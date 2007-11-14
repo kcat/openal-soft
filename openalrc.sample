@@ -1,0 +1,51 @@
+# OpenAL config file. Options that are not under a block or are under the
+# [general] block are for general, non-backend-specific options. Blocks may
+# appear multiple times, and duplicated options will take the last value
+# specified. The system-wide settings can be put in /etc/openal/config and
+# user-specific override settings in ~/.openalrc
+
+# Option and block names are case-insenstive. The supplied values are only
+# hints and may not be honored (though generally it'll try to get as close as
+# possible). These are the current available settings:
+
+format = AL_FORMAT_STEREO16  # Sets the output format. Can be one of:
+                             # AL_FORMAT_MONO8    (8-bit mono)
+                             # AL_FORMAT_STEREO8  (8-bit stereo)
+                             # AL_FORMAT_QUAD8    (8-bit 4-channel)
+                             # AL_FORMAT_MONO16   (16-bit mono)
+                             # AL_FORMAT_STEREO16 (16-bit stereo)
+                             # AL_FORMAT_QUAD16   (16-bit 4-channel)
+                             # Default is AL_FORMAT_STEREO16
+
+frequency = 44100  # Sets the output frequency. Default is 44100
+
+refresh = 0  # Sets the number of frames-per-update. Default is calculated as
+             # 8192*frequency/22050. Note that the actual granularity may or
+             # may not be less than this.
+
+# TODO: Implement this option
+drivers =  # Sets the backend driver list order, comma-seperated. Unknown
+           # backends and duplicated names are ignored, and unlisted backends
+           # won't be considered for use. An empty list means the default.
+           # Default is:
+           # alsa,oss,dsound,winmm
+
+[alsa]  # ALSA backend stuff
+device = default  # Sets the device name for the default playback device.
+                  # Default is default
+
+periods = 4  # Sets the number of update buffers. Default is 4
+
+capture = default  # Sets the device name for the default capture device.
+                   # Default is default
+
+[oss]  # OSS backend stuff
+device = /dev/dsp  # Sets the device name for OSS output. Default is /dev/dsp
+
+periods = 4  # Sets the number of update buffers. Default is 4
+
+[dsound]  # DirectSound backend stuff
+          # Nothing yet...
+
+[winmm]  # Windows Multimedia backend stuff
+         # Nothing yet...

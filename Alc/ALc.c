@@ -43,8 +43,6 @@
 ///////////////////////////////////////////////////////
 // FUNCTION PROTOTYPES
 
-void fill_device_list();
-
 void alc_alsa_init(BackendFuncs *func_list);
 void alc_oss_init(BackendFuncs *func_list);
 void alcDSoundInit(BackendFuncs *func_list);
@@ -199,6 +197,18 @@ static ALCenum g_eLastContextError = ALC_NO_ERROR;
 
 ///////////////////////////////////////////////////////
 // ALC Related helper functions
+
+static void InitAL(void)
+{
+    static int done = 0;
+    if(!done)
+    {
+        int i;
+        for(i = 0;BackendList[i].Init;i++)
+            BackendList[i].Init(&BackendList[i].Funcs);
+        done = 1;
+    }
+}
 
 ALCchar *AppendDeviceList(char *name)
 {
@@ -367,7 +377,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
     ALCdevice *pDevice = NULL;
     ALCint i;
 
-    fill_device_list();
+    InitAL();
 
     pDevice = malloc(sizeof(ALCdevice));
     if (pDevice)
@@ -503,7 +513,7 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
 {
     const ALCchar *value = NULL;
 
-    fill_device_list();
+    InitAL();
 
     switch (param)
     {
@@ -581,7 +591,7 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
 */
 ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsizei size,ALCint *data)
 {
-    fill_device_list();
+    InitAL();
 
     if ((device)&&(device->IsCaptureDevice))
     {
@@ -992,7 +1002,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
     ALCdevice *device;
     ALint i;
 
-    fill_device_list();
+    InitAL();
 
     device = malloc(sizeof(ALCdevice));
     if (device)
@@ -1078,19 +1088,3 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
     return bReturn;
 }
 ///////////////////////////////////////////////////////
-
-
-///////////////////////////////////////////////////////
-// ALC Device Specific Functions
-
-void fill_device_list()
-{
-    static int done = 0;
-    if(!done)
-    {
-        int i;
-        for(i = 0;BackendList[i].Init;i++)
-            BackendList[i].Init(&BackendList[i].Funcs);
-        done = 1;
-    }
-}

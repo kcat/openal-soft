@@ -1014,38 +1014,17 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
         if(fmt[0])
             device->Format = alGetEnumValue(fmt);
-        switch(device->Format)
+
+        device->Channels = aluChannelsFromFormat(device->Format);
+        if(!device->Channels)
         {
-            case AL_FORMAT_MONO8:
-                device->Channels = 1;
-                device->FrameSize = 1;
-                break;
-            case AL_FORMAT_STEREO8:
-                device->Channels = 2;
-                device->FrameSize = 2;
-                break;
-            case AL_FORMAT_QUAD8:
-                device->Channels = 4;
-                device->FrameSize = 4;
-                break;
-            case AL_FORMAT_MONO16:
-                device->Channels = 1;
-                device->FrameSize = 2;
-                break;
-            case AL_FORMAT_STEREO16:
-                device->Channels = 2;
-                device->FrameSize = 4;
-                break;
-            case AL_FORMAT_QUAD16:
-                device->Channels = 4;
-                device->FrameSize = 8;
-                break;
-            default:
-                device->Format = AL_FORMAT_STEREO16;
-                device->Channels = 2;
-                device->FrameSize = 4;
-                break;
+            device->Format = AL_FORMAT_STEREO16;
+            device->Channels = 2;
+            device->FrameSize = 4;
         }
+        else
+            device->FrameSize = aluBytesFromFormat(device->Format) *
+                                device->Channels;
 
         device->UpdateFreq = GetConfigValueInt(NULL, "refresh", 0);
         if((ALint)device->UpdateFreq <= 0)

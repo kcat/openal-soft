@@ -148,8 +148,8 @@ SET(OPENAL_OBJS  OpenAL32/alBuffer.c
                  OpenAL32/alThunk.c
                  OpenAL32/OpenAL32.c
 )
-SET(ALU_OBJS  Alu/ALu.c)
 SET(ALC_OBJS  Alc/ALc.c
+              Alc/ALu.c
               Alc/alcConfig.c
               Alc/alcThread.c
 )
@@ -234,7 +234,7 @@ CONFIGURE_FILE(
 ADD_DEFINITIONS(-DAL_BUILD_LIBRARY)
 
 # Build a shared library
-ADD_LIBRARY(${LIBNAME} SHARED ${OPENAL_OBJS} ${ALU_OBJS} ${ALC_OBJS})
+ADD_LIBRARY(${LIBNAME} SHARED ${OPENAL_OBJS} ${ALC_OBJS})
 SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES VERSION ${LIB_VERSION} SOVERSION ${LIB_MAJOR_VERSION})
 
 TARGET_LINK_LIBRARIES(${LIBNAME} ${EXTRA_LIBS})

@@ -204,6 +204,11 @@ static void InitAL(void)
     if(!done)
     {
         int i;
+
+        InitializeCriticalSection(&g_mutex);
+        ALTHUNK_INIT();
+        ReadALConfig();
+
         for(i = 0;BackendList[i].Init;i++)
             BackendList[i].Init(&BackendList[i].Funcs);
         done = 1;

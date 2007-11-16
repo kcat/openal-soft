@@ -34,9 +34,6 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
     {
         case DLL_PROCESS_ATTACH:
             DisableThreadLibraryCalls(hModule);
-            InitializeCriticalSection(&g_mutex);
-            ALTHUNK_INIT();
-            ReadALConfig();
             break;
 
         case DLL_PROCESS_DETACH:
@@ -49,17 +46,6 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
     return TRUE;
 }
 #else
-static void my_init() __attribute__((constructor));
-static void my_init()
-{
-    static ALenum once = AL_FALSE;
-    if(once) return;
-    once = AL_TRUE;
-
-    InitializeCriticalSection(&g_mutex);
-    ALTHUNK_INIT();
-    ReadALConfig();
-}
 static void my_deinit() __attribute__((destructor));
 static void my_deinit()
 {

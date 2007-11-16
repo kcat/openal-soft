@@ -71,6 +71,9 @@ ELSE()
 
     # Set visibility options if available
     IF(NOT "${WIN32}")
+        CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));
+                                 int main() {return 0;}" HAVE_GCC_DESTRUCTOR)
+
         CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"default\")));
                                  int main() {return 0;}" HAVE_GCC_VISIBILITY)
         IF("${HAVE_GCC_VISIBILITY}")

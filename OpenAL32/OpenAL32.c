@@ -46,6 +46,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
     return TRUE;
 }
 #else
+#ifdef HAVE_GCC_DESTRUCTOR
 static void my_deinit() __attribute__((destructor));
 static void my_deinit()
 {
@@ -58,4 +59,5 @@ static void my_deinit()
     ALTHUNK_EXIT();
     DeleteCriticalSection(&g_mutex);
 }
+#endif
 #endif

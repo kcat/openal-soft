@@ -36,9 +36,7 @@ ALAPI ALenum ALAPIENTRY alGetError(ALvoid)
 		Context->LastError = AL_NO_ERROR;
 	}
 	else
-	{
 		errorCode = AL_INVALID_OPERATION;
-	}
 
 	ProcessContext(Context);
 
@@ -52,10 +50,8 @@ ALvoid alSetError(ALenum errorCode)
 	Context=alcGetCurrentContext();
 	SuspendContext(Context);
 
-	if (Context)
-	{
-		Context->LastError=errorCode;
-	}
-	
+	if (Context && Context->LastError == AL_NO_ERROR)
+		Context->LastError = errorCode;
+
 	ProcessContext(Context);
 }

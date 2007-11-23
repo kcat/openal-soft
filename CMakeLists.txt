@@ -13,9 +13,10 @@ PROJECT(OpenAL)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 
-OPTION(ALSA    "ALSA backend"         ON)
-OPTION(OSS     "OSS backend"          ON)
-OPTION(DSOUND  "DirectSound backend"  ON)
+OPTION(ALSA    "ALSA backend"                ON)
+OPTION(OSS     "OSS backend"                 ON)
+OPTION(DSOUND  "DirectSound backend"         ON)
+OPTION(WINMM   "Windows Multimedia backend"  ON)
 
 OPTION(DLOPEN  "Use the dlopen API for loading optional libs"  ON)
 
@@ -188,16 +189,16 @@ IF(OSS)
 ENDIF()
 
 # Check DSound/MMSystem backend
-IF(DSOUND)
-    IF("${HAVE_WINDOWS_H}")
-        SET(CMAKE_REQUIRED_LIBRARIES ole32)
-        CHECK_C_SOURCE_COMPILES("int main() {return 0;}" HAVE_LIBOLE32)
-        SET(CMAKE_REQUIRED_LIBRARIES "")
-#        CHECK_LIBRARY_EXISTS(ole32 CoInitialize "" HAVE_LIBOLE32)
-        IF("${HAVE_LIBOLE32}")
-            SET(EXTRA_LIBS ole32 ${EXTRA_LIBS})
-        ENDIF()
+IF("${HAVE_WINDOWS_H}")
+    SET(CMAKE_REQUIRED_LIBRARIES ole32)
+    CHECK_C_SOURCE_COMPILES("int main() {return 0;}" HAVE_LIBOLE32)
+    SET(CMAKE_REQUIRED_LIBRARIES "")
+#    CHECK_LIBRARY_EXISTS(ole32 CoInitialize "" HAVE_LIBOLE32)
+    IF("${HAVE_LIBOLE32}")
+        SET(EXTRA_LIBS ole32 ${EXTRA_LIBS})
+    ENDIF()
 
+    IF(DSOUND)
         CHECK_INCLUDE_FILE(dsound.h HAVE_DSOUND_H)
         IF("${HAVE_DSOUND_H}")
             SET(HAVE_DSOUND 1)
@@ -209,7 +210,8 @@ IF(DSOUND)
                 SET(EXTRA_LIBS dxguid ${EXTRA_LIBS})
             ENDIF()
         ENDIF()
-
+    ENDIF()
+    IF(WINMM)
         CHECK_C_SOURCE_COMPILES("\#include <windows.h>
                                  \#include <mmsystem.h>
                                  int main() {return 0;}" HAVE_MMSYSTEM_H)

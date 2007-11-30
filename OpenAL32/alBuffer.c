@@ -28,9 +28,6 @@
 #include "alError.h"
 #include "alBuffer.h"
 
-#ifdef _DEBUG
- char szDebug[256];
-#endif
 
 /*
  *  AL Buffer Functions
@@ -966,10 +963,7 @@ ALvoid ReleaseALBuffers(ALvoid)
 
 #ifdef _DEBUG
     if(g_uiBufferCount > 0)
-    {
-        sprintf(szDebug, "OpenAL32 : DllMain() %d Buffer(s) NOT deleted\n", g_uiBufferCount);
-        OutputDebugString(szDebug);
-    }
+        AL_PRINT("exit() %d Buffer(s) NOT deleted\n", g_uiBufferCount);
 #endif
 
     ALBuffer = g_pBuffers;

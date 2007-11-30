@@ -33,9 +33,7 @@
 ///////////////////////////////////////////////////////
 // DEBUG INFORMATION
 
-#ifdef _DEBUG
- char szDebug[256];
-#endif
+char szDebug[256];
 
 ///////////////////////////////////////////////////////
 
@@ -346,10 +344,7 @@ static ALCvoid ExitContext(ALCcontext *pContext)
 
 #ifdef _DEBUG
     if (pContext->SourceCount>0)
-    {
-        sprintf(szDebug,"OpenAL32 : alcDestroyContext() %d Source(s) NOT deleted\n", pContext->SourceCount);
-        OutputDebugString(szDebug);
-    }
+        AL_PRINT("alcDestroyContext() %d Source(s) NOT deleted\n", pContext->SourceCount);
 #endif
 
     // Free all the Sources still remaining

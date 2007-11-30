@@ -62,6 +62,19 @@ extern "C"
 {
 #endif
 
+extern char szDebug[256];
+
+#define AL_PRINT(...) do {                       \
+    int _al_print_i;                             \
+    char *_al_print_fn = strrchr(__FILE__, '/'); \
+    if(!_al_print_fn) _al_print_fn  = __FILE__;  \
+    else              _al_print_fn += 1;         \
+    _al_print_i = snprintf(szDebug, sizeof(szDebug), "AL lib: %s:%d: ", _al_print_fn, __LINE__); \
+    snprintf(szDebug+_al_print_i, sizeof(szDebug)-_al_print_i, __VA_ARGS__); \
+    fprintf(stderr, "%s", szDebug);              \
+} while(0)
+
+
 #define AL_FORMAT_MONO_IMA4                      0x1300
 #define AL_FORMAT_STEREO_IMA4                    0x1301
 // These are from AL_EXT_MCFORMATS, which we don't support yet but the mixer

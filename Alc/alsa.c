@@ -105,7 +105,7 @@ static int xrun_recovery(snd_pcm_t *handle, int err)
         if(err >= 0)
             err = psnd_pcm_start(handle);
         if (err < 0)
-            printf("Can't recover from underrun, prepare failed: %s\n", psnd_strerror(err));
+            AL_PRINT("prepare failed: %s\n", psnd_strerror(err));
     }
     else if (err == -ESTRPIPE)
     {
@@ -117,7 +117,7 @@ static int xrun_recovery(snd_pcm_t *handle, int err)
             if(err >= 0)
                 err = psnd_pcm_start(handle);
             if (err < 0)
-                printf("Can't recover from suspend, prepare failed: %s\n", psnd_strerror(err));
+                AL_PRINT("prepare failed: %s\n", psnd_strerror(err));
         }
     }
     return err;
@@ -143,7 +143,7 @@ static ALuint ALSAProc(ALvoid *ptr)
             err = xrun_recovery(data->pcmHandle, -EPIPE);
             if (err < 0)
             {
-                fprintf(stderr, "XRUN recovery failed: %s\n", psnd_strerror(err));
+                AL_PRINT("XRUN recovery failed: %s\n", psnd_strerror(err));
                 break;
             }
         }
@@ -152,7 +152,7 @@ static ALuint ALSAProc(ALvoid *ptr)
             err = xrun_recovery(data->pcmHandle, -ESTRPIPE);
             if (err < 0)
             {
-                fprintf(stderr, "SUSPEND recovery failed: %s\n", psnd_strerror(err));
+                AL_PRINT("SUSPEND recovery failed: %s\n", psnd_strerror(err));
                 break;
             }
         }
@@ -163,7 +163,7 @@ static ALuint ALSAProc(ALvoid *ptr)
             err = xrun_recovery(data->pcmHandle, avail);
             if (err < 0)
             {
-                fprintf(stderr, "available update failed: %s\n", psnd_strerror(err));
+                AL_PRINT("available update failed: %s\n", psnd_strerror(err));
                 break;
             }
         }
@@ -185,7 +185,7 @@ static ALuint ALSAProc(ALvoid *ptr)
             {
                 err = xrun_recovery(data->pcmHandle, err);
                 if (err < 0)
-                    fprintf(stderr, "mmap begin error: %s\n", psnd_strerror(err));
+                    AL_PRINT("mmap begin error: %s\n", psnd_strerror(err));
                 break;
             }
 
@@ -206,8 +206,8 @@ static ALuint ALSAProc(ALvoid *ptr)
             commitres = psnd_pcm_mmap_commit(data->pcmHandle, offset, frames);
             if (commitres < 0 || (commitres-frames) != 0)
             {
-                fprintf(stderr, "mmap commit error: %s\n",
-                        psnd_strerror(commitres >= 0 ? -EPIPE : commitres));
+                AL_PRINT("mmap commit error: %s\n",
+                         psnd_strerror(commitres >= 0 ? -EPIPE : commitres));
                 break;
             }
 
@@ -231,7 +231,7 @@ static void fill_silence(snd_pcm_t *pcmHandle, snd_pcm_format_t alsaFormat, int 
         err = xrun_recovery(pcmHandle, avail);
         if (err < 0)
         {
-            fprintf(stderr, "available update failed: %s\n", psnd_strerror(err));
+            AL_PRINT("available update failed: %s\n", psnd_strerror(err));
             return;
         }
     }
@@ -247,7 +247,7 @@ static void fill_silence(snd_pcm_t *pcmHandle, snd_pcm_format_t alsaFormat, int 
             err = xrun_recovery(pcmHandle, err);
             if (err < 0)
             {
-                fprintf(stderr, "mmap begin error: %s\n", psnd_strerror(err));
+                AL_PRINT("mmap begin error: %s\n", psnd_strerror(err));
                 break;
             }
             continue;
@@ -258,8 +258,8 @@ static void fill_silence(snd_pcm_t *pcmHandle, snd_pcm_format_t alsaFormat, int 
         commitres = psnd_pcm_mmap_commit(pcmHandle, offset, frames);
         if (commitres < 0 || (commitres-frames) != 0)
         {
-            fprintf(stderr, "mmap commit error: %s\n",
-                    psnd_strerror(commitres >= 0 ? -EPIPE : commitres));
+            AL_PRINT("mmap commit error: %s\n",
+                     psnd_strerror(commitres >= 0 ? -EPIPE : commitres));
             break;
         }
 
@@ -274,6 +274,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     unsigned int periods;
     alsa_data *data;
     char driver[64];
+    char *err;
     int i;
 
     strncpy(driver, GetConfigValue("alsa", "default", "default"), sizeof(driver)-1);
@@ -345,7 +346,7 @@ open_alsa:
             break;
         default:
             data->format = SND_PCM_FORMAT_UNKNOWN;
-            fprintf(stderr, "Unknown format?! %x\n", device->Format);
+            AL_PRINT("Unknown format?! %x\n", device->Format);
     }
 
     periods = GetConfigValueInt("alsa", "periods", 4);
@@ -354,7 +355,7 @@ open_alsa:
     bufferSizeInFrames = device->UpdateFreq;
 
     psnd_pcm_hw_params_malloc(&p);
-#define ok(func, str) (i=(func),((i<0)?fprintf(stderr,"%s failed: %s\n", str, psnd_strerror(i)),0:1))
+#define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
     /* start with the largest configuration space possible */
     if(!(ok(psnd_pcm_hw_params_any(data->pcmHandle, p), "any") &&
          /* set interleaved access */
@@ -372,6 +373,7 @@ open_alsa:
          /* install and prepare hardware configuration */
          ok(psnd_pcm_hw_params(data->pcmHandle, p), "set params")))
     {
+        AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
         psnd_pcm_hw_params_free(p);
         psnd_pcm_close(data->pcmHandle);
         free(data);
@@ -386,7 +388,7 @@ open_alsa:
     i = psnd_pcm_prepare(data->pcmHandle);
     if(i < 0)
     {
-        fprintf(stderr, "prepare error: %s\n", psnd_strerror(i));
+        AL_PRINT("prepare error: %s\n", psnd_strerror(i));
         psnd_pcm_close(data->pcmHandle);
         free(data);
         return ALC_FALSE;
@@ -396,7 +398,7 @@ open_alsa:
     i = psnd_pcm_start(data->pcmHandle);
     if(i < 0)
     {
-        fprintf(stderr, "start error: %s\n", psnd_strerror(i));
+        AL_PRINT("start error: %s\n", psnd_strerror(i));
         psnd_pcm_close(data->pcmHandle);
         free(data);
         return ALC_FALSE;
@@ -435,6 +437,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     snd_pcm_uframes_t bufferSizeInFrames = SampleSize;
     alsa_data *data;
     char driver[64];
+    char *err;
     int i;
 
     strncpy(driver, GetConfigValue("alsa", "capture", "default"), sizeof(driver)-1);
@@ -492,11 +495,11 @@ open_alsa:
             break;
         default:
             alsaFormat = SND_PCM_FORMAT_UNKNOWN;
-            fprintf(stderr, "Unknown format?! %x\n", format);
+            AL_PRINT("Unknown format?! %x\n", format);
     }
 
     psnd_pcm_hw_params_malloc(&p);
-#define ok(func, str) (i=(func),((i<0)?fprintf(stderr,"%s failed\n", str),0:1))
+#define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
     /* start with the largest configuration space possible */
     if(!(ok(psnd_pcm_hw_params_any(data->pcmHandle, p), "any") &&
          /* set interleaved access */
@@ -514,6 +517,7 @@ open_alsa:
          /* install and prepare hardware configuration */
          ok(psnd_pcm_hw_params(data->pcmHandle, p), "set params")))
     {
+        AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
         psnd_pcm_hw_params_free(p);
         psnd_pcm_close(data->pcmHandle);
         free(data);
@@ -525,7 +529,7 @@ open_alsa:
     i = psnd_pcm_prepare(data->pcmHandle);
     if(i < 0)
     {
-        fprintf(stderr, "prepare error: %s\n", psnd_strerror(i));
+        AL_PRINT("prepare error: %s\n", psnd_strerror(i));
         psnd_pcm_close(data->pcmHandle);
         free(data);
         return ALC_FALSE;
@@ -569,7 +573,7 @@ static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint l
     {
         err = xrun_recovery(data->pcmHandle, frames);
         if (err < 0)
-            fprintf(stderr, "available update failed: %s\n", psnd_strerror(err));
+            AL_PRINT("available update failed: %s\n", psnd_strerror(err));
         else
             frames = psnd_pcm_avail_update(data->pcmHandle);
     }
@@ -592,7 +596,7 @@ static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint l
             err = xrun_recovery(data->pcmHandle, err);
             if (err < 0)
             {
-                fprintf(stderr, "mmap begin error: %s\n", psnd_strerror(err));
+                AL_PRINT("mmap begin error: %s\n", psnd_strerror(err));
                 break;
             }
             continue;
@@ -607,8 +611,8 @@ static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint l
         commitres = psnd_pcm_mmap_commit(data->pcmHandle, offset, size);
         if (commitres < 0 || (commitres-size) != 0)
         {
-           fprintf(stderr, "mmap commit error: %s\n",
-                   psnd_strerror(commitres >= 0 ? -EPIPE : commitres));
+           AL_PRINT("mmap commit error: %s\n",
+                    psnd_strerror(commitres >= 0 ? -EPIPE : commitres));
            break;
         }
 
@@ -624,7 +628,7 @@ static ALCuint alsa_available_samples(ALCdevice *pDevice)
     {
         int err = xrun_recovery(data->pcmHandle, frames);
         if (err < 0)
-            fprintf(stderr, "available update failed: %s\n", psnd_strerror(err));
+            AL_PRINT("available update failed: %s\n", psnd_strerror(err));
         else
             frames = psnd_pcm_avail_update(data->pcmHandle);
         if(frames < 0) /* ew.. */
@@ -647,10 +651,6 @@ BackendFuncs alsa_funcs = {
 
 void alc_alsa_init(BackendFuncs *func_list)
 {
-#define error(...) do { \
-    fprintf(stderr, __VA_ARGS__); \
-    fprintf(stderr, "\n"); \
-}while(0)
     snd_ctl_t *handle;
     int card, err, dev, idx = 1;
     snd_ctl_card_info_t *info;
@@ -673,7 +673,7 @@ void alc_alsa_init(BackendFuncs *func_list)
     { \
         dlclose(alsa_handle); \
         alsa_handle = NULL; \
-        error("Could not load %s from libasound.so.2: %s", #f, str); \
+        AL_PRINT("Could not load %s from libasound.so.2: %s\n", #f, str); \
         return; \
     } \
 } while(0)
@@ -733,7 +733,7 @@ LOAD_FUNC(snd_card_next);
 
     card = -1;
     if(psnd_card_next(&card) < 0 || card < 0)
-        error("no playback cards found...");
+        AL_PRINT("no playback cards found...\n");
     else
     {
         alsaDeviceList[0] = AppendDeviceList("ALSA Software on default");
@@ -743,11 +743,11 @@ LOAD_FUNC(snd_card_next);
     while (card >= 0) {
         sprintf(name, "hw:%d", card);
         if ((err = psnd_ctl_open(&handle, name, 0)) < 0) {
-            error("control open (%i): %s", card, psnd_strerror(err));
+            AL_PRINT("control open (%i): %s\n", card, psnd_strerror(err));
             goto next_card;
         }
         if ((err = psnd_ctl_card_info(handle, info)) < 0) {
-            error("control hardware info (%i): %s", card, psnd_strerror(err));
+            AL_PRINT("control hardware info (%i): %s\n", card, psnd_strerror(err));
             psnd_ctl_close(handle);
             goto next_card;
         }
@@ -760,7 +760,7 @@ LOAD_FUNC(snd_card_next);
         dev = -1;
         while (idx < MAX_ALL_DEVICES) {
             if (psnd_ctl_pcm_next_device(handle, &dev)<0)
-                error("snd_ctl_pcm_next_device");
+                AL_PRINT("snd_ctl_pcm_next_device failed\n");
             if (dev < 0)
                 break;
             psnd_pcm_info_set_device(pcminfo, dev);
@@ -768,7 +768,7 @@ LOAD_FUNC(snd_card_next);
             psnd_pcm_info_set_stream(pcminfo, stream);
             if ((err = psnd_ctl_pcm_info(handle, pcminfo)) < 0) {
                 if (err != -ENOENT)
-                    error("control digital audio info (%i): %s", card, psnd_strerror(err));
+                    AL_PRINT("control digital audio info (%i): %s\n", card, psnd_strerror(err));
                 continue;
             }
             snprintf(name, sizeof(name), "ALSA Software on %s [%s]",
@@ -782,7 +782,7 @@ LOAD_FUNC(snd_card_next);
         psnd_ctl_close(handle);
 next_card:
         if(psnd_card_next(&card) < 0) {
-            error("snd_card_next");
+            AL_PRINT("snd_card_next failed\n");
             break;
         }
     }
@@ -792,7 +792,7 @@ next_card:
 
     card = -1;
     if(psnd_card_next(&card) < 0 || card < 0) {
-        error("no capture cards found...");
+        AL_PRINT("no capture cards found...\n");
         psnd_pcm_info_free(pcminfo);
         psnd_ctl_card_info_free(info);
         return;
@@ -804,10 +804,10 @@ next_card:
         sprintf(name, "hw:%d", card);
         handle = NULL;
         if ((err = psnd_ctl_open(&handle, name, 0)) < 0) {
-            error("control open (%i): %s", card, psnd_strerror(err));
+            AL_PRINT("control open (%i): %s\n", card, psnd_strerror(err));
         }
         if (err >= 0 && (err = psnd_ctl_card_info(handle, info)) < 0) {
-            error("control hardware info (%i): %s", card, psnd_strerror(err));
+            AL_PRINT("control hardware info (%i): %s\n", card, psnd_strerror(err));
             psnd_ctl_close(handle);
         }
         else if (err >= 0 && card < MAX_DEVICES-1)
@@ -818,11 +818,10 @@ next_card:
         }
         if(handle) psnd_ctl_close(handle);
         if(psnd_card_next(&card) < 0) {
-            error("snd_card_next");
+            AL_PRINT("snd_card_next failed\n");
             break;
         }
     }
     psnd_pcm_info_free(pcminfo);
     psnd_ctl_card_info_free(info);
-#undef error
 }

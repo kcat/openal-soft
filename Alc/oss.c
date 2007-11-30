@@ -92,7 +92,7 @@ static ALuint OSSProc(ALvoid *ptr)
             wrote = write(data->fd, data->mix_data+data->data_size-remaining, remaining);
             if(wrote < 0)
             {
-                fprintf(stderr, "write failed: %s\n", strerror(errno));
+                AL_PRINT("write failed: %s\n", strerror(errno));
                 break;
             }
             if(wrote == 0)
@@ -118,6 +118,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     oss_data *data;
     int ossFormat;
     int ossSpeed;
+    char *err;
     int i;
 
     strncpy(driver, GetConfigValue("oss", "device", "/dev/dsp"), sizeof(driver)-1);
@@ -159,7 +160,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
             break;
         default:
             ossFormat = -1;
-            fprintf(stderr, "Unknown format?! %x\n", device->Format);
+            AL_PRINT("Unknown format?! %x\n", device->Format);
     }
 
     periods = GetConfigValueInt("oss", "periods", 4);
@@ -174,13 +175,14 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
         log2FragmentSize = 4;
     numFragmentsLogSize = (periods << 16) | log2FragmentSize;
 
-#define ok(func, str) (i=(func),((i<0)?fprintf(stderr,"%s failed\n", str),0:1))
+#define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
     if (!(ok(ioctl(data->fd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize), "set fragment") &&
           ok(ioctl(data->fd, SNDCTL_DSP_SETFMT, &ossFormat), "set format") &&
           ok(ioctl(data->fd, SNDCTL_DSP_CHANNELS, &numChannels), "set channels") &&
           ok(ioctl(data->fd, SNDCTL_DSP_SPEED, &ossSpeed), "set speed") &&
           ok(ioctl(data->fd, SNDCTL_DSP_GETOSPACE, &info), "get space")))
     {
+        AL_PRINT("%s failed: %s\n", err, strerror(i));
         close(data->fd);
         free(data);
         return ALC_FALSE;
@@ -229,7 +231,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
 
     if(!device->Format)
     {
-        fprintf(stderr, "Unknown returned format/channel %#x/%d!\n", ossFormat, numChannels);
+        AL_PRINT("returned unknown format: %#x %d!\n", ossFormat, numChannels);
         close(data->fd);
         free(data);
         return ALC_FALSE;

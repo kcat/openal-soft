@@ -23,6 +23,8 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "alMain.h"
+
 typedef struct ConfigEntry {
     char *key;
     char *value;
@@ -65,7 +67,7 @@ static void LoadConfigFromFile(FILE *f)
 
             if(!buffer[i])
             {
-                 fprintf(stderr, "openal: config parse error: bad line \"%s\"\n", buffer);
+                 AL_PRINT("config parse error: bad line \"%s\"\n", buffer);
                  continue;
             }
             buffer[i] = 0;
@@ -75,7 +77,7 @@ static void LoadConfigFromFile(FILE *f)
                 if(buffer[i] && !isspace(buffer[i]))
                 {
                     if(buffer[i] != '#')
-                        fprintf(stderr, "openal: config warning: extra data after block: \"%s\"\n", buffer+i);
+                        AL_PRINT("config warning: extra data after block: \"%s\"\n", buffer+i);
                     break;
                 }
             } while(buffer[i]);
@@ -86,7 +88,7 @@ static void LoadConfigFromFile(FILE *f)
                 if(strcasecmp(cfgBlocks[i].name, buffer+1) == 0)
                 {
                     nextBlock = cfgBlocks+i;
-//                    printf("found block '%s'\n", nextBlock->name);
+//                    AL_PRINT("found block '%s'\n", nextBlock->name);
                     break;
                 }
             }
@@ -96,7 +98,7 @@ static void LoadConfigFromFile(FILE *f)
                 nextBlock = realloc(cfgBlocks, (cfgCount+1)*sizeof(ConfigBlock));
                 if(!nextBlock)
                 {
-                     fprintf(stderr, "openal: config parse error: error reallocating config blocks\n");
+                     AL_PRINT("config parse error: error reallocating config blocks\n");
                      continue;
                 }
                 cfgBlocks = nextBlock;
@@ -107,7 +109,7 @@ static void LoadConfigFromFile(FILE *f)
                 nextBlock->entries = NULL;
                 nextBlock->entryCount = 0;
 
-//                printf("found new block '%s'\n", nextBlock->name);
+//                AL_PRINT("found new block '%s'\n", nextBlock->name);
             }
             curBlock = nextBlock;
             continue;
@@ -121,7 +123,7 @@ static void LoadConfigFromFile(FILE *f)
 
         if(!buffer[i] || buffer[i] == '#' || i == 0)
         {
-            fprintf(stderr, "openal: config parse error: malformed option line: \"%s\"\n", buffer);
+            AL_PRINT("config parse error: malformed option line: \"%s\"\n", buffer);
             continue;
         }
 
@@ -134,7 +136,7 @@ static void LoadConfigFromFile(FILE *f)
                 i++;
             if(buffer[i] != '=')
             {
-                fprintf(stderr, "openal: config parse error: option without a value: \"%s\"\n", buffer);
+                AL_PRINT("config parse error: option without a value: \"%s\"\n", buffer);
                 continue;
             }
         }
@@ -158,7 +160,7 @@ static void LoadConfigFromFile(FILE *f)
             ent = realloc(curBlock->entries, (curBlock->entryCount+1)*sizeof(ConfigEntry));
             if(!ent)
             {
-                 fprintf(stderr, "openal: config parse error: error reallocating config entries\n");
+                 AL_PRINT("config parse error: error reallocating config entries\n");
                  continue;
             }
             curBlock->entries = ent;
@@ -184,7 +186,7 @@ static void LoadConfigFromFile(FILE *f)
         free(ent->value);
         ent->value = strdup(buffer);
 
-//        printf("found '%s' = '%s'\n", ent->key, ent->value);
+//        AL_PRINT("found '%s' = '%s'\n", ent->key, ent->value);
     }
 }
 

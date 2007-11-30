@@ -22,27 +22,37 @@
 typedef pthread_mutex_t CRITICAL_SECTION;
 static inline void EnterCriticalSection(CRITICAL_SECTION *cs)
 {
-    assert(pthread_mutex_lock(cs) == 0);
+    int ret;
+    ret = pthread_mutex_lock(cs);
+    assert(ret == 0);
 }
 static inline void LeaveCriticalSection(CRITICAL_SECTION *cs)
 {
-    assert(pthread_mutex_unlock(cs) == 0);
+    int ret;
+    ret = pthread_mutex_unlock(cs);
+    assert(ret == 0);
 }
 static inline void InitializeCriticalSection(CRITICAL_SECTION *cs)
 {
     pthread_mutexattr_t attrib;
+    int ret;
 
-    assert(pthread_mutexattr_init(&attrib) == 0);
+    ret = pthread_mutexattr_init(&attrib);
+    assert(ret == 0);
 
-    assert(pthread_mutexattr_settype(&attrib, PTHREAD_MUTEX_RECURSIVE) == 0);
-    assert(pthread_mutex_init(cs, &attrib) == 0);
+    ret = pthread_mutexattr_settype(&attrib, PTHREAD_MUTEX_RECURSIVE);
+    assert(ret == 0);
+    ret = pthread_mutex_init(cs, &attrib);
+    assert(ret == 0);
 
     pthread_mutexattr_destroy(&attrib);
 }
 
 static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 {
-    assert(pthread_mutex_destroy(cs) == 0);
+    int ret;
+    ret = pthread_mutex_destroy(cs);
+    assert(ret == 0);
 }
 
 #define min(x,y) (((x)<(y))?(x):(y))

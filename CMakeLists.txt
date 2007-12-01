@@ -75,10 +75,13 @@ ELSE()
         CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));
                                  int main() {return 0;}" HAVE_GCC_DESTRUCTOR)
 
-        CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"default\")));
-                                 int main() {return 0;}" HAVE_GCC_VISIBILITY)
-        IF("${HAVE_GCC_VISIBILITY}")
-            ADD_DEFINITIONS(-fvisibility=hidden -DHAVE_GCC_VISIBILITY)
+        CHECK_C_COMPILER_FLAG(-fvisibility=hidden HAVE_VISIBILITY_SWITCH)
+        IF("${HAVE_VISIBILITY_SWITCH}")
+            CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"default\")));
+                                     int main() {return 0;}" HAVE_GCC_VISIBILITY)
+            IF("${HAVE_GCC_VISIBILITY}")
+                ADD_DEFINITIONS(-fvisibility=hidden -DHAVE_GCC_VISIBILITY)
+            ENDIF()
         ENDIF()
     ENDIF()
 ENDIF()

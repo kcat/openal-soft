@@ -87,18 +87,10 @@ static void CALLBACK DirectSoundProc(UINT uID,UINT uReserved,DWORD_PTR dwUser,DW
     {
         // If we have an active context, mix data directly into output buffer otherwise fill with silence
         SuspendContext(NULL);
-        if(pDevice->Context)
-        {
-            if (WritePtr1)
-                aluMixData(pDevice->Context, WritePtr1, WriteCnt1, pDevice->Format);
-            if (WritePtr2)
-                aluMixData(pDevice->Context, WritePtr2, WriteCnt2, pDevice->Format);
-        }
-        else
-        {
-            if (WritePtr1) memset(WritePtr1, 0, WriteCnt1);
-            if (WritePtr2) memset(WritePtr2, 0, WriteCnt2);
-        }
+        if (WritePtr1)
+            aluMixData(pDevice->Context, WritePtr1, WriteCnt1, pDevice->Format);
+        if (WritePtr2)
+            aluMixData(pDevice->Context, WritePtr2, WriteCnt2, pDevice->Format);
         ProcessContext(NULL);
 
         // Unlock output buffer only when successfully locked

@@ -190,17 +190,9 @@ static ALuint ALSAProc(ALvoid *ptr)
             }
 
             SuspendContext(NULL);
-            if(pDevice->Context)
-            {
-                // If we have an active context, mix data directly into output
-                // buffer
-                WritePtr = (char*)areas->addr + (offset * areas->step / 8);
-                WriteCnt = psnd_pcm_frames_to_bytes(data->pcmHandle, frames);
-
-                aluMixData(pDevice->Context, WritePtr, WriteCnt, pDevice->Format);
-            }
-            else
-                psnd_pcm_areas_silence(areas, offset, pDevice->Channels, frames, data->format);
+            WritePtr = (char*)areas->addr + (offset * areas->step / 8);
+            WriteCnt = psnd_pcm_frames_to_bytes(data->pcmHandle, frames);
+            aluMixData(pDevice->Context, WritePtr, WriteCnt, pDevice->Format);
             ProcessContext(NULL);
 
             commitres = psnd_pcm_mmap_commit(data->pcmHandle, offset, frames);

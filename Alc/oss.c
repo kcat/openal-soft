@@ -80,10 +80,7 @@ static ALuint OSSProc(ALvoid *ptr)
     while(!data->killNow)
     {
         SuspendContext(NULL);
-        if(pDevice->Context)
-            aluMixData(pDevice->Context,data->mix_data,data->data_size,pDevice->Format);
-        else
-            memset(data->mix_data,data->silence,data->data_size);
+        aluMixData(pDevice->Context,data->mix_data,data->data_size,pDevice->Format);
         ProcessContext(NULL);
 
         remaining = data->data_size;

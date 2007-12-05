@@ -414,7 +414,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         while(size > 0)
         {
             //Setup variables
-            ALSource = ALContext->Source;
+            ALSource = (ALContext ? ALContext->Source : NULL);
             SamplesToDo = min(size, BUFFERSIZE);
 
             //Clear mixing buffer

@@ -37,6 +37,7 @@ typedef struct {
     LPDIRECTSOUNDBUFFER    DSpbuffer;
     LPDIRECTSOUNDBUFFER    DSsbuffer;
     MMRESULT               ulDSTimerID;
+    DWORD                  OldWriteCursor;
 } DSoundData;
 
 
@@ -44,8 +45,6 @@ static ALCchar *DeviceList[16];
 
 static void CALLBACK DirectSoundProc(UINT uID,UINT uReserved,DWORD_PTR dwUser,DWORD_PTR dwReserved1,DWORD_PTR dwReserved2)
 {
-    static DWORD OldWriteCursor=0;
-
     ALCdevice *pDevice = (ALCdevice *)dwUser;
     DSoundData *pData = pDevice->ExtraData;
     DWORD PlayCursor,WriteCursor;
@@ -65,21 +64,21 @@ static void CALLBACK DirectSoundProc(UINT uID,UINT uReserved,DWORD_PTR dwUser,DW
 
     // Get current play and write cursors
     IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer,&PlayCursor,&WriteCursor);
-    if (!OldWriteCursor) OldWriteCursor=WriteCursor-PlayCursor;
+    if (!pData->OldWriteCursor) pData->OldWriteCursor=WriteCursor-PlayCursor;
 
     // Get the output format and figure the number of bytes played (block aligned)
     IDirectSoundBuffer_GetFormat(pData->DSsbuffer,&OutputType,sizeof(WAVEFORMATEX),NULL);
-    BytesPlayed=((((WriteCursor<OldWriteCursor)?(BufSize+WriteCursor-OldWriteCursor):(WriteCursor-OldWriteCursor))/OutputType.nBlockAlign)*OutputType.nBlockAlign);
+    BytesPlayed=((((WriteCursor<pData->OldWriteCursor)?(BufSize+WriteCursor-pData->OldWriteCursor):(WriteCursor-pData->OldWriteCursor))/OutputType.nBlockAlign)*OutputType.nBlockAlign);
 
     // Lock output buffer started at 40msec in front of the old write cursor (15msec in front of the actual write cursor)
-    DSRes=IDirectSoundBuffer_Lock(pData->DSsbuffer,(OldWriteCursor+(OutputType.nSamplesPerSec/25)*OutputType.nBlockAlign)%BufSize,BytesPlayed,(LPVOID*)&WritePtr1,&WriteCnt1,(LPVOID*)&WritePtr2,&WriteCnt2,0);
+    DSRes=IDirectSoundBuffer_Lock(pData->DSsbuffer,(pData->OldWriteCursor+(OutputType.nSamplesPerSec/25)*OutputType.nBlockAlign)%BufSize,BytesPlayed,(LPVOID*)&WritePtr1,&WriteCnt1,(LPVOID*)&WritePtr2,&WriteCnt2,0);
 
     // If the buffer is lost, restore it, play and lock
     if (DSRes==DSERR_BUFFERLOST)
     {
         IDirectSoundBuffer_Restore(pData->DSsbuffer);
         IDirectSoundBuffer_Play(pData->DSsbuffer,0,0,DSBPLAY_LOOPING);
-        DSRes=IDirectSoundBuffer_Lock(pData->DSsbuffer,(OldWriteCursor+(OutputType.nSamplesPerSec/25)*OutputType.nBlockAlign)%BufSize,BytesPlayed,(LPVOID*)&WritePtr1,&WriteCnt1,(LPVOID*)&WritePtr2,&WriteCnt2,0);
+        DSRes=IDirectSoundBuffer_Lock(pData->DSsbuffer,(pData->OldWriteCursor+(OutputType.nSamplesPerSec/25)*OutputType.nBlockAlign)%BufSize,BytesPlayed,(LPVOID*)&WritePtr1,&WriteCnt1,(LPVOID*)&WritePtr2,&WriteCnt2,0);
     }
 
     // Successfully locked the output buffer
@@ -98,7 +97,7 @@ static void CALLBACK DirectSoundProc(UINT uID,UINT uReserved,DWORD_PTR dwUser,DW
     }
 
     // Update old write cursor location
-    OldWriteCursor=((OldWriteCursor+BytesPlayed)%BufSize);
+    pData->OldWriteCursor=((pData->OldWriteCursor+BytesPlayed)%BufSize);
 }
 
 

@@ -439,7 +439,6 @@ ALAPI ALvoid ALAPIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flValue
 ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *pflValues)
 {
     ALCcontext    *pContext;
-    ALsource    *pSource;
 
     pContext = alcGetCurrentContext();
     if (pContext)
@@ -450,8 +449,6 @@ ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *
         {
             if (alIsSource(source))
             {
-                pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
-
                 switch (eParam)
                 {
                 case AL_PITCH:
@@ -659,7 +656,6 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, ALint lValue2, ALint lValue3)
 {
     ALCcontext    *pContext;
-    ALsource    *pSource;
 
     pContext = alcGetCurrentContext();
     if (pContext)
@@ -668,8 +664,6 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
 
         if (alIsSource(source))
         {
-            pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
-
             switch (eParam)
             {
             case AL_POSITION:
@@ -698,7 +692,6 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
 ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plValues)
 {
     ALCcontext    *pContext;
-    ALsource    *pSource;
 
     pContext = alcGetCurrentContext();
     if (pContext)
@@ -709,8 +702,6 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
         {
             if (alIsSource(source))
             {
-                pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
-
                 switch (eParam)
                 {
                 case AL_SOURCE_RELATIVE:
@@ -1856,7 +1847,7 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
 {
     ALbufferlistitem *pBufferList;
     ALfloat        flBufferFreq;
-    ALint        lBufferSize, lBytesPlayed, lChannels;
+    ALint        lBytesPlayed, lChannels;
     ALenum        eOriginalFormat;
     ALboolean    bReturn = AL_TRUE;
     ALint        lTotalBufferDataSize;
@@ -1864,7 +1855,6 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
     if (((pSource->state == AL_PLAYING) || (pSource->state == AL_PAUSED)) && (pSource->ulBufferID))
     {
         // Get Current Buffer Size and frequency (in milliseconds)
-        lBufferSize = ((ALbuffer*)ALTHUNK_LOOKUPENTRY(pSource->ulBufferID))->size;
         flBufferFreq = (ALfloat)(((ALbuffer*)ALTHUNK_LOOKUPENTRY(pSource->ulBufferID))->frequency);
         eOriginalFormat = ((ALbuffer*)ALTHUNK_LOOKUPENTRY(pSource->ulBufferID))->eOriginalFormat;
         lChannels = ((((ALbuffer*)ALTHUNK_LOOKUPENTRY(pSource->ulBufferID))->format == AL_FORMAT_MONO16)?1:2);

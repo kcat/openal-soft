@@ -27,10 +27,10 @@
 #include "alError.h"
 #include "alSource.h"
 
-ALvoid InitSourceParams(ALsource *pSource);
-ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset);
-ALvoid ApplyOffset(ALsource *pSource, ALboolean bUpdateContext);
-ALint GetByteOffset(ALsource *pSource);
+static ALvoid InitSourceParams(ALsource *pSource);
+static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset);
+static ALvoid ApplyOffset(ALsource *pSource, ALboolean bUpdateContext);
+static ALint GetByteOffset(ALsource *pSource);
 
 ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
 {
@@ -1816,7 +1816,7 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
 }
 
 
-ALvoid InitSourceParams(ALsource *pSource)
+static ALvoid InitSourceParams(ALsource *pSource)
 {
     pSource->flInnerAngle = 360.0f;
     pSource->flOuterAngle = 360.0f;
@@ -1852,7 +1852,7 @@ ALvoid InitSourceParams(ALsource *pSource)
     Gets the current playback position in the given Source, in the appropriate format (Bytes, Samples or MilliSeconds)
     The offset is relative to the start of the queue (not the start of the current buffer)
 */
-ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset)
+static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset)
 {
     ALbufferlistitem *pBufferList;
     ALfloat        flBufferFreq;
@@ -1947,7 +1947,7 @@ ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset)
     Apply a playback offset to the Source.  This function will update the queue (to correctly
     mark buffers as 'pending' or 'processed' depending upon the new offset.
 */
-void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
+static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
 {
     ALbufferlistitem    *pBufferList;
     ALint                lBufferSize, lTotalBufferSize;
@@ -2028,7 +2028,7 @@ void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
     offset supplied by the application).   This takes into account the fact that the buffer format
     may have been modifed by AL (e.g 8bit samples are converted to 16bit)
 */
-ALint GetByteOffset(ALsource *pSource)
+static ALint GetByteOffset(ALsource *pSource)
 {
     ALbuffer *pBuffer = NULL;
     ALbufferlistitem *pBufferList;

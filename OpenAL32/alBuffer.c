@@ -537,7 +537,6 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
 ALAPI void ALAPIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     (void)flValue;
 
@@ -546,8 +545,6 @@ ALAPI void ALAPIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
-        pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
         switch(eParam)
         {
         default:
@@ -567,7 +564,6 @@ ALAPI void ALAPIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 ALAPI void ALAPIENTRY alBuffer3f(ALuint buffer, ALenum eParam, ALfloat flValue1, ALfloat flValue2, ALfloat flValue3)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     (void)flValue1;
     (void)flValue2;
@@ -578,8 +574,6 @@ ALAPI void ALAPIENTRY alBuffer3f(ALuint buffer, ALenum eParam, ALfloat flValue1,
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
-        pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
         switch(eParam)
         {
         default:
@@ -599,7 +593,6 @@ ALAPI void ALAPIENTRY alBuffer3f(ALuint buffer, ALenum eParam, ALfloat flValue1,
 ALAPI void ALAPIENTRY alBufferfv(ALuint buffer, ALenum eParam, const ALfloat* flValues)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     (void)flValues;
 
@@ -608,8 +601,6 @@ ALAPI void ALAPIENTRY alBufferfv(ALuint buffer, ALenum eParam, const ALfloat* fl
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
-        pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
         switch(eParam)
         {
         default:
@@ -629,7 +620,6 @@ ALAPI void ALAPIENTRY alBufferfv(ALuint buffer, ALenum eParam, const ALfloat* fl
 ALAPI void ALAPIENTRY alBufferi(ALuint buffer, ALenum eParam, ALint lValue)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     (void)lValue;
 
@@ -638,8 +628,6 @@ ALAPI void ALAPIENTRY alBufferi(ALuint buffer, ALenum eParam, ALint lValue)
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
-        pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
         switch(eParam)
         {
         default:
@@ -659,7 +647,6 @@ ALAPI void ALAPIENTRY alBufferi(ALuint buffer, ALenum eParam, ALint lValue)
 ALAPI void ALAPIENTRY alBuffer3i( ALuint buffer, ALenum eParam, ALint lValue1, ALint lValue2, ALint lValue3)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     (void)lValue1;
     (void)lValue2;
@@ -670,8 +657,6 @@ ALAPI void ALAPIENTRY alBuffer3i( ALuint buffer, ALenum eParam, ALint lValue1, A
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
-        pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
         switch(eParam)
         {
         default:
@@ -691,7 +676,6 @@ ALAPI void ALAPIENTRY alBuffer3i( ALuint buffer, ALenum eParam, ALint lValue1, A
 ALAPI void ALAPIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* plValues)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     (void)plValues;
 
@@ -700,8 +684,6 @@ ALAPI void ALAPIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* plVa
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
-        pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
         switch(eParam)
         {
         default:
@@ -721,7 +703,6 @@ ALAPI void ALAPIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* plVa
 ALAPI ALvoid ALAPIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pflValue)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     pContext = alcGetCurrentContext();
     SuspendContext(pContext);
@@ -730,8 +711,6 @@ ALAPI ALvoid ALAPIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pflV
     {
         if (alIsBuffer(buffer) && (buffer != 0))
         {
-            pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
             switch(eParam)
             {
             default:
@@ -756,7 +735,6 @@ ALAPI ALvoid ALAPIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pflV
 ALAPI void ALAPIENTRY alGetBuffer3f(ALuint buffer, ALenum eParam, ALfloat* pflValue1, ALfloat* pflValue2, ALfloat* pflValue3)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     pContext = alcGetCurrentContext();
     SuspendContext(pContext);
@@ -765,8 +743,6 @@ ALAPI void ALAPIENTRY alGetBuffer3f(ALuint buffer, ALenum eParam, ALfloat* pflVa
     {
         if (alIsBuffer(buffer) && (buffer != 0))
         {
-            pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
             switch(eParam)
             {
             default:
@@ -791,7 +767,6 @@ ALAPI void ALAPIENTRY alGetBuffer3f(ALuint buffer, ALenum eParam, ALfloat* pflVa
 ALAPI void ALAPIENTRY alGetBufferfv(ALuint buffer, ALenum eParam, ALfloat* pflValues)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     pContext = alcGetCurrentContext();
     SuspendContext(pContext);
@@ -800,8 +775,6 @@ ALAPI void ALAPIENTRY alGetBufferfv(ALuint buffer, ALenum eParam, ALfloat* pflVa
     {
         if (alIsBuffer(buffer) && (buffer != 0))
         {
-            pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
             switch(eParam)
             {
             default:
@@ -877,7 +850,6 @@ ALAPI ALvoid ALAPIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plValu
 ALAPI void ALAPIENTRY alGetBuffer3i(ALuint buffer, ALenum eParam, ALint* plValue1, ALint* plValue2, ALint* plValue3)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     pContext = alcGetCurrentContext();
     SuspendContext(pContext);
@@ -886,8 +858,6 @@ ALAPI void ALAPIENTRY alGetBuffer3i(ALuint buffer, ALenum eParam, ALint* plValue
     {
         if (alIsBuffer(buffer) && (buffer != 0))
         {
-            pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
             switch(eParam)
             {
             default:
@@ -912,7 +882,6 @@ ALAPI void ALAPIENTRY alGetBuffer3i(ALuint buffer, ALenum eParam, ALint* plValue
 ALAPI void ALAPIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plValues)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
 
     pContext = alcGetCurrentContext();
     SuspendContext(pContext);
@@ -921,8 +890,6 @@ ALAPI void ALAPIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plValue
     {
         if (alIsBuffer(buffer) && (buffer != 0))
         {
-            pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
             switch (eParam)
             {
             case AL_FREQUENCY:

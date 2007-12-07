@@ -231,7 +231,7 @@ ALCchar *AppendCaptureDeviceList(char *name)
 
     Check pContext is a valid Context pointer
 */
-ALCboolean IsContext(ALCcontext *pContext)
+static ALCboolean IsContext(ALCcontext *pContext)
 {
     ALCcontext *pTempContext;
 

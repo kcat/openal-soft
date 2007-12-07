@@ -72,6 +72,8 @@ extern "C"
 {
 #endif
 
+extern CRITICAL_SECTION g_mutex;
+
 extern char szDebug[256];
 
 #define AL_PRINT(...) do {                       \
@@ -108,6 +110,12 @@ typedef struct {
     void (*CaptureSamples)(ALCdevice*, void*, ALCuint);
     ALCuint (*AvailableSamples)(ALCdevice*);
 } BackendFuncs;
+
+void alc_alsa_init(BackendFuncs *func_list);
+void alc_oss_init(BackendFuncs *func_list);
+void alcDSoundInit(BackendFuncs *func_list);
+void alcWinMMInit(BackendFuncs *FuncList);
+
 
 struct ALCdevice_struct
 {

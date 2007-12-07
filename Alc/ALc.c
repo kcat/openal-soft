@@ -38,14 +38,6 @@ char szDebug[256];
 ///////////////////////////////////////////////////////
 
 
-///////////////////////////////////////////////////////
-// FUNCTION PROTOTYPES
-
-void alc_alsa_init(BackendFuncs *func_list);
-void alc_oss_init(BackendFuncs *func_list);
-void alcDSoundInit(BackendFuncs *func_list);
-void alcWinMMInit(BackendFuncs *FuncList);
-
 #define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 struct {
     const char *name;
@@ -179,9 +171,6 @@ static ALCint alcMinorVersion = 1;
 
 ///////////////////////////////////////////////////////
 // Global Variables
-
-// Critical Section data
-extern CRITICAL_SECTION g_mutex;
 
 // Context List
 static ALCcontext *g_pContextList = NULL;

@@ -10,13 +10,13 @@
 extern "C" {
 #endif
 
-#if (SIZEOF_VOIDP > SIZEOF_UINT)
-
 void alThunkInit(void);
 void alThunkExit(void);
 ALuint alThunkAddEntry(ALvoid * ptr);
 void alThunkRemoveEntry(ALuint index);
 ALvoid *alThunkLookupEntry(ALuint index);
+
+#if (SIZEOF_VOIDP > SIZEOF_UINT)
 
 #define ALTHUNK_INIT()          alThunkInit()
 #define ALTHUNK_EXIT()          alThunkExit()

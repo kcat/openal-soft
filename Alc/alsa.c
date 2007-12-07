@@ -291,7 +291,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
                strcmp(deviceName, alsaDeviceList[idx]) == 0)
             {
                 if(idx > 0)
-                    sprintf(driver, "hw:%d,0", idx-1);
+                    sprintf(driver, "hw:%zd,0", idx-1);
                 goto open_alsa;
             }
         }

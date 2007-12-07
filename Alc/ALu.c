@@ -627,21 +627,21 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                 case AL_FORMAT_MONO8:
                     for(i = 0;i < SamplesToDo;i++)
                     {
-                        *((ALubyte*)buffer) = (aluF2S(DryBuffer[i][0]+DryBuffer[i][1]+WetBuffer[i][0]+WetBuffer[i][1])>>8)+128;
+                        *((ALubyte*)buffer) = (ALubyte)((aluF2S(DryBuffer[i][0]+DryBuffer[i][1]+WetBuffer[i][0]+WetBuffer[i][1])>>8)+128);
                         buffer = ((ALubyte*)buffer) + 1;
                     }
                     break;
                 case AL_FORMAT_STEREO8:
                     for(i = 0;i < SamplesToDo*2;i++)
                     {
-                        *((ALubyte*)buffer) = (aluF2S(DryBuffer[i>>1][i&1]+WetBuffer[i>>1][i&1])>>8)+128;
+                        *((ALubyte*)buffer) = (ALubyte)((aluF2S(DryBuffer[i>>1][i&1]+WetBuffer[i>>1][i&1])>>8)+128);
                         buffer = ((ALubyte*)buffer) + 1;
                     }
                     break;
                 case AL_FORMAT_QUAD8:
                     for(i = 0;i < SamplesToDo*4;i++)
                     {
-                        *((ALubyte*)buffer) = (aluF2S(DryBuffer[i>>2][i&3]+WetBuffer[i>>2][i&3])>>8)+128;
+                        *((ALubyte*)buffer) = (ALubyte)((aluF2S(DryBuffer[i>>2][i&3]+WetBuffer[i>>2][i&3])>>8)+128);
                         buffer = ((ALubyte*)buffer) + 1;
                     }
                     break;

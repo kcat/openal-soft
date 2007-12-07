@@ -407,8 +407,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     if(buffer)
     {
         //Figure output format variables
-        BlockAlign = aluChannelsFromFormat(format) *
-                     aluBytesFromFormat(format);
+        BlockAlign  = aluChannelsFromFormat(format);
+        BlockAlign *= aluBytesFromFormat(format);
 
         size /= BlockAlign;
         while(size > 0)

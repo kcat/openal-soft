@@ -751,6 +751,8 @@ LOAD_FUNC(snd_card_next);
 
         dev = -1;
         while (idx < MAX_ALL_DEVICES) {
+            const char *cname, *dname;
+
             if (psnd_ctl_pcm_next_device(handle, &dev)<0)
                 AL_PRINT("snd_ctl_pcm_next_device failed\n");
             if (dev < 0)
@@ -763,9 +765,11 @@ LOAD_FUNC(snd_card_next);
                     AL_PRINT("control digital audio info (%i): %s\n", card, psnd_strerror(err));
                 continue;
             }
+
+            cname = psnd_ctl_card_info_get_name(info);
+            dname = psnd_pcm_info_get_name(pcminfo);
             snprintf(name, sizeof(name), "ALSA Software on %s [%s]",
-                     psnd_ctl_card_info_get_name(info),
-                     psnd_pcm_info_get_name(pcminfo));
+                     cname, dname);
             allDevNameMap[idx].name = AppendAllDeviceList(name);
             allDevNameMap[idx].card = card;
             allDevNameMap[idx].dev = dev;

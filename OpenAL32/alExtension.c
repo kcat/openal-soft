@@ -223,7 +223,7 @@ ALAPI ALboolean ALAPIENTRY alIsExtensionPresent(const ALchar *extName)
     ext = strdup(extName);
     ptr = ext;
     do {
-        *ptr = toupper(*ptr);
+        *ptr = (char)toupper(*ptr);
     } while(*(ptr++));
 
     SuspendContext(pContext);

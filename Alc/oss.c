@@ -52,7 +52,7 @@ typedef struct {
     int killNow;
     ALvoid *thread;
 
-    void *mix_data;
+    ALubyte *mix_data;
     int data_size;
     int silence;
 } oss_data;

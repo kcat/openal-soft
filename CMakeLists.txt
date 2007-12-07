@@ -51,7 +51,12 @@ SET(EXTRA_LIBS m ${EXTRA_LIBS})
 IF("${MSVC}")
     # ???
 ELSE()
-    ADD_DEFINITIONS(-W -Wall)
+    CHECK_C_COMPILER_FLAG(-W HAVE_W_SWITCH)
+    IF("${HAVE_W_SWITCH}")
+        ADD_DEFINITIONS(-W)
+    ENDIF()
+
+    ADD_DEFINITIONS(-Wall)
     IF(WERROR)
         ADD_DEFINITIONS(-Werror)
     ENDIF()

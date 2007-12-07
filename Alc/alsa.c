@@ -444,7 +444,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
                strcmp(deviceName, alsaCaptureDeviceList[idx]) == 0)
             {
                 if(idx > 0)
-                    sprintf(driver, "hw:%d,0", idx-1);
+                    sprintf(driver, "hw:%zd,0", idx-1);
                 goto open_alsa;
             }
         }

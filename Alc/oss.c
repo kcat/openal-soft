@@ -138,6 +138,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     if(data->fd == -1)
     {
         free(data);
+        AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
         return ALC_FALSE;
     }
 

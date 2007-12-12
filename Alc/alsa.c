@@ -321,6 +321,7 @@ open_alsa:
     if(i < 0)
     {
         free(data);
+        AL_PRINT("Could not open playback device '%s': %s\n", driver, psnd_strerror(i));
         return ALC_FALSE;
     }
 
@@ -474,6 +475,7 @@ open_alsa:
     if(i < 0)
     {
         free(data);
+        AL_PRINT("Could not open capture device '%s': %s\n", driver, psnd_strerror(i));
         return ALC_FALSE;
     }
 

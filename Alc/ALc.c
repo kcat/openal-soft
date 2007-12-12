@@ -191,10 +191,51 @@ static void InitAL(void)
     if(!done)
     {
         int i;
+        const char *devs;
 
         InitializeCriticalSection(&g_mutex);
         ALTHUNK_INIT();
         ReadALConfig();
+
+        devs = GetConfigValue(NULL, "drivers", "");
+        if(devs[0])
+        {
+            int n;
+            size_t len;
+            const char *next = devs;
+
+            i = 0;
+
+            do {
+                devs = next;
+                next = strchr(devs, ',');
+
+                if(!devs[0] || devs[0] == ',')
+                    continue;
+
+                len = (next ? ((size_t)(next-devs)) : strlen(devs));
+                for(n = i;BackendList[n].Init;n++)
+                {
+                    if(len == strlen(BackendList[n].name) &&
+                       strncmp(BackendList[n].name, devs, len) == 0)
+                    {
+                        const char *name = BackendList[i].name;
+                        void (*Init)(BackendFuncs*) = BackendList[i].Init;
+
+                        BackendList[i].name = BackendList[n].name;
+                        BackendList[i].Init = BackendList[n].Init;
+
+                        BackendList[n].name = name;
+                        BackendList[n].Init = Init;
+
+                        i++;
+                    }
+                }
+            } while(next++);
+
+            BackendList[i].name = NULL;
+            BackendList[i].Init = NULL;
+        }
 
         for(i = 0;BackendList[i].Init;i++)
             BackendList[i].Init(&BackendList[i].Funcs);

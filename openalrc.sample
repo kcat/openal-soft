@@ -23,7 +23,6 @@ refresh = 0  # Sets the number of frames-per-update. Default is calculated as
              # 8192*frequency/22050. Note that the actual granularity may or
              # may not be less than this.
 
-# TODO: Implement this option
 drivers =  # Sets the backend driver list order, comma-seperated. Unknown
            # backends and duplicated names are ignored, and unlisted backends
            # won't be considered for use. An empty list means the default.

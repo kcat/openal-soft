@@ -1,5 +1,6 @@
 # CMake build file list for OpenAL
 
+INCLUDE(CheckFunctionExists)
 INCLUDE(CheckLibraryExists)
 INCLUDE(CheckIncludeFile)
 INCLUDE(CheckCCompilerFlag)
@@ -99,11 +100,11 @@ ELSEIF(NODEBUG)
 ENDIF()
 
 CHECK_LIBRARY_EXISTS(m  sqrtf  "" HAVE_SQRTF)
-CHECK_LIBRARY_EXISTS("" strtof "" HAVE_STRTOF)
+CHECK_FUNCTION_EXISTS(strtof HAVE_STRTOF)
 
-CHECK_LIBRARY_EXISTS("" strcasecmp "" HAVE_STRCASECMP)
+CHECK_FUNCTION_EXISTS(strcasecmp HAVE_STRCASECMP)
 IF(NOT "${HAVE_STRCASECMP}")
-    CHECK_LIBRARY_EXISTS("" _stricmp "" HAVE__STRICMP)
+    CHECK_FUNCTION_EXISTS(_stricmp HAVE__STRICMP)
     IF(NOT "${HAVE__STRICMP}")
         MESSAGE(FATAL_ERROR "No case-insensitive compare function found, please report!")
     ENDIF()

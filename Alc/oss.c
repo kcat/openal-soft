@@ -124,12 +124,10 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     {
         if(strcmp(deviceName, oss_device))
             return ALC_FALSE;
+        device->szDeviceName = oss_device;
     }
-
-    if(deviceName)
-        strcpy(device->szDeviceName, deviceName);
     else
-        strcpy(device->szDeviceName, oss_device);
+        device->szDeviceName = oss_device;
 
     data = (oss_data*)calloc(1, sizeof(oss_data));
     data->killNow = 0;

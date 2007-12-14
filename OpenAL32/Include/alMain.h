@@ -128,7 +128,7 @@ struct ALCdevice_struct
     ALuint       Channels;
     ALenum       Format;
 
-    ALCchar      szDeviceName[256];
+    ALCchar      *szDeviceName;
 
     // Maximum number of sources that can be created
     ALuint       MaxNoOfSources;

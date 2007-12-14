@@ -280,6 +280,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
             if(allDevNameMap[idx].name &&
                strcmp(deviceName, allDevNameMap[idx].name) == 0)
             {
+                device->szDeviceName = allDevNameMap[idx].name;
                 if(idx > 0)
                     sprintf(driver, "hw:%d,%d", allDevNameMap[idx].card, allDevNameMap[idx].dev);
                 goto open_alsa;
@@ -290,6 +291,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
             if(alsaDeviceList[idx] &&
                strcmp(deviceName, alsaDeviceList[idx]) == 0)
             {
+                device->szDeviceName = alsaDeviceList[idx];
                 if(idx > 0)
                     sprintf(driver, "hw:%zd,0", idx-1);
                 goto open_alsa;
@@ -297,11 +299,8 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
         }
         return ALC_FALSE;
     }
-
-    if(deviceName)
-        strcpy(device->szDeviceName, deviceName);
     else
-        strcpy(device->szDeviceName, alsaDeviceList[0]);
+        device->szDeviceName = alsaDeviceList[0];
 
 open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -444,6 +443,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
             if(alsaCaptureDeviceList[idx] &&
                strcmp(deviceName, alsaCaptureDeviceList[idx]) == 0)
             {
+                pDevice->szDeviceName = alsaCaptureDeviceList[idx];
                 if(idx > 0)
                     sprintf(driver, "hw:%zd,0", idx-1);
                 goto open_alsa;
@@ -451,11 +451,8 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
         }
         return ALC_FALSE;
     }
-
-    if(deviceName)
-        strcpy(pDevice->szDeviceName, deviceName);
     else
-        strcpy(pDevice->szDeviceName, alsaCaptureDeviceList[0]);
+        pDevice->szDeviceName = alsaCaptureDeviceList[0];
 
 open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));

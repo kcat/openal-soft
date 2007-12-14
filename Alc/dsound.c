@@ -114,11 +114,16 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         for(i = 0;DeviceList[i];i++)
         {
             if(strcmp(deviceName, DeviceList[i]) == 0)
-               break;
+            {
+                device->szDeviceName = DeviceList[i];
+                break;
+            }
         }
         if(!DeviceList[i])
             return ALC_FALSE;
     }
+    else
+        device->szDeviceName = DeviceList[0];
 
     //Platform specific
     memset(&OutputType, 0, sizeof(WAVEFORMATEX));
@@ -187,11 +192,6 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
 
     pData->ulDSTimerID = timeSetEvent(25, 0, (LPTIMECALLBACK)DirectSoundProc, (DWORD)device, (UINT)TIME_CALLBACK_FUNCTION|TIME_PERIODIC);
     device->MaxNoOfSources = 256;
-
-    if(deviceName)
-        strcpy(device->szDeviceName, deviceName);
-    else
-        strcpy(device->szDeviceName, DeviceList[0]);
 
     device->ExtraData = pData;
     return ALC_TRUE;

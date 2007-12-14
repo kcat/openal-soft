@@ -3,6 +3,7 @@
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckLibraryExists)
 INCLUDE(CheckIncludeFile)
+INCLUDE(CheckIncludeFiles)
 INCLUDE(CheckCCompilerFlag)
 INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckTypeSize)
@@ -228,9 +229,7 @@ IF("${HAVE_WINDOWS_H}")
         ENDIF()
     ENDIF()
     IF(WINMM)
-        CHECK_C_SOURCE_COMPILES("\#include <windows.h>
-                                 \#include <mmsystem.h>
-                                 int main() {return 0;}" HAVE_MMSYSTEM_H)
+        CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H)
         IF("${HAVE_MMSYSTEM_H}")
             SET(HAVE_WINMM 1)
             SET(ALC_OBJS  ${ALC_OBJS} Alc/winmm.c)

@@ -26,7 +26,7 @@
 
 static const ALchar alVendor[] = "OpenAL Community";
 static const ALchar alVersion[] = "1.1";
-static const ALchar alRenderer[] = "OpenAL Sample Implementation";
+static const ALchar alRenderer[] = "OpenAL Soft";
 
 // Error Messages
 static const ALchar alNoError[] = "No Error";

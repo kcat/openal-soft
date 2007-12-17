@@ -212,7 +212,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
           ok(ioctl(data->fd, SNDCTL_DSP_SPEED, &ossSpeed), "set speed") &&
           ok(ioctl(data->fd, SNDCTL_DSP_GETOSPACE, &info), "get space")))
     {
-        AL_PRINT("%s failed: %s\n", err, strerror(i));
+        AL_PRINT("%s failed: %s\n", err, strerror(errno));
         close(data->fd);
         free(data);
         return ALC_FALSE;

@@ -70,7 +70,7 @@ void DestroyRingBuffer(RingBuffer *ring)
 
 ALsizei RingBufferSize(RingBuffer *ring)
 {
-    return (ring->read_pos+1-ring->write_pos+ring->length) % ring->length;
+    return (ring->write_pos-ring->read_pos-1+ring->length) % ring->length;
 }
 
 void WriteRingBuffer(RingBuffer *ring, const ALubyte *data, ALsizei len)
@@ -79,8 +79,8 @@ void WriteRingBuffer(RingBuffer *ring, const ALubyte *data, ALsizei len)
 
     EnterCriticalSection(&ring->cs);
 
-    if((ring->write_pos-ring->read_pos+ring->length)%ring->length < len)
-        ring->read_pos = ((ring->write_pos+len) % ring->length) + 1;
+    if((ring->read_pos-ring->write_pos+ring->length)%ring->length < len)
+        ring->read_pos = (ring->write_pos+len) % ring->length;
 
     if(remain < len)
     {

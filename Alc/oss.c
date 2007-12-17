@@ -46,6 +46,7 @@
 #endif
 
 static char *oss_device;
+static char *oss_device_capture;
 
 typedef struct {
     int fd;
@@ -55,6 +56,9 @@ typedef struct {
     ALubyte *mix_data;
     int data_size;
     int silence;
+
+    RingBuffer *ring;
+    int doCapture;
 } oss_data;
 
 
@@ -99,6 +103,36 @@ static ALuint OSSProc(ALvoid *ptr)
             }
             remaining -= wrote;
         }
+    }
+
+    return 0;
+}
+
+static ALuint OSSCaptureProc(ALvoid *ptr)
+{
+    ALCdevice *pDevice = (ALCdevice*)ptr;
+    oss_data *data = (oss_data*)pDevice->ExtraData;
+    int frameSize;
+    int amt;
+
+    frameSize  = aluBytesFromFormat(pDevice->Format);
+    frameSize *= aluChannelsFromFormat(pDevice->Format);
+
+    while(!data->killNow)
+    {
+        amt = read(data->fd, data->mix_data, data->data_size);
+        if(amt < 0)
+        {
+            AL_PRINT("read failed: %s\n", strerror(errno));
+            break;
+        }
+        if(amt == 0)
+        {
+            usleep(1000);
+            continue;
+        }
+        if(data->doCapture)
+            WriteRingBuffer(data->ring, data->mix_data, amt/frameSize);
     }
 
     return 0;
@@ -267,42 +301,198 @@ static void oss_close_playback(ALCdevice *device)
 }
 
 
-static ALCboolean oss_open_capture(ALCdevice *pDevice, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
+static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
 {
-    (void)pDevice;
-    (void)deviceName;
-    (void)frequency;
-    (void)format;
-    (void)SampleSize;
-    return ALC_FALSE;
+    char driver[64] = "/dev/dsp";
+    int numFragmentsLogSize;
+    int log2FragmentSize;
+    unsigned int periods;
+    audio_buf_info info;
+    int numChannels;
+    oss_data *data;
+    int ossFormat;
+    int ossSpeed;
+    char *err;
+    int i;
+
+    if(deviceName)
+    {
+        if(strcmp(deviceName, oss_device_capture))
+            return ALC_FALSE;
+        device->szDeviceName = oss_device_capture;
+    }
+    else
+        device->szDeviceName = oss_device_capture;
+
+    data = (oss_data*)calloc(1, sizeof(oss_data));
+    data->killNow = 0;
+
+    data->fd = open(driver, O_RDONLY);
+    if(data->fd == -1)
+    {
+        free(data);
+        AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
+        return ALC_FALSE;
+    }
+
+    switch(format)
+    {
+        case AL_FORMAT_MONO8:
+        case AL_FORMAT_STEREO8:
+        case AL_FORMAT_QUAD8:
+            data->silence = 0x80;
+            ossFormat = AFMT_U8;
+            break;
+        case AL_FORMAT_MONO16:
+        case AL_FORMAT_STEREO16:
+        case AL_FORMAT_QUAD16:
+            data->silence = 0;
+            ossFormat = AFMT_S16_NE;
+            break;
+        default:
+            ossFormat = -1;
+            AL_PRINT("Unknown format?! %x\n", device->Format);
+    }
+
+    periods = 4;
+    numChannels = device->Channels;
+    ossSpeed = frequency;
+    log2FragmentSize = log2i(device->UpdateFreq * device->FrameSize / periods);
+
+    /* according to the OSS spec, 16 bytes are the minimum */
+    if (log2FragmentSize < 4)
+        log2FragmentSize = 4;
+    numFragmentsLogSize = (periods << 16) | log2FragmentSize;
+
+#define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
+    if (!(ok(ioctl(data->fd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize), "set fragment") &&
+          ok(ioctl(data->fd, SNDCTL_DSP_SETFMT, &ossFormat), "set format") &&
+          ok(ioctl(data->fd, SNDCTL_DSP_CHANNELS, &numChannels), "set channels") &&
+          ok(ioctl(data->fd, SNDCTL_DSP_SPEED, &ossSpeed), "set speed") &&
+          ok(ioctl(data->fd, SNDCTL_DSP_GETISPACE, &info), "get space")))
+    {
+        AL_PRINT("%s failed: %s\n", err, strerror(errno));
+        close(data->fd);
+        free(data);
+        return ALC_FALSE;
+    }
+#undef ok
+
+    device->Channels = numChannels;
+    device->Frequency = ossSpeed;
+    device->Format = 0;
+    if(ossFormat == AFMT_U8)
+    {
+        if(device->Channels == 1)
+        {
+            device->Format = AL_FORMAT_MONO8;
+            device->FrameSize = 1;
+        }
+        else if(device->Channels == 2)
+        {
+            device->Format = AL_FORMAT_STEREO8;
+            device->FrameSize = 2;
+        }
+        else if(device->Channels == 4)
+        {
+            device->Format = AL_FORMAT_QUAD8;
+            device->FrameSize = 4;
+        }
+    }
+    else if(ossFormat == AFMT_S16_NE)
+    {
+        if(device->Channels == 1)
+        {
+            device->Format = AL_FORMAT_MONO16;
+            device->FrameSize = 2;
+        }
+        else if(device->Channels == 2)
+        {
+            device->Format = AL_FORMAT_STEREO16;
+            device->FrameSize = 4;
+        }
+        else if(device->Channels == 4)
+        {
+            device->Format = AL_FORMAT_QUAD16;
+            device->FrameSize = 8;
+        }
+    }
+
+    if(!device->Format)
+    {
+        AL_PRINT("returned unknown format: %#x %d!\n", ossFormat, numChannels);
+        close(data->fd);
+        free(data);
+        return ALC_FALSE;
+    }
+
+    data->ring = CreateRingBuffer(device->FrameSize, SampleSize);
+    if(!data->ring)
+    {
+        AL_PRINT("ring buffer create failed\n");
+        close(data->fd);
+        free(data);
+        return ALC_FALSE;
+    }
+
+    device->UpdateFreq = info.fragsize / device->FrameSize;
+
+    data->data_size = device->UpdateFreq * device->FrameSize;
+    data->mix_data = calloc(1, data->data_size);
+
+    device->ExtraData = data;
+    data->thread = StartThread(OSSCaptureProc, device);
+    if(data->thread == NULL)
+    {
+        device->ExtraData = NULL;
+        free(data->mix_data);
+        free(data);
+        return ALC_FALSE;
+    }
+
+    return ALC_TRUE;
 }
 
-static void oss_close_capture(ALCdevice *pDevice)
+static void oss_close_capture(ALCdevice *device)
 {
-    (void)pDevice;
+    oss_data *data = (oss_data*)device->ExtraData;
+    data->killNow = 1;
+    StopThread(data->thread);
+
+    close(data->fd);
+
+    DestroyRingBuffer(data->ring);
+
+    free(data->mix_data);
+    free(data);
+    device->ExtraData = NULL;
 }
 
 static void oss_start_capture(ALCdevice *pDevice)
 {
-    (void)pDevice;
+    oss_data *data = (oss_data*)pDevice->ExtraData;
+    data->doCapture = 1;
 }
 
 static void oss_stop_capture(ALCdevice *pDevice)
 {
-    (void)pDevice;
+    oss_data *data = (oss_data*)pDevice->ExtraData;
+    data->doCapture = 0;
 }
 
 static void oss_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
 {
-    (void)pDevice;
-    (void)pBuffer;
-    (void)lSamples;
+    oss_data *data = (oss_data*)pDevice->ExtraData;
+    if(lSamples <= (ALCuint)RingBufferSize(data->ring))
+        ReadRingBuffer(data->ring, pBuffer, lSamples);
+    else
+        SetALCError(ALC_INVALID_VALUE);
 }
 
 static ALCuint oss_available_samples(ALCdevice *pDevice)
 {
-    (void)pDevice;
-    return 0;
+    oss_data *data = (oss_data*)pDevice->ExtraData;
+    return RingBufferSize(data->ring);
 }
 
 
@@ -323,4 +513,6 @@ void alc_oss_init(BackendFuncs *func_list)
 
     oss_device = AppendDeviceList("OSS Software");
     AppendAllDeviceList(oss_device);
+
+    oss_device_capture = AppendCaptureDeviceList("OSS Capture");
 }

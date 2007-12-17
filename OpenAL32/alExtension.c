@@ -24,6 +24,7 @@
 #include "alExtension.h"
 #include "alError.h"
 #include "alMain.h"
+#include "alFilter.h"
 #include "AL/al.h"
 #include "AL/alc.h"
 
@@ -101,6 +102,19 @@ static ALfunction  function[]=   {
     { "alDopplerVelocity",          (ALvoid *) alDopplerVelocity         },
     { "alSpeedOfSound",             (ALvoid *) alSpeedOfSound            },
     { "alDistanceModel",            (ALvoid *) alDistanceModel           },
+
+    { "alGenFilters",               (ALvoid *) alGenFilters              },
+    { "alDeleteFilters",            (ALvoid *) alDeleteFilters           },
+    { "alIsFilter",                 (ALvoid *) alIsFilter                },
+    { "alFilteri",                  (ALvoid *) alFilteri                 },
+    { "alFilteriv",                 (ALvoid *) alFilteriv                },
+    { "alFilterf",                  (ALvoid *) alFilterf                 },
+    { "alFilterfv",                 (ALvoid *) alFilterfv                },
+    { "alGetFilteri",               (ALvoid *) alGetFilteri              },
+    { "alGetFilteriv",              (ALvoid *) alGetFilteriv             },
+    { "alGetFilterf",               (ALvoid *) alGetFilterf              },
+    { "alGetFilterfv",              (ALvoid *) alGetFilterfv             },
+
     { NULL,                         (ALvoid *) NULL                      } };
 
 static ALenums enumeration[]={
@@ -195,6 +209,12 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_LINEAR_DISTANCE_CLAMPED",           AL_LINEAR_DISTANCE_CLAMPED          },
     { (ALchar *)"AL_EXPONENT_DISTANCE",                 AL_EXPONENT_DISTANCE                },
     { (ALchar *)"AL_EXPONENT_DISTANCE_CLAMPED",         AL_EXPONENT_DISTANCE_CLAMPED        },
+
+    // Filter types
+    { (ALchar *)"AL_FILTER_NULL",                       AL_FILTER_NULL                      },
+    { (ALchar *)"AL_FILTER_LOWPASS",                    AL_FILTER_LOWPASS                   },
+    { (ALchar *)"AL_FILTER_HIGHPASS",                   AL_FILTER_HIGHPASS                  },
+    { (ALchar *)"AL_FILTER_BANDPASS",                   AL_FILTER_BANDPASS                  },
 
     // Default
     { (ALchar *)NULL,                                (ALenum  ) 0                         } };

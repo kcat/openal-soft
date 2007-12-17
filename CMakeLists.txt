@@ -163,6 +163,7 @@ ENDIF()
 SET(OPENAL_OBJS  OpenAL32/alBuffer.c
                  OpenAL32/alError.c
                  OpenAL32/alExtension.c
+                 OpenAL32/alFilter.c
                  OpenAL32/alListener.c
                  OpenAL32/alSource.c
                  OpenAL32/alState.c

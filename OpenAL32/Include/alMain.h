@@ -188,6 +188,13 @@ ALCvoid ProcessContext(ALCcontext *context);
 ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr);
 ALuint StopThread(ALvoid *thread);
 
+typedef struct RingBuffer RingBuffer;
+RingBuffer *CreateRingBuffer(ALsizei frame_size, ALsizei length);
+void DestroyRingBuffer(RingBuffer *ring);
+ALsizei RingBufferSize(RingBuffer *ring);
+void WriteRingBuffer(RingBuffer *ring, const ALubyte *data, ALsizei len);
+void ReadRingBuffer(RingBuffer *ring, ALubyte *data, ALsizei len);
+
 void ReadALConfig(void);
 void FreeALConfig(void);
 const char *GetConfigValue(const char *blockName, const char *keyName, const char *def);

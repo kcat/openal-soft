@@ -211,6 +211,7 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_EXPONENT_DISTANCE_CLAMPED",         AL_EXPONENT_DISTANCE_CLAMPED        },
 
     // Filter types
+    { (ALchar *)"AL_FILTER_TYPE",                       AL_FILTER_TYPE                      },
     { (ALchar *)"AL_FILTER_NULL",                       AL_FILTER_NULL                      },
     { (ALchar *)"AL_FILTER_LOWPASS",                    AL_FILTER_LOWPASS                   },
     { (ALchar *)"AL_FILTER_HIGHPASS",                   AL_FILTER_HIGHPASS                  },

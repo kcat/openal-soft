@@ -7,10 +7,12 @@
 extern "C" {
 #endif
 
-#define AL_FILTER_NULL       0x0000
-#define AL_FILTER_LOWPASS    0x0001
-#define AL_FILTER_HIGHPASS   0x0002
-#define AL_FILTER_BANDPASS   0x0003
+#define AL_FILTER_TYPE                                     0x8001
+
+#define AL_FILTER_NULL                                     0x0000
+#define AL_FILTER_LOWPASS                                  0x0001
+#define AL_FILTER_HIGHPASS                                 0x0002
+#define AL_FILTER_BANDPASS                                 0x0003
 
 typedef struct ALfilter_struct
 {

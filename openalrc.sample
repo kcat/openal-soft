@@ -43,6 +43,8 @@ device = /dev/dsp  # Sets the device name for OSS output. Default is /dev/dsp
 
 periods = 4  # Sets the number of update buffers. Default is 4
 
+capture = /dev/dsp  # Sets the device name for OSS capture. Default is /dev/dsp
+
 [dsound]  # DirectSound backend stuff
           # Nothing yet...
 

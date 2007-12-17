@@ -303,18 +303,20 @@ static void oss_close_playback(ALCdevice *device)
 
 static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
 {
-    char driver[64] = "/dev/dsp";
     int numFragmentsLogSize;
     int log2FragmentSize;
     unsigned int periods;
     audio_buf_info info;
     int numChannels;
+    char driver[64];
     oss_data *data;
     int ossFormat;
     int ossSpeed;
     char *err;
     int i;
 
+    strncpy(driver, GetConfigValue("oss", "capture", "/dev/dsp"), sizeof(driver)-1);
+    driver[sizeof(driver)-1] = 0;
     if(deviceName)
     {
         if(strcmp(deviceName, oss_device_capture))

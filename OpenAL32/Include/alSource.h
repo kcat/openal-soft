@@ -62,6 +62,9 @@ typedef struct ALsource_struct
 
     ALfilter DirectFilter;
 
+    ALfloat LastDrySample;
+    ALfloat LastWetSample;
+
     // Index to itself
     ALuint source;
 

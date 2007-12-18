@@ -150,10 +150,35 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat matrix[3][3])
     memcpy(vector, result, sizeof(result));
 }
 
+static __inline ALfloat aluComputeDrySample(ALsource *source, ALfloat DryGainHF, ALfloat sample)
+{
+    if(DryGainHF < 1.0f)
+    {
+        sample *= DryGainHF;
+        sample += source->LastDrySample * (1.0f - DryGainHF);
+    }
+
+    source->LastDrySample = sample;
+    return sample;
+}
+
+static __inline ALfloat aluComputeWetSample(ALsource *source, ALfloat WetGainHF, ALfloat sample)
+{
+    if(WetGainHF < 1.0f)
+    {
+        sample *= WetGainHF;
+        sample += source->LastWetSample * (1.0f - WetGainHF);
+    }
+
+    source->LastWetSample = sample;
+    return sample;
+}
+
 static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                                ALenum isMono, ALenum OutputFormat,
                                ALfloat *drysend, ALfloat *wetsend,
-                               ALfloat *pitch)
+                               ALfloat *pitch, ALfloat *drygainhf,
+                               ALfloat *wetgainhf)
 {
     ALfloat ListenerOrientation[6],ListenerPosition[3],ListenerVelocity[3];
     ALfloat InnerAngle,OuterAngle,OuterGain,Angle,Distance,DryMix,WetMix;
@@ -168,6 +193,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     ALint HeadRelative;
     ALfloat flAttenuation;
     ALfloat MetersPerUnit;
+    ALfloat DryGainHF, WetGainHF;
 
     //Get context properties
     DopplerFactor   = ALContext->DopplerFactor;
@@ -272,6 +298,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         WetMix = __min(WetMix,MaxVolume);
         WetMix = __max(WetMix,MinVolume);
         //3. Apply directional soundcones
+        DryGainHF = 1.0f;
+        WetGainHF = 1.0f;
         SourceToListener[0] = -Position[0];
         SourceToListener[1] = -Position[1];
         SourceToListener[2] = -Position[2];
@@ -334,6 +362,9 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             PanningFB = 0.5f;
         }
 
+        *drygainhf = DryGainHF;
+        *wetgainhf = WetGainHF;
+
         //7. Convert pannings into channel volumes
         switch(OutputFormat)
         {
@@ -379,6 +410,9 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         wetsend[3] = SourceVolume * 0.0f * ListenerGain;
 
         pitch[0] = Pitch;
+
+        *drygainhf = 1.0;
+        *wetgainhf = 1.0;
     }
 }
 
@@ -388,6 +422,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     static float WetBuffer[BUFFERSIZE][OUTPUTCHANNELS];
     ALfloat DrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f };
     ALfloat WetSend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    ALfloat DryGainHF = 0.0f;
+    ALfloat WetGainHF = 0.0f;
     ALuint BlockAlign,BufferSize;
     ALuint DataSize=0,DataPosInt=0,DataPosFrac=0;
     ALuint Channels,Bits,Frequency,ulExtraSamples;
@@ -447,7 +483,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 
                         CalcSourceParams(ALContext, ALSource,
                                          (Channels==1) ? AL_TRUE : AL_FALSE,
-                                         format, DrySend, WetSend, &Pitch);
+                                         format, DrySend, WetSend, &Pitch,
+                                         &DryGainHF, &WetGainHF);
 
 
                         Pitch = (Pitch*Frequency) / ALContext->Frequency;
@@ -510,13 +547,17 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             if(Channels==1)
                             {
                                 //First order interpolator
-                                value = (ALfloat)((ALshort)(((Data[k]*((1L<<FRACTIONBITS)-fraction))+(Data[k+1]*(fraction)))>>FRACTIONBITS));
+                                ALfloat sample = (ALfloat)((ALshort)(((Data[k]*((1L<<FRACTIONBITS)-fraction))+(Data[k+1]*(fraction)))>>FRACTIONBITS));
+
                                 //Direct path final mix buffer and panning
+                                value = aluComputeDrySample(ALSource, DryGainHF, sample);
                                 DryBuffer[j][0] += value*DrySend[0];
                                 DryBuffer[j][1] += value*DrySend[1];
                                 DryBuffer[j][2] += value*DrySend[2];
                                 DryBuffer[j][3] += value*DrySend[3];
+
                                 //Room path final mix buffer and panning
+                                value = aluComputeWetSample(ALSource, WetGainHF, sample);
                                 WetBuffer[j][0] += value*WetSend[0];
                                 WetBuffer[j][1] += value*WetSend[1];
                                 WetBuffer[j][2] += value*WetSend[2];

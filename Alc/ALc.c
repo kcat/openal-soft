@@ -340,6 +340,7 @@ static ALvoid InitContext(ALCcontext *pContext)
 {
     //Initialise listener
     pContext->Listener.Gain = 1.0f;
+    pContext->Listener.MetersPerUnit = 1.0f;
     pContext->Listener.Position[0] = 0.0f;
     pContext->Listener.Position[1] = 0.0f;
     pContext->Listener.Position[2] = 0.0f;

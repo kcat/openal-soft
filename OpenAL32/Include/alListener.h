@@ -16,6 +16,7 @@ typedef struct ALlistener_struct
     ALfloat Forward[3];
     ALfloat Up[3];
     ALfloat Gain;
+    ALfloat MetersPerUnit;
 } ALlistener;
 
 #ifdef __cplusplus

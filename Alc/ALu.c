@@ -167,6 +167,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     ALfloat Matrix[3][3];
     ALint HeadRelative;
     ALfloat flAttenuation;
+    ALfloat MetersPerUnit;
 
     //Get context properties
     DopplerFactor   = ALContext->DopplerFactor;
@@ -176,6 +177,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
     //Get listener properties
     ListenerGain = ALContext->Listener.Gain;
+    MetersPerUnit = ALContext->Listener.MetersPerUnit;
     memcpy(ListenerPosition, ALContext->Listener.Position, sizeof(ALContext->Listener.Position));
     memcpy(ListenerVelocity, ALContext->Listener.Velocity, sizeof(ALContext->Listener.Velocity));
     memcpy(&ListenerOrientation[0], ALContext->Listener.Forward, sizeof(ALContext->Listener.Forward));

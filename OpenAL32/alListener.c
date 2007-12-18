@@ -41,6 +41,13 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
                 alSetError(AL_INVALID_VALUE);
             break;
 
+        case AL_METERS_PER_UNIT:
+            if (flValue > 0.0f)
+                pContext->Listener.MetersPerUnit = flValue;
+            else
+                alSetError(AL_INVALID_VALUE);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -108,6 +115,13 @@ ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
             case AL_GAIN:
                 if (pflValues[0] >= 0.0f)
                     pContext->Listener.Gain = pflValues[0];
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_METERS_PER_UNIT:
+                if (pflValues[0] > 0.0f)
+                    pContext->Listener.MetersPerUnit = pflValues[0];
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
@@ -274,6 +288,10 @@ ALAPI ALvoid ALAPIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
                 *pflValue = pContext->Listener.Gain;
                 break;
 
+            case AL_METERS_PER_UNIT:
+                *pflValue = pContext->Listener.MetersPerUnit;
+                break;
+
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
@@ -348,6 +366,10 @@ ALAPI ALvoid ALAPIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
             {
             case AL_GAIN:
                 pflValues[0] = pContext->Listener.Gain;
+                break;
+
+            case AL_METERS_PER_UNIT:
+                pflValues[0] = pContext->Listener.MetersPerUnit;
                 break;
 
             case AL_POSITION:

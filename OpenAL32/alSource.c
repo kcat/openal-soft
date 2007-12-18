@@ -636,6 +636,22 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     alSetError(AL_INVALID_VALUE);
                 break;
 
+            case AL_DIRECT_FILTER:
+                if(alIsFilter(lValue))
+                {
+                    ALfilter *filter = (ALfilter*)ALTHUNK_LOOKUPENTRY(lValue);
+                    if(!filter)
+                    {
+                        pSource->DirectFilter.type = AL_FILTER_NULL;
+                        pSource->DirectFilter.filter = 0;
+                    }
+                    else
+                        memcpy(&pSource->DirectFilter, filter, sizeof(*filter));
+                }
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
@@ -716,6 +732,7 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
                 case AL_MAX_DISTANCE:
                 case AL_ROLLOFF_FACTOR:
                 case AL_REFERENCE_DISTANCE:
+                case AL_DIRECT_FILTER:
                     alSourcei(source, eParam, plValues[0]);
                     break;
 
@@ -1044,6 +1061,10 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                         alSetError(AL_INVALID_OPERATION);
                     break;
 
+                case AL_DIRECT_FILTER:
+                    *plValue = pSource->DirectFilter.filter;
+                    break;
+
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
@@ -1153,6 +1174,7 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
                 case AL_ROLLOFF_FACTOR:
                 case AL_REFERENCE_DISTANCE:
                 case AL_SOURCE_TYPE:
+                case AL_DIRECT_FILTER:
                     alGetSourcei(source, eParam, plValues);
                     break;
 

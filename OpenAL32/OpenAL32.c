@@ -20,6 +20,7 @@
 
 #include "alMain.h"
 #include "alBuffer.h"
+#include "alFilter.h"
 #include "alThunk.h"
 
 CRITICAL_SECTION g_mutex;
@@ -55,6 +56,7 @@ static void my_deinit()
     once = AL_TRUE;
 
     ReleaseALBuffers();
+    ReleaseALFilters();
     FreeALConfig();
     ALTHUNK_EXIT();
     DeleteCriticalSection(&g_mutex);

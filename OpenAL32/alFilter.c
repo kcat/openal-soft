@@ -342,6 +342,26 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pf
 }
 
 
+ALvoid ReleaseALFilters(ALvoid)
+{
+#ifdef _DEBUG
+    if(g_FilterCount > 0)
+        AL_PRINT("exit() %d Filter(s) NOT deleted\n", g_FilterCount);
+#endif
+
+    while(g_FilterList)
+    {
+        ALfilter *temp = g_FilterList;
+        g_FilterList = g_FilterList->next;
+
+        // Release Buffer structure
+        memset(temp, 0, sizeof(ALfilter));
+        free(temp);
+    }
+    g_FilterCount = 0;
+}
+
+
 static void InitFilterParams(ALfilter *filter, ALenum type)
 {
     filter->type = type;

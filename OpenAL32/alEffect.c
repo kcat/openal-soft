@@ -146,7 +146,7 @@ AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
 
     ProcessContext(Context);
 
-    return (*list ? AL_TRUE : AL_FALSE);
+    return ((*list || !effect) ? AL_TRUE : AL_FALSE);
 }
 
 AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)

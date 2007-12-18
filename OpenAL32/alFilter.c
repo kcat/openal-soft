@@ -146,7 +146,7 @@ AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter)
 
     ProcessContext(Context);
 
-    return (*list ? AL_TRUE : AL_FALSE);
+    return ((*list || !filter) ? AL_TRUE : AL_FALSE);
 }
 
 AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)

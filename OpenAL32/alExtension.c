@@ -175,6 +175,7 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_STATIC",                            AL_STATIC                           },
     { (ALchar *)"AL_STREAMING",                         AL_STREAMING                        },
     { (ALchar *)"AL_UNDETERMINED",                      AL_UNDETERMINED                     },
+    { (ALchar *)"AL_METERS_PER_UNIT",                   AL_METERS_PER_UNIT                  },
 
     // Source EFX Properties
     { (ALchar *)"AL_DIRECT_FILTER",                     AL_DIRECT_FILTER                    },

@@ -254,8 +254,25 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_FILTER_HIGHPASS",                   AL_FILTER_HIGHPASS                  },
     { (ALchar *)"AL_FILTER_BANDPASS",                   AL_FILTER_BANDPASS                  },
 
+    // Effect types
+    { (ALchar *)"AL_EFFECT_TYPE",                       AL_EFFECT_TYPE                      },
+    { (ALchar *)"AL_EFFECT_NULL",                       AL_EFFECT_NULL                      },
+    { (ALchar *)"AL_EFFECT_REVERB",                     AL_EFFECT_REVERB                    },
+    { (ALchar *)"AL_EFFECT_CHORUS",                     AL_EFFECT_CHORUS                    },
+    { (ALchar *)"AL_EFFECT_DISTORTION",                 AL_EFFECT_DISTORTION                },
+    { (ALchar *)"AL_EFFECT_ECHO",                       AL_EFFECT_ECHO                      },
+    { (ALchar *)"AL_EFFECT_FLANGER",                    AL_EFFECT_FLANGER                   },
+    { (ALchar *)"AL_EFFECT_FREQUENCY_SHIFTER",          AL_EFFECT_FREQUENCY_SHIFTER         },
+    { (ALchar *)"AL_EFFECT_VOCAL_MORPHER",              AL_EFFECT_VOCAL_MORPHER             },
+    { (ALchar *)"AL_EFFECT_PITCH_SHIFTER",              AL_EFFECT_PITCH_SHIFTER             },
+    { (ALchar *)"AL_EFFECT_RING_MODULATOR",             AL_EFFECT_RING_MODULATOR            },
+    { (ALchar *)"AL_EFFECT_AUTOWAH",                    AL_EFFECT_AUTOWAH                   },
+    { (ALchar *)"AL_EFFECT_COMPRESSOR",                 AL_EFFECT_COMPRESSOR                },
+    { (ALchar *)"AL_EFFECT_EQUALIZER",                  AL_EFFECT_EQUALIZER                 },
+
     // Default
-    { (ALchar *)NULL,                                (ALenum  ) 0                         } };
+    { (ALchar *)NULL,                                   (ALenum)0                           }
+};
 
 
 

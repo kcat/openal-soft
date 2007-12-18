@@ -10,6 +10,18 @@ extern "C" {
 #define AL_EFFECT_TYPE                                     0x8001
 
 #define AL_EFFECT_NULL                                     0x0000
+#define AL_EFFECT_REVERB                                   0x0001
+#define AL_EFFECT_CHORUS                                   0x0002
+#define AL_EFFECT_DISTORTION                               0x0003
+#define AL_EFFECT_ECHO                                     0x0004
+#define AL_EFFECT_FLANGER                                  0x0005
+#define AL_EFFECT_FREQUENCY_SHIFTER                        0x0006
+#define AL_EFFECT_VOCAL_MORPHER                            0x0007
+#define AL_EFFECT_PITCH_SHIFTER                            0x0008
+#define AL_EFFECT_RING_MODULATOR                           0x0009
+#define AL_EFFECT_AUTOWAH                                  0x000A
+#define AL_EFFECT_COMPRESSOR                               0x000B
+#define AL_EFFECT_EQUALIZER                                0x000C
 
 typedef struct ALeffect_struct
 {

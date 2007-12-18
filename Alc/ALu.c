@@ -378,6 +378,10 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 break;
         }
 
+        if(ALSource->AirAbsorptionFactor > 0.0f)
+            DryGainHF *= pow(ALSource->AirAbsorptionFactor * AIRABSORBGAINHF,
+                             Distance * MetersPerUnit);
+
         *drygainhf = DryGainHF;
         *wetgainhf = WetGainHF;
 

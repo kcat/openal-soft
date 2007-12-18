@@ -348,6 +348,13 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     alSetError(AL_INVALID_VALUE);
                 break;
 
+            case AL_AIR_ABSORPTION_FACTOR:
+                if (flValue >= 0.0f && flValue <= 10.0f)
+                    pSource->AirAbsorptionFactor = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
             case AL_SEC_OFFSET:
             case AL_SAMPLE_OFFSET:
             case AL_BYTE_OFFSET:
@@ -472,6 +479,7 @@ ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *
                 case AL_SEC_OFFSET:
                 case AL_SAMPLE_OFFSET:
                 case AL_BYTE_OFFSET:
+                case AL_AIR_ABSORPTION_FACTOR:
                     alSourcef(source, eParam, pflValues[0]);
                     break;
 
@@ -850,6 +858,10 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
                     *pflValue = pSource->flRefDistance;
                     break;
 
+                case AL_AIR_ABSORPTION_FACTOR:
+                    *pflValue = pSource->AirAbsorptionFactor;
+                    break;
+
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
@@ -958,6 +970,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
                 case AL_CONE_OUTER_ANGLE:
                 case AL_REFERENCE_DISTANCE:
                 case AL_CONE_OUTER_GAINHF:
+                case AL_AIR_ABSORPTION_FACTOR:
                     alGetSourcef(source, eParam, pflValues);
                     break;
 
@@ -1879,6 +1892,7 @@ static ALvoid InitSourceParams(ALsource *pSource)
     pSource->flOuterGain = 0.0f;
 
     pSource->DryGainHFAuto = AL_TRUE;
+    pSource->AirAbsorptionFactor = 0.0f;
 
     pSource->state = AL_INITIAL;
     pSource->lSourceType = AL_UNDETERMINED;

@@ -68,6 +68,8 @@ typedef struct ALsource_struct
     ALboolean DryGainHFAuto;
     ALfloat   OuterGainHF;
 
+    ALfloat AirAbsorptionFactor;
+
     // Index to itself
     ALuint source;
 

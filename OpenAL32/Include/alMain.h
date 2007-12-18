@@ -98,6 +98,7 @@ extern char szDebug[256];
 //#define OUTPUT_BUFFER_SIZE         (32768*SWMIXER_OUTPUT_RATE/22050)
 
 #define SPEEDOFSOUNDMETRESPERSEC   (343.3f)
+#define AIRABSORBGAINHF            (0.994f)
 
 typedef struct {
     ALCboolean (*OpenPlayback)(ALCdevice*, const ALCchar*);

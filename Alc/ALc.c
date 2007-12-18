@@ -63,6 +63,9 @@ struct {
 
 ///////////////////////////////////////////////////////
 
+#define ALC_EFX_MAJOR_VERSION                              0x20001
+#define ALC_EFX_MINOR_VERSION                              0x20002
+#define ALC_MAX_AUXILIARY_SENDS                            0x20003
 
 ///////////////////////////////////////////////////////
 // STRING and EXTENSIONS
@@ -132,8 +135,13 @@ static ALenums enumeration[]={
     { (ALchar *)"ALC_MONO_SOURCES",                     ALC_MONO_SOURCES                    },
     { (ALchar *)"ALC_STEREO_SOURCES",                   ALC_STEREO_SOURCES                  },
     { (ALchar *)"ALC_CAPTURE_DEVICE_SPECIFIER",         ALC_CAPTURE_DEVICE_SPECIFIER        },
-    { (ALchar *)"ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER", ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER },
+    { (ALchar *)"ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER", ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER},
     { (ALchar *)"ALC_CAPTURE_SAMPLES",                  ALC_CAPTURE_SAMPLES                 },
+
+    // EFX Properties
+    { (ALchar *)"ALC_EFX_MAJOR_VERSION",                ALC_EFX_MAJOR_VERSION               },
+    { (ALchar *)"ALC_EFX_MINOR_VERSION",                ALC_EFX_MINOR_VERSION               },
+    { (ALchar *)"ALC_MAX_AUXILIARY_SENDS",              ALC_MAX_AUXILIARY_SENDS             },
 
     // ALC Error Message
     { (ALchar *)"ALC_NO_ERROR",                         ALC_NO_ERROR                        },
@@ -165,6 +173,9 @@ static ALCchar *alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList;
 static ALCchar alcExtensionList[] = "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE";
 static ALCint alcMajorVersion = 1;
 static ALCint alcMinorVersion = 1;
+
+static ALCint alcEFXMajorVersion = 1;
+static ALCint alcEFXMinorVersion = 0;
 
 ///////////////////////////////////////////////////////
 
@@ -665,13 +676,34 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                         *data = alcMinorVersion;
                     break;
 
+                case ALC_EFX_MAJOR_VERSION:
+                    if(!size)
+                        SetALCError(ALC_INVALID_VALUE);
+                    else
+                        *data = alcEFXMajorVersion;
+                    break;
+
+                case ALC_EFX_MINOR_VERSION:
+                    if(!size)
+                        SetALCError(ALC_INVALID_VALUE);
+                    else
+                        *data = alcEFXMinorVersion;
+                    break;
+
+                case ALC_MAX_AUXILIARY_SENDS:
+                    if(!size)
+                        SetALCError(ALC_INVALID_VALUE);
+                    else
+                        *data = 0; /* FIXME: Should be 1 or more */
+                    break;
+
                 case ALC_ATTRIBUTES_SIZE:
                     if(!device)
                         SetALCError(ALC_INVALID_DEVICE);
                     else if(!size)
                         SetALCError(ALC_INVALID_VALUE);
                     else
-                        *data = 11;
+                        *data = 12;
                     break;
 
                 case ALC_ALL_ATTRIBUTES:
@@ -693,13 +725,16 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                         data[i++] = ALC_FALSE;
 
                         SuspendContext(NULL);
-                        if(device->Context && size >= 11)
+                        if(device->Context && size >= 12)
                         {
                             data[i++] = ALC_MONO_SOURCES;
                             data[i++] = device->Context->lNumMonoSources;
 
                             data[i++] = ALC_STEREO_SOURCES;
                             data[i++] = device->Context->lNumStereoSources;
+
+                            data[i++] = ALC_MAX_AUXILIARY_SENDS;
+                            data[i++] = 0; /* FIXME */
                         }
                         ProcessContext(NULL);
 

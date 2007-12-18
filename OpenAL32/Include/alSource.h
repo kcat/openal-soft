@@ -66,6 +66,7 @@ typedef struct ALsource_struct
     ALfloat LastWetSample;
 
     ALboolean DryGainHFAuto;
+    ALfloat   OuterGainHF;
 
     // Index to itself
     ALuint source;

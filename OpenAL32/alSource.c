@@ -341,6 +341,13 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     alSetError(AL_INVALID_VALUE);
                 break;
 
+            case AL_CONE_OUTER_GAINHF:
+                if ((flValue >= 0.0f) && (flValue <= 1.0f))
+                    pSource->OuterGainHF = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
             case AL_SEC_OFFSET:
             case AL_SAMPLE_OFFSET:
             case AL_BYTE_OFFSET:
@@ -461,6 +468,7 @@ ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *
                 case AL_MIN_GAIN:
                 case AL_MAX_GAIN:
                 case AL_CONE_OUTER_GAIN:
+                case AL_CONE_OUTER_GAINHF:
                 case AL_SEC_OFFSET:
                 case AL_SAMPLE_OFFSET:
                 case AL_BYTE_OFFSET:
@@ -817,6 +825,10 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
                     *pflValue = pSource->flOuterGain;
                     break;
 
+                case AL_CONE_OUTER_GAINHF:
+                    *pflValue = pSource->OuterGainHF;
+                    break;
+
                 case AL_SEC_OFFSET:
                 case AL_SAMPLE_OFFSET:
                 case AL_BYTE_OFFSET:
@@ -945,6 +957,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
                 case AL_CONE_INNER_ANGLE:
                 case AL_CONE_OUTER_ANGLE:
                 case AL_REFERENCE_DISTANCE:
+                case AL_CONE_OUTER_GAINHF:
                     alGetSourcef(source, eParam, pflValues);
                     break;
 

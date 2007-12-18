@@ -183,7 +183,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     ALfloat ListenerOrientation[6],ListenerPosition[3],ListenerVelocity[3];
     ALfloat InnerAngle,OuterAngle,OuterGain,Angle,Distance,DryMix,WetMix;
     ALfloat Direction[3],Position[3],Velocity[3],SourceToListener[3];
-    ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
+    ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
     ALfloat Pitch,ConeVolume,SourceVolume,PanningFB,PanningLR,ListenerGain;
     ALfloat U[3],V[3],N[3];
     ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound, flMaxVelocity;
@@ -193,7 +193,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     ALint HeadRelative;
     ALfloat flAttenuation;
     ALfloat MetersPerUnit;
-    ALfloat DryGainHF, WetGainHF;
+    ALfloat DryGainHF = 1.0f;
+    ALfloat WetGainHF = 1.0f;
 
     //Get context properties
     DopplerFactor   = ALContext->DopplerFactor;
@@ -224,6 +225,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     InnerAngle   = ALSource->flInnerAngle;
     OuterAngle   = ALSource->flOuterAngle;
     HeadRelative = ALSource->bHeadRelative;
+    OuterGainHF  = (ALSource->DryGainHFAuto ? ALSource->OuterGainHF : 1.0f);
 
     //Set working variables
     DryMix = (ALfloat)(1.0f);
@@ -298,8 +300,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         WetMix = __min(WetMix,MaxVolume);
         WetMix = __max(WetMix,MinVolume);
         //3. Apply directional soundcones
-        DryGainHF = 1.0f;
-        WetGainHF = 1.0f;
         SourceToListener[0] = -Position[0];
         SourceToListener[1] = -Position[1];
         SourceToListener[2] = -Position[2];
@@ -307,9 +307,16 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         aluNormalize(SourceToListener);
         Angle = (ALfloat)(180.0*acos(aluDotproduct(Direction,SourceToListener))/3.141592654f);
         if(Angle >= InnerAngle && Angle <= OuterAngle)
-            ConeVolume = (1.0f+(OuterGain-1.0f)*(Angle-InnerAngle)/(OuterAngle-InnerAngle));
+        {
+            ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
+            ConeVolume = (1.0f+(OuterGain-1.0f)*scale);
+            DryGainHF *= (1.0f+(OuterGainHF-1.0f)*scale);
+        }
         else if(Angle > OuterAngle)
-            ConeVolume = (1.0f+(OuterGain-1.0f)                                           );
+        {
+            ConeVolume = (1.0f+(OuterGain-1.0f));
+            DryGainHF *= (1.0f+(OuterGainHF-1.0f));
+        }
         else
             ConeVolume = 1.0f;
 
@@ -411,8 +418,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
         pitch[0] = Pitch;
 
-        *drygainhf = 1.0;
-        *wetgainhf = 1.0;
+        *drygainhf = DryGainHF;
+        *wetgainhf = WetGainHF;
     }
 }
 

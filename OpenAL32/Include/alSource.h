@@ -4,6 +4,7 @@
 #define AL_NUM_SOURCE_PARAMS    128
 
 #include "alFilter.h"
+#include "alAuxEffectSlot.h"
 #include "AL/al.h"
 
 #define AL_DIRECT_FILTER                                   0x20005
@@ -61,6 +62,11 @@ typedef struct ALsource_struct
     ALuint BufferPosition;      // Read position in audio data of current buffer
 
     ALfilter DirectFilter;
+
+    struct {
+        ALeffectslot Slot;
+        ALfilter WetFilter;
+    } Send[1];
 
     ALfloat LastDrySample;
     ALfloat LastWetSample;

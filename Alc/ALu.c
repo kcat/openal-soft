@@ -378,6 +378,14 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 break;
         }
 
+        switch(ALSource->Send[0].WetFilter.filter)
+        {
+            case AL_FILTER_LOWPASS:
+                WetMix *= ALSource->Send[0].WetFilter.Gain;
+                WetGainHF *= ALSource->Send[0].WetFilter.GainHF;
+                break;
+        }
+
         if(ALSource->AirAbsorptionFactor > 0.0f)
             DryGainHF *= pow(ALSource->AirAbsorptionFactor * AIRABSORBGAINHF,
                              Distance * MetersPerUnit);
@@ -576,12 +584,15 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 DryBuffer[j][2] += value*DrySend[2];
                                 DryBuffer[j][3] += value*DrySend[3];
 
-                                //Room path final mix buffer and panning
-                                value = aluComputeWetSample(ALSource, WetGainHF, sample);
-                                WetBuffer[j][0] += value*WetSend[0];
-                                WetBuffer[j][1] += value*WetSend[1];
-                                WetBuffer[j][2] += value*WetSend[2];
-                                WetBuffer[j][3] += value*WetSend[3];
+                                if(ALSource->Send[0].Slot.effectslot)
+                                {
+                                    //Room path final mix buffer and panning
+                                    value = aluComputeWetSample(ALSource, WetGainHF, sample);
+                                    WetBuffer[j][0] += value*WetSend[0];
+                                    WetBuffer[j][1] += value*WetSend[1];
+                                    WetBuffer[j][2] += value*WetSend[2];
+                                    WetBuffer[j][3] += value*WetSend[3];
+                                }
                             }
                             else
                             {

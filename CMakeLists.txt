@@ -160,7 +160,8 @@ IF(NOT "${HAVE_STDINT_H}")
 ENDIF()
 
 
-SET(OPENAL_OBJS  OpenAL32/alBuffer.c
+SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
+                 OpenAL32/alBuffer.c
                  OpenAL32/alEffect.c
                  OpenAL32/alError.c
                  OpenAL32/alExtension.c

@@ -25,6 +25,8 @@
 #include "alError.h"
 #include "alMain.h"
 #include "alFilter.h"
+#include "alEffect.h"
+#include "alAuxEffectSlot.h"
 #include "AL/al.h"
 #include "AL/alc.h"
 
@@ -114,6 +116,30 @@ static ALfunction  function[]=   {
     { "alGetFilteriv",              (ALvoid *) alGetFilteriv             },
     { "alGetFilterf",               (ALvoid *) alGetFilterf              },
     { "alGetFilterfv",              (ALvoid *) alGetFilterfv             },
+
+    { "alGenEffects",               (ALvoid *) alGenEffects              },
+    { "alDeleteEffects",            (ALvoid *) alDeleteEffects           },
+    { "alIsEffect",                 (ALvoid *) alIsEffect                },
+    { "alEffecti",                  (ALvoid *) alEffecti                 },
+    { "alEffectiv",                 (ALvoid *) alEffectiv                },
+    { "alEffectf",                  (ALvoid *) alEffectf                 },
+    { "alEffectfv",                 (ALvoid *) alEffectfv                },
+    { "alGetEffecti",               (ALvoid *) alGetEffecti              },
+    { "alGetEffectiv",              (ALvoid *) alGetEffectiv             },
+    { "alGetEffectf",               (ALvoid *) alGetEffectf              },
+    { "alGetEffectfv",              (ALvoid *) alGetEffectfv             },
+
+    { "alGenAuxiliaryEffectSlots",  (ALvoid *) alGenAuxiliaryEffectSlots },
+    { "alDeleteAuxiliaryEffectSlots",(ALvoid *) alDeleteAuxiliaryEffectSlots},
+    { "alIsAuxiliaryEffectSlot",    (ALvoid *) alIsAuxiliaryEffectSlot   },
+    { "alAuxiliaryEffectSloti",     (ALvoid *) alAuxiliaryEffectSloti    },
+    { "alAuxiliaryEffectSlotiv",    (ALvoid *) alAuxiliaryEffectSlotiv   },
+    { "alAuxiliaryEffectSlotf",     (ALvoid *) alAuxiliaryEffectSlotf    },
+    { "alAuxiliaryEffectSlotfv",    (ALvoid *) alAuxiliaryEffectSlotfv   },
+    { "alGetAuxiliaryEffectSloti",  (ALvoid *) alGetAuxiliaryEffectSloti },
+    { "alGetAuxiliaryEffectSlotiv", (ALvoid *) alGetAuxiliaryEffectSlotiv},
+    { "alGetAuxiliaryEffectSlotf",  (ALvoid *) alGetAuxiliaryEffectSlotf },
+    { "alGetAuxiliaryEffectSlotfv", (ALvoid *) alGetAuxiliaryEffectSlotfv},
 
     { NULL,                         (ALvoid *) NULL                      } };
 

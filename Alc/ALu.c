@@ -369,10 +369,19 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             PanningFB = 0.5f;
         }
 
+        //7. Apply filter gains and filters
+        switch(ALSource->DirectFilter.filter)
+        {
+            case AL_FILTER_LOWPASS:
+                DryMix *= ALSource->DirectFilter.Gain;
+                DryGainHF *= ALSource->DirectFilter.GainHF;
+                break;
+        }
+
         *drygainhf = DryGainHF;
         *wetgainhf = WetGainHF;
 
-        //7. Convert pannings into channel volumes
+        //8. Convert pannings into channel volumes
         switch(OutputFormat)
         {
             case AL_FORMAT_MONO8:

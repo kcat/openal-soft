@@ -14,10 +14,17 @@ extern "C" {
 #define AL_FILTER_HIGHPASS                                 0x0002
 #define AL_FILTER_BANDPASS                                 0x0003
 
+#define AL_LOWPASS_GAIN                                    0x0001
+#define AL_LOWPASS_GAINHF                                  0x0002
+
+
 typedef struct ALfilter_struct
 {
     // Filter type (AL_FILTER_NULL, ...)
     ALenum type;
+
+    ALfloat Gain;
+    ALfloat GainHF;
 
     // Index to itself
     ALuint filter;

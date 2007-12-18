@@ -160,8 +160,18 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
 
     if (alIsFilter(filter))
     {
+        ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
+
         switch(param)
         {
+        case AL_FILTER_TYPE:
+            if(iValue == AL_FILTER_NULL ||
+               iValue == AL_FILTER_LOWPASS)
+                InitFilterParams(ALFilter, iValue);
+            else
+                alSetError(AL_INVALID_VALUE);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -186,6 +196,10 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValue
     {
         switch(param)
         {
+        case AL_FILTER_TYPE:
+            alFilteri(filter, param, piValues[0]);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -208,8 +222,30 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue
 
     if (alIsFilter(filter))
     {
+        ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
+
         switch(param)
         {
+        case AL_LOWPASS_GAIN:
+            if(ALFilter->type == AL_FILTER_LOWPASS)
+            {
+                if(flValue >= 0.0f && flValue <= 1.0f)
+                    ALFilter->Gain = flValue;
+            }
+            else
+                alSetError(AL_INVALID_ENUM);
+            break;
+
+        case AL_LOWPASS_GAINHF:
+            if(ALFilter->type == AL_FILTER_LOWPASS)
+            {
+                if(flValue >= 0.0f && flValue <= 1.0f)
+                    ALFilter->GainHF = flValue;
+            }
+            else
+                alSetError(AL_INVALID_ENUM);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -234,6 +270,11 @@ AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflVa
     {
         switch(param)
         {
+        case AL_LOWPASS_GAIN:
+        case AL_LOWPASS_GAINHF:
+            alFilterf(filter, param, pflValues[0]);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -304,8 +345,24 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pfl
 
     if (alIsFilter(filter))
     {
+        ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
+
         switch(param)
         {
+        case AL_LOWPASS_GAIN:
+            if(ALFilter->type == AL_FILTER_LOWPASS)
+                *pflValue = ALFilter->Gain;
+            else
+                alSetError(AL_INVALID_ENUM);
+            break;
+
+        case AL_LOWPASS_GAINHF:
+            if(ALFilter->type == AL_FILTER_LOWPASS)
+                *pflValue = ALFilter->GainHF;
+            else
+                alSetError(AL_INVALID_ENUM);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -330,6 +387,11 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pf
     {
         switch(param)
         {
+        case AL_LOWPASS_GAIN:
+        case AL_LOWPASS_GAINHF:
+            alGetFilterf(filter, param, pflValues);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -365,4 +427,7 @@ ALvoid ReleaseALFilters(ALvoid)
 static void InitFilterParams(ALfilter *filter, ALenum type)
 {
     filter->type = type;
+
+    filter->Gain = 1.0;
+    filter->GainHF = 1.0;
 }

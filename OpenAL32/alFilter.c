@@ -103,7 +103,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
             for (i = 0; i < n; i++)
             {
                 // Recheck that the filter is valid, because there could be duplicated names
-                if (alIsFilter(filters[i]))
+                if (filters[i] && alIsFilter(filters[i]))
                 {
                     ALfilter **list;
 

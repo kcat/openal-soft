@@ -103,7 +103,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
             for (i = 0; i < n; i++)
             {
                 // Recheck that the effect is valid, because there could be duplicated names
-                if (alIsEffect(effects[i]))
+                if (effects[i] && alIsEffect(effects[i]))
                 {
                     ALeffect **list;
 

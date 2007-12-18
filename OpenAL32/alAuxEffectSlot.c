@@ -156,15 +156,31 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
 {
     ALCcontext *Context;
 
-    (void)iValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
+        ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslot);
+
         switch(param)
         {
+        case AL_EFFECTSLOT_EFFECT:
+            if(alIsEffect(iValue))
+            {
+                ALeffect *effect = (ALeffect*)ALTHUNK_LOOKUPENTRY(iValue);
+                if(!effect)
+                {
+                    ALEffectSlot->effect.type = AL_EFFECT_NULL;
+                    ALEffectSlot->effect.effect = 0;
+                }
+                else
+                    memcpy(&ALEffectSlot->effect, effect, sizeof(*effect));
+            }
+            else
+                alSetError(AL_INVALID_VALUE);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -180,8 +196,6 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
 {
     ALCcontext *Context;
 
-    (void)piValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
@@ -189,6 +203,10 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
     {
         switch(param)
         {
+        case AL_EFFECTSLOT_EFFECT:
+            alAuxiliaryEffectSloti(effectslot, param, piValues[0]);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -252,15 +270,19 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
 {
     ALCcontext *Context;
 
-    (void)piValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
+        ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslot);
+
         switch(param)
         {
+        case AL_EFFECTSLOT_EFFECT:
+            *piValue = ALEffectSlot->effect.effect;
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -276,8 +298,6 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
 {
     ALCcontext *Context;
 
-    (void)piValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
@@ -285,6 +305,10 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
     {
         switch(param)
         {
+        case AL_EFFECTSLOT_EFFECT:
+            alGetAuxiliaryEffectSloti(effectslot, param, piValues);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;

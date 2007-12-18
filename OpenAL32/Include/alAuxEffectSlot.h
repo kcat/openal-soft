@@ -1,6 +1,7 @@
 #ifndef _AL_AUXEFFECTSLOT_H_
 #define _AL_AUXEFFECTSLOT_H_
 
+#include "alEffect.h"
 #include "AL/al.h"
 
 #ifdef __cplusplus
@@ -17,6 +18,8 @@ typedef struct ALeffectslot_struct
 {
     // AuxiliaryEffectSlot type (AL_EFFECT_NULL, ...)
     ALenum type;
+
+    ALeffect effect;
 
     // Index to itself
     ALuint effectslot;

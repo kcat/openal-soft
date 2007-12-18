@@ -394,6 +394,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         *wetgainhf = WetGainHF;
 
         //8. Convert pannings into channel volumes
+        WetMix *= ALSource->Send[0].Slot.Gain;
         switch(OutputFormat)
         {
             case AL_FORMAT_MONO8:

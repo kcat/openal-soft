@@ -229,8 +229,17 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
+        ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslot);
+
         switch(param)
         {
+        case AL_EFFECTSLOT_GAIN:
+            if(flValue >= 0.0f && flValue <= 1.0f)
+                ALEffectSlot->Gain = flValue;
+            else
+                alSetError(AL_INVALID_VALUE);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -246,8 +255,6 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
 {
     ALCcontext *Context;
 
-    (void)pflValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
@@ -255,6 +262,10 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
     {
         switch(param)
         {
+        case AL_EFFECTSLOT_GAIN:
+            alAuxiliaryEffectSlotf(effectslot, param, pflValues[0]);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -324,15 +335,19 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum pa
 {
     ALCcontext *Context;
 
-    (void)pflValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
+        ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslot);
+
         switch(param)
         {
+        case AL_EFFECTSLOT_GAIN:
+            *pflValue = ALEffectSlot->Gain;
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -348,8 +363,6 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
 {
     ALCcontext *Context;
 
-    (void)pflValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
@@ -357,6 +370,10 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
     {
         switch(param)
         {
+        case AL_EFFECTSLOT_GAIN:
+            alGetAuxiliaryEffectSlotf(effectslot, param, pflValues);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;

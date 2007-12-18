@@ -150,6 +150,17 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_STREAMING",                         AL_STREAMING                        },
     { (ALchar *)"AL_UNDETERMINED",                      AL_UNDETERMINED                     },
 
+    // Source EFX Properties
+    { (ALchar *)"AL_DIRECT_FILTER",                     AL_DIRECT_FILTER                    },
+    { (ALchar *)"AL_AUXILIARY_SEND_FILTER",             AL_AUXILIARY_SEND_FILTER            },
+    { (ALchar *)"AL_AIR_ABSORPTION_FACTOR",             AL_AIR_ABSORPTION_FACTOR            },
+    { (ALchar *)"AL_ROOM_ROLLOFF_FACTOR",               AL_ROOM_ROLLOFF_FACTOR              },
+    { (ALchar *)"AL_CONE_OUTER_GAINHF",                 AL_CONE_OUTER_GAINHF                },
+    { (ALchar *)"AL_DIRECT_FILTER_GAINHF_AUTO",         AL_DIRECT_FILTER_GAINHF_AUTO        },
+    { (ALchar *)"AL_AUXILIARY_SEND_FILTER_GAIN_AUTO",   AL_AUXILIARY_SEND_FILTER_GAIN_AUTO  },
+    { (ALchar *)"AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO", AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO},
+
+
     // Source State information
     { (ALchar *)"AL_SOURCE_STATE",                      AL_SOURCE_STATE                     },
     { (ALchar *)"AL_INITIAL",                           AL_INITIAL                          },

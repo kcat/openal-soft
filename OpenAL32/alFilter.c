@@ -354,7 +354,7 @@ ALvoid ReleaseALFilters(ALvoid)
         ALfilter *temp = g_FilterList;
         g_FilterList = g_FilterList->next;
 
-        // Release Buffer structure
+        // Release filter structure
         memset(temp, 0, sizeof(ALfilter));
         free(temp);
     }

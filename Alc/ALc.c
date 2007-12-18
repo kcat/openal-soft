@@ -86,6 +86,7 @@ static ALCextension alcExtensions[] = {
     { "ALC_ENUMERATE_ALL_EXT", (ALvoid *) NULL },
     { "ALC_ENUMERATION_EXT",   (ALvoid *) NULL },
     { "ALC_EXT_CAPTURE",       (ALvoid *) NULL },
+    { "ALC_EXT_EFX",           (ALvoid *) NULL },
     { NULL,                    (ALvoid *) NULL }
 };
 
@@ -170,7 +171,7 @@ static ALCchar *alcDefaultAllDeviceSpecifier = alcAllDeviceList;
 static ALCchar *alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList;
 
 
-static ALCchar alcExtensionList[] = "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE";
+static ALCchar alcExtensionList[] = "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE ALC_EXT_EFX";
 static ALCint alcMajorVersion = 1;
 static ALCint alcMinorVersion = 1;
 

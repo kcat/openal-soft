@@ -42,32 +42,38 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
 
     if (n > 0)
     {
-        // Check that enough memory has been allocted in the 'sources' array for n Sources
-        if (!IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))
+        /* NOTE: We only support one slot currently */
+        if(n == 1 && g_AuxiliaryEffectSlotCount == 0)
         {
-            ALeffectslot **list = &g_AuxiliaryEffectSlotList;
-            while(*list)
-                list = &(*list)->next;
-
-            i = 0;
-            while(i < n)
+            // Check that enough memory has been allocted in the 'sources' array for n Sources
+            if (!IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))
             {
-                *list = calloc(1, sizeof(ALeffectslot));
-                if(!(*list))
+                ALeffectslot **list = &g_AuxiliaryEffectSlotList;
+                while(*list)
+                    list = &(*list)->next;
+
+                i = 0;
+                while(i < n)
                 {
-                    // We must have run out or memory
-                    alDeleteAuxiliaryEffectSlots(i, effectslots);
-                    alSetError(AL_OUT_OF_MEMORY);
-                    break;
+                    *list = calloc(1, sizeof(ALeffectslot));
+                    if(!(*list))
+                    {
+                        // We must have run out or memory
+                        alDeleteAuxiliaryEffectSlots(i, effectslots);
+                        alSetError(AL_OUT_OF_MEMORY);
+                        break;
+                    }
+
+                    effectslots[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
+                    (*list)->effectslot = effectslots[i];
+
+                    g_AuxiliaryEffectSlotCount++;
+                    i++;
                 }
-
-                effectslots[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
-                (*list)->effectslot = effectslots[i];
-
-                g_AuxiliaryEffectSlotCount++;
-                i++;
             }
         }
+        else
+            alSetError(AL_INVALID_OPERATION);
     }
 
     ProcessContext(Context);

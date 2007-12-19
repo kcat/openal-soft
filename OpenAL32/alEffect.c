@@ -156,7 +156,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsEffect(effect))
+    if (effect && alIsEffect(effect))
     {
         ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
 
@@ -187,7 +187,7 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValue
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsEffect(effect))
+    if (effect && alIsEffect(effect))
     {
         switch(param)
         {
@@ -215,7 +215,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsEffect(effect))
+    if (effect && alIsEffect(effect))
     {
         switch(param)
         {
@@ -239,7 +239,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsEffect(effect))
+    if (effect && alIsEffect(effect))
     {
         switch(param)
         {
@@ -261,7 +261,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piVal
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsEffect(effect))
+    if (effect && alIsEffect(effect))
     {
         ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
 
@@ -289,7 +289,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piVa
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsEffect(effect))
+    if (effect && alIsEffect(effect))
     {
         switch(param)
         {
@@ -317,7 +317,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pfl
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsEffect(effect))
+    if (effect && alIsEffect(effect))
     {
         switch(param)
         {
@@ -341,7 +341,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pf
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsEffect(effect))
+    if (effect && alIsEffect(effect))
     {
         switch(param)
         {

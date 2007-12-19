@@ -153,12 +153,10 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
 {
     ALCcontext *Context;
 
-    (void)iValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsFilter(filter))
+    if (filter && alIsFilter(filter))
     {
         ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
 
@@ -187,12 +185,10 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValue
 {
     ALCcontext *Context;
 
-    (void)piValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsFilter(filter))
+    if (filter && alIsFilter(filter))
     {
         switch(param)
         {
@@ -215,12 +211,10 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue
 {
     ALCcontext *Context;
 
-    (void)flValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsFilter(filter))
+    if (filter && alIsFilter(filter))
     {
         ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
 
@@ -261,12 +255,10 @@ AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflVa
 {
     ALCcontext *Context;
 
-    (void)pflValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsFilter(filter))
+    if (filter && alIsFilter(filter))
     {
         switch(param)
         {
@@ -295,7 +287,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piVal
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsFilter(filter))
+    if (filter && alIsFilter(filter))
     {
         switch(param)
         {
@@ -319,7 +311,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piVa
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsFilter(filter))
+    if (filter && alIsFilter(filter))
     {
         switch(param)
         {
@@ -338,12 +330,10 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pfl
 {
     ALCcontext *Context;
 
-    (void)pflValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsFilter(filter))
+    if (filter && alIsFilter(filter))
     {
         ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
 
@@ -378,12 +368,10 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pf
 {
     ALCcontext *Context;
 
-    (void)pflValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    if (alIsFilter(filter))
+    if (filter && alIsFilter(filter))
     {
         switch(param)
         {

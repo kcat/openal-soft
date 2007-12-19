@@ -710,12 +710,42 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
 
         if (alIsSource(source))
         {
+            ALsource *pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
+
             switch (eParam)
             {
             case AL_POSITION:
             case AL_VELOCITY:
             case AL_DIRECTION:
                 alSource3f(source, eParam, (ALfloat)lValue1, (ALfloat)lValue2, (ALfloat)lValue3);
+                break;
+
+            case AL_AUXILIARY_SEND_FILTER:
+                if(lValue2 >= 0 && lValue2 <= 0 &&
+                   alIsAuxiliaryEffectSlot(lValue1) && alIsFilter(lValue3))
+                {
+                    ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(lValue1);
+                    ALfilter     *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(lValue3);
+
+                    if(!ALEffectSlot)
+                    {
+                        /* Disable slot */
+                        pSource->Send[lValue2].Slot.effectslot = 0;
+                    }
+                    else
+                        memcpy(&pSource->Send[lValue2].Slot, ALEffectSlot, sizeof(*ALEffectSlot));
+
+                    if(!ALFilter)
+                    {
+                        /* Disable filter */
+                        pSource->Send[lValue2].WetFilter.type = 0;
+                        pSource->Send[lValue2].WetFilter.filter = 0;
+                    }
+                    else
+                        memcpy(&pSource->Send[lValue2].WetFilter, ALFilter, sizeof(*ALFilter));
+                }
+                else
+                    alSetError(AL_INVALID_VALUE);
                 break;
 
             default:
@@ -771,6 +801,7 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
                 case AL_POSITION:
                 case AL_VELOCITY:
                 case AL_DIRECTION:
+                case AL_AUXILIARY_SEND_FILTER:
                     alSource3i(source, eParam, plValues[0], plValues[1], plValues[2]);
                     break;
 

@@ -185,7 +185,6 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
             break;
 
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
-            /* FIXME: Unused */
             if(iValue == AL_TRUE || iValue == AL_FALSE)
                 ALEffectSlot->AuxSendAuto = iValue;
             else

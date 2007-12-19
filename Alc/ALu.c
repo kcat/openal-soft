@@ -302,7 +302,9 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
         // Source Gain + Attenuation
         DryMix = SourceVolume * flAttenuation;
-        WetMix = SourceVolume * (ALSource->WetGainAuto ? RoomAttenuation : 1.0f);
+        WetMix = SourceVolume * ((ALSource->WetGainAuto &&
+                                  ALSource->Send[0].Slot.AuxSendAuto) ?
+                                 RoomAttenuation : 1.0f);
 
         // Clamp to Min/Max Gain
         DryMix = __min(DryMix,MaxVolume);

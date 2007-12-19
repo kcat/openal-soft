@@ -225,7 +225,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     InnerAngle   = ALSource->flInnerAngle;
     OuterAngle   = ALSource->flOuterAngle;
     HeadRelative = ALSource->bHeadRelative;
-    OuterGainHF  = (ALSource->DryGainHFAuto ? ALSource->OuterGainHF : 1.0f);
+    OuterGainHF  = ALSource->OuterGainHF;
 
     //Set working variables
     DryMix = (ALfloat)(1.0f);
@@ -310,12 +310,18 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         {
             ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
             ConeVolume = (1.0f+(OuterGain-1.0f)*scale);
-            DryGainHF *= (1.0f+(OuterGainHF-1.0f)*scale);
+            if(ALSource->DryGainHFAuto)
+                DryGainHF *= (1.0f+(OuterGainHF-1.0f)*scale);
+            if(ALSource->WetGainHFAuto)
+                WetGainHF *= (1.0f+(OuterGainHF-1.0f)*scale);
         }
         else if(Angle > OuterAngle)
         {
             ConeVolume = (1.0f+(OuterGain-1.0f));
-            DryGainHF *= (1.0f+(OuterGainHF-1.0f));
+            if(ALSource->DryGainHFAuto)
+                DryGainHF *= (1.0f+(OuterGainHF-1.0f));
+            if(ALSource->WetGainHFAuto)
+                WetGainHF *= (1.0f+(OuterGainHF-1.0f));
         }
         else
             ConeVolume = 1.0f;

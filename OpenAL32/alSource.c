@@ -675,6 +675,13 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     alSetError(AL_INVALID_VALUE);
                 break;
 
+            case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
+                if(lValue == AL_TRUE || lValue == AL_FALSE)
+                    pSource->WetGainHFAuto = lValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
@@ -757,6 +764,7 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
                 case AL_REFERENCE_DISTANCE:
                 case AL_DIRECT_FILTER:
                 case AL_DIRECT_FILTER_GAINHF_AUTO:
+                case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
                     alSourcei(source, eParam, plValues[0]);
                     break;
 
@@ -1103,6 +1111,10 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                     *plValue = pSource->DryGainHFAuto;
                     break;
 
+                case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
+                    *plValue = pSource->WetGainHFAuto;
+                    break;
+
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
@@ -1214,6 +1226,7 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
                 case AL_SOURCE_TYPE:
                 case AL_DIRECT_FILTER:
                 case AL_DIRECT_FILTER_GAINHF_AUTO:
+                case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
                     alGetSourcei(source, eParam, plValues);
                     break;
 
@@ -1892,6 +1905,7 @@ static ALvoid InitSourceParams(ALsource *pSource)
     pSource->flOuterGain = 0.0f;
 
     pSource->DryGainHFAuto = AL_TRUE;
+    pSource->WetGainHFAuto = AL_TRUE;
     pSource->AirAbsorptionFactor = 0.0f;
 
     pSource->state = AL_INITIAL;

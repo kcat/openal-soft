@@ -72,6 +72,7 @@ typedef struct ALsource_struct
     ALfloat LastWetSample;
 
     ALboolean DryGainHFAuto;
+    ALboolean WetGainHFAuto;
     ALfloat   OuterGainHF;
 
     ALfloat AirAbsorptionFactor;

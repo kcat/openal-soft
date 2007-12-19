@@ -227,10 +227,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     HeadRelative = ALSource->bHeadRelative;
     OuterGainHF  = ALSource->OuterGainHF;
 
-    //Set working variables
-    DryMix = (ALfloat)(1.0f);
-    WetMix = (ALfloat)(0.0f);
-
     //Only apply 3D calculations for mono buffers
     if(isMono != AL_FALSE)
     {
@@ -293,6 +289,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
         // Source Gain + Attenuation
         DryMix = SourceVolume * flAttenuation;
+        WetMix = SourceVolume * 0.0f;
 
         // Clamp to Min/Max Gain
         DryMix = __min(DryMix,MaxVolume);

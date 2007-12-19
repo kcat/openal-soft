@@ -16,9 +16,6 @@ extern "C" {
 
 typedef struct ALeffectslot_struct
 {
-    // AuxiliaryEffectSlot type (AL_EFFECT_NULL, ...)
-    ALenum type;
-
     ALeffect effect;
 
     ALfloat Gain;

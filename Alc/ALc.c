@@ -33,7 +33,7 @@
 ///////////////////////////////////////////////////////
 // DEBUG INFORMATION
 
-char szDebug[256];
+char _alDebug[256];
 
 ///////////////////////////////////////////////////////
 
@@ -193,7 +193,7 @@ static void InitAL(void)
         int i;
         const char *devs;
 
-        InitializeCriticalSection(&g_mutex);
+        InitializeCriticalSection(&_alMutex);
         ALTHUNK_INIT();
         ReadALConfig();
 
@@ -303,7 +303,7 @@ ALCvoid SetALCError(ALenum errorCode)
 ALCvoid SuspendContext(ALCcontext *pContext)
 {
     (void)pContext;
-    EnterCriticalSection(&g_mutex);
+    EnterCriticalSection(&_alMutex);
 }
 
 
@@ -315,7 +315,7 @@ ALCvoid SuspendContext(ALCcontext *pContext)
 ALCvoid ProcessContext(ALCcontext *pContext)
 {
     (void)pContext;
-    LeaveCriticalSection(&g_mutex);
+    LeaveCriticalSection(&_alMutex);
 }
 
 

@@ -72,18 +72,18 @@ extern "C"
 {
 #endif
 
-extern CRITICAL_SECTION g_mutex;
+extern CRITICAL_SECTION _alMutex;
 
-extern char szDebug[256];
+extern char _alDebug[256];
 
 #define AL_PRINT(...) do {                       \
     int _al_print_i;                             \
     char *_al_print_fn = strrchr(__FILE__, '/'); \
     if(!_al_print_fn) _al_print_fn  = __FILE__;  \
     else              _al_print_fn += 1;         \
-    _al_print_i = snprintf(szDebug, sizeof(szDebug), "AL lib: %s:%d: ", _al_print_fn, __LINE__); \
-    snprintf(szDebug+_al_print_i, sizeof(szDebug)-_al_print_i, __VA_ARGS__); \
-    fprintf(stderr, "%s", szDebug);              \
+    _al_print_i = snprintf(_alDebug, sizeof(_alDebug), "AL lib: %s:%d: ", _al_print_fn, __LINE__); \
+    snprintf(_alDebug+_al_print_i, sizeof(_alDebug)-_al_print_i, __VA_ARGS__); \
+    fprintf(stderr, "%s", _alDebug);             \
 } while(0)
 
 

@@ -80,6 +80,8 @@ typedef struct ALsource_struct
 
     ALfloat AirAbsorptionFactor;
 
+    ALfloat RoomRolloffFactor;
+
     // Index to itself
     ALuint source;
 

@@ -192,7 +192,9 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     ALfloat Matrix[3][3];
     ALint HeadRelative;
     ALfloat flAttenuation;
+    ALfloat RoomAttenuation;
     ALfloat MetersPerUnit;
+    ALfloat RoomRolloff;
     ALfloat DryGainHF = 1.0f;
     ALfloat WetGainHF = 1.0f;
 
@@ -226,6 +228,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     OuterAngle   = ALSource->flOuterAngle;
     HeadRelative = ALSource->bHeadRelative;
     OuterGainHF  = ALSource->OuterGainHF;
+    RoomRolloff  = ALSource->RoomRolloffFactor;
 
     //Only apply 3D calculations for mono buffers
     if(isMono != AL_FALSE)
@@ -242,6 +245,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         Distance = aluSqrt(aluDotproduct(Position, Position));
 
         flAttenuation = 1.0f;
+        RoomAttenuation = 1.0f;
         switch (DistanceModel)
         {
             case AL_INVERSE_DISTANCE_CLAMPED:
@@ -255,6 +259,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 {
                     if ((MinDist + (Rolloff * (Distance - MinDist))) > 0.0f)
                         flAttenuation = MinDist / (MinDist + (Rolloff * (Distance - MinDist)));
+                    if ((MinDist + (RoomRolloff * (Distance - MinDist))) > 0.0f)
+                        RoomAttenuation = MinDist / (MinDist + (RoomRolloff * (Distance - MinDist)));
                 }
                 break;
 
@@ -267,7 +273,10 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             case AL_LINEAR_DISTANCE:
                 Distance=__min(Distance,MaxDist);
                 if (MaxDist != MinDist)
+                {
                     flAttenuation = 1.0f - (Rolloff*(Distance-MinDist)/(MaxDist - MinDist));
+                    RoomAttenuation = 1.0f - (RoomRolloff*(Distance-MinDist)/(MaxDist - MinDist));
+                }
                 break;
 
             case AL_EXPONENT_DISTANCE_CLAMPED:
@@ -278,18 +287,22 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 //fall-through
             case AL_EXPONENT_DISTANCE:
                 if ((Distance > 0.0f) && (MinDist > 0.0f))
+                {
                     flAttenuation = (ALfloat)pow(Distance/MinDist, -Rolloff);
+                    RoomAttenuation = (ALfloat)pow(Distance/MinDist, -RoomRolloff);
+                }
                 break;
 
             case AL_NONE:
             default:
                 flAttenuation = 1.0f;
+                RoomAttenuation = 1.0f;
                 break;
         }
 
         // Source Gain + Attenuation
         DryMix = SourceVolume * flAttenuation;
-        WetMix = SourceVolume * 0.0f;
+        WetMix = SourceVolume * RoomAttenuation;
 
         // Clamp to Min/Max Gain
         DryMix = __min(DryMix,MaxVolume);

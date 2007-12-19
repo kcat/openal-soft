@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include "alMain.h"
+#include "alSource.h"
 #include "AL/al.h"
 #include "AL/alc.h"
 
@@ -696,7 +697,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     if(!size)
                         SetALCError(ALC_INVALID_VALUE);
                     else
-                        *data = 0; /* FIXME: Should be 1 or more */
+                        *data = MAX_SENDS;
                     break;
 
                 case ALC_ATTRIBUTES_SIZE:
@@ -736,7 +737,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                             data[i++] = device->Context->lNumStereoSources;
 
                             data[i++] = ALC_MAX_AUXILIARY_SENDS;
-                            data[i++] = 0; /* FIXME */
+                            data[i++] = MAX_SENDS;
                         }
                         ProcessContext(NULL);
 

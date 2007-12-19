@@ -3,6 +3,9 @@
 
 #define AL_NUM_SOURCE_PARAMS    128
 
+/* This cannot be changed without working on the code! */
+#define MAX_SENDS                 1
+
 #include "alFilter.h"
 #include "alAuxEffectSlot.h"
 #include "AL/al.h"
@@ -66,7 +69,7 @@ typedef struct ALsource_struct
     struct {
         ALeffectslot Slot;
         ALfilter WetFilter;
-    } Send[1];
+    } Send[MAX_SENDS];
 
     ALfloat LastDrySample;
     ALfloat LastWetSample;

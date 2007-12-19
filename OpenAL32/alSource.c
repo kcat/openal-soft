@@ -737,7 +737,8 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
 
             case AL_AUXILIARY_SEND_FILTER:
                 if(lValue2 >= 0 && lValue2 < MAX_SENDS &&
-                   alIsAuxiliaryEffectSlot(lValue1) && alIsFilter(lValue3))
+                   (alIsAuxiliaryEffectSlot(lValue1) || lValue1 == 0) &&
+                   alIsFilter(lValue3))
                 {
                     ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(lValue1);
                     ALfilter     *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(lValue3);

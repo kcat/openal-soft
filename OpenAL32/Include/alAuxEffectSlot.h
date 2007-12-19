@@ -22,6 +22,7 @@ typedef struct ALeffectslot_struct
     ALeffect effect;
 
     ALfloat Gain;
+    ALboolean AuxSendAuto;
 
     // Index to itself
     ALuint effectslot;

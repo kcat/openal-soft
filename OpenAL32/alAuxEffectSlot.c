@@ -64,6 +64,9 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                         break;
                     }
 
+                    (*list)->Gain = 1.0;
+                    (*list)->AuxSendAuto = AL_TRUE;
+
                     effectslots[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
                     (*list)->effectslot = effectslots[i];
 
@@ -181,6 +184,14 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
                 alSetError(AL_INVALID_VALUE);
             break;
 
+        case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
+            /* FIXME: Unused */
+            if(iValue == AL_TRUE || iValue == AL_FALSE)
+                ALEffectSlot->AuxSendAuto = iValue;
+            else
+                alSetError(AL_INVALID_VALUE);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -204,6 +215,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
         switch(param)
         {
         case AL_EFFECTSLOT_EFFECT:
+        case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
             alAuxiliaryEffectSloti(effectslot, param, piValues[0]);
             break;
 
@@ -294,6 +306,10 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
             *piValue = ALEffectSlot->effect.effect;
             break;
 
+        case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
+            *piValue = ALEffectSlot->AuxSendAuto;
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -317,6 +333,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
         switch(param)
         {
         case AL_EFFECTSLOT_EFFECT:
+        case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
             alGetAuxiliaryEffectSloti(effectslot, param, piValues);
             break;
 

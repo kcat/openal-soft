@@ -153,15 +153,22 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
 {
     ALCcontext *Context;
 
-    (void)iValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
     if (alIsEffect(effect))
     {
+        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
+
         switch(param)
         {
+        case AL_EFFECT_TYPE:
+            if(iValue == AL_EFFECT_NULL)
+                InitEffectParams(ALEffect, iValue);
+            else
+                alSetError(AL_INVALID_VALUE);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -177,8 +184,6 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValue
 {
     ALCcontext *Context;
 
-    (void)piValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
@@ -186,6 +191,10 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValue
     {
         switch(param)
         {
+        case AL_EFFECT_TYPE:
+            alEffecti(effect, param, piValues[0]);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -249,15 +258,19 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piVal
 {
     ALCcontext *Context;
 
-    (void)piValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
     if (alIsEffect(effect))
     {
+        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
+
         switch(param)
         {
+        case AL_EFFECT_TYPE:
+            *piValue = ALEffect->type;
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -273,8 +286,6 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piVa
 {
     ALCcontext *Context;
 
-    (void)piValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
@@ -282,6 +293,10 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piVa
     {
         switch(param)
         {
+        case AL_EFFECT_TYPE:
+            alGetEffecti(effect, param, piValues);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;

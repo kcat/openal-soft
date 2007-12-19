@@ -302,7 +302,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
         // Source Gain + Attenuation
         DryMix = SourceVolume * flAttenuation;
-        WetMix = SourceVolume * RoomAttenuation;
+        WetMix = SourceVolume * (ALSource->WetGainAuto ? RoomAttenuation : 1.0f);
 
         // Clamp to Min/Max Gain
         DryMix = __min(DryMix,MaxVolume);
@@ -320,6 +320,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         {
             ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
             ConeVolume = (1.0f+(OuterGain-1.0f)*scale);
+            if(ALSource->WetGainAuto)
+                WetMix *= ConeVolume;
             if(ALSource->DryGainHFAuto)
                 DryGainHF *= (1.0f+(OuterGainHF-1.0f)*scale);
             if(ALSource->WetGainHFAuto)
@@ -328,6 +330,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         else if(Angle > OuterAngle)
         {
             ConeVolume = (1.0f+(OuterGain-1.0f));
+            if(ALSource->WetGainAuto)
+                WetMix *= ConeVolume;
             if(ALSource->DryGainHFAuto)
                 DryGainHF *= (1.0f+(OuterGainHF-1.0f));
             if(ALSource->WetGainHFAuto)

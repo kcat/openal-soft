@@ -615,18 +615,25 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             }
                             else
                             {
+                                ALfloat value2;
+
                                 //First order interpolator (left)
                                 value = (ALfloat)((ALshort)(((Data[k*2  ]*((1L<<FRACTIONBITS)-fraction))+(Data[k*2+2]*(fraction)))>>FRACTIONBITS));
+                                //First order interpolator (right)
+                                value2 = (ALfloat)((ALshort)(((Data[k*2+1]*((1L<<FRACTIONBITS)-fraction))+(Data[k*2+3]*(fraction)))>>FRACTIONBITS));
+
                                 //Direct path final mix buffer and panning (left)
                                 DryBuffer[j][0] += value*DrySend[0];
-                                //Room path final mix buffer and panning (left)
-                                WetBuffer[j][0] += value*WetSend[0];
-                                //First order interpolator (right)
-                                value = (ALfloat)((ALshort)(((Data[k*2+1]*((1L<<FRACTIONBITS)-fraction))+(Data[k*2+3]*(fraction)))>>FRACTIONBITS));
                                 //Direct path final mix buffer and panning (right)
                                 DryBuffer[j][1] += value*DrySend[1];
-                                //Room path final mix buffer and panning (right)
-                                WetBuffer[j][1] += value*WetSend[1];
+
+                                if(ALSource->Send[0].Slot.effectslot)
+                                {
+                                    //Room path final mix buffer and panning (left)
+                                    WetBuffer[j][0] += value*WetSend[0];
+                                    //Room path final mix buffer and panning (right)
+                                    WetBuffer[j][1] += value*WetSend[1];
+                                }
                             }
                             DataPosFrac += increment;
                             j++;

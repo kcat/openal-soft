@@ -25,7 +25,7 @@
 #include "alAuxEffectSlot.h"
 #include "alThunk.h"
 
-CRITICAL_SECTION g_mutex;
+CRITICAL_SECTION _alMutex;
 
 #ifdef _WIN32
 BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
@@ -43,7 +43,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             ReleaseALBuffers();
             FreeALConfig();
             ALTHUNK_EXIT();
-            DeleteCriticalSection(&g_mutex);
+            DeleteCriticalSection(&_alMutex);
             break;
     }
     return TRUE;
@@ -63,7 +63,7 @@ static void my_deinit()
     ReleaseALFilters();
     FreeALConfig();
     ALTHUNK_EXIT();
-    DeleteCriticalSection(&g_mutex);
+    DeleteCriticalSection(&_alMutex);
 }
 #endif
 #endif

@@ -402,11 +402,9 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         *drygainhf = DryGainHF;
         *wetgainhf = WetGainHF;
 
-        //7. Convert pannings into channel volumes
-        WetMix *= ALSource->Send[0].Slot.Gain;
-
-        //8. Convert normalized position into pannings, then into channel volumes
+        //7. Convert normalized position into pannings, then into channel volumes
         aluNormalize(Position);
+        WetMix *= ALSource->Send[0].Slot.Gain;
         switch(OutputFormat)
         {
             case AL_FORMAT_MONO8:

@@ -319,20 +319,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         Matrix[2][0] = U[2]; Matrix[2][1] = V[2]; Matrix[2][2] = -N[2];
         aluMatrixVector(Position, Matrix);
 
-        //6. Convert normalized position into left/right front/back pannings
-        if(Distance != 0.0f)
-        {
-            aluNormalize(Position);
-            PanningLR = 0.5f + 0.5f*Position[0];
-            PanningFB = 0.5f + 0.5f*Position[2];
-        }
-        else
-        {
-            PanningLR = 0.5f;
-            PanningFB = 0.5f;
-        }
-
-        //7. Convert pannings into channel volumes
+        //6. Convert normalized position into pannings, then into channel volumes
+        aluNormalize(Position);
         switch(OutputFormat)
         {
             case AL_FORMAT_MONO8:
@@ -344,6 +332,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 break;
             case AL_FORMAT_STEREO8:
             case AL_FORMAT_STEREO16:
+                PanningLR = 0.5f + 0.5f*Position[0];
                 drysend[0] = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f-PanningLR); //L Direct
                 drysend[1] = ConeVolume * ListenerGain * DryMix * aluSqrt(     PanningLR); //R Direct
                 wetsend[0] =              ListenerGain * WetMix * aluSqrt(1.0f-PanningLR); //L Room
@@ -351,6 +340,13 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 break;
             case AL_FORMAT_QUAD8:
             case AL_FORMAT_QUAD16:
+                // Apply a scalar so each individual speaker has more weight
+                PanningLR = 0.5f + (0.5f*Position[0]*1.41421356f);
+                PanningLR = __min(1.0f, PanningLR);
+                PanningLR = __max(0.0f, PanningLR);
+                PanningFB = 0.5f + (0.5f*Position[2]*1.41421356f);
+                PanningFB = __min(1.0f, PanningFB);
+                PanningFB = __max(0.0f, PanningFB);
                 drysend[0] = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB)); //FL Direct
                 drysend[1] = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB)); //FR Direct
                 drysend[2] = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB)); //BL Direct

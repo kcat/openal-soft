@@ -625,14 +625,14 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 //Direct path final mix buffer and panning (left)
                                 DryBuffer[j][0] += value*DrySend[0];
                                 //Direct path final mix buffer and panning (right)
-                                DryBuffer[j][1] += value*DrySend[1];
+                                DryBuffer[j][1] += value2*DrySend[1];
 
                                 if(ALSource->Send[0].Slot.effectslot)
                                 {
                                     //Room path final mix buffer and panning (left)
                                     WetBuffer[j][0] += value*WetSend[0];
                                     //Room path final mix buffer and panning (right)
-                                    WetBuffer[j][1] += value*WetSend[1];
+                                    WetBuffer[j][1] += value2*WetSend[1];
                                 }
                             }
                             DataPosFrac += increment;

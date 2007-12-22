@@ -115,6 +115,16 @@ IF(NOT "${HAVE_STRCASECMP}")
     ADD_DEFINITIONS(-Dstrcasecmp=_stricmp)
 ENDIF()
 
+CHECK_FUNCTION_EXISTS(snprintf HAVE_SNPRINTF)
+IF(NOT "${HAVE_SNPRINTF}")
+    CHECK_FUNCTION_EXISTS(_snprintf HAVE__SNPRINTF)
+    IF(NOT "${HAVE__SNPRINTF}")
+        MESSAGE(FATAL_ERROR "No snprintf function found, please report!")
+    ENDIF()
+
+    ADD_DEFINITIONS(-Dsnprintf=_snprintf)
+ENDIF()
+
 # Check for the dlopen API (for dynamicly loading backend libs)
 IF(DLOPEN)
     CHECK_INCLUDE_FILE(dlfcn.h HAVE_DLFCN_H)

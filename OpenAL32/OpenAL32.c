@@ -41,6 +41,9 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 
         case DLL_PROCESS_DETACH:
             ReleaseALBuffers();
+            ReleaseALAuxiliaryEffectSlots();
+            ReleaseALEffects();
+            ReleaseALFilters();
             FreeALConfig();
             ALTHUNK_EXIT();
             DeleteCriticalSection(&_alMutex);

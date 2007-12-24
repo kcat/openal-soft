@@ -41,7 +41,6 @@ CHECK_TYPE_SIZE("void*" SIZEOF_VOIDP)
 
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES(OpenAL32/Include include "${OpenAL_BINARY_DIR}")
-SET(EXTRA_LIBS m ${EXTRA_LIBS})
 
 IF("${MSVC}")
     # ???
@@ -94,6 +93,9 @@ ELSEIF(NODEBUG)
 ENDIF()
 
 CHECK_LIBRARY_EXISTS(m  sqrtf  "" HAVE_SQRTF)
+IF("${HAVE_SQRTF}")
+    SET(EXTRA_LIBS m ${EXTRA_LIBS})
+ENDIF()
 CHECK_FUNCTION_EXISTS(strtof HAVE_STRTOF)
 
 CHECK_FUNCTION_EXISTS(strcasecmp HAVE_STRCASECMP)

@@ -409,6 +409,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
 
     InitAL();
 
+    if(deviceName && !deviceName[0])
+        deviceName = NULL;
+
     pDevice = malloc(sizeof(ALCdevice));
     if (pDevice)
     {
@@ -1033,6 +1036,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
     ALint i;
 
     InitAL();
+
+    if(deviceName && !deviceName[0])
+        deviceName = NULL;
 
     device = malloc(sizeof(ALCdevice));
     if (device)

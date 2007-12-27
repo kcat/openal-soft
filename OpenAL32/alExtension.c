@@ -156,6 +156,8 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_FORMAT_STEREO_IMA4",                AL_FORMAT_STEREO_IMA4               },
     { (ALchar *)"AL_FORMAT_QUAD8",                      AL_FORMAT_QUAD8                     },
     { (ALchar *)"AL_FORMAT_QUAD16",                     AL_FORMAT_QUAD16                    },
+    { (ALchar *)"AL_FORMAT_51CHN8",                     AL_FORMAT_51CHN8                    },
+    { (ALchar *)"AL_FORMAT_51CHN16",                    AL_FORMAT_51CHN16                   },
 
     // Buffer attributes
     { (ALchar *)"AL_FREQUENCY",                         AL_FREQUENCY                        },

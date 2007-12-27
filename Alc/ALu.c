@@ -59,11 +59,13 @@ __inline ALuint aluBytesFromFormat(ALenum format)
         case AL_FORMAT_MONO8:
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_QUAD8:
+        case AL_FORMAT_51CHN8:
             return 1;
 
         case AL_FORMAT_MONO16:
         case AL_FORMAT_STEREO16:
         case AL_FORMAT_QUAD16:
+        case AL_FORMAT_51CHN16:
             return 2;
 
         default:
@@ -86,6 +88,10 @@ __inline ALuint aluChannelsFromFormat(ALenum format)
         case AL_FORMAT_QUAD8:
         case AL_FORMAT_QUAD16:
             return 4;
+
+        case AL_FORMAT_51CHN8:
+        case AL_FORMAT_51CHN16:
+            return 6;
 
         default:
             return 0;
@@ -340,6 +346,9 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 break;
             case AL_FORMAT_QUAD8:
             case AL_FORMAT_QUAD16:
+            /* TODO: Add center/lfe channel in spatial calculations? */
+            case AL_FORMAT_51CHN8:
+            case AL_FORMAT_51CHN16:
                 // Apply a scalar so each individual speaker has more weight
                 PanningLR = 0.5f + (0.5f*Position[0]*1.41421356f);
                 PanningLR = __min(1.0f, PanningLR);
@@ -367,10 +376,14 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         drysend[1] = SourceVolume * 1.0f * ListenerGain;
         drysend[2] = SourceVolume * 1.0f * ListenerGain;
         drysend[3] = SourceVolume * 1.0f * ListenerGain;
+        drysend[4] = SourceVolume * 1.0f * ListenerGain;
+        drysend[5] = SourceVolume * 1.0f * ListenerGain;
         wetsend[0] = SourceVolume * 0.0f * ListenerGain;
         wetsend[1] = SourceVolume * 0.0f * ListenerGain;
         wetsend[2] = SourceVolume * 0.0f * ListenerGain;
         wetsend[3] = SourceVolume * 0.0f * ListenerGain;
+        wetsend[4] = SourceVolume * 0.0f * ListenerGain;
+        wetsend[5] = SourceVolume * 0.0f * ListenerGain;
 
         pitch[0] = Pitch;
     }
@@ -380,8 +393,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 {
     static float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
     static float WetBuffer[BUFFERSIZE][OUTPUTCHANNELS];
-    ALfloat DrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    ALfloat WetSend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    ALfloat DrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    ALfloat WetSend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
     ALuint BlockAlign,BufferSize;
     ALuint DataSize=0,DataPosInt=0,DataPosFrac=0;
     ALuint Channels,Bits,Frequency,ulExtraSamples;
@@ -641,6 +654,13 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         buffer = ((ALubyte*)buffer) + 1;
                     }
                     break;
+                case AL_FORMAT_51CHN8:
+                    for(i = 0;i < SamplesToDo*6;i++)
+                    {
+                        *((ALubyte*)buffer) = (ALubyte)((aluF2S(DryBuffer[i/6][i%6]+WetBuffer[i/6][i%6])>>8)+128);
+                        buffer = ((ALubyte*)buffer) + 1;
+                    }
+                    break;
                 case AL_FORMAT_MONO16:
                     for(i = 0;i < SamplesToDo;i++)
                     {
@@ -660,6 +680,13 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     for(i = 0;i < SamplesToDo*4;i++)
                     {
                         *((ALshort*)buffer) = aluF2S(DryBuffer[i>>2][i&3]+WetBuffer[i>>2][i&3]);
+                        buffer = ((ALshort*)buffer) + 1;
+                    }
+                    break;
+                case AL_FORMAT_51CHN16:
+                    for(i = 0;i < SamplesToDo*6;i++)
+                    {
+                        *((ALshort*)buffer) = aluF2S(DryBuffer[i/6][i%6]+WetBuffer[i/6][i%6]);
                         buffer = ((ALshort*)buffer) + 1;
                     }
                     break;

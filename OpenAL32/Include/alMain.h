@@ -92,9 +92,11 @@ extern char _alDebug[256];
 #define AL_FORMAT_MONO_IMA4                      0x1300
 #define AL_FORMAT_STEREO_IMA4                    0x1301
 // These are from AL_EXT_MCFORMATS, which we don't support yet but the mixer
-// can use 4-channel formats
+// can use the extra formats
 #define AL_FORMAT_QUAD8                          0x1204
 #define AL_FORMAT_QUAD16                         0x1205
+#define AL_FORMAT_51CHN8                         0x120A
+#define AL_FORMAT_51CHN16                        0x120B
 
 #define SWMIXER_OUTPUT_RATE        44100
 //#define OUTPUT_BUFFER_SIZE         (32768*SWMIXER_OUTPUT_RATE/22050)

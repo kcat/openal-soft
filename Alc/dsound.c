@@ -129,7 +129,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     memset(&OutputType, 0, sizeof(WAVEFORMATEX));
     OutputType.wFormatTag = WAVE_FORMAT_PCM;
     OutputType.nChannels = device->Channels;
-    OutputType.wBitsPerSample = (((device->Format==AL_FORMAT_MONO16)||(device->Format==AL_FORMAT_STEREO16)||(device->Format==AL_FORMAT_QUAD16))?16:8);
+    OutputType.wBitsPerSample = aluBytesFromFormat(device->Format) * 8;
     OutputType.nBlockAlign = OutputType.nChannels*OutputType.wBitsPerSample/8;
     OutputType.nSamplesPerSec = device->Frequency;
     OutputType.nAvgBytesPerSec = OutputType.nSamplesPerSec*OutputType.nBlockAlign;

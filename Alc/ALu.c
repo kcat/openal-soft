@@ -327,28 +327,24 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
         //6. Convert normalized position into pannings, then into channel volumes
         aluNormalize(Position);
-        switch(OutputFormat)
+        switch(aluChannelsFromFormat(OutputFormat))
         {
-            case AL_FORMAT_MONO8:
-            case AL_FORMAT_MONO16:
+            case 1:
                 drysend[0] = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f); //Direct
                 drysend[1] = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f); //Direct
                 wetsend[0] =              ListenerGain * WetMix * aluSqrt(1.0f); //Room
                 wetsend[1] =              ListenerGain * WetMix * aluSqrt(1.0f); //Room
                 break;
-            case AL_FORMAT_STEREO8:
-            case AL_FORMAT_STEREO16:
+            case 2:
                 PanningLR = 0.5f + 0.5f*Position[0];
                 drysend[0] = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f-PanningLR); //L Direct
                 drysend[1] = ConeVolume * ListenerGain * DryMix * aluSqrt(     PanningLR); //R Direct
                 wetsend[0] =              ListenerGain * WetMix * aluSqrt(1.0f-PanningLR); //L Room
                 wetsend[1] =              ListenerGain * WetMix * aluSqrt(     PanningLR); //R Room
                 break;
-            case AL_FORMAT_QUAD8:
-            case AL_FORMAT_QUAD16:
+            case 4:
             /* TODO: Add center/lfe channel in spatial calculations? */
-            case AL_FORMAT_51CHN8:
-            case AL_FORMAT_51CHN16:
+            case 6:
                 // Apply a scalar so each individual speaker has more weight
                 PanningLR = 0.5f + (0.5f*Position[0]*1.41421356f);
                 PanningLR = __min(1.0f, PanningLR);

@@ -324,16 +324,12 @@ open_alsa:
         return ALC_FALSE;
     }
 
-    switch(device->Format)
+    switch(aluBytesFromFormat(device->Format))
     {
-        case AL_FORMAT_MONO8:
-        case AL_FORMAT_STEREO8:
-        case AL_FORMAT_QUAD8:
+        case 1:
             data->format = SND_PCM_FORMAT_U8;
             break;
-        case AL_FORMAT_MONO16:
-        case AL_FORMAT_STEREO16:
-        case AL_FORMAT_QUAD16:
+        case 2:
             data->format = SND_PCM_FORMAT_S16;
             break;
         default:

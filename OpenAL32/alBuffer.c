@@ -275,25 +275,13 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
             switch(format)
             {
                 case AL_FORMAT_MONO8:
-                    LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO16);
-                    break;
-
                 case AL_FORMAT_MONO16:
-                    LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO16);
-                    break;
-
                 case AL_FORMAT_MONO_FLOAT32:
                     LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO16);
                     break;
 
                 case AL_FORMAT_STEREO8:
-                    LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO16);
-                    break;
-
                 case AL_FORMAT_STEREO16:
-                    LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO16);
-                    break;
-
                 case AL_FORMAT_STEREO_FLOAT32:
                     LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO16);
                     break;

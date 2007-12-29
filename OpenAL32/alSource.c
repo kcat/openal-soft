@@ -1910,6 +1910,10 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
             {
                 *pflOffset = (ALfloat)(lBytesPlayed >> 1);
             }
+            else if (aluBytesFromFormat(eOriginalFormat) == 4)
+            {
+                *pflOffset = (ALfloat)(lBytesPlayed << 1);
+            }
             else if ((eOriginalFormat == AL_FORMAT_MONO_IMA4) ||
                      (eOriginalFormat == AL_FORMAT_STEREO_IMA4))
             {
@@ -2059,6 +2063,11 @@ static ALint GetByteOffset(ALsource *pSource)
             if (aluBytesFromFormat(pBuffer->eOriginalFormat) == 1)
             {
                 lByteOffset = pSource->lOffset * 2;
+                lByteOffset -= (lByteOffset % (lChannels * 2));
+            }
+            else if (aluBytesFromFormat(pBuffer->eOriginalFormat) == 4)
+            {
+                lByteOffset = pSource->lOffset / 2;
                 lByteOffset -= (lByteOffset % (lChannels * 2));
             }
             else if ((pBuffer->eOriginalFormat == AL_FORMAT_MONO_IMA4) ||

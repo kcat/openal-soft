@@ -357,7 +357,7 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->lNumStereoSources = 1;
     pContext->lNumMonoSources = pContext->Device->MaxNoOfSources - pContext->lNumStereoSources;
 
-    strcpy(pContext->ExtensionList, "AL_EXT_EXPONENT_DISTANCE AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_OFFSET");
+    strcpy(pContext->ExtensionList, "AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_OFFSET");
 }
 
 

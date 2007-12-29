@@ -89,6 +89,9 @@ extern char _alDebug[256];
 } while(0)
 
 
+#define AL_FORMAT_MONO_FLOAT32                   0x10010
+#define AL_FORMAT_STEREO_FLOAT32                 0x10011
+
 #define AL_FORMAT_MONO_IMA4                      0x1300
 #define AL_FORMAT_STEREO_IMA4                    0x1301
 // These are from AL_EXT_MCFORMATS, which we don't support yet but the mixer

@@ -68,6 +68,10 @@ __inline ALuint aluBytesFromFormat(ALenum format)
         case AL_FORMAT_51CHN16:
             return 2;
 
+        case AL_FORMAT_MONO_FLOAT32:
+        case AL_FORMAT_STEREO_FLOAT32:
+            return 4;
+
         default:
             return 0;
     }
@@ -79,10 +83,12 @@ __inline ALuint aluChannelsFromFormat(ALenum format)
     {
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
+        case AL_FORMAT_MONO_FLOAT32:
             return 1;
 
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
+        case AL_FORMAT_STEREO_FLOAT32:
             return 2;
 
         case AL_FORMAT_QUAD8:

@@ -817,11 +817,11 @@ ALAPI ALvoid ALAPIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plValu
                 break;
 
             case AL_BITS:
-                *plValue= (((pBuffer->format==AL_FORMAT_MONO8)||(pBuffer->format==AL_FORMAT_STEREO8))?8:16);
+                *plValue = aluBytesFromFormat(pBuffer->format) * 8;
                 break;
 
             case AL_CHANNELS:
-                *plValue = (((pBuffer->format==AL_FORMAT_MONO8)||(pBuffer->format==AL_FORMAT_MONO16))?1:2);
+                *plValue = aluChannelsFromFormat(pBuffer->format);
                 break;
 
             case AL_SIZE:

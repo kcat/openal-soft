@@ -1846,6 +1846,7 @@ static ALvoid InitSourceParams(ALsource *pSource)
 static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset)
 {
     ALbufferlistitem *pBufferList;
+    ALbuffer         *pBuffer;
     ALfloat        flBufferFreq;
     ALint        lBytesPlayed, lChannels;
     ALenum        eOriginalFormat;
@@ -1854,10 +1855,11 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
 
     if (((pSource->state == AL_PLAYING) || (pSource->state == AL_PAUSED)) && (pSource->ulBufferID))
     {
+        pBuffer = ALTHUNK_LOOKUPENTRY(pSource->ulBufferID);
         // Get Current Buffer Size and frequency (in milliseconds)
-        flBufferFreq = (ALfloat)(((ALbuffer*)ALTHUNK_LOOKUPENTRY(pSource->ulBufferID))->frequency);
-        eOriginalFormat = ((ALbuffer*)ALTHUNK_LOOKUPENTRY(pSource->ulBufferID))->eOriginalFormat;
-        lChannels = ((((ALbuffer*)ALTHUNK_LOOKUPENTRY(pSource->ulBufferID))->format == AL_FORMAT_MONO16)?1:2);
+        flBufferFreq = (ALfloat)pBuffer->frequency;
+        eOriginalFormat = pBuffer->eOriginalFormat;
+        lChannels = aluChannelsFromFormat(pBuffer->format);
 
         // Get Current BytesPlayed
         lBytesPlayed = pSource->position * lChannels * 2; // NOTE : This is the byte offset into the *current* buffer
@@ -1904,11 +1906,12 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
             break;
         case AL_BYTE_OFFSET:
             // Take into account the original format of the Buffer
-            if ((eOriginalFormat == AL_FORMAT_MONO8) || (eOriginalFormat == AL_FORMAT_STEREO8))
+            if (aluBytesFromFormat(eOriginalFormat) == 1)
             {
                 *pflOffset = (ALfloat)(lBytesPlayed >> 1);
             }
-            else if ((eOriginalFormat == AL_FORMAT_MONO_IMA4) || (eOriginalFormat == AL_FORMAT_STEREO_IMA4))
+            else if ((eOriginalFormat == AL_FORMAT_MONO_IMA4) ||
+                     (eOriginalFormat == AL_FORMAT_STEREO_IMA4))
             {
                 // Compression rate of the ADPCM supported is 3.6111 to 1
                 lBytesPlayed = (ALint)((ALfloat)lBytesPlayed / 3.6111f);
@@ -1940,6 +1943,7 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
 static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
 {
     ALbufferlistitem    *pBufferList;
+    ALbuffer            *pBuffer;
     ALint                lBufferSize, lTotalBufferSize;
     ALint                lByteOffset;
 
@@ -1956,7 +1960,8 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
         pSource->BuffersProcessed = 0;
         while (pBufferList)
         {
-            lBufferSize = pBufferList->buffer ? ((ALbuffer*)ALTHUNK_LOOKUPENTRY(pBufferList->buffer))->size : 0;
+            pBuffer = ALTHUNK_LOOKUPENTRY(pBufferList->buffer);
+            lBufferSize = pBuffer ? pBuffer->size : 0;
 
             if ((lTotalBufferSize + lBufferSize) <= lByteOffset)
             {
@@ -1985,7 +1990,9 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
                 pSource->lBytesPlayed = lByteOffset;
 
                 // SW Mixer Positions are in Samples
-                pSource->position = pSource->BufferPosition / ((((ALbuffer*)ALTHUNK_LOOKUPENTRY(pBufferList->buffer))->format == AL_FORMAT_MONO16)?2:4);
+                pSource->position = pSource->BufferPosition /
+                                    aluBytesFromFormat(pBuffer->format) /
+                                    aluChannelsFromFormat(pBuffer->format);
             }
             else
             {
@@ -2042,19 +2049,20 @@ static ALint GetByteOffset(ALsource *pSource)
     if (pBuffer)
     {
         flBufferFreq = ((ALfloat)pBuffer->frequency);
-        lChannels = (pBuffer->format == AL_FORMAT_MONO16)?1:2;
+        lChannels = aluChannelsFromFormat(pBuffer->format);
 
         // Determine the ByteOffset (and ensure it is block aligned)
         switch (pSource->lOffsetType)
         {
         case AL_BYTE_OFFSET:
             // Take into consideration the original format
-            if ((pBuffer->eOriginalFormat == AL_FORMAT_MONO8) || (pBuffer->eOriginalFormat == AL_FORMAT_STEREO8))
+            if (aluBytesFromFormat(pBuffer->eOriginalFormat) == 1)
             {
                 lByteOffset = pSource->lOffset * 2;
                 lByteOffset -= (lByteOffset % (lChannels * 2));
             }
-            else if ((pBuffer->eOriginalFormat == AL_FORMAT_MONO_IMA4) || (pBuffer->eOriginalFormat == AL_FORMAT_STEREO_IMA4))
+            else if ((pBuffer->eOriginalFormat == AL_FORMAT_MONO_IMA4) ||
+                     (pBuffer->eOriginalFormat == AL_FORMAT_STEREO_IMA4))
             {
                 // Round down to nearest ADPCM block
                 lByteOffset = (pSource->lOffset / (36 * lChannels)) * 36 * lChannels;

@@ -36,6 +36,10 @@
 typedef struct {
     snd_pcm_t *pcmHandle;
     snd_pcm_format_t format;
+
+    ALvoid *buffer;
+    ALsizei size;
+
     int killNow;
     ALvoid *thread;
 } alsa_data;
@@ -63,6 +67,7 @@ MAKE_FUNC(snd_pcm_hw_params_set_rate_near);
 MAKE_FUNC(snd_pcm_hw_params_set_rate);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_min);
+MAKE_FUNC(snd_pcm_hw_params_get_access);
 MAKE_FUNC(snd_pcm_hw_params);
 MAKE_FUNC(snd_pcm_prepare);
 MAKE_FUNC(snd_pcm_start);
@@ -72,6 +77,7 @@ MAKE_FUNC(snd_pcm_avail_update);
 MAKE_FUNC(snd_pcm_areas_silence);
 MAKE_FUNC(snd_pcm_mmap_begin);
 MAKE_FUNC(snd_pcm_mmap_commit);
+MAKE_FUNC(snd_pcm_writei);
 MAKE_FUNC(snd_pcm_drain);
 MAKE_FUNC(snd_pcm_info_malloc);
 MAKE_FUNC(snd_pcm_info_free);
@@ -210,6 +216,76 @@ static ALuint ALSAProc(ALvoid *ptr)
     return 0;
 }
 
+static ALuint ALSANoMMapProc(ALvoid *ptr)
+{
+    ALCdevice *pDevice = (ALCdevice*)ptr;
+    alsa_data *data = (alsa_data*)pDevice->ExtraData;
+    snd_pcm_sframes_t avail;
+    char *WritePtr;
+    int err;
+
+    while(!data->killNow)
+    {
+        snd_pcm_state_t state = psnd_pcm_state(data->pcmHandle);
+        if(state == SND_PCM_STATE_XRUN)
+        {
+            err = xrun_recovery(data->pcmHandle, -EPIPE);
+            if (err < 0)
+            {
+                AL_PRINT("XRUN recovery failed: %s\n", psnd_strerror(err));
+                break;
+            }
+        }
+        else if (state == SND_PCM_STATE_SUSPENDED)
+        {
+            err = xrun_recovery(data->pcmHandle, -ESTRPIPE);
+            if (err < 0)
+            {
+                AL_PRINT("SUSPEND recovery failed: %s\n", psnd_strerror(err));
+                break;
+            }
+        }
+
+        SuspendContext(NULL);
+        aluMixData(pDevice->Context, data->buffer, data->size, pDevice->Format);
+        ProcessContext(NULL);
+
+        WritePtr = data->buffer;
+        avail = (snd_pcm_uframes_t)data->size / psnd_pcm_frames_to_bytes(data->pcmHandle, 1);
+        while(avail > 0)
+        {
+            int ret = psnd_pcm_writei(data->pcmHandle, WritePtr, avail);
+            switch (ret)
+            {
+            case -EAGAIN:
+                continue;
+            case -ESTRPIPE:
+                do {
+                    ret = psnd_pcm_resume(data->pcmHandle);
+                } while(ret == -EAGAIN);
+                break;
+            case -EPIPE:
+                break;
+            default:
+                if (ret >= 0)
+                {
+                    WritePtr += psnd_pcm_frames_to_bytes(data->pcmHandle, ret);
+                    avail -= ret;
+                }
+                break;
+            }
+            if (ret < 0)
+            {
+                ret = psnd_pcm_prepare(data->pcmHandle);
+                if(ret < 0)
+                    break;
+            }
+        }
+    }
+
+    return 0;
+}
+
 static void fill_silence(snd_pcm_t *pcmHandle, snd_pcm_format_t alsaFormat, int channels)
 {
     const snd_pcm_channel_area_t *areas = NULL;
@@ -263,6 +339,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
 {
     snd_pcm_uframes_t bufferSizeInFrames;
     snd_pcm_hw_params_t *p = NULL;
+    snd_pcm_access_t access;
     unsigned int periods;
     alsa_data *data;
     char driver[64];
@@ -347,7 +424,8 @@ open_alsa:
     /* start with the largest configuration space possible */
     if(!(ok(psnd_pcm_hw_params_any(data->pcmHandle, p), "any") &&
          /* set interleaved access */
-         ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED), "set access") &&
+         (ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED), "set access") ||
+          ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED), "set access"))&&
          /* set format (implicitly sets sample bits) */
          ok(psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format), "set format") &&
          /* set channels (implicitly sets frame bits) */
@@ -368,6 +446,16 @@ open_alsa:
         return ALC_FALSE;
     }
 #undef ok
+
+    if((i=psnd_pcm_hw_params_get_access(p, &access)) < 0)
+    {
+        AL_PRINT("get_access failed: %s\n", psnd_strerror(i));
+        psnd_pcm_hw_params_free(p);
+        psnd_pcm_close(data->pcmHandle);
+        free(data);
+        return ALC_FALSE;
+    }
+
     psnd_pcm_hw_params_free(p);
 
     device->MaxNoOfSources = 256;
@@ -378,26 +466,46 @@ open_alsa:
     {
         AL_PRINT("prepare error: %s\n", psnd_strerror(i));
         psnd_pcm_close(data->pcmHandle);
+        free(data->buffer);
         free(data);
         return ALC_FALSE;
     }
 
-    fill_silence(data->pcmHandle, data->format, device->Channels);
+    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
+    if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
+    {
+        data->buffer = malloc(data->size);
+        if(!data->buffer)
+        {
+            AL_PRINT("buffer malloc failed\n");
+            psnd_pcm_close(data->pcmHandle);
+            free(data);
+            return ALC_FALSE;
+        }
+    }
+    else
+        fill_silence(data->pcmHandle, data->format, device->Channels);
+
     i = psnd_pcm_start(data->pcmHandle);
     if(i < 0)
     {
         AL_PRINT("start error: %s\n", psnd_strerror(i));
         psnd_pcm_close(data->pcmHandle);
+        free(data->buffer);
         free(data);
         return ALC_FALSE;
     }
 
     device->ExtraData = data;
-    data->thread = StartThread(ALSAProc, device);
+    if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
+        data->thread = StartThread(ALSANoMMapProc, device);
+    else
+        data->thread = StartThread(ALSAProc, device);
     if(data->thread == NULL)
     {
         psnd_pcm_close(data->pcmHandle);
         device->ExtraData = NULL;
+        free(data->buffer);
         free(data);
         return ALC_FALSE;
     }
@@ -412,6 +520,7 @@ static void alsa_close_playback(ALCdevice *device)
     StopThread(data->thread);
     psnd_pcm_close(data->pcmHandle);
 
+    free(data->buffer);
     free(data);
     device->ExtraData = NULL;
 }
@@ -686,6 +795,7 @@ LOAD_FUNC(snd_pcm_hw_params_set_rate_near);
 LOAD_FUNC(snd_pcm_hw_params_set_rate);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_min);
+LOAD_FUNC(snd_pcm_hw_params_get_access);
 LOAD_FUNC(snd_pcm_hw_params);
 LOAD_FUNC(snd_pcm_prepare);
 LOAD_FUNC(snd_pcm_start);
@@ -695,6 +805,7 @@ LOAD_FUNC(snd_pcm_avail_update);
 LOAD_FUNC(snd_pcm_areas_silence);
 LOAD_FUNC(snd_pcm_mmap_begin);
 LOAD_FUNC(snd_pcm_mmap_commit);
+LOAD_FUNC(snd_pcm_writei);
 LOAD_FUNC(snd_pcm_drain);
 
 LOAD_FUNC(snd_pcm_info_malloc);

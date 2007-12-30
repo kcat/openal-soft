@@ -269,7 +269,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     char *err;
     int i;
 
-    strncpy(driver, GetConfigValue("alsa", "default", "default"), sizeof(driver)-1);
+    strncpy(driver, GetConfigValue("alsa", "device", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
     if(deviceName)
     {

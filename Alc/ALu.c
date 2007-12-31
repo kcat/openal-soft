@@ -56,6 +56,12 @@ typedef long long ALint64;
 #define __min min
 #endif
 
+#define BUFFERSIZE 48000
+#define FRACTIONBITS 14
+#define FRACTIONMASK ((1L<<FRACTIONBITS)-1)
+#define MAX_PITCH 4
+#define OUTPUTCHANNELS 6
+
 __inline ALuint aluBytesFromFormat(ALenum format)
 {
     switch(format)

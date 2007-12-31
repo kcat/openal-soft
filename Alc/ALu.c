@@ -680,7 +680,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     }
                     break;
                 case AL_FORMAT_STEREO16:
-                default:
                     for(i = 0;i < SamplesToDo;i++)
                     {
                         ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][0]+WetBuffer[i][0]);
@@ -709,6 +708,9 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][5]+WetBuffer[i][5]);
                         buffer = ((ALshort*)buffer) + 6;
                     }
+                    break;
+
+                default:
                     break;
             }
 

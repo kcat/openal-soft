@@ -1908,21 +1908,21 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
             break;
         case AL_BYTE_OFFSET:
             // Take into account the original format of the Buffer
-            if (aluBytesFromFormat(eOriginalFormat) == 1)
+            if ((eOriginalFormat == AL_FORMAT_MONO_IMA4) ||
+                (eOriginalFormat == AL_FORMAT_STEREO_IMA4))
+            {
+                // Compression rate of the ADPCM supported is 3.6111 to 1
+                lBytesPlayed = (ALint)((ALfloat)lBytesPlayed / 3.6111f);
+                // Round down to nearest ADPCM block
+                *pflOffset = (ALfloat)((lBytesPlayed / (36 * lChannels)) * 36 * lChannels);
+            }
+            else if (aluBytesFromFormat(eOriginalFormat) == 1)
             {
                 *pflOffset = (ALfloat)(lBytesPlayed >> 1);
             }
             else if (aluBytesFromFormat(eOriginalFormat) == 4)
             {
                 *pflOffset = (ALfloat)(lBytesPlayed << 1);
-            }
-            else if ((eOriginalFormat == AL_FORMAT_MONO_IMA4) ||
-                     (eOriginalFormat == AL_FORMAT_STEREO_IMA4))
-            {
-                // Compression rate of the ADPCM supported is 3.6111 to 1
-                lBytesPlayed = (ALint)((ALfloat)lBytesPlayed / 3.6111f);
-                // Round down to nearest ADPCM block
-                *pflOffset = (ALfloat)((lBytesPlayed / (36 * lChannels)) * 36 * lChannels);
             }
             else
             {
@@ -2062,7 +2062,16 @@ static ALint GetByteOffset(ALsource *pSource)
         {
         case AL_BYTE_OFFSET:
             // Take into consideration the original format
-            if (aluBytesFromFormat(pBuffer->eOriginalFormat) == 1)
+            if ((pBuffer->eOriginalFormat == AL_FORMAT_MONO_IMA4) ||
+                (pBuffer->eOriginalFormat == AL_FORMAT_STEREO_IMA4))
+            {
+                // Round down to nearest ADPCM block
+                lByteOffset = (pSource->lOffset / (36 * lChannels)) * 36 * lChannels;
+                // Multiply by compression rate
+                lByteOffset = (ALint)(3.6111f * (ALfloat)lByteOffset);
+                lByteOffset -= (lByteOffset % (lChannels * 2));
+            }
+            else if (aluBytesFromFormat(pBuffer->eOriginalFormat) == 1)
             {
                 lByteOffset = pSource->lOffset * 2;
                 lByteOffset -= (lByteOffset % (lChannels * 2));
@@ -2070,15 +2079,6 @@ static ALint GetByteOffset(ALsource *pSource)
             else if (aluBytesFromFormat(pBuffer->eOriginalFormat) == 4)
             {
                 lByteOffset = pSource->lOffset / 2;
-                lByteOffset -= (lByteOffset % (lChannels * 2));
-            }
-            else if ((pBuffer->eOriginalFormat == AL_FORMAT_MONO_IMA4) ||
-                     (pBuffer->eOriginalFormat == AL_FORMAT_STEREO_IMA4))
-            {
-                // Round down to nearest ADPCM block
-                lByteOffset = (pSource->lOffset / (36 * lChannels)) * 36 * lChannels;
-                // Multiply by compression rate
-                lByteOffset = (ALint)(3.6111f * (ALfloat)lByteOffset);
                 lByteOffset -= (lByteOffset % (lChannels * 2));
             }
             else

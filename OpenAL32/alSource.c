@@ -26,6 +26,8 @@
 #include "AL/alc.h"
 #include "alError.h"
 #include "alSource.h"
+#include "alBuffer.h"
+#include "alThunk.h"
 
 static ALvoid InitSourceParams(ALsource *pSource);
 static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset);

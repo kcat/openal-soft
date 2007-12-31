@@ -56,13 +56,7 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 #define max(x,y) (((x)>(y))?(x):(y))
 #endif
 
-#include "alBuffer.h"
-#include "alError.h"
-#include "alExtension.h"
 #include "alListener.h"
-#include "alSource.h"
-#include "alState.h"
-#include "alThunk.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -156,8 +150,8 @@ struct ALCcontext_struct
 {
     ALlistener  Listener;
 
-    ALsource   *Source;
-    ALuint      SourceCount;
+    struct ALsource *Source;
+    ALuint           SourceCount;
 
     ALenum      LastError;
     ALboolean   InUse;

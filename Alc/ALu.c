@@ -26,6 +26,10 @@
 #include "alMain.h"
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "alSource.h"
+#include "alBuffer.h"
+#include "alThunk.h"
+#include "alListener.h"
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>

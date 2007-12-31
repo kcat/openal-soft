@@ -29,6 +29,9 @@
 #include "alMain.h"
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "alThunk.h"
+#include "alSource.h"
+#include "alExtension.h"
 
 ///////////////////////////////////////////////////////
 // DEBUG INFORMATION

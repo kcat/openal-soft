@@ -27,6 +27,7 @@
 #include "AL/alc.h"
 #include "alError.h"
 #include "alBuffer.h"
+#include "alThunk.h"
 
 
 static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat);

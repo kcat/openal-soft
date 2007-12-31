@@ -578,15 +578,19 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 //Direct path final mix buffer and panning
                                 DryBuffer[j][FRONT_LEFT]  += value*DrySend[FRONT_LEFT];
                                 DryBuffer[j][FRONT_RIGHT] += value*DrySend[FRONT_RIGHT];
+#if 0 /* FIXME: Re-enable when proper 6-channel spatialization is used */
                                 DryBuffer[j][SIDE_LEFT]   += value*DrySend[SIDE_LEFT];
                                 DryBuffer[j][SIDE_RIGHT]  += value*DrySend[SIDE_RIGHT];
+#endif
                                 DryBuffer[j][BACK_LEFT]   += value*DrySend[BACK_LEFT];
                                 DryBuffer[j][BACK_RIGHT]  += value*DrySend[BACK_RIGHT];
                                 //Room path final mix buffer and panning
                                 WetBuffer[j][FRONT_LEFT]  += value*WetSend[FRONT_LEFT];
                                 WetBuffer[j][FRONT_RIGHT] += value*WetSend[FRONT_RIGHT];
+#if 0 /* FIXME: Re-enable when proper 6-channel spatialization is used */
                                 WetBuffer[j][SIDE_LEFT]   += value*WetSend[SIDE_LEFT];
                                 WetBuffer[j][SIDE_RIGHT]  += value*WetSend[SIDE_RIGHT];
+#endif
                                 WetBuffer[j][BACK_LEFT]   += value*WetSend[BACK_LEFT];
                                 WetBuffer[j][BACK_RIGHT]  += value*WetSend[BACK_RIGHT];
                             }

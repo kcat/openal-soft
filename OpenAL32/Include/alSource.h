@@ -17,7 +17,7 @@ typedef struct ALbufferlistitem
     struct ALbufferlistitem *next;
 } ALbufferlistitem;
 
-typedef struct ALsource_struct
+typedef struct ALsource
 {
     ALfloat      flPitch;
     ALfloat      flGain;
@@ -61,7 +61,7 @@ typedef struct ALsource_struct
     // Source Type (Static, Streaming, or Undetermined)
     ALint  lSourceType;
 
-    struct ALsource_struct *next;
+    struct ALsource *next;
 } ALsource;
 
 #ifdef __cplusplus

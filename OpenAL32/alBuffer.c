@@ -287,6 +287,110 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO16);
                     break;
 
+                case AL_FORMAT_REAR8:
+                case AL_FORMAT_REAR16:
+                case AL_FORMAT_REAR32: {
+                    ALuint NewFormat = AL_FORMAT_QUAD16;
+                    ALuint NewChannels = aluChannelsFromFormat(NewFormat);
+                    ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
+                                        ((format==AL_FORMAT_REAR16) ? 2 :
+                                         4));
+                    ALsizei i;
+
+                    assert(aluBytesFromFormat(NewFormat) == 2);
+
+                    if ((size%(OrigBytes*2)) != 0)
+                    {
+                        alSetError(AL_INVALID_VALUE);
+                        break;
+                    }
+
+                    switch(OrigBytes)
+                    {
+                    case 1:
+                        size /= sizeof(ALubyte);
+                        size *= 2;
+
+                        // 8bit Samples are converted to 16 bit here
+                        // Allocate 8 extra samples
+                        ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
+                        if (ALBuf->data)
+                        {
+                            for (i = 0;i < size;i+=4)
+                            {
+                                ALBuf->data[i+0] = 0;
+                                ALBuf->data[i+1] = 0;
+                                ALBuf->data[i+2] = (ALshort)((((ALubyte*)data)[i/2+0]-128) << 8);
+                                ALBuf->data[i+3] = (ALshort)((((ALubyte*)data)[i/2+1]-128) << 8);
+                            }
+                            memset(&(ALBuf->data[size]), 0, 16*NewChannels);
+
+                            ALBuf->format = NewFormat;
+                            ALBuf->eOriginalFormat = format;
+                            ALBuf->size = size*1*sizeof(ALshort);
+                            ALBuf->frequency = freq;
+                        }
+                        else
+                            alSetError(AL_OUT_OF_MEMORY);
+                        break;
+
+                    case 2:
+                        size /= sizeof(ALshort);
+                        size *= 2;
+
+                        // Allocate 8 extra samples
+                        ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
+                        if (ALBuf->data)
+                        {
+                            for (i = 0;i < size;i+=4)
+                            {
+                                ALBuf->data[i+0] = 0;
+                                ALBuf->data[i+1] = 0;
+                                ALBuf->data[i+2] = ((ALshort*)data)[i/2+0];
+                                ALBuf->data[i+3] = ((ALshort*)data)[i/2+1];
+                            }
+                            memset(&(ALBuf->data[size]), 0, 16*NewChannels);
+
+                            ALBuf->format = NewFormat;
+                            ALBuf->eOriginalFormat = format;
+                            ALBuf->size = size*1*sizeof(ALshort);
+                            ALBuf->frequency = freq;
+                        }
+                        else
+                            alSetError(AL_OUT_OF_MEMORY);
+                        break;
+
+                    case 4:
+                        size /= sizeof(ALfloat);
+                        size *= 2;
+
+                        // Allocate 8 extra samples
+                        ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
+                        if (ALBuf->data)
+                        {
+                            for (i = 0;i < size;i+=4)
+                            {
+                                ALBuf->data[i+0] = 0;
+                                ALBuf->data[i+1] = 0;
+                                ALBuf->data[i+2] = (ALshort)(((ALfloat*)data)[i/2+0] * 32767.5f - 0.5);
+                                ALBuf->data[i+3] = (ALshort)(((ALfloat*)data)[i/2+1] * 32767.5f - 0.5);
+                            }
+                            memset(&(ALBuf->data[size]), 0, 16*NewChannels);
+
+                            ALBuf->format = NewFormat;
+                            ALBuf->eOriginalFormat = format;
+                            ALBuf->size = size*1*sizeof(ALshort);
+                            ALBuf->frequency = freq;
+                        }
+                        else
+                            alSetError(AL_OUT_OF_MEMORY);
+                        break;
+
+                    default:
+                        assert(0);
+                    }
+                }   break;
+
                 case AL_FORMAT_QUAD8:
                 case AL_FORMAT_QUAD16:
                 case AL_FORMAT_QUAD32:

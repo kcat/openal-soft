@@ -1916,6 +1916,14 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
                 // Round down to nearest ADPCM block
                 *pflOffset = (ALfloat)((lBytesPlayed / (36 * lChannels)) * 36 * lChannels);
             }
+            else if (eOriginalFormat == AL_FORMAT_REAR8)
+            {
+                *pflOffset = (ALfloat)(lBytesPlayed >> 2);
+            }
+            else if (eOriginalFormat == AL_FORMAT_REAR16)
+            {
+                *pflOffset = (ALfloat)(lBytesPlayed >> 1);
+            }
             else if (aluBytesFromFormat(eOriginalFormat) == 1)
             {
                 *pflOffset = (ALfloat)(lBytesPlayed >> 1);
@@ -2069,6 +2077,16 @@ static ALint GetByteOffset(ALsource *pSource)
                 lByteOffset = (pSource->lOffset / (36 * lChannels)) * 36 * lChannels;
                 // Multiply by compression rate
                 lByteOffset = (ALint)(3.6111f * (ALfloat)lByteOffset);
+                lByteOffset -= (lByteOffset % (lChannels * 2));
+            }
+            else if (pBuffer->eOriginalFormat == AL_FORMAT_REAR8)
+            {
+                lByteOffset = pSource->lOffset * 4;
+                lByteOffset -= (lByteOffset % (lChannels * 2));
+            }
+            else if (pBuffer->eOriginalFormat == AL_FORMAT_REAR16)
+            {
+                lByteOffset = pSource->lOffset * 2;
                 lByteOffset -= (lByteOffset % (lChannels * 2));
             }
             else if (aluBytesFromFormat(pBuffer->eOriginalFormat) == 1)

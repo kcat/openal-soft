@@ -287,6 +287,30 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO16);
                     break;
 
+                case AL_FORMAT_QUAD8:
+                case AL_FORMAT_QUAD16:
+                case AL_FORMAT_QUAD32:
+                    LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD16);
+                    break;
+
+                case AL_FORMAT_51CHN8:
+                case AL_FORMAT_51CHN16:
+                case AL_FORMAT_51CHN32:
+                    LoadData(ALBuf, data, size, freq, format, AL_FORMAT_51CHN16);
+                    break;
+
+                case AL_FORMAT_61CHN8:
+                case AL_FORMAT_61CHN16:
+                case AL_FORMAT_61CHN32:
+                    LoadData(ALBuf, data, size, freq, format, AL_FORMAT_61CHN16);
+                    break;
+
+                case AL_FORMAT_71CHN8:
+                case AL_FORMAT_71CHN16:
+                case AL_FORMAT_71CHN32:
+                    LoadData(ALBuf, data, size, freq, format, AL_FORMAT_71CHN16);
+                    break;
+
                 case AL_FORMAT_MONO_IMA4:
                     // Here is where things vary:
                     // nVidia and Apple use 64+1 samples per block => block_size=36 bytes

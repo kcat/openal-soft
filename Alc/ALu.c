@@ -638,58 +638,76 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                 case AL_FORMAT_MONO8:
                     for(i = 0;i < SamplesToDo;i++)
                     {
-                        *((ALubyte*)buffer) = (ALubyte)((aluF2S(DryBuffer[i][0]+DryBuffer[i][1]+WetBuffer[i][0]+WetBuffer[i][1])>>8)+128);
+                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][0]+DryBuffer[i][1]+WetBuffer[i][0]+WetBuffer[i][1])>>8)+128);
                         buffer = ((ALubyte*)buffer) + 1;
                     }
                     break;
                 case AL_FORMAT_STEREO8:
-                    for(i = 0;i < SamplesToDo*2;i++)
+                    for(i = 0;i < SamplesToDo;i++)
                     {
-                        *((ALubyte*)buffer) = (ALubyte)((aluF2S(DryBuffer[i>>1][i&1]+WetBuffer[i>>1][i&1])>>8)+128);
-                        buffer = ((ALubyte*)buffer) + 1;
+                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][0]+WetBuffer[i][0])>>8)+128);
+                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][1]+WetBuffer[i][1])>>8)+128);
+                        buffer = ((ALubyte*)buffer) + 2;
                     }
                     break;
                 case AL_FORMAT_QUAD8:
-                    for(i = 0;i < SamplesToDo*4;i++)
+                    for(i = 0;i < SamplesToDo;i++)
                     {
-                        *((ALubyte*)buffer) = (ALubyte)((aluF2S(DryBuffer[i>>2][i&3]+WetBuffer[i>>2][i&3])>>8)+128);
-                        buffer = ((ALubyte*)buffer) + 1;
+                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][0]+WetBuffer[i][0])>>8)+128);
+                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][1]+WetBuffer[i][1])>>8)+128);
+                        ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][2]+WetBuffer[i][2])>>8)+128);
+                        ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][3]+WetBuffer[i][3])>>8)+128);
+                        buffer = ((ALubyte*)buffer) + 4;
                     }
                     break;
                 case AL_FORMAT_51CHN8:
-                    for(i = 0;i < SamplesToDo*6;i++)
+                    for(i = 0;i < SamplesToDo;i++)
                     {
-                        *((ALubyte*)buffer) = (ALubyte)((aluF2S(DryBuffer[i/6][i%6]+WetBuffer[i/6][i%6])>>8)+128);
-                        buffer = ((ALubyte*)buffer) + 1;
+                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][0]+WetBuffer[i][0])>>8)+128);
+                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][1]+WetBuffer[i][1])>>8)+128);
+                        ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][2]+WetBuffer[i][2])>>8)+128);
+                        ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][3]+WetBuffer[i][3])>>8)+128);
+                        ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][4]+WetBuffer[i][4])>>8)+128);
+                        ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][5]+WetBuffer[i][5])>>8)+128);
+                        buffer = ((ALubyte*)buffer) + 6;
                     }
                     break;
                 case AL_FORMAT_MONO16:
                     for(i = 0;i < SamplesToDo;i++)
                     {
-                        *((ALshort*)buffer) = aluF2S(DryBuffer[i][0]+DryBuffer[i][1]+WetBuffer[i][0]+WetBuffer[i][1]);
+                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][0]+DryBuffer[i][1]+WetBuffer[i][0]+WetBuffer[i][1]);
                         buffer = ((ALshort*)buffer) + 1;
                     }
                     break;
                 case AL_FORMAT_STEREO16:
                 default:
-                    for(i = 0;i < SamplesToDo*2;i++)
+                    for(i = 0;i < SamplesToDo;i++)
                     {
-                        *((ALshort*)buffer) = aluF2S(DryBuffer[i>>1][i&1]+WetBuffer[i>>1][i&1]);
-                        buffer = ((ALshort*)buffer) + 1;
+                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][0]+WetBuffer[i][0]);
+                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][1]+WetBuffer[i][1]);
+                        buffer = ((ALshort*)buffer) + 2;
                     }
                     break;
                 case AL_FORMAT_QUAD16:
-                    for(i = 0;i < SamplesToDo*4;i++)
+                    for(i = 0;i < SamplesToDo;i++)
                     {
-                        *((ALshort*)buffer) = aluF2S(DryBuffer[i>>2][i&3]+WetBuffer[i>>2][i&3]);
-                        buffer = ((ALshort*)buffer) + 1;
+                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][0]+WetBuffer[i][0]);
+                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][1]+WetBuffer[i][1]);
+                        ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][2]+WetBuffer[i][2]);
+                        ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][3]+WetBuffer[i][3]);
+                        buffer = ((ALshort*)buffer) + 4;
                     }
                     break;
                 case AL_FORMAT_51CHN16:
-                    for(i = 0;i < SamplesToDo*6;i++)
+                    for(i = 0;i < SamplesToDo;i++)
                     {
-                        *((ALshort*)buffer) = aluF2S(DryBuffer[i/6][i%6]+WetBuffer[i/6][i%6]);
-                        buffer = ((ALshort*)buffer) + 1;
+                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][0]+WetBuffer[i][0]);
+                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][1]+WetBuffer[i][1]);
+                        ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][2]+WetBuffer[i][2]);
+                        ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][3]+WetBuffer[i][3]);
+                        ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][4]+WetBuffer[i][4]);
+                        ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][5]+WetBuffer[i][5]);
+                        buffer = ((ALshort*)buffer) + 6;
                     }
                     break;
             }

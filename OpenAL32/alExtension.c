@@ -150,8 +150,10 @@ static ALenums enumeration[]={
     // Buffer Formats
     { (ALchar *)"AL_FORMAT_MONO8",                      AL_FORMAT_MONO8                     },
     { (ALchar *)"AL_FORMAT_MONO16",                     AL_FORMAT_MONO16                    },
+    { (ALchar *)"AL_FORMAT_MONO_FLOAT32",               AL_FORMAT_MONO_FLOAT32              },
     { (ALchar *)"AL_FORMAT_STEREO8",                    AL_FORMAT_STEREO8                   },
     { (ALchar *)"AL_FORMAT_STEREO16",                   AL_FORMAT_STEREO16                  },
+    { (ALchar *)"AL_FORMAT_STEREO_FLOAT32",             AL_FORMAT_STEREO_FLOAT32            },
     { (ALchar *)"AL_FORMAT_MONO_IMA4",                  AL_FORMAT_MONO_IMA4                 },
     { (ALchar *)"AL_FORMAT_STEREO_IMA4",                AL_FORMAT_STEREO_IMA4               },
     { (ALchar *)"AL_FORMAT_QUAD8",                      AL_FORMAT_QUAD8                     },

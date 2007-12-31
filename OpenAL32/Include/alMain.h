@@ -86,8 +86,6 @@ extern char _alDebug[256];
 #define AL_FORMAT_MONO_IMA4                      0x1300
 #define AL_FORMAT_STEREO_IMA4                    0x1301
 
-// These are from AL_EXT_MCFORMATS, which we don't support yet but the mixer
-// can use some of the extra formats
 #define AL_FORMAT_51CHN8                         0x120A
 #define AL_FORMAT_51CHN16                        0x120B
 #define AL_FORMAT_51CHN32                        0x120C

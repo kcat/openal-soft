@@ -596,18 +596,55 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             }
                             else
                             {
-                                //First order interpolator (left)
-                                value = (ALfloat)((ALshort)(((Data[k*2  ]*((1L<<FRACTIONBITS)-fraction))+(Data[k*2+2]*(fraction)))>>FRACTIONBITS));
-                                //Direct path final mix buffer and panning (left)
+                                //First order interpolator (front left)
+                                value = (ALfloat)((ALshort)(((Data[k*Channels  ]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels  ]*(fraction)))>>FRACTIONBITS));
                                 DryBuffer[j][FRONT_LEFT] += value*DrySend[FRONT_LEFT];
-                                //Room path final mix buffer and panning (left)
                                 WetBuffer[j][FRONT_LEFT] += value*WetSend[FRONT_LEFT];
-                                //First order interpolator (right)
-                                value = (ALfloat)((ALshort)(((Data[k*2+1]*((1L<<FRACTIONBITS)-fraction))+(Data[k*2+3]*(fraction)))>>FRACTIONBITS));
-                                //Direct path final mix buffer and panning (right)
+                                //First order interpolator (front right)
+                                value = (ALfloat)((ALshort)(((Data[k*Channels+1]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+1]*(fraction)))>>FRACTIONBITS));
                                 DryBuffer[j][FRONT_RIGHT] += value*DrySend[FRONT_RIGHT];
-                                //Room path final mix buffer and panning (right)
                                 WetBuffer[j][FRONT_RIGHT] += value*WetSend[FRONT_RIGHT];
+                                if(Channels >= 4)
+                                {
+                                    int i = 2;
+                                    if(Channels >= 7)
+                                    {
+                                        //First order interpolator (side left)
+                                        value = (ALfloat)((ALshort)(((Data[k*Channels+2]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+2]*(fraction)))>>FRACTIONBITS));
+                                        DryBuffer[j][SIDE_LEFT] += value*DrySend[SIDE_LEFT];
+                                        WetBuffer[j][SIDE_LEFT] += value*WetSend[SIDE_LEFT];
+                                        //First order interpolator (side right)
+                                        value = (ALfloat)((ALshort)(((Data[k*Channels+3]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+3]*(fraction)))>>FRACTIONBITS));
+                                        DryBuffer[j][SIDE_RIGHT] += value*DrySend[SIDE_RIGHT];
+                                        WetBuffer[j][SIDE_RIGHT] += value*WetSend[SIDE_RIGHT];
+                                        i += 2;
+                                    }
+                                    //First order interpolator (back left)
+                                    value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
+                                    DryBuffer[j][BACK_LEFT] += value*DrySend[BACK_LEFT];
+                                    WetBuffer[j][BACK_LEFT] += value*WetSend[BACK_LEFT];
+                                    i++;
+                                    //First order interpolator (back right)
+                                    value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
+                                    DryBuffer[j][BACK_RIGHT] += value*DrySend[BACK_RIGHT];
+                                    WetBuffer[j][BACK_RIGHT] += value*WetSend[BACK_RIGHT];
+                                    i++;
+                                    if(Channels >= 6)
+                                    {
+                                        if(Channels != 7)
+                                        {
+                                            //First order interpolator (center)
+                                            value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
+                                            DryBuffer[j][CENTER] += value*DrySend[CENTER];
+                                            WetBuffer[j][CENTER] += value*WetSend[CENTER];
+                                            i++;
+                                        }
+                                        //First order interpolator (lfe)
+                                        value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
+                                        DryBuffer[j][LFE] += value*DrySend[LFE];
+                                        WetBuffer[j][LFE] += value*WetSend[LFE];
+                                    }
+                                }
                             }
                             DataPosFrac += increment;
                             j++;

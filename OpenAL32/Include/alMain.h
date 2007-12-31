@@ -1,9 +1,6 @@
 #ifndef AL_MAIN_H
 #define AL_MAIN_H
 
-#define AL_MAX_CHANNELS        4
-#define AL_MAX_SOURCES        32
-
 #include <string.h>
 
 #include "alu.h"
@@ -102,7 +99,6 @@ extern char _alDebug[256];
 #define AL_FORMAT_51CHN16                        0x120B
 
 #define SWMIXER_OUTPUT_RATE        44100
-//#define OUTPUT_BUFFER_SIZE         (32768*SWMIXER_OUTPUT_RATE/22050)
 
 #define SPEEDOFSOUNDMETRESPERSEC   (343.3f)
 

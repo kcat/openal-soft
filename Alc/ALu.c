@@ -411,16 +411,34 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             case AL_FORMAT_MONO16:
                 drysend[0] = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f); //Direct
                 drysend[1] = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f); //Direct
-                wetsend[0] =              ListenerGain * WetMix * aluSqrt(1.0f); //Room
-                wetsend[1] =              ListenerGain * WetMix * aluSqrt(1.0f); //Room
+                if(ALSource->Send[0].Slot.effectslot)
+                {
+                    wetsend[0] = ListenerGain * WetMix * aluSqrt(1.0f); //Room
+                    wetsend[1] = ListenerGain * WetMix * aluSqrt(1.0f); //Room
+                }
+                else
+                {
+                    wetsend[0] = 0.0f;
+                    wetsend[1] = 0.0f;
+                    *wetgainhf = 1.0f;
+                }
                 break;
             case AL_FORMAT_STEREO8:
             case AL_FORMAT_STEREO16:
                 PanningLR = 0.5f + 0.5f*Position[0];
                 drysend[0] = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f-PanningLR); //L Direct
                 drysend[1] = ConeVolume * ListenerGain * DryMix * aluSqrt(     PanningLR); //R Direct
-                wetsend[0] =              ListenerGain * WetMix * aluSqrt(1.0f-PanningLR); //L Room
-                wetsend[1] =              ListenerGain * WetMix * aluSqrt(     PanningLR); //R Room
+                if(ALSource->Send[0].Slot.effectslot)
+                {
+                    wetsend[0] = ListenerGain * WetMix * aluSqrt(1.0f-PanningLR); //L Room
+                    wetsend[1] = ListenerGain * WetMix * aluSqrt(     PanningLR); //R Room
+                }
+                else
+                {
+                    wetsend[0] = 0.0f;
+                    wetsend[1] = 0.0f;
+                    *wetgainhf = 1.0f;
+                }
                 break;
             case AL_FORMAT_QUAD8:
             case AL_FORMAT_QUAD16:
@@ -435,10 +453,21 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 drysend[1] = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB)); //FR Direct
                 drysend[2] = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB)); //BL Direct
                 drysend[3] = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB)); //BR Direct
-                wetsend[0] =              ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB)); //FL Room
-                wetsend[1] =              ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB)); //FR Room
-                wetsend[2] =              ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB)); //BL Room
-                wetsend[3] =              ListenerGain * WetMix * aluSqrt((     PanningLR)*(     PanningFB)); //BR Room
+                if(ALSource->Send[0].Slot.effectslot)
+                {
+                    wetsend[0] = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB)); //FL Room
+                    wetsend[1] = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB)); //FR Room
+                    wetsend[2] = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB)); //BL Room
+                    wetsend[3] = ListenerGain * WetMix * aluSqrt((     PanningLR)*(     PanningFB)); //BR Room
+                }
+                else
+                {
+                    wetsend[0] = 0.0f;
+                    wetsend[1] = 0.0f;
+                    wetsend[2] = 0.0f;
+                    wetsend[3] = 0.0f;
+                    *wetgainhf = 1.0f;
+                }
                 break;
             default:
                 break;
@@ -446,20 +475,24 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     }
     else
     {
+        *drygainhf = DryGainHF;
+        *wetgainhf = WetGainHF;
+
         //1. Multi-channel buffers always play "normal"
         drysend[0] = SourceVolume * 1.0f * ListenerGain;
         drysend[1] = SourceVolume * 1.0f * ListenerGain;
         drysend[2] = SourceVolume * 1.0f * ListenerGain;
         drysend[3] = SourceVolume * 1.0f * ListenerGain;
-        wetsend[0] = SourceVolume * 0.0f * ListenerGain;
-        wetsend[1] = SourceVolume * 0.0f * ListenerGain;
-        wetsend[2] = SourceVolume * 0.0f * ListenerGain;
-        wetsend[3] = SourceVolume * 0.0f * ListenerGain;
+        if(ALSource->Send[0].Slot.effectslot)
+        {
+            wetsend[0] = SourceVolume * 0.0f * ListenerGain;
+            wetsend[1] = SourceVolume * 0.0f * ListenerGain;
+            wetsend[2] = SourceVolume * 0.0f * ListenerGain;
+            wetsend[3] = SourceVolume * 0.0f * ListenerGain;
+            *wetgainhf = 1.0f;
+        }
 
         pitch[0] = Pitch;
-
-        *drygainhf = DryGainHF;
-        *wetgainhf = WetGainHF;
     }
 }
 
@@ -603,37 +636,28 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 DryBuffer[j][2] += value*DrySend[2];
                                 DryBuffer[j][3] += value*DrySend[3];
 
-                                if(ALSource->Send[0].Slot.effectslot)
-                                {
-                                    //Room path final mix buffer and panning
-                                    value = aluComputeWetSample(ALSource, WetGainHF, sample);
-                                    WetBuffer[j][0] += value*WetSend[0];
-                                    WetBuffer[j][1] += value*WetSend[1];
-                                    WetBuffer[j][2] += value*WetSend[2];
-                                    WetBuffer[j][3] += value*WetSend[3];
-                                }
+                                //Room path final mix buffer and panning
+                                value = aluComputeWetSample(ALSource, WetGainHF, sample);
+                                WetBuffer[j][0] += value*WetSend[0];
+                                WetBuffer[j][1] += value*WetSend[1];
+                                WetBuffer[j][2] += value*WetSend[2];
+                                WetBuffer[j][3] += value*WetSend[3];
                             }
                             else
                             {
-                                ALfloat value2;
-
                                 //First order interpolator (left)
                                 value = (ALfloat)((ALshort)(((Data[k*2  ]*((1L<<FRACTIONBITS)-fraction))+(Data[k*2+2]*(fraction)))>>FRACTIONBITS));
-                                //First order interpolator (right)
-                                value2 = (ALfloat)((ALshort)(((Data[k*2+1]*((1L<<FRACTIONBITS)-fraction))+(Data[k*2+3]*(fraction)))>>FRACTIONBITS));
-
                                 //Direct path final mix buffer and panning (left)
                                 DryBuffer[j][0] += value*DrySend[0];
-                                //Direct path final mix buffer and panning (right)
-                                DryBuffer[j][1] += value2*DrySend[1];
+                                //Room path final mix buffer and panning (left)
+                                WetBuffer[j][0] += value*WetSend[0];
 
-                                if(ALSource->Send[0].Slot.effectslot)
-                                {
-                                    //Room path final mix buffer and panning (left)
-                                    WetBuffer[j][0] += value*WetSend[0];
-                                    //Room path final mix buffer and panning (right)
-                                    WetBuffer[j][1] += value2*WetSend[1];
-                                }
+                                //First order interpolator (right)
+                                value = (ALfloat)((ALshort)(((Data[k*2+1]*((1L<<FRACTIONBITS)-fraction))+(Data[k*2+3]*(fraction)))>>FRACTIONBITS));
+                                //Direct path final mix buffer and panning (right)
+                                DryBuffer[j][1] += value*DrySend[1];
+                                //Room path final mix buffer and panning (right)
+                                WetBuffer[j][1] += value*WetSend[1];
                             }
                             DataPosFrac += increment;
                             j++;

@@ -27,6 +27,8 @@
 
 #include "alMain.h"
 #include "alAuxEffectSlot.h"
+#include "alThunk.h"
+#include "alError.h"
 
 static ALeffectslot *g_AuxiliaryEffectSlotList;
 static ALuint        g_AuxiliaryEffectSlotCount;

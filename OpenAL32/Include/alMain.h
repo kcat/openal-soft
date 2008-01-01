@@ -1,9 +1,6 @@
 #ifndef AL_MAIN_H
 #define AL_MAIN_H
 
-#define AL_MAX_CHANNELS        4
-#define AL_MAX_SOURCES        32
-
 #include <string.h>
 
 #include "alu.h"
@@ -59,13 +56,7 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 #define max(x,y) (((x)>(y))?(x):(y))
 #endif
 
-#include "alBuffer.h"
-#include "alError.h"
-#include "alExtension.h"
 #include "alListener.h"
-#include "alSource.h"
-#include "alState.h"
-#include "alThunk.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -82,20 +73,36 @@ extern char _alDebug[256];
     if(!_al_print_fn) _al_print_fn  = __FILE__;  \
     else              _al_print_fn += 1;         \
     _al_print_i = snprintf(_alDebug, sizeof(_alDebug), "AL lib: %s:%d: ", _al_print_fn, __LINE__); \
-    snprintf(_alDebug+_al_print_i, sizeof(_alDebug)-_al_print_i, __VA_ARGS__); \
+    if(_al_print_i < (int)sizeof(_alDebug) && _al_print_i > 0) \
+        snprintf(_alDebug+_al_print_i, sizeof(_alDebug)-_al_print_i, __VA_ARGS__); \
+    _alDebug[sizeof(_alDebug)-1] = 0;            \
     fprintf(stderr, "%s", _alDebug);             \
 } while(0)
 
 
+#define AL_FORMAT_MONO_FLOAT32                   0x10010
+#define AL_FORMAT_STEREO_FLOAT32                 0x10011
+
 #define AL_FORMAT_MONO_IMA4                      0x1300
 #define AL_FORMAT_STEREO_IMA4                    0x1301
-// These are from AL_EXT_MCFORMATS, which we don't support yet but the mixer
-// can use 4-channel formats
+
+#define AL_FORMAT_51CHN8                         0x120A
+#define AL_FORMAT_51CHN16                        0x120B
+#define AL_FORMAT_51CHN32                        0x120C
+#define AL_FORMAT_61CHN8                         0x120D
+#define AL_FORMAT_61CHN16                        0x120E
+#define AL_FORMAT_61CHN32                        0x120F
+#define AL_FORMAT_71CHN8                         0x1210
+#define AL_FORMAT_71CHN16                        0x1211
+#define AL_FORMAT_71CHN32                        0x1212
 #define AL_FORMAT_QUAD8                          0x1204
 #define AL_FORMAT_QUAD16                         0x1205
+#define AL_FORMAT_QUAD32                         0x1206
+#define AL_FORMAT_REAR8                          0x1207
+#define AL_FORMAT_REAR16                         0x1208
+#define AL_FORMAT_REAR32                         0x1209
 
 #define SWMIXER_OUTPUT_RATE        44100
-//#define OUTPUT_BUFFER_SIZE         (32768*SWMIXER_OUTPUT_RATE/22050)
 
 #define SPEEDOFSOUNDMETRESPERSEC   (343.3f)
 #define AIRABSORBGAINHF            (0.994f)
@@ -154,8 +161,8 @@ struct ALCcontext_struct
 {
     ALlistener  Listener;
 
-    ALsource   *Source;
-    ALuint      SourceCount;
+    struct ALsource *Source;
+    ALuint           SourceCount;
 
     ALenum      LastError;
     ALboolean   InUse;

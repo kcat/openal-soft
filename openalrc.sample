@@ -12,9 +12,15 @@ format = AL_FORMAT_STEREO16  # Sets the output format. Can be one of:
                              # AL_FORMAT_MONO8    (8-bit mono)
                              # AL_FORMAT_STEREO8  (8-bit stereo)
                              # AL_FORMAT_QUAD8    (8-bit 4-channel)
+                             # AL_FORMAT_51CHN8   (8-bit 5.1 output)
+                             # AL_FORMAT_61CHN8   (8-bit 6.1 output)
+                             # AL_FORMAT_71CHN8   (8-bit 7.1 output)
                              # AL_FORMAT_MONO16   (16-bit mono)
                              # AL_FORMAT_STEREO16 (16-bit stereo)
                              # AL_FORMAT_QUAD16   (16-bit 4-channel)
+                             # AL_FORMAT_51CHN16  (16-bit 5.1 output)
+                             # AL_FORMAT_61CHN16  (16-bit 6.1 output)
+                             # AL_FORMAT_71CHN16  (16-bit 7.1 output)
                              # Default is AL_FORMAT_STEREO16
 
 frequency = 44100  # Sets the output frequency. Default is 44100

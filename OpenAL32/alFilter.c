@@ -27,6 +27,8 @@
 
 #include "alMain.h"
 #include "alFilter.h"
+#include "alThunk.h"
+#include "alError.h"
 
 static ALfilter *g_FilterList;
 static ALuint    g_FilterCount;

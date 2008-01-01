@@ -30,6 +30,9 @@
 #include "alSource.h"
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "alThunk.h"
+#include "alSource.h"
+#include "alExtension.h"
 
 ///////////////////////////////////////////////////////
 // DEBUG INFORMATION
@@ -371,7 +374,7 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->lNumStereoSources = 1;
     pContext->lNumMonoSources = pContext->Device->MaxNoOfSources - pContext->lNumStereoSources;
 
-    strcpy(pContext->ExtensionList, "AL_EXT_EXPONENT_DISTANCE AL_EXT_LINEAR_DISTANCE AL_EXT_OFFSET");
+    strcpy(pContext->ExtensionList, "AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_OFFSET");
 }
 
 
@@ -422,6 +425,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
     ALCint i;
 
     InitAL();
+
+    if(deviceName && !deviceName[0])
+        deviceName = NULL;
 
     pDevice = malloc(sizeof(ALCdevice));
     if (pDevice)
@@ -1071,6 +1077,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
     ALint i;
 
     InitAL();
+
+    if(deviceName && !deviceName[0])
+        deviceName = NULL;
 
     device = malloc(sizeof(ALCdevice));
     if (device)

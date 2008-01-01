@@ -27,6 +27,8 @@
 
 #include "alMain.h"
 #include "alEffect.h"
+#include "alThunk.h"
+#include "alError.h"
 
 static ALeffect *g_EffectList;
 static ALuint    g_EffectCount;

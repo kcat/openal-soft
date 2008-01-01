@@ -174,17 +174,13 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
         return ALC_FALSE;
     }
 
-    switch(device->Format)
+    switch(aluBytesFromFormat(device->Format))
     {
-        case AL_FORMAT_MONO8:
-        case AL_FORMAT_STEREO8:
-        case AL_FORMAT_QUAD8:
+        case 1:
             data->silence = 0x80;
             ossFormat = AFMT_U8;
             break;
-        case AL_FORMAT_MONO16:
-        case AL_FORMAT_STEREO16:
-        case AL_FORMAT_QUAD16:
+        case 2:
             data->silence = 0;
             ossFormat = AFMT_S16_NE;
             break;
@@ -337,17 +333,13 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
         return ALC_FALSE;
     }
 
-    switch(format)
+    switch(aluBytesFromFormat(format))
     {
-        case AL_FORMAT_MONO8:
-        case AL_FORMAT_STEREO8:
-        case AL_FORMAT_QUAD8:
+        case 1:
             data->silence = 0x80;
             ossFormat = AFMT_U8;
             break;
-        case AL_FORMAT_MONO16:
-        case AL_FORMAT_STEREO16:
-        case AL_FORMAT_QUAD16:
+        case 2:
             data->silence = 0;
             ossFormat = AFMT_S16_NE;
             break;

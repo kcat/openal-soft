@@ -33,15 +33,6 @@ SET(LIB_BUILD_VERSION "38")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_BUILD_VERSION}")
 
 
-IF("${WIN32}")
-    SET(LIBNAME openal32)
-    SET(TARGET_OPTS "PREFIX \"\"")
-ELSE()
-    SET(LIBNAME openal)
-    SET(TARGET_OPTS "")
-ENDIF()
-
-
 CHECK_TYPE_SIZE("long" SIZEOF_LONG)
 CHECK_TYPE_SIZE("long long" SIZEOF_LONG_LONG)
 CHECK_TYPE_SIZE("unsigned int" SIZEOF_UINT)
@@ -50,7 +41,6 @@ CHECK_TYPE_SIZE("void*" SIZEOF_VOIDP)
 
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES(OpenAL32/Include include "${OpenAL_BINARY_DIR}")
-SET(EXTRA_LIBS m ${EXTRA_LIBS})
 
 IF("${MSVC}")
     # ???
@@ -103,6 +93,9 @@ ELSEIF(NODEBUG)
 ENDIF()
 
 CHECK_LIBRARY_EXISTS(m  sqrtf  "" HAVE_SQRTF)
+IF("${HAVE_SQRTF}")
+    SET(EXTRA_LIBS m ${EXTRA_LIBS})
+ENDIF()
 CHECK_FUNCTION_EXISTS(strtof HAVE_STRTOF)
 
 CHECK_FUNCTION_EXISTS(strcasecmp HAVE_STRCASECMP)
@@ -113,6 +106,16 @@ IF(NOT "${HAVE_STRCASECMP}")
     ENDIF()
 
     ADD_DEFINITIONS(-Dstrcasecmp=_stricmp)
+ENDIF()
+
+CHECK_FUNCTION_EXISTS(snprintf HAVE_SNPRINTF)
+IF(NOT "${HAVE_SNPRINTF}")
+    CHECK_FUNCTION_EXISTS(_snprintf HAVE__SNPRINTF)
+    IF(NOT "${HAVE__SNPRINTF}")
+        MESSAGE(FATAL_ERROR "No snprintf function found, please report!")
+    ENDIF()
+
+    ADD_DEFINITIONS(-Dsnprintf=_snprintf)
 ENDIF()
 
 # Check for the dlopen API (for dynamicly loading backend libs)
@@ -260,10 +263,18 @@ CONFIGURE_FILE(
 ADD_DEFINITIONS(-DAL_BUILD_LIBRARY)
 
 # Build a shared library
+IF("${WIN32}")
+    SET(LIBNAME openal32)
+ELSE()
+    SET(LIBNAME openal)
+ENDIF()
+
 ADD_LIBRARY(${LIBNAME} SHARED ${OPENAL_OBJS} ${ALC_OBJS})
 SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES VERSION ${LIB_VERSION}
-                                            SOVERSION ${LIB_MAJOR_VERSION}
-                                            ${TARGET_OPTS})
+                                            SOVERSION ${LIB_MAJOR_VERSION})
+IF("${WIN32}")
+    SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES PREFIX "")
+ENDIF()
 
 TARGET_LINK_LIBRARIES(${LIBNAME} ${EXTRA_LIBS})
 

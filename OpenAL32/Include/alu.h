@@ -1,12 +1,6 @@
 #ifndef _ALU_H_
 #define _ALU_H_
 
-#define BUFFERSIZE 48000
-#define FRACTIONBITS 14
-#define FRACTIONMASK ((1L<<FRACTIONBITS)-1)
-#define MAX_PITCH 4
-#define OUTPUTCHANNELS 4
-
 #include "AL/al.h"
 #include "AL/alc.h"
 

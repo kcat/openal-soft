@@ -559,6 +559,17 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             wetsend[BACK_RIGHT]  = SourceVolume * 0.0f * ListenerGain;
             wetsend[CENTER]      = SourceVolume * 0.0f * ListenerGain;
             wetsend[LFE]         = SourceVolume * 0.0f * ListenerGain;
+        }
+        else
+        {
+            wetsend[FRONT_LEFT]  = 0.0f;
+            wetsend[FRONT_RIGHT] = 0.0f;
+            wetsend[SIDE_LEFT]   = 0.0f;
+            wetsend[SIDE_RIGHT]  = 0.0f;
+            wetsend[BACK_LEFT]   = 0.0f;
+            wetsend[BACK_RIGHT]  = 0.0f;
+            wetsend[CENTER]      = 0.0f;
+            wetsend[LFE]         = 0.0f;
             *wetgainhf = 1.0f;
         }
 

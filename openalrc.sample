@@ -23,6 +23,17 @@ format = AL_FORMAT_STEREO16  # Sets the output format. Can be one of:
                              # AL_FORMAT_71CHN16  (16-bit 7.1 output)
                              # Default is AL_FORMAT_STEREO16
 
+cf_level = 0  # Sets the crossfeed level for stereo output. Valid values are:
+              # 0 - No crossfeed
+              # 1 - Low crossfeed
+              # 2 - Middle crossfeed
+              # 3 - High crossfeed (virtual speakers are closer to itself)
+              # 4 - Low easy crossfeed
+              # 5 - Middle easy crossfeed
+              # 6 - High easy crossfeed
+              # Default is 0. Users of headphones may want to try various
+              # settings. Has no effect on non-stereo modes.
+
 frequency = 44100  # Sets the output frequency. Default is 44100
 
 refresh = 0  # Sets the number of frames-per-update. Default is calculated as

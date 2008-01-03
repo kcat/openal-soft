@@ -180,6 +180,8 @@ struct ALCcontext_struct
     ALCdevice  *Device;
     ALCchar     ExtensionList[1024];
 
+    struct bs2b *bs2b;
+
     ALCcontext *next;
 };
 

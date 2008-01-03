@@ -30,6 +30,7 @@
 #include "alBuffer.h"
 #include "alThunk.h"
 #include "alListener.h"
+#include "bs2b.h"
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
@@ -746,11 +747,27 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     }
                     break;
                 case AL_FORMAT_STEREO8:
-                    for(i = 0;i < SamplesToDo;i++)
+                    if(ALContext->bs2b)
                     {
-                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
-                        buffer = ((ALubyte*)buffer) + 2;
+                        for(i = 0;i < SamplesToDo;i++)
+                        {
+                            float samples[2];
+                            samples[0] = DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT];
+                            samples[1] = DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT];
+                            bs2b_cross_feed(ALContext->bs2b, samples);
+                            ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(samples[0])>>8)+128);
+                            ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(samples[1])>>8)+128);
+                            buffer = ((ALubyte*)buffer) + 2;
+                        }
+                    }
+                    else
+                    {
+                        for(i = 0;i < SamplesToDo;i++)
+                        {
+                            ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
+                            ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
+                            buffer = ((ALubyte*)buffer) + 2;
+                        }
                     }
                     break;
                 case AL_FORMAT_QUAD8:
@@ -812,11 +829,27 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     }
                     break;
                 case AL_FORMAT_STEREO16:
-                    for(i = 0;i < SamplesToDo;i++)
+                    if(ALContext->bs2b)
                     {
-                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
-                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
-                        buffer = ((ALshort*)buffer) + 2;
+                        for(i = 0;i < SamplesToDo;i++)
+                        {
+                            float samples[2];
+                            samples[0] = DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT];
+                            samples[1] = DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT];
+                            bs2b_cross_feed(ALContext->bs2b, samples);
+                            ((ALshort*)buffer)[0] = aluF2S(samples[0]);
+                            ((ALshort*)buffer)[1] = aluF2S(samples[1]);
+                            buffer = ((ALshort*)buffer) + 2;
+                        }
+                    }
+                    else
+                    {
+                        for(i = 0;i < SamplesToDo;i++)
+                        {
+                            ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
+                            ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
+                            buffer = ((ALshort*)buffer) + 2;
+                        }
                     }
                     break;
                 case AL_FORMAT_QUAD16:

@@ -182,6 +182,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcConfig.c
               Alc/alcRing.c
               Alc/alcThread.c
+              Alc/bs2b.c
 )
 
 SET(BACKENDS "")

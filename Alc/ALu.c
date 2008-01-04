@@ -30,6 +30,7 @@
 #include "alBuffer.h"
 #include "alThunk.h"
 #include "alListener.h"
+#include "bs2b.h"
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
@@ -497,9 +498,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             case 4:
             /* TODO: Add center/lfe channel in spatial calculations? */
             case 6:
-            /* TODO: Special paths for 6.1 and 7.1 output would be nice */
-            case 7:
-            case 8:
                 // Apply a scalar so each individual speaker has more weight
                 PanningLR = 0.5f + (0.5f*Position[0]*1.41421356f);
                 PanningLR = __min(1.0f, PanningLR);
@@ -507,18 +505,16 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 PanningFB = 0.5f + (0.5f*Position[2]*1.41421356f);
                 PanningFB = __min(1.0f, PanningFB);
                 PanningFB = __max(0.0f, PanningFB);
-                drysend[FRONT_LEFT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB)); //FL Direct
-                drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB)); //FR Direct
-                drysend[BACK_LEFT]   = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB)); //BL Direct
-                drysend[BACK_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB)); //BR Direct
-                drysend[SIDE_LEFT]   = 0.0f;
-                drysend[SIDE_RIGHT]  = 0.0f;
+                drysend[FRONT_LEFT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                drysend[BACK_LEFT]   = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                drysend[BACK_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB));
                 if(ALSource->Send[0].Slot.effectslot)
                 {
-                    wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB)); //FL Room
-                    wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB)); //FR Room
-                    wetsend[BACK_LEFT]   = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB)); //BL Room
-                    wetsend[BACK_RIGHT]  = ListenerGain * WetMix * aluSqrt((     PanningLR)*(     PanningFB)); //BR Room
+                    wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                    wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                    wetsend[BACK_LEFT]   = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                    wetsend[BACK_RIGHT]  = ListenerGain * WetMix * aluSqrt((     PanningLR)*(     PanningFB));
                 }
                 else
                 {
@@ -528,9 +524,71 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                     wetsend[BACK_RIGHT]  = 0.0f;
                     *wetgainhf = 1.0f;
                 }
-                wetsend[SIDE_LEFT]  = 0.0f;
-                wetsend[SIDE_RIGHT] = 0.0f;
                 break;
+            case 7:
+            case 8:
+                PanningFB = 1.0f - fabs(Position[2]*1.15470054f);
+                PanningFB = __min(1.0f, PanningFB);
+                PanningFB = __max(0.0f, PanningFB);
+                PanningLR = 0.5f + (0.5*Position[0]*((1.0f-PanningFB)*2.0f));
+                PanningLR = __min(1.0f, PanningLR);
+                PanningLR = __max(0.0f, PanningLR);
+                if(Position[2] > 0.0f)
+                {
+                    drysend[BACK_LEFT]   = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                    drysend[BACK_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                    drysend[SIDE_LEFT]   = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                    drysend[SIDE_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB));
+                    drysend[FRONT_LEFT]  = 0.0f;
+                    drysend[FRONT_RIGHT] = 0.0f;
+                    if(ALSource->Send[0].Slot.effectslot)
+                    {
+                        wetsend[BACK_LEFT]   = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                        wetsend[BACK_RIGHT]  = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                        wetsend[SIDE_LEFT]   = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                        wetsend[SIDE_RIGHT]  = ListenerGain * WetMix * aluSqrt((     PanningLR)*(     PanningFB));
+                        wetsend[FRONT_LEFT]  = 0.0f;
+                        wetsend[FRONT_RIGHT] = 0.0f;
+                    }
+                    else
+                    {
+                        wetsend[FRONT_LEFT]  = 0.0f;
+                        wetsend[FRONT_RIGHT] = 0.0f;
+                        wetsend[SIDE_LEFT]   = 0.0f;
+                        wetsend[SIDE_RIGHT]  = 0.0f;
+                        wetsend[BACK_LEFT]   = 0.0f;
+                        wetsend[BACK_RIGHT]  = 0.0f;
+                        *wetgainhf = 1.0f;
+                    }
+                }
+                else
+                {
+                    drysend[FRONT_LEFT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                    drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                    drysend[SIDE_LEFT]   = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                    drysend[SIDE_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB));
+                    drysend[BACK_LEFT]   = 0.0f;
+                    drysend[BACK_RIGHT]  = 0.0f;
+                    if(ALSource->Send[0].Slot.effectslot)
+                    {
+                        wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                        wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                        wetsend[SIDE_LEFT]   = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                        wetsend[SIDE_RIGHT]  = ListenerGain * WetMix * aluSqrt((     PanningLR)*(     PanningFB));
+                        wetsend[BACK_LEFT]   = 0.0f;
+                        wetsend[BACK_RIGHT]  = 0.0f;
+                    }
+                    else
+                    {
+                        wetsend[FRONT_LEFT]  = 0.0f;
+                        wetsend[FRONT_RIGHT] = 0.0f;
+                        wetsend[SIDE_LEFT]   = 0.0f;
+                        wetsend[SIDE_RIGHT]  = 0.0f;
+                        wetsend[BACK_LEFT]   = 0.0f;
+                        wetsend[BACK_RIGHT]  = 0.0f;
+                        *wetgainhf = 1.0f;
+                    }
+                }
             default:
                 break;
         }
@@ -714,20 +772,16 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 value = aluComputeDrySample(ALSource, DryGainHF, sample);
                                 DryBuffer[j][FRONT_LEFT]  += value*DrySend[FRONT_LEFT];
                                 DryBuffer[j][FRONT_RIGHT] += value*DrySend[FRONT_RIGHT];
-#if 0 /* FIXME: Re-enable when proper 6-channel spatialization is used */
                                 DryBuffer[j][SIDE_LEFT]   += value*DrySend[SIDE_LEFT];
                                 DryBuffer[j][SIDE_RIGHT]  += value*DrySend[SIDE_RIGHT];
-#endif
                                 DryBuffer[j][BACK_LEFT]   += value*DrySend[BACK_LEFT];
                                 DryBuffer[j][BACK_RIGHT]  += value*DrySend[BACK_RIGHT];
                                 //Room path final mix buffer and panning
                                 value = aluComputeWetSample(ALSource, WetGainHF, sample);
                                 WetBuffer[j][FRONT_LEFT]  += value*WetSend[FRONT_LEFT];
                                 WetBuffer[j][FRONT_RIGHT] += value*WetSend[FRONT_RIGHT];
-#if 0 /* FIXME: Re-enable when proper 6-channel spatialization is used */
                                 WetBuffer[j][SIDE_LEFT]   += value*WetSend[SIDE_LEFT];
                                 WetBuffer[j][SIDE_RIGHT]  += value*WetSend[SIDE_RIGHT];
-#endif
                                 WetBuffer[j][BACK_LEFT]   += value*WetSend[BACK_LEFT];
                                 WetBuffer[j][BACK_RIGHT]  += value*WetSend[BACK_RIGHT];
                             }
@@ -883,11 +937,27 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     }
                     break;
                 case AL_FORMAT_STEREO8:
-                    for(i = 0;i < SamplesToDo;i++)
+                    if(ALContext->bs2b)
                     {
-                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
-                        buffer = ((ALubyte*)buffer) + 2;
+                        for(i = 0;i < SamplesToDo;i++)
+                        {
+                            float samples[2];
+                            samples[0] = DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT];
+                            samples[1] = DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT];
+                            bs2b_cross_feed(ALContext->bs2b, samples);
+                            ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(samples[0])>>8)+128);
+                            ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(samples[1])>>8)+128);
+                            buffer = ((ALubyte*)buffer) + 2;
+                        }
+                    }
+                    else
+                    {
+                        for(i = 0;i < SamplesToDo;i++)
+                        {
+                            ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
+                            ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
+                            buffer = ((ALubyte*)buffer) + 2;
+                        }
                     }
                     break;
                 case AL_FORMAT_QUAD8:
@@ -949,11 +1019,27 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     }
                     break;
                 case AL_FORMAT_STEREO16:
-                    for(i = 0;i < SamplesToDo;i++)
+                    if(ALContext->bs2b)
                     {
-                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
-                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
-                        buffer = ((ALshort*)buffer) + 2;
+                        for(i = 0;i < SamplesToDo;i++)
+                        {
+                            float samples[2];
+                            samples[0] = DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT];
+                            samples[1] = DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT];
+                            bs2b_cross_feed(ALContext->bs2b, samples);
+                            ((ALshort*)buffer)[0] = aluF2S(samples[0]);
+                            ((ALshort*)buffer)[1] = aluF2S(samples[1]);
+                            buffer = ((ALshort*)buffer) + 2;
+                        }
+                    }
+                    else
+                    {
+                        for(i = 0;i < SamplesToDo;i++)
+                        {
+                            ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
+                            ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
+                            buffer = ((ALshort*)buffer) + 2;
+                        }
                     }
                     break;
                 case AL_FORMAT_QUAD16:

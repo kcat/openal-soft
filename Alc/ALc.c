@@ -33,6 +33,7 @@
 #include "alThunk.h"
 #include "alSource.h"
 #include "alExtension.h"
+#include "bs2b.h"
 
 ///////////////////////////////////////////////////////
 // DEBUG INFORMATION
@@ -342,6 +343,8 @@ ALCvoid ProcessContext(ALCcontext *pContext)
 */
 static ALvoid InitContext(ALCcontext *pContext)
 {
+    int level;
+
     //Initialise listener
     pContext->Listener.Gain = 1.0f;
     pContext->Listener.MetersPerUnit = 1.0f;
@@ -375,6 +378,14 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->lNumMonoSources = pContext->Device->MaxNoOfSources - pContext->lNumStereoSources;
 
     strcpy(pContext->ExtensionList, "AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_OFFSET");
+
+    level = GetConfigValueInt(NULL, "cf_level", 0);
+    if(level > 0 && level <= 6)
+    {
+        pContext->bs2b = calloc(1, sizeof(*pContext->bs2b));
+        bs2b_set_srate(pContext->bs2b, pContext->Frequency);
+        bs2b_set_level(pContext->bs2b, level);
+    }
 }
 
 
@@ -408,6 +419,9 @@ static ALCvoid ExitContext(ALCcontext *pContext)
     //Invalidate context
     pContext->LastError = AL_NO_ERROR;
     pContext->InUse = AL_FALSE;
+
+    free(pContext->bs2b);
+    pContext->bs2b = NULL;
 }
 
 ///////////////////////////////////////////////////////

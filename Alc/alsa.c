@@ -222,30 +222,9 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
     snd_pcm_sframes_t avail;
     char *WritePtr;
-    int err;
 
     while(!data->killNow)
     {
-        snd_pcm_state_t state = psnd_pcm_state(data->pcmHandle);
-        if(state == SND_PCM_STATE_XRUN)
-        {
-            err = xrun_recovery(data->pcmHandle, -EPIPE);
-            if (err < 0)
-            {
-                AL_PRINT("XRUN recovery failed: %s\n", psnd_strerror(err));
-                break;
-            }
-        }
-        else if (state == SND_PCM_STATE_SUSPENDED)
-        {
-            err = xrun_recovery(data->pcmHandle, -ESTRPIPE);
-            if (err < 0)
-            {
-                AL_PRINT("SUSPEND recovery failed: %s\n", psnd_strerror(err));
-                break;
-            }
-        }
-
         SuspendContext(NULL);
         aluMixData(pDevice->Context, data->buffer, data->size, pDevice->Format);
         ProcessContext(NULL);
@@ -425,7 +404,7 @@ open_alsa:
     if(!(ok(psnd_pcm_hw_params_any(data->pcmHandle, p), "any") &&
          /* set interleaved access */
          (ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED), "set access") ||
-          ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED), "set access"))&&
+          ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED), "set access")) &&
          /* set format (implicitly sets sample bits) */
          ok(psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format), "set format") &&
          /* set channels (implicitly sets frame bits) */
@@ -461,16 +440,6 @@ open_alsa:
     device->MaxNoOfSources = 256;
     device->UpdateFreq = bufferSizeInFrames;
 
-    i = psnd_pcm_prepare(data->pcmHandle);
-    if(i < 0)
-    {
-        AL_PRINT("prepare error: %s\n", psnd_strerror(i));
-        psnd_pcm_close(data->pcmHandle);
-        free(data->buffer);
-        free(data);
-        return ALC_FALSE;
-    }
-
     data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
@@ -484,16 +453,28 @@ open_alsa:
         }
     }
     else
+    {
+        i = psnd_pcm_prepare(data->pcmHandle);
+        if(i < 0)
+        {
+            AL_PRINT("prepare error: %s\n", psnd_strerror(i));
+            psnd_pcm_close(data->pcmHandle);
+            free(data->buffer);
+            free(data);
+            return ALC_FALSE;
+        }
+
         fill_silence(data->pcmHandle, data->format, device->Channels);
 
-    i = psnd_pcm_start(data->pcmHandle);
-    if(i < 0)
-    {
-        AL_PRINT("start error: %s\n", psnd_strerror(i));
-        psnd_pcm_close(data->pcmHandle);
-        free(data->buffer);
-        free(data);
-        return ALC_FALSE;
+        i = psnd_pcm_start(data->pcmHandle);
+        if(i < 0)
+        {
+            AL_PRINT("start error: %s\n", psnd_strerror(i));
+            psnd_pcm_close(data->pcmHandle);
+            free(data->buffer);
+            free(data);
+            return ALC_FALSE;
+        }
     }
 
     device->ExtraData = data;

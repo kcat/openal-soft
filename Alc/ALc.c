@@ -742,7 +742,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     else if(!size)
                         SetALCError(ALC_INVALID_VALUE);
                     else
-                        *data = device->UpdateFreq;
+                        *data = device->Frequency / device->UpdateFreq;
                     break;
 
                 case ALC_SYNC:

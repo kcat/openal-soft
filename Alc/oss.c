@@ -194,7 +194,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     }
 
     periods = GetConfigValueInt("oss", "periods", 4);
-    if((int)periods < 0)
+    if((int)periods <= 0)
         periods = 4;
     numChannels = device->Channels;
     ossSpeed = device->Frequency;

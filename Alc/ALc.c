@@ -707,7 +707,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                         data[i++] = device->Frequency;
 
                         data[i++] = ALC_REFRESH;
-                        data[i++] = device->UpdateFreq;
+                        data[i++] = device->Frequency / device->UpdateFreq;
 
                         data[i++] = ALC_SYNC;
                         data[i++] = ALC_FALSE;

@@ -406,7 +406,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
 
     device->UpdateFreq = info.fragsize / device->FrameSize;
 
-    data->data_size = device->UpdateFreq * device->FrameSize;
+    data->data_size = device->UpdateFreq * device->FrameSize * info.fragments;
     data->mix_data = calloc(1, data->data_size);
 
     device->ExtraData = data;

@@ -60,7 +60,7 @@ static void CALLBACK DirectSoundProc(UINT uID,UINT uReserved,DWORD_PTR dwUser,DW
     (void)dwReserved1;
     (void)dwReserved2;
 
-    BufSize = pDevice->UpdateFreq * pDevice->FrameSize;
+    BufSize = pDevice->UpdateFreq * 2 * pDevice->FrameSize;
 
     // Get current play and write cursors
     IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer,&PlayCursor,&WriteCursor);
@@ -169,7 +169,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
         DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;
-        DSBDescription.dwBufferBytes=device->UpdateFreq * device->FrameSize;
+        DSBDescription.dwBufferBytes=device->UpdateFreq * 2 * device->FrameSize;
         DSBDescription.lpwfxFormat=&OutputType;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
     }

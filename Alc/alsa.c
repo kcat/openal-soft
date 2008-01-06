@@ -438,7 +438,7 @@ open_alsa:
     psnd_pcm_hw_params_free(p);
 
     device->MaxNoOfSources = 256;
-    device->UpdateFreq = bufferSizeInFrames * periods;
+    device->UpdateFreq = bufferSizeInFrames;
 
     data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, device->UpdateFreq);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)

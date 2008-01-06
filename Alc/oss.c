@@ -78,31 +78,35 @@ static ALuint OSSProc(ALvoid *ptr)
 {
     ALCdevice *pDevice = (ALCdevice*)ptr;
     oss_data *data = (oss_data*)pDevice->ExtraData;
-    int remaining;
+    int remaining = 0;
     int wrote;
 
     while(!data->killNow)
     {
-        SuspendContext(NULL);
-        aluMixData(pDevice->Context,data->mix_data,data->data_size,pDevice->Format);
-        ProcessContext(NULL);
+        int len = data->data_size - remaining;
 
-        remaining = data->data_size;
-        while(remaining > 0)
+        if(len > 0)
         {
-            wrote = write(data->fd, data->mix_data+data->data_size-remaining, remaining);
-            if(wrote < 0)
-            {
-                AL_PRINT("write failed: %s\n", strerror(errno));
-                break;
-            }
-            if(wrote == 0)
-            {
-                usleep(1000);
-                continue;
-            }
-            remaining -= wrote;
+            SuspendContext(NULL);
+            aluMixData(pDevice->Context, data->mix_data+remaining, len, pDevice->Format);
+            ProcessContext(NULL);
         }
+
+        remaining += len;
+        wrote = write(data->fd, data->mix_data, remaining);
+        if(wrote < 0)
+        {
+            AL_PRINT("write failed: %s\n", strerror(errno));
+            remaining = 0;
+        }
+        else if(wrote > 0)
+        {
+            remaining -= wrote;
+            if(remaining > 0)
+                memmove(data->mix_data, data->mix_data+wrote, remaining);
+        }
+        else
+            usleep(1000);
     }
 
     return 0;

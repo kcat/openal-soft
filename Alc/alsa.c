@@ -396,7 +396,7 @@ open_alsa:
     periods = GetConfigValueInt("alsa", "periods", 4);
     if((int)periods <= 0)
         periods = 4;
-    bufferSizeInFrames = device->UpdateFreq;
+    bufferSizeInFrames = device->UpdateFreq / periods;
 
     psnd_pcm_hw_params_malloc(&p);
 #define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
@@ -438,9 +438,9 @@ open_alsa:
     psnd_pcm_hw_params_free(p);
 
     device->MaxNoOfSources = 256;
-    device->UpdateFreq = bufferSizeInFrames;
+    device->UpdateFreq = bufferSizeInFrames * periods;
 
-    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
+    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, device->UpdateFreq);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
         data->buffer = malloc(data->size);
@@ -512,7 +512,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     snd_pcm_format_t alsaFormat;
     snd_pcm_hw_params_t *p;
     unsigned int periods = 4;
-    snd_pcm_uframes_t bufferSizeInFrames = SampleSize;
+    snd_pcm_uframes_t bufferSizeInFrames;
     alsa_data *data;
     char driver[64];
     char *err;
@@ -574,6 +574,8 @@ open_alsa:
             alsaFormat = SND_PCM_FORMAT_UNKNOWN;
             AL_PRINT("Unknown format?! %x\n", format);
     }
+
+    bufferSizeInFrames = SampleSize / periods;
 
     psnd_pcm_hw_params_malloc(&p);
 #define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))

@@ -55,7 +55,6 @@ typedef struct {
 
     ALubyte *mix_data;
     int data_size;
-    int silence;
 
     RingBuffer *ring;
     int doCapture;
@@ -181,11 +180,9 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     switch(aluBytesFromFormat(device->Format))
     {
         case 1:
-            data->silence = 0x80;
             ossFormat = AFMT_U8;
             break;
         case 2:
-            data->silence = 0;
             ossFormat = AFMT_S16_NE;
             break;
         default:
@@ -311,11 +308,9 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
     switch(aluBytesFromFormat(format))
     {
         case 1:
-            data->silence = 0x80;
             ossFormat = AFMT_U8;
             break;
         case 2:
-            data->silence = 0;
             ossFormat = AFMT_S16_NE;
             break;
         default:

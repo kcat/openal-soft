@@ -754,6 +754,24 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                         *data = ALC_FALSE;
                     break;
 
+                case ALC_MONO_SOURCES:
+                    if(!device || !device->Context)
+                        SetALCError(ALC_INVALID_DEVICE);
+                    else if (size != 1)
+                        SetALCError(ALC_INVALID_VALUE);
+                    else
+                        *data = device->Context->lNumMonoSources;
+                    break;
+
+                case ALC_STEREO_SOURCES:
+                    if(!device || !device->Context)
+                        SetALCError(ALC_INVALID_DEVICE);
+                    else if (size != 1)
+                        SetALCError(ALC_INVALID_VALUE);
+                    else
+                        *data = device->Context->lNumStereoSources;
+                    break;
+
                 default:
                     SetALCError(ALC_INVALID_ENUM);
                     break;

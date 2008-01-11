@@ -132,6 +132,11 @@ ENDIF()
 # Check if we have Windows headers
 CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H)
 IF(NOT "${HAVE_WINDOWS_H}")
+    CHECK_FUNCTION_EXISTS(gettimeofday HAVE_GETTIMEOFDAY)
+    IF(NOT "${HAVE_GETTIMEOFDAY}")
+        MESSAGE(FATAL_ERROR "No timing function found!")
+    ENDIF()
+
     # We need pthreads outside of Windows
     CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD_H)
     IF(NOT "${HAVE_PTHREAD_H}")

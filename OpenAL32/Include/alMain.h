@@ -13,6 +13,7 @@
 
 #include <assert.h>
 #include <pthread.h>
+#include <sys/time.h>
 
 #define IsBadWritePtr(a,b) (0)
 
@@ -50,6 +51,21 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
     int ret;
     ret = pthread_mutex_destroy(cs);
     assert(ret == 0);
+}
+
+/* NOTE: This wrapper isn't quite accurate as it returns an ALuint, as opposed
+ * to the expected DWORD. Both are defined as unsigned 32-bit types, however.
+ * Additionally, Win32 is supposed to measure the time since Windows started,
+ * as opposed to the actual time. */
+static inline ALuint timeGetTime(void)
+{
+    struct timeval tv;
+    int ret;
+
+    ret = gettimeofday(&tv, NULL);
+    assert(ret == 0);
+
+    return tv.tv_usec/1000 + tv.tv_sec*1000;
 }
 
 #define min(x,y) (((x)<(y))?(x):(y))

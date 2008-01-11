@@ -61,6 +61,8 @@ struct {
     { "winmm", alcWinMMInit, EmptyFuncs },
 #endif
 
+    { "wave", alc_wave_init, EmptyFuncs },
+
     { NULL, NULL, EmptyFuncs }
 };
 #undef EmptyFuncs

@@ -190,6 +190,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcRing.c
               Alc/alcThread.c
               Alc/bs2b.c
+              Alc/wave.c
 )
 
 SET(BACKENDS "")
@@ -262,6 +263,9 @@ IF("${HAVE_WINDOWS_H}")
         ENDIF()
     ENDIF()
 ENDIF()
+
+# This is always available
+SET(BACKENDS  ${BACKENDS} WaveFile)
 
 # End configuration
 CONFIGURE_FILE(

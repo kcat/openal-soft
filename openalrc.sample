@@ -44,7 +44,7 @@ drivers =  # Sets the backend driver list order, comma-seperated. Unknown
            # backends and duplicated names are ignored, and unlisted backends
            # won't be considered for use. An empty list means the default.
            # Default is:
-           # alsa,oss,dsound,winmm
+           # alsa,oss,dsound,winmm,wave
 
 [alsa]  # ALSA backend stuff
 device = default  # Sets the device name for the default playback device.
@@ -67,3 +67,9 @@ capture = /dev/dsp  # Sets the device name for OSS capture. Default is /dev/dsp
 
 [winmm]  # Windows Multimedia backend stuff
          # Nothing yet...
+
+[wave]  # Wave File Writer stuff
+file =  # Sets the filename of the wave file to write to. An empty name
+        # prevents the backend from opening, even when explicitly requested.
+        # THIS WILL OVERWRITE EXISTING FILES WITHOUT QUESTION!
+        # Default is empty

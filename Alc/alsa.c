@@ -899,7 +899,6 @@ next_card:
         }
         if (err >= 0 && (err = psnd_ctl_card_info(handle, info)) < 0) {
             AL_PRINT("control hardware info (%i): %s\n", card, psnd_strerror(err));
-            psnd_ctl_close(handle);
         }
         else if (err >= 0 && card < MAX_DEVICES-1)
         {

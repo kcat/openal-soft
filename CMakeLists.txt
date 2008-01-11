@@ -137,6 +137,11 @@ IF(NOT "${HAVE_WINDOWS_H}")
         MESSAGE(FATAL_ERROR "No timing function found!")
     ENDIF()
 
+    CHECK_FUNCTION_EXISTS(usleep HAVE_USLEEP)
+    IF(NOT "${HAVE_USLEEP}")
+        MESSAGE(FATAL_ERROR "No sleep function found!")
+    ENDIF()
+
     # We need pthreads outside of Windows
     CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD_H)
     IF(NOT "${HAVE_PTHREAD_H}")

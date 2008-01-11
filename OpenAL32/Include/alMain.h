@@ -68,6 +68,7 @@ static inline ALuint timeGetTime(void)
     return tv.tv_usec/1000 + tv.tv_sec*1000;
 }
 
+#define Sleep(x) ((void)usleep((unsigned int)x*1000))
 #define min(x,y) (((x)<(y))?(x):(y))
 #define max(x,y) (((x)>(y))?(x):(y))
 #endif

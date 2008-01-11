@@ -325,6 +325,9 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     char *err;
     int i;
 
+    if(!alsa_handle)
+        return ALC_FALSE;
+
     strncpy(driver, GetConfigValue("alsa", "device", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
     if(deviceName)
@@ -517,6 +520,9 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     char driver[64];
     char *err;
     int i;
+
+    if(!alsa_handle)
+        return ALC_FALSE;
 
     strncpy(driver, GetConfigValue("alsa", "capture", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
@@ -758,7 +764,7 @@ void alc_alsa_init(BackendFuncs *func_list)
 } while(0)
 #else
     str = NULL;
-    alsa_handle = NULL;
+    alsa_handle = 0xDEADBEEF;
 #define LOAD_FUNC(f) p##f = f
 #endif
 

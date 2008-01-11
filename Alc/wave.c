@@ -110,11 +110,10 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
     wave_data *data;
     ALuint channels;
     ALuint bits;
-    char fname[64];
+    const char *fname;
     int i;
 
-    strncpy(fname, GetConfigValue("wave", "file", ""), sizeof(fname)-1);
-    fname[sizeof(fname)-1] = 0;
+    fname = GetConfigValue("wave", "file", "");
     if(!fname[0])
         return ALC_FALSE;
 

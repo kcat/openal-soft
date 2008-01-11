@@ -203,14 +203,15 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
     fputc(0, data->f);
     fputc(0, data->f);
 
-    data->DataStart = ftell(data->f);
-    if(data->DataStart == -1 || ferror(data->f))
+    if(ferror(data->f))
     {
         AL_PRINT("Error writing header: %s\n", strerror(errno));
         fclose(data->f);
         free(data);
         return ALC_FALSE;
     }
+
+    data->DataStart = ftell(data->f);
 
     device->MaxNoOfSources = 256;
     device->UpdateFreq = max(device->UpdateFreq, 2048);

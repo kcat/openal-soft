@@ -105,7 +105,7 @@ static ALuint OSSProc(ALvoid *ptr)
                 memmove(data->mix_data, data->mix_data+wrote, remaining);
         }
         else
-            usleep(1000);
+            Sleep(1);
     }
 
     return 0;
@@ -131,7 +131,7 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
         }
         if(amt == 0)
         {
-            usleep(1000);
+            Sleep(1);
             continue;
         }
         if(data->doCapture)

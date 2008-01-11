@@ -116,7 +116,7 @@ static int xrun_recovery(snd_pcm_t *handle, int err)
     else if (err == -ESTRPIPE)
     {
         while ((err = psnd_pcm_resume(handle)) == -EAGAIN)
-            usleep(1);       /* wait until the suspend flag is released */
+            Sleep(1);       /* wait until the suspend flag is released */
         if (err < 0)
         {
             err = psnd_pcm_prepare(handle);
@@ -177,7 +177,7 @@ static ALuint ALSAProc(ALvoid *ptr)
         // make sure there's frames to process
         if(avail == 0)
         {
-            usleep(1000);
+            Sleep(1);
             continue;
         }
 
@@ -367,7 +367,7 @@ open_alsa:
     i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
     if(i < 0)
     {
-        usleep(200000);
+        Sleep(200);
         i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
     }
     if(i >= 0)
@@ -552,7 +552,7 @@ open_alsa:
     i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
     if(i < 0)
     {
-        usleep(200000);
+        Sleep(200);
         i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
     }
     if(i >= 0)

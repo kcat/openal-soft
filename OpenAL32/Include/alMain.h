@@ -14,6 +14,8 @@
 #include <assert.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <time.h>
+#include <errno.h>
 
 #define IsBadWritePtr(a,b) (0)
 
@@ -68,7 +70,15 @@ static inline ALuint timeGetTime(void)
     return tv.tv_usec/1000 + tv.tv_sec*1000;
 }
 
-#define Sleep(x) ((void)usleep((unsigned int)x*1000))
+static inline void Sleep(ALuint t)
+{
+    struct timespec tv, rem;
+    tv.tv_nsec = (t*1000000)%1000000000;
+    tv.tv_sec = t/1000;
+
+    while(nanosleep(&tv, &rem) == -1 && errno == EINTR)
+        tv = rem;
+}
 #define min(x,y) (((x)<(y))?(x):(y))
 #define max(x,y) (((x)>(y))?(x):(y))
 #endif

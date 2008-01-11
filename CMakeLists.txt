@@ -137,8 +137,8 @@ IF(NOT "${HAVE_WINDOWS_H}")
         MESSAGE(FATAL_ERROR "No timing function found!")
     ENDIF()
 
-    CHECK_FUNCTION_EXISTS(usleep HAVE_USLEEP)
-    IF(NOT "${HAVE_USLEEP}")
+    CHECK_FUNCTION_EXISTS(nanosleep HAVE_NANOSLEEP)
+    IF(NOT "${HAVE_NANOSLEEP}")
         MESSAGE(FATAL_ERROR "No sleep function found!")
     ENDIF()
 

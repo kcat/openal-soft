@@ -62,6 +62,8 @@ struct {
     { "winmm", alcWinMMInit, EmptyFuncs },
 #endif
 
+    { "wave", alc_wave_init, EmptyFuncs },
+
     { NULL, NULL, EmptyFuncs }
 };
 #undef EmptyFuncs
@@ -742,7 +744,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                         data[i++] = device->Frequency;
 
                         data[i++] = ALC_REFRESH;
-                        data[i++] = device->UpdateFreq;
+                        data[i++] = device->Frequency / device->UpdateFreq;
 
                         data[i++] = ALC_SYNC;
                         data[i++] = ALC_FALSE;
@@ -780,7 +782,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     else if(!size)
                         SetALCError(ALC_INVALID_VALUE);
                     else
-                        *data = device->UpdateFreq;
+                        *data = device->Frequency / device->UpdateFreq;
                     break;
 
                 case ALC_SYNC:
@@ -790,6 +792,24 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = ALC_FALSE;
+                    break;
+
+                case ALC_MONO_SOURCES:
+                    if(!device || !device->Context)
+                        SetALCError(ALC_INVALID_DEVICE);
+                    else if (size != 1)
+                        SetALCError(ALC_INVALID_VALUE);
+                    else
+                        *data = device->Context->lNumMonoSources;
+                    break;
+
+                case ALC_STEREO_SOURCES:
+                    if(!device || !device->Context)
+                        SetALCError(ALC_INVALID_DEVICE);
+                    else if (size != 1)
+                        SetALCError(ALC_INVALID_VALUE);
+                    else
+                        *data = device->Context->lNumStereoSources;
                     break;
 
                 default:

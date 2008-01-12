@@ -28,8 +28,8 @@ OPTION(WERROR   "Treat compile warnings as errors"          OFF)
 
 
 SET(LIB_MAJOR_VERSION "1")
-SET(LIB_MINOR_VERSION "0")
-SET(LIB_BUILD_VERSION "38")
+SET(LIB_MINOR_VERSION "1")
+SET(LIB_BUILD_VERSION "93")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_BUILD_VERSION}")
 
 
@@ -132,6 +132,16 @@ ENDIF()
 # Check if we have Windows headers
 CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H)
 IF(NOT "${HAVE_WINDOWS_H}")
+    CHECK_FUNCTION_EXISTS(gettimeofday HAVE_GETTIMEOFDAY)
+    IF(NOT "${HAVE_GETTIMEOFDAY}")
+        MESSAGE(FATAL_ERROR "No timing function found!")
+    ENDIF()
+
+    CHECK_FUNCTION_EXISTS(nanosleep HAVE_NANOSLEEP)
+    IF(NOT "${HAVE_NANOSLEEP}")
+        MESSAGE(FATAL_ERROR "No sleep function found!")
+    ENDIF()
+
     # We need pthreads outside of Windows
     CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD_H)
     IF(NOT "${HAVE_PTHREAD_H}")
@@ -183,6 +193,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcRing.c
               Alc/alcThread.c
               Alc/bs2b.c
+              Alc/wave.c
 )
 
 SET(BACKENDS "")
@@ -255,6 +266,9 @@ IF("${HAVE_WINDOWS_H}")
         ENDIF()
     ENDIF()
 ENDIF()
+
+# This is always available
+SET(BACKENDS  ${BACKENDS} WaveFile)
 
 # End configuration
 CONFIGURE_FILE(

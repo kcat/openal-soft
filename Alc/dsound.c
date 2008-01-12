@@ -36,70 +36,73 @@ typedef struct {
     LPDIRECTSOUND          lpDS;
     LPDIRECTSOUNDBUFFER    DSpbuffer;
     LPDIRECTSOUNDBUFFER    DSsbuffer;
-    MMRESULT               ulDSTimerID;
-    DWORD                  OldWriteCursor;
+
+    int killNow;
+    ALvoid *thread;
 } DSoundData;
 
 
 static ALCchar *DeviceList[16];
 
-static void CALLBACK DirectSoundProc(UINT uID,UINT uReserved,DWORD_PTR dwUser,DWORD_PTR dwReserved1,DWORD_PTR dwReserved2)
+
+static ALuint DSoundProc(ALvoid *ptr)
 {
-    ALCdevice *pDevice = (ALCdevice *)dwUser;
-    DSoundData *pData = pDevice->ExtraData;
-    DWORD PlayCursor,WriteCursor;
-    BYTE *WritePtr1,*WritePtr2;
-    DWORD WriteCnt1,WriteCnt2;
-    WAVEFORMATEX OutputType;
-    DWORD BytesPlayed;
-    DWORD BufSize;
-    HRESULT DSRes;
+    ALCdevice *pDevice = (ALCdevice*)ptr;
+    DSoundData *pData = (DSoundData*)pDevice->ExtraData;
+    DWORD LastCursor = 0;
+    DWORD PlayCursor;
+    VOID *WritePtr;
+    DWORD WriteCnt;
+    DWORD avail;
+    HRESULT err;
 
-    (void)uID;
-    (void)uReserved;
-    (void)dwReserved1;
-    (void)dwReserved2;
-
-    BufSize = pDevice->UpdateFreq * pDevice->FrameSize;
-
-    // Get current play and write cursors
-    IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer,&PlayCursor,&WriteCursor);
-    if (!pData->OldWriteCursor) pData->OldWriteCursor=WriteCursor-PlayCursor;
-
-    // Get the output format and figure the number of bytes played (block aligned)
-    IDirectSoundBuffer_GetFormat(pData->DSsbuffer,&OutputType,sizeof(WAVEFORMATEX),NULL);
-    BytesPlayed=((((WriteCursor<pData->OldWriteCursor)?(BufSize+WriteCursor-pData->OldWriteCursor):(WriteCursor-pData->OldWriteCursor))/OutputType.nBlockAlign)*OutputType.nBlockAlign);
-
-    // Lock output buffer started at 40msec in front of the old write cursor (15msec in front of the actual write cursor)
-    DSRes=IDirectSoundBuffer_Lock(pData->DSsbuffer,(pData->OldWriteCursor+(OutputType.nSamplesPerSec/25)*OutputType.nBlockAlign)%BufSize,BytesPlayed,(LPVOID*)&WritePtr1,&WriteCnt1,(LPVOID*)&WritePtr2,&WriteCnt2,0);
-
-    // If the buffer is lost, restore it, play and lock
-    if (DSRes==DSERR_BUFFERLOST)
+    while(!pData->killNow)
     {
-        IDirectSoundBuffer_Restore(pData->DSsbuffer);
-        IDirectSoundBuffer_Play(pData->DSsbuffer,0,0,DSBPLAY_LOOPING);
-        DSRes=IDirectSoundBuffer_Lock(pData->DSsbuffer,(pData->OldWriteCursor+(OutputType.nSamplesPerSec/25)*OutputType.nBlockAlign)%BufSize,BytesPlayed,(LPVOID*)&WritePtr1,&WriteCnt1,(LPVOID*)&WritePtr2,&WriteCnt2,0);
+        // Get current play and write cursors
+        IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &PlayCursor, NULL);
+        avail = (PlayCursor-LastCursor) % (pDevice->UpdateFreq*pDevice->FrameSize);
+
+        if(avail == 0)
+        {
+            Sleep(1);
+            continue;
+        }
+
+        // Lock output buffer
+        WriteCnt = 0;
+        err = IDirectSoundBuffer_Lock(pData->DSsbuffer, LastCursor, avail, &WritePtr, &WriteCnt, NULL, NULL, 0);
+
+        // If the buffer is lost, restore it, play and lock
+        if(err == DSERR_BUFFERLOST)
+        {
+            err = IDirectSoundBuffer_Restore(pData->DSsbuffer);
+            if(SUCCEEDED(err))
+                err = IDirectSoundBuffer_Play(pData->DSsbuffer, 0, 0, DSBPLAY_LOOPING);
+            if(SUCCEEDED(err))
+                err = IDirectSoundBuffer_Lock(pData->DSsbuffer, LastCursor, avail, (LPVOID*)&WritePtr, &WriteCnt, NULL, NULL, 0);
+        }
+
+        // Successfully locked the output buffer
+        if(SUCCEEDED(err))
+        {
+            // If we have an active context, mix data directly into output buffer otherwise fill with silence
+            SuspendContext(NULL);
+            aluMixData(pDevice->Context, WritePtr, WriteCnt, pDevice->Format);
+            ProcessContext(NULL);
+
+            // Unlock output buffer only when successfully locked
+            IDirectSoundBuffer_Unlock(pData->DSsbuffer, WritePtr, WriteCnt, NULL, 0);
+        }
+        else
+            AL_PRINT("Buffer lock error: %#lx\n", err);
+
+        // Update old write cursor location
+        LastCursor += WriteCnt;
+        LastCursor %= pDevice->UpdateFreq*pDevice->FrameSize;
     }
 
-    // Successfully locked the output buffer
-    if (DSRes==DS_OK)
-    {
-        // If we have an active context, mix data directly into output buffer otherwise fill with silence
-        SuspendContext(NULL);
-        if (WritePtr1)
-            aluMixData(pDevice->Context, WritePtr1, WriteCnt1, pDevice->Format);
-        if (WritePtr2)
-            aluMixData(pDevice->Context, WritePtr2, WriteCnt2, pDevice->Format);
-        ProcessContext(NULL);
-
-        // Unlock output buffer only when successfully locked
-        IDirectSoundBuffer_Unlock(pData->DSsbuffer,WritePtr1,WriteCnt1,WritePtr2,WriteCnt2);
-    }
-
-    // Update old write cursor location
-    pData->OldWriteCursor=((pData->OldWriteCursor+BytesPlayed)%BufSize);
+    return 0;
 }
-
 
 static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 {
@@ -177,6 +180,13 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     if(SUCCEEDED(hr))
         hr = IDirectSoundBuffer_Play(pData->DSsbuffer, 0, 0, DSBPLAY_LOOPING);
 
+    device->MaxNoOfSources = 256;
+    device->ExtraData = pData;
+
+    pData->thread = StartThread(DSoundProc, device);
+    if(!pData->thread)
+        hr = E_FAIL;
+
     if(FAILED(hr))
     {
         if (pData->DSsbuffer)
@@ -190,10 +200,6 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         return ALC_FALSE;
     }
 
-    pData->ulDSTimerID = timeSetEvent(25, 0, (LPTIMECALLBACK)DirectSoundProc, (DWORD)device, (UINT)TIME_CALLBACK_FUNCTION|TIME_PERIODIC);
-    device->MaxNoOfSources = 256;
-
-    device->ExtraData = pData;
     return ALC_TRUE;
 }
 
@@ -201,25 +207,15 @@ static void DSoundClosePlayback(ALCdevice *device)
 {
     DSoundData *pData = device->ExtraData;
 
-    // Stop and release the DS timer
-    if (pData->ulDSTimerID)
-        timeKillEvent(pData->ulDSTimerID);
+    pData->killNow = 1;
+    StopThread(pData->thread);
 
-    // Wait ... just in case any timer events happen
-    Sleep(100);
-
-    SuspendContext(NULL);
-
-    if (pData->DSsbuffer)
-        IDirectSoundBuffer_Release(pData->DSsbuffer);
-    if (pData->DSpbuffer)
-        IDirectSoundBuffer_Release(pData->DSpbuffer);
+    IDirectSoundBuffer_Release(pData->DSsbuffer);
+    IDirectSoundBuffer_Release(pData->DSpbuffer);
     IDirectSound_Release(pData->lpDS);
 
     //Deinit COM
     CoUninitialize();
-
-    ProcessContext(NULL);
 
     free(pData);
     device->ExtraData = NULL;

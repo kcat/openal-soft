@@ -55,7 +55,6 @@ typedef struct {
 
     ALubyte *mix_data;
     int data_size;
-    int silence;
 
     RingBuffer *ring;
     int doCapture;
@@ -78,31 +77,35 @@ static ALuint OSSProc(ALvoid *ptr)
 {
     ALCdevice *pDevice = (ALCdevice*)ptr;
     oss_data *data = (oss_data*)pDevice->ExtraData;
-    int remaining;
+    int remaining = 0;
     int wrote;
 
     while(!data->killNow)
     {
-        SuspendContext(NULL);
-        aluMixData(pDevice->Context,data->mix_data,data->data_size,pDevice->Format);
-        ProcessContext(NULL);
+        int len = data->data_size - remaining;
 
-        remaining = data->data_size;
-        while(remaining > 0)
+        if(len > 0)
         {
-            wrote = write(data->fd, data->mix_data+data->data_size-remaining, remaining);
-            if(wrote < 0)
-            {
-                AL_PRINT("write failed: %s\n", strerror(errno));
-                break;
-            }
-            if(wrote == 0)
-            {
-                usleep(1000);
-                continue;
-            }
-            remaining -= wrote;
+            SuspendContext(NULL);
+            aluMixData(pDevice->Context, data->mix_data+remaining, len, pDevice->Format);
+            ProcessContext(NULL);
         }
+
+        remaining += len;
+        wrote = write(data->fd, data->mix_data, remaining);
+        if(wrote < 0)
+        {
+            AL_PRINT("write failed: %s\n", strerror(errno));
+            remaining = 0;
+        }
+        else if(wrote > 0)
+        {
+            remaining -= wrote;
+            if(remaining > 0)
+                memmove(data->mix_data, data->mix_data+wrote, remaining);
+        }
+        else
+            Sleep(1);
     }
 
     return 0;
@@ -128,7 +131,7 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
         }
         if(amt == 0)
         {
-            usleep(1000);
+            Sleep(1);
             continue;
         }
         if(data->doCapture)
@@ -177,11 +180,9 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     switch(aluBytesFromFormat(device->Format))
     {
         case 1:
-            data->silence = 0x80;
             ossFormat = AFMT_U8;
             break;
         case 2:
-            data->silence = 0;
             ossFormat = AFMT_S16_NE;
             break;
         default:
@@ -190,7 +191,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     }
 
     periods = GetConfigValueInt("oss", "periods", 4);
-    if((int)periods < 0)
+    if((int)periods <= 0)
         periods = 4;
     numChannels = device->Channels;
     ossSpeed = device->Frequency;
@@ -307,11 +308,9 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
     switch(aluBytesFromFormat(format))
     {
         case 1:
-            data->silence = 0x80;
             ossFormat = AFMT_U8;
             break;
         case 2:
-            data->silence = 0;
             ossFormat = AFMT_S16_NE;
             break;
         default:
@@ -402,7 +401,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
 
     device->UpdateFreq = info.fragsize / device->FrameSize;
 
-    data->data_size = device->UpdateFreq * device->FrameSize;
+    data->data_size = device->UpdateFreq * device->FrameSize * info.fragments;
     data->mix_data = calloc(1, data->data_size);
 
     device->ExtraData = data;

@@ -13,6 +13,9 @@
 
 #include <assert.h>
 #include <pthread.h>
+#include <sys/time.h>
+#include <time.h>
+#include <errno.h>
 
 #define IsBadWritePtr(a,b) (0)
 
@@ -52,6 +55,30 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
     assert(ret == 0);
 }
 
+/* NOTE: This wrapper isn't quite accurate as it returns an ALuint, as opposed
+ * to the expected DWORD. Both are defined as unsigned 32-bit types, however.
+ * Additionally, Win32 is supposed to measure the time since Windows started,
+ * as opposed to the actual time. */
+static inline ALuint timeGetTime(void)
+{
+    struct timeval tv;
+    int ret;
+
+    ret = gettimeofday(&tv, NULL);
+    assert(ret == 0);
+
+    return tv.tv_usec/1000 + tv.tv_sec*1000;
+}
+
+static inline void Sleep(ALuint t)
+{
+    struct timespec tv, rem;
+    tv.tv_nsec = (t*1000000)%1000000000;
+    tv.tv_sec = t/1000;
+
+    while(nanosleep(&tv, &rem) == -1 && errno == EINTR)
+        tv = rem;
+}
 #define min(x,y) (((x)<(y))?(x):(y))
 #define max(x,y) (((x)>(y))?(x):(y))
 #endif
@@ -123,6 +150,7 @@ void alc_alsa_init(BackendFuncs *func_list);
 void alc_oss_init(BackendFuncs *func_list);
 void alcDSoundInit(BackendFuncs *func_list);
 void alcWinMMInit(BackendFuncs *FuncList);
+void alc_wave_init(BackendFuncs *func_list);
 
 
 struct ALCdevice_struct

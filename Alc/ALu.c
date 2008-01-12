@@ -151,12 +151,14 @@ __inline ALuint aluChannelsFromFormat(ALenum format)
 
 static __inline ALint aluF2L(ALfloat Value)
 {
+#if 0
     if(sizeof(ALint) == 4 && sizeof(double) == 8)
     {
         double temp;
         temp = Value + (((65536.0*65536.0*16.0)+(65536.0*65536.0*8.0))*65536.0);
         return *((ALint*)&temp);
     }
+#endif
     return (ALint)Value;
 }
 

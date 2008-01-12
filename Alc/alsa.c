@@ -116,7 +116,7 @@ static int xrun_recovery(snd_pcm_t *handle, int err)
     else if (err == -ESTRPIPE)
     {
         while ((err = psnd_pcm_resume(handle)) == -EAGAIN)
-            usleep(1);       /* wait until the suspend flag is released */
+            Sleep(1);       /* wait until the suspend flag is released */
         if (err < 0)
         {
             err = psnd_pcm_prepare(handle);
@@ -177,7 +177,7 @@ static ALuint ALSAProc(ALvoid *ptr)
         // make sure there's frames to process
         if(avail == 0)
         {
-            usleep(1000);
+            Sleep(1);
             continue;
         }
 
@@ -222,30 +222,9 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
     snd_pcm_sframes_t avail;
     char *WritePtr;
-    int err;
 
     while(!data->killNow)
     {
-        snd_pcm_state_t state = psnd_pcm_state(data->pcmHandle);
-        if(state == SND_PCM_STATE_XRUN)
-        {
-            err = xrun_recovery(data->pcmHandle, -EPIPE);
-            if (err < 0)
-            {
-                AL_PRINT("XRUN recovery failed: %s\n", psnd_strerror(err));
-                break;
-            }
-        }
-        else if (state == SND_PCM_STATE_SUSPENDED)
-        {
-            err = xrun_recovery(data->pcmHandle, -ESTRPIPE);
-            if (err < 0)
-            {
-                AL_PRINT("SUSPEND recovery failed: %s\n", psnd_strerror(err));
-                break;
-            }
-        }
-
         SuspendContext(NULL);
         aluMixData(pDevice->Context, data->buffer, data->size, pDevice->Format);
         ProcessContext(NULL);
@@ -346,6 +325,9 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     char *err;
     int i;
 
+    if(!alsa_handle)
+        return ALC_FALSE;
+
     strncpy(driver, GetConfigValue("alsa", "device", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
     if(deviceName)
@@ -385,7 +367,7 @@ open_alsa:
     i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
     if(i < 0)
     {
-        usleep(200000);
+        Sleep(200);
         i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
     }
     if(i >= 0)
@@ -417,7 +399,7 @@ open_alsa:
     periods = GetConfigValueInt("alsa", "periods", 4);
     if((int)periods <= 0)
         periods = 4;
-    bufferSizeInFrames = device->UpdateFreq;
+    bufferSizeInFrames = device->UpdateFreq / periods;
 
     psnd_pcm_hw_params_malloc(&p);
 #define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
@@ -425,7 +407,7 @@ open_alsa:
     if(!(ok(psnd_pcm_hw_params_any(data->pcmHandle, p), "any") &&
          /* set interleaved access */
          (ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED), "set access") ||
-          ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED), "set access"))&&
+          ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED), "set access")) &&
          /* set format (implicitly sets sample bits) */
          ok(psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format), "set format") &&
          /* set channels (implicitly sets frame bits) */
@@ -461,17 +443,7 @@ open_alsa:
     device->MaxNoOfSources = 256;
     device->UpdateFreq = bufferSizeInFrames;
 
-    i = psnd_pcm_prepare(data->pcmHandle);
-    if(i < 0)
-    {
-        AL_PRINT("prepare error: %s\n", psnd_strerror(i));
-        psnd_pcm_close(data->pcmHandle);
-        free(data->buffer);
-        free(data);
-        return ALC_FALSE;
-    }
-
-    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
+    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, device->UpdateFreq);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
         data->buffer = malloc(data->size);
@@ -484,16 +456,28 @@ open_alsa:
         }
     }
     else
+    {
+        i = psnd_pcm_prepare(data->pcmHandle);
+        if(i < 0)
+        {
+            AL_PRINT("prepare error: %s\n", psnd_strerror(i));
+            psnd_pcm_close(data->pcmHandle);
+            free(data->buffer);
+            free(data);
+            return ALC_FALSE;
+        }
+
         fill_silence(data->pcmHandle, data->format, device->Channels);
 
-    i = psnd_pcm_start(data->pcmHandle);
-    if(i < 0)
-    {
-        AL_PRINT("start error: %s\n", psnd_strerror(i));
-        psnd_pcm_close(data->pcmHandle);
-        free(data->buffer);
-        free(data);
-        return ALC_FALSE;
+        i = psnd_pcm_start(data->pcmHandle);
+        if(i < 0)
+        {
+            AL_PRINT("start error: %s\n", psnd_strerror(i));
+            psnd_pcm_close(data->pcmHandle);
+            free(data->buffer);
+            free(data);
+            return ALC_FALSE;
+        }
     }
 
     device->ExtraData = data;
@@ -531,11 +515,14 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     snd_pcm_format_t alsaFormat;
     snd_pcm_hw_params_t *p;
     unsigned int periods = 4;
-    snd_pcm_uframes_t bufferSizeInFrames = SampleSize;
+    snd_pcm_uframes_t bufferSizeInFrames;
     alsa_data *data;
     char driver[64];
     char *err;
     int i;
+
+    if(!alsa_handle)
+        return ALC_FALSE;
 
     strncpy(driver, GetConfigValue("alsa", "capture", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
@@ -565,7 +552,7 @@ open_alsa:
     i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
     if(i < 0)
     {
-        usleep(200000);
+        Sleep(200);
         i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
     }
     if(i >= 0)
@@ -593,6 +580,8 @@ open_alsa:
             alsaFormat = SND_PCM_FORMAT_UNKNOWN;
             AL_PRINT("Unknown format?! %x\n", format);
     }
+
+    bufferSizeInFrames = SampleSize / periods;
 
     psnd_pcm_hw_params_malloc(&p);
 #define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
@@ -775,7 +764,7 @@ void alc_alsa_init(BackendFuncs *func_list)
 } while(0)
 #else
     str = NULL;
-    alsa_handle = NULL;
+    alsa_handle = 0xDEADBEEF;
 #define LOAD_FUNC(f) p##f = f
 #endif
 
@@ -910,7 +899,6 @@ next_card:
         }
         if (err >= 0 && (err = psnd_ctl_card_info(handle, info)) < 0) {
             AL_PRINT("control hardware info (%i): %s\n", card, psnd_strerror(err));
-            psnd_ctl_close(handle);
         }
         else if (err >= 0 && card < MAX_DEVICES-1)
         {

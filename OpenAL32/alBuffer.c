@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 #include "alMain.h"
 #include "AL/al.h"
 #include "AL/alc.h"

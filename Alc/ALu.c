@@ -460,12 +460,10 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             DryGainHF *= pow(ALSource->AirAbsorptionFactor * AIRABSORBGAINHF,
                              Distance * MetersPerUnit);
 
-        *drygainhf = DryGainHF;
-        *wetgainhf = WetGainHF;
+        WetMix *= ALSource->Send[0].Slot.Gain;
 
         //7. Convert normalized position into pannings, then into channel volumes
         aluNormalize(Position);
-        WetMix *= ALSource->Send[0].Slot.Gain;
         switch(aluChannelsFromFormat(OutputFormat))
         {
             case 1:
@@ -480,7 +478,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 {
                     wetsend[FRONT_LEFT]  = 0.0f;
                     wetsend[FRONT_RIGHT] = 0.0f;
-                    *wetgainhf = 1.0f;
+                    WetGainHF = 1.0f;
                 }
                 break;
             case 2:
@@ -496,7 +494,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 {
                     wetsend[FRONT_LEFT]  = 0.0f;
                     wetsend[FRONT_RIGHT] = 0.0f;
-                    *wetgainhf = 1.0f;
+                    WetGainHF = 1.0f;
                 }
                 break;
             case 4:
@@ -526,7 +524,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                     wetsend[FRONT_RIGHT] = 0.0f;
                     wetsend[BACK_LEFT]   = 0.0f;
                     wetsend[BACK_RIGHT]  = 0.0f;
-                    *wetgainhf = 1.0f;
+                    WetGainHF = 1.0f;
                 }
                 break;
             case 7:
@@ -562,7 +560,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                         wetsend[SIDE_RIGHT]  = 0.0f;
                         wetsend[BACK_LEFT]   = 0.0f;
                         wetsend[BACK_RIGHT]  = 0.0f;
-                        *wetgainhf = 1.0f;
+                        WetGainHF = 1.0f;
                     }
                 }
                 else
@@ -590,12 +588,15 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                         wetsend[SIDE_RIGHT]  = 0.0f;
                         wetsend[BACK_LEFT]   = 0.0f;
                         wetsend[BACK_RIGHT]  = 0.0f;
-                        *wetgainhf = 1.0f;
+                        WetGainHF = 1.0f;
                     }
                 }
             default:
                 break;
         }
+
+        *drygainhf = DryGainHF;
+        *wetgainhf = WetGainHF;
     }
     else
     {

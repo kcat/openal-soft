@@ -274,46 +274,6 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
     return 0;
 }
 
-static void fill_silence(snd_pcm_t *pcmHandle, snd_pcm_format_t alsaFormat, int channels)
-{
-    const snd_pcm_channel_area_t *areas = NULL;
-    snd_pcm_sframes_t avail, commitres;
-    snd_pcm_uframes_t offset, frames;
-    int err;
-
-    avail = psnd_pcm_avail_update(pcmHandle);
-    if(avail < 0)
-    {
-        AL_PRINT("available update failed: %s\n", psnd_strerror(avail));
-        return;
-    }
-
-    // it is possible that contiguous areas are smaller, thus we use a loop
-    while (avail > 0)
-    {
-        frames = avail;
-
-        err = psnd_pcm_mmap_begin(pcmHandle, &areas, &offset, &frames);
-        if (err < 0)
-        {
-            AL_PRINT("mmap begin error: %s\n", psnd_strerror(err));
-            break;
-        }
-
-        psnd_pcm_areas_silence(areas, offset, channels, frames, alsaFormat);
-
-        commitres = psnd_pcm_mmap_commit(pcmHandle, offset, frames);
-        if (commitres < 0 || (commitres-frames) != 0)
-        {
-            AL_PRINT("mmap commit error: %s\n",
-                     psnd_strerror(commitres >= 0 ? -EPIPE : commitres));
-            break;
-        }
-
-        avail -= frames;
-    }
-}
-
 static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     snd_pcm_uframes_t bufferSizeInFrames;
@@ -461,18 +421,6 @@ open_alsa:
         if(i < 0)
         {
             AL_PRINT("prepare error: %s\n", psnd_strerror(i));
-            psnd_pcm_close(data->pcmHandle);
-            free(data->buffer);
-            free(data);
-            return ALC_FALSE;
-        }
-
-        fill_silence(data->pcmHandle, data->format, device->Channels);
-
-        i = psnd_pcm_start(data->pcmHandle);
-        if(i < 0)
-        {
-            AL_PRINT("start error: %s\n", psnd_strerror(i));
             psnd_pcm_close(data->pcmHandle);
             free(data->buffer);
             free(data);

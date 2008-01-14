@@ -177,13 +177,11 @@ static ALuint ALSAProc(ALvoid *ptr)
             {
                 err = psnd_pcm_start(data->pcmHandle);
                 if(err < 0)
-                {
                     err = xrun_recovery(data->pcmHandle, err);
-                    if (err < 0)
-                    {
-                        AL_PRINT("start failed: %s\n", psnd_strerror(err));
-                        break;
-                    }
+                if(err < 0)
+                {
+                    AL_PRINT("start failed: %s\n", psnd_strerror(err));
+                    break;
                 }
             }
             Sleep(1);

@@ -173,6 +173,19 @@ static ALuint ALSAProc(ALvoid *ptr)
         // make sure there's frames to process
         if(avail == 0)
         {
+            if(state != SND_PCM_STATE_RUNNING)
+            {
+                err = psnd_pcm_start(data->pcmHandle);
+                if(err < 0)
+                {
+                    err = xrun_recovery(data->pcmHandle, err);
+                    if (err < 0)
+                    {
+                        AL_PRINT("start failed: %s\n", psnd_strerror(err));
+                        break;
+                    }
+                }
+            }
             Sleep(1);
             continue;
         }

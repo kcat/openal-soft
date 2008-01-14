@@ -275,12 +275,8 @@ static void fill_silence(snd_pcm_t *pcmHandle, snd_pcm_format_t alsaFormat, int 
     avail = psnd_pcm_avail_update(pcmHandle);
     if(avail < 0)
     {
-        err = xrun_recovery(pcmHandle, avail);
-        if (err < 0)
-        {
-            AL_PRINT("available update failed: %s\n", psnd_strerror(err));
-            return;
-        }
+        AL_PRINT("available update failed: %s\n", psnd_strerror(avail));
+        return;
     }
 
     // it is possible that contiguous areas are smaller, thus we use a loop
@@ -291,13 +287,8 @@ static void fill_silence(snd_pcm_t *pcmHandle, snd_pcm_format_t alsaFormat, int 
         err = psnd_pcm_mmap_begin(pcmHandle, &areas, &offset, &frames);
         if (err < 0)
         {
-            err = xrun_recovery(pcmHandle, err);
-            if (err < 0)
-            {
-                AL_PRINT("mmap begin error: %s\n", psnd_strerror(err));
-                break;
-            }
-            continue;
+            AL_PRINT("mmap begin error: %s\n", psnd_strerror(err));
+            break;
         }
 
         psnd_pcm_areas_silence(areas, offset, channels, frames, alsaFormat);

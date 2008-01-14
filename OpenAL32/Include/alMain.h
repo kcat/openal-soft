@@ -216,6 +216,8 @@ struct ALCcontext_struct
     ALCcontext *next;
 };
 
+ALCvoid ReleaseALC(ALCvoid);
+
 ALCchar *AppendDeviceList(char *name);
 ALCchar *AppendAllDeviceList(char *name);
 ALCchar *AppendCaptureDeviceList(char *name);

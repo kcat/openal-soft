@@ -1239,4 +1239,26 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
 
     return bReturn;
 }
+
+
+ALCvoid ReleaseALC(ALCvoid)
+{
+    ALCdevice *Dev;
+
+#ifdef _DEBUG
+    if(g_ulContextCount > 0)
+        AL_PRINT("exit() %u device(s) and %u context(s) NOT deleted\n", g_ulDeviceCount, g_ulContextCount);
+#endif
+
+    while(g_pDeviceList)
+    {
+        Dev = g_pDeviceList;
+        g_pDeviceList = g_pDeviceList->next;
+        if(Dev->IsCaptureDevice)
+            alcCaptureCloseDevice(Dev);
+        else
+            alcCloseDevice(Dev);
+    }
+}
+
 ///////////////////////////////////////////////////////

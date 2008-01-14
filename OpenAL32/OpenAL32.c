@@ -44,6 +44,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             ReleaseALAuxiliaryEffectSlots();
             ReleaseALEffects();
             ReleaseALFilters();
+            ReleaseALC();
             FreeALConfig();
             ALTHUNK_EXIT();
             DeleteCriticalSection(&_alMutex);
@@ -64,6 +65,7 @@ static void my_deinit()
     ReleaseALAuxiliaryEffectSlots();
     ReleaseALEffects();
     ReleaseALFilters();
+    ReleaseALC();
     FreeALConfig();
     ALTHUNK_EXIT();
     DeleteCriticalSection(&_alMutex);

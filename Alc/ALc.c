@@ -1224,6 +1224,8 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
 
         ProcessContext(NULL);
 
+        if(pDevice->Context)
+            alcDestroyContext(pDevice->Context);
         ALCdevice_ClosePlayback(pDevice);
 
         //Release device structure

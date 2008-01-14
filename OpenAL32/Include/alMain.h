@@ -174,6 +174,8 @@ struct ALCdevice_struct
 
     BackendFuncs *Funcs;
     void         *ExtraData; // For the backend's use
+
+    ALCdevice *next;
 };
 
 #define ALCdevice_OpenPlayback(a,b)      ((a)->Funcs->OpenPlayback((a), (b)))

@@ -191,6 +191,9 @@ static ALCint alcEFXMinorVersion = 0;
 ///////////////////////////////////////////////////////
 // Global Variables
 
+static ALCdevice *g_pDeviceList = NULL;
+static ALCuint    g_ulDeviceCount = 0;
+
 // Context List
 static ALCcontext *g_pContextList = NULL;
 static ALCuint     g_ulContextCount = 0;
@@ -468,6 +471,12 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
                 pDevice->Funcs = &BackendList[i].Funcs;
                 if(ALCdevice_OpenCapture(pDevice, deviceName, frequency, format, SampleSize))
                 {
+                    SuspendContext(NULL);
+                    pDevice->next = g_pDeviceList;
+                    g_pDeviceList = pDevice;
+                    g_ulDeviceCount++;
+                    ProcessContext(NULL);
+
                     DeviceFound = ALC_TRUE;
                     break;
                 }
@@ -491,9 +500,21 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
 ALCAPI ALCboolean ALCAPIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 {
     ALCboolean bReturn = ALC_FALSE;
+    ALCdevice **list;
 
     if ((pDevice)&&(pDevice->IsCaptureDevice))
     {
+        SuspendContext(NULL);
+
+        list = &g_pDeviceList;
+        while(*list != pDevice)
+            list = &(*list)->next;
+
+        *list = (*list)->next;
+        g_ulDeviceCount--;
+
+        ProcessContext(NULL);
+
         ALCdevice_CloseCapture(pDevice);
         free(pDevice);
 
@@ -1157,6 +1178,12 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
             device->Funcs = &BackendList[i].Funcs;
             if(ALCdevice_OpenPlayback(device, deviceName))
             {
+                SuspendContext(NULL);
+                device->next = g_pDeviceList;
+                g_pDeviceList = device;
+                g_ulDeviceCount++;
+                ProcessContext(NULL);
+
                 bDeviceFound = AL_TRUE;
                 break;
             }
@@ -1182,9 +1209,21 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
 ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
 {
     ALCboolean bReturn = ALC_FALSE;
+    ALCdevice **list;
 
     if ((pDevice)&&(!pDevice->IsCaptureDevice))
     {
+        SuspendContext(NULL);
+
+        list = &g_pDeviceList;
+        while(*list != pDevice)
+            list = &(*list)->next;
+
+        *list = (*list)->next;
+        g_ulDeviceCount--;
+
+        ProcessContext(NULL);
+
         ALCdevice_ClosePlayback(pDevice);
 
         //Release device structure

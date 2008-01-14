@@ -16,6 +16,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <errno.h>
+#include <stdio.h>
 
 #define IsBadWritePtr(a,b) (0)
 

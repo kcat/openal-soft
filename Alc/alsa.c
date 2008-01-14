@@ -248,9 +248,8 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
             case -EAGAIN:
                 continue;
             case -ESTRPIPE:
-                do {
-                    ret = psnd_pcm_resume(data->pcmHandle);
-                } while(ret == -EAGAIN);
+                while((ret=psnd_pcm_resume(data->pcmHandle)) == -EAGAIN)
+                    Sleep(1);
                 break;
             case -EPIPE:
                 break;

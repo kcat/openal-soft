@@ -55,6 +55,12 @@ periods = 4  # Sets the number of update buffers. Default is 4
 capture = default  # Sets the device name for the default capture device.
                    # Default is default
 
+mmap = true  # Sets whether to try using mmap mode (helps reduce latencies and
+             # CPU consumption). If mmap isn't available, it will automatically
+             # fall back to non-mmap mode. True, yes, on, and non-0 values will
+             # attempt to use mmap. 0 and anything else will force mmap off.
+             # Default is true.
+
 [oss]  # OSS backend stuff
 device = /dev/dsp  # Sets the device name for OSS output. Default is /dev/dsp
 

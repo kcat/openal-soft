@@ -281,6 +281,8 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     unsigned int periods;
     alsa_data *data;
     char driver[64];
+    const char *str;
+    int allowmmap;
     char *err;
     int i;
 
@@ -360,12 +362,18 @@ open_alsa:
         periods = 4;
     bufferSizeInFrames = device->UpdateFreq / periods;
 
+    str = GetConfigValue("alsa", "mmap", "true");
+    allowmmap = (strcasecmp(str, "true") == 0 ||
+                 strcasecmp(str, "yes") == 0 ||
+                 strcasecmp(str, "on") == 0 ||
+                 atoi(str) != 0);
+
     psnd_pcm_hw_params_malloc(&p);
 #define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
     /* start with the largest configuration space possible */
     if(!(ok(psnd_pcm_hw_params_any(data->pcmHandle, p), "any") &&
          /* set interleaved access */
-         (ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED), "set access") ||
+         ((allowmmap && ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED), "set access")) ||
           ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED), "set access")) &&
          /* set format (implicitly sets sample bits) */
          ok(psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format), "set format") &&

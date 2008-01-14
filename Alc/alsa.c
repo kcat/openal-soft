@@ -108,8 +108,6 @@ static int xrun_recovery(snd_pcm_t *handle, int err)
     if (err == -EPIPE)
     {    /* under-run */
         err = psnd_pcm_prepare(handle);
-        if(err >= 0)
-            err = psnd_pcm_start(handle);
         if (err < 0)
             AL_PRINT("prepare failed: %s\n", psnd_strerror(err));
     }
@@ -120,8 +118,6 @@ static int xrun_recovery(snd_pcm_t *handle, int err)
         if (err < 0)
         {
             err = psnd_pcm_prepare(handle);
-            if(err >= 0)
-                err = psnd_pcm_start(handle);
             if (err < 0)
                 AL_PRINT("prepare failed: %s\n", psnd_strerror(err));
         }

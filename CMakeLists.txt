@@ -15,12 +15,12 @@ PROJECT(OpenAL)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 
-OPTION(ALSA    "ALSA backend"                ON)
-OPTION(OSS     "OSS backend"                 ON)
-OPTION(DSOUND  "DirectSound backend"         ON)
-OPTION(WINMM   "Windows Multimedia backend"  ON)
+OPTION(ALSA    "Check for ALSA backend"                ON)
+OPTION(OSS     "Check for OSS backend"                 ON)
+OPTION(DSOUND  "Check for DirectSound backend"         ON)
+OPTION(WINMM   "Check for Windows Multimedia backend"  ON)
 
-OPTION(DLOPEN  "Use the dlopen API for loading optional libs"  ON)
+OPTION(DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
 OPTION(WERROR   "Treat compile warnings as errors"          OFF)
 

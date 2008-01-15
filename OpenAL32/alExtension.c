@@ -303,7 +303,8 @@ ALAPI ALboolean ALAPIENTRY alIsExtensionPresent(const ALchar *extName)
 {
     ALboolean bIsSupported = AL_FALSE;
     ALCcontext *pContext;
-    char *ptr, *ext;
+    const char *ptr;
+    size_t len;
 
     if (!extName)
     {
@@ -318,32 +319,28 @@ ALAPI ALboolean ALAPIENTRY alIsExtensionPresent(const ALchar *extName)
         return AL_FALSE;
     }
 
-    ext = strdup(extName);
-    ptr = ext;
-    do {
-        *ptr = (char)toupper(*ptr);
-    } while(*(ptr++));
-
     SuspendContext(pContext);
 
+    len = strlen(extName);
     ptr = pContext->ExtensionList;
-    while((ptr=strstr(ptr, ext)) != NULL)
+    while(ptr && *ptr)
     {
-        if(ptr == pContext->ExtensionList || ptr[-1] == ' ')
+        if(strncasecmp(ptr, extName, len) == 0 &&
+           (ptr[len] == '\0' || isspace(ptr[len])))
         {
-            char e = ptr[strlen(ext)];
-            if(e == ' ' || e == 0)
-            {
-                bIsSupported = AL_TRUE;
-                break;
-            }
+            bIsSupported = AL_TRUE;
+            break;
         }
-        ptr++;
+        if((ptr=strchr(ptr, ' ')) != NULL)
+        {
+            do {
+                ++ptr;
+            } while(isspace(*ptr));
+        }
     }
 
     ProcessContext(pContext);
 
-    free(ext);
     return bIsSupported;
 }
 

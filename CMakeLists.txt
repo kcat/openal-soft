@@ -108,6 +108,16 @@ IF(NOT "${HAVE_STRCASECMP}")
     ADD_DEFINITIONS(-Dstrcasecmp=_stricmp)
 ENDIF()
 
+CHECK_FUNCTION_EXISTS(strncasecmp HAVE_STRNCASECMP)
+IF(NOT "${HAVE_STRNCASECMP}")
+    CHECK_FUNCTION_EXISTS(_strnicmp HAVE__STRNICMP)
+    IF(NOT "${HAVE__STRNICMP}")
+        MESSAGE(FATAL_ERROR "No case-insensitive size-limitted compare function found, please report!")
+    ENDIF()
+
+    ADD_DEFINITIONS(-Dstrncasecmp=_strnicmp)
+ENDIF()
+
 CHECK_FUNCTION_EXISTS(snprintf HAVE_SNPRINTF)
 IF(NOT "${HAVE_SNPRINTF}")
     CHECK_FUNCTION_EXISTS(_snprintf HAVE__SNPRINTF)

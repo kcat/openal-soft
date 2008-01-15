@@ -260,8 +260,6 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
 {
     ALCcontext *Context;
 
-    (void)flValue;
-
     Context = alcGetCurrentContext();
     if(!Context)
     {

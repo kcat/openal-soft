@@ -46,7 +46,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
 
     if (n > 0)
     {
-        // Check that enough memory has been allocted in the 'sources' array for n Sources
+        // Check that enough memory has been allocted in the 'filters' array for n Filters
         if (!IsBadWritePtr((void*)filters, n * sizeof(ALuint)))
         {
             ALfilter **list = &g_FilterList;

@@ -46,7 +46,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 
     if (n > 0)
     {
-        // Check that enough memory has been allocted in the 'sources' array for n Sources
+        // Check that enough memory has been allocted in the 'effects' array for n Effects
         if (!IsBadWritePtr((void*)effects, n * sizeof(ALuint)))
         {
             ALeffect **list = &g_EffectList;

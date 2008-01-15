@@ -47,7 +47,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         /* NOTE: We only support one slot currently */
         if(n == 1 && g_AuxiliaryEffectSlotCount == 0)
         {
-            // Check that enough memory has been allocted in the 'sources' array for n Sources
+            // Check that enough memory has been allocted in the 'effectslots' array for n Effect Slots
             if (!IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))
             {
                 ALeffectslot **list = &g_AuxiliaryEffectSlotList;

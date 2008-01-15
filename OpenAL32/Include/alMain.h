@@ -2,12 +2,13 @@
 #define AL_MAIN_H
 
 #include <string.h>
+#include <stdio.h>
 
 #include "alu.h"
 
 #ifdef _WIN32
+
 #include <windows.h>
-//#define strcasecmp _stricmp
 
 #else
 
@@ -16,7 +17,6 @@
 #include <sys/time.h>
 #include <time.h>
 #include <errno.h>
-#include <stdio.h>
 
 #define IsBadWritePtr(a,b) (0)
 

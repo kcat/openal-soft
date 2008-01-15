@@ -209,6 +209,8 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_FORMAT_STEREO_FLOAT32",             AL_FORMAT_STEREO_FLOAT32            },
     { (ALchar *)"AL_FORMAT_MONO_IMA4",                  AL_FORMAT_MONO_IMA4                 },
     { (ALchar *)"AL_FORMAT_STEREO_IMA4",                AL_FORMAT_STEREO_IMA4               },
+    { (ALchar *)"AL_FORMAT_QUAD8_LOKI",                 AL_FORMAT_QUAD8_LOKI                },
+    { (ALchar *)"AL_FORMAT_QUAD16_LOKI",                AL_FORMAT_QUAD16_LOKI               },
     { (ALchar *)"AL_FORMAT_QUAD8",                      AL_FORMAT_QUAD8                     },
     { (ALchar *)"AL_FORMAT_QUAD16",                     AL_FORMAT_QUAD16                    },
     { (ALchar *)"AL_FORMAT_QUAD32",                     AL_FORMAT_QUAD32                    },

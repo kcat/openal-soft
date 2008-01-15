@@ -392,6 +392,8 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     }
                 }   break;
 
+                case AL_FORMAT_QUAD8_LOKI:
+                case AL_FORMAT_QUAD16_LOKI:
                 case AL_FORMAT_QUAD8:
                 case AL_FORMAT_QUAD16:
                 case AL_FORMAT_QUAD32:

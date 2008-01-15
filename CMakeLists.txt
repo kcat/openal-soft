@@ -22,8 +22,6 @@ OPTION(WINMM   "Windows Multimedia backend"  ON)
 
 OPTION(DLOPEN  "Use the dlopen API for loading optional libs"  ON)
 
-OPTION(DEBUG    "Build lib in debug mode"                   OFF)
-OPTION(NODEBUG  "Disable all debug info for optimizations"  OFF)
 OPTION(WERROR   "Treat compile warnings as errors"          OFF)
 
 
@@ -42,8 +40,18 @@ CHECK_TYPE_SIZE("void*" SIZEOF_VOIDP)
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES(OpenAL32/Include include "${OpenAL_BINARY_DIR}")
 
+IF(NOT CMAKE_BUILD_TYPE)
+    SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+        "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
+        FORCE)
+ENDIF()
+
 IF("${MSVC}")
     # ???
+    SET(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -D_DEBUG")
+    SET(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -DNDEBUG")
+    SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DNDEBUG")
+    SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG")
 ELSE()
     ADD_DEFINITIONS(-Wall)
     CHECK_C_COMPILER_FLAG(-Wextra HAVE_W_EXTRA)
@@ -55,13 +63,18 @@ ELSE()
         ADD_DEFINITIONS(-Werror)
     ENDIF()
 
-    IF(DEBUG)
-        ADD_DEFINITIONS(-g3)
-    ELSEIF(NODEBUG)
-        ADD_DEFINITIONS(-O2 -funroll-loops -fomit-frame-pointer)
-    ELSE()
-        ADD_DEFINITIONS(-g -O2 -funroll-loops)
-    ENDIF()
+    SET(CMAKE_C_FLAGS_RELWITHDEBINFO "-g -O2 -funroll-loops -D_DEBUG" CACHE STRING
+        "Flags used by the compiler during Release with Debug Info builds."
+        FORCE)
+    SET(CMAKE_C_FLAGS_MINSIZEREL "-Os -DNDEBUG" CACHE STRING
+        "Flags used by the compiler during release minsize builds."
+        FORCE)
+    SET(CMAKE_C_FLAGS_RELEASE "-O2 -funroll-loops -fomit-frame-pointer -DNDEBUG" CACHE STRING
+        "Flags used by the compiler during release builds"
+        FORCE)
+    SET(CMAKE_C_FLAGS_DEBUG "-g3 -D_DEBUG" CACHE STRING
+        "Flags used by the compiler during debug builds."
+        FORCE)
 
     # The mixer doesn't like GCC's strict aliasing optimizations. Make sure
     # it's turned off
@@ -86,11 +99,6 @@ ELSE()
     ENDIF()
 ENDIF()
 
-IF(DEBUG)
-    ADD_DEFINITIONS(-D_DEBUG)
-ELSEIF(NODEBUG)
-    ADD_DEFINITIONS(-DNDEBUG)
-ENDIF()
 
 CHECK_LIBRARY_EXISTS(m  sqrtf  "" HAVE_SQRTF)
 IF("${HAVE_SQRTF}")

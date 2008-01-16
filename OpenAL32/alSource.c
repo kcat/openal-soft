@@ -2272,3 +2272,23 @@ static ALint GetByteOffset(ALsource *pSource)
 
     return lByteOffset;
 }
+
+
+ALvoid ReleaseALSources(ALCcontext *Context)
+{
+#ifdef _DEBUG
+    if(Context->SourceCount > 0)
+        AL_PRINT("exit() %d Source(s) NOT deleted\n", Context->SourceCount);
+#endif
+
+    while(Context->Source)
+    {
+        ALsource *temp = Context->Source;
+        Context->Source = Context->Source->next;
+
+        // Release source structure
+        memset(temp, 0, sizeof(ALsource));
+        free(temp);
+    }
+    Context->SourceCount = 0;
+}

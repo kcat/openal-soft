@@ -97,6 +97,8 @@ typedef struct ALsource
     struct ALsource *next;
 } ALsource;
 
+ALvoid ReleaseALSources(ALCcontext *Context);
+
 #ifdef __cplusplus
 }
 #endif

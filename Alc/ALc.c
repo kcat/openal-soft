@@ -1013,6 +1013,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
         // Lock context
         SuspendContext(context);
 
+        ReleaseALSources(context);
         ReleaseALAuxiliaryEffectSlots(context);
 
         context->Device->Context = NULL;

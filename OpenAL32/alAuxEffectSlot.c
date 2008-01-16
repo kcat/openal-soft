@@ -76,6 +76,8 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
 
                     Context->AuxiliaryEffectSlotCount++;
                     i++;
+
+                    list = &(*list)->next;
                 }
             }
         }

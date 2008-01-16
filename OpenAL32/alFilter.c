@@ -71,6 +71,8 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
                 InitFilterParams(*list, AL_FILTER_NULL);
                 g_FilterCount++;
                 i++;
+
+                list = &(*list)->next;
             }
         }
     }

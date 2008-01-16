@@ -71,6 +71,8 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 InitEffectParams(*list, AL_EFFECT_NULL);
                 g_EffectCount++;
                 i++;
+
+                list = &(*list)->next;
             }
         }
     }

@@ -18,10 +18,10 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
+#include "config.h"
+
 #include <string.h>
 #include <stdlib.h>
-
-#include "config.h"
 
 #include "alMain.h"
 

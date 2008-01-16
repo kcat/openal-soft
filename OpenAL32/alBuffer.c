@@ -20,6 +20,8 @@
 
 #define _CRT_SECURE_NO_DEPRECATE // get rid of sprintf security warnings on VS2005
 
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>

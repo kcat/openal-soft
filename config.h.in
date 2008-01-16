@@ -19,6 +19,9 @@
 /* Define if we have the sqrtf function */
 #cmakedefine HAVE_SQRTF
 
+/* Define if we have the acosf function */
+#cmakedefine HAVE_ACOSF
+
 /* Define if we have the strtof function */
 #cmakedefine HAVE_STRTOF
 

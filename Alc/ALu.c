@@ -49,6 +49,12 @@ typedef long long ALint64;
 #define aluSqrt(x) ((ALfloat)sqrt((double)(x)))
 #endif
 
+#ifdef HAVE_ACOSF
+#define aluAcos(x) ((ALfloat)acosf((float)(x)))
+#else
+#define aluAcos(x) ((ALfloat)acos((double)(x)))
+#endif
+
 // fixes for mingw32.
 #if defined(max) && !defined(__max)
 #define __max max
@@ -390,7 +396,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         SourceToListener[2] = -Position[2];
         aluNormalize(Direction);
         aluNormalize(SourceToListener);
-        Angle = (ALfloat)(180.0*acos(aluDotproduct(Direction,SourceToListener))/3.141592654f);
+        Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f /
+                3.141592654f;
         if(Angle >= InnerAngle && Angle <= OuterAngle)
         {
             ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);

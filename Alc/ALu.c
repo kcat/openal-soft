@@ -30,6 +30,7 @@
 #include "alBuffer.h"
 #include "alThunk.h"
 #include "alListener.h"
+#include "alAuxEffectSlot.h"
 #include "bs2b.h"
 
 #if defined(HAVE_STDINT_H)

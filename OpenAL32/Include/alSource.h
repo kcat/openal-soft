@@ -7,7 +7,6 @@
 #define MAX_SENDS                 1
 
 #include "alFilter.h"
-#include "alAuxEffectSlot.h"
 #include "AL/al.h"
 
 #define AL_DIRECT_FILTER                                   0x20005
@@ -67,7 +66,7 @@ typedef struct ALsource
     ALfilter DirectFilter;
 
     struct {
-        ALeffectslot *Slot;
+        struct ALeffectslot *Slot;
         ALfilter WetFilter;
     } Send[MAX_SENDS];
 

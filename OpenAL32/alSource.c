@@ -28,6 +28,7 @@
 #include "alSource.h"
 #include "alBuffer.h"
 #include "alThunk.h"
+#include "alAuxEffectSlot.h"
 
 static ALvoid InitSourceParams(ALsource *pSource);
 static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset);

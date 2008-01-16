@@ -33,6 +33,7 @@
 #include "alThunk.h"
 #include "alSource.h"
 #include "alExtension.h"
+#include "alAuxEffectSlot.h"
 #include "bs2b.h"
 
 ///////////////////////////////////////////////////////

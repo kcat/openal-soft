@@ -217,9 +217,13 @@ static __inline ALfloat aluComputeDrySample(ALsource *source, ALfloat DryGainHF,
 {
     if(DryGainHF < 1.0f)
     {
-        ALfloat u = sample + source->LastDrySample;
-        ALfloat v = sample - source->LastDrySample;
-        sample = (u + (v*DryGainHF)) * 0.5;
+        if(DryGainHF > 0.0f)
+        {
+            sample *= DryGainHF;
+            sample += source->LastDrySample * (1.0f-DryGainHF);
+        }
+        else
+            sample = 0.0f;
     }
 
     source->LastDrySample = sample;
@@ -230,9 +234,13 @@ static __inline ALfloat aluComputeWetSample(ALsource *source, ALfloat WetGainHF,
 {
     if(WetGainHF < 1.0f)
     {
-        ALfloat u = sample + source->LastWetSample;
-        ALfloat v = sample - source->LastWetSample;
-        sample = (u + (v*WetGainHF)) * 0.5;
+        if(WetGainHF > 0.0f)
+        {
+            sample *= WetGainHF;
+            sample += source->LastWetSample * (1.0f-WetGainHF);
+        }
+        else
+            sample = 0.0f;
     }
 
     source->LastWetSample = sample;

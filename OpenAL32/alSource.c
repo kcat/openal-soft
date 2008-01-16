@@ -745,7 +745,13 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
                     ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(lValue1);
                     ALfilter     *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(lValue3);
 
+                    /* Release refcount on the previous slot, and add one for
+                     * the new slot */
+                    if(pSource->Send[lValue2].Slot)
+                        pSource->Send[lValue2].Slot->refcount--;
                     pSource->Send[lValue2].Slot = ALEffectSlot;
+                    if(pSource->Send[lValue2].Slot)
+                        pSource->Send[lValue2].Slot->refcount++;
 
                     if(!ALFilter)
                     {

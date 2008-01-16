@@ -70,6 +70,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
 
                     (*list)->Gain = 1.0;
                     (*list)->AuxSendAuto = AL_TRUE;
+                    (*list)->refcount = 0;
 
                     effectslots[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
                     (*list)->effectslot = effectslots[i];
@@ -111,6 +112,15 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
             {
                 alSetError(AL_INVALID_NAME);
                 break;
+            }
+            else
+            {
+                ALAuxiliaryEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslots[i]);
+                if(ALAuxiliaryEffectSlot->refcount > 0)
+                {
+                    alSetError(AL_INVALID_NAME);
+                    break;
+                }
             }
         }
 

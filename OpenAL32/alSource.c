@@ -1963,6 +1963,7 @@ static ALvoid InitSourceParams(ALsource *pSource)
     pSource->flMinGain = 0.0f;
     pSource->flMaxGain = 1.0f;
     pSource->flOuterGain = 0.0f;
+    pSource->OuterGainHF = 1.0f;
 
     pSource->DryGainHFAuto = AL_TRUE;
     pSource->WetGainAuto = AL_TRUE;

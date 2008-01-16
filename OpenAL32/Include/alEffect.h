@@ -43,6 +43,23 @@ typedef struct ALeffect_struct
     // Effect type (AL_EFFECT_NULL, ...)
     ALenum type;
 
+    struct {
+        ALfloat Density;
+        ALfloat Diffusion;
+
+        ALfloat Gain;
+        ALfloat GainHF;
+        ALfloat DecayTime;
+        ALfloat DecayHFRatio;
+        ALfloat ReflectionsGain;
+        ALfloat ReflectionsDelay;
+        ALfloat LateReverbGain;
+        ALfloat LateReverbDelay;
+        ALfloat AirAbsorptionGainHF;
+        ALfloat RoomRolloffFactor;
+        ALboolean DecayHFLimit;
+    } Reverb;
+
     // Index to itself
     ALuint effect;
 

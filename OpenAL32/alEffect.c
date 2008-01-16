@@ -164,19 +164,32 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
     {
         ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
 
-        switch(param)
+        if(param == AL_EFFECT_TYPE)
         {
-        case AL_EFFECT_TYPE:
-            if(iValue == AL_EFFECT_NULL)
+            if(iValue == AL_EFFECT_NULL ||
+               iValue == AL_EFFECT_REVERB)
                 InitEffectParams(ALEffect, iValue);
             else
                 alSetError(AL_INVALID_VALUE);
-            break;
-
-        default:
-            alSetError(AL_INVALID_ENUM);
-            break;
         }
+        else if(ALEffect->type == AL_EFFECT_REVERB)
+        {
+            switch(param)
+            {
+            case AL_REVERB_DECAY_HFLIMIT:
+                if(iValue == AL_TRUE || iValue == AL_FALSE)
+                    ALEffect->Reverb.DecayHFLimit = iValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else
+            alSetError(AL_INVALID_ENUM);
     }
     else
         alSetError(AL_INVALID_NAME);
@@ -193,16 +206,27 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValue
 
     if (effect && alIsEffect(effect))
     {
-        switch(param)
-        {
-        case AL_EFFECT_TYPE:
-            alEffecti(effect, param, piValues[0]);
-            break;
+        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
 
-        default:
-            alSetError(AL_INVALID_ENUM);
-            break;
+        if(param == AL_EFFECT_TYPE)
+        {
+            alEffecti(effect, param, piValues[0]);
         }
+        else if(ALEffect->type == AL_EFFECT_REVERB)
+        {
+            switch(param)
+            {
+            case AL_REVERB_DECAY_HFLIMIT:
+                alEffecti(effect, param, piValues[0]);
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else
+            alSetError(AL_INVALID_ENUM);
     }
     else
         alSetError(AL_INVALID_NAME);
@@ -214,19 +238,108 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue
 {
     ALCcontext *Context;
 
-    (void)flValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
     if (effect && alIsEffect(effect))
     {
-        switch(param)
+        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
+
+        if(ALEffect->type == AL_EFFECT_REVERB)
         {
-        default:
-            alSetError(AL_INVALID_ENUM);
-            break;
+            switch(param)
+            {
+            case AL_REVERB_DENSITY:
+                if(flValue >= 0.0f && flValue <= 1.0f)
+                    ALEffect->Reverb.Density = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_DIFFUSION:
+                if(flValue >= 0.0f && flValue <= 1.0f)
+                    ALEffect->Reverb.Diffusion = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_GAIN:
+                if(flValue >= 0.0f && flValue <= 1.0f)
+                    ALEffect->Reverb.Gain = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_GAINHF:
+                if(flValue >= 0.0f && flValue <= 1.0f)
+                    ALEffect->Reverb.GainHF = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_DECAY_TIME:
+                if(flValue >= 0.1f && flValue <= 20.0f)
+                    ALEffect->Reverb.DecayTime = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_DECAY_HFRATIO:
+                if(flValue >= 0.1f && flValue <= 2.0f)
+                    ALEffect->Reverb.DecayHFRatio = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_REFLECTIONS_GAIN:
+                if(flValue >= 0.0f && flValue <= 3.16f)
+                    ALEffect->Reverb.ReflectionsGain = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_REFLECTIONS_DELAY:
+                if(flValue >= 0.0f && flValue <= 0.3f)
+                    ALEffect->Reverb.ReflectionsDelay = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_LATE_REVERB_GAIN:
+                if(flValue >= 0.0f && flValue <= 10.0f)
+                    ALEffect->Reverb.LateReverbGain = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_LATE_REVERB_DELAY:
+                if(flValue >= 0.0f && flValue <= 0.1f)
+                    ALEffect->Reverb.LateReverbDelay = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_AIR_ABSORPTION_GAINHF:
+                if(flValue >= 0.892f && flValue <= 1.0f)
+                    ALEffect->Reverb.AirAbsorptionGainHF = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_REVERB_ROOM_ROLLOFF_FACTOR:
+                if(flValue >= 0.0f && flValue <= 10.0f)
+                    ALEffect->Reverb.RoomRolloffFactor = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
         }
+        else
+            alSetError(AL_INVALID_ENUM);
     }
     else
         alSetError(AL_INVALID_NAME);
@@ -238,19 +351,39 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
 {
     ALCcontext *Context;
 
-    (void)pflValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
     if (effect && alIsEffect(effect))
     {
-        switch(param)
+        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
+
+        if(ALEffect->type == AL_EFFECT_REVERB)
         {
-        default:
-            alSetError(AL_INVALID_ENUM);
-            break;
+            switch(param)
+            {
+            case AL_REVERB_DENSITY:
+            case AL_REVERB_DIFFUSION:
+            case AL_REVERB_GAIN:
+            case AL_REVERB_GAINHF:
+            case AL_REVERB_DECAY_TIME:
+            case AL_REVERB_DECAY_HFRATIO:
+            case AL_REVERB_REFLECTIONS_GAIN:
+            case AL_REVERB_REFLECTIONS_DELAY:
+            case AL_REVERB_LATE_REVERB_GAIN:
+            case AL_REVERB_LATE_REVERB_DELAY:
+            case AL_REVERB_AIR_ABSORPTION_GAINHF:
+            case AL_REVERB_ROOM_ROLLOFF_FACTOR:
+                alEffectf(effect, param, pflValues[0]);
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
         }
+        else
+            alSetError(AL_INVALID_ENUM);
     }
     else
         alSetError(AL_INVALID_NAME);
@@ -269,16 +402,25 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piVal
     {
         ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
 
-        switch(param)
+        if(param == AL_EFFECT_TYPE)
         {
-        case AL_EFFECT_TYPE:
             *piValue = ALEffect->type;
-            break;
-
-        default:
-            alSetError(AL_INVALID_ENUM);
-            break;
         }
+        else if(ALEffect->type == AL_EFFECT_REVERB)
+        {
+            switch(param)
+            {
+            case AL_REVERB_DECAY_HFLIMIT:
+                *piValue = ALEffect->Reverb.DecayHFLimit;
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else
+            alSetError(AL_INVALID_ENUM);
     }
     else
         alSetError(AL_INVALID_NAME);
@@ -295,16 +437,27 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piVa
 
     if (effect && alIsEffect(effect))
     {
-        switch(param)
-        {
-        case AL_EFFECT_TYPE:
-            alGetEffecti(effect, param, piValues);
-            break;
+        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
 
-        default:
-            alSetError(AL_INVALID_ENUM);
-            break;
+        if(param == AL_EFFECT_TYPE)
+        {
+            alGetEffecti(effect, param, piValues);
         }
+        else if(ALEffect->type == AL_EFFECT_REVERB)
+        {
+            switch(param)
+            {
+            case AL_REVERB_DECAY_HFLIMIT:
+                alGetEffecti(effect, param, piValues);
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else
+            alSetError(AL_INVALID_ENUM);
     }
     else
         alSetError(AL_INVALID_NAME);
@@ -316,19 +469,72 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pfl
 {
     ALCcontext *Context;
 
-    (void)pflValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
     if (effect && alIsEffect(effect))
     {
-        switch(param)
+        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
+
+        if(ALEffect->type == AL_EFFECT_REVERB)
         {
-        default:
-            alSetError(AL_INVALID_ENUM);
-            break;
+            switch(param)
+            {
+            case AL_REVERB_DENSITY:
+                *pflValue = ALEffect->Reverb.Density;
+                break;
+
+            case AL_REVERB_DIFFUSION:
+                *pflValue = ALEffect->Reverb.Diffusion;
+                break;
+
+            case AL_REVERB_GAIN:
+                *pflValue = ALEffect->Reverb.Gain;
+                break;
+
+            case AL_REVERB_GAINHF:
+                *pflValue = ALEffect->Reverb.GainHF;
+                break;
+
+            case AL_REVERB_DECAY_TIME:
+                *pflValue = ALEffect->Reverb.DecayTime;
+                break;
+
+            case AL_REVERB_DECAY_HFRATIO:
+                *pflValue = ALEffect->Reverb.DecayHFRatio;
+                break;
+
+            case AL_REVERB_REFLECTIONS_GAIN:
+                *pflValue = ALEffect->Reverb.ReflectionsGain;
+                break;
+
+            case AL_REVERB_REFLECTIONS_DELAY:
+                *pflValue = ALEffect->Reverb.ReflectionsDelay;
+                break;
+
+            case AL_REVERB_LATE_REVERB_GAIN:
+                *pflValue = ALEffect->Reverb.LateReverbGain;
+                break;
+
+            case AL_REVERB_LATE_REVERB_DELAY:
+                *pflValue = ALEffect->Reverb.LateReverbDelay;
+                break;
+
+            case AL_REVERB_AIR_ABSORPTION_GAINHF:
+                *pflValue = ALEffect->Reverb.AirAbsorptionGainHF;
+                break;
+
+            case AL_REVERB_ROOM_ROLLOFF_FACTOR:
+                *pflValue = ALEffect->Reverb.RoomRolloffFactor;
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
         }
+        else
+            alSetError(AL_INVALID_ENUM);
     }
     else
         alSetError(AL_INVALID_NAME);
@@ -340,19 +546,39 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pf
 {
     ALCcontext *Context;
 
-    (void)pflValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
     if (effect && alIsEffect(effect))
     {
-        switch(param)
+        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
+
+        if(ALEffect->type == AL_EFFECT_REVERB)
         {
-        default:
-            alSetError(AL_INVALID_ENUM);
-            break;
+            switch(param)
+            {
+            case AL_REVERB_DENSITY:
+            case AL_REVERB_DIFFUSION:
+            case AL_REVERB_GAIN:
+            case AL_REVERB_GAINHF:
+            case AL_REVERB_DECAY_TIME:
+            case AL_REVERB_DECAY_HFRATIO:
+            case AL_REVERB_REFLECTIONS_GAIN:
+            case AL_REVERB_REFLECTIONS_DELAY:
+            case AL_REVERB_LATE_REVERB_GAIN:
+            case AL_REVERB_LATE_REVERB_DELAY:
+            case AL_REVERB_AIR_ABSORPTION_GAINHF:
+            case AL_REVERB_ROOM_ROLLOFF_FACTOR:
+                alGetEffectf(effect, param, pflValues);
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
         }
+        else
+            alSetError(AL_INVALID_ENUM);
     }
     else
         alSetError(AL_INVALID_NAME);
@@ -384,4 +610,22 @@ ALvoid ReleaseALEffects(ALvoid)
 static void InitEffectParams(ALeffect *effect, ALenum type)
 {
     effect->type = type;
+    switch(type)
+    {
+    case AL_EFFECT_REVERB:
+        effect->Reverb.Density = 1.0f;
+        effect->Reverb.Diffusion = 1.0f;
+        effect->Reverb.Gain = 0.32f;
+        effect->Reverb.GainHF = 0.89f;
+        effect->Reverb.DecayTime = 1.49f;
+        effect->Reverb.DecayHFRatio = 0.83f;
+        effect->Reverb.ReflectionsGain = 0.05f;
+        effect->Reverb.ReflectionsDelay = 0.007f;
+        effect->Reverb.LateReverbGain = 1.26f;
+        effect->Reverb.LateReverbDelay = 0.011f;
+        effect->Reverb.AirAbsorptionGainHF = 0.994f;
+        effect->Reverb.RoomRolloffFactor = 0.0f;
+        effect->Reverb.DecayHFLimit = AL_TRUE;
+        break;
+    }
 }

@@ -259,17 +259,13 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                                ALfloat *pitch, ALfloat *drygainhf,
                                ALfloat *wetgainhf)
 {
-    ALfloat ListenerOrientation[6],ListenerPosition[3],ListenerVelocity[3];
-    ALfloat InnerAngle,OuterAngle,OuterGain,Angle,Distance,DryMix,WetMix;
-    ALfloat Direction[3],Position[3],Velocity[3],SourceToListener[3];
+    ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,WetMix;
+    ALfloat Direction[3],Position[3],SourceToListener[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
-    ALfloat Pitch,ConeVolume,SourceVolume,PanningFB,PanningLR,ListenerGain;
+    ALfloat ConeVolume,SourceVolume,PanningFB,PanningLR,ListenerGain;
     ALfloat U[3],V[3],N[3];
     ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound, flMaxVelocity;
-    ALfloat flVSS, flVLS;
-    ALint DistanceModel;
     ALfloat Matrix[3][3];
-    ALint HeadRelative;
     ALfloat flAttenuation;
     ALfloat RoomAttenuation;
     ALfloat MetersPerUnit;
@@ -279,33 +275,24 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
     //Get context properties
     DopplerFactor   = ALContext->DopplerFactor;
-    DistanceModel   = ALContext->DistanceModel;
     DopplerVelocity = ALContext->DopplerVelocity;
     flSpeedOfSound  = ALContext->flSpeedOfSound;
 
     //Get listener properties
     ListenerGain = ALContext->Listener.Gain;
     MetersPerUnit = ALContext->Listener.MetersPerUnit;
-    memcpy(ListenerPosition, ALContext->Listener.Position, sizeof(ALContext->Listener.Position));
-    memcpy(ListenerVelocity, ALContext->Listener.Velocity, sizeof(ALContext->Listener.Velocity));
-    memcpy(&ListenerOrientation[0], ALContext->Listener.Forward, sizeof(ALContext->Listener.Forward));
-    memcpy(&ListenerOrientation[3], ALContext->Listener.Up, sizeof(ALContext->Listener.Up));
 
     //Get source properties
-    Pitch        = ALSource->flPitch;
     SourceVolume = ALSource->flGain;
     memcpy(Position,  ALSource->vPosition,    sizeof(ALSource->vPosition));
-    memcpy(Velocity,  ALSource->vVelocity,    sizeof(ALSource->vVelocity));
     memcpy(Direction, ALSource->vOrientation, sizeof(ALSource->vOrientation));
     MinVolume    = ALSource->flMinGain;
     MaxVolume    = ALSource->flMaxGain;
     MinDist      = ALSource->flRefDistance;
     MaxDist      = ALSource->flMaxDistance;
     Rolloff      = ALSource->flRollOffFactor;
-    OuterGain    = ALSource->flOuterGain;
     InnerAngle   = ALSource->flInnerAngle;
     OuterAngle   = ALSource->flOuterAngle;
-    HeadRelative = ALSource->bHeadRelative;
     OuterGainHF  = ALSource->OuterGainHF;
     RoomRolloff  = ALSource->RoomRolloffFactor;
 
@@ -313,11 +300,11 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     if(isMono != AL_FALSE)
     {
         //1. Translate Listener to origin (convert to head relative)
-        if(HeadRelative==AL_FALSE)
+        if(ALSource->bHeadRelative==AL_FALSE)
         {
-            Position[0] -= ListenerPosition[0];
-            Position[1] -= ListenerPosition[1];
-            Position[2] -= ListenerPosition[2];
+            Position[0] -= ALContext->Listener.Position[0];
+            Position[1] -= ALContext->Listener.Position[1];
+            Position[2] -= ALContext->Listener.Position[2];
         }
 
         //2. Calculate distance attenuation
@@ -325,7 +312,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
         flAttenuation = 1.0f;
         RoomAttenuation = 1.0f;
-        switch (DistanceModel)
+        switch (ALContext->DistanceModel)
         {
             case AL_INVERSE_DISTANCE_CLAMPED:
                 Distance=__max(Distance,MinDist);
@@ -401,7 +388,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         if(Angle >= InnerAngle && Angle <= OuterAngle)
         {
             ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
-            ConeVolume = (1.0f+(OuterGain-1.0f)*scale);
+            ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f)*scale);
             if(ALSource->WetGainAuto)
                 WetMix *= ConeVolume;
             if(ALSource->DryGainHFAuto)
@@ -411,7 +398,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         }
         else if(Angle > OuterAngle)
         {
-            ConeVolume = (1.0f+(OuterGain-1.0f));
+            ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f));
             if(ALSource->WetGainAuto)
                 WetMix *= ConeVolume;
             if(ALSource->DryGainHFAuto)
@@ -425,8 +412,11 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         //4. Calculate Velocity
         if(DopplerFactor != 0.0f)
         {
-            flVLS = aluDotproduct(ListenerVelocity, SourceToListener);
-            flVSS = aluDotproduct(Velocity, SourceToListener);
+            ALfloat flVSS, flVLS;
+
+            flVLS = aluDotproduct(ALContext->Listener.Velocity,
+                                  SourceToListener);
+            flVSS = aluDotproduct(ALSource->vVelocity, SourceToListener);
 
             flMaxVelocity = (DopplerVelocity * flSpeedOfSound) / DopplerFactor;
 
@@ -440,19 +430,20 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             else if (flVLS <= -flMaxVelocity)
                 flVLS = -flMaxVelocity + 1.0f;
 
-            pitch[0] = Pitch * ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /
-                               ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVSS));
+            pitch[0] = ALSource->flPitch *
+                       ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /
+                       ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVSS));
         }
         else
-            pitch[0] = Pitch;
+            pitch[0] = ALSource->flPitch;
 
         //5. Align coordinate system axes
-        aluCrossproduct(&ListenerOrientation[0], &ListenerOrientation[3], U); // Right-vector
-        aluNormalize(U);                                // Normalized Right-vector
-        memcpy(V, &ListenerOrientation[3], sizeof(V));  // Up-vector
-        aluNormalize(V);                                // Normalized Up-vector
-        memcpy(N, &ListenerOrientation[0], sizeof(N));  // At-vector
-        aluNormalize(N);                                // Normalized At-vector
+        aluCrossproduct(ALContext->Listener.Forward, ALContext->Listener.Up, U); // Right-vector
+        aluNormalize(U);  // Normalized Right-vector
+        memcpy(V, ALContext->Listener.Up, sizeof(V));   // Up-vector
+        aluNormalize(V);  // Normalized Up-vector
+        memcpy(N, ALContext->Listener.Forward, sizeof(N));  // At-vector
+        aluNormalize(N);  // Normalized At-vector
         Matrix[0][0] = U[0]; Matrix[0][1] = V[0]; Matrix[0][2] = -N[0];
         Matrix[1][0] = U[1]; Matrix[1][1] = V[1]; Matrix[1][2] = -N[1];
         Matrix[2][0] = U[2]; Matrix[2][1] = V[2]; Matrix[2][2] = -N[2];
@@ -655,7 +646,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             *wetgainhf = 1.0f;
         }
 
-        pitch[0] = Pitch;
+        pitch[0] = ALSource->flPitch;
     }
 }
 
@@ -669,7 +660,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALfloat WetGainHF = 0.0f;
     ALuint BlockAlign,BufferSize;
     ALuint DataSize=0,DataPosInt=0,DataPosFrac=0;
-    ALuint Channels,Bits,Frequency,ulExtraSamples;
+    ALuint Channels,Frequency,ulExtraSamples;
     ALfloat Pitch;
     ALint Looping,increment,State;
     ALuint Buffer,fraction;
@@ -719,7 +710,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         ALBuffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(Buffer);
 
                         Data      = ALBuffer->data;
-                        Bits      = aluBytesFromFormat(ALBuffer->format) * 8;
                         Channels  = aluChannelsFromFormat(ALBuffer->format);
                         DataSize  = ALBuffer->size;
                         Frequency = ALBuffer->frequency;
@@ -731,7 +721,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 
 
                         Pitch = (Pitch*Frequency) / ALContext->Frequency;
-                        DataSize = DataSize / (Bits*Channels/8);
+                        DataSize /= Channels * aluBytesFromFormat(ALBuffer->format);
 
                         //Get source info
                         DataPosInt = ALSource->position;

@@ -1969,6 +1969,7 @@ static ALvoid InitSourceParams(ALsource *pSource)
     pSource->WetGainAuto = AL_TRUE;
     pSource->WetGainHFAuto = AL_TRUE;
     pSource->AirAbsorptionFactor = 0.0f;
+    pSource->RoomRolloffFactor = 0.0f;
 
     pSource->state = AL_INITIAL;
     pSource->lSourceType = AL_UNDETERMINED;

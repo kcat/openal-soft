@@ -293,6 +293,22 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_EFFECT_COMPRESSOR",                 AL_EFFECT_COMPRESSOR                },
     { (ALchar *)"AL_EFFECT_EQUALIZER",                  AL_EFFECT_EQUALIZER                 },
 
+    // Reverb params
+    { (ALchar *)"AL_REVERB_DENSITY",                    AL_REVERB_DENSITY                   },
+    { (ALchar *)"AL_REVERB_DIFFUSION",                  AL_REVERB_DIFFUSION                 },
+    { (ALchar *)"AL_REVERB_GAIN",                       AL_REVERB_GAIN                      },
+    { (ALchar *)"AL_REVERB_GAINHF",                     AL_REVERB_GAINHF                    },
+    { (ALchar *)"AL_REVERB_DECAY_TIME",                 AL_REVERB_DECAY_TIME                },
+    { (ALchar *)"AL_REVERB_DECAY_HFRATIO",              AL_REVERB_DECAY_HFRATIO             },
+    { (ALchar *)"AL_REVERB_REFLECTIONS_GAIN",           AL_REVERB_REFLECTIONS_GAIN          },
+    { (ALchar *)"AL_REVERB_REFLECTIONS_DELAY",          AL_REVERB_REFLECTIONS_DELAY         },
+    { (ALchar *)"AL_REVERB_LATE_REVERB_GAIN",           AL_REVERB_LATE_REVERB_GAIN          },
+    { (ALchar *)"AL_REVERB_LATE_REVERB_DELAY",          AL_REVERB_LATE_REVERB_DELAY         },
+    { (ALchar *)"AL_REVERB_AIR_ABSORPTION_GAINHF",      AL_REVERB_AIR_ABSORPTION_GAINHF     },
+    { (ALchar *)"AL_REVERB_ROOM_ROLLOFF_FACTOR",        AL_REVERB_ROOM_ROLLOFF_FACTOR       },
+    { (ALchar *)"AL_REVERB_DECAY_HFLIMIT",              AL_REVERB_DECAY_HFLIMIT             },
+
+
     // Default
     { (ALchar *)NULL,                                   (ALenum)0                           }
 };

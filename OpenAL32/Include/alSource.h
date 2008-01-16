@@ -67,7 +67,7 @@ typedef struct ALsource
     ALfilter DirectFilter;
 
     struct {
-        ALeffectslot Slot;
+        ALeffectslot *Slot;
         ALfilter WetFilter;
     } Send[MAX_SENDS];
 

@@ -259,7 +259,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                                ALfloat *pitch, ALfloat *drygainhf,
                                ALfloat *wetgainhf)
 {
-    ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,WetMix;
+    ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,WetMix=0.0f;
     ALfloat Direction[3],Position[3],SourceToListener[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
     ALfloat ConeVolume,SourceVolume,PanningFB,PanningLR,ListenerGain;
@@ -368,9 +368,10 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
         // Source Gain + Attenuation
         DryMix = SourceVolume * flAttenuation;
-        WetMix = SourceVolume * ((ALSource->WetGainAuto &&
-                                  ALSource->Send[0].Slot.AuxSendAuto) ?
-                                 RoomAttenuation : 1.0f);
+        if(ALSource->Send[0].Slot)
+            WetMix = SourceVolume * ((ALSource->WetGainAuto &&
+                                      ALSource->Send[0].Slot->AuxSendAuto) ?
+                                     RoomAttenuation : 1.0f);
 
         // Clamp to Min/Max Gain
         DryMix = __min(DryMix,MaxVolume);
@@ -470,7 +471,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             DryGainHF *= pow(ALSource->AirAbsorptionFactor * AIRABSORBGAINHF,
                              Distance * MetersPerUnit);
 
-        WetMix *= ALSource->Send[0].Slot.Gain;
+        if(ALSource->Send[0].Slot)
+            WetMix *= ALSource->Send[0].Slot->Gain;
 
         //7. Convert normalized position into pannings, then into channel volumes
         aluNormalize(Position);
@@ -479,7 +481,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             case 1:
                 drysend[FRONT_LEFT]  = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f); //Direct
                 drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f); //Direct
-                if(ALSource->Send[0].Slot.effectslot)
+                if(ALSource->Send[0].Slot)
                 {
                     wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt(1.0f); //Room
                     wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt(1.0f); //Room
@@ -495,7 +497,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 PanningLR = 0.5f + 0.5f*Position[0];
                 drysend[FRONT_LEFT]  = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f-PanningLR); //L Direct
                 drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt(     PanningLR); //R Direct
-                if(ALSource->Send[0].Slot.effectslot)
+                if(ALSource->Send[0].Slot)
                 {
                     wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt(1.0f-PanningLR); //L Room
                     wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt(     PanningLR); //R Room
@@ -521,7 +523,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
                 drysend[BACK_LEFT]   = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
                 drysend[BACK_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB));
-                if(ALSource->Send[0].Slot.effectslot)
+                if(ALSource->Send[0].Slot)
                 {
                     wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
                     wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
@@ -553,7 +555,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                     drysend[SIDE_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB));
                     drysend[FRONT_LEFT]  = 0.0f;
                     drysend[FRONT_RIGHT] = 0.0f;
-                    if(ALSource->Send[0].Slot.effectslot)
+                    if(ALSource->Send[0].Slot)
                     {
                         wetsend[BACK_LEFT]   = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
                         wetsend[BACK_RIGHT]  = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
@@ -581,7 +583,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                     drysend[SIDE_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB));
                     drysend[BACK_LEFT]   = 0.0f;
                     drysend[BACK_RIGHT]  = 0.0f;
-                    if(ALSource->Send[0].Slot.effectslot)
+                    if(ALSource->Send[0].Slot)
                     {
                         wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
                         wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
@@ -622,7 +624,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         drysend[BACK_RIGHT]  = SourceVolume * 1.0f * ListenerGain;
         drysend[CENTER]      = SourceVolume * 1.0f * ListenerGain;
         drysend[LFE]         = SourceVolume * 1.0f * ListenerGain;
-        if(ALSource->Send[0].Slot.effectslot)
+        if(ALSource->Send[0].Slot)
         {
             wetsend[FRONT_LEFT]  = SourceVolume * 0.0f * ListenerGain;
             wetsend[FRONT_RIGHT] = SourceVolume * 0.0f * ListenerGain;

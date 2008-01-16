@@ -745,13 +745,7 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
                     ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(lValue1);
                     ALfilter     *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(lValue3);
 
-                    if(!ALEffectSlot)
-                    {
-                        /* Disable slot */
-                        pSource->Send[lValue2].Slot.effectslot = 0;
-                    }
-                    else
-                        memcpy(&pSource->Send[lValue2].Slot, ALEffectSlot, sizeof(*ALEffectSlot));
+                    pSource->Send[lValue2].Slot = ALEffectSlot;
 
                     if(!ALFilter)
                     {

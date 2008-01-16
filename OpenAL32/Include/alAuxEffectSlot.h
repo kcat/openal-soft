@@ -14,7 +14,7 @@ extern "C" {
 
 #define AL_EFFECTSLOT_NULL                                 0x0000
 
-typedef struct ALeffectslot_struct
+typedef struct ALeffectslot
 {
     ALeffect effect;
 
@@ -24,7 +24,7 @@ typedef struct ALeffectslot_struct
     // Index to itself
     ALuint effectslot;
 
-    struct ALeffectslot_struct *next;
+    struct ALeffectslot *next;
 } ALeffectslot;
 
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots);

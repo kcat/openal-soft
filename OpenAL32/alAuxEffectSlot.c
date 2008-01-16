@@ -30,9 +30,6 @@
 #include "alThunk.h"
 #include "alError.h"
 
-static ALeffectslot *g_AuxiliaryEffectSlotList;
-static ALuint        g_AuxiliaryEffectSlotCount;
-
 
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
@@ -50,12 +47,12 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     if (n > 0)
     {
         /* NOTE: We only support one slot currently */
-        if(n == 1 && g_AuxiliaryEffectSlotCount == 0)
+        if(n == 1 && Context->AuxiliaryEffectSlotCount == 0)
         {
             // Check that enough memory has been allocted in the 'effectslots' array for n Effect Slots
             if (!IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))
             {
-                ALeffectslot **list = &g_AuxiliaryEffectSlotList;
+                ALeffectslot **list = &Context->AuxiliaryEffectSlot;
                 while(*list)
                     list = &(*list)->next;
 
@@ -77,7 +74,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                     effectslots[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
                     (*list)->effectslot = effectslots[i];
 
-                    g_AuxiliaryEffectSlotCount++;
+                    Context->AuxiliaryEffectSlotCount++;
                     i++;
                 }
             }
@@ -128,7 +125,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
                     ALAuxiliaryEffectSlot = ((ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslots[i]));
 
                     // Remove Source from list of Sources
-                    list = &g_AuxiliaryEffectSlotList;
+                    list = &Context->AuxiliaryEffectSlot;
                     while(*list && *list != ALAuxiliaryEffectSlot)
                          list = &(*list)->next;
 
@@ -139,7 +136,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
                     memset(ALAuxiliaryEffectSlot, 0, sizeof(ALeffectslot));
                     free(ALAuxiliaryEffectSlot);
 
-                    g_AuxiliaryEffectSlotCount--;
+                    Context->AuxiliaryEffectSlotCount--;
                 }
             }
         }
@@ -163,7 +160,7 @@ AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
     }
     SuspendContext(Context);
 
-    list = &g_AuxiliaryEffectSlotList;
+    list = &Context->AuxiliaryEffectSlot;
     while(*list && (*list)->effectslot != effectslot)
         list = &(*list)->next;
 
@@ -457,21 +454,21 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
 }
 
 
-ALvoid ReleaseALAuxiliaryEffectSlots(ALvoid)
+ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
 {
 #ifdef _DEBUG
-    if(g_AuxiliaryEffectSlotCount > 0)
-        AL_PRINT("exit() %d AuxiliaryEffectSlot(s) NOT deleted\n", g_AuxiliaryEffectSlotCount);
+    if(Context->AuxiliaryEffectSlotCount > 0)
+        AL_PRINT("exit() %d AuxiliaryEffectSlot(s) NOT deleted\n", Context->AuxiliaryEffectSlotCount);
 #endif
 
-    while(g_AuxiliaryEffectSlotList)
+    while(Context->AuxiliaryEffectSlot)
     {
-        ALeffectslot *temp = g_AuxiliaryEffectSlotList;
-        g_AuxiliaryEffectSlotList = g_AuxiliaryEffectSlotList->next;
+        ALeffectslot *temp = Context->AuxiliaryEffectSlot;
+        Context->AuxiliaryEffectSlot = Context->AuxiliaryEffectSlot->next;
 
         // Release effectslot structure
         memset(temp, 0, sizeof(ALeffectslot));
         free(temp);
     }
-    g_AuxiliaryEffectSlotCount = 0;
+    Context->AuxiliaryEffectSlotCount = 0;
 }

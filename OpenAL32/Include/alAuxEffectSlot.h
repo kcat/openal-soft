@@ -41,7 +41,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *pflValue);
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues);
 
-ALvoid ReleaseALAuxiliaryEffectSlots(ALvoid);
+ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 #ifdef __cplusplus
 }

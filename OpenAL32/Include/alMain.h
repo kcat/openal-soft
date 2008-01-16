@@ -198,6 +198,9 @@ struct ALCcontext_struct
     struct ALsource *Source;
     ALuint           SourceCount;
 
+    struct ALeffectslot *AuxiliaryEffectSlot;
+    ALuint               AuxiliaryEffectSlotCount;
+
     ALenum      LastError;
     ALboolean   InUse;
 

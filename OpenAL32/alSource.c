@@ -65,22 +65,22 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
                         while(i < n)
                         {
                             *list = calloc(1, sizeof(ALsource));
-                            if(*list)
+                            if(!(*list))
                             {
-                                sources[i]=(ALuint)ALTHUNK_ADDENTRY(*list);
-                                (*list)->source = sources[i];
-
-                                InitSourceParams(*list);
-                                Context->SourceCount++;
-                                i++;
-
-                                list = &(*list)->next;
+                                alDeleteSources(i, sources);
+                                alSetError(AL_OUT_OF_MEMORY);
+                                break;
                             }
-                        }
 
-                        // If we didn't create all the Sources, we must have run out or memory
-                        if(i != n)
-                            alSetError(AL_OUT_OF_MEMORY);
+                            sources[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
+                            (*list)->source = sources[i];
+
+                            InitSourceParams(*list);
+                            Context->SourceCount++;
+                            i++;
+
+                            list = &(*list)->next;
+                        }
                     }
                     else
                     {

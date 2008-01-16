@@ -95,20 +95,20 @@ ALAPI ALvoid ALAPIENTRY alGenBuffers(ALsizei n,ALuint *puiBuffers)
             while(i < n)
             {
                 *list = calloc(1, sizeof(ALbuffer));
-                if(*list)
+                if(!(*list))
                 {
-                    puiBuffers[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
-                    (*list)->state = UNUSED;
-                    g_uiBufferCount++;
-                    i++;
-
-                    list = &(*list)->next;
+                    alDeleteBuffers(i, puiBuffers);
+                    alSetError(AL_OUT_OF_MEMORY);
+                    break;
                 }
-            }
 
-            // If we didn't create all the Buffers, we must have run out of memory
-            if (i != n)
-                alSetError(AL_OUT_OF_MEMORY);
+                puiBuffers[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
+                (*list)->state = UNUSED;
+                g_uiBufferCount++;
+                i++;
+
+                list = &(*list)->next;
+            }
         }
         else
         {

@@ -957,7 +957,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     }
                     break;
                 case AL_FORMAT_STEREO8:
-                    if(ALContext->bs2b)
+                    if(ALContext && ALContext->bs2b)
                     {
                         for(i = 0;i < SamplesToDo;i++)
                         {
@@ -1039,7 +1039,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     }
                     break;
                 case AL_FORMAT_STEREO16:
-                    if(ALContext->bs2b)
+                    if(ALContext && ALContext->bs2b)
                     {
                         for(i = 0;i < SamplesToDo;i++)
                         {

@@ -402,26 +402,6 @@ static ALvoid InitContext(ALCcontext *pContext)
 */
 static ALCvoid ExitContext(ALCcontext *pContext)
 {
-    unsigned int i;
-    ALsource *ALSource;
-    ALsource *ALTempSource;
-
-#ifdef _DEBUG
-    if (pContext->SourceCount>0)
-        AL_PRINT("alcDestroyContext() %d Source(s) NOT deleted\n", pContext->SourceCount);
-#endif
-
-    // Free all the Sources still remaining
-    ALSource = pContext->Source;
-    for (i = 0; i < pContext->SourceCount; i++)
-    {
-        ALTempSource = ALSource->next;
-        ALTHUNK_REMOVEENTRY(ALSource->source);
-        memset(ALSource, 0, sizeof(ALsource));
-        free(ALSource);
-        ALSource = ALTempSource;
-    }
-
     //Invalidate context
     pContext->LastError = AL_NO_ERROR;
     pContext->InUse = AL_FALSE;

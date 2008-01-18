@@ -2297,6 +2297,7 @@ ALvoid ReleaseALSources(ALCcontext *Context)
         Context->Source = Context->Source->next;
 
         // Release source structure
+        ALTHUNK_REMOVEENTRY(temp->source);
         memset(temp, 0, sizeof(ALsource));
         free(temp);
     }

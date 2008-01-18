@@ -122,7 +122,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     ALCdevice  *Device;
     ALsource *ALSource;
     ALsource **list;
-    ALsizei i;
+    ALsizei i, j;
     ALbufferlistitem *ALBufferList;
     ALboolean bSourcesValid = AL_TRUE;
 
@@ -172,6 +172,13 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
                                     ALSource->queue = ALBufferList->next;
                                     // Release memory allocated for buffer list item
                                     free(ALBufferList);
+                                }
+
+                                for(j = 0;j < MAX_SENDS;++j)
+                                {
+                                    if(ALSource->Send[j].Slot)
+                                        ALSource->Send[j].Slot->refcount--;
+                                    ALSource->Send[j].Slot = NULL;
                                 }
 
                                 // Decrement Source count

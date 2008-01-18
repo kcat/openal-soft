@@ -36,9 +36,8 @@ cf_level = 0  # Sets the crossfeed level for stereo output. Valid values are:
 
 frequency = 44100  # Sets the output frequency. Default is 44100
 
-refresh = 0  # Sets the number of frames-per-update. Default is calculated as
-             # 8192*frequency/22050. Note that the actual granularity may or
-             # may not be less than this.
+refresh = 8192  # Sets the buffer size, in frames. Default is 8192. Note that
+                # the actual granularity may or may not be less than this.
 
 drivers =  # Sets the backend driver list order, comma-seperated. Unknown
            # backends and duplicated names are ignored, and unlisted backends
@@ -50,7 +49,8 @@ drivers =  # Sets the backend driver list order, comma-seperated. Unknown
 device = default  # Sets the device name for the default playback device.
                   # Default is default
 
-periods = 4  # Sets the number of update buffers. Default is 4
+periods = 0  # Sets the number of update buffers for playback. A value of 0
+             # means auto-select. Default is 0
 
 capture = default  # Sets the device name for the default capture device.
                    # Default is default

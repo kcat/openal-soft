@@ -1172,9 +1172,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
             device->FrameSize = aluBytesFromFormat(device->Format) *
                                 device->Channels;
 
-        device->UpdateFreq = GetConfigValueInt(NULL, "refresh", 0);
+        device->UpdateFreq = GetConfigValueInt(NULL, "refresh", 8192);
         if((ALint)device->UpdateFreq <= 0)
-            device->UpdateFreq = 8192 * device->Frequency / 22050;
+            device->UpdateFreq = 8192;
 
         // Find a playback device to open
         for(i = 0;BackendList[i].Init;i++)

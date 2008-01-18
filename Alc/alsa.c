@@ -67,6 +67,7 @@ MAKE_FUNC(snd_pcm_hw_params_set_rate_near);
 MAKE_FUNC(snd_pcm_hw_params_set_rate);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_min);
+MAKE_FUNC(snd_pcm_hw_params_get_period_size);
 MAKE_FUNC(snd_pcm_hw_params_get_access);
 MAKE_FUNC(snd_pcm_hw_params);
 MAKE_FUNC(snd_pcm_prepare);
@@ -355,10 +356,8 @@ open_alsa:
             AL_PRINT("Unknown format?! %x\n", device->Format);
     }
 
-    periods = GetConfigValueInt("alsa", "periods", 4);
-    if((int)periods <= 0)
-        periods = 4;
-    bufferSizeInFrames = device->UpdateFreq / periods;
+    periods = GetConfigValueInt("alsa", "periods", 0);
+    bufferSizeInFrames = device->UpdateFreq;
 
     str = GetConfigValue("alsa", "mmap", "true");
     allowmmap = (strcasecmp(str, "true") == 0 ||
@@ -378,7 +377,7 @@ open_alsa:
          /* set channels (implicitly sets frame bits) */
          ok(psnd_pcm_hw_params_set_channels(data->pcmHandle, p, device->Channels), "set channels") &&
          /* set periods (implicitly constrains period/buffer parameters) */
-         ok(psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL), "set periods near") &&
+         (!periods || ok(psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL), "set periods near")) &&
          /* set rate (implicitly constrains period/buffer parameters) */
          ok(psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &device->Frequency, NULL), "set rate near") &&
          /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
@@ -397,6 +396,15 @@ open_alsa:
     if((i=psnd_pcm_hw_params_get_access(p, &access)) < 0)
     {
         AL_PRINT("get_access failed: %s\n", psnd_strerror(i));
+        psnd_pcm_hw_params_free(p);
+        psnd_pcm_close(data->pcmHandle);
+        free(data);
+        return ALC_FALSE;
+    }
+
+    if((i=psnd_pcm_hw_params_get_period_size(p, &bufferSizeInFrames, NULL)) < 0)
+    {
+        AL_PRINT("get_period_size failed: %s\n", psnd_strerror(i));
         psnd_pcm_hw_params_free(p);
         psnd_pcm_close(data->pcmHandle);
         free(data);
@@ -467,7 +475,6 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
 {
     snd_pcm_format_t alsaFormat;
     snd_pcm_hw_params_t *p;
-    unsigned int periods = 4;
     snd_pcm_uframes_t bufferSizeInFrames;
     alsa_data *data;
     char driver[64];
@@ -534,7 +541,7 @@ open_alsa:
             AL_PRINT("Unknown format?! %x\n", format);
     }
 
-    bufferSizeInFrames = SampleSize / periods;
+    bufferSizeInFrames = SampleSize;
 
     psnd_pcm_hw_params_malloc(&p);
 #define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
@@ -546,8 +553,6 @@ open_alsa:
          ok(psnd_pcm_hw_params_set_format(data->pcmHandle, p, alsaFormat), "set format") &&
          /* set channels (implicitly sets frame bits) */
          ok(psnd_pcm_hw_params_set_channels(data->pcmHandle, p, pDevice->Channels), "set channels") &&
-         /* set periods (implicitly constrains period/buffer parameters) */
-         ok(psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL), "set periods near") &&
          /* set rate (implicitly constrains period/buffer parameters) */
          ok(psnd_pcm_hw_params_set_rate(data->pcmHandle, p, frequency, 0), "set rate") &&
          /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
@@ -737,6 +742,7 @@ LOAD_FUNC(snd_pcm_hw_params_set_rate_near);
 LOAD_FUNC(snd_pcm_hw_params_set_rate);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_min);
+LOAD_FUNC(snd_pcm_hw_params_get_period_size);
 LOAD_FUNC(snd_pcm_hw_params_get_access);
 LOAD_FUNC(snd_pcm_hw_params);
 LOAD_FUNC(snd_pcm_prepare);

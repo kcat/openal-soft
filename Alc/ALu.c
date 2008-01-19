@@ -311,6 +311,12 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         //2. Calculate distance attenuation
         Distance = aluSqrt(aluDotproduct(Position, Position));
 
+        if(ALSource->Send[0].Slot && !ALSource->Send[0].Slot->AuxSendAuto)
+        {
+            if(ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB)
+                RoomRolloff = ALSource->Send[0].Slot->effect.Reverb.RoomRolloffFactor;
+        }
+
         flAttenuation = 1.0f;
         RoomAttenuation = 1.0f;
         switch (ALContext->DistanceModel)
@@ -371,14 +377,11 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         DryMix = SourceVolume * flAttenuation;
         DryMix = __min(DryMix,MaxVolume);
         DryMix = __max(DryMix,MinVolume);
-        if(ALSource->Send[0].Slot)
-        {
-            WetMix = SourceVolume * ((ALSource->WetGainAuto &&
-                                      ALSource->Send[0].Slot->AuxSendAuto) ?
-                                     RoomAttenuation : 1.0f);
-            WetMix = __min(WetMix,MaxVolume);
-            WetMix = __max(WetMix,MinVolume);
-        }
+
+        WetMix = SourceVolume * (ALSource->WetGainAuto ?
+                                 RoomAttenuation : 1.0f);
+        WetMix = __min(WetMix,MaxVolume);
+        WetMix = __max(WetMix,MinVolume);
 
         //3. Apply directional soundcones
         SourceToListener[0] = -Position[0];
@@ -473,6 +476,18 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             DryGainHF *= pow(ALSource->AirAbsorptionFactor * AIRABSORBGAINHF,
                              Distance * MetersPerUnit);
 
+        if(ALSource->Send[0].Slot)
+        {
+            WetMix *= ALSource->Send[0].Slot->Gain;
+
+            if(ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB)
+            {
+                WetGainHF *= ALSource->Send[0].Slot->effect.Reverb.GainHF;
+                WetGainHF *= pow(ALSource->Send[0].Slot->effect.Reverb.AirAbsorptionGainHF,
+                                 Distance * MetersPerUnit);
+            }
+        }
+
         //7. Convert normalized position into pannings, then into channel volumes
         aluNormalize(Position);
         switch(aluChannelsFromFormat(OutputFormat))
@@ -482,7 +497,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f); //Direct
                 if(ALSource->Send[0].Slot)
                 {
-                    WetMix *= ALSource->Send[0].Slot->Gain;
                     wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt(1.0f); //Room
                     wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt(1.0f); //Room
                 }
@@ -499,7 +513,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt(     PanningLR); //R Direct
                 if(ALSource->Send[0].Slot)
                 {
-                    WetMix *= ALSource->Send[0].Slot->Gain;
                     wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt(1.0f-PanningLR); //L Room
                     wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt(     PanningLR); //R Room
                 }
@@ -526,7 +539,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 drysend[BACK_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB));
                 if(ALSource->Send[0].Slot)
                 {
-                    WetMix *= ALSource->Send[0].Slot->Gain;
                     wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
                     wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
                     wetsend[BACK_LEFT]   = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
@@ -559,7 +571,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                     drysend[FRONT_RIGHT] = 0.0f;
                     if(ALSource->Send[0].Slot)
                     {
-                        WetMix *= ALSource->Send[0].Slot->Gain;
                         wetsend[BACK_LEFT]   = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
                         wetsend[BACK_RIGHT]  = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
                         wetsend[SIDE_LEFT]   = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
@@ -588,7 +599,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                     drysend[BACK_RIGHT]  = 0.0f;
                     if(ALSource->Send[0].Slot)
                     {
-                        WetMix *= ALSource->Send[0].Slot->Gain;
                         wetsend[FRONT_LEFT]  = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
                         wetsend[FRONT_RIGHT] = ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
                         wetsend[SIDE_LEFT]   = ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
@@ -660,6 +670,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 {
     static float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
     static float WetBuffer[BUFFERSIZE][OUTPUTCHANNELS];
+    static float ReverbBuffer[BUFFERSIZE];
     ALfloat DrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
     ALfloat WetSend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
     ALfloat DryGainHF = 0.0f;
@@ -667,12 +678,14 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALuint BlockAlign,BufferSize;
     ALuint DataSize=0,DataPosInt=0,DataPosFrac=0;
     ALuint Channels,Frequency,ulExtraSamples;
+    ALboolean doReverb;
     ALfloat Pitch;
     ALint Looping,increment,State;
     ALuint Buffer,fraction;
     ALuint SamplesToDo;
     ALsource *ALSource;
     ALbuffer *ALBuffer;
+    ALeffectslot *ALEffectSlot;
     ALfloat value;
     ALshort *Data;
     ALuint i,j,k;
@@ -698,12 +711,18 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
             //Clear mixing buffer
             memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
             memset(WetBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
+            memset(ReverbBuffer, 0, SamplesToDo*sizeof(ALfloat));
 
             //Actual mixing loop
             while(ALSource)
             {
                 j = 0;
                 State = ALSource->state;
+
+                doReverb = ((ALSource->Send[0].Slot &&
+                             ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB) ?
+                            AL_TRUE : AL_FALSE);
+
                 while(State == AL_PLAYING && j < SamplesToDo)
                 {
                     DataSize = 0;
@@ -798,12 +817,17 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 DryBuffer[j][BACK_RIGHT]  += value*DrySend[BACK_RIGHT];
                                 //Room path final mix buffer and panning
                                 value = aluComputeWetSample(ALSource, WetGainHF, sample);
-                                WetBuffer[j][FRONT_LEFT]  += value*WetSend[FRONT_LEFT];
-                                WetBuffer[j][FRONT_RIGHT] += value*WetSend[FRONT_RIGHT];
-                                WetBuffer[j][SIDE_LEFT]   += value*WetSend[SIDE_LEFT];
-                                WetBuffer[j][SIDE_RIGHT]  += value*WetSend[SIDE_RIGHT];
-                                WetBuffer[j][BACK_LEFT]   += value*WetSend[BACK_LEFT];
-                                WetBuffer[j][BACK_RIGHT]  += value*WetSend[BACK_RIGHT];
+                                if(doReverb)
+                                    ReverbBuffer[j] += value;
+                                else
+                                {
+                                    WetBuffer[j][FRONT_LEFT]  += value*WetSend[FRONT_LEFT];
+                                    WetBuffer[j][FRONT_RIGHT] += value*WetSend[FRONT_RIGHT];
+                                    WetBuffer[j][SIDE_LEFT]   += value*WetSend[SIDE_LEFT];
+                                    WetBuffer[j][SIDE_RIGHT]  += value*WetSend[SIDE_RIGHT];
+                                    WetBuffer[j][BACK_LEFT]   += value*WetSend[BACK_LEFT];
+                                    WetBuffer[j][BACK_RIGHT]  += value*WetSend[BACK_RIGHT];
+                                }
                             }
                             else
                             {
@@ -943,6 +967,61 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                 }
 
                 ALSource = ALSource->next;
+            }
+
+            ALEffectSlot = (ALContext ? ALContext->AuxiliaryEffectSlot : NULL);
+            while(ALEffectSlot)
+            {
+                if(ALEffectSlot->effect.type == AL_EFFECT_REVERB)
+                {
+                    ALfloat *DelayBuffer = ALEffectSlot->ReverbBuffer;
+                    ALuint Pos = ALEffectSlot->ReverbPos;
+                    ALuint LatePos = ALEffectSlot->ReverbLatePos;
+                    ALuint ReflectPos = ALEffectSlot->ReverbReflectPos;
+                    ALuint Length = ALEffectSlot->ReverbLength;
+                    ALfloat DecayGain = ALEffectSlot->ReverbDecayGain;
+                    ALfloat DecayHFRatio = ALEffectSlot->effect.Reverb.DecayHFRatio;
+                    ALfloat Gain = ALEffectSlot->effect.Reverb.Gain;
+                    ALfloat ReflectGain = ALEffectSlot->effect.Reverb.ReflectionsGain;
+                    ALfloat LateReverbGain = ALEffectSlot->effect.Reverb.LateReverbGain;
+                    ALfloat LastDecaySample = ALEffectSlot->LastDecaySample;
+                    ALfloat sample;
+
+                    for(i = 0;i < SamplesToDo;i++)
+                    {
+                        DelayBuffer[Pos] = ReverbBuffer[i] * Gain;
+
+                        sample = DelayBuffer[ReflectPos] * ReflectGain;
+
+                        DelayBuffer[LatePos] *= LateReverbGain;
+
+                        Pos = (Pos+1) % Length;
+                        DelayBuffer[Pos] *= DecayHFRatio;
+                        DelayBuffer[Pos] += LastDecaySample * (1.0f-DecayHFRatio);
+                        LastDecaySample = DelayBuffer[Pos];
+                        DelayBuffer[Pos] *= DecayGain;
+
+                        DelayBuffer[LatePos] += DelayBuffer[Pos];
+
+                        sample += DelayBuffer[LatePos];
+
+                        WetBuffer[i][FRONT_LEFT]  += sample;
+                        WetBuffer[i][FRONT_RIGHT] += sample;
+                        WetBuffer[i][SIDE_LEFT]   += sample;
+                        WetBuffer[i][SIDE_RIGHT]  += sample;
+                        WetBuffer[i][BACK_LEFT]   += sample;
+                        WetBuffer[i][BACK_RIGHT]  += sample;
+
+                        LatePos = (LatePos+1) % Length;
+                        ReflectPos = (ReflectPos+1) % Length;
+                    }
+
+                    ALEffectSlot->ReverbPos = Pos;
+                    ALEffectSlot->ReverbLatePos = LatePos;
+                    ALEffectSlot->ReverbReflectPos = ReflectPos;
+                    ALEffectSlot->LastDecaySample = LastDecaySample;
+                }
+                ALEffectSlot = ALEffectSlot->next;
             }
 
             //Post processing loop

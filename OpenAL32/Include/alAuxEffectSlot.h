@@ -21,6 +21,15 @@ typedef struct ALeffectslot
     ALfloat Gain;
     ALboolean AuxSendAuto;
 
+    ALfloat *ReverbBuffer;
+    // in frames!
+    ALuint ReverbLength;
+    ALuint ReverbPos;
+    ALuint ReverbReflectPos;
+    ALuint ReverbLatePos;
+    ALfloat ReverbDecayGain;
+    ALfloat LastDecaySample;
+
     ALuint refcount;
 
     // Index to itself

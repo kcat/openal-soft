@@ -493,22 +493,25 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             WetGainHF = 1.0f;
         }
 
+        DryMix *= ListenerGain * ConeVolume;
+        WetMix *= ListenerGain;
+
         //7. Convert normalized position into pannings, then into channel volumes
         aluNormalize(Position);
         switch(aluChannelsFromFormat(OutputFormat))
         {
             case 1:
-                drysend[FRONT_LEFT]  = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f); //Direct
-                drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f); //Direct
-                wetsend[FRONT_LEFT]  =              ListenerGain * WetMix * aluSqrt(1.0f); //Room
-                wetsend[FRONT_RIGHT] =              ListenerGain * WetMix * aluSqrt(1.0f); //Room
+                drysend[FRONT_LEFT]  = DryMix * aluSqrt(1.0f); //Direct
+                drysend[FRONT_RIGHT] = DryMix * aluSqrt(1.0f); //Direct
+                wetsend[FRONT_LEFT]  = WetMix * aluSqrt(1.0f); //Room
+                wetsend[FRONT_RIGHT] = WetMix * aluSqrt(1.0f); //Room
                 break;
             case 2:
                 PanningLR = 0.5f + 0.5f*Position[0];
-                drysend[FRONT_LEFT]  = ConeVolume * ListenerGain * DryMix * aluSqrt(1.0f-PanningLR); //L Direct
-                drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt(     PanningLR); //R Direct
-                wetsend[FRONT_LEFT]  =              ListenerGain * WetMix * aluSqrt(1.0f-PanningLR); //L Room
-                wetsend[FRONT_RIGHT] =              ListenerGain * WetMix * aluSqrt(     PanningLR); //R Room
+                drysend[FRONT_LEFT]  = DryMix * aluSqrt(1.0f-PanningLR); //L Direct
+                drysend[FRONT_RIGHT] = DryMix * aluSqrt(     PanningLR); //R Direct
+                wetsend[FRONT_LEFT]  = WetMix * aluSqrt(1.0f-PanningLR); //L Room
+                wetsend[FRONT_RIGHT] = WetMix * aluSqrt(     PanningLR); //R Room
                 break;
             case 4:
             /* TODO: Add center/lfe channel in spatial calculations? */
@@ -520,14 +523,14 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 PanningFB = 0.5f + (0.5f*Position[2]*1.41421356f);
                 PanningFB = __min(1.0f, PanningFB);
                 PanningFB = __max(0.0f, PanningFB);
-                drysend[FRONT_LEFT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
-                drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
-                drysend[BACK_LEFT]   = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
-                drysend[BACK_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB));
-                wetsend[FRONT_LEFT]  =              ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
-                wetsend[FRONT_RIGHT] =              ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
-                wetsend[BACK_LEFT]   =              ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
-                wetsend[BACK_RIGHT]  =              ListenerGain * WetMix * aluSqrt((     PanningLR)*(     PanningFB));
+                drysend[FRONT_LEFT]  = DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                drysend[FRONT_RIGHT] = DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                drysend[BACK_LEFT]   = DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                drysend[BACK_RIGHT]  = DryMix * aluSqrt((     PanningLR)*(     PanningFB));
+                wetsend[FRONT_LEFT]  = WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                wetsend[FRONT_RIGHT] = WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                wetsend[BACK_LEFT]   = WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                wetsend[BACK_RIGHT]  = WetMix * aluSqrt((     PanningLR)*(     PanningFB));
                 break;
             case 7:
             case 8:
@@ -539,31 +542,31 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 PanningLR = __max(0.0f, PanningLR);
                 if(Position[2] > 0.0f)
                 {
-                    drysend[BACK_LEFT]   = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
-                    drysend[BACK_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
-                    drysend[SIDE_LEFT]   = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
-                    drysend[SIDE_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB));
+                    drysend[BACK_LEFT]   = DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                    drysend[BACK_RIGHT]  = DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                    drysend[SIDE_LEFT]   = DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                    drysend[SIDE_RIGHT]  = DryMix * aluSqrt((     PanningLR)*(     PanningFB));
                     drysend[FRONT_LEFT]  = 0.0f;
                     drysend[FRONT_RIGHT] = 0.0f;
-                    wetsend[BACK_LEFT]   =              ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
-                    wetsend[BACK_RIGHT]  =              ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
-                    wetsend[SIDE_LEFT]   =              ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
-                    wetsend[SIDE_RIGHT]  =              ListenerGain * WetMix * aluSqrt((     PanningLR)*(     PanningFB));
+                    wetsend[BACK_LEFT]   = WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                    wetsend[BACK_RIGHT]  = WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                    wetsend[SIDE_LEFT]   = WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                    wetsend[SIDE_RIGHT]  = WetMix * aluSqrt((     PanningLR)*(     PanningFB));
                     wetsend[FRONT_LEFT]  = 0.0f;
                     wetsend[FRONT_RIGHT] = 0.0f;
                 }
                 else
                 {
-                    drysend[FRONT_LEFT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
-                    drysend[FRONT_RIGHT] = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
-                    drysend[SIDE_LEFT]   = ConeVolume * ListenerGain * DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
-                    drysend[SIDE_RIGHT]  = ConeVolume * ListenerGain * DryMix * aluSqrt((     PanningLR)*(     PanningFB));
+                    drysend[FRONT_LEFT]  = DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                    drysend[FRONT_RIGHT] = DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                    drysend[SIDE_LEFT]   = DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                    drysend[SIDE_RIGHT]  = DryMix * aluSqrt((     PanningLR)*(     PanningFB));
                     drysend[BACK_LEFT]   = 0.0f;
                     drysend[BACK_RIGHT]  = 0.0f;
-                    wetsend[FRONT_LEFT]  =              ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
-                    wetsend[FRONT_RIGHT] =              ListenerGain * WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
-                    wetsend[SIDE_LEFT]   =              ListenerGain * WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
-                    wetsend[SIDE_RIGHT]  =              ListenerGain * WetMix * aluSqrt((     PanningLR)*(     PanningFB));
+                    wetsend[FRONT_LEFT]  = WetMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
+                    wetsend[FRONT_RIGHT] = WetMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
+                    wetsend[SIDE_LEFT]   = WetMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
+                    wetsend[SIDE_RIGHT]  = WetMix * aluSqrt((     PanningLR)*(     PanningFB));
                     wetsend[BACK_LEFT]   = 0.0f;
                     wetsend[BACK_RIGHT]  = 0.0f;
                 }
@@ -576,43 +579,29 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     }
     else
     {
+        //1. Multi-channel buffers always play "normal"
+        pitch[0] = ALSource->flPitch;
+
+        drysend[FRONT_LEFT]  = SourceVolume * ListenerGain;
+        drysend[FRONT_RIGHT] = SourceVolume * ListenerGain;
+        drysend[SIDE_LEFT]   = SourceVolume * ListenerGain;
+        drysend[SIDE_RIGHT]  = SourceVolume * ListenerGain;
+        drysend[BACK_LEFT]   = SourceVolume * ListenerGain;
+        drysend[BACK_RIGHT]  = SourceVolume * ListenerGain;
+        drysend[CENTER]      = SourceVolume * ListenerGain;
+        drysend[LFE]         = SourceVolume * ListenerGain;
+        wetsend[FRONT_LEFT]  = 0.0f;
+        wetsend[FRONT_RIGHT] = 0.0f;
+        wetsend[SIDE_LEFT]   = 0.0f;
+        wetsend[SIDE_RIGHT]  = 0.0f;
+        wetsend[BACK_LEFT]   = 0.0f;
+        wetsend[BACK_RIGHT]  = 0.0f;
+        wetsend[CENTER]      = 0.0f;
+        wetsend[LFE]         = 0.0f;
+        WetGainHF = 1.0f;
+
         *drygainhf = DryGainHF;
         *wetgainhf = WetGainHF;
-
-        //1. Multi-channel buffers always play "normal"
-        drysend[FRONT_LEFT]  = SourceVolume * 1.0f * ListenerGain;
-        drysend[FRONT_RIGHT] = SourceVolume * 1.0f * ListenerGain;
-        drysend[SIDE_LEFT]   = SourceVolume * 1.0f * ListenerGain;
-        drysend[SIDE_RIGHT]  = SourceVolume * 1.0f * ListenerGain;
-        drysend[BACK_LEFT]   = SourceVolume * 1.0f * ListenerGain;
-        drysend[BACK_RIGHT]  = SourceVolume * 1.0f * ListenerGain;
-        drysend[CENTER]      = SourceVolume * 1.0f * ListenerGain;
-        drysend[LFE]         = SourceVolume * 1.0f * ListenerGain;
-        if(ALSource->Send[0].Slot)
-        {
-            wetsend[FRONT_LEFT]  = SourceVolume * 0.0f * ListenerGain;
-            wetsend[FRONT_RIGHT] = SourceVolume * 0.0f * ListenerGain;
-            wetsend[SIDE_LEFT]   = SourceVolume * 0.0f * ListenerGain;
-            wetsend[SIDE_RIGHT]  = SourceVolume * 0.0f * ListenerGain;
-            wetsend[BACK_LEFT]   = SourceVolume * 0.0f * ListenerGain;
-            wetsend[BACK_RIGHT]  = SourceVolume * 0.0f * ListenerGain;
-            wetsend[CENTER]      = SourceVolume * 0.0f * ListenerGain;
-            wetsend[LFE]         = SourceVolume * 0.0f * ListenerGain;
-        }
-        else
-        {
-            wetsend[FRONT_LEFT]  = 0.0f;
-            wetsend[FRONT_RIGHT] = 0.0f;
-            wetsend[SIDE_LEFT]   = 0.0f;
-            wetsend[SIDE_RIGHT]  = 0.0f;
-            wetsend[BACK_LEFT]   = 0.0f;
-            wetsend[BACK_RIGHT]  = 0.0f;
-            wetsend[CENTER]      = 0.0f;
-            wetsend[LFE]         = 0.0f;
-            *wetgainhf = 1.0f;
-        }
-
-        pitch[0] = ALSource->flPitch;
     }
 }
 

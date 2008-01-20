@@ -1156,7 +1156,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         if((ALint)device->UpdateFreq <= 0)
             device->UpdateFreq = 8192;
 
-        device->MaxNoOfSources = 256;
+        device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
+        if((ALint)device->MaxNoOfSources <= 0)
+            device->MaxNoOfSources = 256;
 
         // Find a playback device to open
         for(i = 0;BackendList[i].Init;i++)

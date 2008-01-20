@@ -1,8 +1,9 @@
 # OpenAL config file. Options that are not under a block or are under the
 # [general] block are for general, non-backend-specific options. Blocks may
 # appear multiple times, and duplicated options will take the last value
-# specified. The system-wide settings can be put in /etc/openal/config and
-# user-specific override settings in ~/.openalrc
+# specified.
+# The system-wide settings can be put in /etc/openal/alsoft.conf and user-
+# specific override settings in ~/.alsoftrc.
 
 # Option and block names are case-insenstive. The supplied values are only
 # hints and may not be honored (though generally it'll try to get as close as

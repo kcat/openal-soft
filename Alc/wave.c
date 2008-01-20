@@ -212,7 +212,6 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
 
     data->DataStart = ftell(data->f);
 
-    device->MaxNoOfSources = 256;
     device->UpdateFreq = max(device->UpdateFreq, 2048);
 
     data->size = device->UpdateFreq;

@@ -182,9 +182,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     if(SUCCEEDED(hr))
         hr = IDirectSoundBuffer_Play(pData->DSsbuffer, 0, 0, DSBPLAY_LOOPING);
 
-    device->MaxNoOfSources = 256;
     device->ExtraData = pData;
-
     pData->thread = StartThread(DSoundProc, device);
     if(!pData->thread)
         hr = E_FAIL;

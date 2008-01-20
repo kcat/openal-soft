@@ -242,8 +242,6 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     data->data_size = device->UpdateFreq * device->FrameSize;
     data->mix_data = calloc(1, data->data_size);
 
-    device->MaxNoOfSources = 256;
-
     device->ExtraData = data;
     data->thread = StartThread(OSSProc, device);
     if(data->thread == NULL)

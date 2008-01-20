@@ -42,10 +42,10 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             break;
 
         case DLL_PROCESS_DETACH:
+            ReleaseALC();
             ReleaseALBuffers();
             ReleaseALEffects();
             ReleaseALFilters();
-            ReleaseALC();
             FreeALConfig();
             ALTHUNK_EXIT();
             DeleteCriticalSection(&_alMutex);
@@ -62,10 +62,10 @@ static void my_deinit()
     if(once) return;
     once = AL_TRUE;
 
+    ReleaseALC();
     ReleaseALBuffers();
     ReleaseALEffects();
     ReleaseALFilters();
-    ReleaseALC();
     FreeALConfig();
     ALTHUNK_EXIT();
     DeleteCriticalSection(&_alMutex);

@@ -1050,8 +1050,14 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
         ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
         if (ALBuf->data)
         {
+            ALint smp;
             for (i = 0;i < size;i++)
-                ALBuf->data[i] = (ALshort)(((ALfloat*)data)[i] * 32767.5f - 0.5);
+            {
+                smp = (((ALfloat*)data)[i] * 32767.5f - 0.5f);
+                smp = min(smp,  32767);
+                smp = max(smp, -32768);
+                ALBuf->data[i] = (ALshort)smp;
+            }
             memset(&(ALBuf->data[size]), 0, 16*NewChannels);
 
             ALBuf->format = NewFormat;

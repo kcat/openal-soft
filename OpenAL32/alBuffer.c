@@ -371,12 +371,19 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                         ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
                         if (ALBuf->data)
                         {
+                            ALint smp;
                             for (i = 0;i < size;i+=4)
                             {
                                 ALBuf->data[i+0] = 0;
                                 ALBuf->data[i+1] = 0;
-                                ALBuf->data[i+2] = (ALshort)(((ALfloat*)data)[i/2+0] * 32767.5f - 0.5);
-                                ALBuf->data[i+3] = (ALshort)(((ALfloat*)data)[i/2+1] * 32767.5f - 0.5);
+                                smp = (((ALfloat*)data)[i/2+0] * 32767.5f - 0.5);
+                                smp = min(smp,  32767);
+                                smp = max(smp, -32768);
+                                ALBuf->data[i+2] = (ALshort)smp;
+                                smp = (((ALfloat*)data)[i/2+1] * 32767.5f - 0.5);
+                                smp = min(smp,  32767);
+                                smp = max(smp, -32768);
+                                ALBuf->data[i+3] = (ALshort)smp;
                             }
                             memset(&(ALBuf->data[size]), 0, 16*NewChannels);
 

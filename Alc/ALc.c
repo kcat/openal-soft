@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
+#include <ctype.h>
 #include "alMain.h"
 #include "alSource.h"
 #include "AL/al.h"
@@ -78,25 +79,11 @@ struct {
 ///////////////////////////////////////////////////////
 // STRING and EXTENSIONS
 
-typedef struct ALCextension_struct
-{
-    ALCchar        *extName;
-    ALvoid        *address;
-} ALCextension;
-
 typedef struct ALCfunction_struct
 {
     ALCchar        *funcName;
     ALvoid        *address;
 } ALCfunction;
-
-static ALCextension alcExtensions[] = {
-    { "ALC_ENUMERATE_ALL_EXT", (ALvoid *) NULL },
-    { "ALC_ENUMERATION_EXT",   (ALvoid *) NULL },
-    { "ALC_EXT_CAPTURE",       (ALvoid *) NULL },
-    { "ALC_EXT_EFX",           (ALvoid *) NULL },
-    { NULL,                    (ALvoid *) NULL }
-};
 
 static ALCfunction  alcFunctions[] = {
     { "alcCreateContext",           (ALvoid *) alcCreateContext         },
@@ -835,18 +822,31 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
 ALCAPI ALCboolean ALCAPIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName)
 {
     ALCboolean bResult = ALC_FALSE;
-    ALsizei i = 0;
 
     (void)device;
 
     if (extName)
     {
-        while(alcExtensions[i].extName &&
-              strcasecmp(alcExtensions[i].extName,extName) != 0)
-            i++;
+        const char *ptr;
+        size_t len;
 
-        if (alcExtensions[i].extName)
-            bResult = ALC_TRUE;
+        len = strlen(extName);
+        ptr = alcExtensionList;
+        while(ptr && *ptr)
+        {
+            if(strncasecmp(ptr, extName, len) == 0 &&
+               (ptr[len] == '\0' || isspace(ptr[len])))
+            {
+                bResult = ALC_TRUE;
+                break;
+            }
+            if((ptr=strchr(ptr, ' ')) != NULL)
+            {
+                do {
+                    ++ptr;
+                } while(isspace(*ptr));
+            }
+        }
     }
     else
         SetALCError(ALC_INVALID_VALUE);

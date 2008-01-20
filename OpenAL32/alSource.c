@@ -2288,7 +2288,7 @@ ALvoid ReleaseALSources(ALCcontext *Context)
 {
 #ifdef _DEBUG
     if(Context->SourceCount > 0)
-        AL_PRINT("destroycontext: %d Source(s) NOT deleted\n", Context->SourceCount);
+        AL_PRINT("alcDestroyContext(): %d Source(s) NOT deleted\n", Context->SourceCount);
 #endif
 
     while(Context->Source)

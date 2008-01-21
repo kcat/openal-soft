@@ -627,6 +627,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         while(size > 0)
         {
             //Setup variables
+            ALEffectSlot = (ALContext ? ALContext->AuxiliaryEffectSlot : NULL);
             ALSource = (ALContext ? ALContext->Source : NULL);
             SamplesToDo = min(size, BUFFERSIZE);
 
@@ -895,7 +896,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                 ALSource = ALSource->next;
             }
 
-            ALEffectSlot = (ALContext ? ALContext->AuxiliaryEffectSlot : NULL);
+            // effect slot processing
             while(ALEffectSlot)
             {
                 if(ALEffectSlot->effect.type == AL_EFFECT_REVERB)
@@ -947,6 +948,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     ALEffectSlot->ReverbReflectPos = ReflectPos;
                     ALEffectSlot->LastDecaySample = LastDecaySample;
                 }
+
                 ALEffectSlot = ALEffectSlot->next;
             }
 

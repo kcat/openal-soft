@@ -617,512 +617,509 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 
     SuspendContext(ALContext);
 
-    if(buffer)
+    //Figure output format variables
+    BlockAlign  = aluChannelsFromFormat(format);
+    BlockAlign *= aluBytesFromFormat(format);
+
+    size /= BlockAlign;
+    while(size > 0)
     {
-        //Figure output format variables
-        BlockAlign  = aluChannelsFromFormat(format);
-        BlockAlign *= aluBytesFromFormat(format);
+        //Setup variables
+        ALEffectSlot = (ALContext ? ALContext->AuxiliaryEffectSlot : NULL);
+        ALSource = (ALContext ? ALContext->Source : NULL);
+        SamplesToDo = min(size, BUFFERSIZE);
 
-        size /= BlockAlign;
-        while(size > 0)
+        //Clear mixing buffer
+        memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
+        memset(WetBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
+        memset(ReverbBuffer, 0, SamplesToDo*sizeof(ALfloat));
+
+        //Actual mixing loop
+        while(ALSource)
         {
-            //Setup variables
-            ALEffectSlot = (ALContext ? ALContext->AuxiliaryEffectSlot : NULL);
-            ALSource = (ALContext ? ALContext->Source : NULL);
-            SamplesToDo = min(size, BUFFERSIZE);
+            j = 0;
+            State = ALSource->state;
 
-            //Clear mixing buffer
-            memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
-            memset(WetBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
-            memset(ReverbBuffer, 0, SamplesToDo*sizeof(ALfloat));
+            doReverb = ((ALSource->Send[0].Slot &&
+                            ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB) ?
+                        AL_TRUE : AL_FALSE);
 
-            //Actual mixing loop
-            while(ALSource)
+            while(State == AL_PLAYING && j < SamplesToDo)
             {
-                j = 0;
-                State = ALSource->state;
+                DataSize = 0;
+                DataPosInt = 0;
+                DataPosFrac = 0;
 
-                doReverb = ((ALSource->Send[0].Slot &&
-                             ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB) ?
-                            AL_TRUE : AL_FALSE);
-
-                while(State == AL_PLAYING && j < SamplesToDo)
+                //Get buffer info
+                if((Buffer = ALSource->ulBufferID))
                 {
-                    DataSize = 0;
-                    DataPosInt = 0;
-                    DataPosFrac = 0;
+                    ALBuffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(Buffer);
 
-                    //Get buffer info
-                    if((Buffer = ALSource->ulBufferID))
+                    Data      = ALBuffer->data;
+                    Channels  = aluChannelsFromFormat(ALBuffer->format);
+                    DataSize  = ALBuffer->size;
+                    Frequency = ALBuffer->frequency;
+
+                    CalcSourceParams(ALContext, ALSource,
+                                        (Channels==1) ? AL_TRUE : AL_FALSE,
+                                        format, DrySend, WetSend, &Pitch,
+                                        &DryGainHF, &WetGainHF);
+
+
+                    Pitch = (Pitch*Frequency) / ALContext->Frequency;
+                    DataSize /= Channels * aluBytesFromFormat(ALBuffer->format);
+
+                    //Get source info
+                    DataPosInt = ALSource->position;
+                    DataPosFrac = ALSource->position_fraction;
+                    DrySample = ALSource->LastDrySample;
+                    WetSample = ALSource->LastWetSample;
+
+                    //Compute 18.14 fixed point step
+                    increment = aluF2L(Pitch*(1L<<FRACTIONBITS));
+                    if(increment > (MAX_PITCH<<FRACTIONBITS))
+                        increment = (MAX_PITCH<<FRACTIONBITS);
+
+                    //Figure out how many samples we can mix.
+                    //Pitch must be <= 4 (the number below !)
+                    DataSize64 = DataSize+MAX_PITCH;
+                    DataSize64 <<= FRACTIONBITS;
+                    DataPos64 = DataPosInt;
+                    DataPos64 <<= FRACTIONBITS;
+                    DataPos64 += DataPosFrac;
+                    BufferSize = (ALuint)((DataSize64-DataPos64) / increment);
+                    BufferListItem = ALSource->queue;
+                    for(loop = 0; loop < ALSource->BuffersPlayed; loop++)
                     {
-                        ALBuffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(Buffer);
-
-                        Data      = ALBuffer->data;
-                        Channels  = aluChannelsFromFormat(ALBuffer->format);
-                        DataSize  = ALBuffer->size;
-                        Frequency = ALBuffer->frequency;
-
-                        CalcSourceParams(ALContext, ALSource,
-                                         (Channels==1) ? AL_TRUE : AL_FALSE,
-                                         format, DrySend, WetSend, &Pitch,
-                                         &DryGainHF, &WetGainHF);
-
-
-                        Pitch = (Pitch*Frequency) / ALContext->Frequency;
-                        DataSize /= Channels * aluBytesFromFormat(ALBuffer->format);
-
-                        //Get source info
-                        DataPosInt = ALSource->position;
-                        DataPosFrac = ALSource->position_fraction;
-                        DrySample = ALSource->LastDrySample;
-                        WetSample = ALSource->LastWetSample;
-
-                        //Compute 18.14 fixed point step
-                        increment = aluF2L(Pitch*(1L<<FRACTIONBITS));
-                        if(increment > (MAX_PITCH<<FRACTIONBITS))
-                            increment = (MAX_PITCH<<FRACTIONBITS);
-
-                        //Figure out how many samples we can mix.
-                        //Pitch must be <= 4 (the number below !)
-                        DataSize64 = DataSize+MAX_PITCH;
-                        DataSize64 <<= FRACTIONBITS;
-                        DataPos64 = DataPosInt;
-                        DataPos64 <<= FRACTIONBITS;
-                        DataPos64 += DataPosFrac;
-                        BufferSize = (ALuint)((DataSize64-DataPos64) / increment);
-                        BufferListItem = ALSource->queue;
-                        for(loop = 0; loop < ALSource->BuffersPlayed; loop++)
+                        if(BufferListItem)
+                            BufferListItem = BufferListItem->next;
+                    }
+                    if (BufferListItem)
+                    {
+                        if (BufferListItem->next)
                         {
+                            ALbuffer *NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(BufferListItem->next->buffer);
+                            if(NextBuf && NextBuf->data)
+                            {
+                                ulExtraSamples = min(NextBuf->size, (ALint)(16*Channels));
+                                memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
+                            }
+                        }
+                        else if (ALSource->bLooping)
+                        {
+                            ALbuffer *NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(ALSource->queue->buffer);
+                            if (NextBuf && NextBuf->data)
+                            {
+                                ulExtraSamples = min(NextBuf->size, (ALint)(16*Channels));
+                                memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
+                            }
+                        }
+                    }
+                    BufferSize = min(BufferSize, (SamplesToDo-j));
+
+                    //Actual sample mixing loop
+                    Data += DataPosInt*Channels;
+                    while(BufferSize--)
+                    {
+                        k = DataPosFrac>>FRACTIONBITS;
+                        fraction = DataPosFrac&FRACTIONMASK;
+                        if(Channels==1)
+                        {
+                            //First order interpolator
+                            ALfloat sample = (ALfloat)((ALshort)(((Data[k]*((1L<<FRACTIONBITS)-fraction))+(Data[k+1]*(fraction)))>>FRACTIONBITS));
+
+                            //Direct path final mix buffer and panning
+                            DrySample = aluComputeSample(DryGainHF, sample, DrySample);
+                            DryBuffer[j][FRONT_LEFT]  += DrySample*DrySend[FRONT_LEFT];
+                            DryBuffer[j][FRONT_RIGHT] += DrySample*DrySend[FRONT_RIGHT];
+                            DryBuffer[j][SIDE_LEFT]   += DrySample*DrySend[SIDE_LEFT];
+                            DryBuffer[j][SIDE_RIGHT]  += DrySample*DrySend[SIDE_RIGHT];
+                            DryBuffer[j][BACK_LEFT]   += DrySample*DrySend[BACK_LEFT];
+                            DryBuffer[j][BACK_RIGHT]  += DrySample*DrySend[BACK_RIGHT];
+                            //Room path final mix buffer and panning
+                            WetSample = aluComputeSample(WetGainHF, sample, WetSample);
+                            if(doReverb)
+                                ReverbBuffer[j] += WetSample;
+                            else
+                            {
+                                WetBuffer[j][FRONT_LEFT]  += WetSample*WetSend[FRONT_LEFT];
+                                WetBuffer[j][FRONT_RIGHT] += WetSample*WetSend[FRONT_RIGHT];
+                                WetBuffer[j][SIDE_LEFT]   += WetSample*WetSend[SIDE_LEFT];
+                                WetBuffer[j][SIDE_RIGHT]  += WetSample*WetSend[SIDE_RIGHT];
+                                WetBuffer[j][BACK_LEFT]   += WetSample*WetSend[BACK_LEFT];
+                                WetBuffer[j][BACK_RIGHT]  += WetSample*WetSend[BACK_RIGHT];
+                            }
+                        }
+                        else
+                        {
+                            //First order interpolator (front left)
+                            value = (ALfloat)((ALshort)(((Data[k*Channels  ]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels  ]*(fraction)))>>FRACTIONBITS));
+                            DryBuffer[j][FRONT_LEFT] += value*DrySend[FRONT_LEFT];
+                            WetBuffer[j][FRONT_LEFT] += value*WetSend[FRONT_LEFT];
+                            //First order interpolator (front right)
+                            value = (ALfloat)((ALshort)(((Data[k*Channels+1]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+1]*(fraction)))>>FRACTIONBITS));
+                            DryBuffer[j][FRONT_RIGHT] += value*DrySend[FRONT_RIGHT];
+                            WetBuffer[j][FRONT_RIGHT] += value*WetSend[FRONT_RIGHT];
+                            if(Channels >= 4)
+                            {
+                                int i = 2;
+                                if(Channels >= 6)
+                                {
+                                    if(Channels != 7)
+                                    {
+                                        //First order interpolator (center)
+                                        value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
+                                        DryBuffer[j][CENTER] += value*DrySend[CENTER];
+                                        WetBuffer[j][CENTER] += value*WetSend[CENTER];
+                                        i++;
+                                    }
+                                    //First order interpolator (lfe)
+                                    value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
+                                    DryBuffer[j][LFE] += value*DrySend[LFE];
+                                    WetBuffer[j][LFE] += value*WetSend[LFE];
+                                    i++;
+                                }
+                                //First order interpolator (back left)
+                                value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
+                                DryBuffer[j][BACK_LEFT] += value*DrySend[BACK_LEFT];
+                                WetBuffer[j][BACK_LEFT] += value*WetSend[BACK_LEFT];
+                                i++;
+                                //First order interpolator (back right)
+                                value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
+                                DryBuffer[j][BACK_RIGHT] += value*DrySend[BACK_RIGHT];
+                                WetBuffer[j][BACK_RIGHT] += value*WetSend[BACK_RIGHT];
+                                i++;
+                                if(Channels >= 7)
+                                {
+                                    //First order interpolator (side left)
+                                    value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
+                                    DryBuffer[j][SIDE_LEFT] += value*DrySend[SIDE_LEFT];
+                                    WetBuffer[j][SIDE_LEFT] += value*WetSend[SIDE_LEFT];
+                                    i++;
+                                    //First order interpolator (side right)
+                                    value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
+                                    DryBuffer[j][SIDE_RIGHT] += value*DrySend[SIDE_RIGHT];
+                                    WetBuffer[j][SIDE_RIGHT] += value*WetSend[SIDE_RIGHT];
+                                    i++;
+                                }
+                            }
+                        }
+                        DataPosFrac += increment;
+                        j++;
+                    }
+                    DataPosInt += (DataPosFrac>>FRACTIONBITS);
+                    DataPosFrac = (DataPosFrac&FRACTIONMASK);
+
+                    //Update source info
+                    ALSource->position = DataPosInt;
+                    ALSource->position_fraction = DataPosFrac;
+                    ALSource->LastDrySample = DrySample;
+                    ALSource->LastWetSample = WetSample;
+                }
+
+                //Handle looping sources
+                if(!Buffer || DataPosInt >= DataSize)
+                {
+                    //queueing
+                    if(ALSource->queue)
+                    {
+                        Looping = ALSource->bLooping;
+                        if(ALSource->BuffersPlayed < (ALSource->BuffersInQueue-1))
+                        {
+                            BufferListItem = ALSource->queue;
+                            for(loop = 0; loop <= ALSource->BuffersPlayed; loop++)
+                            {
+                                if(BufferListItem)
+                                {
+                                    if(!Looping)
+                                        BufferListItem->bufferstate = PROCESSED;
+                                    BufferListItem = BufferListItem->next;
+                                }
+                            }
+                            if(!Looping)
+                                ALSource->BuffersProcessed++;
                             if(BufferListItem)
-                                BufferListItem = BufferListItem->next;
+                                ALSource->ulBufferID = BufferListItem->buffer;
+                            ALSource->position = DataPosInt-DataSize;
+                            ALSource->position_fraction = DataPosFrac;
+                            ALSource->BuffersPlayed++;
                         }
-                        if (BufferListItem)
+                        else
                         {
-                            if (BufferListItem->next)
+                            if(!Looping)
                             {
-                                ALbuffer *NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(BufferListItem->next->buffer);
-                                if(NextBuf && NextBuf->data)
+                                /* alSourceStop */
+                                ALSource->state = AL_STOPPED;
+                                ALSource->inuse = AL_FALSE;
+                                ALSource->BuffersPlayed = ALSource->BuffersProcessed = ALSource->BuffersInQueue;
+                                BufferListItem = ALSource->queue;
+                                while(BufferListItem != NULL)
                                 {
-                                    ulExtraSamples = min(NextBuf->size, (ALint)(16*Channels));
-                                    memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
-                                }
-                            }
-                            else if (ALSource->bLooping)
-                            {
-                                ALbuffer *NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(ALSource->queue->buffer);
-                                if (NextBuf && NextBuf->data)
-                                {
-                                    ulExtraSamples = min(NextBuf->size, (ALint)(16*Channels));
-                                    memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
-                                }
-                            }
-                        }
-                        BufferSize = min(BufferSize, (SamplesToDo-j));
-
-                        //Actual sample mixing loop
-                        Data += DataPosInt*Channels;
-                        while(BufferSize--)
-                        {
-                            k = DataPosFrac>>FRACTIONBITS;
-                            fraction = DataPosFrac&FRACTIONMASK;
-                            if(Channels==1)
-                            {
-                                //First order interpolator
-                                ALfloat sample = (ALfloat)((ALshort)(((Data[k]*((1L<<FRACTIONBITS)-fraction))+(Data[k+1]*(fraction)))>>FRACTIONBITS));
-
-                                //Direct path final mix buffer and panning
-                                DrySample = aluComputeSample(DryGainHF, sample, DrySample);
-                                DryBuffer[j][FRONT_LEFT]  += DrySample*DrySend[FRONT_LEFT];
-                                DryBuffer[j][FRONT_RIGHT] += DrySample*DrySend[FRONT_RIGHT];
-                                DryBuffer[j][SIDE_LEFT]   += DrySample*DrySend[SIDE_LEFT];
-                                DryBuffer[j][SIDE_RIGHT]  += DrySample*DrySend[SIDE_RIGHT];
-                                DryBuffer[j][BACK_LEFT]   += DrySample*DrySend[BACK_LEFT];
-                                DryBuffer[j][BACK_RIGHT]  += DrySample*DrySend[BACK_RIGHT];
-                                //Room path final mix buffer and panning
-                                WetSample = aluComputeSample(WetGainHF, sample, WetSample);
-                                if(doReverb)
-                                    ReverbBuffer[j] += WetSample;
-                                else
-                                {
-                                    WetBuffer[j][FRONT_LEFT]  += WetSample*WetSend[FRONT_LEFT];
-                                    WetBuffer[j][FRONT_RIGHT] += WetSample*WetSend[FRONT_RIGHT];
-                                    WetBuffer[j][SIDE_LEFT]   += WetSample*WetSend[SIDE_LEFT];
-                                    WetBuffer[j][SIDE_RIGHT]  += WetSample*WetSend[SIDE_RIGHT];
-                                    WetBuffer[j][BACK_LEFT]   += WetSample*WetSend[BACK_LEFT];
-                                    WetBuffer[j][BACK_RIGHT]  += WetSample*WetSend[BACK_RIGHT];
+                                    BufferListItem->bufferstate = PROCESSED;
+                                    BufferListItem = BufferListItem->next;
                                 }
                             }
                             else
                             {
-                                //First order interpolator (front left)
-                                value = (ALfloat)((ALshort)(((Data[k*Channels  ]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels  ]*(fraction)))>>FRACTIONBITS));
-                                DryBuffer[j][FRONT_LEFT] += value*DrySend[FRONT_LEFT];
-                                WetBuffer[j][FRONT_LEFT] += value*WetSend[FRONT_LEFT];
-                                //First order interpolator (front right)
-                                value = (ALfloat)((ALshort)(((Data[k*Channels+1]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+1]*(fraction)))>>FRACTIONBITS));
-                                DryBuffer[j][FRONT_RIGHT] += value*DrySend[FRONT_RIGHT];
-                                WetBuffer[j][FRONT_RIGHT] += value*WetSend[FRONT_RIGHT];
-                                if(Channels >= 4)
-                                {
-                                    int i = 2;
-                                    if(Channels >= 6)
-                                    {
-                                        if(Channels != 7)
-                                        {
-                                            //First order interpolator (center)
-                                            value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
-                                            DryBuffer[j][CENTER] += value*DrySend[CENTER];
-                                            WetBuffer[j][CENTER] += value*WetSend[CENTER];
-                                            i++;
-                                        }
-                                        //First order interpolator (lfe)
-                                        value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
-                                        DryBuffer[j][LFE] += value*DrySend[LFE];
-                                        WetBuffer[j][LFE] += value*WetSend[LFE];
-                                        i++;
-                                    }
-                                    //First order interpolator (back left)
-                                    value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
-                                    DryBuffer[j][BACK_LEFT] += value*DrySend[BACK_LEFT];
-                                    WetBuffer[j][BACK_LEFT] += value*WetSend[BACK_LEFT];
-                                    i++;
-                                    //First order interpolator (back right)
-                                    value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
-                                    DryBuffer[j][BACK_RIGHT] += value*DrySend[BACK_RIGHT];
-                                    WetBuffer[j][BACK_RIGHT] += value*WetSend[BACK_RIGHT];
-                                    i++;
-                                    if(Channels >= 7)
-                                    {
-                                        //First order interpolator (side left)
-                                        value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
-                                        DryBuffer[j][SIDE_LEFT] += value*DrySend[SIDE_LEFT];
-                                        WetBuffer[j][SIDE_LEFT] += value*WetSend[SIDE_LEFT];
-                                        i++;
-                                        //First order interpolator (side right)
-                                        value = (ALfloat)((ALshort)(((Data[k*Channels+i]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+i]*(fraction)))>>FRACTIONBITS));
-                                        DryBuffer[j][SIDE_RIGHT] += value*DrySend[SIDE_RIGHT];
-                                        WetBuffer[j][SIDE_RIGHT] += value*WetSend[SIDE_RIGHT];
-                                        i++;
-                                    }
-                                }
-                            }
-                            DataPosFrac += increment;
-                            j++;
-                        }
-                        DataPosInt += (DataPosFrac>>FRACTIONBITS);
-                        DataPosFrac = (DataPosFrac&FRACTIONMASK);
-
-                        //Update source info
-                        ALSource->position = DataPosInt;
-                        ALSource->position_fraction = DataPosFrac;
-                        ALSource->LastDrySample = DrySample;
-                        ALSource->LastWetSample = WetSample;
-                    }
-
-                    //Handle looping sources
-                    if(!Buffer || DataPosInt >= DataSize)
-                    {
-                        //queueing
-                        if(ALSource->queue)
-                        {
-                            Looping = ALSource->bLooping;
-                            if(ALSource->BuffersPlayed < (ALSource->BuffersInQueue-1))
-                            {
+                                /* alSourceRewind */
+                                /* alSourcePlay */
+                                ALSource->state = AL_PLAYING;
+                                ALSource->inuse = AL_TRUE;
+                                ALSource->play = AL_TRUE;
+                                ALSource->BuffersPlayed = 0;
+                                ALSource->BufferPosition = 0;
+                                ALSource->lBytesPlayed = 0;
+                                ALSource->BuffersProcessed = 0;
                                 BufferListItem = ALSource->queue;
-                                for(loop = 0; loop <= ALSource->BuffersPlayed; loop++)
+                                while(BufferListItem != NULL)
                                 {
-                                    if(BufferListItem)
-                                    {
-                                        if(!Looping)
-                                            BufferListItem->bufferstate = PROCESSED;
-                                        BufferListItem = BufferListItem->next;
-                                    }
+                                    BufferListItem->bufferstate = PENDING;
+                                    BufferListItem = BufferListItem->next;
                                 }
-                                if(!Looping)
-                                    ALSource->BuffersProcessed++;
-                                if(BufferListItem)
-                                    ALSource->ulBufferID = BufferListItem->buffer;
+                                ALSource->ulBufferID = ALSource->queue->buffer;
+
                                 ALSource->position = DataPosInt-DataSize;
                                 ALSource->position_fraction = DataPosFrac;
-                                ALSource->BuffersPlayed++;
-                            }
-                            else
-                            {
-                                if(!Looping)
-                                {
-                                    /* alSourceStop */
-                                    ALSource->state = AL_STOPPED;
-                                    ALSource->inuse = AL_FALSE;
-                                    ALSource->BuffersPlayed = ALSource->BuffersProcessed = ALSource->BuffersInQueue;
-                                    BufferListItem = ALSource->queue;
-                                    while(BufferListItem != NULL)
-                                    {
-                                        BufferListItem->bufferstate = PROCESSED;
-                                        BufferListItem = BufferListItem->next;
-                                    }
-                                }
-                                else
-                                {
-                                    /* alSourceRewind */
-                                    /* alSourcePlay */
-                                    ALSource->state = AL_PLAYING;
-                                    ALSource->inuse = AL_TRUE;
-                                    ALSource->play = AL_TRUE;
-                                    ALSource->BuffersPlayed = 0;
-                                    ALSource->BufferPosition = 0;
-                                    ALSource->lBytesPlayed = 0;
-                                    ALSource->BuffersProcessed = 0;
-                                    BufferListItem = ALSource->queue;
-                                    while(BufferListItem != NULL)
-                                    {
-                                        BufferListItem->bufferstate = PENDING;
-                                        BufferListItem = BufferListItem->next;
-                                    }
-                                    ALSource->ulBufferID = ALSource->queue->buffer;
-
-                                    ALSource->position = DataPosInt-DataSize;
-                                    ALSource->position_fraction = DataPosFrac;
-                                }
                             }
                         }
                     }
-
-                    //Get source state
-                    State = ALSource->state;
                 }
 
-                ALSource = ALSource->next;
+                //Get source state
+                State = ALSource->state;
             }
 
-            // effect slot processing
-            while(ALEffectSlot)
-            {
-                if(ALEffectSlot->effect.type == AL_EFFECT_REVERB)
-                {
-                    ALfloat *DelayBuffer = ALEffectSlot->ReverbBuffer;
-                    ALuint Pos = ALEffectSlot->ReverbPos;
-                    ALuint LatePos = ALEffectSlot->ReverbLatePos;
-                    ALuint ReflectPos = ALEffectSlot->ReverbReflectPos;
-                    ALuint Length = ALEffectSlot->ReverbLength;
-                    ALfloat DecayGain = ALEffectSlot->ReverbDecayGain;
-                    ALfloat DecayHFRatio = ALEffectSlot->effect.Reverb.DecayHFRatio;
-                    ALfloat Gain = ALEffectSlot->effect.Reverb.Gain;
-                    ALfloat ReflectGain = ALEffectSlot->effect.Reverb.ReflectionsGain;
-                    ALfloat LateReverbGain = ALEffectSlot->effect.Reverb.LateReverbGain;
-                    ALfloat LastDecaySample = ALEffectSlot->LastDecaySample;
-                    ALfloat sample;
-
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        DelayBuffer[Pos] = ReverbBuffer[i] * Gain;
-
-                        sample = DelayBuffer[ReflectPos] * ReflectGain;
-
-                        DelayBuffer[LatePos] *= LateReverbGain;
-
-                        Pos = (Pos+1) % Length;
-                        DelayBuffer[Pos] *= DecayHFRatio;
-                        DelayBuffer[Pos] += LastDecaySample * (1.0f-DecayHFRatio);
-                        LastDecaySample = DelayBuffer[Pos];
-                        DelayBuffer[Pos] *= DecayGain;
-
-                        DelayBuffer[LatePos] += DelayBuffer[Pos];
-
-                        sample += DelayBuffer[LatePos];
-
-                        WetBuffer[i][FRONT_LEFT]  += sample;
-                        WetBuffer[i][FRONT_RIGHT] += sample;
-                        WetBuffer[i][SIDE_LEFT]   += sample;
-                        WetBuffer[i][SIDE_RIGHT]  += sample;
-                        WetBuffer[i][BACK_LEFT]   += sample;
-                        WetBuffer[i][BACK_RIGHT]  += sample;
-
-                        LatePos = (LatePos+1) % Length;
-                        ReflectPos = (ReflectPos+1) % Length;
-                    }
-
-                    ALEffectSlot->ReverbPos = Pos;
-                    ALEffectSlot->ReverbLatePos = LatePos;
-                    ALEffectSlot->ReverbReflectPos = ReflectPos;
-                    ALEffectSlot->LastDecaySample = LastDecaySample;
-                }
-
-                ALEffectSlot = ALEffectSlot->next;
-            }
-
-            //Post processing loop
-            switch(format)
-            {
-                case AL_FORMAT_MONO8:
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT]+DryBuffer[i][FRONT_RIGHT]+
-                                                                  WetBuffer[i][FRONT_LEFT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
-                        buffer = ((ALubyte*)buffer) + 1;
-                    }
-                    break;
-                case AL_FORMAT_STEREO8:
-                    if(ALContext && ALContext->bs2b)
-                    {
-                        for(i = 0;i < SamplesToDo;i++)
-                        {
-                            float samples[2];
-                            samples[0] = DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT];
-                            samples[1] = DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT];
-                            bs2b_cross_feed(ALContext->bs2b, samples);
-                            ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(samples[0])>>8)+128);
-                            ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(samples[1])>>8)+128);
-                            buffer = ((ALubyte*)buffer) + 2;
-                        }
-                    }
-                    else
-                    {
-                        for(i = 0;i < SamplesToDo;i++)
-                        {
-                            ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
-                            ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
-                            buffer = ((ALubyte*)buffer) + 2;
-                        }
-                    }
-                    break;
-                case AL_FORMAT_QUAD8:
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
-                        ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT])>>8)+128);
-                        buffer = ((ALubyte*)buffer) + 4;
-                    }
-                    break;
-                case AL_FORMAT_51CHN8:
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
-                        ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT])>>8)+128);
-                        ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][CENTER]     +WetBuffer[i][CENTER])>>8)+128);
-                        ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE])>>8)+128);
-                        buffer = ((ALubyte*)buffer) + 6;
-                    }
-                    break;
-                case AL_FORMAT_61CHN8:
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
-                        ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_LEFT]  +WetBuffer[i][SIDE_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_RIGHT] +WetBuffer[i][SIDE_RIGHT])>>8)+128);
-                        ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT])>>8)+128);
-                        ((ALubyte*)buffer)[6] = (ALubyte)((aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE])>>8)+128);
-                        buffer = ((ALubyte*)buffer) + 7;
-                    }
-                    break;
-                case AL_FORMAT_71CHN8:
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
-                        ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_LEFT]  +WetBuffer[i][SIDE_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_RIGHT] +WetBuffer[i][SIDE_RIGHT])>>8)+128);
-                        ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT])>>8)+128);
-                        ((ALubyte*)buffer)[6] = (ALubyte)((aluF2S(DryBuffer[i][CENTER]     +WetBuffer[i][CENTER])>>8)+128);
-                        ((ALubyte*)buffer)[7] = (ALubyte)((aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE])>>8)+128);
-                        buffer = ((ALubyte*)buffer) + 8;
-                    }
-                    break;
-
-                case AL_FORMAT_MONO16:
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT]+DryBuffer[i][FRONT_RIGHT]+
-                                                       WetBuffer[i][FRONT_LEFT]+WetBuffer[i][FRONT_RIGHT]);
-                        buffer = ((ALshort*)buffer) + 1;
-                    }
-                    break;
-                case AL_FORMAT_STEREO16:
-                    if(ALContext && ALContext->bs2b)
-                    {
-                        for(i = 0;i < SamplesToDo;i++)
-                        {
-                            float samples[2];
-                            samples[0] = DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT];
-                            samples[1] = DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT];
-                            bs2b_cross_feed(ALContext->bs2b, samples);
-                            ((ALshort*)buffer)[0] = aluF2S(samples[0]);
-                            ((ALshort*)buffer)[1] = aluF2S(samples[1]);
-                            buffer = ((ALshort*)buffer) + 2;
-                        }
-                    }
-                    else
-                    {
-                        for(i = 0;i < SamplesToDo;i++)
-                        {
-                            ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
-                            ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
-                            buffer = ((ALshort*)buffer) + 2;
-                        }
-                    }
-                    break;
-                case AL_FORMAT_QUAD16:
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
-                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
-                        ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT]);
-                        ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT]);
-                        buffer = ((ALshort*)buffer) + 4;
-                    }
-                    break;
-                case AL_FORMAT_51CHN16:
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
-                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
-                        ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT]);
-                        ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT]);
-                        ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][CENTER]     +WetBuffer[i][CENTER]);
-                        ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE]);
-                        buffer = ((ALshort*)buffer) + 6;
-                    }
-                    break;
-                case AL_FORMAT_61CHN16:
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
-                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
-                        ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][SIDE_LEFT]  +WetBuffer[i][SIDE_LEFT]);
-                        ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][SIDE_RIGHT] +WetBuffer[i][SIDE_RIGHT]);
-                        ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT]);
-                        ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT]);
-                        ((ALshort*)buffer)[6] = aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE]);
-                        buffer = ((ALshort*)buffer) + 7;
-                    }
-                    break;
-                case AL_FORMAT_71CHN16:
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
-                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
-                        ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][SIDE_LEFT]  +WetBuffer[i][SIDE_LEFT]);
-                        ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][SIDE_RIGHT] +WetBuffer[i][SIDE_RIGHT]);
-                        ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT]);
-                        ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT]);
-                        ((ALshort*)buffer)[6] = aluF2S(DryBuffer[i][CENTER]     +WetBuffer[i][CENTER]);
-                        ((ALshort*)buffer)[7] = aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE]);
-                        buffer = ((ALshort*)buffer) + 8;
-                    }
-                    break;
-
-                default:
-                    break;
-            }
-
-            size -= SamplesToDo;
+            ALSource = ALSource->next;
         }
+
+        // effect slot processing
+        while(ALEffectSlot)
+        {
+            if(ALEffectSlot->effect.type == AL_EFFECT_REVERB)
+            {
+                ALfloat *DelayBuffer = ALEffectSlot->ReverbBuffer;
+                ALuint Pos = ALEffectSlot->ReverbPos;
+                ALuint LatePos = ALEffectSlot->ReverbLatePos;
+                ALuint ReflectPos = ALEffectSlot->ReverbReflectPos;
+                ALuint Length = ALEffectSlot->ReverbLength;
+                ALfloat DecayGain = ALEffectSlot->ReverbDecayGain;
+                ALfloat DecayHFRatio = ALEffectSlot->effect.Reverb.DecayHFRatio;
+                ALfloat Gain = ALEffectSlot->effect.Reverb.Gain;
+                ALfloat ReflectGain = ALEffectSlot->effect.Reverb.ReflectionsGain;
+                ALfloat LateReverbGain = ALEffectSlot->effect.Reverb.LateReverbGain;
+                ALfloat LastDecaySample = ALEffectSlot->LastDecaySample;
+                ALfloat sample;
+
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    DelayBuffer[Pos] = ReverbBuffer[i] * Gain;
+
+                    sample = DelayBuffer[ReflectPos] * ReflectGain;
+
+                    DelayBuffer[LatePos] *= LateReverbGain;
+
+                    Pos = (Pos+1) % Length;
+                    DelayBuffer[Pos] *= DecayHFRatio;
+                    DelayBuffer[Pos] += LastDecaySample * (1.0f-DecayHFRatio);
+                    LastDecaySample = DelayBuffer[Pos];
+                    DelayBuffer[Pos] *= DecayGain;
+
+                    DelayBuffer[LatePos] += DelayBuffer[Pos];
+
+                    sample += DelayBuffer[LatePos];
+
+                    WetBuffer[i][FRONT_LEFT]  += sample;
+                    WetBuffer[i][FRONT_RIGHT] += sample;
+                    WetBuffer[i][SIDE_LEFT]   += sample;
+                    WetBuffer[i][SIDE_RIGHT]  += sample;
+                    WetBuffer[i][BACK_LEFT]   += sample;
+                    WetBuffer[i][BACK_RIGHT]  += sample;
+
+                    LatePos = (LatePos+1) % Length;
+                    ReflectPos = (ReflectPos+1) % Length;
+                }
+
+                ALEffectSlot->ReverbPos = Pos;
+                ALEffectSlot->ReverbLatePos = LatePos;
+                ALEffectSlot->ReverbReflectPos = ReflectPos;
+                ALEffectSlot->LastDecaySample = LastDecaySample;
+            }
+
+            ALEffectSlot = ALEffectSlot->next;
+        }
+
+        //Post processing loop
+        switch(format)
+        {
+            case AL_FORMAT_MONO8:
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT]+DryBuffer[i][FRONT_RIGHT]+
+                                                                WetBuffer[i][FRONT_LEFT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
+                    buffer = ((ALubyte*)buffer) + 1;
+                }
+                break;
+            case AL_FORMAT_STEREO8:
+                if(ALContext && ALContext->bs2b)
+                {
+                    for(i = 0;i < SamplesToDo;i++)
+                    {
+                        float samples[2];
+                        samples[0] = DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT];
+                        samples[1] = DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT];
+                        bs2b_cross_feed(ALContext->bs2b, samples);
+                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(samples[0])>>8)+128);
+                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(samples[1])>>8)+128);
+                        buffer = ((ALubyte*)buffer) + 2;
+                    }
+                }
+                else
+                {
+                    for(i = 0;i < SamplesToDo;i++)
+                    {
+                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
+                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
+                        buffer = ((ALubyte*)buffer) + 2;
+                    }
+                }
+                break;
+            case AL_FORMAT_QUAD8:
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
+                    ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT])>>8)+128);
+                    ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT])>>8)+128);
+                    buffer = ((ALubyte*)buffer) + 4;
+                }
+                break;
+            case AL_FORMAT_51CHN8:
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
+                    ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT])>>8)+128);
+                    ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][CENTER]     +WetBuffer[i][CENTER])>>8)+128);
+                    ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE])>>8)+128);
+                    buffer = ((ALubyte*)buffer) + 6;
+                }
+                break;
+            case AL_FORMAT_61CHN8:
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
+                    ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_LEFT]  +WetBuffer[i][SIDE_LEFT])>>8)+128);
+                    ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_RIGHT] +WetBuffer[i][SIDE_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT])>>8)+128);
+                    ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[6] = (ALubyte)((aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE])>>8)+128);
+                    buffer = ((ALubyte*)buffer) + 7;
+                }
+                break;
+            case AL_FORMAT_71CHN8:
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT])>>8)+128);
+                    ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_LEFT]  +WetBuffer[i][SIDE_LEFT])>>8)+128);
+                    ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_RIGHT] +WetBuffer[i][SIDE_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT])>>8)+128);
+                    ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[6] = (ALubyte)((aluF2S(DryBuffer[i][CENTER]     +WetBuffer[i][CENTER])>>8)+128);
+                    ((ALubyte*)buffer)[7] = (ALubyte)((aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE])>>8)+128);
+                    buffer = ((ALubyte*)buffer) + 8;
+                }
+                break;
+
+            case AL_FORMAT_MONO16:
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT]+DryBuffer[i][FRONT_RIGHT]+
+                                                    WetBuffer[i][FRONT_LEFT]+WetBuffer[i][FRONT_RIGHT]);
+                    buffer = ((ALshort*)buffer) + 1;
+                }
+                break;
+            case AL_FORMAT_STEREO16:
+                if(ALContext && ALContext->bs2b)
+                {
+                    for(i = 0;i < SamplesToDo;i++)
+                    {
+                        float samples[2];
+                        samples[0] = DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT];
+                        samples[1] = DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT];
+                        bs2b_cross_feed(ALContext->bs2b, samples);
+                        ((ALshort*)buffer)[0] = aluF2S(samples[0]);
+                        ((ALshort*)buffer)[1] = aluF2S(samples[1]);
+                        buffer = ((ALshort*)buffer) + 2;
+                    }
+                }
+                else
+                {
+                    for(i = 0;i < SamplesToDo;i++)
+                    {
+                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
+                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
+                        buffer = ((ALshort*)buffer) + 2;
+                    }
+                }
+                break;
+            case AL_FORMAT_QUAD16:
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
+                    ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
+                    ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT]);
+                    ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT]);
+                    buffer = ((ALshort*)buffer) + 4;
+                }
+                break;
+            case AL_FORMAT_51CHN16:
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
+                    ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
+                    ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT]);
+                    ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT]);
+                    ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][CENTER]     +WetBuffer[i][CENTER]);
+                    ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE]);
+                    buffer = ((ALshort*)buffer) + 6;
+                }
+                break;
+            case AL_FORMAT_61CHN16:
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
+                    ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
+                    ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][SIDE_LEFT]  +WetBuffer[i][SIDE_LEFT]);
+                    ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][SIDE_RIGHT] +WetBuffer[i][SIDE_RIGHT]);
+                    ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT]);
+                    ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT]);
+                    ((ALshort*)buffer)[6] = aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE]);
+                    buffer = ((ALshort*)buffer) + 7;
+                }
+                break;
+            case AL_FORMAT_71CHN16:
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT] +WetBuffer[i][FRONT_LEFT]);
+                    ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]+WetBuffer[i][FRONT_RIGHT]);
+                    ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][SIDE_LEFT]  +WetBuffer[i][SIDE_LEFT]);
+                    ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][SIDE_RIGHT] +WetBuffer[i][SIDE_RIGHT]);
+                    ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][BACK_LEFT]  +WetBuffer[i][BACK_LEFT]);
+                    ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][BACK_RIGHT] +WetBuffer[i][BACK_RIGHT]);
+                    ((ALshort*)buffer)[6] = aluF2S(DryBuffer[i][CENTER]     +WetBuffer[i][CENTER]);
+                    ((ALshort*)buffer)[7] = aluF2S(DryBuffer[i][LFE]        +WetBuffer[i][LFE]);
+                    buffer = ((ALshort*)buffer) + 8;
+                }
+                break;
+
+            default:
+                break;
+        }
+
+        size -= SamplesToDo;
     }
 
     ProcessContext(ALContext);

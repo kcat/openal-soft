@@ -528,6 +528,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
 
         // Release effectslot structure
         free(temp->ReverbBuffer);
+        ALTHUNK_REMOVEENTRY(temp->effectslot);
 
         memset(temp, 0, sizeof(ALeffectslot));
         free(temp);

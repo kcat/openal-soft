@@ -220,37 +220,35 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat matrix[3][3])
     memcpy(vector, result, sizeof(result));
 }
 
-static __inline ALfloat aluComputeDrySample(ALsource *source, ALfloat DryGainHF, ALfloat sample)
+static __inline ALfloat aluComputeDrySample(ALfloat DryGainHF, ALfloat sample, ALfloat LastDrySample)
 {
     if(DryGainHF < 1.0f)
     {
         if(DryGainHF > 0.0f)
         {
             sample *= DryGainHF;
-            sample += source->LastDrySample * (1.0f-DryGainHF);
+            sample += LastDrySample * (1.0f-DryGainHF);
         }
         else
             sample = 0.0f;
     }
 
-    source->LastDrySample = sample;
     return sample;
 }
 
-static __inline ALfloat aluComputeWetSample(ALsource *source, ALfloat WetGainHF, ALfloat sample)
+static __inline ALfloat aluComputeWetSample(ALfloat WetGainHF, ALfloat sample, ALfloat LastWetSample)
 {
     if(WetGainHF < 1.0f)
     {
         if(WetGainHF > 0.0f)
         {
             sample *= WetGainHF;
-            sample += source->LastWetSample * (1.0f-WetGainHF);
+            sample += LastWetSample * (1.0f-WetGainHF);
         }
         else
             sample = 0.0f;
     }
 
-    source->LastWetSample = sample;
     return sample;
 }
 
@@ -617,6 +615,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALuint BlockAlign,BufferSize;
     ALuint DataSize=0,DataPosInt=0,DataPosFrac=0;
     ALuint Channels,Frequency,ulExtraSamples;
+    ALfloat DrySample, WetSample;
     ALboolean doReverb;
     ALfloat Pitch;
     ALint Looping,increment,State;
@@ -690,6 +689,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         //Get source info
                         DataPosInt = ALSource->position;
                         DataPosFrac = ALSource->position_fraction;
+                        DrySample = ALSource->LastDrySample;
+                        WetSample = ALSource->LastWetSample;
 
                         //Compute 18.14 fixed point step
                         increment = aluF2L(Pitch*(1L<<FRACTIONBITS));
@@ -747,25 +748,25 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 ALfloat sample = (ALfloat)((ALshort)(((Data[k]*((1L<<FRACTIONBITS)-fraction))+(Data[k+1]*(fraction)))>>FRACTIONBITS));
 
                                 //Direct path final mix buffer and panning
-                                value = aluComputeDrySample(ALSource, DryGainHF, sample);
-                                DryBuffer[j][FRONT_LEFT]  += value*DrySend[FRONT_LEFT];
-                                DryBuffer[j][FRONT_RIGHT] += value*DrySend[FRONT_RIGHT];
-                                DryBuffer[j][SIDE_LEFT]   += value*DrySend[SIDE_LEFT];
-                                DryBuffer[j][SIDE_RIGHT]  += value*DrySend[SIDE_RIGHT];
-                                DryBuffer[j][BACK_LEFT]   += value*DrySend[BACK_LEFT];
-                                DryBuffer[j][BACK_RIGHT]  += value*DrySend[BACK_RIGHT];
+                                DrySample = aluComputeDrySample(DryGainHF, sample, DrySample);
+                                DryBuffer[j][FRONT_LEFT]  += DrySample*DrySend[FRONT_LEFT];
+                                DryBuffer[j][FRONT_RIGHT] += DrySample*DrySend[FRONT_RIGHT];
+                                DryBuffer[j][SIDE_LEFT]   += DrySample*DrySend[SIDE_LEFT];
+                                DryBuffer[j][SIDE_RIGHT]  += DrySample*DrySend[SIDE_RIGHT];
+                                DryBuffer[j][BACK_LEFT]   += DrySample*DrySend[BACK_LEFT];
+                                DryBuffer[j][BACK_RIGHT]  += DrySample*DrySend[BACK_RIGHT];
                                 //Room path final mix buffer and panning
-                                value = aluComputeWetSample(ALSource, WetGainHF, sample);
+                                WetSample = aluComputeWetSample(WetGainHF, sample, WetSample);
                                 if(doReverb)
-                                    ReverbBuffer[j] += value;
+                                    ReverbBuffer[j] += WetSample;
                                 else
                                 {
-                                    WetBuffer[j][FRONT_LEFT]  += value*WetSend[FRONT_LEFT];
-                                    WetBuffer[j][FRONT_RIGHT] += value*WetSend[FRONT_RIGHT];
-                                    WetBuffer[j][SIDE_LEFT]   += value*WetSend[SIDE_LEFT];
-                                    WetBuffer[j][SIDE_RIGHT]  += value*WetSend[SIDE_RIGHT];
-                                    WetBuffer[j][BACK_LEFT]   += value*WetSend[BACK_LEFT];
-                                    WetBuffer[j][BACK_RIGHT]  += value*WetSend[BACK_RIGHT];
+                                    WetBuffer[j][FRONT_LEFT]  += WetSample*WetSend[FRONT_LEFT];
+                                    WetBuffer[j][FRONT_RIGHT] += WetSample*WetSend[FRONT_RIGHT];
+                                    WetBuffer[j][SIDE_LEFT]   += WetSample*WetSend[SIDE_LEFT];
+                                    WetBuffer[j][SIDE_RIGHT]  += WetSample*WetSend[SIDE_RIGHT];
+                                    WetBuffer[j][BACK_LEFT]   += WetSample*WetSend[BACK_LEFT];
+                                    WetBuffer[j][BACK_RIGHT]  += WetSample*WetSend[BACK_RIGHT];
                                 }
                             }
                             else
@@ -831,6 +832,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         //Update source info
                         ALSource->position = DataPosInt;
                         ALSource->position_fraction = DataPosFrac;
+                        ALSource->LastDrySample = DrySample;
+                        ALSource->LastWetSample = WetSample;
                     }
 
                     //Handle looping sources

@@ -700,22 +700,20 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         {
                             if (BufferListItem->next)
                             {
-                                if(BufferListItem->next->buffer &&
-                                   ((ALbuffer*)ALTHUNK_LOOKUPENTRY(BufferListItem->next->buffer))->data)
+                                ALbuffer *NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(BufferListItem->next->buffer);
+                                if(NextBuf && NextBuf->data)
                                 {
-                                    ulExtraSamples = min(((ALbuffer*)ALTHUNK_LOOKUPENTRY(BufferListItem->next->buffer))->size, (ALint)(16*Channels));
-                                    memcpy(&Data[DataSize*Channels], ((ALbuffer*)ALTHUNK_LOOKUPENTRY(BufferListItem->next->buffer))->data, ulExtraSamples);
+                                    ulExtraSamples = min(NextBuf->size, (ALint)(16*Channels));
+                                    memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
                                 }
                             }
                             else if (ALSource->bLooping)
                             {
-                                if (ALSource->queue->buffer)
+                                ALbuffer *NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(ALSource->queue->buffer);
+                                if (NextBuf && NextBuf->data)
                                 {
-                                    if(((ALbuffer*)ALTHUNK_LOOKUPENTRY(ALSource->queue->buffer))->data)
-                                    {
-                                        ulExtraSamples = min(((ALbuffer*)ALTHUNK_LOOKUPENTRY(ALSource->queue->buffer))->size, (ALint)(16*Channels));
-                                        memcpy(&Data[DataSize*Channels], ((ALbuffer*)ALTHUNK_LOOKUPENTRY(ALSource->queue->buffer))->data, ulExtraSamples);
-                                    }
+                                    ulExtraSamples = min(NextBuf->size, (ALint)(16*Channels));
+                                    memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
                                 }
                             }
                         }

@@ -220,30 +220,14 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat matrix[3][3])
     memcpy(vector, result, sizeof(result));
 }
 
-static __inline ALfloat aluComputeDrySample(ALfloat DryGainHF, ALfloat sample, ALfloat LastDrySample)
+static __inline ALfloat aluComputeSample(ALfloat GainHF, ALfloat sample, ALfloat LastSample)
 {
-    if(DryGainHF < 1.0f)
+    if(GainHF < 1.0f)
     {
-        if(DryGainHF > 0.0f)
+        if(GainHF > 0.0f)
         {
-            sample *= DryGainHF;
-            sample += LastDrySample * (1.0f-DryGainHF);
-        }
-        else
-            sample = 0.0f;
-    }
-
-    return sample;
-}
-
-static __inline ALfloat aluComputeWetSample(ALfloat WetGainHF, ALfloat sample, ALfloat LastWetSample)
-{
-    if(WetGainHF < 1.0f)
-    {
-        if(WetGainHF > 0.0f)
-        {
-            sample *= WetGainHF;
-            sample += LastWetSample * (1.0f-WetGainHF);
+            sample *= GainHF;
+            sample += LastSample * (1.0f-GainHF);
         }
         else
             sample = 0.0f;
@@ -748,7 +732,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 ALfloat sample = (ALfloat)((ALshort)(((Data[k]*((1L<<FRACTIONBITS)-fraction))+(Data[k+1]*(fraction)))>>FRACTIONBITS));
 
                                 //Direct path final mix buffer and panning
-                                DrySample = aluComputeDrySample(DryGainHF, sample, DrySample);
+                                DrySample = aluComputeSample(DryGainHF, sample, DrySample);
                                 DryBuffer[j][FRONT_LEFT]  += DrySample*DrySend[FRONT_LEFT];
                                 DryBuffer[j][FRONT_RIGHT] += DrySample*DrySend[FRONT_RIGHT];
                                 DryBuffer[j][SIDE_LEFT]   += DrySample*DrySend[SIDE_LEFT];
@@ -756,7 +740,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 DryBuffer[j][BACK_LEFT]   += DrySample*DrySend[BACK_LEFT];
                                 DryBuffer[j][BACK_RIGHT]  += DrySample*DrySend[BACK_RIGHT];
                                 //Room path final mix buffer and panning
-                                WetSample = aluComputeWetSample(WetGainHF, sample, WetSample);
+                                WetSample = aluComputeSample(WetGainHF, sample, WetSample);
                                 if(doReverb)
                                     ReverbBuffer[j] += WetSample;
                                 else

@@ -32,6 +32,9 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
+#ifndef DSSPEAKER_7POINT1
+#define DSSPEAKER_7POINT1       7
+#endif
 
 typedef struct {
     // DirectSound Playback Device
@@ -113,6 +116,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     DSBUFFERDESC DSBDescription;
     DSoundData *pData = NULL;
     WAVEFORMATEX OutputType;
+    DWORD speakers;
     HRESULT hr;
 
     if(deviceName)
@@ -132,15 +136,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     else
         device->szDeviceName = DeviceList[0];
 
-    //Platform specific
     memset(&OutputType, 0, sizeof(WAVEFORMATEX));
-    OutputType.wFormatTag = WAVE_FORMAT_PCM;
-    OutputType.nChannels = device->Channels;
-    OutputType.wBitsPerSample = aluBytesFromFormat(device->Format) * 8;
-    OutputType.nBlockAlign = OutputType.nChannels*OutputType.wBitsPerSample/8;
-    OutputType.nSamplesPerSec = device->Frequency;
-    OutputType.nAvgBytesPerSec = OutputType.nSamplesPerSec*OutputType.nBlockAlign;
-    OutputType.cbSize = 0;
 
     //Initialise requested device
 
@@ -160,6 +156,56 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         hr = IDirectSound_Initialize(pData->lpDS, NULL);
     if(SUCCEEDED(hr))
         hr = IDirectSound_SetCooperativeLevel(pData->lpDS, GetForegroundWindow(), DSSCL_PRIORITY);
+
+    if(SUCCEEDED(hr))
+        hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
+    if(SUCCEEDED(hr))
+    {
+        speakers = DSSPEAKER_CONFIG(speakers);
+        if(speakers == DSSPEAKER_MONO)
+        {
+            if(aluBytesFromFormat(device->Format) == 8)
+                device->Format = AL_FORMAT_MONO8;
+            else
+                device->Format = AL_FORMAT_MONO16;
+        }
+        else if(speakers == DSSPEAKER_STEREO)
+        {
+            if(aluBytesFromFormat(device->Format) == 8)
+                device->Format = AL_FORMAT_STEREO8;
+            else
+                device->Format = AL_FORMAT_STEREO16;
+        }
+        else if(speakers == DSSPEAKER_QUAD)
+        {
+            if(aluBytesFromFormat(device->Format) == 8)
+                device->Format = AL_FORMAT_QUAD8;
+            else
+                device->Format = AL_FORMAT_QUAD16;
+        }
+        else if(speakers == DSSPEAKER_5POINT1)
+        {
+            if(aluBytesFromFormat(device->Format) == 8)
+                device->Format = AL_FORMAT_51CHN8;
+            else
+                device->Format = AL_FORMAT_51CHN16;
+        }
+        else if(speakers == DSSPEAKER_7POINT1)
+        {
+            if(aluBytesFromFormat(device->Format) == 8)
+                device->Format = AL_FORMAT_71CHN8;
+            else
+                device->Format = AL_FORMAT_71CHN16;
+        }
+
+        OutputType.wFormatTag = WAVE_FORMAT_PCM;
+        OutputType.nChannels = device->Channels;
+        OutputType.wBitsPerSample = aluBytesFromFormat(device->Format) * 8;
+        OutputType.nBlockAlign = OutputType.nChannels*OutputType.wBitsPerSample/8;
+        OutputType.nSamplesPerSec = device->Frequency;
+        OutputType.nAvgBytesPerSec = OutputType.nSamplesPerSec*OutputType.nBlockAlign;
+        OutputType.cbSize = 0;
+    }
 
     if(SUCCEEDED(hr))
     {

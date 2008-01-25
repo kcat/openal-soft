@@ -53,8 +53,8 @@ static ALuint DSoundProc(ALvoid *ptr)
     DSoundData *pData = (DSoundData*)pDevice->ExtraData;
     DWORD LastCursor = 0;
     DWORD PlayCursor;
-    VOID *WritePtr;
-    DWORD WriteCnt;
+    VOID *WritePtr1, *WritePtr2;
+    DWORD WriteCnt1,  WriteCnt2;
     DWORD avail;
     HRESULT err;
 
@@ -71,8 +71,9 @@ static ALuint DSoundProc(ALvoid *ptr)
         }
 
         // Lock output buffer
-        WriteCnt = 0;
-        err = IDirectSoundBuffer_Lock(pData->DSsbuffer, LastCursor, avail, &WritePtr, &WriteCnt, NULL, NULL, 0);
+        WriteCnt1 = 0;
+        WriteCnt2 = 0;
+        err = IDirectSoundBuffer_Lock(pData->DSsbuffer, LastCursor, avail, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
 
         // If the buffer is lost, restore it, play and lock
         if(err == DSERR_BUFFERLOST)
@@ -81,7 +82,7 @@ static ALuint DSoundProc(ALvoid *ptr)
             if(SUCCEEDED(err))
                 err = IDirectSoundBuffer_Play(pData->DSsbuffer, 0, 0, DSBPLAY_LOOPING);
             if(SUCCEEDED(err))
-                err = IDirectSoundBuffer_Lock(pData->DSsbuffer, LastCursor, avail, (LPVOID*)&WritePtr, &WriteCnt, NULL, NULL, 0);
+                err = IDirectSoundBuffer_Lock(pData->DSsbuffer, LastCursor, avail, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
         }
 
         // Successfully locked the output buffer
@@ -89,17 +90,18 @@ static ALuint DSoundProc(ALvoid *ptr)
         {
             // If we have an active context, mix data directly into output buffer otherwise fill with silence
             SuspendContext(NULL);
-            aluMixData(pDevice->Context, WritePtr, WriteCnt, pDevice->Format);
+            aluMixData(pDevice->Context, WritePtr1, WriteCnt1, pDevice->Format);
+            aluMixData(pDevice->Context, WritePtr2, WriteCnt2, pDevice->Format);
             ProcessContext(NULL);
 
             // Unlock output buffer only when successfully locked
-            IDirectSoundBuffer_Unlock(pData->DSsbuffer, WritePtr, WriteCnt, NULL, 0);
+            IDirectSoundBuffer_Unlock(pData->DSsbuffer, WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
         }
         else
             AL_PRINT("Buffer lock error: %#lx\n", err);
 
         // Update old write cursor location
-        LastCursor += WriteCnt;
+        LastCursor += WriteCnt1+WriteCnt2;
         LastCursor %= pDevice->UpdateFreq*pDevice->FrameSize;
     }
 

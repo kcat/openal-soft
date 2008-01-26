@@ -165,7 +165,6 @@ struct ALCdevice_struct
     ALuint       Frequency;
     ALuint       UpdateFreq;
     ALuint       FrameSize;
-    ALuint       Channels;
     ALenum       Format;
 
     ALCchar      *szDeviceName;

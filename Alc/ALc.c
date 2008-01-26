@@ -430,9 +430,8 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
 
             pDevice->Frequency = frequency;
             pDevice->Format = format;
-            pDevice->Channels = aluChannelsFromFormat(format);
             pDevice->FrameSize = aluBytesFromFormat(format) *
-                                 pDevice->Channels;
+                                 aluChannelsFromFormat(format);
 
             for(i = 0;BackendList[i].Init;i++)
             {
@@ -1141,16 +1140,14 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         if(fmt[0])
             device->Format = alGetEnumValue(fmt);
 
-        device->Channels = aluChannelsFromFormat(device->Format);
-        if(!device->Channels)
+        if(!aluChannelsFromFormat(device->Format))
         {
             device->Format = AL_FORMAT_STEREO16;
-            device->Channels = 2;
             device->FrameSize = 4;
         }
         else
             device->FrameSize = aluBytesFromFormat(device->Format) *
-                                device->Channels;
+                                aluChannelsFromFormat(device->Format);
 
         device->UpdateFreq = GetConfigValueInt(NULL, "refresh", 8192);
         if((ALint)device->UpdateFreq <= 0)

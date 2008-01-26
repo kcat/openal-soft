@@ -209,8 +209,8 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
 
     memset(&wfexCaptureFormat, 0, sizeof(WAVEFORMATEX));
     wfexCaptureFormat.wFormatTag = WAVE_FORMAT_PCM;
-    wfexCaptureFormat.nChannels = pDevice->Channels;
-    wfexCaptureFormat.wBitsPerSample = pDevice->FrameSize / pDevice->Channels * 8;
+    wfexCaptureFormat.nChannels = aluChannelsFromFormat(pDevice->Format);
+    wfexCaptureFormat.wBitsPerSample = aluBytesFromFormat(pDevice->Format) * 8;
     wfexCaptureFormat.nBlockAlign = pDevice->FrameSize;
     wfexCaptureFormat.nSamplesPerSec = frequency;
     wfexCaptureFormat.nAvgBytesPerSec = wfexCaptureFormat.nSamplesPerSec *

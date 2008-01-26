@@ -195,7 +195,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     periods = GetConfigValueInt("oss", "periods", 4);
     if((int)periods <= 0)
         periods = 4;
-    numChannels = device->Channels;
+    numChannels = aluChannelsFromFormat(device->Format);
     ossSpeed = device->Frequency;
     log2FragmentSize = log2i(device->UpdateFreq * device->FrameSize / periods);
 
@@ -220,9 +220,9 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
 
     device->Frequency = ossSpeed;
 
-    if((int)device->Channels != numChannels)
+    if((int)aluChannelsFromFormat(device->Format) != numChannels)
     {
-        AL_PRINT("Could not set %d channels, got %d instead\n", device->Channels, numChannels);
+        AL_PRINT("Could not set %d channels, got %d instead\n", aluChannelsFromFormat(device->Format), numChannels);
         close(data->fd);
         free(data);
         return ALC_FALSE;
@@ -319,7 +319,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
     }
 
     periods = 4;
-    numChannels = device->Channels;
+    numChannels = aluChannelsFromFormat(device->Format);
     ossSpeed = frequency;
     log2FragmentSize = log2i(device->UpdateFreq * device->FrameSize / periods);
 
@@ -342,49 +342,18 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
     }
 #undef ok
 
-    device->Channels = numChannels;
-    device->Frequency = ossSpeed;
-    device->Format = 0;
-    if(ossFormat == AFMT_U8)
+    if((int)aluChannelsFromFormat(device->Format) != numChannels)
     {
-        if(device->Channels == 1)
-        {
-            device->Format = AL_FORMAT_MONO8;
-            device->FrameSize = 1;
-        }
-        else if(device->Channels == 2)
-        {
-            device->Format = AL_FORMAT_STEREO8;
-            device->FrameSize = 2;
-        }
-        else if(device->Channels == 4)
-        {
-            device->Format = AL_FORMAT_QUAD8;
-            device->FrameSize = 4;
-        }
-    }
-    else if(ossFormat == AFMT_S16_NE)
-    {
-        if(device->Channels == 1)
-        {
-            device->Format = AL_FORMAT_MONO16;
-            device->FrameSize = 2;
-        }
-        else if(device->Channels == 2)
-        {
-            device->Format = AL_FORMAT_STEREO16;
-            device->FrameSize = 4;
-        }
-        else if(device->Channels == 4)
-        {
-            device->Format = AL_FORMAT_QUAD16;
-            device->FrameSize = 8;
-        }
+        AL_PRINT("Could not set %d channels, got %d instead\n", aluChannelsFromFormat(device->Format), numChannels);
+        close(data->fd);
+        free(data);
+        return ALC_FALSE;
     }
 
-    if(!device->Format)
+    if(!((ossFormat == AFMT_U8 && aluBytesFromFormat(device->Format) == 1) ||
+         (ossFormat == AFMT_S16_NE && aluBytesFromFormat(device->Format) == 2)))
     {
-        AL_PRINT("returned unknown format: %#x %d!\n", ossFormat, numChannels);
+        AL_PRINT("Could not set %d-bit input, got format %#x\n", aluBytesFromFormat(device->Format)*8, ossFormat);
         close(data->fd);
         free(data);
         return ALC_FALSE;

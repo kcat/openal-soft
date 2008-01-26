@@ -375,7 +375,7 @@ open_alsa:
          /* set format (implicitly sets sample bits) */
          ok(psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format), "set format") &&
          /* set channels (implicitly sets frame bits) */
-         ok(psnd_pcm_hw_params_set_channels(data->pcmHandle, p, device->Channels), "set channels") &&
+         ok(psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(device->Format)), "set channels") &&
          /* set periods (implicitly constrains period/buffer parameters) */
          (!periods || ok(psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL), "set periods near")) &&
          /* set rate (implicitly constrains period/buffer parameters) */
@@ -551,7 +551,7 @@ open_alsa:
          /* set format (implicitly sets sample bits) */
          ok(psnd_pcm_hw_params_set_format(data->pcmHandle, p, alsaFormat), "set format") &&
          /* set channels (implicitly sets frame bits) */
-         ok(psnd_pcm_hw_params_set_channels(data->pcmHandle, p, pDevice->Channels), "set channels") &&
+         ok(psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(pDevice->Format)), "set channels") &&
          /* set rate (implicitly constrains period/buffer parameters) */
          ok(psnd_pcm_hw_params_set_rate(data->pcmHandle, p, frequency, 0), "set rate") &&
          /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */

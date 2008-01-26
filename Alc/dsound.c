@@ -199,7 +199,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         }
 
         OutputType.wFormatTag = WAVE_FORMAT_PCM;
-        OutputType.nChannels = device->Channels;
+        OutputType.nChannels = aluChannelsFromFormat(device->Format);
         OutputType.wBitsPerSample = aluBytesFromFormat(device->Format) * 8;
         OutputType.nBlockAlign = OutputType.nChannels*OutputType.wBitsPerSample/8;
         OutputType.nSamplesPerSec = device->Frequency;

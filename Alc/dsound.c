@@ -197,6 +197,8 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
             else
                 device->Format = AL_FORMAT_71CHN16;
         }
+        device->FrameSize = aluBytesFromFormat(device->Format) *
+                            aluChannelsFromFormat(device->Format);
 
         OutputType.wFormatTag = WAVE_FORMAT_PCM;
         OutputType.nChannels = aluChannelsFromFormat(device->Format);

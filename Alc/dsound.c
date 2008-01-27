@@ -164,35 +164,35 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         speakers = DSSPEAKER_CONFIG(speakers);
         if(speakers == DSSPEAKER_MONO)
         {
-            if(aluBytesFromFormat(device->Format) == 8)
+            if(aluBytesFromFormat(device->Format) == 1)
                 device->Format = AL_FORMAT_MONO8;
             else
                 device->Format = AL_FORMAT_MONO16;
         }
         else if(speakers == DSSPEAKER_STEREO)
         {
-            if(aluBytesFromFormat(device->Format) == 8)
+            if(aluBytesFromFormat(device->Format) == 1)
                 device->Format = AL_FORMAT_STEREO8;
             else
                 device->Format = AL_FORMAT_STEREO16;
         }
         else if(speakers == DSSPEAKER_QUAD)
         {
-            if(aluBytesFromFormat(device->Format) == 8)
+            if(aluBytesFromFormat(device->Format) == 1)
                 device->Format = AL_FORMAT_QUAD8;
             else
                 device->Format = AL_FORMAT_QUAD16;
         }
         else if(speakers == DSSPEAKER_5POINT1)
         {
-            if(aluBytesFromFormat(device->Format) == 8)
+            if(aluBytesFromFormat(device->Format) == 1)
                 device->Format = AL_FORMAT_51CHN8;
             else
                 device->Format = AL_FORMAT_51CHN16;
         }
         else if(speakers == DSSPEAKER_7POINT1)
         {
-            if(aluBytesFromFormat(device->Format) == 8)
+            if(aluBytesFromFormat(device->Format) == 1)
                 device->Format = AL_FORMAT_71CHN8;
             else
                 device->Format = AL_FORMAT_71CHN16;

@@ -58,14 +58,17 @@ static ALuint DSoundProc(ALvoid *ptr)
     DWORD PlayCursor;
     VOID *WritePtr1, *WritePtr2;
     DWORD WriteCnt1,  WriteCnt2;
+    DWORD BufferSize;
     DWORD avail;
     HRESULT err;
+
+    BufferSize = pDevice->UpdateFreq*pDevice->FrameSize;
 
     while(!pData->killNow)
     {
         // Get current play and write cursors
         IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &PlayCursor, NULL);
-        avail = (PlayCursor-LastCursor) % (pDevice->UpdateFreq*pDevice->FrameSize);
+        avail = (PlayCursor-LastCursor+BufferSize) % BufferSize;
 
         if(avail == 0)
         {
@@ -105,7 +108,7 @@ static ALuint DSoundProc(ALvoid *ptr)
 
         // Update old write cursor location
         LastCursor += WriteCnt1+WriteCnt2;
-        LastCursor %= pDevice->UpdateFreq*pDevice->FrameSize;
+        LastCursor %= BufferSize;
     }
 
     return 0;

@@ -20,12 +20,14 @@
 
 #include "config.h"
 
+#define INITGUID
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
 
 #include <windows.h>
 #include <mmsystem.h>
+#include <mmreg.h>
 #include <dsound.h>
 
 #include "alMain.h"
@@ -35,6 +37,8 @@
 #ifndef DSSPEAKER_7POINT1
 #define DSSPEAKER_7POINT1       7
 #endif
+
+DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 
 typedef struct {
     // DirectSound Playback Device
@@ -118,7 +122,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
 {
     DSBUFFERDESC DSBDescription;
     DSoundData *pData = NULL;
-    WAVEFORMATEX OutputType;
+    WAVEFORMATEXTENSIBLE OutputType;
     DWORD speakers;
     HRESULT hr;
 
@@ -139,7 +143,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     else
         device->szDeviceName = DeviceList[0];
 
-    memset(&OutputType, 0, sizeof(WAVEFORMATEX));
+    memset(&OutputType, 0, sizeof(OutputType));
 
     //Initialise requested device
 
@@ -185,6 +189,10 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
                 device->Format = AL_FORMAT_QUAD8;
             else
                 device->Format = AL_FORMAT_QUAD16;
+            OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                       SPEAKER_FRONT_RIGHT |
+                                       SPEAKER_BACK_LEFT |
+                                       SPEAKER_BACK_RIGHT;
         }
         else if(speakers == DSSPEAKER_5POINT1)
         {
@@ -192,6 +200,12 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
                 device->Format = AL_FORMAT_51CHN8;
             else
                 device->Format = AL_FORMAT_51CHN16;
+            OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                       SPEAKER_FRONT_RIGHT |
+                                       SPEAKER_FRONT_CENTER |
+                                       SPEAKER_LOW_FREQUENCY |
+                                       SPEAKER_BACK_LEFT |
+                                       SPEAKER_BACK_RIGHT;
         }
         else if(speakers == DSSPEAKER_7POINT1)
         {
@@ -199,28 +213,46 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
                 device->Format = AL_FORMAT_71CHN8;
             else
                 device->Format = AL_FORMAT_71CHN16;
+            OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                       SPEAKER_FRONT_RIGHT |
+                                       SPEAKER_FRONT_CENTER |
+                                       SPEAKER_LOW_FREQUENCY |
+                                       SPEAKER_BACK_LEFT |
+                                       SPEAKER_BACK_RIGHT |
+                                       SPEAKER_SIDE_LEFT |
+                                       SPEAKER_SIDE_RIGHT;
         }
         device->FrameSize = aluBytesFromFormat(device->Format) *
                             aluChannelsFromFormat(device->Format);
 
-        OutputType.wFormatTag = WAVE_FORMAT_PCM;
-        OutputType.nChannels = aluChannelsFromFormat(device->Format);
-        OutputType.wBitsPerSample = aluBytesFromFormat(device->Format) * 8;
-        OutputType.nBlockAlign = OutputType.nChannels*OutputType.wBitsPerSample/8;
-        OutputType.nSamplesPerSec = device->Frequency;
-        OutputType.nAvgBytesPerSec = OutputType.nSamplesPerSec*OutputType.nBlockAlign;
-        OutputType.cbSize = 0;
+        OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
+        OutputType.Format.nChannels = aluChannelsFromFormat(device->Format);
+        OutputType.Format.wBitsPerSample = aluBytesFromFormat(device->Format) * 8;
+        OutputType.Format.nBlockAlign = OutputType.Format.nChannels*OutputType.Format.wBitsPerSample/8;
+        OutputType.Format.nSamplesPerSec = device->Frequency;
+        OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec*OutputType.Format.nBlockAlign;
+        OutputType.Format.cbSize = 0;
     }
 
-    if(SUCCEEDED(hr))
+    if(OutputType.Format.nChannels > 2)
     {
-        memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
-        DSBDescription.dwSize=sizeof(DSBUFFERDESC);
-        DSBDescription.dwFlags=DSBCAPS_PRIMARYBUFFER;
-        hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSpbuffer, NULL);
+        OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+        OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+        OutputType.Format.cbSize = 22;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
     }
-    if(SUCCEEDED(hr))
-        hr = IDirectSoundBuffer_SetFormat(pData->DSpbuffer,&OutputType);
+    else
+    {
+        if(SUCCEEDED(hr))
+        {
+            memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
+            DSBDescription.dwSize=sizeof(DSBUFFERDESC);
+            DSBDescription.dwFlags=DSBCAPS_PRIMARYBUFFER;
+            hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSpbuffer, NULL);
+        }
+        if(SUCCEEDED(hr))
+            hr = IDirectSoundBuffer_SetFormat(pData->DSpbuffer,&OutputType.Format);
+    }
 
     if(SUCCEEDED(hr))
     {
@@ -228,7 +260,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
         DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;
         DSBDescription.dwBufferBytes=device->UpdateFreq * device->FrameSize;
-        DSBDescription.lpwfxFormat=&OutputType;
+        DSBDescription.lpwfxFormat=&OutputType.Format;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
     }
 
@@ -264,7 +296,8 @@ static void DSoundClosePlayback(ALCdevice *device)
     StopThread(pData->thread);
 
     IDirectSoundBuffer_Release(pData->DSsbuffer);
-    IDirectSoundBuffer_Release(pData->DSpbuffer);
+    if (pData->DSpbuffer)
+        IDirectSoundBuffer_Release(pData->DSpbuffer);
     IDirectSound_Release(pData->lpDS);
 
     //Deinit COM

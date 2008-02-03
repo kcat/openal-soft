@@ -65,7 +65,7 @@ static void CALLBACK WaveInProc(HWAVEIN hDevice,UINT uMsg,DWORD_PTR dwInstance,D
     (void)hDevice;
     (void)dwParam2;
 
-    if ((uMsg==WIM_DATA) && (pDevice))
+    if ((uMsg==WIM_DATA))
     {
         // Decrement number of buffers in use
         pData->lWaveInBuffersCommitted--;
@@ -228,10 +228,6 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     if (pData->hWaveInThreadEvent == NULL)
         goto failure;
 
-    pData->hWaveInThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CaptureThreadProc, (LPVOID)pDevice, 0, &pData->ulWaveInThreadID);
-    if (pData->hWaveInThread == NULL)
-        goto failure;
-
     // Allocate circular memory buffer for the captured audio
     pData->ulCapturedDataSize = SampleSize * wfexCaptureFormat.nBlockAlign;
 
@@ -266,15 +262,32 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     pData->ulWriteCapturedDataPos = 0;
 
     pDevice->ExtraData = pData;
+
+    pData->hWaveInThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CaptureThreadProc, (LPVOID)pDevice, 0, &pData->ulWaveInThreadID);
+    if (pData->hWaveInThread == NULL)
+        goto failure;
+
     return ALC_TRUE;
 
 failure:
-    if (pData->hWaveInThreadEvent)
-        CloseHandle(pData->hWaveInThreadEvent);
+    for (i=0;i<4;i++)
+    {
+        if(pData->WaveInBuffer[i].lpData)
+        {
+            waveInUnprepareHeader(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
+            free(pData->WaveInBuffer[i].lpData);
+        }
+    }
+
+    free(pData->pCapturedSampleData);
+    if(pData->hWaveInHandle)
+        waveInClose(pData->hWaveInHandle);
+    if(pData->hWaveInThread)
+        CloseHandle(pData->hWaveInThread);
     if (pData->hWaveInHdrEvent)
         CloseHandle(pData->hWaveInHdrEvent);
-    if (pData->hWaveInHandle)
-        waveInClose(pData->hWaveInHandle);
+    if (pData->hWaveInThreadEvent)
+        CloseHandle(pData->hWaveInThreadEvent);
 
     free(pData);
     return ALC_FALSE;

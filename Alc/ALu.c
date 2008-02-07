@@ -82,6 +82,8 @@ enum {
     OUTPUTCHANNELS
 };
 
+ALboolean DuplicateStereo = AL_FALSE;
+
 /* NOTE: The AL_FORMAT_REAR* enums aren't handled here be cause they're
  *       converted to AL_FORMAT_QUAD* when loaded */
 __inline ALuint aluBytesFromFormat(ALenum format)
@@ -752,14 +754,15 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         }
                         else
                         {
+                            ALfloat samp1, samp2;
                             //First order interpolator (front left)
-                            value = (ALfloat)((ALshort)(((Data[k*Channels  ]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels  ]*(fraction)))>>FRACTIONBITS));
-                            DryBuffer[j][FRONT_LEFT] += value*DrySend[FRONT_LEFT];
-                            WetBuffer[j][FRONT_LEFT] += value*WetSend[FRONT_LEFT];
+                            samp1 = (ALfloat)((ALshort)(((Data[k*Channels  ]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels  ]*(fraction)))>>FRACTIONBITS));
+                            DryBuffer[j][FRONT_LEFT] += samp1*DrySend[FRONT_LEFT];
+                            WetBuffer[j][FRONT_LEFT] += samp1*WetSend[FRONT_LEFT];
                             //First order interpolator (front right)
-                            value = (ALfloat)((ALshort)(((Data[k*Channels+1]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+1]*(fraction)))>>FRACTIONBITS));
-                            DryBuffer[j][FRONT_RIGHT] += value*DrySend[FRONT_RIGHT];
-                            WetBuffer[j][FRONT_RIGHT] += value*WetSend[FRONT_RIGHT];
+                            samp2 = (ALfloat)((ALshort)(((Data[k*Channels+1]*((1L<<FRACTIONBITS)-fraction))+(Data[(k+1)*Channels+1]*(fraction)))>>FRACTIONBITS));
+                            DryBuffer[j][FRONT_RIGHT] += samp2*DrySend[FRONT_RIGHT];
+                            WetBuffer[j][FRONT_RIGHT] += samp2*WetSend[FRONT_RIGHT];
                             if(Channels >= 4)
                             {
                                 int i = 2;
@@ -802,6 +805,14 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                     WetBuffer[j][SIDE_RIGHT] += value*WetSend[SIDE_RIGHT];
                                     i++;
                                 }
+                            }
+                            else if(DuplicateStereo)
+                            {
+                                //Duplicate stereo channels on the back speakers
+                                DryBuffer[j][BACK_LEFT] += samp1*DrySend[BACK_LEFT];
+                                WetBuffer[j][BACK_LEFT] += samp1*WetSend[BACK_LEFT];
+                                DryBuffer[j][BACK_RIGHT] += samp2*DrySend[BACK_RIGHT];
+                                WetBuffer[j][BACK_RIGHT] += samp2*WetSend[BACK_RIGHT];
                             }
                         }
                         DataPosFrac += increment;

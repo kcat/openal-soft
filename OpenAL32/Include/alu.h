@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+extern ALboolean DuplicateStereo;
+
 __inline ALuint aluBytesFromFormat(ALenum format);
 __inline ALuint aluChannelsFromFormat(ALenum format);
 ALvoid aluMixData(ALCcontext *context,ALvoid *buffer,ALsizei size,ALenum format);

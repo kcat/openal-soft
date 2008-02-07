@@ -320,6 +320,7 @@ INSTALL(TARGETS ${LIBNAME}
 )
 INSTALL(FILES include/AL/al.h
               include/AL/alc.h
+              include/AL/alext.h
         DESTINATION include/AL
 )
 

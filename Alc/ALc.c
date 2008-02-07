@@ -203,6 +203,8 @@ static void InitAL(void)
         int i;
         const char *devs, *str;
 
+        done = 1;
+
         InitializeCriticalSection(&_alMutex);
         ALTHUNK_INIT();
         ReadALConfig();
@@ -249,7 +251,6 @@ static void InitAL(void)
 
         for(i = 0;BackendList[i].Init;i++)
             BackendList[i].Init(&BackendList[i].Funcs);
-        done = 1;
 
         str = GetConfigValue(NULL, "stereodup", "false");
         DuplicateStereo = (strcasecmp(str, "true") == 0 ||

@@ -102,7 +102,7 @@ MAKE_FUNC(snd_card_next);
 
 static DevMap allDevNameMap[MAX_ALL_DEVICES];
 static ALCchar *alsaDeviceList[MAX_DEVICES];
-static ALCchar *alsaCaptureDeviceList[MAX_DEVICES];
+static DevMap allCaptureDevNameMap[MAX_ALL_DEVICES];
 
 static int xrun_recovery(snd_pcm_t *handle, int err)
 {
@@ -489,21 +489,21 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     {
         size_t idx;
 
-        for(idx = 0;idx < MAX_DEVICES;idx++)
+        for(idx = 0;idx < MAX_ALL_DEVICES;idx++)
         {
-            if(alsaCaptureDeviceList[idx] &&
-               strcmp(deviceName, alsaCaptureDeviceList[idx]) == 0)
+            if(allCaptureDevNameMap[idx].name &&
+               strcmp(deviceName, allCaptureDevNameMap[idx].name) == 0)
             {
-                pDevice->szDeviceName = alsaCaptureDeviceList[idx];
+                pDevice->szDeviceName = allCaptureDevNameMap[idx].name;
                 if(idx > 0)
-                    sprintf(driver, "hw:%zd,0", idx-1);
+                    sprintf(driver, "hw:%d,%d", allCaptureDevNameMap[idx].card, allCaptureDevNameMap[idx].dev);
                 goto open_alsa;
             }
         }
         return ALC_FALSE;
     }
     else
-        pDevice->szDeviceName = alsaCaptureDeviceList[0];
+        pDevice->szDeviceName = allCaptureDevNameMap[0].name;
 
 open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -847,7 +847,7 @@ next_card:
         return;
     }
 
-    alsaCaptureDeviceList[0] = AppendCaptureDeviceList("ALSA Capture on default");
+    allCaptureDevNameMap[0].name = AppendCaptureDeviceList("ALSA Capture on default");
 
     while (card >= 0) {
         sprintf(name, "hw:%d", card);
@@ -858,11 +858,34 @@ next_card:
         if (err >= 0 && (err = psnd_ctl_card_info(handle, info)) < 0) {
             AL_PRINT("control hardware info (%i): %s\n", card, psnd_strerror(err));
         }
-        else if (err >= 0 && card < MAX_DEVICES-1)
+        else if (err >= 0)
         {
-            snprintf(name, sizeof(name), "ALSA Capture on %s",
-                     psnd_ctl_card_info_get_name(info));
-            alsaCaptureDeviceList[card+1] = AppendCaptureDeviceList(name);
+            dev = -1;
+            while (idx < MAX_ALL_DEVICES) {
+                const char *cname, *dname;
+
+                if (psnd_ctl_pcm_next_device(handle, &dev)<0)
+                    AL_PRINT("snd_ctl_pcm_next_device failed\n");
+                if (dev < 0)
+                    break;
+                psnd_pcm_info_set_device(pcminfo, dev);
+                psnd_pcm_info_set_subdevice(pcminfo, 0);
+                psnd_pcm_info_set_stream(pcminfo, stream);
+                if ((err = psnd_ctl_pcm_info(handle, pcminfo)) < 0) {
+                    if (err != -ENOENT)
+                        AL_PRINT("control digital audio info (%i): %s\n", card, psnd_strerror(err));
+                    continue;
+                }
+
+                cname = psnd_ctl_card_info_get_name(info);
+                dname = psnd_pcm_info_get_name(pcminfo);
+                snprintf(name, sizeof(name), "ALSA Capture on %s [%s]",
+                         cname, dname);
+                allDevNameMap[idx].name = AppendCaptureDeviceList(name);
+                allDevNameMap[idx].card = card;
+                allDevNameMap[idx].dev = dev;
+                idx++;
+            }
         }
         if(handle) psnd_ctl_close(handle);
         if(psnd_card_next(&card) < 0) {

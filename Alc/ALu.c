@@ -162,24 +162,12 @@ __inline ALuint aluChannelsFromFormat(ALenum format)
     }
 }
 
-static __inline ALint aluF2L(ALfloat Value)
-{
-#if 0
-    if(sizeof(ALint) == 4 && sizeof(double) == 8)
-    {
-        double temp;
-        temp = Value + (((65536.0*65536.0*16.0)+(65536.0*65536.0*8.0))*65536.0);
-        return *((ALint*)&temp);
-    }
-#endif
-    return (ALint)Value;
-}
 
 static __inline ALshort aluF2S(ALfloat Value)
 {
     ALint i;
 
-    i = aluF2L(Value);
+    i = (ALint)Value;
     i = __min( 32767, i);
     i = __max(-32768, i);
     return ((ALshort)i);
@@ -678,7 +666,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     WetSample = ALSource->LastWetSample;
 
                     //Compute 18.14 fixed point step
-                    increment = aluF2L(Pitch*(1L<<FRACTIONBITS));
+                    increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
                     if(increment > (MAX_PITCH<<FRACTIONBITS))
                         increment = (MAX_PITCH<<FRACTIONBITS);
 

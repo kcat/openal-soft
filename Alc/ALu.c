@@ -202,8 +202,8 @@ static __inline ALvoid aluNormalize(ALfloat *inVector)
 {
     ALfloat length, inverse_length;
 
-    length = (ALfloat)aluSqrt(aluDotproduct(inVector, inVector));
-    if(length != 0)
+    length = aluSqrt(aluDotproduct(inVector, inVector));
+    if(length != 0.0f)
     {
         inverse_length = 1.0f/length;
         inVector[0] *= inverse_length;

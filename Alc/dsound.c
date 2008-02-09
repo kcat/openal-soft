@@ -161,13 +161,8 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         return ALC_FALSE;
     }
 
-    //Init COM
-    CoInitialize(NULL);
-
     //DirectSound Init code
-    hr = CoCreateInstance(&CLSID_DirectSound, NULL, CLSCTX_INPROC_SERVER, &IID_IDirectSound, (LPVOID*)&pData->lpDS);
-    if(SUCCEEDED(hr))
-        hr = IDirectSound_Initialize(pData->lpDS, guid);
+    hr = DirectSoundCreate(guid, &pData->lpDS, NULL);
     if(SUCCEEDED(hr))
         hr = IDirectSound_SetCooperativeLevel(pData->lpDS, GetForegroundWindow(), DSSCL_PRIORITY);
 
@@ -306,9 +301,6 @@ static void DSoundClosePlayback(ALCdevice *device)
     if (pData->DSpbuffer)
         IDirectSoundBuffer_Release(pData->DSpbuffer);
     IDirectSound_Release(pData->lpDS);
-
-    //Deinit COM
-    CoUninitialize();
 
     free(pData);
     device->ExtraData = NULL;

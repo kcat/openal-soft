@@ -247,25 +247,12 @@ ENDIF()
 
 # Check DSound/MMSystem backend
 IF(HAVE_WINDOWS_H)
-    SET(CMAKE_REQUIRED_LIBRARIES ole32)
-    CHECK_C_SOURCE_COMPILES("int main() {return 0;}" HAVE_LIBOLE32)
-    SET(CMAKE_REQUIRED_LIBRARIES "")
-#    CHECK_LIBRARY_EXISTS(ole32 CoInitialize "" HAVE_LIBOLE32)
-    IF(HAVE_LIBOLE32)
-        SET(EXTRA_LIBS ole32 ${EXTRA_LIBS})
-    ENDIF()
-
     IF(DSOUND)
         CHECK_INCLUDE_FILE(dsound.h HAVE_DSOUND_H)
         IF(HAVE_DSOUND_H)
             SET(HAVE_DSOUND 1)
             SET(ALC_OBJS  ${ALC_OBJS} Alc/dsound.c)
             SET(BACKENDS  "${BACKENDS} DirectSound,")
-
-            CHECK_LIBRARY_EXISTS(dxguid IID_IDirectSound "" HAVE_LIBDXGUID)
-            IF(HAVE_LIBDXGUID)
-                SET(EXTRA_LIBS dxguid ${EXTRA_LIBS})
-            ENDIF()
 
             SET(CMAKE_REQUIRED_LIBRARIES dsound)
             CHECK_C_SOURCE_COMPILES("int main() {return 0;}" HAVE_LIBDSOUND)

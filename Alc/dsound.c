@@ -51,7 +51,11 @@ typedef struct {
 } DSoundData;
 
 
-static ALCchar *DeviceList[16];
+typedef struct {
+    ALCchar *name;
+    GUID guid;
+} DevMap;
+static DevMap DeviceList[16];
 
 
 static ALuint DSoundProc(ALvoid *ptr)
@@ -123,25 +127,28 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     DSBUFFERDESC DSBDescription;
     DSoundData *pData = NULL;
     WAVEFORMATEXTENSIBLE OutputType;
+    LPGUID guid = NULL;
     DWORD speakers;
     HRESULT hr;
 
     if(deviceName)
     {
         int i;
-        for(i = 0;DeviceList[i];i++)
+        for(i = 0;DeviceList[i].name;i++)
         {
-            if(strcmp(deviceName, DeviceList[i]) == 0)
+            if(strcmp(deviceName, DeviceList[i].name) == 0)
             {
-                device->szDeviceName = DeviceList[i];
+                device->szDeviceName = DeviceList[i].name;
+                if(i > 0)
+                    guid = &DeviceList[i].guid;
                 break;
             }
         }
-        if(!DeviceList[i])
+        if(!DeviceList[i].name)
             return ALC_FALSE;
     }
     else
-        device->szDeviceName = DeviceList[0];
+        device->szDeviceName = DeviceList[0].name;
 
     memset(&OutputType, 0, sizeof(OutputType));
 
@@ -160,7 +167,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     //DirectSound Init code
     hr = CoCreateInstance(&CLSID_DirectSound, NULL, CLSCTX_INPROC_SERVER, &IID_IDirectSound, (LPVOID*)&pData->lpDS);
     if(SUCCEEDED(hr))
-        hr = IDirectSound_Initialize(pData->lpDS, NULL);
+        hr = IDirectSound_Initialize(pData->lpDS, guid);
     if(SUCCEEDED(hr))
         hr = IDirectSound_SetCooperativeLevel(pData->lpDS, GetForegroundWindow(), DSSCL_PRIORITY);
 
@@ -358,10 +365,33 @@ BackendFuncs DSoundFuncs = {
     DSoundAvailableSamples
 };
 
+static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
+{
+    static size_t i = 1;
+    (void)drvname;
+    (void)data;
+
+    if(guid)
+    {
+        char str[128];
+        snprintf(str, sizeof(str), "DirectSound Software on %s", desc);
+        DeviceList[i].name = AppendAllDeviceList(str);
+        DeviceList[i].guid = *guid;
+        i++;
+    }
+    else
+        DeviceList[0].name = AppendDeviceList("DirectSound Software");
+
+    return TRUE;
+}
+
 void alcDSoundInit(BackendFuncs *FuncList)
 {
+    HRESULT hr;
+
     *FuncList = DSoundFuncs;
 
-    DeviceList[0] = AppendDeviceList("DirectSound Software");
-    AppendAllDeviceList(DeviceList[0]);
+    hr = DirectSoundEnumerate(DSoundEnumDevices, NULL);
+    if(FAILED(hr))
+        AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
 }

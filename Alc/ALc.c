@@ -447,7 +447,6 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
             memset(pDevice, 0, sizeof(ALCdevice));
 
             //Validate device
-            pDevice->InUse = AL_TRUE;
             pDevice->IsCaptureDevice = AL_TRUE;
 
             pDevice->Frequency = frequency;
@@ -1150,7 +1149,6 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         memset(device, 0, sizeof(ALCdevice));
 
         //Validate device
-        device->InUse = AL_TRUE;
         device->IsCaptureDevice = AL_FALSE;
 
         //Set output format

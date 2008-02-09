@@ -159,7 +159,6 @@ void alc_wave_init(BackendFuncs *func_list);
 
 struct ALCdevice_struct
 {
-    ALboolean    InUse;
     ALboolean    IsCaptureDevice;
 
     ALuint       Frequency;

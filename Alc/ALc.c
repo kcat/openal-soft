@@ -46,7 +46,7 @@ char _alDebug[256];
 
 
 #define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
-struct {
+static struct {
     const char *name;
     void (*Init)(BackendFuncs*);
     BackendFuncs Funcs;

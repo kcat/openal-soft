@@ -1006,6 +1006,8 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALCcontext **list;
 
+    InitAL();
+
     // Lock context list
     SuspendContext(NULL);
 
@@ -1051,6 +1053,8 @@ ALCAPI ALCcontext * ALCAPIENTRY alcGetCurrentContext(ALCvoid)
 {
     ALCcontext *pContext = NULL;
 
+    InitAL();
+
     SuspendContext(NULL);
 
     pContext = g_pContextList;
@@ -1072,6 +1076,8 @@ ALCAPI ALCdevice* ALCAPIENTRY alcGetContextsDevice(ALCcontext *pContext)
 {
     ALCdevice *pDevice = NULL;
 
+    InitAL();
+
     SuspendContext(NULL);
     if (IsContext(pContext))
         pDevice = pContext->Device;
@@ -1092,6 +1098,8 @@ ALCAPI ALCboolean ALCAPIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
     ALCcontext *ALContext;
     ALboolean bReturn = AL_TRUE;
+
+    InitAL();
 
     SuspendContext(NULL);
 

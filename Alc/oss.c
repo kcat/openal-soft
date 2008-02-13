@@ -368,7 +368,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
         return ALC_FALSE;
     }
 
-    data->data_size = SampleSize * device->FrameSize * info.fragments;
+    data->data_size = info.fragsize;
     data->mix_data = calloc(1, data->data_size);
 
     device->ExtraData = data;

@@ -357,7 +357,7 @@ open_alsa:
     }
 
     periods = GetConfigValueInt("alsa", "periods", 0);
-    bufferSizeInFrames = device->UpdateFreq;
+    bufferSizeInFrames = device->UpdateSize;
 
     str = GetConfigValue("alsa", "mmap", "true");
     allowmmap = (strcasecmp(str, "true") == 0 ||
@@ -413,9 +413,9 @@ open_alsa:
 
     psnd_pcm_hw_params_free(p);
 
-    device->UpdateFreq = bufferSizeInFrames;
+    device->UpdateSize = bufferSizeInFrames;
 
-    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, device->UpdateFreq);
+    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, device->UpdateSize);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
         data->buffer = malloc(data->size);

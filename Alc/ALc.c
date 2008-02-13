@@ -753,7 +753,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                         data[i++] = device->Frequency;
 
                         data[i++] = ALC_REFRESH;
-                        data[i++] = device->Frequency / device->UpdateFreq;
+                        data[i++] = device->Frequency / device->UpdateSize;
 
                         data[i++] = ALC_SYNC;
                         data[i++] = ALC_FALSE;
@@ -791,7 +791,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     else if(!size)
                         SetALCError(ALC_INVALID_VALUE);
                     else
-                        *data = device->Frequency / device->UpdateFreq;
+                        *data = device->Frequency / device->UpdateSize;
                     break;
 
                 case ALC_SYNC:
@@ -1177,9 +1177,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
             device->FrameSize = aluBytesFromFormat(device->Format) *
                                 aluChannelsFromFormat(device->Format);
 
-        device->UpdateFreq = GetConfigValueInt(NULL, "refresh", 8192);
-        if((ALint)device->UpdateFreq <= 0)
-            device->UpdateFreq = 8192;
+        device->UpdateSize = GetConfigValueInt(NULL, "refresh", 8192);
+        if((ALint)device->UpdateSize <= 0)
+            device->UpdateSize = 8192;
 
         device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
         if((ALint)device->MaxNoOfSources <= 0)

@@ -73,7 +73,7 @@ static ALuint DSoundProc(ALvoid *ptr)
     DWORD avail;
     HRESULT err;
 
-    BufferSize = pDevice->UpdateFreq*DS_FRAGS*pDevice->FrameSize;
+    BufferSize = pDevice->UpdateSize*DS_FRAGS*pDevice->FrameSize;
 
     while(!pData->killNow)
     {
@@ -238,7 +238,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec*OutputType.Format.nBlockAlign;
         OutputType.Format.cbSize = 0;
 
-        device->UpdateFreq /= DS_FRAGS;
+        device->UpdateSize /= DS_FRAGS;
     }
 
     if(OutputType.Format.nChannels > 2)
@@ -266,7 +266,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
         DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;
-        DSBDescription.dwBufferBytes=device->UpdateFreq * DS_FRAGS * device->FrameSize;
+        DSBDescription.dwBufferBytes=device->UpdateSize * DS_FRAGS * device->FrameSize;
         DSBDescription.lpwfxFormat=&OutputType.Format;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
     }

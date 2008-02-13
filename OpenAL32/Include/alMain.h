@@ -139,7 +139,7 @@ struct ALCdevice_struct
     ALboolean    IsCaptureDevice;
 
     ALuint       Frequency;
-    ALuint       UpdateFreq;
+    ALuint       UpdateSize;
     ALuint       FrameSize;
     ALenum       Format;
 

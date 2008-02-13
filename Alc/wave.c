@@ -66,7 +66,7 @@ static ALuint WaveProc(ALvoid *ptr)
         now = timeGetTime();
 
         avail = (now-last) * pDevice->Frequency / 1000;
-        if(avail < pDevice->UpdateFreq/4)
+        if(avail < pDevice->UpdateSize/4)
         {
             Sleep(1);
             continue;
@@ -212,9 +212,9 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
 
     data->DataStart = ftell(data->f);
 
-    device->UpdateFreq = max(device->UpdateFreq, 2048);
+    device->UpdateSize = max(device->UpdateSize, 2048);
 
-    data->size = device->UpdateFreq;
+    data->size = device->UpdateSize;
     data->buffer = malloc(data->size * channels * bits / 8);
     if(!data->buffer)
     {

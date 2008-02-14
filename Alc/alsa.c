@@ -73,6 +73,7 @@ MAKE_FUNC(snd_pcm_hw_params);
 MAKE_FUNC(snd_pcm_prepare);
 MAKE_FUNC(snd_pcm_start);
 MAKE_FUNC(snd_pcm_resume);
+MAKE_FUNC(snd_pcm_wait);
 MAKE_FUNC(snd_pcm_state);
 MAKE_FUNC(snd_pcm_avail_update);
 MAKE_FUNC(snd_pcm_areas_silence);
@@ -185,7 +186,8 @@ static ALuint ALSAProc(ALvoid *ptr)
                     break;
                 }
             }
-            Sleep(1);
+            else if(psnd_pcm_wait(data->pcmHandle, 1000) == 0)
+                AL_PRINT("Wait timeout... buffer size too low?\n");
             continue;
         }
 
@@ -747,6 +749,7 @@ LOAD_FUNC(snd_pcm_hw_params);
 LOAD_FUNC(snd_pcm_prepare);
 LOAD_FUNC(snd_pcm_start);
 LOAD_FUNC(snd_pcm_resume);
+LOAD_FUNC(snd_pcm_wait);
 LOAD_FUNC(snd_pcm_state);
 LOAD_FUNC(snd_pcm_avail_update);
 LOAD_FUNC(snd_pcm_areas_silence);

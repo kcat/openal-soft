@@ -25,10 +25,8 @@
 #include <stdio.h>
 #include <memory.h>
 
-#include <windows.h>
-#include <mmsystem.h>
-#include <mmreg.h>
 #include <dsound.h>
+#include <mmreg.h>
 
 #include "alMain.h"
 #include "AL/al.h"

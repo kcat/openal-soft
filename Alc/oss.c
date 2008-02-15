@@ -149,6 +149,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     int log2FragmentSize;
     unsigned int periods;
     audio_buf_info info;
+    ALuint frameSize;
     char driver[64];
     int numChannels;
     oss_data *data;
@@ -196,8 +197,10 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     if((int)periods <= 0)
         periods = 4;
     numChannels = aluChannelsFromFormat(device->Format);
+    frameSize = numChannels * aluBytesFromFormat(device->Format);
+
     ossSpeed = device->Frequency;
-    log2FragmentSize = log2i(device->UpdateSize * device->FrameSize / periods);
+    log2FragmentSize = log2i(device->UpdateSize * frameSize / periods);
 
     /* according to the OSS spec, 16 bytes are the minimum */
     if (log2FragmentSize < 4)
@@ -237,9 +240,9 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
         return ALC_FALSE;
     }
 
-    device->UpdateSize = info.fragsize / device->FrameSize;
+    device->UpdateSize = info.fragsize / frameSize;
 
-    data->data_size = device->UpdateSize * device->FrameSize;
+    data->data_size = device->UpdateSize * frameSize;
     data->mix_data = calloc(1, data->data_size);
 
     device->ExtraData = data;
@@ -275,6 +278,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
     int log2FragmentSize;
     unsigned int periods;
     audio_buf_info info;
+    ALuint frameSize;
     int numChannels;
     char driver[64];
     oss_data *data;
@@ -320,8 +324,9 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
 
     periods = 4;
     numChannels = aluChannelsFromFormat(device->Format);
+    frameSize = numChannels * aluBytesFromFormat(device->Format);
     ossSpeed = frequency;
-    log2FragmentSize = log2i(SampleSize * device->FrameSize / periods);
+    log2FragmentSize = log2i(SampleSize * frameSize / periods);
 
     /* according to the OSS spec, 16 bytes are the minimum */
     if (log2FragmentSize < 4)
@@ -359,7 +364,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
         return ALC_FALSE;
     }
 
-    data->ring = CreateRingBuffer(device->FrameSize, SampleSize);
+    data->ring = CreateRingBuffer(frameSize, SampleSize);
     if(!data->ring)
     {
         AL_PRINT("ring buffer create failed\n");

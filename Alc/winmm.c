@@ -211,10 +211,11 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     wfexCaptureFormat.wFormatTag = WAVE_FORMAT_PCM;
     wfexCaptureFormat.nChannels = aluChannelsFromFormat(pDevice->Format);
     wfexCaptureFormat.wBitsPerSample = aluBytesFromFormat(pDevice->Format) * 8;
-    wfexCaptureFormat.nBlockAlign = pDevice->FrameSize;
+    wfexCaptureFormat.nBlockAlign = wfexCaptureFormat.wBitsPerSample *
+                                    wfexCaptureFormat.nChannels / 8;
     wfexCaptureFormat.nSamplesPerSec = frequency;
     wfexCaptureFormat.nAvgBytesPerSec = wfexCaptureFormat.nSamplesPerSec *
-                                        pDevice->FrameSize;
+                                        wfexCaptureFormat.nBlockAlign;
     wfexCaptureFormat.cbSize = 0;
 
     if (waveInOpen(&pData->hWaveInHandle, lDeviceID, &wfexCaptureFormat, (DWORD_PTR)&WaveInProc, (DWORD_PTR)pDevice, CALLBACK_FUNCTION) != MMSYSERR_NOERROR)
@@ -361,16 +362,20 @@ static void WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lS
     ALuint ulBytes, ulBytesToCopy;
     ALuint ulCapturedSamples;
     ALuint ulReadOffset;
+    ALuint frameSize = aluBytesFromFormat(pDevice->Format) *
+                       aluChannelsFromFormat(pDevice->Format);
 
     // Check that we have the requested numbers of Samples
-    ulCapturedSamples = (pData->ulWriteCapturedDataPos - pData->ulReadCapturedDataPos) / pDevice->FrameSize;
+    ulCapturedSamples = (pData->ulWriteCapturedDataPos -
+                         pData->ulReadCapturedDataPos) /
+                        frameSize;
     if(ulSamples > ulCapturedSamples)
     {
         SetALCError(ALC_INVALID_VALUE);
         return;
     }
 
-    ulBytes = ulSamples * pDevice->FrameSize;
+    ulBytes = ulSamples * frameSize;
 
     // Get Read Offset
     ulReadOffset = (pData->ulReadCapturedDataPos % pData->ulCapturedDataSize);
@@ -399,7 +404,8 @@ static ALCuint WinMMAvailableSamples(ALCdevice *pDevice)
 {
     WinMMData *pData = (WinMMData*)pDevice->ExtraData;
     ALCuint lCapturedBytes = (pData->ulWriteCapturedDataPos - pData->ulReadCapturedDataPos);
-    return lCapturedBytes / pDevice->FrameSize;
+    return lCapturedBytes / (aluBytesFromFormat(pDevice->Format) *
+                             aluChannelsFromFormat(pDevice->Format));
 }
 
 

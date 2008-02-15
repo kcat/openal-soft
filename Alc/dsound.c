@@ -71,7 +71,9 @@ static ALuint DSoundProc(ALvoid *ptr)
     DWORD avail;
     HRESULT err;
 
-    BufferSize = pDevice->UpdateSize*DS_FRAGS*pDevice->FrameSize;
+    BufferSize  = pDevice->UpdateSize * DS_FRAGS *
+                  aluBytesFromFormat(pDevice->Format) *
+                  aluChannelsFromFormat(pDevice->Format);
 
     while(!pData->killNow)
     {
@@ -128,6 +130,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     DSBUFFERDESC DSBDescription;
     DSoundData *pData = NULL;
     WAVEFORMATEXTENSIBLE OutputType;
+    DWORD frameSize = 0;
     LPGUID guid = NULL;
     DWORD speakers;
     HRESULT hr;
@@ -225,8 +228,8 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
                                        SPEAKER_SIDE_LEFT |
                                        SPEAKER_SIDE_RIGHT;
         }
-        device->FrameSize = aluBytesFromFormat(device->Format) *
-                            aluChannelsFromFormat(device->Format);
+        frameSize = aluBytesFromFormat(device->Format) *
+                    aluChannelsFromFormat(device->Format);
 
         OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
         OutputType.Format.nChannels = aluChannelsFromFormat(device->Format);
@@ -264,7 +267,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
         DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;
-        DSBDescription.dwBufferBytes=device->UpdateSize * DS_FRAGS * device->FrameSize;
+        DSBDescription.dwBufferBytes=device->UpdateSize * DS_FRAGS * frameSize;
         DSBDescription.lpwfxFormat=&OutputType.Format;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
     }

@@ -647,7 +647,7 @@ static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint l
         }
 
         Pointer = (char*)areas->addr + (offset * areas->step / 8);
-        Count = size * pDevice->FrameSize;
+        Count = psnd_pcm_frames_to_bytes(data->pcmHandle, size);
 
         memcpy(pBuffer, Pointer, Count);
         pBuffer = (char*)pBuffer + Count;

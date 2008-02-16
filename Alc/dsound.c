@@ -365,17 +365,16 @@ BackendFuncs DSoundFuncs = {
 
 static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
 {
-    static size_t i = 1;
+    size_t *iter = data;
     (void)drvname;
-    (void)data;
 
     if(guid)
     {
         char str[128];
         snprintf(str, sizeof(str), "DirectSound Software on %s", desc);
-        DeviceList[i].name = AppendAllDeviceList(str);
-        DeviceList[i].guid = *guid;
-        i++;
+        DeviceList[*iter].name = AppendAllDeviceList(str);
+        DeviceList[*iter].guid = *guid;
+        (*iter)++;
     }
     else
         DeviceList[0].name = AppendDeviceList("DirectSound Software");
@@ -385,11 +384,12 @@ static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname,
 
 void alcDSoundInit(BackendFuncs *FuncList)
 {
+    size_t iter = 1;
     HRESULT hr;
 
     *FuncList = DSoundFuncs;
 
-    hr = DirectSoundEnumerate(DSoundEnumDevices, NULL);
+    hr = DirectSoundEnumerate(DSoundEnumDevices, &iter);
     if(FAILED(hr))
         AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
 }

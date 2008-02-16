@@ -789,6 +789,8 @@ LOAD_FUNC(snd_card_next);
     }
 
     while (card >= 0) {
+        int firstDev = 1;
+
         sprintf(name, "hw:%d", card);
         if ((err = psnd_ctl_open(&handle, name, 0)) < 0) {
             AL_PRINT("control open (%i): %s\n", card, psnd_strerror(err));
@@ -799,11 +801,6 @@ LOAD_FUNC(snd_card_next);
             psnd_ctl_close(handle);
             goto next_card;
         }
-        if(card < MAX_DEVICES-1) {
-            snprintf(name, sizeof(name), "ALSA Software on %s",
-                     psnd_ctl_card_info_get_name(info));
-            alsaDeviceList[card+1] = AppendDeviceList(name);
-        }
 
         dev = -1;
         while (idx < MAX_ALL_DEVICES) {
@@ -813,6 +810,14 @@ LOAD_FUNC(snd_card_next);
                 AL_PRINT("snd_ctl_pcm_next_device failed\n");
             if (dev < 0)
                 break;
+
+            if(firstDev && card < MAX_DEVICES-1) {
+                firstDev = 0;
+                snprintf(name, sizeof(name), "ALSA Software on %s",
+                         psnd_ctl_card_info_get_name(info));
+                alsaDeviceList[card+1] = AppendDeviceList(name);
+            }
+
             psnd_pcm_info_set_device(pcminfo, dev);
             psnd_pcm_info_set_subdevice(pcminfo, 0);
             psnd_pcm_info_set_stream(pcminfo, stream);

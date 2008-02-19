@@ -493,16 +493,20 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
             alSetError(AL_OUT_OF_MEMORY);
             return;
         }
+        if(ALEffectSlot->ReverbBuffer)
+            memcpy(ptr, ALEffectSlot->ReverbBuffer, min(size, ALEffectSlot->ReverbLength)*sizeof(ALfloat));
         ALEffectSlot->ReverbLength = size;
-        ALEffectSlot->ReverbPos = 0;
+        ALEffectSlot->ReverbPos %= size;
         ALEffectSlot->ReverbReflectPos = (ALuint)(ALEffectSlot->ReverbLength -
                                           ((ALfloat)Context->Frequency *
-                                           effect->Reverb.ReflectionsDelay)) %
+                                           effect->Reverb.ReflectionsDelay) +
+                                          ALEffectSlot->ReverbPos) %
                                          ALEffectSlot->ReverbLength;
         ALEffectSlot->ReverbLatePos = (ALuint)(ALEffectSlot->ReverbLength -
                                                ((ALfloat)Context->Frequency *
                                               (effect->Reverb.LateReverbDelay +
-                                           effect->Reverb.ReflectionsDelay))) %
+                                           effect->Reverb.ReflectionsDelay)) +
+                                          ALEffectSlot->ReverbPos) %
                                          ALEffectSlot->ReverbLength;
         ALEffectSlot->ReverbDecayGain = pow(1.0/32768.0, 1.0/(effect->Reverb.DecayTime/reverbwait));
     }

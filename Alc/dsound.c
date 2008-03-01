@@ -20,6 +20,7 @@
 
 #include "config.h"
 
+#define _WIN32_WINNT 0x0500
 #define INITGUID
 #include <stdlib.h>
 #include <stdio.h>

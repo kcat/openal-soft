@@ -28,8 +28,6 @@
 
 #ifdef _WIN32
 
-#include <windows.h>
-
 typedef struct {
     ALuint (*func)(ALvoid*);
     ALvoid *ptr;

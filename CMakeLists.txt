@@ -149,7 +149,7 @@ IF(DLOPEN)
 ENDIF()
 
 # Check if we have Windows headers
-CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H)
+CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H -D_WIN32_WINNT=0x0500)
 IF(NOT HAVE_WINDOWS_H)
     CHECK_FUNCTION_EXISTS(gettimeofday HAVE_GETTIMEOFDAY)
     IF(NOT HAVE_GETTIMEOFDAY)
@@ -180,7 +180,8 @@ ENDIF()
 CHECK_INCLUDE_FILE(stdint.h HAVE_STDINT_H)
 IF(NOT HAVE_STDINT_H)
     IF(HAVE_WINDOWS_H)
-        CHECK_C_SOURCE_COMPILES("\#include <windows.h>
+        CHECK_C_SOURCE_COMPILES("\#define _WIN32_WINNT 0x0500
+                                 \#include <windows.h>
                                  __int64 foo;
                                  int main() {return 0;}" HAVE___INT64)
     ENDIF()
@@ -264,7 +265,7 @@ IF(HAVE_WINDOWS_H)
         ENDIF()
     ENDIF()
     IF(WINMM)
-        CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H)
+        CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H -D_WIN32_WINNT=0x0500)
         IF(HAVE_MMSYSTEM_H)
             SET(HAVE_WINMM 1)
             SET(ALC_OBJS  ${ALC_OBJS} Alc/winmm.c)

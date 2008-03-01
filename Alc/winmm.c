@@ -20,6 +20,7 @@
 
 #include "config.h"
 
+#define _WIN32_WINNT 0x0500
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>

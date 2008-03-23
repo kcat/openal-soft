@@ -100,16 +100,16 @@ extern CRITICAL_SECTION _alMutex;
 
 extern char _alDebug[256];
 
-#define AL_PRINT(...) do {                       \
-    int _al_print_i;                             \
-    char *_al_print_fn = strrchr(__FILE__, '/'); \
-    if(!_al_print_fn) _al_print_fn  = __FILE__;  \
-    else              _al_print_fn += 1;         \
+#define AL_PRINT(...) do {                             \
+    int _al_print_i;                                   \
+    const char *_al_print_fn = strrchr(__FILE__, '/'); \
+    if(!_al_print_fn) _al_print_fn  = __FILE__;        \
+    else              _al_print_fn += 1;               \
     _al_print_i = snprintf(_alDebug, sizeof(_alDebug), "AL lib: %s:%d: ", _al_print_fn, __LINE__); \
-    if(_al_print_i < (int)sizeof(_alDebug) && _al_print_i > 0) \
+    if(_al_print_i < (int)sizeof(_alDebug) && _al_print_i > 0)                     \
         snprintf(_alDebug+_al_print_i, sizeof(_alDebug)-_al_print_i, __VA_ARGS__); \
-    _alDebug[sizeof(_alDebug)-1] = 0;            \
-    fprintf(stderr, "%s", _alDebug);             \
+    _alDebug[sizeof(_alDebug)-1] = 0; \
+    fprintf(stderr, "%s", _alDebug);  \
 } while(0)
 
 

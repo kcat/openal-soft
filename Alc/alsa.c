@@ -856,6 +856,7 @@ next_card:
     }
 
     allCaptureDevNameMap[0].name = AppendCaptureDeviceList("ALSA Capture on default");
+    idx = 1;
 
     while (card >= 0) {
         sprintf(name, "hw:%d", card);
@@ -889,9 +890,9 @@ next_card:
                 dname = psnd_pcm_info_get_name(pcminfo);
                 snprintf(name, sizeof(name), "ALSA Capture on %s [%s]",
                          cname, dname);
-                allDevNameMap[idx].name = AppendCaptureDeviceList(name);
-                allDevNameMap[idx].card = card;
-                allDevNameMap[idx].dev = dev;
+                allCaptureDevNameMap[idx].name = AppendCaptureDeviceList(name);
+                allCaptureDevNameMap[idx].card = card;
+                allCaptureDevNameMap[idx].dev = dev;
                 idx++;
             }
         }

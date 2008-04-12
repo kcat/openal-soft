@@ -428,7 +428,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         aluMatrixVector(Position, Matrix);
 
         //6. Apply filter gains and filters
-        switch(ALSource->DirectFilter.filter)
+        switch(ALSource->DirectFilter.type)
         {
             case AL_FILTER_LOWPASS:
                 DryMix *= ALSource->DirectFilter.Gain;
@@ -436,7 +436,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 break;
         }
 
-        switch(ALSource->Send[0].WetFilter.filter)
+        switch(ALSource->Send[0].WetFilter.type)
         {
             case AL_FILTER_LOWPASS:
                 WetMix *= ALSource->Send[0].WetFilter.Gain;

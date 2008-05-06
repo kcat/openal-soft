@@ -595,6 +595,7 @@ static void alsa_close_capture(ALCdevice *pDevice)
 static void alsa_start_capture(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
+    psnd_pcm_prepare(data->pcmHandle);
     psnd_pcm_start(data->pcmHandle);
 }
 

@@ -167,6 +167,9 @@ IF(NOT HAVE_WINDOWS_H)
         MESSAGE(FATAL_ERROR "PThreads is required for non-Windows builds!")
     ENDIF()
 
+    # Some systems need pthread_np.h to get recursive mutexes
+    CHECK_INCLUDE_FILES("pthread.h;pthread_np.h" HAVE_PTHREAD_NP_H)
+
     # _GNU_SOURCE is needed on some systems for extra attributes, and
     # _REENTRANT is needed for libc thread-safety
     ADD_DEFINITIONS(-D_GNU_SOURCE=1 -D_REENTRANT)

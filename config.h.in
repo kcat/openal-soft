@@ -46,4 +46,7 @@
 /* Define if we have GCC's destructor attribute */
 #cmakedefine HAVE_GCC_DESTRUCTOR
 
+/* Define if we have pthread_np.h */
+#cmakedefine HAVE_PTHREAD_NP_H
+
 #endif

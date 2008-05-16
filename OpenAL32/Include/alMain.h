@@ -17,6 +17,9 @@
 
 #include <assert.h>
 #include <pthread.h>
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>
+#endif
 #include <sys/time.h>
 #include <time.h>
 #include <errno.h>
@@ -45,6 +48,10 @@ static inline void InitializeCriticalSection(CRITICAL_SECTION *cs)
     assert(ret == 0);
 
     ret = pthread_mutexattr_settype(&attrib, PTHREAD_MUTEX_RECURSIVE);
+#ifdef HAVE_PTHREAD_NP_H
+    if(ret != 0)
+        ret = pthread_mutexattr_setkind_np(&attrib, PTHREAD_MUTEX_RECURSIVE);
+#endif
     assert(ret == 0);
     ret = pthread_mutex_init(cs, &attrib);
     assert(ret == 0);

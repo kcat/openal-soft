@@ -275,10 +275,26 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         //1. Translate Listener to origin (convert to head relative)
         if(ALSource->bHeadRelative==AL_FALSE)
         {
+            // Build transform matrix
+            aluCrossproduct(ALContext->Listener.Forward, ALContext->Listener.Up, U); // Right-vector
+            aluNormalize(U);  // Normalized Right-vector
+            memcpy(V, ALContext->Listener.Up, sizeof(V));   // Up-vector
+            aluNormalize(V);  // Normalized Up-vector
+            memcpy(N, ALContext->Listener.Forward, sizeof(N));  // At-vector
+            aluNormalize(N);  // Normalized At-vector
+            Matrix[0][0] = U[0]; Matrix[0][1] = V[0]; Matrix[0][2] = -N[0];
+            Matrix[1][0] = U[1]; Matrix[1][1] = V[1]; Matrix[1][2] = -N[1];
+            Matrix[2][0] = U[2]; Matrix[2][1] = V[2]; Matrix[2][2] = -N[2];
+
+            // Translate source position into listener space
             Position[0] -= ALContext->Listener.Position[0];
             Position[1] -= ALContext->Listener.Position[1];
             Position[2] -= ALContext->Listener.Position[2];
+            // Transform source position and direction into listener space
+            aluMatrixVector(Position, Matrix);
+            aluMatrixVector(Direction, Matrix);
         }
+        aluNormalize(Direction);
 
         //2. Calculate distance attenuation
         Distance = aluSqrt(aluDotproduct(Position, Position));
@@ -359,8 +375,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         SourceToListener[0] = -Position[0];
         SourceToListener[1] = -Position[1];
         SourceToListener[2] = -Position[2];
-        aluNormalize(Direction);
         aluNormalize(SourceToListener);
+
         Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f /
                 3.141592654f;
         if(Angle >= InnerAngle && Angle <= OuterAngle)
@@ -390,10 +406,10 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         //4. Calculate Velocity
         if(DopplerFactor != 0.0f)
         {
-            ALfloat flVSS, flVLS;
+            ALfloat flVSS, flVLS = 0.0f;
 
-            flVLS = aluDotproduct(ALContext->Listener.Velocity,
-                                  SourceToListener);
+            if(ALSource->bHeadRelative==AL_FALSE)
+                flVLS = aluDotproduct(ALContext->Listener.Velocity, SourceToListener);
             flVSS = aluDotproduct(ALSource->vVelocity, SourceToListener);
 
             flMaxVelocity = (DopplerVelocity * flSpeedOfSound) / DopplerFactor;
@@ -415,19 +431,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         else
             pitch[0] = ALSource->flPitch;
 
-        //5. Align coordinate system axes
-        aluCrossproduct(ALContext->Listener.Forward, ALContext->Listener.Up, U); // Right-vector
-        aluNormalize(U);  // Normalized Right-vector
-        memcpy(V, ALContext->Listener.Up, sizeof(V));   // Up-vector
-        aluNormalize(V);  // Normalized Up-vector
-        memcpy(N, ALContext->Listener.Forward, sizeof(N));  // At-vector
-        aluNormalize(N);  // Normalized At-vector
-        Matrix[0][0] = U[0]; Matrix[0][1] = V[0]; Matrix[0][2] = -N[0];
-        Matrix[1][0] = U[1]; Matrix[1][1] = V[1]; Matrix[1][2] = -N[1];
-        Matrix[2][0] = U[2]; Matrix[2][1] = V[2]; Matrix[2][2] = -N[2];
-        aluMatrixVector(Position, Matrix);
-
-        //6. Apply filter gains and filters
+        //5. Apply filter gains and filters
         switch(ALSource->DirectFilter.type)
         {
             case AL_FILTER_LOWPASS:
@@ -468,7 +472,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         DryMix *= ListenerGain * ConeVolume;
         WetMix *= ListenerGain;
 
-        //7. Convert normalized position into pannings, then into channel volumes
+        //6. Convert normalized position into pannings, then into channel volumes
         aluNormalize(Position);
         switch(aluChannelsFromFormat(OutputFormat))
         {

@@ -4,6 +4,7 @@
  * Idea based on glxinfo for OpenGL.
  * Initial OpenAL version by Erik Hofman <erik@ehofman.com>.
  * Further hacked by Sven Panne <sven.panne@aedion.de>.
+ * More work (clean up) by Chris Robinson <chris.kcat@gmail.com>.
  *
  */
 

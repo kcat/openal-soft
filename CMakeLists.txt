@@ -22,7 +22,9 @@ OPTION(WINMM   "Check for Windows Multimedia backend"  ON)
 
 OPTION(DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
-OPTION(WERROR   "Treat compile warnings as errors"          OFF)
+OPTION(WERROR  "Treat compile warnings as errors"      OFF)
+
+OPTION(EXAMPLES  "Build example programs"              ON)
 
 
 SET(LIB_MAJOR_VERSION "1")
@@ -315,6 +317,11 @@ INSTALL(FILES include/AL/al.h
               include/AL/alext.h
         DESTINATION include/AL
 )
+
+IF(EXAMPLES)
+    ADD_EXECUTABLE(openal-info examples/openal-info.c)
+    TARGET_LINK_LIBRARIES(openal-info ${LIBNAME})
+ENDIF()
 
 MESSAGE(STATUS "")
 MESSAGE(STATUS "Building OpenAL with support for the following backends:")

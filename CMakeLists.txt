@@ -76,13 +76,6 @@ ELSE()
         "Flags used by the compiler during debug builds."
         FORCE)
 
-    # The mixer doesn't like GCC's strict aliasing optimizations. Make sure
-    # it's turned off
-    CHECK_C_COMPILER_FLAG(-fstrict-aliasing HAVE_STRICT_ALIASING)
-    IF("${HAVE_STRICT_ALIASING}")
-        ADD_DEFINITIONS(-fno-strict-aliasing)
-    ENDIF()
-
     # Set visibility options if available
     IF(NOT WIN32)
         CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));

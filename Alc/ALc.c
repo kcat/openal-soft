@@ -1248,6 +1248,8 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
 
 ALCvoid ReleaseALC(ALCvoid)
 {
+    InitAL();
+
 #ifdef _DEBUG
     if(g_ulContextCount > 0)
         AL_PRINT("exit() %u device(s) and %u context(s) NOT deleted\n", g_ulDeviceCount, g_ulContextCount);

@@ -321,6 +321,11 @@ INSTALL(FILES include/AL/al.h
 IF(EXAMPLES)
     ADD_EXECUTABLE(openal-info examples/openal-info.c)
     TARGET_LINK_LIBRARIES(openal-info ${LIBNAME})
+    INSTALL(TARGETS openal-info
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+    )
 ENDIF()
 
 MESSAGE(STATUS "")

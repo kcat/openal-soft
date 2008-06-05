@@ -172,7 +172,25 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         hr = IDirectSound_SetCooperativeLevel(pData->lpDS, GetForegroundWindow(), DSSCL_PRIORITY);
 
     if(SUCCEEDED(hr))
-        hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
+    {
+        if(*(GetConfigValue(NULL, "format", "")) != 0)
+            hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
+        else
+        {
+            if(device->Format == AL_FORMAT_MONO8 || device->Format == AL_FORMAT_MONO16)
+                speakers = DSSPEAKER_COMBINED(DSSPEAKER_MONO, 0);
+            else if(device->Format == AL_FORMAT_STEREO8 || device->Format == AL_FORMAT_STEREO16)
+                speakers = DSSPEAKER_COMBINED(DSSPEAKER_STEREO, 0);
+            else if(device->Format == AL_FORMAT_QUAD8 || device->Format == AL_FORMAT_QUAD16)
+                speakers = DSSPEAKER_COMBINED(DSSPEAKER_QUAD, 0);
+            else if(device->Format == AL_FORMAT_51CHN8 || device->Format == AL_FORMAT_51CHN16)
+                speakers = DSSPEAKER_COMBINED(DSSPEAKER_5POINT1, 0);
+            else if(device->Format == AL_FORMAT_71CHN8 || device->Format == AL_FORMAT_71CHN16)
+                speakers = DSSPEAKER_COMBINED(DSSPEAKER_7POINT1, 0);
+            else
+                hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
+        }
+    }
     if(SUCCEEDED(hr))
     {
         speakers = DSSPEAKER_CONFIG(speakers);

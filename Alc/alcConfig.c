@@ -27,6 +27,11 @@
 
 #include "alMain.h"
 
+#ifdef _WIN32
+#define _WIN32_IE 0x400
+#include <shlobj.h>
+#endif
+
 typedef struct ConfigEntry {
     char *key;
     char *value;
@@ -201,6 +206,17 @@ void ReadALConfig(void)
     cfgCount = 1;
 
 #ifdef _WIN32
+    if(SHGetSpecialFolderPathA(NULL, buffer, CSIDL_APPDATA, FALSE) != FALSE)
+    {
+        int p = strlen(buffer);
+        snprintf(buffer+p, sizeof(buffer)-p, "\\alsoft.ini");
+        f = fopen(buffer, "rt");
+        if(f)
+        {
+            LoadConfigFromFile(f);
+            fclose(f);
+        }
+    }
 #else
     f = fopen("/etc/openal/alsoft.conf", "r");
     if(!f)

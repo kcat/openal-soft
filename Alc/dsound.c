@@ -173,7 +173,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
 
     if(SUCCEEDED(hr))
     {
-        if(*(GetConfigValue(NULL, "format", "")) != 0)
+        if(*(GetConfigValue(NULL, "format", "")) == 0)
             hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
         else
         {

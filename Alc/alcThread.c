@@ -83,22 +83,21 @@ ALuint StopThread(ALvoid *thread)
 typedef struct {
     ALuint (*func)(ALvoid*);
     ALvoid *ptr;
+    ALuint ret;
     pthread_t thread;
 } ThreadInfo;
 
 static void *StarterFunc(void *ptr)
 {
     ThreadInfo *inf = (ThreadInfo*)ptr;
-    ALint ret;
-
-    ret = inf->func(inf->ptr);
-    return (void*)ret;
+    inf->ret = inf->func(inf->ptr);
+    return NULL;
 }
 
 ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr)
 {
     ThreadInfo *inf = malloc(sizeof(ThreadInfo));
-    if(!inf) return 0;
+    if(!inf) return NULL;
 
     inf->func = func;
     inf->ptr = ptr;
@@ -114,12 +113,14 @@ ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr)
 ALuint StopThread(ALvoid *thread)
 {
     ThreadInfo *inf = thread;
-    void *ret;
+    ALuint ret;
 
-    pthread_join(inf->thread, &ret);
+    pthread_join(inf->thread, NULL);
+    ret = inf->ret;
+
     free(inf);
 
-    return (ALuint)ret;
+    return ret;
 }
 
 #endif

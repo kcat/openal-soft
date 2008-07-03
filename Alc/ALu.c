@@ -273,6 +273,10 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     if(isMono != AL_FALSE)
     {
         //1. Translate Listener to origin (convert to head relative)
+        // Note that Direction and SourceToListener are *not* transformed.
+        // SourceToListener is used with the source and listener velocities,
+        // which are untransformed, and Direction is used with SourceToListener
+        // for the sound cone
         if(ALSource->bHeadRelative==AL_FALSE)
         {
             // Build transform matrix
@@ -290,10 +294,21 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             Position[0] -= ALContext->Listener.Position[0];
             Position[1] -= ALContext->Listener.Position[1];
             Position[2] -= ALContext->Listener.Position[2];
+
+            SourceToListener[0] = -Position[0];
+            SourceToListener[1] = -Position[1];
+            SourceToListener[2] = -Position[2];
+
             // Transform source position and direction into listener space
             aluMatrixVector(Position, Matrix);
-            aluMatrixVector(Direction, Matrix);
         }
+        else
+        {
+            SourceToListener[0] = -Position[0];
+            SourceToListener[1] = -Position[1];
+            SourceToListener[2] = -Position[2];
+        }
+        aluNormalize(SourceToListener);
         aluNormalize(Direction);
 
         //2. Calculate distance attenuation
@@ -372,11 +387,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         WetMix = __max(WetMix,MinVolume);
 
         //3. Apply directional soundcones
-        SourceToListener[0] = -Position[0];
-        SourceToListener[1] = -Position[1];
-        SourceToListener[2] = -Position[2];
-        aluNormalize(SourceToListener);
-
         Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f /
                 3.141592654f;
         if(Angle >= InnerAngle && Angle <= OuterAngle)

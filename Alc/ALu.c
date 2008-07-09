@@ -64,7 +64,7 @@ typedef long long ALint64;
 #define __min min
 #endif
 
-#define BUFFERSIZE 48000
+#define BUFFERSIZE 24000
 #define FRACTIONBITS 14
 #define FRACTIONMASK ((1L<<FRACTIONBITS)-1)
 #define MAX_PITCH 4

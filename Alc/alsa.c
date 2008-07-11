@@ -40,7 +40,7 @@ typedef struct {
     ALvoid *buffer;
     ALsizei size;
 
-    int killNow;
+    volatile int killNow;
     ALvoid *thread;
 } alsa_data;
 

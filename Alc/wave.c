@@ -35,7 +35,7 @@ typedef struct {
     ALvoid *buffer;
     ALuint size;
 
-    int killNow;
+    volatile int killNow;
     ALvoid *thread;
 } wave_data;
 

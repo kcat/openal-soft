@@ -52,7 +52,7 @@ static char *oss_device_capture;
 
 typedef struct {
     int fd;
-    int killNow;
+    volatile int killNow;
     ALvoid *thread;
 
     ALubyte *mix_data;

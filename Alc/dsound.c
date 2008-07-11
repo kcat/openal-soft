@@ -48,7 +48,7 @@ typedef struct {
     LPDIRECTSOUNDBUFFER    DSpbuffer;
     LPDIRECTSOUNDBUFFER    DSsbuffer;
 
-    int killNow;
+    volatile int killNow;
     ALvoid *thread;
 } DSoundData;
 

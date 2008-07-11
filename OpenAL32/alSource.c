@@ -137,73 +137,64 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 
             if (Device)
             {
-                if ((ALuint)n <= Context->SourceCount)
+                // Check that all Sources are valid (and can therefore be deleted)
+                for (i = 0; i < n; i++)
                 {
-                    // Check that all Sources are valid (and can therefore be deleted)
-                    for (i = 0; i < n; i++)
+                    if (!alIsSource(sources[i]))
                     {
-                        if (!alIsSource(sources[i]))
-                        {
-                            alSetError(AL_INVALID_NAME);
-                            bSourcesValid = AL_FALSE;
-                            break;
-                        }
-                    }
-
-                    if (bSourcesValid)
-                    {
-                        // All Sources are valid, and can be deleted
-                        for (i = 0; i < n; i++)
-                        {
-                            // Recheck that the Source is valid, because there could be duplicated Source names
-                            if (alIsSource(sources[i]))
-                            {
-                                ALSource=((ALsource *)ALTHUNK_LOOKUPENTRY(sources[i]));
-                                alSourceStop((ALuint)ALSource->source);
-
-                                // For each buffer in the source's queue, decrement its reference counter and remove it
-                                while (ALSource->queue != NULL)
-                                {
-                                    ALBufferList = ALSource->queue;
-                                    // Decrement buffer's reference counter
-                                    if (ALBufferList->buffer != 0)
-                                        ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->refcount--;
-                                    // Update queue to point to next element in list
-                                    ALSource->queue = ALBufferList->next;
-                                    // Release memory allocated for buffer list item
-                                    free(ALBufferList);
-                                }
-
-                                for(j = 0;j < MAX_SENDS;++j)
-                                {
-                                    if(ALSource->Send[j].Slot)
-                                        ALSource->Send[j].Slot->refcount--;
-                                    ALSource->Send[j].Slot = NULL;
-                                }
-
-                                // Decrement Source count
-                                Context->SourceCount--;
-
-                                // Remove Source from list of Sources
-                                list = &Context->Source;
-                                while(*list && *list != ALSource)
-                                    list = &(*list)->next;
-
-                                if(*list)
-                                    *list = (*list)->next;
-                                ALTHUNK_REMOVEENTRY(ALSource->source);
-
-                                memset(ALSource,0,sizeof(ALsource));
-                                free(ALSource);
-                            }
-                        }
-
+                        alSetError(AL_INVALID_NAME);
+                        bSourcesValid = AL_FALSE;
+                        break;
                     }
                 }
-                else
+
+                if (bSourcesValid)
                 {
-                    // Trying to delete more Sources than have been generated
-                    alSetError(AL_INVALID_NAME);
+                    // All Sources are valid, and can be deleted
+                    for (i = 0; i < n; i++)
+                    {
+                        // Recheck that the Source is valid, because there could be duplicated Source names
+                        if (alIsSource(sources[i]))
+                        {
+                            ALSource=((ALsource *)ALTHUNK_LOOKUPENTRY(sources[i]));
+                            alSourceStop((ALuint)ALSource->source);
+
+                            // For each buffer in the source's queue, decrement its reference counter and remove it
+                            while (ALSource->queue != NULL)
+                            {
+                                ALBufferList = ALSource->queue;
+                                // Decrement buffer's reference counter
+                                if (ALBufferList->buffer != 0)
+                                    ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->refcount--;
+                                // Update queue to point to next element in list
+                                ALSource->queue = ALBufferList->next;
+                                // Release memory allocated for buffer list item
+                                free(ALBufferList);
+                            }
+
+                            for(j = 0;j < MAX_SENDS;++j)
+                            {
+                                if(ALSource->Send[j].Slot)
+                                    ALSource->Send[j].Slot->refcount--;
+                                ALSource->Send[j].Slot = NULL;
+                            }
+
+                            // Decrement Source count
+                            Context->SourceCount--;
+
+                            // Remove Source from list of Sources
+                            list = &Context->Source;
+                            while(*list && *list != ALSource)
+                                list = &(*list)->next;
+
+                            if(*list)
+                                *list = (*list)->next;
+                            ALTHUNK_REMOVEENTRY(ALSource->source);
+
+                            memset(ALSource,0,sizeof(ALsource));
+                            free(ALSource);
+                        }
+                    }
                 }
             }
             else

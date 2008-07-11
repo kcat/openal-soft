@@ -142,63 +142,59 @@ ALAPI ALvoid ALAPIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
     // Check we are actually Deleting some Buffers
     if (n >= 0)
     {
-        if ((ALuint)n <= g_uiBufferCount)
+        // Check that all the buffers are valid and can actually be deleted
+        for (i = 0; i < n; i++)
         {
-            // Check that all the buffers are valid and can actually be deleted
-            for (i = 0; i < n; i++)
+            // Check for valid Buffer ID (can be NULL buffer)
+            if (alIsBuffer(puiBuffers[i]))
             {
-                // Check for valid Buffer ID (can be NULL buffer)
-                if (alIsBuffer(puiBuffers[i]))
+                // If not the NULL buffer, check that the reference count is 0
+                ALBuf = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(puiBuffers[i]));
+                if (ALBuf)
                 {
-                    // If not the NULL buffer, check that the reference count is 0
-                    ALBuf = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(puiBuffers[i]));
-                    if (ALBuf)
+                    if (ALBuf->refcount != 0)
                     {
-                        if (ALBuf->refcount != 0)
-                        {
-                            // Buffer still in use, cannot be deleted
-                            alSetError(AL_INVALID_OPERATION);
-                            bFailed = AL_TRUE;
-                        }
+                        // Buffer still in use, cannot be deleted
+                        alSetError(AL_INVALID_OPERATION);
+                        bFailed = AL_TRUE;
                     }
-                }
-                else
-                {
-                    // Invalid Buffer
-                    alSetError(AL_INVALID_NAME);
-                    bFailed = AL_TRUE;
                 }
             }
-
-            // If all the Buffers were valid (and have Reference Counts of 0), then we can delete them
-            if (!bFailed)
+            else
             {
-                for (i = 0; i < n; i++)
+                // Invalid Buffer
+                alSetError(AL_INVALID_NAME);
+                bFailed = AL_TRUE;
+            }
+        }
+
+        // If all the Buffers were valid (and have Reference Counts of 0), then we can delete them
+        if (!bFailed)
+        {
+            for (i = 0; i < n; i++)
+            {
+                if (puiBuffers[i] && alIsBuffer(puiBuffers[i]))
                 {
+                    ALbuffer **list = &g_pBuffers;
+
                     ALBuf=((ALbuffer *)ALTHUNK_LOOKUPENTRY(puiBuffers[i]));
-                    if (ALBuf)
-                    {
-                        ALbuffer **list = &g_pBuffers;
-                        while(*list && *list != ALBuf)
-                            list = &(*list)->next;
+                    while(*list && *list != ALBuf)
+                        list = &(*list)->next;
 
-                        if(*list)
-                            *list = (*list)->next;
+                    if(*list)
+                        *list = (*list)->next;
 
-                        // Release the memory used to store audio data
-                        free(ALBuf->data);
+                    // Release the memory used to store audio data
+                    free(ALBuf->data);
 
-                        // Release buffer structure
-                        ALTHUNK_REMOVEENTRY(puiBuffers[i]);
-                        memset(ALBuf, 0, sizeof(ALbuffer));
-                        g_uiBufferCount--;
-                        free(ALBuf);
-                    }
+                    // Release buffer structure
+                    ALTHUNK_REMOVEENTRY(puiBuffers[i]);
+                    memset(ALBuf, 0, sizeof(ALbuffer));
+                    g_uiBufferCount--;
+                    free(ALBuf);
                 }
             }
         }
-        else
-            alSetError(AL_INVALID_NAME);
     }
     else
         alSetError(AL_INVALID_VALUE);

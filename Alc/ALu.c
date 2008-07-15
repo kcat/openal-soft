@@ -317,7 +317,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         if(ALSource->Send[0].Slot && !ALSource->Send[0].Slot->AuxSendAuto)
         {
             if(ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB)
-                RoomRolloff = ALSource->Send[0].Slot->effect.Reverb.RoomRolloffFactor;
+                RoomRolloff += ALSource->Send[0].Slot->effect.Reverb.RoomRolloffFactor;
         }
 
         flAttenuation = 1.0f;

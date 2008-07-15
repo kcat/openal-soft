@@ -247,7 +247,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     ALfloat WetGainHF = 1.0f;
 
     //Get context properties
-    DopplerFactor   = ALContext->DopplerFactor;
+    DopplerFactor   = ALContext->DopplerFactor * ALSource->DopplerFactor;
     DopplerVelocity = ALContext->DopplerVelocity;
     flSpeedOfSound  = ALContext->flSpeedOfSound;
 

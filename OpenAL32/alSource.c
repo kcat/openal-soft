@@ -925,6 +925,10 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
                     *pflValue = pSource->RoomRolloffFactor;
                     break;
 
+                case AL_DOPPLER_FACTOR:
+                    *pflValue = pSource->DopplerFactor;
+                    break;
+
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
@@ -1025,6 +1029,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
                 case AL_MAX_GAIN:
                 case AL_MAX_DISTANCE:
                 case AL_ROLLOFF_FACTOR:
+                case AL_DOPPLER_FACTOR:
                 case AL_CONE_OUTER_GAIN:
                 case AL_SEC_OFFSET:
                 case AL_SAMPLE_OFFSET:
@@ -1175,6 +1180,10 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                     *plValue = pSource->WetGainHFAuto;
                     break;
 
+                case AL_DOPPLER_FACTOR:
+                    *plValue = (ALint)pSource->DopplerFactor;
+                    break;
+
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
@@ -1282,6 +1291,7 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
                 case AL_BYTE_OFFSET:
                 case AL_MAX_DISTANCE:
                 case AL_ROLLOFF_FACTOR:
+                case AL_DOPPLER_FACTOR:
                 case AL_REFERENCE_DISTANCE:
                 case AL_SOURCE_TYPE:
                 case AL_DIRECT_FILTER:
@@ -1971,6 +1981,7 @@ static ALvoid InitSourceParams(ALsource *pSource)
     pSource->WetGainHFAuto = AL_TRUE;
     pSource->AirAbsorptionFactor = 0.0f;
     pSource->RoomRolloffFactor = 0.0f;
+    pSource->DopplerFactor = 1.0f;
 
     pSource->state = AL_INITIAL;
     pSource->lSourceType = AL_UNDETERMINED;

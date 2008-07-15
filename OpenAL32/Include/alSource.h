@@ -82,6 +82,8 @@ typedef struct ALsource
 
     ALfloat RoomRolloffFactor;
 
+    ALfloat DopplerFactor;
+
     // Index to itself
     ALuint source;
 

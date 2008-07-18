@@ -192,6 +192,8 @@ static ALCuint     g_ulContextCount = 0;
 // Context Error
 static ALCenum g_eLastContextError = ALC_NO_ERROR;
 
+static ALboolean init_done = AL_FALSE;
+
 ///////////////////////////////////////////////////////
 
 
@@ -210,6 +212,8 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             break;
 
         case DLL_PROCESS_DETACH:
+            if(!init_done)
+                break;
             ReleaseALC();
             ReleaseALBuffers();
             ReleaseALEffects();
@@ -227,7 +231,7 @@ static void my_deinit() __attribute__((destructor));
 static void my_deinit()
 {
     static ALenum once = AL_FALSE;
-    if(once) return;
+    if(once || !init_done) return;
     once = AL_TRUE;
 
     ReleaseALC();
@@ -243,13 +247,12 @@ static void my_deinit()
 
 static void InitAL(void)
 {
-    static int done = 0;
-    if(!done)
+    if(!init_done)
     {
         int i;
         const char *devs, *str;
 
-        done = 1;
+        init_done = AL_TRUE;
 
         InitializeCriticalSection(&g_csMutex);
         ALTHUNK_INIT();
@@ -1294,8 +1297,6 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
 
 ALCvoid ReleaseALC(ALCvoid)
 {
-    InitAL();
-
 #ifdef _DEBUG
     if(g_ulContextCount > 0)
         AL_PRINT("exit() %u device(s) and %u context(s) NOT deleted\n", g_ulDeviceCount, g_ulContextCount);

@@ -103,8 +103,6 @@ static inline void Sleep(ALuint t)
 extern "C" {
 #endif
 
-extern CRITICAL_SECTION _alMutex;
-
 extern char _alDebug[256];
 
 #define AL_PRINT(...) do {                             \

@@ -206,7 +206,6 @@ SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
                  OpenAL32/alSource.c
                  OpenAL32/alState.c
                  OpenAL32/alThunk.c
-                 OpenAL32/OpenAL32.c
 )
 SET(ALC_OBJS  Alc/ALc.c
               Alc/ALu.c

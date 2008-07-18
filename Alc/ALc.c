@@ -33,6 +33,7 @@
 #include "AL/alc.h"
 #include "alThunk.h"
 #include "alSource.h"
+#include "alBuffer.h"
 #include "alExtension.h"
 #include "alAuxEffectSlot.h"
 #include "bs2b.h"
@@ -182,6 +183,8 @@ static ALCint alcEFXMinorVersion = 0;
 static ALCdevice *g_pDeviceList = NULL;
 static ALCuint    g_ulDeviceCount = 0;
 
+static CRITICAL_SECTION g_csMutex;
+
 // Context List
 static ALCcontext *g_pContextList = NULL;
 static ALCuint     g_ulContextCount = 0;
@@ -194,6 +197,49 @@ static ALCenum g_eLastContextError = ALC_NO_ERROR;
 
 ///////////////////////////////////////////////////////
 // ALC Related helper functions
+#ifdef _WIN32
+BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
+{
+    (void)lpReserved;
+
+    // Perform actions based on the reason for calling.
+    switch(ul_reason_for_call)
+    {
+        case DLL_PROCESS_ATTACH:
+            DisableThreadLibraryCalls(hModule);
+            break;
+
+        case DLL_PROCESS_DETACH:
+            ReleaseALC();
+            ReleaseALBuffers();
+            ReleaseALEffects();
+            ReleaseALFilters();
+            FreeALConfig();
+            ALTHUNK_EXIT();
+            DeleteCriticalSection(&g_csMutex);
+            break;
+    }
+    return TRUE;
+}
+#else
+#ifdef HAVE_GCC_DESTRUCTOR
+static void my_deinit() __attribute__((destructor));
+static void my_deinit()
+{
+    static ALenum once = AL_FALSE;
+    if(once) return;
+    once = AL_TRUE;
+
+    ReleaseALC();
+    ReleaseALBuffers();
+    ReleaseALEffects();
+    ReleaseALFilters();
+    FreeALConfig();
+    ALTHUNK_EXIT();
+    DeleteCriticalSection(&g_csMutex);
+}
+#endif
+#endif
 
 static void InitAL(void)
 {
@@ -205,7 +251,7 @@ static void InitAL(void)
 
         done = 1;
 
-        InitializeCriticalSection(&_alMutex);
+        InitializeCriticalSection(&g_csMutex);
         ALTHUNK_INIT();
         ReadALConfig();
 
@@ -335,7 +381,7 @@ ALCvoid SetALCError(ALenum errorCode)
 ALCvoid SuspendContext(ALCcontext *pContext)
 {
     (void)pContext;
-    EnterCriticalSection(&_alMutex);
+    EnterCriticalSection(&g_csMutex);
 }
 
 
@@ -347,7 +393,7 @@ ALCvoid SuspendContext(ALCcontext *pContext)
 ALCvoid ProcessContext(ALCcontext *pContext)
 {
     (void)pContext;
-    LeaveCriticalSection(&_alMutex);
+    LeaveCriticalSection(&g_csMutex);
 }
 
 

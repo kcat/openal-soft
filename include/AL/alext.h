@@ -25,10 +25,10 @@
 extern "C" {
 #endif
 
-#ifndef AL_EXT_float32
-#define AL_EXT_float32 1
-#define AL_FORMAT_MONO_FLOAT32                   0x10010
-#define AL_FORMAT_STEREO_FLOAT32                 0x10011
+#ifndef AL_LOKI_IMA_ADPCM_format
+#define AL_LOKI_IMA_ADPCM_format 1
+#define AL_FORMAT_IMA_ADPCM_MONO16_EXT           0x10000
+#define AL_FORMAT_IMA_ADPCM_STEREO16_EXT         0x10001
 #endif
 
 #ifndef AL_LOKI_WAVE_format
@@ -36,10 +36,21 @@ extern "C" {
 #define AL_FORMAT_WAVE_EXT                       0x10002
 #endif
 
+#ifndef AL_EXT_vorbis
+#define AL_EXT_vorbis 1
+#define AL_FORMAT_VORBIS_EXT                     0x10003
+#endif
+
 #ifndef AL_LOKI_quadriphonic
 #define AL_LOKI_quadriphonic 1
 #define AL_FORMAT_QUAD8_LOKI                     0x10004
 #define AL_FORMAT_QUAD16_LOKI                    0x10005
+#endif
+
+#ifndef AL_EXT_float32
+#define AL_EXT_float32 1
+#define AL_FORMAT_MONO_FLOAT32                   0x10010
+#define AL_FORMAT_STEREO_FLOAT32                 0x10011
 #endif
 
 #ifndef ALC_LOKI_audio_channel

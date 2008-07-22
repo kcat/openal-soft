@@ -198,7 +198,7 @@ struct ALCcontext_struct
     ALint       lNumStereoSources;
 
     ALCdevice  *Device;
-    ALCchar     ExtensionList[1024];
+    const ALCchar *ExtensionList;
 
     struct bs2b *bs2b;
 

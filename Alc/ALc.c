@@ -1279,7 +1279,12 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
         ProcessContext(NULL);
 
         if(pDevice->Context)
+        {
+#ifdef _DEBUG
+            AL_PRINT("alcCloseDevice(): destroying 1 Context\n");
+#endif
             alcDestroyContext(pDevice->Context);
+        }
         ALCdevice_ClosePlayback(pDevice);
 
         //Release device structure
@@ -1298,8 +1303,8 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
 ALCvoid ReleaseALC(ALCvoid)
 {
 #ifdef _DEBUG
-    if(g_ulContextCount > 0)
-        AL_PRINT("exit() %u device(s) and %u context(s) NOT deleted\n", g_ulDeviceCount, g_ulContextCount);
+    if(g_ulDeviceCount > 0)
+        AL_PRINT("exit(): closing %u Device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
 #endif
 
     while(g_pDeviceList)

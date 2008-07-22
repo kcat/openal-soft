@@ -1090,7 +1090,7 @@ ALvoid ReleaseALBuffers(ALvoid)
 
 #ifdef _DEBUG
     if(g_uiBufferCount > 0)
-        AL_PRINT("exit() %d Buffer(s) NOT deleted\n", g_uiBufferCount);
+        AL_PRINT("exit(): deleting %d Buffer(s)\n", g_uiBufferCount);
 #endif
 
     ALBuffer = g_pBuffers;

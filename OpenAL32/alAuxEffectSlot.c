@@ -522,7 +522,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
 {
 #ifdef _DEBUG
     if(Context->AuxiliaryEffectSlotCount > 0)
-        AL_PRINT("alcDestroyContext(): %d AuxiliaryEffectSlot(s) NOT deleted\n", Context->AuxiliaryEffectSlotCount);
+        AL_PRINT("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", Context->AuxiliaryEffectSlotCount);
 #endif
 
     while(Context->AuxiliaryEffectSlot)

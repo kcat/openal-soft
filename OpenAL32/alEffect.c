@@ -590,7 +590,7 @@ ALvoid ReleaseALEffects(ALvoid)
 {
 #ifdef _DEBUG
     if(g_EffectCount > 0)
-        AL_PRINT("exit() %d Effect(s) NOT deleted\n", g_EffectCount);
+        AL_PRINT("exit(): deleting %d Effect(s)\n", g_EffectCount);
 #endif
 
     while(g_EffectList)

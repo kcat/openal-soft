@@ -399,7 +399,7 @@ ALvoid ReleaseALFilters(ALvoid)
 {
 #ifdef _DEBUG
     if(g_FilterCount > 0)
-        AL_PRINT("exit() %d Filter(s) NOT deleted\n", g_FilterCount);
+        AL_PRINT("exit(): deleting %d Filter(s)\n", g_FilterCount);
 #endif
 
     while(g_FilterList)

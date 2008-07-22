@@ -31,6 +31,11 @@ extern "C" {
 #define AL_FORMAT_STEREO_FLOAT32                 0x10011
 #endif
 
+#ifndef AL_LOKI_WAVE_format
+#define AL_LOKI_WAVE_format 1
+#define AL_FORMAT_WAVE_EXT                       0x10002
+#endif
+
 #ifndef AL_LOKI_quadriphonic
 #define AL_LOKI_quadriphonic 1
 #define AL_FORMAT_QUAD8_LOKI                     0x10004

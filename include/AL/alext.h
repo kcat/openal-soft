@@ -37,6 +37,13 @@ extern "C" {
 #define AL_FORMAT_QUAD16_LOKI                    0x10005
 #endif
 
+#ifndef ALC_LOKI_audio_channel
+#define ALC_LOKI_audio_channel 1
+#define ALC_CHAN_MAIN_LOKI                       0x500001
+#define ALC_CHAN_PCM_LOKI                        0x500002
+#define ALC_CHAN_CD_LOKI                         0x500003
+#endif
+
 #ifndef AL_EXT_MCFORMATS
 #define AL_EXT_MCFORMATS 1
 #define AL_FORMAT_QUAD8                          0x1204

@@ -7,5 +7,5 @@ Name: OpenAL
 Description: OpenAL is a cross-platform 3D audio API
 Requires: @PKG_CONFIG_REQUIRES@
 Version: @PACKAGE_VERSION@
-Libs: -L${libdir} -lopenal @PKG_CONFIG_LIBS@
+Libs: -L${libdir} -l@LIBNAME@ @PKG_CONFIG_LIBS@
 Cflags: -I${includedir}

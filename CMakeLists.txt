@@ -33,6 +33,12 @@ OPTION(WERROR  "Treat compile warnings as errors"      OFF)
 OPTION(EXAMPLES  "Build example programs"              ON)
 
 
+IF(WIN32)
+    SET(LIBNAME openal32)
+ELSE()
+    SET(LIBNAME openal)
+ENDIF()
+
 SET(LIB_MAJOR_VERSION "1")
 SET(LIB_MINOR_VERSION "4")
 SET(LIB_BUILD_VERSION "272")
@@ -311,12 +317,6 @@ CONFIGURE_FILE(
 ADD_DEFINITIONS(-DAL_BUILD_LIBRARY)
 
 # Build a shared library
-IF(WIN32)
-    SET(LIBNAME openal32)
-ELSE()
-    SET(LIBNAME openal)
-ENDIF()
-
 ADD_LIBRARY(${LIBNAME} SHARED ${OPENAL_OBJS} ${ALC_OBJS})
 SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES VERSION ${LIB_VERSION}
                                             SOVERSION ${LIB_MAJOR_VERSION})

@@ -291,10 +291,22 @@ ENDIF()
 # This is always available
 SET(BACKENDS  "${BACKENDS} WaveFile")
 
+# Needed for openal.pc.in
+SET(prefix ${CMAKE_INSTALL_PREFIX})
+SET(exec_prefix "\${prefix}")
+SET(libdir "\${exec_prefix}/${LIB_INSTALL_DIR}")
+SET(bindir "\${exec_prefix}/bin")
+SET(includedir "\${prefix}/include")
+SET(PACKAGE_VERSION "${LIB_VERSION}")
+
 # End configuration
 CONFIGURE_FILE(
     "${OpenAL_SOURCE_DIR}/config.h.in"
     "${OpenAL_BINARY_DIR}/config.h")
+CONFIGURE_FILE(
+    "${OpenAL_SOURCE_DIR}/admin/pkgconfig/openal.pc.in"
+    "${OpenAL_BINARY_DIR}/admin/pkgconfig/openal.pc"
+    @ONLY)
 
 ADD_DEFINITIONS(-DAL_BUILD_LIBRARY)
 
@@ -325,6 +337,8 @@ INSTALL(FILES include/AL/al.h
               include/AL/alext.h
         DESTINATION include/AL
 )
+INSTALL(FILES "${OpenAL_BINARY_DIR}/admin/pkgconfig/openal.pc"
+        DESTINATION lib/pkgconfig)
 
 IF(EXAMPLES)
     ADD_EXECUTABLE(openal-info examples/openal-info.c)

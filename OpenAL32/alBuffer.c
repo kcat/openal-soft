@@ -264,6 +264,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
     ALbuffer *ALBuf;
     ALsizei padding;
     ALsizei i,j,k;
+    ALvoid *temp;
 
     Context = alcGetCurrentContext();
     SuspendContext(Context);
@@ -315,9 +316,10 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                         size *= 2;
 
                         // 8bit Samples are converted to 16 bit here
-                        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-                        if (ALBuf->data)
+                        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
+                        if (temp)
                         {
+                            ALBuf->data = temp;
                             for (i = 0;i < size;i+=4)
                             {
                                 ALBuf->data[i+0] = 0;
@@ -341,9 +343,10 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                         size /= sizeof(ALshort);
                         size *= 2;
 
-                        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-                        if (ALBuf->data)
+                        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
+                        if (temp)
                         {
+                            ALBuf->data = temp;
                             for (i = 0;i < size;i+=4)
                             {
                                 ALBuf->data[i+0] = 0;
@@ -367,10 +370,11 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                         size /= sizeof(ALfloat);
                         size *= 2;
 
-                        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-                        if (ALBuf->data)
+                        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
+                        if (temp)
                         {
                             ALint smp;
+                            ALBuf->data = temp;
                             for (i = 0;i < size;i+=4)
                             {
                                 ALBuf->data[i+0] = 0;
@@ -437,9 +441,10 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     if ((size%36) == 0)
                     {
                         // Allocate extra padding samples
-                        ALBuf->data=realloc(ALBuf->data,padding*2+(size/36)*(65*sizeof(ALshort)));
-                        if (ALBuf->data)
+                        temp=realloc(ALBuf->data,padding*2+(size/36)*(65*sizeof(ALshort)));
+                        if (temp)
                         {
+                            ALBuf->data = temp;
                             ALBuf->format = AL_FORMAT_MONO16;
                             ALBuf->eOriginalFormat = AL_FORMAT_MONO_IMA4;
                             IMAData=(ALuint *)data;
@@ -503,9 +508,10 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     if ((size%72) == 0)
                     {
                         // Allocate extra padding samples
-                        ALBuf->data=realloc(ALBuf->data,padding*2*2+(size/72)*(2*65*sizeof(ALshort)));
-                        if (ALBuf->data)
+                        temp=realloc(ALBuf->data,padding*2*2+(size/72)*(2*65*sizeof(ALshort)));
+                        if (temp)
                         {
+                            ALBuf->data = temp;
                             ALBuf->format = AL_FORMAT_STEREO16;
                             ALBuf->eOriginalFormat = AL_FORMAT_STEREO_IMA4;
                             IMAData=(ALuint *)data;
@@ -1006,6 +1012,7 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
     ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
     ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
     ALsizei padding = freq / LOWPASSFREQCUTOFF;
+    ALvoid *temp;
     ALsizei i;
 
     assert(aluBytesFromFormat(NewFormat) == 2);
@@ -1027,9 +1034,10 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
         size /= sizeof(ALubyte);
 
         // 8bit Samples are converted to 16 bit here
-        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-        if (ALBuf->data)
+        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
+        if (temp)
         {
+            ALBuf->data = temp;
             for (i = 0;i < size;i++)
                 ALBuf->data[i] = (ALshort)((data[i]-128) << 8);
             memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
@@ -1048,9 +1056,10 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
         size /= sizeof(ALshort);
 
         // Allocate 8 extra samples
-        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-        if (ALBuf->data)
+        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
+        if (temp)
         {
+            ALBuf->data = temp;
             memcpy(ALBuf->data, data, size*1*sizeof(ALshort));
             memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
 
@@ -1068,10 +1077,11 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
         size /= sizeof(ALfloat);
 
         // Allocate 8 extra samples
-        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-        if (ALBuf->data)
+        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
+        if (temp)
         {
             ALint smp;
+            ALBuf->data = temp;
             for (i = 0;i < size;i++)
             {
                 smp = (((ALfloat*)data)[i] * 32767.5f - 0.5f);

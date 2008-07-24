@@ -123,6 +123,9 @@ extern char _alDebug[256];
 #define SPEEDOFSOUNDMETRESPERSEC   (343.3f)
 #define AIRABSORBGAINHF            (0.994f)
 
+#define LOWPASSFREQCUTOFF          (5000)
+
+
 typedef struct {
     ALCboolean (*OpenPlayback)(ALCdevice*, const ALCchar*);
     void (*ClosePlayback)(ALCdevice*);

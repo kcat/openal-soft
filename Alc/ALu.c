@@ -680,6 +680,9 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     DataPos64 <<= FRACTIONBITS;
                     DataPos64 += DataPosFrac;
                     BufferSize = (ALuint)((DataSize64-DataPos64+(increment-1)) / increment);
+                    LowStep = Frequency/LOWPASSFREQCUTOFF;
+                    if(LowStep < 1) LowStep = 1;
+
                     BufferListItem = ALSource->queue;
                     for(loop = 0; loop < ALSource->BuffersPlayed; loop++)
                     {
@@ -693,7 +696,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             ALbuffer *NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(BufferListItem->next->buffer);
                             if(NextBuf && NextBuf->data)
                             {
-                                ulExtraSamples = min(NextBuf->size, (ALint)(16*Channels));
+                                ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*2));
                                 memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
                             }
                         }
@@ -702,7 +705,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             ALbuffer *NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(ALSource->queue->buffer);
                             if (NextBuf && NextBuf->data)
                             {
-                                ulExtraSamples = min(NextBuf->size, (ALint)(16*Channels));
+                                ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*2));
                                 memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
                             }
                         }
@@ -710,9 +713,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     BufferSize = min(BufferSize, (SamplesToDo-j));
 
                     //Actual sample mixing loop
-                    LowStep = Frequency/5000;
-                    if(LowStep < 1) LowStep = 1;
-                    if(LowStep > 8) LowStep = 8;
                     Data += DataPosInt*Channels;
                     while(BufferSize--)
                     {

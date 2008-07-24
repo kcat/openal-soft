@@ -18,6 +18,7 @@ typedef struct ALbuffer_struct
     ALshort *data;
     ALsizei  size;
     ALsizei  frequency;
+    ALsizei  padding;
     ALenum   state;
     ALuint   refcount; // Number of sources using this buffer (deletion can only occur when this is 0)
     struct ALbuffer_struct *next;

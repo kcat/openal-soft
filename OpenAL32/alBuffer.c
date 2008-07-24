@@ -262,6 +262,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
     ALint RightSample,RightIndex;
     ALuint LeftIMACode,RightIMACode;
     ALbuffer *ALBuf;
+    ALsizei padding;
     ALsizei i,j,k;
 
     Context = alcGetCurrentContext();
@@ -304,6 +305,9 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                         break;
                     }
 
+                    padding = freq / LOWPASSFREQCUTOFF;
+                    if(padding < 1) padding = 1;
+
                     switch(OrigBytes)
                     {
                     case 1:
@@ -311,8 +315,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                         size *= 2;
 
                         // 8bit Samples are converted to 16 bit here
-                        // Allocate 8 extra samples
-                        ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
+                        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
                         if (ALBuf->data)
                         {
                             for (i = 0;i < size;i+=4)
@@ -322,12 +325,13 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                                 ALBuf->data[i+2] = (ALshort)((((ALubyte*)data)[i/2+0]-128) << 8);
                                 ALBuf->data[i+3] = (ALshort)((((ALubyte*)data)[i/2+1]-128) << 8);
                             }
-                            memset(&(ALBuf->data[size]), 0, 16*NewChannels);
+                            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
 
                             ALBuf->format = NewFormat;
                             ALBuf->eOriginalFormat = format;
                             ALBuf->size = size*1*sizeof(ALshort);
                             ALBuf->frequency = freq;
+                            ALBuf->padding = padding;
                         }
                         else
                             alSetError(AL_OUT_OF_MEMORY);
@@ -337,8 +341,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                         size /= sizeof(ALshort);
                         size *= 2;
 
-                        // Allocate 8 extra samples
-                        ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
+                        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
                         if (ALBuf->data)
                         {
                             for (i = 0;i < size;i+=4)
@@ -348,12 +351,13 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                                 ALBuf->data[i+2] = ((ALshort*)data)[i/2+0];
                                 ALBuf->data[i+3] = ((ALshort*)data)[i/2+1];
                             }
-                            memset(&(ALBuf->data[size]), 0, 16*NewChannels);
+                            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
 
                             ALBuf->format = NewFormat;
                             ALBuf->eOriginalFormat = format;
                             ALBuf->size = size*1*sizeof(ALshort);
                             ALBuf->frequency = freq;
+                            ALBuf->padding = padding;
                         }
                         else
                             alSetError(AL_OUT_OF_MEMORY);
@@ -363,8 +367,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                         size /= sizeof(ALfloat);
                         size *= 2;
 
-                        // Allocate 8 extra samples
-                        ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
+                        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
                         if (ALBuf->data)
                         {
                             ALint smp;
@@ -381,12 +384,13 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                                 smp = max(smp, -32768);
                                 ALBuf->data[i+3] = (ALshort)smp;
                             }
-                            memset(&(ALBuf->data[size]), 0, 16*NewChannels);
+                            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
 
                             ALBuf->format = NewFormat;
                             ALBuf->eOriginalFormat = format;
                             ALBuf->size = size*1*sizeof(ALshort);
                             ALBuf->frequency = freq;
+                            ALBuf->padding = padding;
                         }
                         else
                             alSetError(AL_OUT_OF_MEMORY);
@@ -424,13 +428,16 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     break;
 
                 case AL_FORMAT_MONO_IMA4:
+                    padding = freq / LOWPASSFREQCUTOFF;
+                    if(padding < 1) padding = 1;
+
                     // Here is where things vary:
                     // nVidia and Apple use 64+1 samples per block => block_size=36 bytes
                     // Most PC sound software uses 2040+1 samples per block -> block_size=1024 bytes
                     if ((size%36) == 0)
                     {
-                        // Allocate 8 extra samples (16 bytes)
-                        ALBuf->data=realloc(ALBuf->data,16+(size/36)*(65*sizeof(ALshort)));
+                        // Allocate extra padding samples
+                        ALBuf->data=realloc(ALBuf->data,padding*2+(size/36)*(65*sizeof(ALshort)));
                         if (ALBuf->data)
                         {
                             ALBuf->format = AL_FORMAT_MONO16;
@@ -474,9 +481,10 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                                     IMAData++;
                                 }
                             }
-                            memset(&(ALBuf->data[(size/36*65)]), 0, 16);
+                            memset(&(ALBuf->data[(size/36*65)]), 0, padding*2);
                             ALBuf->size=size/36*65*sizeof(ALshort);
                             ALBuf->frequency=freq;
+                            ALBuf->padding=padding;
                         }
                         else
                             alSetError(AL_OUT_OF_MEMORY);
@@ -486,13 +494,16 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     break;
 
                 case AL_FORMAT_STEREO_IMA4:
+                    padding = freq / LOWPASSFREQCUTOFF;
+                    if(padding < 1) padding = 1;
+
                     // Here is where things vary:
                     // nVidia and Apple use 64+1 samples per channel per block => block_size=72 bytes
                     // Most PC sound software uses 2040+1 samples per channel per block -> block_size=2048 bytes
                     if ((size%72) == 0)
                     {
-                        // Allocate 8 extra samples (32 bytes)
-                        ALBuf->data=realloc(ALBuf->data,32+(size/72)*(2*65*sizeof(ALshort)));
+                        // Allocate extra padding samples
+                        ALBuf->data=realloc(ALBuf->data,padding*2*2+(size/72)*(2*65*sizeof(ALshort)));
                         if (ALBuf->data)
                         {
                             ALBuf->format = AL_FORMAT_STEREO16;
@@ -565,9 +576,10 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                                     IMAData+=2;
                                 }
                             }
-                            memset(&(ALBuf->data[(size/72*2*65)]), 0, 32);
+                            memset(&(ALBuf->data[(size/72*2*65)]), 0, padding*2*2);
                             ALBuf->size=size/72*2*65*sizeof(ALshort);
                             ALBuf->frequency=freq;
+                            ALBuf->padding=padding;
                         }
                         else
                             alSetError(AL_OUT_OF_MEMORY);
@@ -993,6 +1005,7 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
     ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
     ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
+    ALsizei padding = freq / LOWPASSFREQCUTOFF;
     ALsizei i;
 
     assert(aluBytesFromFormat(NewFormat) == 2);
@@ -1004,24 +1017,28 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
         return;
     }
 
+    /* Ensure at least one padding byte for the bilinear filter */
+    if(padding < 1)
+        padding = 1;
+
     switch(OrigBytes)
     {
     case 1:
         size /= sizeof(ALubyte);
 
         // 8bit Samples are converted to 16 bit here
-        // Allocate 8 extra samples
-        ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
+        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
         if (ALBuf->data)
         {
             for (i = 0;i < size;i++)
                 ALBuf->data[i] = (ALshort)((data[i]-128) << 8);
-            memset(&(ALBuf->data[size]), 0, 16*NewChannels);
+            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
 
             ALBuf->format = NewFormat;
             ALBuf->eOriginalFormat = OrigFormat;
             ALBuf->size = size*1*sizeof(ALshort);
             ALBuf->frequency = freq;
+            ALBuf->padding = padding;
         }
         else
             alSetError(AL_OUT_OF_MEMORY);
@@ -1031,16 +1048,17 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
         size /= sizeof(ALshort);
 
         // Allocate 8 extra samples
-        ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
+        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
         if (ALBuf->data)
         {
             memcpy(ALBuf->data, data, size*1*sizeof(ALshort));
-            memset(&(ALBuf->data[size]), 0, 16*NewChannels);
+            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
 
             ALBuf->format = NewFormat;
             ALBuf->eOriginalFormat = OrigFormat;
             ALBuf->size = size*1*sizeof(ALshort);
             ALBuf->frequency = freq;
+            ALBuf->padding = padding;
         }
         else
             alSetError(AL_OUT_OF_MEMORY);
@@ -1050,7 +1068,7 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
         size /= sizeof(ALfloat);
 
         // Allocate 8 extra samples
-        ALBuf->data = realloc(ALBuf->data, (8*NewChannels + size) * (1*sizeof(ALshort)));
+        ALBuf->data = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
         if (ALBuf->data)
         {
             ALint smp;
@@ -1061,12 +1079,13 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
                 smp = max(smp, -32768);
                 ALBuf->data[i] = (ALshort)smp;
             }
-            memset(&(ALBuf->data[size]), 0, 16*NewChannels);
+            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
 
             ALBuf->format = NewFormat;
             ALBuf->eOriginalFormat = OrigFormat;
             ALBuf->size = size*1*sizeof(ALshort);
             ALBuf->frequency = freq;
+            ALBuf->padding = padding;
         }
         else
             alSetError(AL_OUT_OF_MEMORY);

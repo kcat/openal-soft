@@ -210,20 +210,9 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat matrix[3][3])
     memcpy(vector, result, sizeof(result));
 }
 
-static __inline ALfloat aluComputeSample(ALfloat GainHF, ALfloat sample, ALfloat LastSample)
+static __inline ALfloat aluComputeSample(ALfloat GainHF, ALfloat sample, ALfloat LowSample)
 {
-    if(GainHF < 1.0f)
-    {
-        if(GainHF > 0.0f)
-        {
-            sample *= GainHF;
-            sample += LastSample * (1.0f-GainHF);
-        }
-        else
-            sample = 0.0f;
-    }
-
-    return sample;
+    return LowSample + ((sample - LowSample) * GainHF);
 }
 
 static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
@@ -603,11 +592,13 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALuint BlockAlign,BufferSize;
     ALuint DataSize=0,DataPosInt=0,DataPosFrac=0;
     ALuint Channels,Frequency,ulExtraSamples;
-    ALfloat DrySample, WetSample;
     ALboolean doReverb;
     ALfloat Pitch;
-    ALint Looping,increment,State;
-    ALuint Buffer,fraction;
+    ALint Looping,State;
+    ALint fraction,increment;
+    ALint LowFrac;
+    ALuint LowStep;
+    ALuint Buffer;
     ALuint SamplesToDo;
     ALsource *ALSource;
     ALbuffer *ALBuffer;
@@ -676,8 +667,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     //Get source info
                     DataPosInt = ALSource->position;
                     DataPosFrac = ALSource->position_fraction;
-                    DrySample = ALSource->LastDrySample;
-                    WetSample = ALSource->LastWetSample;
 
                     //Compute 18.14 fixed point step
                     increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
@@ -722,36 +711,45 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     BufferSize = min(BufferSize, (SamplesToDo-j));
 
                     //Actual sample mixing loop
+                    LowStep = Frequency/5000;
+                    if(LowStep < 1) LowStep = 1;
+                    if(LowStep > 8) LowStep = 8;
                     Data += DataPosInt*Channels;
                     while(BufferSize--)
                     {
                         k = DataPosFrac>>FRACTIONBITS;
                         fraction = DataPosFrac&FRACTIONMASK;
+                        LowFrac = ((DataPosFrac+(DataPosInt<<FRACTIONBITS))/LowStep)&FRACTIONMASK;
                         if(Channels==1)
                         {
+                            ALfloat sample, lowsamp, outsamp;
                             //First order interpolator
-                            ALfloat sample = (ALfloat)((ALshort)(((Data[k]*((1L<<FRACTIONBITS)-fraction))+(Data[k+1]*(fraction)))>>FRACTIONBITS));
+                            sample = (Data[k]*((1<<FRACTIONBITS)-fraction) +
+                                      Data[k+1]*fraction) >> FRACTIONBITS;
+                            lowsamp = (Data[((k+DataPosInt)/LowStep    )*LowStep - DataPosInt]*((1<<FRACTIONBITS)-LowFrac) +
+                                       Data[((k+DataPosInt)/LowStep + 1)*LowStep - DataPosInt]*LowFrac) >>
+                                      FRACTIONBITS;
 
                             //Direct path final mix buffer and panning
-                            DrySample = aluComputeSample(DryGainHF, sample, DrySample);
-                            DryBuffer[j][FRONT_LEFT]  += DrySample*DrySend[FRONT_LEFT];
-                            DryBuffer[j][FRONT_RIGHT] += DrySample*DrySend[FRONT_RIGHT];
-                            DryBuffer[j][SIDE_LEFT]   += DrySample*DrySend[SIDE_LEFT];
-                            DryBuffer[j][SIDE_RIGHT]  += DrySample*DrySend[SIDE_RIGHT];
-                            DryBuffer[j][BACK_LEFT]   += DrySample*DrySend[BACK_LEFT];
-                            DryBuffer[j][BACK_RIGHT]  += DrySample*DrySend[BACK_RIGHT];
+                            outsamp = aluComputeSample(DryGainHF, sample, lowsamp);
+                            DryBuffer[j][FRONT_LEFT]  += outsamp*DrySend[FRONT_LEFT];
+                            DryBuffer[j][FRONT_RIGHT] += outsamp*DrySend[FRONT_RIGHT];
+                            DryBuffer[j][SIDE_LEFT]   += outsamp*DrySend[SIDE_LEFT];
+                            DryBuffer[j][SIDE_RIGHT]  += outsamp*DrySend[SIDE_RIGHT];
+                            DryBuffer[j][BACK_LEFT]   += outsamp*DrySend[BACK_LEFT];
+                            DryBuffer[j][BACK_RIGHT]  += outsamp*DrySend[BACK_RIGHT];
                             //Room path final mix buffer and panning
-                            WetSample = aluComputeSample(WetGainHF, sample, WetSample);
+                            outsamp = aluComputeSample(WetGainHF, sample, lowsamp);
                             if(doReverb)
-                                ReverbBuffer[j] += WetSample;
+                                ReverbBuffer[j] += outsamp;
                             else
                             {
-                                WetBuffer[j][FRONT_LEFT]  += WetSample*WetSend[FRONT_LEFT];
-                                WetBuffer[j][FRONT_RIGHT] += WetSample*WetSend[FRONT_RIGHT];
-                                WetBuffer[j][SIDE_LEFT]   += WetSample*WetSend[SIDE_LEFT];
-                                WetBuffer[j][SIDE_RIGHT]  += WetSample*WetSend[SIDE_RIGHT];
-                                WetBuffer[j][BACK_LEFT]   += WetSample*WetSend[BACK_LEFT];
-                                WetBuffer[j][BACK_RIGHT]  += WetSample*WetSend[BACK_RIGHT];
+                                WetBuffer[j][FRONT_LEFT]  += outsamp*WetSend[FRONT_LEFT];
+                                WetBuffer[j][FRONT_RIGHT] += outsamp*WetSend[FRONT_RIGHT];
+                                WetBuffer[j][SIDE_LEFT]   += outsamp*WetSend[SIDE_LEFT];
+                                WetBuffer[j][SIDE_RIGHT]  += outsamp*WetSend[SIDE_RIGHT];
+                                WetBuffer[j][BACK_LEFT]   += outsamp*WetSend[BACK_LEFT];
+                                WetBuffer[j][BACK_RIGHT]  += outsamp*WetSend[BACK_RIGHT];
                             }
                         }
                         else
@@ -826,8 +824,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     //Update source info
                     ALSource->position = DataPosInt;
                     ALSource->position_fraction = DataPosFrac;
-                    ALSource->LastDrySample = DrySample;
-                    ALSource->LastWetSample = WetSample;
                 }
 
                 //Handle looping sources

@@ -70,9 +70,6 @@ typedef struct ALsource
         ALfilter WetFilter;
     } Send[MAX_SENDS];
 
-    ALfloat LastDrySample;
-    ALfloat LastWetSample;
-
     ALboolean DryGainHFAuto;
     ALboolean WetGainAuto;
     ALboolean WetGainHFAuto;

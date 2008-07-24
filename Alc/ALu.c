@@ -674,13 +674,12 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         increment = (MAX_PITCH<<FRACTIONBITS);
 
                     //Figure out how many samples we can mix.
-                    //Pitch must be <= 4 (the number below !)
-                    DataSize64 = DataSize+MAX_PITCH;
+                    DataSize64 = DataSize;
                     DataSize64 <<= FRACTIONBITS;
                     DataPos64 = DataPosInt;
                     DataPos64 <<= FRACTIONBITS;
                     DataPos64 += DataPosFrac;
-                    BufferSize = (ALuint)((DataSize64-DataPos64) / increment);
+                    BufferSize = (ALuint)((DataSize64-DataPos64+(increment-1)) / increment);
                     BufferListItem = ALSource->queue;
                     for(loop = 0; loop < ALSource->BuffersPlayed; loop++)
                     {

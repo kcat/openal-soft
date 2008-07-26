@@ -12,9 +12,6 @@ By baltrax@hotmail.com (Zxform)
 #include "alFilter.h"
 
 
-#define FILTER_SECTIONS   2   /* 2 filter sections for 24 db/oct filter */
-
-
 static void szxform(
     double *a0, double *a1, double *a2,   /* numerator coefficients */
     double *b0, double *b1, double *b2,   /* denominator coefficients */
@@ -43,41 +40,8 @@ static void szxform(
  * Returns float value giving the current output.
  * --------------------------------------------------------------------
  */
-float lpFilter(FILTER *iir, float input)
-{
-    unsigned int i;
-    float *hist1_ptr,*hist2_ptr,*coef_ptr;
-    float output,new_hist,history1,history2;
 
-    coef_ptr = iir->coef;                /* coefficient pointer */
-
-    hist1_ptr = iir->history;            /* first history */
-    hist2_ptr = hist1_ptr + 1;           /* next history */
-
-    /* 1st number of coefficients array is overall input scale factor,
-     * or filter gain */
-    output = input * (*coef_ptr++);
-
-    for(i = 0;i < FILTER_SECTIONS;i++)
-    {
-        history1 = *hist1_ptr;           /* history values */
-        history2 = *hist2_ptr;
-
-        output = output - history1 * (*coef_ptr++);
-        new_hist = output - history2 * (*coef_ptr++);    /* poles */
-
-        output = new_hist + history1 * (*coef_ptr++);
-        output = output + history2 * (*coef_ptr++);      /* zeros */
-
-        *hist2_ptr++ = *hist1_ptr;
-        *hist1_ptr++ = new_hist;
-        hist1_ptr++;
-        hist2_ptr++;
-    }
-
-    return output;
-}
-
+/*** moved to ALu.c ***/
 
 /*
  * --------------------------------------------------------------------

@@ -53,7 +53,8 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pf
 
 ALvoid ReleaseALFilters(ALvoid);
 
-float lpFilter(FILTER *iir, float input);
+#define FILTER_SECTIONS 2   /* 2 filter sections for 24 db/oct filter */
+
 int InitLowPassFilter(ALCcontext *Context, FILTER *iir);
 
 #ifdef __cplusplus

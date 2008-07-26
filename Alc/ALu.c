@@ -163,6 +163,42 @@ __inline ALuint aluChannelsFromFormat(ALenum format)
 }
 
 
+static __inline ALfloat lpFilter(FILTER *iir, ALfloat input)
+{
+    unsigned int i;
+    float *hist1_ptr,*hist2_ptr,*coef_ptr;
+    ALfloat output,new_hist,history1,history2;
+
+    coef_ptr = iir->coef;                /* coefficient pointer */
+
+    hist1_ptr = iir->history;            /* first history */
+    hist2_ptr = hist1_ptr + 1;           /* next history */
+
+    /* 1st number of coefficients array is overall input scale factor,
+     * or filter gain */
+    output = input * (*coef_ptr++);
+
+    for(i = 0;i < FILTER_SECTIONS;i++)
+    {
+        history1 = *hist1_ptr;           /* history values */
+        history2 = *hist2_ptr;
+
+        output = output - history1 * (*coef_ptr++);
+        new_hist = output - history2 * (*coef_ptr++);    /* poles */
+
+        output = new_hist + history1 * (*coef_ptr++);
+        output = output + history2 * (*coef_ptr++);      /* zeros */
+
+        *hist2_ptr++ = *hist1_ptr;
+        *hist1_ptr++ = new_hist;
+        hist1_ptr++;
+        hist2_ptr++;
+    }
+
+    return output;
+}
+
+
 static __inline ALshort aluF2S(ALfloat Value)
 {
     ALint i;

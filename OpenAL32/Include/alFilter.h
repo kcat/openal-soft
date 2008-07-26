@@ -7,6 +7,11 @@
 extern "C" {
 #endif
 
+typedef struct {
+    float *history; /* pointer to history in filter */
+    float *coef;    /* pointer to coefficients of filter */
+} FILTER;
+
 #define AL_FILTER_TYPE                                     0x8001
 
 #define AL_FILTER_NULL                                     0x0000
@@ -47,6 +52,9 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pfl
 AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues);
 
 ALvoid ReleaseALFilters(ALvoid);
+
+float lpFilter(FILTER *iir, float input);
+int InitLowPassFilter(ALCcontext *Context, FILTER *iir);
 
 #ifdef __cplusplus
 }

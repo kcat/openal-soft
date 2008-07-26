@@ -1,8 +1,9 @@
 #ifndef _AL_AUXEFFECTSLOT_H_
 #define _AL_AUXEFFECTSLOT_H_
 
-#include "alEffect.h"
 #include "AL/al.h"
+#include "alEffect.h"
+#include "alFilter.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,7 +29,8 @@ typedef struct ALeffectslot
     ALuint ReverbReflectPos;
     ALuint ReverbLatePos;
     ALfloat ReverbDecayGain;
-    ALfloat LastDecaySample;
+
+    FILTER iirFilter;
 
     ALuint refcount;
 

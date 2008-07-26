@@ -71,6 +71,8 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                         break;
                     }
 
+                    InitLowPassFilter(Context, &(*list)->iirFilter);
+
                     (*list)->Gain = 1.0;
                     (*list)->AuxSendAuto = AL_TRUE;
                     (*list)->refcount = 0;
@@ -138,6 +140,9 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
                     ALeffectslot **list;
 
                     ALAuxiliaryEffectSlot = ((ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslots[i]));
+
+                    free(ALAuxiliaryEffectSlot->iirFilter.coef);
+                    free(ALAuxiliaryEffectSlot->iirFilter.history);
 
                     // Remove Source from list of Sources
                     list = &Context->AuxiliaryEffectSlot;

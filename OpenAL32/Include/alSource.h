@@ -75,6 +75,8 @@ typedef struct ALsource
     ALboolean WetGainHFAuto;
     ALfloat   OuterGainHF;
 
+    FILTER iirFilter;
+
     ALfloat AirAbsorptionFactor;
 
     ALfloat RoomRolloffFactor;

@@ -596,8 +596,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALfloat Pitch;
     ALint Looping,State;
     ALint fraction,increment;
-    ALint LowFrac;
-    ALuint LowStep;
     ALuint Buffer;
     ALuint SamplesToDo;
     ALsource *ALSource;
@@ -609,6 +607,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALbufferlistitem *BufferListItem;
     ALuint loop;
     ALint64 DataSize64,DataPos64;
+    FILTER *Filter;
 
     SuspendContext(ALContext);
 
@@ -667,6 +666,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     //Get source info
                     DataPosInt = ALSource->position;
                     DataPosFrac = ALSource->position_fraction;
+                    Filter = &ALSource->iirFilter;
 
                     //Compute 18.14 fixed point step
                     increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
@@ -680,8 +680,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     DataPos64 <<= FRACTIONBITS;
                     DataPos64 += DataPosFrac;
                     BufferSize = (ALuint)((DataSize64-DataPos64+(increment-1)) / increment);
-                    LowStep = Frequency/LOWPASSFREQCUTOFF;
-                    if(LowStep < 1) LowStep = 1;
 
                     BufferListItem = ALSource->queue;
                     for(loop = 0; loop < ALSource->BuffersPlayed; loop++)
@@ -718,16 +716,14 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     {
                         k = DataPosFrac>>FRACTIONBITS;
                         fraction = DataPosFrac&FRACTIONMASK;
-                        LowFrac = ((DataPosFrac+(DataPosInt<<FRACTIONBITS))/LowStep)&FRACTIONMASK;
+
                         if(Channels==1)
                         {
                             ALfloat sample, lowsamp, outsamp;
                             //First order interpolator
                             sample = (Data[k]*((1<<FRACTIONBITS)-fraction) +
                                       Data[k+1]*fraction) >> FRACTIONBITS;
-                            lowsamp = (Data[((k+DataPosInt)/LowStep    )*LowStep - DataPosInt]*((1<<FRACTIONBITS)-LowFrac) +
-                                       Data[((k+DataPosInt)/LowStep + 1)*LowStep - DataPosInt]*LowFrac) >>
-                                      FRACTIONBITS;
+                            lowsamp = lpFilter(Filter, sample);
 
                             //Direct path final mix buffer and panning
                             outsamp = aluComputeSample(DryGainHF, sample, lowsamp);
@@ -915,9 +911,9 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                 ALfloat Gain = ALEffectSlot->effect.Reverb.Gain;
                 ALfloat ReflectGain = ALEffectSlot->effect.Reverb.ReflectionsGain;
                 ALfloat LateReverbGain = ALEffectSlot->effect.Reverb.LateReverbGain;
-                ALfloat LastDecaySample = ALEffectSlot->LastDecaySample;
-                ALfloat sample;
+                ALfloat sample, lowsample;
 
+                Filter = &ALEffectSlot->iirFilter;
                 for(i = 0;i < SamplesToDo;i++)
                 {
                     DelayBuffer[Pos] = ReverbBuffer[i] * Gain;
@@ -927,12 +923,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     DelayBuffer[LatePos] *= LateReverbGain;
 
                     Pos = (Pos+1) % Length;
-                    DelayBuffer[Pos] *= DecayHFRatio;
-                    DelayBuffer[Pos] += LastDecaySample * (1.0f-DecayHFRatio);
-                    LastDecaySample = DelayBuffer[Pos];
-                    DelayBuffer[Pos] *= DecayGain;
+                    lowsample = lpFilter(Filter, DelayBuffer[Pos]);
+                    lowsample += (DelayBuffer[Pos]-lowsample) * DecayHFRatio;
 
-                    DelayBuffer[LatePos] += DelayBuffer[Pos];
+                    DelayBuffer[LatePos] += lowsample * DecayGain;
 
                     sample += DelayBuffer[LatePos];
 
@@ -950,7 +944,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                 ALEffectSlot->ReverbPos = Pos;
                 ALEffectSlot->ReverbLatePos = LatePos;
                 ALEffectSlot->ReverbReflectPos = ReflectPos;
-                ALEffectSlot->LastDecaySample = LastDecaySample;
             }
 
             ALEffectSlot = ALEffectSlot->next;

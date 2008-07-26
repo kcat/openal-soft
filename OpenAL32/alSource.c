@@ -75,6 +75,8 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
                                 break;
                             }
 
+                            InitLowPassFilter(Context, &(*list)->iirFilter);
+
                             sources[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
                             (*list)->source = sources[i];
 
@@ -178,6 +180,9 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
                                     ALSource->Send[j].Slot->refcount--;
                                 ALSource->Send[j].Slot = NULL;
                             }
+
+                            free(ALSource->iirFilter.coef);
+                            free(ALSource->iirFilter.history);
 
                             // Decrement Source count
                             Context->SourceCount--;

@@ -38,7 +38,7 @@ cf_level = 0  # Sets the crossfeed level for stereo output. Valid values are:
 
 frequency = 44100  # Sets the output frequency. Default is 44100
 
-refresh = 8192  # Sets the buffer size, in frames. Default is 8192. Note that
+refresh = 4096  # Sets the buffer size, in frames. Default is 4096. Note that
                 # the actual granularity may or may not be less than this.
 
 sources = 256  # Sets the maximum number of allocatable sources. Lower values

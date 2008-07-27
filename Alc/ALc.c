@@ -1218,9 +1218,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         if(!aluChannelsFromFormat(device->Format))
             device->Format = AL_FORMAT_STEREO16;
 
-        device->UpdateSize = GetConfigValueInt(NULL, "refresh", 8192);
+        device->UpdateSize = GetConfigValueInt(NULL, "refresh", 4096);
         if((ALint)device->UpdateSize <= 0)
-            device->UpdateSize = 8192;
+            device->UpdateSize = 4096;
 
         device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
         if((ALint)device->MaxNoOfSources <= 0)

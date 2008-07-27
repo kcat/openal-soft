@@ -221,26 +221,29 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue
     {
         ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
 
-        switch(param)
+        switch(ALFilter->type)
         {
-        case AL_LOWPASS_GAIN:
-            if(ALFilter->type == AL_FILTER_LOWPASS)
+        case AL_FILTER_LOWPASS:
+            switch(param)
             {
+            case AL_LOWPASS_GAIN:
                 if(flValue >= 0.0f && flValue <= 1.0f)
                     ALFilter->Gain = flValue;
-            }
-            else
-                alSetError(AL_INVALID_ENUM);
-            break;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
 
-        case AL_LOWPASS_GAINHF:
-            if(ALFilter->type == AL_FILTER_LOWPASS)
-            {
+            case AL_LOWPASS_GAINHF:
                 if(flValue >= 0.0f && flValue <= 1.0f)
                     ALFilter->GainHF = flValue;
-            }
-            else
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            default:
                 alSetError(AL_INVALID_ENUM);
+                break;
+            }
             break;
 
         default:
@@ -265,13 +268,8 @@ AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflVa
     {
         switch(param)
         {
-        case AL_LOWPASS_GAIN:
-        case AL_LOWPASS_GAINHF:
-            alFilterf(filter, param, pflValues[0]);
-            break;
-
         default:
-            alSetError(AL_INVALID_ENUM);
+            alFilterf(filter, param, pflValues[0]);
             break;
         }
     }
@@ -285,15 +283,19 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piVal
 {
     ALCcontext *Context;
 
-    (void)piValue;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
     if (filter && alIsFilter(filter))
     {
+        ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
+
         switch(param)
         {
+        case AL_FILTER_TYPE:
+            *piValue = ALFilter->type;
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -309,8 +311,6 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piVa
 {
     ALCcontext *Context;
 
-    (void)piValues;
-
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
@@ -318,6 +318,10 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piVa
     {
         switch(param)
         {
+        case AL_FILTER_TYPE:
+            alGetFilteri(filter, param, piValues);
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -340,20 +344,23 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pfl
     {
         ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
 
-        switch(param)
+        switch(ALFilter->type)
         {
-        case AL_LOWPASS_GAIN:
-            if(ALFilter->type == AL_FILTER_LOWPASS)
+        case AL_FILTER_LOWPASS:
+            switch(param)
+            {
+            case AL_LOWPASS_GAIN:
                 *pflValue = ALFilter->Gain;
-            else
-                alSetError(AL_INVALID_ENUM);
-            break;
+                break;
 
-        case AL_LOWPASS_GAINHF:
-            if(ALFilter->type == AL_FILTER_LOWPASS)
+            case AL_LOWPASS_GAINHF:
                 *pflValue = ALFilter->GainHF;
-            else
+                break;
+
+            default:
                 alSetError(AL_INVALID_ENUM);
+                break;
+            }
             break;
 
         default:
@@ -378,13 +385,8 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pf
     {
         switch(param)
         {
-        case AL_LOWPASS_GAIN:
-        case AL_LOWPASS_GAINHF:
-            alGetFilterf(filter, param, pflValues);
-            break;
-
         default:
-            alSetError(AL_INVALID_ENUM);
+            alGetFilterf(filter, param, pflValues);
             break;
         }
     }

@@ -141,9 +141,6 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
 
                     ALAuxiliaryEffectSlot = ((ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslots[i]));
 
-                    free(ALAuxiliaryEffectSlot->iirFilter.coef);
-                    free(ALAuxiliaryEffectSlot->iirFilter.history);
-
                     // Remove Source from list of Sources
                     list = &Context->AuxiliaryEffectSlot;
                     while(*list && *list != ALAuxiliaryEffectSlot)

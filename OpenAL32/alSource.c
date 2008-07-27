@@ -181,9 +181,6 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
                                 ALSource->Send[j].Slot = NULL;
                             }
 
-                            free(ALSource->iirFilter.coef);
-                            free(ALSource->iirFilter.history);
-
                             // Decrement Source count
                             Context->SourceCount--;
 

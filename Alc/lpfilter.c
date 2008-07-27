@@ -87,24 +87,9 @@ int InitLowPassFilter(ALCcontext *Context, FILTER *iir)
     ProtoCoef[1].b1 = 1.847759;
     ProtoCoef[1].b2 = 1.0;
 
-    /*
-     * Allocate array of z-domain coefficients for each filter section
-     * plus filter gain variable
-     */
-    iir->coef = (float*)calloc(4*FILTER_SECTIONS + 1, sizeof(float));
-    if(!iir->coef)
-    {
-        AL_PRINT("Unable to allocate coef array\n");
-        return 1;
-    }
-
-    /* allocate history array */
-    iir->history = (float*)calloc(2*FILTER_SECTIONS, sizeof(float));
-    if(!iir->history) {
-        AL_PRINT("\nUnable to allocate history array\n");
-        return 1;
-    }
-
+    /* Clear the coefficient and history arrays */
+    memset(iir->coef, 0, sizeof(iir->coef));
+    memset(iir->history, 0, sizeof(iir->history));
 
     k = 1.0;              /* Set overall filter gain */
     coef = iir->coef + 1; /* Skip k, or gain */

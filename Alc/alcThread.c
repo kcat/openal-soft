@@ -47,13 +47,14 @@ static DWORD CALLBACK StarterFunc(void *ptr)
 
 ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr)
 {
+    DWORD dummy;
     ThreadInfo *inf = malloc(sizeof(ThreadInfo));
     if(!inf) return 0;
 
     inf->func = func;
     inf->ptr = ptr;
 
-    inf->thread = CreateThread(NULL, 0, StarterFunc, inf, 0, NULL);
+    inf->thread = CreateThread(NULL, 0, StarterFunc, inf, 0, &dummy);
     if(!inf->thread)
     {
         free(inf);

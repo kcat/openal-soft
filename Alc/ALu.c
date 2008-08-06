@@ -709,6 +709,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
                     if(increment > (MAX_PITCH<<FRACTIONBITS))
                         increment = (MAX_PITCH<<FRACTIONBITS);
+                    else if(increment <= 0)
+                        increment = (1<<FRACTIONBITS);
 
                     //Figure out how many samples we can mix.
                     DataSize64 = DataSize;

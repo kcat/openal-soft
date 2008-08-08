@@ -650,8 +650,19 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALuint loop;
     ALint64 DataSize64,DataPos64;
     FILTER *Filter;
+    int fpuState;
 
     SuspendContext(ALContext);
+
+#if defined(HAVE_FESETROUND)
+    fpuState = fegetround();
+    fesetround(FE_TOWARDZERO);
+#elif defined(HAVE__CONTROLFP)
+    fpuState = _controlfp(0, 0);
+    _controlfp(_RC_CHOP, _MCW_RC);
+#else
+    (void)fpuState;
+#endif
 
     //Figure output format variables
     BlockAlign  = aluChannelsFromFormat(format);
@@ -1205,6 +1216,12 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 
         size -= SamplesToDo;
     }
+
+#if defined(HAVE_FESETROUND)
+    fesetround(fpuState);
+#elif defined(HAVE__CONTROLFP)
+    _controlfp(fpuState, 0xfffff);
+#endif
 
     ProcessContext(ALContext);
 }

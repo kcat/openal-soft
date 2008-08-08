@@ -6,6 +6,10 @@
 
 #include "alu.h"
 
+#ifdef HAVE_FENV_H
+#include <fenv.h>
+#endif
+
 #ifdef _WIN32
 
 #ifndef _WIN32_WINNT

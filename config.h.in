@@ -49,4 +49,13 @@
 /* Define if we have pthread_np.h */
 #cmakedefine HAVE_PTHREAD_NP_H
 
+/* Define if we have fenv.h */
+#cmakedefine HAVE_FENV_H
+
+/* Define if we have fesetround() */
+#cmakedefine HAVE_FESETROUND
+
+/* Define if we have _controlfp() */
+#cmakedefine HAVE__CONTROLFP
+
 #endif

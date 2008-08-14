@@ -367,6 +367,13 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     alSetError(AL_INVALID_VALUE);
                 break;
 
+            case AL_DOPPLER_FACTOR:
+                if (flValue >= 0.0f && flValue <= 1.0f)
+                    pSource->DopplerFactor = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
             case AL_SEC_OFFSET:
             case AL_SAMPLE_OFFSET:
             case AL_BYTE_OFFSET:

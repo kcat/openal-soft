@@ -31,6 +31,7 @@
 #include "alThunk.h"
 #include "alListener.h"
 #include "alAuxEffectSlot.h"
+#include "alu.h"
 #include "bs2b.h"
 
 #if defined(HAVE_STDINT_H)
@@ -69,18 +70,9 @@ typedef long long ALint64;
 #define FRACTIONMASK ((1L<<FRACTIONBITS)-1)
 #define MAX_PITCH 4
 
-enum {
-    FRONT_LEFT = 0,
-    FRONT_RIGHT,
-    SIDE_LEFT,
-    SIDE_RIGHT,
-    BACK_LEFT,
-    BACK_RIGHT,
-    CENTER,
-    LFE,
-
-    OUTPUTCHANNELS
-};
+/* Minimum ramp length in milliseconds. The value below was chosen to
+ * adequately reduce clicks and pops from harsh gain changes. */
+#define MIN_RAMP_LENGTH  16
 
 ALboolean DuplicateStereo = AL_FALSE;
 
@@ -628,10 +620,17 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 {
     static float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
     static float WetBuffer[BUFFERSIZE][OUTPUTCHANNELS];
-    ALfloat DrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-    ALfloat WetSend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    ALfloat newDrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    ALfloat newWetSend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
     ALfloat DryGainHF = 0.0f;
     ALfloat WetGainHF = 0.0f;
+    ALfloat *DrySend;
+    ALfloat *WetSend;
+    ALuint rampLength;
+    ALfloat dryGainStep[OUTPUTCHANNELS];
+    ALfloat wetGainStep[OUTPUTCHANNELS];
+    ALfloat dryGainHFStep;
+    ALfloat wetGainHFStep;
     ALuint BlockAlign,BufferSize;
     ALuint DataSize=0,DataPosInt=0,DataPosFrac=0;
     ALuint Channels,Frequency,ulExtraSamples;
@@ -672,9 +671,20 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     while(size > 0)
     {
         //Setup variables
-        ALEffectSlot = (ALContext ? ALContext->AuxiliaryEffectSlot : NULL);
-        ALSource = (ALContext ? ALContext->Source : NULL);
         SamplesToDo = min(size, BUFFERSIZE);
+        if(ALContext)
+        {
+            ALEffectSlot = ALContext->AuxiliaryEffectSlot;
+            ALSource = ALContext->Source;
+            rampLength = ALContext->Frequency * MIN_RAMP_LENGTH / 1000;
+        }
+        else
+        {
+            ALEffectSlot = NULL;
+            ALSource = NULL;
+            rampLength = 0;
+        }
+        rampLength = max(rampLength, SamplesToDo);
 
         //Clear mixing buffer
         memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
@@ -703,10 +713,9 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     Frequency = ALBuffer->frequency;
 
                     CalcSourceParams(ALContext, ALSource,
-                                        (Channels==1) ? AL_TRUE : AL_FALSE,
-                                        format, DrySend, WetSend, &Pitch,
-                                        &DryGainHF, &WetGainHF);
-
+                                     (Channels==1) ? AL_TRUE : AL_FALSE,
+                                     format, newDrySend, newWetSend, &Pitch,
+                                     &DryGainHF, &WetGainHF);
 
                     Pitch = (Pitch*Frequency) / ALContext->Frequency;
                     DataSize /= Channels * aluBytesFromFormat(ALBuffer->format);
@@ -715,6 +724,19 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     DataPosInt = ALSource->position;
                     DataPosFrac = ALSource->position_fraction;
                     Filter = &ALSource->iirFilter;
+                    DrySend = ALSource->DryGains;
+                    WetSend = ALSource->WetGains;
+
+                    //Compute the gain steps for each output channel
+                    for(i = 0;i < OUTPUTCHANNELS;i++)
+                    {
+                        dryGainStep[i] = (newDrySend[i]-DrySend[i]) / rampLength;
+                        wetGainStep[i] = (newWetSend[i]-WetSend[i]) / rampLength;
+                    }
+                    dryGainHFStep = (DryGainHF-ALSource->DryGainHF) / rampLength;
+                    wetGainHFStep = (WetGainHF-ALSource->WetGainHF) / rampLength;
+                    DryGainHF = ALSource->DryGainHF;
+                    WetGainHF = ALSource->WetGainHF;
 
                     //Compute 18.14 fixed point step
                     increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
@@ -766,6 +788,14 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     {
                         k = DataPosFrac>>FRACTIONBITS;
                         fraction = DataPosFrac&FRACTIONMASK;
+
+                        for(i = 0;i < OUTPUTCHANNELS;i++)
+                        {
+                            DrySend[i] += dryGainStep[i];
+                            WetSend[i] += wetGainStep[i];
+                        }
+                        DryGainHF += dryGainHFStep;
+                        WetGainHF += wetGainHFStep;
 
                         if(Channels==1)
                         {
@@ -872,6 +902,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     //Update source info
                     ALSource->position = DataPosInt;
                     ALSource->position_fraction = DataPosFrac;
+                    ALSource->DryGainHF = DryGainHF;
+                    ALSource->WetGainHF = WetGainHF;
                 }
 
                 //Handle looping sources

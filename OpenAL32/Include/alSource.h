@@ -7,6 +7,7 @@
 #define MAX_SENDS                 1
 
 #include "alFilter.h"
+#include "alu.h"
 #include "AL/al.h"
 
 #define AL_DIRECT_FILTER                                   0x20005
@@ -93,6 +94,12 @@ typedef struct ALsource
 
     // Source Type (Static, Streaming, or Undetermined)
     ALint  lSourceType;
+
+    // Current gains, which are ramped while mixed
+    ALfloat DryGains[OUTPUTCHANNELS];
+    ALfloat WetGains[OUTPUTCHANNELS];
+    ALfloat DryGainHF;
+    ALfloat WetGainHF;
 
     struct ALsource *next;
 } ALsource;

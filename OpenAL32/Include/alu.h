@@ -8,6 +8,19 @@
 extern "C" {
 #endif
 
+enum {
+    FRONT_LEFT = 0,
+    FRONT_RIGHT,
+    SIDE_LEFT,
+    SIDE_RIGHT,
+    BACK_LEFT,
+    BACK_RIGHT,
+    CENTER,
+    LFE,
+
+    OUTPUTCHANNELS
+};
+
 extern ALboolean DuplicateStereo;
 
 __inline ALuint aluBytesFromFormat(ALenum format);

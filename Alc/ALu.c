@@ -1016,12 +1016,12 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 
                     sample += DelayBuffer[LatePos];
 
-                    WetBuffer[i][FRONT_LEFT]  += sample;
-                    WetBuffer[i][FRONT_RIGHT] += sample;
-                    WetBuffer[i][SIDE_LEFT]   += sample;
-                    WetBuffer[i][SIDE_RIGHT]  += sample;
-                    WetBuffer[i][BACK_LEFT]   += sample;
-                    WetBuffer[i][BACK_RIGHT]  += sample;
+                    WetBuffer[i][FRONT_LEFT]  = sample;
+                    WetBuffer[i][FRONT_RIGHT] = sample;
+                    WetBuffer[i][SIDE_LEFT]   = sample;
+                    WetBuffer[i][SIDE_RIGHT]  = sample;
+                    WetBuffer[i][BACK_LEFT]   = sample;
+                    WetBuffer[i][BACK_RIGHT]  = sample;
 
                     LatePos = (LatePos+1) % Length;
                     ReflectPos = (ReflectPos+1) % Length;

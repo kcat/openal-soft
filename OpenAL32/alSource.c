@@ -1361,7 +1361,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
     ALbufferlistitem    *ALBufferList;
     ALboolean            bSourcesValid = AL_TRUE;
     ALboolean            bPlay;
-    ALsizei              i;
+    ALsizei              i, j;
 
     pContext = alcGetCurrentContext();
     if (pContext)
@@ -1404,6 +1404,14 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
 
                     if (bPlay)
                     {
+                        for(j = 0;j < OUTPUTCHANNELS;j++)
+                        {
+                            pSource->DryGains[j] = 0.0f;
+                            pSource->WetGains[j] = 0.0f;
+                        }
+                        pSource->DryGainHF = 0.0f;
+                        pSource->WetGainHF = 0.0f;
+
                         if (pSource->state != AL_PAUSED)
                         {
                             pSource->state = AL_PLAYING;

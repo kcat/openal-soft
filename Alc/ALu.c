@@ -925,8 +925,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                     BufferListItem = BufferListItem->next;
                                 }
                             }
-                            if(!Looping)
-                                ALSource->BuffersProcessed++;
                             if(BufferListItem)
                                 ALSource->ulBufferID = BufferListItem->buffer;
                             ALSource->position = DataPosInt-DataSize;
@@ -940,7 +938,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 /* alSourceStop */
                                 ALSource->state = AL_STOPPED;
                                 ALSource->inuse = AL_FALSE;
-                                ALSource->BuffersPlayed = ALSource->BuffersProcessed = ALSource->BuffersInQueue;
+                                ALSource->BuffersPlayed = ALSource->BuffersInQueue;
                                 BufferListItem = ALSource->queue;
                                 while(BufferListItem != NULL)
                                 {
@@ -958,7 +956,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 ALSource->BuffersPlayed = 0;
                                 ALSource->BufferPosition = 0;
                                 ALSource->lBytesPlayed = 0;
-                                ALSource->BuffersProcessed = 0;
                                 BufferListItem = ALSource->queue;
                                 while(BufferListItem != NULL)
                                 {

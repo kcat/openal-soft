@@ -634,9 +634,6 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             pSource->lSourceType = AL_UNDETERMINED;
                         }
 
-                        // Set Buffers Processed
-                        pSource->BuffersProcessed = 0;
-
                         // Update AL_BUFFER parameter
                         pSource->ulBufferID = lValue;
                     }
@@ -1157,7 +1154,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                         *plValue = 0;
                     }
                     else
-                        *plValue = pSource->BuffersProcessed;
+                        *plValue = pSource->BuffersPlayed;
                     break;
 
                 case AL_SOURCE_TYPE:
@@ -1419,7 +1416,6 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                             pSource->play = AL_TRUE;
                             pSource->position = 0;
                             pSource->position_fraction = 0;
-                            pSource->BuffersProcessed = 0;
                             pSource->BuffersPlayed = 0;
                             pSource->BufferPosition = 0;
                             pSource->lBytesPlayed = 0;
@@ -1455,7 +1451,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                             ALBufferList = ALBufferList->next;
                         }
 
-                        pSource->BuffersPlayed = pSource->BuffersProcessed = pSource->BuffersInQueue;
+                        pSource->BuffersPlayed = pSource->BuffersInQueue;
                     }
                 }
             }
@@ -1579,7 +1575,7 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
                     {
                         Source->state=AL_STOPPED;
                         Source->inuse=AL_FALSE;
-                        Source->BuffersPlayed = Source->BuffersProcessed = Source->BuffersInQueue;
+                        Source->BuffersPlayed = Source->BuffersInQueue;
                         ALBufferListItem= Source->queue;
                         while (ALBufferListItem != NULL)
                         {
@@ -1651,7 +1647,7 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
                         Source->inuse=AL_FALSE;
                         Source->position=0;
                         Source->position_fraction=0;
-                        Source->BuffersProcessed = 0;
+                        Source->BuffersPlayed = 0;
                         ALBufferListItem= Source->queue;
                         while (ALBufferListItem != NULL)
                         {
@@ -1924,7 +1920,6 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
                     // Release memory for buffer list item
                     free(ALBufferList);
                     ALSource->BuffersInQueue--;
-                    ALSource->BuffersProcessed--;
                 }
 
                 if (ALSource->state != AL_PLAYING)
@@ -2139,7 +2134,6 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
         pBufferList = pSource->queue;
         lTotalBufferSize = 0;
         pSource->BuffersPlayed = 0;
-        pSource->BuffersProcessed = 0;
         while (pBufferList)
         {
             pBuffer = ALTHUNK_LOOKUPENTRY(pBufferList->buffer);
@@ -2152,10 +2146,7 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
                 pSource->BuffersPlayed++;
 
                 if (!pSource->bLooping)
-                {
                     pBufferList->bufferstate = PROCESSED;
-                    pSource->BuffersProcessed++;
-                }
             }
             else if (lTotalBufferSize <= lByteOffset)
             {

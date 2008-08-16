@@ -56,9 +56,9 @@ typedef struct ALsource
     ALenum       state;
     ALuint       position;
     ALuint       position_fraction;
+
     struct ALbufferlistitem *queue; // Linked list of buffers in queue
     ALuint       BuffersInQueue;    // Number of buffers in queue
-    ALuint       BuffersProcessed;  // Number of buffers already processed (played)
 
     ALuint TotalBufferDataSize; // Total amount of data contained in the buffers queued for this source
     ALuint BuffersPlayed;       // Number of buffers played on this loop

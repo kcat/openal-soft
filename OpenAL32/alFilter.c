@@ -35,7 +35,7 @@ static ALuint    g_FilterCount;
 static void InitFilterParams(ALfilter *filter, ALenum type);
 
 
-AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
+ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
 {
     ALCcontext *Context;
     ALsizei i;
@@ -79,7 +79,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
     ProcessContext(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
+ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
 {
     ALCcontext *Context;
     ALfilter *ALFilter;
@@ -135,7 +135,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
     ProcessContext(Context);
 }
 
-AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter)
+ALboolean AL_APIENTRY alIsFilter(ALuint filter)
 {
     ALCcontext *Context;
     ALfilter **list;
@@ -152,7 +152,7 @@ AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter)
     return ((*list || !filter) ? AL_TRUE : AL_FALSE);
 }
 
-AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
+ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
 {
     ALCcontext *Context;
 
@@ -184,7 +184,7 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
     ProcessContext(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValues)
+ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
 
@@ -210,7 +210,7 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValue
     ProcessContext(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue)
+ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue)
 {
     ALCcontext *Context;
 
@@ -257,7 +257,7 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue
     ProcessContext(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
+ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
 
@@ -279,7 +279,7 @@ AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflVa
     ProcessContext(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piValue)
+ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piValue)
 {
     ALCcontext *Context;
 
@@ -307,7 +307,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piVal
     ProcessContext(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues)
+ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
 
@@ -333,7 +333,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piVa
     ProcessContext(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pflValue)
+ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pflValue)
 {
     ALCcontext *Context;
 
@@ -374,7 +374,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pfl
     ProcessContext(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
+ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
 

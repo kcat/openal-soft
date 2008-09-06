@@ -779,6 +779,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
                             }
                         }
+                        else
+                            memset(&Data[DataSize*Channels], 0, (ALBuffer->padding*Channels*2));
                     }
                     BufferSize = min(BufferSize, (SamplesToDo-j));
 

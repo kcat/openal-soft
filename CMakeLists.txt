@@ -23,6 +23,7 @@ SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 OPTION(ALSA    "Check for ALSA backend"                ON)
 OPTION(OSS     "Check for OSS backend"                 ON)
+OPTION(SOLARIS "Check for Solaris backend"             ON)
 OPTION(DSOUND  "Check for DirectSound backend"         ON)
 OPTION(WINMM   "Check for Windows Multimedia backend"  ON)
 
@@ -261,6 +262,16 @@ IF(OSS)
         SET(HAVE_OSS 1)
         SET(ALC_OBJS  ${ALC_OBJS} Alc/oss.c)
         SET(BACKENDS  "${BACKENDS} OSS,")
+    ENDIF()
+ENDIF()
+
+# Check Solaris backend
+IF(SOLARIS)
+    CHECK_INCLUDE_FILE(sys/audioio.h HAVE_SYS_AUDIOIO_H)
+    IF(HAVE_SYS_AUDIOIO_H)
+        SET(HAVE_SOLARIS 1)
+        SET(ALC_OBJS  ${ALC_OBJS} Alc/solaris.c)
+        SET(BACKENDS  "${BACKENDS} Solaris,")
     ENDIF()
 ENDIF()
 

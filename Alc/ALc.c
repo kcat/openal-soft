@@ -58,6 +58,9 @@ static struct {
 #ifdef HAVE_OSS
     { "oss", alc_oss_init, EmptyFuncs },
 #endif
+#ifdef HAVE_SOLARIS
+    { "solaris", alc_solaris_init, EmptyFuncs },
+#endif
 #ifdef HAVE_DSOUND
     { "dsound", alcDSoundInit, EmptyFuncs },
 #endif

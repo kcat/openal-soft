@@ -7,6 +7,9 @@
 /* Define if we have the OSS backend */
 #cmakedefine HAVE_OSS
 
+/* Define if we have the Solaris backend */
+#cmakedefine HAVE_SOLARIS
+
 /* Define if we have the DSound backend */
 #cmakedefine HAVE_DSOUND
 

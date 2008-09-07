@@ -57,7 +57,7 @@ drivers =  # Sets the backend driver list order, comma-seperated. Unknown
            # backends and duplicated names are ignored, and unlisted backends
            # won't be considered for use. An empty list means the default.
            # Default is:
-           # alsa,oss,dsound,winmm,wave
+           # alsa,oss,solaris,dsound,winmm,wave
 
 [alsa]  # ALSA backend stuff
 device = default  # Sets the device name for the default playback device.
@@ -81,6 +81,10 @@ device = /dev/dsp  # Sets the device name for OSS output. Default is /dev/dsp
 periods = 4  # Sets the number of update buffers. Default is 4
 
 capture = /dev/dsp  # Sets the device name for OSS capture. Default is /dev/dsp
+
+[solaris]  # Solaris backend stuff
+device = /dev/audio  # Sets the device name for Solaris output. Default is
+                     # /dev/audio
 
 [dsound]  # DirectSound backend stuff
           # Nothing yet...

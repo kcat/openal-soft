@@ -212,10 +212,9 @@ static void prewarp(
     double *a0, double *a1, double *a2,
     double fc, double fs)
 {
-    double wp, pi;
+    static const double pi = 3.141592653589793238;
 
-    pi = 4.0 * atan(1.0);
-    wp = 2.0 * fs * tan(pi * fc / fs);
+    double wp = 2.0 * fs * tan(pi * fc / fs);
 
     *a2 = (*a2) / (wp * wp);
     *a1 = (*a1) / wp;

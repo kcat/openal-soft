@@ -49,8 +49,8 @@ static void szxform(
  * InitLowPassFilter()
  *
  * Initialize filter coefficients.
- * We create a 4th order filter (24 db/oct rolloff), consisting
- * of two second order sections.
+ * We create a 2nd order filter (12 db/oct rolloff), consisting
+ * of one second order section.
  * --------------------------------------------------------------------
  */
 int InitLowPassFilter(ALCcontext *Context, FILTER *iir)
@@ -58,13 +58,12 @@ int InitLowPassFilter(ALCcontext *Context, FILTER *iir)
     float    *coef;
     double   fs, fc; /* Sampling frequency, cutoff frequency */
     double   Q;      /* Resonance > 1.0 < 1000 */
-    unsigned nInd;
     double   a0, a1, a2, b0, b1, b2;
     double   k;      /* overall gain factor */
     struct {
         double a0, a1, a2;       /* numerator coefficients */
         double b0, b1, b2;       /* denominator coefficients */
-    } ProtoCoef[FILTER_SECTIONS];      /* Filter prototype coefficients,
+    } ProtoCoef;      /* Filter prototype coefficients,
                                           1 for each filter section */
 
 
@@ -72,20 +71,12 @@ int InitLowPassFilter(ALCcontext *Context, FILTER *iir)
      * Setup filter s-domain coefficients
      */
     /* Section 1 */
-    ProtoCoef[0].a0 = 1.0;
-    ProtoCoef[0].a1 = 0;
-    ProtoCoef[0].a2 = 0;
-    ProtoCoef[0].b0 = 1.0;
-    ProtoCoef[0].b1 = 0.765367;
-    ProtoCoef[0].b2 = 1.0;
-
-    /* Section 2 */
-    ProtoCoef[1].a0 = 1.0;
-    ProtoCoef[1].a1 = 0;
-    ProtoCoef[1].a2 = 0;
-    ProtoCoef[1].b0 = 1.0;
-    ProtoCoef[1].b1 = 1.847759;
-    ProtoCoef[1].b2 = 1.0;
+    ProtoCoef.a0 = 1.0;
+    ProtoCoef.a1 = 0;
+    ProtoCoef.a2 = 0;
+    ProtoCoef.b0 = 1.0;
+    ProtoCoef.b1 = 1.4142;
+    ProtoCoef.b2 = 1.0;
 
     /* Clear the coefficient and history arrays */
     memset(iir->coef, 0, sizeof(iir->coef));
@@ -102,18 +93,14 @@ int InitLowPassFilter(ALCcontext *Context, FILTER *iir)
      * Compute z-domain coefficients for each biquad section
      * for new Cutoff Frequency and Resonance
      */
-    for (nInd = 0; nInd < FILTER_SECTIONS; nInd++)
-    {
-        a0 = ProtoCoef[nInd].a0;
-        a1 = ProtoCoef[nInd].a1;
-        a2 = ProtoCoef[nInd].a2;
+    a0 = ProtoCoef.a0;
+    a1 = ProtoCoef.a1;
+    a2 = ProtoCoef.a2;
 
-        b0 = ProtoCoef[nInd].b0;
-        b1 = ProtoCoef[nInd].b1 / Q;      /* Divide by resonance or Q */
-        b2 = ProtoCoef[nInd].b2;
-        szxform(&a0, &a1, &a2, &b0, &b1, &b2, fc, fs, &k, coef);
-        coef += 4;                       /* Point to next filter section */
-    }
+    b0 = ProtoCoef.b0;
+    b1 = ProtoCoef.b1 / Q;      /* Divide by resonance or Q */
+    b2 = ProtoCoef.b2;
+    szxform(&a0, &a1, &a2, &b0, &b1, &b2, fc, fs, &k, coef);
 
     /* Update overall filter gain in coef array */
     iir->coef[0] = k;
@@ -134,8 +121,8 @@ int InitLowPassFilter(ALCcontext *Context, FILTER *iir)
  *      as input to szxform() to convert them to z-domain.
  *
  * Here's the butterworth polinomials for 2nd, 4th and 6th order sections.
- *      When we construct a 24 db/oct filter, we take to 2nd order
- *      sections and compute the coefficients separately for each section.
+ *      When we construct a 12 db/oct filter, we take a 2nd order
+ *      section and compute the coefficients.
  *
  *      n       Polinomials
  * --------------------------------------------------------------------
@@ -144,10 +131,9 @@ int InitLowPassFilter(ALCcontext *Context, FILTER *iir)
  *      6       (s^2 + 0.5176387s + 1) (s^2 + 1.414214 + 1) (s^2 + 1.931852s + 1)
  *
  *      Where n is a filter order.
- *      For n=4, or two second order sections, we have following equasions for each
- *      2nd order stage:
+ *      For n=2, or one second order section, we have following equasion:
  *
- *      (1 / (s^2 + (1/Q) * 0.765367s + 1)) * (1 / (s^2 + (1/Q) * 1.847759s + 1))
+ *      (1 / (s^2 + (1/Q) * 1.4142s + 1))
  *
  *      Where Q is filter quality factor in the range of
  *      1 to 1000. The overall filter Q is a product of all
@@ -157,12 +143,7 @@ int InitLowPassFilter(ALCcontext *Context, FILTER *iir)
  *
  *      The nominator part is just 1.
  *      The denominator coefficients for stage 1 of filter are:
- *      b2 = 1; b1 = 0.765367; b0 = 1;
- *      numerator is
- *      a2 = 0; a1 = 0; a0 = 1;
- *
- *      The denominator coefficients for stage 1 of filter are:
- *      b2 = 1; b1 = 1.847759; b0 = 1;
+ *      b2 = 1; b1 = 1.4142; b0 = 1;
  *      numerator is
  *      a2 = 0; a1 = 0; a0 = 1;
  *
@@ -315,17 +296,15 @@ static void szxform(
 How to construct a kewl low pass resonant filter?
 
 Lets assume we want to create a filter for analog synth.
-The filter rolloff is 24 db/oct, which corresponds to 4th
+The filter rolloff is 12 db/oct, which corresponds to 2nd
 order filter. Filter of first order is equivalent to RC circuit
 and has max rolloff of 6 db/oct.
 
 We will use classical Butterworth IIR filter design, as it
 exactly corresponds to our requirements.
 
-A common practice is to chain several 2nd order sections,
-or biquads, as they commonly called, in order to achive a higher
-order filter. Each 2nd order section is a 2nd order filter, which
-has 12 db/oct roloff. So, we need 2 of those sections in series.
+Each 2nd order section is a 2nd order filter, which has 12 db/oct
+rolloff. So, we only need one section
 
 To compute those sections, we use standard Butterworth polinomials,
 or so called s-domain representation and convert it into z-domain,
@@ -354,14 +333,14 @@ of 2nd order sections:
  *      4       (s^2 + 0.765367s + 1) * (s^2 + 1.847759s + 1)
  *      6       (s^2 + 0.5176387s + 1) * (s^2 + 1.414214 + 1) * (s^2 + 1.931852s + 1)
  *
- * For n=4 we have following equasion for the filter transfer function:
+ * For n=2 we have following equasion for the filter transfer function:
  *
- *                     1                              1
- * T(s) = --------------------------- * ----------------------------
- *        s^2 + (1/Q) * 0.765367s + 1   s^2 + (1/Q) * 1.847759s + 1
+ *                     1
+ * T(s) = -------------------------
+ *        s^2 + (1/Q) * 1.4142s + 1
  *
 
-The filter consists of two 2nd order secions since highest s power is 2.
+The filter consists of one 2nd order section since highest s power is 2.
 Now we can take the coefficients, or the numbers by which s is multiplied
 and plug them into a standard formula to be used by bilinear transform.
 
@@ -376,17 +355,13 @@ which means s^2 = 0 and s^1 = 0
 
 Lets convert standard butterworth polinomials into this form:
 
-       0 + 0 + 1                  0 + 0 + 1
--------------------------- * --------------------------
-1 + ((1/Q) * 0.765367) + 1   1 + ((1/Q) * 1.847759) + 1
+       0 + 0 + 1
+------------------------
+1 + ((1/Q) * 1.4142) + 1
 
 Section 1:
 a2 = 0; a1 = 0; a0 = 1;
-b2 = 1; b1 = 0.5176387; b0 = 1;
-
-Section 2:
-a2 = 0; a1 = 0; a0 = 1;
-b2 = 1; b1 = 1.847759; b0 = 1;
+b2 = 1; b1 = 1.4142; b0 = 1;
 
 That Q is filter quality factor or resonance, in the range of
 1 to 1000. The overall filter Q is a product of all 2nd order stages.
@@ -408,7 +383,7 @@ coefficients and the new filter cutoff frequency or resonance.
 You also need to supply the sampling rate and filter gain you want
 to achive. For our purposes the gain = 1.
 
-We call szxform() function 2 times becase we have 2 filter sections.
+We call szxform() function 1 time becase we have 1 filter section.
 Each call provides different coefficients.
 
 The gain argument to szxform() is a pointer to desired filter
@@ -418,7 +393,7 @@ double k = 1.0;      // overall gain factor
 
 Upon return from each call, the k argument will be set to a value,
 by which to multiply our actual signal in order for the gain
-to be one. On second call to szxform() we provide k that was
+to be one. On following calls to szxform() we provide k that was
 changed by the previous section. During actual audio filtering
 function iir_filter() will use this k
 

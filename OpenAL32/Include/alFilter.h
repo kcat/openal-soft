@@ -7,11 +7,9 @@
 extern "C" {
 #endif
 
-#define FILTER_SECTIONS 2   /* 2 filter sections for 24 db/oct filter */
-
 typedef struct {
-    float history[2*FILTER_SECTIONS];  /* history in filter */
-    float coef[4*FILTER_SECTIONS + 1]; /* coefficients of filter */
+    float history[2];  /* history in filter */
+    float coef[4 + 1]; /* coefficients of filter */
 } FILTER;
 
 #define AL_FILTER_TYPE                                     0x8001

@@ -19,6 +19,37 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#ifndef ALC_EXT_EFX
+#define AL_FILTER_TYPE                                     0x8001
+#define AL_EFFECT_TYPE                                     0x8001
+#define AL_FILTER_NULL                                     0x0000
+#define AL_FILTER_LOWPASS                                  0x0001
+#define AL_FILTER_HIGHPASS                                 0x0002
+#define AL_FILTER_BANDPASS                                 0x0003
+#define AL_EFFECT_NULL                                     0x0000
+#define AL_EFFECT_EAXREVERB                                0x8000
+#define AL_EFFECT_REVERB                                   0x0001
+#define AL_EFFECT_CHORUS                                   0x0002
+#define AL_EFFECT_DISTORTION                               0x0003
+#define AL_EFFECT_ECHO                                     0x0004
+#define AL_EFFECT_FLANGER                                  0x0005
+#define AL_EFFECT_FREQUENCY_SHIFTER                        0x0006
+#define AL_EFFECT_VOCAL_MORPHER                            0x0007
+#define AL_EFFECT_PITCH_SHIFTER                            0x0008
+#define AL_EFFECT_RING_MODULATOR                           0x0009
+#define AL_EFFECT_AUTOWAH                                  0x000A
+#define AL_EFFECT_COMPRESSOR                               0x000B
+#define AL_EFFECT_EQUALIZER                                0x000C
+#define ALC_EFX_MAJOR_VERSION                              0x20001
+#define ALC_EFX_MINOR_VERSION                              0x20002
+#define ALC_MAX_AUXILIARY_SENDS                            0x20003
+#endif
+ALvoid AL_APIENTRY (*p_alGenFilters)(ALsizei,ALuint*);
+ALvoid AL_APIENTRY (*p_alDeleteFilters)(ALsizei,ALuint*);
+ALvoid AL_APIENTRY (*p_alFilteri)(ALuint,ALenum,ALint);
+ALvoid AL_APIENTRY (*p_alGenEffects)(ALsizei,ALuint*);
+ALvoid AL_APIENTRY (*p_alDeleteEffects)(ALsizei,ALuint*);
+ALvoid AL_APIENTRY (*p_alEffecti)(ALuint,ALenum,ALint);
 
 static const int indentation = 4;
 static const int maxmimumWidth = 79;
@@ -152,6 +183,97 @@ static void printALInfo(void)
     checkForErrors();
 }
 
+static void printEFXInfo(void)
+{
+    ALCint major, minor, sends;
+    ALCdevice *device;
+    ALuint obj;
+    int i;
+    const struct {
+        ALenum type;
+        const char *name;
+    } effects[] = {
+        { AL_EFFECT_EAXREVERB,         "EAX Reverb"        },
+        { AL_EFFECT_REVERB,            "Standard Reverb"   },
+        { AL_EFFECT_CHORUS,            "Chorus"            },
+        { AL_EFFECT_DISTORTION,        "Distortion"        },
+        { AL_EFFECT_ECHO,              "Echo"              },
+        { AL_EFFECT_FLANGER,           "Flanger"           },
+        { AL_EFFECT_FREQUENCY_SHIFTER, "Frequency Shifter" },
+        { AL_EFFECT_VOCAL_MORPHER,     "Vocal Morpher"     },
+        { AL_EFFECT_PITCH_SHIFTER,     "Pitch Shifter"     },
+        { AL_EFFECT_RING_MODULATOR,    "Ring Modulator"    },
+        { AL_EFFECT_AUTOWAH,           "Autowah"           },
+        { AL_EFFECT_COMPRESSOR,        "Compressor"        },
+        { AL_EFFECT_EQUALIZER,         "Equalizer"         },
+        { AL_EFFECT_NULL, NULL }
+    };
+    const struct {
+        ALenum type;
+        const char *name;
+    } filters[] = {
+        { AL_FILTER_LOWPASS,  "Low-pass"  },
+        { AL_FILTER_HIGHPASS, "High-pass" },
+        { AL_FILTER_BANDPASS, "Band-pass" },
+        { AL_FILTER_NULL, NULL }
+    };
+
+    device = alcGetContextsDevice(alcGetCurrentContext());
+
+    if(alcIsExtensionPresent(device, (const ALCchar*)"ALC_EXT_EFX") == AL_FALSE)
+    {
+        printf("EFX not available\n");
+        return;
+    }
+
+    alcGetIntegerv(device, ALC_EFX_MAJOR_VERSION, 1, &major);
+    alcGetIntegerv(device, ALC_EFX_MINOR_VERSION, 1, &minor);
+    checkForErrors();
+    printf("EFX version: %d.%d\n", (int)major, (int)minor);
+
+    alcGetIntegerv(device, ALC_MAX_AUXILIARY_SENDS, 1, &sends);
+    checkForErrors();
+    printf("Max auxiliary sends: %d\n", (int)sends);
+
+    p_alGenFilters = alGetProcAddress("alGenFilters");
+    p_alDeleteFilters = alGetProcAddress("alDeleteFilters");
+    p_alFilteri = alGetProcAddress("alFilteri");
+    p_alGenEffects = alGetProcAddress("alGenEffects");
+    p_alDeleteEffects = alGetProcAddress("alDeleteEffects");
+    p_alEffecti = alGetProcAddress("alEffecti");
+    checkForErrors();
+    if(!p_alGenEffects || !p_alDeleteEffects || !p_alEffecti ||
+       !p_alGenFilters || !p_alDeleteFilters || !p_alFilteri)
+    {
+        printf("Missing EFX functions!\n");
+        return;
+    }
+
+    p_alGenFilters(1, &obj);
+    checkForErrors();
+    printf("Available filters:\n");
+    for(i = 0;filters[i].type != AL_FILTER_NULL;i++)
+    {
+        p_alFilteri(obj, AL_FILTER_TYPE, filters[i].type);
+        if(alGetError() == AL_NO_ERROR)
+            printf("    %s\n", filters[i].name);
+    }
+    p_alDeleteFilters(1, &obj);
+    checkForErrors();
+
+    p_alGenEffects(1, &obj);
+    checkForErrors();
+    printf("Available effects:\n");
+    for(i = 0;effects[i].type != AL_EFFECT_NULL;i++)
+    {
+        p_alEffecti(obj, AL_EFFECT_TYPE, effects[i].type);
+        if(alGetError() == AL_NO_ERROR)
+            printf("    %s\n", effects[i].name);
+    }
+    p_alDeleteEffects(1, &obj);
+    checkForErrors();
+}
+
 int main()
 {
     ALCdevice *device = alcOpenDevice(NULL);
@@ -161,6 +283,7 @@ int main()
 
     printALCInfo();
     printALInfo();
+    printEFXInfo();
     checkForErrors();
 
     alcMakeContextCurrent(NULL);

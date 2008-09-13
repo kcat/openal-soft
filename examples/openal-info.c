@@ -165,7 +165,7 @@ static void printALCInfo (void)
            alcGetString(device, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER));
 
     alcGetIntegerv(device, ALC_MAJOR_VERSION, 1, &major);
-    alcGetIntegerv(device, ALC_MAJOR_VERSION, 1, &minor);
+    alcGetIntegerv(device, ALC_MINOR_VERSION, 1, &minor);
     checkForErrors();
     printf("ALC version: %d.%d\n", (int)major, (int)minor);
 

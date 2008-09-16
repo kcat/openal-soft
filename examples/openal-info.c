@@ -44,12 +44,12 @@
 #define ALC_EFX_MINOR_VERSION                              0x20002
 #define ALC_MAX_AUXILIARY_SENDS                            0x20003
 #endif
-ALvoid AL_APIENTRY (*p_alGenFilters)(ALsizei,ALuint*);
-ALvoid AL_APIENTRY (*p_alDeleteFilters)(ALsizei,ALuint*);
-ALvoid AL_APIENTRY (*p_alFilteri)(ALuint,ALenum,ALint);
-ALvoid AL_APIENTRY (*p_alGenEffects)(ALsizei,ALuint*);
-ALvoid AL_APIENTRY (*p_alDeleteEffects)(ALsizei,ALuint*);
-ALvoid AL_APIENTRY (*p_alEffecti)(ALuint,ALenum,ALint);
+ALvoid (AL_APIENTRY *p_alGenFilters)(ALsizei,ALuint*);
+ALvoid (AL_APIENTRY *p_alDeleteFilters)(ALsizei,ALuint*);
+ALvoid (AL_APIENTRY *p_alFilteri)(ALuint,ALenum,ALint);
+ALvoid (AL_APIENTRY *p_alGenEffects)(ALsizei,ALuint*);
+ALvoid (AL_APIENTRY *p_alDeleteEffects)(ALsizei,ALuint*);
+ALvoid (AL_APIENTRY *p_alEffecti)(ALuint,ALenum,ALint);
 
 static const int indentation = 4;
 static const int maxmimumWidth = 79;

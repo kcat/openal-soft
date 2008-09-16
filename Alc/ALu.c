@@ -327,7 +327,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         //2. Calculate distance attenuation
         Distance = aluSqrt(aluDotproduct(Position, Position));
 
-        if(ALSource->Send[0].Slot && !ALSource->Send[0].Slot->AuxSendAuto)
+        if(ALSource->Send[0].Slot)
         {
             if(ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB)
                 RoomRolloff += ALSource->Send[0].Slot->effect.Reverb.RoomRolloffFactor;
@@ -394,10 +394,22 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         DryMix = __min(DryMix,MaxVolume);
         DryMix = __max(DryMix,MinVolume);
 
-        WetMix = SourceVolume * (ALSource->WetGainAuto ?
-                                 RoomAttenuation : 1.0f);
+        WetMix = SourceVolume * RoomAttenuation;
         WetMix = __min(WetMix,MaxVolume);
         WetMix = __max(WetMix,MinVolume);
+
+        // Distance-based air absorption
+        if(ALSource->AirAbsorptionFactor > 0.0f)
+        {
+            ALfloat dist = Distance-MinDist;
+            ALfloat absorb;
+
+            if(dist < 0.0f) dist = 0.0f;
+            absorb = pow(ALSource->AirAbsorptionFactor * AIRABSORBGAINHF,
+                         Distance * MetersPerUnit);
+            DryGainHF *= absorb;
+            WetGainHF *= absorb;
+        }
 
         //3. Apply directional soundcones
         Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f /
@@ -406,6 +418,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         {
             ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
             ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f)*scale);
+            DryMix *= ConeVolume;
             if(ALSource->WetGainAuto)
                 WetMix *= ConeVolume;
             if(ALSource->DryGainHFAuto)
@@ -416,6 +429,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         else if(Angle > OuterAngle)
         {
             ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f));
+            DryMix *= ConeVolume;
             if(ALSource->WetGainAuto)
                 WetMix *= ConeVolume;
             if(ALSource->DryGainHFAuto)
@@ -423,8 +437,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             if(ALSource->WetGainHFAuto)
                 WetGainHF *= (1.0f+(OuterGainHF-1.0f));
         }
-        else
-            ConeVolume = 1.0f;
 
         //4. Calculate Velocity
         if(DopplerFactor != 0.0f)
@@ -454,6 +466,37 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         else
             pitch[0] = ALSource->flPitch;
 
+        if(ALSource->Send[0].Slot)
+        {
+            // If the slot's auxilliary send auto is off, the data sent to the
+            // effect slot is the same as the dry path, sans filter effects
+            if(!ALSource->Send[0].Slot->AuxSendAuto)
+            {
+                WetMix = DryMix;
+                WetGainHF = DryGainHF;
+            }
+
+            // Note that these are really applied by the effect slot. However,
+            // it's easier to handle them here (particularly the lowpass
+            // filter). Applying the gain to the individual sources going to
+            // the effect slot should have the same effect as applying the gain
+            // to the accumulated sources in the effect slot.
+            // vol1*g + vol2*g + ... voln*g = (vol1+vol2+...voln)*g
+            WetMix *= ALSource->Send[0].Slot->Gain;
+            if(ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB)
+            {
+                WetMix *= ALSource->Send[0].Slot->effect.Reverb.Gain;
+                WetGainHF *= ALSource->Send[0].Slot->effect.Reverb.GainHF;
+                WetGainHF *= pow(ALSource->Send[0].Slot->effect.Reverb.AirAbsorptionGainHF,
+                                 Distance * MetersPerUnit);
+            }
+        }
+        else
+        {
+            WetMix = 0.0f;
+            WetGainHF = 1.0f;
+        }
+
         //5. Apply filter gains and filters
         switch(ALSource->DirectFilter.type)
         {
@@ -471,29 +514,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 break;
         }
 
-        if(ALSource->AirAbsorptionFactor > 0.0f)
-            DryGainHF *= pow(ALSource->AirAbsorptionFactor * AIRABSORBGAINHF,
-                             Distance * MetersPerUnit);
-
-        if(ALSource->Send[0].Slot)
-        {
-            WetMix *= ALSource->Send[0].Slot->Gain;
-
-            if(ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB)
-            {
-                WetMix *= ALSource->Send[0].Slot->effect.Reverb.Gain;
-                WetGainHF *= ALSource->Send[0].Slot->effect.Reverb.GainHF;
-                WetGainHF *= pow(ALSource->Send[0].Slot->effect.Reverb.AirAbsorptionGainHF,
-                                 Distance * MetersPerUnit);
-            }
-        }
-        else
-        {
-            WetMix = 0.0f;
-            WetGainHF = 1.0f;
-        }
-
-        DryMix *= ListenerGain * ConeVolume;
+        DryMix *= ListenerGain;
         WetMix *= ListenerGain;
 
         //6. Convert normalized position into pannings, then into channel volumes

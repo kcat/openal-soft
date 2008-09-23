@@ -126,6 +126,7 @@ extern char _alDebug[256];
 
 #define SPEEDOFSOUNDMETRESPERSEC   (343.3f)
 #define AIRABSORBGAINHF            (0.994f)
+#define AIRABSORBGAINDBHF          (-0.05f)
 
 #define LOWPASSFREQCUTOFF          (5000)
 

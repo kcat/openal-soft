@@ -383,10 +383,25 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 break;
 
             case AL_NONE:
-            default:
                 flAttenuation = 1.0f;
                 RoomAttenuation = 1.0f;
                 break;
+        }
+
+        // Distance-based air absorption
+        if(ALSource->AirAbsorptionFactor > 0.0f && ALContext->DistanceModel != AL_NONE)
+        {
+            ALfloat dist = Distance-MinDist;
+            ALfloat absorb;
+
+            if(dist < 0.0f) dist = 0.0f;
+            // Absorption calculation is done in dB
+            absorb = (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF) *
+                     (Distance*MetersPerUnit);
+            // Convert dB to linear gain before applying
+            absorb = pow(0.5, absorb/-6.0);
+            DryGainHF *= absorb;
+            WetGainHF *= absorb;
         }
 
         // Source Gain + Attenuation and clamp to Min/Max Gain
@@ -397,19 +412,6 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         WetMix = SourceVolume * RoomAttenuation;
         WetMix = __min(WetMix,MaxVolume);
         WetMix = __max(WetMix,MinVolume);
-
-        // Distance-based air absorption
-        if(ALSource->AirAbsorptionFactor > 0.0f)
-        {
-            ALfloat dist = Distance-MinDist;
-            ALfloat absorb;
-
-            if(dist < 0.0f) dist = 0.0f;
-            absorb = pow(ALSource->AirAbsorptionFactor * AIRABSORBGAINHF,
-                         Distance * MetersPerUnit);
-            DryGainHF *= absorb;
-            WetGainHF *= absorb;
-        }
 
         //3. Apply directional soundcones
         Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f /

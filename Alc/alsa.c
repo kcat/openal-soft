@@ -40,6 +40,9 @@ typedef struct {
     ALvoid *buffer;
     ALsizei size;
 
+    RingBuffer *ring;
+    int doCapture;
+
     volatile int killNow;
     ALvoid *thread;
 } alsa_data;
@@ -67,6 +70,7 @@ MAKE_FUNC(snd_pcm_hw_params_set_rate_near);
 MAKE_FUNC(snd_pcm_hw_params_set_rate);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_min);
+MAKE_FUNC(snd_pcm_hw_params_get_buffer_size);
 MAKE_FUNC(snd_pcm_hw_params_get_period_size);
 MAKE_FUNC(snd_pcm_hw_params_get_access);
 MAKE_FUNC(snd_pcm_hw_params);
@@ -79,6 +83,7 @@ MAKE_FUNC(snd_pcm_avail_update);
 MAKE_FUNC(snd_pcm_areas_silence);
 MAKE_FUNC(snd_pcm_mmap_begin);
 MAKE_FUNC(snd_pcm_mmap_commit);
+MAKE_FUNC(snd_pcm_readi);
 MAKE_FUNC(snd_pcm_writei);
 MAKE_FUNC(snd_pcm_drain);
 MAKE_FUNC(snd_pcm_info_malloc);
@@ -274,6 +279,42 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
     return 0;
 }
 
+static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
+{
+    ALCdevice *pDevice = (ALCdevice*)ptr;
+    alsa_data *data = (alsa_data*)pDevice->ExtraData;
+    snd_pcm_sframes_t avail;
+
+    while(!data->killNow)
+    {
+        avail = (snd_pcm_uframes_t)data->size / psnd_pcm_frames_to_bytes(data->pcmHandle, 1);
+        avail = psnd_pcm_readi(data->pcmHandle, data->buffer, avail);
+        switch(avail)
+        {
+            case -EAGAIN:
+                continue;
+            case -ESTRPIPE:
+                while((avail=psnd_pcm_resume(data->pcmHandle)) == -EAGAIN)
+                    Sleep(1);
+                break;
+            case -EPIPE:
+                break;
+            default:
+                if (avail >= 0 && data->doCapture)
+                    WriteRingBuffer(data->ring, data->buffer, avail);
+                break;
+        }
+        if(avail < 0)
+        {
+            avail = psnd_pcm_prepare(data->pcmHandle);
+            if(avail < 0)
+                AL_PRINT("prepare error: %s\n", psnd_strerror(avail));
+        }
+    }
+
+    return 0;
+}
+
 static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     snd_pcm_uframes_t bufferSizeInFrames;
@@ -449,6 +490,7 @@ open_alsa:
         data->thread = StartThread(ALSAProc, device);
     if(data->thread == NULL)
     {
+        AL_PRINT("Could not create playback thread\n");
         psnd_pcm_close(data->pcmHandle);
         device->ExtraData = NULL;
         free(data->buffer);
@@ -477,8 +519,11 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     snd_pcm_format_t alsaFormat;
     snd_pcm_hw_params_t *p;
     snd_pcm_uframes_t bufferSizeInFrames;
+    snd_pcm_access_t access;
+    const char *str;
     alsa_data *data;
     char driver[64];
+    int allowmmap;
     char *err;
     int i;
 
@@ -542,12 +587,18 @@ open_alsa:
             AL_PRINT("Unknown format?! %x\n", format);
     }
 
-    bufferSizeInFrames = SampleSize;
+    str = GetConfigValue("alsa", "mmap", "true");
+    allowmmap = (strcasecmp(str, "true") == 0 ||
+                 strcasecmp(str, "yes") == 0 ||
+                 strcasecmp(str, "on") == 0 ||
+                 atoi(str) != 0);
 
+    bufferSizeInFrames = SampleSize;
     psnd_pcm_hw_params_malloc(&p);
 #define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
     /* start with the largest configuration space possible */
-    if(!(ok(psnd_pcm_hw_params_any(data->pcmHandle, p), "any") &&
+    if(!(allowmmap &&
+         ok(psnd_pcm_hw_params_any(data->pcmHandle, p), "any") &&
          /* set interleaved access */
          ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED), "set access") &&
          /* set format (implicitly sets sample bits) */
@@ -561,31 +612,109 @@ open_alsa:
          /* install and prepare hardware configuration */
          ok(psnd_pcm_hw_params(data->pcmHandle, p), "set params")))
     {
-        AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
+        if(i < 0)
+            AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
+        bufferSizeInFrames = SampleSize;
+        if(!(ok(psnd_pcm_hw_params_any(data->pcmHandle, p), "any") &&
+             ok(psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED), "set access") &&
+             ok(psnd_pcm_hw_params_set_format(data->pcmHandle, p, alsaFormat), "set format") &&
+             ok(psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(pDevice->Format)), "set channels") &&
+             ok(psnd_pcm_hw_params_set_rate(data->pcmHandle, p, frequency, 0), "set rate") &&
+             ok(psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames), "set buffer size near") &&
+             ok(psnd_pcm_hw_params(data->pcmHandle, p), "set params")))
+        {
+            AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
+            psnd_pcm_hw_params_free(p);
+            psnd_pcm_close(data->pcmHandle);
+            free(data);
+            return ALC_FALSE;
+        }
+    }
+#undef ok
+
+    if((i=psnd_pcm_hw_params_get_access(p, &access)) < 0)
+    {
+        AL_PRINT("get_access failed: %s\n", psnd_strerror(i));
         psnd_pcm_hw_params_free(p);
         psnd_pcm_close(data->pcmHandle);
         free(data);
         return ALC_FALSE;
     }
-#undef ok
-    psnd_pcm_hw_params_free(p);
-
-    i = psnd_pcm_prepare(data->pcmHandle);
-    if(i < 0)
+    if((i=psnd_pcm_hw_params_get_period_size(p, &bufferSizeInFrames, NULL)) < 0)
     {
-        AL_PRINT("prepare error: %s\n", psnd_strerror(i));
+        AL_PRINT("get size failed: %s\n", psnd_strerror(i));
+        psnd_pcm_hw_params_free(p);
         psnd_pcm_close(data->pcmHandle);
         free(data);
         return ALC_FALSE;
     }
 
-    pDevice->ExtraData = data;
+    psnd_pcm_hw_params_free(p);
+
+    if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
+    {
+        ALuint frameSize = aluChannelsFromFormat(pDevice->Format);
+        frameSize *= aluBytesFromFormat(pDevice->Format);
+
+        data->ring = CreateRingBuffer(frameSize, SampleSize);
+        if(!data->ring)
+        {
+            AL_PRINT("ring buffer create failed\n");
+            psnd_pcm_close(data->pcmHandle);
+            free(data);
+            return ALC_FALSE;
+        }
+
+        data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
+        data->buffer = malloc(data->size);
+        if(!data->buffer)
+        {
+            AL_PRINT("buffer malloc failed\n");
+            psnd_pcm_close(data->pcmHandle);
+            DestroyRingBuffer(data->ring);
+            free(data);
+            return ALC_FALSE;
+        }
+
+        pDevice->ExtraData = data;
+        data->thread = StartThread(ALSANoMMapCaptureProc, pDevice);
+        if(data->thread == NULL)
+        {
+            AL_PRINT("Could not create capture thread\n");
+            pDevice->ExtraData = NULL;
+            psnd_pcm_close(data->pcmHandle);
+            DestroyRingBuffer(data->ring);
+            free(data->buffer);
+            free(data);
+            return ALC_FALSE;
+        }
+    }
+    else
+    {
+        i = psnd_pcm_prepare(data->pcmHandle);
+        if(i < 0)
+        {
+            AL_PRINT("prepare error: %s\n", psnd_strerror(i));
+            psnd_pcm_close(data->pcmHandle);
+            free(data);
+            return ALC_FALSE;
+        }
+        pDevice->ExtraData = data;
+    }
+
     return ALC_TRUE;
 }
 
 static void alsa_close_capture(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
+
+    if(data->thread)
+    {
+        data->killNow = 1;
+        StopThread(data->thread);
+        DestroyRingBuffer(data->ring);
+    }
     psnd_pcm_close(data->pcmHandle);
 
     free(data);
@@ -595,14 +724,22 @@ static void alsa_close_capture(ALCdevice *pDevice)
 static void alsa_start_capture(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
-    psnd_pcm_prepare(data->pcmHandle);
-    psnd_pcm_start(data->pcmHandle);
+    if(data->thread)
+        data->doCapture = 1;
+    else
+    {
+        psnd_pcm_prepare(data->pcmHandle);
+        psnd_pcm_start(data->pcmHandle);
+    }
 }
 
 static void alsa_stop_capture(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
-    psnd_pcm_drain(data->pcmHandle);
+    if(data->thread)
+        data->doCapture = 0;
+    else
+        psnd_pcm_drain(data->pcmHandle);
 }
 
 static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
@@ -612,6 +749,15 @@ static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint l
     snd_pcm_sframes_t frames, commitres;
     snd_pcm_uframes_t size, offset;
     int err;
+
+    if(data->thread)
+    {
+        if(lSamples <= (ALCuint)RingBufferSize(data->ring))
+            ReadRingBuffer(data->ring, pBuffer, lSamples);
+        else
+            SetALCError(ALC_INVALID_VALUE);
+        return;
+    }
 
     frames = psnd_pcm_avail_update(data->pcmHandle);
     if(frames < 0)
@@ -668,7 +814,12 @@ static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint l
 static ALCuint alsa_available_samples(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
-    snd_pcm_sframes_t frames = psnd_pcm_avail_update(data->pcmHandle);
+    snd_pcm_sframes_t frames;
+
+    if(data->thread)
+        return RingBufferSize(data->ring);
+
+    frames = psnd_pcm_avail_update(data->pcmHandle);
     if(frames < 0)
     {
         int err = xrun_recovery(data->pcmHandle, frames);
@@ -744,6 +895,7 @@ LOAD_FUNC(snd_pcm_hw_params_set_rate_near);
 LOAD_FUNC(snd_pcm_hw_params_set_rate);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_min);
+LOAD_FUNC(snd_pcm_hw_params_get_buffer_size);
 LOAD_FUNC(snd_pcm_hw_params_get_period_size);
 LOAD_FUNC(snd_pcm_hw_params_get_access);
 LOAD_FUNC(snd_pcm_hw_params);
@@ -756,6 +908,7 @@ LOAD_FUNC(snd_pcm_avail_update);
 LOAD_FUNC(snd_pcm_areas_silence);
 LOAD_FUNC(snd_pcm_mmap_begin);
 LOAD_FUNC(snd_pcm_mmap_commit);
+LOAD_FUNC(snd_pcm_readi);
 LOAD_FUNC(snd_pcm_writei);
 LOAD_FUNC(snd_pcm_drain);
 

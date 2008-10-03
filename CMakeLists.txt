@@ -231,7 +231,6 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcRing.c
               Alc/alcThread.c
               Alc/bs2b.c
-              Alc/lpfilter.c
               Alc/wave.c
 )
 

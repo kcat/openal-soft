@@ -75,8 +75,6 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
                                 break;
                             }
 
-                            InitLowPassFilter(Context, &(*list)->iirFilter);
-
                             sources[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
                             (*list)->source = sources[i];
 
@@ -1406,8 +1404,6 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                             pSource->DryGains[j] = 0.0f;
                             pSource->WetGains[j] = 0.0f;
                         }
-                        pSource->DryGainHF = 0.0f;
-                        pSource->WetGainHF = 0.0f;
 
                         if (pSource->state != AL_PAUSED)
                         {

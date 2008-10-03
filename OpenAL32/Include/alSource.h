@@ -69,6 +69,7 @@ typedef struct ALsource
     struct {
         struct ALeffectslot *Slot;
         ALfilter WetFilter;
+        FILTER iirFilter;
     } Send[MAX_SENDS];
 
     ALboolean DryGainHFAuto;
@@ -98,8 +99,6 @@ typedef struct ALsource
     // Current gains, which are ramped while mixed
     ALfloat DryGains[OUTPUTCHANNELS];
     ALfloat WetGains[OUTPUTCHANNELS];
-    ALfloat DryGainHF;
-    ALfloat WetGainHF;
 
     struct ALsource *next;
 } ALsource;

@@ -8,8 +8,8 @@ extern "C" {
 #endif
 
 typedef struct {
-    float history[2];  /* history in filter */
-    float coef[4 + 1]; /* coefficients of filter */
+    ALfloat history[4];
+    ALfloat coeff;
 } FILTER;
 
 #define AL_FILTER_TYPE                                     0x8001
@@ -52,8 +52,6 @@ ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pflValue);
 ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues);
 
 ALvoid ReleaseALFilters(ALvoid);
-
-int InitLowPassFilter(ALCcontext *Context, FILTER *iir);
 
 #ifdef __cplusplus
 }

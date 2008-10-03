@@ -71,8 +71,6 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                         break;
                     }
 
-                    InitLowPassFilter(Context, &(*list)->iirFilter);
-
                     (*list)->Gain = 1.0;
                     (*list)->AuxSendAuto = AL_TRUE;
                     (*list)->refcount = 0;

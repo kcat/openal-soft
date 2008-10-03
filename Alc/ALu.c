@@ -157,31 +157,18 @@ __inline ALuint aluChannelsFromFormat(ALenum format)
 
 static __inline ALfloat lpFilter(FILTER *iir, ALfloat input)
 {
-    float *hist1_ptr,*hist2_ptr,*coef_ptr;
-    ALfloat output,new_hist,history1,history2;
+    ALfloat *history = iir->history;
+    ALfloat a = iir->coeff;
+    ALfloat output = input;
 
-    coef_ptr = iir->coef;                /* coefficient pointer */
-
-    hist1_ptr = iir->history;            /* first history */
-    hist2_ptr = hist1_ptr + 1;           /* next history */
-
-    /* 1st number of coefficients array is overall input scale factor,
-     * or filter gain */
-    output = input * (*coef_ptr++);
-
-    history1 = *hist1_ptr;           /* history values */
-    history2 = *hist2_ptr;
-
-    output = output - history1 * (*coef_ptr++);
-    new_hist = output - history2 * (*coef_ptr++);    /* poles */
-
-    output = new_hist + history1 * (*coef_ptr++);
-    output = output + history2 * (*coef_ptr++);      /* zeros */
-
-    *hist2_ptr++ = *hist1_ptr;
-    *hist1_ptr++ = new_hist;
-    hist1_ptr++;
-    hist2_ptr++;
+    output = output + (history[0]-output)*a;
+    history[0] = output;
+    output = output + (history[1]-output)*a;
+    history[1] = output;
+    output = output + (history[2]-output)*a;
+    history[2] = output;
+    output = output + (history[3]-output)*a;
+    history[3] = output;
 
     return output;
 }
@@ -234,10 +221,6 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat matrix[3][3])
     memcpy(vector, result, sizeof(result));
 }
 
-static __inline ALfloat aluComputeSample(ALfloat GainHF, ALfloat sample, ALfloat LowSample)
-{
-    return LowSample + ((sample - LowSample) * GainHF);
-}
 
 static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                                ALenum isMono, ALenum OutputFormat,
@@ -258,6 +241,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     ALfloat RoomRolloff;
     ALfloat DryGainHF = 1.0f;
     ALfloat WetGainHF = 1.0f;
+    ALfloat cw, a, g;
 
     //Get context properties
     DopplerFactor   = ALContext->DopplerFactor * ALSource->DopplerFactor;
@@ -604,6 +588,25 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
                 break;
         }
 
+        // Update filter coefficients. Calculations based on the I3DL2 spec.
+        cw = cos(2.0f*3.141592654f * LOWPASSFREQCUTOFF / ALContext->Frequency);
+        // We use four chained one-pole filters, so we need to take the fourth
+        // root of the squared gain, which is the same as the square root of
+        // the base gain.
+        // Be careful with gains < 0.0001, as that causes the coefficient to
+        // head towards 1, which will flatten the signal
+        g = aluSqrt(__max(DryGainHF, 0.0001f));
+        a = 0.0f;
+        if(g < 0.9999f) // 1-epsilon
+            a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
+        ALSource->iirFilter.coeff = a;
+
+        g = aluSqrt(__max(WetGainHF, 0.0001f));
+        a = 0.0f;
+        if(g < 0.9999f) // 1-epsilon
+            a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
+        ALSource->Send[0].iirFilter.coeff = a;
+
         *drygainhf = DryGainHF;
         *wetgainhf = WetGainHF;
     }
@@ -648,8 +651,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALuint rampLength;
     ALfloat dryGainStep[OUTPUTCHANNELS];
     ALfloat wetGainStep[OUTPUTCHANNELS];
-    ALfloat dryGainHFStep;
-    ALfloat wetGainHFStep;
     ALuint BlockAlign,BufferSize;
     ALuint DataSize=0,DataPosInt=0,DataPosFrac=0;
     ALuint Channels,Frequency,ulExtraSamples;
@@ -667,7 +668,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALbufferlistitem *BufferListItem;
     ALuint loop;
     ALint64 DataSize64,DataPos64;
-    FILTER *Filter;
+    FILTER *DryFilter, *WetFilter;
     int fpuState;
 
     SuspendContext(ALContext);
@@ -742,7 +743,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     //Get source info
                     DataPosInt = ALSource->position;
                     DataPosFrac = ALSource->position_fraction;
-                    Filter = &ALSource->iirFilter;
+                    DryFilter = &ALSource->iirFilter;
+                    WetFilter = &ALSource->Send[0].iirFilter;
                     DrySend = ALSource->DryGains;
                     WetSend = ALSource->WetGains;
 
@@ -752,10 +754,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         dryGainStep[i] = (newDrySend[i]-DrySend[i]) / rampLength;
                         wetGainStep[i] = (newWetSend[i]-WetSend[i]) / rampLength;
                     }
-                    dryGainHFStep = (DryGainHF-ALSource->DryGainHF) / rampLength;
-                    wetGainHFStep = (WetGainHF-ALSource->WetGainHF) / rampLength;
-                    DryGainHF = ALSource->DryGainHF;
-                    WetGainHF = ALSource->WetGainHF;
 
                     //Compute 18.14 fixed point step
                     increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
@@ -815,19 +813,16 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             DrySend[i] += dryGainStep[i];
                             WetSend[i] += wetGainStep[i];
                         }
-                        DryGainHF += dryGainHFStep;
-                        WetGainHF += wetGainHFStep;
 
                         if(Channels==1)
                         {
-                            ALfloat sample, lowsamp, outsamp;
+                            ALfloat sample, outsamp;
                             //First order interpolator
                             sample = (Data[k]*((1<<FRACTIONBITS)-fraction) +
                                       Data[k+1]*fraction) >> FRACTIONBITS;
-                            lowsamp = lpFilter(Filter, sample);
 
                             //Direct path final mix buffer and panning
-                            outsamp = aluComputeSample(DryGainHF, sample, lowsamp);
+                            outsamp = lpFilter(DryFilter, sample);
                             DryBuffer[j][FRONT_LEFT]  += outsamp*DrySend[FRONT_LEFT];
                             DryBuffer[j][FRONT_RIGHT] += outsamp*DrySend[FRONT_RIGHT];
                             DryBuffer[j][SIDE_LEFT]   += outsamp*DrySend[SIDE_LEFT];
@@ -835,7 +830,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             DryBuffer[j][BACK_LEFT]   += outsamp*DrySend[BACK_LEFT];
                             DryBuffer[j][BACK_RIGHT]  += outsamp*DrySend[BACK_RIGHT];
                             //Room path final mix buffer and panning
-                            outsamp = aluComputeSample(WetGainHF, sample, lowsamp);
+                            outsamp = lpFilter(WetFilter, sample);
                             WetBuffer[j][FRONT_LEFT]  += outsamp*WetSend[FRONT_LEFT];
                             WetBuffer[j][FRONT_RIGHT] += outsamp*WetSend[FRONT_RIGHT];
                             WetBuffer[j][SIDE_LEFT]   += outsamp*WetSend[SIDE_LEFT];
@@ -923,8 +918,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     //Update source info
                     ALSource->position = DataPosInt;
                     ALSource->position_fraction = DataPosFrac;
-                    ALSource->DryGainHF = DryGainHF;
-                    ALSource->WetGainHF = WetGainHF;
                 }
 
                 //Handle looping sources
@@ -1015,7 +1008,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                 ALfloat LateReverbGain = ALEffectSlot->effect.Reverb.LateReverbGain;
                 ALfloat sample, lowsample;
 
-                Filter = &ALEffectSlot->iirFilter;
+                WetFilter = &ALEffectSlot->iirFilter;
                 for(i = 0;i < SamplesToDo;i++)
                 {
                     sample  = WetBuffer[i][FRONT_LEFT] +WetBuffer[i][SIDE_LEFT] +WetBuffer[i][BACK_LEFT];
@@ -1027,7 +1020,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     DelayBuffer[LatePos] *= LateReverbGain;
 
                     Pos = (Pos+1) % Length;
-                    lowsample = lpFilter(Filter, DelayBuffer[Pos]);
+                    lowsample = lpFilter(WetFilter, DelayBuffer[Pos]);
                     lowsample += (DelayBuffer[Pos]-lowsample) * DecayHFRatio;
 
                     DelayBuffer[LatePos] += lowsample * DecayGain;

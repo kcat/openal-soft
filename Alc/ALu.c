@@ -638,6 +638,11 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     }
 }
 
+static __inline ALshort lerp(ALshort val1, ALshort val2, ALint frac)
+{
+    return (val1*((1<<FRACTIONBITS)-frac) + val2*frac) >> FRACTIONBITS;
+}
+
 ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum format)
 {
     static float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
@@ -656,7 +661,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALuint Channels,Frequency,ulExtraSamples;
     ALfloat Pitch;
     ALint Looping,State;
-    ALint fraction,increment;
+    ALint increment;
     ALuint Buffer;
     ALuint SamplesToDo;
     ALsource *ALSource;
@@ -802,12 +807,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     BufferSize = min(BufferSize, (SamplesToDo-j));
 
                     //Actual sample mixing loop
+                    k = 0;
                     Data += DataPosInt*Channels;
                     while(BufferSize--)
                     {
-                        k = DataPosFrac>>FRACTIONBITS;
-                        fraction = DataPosFrac&FRACTIONMASK;
-
                         for(i = 0;i < OUTPUTCHANNELS;i++)
                         {
                             DrySend[i] += dryGainStep[i];
@@ -818,8 +821,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         {
                             ALfloat sample, outsamp;
                             //First order interpolator
-                            sample = (Data[k]*((1<<FRACTIONBITS)-fraction) +
-                                      Data[k+1]*fraction) >> FRACTIONBITS;
+                            sample = lerp(Data[k], Data[k+1], DataPosFrac);
 
                             //Direct path final mix buffer and panning
                             outsamp = lpFilter(DryFilter, sample);
@@ -842,13 +844,11 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         {
                             ALfloat samp1, samp2;
                             //First order interpolator (front left)
-                            samp1 = (Data[k*Channels]*((1<<FRACTIONBITS)-fraction) +
-                                     Data[(k+1)*Channels]*fraction) >> FRACTIONBITS;
+                            samp1 = lerp(Data[k*Channels], Data[(k+1)*Channels], DataPosFrac);
                             DryBuffer[j][FRONT_LEFT] += samp1*DrySend[FRONT_LEFT];
                             WetBuffer[j][FRONT_LEFT] += samp1*WetSend[FRONT_LEFT];
                             //First order interpolator (front right)
-                            samp2 = (Data[k*Channels+1]*((1<<FRACTIONBITS)-fraction) +
-                                     Data[(k+1)*Channels+1]*fraction) >> FRACTIONBITS;
+                            samp2 = lerp(Data[k*Channels+1], Data[(k+1)*Channels+1], DataPosFrac);
                             DryBuffer[j][FRONT_RIGHT] += samp2*DrySend[FRONT_RIGHT];
                             WetBuffer[j][FRONT_RIGHT] += samp2*WetSend[FRONT_RIGHT];
                             if(Channels >= 4)
@@ -859,42 +859,36 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                     if(Channels != 7)
                                     {
                                         //First order interpolator (center)
-                                        value = (Data[k*Channels+i]*((1<<FRACTIONBITS)-fraction) +
-                                                 Data[(k+1)*Channels+i]*fraction) >> FRACTIONBITS;
+                                        value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                         DryBuffer[j][CENTER] += value*DrySend[CENTER];
                                         WetBuffer[j][CENTER] += value*WetSend[CENTER];
                                         i++;
                                     }
                                     //First order interpolator (lfe)
-                                    value = (Data[k*Channels+i]*((1<<FRACTIONBITS)-fraction) +
-                                             Data[(k+1)*Channels+i]*fraction) >> FRACTIONBITS;
+                                    value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                     DryBuffer[j][LFE] += value*DrySend[LFE];
                                     WetBuffer[j][LFE] += value*WetSend[LFE];
                                     i++;
                                 }
                                 //First order interpolator (back left)
-                                value = (Data[k*Channels+i]*((1<<FRACTIONBITS)-fraction) +
-                                         Data[(k+1)*Channels+i]*fraction) >> FRACTIONBITS;
+                                value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                 DryBuffer[j][BACK_LEFT] += value*DrySend[BACK_LEFT];
                                 WetBuffer[j][BACK_LEFT] += value*WetSend[BACK_LEFT];
                                 i++;
                                 //First order interpolator (back right)
-                                value = (Data[k*Channels+i]*((1<<FRACTIONBITS)-fraction) +
-                                         Data[(k+1)*Channels+i]*fraction) >> FRACTIONBITS;
+                                value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                 DryBuffer[j][BACK_RIGHT] += value*DrySend[BACK_RIGHT];
                                 WetBuffer[j][BACK_RIGHT] += value*WetSend[BACK_RIGHT];
                                 i++;
                                 if(Channels >= 7)
                                 {
                                     //First order interpolator (side left)
-                                    value = (Data[k*Channels+i]*((1<<FRACTIONBITS)-fraction) +
-                                             Data[(k+1)*Channels+i]*fraction) >> FRACTIONBITS;
+                                    value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                     DryBuffer[j][SIDE_LEFT] += value*DrySend[SIDE_LEFT];
                                     WetBuffer[j][SIDE_LEFT] += value*WetSend[SIDE_LEFT];
                                     i++;
                                     //First order interpolator (side right)
-                                    value = (Data[k*Channels+i]*((1<<FRACTIONBITS)-fraction) +
-                                             Data[(k+1)*Channels+i]*fraction) >> FRACTIONBITS;
+                                    value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                     DryBuffer[j][SIDE_RIGHT] += value*DrySend[SIDE_RIGHT];
                                     WetBuffer[j][SIDE_RIGHT] += value*WetSend[SIDE_RIGHT];
                                     i++;
@@ -910,10 +904,11 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             }
                         }
                         DataPosFrac += increment;
+                        k += DataPosFrac>>FRACTIONBITS;
+                        DataPosFrac &= FRACTIONMASK;
                         j++;
                     }
-                    DataPosInt += (DataPosFrac>>FRACTIONBITS);
-                    DataPosFrac = (DataPosFrac&FRACTIONMASK);
+                    DataPosInt += k;
 
                     //Update source info
                     ALSource->position = DataPosInt;

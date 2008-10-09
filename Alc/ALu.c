@@ -736,7 +736,13 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     Data      = ALBuffer->data;
                     Channels  = aluChannelsFromFormat(ALBuffer->format);
                     DataSize  = ALBuffer->size;
+                    DataSize /= Channels * aluBytesFromFormat(ALBuffer->format);
                     Frequency = ALBuffer->frequency;
+                    DataPosInt = ALSource->position;
+                    DataPosFrac = ALSource->position_fraction;
+
+                    if(DataPosInt >= DataSize)
+                        goto skipmix;
 
                     CalcSourceParams(ALContext, ALSource,
                                      (Channels==1) ? AL_TRUE : AL_FALSE,
@@ -744,11 +750,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                      &DryGainHF, &WetGainHF);
 
                     Pitch = (Pitch*Frequency) / ALContext->Frequency;
-                    DataSize /= Channels * aluBytesFromFormat(ALBuffer->format);
 
                     //Get source info
-                    DataPosInt = ALSource->position;
-                    DataPosFrac = ALSource->position_fraction;
                     DryFilter = &ALSource->iirFilter;
                     WetFilter = &ALSource->Send[0].iirFilter;
                     DrySend = ALSource->DryGains;
@@ -914,6 +917,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     //Update source info
                     ALSource->position = DataPosInt;
                     ALSource->position_fraction = DataPosFrac;
+
+                skipmix: ;
                 }
 
                 //Handle looping sources

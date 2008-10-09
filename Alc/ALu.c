@@ -452,7 +452,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         else
             pitch[0] = ALSource->flPitch;
 
-        if(ALSource->Send[0].Slot)
+        if(ALSource->Send[0].Slot &&
+           ALSource->Send[0].Slot->effect.type != AL_EFFECT_NULL)
         {
             // If the slot's auxilliary send auto is off, the data sent to the
             // effect slot is the same as the dry path, sans filter effects

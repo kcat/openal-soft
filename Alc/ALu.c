@@ -641,7 +641,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
 static __inline ALshort lerp(ALshort val1, ALshort val2, ALint frac)
 {
-    return (val1*((1<<FRACTIONBITS)-frac) + val2*frac) >> FRACTIONBITS;
+    return val1 + (((val2-val1)*frac)>>FRACTIONBITS);
 }
 
 ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum format)

@@ -68,7 +68,7 @@ typedef long long ALint64;
 #define BUFFERSIZE 24000
 #define FRACTIONBITS 14
 #define FRACTIONMASK ((1L<<FRACTIONBITS)-1)
-#define MAX_PITCH 4
+#define MAX_PITCH 65536
 
 /* Minimum ramp length in milliseconds. The value below was chosen to
  * adequately reduce clicks and pops from harsh gain changes. */
@@ -765,10 +765,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     }
 
                     //Compute 18.14 fixed point step
+                    if(Pitch > (float)MAX_PITCH)
+                        Pitch = (float)MAX_PITCH;
                     increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
-                    if(increment > (MAX_PITCH<<FRACTIONBITS))
-                        increment = (MAX_PITCH<<FRACTIONBITS);
-                    else if(increment <= 0)
+                    if(increment <= 0)
                         increment = (1<<FRACTIONBITS);
 
                     //Figure out how many samples we can mix.

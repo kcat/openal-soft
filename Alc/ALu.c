@@ -850,11 +850,9 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             //First order interpolator (front left)
                             samp1 = lerp(Data[k*Channels], Data[(k+1)*Channels], DataPosFrac);
                             DryBuffer[j][FRONT_LEFT] += samp1*DrySend[FRONT_LEFT];
-                            WetBuffer[j][FRONT_LEFT] += samp1*WetSend[FRONT_LEFT];
                             //First order interpolator (front right)
                             samp2 = lerp(Data[k*Channels+1], Data[(k+1)*Channels+1], DataPosFrac);
                             DryBuffer[j][FRONT_RIGHT] += samp2*DrySend[FRONT_RIGHT];
-                            WetBuffer[j][FRONT_RIGHT] += samp2*WetSend[FRONT_RIGHT];
                             if(Channels >= 4)
                             {
                                 int i = 2;
@@ -865,36 +863,30 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                         //First order interpolator (center)
                                         value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                         DryBuffer[j][CENTER] += value*DrySend[CENTER];
-                                        WetBuffer[j][CENTER] += value*WetSend[CENTER];
                                         i++;
                                     }
                                     //First order interpolator (lfe)
                                     value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                     DryBuffer[j][LFE] += value*DrySend[LFE];
-                                    WetBuffer[j][LFE] += value*WetSend[LFE];
                                     i++;
                                 }
                                 //First order interpolator (back left)
                                 value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                 DryBuffer[j][BACK_LEFT] += value*DrySend[BACK_LEFT];
-                                WetBuffer[j][BACK_LEFT] += value*WetSend[BACK_LEFT];
                                 i++;
                                 //First order interpolator (back right)
                                 value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                 DryBuffer[j][BACK_RIGHT] += value*DrySend[BACK_RIGHT];
-                                WetBuffer[j][BACK_RIGHT] += value*WetSend[BACK_RIGHT];
                                 i++;
                                 if(Channels >= 7)
                                 {
                                     //First order interpolator (side left)
                                     value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                     DryBuffer[j][SIDE_LEFT] += value*DrySend[SIDE_LEFT];
-                                    WetBuffer[j][SIDE_LEFT] += value*WetSend[SIDE_LEFT];
                                     i++;
                                     //First order interpolator (side right)
                                     value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
                                     DryBuffer[j][SIDE_RIGHT] += value*DrySend[SIDE_RIGHT];
-                                    WetBuffer[j][SIDE_RIGHT] += value*WetSend[SIDE_RIGHT];
                                     i++;
                                 }
                             }
@@ -902,9 +894,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             {
                                 //Duplicate stereo channels on the back speakers
                                 DryBuffer[j][BACK_LEFT] += samp1*DrySend[BACK_LEFT];
-                                WetBuffer[j][BACK_LEFT] += samp1*WetSend[BACK_LEFT];
                                 DryBuffer[j][BACK_RIGHT] += samp2*DrySend[BACK_RIGHT];
-                                WetBuffer[j][BACK_RIGHT] += samp2*WetSend[BACK_RIGHT];
                             }
                         }
                         DataPosFrac += increment;

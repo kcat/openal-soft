@@ -911,6 +911,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                     BufferListItem->bufferstate = PROCESSED;
                                     BufferListItem = BufferListItem->next;
                                 }
+                                ALSource->position = DataSize;
+                                ALSource->position_fraction = 0;
                             }
                             else
                             {

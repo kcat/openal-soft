@@ -62,7 +62,6 @@ typedef struct ALsource
 
     ALuint TotalBufferDataSize; // Total amount of data contained in the buffers queued for this source
     ALuint BuffersPlayed;       // Number of buffers played on this loop
-    ALuint BufferPosition;      // Read position in audio data of current buffer
 
     ALfilter DirectFilter;
 

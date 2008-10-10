@@ -87,8 +87,6 @@ typedef struct ALsource
     // Index to itself
     ALuint source;
 
-    ALint  lBytesPlayed;
-
     ALint  lOffset;
     ALint  lOffsetType;
 

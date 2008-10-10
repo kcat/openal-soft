@@ -1411,7 +1411,6 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                             pSource->position = 0;
                             pSource->position_fraction = 0;
                             pSource->BuffersPlayed = 0;
-                            pSource->lBytesPlayed = 0;
 
                             pSource->ulBufferID = pSource->queue->buffer;
 
@@ -2145,9 +2144,6 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
 
                 // Set Current Buffer ID
                 pSource->ulBufferID = pBufferList->buffer;
-
-                // Set Total Bytes Played to Offset
-                pSource->lBytesPlayed = lByteOffset;
 
                 // SW Mixer Positions are in Samples
                 pSource->position = (lByteOffset - lTotalBufferSize) /

@@ -922,7 +922,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 ALSource->inuse = AL_TRUE;
                                 ALSource->play = AL_TRUE;
                                 ALSource->BuffersPlayed = 0;
-                                ALSource->lBytesPlayed = 0;
                                 BufferListItem = ALSource->queue;
                                 while(BufferListItem != NULL)
                                 {

@@ -931,7 +931,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                 }
                                 ALSource->ulBufferID = ALSource->queue->buffer;
 
-                                ALSource->position = DataPosInt-DataSize;
+                                if(ALSource->BuffersInQueue == 1)
+                                    ALSource->position = DataPosInt%DataSize;
+                                else
+                                    ALSource->position = DataPosInt-DataSize;
                                 ALSource->position_fraction = DataPosFrac;
                             }
                         }

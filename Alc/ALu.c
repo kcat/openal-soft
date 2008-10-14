@@ -34,6 +34,10 @@
 #include "alu.h"
 #include "bs2b.h"
 
+#if defined (HAVE_FLOAT_H)
+#include <float.h>
+#endif
+
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
 typedef int64_t ALint64;

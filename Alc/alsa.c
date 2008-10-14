@@ -543,7 +543,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
             {
                 pDevice->szDeviceName = allCaptureDevNameMap[idx].name;
                 if(idx > 0)
-                    sprintf(driver, "hw:%d,%d", allCaptureDevNameMap[idx].card, allCaptureDevNameMap[idx].dev);
+                    sprintf(driver, "plughw:%d,%d", allCaptureDevNameMap[idx].card, allCaptureDevNameMap[idx].dev);
                 goto open_alsa;
             }
         }

@@ -1,6 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+/* Define to the library version */
+#define ALSOFT_VERSION "${LIB_VERSION}"
+
 /* Define if we have the ALSA backend */
 #cmakedefine HAVE_ALSA
 

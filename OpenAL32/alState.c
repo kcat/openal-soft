@@ -27,7 +27,7 @@
 #include "alState.h"
 
 static const ALchar alVendor[] = "OpenAL Community";
-static const ALchar alVersion[] = "1.1";
+static const ALchar alVersion[] = "1.1 ALSOFT "ALSOFT_VERSION;
 static const ALchar alRenderer[] = "OpenAL Soft";
 
 // Error Messages

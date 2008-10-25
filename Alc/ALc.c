@@ -487,44 +487,46 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
 
     InitAL();
 
+    if(SampleSize > 0)
+    {
+        SetALCError(ALC_INVALID_VALUE);
+        return NULL;
+    }
+
     if(deviceName && !deviceName[0])
         deviceName = NULL;
 
     pDevice = malloc(sizeof(ALCdevice));
     if (pDevice)
     {
-        if (SampleSize > 0)
+        //Initialise device structure
+        memset(pDevice, 0, sizeof(ALCdevice));
+
+        //Validate device
+        pDevice->IsCaptureDevice = AL_TRUE;
+
+        pDevice->Frequency = frequency;
+        pDevice->Format = format;
+
+        for(i = 0;BackendList[i].Init;i++)
         {
-            //Initialise device structure
-            memset(pDevice, 0, sizeof(ALCdevice));
-
-            //Validate device
-            pDevice->IsCaptureDevice = AL_TRUE;
-
-            pDevice->Frequency = frequency;
-            pDevice->Format = format;
-
-            for(i = 0;BackendList[i].Init;i++)
+            pDevice->Funcs = &BackendList[i].Funcs;
+            if(ALCdevice_OpenCapture(pDevice, deviceName, frequency, format, SampleSize))
             {
-                pDevice->Funcs = &BackendList[i].Funcs;
-                if(ALCdevice_OpenCapture(pDevice, deviceName, frequency, format, SampleSize))
-                {
-                    SuspendContext(NULL);
-                    pDevice->next = g_pDeviceList;
-                    g_pDeviceList = pDevice;
-                    g_ulDeviceCount++;
-                    ProcessContext(NULL);
+                SuspendContext(NULL);
+                pDevice->next = g_pDeviceList;
+                g_pDeviceList = pDevice;
+                g_ulDeviceCount++;
+                ProcessContext(NULL);
 
-                    DeviceFound = ALC_TRUE;
-                    break;
-                }
+                DeviceFound = ALC_TRUE;
+                break;
             }
         }
-        else
-            SetALCError(ALC_INVALID_VALUE);
 
         if(!DeviceFound)
         {
+            SetALCError(ALC_INVALID_VALUE);
             free(pDevice);
             pDevice = NULL;
         }
@@ -1249,10 +1251,13 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         if (!bDeviceFound)
         {
             // No suitable output device found
+            SetALCError(ALC_INVALID_VALUE);
             free(device);
             device = NULL;
         }
     }
+    else
+        SetALCError(ALC_OUT_OF_MEMORY);
 
     return device;
 }

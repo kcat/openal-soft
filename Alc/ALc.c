@@ -487,7 +487,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
 
     InitAL();
 
-    if(SampleSize > 0)
+    if(SampleSize <= 0)
     {
         SetALCError(ALC_INVALID_VALUE);
         return NULL;

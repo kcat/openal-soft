@@ -1011,7 +1011,7 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
     ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
     ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
-    ALsizei padding = freq / LOWPASSFREQCUTOFF;
+    ALsizei padding = 2;
     ALvoid *temp;
     ALsizei i;
 
@@ -1023,10 +1023,6 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
         alSetError(AL_INVALID_VALUE);
         return;
     }
-
-    /* Ensure at least one padding byte for the bilinear filter */
-    if(padding < 1)
-        padding = 1;
 
     // Samples are converted to 16 bit here
     size /= OrigBytes;

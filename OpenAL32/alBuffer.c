@@ -261,8 +261,8 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
     ALint LeftSample,LeftIndex;
     ALint RightSample,RightIndex;
     ALuint LeftIMACode,RightIMACode;
+    ALsizei padding = 2;
     ALbuffer *ALBuf;
-    ALsizei padding;
     ALsizei i,j,k;
     ALvoid *temp;
 
@@ -305,9 +305,6 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                         alSetError(AL_INVALID_VALUE);
                         break;
                     }
-
-                    padding = freq / LOWPASSFREQCUTOFF;
-                    if(padding < 1) padding = 1;
 
                     size /= OrigBytes;
                     size *= 2;
@@ -398,9 +395,6 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     break;
 
                 case AL_FORMAT_MONO_IMA4:
-                    padding = freq / LOWPASSFREQCUTOFF;
-                    if(padding < 1) padding = 1;
-
                     // Here is where things vary:
                     // nVidia and Apple use 64+1 samples per block => block_size=36 bytes
                     // Most PC sound software uses 2040+1 samples per block -> block_size=1024 bytes
@@ -465,9 +459,6 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     break;
 
                 case AL_FORMAT_STEREO_IMA4:
-                    padding = freq / LOWPASSFREQCUTOFF;
-                    if(padding < 1) padding = 1;
-
                     // Here is where things vary:
                     // nVidia and Apple use 64+1 samples per channel per block => block_size=72 bytes
                     // Most PC sound software uses 2040+1 samples per channel per block -> block_size=2048 bytes

@@ -309,74 +309,40 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     padding = freq / LOWPASSFREQCUTOFF;
                     if(padding < 1) padding = 1;
 
-                    switch(OrigBytes)
-                    {
-                    case 1:
-                        size /= sizeof(ALubyte);
-                        size *= 2;
+                    size /= OrigBytes;
+                    size *= 2;
 
-                        // 8bit Samples are converted to 16 bit here
-                        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-                        if (temp)
+                    // Samples are converted to 16 bit here
+                    temp = realloc(ALBuf->data, (padding*NewChannels + size) * sizeof(ALshort));
+                    if(temp)
+                    {
+                        ALBuf->data = temp;
+                        switch(OrigBytes)
                         {
-                            ALBuf->data = temp;
-                            for (i = 0;i < size;i+=4)
+                        case 1:
+                            for(i = 0;i < size;i+=4)
                             {
                                 ALBuf->data[i+0] = 0;
                                 ALBuf->data[i+1] = 0;
                                 ALBuf->data[i+2] = (ALshort)((((ALubyte*)data)[i/2+0]-128) << 8);
                                 ALBuf->data[i+3] = (ALshort)((((ALubyte*)data)[i/2+1]-128) << 8);
                             }
-                            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
+                            break;
 
-                            ALBuf->format = NewFormat;
-                            ALBuf->eOriginalFormat = format;
-                            ALBuf->size = size*1*sizeof(ALshort);
-                            ALBuf->frequency = freq;
-                            ALBuf->padding = padding;
-                        }
-                        else
-                            alSetError(AL_OUT_OF_MEMORY);
-                        break;
-
-                    case 2:
-                        size /= sizeof(ALshort);
-                        size *= 2;
-
-                        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-                        if (temp)
-                        {
-                            ALBuf->data = temp;
-                            for (i = 0;i < size;i+=4)
+                        case 2:
+                            for(i = 0;i < size;i+=4)
                             {
                                 ALBuf->data[i+0] = 0;
                                 ALBuf->data[i+1] = 0;
                                 ALBuf->data[i+2] = ((ALshort*)data)[i/2+0];
                                 ALBuf->data[i+3] = ((ALshort*)data)[i/2+1];
                             }
-                            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
+                            break;
 
-                            ALBuf->format = NewFormat;
-                            ALBuf->eOriginalFormat = format;
-                            ALBuf->size = size*1*sizeof(ALshort);
-                            ALBuf->frequency = freq;
-                            ALBuf->padding = padding;
-                        }
-                        else
-                            alSetError(AL_OUT_OF_MEMORY);
-                        break;
-
-                    case 4:
-                        size /= sizeof(ALfloat);
-                        size *= 2;
-
-                        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-                        if (temp)
-                        {
-                            ALint smp;
-                            ALBuf->data = temp;
-                            for (i = 0;i < size;i+=4)
+                        case 4:
+                            for(i = 0;i < size;i+=4)
                             {
+                                ALint smp;
                                 ALBuf->data[i+0] = 0;
                                 ALBuf->data[i+1] = 0;
                                 smp = (((ALfloat*)data)[i/2+0] * 32767.5f - 0.5);
@@ -388,21 +354,21 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                                 smp = max(smp, -32768);
                                 ALBuf->data[i+3] = (ALshort)smp;
                             }
-                            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
+                            break;
 
-                            ALBuf->format = NewFormat;
-                            ALBuf->eOriginalFormat = format;
-                            ALBuf->size = size*1*sizeof(ALshort);
-                            ALBuf->frequency = freq;
-                            ALBuf->padding = padding;
+                        default:
+                            assert(0);
                         }
-                        else
-                            alSetError(AL_OUT_OF_MEMORY);
-                        break;
+                        memset(&(ALBuf->data[size]), 0, padding*NewChannels*sizeof(ALshort));
 
-                    default:
-                        assert(0);
+                        ALBuf->format = NewFormat;
+                        ALBuf->eOriginalFormat = format;
+                        ALBuf->size = size*sizeof(ALshort);
+                        ALBuf->frequency = freq;
+                        ALBuf->padding = padding;
                     }
+                    else
+                        alSetError(AL_OUT_OF_MEMORY);
                 }   break;
 
                 case AL_FORMAT_QUAD8_LOKI:

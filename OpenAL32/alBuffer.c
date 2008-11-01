@@ -1028,82 +1028,49 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
     if(padding < 1)
         padding = 1;
 
-    switch(OrigBytes)
+    // Samples are converted to 16 bit here
+    size /= OrigBytes;
+    temp = realloc(ALBuf->data, (padding*NewChannels + size) * sizeof(ALshort));
+    if(temp)
     {
-    case 1:
-        size /= sizeof(ALubyte);
+        ALBuf->data = temp;
 
-        // 8bit Samples are converted to 16 bit here
-        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-        if (temp)
+        switch(OrigBytes)
         {
-            ALBuf->data = temp;
-            for (i = 0;i < size;i++)
+        case 1:
+            for(i = 0;i < size;i++)
                 ALBuf->data[i] = (ALshort)((data[i]-128) << 8);
-            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
+            break;
 
-            ALBuf->format = NewFormat;
-            ALBuf->eOriginalFormat = OrigFormat;
-            ALBuf->size = size*1*sizeof(ALshort);
-            ALBuf->frequency = freq;
-            ALBuf->padding = padding;
-        }
-        else
-            alSetError(AL_OUT_OF_MEMORY);
-        break;
+        case 2:
+            memcpy(ALBuf->data, data, size*sizeof(ALshort));
+            break;
 
-    case 2:
-        size /= sizeof(ALshort);
-
-        // Allocate 8 extra samples
-        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-        if (temp)
-        {
-            ALBuf->data = temp;
-            memcpy(ALBuf->data, data, size*1*sizeof(ALshort));
-            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
-
-            ALBuf->format = NewFormat;
-            ALBuf->eOriginalFormat = OrigFormat;
-            ALBuf->size = size*1*sizeof(ALshort);
-            ALBuf->frequency = freq;
-            ALBuf->padding = padding;
-        }
-        else
-            alSetError(AL_OUT_OF_MEMORY);
-        break;
-
-    case 4:
-        size /= sizeof(ALfloat);
-
-        // Allocate 8 extra samples
-        temp = realloc(ALBuf->data, (padding*NewChannels + size) * (1*sizeof(ALshort)));
-        if (temp)
-        {
-            ALint smp;
-            ALBuf->data = temp;
-            for (i = 0;i < size;i++)
+        case 4:
+            for(i = 0;i < size;i++)
             {
+                ALint smp;
                 smp = (((ALfloat*)data)[i] * 32767.5f - 0.5f);
                 smp = min(smp,  32767);
                 smp = max(smp, -32768);
                 ALBuf->data[i] = (ALshort)smp;
             }
-            memset(&(ALBuf->data[size]), 0, padding*NewChannels*2);
+            break;
 
-            ALBuf->format = NewFormat;
-            ALBuf->eOriginalFormat = OrigFormat;
-            ALBuf->size = size*1*sizeof(ALshort);
-            ALBuf->frequency = freq;
-            ALBuf->padding = padding;
+        default:
+            assert(0);
         }
-        else
-            alSetError(AL_OUT_OF_MEMORY);
-        break;
 
-    default:
-        assert(0);
+        memset(&(ALBuf->data[size]), 0, padding*NewChannels*sizeof(ALshort));
+
+        ALBuf->format = NewFormat;
+        ALBuf->eOriginalFormat = OrigFormat;
+        ALBuf->size = size*sizeof(ALshort);
+        ALBuf->frequency = freq;
+        ALBuf->padding = padding;
     }
+    else
+        alSetError(AL_OUT_OF_MEMORY);
 }
 
 

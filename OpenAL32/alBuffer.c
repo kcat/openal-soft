@@ -34,6 +34,9 @@
 
 
 static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat);
+static void ConvertData(ALshort *dst, const ALvoid *src, ALint origBytes, ALsizei len);
+static void ConvertDataRear(ALshort *dst, const ALvoid *src, ALint origBytes, ALsizei len);
+static void ConvertDataIMA4(ALshort *dst, const ALvoid *src, ALint origChans, ALsizei len);
 
 /*
  *  AL Buffer Functions
@@ -255,15 +258,9 @@ ALAPI ALboolean ALAPIENTRY alIsBuffer(ALuint uiBuffer)
 */
 ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *data,ALsizei size,ALsizei freq)
 {
-    ALuint *IMAData,IMACode;
     ALCcontext *Context;
-    ALint Sample,Index;
-    ALint LeftSample,LeftIndex;
-    ALint RightSample,RightIndex;
-    ALuint LeftIMACode,RightIMACode;
     ALsizei padding = 2;
     ALbuffer *ALBuf;
-    ALsizei i,j,k;
     ALvoid *temp;
 
     Context = alcGetCurrentContext();
@@ -296,11 +293,10 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
                                         ((format==AL_FORMAT_REAR16) ? 2 :
                                          4));
-                    ALsizei i;
 
                     assert(aluBytesFromFormat(NewFormat) == 2);
 
-                    if ((size%(OrigBytes*2)) != 0)
+                    if((size%(OrigBytes*2)) != 0)
                     {
                         alSetError(AL_INVALID_VALUE);
                         break;
@@ -314,48 +310,8 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     if(temp)
                     {
                         ALBuf->data = temp;
-                        switch(OrigBytes)
-                        {
-                        case 1:
-                            for(i = 0;i < size;i+=4)
-                            {
-                                ALBuf->data[i+0] = 0;
-                                ALBuf->data[i+1] = 0;
-                                ALBuf->data[i+2] = (ALshort)((((ALubyte*)data)[i/2+0]-128) << 8);
-                                ALBuf->data[i+3] = (ALshort)((((ALubyte*)data)[i/2+1]-128) << 8);
-                            }
-                            break;
+                        ConvertDataRear(ALBuf->data, data, OrigBytes, size);
 
-                        case 2:
-                            for(i = 0;i < size;i+=4)
-                            {
-                                ALBuf->data[i+0] = 0;
-                                ALBuf->data[i+1] = 0;
-                                ALBuf->data[i+2] = ((ALshort*)data)[i/2+0];
-                                ALBuf->data[i+3] = ((ALshort*)data)[i/2+1];
-                            }
-                            break;
-
-                        case 4:
-                            for(i = 0;i < size;i+=4)
-                            {
-                                ALint smp;
-                                ALBuf->data[i+0] = 0;
-                                ALBuf->data[i+1] = 0;
-                                smp = (((ALfloat*)data)[i/2+0] * 32767.5f - 0.5);
-                                smp = min(smp,  32767);
-                                smp = max(smp, -32768);
-                                ALBuf->data[i+2] = (ALshort)smp;
-                                smp = (((ALfloat*)data)[i/2+1] * 32767.5f - 0.5);
-                                smp = min(smp,  32767);
-                                smp = max(smp, -32768);
-                                ALBuf->data[i+3] = (ALshort)smp;
-                            }
-                            break;
-
-                        default:
-                            assert(0);
-                        }
                         memset(&(ALBuf->data[size]), 0, padding*NewChannels*sizeof(ALshort));
 
                         ALBuf->format = NewFormat;
@@ -395,161 +351,39 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     break;
 
                 case AL_FORMAT_MONO_IMA4:
+                case AL_FORMAT_STEREO_IMA4: {
+                    int OrigChans = ((format==AL_FORMAT_MONO_IMA4) ? 1 : 2);
+
                     // Here is where things vary:
-                    // nVidia and Apple use 64+1 samples per block => block_size=36 bytes
-                    // Most PC sound software uses 2040+1 samples per block -> block_size=1024 bytes
-                    if ((size%36) == 0)
+                    // nVidia and Apple use 64+1 samples per channel per block => block_size=36*chans bytes
+                    // Most PC sound software uses 2040+1 samples per channel per block -> block_size=1024*chans bytes
+                    if((size%(36*OrigChans)) != 0)
                     {
-                        // Allocate extra padding samples
-                        temp=realloc(ALBuf->data,padding*2+(size/36)*(65*sizeof(ALshort)));
-                        if (temp)
-                        {
-                            ALBuf->data = temp;
-                            ALBuf->format = AL_FORMAT_MONO16;
-                            ALBuf->eOriginalFormat = AL_FORMAT_MONO_IMA4;
-                            IMAData=(ALuint *)data;
-                            for (i=0;i<size/36;i++)
-                            {
-                                Sample=((ALshort *)IMAData)[0];
-                                Index=((ALshort *)IMAData)[1];
-
-                                Index=Index<0?0:Index;
-                                Index=Index>88?88:Index;
-
-                                ALBuf->data[i*65]=(short)Sample;
-
-                                IMAData++;
-
-                                for (j=1;j<65;j+=8)
-                                {
-                                    IMACode=*IMAData;
-                                    for (k=0;k<8;k+=2)
-                                    {
-                                        Sample+=((g_IMAStep_size[Index]*g_IMACodeword_4[IMACode&15])/8);
-                                        Index+=g_IMAIndex_adjust_4[IMACode&15];
-                                        if (Sample<-32768) Sample=-32768;
-                                        else if (Sample>32767) Sample=32767;
-                                        if (Index<0) Index=0;
-                                        else if (Index>88) Index=88;
-                                        ALBuf->data[i*65+j+k]=(short)Sample;
-                                        IMACode>>=4;
-
-                                        Sample+=((g_IMAStep_size[Index]*g_IMACodeword_4[IMACode&15])/8);
-                                        Index+=g_IMAIndex_adjust_4[IMACode&15];
-                                        if (Sample<-32768) Sample=-32768;
-                                        else if (Sample>32767) Sample=32767;
-                                        if (Index<0) Index=0;
-                                        else if (Index>88) Index=88;
-                                        ALBuf->data[i*65+j+k+1]=(short)Sample;
-                                        IMACode>>=4;
-                                    }
-                                    IMAData++;
-                                }
-                            }
-                            memset(&(ALBuf->data[(size/36*65)]), 0, padding*2);
-                            ALBuf->size=size/36*65*sizeof(ALshort);
-                            ALBuf->frequency=freq;
-                            ALBuf->padding=padding;
-                        }
-                        else
-                            alSetError(AL_OUT_OF_MEMORY);
-                    }
-                    else
-                         alSetError(AL_INVALID_VALUE);
-                    break;
-
-                case AL_FORMAT_STEREO_IMA4:
-                    // Here is where things vary:
-                    // nVidia and Apple use 64+1 samples per channel per block => block_size=72 bytes
-                    // Most PC sound software uses 2040+1 samples per channel per block -> block_size=2048 bytes
-                    if ((size%72) == 0)
-                    {
-                        // Allocate extra padding samples
-                        temp=realloc(ALBuf->data,padding*2*2+(size/72)*(2*65*sizeof(ALshort)));
-                        if (temp)
-                        {
-                            ALBuf->data = temp;
-                            ALBuf->format = AL_FORMAT_STEREO16;
-                            ALBuf->eOriginalFormat = AL_FORMAT_STEREO_IMA4;
-                            IMAData=(ALuint *)data;
-                            for (i=0;i<size/72;i++)
-                            {
-                                LeftSample=((ALshort *)IMAData)[0];
-                                LeftIndex=((ALshort *)IMAData)[1];
-
-                                LeftIndex=LeftIndex<0?0:LeftIndex;
-                                LeftIndex=LeftIndex>88?88:LeftIndex;
-
-                                ALBuf->data[i*2*65]=(short)LeftSample;
-
-                                IMAData++;
-
-                                RightSample=((ALshort *)IMAData)[0];
-                                RightIndex=((ALshort *)IMAData)[1];
-
-                                RightIndex=RightIndex<0?0:RightIndex;
-                                RightIndex=RightIndex>88?88:RightIndex;
-
-                                ALBuf->data[i*2*65+1]=(short)RightSample;
-
-                                IMAData++;
-
-                                for (j=2;j<130;j+=16)
-                                {
-                                    LeftIMACode=IMAData[0];
-                                    RightIMACode=IMAData[1];
-                                    for (k=0;k<16;k+=4)
-                                    {
-                                        LeftSample+=((g_IMAStep_size[LeftIndex]*g_IMACodeword_4[LeftIMACode&15])/8);
-                                        LeftIndex+=g_IMAIndex_adjust_4[LeftIMACode&15];
-                                        if (LeftSample<-32768) LeftSample=-32768;
-                                        else if (LeftSample>32767) LeftSample=32767;
-                                        if (LeftIndex<0) LeftIndex=0;
-                                        else if (LeftIndex>88) LeftIndex=88;
-                                        ALBuf->data[i*2*65+j+k]=(short)LeftSample;
-                                        LeftIMACode>>=4;
-
-                                        RightSample+=((g_IMAStep_size[RightIndex]*g_IMACodeword_4[RightIMACode&15])/8);
-                                        RightIndex+=g_IMAIndex_adjust_4[RightIMACode&15];
-                                        if (RightSample<-32768) RightSample=-32768;
-                                        else if (RightSample>32767) RightSample=32767;
-                                        if (RightIndex<0) RightIndex=0;
-                                        else if (RightIndex>88) RightIndex=88;
-                                        ALBuf->data[i*2*65+j+k+1]=(short)RightSample;
-                                        RightIMACode>>=4;
-
-                                        LeftSample+=((g_IMAStep_size[LeftIndex]*g_IMACodeword_4[LeftIMACode&15])/8);
-                                        LeftIndex+=g_IMAIndex_adjust_4[LeftIMACode&15];
-                                        if (LeftSample<-32768) LeftSample=-32768;
-                                        else if (LeftSample>32767) LeftSample=32767;
-                                        if (LeftIndex<0) LeftIndex=0;
-                                        else if (LeftIndex>88) LeftIndex=88;
-                                        ALBuf->data[i*2*65+j+k+2]=(short)LeftSample;
-                                        LeftIMACode>>=4;
-
-                                        RightSample+=((g_IMAStep_size[RightIndex]*g_IMACodeword_4[RightIMACode&15])/8);
-                                        RightIndex+=g_IMAIndex_adjust_4[RightIMACode&15];
-                                        if (RightSample<-32768) RightSample=-32768;
-                                        else if (RightSample>32767) RightSample=32767;
-                                        if (RightIndex<0) RightIndex=0;
-                                        else if (RightIndex>88) RightIndex=88;
-                                        ALBuf->data[i*2*65+j+k+3]=(short)RightSample;
-                                        RightIMACode>>=4;
-                                    }
-                                    IMAData+=2;
-                                }
-                            }
-                            memset(&(ALBuf->data[(size/72*2*65)]), 0, padding*2*2);
-                            ALBuf->size=size/72*2*65*sizeof(ALshort);
-                            ALBuf->frequency=freq;
-                            ALBuf->padding=padding;
-                        }
-                        else
-                            alSetError(AL_OUT_OF_MEMORY);
-                    }
-                    else
                         alSetError(AL_INVALID_VALUE);
-                    break;
+                        break;
+                    }
+
+                    size /= 36;
+                    size *= 65;
+
+                    // Allocate extra padding samples
+                    temp = realloc(ALBuf->data, (padding*OrigChans + size)*sizeof(ALshort));
+                    if(temp)
+                    {
+                        ALBuf->data = temp;
+                        ConvertDataIMA4(ALBuf->data, data, OrigChans, size/65);
+
+                        memset(&(ALBuf->data[size]), 0, padding*sizeof(ALshort)*OrigChans);
+
+                        ALBuf->format = ((OrigChans==1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16);
+                        ALBuf->eOriginalFormat = format;
+                        ALBuf->size = size*sizeof(ALshort);
+                        ALBuf->frequency = freq;
+                        ALBuf->padding = padding;
+                    }
+                    else
+                        alSetError(AL_OUT_OF_MEMORY);
+                }   break;
 
                 default:
                     alSetError(AL_INVALID_ENUM);
@@ -970,7 +804,6 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
     ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
     ALsizei padding = 2;
     ALvoid *temp;
-    ALsizei i;
 
     assert(aluBytesFromFormat(NewFormat) == 2);
     assert(NewChannels == OrigChannels);
@@ -987,32 +820,7 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
     if(temp)
     {
         ALBuf->data = temp;
-
-        switch(OrigBytes)
-        {
-        case 1:
-            for(i = 0;i < size;i++)
-                ALBuf->data[i] = (ALshort)((data[i]-128) << 8);
-            break;
-
-        case 2:
-            memcpy(ALBuf->data, data, size*sizeof(ALshort));
-            break;
-
-        case 4:
-            for(i = 0;i < size;i++)
-            {
-                ALint smp;
-                smp = (((ALfloat*)data)[i] * 32767.5f - 0.5f);
-                smp = min(smp,  32767);
-                smp = max(smp, -32768);
-                ALBuf->data[i] = (ALshort)smp;
-            }
-            break;
-
-        default:
-            assert(0);
-        }
+        ConvertData(ALBuf->data, data, OrigBytes, size);
 
         memset(&(ALBuf->data[size]), 0, padding*NewChannels*sizeof(ALshort));
 
@@ -1026,6 +834,155 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
         alSetError(AL_OUT_OF_MEMORY);
 }
 
+static void ConvertData(ALshort *dst, const ALvoid *src, ALint origBytes, ALsizei len)
+{
+    ALsizei i;
+    switch(origBytes)
+    {
+        case 1:
+            for(i = 0;i < len;i++)
+                dst[i] = ((ALshort)((ALubyte*)src)[i] - 128) << 8;
+            break;
+
+        case 2:
+            memcpy(dst, src, len*sizeof(ALshort));
+            break;
+
+        case 4:
+            for(i = 0;i < len;i++)
+            {
+                ALint smp;
+                smp = (((ALfloat*)src)[i] * 32767.5f - 0.5f);
+                smp = min(smp,  32767);
+                smp = max(smp, -32768);
+                dst[i] = (ALshort)smp;
+            }
+            break;
+
+        default:
+            assert(0);
+    }
+}
+
+static void ConvertDataRear(ALshort *dst, const ALvoid *src, ALint origBytes, ALsizei len)
+{
+    ALsizei i;
+    switch(origBytes)
+    {
+        case 1:
+            for(i = 0;i < len;i+=4)
+            {
+                dst[i+0] = 0;
+                dst[i+1] = 0;
+                dst[i+2] = ((ALshort)((ALubyte*)src)[i/2+0] - 128) << 8;
+                dst[i+3] = ((ALshort)((ALubyte*)src)[i/2+1] - 128) << 8;
+            }
+            break;
+
+        case 2:
+            for(i = 0;i < len;i+=4)
+            {
+                dst[i+0] = 0;
+                dst[i+1] = 0;
+                dst[i+2] = ((ALshort*)src)[i/2+0];
+                dst[i+3] = ((ALshort*)src)[i/2+1];
+            }
+            break;
+
+        case 4:
+            for(i = 0;i < len;i+=4)
+            {
+                ALint smp;
+                dst[i+0] = 0;
+                dst[i+1] = 0;
+                smp = (((ALfloat*)src)[i/2+0] * 32767.5f - 0.5);
+                smp = min(smp,  32767);
+                smp = max(smp, -32768);
+                dst[i+2] = (ALshort)smp;
+                smp = (((ALfloat*)src)[i/2+1] * 32767.5f - 0.5);
+                smp = min(smp,  32767);
+                smp = max(smp, -32768);
+                dst[i+3] = (ALshort)smp;
+            }
+            break;
+
+        default:
+            assert(0);
+    }
+}
+
+static void ConvertDataIMA4(ALshort *dst, const ALvoid *src, ALint origChans, ALsizei len)
+{
+    const ALuint *IMAData;
+    ALint LeftSample=0,LeftIndex=0;
+    ALint RightSample=0,RightIndex=0;
+    ALuint LeftIMACode=0,RightIMACode=0;
+    ALsizei i,j,k;
+
+    IMAData = src;
+    for(i = 0;i < len/origChans;i++)
+    {
+        LeftSample = ((ALshort*)IMAData)[0];
+        LeftIndex = ((ALshort*)IMAData)[1];
+
+        LeftIndex = ((LeftIndex<0) ? 0 : LeftIndex);
+        LeftIndex = ((LeftIndex>88) ? 88 : LeftIndex);
+
+        dst[i*65*origChans] = (short)LeftSample;
+
+        IMAData++;
+
+        if(origChans > 1)
+        {
+            RightSample = ((ALshort*)IMAData)[0];
+            RightIndex = ((ALshort*)IMAData)[1];
+
+            RightIndex = ((RightIndex<0) ? 0 : RightIndex);
+            RightIndex = ((RightIndex>88) ? 88 : RightIndex);
+
+            dst[i*65*origChans + 1] = (short)RightSample;
+
+            IMAData++;
+        }
+
+        for(j = 1;j < 65;j += 8)
+        {
+            LeftIMACode = *(IMAData++);
+            if(origChans > 1)
+                RightIMACode = *(IMAData++);
+
+            for(k = 0;k < 8;k++)
+            {
+                LeftSample += ((g_IMAStep_size[LeftIndex]*g_IMACodeword_4[LeftIMACode&15])/8);
+                LeftIndex += g_IMAIndex_adjust_4[LeftIMACode&15];
+
+                if(LeftSample < -32768) LeftSample = -32768;
+                else if(LeftSample > 32767) LeftSample = 32767;
+
+                if(LeftIndex<0) LeftIndex = 0;
+                else if(LeftIndex>88) LeftIndex = 88;
+
+                dst[(i*65+j+k)*origChans] = (short)LeftSample;
+                LeftIMACode >>= 4;
+
+                if(origChans > 1)
+                {
+                    RightSample += ((g_IMAStep_size[RightIndex]*g_IMACodeword_4[RightIMACode&15])/8);
+                    RightIndex += g_IMAIndex_adjust_4[RightIMACode&15];
+
+                    if(RightSample < -32768) RightSample = -32768;
+                    else if(RightSample > 32767) RightSample = 32767;
+
+                    if(RightIndex < 0) RightIndex = 0;
+                    else if(RightIndex > 88) RightIndex = 88;
+
+                    dst[(i*65+j+k)*origChans + 1] = (short)RightSample;
+                    RightIMACode >>= 4;
+                }
+            }
+        }
+    }
+}
 
 /*
 *    ReleaseALBuffers()

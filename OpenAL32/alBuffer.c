@@ -914,70 +914,48 @@ static void ConvertDataRear(ALshort *dst, const ALvoid *src, ALint origBytes, AL
 static void ConvertDataIMA4(ALshort *dst, const ALvoid *src, ALint origChans, ALsizei len)
 {
     const ALuint *IMAData;
-    ALint LeftSample=0,LeftIndex=0;
-    ALint RightSample=0,RightIndex=0;
-    ALuint LeftIMACode=0,RightIMACode=0;
-    ALsizei i,j,k;
+    ALint Sample[2],Index[2];
+    ALuint IMACode[2];
+    ALsizei i,j,k,c;
+
+    assert(origChans <= 2);
 
     IMAData = src;
     for(i = 0;i < len/origChans;i++)
     {
-        LeftSample = ((ALshort*)IMAData)[0];
-        LeftIndex = ((ALshort*)IMAData)[1];
-
-        LeftIndex = ((LeftIndex<0) ? 0 : LeftIndex);
-        LeftIndex = ((LeftIndex>88) ? 88 : LeftIndex);
-
-        dst[i*65*origChans] = (short)LeftSample;
-
-        IMAData++;
-
-        if(origChans > 1)
+        for(c = 0;c < origChans;c++)
         {
-            RightSample = ((ALshort*)IMAData)[0];
-            RightIndex = ((ALshort*)IMAData)[1];
+            Sample[c] = ((ALshort*)IMAData)[0];
+            Index[c] = ((ALshort*)IMAData)[1];
 
-            RightIndex = ((RightIndex<0) ? 0 : RightIndex);
-            RightIndex = ((RightIndex>88) ? 88 : RightIndex);
+            Index[c] = ((Index[c]<0) ? 0 : Index[c]);
+            Index[c] = ((Index[c]>88) ? 88 : Index[c]);
 
-            dst[i*65*origChans + 1] = (short)RightSample;
+            dst[i*65*origChans + c] = (ALshort)Sample[c];
 
             IMAData++;
         }
 
         for(j = 1;j < 65;j += 8)
         {
-            LeftIMACode = *(IMAData++);
-            if(origChans > 1)
-                RightIMACode = *(IMAData++);
+            for(c = 0;c < origChans;c++)
+                IMACode[c] = *(IMAData++);
 
             for(k = 0;k < 8;k++)
             {
-                LeftSample += ((g_IMAStep_size[LeftIndex]*g_IMACodeword_4[LeftIMACode&15])/8);
-                LeftIndex += g_IMAIndex_adjust_4[LeftIMACode&15];
-
-                if(LeftSample < -32768) LeftSample = -32768;
-                else if(LeftSample > 32767) LeftSample = 32767;
-
-                if(LeftIndex<0) LeftIndex = 0;
-                else if(LeftIndex>88) LeftIndex = 88;
-
-                dst[(i*65+j+k)*origChans] = (short)LeftSample;
-                LeftIMACode >>= 4;
-
-                if(origChans > 1)
+                for(c = 0;c < origChans;c++)
                 {
-                    RightSample += ((g_IMAStep_size[RightIndex]*g_IMACodeword_4[RightIMACode&15])/8);
-                    RightIndex += g_IMAIndex_adjust_4[RightIMACode&15];
+                    Sample[c] += ((g_IMAStep_size[Index[c]]*g_IMACodeword_4[IMACode[c]&15])/8);
+                    Index[c] += g_IMAIndex_adjust_4[IMACode[c]&15];
 
-                    if(RightSample < -32768) RightSample = -32768;
-                    else if(RightSample > 32767) RightSample = 32767;
+                    if(Sample[c] < -32768) Sample[c] = -32768;
+                    else if(Sample[c] > 32767) Sample[c] = 32767;
 
-                    if(RightIndex < 0) RightIndex = 0;
-                    else if(RightIndex > 88) RightIndex = 88;
+                    if(Index[c]<0) Index[c] = 0;
+                    else if(Index[c]>88) Index[c] = 88;
 
-                    dst[(i*65+j+k)*origChans + 1] = (short)RightSample;
-                    RightIMACode >>= 4;
+                    dst[(i*65+j+k)*origChans + c] = (ALshort)Sample[c];
+                    IMACode[c] >>= 4;
                 }
             }
         }

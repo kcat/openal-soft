@@ -71,6 +71,7 @@ ALuint StopThread(ALvoid *thread)
 
     WaitForSingleObject(inf->thread, INFINITE);
     GetExitCodeThread(inf->thread, &ret);
+    CloseHandle(inf->thread);
 
     free(inf);
 

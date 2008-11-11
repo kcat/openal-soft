@@ -405,6 +405,110 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
     ProcessContext(Context);
 }
 
+/*
+*    alBufferSubDataEXT(ALuint buffer,ALenum format,ALvoid *data,ALsizei offset,ALsizei length)
+*
+*    Fill buffer with audio data
+*/
+ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
+{
+    ALCcontext *Context;
+    ALbuffer *ALBuf;
+
+    Context = alcGetCurrentContext();
+    SuspendContext(Context);
+
+    if(alIsBuffer(buffer) && buffer != 0)
+    {
+        ALBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffer);
+        if(ALBuf->data == NULL)
+        {
+            // buffer does not have any data
+            alSetError(AL_INVALID_NAME);
+        }
+        else if(length < 0 || offset < 0 || (length > 0 && data == NULL))
+        {
+            // data is NULL or offset/length is negative
+            alSetError(AL_INVALID_VALUE);
+        }
+        else
+        {
+            switch(format)
+            {
+                case AL_FORMAT_REAR8:
+                case AL_FORMAT_REAR16:
+                case AL_FORMAT_REAR32: {
+                    ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
+                                        ((format==AL_FORMAT_REAR16) ? 2 :
+                                         4));
+
+                    if(ALBuf->eOriginalFormat != AL_FORMAT_REAR8 &&
+                       ALBuf->eOriginalFormat != AL_FORMAT_REAR16 &&
+                       ALBuf->eOriginalFormat != AL_FORMAT_REAR32)
+                    {
+                        alSetError(AL_INVALID_ENUM);
+                        break;
+                    }
+
+                    if(ALBuf->size/4/sizeof(ALshort) < (ALuint)offset+length)
+                    {
+                        alSetError(AL_INVALID_VALUE);
+                        break;
+                    }
+
+                    ConvertDataRear(&ALBuf->data[offset*4], data, OrigBytes, length*2);
+                }   break;
+
+                case AL_FORMAT_MONO_IMA4:
+                case AL_FORMAT_STEREO_IMA4: {
+                    int Channels = aluChannelsFromFormat(ALBuf->format);
+
+                    if(ALBuf->eOriginalFormat != format)
+                    {
+                        alSetError(AL_INVALID_ENUM);
+                        break;
+                    }
+
+                    if((offset%65) != 0 || (length%65) != 0 ||
+                       ALBuf->size/Channels/sizeof(ALshort) < (ALuint)offset+length)
+                    {
+                        alSetError(AL_INVALID_VALUE);
+                        break;
+                    }
+
+                    ConvertDataIMA4(&ALBuf->data[offset*Channels], data, Channels, length/65*Channels);
+                }   break;
+
+                default: {
+                    ALuint Channels = aluChannelsFromFormat(format);
+                    ALuint Bytes = aluBytesFromFormat(format);
+
+                    if(Channels != aluChannelsFromFormat(ALBuf->format))
+                    {
+                        alSetError(AL_INVALID_ENUM);
+                        break;
+                    }
+
+                    if(ALBuf->size/Channels/sizeof(ALshort) < (ALuint)offset+length)
+                    {
+                        alSetError(AL_INVALID_VALUE);
+                        break;
+                    }
+
+                    ConvertData(&ALBuf->data[offset*Channels], data, Bytes, length*Channels);
+                }   break;
+            }
+        }
+    }
+    else
+    {
+        // Invalid Buffer Name
+        alSetError(AL_INVALID_NAME);
+    }
+
+    ProcessContext(Context);
+}
+
 
 ALAPI void ALAPIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 {

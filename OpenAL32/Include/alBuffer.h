@@ -24,6 +24,8 @@ typedef struct ALbuffer_struct
     struct ALbuffer_struct *next;
 } ALbuffer;
 
+ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length);
+
 ALvoid ReleaseALBuffers(ALvoid);
 
 #ifdef __cplusplus

@@ -91,6 +91,14 @@ extern "C" {
 #define AL_FORMAT_STEREO_IMA4                    0x1301
 #endif
 
+#ifndef AL_EXT_buffer_sub_data
+#define AL_EXT_buffer_sub_data 1
+#define AL_BYTE_RW_OFFSETS_EXT                   0x1031
+#define AL_SAMPLE_RW_OFFSETS_EXT                 0x1032
+#define AL_SEC_RW_OFFSETS_EXT                    0x1033
+typedef ALvoid (AL_APIENTRY*PFNALBUFFERSUBDATAEXTPROC)(ALuint,ALenum,const ALvoid*,ALsizei,ALsizei);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

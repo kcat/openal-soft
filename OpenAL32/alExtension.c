@@ -30,6 +30,7 @@
 #include "alEffect.h"
 #include "alAuxEffectSlot.h"
 #include "alSource.h"
+#include "alBuffer.h"
 #include "AL/al.h"
 #include "AL/alc.h"
 
@@ -143,6 +144,8 @@ static ALfunction  function[]=   {
     { "alGetAuxiliaryEffectSlotiv", (ALvoid *) alGetAuxiliaryEffectSlotiv},
     { "alGetAuxiliaryEffectSlotf",  (ALvoid *) alGetAuxiliaryEffectSlotf },
     { "alGetAuxiliaryEffectSlotfv", (ALvoid *) alGetAuxiliaryEffectSlotfv},
+
+    { "alBufferSubDataEXT",         (ALvoid *) alBufferSubDataEXT        },
 
     { NULL,                         (ALvoid *) NULL                      } };
 

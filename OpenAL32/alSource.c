@@ -33,7 +33,7 @@
 #include "alAuxEffectSlot.h"
 
 static ALvoid InitSourceParams(ALsource *pSource);
-static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset);
+static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset, ALuint updateSize);
 static ALvoid ApplyOffset(ALsource *pSource, ALboolean bUpdateContext);
 static ALint GetByteOffset(ALsource *pSource);
 
@@ -853,7 +853,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
 {
     ALCcontext    *pContext;
     ALsource    *pSource;
-    ALfloat        flOffset;
+    ALfloat        flOffset[2];
 
     pContext = alcGetCurrentContext();
     if (pContext)
@@ -903,8 +903,20 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
                 case AL_SEC_OFFSET:
                 case AL_SAMPLE_OFFSET:
                 case AL_BYTE_OFFSET:
-                    if (GetSourceOffset(pSource, eParam, &flOffset))
-                        *pflValue = flOffset;
+                    if(GetSourceOffset(pSource, eParam, flOffset, pContext->Device->UpdateSize))
+                        *pflValue = flOffset[0];
+                    else
+                        alSetError(AL_INVALID_OPERATION);
+                    break;
+
+                case AL_SEC_RW_OFFSETS_EXT:
+                case AL_SAMPLE_RW_OFFSETS_EXT:
+                case AL_BYTE_RW_OFFSETS_EXT:
+                    if(GetSourceOffset(pSource, eParam, flOffset, pContext->Device->UpdateSize))
+                    {
+                        pflValue[0] = flOffset[0];
+                        pflValue[1] = flOffset[1];
+                    }
                     else
                         alSetError(AL_INVALID_OPERATION);
                     break;
@@ -1089,7 +1101,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
 {
     ALCcontext *pContext;
     ALsource   *pSource;
-    ALfloat     flOffset;
+    ALfloat     flOffset[2];
 
     pContext = alcGetCurrentContext();
     if (pContext)
@@ -1162,8 +1174,20 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                 case AL_SEC_OFFSET:
                 case AL_SAMPLE_OFFSET:
                 case AL_BYTE_OFFSET:
-                    if (GetSourceOffset(pSource, eParam, &flOffset))
-                        *plValue = (ALint)flOffset;
+                    if(GetSourceOffset(pSource, eParam, flOffset, pContext->Device->UpdateSize))
+                        *plValue = (ALint)flOffset[0];
+                    else
+                        alSetError(AL_INVALID_OPERATION);
+                    break;
+
+                case AL_SEC_RW_OFFSETS_EXT:
+                case AL_SAMPLE_RW_OFFSETS_EXT:
+                case AL_BYTE_RW_OFFSETS_EXT:
+                    if(GetSourceOffset(pSource, eParam, flOffset, pContext->Device->UpdateSize))
+                    {
+                        plValue[0] = (ALint)flOffset[0];
+                        plValue[1] = (ALint)flOffset[1];
+                    }
                     else
                         alSetError(AL_INVALID_OPERATION);
                     break;
@@ -1997,12 +2021,13 @@ static ALvoid InitSourceParams(ALsource *pSource)
     Gets the current playback position in the given Source, in the appropriate format (Bytes, Samples or MilliSeconds)
     The offset is relative to the start of the queue (not the start of the current buffer)
 */
-static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset)
+static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset, ALuint updateSize)
 {
     ALbufferlistitem *pBufferList;
     ALbuffer         *pBuffer;
     ALfloat        flBufferFreq;
-    ALint        lBytesPlayed, lChannels;
+    ALint        lChannels;
+    ALint        readPos, writePos;
     ALenum        eOriginalFormat;
     ALboolean    bReturn = AL_TRUE;
     ALint        lTotalBufferDataSize;
@@ -2016,14 +2041,19 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
         lChannels = aluChannelsFromFormat(pBuffer->format);
 
         // Get Current BytesPlayed
-        lBytesPlayed = pSource->position * lChannels * 2; // NOTE : This is the byte offset into the *current* buffer
+        readPos = pSource->position * lChannels * 2; // NOTE : This is the byte offset into the *current* buffer
         // Add byte length of any processed buffers in the queue
         pBufferList = pSource->queue;
         while ((pBufferList) && (pBufferList->bufferstate == PROCESSED))
         {
-            lBytesPlayed += ((ALbuffer*)ALTHUNK_LOOKUPENTRY(pBufferList->buffer))->size;
+            readPos += ((ALbuffer*)ALTHUNK_LOOKUPENTRY(pBufferList->buffer))->size;
             pBufferList = pBufferList->next;
         }
+
+        if(pSource->state == AL_PLAYING)
+            writePos = readPos + (updateSize * lChannels * 2);
+        else
+            writePos = readPos;
 
         lTotalBufferDataSize = 0;
         pBufferList = pSource->queue;
@@ -2036,64 +2066,91 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
 
         if (pSource->bLooping)
         {
-            if (lBytesPlayed < 0)
-                lBytesPlayed = 0;
+            if(readPos < 0)
+                readPos = 0;
             else
-                lBytesPlayed = lBytesPlayed % lTotalBufferDataSize;
+                readPos %= lTotalBufferDataSize;
+            if(writePos < 0)
+                writePos = 0;
+            else
+                writePos %= lTotalBufferDataSize;
         }
         else
         {
             // Clamp BytesPlayed to within 0 and lTotalBufferDataSize
-            if(lBytesPlayed < 0)
-                lBytesPlayed = 0;
-            if(lBytesPlayed > lTotalBufferDataSize)
-                lBytesPlayed = lTotalBufferDataSize;
+            if(readPos < 0)
+                readPos = 0;
+            else if(readPos > lTotalBufferDataSize)
+                readPos = lTotalBufferDataSize;
+            if(writePos < 0)
+                writePos = 0;
+            else if(writePos > lTotalBufferDataSize)
+                writePos = lTotalBufferDataSize;
         }
 
         switch (eName)
         {
         case AL_SEC_OFFSET:
-            *pflOffset = ((ALfloat)lBytesPlayed / (lChannels * 2.0f * flBufferFreq));
+        case AL_SEC_RW_OFFSETS_EXT:
+            pflOffset[0] = (ALfloat)readPos / (lChannels * 2.0f * flBufferFreq);
+            pflOffset[1] = (ALfloat)writePos / (lChannels * 2.0f * flBufferFreq);
             break;
         case AL_SAMPLE_OFFSET:
-            *pflOffset = (ALfloat)(lBytesPlayed / (lChannels * 2));
+        case AL_SAMPLE_RW_OFFSETS_EXT:
+            pflOffset[0] = (ALfloat)(readPos / (lChannels * 2));
+            pflOffset[1] = (ALfloat)(writePos / (lChannels * 2));
             break;
         case AL_BYTE_OFFSET:
+        case AL_BYTE_RW_OFFSETS_EXT:
             // Take into account the original format of the Buffer
             if ((eOriginalFormat == AL_FORMAT_MONO_IMA4) ||
                 (eOriginalFormat == AL_FORMAT_STEREO_IMA4))
             {
                 // Compression rate of the ADPCM supported is 3.6111 to 1
-                lBytesPlayed = (ALint)((ALfloat)lBytesPlayed / 3.6111f);
+                readPos = (ALint)((ALfloat)readPos / 3.6111f);
+                writePos = (ALint)((ALfloat)writePos / 3.6111f);
                 // Round down to nearest ADPCM block
-                *pflOffset = (ALfloat)((lBytesPlayed / (36 * lChannels)) * 36 * lChannels);
+                pflOffset[0] = (ALfloat)((readPos / (36 * lChannels)) * 36 * lChannels);
+                if(pSource->state == AL_PLAYING)
+                {
+                    // Round up to nearest ADPCM block
+                    pflOffset[1] = (ALfloat)(((writePos + (36 * lChannels) - 1) / (36 * lChannels)) * 36 * lChannels);
+                }
+                else
+                    pflOffset[1] = pflOffset[0];
             }
             else if (eOriginalFormat == AL_FORMAT_REAR8)
             {
-                *pflOffset = (ALfloat)(lBytesPlayed >> 2);
+                pflOffset[0] = (ALfloat)(readPos >> 2);
+                pflOffset[1] = (ALfloat)(writePos >> 2);
             }
             else if (eOriginalFormat == AL_FORMAT_REAR16)
             {
-                *pflOffset = (ALfloat)(lBytesPlayed >> 1);
+                pflOffset[0] = (ALfloat)(readPos >> 1);
+                pflOffset[1] = (ALfloat)(writePos >> 1);
             }
             else if (aluBytesFromFormat(eOriginalFormat) == 1)
             {
-                *pflOffset = (ALfloat)(lBytesPlayed >> 1);
+                pflOffset[0] = (ALfloat)(readPos >> 1);
+                pflOffset[1] = (ALfloat)(writePos >> 1);
             }
             else if (aluBytesFromFormat(eOriginalFormat) == 4)
             {
-                *pflOffset = (ALfloat)(lBytesPlayed << 1);
+                pflOffset[0] = (ALfloat)(readPos << 1);
+                pflOffset[1] = (ALfloat)(writePos << 1);
             }
             else
             {
-                *pflOffset = (ALfloat)lBytesPlayed;
+                pflOffset[0] = (ALfloat)readPos;
+                pflOffset[1] = (ALfloat)writePos;
             }
             break;
         }
     }
     else
     {
-        *pflOffset = 0.0f;
+        pflOffset[0] = 0.0f;
+        pflOffset[1] = 0.0f;
     }
 
     return bReturn;

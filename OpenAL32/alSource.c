@@ -2106,15 +2106,12 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
             if ((eOriginalFormat == AL_FORMAT_MONO_IMA4) ||
                 (eOriginalFormat == AL_FORMAT_STEREO_IMA4))
             {
-                // Compression rate of the ADPCM supported is 3.6111 to 1
-                readPos = (ALint)((ALfloat)readPos / 3.6111f);
-                writePos = (ALint)((ALfloat)writePos / 3.6111f);
                 // Round down to nearest ADPCM block
-                pflOffset[0] = (ALfloat)((readPos / (36 * lChannels)) * 36 * lChannels);
+                pflOffset[0] = (ALfloat)((readPos / (65 * 2 * lChannels)) * 36 * lChannels);
                 if(pSource->state == AL_PLAYING)
                 {
                     // Round up to nearest ADPCM block
-                    pflOffset[1] = (ALfloat)(((writePos + (36 * lChannels) - 1) / (36 * lChannels)) * 36 * lChannels);
+                    pflOffset[1] = (ALfloat)(((writePos + (65 * 2 * lChannels) - 1) / (65 * 2 * lChannels)) * 36 * lChannels);
                 }
                 else
                     pflOffset[1] = pflOffset[0];

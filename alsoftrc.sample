@@ -5,6 +5,8 @@
 # The system-wide settings can be put in /etc/openal/alsoft.conf and user-
 # specific override settings in ~/.alsoftrc.
 # For Windows, these settings should go into %AppData%\alsoft.ini
+# The environment variable ALSOFT_CONF can be used to specify another config
+# override
 
 # Option and block names are case-insenstive. The supplied values are only
 # hints and may not be honored (though generally it'll try to get as close as

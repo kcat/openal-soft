@@ -250,6 +250,15 @@ void ReadALConfig(void)
         }
     }
 #endif
+    if(getenv("ALSOFT_CONF"))
+    {
+        f = fopen(getenv("ALSOFT_CONF"), "r");
+        if(f)
+        {
+            LoadConfigFromFile(f);
+            fclose(f);
+        }
+    }
 }
 
 void FreeALConfig(void)

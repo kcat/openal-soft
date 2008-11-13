@@ -732,9 +732,23 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     WetSend = &ALSource->WetGain;
 
                     //Compute the gain steps for each output channel
-                    for(i = 0;i < OUTPUTCHANNELS;i++)
-                        dryGainStep[i] = (newDrySend[i]-DrySend[i]) / rampLength;
-                    wetGainStep = (newWetSend-(*WetSend)) / rampLength;
+                    if(ALSource->FirstStart && DataPosInt == 0 && DataPosFrac == 0)
+                    {
+                        for(i = 0;i < OUTPUTCHANNELS;i++)
+                        {
+                            DrySend[i] = newDrySend[i];
+                            dryGainStep[i] = 0;
+                        }
+                        *WetSend = newWetSend;
+                        wetGainStep = 0;
+                    }
+                    else
+                    {
+                        for(i = 0;i < OUTPUTCHANNELS;i++)
+                            dryGainStep[i] = (newDrySend[i]-DrySend[i]) / rampLength;
+                        wetGainStep = (newWetSend-(*WetSend)) / rampLength;
+                    }
+                    ALSource->FirstStart = AL_FALSE;
 
                     //Compute 18.14 fixed point step
                     if(Pitch > (float)MAX_PITCH)

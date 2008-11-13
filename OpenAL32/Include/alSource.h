@@ -96,6 +96,7 @@ typedef struct ALsource
     // Current gains, which are ramped while mixed
     ALfloat DryGains[OUTPUTCHANNELS];
     ALfloat WetGain;
+    ALboolean FirstStart;
 
     struct ALsource *next;
 } ALsource;

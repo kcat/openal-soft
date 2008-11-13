@@ -1435,6 +1435,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                             pSource->position = 0;
                             pSource->position_fraction = 0;
                             pSource->BuffersPlayed = 0;
+                            pSource->FirstStart = AL_TRUE;
 
                             pSource->ulBufferID = pSource->queue->buffer;
 
@@ -1451,6 +1452,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                             pSource->state = AL_PLAYING;
                             pSource->inuse = AL_TRUE;
                             pSource->play = AL_TRUE;
+                            pSource->FirstStart = AL_FALSE;
                         }
 
                         // Check if an Offset has been set

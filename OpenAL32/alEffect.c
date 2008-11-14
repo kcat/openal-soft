@@ -29,6 +29,10 @@
 #include "alThunk.h"
 #include "alError.h"
 
+
+ALboolean DisabledEffects[MAX_EFFECTS];
+
+
 static ALeffect *g_EffectList;
 static ALuint    g_EffectCount;
 
@@ -165,8 +169,10 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
 
         if(param == AL_EFFECT_TYPE)
         {
-            if(iValue == AL_EFFECT_NULL ||
-               iValue == AL_EFFECT_REVERB)
+            ALboolean isOk = (iValue == AL_EFFECT_NULL ||
+                (iValue == AL_EFFECT_REVERB && !DisabledEffects[REVERB]));
+
+            if(isOk)
                 InitEffectParams(ALEffect, iValue);
             else
                 alSetError(AL_INVALID_VALUE);

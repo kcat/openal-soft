@@ -61,6 +61,12 @@ drivers =  # Sets the backend driver list order, comma-seperated. Unknown
            # Default is:
            # alsa,oss,solaris,dsound,winmm,wave
 
+excludefx =  # Sets which effects to exclude, preventing apps from using them.
+             # This can help for apps that try to use effects which are too CPU
+             # intensive for the system to handle. Available effects are:
+             # reverb
+             # Default is empty (all available effects enabled)
+
 [alsa]  # ALSA backend stuff
 device = default  # Sets the device name for the default playback device.
                   # Default is default

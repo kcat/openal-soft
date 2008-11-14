@@ -38,6 +38,13 @@ extern "C" {
 #define AL_REVERB_DECAY_HFLIMIT                            0x000D
 
 
+enum {
+    REVERB = 0,
+    MAX_EFFECTS
+};
+extern ALboolean DisabledEffects[MAX_EFFECTS];
+
+
 typedef struct ALeffect_struct
 {
     // Effect type (AL_EFFECT_NULL, ...)

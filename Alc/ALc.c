@@ -309,6 +309,37 @@ static void InitAL(void)
                            strcasecmp(str, "yes") == 0 ||
                            strcasecmp(str, "on") == 0 ||
                            atoi(str) != 0);
+
+        str = GetConfigValue(NULL, "excludefx", "");
+        if(str[0])
+        {
+            const struct {
+                const char *name;
+                int type;
+            } EffectList[] = {
+                { "reverb", REVERB },
+                { NULL, 0 }
+            };
+            int n;
+            size_t len;
+            const char *next = str;
+
+            do {
+                str = next;
+                next = strchr(str, ',');
+
+                if(!str[0] || next == str)
+                    continue;
+
+                len = (next ? ((size_t)(next-str)) : strlen(str));
+                for(n = 0;EffectList[n].name;n++)
+                {
+                    if(len == strlen(EffectList[n].name) &&
+                       strncmp(EffectList[n].name, str, len) == 0)
+                        DisabledEffects[EffectList[n].type] = AL_TRUE;
+                }
+            } while(next++);
+        }
     }
 }
 

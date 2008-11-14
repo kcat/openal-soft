@@ -33,9 +33,12 @@ OPTION(WERROR  "Treat compile warnings as errors"      OFF)
 
 OPTION(EXAMPLES  "Build example programs"              ON)
 
+OPTION(XCOMPILEWIN32  "Cross-compile to Win32" OFF)
 
-IF(WIN32)
+
+IF(WIN32 OR XCOMPILEWIN32)
     SET(LIBNAME openal32)
+    ADD_DEFINITIONS("-D_WIN32")
 ELSE()
     SET(LIBNAME openal)
 ENDIF()
@@ -95,7 +98,7 @@ ELSE()
         FORCE)
 
     # Set visibility options if available
-    IF(NOT WIN32)
+    IF(NOT WIN32 AND NOT XCOMPILEWIN32)
         CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));
                                  int main() {return 0;}" HAVE_GCC_DESTRUCTOR)
 
@@ -340,9 +343,15 @@ ENDIF()
 ADD_LIBRARY(${LIBNAME} ${LIBTYPE} ${OPENAL_OBJS} ${ALC_OBJS})
 SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES VERSION ${LIB_VERSION}
                                             SOVERSION ${LIB_MAJOR_VERSION})
-IF(WIN32)
-    SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES PREFIX "")
+IF(XCOMPILEWIN32)
+    SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES PREFIX "" SUFFIX .dll)
+    IF(EXAMPLES)
+        SET(EXAMPLES OFF)
+        MESSAGE(STATUS "")
+        MESSAGE(STATUS "Building examples disabled when cross-compiling")
+    ENDIF()
 ENDIF()
+SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES OUTPUT_NAME ${LIBNAME})
 
 TARGET_LINK_LIBRARIES(${LIBNAME} ${EXTRA_LIBS})
 
@@ -375,8 +384,10 @@ MESSAGE(STATUS "Building OpenAL with support for the following backends:")
 MESSAGE(STATUS "    ${BACKENDS}")
 MESSAGE(STATUS "")
 
-IF(WIN32 AND NOT HAVE_DSOUND)
-    MESSAGE(STATUS "WARNING: Building the Windows version without DirectSound output")
-    MESSAGE(STATUS "         This is probably NOT what you want!")
-    MESSAGE(STATUS "")
+IF(WIN32 OR XCOMPILEWIN32)
+    IF(NOT HAVE_DSOUND)
+        MESSAGE(STATUS "WARNING: Building the Windows version without DirectSound output")
+        MESSAGE(STATUS "         This is probably NOT what you want!")
+        MESSAGE(STATUS "")
+    ENDIF()
 ENDIF()

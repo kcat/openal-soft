@@ -29,6 +29,7 @@
 #include "alAuxEffectSlot.h"
 #include "alThunk.h"
 #include "alError.h"
+#include "alReverb.h"
 
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, ALeffect *effect);
@@ -148,7 +149,7 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                         *list = (*list)->next;
                     ALTHUNK_REMOVEENTRY(ALAuxiliaryEffectSlot->effectslot);
 
-                    free(ALAuxiliaryEffectSlot->ReverbBuffer);
+                    VerbDestroy(ALAuxiliaryEffectSlot->ReverbState);
 
                     memset(ALAuxiliaryEffectSlot, 0, sizeof(ALeffectslot));
                     free(ALAuxiliaryEffectSlot);
@@ -467,54 +468,20 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, A
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, ALeffect *effect)
 {
-    ALfloat *ptr = NULL;
-
     if(!effect)
     {
         memset(&ALEffectSlot->effect, 0, sizeof(ALEffectSlot->effect));
-        goto done;
+        VerbDestroy(ALEffectSlot->ReverbState);
+        ALEffectSlot->ReverbState = NULL;
+        return;
     }
-
     if(effect->type == AL_EFFECT_REVERB)
     {
-        ALuint size;
-        ALfloat reverbwait;
-
-        reverbwait = (1.0f-effect->Reverb.Density)*(0.1f-0.075f) + 0.075f;
-
-        size = (ALuint)((ALfloat)Context->Frequency *
-                        (effect->Reverb.ReflectionsDelay +
-                         effect->Reverb.LateReverbDelay +
-                         reverbwait)) + 1;
-
-        ptr = calloc(size, sizeof(ALfloat));
-        if(!ptr)
-        {
-            alSetError(AL_OUT_OF_MEMORY);
-            return;
-        }
-        if(ALEffectSlot->ReverbBuffer)
-            memcpy(ptr, ALEffectSlot->ReverbBuffer, min(size, ALEffectSlot->ReverbLength)*sizeof(ALfloat));
-        ALEffectSlot->ReverbLength = size;
-        ALEffectSlot->ReverbPos %= size;
-        ALEffectSlot->ReverbReflectPos = (ALuint)(ALEffectSlot->ReverbLength -
-                                          ((ALfloat)Context->Frequency *
-                                           effect->Reverb.ReflectionsDelay) +
-                                          ALEffectSlot->ReverbPos) %
-                                         ALEffectSlot->ReverbLength;
-        ALEffectSlot->ReverbLatePos = (ALuint)(ALEffectSlot->ReverbLength -
-                                               ((ALfloat)Context->Frequency *
-                                              (effect->Reverb.LateReverbDelay +
-                                           effect->Reverb.ReflectionsDelay)) +
-                                          ALEffectSlot->ReverbPos) %
-                                         ALEffectSlot->ReverbLength;
-        ALEffectSlot->ReverbDecayGain = pow(1.0/32768.0, 1.0/(effect->Reverb.DecayTime/reverbwait));
+        if(!ALEffectSlot->ReverbState)
+            ALEffectSlot->ReverbState = VerbCreate(Context);
+        VerbUpdate(Context, ALEffectSlot, effect);
     }
-
     memcpy(&ALEffectSlot->effect, effect, sizeof(*effect));
-done:
-    free(ALEffectSlot->ReverbBuffer);
-    ALEffectSlot->ReverbBuffer = ptr;
 }
 
 
@@ -531,7 +498,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
         Context->AuxiliaryEffectSlot = Context->AuxiliaryEffectSlot->next;
 
         // Release effectslot structure
-        free(temp->ReverbBuffer);
+        VerbDestroy(temp->ReverbState);
         ALTHUNK_REMOVEENTRY(temp->effectslot);
 
         memset(temp, 0, sizeof(ALeffectslot));

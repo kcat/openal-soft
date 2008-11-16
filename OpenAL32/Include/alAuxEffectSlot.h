@@ -4,6 +4,7 @@
 #include "AL/al.h"
 #include "alEffect.h"
 #include "alFilter.h"
+#include "alReverb.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,15 +23,7 @@ typedef struct ALeffectslot
     ALfloat Gain;
     ALboolean AuxSendAuto;
 
-    ALfloat *ReverbBuffer;
-    // in frames!
-    ALuint ReverbLength;
-    ALuint ReverbPos;
-    ALuint ReverbReflectPos;
-    ALuint ReverbLatePos;
-    ALfloat ReverbDecayGain;
-
-    FILTER iirFilter;
+    ALverbState *ReverbState;
 
     ALuint refcount;
 

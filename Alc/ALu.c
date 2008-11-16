@@ -33,6 +33,7 @@
 #include "alAuxEffectSlot.h"
 #include "alu.h"
 #include "bs2b.h"
+#include "alReverb.h"
 
 #if defined (HAVE_FLOAT_H)
 #include <float.h>
@@ -459,28 +460,24 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         if(ALSource->Send[0].Slot &&
            ALSource->Send[0].Slot->effect.type != AL_EFFECT_NULL)
         {
-            // If the slot's auxilliary send auto is off, the data sent to the
-            // effect slot is the same as the dry path, sans filter effects
-            if(!ALSource->Send[0].Slot->AuxSendAuto)
+            if(ALSource->Send[0].Slot->AuxSendAuto)
             {
+                // Apply minimal attenuation in place of missing statistical
+                // reverb model.
+                WetMix *= pow(DryMix, 1.0f / 2.0f);
+            }
+            else
+            {
+                // If the slot's auxilliary send auto is off, the data sent to the
+                // effect slot is the same as the dry path, sans filter effects
                 WetMix = DryMix;
                 WetGainHF = DryGainHF;
             }
 
-            // Note that these are really applied by the effect slot. However,
-            // it's easier to handle them here (particularly the lowpass
-            // filter). Applying the gain to the individual sources going to
-            // the effect slot should have the same effect as applying the gain
-            // to the accumulated sources in the effect slot.
-            // vol1*g + vol2*g + ... voln*g = (vol1+vol2+...voln)*g
-            WetMix *= ALSource->Send[0].Slot->Gain;
+            // Note that this is really applied by the effect slot. However,
+            // it's easier (more optimal) to handle it here.
             if(ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB)
-            {
-                WetMix *= ALSource->Send[0].Slot->effect.Reverb.Gain;
                 WetGainHF *= ALSource->Send[0].Slot->effect.Reverb.GainHF;
-                WetGainHF *= pow(ALSource->Send[0].Slot->effect.Reverb.AirAbsorptionGainHF,
-                                 Distance * MetersPerUnit);
-            }
         }
         else
         {
@@ -969,50 +966,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         while(ALEffectSlot)
         {
             if(ALEffectSlot->effect.type == AL_EFFECT_REVERB)
-            {
-                ALfloat *DelayBuffer = ALEffectSlot->ReverbBuffer;
-                ALuint Pos = ALEffectSlot->ReverbPos;
-                ALuint LatePos = ALEffectSlot->ReverbLatePos;
-                ALuint ReflectPos = ALEffectSlot->ReverbReflectPos;
-                ALuint Length = ALEffectSlot->ReverbLength;
-                ALfloat DecayGain = ALEffectSlot->ReverbDecayGain;
-                ALfloat DecayHFRatio = ALEffectSlot->effect.Reverb.DecayHFRatio;
-                ALfloat ReflectGain = ALEffectSlot->effect.Reverb.ReflectionsGain;
-                ALfloat LateReverbGain = ALEffectSlot->effect.Reverb.LateReverbGain;
-                ALfloat sample, lowsample;
-
-                WetFilter = &ALEffectSlot->iirFilter;
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    DelayBuffer[Pos] = WetBuffer[i];
-
-                    sample = DelayBuffer[ReflectPos] * ReflectGain;
-
-                    DelayBuffer[LatePos] *= LateReverbGain;
-
-                    Pos = (Pos+1) % Length;
-                    lowsample = lpFilter(WetFilter, DelayBuffer[Pos]);
-                    lowsample += (DelayBuffer[Pos]-lowsample) * DecayHFRatio;
-
-                    DelayBuffer[LatePos] += lowsample * DecayGain;
-
-                    sample += DelayBuffer[LatePos];
-
-                    DryBuffer[i][FRONT_LEFT]  += sample;
-                    DryBuffer[i][FRONT_RIGHT] += sample;
-                    DryBuffer[i][SIDE_LEFT]   += sample;
-                    DryBuffer[i][SIDE_RIGHT]  += sample;
-                    DryBuffer[i][BACK_LEFT]   += sample;
-                    DryBuffer[i][BACK_RIGHT]  += sample;
-
-                    LatePos = (LatePos+1) % Length;
-                    ReflectPos = (ReflectPos+1) % Length;
-                }
-
-                ALEffectSlot->ReverbPos = Pos;
-                ALEffectSlot->ReverbLatePos = LatePos;
-                ALEffectSlot->ReverbReflectPos = ReflectPos;
-            }
+                VerbProcess(ALEffectSlot->ReverbState, SamplesToDo, WetBuffer, DryBuffer);
 
             ALEffectSlot = ALEffectSlot->next;
         }

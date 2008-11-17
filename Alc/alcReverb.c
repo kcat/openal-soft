@@ -1,12 +1,22 @@
-// TODO:  Look into the distance attenuation done by the statistical model,
-//        and see if it matches 1 / sqrt (distance) or some variant thereof.
-//        If not, try to map it so it can replace the current dry-path model.
-//        Also see how it responds to the distance model.  Then if necessary
-//        update ALu.c to compensate.
-// TODO:  Finalize all updates and add necessary comments.  Merge changes
-//        with latest GIT snapshot and test all parameters thoroughly.  When
-//        ready produce some .diff files for the changes and include with
-//        alReverb.c for presentation.
+/**
+ * OpenAL cross platform audio library
+ * Copyright (C) 2008 by Christopher Fitzgerald.
+ * This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Library General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ *  License along with this library; if not, write to the
+ *  Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ *  Boston, MA  02111-1307, USA.
+ * Or go to http://www.gnu.org/copyleft/lgpl.html
+ */
 
 #include "config.h"
 

@@ -445,7 +445,7 @@ ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
     // what is done here.
     // If the HF limit parameter is flagged, calculate an appropriate limit
     // based on the air absorption parameter.
-    if(Effect->Reverb.DecayHFLimit)
+    if(Effect->Reverb.DecayHFLimit && Effect->Reverb.AirAbsorptionGainHF < 1.0f)
     {
         ALfloat limitRatio;
 
@@ -457,8 +457,8 @@ ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
         // The delay length is cancelled out of the equation, so it can be
         // calculated once for all lines.
         limitRatio = 1.0f / (log10(Effect->Reverb.AirAbsorptionGainHF) *
-                             SPEEDOFSOUNDMETRESPERSEC*Effect->Reverb.DecayTime/
-                             -60.0f * 20.0f);
+                             SPEEDOFSOUNDMETRESPERSEC *
+                             Effect->Reverb.DecayTime / -60.0f * 20.0f);
         // Need to limit the result to a minimum of 0.1, just like the HF
         // ratio parameter.
         limitRatio = __max(limitRatio, 0.1f);

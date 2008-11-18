@@ -476,12 +476,9 @@ ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
         length = LATE_LINE_LENGTH[index];
         if(index >= 4)
         {
-            index2 = index - 3;
-
-            length *= 1.0f + (Effect->Reverb.Density * LATE_LINE_MULTIPLIER);
-
             // Calculate the delay offset for the variable-length delay
             // lines.
+            length *= 1.0f + (Effect->Reverb.Density * LATE_LINE_MULTIPLIER);
             State->Late.Offset[index] = (ALuint)(length * Context->Frequency);
         }
         // Calculate the gain (coefficient) for each line.
@@ -489,6 +486,8 @@ ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
                                               -60.0f / 20.0f);
         if(index >= 4)
         {
+            index2 = index - 3;
+
             // Calculate the decay equation for each low-pass filter.
             g = pow(10.0f, length / (Effect->Reverb.DecayTime * hfRatio) *
                            -60.0f / 20.0f) /
@@ -512,8 +511,8 @@ ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
     length = LATE_LINE_LENGTH[5] * (1.0f + Effect->Reverb.Density * LATE_LINE_MULTIPLIER) +
              LATE_LINE_LENGTH[6] * (1.0f + Effect->Reverb.Density * LATE_LINE_MULTIPLIER);
 
-    g = pow(10.0f, length / (Effect->Reverb.DecayTime * hfRatio) * -30.0f / 20.0f) /
-        pow(10.0f, length / Effect->Reverb.DecayTime * -30.0f / 20.0f);
+    g = pow(10.0f, ((length / (Effect->Reverb.DecayTime * hfRatio))-
+                    (length / Effect->Reverb.DecayTime)) * -30.0f / 20.0f);
     g  = __max(g, 0.1f);
     g *= g;
 

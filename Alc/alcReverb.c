@@ -483,10 +483,16 @@ ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
             // Calculate the delay offset for the variable-length delay
             // lines.
             State->Late.Offset[index] = (ALuint)(length * Context->Frequency);
-
+        }
+        // Calculate the gain (coefficient) for each line.
+        State->Late.Coeff[index] = pow(10.0f, length / Effect->Reverb.DecayTime *
+                                              -60.0f / 20.0f);
+        if(index >= 4)
+        {
             // Calculate the decay equation for each low-pass filter.
             g = pow(10.0f, length / (Effect->Reverb.DecayTime * hfRatio) *
-                           -60.0f / 20.0f);
+                           -60.0f / 20.0f) /
+                State->Late.Coeff[index];
             g  = __max(g, 0.1f);
             g *= g;
             // Calculate the gain (coefficient) for each low-pass filter.
@@ -498,10 +504,6 @@ ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
             // upper bound to the coefficient.
             State->Late.LpCoeff[index2] = __min(lpcoeff, 0.98f);
         }
-
-        // Calculate the gain (coefficient) for each line.
-        State->Late.Coeff[index] = pow(10.0f, length / Effect->Reverb.DecayTime *
-                                              -60.0f / 20.0f);
     }
 
     // This just calculates the coefficient for the late reverb input low-
@@ -510,7 +512,8 @@ ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
     length = LATE_LINE_LENGTH[5] * (1.0f + Effect->Reverb.Density * LATE_LINE_MULTIPLIER) +
              LATE_LINE_LENGTH[6] * (1.0f + Effect->Reverb.Density * LATE_LINE_MULTIPLIER);
 
-    g = pow(10.0f, length / (Effect->Reverb.DecayTime * hfRatio) * -30.0f / 20.0f);
+    g = pow(10.0f, length / (Effect->Reverb.DecayTime * hfRatio) * -30.0f / 20.0f) /
+        pow(10.0f, length / Effect->Reverb.DecayTime * -30.0f / 20.0f);
     g  = __max(g, 0.1f);
     g *= g;
 

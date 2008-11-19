@@ -724,9 +724,8 @@ static void alsa_close_capture(ALCdevice *pDevice)
 static void alsa_start_capture(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
-    if(data->thread)
-        data->doCapture = 1;
-    else
+    data->doCapture = 1;
+    if(!data->thread)
     {
         psnd_pcm_prepare(data->pcmHandle);
         psnd_pcm_start(data->pcmHandle);
@@ -736,9 +735,8 @@ static void alsa_start_capture(ALCdevice *pDevice)
 static void alsa_stop_capture(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
-    if(data->thread)
-        data->doCapture = 0;
-    else
+    data->doCapture = 0;
+    if(!data->thread)
         psnd_pcm_drain(data->pcmHandle);
 }
 
@@ -748,6 +746,7 @@ static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint l
     const snd_pcm_channel_area_t *areas = NULL;
     snd_pcm_sframes_t frames, commitres;
     snd_pcm_uframes_t size, offset;
+    snd_pcm_state_t state;
     int err;
 
     if(data->thread)
@@ -757,6 +756,17 @@ static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint l
         else
             SetALCError(ALC_INVALID_VALUE);
         return;
+    }
+
+    state = psnd_pcm_state(data->pcmHandle);
+    if(state == SND_PCM_STATE_XRUN)
+    {
+        err = xrun_recovery(data->pcmHandle, -EPIPE);
+        if(err < 0)
+        {
+            AL_PRINT("XRUN recovery failed: %s\n", psnd_strerror(err));
+            return;
+        }
     }
 
     frames = psnd_pcm_avail_update(data->pcmHandle);
@@ -815,20 +825,36 @@ static ALCuint alsa_available_samples(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
     snd_pcm_sframes_t frames;
+    snd_pcm_state_t state;
+    int err;
 
     if(data->thread)
         return RingBufferSize(data->ring);
 
+    state = psnd_pcm_state(data->pcmHandle);
+    if(state == SND_PCM_STATE_XRUN)
+    {
+        err = xrun_recovery(data->pcmHandle, -EPIPE);
+        if(err >= 0)
+        {
+            if(data->doCapture)
+                err = psnd_pcm_start(data->pcmHandle);
+        }
+        if (err < 0)
+        {
+            AL_PRINT("XRUN recovery failed: %s\n", psnd_strerror(err));
+            return 0;
+        }
+    }
+
     frames = psnd_pcm_avail_update(data->pcmHandle);
     if(frames < 0)
     {
-        int err = xrun_recovery(data->pcmHandle, frames);
+        err = xrun_recovery(data->pcmHandle, frames);
         if (err < 0)
             AL_PRINT("available update failed: %s\n", psnd_strerror(err));
         else
             frames = psnd_pcm_avail_update(data->pcmHandle);
-        if(frames < 0) /* ew.. */
-            SetALCError(ALC_INVALID_DEVICE);
     }
     return max(frames, 0);
 }

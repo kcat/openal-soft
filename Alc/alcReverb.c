@@ -179,12 +179,11 @@ static __inline ALvoid EarlyReflection(ALverbState *State, ALfloat in, ALfloat *
     f[2] = v - d[2];
     f[3] = v - d[3];
 
-    // To increase reflection complexity (and help reduce coloration) the
-    // delay lines cyclicly refeed themselves (0 -> 1 -> 3 -> 2 -> 0...).
-    DelayLineIn(&State->Early.Delay[0], State->Offset, f[2]);
-    DelayLineIn(&State->Early.Delay[1], State->Offset, f[0]);
-    DelayLineIn(&State->Early.Delay[2], State->Offset, f[3]);
-    DelayLineIn(&State->Early.Delay[3], State->Offset, f[1]);
+    // Refeed the delay lines.
+    DelayLineIn(&State->Early.Delay[0], State->Offset, f[0]);
+    DelayLineIn(&State->Early.Delay[1], State->Offset, f[1]);
+    DelayLineIn(&State->Early.Delay[2], State->Offset, f[2]);
+    DelayLineIn(&State->Early.Delay[3], State->Offset, f[3]);
 
     // To decorrelate the output for stereo separation, the cyclical nature
     // of the feed path is exploited.  The two outputs are obtained from the

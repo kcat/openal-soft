@@ -185,9 +185,8 @@ static __inline ALvoid EarlyReflection(ALverbState *State, ALfloat in, ALfloat *
     DelayLineIn(&State->Early.Delay[2], State->Offset, f[2]);
     DelayLineIn(&State->Early.Delay[3], State->Offset, f[3]);
 
-    // To decorrelate the output for stereo separation, the cyclical nature
-    // of the feed path is exploited.  The two outputs are obtained from the
-    // inner delay lines.
+    // To decorrelate the output for stereo separation, the two outputs are
+    // obtained from the inner delay lines.
     // Output is instant by using the inputs to them instead of taking the
     // result of the two delay lines directly (f[0] and f[3] instead of d[1]
     // and d[2]).

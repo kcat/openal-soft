@@ -39,8 +39,8 @@
 
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 
-// Since DSound doesn't report the fragment size, just assume 4 fragments
-#define DS_FRAGS 4
+// Since DSound doesn't report the fragment size, emulate it
+static int num_frags;
 
 typedef struct {
     // DirectSound Playback Device
@@ -72,7 +72,7 @@ static ALuint DSoundProc(ALvoid *ptr)
     DWORD avail;
     HRESULT err;
 
-    BufferSize  = pDevice->UpdateSize * DS_FRAGS *
+    BufferSize  = pDevice->UpdateSize * num_frags *
                   aluBytesFromFormat(pDevice->Format) *
                   aluChannelsFromFormat(pDevice->Format);
 
@@ -258,7 +258,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec*OutputType.Format.nBlockAlign;
         OutputType.Format.cbSize = 0;
 
-        device->UpdateSize /= DS_FRAGS;
+        device->UpdateSize /= num_frags;
     }
 
     if(OutputType.Format.nChannels > 2)
@@ -286,7 +286,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
         DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;
-        DSBDescription.dwBufferBytes=device->UpdateSize * DS_FRAGS * frameSize;
+        DSBDescription.dwBufferBytes=device->UpdateSize * num_frags * frameSize;
         DSBDescription.lpwfxFormat=&OutputType.Format;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
     }
@@ -410,6 +410,9 @@ void alcDSoundInit(BackendFuncs *FuncList)
     HRESULT hr;
 
     *FuncList = DSoundFuncs;
+
+    num_frags = GetConfigValueInt("dsound", "periods", 4);
+    if(num_frags < 2) num_frags = 2;
 
     hr = DirectSoundEnumerate(DSoundEnumDevices, &iter);
     if(FAILED(hr))

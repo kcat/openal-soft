@@ -95,7 +95,7 @@ device = /dev/audio  # Sets the device name for Solaris output. Default is
                      # /dev/audio
 
 [dsound]  # DirectSound backend stuff
-          # Nothing yet...
+periods = 4  # Sets the number of updates for the output buffer. Default is 4
 
 [winmm]  # Windows Multimedia backend stuff
          # Nothing yet...

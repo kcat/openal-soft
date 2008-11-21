@@ -82,7 +82,7 @@ static ALuint DSoundProc(ALvoid *ptr)
         IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &PlayCursor, NULL);
         avail = (PlayCursor-LastCursor+BufferSize) % BufferSize;
 
-        if(avail == 0)
+        if(avail < BufferSize/num_frags)
         {
             Sleep(1);
             continue;

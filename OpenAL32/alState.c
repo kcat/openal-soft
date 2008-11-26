@@ -24,6 +24,7 @@
 #include "alMain.h"
 #include "AL/alc.h"
 #include "alError.h"
+#include "alSource.h"
 #include "alState.h"
 
 static const ALchar alVendor[] = "OpenAL Community";
@@ -644,6 +645,7 @@ ALAPI ALvoid ALAPIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
 ALAPI ALvoid ALAPIENTRY alDistanceModel(ALenum value)
 {
     ALCcontext *Context;
+    ALsource *Source;
 
     Context=alcGetCurrentContext();
     if (Context)
@@ -660,6 +662,8 @@ ALAPI ALvoid ALAPIENTRY alDistanceModel(ALenum value)
             case AL_EXPONENT_DISTANCE:
             case AL_EXPONENT_DISTANCE_CLAMPED:
                 Context->DistanceModel = value;
+                for(Source = Context->Source;Source != NULL;Source = Source->next)
+                    Source->DistanceModel = value;
                 break;
 
             default:

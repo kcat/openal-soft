@@ -324,7 +324,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
 
         flAttenuation = 1.0f;
         RoomAttenuation = 1.0f;
-        switch (ALContext->DistanceModel)
+        switch (ALSource->DistanceModel)
         {
             case AL_INVERSE_DISTANCE_CLAMPED:
                 Distance=__max(Distance,MinDist);

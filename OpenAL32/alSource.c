@@ -32,7 +32,7 @@
 #include "alThunk.h"
 #include "alAuxEffectSlot.h"
 
-static ALvoid InitSourceParams(ALsource *pSource);
+static ALvoid InitSourceParams(ALCcontext *Context, ALsource *pSource);
 static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset, ALuint updateSize);
 static ALvoid ApplyOffset(ALsource *pSource, ALboolean bUpdateContext);
 static ALint GetByteOffset(ALsource *pSource);
@@ -78,7 +78,7 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
                             sources[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
                             (*list)->source = sources[i];
 
-                            InitSourceParams(*list);
+                            InitSourceParams(Context, *list);
                             Context->SourceCount++;
                             i++;
 
@@ -704,6 +704,19 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     alSetError(AL_INVALID_VALUE);
                 break;
 
+            case AL_DISTANCE_MODEL:
+                if(lValue == AL_NONE ||
+                   lValue == AL_INVERSE_DISTANCE ||
+                   lValue == AL_INVERSE_DISTANCE_CLAMPED ||
+                   lValue == AL_LINEAR_DISTANCE ||
+                   lValue == AL_LINEAR_DISTANCE_CLAMPED ||
+                   lValue == AL_EXPONENT_DISTANCE ||
+                   lValue == AL_EXPONENT_DISTANCE_CLAMPED)
+                    pSource->DistanceModel = lValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
@@ -819,6 +832,7 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
                 case AL_DIRECT_FILTER_GAINHF_AUTO:
                 case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
                 case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
+                case AL_DISTANCE_MODEL:
                     alSourcei(source, eParam, plValues[0]);
                     break;
 
@@ -1212,6 +1226,10 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                     *plValue = (ALint)pSource->DopplerFactor;
                     break;
 
+                case AL_DISTANCE_MODEL:
+                    *plValue = pSource->DistanceModel;
+                    break;
+
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
@@ -1326,6 +1344,7 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
                 case AL_DIRECT_FILTER_GAINHF_AUTO:
                 case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
                 case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
+                case AL_DISTANCE_MODEL:
                     alGetSourcei(source, eParam, plValues);
                     break;
 
@@ -1979,7 +1998,7 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
 }
 
 
-static ALvoid InitSourceParams(ALsource *pSource)
+static ALvoid InitSourceParams(ALCcontext *Context, ALsource *pSource)
 {
     pSource->flInnerAngle = 360.0f;
     pSource->flOuterAngle = 360.0f;
@@ -2009,6 +2028,8 @@ static ALvoid InitSourceParams(ALsource *pSource)
     pSource->AirAbsorptionFactor = 0.0f;
     pSource->RoomRolloffFactor = 0.0f;
     pSource->DopplerFactor = 1.0f;
+
+    pSource->DistanceModel = Context->DistanceModel;
 
     pSource->state = AL_INITIAL;
     pSource->lSourceType = AL_UNDETERMINED;

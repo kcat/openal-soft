@@ -901,7 +901,7 @@ void alc_alsa_init(BackendFuncs *func_list)
 } while(0)
 #else
     str = NULL;
-    alsa_handle = 0xDEADBEEF;
+    alsa_handle = (void*)0xDEADBEEF;
 #define LOAD_FUNC(f) p##f = f
 #endif
 

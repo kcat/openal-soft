@@ -19,6 +19,9 @@
 /* Define if we have the Windows Multimedia backend */
 #cmakedefine HAVE_WINMM
 
+/* Define if we have the SDL backend */
+#cmakedefine HAVE_SDL
+
 /* Define if we have dlfcn.h */
 #cmakedefine HAVE_DLFCN_H
 

@@ -59,7 +59,7 @@ drivers =  # Sets the backend driver list order, comma-seperated. Unknown
            # backends and duplicated names are ignored, and unlisted backends
            # won't be considered for use. An empty list means the default.
            # Default is:
-           # alsa,oss,solaris,dsound,winmm,wave
+           # alsa,oss,solaris,dsound,winmm,sdl,wave
 
 excludefx =  # Sets which effects to exclude, preventing apps from using them.
              # This can help for apps that try to use effects which are too CPU
@@ -99,6 +99,9 @@ periods = 4  # Sets the number of updates for the output buffer. Default is 4
 
 [winmm]  # Windows Multimedia backend stuff
          # Nothing yet...
+
+[sdl]  # SDL backend stuff
+       # Nothing yet...
 
 [wave]  # Wave File Writer stuff
 file =  # Sets the filename of the wave file to write to. An empty name

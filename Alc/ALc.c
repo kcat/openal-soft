@@ -67,6 +67,9 @@ static struct {
 #ifdef HAVE_WINMM
     { "winmm", alcWinMMInit, EmptyFuncs },
 #endif
+#ifdef HAVE_SDL
+    { "sdl", alc_sdl_init, EmptyFuncs },
+#endif
 
     { "wave", alc_wave_init, EmptyFuncs },
 

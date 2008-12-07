@@ -1266,21 +1266,21 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
             device->MaxNoOfSources = 256;
 
         // Find a playback device to open
+        SuspendContext(NULL);
         for(i = 0;BackendList[i].Init;i++)
         {
             device->Funcs = &BackendList[i].Funcs;
             if(ALCdevice_OpenPlayback(device, deviceName))
             {
-                SuspendContext(NULL);
                 device->next = g_pDeviceList;
                 g_pDeviceList = device;
                 g_ulDeviceCount++;
-                ProcessContext(NULL);
 
                 bDeviceFound = AL_TRUE;
                 break;
             }
         }
+        ProcessContext(NULL);
 
         if (!bDeviceFound)
         {

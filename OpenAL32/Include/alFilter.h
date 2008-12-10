@@ -2,13 +2,14 @@
 #define _AL_FILTER_H_
 
 #include "AL/al.h"
+#include "alu.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct {
-    ALfloat history[4];
+    ALfloat history[OUTPUTCHANNELS*2];
     ALfloat coeff;
 } FILTER;
 

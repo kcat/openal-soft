@@ -178,6 +178,20 @@ static __inline ALfloat lpFilter(FILTER *iir, ALfloat input)
     return output;
 }
 
+static __inline ALfloat lpFilterMC(FILTER *iir, ALuint chan, ALfloat input)
+{
+    ALfloat *history = &iir->history[chan*2];
+    ALfloat a = iir->coeff;
+    ALfloat output = input;
+
+    output = output + (history[0]-output)*a;
+    history[0] = output;
+    output = output + (history[1]-output)*a;
+    history[1] = output;
+
+    return output;
+}
+
 
 static __inline ALshort aluF2S(ALfloat Value)
 {
@@ -594,16 +608,33 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         //1. Multi-channel buffers always play "normal"
         pitch[0] = ALSource->flPitch;
 
-        drysend[FRONT_LEFT]  = SourceVolume * ListenerGain;
-        drysend[FRONT_RIGHT] = SourceVolume * ListenerGain;
-        drysend[SIDE_LEFT]   = SourceVolume * ListenerGain;
-        drysend[SIDE_RIGHT]  = SourceVolume * ListenerGain;
-        drysend[BACK_LEFT]   = SourceVolume * ListenerGain;
-        drysend[BACK_RIGHT]  = SourceVolume * ListenerGain;
-        drysend[CENTER]      = SourceVolume * ListenerGain;
-        drysend[LFE]         = SourceVolume * ListenerGain;
+        DryMix = SourceVolume;
+
+        switch(ALSource->DirectFilter.type)
+        {
+            case AL_FILTER_LOWPASS:
+                DryMix *= ALSource->DirectFilter.Gain;
+                DryGainHF *= ALSource->DirectFilter.GainHF;
+                break;
+        }
+
+        drysend[FRONT_LEFT]  = DryMix * ListenerGain;
+        drysend[FRONT_RIGHT] = DryMix * ListenerGain;
+        drysend[SIDE_LEFT]   = DryMix * ListenerGain;
+        drysend[SIDE_RIGHT]  = DryMix * ListenerGain;
+        drysend[BACK_LEFT]   = DryMix * ListenerGain;
+        drysend[BACK_RIGHT]  = DryMix * ListenerGain;
+        drysend[CENTER]      = DryMix * ListenerGain;
+        drysend[LFE]         = DryMix * ListenerGain;
         *wetsend             = 0.0f;
-        WetGainHF = 1.0f;
+
+        cw = cos(2.0f*3.141592654f * LOWPASSFREQCUTOFF / ALContext->Frequency);
+        g = __max(DryGainHF, 0.01f);
+        a = 0.0f;
+        if(g < 0.9999f) // 1-epsilon
+            a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
+        ALSource->iirFilter.coeff = a;
+        ALSource->Send[0].iirFilter.coeff = 0.0f;
 
         *drygainhf = DryGainHF;
         *wetgainhf = WetGainHF;
@@ -825,9 +856,11 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             ALfloat samp1, samp2;
                             //First order interpolator (front left)
                             samp1 = lerp(Data[k*Channels], Data[(k+1)*Channels], DataPosFrac);
+                            samp1 = lpFilterMC(DryFilter, FRONT_LEFT, samp1);
                             DryBuffer[j][FRONT_LEFT] += samp1*DrySend[FRONT_LEFT];
                             //First order interpolator (front right)
                             samp2 = lerp(Data[k*Channels+1], Data[(k+1)*Channels+1], DataPosFrac);
+                            samp2 = lpFilterMC(DryFilter, FRONT_RIGHT, samp2);
                             DryBuffer[j][FRONT_RIGHT] += samp2*DrySend[FRONT_RIGHT];
                             if(Channels >= 4)
                             {
@@ -838,31 +871,31 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                     {
                                         //First order interpolator (center)
                                         value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                        DryBuffer[j][CENTER] += value*DrySend[CENTER];
+                                        DryBuffer[j][CENTER] += lpFilterMC(DryFilter, CENTER, value)*DrySend[CENTER];
                                         i++;
                                     }
                                     //First order interpolator (lfe)
                                     value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                    DryBuffer[j][LFE] += value*DrySend[LFE];
+                                    DryBuffer[j][LFE] += lpFilterMC(DryFilter, LFE, value)*DrySend[LFE];
                                     i++;
                                 }
                                 //First order interpolator (back left)
                                 value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                DryBuffer[j][BACK_LEFT] += value*DrySend[BACK_LEFT];
+                                DryBuffer[j][BACK_LEFT] += lpFilterMC(DryFilter, BACK_LEFT, value)*DrySend[BACK_LEFT];
                                 i++;
                                 //First order interpolator (back right)
                                 value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                DryBuffer[j][BACK_RIGHT] += value*DrySend[BACK_RIGHT];
+                                DryBuffer[j][BACK_RIGHT] += lpFilterMC(DryFilter, BACK_RIGHT, value)*DrySend[BACK_RIGHT];
                                 i++;
                                 if(Channels >= 7)
                                 {
                                     //First order interpolator (side left)
                                     value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                    DryBuffer[j][SIDE_LEFT] += value*DrySend[SIDE_LEFT];
+                                    DryBuffer[j][SIDE_LEFT] += lpFilterMC(DryFilter, SIDE_LEFT, value)*DrySend[SIDE_LEFT];
                                     i++;
                                     //First order interpolator (side right)
                                     value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                    DryBuffer[j][SIDE_RIGHT] += value*DrySend[SIDE_RIGHT];
+                                    DryBuffer[j][SIDE_RIGHT] += lpFilterMC(DryFilter, SIDE_RIGHT, value)*DrySend[SIDE_RIGHT];
                                     i++;
                                 }
                             }

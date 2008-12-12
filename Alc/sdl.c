@@ -30,7 +30,11 @@
 #include <dlfcn.h>
 #endif
 
+#ifdef HAVE_SDL_SDL_H
 #include <SDL/SDL.h>
+#elif defined(HAVE_SDL_H)
+#include <SDL.h>
+#endif
 
 static void *sdl_handle;
 #define MAKE_FUNC(x) static typeof(x) * p##x

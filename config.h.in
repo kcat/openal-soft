@@ -37,6 +37,12 @@
 /* Define if we have stdint.h */
 #cmakedefine HAVE_STDINT_H
 
+/* Define if we have SDL/SDL.h */
+#cmakedefine HAVE_SDL_SDL_H
+
+/* Define if we have SDL.h */
+#cmakedefine HAVE_SDL_H
+
 /* Define if we have the __int64 type */
 #cmakedefine HAVE___INT64
 

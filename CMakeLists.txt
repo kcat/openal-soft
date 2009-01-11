@@ -36,7 +36,7 @@ OPTION(EXAMPLES  "Build example programs"              ON)
 
 
 IF(WIN32)
-    SET(LIBNAME openal32)
+    SET(LIBNAME OpenAL32)
     ADD_DEFINITIONS("-D_WIN32")
 ELSE()
     SET(LIBNAME openal)

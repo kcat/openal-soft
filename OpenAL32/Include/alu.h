@@ -11,11 +11,12 @@ extern "C" {
 enum {
     FRONT_LEFT = 0,
     FRONT_RIGHT,
+    FRONT_CENTER,
     SIDE_LEFT,
     SIDE_RIGHT,
     BACK_LEFT,
     BACK_RIGHT,
-    CENTER,
+    BACK_CENTER,
     LFE,
 
     OUTPUTCHANNELS

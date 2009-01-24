@@ -25,6 +25,7 @@ extern ALboolean DuplicateStereo;
 
 __inline ALuint aluBytesFromFormat(ALenum format);
 __inline ALuint aluChannelsFromFormat(ALenum format);
+ALvoid aluInitPanning(ALCcontext *Context);
 ALvoid aluMixData(ALCcontext *context,ALvoid *buffer,ALsizei size,ALenum format);
 
 #ifdef __cplusplus

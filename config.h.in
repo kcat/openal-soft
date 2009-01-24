@@ -31,6 +31,12 @@
 /* Define if we have the acosf function */
 #cmakedefine HAVE_ACOSF
 
+/* Define if we have the atanf function */
+#cmakedefine HAVE_ATANF
+
+/* Define if we have the fabsf function */
+#cmakedefine HAVE_FABSF
+
 /* Define if we have the strtof function */
 #cmakedefine HAVE_STRTOF
 

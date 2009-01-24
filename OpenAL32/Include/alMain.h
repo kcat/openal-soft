@@ -129,6 +129,9 @@ extern char _alDebug[256];
 
 #define LOWPASSFREQCUTOFF          (5000)
 
+#define QUADRANT_NUM 128
+#define LUT_NUM (4 * QUADRANT_NUM)
+
 
 typedef struct {
     ALCboolean (*OpenPlayback)(ALCdevice*, const ALCchar*);
@@ -205,6 +208,9 @@ struct ALCcontext_struct
 
     ALint       lNumMonoSources;
     ALint       lNumStereoSources;
+
+    ALfloat     PanningLUT[OUTPUTCHANNELS * LUT_NUM];
+    ALint       NumChan;
 
     ALCdevice  *Device;
     const ALCchar *ExtensionList;

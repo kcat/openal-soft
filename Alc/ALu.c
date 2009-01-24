@@ -23,6 +23,8 @@
 #include "config.h"
 
 #include <math.h>
+#include <stdlib.h>
+#include <string.h>
 #include "alMain.h"
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -37,6 +39,11 @@
 
 #if defined (HAVE_FLOAT_H)
 #include <float.h>
+#endif
+
+#ifndef M_PI
+#define M_PI           3.14159265358979323846  /* pi */
+#define M_PI_2         1.57079632679489661923  /* pi/2 */
 #endif
 
 #if defined(HAVE_STDINT_H)
@@ -60,6 +67,18 @@ typedef long long ALint64;
 #define aluAcos(x) ((ALfloat)acosf((float)(x)))
 #else
 #define aluAcos(x) ((ALfloat)acos((double)(x)))
+#endif
+
+#ifdef HAVE_ATANF
+#define aluAtan(x) ((ALfloat)atanf((float)(x)))
+#else
+#define aluAtan(x) ((ALfloat)atan((double)(x)))
+#endif
+
+#ifdef HAVE_FABSF
+#define aluFabs(x) ((ALfloat)fabsf((float)(x)))
+#else
+#define aluFabs(x) ((ALfloat)fabs((double)(x)))
 #endif
 
 // fixes for mingw32.
@@ -240,17 +259,170 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat matrix[3][3])
     memcpy(vector, result, sizeof(result));
 }
 
+static __inline ALfloat aluLUTpos2Angle(ALint pos)
+{
+    if(pos < QUADRANT_NUM)
+        return aluAtan((ALfloat)pos / (ALfloat)(QUADRANT_NUM - pos));
+    if(pos < 2 * QUADRANT_NUM)
+        return M_PI_2 + aluAtan((ALfloat)(pos - QUADRANT_NUM) / (ALfloat)(2 * QUADRANT_NUM - pos));
+    if(pos < 3 * QUADRANT_NUM)
+        return aluAtan((ALfloat)(pos - 2 * QUADRANT_NUM) / (ALfloat)(3 * QUADRANT_NUM - pos)) - M_PI;
+    return aluAtan((ALfloat)(pos - 3 * QUADRANT_NUM) / (ALfloat)(4 * QUADRANT_NUM - pos)) - M_PI_2;
+}
+
+ALvoid aluInitPanning(ALCcontext *Context)
+{
+    ALint pos, offset, s;
+    ALfloat Alpha, Theta;
+    ALfloat SpeakerAngle[OUTPUTCHANNELS];
+    ALint Speaker2Chan[OUTPUTCHANNELS];
+
+    switch(Context->Device->Format)
+    {
+        /* Mono is rendered as stereo, then downmixed during post-process */
+        case AL_FORMAT_MONO8:
+        case AL_FORMAT_MONO16:
+        case AL_FORMAT_MONO_FLOAT32:
+        case AL_FORMAT_STEREO8:
+        case AL_FORMAT_STEREO16:
+        case AL_FORMAT_STEREO_FLOAT32:
+            Context->NumChan = 2;
+            Speaker2Chan[0] = FRONT_LEFT;
+            Speaker2Chan[1] = FRONT_RIGHT;
+            SpeakerAngle[0] = -90.0f * M_PI/180.0f;
+            SpeakerAngle[1] =  90.0f * M_PI/180.0f;
+
+        case AL_FORMAT_QUAD8:
+        case AL_FORMAT_QUAD16:
+        case AL_FORMAT_QUAD32:
+            Context->NumChan = 4;
+            Speaker2Chan[0] = BACK_LEFT;
+            Speaker2Chan[1] = FRONT_LEFT;
+            Speaker2Chan[2] = FRONT_RIGHT;
+            Speaker2Chan[3] = BACK_RIGHT;
+            SpeakerAngle[0] = -135.0f * M_PI/180.0f;
+            SpeakerAngle[1] =  -45.0f * M_PI/180.0f;
+            SpeakerAngle[2] =   45.0f * M_PI/180.0f;
+            SpeakerAngle[3] =  135.0f * M_PI/180.0f;
+            break;
+
+        case AL_FORMAT_51CHN8:
+        case AL_FORMAT_51CHN16:
+        case AL_FORMAT_51CHN32:
+            Context->NumChan = 5;
+            Speaker2Chan[0] = BACK_LEFT;
+            Speaker2Chan[1] = FRONT_LEFT;
+            Speaker2Chan[2] = CENTER;
+            Speaker2Chan[3] = FRONT_RIGHT;
+            Speaker2Chan[4] = BACK_RIGHT;
+            SpeakerAngle[0] = -110.0f * M_PI/180.0f;
+            SpeakerAngle[1] =  -30.0f * M_PI/180.0f;
+            SpeakerAngle[2] =    0.0f * M_PI/180.0f;
+            SpeakerAngle[3] =   30.0f * M_PI/180.0f;
+            SpeakerAngle[4] =  110.0f * M_PI/180.0f;
+            break;
+
+        case AL_FORMAT_61CHN8:
+        case AL_FORMAT_61CHN16:
+        case AL_FORMAT_61CHN32:
+            Context->NumChan = 6;
+            Speaker2Chan[0] = BACK_LEFT;
+            Speaker2Chan[1] = SIDE_LEFT;
+            Speaker2Chan[2] = FRONT_LEFT;
+            Speaker2Chan[3] = FRONT_RIGHT;
+            Speaker2Chan[4] = SIDE_RIGHT;
+            Speaker2Chan[5] = BACK_RIGHT;
+            SpeakerAngle[0] = -150.0f * M_PI/180.0f;
+            SpeakerAngle[1] =  -90.0f * M_PI/180.0f;
+            SpeakerAngle[2] =  -30.0f * M_PI/180.0f;
+            SpeakerAngle[3] =   30.0f * M_PI/180.0f;
+            SpeakerAngle[4] =   90.0f * M_PI/180.0f;
+            SpeakerAngle[5] =  150.0f * M_PI/180.0f;
+            break;
+
+        case AL_FORMAT_71CHN8:
+        case AL_FORMAT_71CHN16:
+        case AL_FORMAT_71CHN32:
+            Context->NumChan = 7;
+            Speaker2Chan[0] = BACK_LEFT;
+            Speaker2Chan[1] = SIDE_LEFT;
+            Speaker2Chan[2] = FRONT_LEFT;
+            Speaker2Chan[3] = CENTER;
+            Speaker2Chan[4] = FRONT_RIGHT;
+            Speaker2Chan[5] = SIDE_RIGHT;
+            Speaker2Chan[6] = BACK_RIGHT;
+            SpeakerAngle[0] = -150.0f * M_PI/180.0f;
+            SpeakerAngle[1] =  -90.0f * M_PI/180.0f;
+            SpeakerAngle[2] =  -30.0f * M_PI/180.0f;
+            SpeakerAngle[3] =    0.0f * M_PI/180.0f;
+            SpeakerAngle[4] =   30.0f * M_PI/180.0f;
+            SpeakerAngle[5] =   90.0f * M_PI/180.0f;
+            SpeakerAngle[6] =  150.0f * M_PI/180.0f;
+            break;
+
+        default:
+            assert(0);
+    }
+
+    for(pos = 0; pos < LUT_NUM; pos++)
+    {
+        /* source angle */
+        Theta = aluLUTpos2Angle(pos);
+
+        /* clear all values */
+        offset = OUTPUTCHANNELS * pos;
+        for(s = 0; s < OUTPUTCHANNELS; s++)
+            Context->PanningLUT[offset+s] = 0.0f;
+
+        /* set panning values */
+        for(s = 0; s < Context->NumChan - 1; s++)
+        {
+            if(Theta >= SpeakerAngle[s] && Theta < SpeakerAngle[s+1])
+            {
+                /* source between speaker s and speaker s+1 */
+                Alpha = M_PI_2 * (Theta-SpeakerAngle[s]) /
+                                 (SpeakerAngle[s+1]-SpeakerAngle[s]);
+                Context->PanningLUT[offset + Speaker2Chan[s]]   = cos(Alpha);
+                Context->PanningLUT[offset + Speaker2Chan[s+1]] = sin(Alpha);
+                break;
+            }
+        }
+        if(s == Context->NumChan - 1)
+        {
+            /* source between last and first speaker */
+            if(Theta < SpeakerAngle[0])
+                Theta += 2.0f * M_PI;
+            Alpha = M_PI_2 * (Theta-SpeakerAngle[s]) /
+                             (2.0f * M_PI + SpeakerAngle[0]-SpeakerAngle[s]);
+            Context->PanningLUT[offset + Speaker2Chan[s]] = cos(Alpha);
+            Context->PanningLUT[offset + Speaker2Chan[0]] = sin(Alpha);
+        }
+    }
+}
+
+static __inline ALint aluCart2LUTpos(ALfloat re, ALfloat im)
+{
+    ALint pos = 0;
+    ALfloat denom = aluFabs(re) + aluFabs(im);
+    if(denom > 0.0f)
+        pos = (ALint)(QUADRANT_NUM*aluFabs(im) / denom + 0.5);
+
+    if(re < 0.0)
+        pos = 2 * QUADRANT_NUM - pos;
+    if(im < 0.0)
+        pos = LUT_NUM - pos;
+    return pos%LUT_NUM;
+}
 
 static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
-                               ALenum isMono, ALenum OutputFormat,
-                               ALfloat *drysend, ALfloat *wetsend,
-                               ALfloat *pitch, ALfloat *drygainhf,
-                               ALfloat *wetgainhf)
+                               ALenum isMono, ALfloat *drysend,
+                               ALfloat *wetsend, ALfloat *pitch,
+                               ALfloat *drygainhf, ALfloat *wetgainhf)
 {
     ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,WetMix=0.0f;
     ALfloat Direction[3],Position[3],SourceToListener[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
-    ALfloat ConeVolume,SourceVolume,PanningFB,PanningLR,ListenerGain;
+    ALfloat ConeVolume,SourceVolume,ListenerGain;
     ALfloat U[3],V[3],N[3];
     ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound, flMaxVelocity;
     ALfloat Matrix[3][3];
@@ -260,6 +432,9 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
     ALfloat RoomRolloff;
     ALfloat DryGainHF = 1.0f;
     ALfloat WetGainHF = 1.0f;
+    ALfloat DirGain, AmbientGain;
+    const ALfloat *SpeakerGain;
+    ALint pos, s;
     ALfloat cw, a, g;
 
     //Get context properties
@@ -519,65 +694,20 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         DryMix *= ListenerGain;
         WetMix *= ListenerGain;
 
-        //6. Convert normalized position into pannings, then into channel volumes
+        // Use energy-preserving panning algorithm for multi-speaker playback
         aluNormalize(Position);
-        switch(aluChannelsFromFormat(OutputFormat))
+
+        pos = aluCart2LUTpos(-Position[2], Position[0]);
+        SpeakerGain = &ALContext->PanningLUT[OUTPUTCHANNELS * pos];
+
+        DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
+        // elevation adjustment for directional gain. this sucks, but
+        // has low complexity
+        AmbientGain = 1.0/aluSqrt(ALContext->NumChan) * (1.0-DirGain);
+        for(s = 0; s < OUTPUTCHANNELS; s++)
         {
-            case 1:
-            case 2:
-                PanningLR = 0.5f + 0.5f*Position[0];
-                drysend[FRONT_LEFT]  = DryMix * aluSqrt(1.0f-PanningLR); //L Direct
-                drysend[FRONT_RIGHT] = DryMix * aluSqrt(     PanningLR); //R Direct
-                drysend[BACK_LEFT]   = 0.0f;
-                drysend[BACK_RIGHT]  = 0.0f;
-                drysend[SIDE_LEFT]   = 0.0f;
-                drysend[SIDE_RIGHT]  = 0.0f;
-                break;
-            case 4:
-            /* TODO: Add center/lfe channel in spatial calculations? */
-            case 6:
-                // Apply a scalar so each individual speaker has more weight
-                PanningLR = 0.5f + (0.5f*Position[0]*1.41421356f);
-                PanningLR = __min(1.0f, PanningLR);
-                PanningLR = __max(0.0f, PanningLR);
-                PanningFB = 0.5f + (0.5f*Position[2]*1.41421356f);
-                PanningFB = __min(1.0f, PanningFB);
-                PanningFB = __max(0.0f, PanningFB);
-                drysend[FRONT_LEFT]  = DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
-                drysend[FRONT_RIGHT] = DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
-                drysend[BACK_LEFT]   = DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
-                drysend[BACK_RIGHT]  = DryMix * aluSqrt((     PanningLR)*(     PanningFB));
-                drysend[SIDE_LEFT]   = 0.0f;
-                drysend[SIDE_RIGHT]  = 0.0f;
-                break;
-            case 7:
-            case 8:
-                PanningFB = 1.0f - fabs(Position[2]*1.15470054f);
-                PanningFB = __min(1.0f, PanningFB);
-                PanningFB = __max(0.0f, PanningFB);
-                PanningLR = 0.5f + (0.5*Position[0]*((1.0f-PanningFB)*2.0f));
-                PanningLR = __min(1.0f, PanningLR);
-                PanningLR = __max(0.0f, PanningLR);
-                if(Position[2] > 0.0f)
-                {
-                    drysend[BACK_LEFT]   = DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
-                    drysend[BACK_RIGHT]  = DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
-                    drysend[SIDE_LEFT]   = DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
-                    drysend[SIDE_RIGHT]  = DryMix * aluSqrt((     PanningLR)*(     PanningFB));
-                    drysend[FRONT_LEFT]  = 0.0f;
-                    drysend[FRONT_RIGHT] = 0.0f;
-                }
-                else
-                {
-                    drysend[FRONT_LEFT]  = DryMix * aluSqrt((1.0f-PanningLR)*(1.0f-PanningFB));
-                    drysend[FRONT_RIGHT] = DryMix * aluSqrt((     PanningLR)*(1.0f-PanningFB));
-                    drysend[SIDE_LEFT]   = DryMix * aluSqrt((1.0f-PanningLR)*(     PanningFB));
-                    drysend[SIDE_RIGHT]  = DryMix * aluSqrt((     PanningLR)*(     PanningFB));
-                    drysend[BACK_LEFT]   = 0.0f;
-                    drysend[BACK_RIGHT]  = 0.0f;
-                }
-            default:
-                break;
+            ALfloat gain = SpeakerGain[s]*DirGain + AmbientGain;
+            drysend[s] = DryMix * gain;
         }
         *wetsend = WetMix;
 
@@ -748,7 +878,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 
                     CalcSourceParams(ALContext, ALSource,
                                      (Channels==1) ? AL_TRUE : AL_FALSE,
-                                     format, newDrySend, &newWetSend, &Pitch,
+                                     newDrySend, &newWetSend, &Pitch,
                                      &DryGainHF, &WetGainHF);
 
                     Pitch = (Pitch*Frequency) / ALContext->Frequency;
@@ -847,6 +977,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             DryBuffer[j][SIDE_RIGHT]  += outsamp*DrySend[SIDE_RIGHT];
                             DryBuffer[j][BACK_LEFT]   += outsamp*DrySend[BACK_LEFT];
                             DryBuffer[j][BACK_RIGHT]  += outsamp*DrySend[BACK_RIGHT];
+                            DryBuffer[j][CENTER]      += outsamp*DrySend[CENTER];
                             //Room path final mix buffer and panning
                             outsamp = lpFilter(WetFilter, sample);
                             WetBuffer[j] += outsamp*(*WetSend);

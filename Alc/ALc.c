@@ -37,6 +37,7 @@
 #include "alExtension.h"
 #include "alAuxEffectSlot.h"
 #include "bs2b.h"
+#include "alu.h"
 
 ///////////////////////////////////////////////////////
 // DEBUG INFORMATION
@@ -487,6 +488,8 @@ static ALvoid InitContext(ALCcontext *pContext)
         bs2b_set_srate(pContext->bs2b, pContext->Frequency);
         bs2b_set_level(pContext->bs2b, level);
     }
+
+    aluInitPanning(pContext);
 }
 
 

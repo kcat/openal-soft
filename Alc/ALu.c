@@ -957,20 +957,22 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     //Actual sample mixing loop
                     k = 0;
                     Data += DataPosInt*Channels;
-                    while(BufferSize--)
-                    {
-                        for(i = 0;i < OUTPUTCHANNELS;i++)
-                            DrySend[i] += dryGainStep[i];
-                        *WetSend += wetGainStep;
 
-                        if(Channels==1)
+                    if(Channels == 1) /* Mono */
+                    {
+                        ALfloat outsamp;
+
+                        while(BufferSize--)
                         {
-                            ALfloat sample, outsamp;
+                            for(i = 0;i < OUTPUTCHANNELS;i++)
+                                DrySend[i] += dryGainStep[i];
+                            *WetSend += wetGainStep;
+
                             //First order interpolator
-                            sample = lerp(Data[k], Data[k+1], DataPosFrac);
+                            value = lerp(Data[k], Data[k+1], DataPosFrac);
 
                             //Direct path final mix buffer and panning
-                            outsamp = lpFilter(DryFilter, sample);
+                            outsamp = lpFilter(DryFilter, value);
                             DryBuffer[j][FRONT_LEFT]  += outsamp*DrySend[FRONT_LEFT];
                             DryBuffer[j][FRONT_RIGHT] += outsamp*DrySend[FRONT_RIGHT];
                             DryBuffer[j][SIDE_LEFT]   += outsamp*DrySend[SIDE_LEFT];
@@ -978,69 +980,122 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             DryBuffer[j][BACK_LEFT]   += outsamp*DrySend[BACK_LEFT];
                             DryBuffer[j][BACK_RIGHT]  += outsamp*DrySend[BACK_RIGHT];
                             DryBuffer[j][CENTER]      += outsamp*DrySend[CENTER];
+
                             //Room path final mix buffer and panning
-                            outsamp = lpFilter(WetFilter, sample);
+                            outsamp = lpFilter(WetFilter, value);
                             WetBuffer[j] += outsamp*(*WetSend);
+
+                            DataPosFrac += increment;
+                            k += DataPosFrac>>FRACTIONBITS;
+                            DataPosFrac &= FRACTIONMASK;
+                            j++;
                         }
-                        else
+                    }
+                    else if(Channels == 2) /* Stereo */
+                    {
+                        ALfloat samp1, samp2;
+
+                        *WetSend += wetGainStep*BufferSize;
+                        while(BufferSize--)
                         {
-                            ALfloat samp1, samp2;
-                            //First order interpolator (front left)
+                            for(i = 0;i < OUTPUTCHANNELS;i++)
+                                DrySend[i] += dryGainStep[i];
+
                             samp1 = lerp(Data[k*Channels], Data[(k+1)*Channels], DataPosFrac);
                             samp1 = lpFilterMC(DryFilter, FRONT_LEFT, samp1);
-                            DryBuffer[j][FRONT_LEFT] += samp1*DrySend[FRONT_LEFT];
-                            //First order interpolator (front right)
+
                             samp2 = lerp(Data[k*Channels+1], Data[(k+1)*Channels+1], DataPosFrac);
                             samp2 = lpFilterMC(DryFilter, FRONT_RIGHT, samp2);
+
+                            DryBuffer[j][FRONT_LEFT] += samp1*DrySend[FRONT_LEFT];
                             DryBuffer[j][FRONT_RIGHT] += samp2*DrySend[FRONT_RIGHT];
-                            if(Channels >= 4)
-                            {
-                                int i = 2;
-                                if(Channels >= 6)
-                                {
-                                    if(Channels != 7)
-                                    {
-                                        //First order interpolator (center)
-                                        value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                        DryBuffer[j][CENTER] += lpFilterMC(DryFilter, CENTER, value)*DrySend[CENTER];
-                                        i++;
-                                    }
-                                    //First order interpolator (lfe)
-                                    value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                    DryBuffer[j][LFE] += lpFilterMC(DryFilter, LFE, value)*DrySend[LFE];
-                                    i++;
-                                }
-                                //First order interpolator (back left)
-                                value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                DryBuffer[j][BACK_LEFT] += lpFilterMC(DryFilter, BACK_LEFT, value)*DrySend[BACK_LEFT];
-                                i++;
-                                //First order interpolator (back right)
-                                value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                DryBuffer[j][BACK_RIGHT] += lpFilterMC(DryFilter, BACK_RIGHT, value)*DrySend[BACK_RIGHT];
-                                i++;
-                                if(Channels >= 7)
-                                {
-                                    //First order interpolator (side left)
-                                    value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                    DryBuffer[j][SIDE_LEFT] += lpFilterMC(DryFilter, SIDE_LEFT, value)*DrySend[SIDE_LEFT];
-                                    i++;
-                                    //First order interpolator (side right)
-                                    value = lerp(Data[k*Channels+i], Data[(k+1)*Channels+i], DataPosFrac);
-                                    DryBuffer[j][SIDE_RIGHT] += lpFilterMC(DryFilter, SIDE_RIGHT, value)*DrySend[SIDE_RIGHT];
-                                    i++;
-                                }
-                            }
-                            else if(DuplicateStereo)
+                            if(DuplicateStereo)
                             {
                                 //Duplicate stereo channels on the back speakers
                                 DryBuffer[j][BACK_LEFT] += samp1*DrySend[BACK_LEFT];
                                 DryBuffer[j][BACK_RIGHT] += samp2*DrySend[BACK_RIGHT];
                             }
+
+                            DataPosFrac += increment;
+                            k += DataPosFrac>>FRACTIONBITS;
+                            DataPosFrac &= FRACTIONMASK;
+                            j++;
                         }
-                        DataPosFrac += increment;
-                        k += DataPosFrac>>FRACTIONBITS;
-                        DataPosFrac &= FRACTIONMASK;
-                        j++;
+                    }
+                    else if(Channels == 4) /* Quad */
+                    {
+                        const int chans[] = {
+                            FRONT_LEFT, FRONT_RIGHT,
+                            BACK_LEFT,  BACK_RIGHT
+                        };
+
+#define DO_MIX() do { \
+    *WetSend += wetGainStep*BufferSize; \
+    while(BufferSize--) \
+    { \
+        for(i = 0;i < OUTPUTCHANNELS;i++) \
+            DrySend[i] += dryGainStep[i]; \
+ \
+        for(i = 0;i < Channels;i++) \
+        { \
+            value = lerp(Data[k*Channels + i], Data[(k+1)*Channels + i], DataPosFrac); \
+            DryBuffer[j][chans[i]] += lpFilterMC(DryFilter, chans[i], value)*DrySend[chans[i]]; \
+        } \
+ \
+        DataPosFrac += increment; \
+        k += DataPosFrac>>FRACTIONBITS; \
+        DataPosFrac &= FRACTIONMASK; \
+        j++; \
+    } \
+} while(0)
+
+                        DO_MIX();
+                    }
+                    else if(Channels == 6) /* 5.1 */
+                    {
+                        const int chans[] = {
+                            FRONT_LEFT, FRONT_RIGHT,
+                            CENTER,     LFE,
+                            BACK_LEFT,  BACK_RIGHT
+                        };
+
+                        DO_MIX();
+                    }
+                    else if(Channels == 7) /* 6.1 */
+                    {
+                        const int chans[] = {
+                            FRONT_LEFT, FRONT_RIGHT,
+                            LFE,
+                            BACK_LEFT,  BACK_RIGHT,
+                            SIDE_LEFT,  SIDE_RIGHT
+                        };
+
+                        DO_MIX();
+                    }
+                    else if(Channels == 8) /* 7.1 */
+                    {
+                        const int chans[] = {
+                            FRONT_LEFT, FRONT_RIGHT,
+                            CENTER,     LFE,
+                            BACK_LEFT,  BACK_RIGHT,
+                            SIDE_LEFT,  SIDE_RIGHT
+                        };
+
+                        DO_MIX();
+#undef DO_MIX
+                    }
+                    else /* Unknown? */
+                    {
+                        *WetSend += wetGainStep*BufferSize;
+                        for(i = 0;i < OUTPUTCHANNELS;i++)
+                            DrySend[i] += dryGainStep[i]*BufferSize;
+                        while(BufferSize--)
+                        {
+                            DataPosFrac += increment;
+                            k += DataPosFrac>>FRACTIONBITS;
+                            DataPosFrac &= FRACTIONMASK;
+                            j++;
+                        }
                     }
                     DataPosInt += k;
 

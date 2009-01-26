@@ -212,6 +212,8 @@ struct ALCcontext_struct
     ALfloat     PanningLUT[OUTPUTCHANNELS * LUT_NUM];
     ALint       NumChan;
 
+    ALfloat     ChannelMatrix[OUTPUTCHANNELS][OUTPUTCHANNELS];
+
     ALCdevice  *Device;
     const ALCchar *ExtensionList;
 

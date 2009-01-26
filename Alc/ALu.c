@@ -360,12 +360,27 @@ ALvoid aluInitPanning(ALCcontext *Context)
     ALfloat SpeakerAngle[OUTPUTCHANNELS];
     ALint Speaker2Chan[OUTPUTCHANNELS];
 
+    for(s = 0;s < OUTPUTCHANNELS;s++)
+    {
+        int s2;
+        for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
+            Context->ChannelMatrix[s][s2] = ((s==s2) ? 1.0f : 0.0f);
+    }
+
     switch(Context->Device->Format)
     {
         /* Mono is rendered as stereo, then downmixed during post-process */
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
         case AL_FORMAT_MONO_FLOAT32:
+            Context->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
+            Context->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
+            Context->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = 1.0f;
+            Context->ChannelMatrix[BACK_LEFT][FRONT_LEFT]     = 1.0f;
+            Context->ChannelMatrix[BACK_RIGHT][FRONT_RIGHT]   = 1.0f;
+            Context->ChannelMatrix[BACK_CENTER][FRONT_LEFT]   = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_CENTER][FRONT_RIGHT]  = aluSqrt(0.5);
             Context->NumChan = 2;
             Speaker2Chan[0] = FRONT_LEFT;
             Speaker2Chan[1] = FRONT_RIGHT;
@@ -376,6 +391,14 @@ ALvoid aluInitPanning(ALCcontext *Context)
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
         case AL_FORMAT_STEREO_FLOAT32:
+            Context->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
+            Context->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
+            Context->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = 1.0f;
+            Context->ChannelMatrix[BACK_LEFT][FRONT_LEFT]     = 1.0f;
+            Context->ChannelMatrix[BACK_RIGHT][FRONT_RIGHT]   = 1.0f;
+            Context->ChannelMatrix[BACK_CENTER][FRONT_LEFT]   = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_CENTER][FRONT_RIGHT]  = aluSqrt(0.5);
             Context->NumChan = 2;
             Speaker2Chan[0] = FRONT_LEFT;
             Speaker2Chan[1] = FRONT_RIGHT;
@@ -387,6 +410,14 @@ ALvoid aluInitPanning(ALCcontext *Context)
         case AL_FORMAT_QUAD8:
         case AL_FORMAT_QUAD16:
         case AL_FORMAT_QUAD32:
+            Context->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
+            Context->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_LEFT][BACK_LEFT]      = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_RIGHT][BACK_RIGHT]    = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_CENTER][BACK_LEFT]    = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_CENTER][BACK_RIGHT]   = aluSqrt(0.5);
             Context->NumChan = 4;
             Speaker2Chan[0] = BACK_LEFT;
             Speaker2Chan[1] = FRONT_LEFT;
@@ -402,6 +433,12 @@ ALvoid aluInitPanning(ALCcontext *Context)
         case AL_FORMAT_51CHN8:
         case AL_FORMAT_51CHN16:
         case AL_FORMAT_51CHN32:
+            Context->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]   = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT] = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_RIGHT][BACK_RIGHT]  = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
             Context->NumChan = 5;
             Speaker2Chan[0] = BACK_LEFT;
             Speaker2Chan[1] = FRONT_LEFT;
@@ -419,6 +456,10 @@ ALvoid aluInitPanning(ALCcontext *Context)
         case AL_FORMAT_61CHN8:
         case AL_FORMAT_61CHN16:
         case AL_FORMAT_61CHN32:
+            Context->ChannelMatrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_RIGHT][SIDE_RIGHT]  = aluSqrt(0.5);
             Context->NumChan = 6;
             Speaker2Chan[0] = SIDE_LEFT;
             Speaker2Chan[1] = FRONT_LEFT;
@@ -438,6 +479,8 @@ ALvoid aluInitPanning(ALCcontext *Context)
         case AL_FORMAT_71CHN8:
         case AL_FORMAT_71CHN16:
         case AL_FORMAT_71CHN32:
+            Context->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
             Context->NumChan = 7;
             Speaker2Chan[0] = BACK_LEFT;
             Speaker2Chan[1] = SIDE_LEFT;
@@ -877,6 +920,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 {
     static float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
     static float WetBuffer[BUFFERSIZE];
+    ALfloat (*Matrix)[OUTPUTCHANNELS] = ALContext->ChannelMatrix;
     ALfloat newDrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
     ALfloat newWetSend = 0.0f;
     ALfloat DryGainHF = 0.0f;
@@ -897,9 +941,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALsource *ALSource;
     ALbuffer *ALBuffer;
     ALeffectslot *ALEffectSlot;
+    ALfloat values[OUTPUTCHANNELS];
     ALfloat value;
     ALshort *Data;
-    ALuint i,j,k;
+    ALuint i,j,k,out;
     ALbufferlistitem *BufferListItem;
     ALuint loop;
     ALint64 DataSize64,DataPos64;
@@ -979,6 +1024,24 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                      &DryGainHF, &WetGainHF);
 
                     Pitch = (Pitch*Frequency) / ALContext->Frequency;
+
+                    if(DuplicateStereo && Channels > 1)
+                    {
+                        if(Channels == 2)
+                        {
+                            Matrix[FRONT_LEFT][SIDE_LEFT]   = 1.0f;
+                            Matrix[FRONT_RIGHT][SIDE_RIGHT] = 1.0f;
+                            Matrix[FRONT_LEFT][BACK_LEFT]   = 1.0f;
+                            Matrix[FRONT_RIGHT][BACK_RIGHT] = 1.0f;
+                        }
+                        else
+                        {
+                            Matrix[FRONT_LEFT][SIDE_LEFT]   = 0.0f;
+                            Matrix[FRONT_RIGHT][SIDE_RIGHT] = 0.0f;
+                            Matrix[FRONT_LEFT][BACK_LEFT]   = 0.0f;
+                            Matrix[FRONT_RIGHT][BACK_RIGHT] = 0.0f;
+                        }
+                    }
 
                     //Get source info
                     DryFilter = &ALSource->iirFilter;
@@ -1091,43 +1154,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     }
                     else if(Channels == 2) /* Stereo */
                     {
-                        ALfloat samp1, samp2;
-
-                        *WetSend += wetGainStep*BufferSize;
-                        while(BufferSize--)
-                        {
-                            for(i = 0;i < OUTPUTCHANNELS;i++)
-                                DrySend[i] += dryGainStep[i];
-
-                            samp1 = lerp(Data[k*Channels], Data[(k+1)*Channels], DataPosFrac);
-                            samp1 = lpFilterMC(DryFilter, FRONT_LEFT, samp1);
-
-                            samp2 = lerp(Data[k*Channels+1], Data[(k+1)*Channels+1], DataPosFrac);
-                            samp2 = lpFilterMC(DryFilter, FRONT_RIGHT, samp2);
-
-                            DryBuffer[j][FRONT_LEFT] += samp1*DrySend[FRONT_LEFT];
-                            DryBuffer[j][FRONT_RIGHT] += samp2*DrySend[FRONT_RIGHT];
-                            if(DuplicateStereo)
-                            {
-                                //Duplicate stereo channels on the side and
-                                //back speakers
-                                DryBuffer[j][SIDE_LEFT] += samp1*DrySend[SIDE_LEFT];
-                                DryBuffer[j][SIDE_RIGHT] += samp2*DrySend[SIDE_RIGHT];
-                                DryBuffer[j][BACK_LEFT] += samp1*DrySend[BACK_LEFT];
-                                DryBuffer[j][BACK_RIGHT] += samp2*DrySend[BACK_RIGHT];
-                            }
-
-                            DataPosFrac += increment;
-                            k += DataPosFrac>>FRACTIONBITS;
-                            DataPosFrac &= FRACTIONMASK;
-                            j++;
-                        }
-                    }
-                    else if(Channels == 4) /* Quad */
-                    {
                         const int chans[] = {
-                            FRONT_LEFT, FRONT_RIGHT,
-                            BACK_LEFT,  BACK_RIGHT
+                            FRONT_LEFT, FRONT_RIGHT
                         };
 
 #define DO_MIX() do { \
@@ -1140,7 +1168,14 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         for(i = 0;i < Channels;i++) \
         { \
             value = lerp(Data[k*Channels + i], Data[(k+1)*Channels + i], DataPosFrac); \
-            DryBuffer[j][chans[i]] += lpFilterMC(DryFilter, chans[i], value)*DrySend[chans[i]]; \
+            values[i] = lpFilterMC(DryFilter, chans[i], value)*DrySend[chans[i]]; \
+        } \
+        for(out = 0;out < OUTPUTCHANNELS;out++) \
+        { \
+            ALfloat sum = 0.0f; \
+            for(i = 0;i < Channels;i++) \
+                sum += values[i]*Matrix[chans[i]][out]; \
+            DryBuffer[j][out] += sum; \
         } \
  \
         DataPosFrac += increment; \
@@ -1149,6 +1184,15 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         j++; \
     } \
 } while(0)
+
+                        DO_MIX();
+                    }
+                    else if(Channels == 4) /* Quad */
+                    {
+                        const int chans[] = {
+                            FRONT_LEFT, FRONT_RIGHT,
+                            BACK_LEFT,  BACK_RIGHT
+                        };
 
                         DO_MIX();
                     }

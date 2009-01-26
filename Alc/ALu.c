@@ -1109,7 +1109,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             DryBuffer[j][FRONT_RIGHT] += samp2*DrySend[FRONT_RIGHT];
                             if(DuplicateStereo)
                             {
-                                //Duplicate stereo channels on the back speakers
+                                //Duplicate stereo channels on the side and
+                                //back speakers
+                                DryBuffer[j][SIDE_LEFT] += samp1*DrySend[SIDE_LEFT];
+                                DryBuffer[j][SIDE_RIGHT] += samp2*DrySend[SIDE_RIGHT];
                                 DryBuffer[j][BACK_LEFT] += samp1*DrySend[BACK_LEFT];
                                 DryBuffer[j][BACK_RIGHT] += samp2*DrySend[BACK_RIGHT];
                             }

@@ -67,6 +67,42 @@ excludefx =  # Sets which effects to exclude, preventing apps from using them.
              # reverb
              # Default is empty (all available effects enabled)
 
+layout_STEREO =  # Sets the speaker layout when using stereo output. Values are
+                   specified in degrees, where 0 is straight in front, negative
+                   goes left, and positive goes right. The values must define a
+                   circular pattern, starting with the back-left at the most
+                   negative, around the front to back-center. Unspecified
+                   speakers will remain at their default position. Available
+                   speakers are front-left(fl) and front-right(fr).
+                   The default is:
+                   fl=-90, fr=90
+
+layout_QUAD =  # Sets the speaker layout when using quadriphonic output.
+                 Available speakers are back-left(bl), front-left(fl),
+                 front-right(fr), and back-right(br).
+                 The default is:
+                 bl=-135, fl=-45, fr=45, br=135
+
+layout_51CHN =  # Sets the speaker layout when using 5.1 output. Available
+                  speakers are back-left(bl), front-left(fl), front-center(fc),
+                  front-right(fr), and back-right(br).
+                  The default is:
+                  bl=-110, fl=-30, fc=0, fr=30, br=110
+
+layout_61CHN =  # Sets the speaker layout when using 6.1 output. Available
+                  speakers are side-left(sl), front-left(fl), front-center(fc),
+                  front-right(fr), side-right(sr), and back-center(bc).
+                  The default is:
+                  sl=-90, fl=-30, fc=0, fr=30, sr=90, bc=180
+
+layout_71CHN =  # Sets the speaker layout when using 7.1 output. Available
+                  speakers are back-left(bl), side-left(sl), front-left(fl),
+                  front-center(fc), front-right(fr), side-right(sr), and
+                  back-right(br).
+                  The default is:
+                  bl=-150, sl=-90, fl=-30, fc=0, fr=30, sr=90 br=150
+
+
 [alsa]  # ALSA backend stuff
 device = default  # Sets the device name for the default playback device.
                   # Default is default

@@ -25,6 +25,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+
 #include "alMain.h"
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -259,6 +261,87 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat matrix[3][3])
     memcpy(vector, result, sizeof(result));
 }
 
+static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPUTCHANNELS],
+                                    ALint Speaker2Chan[OUTPUTCHANNELS], ALint chans)
+{
+    const char *confkey;
+    const char *next;
+    const char *sep;
+    const char *end;
+    int i, val;
+
+    confkey = GetConfigValue(NULL, name, "");
+    next = confkey;
+    while(next && *next)
+    {
+        confkey = next;
+        next = strchr(confkey, ',');
+        if(next)
+        {
+            do {
+                next++;
+            } while(isspace(*next));
+        }
+
+        sep = strchr(confkey, '=');
+        if(!sep || confkey == sep)
+            continue;
+
+        end = sep - 1;
+        while(isspace(*end) && end != confkey)
+            end--;
+
+        if(strncmp(confkey, "fl", end-confkey) == 0)
+            val = FRONT_LEFT;
+        else if(strncmp(confkey, "fr", end-confkey) == 0)
+            val = FRONT_RIGHT;
+        else if(strncmp(confkey, "fc", end-confkey) == 0)
+            val = FRONT_CENTER;
+        else if(strncmp(confkey, "bl", end-confkey) == 0)
+            val = BACK_LEFT;
+        else if(strncmp(confkey, "br", end-confkey) == 0)
+            val = BACK_RIGHT;
+        else if(strncmp(confkey, "bc", end-confkey) == 0)
+            val = BACK_CENTER;
+        else if(strncmp(confkey, "sl", end-confkey) == 0)
+            val = SIDE_LEFT;
+        else if(strncmp(confkey, "sr", end-confkey) == 0)
+            val = SIDE_RIGHT;
+        else
+        {
+            AL_PRINT("Unknown speaker for %s: \"%c%c\"\n", name, confkey[0], confkey[1]);
+            continue;
+        }
+
+        sep++;
+        while(isspace(*sep))
+            sep++;
+
+        for(i = 0;i < chans;i++)
+        {
+            if(Speaker2Chan[i] == val)
+            {
+                val = strtol(sep, NULL, 10);
+                if(val >= -180 && val <= 180)
+                    SpeakerAngle[i] = val * M_PI/180.0f;
+                else
+                    AL_PRINT("Invalid angle for speaker \"%c%c\": %d\n", confkey[0], confkey[1], val);
+                break;
+            }
+        }
+    }
+
+    for(i = 1;i < chans;i++)
+    {
+        if(SpeakerAngle[i] <= SpeakerAngle[i-1])
+        {
+            AL_PRINT("Speaker %d of %d does not follow previous: %f > %f\n", i, chans,
+                     SpeakerAngle[i-1] * 180.0f/M_PI, SpeakerAngle[i] * 180.0f/M_PI);
+            SpeakerAngle[i] = SpeakerAngle[i-1] + 1 * 180.0f/M_PI;
+        }
+    }
+}
+
 static __inline ALfloat aluLUTpos2Angle(ALint pos)
 {
     if(pos < QUADRANT_NUM)
@@ -291,6 +374,8 @@ ALvoid aluInitPanning(ALCcontext *Context)
             Speaker2Chan[1] = FRONT_RIGHT;
             SpeakerAngle[0] = -90.0f * M_PI/180.0f;
             SpeakerAngle[1] =  90.0f * M_PI/180.0f;
+            SetSpeakerArrangement("layout_STEREO", SpeakerAngle, Speaker2Chan, Context->NumChan);
+            break;
 
         case AL_FORMAT_QUAD8:
         case AL_FORMAT_QUAD16:
@@ -304,6 +389,7 @@ ALvoid aluInitPanning(ALCcontext *Context)
             SpeakerAngle[1] =  -45.0f * M_PI/180.0f;
             SpeakerAngle[2] =   45.0f * M_PI/180.0f;
             SpeakerAngle[3] =  135.0f * M_PI/180.0f;
+            SetSpeakerArrangement("layout_QUAD", SpeakerAngle, Speaker2Chan, Context->NumChan);
             break;
 
         case AL_FORMAT_51CHN8:
@@ -320,6 +406,7 @@ ALvoid aluInitPanning(ALCcontext *Context)
             SpeakerAngle[2] =    0.0f * M_PI/180.0f;
             SpeakerAngle[3] =   30.0f * M_PI/180.0f;
             SpeakerAngle[4] =  110.0f * M_PI/180.0f;
+            SetSpeakerArrangement("layout_51CHN", SpeakerAngle, Speaker2Chan, Context->NumChan);
             break;
 
         case AL_FORMAT_61CHN8:
@@ -338,6 +425,7 @@ ALvoid aluInitPanning(ALCcontext *Context)
             SpeakerAngle[3] =  30.0f * M_PI/180.0f;
             SpeakerAngle[4] =  90.0f * M_PI/180.0f;
             SpeakerAngle[5] = 180.0f * M_PI/180.0f;
+            SetSpeakerArrangement("layout_61CHN", SpeakerAngle, Speaker2Chan, Context->NumChan);
             break;
 
         case AL_FORMAT_71CHN8:
@@ -358,6 +446,7 @@ ALvoid aluInitPanning(ALCcontext *Context)
             SpeakerAngle[4] =   30.0f * M_PI/180.0f;
             SpeakerAngle[5] =   90.0f * M_PI/180.0f;
             SpeakerAngle[6] =  150.0f * M_PI/180.0f;
+            SetSpeakerArrangement("layout_71CHN", SpeakerAngle, Speaker2Chan, Context->NumChan);
             break;
 
         default:

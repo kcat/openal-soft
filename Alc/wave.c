@@ -50,6 +50,7 @@ static ALuint WaveProc(ALvoid *ptr)
     ALuint frameSize;
     ALuint now, last;
     size_t WriteCnt;
+    size_t fs;
     ALuint avail;
     union {
         short s;
@@ -89,7 +90,7 @@ static ALuint WaveProc(ALvoid *ptr)
                     fputc(bytes[i^1], data->f);
             }
             else
-                fwrite(data->buffer, frameSize, WriteCnt, data->f);
+                fs = fwrite(data->buffer, frameSize, WriteCnt, data->f);
             if(ferror(data->f))
             {
                 AL_PRINT("Error writing to file\n");

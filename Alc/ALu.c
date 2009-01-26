@@ -366,6 +366,13 @@ ALvoid aluInitPanning(ALCcontext *Context)
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
         case AL_FORMAT_MONO_FLOAT32:
+            Context->NumChan = 2;
+            Speaker2Chan[0] = FRONT_LEFT;
+            Speaker2Chan[1] = FRONT_RIGHT;
+            SpeakerAngle[0] = -90.0f * M_PI/180.0f;
+            SpeakerAngle[1] =  90.0f * M_PI/180.0f;
+            break;
+
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
         case AL_FORMAT_STEREO_FLOAT32:

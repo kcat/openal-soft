@@ -731,8 +731,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         WetMix = __max(WetMix,MinVolume);
 
         //3. Apply directional soundcones
-        Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f /
-                3.141592654f;
+        Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f/M_PI;
         if(Angle >= InnerAngle && Angle <= OuterAngle)
         {
             ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
@@ -851,7 +850,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         *wetsend = WetMix;
 
         // Update filter coefficients. Calculations based on the I3DL2 spec.
-        cw = cos(2.0f*3.141592654f * LOWPASSFREQCUTOFF / ALContext->Frequency);
+        cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / ALContext->Frequency);
         // We use four chained one-pole filters, so we need to take the fourth
         // root of the squared gain, which is the same as the square root of
         // the base gain.
@@ -898,7 +897,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         drysend[LFE]          = DryMix * ListenerGain;
         *wetsend              = 0.0f;
 
-        cw = cos(2.0f*3.141592654f * LOWPASSFREQCUTOFF / ALContext->Frequency);
+        cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / ALContext->Frequency);
         g = __max(DryGainHF, 0.01f);
         a = 0.0f;
         if(g < 0.9999f) // 1-epsilon

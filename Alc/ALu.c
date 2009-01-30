@@ -629,7 +629,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             SourceToListener[1] = -Position[1];
             SourceToListener[2] = -Position[2];
 
-            // Transform source position and direction into listener space
+            // Transform source position into listener space
             aluMatrixVector(Position, Matrix);
         }
         else

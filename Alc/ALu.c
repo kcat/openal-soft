@@ -714,7 +714,7 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
             if(dist < 0.0f) dist = 0.0f;
             // Absorption calculation is done in dB
             absorb = (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF) *
-                     (Distance*MetersPerUnit);
+                     (dist*MetersPerUnit);
             // Convert dB to linear gain before applying
             absorb = pow(10.0, absorb/20.0);
             DryGainHF *= absorb;

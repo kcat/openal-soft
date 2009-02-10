@@ -878,6 +878,8 @@ static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
         pitch[0] = ALSource->flPitch;
 
         DryMix = SourceVolume;
+        DryMix = __min(DryMix,MaxVolume);
+        DryMix = __max(DryMix,MinVolume);
 
         switch(ALSource->DirectFilter.type)
         {

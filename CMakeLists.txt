@@ -389,7 +389,7 @@ INSTALL(FILES include/AL/al.h
         DESTINATION include/AL
 )
 INSTALL(FILES "${OpenAL_BINARY_DIR}/admin/pkgconfig/openal.pc"
-        DESTINATION lib/pkgconfig)
+        DESTINATION "${LIB_INSTALL_DIR}/pkgconfig")
 
 IF(EXAMPLES)
     ADD_EXECUTABLE(openal-info examples/openal-info.c)

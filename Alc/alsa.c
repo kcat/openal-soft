@@ -993,8 +993,8 @@ LOAD_FUNC(snd_card_next);
 
             if(firstDev && card < MAX_DEVICES-1) {
                 firstDev = 0;
-                snprintf(name, sizeof(name), "ALSA Software on %s",
-                         psnd_ctl_card_info_get_name(info));
+                snprintf(name, sizeof(name), "ALSA Software on %s (hw:%d)",
+                         psnd_ctl_card_info_get_name(info), card);
                 alsaDeviceList[card+1] = AppendDeviceList(name);
             }
 
@@ -1009,8 +1009,8 @@ LOAD_FUNC(snd_card_next);
 
             cname = psnd_ctl_card_info_get_name(info);
             dname = psnd_pcm_info_get_name(pcminfo);
-            snprintf(name, sizeof(name), "ALSA Software on %s [%s]",
-                     cname, dname);
+            snprintf(name, sizeof(name), "ALSA Software on %s [%s] (hw:%d,%d)",
+                     cname, dname, card, dev);
             allDevNameMap[idx].name = AppendAllDeviceList(name);
             allDevNameMap[idx].card = card;
             allDevNameMap[idx].dev = dev;
@@ -1068,8 +1068,8 @@ next_card:
 
                 cname = psnd_ctl_card_info_get_name(info);
                 dname = psnd_pcm_info_get_name(pcminfo);
-                snprintf(name, sizeof(name), "ALSA Capture on %s [%s]",
-                         cname, dname);
+                snprintf(name, sizeof(name), "ALSA Capture on %s [%s] (hw:%d,%d)",
+                         cname, dname, card, dev);
                 allCaptureDevNameMap[idx].name = AppendCaptureDeviceList(name);
                 allCaptureDevNameMap[idx].card = card;
                 allCaptureDevNameMap[idx].dev = dev;

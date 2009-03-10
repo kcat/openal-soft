@@ -103,11 +103,10 @@ MAKE_FUNC(snd_ctl_card_info_get_name);
 MAKE_FUNC(snd_card_next);
 #undef MAKE_FUNC
 
-#define MAX_DEVICES 16
 #define MAX_ALL_DEVICES 32
 
+static ALCchar *alsaDevice;
 static DevMap allDevNameMap[MAX_ALL_DEVICES];
-static ALCchar *alsaDeviceList[MAX_DEVICES];
 static DevMap allCaptureDevNameMap[MAX_ALL_DEVICES];
 
 static int xrun_recovery(snd_pcm_t *handle, int err)
@@ -348,21 +347,15 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
                 goto open_alsa;
             }
         }
-        for(idx = 0;idx < MAX_DEVICES;idx++)
+        if(strcmp(deviceName, alsaDevice) == 0)
         {
-            if(alsaDeviceList[idx] &&
-               strcmp(deviceName, alsaDeviceList[idx]) == 0)
-            {
-                device->szDeviceName = alsaDeviceList[idx];
-                if(idx > 0)
-                    sprintf(driver, "hw:%zd,0", idx-1);
-                goto open_alsa;
-            }
+            device->szDeviceName = alsaDevice;
+            goto open_alsa;
         }
         return ALC_FALSE;
     }
     else
-        device->szDeviceName = alsaDeviceList[0];
+        device->szDeviceName = alsaDevice;
 
 open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -964,13 +957,11 @@ LOAD_FUNC(snd_card_next);
         AL_PRINT("no playback cards found...\n");
     else
     {
-        alsaDeviceList[0] = AppendDeviceList("ALSA Software on default");
+        alsaDevice = AppendDeviceList("ALSA Software");
         allDevNameMap[0].name = AppendAllDeviceList("ALSA Software on default");
     }
 
     while (card >= 0) {
-        int firstDev = 1;
-
         sprintf(name, "hw:%d", card);
         if ((err = psnd_ctl_open(&handle, name, 0)) < 0) {
             AL_PRINT("control open (%i): %s\n", card, psnd_strerror(err));
@@ -990,13 +981,6 @@ LOAD_FUNC(snd_card_next);
                 AL_PRINT("snd_ctl_pcm_next_device failed\n");
             if (dev < 0)
                 break;
-
-            if(firstDev && card < MAX_DEVICES-1) {
-                firstDev = 0;
-                snprintf(name, sizeof(name), "ALSA Software on %s (hw:%d)",
-                         psnd_ctl_card_info_get_name(info), card);
-                alsaDeviceList[card+1] = AppendDeviceList(name);
-            }
 
             psnd_pcm_info_set_device(pcminfo, dev);
             psnd_pcm_info_set_subdevice(pcminfo, 0);

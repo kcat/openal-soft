@@ -68,6 +68,9 @@ static struct {
 #ifdef HAVE_WINMM
     { "winmm", alcWinMMInit, EmptyFuncs },
 #endif
+#ifdef HAVE_PORTAUDIO
+    { "port", alc_pa_init, EmptyFuncs },
+#endif
 #ifdef HAVE_SDL
     { "sdl", alc_sdl_init, EmptyFuncs },
 #endif

@@ -136,6 +136,12 @@ periods = 4  # Sets the number of updates for the output buffer. Default is 4
 [winmm]  # Windows Multimedia backend stuff
          # Nothing yet...
 
+[port]  # PortAudio backend stuff
+device = -1  # Sets the device index for output. Negative values will use the
+             # default as given by PortAudio itself. Default is -1
+
+periods = 4  # Sets the number of update buffers. Default is 4
+
 [sdl]  # SDL backend stuff
        # Nothing yet...
 

@@ -19,6 +19,9 @@
 /* Define if we have the Windows Multimedia backend */
 #cmakedefine HAVE_WINMM
 
+/* Define if we have the PortAudio backend */
+#cmakedefine HAVE_PORTAUDIO
+
 /* Define if we have the SDL backend */
 #cmakedefine HAVE_SDL
 

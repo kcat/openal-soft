@@ -215,7 +215,7 @@ void alc_pa_init(BackendFuncs *func_list)
 } while(0)
 #else
     str = NULL;
-    pa_handle = 0xDEADBEEF;
+    pa_handle = (void*)0xDEADBEEF;
 #define LOAD_FUNC(f) p##f = f
 #endif
 

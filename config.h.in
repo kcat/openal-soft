@@ -22,9 +22,6 @@
 /* Define if we have the PortAudio backend */
 #cmakedefine HAVE_PORTAUDIO
 
-/* Define if we have the SDL backend */
-#cmakedefine HAVE_SDL
-
 /* Define if we have dlfcn.h */
 #cmakedefine HAVE_DLFCN_H
 
@@ -45,12 +42,6 @@
 
 /* Define if we have stdint.h */
 #cmakedefine HAVE_STDINT_H
-
-/* Define if we have SDL/SDL.h */
-#cmakedefine HAVE_SDL_SDL_H
-
-/* Define if we have SDL.h */
-#cmakedefine HAVE_SDL_H
 
 /* Define if we have the __int64 type */
 #cmakedefine HAVE___INT64

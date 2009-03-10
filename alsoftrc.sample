@@ -47,19 +47,19 @@ sources = 256  # Sets the maximum number of allocatable sources. Lower values
                # may help for systems with apps that try to play more sounds
                # than the CPU can handle. Default is 256
 
-stereodup =  # Sets whether to duplicate stereo sounds on the rear speakers for
-             # 4+ channel output. This can make stereo sources substantially
-             # louder than mono or even 4+ channel sources, but provides a
-             # "fuller" playback quality. True, yes, on, and non-0 values will
-             # duplicate stereo sources. 0 and anything else will cause stereo
-             # sounds to only play out the front speakers.
+stereodup =  # Sets whether to duplicate stereo sounds on the rear and side
+             # speakers for 4+ channel output. This can make stereo sources
+             # substantially louder than mono or even 4+ channel sources, but
+             # provides a "fuller" playback quality. True, yes, on, and non-0
+             # values will duplicate stereo sources. 0 and anything else will
+             # cause stereo sounds to only play out the front speakers.
              # Default is false
 
 drivers =  # Sets the backend driver list order, comma-seperated. Unknown
            # backends and duplicated names are ignored, and unlisted backends
            # won't be considered for use. An empty list means the default.
            # Default is:
-           # alsa,oss,solaris,dsound,winmm,wave
+           # alsa,oss,solaris,dsound,winmm,port,wave
 
 excludefx =  # Sets which effects to exclude, preventing apps from using them.
              # This can help for apps that try to use effects which are too CPU

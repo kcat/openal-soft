@@ -39,6 +39,10 @@
 
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 
+static void *ds_handle;
+static HRESULT (WINAPI *pDirectSoundCreate)(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter);
+static HRESULT (WINAPI *pDirectSoundEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallback, LPVOID pContext);
+
 // Since DSound doesn't report the fragment size, emulate it
 static int num_frags;
 
@@ -136,6 +140,9 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     DWORD speakers;
     HRESULT hr;
 
+    if(ds_handle == NULL)
+        return ALC_FALSE;
+
     if(deviceName)
     {
         int i;
@@ -167,7 +174,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     }
 
     //DirectSound Init code
-    hr = DirectSoundCreate(guid, &pData->lpDS, NULL);
+    hr = pDirectSoundCreate(guid, &pData->lpDS, NULL);
     if(SUCCEEDED(hr))
         hr = IDirectSound_SetCooperativeLevel(pData->lpDS, GetForegroundWindow(), DSSCL_PRIORITY);
 
@@ -411,10 +418,37 @@ void alcDSoundInit(BackendFuncs *FuncList)
 
     *FuncList = DSoundFuncs;
 
+#ifdef _WIN32
+    ds_handle = LoadLibraryA("dsound.dll");
+    if(ds_handle == NULL)
+    {
+        AL_PRINT("Failed to load dsound.dll\n");
+        return;
+    }
+
+#define LOAD_FUNC(f) do { \
+    p##f = (void*)GetProcAddress((HMODULE)ds_handle, #f); \
+    if(p##f == NULL) \
+    { \
+        FreeLibrary(ds_handle); \
+        ds_handle = NULL; \
+        AL_PRINT("Could not load %s from dsound.dll\n", #f); \
+        return; \
+    } \
+} while(0)
+#else
+    ds_handle = (void*)0xDEADBEEF;
+#define LOAD_FUNC(f) p##f = f
+#endif
+
+LOAD_FUNC(DirectSoundCreate);
+LOAD_FUNC(DirectSoundEnumerateA);
+#undef LOAD_FUNC
+
     num_frags = GetConfigValueInt("dsound", "periods", 4);
     if(num_frags < 2) num_frags = 2;
 
-    hr = DirectSoundEnumerate(DSoundEnumDevices, &iter);
+    hr = pDirectSoundEnumerateA(DSoundEnumDevices, &iter);
     if(FAILED(hr))
         AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
 }

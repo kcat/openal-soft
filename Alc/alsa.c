@@ -955,11 +955,9 @@ LOAD_FUNC(snd_card_next);
     card = -1;
     if(psnd_card_next(&card) < 0 || card < 0)
         AL_PRINT("no playback cards found...\n");
-    else
-    {
-        alsaDevice = AppendDeviceList("ALSA Software");
-        allDevNameMap[0].name = AppendAllDeviceList("ALSA Software on default");
-    }
+
+    alsaDevice = AppendDeviceList("ALSA Software");
+    allDevNameMap[0].name = AppendAllDeviceList("ALSA Software on default");
 
     while (card >= 0) {
         sprintf(name, "hw:%d", card);

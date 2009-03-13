@@ -359,7 +359,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                 break;
 
             case AL_ROOM_ROLLOFF_FACTOR:
-                if (flValue >= 0.0f && flValue <= 1.0f)
+                if (flValue >= 0.0f && flValue <= 10.0f)
                     pSource->RoomRolloffFactor = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);

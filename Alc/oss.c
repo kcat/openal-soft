@@ -221,8 +221,6 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     }
 #undef ok
 
-    device->Frequency = ossSpeed;
-
     if((int)aluChannelsFromFormat(device->Format) != numChannels)
     {
         AL_PRINT("Could not set %d channels, got %d instead\n", aluChannelsFromFormat(device->Format), numChannels);
@@ -240,8 +238,6 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
         return ALC_FALSE;
     }
 
-    device->UpdateSize = info.fragsize / frameSize;
-
     data->data_size = device->UpdateSize * frameSize;
     data->mix_data = calloc(1, data->data_size);
 
@@ -254,6 +250,9 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
         free(data);
         return ALC_FALSE;
     }
+
+    device->Frequency = ossSpeed;
+    device->UpdateSize = info.fragsize / frameSize;
 
     return ALC_TRUE;
 }

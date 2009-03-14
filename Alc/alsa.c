@@ -320,6 +320,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     snd_pcm_hw_params_t *p = NULL;
     snd_pcm_access_t access;
     unsigned int periods;
+    unsigned int rate;
     alsa_data *data;
     char driver[64];
     const char *str;
@@ -394,6 +395,7 @@ open_alsa:
 
     periods = GetConfigValueInt("alsa", "periods", 0);
     bufferSizeInFrames = device->UpdateSize;
+    rate = device->Frequency;
 
     str = GetConfigValue("alsa", "mmap", "true");
     allowmmap = (strcasecmp(str, "true") == 0 ||
@@ -415,7 +417,7 @@ open_alsa:
          /* set periods (implicitly constrains period/buffer parameters) */
          (!periods || ok(psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL), "set periods near")) &&
          /* set rate (implicitly constrains period/buffer parameters) */
-         ok(psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &device->Frequency, NULL), "set rate near") &&
+         ok(psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &rate, NULL), "set rate near") &&
          /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
          ok(psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames), "set buffer size near") &&
          /* install and prepare hardware configuration */
@@ -448,8 +450,6 @@ open_alsa:
     }
 
     psnd_pcm_hw_params_free(p);
-
-    device->UpdateSize = bufferSizeInFrames;
 
     data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, device->UpdateSize);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
@@ -490,6 +490,9 @@ open_alsa:
         free(data);
         return ALC_FALSE;
     }
+
+    device->UpdateSize = bufferSizeInFrames;
+    device->Frequency = rate;
 
     return ALC_TRUE;
 }

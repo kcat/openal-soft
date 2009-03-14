@@ -225,14 +225,14 @@ static __inline ALshort aluF2S(ALfloat Value)
     return ((ALshort)i);
 }
 
-static __inline ALvoid aluCrossproduct(ALfloat *inVector1,ALfloat *inVector2,ALfloat *outVector)
+static __inline ALvoid aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
 {
     outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
     outVector[1] = inVector1[2]*inVector2[0] - inVector1[0]*inVector2[2];
     outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
 }
 
-static __inline ALfloat aluDotproduct(ALfloat *inVector1,ALfloat *inVector2)
+static __inline ALfloat aluDotproduct(const ALfloat *inVector1, const ALfloat *inVector2)
 {
     return inVector1[0]*inVector2[0] + inVector1[1]*inVector2[1] +
            inVector1[2]*inVector2[2];
@@ -554,10 +554,11 @@ static __inline ALint aluCart2LUTpos(ALfloat re, ALfloat im)
     return pos%LUT_NUM;
 }
 
-static ALvoid CalcSourceParams(ALCcontext *ALContext, ALsource *ALSource,
-                               ALenum isMono, ALfloat *drysend,
-                               ALfloat *wetsend, ALfloat *pitch,
-                               ALfloat *drygainhf, ALfloat *wetgainhf)
+static ALvoid CalcSourceParams(const ALCcontext *ALContext,
+                               const ALsource *ALSource, ALenum isMono,
+                               ALfloat *drysend, ALfloat *wetsend,
+                               ALfloat *pitch, ALfloat *drygainhf,
+                               ALfloat *wetgainhf)
 {
     ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,WetMix=0.0f;
     ALfloat Direction[3],Position[3],SourceToListener[3];

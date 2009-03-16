@@ -44,6 +44,10 @@
 #define __min min
 #endif
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846  /* pi */
+#endif
+
 typedef struct DelayLine
 {
     // The delay lines use sample lengths that are powers of 2 to allow

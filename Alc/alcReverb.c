@@ -525,10 +525,10 @@ ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
               LATE_LINE_LENGTH[2] + LATE_LINE_LENGTH[3]);
     g = length * (1.0f + LATE_LINE_MULTIPLIER) * 0.25f;
     g = pow(10.0f, g * -60.0f / 20.0f);
-    g = 1.0f / (1.0f - g);
+    g = 1.0f / (1.0f - (g*g));
     length *= 1.0f + (Effect->Reverb.Density * LATE_LINE_MULTIPLIER) * 0.25f;
     length = pow(10.0f, length / Effect->Reverb.DecayTime * -60.0f / 20.0f);
-    length = 1.0f / (1.0f - length);
+    length = 1.0f / (1.0f - (length*length));
     State->Late.DensityGain = 0.707106f * __min(aluSqrt(g / length), 1.0f);
 
     // Calculate the all-pass feed-back and feed-forward coefficient.

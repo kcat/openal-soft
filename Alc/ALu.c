@@ -559,7 +559,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                                ALfloat *pitch, ALfloat *drygainhf,
                                ALfloat *wetgainhf)
 {
-    ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,WetMix=0.0f;
+    ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix;
     ALfloat Direction[3],Position[3],SourceToListener[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
     ALfloat ConeVolume,SourceVolume,ListenerGain;
@@ -567,14 +567,13 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound, flMaxVelocity;
     ALfloat Matrix[3][3];
     ALfloat flAttenuation;
-    ALfloat RoomAttenuation;
+    ALfloat RoomAttenuation[MAX_SENDS];
     ALfloat MetersPerUnit;
-    ALfloat RoomRolloff;
+    ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DryGainHF = 1.0f;
-    ALfloat WetGainHF = 1.0f;
     ALfloat DirGain, AmbientGain;
     const ALfloat *SpeakerGain;
-    ALint pos, s;
+    ALint pos, s, i;
 
     //Get context properties
     DopplerFactor   = ALContext->DopplerFactor * ALSource->DopplerFactor;
@@ -597,7 +596,8 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     InnerAngle   = ALSource->flInnerAngle;
     OuterAngle   = ALSource->flOuterAngle;
     OuterGainHF  = ALSource->OuterGainHF;
-    RoomRolloff  = ALSource->RoomRolloffFactor;
+    for(i = 0;i < MAX_SENDS;i++)
+        RoomRolloff[i] = ALSource->RoomRolloffFactor;
 
     //Only apply 3D calculations for mono buffers
     if(isMono != AL_FALSE)
@@ -644,14 +644,16 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         //2. Calculate distance attenuation
         Distance = aluSqrt(aluDotproduct(Position, Position));
 
-        if(ALSource->Send[0].Slot)
+        for(i = 0;i < MAX_SENDS;i++)
         {
-            if(ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB)
-                RoomRolloff += ALSource->Send[0].Slot->effect.Reverb.RoomRolloffFactor;
+            if(ALSource->Send[i].Slot &&
+               ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB)
+                RoomRolloff[i] += ALSource->Send[i].Slot->effect.Reverb.RoomRolloffFactor;
         }
 
         flAttenuation = 1.0f;
-        RoomAttenuation = 1.0f;
+        for(i = 0;i < MAX_SENDS;i++)
+            RoomAttenuation[i] = 1.0f;
         switch (ALSource->DistanceModel)
         {
             case AL_INVERSE_DISTANCE_CLAMPED:
@@ -665,8 +667,11 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 {
                     if ((MinDist + (Rolloff * (Distance - MinDist))) > 0.0f)
                         flAttenuation = MinDist / (MinDist + (Rolloff * (Distance - MinDist)));
-                    if ((MinDist + (RoomRolloff * (Distance - MinDist))) > 0.0f)
-                        RoomAttenuation = MinDist / (MinDist + (RoomRolloff * (Distance - MinDist)));
+                    for(i = 0;i < MAX_SENDS;i++)
+                    {
+                        if ((MinDist + (RoomRolloff[i] * (Distance - MinDist))) > 0.0f)
+                            RoomAttenuation[i] = MinDist / (MinDist + (RoomRolloff[i] * (Distance - MinDist)));
+                    }
                 }
                 break;
 
@@ -681,7 +686,8 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 if (MaxDist != MinDist)
                 {
                     flAttenuation = 1.0f - (Rolloff*(Distance-MinDist)/(MaxDist - MinDist));
-                    RoomAttenuation = 1.0f - (RoomRolloff*(Distance-MinDist)/(MaxDist - MinDist));
+                    for(i = 0;i < MAX_SENDS;i++)
+                        RoomAttenuation[i] = 1.0f - (RoomRolloff[i]*(Distance-MinDist)/(MaxDist - MinDist));
                 }
                 break;
 
@@ -695,13 +701,12 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 if ((Distance > 0.0f) && (MinDist > 0.0f))
                 {
                     flAttenuation = (ALfloat)pow(Distance/MinDist, -Rolloff);
-                    RoomAttenuation = (ALfloat)pow(Distance/MinDist, -RoomRolloff);
+                    for(i = 0;i < MAX_SENDS;i++)
+                        RoomAttenuation[i] = (ALfloat)pow(Distance/MinDist, -RoomRolloff[i]);
                 }
                 break;
 
             case AL_NONE:
-                flAttenuation = 1.0f;
-                RoomAttenuation = 1.0f;
                 break;
         }
 
@@ -718,7 +723,8 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
             // Convert dB to linear gain before applying
             absorb = pow(10.0, absorb/20.0);
             DryGainHF *= absorb;
-            WetGainHF *= absorb;
+            for(i = 0;i < MAX_SENDS;i++)
+                wetgainhf[i] *= absorb;
         }
 
         // Source Gain + Attenuation and clamp to Min/Max Gain
@@ -726,9 +732,13 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         DryMix = __min(DryMix,MaxVolume);
         DryMix = __max(DryMix,MinVolume);
 
-        WetMix = SourceVolume * RoomAttenuation;
-        WetMix = __min(WetMix,MaxVolume);
-        WetMix = __max(WetMix,MinVolume);
+        for(i = 0;i < MAX_SENDS;i++)
+        {
+            ALfloat WetMix = SourceVolume * RoomAttenuation[i];
+            WetMix = __min(WetMix,MaxVolume);
+            wetsend[i] = __max(WetMix,MinVolume);
+            wetgainhf[i] = 1.0f;
+        }
 
         //3. Apply directional soundcones
         Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f/M_PI;
@@ -737,23 +747,35 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
             ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
             ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f)*scale);
             DryMix *= ConeVolume;
-            if(ALSource->WetGainAuto)
-                WetMix *= ConeVolume;
             if(ALSource->DryGainHFAuto)
                 DryGainHF *= (1.0f+(OuterGainHF-1.0f)*scale);
+            if(ALSource->WetGainAuto)
+            {
+                for(i = 0;i < MAX_SENDS;i++)
+                    wetsend[i] *= ConeVolume;
+            }
             if(ALSource->WetGainHFAuto)
-                WetGainHF *= (1.0f+(OuterGainHF-1.0f)*scale);
+            {
+                for(i = 0;i < MAX_SENDS;i++)
+                    wetgainhf[i] *= (1.0f+(OuterGainHF-1.0f)*scale);
+            }
         }
         else if(Angle > OuterAngle)
         {
             ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f));
             DryMix *= ConeVolume;
-            if(ALSource->WetGainAuto)
-                WetMix *= ConeVolume;
             if(ALSource->DryGainHFAuto)
                 DryGainHF *= (1.0f+(OuterGainHF-1.0f));
+            if(ALSource->WetGainAuto)
+            {
+                for(i = 0;i < MAX_SENDS;i++)
+                    wetsend[i] *= ConeVolume;
+            }
             if(ALSource->WetGainHFAuto)
-                WetGainHF *= (1.0f+(OuterGainHF-1.0f));
+            {
+                for(i = 0;i < MAX_SENDS;i++)
+                    wetgainhf[i] *= (1.0f+(OuterGainHF-1.0f));
+            }
         }
 
         //4. Calculate Velocity
@@ -784,32 +806,44 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         else
             pitch[0] = ALSource->flPitch;
 
-        if(ALSource->Send[0].Slot &&
-           ALSource->Send[0].Slot->effect.type != AL_EFFECT_NULL)
+        for(i = 0;i < MAX_SENDS;i++)
         {
-            if(ALSource->Send[0].Slot->AuxSendAuto)
+            if(ALSource->Send[i].Slot &&
+               ALSource->Send[i].Slot->effect.type != AL_EFFECT_NULL)
             {
-                // Apply minimal attenuation in place of missing statistical
-                // reverb model.
-                WetMix *= pow(DryMix, 1.0f / 2.0f);
+                if(ALSource->Send[i].Slot->AuxSendAuto)
+                {
+                    // Apply minimal attenuation in place of missing
+                    // statistical reverb model.
+                    wetsend[i] *= pow(DryMix, 1.0f / 2.0f);
+                }
+                else
+                {
+                    // If the slot's auxilliary send auto is off, the data sent to the
+                    // effect slot is the same as the dry path, sans filter effects
+                    wetsend[i] = DryMix;
+                    wetgainhf[i] = DryGainHF;
+                }
+
+                // Note that this is really applied by the effect slot. However,
+                // it's easier (more optimal) to handle it here.
+                if(ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB)
+                    wetgainhf[i] *= ALSource->Send[0].Slot->effect.Reverb.GainHF;
             }
             else
             {
-                // If the slot's auxilliary send auto is off, the data sent to the
-                // effect slot is the same as the dry path, sans filter effects
-                WetMix = DryMix;
-                WetGainHF = DryGainHF;
+                wetsend[i] = 0.0f;
+                wetgainhf[i] = 1.0f;
             }
 
-            // Note that this is really applied by the effect slot. However,
-            // it's easier (more optimal) to handle it here.
-            if(ALSource->Send[0].Slot->effect.type == AL_EFFECT_REVERB)
-                WetGainHF *= ALSource->Send[0].Slot->effect.Reverb.GainHF;
-        }
-        else
-        {
-            WetMix = 0.0f;
-            WetGainHF = 1.0f;
+            switch(ALSource->Send[i].WetFilter.type)
+            {
+                case AL_FILTER_LOWPASS:
+                    wetsend[i] *= ALSource->Send[i].WetFilter.Gain;
+                    wetgainhf[i] *= ALSource->Send[i].WetFilter.GainHF;
+                    break;
+            }
+            wetsend[i] *= ListenerGain;
         }
 
         //5. Apply filter gains and filters
@@ -820,17 +854,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 DryGainHF *= ALSource->DirectFilter.GainHF;
                 break;
         }
-
-        switch(ALSource->Send[0].WetFilter.type)
-        {
-            case AL_FILTER_LOWPASS:
-                WetMix *= ALSource->Send[0].WetFilter.Gain;
-                WetGainHF *= ALSource->Send[0].WetFilter.GainHF;
-                break;
-        }
-
         DryMix *= ListenerGain;
-        WetMix *= ListenerGain;
 
         // Use energy-preserving panning algorithm for multi-speaker playback
         aluNormalize(Position);
@@ -847,10 +871,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
             ALfloat gain = SpeakerGain[s]*DirGain + AmbientGain;
             drysend[s] = DryMix * gain;
         }
-        *wetsend = WetMix;
-
         *drygainhf = DryGainHF;
-        *wetgainhf = WetGainHF;
     }
     else
     {
@@ -878,10 +899,13 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         drysend[FRONT_CENTER] = DryMix * ListenerGain;
         drysend[BACK_CENTER]  = DryMix * ListenerGain;
         drysend[LFE]          = DryMix * ListenerGain;
-        *wetsend              = 0.0f;
+        *drygainhf            = DryGainHF;
 
-        *drygainhf = DryGainHF;
-        *wetgainhf = WetGainHF;
+        for(i = 0;i < MAX_SENDS;i++)
+        {
+            wetsend[i] = 0.0f;
+            wetgainhf[i] = 1.0f;
+        }
     }
 }
 
@@ -894,17 +918,17 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 {
     static float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
     static float DummyBuffer[BUFFERSIZE];
-    ALfloat *WetBuffer = NULL;
+    ALfloat *WetBuffer[MAX_SENDS];
     ALfloat (*Matrix)[OUTPUTCHANNELS] = ALContext->ChannelMatrix;
     ALfloat newDrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-    ALfloat newWetSend = 0.0f;
+    ALfloat newWetSend[MAX_SENDS];
     ALfloat DryGainHF = 0.0f;
-    ALfloat WetGainHF = 0.0f;
+    ALfloat WetGainHF[MAX_SENDS];
     ALfloat *DrySend;
     ALfloat *WetSend;
     ALuint rampLength;
     ALfloat dryGainStep[OUTPUTCHANNELS];
-    ALfloat wetGainStep;
+    ALfloat wetGainStep[MAX_SENDS];
     ALuint BlockAlign,BufferSize;
     ALuint DataSize=0,DataPosInt=0,DataPosFrac=0;
     ALuint Channels,Frequency,ulExtraSamples;
@@ -924,7 +948,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     ALbufferlistitem *BufferListItem;
     ALuint loop;
     ALint64 DataSize64,DataPos64;
-    FILTER *DryFilter, *WetFilter;
+    FILTER *DryFilter, *WetFilter[MAX_SENDS];
     int fpuState;
 
     SuspendContext(ALContext);
@@ -995,17 +1019,20 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 
                     //Get source info
                     DryFilter = &ALSource->iirFilter;
-                    WetFilter = &ALSource->Send[0].iirFilter;
-                    WetBuffer = (ALSource->Send[0].Slot ?
-                                 ALSource->Send[0].Slot->WetBuffer :
-                                 DummyBuffer);
+                    for(i = 0;i < MAX_SENDS;i++)
+                    {
+                        WetFilter[i] = &ALSource->Send[i].iirFilter;
+                        WetBuffer[i] = (ALSource->Send[i].Slot ?
+                                        ALSource->Send[i].Slot->WetBuffer :
+                                        DummyBuffer);
+                    }
                     DrySend = ALSource->DryGains;
-                    WetSend = &ALSource->WetGain;
+                    WetSend = ALSource->WetGains;
 
                     CalcSourceParams(ALContext, ALSource,
                                      (Channels==1) ? AL_TRUE : AL_FALSE,
-                                     newDrySend, &newWetSend, &Pitch,
-                                     &DryGainHF, &WetGainHF);
+                                     newDrySend, newWetSend, &Pitch,
+                                     &DryGainHF, WetGainHF);
                     Pitch = (Pitch*Frequency) / ALContext->Frequency;
 
                     if(Channels == 1)
@@ -1025,11 +1052,14 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
                         DryFilter->coeff = a;
 
-                        g = aluSqrt(__max(WetGainHF, 0.0001f));
-                        a = 0.0f;
-                        if(g < 0.9999f) // 1-epsilon
-                            a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
-                        WetFilter->coeff = a;
+                        for(i = 0;i < MAX_SENDS;i++)
+                        {
+                            g = aluSqrt(__max(WetGainHF[i], 0.0001f));
+                            a = 0.0f;
+                            if(g < 0.9999f) // 1-epsilon
+                                a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
+                            WetFilter[i]->coeff = a;
+                        }
                     }
                     else
                     {
@@ -1042,7 +1072,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         if(g < 0.9999f) // 1-epsilon
                             a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
                         DryFilter->coeff = a;
-                        WetFilter->coeff = 0.0f;
+                        for(i = 0;i < MAX_SENDS;i++)
+                            WetFilter[i]->coeff = 0.0f;
 
                         if(DuplicateStereo && Channels == 2)
                         {
@@ -1068,14 +1099,18 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             DrySend[i] = newDrySend[i];
                             dryGainStep[i] = 0;
                         }
-                        *WetSend = newWetSend;
-                        wetGainStep = 0;
+                        for(i = 0;i < MAX_SENDS;i++)
+                        {
+                            WetSend[i] = newWetSend[i];
+                            wetGainStep[i] = 0;
+                        }
                     }
                     else
                     {
                         for(i = 0;i < OUTPUTCHANNELS;i++)
                             dryGainStep[i] = (newDrySend[i]-DrySend[i]) / rampLength;
-                        wetGainStep = (newWetSend-(*WetSend)) / rampLength;
+                        for(i = 0;i < MAX_SENDS;i++)
+                            wetGainStep[i] = (newWetSend[i]-WetSend[i]) / rampLength;
                     }
                     ALSource->FirstStart = AL_FALSE;
 
@@ -1137,7 +1172,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         {
                             for(i = 0;i < OUTPUTCHANNELS;i++)
                                 DrySend[i] += dryGainStep[i];
-                            *WetSend += wetGainStep;
+                            for(i = 0;i < MAX_SENDS;i++)
+                                WetSend[i] += wetGainStep[i];
 
                             //First order interpolator
                             value = lerp(Data[k], Data[k+1], DataPosFrac);
@@ -1154,8 +1190,11 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             DryBuffer[j][BACK_CENTER]  += outsamp*DrySend[BACK_CENTER];
 
                             //Room path final mix buffer and panning
-                            outsamp = lpFilter(WetFilter, value);
-                            WetBuffer[j] += outsamp*(*WetSend);
+                            for(i = 0;i < MAX_SENDS;i++)
+                            {
+                                outsamp = lpFilter(WetFilter[i], value);
+                                WetBuffer[i][j] += outsamp*WetSend[i];
+                            }
 
                             DataPosFrac += increment;
                             k += DataPosFrac>>FRACTIONBITS;
@@ -1170,7 +1209,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         };
 
 #define DO_MIX() do { \
-    *WetSend += wetGainStep*BufferSize; \
+    for(i = 0;i < MAX_SENDS;i++) \
+        WetSend[i] += wetGainStep[i]*BufferSize; \
     while(BufferSize--) \
     { \
         for(i = 0;i < OUTPUTCHANNELS;i++) \
@@ -1242,9 +1282,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     }
                     else /* Unknown? */
                     {
-                        *WetSend += wetGainStep*BufferSize;
                         for(i = 0;i < OUTPUTCHANNELS;i++)
                             DrySend[i] += dryGainStep[i]*BufferSize;
+                        for(i = 0;i < MAX_SENDS;i++)
+                            WetSend[i] += wetGainStep[i]*BufferSize;
                         while(BufferSize--)
                         {
                             DataPosFrac += increment;

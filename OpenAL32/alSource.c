@@ -1444,7 +1444,8 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                     {
                         for(j = 0;j < OUTPUTCHANNELS;j++)
                             pSource->DryGains[j] = 0.0f;
-                        pSource->WetGain = 0.0f;
+                        for(j = 0;j < MAX_SENDS;j++)
+                            pSource->WetGains[j] = 0.0f;
 
                         if (pSource->state != AL_PAUSED)
                         {

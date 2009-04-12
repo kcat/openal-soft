@@ -3,7 +3,6 @@
 
 #define AL_NUM_SOURCE_PARAMS    128
 
-/* This cannot be changed without working on the code! */
 #define MAX_SENDS                 1
 
 #include "alFilter.h"
@@ -96,7 +95,7 @@ typedef struct ALsource
 
     // Current gains, which are ramped while mixed
     ALfloat DryGains[OUTPUTCHANNELS];
-    ALfloat WetGain;
+    ALfloat WetGains[MAX_SENDS];
     ALboolean FirstStart;
 
     struct ALsource *next;

@@ -22,6 +22,8 @@ enum {
     OUTPUTCHANNELS
 };
 
+#define BUFFERSIZE 24000
+
 extern ALboolean DuplicateStereo;
 
 __inline ALuint aluBytesFromFormat(ALenum format);

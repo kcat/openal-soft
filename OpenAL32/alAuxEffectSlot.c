@@ -38,7 +38,7 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
 ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
     ALCcontext *Context;
-    ALsizei i;
+    ALsizei i, j;
 
     Context = alcGetCurrentContext();
     if(!Context)
@@ -74,6 +74,8 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 
                     (*list)->Gain = 1.0;
                     (*list)->AuxSendAuto = AL_TRUE;
+                    for(j = 0;j < BUFFERSIZE;j++)
+                        (*list)->WetBuffer[j] = 0.0f;
                     (*list)->refcount = 0;
 
                     effectslots[i] = (ALuint)ALTHUNK_ADDENTRY(*list);

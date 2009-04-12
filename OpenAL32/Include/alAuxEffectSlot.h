@@ -25,6 +25,8 @@ typedef struct ALeffectslot
 
     ALverbState *ReverbState;
 
+    ALfloat WetBuffer[BUFFERSIZE];
+
     ALuint refcount;
 
     // Index to itself

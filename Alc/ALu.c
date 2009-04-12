@@ -92,7 +92,6 @@ typedef long long ALint64;
 #define __min min
 #endif
 
-#define BUFFERSIZE 24000
 #define FRACTIONBITS 14
 #define FRACTIONMASK ((1L<<FRACTIONBITS)-1)
 #define MAX_PITCH 65536
@@ -894,7 +893,8 @@ static __inline ALshort lerp(ALshort val1, ALshort val2, ALint frac)
 ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum format)
 {
     static float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
-    static float WetBuffer[BUFFERSIZE];
+    static float DummyBuffer[BUFFERSIZE];
+    ALfloat *WetBuffer = NULL;
     ALfloat (*Matrix)[OUTPUTCHANNELS] = ALContext->ChannelMatrix;
     ALfloat newDrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
     ALfloat newWetSend = 0.0f;
@@ -963,7 +963,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         rampLength = max(rampLength, SamplesToDo);
 
         //Clear mixing buffer
-        memset(WetBuffer, 0, SamplesToDo*sizeof(ALfloat));
         memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
 
         //Actual mixing loop
@@ -997,6 +996,9 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     //Get source info
                     DryFilter = &ALSource->iirFilter;
                     WetFilter = &ALSource->Send[0].iirFilter;
+                    WetBuffer = (ALSource->Send[0].Slot ?
+                                 ALSource->Send[0].Slot->WetBuffer :
+                                 DummyBuffer);
                     DrySend = ALSource->DryGains;
                     WetSend = &ALSource->WetGain;
 
@@ -1339,8 +1341,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         while(ALEffectSlot)
         {
             if(ALEffectSlot->effect.type == AL_EFFECT_REVERB)
-                VerbProcess(ALEffectSlot->ReverbState, SamplesToDo, WetBuffer, DryBuffer);
+                VerbProcess(ALEffectSlot->ReverbState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
 
+            for(i = 0;i < SamplesToDo;i++)
+                ALEffectSlot->WetBuffer[i] = 0.0f;
             ALEffectSlot = ALEffectSlot->next;
         }
 

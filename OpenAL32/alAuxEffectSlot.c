@@ -50,8 +50,7 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 
     if (n > 0)
     {
-        /* NOTE: We only support one slot currently */
-        if(n == 1 && Context->AuxiliaryEffectSlotCount == 0)
+        if(Context->AuxiliaryEffectSlotCount+n <= Context->AuxiliaryEffectSlotMax)
         {
             // Check that enough memory has been allocted in the 'effectslots' array for n Effect Slots
             if (!IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))

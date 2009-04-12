@@ -479,6 +479,8 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->lNumStereoSources = 1;
     pContext->lNumMonoSources = pContext->Device->MaxNoOfSources - pContext->lNumStereoSources;
 
+    pContext->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
+
     pContext->ExtensionList = "AL_EXTX_buffer_sub_data AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_OFFSET AL_EXTX_source_distance_model AL_LOKI_quadriphonic";
 
     level = GetConfigValueInt(NULL, "cf_level", 0);

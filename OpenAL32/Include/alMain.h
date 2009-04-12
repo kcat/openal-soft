@@ -194,6 +194,8 @@ struct ALCcontext_struct
 
     struct ALeffectslot *AuxiliaryEffectSlot;
     ALuint               AuxiliaryEffectSlotCount;
+    // Maximum number of slots that can be created
+    ALuint               AuxiliaryEffectSlotMax;
 
     ALenum      LastError;
     ALboolean   InUse;

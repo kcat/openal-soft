@@ -67,6 +67,11 @@ excludefx =  # Sets which effects to exclude, preventing apps from using them.
              # reverb
              # Default is empty (all available effects enabled)
 
+slots = 4  # Sets the maximum number of Auxiliary Effect Slots an app can
+           # create. A slot can use a non-negligible amount of CPU time if an
+           # effect is set on it even if no sources are feeding it, so this may
+           # help when apps use more than the system can handle. Default is 4
+
 layout_STEREO =  # Sets the speaker layout when using stereo output. Values are
                  # specified in degrees, where 0 is straight in front, negative
                  # goes left, and positive goes right. The values must define a

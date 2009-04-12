@@ -322,6 +322,7 @@ static void InitAL(void)
                 int type;
             } EffectList[] = {
                 { "reverb", REVERB },
+                { "echo", ECHO },
                 { NULL, 0 }
             };
             int n;

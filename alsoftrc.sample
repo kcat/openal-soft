@@ -64,7 +64,7 @@ drivers =  # Sets the backend driver list order, comma-seperated. Unknown
 excludefx =  # Sets which effects to exclude, preventing apps from using them.
              # This can help for apps that try to use effects which are too CPU
              # intensive for the system to handle. Available effects are:
-             # reverb
+             # reverb,echo
              # Default is empty (all available effects enabled)
 
 slots = 4  # Sets the maximum number of Auxiliary Effect Slots an app can

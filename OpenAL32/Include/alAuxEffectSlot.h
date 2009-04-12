@@ -5,6 +5,7 @@
 #include "alEffect.h"
 #include "alFilter.h"
 #include "alReverb.h"
+#include "alEcho.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +25,7 @@ typedef struct ALeffectslot
     ALboolean AuxSendAuto;
 
     ALverbState *ReverbState;
+    ALechoState *EchoState;
 
     ALfloat WetBuffer[BUFFERSIZE];
 

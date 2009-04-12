@@ -170,7 +170,8 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
         if(param == AL_EFFECT_TYPE)
         {
             ALboolean isOk = (iValue == AL_EFFECT_NULL ||
-                (iValue == AL_EFFECT_REVERB && !DisabledEffects[REVERB]));
+                (iValue == AL_EFFECT_REVERB && !DisabledEffects[REVERB]) ||
+                (iValue == AL_EFFECT_ECHO && !DisabledEffects[ECHO]));
 
             if(isOk)
                 InitEffectParams(ALEffect, iValue);
@@ -188,6 +189,15 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
                     alSetError(AL_INVALID_VALUE);
                 break;
 
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else if(ALEffect->type == AL_EFFECT_ECHO)
+        {
+            switch(param)
+            {
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
@@ -225,6 +235,15 @@ ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
                 alEffecti(effect, param, piValues[0]);
                 break;
 
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else if(ALEffect->type == AL_EFFECT_ECHO)
+        {
+            switch(param)
+            {
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
@@ -343,6 +362,50 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                 break;
             }
         }
+        else if(ALEffect->type == AL_EFFECT_ECHO)
+        {
+            switch(param)
+            {
+            case AL_ECHO_DELAY:
+                if(flValue >= AL_ECHO_MIN_DELAY && flValue <= AL_ECHO_MAX_DELAY)
+                    ALEffect->Echo.Delay = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_ECHO_LRDELAY:
+                if(flValue >= AL_ECHO_MIN_LRDELAY && flValue <= AL_ECHO_MAX_LRDELAY)
+                    ALEffect->Echo.LRDelay = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_ECHO_DAMPING:
+                if(flValue >= AL_ECHO_MIN_DAMPING && flValue <= AL_ECHO_MAX_DAMPING)
+                    ALEffect->Echo.Damping = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_ECHO_FEEDBACK:
+                if(flValue >= AL_ECHO_MIN_FEEDBACK && flValue <= AL_ECHO_MAX_FEEDBACK)
+                    ALEffect->Echo.Feedback = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            case AL_ECHO_SPREAD:
+                if(flValue >= AL_ECHO_MIN_SPREAD && flValue <= AL_ECHO_MAX_SPREAD)
+                    ALEffect->Echo.Spread = flValue;
+                else
+                    alSetError(AL_INVALID_VALUE);
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
         else
             alSetError(AL_INVALID_ENUM);
     }
@@ -379,6 +442,23 @@ ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
             case AL_REVERB_LATE_REVERB_DELAY:
             case AL_REVERB_AIR_ABSORPTION_GAINHF:
             case AL_REVERB_ROOM_ROLLOFF_FACTOR:
+                alEffectf(effect, param, pflValues[0]);
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else if(ALEffect->type == AL_EFFECT_ECHO)
+        {
+            switch(param)
+            {
+            case AL_ECHO_DELAY:
+            case AL_ECHO_LRDELAY:
+            case AL_ECHO_DAMPING:
+            case AL_ECHO_FEEDBACK:
+            case AL_ECHO_SPREAD:
                 alEffectf(effect, param, pflValues[0]);
                 break;
 
@@ -424,6 +504,15 @@ ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
                 break;
             }
         }
+        else if(ALEffect->type == AL_EFFECT_ECHO)
+        {
+            switch(param)
+            {
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
         else
             alSetError(AL_INVALID_ENUM);
     }
@@ -456,6 +545,15 @@ ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
                 alGetEffecti(effect, param, piValues);
                 break;
 
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else if(ALEffect->type == AL_EFFECT_ECHO)
+        {
+            switch(param)
+            {
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
@@ -538,6 +636,35 @@ ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
                 break;
             }
         }
+        else if(ALEffect->type == AL_EFFECT_ECHO)
+        {
+            switch(param)
+            {
+            case AL_ECHO_DELAY:
+                *pflValue = ALEffect->Echo.Delay;
+                break;
+
+            case AL_ECHO_LRDELAY:
+                *pflValue = ALEffect->Echo.LRDelay;
+                break;
+
+            case AL_ECHO_DAMPING:
+                *pflValue = ALEffect->Echo.Damping;
+                break;
+
+            case AL_ECHO_FEEDBACK:
+                *pflValue = ALEffect->Echo.Feedback;
+                break;
+
+            case AL_ECHO_SPREAD:
+                *pflValue = ALEffect->Echo.Spread;
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
         else
             alSetError(AL_INVALID_ENUM);
     }
@@ -574,6 +701,23 @@ ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues
             case AL_REVERB_LATE_REVERB_DELAY:
             case AL_REVERB_AIR_ABSORPTION_GAINHF:
             case AL_REVERB_ROOM_ROLLOFF_FACTOR:
+                alGetEffectf(effect, param, pflValues);
+                break;
+
+            default:
+                alSetError(AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else if(ALEffect->type == AL_EFFECT_ECHO)
+        {
+            switch(param)
+            {
+            case AL_ECHO_DELAY:
+            case AL_ECHO_LRDELAY:
+            case AL_ECHO_DAMPING:
+            case AL_ECHO_FEEDBACK:
+            case AL_ECHO_SPREAD:
                 alGetEffectf(effect, param, pflValues);
                 break;
 
@@ -631,6 +775,13 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Reverb.AirAbsorptionGainHF = 0.994f;
         effect->Reverb.RoomRolloffFactor = 0.0f;
         effect->Reverb.DecayHFLimit = AL_TRUE;
+        break;
+    case AL_EFFECT_ECHO:
+        effect->Echo.Delay = AL_ECHO_DEFAULT_DELAY;
+        effect->Echo.LRDelay = AL_ECHO_DEFAULT_LRDELAY;
+        effect->Echo.Damping = AL_ECHO_DEFAULT_DAMPING;
+        effect->Echo.Feedback = AL_ECHO_DEFAULT_FEEDBACK;
+        effect->Echo.Spread = AL_ECHO_DEFAULT_SPREAD;
         break;
     }
 }

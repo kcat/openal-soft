@@ -151,6 +151,7 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                     ALTHUNK_REMOVEENTRY(ALAuxiliaryEffectSlot->effectslot);
 
                     VerbDestroy(ALAuxiliaryEffectSlot->ReverbState);
+                    EchoDestroy(ALAuxiliaryEffectSlot->EchoState);
 
                     memset(ALAuxiliaryEffectSlot, 0, sizeof(ALeffectslot));
                     free(ALAuxiliaryEffectSlot);
@@ -474,13 +475,31 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
         memset(&ALEffectSlot->effect, 0, sizeof(ALEffectSlot->effect));
         VerbDestroy(ALEffectSlot->ReverbState);
         ALEffectSlot->ReverbState = NULL;
+        EchoDestroy(ALEffectSlot->EchoState);
+        ALEffectSlot->EchoState = NULL;
         return;
     }
     if(effect->type == AL_EFFECT_REVERB)
     {
+        if(ALEffectSlot->EchoState)
+        {
+            EchoDestroy(ALEffectSlot->EchoState);
+            ALEffectSlot->EchoState = NULL;
+        }
         if(!ALEffectSlot->ReverbState)
             ALEffectSlot->ReverbState = VerbCreate(Context);
         VerbUpdate(Context, ALEffectSlot, effect);
+    }
+    else if(effect->type == AL_EFFECT_ECHO)
+    {
+        if(ALEffectSlot->ReverbState)
+        {
+            VerbDestroy(ALEffectSlot->ReverbState);
+            ALEffectSlot->ReverbState = NULL;
+        }
+        if(!ALEffectSlot->EchoState)
+            ALEffectSlot->EchoState = EchoCreate(Context);
+        EchoUpdate(Context, ALEffectSlot, effect);
     }
     memcpy(&ALEffectSlot->effect, effect, sizeof(*effect));
 }
@@ -500,6 +519,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
 
         // Release effectslot structure
         VerbDestroy(temp->ReverbState);
+        EchoDestroy(temp->EchoState);
         ALTHUNK_REMOVEENTRY(temp->effectslot);
 
         memset(temp, 0, sizeof(ALeffectslot));

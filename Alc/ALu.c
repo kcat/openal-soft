@@ -1383,6 +1383,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         {
             if(ALEffectSlot->effect.type == AL_EFFECT_REVERB)
                 VerbProcess(ALEffectSlot->ReverbState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
+            else if(ALEffectSlot->effect.type == AL_EFFECT_ECHO)
+                EchoProcess(ALEffectSlot->EchoState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
 
             for(i = 0;i < SamplesToDo;i++)
                 ALEffectSlot->WetBuffer[i] = 0.0f;

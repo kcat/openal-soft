@@ -710,8 +710,21 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 break;
         }
 
+        // Source Gain + Attenuation and clamp to Min/Max Gain
+        DryMix = SourceVolume * flAttenuation;
+        DryMix = __min(DryMix,MaxVolume);
+        DryMix = __max(DryMix,MinVolume);
+
+        for(i = 0;i < MAX_SENDS;i++)
+        {
+            ALfloat WetMix = SourceVolume * RoomAttenuation[i];
+            WetMix = __min(WetMix,MaxVolume);
+            wetsend[i] = __max(WetMix,MinVolume);
+            wetgainhf[i] = 1.0f;
+        }
+
         // Distance-based air absorption
-        if(ALSource->AirAbsorptionFactor > 0.0f && ALContext->DistanceModel != AL_NONE)
+        if(ALSource->AirAbsorptionFactor > 0.0f && ALSource->DistanceModel != AL_NONE)
         {
             ALfloat dist = Distance-MinDist;
             ALfloat absorb;
@@ -725,19 +738,6 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
             DryGainHF *= absorb;
             for(i = 0;i < MAX_SENDS;i++)
                 wetgainhf[i] *= absorb;
-        }
-
-        // Source Gain + Attenuation and clamp to Min/Max Gain
-        DryMix = SourceVolume * flAttenuation;
-        DryMix = __min(DryMix,MaxVolume);
-        DryMix = __max(DryMix,MinVolume);
-
-        for(i = 0;i < MAX_SENDS;i++)
-        {
-            ALfloat WetMix = SourceVolume * RoomAttenuation[i];
-            WetMix = __min(WetMix,MaxVolume);
-            wetsend[i] = __max(WetMix,MinVolume);
-            wetgainhf[i] = 1.0f;
         }
 
         //3. Apply directional soundcones

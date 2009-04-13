@@ -38,8 +38,8 @@ struct ALechoState {
     ALfloat *SampleBuffer;
     ALuint BufferLength;
 
-    // The echo is two tap. The third tap is the offset to sample from for
-    // feedback
+    // The echo is two tap. The third tap is the offset to write the feedback
+    // and input sample to
     struct {
         ALuint offset;
     } Tap[3];

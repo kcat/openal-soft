@@ -194,7 +194,7 @@ static void printEFXInfo(void)
         const char *name;
     } effects[] = {
         { AL_EFFECT_EAXREVERB,         "EAX Reverb"        },
-        { AL_EFFECT_REVERB,            "Standard Reverb"   },
+        { AL_EFFECT_REVERB,            "Reverb"            },
         { AL_EFFECT_CHORUS,            "Chorus"            },
         { AL_EFFECT_DISTORTION,        "Distortion"        },
         { AL_EFFECT_ECHO,              "Echo"              },

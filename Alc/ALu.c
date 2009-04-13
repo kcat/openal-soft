@@ -562,7 +562,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix;
     ALfloat Direction[3],Position[3],SourceToListener[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
-    ALfloat ConeVolume,SourceVolume,ListenerGain;
+    ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
     ALfloat U[3],V[3],N[3];
     ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound, flMaxVelocity;
     ALfloat Matrix[3][3];
@@ -596,8 +596,6 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     InnerAngle   = ALSource->flInnerAngle;
     OuterAngle   = ALSource->flOuterAngle;
     OuterGainHF  = ALSource->OuterGainHF;
-    for(i = 0;i < MAX_SENDS;i++)
-        RoomRolloff[i] = ALSource->RoomRolloffFactor;
 
     //Only apply 3D calculations for mono buffers
     if(isMono != AL_FALSE)
@@ -644,16 +642,17 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         //2. Calculate distance attenuation
         Distance = aluSqrt(aluDotproduct(Position, Position));
 
+        flAttenuation = 1.0f;
         for(i = 0;i < MAX_SENDS;i++)
         {
+            RoomAttenuation[i] = 1.0f;
+
+            RoomRolloff[i] = ALSource->RoomRolloffFactor;
             if(ALSource->Send[i].Slot &&
                ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB)
                 RoomRolloff[i] += ALSource->Send[i].Slot->effect.Reverb.RoomRolloffFactor;
         }
 
-        flAttenuation = 1.0f;
-        for(i = 0;i < MAX_SENDS;i++)
-            RoomAttenuation[i] = 1.0f;
         switch (ALSource->DistanceModel)
         {
             case AL_INVERSE_DISTANCE_CLAMPED:
@@ -746,36 +745,23 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         {
             ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
             ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f)*scale);
+            ConeHF = (1.0f+(OuterGainHF-1.0f)*scale);
             DryMix *= ConeVolume;
             if(ALSource->DryGainHFAuto)
-                DryGainHF *= (1.0f+(OuterGainHF-1.0f)*scale);
-            if(ALSource->WetGainAuto)
-            {
-                for(i = 0;i < MAX_SENDS;i++)
-                    wetsend[i] *= ConeVolume;
-            }
-            if(ALSource->WetGainHFAuto)
-            {
-                for(i = 0;i < MAX_SENDS;i++)
-                    wetgainhf[i] *= (1.0f+(OuterGainHF-1.0f)*scale);
-            }
+                DryGainHF *= ConeHF;
         }
         else if(Angle > OuterAngle)
         {
             ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f));
+            ConeHF = (1.0f+(OuterGainHF-1.0f));
             DryMix *= ConeVolume;
             if(ALSource->DryGainHFAuto)
-                DryGainHF *= (1.0f+(OuterGainHF-1.0f));
-            if(ALSource->WetGainAuto)
-            {
-                for(i = 0;i < MAX_SENDS;i++)
-                    wetsend[i] *= ConeVolume;
-            }
-            if(ALSource->WetGainHFAuto)
-            {
-                for(i = 0;i < MAX_SENDS;i++)
-                    wetgainhf[i] *= (1.0f+(OuterGainHF-1.0f));
-            }
+                DryGainHF *= ConeHF;
+        }
+        else
+        {
+            ConeVolume = 1.0f;
+            ConeHF = 1.0f;
         }
 
         //4. Calculate Velocity
@@ -811,6 +797,11 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
             if(ALSource->Send[i].Slot &&
                ALSource->Send[i].Slot->effect.type != AL_EFFECT_NULL)
             {
+                if(ALSource->WetGainAuto)
+                    wetsend[i] *= ConeVolume;
+                if(ALSource->WetGainHFAuto)
+                    wetgainhf[i] *= ConeHF;
+
                 if(ALSource->Send[i].Slot->AuxSendAuto)
                 {
                     // Apply minimal attenuation in place of missing
@@ -829,21 +820,21 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 // it's easier (more optimal) to handle it here.
                 if(ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB)
                     wetgainhf[i] *= ALSource->Send[0].Slot->effect.Reverb.GainHF;
+
+                switch(ALSource->Send[i].WetFilter.type)
+                {
+                    case AL_FILTER_LOWPASS:
+                        wetsend[i] *= ALSource->Send[i].WetFilter.Gain;
+                        wetgainhf[i] *= ALSource->Send[i].WetFilter.GainHF;
+                        break;
+                }
+                wetsend[i] *= ListenerGain;
             }
             else
             {
                 wetsend[i] = 0.0f;
                 wetgainhf[i] = 1.0f;
             }
-
-            switch(ALSource->Send[i].WetFilter.type)
-            {
-                case AL_FILTER_LOWPASS:
-                    wetsend[i] *= ALSource->Send[i].WetFilter.Gain;
-                    wetgainhf[i] *= ALSource->Send[i].WetFilter.GainHF;
-                    break;
-            }
-            wetsend[i] *= ListenerGain;
         }
 
         //5. Apply filter gains and filters

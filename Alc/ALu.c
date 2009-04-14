@@ -573,12 +573,14 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     ALfloat DryGainHF = 1.0f;
     ALfloat DirGain, AmbientGain;
     const ALfloat *SpeakerGain;
+    ALint NumSends;
     ALint pos, s, i;
 
     //Get context properties
     DopplerFactor   = ALContext->DopplerFactor * ALSource->DopplerFactor;
     DopplerVelocity = ALContext->DopplerVelocity;
     flSpeedOfSound  = ALContext->flSpeedOfSound;
+    NumSends        = ALContext->NumSends;
 
     //Get listener properties
     ListenerGain = ALContext->Listener.Gain;
@@ -666,7 +668,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 {
                     if ((MinDist + (Rolloff * (Distance - MinDist))) > 0.0f)
                         flAttenuation = MinDist / (MinDist + (Rolloff * (Distance - MinDist)));
-                    for(i = 0;i < MAX_SENDS;i++)
+                    for(i = 0;i < NumSends;i++)
                     {
                         if ((MinDist + (RoomRolloff[i] * (Distance - MinDist))) > 0.0f)
                             RoomAttenuation[i] = MinDist / (MinDist + (RoomRolloff[i] * (Distance - MinDist)));
@@ -685,7 +687,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 if (MaxDist != MinDist)
                 {
                     flAttenuation = 1.0f - (Rolloff*(Distance-MinDist)/(MaxDist - MinDist));
-                    for(i = 0;i < MAX_SENDS;i++)
+                    for(i = 0;i < NumSends;i++)
                         RoomAttenuation[i] = 1.0f - (RoomRolloff[i]*(Distance-MinDist)/(MaxDist - MinDist));
                 }
                 break;
@@ -700,7 +702,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 if ((Distance > 0.0f) && (MinDist > 0.0f))
                 {
                     flAttenuation = (ALfloat)pow(Distance/MinDist, -Rolloff);
-                    for(i = 0;i < MAX_SENDS;i++)
+                    for(i = 0;i < NumSends;i++)
                         RoomAttenuation[i] = (ALfloat)pow(Distance/MinDist, -RoomRolloff[i]);
                 }
                 break;
@@ -714,7 +716,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         DryMix = __min(DryMix,MaxVolume);
         DryMix = __max(DryMix,MinVolume);
 
-        for(i = 0;i < MAX_SENDS;i++)
+        for(i = 0;i < NumSends;i++)
         {
             ALfloat WetMix = SourceVolume * RoomAttenuation[i];
             WetMix = __min(WetMix,MaxVolume);
@@ -792,7 +794,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         else
             pitch[0] = ALSource->flPitch;
 
-        for(i = 0;i < MAX_SENDS;i++)
+        for(i = 0;i < NumSends;i++)
         {
             if(ALSource->Send[i].Slot &&
                ALSource->Send[i].Slot->effect.type != AL_EFFECT_NULL)
@@ -835,6 +837,11 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 wetsend[i] = 0.0f;
                 wetgainhf[i] = 1.0f;
             }
+        }
+        for(i = NumSends;i < MAX_SENDS;i++)
+        {
+            wetsend[i] = 0.0f;
+            wetgainhf[i] = 1.0f;
         }
 
         //5. Apply filter gains and filters

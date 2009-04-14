@@ -211,6 +211,8 @@ struct ALCcontext_struct
     ALint       lNumMonoSources;
     ALint       lNumStereoSources;
 
+    ALuint      NumSends;
+
     ALfloat     PanningLUT[OUTPUTCHANNELS * LUT_NUM];
     ALint       NumChan;
 

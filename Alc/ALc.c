@@ -481,6 +481,9 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->lNumMonoSources = pContext->Device->MaxNoOfSources - pContext->lNumStereoSources;
 
     pContext->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
+    pContext->NumSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
+    if(pContext->NumSends > MAX_SENDS)
+        pContext->NumSends = MAX_SENDS;
 
     pContext->ExtensionList = "AL_EXTX_buffer_sub_data AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_OFFSET AL_EXTX_source_distance_model AL_LOKI_quadriphonic";
 
@@ -819,6 +822,8 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                 case ALC_MAX_AUXILIARY_SENDS:
                     if(!size)
                         SetALCError(ALC_INVALID_VALUE);
+                    else if(device && device->Context)
+                        *data = device->Context->NumSends;
                     else
                         *data = MAX_SENDS;
                     break;
@@ -860,7 +865,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                             data[i++] = device->Context->lNumStereoSources;
 
                             data[i++] = ALC_MAX_AUXILIARY_SENDS;
-                            data[i++] = MAX_SENDS;
+                            data[i++] = device->Context->NumSends;
                         }
                         ProcessContext(NULL);
 
@@ -1025,6 +1030,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 {
     ALCcontext *ALContext = NULL;
     ALuint      ulAttributeIndex, ulRequestedStereoSources;
+    ALuint      RequestedSends;
 
     if ((device)&&(!device->IsCaptureDevice))
     {
@@ -1054,7 +1060,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 
             ProcessContext(NULL);
 
-            // Check for Voice Count attributes
+            // Check for attributes
             if (attrList)
             {
                 ulAttributeIndex = 0;
@@ -1069,7 +1075,16 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 
                         ALContext->lNumStereoSources = ulRequestedStereoSources;
                         ALContext->lNumMonoSources = ALContext->Device->MaxNoOfSources - ALContext->lNumStereoSources;
-                        break;
+                    }
+
+                    if(attrList[ulAttributeIndex] == ALC_MAX_AUXILIARY_SENDS)
+                    {
+                        RequestedSends = attrList[ulAttributeIndex + 1];
+
+                        if(RequestedSends > ALContext->NumSends)
+                            RequestedSends = ALContext->NumSends;
+
+                        ALContext->NumSends = RequestedSends;
                     }
 
                     ulAttributeIndex += 2;

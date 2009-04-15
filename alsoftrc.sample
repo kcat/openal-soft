@@ -72,9 +72,9 @@ slots = 4  # Sets the maximum number of Auxiliary Effect Slots an app can
            # effect is set on it even if no sources are feeding it, so this may
            # help when apps use more than the system can handle. Default is 4
 
-sends = 1  # Sets the maximum number of auxiliary sends per source. The total
+sends = 2  # Sets the maximum number of auxiliary sends per source. The total
            # number of sends possible is defined at compile time and thus can
-           # not be increased beyond the default. Default is 1
+           # not be increased beyond the default. Default is 2
 
 layout_STEREO =  # Sets the speaker layout when using stereo output. Values are
                  # specified in degrees, where 0 is straight in front, negative

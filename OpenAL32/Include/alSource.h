@@ -3,7 +3,7 @@
 
 #define AL_NUM_SOURCE_PARAMS    128
 
-#define MAX_SENDS                 1
+#define MAX_SENDS                 2
 
 #include "alFilter.h"
 #include "alu.h"

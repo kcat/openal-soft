@@ -181,7 +181,7 @@ __inline ALuint aluChannelsFromFormat(ALenum format)
 }
 
 
-static __inline ALfloat lpFilter(FILTER *iir, ALfloat input)
+static __inline ALfloat lpFilter4P(FILTER *iir, ALfloat input)
 {
     ALfloat *history = iir->history;
     ALfloat a = iir->coeff;
@@ -199,7 +199,7 @@ static __inline ALfloat lpFilter(FILTER *iir, ALfloat input)
     return output;
 }
 
-static __inline ALfloat lpFilterMC(FILTER *iir, ALuint chan, ALfloat input)
+static __inline ALfloat lpFilter2P(FILTER *iir, ALuint chan, ALfloat input)
 {
     ALfloat *history = &iir->history[chan*2];
     ALfloat a = iir->coeff;
@@ -1052,7 +1052,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 
                         for(i = 0;i < MAX_SENDS;i++)
                         {
-                            g = aluSqrt(__max(WetGainHF[i], 0.0001f));
+                            // The wet path uses two chained one-pole filters,
+                            // so take the base gain (square root of the
+                            // squared gain)
+                            g = __max(WetGainHF[i], 0.01f);
                             a = 0.0f;
                             if(g < 0.9999f) // 1-epsilon
                                 a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
@@ -1062,8 +1065,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     else
                     {
                         // Multi-channel sources use two chained one-pole
-                        // filters, so take the base gain (square root of the
-                        // squared gain)
+                        // filters
                         cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / ALContext->Frequency);
                         g = __max(DryGainHF, 0.01f);
                         a = 0.0f;
@@ -1177,7 +1179,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             value = lerp(Data[k], Data[k+1], DataPosFrac);
 
                             //Direct path final mix buffer and panning
-                            outsamp = lpFilter(DryFilter, value);
+                            outsamp = lpFilter4P(DryFilter, value);
                             DryBuffer[j][FRONT_LEFT]   += outsamp*DrySend[FRONT_LEFT];
                             DryBuffer[j][FRONT_RIGHT]  += outsamp*DrySend[FRONT_RIGHT];
                             DryBuffer[j][SIDE_LEFT]    += outsamp*DrySend[SIDE_LEFT];
@@ -1190,7 +1192,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             //Room path final mix buffer and panning
                             for(i = 0;i < MAX_SENDS;i++)
                             {
-                                outsamp = lpFilter(WetFilter[i], value);
+                                outsamp = lpFilter2P(WetFilter[i], 0, value);
                                 WetBuffer[i][j] += outsamp*WetSend[i];
                             }
 
@@ -1217,7 +1219,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         for(i = 0;i < Channels;i++) \
         { \
             value = lerp(Data[k*Channels + i], Data[(k+1)*Channels + i], DataPosFrac); \
-            values[i] = lpFilterMC(DryFilter, chans[i], value)*DrySend[chans[i]]; \
+            values[i] = lpFilter2P(DryFilter, chans[i], value)*DrySend[chans[i]]; \
         } \
         for(out = 0;out < OUTPUTCHANNELS;out++) \
         { \

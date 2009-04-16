@@ -48,7 +48,9 @@ struct ALechoState {
     ALfloat GainR;
 
     ALfloat FeedGain;
+
     FILTER iirFilter;
+    ALfloat history[2];
 };
 
 // Find the next power of 2.  Actually, this will return the input value if
@@ -100,8 +102,8 @@ ALechoState *EchoCreate(ALCcontext *Context)
     state->GainL = 0.0f;
     state->GainR = 0.0f;
 
-    for(i = 0;i < sizeof(state->iirFilter.history)/sizeof(state->iirFilter.history[0]);i++)
-        state->iirFilter.history[i] = 0.0f;
+    for(i = 0;i < sizeof(state->history)/sizeof(state->history[0]);i++)
+        state->history[i] = 0.0f;
     state->iirFilter.coeff = 0.0f;
 
     return state;

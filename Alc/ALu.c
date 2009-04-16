@@ -181,9 +181,9 @@ __inline ALuint aluChannelsFromFormat(ALenum format)
 }
 
 
-static __inline ALfloat lpFilter4P(FILTER *iir, ALfloat input)
+static __inline ALfloat lpFilter4P(FILTER *iir, ALuint offset, ALfloat input)
 {
-    ALfloat *history = iir->history;
+    ALfloat *history = &iir->history[offset];
     ALfloat a = iir->coeff;
     ALfloat output = input;
 
@@ -199,9 +199,9 @@ static __inline ALfloat lpFilter4P(FILTER *iir, ALfloat input)
     return output;
 }
 
-static __inline ALfloat lpFilter2P(FILTER *iir, ALuint chan, ALfloat input)
+static __inline ALfloat lpFilter2P(FILTER *iir, ALuint offset, ALfloat input)
 {
-    ALfloat *history = &iir->history[chan*2];
+    ALfloat *history = &iir->history[offset];
     ALfloat a = iir->coeff;
     ALfloat output = input;
 
@@ -1179,7 +1179,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                             value = lerp(Data[k], Data[k+1], DataPosFrac);
 
                             //Direct path final mix buffer and panning
-                            outsamp = lpFilter4P(DryFilter, value);
+                            outsamp = lpFilter4P(DryFilter, 0, value);
                             DryBuffer[j][FRONT_LEFT]   += outsamp*DrySend[FRONT_LEFT];
                             DryBuffer[j][FRONT_RIGHT]  += outsamp*DrySend[FRONT_RIGHT];
                             DryBuffer[j][SIDE_LEFT]    += outsamp*DrySend[SIDE_LEFT];
@@ -1219,7 +1219,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         for(i = 0;i < Channels;i++) \
         { \
             value = lerp(Data[k*Channels + i], Data[(k+1)*Channels + i], DataPosFrac); \
-            values[i] = lpFilter2P(DryFilter, chans[i], value)*DrySend[chans[i]]; \
+            values[i] = lpFilter2P(DryFilter, chans[i]*2, value)*DrySend[chans[i]]; \
         } \
         for(out = 0;out < OUTPUTCHANNELS;out++) \
         { \

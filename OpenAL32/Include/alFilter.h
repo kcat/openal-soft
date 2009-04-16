@@ -9,8 +9,8 @@ extern "C" {
 #endif
 
 typedef struct {
-    ALfloat history[OUTPUTCHANNELS*2];
     ALfloat coeff;
+    ALfloat history[0];
 } FILTER;
 
 #define AL_FILTER_TYPE                                     0x8001

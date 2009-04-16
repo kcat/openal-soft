@@ -69,6 +69,7 @@ typedef struct ALsource
         struct ALeffectslot *Slot;
         ALfilter WetFilter;
         FILTER iirFilter;
+        ALfloat history[2];
     } Send[MAX_SENDS];
 
     ALboolean DryGainHFAuto;
@@ -77,6 +78,7 @@ typedef struct ALsource
     ALfloat   OuterGainHF;
 
     FILTER iirFilter;
+    ALfloat history[OUTPUTCHANNELS*2];
 
     ALfloat AirAbsorptionFactor;
 

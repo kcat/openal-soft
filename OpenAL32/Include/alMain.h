@@ -152,6 +152,7 @@ void alcDSoundInit(BackendFuncs *func_list);
 void alcWinMMInit(BackendFuncs *FuncList);
 void alc_pa_init(BackendFuncs *func_list);
 void alc_wave_init(BackendFuncs *func_list);
+void alc_pulse_init(BackendFuncs *func_list);
 
 
 struct ALCdevice_struct

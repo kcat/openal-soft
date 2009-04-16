@@ -59,7 +59,7 @@ drivers =  # Sets the backend driver list order, comma-seperated. Unknown
            # backends and duplicated names are ignored, and unlisted backends
            # won't be considered for use. An empty list means the default.
            # Default is:
-           # alsa,oss,solaris,dsound,winmm,port,wave
+           # alsa,oss,solaris,dsound,winmm,port,pulse,wave
 
 excludefx =  # Sets which effects to exclude, preventing apps from using them.
              # This can help for apps that try to use effects which are too CPU
@@ -150,6 +150,9 @@ device = -1  # Sets the device index for output. Negative values will use the
              # default as given by PortAudio itself. Default is -1
 
 periods = 4  # Sets the number of update buffers. Default is 4
+
+[pulse]  # PulseAudio backend stuff
+         # Nothing yet...
 
 [wave]  # Wave File Writer stuff
 file =  # Sets the filename of the wave file to write to. An empty name

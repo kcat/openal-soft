@@ -250,7 +250,7 @@ static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name, ALCenum fo
 
     pa_context_set_state_callback(data->context, context_state_callback, data);
 
-    if(pa_context_connect(data->context, NULL, 0, NULL) < 0)
+    if(pa_context_connect(data->context, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL) < 0)
     {
         AL_PRINT("Context did not connect: %s\n",
                  pa_strerror(pa_context_errno(data->context)));

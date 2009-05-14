@@ -33,6 +33,9 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
+#ifndef DSSPEAKER_5POINT1
+#define DSSPEAKER_5POINT1       6
+#endif
 #ifndef DSSPEAKER_7POINT1
 #define DSSPEAKER_7POINT1       7
 #endif

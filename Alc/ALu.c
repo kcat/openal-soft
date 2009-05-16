@@ -572,6 +572,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DryGainHF = 1.0f;
     ALfloat DirGain, AmbientGain;
+    ALfloat length;
     const ALfloat *SpeakerGain;
     ALint NumSends;
     ALint pos, s, i;
@@ -855,7 +856,16 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         DryMix *= ListenerGain;
 
         // Use energy-preserving panning algorithm for multi-speaker playback
-        aluNormalize(Position);
+        length = aluSqrt(Position[0]*Position[0] + Position[1]*Position[1] +
+                         Position[2]*Position[2]);
+        length = __max(length, MinDist);
+        if(length > 0.0f)
+        {
+            ALfloat invlen = 1.0f/length;
+            Position[0] *= invlen;
+            Position[1] *= invlen;
+            Position[2] *= invlen;
+        }
 
         pos = aluCart2LUTpos(-Position[2], Position[0]);
         SpeakerGain = &ALContext->PanningLUT[OUTPUTCHANNELS * pos];

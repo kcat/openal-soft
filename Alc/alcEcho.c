@@ -144,8 +144,6 @@ ALvoid EchoUpdate(ALCcontext *Context, struct ALeffectslot *Slot, ALeffect *Effe
 
 ALvoid EchoProcess(ALechoState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
-    ALfloat *history = state->iirFilter.history;
-    const ALfloat a = state->iirFilter.coeff;
     const ALuint delay = state->BufferLength-1;
     ALuint tap1off = state->Tap[0].offset;
     ALuint tap2off = state->Tap[1].offset;
@@ -156,12 +154,7 @@ ALvoid EchoProcess(ALechoState *state, ALuint SamplesToDo, const ALfloat *Sample
     for(i = 0;i < SamplesToDo;i++)
     {
         // Apply damping
-        samp[0] = state->SampleBuffer[tap2off] + SamplesIn[i];
-
-        samp[0] += (history[0]-samp[0]) * a;
-        history[0] = samp[0];
-        samp[0] += (history[1]-samp[0]) * a;
-        history[1] = samp[0];
+        samp[0] = lpFilter2P(&state->iirFilter, 0, state->SampleBuffer[tap2off]+SamplesIn[i]);
 
         // Apply feedback gain and mix in the new sample
         state->SampleBuffer[fboff] = samp[0] * state->FeedGain;

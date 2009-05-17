@@ -140,39 +140,6 @@ __inline ALuint aluChannelsFromFormat(ALenum format)
 }
 
 
-static __inline ALfloat lpFilter4P(FILTER *iir, ALuint offset, ALfloat input)
-{
-    ALfloat *history = &iir->history[offset];
-    ALfloat a = iir->coeff;
-    ALfloat output = input;
-
-    output = output + (history[0]-output)*a;
-    history[0] = output;
-    output = output + (history[1]-output)*a;
-    history[1] = output;
-    output = output + (history[2]-output)*a;
-    history[2] = output;
-    output = output + (history[3]-output)*a;
-    history[3] = output;
-
-    return output;
-}
-
-static __inline ALfloat lpFilter2P(FILTER *iir, ALuint offset, ALfloat input)
-{
-    ALfloat *history = &iir->history[offset];
-    ALfloat a = iir->coeff;
-    ALfloat output = input;
-
-    output = output + (history[0]-output)*a;
-    history[0] = output;
-    output = output + (history[1]-output)*a;
-    history[1] = output;
-
-    return output;
-}
-
-
 static __inline ALshort aluF2S(ALfloat Value)
 {
     ALint i;

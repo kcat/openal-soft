@@ -29,24 +29,7 @@
 #include "alAuxEffectSlot.h"
 #include "alEffect.h"
 #include "alReverb.h"
-
-#ifdef HAVE_SQRTF
-#define aluSqrt(x) ((ALfloat)sqrtf((float)(x)))
-#else
-#define aluSqrt(x) ((ALfloat)sqrt((double)(x)))
-#endif
-
-// fixes for mingw32.
-#if defined(max) && !defined(__max)
-#define __max max
-#endif
-#if defined(min) && !defined(__min)
-#define __min min
-#endif
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846  /* pi */
-#endif
+#include "alu.h"
 
 typedef struct DelayLine
 {

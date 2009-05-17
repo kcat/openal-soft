@@ -27,12 +27,7 @@
 #include "alFilter.h"
 #include "alAuxEffectSlot.h"
 #include "alEcho.h"
-
-#ifdef HAVE_SQRTF
-#define aluSqrt(x) ((ALfloat)sqrtf((float)(x)))
-#else
-#define aluSqrt(x) ((ALfloat)sqrt((double)(x)))
-#endif
+#include "alu.h"
 
 struct ALechoState {
     ALfloat *SampleBuffer;

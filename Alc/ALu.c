@@ -40,15 +40,6 @@
 #include "bs2b.h"
 #include "alReverb.h"
 
-#if defined (HAVE_FLOAT_H)
-#include <float.h>
-#endif
-
-#ifndef M_PI
-#define M_PI           3.14159265358979323846  /* pi */
-#define M_PI_2         1.57079632679489661923  /* pi/2 */
-#endif
-
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
 typedef int64_t ALint64;
@@ -58,38 +49,6 @@ typedef __int64 ALint64;
 typedef long ALint64;
 #elif (SIZEOF_LONG_LONG == 8)
 typedef long long ALint64;
-#endif
-
-#ifdef HAVE_SQRTF
-#define aluSqrt(x) ((ALfloat)sqrtf((float)(x)))
-#else
-#define aluSqrt(x) ((ALfloat)sqrt((double)(x)))
-#endif
-
-#ifdef HAVE_ACOSF
-#define aluAcos(x) ((ALfloat)acosf((float)(x)))
-#else
-#define aluAcos(x) ((ALfloat)acos((double)(x)))
-#endif
-
-#ifdef HAVE_ATANF
-#define aluAtan(x) ((ALfloat)atanf((float)(x)))
-#else
-#define aluAtan(x) ((ALfloat)atan((double)(x)))
-#endif
-
-#ifdef HAVE_FABSF
-#define aluFabs(x) ((ALfloat)fabsf((float)(x)))
-#else
-#define aluFabs(x) ((ALfloat)fabs((double)(x)))
-#endif
-
-// fixes for mingw32.
-#if defined(max) && !defined(__max)
-#define __max max
-#endif
-#if defined(min) && !defined(__min)
-#define __min min
 #endif
 
 #define FRACTIONBITS 14

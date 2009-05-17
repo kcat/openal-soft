@@ -4,11 +4,13 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "alu.h"
-
 #ifdef HAVE_FENV_H
 #include <fenv.h>
 #endif
+
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
 
 #ifdef _WIN32
 
@@ -98,10 +100,8 @@ static inline void Sleep(ALuint t)
 #define max(x,y) (((x)>(y))?(x):(y))
 #endif
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/alext.h"
 #include "alListener.h"
+#include "alu.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -12,150 +12,203 @@
 # hints and may not be honored (though generally it'll try to get as close as
 # possible). These are the current available settings:
 
-format = AL_FORMAT_STEREO16  # Sets the output format. Can be one of:
-                             # AL_FORMAT_MONO8    (8-bit mono)
-                             # AL_FORMAT_STEREO8  (8-bit stereo)
-                             # AL_FORMAT_QUAD8    (8-bit 4-channel)
-                             # AL_FORMAT_51CHN8   (8-bit 5.1 output)
-                             # AL_FORMAT_61CHN8   (8-bit 6.1 output)
-                             # AL_FORMAT_71CHN8   (8-bit 7.1 output)
-                             # AL_FORMAT_MONO16   (16-bit mono)
-                             # AL_FORMAT_STEREO16 (16-bit stereo)
-                             # AL_FORMAT_QUAD16   (16-bit 4-channel)
-                             # AL_FORMAT_51CHN16  (16-bit 5.1 output)
-                             # AL_FORMAT_61CHN16  (16-bit 6.1 output)
-                             # AL_FORMAT_71CHN16  (16-bit 7.1 output)
-                             # Default is AL_FORMAT_STEREO16
+## format:
+#  Sets the output format. Can be one of:
+#  AL_FORMAT_MONO8    (8-bit mono)
+#  AL_FORMAT_STEREO8  (8-bit stereo)
+#  AL_FORMAT_QUAD8    (8-bit 4-channel)
+#  AL_FORMAT_51CHN8   (8-bit 5.1 output)
+#  AL_FORMAT_61CHN8   (8-bit 6.1 output)
+#  AL_FORMAT_71CHN8   (8-bit 7.1 output)
+#  AL_FORMAT_MONO16   (16-bit mono)
+#  AL_FORMAT_STEREO16 (16-bit stereo)
+#  AL_FORMAT_QUAD16   (16-bit 4-channel)
+#  AL_FORMAT_51CHN16  (16-bit 5.1 output)
+#  AL_FORMAT_61CHN16  (16-bit 6.1 output)
+#  AL_FORMAT_71CHN16  (16-bit 7.1 output)
+#format = AL_FORMAT_STEREO16
 
-cf_level = 0  # Sets the crossfeed level for stereo output. Valid values are:
-              # 0 - No crossfeed
-              # 1 - Low crossfeed
-              # 2 - Middle crossfeed
-              # 3 - High crossfeed (virtual speakers are closer to itself)
-              # 4 - Low easy crossfeed
-              # 5 - Middle easy crossfeed
-              # 6 - High easy crossfeed
-              # Default is 0. Users of headphones may want to try various
-              # settings. Has no effect on non-stereo modes.
+## cf_level:
+#  Sets the crossfeed level for stereo output. Valid values are:
+#  0 - No crossfeed
+#  1 - Low crossfeed
+#  2 - Middle crossfeed
+#  3 - High crossfeed (virtual speakers are closer to itself)
+#  4 - Low easy crossfeed
+#  5 - Middle easy crossfeed
+#  6 - High easy crossfeed
+#  Users of headphones may want to try various settings. Has no effect on non-
+#  stereo modes.
+#cf_level = 0
 
-frequency = 44100  # Sets the output frequency. Default is 44100
+## frequency:
+#  Sets the output frequency.
+#frequency = 44100
 
-refresh = 4096  # Sets the buffer size, in frames. Default is 4096. Note that
-                # the actual granularity may or may not be less than this.
+## refresh:
+#  Sets the buffer size, in frames. Note that the actual granularity may or may
+#  not be less than this.
+#refresh = 4096
 
-sources = 256  # Sets the maximum number of allocatable sources. Lower values
-               # may help for systems with apps that try to play more sounds
-               # than the CPU can handle. Default is 256
+## sources:
+#  Sets the maximum number of allocatable sources. Lower values may help for
+#  systems with apps that try to play more sounds than the CPU can handle.
+#sources = 256
 
-stereodup =  # Sets whether to duplicate stereo sounds on the rear and side
-             # speakers for 4+ channel output. This can make stereo sources
-             # substantially louder than mono or even 4+ channel sources, but
-             # provides a "fuller" playback quality. True, yes, on, and non-0
-             # values will duplicate stereo sources. 0 and anything else will
-             # cause stereo sounds to only play out the front speakers.
-             # Default is false
+## stereodup:
+#  Sets whether to duplicate stereo sounds on the rear and side speakers for 4+
+#  channel output. This can make stereo sources substantially louder than mono
+#  or even 4+ channel sources, but provides a "fuller" playback quality. True,
+#  yes, on, and non-0 values will duplicate stereo sources. 0 and anything else
+#  will cause stereo sounds to only play out the front speakers.
+#stereodup = false
 
-drivers =  # Sets the backend driver list order, comma-seperated. Unknown
-           # backends and duplicated names are ignored, and unlisted backends
-           # won't be considered for use. An empty list means the default.
-           # Default is:
-           # alsa,oss,solaris,dsound,winmm,port,pulse,wave
+## drivers:
+#  Sets the backend driver list order, comma-seperated. Unknown backends and
+#  duplicated names are ignored, and unlisted backends won't be considered for
+#  use. An empty list means the default.
+#drivers = alsa,oss,solaris,dsound,winmm,port,pulse,wave
 
-excludefx =  # Sets which effects to exclude, preventing apps from using them.
-             # This can help for apps that try to use effects which are too CPU
-             # intensive for the system to handle. Available effects are:
-             # reverb,echo
-             # Default is empty (all available effects enabled)
+## excludefx:
+#  Sets which effects to exclude, preventing apps from using them. This can
+#  help for apps that try to use effects which are too CPU intensive for the
+#  system to handle. Available effects are: reverb,echo
+#excludefx =
 
-slots = 4  # Sets the maximum number of Auxiliary Effect Slots an app can
-           # create. A slot can use a non-negligible amount of CPU time if an
-           # effect is set on it even if no sources are feeding it, so this may
-           # help when apps use more than the system can handle. Default is 4
+## slots:
+#  Sets the maximum number of Auxiliary Effect Slots an app can create. A slot
+#  can use a non-negligible amount of CPU time if an effect is set on it even
+#  if no sources are feeding it, so this may help when apps use more than the
+#  system can handle.
+#slots = 4
 
-sends = 2  # Sets the maximum number of auxiliary sends per source. The total
-           # number of sends possible is defined at compile time and thus can
-           # not be increased beyond the default. Default is 2
+## sends:
+#  Sets the maximum number of auxiliary sends per source. The total number of
+#  sends possible is defined at compile time and thus can not be increased
+#  beyond the default (2).
+#sends = 2
 
-layout_STEREO =  # Sets the speaker layout when using stereo output. Values are
-                 # specified in degrees, where 0 is straight in front, negative
-                 # goes left, and positive goes right. The values must define a
-                 # circular pattern, starting with the back-left at the most
-                 # negative, around the front to back-center. Unspecified
-                 # speakers will remain at their default position. Available
-                 # speakers are front-left(fl) and front-right(fr).
-                 # The default is:
-                 # fl=-90, fr=90
+## layout_STEREO:
+#  Sets the speaker layout when using stereo output. Values are specified in
+#  degrees, where 0 is straight in front, negative goes left, and positive goes
+#  right. The values must define a circular pattern, starting with the back-
+#  left at the most negative, around the front to back-center. Unspecified
+#  speakers will remain at their default position. Available speakers are
+#  front-left(fl) and front-right(fr).
+#layout_STEREO = fl=-90, fr=90
 
-layout_QUAD =  # Sets the speaker layout when using quadriphonic output.
-               # Available speakers are back-left(bl), front-left(fl),
-               # front-right(fr), and back-right(br).
-               # The default is:
-               # bl=-135, fl=-45, fr=45, br=135
+## laytout_QUAD:
+#  Sets the speaker layout when using quadriphonic output. Available speakers
+#  are back-left(bl), front-left(fl), front-right(fr), and back-right(br).
+#layout_QUAD = bl=-135, fl=-45, fr=45, br=135
 
-layout_51CHN =  # Sets the speaker layout when using 5.1 output. Available
-                # speakers are back-left(bl), front-left(fl), front-center(fc),
-                # front-right(fr), and back-right(br).
-                # The default is:
-                # bl=-110, fl=-30, fc=0, fr=30, br=110
+## layout_51CHN:
+#  Sets the speaker layout when using 5.1 output. Available speakers are back-
+#  left(bl), front-left(fl), front-center(fc), front-right(fr), and back-
+#  right(br).
+#layout_51CHN = bl=-110, fl=-30, fc=0, fr=30, br=110
 
-layout_61CHN =  # Sets the speaker layout when using 6.1 output. Available
-                # speakers are side-left(sl), front-left(fl), front-center(fc),
-                # front-right(fr), side-right(sr), and back-center(bc).
-                # The default is:
-                # sl=-90, fl=-30, fc=0, fr=30, sr=90, bc=180
+## layout_61CHN:
+#  Sets the speaker layout when using 6.1 output. Available speakers are side-
+#  left(sl), front-left(fl), front-center(fc), front-right(fr), side-right(sr),
+#  and back-center(bc).
+#layout_61CHN = sl=-90, fl=-30, fc=0, fr=30, sr=90, bc=180
 
-layout_71CHN =  # Sets the speaker layout when using 7.1 output. Available
-                # speakers are back-left(bl), side-left(sl), front-left(fl),
-                # front-center(fc), front-right(fr), side-right(sr), and
-                # back-right(br).
-                # The default is:
-                # bl=-150, sl=-90, fl=-30, fc=0, fr=30, sr=90 br=150
+## layout_71CHN:
+#  Sets the speaker layout when using 7.1 output. Available speakers are back-
+#  left(bl), side-left(sl), front-left(fl), front-center(fc), front-right(fr),
+#  side-right(sr), and back-right(br).
+#layout_71CHN = bl=-150, sl=-90, fl=-30, fc=0, fr=30, sr=90, br=150
 
+##
+## ALSA backend stuff
+##
+[alsa]
 
-[alsa]  # ALSA backend stuff
-device = default  # Sets the device name for the default playback device.
-                  # Default is default
+## device:
+#  Sets the device name for the default playback device.
+#device = default
 
-periods = 0  # Sets the number of update buffers for playback. A value of 0
-             # means auto-select. Default is 0
+## periods:
+#  Sets the number of update buffers for playback. A value of 0 means auto-
+#  select.
+#periods = 0
 
-capture = default  # Sets the device name for the default capture device.
-                   # Default is default
+## capture:
+#  Sets the device name for the default capture device.
+#capture = default
 
-mmap = true  # Sets whether to try using mmap mode (helps reduce latencies and
-             # CPU consumption). If mmap isn't available, it will automatically
-             # fall back to non-mmap mode. True, yes, on, and non-0 values will
-             # attempt to use mmap. 0 and anything else will force mmap off.
-             # Default is true.
+## mmap:
+#  Sets whether to try using mmap mode (helps reduce latencies and CPU
+#  consumption). If mmap isn't available, it will automatically fall back to
+#  non-mmap mode. True, yes, on, and non-0 values will attempt to use mmap. 0
+#  and anything else will force mmap off.
+#mmap = true
 
-[oss]  # OSS backend stuff
-device = /dev/dsp  # Sets the device name for OSS output. Default is /dev/dsp
+##
+## OSS backend stuff
+##
+[oss]
 
-periods = 4  # Sets the number of update buffers. Default is 4
+## device:
+#  Sets the device name for OSS output.
+#device = /dev/dsp
 
-capture = /dev/dsp  # Sets the device name for OSS capture. Default is /dev/dsp
+## periods:
+#  Sets the number of update buffers.
+#periods = 4
 
-[solaris]  # Solaris backend stuff
-device = /dev/audio  # Sets the device name for Solaris output. Default is
-                     # /dev/audio
+## capture:
+#  Sets the device name for OSS capture.
+#capture = /dev/dsp
 
-[dsound]  # DirectSound backend stuff
-periods = 4  # Sets the number of updates for the output buffer. Default is 4
+##
+## Solaris backend stuff
+##
+[solaris]
 
-[winmm]  # Windows Multimedia backend stuff
-         # Nothing yet...
+## device:
+#  Sets the device name for Solaris output.
+#device = /dev/audio
 
-[port]  # PortAudio backend stuff
-device = -1  # Sets the device index for output. Negative values will use the
-             # default as given by PortAudio itself. Default is -1
+## DirectSound backend stuff
+[dsound]
 
-periods = 4  # Sets the number of update buffers. Default is 4
+## periods:
+#  Sets the number of updates for the output buffer.
+#periods = 4
 
-[pulse]  # PulseAudio backend stuff
-         # Nothing yet...
+##
+## Windows Multimedia backend stuff
+##
+[winmm]
 
-[wave]  # Wave File Writer stuff
-file =  # Sets the filename of the wave file to write to. An empty name
-        # prevents the backend from opening, even when explicitly requested.
-        # THIS WILL OVERWRITE EXISTING FILES WITHOUT QUESTION!
-        # Default is empty
+##
+## PortAudio backend stuff
+##
+[port]
+
+## device:
+#  Sets the device index for output. Negative values will use the default as
+#  given by PortAudio itself.
+#device = -1
+
+## periods:
+#  Sets the number of update buffers.
+#periods = 4
+
+##
+## PulseAudio backend stuff
+##
+[pulse]
+
+##
+## Wave File Writer stuff
+##
+[wave]
+
+## file:
+#  Sets the filename of the wave file to write to. An empty name prevents the
+#  backend from opening, even when explicitly requested.
+#  THIS WILL OVERWRITE EXISTING FILES WITHOUT QUESTION!
+#file =

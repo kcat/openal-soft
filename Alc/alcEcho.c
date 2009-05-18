@@ -97,8 +97,8 @@ ALechoState *EchoCreate(ALCcontext *Context)
     state->GainL = 0.0f;
     state->GainR = 0.0f;
 
-    for(i = 0;i < sizeof(state->history)/sizeof(state->history[0]);i++)
-        state->history[i] = 0.0f;
+    for(i = 0;i < 2;i++)
+        state->iirFilter.history[i] = 0.0f;
     state->iirFilter.coeff = 0.0f;
 
     return state;

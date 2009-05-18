@@ -35,6 +35,8 @@ OPTION(WERROR  "Treat compile warnings as errors"      OFF)
 
 OPTION(EXAMPLES  "Build example programs"              ON)
 
+OPTION(ALSOFT_CONFIG "Install alsoft.conf configuration file" OFF)
+
 
 IF(WIN32)
     SET(LIBNAME OpenAL32)
@@ -405,6 +407,14 @@ INSTALL(FILES include/AL/al.h
 )
 INSTALL(FILES "${OpenAL_BINARY_DIR}/admin/pkgconfig/openal.pc"
         DESTINATION "${LIB_INSTALL_DIR}/pkgconfig")
+
+# Install alsoft.conf configuration file
+IF(ALSOFT_CONFIG)
+    INSTALL(FILES alsoftrc.sample
+            DESTINATION /etc/openal
+            RENAME alsoft.conf
+    )
+ENDIF()
 
 IF(EXAMPLES)
     ADD_EXECUTABLE(openal-info examples/openal-info.c)

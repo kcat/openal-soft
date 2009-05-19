@@ -429,6 +429,9 @@ static void pulse_close(ALCdevice *device) //{{{
 // OpenAL {{{
 static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_name) //{{{
 {
+    if(!pa_handle)
+        return ALC_FALSE;
+
     if(device_name)
     {
         if(strcmp(device_name, pulse_device) != 0)
@@ -445,6 +448,9 @@ static void pulse_close_playback(ALCdevice *device) //{{{
 
 static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_name, ALCuint frequency, ALCenum format, ALCsizei samples) //{{{
 {
+    if(!pa_handle)
+        return ALC_FALSE;
+
     if(device_name)
     {
         if(strcmp(device_name, pulse_capture_device) != 0)
@@ -538,6 +544,7 @@ void alc_pulse_init(BackendFuncs *func_list) //{{{
 
 #else
 
+    pa_handle = (void*)0xDEADBEEF;
 #define LOAD_FUNC(x) p##x = (x)
 
 #endif

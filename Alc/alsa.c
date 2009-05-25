@@ -606,13 +606,15 @@ open_alsa:
     bufferSizeInFrames = SampleSize;
     psnd_pcm_hw_params_malloc(&p);
 
+    if(!allowmmap)
+        err = "no mmap";
     if((i=psnd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
         err = "any";
     /* set interleaved access */
-    if(err == NULL && (!allowmmap || (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED)) < 0))
+    if(err == NULL && (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED)) < 0)
     {
-        if((i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
-            err = "set access";
+        err = "set access";
+        allowmmap = 0;
     }
     /* set format (implicitly sets sample bits) */
     if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format)) < 0)
@@ -624,11 +626,38 @@ open_alsa:
     if(err == NULL && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, frequency, 0)) < 0)
         err = "set rate near";
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
-        err = "set buffer size near";
+    if(err == NULL && (i=psnd_pcm_hw_params_set_buffer_size_min(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
+    {
+        err = "set buffer size min";
+        allowmmap = 0;
+    }
     /* install and prepare hardware configuration */
     if(err == NULL && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
         err = "set params";
+    if(!allowmmap)
+    {
+        err = NULL;
+        if((i=psnd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
+            err = "any";
+        /* set interleaved access */
+        if(err == NULL && (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED)) < 0)
+            err = "set access";
+        /* set format (implicitly sets sample bits) */
+        if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format)) < 0)
+            err = "set format";
+        /* set channels (implicitly sets frame bits) */
+        if(err == NULL && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(pDevice->Format))) < 0)
+            err = "set channels";
+        /* set rate (implicitly constrains period/buffer parameters) */
+        if(err == NULL && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, frequency, 0)) < 0)
+            err = "set rate near";
+        /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
+        if(err == NULL && (i=psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
+            err = "set buffer size near";
+        /* install and prepare hardware configuration */
+        if(err == NULL && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
+            err = "set params";
+    }
     if(err != NULL)
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));

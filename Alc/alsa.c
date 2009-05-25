@@ -177,7 +177,7 @@ static ALuint ALSAProc(ALvoid *ptr)
         }
 
         // make sure there's frames to process
-        if(avail == 0)
+        if(avail < (snd_pcm_sframes_t)pDevice->UpdateSize)
         {
             if(state != SND_PCM_STATE_RUNNING)
             {
@@ -190,10 +190,13 @@ static ALuint ALSAProc(ALvoid *ptr)
                     break;
                 }
             }
-            else if(psnd_pcm_wait(data->pcmHandle, 1000) == 0)
+            else if(avail == 0 && psnd_pcm_wait(data->pcmHandle, 1000) == 0)
                 AL_PRINT("Wait timeout... buffer size too low?\n");
+            else if(avail != 0)
+                Sleep(1);
             continue;
         }
+        avail = pDevice->UpdateSize;
 
         // it is possible that contiguous areas are smaller, thus we use a loop
         while (avail > 0)
@@ -209,9 +212,9 @@ static ALuint ALSAProc(ALvoid *ptr)
                 break;
             }
 
-            SuspendContext(NULL);
             WritePtr = (char*)areas->addr + (offset * areas->step / 8);
             WriteCnt = psnd_pcm_frames_to_bytes(data->pcmHandle, frames);
+            SuspendContext(NULL);
             aluMixData(pDevice->Context, WritePtr, WriteCnt, pDevice->Format);
             ProcessContext(NULL);
 

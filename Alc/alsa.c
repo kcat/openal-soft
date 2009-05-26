@@ -206,28 +206,30 @@ static ALuint ALSAProc(ALvoid *ptr)
         {
             frames = avail;
 
+            SuspendContext(NULL);
             err = psnd_pcm_mmap_begin(data->pcmHandle, &areas, &offset, &frames);
             if (err < 0)
             {
                 err = xrun_recovery(data->pcmHandle, err);
                 if (err < 0)
                     AL_PRINT("mmap begin error: %s\n", psnd_strerror(err));
+                ProcessContext(NULL);
                 break;
             }
 
             WritePtr = (char*)areas->addr + (offset * areas->step / 8);
             WriteCnt = psnd_pcm_frames_to_bytes(data->pcmHandle, frames);
-            SuspendContext(NULL);
             aluMixData(pDevice->Context, WritePtr, WriteCnt, pDevice->Format);
-            ProcessContext(NULL);
 
             commitres = psnd_pcm_mmap_commit(data->pcmHandle, offset, frames);
             if (commitres < 0 || (commitres-frames) != 0)
             {
                 AL_PRINT("mmap commit error: %s\n",
                          psnd_strerror(commitres >= 0 ? -EPIPE : commitres));
+                ProcessContext(NULL);
                 break;
             }
+            ProcessContext(NULL);
 
             avail -= frames;
         }

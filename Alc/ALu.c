@@ -852,12 +852,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     static float DummyBuffer[BUFFERSIZE];
     ALfloat *WetBuffer[MAX_SENDS];
     ALfloat (*Matrix)[OUTPUTCHANNELS] = ALContext->ChannelMatrix;
-    ALfloat newDrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-    ALfloat newWetSend[MAX_SENDS];
+    ALfloat DrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    ALfloat WetSend[MAX_SENDS];
     ALfloat DryGainHF = 0.0f;
     ALfloat WetGainHF[MAX_SENDS];
-    ALfloat *DrySend;
-    ALfloat *WetSend;
     ALuint rampLength;
     ALfloat dryGainStep[OUTPUTCHANNELS];
     ALfloat wetGainStep[MAX_SENDS];
@@ -958,12 +956,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                                         ALSource->Send[i].Slot->WetBuffer :
                                         DummyBuffer);
                     }
-                    DrySend = ALSource->DryGains;
-                    WetSend = ALSource->WetGains;
 
                     CalcSourceParams(ALContext, ALSource,
                                      (Channels==1) ? AL_TRUE : AL_FALSE,
-                                     newDrySend, newWetSend, &Pitch,
+                                     DrySend, WetSend, &Pitch,
                                      &DryGainHF, WetGainHF);
                     Pitch = (Pitch*Frequency) / ALContext->Frequency;
 
@@ -1029,22 +1025,22 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     if(ALSource->FirstStart && DataPosInt == 0 && DataPosFrac == 0)
                     {
                         for(i = 0;i < OUTPUTCHANNELS;i++)
-                        {
-                            DrySend[i] = newDrySend[i];
                             dryGainStep[i] = 0;
-                        }
                         for(i = 0;i < MAX_SENDS;i++)
-                        {
-                            WetSend[i] = newWetSend[i];
                             wetGainStep[i] = 0;
-                        }
                     }
                     else
                     {
                         for(i = 0;i < OUTPUTCHANNELS;i++)
-                            dryGainStep[i] = (newDrySend[i]-DrySend[i]) / rampLength;
+                        {
+                            dryGainStep[i] = (DrySend[i]-ALSource->DryGains[i]) / rampLength;
+                            DrySend[i] = ALSource->DryGains[i];
+                        }
                         for(i = 0;i < MAX_SENDS;i++)
-                            wetGainStep[i] = (newWetSend[i]-WetSend[i]) / rampLength;
+                        {
+                            wetGainStep[i] = (WetSend[i]-ALSource->WetGains[i]) / rampLength;
+                            WetSend[i] = ALSource->WetGains[i];
+                        }
                     }
                     ALSource->FirstStart = AL_FALSE;
 
@@ -1233,6 +1229,10 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     //Update source info
                     ALSource->position = DataPosInt;
                     ALSource->position_fraction = DataPosFrac;
+                    for(i = 0;i < OUTPUTCHANNELS;i++)
+                        ALSource->DryGains[i] = DrySend[i];
+                    for(i = 0;i < MAX_SENDS;i++)
+                        ALSource->WetGains[i] = WetSend[i];
 
                 skipmix: ;
                 }

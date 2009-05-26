@@ -439,27 +439,13 @@ open_alsa:
     /* install and prepare hardware configuration */
     if(err == NULL && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
         err = "set params";
+    if(err == NULL && (i=psnd_pcm_hw_params_get_access(p, &access)) < 0)
+        err = "get access";
+    if(err == NULL && (i=psnd_pcm_hw_params_get_period_size(p, &bufferSizeInFrames, NULL)) < 0)
+        err = "get period size";
     if(err != NULL)
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
-        psnd_pcm_hw_params_free(p);
-        psnd_pcm_close(data->pcmHandle);
-        free(data);
-        return ALC_FALSE;
-    }
-
-    if((i=psnd_pcm_hw_params_get_access(p, &access)) < 0)
-    {
-        AL_PRINT("get_access failed: %s\n", psnd_strerror(i));
-        psnd_pcm_hw_params_free(p);
-        psnd_pcm_close(data->pcmHandle);
-        free(data);
-        return ALC_FALSE;
-    }
-
-    if((i=psnd_pcm_hw_params_get_period_size(p, &bufferSizeInFrames, NULL)) < 0)
-    {
-        AL_PRINT("get_period_size failed: %s\n", psnd_strerror(i));
         psnd_pcm_hw_params_free(p);
         psnd_pcm_close(data->pcmHandle);
         free(data);

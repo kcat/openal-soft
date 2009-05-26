@@ -474,7 +474,7 @@ open_alsa:
 
     psnd_pcm_sw_params_free(sp);
 
-    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, device->UpdateSize);
+    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
         data->buffer = malloc(data->size);

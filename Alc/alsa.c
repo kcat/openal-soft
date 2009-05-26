@@ -74,6 +74,11 @@ MAKE_FUNC(snd_pcm_hw_params_get_buffer_size);
 MAKE_FUNC(snd_pcm_hw_params_get_period_size);
 MAKE_FUNC(snd_pcm_hw_params_get_access);
 MAKE_FUNC(snd_pcm_hw_params);
+MAKE_FUNC(snd_pcm_sw_params_malloc);
+MAKE_FUNC(snd_pcm_sw_params_current);
+MAKE_FUNC(snd_pcm_sw_params_set_avail_min);
+MAKE_FUNC(snd_pcm_sw_params);
+MAKE_FUNC(snd_pcm_sw_params_free);
 MAKE_FUNC(snd_pcm_prepare);
 MAKE_FUNC(snd_pcm_start);
 MAKE_FUNC(snd_pcm_resume);
@@ -177,7 +182,7 @@ static ALuint ALSAProc(ALvoid *ptr)
         }
 
         // make sure there's frames to process
-        if(avail < (snd_pcm_sframes_t)pDevice->UpdateSize)
+        if(avail >= 0 && avail < (snd_pcm_sframes_t)pDevice->UpdateSize)
         {
             if(state != SND_PCM_STATE_RUNNING)
             {
@@ -190,10 +195,8 @@ static ALuint ALSAProc(ALvoid *ptr)
                     break;
                 }
             }
-            else if(avail == 0 && psnd_pcm_wait(data->pcmHandle, 1000) == 0)
+            else if(psnd_pcm_wait(data->pcmHandle, 1000) == 0)
                 AL_PRINT("Wait timeout... buffer size too low?\n");
-            else if(avail != 0)
-                Sleep(1);
             continue;
         }
         avail = pDevice->UpdateSize;
@@ -320,6 +323,7 @@ static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
 static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     snd_pcm_uframes_t bufferSizeInFrames;
+    snd_pcm_sw_params_t *sp = NULL;
     snd_pcm_hw_params_t *p = NULL;
     snd_pcm_access_t access;
     unsigned int periods;
@@ -463,6 +467,26 @@ open_alsa:
     }
 
     psnd_pcm_hw_params_free(p);
+
+    err = NULL;
+    psnd_pcm_sw_params_malloc(&sp);
+
+    if((i=psnd_pcm_sw_params_current(data->pcmHandle, sp)) != 0)
+        err = "sw current";
+    if(err == NULL && (i=psnd_pcm_sw_params_set_avail_min(data->pcmHandle, sp, bufferSizeInFrames)) != 0)
+        err = "sw set avail min";
+    if(err == NULL && (i=psnd_pcm_sw_params(data->pcmHandle, sp)) != 0)
+        err = "sw set params";
+    if(err != NULL)
+    {
+        AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
+        psnd_pcm_sw_params_free(sp);
+        psnd_pcm_close(data->pcmHandle);
+        free(data);
+        return ALC_FALSE;
+    }
+
+    psnd_pcm_sw_params_free(sp);
 
     data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, device->UpdateSize);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
@@ -960,6 +984,11 @@ LOAD_FUNC(snd_pcm_hw_params_get_buffer_size);
 LOAD_FUNC(snd_pcm_hw_params_get_period_size);
 LOAD_FUNC(snd_pcm_hw_params_get_access);
 LOAD_FUNC(snd_pcm_hw_params);
+LOAD_FUNC(snd_pcm_sw_params_malloc);
+LOAD_FUNC(snd_pcm_sw_params_current);
+LOAD_FUNC(snd_pcm_sw_params_set_avail_min);
+LOAD_FUNC(snd_pcm_sw_params);
+LOAD_FUNC(snd_pcm_sw_params_free);
 LOAD_FUNC(snd_pcm_prepare);
 LOAD_FUNC(snd_pcm_start);
 LOAD_FUNC(snd_pcm_resume);

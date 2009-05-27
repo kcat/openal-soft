@@ -71,29 +71,38 @@ static ALuint DSoundProc(ALvoid *ptr)
 {
     ALCdevice *pDevice = (ALCdevice*)ptr;
     DSoundData *pData = (DSoundData*)pDevice->ExtraData;
+    DSBCAPS DSBCaps;
     DWORD LastCursor = 0;
     DWORD PlayCursor;
     VOID *WritePtr1, *WritePtr2;
     DWORD WriteCnt1,  WriteCnt2;
-    DWORD BufferSize;
+    DWORD FragSize;
     DWORD avail;
     HRESULT err;
 
-    BufferSize  = pDevice->UpdateSize * num_frags *
-                  aluBytesFromFormat(pDevice->Format) *
-                  aluChannelsFromFormat(pDevice->Format);
+    memset(&DSBCaps, 0, sizeof(DSBCaps));
+    DSBCaps.dwSize = sizeof(DSBCaps);
+    err = IDirectSoundBuffer_GetCaps(pData->DSsbuffer, &DSBCaps);
+    if(FAILED(err))
+    {
+        AL_PRINT("Failed to get buffer caps: 0x%lx\n", err);
+        return 1;
+    }
+    FragSize = DSBCaps.dwBufferBytes / num_frags;
 
+    IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &LastCursor, NULL);
     while(!pData->killNow)
     {
         // Get current play and write cursors
         IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &PlayCursor, NULL);
-        avail = (PlayCursor-LastCursor+BufferSize) % BufferSize;
+        avail = (PlayCursor-LastCursor+DSBCaps.dwBufferBytes) % DSBCaps.dwBufferBytes;
 
-        if(avail < BufferSize/num_frags)
+        if(avail < FragSize)
         {
             Sleep(1);
             continue;
         }
+        avail -= avail%FragSize;
 
         // Lock output buffer
         WriteCnt1 = 0;
@@ -127,7 +136,7 @@ static ALuint DSoundProc(ALvoid *ptr)
 
         // Update old write cursor location
         LastCursor += WriteCnt1+WriteCnt2;
-        LastCursor %= BufferSize;
+        LastCursor %= DSBCaps.dwBufferBytes;
     }
 
     return 0;
@@ -140,6 +149,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     WAVEFORMATEXTENSIBLE OutputType;
     DWORD frameSize = 0;
     LPGUID guid = NULL;
+    ALenum format = 0;
     DWORD speakers;
     HRESULT hr;
 
@@ -207,23 +217,23 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         if(speakers == DSSPEAKER_MONO)
         {
             if(aluBytesFromFormat(device->Format) == 1)
-                device->Format = AL_FORMAT_MONO8;
+                format = AL_FORMAT_MONO8;
             else
-                device->Format = AL_FORMAT_MONO16;
+                format = AL_FORMAT_MONO16;
         }
         else if(speakers == DSSPEAKER_STEREO)
         {
             if(aluBytesFromFormat(device->Format) == 1)
-                device->Format = AL_FORMAT_STEREO8;
+                format = AL_FORMAT_STEREO8;
             else
-                device->Format = AL_FORMAT_STEREO16;
+                format = AL_FORMAT_STEREO16;
         }
         else if(speakers == DSSPEAKER_QUAD)
         {
             if(aluBytesFromFormat(device->Format) == 1)
-                device->Format = AL_FORMAT_QUAD8;
+                format = AL_FORMAT_QUAD8;
             else
-                device->Format = AL_FORMAT_QUAD16;
+                format = AL_FORMAT_QUAD16;
             OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                        SPEAKER_FRONT_RIGHT |
                                        SPEAKER_BACK_LEFT |
@@ -232,9 +242,9 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         else if(speakers == DSSPEAKER_5POINT1)
         {
             if(aluBytesFromFormat(device->Format) == 1)
-                device->Format = AL_FORMAT_51CHN8;
+                format = AL_FORMAT_51CHN8;
             else
-                device->Format = AL_FORMAT_51CHN16;
+                format = AL_FORMAT_51CHN16;
             OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                        SPEAKER_FRONT_RIGHT |
                                        SPEAKER_FRONT_CENTER |
@@ -245,9 +255,9 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         else if(speakers == DSSPEAKER_7POINT1)
         {
             if(aluBytesFromFormat(device->Format) == 1)
-                device->Format = AL_FORMAT_71CHN8;
+                format = AL_FORMAT_71CHN8;
             else
-                device->Format = AL_FORMAT_71CHN16;
+                format = AL_FORMAT_71CHN16;
             OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                        SPEAKER_FRONT_RIGHT |
                                        SPEAKER_FRONT_CENTER |
@@ -257,18 +267,17 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
                                        SPEAKER_SIDE_LEFT |
                                        SPEAKER_SIDE_RIGHT;
         }
-        frameSize = aluBytesFromFormat(device->Format) *
-                    aluChannelsFromFormat(device->Format);
+        else
+            format = device->Format;
+        frameSize = aluBytesFromFormat(format) * aluChannelsFromFormat(format);
 
         OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-        OutputType.Format.nChannels = aluChannelsFromFormat(device->Format);
-        OutputType.Format.wBitsPerSample = aluBytesFromFormat(device->Format) * 8;
+        OutputType.Format.nChannels = aluChannelsFromFormat(format);
+        OutputType.Format.wBitsPerSample = aluBytesFromFormat(format) * 8;
         OutputType.Format.nBlockAlign = OutputType.Format.nChannels*OutputType.Format.wBitsPerSample/8;
         OutputType.Format.nSamplesPerSec = device->Frequency;
         OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec*OutputType.Format.nBlockAlign;
         OutputType.Format.cbSize = 0;
-
-        device->UpdateSize /= num_frags;
     }
 
     if(OutputType.Format.nChannels > 2)
@@ -296,7 +305,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
         DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;
-        DSBDescription.dwBufferBytes=device->UpdateSize * num_frags * frameSize;
+        DSBDescription.dwBufferBytes=(device->UpdateSize/num_frags) * num_frags * frameSize;
         DSBDescription.lpwfxFormat=&OutputType.Format;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
     }
@@ -324,6 +333,9 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         free(pData);
         return ALC_FALSE;
     }
+
+    device->Format = format;
+    device->UpdateSize /= num_frags;
 
     return ALC_TRUE;
 }

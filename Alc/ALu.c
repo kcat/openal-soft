@@ -743,11 +743,6 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                     wetgainhf[i] = DryGainHF;
                 }
 
-                // Note that this is really applied by the effect slot. However,
-                // it's easier (more optimal) to handle it here.
-                if(ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB)
-                    wetgainhf[i] *= ALSource->Send[0].Slot->effect.Reverb.GainHF;
-
                 switch(ALSource->Send[i].WetFilter.type)
                 {
                     case AL_FILTER_LOWPASS:
@@ -1025,9 +1020,9 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                     if(ALSource->FirstStart && DataPosInt == 0 && DataPosFrac == 0)
                     {
                         for(i = 0;i < OUTPUTCHANNELS;i++)
-                            dryGainStep[i] = 0;
+                            dryGainStep[i] = 0.0f;
                         for(i = 0;i < MAX_SENDS;i++)
-                            wetGainStep[i] = 0;
+                            wetGainStep[i] = 0.0f;
                     }
                     else
                     {
@@ -1315,10 +1310,18 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         // effect slot processing
         while(ALEffectSlot)
         {
-            if(ALEffectSlot->effect.type == AL_EFFECT_REVERB)
-                VerbProcess(ALEffectSlot->ReverbState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
-            else if(ALEffectSlot->effect.type == AL_EFFECT_ECHO)
-                EchoProcess(ALEffectSlot->EchoState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
+            switch(ALEffectSlot->effect.type)
+            {
+                case AL_EFFECT_REVERB:
+                    VerbProcess(ALEffectSlot->ReverbState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
+                    break;
+                case AL_EFFECT_ECHO:
+                    EchoProcess(ALEffectSlot->EchoState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
+                    break;
+                case AL_EFFECT_EAXREVERB:
+                    EAXVerbProcess(ALEffectSlot->ReverbState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
+                    break;
+            }
 
             for(i = 0;i < SamplesToDo;i++)
                 ALEffectSlot->WetBuffer[i] = 0.0f;

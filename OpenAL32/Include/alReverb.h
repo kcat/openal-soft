@@ -14,9 +14,11 @@ extern "C" {
 typedef struct ALverbState ALverbState;
 
 ALverbState *VerbCreate(ALCcontext *Context);
+ALverbState *EAXVerbCreate(ALCcontext *Context);
 ALvoid VerbDestroy(ALverbState *State);
 ALvoid VerbUpdate(ALCcontext *Context, struct ALeffectslot *Slot, ALeffect *Effect);
 ALvoid VerbProcess(ALverbState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS]);
+ALvoid EAXVerbProcess(ALverbState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS]);
 
 #ifdef __cplusplus
 }

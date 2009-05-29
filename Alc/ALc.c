@@ -322,6 +322,7 @@ static void InitAL(void)
                 const char *name;
                 int type;
             } EffectList[] = {
+                { "eaxreverb", EAXREVERB },
                 { "reverb", REVERB },
                 { "echo", ECHO },
                 { NULL, 0 }

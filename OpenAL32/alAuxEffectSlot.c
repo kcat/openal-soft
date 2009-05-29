@@ -470,38 +470,37 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, A
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, ALeffect *effect)
 {
-    if(!effect)
+    if((!effect) || (effect->type != ALEffectSlot->effect.type))
     {
-        memset(&ALEffectSlot->effect, 0, sizeof(ALEffectSlot->effect));
         VerbDestroy(ALEffectSlot->ReverbState);
         ALEffectSlot->ReverbState = NULL;
         EchoDestroy(ALEffectSlot->EchoState);
         ALEffectSlot->EchoState = NULL;
+    }
+    if(!effect)
+    {
+        memset(&ALEffectSlot->effect, 0, sizeof(ALEffectSlot->effect));
         return;
     }
-    if(effect->type == AL_EFFECT_REVERB)
+    memcpy(&ALEffectSlot->effect, effect, sizeof(*effect));
+    if(effect->type == AL_EFFECT_EAXREVERB)
     {
-        if(ALEffectSlot->EchoState)
-        {
-            EchoDestroy(ALEffectSlot->EchoState);
-            ALEffectSlot->EchoState = NULL;
-        }
+        if(!ALEffectSlot->ReverbState)
+            ALEffectSlot->ReverbState = EAXVerbCreate(Context);
+        VerbUpdate(Context, ALEffectSlot, effect);
+    }
+    else if(effect->type == AL_EFFECT_REVERB)
+    {
         if(!ALEffectSlot->ReverbState)
             ALEffectSlot->ReverbState = VerbCreate(Context);
         VerbUpdate(Context, ALEffectSlot, effect);
     }
     else if(effect->type == AL_EFFECT_ECHO)
     {
-        if(ALEffectSlot->ReverbState)
-        {
-            VerbDestroy(ALEffectSlot->ReverbState);
-            ALEffectSlot->ReverbState = NULL;
-        }
         if(!ALEffectSlot->EchoState)
             ALEffectSlot->EchoState = EchoCreate(Context);
         EchoUpdate(Context, ALEffectSlot, effect);
     }
-    memcpy(&ALEffectSlot->effect, effect, sizeof(*effect));
 }
 
 

@@ -184,7 +184,8 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
             switch(param)
             {
             case AL_EAXREVERB_DECAY_HFLIMIT:
-                if(iValue == AL_TRUE || iValue == AL_FALSE)
+                if(iValue >= AL_EAXREVERB_MIN_DECAY_HFLIMIT &&
+                   iValue <= AL_EAXREVERB_MAX_DECAY_HFLIMIT)
                     ALEffect->Reverb.DecayHFLimit = iValue;
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -200,7 +201,8 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
             switch(param)
             {
             case AL_REVERB_DECAY_HFLIMIT:
-                if(iValue == AL_TRUE || iValue == AL_FALSE)
+                if(iValue >= AL_REVERB_MIN_DECAY_HFLIMIT &&
+                   iValue <= AL_REVERB_MAX_DECAY_HFLIMIT)
                     ALEffect->Reverb.DecayHFLimit = iValue;
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -472,84 +474,96 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
             switch(param)
             {
             case AL_REVERB_DENSITY:
-                if(flValue >= 0.0f && flValue <= 1.0f)
+                if(flValue >= AL_REVERB_MIN_DENSITY &&
+                   flValue <= AL_REVERB_MAX_DENSITY)
                     ALEffect->Reverb.Density = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_DIFFUSION:
-                if(flValue >= 0.0f && flValue <= 1.0f)
+                if(flValue >= AL_REVERB_MIN_DIFFUSION &&
+                   flValue <= AL_REVERB_MAX_DIFFUSION)
                     ALEffect->Reverb.Diffusion = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_GAIN:
-                if(flValue >= 0.0f && flValue <= 1.0f)
+                if(flValue >= AL_REVERB_MIN_GAIN &&
+                   flValue <= AL_REVERB_MAX_GAIN)
                     ALEffect->Reverb.Gain = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_GAINHF:
-                if(flValue >= 0.0f && flValue <= 1.0f)
+                if(flValue >= AL_REVERB_MIN_GAINHF &&
+                   flValue <= AL_REVERB_MAX_GAINHF)
                     ALEffect->Reverb.GainHF = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_DECAY_TIME:
-                if(flValue >= 0.1f && flValue <= 20.0f)
+                if(flValue >= AL_REVERB_MIN_DECAY_TIME &&
+                   flValue <= AL_REVERB_MAX_DECAY_TIME)
                     ALEffect->Reverb.DecayTime = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_DECAY_HFRATIO:
-                if(flValue >= 0.1f && flValue <= 2.0f)
+                if(flValue >= AL_REVERB_MIN_DECAY_HFRATIO &&
+                   flValue <= AL_REVERB_MAX_DECAY_HFRATIO)
                     ALEffect->Reverb.DecayHFRatio = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_REFLECTIONS_GAIN:
-                if(flValue >= 0.0f && flValue <= 3.16f)
+                if(flValue >= AL_REVERB_MIN_REFLECTIONS_GAIN &&
+                   flValue <= AL_REVERB_MAX_REFLECTIONS_GAIN)
                     ALEffect->Reverb.ReflectionsGain = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_REFLECTIONS_DELAY:
-                if(flValue >= 0.0f && flValue <= 0.3f)
+                if(flValue >= AL_REVERB_MIN_REFLECTIONS_DELAY &&
+                   flValue <= AL_REVERB_MAX_REFLECTIONS_DELAY)
                     ALEffect->Reverb.ReflectionsDelay = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_LATE_REVERB_GAIN:
-                if(flValue >= 0.0f && flValue <= 10.0f)
+                if(flValue >= AL_REVERB_MIN_LATE_REVERB_GAIN &&
+                   flValue <= AL_REVERB_MAX_LATE_REVERB_GAIN)
                     ALEffect->Reverb.LateReverbGain = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_LATE_REVERB_DELAY:
-                if(flValue >= 0.0f && flValue <= 0.1f)
+                if(flValue >= AL_REVERB_MIN_LATE_REVERB_DELAY &&
+                   flValue <= AL_REVERB_MAX_LATE_REVERB_DELAY)
                     ALEffect->Reverb.LateReverbDelay = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_AIR_ABSORPTION_GAINHF:
-                if(flValue >= 0.892f && flValue <= 1.0f)
+                if(flValue >= AL_REVERB_MIN_AIR_ABSORPTION_GAINHF &&
+                   flValue <= AL_REVERB_MAX_AIR_ABSORPTION_GAINHF)
                     ALEffect->Reverb.AirAbsorptionGainHF = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_ROOM_ROLLOFF_FACTOR:
-                if(flValue >= 0.0f && flValue <= 10.0f)
+                if(flValue >= AL_REVERB_MIN_ROOM_ROLLOFF_FACTOR &&
+                   flValue <= AL_REVERB_MAX_ROOM_ROLLOFF_FACTOR)
                     ALEffect->Reverb.RoomRolloffFactor = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -1160,35 +1174,39 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
     effect->type = type;
     switch(type)
     {
+    /* NOTE: Standard reverb and EAX reverb use the same defaults for the
+     *       shared parameters, and EAX's additional parameters default to
+     *       values assumed by standard reverb.
+     */
     case AL_EFFECT_EAXREVERB:
     case AL_EFFECT_REVERB:
-        effect->Reverb.Density = 1.0f;
-        effect->Reverb.Diffusion = 1.0f;
-        effect->Reverb.Gain = 0.32f;
-        effect->Reverb.GainHF = 0.89f;
-        effect->Reverb.GainLF = 1.0f;
-        effect->Reverb.DecayTime = 1.49f;
-        effect->Reverb.DecayHFRatio = 0.83f;
-        effect->Reverb.DecayLFRatio = 1.0f;
-        effect->Reverb.ReflectionsGain = 0.05f;
-        effect->Reverb.ReflectionsDelay = 0.007f;
-        effect->Reverb.ReflectionsPan[0] = 0.0f;
-        effect->Reverb.ReflectionsPan[1] = 0.0f;
-        effect->Reverb.ReflectionsPan[2] = 0.0f;
-        effect->Reverb.LateReverbGain = 1.26f;
-        effect->Reverb.LateReverbDelay = 0.011f;
-        effect->Reverb.LateReverbPan[0] = 0.0f;
-        effect->Reverb.LateReverbPan[1] = 0.0f;
-        effect->Reverb.LateReverbPan[2] = 0.0f;
-        effect->Reverb.EchoTime = 0.25f;
-        effect->Reverb.EchoDepth = 0.0f;
-        effect->Reverb.ModulationTime = 0.25f;
-        effect->Reverb.ModulationDepth = 0.0f;
-        effect->Reverb.AirAbsorptionGainHF = 0.994f;
-        effect->Reverb.HFReference = 5000.0f;
-        effect->Reverb.LFReference = 250.0f;
-        effect->Reverb.RoomRolloffFactor = 0.0f;
-        effect->Reverb.DecayHFLimit = AL_TRUE;
+        effect->Reverb.Density = AL_EAXREVERB_DEFAULT_DENSITY;
+        effect->Reverb.Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION;
+        effect->Reverb.Gain = AL_EAXREVERB_DEFAULT_GAIN;
+        effect->Reverb.GainHF = AL_EAXREVERB_DEFAULT_GAINHF;
+        effect->Reverb.GainLF = AL_EAXREVERB_DEFAULT_GAINLF;
+        effect->Reverb.DecayTime = AL_EAXREVERB_DEFAULT_DECAY_TIME;
+        effect->Reverb.DecayHFRatio = AL_EAXREVERB_DEFAULT_DECAY_HFRATIO;
+        effect->Reverb.DecayLFRatio = AL_EAXREVERB_DEFAULT_DECAY_LFRATIO;
+        effect->Reverb.ReflectionsGain = AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN;
+        effect->Reverb.ReflectionsDelay = AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY;
+        effect->Reverb.ReflectionsPan[0] = AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ;
+        effect->Reverb.ReflectionsPan[1] = AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ;
+        effect->Reverb.ReflectionsPan[2] = AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ;
+        effect->Reverb.LateReverbGain = AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN;
+        effect->Reverb.LateReverbDelay = AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY;
+        effect->Reverb.LateReverbPan[0] = AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ;
+        effect->Reverb.LateReverbPan[1] = AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ;
+        effect->Reverb.LateReverbPan[2] = AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ;
+        effect->Reverb.EchoTime = AL_EAXREVERB_DEFAULT_ECHO_TIME;
+        effect->Reverb.EchoDepth = AL_EAXREVERB_DEFAULT_ECHO_DEPTH;
+        effect->Reverb.ModulationTime = AL_EAXREVERB_DEFAULT_MODULATION_TIME;
+        effect->Reverb.ModulationDepth = AL_EAXREVERB_DEFAULT_MODULATION_DEPTH;
+        effect->Reverb.AirAbsorptionGainHF = AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF;
+        effect->Reverb.HFReference = AL_EAXREVERB_DEFAULT_HFREFERENCE;
+        effect->Reverb.LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE;
+        effect->Reverb.RoomRolloffFactor = AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR;
+        effect->Reverb.DecayHFLimit = AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT;
         break;
     case AL_EFFECT_ECHO:
         effect->Echo.Delay = AL_ECHO_DEFAULT_DELAY;

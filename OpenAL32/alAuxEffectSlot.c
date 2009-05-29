@@ -491,7 +491,7 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
         else if(effect->type == AL_EFFECT_ECHO)
             ALEffectSlot->EffectState = EchoCreate(Context);
     }
-    ALEffect_Update(ALEffectSlot->EffectState, Context, ALEffectSlot, effect);
+    ALEffect_Update(ALEffectSlot->EffectState, Context, effect);
 }
 
 

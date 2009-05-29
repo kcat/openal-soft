@@ -371,7 +371,7 @@ static __inline ALint aluCart2LUTpos(ALfloat re, ALfloat im)
 
 // This updates the reverb state.  This is called any time the reverb effect
 // is loaded into a slot.
-ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
+ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffect *Effect)
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
@@ -567,11 +567,12 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffectslot *Slot
 
 // This processes the reverb state, given the input samples and an output
 // buffer.
-ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+ALvoid VerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat early[4], late[4], out[4];
+    ALfloat gain = Slot->Gain;
 
     for(index = 0;index < SamplesToDo;index++)
     {
@@ -579,30 +580,31 @@ ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *Sam
         ReverbInOut(State, SamplesIn[index], early, late);
 
         // Mix early reflections and late reverb.
-        out[0] = early[0] + late[0];
-        out[1] = early[1] + late[1];
-        out[2] = early[2] + late[2];
-        out[3] = early[3] + late[3];
+        out[0] = (early[0] + late[0]) * gain;
+        out[1] = (early[1] + late[1]) * gain;
+        out[2] = (early[2] + late[2]) * gain;
+        out[3] = (early[3] + late[3]) * gain;
 
         // Output the results.
-        SamplesOut[index][FRONT_LEFT]   += out [0];
-        SamplesOut[index][FRONT_RIGHT]  += out [1];
-        SamplesOut[index][FRONT_CENTER] += out [3];
-        SamplesOut[index][SIDE_LEFT]    += out [0];
-        SamplesOut[index][SIDE_RIGHT]   += out [1];
-        SamplesOut[index][BACK_LEFT]    += out [0];
-        SamplesOut[index][BACK_RIGHT]   += out [1];
-        SamplesOut[index][BACK_CENTER]  += out [2];
+        SamplesOut[index][FRONT_LEFT]   += out[0];
+        SamplesOut[index][FRONT_RIGHT]  += out[1];
+        SamplesOut[index][FRONT_CENTER] += out[3];
+        SamplesOut[index][SIDE_LEFT]    += out[0];
+        SamplesOut[index][SIDE_RIGHT]   += out[1];
+        SamplesOut[index][BACK_LEFT]    += out[0];
+        SamplesOut[index][BACK_RIGHT]   += out[1];
+        SamplesOut[index][BACK_CENTER]  += out[2];
     }
 }
 
 // This processes the EAX reverb state, given the input samples and an output
 // buffer.
-ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+ALvoid EAXVerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat early[4], late[4];
+    ALfloat gain = Slot->Gain;
 
     for(index = 0;index < SamplesToDo;index++)
     {
@@ -613,29 +615,29 @@ ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *
         // panning adjust according to OUTPUTCHANNELS, the output from the
         // reverb engine is not so scalable.
         SamplesOut[index][FRONT_LEFT] +=
-           (State->Early.PanGain[FRONT_LEFT] * early[0]) +
-           (State->Late.PanGain[FRONT_LEFT] * late[0]);
+           (State->Early.PanGain[FRONT_LEFT]*early[0] +
+            State->Late.PanGain[FRONT_LEFT]*late[0]) * gain;
         SamplesOut[index][FRONT_RIGHT] +=
-           (State->Early.PanGain[FRONT_RIGHT] * early[1]) +
-           (State->Late.PanGain[FRONT_RIGHT] * late[1]);
+           (State->Early.PanGain[FRONT_RIGHT]*early[1] +
+            State->Late.PanGain[FRONT_RIGHT]*late[1]) * gain;
         SamplesOut[index][FRONT_CENTER] +=
-           (State->Early.PanGain[FRONT_CENTER] * early[3]) +
-           (State->Late.PanGain[FRONT_CENTER] * late[3]);
+           (State->Early.PanGain[FRONT_CENTER]*early[3] +
+            State->Late.PanGain[FRONT_CENTER]*late[3]) * gain;
         SamplesOut[index][SIDE_LEFT] +=
-           (State->Early.PanGain[SIDE_LEFT] * early[0]) +
-           (State->Late.PanGain[SIDE_LEFT] * late[0]);
+           (State->Early.PanGain[SIDE_LEFT]*early[0] +
+            State->Late.PanGain[SIDE_LEFT]*late[0]) * gain;
         SamplesOut[index][SIDE_RIGHT] +=
-           (State->Early.PanGain[SIDE_RIGHT] * early[1]) +
-           (State->Late.PanGain[SIDE_RIGHT] * late[1]);
+           (State->Early.PanGain[SIDE_RIGHT]*early[1] +
+            State->Late.PanGain[SIDE_RIGHT]*late[1]) * gain;
         SamplesOut[index][BACK_LEFT] +=
-           (State->Early.PanGain[BACK_LEFT] * early[0]) +
-           (State->Late.PanGain[BACK_LEFT] * late[0]);
+           (State->Early.PanGain[BACK_LEFT]*early[0] +
+            State->Late.PanGain[BACK_LEFT]*late[0]) * gain;
         SamplesOut[index][BACK_RIGHT] +=
-           (State->Early.PanGain[BACK_RIGHT] * early[1]) +
-           (State->Late.PanGain[BACK_RIGHT] * late[1]);
+           (State->Early.PanGain[BACK_RIGHT]*early[1] +
+            State->Late.PanGain[BACK_RIGHT]*late[1]) * gain;
         SamplesOut[index][BACK_CENTER] +=
-           (State->Early.PanGain[BACK_CENTER] * early[2]) +
-           (State->Late.PanGain[BACK_CENTER] * late[2]);
+           (State->Early.PanGain[BACK_CENTER]*early[2] +
+            State->Late.PanGain[BACK_CENTER]*late[2]) * gain;
     }
 }
 

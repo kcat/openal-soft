@@ -749,7 +749,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                         wetgainhf[i] *= ALSource->Send[i].WetFilter.GainHF;
                         break;
                 }
-                wetsend[i] *= ALSource->Send[i].Slot->Gain * ListenerGain;
+                wetsend[i] *= ListenerGain;
             }
             else
             {
@@ -1310,7 +1310,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         while(ALEffectSlot)
         {
             if(ALEffectSlot->EffectState)
-                ALEffect_Process(ALEffectSlot->EffectState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
+                ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
 
             for(i = 0;i < SamplesToDo;i++)
                 ALEffectSlot->WetBuffer[i] = 0.0f;

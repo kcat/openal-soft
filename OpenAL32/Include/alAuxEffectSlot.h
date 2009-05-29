@@ -55,17 +55,17 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 struct ALeffectState {
     ALvoid (*Destroy)(ALeffectState *State);
-    ALvoid (*Update)(ALeffectState *State, ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect);
-    ALvoid (*Process)(ALeffectState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS]);
+    ALvoid (*Update)(ALeffectState *State, ALCcontext *Context, ALeffect *Effect);
+    ALvoid (*Process)(ALeffectState *State, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS]);
 };
 
 ALeffectState *EAXVerbCreate(ALCcontext *Context);
 ALeffectState *VerbCreate(ALCcontext *Context);
 ALeffectState *EchoCreate(ALCcontext *Context);
 
-#define ALEffect_Destroy(a)       ((a)->Destroy((a)))
-#define ALEffect_Update(a,b,c,d)  ((a)->Update((a),(b),(c),(d)))
-#define ALEffect_Process(a,b,c,d) ((a)->Process((a),(b),(c),(d)))
+#define ALEffect_Destroy(a)         ((a)->Destroy((a)))
+#define ALEffect_Update(a,b,c)      ((a)->Update((a),(b),(c)))
+#define ALEffect_Process(a,b,c,d,e) ((a)->Process((a),(b),(c),(d),(e)))
 
 
 #ifdef __cplusplus

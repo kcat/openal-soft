@@ -79,7 +79,7 @@ ALvoid EchoDestroy(ALeffectState *effect)
     }
 }
 
-ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, struct ALeffectslot *Slot, ALeffect *Effect)
+ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, ALeffect *Effect)
 {
     ALechoState *state = (ALechoState*)effect;
     ALuint newdelay1, newdelay2;
@@ -107,13 +107,14 @@ ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, struct ALeffectslo
     state->iirFilter.coeff = a;
 }
 
-ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
     ALechoState *state = (ALechoState*)effect;
     const ALuint delay = state->BufferLength-1;
     ALuint tap1off = state->Tap[0].offset;
     ALuint tap2off = state->Tap[1].offset;
     ALuint fboff = state->Tap[2].offset;
+    ALfloat gain = Slot->Gain;
     ALfloat samp[2];
     ALuint i;
 
@@ -135,6 +136,9 @@ ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *Sam
         // Sample second tap. Reverse LR panning
         samp[0] += state->SampleBuffer[tap2off]*state->GainR;
         samp[1] += state->SampleBuffer[tap2off]*state->GainL;
+        // Apply slot gain
+        samp[0] *= gain;
+        samp[1] *= gain;
 
         SamplesOut[i][FRONT_LEFT]  += samp[0];
         SamplesOut[i][FRONT_RIGHT] += samp[1];

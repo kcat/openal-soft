@@ -36,7 +36,6 @@
 #include "alAuxEffectSlot.h"
 #include "alu.h"
 #include "bs2b.h"
-#include "alReverb.h"
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
@@ -1310,18 +1309,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         // effect slot processing
         while(ALEffectSlot)
         {
-            switch(ALEffectSlot->effect.type)
-            {
-                case AL_EFFECT_REVERB:
-                    VerbProcess(ALEffectSlot->ReverbState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
-                    break;
-                case AL_EFFECT_ECHO:
-                    EchoProcess(ALEffectSlot->EchoState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
-                    break;
-                case AL_EFFECT_EAXREVERB:
-                    EAXVerbProcess(ALEffectSlot->ReverbState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
-                    break;
-            }
+            if(ALEffectSlot->EffectState)
+                ALEffect_Process(ALEffectSlot->EffectState, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
 
             for(i = 0;i < SamplesToDo;i++)
                 ALEffectSlot->WetBuffer[i] = 0.0f;

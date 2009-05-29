@@ -28,7 +28,6 @@
 #include "alMain.h"
 #include "alAuxEffectSlot.h"
 #include "alEffect.h"
-#include "alReverb.h"
 #include "alu.h"
 
 typedef struct DelayLine
@@ -39,8 +38,10 @@ typedef struct DelayLine
     ALfloat *Line;
 } DelayLine;
 
-struct ALverbState
-{
+typedef struct ALverbState {
+    // Must be first in all effects!
+    ALeffectState state;
+
     // All delay lines are allocated as a single buffer to reduce memory
     // fragmentation and management code.
     ALfloat  *SampleBuffer;
@@ -87,7 +88,7 @@ struct ALverbState
     } Late;
     // The current read offset for all delay lines.
     ALuint Offset;
-};
+} ALverbState;
 
 // All delay line lengths are specified in seconds.
 
@@ -340,138 +341,11 @@ static __inline ALvoid ReverbInOut(ALverbState *State, ALfloat in, ALfloat *earl
     State->Offset++;
 }
 
-// This creates the reverb state.  It should be called only when the reverb
-// effect is loaded into a slot that doesn't already have a reverb effect.
-ALverbState *VerbCreate(ALCcontext *Context)
-{
-    ALverbState *State = NULL;
-    ALuint samples, length[13], totalLength, index;
-
-    State = malloc(sizeof(ALverbState));
-    if(!State)
-        return NULL;
-
-    // All line lengths are powers of 2, calculated from their lengths, with
-    // an additional sample in case of rounding errors.
-
-    // See VerbUpdate() for an explanation of the additional calculation
-    // added to the master line length.
-    samples = (ALuint)
-              ((MASTER_LINE_LENGTH +
-                (LATE_LINE_LENGTH[0] * (1.0f + LATE_LINE_MULTIPLIER) *
-                 (DECO_FRACTION * ((DECO_MULTIPLIER * DECO_MULTIPLIER *
-                                    DECO_MULTIPLIER) - 1.0f)))) *
-               Context->Frequency) + 1;
-    length[0] = NextPowerOf2(samples);
-    totalLength = length[0];
-    for(index = 0;index < 4;index++)
-    {
-        samples = (ALuint)(EARLY_LINE_LENGTH[index] * Context->Frequency) + 1;
-        length[1 + index] = NextPowerOf2(samples);
-        totalLength += length[1 + index];
-    }
-    for(index = 0;index < 4;index++)
-    {
-        samples = (ALuint)(ALLPASS_LINE_LENGTH[index] * Context->Frequency) + 1;
-        length[5 + index] = NextPowerOf2(samples);
-        totalLength += length[5 + index];
-    }
-    for(index = 0;index < 4;index++)
-    {
-        samples = (ALuint)(LATE_LINE_LENGTH[index] *
-                           (1.0f + LATE_LINE_MULTIPLIER) * Context->Frequency) + 1;
-        length[9 + index] = NextPowerOf2(samples);
-        totalLength += length[9 + index];
-    }
-
-    // All lines share a single sample buffer and have their masks and start
-    // addresses calculated once.
-    State->SampleBuffer = malloc(totalLength * sizeof(ALfloat));
-    if(!State->SampleBuffer)
-    {
-        free(State);
-        return NULL;
-    }
-    for(index = 0; index < totalLength;index++)
-        State->SampleBuffer[index] = 0.0f;
-
-    State->LpCoeff = 0.0f;
-    State->LpSamples[0] = 0.0f;
-    State->LpSamples[1] = 0.0f;
-    State->Delay.Mask = length[0] - 1;
-    State->Delay.Line = &State->SampleBuffer[0];
-    totalLength = length[0];
-
-    State->Tap[0] = 0;
-    State->Tap[1] = 0;
-    State->Tap[2] = 0;
-    State->Tap[3] = 0;
-    State->Tap[4] = 0;
-
-    State->Early.Gain = 0.0f;
-    for(index = 0;index < 4;index++)
-    {
-        State->Early.Coeff[index] = 0.0f;
-        State->Early.Delay[index].Mask = length[1 + index] - 1;
-        State->Early.Delay[index].Line = &State->SampleBuffer[totalLength];
-        totalLength += length[1 + index];
-
-        // The early delay lines have their read offsets calculated once.
-        State->Early.Offset[index] = (ALuint)(EARLY_LINE_LENGTH[index] *
-                                              Context->Frequency);
-    }
-
-    State->Late.Gain = 0.0f;
-    State->Late.DensityGain = 0.0f;
-    State->Late.ApFeedCoeff = 0.0f;
-    State->Late.MixCoeff = 0.0f;
-
-    for(index = 0;index < 4;index++)
-    {
-        State->Late.ApCoeff[index] = 0.0f;
-        State->Late.ApDelay[index].Mask = length[5 + index] - 1;
-        State->Late.ApDelay[index].Line = &State->SampleBuffer[totalLength];
-        totalLength += length[5 + index];
-
-        // The late all-pass lines have their read offsets calculated once.
-        State->Late.ApOffset[index] = (ALuint)(ALLPASS_LINE_LENGTH[index] *
-                                               Context->Frequency);
-    }
-
-    for(index = 0;index < 4;index++)
-    {
-        State->Late.Coeff[index] = 0.0f;
-        State->Late.Delay[index].Mask = length[9 + index] - 1;
-        State->Late.Delay[index].Line = &State->SampleBuffer[totalLength];
-        totalLength += length[9 + index];
-
-        State->Late.Offset[index] = 0;
-
-        State->Late.LpCoeff[index] = 0.0f;
-        State->Late.LpSample[index] = 0.0f;
-    }
-
-    // Panning is applied as an independent gain for each output channel.
-    for(index = 0;index < OUTPUTCHANNELS;index++)
-    {
-        State->Early.PanGain[index] = 0.0f;
-        State->Late.PanGain[index] = 0.0f;
-    }
-
-    State->Offset = 0;
-    return State;
-}
-
-ALverbState *EAXVerbCreate(ALCcontext *Context)
-{
-    ALverbState *State = VerbCreate(Context);
-    return State;
-}
-
 // This destroys the reverb state.  It should be called only when the effect
 // slot has a different (or no) effect loaded over the reverb effect.
-ALvoid VerbDestroy(ALverbState *State)
+ALvoid VerbDestroy(ALeffectState *effect)
 {
+    ALverbState *State = (ALverbState*)effect;
     if(State)
     {
         free(State->SampleBuffer);
@@ -497,9 +371,9 @@ static __inline ALint aluCart2LUTpos(ALfloat re, ALfloat im)
 
 // This updates the reverb state.  This is called any time the reverb effect
 // is loaded into a slot.
-ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
+ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
 {
-    ALverbState *State = Slot->ReverbState;
+    ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat length, mixCoeff, cw, g, coeff;
     ALfloat hfRatio = Effect->Reverb.DecayHFRatio;
@@ -695,8 +569,9 @@ ALvoid VerbUpdate(ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect)
 
 // This processes the reverb state, given the input samples and an output
 // buffer.
-ALvoid VerbProcess(ALverbState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
+    ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat early[4], late[4], out[4];
 
@@ -725,8 +600,9 @@ ALvoid VerbProcess(ALverbState *State, ALuint SamplesToDo, const ALfloat *Sample
 
 // This processes the EAX reverb state, given the input samples and an output
 // buffer.
-ALvoid EAXVerbProcess(ALverbState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
+    ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat early[4], late[4];
 
@@ -765,3 +641,135 @@ ALvoid EAXVerbProcess(ALverbState *State, ALuint SamplesToDo, const ALfloat *Sam
     }
 }
 
+// This creates the reverb state.  It should be called only when the reverb
+// effect is loaded into a slot that doesn't already have a reverb effect.
+ALeffectState *VerbCreate(ALCcontext *Context)
+{
+    ALverbState *State = NULL;
+    ALuint samples, length[13], totalLength, index;
+
+    State = malloc(sizeof(ALverbState));
+    if(!State)
+        return NULL;
+
+    State->state.Destroy = VerbDestroy;
+    State->state.Update = VerbUpdate;
+    State->state.Process = VerbProcess;
+
+    // All line lengths are powers of 2, calculated from their lengths, with
+    // an additional sample in case of rounding errors.
+
+    // See VerbUpdate() for an explanation of the additional calculation
+    // added to the master line length.
+    samples = (ALuint)
+              ((MASTER_LINE_LENGTH +
+                (LATE_LINE_LENGTH[0] * (1.0f + LATE_LINE_MULTIPLIER) *
+                 (DECO_FRACTION * ((DECO_MULTIPLIER * DECO_MULTIPLIER *
+                                    DECO_MULTIPLIER) - 1.0f)))) *
+               Context->Frequency) + 1;
+    length[0] = NextPowerOf2(samples);
+    totalLength = length[0];
+    for(index = 0;index < 4;index++)
+    {
+        samples = (ALuint)(EARLY_LINE_LENGTH[index] * Context->Frequency) + 1;
+        length[1 + index] = NextPowerOf2(samples);
+        totalLength += length[1 + index];
+    }
+    for(index = 0;index < 4;index++)
+    {
+        samples = (ALuint)(ALLPASS_LINE_LENGTH[index] * Context->Frequency) + 1;
+        length[5 + index] = NextPowerOf2(samples);
+        totalLength += length[5 + index];
+    }
+    for(index = 0;index < 4;index++)
+    {
+        samples = (ALuint)(LATE_LINE_LENGTH[index] *
+                           (1.0f + LATE_LINE_MULTIPLIER) * Context->Frequency) + 1;
+        length[9 + index] = NextPowerOf2(samples);
+        totalLength += length[9 + index];
+    }
+
+    // All lines share a single sample buffer and have their masks and start
+    // addresses calculated once.
+    State->SampleBuffer = malloc(totalLength * sizeof(ALfloat));
+    if(!State->SampleBuffer)
+    {
+        free(State);
+        return NULL;
+    }
+    for(index = 0; index < totalLength;index++)
+        State->SampleBuffer[index] = 0.0f;
+
+    State->LpCoeff = 0.0f;
+    State->LpSamples[0] = 0.0f;
+    State->LpSamples[1] = 0.0f;
+    State->Delay.Mask = length[0] - 1;
+    State->Delay.Line = &State->SampleBuffer[0];
+    totalLength = length[0];
+
+    State->Tap[0] = 0;
+    State->Tap[1] = 0;
+    State->Tap[2] = 0;
+    State->Tap[3] = 0;
+    State->Tap[4] = 0;
+
+    State->Early.Gain = 0.0f;
+    for(index = 0;index < 4;index++)
+    {
+        State->Early.Coeff[index] = 0.0f;
+        State->Early.Delay[index].Mask = length[1 + index] - 1;
+        State->Early.Delay[index].Line = &State->SampleBuffer[totalLength];
+        totalLength += length[1 + index];
+
+        // The early delay lines have their read offsets calculated once.
+        State->Early.Offset[index] = (ALuint)(EARLY_LINE_LENGTH[index] *
+                                              Context->Frequency);
+    }
+
+    State->Late.Gain = 0.0f;
+    State->Late.DensityGain = 0.0f;
+    State->Late.ApFeedCoeff = 0.0f;
+    State->Late.MixCoeff = 0.0f;
+
+    for(index = 0;index < 4;index++)
+    {
+        State->Late.ApCoeff[index] = 0.0f;
+        State->Late.ApDelay[index].Mask = length[5 + index] - 1;
+        State->Late.ApDelay[index].Line = &State->SampleBuffer[totalLength];
+        totalLength += length[5 + index];
+
+        // The late all-pass lines have their read offsets calculated once.
+        State->Late.ApOffset[index] = (ALuint)(ALLPASS_LINE_LENGTH[index] *
+                                               Context->Frequency);
+    }
+
+    for(index = 0;index < 4;index++)
+    {
+        State->Late.Coeff[index] = 0.0f;
+        State->Late.Delay[index].Mask = length[9 + index] - 1;
+        State->Late.Delay[index].Line = &State->SampleBuffer[totalLength];
+        totalLength += length[9 + index];
+
+        State->Late.Offset[index] = 0;
+
+        State->Late.LpCoeff[index] = 0.0f;
+        State->Late.LpSample[index] = 0.0f;
+    }
+
+    // Panning is applied as an independent gain for each output channel.
+    for(index = 0;index < OUTPUTCHANNELS;index++)
+    {
+        State->Early.PanGain[index] = 0.0f;
+        State->Late.PanGain[index] = 0.0f;
+    }
+
+    State->Offset = 0;
+    return &State->state;
+}
+
+ALeffectState *EAXVerbCreate(ALCcontext *Context)
+{
+    ALeffectState *State = VerbCreate(Context);
+    if(State) State->Process = EAXVerbProcess;
+    return State;
+}

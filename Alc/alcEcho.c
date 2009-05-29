@@ -23,13 +23,15 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "AL/al.h"
+#include "alMain.h"
 #include "alFilter.h"
 #include "alAuxEffectSlot.h"
-#include "alEcho.h"
 #include "alu.h"
 
-struct ALechoState {
+typedef struct ALechoState {
+    // Must be first in all effects!
+    ALeffectState state;
+
     ALfloat *SampleBuffer;
     ALuint BufferLength;
 
@@ -46,7 +48,7 @@ struct ALechoState {
 
     FILTER iirFilter;
     ALfloat history[2];
-};
+} ALechoState;
 
 // Find the next power of 2.  Actually, this will return the input value if
 // it is already a power of 2.
@@ -66,46 +68,9 @@ static ALuint NextPowerOf2(ALuint value)
     return powerOf2;
 }
 
-ALechoState *EchoCreate(ALCcontext *Context)
+ALvoid EchoDestroy(ALeffectState *effect)
 {
-    ALechoState *state;
-    ALuint i, maxlen;
-
-    state = malloc(sizeof(*state));
-    if(!state)
-        return NULL;
-
-    maxlen  = (ALuint)(AL_ECHO_MAX_DELAY * Context->Frequency);
-    maxlen += (ALuint)(AL_ECHO_MAX_LRDELAY * Context->Frequency);
-
-    // Use the next power of 2 for the buffer length, so the tap offsets can be
-    // wrapped using a mask instead of a modulo
-    state->BufferLength = NextPowerOf2(maxlen+1);
-    state->SampleBuffer = malloc(state->BufferLength * sizeof(ALfloat));
-    if(!state->SampleBuffer)
-    {
-        free(state);
-        return NULL;
-    }
-
-    for(i = 0;i < state->BufferLength;i++)
-        state->SampleBuffer[i] = 0.0f;
-
-    state->Tap[0].offset = 0;
-    state->Tap[1].offset = 0;
-    state->Tap[2].offset = 0;
-    state->GainL = 0.0f;
-    state->GainR = 0.0f;
-
-    for(i = 0;i < 2;i++)
-        state->iirFilter.history[i] = 0.0f;
-    state->iirFilter.coeff = 0.0f;
-
-    return state;
-}
-
-ALvoid EchoDestroy(ALechoState *state)
-{
+    ALechoState *state = (ALechoState*)effect;
     if(state)
     {
         free(state->SampleBuffer);
@@ -114,9 +79,9 @@ ALvoid EchoDestroy(ALechoState *state)
     }
 }
 
-ALvoid EchoUpdate(ALCcontext *Context, struct ALeffectslot *Slot, ALeffect *Effect)
+ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, struct ALeffectslot *Slot, ALeffect *Effect)
 {
-    ALechoState *state = Slot->EchoState;
+    ALechoState *state = (ALechoState*)effect;
     ALuint newdelay1, newdelay2;
     ALfloat lrpan, cw, a, g;
 
@@ -142,8 +107,9 @@ ALvoid EchoUpdate(ALCcontext *Context, struct ALeffectslot *Slot, ALeffect *Effe
     state->iirFilter.coeff = a;
 }
 
-ALvoid EchoProcess(ALechoState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
+    ALechoState *state = (ALechoState*)effect;
     const ALuint delay = state->BufferLength-1;
     ALuint tap1off = state->Tap[0].offset;
     ALuint tap2off = state->Tap[1].offset;
@@ -181,4 +147,46 @@ ALvoid EchoProcess(ALechoState *state, ALuint SamplesToDo, const ALfloat *Sample
     state->Tap[0].offset = tap1off;
     state->Tap[1].offset = tap2off;
     state->Tap[2].offset = fboff;
+}
+
+ALeffectState *EchoCreate(ALCcontext *Context)
+{
+    ALechoState *state;
+    ALuint i, maxlen;
+
+    state = malloc(sizeof(*state));
+    if(!state)
+        return NULL;
+
+    state->state.Destroy = EchoDestroy;
+    state->state.Update = EchoUpdate;
+    state->state.Process = EchoProcess;
+
+    maxlen  = (ALuint)(AL_ECHO_MAX_DELAY * Context->Frequency);
+    maxlen += (ALuint)(AL_ECHO_MAX_LRDELAY * Context->Frequency);
+
+    // Use the next power of 2 for the buffer length, so the tap offsets can be
+    // wrapped using a mask instead of a modulo
+    state->BufferLength = NextPowerOf2(maxlen+1);
+    state->SampleBuffer = malloc(state->BufferLength * sizeof(ALfloat));
+    if(!state->SampleBuffer)
+    {
+        free(state);
+        return NULL;
+    }
+
+    for(i = 0;i < state->BufferLength;i++)
+        state->SampleBuffer[i] = 0.0f;
+
+    state->Tap[0].offset = 0;
+    state->Tap[1].offset = 0;
+    state->Tap[2].offset = 0;
+    state->GainL = 0.0f;
+    state->GainR = 0.0f;
+
+    for(i = 0;i < 2;i++)
+        state->iirFilter.history[i] = 0.0f;
+    state->iirFilter.coeff = 0.0f;
+
+    return &state->state;
 }

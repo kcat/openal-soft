@@ -29,7 +29,6 @@
 #include "alAuxEffectSlot.h"
 #include "alThunk.h"
 #include "alError.h"
-#include "alReverb.h"
 
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, ALeffect *effect);
@@ -150,8 +149,8 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                         *list = (*list)->next;
                     ALTHUNK_REMOVEENTRY(ALAuxiliaryEffectSlot->effectslot);
 
-                    VerbDestroy(ALAuxiliaryEffectSlot->ReverbState);
-                    EchoDestroy(ALAuxiliaryEffectSlot->EchoState);
+                    if(ALAuxiliaryEffectSlot->EffectState)
+                        ALEffect_Destroy(ALAuxiliaryEffectSlot->EffectState);
 
                     memset(ALAuxiliaryEffectSlot, 0, sizeof(ALeffectslot));
                     free(ALAuxiliaryEffectSlot);
@@ -472,10 +471,9 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
 {
     if((!effect) || (effect->type != ALEffectSlot->effect.type))
     {
-        VerbDestroy(ALEffectSlot->ReverbState);
-        ALEffectSlot->ReverbState = NULL;
-        EchoDestroy(ALEffectSlot->EchoState);
-        ALEffectSlot->EchoState = NULL;
+        if(ALEffectSlot->EffectState)
+            ALEffect_Destroy(ALEffectSlot->EffectState);
+        ALEffectSlot->EffectState = NULL;
     }
     if(!effect)
     {
@@ -483,24 +481,17 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
         return;
     }
     memcpy(&ALEffectSlot->effect, effect, sizeof(*effect));
-    if(effect->type == AL_EFFECT_EAXREVERB)
+
+    if(!ALEffectSlot->EffectState)
     {
-        if(!ALEffectSlot->ReverbState)
-            ALEffectSlot->ReverbState = EAXVerbCreate(Context);
-        VerbUpdate(Context, ALEffectSlot, effect);
+        if(effect->type == AL_EFFECT_EAXREVERB)
+            ALEffectSlot->EffectState = EAXVerbCreate(Context);
+        else if(effect->type == AL_EFFECT_REVERB)
+            ALEffectSlot->EffectState = VerbCreate(Context);
+        else if(effect->type == AL_EFFECT_ECHO)
+            ALEffectSlot->EffectState = EchoCreate(Context);
     }
-    else if(effect->type == AL_EFFECT_REVERB)
-    {
-        if(!ALEffectSlot->ReverbState)
-            ALEffectSlot->ReverbState = VerbCreate(Context);
-        VerbUpdate(Context, ALEffectSlot, effect);
-    }
-    else if(effect->type == AL_EFFECT_ECHO)
-    {
-        if(!ALEffectSlot->EchoState)
-            ALEffectSlot->EchoState = EchoCreate(Context);
-        EchoUpdate(Context, ALEffectSlot, effect);
-    }
+    ALEffect_Update(ALEffectSlot->EffectState, Context, ALEffectSlot, effect);
 }
 
 
@@ -517,8 +508,8 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
         Context->AuxiliaryEffectSlot = Context->AuxiliaryEffectSlot->next;
 
         // Release effectslot structure
-        VerbDestroy(temp->ReverbState);
-        EchoDestroy(temp->EchoState);
+        if(temp->EffectState)
+            ALEffect_Destroy(temp->EffectState);
         ALTHUNK_REMOVEENTRY(temp->effectslot);
 
         memset(temp, 0, sizeof(ALeffectslot));

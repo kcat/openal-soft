@@ -4,8 +4,6 @@
 #include "AL/al.h"
 #include "alEffect.h"
 #include "alFilter.h"
-#include "alReverb.h"
-#include "alEcho.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,6 +15,8 @@ extern "C" {
 
 #define AL_EFFECTSLOT_NULL                                 0x0000
 
+typedef struct ALeffectState ALeffectState;
+
 typedef struct ALeffectslot
 {
     ALeffect effect;
@@ -24,8 +24,7 @@ typedef struct ALeffectslot
     ALfloat Gain;
     ALboolean AuxSendAuto;
 
-    ALverbState *ReverbState;
-    ALechoState *EchoState;
+    ALeffectState *EffectState;
 
     ALfloat WetBuffer[BUFFERSIZE];
 
@@ -52,6 +51,22 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, AL
 ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues);
 
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
+
+
+struct ALeffectState {
+    ALvoid (*Destroy)(ALeffectState *State);
+    ALvoid (*Update)(ALeffectState *State, ALCcontext *Context, ALeffectslot *Slot, ALeffect *Effect);
+    ALvoid (*Process)(ALeffectState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS]);
+};
+
+ALeffectState *EAXVerbCreate(ALCcontext *Context);
+ALeffectState *VerbCreate(ALCcontext *Context);
+ALeffectState *EchoCreate(ALCcontext *Context);
+
+#define ALEffect_Destroy(a)       ((a)->Destroy((a)))
+#define ALEffect_Update(a,b,c,d)  ((a)->Update((a),(b),(c),(d)))
+#define ALEffect_Process(a,b,c,d) ((a)->Process((a),(b),(c),(d)))
+
 
 #ifdef __cplusplus
 }

@@ -749,7 +749,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                         wetgainhf[i] *= ALSource->Send[i].WetFilter.GainHF;
                         break;
                 }
-                wetsend[i] *= ListenerGain;
+                wetsend[i] *= ALSource->Send[i].Slot->Gain * ListenerGain;
             }
             else
             {

@@ -409,8 +409,7 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffectslot *Slot
 
     // Calculate the early reflections gain (from the slot gain, master
     // effect gain, and reflections gain parameters).
-    State->Early.Gain = Slot->Gain * Effect->Reverb.Gain *
-        Effect->Reverb.ReflectionsGain;
+    State->Early.Gain = Effect->Reverb.Gain * Effect->Reverb.ReflectionsGain;
 
     // Calculate the gain (coefficient) for each early delay line.
     for(index = 0;index < 4;index++)
@@ -425,8 +424,7 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffectslot *Slot
     // gain, and late reverb gain parameters).  Since the output is tapped
     // prior to the application of the delay line coefficients, this gain
     // needs to be attenuated by the 'x' mix coefficient from above.
-    State->Late.Gain = Slot->Gain * Effect->Reverb.Gain *
-        Effect->Reverb.LateReverbGain * mixCoeff;
+    State->Late.Gain = Effect->Reverb.Gain * Effect->Reverb.LateReverbGain * mixCoeff;
 
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of

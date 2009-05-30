@@ -539,10 +539,28 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffect *Effect)
     // Calculate the 3D-panning gains for the early reflections and late
     // reverb (for EAX mode).
     {
-        ALfloat *earlyPan = Effect->Reverb.ReflectionsPan;
-        ALfloat *latePan = Effect->Reverb.LateReverbPan;
+        ALfloat earlyPan[3] = { Effect->Reverb.ReflectionsPan[0], Effect->Reverb.ReflectionsPan[1], Effect->Reverb.ReflectionsPan[2] };
+        ALfloat latePan[3] = { Effect->Reverb.LateReverbPan[0], Effect->Reverb.LateReverbPan[1], Effect->Reverb.LateReverbPan[2] };
         ALfloat *speakerGain, dirGain, ambientGain;
+        ALfloat length;
         ALint pos;
+
+        length = earlyPan[0]*earlyPan[0] + earlyPan[1]*earlyPan[1] + earlyPan[2]*earlyPan[2];
+        if(length > 1.0f)
+        {
+            length = 1.0f / aluSqrt(length);
+            earlyPan[0] *= length;
+            earlyPan[1] *= length;
+            earlyPan[2] *= length;
+        }
+        length = latePan[0]*latePan[0] + latePan[1]*latePan[1] + latePan[2]*latePan[2];
+        if(length > 1.0f)
+        {
+            length = 1.0f / aluSqrt(length);
+            latePan[0] *= length;
+            latePan[1] *= length;
+            latePan[2] *= length;
+        }
 
         // This code applies directional reverb just like the mixer applies
         // directional sources.  It diffuses the sound toward all speakers
@@ -552,14 +570,14 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffect *Effect)
         pos = aluCart2LUTpos(earlyPan[2], earlyPan[0]);
         speakerGain = &Context->PanningLUT[OUTPUTCHANNELS * pos];
         dirGain = aluSqrt((earlyPan[0] * earlyPan[0]) + (earlyPan[2] * earlyPan[2]));
-        ambientGain = 1.0 / aluSqrt(Context->NumChan) * (1.0 - dirGain);
+        ambientGain = (1.0 - dirGain);
         for(index = 0;index < OUTPUTCHANNELS;index++)
              State->Early.PanGain[index] = dirGain * speakerGain[index] + ambientGain;
 
         pos = aluCart2LUTpos(latePan[2], latePan[0]);
         speakerGain = &Context->PanningLUT[OUTPUTCHANNELS * pos];
         dirGain = aluSqrt((latePan[0] * latePan[0]) + (latePan[2] * latePan[2]));
-        ambientGain = 1.0 / aluSqrt(Context->NumChan) * (1.0 - dirGain);
+        ambientGain = (1.0 - dirGain);
         for(index = 0;index < OUTPUTCHANNELS;index++)
              State->Late.PanGain[index] = dirGain * speakerGain[index] + ambientGain;
     }

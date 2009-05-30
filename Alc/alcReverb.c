@@ -46,8 +46,8 @@ typedef struct ALverbState {
     // fragmentation and management code.
     ALfloat  *SampleBuffer;
     // Master effect low-pass filter (2 chained 1-pole filters).
-    ALfloat   LpCoeff;
-    ALfloat   LpSamples[2];
+    FILTER    LpFilter;
+    ALfloat   LpHistory[2];
     // Initial effect delay and decorrelation.
     DelayLine Delay;
     // The tap points for the initial delay.  First tap goes to early
@@ -318,10 +318,7 @@ static __inline ALvoid ReverbInOut(ALverbState *State, ALfloat in, ALfloat *earl
     ALfloat taps[4];
 
     // Low-pass filter the incoming sample.
-    in = in + ((State->LpSamples[0] - in) * State->LpCoeff);
-    State->LpSamples[0] = in;
-    in = in + ((State->LpSamples[1] - in) * State->LpCoeff);
-    State->LpSamples[1] = in;
+    in = lpFilter2P(&State->LpFilter, 0, in);
 
     // Feed the initial delay line.
     DelayLineIn(&State->Delay, State->Offset, in);
@@ -381,9 +378,9 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffect *Effect)
     // Calculate the master low-pass filter (from the master effect HF gain).
     cw = cos(2.0 * M_PI * Effect->Reverb.HFReference / Context->Frequency);
     g = __max(Effect->Reverb.GainHF, 0.0001f);
-    State->LpCoeff = 0.0f;
+    State->LpFilter.coeff = 0.0f;
     if(g < 0.9999f) // 1-epsilon
-        State->LpCoeff = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
+        State->LpFilter.coeff = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
 
     // Calculate the initial delay taps.
     length = Effect->Reverb.ReflectionsDelay;
@@ -407,8 +404,8 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffect *Effect)
         State->Tap[1 + index] = (ALuint)(length * Context->Frequency);
     }
 
-    // Calculate the early reflections gain (from the slot gain, master
-    // effect gain, and reflections gain parameters).
+    // Calculate the early reflections gain (from the master effect gain, and
+    // reflections gain parameters).
     State->Early.Gain = Effect->Reverb.Gain * Effect->Reverb.ReflectionsGain;
 
     // Calculate the gain (coefficient) for each early delay line.
@@ -420,10 +417,10 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, ALeffect *Effect)
     // Calculate the first mixing matrix coefficient (x).
     mixCoeff = 1.0f - (0.5f * pow(Effect->Reverb.Diffusion, 3.0f));
 
-    // Calculate the late reverb gain (from the slot gain, master effect
-    // gain, and late reverb gain parameters).  Since the output is tapped
-    // prior to the application of the delay line coefficients, this gain
-    // needs to be attenuated by the 'x' mix coefficient from above.
+    // Calculate the late reverb gain (from the master effect gain, and late
+    // reverb gain parameters).  Since the output is tapped prior to the
+    // application of the delay line coefficients, this gain needs to be
+    // attenuated by the 'x' mix coefficient from above.
     State->Late.Gain = Effect->Reverb.Gain * Effect->Reverb.LateReverbGain * mixCoeff;
 
     /* To compensate for changes in modal density and decay time of the late
@@ -718,9 +715,9 @@ ALeffectState *VerbCreate(ALCcontext *Context)
     for(index = 0; index < totalLength;index++)
         State->SampleBuffer[index] = 0.0f;
 
-    State->LpCoeff = 0.0f;
-    State->LpSamples[0] = 0.0f;
-    State->LpSamples[1] = 0.0f;
+    State->LpFilter.coeff = 0.0f;
+    State->LpFilter.history[0] = 0.0f;
+    State->LpFilter.history[1] = 0.0f;
     State->Delay.Mask = length[0] - 1;
     State->Delay.Line = &State->SampleBuffer[0];
     totalLength = length[0];

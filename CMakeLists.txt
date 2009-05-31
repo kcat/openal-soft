@@ -10,6 +10,7 @@ INCLUDE(CheckFunctionExists)
 INCLUDE(CheckLibraryExists)
 INCLUDE(CheckIncludeFile)
 INCLUDE(CheckIncludeFiles)
+INCLUDE(CheckSymbolExists)
 INCLUDE(CheckCCompilerFlag)
 INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckTypeSize)
@@ -166,6 +167,17 @@ IF(NOT HAVE_SNPRINTF)
 
     ADD_DEFINITIONS(-Dsnprintf=_snprintf)
 ENDIF()
+
+CHECK_SYMBOL_EXISTS(isnan math.h HAVE_ISNAN)
+IF(NOT HAVE_ISNAN)
+    CHECK_FUNCTION_EXISTS(_isnan HAVE__ISNAN)
+    IF(NOT HAVE__ISNAN)
+        MESSAGE(FATAL_ERROR "No isnan function found, please report!")
+    ENDIF()
+
+    ADD_DEFINITIONS(-Disnan=_isnan)
+ENDIF()
+
 
 # Check for the dlopen API (for dynamicly loading backend libs)
 IF(DLOPEN)

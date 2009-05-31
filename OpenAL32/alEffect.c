@@ -21,6 +21,7 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <math.h>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -666,14 +667,24 @@ ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
                 break;
 
             case AL_EAXREVERB_REFLECTIONS_PAN:
-                ALEffect->Reverb.ReflectionsPan[0] = pflValues[0];
-                ALEffect->Reverb.ReflectionsPan[1] = pflValues[1];
-                ALEffect->Reverb.ReflectionsPan[2] = pflValues[2];
+                if(!isnan(pflValues[0]) && !isnan(pflValues[1]) && !isnan(pflValues[2]))
+                {
+                    ALEffect->Reverb.ReflectionsPan[0] = pflValues[0];
+                    ALEffect->Reverb.ReflectionsPan[1] = pflValues[1];
+                    ALEffect->Reverb.ReflectionsPan[2] = pflValues[2];
+                }
+                else
+                    alSetError(AL_INVALID_VALUE);
                 break;
             case AL_EAXREVERB_LATE_REVERB_PAN:
-                ALEffect->Reverb.LateReverbPan[0] = pflValues[0];
-                ALEffect->Reverb.LateReverbPan[1] = pflValues[1];
-                ALEffect->Reverb.LateReverbPan[2] = pflValues[2];
+                if(!isnan(pflValues[0]) && !isnan(pflValues[1]) && !isnan(pflValues[2]))
+                {
+                    ALEffect->Reverb.LateReverbPan[0] = pflValues[0];
+                    ALEffect->Reverb.LateReverbPan[1] = pflValues[1];
+                    ALEffect->Reverb.LateReverbPan[2] = pflValues[2];
+                }
+                else
+                    alSetError(AL_INVALID_VALUE);
                 break;
 
             default:

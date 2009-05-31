@@ -471,9 +471,22 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
 {
     if((!effect) || (effect->type != ALEffectSlot->effect.type))
     {
+        ALeffectState *NewState = NULL;
+        if(effect)
+        {
+            if(effect->type == AL_EFFECT_EAXREVERB)
+                NewState = EAXVerbCreate(Context);
+            else if(effect->type == AL_EFFECT_REVERB)
+                NewState = VerbCreate(Context);
+            else if(effect->type == AL_EFFECT_ECHO)
+                NewState = EchoCreate(Context);
+            /* No new state? An error occured.. */
+            if(!NewState)
+                return;
+        }
         if(ALEffectSlot->EffectState)
             ALEffect_Destroy(ALEffectSlot->EffectState);
-        ALEffectSlot->EffectState = NULL;
+        ALEffectSlot->EffectState = NewState;
     }
     if(!effect)
     {
@@ -481,16 +494,6 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
         return;
     }
     memcpy(&ALEffectSlot->effect, effect, sizeof(*effect));
-
-    if(!ALEffectSlot->EffectState)
-    {
-        if(effect->type == AL_EFFECT_EAXREVERB)
-            ALEffectSlot->EffectState = EAXVerbCreate(Context);
-        else if(effect->type == AL_EFFECT_REVERB)
-            ALEffectSlot->EffectState = VerbCreate(Context);
-        else if(effect->type == AL_EFFECT_ECHO)
-            ALEffectSlot->EffectState = EchoCreate(Context);
-    }
     ALEffect_Update(ALEffectSlot->EffectState, Context, effect);
 }
 

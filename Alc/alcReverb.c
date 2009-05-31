@@ -28,6 +28,7 @@
 #include "alMain.h"
 #include "alAuxEffectSlot.h"
 #include "alEffect.h"
+#include "alError.h"
 #include "alu.h"
 
 typedef struct DelayLine
@@ -665,7 +666,10 @@ ALeffectState *VerbCreate(ALCcontext *Context)
 
     State = malloc(sizeof(ALverbState));
     if(!State)
+    {
+        alSetError(AL_OUT_OF_MEMORY);
         return NULL;
+    }
 
     State->state.Destroy = VerbDestroy;
     State->state.Update = VerbUpdate;
@@ -710,6 +714,7 @@ ALeffectState *VerbCreate(ALCcontext *Context)
     if(!State->SampleBuffer)
     {
         free(State);
+        alSetError(AL_OUT_OF_MEMORY);
         return NULL;
     }
     for(index = 0; index < totalLength;index++)

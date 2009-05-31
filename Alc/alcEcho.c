@@ -26,6 +26,7 @@
 #include "alMain.h"
 #include "alFilter.h"
 #include "alAuxEffectSlot.h"
+#include "alError.h"
 #include "alu.h"
 
 typedef struct ALechoState {
@@ -160,7 +161,10 @@ ALeffectState *EchoCreate(ALCcontext *Context)
 
     state = malloc(sizeof(*state));
     if(!state)
+    {
+        alSetError(AL_OUT_OF_MEMORY);
         return NULL;
+    }
 
     state->state.Destroy = EchoDestroy;
     state->state.Update = EchoUpdate;
@@ -176,6 +180,7 @@ ALeffectState *EchoCreate(ALCcontext *Context)
     if(!state->SampleBuffer)
     {
         free(state);
+        alSetError(AL_OUT_OF_MEMORY);
         return NULL;
     }
 

@@ -10,7 +10,11 @@ extern "C" {
 
 typedef struct {
     ALfloat coeff;
+#ifndef _MSC_VER
     ALfloat history[0];
+#else
+    ALfloat history[1];
+#endif
 } FILTER;
 
 static __inline ALfloat lpFilter4P(FILTER *iir, ALuint offset, ALfloat input)

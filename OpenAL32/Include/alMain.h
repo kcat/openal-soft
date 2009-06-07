@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 #ifdef HAVE_FENV_H
 #include <fenv.h>
@@ -107,19 +108,30 @@ static inline void Sleep(ALuint t)
 extern "C" {
 #endif
 
-extern char _alDebug[256];
+static __inline void al_print(const char *fname, unsigned int line, const char *fmt, ...)
+{
+    const char *fn;
+    char str[256];
+    int i;
 
-#define AL_PRINT(...) do {                             \
-    int _al_print_i;                                   \
-    const char *_al_print_fn = strrchr(__FILE__, '/'); \
-    if(!_al_print_fn) _al_print_fn  = __FILE__;        \
-    else              _al_print_fn += 1;               \
-    _al_print_i = snprintf(_alDebug, sizeof(_alDebug), "AL lib: %s:%d: ", _al_print_fn, __LINE__); \
-    if(_al_print_i < (int)sizeof(_alDebug) && _al_print_i > 0)                     \
-        snprintf(_alDebug+_al_print_i, sizeof(_alDebug)-_al_print_i, __VA_ARGS__); \
-    _alDebug[sizeof(_alDebug)-1] = 0; \
-    fprintf(stderr, "%s", _alDebug);  \
-} while(0)
+    fn = strrchr(fname, '/');
+    if(!fn) fn = strrchr(fname, '\\');;
+    if(!fn) fn = fname;
+    else fn += 1;
+
+    i = snprintf(str, sizeof(str), "AL lib: %s:%d: ", fn, line);
+    if(i < (int)sizeof(str) && i > 0)
+    {
+        va_list ap;
+        va_start(ap, fmt);
+        vsnprintf(str+i, sizeof(str)-i, fmt, ap);
+        va_end(ap);
+    }
+    str[sizeof(str)-1] = 0;
+
+    fprintf(stderr, "%s", str);
+}
+#define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
 
 
 #define SWMIXER_OUTPUT_RATE        44100

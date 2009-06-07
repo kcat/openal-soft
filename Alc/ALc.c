@@ -37,13 +37,6 @@
 #include "bs2b.h"
 #include "alu.h"
 
-///////////////////////////////////////////////////////
-// DEBUG INFORMATION
-
-char _alDebug[256];
-
-///////////////////////////////////////////////////////
-
 
 #define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 static struct {

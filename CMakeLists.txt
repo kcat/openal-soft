@@ -168,6 +168,16 @@ IF(NOT HAVE_SNPRINTF)
     ADD_DEFINITIONS(-Dsnprintf=_snprintf)
 ENDIF()
 
+CHECK_FUNCTION_EXISTS(vsnprintf HAVE_VSNPRINTF)
+IF(NOT HAVE_VSNPRINTF)
+    CHECK_FUNCTION_EXISTS(_vsnprintf HAVE__VSNPRINTF)
+    IF(NOT HAVE__VSNPRINTF)
+        MESSAGE(FATAL_ERROR "No vsnprintf function found, please report!")
+    ENDIF()
+
+    ADD_DEFINITIONS(-Dvsnprintf=_vsnprintf)
+ENDIF()
+
 CHECK_SYMBOL_EXISTS(isnan math.h HAVE_ISNAN)
 IF(NOT HAVE_ISNAN)
     CHECK_FUNCTION_EXISTS(_isnan HAVE__ISNAN)

@@ -49,7 +49,9 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 
     if (n > 0)
     {
-        if(Context->AuxiliaryEffectSlotCount+n <= Context->AuxiliaryEffectSlotMax)
+        ALCdevice *Device = alcGetContextsDevice(Context);
+
+        if(Context->AuxiliaryEffectSlotCount+n <= Device->AuxiliaryEffectSlotMax)
         {
             // Check that enough memory has been allocted in the 'effectslots' array for n Effect Slots
             if (!IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))

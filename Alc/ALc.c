@@ -482,7 +482,6 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->lNumStereoSources = 1;
     pContext->lNumMonoSources = pContext->Device->MaxNoOfSources - pContext->lNumStereoSources;
 
-    pContext->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
     pContext->NumSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
     if(pContext->NumSends > MAX_SENDS)
         pContext->NumSends = MAX_SENDS;
@@ -1287,6 +1286,10 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
         if((ALint)device->MaxNoOfSources <= 0)
             device->MaxNoOfSources = 256;
+
+        device->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
+        if((ALint)device->AuxiliaryEffectSlotMax <= 0)
+            device->AuxiliaryEffectSlotMax = 4;
 
         // Find a playback device to open
         SuspendContext(NULL);

@@ -167,6 +167,8 @@ struct ALCdevice_struct
 
     // Maximum number of sources that can be created
     ALuint       MaxNoOfSources;
+    // Maximum number of slots that can be created
+    ALuint       AuxiliaryEffectSlotMax;
 
     // Context created on this device
     ALCcontext   *Context;
@@ -195,8 +197,6 @@ struct ALCcontext_struct
 
     struct ALeffectslot *AuxiliaryEffectSlot;
     ALuint               AuxiliaryEffectSlotCount;
-    // Maximum number of slots that can be created
-    ALuint               AuxiliaryEffectSlotMax;
 
     ALenum      LastError;
     ALboolean   InUse;

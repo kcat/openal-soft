@@ -81,10 +81,11 @@ ALsizei RingBufferSize(RingBuffer *ring)
 
 void WriteRingBuffer(RingBuffer *ring, const ALubyte *data, ALsizei len)
 {
-    int remain = ring->length - ring->write_pos;
+    int remain;
 
     EnterCriticalSection(&ring->cs);
 
+    remain = ring->length - ring->write_pos;
     if((ring->read_pos-ring->write_pos+ring->length)%ring->length < len)
         ring->read_pos = (ring->write_pos+len) % ring->length;
 
@@ -104,10 +105,11 @@ void WriteRingBuffer(RingBuffer *ring, const ALubyte *data, ALsizei len)
 
 void ReadRingBuffer(RingBuffer *ring, ALubyte *data, ALsizei len)
 {
-    int remain = ring->length - ring->read_pos;
+    int remain;
 
     EnterCriticalSection(&ring->cs);
 
+    remain = ring->length - ring->read_pos;
     if(remain < len)
     {
         memcpy(data, ring->mem+(ring->read_pos*ring->frame_size), remain*ring->frame_size);

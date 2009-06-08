@@ -222,13 +222,6 @@ void ReadALConfig(void)
     }
 #else
     f = fopen("/etc/openal/alsoft.conf", "r");
-    if(!f)
-    {
-        f = fopen("/etc/openal/config", "r");
-        if(f)
-            AL_PRINT("Reading /etc/openal/config; this file is deprecated\n"
-                     "\tPlease rename it to /etc/openal/alsoft.conf\n");
-    }
     if(f)
     {
         LoadConfigFromFile(f);
@@ -238,14 +231,6 @@ void ReadALConfig(void)
     {
         snprintf(buffer, sizeof(buffer), "%s/.alsoftrc", getenv("HOME"));
         f = fopen(buffer, "r");
-        if(!f)
-        {
-            snprintf(buffer, sizeof(buffer), "%s/.openalrc", getenv("HOME"));
-            f = fopen(buffer, "r");
-            if(f)
-                AL_PRINT("Reading ~/.openalrc; this file is deprecated\n"
-                         "\tPlease rename it to ~/.alsoftrc\n");
-        }
         if(f)
         {
             LoadConfigFromFile(f);

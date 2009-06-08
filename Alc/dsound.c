@@ -28,6 +28,10 @@
 
 #include <dsound.h>
 #include <mmreg.h>
+#ifndef _WAVEFORMATEXTENSIBLE_
+#include <ks.h>
+#include <ksmedia.h>
+#endif
 
 #include "alMain.h"
 #include "AL/al.h"

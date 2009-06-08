@@ -18,6 +18,10 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
+#ifdef _WIN32
+#define _WIN32_IE 0x400
+#endif
+
 #include "config.h"
 
 #include <stdlib.h>
@@ -27,8 +31,7 @@
 
 #include "alMain.h"
 
-#ifdef _WIN32
-#define _WIN32_IE 0x400
+#ifdef _WIN32_IE
 #include <shlobj.h>
 #endif
 

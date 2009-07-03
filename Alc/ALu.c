@@ -135,6 +135,7 @@ static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPU
         end = sep - 1;
         while(isspace(*end) && end != confkey)
             end--;
+        end++;
 
         if(strncmp(confkey, "fl", end-confkey) == 0)
             val = FRONT_LEFT;

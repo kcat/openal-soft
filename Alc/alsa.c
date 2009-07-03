@@ -537,7 +537,6 @@ static void alsa_close_playback(ALCdevice *device)
 
 static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
 {
-    snd_pcm_format_t alsaFormat;
     snd_pcm_hw_params_t *p;
     snd_pcm_uframes_t bufferSizeInFrames;
     snd_pcm_access_t access;
@@ -598,13 +597,13 @@ open_alsa:
     switch(aluBytesFromFormat(format))
     {
         case 1:
-            alsaFormat = SND_PCM_FORMAT_U8;
+            data->format = SND_PCM_FORMAT_U8;
             break;
         case 2:
-            alsaFormat = SND_PCM_FORMAT_S16;
+            data->format = SND_PCM_FORMAT_S16;
             break;
         default:
-            alsaFormat = SND_PCM_FORMAT_UNKNOWN;
+            data->format = SND_PCM_FORMAT_UNKNOWN;
             AL_PRINT("Unknown format?! %x\n", format);
     }
 

@@ -651,7 +651,7 @@ open_alsa:
         if((i=psnd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
             err = "any";
         /* set interleaved access */
-        if(err == NULL && (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED)) < 0)
+        if(err == NULL && (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
             err = "set access";
         /* set format (implicitly sets sample bits) */
         if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format)) < 0)

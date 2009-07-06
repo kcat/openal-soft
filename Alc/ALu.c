@@ -427,7 +427,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     DopplerFactor   = ALContext->DopplerFactor * ALSource->DopplerFactor;
     DopplerVelocity = ALContext->DopplerVelocity;
     flSpeedOfSound  = ALContext->flSpeedOfSound;
-    NumSends        = ALContext->NumSends;
+    NumSends        = ALContext->Device->NumAuxSends;
 
     //Get listener properties
     ListenerGain = ALContext->Listener.Gain;

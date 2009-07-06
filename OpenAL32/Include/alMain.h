@@ -182,6 +182,10 @@ struct ALCdevice_struct
     // Maximum number of slots that can be created
     ALuint       AuxiliaryEffectSlotMax;
 
+    ALint        lNumMonoSources;
+    ALint        lNumStereoSources;
+    ALuint       NumAuxSends;
+
     // Context created on this device
     ALCcontext   *Context;
 
@@ -220,11 +224,6 @@ struct ALCcontext_struct
     ALfloat     DopplerFactor;
     ALfloat     DopplerVelocity;
     ALfloat     flSpeedOfSound;
-
-    ALint       lNumMonoSources;
-    ALint       lNumStereoSources;
-
-    ALuint      NumSends;
 
     ALfloat     PanningLUT[OUTPUTCHANNELS * LUT_NUM];
     ALint       NumChan;

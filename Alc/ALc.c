@@ -472,13 +472,6 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->DopplerVelocity = 1.0f;
     pContext->flSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
 
-    pContext->lNumStereoSources = 1;
-    pContext->lNumMonoSources = pContext->Device->MaxNoOfSources - pContext->lNumStereoSources;
-
-    pContext->NumSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
-    if(pContext->NumSends > MAX_SENDS)
-        pContext->NumSends = MAX_SENDS;
-
     pContext->ExtensionList = "AL_EXTX_buffer_sub_data AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_OFFSET AL_EXTX_source_distance_model AL_LOKI_quadriphonic";
 
     level = GetConfigValueInt(NULL, "cf_level", 0);
@@ -816,10 +809,8 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                 case ALC_MAX_AUXILIARY_SENDS:
                     if(!size)
                         SetALCError(ALC_INVALID_VALUE);
-                    else if(device && device->Context)
-                        *data = device->Context->NumSends;
                     else
-                        *data = MAX_SENDS;
+                        *data = (device?device->NumAuxSends:MAX_SENDS);
                     break;
 
                 case ALC_ATTRIBUTES_SIZE:
@@ -828,18 +819,19 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     else if(!size)
                         SetALCError(ALC_INVALID_VALUE);
                     else
-                        *data = 12;
+                        *data = 13;
                     break;
 
                 case ALC_ALL_ATTRIBUTES:
                     if(!device)
                         SetALCError(ALC_INVALID_DEVICE);
-                    else if (size < 7)
+                    else if (size < 13)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                     {
                         int i = 0;
 
+                        SuspendContext(NULL);
                         data[i++] = ALC_FREQUENCY;
                         data[i++] = device->Frequency;
 
@@ -849,21 +841,17 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                         data[i++] = ALC_SYNC;
                         data[i++] = ALC_FALSE;
 
-                        SuspendContext(NULL);
-                        if(device->Context && size >= 12)
-                        {
-                            data[i++] = ALC_MONO_SOURCES;
-                            data[i++] = device->Context->lNumMonoSources;
+                        data[i++] = ALC_MONO_SOURCES;
+                        data[i++] = device->lNumMonoSources;
 
-                            data[i++] = ALC_STEREO_SOURCES;
-                            data[i++] = device->Context->lNumStereoSources;
+                        data[i++] = ALC_STEREO_SOURCES;
+                        data[i++] = device->lNumStereoSources;
 
-                            data[i++] = ALC_MAX_AUXILIARY_SENDS;
-                            data[i++] = device->Context->NumSends;
-                        }
-                        ProcessContext(NULL);
+                        data[i++] = ALC_MAX_AUXILIARY_SENDS;
+                        data[i++] = device->NumAuxSends;
 
                         data[i++] = 0;
+                        ProcessContext(NULL);
                     }
                     break;
 
@@ -900,7 +888,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     else if (size != 1)
                         SetALCError(ALC_INVALID_VALUE);
                     else
-                        *data = device->Context->lNumMonoSources;
+                        *data = device->lNumMonoSources;
                     break;
 
                 case ALC_STEREO_SOURCES:
@@ -909,7 +897,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     else if (size != 1)
                         SetALCError(ALC_INVALID_VALUE);
                     else
-                        *data = device->Context->lNumStereoSources;
+                        *data = device->lNumStereoSources;
                     break;
 
                 default:
@@ -1057,6 +1045,10 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
             // Check for attributes
             if (attrList)
             {
+                ALCint numMono = ALContext->Device->lNumMonoSources;
+                ALCint numStereo = ALContext->Device->lNumStereoSources;
+                ALCuint numSends = ALContext->Device->NumAuxSends;
+
                 ulAttributeIndex = 0;
                 while ((ulAttributeIndex < 10) && (attrList[ulAttributeIndex]))
                 {
@@ -1067,22 +1059,26 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                         if (ulRequestedStereoSources > ALContext->Device->MaxNoOfSources)
                             ulRequestedStereoSources = ALContext->Device->MaxNoOfSources;
 
-                        ALContext->lNumStereoSources = ulRequestedStereoSources;
-                        ALContext->lNumMonoSources = ALContext->Device->MaxNoOfSources - ALContext->lNumStereoSources;
+                        numStereo = ulRequestedStereoSources;
+                        numMono = ALContext->Device->MaxNoOfSources - numStereo;
                     }
 
                     if(attrList[ulAttributeIndex] == ALC_MAX_AUXILIARY_SENDS)
                     {
                         RequestedSends = attrList[ulAttributeIndex + 1];
 
-                        if(RequestedSends > ALContext->NumSends)
-                            RequestedSends = ALContext->NumSends;
+                        if(RequestedSends > ALContext->Device->NumAuxSends)
+                            RequestedSends = ALContext->Device->NumAuxSends;
 
-                        ALContext->NumSends = RequestedSends;
+                        numSends = RequestedSends;
                     }
 
                     ulAttributeIndex += 2;
                 }
+
+                ALContext->Device->lNumMonoSources = numMono;
+                ALContext->Device->lNumStereoSources = numStereo;
+                ALContext->Device->NumAuxSends = numSends;
             }
         }
         else
@@ -1283,6 +1279,13 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
         if((ALint)device->AuxiliaryEffectSlotMax <= 0)
             device->AuxiliaryEffectSlotMax = 4;
+
+        device->lNumStereoSources = 1;
+        device->lNumMonoSources = device->MaxNoOfSources - device->lNumStereoSources;
+
+        device->NumAuxSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
+        if(device->NumAuxSends > MAX_SENDS)
+            device->NumAuxSends = MAX_SENDS;
 
         // Find a playback device to open
         SuspendContext(NULL);

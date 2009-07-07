@@ -520,6 +520,7 @@ void alc_pulse_init(BackendFuncs *func_list) //{{{
 #define LOAD_FUNC(x) do { \
     p##x = GetProcAddress(pa_handle, #x); \
     if(!(p##x)) { \
+        AL_PRINT("Could not load %s from libpulse-0.dll\n", #x); \
         FreeLibrary(pa_handle); \
         pa_handle = NULL; \
         return; \
@@ -536,6 +537,7 @@ void alc_pulse_init(BackendFuncs *func_list) //{{{
 #define LOAD_FUNC(x) do { \
     p##x = dlsym(pa_handle, #x); \
     if(!(p##x)) { \
+        AL_PRINT("Could not load %s from libpulse\n", #x); \
         dlclose(pa_handle); \
         pa_handle = NULL; \
         return; \
@@ -548,6 +550,8 @@ void alc_pulse_init(BackendFuncs *func_list) //{{{
 #define LOAD_FUNC(x) p##x = (x)
 
 #endif
+    if(!pa_handle)
+        return;
 
 LOAD_FUNC(pa_context_unref);
 LOAD_FUNC(pa_sample_spec_valid);

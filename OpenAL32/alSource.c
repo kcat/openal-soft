@@ -532,9 +532,6 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
     ALCcontext          *pContext;
     ALsource            *pSource;
     ALbufferlistitem    *pALBufferListItem;
-    ALint                Counter = 0;
-    ALint                DataSize = 0;
-    ALint                BufferSize;
 
     pContext = alcGetCurrentContext();
     if (pContext)
@@ -594,11 +591,6 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             // Decrement reference counter for buffer
                             if (pALBufferListItem->buffer)
                                 ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(pALBufferListItem->buffer)))->refcount--;
-                            // Record size of buffer
-                            BufferSize = ((ALbuffer*)ALTHUNK_LOOKUPENTRY(pALBufferListItem->buffer))->size;
-                            DataSize += BufferSize;
-                            // Increment the number of buffers removed from queue
-                            Counter++;
                             // Release memory for buffer list item
                             free(pALBufferListItem);
                             // Decrement the number of buffers in the queue
@@ -620,8 +612,6 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 
                             pSource->queue = pALBufferListItem;
                             pSource->BuffersInQueue = 1;
-
-                            DataSize = ((ALbuffer*)ALTHUNK_LOOKUPENTRY(lValue))->size;
 
                             // Increment reference counter for buffer
                             ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(lValue)))->refcount++;

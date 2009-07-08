@@ -59,9 +59,7 @@ typedef struct ALsource
 
     struct ALbufferlistitem *queue; // Linked list of buffers in queue
     ALuint       BuffersInQueue;    // Number of buffers in queue
-
-    ALuint TotalBufferDataSize; // Total amount of data contained in the buffers queued for this source
-    ALuint BuffersPlayed;       // Number of buffers played on this loop
+    ALuint       BuffersPlayed;     // Number of buffers played on this loop
 
     ALfilter DirectFilter;
 

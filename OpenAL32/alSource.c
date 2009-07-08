@@ -1724,8 +1724,6 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
     ALsizei i;
     ALbufferlistitem *ALBufferList;
     ALbufferlistitem *ALBufferListStart;
-    ALuint DataSize;
-    ALuint BufferSize;
     ALint iFrequency;
     ALint iFormat;
     ALboolean bBuffersValid = AL_TRUE;
@@ -1737,9 +1735,6 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
     if (Context)
     {
         SuspendContext(Context);
-
-        DataSize = 0;
-        BufferSize = 0;
 
         // Check that all buffers are valid or zero and that the source is valid
 
@@ -1810,13 +1805,6 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
                     ALBufferListStart->flag = 0;
                     ALBufferListStart->next = NULL;
 
-                    if (buffers[0])
-                        BufferSize = ((ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[0]))->size;
-                    else
-                        BufferSize = 0;
-
-                    DataSize += BufferSize;
-
                     // Increment reference counter for buffer
                     if (buffers[0])
                         ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[0])))->refcount++;
@@ -1830,13 +1818,6 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
                         ALBufferList->next->bufferstate = PENDING;
                         ALBufferList->next->flag = 0;
                         ALBufferList->next->next = NULL;
-
-                        if (buffers[i])
-                            BufferSize = ((ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[i]))->size;
-                        else
-                            BufferSize = 0;
-
-                        DataSize += BufferSize;
 
                         // Increment reference counter for buffer
                         if (buffers[i])
@@ -1899,16 +1880,12 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
     ALsource *ALSource;
     ALsizei i;
     ALbufferlistitem *ALBufferList;
-    ALuint DataSize;
-    ALuint BufferSize;
     ALuint BufferID;
     ALboolean bBuffersProcessed;
 
     if (n == 0)
         return;
 
-    DataSize = 0;
-    BufferSize = 0;
     bBuffersProcessed = AL_TRUE;
 
     Context=alcGetCurrentContext();
@@ -1948,13 +1925,7 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
                     // Decrement buffer reference counter
                     if (ALBufferList->buffer)
                         ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->refcount--;
-                    // Record size of buffer
-                    if (ALBufferList->buffer)
-                        BufferSize = ((ALbuffer*)ALTHUNK_LOOKUPENTRY(ALBufferList->buffer))->size;
-                    else
-                        BufferSize = 0;
 
-                    DataSize += BufferSize;
                     // Release memory for buffer list item
                     free(ALBufferList);
                     ALSource->BuffersInQueue--;

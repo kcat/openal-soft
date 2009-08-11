@@ -532,6 +532,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
     ALCcontext          *pContext;
     ALsource            *pSource;
     ALbufferlistitem    *pALBufferListItem;
+    ALuint i;
 
     pContext = alcGetCurrentContext();
     if (pContext)
@@ -573,7 +574,19 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 
             case AL_LOOPING:
                 if ((lValue == AL_FALSE) || (lValue == AL_TRUE))
+                {
                     pSource->bLooping = (ALboolean)lValue;
+
+                    pALBufferListItem = pSource->queue;
+                    for(i = 0;pALBufferListItem != NULL;i++)
+                    {
+                        if(lValue == AL_FALSE && i <= pSource->BuffersPlayed)
+                            pALBufferListItem->bufferstate = PROCESSED;
+                        else
+                            pALBufferListItem->bufferstate = PENDING;
+                        pALBufferListItem = pALBufferListItem->next;
+                    }
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;

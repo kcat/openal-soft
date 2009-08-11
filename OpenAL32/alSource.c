@@ -633,6 +633,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         {
                             // Source is now in UNDETERMINED mode
                             pSource->lSourceType = AL_UNDETERMINED;
+                            pSource->BuffersPlayed = 0;
                         }
 
                         // Update AL_BUFFER parameter

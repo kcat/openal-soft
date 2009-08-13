@@ -1049,6 +1049,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
             // Check for attributes
             if (attrList)
             {
+                ALCuint freq = device->Frequency;
                 ALCint numMono = device->lNumMonoSources;
                 ALCint numStereo = device->lNumStereoSources;
                 ALCuint numSends = device->NumAuxSends;
@@ -1056,7 +1057,14 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 ulAttributeIndex = 0;
                 while ((ulAttributeIndex < 10) && (attrList[ulAttributeIndex]))
                 {
-                    if (attrList[ulAttributeIndex] == ALC_STEREO_SOURCES)
+                    if(attrList[ulAttributeIndex] == ALC_FREQUENCY)
+                    {
+                        freq = attrList[ulAttributeIndex + 1];
+                        if(freq == 0)
+                            freq = device->Frequency;
+                    }
+
+                    if(attrList[ulAttributeIndex] == ALC_STEREO_SOURCES)
                     {
                         ulRequestedStereoSources = attrList[ulAttributeIndex + 1];
 
@@ -1080,6 +1088,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                     ulAttributeIndex += 2;
                 }
 
+                device->Frequency = GetConfigValueInt(NULL, "frequency", freq);
                 device->lNumMonoSources = numMono;
                 device->lNumStereoSources = numStereo;
                 device->NumAuxSends = numSends;
@@ -1091,6 +1100,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 ALContext = NULL;
                 SetALCError(ALC_INVALID_VALUE);
             }
+            ALContext->Frequency = device->Frequency;
         }
         else
         {
@@ -1266,7 +1276,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
 
         //Set output format
         device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
-        if((ALint)device->Frequency <= 0)
+        if(device->Frequency == 0)
             device->Frequency = SWMIXER_OUTPUT_RATE;
 
         fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");

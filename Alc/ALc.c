@@ -1033,18 +1033,16 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 return NULL;
             }
 
+            SuspendContext(NULL);
+
             ALContext->Device = device;
             InitContext(ALContext);
 
             device->Context = ALContext;
 
-            SuspendContext(NULL);
-
             ALContext->next = g_pContextList;
             g_pContextList = ALContext;
             g_ulContextCount++;
-
-            ProcessContext(NULL);
 
             // Check for attributes
             if (attrList)
@@ -1101,6 +1099,8 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 SetALCError(ALC_INVALID_VALUE);
             }
             ALContext->Frequency = device->Frequency;
+
+            ProcessContext(NULL);
         }
         else
         {

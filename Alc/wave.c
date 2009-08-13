@@ -252,7 +252,7 @@ static ALCboolean wave_start_context(ALCdevice *device, ALCcontext *Context)
 
     data->DataStart = ftell(data->f);
 
-    device->UpdateSize = max(device->BufferSize/4, 2048);
+    device->UpdateSize = device->BufferSize / 4;
 
     data->size = device->UpdateSize;
     data->buffer = malloc(data->size * channels * bits / 8);

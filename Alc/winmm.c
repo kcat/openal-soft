@@ -413,6 +413,8 @@ static ALCuint WinMMAvailableSamples(ALCdevice *pDevice)
 BackendFuncs WinMMFuncs = {
     WinMMOpenPlayback,
     WinMMClosePlayback,
+    NULL,
+    NULL,
     WinMMOpenCapture,
     WinMMCloseCapture,
     WinMMStartCapture,

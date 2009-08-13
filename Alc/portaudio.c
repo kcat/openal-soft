@@ -97,7 +97,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     outParams.device = GetConfigValueInt("port", "device", -1);
     if(outParams.device < 0)
         outParams.device = pPa_GetDefaultOutputDevice();
-    outParams.suggestedLatency = (float)device->UpdateSize /
+    outParams.suggestedLatency = (float)device->BufferSize /
                                  (float)device->Frequency;
     outParams.hostApiSpecificStreamInfo = NULL;
 
@@ -120,8 +120,8 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     outParams.channelCount = aluChannelsFromFormat(device->Format);
 
     err = pPa_OpenStream(&data->stream, NULL, &outParams, device->Frequency,
-                        device->UpdateSize/periods, paNoFlag,
-                        pa_callback, device);
+                         device->BufferSize/periods, paNoFlag,
+                         pa_callback, device);
     if(err != paNoError)
     {
         AL_PRINT("Pa_OpenStream() returned an error: %s\n", pPa_GetErrorText(err));
@@ -140,7 +140,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_FALSE;
     }
 
-    device->UpdateSize /= periods;
+    device->UpdateSize = device->BufferSize/periods;
     return ALC_TRUE;
 }
 
@@ -161,6 +161,19 @@ static void pa_close_playback(ALCdevice *device)
     device->ExtraData = NULL;
 }
 
+static ALCboolean pa_start_context(ALCdevice *device, ALCcontext *context)
+{
+    return ALC_TRUE;
+    (void)device;
+    (void)context;
+}
+
+static void pa_stop_context(ALCdevice *device, ALCcontext *context)
+{
+    (void)device;
+    (void)context;
+}
+
 
 static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
 {
@@ -177,6 +190,8 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName, 
 static const BackendFuncs pa_funcs = {
     pa_open_playback,
     pa_close_playback,
+    pa_start_context,
+    pa_stop_context,
     pa_open_capture,
     NULL,
     NULL,

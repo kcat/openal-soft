@@ -145,18 +145,8 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
 
 static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
-    int numFragmentsLogSize;
-    int log2FragmentSize;
-    unsigned int periods;
-    audio_buf_info info;
-    ALuint frameSize;
     char driver[64];
-    int numChannels;
     oss_data *data;
-    int ossFormat;
-    int ossSpeed;
-    char *err;
-    int i;
 
     strncpy(driver, GetConfigValue("oss", "device", "/dev/dsp"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
@@ -180,6 +170,34 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
         return ALC_FALSE;
     }
 
+    device->ExtraData = data;
+    return ALC_TRUE;
+}
+
+static void oss_close_playback(ALCdevice *device)
+{
+    oss_data *data = (oss_data*)device->ExtraData;
+
+    close(data->fd);
+    free(data);
+    device->ExtraData = NULL;
+}
+
+static ALCboolean oss_start_context(ALCdevice *device, ALCcontext *context)
+{
+    oss_data *data = (oss_data*)device->ExtraData;
+    int numFragmentsLogSize;
+    int log2FragmentSize;
+    unsigned int periods;
+    audio_buf_info info;
+    ALuint frameSize;
+    int numChannels;
+    int ossFormat;
+    int ossSpeed;
+    char *err;
+    int i;
+    (void)context;
+
     switch(aluBytesFromFormat(device->Format))
     {
         case 1:
@@ -200,7 +218,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     frameSize = numChannels * aluBytesFromFormat(device->Format);
 
     ossSpeed = device->Frequency;
-    log2FragmentSize = log2i(device->UpdateSize * frameSize / periods);
+    log2FragmentSize = log2i(device->BufferSize * frameSize / periods);
 
     /* according to the OSS spec, 16 bytes are the minimum */
     if (log2FragmentSize < 4)
@@ -215,8 +233,6 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
           ok(ioctl(data->fd, SNDCTL_DSP_GETOSPACE, &info), "get space")))
     {
         AL_PRINT("%s failed: %s\n", err, strerror(errno));
-        close(data->fd);
-        free(data);
         return ALC_FALSE;
     }
 #undef ok
@@ -224,8 +240,6 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     if((int)aluChannelsFromFormat(device->Format) != numChannels)
     {
         AL_PRINT("Could not set %d channels, got %d instead\n", aluChannelsFromFormat(device->Format), numChannels);
-        close(data->fd);
-        free(data);
         return ALC_FALSE;
     }
 
@@ -233,41 +247,40 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
          (ossFormat == AFMT_S16_NE && aluBytesFromFormat(device->Format) == 2)))
     {
         AL_PRINT("Could not set %d-bit output, got format %#x\n", aluBytesFromFormat(device->Format)*8, ossFormat);
-        close(data->fd);
-        free(data);
-        return ALC_FALSE;
-    }
-
-    data->data_size = device->UpdateSize * frameSize;
-    data->mix_data = calloc(1, data->data_size);
-
-    device->ExtraData = data;
-    data->thread = StartThread(OSSProc, device);
-    if(data->thread == NULL)
-    {
-        device->ExtraData = NULL;
-        free(data->mix_data);
-        free(data);
         return ALC_FALSE;
     }
 
     device->Frequency = ossSpeed;
     device->UpdateSize = info.fragsize / frameSize;
 
+    data->data_size = device->UpdateSize * frameSize;
+    data->mix_data = calloc(1, data->data_size);
+
+    data->thread = StartThread(OSSProc, device);
+    if(data->thread == NULL)
+    {
+        free(data->mix_data);
+        data->mix_data = NULL;
+        return ALC_FALSE;
+    }
+
     return ALC_TRUE;
 }
 
-static void oss_close_playback(ALCdevice *device)
+static void oss_stop_context(ALCdevice *device, ALCcontext *context)
 {
     oss_data *data = (oss_data*)device->ExtraData;
+    (void)context;
+
+    if(!data->thread)
+        return;
+
     data->killNow = 1;
     StopThread(data->thread);
-
-    close(data->fd);
+    data->thread = NULL;
 
     free(data->mix_data);
-    free(data);
-    device->ExtraData = NULL;
+    data->mix_data = NULL;
 }
 
 
@@ -434,6 +447,8 @@ static ALCuint oss_available_samples(ALCdevice *pDevice)
 BackendFuncs oss_funcs = {
     oss_open_playback,
     oss_close_playback,
+    oss_start_context,
+    oss_stop_context,
     oss_open_capture,
     oss_close_capture,
     oss_start_capture,

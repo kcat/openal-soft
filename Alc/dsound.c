@@ -309,7 +309,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
         DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;
-        DSBDescription.dwBufferBytes=(device->UpdateSize/num_frags) * num_frags * frameSize;
+        DSBDescription.dwBufferBytes=(device->BufferSize/num_frags) * num_frags * frameSize;
         DSBDescription.lpwfxFormat=&OutputType.Format;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
     }
@@ -339,7 +339,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     }
 
     device->Format = format;
-    device->UpdateSize /= num_frags;
+    device->UpdateSize = device->BufferSize/num_frags;
 
     return ALC_TRUE;
 }
@@ -358,6 +358,19 @@ static void DSoundClosePlayback(ALCdevice *device)
 
     free(pData);
     device->ExtraData = NULL;
+}
+
+static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
+{
+    return ALC_TRUE;
+    (void)device;
+    (void)context;
+}
+
+static void DSoundStopContext(ALCdevice *device, ALCcontext *context)
+{
+    (void)device;
+    (void)context;
 }
 
 
@@ -403,6 +416,8 @@ static ALCuint DSoundAvailableSamples(ALCdevice *pDevice)
 BackendFuncs DSoundFuncs = {
     DSoundOpenPlayback,
     DSoundClosePlayback,
+    DSoundStartContext,
+    DSoundStopContext,
     DSoundOpenCapture,
     DSoundCloseCapture,
     DSoundStartCapture,

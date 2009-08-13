@@ -324,17 +324,8 @@ static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
 
 static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
-    snd_pcm_uframes_t bufferSizeInFrames;
-    snd_pcm_sw_params_t *sp = NULL;
-    snd_pcm_hw_params_t *p = NULL;
-    snd_pcm_access_t access;
-    unsigned int periods;
-    unsigned int rate;
     alsa_data *data;
     char driver[64];
-    const char *str;
-    int allowmmap;
-    char *err;
     int i;
 
     if(!alsa_handle)
@@ -389,6 +380,35 @@ open_alsa:
         return ALC_FALSE;
     }
 
+    device->ExtraData = data;
+    return ALC_TRUE;
+}
+
+static void alsa_close_playback(ALCdevice *device)
+{
+    alsa_data *data = (alsa_data*)device->ExtraData;
+
+    psnd_pcm_close(data->pcmHandle);
+    free(data);
+    device->ExtraData = NULL;
+}
+
+static ALCboolean alsa_start_context(ALCdevice *device, ALCcontext *context)
+{
+    alsa_data *data = (alsa_data*)device->ExtraData;
+    snd_pcm_uframes_t bufferSizeInFrames;
+    snd_pcm_sw_params_t *sp = NULL;
+    snd_pcm_hw_params_t *p = NULL;
+    snd_pcm_access_t access;
+    unsigned int periods;
+    unsigned int rate;
+    const char *str;
+    int allowmmap;
+    char *err;
+    int i;
+    (void)context;
+
+
     switch(aluBytesFromFormat(device->Format))
     {
         case 1:
@@ -403,7 +423,7 @@ open_alsa:
     }
 
     periods = GetConfigValueInt("alsa", "periods", 0);
-    bufferSizeInFrames = device->UpdateSize;
+    bufferSizeInFrames = device->BufferSize;
     rate = device->Frequency;
 
     str = GetConfigValue("alsa", "mmap", "true");
@@ -449,8 +469,6 @@ open_alsa:
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
         psnd_pcm_hw_params_free(p);
-        psnd_pcm_close(data->pcmHandle);
-        free(data);
         return ALC_FALSE;
     }
 
@@ -469,8 +487,6 @@ open_alsa:
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
         psnd_pcm_sw_params_free(sp);
-        psnd_pcm_close(data->pcmHandle);
-        free(data);
         return ALC_FALSE;
     }
 
@@ -483,8 +499,6 @@ open_alsa:
         if(!data->buffer)
         {
             AL_PRINT("buffer malloc failed\n");
-            psnd_pcm_close(data->pcmHandle);
-            free(data);
             return ALC_FALSE;
         }
     }
@@ -494,14 +508,12 @@ open_alsa:
         if(i < 0)
         {
             AL_PRINT("prepare error: %s\n", psnd_strerror(i));
-            psnd_pcm_close(data->pcmHandle);
             free(data->buffer);
-            free(data);
+            data->buffer = NULL;
             return ALC_FALSE;
         }
     }
 
-    device->ExtraData = data;
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
         data->thread = StartThread(ALSANoMMapProc, device);
     else
@@ -509,10 +521,8 @@ open_alsa:
     if(data->thread == NULL)
     {
         AL_PRINT("Could not create playback thread\n");
-        psnd_pcm_close(data->pcmHandle);
-        device->ExtraData = NULL;
         free(data->buffer);
-        free(data);
+        data->buffer = NULL;
         return ALC_FALSE;
     }
 
@@ -522,16 +532,20 @@ open_alsa:
     return ALC_TRUE;
 }
 
-static void alsa_close_playback(ALCdevice *device)
+static void alsa_stop_context(ALCdevice *device, ALCcontext *context)
 {
     alsa_data *data = (alsa_data*)device->ExtraData;
+    (void)context;
+
+    if(!data->thread)
+        return;
+
     data->killNow = 1;
     StopThread(data->thread);
-    psnd_pcm_close(data->pcmHandle);
+    data->thread = NULL;
 
     free(data->buffer);
-    free(data);
-    device->ExtraData = NULL;
+    data->buffer = NULL;
 }
 
 
@@ -909,6 +923,8 @@ static ALCuint alsa_available_samples(ALCdevice *pDevice)
 BackendFuncs alsa_funcs = {
     alsa_open_playback,
     alsa_close_playback,
+    alsa_start_context,
+    alsa_stop_context,
     alsa_open_capture,
     alsa_close_capture,
     alsa_start_capture,

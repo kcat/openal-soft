@@ -38,7 +38,7 @@
 #include "alu.h"
 
 
-#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 static struct {
     const char *name;
     void (*Init)(BackendFuncs*);
@@ -391,9 +391,13 @@ static ALCboolean IsContext(ALCcontext *pContext)
 {
     ALCcontext *pTempContext;
 
+    SuspendContext(NULL);
+
     pTempContext = g_pContextList;
     while (pTempContext && pTempContext != pContext)
         pTempContext = pTempContext->next;
+
+    ProcessContext(NULL);
 
     return (pTempContext ? ALC_TRUE : ALC_FALSE);
 }
@@ -1045,9 +1049,9 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
             // Check for attributes
             if (attrList)
             {
-                ALCint numMono = ALContext->Device->lNumMonoSources;
-                ALCint numStereo = ALContext->Device->lNumStereoSources;
-                ALCuint numSends = ALContext->Device->NumAuxSends;
+                ALCint numMono = device->lNumMonoSources;
+                ALCint numStereo = device->lNumStereoSources;
+                ALCuint numSends = device->NumAuxSends;
 
                 ulAttributeIndex = 0;
                 while ((ulAttributeIndex < 10) && (attrList[ulAttributeIndex]))
@@ -1056,19 +1060,19 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                     {
                         ulRequestedStereoSources = attrList[ulAttributeIndex + 1];
 
-                        if (ulRequestedStereoSources > ALContext->Device->MaxNoOfSources)
-                            ulRequestedStereoSources = ALContext->Device->MaxNoOfSources;
+                        if (ulRequestedStereoSources > device->MaxNoOfSources)
+                            ulRequestedStereoSources = device->MaxNoOfSources;
 
                         numStereo = ulRequestedStereoSources;
-                        numMono = ALContext->Device->MaxNoOfSources - numStereo;
+                        numMono = device->MaxNoOfSources - numStereo;
                     }
 
                     if(attrList[ulAttributeIndex] == ALC_MAX_AUXILIARY_SENDS)
                     {
                         RequestedSends = attrList[ulAttributeIndex + 1];
 
-                        if(RequestedSends > ALContext->Device->NumAuxSends)
-                            RequestedSends = ALContext->Device->NumAuxSends;
+                        if(RequestedSends > device->NumAuxSends)
+                            RequestedSends = device->NumAuxSends;
 
                         numSends = RequestedSends;
                     }
@@ -1076,9 +1080,16 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                     ulAttributeIndex += 2;
                 }
 
-                ALContext->Device->lNumMonoSources = numMono;
-                ALContext->Device->lNumStereoSources = numStereo;
-                ALContext->Device->NumAuxSends = numSends;
+                device->lNumMonoSources = numMono;
+                device->lNumStereoSources = numStereo;
+                device->NumAuxSends = numSends;
+            }
+
+            if(ALCdevice_StartContext(device, ALContext) == ALC_FALSE)
+            {
+                alcDestroyContext(ALContext);
+                ALContext = NULL;
+                SetALCError(ALC_INVALID_VALUE);
             }
         }
         else
@@ -1105,11 +1116,10 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
 
     InitAL();
 
-    // Lock context list
-    SuspendContext(NULL);
-
     if (IsContext(context))
     {
+        ALCdevice_StopContext(context->Device, context);
+
         // Lock context
         SuspendContext(context);
 
@@ -1136,8 +1146,6 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
     }
     else
         SetALCError(ALC_INVALID_CONTEXT);
-
-    ProcessContext(NULL);
 }
 
 
@@ -1268,9 +1276,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         if(!aluChannelsFromFormat(device->Format))
             device->Format = AL_FORMAT_STEREO16;
 
-        device->UpdateSize = GetConfigValueInt(NULL, "refresh", 4096);
-        if((ALint)device->UpdateSize <= 0)
-            device->UpdateSize = 4096;
+        device->BufferSize = GetConfigValueInt(NULL, "refresh", 4096);
+        if((ALint)device->BufferSize <= 0)
+            device->BufferSize = 4096;
 
         device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
         if((ALint)device->MaxNoOfSources <= 0)

@@ -239,7 +239,7 @@ static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name, ALCenum fo
     }
     else
     {
-        data->attr.tlength = data->frame_size * (device->UpdateSize&~3);
+        data->attr.tlength = data->frame_size * (device->BufferSize&~3);
         data->attr.fragsize = -1;
         data->stream_name = "Playback Stream";
     }
@@ -377,7 +377,7 @@ static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name, ALCenum fo
         ppa_threaded_mainloop_accept(data->loop);
     }
 
-    device->UpdateSize /= 4;
+    device->UpdateSize = device->BufferSize/4;
     ppa_threaded_mainloop_unlock(data->loop);
 
     return ALC_TRUE;
@@ -446,6 +446,20 @@ static void pulse_close_playback(ALCdevice *device) //{{{
     pulse_close(device);
 } //}}}
 
+static ALCboolean pulse_start_context(ALCdevice *device, ALCcontext *context) //{{{
+{
+    return ALC_TRUE;
+    (void)device;
+    (void)context;
+} //}}}
+
+static void pulse_stop_context(ALCdevice *device, ALCcontext *context) //{{{
+{
+    (void)device;
+    (void)context;
+} //}}}
+
+
 static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_name, ALCuint frequency, ALCenum format, ALCsizei samples) //{{{
 {
     if(!pa_handle)
@@ -503,6 +517,8 @@ static ALCuint pulse_available_samples(ALCdevice *device) //{{{
 BackendFuncs pulse_funcs = { //{{{
     pulse_open_playback,
     pulse_close_playback,
+    pulse_start_context,
+    pulse_stop_context,
     pulse_open_capture,
     pulse_close_capture,
     pulse_start_capture,

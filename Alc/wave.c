@@ -67,7 +67,7 @@ static ALuint WaveProc(ALvoid *ptr)
         now = timeGetTime();
 
         avail = (now-last) * pDevice->Frequency / 1000;
-        if(avail < pDevice->UpdateSize/4)
+        if(avail < pDevice->UpdateSize)
         {
             Sleep(1);
             continue;
@@ -109,10 +109,7 @@ static ALuint WaveProc(ALvoid *ptr)
 static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     wave_data *data;
-    ALuint channels;
-    ALuint bits;
     const char *fname;
-    int i;
 
     fname = GetConfigValue("wave", "file", "");
     if(!fname[0])
@@ -137,6 +134,54 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
         return ALC_FALSE;
     }
 
+    device->ExtraData = data;
+    return ALC_TRUE;
+}
+
+static void wave_close_playback(ALCdevice *device)
+{
+    wave_data *data = (wave_data*)device->ExtraData;
+    ALuint dataLen;
+    long size;
+
+    data->killNow = 1;
+    StopThread(data->thread);
+
+    size = ftell(data->f);
+    if(size > 0)
+    {
+        dataLen = size - data->DataStart;
+        if(fseek(data->f, data->DataStart-4, SEEK_SET) == 0)
+        {
+            fputc(dataLen&0xff, data->f); // 'data' header len
+            fputc((dataLen>>8)&0xff, data->f);
+            fputc((dataLen>>16)&0xff, data->f);
+            fputc((dataLen>>24)&0xff, data->f);
+        }
+        if(fseek(data->f, 4, SEEK_SET) == 0)
+        {
+            size -= 8;
+            fputc(size&0xff, data->f); // 'WAVE' header len
+            fputc((size>>8)&0xff, data->f);
+            fputc((size>>16)&0xff, data->f);
+            fputc((size>>24)&0xff, data->f);
+        }
+    }
+
+    fclose(data->f);
+    free(data);
+    device->ExtraData = NULL;
+}
+
+static ALCboolean wave_start_context(ALCdevice *device, ALCcontext *Context)
+{
+    wave_data *data = (wave_data*)device->ExtraData;
+    ALuint channels, bits, i;
+    (void)Context;
+
+    fseek(data->f, 0, SEEK_SET);
+    clearerr(data->f);
+
     bits = aluBytesFromFormat(device->Format) * 8;
     channels = aluChannelsFromFormat(device->Format);
     switch(bits)
@@ -146,16 +191,12 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
             if(channels == 0)
             {
                 AL_PRINT("Unknown format?! %x\n", device->Format);
-                fclose(data->f);
-                free(data);
                 return ALC_FALSE;
             }
             break;
 
         default:
             AL_PRINT("Unknown format?! %x\n", device->Format);
-            fclose(data->f);
-            free(data);
             return ALC_FALSE;
     }
 
@@ -206,47 +247,48 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
     if(ferror(data->f))
     {
         AL_PRINT("Error writing header: %s\n", strerror(errno));
-        fclose(data->f);
-        free(data);
         return ALC_FALSE;
     }
 
     data->DataStart = ftell(data->f);
 
-    device->UpdateSize = max(device->UpdateSize, 2048);
+    device->UpdateSize = max(device->BufferSize/4, 2048);
 
     data->size = device->UpdateSize;
     data->buffer = malloc(data->size * channels * bits / 8);
     if(!data->buffer)
     {
         AL_PRINT("buffer malloc failed\n");
-        fclose(data->f);
-        free(data);
         return ALC_FALSE;
     }
 
-    device->ExtraData = data;
     data->thread = StartThread(WaveProc, device);
     if(data->thread == NULL)
     {
-        device->ExtraData = NULL;
-        fclose(data->f);
         free(data->buffer);
-        free(data);
+        data->buffer = NULL;
         return ALC_FALSE;
     }
 
     return ALC_TRUE;
 }
 
-static void wave_close_playback(ALCdevice *device)
+static void wave_stop_context(ALCdevice *device, ALCcontext *Context)
 {
     wave_data *data = (wave_data*)device->ExtraData;
     ALuint dataLen;
     long size;
+    (void)Context;
+
+    if(!data->thread)
+        return;
 
     data->killNow = 1;
     StopThread(data->thread);
+    data->thread = NULL;
+
+    free(data->buffer);
+    data->buffer = NULL;
 
     size = ftell(data->f);
     if(size > 0)
@@ -268,11 +310,6 @@ static void wave_close_playback(ALCdevice *device)
             fputc((size>>24)&0xff, data->f);
         }
     }
-
-    fclose(data->f);
-    free(data->buffer);
-    free(data);
-    device->ExtraData = NULL;
 }
 
 
@@ -318,6 +355,8 @@ static ALCuint wave_available_samples(ALCdevice *pDevice)
 BackendFuncs wave_funcs = {
     wave_open_playback,
     wave_close_playback,
+    wave_start_context,
+    wave_stop_context,
     wave_open_capture,
     wave_close_capture,
     wave_start_capture,

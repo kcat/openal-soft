@@ -148,6 +148,8 @@ static __inline void al_print(const char *fname, unsigned int line, const char *
 typedef struct {
     ALCboolean (*OpenPlayback)(ALCdevice*, const ALCchar*);
     void (*ClosePlayback)(ALCdevice*);
+    ALCboolean (*StartContext)(ALCdevice*, ALCcontext*);
+    void (*StopContext)(ALCdevice*, ALCcontext*);
 
     ALCboolean (*OpenCapture)(ALCdevice*, const ALCchar*, ALCuint, ALCenum, ALCsizei);
     void (*CloseCapture)(ALCdevice*);
@@ -173,6 +175,7 @@ struct ALCdevice_struct
 
     ALuint       Frequency;
     ALuint       UpdateSize;
+    ALuint       BufferSize;
     ALenum       Format;
 
     ALCchar      *szDeviceName;
@@ -197,6 +200,8 @@ struct ALCdevice_struct
 
 #define ALCdevice_OpenPlayback(a,b)      ((a)->Funcs->OpenPlayback((a), (b)))
 #define ALCdevice_ClosePlayback(a)       ((a)->Funcs->ClosePlayback((a)))
+#define ALCdevice_StartContext(a,b)      ((a)->Funcs->StartContext((a), (b)))
+#define ALCdevice_StopContext(a,b)       ((a)->Funcs->StopContext((a), (b)))
 #define ALCdevice_OpenCapture(a,b,c,d,e) ((a)->Funcs->OpenCapture((a), (b), (c), (d), (e)))
 #define ALCdevice_CloseCapture(a)        ((a)->Funcs->CloseCapture((a)))
 #define ALCdevice_StartCapture(a)        ((a)->Funcs->StartCapture((a)))

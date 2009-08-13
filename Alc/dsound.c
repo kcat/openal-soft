@@ -148,13 +148,8 @@ static ALuint DSoundProc(ALvoid *ptr)
 
 static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 {
-    DSBUFFERDESC DSBDescription;
     DSoundData *pData = NULL;
-    WAVEFORMATEXTENSIBLE OutputType;
-    DWORD frameSize = 0;
     LPGUID guid = NULL;
-    ALenum format = 0;
-    DWORD speakers;
     HRESULT hr;
 
     if(ds_handle == NULL)
@@ -179,8 +174,6 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     else
         device->szDeviceName = DeviceList[0].name;
 
-    memset(&OutputType, 0, sizeof(OutputType));
-
     //Initialise requested device
 
     pData = calloc(1, sizeof(DSoundData));
@@ -194,26 +187,53 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     hr = pDirectSoundCreate(guid, &pData->lpDS, NULL);
     if(SUCCEEDED(hr))
         hr = IDirectSound_SetCooperativeLevel(pData->lpDS, GetForegroundWindow(), DSSCL_PRIORITY);
-
-    if(SUCCEEDED(hr))
+    if(FAILED(hr))
     {
-        if(*(GetConfigValue(NULL, "format", "")) == 0)
-            hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
-        else
-        {
-            if(device->Format == AL_FORMAT_MONO8 || device->Format == AL_FORMAT_MONO16)
-                speakers = DSSPEAKER_COMBINED(DSSPEAKER_MONO, 0);
-            else if(device->Format == AL_FORMAT_STEREO8 || device->Format == AL_FORMAT_STEREO16)
-                speakers = DSSPEAKER_COMBINED(DSSPEAKER_STEREO, 0);
-            else if(device->Format == AL_FORMAT_QUAD8 || device->Format == AL_FORMAT_QUAD16)
-                speakers = DSSPEAKER_COMBINED(DSSPEAKER_QUAD, 0);
-            else if(device->Format == AL_FORMAT_51CHN8 || device->Format == AL_FORMAT_51CHN16)
-                speakers = DSSPEAKER_COMBINED(DSSPEAKER_5POINT1, 0);
-            else if(device->Format == AL_FORMAT_71CHN8 || device->Format == AL_FORMAT_71CHN16)
-                speakers = DSSPEAKER_COMBINED(DSSPEAKER_7POINT1, 0);
-            else
-                hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
-        }
+        if(pData->lpDS)
+            IDirectSound_Release(pData->lpDS);
+        free(pData);
+        return ALC_FALSE;
+    }
+
+    device->ExtraData = pData;
+    return ALC_TRUE;
+}
+
+static void DSoundClosePlayback(ALCdevice *device)
+{
+    DSoundData *pData = device->ExtraData;
+
+    IDirectSound_Release(pData->lpDS);
+    free(pData);
+    device->ExtraData = NULL;
+}
+
+static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
+{
+    DSoundData *pData = (DSoundData*)device->ExtraData;
+    DSBUFFERDESC DSBDescription;
+    WAVEFORMATEXTENSIBLE OutputType;
+    DWORD frameSize = 0;
+    ALenum format = 0;
+    DWORD speakers;
+    HRESULT hr;
+    (void)context;
+
+    memset(&OutputType, 0, sizeof(OutputType));
+
+    hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
+    if(SUCCEEDED(hr) && *(GetConfigValue(NULL, "format", "")) == 0)
+    {
+        if(device->Format == AL_FORMAT_MONO8 || device->Format == AL_FORMAT_MONO16)
+            speakers = DSSPEAKER_COMBINED(DSSPEAKER_MONO, 0);
+        else if(device->Format == AL_FORMAT_STEREO8 || device->Format == AL_FORMAT_STEREO16)
+            speakers = DSSPEAKER_COMBINED(DSSPEAKER_STEREO, 0);
+        else if(device->Format == AL_FORMAT_QUAD8 || device->Format == AL_FORMAT_QUAD16)
+            speakers = DSSPEAKER_COMBINED(DSSPEAKER_QUAD, 0);
+        else if(device->Format == AL_FORMAT_51CHN8 || device->Format == AL_FORMAT_51CHN16)
+            speakers = DSSPEAKER_COMBINED(DSSPEAKER_5POINT1, 0);
+        else if(device->Format == AL_FORMAT_71CHN8 || device->Format == AL_FORMAT_71CHN16)
+            speakers = DSSPEAKER_COMBINED(DSSPEAKER_7POINT1, 0);
     }
     if(SUCCEEDED(hr))
     {
@@ -329,12 +349,10 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     {
         if (pData->DSsbuffer)
             IDirectSoundBuffer_Release(pData->DSsbuffer);
+        pData->DSsbuffer = NULL;
         if (pData->DSpbuffer)
             IDirectSoundBuffer_Release(pData->DSpbuffer);
-        if (pData->lpDS)
-            IDirectSound_Release(pData->lpDS);
-
-        free(pData);
+        pData->DSpbuffer = NULL;
         return ALC_FALSE;
     }
 
@@ -344,33 +362,23 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     return ALC_TRUE;
 }
 
-static void DSoundClosePlayback(ALCdevice *device)
+static void DSoundStopContext(ALCdevice *device, ALCcontext *context)
 {
     DSoundData *pData = device->ExtraData;
+    (void)context;
+
+    if(!pData->thread)
+        return;
 
     pData->killNow = 1;
     StopThread(pData->thread);
+    pData->thread = NULL;
 
     IDirectSoundBuffer_Release(pData->DSsbuffer);
+    pData->DSsbuffer = NULL;
     if (pData->DSpbuffer)
         IDirectSoundBuffer_Release(pData->DSpbuffer);
-    IDirectSound_Release(pData->lpDS);
-
-    free(pData);
-    device->ExtraData = NULL;
-}
-
-static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
-{
-    return ALC_TRUE;
-    (void)device;
-    (void)context;
-}
-
-static void DSoundStopContext(ALCdevice *device, ALCcontext *context)
-{
-    (void)device;
-    (void)context;
+    pData->DSpbuffer = NULL;
 }
 
 

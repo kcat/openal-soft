@@ -1098,7 +1098,8 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 ALContext = NULL;
                 SetALCError(ALC_INVALID_VALUE);
             }
-            ALContext->Frequency = device->Frequency;
+            else
+                ALContext->Frequency = device->Frequency;
 
             ProcessContext(NULL);
         }

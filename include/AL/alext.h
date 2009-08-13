@@ -99,6 +99,11 @@ extern "C" {
 typedef ALvoid (AL_APIENTRY*PFNALBUFFERSUBDATAEXTPROC)(ALuint,ALenum,const ALvoid*,ALsizei,ALsizei);
 #endif
 
+#ifndef AL_EXT_BUFFER_DATA_STATIC
+#define AL_EXT_BUFFER_DATA_STATIC 1
+typedef ALvoid (AL_APIENTRY*PFNALBUFFERDATASTATICPROC)(const ALint,ALenum,ALvoid*,ALsizei,ALsizei);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

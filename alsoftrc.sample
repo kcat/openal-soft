@@ -10,7 +10,8 @@
 
 # Option and block names are case-insenstive. The supplied values are only
 # hints and may not be honored (though generally it'll try to get as close as
-# possible). These are the current available settings:
+# possible). Note: options that are left unset may default to app- or system-
+# specified values. These are the current available settings:
 
 ## format:
 #  Sets the output format. Can be one of:

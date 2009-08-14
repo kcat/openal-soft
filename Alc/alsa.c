@@ -549,7 +549,7 @@ static void alsa_stop_context(ALCdevice *device, ALCcontext *context)
 }
 
 
-static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
+static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     snd_pcm_hw_params_t *p;
     snd_pcm_uframes_t bufferSizeInFrames;
@@ -608,7 +608,7 @@ open_alsa:
         return ALC_FALSE;
     }
 
-    switch(aluBytesFromFormat(format))
+    switch(aluBytesFromFormat(pDevice->Format))
     {
         case 1:
             data->format = SND_PCM_FORMAT_U8;
@@ -618,7 +618,7 @@ open_alsa:
             break;
         default:
             data->format = SND_PCM_FORMAT_UNKNOWN;
-            AL_PRINT("Unknown format?! %x\n", format);
+            AL_PRINT("Unknown format?! %x\n", pDevice->Format);
     }
 
     str = GetConfigValue("alsa", "mmap", "true");
@@ -628,7 +628,7 @@ open_alsa:
                  atoi(str) != 0);
 
     err = NULL;
-    bufferSizeInFrames = SampleSize;
+    bufferSizeInFrames = pDevice->BufferSize;
     psnd_pcm_hw_params_malloc(&p);
 
     if(!allowmmap)
@@ -648,7 +648,7 @@ open_alsa:
     if(err == NULL && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(pDevice->Format))) < 0)
         err = "set channels";
     /* set rate (implicitly constrains period/buffer parameters) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, frequency, 0)) < 0)
+    if(err == NULL && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, pDevice->Frequency, 0)) < 0)
         err = "set rate near";
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
     if(err == NULL && (i=psnd_pcm_hw_params_set_buffer_size_min(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
@@ -674,7 +674,7 @@ open_alsa:
         if(err == NULL && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(pDevice->Format))) < 0)
             err = "set channels";
         /* set rate (implicitly constrains period/buffer parameters) */
-        if(err == NULL && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, frequency, 0)) < 0)
+        if(err == NULL && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, pDevice->Frequency, 0)) < 0)
             err = "set rate near";
         /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
         if(err == NULL && (i=psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
@@ -716,7 +716,7 @@ open_alsa:
         ALuint frameSize = aluChannelsFromFormat(pDevice->Format);
         frameSize *= aluBytesFromFormat(pDevice->Format);
 
-        data->ring = CreateRingBuffer(frameSize, SampleSize);
+        data->ring = CreateRingBuffer(frameSize, pDevice->BufferSize);
         if(!data->ring)
         {
             AL_PRINT("ring buffer create failed\n");

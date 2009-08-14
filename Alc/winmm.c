@@ -175,15 +175,13 @@ static void WinMMClosePlayback(ALCdevice *device)
 }
 
 
-static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
+static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     WAVEFORMATEX wfexCaptureFormat;
     WinMMData *pData = NULL;
     ALint lDeviceID = 0;
     ALint lBufferSize;
     ALint i;
-
-    (void)format;
 
     // Find the Device ID matching the deviceName if valid
     if (deviceName)
@@ -214,7 +212,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     wfexCaptureFormat.wBitsPerSample = aluBytesFromFormat(pDevice->Format) * 8;
     wfexCaptureFormat.nBlockAlign = wfexCaptureFormat.wBitsPerSample *
                                     wfexCaptureFormat.nChannels / 8;
-    wfexCaptureFormat.nSamplesPerSec = frequency;
+    wfexCaptureFormat.nSamplesPerSec = pDevice->Frequency;
     wfexCaptureFormat.nAvgBytesPerSec = wfexCaptureFormat.nSamplesPerSec *
                                         wfexCaptureFormat.nBlockAlign;
     wfexCaptureFormat.cbSize = 0;
@@ -231,7 +229,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
         goto failure;
 
     // Allocate circular memory buffer for the captured audio
-    pData->ulCapturedDataSize = SampleSize * wfexCaptureFormat.nBlockAlign;
+    pData->ulCapturedDataSize = pDevice->BufferSize * wfexCaptureFormat.nBlockAlign;
 
     // Make sure circular buffer is at least 100ms in size (and an exact multiple of
     // the block alignment

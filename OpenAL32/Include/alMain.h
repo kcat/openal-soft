@@ -151,7 +151,7 @@ typedef struct {
     ALCboolean (*StartContext)(ALCdevice*, ALCcontext*);
     void (*StopContext)(ALCdevice*, ALCcontext*);
 
-    ALCboolean (*OpenCapture)(ALCdevice*, const ALCchar*, ALCuint, ALCenum, ALCsizei);
+    ALCboolean (*OpenCapture)(ALCdevice*, const ALCchar*);
     void (*CloseCapture)(ALCdevice*);
     void (*StartCapture)(ALCdevice*);
     void (*StopCapture)(ALCdevice*);
@@ -202,7 +202,7 @@ struct ALCdevice_struct
 #define ALCdevice_ClosePlayback(a)       ((a)->Funcs->ClosePlayback((a)))
 #define ALCdevice_StartContext(a,b)      ((a)->Funcs->StartContext((a), (b)))
 #define ALCdevice_StopContext(a,b)       ((a)->Funcs->StopContext((a), (b)))
-#define ALCdevice_OpenCapture(a,b,c,d,e) ((a)->Funcs->OpenCapture((a), (b), (c), (d), (e)))
+#define ALCdevice_OpenCapture(a,b)       ((a)->Funcs->OpenCapture((a), (b)))
 #define ALCdevice_CloseCapture(a)        ((a)->Funcs->CloseCapture((a)))
 #define ALCdevice_StartCapture(a)        ((a)->Funcs->StartCapture((a)))
 #define ALCdevice_StopCapture(a)         ((a)->Funcs->StopCapture((a)))

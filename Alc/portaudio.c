@@ -174,14 +174,11 @@ static void pa_stop_context(ALCdevice *device, ALCcontext *context)
 }
 
 
-static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
+static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
 {
     return ALC_FALSE;
     (void)device;
     (void)deviceName;
-    (void)frequency;
-    (void)format;
-    (void)SampleSize;
 }
 
 

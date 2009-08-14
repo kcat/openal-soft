@@ -201,12 +201,12 @@ static void stream_read_callback(pa_stream *stream, size_t length, void *pdata) 
 } //}}}
 //}}}
 
-static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name, ALCuint samples) //{{{
+static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name) //{{{
 {
     pulse_data *data = ppa_xmalloc0(sizeof(pulse_data));
 
     data->device = device;
-    data->samples = samples;
+    data->samples = device->BufferSize;
     data->frame_size = aluBytesFromFormat(device->Format) *
                        aluChannelsFromFormat(device->Format);
 
@@ -337,7 +337,7 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
             return ALC_FALSE;
     }
 
-    return pulse_open(device, pulse_device, 0);
+    return pulse_open(device, pulse_device);
 } //}}}
 
 static void pulse_close_playback(ALCdevice *device) //{{{
@@ -450,7 +450,7 @@ static void pulse_stop_context(ALCdevice *device, ALCcontext *context) //{{{
 } //}}}
 
 
-static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_name, ALCuint frequency, ALCenum format, ALCsizei samples) //{{{
+static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_name) //{{{
 {
     pulse_data *data;
 
@@ -463,10 +463,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             return ALC_FALSE;
     }
 
-    assert(device->Format == format);
-    assert(device->Frequency == frequency);
-
-    if(pulse_open(device, pulse_capture_device, samples) == ALC_FALSE)
+    if(pulse_open(device, pulse_capture_device) == ALC_FALSE)
         return ALC_FALSE;
 
     data = device->ExtraData;

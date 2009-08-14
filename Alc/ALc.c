@@ -541,12 +541,13 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
 
         pDevice->Frequency = frequency;
         pDevice->Format = format;
+        pDevice->BufferSize = SampleSize;
 
         SuspendContext(NULL);
         for(i = 0;BackendList[i].Init;i++)
         {
             pDevice->Funcs = &BackendList[i].Funcs;
-            if(ALCdevice_OpenCapture(pDevice, deviceName, frequency, format, SampleSize))
+            if(ALCdevice_OpenCapture(pDevice, deviceName))
             {
                 pDevice->next = g_pDeviceList;
                 g_pDeviceList = pDevice;

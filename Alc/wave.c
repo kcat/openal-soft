@@ -313,13 +313,10 @@ static void wave_stop_context(ALCdevice *device, ALCcontext *Context)
 }
 
 
-static ALCboolean wave_open_capture(ALCdevice *pDevice, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
+static ALCboolean wave_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     (void)pDevice;
     (void)deviceName;
-    (void)frequency;
-    (void)format;
-    (void)SampleSize;
     return ALC_FALSE;
 }
 

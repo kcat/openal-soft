@@ -382,13 +382,10 @@ static void DSoundStopContext(ALCdevice *device, ALCcontext *context)
 }
 
 
-static ALCboolean DSoundOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
+static ALCboolean DSoundOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     (void)pDevice;
     (void)deviceName;
-    (void)frequency;
-    (void)format;
-    (void)SampleSize;
     return ALC_FALSE;
 }
 

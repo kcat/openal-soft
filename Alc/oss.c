@@ -284,7 +284,7 @@ static void oss_stop_context(ALCdevice *device, ALCcontext *context)
 }
 
 
-static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
+static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
 {
     int numFragmentsLogSize;
     int log2FragmentSize;
@@ -321,7 +321,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
         return ALC_FALSE;
     }
 
-    switch(aluBytesFromFormat(format))
+    switch(aluBytesFromFormat(device->Format))
     {
         case 1:
             ossFormat = AFMT_U8;
@@ -337,8 +337,8 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
     periods = 4;
     numChannels = aluChannelsFromFormat(device->Format);
     frameSize = numChannels * aluBytesFromFormat(device->Format);
-    ossSpeed = frequency;
-    log2FragmentSize = log2i(SampleSize * frameSize / periods);
+    ossSpeed = device->Frequency;
+    log2FragmentSize = log2i(device->BufferSize * frameSize / periods);
 
     /* according to the OSS spec, 16 bytes are the minimum */
     if (log2FragmentSize < 4)
@@ -376,7 +376,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName,
         return ALC_FALSE;
     }
 
-    data->ring = CreateRingBuffer(frameSize, SampleSize);
+    data->ring = CreateRingBuffer(frameSize, device->BufferSize);
     if(!data->ring)
     {
         AL_PRINT("ring buffer create failed\n");

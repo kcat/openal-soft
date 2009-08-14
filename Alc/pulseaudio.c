@@ -86,9 +86,7 @@ MAKE_FUNC(pa_threaded_mainloop_lock);
 typedef struct {
     ALCdevice *device;
 
-    ALCenum format;
     ALCuint samples;
-    ALCuint frequency;
     ALCuint frame_size;
 
     RingBuffer *ring;
@@ -203,15 +201,14 @@ static void stream_read_callback(pa_stream *stream, size_t length, void *pdata) 
 } //}}}
 //}}}
 
-static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name, ALCenum format, ALCuint samples, ALCuint frequency) //{{{
+static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name, ALCuint samples) //{{{
 {
     pulse_data *data = ppa_xmalloc0(sizeof(pulse_data));
 
     data->device = device;
-    data->format = format;
     data->samples = samples;
-    data->frequency = frequency;
-    data->frame_size = aluBytesFromFormat(format) * aluChannelsFromFormat(format);
+    data->frame_size = aluBytesFromFormat(device->Format) *
+                       aluChannelsFromFormat(device->Format);
 
     if(ppa_get_binary_name(data->path_name, sizeof(data->path_name)))
         data->context_name = ppa_path_get_filename(data->path_name);
@@ -227,55 +224,16 @@ static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name, ALCenum fo
     device->ExtraData = data;
     device->szDeviceName = device_name;
 
-    data->attr.minreq = -1;
-    data->attr.prebuf = -1;
-    data->attr.maxlength = -1;
-
-    if(device->IsCaptureDevice)
-    {
-        data->attr.tlength = -1;
-        data->attr.fragsize = data->frame_size * data->samples / 2;
-        data->stream_name = "Capture Stream";
-    }
-    else
-    {
-        data->attr.tlength = data->frame_size * (device->BufferSize&~3);
-        data->attr.fragsize = -1;
-        data->stream_name = "Playback Stream";
-    }
-
-    data->spec.rate = data->frequency;
-    data->spec.channels = aluChannelsFromFormat(data->format);
-
-    switch(aluBytesFromFormat(data->format))
-    {
-        case 1:
-            data->spec.format = PA_SAMPLE_U8;
-            break;
-        case 2:
-            data->spec.format = PA_SAMPLE_S16NE;
-            break;
-        default:
-            AL_PRINT("Unknown format: %x\n", data->format);
-			goto out2;
-    }
-
-    if(ppa_sample_spec_valid(&data->spec) == 0)
-    {
-        AL_PRINT("Invalid sample format\n");
-		goto out2;
-    }
-
     if(!(data->loop = ppa_threaded_mainloop_new()))
     {
         AL_PRINT("pa_threaded_mainloop_new() failed!\n");
-		goto out2;
+        goto out;
     }
 
     if(ppa_threaded_mainloop_start(data->loop) < 0)
     {
         AL_PRINT("pa_threaded_mainloop_start() failed\n");
-		goto out3;
+        goto out;
     }
 
     ppa_threaded_mainloop_lock(data->loop);
@@ -287,7 +245,7 @@ static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name, ALCenum fo
                  ppa_strerror(ppa_context_errno(data->context)));
 
         ppa_threaded_mainloop_unlock(data->loop);
-		goto out3;
+        goto out;
     }
 
     ppa_context_set_state_callback(data->context, context_state_callback, data);
@@ -298,101 +256,39 @@ static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name, ALCenum fo
                  ppa_strerror(ppa_context_errno(data->context)));
 
         ppa_context_unref(data->context);
-        ppa_threaded_mainloop_unlock(data->loop);
-
         data->context = NULL;
-		goto out3;
+
+        ppa_threaded_mainloop_unlock(data->loop);
+        goto out;
     }
 
     while(ppa_context_get_state(data->context) != PA_CONTEXT_READY)
     {
         if(!PA_CONTEXT_IS_GOOD(ppa_context_get_state(data->context)))
         {
+            AL_PRINT("Context did not get ready: %s\n",
+                     ppa_strerror(ppa_context_errno(data->context)));
+
             ppa_context_unref(data->context);
-            ppa_threaded_mainloop_unlock(data->loop);
-
             data->context = NULL;
-			goto out3;
+
+            ppa_threaded_mainloop_unlock(data->loop);
+            goto out;
         }
 
         ppa_threaded_mainloop_wait(data->loop);
         ppa_threaded_mainloop_accept(data->loop);
     }
 
-    data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, NULL);
-    if(!data->stream)
-    {
-        AL_PRINT("pa_stream_new() failed: %s\n",
-                 ppa_strerror(ppa_context_errno(data->context)));
-
-        ppa_threaded_mainloop_unlock(data->loop);
-		goto out4;
-    }
-
-    ppa_stream_set_state_callback(data->stream, stream_state_callback, data);
-
-    if(device->IsCaptureDevice)
-    {
-        if(ppa_stream_connect_record(data->stream, NULL, &data->attr, PA_STREAM_ADJUST_LATENCY) < 0)
-        {
-            AL_PRINT("Stream did not connect: %s\n",
-                     ppa_strerror(ppa_context_errno(data->context)));
-
-            ppa_stream_unref(data->stream);
-            ppa_threaded_mainloop_unlock(data->loop);
-
-            data->stream = NULL;
-			goto out4;
-        }
-    }
-    else
-    {
-        ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
-
-        if(ppa_stream_connect_playback(data->stream, NULL, &data->attr, PA_STREAM_ADJUST_LATENCY, NULL, NULL) < 0)
-        {
-            AL_PRINT("Stream did not connect: %s\n",
-                     ppa_strerror(ppa_context_errno(data->context)));
-
-            ppa_stream_unref(data->stream);
-            ppa_threaded_mainloop_unlock(data->loop);
-
-            data->stream = NULL;
-			goto out4;
-        }
-    }
-
-    while(ppa_stream_get_state(data->stream) != PA_STREAM_READY)
-    {
-        if(!PA_STREAM_IS_GOOD(ppa_stream_get_state(data->stream)))
-        {
-            ppa_stream_unref(data->stream);
-            ppa_threaded_mainloop_unlock(data->loop);
-
-            data->stream = NULL;
-			goto out4;
-        }
-
-        ppa_threaded_mainloop_wait(data->loop);
-        ppa_threaded_mainloop_accept(data->loop);
-    }
-
-    device->UpdateSize = device->BufferSize/4;
     ppa_threaded_mainloop_unlock(data->loop);
-
     return ALC_TRUE;
 
-out4:
-    ppa_threaded_mainloop_lock(data->loop);
-
-    ppa_context_disconnect(data->context);
-    ppa_context_unref(data->context);
-
-    ppa_threaded_mainloop_unlock(data->loop);
-out3:
-    ppa_threaded_mainloop_stop(data->loop);
-    ppa_threaded_mainloop_free(data->loop);
-out2:
+out:
+    if(data->loop)
+    {
+        ppa_threaded_mainloop_stop(data->loop);
+        ppa_threaded_mainloop_free(data->loop);
+    }
     device->ExtraData = NULL;
     device->szDeviceName = NULL;
     DestroyRingBuffer(data->ring);
@@ -407,8 +303,11 @@ static void pulse_close(ALCdevice *device) //{{{
 
     ppa_threaded_mainloop_lock(data->loop);
 
-    ppa_stream_disconnect(data->stream);
-    ppa_stream_unref(data->stream);
+    if(data->stream)
+    {
+        ppa_stream_disconnect(data->stream);
+        ppa_stream_unref(data->stream);
+    }
 
     ppa_context_disconnect(data->context);
     ppa_context_unref(data->context);
@@ -438,7 +337,7 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
             return ALC_FALSE;
     }
 
-    return pulse_open(device, pulse_device, device->Format, 0, device->Frequency);
+    return pulse_open(device, pulse_device, 0);
 } //}}}
 
 static void pulse_close_playback(ALCdevice *device) //{{{
@@ -448,20 +347,113 @@ static void pulse_close_playback(ALCdevice *device) //{{{
 
 static ALCboolean pulse_start_context(ALCdevice *device, ALCcontext *context) //{{{
 {
-    return ALC_TRUE;
-    (void)device;
+    pulse_data *data = device->ExtraData;
     (void)context;
+
+    ppa_threaded_mainloop_lock(data->loop);
+
+    device->UpdateSize = device->BufferSize / 4;
+
+    data->attr.minreq = -1;
+    data->attr.prebuf = -1;
+    data->attr.maxlength = -1;
+    data->attr.fragsize = data->frame_size * device->UpdateSize;
+    data->attr.tlength = data->attr.fragsize * 4;
+    data->stream_name = "Playback Stream";
+
+    data->spec.rate = device->Frequency;
+    data->spec.channels = aluChannelsFromFormat(device->Format);
+
+    switch(aluBytesFromFormat(device->Format))
+    {
+        case 1:
+            data->spec.format = PA_SAMPLE_U8;
+            break;
+        case 2:
+            data->spec.format = PA_SAMPLE_S16NE;
+            break;
+        default:
+            AL_PRINT("Unknown format: %x\n", device->Format);
+            ppa_threaded_mainloop_unlock(data->loop);
+            return ALC_FALSE;
+    }
+
+    if(ppa_sample_spec_valid(&data->spec) == 0)
+    {
+        AL_PRINT("Invalid sample format\n");
+        ppa_threaded_mainloop_unlock(data->loop);
+        return ALC_FALSE;
+    }
+
+    data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, NULL);
+    if(!data->stream)
+    {
+        AL_PRINT("pa_stream_new() failed: %s\n",
+                 ppa_strerror(ppa_context_errno(data->context)));
+
+        ppa_threaded_mainloop_unlock(data->loop);
+        return ALC_FALSE;
+    }
+
+    ppa_stream_set_state_callback(data->stream, stream_state_callback, data);
+    ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
+
+    if(ppa_stream_connect_playback(data->stream, NULL, &data->attr, PA_STREAM_ADJUST_LATENCY, NULL, NULL) < 0)
+    {
+        AL_PRINT("Stream did not connect: %s\n",
+                 ppa_strerror(ppa_context_errno(data->context)));
+
+        ppa_stream_unref(data->stream);
+        data->stream = NULL;
+
+        ppa_threaded_mainloop_unlock(data->loop);
+        return ALC_FALSE;
+    }
+
+    while(ppa_stream_get_state(data->stream) != PA_STREAM_READY)
+    {
+        if(!PA_STREAM_IS_GOOD(ppa_stream_get_state(data->stream)))
+        {
+            AL_PRINT("Stream did not get ready: %s\n",
+                     ppa_strerror(ppa_context_errno(data->context)));
+
+            ppa_stream_unref(data->stream);
+            data->stream = NULL;
+
+            ppa_threaded_mainloop_unlock(data->loop);
+            return ALC_FALSE;
+        }
+
+        ppa_threaded_mainloop_wait(data->loop);
+        ppa_threaded_mainloop_accept(data->loop);
+    }
+
+    ppa_threaded_mainloop_unlock(data->loop);
+    return ALC_TRUE;
 } //}}}
 
 static void pulse_stop_context(ALCdevice *device, ALCcontext *context) //{{{
 {
-    (void)device;
+    pulse_data *data = device->ExtraData;
     (void)context;
+
+    if(!data->stream)
+        return;
+
+    ppa_threaded_mainloop_lock(data->loop);
+
+    ppa_stream_disconnect(data->stream);
+    ppa_stream_unref(data->stream);
+    data->stream = NULL;
+
+    ppa_threaded_mainloop_unlock(data->loop);
 } //}}}
 
 
 static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_name, ALCuint frequency, ALCenum format, ALCsizei samples) //{{{
 {
+    pulse_data *data;
+
     if(!pa_handle)
         return ALC_FALSE;
 
@@ -471,7 +463,95 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             return ALC_FALSE;
     }
 
-    return pulse_open(device, pulse_capture_device, format, samples, frequency);
+    assert(device->Format == format);
+    assert(device->Frequency == frequency);
+
+    if(pulse_open(device, pulse_capture_device, samples) == ALC_FALSE)
+        return ALC_FALSE;
+
+    data = device->ExtraData;
+    ppa_threaded_mainloop_lock(data->loop);
+
+    data->attr.minreq = -1;
+    data->attr.prebuf = -1;
+    data->attr.maxlength = -1;
+    data->attr.tlength = -1;
+    data->attr.fragsize = data->frame_size * data->samples / 2;
+    data->stream_name = "Capture Stream";
+
+    data->spec.rate = device->Frequency;
+    data->spec.channels = aluChannelsFromFormat(device->Format);
+
+    switch(aluBytesFromFormat(device->Format))
+    {
+        case 1:
+            data->spec.format = PA_SAMPLE_U8;
+            break;
+        case 2:
+            data->spec.format = PA_SAMPLE_S16NE;
+            break;
+        default:
+            AL_PRINT("Unknown format: %x\n", device->Format);
+            ppa_threaded_mainloop_unlock(data->loop);
+            pulse_close(device);
+            return ALC_FALSE;
+    }
+
+    if(ppa_sample_spec_valid(&data->spec) == 0)
+    {
+        AL_PRINT("Invalid sample format\n");
+        ppa_threaded_mainloop_unlock(data->loop);
+        pulse_close(device);
+        return ALC_FALSE;
+    }
+
+    data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, NULL);
+    if(!data->stream)
+    {
+        AL_PRINT("pa_stream_new() failed: %s\n",
+                 ppa_strerror(ppa_context_errno(data->context)));
+
+        ppa_threaded_mainloop_unlock(data->loop);
+        pulse_close(device);
+        return ALC_FALSE;
+    }
+
+    ppa_stream_set_state_callback(data->stream, stream_state_callback, data);
+
+    if(ppa_stream_connect_record(data->stream, NULL, &data->attr, PA_STREAM_ADJUST_LATENCY) < 0)
+    {
+        AL_PRINT("Stream did not connect: %s\n",
+                 ppa_strerror(ppa_context_errno(data->context)));
+
+        ppa_stream_unref(data->stream);
+        ppa_threaded_mainloop_unlock(data->loop);
+
+        data->stream = NULL;
+        pulse_close(device);
+        return ALC_FALSE;
+    }
+
+    while(ppa_stream_get_state(data->stream) != PA_STREAM_READY)
+    {
+        if(!PA_STREAM_IS_GOOD(ppa_stream_get_state(data->stream)))
+        {
+            AL_PRINT("Stream did not get ready: %s\n",
+                     ppa_strerror(ppa_context_errno(data->context)));
+
+            ppa_stream_unref(data->stream);
+            ppa_threaded_mainloop_unlock(data->loop);
+
+            data->stream = NULL;
+            pulse_close(device);
+            return ALC_FALSE;
+        }
+
+        ppa_threaded_mainloop_wait(data->loop);
+        ppa_threaded_mainloop_accept(data->loop);
+    }
+
+    ppa_threaded_mainloop_unlock(data->loop);
+    return ALC_TRUE;
 } //}}}
 
 static void pulse_close_capture(ALCdevice *device) //{{{

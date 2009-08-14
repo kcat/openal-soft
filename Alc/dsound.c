@@ -222,7 +222,7 @@ static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
     memset(&OutputType, 0, sizeof(OutputType));
 
     hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
-    if(SUCCEEDED(hr) && *(GetConfigValue(NULL, "format", "")) == 0)
+    if(SUCCEEDED(hr) && *(GetConfigValue(NULL, "format", "")) != 0)
     {
         if(device->Format == AL_FORMAT_MONO8 || device->Format == AL_FORMAT_MONO16)
             speakers = DSSPEAKER_COMBINED(DSSPEAKER_MONO, 0);

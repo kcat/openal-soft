@@ -542,21 +542,21 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
         pDevice->Frequency = frequency;
         pDevice->Format = format;
 
+        SuspendContext(NULL);
         for(i = 0;BackendList[i].Init;i++)
         {
             pDevice->Funcs = &BackendList[i].Funcs;
             if(ALCdevice_OpenCapture(pDevice, deviceName, frequency, format, SampleSize))
             {
-                SuspendContext(NULL);
                 pDevice->next = g_pDeviceList;
                 g_pDeviceList = pDevice;
                 g_ulDeviceCount++;
-                ProcessContext(NULL);
 
                 DeviceFound = ALC_TRUE;
                 break;
             }
         }
+        ProcessContext(NULL);
 
         if(!DeviceFound)
         {

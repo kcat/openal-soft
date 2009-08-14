@@ -206,20 +206,11 @@ static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name) //{{{
     pulse_data *data = ppa_xmalloc0(sizeof(pulse_data));
 
     data->device = device;
-    data->samples = device->BufferSize;
-    data->frame_size = aluBytesFromFormat(device->Format) *
-                       aluChannelsFromFormat(device->Format);
 
     if(ppa_get_binary_name(data->path_name, sizeof(data->path_name)))
         data->context_name = ppa_path_get_filename(data->path_name);
     else
         data->context_name = "OpenAL Soft";
-
-    if(!(data->ring = CreateRingBuffer(data->frame_size, data->samples)))
-    {
-        ppa_xfree(data);
-        return ALC_FALSE;
-    }
 
     device->ExtraData = data;
     device->szDeviceName = device_name;
@@ -291,7 +282,6 @@ out:
     }
     device->ExtraData = NULL;
     device->szDeviceName = NULL;
-    DestroyRingBuffer(data->ring);
 
     ppa_xfree(data);
     return ALC_FALSE;
@@ -351,6 +341,10 @@ static ALCboolean pulse_start_context(ALCdevice *device, ALCcontext *context) //
     (void)context;
 
     ppa_threaded_mainloop_lock(data->loop);
+
+    data->samples = device->BufferSize;
+    data->frame_size = aluBytesFromFormat(device->Format) *
+                       aluChannelsFromFormat(device->Format);
 
     device->UpdateSize = device->BufferSize / 4;
 
@@ -468,6 +462,17 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
     data = device->ExtraData;
     ppa_threaded_mainloop_lock(data->loop);
+
+    data->samples = device->BufferSize;
+    data->frame_size = aluBytesFromFormat(device->Format) *
+                       aluChannelsFromFormat(device->Format);
+
+    if(!(data->ring = CreateRingBuffer(data->frame_size, data->samples)))
+    {
+        ppa_threaded_mainloop_unlock(data->loop);
+        pulse_close(device);
+        return ALC_FALSE;
+    }
 
     data->attr.minreq = -1;
     data->attr.prebuf = -1;

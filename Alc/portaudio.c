@@ -163,9 +163,8 @@ static void pa_close_playback(ALCdevice *device)
 
 static ALCboolean pa_start_context(ALCdevice *device, ALCcontext *context)
 {
+    device->Frequency = context->Frequency;
     return ALC_TRUE;
-    (void)device;
-    (void)context;
 }
 
 static void pa_stop_context(ALCdevice *device, ALCcontext *context)

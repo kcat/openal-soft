@@ -69,6 +69,13 @@ static __inline ALshort aluF2S(ALfloat Value)
     return ((ALshort)i);
 }
 
+static __inline ALubyte aluF2UB(ALfloat Value)
+{
+    ALshort i = aluF2S(Value);
+    return (i>>8)+128;
+}
+
+
 static __inline ALvoid aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
 {
     outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
@@ -1246,7 +1253,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
             case AL_FORMAT_MONO8:
                 for(i = 0;i < SamplesToDo;i++)
                 {
-                    ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT]+DryBuffer[i][FRONT_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]+DryBuffer[i][FRONT_RIGHT]);
                     buffer = ((ALubyte*)buffer) + 1;
                 }
                 break;
@@ -1259,8 +1266,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                         samples[0] = DryBuffer[i][FRONT_LEFT];
                         samples[1] = DryBuffer[i][FRONT_RIGHT];
                         bs2b_cross_feed(ALContext->bs2b, samples);
-                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(samples[0])>>8)+128);
-                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(samples[1])>>8)+128);
+                        ((ALubyte*)buffer)[0] = aluF2UB(samples[0]);
+                        ((ALubyte*)buffer)[1] = aluF2UB(samples[1]);
                         buffer = ((ALubyte*)buffer) + 2;
                     }
                 }
@@ -1268,8 +1275,8 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
                 {
                     for(i = 0;i < SamplesToDo;i++)
                     {
-                        ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT])>>8)+128);
-                        ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT])>>8)+128);
+                        ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]);
+                        ((ALubyte*)buffer)[1] = aluF2UB(DryBuffer[i][FRONT_RIGHT]);
                         buffer = ((ALubyte*)buffer) + 2;
                     }
                 }
@@ -1277,28 +1284,28 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
             case AL_FORMAT_QUAD8:
                 for(i = 0;i < SamplesToDo;i++)
                 {
-                    ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT])>>8)+128);
-                    ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]);
+                    ((ALubyte*)buffer)[1] = aluF2UB(DryBuffer[i][FRONT_RIGHT]);
+                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][BACK_LEFT]);
+                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][BACK_RIGHT]);
                     buffer = ((ALubyte*)buffer) + 4;
                 }
                 break;
             case AL_FORMAT_51CHN8:
                 for(i = 0;i < SamplesToDo;i++)
                 {
-                    ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]);
+                    ((ALubyte*)buffer)[1] = aluF2UB(DryBuffer[i][FRONT_RIGHT]);
 #ifdef _WIN32 /* Of course, Windows can't use the same ordering... */
-                    ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_CENTER])>>8)+128);
-                    ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][LFE])>>8)+128);
-                    ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][FRONT_CENTER]);
+                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][LFE]);
+                    ((ALubyte*)buffer)[4] = aluF2UB(DryBuffer[i][BACK_LEFT]);
+                    ((ALubyte*)buffer)[5] = aluF2UB(DryBuffer[i][BACK_RIGHT]);
 #else
-                    ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT])>>8)+128);
-                    ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_CENTER])>>8)+128);
-                    ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][LFE])>>8)+128);
+                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][BACK_LEFT]);
+                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][BACK_RIGHT]);
+                    ((ALubyte*)buffer)[4] = aluF2UB(DryBuffer[i][FRONT_CENTER]);
+                    ((ALubyte*)buffer)[5] = aluF2UB(DryBuffer[i][LFE]);
 #endif
                     buffer = ((ALubyte*)buffer) + 6;
                 }
@@ -1306,34 +1313,34 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
             case AL_FORMAT_61CHN8:
                 for(i = 0;i < SamplesToDo;i++)
                 {
-                    ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT])>>8)+128);
-                    ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_CENTER])>>8)+128);
-                    ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][LFE])>>8)+128);
-                    ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][BACK_CENTER])>>8)+128);
-                    ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[6] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]);
+                    ((ALubyte*)buffer)[1] = aluF2UB(DryBuffer[i][FRONT_RIGHT]);
+                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][FRONT_CENTER]);
+                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][LFE]);
+                    ((ALubyte*)buffer)[4] = aluF2UB(DryBuffer[i][BACK_CENTER]);
+                    ((ALubyte*)buffer)[5] = aluF2UB(DryBuffer[i][SIDE_LEFT]);
+                    ((ALubyte*)buffer)[6] = aluF2UB(DryBuffer[i][SIDE_RIGHT]);
                     buffer = ((ALubyte*)buffer) + 7;
                 }
                 break;
             case AL_FORMAT_71CHN8:
                 for(i = 0;i < SamplesToDo;i++)
                 {
-                    ((ALubyte*)buffer)[0] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[1] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]);
+                    ((ALubyte*)buffer)[1] = aluF2UB(DryBuffer[i][FRONT_RIGHT]);
 #ifdef _WIN32
-                    ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_CENTER])>>8)+128);
-                    ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][LFE])>>8)+128);
-                    ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][FRONT_CENTER]);
+                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][LFE]);
+                    ((ALubyte*)buffer)[4] = aluF2UB(DryBuffer[i][BACK_LEFT]);
+                    ((ALubyte*)buffer)[5] = aluF2UB(DryBuffer[i][BACK_RIGHT]);
 #else
-                    ((ALubyte*)buffer)[2] = (ALubyte)((aluF2S(DryBuffer[i][BACK_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[3] = (ALubyte)((aluF2S(DryBuffer[i][BACK_RIGHT])>>8)+128);
-                    ((ALubyte*)buffer)[4] = (ALubyte)((aluF2S(DryBuffer[i][FRONT_CENTER])>>8)+128);
-                    ((ALubyte*)buffer)[5] = (ALubyte)((aluF2S(DryBuffer[i][LFE])>>8)+128);
+                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][BACK_LEFT]);
+                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][BACK_RIGHT]);
+                    ((ALubyte*)buffer)[4] = aluF2UB(DryBuffer[i][FRONT_CENTER]);
+                    ((ALubyte*)buffer)[5] = aluF2UB(DryBuffer[i][LFE]);
 #endif
-                    ((ALubyte*)buffer)[6] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_LEFT])>>8)+128);
-                    ((ALubyte*)buffer)[7] = (ALubyte)((aluF2S(DryBuffer[i][SIDE_RIGHT])>>8)+128);
+                    ((ALubyte*)buffer)[6] = aluF2UB(DryBuffer[i][SIDE_LEFT]);
+                    ((ALubyte*)buffer)[7] = aluF2UB(DryBuffer[i][SIDE_RIGHT]);
                     buffer = ((ALubyte*)buffer) + 8;
                 }
                 break;

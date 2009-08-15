@@ -377,6 +377,26 @@ ALCchar *AppendCaptureDeviceList(char *name)
 }
 
 /*
+    IsDevice
+
+    Check pDevice is a valid Device pointer
+*/
+static ALCboolean IsDevice(ALCdevice *pDevice)
+{
+    ALCdevice *pTempDevice;
+
+    SuspendContext(NULL);
+
+    pTempDevice = g_pDeviceList;
+    while(pTempDevice && pTempDevice != pDevice)
+        pTempDevice = pTempDevice->next;
+
+    ProcessContext(NULL);
+
+    return (pTempDevice ? ALC_TRUE : ALC_FALSE);
+}
+
+/*
     IsContext
 
     Check pContext is a valid Context pointer
@@ -571,7 +591,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
     ALCboolean bReturn = ALC_FALSE;
     ALCdevice **list;
 
-    if ((pDevice)&&(pDevice->IsCaptureDevice))
+    if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
     {
         SuspendContext(NULL);
 
@@ -597,7 +617,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 
 ALCAPI void ALCAPIENTRY alcCaptureStart(ALCdevice *pDevice)
 {
-    if ((pDevice)&&(pDevice->IsCaptureDevice))
+    if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
         ALCdevice_StartCapture(pDevice);
     else
         SetALCError(ALC_INVALID_DEVICE);
@@ -605,7 +625,7 @@ ALCAPI void ALCAPIENTRY alcCaptureStart(ALCdevice *pDevice)
 
 ALCAPI void ALCAPIENTRY alcCaptureStop(ALCdevice *pDevice)
 {
-    if ((pDevice)&&(pDevice->IsCaptureDevice))
+    if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
         ALCdevice_StopCapture(pDevice);
     else
         SetALCError(ALC_INVALID_DEVICE);
@@ -613,7 +633,7 @@ ALCAPI void ALCAPIENTRY alcCaptureStop(ALCdevice *pDevice)
 
 ALCAPI void ALCAPIENTRY alcCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCsizei lSamples)
 {
-    if ((pDevice) && (pDevice->IsCaptureDevice))
+    if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
         ALCdevice_CaptureSamples(pDevice, pBuffer, lSamples);
     else
         SetALCError(ALC_INVALID_DEVICE);
@@ -702,7 +722,7 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         break;
 
     case ALC_DEVICE_SPECIFIER:
-        if (pDevice)
+        if(IsDevice(pDevice))
             value = pDevice->szDeviceName;
         else
             value = alcDeviceList;
@@ -717,7 +737,7 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         break;
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
-        if (pDevice)
+        if(IsDevice(pDevice))
             value = pDevice->szDeviceName;
         else
             value = alcCaptureDeviceList;
@@ -749,7 +769,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
 {
     InitAL();
 
-    if ((device)&&(device->IsCaptureDevice))
+    if(IsDevice(device) && device->IsCaptureDevice)
     {
         SuspendContext(NULL);
 
@@ -813,7 +833,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     break;
 
                 case ALC_ATTRIBUTES_SIZE:
-                    if(!device)
+                    if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
                     else if(!size)
                         SetALCError(ALC_INVALID_VALUE);
@@ -822,7 +842,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     break;
 
                 case ALC_ALL_ATTRIBUTES:
-                    if(!device)
+                    if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
                     else if (size < 13)
                         SetALCError(ALC_INVALID_VALUE);
@@ -855,7 +875,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     break;
 
                 case ALC_FREQUENCY:
-                    if(!device)
+                    if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
                     else if(!size)
                         SetALCError(ALC_INVALID_VALUE);
@@ -864,7 +884,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     break;
 
                 case ALC_REFRESH:
-                    if(!device)
+                    if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
                     else if(!size)
                         SetALCError(ALC_INVALID_VALUE);
@@ -873,7 +893,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     break;
 
                 case ALC_SYNC:
-                    if(!device)
+                    if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
                     else if(!size)
                         SetALCError(ALC_INVALID_VALUE);
@@ -882,7 +902,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     break;
 
                 case ALC_MONO_SOURCES:
-                    if(!device || !device->Context)
+                    if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
                     else if (size != 1)
                         SetALCError(ALC_INVALID_VALUE);
@@ -891,7 +911,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                     break;
 
                 case ALC_STEREO_SOURCES:
-                    if(!device || !device->Context)
+                    if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
                     else if (size != 1)
                         SetALCError(ALC_INVALID_VALUE);
@@ -1013,7 +1033,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
     ALuint      ulAttributeIndex, ulRequestedStereoSources;
     ALuint      RequestedSends;
 
-    if ((device)&&(!device->IsCaptureDevice))
+    if(IsDevice(device) && !device->IsCaptureDevice)
     {
         // Reset Context Last Error code
         g_eLastContextError = ALC_NO_ERROR;
@@ -1343,7 +1363,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
     ALCboolean bReturn = ALC_FALSE;
     ALCdevice **list;
 
-    if ((pDevice)&&(!pDevice->IsCaptureDevice))
+    if(IsDevice(pDevice) && !pDevice->IsCaptureDevice)
     {
         SuspendContext(NULL);
 

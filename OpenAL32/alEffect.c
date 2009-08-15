@@ -34,9 +34,6 @@
 ALboolean DisabledEffects[MAX_EFFECTS];
 
 
-static ALeffect *g_EffectList;
-static ALuint    g_EffectCount;
-
 static void InitEffectParams(ALeffect *effect, ALenum type);
 
 
@@ -50,10 +47,12 @@ ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 
     if (n > 0)
     {
+        ALCdevice *device = Context->Device;
+
         // Check that enough memory has been allocted in the 'effects' array for n Effects
         if (!IsBadWritePtr((void*)effects, n * sizeof(ALuint)))
         {
-            ALeffect **list = &g_EffectList;
+            ALeffect **list = &device->EffectList;
             while(*list)
                 list = &(*list)->next;
 
@@ -73,7 +72,7 @@ ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 (*list)->effect = effects[i];
 
                 InitEffectParams(*list, AL_EFFECT_NULL);
-                g_EffectCount++;
+                device->EffectCount++;
                 i++;
 
                 list = &(*list)->next;
@@ -95,6 +94,8 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
 
     if (n >= 0)
     {
+        ALCdevice *device = Context->Device;
+
         // Check that all effects are valid
         for (i = 0; i < n; i++)
         {
@@ -118,7 +119,7 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
                     ALEffect = ((ALeffect*)ALTHUNK_LOOKUPENTRY(effects[i]));
 
                     // Remove Source from list of Sources
-                    list = &g_EffectList;
+                    list = &device->EffectList;
                     while(*list && *list != ALEffect)
                          list = &(*list)->next;
 
@@ -129,7 +130,7 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
                     memset(ALEffect, 0, sizeof(ALeffect));
                     free(ALEffect);
 
-                    g_EffectCount--;
+                    device->EffectCount--;
                 }
             }
         }
@@ -143,18 +144,18 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
 ALboolean AL_APIENTRY alIsEffect(ALuint effect)
 {
     ALCcontext *Context;
-    ALeffect **list;
+    ALeffect *list;
 
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    list = &g_EffectList;
-    while(*list && (*list)->effect != effect)
-        list = &(*list)->next;
+    list = Context->Device->EffectList;
+    while(list && list->effect != effect)
+        list = list->next;
 
     ProcessContext(Context);
 
-    return ((*list || !effect) ? AL_TRUE : AL_FALSE);
+    return ((list || !effect) ? AL_TRUE : AL_FALSE);
 }
 
 ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
@@ -1160,23 +1161,20 @@ ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues
 }
 
 
-ALvoid ReleaseALEffects(ALvoid)
+ALvoid ReleaseALEffects(ALCdevice *device)
 {
-#ifdef _DEBUG
-    if(g_EffectCount > 0)
-        AL_PRINT("exit(): deleting %d Effect(s)\n", g_EffectCount);
-#endif
-
-    while(g_EffectList)
+    ALeffect *list = device->EffectList;
+    while(list)
     {
-        ALeffect *temp = g_EffectList;
-        g_EffectList = g_EffectList->next;
+        ALeffect *temp = list;
+        list = list->next;
 
         // Release effect structure
         memset(temp, 0, sizeof(ALeffect));
         free(temp);
     }
-    g_EffectCount = 0;
+    device->EffectList = NULL;
+    device->EffectCount = 0;
 }
 
 

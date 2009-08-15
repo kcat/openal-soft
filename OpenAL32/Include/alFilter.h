@@ -61,7 +61,7 @@ static __inline ALfloat lpFilter2P(FILTER *iir, ALuint offset, ALfloat input)
 #define AL_LOWPASS_GAINHF                                  0x0002
 
 
-typedef struct ALfilter_struct
+typedef struct ALfilter
 {
     // Filter type (AL_FILTER_NULL, ...)
     ALenum type;
@@ -72,7 +72,7 @@ typedef struct ALfilter_struct
     // Index to itself
     ALuint filter;
 
-    struct ALfilter_struct *next;
+    struct ALfilter *next;
 } ALfilter;
 
 ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters);
@@ -89,7 +89,7 @@ ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues);
 ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pflValue);
 ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues);
 
-ALvoid ReleaseALFilters(ALvoid);
+ALvoid ReleaseALFilters(ALCdevice *device);
 
 #ifdef __cplusplus
 }

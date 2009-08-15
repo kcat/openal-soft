@@ -29,8 +29,6 @@
 #include "alThunk.h"
 #include "alError.h"
 
-static ALfilter *g_FilterList;
-static ALuint    g_FilterCount;
 
 static void InitFilterParams(ALfilter *filter, ALenum type);
 
@@ -45,10 +43,12 @@ ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
 
     if (n > 0)
     {
+        ALCdevice *device = Context->Device;
+
         // Check that enough memory has been allocted in the 'filters' array for n Filters
         if (!IsBadWritePtr((void*)filters, n * sizeof(ALuint)))
         {
-            ALfilter **list = &g_FilterList;
+            ALfilter **list = &device->FilterList;
             while(*list)
                 list = &(*list)->next;
 
@@ -68,7 +68,7 @@ ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
                 (*list)->filter = filters[i];
 
                 InitFilterParams(*list, AL_FILTER_NULL);
-                g_FilterCount++;
+                device->FilterCount++;
                 i++;
 
                 list = &(*list)->next;
@@ -90,6 +90,8 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
 
     if (n >= 0)
     {
+        ALCdevice *device = Context->Device;
+
         // Check that all filters are valid
         for (i = 0; i < n; i++)
         {
@@ -113,7 +115,7 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
                     ALFilter = ((ALfilter*)ALTHUNK_LOOKUPENTRY(filters[i]));
 
                     // Remove Source from list of Sources
-                    list = &g_FilterList;
+                    list = &device->FilterList;
                     while(*list && *list != ALFilter)
                          list = &(*list)->next;
 
@@ -124,7 +126,7 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
                     memset(ALFilter, 0, sizeof(ALfilter));
                     free(ALFilter);
 
-                    g_FilterCount--;
+                    device->FilterCount--;
                 }
             }
         }
@@ -138,18 +140,18 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
 ALboolean AL_APIENTRY alIsFilter(ALuint filter)
 {
     ALCcontext *Context;
-    ALfilter **list;
+    ALfilter *list;
 
     Context = alcGetCurrentContext();
     SuspendContext(Context);
 
-    list = &g_FilterList;
-    while(*list && (*list)->filter != filter)
-        list = &(*list)->next;
+    list = Context->Device->FilterList;
+    while(list && list->filter != filter)
+        list = list->next;
 
     ProcessContext(Context);
 
-    return ((*list || !filter) ? AL_TRUE : AL_FALSE);
+    return ((list || !filter) ? AL_TRUE : AL_FALSE);
 }
 
 ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
@@ -397,23 +399,20 @@ ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues
 }
 
 
-ALvoid ReleaseALFilters(ALvoid)
+ALvoid ReleaseALFilters(ALCdevice *device)
 {
-#ifdef _DEBUG
-    if(g_FilterCount > 0)
-        AL_PRINT("exit(): deleting %d Filter(s)\n", g_FilterCount);
-#endif
-
-    while(g_FilterList)
+    ALfilter *list = device->FilterList;
+    while(list)
     {
-        ALfilter *temp = g_FilterList;
-        g_FilterList = g_FilterList->next;
+        ALfilter *temp = list;
+        list = list->next;
 
         // Release filter structure
         memset(temp, 0, sizeof(ALfilter));
         free(temp);
     }
-    g_FilterCount = 0;
+    device->FilterList = NULL;
+    device->FilterCount = 0;
 }
 
 

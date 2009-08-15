@@ -216,8 +216,6 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             if(!init_done)
                 break;
             ReleaseALC();
-            ReleaseALEffects();
-            ReleaseALFilters();
             FreeALConfig();
             ALTHUNK_EXIT();
             DeleteCriticalSection(&g_csMutex);
@@ -235,8 +233,6 @@ static void my_deinit()
     once = AL_TRUE;
 
     ReleaseALC();
-    ReleaseALEffects();
-    ReleaseALFilters();
     FreeALConfig();
     ALTHUNK_EXIT();
     DeleteCriticalSection(&g_csMutex);
@@ -1375,6 +1371,20 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
             AL_PRINT("alcCloseDevice(): deleting %d Buffer(s)\n", pDevice->BufferCount);
 #endif
             ReleaseALBuffers(pDevice);
+        }
+        if(pDevice->EffectCount > 0)
+        {
+#ifdef _DEBUG
+            AL_PRINT("alcCloseDevice(): deleting %d Effect(s)\n", pDevice->EffectCount);
+#endif
+            ReleaseALEffects(pDevice);
+        }
+        if(pDevice->FilterCount > 0)
+        {
+#ifdef _DEBUG
+            AL_PRINT("alcCloseDevice(): deleting %d Filter(s)\n", pDevice->FilterCount);
+#endif
+            ReleaseALFilters(pDevice);
         }
 
         //Release device structure

@@ -201,7 +201,7 @@ enum {
 };
 extern ALboolean DisabledEffects[MAX_EFFECTS];
 
-typedef struct ALeffect_struct
+typedef struct ALeffect
 {
     // Effect type (AL_EFFECT_NULL, ...)
     ALenum type;
@@ -248,7 +248,7 @@ typedef struct ALeffect_struct
     // Index to itself
     ALuint effect;
 
-    struct ALeffect_struct *next;
+    struct ALeffect *next;
 } ALeffect;
 
 ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects);
@@ -265,7 +265,7 @@ ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues);
 ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue);
 ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues);
 
-ALvoid ReleaseALEffects(ALvoid);
+ALvoid ReleaseALEffects(ALCdevice *device);
 
 #ifdef __cplusplus
 }

@@ -193,6 +193,14 @@ struct ALCdevice_struct
     struct ALbuffer *Buffers;
     ALuint          BufferCount;
 
+    // Linked List of Effects for this device
+    struct ALeffect *EffectList;
+    ALuint          EffectCount;
+
+    // Linked List of Filters for this device
+    struct ALfilter *FilterList;
+    ALuint          FilterCount;
+
     // Context created on this device
     ALCcontext   *Context;
 

@@ -1263,6 +1263,26 @@ ALCAPI ALCboolean ALCAPIENTRY alcMakeContextCurrent(ALCcontext *context)
 }
 
 
+static ALenum GetFormatFromString(const char *str)
+{
+    if(strcasecmp(str, "AL_FORMAT_MONO16") == 0)    return AL_FORMAT_MONO16;
+    if(strcasecmp(str, "AL_FORMAT_STEREO16") == 0)  return AL_FORMAT_STEREO16;
+    if(strcasecmp(str, "AL_FORMAT_QUAD16") == 0)    return AL_FORMAT_QUAD16;
+    if(strcasecmp(str, "AL_FORMAT_51CHN16") == 0)   return AL_FORMAT_51CHN16;
+    if(strcasecmp(str, "AL_FORMAT_61CHN16") == 0)   return AL_FORMAT_61CHN16;
+    if(strcasecmp(str, "AL_FORMAT_71CHN16") == 0)   return AL_FORMAT_71CHN16;
+
+    if(strcasecmp(str, "AL_FORMAT_MONO8") == 0)    return AL_FORMAT_MONO8;
+    if(strcasecmp(str, "AL_FORMAT_STEREO8") == 0)  return AL_FORMAT_STEREO8;
+    if(strcasecmp(str, "AL_FORMAT_QUAD8") == 0)    return AL_FORMAT_QUAD8;
+    if(strcasecmp(str, "AL_FORMAT_51CHN8") == 0)   return AL_FORMAT_51CHN8;
+    if(strcasecmp(str, "AL_FORMAT_61CHN8") == 0)   return AL_FORMAT_61CHN8;
+    if(strcasecmp(str, "AL_FORMAT_71CHN8") == 0)   return AL_FORMAT_71CHN8;
+
+    AL_PRINT("Unknown format: \"%s\"\n", str);
+    return AL_FORMAT_STEREO16;
+}
+
 /*
     alcOpenDevice
 
@@ -1296,11 +1316,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
             device->Frequency = SWMIXER_OUTPUT_RATE;
 
         fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
-        if(fmt[0])
-            device->Format = alGetEnumValue(fmt);
-
-        if(!aluChannelsFromFormat(device->Format))
-            device->Format = AL_FORMAT_STEREO16;
+        device->Format = GetFormatFromString(fmt);
 
         device->BufferSize = GetConfigValueInt(NULL, "refresh", 4096);
         if((ALint)device->BufferSize <= 0)

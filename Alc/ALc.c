@@ -798,35 +798,35 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
             switch (param)
             {
                 case ALC_MAJOR_VERSION:
-                    if(!size)
+                    if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = alcMajorVersion;
                     break;
 
                 case ALC_MINOR_VERSION:
-                    if(!size)
+                    if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = alcMinorVersion;
                     break;
 
                 case ALC_EFX_MAJOR_VERSION:
-                    if(!size)
+                    if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = alcEFXMajorVersion;
                     break;
 
                 case ALC_EFX_MINOR_VERSION:
-                    if(!size)
+                    if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = alcEFXMinorVersion;
                     break;
 
                 case ALC_MAX_AUXILIARY_SENDS:
-                    if(!size)
+                    if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = (device?device->NumAuxSends:MAX_SENDS);
@@ -835,7 +835,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                 case ALC_ATTRIBUTES_SIZE:
                     if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
-                    else if(!size)
+                    else if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = 13;
@@ -877,7 +877,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                 case ALC_FREQUENCY:
                     if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
-                    else if(!size)
+                    else if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = device->Frequency;
@@ -886,7 +886,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                 case ALC_REFRESH:
                     if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
-                    else if(!size)
+                    else if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = device->Frequency / device->UpdateSize;
@@ -895,7 +895,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                 case ALC_SYNC:
                     if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
-                    else if(!size)
+                    else if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = ALC_FALSE;
@@ -904,7 +904,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                 case ALC_MONO_SOURCES:
                     if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
-                    else if (size != 1)
+                    else if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = device->lNumMonoSources;
@@ -913,7 +913,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                 case ALC_STEREO_SOURCES:
                     if(!IsDevice(device))
                         SetALCError(ALC_INVALID_DEVICE);
-                    else if (size != 1)
+                    else if(size <= 0)
                         SetALCError(ALC_INVALID_VALUE);
                     else
                         *data = device->lNumStereoSources;

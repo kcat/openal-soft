@@ -27,6 +27,12 @@
 #  AL_FORMAT_51CHN16  (16-bit 5.1 output)
 #  AL_FORMAT_61CHN16  (16-bit 6.1 output)
 #  AL_FORMAT_71CHN16  (16-bit 7.1 output)
+#  AL_FORMAT_MONO32   (32-bit float mono)
+#  AL_FORMAT_STEREO32 (32-bit float stereo)
+#  AL_FORMAT_QUAD32   (32-bit float 4-channel)
+#  AL_FORMAT_51CHN32  (32-bit float 5.1 output)
+#  AL_FORMAT_61CHN32  (32-bit float 6.1 output)
+#  AL_FORMAT_71CHN32  (32-bit float 7.1 output)
 #format = AL_FORMAT_STEREO16
 
 ## cf_level:

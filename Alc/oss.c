@@ -203,6 +203,17 @@ static ALCboolean oss_start_context(ALCdevice *device, ALCcontext *context)
         case 1:
             ossFormat = AFMT_U8;
             break;
+        case 4:
+            switch(aluChannelsFromFormat(device->Format))
+            {
+                case 1: device->Format = AL_FORMAT_MONO16; break;
+                case 2: device->Format = AL_FORMAT_STEREO16; break;
+                case 4: device->Format = AL_FORMAT_QUAD16; break;
+                case 6: device->Format = AL_FORMAT_51CHN16; break;
+                case 7: device->Format = AL_FORMAT_61CHN16; break;
+                case 8: device->Format = AL_FORMAT_71CHN16; break;
+            }
+            /* fall-through */
         case 2:
             ossFormat = AFMT_S16_NE;
             break;

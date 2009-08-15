@@ -45,6 +45,7 @@
 #endif
 
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
+DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 
 static void *ds_handle;
 static HRESULT (WINAPI *pDirectSoundCreate)(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter);
@@ -242,22 +243,28 @@ static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
         {
             if(aluBytesFromFormat(device->Format) == 1)
                 format = AL_FORMAT_MONO8;
-            else
+            else if(aluBytesFromFormat(device->Format) == 2)
                 format = AL_FORMAT_MONO16;
+            else if(aluBytesFromFormat(device->Format) == 4)
+                format = AL_FORMAT_MONO_FLOAT32;
         }
         else if(speakers == DSSPEAKER_STEREO)
         {
             if(aluBytesFromFormat(device->Format) == 1)
                 format = AL_FORMAT_STEREO8;
-            else
+            else if(aluBytesFromFormat(device->Format) == 2)
                 format = AL_FORMAT_STEREO16;
+            else if(aluBytesFromFormat(device->Format) == 4)
+                format = AL_FORMAT_STEREO_FLOAT32;
         }
         else if(speakers == DSSPEAKER_QUAD)
         {
             if(aluBytesFromFormat(device->Format) == 1)
                 format = AL_FORMAT_QUAD8;
-            else
+            else if(aluBytesFromFormat(device->Format) == 2)
                 format = AL_FORMAT_QUAD16;
+            else if(aluBytesFromFormat(device->Format) == 4)
+                format = AL_FORMAT_QUAD32;
             OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                        SPEAKER_FRONT_RIGHT |
                                        SPEAKER_BACK_LEFT |
@@ -267,8 +274,10 @@ static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
         {
             if(aluBytesFromFormat(device->Format) == 1)
                 format = AL_FORMAT_51CHN8;
-            else
+            else if(aluBytesFromFormat(device->Format) == 2)
                 format = AL_FORMAT_51CHN16;
+            else if(aluBytesFromFormat(device->Format) == 4)
+                format = AL_FORMAT_51CHN32;
             OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                        SPEAKER_FRONT_RIGHT |
                                        SPEAKER_FRONT_CENTER |
@@ -280,8 +289,10 @@ static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
         {
             if(aluBytesFromFormat(device->Format) == 1)
                 format = AL_FORMAT_71CHN8;
-            else
+            else if(aluBytesFromFormat(device->Format) == 2)
                 format = AL_FORMAT_71CHN16;
+            else if(aluBytesFromFormat(device->Format) == 4)
+                format = AL_FORMAT_71CHN32;
             OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                        SPEAKER_FRONT_RIGHT |
                                        SPEAKER_FRONT_CENTER |
@@ -304,12 +315,15 @@ static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
         OutputType.Format.cbSize = 0;
     }
 
-    if(OutputType.Format.nChannels > 2)
+    if(OutputType.Format.nChannels > 2 || OutputType.Format.wBitsPerSample > 16)
     {
         OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
         OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
         OutputType.Format.cbSize = 22;
-        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+        if(OutputType.Format.wBitsPerSample == 32)
+            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+        else
+            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
     }
     else
     {

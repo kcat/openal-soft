@@ -109,6 +109,9 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         case 2:
             outParams.sampleFormat = paInt16;
             break;
+        case 4:
+            outParams.sampleFormat = paFloat32;
+            break;
         default:
             outParams.sampleFormat = -1;
             AL_PRINT("Unknown format?! %x\n", device->Format);

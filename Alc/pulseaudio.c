@@ -366,6 +366,9 @@ static ALCboolean pulse_start_context(ALCdevice *device, ALCcontext *context) //
         case 2:
             data->spec.format = PA_SAMPLE_S16NE;
             break;
+        case 4:
+            data->spec.format = PA_SAMPLE_FLOAT32NE;
+            break;
         default:
             AL_PRINT("Unknown format: %x\n", device->Format);
             ppa_threaded_mainloop_unlock(data->loop);

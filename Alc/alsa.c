@@ -417,6 +417,9 @@ static ALCboolean alsa_start_context(ALCdevice *device, ALCcontext *context)
         case 2:
             data->format = SND_PCM_FORMAT_S16;
             break;
+        case 4:
+            data->format = SND_PCM_FORMAT_FLOAT;
+            break;
         default:
             data->format = SND_PCM_FORMAT_UNKNOWN;
             AL_PRINT("Unknown format?! %x\n", device->Format);

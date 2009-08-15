@@ -188,6 +188,7 @@ static ALCboolean wave_start_context(ALCdevice *device, ALCcontext *Context)
     {
         case 8:
         case 16:
+        case 32:
             if(channels == 0)
             {
                 AL_PRINT("Unknown format?! %x\n", device->Format);

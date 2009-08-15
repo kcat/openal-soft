@@ -59,6 +59,13 @@ typedef long long ALint64;
 ALboolean DuplicateStereo = AL_FALSE;
 
 
+static __inline ALfloat aluF2F(ALfloat Value)
+{
+    if(Value < 0.f) Value /= 32768.f;
+    else            Value /= 32767.f;
+    return Value;
+}
+
 static __inline ALshort aluF2S(ALfloat Value)
 {
     ALint i;
@@ -1250,195 +1257,118 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         //Post processing loop
         switch(format)
         {
-            case AL_FORMAT_MONO8:
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]+DryBuffer[i][FRONT_RIGHT]);
-                    buffer = ((ALubyte*)buffer) + 1;
-                }
-                break;
-            case AL_FORMAT_STEREO8:
-                if(ALContext && ALContext->bs2b)
-                {
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        float samples[2];
-                        samples[0] = DryBuffer[i][FRONT_LEFT];
-                        samples[1] = DryBuffer[i][FRONT_RIGHT];
-                        bs2b_cross_feed(ALContext->bs2b, samples);
-                        ((ALubyte*)buffer)[0] = aluF2UB(samples[0]);
-                        ((ALubyte*)buffer)[1] = aluF2UB(samples[1]);
-                        buffer = ((ALubyte*)buffer) + 2;
-                    }
-                }
-                else
-                {
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]);
-                        ((ALubyte*)buffer)[1] = aluF2UB(DryBuffer[i][FRONT_RIGHT]);
-                        buffer = ((ALubyte*)buffer) + 2;
-                    }
-                }
-                break;
-            case AL_FORMAT_QUAD8:
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]);
-                    ((ALubyte*)buffer)[1] = aluF2UB(DryBuffer[i][FRONT_RIGHT]);
-                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][BACK_LEFT]);
-                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][BACK_RIGHT]);
-                    buffer = ((ALubyte*)buffer) + 4;
-                }
-                break;
-            case AL_FORMAT_51CHN8:
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]);
-                    ((ALubyte*)buffer)[1] = aluF2UB(DryBuffer[i][FRONT_RIGHT]);
-#ifdef _WIN32 /* Of course, Windows can't use the same ordering... */
-                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][FRONT_CENTER]);
-                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][LFE]);
-                    ((ALubyte*)buffer)[4] = aluF2UB(DryBuffer[i][BACK_LEFT]);
-                    ((ALubyte*)buffer)[5] = aluF2UB(DryBuffer[i][BACK_RIGHT]);
-#else
-                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][BACK_LEFT]);
-                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][BACK_RIGHT]);
-                    ((ALubyte*)buffer)[4] = aluF2UB(DryBuffer[i][FRONT_CENTER]);
-                    ((ALubyte*)buffer)[5] = aluF2UB(DryBuffer[i][LFE]);
-#endif
-                    buffer = ((ALubyte*)buffer) + 6;
-                }
-                break;
-            case AL_FORMAT_61CHN8:
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]);
-                    ((ALubyte*)buffer)[1] = aluF2UB(DryBuffer[i][FRONT_RIGHT]);
-                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][FRONT_CENTER]);
-                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][LFE]);
-                    ((ALubyte*)buffer)[4] = aluF2UB(DryBuffer[i][BACK_CENTER]);
-                    ((ALubyte*)buffer)[5] = aluF2UB(DryBuffer[i][SIDE_LEFT]);
-                    ((ALubyte*)buffer)[6] = aluF2UB(DryBuffer[i][SIDE_RIGHT]);
-                    buffer = ((ALubyte*)buffer) + 7;
-                }
-                break;
-            case AL_FORMAT_71CHN8:
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    ((ALubyte*)buffer)[0] = aluF2UB(DryBuffer[i][FRONT_LEFT]);
-                    ((ALubyte*)buffer)[1] = aluF2UB(DryBuffer[i][FRONT_RIGHT]);
-#ifdef _WIN32
-                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][FRONT_CENTER]);
-                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][LFE]);
-                    ((ALubyte*)buffer)[4] = aluF2UB(DryBuffer[i][BACK_LEFT]);
-                    ((ALubyte*)buffer)[5] = aluF2UB(DryBuffer[i][BACK_RIGHT]);
-#else
-                    ((ALubyte*)buffer)[2] = aluF2UB(DryBuffer[i][BACK_LEFT]);
-                    ((ALubyte*)buffer)[3] = aluF2UB(DryBuffer[i][BACK_RIGHT]);
-                    ((ALubyte*)buffer)[4] = aluF2UB(DryBuffer[i][FRONT_CENTER]);
-                    ((ALubyte*)buffer)[5] = aluF2UB(DryBuffer[i][LFE]);
-#endif
-                    ((ALubyte*)buffer)[6] = aluF2UB(DryBuffer[i][SIDE_LEFT]);
-                    ((ALubyte*)buffer)[7] = aluF2UB(DryBuffer[i][SIDE_RIGHT]);
-                    buffer = ((ALubyte*)buffer) + 8;
-                }
-                break;
+#define CHECK_WRITE_FORMAT(bits, type, func, isWin)                           \
+        case AL_FORMAT_MONO##bits:                                            \
+            for(i = 0;i < SamplesToDo;i++)                                    \
+            {                                                                 \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT] +        \
+                                            DryBuffer[i][FRONT_RIGHT]);       \
+                buffer = ((type*)buffer) + 1;                                 \
+            }                                                                 \
+            break;                                                            \
+        case AL_FORMAT_STEREO##bits:                                          \
+            if(ALContext && ALContext->bs2b)                                  \
+            {                                                                 \
+                for(i = 0;i < SamplesToDo;i++)                                \
+                {                                                             \
+                    float samples[2];                                         \
+                    samples[0] = DryBuffer[i][FRONT_LEFT];                    \
+                    samples[1] = DryBuffer[i][FRONT_RIGHT];                   \
+                    bs2b_cross_feed(ALContext->bs2b, samples);                \
+                    ((type*)buffer)[0] = (func)(samples[0]);                  \
+                    ((type*)buffer)[1] = (func)(samples[1]);                  \
+                    buffer = ((type*)buffer) + 2;                             \
+                }                                                             \
+            }                                                                 \
+            else                                                              \
+            {                                                                 \
+                for(i = 0;i < SamplesToDo;i++)                                \
+                {                                                             \
+                    ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT]);    \
+                    ((type*)buffer)[1] = (func)(DryBuffer[i][FRONT_RIGHT]);   \
+                    buffer = ((type*)buffer) + 2;                             \
+                }                                                             \
+            }                                                                 \
+            break;                                                            \
+        case AL_FORMAT_QUAD##bits:                                            \
+            for(i = 0;i < SamplesToDo;i++)                                    \
+            {                                                                 \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT]);        \
+                ((type*)buffer)[1] = (func)(DryBuffer[i][FRONT_RIGHT]);       \
+                ((type*)buffer)[2] = (func)(DryBuffer[i][BACK_LEFT]);         \
+                ((type*)buffer)[3] = (func)(DryBuffer[i][BACK_RIGHT]);        \
+                buffer = ((type*)buffer) + 4;                                 \
+            }                                                                 \
+            break;                                                            \
+        case AL_FORMAT_51CHN##bits:                                           \
+            for(i = 0;i < SamplesToDo;i++)                                    \
+            {                                                                 \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT]);        \
+                ((type*)buffer)[1] = (func)(DryBuffer[i][FRONT_RIGHT]);       \
+                if(isWin) {                                                   \
+                    /* Of course, Windows can't use the same ordering... */   \
+                    ((type*)buffer)[2] = (func)(DryBuffer[i][FRONT_CENTER]);  \
+                    ((type*)buffer)[3] = (func)(DryBuffer[i][LFE]);           \
+                    ((type*)buffer)[4] = (func)(DryBuffer[i][BACK_LEFT]);     \
+                    ((type*)buffer)[5] = (func)(DryBuffer[i][BACK_RIGHT]);    \
+                } else {                                                      \
+                    ((type*)buffer)[2] = (func)(DryBuffer[i][BACK_LEFT]);     \
+                    ((type*)buffer)[3] = (func)(DryBuffer[i][BACK_RIGHT]);    \
+                    ((type*)buffer)[4] = (func)(DryBuffer[i][FRONT_CENTER]);  \
+                    ((type*)buffer)[5] = (func)(DryBuffer[i][LFE]);           \
+                }                                                             \
+                buffer = ((type*)buffer) + 6;                                 \
+            }                                                                 \
+            break;                                                            \
+        case AL_FORMAT_61CHN##bits:                                           \
+            for(i = 0;i < SamplesToDo;i++)                                    \
+            {                                                                 \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT]);        \
+                ((type*)buffer)[1] = (func)(DryBuffer[i][FRONT_RIGHT]);       \
+                ((type*)buffer)[2] = (func)(DryBuffer[i][FRONT_CENTER]);      \
+                ((type*)buffer)[3] = (func)(DryBuffer[i][LFE]);               \
+                ((type*)buffer)[4] = (func)(DryBuffer[i][BACK_CENTER]);       \
+                ((type*)buffer)[5] = (func)(DryBuffer[i][SIDE_LEFT]);         \
+                ((type*)buffer)[6] = (func)(DryBuffer[i][SIDE_RIGHT]);        \
+                buffer = ((type*)buffer) + 7;                                 \
+            }                                                                 \
+            break;                                                            \
+        case AL_FORMAT_71CHN##bits:                                           \
+            for(i = 0;i < SamplesToDo;i++)                                    \
+            {                                                                 \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT]);        \
+                ((type*)buffer)[1] = (func)(DryBuffer[i][FRONT_RIGHT]);       \
+                if(isWin) {                                                   \
+                    ((type*)buffer)[2] = (func)(DryBuffer[i][FRONT_CENTER]);  \
+                    ((type*)buffer)[3] = (func)(DryBuffer[i][LFE]);           \
+                    ((type*)buffer)[4] = (func)(DryBuffer[i][BACK_LEFT]);     \
+                    ((type*)buffer)[5] = (func)(DryBuffer[i][BACK_RIGHT]);    \
+                } else {                                                      \
+                    ((type*)buffer)[2] = (func)(DryBuffer[i][BACK_LEFT]);     \
+                    ((type*)buffer)[3] = (func)(DryBuffer[i][BACK_RIGHT]);    \
+                    ((type*)buffer)[4] = (func)(DryBuffer[i][FRONT_CENTER]);  \
+                    ((type*)buffer)[5] = (func)(DryBuffer[i][LFE]);           \
+                }                                                             \
+                ((ALubyte*)buffer)[6] = (func)(DryBuffer[i][SIDE_LEFT]);      \
+                ((ALubyte*)buffer)[7] = (func)(DryBuffer[i][SIDE_RIGHT]);     \
+                buffer = ((type*)buffer) + 8;                                 \
+            }                                                                 \
+            break;
 
-            case AL_FORMAT_MONO16:
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT]+DryBuffer[i][FRONT_RIGHT]);
-                    buffer = ((ALshort*)buffer) + 1;
-                }
-                break;
-            case AL_FORMAT_STEREO16:
-                if(ALContext && ALContext->bs2b)
-                {
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        float samples[2];
-                        samples[0] = DryBuffer[i][FRONT_LEFT];
-                        samples[1] = DryBuffer[i][FRONT_RIGHT];
-                        bs2b_cross_feed(ALContext->bs2b, samples);
-                        ((ALshort*)buffer)[0] = aluF2S(samples[0]);
-                        ((ALshort*)buffer)[1] = aluF2S(samples[1]);
-                        buffer = ((ALshort*)buffer) + 2;
-                    }
-                }
-                else
-                {
-                    for(i = 0;i < SamplesToDo;i++)
-                    {
-                        ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT]);
-                        ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]);
-                        buffer = ((ALshort*)buffer) + 2;
-                    }
-                }
-                break;
-            case AL_FORMAT_QUAD16:
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT]);
-                    ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]);
-                    ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][BACK_LEFT]);
-                    ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][BACK_RIGHT]);
-                    buffer = ((ALshort*)buffer) + 4;
-                }
-                break;
-            case AL_FORMAT_51CHN16:
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT]);
-                    ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]);
+#define AL_FORMAT_MONO32 AL_FORMAT_MONO_FLOAT32
+#define AL_FORMAT_STEREO32 AL_FORMAT_STEREO_FLOAT32
 #ifdef _WIN32
-                    ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][FRONT_CENTER]);
-                    ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][LFE]);
-                    ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][BACK_LEFT]);
-                    ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][BACK_RIGHT]);
+            CHECK_WRITE_FORMAT(8,  ALubyte, aluF2UB, 1)
+            CHECK_WRITE_FORMAT(16, ALshort, aluF2S, 1)
+            CHECK_WRITE_FORMAT(32, ALfloat, aluF2F, 1)
 #else
-                    ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][BACK_LEFT]);
-                    ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][BACK_RIGHT]);
-                    ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][FRONT_CENTER]);
-                    ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][LFE]);
+            CHECK_WRITE_FORMAT(8,  ALubyte, aluF2UB, 0)
+            CHECK_WRITE_FORMAT(16, ALshort, aluF2S, 0)
+            CHECK_WRITE_FORMAT(32, ALfloat, aluF2F, 0)
 #endif
-                    buffer = ((ALshort*)buffer) + 6;
-                }
-                break;
-            case AL_FORMAT_61CHN16:
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT]);
-                    ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]);
-                    ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][FRONT_CENTER]);
-                    ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][LFE]);
-                    ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][BACK_CENTER]);
-                    ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][SIDE_LEFT]);
-                    ((ALshort*)buffer)[6] = aluF2S(DryBuffer[i][SIDE_RIGHT]);
-                    buffer = ((ALshort*)buffer) + 7;
-                }
-                break;
-            case AL_FORMAT_71CHN16:
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    ((ALshort*)buffer)[0] = aluF2S(DryBuffer[i][FRONT_LEFT]);
-                    ((ALshort*)buffer)[1] = aluF2S(DryBuffer[i][FRONT_RIGHT]);
-#ifdef _WIN32
-                    ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][FRONT_CENTER]);
-                    ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][LFE]);
-                    ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][BACK_LEFT]);
-                    ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][BACK_RIGHT]);
-#else
-                    ((ALshort*)buffer)[2] = aluF2S(DryBuffer[i][BACK_LEFT]);
-                    ((ALshort*)buffer)[3] = aluF2S(DryBuffer[i][BACK_RIGHT]);
-                    ((ALshort*)buffer)[4] = aluF2S(DryBuffer[i][FRONT_CENTER]);
-                    ((ALshort*)buffer)[5] = aluF2S(DryBuffer[i][LFE]);
-#endif
-                    ((ALshort*)buffer)[6] = aluF2S(DryBuffer[i][SIDE_LEFT]);
-                    ((ALshort*)buffer)[7] = aluF2S(DryBuffer[i][SIDE_RIGHT]);
-                    buffer = ((ALshort*)buffer) + 8;
-                }
-                break;
+#undef AL_FORMAT_STEREO32
+#undef AL_FORMAT_MONO32
+#undef CHECK_WRITE_FORMAT
 
             default:
                 break;

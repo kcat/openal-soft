@@ -189,6 +189,10 @@ struct ALCdevice_struct
     ALint        lNumStereoSources;
     ALuint       NumAuxSends;
 
+    // Linked List of Buffers for this device
+    struct ALbuffer *Buffers;
+    ALuint          BufferCount;
+
     // Context created on this device
     ALCcontext   *Context;
 

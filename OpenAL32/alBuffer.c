@@ -49,9 +49,6 @@ static void ConvertDataIMA4(ALshort *dst, const ALvoid *src, ALint origChans, AL
 * Global Variables
 */
 
-static ALbuffer *g_pBuffers = NULL;          // Linked List of Buffers
-static ALuint    g_uiBufferCount = 0;        // Buffer Count
-
 static const long g_IMAStep_size[89]={            // IMA ADPCM Stepsize table
        7,    8,    9,   10,   11,   12,   13,   14,   16,   17,   19,   21,   23,   25,   28,   31,
       34,   37,   41,   45,   50,   55,   60,   66,   73,   80,   88,   97,  107,  118,  130,  143,
@@ -87,10 +84,12 @@ ALAPI ALvoid ALAPIENTRY alGenBuffers(ALsizei n,ALuint *puiBuffers)
     // Check that we are actually generation some Buffers
     if (n > 0)
     {
+        ALCdevice *device = Context->Device;
+
         // Check the pointer is valid (and points to enough memory to store Buffer Names)
         if (!IsBadWritePtr((void*)puiBuffers, n * sizeof(ALuint)))
         {
-            ALbuffer **list = &g_pBuffers;
+            ALbuffer **list = &device->Buffers;
             while(*list)
                 list = &(*list)->next;
 
@@ -107,7 +106,7 @@ ALAPI ALvoid ALAPIENTRY alGenBuffers(ALsizei n,ALuint *puiBuffers)
 
                 puiBuffers[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
                 (*list)->state = UNUSED;
-                g_uiBufferCount++;
+                device->BufferCount++;
                 i++;
 
                 list = &(*list)->next;
@@ -143,6 +142,8 @@ ALAPI ALvoid ALAPIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
     // Check we are actually Deleting some Buffers
     if (n >= 0)
     {
+        ALCdevice *device = Context->Device;
+
         // Check that all the buffers are valid and can actually be deleted
         for (i = 0; i < n; i++)
         {
@@ -176,7 +177,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
             {
                 if (puiBuffers[i] && alIsBuffer(puiBuffers[i]))
                 {
-                    ALbuffer **list = &g_pBuffers;
+                    ALbuffer **list = &device->Buffers;
 
                     ALBuf=((ALbuffer *)ALTHUNK_LOOKUPENTRY(puiBuffers[i]));
                     while(*list && *list != ALBuf)
@@ -191,7 +192,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
                     // Release buffer structure
                     ALTHUNK_REMOVEENTRY(puiBuffers[i]);
                     memset(ALBuf, 0, sizeof(ALbuffer));
-                    g_uiBufferCount--;
+                    device->BufferCount--;
                     free(ALBuf);
                 }
             }
@@ -223,10 +224,12 @@ ALAPI ALboolean ALAPIENTRY alIsBuffer(ALuint uiBuffer)
 
     if (uiBuffer)
     {
+        ALCdevice *device = Context->Device;
+
         TgtALBuf = (ALbuffer *)ALTHUNK_LOOKUPENTRY(uiBuffer);
 
         // Check through list of generated buffers for uiBuffer
-        ALBuf = g_pBuffers;
+        ALBuf = device->Buffers;
         while (ALBuf)
         {
             if (ALBuf == TgtALBuf)
@@ -1069,17 +1072,12 @@ static void ConvertDataIMA4(ALshort *dst, const ALvoid *src, ALint origChans, AL
 *
 *    INTERNAL FN : Called by DLLMain on exit to destroy any buffers that still exist
 */
-ALvoid ReleaseALBuffers(ALvoid)
+ALvoid ReleaseALBuffers(ALCdevice *device)
 {
     ALbuffer *ALBuffer;
     ALbuffer *ALBufferTemp;
 
-#ifdef _DEBUG
-    if(g_uiBufferCount > 0)
-        AL_PRINT("exit(): deleting %d Buffer(s)\n", g_uiBufferCount);
-#endif
-
-    ALBuffer = g_pBuffers;
+    ALBuffer = device->Buffers;
     while(ALBuffer)
     {
         // Release sample data
@@ -1091,6 +1089,6 @@ ALvoid ReleaseALBuffers(ALvoid)
         memset(ALBufferTemp, 0, sizeof(ALbuffer));
         free(ALBufferTemp);
     }
-    g_pBuffers = NULL;
-    g_uiBufferCount = 0;
+    device->Buffers = NULL;
+    device->BufferCount = 0;
 }

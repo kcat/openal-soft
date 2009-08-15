@@ -216,7 +216,6 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             if(!init_done)
                 break;
             ReleaseALC();
-            ReleaseALBuffers();
             ReleaseALEffects();
             ReleaseALFilters();
             FreeALConfig();
@@ -236,7 +235,6 @@ static void my_deinit()
     once = AL_TRUE;
 
     ReleaseALC();
-    ReleaseALBuffers();
     ReleaseALEffects();
     ReleaseALFilters();
     FreeALConfig();
@@ -1370,6 +1368,14 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
             alcDestroyContext(pDevice->Context);
         }
         ALCdevice_ClosePlayback(pDevice);
+
+        if(pDevice->BufferCount > 0)
+        {
+#ifdef _DEBUG
+            AL_PRINT("alcCloseDevice(): deleting %d Buffer(s)\n", pDevice->BufferCount);
+#endif
+            ReleaseALBuffers(pDevice);
+        }
 
         //Release device structure
         memset(pDevice, 0, sizeof(ALCdevice));

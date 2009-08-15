@@ -11,7 +11,7 @@ extern "C" {
 #define PENDING   1
 #define PROCESSED 2
 
-typedef struct ALbuffer_struct 
+typedef struct ALbuffer
 {
     ALenum   format;
     ALenum   eOriginalFormat;
@@ -21,12 +21,12 @@ typedef struct ALbuffer_struct
     ALsizei  padding;
     ALenum   state;
     ALuint   refcount; // Number of sources using this buffer (deletion can only occur when this is 0)
-    struct ALbuffer_struct *next;
+    struct ALbuffer *next;
 } ALbuffer;
 
 ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length);
 
-ALvoid ReleaseALBuffers(ALvoid);
+ALvoid ReleaseALBuffers(ALCdevice *device);
 
 #ifdef __cplusplus
 }

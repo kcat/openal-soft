@@ -44,73 +44,57 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
     ALsizei i=0;
 
     Context = GetContextSuspended();
-    if (Context)
+    if(!Context) return;
+
+    if(n > 0)
     {
-        if (n > 0)
+        Device = Context->Device;
+
+        // Check that enough memory has been allocted in the 'sources' array for n Sources
+        if(!IsBadWritePtr((void*)sources, n * sizeof(ALuint)))
         {
-            Device = alcGetContextsDevice(Context);
-
-            if (Device)
+            // Check that the requested number of sources can be generated
+            if((Context->SourceCount + n) <= Device->MaxNoOfSources)
             {
-                // Check that enough memory has been allocted in the 'sources' array for n Sources
-                if (!IsBadWritePtr((void*)sources, n * sizeof(ALuint)))
+                ALsource **list = &Context->Source;
+                while(*list)
+                    list = &(*list)->next;
+
+                // Add additional sources to the list (Source->next points to the location for the next Source structure)
+                while(i < n)
                 {
-                    // Check that the requested number of sources can be generated
-                    if ((Context->SourceCount + n) <= Device->MaxNoOfSources)
+                    *list = calloc(1, sizeof(ALsource));
+                    if(!(*list))
                     {
-                        ALsource **list = &Context->Source;
-                        while(*list)
-                            list = &(*list)->next;
-
-                        // Add additional sources to the list (Source->next points to the location for the next Source structure)
-                        while(i < n)
-                        {
-                            *list = calloc(1, sizeof(ALsource));
-                            if(!(*list))
-                            {
-                                alDeleteSources(i, sources);
-                                alSetError(AL_OUT_OF_MEMORY);
-                                break;
-                            }
-
-                            sources[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
-                            (*list)->source = sources[i];
-
-                            InitSourceParams(Context, *list);
-                            Context->SourceCount++;
-                            i++;
-
-                            list = &(*list)->next;
-                        }
+                        alDeleteSources(i, sources);
+                        alSetError(AL_OUT_OF_MEMORY);
+                        break;
                     }
-                    else
-                    {
-                        // Not enough resources to create the Sources
-                        alSetError(AL_INVALID_VALUE);
-                    }
-                }
-                else
-                {
-                    // Bad pointer
-                    alSetError(AL_INVALID_VALUE);
+
+                    sources[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
+                    (*list)->source = sources[i];
+
+                    InitSourceParams(Context, *list);
+                    Context->SourceCount++;
+                    i++;
+
+                    list = &(*list)->next;
                 }
             }
             else
             {
-                // No Device created, or attached to Context
-                alSetError(AL_INVALID_OPERATION);
+                // Not enough resources to create the Sources
+                alSetError(AL_INVALID_VALUE);
             }
         }
-
-        ProcessContext(Context);
-    }
-    else
-    {
-        // Invalid Context
-        alSetError(AL_INVALID_OPERATION);
+        else
+        {
+            // Bad pointer
+            alSetError(AL_INVALID_VALUE);
+        }
     }
 
-    return;
+    ProcessContext(Context);
 }
 
 
@@ -125,92 +109,76 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     ALboolean bSourcesValid = AL_TRUE;
 
     Context = GetContextSuspended();
-    if (Context)
+    if(!Context) return;
+
+    if(n >= 0)
     {
-        if (n >= 0)
+        Device = Context->Device;
+
+        // Check that all Sources are valid (and can therefore be deleted)
+        for (i = 0; i < n; i++)
         {
-            Device = alcGetContextsDevice(Context);
-
-            if (Device)
+            if (!alIsSource(sources[i]))
             {
-                // Check that all Sources are valid (and can therefore be deleted)
-                for (i = 0; i < n; i++)
-                {
-                    if (!alIsSource(sources[i]))
-                    {
-                        alSetError(AL_INVALID_NAME);
-                        bSourcesValid = AL_FALSE;
-                        break;
-                    }
-                }
-
-                if (bSourcesValid)
-                {
-                    // All Sources are valid, and can be deleted
-                    for (i = 0; i < n; i++)
-                    {
-                        // Recheck that the Source is valid, because there could be duplicated Source names
-                        if (alIsSource(sources[i]))
-                        {
-                            ALSource=((ALsource *)ALTHUNK_LOOKUPENTRY(sources[i]));
-                            alSourceStop((ALuint)ALSource->source);
-
-                            // For each buffer in the source's queue, decrement its reference counter and remove it
-                            while (ALSource->queue != NULL)
-                            {
-                                ALBufferList = ALSource->queue;
-                                // Decrement buffer's reference counter
-                                if (ALBufferList->buffer != 0)
-                                    ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->refcount--;
-                                // Update queue to point to next element in list
-                                ALSource->queue = ALBufferList->next;
-                                // Release memory allocated for buffer list item
-                                free(ALBufferList);
-                            }
-
-                            for(j = 0;j < MAX_SENDS;++j)
-                            {
-                                if(ALSource->Send[j].Slot)
-                                    ALSource->Send[j].Slot->refcount--;
-                                ALSource->Send[j].Slot = NULL;
-                            }
-
-                            // Decrement Source count
-                            Context->SourceCount--;
-
-                            // Remove Source from list of Sources
-                            list = &Context->Source;
-                            while(*list && *list != ALSource)
-                                list = &(*list)->next;
-
-                            if(*list)
-                                *list = (*list)->next;
-                            ALTHUNK_REMOVEENTRY(ALSource->source);
-
-                            memset(ALSource,0,sizeof(ALsource));
-                            free(ALSource);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // No Device created, or attached to Context
-                alSetError(AL_INVALID_OPERATION);
+                alSetError(AL_INVALID_NAME);
+                bSourcesValid = AL_FALSE;
+                break;
             }
         }
-        else
-            alSetError(AL_INVALID_VALUE);
 
-        ProcessContext(Context);
+        if(bSourcesValid)
+        {
+            // All Sources are valid, and can be deleted
+            for(i = 0; i < n; i++)
+            {
+                // Recheck that the Source is valid, because there could be duplicated Source names
+                if(alIsSource(sources[i]))
+                {
+                    ALSource = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
+                    alSourceStop((ALuint)ALSource->source);
+
+                    // For each buffer in the source's queue, decrement its reference counter and remove it
+                    while (ALSource->queue != NULL)
+                    {
+                        ALBufferList = ALSource->queue;
+                        // Decrement buffer's reference counter
+                        if(ALBufferList->buffer != 0)
+                            ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->refcount--;
+                        // Update queue to point to next element in list
+                        ALSource->queue = ALBufferList->next;
+                        // Release memory allocated for buffer list item
+                        free(ALBufferList);
+                    }
+
+                    for(j = 0;j < MAX_SENDS;++j)
+                    {
+                        if(ALSource->Send[j].Slot)
+                            ALSource->Send[j].Slot->refcount--;
+                        ALSource->Send[j].Slot = NULL;
+                    }
+
+                    // Decrement Source count
+                    Context->SourceCount--;
+
+                    // Remove Source from list of Sources
+                    list = &Context->Source;
+                    while(*list && *list != ALSource)
+                        list = &(*list)->next;
+
+                    if(*list)
+                        *list = (*list)->next;
+                    ALTHUNK_REMOVEENTRY(ALSource->source);
+
+                    memset(ALSource,0,sizeof(ALsource));
+                    free(ALSource);
+                }
+            }
+        }
     }
     else
-    {
-        // Invalid Context
-        alSetError(AL_INVALID_OPERATION);
-    }
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(Context);
 }
 
 
@@ -221,28 +189,22 @@ ALAPI ALboolean ALAPIENTRY alIsSource(ALuint source)
     ALsource *Source;
 
     Context = GetContextSuspended();
-    if (Context)
-    {
-        // To determine if this is a valid Source name, look through the list of generated Sources
-        Source = Context->Source;
-        while(Source)
-        {
-            if (Source == (ALsource*)ALTHUNK_LOOKUPENTRY(source))
-            {
-                result = AL_TRUE;
-                break;
-            }
+    if(!Context) return AL_FALSE;
 
-            Source = Source->next;
+    // To determine if this is a valid Source name, look through the list of generated Sources
+    Source = Context->Source;
+    while(Source)
+    {
+        if(Source->source == source)
+        {
+            result = AL_TRUE;
+            break;
         }
 
-        ProcessContext(Context);
+        Source = Source->next;
     }
-    else
-    {
-        // Invalid Context
-        alSetError(AL_INVALID_OPERATION);
-    }
+
+    ProcessContext(Context);
 
     return result;
 }
@@ -254,16 +216,16 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
     ALsource    *pSource;
 
     pContext = GetContextSuspended();
-    if (pContext)
-    {
-        if (alIsSource(source))
-        {
-            pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
+    if(!pContext) return;
 
-            switch (eParam)
-            {
+    if(alIsSource(source))
+    {
+        pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+
+        switch(eParam)
+        {
             case AL_PITCH:
-                if (flValue >= 0.0f)
+                if(flValue >= 0.0f)
                 {
                     pSource->flPitch = flValue;
                     if(pSource->flPitch < 0.001f)
@@ -274,91 +236,91 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                 break;
 
             case AL_CONE_INNER_ANGLE:
-                if ((flValue >= 0.0f) && (flValue <= 360.0f))
+                if(flValue >= 0.0f && flValue <= 360.0f)
                     pSource->flInnerAngle = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_ANGLE:
-                if ((flValue >= 0.0f) && (flValue <= 360.0f))
+                if(flValue >= 0.0f && flValue <= 360.0f)
                     pSource->flOuterAngle = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_GAIN:
-                if (flValue >= 0.0f)
+                if(flValue >= 0.0f)
                     pSource->flGain = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_MAX_DISTANCE:
-                if (flValue >= 0.0f)
+                if(flValue >= 0.0f)
                     pSource->flMaxDistance = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_ROLLOFF_FACTOR:
-                if (flValue >= 0.0f)
+                if(flValue >= 0.0f)
                     pSource->flRollOffFactor = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REFERENCE_DISTANCE:
-                if (flValue >= 0.0f)
+                if(flValue >= 0.0f)
                     pSource->flRefDistance = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_MIN_GAIN:
-                if ((flValue >= 0.0f) && (flValue <= 1.0f))
+                if(flValue >= 0.0f && flValue <= 1.0f)
                     pSource->flMinGain = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_MAX_GAIN:
-                if ((flValue >= 0.0f) && (flValue <= 1.0f))
+                if(flValue >= 0.0f && flValue <= 1.0f)
                     pSource->flMaxGain = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_GAIN:
-                if ((flValue >= 0.0f) && (flValue <= 1.0f))
+                if(flValue >= 0.0f && flValue <= 1.0f)
                     pSource->flOuterGain = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_GAINHF:
-                if ((flValue >= 0.0f) && (flValue <= 1.0f))
+                if(flValue >= 0.0f && flValue <= 1.0f)
                     pSource->OuterGainHF = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_AIR_ABSORPTION_FACTOR:
-                if (flValue >= 0.0f && flValue <= 10.0f)
+                if(flValue >= 0.0f && flValue <= 10.0f)
                     pSource->AirAbsorptionFactor = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_ROOM_ROLLOFF_FACTOR:
-                if (flValue >= 0.0f && flValue <= 10.0f)
+                if(flValue >= 0.0f && flValue <= 10.0f)
                     pSource->RoomRolloffFactor = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_DOPPLER_FACTOR:
-                if (flValue >= 0.0f && flValue <= 1.0f)
+                if(flValue >= 0.0f && flValue <= 1.0f)
                     pSource->DopplerFactor = flValue;
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -367,12 +329,12 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
             case AL_SEC_OFFSET:
             case AL_SAMPLE_OFFSET:
             case AL_BYTE_OFFSET:
-                if (flValue >= 0.0f)
+                if(flValue >= 0.0f)
                 {
                     pSource->lOffsetType = eParam;
 
                     // Store Offset (convert Seconds into Milliseconds)
-                    if (eParam == AL_SEC_OFFSET)
+                    if(eParam == AL_SEC_OFFSET)
                         pSource->lOffset = (ALint)(flValue * 1000.0f);
                     else
                         pSource->lOffset = (ALint)flValue;
@@ -387,23 +349,15 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-        {
-            // Invalid Source Name
-            alSetError(AL_INVALID_NAME);
-        }
-
-        ProcessContext(pContext);
     }
     else
     {
-        // Invalid context
-        alSetError(AL_INVALID_OPERATION);
+        // Invalid Source Name
+        alSetError(AL_INVALID_NAME);
     }
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -413,13 +367,13 @@ ALAPI ALvoid ALAPIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flValue
     ALsource    *pSource;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(alIsSource(source))
     {
-        if (alIsSource(source))
+        pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+        switch(eParam)
         {
-            pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
-            switch(eParam)
-            {
             case AL_POSITION:
                 pSource->vPosition[0] = flValue1;
                 pSource->vPosition[1] = flValue2;
@@ -441,19 +395,12 @@ ALAPI ALvoid ALAPIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flValue
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_NAME);
-
-        ProcessContext(pContext);
     }
     else
-    {
-        alSetError(AL_INVALID_OPERATION);
-    }
+        alSetError(AL_INVALID_NAME);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -462,14 +409,14 @@ ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *
     ALCcontext    *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(pflValues)
     {
-        if (pflValues)
+        if(alIsSource(source))
         {
-            if (alIsSource(source))
+            switch(eParam)
             {
-                switch (eParam)
-                {
                 case AL_PITCH:
                 case AL_CONE_INNER_ANGLE:
                 case AL_CONE_OUTER_ANGLE:
@@ -498,20 +445,15 @@ ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
-                }
             }
-            else
-                alSetError(AL_INVALID_NAME);
         }
         else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
+            alSetError(AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -523,14 +465,14 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
     ALuint i;
 
     pContext = GetContextSuspended();
-    if (pContext)
-    {
-        if (alIsSource(source))
-        {
-            pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
+    if(!pContext) return;
 
-            switch(eParam)
-            {
+    if(alIsSource(source))
+    {
+        pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+
+        switch(eParam)
+        {
             case AL_MAX_DISTANCE:
             case AL_ROLLOFF_FACTOR:
             case AL_REFERENCE_DISTANCE:
@@ -538,28 +480,28 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                 break;
 
             case AL_SOURCE_RELATIVE:
-                if ((lValue == AL_FALSE) || (lValue == AL_TRUE))
+                if(lValue == AL_FALSE || lValue == AL_TRUE)
                     pSource->bHeadRelative = (ALboolean)lValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_INNER_ANGLE:
-                if ((lValue >= 0) && (lValue <= 360))
+                if(lValue >= 0 && lValue <= 360)
                     pSource->flInnerAngle = (float)lValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_ANGLE:
-                if ((lValue >= 0) && (lValue <= 360))
+                if(lValue >= 0 && lValue <= 360)
                     pSource->flOuterAngle = (float)lValue;
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_LOOPING:
-                if ((lValue == AL_FALSE) || (lValue == AL_TRUE))
+                if(lValue == AL_FALSE || lValue == AL_TRUE)
                 {
                     pSource->bLooping = (ALboolean)lValue;
 
@@ -578,12 +520,12 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                 break;
 
             case AL_BUFFER:
-                if ((pSource->state == AL_STOPPED) || (pSource->state == AL_INITIAL))
+                if(pSource->state == AL_STOPPED || pSource->state == AL_INITIAL)
                 {
-                    if (alIsBuffer(lValue))
+                    if(alIsBuffer(lValue))
                     {
                         // Remove all elements in the queue
-                        while (pSource->queue != NULL)
+                        while(pSource->queue != NULL)
                         {
                             pALBufferListItem = pSource->queue;
                             pSource->queue = pALBufferListItem->next;
@@ -597,7 +539,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         }
 
                         // Add the buffer to the queue (as long as it is NOT the NULL buffer)
-                        if (lValue != 0)
+                        if(lValue != 0)
                         {
                             // Source is now in STATIC mode
                             pSource->lSourceType = AL_STATIC;
@@ -640,17 +582,17 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
             case AL_SEC_OFFSET:
             case AL_SAMPLE_OFFSET:
             case AL_BYTE_OFFSET:
-                if (lValue >= 0)
+                if(lValue >= 0)
                 {
                     pSource->lOffsetType = eParam;
 
                     // Store Offset (convert Seconds into Milliseconds)
-                    if (eParam == AL_SEC_OFFSET)
+                    if(eParam == AL_SEC_OFFSET)
                         pSource->lOffset = lValue * 1000;
                     else
                         pSource->lOffset = lValue;
 
-                    if ((pSource->state == AL_PLAYING) || (pSource->state == AL_PAUSED))
+                    if(pSource->state == AL_PLAYING || pSource->state == AL_PAUSED)
                         ApplyOffset(pSource, AL_TRUE);
                 }
                 else
@@ -710,17 +652,12 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_NAME);
-
-        ProcessContext(pContext);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_NAME);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -729,14 +666,14 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
     ALCcontext    *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
-    {
-        if (alIsSource(source))
-        {
-            ALsource *pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
+    if(!pContext) return;
 
-            switch (eParam)
-            {
+    if(alIsSource(source))
+    {
+        ALsource *pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+
+        switch (eParam)
+        {
             case AL_POSITION:
             case AL_VELOCITY:
             case AL_DIRECTION:
@@ -775,17 +712,12 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_NAME);
-
-        ProcessContext(pContext);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_NAME);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -794,14 +726,14 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
     ALCcontext    *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(plValues)
     {
-        if (plValues)
+        if(alIsSource(source))
         {
-            if (alIsSource(source))
+            switch(eParam)
             {
-                switch (eParam)
-                {
                 case AL_SOURCE_RELATIVE:
                 case AL_CONE_INNER_ANGLE:
                 case AL_CONE_OUTER_ANGLE:
@@ -832,20 +764,15 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
-                }
             }
-            else
-                alSetError(AL_INVALID_NAME);
         }
         else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
+            alSetError(AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -856,16 +783,16 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
     ALfloat        flOffset[2];
 
     pContext = GetContextSuspended();
-    if (pContext)
-    {
-        if (pflValue)
-        {
-            if (alIsSource(source))
-            {
-                pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
+    if(!pContext) return;
 
-                switch(eParam)
-                {
+    if(pflValue)
+    {
+        if(alIsSource(source))
+        {
+            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+
+            switch(eParam)
+            {
                 case AL_PITCH:
                     *pflValue = pSource->flPitch;
                     break;
@@ -946,20 +873,15 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
-                }
             }
-            else
-                alSetError(AL_INVALID_NAME);
         }
         else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
+            alSetError(AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -969,16 +891,16 @@ ALAPI ALvoid ALAPIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* pfl
     ALsource    *pSource;
 
     pContext = GetContextSuspended();
-    if (pContext)
-    {
-        if ((pflValue1) && (pflValue2) && (pflValue3))
-        {
-            if (alIsSource(source))
-            {
-                pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
+    if(!pContext) return;
 
-                switch(eParam)
-                {
+    if(pflValue1 && pflValue2 && pflValue3)
+    {
+        if(alIsSource(source))
+        {
+            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+
+            switch(eParam)
+            {
                 case AL_POSITION:
                     *pflValue1 = pSource->vPosition[0];
                     *pflValue2 = pSource->vPosition[1];
@@ -1000,20 +922,15 @@ ALAPI ALvoid ALAPIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* pfl
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
-                }
             }
-            else
-                alSetError(AL_INVALID_NAME);
         }
         else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
+            alSetError(AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -1023,16 +940,16 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
     ALsource    *pSource;
 
     pContext = GetContextSuspended();
-    if (pContext)
-    {
-        if (pflValues)
-        {
-            if (alIsSource(source))
-            {
-                pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
+    if(!pContext) return;
 
-                switch(eParam)
-                {
+    if(pflValues)
+    {
+        if(alIsSource(source))
+        {
+            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+
+            switch(eParam)
+            {
                 case AL_PITCH:
                 case AL_GAIN:
                 case AL_MIN_GAIN:
@@ -1074,20 +991,15 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
-                }
             }
-            else
-                alSetError(AL_INVALID_NAME);
         }
         else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
+            alSetError(AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -1098,16 +1010,16 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
     ALfloat     flOffset[2];
 
     pContext = GetContextSuspended();
-    if (pContext)
-    {
-        if (plValue)
-        {
-            if (alIsSource(source))
-            {
-                pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
+    if(!pContext) return;
 
-                switch(eParam)
-                {
+    if(plValue)
+    {
+        if(alIsSource(source))
+        {
+            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+
+            switch(eParam)
+            {
                 case AL_MAX_DISTANCE:
                     *plValue = (ALint)pSource->flMaxDistance;
                     break;
@@ -1211,20 +1123,15 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
-                }
             }
-            else
-                alSetError(AL_INVALID_NAME);
         }
         else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
+            alSetError(AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -1234,16 +1141,16 @@ ALAPI void ALAPIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plValue
     ALsource    *pSource;
 
     pContext = GetContextSuspended();
-    if (pContext)
-    {
-        if ((plValue1) && (plValue2) && (plValue3))
-        {
-            if (alIsSource(source))
-            {
-                pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
+    if(!pContext) return;
 
-                switch(eParam)
-                {
+    if(plValue1 && plValue2 && plValue3)
+    {
+        if(alIsSource(source))
+        {
+            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+
+            switch(eParam)
+            {
                 case AL_POSITION:
                     *plValue1 = (ALint)pSource->vPosition[0];
                     *plValue2 = (ALint)pSource->vPosition[1];
@@ -1265,20 +1172,15 @@ ALAPI void ALAPIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plValue
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
-                }
             }
-            else
-                alSetError(AL_INVALID_NAME);
         }
         else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
+            alSetError(AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -1288,16 +1190,16 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
     ALsource    *pSource;
 
     pContext = GetContextSuspended();
-    if (pContext)
-    {
-        if (plValues)
-        {
-            if (alIsSource(source))
-            {
-                pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
+    if(!pContext) return;
 
-                switch (eParam)
-                {
+    if(plValues)
+    {
+        if(alIsSource(source))
+        {
+            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+
+            switch(eParam)
+            {
                 case AL_SOURCE_RELATIVE:
                 case AL_CONE_INNER_ANGLE:
                 case AL_CONE_OUTER_ANGLE:
@@ -1343,20 +1245,15 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
-                }
             }
-            else
-                alSetError(AL_INVALID_NAME);
         }
         else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
+            alSetError(AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -1376,111 +1273,103 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
     ALsizei              i, j;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(pSourceList)
     {
-        if (pSourceList)
+        // Check that all the Sources are valid
+        for(i = 0; i < n; i++)
         {
-            // Check that all the Sources are valid
-            for (i = 0; i < n; i++)
+            if(!alIsSource(pSourceList[i]))
             {
-                if (!alIsSource(pSourceList[i]))
-                {
-                    alSetError(AL_INVALID_NAME);
-                    bSourcesValid = AL_FALSE;
-                    break;
-                }
+                alSetError(AL_INVALID_NAME);
+                bSourcesValid = AL_FALSE;
+                break;
             }
+        }
 
-            if (bSourcesValid)
+        if(bSourcesValid)
+        {
+            for(i = 0; i < n; i++)
             {
-                for (i = 0; i < n; i++)
+                // Assume Source won't need to play
+                bPlay = AL_FALSE;
+
+                pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(pSourceList[i]);
+
+                // Check that there is a queue containing at least one non-null, non zero length AL Buffer
+                ALBufferList = pSource->queue;
+                while(ALBufferList)
                 {
-                    // Assume Source won't need to play
-                    bPlay = AL_FALSE;
-
-                    pSource = ((ALsource*)ALTHUNK_LOOKUPENTRY(pSourceList[i]));
-
-                    // Check that there is a queue containing at least one non-null, non zero length AL Buffer
-                    ALBufferList = pSource->queue;
-                    while (ALBufferList)
+                    if(ALBufferList->buffer != 0 && ((ALbuffer*)ALTHUNK_LOOKUPENTRY(ALBufferList->buffer))->size)
                     {
-                        if ((ALBufferList->buffer != 0) && (((ALbuffer*)ALTHUNK_LOOKUPENTRY(ALBufferList->buffer))->size))
-                        {
-                            bPlay = AL_TRUE;
-                            break;
-                        }
-                        ALBufferList = ALBufferList->next;
+                        bPlay = AL_TRUE;
+                        break;
                     }
+                    ALBufferList = ALBufferList->next;
+                }
 
-                    if (bPlay)
+                if (bPlay)
+                {
+                    for(j = 0;j < OUTPUTCHANNELS;j++)
+                        pSource->DryGains[j] = 0.0f;
+                    for(j = 0;j < MAX_SENDS;j++)
+                        pSource->WetGains[j] = 0.0f;
+
+                    if(pSource->state != AL_PAUSED)
                     {
-                        for(j = 0;j < OUTPUTCHANNELS;j++)
-                            pSource->DryGains[j] = 0.0f;
-                        for(j = 0;j < MAX_SENDS;j++)
-                            pSource->WetGains[j] = 0.0f;
+                        pSource->state = AL_PLAYING;
+                        pSource->inuse = AL_TRUE;
+                        pSource->play = AL_TRUE;
+                        pSource->position = 0;
+                        pSource->position_fraction = 0;
+                        pSource->BuffersPlayed = 0;
+                        pSource->FirstStart = AL_TRUE;
 
-                        if (pSource->state != AL_PAUSED)
+                        pSource->ulBufferID = pSource->queue->buffer;
+
+                        // Make sure all the Buffers in the queue are marked as PENDING
+                        ALBufferList = pSource->queue;
+                        while(ALBufferList)
                         {
-                            pSource->state = AL_PLAYING;
-                            pSource->inuse = AL_TRUE;
-                            pSource->play = AL_TRUE;
-                            pSource->position = 0;
-                            pSource->position_fraction = 0;
-                            pSource->BuffersPlayed = 0;
-                            pSource->FirstStart = AL_TRUE;
-
-                            pSource->ulBufferID = pSource->queue->buffer;
-
-                            // Make sure all the Buffers in the queue are marked as PENDING
-                            ALBufferList = pSource->queue;
-                            while (ALBufferList)
-                            {
-                                ALBufferList->bufferstate = PENDING;
-                                ALBufferList = ALBufferList->next;
-                            }
+                            ALBufferList->bufferstate = PENDING;
+                            ALBufferList = ALBufferList->next;
                         }
-                        else
-                        {
-                            pSource->state = AL_PLAYING;
-                            pSource->inuse = AL_TRUE;
-                            pSource->play = AL_TRUE;
-                            pSource->FirstStart = AL_FALSE;
-                        }
-
-                        // Check if an Offset has been set
-                        if (pSource->lOffset)
-                            ApplyOffset(pSource, AL_FALSE);
                     }
                     else
                     {
-                        // If there is a queue (must all be NULL or Zero length Buffers) mark them all as processed
-                        ALBufferList = pSource->queue;
-                        while (ALBufferList)
-                        {
-                            ALBufferList->bufferstate = PROCESSED;
-                            ALBufferList = ALBufferList->next;
-                        }
-
-                        pSource->BuffersPlayed = pSource->BuffersInQueue;
+                        pSource->state = AL_PLAYING;
+                        pSource->inuse = AL_TRUE;
+                        pSource->play = AL_TRUE;
+                        pSource->FirstStart = AL_FALSE;
                     }
+
+                    // Check if an Offset has been set
+                    if(pSource->lOffset)
+                        ApplyOffset(pSource, AL_FALSE);
+                }
+                else
+                {
+                    // If there is a queue (must all be NULL or Zero length Buffers) mark them all as processed
+                    ALBufferList = pSource->queue;
+                    while(ALBufferList)
+                    {
+                        ALBufferList->bufferstate = PROCESSED;
+                        ALBufferList = ALBufferList->next;
+                    }
+
+                    pSource->BuffersPlayed = pSource->BuffersInQueue;
                 }
             }
         }
-        else
-        {
-            // sources is a NULL pointer
-            alSetError(AL_INVALID_VALUE);
-        }
-
-        ProcessContext(pContext);
     }
     else
     {
-        // Invalid Context
-        alSetError(AL_INVALID_OPERATION);
+        // sources is a NULL pointer
+        alSetError(AL_INVALID_VALUE);
     }
 
-    return;
+    ProcessContext(pContext);
 }
 
 ALAPI ALvoid ALAPIENTRY alSourcePause(ALuint source)
@@ -1497,49 +1386,41 @@ ALAPI ALvoid ALAPIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     ALboolean bSourcesValid = AL_TRUE;
 
     Context = GetContextSuspended();
-    if (Context)
+    if(!Context) return;
+
+    if(sources)
     {
-        if (sources)
+        // Check all the Sources are valid
+        for(i=0;i<n;i++)
         {
-            // Check all the Sources are valid
-            for (i=0;i<n;i++)
+            if(!alIsSource(sources[i]))
             {
-                if (!alIsSource(sources[i]))
-                {
-                    alSetError(AL_INVALID_NAME);
-                    bSourcesValid = AL_FALSE;
-                    break;
-                }
+                alSetError(AL_INVALID_NAME);
+                bSourcesValid = AL_FALSE;
+                break;
             }
+        }
 
-            if (bSourcesValid)
+        if(bSourcesValid)
+        {
+            for(i = 0;i < n;i++)
             {
-                for (i=0;i<n;i++)
+                Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
+                if(Source->state == AL_PLAYING)
                 {
-                    Source=((ALsource *)ALTHUNK_LOOKUPENTRY(sources[i]));
-                    if (Source->state==AL_PLAYING)
-                    {
-                        Source->state=AL_PAUSED;
-                        Source->inuse=AL_FALSE;
-                    }
+                    Source->state = AL_PAUSED;
+                    Source->inuse = AL_FALSE;
                 }
             }
         }
-        else
-        {
-            // sources is a NULL pointer
-            alSetError(AL_INVALID_VALUE);
-        }
-
-        ProcessContext(Context);
     }
     else
     {
-        // Invalid Context
-        alSetError(AL_INVALID_OPERATION);
+        // sources is a NULL pointer
+        alSetError(AL_INVALID_VALUE);
     }
 
-    return;
+    ProcessContext(Context);
 }
 
 ALAPI ALvoid ALAPIENTRY alSourceStop(ALuint source)
@@ -1557,57 +1438,49 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     ALboolean bSourcesValid = AL_TRUE;
 
     Context = GetContextSuspended();
-    if (Context)
+    if(!Context) return;
+
+    if(sources)
     {
-        if (sources)
+        // Check all the Sources are valid
+        for(i = 0;i < n;i++)
         {
-            // Check all the Sources are valid
-            for (i=0;i<n;i++)
+            if(!alIsSource(sources[i]))
             {
-                if (!alIsSource(sources[i]))
-                {
-                    alSetError(AL_INVALID_NAME);
-                    bSourcesValid = AL_FALSE;
-                    break;
-                }
+                alSetError(AL_INVALID_NAME);
+                bSourcesValid = AL_FALSE;
+                break;
             }
+        }
 
-            if (bSourcesValid)
+        if(bSourcesValid)
+        {
+            for(i = 0;i < n;i++)
             {
-                for (i=0;i<n;i++)
+                Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
+                if(Source->state != AL_INITIAL)
                 {
-                    Source=((ALsource *)ALTHUNK_LOOKUPENTRY(sources[i]));
-                    if (Source->state!=AL_INITIAL)
+                    Source->state = AL_STOPPED;
+                    Source->inuse = AL_FALSE;
+                    Source->BuffersPlayed = Source->BuffersInQueue;
+                    ALBufferListItem = Source->queue;
+                    while(ALBufferListItem != NULL)
                     {
-                        Source->state=AL_STOPPED;
-                        Source->inuse=AL_FALSE;
-                        Source->BuffersPlayed = Source->BuffersInQueue;
-                        ALBufferListItem= Source->queue;
-                        while (ALBufferListItem != NULL)
-                        {
-                            ALBufferListItem->bufferstate = PROCESSED;
-                            ALBufferListItem = ALBufferListItem->next;
-                        }
+                        ALBufferListItem->bufferstate = PROCESSED;
+                        ALBufferListItem = ALBufferListItem->next;
                     }
-                    Source->lOffset = 0;
                 }
+                Source->lOffset = 0;
             }
         }
-        else
-        {
-            // sources is a NULL pointer
-            alSetError(AL_INVALID_VALUE);
-        }
-
-        ProcessContext(Context);
     }
     else
     {
-        // Invalid Context
-        alSetError(AL_INVALID_OPERATION);
+        // sources is a NULL pointer
+        alSetError(AL_INVALID_VALUE);
     }
 
-    return;
+    ProcessContext(Context);
 }
 
 ALAPI ALvoid ALAPIENTRY alSourceRewind(ALuint source)
@@ -1625,61 +1498,53 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     ALboolean bSourcesValid = AL_TRUE;
 
     Context = GetContextSuspended();
-    if (Context)
+    if(!Context) return;
+
+    if(sources)
     {
-        if (sources)
+        // Check all the Sources are valid
+        for(i = 0;i < n;i++)
         {
-            // Check all the Sources are valid
-            for (i=0;i<n;i++)
+            if(!alIsSource(sources[i]))
             {
-                if (!alIsSource(sources[i]))
-                {
-                    alSetError(AL_INVALID_NAME);
-                    bSourcesValid = AL_FALSE;
-                    break;
-                }
+                alSetError(AL_INVALID_NAME);
+                bSourcesValid = AL_FALSE;
+                break;
             }
+        }
 
-            if (bSourcesValid)
+        if(bSourcesValid)
+        {
+            for(i = 0;i < n;i++)
             {
-                for (i=0;i<n;i++)
+                Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
+                if(Source->state != AL_INITIAL)
                 {
-                    Source=((ALsource *)ALTHUNK_LOOKUPENTRY(sources[i]));
-                    if (Source->state!=AL_INITIAL)
+                    Source->state = AL_INITIAL;
+                    Source->inuse = AL_FALSE;
+                    Source->position = 0;
+                    Source->position_fraction = 0;
+                    Source->BuffersPlayed = 0;
+                    ALBufferListItem = Source->queue;
+                    while(ALBufferListItem != NULL)
                     {
-                        Source->state=AL_INITIAL;
-                        Source->inuse=AL_FALSE;
-                        Source->position=0;
-                        Source->position_fraction=0;
-                        Source->BuffersPlayed = 0;
-                        ALBufferListItem= Source->queue;
-                        while (ALBufferListItem != NULL)
-                        {
-                            ALBufferListItem->bufferstate = PENDING;
-                            ALBufferListItem = ALBufferListItem->next;
-                        }
-                        if (Source->queue)
-                            Source->ulBufferID = Source->queue->buffer;
+                        ALBufferListItem->bufferstate = PENDING;
+                        ALBufferListItem = ALBufferListItem->next;
                     }
-                    Source->lOffset = 0;
+                    if(Source->queue)
+                        Source->ulBufferID = Source->queue->buffer;
                 }
+                Source->lOffset = 0;
             }
         }
-        else
-        {
-            // sources is a NULL pointer
-            alSetError(AL_INVALID_VALUE);
-        }
-
-        ProcessContext(Context);
     }
     else
     {
-        // Invalid Context
-        alSetError(AL_INVALID_OPERATION);
+        // sources is a NULL pointer
+        alSetError(AL_INVALID_VALUE);
     }
 
-    return;
+    ProcessContext(Context);
 }
 
 
@@ -1698,141 +1563,131 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
         return;
 
     Context = GetContextSuspended();
-    if (Context)
+    if(!Context) return;
+
+    // Check that all buffers are valid or zero and that the source is valid
+
+    // Check that this is a valid source
+    if(alIsSource(source))
     {
-        // Check that all buffers are valid or zero and that the source is valid
+        ALSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
 
-        // Check that this is a valid source
-        if (alIsSource(source))
+        // Check that this is not a STATIC Source
+        if(ALSource->lSourceType != AL_STATIC)
         {
-            ALSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+            iFrequency = -1;
+            iFormat = -1;
 
-            // Check that this is not a STATIC Source
-            if (ALSource->lSourceType != AL_STATIC)
+            // Check existing Queue (if any) for a valid Buffers and get its frequency and format
+            ALBufferList = ALSource->queue;
+            while(ALBufferList)
             {
-                iFrequency = -1;
-                iFormat = -1;
-
-                // Check existing Queue (if any) for a valid Buffers and get its frequency and format
-                ALBufferList = ALSource->queue;
-                while (ALBufferList)
+                if (ALBufferList->buffer)
                 {
-                    if (ALBufferList->buffer)
+                    iFrequency = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->frequency;
+                    iFormat = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->format;
+                    break;
+                }
+                ALBufferList = ALBufferList->next;
+            }
+
+            for(i = 0; i < n; i++)
+            {
+                if(alIsBuffer(buffers[i]))
+                {
+                    if(buffers[i])
                     {
-                        iFrequency = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->frequency;
-                        iFormat = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->format;
-                        break;
+                        if((iFrequency == -1) && (iFormat == -1))
+                        {
+                            iFrequency = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->frequency;
+                            iFormat = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->format;
+                        }
+                        else
+                        {
+                            if((iFrequency != ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->frequency) ||
+                               (iFormat != ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->format))
+                            {
+                                alSetError(AL_INVALID_OPERATION);
+                                bBuffersValid = AL_FALSE;
+                                break;
+                            }
+                        }
                     }
+                }
+                else
+                {
+                    alSetError(AL_INVALID_NAME);
+                    bBuffersValid = AL_FALSE;
+                    break;
+                }
+            }
+
+            if(bBuffersValid)
+            {
+                // Change Source Type
+                ALSource->lSourceType = AL_STREAMING;
+
+                // All buffers are valid - so add them to the list
+                ALBufferListStart = malloc(sizeof(ALbufferlistitem));
+                ALBufferListStart->buffer = buffers[0];
+                ALBufferListStart->bufferstate = PENDING;
+                ALBufferListStart->flag = 0;
+                ALBufferListStart->next = NULL;
+
+                // Increment reference counter for buffer
+                if(buffers[0])
+                    ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[0])))->refcount++;
+
+                ALBufferList = ALBufferListStart;
+
+                for(i = 1; i < n; i++)
+                {
+                    ALBufferList->next = malloc(sizeof(ALbufferlistitem));
+                    ALBufferList->next->buffer = buffers[i];
+                    ALBufferList->next->bufferstate = PENDING;
+                    ALBufferList->next->flag = 0;
+                    ALBufferList->next->next = NULL;
+
+                    // Increment reference counter for buffer
+                    if(buffers[i])
+                        ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->refcount++;
+
                     ALBufferList = ALBufferList->next;
                 }
 
-                for (i = 0; i < n; i++)
+                if(ALSource->queue == NULL)
                 {
-                    if (alIsBuffer(buffers[i]))
-                    {
-                        if (buffers[i])
-                        {
-                            if ((iFrequency == -1) && (iFormat == -1))
-                            {
-                                iFrequency = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->frequency;
-                                iFormat = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->format;
-                            }
-                            else
-                            {
-                                if ((iFrequency != ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->frequency) ||
-                                    (iFormat != ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->format))
-                                {
-                                    alSetError(AL_INVALID_OPERATION);
-                                    bBuffersValid = AL_FALSE;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        alSetError(AL_INVALID_NAME);
-                        bBuffersValid = AL_FALSE;
-                        break;
-                    }
+                    ALSource->queue = ALBufferListStart;
+                    // Update Current Buffer
+                    ALSource->ulBufferID = ALBufferListStart->buffer;
                 }
-
-                if (bBuffersValid)
+                else
                 {
-                    // Change Source Type
-                    ALSource->lSourceType = AL_STREAMING;
-
-                    // All buffers are valid - so add them to the list
-                    ALBufferListStart = malloc(sizeof(ALbufferlistitem));
-                    ALBufferListStart->buffer = buffers[0];
-                    ALBufferListStart->bufferstate = PENDING;
-                    ALBufferListStart->flag = 0;
-                    ALBufferListStart->next = NULL;
-
-                    // Increment reference counter for buffer
-                    if (buffers[0])
-                        ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[0])))->refcount++;
-
-                    ALBufferList = ALBufferListStart;
-
-                    for (i = 1; i < n; i++)
-                    {
-                        ALBufferList->next = malloc(sizeof(ALbufferlistitem));
-                        ALBufferList->next->buffer = buffers[i];
-                        ALBufferList->next->bufferstate = PENDING;
-                        ALBufferList->next->flag = 0;
-                        ALBufferList->next->next = NULL;
-
-                        // Increment reference counter for buffer
-                        if (buffers[i])
-                            ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->refcount++;
-
+                    // Find end of queue
+                    ALBufferList = ALSource->queue;
+                    while(ALBufferList->next != NULL)
                         ALBufferList = ALBufferList->next;
-                    }
 
-                    if (ALSource->queue == NULL)
-                    {
-                        ALSource->queue = ALBufferListStart;
-                        // Update Current Buffer
-                        ALSource->ulBufferID = ALBufferListStart->buffer;
-                    }
-                    else
-                    {
-                        // Find end of queue
-                        ALBufferList = ALSource->queue;
-                        while (ALBufferList->next != NULL)
-                        {
-                            ALBufferList = ALBufferList->next;
-                        }
-
-                        ALBufferList->next = ALBufferListStart;
-                    }
-
-                    // Update number of buffers in queue
-                    ALSource->BuffersInQueue += n;
+                    ALBufferList->next = ALBufferListStart;
                 }
-            }
-            else
-            {
-                // Invalid Source Type (can't queue on a Static Source)
-                alSetError(AL_INVALID_OPERATION);
+
+                // Update number of buffers in queue
+                ALSource->BuffersInQueue += n;
             }
         }
         else
         {
-            // Invalid Source Name
-            alSetError(AL_INVALID_NAME);
+            // Invalid Source Type (can't queue on a Static Source)
+            alSetError(AL_INVALID_OPERATION);
         }
-
-        ProcessContext(Context);
     }
     else
     {
-        // Invalid Context
-        alSetError(AL_INVALID_OPERATION);
+        // Invalid Source Name
+        alSetError(AL_INVALID_NAME);
     }
 
-    return;
+    ProcessContext(Context);
 }
 
 
@@ -1853,82 +1708,74 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
     bBuffersProcessed = AL_TRUE;
 
     Context = GetContextSuspended();
-    if (Context)
+    if(!Context) return;
+
+    if(alIsSource(source))
     {
-        if (alIsSource(source))
+        ALSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+
+        // Check that all 'n' buffers have been processed
+        ALBufferList = ALSource->queue;
+        for(i = 0; i < n; i++)
         {
-            ALSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-
-            // Check that all 'n' buffers have been processed
-            ALBufferList = ALSource->queue;
-            for (i = 0; i < n; i++)
+            if(ALBufferList != NULL && ALBufferList->bufferstate == PROCESSED)
             {
-                if ((ALBufferList != NULL) && (ALBufferList->bufferstate == PROCESSED))
-                {
-                    ALBufferList = ALBufferList->next;
-                }
-                else
-                {
-                    bBuffersProcessed = AL_FALSE;
-                    break;
-                }
-            }
-
-            // If all 'n' buffers have been processed, remove them from the queue
-            if (bBuffersProcessed)
-            {
-                for (i = 0; i < n; i++)
-                {
-                    ALBufferList = ALSource->queue;
-
-                    ALSource->queue = ALBufferList->next;
-                    // Record name of buffer
-                    buffers[i] = ALBufferList->buffer;
-                    // Decrement buffer reference counter
-                    if (ALBufferList->buffer)
-                        ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->refcount--;
-
-                    // Release memory for buffer list item
-                    free(ALBufferList);
-                    ALSource->BuffersInQueue--;
-                }
-
-                if (ALSource->state != AL_PLAYING)
-                {
-                    if (ALSource->queue)
-                        BufferID = ALSource->queue->buffer;
-                    else
-                        BufferID = 0;
-
-                    ALSource->ulBufferID = BufferID;
-                }
-
-                if((ALuint)n > ALSource->BuffersPlayed)
-                    ALSource->BuffersPlayed = 0;
-                else
-                    ALSource->BuffersPlayed -= n;
+                ALBufferList = ALBufferList->next;
             }
             else
             {
-                // Some buffers can't be unqueue because they have not been processed
-                alSetError(AL_INVALID_VALUE);
+                bBuffersProcessed = AL_FALSE;
+                break;
             }
+        }
+
+        // If all 'n' buffers have been processed, remove them from the queue
+        if(bBuffersProcessed)
+        {
+            for(i = 0; i < n; i++)
+            {
+                ALBufferList = ALSource->queue;
+
+                ALSource->queue = ALBufferList->next;
+                // Record name of buffer
+                buffers[i] = ALBufferList->buffer;
+                // Decrement buffer reference counter
+                if(ALBufferList->buffer)
+                    ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->refcount--;
+
+                // Release memory for buffer list item
+                free(ALBufferList);
+                ALSource->BuffersInQueue--;
+            }
+
+            if(ALSource->state != AL_PLAYING)
+            {
+                if (ALSource->queue)
+                    BufferID = ALSource->queue->buffer;
+                else
+                    BufferID = 0;
+
+                ALSource->ulBufferID = BufferID;
+            }
+
+            if((ALuint)n > ALSource->BuffersPlayed)
+                ALSource->BuffersPlayed = 0;
+            else
+                ALSource->BuffersPlayed -= n;
         }
         else
         {
-            // Invalid Source Name
-            alSetError(AL_INVALID_NAME);
+            // Some buffers can't be unqueue because they have not been processed
+            alSetError(AL_INVALID_VALUE);
         }
-
-        ProcessContext(Context);
     }
     else
     {
-        // Invalid Context
-        alSetError(AL_INVALID_OPERATION);
+        // Invalid Source Name
+        alSetError(AL_INVALID_NAME);
     }
 
-    return;
+    ProcessContext(Context);
 }
 
 

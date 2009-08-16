@@ -201,6 +201,10 @@ struct ALCdevice_struct
     struct ALfilter *FilterList;
     ALuint          FilterCount;
 
+    // Linked List of Databuffers for this device
+    struct ALdatabuffer *Databuffers;
+    ALuint              DatabufferCount;
+
     // Context created on this device
     ALCcontext   *Context;
 
@@ -230,6 +234,9 @@ struct ALCcontext_struct
 
     struct ALeffectslot *AuxiliaryEffectSlot;
     ALuint               AuxiliaryEffectSlotCount;
+
+    struct ALdatabuffer *SampleSource;
+    struct ALdatabuffer *SampleSink;
 
     ALenum      LastError;
     ALboolean   InUse;

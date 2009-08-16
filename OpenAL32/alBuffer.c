@@ -28,6 +28,7 @@
 #include "AL/alc.h"
 #include "alError.h"
 #include "alBuffer.h"
+#include "alDatabuffer.h"
 #include "alThunk.h"
 
 
@@ -270,6 +271,22 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
     if (alIsBuffer(buffer) && (buffer != 0))
     {
         ALBuf=((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
+
+        if(Context->SampleSource)
+        {
+            ALuint offset;
+
+            if(Context->SampleSource->state == MAPPED)
+            {
+                alSetError(AL_INVALID_OPERATION);
+                ProcessContext(Context);
+                return;
+            }
+
+            offset = (ALuint)data;
+            data = Context->SampleSource->data + offset;
+        }
+
         if ((ALBuf->refcount==0)&&(data))
         {
             switch(format)
@@ -422,6 +439,22 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
     if(alIsBuffer(buffer) && buffer != 0)
     {
         ALBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffer);
+
+        if(Context->SampleSource)
+        {
+            ALuint offset;
+
+            if(Context->SampleSource->state == MAPPED)
+            {
+                alSetError(AL_INVALID_OPERATION);
+                ProcessContext(Context);
+                return;
+            }
+
+            offset = (ALuint)data;
+            data = Context->SampleSource->data + offset;
+        }
+
         if(ALBuf->data == NULL)
         {
             // buffer does not have any data

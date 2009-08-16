@@ -29,6 +29,7 @@
 #include "alFilter.h"
 #include "alEffect.h"
 #include "alAuxEffectSlot.h"
+#include "alDatabuffer.h"
 #include "alSource.h"
 #include "alBuffer.h"
 #include "AL/al.h"
@@ -146,6 +147,24 @@ static ALfunction  function[]=   {
     { "alGetAuxiliaryEffectSlotfv", (ALvoid *) alGetAuxiliaryEffectSlotfv},
 
     { "alBufferSubDataEXT",         (ALvoid *) alBufferSubDataEXT        },
+
+    { "alGenDatabuffersEXT",        (ALvoid *) alGenDatabuffersEXT       },
+    { "alDeleteDatabuffersEXT",     (ALvoid *) alDeleteDatabuffersEXT    },
+    { "alIsDatabufferEXT",          (ALvoid *) alIsDatabufferEXT         },
+    { "alDatabufferDataEXT",        (ALvoid *) alDatabufferDataEXT       },
+    { "alDatabufferSubDataEXT",     (ALvoid *) alDatabufferSubDataEXT    },
+    { "alGetDatabufferSubDataEXT",  (ALvoid *) alGetDatabufferSubDataEXT },
+    { "alDatabufferfEXT",           (ALvoid *) alDatabufferfEXT          },
+    { "alDatabufferfvEXT",          (ALvoid *) alDatabufferfvEXT         },
+    { "alDatabufferiEXT",           (ALvoid *) alDatabufferiEXT          },
+    { "alDatabufferivEXT",          (ALvoid *) alDatabufferivEXT         },
+    { "alGetDatabufferfEXT",        (ALvoid *) alGetDatabufferfEXT       },
+    { "alGetDatabufferfvEXT",       (ALvoid *) alGetDatabufferfvEXT      },
+    { "alGetDatabufferiEXT",        (ALvoid *) alGetDatabufferiEXT       },
+    { "alGetDatabufferivEXT",       (ALvoid *) alGetDatabufferivEXT      },
+    { "alSelectDatabufferEXT",      (ALvoid *) alSelectDatabufferEXT     },
+    { "alMapDatabufferEXT",         (ALvoid *) alMapDatabufferEXT        },
+    { "alUnmapDatabufferEXT",       (ALvoid *) alUnmapDatabufferEXT      },
 
     { NULL,                         (ALvoid *) NULL                      } };
 

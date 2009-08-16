@@ -23,9 +23,11 @@
 #include <stdlib.h>
 #include "alMain.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 #include "alError.h"
 #include "alSource.h"
 #include "alState.h"
+#include "alDatabuffer.h"
 
 static const ALchar alVendor[] = "OpenAL Community";
 static const ALchar alVersion[] = "1.1 ALSOFT "ALSOFT_VERSION;
@@ -281,6 +283,20 @@ ALAPI ALint ALAPIENTRY alGetInteger(ALenum pname)
                 value = (ALint)Context->flSpeedOfSound;
                 break;
 
+            case AL_SAMPLE_SOURCE_EXT:
+                if(Context->SampleSource)
+                    value = (ALint)Context->SampleSource->databuffer;
+                else
+                    value = 0;
+                break;
+
+            case AL_SAMPLE_SINK_EXT:
+                if(Context->SampleSink)
+                    value = (ALint)Context->SampleSink->databuffer;
+                else
+                    value = 0;
+                break;
+
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
@@ -477,6 +493,20 @@ ALAPI ALvoid ALAPIENTRY alGetIntegerv(ALenum pname,ALint *data)
 
                 case AL_SPEED_OF_SOUND:
                     *data = (ALint)Context->flSpeedOfSound;
+                    break;
+
+                case AL_SAMPLE_SOURCE_EXT:
+                    if(Context->SampleSource)
+                        *data = (ALint)Context->SampleSource->databuffer;
+                    else
+                        *data = 0;
+                    break;
+
+                case AL_SAMPLE_SINK_EXT:
+                    if(Context->SampleSink)
+                        *data = (ALint)Context->SampleSink->databuffer;
+                    else
+                        *data = 0;
                     break;
 
                 default:

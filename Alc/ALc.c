@@ -34,6 +34,7 @@
 #include "alBuffer.h"
 #include "alExtension.h"
 #include "alAuxEffectSlot.h"
+#include "alDatabuffer.h"
 #include "bs2b.h"
 #include "alu.h"
 
@@ -490,7 +491,7 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->DopplerVelocity = 1.0f;
     pContext->flSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
 
-    pContext->ExtensionList = "AL_EXTX_buffer_sub_data AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_OFFSET AL_EXTX_source_distance_model AL_LOKI_quadriphonic";
+    pContext->ExtensionList = "AL_EXTX_buffer_sub_data AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_OFFSET AL_EXTX_sample_buffer_object AL_EXTX_source_distance_model AL_LOKI_quadriphonic";
 
     level = GetConfigValueInt(NULL, "cf_level", 0);
     if(level > 0 && level <= 6)
@@ -1428,6 +1429,13 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
             AL_PRINT("alcCloseDevice(): deleting %d Filter(s)\n", pDevice->FilterCount);
 #endif
             ReleaseALFilters(pDevice);
+        }
+        if(pDevice->DatabufferCount > 0)
+        {
+#ifdef _DEBUG
+            AL_PRINT("alcCloseDevice(): deleting %d Databuffer(s)\n", pDevice->DatabufferCount);
+#endif
+            ReleaseALDatabuffers(pDevice);
         }
 
         //Release device structure

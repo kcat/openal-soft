@@ -104,6 +104,41 @@ typedef ALvoid (AL_APIENTRY*PFNALBUFFERSUBDATAEXTPROC)(ALuint,ALenum,const ALvoi
 typedef ALvoid (AL_APIENTRY*PFNALBUFFERDATASTATICPROC)(const ALint,ALenum,ALvoid*,ALsizei,ALsizei);
 #endif
 
+#ifndef AL_EXT_sample_buffer_object
+#define AL_EXT_sample_buffer_object 1
+#define AL_SAMPLE_SOURCE_EXT                     0x1040
+#define AL_SAMPLE_SINK_EXT                       0x1041
+#define AL_READ_ONLY_EXT                         0x1042
+#define AL_WRITE_ONLY_EXT                        0x1043
+#define AL_READ_WRITE_EXT                        0x1044
+#define AL_STREAM_WRITE_EXT                      0x1045
+#define AL_STREAM_READ_EXT                       0x1046
+#define AL_STREAM_COPY_EXT                       0x1047
+#define AL_STATIC_WRITE_EXT                      0x1048
+#define AL_STATIC_READ_EXT                       0x1049
+#define AL_STATIC_COPY_EXT                       0x104A
+#define AL_DYNAMIC_WRITE_EXT                     0x104B
+#define AL_DYNAMIC_READ_EXT                      0x104C
+#define AL_DYNAMIC_COPY_EXT                      0x104D
+typedef ALvoid (AL_APIENTRY*PFNALGENDATABUFFERSEXTPROC)(ALsizei n,ALuint *puiBuffers);
+typedef ALvoid (AL_APIENTRY*PFNALDELETEDATABUFFERSEXTPROC)(ALsizei n, const ALuint *puiBuffers);
+typedef ALboolean (AL_APIENTRY*PFNALISDATABUFFEREXTPROC)(ALuint uiBuffer);
+typedef ALvoid (AL_APIENTRY*PFNALDATABUFFERDATAEXTPROC)(ALuint buffer,const ALvoid *data,ALsizei size,ALenum usage);
+typedef ALvoid (AL_APIENTRY*PFNALDATABUFFERSUBDATAEXTPROC)(ALuint buffer, ALuint start, ALsizei length, const ALvoid *);
+typedef ALvoid (AL_APIENTRY*PFNALGETDATABUFFERSUBDATAEXTPROC)(ALuint buffer, ALuint start, ALsizei length, ALvoid *);
+typedef ALvoid (AL_APIENTRY*PFNALDATABUFFERFEXTPROC)(ALuint buffer, ALenum eParam, ALfloat flValue);
+typedef ALvoid (AL_APIENTRY*PFNALDATABUFFERFVEXTPROC)(ALuint buffer, ALenum eParam, const ALfloat* flValues);
+typedef ALvoid (AL_APIENTRY*PFNALDATABUFFERIEXTPROC)(ALuint buffer, ALenum eParam, ALint lValue);
+typedef ALvoid (AL_APIENTRY*PFNALDATABUFFERIVEXTPROC)(ALuint buffer, ALenum eParam, const ALint* plValues);
+typedef ALvoid (AL_APIENTRY*PFNALGETDATABUFFERFEXTPROC)(ALuint buffer, ALenum eParam, ALfloat *pflValue);
+typedef ALvoid (AL_APIENTRY*PFNALGETDATABUFFERFVEXTPROC)(ALuint buffer, ALenum eParam, ALfloat* pflValues);
+typedef ALvoid (AL_APIENTRY*PFNALGETDATABUFFERIEXTPROC)(ALuint buffer, ALenum eParam, ALint *plValue);
+typedef ALvoid (AL_APIENTRY*PFNALGETDATABUFFERIVEXTPROC)(ALuint buffer, ALenum eParam, ALint* plValues);
+typedef ALvoid (AL_APIENTRY*PFNALSELECTDATABUFFEREXTPROC)(ALenum target, ALuint uiBuffer);
+typedef ALvoid* (AL_APIENTRY*PFNALMAPDATABUFFEREXTPROC)(ALuint uiBuffer, ALuint start, ALsizei length, ALenum access);
+typedef ALvoid (AL_APIENTRY*PFNALUNMAPDATABUFFEREXTPROC)(ALuint uiBuffer);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

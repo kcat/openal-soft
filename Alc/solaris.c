@@ -129,6 +129,17 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
             info.play.precision = 8;
             info.play.encoding = AUDIO_ENCODING_LINEAR8;
             break;
+        case 4:
+            switch(numChannels)
+            {
+                case 1: device->Format = AL_FORMAT_MONO16; break;
+                case 2: device->Format = AL_FORMAT_STEREO16; break;
+                case 4: device->Format = AL_FORMAT_QUAD16; break;
+                case 6: device->Format = AL_FORMAT_51CHN16; break;
+                case 7: device->Format = AL_FORMAT_61CHN16; break;
+                case 8: device->Format = AL_FORMAT_71CHN16; break;
+            }
+            /* fall-through */
         case 2:
             info.play.precision = 16;
             info.play.encoding = AUDIO_ENCODING_LINEAR;
@@ -138,7 +149,7 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
     }
 
     frameSize = numChannels * aluBytesFromFormat(device->Format);
-    info.play.buffer_size = device->UpdateSize * frameSize;
+    info.play.buffer_size = device->BufferSize * frameSize;
 
     if(ioctl(data->fd, AUDIO_SETINFO, &info) < 0)
     {
@@ -147,8 +158,6 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
         free(data);
         return ALC_FALSE;
     }
-
-    device->Frequency = info.play.sample_rate;
 
     if(aluChannelsFromFormat(device->Format) != info.play.channels)
     {
@@ -167,6 +176,7 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
         return ALC_FALSE;
     }
 
+    device->Frequency = info.play.sample_rate;
     device->UpdateSize = info.play.buffer_size / 4;
 
     data->data_size = device->UpdateSize * frameSize;
@@ -196,6 +206,18 @@ static void solaris_close_playback(ALCdevice *device)
     free(data->mix_data);
     free(data);
     device->ExtraData = NULL;
+}
+
+static ALCboolean solaris_start_context(ALCdevice *device, ALCcontext *context)
+{
+    device->Frequency = context->fFrequency;
+    return ALC_TRUE;
+}
+
+static void solaris_stop_context(ALCdevice *device, ALCcontext *context)
+{
+    (void)device;
+    (void)context;
 }
 
 
@@ -241,6 +263,8 @@ static ALCuint solaris_available_samples(ALCdevice *pDevice)
 BackendFuncs solaris_funcs = {
     solaris_open_playback,
     solaris_close_playback,
+    solaris_start_context,
+    solaris_stop_context,
     solaris_open_capture,
     solaris_close_capture,
     solaris_start_capture,

@@ -42,8 +42,7 @@ ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     ALCcontext *Context;
     ALsizei i;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (n > 0)
     {
@@ -89,8 +88,7 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
     ALeffect *ALEffect;
     ALsizei i;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (n >= 0)
     {
@@ -146,8 +144,7 @@ ALboolean AL_APIENTRY alIsEffect(ALuint effect)
     ALCcontext *Context;
     ALeffect *list;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     list = Context->Device->EffectList;
     while(list && list->effect != effect)
@@ -162,8 +159,7 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (effect && alIsEffect(effect))
     {
@@ -237,8 +233,7 @@ ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (effect && alIsEffect(effect))
     {
@@ -296,8 +291,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (effect && alIsEffect(effect))
     {
@@ -633,8 +627,7 @@ ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (effect && alIsEffect(effect))
     {
@@ -747,8 +740,7 @@ ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (effect && alIsEffect(effect))
     {
@@ -806,8 +798,7 @@ ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (effect && alIsEffect(effect))
     {
@@ -865,8 +856,7 @@ ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (effect && alIsEffect(effect))
     {
@@ -1060,8 +1050,7 @@ ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (effect && alIsEffect(effect))
     {

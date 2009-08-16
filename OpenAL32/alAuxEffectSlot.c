@@ -39,13 +39,12 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
     ALCcontext *Context;
     ALsizei i, j;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return;
     }
-    SuspendContext(Context);
 
     if (n > 0)
     {
@@ -101,13 +100,12 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
     ALeffectslot *ALAuxiliaryEffectSlot;
     ALsizei i;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return;
     }
-    SuspendContext(Context);
 
     if (n >= 0)
     {
@@ -173,13 +171,12 @@ ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
     ALCcontext *Context;
     ALeffectslot **list;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return AL_FALSE;
     }
-    SuspendContext(Context);
 
     list = &Context->AuxiliaryEffectSlot;
     while(*list && (*list)->effectslot != effectslot)
@@ -194,13 +191,12 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return;
     }
-    SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
@@ -240,13 +236,12 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALin
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return;
     }
-    SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
@@ -272,13 +267,12 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALflo
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return;
     }
-    SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
@@ -308,13 +302,12 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfl
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return;
     }
-    SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
@@ -339,13 +332,12 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, AL
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return;
     }
-    SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
@@ -376,13 +368,12 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, A
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return;
     }
-    SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
@@ -408,13 +399,12 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, AL
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return;
     }
-    SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {
@@ -441,13 +431,12 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, A
 {
     ALCcontext *Context;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context)
     {
         alSetError(AL_INVALID_OPERATION);
         return;
     }
-    SuspendContext(Context);
 
     if (alIsAuxiliaryEffectSlot(effectslot))
     {

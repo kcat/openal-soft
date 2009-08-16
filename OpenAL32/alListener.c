@@ -29,11 +29,9 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         switch (eParam)
         {
         case AL_GAIN:
@@ -68,11 +66,9 @@ ALAPI ALvoid ALAPIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat fl
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         switch(eParam)
         {
         case AL_POSITION:
@@ -105,11 +101,9 @@ ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (pflValues)
         {
             switch (eParam)
@@ -173,11 +167,9 @@ ALAPI ALvoid ALAPIENTRY alListeneri(ALenum eParam, ALint lValue)
 
     (void)lValue;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         switch (eParam)
         {
         default:
@@ -198,11 +190,9 @@ ALAPI void ALAPIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2, 
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         switch(eParam)
         {
         case AL_POSITION:
@@ -229,11 +219,9 @@ ALAPI void ALAPIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
     ALCcontext *pContext;
     ALfloat flValues[6];
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (plValues)
         {
             switch (eParam)
@@ -277,11 +265,9 @@ ALAPI ALvoid ALAPIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (pflValue)
         {
             switch (eParam)
@@ -315,11 +301,9 @@ ALAPI ALvoid ALAPIENTRY alGetListener3f(ALenum eParam, ALfloat *pflValue1, ALflo
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if ((pflValue1) && (pflValue2) && (pflValue3))
         {
             switch (eParam)
@@ -357,11 +341,9 @@ ALAPI ALvoid ALAPIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (pflValues)
         {
             switch (eParam)
@@ -417,11 +399,9 @@ ALAPI ALvoid ALAPIENTRY alGetListeneri(ALenum eParam, ALint *plValue)
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (plValue)
         {
             switch (eParam)
@@ -447,11 +427,9 @@ ALAPI void ALAPIENTRY alGetListener3i(ALenum eParam, ALint *plValue1, ALint *plV
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if ((plValue1) && (plValue2) && (plValue3))
         {
             switch (eParam)
@@ -489,11 +467,9 @@ ALAPI void ALAPIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (plValues)
         {
             switch (eParam)

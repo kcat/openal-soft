@@ -45,11 +45,9 @@ ALAPI ALvoid ALAPIENTRY alEnable(ALenum capability)
 {
     ALCcontext *Context;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         switch (capability)
         {
             default:
@@ -70,11 +68,9 @@ ALAPI ALvoid ALAPIENTRY alDisable(ALenum capability)
 {
     ALCcontext *Context;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         switch (capability)
         {
             default:
@@ -96,11 +92,9 @@ ALAPI ALboolean ALAPIENTRY alIsEnabled(ALenum capability)
     ALCcontext *Context;
     ALboolean value=AL_FALSE;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         switch (capability)
         {
             default:
@@ -124,11 +118,9 @@ ALAPI ALboolean ALAPIENTRY alGetBoolean(ALenum pname)
     ALCcontext *Context;
     ALboolean value=AL_FALSE;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         switch (pname)
         {
             case AL_DOPPLER_FACTOR:
@@ -172,11 +164,9 @@ ALAPI ALdouble ALAPIENTRY alGetDouble(ALenum pname)
     ALCcontext *Context;
     ALdouble value = 0.0;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         switch (pname)
         {
             case AL_DOPPLER_FACTOR:
@@ -216,11 +206,9 @@ ALAPI ALfloat ALAPIENTRY alGetFloat(ALenum pname)
     ALCcontext *Context;
     ALfloat value = 0.0f;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         switch (pname)
         {
             case AL_DOPPLER_FACTOR:
@@ -260,11 +248,9 @@ ALAPI ALint ALAPIENTRY alGetInteger(ALenum pname)
     ALCcontext *Context;
     ALint value = 0;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         switch (pname)
         {
             case AL_DOPPLER_FACTOR:
@@ -317,11 +303,9 @@ ALAPI ALvoid ALAPIENTRY alGetBooleanv(ALenum pname,ALboolean *data)
 {
     ALCcontext *Context;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (data)
         {
             switch (pname)
@@ -368,11 +352,9 @@ ALAPI ALvoid ALAPIENTRY alGetDoublev(ALenum pname,ALdouble *data)
 {
     ALCcontext *Context;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (data)
         {
             switch (pname)
@@ -419,11 +401,9 @@ ALAPI ALvoid ALAPIENTRY alGetFloatv(ALenum pname,ALfloat *data)
 {
     ALCcontext *Context;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (data)
         {
             switch (pname)
@@ -470,11 +450,9 @@ ALAPI ALvoid ALAPIENTRY alGetIntegerv(ALenum pname,ALint *data)
 {
     ALCcontext *Context;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (data)
         {
             switch (pname)
@@ -536,7 +514,7 @@ ALAPI const ALchar* ALAPIENTRY alGetString(ALenum pname)
     const ALchar *value;
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext)
     {
         alSetError(AL_INVALID_OPERATION);
@@ -602,11 +580,9 @@ ALAPI ALvoid ALAPIENTRY alDopplerFactor(ALfloat value)
 {
     ALCcontext *Context;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (value>=0.0f)
             Context->DopplerFactor = value;
         else
@@ -627,11 +603,9 @@ ALAPI ALvoid ALAPIENTRY alDopplerVelocity(ALfloat value)
 {
     ALCcontext *Context;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (value>0.0f)
             Context->DopplerVelocity=value;
         else
@@ -652,11 +626,9 @@ ALAPI ALvoid ALAPIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
 {
     ALCcontext *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (flSpeedOfSound > 0.0f)
             pContext->flSpeedOfSound = flSpeedOfSound;
         else
@@ -677,11 +649,9 @@ ALAPI ALvoid ALAPIENTRY alDistanceModel(ALenum value)
     ALCcontext *Context;
     ALsource *Source;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         switch (value)
         {
             case AL_NONE:

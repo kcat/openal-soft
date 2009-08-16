@@ -454,6 +454,30 @@ ALCvoid ProcessContext(ALCcontext *pContext)
 
 
 /*
+    GetContextSuspended
+
+    Returns the currently active Context, in a locked state
+*/
+ALCcontext *GetContextSuspended(void)
+{
+    ALCcontext *pContext = NULL;
+
+    SuspendContext(NULL);
+
+    pContext = g_pContextList;
+    while(pContext && !pContext->InUse)
+        pContext = pContext->next;
+
+    if(pContext)
+        SuspendContext(pContext);
+
+    ProcessContext(NULL);
+
+    return pContext;
+}
+
+
+/*
     InitContext
 
     Initialize Context variables
@@ -1236,16 +1260,15 @@ ALCAPI ALCboolean ALCAPIENTRY alcMakeContextCurrent(ALCcontext *context)
     SuspendContext(NULL);
 
     // context must be a valid Context or NULL
-    if ((IsContext(context)) || (context == NULL))
+    if(context == NULL || IsContext(context))
     {
-        if ((ALContext=alcGetCurrentContext()))
+        if((ALContext=GetContextSuspended()) != NULL)
         {
-            SuspendContext(ALContext);
             ALContext->InUse=AL_FALSE;
             ProcessContext(ALContext);
         }
 
-        if ((ALContext=context) && (ALContext->Device))
+        if((ALContext=context) != NULL && ALContext->Device)
         {
             SuspendContext(ALContext);
             ALContext->InUse=AL_TRUE;

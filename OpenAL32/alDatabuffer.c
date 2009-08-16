@@ -42,9 +42,8 @@ ALvoid ALAPIENTRY alGenDatabuffersEXT(ALsizei n,ALuint *puiBuffers)
     ALCcontext *Context;
     ALsizei i=0;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context) return;
-    SuspendContext(Context);
 
     /* Check that we are actually generation some Databuffers */
     if(n > 0)
@@ -98,9 +97,8 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
     ALsizei i;
     ALboolean bFailed = AL_FALSE;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context) return;
-    SuspendContext(Context);
 
     /* Check we are actually Deleting some Databuffers */
     if(n >= 0)
@@ -187,9 +185,8 @@ ALboolean ALAPIENTRY alIsDatabufferEXT(ALuint uiBuffer)
     ALCcontext *Context;
     ALdatabuffer *ALBuf;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
-    SuspendContext(Context);
 
     /* Check through list of generated databuffers for uiBuffer */
     ALBuf = Context->Device->Databuffers;
@@ -212,9 +209,8 @@ ALvoid ALAPIENTRY alDatabufferDataEXT(ALuint buffer,const ALvoid *data,ALsizei s
     ALdatabuffer *ALBuf;
     ALvoid *temp;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if(!Context) return;
-    SuspendContext(Context);
 
     if(alIsDatabufferEXT(buffer) && buffer != 0)
     {
@@ -257,9 +253,8 @@ ALvoid ALAPIENTRY alDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsizei 
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(alIsDatabufferEXT(uiBuffer) && uiBuffer != 0)
     {
@@ -286,9 +281,8 @@ ALvoid ALAPIENTRY alGetDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsiz
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(alIsDatabufferEXT(uiBuffer) && uiBuffer != 0)
     {
@@ -317,9 +311,8 @@ ALvoid ALAPIENTRY alDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat flValue
 
     (void)flValue;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(alIsDatabufferEXT(buffer) && buffer != 0)
     {
@@ -342,9 +335,8 @@ ALvoid ALAPIENTRY alDatabufferfvEXT(ALuint buffer, ALenum eParam, const ALfloat*
 
     (void)flValues;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(alIsDatabufferEXT(buffer) && buffer != 0)
     {
@@ -368,9 +360,8 @@ ALvoid ALAPIENTRY alDatabufferiEXT(ALuint buffer, ALenum eParam, ALint lValue)
 
     (void)lValue;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(alIsDatabufferEXT(buffer) && buffer != 0)
     {
@@ -393,9 +384,8 @@ ALvoid ALAPIENTRY alDatabufferivEXT(ALuint buffer, ALenum eParam, const ALint* p
 
     (void)plValues;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(alIsDatabufferEXT(buffer) && buffer != 0)
     {
@@ -417,9 +407,8 @@ ALvoid ALAPIENTRY alGetDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat *pfl
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(pflValue)
     {
@@ -445,9 +434,8 @@ ALvoid ALAPIENTRY alGetDatabufferfvEXT(ALuint buffer, ALenum eParam, ALfloat* pf
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(pflValues)
     {
@@ -474,9 +462,8 @@ ALvoid ALAPIENTRY alGetDatabufferiEXT(ALuint buffer, ALenum eParam, ALint *plVal
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(plValue)
     {
@@ -508,9 +495,8 @@ ALvoid ALAPIENTRY alGetDatabufferivEXT(ALuint buffer, ALenum eParam, ALint* plVa
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(plValues)
     {
@@ -542,9 +528,8 @@ ALvoid ALAPIENTRY alSelectDatabufferEXT(ALenum target, ALuint uiBuffer)
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(alIsDatabufferEXT(uiBuffer))
     {
@@ -569,9 +554,8 @@ ALvoid* ALAPIENTRY alMapDatabufferEXT(ALuint uiBuffer, ALuint start, ALsizei len
     ALdatabuffer  *pBuffer;
     ALvoid        *ret = NULL;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return NULL;
-    SuspendContext(pContext);
 
     if(alIsDatabufferEXT(uiBuffer) && uiBuffer != 0)
     {
@@ -609,9 +593,8 @@ ALvoid ALAPIENTRY alUnmapDatabufferEXT(ALuint uiBuffer)
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext) return;
-    SuspendContext(pContext);
 
     if(alIsDatabufferEXT(uiBuffer) && uiBuffer != 0)
     {

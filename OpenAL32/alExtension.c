@@ -352,14 +352,12 @@ ALAPI ALboolean ALAPIENTRY alIsExtensionPresent(const ALchar *extName)
         return AL_FALSE;
     }
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if(!pContext)
     {
         alSetError(AL_INVALID_OPERATION);
         return AL_FALSE;
     }
-
-    SuspendContext(pContext);
 
     len = strlen(extName);
     ptr = pContext->ExtensionList;

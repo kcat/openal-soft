@@ -43,11 +43,9 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
     ALCdevice *Device;
     ALsizei i=0;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (n > 0)
         {
             Device = alcGetContextsDevice(Context);
@@ -126,11 +124,9 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     ALbufferlistitem *ALBufferList;
     ALboolean bSourcesValid = AL_TRUE;
 
-    Context = alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (n >= 0)
         {
             Device = alcGetContextsDevice(Context);
@@ -224,11 +220,9 @@ ALAPI ALboolean ALAPIENTRY alIsSource(ALuint source)
     ALCcontext *Context;
     ALsource *Source;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         // To determine if this is a valid Source name, look through the list of generated Sources
         Source = Context->Source;
         while(Source)
@@ -259,11 +253,9 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
     ALCcontext    *pContext;
     ALsource    *pSource;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (alIsSource(source))
         {
             pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
@@ -420,11 +412,9 @@ ALAPI ALvoid ALAPIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flValue
     ALCcontext    *pContext;
     ALsource    *pSource;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (alIsSource(source))
         {
             pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
@@ -471,11 +461,9 @@ ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (pflValues)
         {
             if (alIsSource(source))
@@ -534,11 +522,9 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
     ALbufferlistitem    *pALBufferListItem;
     ALuint i;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (alIsSource(source))
         {
             pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
@@ -742,11 +728,9 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (alIsSource(source))
         {
             ALsource *pSource = ((ALsource *)ALTHUNK_LOOKUPENTRY(source));
@@ -809,11 +793,9 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (plValues)
         {
             if (alIsSource(source))
@@ -873,11 +855,9 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
     ALsource    *pSource;
     ALfloat        flOffset[2];
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (pflValue)
         {
             if (alIsSource(source))
@@ -988,11 +968,9 @@ ALAPI ALvoid ALAPIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* pfl
     ALCcontext    *pContext;
     ALsource    *pSource;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if ((pflValue1) && (pflValue2) && (pflValue3))
         {
             if (alIsSource(source))
@@ -1044,11 +1022,9 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
     ALCcontext    *pContext;
     ALsource    *pSource;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (pflValues)
         {
             if (alIsSource(source))
@@ -1121,11 +1097,9 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
     ALsource   *pSource;
     ALfloat     flOffset[2];
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (plValue)
         {
             if (alIsSource(source))
@@ -1259,11 +1233,9 @@ ALAPI void ALAPIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plValue
     ALCcontext  *pContext;
     ALsource    *pSource;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if ((plValue1) && (plValue2) && (plValue3))
         {
             if (alIsSource(source))
@@ -1315,11 +1287,9 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
     ALCcontext  *pContext;
     ALsource    *pSource;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (plValues)
         {
             if (alIsSource(source))
@@ -1405,11 +1375,9 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
     ALboolean            bPlay;
     ALsizei              i, j;
 
-    pContext = alcGetCurrentContext();
+    pContext = GetContextSuspended();
     if (pContext)
     {
-        SuspendContext(pContext);
-
         if (pSourceList)
         {
             // Check that all the Sources are valid
@@ -1528,11 +1496,9 @@ ALAPI ALvoid ALAPIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     ALsizei i;
     ALboolean bSourcesValid = AL_TRUE;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (sources)
         {
             // Check all the Sources are valid
@@ -1590,11 +1556,9 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     ALbufferlistitem *ALBufferListItem;
     ALboolean bSourcesValid = AL_TRUE;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (sources)
         {
             // Check all the Sources are valid
@@ -1660,11 +1624,9 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     ALbufferlistitem *ALBufferListItem;
     ALboolean bSourcesValid = AL_TRUE;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (sources)
         {
             // Check all the Sources are valid
@@ -1735,11 +1697,9 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
     if (n == 0)
         return;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         // Check that all buffers are valid or zero and that the source is valid
 
         // Check that this is a valid source
@@ -1892,11 +1852,9 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
 
     bBuffersProcessed = AL_TRUE;
 
-    Context=alcGetCurrentContext();
+    Context = GetContextSuspended();
     if (Context)
     {
-        SuspendContext(Context);
-
         if (alIsSource(source))
         {
             ALSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);

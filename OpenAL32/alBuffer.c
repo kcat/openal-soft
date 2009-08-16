@@ -79,8 +79,7 @@ ALAPI ALvoid ALAPIENTRY alGenBuffers(ALsizei n,ALuint *puiBuffers)
     ALCcontext *Context;
     ALsizei i=0;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     // Check that we are actually generation some Buffers
     if (n > 0)
@@ -137,8 +136,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
     ALsizei i;
     ALboolean bFailed = AL_FALSE;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     // Check we are actually Deleting some Buffers
     if (n >= 0)
@@ -220,8 +218,7 @@ ALAPI ALboolean ALAPIENTRY alIsBuffer(ALuint uiBuffer)
     ALbuffer *ALBuf;
     ALbuffer *TgtALBuf;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (uiBuffer)
     {
@@ -265,8 +262,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
     ALbuffer *ALBuf;
     ALvoid *temp;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
@@ -433,8 +429,7 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
     ALCcontext *Context;
     ALbuffer *ALBuf;
 
-    Context = alcGetCurrentContext();
-    SuspendContext(Context);
+    Context = GetContextSuspended();
 
     if(alIsBuffer(buffer) && buffer != 0)
     {
@@ -550,8 +545,7 @@ ALAPI void ALAPIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 
     (void)flValue;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
@@ -579,8 +573,7 @@ ALAPI void ALAPIENTRY alBuffer3f(ALuint buffer, ALenum eParam, ALfloat flValue1,
     (void)flValue2;
     (void)flValue3;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
@@ -606,8 +599,7 @@ ALAPI void ALAPIENTRY alBufferfv(ALuint buffer, ALenum eParam, const ALfloat* fl
 
     (void)flValues;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
@@ -633,8 +625,7 @@ ALAPI void ALAPIENTRY alBufferi(ALuint buffer, ALenum eParam, ALint lValue)
 
     (void)lValue;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
@@ -662,8 +653,7 @@ ALAPI void ALAPIENTRY alBuffer3i( ALuint buffer, ALenum eParam, ALint lValue1, A
     (void)lValue2;
     (void)lValue3;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
@@ -689,8 +679,7 @@ ALAPI void ALAPIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* plVa
 
     (void)plValues;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if (alIsBuffer(buffer) && (buffer != 0))
     {
@@ -714,8 +703,7 @@ ALAPI ALvoid ALAPIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pflV
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if (pflValue)
     {
@@ -746,8 +734,7 @@ ALAPI void ALAPIENTRY alGetBuffer3f(ALuint buffer, ALenum eParam, ALfloat* pflVa
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if ((pflValue1) && (pflValue2) && (pflValue3))
     {
@@ -778,8 +765,7 @@ ALAPI void ALAPIENTRY alGetBufferfv(ALuint buffer, ALenum eParam, ALfloat* pflVa
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if (pflValues)
     {
@@ -811,8 +797,7 @@ ALAPI ALvoid ALAPIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plValu
     ALCcontext    *pContext;
     ALbuffer    *pBuffer;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if (plValue)
     {
@@ -861,8 +846,7 @@ ALAPI void ALAPIENTRY alGetBuffer3i(ALuint buffer, ALenum eParam, ALint* plValue
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if ((plValue1) && (plValue2) && (plValue3))
     {
@@ -893,8 +877,7 @@ ALAPI void ALAPIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plValue
 {
     ALCcontext    *pContext;
 
-    pContext = alcGetCurrentContext();
-    SuspendContext(pContext);
+    pContext = GetContextSuspended();
 
     if (plValues)
     {

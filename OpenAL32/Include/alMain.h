@@ -276,6 +276,8 @@ ALCvoid ProcessContext(ALCcontext *context);
 ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr);
 ALuint StopThread(ALvoid *thread);
 
+ALCcontext *GetContextSuspended(void);
+
 typedef struct RingBuffer RingBuffer;
 RingBuffer *CreateRingBuffer(ALsizei frame_size, ALsizei length);
 void DestroyRingBuffer(RingBuffer *ring);

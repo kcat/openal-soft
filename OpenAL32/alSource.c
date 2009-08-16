@@ -2137,11 +2137,6 @@ static ALint GetByteOffset(ALsource *pSource)
 
 ALvoid ReleaseALSources(ALCcontext *Context)
 {
-#ifdef _DEBUG
-    if(Context->SourceCount > 0)
-        AL_PRINT("alcDestroyContext(): deleting %d Source(s)\n", Context->SourceCount);
-#endif
-
     while(Context->Source)
     {
         ALsource *temp = Context->Source;

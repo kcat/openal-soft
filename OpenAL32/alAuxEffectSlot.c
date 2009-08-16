@@ -447,11 +447,6 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
 
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
 {
-#ifdef _DEBUG
-    if(Context->AuxiliaryEffectSlotCount > 0)
-        AL_PRINT("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", Context->AuxiliaryEffectSlotCount);
-#endif
-
     while(Context->AuxiliaryEffectSlot)
     {
         ALeffectslot *temp = Context->AuxiliaryEffectSlot;

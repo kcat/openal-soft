@@ -1174,8 +1174,20 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
         // Lock context
         SuspendContext(context);
 
-        ReleaseALSources(context);
-        ReleaseALAuxiliaryEffectSlots(context);
+        if(context->SourceCount > 0)
+        {
+#ifdef _DEBUG
+            AL_PRINT("alcDestroyContext(): deleting %d Source(s)\n", context->SourceCount);
+#endif
+            ReleaseALSources(context);
+        }
+        if(context->AuxiliaryEffectSlotCount > 0)
+        {
+#ifdef _DEBUG
+            AL_PRINT("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->AuxiliaryEffectSlotCount);
+#endif
+            ReleaseALAuxiliaryEffectSlots(context);
+        }
 
         context->Device->Context = NULL;
 

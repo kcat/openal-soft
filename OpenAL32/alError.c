@@ -26,32 +26,29 @@
 
 ALAPI ALenum ALAPIENTRY alGetError(ALvoid)
 {
-	ALCcontext *Context;
-	ALenum errorCode;
+    ALCcontext *Context;
+    ALenum errorCode;
 
-	Context = GetContextSuspended();
+    Context = GetContextSuspended();
+    if(!Context) return AL_INVALID_OPERATION;
 
-	if (Context)
-	{
-		errorCode = Context->LastError;
-		Context->LastError = AL_NO_ERROR;
-	}
-	else
-		errorCode = AL_INVALID_OPERATION;
+    errorCode = Context->LastError;
+    Context->LastError = AL_NO_ERROR;
 
-	ProcessContext(Context);
+    ProcessContext(Context);
 
-	return errorCode;
+    return errorCode;
 }
 
 ALvoid alSetError(ALenum errorCode)
 {
-	ALCcontext *Context;
+    ALCcontext *Context;
 
-	Context=GetContextSuspended();
-
-	if (Context && Context->LastError == AL_NO_ERROR)
-		Context->LastError = errorCode;
-
-	ProcessContext(Context);
+    Context = GetContextSuspended();
+    if(Context)
+    {
+        if(Context->LastError == AL_NO_ERROR)
+            Context->LastError = errorCode;
+        ProcessContext(Context);
+    }
 }

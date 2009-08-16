@@ -30,19 +30,19 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
     ALCcontext *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    switch(eParam)
     {
-        switch (eParam)
-        {
         case AL_GAIN:
-            if (flValue >= 0.0f)
+            if(flValue >= 0.0f)
                 pContext->Listener.Gain = flValue;
             else
                 alSetError(AL_INVALID_VALUE);
             break;
 
         case AL_METERS_PER_UNIT:
-            if (flValue > 0.0f)
+            if(flValue > 0.0f)
                 pContext->Listener.MetersPerUnit = flValue;
             else
                 alSetError(AL_INVALID_VALUE);
@@ -51,14 +51,9 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
         default:
             alSetError(AL_INVALID_ENUM);
             break;
-        }
-
-        ProcessContext(pContext);
     }
-    else
-        alSetError(AL_INVALID_OPERATION);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -67,10 +62,10 @@ ALAPI ALvoid ALAPIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat fl
     ALCcontext *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    switch(eParam)
     {
-        switch(eParam)
-        {
         case AL_POSITION:
             pContext->Listener.Position[0] = flValue1;
             pContext->Listener.Position[1] = flValue2;
@@ -86,14 +81,9 @@ ALAPI ALvoid ALAPIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat fl
         default:
             alSetError(AL_INVALID_ENUM);
             break;
-        }
-
-        ProcessContext(pContext);
     }
-    else
-        alSetError(AL_INVALID_OPERATION);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -102,21 +92,21 @@ ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
     ALCcontext *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(pflValues)
     {
-        if (pflValues)
+        switch(eParam)
         {
-            switch (eParam)
-            {
             case AL_GAIN:
-                if (pflValues[0] >= 0.0f)
+                if(pflValues[0] >= 0.0f)
                     pContext->Listener.Gain = pflValues[0];
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_METERS_PER_UNIT:
-                if (pflValues[0] > 0.0f)
+                if(pflValues[0] > 0.0f)
                     pContext->Listener.MetersPerUnit = pflValues[0];
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -147,17 +137,12 @@ ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -168,21 +153,16 @@ ALAPI ALvoid ALAPIENTRY alListeneri(ALenum eParam, ALint lValue)
     (void)lValue;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    switch(eParam)
     {
-        switch (eParam)
-        {
         default:
             alSetError(AL_INVALID_ENUM);
             break;
-        }
-
-        ProcessContext(pContext);
     }
-    else
-        alSetError(AL_INVALID_OPERATION);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -191,10 +171,10 @@ ALAPI void ALAPIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2, 
     ALCcontext *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    switch(eParam)
     {
-        switch(eParam)
-        {
         case AL_POSITION:
         case AL_VELOCITY:
             alListener3f(eParam, (ALfloat)lValue1, (ALfloat)lValue2, (ALfloat)lValue3);
@@ -203,14 +183,9 @@ ALAPI void ALAPIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2, 
         default:
             alSetError(AL_INVALID_ENUM);
             break;
-        }
-
-        ProcessContext(pContext);
     }
-    else
-        alSetError(AL_INVALID_OPERATION);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -220,12 +195,12 @@ ALAPI void ALAPIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
     ALfloat flValues[6];
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(plValues)
     {
-        if (plValues)
+        switch(eParam)
         {
-            switch (eParam)
-            {
             case AL_POSITION:
             case AL_VELOCITY:
                 flValues[0] = (ALfloat)plValues[0];
@@ -247,17 +222,12 @@ ALAPI void ALAPIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -266,12 +236,12 @@ ALAPI ALvoid ALAPIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
     ALCcontext *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(pflValue)
     {
-        if (pflValue)
+        switch(eParam)
         {
-            switch (eParam)
-            {
             case AL_GAIN:
                 *pflValue = pContext->Listener.Gain;
                 break;
@@ -283,17 +253,12 @@ ALAPI ALvoid ALAPIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -302,12 +267,12 @@ ALAPI ALvoid ALAPIENTRY alGetListener3f(ALenum eParam, ALfloat *pflValue1, ALflo
     ALCcontext *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(pflValue1 && pflValue2 && pflValue3)
     {
-        if ((pflValue1) && (pflValue2) && (pflValue3))
+        switch(eParam)
         {
-            switch (eParam)
-            {
             case AL_POSITION:
                 *pflValue1 = pContext->Listener.Position[0];
                 *pflValue2 = pContext->Listener.Position[1];
@@ -323,17 +288,12 @@ ALAPI ALvoid ALAPIENTRY alGetListener3f(ALenum eParam, ALfloat *pflValue1, ALflo
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -342,12 +302,12 @@ ALAPI ALvoid ALAPIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
     ALCcontext *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(pflValues)
     {
-        if (pflValues)
+        switch(eParam)
         {
-            switch (eParam)
-            {
             case AL_GAIN:
                 pflValues[0] = pContext->Listener.Gain;
                 break;
@@ -381,17 +341,12 @@ ALAPI ALvoid ALAPIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -400,26 +355,21 @@ ALAPI ALvoid ALAPIENTRY alGetListeneri(ALenum eParam, ALint *plValue)
     ALCcontext *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(plValue)
     {
-        if (plValue)
+        switch(eParam)
         {
-            switch (eParam)
-            {
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -428,12 +378,12 @@ ALAPI void ALAPIENTRY alGetListener3i(ALenum eParam, ALint *plValue1, ALint *plV
     ALCcontext *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(plValue1 && plValue2 && plValue3)
     {
-        if ((plValue1) && (plValue2) && (plValue3))
+        switch (eParam)
         {
-            switch (eParam)
-            {
             case AL_POSITION:
                 *plValue1 = (ALint)pContext->Listener.Position[0];
                 *plValue2 = (ALint)pContext->Listener.Position[1];
@@ -449,17 +399,12 @@ ALAPI void ALAPIENTRY alGetListener3i(ALenum eParam, ALint *plValue1, ALint *plV
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }
 
 
@@ -468,12 +413,12 @@ ALAPI void ALAPIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
     ALCcontext *pContext;
 
     pContext = GetContextSuspended();
-    if (pContext)
+    if(!pContext) return;
+
+    if(plValues)
     {
-        if (plValues)
+        switch(eParam)
         {
-            switch (eParam)
-            {
             case AL_POSITION:
                 plValues[0] = (ALint)pContext->Listener.Position[0];
                 plValues[1] = (ALint)pContext->Listener.Position[1];
@@ -499,15 +444,10 @@ ALAPI void ALAPIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
             default:
                 alSetError(AL_INVALID_ENUM);
                 break;
-            }
         }
-        else
-            alSetError(AL_INVALID_VALUE);
-
-        ProcessContext(pContext);
     }
     else
-        alSetError(AL_INVALID_OPERATION);
+        alSetError(AL_INVALID_VALUE);
 
-    return;
+    ProcessContext(pContext);
 }

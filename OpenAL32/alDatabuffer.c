@@ -151,6 +151,11 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
                     if(*list)
                         *list = (*list)->next;
 
+                    if(ALBuf == Context->SampleSource)
+                        Context->SampleSource = NULL;
+                    if(ALBuf == Context->SampleSink)
+                        Context->SampleSink = NULL;
+
                     // Release the memory used to store audio data
                     free(ALBuf->data);
 

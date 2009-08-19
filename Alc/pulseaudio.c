@@ -83,6 +83,10 @@ MAKE_FUNC(pa_stream_disconnect);
 MAKE_FUNC(pa_threaded_mainloop_lock);
 #undef MAKE_FUNC
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 typedef struct {
     ALCdevice *device;
 

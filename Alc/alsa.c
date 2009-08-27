@@ -136,6 +136,25 @@ static int xrun_recovery(snd_pcm_t *handle, int err)
     return err;
 }
 
+static int verify_state(snd_pcm_t *handle)
+{
+    snd_pcm_state_t state = psnd_pcm_state(handle);
+    if(state == SND_PCM_STATE_DISCONNECTED)
+        return -ENODEV;
+    if(state == SND_PCM_STATE_XRUN)
+    {
+        int err = xrun_recovery(handle, -EPIPE);
+        if(err < 0) return err;
+    }
+    else if (state == SND_PCM_STATE_SUSPENDED)
+    {
+        int err = xrun_recovery(handle, -ESTRPIPE);
+        if(err < 0) return err;
+    }
+
+    return state;
+}
+
 
 static ALuint ALSAProc(ALvoid *ptr)
 {
@@ -150,24 +169,12 @@ static ALuint ALSAProc(ALvoid *ptr)
 
     while(!data->killNow)
     {
-        snd_pcm_state_t state = psnd_pcm_state(data->pcmHandle);
-        if(state == SND_PCM_STATE_XRUN)
+        int state = verify_state(data->pcmHandle);
+        if(state < 0)
         {
-            err = xrun_recovery(data->pcmHandle, -EPIPE);
-            if (err < 0)
-            {
-                AL_PRINT("XRUN recovery failed: %s\n", psnd_strerror(err));
-                break;
-            }
-        }
-        else if (state == SND_PCM_STATE_SUSPENDED)
-        {
-            err = xrun_recovery(data->pcmHandle, -ESTRPIPE);
-            if (err < 0)
-            {
-                AL_PRINT("SUSPEND recovery failed: %s\n", psnd_strerror(err));
-                break;
-            }
+            AL_PRINT("Invalid state detected: %s\n", psnd_strerror(state));
+            aluHandleDisconnect(pDevice);
+            break;
         }
 
         avail = psnd_pcm_avail_update(data->pcmHandle);
@@ -177,8 +184,10 @@ static ALuint ALSAProc(ALvoid *ptr)
             if (err < 0)
             {
                 AL_PRINT("available update failed: %s\n", psnd_strerror(err));
+                aluHandleDisconnect(pDevice);
                 break;
             }
+            continue;
         }
 
         // make sure there's frames to process
@@ -192,6 +201,7 @@ static ALuint ALSAProc(ALvoid *ptr)
                 if(err < 0)
                 {
                     AL_PRINT("start failed: %s\n", psnd_strerror(err));
+                    aluHandleDisconnect(pDevice);
                     break;
                 }
             }
@@ -247,6 +257,14 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
 
     while(!data->killNow)
     {
+        int state = verify_state(data->pcmHandle);
+        if(state < 0)
+        {
+            AL_PRINT("Invalid state detected: %s\n", psnd_strerror(state));
+            aluHandleDisconnect(pDevice);
+            break;
+        }
+
         SuspendContext(NULL);
         aluMixData(pDevice->Context, data->buffer, data->size, pDevice->Format);
         ProcessContext(NULL);
@@ -294,6 +312,14 @@ static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
 
     while(!data->killNow)
     {
+        int state = verify_state(data->pcmHandle);
+        if(state < 0)
+        {
+            AL_PRINT("Invalid state detected: %s\n", psnd_strerror(state));
+            aluHandleDisconnect(pDevice);
+            break;
+        }
+
         avail = (snd_pcm_uframes_t)data->size / psnd_pcm_frames_to_bytes(data->pcmHandle, 1);
         avail = psnd_pcm_readi(data->pcmHandle, data->buffer, avail);
         switch(avail)
@@ -556,11 +582,9 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
 {
     snd_pcm_hw_params_t *p;
     snd_pcm_uframes_t bufferSizeInFrames;
-    snd_pcm_access_t access;
-    const char *str;
+    ALuint frameSize;
     alsa_data *data;
     char driver[64];
-    int allowmmap;
     char *err;
     int i;
 
@@ -624,26 +648,15 @@ open_alsa:
             AL_PRINT("Unknown format?! %x\n", pDevice->Format);
     }
 
-    str = GetConfigValue("alsa", "mmap", "true");
-    allowmmap = (strcasecmp(str, "true") == 0 ||
-                 strcasecmp(str, "yes") == 0 ||
-                 strcasecmp(str, "on") == 0 ||
-                 atoi(str) != 0);
-
     err = NULL;
     bufferSizeInFrames = pDevice->BufferSize;
     psnd_pcm_hw_params_malloc(&p);
 
-    if(!allowmmap)
-        err = "no mmap";
     if((i=psnd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
         err = "any";
     /* set interleaved access */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED)) < 0)
-    {
+    if(err == NULL && (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
         err = "set access";
-        allowmmap = 0;
-    }
     /* set format (implicitly sets sample bits) */
     if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format)) < 0)
         err = "set format";
@@ -654,38 +667,11 @@ open_alsa:
     if(err == NULL && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, pDevice->Frequency, 0)) < 0)
         err = "set rate near";
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_buffer_size_min(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
-    {
-        err = "set buffer size min";
-        allowmmap = 0;
-    }
+    if(err == NULL && (i=psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
+        err = "set buffer size near";
     /* install and prepare hardware configuration */
     if(err == NULL && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
         err = "set params";
-    if(!allowmmap)
-    {
-        err = NULL;
-        if((i=psnd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
-            err = "any";
-        /* set interleaved access */
-        if(err == NULL && (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
-            err = "set access";
-        /* set format (implicitly sets sample bits) */
-        if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format)) < 0)
-            err = "set format";
-        /* set channels (implicitly sets frame bits) */
-        if(err == NULL && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(pDevice->Format))) < 0)
-            err = "set channels";
-        /* set rate (implicitly constrains period/buffer parameters) */
-        if(err == NULL && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, pDevice->Frequency, 0)) < 0)
-            err = "set rate near";
-        /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
-        if(err == NULL && (i=psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
-            err = "set buffer size near";
-        /* install and prepare hardware configuration */
-        if(err == NULL && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
-            err = "set params";
-    }
     if(err != NULL)
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
@@ -695,14 +681,6 @@ open_alsa:
         return ALC_FALSE;
     }
 
-    if((i=psnd_pcm_hw_params_get_access(p, &access)) < 0)
-    {
-        AL_PRINT("get_access failed: %s\n", psnd_strerror(i));
-        psnd_pcm_hw_params_free(p);
-        psnd_pcm_close(data->pcmHandle);
-        free(data);
-        return ALC_FALSE;
-    }
     if((i=psnd_pcm_hw_params_get_period_size(p, &bufferSizeInFrames, NULL)) < 0)
     {
         AL_PRINT("get size failed: %s\n", psnd_strerror(i));
@@ -714,55 +692,40 @@ open_alsa:
 
     psnd_pcm_hw_params_free(p);
 
-    if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
+    frameSize  = aluChannelsFromFormat(pDevice->Format);
+    frameSize *= aluBytesFromFormat(pDevice->Format);
+
+    data->ring = CreateRingBuffer(frameSize, pDevice->BufferSize);
+    if(!data->ring)
     {
-        ALuint frameSize = aluChannelsFromFormat(pDevice->Format);
-        frameSize *= aluBytesFromFormat(pDevice->Format);
-
-        data->ring = CreateRingBuffer(frameSize, pDevice->BufferSize);
-        if(!data->ring)
-        {
-            AL_PRINT("ring buffer create failed\n");
-            psnd_pcm_close(data->pcmHandle);
-            free(data);
-            return ALC_FALSE;
-        }
-
-        data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
-        data->buffer = malloc(data->size);
-        if(!data->buffer)
-        {
-            AL_PRINT("buffer malloc failed\n");
-            psnd_pcm_close(data->pcmHandle);
-            DestroyRingBuffer(data->ring);
-            free(data);
-            return ALC_FALSE;
-        }
-
-        pDevice->ExtraData = data;
-        data->thread = StartThread(ALSANoMMapCaptureProc, pDevice);
-        if(data->thread == NULL)
-        {
-            AL_PRINT("Could not create capture thread\n");
-            pDevice->ExtraData = NULL;
-            psnd_pcm_close(data->pcmHandle);
-            DestroyRingBuffer(data->ring);
-            free(data->buffer);
-            free(data);
-            return ALC_FALSE;
-        }
+        AL_PRINT("ring buffer create failed\n");
+        psnd_pcm_close(data->pcmHandle);
+        free(data);
+        return ALC_FALSE;
     }
-    else
+
+    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
+    data->buffer = malloc(data->size);
+    if(!data->buffer)
     {
-        i = psnd_pcm_prepare(data->pcmHandle);
-        if(i < 0)
-        {
-            AL_PRINT("prepare error: %s\n", psnd_strerror(i));
-            psnd_pcm_close(data->pcmHandle);
-            free(data);
-            return ALC_FALSE;
-        }
-        pDevice->ExtraData = data;
+        AL_PRINT("buffer malloc failed\n");
+        psnd_pcm_close(data->pcmHandle);
+        DestroyRingBuffer(data->ring);
+        free(data);
+        return ALC_FALSE;
+    }
+
+    pDevice->ExtraData = data;
+    data->thread = StartThread(ALSANoMMapCaptureProc, pDevice);
+    if(data->thread == NULL)
+    {
+        AL_PRINT("Could not create capture thread\n");
+        psnd_pcm_close(data->pcmHandle);
+        DestroyRingBuffer(data->ring);
+        pDevice->ExtraData = NULL;
+        free(data->buffer);
+        free(data);
+        return ALC_FALSE;
     }
 
     return ALC_TRUE;
@@ -772,14 +735,13 @@ static void alsa_close_capture(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
 
-    if(data->thread)
-    {
-        data->killNow = 1;
-        StopThread(data->thread);
-        DestroyRingBuffer(data->ring);
-    }
-    psnd_pcm_close(data->pcmHandle);
+    data->killNow = 1;
+    StopThread(data->thread);
 
+    psnd_pcm_close(data->pcmHandle);
+    DestroyRingBuffer(data->ring);
+
+    free(data->buffer);
     free(data);
     pDevice->ExtraData = NULL;
 }
@@ -788,138 +750,28 @@ static void alsa_start_capture(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
     data->doCapture = 1;
-    if(!data->thread)
-    {
-        psnd_pcm_prepare(data->pcmHandle);
-        psnd_pcm_start(data->pcmHandle);
-    }
 }
 
 static void alsa_stop_capture(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
     data->doCapture = 0;
-    if(!data->thread)
-        psnd_pcm_drain(data->pcmHandle);
 }
 
 static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
-    const snd_pcm_channel_area_t *areas = NULL;
-    snd_pcm_sframes_t frames, commitres;
-    snd_pcm_uframes_t size, offset;
-    snd_pcm_state_t state;
-    int err;
 
-    if(data->thread)
-    {
-        if(lSamples <= (ALCuint)RingBufferSize(data->ring))
-            ReadRingBuffer(data->ring, pBuffer, lSamples);
-        else
-            SetALCError(ALC_INVALID_VALUE);
-        return;
-    }
-
-    state = psnd_pcm_state(data->pcmHandle);
-    if(state == SND_PCM_STATE_XRUN)
-    {
-        err = xrun_recovery(data->pcmHandle, -EPIPE);
-        if(err < 0)
-        {
-            AL_PRINT("XRUN recovery failed: %s\n", psnd_strerror(err));
-            return;
-        }
-    }
-
-    frames = psnd_pcm_avail_update(data->pcmHandle);
-    if(frames < 0)
-    {
-        err = xrun_recovery(data->pcmHandle, frames);
-        if (err < 0)
-            AL_PRINT("available update failed: %s\n", psnd_strerror(err));
-        else
-            frames = psnd_pcm_avail_update(data->pcmHandle);
-    }
-    if (frames < (snd_pcm_sframes_t)lSamples)
-    {
+    if(lSamples <= (ALCuint)RingBufferSize(data->ring))
+        ReadRingBuffer(data->ring, pBuffer, lSamples);
+    else
         SetALCError(ALC_INVALID_VALUE);
-        return;
-    }
-
-    // it is possible that contiguous areas are smaller, thus we use a loop
-    while (lSamples > 0)
-    {
-        char *Pointer;
-        int Count;
-
-        size = lSamples;
-        err = psnd_pcm_mmap_begin(data->pcmHandle, &areas, &offset, &size);
-        if (err < 0)
-        {
-            err = xrun_recovery(data->pcmHandle, err);
-            if (err < 0)
-            {
-                AL_PRINT("mmap begin error: %s\n", psnd_strerror(err));
-                break;
-            }
-            continue;
-        }
-
-        Pointer = (char*)areas->addr + (offset * areas->step / 8);
-        Count = psnd_pcm_frames_to_bytes(data->pcmHandle, size);
-
-        memcpy(pBuffer, Pointer, Count);
-        pBuffer = (char*)pBuffer + Count;
-
-        commitres = psnd_pcm_mmap_commit(data->pcmHandle, offset, size);
-        if (commitres < 0 || (commitres-size) != 0)
-        {
-           AL_PRINT("mmap commit error: %s\n",
-                    psnd_strerror(commitres >= 0 ? -EPIPE : commitres));
-           break;
-        }
-
-        lSamples -= size;
-    }
 }
 
 static ALCuint alsa_available_samples(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
-    snd_pcm_sframes_t frames;
-    snd_pcm_state_t state;
-    int err;
-
-    if(data->thread)
-        return RingBufferSize(data->ring);
-
-    state = psnd_pcm_state(data->pcmHandle);
-    if(state == SND_PCM_STATE_XRUN)
-    {
-        err = xrun_recovery(data->pcmHandle, -EPIPE);
-        if(err >= 0)
-        {
-            if(data->doCapture)
-                err = psnd_pcm_start(data->pcmHandle);
-        }
-        if (err < 0)
-        {
-            AL_PRINT("XRUN recovery failed: %s\n", psnd_strerror(err));
-            return 0;
-        }
-    }
-
-    frames = psnd_pcm_avail_update(data->pcmHandle);
-    if(frames < 0)
-    {
-        err = xrun_recovery(data->pcmHandle, frames);
-        if (err < 0)
-            AL_PRINT("available update failed: %s\n", psnd_strerror(err));
-        else
-            frames = psnd_pcm_avail_update(data->pcmHandle);
-    }
-    return max(frames, 0);
+    return RingBufferSize(data->ring);
 }
 
 

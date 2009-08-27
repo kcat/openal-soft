@@ -43,33 +43,34 @@
 static struct {
     const char *name;
     void (*Init)(BackendFuncs*);
+    void (*Deinit)(void);
     BackendFuncs Funcs;
 } BackendList[] = {
 #ifdef HAVE_ALSA
-    { "alsa", alc_alsa_init, EmptyFuncs },
+    { "alsa", alc_alsa_init, alc_alsa_deinit, EmptyFuncs },
 #endif
 #ifdef HAVE_OSS
-    { "oss", alc_oss_init, EmptyFuncs },
+    { "oss", alc_oss_init, alc_oss_deinit, EmptyFuncs },
 #endif
 #ifdef HAVE_SOLARIS
-    { "solaris", alc_solaris_init, EmptyFuncs },
+    { "solaris", alc_solaris_init, alc_solaris_deinit, EmptyFuncs },
 #endif
 #ifdef HAVE_DSOUND
-    { "dsound", alcDSoundInit, EmptyFuncs },
+    { "dsound", alcDSoundInit, alcDSoundDeinit, EmptyFuncs },
 #endif
 #ifdef HAVE_WINMM
-    { "winmm", alcWinMMInit, EmptyFuncs },
+    { "winmm", alcWinMMInit, alcWinMMDeinit, EmptyFuncs },
 #endif
 #ifdef HAVE_PORTAUDIO
-    { "port", alc_pa_init, EmptyFuncs },
+    { "port", alc_pa_init, alc_pa_deinit, EmptyFuncs },
 #endif
 #ifdef HAVE_PULSEAUDIO
-    { "pulse", alc_pulse_init, EmptyFuncs },
+    { "pulse", alc_pulse_init, alc_pulse_deinit, EmptyFuncs },
 #endif
 
-    { "wave", alc_wave_init, EmptyFuncs },
+    { "wave", alc_wave_init, alc_wave_deinit, EmptyFuncs },
 
-    { NULL, NULL, EmptyFuncs }
+    { NULL, NULL, NULL, EmptyFuncs }
 };
 #undef EmptyFuncs
 
@@ -204,6 +205,8 @@ static ALboolean init_done = AL_FALSE;
 #ifdef _WIN32
 BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 {
+    int i;
+
     (void)lpReserved;
 
     // Perform actions based on the reason for calling.
@@ -217,6 +220,10 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             if(!init_done)
                 break;
             ReleaseALC();
+
+            for(i = 0;BackendList[i].Deinit;i++)
+                BackendList[i].Deinit();
+
             FreeALConfig();
             ALTHUNK_EXIT();
             DeleteCriticalSection(&g_csMutex);
@@ -230,10 +237,16 @@ static void my_deinit() __attribute__((destructor));
 static void my_deinit()
 {
     static ALenum once = AL_FALSE;
+    int i;
+
     if(once || !init_done) return;
     once = AL_TRUE;
 
     ReleaseALC();
+
+    for(i = 0;BackendList[i].Deinit;i++)
+        BackendList[i].Deinit();
+
     FreeALConfig();
     ALTHUNK_EXIT();
     DeleteCriticalSection(&g_csMutex);

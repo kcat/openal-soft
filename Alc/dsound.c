@@ -505,3 +505,7 @@ LOAD_FUNC(DirectSoundEnumerateA);
     if(FAILED(hr))
         AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
 }
+
+void alcDSoundDeinit(void)
+{
+}

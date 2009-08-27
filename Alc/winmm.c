@@ -440,3 +440,7 @@ void alcWinMMInit(BackendFuncs *FuncList)
         }
     }
 }
+
+void alcWinMMDeinit()
+{
+}

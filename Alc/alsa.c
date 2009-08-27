@@ -996,3 +996,7 @@ next_card:
     psnd_pcm_info_free(pcminfo);
     psnd_ctl_card_info_free(info);
 }
+
+void alc_alsa_deinit(void)
+{
+}

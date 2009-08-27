@@ -282,3 +282,7 @@ void alc_solaris_init(BackendFuncs *func_list)
     solaris_device = AppendDeviceList("Solaris Software");
     AppendAllDeviceList(solaris_device);
 }
+
+void alc_solaris_deinit(void)
+{
+}

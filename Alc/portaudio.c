@@ -251,3 +251,7 @@ void alc_pa_init(BackendFuncs *func_list)
     pa_device = AppendDeviceList("PortAudio Software");
     AppendAllDeviceList(pa_device);
 }
+
+void alc_pa_deinit(void)
+{
+}

@@ -479,3 +479,7 @@ void alc_oss_init(BackendFuncs *func_list)
 
     oss_device_capture = AppendCaptureDeviceList("OSS Capture");
 }
+
+void alc_oss_deinit(void)
+{
+}

@@ -160,13 +160,21 @@ typedef struct {
 } BackendFuncs;
 
 void alc_alsa_init(BackendFuncs *func_list);
+void alc_alsa_deinit(void);
 void alc_oss_init(BackendFuncs *func_list);
+void alc_oss_deinit(void);
 void alc_solaris_init(BackendFuncs *func_list);
+void alc_solaris_deinit(void);
 void alcDSoundInit(BackendFuncs *func_list);
+void alcDSoundDeinit(void);
 void alcWinMMInit(BackendFuncs *FuncList);
+void alcWinMMDeinit(void);
 void alc_pa_init(BackendFuncs *func_list);
+void alc_pa_deinit(void);
 void alc_wave_init(BackendFuncs *func_list);
+void alc_wave_deinit(void);
 void alc_pulse_init(BackendFuncs *func_list);
+void alc_pulse_deinit(void);
 
 
 struct ALCdevice_struct

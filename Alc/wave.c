@@ -370,3 +370,7 @@ void alc_wave_init(BackendFuncs *func_list)
     waveDevice = AppendDeviceList("Wave File Writer");
     AppendAllDeviceList(waveDevice);
 }
+
+void alc_wave_deinit(void)
+{
+}

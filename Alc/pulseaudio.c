@@ -701,4 +701,8 @@ LOAD_FUNC(pa_threaded_mainloop_lock);
 
     pulse_capture_device = AppendCaptureDeviceList("PulseAudio Capture");
 } //}}}
+
+void alc_pulse_deinit(void) //{{{
+{
+} //}}}
 //}}}

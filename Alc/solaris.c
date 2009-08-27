@@ -37,7 +37,7 @@
 #include <sys/audioio.h>
 
 
-static char *solaris_device;
+static const ALCchar solaris_device[] = "Solaris Software";
 
 typedef struct {
     int fd;
@@ -279,7 +279,7 @@ void alc_solaris_init(BackendFuncs *func_list)
 {
     *func_list = solaris_funcs;
 
-    solaris_device = AppendDeviceList("Solaris Software");
+    AppendDeviceList(solaris_device);
     AppendAllDeviceList(solaris_device);
 }
 

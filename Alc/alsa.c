@@ -108,11 +108,13 @@ MAKE_FUNC(snd_ctl_card_info_get_name);
 MAKE_FUNC(snd_card_next);
 #undef MAKE_FUNC
 
-#define MAX_ALL_DEVICES 32
 
-static ALCchar *alsaDevice;
-static DevMap allDevNameMap[MAX_ALL_DEVICES];
-static DevMap allCaptureDevNameMap[MAX_ALL_DEVICES];
+static const ALCchar alsaDevice[] = "ALSA Software";
+static DevMap *allDevNameMap;
+static ALuint numDevNames;
+static DevMap *allCaptureDevNameMap;
+static ALuint numCaptureDevNames;
+
 
 static int xrun_recovery(snd_pcm_t *handle, int err)
 {
@@ -363,7 +365,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     {
         size_t idx;
 
-        for(idx = 0;idx < MAX_ALL_DEVICES;idx++)
+        for(idx = 0;idx < numDevNames;idx++)
         {
             if(allDevNameMap[idx].name &&
                strcmp(deviceName, allDevNameMap[idx].name) == 0)
@@ -597,7 +599,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     {
         size_t idx;
 
-        for(idx = 0;idx < MAX_ALL_DEVICES;idx++)
+        for(idx = 0;idx < numCaptureDevNames;idx++)
         {
             if(allCaptureDevNameMap[idx].name &&
                strcmp(deviceName, allCaptureDevNameMap[idx].name) == 0)
@@ -885,8 +887,10 @@ LOAD_FUNC(snd_card_next);
     if(psnd_card_next(&card) < 0 || card < 0)
         AL_PRINT("no playback cards found...\n");
 
-    alsaDevice = AppendDeviceList("ALSA Software");
-    allDevNameMap[0].name = AppendAllDeviceList("ALSA Software on default");
+    AppendDeviceList(alsaDevice);
+    allDevNameMap = malloc(sizeof(DevMap) * 1);
+    allDevNameMap[0].name = strdup("ALSA Software on default");
+    AppendAllDeviceList(allDevNameMap[0].name);
 
     while (card >= 0) {
         sprintf(name, "hw:%d", card);
@@ -901,8 +905,9 @@ LOAD_FUNC(snd_card_next);
         }
 
         dev = -1;
-        while (idx < MAX_ALL_DEVICES) {
+        while(1) {
             const char *cname, *dname;
+            void *temp;
 
             if (psnd_ctl_pcm_next_device(handle, &dev)<0)
                 AL_PRINT("snd_ctl_pcm_next_device failed\n");
@@ -918,14 +923,20 @@ LOAD_FUNC(snd_card_next);
                 continue;
             }
 
-            cname = psnd_ctl_card_info_get_name(info);
-            dname = psnd_pcm_info_get_name(pcminfo);
-            snprintf(name, sizeof(name), "ALSA Software on %s [%s] (hw:%d,%d)",
-                     cname, dname, card, dev);
-            allDevNameMap[idx].name = AppendAllDeviceList(name);
-            allDevNameMap[idx].card = card;
-            allDevNameMap[idx].dev = dev;
-            idx++;
+            temp = realloc(allDevNameMap, sizeof(DevMap) * (idx+1));
+            if(temp)
+            {
+                allDevNameMap = temp;
+                cname = psnd_ctl_card_info_get_name(info);
+                dname = psnd_pcm_info_get_name(pcminfo);
+                snprintf(name, sizeof(name), "ALSA Software on %s [%s] (hw:%d,%d)",
+                         cname, dname, card, dev);
+                AppendAllDeviceList(name);
+                allDevNameMap[idx].name = strdup(name);
+                allDevNameMap[idx].card = card;
+                allDevNameMap[idx].dev = dev;
+                idx++;
+            }
         }
         psnd_ctl_close(handle);
 next_card:
@@ -934,6 +945,7 @@ next_card:
             break;
         }
     }
+    numDevNames = idx;
 
 
     stream = SND_PCM_STREAM_CAPTURE;
@@ -946,9 +958,11 @@ next_card:
         return;
     }
 
-    allCaptureDevNameMap[0].name = AppendCaptureDeviceList("ALSA Capture on default");
-    idx = 1;
+    allCaptureDevNameMap = malloc(sizeof(DevMap) * 1);
+    allCaptureDevNameMap[0].name = strdup("ALSA Capture on default");
+    AppendCaptureDeviceList(allCaptureDevNameMap[0].name);
 
+    idx = 1;
     while (card >= 0) {
         sprintf(name, "hw:%d", card);
         handle = NULL;
@@ -961,8 +975,9 @@ next_card:
         else if (err >= 0)
         {
             dev = -1;
-            while (idx < MAX_ALL_DEVICES) {
+            while(1) {
                 const char *cname, *dname;
+                void *temp;
 
                 if (psnd_ctl_pcm_next_device(handle, &dev)<0)
                     AL_PRINT("snd_ctl_pcm_next_device failed\n");
@@ -977,14 +992,20 @@ next_card:
                     continue;
                 }
 
-                cname = psnd_ctl_card_info_get_name(info);
-                dname = psnd_pcm_info_get_name(pcminfo);
-                snprintf(name, sizeof(name), "ALSA Capture on %s [%s] (hw:%d,%d)",
-                         cname, dname, card, dev);
-                allCaptureDevNameMap[idx].name = AppendCaptureDeviceList(name);
-                allCaptureDevNameMap[idx].card = card;
-                allCaptureDevNameMap[idx].dev = dev;
-                idx++;
+                temp = realloc(allCaptureDevNameMap, sizeof(DevMap) * (idx+1));
+                if(temp)
+                {
+                    allCaptureDevNameMap = temp;
+                    cname = psnd_ctl_card_info_get_name(info);
+                    dname = psnd_pcm_info_get_name(pcminfo);
+                    snprintf(name, sizeof(name), "ALSA Capture on %s [%s] (hw:%d,%d)",
+                             cname, dname, card, dev);
+                    AppendCaptureDeviceList(name);
+                    allCaptureDevNameMap[idx].name = strdup(name);
+                    allCaptureDevNameMap[idx].card = card;
+                    allCaptureDevNameMap[idx].dev = dev;
+                    idx++;
+                }
             }
         }
         if(handle) psnd_ctl_close(handle);
@@ -993,10 +1014,30 @@ next_card:
             break;
         }
     }
+    numCaptureDevNames = idx;
+
     psnd_pcm_info_free(pcminfo);
     psnd_ctl_card_info_free(info);
 }
 
 void alc_alsa_deinit(void)
 {
+    ALuint i;
+
+    for(i = 0;i < numDevNames;++i)
+        free(allDevNameMap[i].name);
+    free(allDevNameMap);
+    allDevNameMap = NULL;
+    numDevNames = 0;
+
+    for(i = 0;i < numCaptureDevNames;++i)
+        free(allCaptureDevNameMap[i].name);
+    free(allCaptureDevNameMap);
+    allCaptureDevNameMap = NULL;
+    numCaptureDevNames = 0;
+
+#ifdef HAVE_DLFCN_H
+    dlclose(alsa_handle);
+    alsa_handle = NULL;
+#endif
 }

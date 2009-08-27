@@ -47,8 +47,8 @@
 #define SOUND_MIXER_WRITE MIXER_WRITE
 #endif
 
-static char *oss_device;
-static char *oss_device_capture;
+static const ALCchar oss_device[] = "OSS Software";
+static const ALCchar oss_device_capture[] = "OSS Capture";
 
 typedef struct {
     int fd;
@@ -474,10 +474,10 @@ void alc_oss_init(BackendFuncs *func_list)
 {
     *func_list = oss_funcs;
 
-    oss_device = AppendDeviceList("OSS Software");
+    AppendDeviceList(oss_device);
     AppendAllDeviceList(oss_device);
 
-    oss_device_capture = AppendCaptureDeviceList("OSS Capture");
+    AppendCaptureDeviceList(oss_device_capture);
 }
 
 void alc_oss_deinit(void)

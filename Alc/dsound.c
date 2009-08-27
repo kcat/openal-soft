@@ -69,7 +69,8 @@ typedef struct {
     ALCchar *name;
     GUID guid;
 } DevMap;
-static DevMap DeviceList[16];
+static DevMap *DeviceList;
+static ALuint NumDevices;
 
 
 static ALuint DSoundProc(ALvoid *ptr)
@@ -447,26 +448,33 @@ BackendFuncs DSoundFuncs = {
 
 static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
 {
-    size_t *iter = data;
+    (void)data;
     (void)drvname;
 
     if(guid)
     {
         char str[128];
-        snprintf(str, sizeof(str), "DirectSound Software on %s", desc);
-        DeviceList[*iter].name = AppendAllDeviceList(str);
-        DeviceList[*iter].guid = *guid;
-        (*iter)++;
+        void *temp;
+
+        temp = realloc(DeviceList, sizeof(DevMap) * (NumDevices+1));
+        if(temp)
+        {
+            DeviceList = temp;
+
+            snprintf(str, sizeof(str), "DirectSound Software on %s", desc);
+            AppendAllDeviceList(str);
+
+            DeviceList[NumDevices].name = strdup(str);
+            DeviceList[NumDevices].guid = *guid;
+            NumDevices++;
+        }
     }
-    else
-        DeviceList[0].name = AppendDeviceList("DirectSound Software");
 
     return TRUE;
 }
 
 void alcDSoundInit(BackendFuncs *FuncList)
 {
-    size_t iter = 1;
     HRESULT hr;
 
     *FuncList = DSoundFuncs;
@@ -501,11 +509,29 @@ LOAD_FUNC(DirectSoundEnumerateA);
     num_frags = GetConfigValueInt("dsound", "periods", 4);
     if(num_frags < 2) num_frags = 2;
 
-    hr = pDirectSoundEnumerateA(DSoundEnumDevices, &iter);
+    DeviceList = malloc(sizeof(DevMap) * 1);
+    DeviceList[0].name = strdup("DirectSound Software");
+    NumDevices = 1;
+
+    AppendDeviceList(DeviceList[0].name);
+
+    hr = pDirectSoundEnumerateA(DSoundEnumDevices, NULL);
     if(FAILED(hr))
         AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
 }
 
 void alcDSoundDeinit(void)
 {
+    ALuint i;
+
+    for(i = 0;i < NumDevices;++i)
+        free(DeviceList[i].name);
+    free(DeviceList);
+    DeviceList = NULL;
+    NumDevices = 0;
+
+#ifdef _WIN32
+    FreeLibrary(ds_handle);
+    ds_handle = NULL;
+#endif
 }

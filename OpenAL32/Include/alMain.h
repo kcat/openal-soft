@@ -187,7 +187,7 @@ struct ALCdevice_struct
     ALuint       BufferSize;
     ALenum       Format;
 
-    ALCchar      *szDeviceName;
+    const ALCchar *szDeviceName;
 
     // Maximum number of sources that can be created
     ALuint       MaxNoOfSources;
@@ -273,9 +273,9 @@ struct ALCcontext_struct
 
 ALCvoid ReleaseALC(ALCvoid);
 
-ALCchar *AppendDeviceList(char *name);
-ALCchar *AppendAllDeviceList(char *name);
-ALCchar *AppendCaptureDeviceList(char *name);
+void AppendDeviceList(const ALCchar *name);
+void AppendAllDeviceList(const ALCchar *name);
+void AppendCaptureDeviceList(const ALCchar *name);
 
 ALCvoid SetALCError(ALenum errorCode);
 

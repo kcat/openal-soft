@@ -40,7 +40,7 @@ typedef struct {
 } wave_data;
 
 
-static ALCchar *waveDevice;
+static const ALCchar waveDevice[] = "Wave File Writer";
 
 
 static ALuint WaveProc(ALvoid *ptr)
@@ -367,7 +367,7 @@ void alc_wave_init(BackendFuncs *func_list)
 {
     *func_list = wave_funcs;
 
-    waveDevice = AppendDeviceList("Wave File Writer");
+    AppendDeviceList(waveDevice);
     AppendAllDeviceList(waveDevice);
 }
 

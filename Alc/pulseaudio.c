@@ -108,8 +108,8 @@ typedef struct {
     pa_context *context;
 } pulse_data;
 
-static char *pulse_device;
-static char *pulse_capture_device;
+static const ALCchar pulse_device[] = "PulseAudio Software";
+static const ALCchar pulse_capture_device[] = "PulseAudio Capture";
 
 // PulseAudio Event Callbacks {{{
 static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
@@ -205,7 +205,7 @@ static void stream_read_callback(pa_stream *stream, size_t length, void *pdata) 
 } //}}}
 //}}}
 
-static ALCboolean pulse_open(ALCdevice *device, ALCchar *device_name) //{{{
+static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{{
 {
     pulse_data *data = ppa_xmalloc0(sizeof(pulse_data));
 
@@ -696,10 +696,10 @@ LOAD_FUNC(pa_threaded_mainloop_lock);
 
 #undef LOAD_FUNC
 
-    pulse_device = AppendDeviceList("PulseAudio Software");
+    AppendDeviceList(pulse_device);
     AppendAllDeviceList(pulse_device);
 
-    pulse_capture_device = AppendCaptureDeviceList("PulseAudio Capture");
+    AppendCaptureDeviceList(pulse_capture_device);
 } //}}}
 
 void alc_pulse_deinit(void) //{{{

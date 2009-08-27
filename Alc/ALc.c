@@ -351,43 +351,37 @@ static void InitAL(void)
     }
 }
 
-ALCchar *AppendDeviceList(char *name)
+void AppendDeviceList(const ALCchar *name)
 {
     static size_t pos;
-    ALCchar *ret = alcDeviceList+pos;
     if(pos >= sizeof(alcDeviceList))
     {
         AL_PRINT("Not enough room to add %s!\n", name);
-        return alcDeviceList + sizeof(alcDeviceList) - 1;
+        return;
     }
     pos += snprintf(alcDeviceList+pos, sizeof(alcDeviceList)-pos-1, "%s", name) + 1;
-    return ret;
 }
 
-ALCchar *AppendAllDeviceList(char *name)
+void AppendAllDeviceList(const ALCchar *name)
 {
     static size_t pos;
-    ALCchar *ret = alcAllDeviceList+pos;
     if(pos >= sizeof(alcAllDeviceList))
     {
         AL_PRINT("Not enough room to add %s!\n", name);
-        return alcAllDeviceList + sizeof(alcAllDeviceList) - 1;
+        return;
     }
     pos += snprintf(alcAllDeviceList+pos, sizeof(alcAllDeviceList)-pos-1, "%s", name) + 1;
-    return ret;
 }
 
-ALCchar *AppendCaptureDeviceList(char *name)
+void AppendCaptureDeviceList(const ALCchar *name)
 {
     static size_t pos;
-    ALCchar *ret = alcCaptureDeviceList+pos;
     if(pos >= sizeof(alcCaptureDeviceList))
     {
         AL_PRINT("Not enough room to add %s!\n", name);
-        return alcCaptureDeviceList + sizeof(alcCaptureDeviceList) - 1;
+        return;
     }
     pos += snprintf(alcCaptureDeviceList+pos, sizeof(alcCaptureDeviceList)-pos-1, "%s", name) + 1;
-    return ret;
 }
 
 /*

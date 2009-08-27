@@ -44,7 +44,7 @@ MAKE_FUNC(Pa_GetDefaultOutputDevice);
 #undef MAKE_FUNC
 
 
-static char *pa_device;
+static const ALCchar pa_device[] = "PortAudio Software";
 
 typedef struct {
     PaStream *stream;
@@ -248,7 +248,7 @@ void alc_pa_init(BackendFuncs *func_list)
         return;
     }
 
-    pa_device = AppendDeviceList("PortAudio Software");
+    AppendDeviceList(pa_device);
     AppendAllDeviceList(pa_device);
 }
 

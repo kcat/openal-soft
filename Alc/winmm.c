@@ -50,7 +50,8 @@ typedef struct {
 } WinMMData;
 
 
-static ALCchar *CaptureDeviceList[16];
+static ALCchar **CaptureDeviceList;
+static ALuint  NumCaptureDevices;
 
 /*
     WaveInProc
@@ -181,12 +182,12 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     WinMMData *pData = NULL;
     ALint lDeviceID = 0;
     ALint lBufferSize;
-    ALint i;
+    ALuint i;
 
     // Find the Device ID matching the deviceName if valid
     if (deviceName)
     {
-        for(i = 0;CaptureDeviceList[i];i++)
+        for(i = 0;i < NumCaptureDevices;i++)
         {
             if (!strcmp(deviceName, CaptureDeviceList[i]))
             {
@@ -194,7 +195,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
                 break;
             }
         }
-        if(!CaptureDeviceList[i])
+        if(i == NumCaptureDevices)
             return ALC_FALSE;
     }
     pDevice->szDeviceName = CaptureDeviceList[lDeviceID];
@@ -423,24 +424,35 @@ BackendFuncs WinMMFuncs = {
 
 void alcWinMMInit(BackendFuncs *FuncList)
 {
-    ALint lNumDevs;
-    ALint lLoop;
+    ALuint lLoop;
 
     *FuncList = WinMMFuncs;
 
-    lNumDevs = waveInGetNumDevs();
-    for (lLoop = 0; lLoop < lNumDevs; lLoop++)
+    NumCaptureDevices = waveInGetNumDevs();
+    CaptureDeviceList = malloc(sizeof(ALCchar*) * NumCaptureDevices);
+    for(lLoop = 0; lLoop < NumCaptureDevices; lLoop++)
     {
         WAVEINCAPS WaveInCaps;
+
+        CaptureDeviceList[lLoop] = strdup("");
         if(waveInGetDevCaps(lLoop, &WaveInCaps, sizeof(WAVEINCAPS)) == MMSYSERR_NOERROR)
         {
             char name[128];
             snprintf(name, sizeof(name), "WaveIn on %s", WaveInCaps.szPname);
-            CaptureDeviceList[lLoop] = AppendCaptureDeviceList(name);
+            AppendCaptureDeviceList(name);
+            CaptureDeviceList[lLoop] = strdup(name);
         }
     }
 }
 
 void alcWinMMDeinit()
 {
+    ALuint lLoop;
+
+    for(lLoop = 0; lLoop < NumCaptureDevices; lLoop++)
+        free(CaptureDeviceList[lLoop]);
+    free(CaptureDeviceList);
+    CaptureDeviceList = NULL;
+
+    NumCaptureDevices = 0;
 }

@@ -81,7 +81,7 @@ static ALuint OSSProc(ALvoid *ptr)
     oss_data *data = (oss_data*)pDevice->ExtraData;
     int wrote;
 
-    while(!data->killNow)
+    while(!data->killNow && !pDevice->Connected)
     {
         ALint len = data->data_size;
         ALubyte *WritePtr = data->mix_data;
@@ -98,6 +98,7 @@ static ALuint OSSProc(ALvoid *ptr)
                 if(errno != EAGAIN && errno != EWOULDBLOCK)
                 {
                     AL_PRINT("write failed: %s\n", strerror(errno));
+                    aluHandleDisconnect(pDevice);
                     len = 0;
                 }
                 else
@@ -129,6 +130,7 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
         if(amt < 0)
         {
             AL_PRINT("read failed: %s\n", strerror(errno));
+            aluHandleDisconnect(pDevice);
             break;
         }
         if(amt == 0)

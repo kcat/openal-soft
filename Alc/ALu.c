@@ -1385,3 +1385,39 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
 
     ProcessContext(ALContext);
 }
+
+ALvoid aluHandleDisconnect(ALCdevice *device)
+{
+    if(!device->IsCaptureDevice)
+    {
+        ALsource *source = NULL;
+
+        SuspendContext(device->Context);
+        if(device->Context)
+            source = device->Context->Source;
+
+        while(source)
+        {
+            if(source->state == AL_PLAYING)
+            {
+                ALbufferlistitem *BufferListItem;
+
+                source->state = AL_STOPPED;
+                source->inuse = AL_FALSE;
+                source->BuffersPlayed = source->BuffersInQueue;
+                BufferListItem = source->queue;
+                while(BufferListItem != NULL)
+                {
+                    BufferListItem->bufferstate = PROCESSED;
+                    BufferListItem = BufferListItem->next;
+                }
+                source->position = 0;
+                source->position_fraction = 0;
+            }
+            source = source->next;
+        }
+        ProcessContext(device->Context);
+    }
+
+    device->Connected = ALC_FALSE;
+}

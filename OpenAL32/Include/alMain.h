@@ -171,6 +171,7 @@ void alc_pulse_init(BackendFuncs *func_list);
 
 struct ALCdevice_struct
 {
+    ALCboolean   Connected;
     ALboolean    IsCaptureDevice;
 
     ALuint       Frequency;

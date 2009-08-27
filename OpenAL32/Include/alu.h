@@ -147,6 +147,7 @@ static __inline ALuint aluChannelsFromFormat(ALenum format)
 
 ALvoid aluInitPanning(ALCcontext *Context);
 ALvoid aluMixData(ALCcontext *context,ALvoid *buffer,ALsizei size,ALenum format);
+ALvoid aluHandleDisconnect(ALCdevice *device);
 
 #ifdef __cplusplus
 }

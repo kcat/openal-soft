@@ -169,7 +169,7 @@ static ALCchar *alcDefaultAllDeviceSpecifier = alcAllDeviceList;
 static ALCchar *alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList;
 
 
-static ALCchar alcExtensionList[] = "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE ALC_EXT_EFX";
+static ALCchar alcExtensionList[] = "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE ALC_EXT_disconnect ALC_EXT_EFX";
 static ALCint alcMajorVersion = 1;
 static ALCint alcMinorVersion = 1;
 
@@ -576,6 +576,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
         memset(pDevice, 0, sizeof(ALCdevice));
 
         //Validate device
+        pDevice->Connected = ALC_TRUE;
         pDevice->IsCaptureDevice = AL_TRUE;
 
         pDevice->Frequency = frequency;
@@ -808,6 +809,13 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                 SetALCError(ALC_INVALID_VALUE);
             break;
 
+        case ALC_CONNECTED:
+            if(size <= 0)
+                SetALCError(ALC_INVALID_VALUE);
+            else
+                *data = device->Connected;
+            break;
+
         default:
             SetALCError(ALC_INVALID_ENUM);
             break;
@@ -944,6 +952,15 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
                         *data = device->lNumStereoSources;
                     break;
 
+                case ALC_CONNECTED:
+                    if(!IsDevice(device))
+                        SetALCError(ALC_INVALID_DEVICE);
+                    else if(size <= 0)
+                        SetALCError(ALC_INVALID_VALUE);
+                    else
+                        *data = device->Connected;
+                    break;
+
                 default:
                     SetALCError(ALC_INVALID_ENUM);
                     break;
@@ -1058,7 +1075,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
     ALuint      ulAttributeIndex, ulRequestedStereoSources;
     ALuint      RequestedSends;
 
-    if(IsDevice(device) && !device->IsCaptureDevice)
+    if(IsDevice(device) && !device->IsCaptureDevice && device->Connected)
     {
         // Reset Context Last Error code
         g_eLastContextError = ALC_NO_ERROR;
@@ -1351,6 +1368,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         memset(device, 0, sizeof(ALCdevice));
 
         //Validate device
+        device->Connected = ALC_TRUE;
         device->IsCaptureDevice = AL_FALSE;
 
         //Set output format

@@ -1347,6 +1347,22 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                     // Check if an Offset has been set
                     if(pSource->lOffset)
                         ApplyOffset(pSource, AL_FALSE);
+
+                    // If device is disconnected, go right to stopped
+                    if(!pContext->Device->Connected)
+                    {
+                        pSource->state = AL_STOPPED;
+                        pSource->inuse = AL_FALSE;
+                        pSource->BuffersPlayed = pSource->BuffersInQueue;
+                        ALBufferList = pSource->queue;
+                        while(ALBufferList != NULL)
+                        {
+                            ALBufferList->bufferstate = PROCESSED;
+                            ALBufferList = ALBufferList->next;
+                        }
+                        pSource->position = 0;
+                        pSource->position_fraction = 0;
+                    }
                 }
                 else
                 {

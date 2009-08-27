@@ -278,11 +278,16 @@ BackendFuncs solaris_funcs = {
 void alc_solaris_init(BackendFuncs *func_list)
 {
     *func_list = solaris_funcs;
-
-    AppendDeviceList(solaris_device);
-    AppendAllDeviceList(solaris_device);
 }
 
 void alc_solaris_deinit(void)
 {
+}
+
+void alc_solaris_probe(ALCboolean capture)
+{
+    if(type == DEVICE_PROBE)
+        AppendDeviceList(solaris_device);
+    else if(type == ALL_DEVICE_PROBE)
+        AppendAllDeviceList(solaris_device);
 }

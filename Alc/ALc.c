@@ -44,33 +44,34 @@ static struct {
     const char *name;
     void (*Init)(BackendFuncs*);
     void (*Deinit)(void);
+    void (*Probe)(int);
     BackendFuncs Funcs;
 } BackendList[] = {
 #ifdef HAVE_ALSA
-    { "alsa", alc_alsa_init, alc_alsa_deinit, EmptyFuncs },
+    { "alsa", alc_alsa_init, alc_alsa_deinit, alc_alsa_probe, EmptyFuncs },
 #endif
 #ifdef HAVE_OSS
-    { "oss", alc_oss_init, alc_oss_deinit, EmptyFuncs },
+    { "oss", alc_oss_init, alc_oss_deinit, alc_oss_probe, EmptyFuncs },
 #endif
 #ifdef HAVE_SOLARIS
-    { "solaris", alc_solaris_init, alc_solaris_deinit, EmptyFuncs },
+    { "solaris", alc_solaris_init, alc_solaris_deinit, alc_solaris_probe, EmptyFuncs },
 #endif
 #ifdef HAVE_DSOUND
-    { "dsound", alcDSoundInit, alcDSoundDeinit, EmptyFuncs },
+    { "dsound", alcDSoundInit, alcDSoundDeinit, alcDSoundProbe, EmptyFuncs },
 #endif
 #ifdef HAVE_WINMM
-    { "winmm", alcWinMMInit, alcWinMMDeinit, EmptyFuncs },
+    { "winmm", alcWinMMInit, alcWinMMDeinit, alcWinMMProbe, EmptyFuncs },
 #endif
 #ifdef HAVE_PORTAUDIO
-    { "port", alc_pa_init, alc_pa_deinit, EmptyFuncs },
+    { "port", alc_pa_init, alc_pa_deinit, alc_pa_probe, EmptyFuncs },
 #endif
 #ifdef HAVE_PULSEAUDIO
-    { "pulse", alc_pulse_init, alc_pulse_deinit, EmptyFuncs },
+    { "pulse", alc_pulse_init, alc_pulse_deinit, alc_pulse_probe, EmptyFuncs },
 #endif
 
-    { "wave", alc_wave_init, alc_wave_deinit, EmptyFuncs },
+    { "wave", alc_wave_init, alc_wave_deinit, alc_wave_probe, EmptyFuncs },
 
-    { NULL, NULL, NULL, EmptyFuncs }
+    { NULL, NULL, NULL, NULL, EmptyFuncs }
 };
 #undef EmptyFuncs
 
@@ -258,6 +259,45 @@ static void my_deinit()
 #endif
 #endif
 
+static void ProbeDeviceList()
+{
+    ALint i;
+
+    free(alcDeviceList); alcDeviceList = NULL;
+    alcDeviceListSize = 0;
+
+    for(i = 0;BackendList[i].Probe;i++)
+        BackendList[i].Probe(DEVICE_PROBE);
+
+    alcDefaultDeviceSpecifier = alcDeviceList;
+}
+
+static void ProbeAllDeviceList()
+{
+    ALint i;
+
+    free(alcAllDeviceList); alcAllDeviceList = NULL;
+    alcAllDeviceListSize = 0;
+
+    for(i = 0;BackendList[i].Probe;i++)
+        BackendList[i].Probe(ALL_DEVICE_PROBE);
+
+    alcDefaultAllDeviceSpecifier = alcAllDeviceList;
+}
+
+static void ProbeCaptureDeviceList()
+{
+    ALint i;
+
+    free(alcCaptureDeviceList); alcCaptureDeviceList = NULL;
+    alcCaptureDeviceListSize = 0;
+
+    for(i = 0;BackendList[i].Probe;i++)
+        BackendList[i].Probe(CAPTURE_DEVICE_PROBE);
+
+    alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList;
+}
+
 static void InitAL(void)
 {
     if(!init_done)
@@ -312,7 +352,13 @@ static void InitAL(void)
         }
 
         for(i = 0;BackendList[i].Init;i++)
+        {
             BackendList[i].Init(&BackendList[i].Funcs);
+
+            BackendList[i].Probe(DEVICE_PROBE);
+            BackendList[i].Probe(ALL_DEVICE_PROBE);
+            BackendList[i].Probe(CAPTURE_DEVICE_PROBE);
+        }
 
         /* Default is always the first in the list */
         alcDefaultDeviceSpecifier = alcDeviceList;
@@ -359,6 +405,7 @@ static void InitAL(void)
         }
     }
 }
+
 
 #define DECL_APPEND_LIST_FUNC(type)                                          \
 void Append##type##List(const ALCchar *name)                                 \
@@ -764,10 +811,14 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         if(IsDevice(pDevice))
             value = pDevice->szDeviceName;
         else
+        {
+            ProbeDeviceList();
             value = alcDeviceList;
+        }
         break;
 
     case ALC_ALL_DEVICES_SPECIFIER:
+        ProbeAllDeviceList();
         value = alcAllDeviceList;
         break;
 
@@ -779,7 +830,10 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         if(IsDevice(pDevice))
             value = pDevice->szDeviceName;
         else
+        {
+            ProbeCaptureDeviceList();
             value = alcCaptureDeviceList;
+        }
         break;
 
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:

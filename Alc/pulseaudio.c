@@ -695,20 +695,31 @@ LOAD_FUNC(pa_stream_disconnect);
 LOAD_FUNC(pa_threaded_mainloop_lock);
 
 #undef LOAD_FUNC
-
-    AppendDeviceList(pulse_device);
-    AppendAllDeviceList(pulse_device);
-
-    AppendCaptureDeviceList(pulse_capture_device);
 } //}}}
 
 void alc_pulse_deinit(void) //{{{
 {
+    if(pa_handle)
+    {
 #ifdef _WIN32
-    FreeLibrary(pa_handle);
+        FreeLibrary(pa_handle);
 #elif defined (HAVE_DLFCN_H)
-    dlclose(pa_handle);
+        dlclose(pa_handle);
 #endif
+    }
     pa_handle = NULL;
+} //}}}
+
+void alc_pulse_probe(int type) //{{{
+{
+    if(!pa_handle)
+        return;
+
+    if(type == DEVICE_PROBE)
+        AppendDeviceList(pulse_device);
+    else if(type == ALL_DEVICE_PROBE)
+        AppendAllDeviceList(pulse_device);
+    else if(type == CAPTURE_DEVICE_PROBE)
+        AppendCaptureDeviceList(pulse_capture_device);
 } //}}}
 //}}}

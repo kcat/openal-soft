@@ -159,22 +159,36 @@ typedef struct {
     ALCuint (*AvailableSamples)(ALCdevice*);
 } BackendFuncs;
 
+enum {
+    DEVICE_PROBE,
+    ALL_DEVICE_PROBE,
+    CAPTURE_DEVICE_PROBE
+};
+
 void alc_alsa_init(BackendFuncs *func_list);
 void alc_alsa_deinit(void);
+void alc_alsa_probe(int type);
 void alc_oss_init(BackendFuncs *func_list);
 void alc_oss_deinit(void);
+void alc_oss_probe(int type);
 void alc_solaris_init(BackendFuncs *func_list);
 void alc_solaris_deinit(void);
+void alc_solarise_probe(int type);
 void alcDSoundInit(BackendFuncs *func_list);
 void alcDSoundDeinit(void);
+void alcDSoundProbe(int type);
 void alcWinMMInit(BackendFuncs *FuncList);
 void alcWinMMDeinit(void);
+void alcWinMMProbe(int type);
 void alc_pa_init(BackendFuncs *func_list);
 void alc_pa_deinit(void);
+void alc_pa_probe(int type);
 void alc_wave_init(BackendFuncs *func_list);
 void alc_wave_deinit(void);
+void alc_wave_probe(int type);
 void alc_pulse_init(BackendFuncs *func_list);
 void alc_pulse_deinit(void);
+void alc_pulse_probe(int type);
 
 
 struct ALCdevice_struct

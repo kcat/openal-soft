@@ -69,6 +69,8 @@ typedef struct {
     ALCchar *name;
     GUID guid;
 } DevMap;
+
+static const ALCchar dsDevice[] = "DirectSound Software";
 static DevMap *DeviceList;
 static ALuint NumDevices;
 
@@ -158,24 +160,23 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     if(ds_handle == NULL)
         return ALC_FALSE;
 
-    if(deviceName)
+    if(deviceName && strcmp(deviceName, dsDevice) != 0)
     {
-        int i;
-        for(i = 0;DeviceList[i].name;i++)
+        ALuint i;
+        for(i = 0;i < NumDevices;i++)
         {
             if(strcmp(deviceName, DeviceList[i].name) == 0)
             {
                 devName = DeviceList[i].name;
-                if(i > 0)
-                    guid = &DeviceList[i].guid;
+                guid = &DeviceList[i].guid;
                 break;
             }
         }
-        if(!DeviceList[i].name)
+        if(i == NumDevices)
             return ALC_FALSE;
     }
     else
-        devName = DeviceList[0].name;
+        devName = dsDevice;
 
     //Initialise requested device
 
@@ -510,16 +511,6 @@ LOAD_FUNC(DirectSoundEnumerateA);
 
     num_frags = GetConfigValueInt("dsound", "periods", 4);
     if(num_frags < 2) num_frags = 2;
-
-    DeviceList = malloc(sizeof(DevMap) * 1);
-    DeviceList[0].name = strdup("DirectSound Software");
-    NumDevices = 1;
-
-    AppendDeviceList(DeviceList[0].name);
-
-    hr = pDirectSoundEnumerateA(DSoundEnumDevices, NULL);
-    if(FAILED(hr))
-        AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
 }
 
 void alcDSoundDeinit(void)
@@ -536,4 +527,25 @@ void alcDSoundDeinit(void)
     FreeLibrary(ds_handle);
     ds_handle = NULL;
 #endif
+}
+
+void alcDSoundProbe(int type)
+{
+    if(!dsound_handle)
+        return;
+
+    if(type == DEVICE_PROBE)
+        AppendDeviceList(DeviceList[0].name);
+    else if(type == ALL_DEVICE_PROBE)
+    {
+        for(i = 0;i < NumDevices;++i)
+            free(DeviceList[i].name);
+        free(DeviceList);
+        DeviceList = NULL;
+        NumDevices = 0;
+
+        hr = pDirectSoundEnumerateA(DSoundEnumDevices, NULL);
+        if(FAILED(hr))
+            AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+    }
 }

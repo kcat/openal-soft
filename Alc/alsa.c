@@ -791,12 +791,6 @@ BackendFuncs alsa_funcs = {
 
 void alc_alsa_init(BackendFuncs *func_list)
 {
-    snd_ctl_t *handle;
-    int card, err, dev, idx = 1;
-    snd_ctl_card_info_t *info;
-    snd_pcm_info_t *pcminfo;
-    snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
-    char name[128];
     char *str;
 
     *func_list = alsa_funcs;
@@ -878,145 +872,6 @@ LOAD_FUNC(snd_ctl_card_info_get_name);
 LOAD_FUNC(snd_card_next);
 
 #undef LOAD_FUNC
-
-    psnd_ctl_card_info_malloc(&info);
-    psnd_pcm_info_malloc(&pcminfo);
-
-    card = -1;
-    if(psnd_card_next(&card) < 0 || card < 0)
-        AL_PRINT("no playback cards found...\n");
-
-    AppendDeviceList(alsaDevice);
-    allDevNameMap = malloc(sizeof(DevMap) * 1);
-    allDevNameMap[0].name = strdup("ALSA Software on default");
-    AppendAllDeviceList(allDevNameMap[0].name);
-
-    while (card >= 0) {
-        sprintf(name, "hw:%d", card);
-        if ((err = psnd_ctl_open(&handle, name, 0)) < 0) {
-            AL_PRINT("control open (%i): %s\n", card, psnd_strerror(err));
-            goto next_card;
-        }
-        if ((err = psnd_ctl_card_info(handle, info)) < 0) {
-            AL_PRINT("control hardware info (%i): %s\n", card, psnd_strerror(err));
-            psnd_ctl_close(handle);
-            goto next_card;
-        }
-
-        dev = -1;
-        while(1) {
-            const char *cname, *dname;
-            void *temp;
-
-            if (psnd_ctl_pcm_next_device(handle, &dev)<0)
-                AL_PRINT("snd_ctl_pcm_next_device failed\n");
-            if (dev < 0)
-                break;
-
-            psnd_pcm_info_set_device(pcminfo, dev);
-            psnd_pcm_info_set_subdevice(pcminfo, 0);
-            psnd_pcm_info_set_stream(pcminfo, stream);
-            if ((err = psnd_ctl_pcm_info(handle, pcminfo)) < 0) {
-                if (err != -ENOENT)
-                    AL_PRINT("control digital audio info (%i): %s\n", card, psnd_strerror(err));
-                continue;
-            }
-
-            temp = realloc(allDevNameMap, sizeof(DevMap) * (idx+1));
-            if(temp)
-            {
-                allDevNameMap = temp;
-                cname = psnd_ctl_card_info_get_name(info);
-                dname = psnd_pcm_info_get_name(pcminfo);
-                snprintf(name, sizeof(name), "ALSA Software on %s [%s] (hw:%d,%d)",
-                         cname, dname, card, dev);
-                AppendAllDeviceList(name);
-                allDevNameMap[idx].name = strdup(name);
-                allDevNameMap[idx].card = card;
-                allDevNameMap[idx].dev = dev;
-                idx++;
-            }
-        }
-        psnd_ctl_close(handle);
-next_card:
-        if(psnd_card_next(&card) < 0) {
-            AL_PRINT("snd_card_next failed\n");
-            break;
-        }
-    }
-    numDevNames = idx;
-
-
-    stream = SND_PCM_STREAM_CAPTURE;
-
-    card = -1;
-    if(psnd_card_next(&card) < 0 || card < 0) {
-        AL_PRINT("no capture cards found...\n");
-        psnd_pcm_info_free(pcminfo);
-        psnd_ctl_card_info_free(info);
-        return;
-    }
-
-    allCaptureDevNameMap = malloc(sizeof(DevMap) * 1);
-    allCaptureDevNameMap[0].name = strdup("ALSA Capture on default");
-    AppendCaptureDeviceList(allCaptureDevNameMap[0].name);
-
-    idx = 1;
-    while (card >= 0) {
-        sprintf(name, "hw:%d", card);
-        handle = NULL;
-        if ((err = psnd_ctl_open(&handle, name, 0)) < 0) {
-            AL_PRINT("control open (%i): %s\n", card, psnd_strerror(err));
-        }
-        if (err >= 0 && (err = psnd_ctl_card_info(handle, info)) < 0) {
-            AL_PRINT("control hardware info (%i): %s\n", card, psnd_strerror(err));
-        }
-        else if (err >= 0)
-        {
-            dev = -1;
-            while(1) {
-                const char *cname, *dname;
-                void *temp;
-
-                if (psnd_ctl_pcm_next_device(handle, &dev)<0)
-                    AL_PRINT("snd_ctl_pcm_next_device failed\n");
-                if (dev < 0)
-                    break;
-                psnd_pcm_info_set_device(pcminfo, dev);
-                psnd_pcm_info_set_subdevice(pcminfo, 0);
-                psnd_pcm_info_set_stream(pcminfo, stream);
-                if ((err = psnd_ctl_pcm_info(handle, pcminfo)) < 0) {
-                    if (err != -ENOENT)
-                        AL_PRINT("control digital audio info (%i): %s\n", card, psnd_strerror(err));
-                    continue;
-                }
-
-                temp = realloc(allCaptureDevNameMap, sizeof(DevMap) * (idx+1));
-                if(temp)
-                {
-                    allCaptureDevNameMap = temp;
-                    cname = psnd_ctl_card_info_get_name(info);
-                    dname = psnd_pcm_info_get_name(pcminfo);
-                    snprintf(name, sizeof(name), "ALSA Capture on %s [%s] (hw:%d,%d)",
-                             cname, dname, card, dev);
-                    AppendCaptureDeviceList(name);
-                    allCaptureDevNameMap[idx].name = strdup(name);
-                    allCaptureDevNameMap[idx].card = card;
-                    allCaptureDevNameMap[idx].dev = dev;
-                    idx++;
-                }
-            }
-        }
-        if(handle) psnd_ctl_close(handle);
-        if(psnd_card_next(&card) < 0) {
-            AL_PRINT("snd_card_next failed\n");
-            break;
-        }
-    }
-    numCaptureDevNames = idx;
-
-    psnd_pcm_info_free(pcminfo);
-    psnd_ctl_card_info_free(info);
 }
 
 void alc_alsa_deinit(void)
@@ -1036,7 +891,177 @@ void alc_alsa_deinit(void)
     numCaptureDevNames = 0;
 
 #ifdef HAVE_DLFCN_H
-    dlclose(alsa_handle);
+    if(alsa_handle)
+        dlclose(alsa_handle);
     alsa_handle = NULL;
 #endif
+}
+
+void alc_alsa_probe(int type)
+{
+    snd_ctl_t *handle;
+    int card, err, dev, idx;
+    snd_ctl_card_info_t *info;
+    snd_pcm_info_t *pcminfo;
+    snd_pcm_stream_t stream;
+    char name[128];
+    ALuint i;
+
+    if(!alsa_handle)
+        return;
+
+    psnd_ctl_card_info_malloc(&info);
+    psnd_pcm_info_malloc(&pcminfo);
+
+    if(type == DEVICE_PROBE)
+        AppendDeviceList(alsaDevice);
+    else if(type == ALL_DEVICE_PROBE)
+    {
+        stream = SND_PCM_STREAM_PLAYBACK;
+        card = -1;
+        if(psnd_card_next(&card) < 0 || card < 0) {
+            AL_PRINT("no playback cards found...\n");
+            psnd_pcm_info_free(pcminfo);
+            psnd_ctl_card_info_free(info);
+            return;
+        }
+
+        for(i = 0;i < numDevNames;++i)
+            free(allDevNameMap[i].name);
+
+        allDevNameMap = realloc(allDevNameMap, sizeof(DevMap) * 1);
+        allDevNameMap[0].name = strdup("ALSA Software on default");
+        AppendAllDeviceList(allDevNameMap[0].name);
+
+        idx = 1;
+        while(card >= 0) {
+            sprintf(name, "hw:%d", card);
+            if ((err = psnd_ctl_open(&handle, name, 0)) < 0) {
+                AL_PRINT("control open (%i): %s\n", card, psnd_strerror(err));
+                goto next_card;
+            }
+            if ((err = psnd_ctl_card_info(handle, info)) < 0) {
+                AL_PRINT("control hardware info (%i): %s\n", card, psnd_strerror(err));
+                psnd_ctl_close(handle);
+                goto next_card;
+            }
+
+            dev = -1;
+            while(1) {
+                const char *cname, *dname;
+                void *temp;
+
+                if (psnd_ctl_pcm_next_device(handle, &dev)<0)
+                    AL_PRINT("snd_ctl_pcm_next_device failed\n");
+                if (dev < 0)
+                    break;
+
+                psnd_pcm_info_set_device(pcminfo, dev);
+                psnd_pcm_info_set_subdevice(pcminfo, 0);
+                psnd_pcm_info_set_stream(pcminfo, stream);
+                if ((err = psnd_ctl_pcm_info(handle, pcminfo)) < 0) {
+                    if (err != -ENOENT)
+                        AL_PRINT("control digital audio info (%i): %s\n", card, psnd_strerror(err));
+                    continue;
+                }
+
+                temp = realloc(allDevNameMap, sizeof(DevMap) * (idx+1));
+                if(temp)
+                {
+                    allDevNameMap = temp;
+                    cname = psnd_ctl_card_info_get_name(info);
+                    dname = psnd_pcm_info_get_name(pcminfo);
+                    snprintf(name, sizeof(name), "ALSA Software on %s [%s] (hw:%d,%d)",
+                             cname, dname, card, dev);
+                    AppendAllDeviceList(name);
+                    allDevNameMap[idx].name = strdup(name);
+                    allDevNameMap[idx].card = card;
+                    allDevNameMap[idx].dev = dev;
+                    idx++;
+                }
+            }
+            psnd_ctl_close(handle);
+        next_card:
+            if(psnd_card_next(&card) < 0) {
+                AL_PRINT("snd_card_next failed\n");
+                break;
+            }
+        }
+        numDevNames = idx;
+    }
+    else if(type == CAPTURE_DEVICE_PROBE)
+    {
+        stream = SND_PCM_STREAM_CAPTURE;
+        card = -1;
+        if(psnd_card_next(&card) < 0 || card < 0) {
+            AL_PRINT("no capture cards found...\n");
+            psnd_pcm_info_free(pcminfo);
+            psnd_ctl_card_info_free(info);
+            return;
+        }
+
+        for(i = 0;i < numCaptureDevNames;++i)
+            free(allCaptureDevNameMap[i].name);
+
+        allCaptureDevNameMap = realloc(allCaptureDevNameMap, sizeof(DevMap) * 1);
+        allCaptureDevNameMap[0].name = strdup("ALSA Capture on default");
+        AppendCaptureDeviceList(allCaptureDevNameMap[0].name);
+
+        idx = 1;
+        while (card >= 0) {
+            sprintf(name, "hw:%d", card);
+            handle = NULL;
+            if ((err = psnd_ctl_open(&handle, name, 0)) < 0) {
+                AL_PRINT("control open (%i): %s\n", card, psnd_strerror(err));
+            }
+            if (err >= 0 && (err = psnd_ctl_card_info(handle, info)) < 0) {
+                AL_PRINT("control hardware info (%i): %s\n", card, psnd_strerror(err));
+            }
+            else if (err >= 0)
+            {
+                dev = -1;
+                while(1) {
+                    const char *cname, *dname;
+                    void *temp;
+
+                    if (psnd_ctl_pcm_next_device(handle, &dev)<0)
+                        AL_PRINT("snd_ctl_pcm_next_device failed\n");
+                    if (dev < 0)
+                        break;
+                    psnd_pcm_info_set_device(pcminfo, dev);
+                    psnd_pcm_info_set_subdevice(pcminfo, 0);
+                    psnd_pcm_info_set_stream(pcminfo, stream);
+                    if ((err = psnd_ctl_pcm_info(handle, pcminfo)) < 0) {
+                        if (err != -ENOENT)
+                            AL_PRINT("control digital audio info (%i): %s\n", card, psnd_strerror(err));
+                        continue;
+                    }
+
+                    temp = realloc(allCaptureDevNameMap, sizeof(DevMap) * (idx+1));
+                    if(temp)
+                    {
+                        allCaptureDevNameMap = temp;
+                        cname = psnd_ctl_card_info_get_name(info);
+                        dname = psnd_pcm_info_get_name(pcminfo);
+                        snprintf(name, sizeof(name), "ALSA Capture on %s [%s] (hw:%d,%d)",
+                                 cname, dname, card, dev);
+                        AppendCaptureDeviceList(name);
+                        allCaptureDevNameMap[idx].name = strdup(name);
+                        allCaptureDevNameMap[idx].card = card;
+                        allCaptureDevNameMap[idx].dev = dev;
+                        idx++;
+                    }
+                }
+            }
+            if(handle) psnd_ctl_close(handle);
+            if(psnd_card_next(&card) < 0) {
+                AL_PRINT("snd_card_next failed\n");
+                break;
+            }
+        }
+        numCaptureDevNames = idx;
+    }
+
+    psnd_pcm_info_free(pcminfo);
+    psnd_ctl_card_info_free(info);
 }

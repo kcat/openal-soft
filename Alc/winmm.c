@@ -425,25 +425,7 @@ BackendFuncs WinMMFuncs = {
 
 void alcWinMMInit(BackendFuncs *FuncList)
 {
-    ALuint lLoop;
-
     *FuncList = WinMMFuncs;
-
-    NumCaptureDevices = waveInGetNumDevs();
-    CaptureDeviceList = malloc(sizeof(ALCchar*) * NumCaptureDevices);
-    for(lLoop = 0; lLoop < NumCaptureDevices; lLoop++)
-    {
-        WAVEINCAPS WaveInCaps;
-
-        CaptureDeviceList[lLoop] = strdup("");
-        if(waveInGetDevCaps(lLoop, &WaveInCaps, sizeof(WAVEINCAPS)) == MMSYSERR_NOERROR)
-        {
-            char name[128];
-            snprintf(name, sizeof(name), "WaveIn on %s", WaveInCaps.szPname);
-            AppendCaptureDeviceList(name);
-            CaptureDeviceList[lLoop] = strdup(name);
-        }
-    }
 }
 
 void alcWinMMDeinit()
@@ -456,4 +438,32 @@ void alcWinMMDeinit()
     CaptureDeviceList = NULL;
 
     NumCaptureDevices = 0;
+}
+
+void alcWinMMProbe(ALCboolean capture)
+{
+    ALuint lLoop;
+
+    if(type != CAPTURE_DEVICE_PROBE)
+        return;
+
+    for(lLoop = 0; lLoop < NumCaptureDevices; lLoop++)
+        free(CaptureDeviceList[lLoop]);
+
+    NumCaptureDevices = waveInGetNumDevs();
+    CaptureDeviceList = realloc(CaptureDeviceList, sizeof(ALCchar*) * NumCaptureDevices);
+    for(lLoop = 0; lLoop < NumCaptureDevices; lLoop++)
+    {
+        WAVEINCAPS WaveInCaps;
+
+        if(waveInGetDevCaps(lLoop, &WaveInCaps, sizeof(WAVEINCAPS)) == MMSYSERR_NOERROR)
+        {
+            char name[128];
+            snprintf(name, sizeof(name), "WaveIn on %s", WaveInCaps.szPname);
+            AppendCaptureDeviceList(name);
+            CaptureDeviceList[lLoop] = strdup(name);
+        }
+        else
+            CaptureDeviceList[lLoop] = strdup("");
+    }
 }

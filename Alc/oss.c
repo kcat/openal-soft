@@ -473,13 +473,18 @@ BackendFuncs oss_funcs = {
 void alc_oss_init(BackendFuncs *func_list)
 {
     *func_list = oss_funcs;
-
-    AppendDeviceList(oss_device);
-    AppendAllDeviceList(oss_device);
-
-    AppendCaptureDeviceList(oss_device_capture);
 }
 
 void alc_oss_deinit(void)
 {
+}
+
+void alc_oss_probe(int type)
+{
+    if(type == DEVICE_PROBE)
+        AppendDeviceList(oss_device);
+    else if(type == ALL_DEVICE_PROBE)
+        AppendAllDeviceList(oss_device);
+    else if(type == CAPTURE_DEVICE_PROBE)
+        AppendCaptureDeviceList(oss_device_capture);
 }

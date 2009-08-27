@@ -366,11 +366,16 @@ BackendFuncs wave_funcs = {
 void alc_wave_init(BackendFuncs *func_list)
 {
     *func_list = wave_funcs;
-
-    AppendDeviceList(waveDevice);
-    AppendAllDeviceList(waveDevice);
 }
 
 void alc_wave_deinit(void)
 {
+}
+
+void alc_wave_probe(int type)
+{
+    if(type == DEVICE_PROBE)
+        AppendDeviceList(waveDevice);
+    else if(type == ALL_DEVICE_PROBE)
+        AppendAllDeviceList(waveDevice);
 }

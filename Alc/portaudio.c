@@ -244,17 +244,27 @@ void alc_pa_init(BackendFuncs *func_list)
     if((err=pPa_Initialize()) != paNoError)
     {
         AL_PRINT("Pa_Initialize() returned an error: %s\n", pPa_GetErrorText(err));
+        alc_pa_deinit();
         return;
     }
-
-    AppendDeviceList(pa_device);
-    AppendAllDeviceList(pa_device);
 }
 
 void alc_pa_deinit(void)
 {
 #ifdef HAVE_DLFCN_H
-    dlclose(pa_handle);
+    if(pa_handle)
+        dlclose(pa_handle);
     pa_handle = NULL;
 #endif
+}
+
+void alc_pa_probe(int type)
+{
+    if(!pa_handle)
+        return;
+
+    if(type == DEVICE_PROBE)
+        AppendDeviceList(pa_device);
+    else if(type == ALL_DEVICE_PROBE)
+        AppendAllDeviceList(pa_device);
 }

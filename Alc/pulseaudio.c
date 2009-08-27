@@ -704,5 +704,11 @@ LOAD_FUNC(pa_threaded_mainloop_lock);
 
 void alc_pulse_deinit(void) //{{{
 {
+#ifdef _WIN32
+    FreeLibrary(pa_handle);
+#elif defined (HAVE_DLFCN_H)
+    dlclose(pa_handle);
+#endif
+    pa_handle = NULL;
 } //}}}
 //}}}

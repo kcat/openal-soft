@@ -253,4 +253,8 @@ void alc_pa_init(BackendFuncs *func_list)
 
 void alc_pa_deinit(void)
 {
+#ifdef HAVE_DLFCN_H
+    dlclose(pa_handle);
+    pa_handle = NULL;
+#endif
 }

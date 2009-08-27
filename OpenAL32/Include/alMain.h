@@ -187,7 +187,7 @@ struct ALCdevice_struct
     ALuint       BufferSize;
     ALenum       Format;
 
-    const ALCchar *szDeviceName;
+    ALCchar      *szDeviceName;
 
     // Maximum number of sources that can be created
     ALuint       MaxNoOfSources;

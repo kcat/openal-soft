@@ -198,7 +198,6 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
         if(i == NumCaptureDevices)
             return ALC_FALSE;
     }
-    pDevice->szDeviceName = CaptureDeviceList[lDeviceID];
 
     pData = calloc(1, sizeof(*pData));
     if(!pData)
@@ -268,6 +267,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     if (pData->hWaveInThread == NULL)
         goto failure;
 
+    pDevice->szDeviceName = strdup(CaptureDeviceList[lDeviceID]);
     return ALC_TRUE;
 
 failure:
@@ -291,6 +291,7 @@ failure:
         CloseHandle(pData->hWaveInThreadEvent);
 
     free(pData);
+    pDevice->ExtraData = NULL;
     return ALC_FALSE;
 }
 

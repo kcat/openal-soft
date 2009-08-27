@@ -586,6 +586,8 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
         pDevice->Connected = ALC_TRUE;
         pDevice->IsCaptureDevice = AL_TRUE;
 
+        pDevice->szDeviceName = NULL;
+
         pDevice->Frequency = frequency;
         pDevice->Format = format;
         pDevice->BufferSize = SampleSize;
@@ -636,6 +638,8 @@ ALCAPI ALCboolean ALCAPIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
         g_ulDeviceCount--;
 
         ProcessContext(NULL);
+
+        free(pDevice->szDeviceName);
 
         ALCdevice_CloseCapture(pDevice);
         free(pDevice);
@@ -1378,6 +1382,8 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->Connected = ALC_TRUE;
         device->IsCaptureDevice = AL_FALSE;
 
+        device->szDeviceName = NULL;
+
         //Set output format
         device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
         if(device->Frequency == 0)
@@ -1497,6 +1503,8 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
 #endif
             ReleaseALDatabuffers(pDevice);
         }
+
+        free(pDevice->szDeviceName);
 
         //Release device structure
         memset(pDevice, 0, sizeof(ALCdevice));

@@ -89,8 +89,6 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
             return ALC_FALSE;
     }
 
-    device->szDeviceName = pa_device;
-
     data = (pa_data*)calloc(1, sizeof(pa_data));
     device->ExtraData = data;
 
@@ -143,6 +141,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_FALSE;
     }
 
+    device->szDeviceName = strdup(pa_device);
     device->UpdateSize = device->BufferSize/periods;
     return ALC_TRUE;
 }

@@ -92,6 +92,7 @@ static ALuint SolarisProc(ALvoid *ptr)
 
 static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
+    const char *devName = solaris_device;
     audio_info_t info;
     ALuint frameSize;
     char driver[64];
@@ -104,10 +105,8 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
     {
         if(strcmp(deviceName, solaris_device))
             return ALC_FALSE;
-        device->szDeviceName = solaris_device;
+        devName = solaris_device;
     }
-    else
-        device->szDeviceName = solaris_device;
 
     data = (solaris_data*)calloc(1, sizeof(solaris_data));
     data->killNow = 0;
@@ -194,6 +193,7 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
         return ALC_FALSE;
     }
 
+    device->szDeviceName = strdup(devName);
     return ALC_TRUE;
 }
 

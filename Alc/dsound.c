@@ -151,6 +151,7 @@ static ALuint DSoundProc(ALvoid *ptr)
 static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 {
     DSoundData *pData = NULL;
+    const char *devName;
     LPGUID guid = NULL;
     HRESULT hr;
 
@@ -164,7 +165,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         {
             if(strcmp(deviceName, DeviceList[i].name) == 0)
             {
-                device->szDeviceName = DeviceList[i].name;
+                devName = DeviceList[i].name;
                 if(i > 0)
                     guid = &DeviceList[i].guid;
                 break;
@@ -174,7 +175,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
             return ALC_FALSE;
     }
     else
-        device->szDeviceName = DeviceList[0].name;
+        devName = DeviceList[0].name;
 
     //Initialise requested device
 
@@ -197,6 +198,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         return ALC_FALSE;
     }
 
+    device->szDeviceName = strdup(devName);
     device->ExtraData = pData;
     return ALC_TRUE;
 }

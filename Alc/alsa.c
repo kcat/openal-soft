@@ -352,6 +352,7 @@ static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
 
 static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
+    const char *devName = alsaDevice;
     alsa_data *data;
     char driver[64];
     int i;
@@ -370,21 +371,16 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
             if(allDevNameMap[idx].name &&
                strcmp(deviceName, allDevNameMap[idx].name) == 0)
             {
-                device->szDeviceName = allDevNameMap[idx].name;
+                devName = allDevNameMap[idx].name;
                 if(idx > 0)
                     sprintf(driver, "hw:%d,%d", allDevNameMap[idx].card, allDevNameMap[idx].dev);
                 goto open_alsa;
             }
         }
         if(strcmp(deviceName, alsaDevice) == 0)
-        {
-            device->szDeviceName = alsaDevice;
             goto open_alsa;
-        }
         return ALC_FALSE;
     }
-    else
-        device->szDeviceName = alsaDevice;
 
 open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -408,6 +404,7 @@ open_alsa:
         return ALC_FALSE;
     }
 
+    device->szDeviceName = strdup(devName);
     device->ExtraData = data;
     return ALC_TRUE;
 }
@@ -582,6 +579,7 @@ static void alsa_stop_context(ALCdevice *device, ALCcontext *context)
 
 static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
+    const char *devName;
     snd_pcm_hw_params_t *p;
     snd_pcm_uframes_t bufferSizeInFrames;
     ALuint frameSize;
@@ -604,7 +602,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
             if(allCaptureDevNameMap[idx].name &&
                strcmp(deviceName, allCaptureDevNameMap[idx].name) == 0)
             {
-                pDevice->szDeviceName = allCaptureDevNameMap[idx].name;
+                devName = allCaptureDevNameMap[idx].name;
                 if(idx > 0)
                     sprintf(driver, "plughw:%d,%d", allCaptureDevNameMap[idx].card, allCaptureDevNameMap[idx].dev);
                 goto open_alsa;
@@ -613,7 +611,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
         return ALC_FALSE;
     }
     else
-        pDevice->szDeviceName = allCaptureDevNameMap[0].name;
+        devName = allCaptureDevNameMap[0].name;
 
 open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -730,6 +728,7 @@ open_alsa:
         return ALC_FALSE;
     }
 
+    pDevice->szDeviceName = strdup(devName);
     return ALC_TRUE;
 }
 

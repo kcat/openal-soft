@@ -108,6 +108,7 @@ static ALuint WaveProc(ALvoid *ptr)
 
 static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
+    const char *devName = waveDevice;
     wave_data *data;
     const char *fname;
 
@@ -119,10 +120,8 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
     {
         if(strcmp(deviceName, waveDevice) != 0)
             return ALC_FALSE;
-        device->szDeviceName = waveDevice;
+        devName = waveDevice;
     }
-    else
-        device->szDeviceName = waveDevice;
 
     data = (wave_data*)calloc(1, sizeof(wave_data));
 
@@ -134,6 +133,7 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
         return ALC_FALSE;
     }
 
+    device->szDeviceName = strdup(devName);
     device->ExtraData = data;
     return ALC_TRUE;
 }

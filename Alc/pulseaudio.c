@@ -216,9 +216,6 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
     else
         data->context_name = "OpenAL Soft";
 
-    device->ExtraData = data;
-    device->szDeviceName = device_name;
-
     if(!(data->loop = ppa_threaded_mainloop_new()))
     {
         AL_PRINT("pa_threaded_mainloop_new() failed!\n");
@@ -274,6 +271,9 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
         ppa_threaded_mainloop_wait(data->loop);
         ppa_threaded_mainloop_accept(data->loop);
     }
+
+    device->szDeviceName = strdup(device_name);
+    device->ExtraData = data;
 
     ppa_threaded_mainloop_unlock(data->loop);
     return ALC_TRUE;

@@ -147,6 +147,7 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
 
 static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
+    const char *devName = oss_device;
     char driver[64];
     oss_data *data;
 
@@ -156,10 +157,8 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     {
         if(strcmp(deviceName, oss_device))
             return ALC_FALSE;
-        device->szDeviceName = oss_device;
+        devName = oss_device;
     }
-    else
-        device->szDeviceName = oss_device;
 
     data = (oss_data*)calloc(1, sizeof(oss_data));
     data->killNow = 0;
@@ -172,6 +171,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
         return ALC_FALSE;
     }
 
+    device->szDeviceName = strdup(devName);
     device->ExtraData = data;
     return ALC_TRUE;
 }
@@ -299,6 +299,7 @@ static void oss_stop_context(ALCdevice *device, ALCcontext *context)
 
 static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
 {
+    const char *devName = oss_device_capture;
     int numFragmentsLogSize;
     int log2FragmentSize;
     unsigned int periods;
@@ -318,10 +319,8 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     {
         if(strcmp(deviceName, oss_device_capture))
             return ALC_FALSE;
-        device->szDeviceName = oss_device_capture;
+        devName = oss_device_capture;
     }
-    else
-        device->szDeviceName = oss_device_capture;
 
     data = (oss_data*)calloc(1, sizeof(oss_data));
     data->killNow = 0;
@@ -411,6 +410,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         return ALC_FALSE;
     }
 
+    device->szDeviceName = strdup(devName);
     return ALC_TRUE;
 }
 

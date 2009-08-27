@@ -160,14 +160,18 @@ static const ALCchar alcErrInvalidEnum[] = "Invalid Enum";
 static const ALCchar alcErrInvalidValue[] = "Invalid Value";
 static const ALCchar alcErrOutOfMemory[] = "Out of Memory";
 
-// Context strings
-static ALCchar alcDeviceList[2048];
-static ALCchar alcAllDeviceList[2048];
-static ALCchar alcCaptureDeviceList[2048];
+/* Device lists. Sizes only include the first ending null character, not the
+ * second */
+static ALCchar *alcDeviceList;
+static ALCuint alcDeviceListSize;
+static ALCchar *alcAllDeviceList;
+static ALCuint alcAllDeviceListSize;
+static ALCchar *alcCaptureDeviceList;
+static ALCuint alcCaptureDeviceListSize;
 // Default is always the first in the list
-static ALCchar *alcDefaultDeviceSpecifier = alcDeviceList;
-static ALCchar *alcDefaultAllDeviceSpecifier = alcAllDeviceList;
-static ALCchar *alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList;
+static ALCchar *alcDefaultDeviceSpecifier;
+static ALCchar *alcDefaultAllDeviceSpecifier;
+static ALCchar *alcCaptureDefaultDeviceSpecifier;
 
 
 static ALCchar alcExtensionList[] = "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE ALC_EXT_disconnect ALC_EXT_EFX";
@@ -310,6 +314,11 @@ static void InitAL(void)
         for(i = 0;BackendList[i].Init;i++)
             BackendList[i].Init(&BackendList[i].Funcs);
 
+        /* Default is always the first in the list */
+        alcDefaultDeviceSpecifier = alcDeviceList;
+        alcDefaultAllDeviceSpecifier = alcAllDeviceList;
+        alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList;
+
         str = GetConfigValue(NULL, "stereodup", "false");
         DuplicateStereo = (strcasecmp(str, "true") == 0 ||
                            strcasecmp(str, "yes") == 0 ||
@@ -351,38 +360,31 @@ static void InitAL(void)
     }
 }
 
-void AppendDeviceList(const ALCchar *name)
-{
-    static size_t pos;
-    if(pos >= sizeof(alcDeviceList))
-    {
-        AL_PRINT("Not enough room to add %s!\n", name);
-        return;
-    }
-    pos += snprintf(alcDeviceList+pos, sizeof(alcDeviceList)-pos-1, "%s", name) + 1;
+#define DECL_APPEND_LIST_FUNC(type)                                          \
+void Append##type##List(const ALCchar *name)                                 \
+{                                                                            \
+    ALCuint len = strlen(name);                                              \
+    void *temp;                                                              \
+                                                                             \
+    if(len == 0)                                                             \
+        return;                                                              \
+                                                                             \
+    temp = realloc(alc##type##List, alc##type##ListSize + len + 2);          \
+    if(!temp)                                                                \
+    {                                                                        \
+        AL_PRINT("Realloc failed to add %s!\n", name);                       \
+        return;                                                              \
+    }                                                                        \
+    alc##type##List = temp;                                                  \
+    sprintf(alc##type##List+alc##type##ListSize, "%s", name);                \
+    alc##type##ListSize += len+1;                                            \
+    alc##type##List[alc##type##ListSize] = 0;                                \
 }
 
-void AppendAllDeviceList(const ALCchar *name)
-{
-    static size_t pos;
-    if(pos >= sizeof(alcAllDeviceList))
-    {
-        AL_PRINT("Not enough room to add %s!\n", name);
-        return;
-    }
-    pos += snprintf(alcAllDeviceList+pos, sizeof(alcAllDeviceList)-pos-1, "%s", name) + 1;
-}
+DECL_APPEND_LIST_FUNC(Device)
+DECL_APPEND_LIST_FUNC(AllDevice)
+DECL_APPEND_LIST_FUNC(CaptureDevice)
 
-void AppendCaptureDeviceList(const ALCchar *name)
-{
-    static size_t pos;
-    if(pos >= sizeof(alcCaptureDeviceList))
-    {
-        AL_PRINT("Not enough room to add %s!\n", name);
-        return;
-    }
-    pos += snprintf(alcCaptureDeviceList+pos, sizeof(alcCaptureDeviceList)-pos-1, "%s", name) + 1;
-}
 
 /*
     IsDevice
@@ -1521,6 +1523,17 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
 
 ALCvoid ReleaseALC(ALCvoid)
 {
+    free(alcDeviceList); alcDeviceList = NULL;
+    alcDeviceListSize = 0;
+    free(alcAllDeviceList); alcAllDeviceList = NULL;
+    alcAllDeviceListSize = 0;
+    free(alcCaptureDeviceList); alcCaptureDeviceList = NULL;
+    alcCaptureDeviceListSize = 0;
+
+    alcDefaultDeviceSpecifier = NULL;
+    alcDefaultAllDeviceSpecifier = NULL;
+    alcCaptureDefaultDeviceSpecifier = NULL;
+
 #ifdef _DEBUG
     if(g_ulDeviceCount > 0)
         AL_PRINT("exit(): closing %u Device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");

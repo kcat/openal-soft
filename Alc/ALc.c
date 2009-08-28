@@ -268,8 +268,6 @@ static void ProbeDeviceList()
 
     for(i = 0;BackendList[i].Probe;i++)
         BackendList[i].Probe(DEVICE_PROBE);
-
-    alcDefaultDeviceSpecifier = alcDeviceList;
 }
 
 static void ProbeAllDeviceList()
@@ -281,8 +279,6 @@ static void ProbeAllDeviceList()
 
     for(i = 0;BackendList[i].Probe;i++)
         BackendList[i].Probe(ALL_DEVICE_PROBE);
-
-    alcDefaultAllDeviceSpecifier = alcAllDeviceList;
 }
 
 static void ProbeCaptureDeviceList()
@@ -294,8 +290,6 @@ static void ProbeCaptureDeviceList()
 
     for(i = 0;BackendList[i].Probe;i++)
         BackendList[i].Probe(CAPTURE_DEVICE_PROBE);
-
-    alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList;
 }
 
 static void InitAL(void)
@@ -359,11 +353,6 @@ static void InitAL(void)
             BackendList[i].Probe(ALL_DEVICE_PROBE);
             BackendList[i].Probe(CAPTURE_DEVICE_PROBE);
         }
-
-        /* Default is always the first in the list */
-        alcDefaultDeviceSpecifier = alcDeviceList;
-        alcDefaultAllDeviceSpecifier = alcAllDeviceList;
-        alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList;
 
         str = GetConfigValue(NULL, "stereodup", "false");
         DuplicateStereo = (strcasecmp(str, "true") == 0 ||
@@ -803,10 +792,6 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         value = alcErrOutOfMemory;
         break;
 
-    case ALC_DEFAULT_DEVICE_SPECIFIER:
-        value = alcDefaultDeviceSpecifier;
-        break;
-
     case ALC_DEVICE_SPECIFIER:
         if(IsDevice(pDevice))
             value = pDevice->szDeviceName;
@@ -822,10 +807,6 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         value = alcAllDeviceList;
         break;
 
-    case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
-        value = alcDefaultAllDeviceSpecifier;
-        break;
-
     case ALC_CAPTURE_DEVICE_SPECIFIER:
         if(IsDevice(pDevice))
             value = pDevice->szDeviceName;
@@ -836,7 +817,30 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         }
         break;
 
+    /* Default devices are always first in the list */
+    case ALC_DEFAULT_DEVICE_SPECIFIER:
+        free(alcDefaultDeviceSpecifier);
+        alcDefaultDeviceSpecifier = strdup(alcDeviceList ? alcDeviceList : "");
+        if(!alcDefaultDeviceSpecifier)
+            SetALCError(ALC_OUT_OF_MEMORY);
+        value = alcDefaultDeviceSpecifier;
+        break;
+
+    case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
+        free(alcDefaultAllDeviceSpecifier);
+        alcDefaultAllDeviceSpecifier = strdup(alcAllDeviceList ?
+                                              alcAllDeviceList : "");
+        if(!alcDefaultAllDeviceSpecifier)
+            SetALCError(ALC_OUT_OF_MEMORY);
+        value = alcDefaultAllDeviceSpecifier;
+        break;
+
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
+        free(alcCaptureDefaultDeviceSpecifier);
+        alcCaptureDefaultDeviceSpecifier = strdup(alcCaptureDeviceList ?
+                                                  alcCaptureDeviceList : "");
+        if(!alcCaptureDefaultDeviceSpecifier)
+            SetALCError(ALC_OUT_OF_MEMORY);
         value = alcCaptureDefaultDeviceSpecifier;
         break;
 
@@ -1584,8 +1588,11 @@ ALCvoid ReleaseALC(ALCvoid)
     free(alcCaptureDeviceList); alcCaptureDeviceList = NULL;
     alcCaptureDeviceListSize = 0;
 
+    free(alcDefaultDeviceSpecifier);
     alcDefaultDeviceSpecifier = NULL;
+    free(alcDefaultAllDeviceSpecifier);
     alcDefaultAllDeviceSpecifier = NULL;
+    free(alcCaptureDefaultDeviceSpecifier);
     alcCaptureDefaultDeviceSpecifier = NULL;
 
 #ifdef _DEBUG

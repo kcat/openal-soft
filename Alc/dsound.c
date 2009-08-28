@@ -522,7 +522,8 @@ void alcDSoundDeinit(void)
     NumDevices = 0;
 
 #ifdef _WIN32
-    FreeLibrary(ds_handle);
+    if(ds_handle)
+        FreeLibrary(ds_handle);
     ds_handle = NULL;
 #endif
 }

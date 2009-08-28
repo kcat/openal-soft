@@ -153,21 +153,21 @@ static ALuint DSoundProc(ALvoid *ptr)
 static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 {
     DSoundData *pData = NULL;
-    const char *devName;
     LPGUID guid = NULL;
     HRESULT hr;
 
     if(ds_handle == NULL)
         return ALC_FALSE;
 
-    if(deviceName && strcmp(deviceName, dsDevice) != 0)
+    if(!deviceName)
+        deviceName = dsDevice;
+    else if(strcmp(deviceName, dsDevice) != 0)
     {
         ALuint i;
         for(i = 0;i < NumDevices;i++)
         {
             if(strcmp(deviceName, DeviceList[i].name) == 0)
             {
-                devName = DeviceList[i].name;
                 guid = &DeviceList[i].guid;
                 break;
             }
@@ -175,8 +175,6 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         if(i == NumDevices)
             return ALC_FALSE;
     }
-    else
-        devName = dsDevice;
 
     //Initialise requested device
 
@@ -199,7 +197,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         return ALC_FALSE;
     }
 
-    device->szDeviceName = strdup(devName);
+    device->szDeviceName = strdup(deviceName);
     device->ExtraData = pData;
     return ALC_TRUE;
 }
@@ -535,7 +533,7 @@ void alcDSoundProbe(int type)
         return;
 
     if(type == DEVICE_PROBE)
-        AppendDeviceList(DeviceList[0].name);
+        AppendDeviceList(dsDevice);
     else if(type == ALL_DEVICE_PROBE)
     {
         for(i = 0;i < NumDevices;++i)

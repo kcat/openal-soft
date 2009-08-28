@@ -325,13 +325,12 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
     if(!pa_handle)
         return ALC_FALSE;
 
-    if(device_name)
-    {
-        if(strcmp(device_name, pulse_device) != 0)
-            return ALC_FALSE;
-    }
+    if(!device_name)
+        device_name = pulse_device;
+    else if(strcmp(device_name, pulse_device) != 0)
+        return ALC_FALSE;
 
-    return pulse_open(device, pulse_device);
+    return pulse_open(device, device_name);
 } //}}}
 
 static void pulse_close_playback(ALCdevice *device) //{{{
@@ -458,13 +457,12 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     if(!pa_handle)
         return ALC_FALSE;
 
-    if(device_name)
-    {
-        if(strcmp(device_name, pulse_capture_device) != 0)
-            return ALC_FALSE;
-    }
+    if(!device_name)
+        device_name = pulse_capture_device;
+    else if(strcmp(device_name, pulse_capture_device) != 0)
+        return ALC_FALSE;
 
-    if(pulse_open(device, pulse_capture_device) == ALC_FALSE)
+    if(pulse_open(device, device_name) == ALC_FALSE)
         return ALC_FALSE;
 
     data = device->ExtraData;
@@ -478,6 +476,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     {
         ppa_threaded_mainloop_unlock(data->loop);
         pulse_close(device);
+        free(device->szDeviceName);
+        device->szDeviceName = NULL;
         return ALC_FALSE;
     }
 
@@ -503,6 +503,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             AL_PRINT("Unknown format: %x\n", device->Format);
             ppa_threaded_mainloop_unlock(data->loop);
             pulse_close(device);
+            free(device->szDeviceName);
+            device->szDeviceName = NULL;
             return ALC_FALSE;
     }
 
@@ -511,6 +513,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         AL_PRINT("Invalid sample format\n");
         ppa_threaded_mainloop_unlock(data->loop);
         pulse_close(device);
+        free(device->szDeviceName);
+        device->szDeviceName = NULL;
         return ALC_FALSE;
     }
 
@@ -522,6 +526,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
         ppa_threaded_mainloop_unlock(data->loop);
         pulse_close(device);
+        free(device->szDeviceName);
+        device->szDeviceName = NULL;
         return ALC_FALSE;
     }
 
@@ -537,6 +543,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
         data->stream = NULL;
         pulse_close(device);
+        free(device->szDeviceName);
+        device->szDeviceName = NULL;
         return ALC_FALSE;
     }
 
@@ -552,6 +560,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
             data->stream = NULL;
             pulse_close(device);
+            free(device->szDeviceName);
+            device->szDeviceName = NULL;
             return ALC_FALSE;
         }
 

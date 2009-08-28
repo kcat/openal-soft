@@ -147,18 +147,15 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
 
 static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
-    const char *devName = oss_device;
     char driver[64];
     oss_data *data;
 
     strncpy(driver, GetConfigValue("oss", "device", "/dev/dsp"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
-    if(deviceName)
-    {
-        if(strcmp(deviceName, oss_device))
-            return ALC_FALSE;
-        devName = oss_device;
-    }
+    if(!deviceName)
+        deviceName = oss_device;
+    else if(strcmp(deviceName, oss_device) != 0)
+        return ALC_FALSE;
 
     data = (oss_data*)calloc(1, sizeof(oss_data));
     data->killNow = 0;
@@ -171,7 +168,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
         return ALC_FALSE;
     }
 
-    device->szDeviceName = strdup(devName);
+    device->szDeviceName = strdup(deviceName);
     device->ExtraData = data;
     return ALC_TRUE;
 }
@@ -299,7 +296,6 @@ static void oss_stop_context(ALCdevice *device, ALCcontext *context)
 
 static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
 {
-    const char *devName = oss_device_capture;
     int numFragmentsLogSize;
     int log2FragmentSize;
     unsigned int periods;
@@ -315,12 +311,10 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
 
     strncpy(driver, GetConfigValue("oss", "capture", "/dev/dsp"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
-    if(deviceName)
-    {
-        if(strcmp(deviceName, oss_device_capture))
-            return ALC_FALSE;
-        devName = oss_device_capture;
-    }
+    if(!deviceName)
+        deviceName = oss_device_capture;
+    else if(strcmp(deviceName, oss_device_capture) != 0)
+        return ALC_FALSE;
 
     data = (oss_data*)calloc(1, sizeof(oss_data));
     data->killNow = 0;
@@ -410,7 +404,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         return ALC_FALSE;
     }
 
-    device->szDeviceName = strdup(devName);
+    device->szDeviceName = strdup(deviceName);
     return ALC_TRUE;
 }
 

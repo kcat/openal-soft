@@ -352,7 +352,6 @@ static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
 
 static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
-    const char *devName = alsaDevice;
     alsa_data *data;
     char driver[64];
     int i;
@@ -362,7 +361,9 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
 
     strncpy(driver, GetConfigValue("alsa", "device", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
-    if(deviceName)
+    if(!deviceName)
+        deviceName = alsaDevice;
+    else if(strcmp(deviceName, alsaDevice) != 0)
     {
         size_t idx;
 
@@ -371,14 +372,11 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
             if(allDevNameMap[idx].name &&
                strcmp(deviceName, allDevNameMap[idx].name) == 0)
             {
-                devName = allDevNameMap[idx].name;
                 if(idx > 0)
                     sprintf(driver, "hw:%d,%d", allDevNameMap[idx].card, allDevNameMap[idx].dev);
                 goto open_alsa;
             }
         }
-        if(strcmp(deviceName, alsaDevice) == 0)
-            goto open_alsa;
         return ALC_FALSE;
     }
 
@@ -404,7 +402,7 @@ open_alsa:
         return ALC_FALSE;
     }
 
-    device->szDeviceName = strdup(devName);
+    device->szDeviceName = strdup(deviceName);
     device->ExtraData = data;
     return ALC_TRUE;
 }
@@ -593,7 +591,9 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
 
     strncpy(driver, GetConfigValue("alsa", "capture", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
-    if(deviceName)
+    if(!deviceName)
+        deviceName = allCaptureDevNameMap[0].name;
+    else
     {
         size_t idx;
 
@@ -610,8 +610,6 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
         }
         return ALC_FALSE;
     }
-    else
-        devName = allCaptureDevNameMap[0].name;
 
 open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -728,7 +726,7 @@ open_alsa:
         return ALC_FALSE;
     }
 
-    pDevice->szDeviceName = strdup(devName);
+    pDevice->szDeviceName = strdup(deviceName);
     return ALC_TRUE;
 }
 

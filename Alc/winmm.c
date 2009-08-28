@@ -440,7 +440,7 @@ void alcWinMMDeinit()
     NumCaptureDevices = 0;
 }
 
-void alcWinMMProbe(ALCboolean capture)
+void alcWinMMProbe(int type)
 {
     ALuint lLoop;
 

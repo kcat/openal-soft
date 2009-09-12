@@ -20,6 +20,12 @@
 #endif
 #include <windows.h>
 
+typedef DWORD tls_type;
+#define tls_create(x) (*(x) = TlsAlloc())
+#define tls_delete(x) TlsFree((x))
+#define tls_get(x) TlsGetValue((x))
+#define tls_set(x, a) TlsSetValue((x), (a))
+
 #else
 
 #include <assert.h>
@@ -32,6 +38,12 @@
 #include <errno.h>
 
 #define IsBadWritePtr(a,b) (0)
+
+typedef pthread_key_t tls_type;
+#define tls_create(x) pthread_key_create((x), NULL)
+#define tls_delete(x) pthread_key_delete((x))
+#define tls_get(x) pthread_getspecific((x))
+#define tls_set(x, a) pthread_setspecific((x), (a))
 
 typedef pthread_mutex_t CRITICAL_SECTION;
 static inline void EnterCriticalSection(CRITICAL_SECTION *cs)
@@ -313,6 +325,9 @@ void FreeALConfig(void);
 const char *GetConfigValue(const char *blockName, const char *keyName, const char *def);
 int GetConfigValueInt(const char *blockName, const char *keyName, int def);
 float GetConfigValueFloat(const char *blockName, const char *keyName, float def);
+
+ALCboolean  ALCAPIENTRY alcMakeCurrent(ALCcontext *context);
+ALCcontext* ALCAPIENTRY alcGetThreadContext(void);
 
 #ifdef __cplusplus
 }

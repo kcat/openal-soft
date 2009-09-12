@@ -111,6 +111,10 @@ static ALCfunction  alcFunctions[] = {
     { "alcCaptureStart",            (ALvoid *) alcCaptureStart          },
     { "alcCaptureStop",             (ALvoid *) alcCaptureStop           },
     { "alcCaptureSamples",          (ALvoid *) alcCaptureSamples        },
+
+    { "alcMakeCurrent",             (ALvoid *) alcMakeCurrent           },
+    { "alcGetThreadContext",        (ALvoid *) alcGetThreadContext      },
+
     { NULL,                         (ALvoid *) NULL                     }
 };
 
@@ -175,7 +179,7 @@ static ALCchar *alcDefaultAllDeviceSpecifier;
 static ALCchar *alcCaptureDefaultDeviceSpecifier;
 
 
-static ALCchar alcExtensionList[] = "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE ALC_EXT_disconnect ALC_EXT_EFX";
+static ALCchar alcExtensionList[] = "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE ALC_EXT_disconnect ALC_EXT_EFX ALC_EXTX_thread_local_context";
 static ALCint alcMajorVersion = 1;
 static ALCint alcMinorVersion = 1;
 
@@ -196,6 +200,9 @@ static CRITICAL_SECTION g_csMutex;
 // Context List
 static ALCcontext *g_pContextList = NULL;
 static ALCuint     g_ulContextCount = 0;
+
+// Thread-local current context
+static tls_type LocalContext;
 
 // Context Error
 static ALCenum g_eLastContextError = ALC_NO_ERROR;
@@ -229,6 +236,8 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             for(i = 0;BackendList[i].Deinit;i++)
                 BackendList[i].Deinit();
 
+            tls_delete(LocalContext);
+
             FreeALConfig();
             ALTHUNK_EXIT();
             DeleteCriticalSection(&g_csMutex);
@@ -251,6 +260,8 @@ static void my_deinit()
 
     for(i = 0;BackendList[i].Deinit;i++)
         BackendList[i].Deinit();
+
+    tls_delete(LocalContext);
 
     FreeALConfig();
     ALTHUNK_EXIT();
@@ -304,6 +315,8 @@ static void InitAL(void)
         InitializeCriticalSection(&g_csMutex);
         ALTHUNK_INIT();
         ReadALConfig();
+
+        tls_create(&LocalContext);
 
         devs = GetConfigValue(NULL, "drivers", "");
         if(devs[0])
@@ -509,10 +522,18 @@ ALCcontext *GetContextSuspended(void)
 
     SuspendContext(NULL);
 
-    pContext = g_pContextList;
-    while(pContext && !pContext->InUse)
-        pContext = pContext->next;
-
+    pContext = tls_get(LocalContext);
+    if(pContext && !IsContext(pContext))
+    {
+        tls_set(LocalContext, NULL);
+        pContext = NULL;
+    }
+    if(!pContext)
+    {
+        pContext = g_pContextList;
+        while(pContext && !pContext->InUse)
+            pContext = pContext->next;
+    }
     if(pContext)
         SuspendContext(pContext);
 
@@ -1307,15 +1328,33 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
 */
 ALCAPI ALCcontext * ALCAPIENTRY alcGetCurrentContext(ALCvoid)
 {
+    ALCcontext *pContext;
+
+    if((pContext=GetContextSuspended()) != NULL)
+        ProcessContext(pContext);
+
+    return pContext;
+}
+
+/*
+    alcGetThreadContext
+
+    Returns the currently active thread-local Context
+*/
+ALCcontext * ALCAPIENTRY alcGetThreadContext(void)
+{
     ALCcontext *pContext = NULL;
 
     InitAL();
 
     SuspendContext(NULL);
 
-    pContext = g_pContextList;
-    while ((pContext) && (!pContext->InUse))
-        pContext = pContext->next;
+    pContext = tls_get(LocalContext);
+    if(pContext && !IsContext(pContext))
+    {
+        tls_set(LocalContext, NULL);
+        pContext = NULL;
+    }
 
     ProcessContext(NULL);
 
@@ -1374,7 +1413,36 @@ ALCAPI ALCboolean ALCAPIENTRY alcMakeContextCurrent(ALCcontext *context)
             ALContext->InUse=AL_TRUE;
             ProcessContext(ALContext);
         }
+
+        tls_set(LocalContext, NULL);
     }
+    else
+    {
+        SetALCError(ALC_INVALID_CONTEXT);
+        bReturn = AL_FALSE;
+    }
+
+    ProcessContext(NULL);
+
+    return bReturn;
+}
+
+/*
+    alcMakeCurrent
+
+    Makes the given Context the active Context for the current thread
+*/
+ALCboolean ALCAPIENTRY alcMakeCurrent(ALCcontext *context)
+{
+    ALboolean bReturn = AL_TRUE;
+
+    InitAL();
+
+    SuspendContext(NULL);
+
+    // context must be a valid Context or NULL
+    if(context == NULL || IsContext(context))
+        tls_set(LocalContext, context);
     else
     {
         SetALCError(ALC_INVALID_CONTEXT);

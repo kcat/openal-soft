@@ -215,6 +215,8 @@ static ALboolean init_done = AL_FALSE;
 ///////////////////////////////////////////////////////
 // ALC Related helper functions
 #ifdef _WIN32
+static void alc_deinit();
+
 BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 {
     int i;
@@ -229,26 +231,18 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             break;
 
         case DLL_PROCESS_DETACH:
-            if(!init_done)
-                break;
-            ReleaseALC();
-
-            for(i = 0;BackendList[i].Deinit;i++)
-                BackendList[i].Deinit();
-
-            tls_delete(LocalContext);
-
-            FreeALConfig();
-            ALTHUNK_EXIT();
-            DeleteCriticalSection(&g_csMutex);
+            alc_deinit();
             break;
     }
     return TRUE;
 }
 #else
 #ifdef HAVE_GCC_DESTRUCTOR
-static void my_deinit() __attribute__((destructor));
-static void my_deinit()
+static void alc_deinit() __attribute__((destructor));
+#endif
+#endif
+
+static void alc_deinit()
 {
     static ALenum once = AL_FALSE;
     int i;
@@ -267,8 +261,6 @@ static void my_deinit()
     ALTHUNK_EXIT();
     DeleteCriticalSection(&g_csMutex);
 }
-#endif
-#endif
 
 static void ProbeDeviceList()
 {

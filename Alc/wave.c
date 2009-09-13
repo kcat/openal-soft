@@ -49,7 +49,6 @@ static ALuint WaveProc(ALvoid *ptr)
     wave_data *data = (wave_data*)pDevice->ExtraData;
     ALuint frameSize;
     ALuint now, last;
-    size_t WriteCnt;
     size_t fs;
     ALuint avail;
     union {
@@ -62,7 +61,7 @@ static ALuint WaveProc(ALvoid *ptr)
                 aluChannelsFromFormat(pDevice->Format);
 
     last = timeGetTime();
-    while(!data->killNow)
+    while(!data->killNow && pDevice->Connected)
     {
         now = timeGetTime();
 
@@ -73,11 +72,10 @@ static ALuint WaveProc(ALvoid *ptr)
             continue;
         }
 
-        while(avail > 0)
+        while(avail >= pDevice->UpdateSize)
         {
             SuspendContext(NULL);
-            WriteCnt = min(data->size, avail);
-            aluMixData(pDevice->Context, data->buffer, WriteCnt * frameSize,
+            aluMixData(pDevice->Context, data->buffer, data->size,
                        pDevice->Format);
             ProcessContext(NULL);
 
@@ -86,19 +84,20 @@ static ALuint WaveProc(ALvoid *ptr)
                 ALubyte *bytes = data->buffer;
                 ALuint i;
 
-                for(i = 0;i < WriteCnt*frameSize;i++)
+                for(i = 0;i < data->size;i++)
                     fputc(bytes[i^1], data->f);
             }
             else
-                fs = fwrite(data->buffer, frameSize, WriteCnt, data->f);
+                fs = fwrite(data->buffer, frameSize, pDevice->UpdateSize,
+                            data->f);
             if(ferror(data->f))
             {
                 AL_PRINT("Error writing to file\n");
-                data->killNow = 1;
+                aluHandleDisconnect(pDevice);
                 break;
             }
 
-            avail -= WriteCnt;
+            avail -= pDevice->UpdateSize;
         }
         last = now;
     }

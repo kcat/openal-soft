@@ -92,10 +92,7 @@ static ALuint SolarisProc(ALvoid *ptr)
 
 static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
-    audio_info_t info;
-    ALuint frameSize;
     char driver[64];
-    int numChannels;
     solaris_data *data;
 
     strncpy(driver, GetConfigValue("solaris", "device", "/dev/audio"), sizeof(driver)-1);
@@ -116,10 +113,29 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
         return ALC_FALSE;
     }
 
-    numChannels = aluChannelsFromFormat(device->Format);
+    device->szDeviceName = strdup(deviceName);
+    device->ExtraData = data;
+    return ALC_TRUE;
+}
+
+static void solaris_close_playback(ALCdevice *device)
+{
+    solaris_data *data = (solaris_data*)device->ExtraData;
+
+    close(data->fd);
+    free(data);
+    device->ExtraData = NULL;
+}
+
+static ALCboolean solaris_start_context(ALCdevice *device, ALCcontext *context)
+{
+    solaris_data *data = (solaris_data*)device->ExtraData;
+    audio_info_t info;
+    ALuint frameSize;
+    int numChannels;
+    (void)context;
+
     AUDIO_INITINFO(&info);
-    info.play.sample_rate = device->Frequency;
-    info.play.channels = numChannels;
 
     switch(aluBytesFromFormat(device->Format))
     {
@@ -146,22 +162,22 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
             AL_PRINT("Unknown format?! %x\n", device->Format);
     }
 
+    numChannels = aluChannelsFromFormat(device->Format);
+    info.play.sample_rate = device->Frequency;
+    info.play.channels = numChannels;
+
     frameSize = numChannels * aluBytesFromFormat(device->Format);
     info.play.buffer_size = device->BufferSize * frameSize;
 
     if(ioctl(data->fd, AUDIO_SETINFO, &info) < 0)
     {
         AL_PRINT("ioctl failed: %s\n", strerror(errno));
-        close(data->fd);
-        free(data);
         return ALC_FALSE;
     }
 
     if(aluChannelsFromFormat(device->Format) != info.play.channels)
     {
         AL_PRINT("Could not set %d channels, got %d instead\n", aluChannelsFromFormat(device->Format), info.play.channels);
-        close(data->fd);
-        free(data);
         return ALC_FALSE;
     }
 
@@ -169,8 +185,6 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
          (info.play.precision == 16 && aluBytesFromFormat(device->Format) == 2)))
     {
         AL_PRINT("Could not set %d-bit output, got %d\n", aluBytesFromFormat(device->Format)*8, info.play.precision);
-        close(data->fd);
-        free(data);
         return ALC_FALSE;
     }
 
@@ -180,43 +194,31 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
     data->data_size = device->UpdateSize * frameSize;
     data->mix_data = calloc(1, data->data_size);
 
-    device->ExtraData = data;
     data->thread = StartThread(SolarisProc, device);
     if(data->thread == NULL)
     {
-        device->ExtraData = NULL;
         free(data->mix_data);
-        free(data);
+        data->mix_data = NULL;
         return ALC_FALSE;
     }
 
-    device->szDeviceName = strdup(deviceName);
-    return ALC_TRUE;
-}
-
-static void solaris_close_playback(ALCdevice *device)
-{
-    solaris_data *data = (solaris_data*)device->ExtraData;
-    data->killNow = 1;
-    StopThread(data->thread);
-
-    close(data->fd);
-
-    free(data->mix_data);
-    free(data);
-    device->ExtraData = NULL;
-}
-
-static ALCboolean solaris_start_context(ALCdevice *device, ALCcontext *context)
-{
-    device->Frequency = context->fFrequency;
     return ALC_TRUE;
 }
 
 static void solaris_stop_context(ALCdevice *device, ALCcontext *context)
 {
-    (void)device;
+    solaris_data *data = (solaris_data*)device->ExtraData;
     (void)context;
+
+    if(!data->thread)
+        return;
+
+    data->killNow = 1;
+    StopThread(data->thread);
+    data->thread = NULL;
+
+    free(data->mix_data);
+    data->mix_data = NULL;
 }
 
 

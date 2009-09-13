@@ -137,32 +137,6 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
 static void wave_close_playback(ALCdevice *device)
 {
     wave_data *data = (wave_data*)device->ExtraData;
-    ALuint dataLen;
-    long size;
-
-    data->killNow = 1;
-    StopThread(data->thread);
-
-    size = ftell(data->f);
-    if(size > 0)
-    {
-        dataLen = size - data->DataStart;
-        if(fseek(data->f, data->DataStart-4, SEEK_SET) == 0)
-        {
-            fputc(dataLen&0xff, data->f); // 'data' header len
-            fputc((dataLen>>8)&0xff, data->f);
-            fputc((dataLen>>16)&0xff, data->f);
-            fputc((dataLen>>24)&0xff, data->f);
-        }
-        if(fseek(data->f, 4, SEEK_SET) == 0)
-        {
-            size -= 8;
-            fputc(size&0xff, data->f); // 'WAVE' header len
-            fputc((size>>8)&0xff, data->f);
-            fputc((size>>16)&0xff, data->f);
-            fputc((size>>24)&0xff, data->f);
-        }
-    }
 
     fclose(data->f);
     free(data);
@@ -251,8 +225,8 @@ static ALCboolean wave_start_context(ALCdevice *device, ALCcontext *Context)
 
     device->UpdateSize = device->BufferSize / 4;
 
-    data->size = device->UpdateSize;
-    data->buffer = malloc(data->size * channels * bits / 8);
+    data->size = device->UpdateSize * channels * bits / 8;
+    data->buffer = malloc(data->size);
     if(!data->buffer)
     {
         AL_PRINT("buffer malloc failed\n");

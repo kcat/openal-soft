@@ -207,20 +207,17 @@ static tls_type LocalContext;
 // Context Error
 static ALCenum g_eLastContextError = ALC_NO_ERROR;
 
-static ALboolean init_done = AL_FALSE;
-
 ///////////////////////////////////////////////////////
 
 
 ///////////////////////////////////////////////////////
 // ALC Related helper functions
 #ifdef _WIN32
-static void alc_deinit();
+static void alc_init(void);
+static void alc_deinit(void);
 
 BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 {
-    int i;
-
     (void)lpReserved;
 
     // Perform actions based on the reason for calling.
@@ -228,6 +225,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
     {
         case DLL_PROCESS_ATTACH:
             DisableThreadLibraryCalls(hModule);
+            alc_init();
             break;
 
         case DLL_PROCESS_DETACH:
@@ -238,17 +236,115 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 }
 #else
 #ifdef HAVE_GCC_DESTRUCTOR
-static void alc_deinit() __attribute__((destructor));
+static void alc_init(void) __attribute__((constructor));
+static void alc_deinit(void) __attribute__((destructor));
 #endif
 #endif
 
-static void alc_deinit()
+static void alc_init(void)
 {
-    static ALenum once = AL_FALSE;
     int i;
+    const char *devs, *str;
 
-    if(once || !init_done) return;
-    once = AL_TRUE;
+    InitializeCriticalSection(&g_csMutex);
+    ALTHUNK_INIT();
+    ReadALConfig();
+
+    tls_create(&LocalContext);
+
+    devs = GetConfigValue(NULL, "drivers", "");
+    if(devs[0])
+    {
+        int n;
+        size_t len;
+        const char *next = devs;
+
+        i = 0;
+        do {
+            devs = next;
+            next = strchr(devs, ',');
+
+            if(!devs[0] || devs[0] == ',')
+                continue;
+
+            len = (next ? ((size_t)(next-devs)) : strlen(devs));
+            for(n = i;BackendList[n].Init;n++)
+            {
+                if(len == strlen(BackendList[n].name) &&
+                   strncmp(BackendList[n].name, devs, len) == 0)
+                {
+                    const char *name = BackendList[i].name;
+                    void (*Init)(BackendFuncs*) = BackendList[i].Init;
+
+                    BackendList[i].name = BackendList[n].name;
+                    BackendList[i].Init = BackendList[n].Init;
+
+                    BackendList[n].name = name;
+                    BackendList[n].Init = Init;
+
+                    i++;
+                }
+            }
+        } while(next++);
+
+        BackendList[i].name = NULL;
+        BackendList[i].Init = NULL;
+        BackendList[i].Deinit = NULL;
+        BackendList[i].Probe = NULL;
+    }
+
+    for(i = 0;BackendList[i].Init;i++)
+    {
+        BackendList[i].Init(&BackendList[i].Funcs);
+
+        BackendList[i].Probe(DEVICE_PROBE);
+        BackendList[i].Probe(ALL_DEVICE_PROBE);
+        BackendList[i].Probe(CAPTURE_DEVICE_PROBE);
+    }
+
+    str = GetConfigValue(NULL, "stereodup", "false");
+    DuplicateStereo = (strcasecmp(str, "true") == 0 ||
+                       strcasecmp(str, "yes") == 0 ||
+                       strcasecmp(str, "on") == 0 ||
+                       atoi(str) != 0);
+
+    str = GetConfigValue(NULL, "excludefx", "");
+    if(str[0])
+    {
+        const struct {
+            const char *name;
+            int type;
+        } EffectList[] = {
+            { "eaxreverb", EAXREVERB },
+            { "reverb", REVERB },
+            { "echo", ECHO },
+            { NULL, 0 }
+        };
+        int n;
+        size_t len;
+        const char *next = str;
+
+        do {
+            str = next;
+            next = strchr(str, ',');
+
+            if(!str[0] || next == str)
+                continue;
+
+            len = (next ? ((size_t)(next-str)) : strlen(str));
+            for(n = 0;EffectList[n].name;n++)
+            {
+                if(len == strlen(EffectList[n].name) &&
+                   strncmp(EffectList[n].name, str, len) == 0)
+                    DisabledEffects[EffectList[n].type] = AL_TRUE;
+            }
+        } while(next++);
+    }
+}
+
+static void alc_deinit(void)
+{
+    int i;
 
     ReleaseALC();
 
@@ -261,6 +357,7 @@ static void alc_deinit()
     ALTHUNK_EXIT();
     DeleteCriticalSection(&g_csMutex);
 }
+
 
 static void ProbeDeviceList()
 {
@@ -293,111 +390,6 @@ static void ProbeCaptureDeviceList()
 
     for(i = 0;BackendList[i].Probe;i++)
         BackendList[i].Probe(CAPTURE_DEVICE_PROBE);
-}
-
-static void InitAL(void)
-{
-    if(!init_done)
-    {
-        int i;
-        const char *devs, *str;
-
-        init_done = AL_TRUE;
-
-        InitializeCriticalSection(&g_csMutex);
-        ALTHUNK_INIT();
-        ReadALConfig();
-
-        tls_create(&LocalContext);
-
-        devs = GetConfigValue(NULL, "drivers", "");
-        if(devs[0])
-        {
-            int n;
-            size_t len;
-            const char *next = devs;
-
-            i = 0;
-
-            do {
-                devs = next;
-                next = strchr(devs, ',');
-
-                if(!devs[0] || devs[0] == ',')
-                    continue;
-
-                len = (next ? ((size_t)(next-devs)) : strlen(devs));
-                for(n = i;BackendList[n].Init;n++)
-                {
-                    if(len == strlen(BackendList[n].name) &&
-                       strncmp(BackendList[n].name, devs, len) == 0)
-                    {
-                        const char *name = BackendList[i].name;
-                        void (*Init)(BackendFuncs*) = BackendList[i].Init;
-
-                        BackendList[i].name = BackendList[n].name;
-                        BackendList[i].Init = BackendList[n].Init;
-
-                        BackendList[n].name = name;
-                        BackendList[n].Init = Init;
-
-                        i++;
-                    }
-                }
-            } while(next++);
-
-            BackendList[i].name = NULL;
-            BackendList[i].Init = NULL;
-        }
-
-        for(i = 0;BackendList[i].Init;i++)
-        {
-            BackendList[i].Init(&BackendList[i].Funcs);
-
-            BackendList[i].Probe(DEVICE_PROBE);
-            BackendList[i].Probe(ALL_DEVICE_PROBE);
-            BackendList[i].Probe(CAPTURE_DEVICE_PROBE);
-        }
-
-        str = GetConfigValue(NULL, "stereodup", "false");
-        DuplicateStereo = (strcasecmp(str, "true") == 0 ||
-                           strcasecmp(str, "yes") == 0 ||
-                           strcasecmp(str, "on") == 0 ||
-                           atoi(str) != 0);
-
-        str = GetConfigValue(NULL, "excludefx", "");
-        if(str[0])
-        {
-            const struct {
-                const char *name;
-                int type;
-            } EffectList[] = {
-                { "eaxreverb", EAXREVERB },
-                { "reverb", REVERB },
-                { "echo", ECHO },
-                { NULL, 0 }
-            };
-            int n;
-            size_t len;
-            const char *next = str;
-
-            do {
-                str = next;
-                next = strchr(str, ',');
-
-                if(!str[0] || next == str)
-                    continue;
-
-                len = (next ? ((size_t)(next-str)) : strlen(str));
-                for(n = 0;EffectList[n].name;n++)
-                {
-                    if(len == strlen(EffectList[n].name) &&
-                       strncmp(EffectList[n].name, str, len) == 0)
-                        DisabledEffects[EffectList[n].type] = AL_TRUE;
-                }
-            } while(next++);
-        }
-    }
 }
 
 
@@ -616,8 +608,6 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
     ALCdevice *pDevice = NULL;
     ALCint i;
 
-    InitAL();
-
     if(SampleSize <= 0)
     {
         SetALCError(ALC_INVALID_VALUE);
@@ -777,8 +767,6 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
 {
     const ALCchar *value = NULL;
 
-    InitAL();
-
     switch (param)
     {
     case ALC_NO_ERROR:
@@ -877,8 +865,6 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
 */
 ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsizei size,ALCint *data)
 {
-    InitAL();
-
     if(IsDevice(device) && device->IsCaptureDevice)
     {
         SuspendContext(NULL);
@@ -1266,8 +1252,6 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALCcontext **list;
 
-    InitAL();
-
     if (IsContext(context))
     {
         ALCdevice_StopContext(context->Device, context);
@@ -1337,8 +1321,6 @@ ALCcontext * ALCAPIENTRY alcGetThreadContext(void)
 {
     ALCcontext *pContext = NULL;
 
-    InitAL();
-
     SuspendContext(NULL);
 
     pContext = tls_get(LocalContext);
@@ -1363,8 +1345,6 @@ ALCAPI ALCdevice* ALCAPIENTRY alcGetContextsDevice(ALCcontext *pContext)
 {
     ALCdevice *pDevice = NULL;
 
-    InitAL();
-
     SuspendContext(NULL);
     if (IsContext(pContext))
         pDevice = pContext->Device;
@@ -1385,8 +1365,6 @@ ALCAPI ALCboolean ALCAPIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
     ALCcontext *ALContext;
     ALboolean bReturn = AL_TRUE;
-
-    InitAL();
 
     SuspendContext(NULL);
 
@@ -1427,8 +1405,6 @@ ALCAPI ALCboolean ALCAPIENTRY alcMakeContextCurrent(ALCcontext *context)
 ALCboolean ALCAPIENTRY alcMakeCurrent(ALCcontext *context)
 {
     ALboolean bReturn = AL_TRUE;
-
-    InitAL();
 
     SuspendContext(NULL);
 
@@ -1484,8 +1460,6 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
     ALboolean bDeviceFound = AL_FALSE;
     ALCdevice *device;
     ALint i;
-
-    InitAL();
 
     if(deviceName && !deviceName[0])
         deviceName = NULL;

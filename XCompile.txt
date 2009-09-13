@@ -1,6 +1,5 @@
 # Cross-compiling requires CMake 2.6 or newer. To cross-compile, first modify
-# this file to set the proper settings and paths. Then use it from CMakeConf/
-# like:
+# this file to set the proper settings and paths. Then use it from build/ like:
 # cmake .. -DCMAKE_TOOLCHAIN_FILE=../XCompile.txt \
 #          -DCMAKE_INSTALL_PREFIX=/usr/mingw32/mingw
 # If you already have a toolchain file setup, you may use that instead of this

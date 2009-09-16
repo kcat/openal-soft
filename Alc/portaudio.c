@@ -42,6 +42,7 @@ MAKE_FUNC(Pa_StopStream);
 MAKE_FUNC(Pa_OpenStream);
 MAKE_FUNC(Pa_CloseStream);
 MAKE_FUNC(Pa_GetDefaultOutputDevice);
+MAKE_FUNC(Pa_GetStreamInfo);
 #undef MAKE_FUNC
 
 
@@ -69,6 +70,7 @@ static int pa_callback(const void *inputBuffer, void *outputBuffer,
 
 static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
+    const PaStreamInfo *streamInfo;
     PaStreamParameters outParams;
     pa_data *data;
     int periods;
@@ -123,6 +125,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         free(data);
         return ALC_FALSE;
     }
+    streamInfo = pPa_GetStreamInfo(data->stream);
 
     err = pPa_StartStream(data->stream);
     if(err != paNoError)
@@ -136,6 +139,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 
     device->szDeviceName = strdup(deviceName);
     device->UpdateSize = device->BufferSize/periods;
+    device->Frequency = streamInfo->sampleRate;
     return ALC_TRUE;
 }
 
@@ -233,6 +237,7 @@ void alc_pa_init(BackendFuncs *func_list)
     LOAD_FUNC(Pa_OpenStream);
     LOAD_FUNC(Pa_CloseStream);
     LOAD_FUNC(Pa_GetDefaultOutputDevice);
+    LOAD_FUNC(Pa_GetStreamInfo);
 #undef LOAD_FUNC
 
     if((err=pPa_Initialize()) != paNoError)

@@ -35,6 +35,7 @@
 static void *pa_handle;
 #define MAKE_FUNC(x) static typeof(x) * p##x
 MAKE_FUNC(Pa_Initialize);
+MAKE_FUNC(Pa_Terminate);
 MAKE_FUNC(Pa_GetErrorText);
 MAKE_FUNC(Pa_StartStream);
 MAKE_FUNC(Pa_StopStream);
@@ -225,6 +226,7 @@ void alc_pa_init(BackendFuncs *func_list)
 #endif
 
     LOAD_FUNC(Pa_Initialize);
+    LOAD_FUNC(Pa_Terminate);
     LOAD_FUNC(Pa_GetErrorText);
     LOAD_FUNC(Pa_StartStream);
     LOAD_FUNC(Pa_StopStream);
@@ -243,11 +245,14 @@ void alc_pa_init(BackendFuncs *func_list)
 
 void alc_pa_deinit(void)
 {
-#ifdef HAVE_DLFCN_H
     if(pa_handle)
+    {
+        pPa_Terminate();
+#ifdef HAVE_DLFCN_H
         dlclose(pa_handle);
-    pa_handle = NULL;
+        pa_handle = NULL;
 #endif
+    }
 }
 
 void alc_pa_probe(int type)

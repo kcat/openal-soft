@@ -166,7 +166,6 @@ static ALuint ALSAProc(ALvoid *ptr)
     snd_pcm_sframes_t avail, commitres;
     snd_pcm_uframes_t offset, frames;
     char *WritePtr;
-    int WriteCnt;
     int err;
 
     while(!data->killNow)
@@ -230,8 +229,7 @@ static ALuint ALSAProc(ALvoid *ptr)
             }
 
             WritePtr = (char*)areas->addr + (offset * areas->step / 8);
-            WriteCnt = psnd_pcm_frames_to_bytes(data->pcmHandle, frames);
-            aluMixData(pDevice->Context, WritePtr, WriteCnt, pDevice->Format);
+            aluMixData(pDevice->Context, WritePtr, frames, pDevice->Format);
 
             commitres = psnd_pcm_mmap_commit(data->pcmHandle, offset, frames);
             if (commitres < 0 || (commitres-frames) != 0)
@@ -267,12 +265,12 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
             break;
         }
 
+        avail = data->size / psnd_pcm_frames_to_bytes(data->pcmHandle, 1);
         SuspendContext(NULL);
-        aluMixData(pDevice->Context, data->buffer, data->size, pDevice->Format);
+        aluMixData(pDevice->Context, data->buffer, avail, pDevice->Format);
         ProcessContext(NULL);
 
         WritePtr = data->buffer;
-        avail = (snd_pcm_uframes_t)data->size / psnd_pcm_frames_to_bytes(data->pcmHandle, 1);
         while(avail > 0)
         {
             int ret = psnd_pcm_writei(data->pcmHandle, WritePtr, avail);

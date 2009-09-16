@@ -132,8 +132,8 @@ static ALuint DSoundProc(ALvoid *ptr)
         {
             // If we have an active context, mix data directly into output buffer otherwise fill with silence
             SuspendContext(NULL);
-            aluMixData(pDevice->Context, WritePtr1, WriteCnt1, pDevice->Format);
-            aluMixData(pDevice->Context, WritePtr2, WriteCnt2, pDevice->Format);
+            aluMixData(pDevice->Context, WritePtr1, WriteCnt1/DSBCaps.nBlockAlign, pDevice->Format);
+            aluMixData(pDevice->Context, WritePtr2, WriteCnt2/DSBCaps.nBlockAlign, pDevice->Format);
             ProcessContext(NULL);
 
             // Unlock output buffer only when successfully locked

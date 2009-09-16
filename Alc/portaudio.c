@@ -56,17 +56,13 @@ static int pa_callback(const void *inputBuffer, void *outputBuffer,
                        const PaStreamCallbackFlags statusFlags, void *userData)
 {
     ALCdevice *device = (ALCdevice*)userData;
-    int frameSize;
 
     (void)inputBuffer;
     (void)timeInfo;
     (void)statusFlags;
 
-    frameSize  = aluBytesFromFormat(device->Format);
-    frameSize *= aluChannelsFromFormat(device->Format);
-
     SuspendContext(NULL);
-    aluMixData(device->Context, outputBuffer, framesPerBuffer*frameSize, device->Format);
+    aluMixData(device->Context, outputBuffer, framesPerBuffer, device->Format);
     ProcessContext(NULL);
 
     return 0;

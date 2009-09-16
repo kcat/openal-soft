@@ -169,10 +169,11 @@ static void context_state_callback(pa_context *context, void *pdata) //{{{
 static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //{{{
 {
     ALCdevice *Device = pdata;
+    pulse_data *data = Device->ExtraData;
     void *buf = ppa_xmalloc0(len);
 
     SuspendContext(NULL);
-    aluMixData(Device->Context, buf, len, Device->Format);
+    aluMixData(Device->Context, buf, len/data->frame_size, Device->Format);
     ProcessContext(NULL);
 
     ppa_stream_write(stream, buf, len, ppa_xfree, 0, PA_SEEK_RELATIVE);

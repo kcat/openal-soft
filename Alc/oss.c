@@ -79,7 +79,11 @@ static ALuint OSSProc(ALvoid *ptr)
 {
     ALCdevice *pDevice = (ALCdevice*)ptr;
     oss_data *data = (oss_data*)pDevice->ExtraData;
+    ALint frameSize;
     int wrote;
+
+    frameSize = aluChannelsFromFormat(pDevice->Format) *
+                aluBytesFromFormat(pDevice->Format);
 
     while(!data->killNow && !pDevice->Connected)
     {
@@ -87,7 +91,7 @@ static ALuint OSSProc(ALvoid *ptr)
         ALubyte *WritePtr = data->mix_data;
 
         SuspendContext(NULL);
-        aluMixData(pDevice->Context, WritePtr, len, pDevice->Format);
+        aluMixData(pDevice->Context, WritePtr, len/frameSize, pDevice->Format);
         ProcessContext(NULL);
 
         while(len > 0 && !data->killNow)

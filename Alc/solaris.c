@@ -54,7 +54,11 @@ static ALuint SolarisProc(ALvoid *ptr)
     ALCdevice *pDevice = (ALCdevice*)ptr;
     solaris_data *data = (solaris_data*)pDevice->ExtraData;
     int remaining = 0;
+    ALint frameSize;
     int wrote;
+
+    frameSize = aluChannelsFromFormat(pDevice->Format) *
+                aluBytesFromFormat(pDevice->Format);
 
     while(!data->killNow && !pDevice->Connected)
     {
@@ -62,7 +66,7 @@ static ALuint SolarisProc(ALvoid *ptr)
         ALubyte *WritePtr = data->mix_data;
 
         SuspendContext(NULL);
-        aluMixData(pDevice->Context, WritePtr, len, pDevice->Format);
+        aluMixData(pDevice->Context, WritePtr, len/frameSize, pDevice->Format);
         ProcessContext(NULL);
 
         while(len > 0 && !data->killNow)

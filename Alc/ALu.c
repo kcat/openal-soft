@@ -1205,7 +1205,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     static float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
-    ALuint BlockAlign;
     int fpuState;
     ALuint i;
 
@@ -1221,11 +1220,6 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     (void)fpuState;
 #endif
 
-    /* Figure output format variables */
-    BlockAlign  = aluChannelsFromFormat(format);
-    BlockAlign *= aluBytesFromFormat(format);
-
-    size /= BlockAlign;
     while(size > 0)
     {
         /* Setup variables */

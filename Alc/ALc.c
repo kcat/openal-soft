@@ -534,8 +534,6 @@ ALCcontext *GetContextSuspended(void)
 */
 static ALvoid InitContext(ALCcontext *pContext)
 {
-    int level;
-
     //Initialise listener
     pContext->Listener.Gain = 1.0f;
     pContext->Listener.MetersPerUnit = 1.0f;
@@ -567,14 +565,6 @@ static ALvoid InitContext(ALCcontext *pContext)
 
     pContext->ExtensionList = "AL_EXTX_buffer_sub_data AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_OFFSET AL_EXTX_sample_buffer_object AL_EXTX_source_distance_model AL_LOKI_quadriphonic";
 
-    level = GetConfigValueInt(NULL, "cf_level", 0);
-    if(level > 0 && level <= 6)
-    {
-        pContext->bs2b = calloc(1, sizeof(*pContext->bs2b));
-        bs2b_set_srate(pContext->bs2b, pContext->Frequency);
-        bs2b_set_level(pContext->bs2b, level);
-    }
-
     aluInitPanning(pContext);
 }
 
@@ -589,9 +579,6 @@ static ALCvoid ExitContext(ALCcontext *pContext)
     //Invalidate context
     pContext->LastError = AL_NO_ERROR;
     pContext->InUse = AL_FALSE;
-
-    free(pContext->bs2b);
-    pContext->bs2b = NULL;
 }
 
 ///////////////////////////////////////////////////////
@@ -1174,6 +1161,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
             // Check for attributes
             if (attrList)
             {
+                ALCint level = device->Bs2bLevel;
                 ALCuint freq = device->Frequency;
                 ALCint numMono = device->lNumMonoSources;
                 ALCint numStereo = device->lNumStereoSources;
@@ -1213,10 +1201,20 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                     ulAttributeIndex += 2;
                 }
 
+                device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", level);
                 device->Frequency = GetConfigValueInt(NULL, "frequency", freq);
                 device->lNumMonoSources = numMono;
                 device->lNumStereoSources = numStereo;
                 device->NumAuxSends = numSends;
+            }
+
+            free(device->Bs2b);
+            device->Bs2b = NULL;
+            if(device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
+            {
+                device->Bs2b = calloc(1, sizeof(*device->Bs2b));
+                bs2b_set_srate(device->Bs2b, device->Frequency);
+                bs2b_set_level(device->Bs2b, device->Bs2bLevel);
             }
 
             if(ALCdevice_StartContext(device, ALContext) == ALC_FALSE)
@@ -1476,6 +1474,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->Connected = ALC_TRUE;
         device->IsCaptureDevice = AL_FALSE;
 
+        device->Bs2b = NULL;
         device->szDeviceName = NULL;
 
         //Set output format
@@ -1504,6 +1503,8 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->NumAuxSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
         if(device->NumAuxSends > MAX_SENDS)
             device->NumAuxSends = MAX_SENDS;
+
+        device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
         // Find a playback device to open
         SuspendContext(NULL);
@@ -1597,6 +1598,9 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
 #endif
             ReleaseALDatabuffers(pDevice);
         }
+
+        free(pDevice->Bs2b);
+        pDevice->Bs2b = NULL;
 
         free(pDevice->szDeviceName);
 

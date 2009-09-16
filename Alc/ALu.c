@@ -1258,14 +1258,14 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
             }                                                                 \
             break;                                                            \
         case AL_FORMAT_STEREO##bits:                                          \
-            if(ALContext && ALContext->bs2b)                                  \
+            if(ALContext && ALContext->Device->Bs2b)                          \
             {                                                                 \
                 for(i = 0;i < SamplesToDo;i++)                                \
                 {                                                             \
                     float samples[2];                                         \
                     samples[0] = DryBuffer[i][FRONT_LEFT];                    \
                     samples[1] = DryBuffer[i][FRONT_RIGHT];                   \
-                    bs2b_cross_feed(ALContext->bs2b, samples);                \
+                    bs2b_cross_feed(ALContext->Device->Bs2b, samples);        \
                     ((type*)buffer)[0] = (func)(samples[0]);                  \
                     ((type*)buffer)[1] = (func)(samples[1]);                  \
                     buffer = ((type*)buffer) + 2;                             \

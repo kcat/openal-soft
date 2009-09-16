@@ -240,6 +240,10 @@ struct ALCdevice_struct
     struct ALdatabuffer *Databuffers;
     ALuint              DatabufferCount;
 
+    // Stereo-to-binaural filter
+    struct bs2b *Bs2b;
+    ALCint       Bs2bLevel;
+
     // Context created on this device
     ALCcontext   *Context;
 
@@ -291,8 +295,6 @@ struct ALCcontext_struct
 
     ALCdevice  *Device;
     const ALCchar *ExtensionList;
-
-    struct bs2b *bs2b;
 
     ALCcontext *next;
 };

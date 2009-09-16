@@ -1200,15 +1200,16 @@ another_source:
         goto another_source;
 }
 
-ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum format)
+ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     static float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
+    ALCcontext *ALContext;
     int fpuState;
     ALuint i;
 
-    SuspendContext(ALContext);
+    SuspendContext(NULL);
 
 #if defined(HAVE_FESETROUND)
     fpuState = fegetround();
@@ -1228,6 +1229,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         /* Clear mixing buffer */
         memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
 
+        ALContext = device->Context;
         if(ALContext)
         {
             MixSomeSources(ALContext, DryBuffer, SamplesToDo);
@@ -1246,7 +1248,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
         }
 
         //Post processing loop
-        switch(format)
+        switch(device->Format)
         {
 #define CHECK_WRITE_FORMAT(bits, type, func, isWin)                           \
         case AL_FORMAT_MONO##bits:                                            \
@@ -1258,14 +1260,14 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
             }                                                                 \
             break;                                                            \
         case AL_FORMAT_STEREO##bits:                                          \
-            if(ALContext && ALContext->Device->Bs2b)                          \
+            if(device->Bs2b)                                                  \
             {                                                                 \
                 for(i = 0;i < SamplesToDo;i++)                                \
                 {                                                             \
                     float samples[2];                                         \
                     samples[0] = DryBuffer[i][FRONT_LEFT];                    \
                     samples[1] = DryBuffer[i][FRONT_RIGHT];                   \
-                    bs2b_cross_feed(ALContext->Device->Bs2b, samples);        \
+                    bs2b_cross_feed(device->Bs2b, samples);                   \
                     ((type*)buffer)[0] = (func)(samples[0]);                  \
                     ((type*)buffer)[1] = (func)(samples[1]);                  \
                     buffer = ((type*)buffer) + 2;                             \
@@ -1374,7 +1376,7 @@ ALvoid aluMixData(ALCcontext *ALContext,ALvoid *buffer,ALsizei size,ALenum forma
     _controlfp(fpuState, 0xfffff);
 #endif
 
-    ProcessContext(ALContext);
+    ProcessContext(NULL);
 }
 
 ALvoid aluHandleDisconnect(ALCdevice *device)

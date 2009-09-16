@@ -90,10 +90,7 @@ static ALuint OSSProc(ALvoid *ptr)
         ALint len = data->data_size;
         ALubyte *WritePtr = data->mix_data;
 
-        SuspendContext(NULL);
-        aluMixData(pDevice->Context, WritePtr, len/frameSize, pDevice->Format);
-        ProcessContext(NULL);
-
+        aluMixData(pDevice, WritePtr, len/frameSize);
         while(len > 0 && !data->killNow)
         {
             wrote = write(data->fd, WritePtr, len);

@@ -61,10 +61,7 @@ static int pa_callback(const void *inputBuffer, void *outputBuffer,
     (void)timeInfo;
     (void)statusFlags;
 
-    SuspendContext(NULL);
-    aluMixData(device->Context, outputBuffer, framesPerBuffer, device->Format);
-    ProcessContext(NULL);
-
+    aluMixData(device, outputBuffer, framesPerBuffer);
     return 0;
 }
 

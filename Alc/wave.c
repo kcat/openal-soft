@@ -74,10 +74,7 @@ static ALuint WaveProc(ALvoid *ptr)
 
         while(avail >= pDevice->UpdateSize)
         {
-            SuspendContext(NULL);
-            aluMixData(pDevice->Context, data->buffer, pDevice->UpdateSize,
-                       pDevice->Format);
-            ProcessContext(NULL);
+            aluMixData(pDevice, data->buffer, pDevice->UpdateSize);
 
             if(uSB.b[0] != 1 && aluBytesFromFormat(pDevice->Format) > 1)
             {

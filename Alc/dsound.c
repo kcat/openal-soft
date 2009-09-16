@@ -84,6 +84,7 @@ static ALuint DSoundProc(ALvoid *ptr)
     DWORD PlayCursor;
     VOID *WritePtr1, *WritePtr2;
     DWORD WriteCnt1,  WriteCnt2;
+    DWORD FrameSize;
     DWORD FragSize;
     DWORD avail;
     HRESULT err;
@@ -94,9 +95,13 @@ static ALuint DSoundProc(ALvoid *ptr)
     if(FAILED(err))
     {
         AL_PRINT("Failed to get buffer caps: 0x%lx\n", err);
+        aluHandleDisconnect(pDevice);
         return 1;
     }
     FragSize = DSBCaps.dwBufferBytes / num_frags;
+
+    FrameSize = aluChannelsFromFormat(pDevice->Format) *
+                aluBytesFromFormat(pDevice->Format);
 
     IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &LastCursor, NULL);
     while(!pData->killNow)
@@ -131,10 +136,8 @@ static ALuint DSoundProc(ALvoid *ptr)
         if(SUCCEEDED(err))
         {
             // If we have an active context, mix data directly into output buffer otherwise fill with silence
-            SuspendContext(NULL);
-            aluMixData(pDevice->Context, WritePtr1, WriteCnt1/DSBCaps.nBlockAlign, pDevice->Format);
-            aluMixData(pDevice->Context, WritePtr2, WriteCnt2/DSBCaps.nBlockAlign, pDevice->Format);
-            ProcessContext(NULL);
+            aluMixData(pDevice, WritePtr1, WriteCnt1/FrameSize);
+            aluMixData(pDevice, WritePtr2, WriteCnt2/FrameSize);
 
             // Unlock output buffer only when successfully locked
             IDirectSoundBuffer_Unlock(pData->DSsbuffer, WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);

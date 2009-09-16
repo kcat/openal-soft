@@ -302,11 +302,7 @@ static void alc_init(void)
         BackendList[i].Probe(CAPTURE_DEVICE_PROBE);
     }
 
-    str = GetConfigValue(NULL, "stereodup", "false");
-    DuplicateStereo = (strcasecmp(str, "true") == 0 ||
-                       strcasecmp(str, "yes") == 0 ||
-                       strcasecmp(str, "on") == 0 ||
-                       atoi(str) != 0);
+    DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
 
     str = GetConfigValue(NULL, "excludefx", "");
     if(str[0])

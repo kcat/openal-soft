@@ -313,3 +313,12 @@ float GetConfigValueFloat(const char *blockName, const char *keyName, float def)
     return (float)strtod(val, NULL);
 #endif
 }
+
+int GetConfigValueBool(const char *blockName, const char *keyName, float def)
+{
+    const char *val = GetConfigValue(blockName, keyName, "");
+
+    if(!val[0]) return !!def;
+    return (strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
+            strcasecmp(val, "on") == 0 || atoi(val) != 0);
+}

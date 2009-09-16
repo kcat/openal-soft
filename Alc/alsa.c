@@ -417,7 +417,6 @@ static ALCboolean alsa_start_context(ALCdevice *device, ALCcontext *context)
     snd_pcm_access_t access;
     unsigned int periods;
     unsigned int rate;
-    const char *str;
     int allowmmap;
     char *err;
     int i;
@@ -440,15 +439,10 @@ static ALCboolean alsa_start_context(ALCdevice *device, ALCcontext *context)
             AL_PRINT("Unknown format?! %x\n", device->Format);
     }
 
+    allowmmap = GetConfigValueBool("alsa", "mmap", 1);
     periods = GetConfigValueInt("alsa", "periods", 0);
     bufferSizeInFrames = device->BufferSize;
     rate = device->Frequency;
-
-    str = GetConfigValue("alsa", "mmap", "true");
-    allowmmap = (strcasecmp(str, "true") == 0 ||
-                 strcasecmp(str, "yes") == 0 ||
-                 strcasecmp(str, "on") == 0 ||
-                 atoi(str) != 0);
 
     err = NULL;
     psnd_pcm_hw_params_malloc(&p);

@@ -214,7 +214,7 @@ static void DSoundClosePlayback(ALCdevice *device)
     device->ExtraData = NULL;
 }
 
-static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
+static ALCboolean DSoundResetPlayback(ALCdevice *device)
 {
     DSoundData *pData = (DSoundData*)device->ExtraData;
     DSBUFFERDESC DSBDescription;
@@ -223,7 +223,6 @@ static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
     ALenum format = 0;
     DWORD speakers;
     HRESULT hr;
-    (void)context;
 
     memset(&OutputType, 0, sizeof(OutputType));
 
@@ -381,10 +380,9 @@ static ALCboolean DSoundStartContext(ALCdevice *device, ALCcontext *context)
     return ALC_TRUE;
 }
 
-static void DSoundStopContext(ALCdevice *device, ALCcontext *context)
+static void DSoundStopPlayback(ALCdevice *device)
 {
     DSoundData *pData = device->ExtraData;
-    (void)context;
 
     if(!pData->thread)
         return;
@@ -440,8 +438,8 @@ static ALCuint DSoundAvailableSamples(ALCdevice *pDevice)
 BackendFuncs DSoundFuncs = {
     DSoundOpenPlayback,
     DSoundClosePlayback,
-    DSoundStartContext,
-    DSoundStopContext,
+    DSoundResetPlayback,
+    DSoundStopPlayback,
     DSoundOpenCapture,
     DSoundCloseCapture,
     DSoundStartCapture,

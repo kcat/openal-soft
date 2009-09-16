@@ -336,10 +336,9 @@ static void pulse_close_playback(ALCdevice *device) //{{{
     pulse_close(device);
 } //}}}
 
-static ALCboolean pulse_start_context(ALCdevice *device, ALCcontext *context) //{{{
+static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
-    (void)context;
 
     ppa_threaded_mainloop_lock(data->loop);
 
@@ -430,10 +429,9 @@ static ALCboolean pulse_start_context(ALCdevice *device, ALCcontext *context) //
     return ALC_TRUE;
 } //}}}
 
-static void pulse_stop_context(ALCdevice *device, ALCcontext *context) //{{{
+static void pulse_stop_playback(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
-    (void)context;
 
     if(!data->stream)
         return;
@@ -614,8 +612,8 @@ static ALCuint pulse_available_samples(ALCdevice *device) //{{{
 BackendFuncs pulse_funcs = { //{{{
     pulse_open_playback,
     pulse_close_playback,
-    pulse_start_context,
-    pulse_stop_context,
+    pulse_reset_playback,
+    pulse_stop_playback,
     pulse_open_capture,
     pulse_close_capture,
     pulse_start_capture,

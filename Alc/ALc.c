@@ -1213,7 +1213,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 bs2b_set_level(device->Bs2b, device->Bs2bLevel);
             }
 
-            if(ALCdevice_StartContext(device, ALContext) == ALC_FALSE)
+            if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
             {
                 alcDestroyContext(ALContext);
                 ALContext = NULL;
@@ -1248,7 +1248,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
 
     if (IsContext(context))
     {
-        ALCdevice_StopContext(context->Device, context);
+        ALCdevice_StopPlayback(context->Device);
 
         // Lock context
         SuspendContext(context);

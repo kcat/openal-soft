@@ -183,7 +183,7 @@ static void oss_close_playback(ALCdevice *device)
     device->ExtraData = NULL;
 }
 
-static ALCboolean oss_start_context(ALCdevice *device, ALCcontext *context)
+static ALCboolean oss_reset_playback(ALCdevice *device)
 {
     oss_data *data = (oss_data*)device->ExtraData;
     int numFragmentsLogSize;
@@ -196,7 +196,6 @@ static ALCboolean oss_start_context(ALCdevice *device, ALCcontext *context)
     int ossSpeed;
     char *err;
     int i;
-    (void)context;
 
     switch(aluBytesFromFormat(device->Format))
     {
@@ -278,10 +277,9 @@ static ALCboolean oss_start_context(ALCdevice *device, ALCcontext *context)
     return ALC_TRUE;
 }
 
-static void oss_stop_context(ALCdevice *device, ALCcontext *context)
+static void oss_stop_playback(ALCdevice *device)
 {
     oss_data *data = (oss_data*)device->ExtraData;
-    (void)context;
 
     if(!data->thread)
         return;
@@ -455,8 +453,8 @@ static ALCuint oss_available_samples(ALCdevice *pDevice)
 BackendFuncs oss_funcs = {
     oss_open_playback,
     oss_close_playback,
-    oss_start_context,
-    oss_stop_context,
+    oss_reset_playback,
+    oss_stop_playback,
     oss_open_capture,
     oss_close_capture,
     oss_start_capture,

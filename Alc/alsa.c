@@ -408,7 +408,7 @@ static void alsa_close_playback(ALCdevice *device)
     device->ExtraData = NULL;
 }
 
-static ALCboolean alsa_start_context(ALCdevice *device, ALCcontext *context)
+static ALCboolean alsa_reset_playback(ALCdevice *device)
 {
     alsa_data *data = (alsa_data*)device->ExtraData;
     snd_pcm_uframes_t bufferSizeInFrames;
@@ -420,7 +420,6 @@ static ALCboolean alsa_start_context(ALCdevice *device, ALCcontext *context)
     int allowmmap;
     char *err;
     int i;
-    (void)context;
 
 
     switch(aluBytesFromFormat(device->Format))
@@ -544,10 +543,9 @@ static ALCboolean alsa_start_context(ALCdevice *device, ALCcontext *context)
     return ALC_TRUE;
 }
 
-static void alsa_stop_context(ALCdevice *device, ALCcontext *context)
+static void alsa_stop_playback(ALCdevice *device)
 {
     alsa_data *data = (alsa_data*)device->ExtraData;
-    (void)context;
 
     if(!data->thread)
         return;
@@ -763,8 +761,8 @@ static ALCuint alsa_available_samples(ALCdevice *pDevice)
 BackendFuncs alsa_funcs = {
     alsa_open_playback,
     alsa_close_playback,
-    alsa_start_context,
-    alsa_stop_context,
+    alsa_reset_playback,
+    alsa_stop_playback,
     alsa_open_capture,
     alsa_close_capture,
     alsa_start_capture,

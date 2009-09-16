@@ -140,11 +140,10 @@ static void wave_close_playback(ALCdevice *device)
     device->ExtraData = NULL;
 }
 
-static ALCboolean wave_start_context(ALCdevice *device, ALCcontext *Context)
+static ALCboolean wave_reset_playback(ALCdevice *device)
 {
     wave_data *data = (wave_data*)device->ExtraData;
     ALuint channels, bits, i;
-    (void)Context;
 
     fseek(data->f, 0, SEEK_SET);
     clearerr(data->f);
@@ -241,12 +240,11 @@ static ALCboolean wave_start_context(ALCdevice *device, ALCcontext *Context)
     return ALC_TRUE;
 }
 
-static void wave_stop_context(ALCdevice *device, ALCcontext *Context)
+static void wave_stop_playback(ALCdevice *device)
 {
     wave_data *data = (wave_data*)device->ExtraData;
     ALuint dataLen;
     long size;
-    (void)Context;
 
     if(!data->thread)
         return;
@@ -320,8 +318,8 @@ static ALCuint wave_available_samples(ALCdevice *pDevice)
 BackendFuncs wave_funcs = {
     wave_open_playback,
     wave_close_playback,
-    wave_start_context,
-    wave_stop_context,
+    wave_reset_playback,
+    wave_stop_playback,
     wave_open_capture,
     wave_close_capture,
     wave_start_capture,

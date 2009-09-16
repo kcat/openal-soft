@@ -160,7 +160,7 @@ static void pa_close_playback(ALCdevice *device)
     device->ExtraData = NULL;
 }
 
-static ALCboolean pa_start_context(ALCdevice *device, ALCcontext *context)
+static ALCboolean pa_reset_playback(ALCdevice *device)
 {
     pa_data *data = (pa_data*)device->ExtraData;
     const PaStreamInfo *streamInfo;
@@ -169,13 +169,11 @@ static ALCboolean pa_start_context(ALCdevice *device, ALCcontext *context)
     device->Frequency = streamInfo->sampleRate;
 
     return ALC_TRUE;
-    (void)context;
 }
 
-static void pa_stop_context(ALCdevice *device, ALCcontext *context)
+static void pa_stop_playback(ALCdevice *device)
 {
     (void)device;
-    (void)context;
 }
 
 
@@ -191,8 +189,8 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
 static const BackendFuncs pa_funcs = {
     pa_open_playback,
     pa_close_playback,
-    pa_start_context,
-    pa_stop_context,
+    pa_reset_playback,
+    pa_stop_playback,
     pa_open_capture,
     NULL,
     NULL,

@@ -128,13 +128,12 @@ static void solaris_close_playback(ALCdevice *device)
     device->ExtraData = NULL;
 }
 
-static ALCboolean solaris_start_context(ALCdevice *device, ALCcontext *context)
+static ALCboolean solaris_reset_playback(ALCdevice *device)
 {
     solaris_data *data = (solaris_data*)device->ExtraData;
     audio_info_t info;
     ALuint frameSize;
     int numChannels;
-    (void)context;
 
     AUDIO_INITINFO(&info);
 
@@ -206,10 +205,9 @@ static ALCboolean solaris_start_context(ALCdevice *device, ALCcontext *context)
     return ALC_TRUE;
 }
 
-static void solaris_stop_context(ALCdevice *device, ALCcontext *context)
+static void solaris_stop_playback(ALCdevice *device)
 {
     solaris_data *data = (solaris_data*)device->ExtraData;
-    (void)context;
 
     if(!data->thread)
         return;
@@ -265,8 +263,8 @@ static ALCuint solaris_available_samples(ALCdevice *pDevice)
 BackendFuncs solaris_funcs = {
     solaris_open_playback,
     solaris_close_playback,
-    solaris_start_context,
-    solaris_stop_context,
+    solaris_reset_playback,
+    solaris_stop_playback,
     solaris_open_capture,
     solaris_close_capture,
     solaris_start_capture,

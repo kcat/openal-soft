@@ -150,7 +150,7 @@ static void pa_close_playback(ALCdevice *device)
 
     err = pPa_StopStream(data->stream);
     if(err != paNoError)
-      fprintf(stderr, "Error stopping stream: %s\n", pPa_GetErrorText(err));
+        fprintf(stderr, "Error stopping stream: %s\n", pPa_GetErrorText(err));
 
     err = pPa_CloseStream(data->stream);
     if(err != paNoError)
@@ -162,8 +162,14 @@ static void pa_close_playback(ALCdevice *device)
 
 static ALCboolean pa_start_context(ALCdevice *device, ALCcontext *context)
 {
-    device->Frequency = context->Frequency;
+    pa_data *data = (pa_data*)device->ExtraData;
+    const PaStreamInfo *streamInfo;
+
+    streamInfo = pPa_GetStreamInfo(data->stream);
+    device->Frequency = streamInfo->sampleRate;
+
     return ALC_TRUE;
+    (void)context;
 }
 
 static void pa_stop_context(ALCdevice *device, ALCcontext *context)

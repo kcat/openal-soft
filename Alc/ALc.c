@@ -614,7 +614,8 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
 
         pDevice->Frequency = frequency;
         pDevice->Format = format;
-        pDevice->BufferSize = SampleSize;
+        pDevice->UpdateSize = SampleSize;
+        pDevice->NumUpdates = 1;
 
         SuspendContext(NULL);
         for(i = 0;BackendList[i].Init;i++)
@@ -1481,9 +1482,16 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
         device->Format = GetFormatFromString(fmt);
 
-        device->BufferSize = GetConfigValueInt(NULL, "refresh", 4096);
-        if((ALint)device->BufferSize <= 0)
-            device->BufferSize = 4096;
+        device->NumUpdates = GetConfigValueInt(NULL, "periods", 4);
+        if(device->NumUpdates < 2)
+            device->NumUpdates = 4;
+
+        i = GetConfigValueInt(NULL, "refresh", 4096);
+        if(i <= 0) i = 4096;
+
+        device->UpdateSize = GetConfigValueInt(NULL, "period_size", i/device->NumUpdates);
+        if(device->UpdateSize <= 0)
+            device->UpdateSize = i/device->NumUpdates;
 
         device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
         if((ALint)device->MaxNoOfSources <= 0)

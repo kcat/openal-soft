@@ -342,17 +342,13 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     ppa_threaded_mainloop_lock(data->loop);
 
-    data->samples = device->BufferSize;
     data->frame_size = aluBytesFromFormat(device->Format) *
                        aluChannelsFromFormat(device->Format);
-
-    device->UpdateSize = device->BufferSize / 4;
-
     data->attr.minreq = -1;
     data->attr.prebuf = -1;
     data->attr.maxlength = -1;
     data->attr.fragsize = data->frame_size * device->UpdateSize;
-    data->attr.tlength = data->attr.fragsize * 4;
+    data->attr.tlength = data->attr.fragsize * device->NumUpdates;
     data->stream_name = "Playback Stream";
 
     data->spec.rate = device->Frequency;
@@ -464,7 +460,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     data = device->ExtraData;
     ppa_threaded_mainloop_lock(data->loop);
 
-    data->samples = device->BufferSize;
+    data->samples = device->UpdateSize * device->NumUpdates;
     data->frame_size = aluBytesFromFormat(device->Format) *
                        aluChannelsFromFormat(device->Format);
 

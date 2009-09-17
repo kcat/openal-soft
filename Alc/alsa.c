@@ -69,10 +69,12 @@ MAKE_FUNC(snd_pcm_hw_params_set_periods_near);
 MAKE_FUNC(snd_pcm_hw_params_set_rate_near);
 MAKE_FUNC(snd_pcm_hw_params_set_rate);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_near);
+MAKE_FUNC(snd_pcm_hw_params_set_period_size_near);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_min);
 MAKE_FUNC(snd_pcm_hw_params_get_buffer_size);
 MAKE_FUNC(snd_pcm_hw_params_get_period_size);
 MAKE_FUNC(snd_pcm_hw_params_get_access);
+MAKE_FUNC(snd_pcm_hw_params_get_periods);
 MAKE_FUNC(snd_pcm_hw_params);
 MAKE_FUNC(snd_pcm_sw_params_malloc);
 MAKE_FUNC(snd_pcm_sw_params_current);
@@ -411,7 +413,7 @@ static void alsa_close_playback(ALCdevice *device)
 static ALCboolean alsa_reset_playback(ALCdevice *device)
 {
     alsa_data *data = (alsa_data*)device->ExtraData;
-    snd_pcm_uframes_t bufferSizeInFrames;
+    snd_pcm_uframes_t periodSizeInFrames;
     snd_pcm_sw_params_t *sp = NULL;
     snd_pcm_hw_params_t *p = NULL;
     snd_pcm_access_t access;
@@ -439,8 +441,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     }
 
     allowmmap = GetConfigValueBool("alsa", "mmap", 1);
-    periods = GetConfigValueInt("alsa", "periods", 0);
-    bufferSizeInFrames = device->BufferSize;
+    periods = GetConfigValueInt("alsa", "periods", device->NumUpdates);
+    periodSizeInFrames = device->UpdateSize;
     rate = device->Frequency;
 
     err = NULL;
@@ -451,6 +453,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     /* set interleaved access */
     if(err == NULL && (!allowmmap || (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED)) < 0))
     {
+        if(periods > 2) periods--;
         if((i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
             err = "set access";
     }
@@ -466,16 +469,18 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     /* set rate (implicitly constrains period/buffer parameters) */
     if(err == NULL && (i=psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &rate, NULL)) < 0)
         err = "set rate near";
-    /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
-        err = "set buffer size near";
+    /* set period size in frame units (implicitly sets buffer size/bytes/time and period time/bytes) */
+    if(err == NULL && (i=psnd_pcm_hw_params_set_period_size_near(data->pcmHandle, p, &periodSizeInFrames, NULL)) < 0)
+        err = "set period size near";
     /* install and prepare hardware configuration */
     if(err == NULL && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
         err = "set params";
     if(err == NULL && (i=psnd_pcm_hw_params_get_access(p, &access)) < 0)
         err = "get access";
-    if(err == NULL && (i=psnd_pcm_hw_params_get_period_size(p, &bufferSizeInFrames, NULL)) < 0)
+    if(err == NULL && (i=psnd_pcm_hw_params_get_period_size(p, &periodSizeInFrames, NULL)) < 0)
         err = "get period size";
+    if(err == NULL && (i=psnd_pcm_hw_params_get_periods(p, &periods, NULL)) < 0)
+        err = "get periods";
     if(err != NULL)
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
@@ -490,7 +495,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 
     if((i=psnd_pcm_sw_params_current(data->pcmHandle, sp)) != 0)
         err = "sw current";
-    if(err == NULL && (i=psnd_pcm_sw_params_set_avail_min(data->pcmHandle, sp, bufferSizeInFrames)) != 0)
+    if(err == NULL && (i=psnd_pcm_sw_params_set_avail_min(data->pcmHandle, sp, periodSizeInFrames)) != 0)
         err = "sw set avail min";
     if(err == NULL && (i=psnd_pcm_sw_params(data->pcmHandle, sp)) != 0)
         err = "sw set params";
@@ -503,15 +508,19 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 
     psnd_pcm_sw_params_free(sp);
 
-    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
+    data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, periodSizeInFrames);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
+        /* Increase periods by one, since the temp buffer counts as an extra
+         * period */
+        periods++;
         data->buffer = malloc(data->size);
         if(!data->buffer)
         {
             AL_PRINT("buffer malloc failed\n");
             return ALC_FALSE;
         }
+        data->thread = StartThread(ALSANoMMapProc, device);
     }
     else
     {
@@ -523,12 +532,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             data->buffer = NULL;
             return ALC_FALSE;
         }
-    }
-
-    if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
-        data->thread = StartThread(ALSANoMMapProc, device);
-    else
         data->thread = StartThread(ALSAProc, device);
+    }
     if(data->thread == NULL)
     {
         AL_PRINT("Could not create playback thread\n");
@@ -537,7 +542,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    device->UpdateSize = bufferSizeInFrames;
+    device->UpdateSize = periodSizeInFrames;
+    device->NumUpdates = periods;
     device->Frequency = rate;
 
     return ALC_TRUE;
@@ -631,7 +637,7 @@ open_alsa:
     }
 
     err = NULL;
-    bufferSizeInFrames = pDevice->BufferSize;
+    bufferSizeInFrames = pDevice->UpdateSize * pDevice->NumUpdates;
     psnd_pcm_hw_params_malloc(&p);
 
     if((i=psnd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
@@ -677,7 +683,7 @@ open_alsa:
     frameSize  = aluChannelsFromFormat(pDevice->Format);
     frameSize *= aluBytesFromFormat(pDevice->Format);
 
-    data->ring = CreateRingBuffer(frameSize, pDevice->BufferSize);
+    data->ring = CreateRingBuffer(frameSize, bufferSizeInFrames);
     if(!data->ring)
     {
         AL_PRINT("ring buffer create failed\n");
@@ -815,9 +821,11 @@ LOAD_FUNC(snd_pcm_hw_params_set_rate_near);
 LOAD_FUNC(snd_pcm_hw_params_set_rate);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_min);
+LOAD_FUNC(snd_pcm_hw_params_set_period_size_near);
 LOAD_FUNC(snd_pcm_hw_params_get_buffer_size);
 LOAD_FUNC(snd_pcm_hw_params_get_period_size);
 LOAD_FUNC(snd_pcm_hw_params_get_access);
+LOAD_FUNC(snd_pcm_hw_params_get_periods);
 LOAD_FUNC(snd_pcm_hw_params);
 LOAD_FUNC(snd_pcm_sw_params_malloc);
 LOAD_FUNC(snd_pcm_sw_params_current);

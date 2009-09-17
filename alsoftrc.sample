@@ -52,10 +52,17 @@
 #  Sets the output frequency.
 #frequency = 44100
 
-## refresh:
-#  Sets the buffer size, in frames. Note that the actual granularity may or may
-#  not be less than this.
-#refresh = 4096
+## period_size:
+#  Sets the update period size, in frames. This is the number of frames needed
+#  for each mixing update. If the deprecated 'refresh' option is specified and
+#  this isn't, the value will be calculated as size = refresh/periods.
+#period_size = 1024
+
+## periods:
+#  Sets the number of update periods. Higher values create a larger mix ahead,
+#  which helps protect against skips when the CPU is under load, but increases
+#  the delay between a sound getting mixed and being heard.
+#periods = 4
 
 ## sources:
 #  Sets the maximum number of allocatable sources. Lower values may help for
@@ -136,11 +143,6 @@
 #  Sets the device name for the default playback device.
 #device = default
 
-## periods:
-#  Sets the number of update buffers for playback. A value of 0 means auto-
-#  select.
-#periods = 0
-
 ## capture:
 #  Sets the device name for the default capture device.
 #capture = default
@@ -161,10 +163,6 @@
 #  Sets the device name for OSS output.
 #device = /dev/dsp
 
-## periods:
-#  Sets the number of update buffers.
-#periods = 4
-
 ## capture:
 #  Sets the device name for OSS capture.
 #capture = /dev/dsp
@@ -178,12 +176,10 @@
 #  Sets the device name for Solaris output.
 #device = /dev/audio
 
+##
 ## DirectSound backend stuff
+##
 [dsound]
-
-## periods:
-#  Sets the number of updates for the output buffer.
-#periods = 4
 
 ##
 ## Windows Multimedia backend stuff
@@ -199,10 +195,6 @@
 #  Sets the device index for output. Negative values will use the default as
 #  given by PortAudio itself.
 #device = -1
-
-## periods:
-#  Sets the number of update buffers.
-#periods = 4
 
 ##
 ## PulseAudio backend stuff

@@ -229,7 +229,8 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
         goto failure;
 
     // Allocate circular memory buffer for the captured audio
-    pData->ulCapturedDataSize = pDevice->BufferSize * wfexCaptureFormat.nBlockAlign;
+    pData->ulCapturedDataSize = pDevice->UpdateSize*pDevice->NumUpdates *
+                                wfexCaptureFormat.nBlockAlign;
 
     // Make sure circular buffer is at least 100ms in size (and an exact multiple of
     // the block alignment

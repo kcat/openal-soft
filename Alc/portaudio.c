@@ -90,7 +90,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     outParams.device = GetConfigValueInt("port", "device", -1);
     if(outParams.device < 0)
         outParams.device = pPa_GetDefaultOutputDevice();
-    outParams.suggestedLatency = (float)device->BufferSize /
+    outParams.suggestedLatency = (device->UpdateSize*device->NumUpdates) /
                                  (float)device->Frequency;
     outParams.hostApiSpecificStreamInfo = NULL;
 
@@ -116,8 +116,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     outParams.channelCount = aluChannelsFromFormat(device->Format);
 
     err = pPa_OpenStream(&data->stream, NULL, &outParams, device->Frequency,
-                         device->BufferSize/periods, paNoFlag,
-                         pa_callback, device);
+                         device->UpdateSize, paNoFlag, pa_callback, device);
     if(err != paNoError)
     {
         AL_PRINT("Pa_OpenStream() returned an error: %s\n", pPa_GetErrorText(err));
@@ -138,7 +137,6 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     }
 
     device->szDeviceName = strdup(deviceName);
-    device->UpdateSize = device->BufferSize/periods;
     device->Frequency = streamInfo->sampleRate;
     return ALC_TRUE;
 }

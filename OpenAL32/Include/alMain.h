@@ -210,7 +210,7 @@ struct ALCdevice_struct
 
     ALuint       Frequency;
     ALuint       UpdateSize;
-    ALuint       BufferSize;
+    ALuint       NumUpdates;
     ALenum       Format;
 
     ALCchar      *szDeviceName;

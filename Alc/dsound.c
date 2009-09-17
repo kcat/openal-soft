@@ -51,8 +51,6 @@ static void *ds_handle;
 static HRESULT (WINAPI *pDirectSoundCreate)(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter);
 static HRESULT (WINAPI *pDirectSoundEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallback, LPVOID pContext);
 
-// Since DSound doesn't report the fragment size, emulate it
-static int num_frags;
 
 typedef struct {
     // DirectSound Playback Device
@@ -98,10 +96,10 @@ static ALuint DSoundProc(ALvoid *ptr)
         aluHandleDisconnect(pDevice);
         return 1;
     }
-    FragSize = DSBCaps.dwBufferBytes / num_frags;
 
     FrameSize = aluChannelsFromFormat(pDevice->Format) *
                 aluBytesFromFormat(pDevice->Format);
+    FragSize = pDevice->UpdateSize * FrameSize;
 
     IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &LastCursor, NULL);
     while(!pData->killNow)
@@ -344,10 +342,13 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
 
     if(SUCCEEDED(hr))
     {
+        DWORD num_frags = GetConfigValueInt("dsound", "periods", device->NumUpdates);
+        if(num_frags < 2) num_frags = 2;
+
         memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
         DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;
-        DSBDescription.dwBufferBytes=(device->BufferSize/num_frags) * num_frags * frameSize;
+        DSBDescription.dwBufferBytes=device->UpdateSize * device->NumUpdates * frameSize;
         DSBDescription.lpwfxFormat=&OutputType.Format;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
     }
@@ -375,7 +376,6 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     }
 
     device->Format = format;
-    device->UpdateSize = device->BufferSize/num_frags;
 
     return ALC_TRUE;
 }
@@ -505,9 +505,6 @@ void alcDSoundInit(BackendFuncs *FuncList)
 LOAD_FUNC(DirectSoundCreate);
 LOAD_FUNC(DirectSoundEnumerateA);
 #undef LOAD_FUNC
-
-    num_frags = GetConfigValueInt("dsound", "periods", 4);
-    if(num_frags < 2) num_frags = 2;
 }
 
 void alcDSoundDeinit(void)

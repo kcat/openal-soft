@@ -167,7 +167,7 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
     info.play.channels = numChannels;
 
     frameSize = numChannels * aluBytesFromFormat(device->Format);
-    info.play.buffer_size = device->BufferSize * frameSize;
+    info.play.buffer_size = device->UpdateSize*device->NumUpdates * frameSize;
 
     if(ioctl(data->fd, AUDIO_SETINFO, &info) < 0)
     {
@@ -189,7 +189,7 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
     }
 
     device->Frequency = info.play.sample_rate;
-    device->UpdateSize = info.play.buffer_size / 4;
+    device->UpdateSize = (info.play.buffer_size/device->NumUpdates) + 1;
 
     data->data_size = device->UpdateSize * frameSize;
     data->mix_data = calloc(1, data->data_size);

@@ -219,8 +219,6 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
 
     data->DataStart = ftell(data->f);
 
-    device->UpdateSize = device->BufferSize / 4;
-
     data->size = device->UpdateSize * channels * bits / 8;
     data->buffer = malloc(data->size);
     if(!data->buffer)

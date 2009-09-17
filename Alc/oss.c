@@ -221,18 +221,19 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
             AL_PRINT("Unknown format?! %x\n", device->Format);
     }
 
-    periods = GetConfigValueInt("oss", "periods", 4);
-    if((int)periods <= 0)
+    periods = GetConfigValueInt("oss", "periods", device->NumUpdates);
+    if((int)periods < 2)
         periods = 4;
     numChannels = aluChannelsFromFormat(device->Format);
     frameSize = numChannels * aluBytesFromFormat(device->Format);
 
     ossSpeed = device->Frequency;
-    log2FragmentSize = log2i(device->BufferSize * frameSize / periods);
+    log2FragmentSize = log2i(device->UpdateSize * frameSize);
 
     /* according to the OSS spec, 16 bytes are the minimum */
     if (log2FragmentSize < 4)
         log2FragmentSize = 4;
+    if(periods > 2) periods--;
     numFragmentsLogSize = (periods << 16) | log2FragmentSize;
 
 #define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
@@ -262,6 +263,7 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
 
     device->Frequency = ossSpeed;
     device->UpdateSize = info.fragsize / frameSize;
+    device->NumUpdates = info.fragments + 1;
 
     data->data_size = device->UpdateSize * frameSize;
     data->mix_data = calloc(1, data->data_size);
@@ -343,7 +345,8 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     numChannels = aluChannelsFromFormat(device->Format);
     frameSize = numChannels * aluBytesFromFormat(device->Format);
     ossSpeed = device->Frequency;
-    log2FragmentSize = log2i(device->BufferSize * frameSize / periods);
+    log2FragmentSize = log2i(device->UpdateSize * device->NumUpdates *
+                             frameSize / periods);
 
     /* according to the OSS spec, 16 bytes are the minimum */
     if (log2FragmentSize < 4)
@@ -381,7 +384,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         return ALC_FALSE;
     }
 
-    data->ring = CreateRingBuffer(frameSize, device->BufferSize);
+    data->ring = CreateRingBuffer(frameSize, device->UpdateSize * device->NumUpdates);
     if(!data->ring)
     {
         AL_PRINT("ring buffer create failed\n");

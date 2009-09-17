@@ -342,9 +342,6 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
 
     if(SUCCEEDED(hr))
     {
-        DWORD num_frags = GetConfigValueInt("dsound", "periods", device->NumUpdates);
-        if(num_frags < 2) num_frags = 2;
-
         memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
         DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;

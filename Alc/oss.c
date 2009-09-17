@@ -221,9 +221,7 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
             AL_PRINT("Unknown format?! %x\n", device->Format);
     }
 
-    periods = GetConfigValueInt("oss", "periods", device->NumUpdates);
-    if((int)periods < 2)
-        periods = 4;
+    periods = device->NumUpdates;
     numChannels = aluChannelsFromFormat(device->Format);
     frameSize = numChannels * aluBytesFromFormat(device->Format);
 
@@ -233,6 +231,8 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     /* according to the OSS spec, 16 bytes are the minimum */
     if (log2FragmentSize < 4)
         log2FragmentSize = 4;
+    /* Subtract one period since the temp mixing buffer counts as one. Still
+     * need at least two on the card, though. */
     if(periods > 2) periods--;
     numFragmentsLogSize = (periods << 16) | log2FragmentSize;
 

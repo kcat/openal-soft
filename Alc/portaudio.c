@@ -73,7 +73,6 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     const PaStreamInfo *streamInfo;
     PaStreamParameters outParams;
     pa_data *data;
-    int periods;
     PaError err;
 
     if(pa_handle == NULL)
@@ -109,10 +108,6 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
             outParams.sampleFormat = -1;
             AL_PRINT("Unknown format?! %x\n", device->Format);
     }
-
-    periods = GetConfigValueInt("port", "periods", 4);
-    if((int)periods <= 0)
-        periods = 4;
     outParams.channelCount = aluChannelsFromFormat(device->Format);
 
     err = pPa_OpenStream(&data->stream, NULL, &outParams, device->Frequency,

@@ -441,7 +441,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     }
 
     allowmmap = GetConfigValueBool("alsa", "mmap", 1);
-    periods = GetConfigValueInt("alsa", "periods", device->NumUpdates);
+    periods = device->NumUpdates;
     periodSizeInFrames = device->UpdateSize;
     rate = device->Frequency;
 
@@ -464,7 +464,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     if(err == NULL && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(device->Format))) < 0)
         err = "set channels";
     /* set periods (implicitly constrains period/buffer parameters) */
-    if(err == NULL && periods && (i=psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL)) < 0)
+    if(err == NULL && (i=psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL)) < 0)
         err = "set periods near";
     /* set rate (implicitly constrains period/buffer parameters) */
     if(err == NULL && (i=psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &rate, NULL)) < 0)

@@ -203,7 +203,7 @@ static ALuint ALSAProc(ALvoid *ptr)
                 AL_PRINT("Wait timeout... buffer size too low?\n");
             continue;
         }
-        avail = pDevice->UpdateSize;
+        avail -= avail%pDevice->UpdateSize;
 
         // it is possible that contiguous areas are smaller, thus we use a loop
         while(avail > 0)

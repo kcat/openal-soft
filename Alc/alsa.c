@@ -150,7 +150,7 @@ static int verify_state(snd_pcm_t *handle)
         int err = xrun_recovery(handle, -EPIPE);
         if(err < 0) return err;
     }
-    else if (state == SND_PCM_STATE_SUSPENDED)
+    else if(state == SND_PCM_STATE_SUSPENDED)
     {
         int err = xrun_recovery(handle, -ESTRPIPE);
         if(err < 0) return err;
@@ -183,13 +183,7 @@ static ALuint ALSAProc(ALvoid *ptr)
         avail = psnd_pcm_avail_update(data->pcmHandle);
         if(avail < 0)
         {
-            err = xrun_recovery(data->pcmHandle, avail);
-            if (err < 0)
-            {
-                AL_PRINT("available update failed: %s\n", psnd_strerror(err));
-                aluHandleDisconnect(pDevice);
-                break;
-            }
+            AL_PRINT("available update failed: %s\n", psnd_strerror(avail));
             continue;
         }
 
@@ -200,31 +194,26 @@ static ALuint ALSAProc(ALvoid *ptr)
             {
                 err = psnd_pcm_start(data->pcmHandle);
                 if(err < 0)
-                    err = xrun_recovery(data->pcmHandle, err);
-                if(err < 0)
                 {
                     AL_PRINT("start failed: %s\n", psnd_strerror(err));
-                    aluHandleDisconnect(pDevice);
-                    break;
+                    continue;
                 }
             }
-            else if(psnd_pcm_wait(data->pcmHandle, 1000) == 0)
+            if(psnd_pcm_wait(data->pcmHandle, 1000) == 0)
                 AL_PRINT("Wait timeout... buffer size too low?\n");
             continue;
         }
         avail = pDevice->UpdateSize;
 
         // it is possible that contiguous areas are smaller, thus we use a loop
-        while (avail > 0)
+        while(avail > 0)
         {
             frames = avail;
 
             err = psnd_pcm_mmap_begin(data->pcmHandle, &areas, &offset, &frames);
-            if (err < 0)
+            if(err < 0)
             {
-                err = xrun_recovery(data->pcmHandle, err);
-                if (err < 0)
-                    AL_PRINT("mmap begin error: %s\n", psnd_strerror(err));
+                AL_PRINT("mmap begin error: %s\n", psnd_strerror(err));
                 break;
             }
 
@@ -232,7 +221,7 @@ static ALuint ALSAProc(ALvoid *ptr)
             aluMixData(pDevice, WritePtr, frames);
 
             commitres = psnd_pcm_mmap_commit(data->pcmHandle, offset, frames);
-            if (commitres < 0 || (commitres-frames) != 0)
+            if(commitres < 0 || (commitres-frames) != 0)
             {
                 AL_PRINT("mmap commit error: %s\n",
                          psnd_strerror(commitres >= 0 ? -EPIPE : commitres));

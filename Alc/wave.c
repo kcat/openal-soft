@@ -337,6 +337,9 @@ void alc_wave_deinit(void)
 
 void alc_wave_probe(int type)
 {
+    if(*(GetConfigValue("wave", "file", "")) == 0)
+        return;
+
     if(type == DEVICE_PROBE)
         AppendDeviceList(waveDevice);
     else if(type == ALL_DEVICE_PROBE)

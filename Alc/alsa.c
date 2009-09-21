@@ -672,7 +672,7 @@ open_alsa:
     frameSize  = aluChannelsFromFormat(pDevice->Format);
     frameSize *= aluBytesFromFormat(pDevice->Format);
 
-    data->ring = CreateRingBuffer(frameSize, bufferSizeInFrames);
+    data->ring = CreateRingBuffer(frameSize, pDevice->UpdateSize*pDevice->NumUpdates);
     if(!data->ring)
     {
         AL_PRINT("ring buffer create failed\n");

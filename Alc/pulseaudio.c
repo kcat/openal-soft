@@ -491,6 +491,9 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         case 2:
             data->spec.format = PA_SAMPLE_S16NE;
             break;
+        case 4:
+            data->spec.format = PA_SAMPLE_FLOAT32NE;
+            break;
         default:
             AL_PRINT("Unknown format: %x\n", device->Format);
             ppa_threaded_mainloop_unlock(data->loop);

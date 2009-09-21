@@ -227,15 +227,15 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
     if(SUCCEEDED(hr) && *(GetConfigValue(NULL, "format", "")) != 0)
     {
-        if(device->Format == AL_FORMAT_MONO8 || device->Format == AL_FORMAT_MONO16)
+        if(aluChannelsFromFormat(device->Format) == 1)
             speakers = DSSPEAKER_COMBINED(DSSPEAKER_MONO, 0);
-        else if(device->Format == AL_FORMAT_STEREO8 || device->Format == AL_FORMAT_STEREO16)
+        else if(aluChannelsFromFormat(device->Format) == 2)
             speakers = DSSPEAKER_COMBINED(DSSPEAKER_STEREO, 0);
-        else if(device->Format == AL_FORMAT_QUAD8 || device->Format == AL_FORMAT_QUAD16)
+        else if(aluChannelsFromFormat(device->Format) == 4)
             speakers = DSSPEAKER_COMBINED(DSSPEAKER_QUAD, 0);
-        else if(device->Format == AL_FORMAT_51CHN8 || device->Format == AL_FORMAT_51CHN16)
+        else if(aluChannelsFromFormat(device->Format) == 6)
             speakers = DSSPEAKER_COMBINED(DSSPEAKER_5POINT1, 0);
-        else if(device->Format == AL_FORMAT_71CHN8 || device->Format == AL_FORMAT_71CHN16)
+        else if(aluChannelsFromFormat(device->Format) == 8)
             speakers = DSSPEAKER_COMBINED(DSSPEAKER_7POINT1, 0);
         else
         {

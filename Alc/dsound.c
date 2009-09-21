@@ -237,6 +237,11 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
             speakers = DSSPEAKER_COMBINED(DSSPEAKER_5POINT1, 0);
         else if(device->Format == AL_FORMAT_71CHN8 || device->Format == AL_FORMAT_71CHN16)
             speakers = DSSPEAKER_COMBINED(DSSPEAKER_7POINT1, 0);
+        else
+        {
+            AL_PRINT("Unknown format: 0x%x\n", device->Format);
+            return ALC_FALSE;
+        }
     }
     if(SUCCEEDED(hr))
     {

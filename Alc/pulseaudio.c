@@ -366,7 +366,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
             data->spec.format = PA_SAMPLE_FLOAT32NE;
             break;
         default:
-            AL_PRINT("Unknown format: %x\n", device->Format);
+            AL_PRINT("Unknown format: 0x%x\n", device->Format);
             ppa_threaded_mainloop_unlock(data->loop);
             return ALC_FALSE;
     }
@@ -495,7 +495,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             data->spec.format = PA_SAMPLE_FLOAT32NE;
             break;
         default:
-            AL_PRINT("Unknown format: %x\n", device->Format);
+            AL_PRINT("Unknown format: 0x%x\n", device->Format);
             ppa_threaded_mainloop_unlock(data->loop);
             pulse_close(device);
             free(device->szDeviceName);

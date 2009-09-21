@@ -159,7 +159,8 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
             info.play.encoding = AUDIO_ENCODING_LINEAR;
             break;
         default:
-            AL_PRINT("Unknown format?! %x\n", device->Format);
+            AL_PRINT("Unknown format: 0x%x\n", device->Format);
+            return ALC_FALSE;
     }
 
     numChannels = aluChannelsFromFormat(device->Format);

@@ -217,8 +217,8 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
             ossFormat = AFMT_S16_NE;
             break;
         default:
-            ossFormat = -1;
-            AL_PRINT("Unknown format?! %x\n", device->Format);
+            AL_PRINT("Unknown format: 0x%x\n", device->Format);
+            return ALC_FALSE;
     }
 
     periods = device->NumUpdates;
@@ -337,8 +337,10 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
             ossFormat = AFMT_S16_NE;
             break;
         default:
-            ossFormat = -1;
-            AL_PRINT("Unknown format?! %x\n", device->Format);
+            AL_PRINT("Unknown format: 0x%x\n", device->Format);
+            close(data->fd);
+            free(data);
+            return ALC_FALSE;
     }
 
     periods = 4;

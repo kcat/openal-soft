@@ -105,8 +105,10 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
             outParams.sampleFormat = paFloat32;
             break;
         default:
-            outParams.sampleFormat = -1;
-            AL_PRINT("Unknown format?! %x\n", device->Format);
+            AL_PRINT("Unknown format: 0x%x\n", device->Format);
+            device->ExtraData = NULL;
+            free(data);
+            return ALC_FALSE;
     }
     outParams.channelCount = aluChannelsFromFormat(device->Format);
 

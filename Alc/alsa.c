@@ -425,8 +425,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             data->format = SND_PCM_FORMAT_FLOAT;
             break;
         default:
-            data->format = SND_PCM_FORMAT_UNKNOWN;
-            AL_PRINT("Unknown format?! %x\n", device->Format);
+            AL_PRINT("Unknown format: 0x%x\n", device->Format);
+            return ALC_FALSE;
     }
 
     allowmmap = GetConfigValueBool("alsa", "mmap", 1);
@@ -624,8 +624,10 @@ open_alsa:
             data->format = SND_PCM_FORMAT_FLOAT;
             break;
         default:
-            data->format = SND_PCM_FORMAT_UNKNOWN;
-            AL_PRINT("Unknown format?! %x\n", pDevice->Format);
+            AL_PRINT("Unknown format: 0x%x\n", pDevice->Format);
+            psnd_pcm_close(data->pcmHandle);
+            free(data);
+            return ALC_FALSE;
     }
 
     err = NULL;

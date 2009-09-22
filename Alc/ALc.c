@@ -1189,8 +1189,8 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                     {
                         RequestedSends = attrList[ulAttributeIndex + 1];
 
-                        if(RequestedSends > device->NumAuxSends)
-                            RequestedSends = device->NumAuxSends;
+                        if(RequestedSends > MAX_SENDS)
+                            RequestedSends = MAX_SENDS;
 
                         numSends = RequestedSends;
                     }
@@ -1202,7 +1202,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 device->Frequency = GetConfigValueInt(NULL, "frequency", freq);
                 device->lNumMonoSources = numMono;
                 device->lNumStereoSources = numStereo;
-                device->NumAuxSends = numSends;
+                device->NumAuxSends = GetConfigValueInt(NULL, "sends", numSends);
             }
 
             free(device->Bs2b);

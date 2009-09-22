@@ -1205,7 +1205,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 device->NumAuxSends = GetConfigValueInt(NULL, "sends", numSends);
             }
 
-            if(ALCdevice_ResetPlayback(device) != ALC_FALSE)
+            if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
             {
                 alcDestroyContext(ALContext);
                 ALContext = NULL;

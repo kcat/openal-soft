@@ -1381,14 +1381,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
 ALvoid aluHandleDisconnect(ALCdevice *device)
 {
-    if(!device->IsCaptureDevice)
+    if(device->Context)
     {
-        ALsource *source = NULL;
+        ALsource *source;
 
         SuspendContext(device->Context);
-        if(device->Context)
-            source = device->Context->Source;
 
+        source = device->Context->Source;
         while(source)
         {
             if(source->state == AL_PLAYING)

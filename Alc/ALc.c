@@ -1214,13 +1214,20 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 
             ALContext->Frequency = device->Frequency;
 
-            free(device->Bs2b);
-            device->Bs2b = NULL;
             if(device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
             {
-                device->Bs2b = calloc(1, sizeof(*device->Bs2b));
+                if(!device->Bs2b)
+                {
+                    device->Bs2b = calloc(1, sizeof(*device->Bs2b));
+                    bs2b_clear(device->Bs2b);
+                }
                 bs2b_set_srate(device->Bs2b, device->Frequency);
                 bs2b_set_level(device->Bs2b, device->Bs2bLevel);
+            }
+            else
+            {
+                free(device->Bs2b);
+                device->Bs2b = NULL;
             }
 
             ProcessContext(NULL);

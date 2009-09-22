@@ -113,8 +113,6 @@ static void init(struct bs2b *bs2b)
     bs2b->a1_hi = -x;
 
     bs2b->gain  = 1.0 / (1.0 - G_hi + G_lo);
-
-    bs2b_clear(bs2b);
 } /* init */
 
 /* Exported functions.

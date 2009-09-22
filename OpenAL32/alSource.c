@@ -671,6 +671,7 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
     if(alIsSource(source))
     {
         ALsource *pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+        ALCdevice *Device = pContext->Device;
 
         switch (eParam)
         {
@@ -681,8 +682,8 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
                 break;
 
             case AL_AUXILIARY_SEND_FILTER:
-                if(lValue2 >= 0 && lValue2 < MAX_SENDS &&
-                   (alIsAuxiliaryEffectSlot(lValue1) || lValue1 == 0) &&
+                if((ALuint)lValue2 < Device->NumAuxSends &&
+                   (lValue1 == 0 || alIsAuxiliaryEffectSlot(lValue1)) &&
                    alIsFilter(lValue3))
                 {
                     ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(lValue1);

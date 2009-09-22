@@ -1205,6 +1205,15 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 device->NumAuxSends = GetConfigValueInt(NULL, "sends", numSends);
             }
 
+            if(ALCdevice_ResetPlayback(device) != ALC_FALSE)
+            {
+                alcDestroyContext(ALContext);
+                ALContext = NULL;
+                SetALCError(ALC_INVALID_VALUE);
+            }
+
+            ALContext->Frequency = device->Frequency;
+
             free(device->Bs2b);
             device->Bs2b = NULL;
             if(device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
@@ -1213,15 +1222,6 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 bs2b_set_srate(device->Bs2b, device->Frequency);
                 bs2b_set_level(device->Bs2b, device->Bs2bLevel);
             }
-
-            if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
-            {
-                alcDestroyContext(ALContext);
-                ALContext = NULL;
-                SetALCError(ALC_INVALID_VALUE);
-            }
-            else
-                ALContext->Frequency = device->Frequency;
 
             ProcessContext(NULL);
         }

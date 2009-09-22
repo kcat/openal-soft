@@ -40,13 +40,14 @@
 
 
 #define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
-static struct {
+typedef struct BackendInfo {
     const char *name;
     void (*Init)(BackendFuncs*);
     void (*Deinit)(void);
     void (*Probe)(int);
     BackendFuncs Funcs;
-} BackendList[] = {
+} BackendInfo;
+static BackendInfo BackendList[] = {
 #ifdef HAVE_ALSA
     { "alsa", alc_alsa_init, alc_alsa_deinit, alc_alsa_probe, EmptyFuncs },
 #endif
@@ -273,14 +274,9 @@ static void alc_init(void)
                 if(len == strlen(BackendList[n].name) &&
                    strncmp(BackendList[n].name, devs, len) == 0)
                 {
-                    const char *name = BackendList[i].name;
-                    void (*Init)(BackendFuncs*) = BackendList[i].Init;
-
-                    BackendList[i].name = BackendList[n].name;
-                    BackendList[i].Init = BackendList[n].Init;
-
-                    BackendList[n].name = name;
-                    BackendList[n].Init = Init;
+                    BackendInfo Bkp = BackendList[i];
+                    BackendList[i] = BackendList[n];
+                    BackendList[n] = Bkp;
 
                     i++;
                 }

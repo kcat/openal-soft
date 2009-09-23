@@ -76,6 +76,7 @@ MAKE_FUNC(pa_threaded_mainloop_accept);
 MAKE_FUNC(pa_stream_set_write_callback);
 MAKE_FUNC(pa_threaded_mainloop_new);
 MAKE_FUNC(pa_context_connect);
+MAKE_FUNC(pa_stream_get_buffer_attr);
 MAKE_FUNC(pa_stream_set_read_callback);
 MAKE_FUNC(pa_stream_set_state_callback);
 MAKE_FUNC(pa_stream_new);
@@ -170,10 +171,11 @@ static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //
 {
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
-    void *buf = ppa_xmalloc0(len);
+    void *buf = ppa_xmalloc0(data->attr.minreq);
 
-    aluMixData(Device, buf, len/data->frame_size);
-    ppa_stream_write(stream, buf, len, ppa_xfree, 0, PA_SEEK_RELATIVE);
+    aluMixData(Device, buf, data->attr.minreq/data->frame_size);
+    ppa_stream_write(stream, buf, data->attr.minreq, ppa_xfree, 0,
+                     PA_SEEK_RELATIVE);
 } //}}}
 
 static void stream_read_callback(pa_stream *stream, size_t length, void *pdata) //{{{
@@ -344,15 +346,12 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     data->frame_size = aluBytesFromFormat(device->Format) *
                        aluChannelsFromFormat(device->Format);
-    data->attr.minreq = -1;
+    data->attr.minreq = data->frame_size * device->UpdateSize;
     data->attr.prebuf = -1;
     data->attr.maxlength = -1;
-    data->attr.fragsize = data->frame_size * device->UpdateSize;
-    data->attr.tlength = data->attr.fragsize * device->NumUpdates;
+    data->attr.fragsize = -1;
+    data->attr.tlength = data->attr.minreq * device->NumUpdates;
     data->stream_name = "Playback Stream";
-
-    data->spec.rate = device->Frequency;
-    data->spec.channels = aluChannelsFromFormat(device->Format);
 
     switch(aluBytesFromFormat(device->Format))
     {
@@ -370,6 +369,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
             ppa_threaded_mainloop_unlock(data->loop);
             return ALC_FALSE;
     }
+    data->spec.rate = device->Frequency;
+    data->spec.channels = aluChannelsFromFormat(device->Format);
 
     if(ppa_sample_spec_valid(&data->spec) == 0)
     {
@@ -420,6 +421,13 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         ppa_threaded_mainloop_wait(data->loop);
         ppa_threaded_mainloop_accept(data->loop);
     }
+
+    data->attr = *(ppa_stream_get_buffer_attr(data->stream));
+    if((data->attr.tlength%data->attr.minreq) != 0)
+        AL_PRINT("tlength (%d) is not a multiple of minreq (%d)!\n",
+                 data->attr.tlength, data->attr.minreq);
+    device->UpdateSize = data->attr.minreq;
+    device->NumUpdates = data->attr.tlength/data->attr.minreq;
 
     ppa_threaded_mainloop_unlock(data->loop);
     return ALC_TRUE;
@@ -693,6 +701,7 @@ LOAD_FUNC(pa_threaded_mainloop_accept);
 LOAD_FUNC(pa_stream_set_write_callback);
 LOAD_FUNC(pa_threaded_mainloop_new);
 LOAD_FUNC(pa_context_connect);
+LOAD_FUNC(pa_stream_get_buffer_attr);
 LOAD_FUNC(pa_stream_set_read_callback);
 LOAD_FUNC(pa_stream_set_state_callback);
 LOAD_FUNC(pa_stream_new);

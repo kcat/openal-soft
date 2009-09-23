@@ -89,8 +89,6 @@ MAKE_FUNC(pa_threaded_mainloop_lock);
 #endif
 
 typedef struct {
-    ALCdevice *device;
-
     ALCuint samples;
     ALCuint frame_size;
 
@@ -210,8 +208,6 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
 {
     pulse_data *data = ppa_xmalloc0(sizeof(pulse_data));
 
-    data->device = device;
-
     if(ppa_get_binary_name(data->path_name, sizeof(data->path_name)))
         data->context_name = ppa_path_get_filename(data->path_name);
     else
@@ -285,8 +281,6 @@ out:
         ppa_threaded_mainloop_stop(data->loop);
         ppa_threaded_mainloop_free(data->loop);
     }
-    device->ExtraData = NULL;
-    device->szDeviceName = NULL;
 
     ppa_xfree(data);
     return ALC_FALSE;
@@ -313,6 +307,7 @@ static void pulse_close(ALCdevice *device) //{{{
     ppa_threaded_mainloop_free(data->loop);
 
     device->ExtraData = NULL;
+    free(device->szDeviceName);
     device->szDeviceName = NULL;
     DestroyRingBuffer(data->ring);
 
@@ -477,8 +472,6 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     {
         ppa_threaded_mainloop_unlock(data->loop);
         pulse_close(device);
-        free(device->szDeviceName);
-        device->szDeviceName = NULL;
         return ALC_FALSE;
     }
 
@@ -507,8 +500,6 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             AL_PRINT("Unknown format: 0x%x\n", device->Format);
             ppa_threaded_mainloop_unlock(data->loop);
             pulse_close(device);
-            free(device->szDeviceName);
-            device->szDeviceName = NULL;
             return ALC_FALSE;
     }
 
@@ -517,8 +508,6 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         AL_PRINT("Invalid sample format\n");
         ppa_threaded_mainloop_unlock(data->loop);
         pulse_close(device);
-        free(device->szDeviceName);
-        device->szDeviceName = NULL;
         return ALC_FALSE;
     }
 
@@ -530,8 +519,6 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
         ppa_threaded_mainloop_unlock(data->loop);
         pulse_close(device);
-        free(device->szDeviceName);
-        device->szDeviceName = NULL;
         return ALC_FALSE;
     }
 
@@ -547,8 +534,6 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
         data->stream = NULL;
         pulse_close(device);
-        free(device->szDeviceName);
-        device->szDeviceName = NULL;
         return ALC_FALSE;
     }
 
@@ -564,8 +549,6 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
             data->stream = NULL;
             pulse_close(device);
-            free(device->szDeviceName);
-            device->szDeviceName = NULL;
             return ALC_FALSE;
         }
 

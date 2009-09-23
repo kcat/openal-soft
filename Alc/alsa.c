@@ -775,7 +775,7 @@ void alc_alsa_init(BackendFuncs *func_list)
 {
     char *str;
 
-    *func_list = alsa_funcs;
+    if(func_list) *func_list = alsa_funcs;
 
 #ifdef HAVE_DLFCN_H
     alsa_handle = dlopen("libasound.so.2", RTLD_NOW);
@@ -877,8 +877,8 @@ void alc_alsa_deinit(void)
 #ifdef HAVE_DLFCN_H
     if(alsa_handle)
         dlclose(alsa_handle);
-    alsa_handle = NULL;
 #endif
+    alsa_handle = NULL;
 }
 
 void alc_alsa_probe(int type)
@@ -891,8 +891,8 @@ void alc_alsa_probe(int type)
     char name[128];
     ALuint i;
 
-    if(!alsa_handle)
-        return;
+    if(!alsa_handle) alc_alsa_init(NULL);
+    if(!alsa_handle) return;
 
     psnd_ctl_card_info_malloc(&info);
     psnd_pcm_info_malloc(&pcminfo);

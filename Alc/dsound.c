@@ -479,7 +479,7 @@ static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname,
 
 void alcDSoundInit(BackendFuncs *FuncList)
 {
-    *FuncList = DSoundFuncs;
+    if(FuncList) *FuncList = DSoundFuncs;
 
 #ifdef _WIN32
     ds_handle = LoadLibraryA("dsound.dll");
@@ -522,14 +522,14 @@ void alcDSoundDeinit(void)
 #ifdef _WIN32
     if(ds_handle)
         FreeLibrary(ds_handle);
-    ds_handle = NULL;
 #endif
+    ds_handle = NULL;
 }
 
 void alcDSoundProbe(int type)
 {
-    if(!ds_handle)
-        return;
+    if(!ds_handle) alcDSoundInit(NULL);
+    if(!ds_handle) return;
 
     if(type == DEVICE_PROBE)
         AppendDeviceList(dsDevice);

@@ -631,7 +631,7 @@ BackendFuncs pulse_funcs = { //{{{
 
 void alc_pulse_init(BackendFuncs *func_list) //{{{
 {
-    *func_list = pulse_funcs;
+    if(func_list) *func_list = pulse_funcs;
 
 #ifdef _WIN32
     pa_handle = LoadLibrary("libpulse-0.dll");
@@ -726,8 +726,8 @@ void alc_pulse_deinit(void) //{{{
 
 void alc_pulse_probe(int type) //{{{
 {
-    if(!pa_handle)
-        return;
+    if(!pa_handle) alc_pulse_init(NULL);
+    if(!pa_handle) return;
 
     if(type == DEVICE_PROBE)
         AppendDeviceList(pulse_device);

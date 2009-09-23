@@ -199,7 +199,7 @@ void alc_pa_init(BackendFuncs *func_list)
     const char *str;
     PaError err;
 
-    *func_list = pa_funcs;
+    if(func_list) *func_list = pa_funcs;
 
 #ifdef HAVE_DLFCN_H
 #if defined(__APPLE__) && defined(__MACH__)
@@ -261,8 +261,8 @@ void alc_pa_deinit(void)
 
 void alc_pa_probe(int type)
 {
-    if(!pa_handle)
-        return;
+    if(!pa_handle) alc_pa_init(NULL);
+    if(!pa_handle) return;
 
     if(type == DEVICE_PROBE)
         AppendDeviceList(pa_device);

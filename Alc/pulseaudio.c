@@ -116,23 +116,17 @@ static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
     pulse_data *data = pdata;
 
     switch(ppa_stream_get_state(stream))
-	{
-		case PA_STREAM_READY:
-            AL_PRINT("%s: %s ready!\n", data->context_name, data->stream_name);
-			break;
-
-		case PA_STREAM_FAILED:
+    {
+        case PA_STREAM_FAILED:
             AL_PRINT("%s: %s: Connection failed: %s\n", data->context_name,
                      data->stream_name, ppa_strerror(ppa_context_errno(data->context)));
-			break;
+            break;
 
-		case PA_STREAM_TERMINATED:
-            AL_PRINT("%s: %s terminated!\n", data->context_name, data->stream_name);
-			break;
-
-		default:
-			break;
-	}
+        case PA_STREAM_TERMINATED:
+        case PA_STREAM_READY:
+        default:
+            break;
+    }
 
     ppa_threaded_mainloop_signal(data->loop, 1);
 } //}}}
@@ -142,23 +136,17 @@ static void context_state_callback(pa_context *context, void *pdata) //{{{
     pulse_data *data = pdata;
 
     switch(ppa_context_get_state(context))
-	{
-		case PA_CONTEXT_READY:
-            AL_PRINT("%s ready!\n", data->context_name);
-			break;
-
-		case PA_CONTEXT_FAILED:
+    {
+        case PA_CONTEXT_FAILED:
             AL_PRINT("%s: Connection failed: %s\n", data->context_name,
                      ppa_strerror(ppa_context_errno(context)));
             break;
 
-		case PA_CONTEXT_TERMINATED:
-            AL_PRINT("%s terminated!\n", data->context_name);
-			break;
-
-		default:
-			break;
-	}
+        case PA_CONTEXT_TERMINATED:
+        case PA_CONTEXT_READY:
+        default:
+            break;
+    }
 
     ppa_threaded_mainloop_signal(data->loop, 1);
 } //}}}

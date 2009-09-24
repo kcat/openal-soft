@@ -785,7 +785,6 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALfloat DrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
     ALfloat dryGainStep[OUTPUTCHANNELS];
     ALfloat wetGainStep[MAX_SENDS];
-    ALfloat values[OUTPUTCHANNELS];
     ALuint i, j, k, out;
     ALsource *ALSource;
     ALfloat value;
@@ -1041,14 +1040,9 @@ another_source:
         for(i = 0;i < Channels;i++) \
         { \
             value = lerp(Data[k*Channels + i], Data[(k+1)*Channels + i], DataPosFrac); \
-            values[i] = lpFilter2P(DryFilter, chans[i]*2, value)*DrySend[chans[i]]; \
-        } \
-        for(out = 0;out < OUTPUTCHANNELS;out++) \
-        { \
-            ALfloat sum = 0.0f; \
-            for(i = 0;i < Channels;i++) \
-                sum += values[i]*Matrix[chans[i]][out]; \
-            DryBuffer[j][out] += sum; \
+            value = lpFilter2P(DryFilter, chans[i]*2, value)*DrySend[chans[i]]; \
+            for(out = 0;out < OUTPUTCHANNELS;out++) \
+                DryBuffer[j][out] += value*Matrix[chans[i]][out]; \
         } \
  \
         DataPosFrac += increment; \

@@ -110,47 +110,6 @@ typedef struct {
 static const ALCchar pulse_device[] = "PulseAudio Software";
 static const ALCchar pulse_capture_device[] = "PulseAudio Capture";
 
-// PulseAudio Event Callbacks {{{
-static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
-{
-    pulse_data *data = pdata;
-
-    switch(ppa_stream_get_state(stream))
-    {
-        case PA_STREAM_FAILED:
-            AL_PRINT("%s: %s: Connection failed: %s\n", data->context_name,
-                     data->stream_name, ppa_strerror(ppa_context_errno(data->context)));
-            break;
-
-        case PA_STREAM_TERMINATED:
-        case PA_STREAM_READY:
-        default:
-            break;
-    }
-
-    ppa_threaded_mainloop_signal(data->loop, 1);
-} //}}}
-
-static void context_state_callback(pa_context *context, void *pdata) //{{{
-{
-    pulse_data *data = pdata;
-
-    switch(ppa_context_get_state(context))
-    {
-        case PA_CONTEXT_FAILED:
-            AL_PRINT("%s: Connection failed: %s\n", data->context_name,
-                     ppa_strerror(ppa_context_errno(context)));
-            break;
-
-        case PA_CONTEXT_TERMINATED:
-        case PA_CONTEXT_READY:
-        default:
-            break;
-    }
-
-    ppa_threaded_mainloop_signal(data->loop, 1);
-} //}}}
-//}}}
 
 // PulseAudio I/O Callbacks //{{{
 static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //{{{
@@ -195,6 +154,7 @@ static void stream_read_callback(pa_stream *stream, size_t length, void *pdata) 
 static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{{
 {
     pulse_data *data = ppa_xmalloc0(sizeof(pulse_data));
+    pa_context_state_t state;
 
     if(ppa_get_binary_name(data->path_name, sizeof(data->path_name)))
         data->context_name = ppa_path_get_filename(data->path_name);
@@ -225,8 +185,6 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
         goto out;
     }
 
-    ppa_context_set_state_callback(data->context, context_state_callback, data);
-
     if(ppa_context_connect(data->context, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL) < 0)
     {
         AL_PRINT("Context did not connect: %s\n",
@@ -239,9 +197,9 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
         goto out;
     }
 
-    while(ppa_context_get_state(data->context) != PA_CONTEXT_READY)
+    while((state=ppa_context_get_state(data->context)) != PA_CONTEXT_READY)
     {
-        if(!PA_CONTEXT_IS_GOOD(ppa_context_get_state(data->context)))
+        if(!PA_CONTEXT_IS_GOOD(state))
         {
             AL_PRINT("Context did not get ready: %s\n",
                      ppa_strerror(ppa_context_errno(data->context)));
@@ -253,8 +211,9 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
             goto out;
         }
 
-        ppa_threaded_mainloop_wait(data->loop);
-        ppa_threaded_mainloop_accept(data->loop);
+        ppa_threaded_mainloop_unlock(data->loop);
+        Sleep(1);
+        ppa_threaded_mainloop_lock(data->loop);
     }
 
     device->szDeviceName = strdup(device_name);
@@ -325,6 +284,7 @@ static void pulse_close_playback(ALCdevice *device) //{{{
 static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
+    pa_stream_state_t state;
 
     ppa_threaded_mainloop_lock(data->loop);
 
@@ -373,9 +333,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         return ALC_FALSE;
     }
 
-    ppa_stream_set_state_callback(data->stream, stream_state_callback, data);
-    ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
-
     if(ppa_stream_connect_playback(data->stream, NULL, &data->attr, PA_STREAM_ADJUST_LATENCY, NULL, NULL) < 0)
     {
         AL_PRINT("Stream did not connect: %s\n",
@@ -388,9 +345,9 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         return ALC_FALSE;
     }
 
-    while(ppa_stream_get_state(data->stream) != PA_STREAM_READY)
+    while((state=ppa_stream_get_state(data->stream)) != PA_STREAM_READY)
     {
-        if(!PA_STREAM_IS_GOOD(ppa_stream_get_state(data->stream)))
+        if(!PA_STREAM_IS_GOOD(state))
         {
             AL_PRINT("Stream did not get ready: %s\n",
                      ppa_strerror(ppa_context_errno(data->context)));
@@ -402,8 +359,9 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
             return ALC_FALSE;
         }
 
-        ppa_threaded_mainloop_wait(data->loop);
-        ppa_threaded_mainloop_accept(data->loop);
+        ppa_threaded_mainloop_unlock(data->loop);
+        Sleep(1);
+        ppa_threaded_mainloop_lock(data->loop);
     }
 
     data->attr = *(ppa_stream_get_buffer_attr(data->stream));
@@ -412,6 +370,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
                  data->attr.tlength, data->attr.minreq);
     device->UpdateSize = data->attr.minreq;
     device->NumUpdates = data->attr.tlength/data->attr.minreq;
+
+    ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
 
     ppa_threaded_mainloop_unlock(data->loop);
     return ALC_TRUE;
@@ -437,6 +397,7 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
 static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_name) //{{{
 {
     pulse_data *data;
+    pa_stream_state_t state;
 
     if(!pa_handle)
         return ALC_FALSE;
@@ -510,8 +471,6 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         return ALC_FALSE;
     }
 
-    ppa_stream_set_state_callback(data->stream, stream_state_callback, data);
-
     if(ppa_stream_connect_record(data->stream, NULL, &data->attr, PA_STREAM_ADJUST_LATENCY) < 0)
     {
         AL_PRINT("Stream did not connect: %s\n",
@@ -525,9 +484,9 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         return ALC_FALSE;
     }
 
-    while(ppa_stream_get_state(data->stream) != PA_STREAM_READY)
+    while((state=ppa_stream_get_state(data->stream)) != PA_STREAM_READY)
     {
-        if(!PA_STREAM_IS_GOOD(ppa_stream_get_state(data->stream)))
+        if(!PA_STREAM_IS_GOOD(state))
         {
             AL_PRINT("Stream did not get ready: %s\n",
                      ppa_strerror(ppa_context_errno(data->context)));
@@ -540,8 +499,9 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             return ALC_FALSE;
         }
 
-        ppa_threaded_mainloop_wait(data->loop);
-        ppa_threaded_mainloop_accept(data->loop);
+        ppa_threaded_mainloop_unlock(data->loop);
+        Sleep(1);
+        ppa_threaded_mainloop_lock(data->loop);
     }
 
     ppa_threaded_mainloop_unlock(data->loop);

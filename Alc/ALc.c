@@ -1121,8 +1121,7 @@ ALCAPI ALCenum ALCAPIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enu
 */
 ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
-    ALuint ulAttributeIndex, ulRequestedStereoSources;
-    ALuint RequestedSends;
+    ALuint attrIdx, reqStereoSources;
     ALCcontext *ALContext;
 
     SuspendContext(NULL);
@@ -1154,36 +1153,34 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
         ALCint numStereo = device->lNumStereoSources;
         ALCuint numSends = device->NumAuxSends;
 
-        ulAttributeIndex = 0;
-        while(attrList[ulAttributeIndex])
+        attrIdx = 0;
+        while(attrList[attrIdx])
         {
-            if(attrList[ulAttributeIndex] == ALC_FREQUENCY)
+            if(attrList[attrIdx] == ALC_FREQUENCY)
             {
-                freq = attrList[ulAttributeIndex + 1];
+                freq = attrList[attrIdx + 1];
                 if(freq == 0)
                     freq = device->Frequency;
             }
 
-            if(attrList[ulAttributeIndex] == ALC_STEREO_SOURCES)
+            if(attrList[attrIdx] == ALC_STEREO_SOURCES)
             {
-                ulRequestedStereoSources = attrList[ulAttributeIndex + 1];
-                if(ulRequestedStereoSources > device->MaxNoOfSources)
-                    ulRequestedStereoSources = device->MaxNoOfSources;
+                reqStereoSources = attrList[attrIdx + 1];
+                if(reqStereoSources > device->MaxNoOfSources)
+                    reqStereoSources = device->MaxNoOfSources;
 
-                numStereo = ulRequestedStereoSources;
+                numStereo = reqStereoSources;
                 numMono = device->MaxNoOfSources - numStereo;
             }
 
-            if(attrList[ulAttributeIndex] == ALC_MAX_AUXILIARY_SENDS)
+            if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
             {
-                RequestedSends = attrList[ulAttributeIndex + 1];
-                if(RequestedSends > MAX_SENDS)
-                    RequestedSends = MAX_SENDS;
-
-                numSends = RequestedSends;
+                numSends = attrList[attrIdx + 1];
+                if(numSends > MAX_SENDS)
+                    numSends = MAX_SENDS;
             }
 
-            ulAttributeIndex += 2;
+            attrIdx += 2;
         }
 
         device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", level);

@@ -1121,121 +1121,119 @@ ALCAPI ALCenum ALCAPIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enu
 */
 ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
-    ALCcontext *ALContext = NULL;
-    ALuint      ulAttributeIndex, ulRequestedStereoSources;
-    ALuint      RequestedSends;
+    ALuint ulAttributeIndex, ulRequestedStereoSources;
+    ALuint RequestedSends;
+    ALCcontext *ALContext;
 
-    if(IsDevice(device) && !device->IsCaptureDevice && device->Connected)
+    SuspendContext(NULL);
+
+    if(!IsDevice(device) || device->IsCaptureDevice || !device->Connected)
     {
-        // Reset Context Last Error code
-        g_eLastContextError = ALC_NO_ERROR;
+        SetALCError(ALC_INVALID_DEVICE);
+        ProcessContext(NULL);
+        return NULL;
+    }
 
-        // Current implementation only allows one Context per Device
-        if(!device->Context)
+    // Reset Context Last Error code
+    g_eLastContextError = ALC_NO_ERROR;
+
+    // Current implementation only allows one Context per Device
+    if(device->Context)
+    {
+        SetALCError(ALC_INVALID_VALUE);
+        ProcessContext(NULL);
+        return NULL;
+    }
+
+    // Check for attributes
+    if(attrList)
+    {
+        ALCint level = device->Bs2bLevel;
+        ALCuint freq = device->Frequency;
+        ALCint numMono = device->lNumMonoSources;
+        ALCint numStereo = device->lNumStereoSources;
+        ALCuint numSends = device->NumAuxSends;
+
+        ulAttributeIndex = 0;
+        while(attrList[ulAttributeIndex])
         {
-            ALContext = calloc(1, sizeof(ALCcontext));
-            if(!ALContext)
+            if(attrList[ulAttributeIndex] == ALC_FREQUENCY)
             {
-                SetALCError(ALC_OUT_OF_MEMORY);
-                return NULL;
+                freq = attrList[ulAttributeIndex + 1];
+                if(freq == 0)
+                    freq = device->Frequency;
             }
 
-            SuspendContext(NULL);
-
-            ALContext->Device = device;
-            InitContext(ALContext);
-
-            device->Context = ALContext;
-
-            ALContext->next = g_pContextList;
-            g_pContextList = ALContext;
-            g_ulContextCount++;
-
-            // Check for attributes
-            if (attrList)
+            if(attrList[ulAttributeIndex] == ALC_STEREO_SOURCES)
             {
-                ALCint level = device->Bs2bLevel;
-                ALCuint freq = device->Frequency;
-                ALCint numMono = device->lNumMonoSources;
-                ALCint numStereo = device->lNumStereoSources;
-                ALCuint numSends = device->NumAuxSends;
+                ulRequestedStereoSources = attrList[ulAttributeIndex + 1];
+                if(ulRequestedStereoSources > device->MaxNoOfSources)
+                    ulRequestedStereoSources = device->MaxNoOfSources;
 
-                ulAttributeIndex = 0;
-                while ((ulAttributeIndex < 10) && (attrList[ulAttributeIndex]))
-                {
-                    if(attrList[ulAttributeIndex] == ALC_FREQUENCY)
-                    {
-                        freq = attrList[ulAttributeIndex + 1];
-                        if(freq == 0)
-                            freq = device->Frequency;
-                    }
-
-                    if(attrList[ulAttributeIndex] == ALC_STEREO_SOURCES)
-                    {
-                        ulRequestedStereoSources = attrList[ulAttributeIndex + 1];
-
-                        if (ulRequestedStereoSources > device->MaxNoOfSources)
-                            ulRequestedStereoSources = device->MaxNoOfSources;
-
-                        numStereo = ulRequestedStereoSources;
-                        numMono = device->MaxNoOfSources - numStereo;
-                    }
-
-                    if(attrList[ulAttributeIndex] == ALC_MAX_AUXILIARY_SENDS)
-                    {
-                        RequestedSends = attrList[ulAttributeIndex + 1];
-
-                        if(RequestedSends > MAX_SENDS)
-                            RequestedSends = MAX_SENDS;
-
-                        numSends = RequestedSends;
-                    }
-
-                    ulAttributeIndex += 2;
-                }
-
-                device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", level);
-                device->Frequency = GetConfigValueInt(NULL, "frequency", freq);
-                device->lNumMonoSources = numMono;
-                device->lNumStereoSources = numStereo;
-                device->NumAuxSends = GetConfigValueInt(NULL, "sends", numSends);
+                numStereo = ulRequestedStereoSources;
+                numMono = device->MaxNoOfSources - numStereo;
             }
 
-            if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
+            if(attrList[ulAttributeIndex] == ALC_MAX_AUXILIARY_SENDS)
             {
-                alcDestroyContext(ALContext);
-                ALContext = NULL;
-                SetALCError(ALC_INVALID_VALUE);
+                RequestedSends = attrList[ulAttributeIndex + 1];
+                if(RequestedSends > MAX_SENDS)
+                    RequestedSends = MAX_SENDS;
+
+                numSends = RequestedSends;
             }
 
-            ALContext->Frequency = device->Frequency;
-
-            if(device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
-            {
-                if(!device->Bs2b)
-                {
-                    device->Bs2b = calloc(1, sizeof(*device->Bs2b));
-                    bs2b_clear(device->Bs2b);
-                }
-                bs2b_set_srate(device->Bs2b, device->Frequency);
-                bs2b_set_level(device->Bs2b, device->Bs2bLevel);
-            }
-            else
-            {
-                free(device->Bs2b);
-                device->Bs2b = NULL;
-            }
-
-            ProcessContext(NULL);
+            ulAttributeIndex += 2;
         }
-        else
+
+        device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", level);
+        device->Frequency = GetConfigValueInt(NULL, "frequency", freq);
+        device->lNumMonoSources = numMono;
+        device->lNumStereoSources = numStereo;
+        device->NumAuxSends = GetConfigValueInt(NULL, "sends", numSends);
+    }
+
+    if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
+    {
+        SetALCError(ALC_INVALID_VALUE);
+        ProcessContext(NULL);
+        return NULL;
+    }
+
+    if(device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
+    {
+        if(!device->Bs2b)
         {
-            SetALCError(ALC_INVALID_VALUE);
-            ALContext = NULL;
+            device->Bs2b = calloc(1, sizeof(*device->Bs2b));
+            bs2b_clear(device->Bs2b);
         }
+        bs2b_set_srate(device->Bs2b, device->Frequency);
+        bs2b_set_level(device->Bs2b, device->Bs2bLevel);
     }
     else
-        SetALCError(ALC_INVALID_DEVICE);
+    {
+        free(device->Bs2b);
+        device->Bs2b = NULL;
+    }
+
+    ALContext = calloc(1, sizeof(ALCcontext));
+    if(!ALContext)
+    {
+        SetALCError(ALC_OUT_OF_MEMORY);
+        ProcessContext(NULL);
+        return NULL;
+    }
+
+    ALContext->Device = device;
+    InitContext(ALContext);
+
+    device->Context = ALContext;
+
+    ALContext->next = g_pContextList;
+    g_pContextList = ALContext;
+    g_ulContextCount++;
+
+    ProcessContext(NULL);
 
     return ALContext;
 }

@@ -913,8 +913,9 @@ another_source:
         }
 
         /* Compute the gain steps for each output channel */
-        if(ALSource->FirstStart && DataPosInt == 0 && DataPosFrac == 0)
+        if(ALSource->FirstStart)
         {
+            ALSource->FirstStart = AL_FALSE;
             for(i = 0;i < OUTPUTCHANNELS;i++)
                 dryGainStep[i] = 0.0f;
             for(i = 0;i < MAX_SENDS;i++)
@@ -933,7 +934,6 @@ another_source:
                 WetSend[i] = ALSource->WetGains[i];
             }
         }
-        ALSource->FirstStart = AL_FALSE;
 
         /* Compute 18.14 fixed point step */
         if(Pitch > (float)MAX_PITCH)

@@ -47,6 +47,81 @@ MAKE_FUNC(Pa_GetStreamInfo);
 
 
 static const ALCchar pa_device[] = "PortAudio Software";
+static volatile ALuint load_count;
+
+
+void pa_load(void)
+{
+    const char *str;
+    PaError err;
+
+    if(load_count == 0)
+    {
+#ifdef HAVE_DLFCN_H
+#if defined(__APPLE__) && defined(__MACH__)
+# define PALIB "libportaudio.2.dylib"
+#else
+# define PALIB "libportaudio.so.2"
+#endif
+        pa_handle = dlopen(PALIB, RTLD_NOW);
+        if(!pa_handle)
+            return;
+        dlerror();
+
+#define LOAD_FUNC(f) do { \
+    p##f = (typeof(f)*)dlsym(pa_handle, #f); \
+    if((str=dlerror()) != NULL) \
+    { \
+        dlclose(pa_handle); \
+        pa_handle = NULL; \
+        AL_PRINT("Could not load %s from "PALIB": %s\n", #f, str); \
+        return; \
+    } \
+} while(0)
+#else
+        str = NULL;
+        pa_handle = (void*)0xDEADBEEF;
+#define LOAD_FUNC(f) p##f = f
+#endif
+
+LOAD_FUNC(Pa_Initialize);
+LOAD_FUNC(Pa_Terminate);
+LOAD_FUNC(Pa_GetErrorText);
+LOAD_FUNC(Pa_StartStream);
+LOAD_FUNC(Pa_StopStream);
+LOAD_FUNC(Pa_OpenStream);
+LOAD_FUNC(Pa_CloseStream);
+LOAD_FUNC(Pa_GetDefaultOutputDevice);
+LOAD_FUNC(Pa_GetStreamInfo);
+
+#undef LOAD_FUNC
+
+        if((err=pPa_Initialize()) != paNoError)
+        {
+            AL_PRINT("Pa_Initialize() returned an error: %s\n", pPa_GetErrorText(err));
+#ifdef HAVE_DLFCN_H
+            dlclose(pa_handle);
+#endif
+            pa_handle = NULL;
+            return;
+        }
+    }
+
+    ++load_count;
+}
+
+void pa_unload(void)
+{
+    if(load_count == 0 || --load_count > 0)
+        return;
+
+    pPa_Terminate();
+#ifdef HAVE_DLFCN_H
+    dlclose(pa_handle);
+#endif
+    pa_handle = NULL;
+}
+
 
 typedef struct {
     PaStream *stream;
@@ -75,12 +150,13 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     pa_data *data;
     PaError err;
 
-    if(pa_handle == NULL)
-        return ALC_FALSE;
-
     if(!deviceName)
         deviceName = pa_device;
     else if(strcmp(deviceName, pa_device) != 0)
+        return ALC_FALSE;
+
+    pa_load();
+    if(pa_handle == NULL)
         return ALC_FALSE;
 
     data = (pa_data*)calloc(1, sizeof(pa_data));
@@ -108,6 +184,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
             AL_PRINT("Unknown format: 0x%x\n", device->Format);
             device->ExtraData = NULL;
             free(data);
+            pa_unload();
             return ALC_FALSE;
     }
     outParams.channelCount = aluChannelsFromFormat(device->Format);
@@ -119,6 +196,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         AL_PRINT("Pa_OpenStream() returned an error: %s\n", pPa_GetErrorText(err));
         device->ExtraData = NULL;
         free(data);
+        pa_unload();
         return ALC_FALSE;
     }
     streamInfo = pPa_GetStreamInfo(data->stream);
@@ -130,6 +208,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         pPa_CloseStream(data->stream);
         device->ExtraData = NULL;
         free(data);
+        pa_unload();
         return ALC_FALSE;
     }
 
@@ -153,6 +232,8 @@ static void pa_close_playback(ALCdevice *device)
 
     free(data);
     device->ExtraData = NULL;
+
+    pa_unload();
 }
 
 static ALCboolean pa_reset_playback(ALCdevice *device)
@@ -196,76 +277,22 @@ static const BackendFuncs pa_funcs = {
 
 void alc_pa_init(BackendFuncs *func_list)
 {
-    const char *str;
-    PaError err;
-
-    if(func_list) *func_list = pa_funcs;
-
-#ifdef HAVE_DLFCN_H
-#if defined(__APPLE__) && defined(__MACH__)
-# define PALIB "libportaudio.2.dylib"
-#else
-# define PALIB "libportaudio.so.2"
-#endif
-    pa_handle = dlopen(PALIB, RTLD_NOW);
-    if(!pa_handle)
-        return;
-    dlerror();
-
-#define LOAD_FUNC(f) do { \
-    p##f = (typeof(f)*)dlsym(pa_handle, #f); \
-    if((str=dlerror()) != NULL) \
-    { \
-        dlclose(pa_handle); \
-        pa_handle = NULL; \
-        AL_PRINT("Could not load %s from "PALIB": %s\n", #f, str); \
-        return; \
-    } \
-} while(0)
-#else
-    str = NULL;
-    pa_handle = (void*)0xDEADBEEF;
-#define LOAD_FUNC(f) p##f = f
-#endif
-
-    LOAD_FUNC(Pa_Initialize);
-    LOAD_FUNC(Pa_Terminate);
-    LOAD_FUNC(Pa_GetErrorText);
-    LOAD_FUNC(Pa_StartStream);
-    LOAD_FUNC(Pa_StopStream);
-    LOAD_FUNC(Pa_OpenStream);
-    LOAD_FUNC(Pa_CloseStream);
-    LOAD_FUNC(Pa_GetDefaultOutputDevice);
-    LOAD_FUNC(Pa_GetStreamInfo);
-#undef LOAD_FUNC
-
-    if((err=pPa_Initialize()) != paNoError)
-    {
-        AL_PRINT("Pa_Initialize() returned an error: %s\n", pPa_GetErrorText(err));
-        alc_pa_deinit();
-        return;
-    }
+    *func_list = pa_funcs;
 }
 
 void alc_pa_deinit(void)
 {
-    if(pa_handle)
-    {
-        pPa_Terminate();
-#ifdef HAVE_DLFCN_H
-        dlclose(pa_handle);
-        pa_handle = NULL;
-#endif
-    }
 }
 
 void alc_pa_probe(int type)
 {
-    if(!pa_handle) alc_pa_init(NULL);
+    pa_load();
     if(!pa_handle) return;
 
     if(type == DEVICE_PROBE)
         AppendDeviceList(pa_device);
     else if(type == ALL_DEVICE_PROBE)
         AppendAllDeviceList(pa_device);
+
+    pa_unload();
 }

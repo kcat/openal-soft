@@ -71,6 +71,53 @@ typedef struct {
 static const ALCchar dsDevice[] = "DirectSound Software";
 static DevMap *DeviceList;
 static ALuint NumDevices;
+static volatile ALuint load_count;
+
+
+void DSoundLoad(void)
+{
+    if(load_count == 0)
+    {
+#ifdef _WIN32
+        ds_handle = LoadLibraryA("dsound.dll");
+        if(ds_handle == NULL)
+        {
+            AL_PRINT("Failed to load dsound.dll\n");
+            return;
+        }
+
+#define LOAD_FUNC(f) do { \
+    p##f = (void*)GetProcAddress((HMODULE)ds_handle, #f); \
+    if(p##f == NULL) \
+    { \
+        FreeLibrary(ds_handle); \
+        ds_handle = NULL; \
+        AL_PRINT("Could not load %s from dsound.dll\n", #f); \
+        return; \
+    } \
+} while(0)
+#else
+        ds_handle = (void*)0xDEADBEEF;
+#define LOAD_FUNC(f) p##f = f
+#endif
+
+LOAD_FUNC(DirectSoundCreate);
+LOAD_FUNC(DirectSoundEnumerateA);
+#undef LOAD_FUNC
+    }
+    ++load_count;
+}
+
+void DSoundUnload(void)
+{
+    if(load_count == 0 || --load_count > 0)
+        return;
+
+#ifdef _WIN32
+    FreeLibrary(ds_handle);
+#endif
+    ds_handle = NULL;
+}
 
 
 static ALuint DSoundProc(ALvoid *ptr)
@@ -157,9 +204,6 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     LPGUID guid = NULL;
     HRESULT hr;
 
-    if(ds_handle == NULL)
-        return ALC_FALSE;
-
     if(!deviceName)
         deviceName = dsDevice;
     else if(strcmp(deviceName, dsDevice) != 0)
@@ -177,12 +221,17 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
             return ALC_FALSE;
     }
 
+    DSoundLoad();
+    if(ds_handle == NULL)
+        return ALC_FALSE;
+
     //Initialise requested device
 
     pData = calloc(1, sizeof(DSoundData));
     if(!pData)
     {
         SetALCError(ALC_OUT_OF_MEMORY);
+        DSoundUnload();
         return ALC_FALSE;
     }
 
@@ -195,6 +244,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         if(pData->lpDS)
             IDirectSound_Release(pData->lpDS);
         free(pData);
+        DSoundUnload();
         return ALC_FALSE;
     }
 
@@ -210,6 +260,8 @@ static void DSoundClosePlayback(ALCdevice *device)
     IDirectSound_Release(pData->lpDS);
     free(pData);
     device->ExtraData = NULL;
+
+    DSoundUnload();
 }
 
 static ALCboolean DSoundResetPlayback(ALCdevice *device)
@@ -479,34 +531,7 @@ static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname,
 
 void alcDSoundInit(BackendFuncs *FuncList)
 {
-    if(FuncList) *FuncList = DSoundFuncs;
-
-#ifdef _WIN32
-    ds_handle = LoadLibraryA("dsound.dll");
-    if(ds_handle == NULL)
-    {
-        AL_PRINT("Failed to load dsound.dll\n");
-        return;
-    }
-
-#define LOAD_FUNC(f) do { \
-    p##f = (void*)GetProcAddress((HMODULE)ds_handle, #f); \
-    if(p##f == NULL) \
-    { \
-        FreeLibrary(ds_handle); \
-        ds_handle = NULL; \
-        AL_PRINT("Could not load %s from dsound.dll\n", #f); \
-        return; \
-    } \
-} while(0)
-#else
-    ds_handle = (void*)0xDEADBEEF;
-#define LOAD_FUNC(f) p##f = f
-#endif
-
-LOAD_FUNC(DirectSoundCreate);
-LOAD_FUNC(DirectSoundEnumerateA);
-#undef LOAD_FUNC
+    *FuncList = DSoundFuncs;
 }
 
 void alcDSoundDeinit(void)
@@ -518,17 +543,11 @@ void alcDSoundDeinit(void)
     free(DeviceList);
     DeviceList = NULL;
     NumDevices = 0;
-
-#ifdef _WIN32
-    if(ds_handle)
-        FreeLibrary(ds_handle);
-#endif
-    ds_handle = NULL;
 }
 
 void alcDSoundProbe(int type)
 {
-    if(!ds_handle) alcDSoundInit(NULL);
+    DSoundLoad();
     if(!ds_handle) return;
 
     if(type == DEVICE_PROBE)
@@ -548,4 +567,6 @@ void alcDSoundProbe(int type)
         if(FAILED(hr))
             AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
     }
+
+    DSoundUnload();
 }

@@ -116,6 +116,108 @@ static DevMap *allDevNameMap;
 static ALuint numDevNames;
 static DevMap *allCaptureDevNameMap;
 static ALuint numCaptureDevNames;
+static volatile ALuint load_count;
+
+
+void alsa_load(void)
+{
+    if(load_count == 0)
+    {
+        char *str;
+
+#ifdef HAVE_DLFCN_H
+        alsa_handle = dlopen("libasound.so.2", RTLD_NOW);
+        if(!alsa_handle)
+            return;
+        dlerror();
+
+#define LOAD_FUNC(f) do { \
+    p##f = dlsym(alsa_handle, #f); \
+    if((str=dlerror()) != NULL) \
+    { \
+        dlclose(alsa_handle); \
+        alsa_handle = NULL; \
+        AL_PRINT("Could not load %s from libasound.so.2: %s\n", #f, str); \
+        return; \
+    } \
+} while(0)
+#else
+        str = NULL;
+        alsa_handle = (void*)0xDEADBEEF;
+#define LOAD_FUNC(f) p##f = f
+#endif
+
+LOAD_FUNC(snd_strerror);
+LOAD_FUNC(snd_pcm_open);
+LOAD_FUNC(snd_pcm_close);
+LOAD_FUNC(snd_pcm_nonblock);
+LOAD_FUNC(snd_pcm_frames_to_bytes);
+LOAD_FUNC(snd_pcm_hw_params_malloc);
+LOAD_FUNC(snd_pcm_hw_params_free);
+LOAD_FUNC(snd_pcm_hw_params_any);
+LOAD_FUNC(snd_pcm_hw_params_set_access);
+LOAD_FUNC(snd_pcm_hw_params_set_format);
+LOAD_FUNC(snd_pcm_hw_params_set_channels);
+LOAD_FUNC(snd_pcm_hw_params_set_periods_near);
+LOAD_FUNC(snd_pcm_hw_params_set_rate_near);
+LOAD_FUNC(snd_pcm_hw_params_set_rate);
+LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_near);
+LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_min);
+LOAD_FUNC(snd_pcm_hw_params_set_period_size_near);
+LOAD_FUNC(snd_pcm_hw_params_get_buffer_size);
+LOAD_FUNC(snd_pcm_hw_params_get_period_size);
+LOAD_FUNC(snd_pcm_hw_params_get_access);
+LOAD_FUNC(snd_pcm_hw_params_get_periods);
+LOAD_FUNC(snd_pcm_hw_params);
+LOAD_FUNC(snd_pcm_sw_params_malloc);
+LOAD_FUNC(snd_pcm_sw_params_current);
+LOAD_FUNC(snd_pcm_sw_params_set_avail_min);
+LOAD_FUNC(snd_pcm_sw_params);
+LOAD_FUNC(snd_pcm_sw_params_free);
+LOAD_FUNC(snd_pcm_prepare);
+LOAD_FUNC(snd_pcm_start);
+LOAD_FUNC(snd_pcm_resume);
+LOAD_FUNC(snd_pcm_wait);
+LOAD_FUNC(snd_pcm_state);
+LOAD_FUNC(snd_pcm_avail_update);
+LOAD_FUNC(snd_pcm_areas_silence);
+LOAD_FUNC(snd_pcm_mmap_begin);
+LOAD_FUNC(snd_pcm_mmap_commit);
+LOAD_FUNC(snd_pcm_readi);
+LOAD_FUNC(snd_pcm_writei);
+LOAD_FUNC(snd_pcm_drain);
+
+LOAD_FUNC(snd_pcm_info_malloc);
+LOAD_FUNC(snd_pcm_info_free);
+LOAD_FUNC(snd_pcm_info_set_device);
+LOAD_FUNC(snd_pcm_info_set_subdevice);
+LOAD_FUNC(snd_pcm_info_set_stream);
+LOAD_FUNC(snd_pcm_info_get_name);
+LOAD_FUNC(snd_ctl_pcm_next_device);
+LOAD_FUNC(snd_ctl_pcm_info);
+LOAD_FUNC(snd_ctl_open);
+LOAD_FUNC(snd_ctl_close);
+LOAD_FUNC(snd_ctl_card_info_malloc);
+LOAD_FUNC(snd_ctl_card_info_free);
+LOAD_FUNC(snd_ctl_card_info);
+LOAD_FUNC(snd_ctl_card_info_get_name);
+LOAD_FUNC(snd_card_next);
+
+#undef LOAD_FUNC
+    }
+    ++load_count;
+}
+
+void alsa_unload(void)
+{
+    if(load_count == 0 || --load_count > 0)
+        return;
+
+#ifdef HAVE_DLFCN_H
+    dlclose(alsa_handle);
+#endif
+    alsa_handle = NULL;
+}
 
 
 static int xrun_recovery(snd_pcm_t *handle, int err)
@@ -339,9 +441,6 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     char driver[64];
     int i;
 
-    if(!alsa_handle)
-        return ALC_FALSE;
-
     strncpy(driver, GetConfigValue("alsa", "device", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
     if(!deviceName)
@@ -363,6 +462,10 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
         return ALC_FALSE;
     }
 
+    alsa_load();
+    if(!alsa_handle)
+        return ALC_FALSE;
+
 open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
 
@@ -382,6 +485,7 @@ open_alsa:
     {
         free(data);
         AL_PRINT("Could not open playback device '%s': %s\n", driver, psnd_strerror(i));
+        alsa_unload();
         return ALC_FALSE;
     }
 
@@ -397,6 +501,8 @@ static void alsa_close_playback(ALCdevice *device)
     psnd_pcm_close(data->pcmHandle);
     free(data);
     device->ExtraData = NULL;
+
+    alsa_unload();
 }
 
 static ALCboolean alsa_reset_playback(ALCdevice *device)
@@ -565,9 +671,6 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     char *err;
     int i;
 
-    if(!alsa_handle)
-        return ALC_FALSE;
-
     strncpy(driver, GetConfigValue("alsa", "capture", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
     if(!deviceName)
@@ -590,6 +693,10 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
         return ALC_FALSE;
     }
 
+    alsa_load();
+    if(!alsa_handle)
+        return ALC_FALSE;
+
 open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
 
@@ -609,6 +716,7 @@ open_alsa:
     {
         free(data);
         AL_PRINT("Could not open capture device '%s': %s\n", driver, psnd_strerror(i));
+        alsa_unload();
         return ALC_FALSE;
     }
 
@@ -627,6 +735,7 @@ open_alsa:
             AL_PRINT("Unknown format: 0x%x\n", pDevice->Format);
             psnd_pcm_close(data->pcmHandle);
             free(data);
+            alsa_unload();
             return ALC_FALSE;
     }
 
@@ -660,6 +769,7 @@ open_alsa:
         psnd_pcm_hw_params_free(p);
         psnd_pcm_close(data->pcmHandle);
         free(data);
+        alsa_unload();
         return ALC_FALSE;
     }
 
@@ -669,6 +779,7 @@ open_alsa:
         psnd_pcm_hw_params_free(p);
         psnd_pcm_close(data->pcmHandle);
         free(data);
+        alsa_unload();
         return ALC_FALSE;
     }
 
@@ -683,6 +794,7 @@ open_alsa:
         AL_PRINT("ring buffer create failed\n");
         psnd_pcm_close(data->pcmHandle);
         free(data);
+        alsa_unload();
         return ALC_FALSE;
     }
 
@@ -694,6 +806,7 @@ open_alsa:
         psnd_pcm_close(data->pcmHandle);
         DestroyRingBuffer(data->ring);
         free(data);
+        alsa_unload();
         return ALC_FALSE;
     }
 
@@ -707,6 +820,7 @@ open_alsa:
         pDevice->ExtraData = NULL;
         free(data->buffer);
         free(data);
+        alsa_unload();
         return ALC_FALSE;
     }
 
@@ -727,6 +841,8 @@ static void alsa_close_capture(ALCdevice *pDevice)
     free(data->buffer);
     free(data);
     pDevice->ExtraData = NULL;
+
+    alsa_unload();
 }
 
 static void alsa_start_capture(ALCdevice *pDevice)
@@ -773,89 +889,7 @@ BackendFuncs alsa_funcs = {
 
 void alc_alsa_init(BackendFuncs *func_list)
 {
-    char *str;
-
-    if(func_list) *func_list = alsa_funcs;
-
-#ifdef HAVE_DLFCN_H
-    alsa_handle = dlopen("libasound.so.2", RTLD_NOW);
-    if(!alsa_handle)
-        return;
-    dlerror();
-
-#define LOAD_FUNC(f) do { \
-    p##f = (typeof(f)*)dlsym(alsa_handle, #f); \
-    if((str=dlerror()) != NULL) \
-    { \
-        dlclose(alsa_handle); \
-        alsa_handle = NULL; \
-        AL_PRINT("Could not load %s from libasound.so.2: %s\n", #f, str); \
-        return; \
-    } \
-} while(0)
-#else
-    str = NULL;
-    alsa_handle = (void*)0xDEADBEEF;
-#define LOAD_FUNC(f) p##f = f
-#endif
-
-LOAD_FUNC(snd_strerror);
-LOAD_FUNC(snd_pcm_open);
-LOAD_FUNC(snd_pcm_close);
-LOAD_FUNC(snd_pcm_nonblock);
-LOAD_FUNC(snd_pcm_frames_to_bytes);
-LOAD_FUNC(snd_pcm_hw_params_malloc);
-LOAD_FUNC(snd_pcm_hw_params_free);
-LOAD_FUNC(snd_pcm_hw_params_any);
-LOAD_FUNC(snd_pcm_hw_params_set_access);
-LOAD_FUNC(snd_pcm_hw_params_set_format);
-LOAD_FUNC(snd_pcm_hw_params_set_channels);
-LOAD_FUNC(snd_pcm_hw_params_set_periods_near);
-LOAD_FUNC(snd_pcm_hw_params_set_rate_near);
-LOAD_FUNC(snd_pcm_hw_params_set_rate);
-LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_near);
-LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_min);
-LOAD_FUNC(snd_pcm_hw_params_set_period_size_near);
-LOAD_FUNC(snd_pcm_hw_params_get_buffer_size);
-LOAD_FUNC(snd_pcm_hw_params_get_period_size);
-LOAD_FUNC(snd_pcm_hw_params_get_access);
-LOAD_FUNC(snd_pcm_hw_params_get_periods);
-LOAD_FUNC(snd_pcm_hw_params);
-LOAD_FUNC(snd_pcm_sw_params_malloc);
-LOAD_FUNC(snd_pcm_sw_params_current);
-LOAD_FUNC(snd_pcm_sw_params_set_avail_min);
-LOAD_FUNC(snd_pcm_sw_params);
-LOAD_FUNC(snd_pcm_sw_params_free);
-LOAD_FUNC(snd_pcm_prepare);
-LOAD_FUNC(snd_pcm_start);
-LOAD_FUNC(snd_pcm_resume);
-LOAD_FUNC(snd_pcm_wait);
-LOAD_FUNC(snd_pcm_state);
-LOAD_FUNC(snd_pcm_avail_update);
-LOAD_FUNC(snd_pcm_areas_silence);
-LOAD_FUNC(snd_pcm_mmap_begin);
-LOAD_FUNC(snd_pcm_mmap_commit);
-LOAD_FUNC(snd_pcm_readi);
-LOAD_FUNC(snd_pcm_writei);
-LOAD_FUNC(snd_pcm_drain);
-
-LOAD_FUNC(snd_pcm_info_malloc);
-LOAD_FUNC(snd_pcm_info_free);
-LOAD_FUNC(snd_pcm_info_set_device);
-LOAD_FUNC(snd_pcm_info_set_subdevice);
-LOAD_FUNC(snd_pcm_info_set_stream);
-LOAD_FUNC(snd_pcm_info_get_name);
-LOAD_FUNC(snd_ctl_pcm_next_device);
-LOAD_FUNC(snd_ctl_pcm_info);
-LOAD_FUNC(snd_ctl_open);
-LOAD_FUNC(snd_ctl_close);
-LOAD_FUNC(snd_ctl_card_info_malloc);
-LOAD_FUNC(snd_ctl_card_info_free);
-LOAD_FUNC(snd_ctl_card_info);
-LOAD_FUNC(snd_ctl_card_info_get_name);
-LOAD_FUNC(snd_card_next);
-
-#undef LOAD_FUNC
+    *func_list = alsa_funcs;
 }
 
 void alc_alsa_deinit(void)
@@ -873,12 +907,6 @@ void alc_alsa_deinit(void)
     free(allCaptureDevNameMap);
     allCaptureDevNameMap = NULL;
     numCaptureDevNames = 0;
-
-#ifdef HAVE_DLFCN_H
-    if(alsa_handle)
-        dlclose(alsa_handle);
-#endif
-    alsa_handle = NULL;
 }
 
 void alc_alsa_probe(int type)
@@ -891,7 +919,7 @@ void alc_alsa_probe(int type)
     char name[128];
     ALuint i;
 
-    if(!alsa_handle) alc_alsa_init(NULL);
+    alsa_load();
     if(!alsa_handle) return;
 
     psnd_ctl_card_info_malloc(&info);
@@ -907,6 +935,7 @@ void alc_alsa_probe(int type)
             AL_PRINT("no playback cards found...\n");
             psnd_pcm_info_free(pcminfo);
             psnd_ctl_card_info_free(info);
+            alsa_unload();
             return;
         }
 
@@ -981,6 +1010,7 @@ void alc_alsa_probe(int type)
             AL_PRINT("no capture cards found...\n");
             psnd_pcm_info_free(pcminfo);
             psnd_ctl_card_info_free(info);
+            alsa_unload();
             return;
         }
 
@@ -1048,4 +1078,6 @@ void alc_alsa_probe(int type)
 
     psnd_pcm_info_free(pcminfo);
     psnd_ctl_card_info_free(info);
+
+    alsa_unload();
 }

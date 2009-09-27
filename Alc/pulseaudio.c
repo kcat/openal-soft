@@ -109,6 +109,108 @@ typedef struct {
 
 static const ALCchar pulse_device[] = "PulseAudio Software";
 static const ALCchar pulse_capture_device[] = "PulseAudio Capture";
+static volatile ALuint load_count;
+
+
+void pulse_load(void) //{{{
+{
+    if(load_count == 0)
+    {
+#ifdef _WIN32
+        pa_handle = LoadLibrary("libpulse-0.dll");
+#define LOAD_FUNC(x) do { \
+    p##x = GetProcAddress(pa_handle, #x); \
+    if(!(p##x)) { \
+        AL_PRINT("Could not load %s from libpulse-0.dll\n", #x); \
+        FreeLibrary(pa_handle); \
+        pa_handle = NULL; \
+        return; \
+    } \
+} while(0)
+
+#elif defined (HAVE_DLFCN_H)
+
+        const char *err;
+#if defined(__APPLE__) && defined(__MACH__)
+        pa_handle = dlopen("libpulse.0.dylib", RTLD_NOW);
+#else
+        pa_handle = dlopen("libpulse.so.0", RTLD_NOW);
+#endif
+        dlerror();
+
+#define LOAD_FUNC(x) do { \
+    p##x = dlsym(pa_handle, #x); \
+    if((err=dlerror() != NULL) { \
+        AL_PRINT("Could not load %s from libpulse: %s\n", #x, err); \
+        dlclose(pa_handle); \
+        pa_handle = NULL; \
+        return; \
+    } \
+} while(0)
+
+#else
+
+        pa_handle = (void*)0xDEADBEEF;
+#define LOAD_FUNC(x) p##x = (x)
+
+#endif
+        if(!pa_handle)
+            return;
+
+LOAD_FUNC(pa_context_unref);
+LOAD_FUNC(pa_sample_spec_valid);
+LOAD_FUNC(pa_stream_drop);
+LOAD_FUNC(pa_strerror);
+LOAD_FUNC(pa_context_get_state);
+LOAD_FUNC(pa_stream_get_state);
+LOAD_FUNC(pa_threaded_mainloop_signal);
+LOAD_FUNC(pa_stream_peek);
+LOAD_FUNC(pa_threaded_mainloop_wait);
+LOAD_FUNC(pa_threaded_mainloop_unlock);
+LOAD_FUNC(pa_context_new);
+LOAD_FUNC(pa_threaded_mainloop_stop);
+LOAD_FUNC(pa_context_disconnect);
+LOAD_FUNC(pa_threaded_mainloop_start);
+LOAD_FUNC(pa_threaded_mainloop_get_api);
+LOAD_FUNC(pa_context_set_state_callback);
+LOAD_FUNC(pa_stream_write);
+LOAD_FUNC(pa_xfree);
+LOAD_FUNC(pa_stream_connect_record);
+LOAD_FUNC(pa_stream_connect_playback);
+LOAD_FUNC(pa_path_get_filename);
+LOAD_FUNC(pa_get_binary_name);
+LOAD_FUNC(pa_threaded_mainloop_free);
+LOAD_FUNC(pa_context_errno);
+LOAD_FUNC(pa_xmalloc0);
+LOAD_FUNC(pa_stream_unref);
+LOAD_FUNC(pa_threaded_mainloop_accept);
+LOAD_FUNC(pa_stream_set_write_callback);
+LOAD_FUNC(pa_threaded_mainloop_new);
+LOAD_FUNC(pa_context_connect);
+LOAD_FUNC(pa_stream_get_buffer_attr);
+LOAD_FUNC(pa_stream_set_read_callback);
+LOAD_FUNC(pa_stream_set_state_callback);
+LOAD_FUNC(pa_stream_new);
+LOAD_FUNC(pa_stream_disconnect);
+LOAD_FUNC(pa_threaded_mainloop_lock);
+
+#undef LOAD_FUNC
+    }
+    ++load_count;
+} //}}}
+
+void pulse_unload(void) //{{{
+{
+    if(load_count == 0 || --load_count > 0)
+        return;
+
+#ifdef _WIN32
+    FreeLibrary(pa_handle);
+#elif defined (HAVE_DLFCN_H)
+    dlclose(pa_handle);
+#endif
+    pa_handle = NULL;
+} //}}}
 
 
 // PulseAudio I/O Callbacks //{{{
@@ -265,20 +367,26 @@ static void pulse_close(ALCdevice *device) //{{{
 // OpenAL {{{
 static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_name) //{{{
 {
-    if(!pa_handle)
-        return ALC_FALSE;
-
     if(!device_name)
         device_name = pulse_device;
     else if(strcmp(device_name, pulse_device) != 0)
         return ALC_FALSE;
 
-    return pulse_open(device, device_name);
+    pulse_load();
+    if(!pa_handle)
+        return ALC_FALSE;
+
+    if(pulse_open(device, device_name) != ALC_FALSE)
+        return ALC_TRUE;
+
+    pulse_unload();
+    return ALC_FALSE;
 } //}}}
 
 static void pulse_close_playback(ALCdevice *device) //{{{
 {
     pulse_close(device);
+    pulse_unload();
 } //}}}
 
 static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
@@ -399,16 +507,20 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     pulse_data *data;
     pa_stream_state_t state;
 
-    if(!pa_handle)
-        return ALC_FALSE;
-
     if(!device_name)
         device_name = pulse_capture_device;
     else if(strcmp(device_name, pulse_capture_device) != 0)
         return ALC_FALSE;
 
-    if(pulse_open(device, device_name) == ALC_FALSE)
+    pulse_load();
+    if(!pa_handle)
         return ALC_FALSE;
+
+    if(pulse_open(device, device_name) == ALC_FALSE)
+    {
+        pulse_unload();
+        return ALC_FALSE;
+    }
 
     data = device->ExtraData;
     ppa_threaded_mainloop_lock(data->loop);
@@ -421,6 +533,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     {
         ppa_threaded_mainloop_unlock(data->loop);
         pulse_close(device);
+        pulse_unload();
         return ALC_FALSE;
     }
 
@@ -449,6 +562,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             AL_PRINT("Unknown format: 0x%x\n", device->Format);
             ppa_threaded_mainloop_unlock(data->loop);
             pulse_close(device);
+            pulse_unload();
             return ALC_FALSE;
     }
 
@@ -457,6 +571,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         AL_PRINT("Invalid sample format\n");
         ppa_threaded_mainloop_unlock(data->loop);
         pulse_close(device);
+        pulse_unload();
         return ALC_FALSE;
     }
 
@@ -468,6 +583,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
         ppa_threaded_mainloop_unlock(data->loop);
         pulse_close(device);
+        pulse_unload();
         return ALC_FALSE;
     }
 
@@ -481,6 +597,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
         data->stream = NULL;
         pulse_close(device);
+        pulse_unload();
         return ALC_FALSE;
     }
 
@@ -496,6 +613,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
             data->stream = NULL;
             pulse_close(device);
+            pulse_unload();
             return ALC_FALSE;
         }
 
@@ -511,6 +629,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 static void pulse_close_capture(ALCdevice *device) //{{{
 {
     pulse_close(device);
+    pulse_unload();
 } //}}}
 
 static void pulse_start_capture(ALCdevice *device) //{{{
@@ -563,102 +682,16 @@ BackendFuncs pulse_funcs = { //{{{
 
 void alc_pulse_init(BackendFuncs *func_list) //{{{
 {
-    if(func_list) *func_list = pulse_funcs;
-
-#ifdef _WIN32
-    pa_handle = LoadLibrary("libpulse-0.dll");
-#define LOAD_FUNC(x) do { \
-    p##x = GetProcAddress(pa_handle, #x); \
-    if(!(p##x)) { \
-        AL_PRINT("Could not load %s from libpulse-0.dll\n", #x); \
-        FreeLibrary(pa_handle); \
-        pa_handle = NULL; \
-        return; \
-    } \
-} while(0)
-
-#elif defined (HAVE_DLFCN_H)
-
-#if defined(__APPLE__) && defined(__MACH__)
-    pa_handle = dlopen("libpulse.0.dylib", RTLD_NOW);
-#else
-    pa_handle = dlopen("libpulse.so.0", RTLD_NOW);
-#endif
-#define LOAD_FUNC(x) do { \
-    p##x = dlsym(pa_handle, #x); \
-    if(!(p##x)) { \
-        AL_PRINT("Could not load %s from libpulse\n", #x); \
-        dlclose(pa_handle); \
-        pa_handle = NULL; \
-        return; \
-    } \
-} while(0)
-
-#else
-
-    pa_handle = (void*)0xDEADBEEF;
-#define LOAD_FUNC(x) p##x = (x)
-
-#endif
-    if(!pa_handle)
-        return;
-
-LOAD_FUNC(pa_context_unref);
-LOAD_FUNC(pa_sample_spec_valid);
-LOAD_FUNC(pa_stream_drop);
-LOAD_FUNC(pa_strerror);
-LOAD_FUNC(pa_context_get_state);
-LOAD_FUNC(pa_stream_get_state);
-LOAD_FUNC(pa_threaded_mainloop_signal);
-LOAD_FUNC(pa_stream_peek);
-LOAD_FUNC(pa_threaded_mainloop_wait);
-LOAD_FUNC(pa_threaded_mainloop_unlock);
-LOAD_FUNC(pa_context_new);
-LOAD_FUNC(pa_threaded_mainloop_stop);
-LOAD_FUNC(pa_context_disconnect);
-LOAD_FUNC(pa_threaded_mainloop_start);
-LOAD_FUNC(pa_threaded_mainloop_get_api);
-LOAD_FUNC(pa_context_set_state_callback);
-LOAD_FUNC(pa_stream_write);
-LOAD_FUNC(pa_xfree);
-LOAD_FUNC(pa_stream_connect_record);
-LOAD_FUNC(pa_stream_connect_playback);
-LOAD_FUNC(pa_path_get_filename);
-LOAD_FUNC(pa_get_binary_name);
-LOAD_FUNC(pa_threaded_mainloop_free);
-LOAD_FUNC(pa_context_errno);
-LOAD_FUNC(pa_xmalloc0);
-LOAD_FUNC(pa_stream_unref);
-LOAD_FUNC(pa_threaded_mainloop_accept);
-LOAD_FUNC(pa_stream_set_write_callback);
-LOAD_FUNC(pa_threaded_mainloop_new);
-LOAD_FUNC(pa_context_connect);
-LOAD_FUNC(pa_stream_get_buffer_attr);
-LOAD_FUNC(pa_stream_set_read_callback);
-LOAD_FUNC(pa_stream_set_state_callback);
-LOAD_FUNC(pa_stream_new);
-LOAD_FUNC(pa_stream_disconnect);
-LOAD_FUNC(pa_threaded_mainloop_lock);
-
-#undef LOAD_FUNC
+    *func_list = pulse_funcs;
 } //}}}
 
 void alc_pulse_deinit(void) //{{{
 {
-    if(pa_handle)
-    {
-#ifdef _WIN32
-        FreeLibrary(pa_handle);
-#elif defined (HAVE_DLFCN_H)
-        dlclose(pa_handle);
-#endif
-    }
-    pa_handle = NULL;
 } //}}}
 
 void alc_pulse_probe(int type) //{{{
 {
-    if(!pa_handle) alc_pulse_init(NULL);
+    pulse_load();
     if(!pa_handle) return;
 
     if(type == DEVICE_PROBE)
@@ -667,5 +700,7 @@ void alc_pulse_probe(int type) //{{{
         AppendAllDeviceList(pulse_device);
     else if(type == CAPTURE_DEVICE_PROBE)
         AppendCaptureDeviceList(pulse_capture_device);
+
+    pulse_unload();
 } //}}}
 //}}}

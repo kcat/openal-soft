@@ -35,7 +35,6 @@
 
 typedef struct {
     snd_pcm_t *pcmHandle;
-    snd_pcm_format_t format;
 
     ALvoid *buffer;
     ALsizei size;
@@ -512,6 +511,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     snd_pcm_sw_params_t *sp = NULL;
     snd_pcm_hw_params_t *p = NULL;
     snd_pcm_access_t access;
+    snd_pcm_format_t format;
     unsigned int periods;
     unsigned int rate;
     int allowmmap;
@@ -522,13 +522,13 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     switch(aluBytesFromFormat(device->Format))
     {
         case 1:
-            data->format = SND_PCM_FORMAT_U8;
+            format = SND_PCM_FORMAT_U8;
             break;
         case 2:
-            data->format = SND_PCM_FORMAT_S16;
+            format = SND_PCM_FORMAT_S16;
             break;
         case 4:
-            data->format = SND_PCM_FORMAT_FLOAT;
+            format = SND_PCM_FORMAT_FLOAT;
             break;
         default:
             AL_PRINT("Unknown format: 0x%x\n", device->Format);
@@ -553,7 +553,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             err = "set access";
     }
     /* set format (implicitly sets sample bits) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format)) < 0)
+    if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
         err = "set format";
     /* set channels (implicitly sets frame bits) */
     if(err == NULL && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(device->Format))) < 0)
@@ -662,6 +662,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     const char *devName;
     snd_pcm_hw_params_t *p;
     snd_pcm_uframes_t bufferSizeInFrames;
+    snd_pcm_format_t format;
     ALuint frameSize;
     alsa_data *data;
     char driver[64];
@@ -720,13 +721,13 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     switch(aluBytesFromFormat(pDevice->Format))
     {
         case 1:
-            data->format = SND_PCM_FORMAT_U8;
+            format = SND_PCM_FORMAT_U8;
             break;
         case 2:
-            data->format = SND_PCM_FORMAT_S16;
+            format = SND_PCM_FORMAT_S16;
             break;
         case 4:
-            data->format = SND_PCM_FORMAT_FLOAT;
+            format = SND_PCM_FORMAT_FLOAT;
             break;
         default:
             AL_PRINT("Unknown format: 0x%x\n", pDevice->Format);
@@ -743,7 +744,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     if(err == NULL && (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
         err = "set access";
     /* set format (implicitly sets sample bits) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, data->format)) < 0)
+    if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
         err = "set format";
     /* set channels (implicitly sets frame bits) */
     if(err == NULL && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(pDevice->Format))) < 0)

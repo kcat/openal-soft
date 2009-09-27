@@ -1192,7 +1192,8 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
     {
-        SetALCError(ALC_INVALID_VALUE);
+        SetALCError(ALC_INVALID_DEVICE);
+        aluHandleDisconnect(device);
         ProcessContext(NULL);
         return NULL;
     }

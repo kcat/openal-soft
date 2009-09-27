@@ -554,10 +554,43 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     }
     /* set format (implicitly sets sample bits) */
     if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
-        err = "set format";
+    {
+        switch(aluChannelsFromFormat(device->Format))
+        {
+            case 1: device->Format = AL_FORMAT_MONO16; break;
+            case 2: device->Format = AL_FORMAT_STEREO16; break;
+            case 4: device->Format = AL_FORMAT_QUAD16; break;
+            case 6: device->Format = AL_FORMAT_51CHN16; break;
+            case 7: device->Format = AL_FORMAT_61CHN16; break;
+            case 8: device->Format = AL_FORMAT_71CHN16; break;
+        }
+        if((i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_S16)) < 0)
+        {
+            switch(aluChannelsFromFormat(device->Format))
+            {
+                case 1: device->Format = AL_FORMAT_MONO8; break;
+                case 2: device->Format = AL_FORMAT_STEREO8; break;
+                case 4: device->Format = AL_FORMAT_QUAD8; break;
+                case 6: device->Format = AL_FORMAT_51CHN8; break;
+                case 7: device->Format = AL_FORMAT_61CHN8; break;
+                case 8: device->Format = AL_FORMAT_71CHN8; break;
+            }
+            if((i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_U8)) < 0)
+                err = "set format";
+        }
+    }
     /* set channels (implicitly sets frame bits) */
     if(err == NULL && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(device->Format))) < 0)
-        err = "set channels";
+    {
+        switch(aluBytesFromFormat(device->Format))
+        {
+            case 1: device->Format = AL_FORMAT_MONO8; break;
+            case 2: device->Format = AL_FORMAT_MONO16; break;
+            case 4: device->Format = AL_FORMAT_MONO_FLOAT32; break;
+        }
+        if((i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, 1)) < 0)
+            err = "set channels";
+    }
     /* set periods (implicitly constrains period/buffer parameters) */
     if(err == NULL && (i=psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL)) < 0)
         err = "set periods near";

@@ -684,17 +684,17 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
                 devName = allCaptureDevNameMap[idx].name;
                 if(idx > 0)
                     sprintf(driver, "plughw:%d,%d", allCaptureDevNameMap[idx].card, allCaptureDevNameMap[idx].dev);
-                goto open_alsa;
+                break;
             }
         }
-        return ALC_FALSE;
+        if(idx == numCaptureDevNames)
+            return ALC_FALSE;
     }
 
     alsa_load();
     if(!alsa_handle)
         return ALC_FALSE;
 
-open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
 
     i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);

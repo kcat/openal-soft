@@ -623,8 +623,6 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         if(i < 0)
         {
             AL_PRINT("prepare error: %s\n", psnd_strerror(i));
-            free(data->buffer);
-            data->buffer = NULL;
             return ALC_FALSE;
         }
         data->thread = StartThread(ALSAProc, device);
@@ -649,12 +647,11 @@ static void alsa_stop_playback(ALCdevice *device)
     alsa_data *data = (alsa_data*)device->ExtraData;
 
     if(!data->thread)
-        return;
-
-    data->killNow = 1;
-    StopThread(data->thread);
-    data->thread = NULL;
-
+    {
+        data->killNow = 1;
+        StopThread(data->thread);
+        data->thread = NULL;
+    }
     free(data->buffer);
     data->buffer = NULL;
 }
@@ -714,8 +711,8 @@ open_alsa:
     }
     if(i < 0)
     {
-        free(data);
         AL_PRINT("Could not open capture device '%s': %s\n", driver, psnd_strerror(i));
+        free(data);
         alsa_unload();
         return ALC_FALSE;
     }
@@ -733,10 +730,7 @@ open_alsa:
             break;
         default:
             AL_PRINT("Unknown format: 0x%x\n", pDevice->Format);
-            psnd_pcm_close(data->pcmHandle);
-            free(data);
-            alsa_unload();
-            return ALC_FALSE;
+            goto error;
     }
 
     err = NULL;
@@ -767,20 +761,14 @@ open_alsa:
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
         psnd_pcm_hw_params_free(p);
-        psnd_pcm_close(data->pcmHandle);
-        free(data);
-        alsa_unload();
-        return ALC_FALSE;
+        goto error;
     }
 
     if((i=psnd_pcm_hw_params_get_period_size(p, &bufferSizeInFrames, NULL)) < 0)
     {
         AL_PRINT("get size failed: %s\n", psnd_strerror(i));
         psnd_pcm_hw_params_free(p);
-        psnd_pcm_close(data->pcmHandle);
-        free(data);
-        alsa_unload();
-        return ALC_FALSE;
+        goto error;
     }
 
     psnd_pcm_hw_params_free(p);
@@ -792,10 +780,7 @@ open_alsa:
     if(!data->ring)
     {
         AL_PRINT("ring buffer create failed\n");
-        psnd_pcm_close(data->pcmHandle);
-        free(data);
-        alsa_unload();
-        return ALC_FALSE;
+        goto error;
     }
 
     data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
@@ -803,11 +788,7 @@ open_alsa:
     if(!data->buffer)
     {
         AL_PRINT("buffer malloc failed\n");
-        psnd_pcm_close(data->pcmHandle);
-        DestroyRingBuffer(data->ring);
-        free(data);
-        alsa_unload();
-        return ALC_FALSE;
+        goto error;
     }
 
     pDevice->ExtraData = data;
@@ -815,17 +796,21 @@ open_alsa:
     if(data->thread == NULL)
     {
         AL_PRINT("Could not create capture thread\n");
-        psnd_pcm_close(data->pcmHandle);
-        DestroyRingBuffer(data->ring);
-        pDevice->ExtraData = NULL;
-        free(data->buffer);
-        free(data);
-        alsa_unload();
-        return ALC_FALSE;
+        goto error;
     }
 
     pDevice->szDeviceName = strdup(deviceName);
     return ALC_TRUE;
+
+error:
+    free(data->buffer);
+    DestroyRingBuffer(data->ring);
+    psnd_pcm_close(data->pcmHandle);
+    free(data);
+    alsa_unload();
+
+    pDevice->ExtraData = NULL;
+    return ALC_FALSE;
 }
 
 static void alsa_close_capture(ALCdevice *pDevice)
@@ -933,10 +918,7 @@ void alc_alsa_probe(int type)
         card = -1;
         if(psnd_card_next(&card) < 0 || card < 0) {
             AL_PRINT("no playback cards found...\n");
-            psnd_pcm_info_free(pcminfo);
-            psnd_ctl_card_info_free(info);
-            alsa_unload();
-            return;
+            goto out;
         }
 
         for(i = 0;i < numDevNames;++i)
@@ -1008,10 +990,7 @@ void alc_alsa_probe(int type)
         card = -1;
         if(psnd_card_next(&card) < 0 || card < 0) {
             AL_PRINT("no capture cards found...\n");
-            psnd_pcm_info_free(pcminfo);
-            psnd_ctl_card_info_free(info);
-            alsa_unload();
-            return;
+            goto out;
         }
 
         for(i = 0;i < numCaptureDevNames;++i)
@@ -1076,6 +1055,7 @@ void alc_alsa_probe(int type)
         numCaptureDevNames = idx;
     }
 
+out:
     psnd_pcm_info_free(pcminfo);
     psnd_ctl_card_info_free(info);
 

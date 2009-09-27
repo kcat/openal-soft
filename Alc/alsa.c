@@ -456,17 +456,17 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
             {
                 if(idx > 0)
                     sprintf(driver, "hw:%d,%d", allDevNameMap[idx].card, allDevNameMap[idx].dev);
-                goto open_alsa;
+                break;
             }
         }
-        return ALC_FALSE;
+        if(idx == numDevNames)
+            return ALC_FALSE;
     }
 
     alsa_load();
     if(!alsa_handle)
         return ALC_FALSE;
 
-open_alsa:
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
 
     i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
@@ -646,7 +646,7 @@ static void alsa_stop_playback(ALCdevice *device)
 {
     alsa_data *data = (alsa_data*)device->ExtraData;
 
-    if(!data->thread)
+    if(data->thread)
     {
         data->killNow = 1;
         StopThread(data->thread);

@@ -1336,8 +1336,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     ((type*)buffer)[4] = (func)(DryBuffer[i][FRONT_CENTER]);  \
                     ((type*)buffer)[5] = (func)(DryBuffer[i][LFE]);           \
                 }                                                             \
-                ((ALubyte*)buffer)[6] = (func)(DryBuffer[i][SIDE_LEFT]);      \
-                ((ALubyte*)buffer)[7] = (func)(DryBuffer[i][SIDE_RIGHT]);     \
+                ((type*)buffer)[6] = (func)(DryBuffer[i][SIDE_LEFT]);         \
+                ((type*)buffer)[7] = (func)(DryBuffer[i][SIDE_RIGHT]);        \
                 buffer = ((type*)buffer) + 8;                                 \
             }                                                                 \
             break;

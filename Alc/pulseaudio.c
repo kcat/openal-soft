@@ -140,7 +140,7 @@ void pulse_load(void) //{{{
 
 #define LOAD_FUNC(x) do { \
     p##x = dlsym(pa_handle, #x); \
-    if((err=dlerror() != NULL) { \
+    if((err=dlerror()) != NULL) { \
         AL_PRINT("Could not load %s from libpulse: %s\n", #x, err); \
         dlclose(pa_handle); \
         pa_handle = NULL; \

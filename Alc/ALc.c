@@ -453,11 +453,11 @@ static ALCboolean IsContext(ALCcontext *pContext)
 
 
 /*
-    SetALCError
+    alcSetError
 
     Store latest ALC Error
 */
-ALCvoid SetALCError(ALenum errorCode)
+ALCvoid alcSetError(ALenum errorCode)
 {
     g_eLastContextError = errorCode;
 }
@@ -589,7 +589,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
 
     if(SampleSize <= 0)
     {
-        SetALCError(ALC_INVALID_VALUE);
+        alcSetError(ALC_INVALID_VALUE);
         return NULL;
     }
 
@@ -631,13 +631,13 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
 
         if(!DeviceFound)
         {
-            SetALCError(ALC_INVALID_VALUE);
+            alcSetError(ALC_INVALID_VALUE);
             free(pDevice);
             pDevice = NULL;
         }
     }
     else
-        SetALCError(ALC_OUT_OF_MEMORY);
+        alcSetError(ALC_OUT_OF_MEMORY);
 
     return pDevice;
 }
@@ -668,7 +668,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
         bReturn = ALC_TRUE;
     }
     else
-        SetALCError(ALC_INVALID_DEVICE);
+        alcSetError(ALC_INVALID_DEVICE);
 
     return bReturn;
 }
@@ -678,7 +678,7 @@ ALCAPI void ALCAPIENTRY alcCaptureStart(ALCdevice *pDevice)
     if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
         ALCdevice_StartCapture(pDevice);
     else
-        SetALCError(ALC_INVALID_DEVICE);
+        alcSetError(ALC_INVALID_DEVICE);
 }
 
 ALCAPI void ALCAPIENTRY alcCaptureStop(ALCdevice *pDevice)
@@ -686,7 +686,7 @@ ALCAPI void ALCAPIENTRY alcCaptureStop(ALCdevice *pDevice)
     if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
         ALCdevice_StopCapture(pDevice);
     else
-        SetALCError(ALC_INVALID_DEVICE);
+        alcSetError(ALC_INVALID_DEVICE);
 }
 
 ALCAPI void ALCAPIENTRY alcCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCsizei lSamples)
@@ -694,7 +694,7 @@ ALCAPI void ALCAPIENTRY alcCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, 
     if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
         ALCdevice_CaptureSamples(pDevice, pBuffer, lSamples);
     else
-        SetALCError(ALC_INVALID_DEVICE);
+        alcSetError(ALC_INVALID_DEVICE);
 }
 
 /*
@@ -803,7 +803,7 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         free(alcDefaultDeviceSpecifier);
         alcDefaultDeviceSpecifier = strdup(alcDeviceList ? alcDeviceList : "");
         if(!alcDefaultDeviceSpecifier)
-            SetALCError(ALC_OUT_OF_MEMORY);
+            alcSetError(ALC_OUT_OF_MEMORY);
         value = alcDefaultDeviceSpecifier;
         break;
 
@@ -812,7 +812,7 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         alcDefaultAllDeviceSpecifier = strdup(alcAllDeviceList ?
                                               alcAllDeviceList : "");
         if(!alcDefaultAllDeviceSpecifier)
-            SetALCError(ALC_OUT_OF_MEMORY);
+            alcSetError(ALC_OUT_OF_MEMORY);
         value = alcDefaultAllDeviceSpecifier;
         break;
 
@@ -821,7 +821,7 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         alcCaptureDefaultDeviceSpecifier = strdup(alcCaptureDeviceList ?
                                                   alcCaptureDeviceList : "");
         if(!alcCaptureDefaultDeviceSpecifier)
-            SetALCError(ALC_OUT_OF_MEMORY);
+            alcSetError(ALC_OUT_OF_MEMORY);
         value = alcCaptureDefaultDeviceSpecifier;
         break;
 
@@ -830,7 +830,7 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         break;
 
     default:
-        SetALCError(ALC_INVALID_ENUM);
+        alcSetError(ALC_INVALID_ENUM);
         break;
     }
 
@@ -856,18 +856,18 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
             if ((size) && (data))
                 *data = ALCdevice_AvailableSamples(device);
             else
-                SetALCError(ALC_INVALID_VALUE);
+                alcSetError(ALC_INVALID_VALUE);
             break;
 
         case ALC_CONNECTED:
             if(size <= 0)
-                SetALCError(ALC_INVALID_VALUE);
+                alcSetError(ALC_INVALID_VALUE);
             else
                 *data = device->Connected;
             break;
 
         default:
-            SetALCError(ALC_INVALID_ENUM);
+            alcSetError(ALC_INVALID_ENUM);
             break;
         }
 
@@ -882,53 +882,53 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
             {
                 case ALC_MAJOR_VERSION:
                     if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = alcMajorVersion;
                     break;
 
                 case ALC_MINOR_VERSION:
                     if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = alcMinorVersion;
                     break;
 
                 case ALC_EFX_MAJOR_VERSION:
                     if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = alcEFXMajorVersion;
                     break;
 
                 case ALC_EFX_MINOR_VERSION:
                     if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = alcEFXMinorVersion;
                     break;
 
                 case ALC_MAX_AUXILIARY_SENDS:
                     if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = (device?device->NumAuxSends:MAX_SENDS);
                     break;
 
                 case ALC_ATTRIBUTES_SIZE:
                     if(!IsDevice(device))
-                        SetALCError(ALC_INVALID_DEVICE);
+                        alcSetError(ALC_INVALID_DEVICE);
                     else if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = 13;
                     break;
 
                 case ALC_ALL_ATTRIBUTES:
                     if(!IsDevice(device))
-                        SetALCError(ALC_INVALID_DEVICE);
+                        alcSetError(ALC_INVALID_DEVICE);
                     else if (size < 13)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                     {
                         int i = 0;
@@ -959,65 +959,65 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
 
                 case ALC_FREQUENCY:
                     if(!IsDevice(device))
-                        SetALCError(ALC_INVALID_DEVICE);
+                        alcSetError(ALC_INVALID_DEVICE);
                     else if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = device->Frequency;
                     break;
 
                 case ALC_REFRESH:
                     if(!IsDevice(device))
-                        SetALCError(ALC_INVALID_DEVICE);
+                        alcSetError(ALC_INVALID_DEVICE);
                     else if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = device->Frequency / device->UpdateSize;
                     break;
 
                 case ALC_SYNC:
                     if(!IsDevice(device))
-                        SetALCError(ALC_INVALID_DEVICE);
+                        alcSetError(ALC_INVALID_DEVICE);
                     else if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = ALC_FALSE;
                     break;
 
                 case ALC_MONO_SOURCES:
                     if(!IsDevice(device))
-                        SetALCError(ALC_INVALID_DEVICE);
+                        alcSetError(ALC_INVALID_DEVICE);
                     else if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = device->lNumMonoSources;
                     break;
 
                 case ALC_STEREO_SOURCES:
                     if(!IsDevice(device))
-                        SetALCError(ALC_INVALID_DEVICE);
+                        alcSetError(ALC_INVALID_DEVICE);
                     else if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = device->lNumStereoSources;
                     break;
 
                 case ALC_CONNECTED:
                     if(!IsDevice(device))
-                        SetALCError(ALC_INVALID_DEVICE);
+                        alcSetError(ALC_INVALID_DEVICE);
                     else if(size <= 0)
-                        SetALCError(ALC_INVALID_VALUE);
+                        alcSetError(ALC_INVALID_VALUE);
                     else
                         *data = device->Connected;
                     break;
 
                 default:
-                    SetALCError(ALC_INVALID_ENUM);
+                    alcSetError(ALC_INVALID_ENUM);
                     break;
             }
         }
         else if(size)
-            SetALCError(ALC_INVALID_VALUE);
+            alcSetError(ALC_INVALID_VALUE);
     }
 
     return;
@@ -1059,7 +1059,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcIsExtensionPresent(ALCdevice *device, const ALC
         }
     }
     else
-        SetALCError(ALC_INVALID_VALUE);
+        alcSetError(ALC_INVALID_VALUE);
 
     return bResult;
 }
@@ -1085,7 +1085,7 @@ ALCAPI ALCvoid *  ALCAPIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
         pFunction = alcFunctions[i].address;
     }
     else
-        SetALCError(ALC_INVALID_VALUE);
+        alcSetError(ALC_INVALID_VALUE);
 
     return pFunction;
 }
@@ -1108,7 +1108,7 @@ ALCAPI ALCenum ALCAPIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enu
     val = enumeration[i].value;
 
     if(!enumeration[i].enumName)
-        SetALCError(ALC_INVALID_VALUE);
+        alcSetError(ALC_INVALID_VALUE);
 
     return val;
 }
@@ -1128,7 +1128,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 
     if(!IsDevice(device) || device->IsCaptureDevice || !device->Connected)
     {
-        SetALCError(ALC_INVALID_DEVICE);
+        alcSetError(ALC_INVALID_DEVICE);
         ProcessContext(NULL);
         return NULL;
     }
@@ -1139,7 +1139,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
     // Current implementation only allows one Context per Device
     if(device->Context)
     {
-        SetALCError(ALC_INVALID_VALUE);
+        alcSetError(ALC_INVALID_VALUE);
         ProcessContext(NULL);
         return NULL;
     }
@@ -1192,7 +1192,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
     {
-        SetALCError(ALC_INVALID_DEVICE);
+        alcSetError(ALC_INVALID_DEVICE);
         aluHandleDisconnect(device);
         ProcessContext(NULL);
         return NULL;
@@ -1217,7 +1217,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
     ALContext = calloc(1, sizeof(ALCcontext));
     if(!ALContext)
     {
-        SetALCError(ALC_OUT_OF_MEMORY);
+        alcSetError(ALC_OUT_OF_MEMORY);
         ProcessContext(NULL);
         return NULL;
     }
@@ -1287,7 +1287,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
         free(context);
     }
     else
-        SetALCError(ALC_INVALID_CONTEXT);
+        alcSetError(ALC_INVALID_CONTEXT);
 }
 
 
@@ -1343,7 +1343,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcGetContextsDevice(ALCcontext *pContext)
     if (IsContext(pContext))
         pDevice = pContext->Device;
     else
-        SetALCError(ALC_INVALID_CONTEXT);
+        alcSetError(ALC_INVALID_CONTEXT);
     ProcessContext(NULL);
 
     return pDevice;
@@ -1382,7 +1382,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcMakeContextCurrent(ALCcontext *context)
     }
     else
     {
-        SetALCError(ALC_INVALID_CONTEXT);
+        alcSetError(ALC_INVALID_CONTEXT);
         bReturn = AL_FALSE;
     }
 
@@ -1407,7 +1407,7 @@ ALCboolean ALCAPIENTRY alcMakeCurrent(ALCcontext *context)
         tls_set(LocalContext, context);
     else
     {
-        SetALCError(ALC_INVALID_CONTEXT);
+        alcSetError(ALC_INVALID_CONTEXT);
         bReturn = AL_FALSE;
     }
 
@@ -1529,13 +1529,13 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         if (!bDeviceFound)
         {
             // No suitable output device found
-            SetALCError(ALC_INVALID_VALUE);
+            alcSetError(ALC_INVALID_VALUE);
             free(device);
             device = NULL;
         }
     }
     else
-        SetALCError(ALC_OUT_OF_MEMORY);
+        alcSetError(ALC_OUT_OF_MEMORY);
 
     return device;
 }
@@ -1614,7 +1614,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
         bReturn = ALC_TRUE;
     }
     else
-        SetALCError(ALC_INVALID_DEVICE);
+        alcSetError(ALC_INVALID_DEVICE);
 
     return bReturn;
 }

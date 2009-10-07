@@ -445,7 +445,7 @@ static void oss_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lS
     if(lSamples <= (ALCuint)RingBufferSize(data->ring))
         ReadRingBuffer(data->ring, pBuffer, lSamples);
     else
-        SetALCError(ALC_INVALID_VALUE);
+        alcSetError(ALC_INVALID_VALUE);
 }
 
 static ALCuint oss_available_samples(ALCdevice *pDevice)

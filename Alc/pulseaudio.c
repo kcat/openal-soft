@@ -656,7 +656,7 @@ static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint sa
     ALCuint available = RingBufferSize(data->ring);
 
     if(available < samples)
-        SetALCError(ALC_INVALID_VALUE);
+        alcSetError(ALC_INVALID_VALUE);
     else
         ReadRingBuffer(data->ring, buffer, samples);
 } //}}}

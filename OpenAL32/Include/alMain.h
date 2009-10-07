@@ -305,7 +305,7 @@ void AppendDeviceList(const ALCchar *name);
 void AppendAllDeviceList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
 
-ALCvoid SetALCError(ALenum errorCode);
+ALCvoid alcSetError(ALenum errorCode);
 
 ALCvoid SuspendContext(ALCcontext *context);
 ALCvoid ProcessContext(ALCcontext *context);

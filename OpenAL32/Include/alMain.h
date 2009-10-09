@@ -244,6 +244,9 @@ struct ALCdevice_struct
     struct bs2b *Bs2b;
     ALCint       Bs2bLevel;
 
+    // Dry path buffer mix
+    float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
+
     // Context created on this device
     ALCcontext   *Context;
 

@@ -1196,7 +1196,7 @@ another_source:
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
-    static float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
+    float (*DryBuffer)[OUTPUTCHANNELS];
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
     ALCcontext *ALContext;
@@ -1215,6 +1215,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     (void)fpuState;
 #endif
 
+    DryBuffer = device->DryBuffer;
     while(size > 0)
     {
         /* Setup variables */

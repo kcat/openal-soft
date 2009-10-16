@@ -289,7 +289,7 @@ static ALuint ALSAProc(ALvoid *ptr)
         }
 
         // make sure there's frames to process
-        if(avail >= 0 && avail < (snd_pcm_sframes_t)pDevice->UpdateSize)
+        if((snd_pcm_uframes_t)avail < pDevice->UpdateSize)
         {
             if(state != SND_PCM_STATE_RUNNING)
             {

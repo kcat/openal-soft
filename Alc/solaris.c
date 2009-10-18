@@ -60,7 +60,7 @@ static ALuint SolarisProc(ALvoid *ptr)
     frameSize = aluChannelsFromFormat(pDevice->Format) *
                 aluBytesFromFormat(pDevice->Format);
 
-    while(!data->killNow && !pDevice->Connected)
+    while(!data->killNow && pDevice->Connected)
     {
         ALint len = data->data_size;
         ALubyte *WritePtr = data->mix_data;

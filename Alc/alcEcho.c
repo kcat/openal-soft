@@ -29,6 +29,10 @@
 #include "alError.h"
 #include "alu.h"
 
+// Just a soft maximum. Being higher will cause EchoUpdate to reallocate the
+// sample buffer which may cause an abort if realloc fails
+#define MAX_ECHO_FREQ  192000
+
 typedef struct ALechoState {
     // Must be first in all effects!
     ALeffectState state;
@@ -36,11 +40,12 @@ typedef struct ALechoState {
     ALfloat *SampleBuffer;
     ALuint BufferLength;
 
-    // The echo is two tap. The third tap is the offset to write the feedback
-    // and input sample to
+    // The echo is two tap. The delay is the number of samples from before the
+    // current offset
     struct {
-        ALuint offset;
-    } Tap[3];
+        ALuint delay;
+    } Tap[2];
+    ALuint Offset;
     // The LR gains for the first tap. The second tap uses the reverse
     ALfloat GainL;
     ALfloat GainR;
@@ -80,19 +85,35 @@ ALvoid EchoDestroy(ALeffectState *effect)
     }
 }
 
-ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, ALeffect *Effect)
+ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
 {
     ALechoState *state = (ALechoState*)effect;
-    ALuint newdelay1, newdelay2;
     ALfloat lrpan, cw, a, g;
+    ALuint maxlen;
 
-    newdelay1 = (ALuint)(Effect->Echo.Delay * Context->Frequency);
-    newdelay2 = (ALuint)(Effect->Echo.LRDelay * Context->Frequency);
+    maxlen  = (ALuint)(AL_ECHO_MAX_DELAY * Context->Frequency);
+    maxlen += (ALuint)(AL_ECHO_MAX_LRDELAY * Context->Frequency);
+    maxlen  = NextPowerOf2(maxlen+1);
 
-    state->Tap[0].offset = (state->BufferLength - newdelay1 - 1 +
-                            state->Tap[2].offset)%state->BufferLength;
-    state->Tap[1].offset = (state->BufferLength - newdelay1 - newdelay2 - 1 +
-                            state->Tap[2].offset)%state->BufferLength;
+    if(maxlen > state->BufferLength)
+    {
+        void *temp;
+        ALuint i;
+
+        state->BufferLength = maxlen;
+        temp = realloc(state->SampleBuffer, state->BufferLength * sizeof(ALfloat));
+        if(!temp)
+        {
+            AL_PRINT("Failed reallocation!");
+            abort();
+        }
+        for(i = 0;i < state->BufferLength;i++)
+            state->SampleBuffer[i] = 0.0f;
+    }
+
+    state->Tap[0].delay = (ALuint)(Effect->Echo.Delay * Context->Frequency);
+    state->Tap[1].delay = (ALuint)(Effect->Echo.LRDelay * Context->Frequency);
+    state->Tap[1].delay += state->Tap[0].delay;
 
     lrpan = Effect->Echo.Spread*0.5f + 0.5f;
     state->GainL = aluSqrt(     lrpan);
@@ -111,32 +132,30 @@ ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, ALeffect *Effect)
 ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
     ALechoState *state = (ALechoState*)effect;
-    const ALuint delay = state->BufferLength-1;
-    ALuint tap1off = state->Tap[0].offset;
-    ALuint tap2off = state->Tap[1].offset;
-    ALuint fboff = state->Tap[2].offset;
-    ALfloat gain = Slot->Gain;
-    ALfloat samp[2];
+    const ALuint mask = state->BufferLength-1;
+    const ALuint tap1 = state->Tap[0].delay;
+    const ALuint tap2 = state->Tap[1].delay;
+    ALuint offset = state->Offset;
+    const ALfloat gain = Slot->Gain;
+    ALfloat samp[2], smp;
     ALuint i;
 
-    for(i = 0;i < SamplesToDo;i++)
+    for(i = 0;i < SamplesToDo;i++,offset++)
     {
-        // Apply damping
-        samp[0] = lpFilter2P(&state->iirFilter, 0, state->SampleBuffer[tap2off]+SamplesIn[i]);
-
-        // Apply feedback gain and mix in the new sample
-        state->SampleBuffer[fboff] = samp[0] * state->FeedGain;
-
-        tap1off = (tap1off+1) & delay;
-        tap2off = (tap2off+1) & delay;
-        fboff = (fboff+1) & delay;
-
         // Sample first tap
-        samp[0] = state->SampleBuffer[tap1off]*state->GainL;
-        samp[1] = state->SampleBuffer[tap1off]*state->GainR;
+        smp = state->SampleBuffer[(offset-tap1) & mask];
+        samp[0] = smp * state->GainL;
+        samp[1] = smp * state->GainR;
         // Sample second tap. Reverse LR panning
-        samp[0] += state->SampleBuffer[tap2off]*state->GainR;
-        samp[1] += state->SampleBuffer[tap2off]*state->GainL;
+        smp = state->SampleBuffer[(offset-tap2) & mask];
+        samp[0] += smp * state->GainR;
+        samp[1] += smp * state->GainL;
+
+        // Apply damping and feedback gain to the second tap, and mix in the
+        // new sample
+        smp = lpFilter2P(&state->iirFilter, 0, smp+SamplesIn[i]);
+        state->SampleBuffer[offset&mask] = smp * state->FeedGain;
+
         // Apply slot gain
         samp[0] *= gain;
         samp[1] *= gain;
@@ -148,13 +167,10 @@ ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint Sampl
         SamplesOut[i][BACK_LEFT]   += samp[0];
         SamplesOut[i][BACK_RIGHT]  += samp[1];
     }
-
-    state->Tap[0].offset = tap1off;
-    state->Tap[1].offset = tap2off;
-    state->Tap[2].offset = fboff;
+    state->Offset = offset;
 }
 
-ALeffectState *EchoCreate(ALCcontext *Context)
+ALeffectState *EchoCreate(void)
 {
     ALechoState *state;
     ALuint i, maxlen;
@@ -170,8 +186,8 @@ ALeffectState *EchoCreate(ALCcontext *Context)
     state->state.Update = EchoUpdate;
     state->state.Process = EchoProcess;
 
-    maxlen  = (ALuint)(AL_ECHO_MAX_DELAY * Context->Frequency);
-    maxlen += (ALuint)(AL_ECHO_MAX_LRDELAY * Context->Frequency);
+    maxlen  = (ALuint)(AL_ECHO_MAX_DELAY * MAX_ECHO_FREQ);
+    maxlen += (ALuint)(AL_ECHO_MAX_LRDELAY * MAX_ECHO_FREQ);
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
@@ -187,9 +203,9 @@ ALeffectState *EchoCreate(ALCcontext *Context)
     for(i = 0;i < state->BufferLength;i++)
         state->SampleBuffer[i] = 0.0f;
 
-    state->Tap[0].offset = 0;
-    state->Tap[1].offset = 0;
-    state->Tap[2].offset = 0;
+    state->Tap[0].delay = 0;
+    state->Tap[1].delay = 0;
+    state->Offset = 0;
     state->GainL = 0.0f;
     state->GainR = 0.0f;
 

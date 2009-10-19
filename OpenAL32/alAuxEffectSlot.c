@@ -422,11 +422,11 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
         if(effect)
         {
             if(effect->type == AL_EFFECT_EAXREVERB)
-                NewState = EAXVerbCreate(Context);
+                NewState = EAXVerbCreate();
             else if(effect->type == AL_EFFECT_REVERB)
-                NewState = VerbCreate(Context);
+                NewState = VerbCreate();
             else if(effect->type == AL_EFFECT_ECHO)
-                NewState = EchoCreate(Context);
+                NewState = EchoCreate();
             /* No new state? An error occured.. */
             if(!NewState)
                 return;

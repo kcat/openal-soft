@@ -80,7 +80,7 @@ static ALuint OSSProc(ALvoid *ptr)
     ALCdevice *pDevice = (ALCdevice*)ptr;
     oss_data *data = (oss_data*)pDevice->ExtraData;
     ALint frameSize;
-    int wrote;
+    ssize_t wrote;
 
     frameSize = aluChannelsFromFormat(pDevice->Format) *
                 aluBytesFromFormat(pDevice->Format);
@@ -96,7 +96,7 @@ static ALuint OSSProc(ALvoid *ptr)
             wrote = write(data->fd, WritePtr, len);
             if(wrote < 0)
             {
-                if(errno != EAGAIN && errno != EWOULDBLOCK)
+                if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
                 {
                     AL_PRINT("write failed: %s\n", strerror(errno));
                     aluHandleDisconnect(pDevice);

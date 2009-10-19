@@ -461,282 +461,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     OuterGainHF  = ALSource->OuterGainHF;
 
     //Only apply 3D calculations for mono buffers
-    if(isMono != AL_FALSE)
-    {
-        //1. Translate Listener to origin (convert to head relative)
-        // Note that Direction and SourceToListener are *not* transformed.
-        // SourceToListener is used with the source and listener velocities,
-        // which are untransformed, and Direction is used with SourceToListener
-        // for the sound cone
-        if(ALSource->bHeadRelative==AL_FALSE)
-        {
-            // Build transform matrix
-            aluCrossproduct(ALContext->Listener.Forward, ALContext->Listener.Up, U); // Right-vector
-            aluNormalize(U);  // Normalized Right-vector
-            memcpy(V, ALContext->Listener.Up, sizeof(V));   // Up-vector
-            aluNormalize(V);  // Normalized Up-vector
-            memcpy(N, ALContext->Listener.Forward, sizeof(N));  // At-vector
-            aluNormalize(N);  // Normalized At-vector
-            Matrix[0][0] = U[0]; Matrix[0][1] = V[0]; Matrix[0][2] = -N[0];
-            Matrix[1][0] = U[1]; Matrix[1][1] = V[1]; Matrix[1][2] = -N[1];
-            Matrix[2][0] = U[2]; Matrix[2][1] = V[2]; Matrix[2][2] = -N[2];
-
-            // Translate source position into listener space
-            Position[0] -= ALContext->Listener.Position[0];
-            Position[1] -= ALContext->Listener.Position[1];
-            Position[2] -= ALContext->Listener.Position[2];
-
-            SourceToListener[0] = -Position[0];
-            SourceToListener[1] = -Position[1];
-            SourceToListener[2] = -Position[2];
-
-            // Transform source position into listener space
-            aluMatrixVector(Position, Matrix);
-        }
-        else
-        {
-            SourceToListener[0] = -Position[0];
-            SourceToListener[1] = -Position[1];
-            SourceToListener[2] = -Position[2];
-        }
-        aluNormalize(SourceToListener);
-        aluNormalize(Direction);
-
-        //2. Calculate distance attenuation
-        Distance = aluSqrt(aluDotproduct(Position, Position));
-
-        flAttenuation = 1.0f;
-        for(i = 0;i < MAX_SENDS;i++)
-        {
-            RoomAttenuation[i] = 1.0f;
-
-            RoomRolloff[i] = ALSource->RoomRolloffFactor;
-            if(ALSource->Send[i].Slot &&
-               ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB)
-                RoomRolloff[i] += ALSource->Send[i].Slot->effect.Reverb.RoomRolloffFactor;
-        }
-
-        switch (ALSource->DistanceModel)
-        {
-            case AL_INVERSE_DISTANCE_CLAMPED:
-                Distance=__max(Distance,MinDist);
-                Distance=__min(Distance,MaxDist);
-                if (MaxDist < MinDist)
-                    break;
-                //fall-through
-            case AL_INVERSE_DISTANCE:
-                if (MinDist > 0.0f)
-                {
-                    if ((MinDist + (Rolloff * (Distance - MinDist))) > 0.0f)
-                        flAttenuation = MinDist / (MinDist + (Rolloff * (Distance - MinDist)));
-                    for(i = 0;i < NumSends;i++)
-                    {
-                        if ((MinDist + (RoomRolloff[i] * (Distance - MinDist))) > 0.0f)
-                            RoomAttenuation[i] = MinDist / (MinDist + (RoomRolloff[i] * (Distance - MinDist)));
-                    }
-                }
-                break;
-
-            case AL_LINEAR_DISTANCE_CLAMPED:
-                Distance=__max(Distance,MinDist);
-                Distance=__min(Distance,MaxDist);
-                if (MaxDist < MinDist)
-                    break;
-                //fall-through
-            case AL_LINEAR_DISTANCE:
-                Distance=__min(Distance,MaxDist);
-                if (MaxDist != MinDist)
-                {
-                    flAttenuation = 1.0f - (Rolloff*(Distance-MinDist)/(MaxDist - MinDist));
-                    for(i = 0;i < NumSends;i++)
-                        RoomAttenuation[i] = 1.0f - (RoomRolloff[i]*(Distance-MinDist)/(MaxDist - MinDist));
-                }
-                break;
-
-            case AL_EXPONENT_DISTANCE_CLAMPED:
-                Distance=__max(Distance,MinDist);
-                Distance=__min(Distance,MaxDist);
-                if (MaxDist < MinDist)
-                    break;
-                //fall-through
-            case AL_EXPONENT_DISTANCE:
-                if ((Distance > 0.0f) && (MinDist > 0.0f))
-                {
-                    flAttenuation = (ALfloat)pow(Distance/MinDist, -Rolloff);
-                    for(i = 0;i < NumSends;i++)
-                        RoomAttenuation[i] = (ALfloat)pow(Distance/MinDist, -RoomRolloff[i]);
-                }
-                break;
-
-            case AL_NONE:
-                break;
-        }
-
-        // Source Gain + Attenuation and clamp to Min/Max Gain
-        DryMix = SourceVolume * flAttenuation;
-        DryMix = __min(DryMix,MaxVolume);
-        DryMix = __max(DryMix,MinVolume);
-
-        for(i = 0;i < NumSends;i++)
-        {
-            ALfloat WetMix = SourceVolume * RoomAttenuation[i];
-            WetMix = __min(WetMix,MaxVolume);
-            wetsend[i] = __max(WetMix,MinVolume);
-            wetgainhf[i] = 1.0f;
-        }
-
-        // Distance-based air absorption
-        if(ALSource->AirAbsorptionFactor > 0.0f && ALSource->DistanceModel != AL_NONE)
-        {
-            ALfloat dist = Distance-MinDist;
-            ALfloat absorb;
-
-            if(dist < 0.0f) dist = 0.0f;
-            // Absorption calculation is done in dB
-            absorb = (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF) *
-                     (dist*MetersPerUnit);
-            // Convert dB to linear gain before applying
-            absorb = pow(10.0, absorb/20.0);
-            DryGainHF *= absorb;
-            for(i = 0;i < MAX_SENDS;i++)
-                wetgainhf[i] *= absorb;
-        }
-
-        //3. Apply directional soundcones
-        Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f/M_PI;
-        if(Angle >= InnerAngle && Angle <= OuterAngle)
-        {
-            ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
-            ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f)*scale);
-            ConeHF = (1.0f+(OuterGainHF-1.0f)*scale);
-            DryMix *= ConeVolume;
-            if(ALSource->DryGainHFAuto)
-                DryGainHF *= ConeHF;
-        }
-        else if(Angle > OuterAngle)
-        {
-            ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f));
-            ConeHF = (1.0f+(OuterGainHF-1.0f));
-            DryMix *= ConeVolume;
-            if(ALSource->DryGainHFAuto)
-                DryGainHF *= ConeHF;
-        }
-        else
-        {
-            ConeVolume = 1.0f;
-            ConeHF = 1.0f;
-        }
-
-        //4. Calculate Velocity
-        if(DopplerFactor != 0.0f)
-        {
-            ALfloat flVSS, flVLS = 0.0f;
-
-            if(ALSource->bHeadRelative==AL_FALSE)
-                flVLS = aluDotproduct(ALContext->Listener.Velocity, SourceToListener);
-            flVSS = aluDotproduct(ALSource->vVelocity, SourceToListener);
-
-            flMaxVelocity = (DopplerVelocity * flSpeedOfSound) / DopplerFactor;
-
-            if (flVSS >= flMaxVelocity)
-                flVSS = (flMaxVelocity - 1.0f);
-            else if (flVSS <= -flMaxVelocity)
-                flVSS = -flMaxVelocity + 1.0f;
-
-            if (flVLS >= flMaxVelocity)
-                flVLS = (flMaxVelocity - 1.0f);
-            else if (flVLS <= -flMaxVelocity)
-                flVLS = -flMaxVelocity + 1.0f;
-
-            pitch[0] = ALSource->flPitch *
-                       ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /
-                       ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVSS));
-        }
-        else
-            pitch[0] = ALSource->flPitch;
-
-        for(i = 0;i < NumSends;i++)
-        {
-            if(ALSource->Send[i].Slot &&
-               ALSource->Send[i].Slot->effect.type != AL_EFFECT_NULL)
-            {
-                if(ALSource->WetGainAuto)
-                    wetsend[i] *= ConeVolume;
-                if(ALSource->WetGainHFAuto)
-                    wetgainhf[i] *= ConeHF;
-
-                if(ALSource->Send[i].Slot->AuxSendAuto)
-                {
-                    // Apply minimal attenuation in place of missing
-                    // statistical reverb model.
-                    wetsend[i] *= pow(DryMix, 1.0f / 2.0f);
-                }
-                else
-                {
-                    // If the slot's auxilliary send auto is off, the data sent to the
-                    // effect slot is the same as the dry path, sans filter effects
-                    wetsend[i] = DryMix;
-                    wetgainhf[i] = DryGainHF;
-                }
-
-                switch(ALSource->Send[i].WetFilter.type)
-                {
-                    case AL_FILTER_LOWPASS:
-                        wetsend[i] *= ALSource->Send[i].WetFilter.Gain;
-                        wetgainhf[i] *= ALSource->Send[i].WetFilter.GainHF;
-                        break;
-                }
-                wetsend[i] *= ListenerGain;
-            }
-            else
-            {
-                wetsend[i] = 0.0f;
-                wetgainhf[i] = 1.0f;
-            }
-        }
-        for(i = NumSends;i < MAX_SENDS;i++)
-        {
-            wetsend[i] = 0.0f;
-            wetgainhf[i] = 1.0f;
-        }
-
-        //5. Apply filter gains and filters
-        switch(ALSource->DirectFilter.type)
-        {
-            case AL_FILTER_LOWPASS:
-                DryMix *= ALSource->DirectFilter.Gain;
-                DryGainHF *= ALSource->DirectFilter.GainHF;
-                break;
-        }
-        DryMix *= ListenerGain;
-
-        // Use energy-preserving panning algorithm for multi-speaker playback
-        length = aluSqrt(Position[0]*Position[0] + Position[1]*Position[1] +
-                         Position[2]*Position[2]);
-        length = __max(length, MinDist);
-        if(length > 0.0f)
-        {
-            ALfloat invlen = 1.0f/length;
-            Position[0] *= invlen;
-            Position[1] *= invlen;
-            Position[2] *= invlen;
-        }
-
-        pos = aluCart2LUTpos(-Position[2], Position[0]);
-        SpeakerGain = &ALContext->PanningLUT[OUTPUTCHANNELS * pos];
-
-        DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
-        // elevation adjustment for directional gain. this sucks, but
-        // has low complexity
-        AmbientGain = 1.0/aluSqrt(ALContext->NumChan) * (1.0-DirGain);
-        for(s = 0; s < OUTPUTCHANNELS; s++)
-        {
-            ALfloat gain = SpeakerGain[s]*DirGain + AmbientGain;
-            drysend[s] = DryMix * gain;
-        }
-        *drygainhf = DryGainHF;
-    }
-    else
+    if(isMono == AL_FALSE)
     {
         //1. Multi-channel buffers always play "normal"
         pitch[0] = ALSource->flPitch;
@@ -769,7 +494,283 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
             wetsend[i] = 0.0f;
             wetgainhf[i] = 1.0f;
         }
+
+        return;
     }
+
+    //1. Translate Listener to origin (convert to head relative)
+    // Note that Direction and SourceToListener are *not* transformed.
+    // SourceToListener is used with the source and listener velocities,
+    // which are untransformed, and Direction is used with SourceToListener
+    // for the sound cone
+    if(ALSource->bHeadRelative==AL_FALSE)
+    {
+        // Build transform matrix
+        aluCrossproduct(ALContext->Listener.Forward, ALContext->Listener.Up, U); // Right-vector
+        aluNormalize(U);  // Normalized Right-vector
+        memcpy(V, ALContext->Listener.Up, sizeof(V));   // Up-vector
+        aluNormalize(V);  // Normalized Up-vector
+        memcpy(N, ALContext->Listener.Forward, sizeof(N));  // At-vector
+        aluNormalize(N);  // Normalized At-vector
+        Matrix[0][0] = U[0]; Matrix[0][1] = V[0]; Matrix[0][2] = -N[0];
+        Matrix[1][0] = U[1]; Matrix[1][1] = V[1]; Matrix[1][2] = -N[1];
+        Matrix[2][0] = U[2]; Matrix[2][1] = V[2]; Matrix[2][2] = -N[2];
+
+        // Translate source position into listener space
+        Position[0] -= ALContext->Listener.Position[0];
+        Position[1] -= ALContext->Listener.Position[1];
+        Position[2] -= ALContext->Listener.Position[2];
+
+        SourceToListener[0] = -Position[0];
+        SourceToListener[1] = -Position[1];
+        SourceToListener[2] = -Position[2];
+
+        // Transform source position into listener space
+        aluMatrixVector(Position, Matrix);
+    }
+    else
+    {
+        SourceToListener[0] = -Position[0];
+        SourceToListener[1] = -Position[1];
+        SourceToListener[2] = -Position[2];
+    }
+    aluNormalize(SourceToListener);
+    aluNormalize(Direction);
+
+    //2. Calculate distance attenuation
+    Distance = aluSqrt(aluDotproduct(Position, Position));
+
+    flAttenuation = 1.0f;
+    for(i = 0;i < MAX_SENDS;i++)
+    {
+        RoomAttenuation[i] = 1.0f;
+
+        RoomRolloff[i] = ALSource->RoomRolloffFactor;
+        if(ALSource->Send[i].Slot &&
+           ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB)
+            RoomRolloff[i] += ALSource->Send[i].Slot->effect.Reverb.RoomRolloffFactor;
+    }
+
+    switch(ALSource->DistanceModel)
+    {
+        case AL_INVERSE_DISTANCE_CLAMPED:
+            Distance=__max(Distance,MinDist);
+            Distance=__min(Distance,MaxDist);
+            if(MaxDist < MinDist)
+                break;
+            //fall-through
+        case AL_INVERSE_DISTANCE:
+            if(MinDist > 0.0f)
+            {
+                if((MinDist + (Rolloff * (Distance - MinDist))) > 0.0f)
+                    flAttenuation = MinDist / (MinDist + (Rolloff * (Distance - MinDist)));
+                for(i = 0;i < NumSends;i++)
+                {
+                    if((MinDist + (RoomRolloff[i] * (Distance - MinDist))) > 0.0f)
+                        RoomAttenuation[i] = MinDist / (MinDist + (RoomRolloff[i] * (Distance - MinDist)));
+                }
+            }
+            break;
+
+        case AL_LINEAR_DISTANCE_CLAMPED:
+            Distance=__max(Distance,MinDist);
+            Distance=__min(Distance,MaxDist);
+            if(MaxDist < MinDist)
+                break;
+            //fall-through
+        case AL_LINEAR_DISTANCE:
+            Distance=__min(Distance,MaxDist);
+            if(MaxDist != MinDist)
+            {
+                flAttenuation = 1.0f - (Rolloff*(Distance-MinDist)/(MaxDist - MinDist));
+                for(i = 0;i < NumSends;i++)
+                    RoomAttenuation[i] = 1.0f - (RoomRolloff[i]*(Distance-MinDist)/(MaxDist - MinDist));
+            }
+            break;
+
+        case AL_EXPONENT_DISTANCE_CLAMPED:
+            Distance=__max(Distance,MinDist);
+            Distance=__min(Distance,MaxDist);
+            if(MaxDist < MinDist)
+                break;
+            //fall-through
+        case AL_EXPONENT_DISTANCE:
+            if(Distance > 0.0f && MinDist > 0.0f)
+            {
+                flAttenuation = (ALfloat)pow(Distance/MinDist, -Rolloff);
+                for(i = 0;i < NumSends;i++)
+                    RoomAttenuation[i] = (ALfloat)pow(Distance/MinDist, -RoomRolloff[i]);
+            }
+            break;
+
+        case AL_NONE:
+            break;
+    }
+
+    // Source Gain + Attenuation and clamp to Min/Max Gain
+    DryMix = SourceVolume * flAttenuation;
+    DryMix = __min(DryMix,MaxVolume);
+    DryMix = __max(DryMix,MinVolume);
+
+    for(i = 0;i < NumSends;i++)
+    {
+        ALfloat WetMix = SourceVolume * RoomAttenuation[i];
+        WetMix = __min(WetMix,MaxVolume);
+        wetsend[i] = __max(WetMix,MinVolume);
+        wetgainhf[i] = 1.0f;
+    }
+
+    // Distance-based air absorption
+    if(ALSource->AirAbsorptionFactor > 0.0f && ALSource->DistanceModel != AL_NONE)
+    {
+        ALfloat dist = Distance-MinDist;
+        ALfloat absorb;
+
+        if(dist < 0.0f) dist = 0.0f;
+        // Absorption calculation is done in dB
+        absorb = (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF) *
+                 (dist*MetersPerUnit);
+        // Convert dB to linear gain before applying
+        absorb = pow(10.0, absorb/20.0);
+        DryGainHF *= absorb;
+        for(i = 0;i < MAX_SENDS;i++)
+            wetgainhf[i] *= absorb;
+    }
+
+    //3. Apply directional soundcones
+    Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f/M_PI;
+    if(Angle >= InnerAngle && Angle <= OuterAngle)
+    {
+        ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
+        ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f)*scale);
+        ConeHF = (1.0f+(OuterGainHF-1.0f)*scale);
+        DryMix *= ConeVolume;
+        if(ALSource->DryGainHFAuto)
+            DryGainHF *= ConeHF;
+    }
+    else if(Angle > OuterAngle)
+    {
+        ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f));
+        ConeHF = (1.0f+(OuterGainHF-1.0f));
+        DryMix *= ConeVolume;
+        if(ALSource->DryGainHFAuto)
+            DryGainHF *= ConeHF;
+    }
+    else
+    {
+        ConeVolume = 1.0f;
+        ConeHF = 1.0f;
+    }
+
+    //4. Calculate Velocity
+    if(DopplerFactor != 0.0f)
+    {
+        ALfloat flVSS, flVLS = 0.0f;
+
+        if(ALSource->bHeadRelative==AL_FALSE)
+            flVLS = aluDotproduct(ALContext->Listener.Velocity, SourceToListener);
+        flVSS = aluDotproduct(ALSource->vVelocity, SourceToListener);
+
+        flMaxVelocity = (DopplerVelocity * flSpeedOfSound) / DopplerFactor;
+
+        if(flVSS >= flMaxVelocity)
+            flVSS = (flMaxVelocity - 1.0f);
+        else if(flVSS <= -flMaxVelocity)
+            flVSS = -flMaxVelocity + 1.0f;
+
+        if(flVLS >= flMaxVelocity)
+            flVLS = (flMaxVelocity - 1.0f);
+        else if(flVLS <= -flMaxVelocity)
+            flVLS = -flMaxVelocity + 1.0f;
+
+        pitch[0] = ALSource->flPitch *
+                   ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /
+                   ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVSS));
+    }
+    else
+        pitch[0] = ALSource->flPitch;
+
+    for(i = 0;i < NumSends;i++)
+    {
+        if(ALSource->Send[i].Slot &&
+           ALSource->Send[i].Slot->effect.type != AL_EFFECT_NULL)
+        {
+            if(ALSource->WetGainAuto)
+                wetsend[i] *= ConeVolume;
+            if(ALSource->WetGainHFAuto)
+                wetgainhf[i] *= ConeHF;
+
+            if(ALSource->Send[i].Slot->AuxSendAuto)
+            {
+                // Apply minimal attenuation in place of missing
+                // statistical reverb model.
+                wetsend[i] *= pow(DryMix, 1.0f / 2.0f);
+            }
+            else
+            {
+                // If the slot's auxiliary send auto is off, the data sent to
+                // the effect slot is the same as the dry path, sans filter
+                // effects
+                wetsend[i] = DryMix;
+                wetgainhf[i] = DryGainHF;
+            }
+
+            switch(ALSource->Send[i].WetFilter.type)
+            {
+                case AL_FILTER_LOWPASS:
+                    wetsend[i] *= ALSource->Send[i].WetFilter.Gain;
+                    wetgainhf[i] *= ALSource->Send[i].WetFilter.GainHF;
+                    break;
+            }
+            wetsend[i] *= ListenerGain;
+        }
+        else
+        {
+            wetsend[i] = 0.0f;
+            wetgainhf[i] = 1.0f;
+        }
+    }
+    for(i = NumSends;i < MAX_SENDS;i++)
+    {
+        wetsend[i] = 0.0f;
+        wetgainhf[i] = 1.0f;
+    }
+
+    //5. Apply filter gains and filters
+    switch(ALSource->DirectFilter.type)
+    {
+        case AL_FILTER_LOWPASS:
+            DryMix *= ALSource->DirectFilter.Gain;
+            DryGainHF *= ALSource->DirectFilter.GainHF;
+            break;
+    }
+    DryMix *= ListenerGain;
+
+    // Use energy-preserving panning algorithm for multi-speaker playback
+    length = aluSqrt(Position[0]*Position[0] + Position[1]*Position[1] +
+                     Position[2]*Position[2]);
+    length = __max(length, MinDist);
+    if(length > 0.0f)
+    {
+        ALfloat invlen = 1.0f/length;
+        Position[0] *= invlen;
+        Position[1] *= invlen;
+        Position[2] *= invlen;
+    }
+
+    pos = aluCart2LUTpos(-Position[2], Position[0]);
+    SpeakerGain = &ALContext->PanningLUT[OUTPUTCHANNELS * pos];
+
+    DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
+    // elevation adjustment for directional gain. this sucks, but
+    // has low complexity
+    AmbientGain = 1.0/aluSqrt(ALContext->NumChan) * (1.0-DirGain);
+    for(s = 0; s < OUTPUTCHANNELS; s++)
+    {
+        ALfloat gain = SpeakerGain[s]*DirGain + AmbientGain;
+        drysend[s] = DryMix * gain;
+    }
+    *drygainhf = DryGainHF;
 }
 
 static __inline ALshort lerp(ALshort val1, ALshort val2, ALint frac)

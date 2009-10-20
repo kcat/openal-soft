@@ -1124,6 +1124,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
     ALuint attrIdx, reqStereoSources;
     ALCcontext *ALContext;
     void *temp;
+    ALuint i;
 
     SuspendContext(NULL);
 
@@ -1197,6 +1198,42 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
         aluHandleDisconnect(device);
         ProcessContext(NULL);
         return NULL;
+    }
+
+    for(i = 0;i < device->NumContexts;i++)
+    {
+        ALeffectslot *slot;
+        ALsource *source;
+        for(slot = device->Contexts[i]->AuxiliaryEffectSlot;slot != NULL;
+            slot = slot->next)
+        {
+            if(!slot->EffectState)
+                continue;
+
+            if(ALEffect_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
+            {
+                alcSetError(ALC_INVALID_DEVICE);
+                aluHandleDisconnect(device);
+                ProcessContext(NULL);
+                ALCdevice_StopPlayback(device);
+                return NULL;
+            }
+            ALEffect_Update(slot->EffectState, device->Contexts[i], &slot->effect);
+        }
+
+        for(source = device->Contexts[i]->Source;source != NULL;source = source->next)
+        {
+            ALuint s = device->NumAuxSends;
+            while(s < MAX_SENDS)
+            {
+                if(source->Send[s].Slot)
+                    source->Send[s].Slot->refcount--;
+                source->Send[s].Slot = NULL;
+                source->Send[s].WetFilter.type = 0;
+                source->Send[s].WetFilter.filter = 0;
+                s++;
+            }
+        }
     }
 
     if(device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)

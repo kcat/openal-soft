@@ -237,8 +237,10 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     numFragmentsLogSize = (periods << 16) | log2FragmentSize;
 
 #define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
-    if (!(ok(ioctl(data->fd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize), "set fragment") &&
-          ok(ioctl(data->fd, SNDCTL_DSP_SETFMT, &ossFormat), "set format") &&
+    /* Don't fail if SETFRAGMENT fails. We can handle just about anything
+     * that's reported back via GETOSPACE */
+    ioctl(data->fd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize);
+    if (!(ok(ioctl(data->fd, SNDCTL_DSP_SETFMT, &ossFormat), "set format") &&
           ok(ioctl(data->fd, SNDCTL_DSP_CHANNELS, &numChannels), "set channels") &&
           ok(ioctl(data->fd, SNDCTL_DSP_SPEED, &ossSpeed), "set speed") &&
           ok(ioctl(data->fd, SNDCTL_DSP_GETOSPACE, &info), "get space")))
@@ -289,6 +291,9 @@ static void oss_stop_playback(ALCdevice *device)
     data->killNow = 1;
     StopThread(data->thread);
     data->thread = NULL;
+
+    if(ioctl(data->fd, SNDCTL_DSP_RESET) != 0)
+        AL_PRINT("Error resetting device: %s\n", strerror(errno));
 
     free(data->mix_data);
     data->mix_data = NULL;

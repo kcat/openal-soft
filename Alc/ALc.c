@@ -1203,10 +1203,12 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 
     for(i = 0;i < device->NumContexts;i++)
     {
+        ALCcontext *context = device->Contexts[i];
         ALeffectslot *slot;
         ALsource *source;
-        for(slot = device->Contexts[i]->AuxiliaryEffectSlot;slot != NULL;
-            slot = slot->next)
+
+        SuspendContext(context);
+        for(slot = context->AuxiliaryEffectSlot;slot != NULL;slot = slot->next)
         {
             if(!slot->EffectState)
                 continue;
@@ -1215,14 +1217,15 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
             {
                 alcSetError(ALC_INVALID_DEVICE);
                 aluHandleDisconnect(device);
+                ProcessContext(context);
                 ProcessContext(NULL);
                 ALCdevice_StopPlayback(device);
                 return NULL;
             }
-            ALEffect_Update(slot->EffectState, device->Contexts[i], &slot->effect);
+            ALEffect_Update(slot->EffectState, context, &slot->effect);
         }
 
-        for(source = device->Contexts[i]->Source;source != NULL;source = source->next)
+        for(source = context->Source;source != NULL;source = source->next)
         {
             ALuint s = device->NumAuxSends;
             while(s < MAX_SENDS)
@@ -1235,6 +1238,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 s++;
             }
         }
+        ProcessContext(context);
     }
 
     if(device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)

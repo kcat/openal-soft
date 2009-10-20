@@ -61,9 +61,9 @@ ALboolean DuplicateStereo = AL_FALSE;
 
 static __inline ALfloat aluF2F(ALfloat Value)
 {
-    if(Value < 0.f) Value /= 32768.f;
-    else            Value /= 32767.f;
-    return Value;
+    if(Value < 0.f) return Value/32768.f;
+    if(Value > 0.f) return Value/32767.f;
+    return 0.f;
 }
 
 static __inline ALshort aluF2S(ALfloat Value)

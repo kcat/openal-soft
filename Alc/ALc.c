@@ -546,9 +546,6 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->LastError = AL_NO_ERROR;
     pContext->InUse = AL_FALSE;
 
-    //Set output format
-    pContext->Frequency = pContext->Device->Frequency;
-
     //Set globals
     pContext->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
     pContext->DopplerFactor = 1.0f;

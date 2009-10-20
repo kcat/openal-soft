@@ -474,12 +474,13 @@ ALboolean VerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
 {
     ALverbState *State = (ALverbState*)effect;
+    ALuint frequency = Context->Device->Frequency;
     ALuint index;
     ALfloat length, mixCoeff, cw, g, coeff;
     ALfloat hfRatio = Effect->Reverb.DecayHFRatio;
 
     // Calculate the master low-pass filter (from the master effect HF gain).
-    cw = cos(2.0 * M_PI * Effect->Reverb.HFReference / Context->Frequency);
+    cw = cos(2.0*M_PI * Effect->Reverb.HFReference / frequency);
     g = __max(Effect->Reverb.GainHF, 0.0001f);
     State->LpFilter.coeff = 0.0f;
     if(g < 0.9999f) // 1-epsilon
@@ -487,7 +488,7 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Ef
 
     // Calculate the initial delay taps.
     length = Effect->Reverb.ReflectionsDelay;
-    State->Tap[0] = (ALuint)(length * Context->Frequency);
+    State->Tap[0] = (ALuint)(length * frequency);
 
     length += Effect->Reverb.LateReverbDelay;
 
@@ -504,7 +505,7 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Ef
         length += LATE_LINE_LENGTH[0] *
             (1.0f + (Effect->Reverb.Density * LATE_LINE_MULTIPLIER)) *
             (DECO_FRACTION * (pow(DECO_MULTIPLIER, (ALfloat)index) - 1.0f));
-        State->Tap[1 + index] = (ALuint)(length * Context->Frequency);
+        State->Tap[1 + index] = (ALuint)(length * frequency);
     }
 
     // Calculate the early reflections gain (from the master effect gain, and
@@ -596,7 +597,7 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Ef
     }
 
     // Calculate the low-pass filter frequency.
-    cw = cos(2.0f * M_PI * Effect->Reverb.HFReference / Context->Frequency);
+    cw = cos(2.0*M_PI * Effect->Reverb.HFReference / frequency);
 
     for(index = 0;index < 4;index++)
     {
@@ -604,7 +605,7 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Ef
         length = LATE_LINE_LENGTH[index] * (1.0f + (Effect->Reverb.Density *
                                                     LATE_LINE_MULTIPLIER));
         // Calculate the delay offset for the cyclical delay lines.
-        State->Late.Offset[index] = (ALuint)(length * Context->Frequency);
+        State->Late.Offset[index] = (ALuint)(length * frequency);
 
         // Calculate the gain (coefficient) for each cyclical line.
         State->Late.Coeff[index] = pow(10.0f, length / Effect->Reverb.DecayTime *

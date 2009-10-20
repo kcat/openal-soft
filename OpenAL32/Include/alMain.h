@@ -284,8 +284,6 @@ struct ALCcontext_struct
     ALenum      LastError;
     ALboolean   InUse;
 
-    ALuint      Frequency;
-
     ALenum      DistanceModel;
 
     ALfloat     DopplerFactor;

@@ -798,13 +798,16 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALfloat DryGainHF = 0.0f;
     ALfloat WetGainHF[MAX_SENDS];
     ALuint rampLength;
+    ALuint frequency;
     ALint Looping,State;
     ALint increment;
 
     if(!(ALSource=ALContext->Source))
         return;
 
-    rampLength = ALContext->Frequency * MIN_RAMP_LENGTH / 1000;
+    frequency = ALContext->Device->Frequency;
+
+    rampLength = frequency * MIN_RAMP_LENGTH / 1000;
     rampLength = max(rampLength, SamplesToDo);
 
 another_source:
@@ -850,7 +853,7 @@ another_source:
 
         CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE,
                          DrySend, WetSend, &Pitch, &DryGainHF, WetGainHF);
-        Pitch = (Pitch*Frequency) / ALContext->Frequency;
+        Pitch = (Pitch*Frequency) / frequency;
 
         if(Channels == 1)
         {
@@ -858,7 +861,7 @@ another_source:
 
             /* Update filter coefficients. Calculations based on the I3DL2
              * spec. */
-            cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / ALContext->Frequency);
+            cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / frequency);
             /* We use four chained one-pole filters, so we need to take the
              * fourth root of the squared gain, which is the same as the square
              * root of the base gain. */
@@ -888,7 +891,7 @@ another_source:
             ALfloat cw, a, g;
 
             /* Multi-channel sources use two chained one-pole filters */
-            cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / ALContext->Frequency);
+            cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / frequency);
             g = __max(DryGainHF, 0.01f);
             a = 0.0f;
             if(g < 0.9999f) /* 1-epsilon */

@@ -118,10 +118,11 @@ ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
 {
     ALechoState *state = (ALechoState*)effect;
+    ALuint frequency = Context->Device->Frequency;
     ALfloat lrpan, cw, a, g;
 
-    state->Tap[0].delay = (ALuint)(Effect->Echo.Delay * Context->Frequency);
-    state->Tap[1].delay = (ALuint)(Effect->Echo.LRDelay * Context->Frequency);
+    state->Tap[0].delay = (ALuint)(Effect->Echo.Delay * frequency);
+    state->Tap[1].delay = (ALuint)(Effect->Echo.LRDelay * frequency);
     state->Tap[1].delay += state->Tap[0].delay;
 
     lrpan = Effect->Echo.Spread*0.5f + 0.5f;
@@ -130,7 +131,7 @@ ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Ef
 
     state->FeedGain = Effect->Echo.Feedback;
 
-    cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / Context->Frequency);
+    cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / frequency);
     g = 1.0f - Effect->Echo.Damping;
     a = 0.0f;
     if(g < 0.9999f) // 1-epsilon

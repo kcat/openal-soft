@@ -424,7 +424,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
     ALfloat U[3],V[3],N[3];
-    ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound, flMaxVelocity;
+    ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound;
     ALfloat Matrix[3][3];
     ALfloat flAttenuation;
     ALfloat RoomAttenuation[MAX_SENDS];
@@ -666,22 +666,23 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     if(DopplerFactor != 0.0f)
     {
         ALfloat flVSS, flVLS = 0.0f;
+        ALfloat flMaxVelocity = (DopplerVelocity * flSpeedOfSound) /
+                                DopplerFactor;
 
-        if(ALSource->bHeadRelative==AL_FALSE)
-            flVLS = aluDotproduct(ALContext->Listener.Velocity, SourceToListener);
         flVSS = aluDotproduct(ALSource->vVelocity, SourceToListener);
-
-        flMaxVelocity = (DopplerVelocity * flSpeedOfSound) / DopplerFactor;
-
         if(flVSS >= flMaxVelocity)
             flVSS = (flMaxVelocity - 1.0f);
         else if(flVSS <= -flMaxVelocity)
             flVSS = -flMaxVelocity + 1.0f;
 
-        if(flVLS >= flMaxVelocity)
-            flVLS = (flMaxVelocity - 1.0f);
-        else if(flVLS <= -flMaxVelocity)
-            flVLS = -flMaxVelocity + 1.0f;
+        if(ALSource->bHeadRelative == AL_FALSE)
+        {
+            flVLS = aluDotproduct(ALContext->Listener.Velocity, SourceToListener);
+            if(flVLS >= flMaxVelocity)
+                flVLS = (flMaxVelocity - 1.0f);
+            else if(flVLS <= -flMaxVelocity)
+                flVLS = -flMaxVelocity + 1.0f;
+        }
 
         pitch[0] = ALSource->flPitch *
                    ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /

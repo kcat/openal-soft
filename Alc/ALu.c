@@ -1203,7 +1203,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     ALeffectslot *ALEffectSlot;
     ALCcontext *ALContext;
     int fpuState;
-    ALuint i;
+    ALuint i, c;
 
     SuspendContext(NULL);
 
@@ -1226,9 +1226,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         /* Clear mixing buffer */
         memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
 
-        ALContext = device->Context;
-        if(ALContext)
+        for(c = 0;c < device->NumContexts;c++)
         {
+            ALContext = device->Contexts[c];
             MixSomeSources(ALContext, DryBuffer, SamplesToDo);
 
             /* effect slot processing */
@@ -1378,13 +1378,15 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
 ALvoid aluHandleDisconnect(ALCdevice *device)
 {
-    if(device->Context)
+    ALuint i;
+
+    for(i = 0;i < device->NumContexts;i++)
     {
         ALsource *source;
 
-        SuspendContext(device->Context);
+        SuspendContext(device->Contexts[i]);
 
-        source = device->Context->Source;
+        source = device->Contexts[i]->Source;
         while(source)
         {
             if(source->state == AL_PLAYING)
@@ -1405,7 +1407,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
             }
             source = source->next;
         }
-        ProcessContext(device->Context);
+        ProcessContext(device->Contexts[i]);
     }
 
     device->Connected = ALC_FALSE;

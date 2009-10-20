@@ -247,8 +247,9 @@ struct ALCdevice_struct
     // Dry path buffer mix
     float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
 
-    // Context created on this device
-    ALCcontext   *Context;
+    // Contexts created on this device
+    ALCcontext  **Contexts;
+    ALuint        NumContexts;
 
     BackendFuncs *Funcs;
     void         *ExtraData; // For the backend's use

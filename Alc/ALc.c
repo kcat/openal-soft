@@ -1123,6 +1123,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 {
     ALuint attrIdx, reqStereoSources;
     ALCcontext *ALContext;
+    void *temp;
 
     SuspendContext(NULL);
 
@@ -1137,7 +1138,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
     g_eLastContextError = ALC_NO_ERROR;
 
     // Current implementation only allows one Context per Device
-    if(device->Context)
+    if(device->NumContexts > 0)
     {
         alcSetError(ALC_INVALID_VALUE);
         ProcessContext(NULL);
@@ -1214,6 +1215,15 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
         device->Bs2b = NULL;
     }
 
+    temp = realloc(device->Contexts, (device->NumContexts+1) * sizeof(*device->Contexts));
+    if(!temp)
+    {
+        alcSetError(ALC_OUT_OF_MEMORY);
+        ProcessContext(NULL);
+        return NULL;
+    }
+    device->Contexts = temp;
+
     ALContext = calloc(1, sizeof(ALCcontext));
     if(!ALContext)
     {
@@ -1222,10 +1232,10 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
         return NULL;
     }
 
+    device->Contexts[device->NumContexts++] = ALContext;
     ALContext->Device = device;
-    InitContext(ALContext);
 
-    device->Context = ALContext;
+    InitContext(ALContext);
 
     ALContext->next = g_pContextList;
     g_pContextList = ALContext;
@@ -1245,10 +1255,27 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALCcontext **list;
+    ALuint i;
 
     if (IsContext(context))
     {
-        ALCdevice_StopPlayback(context->Device);
+        ALCdevice *Device = context->Device;
+
+        if(Device->NumContexts == 1)
+            ALCdevice_StopPlayback(Device);
+
+        SuspendContext(NULL);
+
+        for(i = 0;i < Device->NumContexts-1;i++)
+        {
+            if(Device->Contexts[i] == context)
+            {
+                memmove(&Device->Contexts[i], &Device->Contexts[i+1],
+                        (Device->NumContexts-i-1) * sizeof(*Device->Contexts));
+                break;
+            }
+        }
+        Device->NumContexts--;
 
         // Lock context
         SuspendContext(context);
@@ -1268,8 +1295,6 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
             ReleaseALAuxiliaryEffectSlots(context);
         }
 
-        context->Device->Context = NULL;
-
         list = &g_pContextList;
         while(*list != context)
             list = &(*list)->next;
@@ -1279,6 +1304,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
 
         // Unlock context
         ProcessContext(context);
+        ProcessContext(NULL);
 
         ExitContext(context);
 
@@ -1473,6 +1499,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->Bs2b = NULL;
         device->szDeviceName = NULL;
 
+        device->Contexts = NULL;
+        device->NumContexts = 0;
+
         //Set output format
         device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
         if(device->Frequency == 0)
@@ -1564,12 +1593,13 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
 
         ProcessContext(NULL);
 
-        if(pDevice->Context)
+        if(pDevice->NumContexts > 0)
         {
 #ifdef _DEBUG
-            AL_PRINT("alcCloseDevice(): destroying 1 Context\n");
+            AL_PRINT("alcCloseDevice(): destroying %u Context(s)\n", pDevice->NumContexts);
 #endif
-            alcDestroyContext(pDevice->Context);
+            while(pDevice->NumContexts > 0)
+                alcDestroyContext(pDevice->Contexts[0]);
         }
         ALCdevice_ClosePlayback(pDevice);
 
@@ -1606,6 +1636,10 @@ ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
         pDevice->Bs2b = NULL;
 
         free(pDevice->szDeviceName);
+        pDevice->szDeviceName = NULL;
+
+        free(pDevice->Contexts);
+        pDevice->Contexts = NULL;
 
         //Release device structure
         memset(pDevice, 0, sizeof(ALCdevice));

@@ -1229,6 +1229,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         for(c = 0;c < device->NumContexts;c++)
         {
             ALContext = device->Contexts[c];
+            SuspendContext(ALContext);
+
             MixSomeSources(ALContext, DryBuffer, SamplesToDo);
 
             /* effect slot processing */
@@ -1242,6 +1244,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     ALEffectSlot->WetBuffer[i] = 0.0f;
                 ALEffectSlot = ALEffectSlot->next;
             }
+            ProcessContext(ALContext);
         }
 
         //Post processing loop

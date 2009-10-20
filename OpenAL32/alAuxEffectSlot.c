@@ -428,8 +428,13 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
             else if(effect->type == AL_EFFECT_ECHO)
                 NewState = EchoCreate();
             /* No new state? An error occured.. */
-            if(!NewState)
+            if(NewState == NULL ||
+               ALEffect_DeviceUpdate(NewState, Context->Device) == AL_FALSE)
+            {
+                if(NewState)
+                    ALEffect_Destroy(NewState);
                 return;
+            }
         }
         if(ALEffectSlot->EffectState)
             ALEffect_Destroy(ALEffectSlot->EffectState);

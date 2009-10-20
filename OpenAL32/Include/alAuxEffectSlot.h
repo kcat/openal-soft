@@ -55,6 +55,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 struct ALeffectState {
     ALvoid (*Destroy)(ALeffectState *State);
+    ALboolean (*DeviceUpdate)(ALeffectState *State, ALCdevice *Device);
     ALvoid (*Update)(ALeffectState *State, ALCcontext *Context, const ALeffect *Effect);
     ALvoid (*Process)(ALeffectState *State, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS]);
 };
@@ -64,6 +65,7 @@ ALeffectState *VerbCreate(void);
 ALeffectState *EchoCreate(void);
 
 #define ALEffect_Destroy(a)         ((a)->Destroy((a)))
+#define ALEffect_DeviceUpdate(a,b)  ((a)->DeviceUpdate((a),(b)))
 #define ALEffect_Update(a,b,c)      ((a)->Update((a),(b),(c)))
 #define ALEffect_Process(a,b,c,d,e) ((a)->Process((a),(b),(c),(d),(e)))
 

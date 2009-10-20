@@ -85,31 +85,40 @@ ALvoid EchoDestroy(ALeffectState *effect)
     }
 }
 
-ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
+ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     ALechoState *state = (ALechoState*)effect;
-    ALfloat lrpan, cw, a, g;
     ALuint maxlen;
 
-    maxlen  = (ALuint)(AL_ECHO_MAX_DELAY * Context->Frequency);
-    maxlen += (ALuint)(AL_ECHO_MAX_LRDELAY * Context->Frequency);
+    // Use the next power of 2 for the buffer length, so the tap offsets can be
+    // wrapped using a mask instead of a modulo
+    maxlen  = (ALuint)(AL_ECHO_MAX_DELAY * Device->Frequency);
+    maxlen += (ALuint)(AL_ECHO_MAX_LRDELAY * Device->Frequency);
     maxlen  = NextPowerOf2(maxlen+1);
 
-    if(maxlen > state->BufferLength)
+    if(maxlen != state->BufferLength)
     {
         void *temp;
         ALuint i;
 
-        state->BufferLength = maxlen;
-        temp = realloc(state->SampleBuffer, state->BufferLength * sizeof(ALfloat));
+        temp = realloc(state->SampleBuffer, maxlen * sizeof(ALfloat));
         if(!temp)
         {
-            AL_PRINT("Failed reallocation!");
-            abort();
+            alSetError(AL_OUT_OF_MEMORY);
+            return AL_FALSE;
         }
+        state->BufferLength = maxlen;
         for(i = 0;i < state->BufferLength;i++)
             state->SampleBuffer[i] = 0.0f;
     }
+
+    return AL_TRUE;
+}
+
+ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
+{
+    ALechoState *state = (ALechoState*)effect;
+    ALfloat lrpan, cw, a, g;
 
     state->Tap[0].delay = (ALuint)(Effect->Echo.Delay * Context->Frequency);
     state->Tap[1].delay = (ALuint)(Effect->Echo.LRDelay * Context->Frequency);
@@ -173,7 +182,6 @@ ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint Sampl
 ALeffectState *EchoCreate(void)
 {
     ALechoState *state;
-    ALuint i, maxlen;
 
     state = malloc(sizeof(*state));
     if(!state)
@@ -183,25 +191,12 @@ ALeffectState *EchoCreate(void)
     }
 
     state->state.Destroy = EchoDestroy;
+    state->state.DeviceUpdate = EchoDeviceUpdate;
     state->state.Update = EchoUpdate;
     state->state.Process = EchoProcess;
 
-    maxlen  = (ALuint)(AL_ECHO_MAX_DELAY * MAX_ECHO_FREQ);
-    maxlen += (ALuint)(AL_ECHO_MAX_LRDELAY * MAX_ECHO_FREQ);
-
-    // Use the next power of 2 for the buffer length, so the tap offsets can be
-    // wrapped using a mask instead of a modulo
-    state->BufferLength = NextPowerOf2(maxlen+1);
-    state->SampleBuffer = malloc(state->BufferLength * sizeof(ALfloat));
-    if(!state->SampleBuffer)
-    {
-        free(state);
-        alSetError(AL_OUT_OF_MEMORY);
-        return NULL;
-    }
-
-    for(i = 0;i < state->BufferLength;i++)
-        state->SampleBuffer[i] = 0.0f;
+    state->BufferLength = 0;
+    state->SampleBuffer = NULL;
 
     state->Tap[0].delay = 0;
     state->Tap[1].delay = 0;
@@ -209,9 +204,9 @@ ALeffectState *EchoCreate(void)
     state->GainL = 0.0f;
     state->GainR = 0.0f;
 
-    for(i = 0;i < 2;i++)
-        state->iirFilter.history[i] = 0.0f;
     state->iirFilter.coeff = 0.0f;
+    state->iirFilter.history[0] = 0.0f;
+    state->iirFilter.history[1] = 0.0f;
 
     return &state->state;
 }

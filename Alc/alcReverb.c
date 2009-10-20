@@ -31,10 +31,6 @@
 #include "alError.h"
 #include "alu.h"
 
-// Just a soft maximum. Being higher will cause VerbUpdate to reallocate the
-// sample buffer which may cause an abort if realloc fails
-#define MAX_REVERB_FREQ  192000
-
 typedef struct DelayLine
 {
     // The delay lines use sample lengths that are powers of 2 to allow
@@ -412,6 +408,67 @@ static __inline ALint aluCart2LUTpos(ALfloat re, ALfloat im)
     return pos%LUT_NUM;
 }
 
+// This updates the device-dependant reverb state.  This is called on
+// initialization and any time the device parameters (eg. playback frequency,
+// format) have been changed.
+ALboolean VerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+{
+    ALverbState *State = (ALverbState*)effect;
+    ALuint length[13], totalLength;
+    ALuint index;
+
+    totalLength = CalcLengths(length, Device->Frequency);
+    if(totalLength != State->TotalLength)
+    {
+        void *temp;
+
+        temp = realloc(State->SampleBuffer, totalLength * sizeof(ALfloat));
+        if(!temp)
+        {
+            alSetError(AL_OUT_OF_MEMORY);
+            return AL_FALSE;
+        }
+        State->TotalLength = totalLength;
+        State->SampleBuffer = temp;
+
+        for(index = 0; index < totalLength;index++)
+            State->SampleBuffer[index] = 0.0f;
+
+        // All lines share a single sample buffer
+        State->Delay.Mask = length[0] - 1;
+        State->Delay.Line = &State->SampleBuffer[0];
+        totalLength = length[0];
+        for(index = 0;index < 4;index++)
+        {
+            State->Early.Delay[index].Mask = length[1 + index] - 1;
+            State->Early.Delay[index].Line = &State->SampleBuffer[totalLength];
+            totalLength += length[1 + index];
+        }
+        for(index = 0;index < 4;index++)
+        {
+            State->Late.ApDelay[index].Mask = length[5 + index] - 1;
+            State->Late.ApDelay[index].Line = &State->SampleBuffer[totalLength];
+            totalLength += length[5 + index];
+        }
+        for(index = 0;index < 4;index++)
+        {
+            State->Late.Delay[index].Mask = length[9 + index] - 1;
+            State->Late.Delay[index].Line = &State->SampleBuffer[totalLength];
+            totalLength += length[9 + index];
+        }
+    }
+
+    for(index = 0;index < 4;index++)
+    {
+        State->Early.Offset[index] = (ALuint)(EARLY_LINE_LENGTH[index] *
+                                              Device->Frequency);
+        State->Late.ApOffset[index] = (ALuint)(ALLPASS_LINE_LENGTH[index] *
+                                               Device->Frequency);
+    }
+
+    return AL_TRUE;
+}
+
 // This updates the reverb state.  This is called any time the reverb effect
 // is loaded into a slot.
 ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
@@ -420,56 +477,6 @@ ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Ef
     ALuint index;
     ALfloat length, mixCoeff, cw, g, coeff;
     ALfloat hfRatio = Effect->Reverb.DecayHFRatio;
-    ALuint lengths[13], totalLength;
-
-    totalLength = CalcLengths(lengths, Context->Frequency);
-    if(totalLength > State->TotalLength)
-    {
-        void *temp;
-
-        State->TotalLength = totalLength;
-        temp = realloc(State->SampleBuffer, State->TotalLength * sizeof(ALfloat));
-        if(!temp)
-        {
-            AL_PRINT("Failed reallocation!");
-            abort();
-        }
-        State->SampleBuffer = temp;
-
-        for(index = 0; index < totalLength;index++)
-            State->SampleBuffer[index] = 0.0f;
-
-        // All lines share a single sample buffer
-        State->Delay.Mask = lengths[0] - 1;
-        State->Delay.Line = &State->SampleBuffer[0];
-        totalLength = lengths[0];
-        for(index = 0;index < 4;index++)
-        {
-            State->Early.Delay[index].Mask = lengths[1 + index] - 1;
-            State->Early.Delay[index].Line = &State->SampleBuffer[totalLength];
-            totalLength += lengths[1 + index];
-        }
-        for(index = 0;index < 4;index++)
-        {
-            State->Late.ApDelay[index].Mask = lengths[5 + index] - 1;
-            State->Late.ApDelay[index].Line = &State->SampleBuffer[totalLength];
-            totalLength += lengths[5 + index];
-        }
-        for(index = 0;index < 4;index++)
-        {
-            State->Late.Delay[index].Mask = lengths[9 + index] - 1;
-            State->Late.Delay[index].Line = &State->SampleBuffer[totalLength];
-            totalLength += lengths[9 + index];
-        }
-    }
-
-    for(index = 0;index < 4;index++)
-    {
-        State->Early.Offset[index] = (ALuint)(EARLY_LINE_LENGTH[index] *
-                                              Context->Frequency);
-        State->Late.ApOffset[index] = (ALuint)(ALLPASS_LINE_LENGTH[index] *
-                                               Context->Frequency);
-    }
 
     // Calculate the master low-pass filter (from the master effect HF gain).
     cw = cos(2.0 * M_PI * Effect->Reverb.HFReference / Context->Frequency);
@@ -757,7 +764,7 @@ ALvoid EAXVerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint Sa
 ALeffectState *VerbCreate(void)
 {
     ALverbState *State = NULL;
-    ALuint length[13], totalLength, index;
+    ALuint index;
 
     State = malloc(sizeof(ALverbState));
     if(!State)
@@ -767,28 +774,18 @@ ALeffectState *VerbCreate(void)
     }
 
     State->state.Destroy = VerbDestroy;
+    State->state.DeviceUpdate = VerbDeviceUpdate;
     State->state.Update = VerbUpdate;
     State->state.Process = VerbProcess;
 
-    totalLength = CalcLengths(length, MAX_REVERB_FREQ);
-
-    State->TotalLength = totalLength;
-    State->SampleBuffer = malloc(State->TotalLength * sizeof(ALfloat));
-    if(!State->SampleBuffer)
-    {
-        free(State);
-        alSetError(AL_OUT_OF_MEMORY);
-        return NULL;
-    }
-    for(index = 0; index < totalLength;index++)
-        State->SampleBuffer[index] = 0.0f;
+    State->TotalLength = 0;
+    State->SampleBuffer = NULL;
 
     State->LpFilter.coeff = 0.0f;
     State->LpFilter.history[0] = 0.0f;
     State->LpFilter.history[1] = 0.0f;
-    State->Delay.Mask = length[0] - 1;
-    State->Delay.Line = &State->SampleBuffer[0];
-    totalLength = length[0];
+    State->Delay.Mask = 0;
+    State->Delay.Line = NULL;
 
     State->Tap[0] = 0;
     State->Tap[1] = 0;
@@ -800,10 +797,8 @@ ALeffectState *VerbCreate(void)
     for(index = 0;index < 4;index++)
     {
         State->Early.Coeff[index] = 0.0f;
-        State->Early.Delay[index].Mask = length[1 + index] - 1;
-        State->Early.Delay[index].Line = &State->SampleBuffer[totalLength];
-        totalLength += length[1 + index];
-
+        State->Early.Delay[index].Mask = 0;
+        State->Early.Delay[index].Line = NULL;
         State->Early.Offset[index] = 0;
     }
 
@@ -815,20 +810,13 @@ ALeffectState *VerbCreate(void)
     for(index = 0;index < 4;index++)
     {
         State->Late.ApCoeff[index] = 0.0f;
-        State->Late.ApDelay[index].Mask = length[5 + index] - 1;
-        State->Late.ApDelay[index].Line = &State->SampleBuffer[totalLength];
-        totalLength += length[5 + index];
-
+        State->Late.ApDelay[index].Mask = 0;
+        State->Late.ApDelay[index].Line = NULL;
         State->Late.ApOffset[index] = 0;
-    }
 
-    for(index = 0;index < 4;index++)
-    {
         State->Late.Coeff[index] = 0.0f;
-        State->Late.Delay[index].Mask = length[9 + index] - 1;
-        State->Late.Delay[index].Line = &State->SampleBuffer[totalLength];
-        totalLength += length[9 + index];
-
+        State->Late.Delay[index].Mask = 0;
+        State->Late.Delay[index].Line = NULL;
         State->Late.Offset[index] = 0;
 
         State->Late.LpCoeff[index] = 0.0f;

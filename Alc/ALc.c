@@ -1138,12 +1138,13 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
     // Reset Context Last Error code
     g_eLastContextError = ALC_NO_ERROR;
 
-    // Current implementation only allows one Context per Device
+    // If a context is already running on the device, stop playback so the
+    // device attributes can be updated
     if(device->NumContexts > 0)
     {
-        alcSetError(ALC_INVALID_VALUE);
         ProcessContext(NULL);
-        return NULL;
+        ALCdevice_StopPlayback(device);
+        SuspendContext(NULL);
     }
 
     // Check for attributes

@@ -944,16 +944,15 @@ void alc_alsa_probe(int type)
     psnd_ctl_card_info_malloc(&info);
     psnd_pcm_info_malloc(&pcminfo);
 
+    card = -1;
+    if((err=psnd_card_next(&card)) < 0)
+        AL_PRINT("Failed to find a card: %s\n", psnd_strerror(err));
+
     if(type == DEVICE_PROBE)
         AppendDeviceList(alsaDevice);
     else if(type == ALL_DEVICE_PROBE)
     {
         stream = SND_PCM_STREAM_PLAYBACK;
-        card = -1;
-        if(psnd_card_next(&card) < 0 || card < 0) {
-            AL_PRINT("no playback cards found...\n");
-            goto out;
-        }
 
         for(i = 0;i < numDevNames;++i)
             free(allDevNameMap[i].name);
@@ -1021,11 +1020,6 @@ void alc_alsa_probe(int type)
     else if(type == CAPTURE_DEVICE_PROBE)
     {
         stream = SND_PCM_STREAM_CAPTURE;
-        card = -1;
-        if(psnd_card_next(&card) < 0 || card < 0) {
-            AL_PRINT("no capture cards found...\n");
-            goto out;
-        }
 
         for(i = 0;i < numCaptureDevNames;++i)
             free(allCaptureDevNameMap[i].name);
@@ -1089,7 +1083,6 @@ void alc_alsa_probe(int type)
         numCaptureDevNames = idx;
     }
 
-out:
     psnd_pcm_info_free(pcminfo);
     psnd_ctl_card_info_free(info);
 

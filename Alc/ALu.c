@@ -416,8 +416,8 @@ static __inline ALint aluCart2LUTpos(ALfloat re, ALfloat im)
 static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                                const ALsource *ALSource, ALenum isMono,
                                ALfloat *drysend, ALfloat *wetsend,
-                               ALfloat *pitch, ALfloat *drygainhf,
-                               ALfloat *wetgainhf)
+                               ALfloat *pitch, FILTER *DryFilter,
+                               FILTER *WetFilter[MAX_SENDS])
 {
     ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix;
     ALfloat Direction[3],Position[3],SourceToListener[3];
@@ -431,17 +431,21 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     ALfloat MetersPerUnit;
     ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DryGainHF = 1.0f;
+    ALfloat WetGainHF[MAX_SENDS];
     ALfloat DirGain, AmbientGain;
     ALfloat length;
     const ALfloat *SpeakerGain;
+    ALuint Frequency;
     ALint NumSends;
     ALint pos, s, i;
+    ALfloat cw, a, g;
 
     //Get context properties
     DopplerFactor   = ALContext->DopplerFactor * ALSource->DopplerFactor;
     DopplerVelocity = ALContext->DopplerVelocity;
     flSpeedOfSound  = ALContext->flSpeedOfSound;
     NumSends        = ALContext->Device->NumAuxSends;
+    Frequency       = ALContext->Device->Frequency;
 
     //Get listener properties
     ListenerGain = ALContext->Listener.Gain;
@@ -487,13 +491,25 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         drysend[FRONT_CENTER] = DryMix * ListenerGain;
         drysend[BACK_CENTER]  = DryMix * ListenerGain;
         drysend[LFE]          = DryMix * ListenerGain;
-        *drygainhf            = DryGainHF;
-
         for(i = 0;i < MAX_SENDS;i++)
-        {
             wetsend[i] = 0.0f;
-            wetgainhf[i] = 1.0f;
-        }
+
+        /* Update filter coefficients. Calculations based on the I3DL2
+         * spec. */
+        cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / Frequency);
+        /* We use two chained one-pole filters, so we need to take the
+         * square root of the squared gain, which is the same as the base
+         * gain. */
+        g = __max(DryGainHF, 0.01f);
+        a = 0.0f;
+        /* Be careful with gains < 0.0001, as that causes the coefficient
+         * head towards 1, which will flatten the signal */
+        if(g < 0.9999f) /* 1-epsilon */
+            a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
+                (1 - g);
+        DryFilter->coeff = a;
+        for(i = 0;i < MAX_SENDS;i++)
+            WetFilter[i]->coeff = 0.0f;
 
         return;
     }
@@ -617,7 +633,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         ALfloat WetMix = SourceVolume * RoomAttenuation[i];
         WetMix = __min(WetMix,MaxVolume);
         wetsend[i] = __max(WetMix,MinVolume);
-        wetgainhf[i] = 1.0f;
+        WetGainHF[i] = 1.0f;
     }
 
     // Distance-based air absorption
@@ -634,7 +650,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         absorb = pow(10.0, absorb/20.0);
         DryGainHF *= absorb;
         for(i = 0;i < MAX_SENDS;i++)
-            wetgainhf[i] *= absorb;
+            WetGainHF[i] *= absorb;
     }
 
     //3. Apply directional soundcones
@@ -699,7 +715,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
             if(ALSource->WetGainAuto)
                 wetsend[i] *= ConeVolume;
             if(ALSource->WetGainHFAuto)
-                wetgainhf[i] *= ConeHF;
+                WetGainHF[i] *= ConeHF;
 
             if(ALSource->Send[i].Slot->AuxSendAuto)
             {
@@ -713,14 +729,14 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 // the effect slot is the same as the dry path, sans filter
                 // effects
                 wetsend[i] = DryMix;
-                wetgainhf[i] = DryGainHF;
+                WetGainHF[i] = DryGainHF;
             }
 
             switch(ALSource->Send[i].WetFilter.type)
             {
                 case AL_FILTER_LOWPASS:
                     wetsend[i] *= ALSource->Send[i].WetFilter.Gain;
-                    wetgainhf[i] *= ALSource->Send[i].WetFilter.GainHF;
+                    WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
                     break;
             }
             wetsend[i] *= ListenerGain;
@@ -728,13 +744,13 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         else
         {
             wetsend[i] = 0.0f;
-            wetgainhf[i] = 1.0f;
+            WetGainHF[i] = 1.0f;
         }
     }
     for(i = NumSends;i < MAX_SENDS;i++)
     {
         wetsend[i] = 0.0f;
-        wetgainhf[i] = 1.0f;
+        WetGainHF[i] = 1.0f;
     }
 
     //5. Apply filter gains and filters
@@ -771,7 +787,30 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         ALfloat gain = SpeakerGain[s]*DirGain + AmbientGain;
         drysend[s] = DryMix * gain;
     }
-    *drygainhf = DryGainHF;
+
+    /* Update filter coefficients. */
+    cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / Frequency);
+    /* Spatialized sources use four chained one-pole filters, so we need to
+     * take the fourth root of the squared gain, which is the same as the
+     * square root of the base gain. */
+    g = aluSqrt(__max(DryGainHF, 0.0001f));
+    a = 0.0f;
+    if(g < 0.9999f) /* 1-epsilon */
+        a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
+            (1 - g);
+    DryFilter->coeff = a;
+
+    for(i = 0;i < NumSends;i++)
+    {
+        /* The wet path uses two chained one-pole filters, so take the
+         * base gain (square root of the squared gain) */
+        g = __max(WetGainHF[i], 0.01f);
+        a = 0.0f;
+        if(g < 0.9999f) /* 1-epsilon */
+            a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
+                (1 - g);
+        WetFilter[i]->coeff = a;
+    }
 }
 
 static __inline ALshort lerp(ALshort val1, ALshort val2, ALint frac)
@@ -795,8 +834,6 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALint64 DataSize64,DataPos64;
     FILTER *DryFilter, *WetFilter[MAX_SENDS];
     ALfloat WetSend[MAX_SENDS];
-    ALfloat DryGainHF = 0.0f;
-    ALfloat WetGainHF[MAX_SENDS];
     ALuint rampLength;
     ALuint frequency;
     ALint Looping,State;
@@ -851,69 +888,22 @@ another_source:
         }
 
         CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE,
-                         DrySend, WetSend, &Pitch, &DryGainHF, WetGainHF);
+                         DrySend, WetSend, &Pitch, DryFilter, WetFilter);
         Pitch = (Pitch*ALBuffer->frequency) / frequency;
 
-        if(Channels == 1)
+        if(DuplicateStereo && Channels == 2)
         {
-            ALfloat cw, a, g;
-
-            /* Update filter coefficients. Calculations based on the I3DL2
-             * spec. */
-            cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / frequency);
-            /* We use four chained one-pole filters, so we need to take the
-             * fourth root of the squared gain, which is the same as the square
-             * root of the base gain. */
-            /* Be careful with gains < 0.0001, as that causes the coefficient
-             * head towards 1, which will flatten the signal */
-            g = aluSqrt(__max(DryGainHF, 0.0001f));
-            a = 0.0f;
-            if(g < 0.9999f) /* 1-epsilon */
-                a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
-                    (1 - g);
-            DryFilter->coeff = a;
-
-            for(i = 0;i < MAX_SENDS;i++)
-            {
-                /* The wet path uses two chained one-pole filters, so take the
-                 * base gain (square root of the squared gain) */
-                g = __max(WetGainHF[i], 0.01f);
-                a = 0.0f;
-                if(g < 0.9999f) /* 1-epsilon */
-                    a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
-                        (1 - g);
-                WetFilter[i]->coeff = a;
-            }
+            Matrix[FRONT_LEFT][SIDE_LEFT]   = 1.0f;
+            Matrix[FRONT_RIGHT][SIDE_RIGHT] = 1.0f;
+            Matrix[FRONT_LEFT][BACK_LEFT]   = 1.0f;
+            Matrix[FRONT_RIGHT][BACK_RIGHT] = 1.0f;
         }
-        else
+        else if(DuplicateStereo)
         {
-            ALfloat cw, a, g;
-
-            /* Multi-channel sources use two chained one-pole filters */
-            cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / frequency);
-            g = __max(DryGainHF, 0.01f);
-            a = 0.0f;
-            if(g < 0.9999f) /* 1-epsilon */
-                a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
-                    (1 - g);
-            DryFilter->coeff = a;
-            for(i = 0;i < MAX_SENDS;i++)
-                WetFilter[i]->coeff = 0.0f;
-
-            if(DuplicateStereo && Channels == 2)
-            {
-                Matrix[FRONT_LEFT][SIDE_LEFT]   = 1.0f;
-                Matrix[FRONT_RIGHT][SIDE_RIGHT] = 1.0f;
-                Matrix[FRONT_LEFT][BACK_LEFT]   = 1.0f;
-                Matrix[FRONT_RIGHT][BACK_RIGHT] = 1.0f;
-            }
-            else if(DuplicateStereo)
-            {
-                Matrix[FRONT_LEFT][SIDE_LEFT]   = 0.0f;
-                Matrix[FRONT_RIGHT][SIDE_RIGHT] = 0.0f;
-                Matrix[FRONT_LEFT][BACK_LEFT]   = 0.0f;
-                Matrix[FRONT_RIGHT][BACK_RIGHT] = 0.0f;
-            }
+            Matrix[FRONT_LEFT][SIDE_LEFT]   = 0.0f;
+            Matrix[FRONT_RIGHT][SIDE_RIGHT] = 0.0f;
+            Matrix[FRONT_LEFT][BACK_LEFT]   = 0.0f;
+            Matrix[FRONT_RIGHT][BACK_RIGHT] = 0.0f;
         }
 
         /* Compute the gain steps for each output channel */

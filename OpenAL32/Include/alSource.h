@@ -66,8 +66,6 @@ typedef struct ALsource
     struct {
         struct ALeffectslot *Slot;
         ALfilter WetFilter;
-        FILTER iirFilter;
-        ALfloat history[2];
     } Send[MAX_SENDS];
 
     ALboolean DryGainHFAuto;
@@ -75,17 +73,9 @@ typedef struct ALsource
     ALboolean WetGainHFAuto;
     ALfloat   OuterGainHF;
 
-    FILTER iirFilter;
-    ALfloat history[OUTPUTCHANNELS*2];
-
     ALfloat AirAbsorptionFactor;
-
     ALfloat RoomRolloffFactor;
-
     ALfloat DopplerFactor;
-
-    // Index to itself
-    ALuint source;
 
     ALint  lOffset;
     ALint  lOffsetType;
@@ -97,6 +87,24 @@ typedef struct ALsource
     ALfloat DryGains[OUTPUTCHANNELS];
     ALfloat WetGains[MAX_SENDS];
     ALboolean FirstStart;
+
+    // Current target parameters used for mixing
+    struct {
+        ALfloat DryGains[OUTPUTCHANNELS];
+        ALfloat WetGains[MAX_SENDS];
+        ALfloat Pitch;
+
+        struct {
+            FILTER iirFilter;
+            ALfloat history[2];
+        } Send[MAX_SENDS];
+
+        FILTER iirFilter;
+        ALfloat history[OUTPUTCHANNELS*2];
+    } Params;
+
+    // Index to itself
+    ALuint source;
 
     struct ALsource *next;
 } ALsource;

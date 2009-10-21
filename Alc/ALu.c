@@ -823,7 +823,7 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     static float DummyBuffer[BUFFERSIZE];
     ALfloat *WetBuffer[MAX_SENDS];
     ALfloat (*Matrix)[OUTPUTCHANNELS] = ALContext->ChannelMatrix;
-    ALfloat DrySend[OUTPUTCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    ALfloat DrySend[OUTPUTCHANNELS];
     ALfloat dryGainStep[OUTPUTCHANNELS];
     ALfloat wetGainStep[MAX_SENDS];
     ALuint i, j, k, out;
@@ -879,18 +879,19 @@ another_source:
             goto skipmix;
 
         /* Get source info */
-        DryFilter = &ALSource->iirFilter;
+        DryFilter = &ALSource->Params.iirFilter;
         for(i = 0;i < MAX_SENDS;i++)
         {
-            WetFilter[i] = &ALSource->Send[i].iirFilter;
+            WetFilter[i] = &ALSource->Params.Send[i].iirFilter;
             WetBuffer[i] = (ALSource->Send[i].Slot ?
                             ALSource->Send[i].Slot->WetBuffer :
                             DummyBuffer);
         }
 
         CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE,
-                         DrySend, WetSend, &Pitch, DryFilter, WetFilter);
-        Pitch = (Pitch*ALBuffer->frequency) / frequency;
+                         ALSource->Params.DryGains, ALSource->Params.WetGains,
+                         &ALSource->Params.Pitch, DryFilter, WetFilter);
+        Pitch = (ALSource->Params.Pitch*ALBuffer->frequency) / frequency;
 
         if(DuplicateStereo && Channels == 2)
         {
@@ -912,20 +913,28 @@ another_source:
         {
             ALSource->FirstStart = AL_FALSE;
             for(i = 0;i < OUTPUTCHANNELS;i++)
+            {
+                DrySend[i] = ALSource->Params.DryGains[i];
                 dryGainStep[i] = 0.0f;
+            }
             for(i = 0;i < MAX_SENDS;i++)
+            {
+                WetSend[i] = ALSource->Params.WetGains[i];
                 wetGainStep[i] = 0.0f;
+            }
         }
         else
         {
             for(i = 0;i < OUTPUTCHANNELS;i++)
             {
-                dryGainStep[i] = (DrySend[i]-ALSource->DryGains[i]) / rampLength;
+                dryGainStep[i] = (ALSource->Params.DryGains[i]-
+                                  ALSource->DryGains[i]) / rampLength;
                 DrySend[i] = ALSource->DryGains[i];
             }
             for(i = 0;i < MAX_SENDS;i++)
             {
-                wetGainStep[i] = (WetSend[i]-ALSource->WetGains[i]) / rampLength;
+                wetGainStep[i] = (ALSource->Params.WetGains[i]-
+                                  ALSource->WetGains[i]) / rampLength;
                 WetSend[i] = ALSource->WetGains[i];
             }
         }

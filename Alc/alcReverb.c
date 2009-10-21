@@ -431,9 +431,6 @@ ALboolean VerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
         State->TotalLength = totalLength;
         State->SampleBuffer = temp;
 
-        for(index = 0; index < totalLength;index++)
-            State->SampleBuffer[index] = 0.0f;
-
         // All lines share a single sample buffer
         State->Delay.Mask = length[0] - 1;
         State->Delay.Line = &State->SampleBuffer[0];
@@ -465,6 +462,9 @@ ALboolean VerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
         State->Late.ApOffset[index] = (ALuint)(ALLPASS_LINE_LENGTH[index] *
                                                Device->Frequency);
     }
+
+    for(index = 0;index < State->TotalLength;index++)
+        State->SampleBuffer[index] = 0.0f;
 
     return AL_TRUE;
 }

@@ -88,7 +88,7 @@ ALvoid EchoDestroy(ALeffectState *effect)
 ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     ALechoState *state = (ALechoState*)effect;
-    ALuint maxlen;
+    ALuint maxlen, i;
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
@@ -99,7 +99,6 @@ ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     if(maxlen != state->BufferLength)
     {
         void *temp;
-        ALuint i;
 
         temp = realloc(state->SampleBuffer, maxlen * sizeof(ALfloat));
         if(!temp)
@@ -108,9 +107,9 @@ ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
             return AL_FALSE;
         }
         state->BufferLength = maxlen;
-        for(i = 0;i < state->BufferLength;i++)
-            state->SampleBuffer[i] = 0.0f;
     }
+    for(i = 0;i < state->BufferLength;i++)
+        state->SampleBuffer[i] = 0.0f;
 
     return AL_TRUE;
 }

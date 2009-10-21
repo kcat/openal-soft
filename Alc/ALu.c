@@ -857,7 +857,7 @@ another_source:
         ALuint DataPosFrac = 0;
         ALuint Buffer;
         ALbuffer *ALBuffer;
-        ALuint Channels;
+        ALuint Channels, Bytes;
         ALuint BufferSize;
         ALfloat Pitch;
 
@@ -868,8 +868,9 @@ another_source:
 
         Data      = ALBuffer->data;
         Channels  = aluChannelsFromFormat(ALBuffer->format);
+        Bytes     = aluBytesFromFormat(ALBuffer->format);
         DataSize  = ALBuffer->size;
-        DataSize /= Channels * aluBytesFromFormat(ALBuffer->format);
+        DataSize /= Channels * Bytes;
 
         DataPosInt = ALSource->position;
         DataPosFrac = ALSource->position_fraction;
@@ -957,7 +958,7 @@ another_source:
                 NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(BufferListItem->next->buffer);
                 if(NextBuf && NextBuf->data)
                 {
-                    ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*2));
+                    ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*Bytes));
                     memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
                 }
             }
@@ -966,12 +967,12 @@ another_source:
                 NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(ALSource->queue->buffer);
                 if(NextBuf && NextBuf->data)
                 {
-                    ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*2));
+                    ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*Bytes));
                     memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
                 }
             }
             else
-                memset(&Data[DataSize*Channels], 0, (ALBuffer->padding*Channels*2));
+                memset(&Data[DataSize*Channels], 0, (ALBuffer->padding*Channels*Bytes));
         }
         BufferSize = min(BufferSize, (SamplesToDo-j));
 

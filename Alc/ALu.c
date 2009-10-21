@@ -413,11 +413,8 @@ static __inline ALint aluCart2LUTpos(ALfloat re, ALfloat im)
     return pos%LUT_NUM;
 }
 
-static ALvoid CalcSourceParams(const ALCcontext *ALContext,
-                               const ALsource *ALSource, ALenum isMono,
-                               ALfloat *drysend, ALfloat *wetsend,
-                               ALfloat *pitch, FILTER *DryFilter,
-                               FILTER *WetFilter[MAX_SENDS])
+static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
+                               ALboolean isMono)
 {
     ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix;
     ALfloat Direction[3],Position[3],SourceToListener[3];
@@ -431,6 +428,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     ALfloat MetersPerUnit;
     ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DryGainHF = 1.0f;
+    ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat DirGain, AmbientGain;
     ALfloat length;
@@ -468,7 +466,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     if(isMono == AL_FALSE)
     {
         //1. Multi-channel buffers always play "normal"
-        pitch[0] = ALSource->flPitch;
+        ALSource->Params.Pitch = ALSource->flPitch;
 
         DryMix = SourceVolume;
         DryMix = __min(DryMix,MaxVolume);
@@ -482,17 +480,17 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 break;
         }
 
-        drysend[FRONT_LEFT]   = DryMix * ListenerGain;
-        drysend[FRONT_RIGHT]  = DryMix * ListenerGain;
-        drysend[SIDE_LEFT]    = DryMix * ListenerGain;
-        drysend[SIDE_RIGHT]   = DryMix * ListenerGain;
-        drysend[BACK_LEFT]    = DryMix * ListenerGain;
-        drysend[BACK_RIGHT]   = DryMix * ListenerGain;
-        drysend[FRONT_CENTER] = DryMix * ListenerGain;
-        drysend[BACK_CENTER]  = DryMix * ListenerGain;
-        drysend[LFE]          = DryMix * ListenerGain;
+        ALSource->Params.DryGains[FRONT_LEFT]   = DryMix * ListenerGain;
+        ALSource->Params.DryGains[FRONT_RIGHT]  = DryMix * ListenerGain;
+        ALSource->Params.DryGains[SIDE_LEFT]    = DryMix * ListenerGain;
+        ALSource->Params.DryGains[SIDE_RIGHT]   = DryMix * ListenerGain;
+        ALSource->Params.DryGains[BACK_LEFT]    = DryMix * ListenerGain;
+        ALSource->Params.DryGains[BACK_RIGHT]   = DryMix * ListenerGain;
+        ALSource->Params.DryGains[FRONT_CENTER] = DryMix * ListenerGain;
+        ALSource->Params.DryGains[BACK_CENTER]  = DryMix * ListenerGain;
+        ALSource->Params.DryGains[LFE]          = DryMix * ListenerGain;
         for(i = 0;i < MAX_SENDS;i++)
-            wetsend[i] = 0.0f;
+            ALSource->Params.WetGains[i] = 0.0f;
 
         /* Update filter coefficients. Calculations based on the I3DL2
          * spec. */
@@ -507,9 +505,9 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         if(g < 0.9999f) /* 1-epsilon */
             a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
                 (1 - g);
-        DryFilter->coeff = a;
+        ALSource->Params.iirFilter.coeff = a;
         for(i = 0;i < MAX_SENDS;i++)
-            WetFilter[i]->coeff = 0.0f;
+            ALSource->Params.Send[i].iirFilter.coeff = 0.0f;
 
         return;
     }
@@ -632,7 +630,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     {
         ALfloat WetMix = SourceVolume * RoomAttenuation[i];
         WetMix = __min(WetMix,MaxVolume);
-        wetsend[i] = __max(WetMix,MinVolume);
+        WetGain[i] = __max(WetMix,MinVolume);
         WetGainHF[i] = 1.0f;
     }
 
@@ -700,56 +698,56 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
                 flVLS = -flMaxVelocity + 1.0f;
         }
 
-        pitch[0] = ALSource->flPitch *
-                   ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /
-                   ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVSS));
+        ALSource->Params.Pitch = ALSource->flPitch *
+            ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /
+            ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVSS));
     }
     else
-        pitch[0] = ALSource->flPitch;
+        ALSource->Params.Pitch = ALSource->flPitch;
 
     for(i = 0;i < NumSends;i++)
     {
         if(ALSource->Send[i].Slot &&
            ALSource->Send[i].Slot->effect.type != AL_EFFECT_NULL)
         {
-            if(ALSource->WetGainAuto)
-                wetsend[i] *= ConeVolume;
-            if(ALSource->WetGainHFAuto)
-                WetGainHF[i] *= ConeHF;
-
             if(ALSource->Send[i].Slot->AuxSendAuto)
             {
+                if(ALSource->WetGainAuto)
+                    WetGain[i] *= ConeVolume;
+                if(ALSource->WetGainHFAuto)
+                    WetGainHF[i] *= ConeHF;
+
                 // Apply minimal attenuation in place of missing
                 // statistical reverb model.
-                wetsend[i] *= pow(DryMix, 1.0f / 2.0f);
+                WetGain[i] *= pow(DryMix, 1.0f / 2.0f);
             }
             else
             {
                 // If the slot's auxiliary send auto is off, the data sent to
                 // the effect slot is the same as the dry path, sans filter
                 // effects
-                wetsend[i] = DryMix;
+                WetGain[i] = DryMix;
                 WetGainHF[i] = DryGainHF;
             }
 
             switch(ALSource->Send[i].WetFilter.type)
             {
                 case AL_FILTER_LOWPASS:
-                    wetsend[i] *= ALSource->Send[i].WetFilter.Gain;
+                    WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
                     WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
                     break;
             }
-            wetsend[i] *= ListenerGain;
+            ALSource->Params.WetGains[i] = WetGain[i] * ListenerGain;
         }
         else
         {
-            wetsend[i] = 0.0f;
+            ALSource->Params.WetGains[i] = 0.0f;
             WetGainHF[i] = 1.0f;
         }
     }
     for(i = NumSends;i < MAX_SENDS;i++)
     {
-        wetsend[i] = 0.0f;
+        ALSource->Params.WetGains[i] = 0.0f;
         WetGainHF[i] = 1.0f;
     }
 
@@ -785,7 +783,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     for(s = 0; s < OUTPUTCHANNELS; s++)
     {
         ALfloat gain = SpeakerGain[s]*DirGain + AmbientGain;
-        drysend[s] = DryMix * gain;
+        ALSource->Params.DryGains[s] = DryMix * gain;
     }
 
     /* Update filter coefficients. */
@@ -798,7 +796,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
     if(g < 0.9999f) /* 1-epsilon */
         a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
             (1 - g);
-    DryFilter->coeff = a;
+    ALSource->Params.iirFilter.coeff = a;
 
     for(i = 0;i < NumSends;i++)
     {
@@ -809,7 +807,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext,
         if(g < 0.9999f) /* 1-epsilon */
             a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
                 (1 - g);
-        WetFilter[i]->coeff = a;
+        ALSource->Params.Send[i].iirFilter.coeff = a;
     }
 }
 
@@ -888,9 +886,7 @@ another_source:
                             DummyBuffer);
         }
 
-        CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE,
-                         ALSource->Params.DryGains, ALSource->Params.WetGains,
-                         &ALSource->Params.Pitch, DryFilter, WetFilter);
+        CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE);
         Pitch = (ALSource->Params.Pitch*ALBuffer->frequency) / frequency;
 
         if(DuplicateStereo && Channels == 2)

@@ -1149,7 +1149,6 @@ another_source:
                     {
                         /* alSourceStop */
                         ALSource->state = AL_STOPPED;
-                        ALSource->inuse = AL_FALSE;
                         ALSource->BuffersPlayed = ALSource->BuffersInQueue;
                         BufferListItem = ALSource->queue;
                         while(BufferListItem != NULL)
@@ -1165,8 +1164,6 @@ another_source:
                         /* alSourceRewind */
                         /* alSourcePlay */
                         ALSource->state = AL_PLAYING;
-                        ALSource->inuse = AL_TRUE;
-                        ALSource->play = AL_TRUE;
                         ALSource->BuffersPlayed = 0;
                         BufferListItem = ALSource->queue;
                         while(BufferListItem != NULL)
@@ -1395,7 +1392,6 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
                 ALbufferlistitem *BufferListItem;
 
                 source->state = AL_STOPPED;
-                source->inuse = AL_FALSE;
                 source->BuffersPlayed = source->BuffersInQueue;
                 BufferListItem = source->queue;
                 while(BufferListItem != NULL)

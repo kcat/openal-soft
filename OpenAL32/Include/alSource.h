@@ -51,8 +51,6 @@ typedef struct ALsource
 
     ALuint       ulBufferID;
 
-    ALboolean    inuse;
-    ALboolean    play;
     ALenum       state;
     ALuint       position;
     ALuint       position_fraction;

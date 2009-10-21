@@ -1320,8 +1320,6 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                     if(pSource->state != AL_PAUSED)
                     {
                         pSource->state = AL_PLAYING;
-                        pSource->inuse = AL_TRUE;
-                        pSource->play = AL_TRUE;
                         pSource->position = 0;
                         pSource->position_fraction = 0;
                         pSource->BuffersPlayed = 0;
@@ -1337,11 +1335,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                         }
                     }
                     else
-                    {
                         pSource->state = AL_PLAYING;
-                        pSource->inuse = AL_TRUE;
-                        pSource->play = AL_TRUE;
-                    }
 
                     // Check if an Offset has been set
                     if(pSource->lOffset)
@@ -1357,7 +1351,6 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                     if(!pContext->Device->Connected)
                     {
                         pSource->state = AL_STOPPED;
-                        pSource->inuse = AL_FALSE;
                         pSource->BuffersPlayed = pSource->BuffersInQueue;
                         ALBufferList = pSource->queue;
                         while(ALBufferList != NULL)
@@ -1428,10 +1421,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
             {
                 Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
                 if(Source->state == AL_PLAYING)
-                {
                     Source->state = AL_PAUSED;
-                    Source->inuse = AL_FALSE;
-                }
             }
         }
     }
@@ -1482,7 +1472,6 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
                 if(Source->state != AL_INITIAL)
                 {
                     Source->state = AL_STOPPED;
-                    Source->inuse = AL_FALSE;
                     Source->BuffersPlayed = Source->BuffersInQueue;
                     ALBufferListItem = Source->queue;
                     while(ALBufferListItem != NULL)
@@ -1542,7 +1531,6 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
                 if(Source->state != AL_INITIAL)
                 {
                     Source->state = AL_INITIAL;
-                    Source->inuse = AL_FALSE;
                     Source->position = 0;
                     Source->position_fraction = 0;
                     Source->BuffersPlayed = 0;

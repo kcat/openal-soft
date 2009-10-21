@@ -820,7 +820,7 @@ another_source:
         ALuint DataPosFrac = 0;
         ALuint Buffer;
         ALbuffer *ALBuffer;
-        ALuint Channels, Frequency;
+        ALuint Channels;
         ALuint BufferSize;
         ALfloat Pitch;
 
@@ -833,7 +833,6 @@ another_source:
         Channels  = aluChannelsFromFormat(ALBuffer->format);
         DataSize  = ALBuffer->size;
         DataSize /= Channels * aluBytesFromFormat(ALBuffer->format);
-        Frequency = ALBuffer->frequency;
 
         DataPosInt = ALSource->position;
         DataPosFrac = ALSource->position_fraction;
@@ -853,7 +852,7 @@ another_source:
 
         CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE,
                          DrySend, WetSend, &Pitch, &DryGainHF, WetGainHF);
-        Pitch = (Pitch*Frequency) / frequency;
+        Pitch = (Pitch*ALBuffer->frequency) / frequency;
 
         if(Channels == 1)
         {

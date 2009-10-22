@@ -15,12 +15,19 @@ typedef struct ALbuffer
 {
     ALenum   format;
     ALenum   eOriginalFormat;
+
     ALshort *data;
     ALsizei  size;
+
     ALsizei  frequency;
     ALsizei  padding;
     ALenum   state;
+
     ALuint   refcount; // Number of sources using this buffer (deletion can only occur when this is 0)
+
+    // Index to itself
+    ALuint buffer;
+
     struct ALbuffer *next;
 } ALbuffer;
 

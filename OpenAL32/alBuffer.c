@@ -106,6 +106,8 @@ ALAPI ALvoid ALAPIENTRY alGenBuffers(ALsizei n,ALuint *puiBuffers)
                 }
 
                 puiBuffers[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
+                (*list)->buffer = puiBuffers[i];
+
                 (*list)->state = UNUSED;
                 device->BufferCount++;
                 i++;

@@ -142,8 +142,8 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
                     {
                         ALBufferList = ALSource->queue;
                         // Decrement buffer's reference counter
-                        if(ALBufferList->buffer != 0)
-                            ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->refcount--;
+                        if(ALBufferList->buffer != NULL)
+                            ALBufferList->buffer->refcount--;
                         // Update queue to point to next element in list
                         ALSource->queue = ALBufferList->next;
                         // Release memory allocated for buffer list item
@@ -524,14 +524,16 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                 {
                     if(alIsBuffer(lValue))
                     {
+                        ALbuffer *buffer = NULL;
+
                         // Remove all elements in the queue
                         while(pSource->queue != NULL)
                         {
                             pALBufferListItem = pSource->queue;
                             pSource->queue = pALBufferListItem->next;
                             // Decrement reference counter for buffer
-                            if (pALBufferListItem->buffer)
-                                ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(pALBufferListItem->buffer)))->refcount--;
+                            if(pALBufferListItem->buffer)
+                                pALBufferListItem->buffer->refcount--;
                             // Release memory for buffer list item
                             free(pALBufferListItem);
                             // Decrement the number of buffers in the queue
@@ -541,12 +543,14 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         // Add the buffer to the queue (as long as it is NOT the NULL buffer)
                         if(lValue != 0)
                         {
+                            buffer = (ALbuffer*)(ALTHUNK_LOOKUPENTRY(lValue));
+
                             // Source is now in STATIC mode
                             pSource->lSourceType = AL_STATIC;
 
                             // Add the selected buffer to the queue
                             pALBufferListItem = malloc(sizeof(ALbufferlistitem));
-                            pALBufferListItem->buffer = lValue;
+                            pALBufferListItem->buffer = buffer;
                             pALBufferListItem->bufferstate = PENDING;
                             pALBufferListItem->flag = 0;
                             pALBufferListItem->next = NULL;
@@ -555,7 +559,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             pSource->BuffersInQueue = 1;
 
                             // Increment reference counter for buffer
-                            ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(lValue)))->refcount++;
+                            buffer->refcount++;
                         }
                         else
                         {
@@ -565,7 +569,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         }
 
                         // Update AL_BUFFER parameter
-                        pSource->ulBufferID = lValue;
+                        pSource->Buffer = buffer;
                     }
                     else
                         alSetError(AL_INVALID_VALUE);
@@ -1050,7 +1054,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                     break;
 
                 case AL_BUFFER:
-                    *plValue = pSource->ulBufferID;
+                    *plValue = (pSource->Buffer ? pSource->Buffer->buffer : 0);
                     break;
 
                 case AL_SOURCE_STATE:
@@ -1302,7 +1306,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                 ALBufferList = pSource->queue;
                 while(ALBufferList)
                 {
-                    if(ALBufferList->buffer != 0 && ((ALbuffer*)ALTHUNK_LOOKUPENTRY(ALBufferList->buffer))->size)
+                    if(ALBufferList->buffer != NULL && ALBufferList->buffer->size)
                     {
                         bPlay = AL_TRUE;
                         break;
@@ -1324,7 +1328,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                         pSource->position_fraction = 0;
                         pSource->BuffersPlayed = 0;
 
-                        pSource->ulBufferID = pSource->queue->buffer;
+                        pSource->Buffer = pSource->queue->buffer;
 
                         // Make sure all the Buffers in the queue are marked as PENDING
                         ALBufferList = pSource->queue;
@@ -1541,7 +1545,7 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
                         ALBufferListItem = ALBufferListItem->next;
                     }
                     if(Source->queue)
-                        Source->ulBufferID = Source->queue->buffer;
+                        Source->Buffer = Source->queue->buffer;
                 }
                 Source->lOffset = 0;
             }
@@ -1593,8 +1597,8 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
             {
                 if (ALBufferList->buffer)
                 {
-                    iFrequency = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->frequency;
-                    iFormat = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->format;
+                    iFrequency = ALBufferList->buffer->frequency;
+                    iFormat = ALBufferList->buffer->format;
                     break;
                 }
                 ALBufferList = ALBufferList->next;
@@ -1602,30 +1606,27 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
 
             for(i = 0; i < n; i++)
             {
-                if(alIsBuffer(buffers[i]))
-                {
-                    if(buffers[i])
-                    {
-                        if((iFrequency == -1) && (iFormat == -1))
-                        {
-                            iFrequency = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->frequency;
-                            iFormat = ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->format;
-                        }
-                        else
-                        {
-                            if((iFrequency != ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->frequency) ||
-                               (iFormat != ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->format))
-                            {
-                                alSetError(AL_INVALID_OPERATION);
-                                bBuffersValid = AL_FALSE;
-                                break;
-                            }
-                        }
-                    }
-                }
-                else
+                ALbuffer *buffer;
+
+                if(!alIsBuffer(buffers[i]))
                 {
                     alSetError(AL_INVALID_NAME);
+                    bBuffersValid = AL_FALSE;
+                    break;
+                }
+                if(!buffers[i])
+                    continue;
+
+                buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[i]);
+                if(iFrequency == -1 && iFormat == -1)
+                {
+                    iFrequency = buffer->frequency;
+                    iFormat = buffer->format;
+                }
+                else if(iFrequency != buffer->frequency ||
+                        iFormat != buffer->format)
+                {
+                    alSetError(AL_INVALID_OPERATION);
                     bBuffersValid = AL_FALSE;
                     break;
                 }
@@ -1633,33 +1634,39 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
 
             if(bBuffersValid)
             {
+                ALbuffer *buffer = NULL;
+
                 // Change Source Type
                 ALSource->lSourceType = AL_STREAMING;
 
+                if(buffers[0])
+                    buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[0]);
+
                 // All buffers are valid - so add them to the list
                 ALBufferListStart = malloc(sizeof(ALbufferlistitem));
-                ALBufferListStart->buffer = buffers[0];
+                ALBufferListStart->buffer = buffer;
                 ALBufferListStart->bufferstate = PENDING;
                 ALBufferListStart->flag = 0;
                 ALBufferListStart->next = NULL;
 
                 // Increment reference counter for buffer
-                if(buffers[0])
-                    ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[0])))->refcount++;
+                if(buffer) buffer->refcount++;
 
                 ALBufferList = ALBufferListStart;
 
                 for(i = 1; i < n; i++)
                 {
+                    if(buffers[i])
+                        buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[i]);
+
                     ALBufferList->next = malloc(sizeof(ALbufferlistitem));
-                    ALBufferList->next->buffer = buffers[i];
+                    ALBufferList->next->buffer = buffer;
                     ALBufferList->next->bufferstate = PENDING;
                     ALBufferList->next->flag = 0;
                     ALBufferList->next->next = NULL;
 
                     // Increment reference counter for buffer
-                    if(buffers[i])
-                        ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(buffers[i])))->refcount++;
+                    if(buffer) buffer->refcount++;
 
                     ALBufferList = ALBufferList->next;
                 }
@@ -1668,7 +1675,7 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
                 {
                     ALSource->queue = ALBufferListStart;
                     // Update Current Buffer
-                    ALSource->ulBufferID = ALBufferListStart->buffer;
+                    ALSource->Buffer = ALBufferListStart->buffer;
                 }
                 else
                 {
@@ -1708,7 +1715,6 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
     ALsource *ALSource;
     ALsizei i;
     ALbufferlistitem *ALBufferList;
-    ALuint BufferID;
     ALboolean bBuffersProcessed;
 
     if (n == 0)
@@ -1747,10 +1753,10 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
 
                 ALSource->queue = ALBufferList->next;
                 // Record name of buffer
-                buffers[i] = ALBufferList->buffer;
+                buffers[i] = ALBufferList->buffer->buffer;
                 // Decrement buffer reference counter
                 if(ALBufferList->buffer)
-                    ((ALbuffer*)(ALTHUNK_LOOKUPENTRY(ALBufferList->buffer)))->refcount--;
+                    ALBufferList->buffer->refcount--;
 
                 // Release memory for buffer list item
                 free(ALBufferList);
@@ -1759,12 +1765,10 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
 
             if(ALSource->state != AL_PLAYING)
             {
-                if (ALSource->queue)
-                    BufferID = ALSource->queue->buffer;
+                if(ALSource->queue)
+                    ALSource->Buffer = ALSource->queue->buffer;
                 else
-                    BufferID = 0;
-
-                ALSource->ulBufferID = BufferID;
+                    ALSource->Buffer = NULL;
             }
 
             if((ALuint)n > ALSource->BuffersPlayed)
@@ -1824,7 +1828,7 @@ static ALvoid InitSourceParams(ALCcontext *Context, ALsource *pSource)
     pSource->state = AL_INITIAL;
     pSource->lSourceType = AL_UNDETERMINED;
 
-    pSource->ulBufferID= 0;
+    pSource->Buffer = NULL;
 }
 
 
@@ -1845,9 +1849,9 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
     ALboolean    bReturn = AL_TRUE;
     ALint        lTotalBufferDataSize;
 
-    if (((pSource->state == AL_PLAYING) || (pSource->state == AL_PAUSED)) && (pSource->ulBufferID))
+    if((pSource->state == AL_PLAYING || pSource->state == AL_PAUSED) && pSource->Buffer)
     {
-        pBuffer = ALTHUNK_LOOKUPENTRY(pSource->ulBufferID);
+        pBuffer = pSource->Buffer;
         // Get Current Buffer Size and frequency (in milliseconds)
         flBufferFreq = (ALfloat)pBuffer->frequency;
         eOriginalFormat = pBuffer->eOriginalFormat;
@@ -1857,9 +1861,9 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
         readPos = pSource->position * lChannels * 2; // NOTE : This is the byte offset into the *current* buffer
         // Add byte length of any processed buffers in the queue
         pBufferList = pSource->queue;
-        while ((pBufferList) && (pBufferList->bufferstate == PROCESSED))
+        while(pBufferList && pBufferList->bufferstate == PROCESSED)
         {
-            readPos += ((ALbuffer*)ALTHUNK_LOOKUPENTRY(pBufferList->buffer))->size;
+            readPos += pBufferList->buffer->size;
             pBufferList = pBufferList->next;
         }
 
@@ -1873,7 +1877,7 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
         while (pBufferList)
         {
             if (pBufferList->buffer)
-                lTotalBufferDataSize += ((ALbuffer*)ALTHUNK_LOOKUPENTRY(pBufferList->buffer))->size;
+                lTotalBufferDataSize += pBufferList->buffer->size;
             pBufferList = pBufferList->next;
         }
 
@@ -1992,7 +1996,7 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
         pSource->BuffersPlayed = 0;
         while (pBufferList)
         {
-            pBuffer = ALTHUNK_LOOKUPENTRY(pBufferList->buffer);
+            pBuffer = pBufferList->buffer;
             lBufferSize = pBuffer ? pBuffer->size : 0;
 
             if ((lTotalBufferSize + lBufferSize) <= lByteOffset)
@@ -2009,8 +2013,8 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
                 // Offset is within this buffer
                 pBufferList->bufferstate = PENDING;
 
-                // Set Current Buffer ID
-                pSource->ulBufferID = pBufferList->buffer;
+                // Set Current Buffer
+                pSource->Buffer = pBufferList->buffer;
 
                 // SW Mixer Positions are in Samples
                 pSource->position = (lByteOffset - lTotalBufferSize) /
@@ -2063,7 +2067,7 @@ static ALint GetByteOffset(ALsource *pSource)
     {
         if (pBufferList->buffer)
         {
-            pBuffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(pBufferList->buffer);
+            pBuffer = pBufferList->buffer;
             break;
         }
         pBufferList = pBufferList->next;
@@ -2131,7 +2135,7 @@ static ALint GetByteOffset(ALsource *pSource)
         while (pBufferList)
         {
             if (pBufferList->buffer)
-                lTotalBufferDataSize += ((ALbuffer*)ALTHUNK_LOOKUPENTRY(pBufferList->buffer))->size;
+                lTotalBufferDataSize += pBufferList->buffer->size;
             pBufferList = pBufferList->next;
         }
 

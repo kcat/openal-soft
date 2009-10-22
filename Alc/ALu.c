@@ -853,16 +853,14 @@ another_source:
         ALuint DataSize = 0;
         ALuint DataPosInt = 0;
         ALuint DataPosFrac = 0;
-        ALuint Buffer;
         ALbuffer *ALBuffer;
         ALuint Channels, Bytes;
         ALuint BufferSize;
         ALfloat Pitch;
 
         /* Get buffer info */
-        if(!(Buffer = ALSource->ulBufferID))
+        if(!(ALBuffer = ALSource->Buffer))
             goto skipmix;
-        ALBuffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(Buffer);
 
         Data      = ALBuffer->data;
         Channels  = aluChannelsFromFormat(ALBuffer->format);
@@ -960,7 +958,7 @@ another_source:
 
             if(BufferListItem->next)
             {
-                NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(BufferListItem->next->buffer);
+                NextBuf = BufferListItem->next->buffer;
                 if(NextBuf && NextBuf->data)
                 {
                     ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*Bytes));
@@ -969,7 +967,7 @@ another_source:
             }
             else if(ALSource->bLooping)
             {
-                NextBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(ALSource->queue->buffer);
+                NextBuf = ALSource->queue->buffer;
                 if(NextBuf && NextBuf->data)
                 {
                     ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*Bytes));
@@ -1122,7 +1120,7 @@ another_source:
 
     skipmix:
         /* Handle looping sources */
-        if(!Buffer || DataPosInt >= DataSize)
+        if(!ALBuffer || DataPosInt >= DataSize)
         {
             /* Queueing */
             if(ALSource->queue)
@@ -1138,7 +1136,7 @@ another_source:
                         BufferListItem = BufferListItem->next;
                     }
                     if(BufferListItem)
-                        ALSource->ulBufferID = BufferListItem->buffer;
+                        ALSource->Buffer = BufferListItem->buffer;
                     ALSource->position = DataPosInt-DataSize;
                     ALSource->position_fraction = DataPosFrac;
                     ALSource->BuffersPlayed++;
@@ -1171,7 +1169,7 @@ another_source:
                             BufferListItem->bufferstate = PENDING;
                             BufferListItem = BufferListItem->next;
                         }
-                        ALSource->ulBufferID = ALSource->queue->buffer;
+                        ALSource->Buffer = ALSource->queue->buffer;
 
                         if(ALSource->BuffersInQueue == 1)
                             ALSource->position = DataPosInt%DataSize;

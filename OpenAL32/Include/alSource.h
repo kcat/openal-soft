@@ -24,7 +24,7 @@ extern "C" {
 
 typedef struct ALbufferlistitem
 {
-    ALuint                   buffer;
+    struct ALbuffer         *buffer;
     ALuint                   bufferstate;
     ALuint                   flag;
     struct ALbufferlistitem *next;
@@ -49,11 +49,11 @@ typedef struct ALsource
     ALboolean    bLooping;
     ALenum       DistanceModel;
 
-    ALuint       ulBufferID;
-
     ALenum       state;
     ALuint       position;
     ALuint       position_fraction;
+
+    struct ALbuffer *Buffer;
 
     struct ALbufferlistitem *queue; // Linked list of buffers in queue
     ALuint       BuffersInQueue;    // Number of buffers in queue

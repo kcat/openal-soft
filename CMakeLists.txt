@@ -213,18 +213,23 @@ IF(NOT HAVE_WINDOWS_H)
         MESSAGE(FATAL_ERROR "No sleep function found!")
     ENDIF()
 
+    CHECK_C_COMPILER_FLAG(-pthread HAVE_PTHREAD)
+    IF(HAVE_PTHREAD)
+        ADD_DEFINITIONS(-pthread)
+        SET(EXTRA_LIBS ${EXTRA_LIBS} -pthread)
+    ENDIF()
+
     # We need pthreads outside of Windows
     CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD_H)
     IF(NOT HAVE_PTHREAD_H)
         MESSAGE(FATAL_ERROR "PThreads is required for non-Windows builds!")
     ENDIF()
-
     # Some systems need pthread_np.h to get recursive mutexes
     CHECK_INCLUDE_FILES("pthread.h;pthread_np.h" HAVE_PTHREAD_NP_H)
 
     # _GNU_SOURCE is needed on some systems for extra attributes, and
     # _REENTRANT is needed for libc thread-safety
-    ADD_DEFINITIONS(-D_GNU_SOURCE=1 -D_REENTRANT)
+    ADD_DEFINITIONS(-D_GNU_SOURCE=1)
     CHECK_LIBRARY_EXISTS(pthread pthread_create "" HAVE_LIBPTHREAD)
     IF(HAVE_LIBPTHREAD)
         SET(EXTRA_LIBS pthread ${EXTRA_LIBS})

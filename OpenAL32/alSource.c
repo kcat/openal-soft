@@ -2150,10 +2150,31 @@ static ALint GetByteOffset(ALsource *pSource)
 
 ALvoid ReleaseALSources(ALCcontext *Context)
 {
+    ALuint j;
+
     while(Context->Source)
     {
         ALsource *temp = Context->Source;
-        Context->Source = Context->Source->next;
+        Context->Source = temp->next;
+
+        // For each buffer in the source's queue, decrement its reference counter and remove it
+        while(temp->queue != NULL)
+        {
+            ALbufferlistitem *ALBufferList = temp->queue;
+            // Decrement buffer's reference counter
+            if(ALBufferList->buffer != NULL)
+                ALBufferList->buffer->refcount--;
+            // Update queue to point to next element in list
+            temp->queue = ALBufferList->next;
+            // Release memory allocated for buffer list item
+            free(ALBufferList);
+        }
+
+        for(j = 0;j < MAX_SENDS;++j)
+        {
+            if(temp->Send[j].Slot)
+                temp->Send[j].Slot->refcount--;
+        }
 
         // Release source structure
         ALTHUNK_REMOVEENTRY(temp->source);

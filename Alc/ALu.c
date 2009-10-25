@@ -832,10 +832,11 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     FILTER *DryFilter, *WetFilter[MAX_SENDS];
     ALfloat WetSend[MAX_SENDS];
     ALuint rampLength;
-    ALuint frequency;
+    ALuint DeviceFreq;
     ALint increment;
     ALuint DataPosInt, DataPosFrac;
     ALuint Channels, Bytes;
+    ALuint Frequency;
     ALuint BuffersPlayed;
     ALfloat Pitch;
     ALenum State;
@@ -843,9 +844,9 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     if(!(ALSource=ALContext->Source))
         return;
 
-    frequency = ALContext->Device->Frequency;
+    DeviceFreq = ALContext->Device->Frequency;
 
-    rampLength = frequency * MIN_RAMP_LENGTH / 1000;
+    rampLength = DeviceFreq * MIN_RAMP_LENGTH / 1000;
     rampLength = max(rampLength, SamplesToDo);
 
 another_source:
@@ -858,18 +859,33 @@ another_source:
     }
     j = 0;
 
+    /* Find buffer format */
+    Frequency = 0;
+    Channels = 0;
+    Bytes = 0;
+    BufferListItem = ALSource->queue;
+    while(BufferListItem != NULL)
+    {
+        ALbuffer *ALBuffer;
+        if((ALBuffer=BufferListItem->buffer) != NULL)
+        {
+            Channels  = aluChannelsFromFormat(ALBuffer->format);
+            Bytes     = aluBytesFromFormat(ALBuffer->format);
+            Frequency = ALBuffer->frequency;
+            break;
+        }
+        BufferListItem = BufferListItem->next;
+    }
+
     /* Get source info */
     BuffersPlayed = ALSource->BuffersPlayed;
     DataPosInt    = ALSource->position;
     DataPosFrac   = ALSource->position_fraction;
 
-    Channels = aluChannelsFromFormat(ALSource->Format);
-    Bytes    = aluBytesFromFormat(ALSource->Format);
-
     CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE);
 
     /* Compute 18.14 fixed point step */
-    Pitch = (ALSource->Params.Pitch*ALSource->Frequency) / frequency;
+    Pitch = (ALSource->Params.Pitch*Frequency) / DeviceFreq;
     if(Pitch > (float)MAX_PITCH)  Pitch = (float)MAX_PITCH;
     increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
     if(increment <= 0)  increment = (1<<FRACTIONBITS);
@@ -914,6 +930,7 @@ another_source:
         Matrix[FRONT_RIGHT][BACK_RIGHT] = 0.0f;
     }
 
+    /* Get current buffer queue item */
     BufferListItem = ALSource->queue;
     for(i = 0;i < BuffersPlayed && BufferListItem;i++)
         BufferListItem = BufferListItem->next;

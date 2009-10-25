@@ -535,6 +535,9 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             // Source is now in STATIC mode
                             pSource->lSourceType = AL_STATIC;
 
+                            pSource->Format    = buffer->format;
+                            pSource->Frequency = buffer->frequency;
+
                             // Add the selected buffer to the queue
                             pALBufferListItem = malloc(sizeof(ALbufferlistitem));
                             pALBufferListItem->buffer = buffer;
@@ -1585,6 +1588,9 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
 
                 // Change Source Type
                 ALSource->lSourceType = AL_STREAMING;
+
+                ALSource->Format    = iFormat;
+                ALSource->Frequency = iFrequency;
 
                 if(buffers[0])
                     buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[0]);

@@ -52,6 +52,8 @@ typedef struct ALsource
     ALuint       position_fraction;
 
     struct ALbuffer *Buffer;
+    ALenum       Format;
+    ALuint       Frequency;
 
     struct ALbufferlistitem *queue; // Linked list of buffers in queue
     ALuint       BuffersInQueue;    // Number of buffers in queue

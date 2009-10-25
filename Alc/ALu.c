@@ -835,8 +835,9 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALuint frequency;
     ALint increment;
     ALuint DataPosInt, DataPosFrac;
-    ALboolean FirstStart;
+    ALuint Channels, Bytes;
     ALuint BuffersPlayed;
+    ALfloat Pitch;
     ALenum State;
 
     if(!(ALSource=ALContext->Source))
@@ -861,12 +862,30 @@ another_source:
     BuffersPlayed = ALSource->BuffersPlayed;
     DataPosInt    = ALSource->position;
     DataPosFrac   = ALSource->position_fraction;
-    FirstStart    = ALSource->FirstStart;
 
-    for(i = 0;i < OUTPUTCHANNELS;i++)
-        DrySend[i] = ALSource->DryGains[i];
-    for(i = 0;i < MAX_SENDS;i++)
-        WetSend[i] = ALSource->WetGains[i];
+    Channels = aluChannelsFromFormat(ALSource->Format);
+    Bytes    = aluBytesFromFormat(ALSource->Format);
+
+    CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE);
+    Pitch = (ALSource->Params.Pitch*ALSource->Frequency) / frequency;
+    if(Pitch > (float)MAX_PITCH)
+        Pitch = (float)MAX_PITCH;
+
+    /* Compute the gain steps for each output channel */
+    if(ALSource->FirstStart)
+    {
+        for(i = 0;i < OUTPUTCHANNELS;i++)
+            DrySend[i] = ALSource->Params.DryGains[i];
+        for(i = 0;i < MAX_SENDS;i++)
+            WetSend[i] = ALSource->Params.WetGains[i];
+    }
+    else
+    {
+        for(i = 0;i < OUTPUTCHANNELS;i++)
+            DrySend[i] = ALSource->DryGains[i];
+        for(i = 0;i < MAX_SENDS;i++)
+            WetSend[i] = ALSource->WetGains[i];
+    }
 
     DryFilter = &ALSource->Params.iirFilter;
     for(i = 0;i < MAX_SENDS;i++)
@@ -886,53 +905,27 @@ another_source:
         ALuint DataSize = 0;
         ALbuffer *ALBuffer;
         ALshort *Data;
-        ALuint Channels, Bytes;
         ALuint BufferSize;
-        ALfloat Pitch;
 
         /* Get buffer info */
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
             Data      = ALBuffer->data;
-            Channels  = aluChannelsFromFormat(ALBuffer->format);
-            Bytes     = aluBytesFromFormat(ALBuffer->format);
             DataSize  = ALBuffer->size;
             DataSize /= Channels * Bytes;
         }
         if(DataPosInt >= DataSize)
             goto skipmix;
 
-        CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE);
-        Pitch = (ALSource->Params.Pitch*ALBuffer->frequency) / frequency;
-
         /* Compute the gain steps for each output channel */
-        if(FirstStart)
-        {
-            FirstStart = AL_FALSE;
-            for(i = 0;i < OUTPUTCHANNELS;i++)
-            {
-                DrySend[i] = ALSource->Params.DryGains[i];
-                dryGainStep[i] = 0.0f;
-            }
-            for(i = 0;i < MAX_SENDS;i++)
-            {
-                WetSend[i] = ALSource->Params.WetGains[i];
-                wetGainStep[i] = 0.0f;
-            }
-        }
-        else
-        {
-            for(i = 0;i < OUTPUTCHANNELS;i++)
-                dryGainStep[i] = (ALSource->Params.DryGains[i]-
-                                  DrySend[i]) / rampLength;
-            for(i = 0;i < MAX_SENDS;i++)
-                wetGainStep[i] = (ALSource->Params.WetGains[i]-
-                                  WetSend[i]) / rampLength;
-        }
+        for(i = 0;i < OUTPUTCHANNELS;i++)
+            dryGainStep[i] = (ALSource->Params.DryGains[i]-
+                              DrySend[i]) / rampLength;
+        for(i = 0;i < MAX_SENDS;i++)
+            wetGainStep[i] = (ALSource->Params.WetGains[i]-
+                              WetSend[i]) / rampLength;
 
         /* Compute 18.14 fixed point step */
-        if(Pitch > (float)MAX_PITCH)
-            Pitch = (float)MAX_PITCH;
         increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
         if(increment <= 0)
             increment = (1<<FRACTIONBITS);
@@ -1158,7 +1151,7 @@ another_source:
     for(i = 0;i < MAX_SENDS;i++)
         ALSource->WetGains[i] = WetSend[i];
 
-    ALSource->FirstStart = FirstStart;
+    ALSource->FirstStart = AL_FALSE;
 
     if((ALSource=ALSource->next) != NULL)
         goto another_source;

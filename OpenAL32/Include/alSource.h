@@ -25,8 +25,6 @@ extern "C" {
 typedef struct ALbufferlistitem
 {
     struct ALbuffer         *buffer;
-    ALuint                   bufferstate;
-    ALuint                   flag;
     struct ALbufferlistitem *next;
 } ALbufferlistitem;
 

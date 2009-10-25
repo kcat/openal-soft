@@ -1130,11 +1130,7 @@ another_source:
                 {
                     BufferListItem = ALSource->queue;
                     for(i = 0;i <= ALSource->BuffersPlayed && BufferListItem;i++)
-                    {
-                        if(!Looping)
-                            BufferListItem->bufferstate = PROCESSED;
                         BufferListItem = BufferListItem->next;
-                    }
                     if(BufferListItem)
                         ALSource->Buffer = BufferListItem->buffer;
                     ALSource->position = DataPosInt-DataSize;
@@ -1148,12 +1144,6 @@ another_source:
                         /* alSourceStop */
                         ALSource->state = AL_STOPPED;
                         ALSource->BuffersPlayed = ALSource->BuffersInQueue;
-                        BufferListItem = ALSource->queue;
-                        while(BufferListItem != NULL)
-                        {
-                            BufferListItem->bufferstate = PROCESSED;
-                            BufferListItem = BufferListItem->next;
-                        }
                         ALSource->position = 0;
                         ALSource->position_fraction = 0;
                     }
@@ -1163,12 +1153,6 @@ another_source:
                         /* alSourcePlay */
                         ALSource->state = AL_PLAYING;
                         ALSource->BuffersPlayed = 0;
-                        BufferListItem = ALSource->queue;
-                        while(BufferListItem != NULL)
-                        {
-                            BufferListItem->bufferstate = PENDING;
-                            BufferListItem = BufferListItem->next;
-                        }
                         ALSource->Buffer = ALSource->queue->buffer;
 
                         if(ALSource->BuffersInQueue == 1)
@@ -1387,16 +1371,8 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
         {
             if(source->state == AL_PLAYING)
             {
-                ALbufferlistitem *BufferListItem;
-
                 source->state = AL_STOPPED;
                 source->BuffersPlayed = source->BuffersInQueue;
-                BufferListItem = source->queue;
-                while(BufferListItem != NULL)
-                {
-                    BufferListItem->bufferstate = PROCESSED;
-                    BufferListItem = BufferListItem->next;
-                }
                 source->position = 0;
                 source->position_fraction = 0;
             }

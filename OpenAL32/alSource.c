@@ -462,7 +462,6 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
     ALCcontext          *pContext;
     ALsource            *pSource;
     ALbufferlistitem    *pALBufferListItem;
-    ALuint i;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
@@ -502,19 +501,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 
             case AL_LOOPING:
                 if(lValue == AL_FALSE || lValue == AL_TRUE)
-                {
                     pSource->bLooping = (ALboolean)lValue;
-
-                    pALBufferListItem = pSource->queue;
-                    for(i = 0;pALBufferListItem != NULL;i++)
-                    {
-                        if(lValue == AL_FALSE && i <= pSource->BuffersPlayed)
-                            pALBufferListItem->bufferstate = PROCESSED;
-                        else
-                            pALBufferListItem->bufferstate = PENDING;
-                        pALBufferListItem = pALBufferListItem->next;
-                    }
-                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
@@ -551,8 +538,6 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             // Add the selected buffer to the queue
                             pALBufferListItem = malloc(sizeof(ALbufferlistitem));
                             pALBufferListItem->buffer = buffer;
-                            pALBufferListItem->bufferstate = PENDING;
-                            pALBufferListItem->flag = 0;
                             pALBufferListItem->next = NULL;
 
                             pSource->queue = pALBufferListItem;
@@ -1329,14 +1314,6 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                         pSource->BuffersPlayed = 0;
 
                         pSource->Buffer = pSource->queue->buffer;
-
-                        // Make sure all the Buffers in the queue are marked as PENDING
-                        ALBufferList = pSource->queue;
-                        while(ALBufferList)
-                        {
-                            ALBufferList->bufferstate = PENDING;
-                            ALBufferList = ALBufferList->next;
-                        }
                     }
                     else
                         pSource->state = AL_PLAYING;
@@ -1356,28 +1333,12 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
                     {
                         pSource->state = AL_STOPPED;
                         pSource->BuffersPlayed = pSource->BuffersInQueue;
-                        ALBufferList = pSource->queue;
-                        while(ALBufferList != NULL)
-                        {
-                            ALBufferList->bufferstate = PROCESSED;
-                            ALBufferList = ALBufferList->next;
-                        }
                         pSource->position = 0;
                         pSource->position_fraction = 0;
                     }
                 }
                 else
-                {
-                    // If there is a queue (must all be NULL or Zero length Buffers) mark them all as processed
-                    ALBufferList = pSource->queue;
-                    while(ALBufferList)
-                    {
-                        ALBufferList->bufferstate = PROCESSED;
-                        ALBufferList = ALBufferList->next;
-                    }
-
                     pSource->BuffersPlayed = pSource->BuffersInQueue;
-                }
             }
         }
     }
@@ -1449,7 +1410,6 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     ALCcontext *Context;
     ALsource *Source;
     ALsizei i;
-    ALbufferlistitem *ALBufferListItem;
     ALboolean bSourcesValid = AL_TRUE;
 
     Context = GetContextSuspended();
@@ -1477,12 +1437,6 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
                 {
                     Source->state = AL_STOPPED;
                     Source->BuffersPlayed = Source->BuffersInQueue;
-                    ALBufferListItem = Source->queue;
-                    while(ALBufferListItem != NULL)
-                    {
-                        ALBufferListItem->bufferstate = PROCESSED;
-                        ALBufferListItem = ALBufferListItem->next;
-                    }
                 }
                 Source->lOffset = 0;
             }
@@ -1508,7 +1462,6 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     ALCcontext *Context;
     ALsource *Source;
     ALsizei i;
-    ALbufferlistitem *ALBufferListItem;
     ALboolean bSourcesValid = AL_TRUE;
 
     Context = GetContextSuspended();
@@ -1538,12 +1491,6 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
                     Source->position = 0;
                     Source->position_fraction = 0;
                     Source->BuffersPlayed = 0;
-                    ALBufferListItem = Source->queue;
-                    while(ALBufferListItem != NULL)
-                    {
-                        ALBufferListItem->bufferstate = PENDING;
-                        ALBufferListItem = ALBufferListItem->next;
-                    }
                     if(Source->queue)
                         Source->Buffer = Source->queue->buffer;
                 }
@@ -1645,8 +1592,6 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
                 // All buffers are valid - so add them to the list
                 ALBufferListStart = malloc(sizeof(ALbufferlistitem));
                 ALBufferListStart->buffer = buffer;
-                ALBufferListStart->bufferstate = PENDING;
-                ALBufferListStart->flag = 0;
                 ALBufferListStart->next = NULL;
 
                 // Increment reference counter for buffer
@@ -1661,8 +1606,6 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
 
                     ALBufferList->next = malloc(sizeof(ALbufferlistitem));
                     ALBufferList->next->buffer = buffer;
-                    ALBufferList->next->bufferstate = PENDING;
-                    ALBufferList->next->flag = 0;
                     ALBufferList->next->next = NULL;
 
                     // Increment reference counter for buffer
@@ -1729,23 +1672,8 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
     {
         ALSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
 
-        // Check that all 'n' buffers have been processed
-        ALBufferList = ALSource->queue;
-        for(i = 0; i < n; i++)
-        {
-            if(ALBufferList != NULL && ALBufferList->bufferstate == PROCESSED)
-            {
-                ALBufferList = ALBufferList->next;
-            }
-            else
-            {
-                bBuffersProcessed = AL_FALSE;
-                break;
-            }
-        }
-
         // If all 'n' buffers have been processed, remove them from the queue
-        if(bBuffersProcessed)
+        if(!ALSource->bLooping && (ALuint)n <= ALSource->BuffersPlayed)
         {
             for(i = 0; i < n; i++)
             {
@@ -1771,10 +1699,7 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
                     ALSource->Buffer = NULL;
             }
 
-            if((ALuint)n > ALSource->BuffersPlayed)
-                ALSource->BuffersPlayed = 0;
-            else
-                ALSource->BuffersPlayed -= n;
+            ALSource->BuffersPlayed -= n;
         }
         else
         {
@@ -1848,6 +1773,7 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
     ALenum        eOriginalFormat;
     ALboolean    bReturn = AL_TRUE;
     ALint        lTotalBufferDataSize;
+    ALuint       i;
 
     if((pSource->state == AL_PLAYING || pSource->state == AL_PAUSED) && pSource->Buffer)
     {
@@ -1861,7 +1787,7 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
         readPos = pSource->position * lChannels * 2; // NOTE : This is the byte offset into the *current* buffer
         // Add byte length of any processed buffers in the queue
         pBufferList = pSource->queue;
-        while(pBufferList && pBufferList->bufferstate == PROCESSED)
+        for(i = 0;i < pSource->BuffersPlayed && pBufferList;i++)
         {
             readPos += pBufferList->buffer->size;
             pBufferList = pBufferList->next;
@@ -2001,18 +1927,12 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
 
             if ((lTotalBufferSize + lBufferSize) <= lByteOffset)
             {
-                // Offset is past this buffer so increment BuffersPlayed and if the Source is NOT looping
-                // update the state to PROCESSED
+                // Offset is past this buffer so increment BuffersPlayed
                 pSource->BuffersPlayed++;
-
-                if (!pSource->bLooping)
-                    pBufferList->bufferstate = PROCESSED;
             }
             else if (lTotalBufferSize <= lByteOffset)
             {
                 // Offset is within this buffer
-                pBufferList->bufferstate = PENDING;
-
                 // Set Current Buffer
                 pSource->Buffer = pBufferList->buffer;
 
@@ -2020,11 +1940,6 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
                 pSource->position = (lByteOffset - lTotalBufferSize) /
                                     aluBytesFromFormat(pBuffer->format) /
                                     aluChannelsFromFormat(pBuffer->format);
-            }
-            else
-            {
-                // Offset is before this buffer, so mark as pending
-                pBufferList->bufferstate = PENDING;
             }
 
             // Increment the TotalBufferSize

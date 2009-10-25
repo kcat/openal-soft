@@ -827,15 +827,17 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALuint i, j, k, out;
     ALsource *ALSource;
     ALfloat value;
-    ALshort *Data;
     ALbufferlistitem *BufferListItem;
     ALint64 DataSize64,DataPos64;
     FILTER *DryFilter, *WetFilter[MAX_SENDS];
     ALfloat WetSend[MAX_SENDS];
     ALuint rampLength;
     ALuint frequency;
-    ALint Looping,State;
     ALint increment;
+    ALuint DataPosInt, DataPosFrac;
+    ALboolean FirstStart;
+    ALuint BuffersPlayed;
+    ALenum State;
 
     if(!(ALSource=ALContext->Source))
         return;
@@ -846,66 +848,67 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     rampLength = max(rampLength, SamplesToDo);
 
 another_source:
-    j = 0;
     State = ALSource->state;
+    if(State != AL_PLAYING)
+    {
+        if((ALSource=ALSource->next) != NULL)
+            goto another_source;
+        return;
+    }
+    j = 0;
+
+    /* Get source info */
+    BuffersPlayed = ALSource->BuffersPlayed;
+    DataPosInt    = ALSource->position;
+    DataPosFrac   = ALSource->position_fraction;
+    FirstStart    = ALSource->FirstStart;
+
+    for(i = 0;i < OUTPUTCHANNELS;i++)
+        DrySend[i] = ALSource->DryGains[i];
+    for(i = 0;i < MAX_SENDS;i++)
+        WetSend[i] = ALSource->WetGains[i];
+
+    DryFilter = &ALSource->Params.iirFilter;
+    for(i = 0;i < MAX_SENDS;i++)
+    {
+        WetFilter[i] = &ALSource->Params.Send[i].iirFilter;
+        WetBuffer[i] = (ALSource->Send[i].Slot ?
+                        ALSource->Send[i].Slot->WetBuffer :
+                        DummyBuffer);
+    }
+
+    BufferListItem = ALSource->queue;
+    for(i = 0;i < BuffersPlayed && BufferListItem;i++)
+        BufferListItem = BufferListItem->next;
+
     while(State == AL_PLAYING && j < SamplesToDo)
     {
         ALuint DataSize = 0;
-        ALuint DataPosInt = 0;
-        ALuint DataPosFrac = 0;
         ALbuffer *ALBuffer;
+        ALshort *Data;
         ALuint Channels, Bytes;
         ALuint BufferSize;
         ALfloat Pitch;
 
         /* Get buffer info */
-        if(!(ALBuffer = ALSource->Buffer))
-            goto skipmix;
-
-        Data      = ALBuffer->data;
-        Channels  = aluChannelsFromFormat(ALBuffer->format);
-        Bytes     = aluBytesFromFormat(ALBuffer->format);
-        DataSize  = ALBuffer->size;
-        DataSize /= Channels * Bytes;
-
-        DataPosInt = ALSource->position;
-        DataPosFrac = ALSource->position_fraction;
-
+        if((ALBuffer=BufferListItem->buffer) != NULL)
+        {
+            Data      = ALBuffer->data;
+            Channels  = aluChannelsFromFormat(ALBuffer->format);
+            Bytes     = aluBytesFromFormat(ALBuffer->format);
+            DataSize  = ALBuffer->size;
+            DataSize /= Channels * Bytes;
+        }
         if(DataPosInt >= DataSize)
             goto skipmix;
-
-        /* Get source info */
-        DryFilter = &ALSource->Params.iirFilter;
-        for(i = 0;i < MAX_SENDS;i++)
-        {
-            WetFilter[i] = &ALSource->Params.Send[i].iirFilter;
-            WetBuffer[i] = (ALSource->Send[i].Slot ?
-                            ALSource->Send[i].Slot->WetBuffer :
-                            DummyBuffer);
-        }
 
         CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE);
         Pitch = (ALSource->Params.Pitch*ALBuffer->frequency) / frequency;
 
-        if(DuplicateStereo && Channels == 2)
-        {
-            Matrix[FRONT_LEFT][SIDE_LEFT]   = 1.0f;
-            Matrix[FRONT_RIGHT][SIDE_RIGHT] = 1.0f;
-            Matrix[FRONT_LEFT][BACK_LEFT]   = 1.0f;
-            Matrix[FRONT_RIGHT][BACK_RIGHT] = 1.0f;
-        }
-        else if(DuplicateStereo)
-        {
-            Matrix[FRONT_LEFT][SIDE_LEFT]   = 0.0f;
-            Matrix[FRONT_RIGHT][SIDE_RIGHT] = 0.0f;
-            Matrix[FRONT_LEFT][BACK_LEFT]   = 0.0f;
-            Matrix[FRONT_RIGHT][BACK_RIGHT] = 0.0f;
-        }
-
         /* Compute the gain steps for each output channel */
-        if(ALSource->FirstStart)
+        if(FirstStart)
         {
-            ALSource->FirstStart = AL_FALSE;
+            FirstStart = AL_FALSE;
             for(i = 0;i < OUTPUTCHANNELS;i++)
             {
                 DrySend[i] = ALSource->Params.DryGains[i];
@@ -920,17 +923,11 @@ another_source:
         else
         {
             for(i = 0;i < OUTPUTCHANNELS;i++)
-            {
                 dryGainStep[i] = (ALSource->Params.DryGains[i]-
-                                  ALSource->DryGains[i]) / rampLength;
-                DrySend[i] = ALSource->DryGains[i];
-            }
+                                  DrySend[i]) / rampLength;
             for(i = 0;i < MAX_SENDS;i++)
-            {
                 wetGainStep[i] = (ALSource->Params.WetGains[i]-
-                                  ALSource->WetGains[i]) / rampLength;
-                WetSend[i] = ALSource->WetGains[i];
-            }
+                                  WetSend[i]) / rampLength;
         }
 
         /* Compute 18.14 fixed point step */
@@ -948,36 +945,42 @@ another_source:
         DataPos64 += DataPosFrac;
         BufferSize = (ALuint)((DataSize64-DataPos64+(increment-1)) / increment);
 
-        BufferListItem = ALSource->queue;
-        for(i = 0;i < ALSource->BuffersPlayed && BufferListItem;i++)
-            BufferListItem = BufferListItem->next;
-        if(BufferListItem)
+        if(BufferListItem->next)
         {
-            ALbuffer *NextBuf;
-            ALuint ulExtraSamples;
-
-            if(BufferListItem->next)
+            ALbuffer *NextBuf = BufferListItem->next->buffer;
+            if(NextBuf && NextBuf->data)
             {
-                NextBuf = BufferListItem->next->buffer;
-                if(NextBuf && NextBuf->data)
-                {
-                    ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*Bytes));
-                    memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
-                }
+                ALuint ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*Bytes));
+                memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
             }
-            else if(ALSource->bLooping)
-            {
-                NextBuf = ALSource->queue->buffer;
-                if(NextBuf && NextBuf->data)
-                {
-                    ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*Bytes));
-                    memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
-                }
-            }
-            else
-                memset(&Data[DataSize*Channels], 0, (ALBuffer->padding*Channels*Bytes));
         }
+        else if(ALSource->bLooping)
+        {
+            ALbuffer *NextBuf = ALSource->queue->buffer;
+            if(NextBuf && NextBuf->data)
+            {
+                ALuint ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*Bytes));
+                memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
+            }
+        }
+        else
+            memset(&Data[DataSize*Channels], 0, (ALBuffer->padding*Channels*Bytes));
         BufferSize = min(BufferSize, (SamplesToDo-j));
+
+        if(DuplicateStereo && Channels == 2)
+        {
+            Matrix[FRONT_LEFT][SIDE_LEFT]   = 1.0f;
+            Matrix[FRONT_RIGHT][SIDE_RIGHT] = 1.0f;
+            Matrix[FRONT_LEFT][BACK_LEFT]   = 1.0f;
+            Matrix[FRONT_RIGHT][BACK_RIGHT] = 1.0f;
+        }
+        else if(DuplicateStereo)
+        {
+            Matrix[FRONT_LEFT][SIDE_LEFT]   = 0.0f;
+            Matrix[FRONT_RIGHT][SIDE_RIGHT] = 0.0f;
+            Matrix[FRONT_LEFT][BACK_LEFT]   = 0.0f;
+            Matrix[FRONT_RIGHT][BACK_RIGHT] = 0.0f;
+        }
 
         /* Actual sample mixing loop */
         k = 0;
@@ -1110,64 +1113,52 @@ another_source:
         }
         DataPosInt += k;
 
-        /* Update source info */
-        ALSource->position = DataPosInt;
-        ALSource->position_fraction = DataPosFrac;
-        for(i = 0;i < OUTPUTCHANNELS;i++)
-            ALSource->DryGains[i] = DrySend[i];
-        for(i = 0;i < MAX_SENDS;i++)
-            ALSource->WetGains[i] = WetSend[i];
-
     skipmix:
         /* Handle looping sources */
-        if(!ALBuffer || DataPosInt >= DataSize)
+        if(DataPosInt >= DataSize)
         {
-            /* Queueing */
-            if(ALSource->queue)
+            if(BuffersPlayed < (ALSource->BuffersInQueue-1))
             {
-                Looping = ALSource->bLooping;
-                if(ALSource->BuffersPlayed < (ALSource->BuffersInQueue-1))
+                BufferListItem = BufferListItem->next;
+                BuffersPlayed++;
+                DataPosInt -= DataSize;
+            }
+            else
+            {
+                if(!ALSource->bLooping)
                 {
+                    State = AL_STOPPED;
                     BufferListItem = ALSource->queue;
-                    for(i = 0;i <= ALSource->BuffersPlayed && BufferListItem;i++)
-                        BufferListItem = BufferListItem->next;
-                    if(BufferListItem)
-                        ALSource->Buffer = BufferListItem->buffer;
-                    ALSource->position = DataPosInt-DataSize;
-                    ALSource->position_fraction = DataPosFrac;
-                    ALSource->BuffersPlayed++;
+                    BuffersPlayed = ALSource->BuffersInQueue;
+                    DataPosInt = 0;
+                    DataPosFrac = 0;
                 }
                 else
                 {
-                    if(!Looping)
-                    {
-                        /* alSourceStop */
-                        ALSource->state = AL_STOPPED;
-                        ALSource->BuffersPlayed = ALSource->BuffersInQueue;
-                        ALSource->position = 0;
-                        ALSource->position_fraction = 0;
-                    }
+                    BufferListItem = ALSource->queue;
+                    BuffersPlayed = 0;
+                    if(ALSource->BuffersInQueue == 1 && DataSize)
+                        DataPosInt %= DataSize;
                     else
-                    {
-                        /* alSourceRewind */
-                        /* alSourcePlay */
-                        ALSource->state = AL_PLAYING;
-                        ALSource->BuffersPlayed = 0;
-                        ALSource->Buffer = ALSource->queue->buffer;
-
-                        if(ALSource->BuffersInQueue == 1)
-                            ALSource->position = DataPosInt%DataSize;
-                        else
-                            ALSource->position = DataPosInt-DataSize;
-                        ALSource->position_fraction = DataPosFrac;
-                    }
+                        DataPosInt -= DataSize;
                 }
             }
         }
-
-        /* Get source state */
-        State = ALSource->state;
     }
+
+    /* Update source info */
+    ALSource->state             = State;
+    ALSource->BuffersPlayed     = BuffersPlayed;
+    ALSource->position          = DataPosInt;
+    ALSource->position_fraction = DataPosFrac;
+    ALSource->Buffer            = BufferListItem->buffer;
+
+    for(i = 0;i < OUTPUTCHANNELS;i++)
+        ALSource->DryGains[i] = DrySend[i];
+    for(i = 0;i < MAX_SENDS;i++)
+        ALSource->WetGains[i] = WetSend[i];
+
+    ALSource->FirstStart = FirstStart;
 
     if((ALSource=ALSource->next) != NULL)
         goto another_source;

@@ -867,9 +867,11 @@ another_source:
     Bytes    = aluBytesFromFormat(ALSource->Format);
 
     CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE);
+    /* Compute 18.14 fixed point step */
     Pitch = (ALSource->Params.Pitch*ALSource->Frequency) / frequency;
-    if(Pitch > (float)MAX_PITCH)
-        Pitch = (float)MAX_PITCH;
+    if(Pitch > (float)MAX_PITCH)  Pitch = (float)MAX_PITCH;
+    increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
+    if(increment <= 0)  increment = (1<<FRACTIONBITS);
 
     /* Compute the gain steps for each output channel */
     if(ALSource->FirstStart)
@@ -894,6 +896,21 @@ another_source:
         WetBuffer[i] = (ALSource->Send[i].Slot ?
                         ALSource->Send[i].Slot->WetBuffer :
                         DummyBuffer);
+    }
+
+    if(DuplicateStereo && Channels == 2)
+    {
+        Matrix[FRONT_LEFT][SIDE_LEFT]   = 1.0f;
+        Matrix[FRONT_RIGHT][SIDE_RIGHT] = 1.0f;
+        Matrix[FRONT_LEFT][BACK_LEFT]   = 1.0f;
+        Matrix[FRONT_RIGHT][BACK_RIGHT] = 1.0f;
+    }
+    else if(DuplicateStereo)
+    {
+        Matrix[FRONT_LEFT][SIDE_LEFT]   = 0.0f;
+        Matrix[FRONT_RIGHT][SIDE_RIGHT] = 0.0f;
+        Matrix[FRONT_LEFT][BACK_LEFT]   = 0.0f;
+        Matrix[FRONT_RIGHT][BACK_RIGHT] = 0.0f;
     }
 
     BufferListItem = ALSource->queue;
@@ -925,19 +942,6 @@ another_source:
             wetGainStep[i] = (ALSource->Params.WetGains[i]-
                               WetSend[i]) / rampLength;
 
-        /* Compute 18.14 fixed point step */
-        increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
-        if(increment <= 0)
-            increment = (1<<FRACTIONBITS);
-
-        /* Figure out how many samples we can mix. */
-        DataSize64 = DataSize;
-        DataSize64 <<= FRACTIONBITS;
-        DataPos64 = DataPosInt;
-        DataPos64 <<= FRACTIONBITS;
-        DataPos64 += DataPosFrac;
-        BufferSize = (ALuint)((DataSize64-DataPos64+(increment-1)) / increment);
-
         if(BufferListItem->next)
         {
             ALbuffer *NextBuf = BufferListItem->next->buffer;
@@ -958,22 +962,16 @@ another_source:
         }
         else
             memset(&Data[DataSize*Channels], 0, (ALBuffer->padding*Channels*Bytes));
-        BufferSize = min(BufferSize, (SamplesToDo-j));
 
-        if(DuplicateStereo && Channels == 2)
-        {
-            Matrix[FRONT_LEFT][SIDE_LEFT]   = 1.0f;
-            Matrix[FRONT_RIGHT][SIDE_RIGHT] = 1.0f;
-            Matrix[FRONT_LEFT][BACK_LEFT]   = 1.0f;
-            Matrix[FRONT_RIGHT][BACK_RIGHT] = 1.0f;
-        }
-        else if(DuplicateStereo)
-        {
-            Matrix[FRONT_LEFT][SIDE_LEFT]   = 0.0f;
-            Matrix[FRONT_RIGHT][SIDE_RIGHT] = 0.0f;
-            Matrix[FRONT_LEFT][BACK_LEFT]   = 0.0f;
-            Matrix[FRONT_RIGHT][BACK_RIGHT] = 0.0f;
-        }
+        /* Figure out how many samples we can mix. */
+        DataSize64 = DataSize;
+        DataSize64 <<= FRACTIONBITS;
+        DataPos64 = DataPosInt;
+        DataPos64 <<= FRACTIONBITS;
+        DataPos64 += DataPosFrac;
+        BufferSize = (ALuint)((DataSize64-DataPos64+(increment-1)) / increment);
+
+        BufferSize = min(BufferSize, (SamplesToDo-j));
 
         /* Actual sample mixing loop */
         k = 0;

@@ -867,6 +867,7 @@ another_source:
     Bytes    = aluBytesFromFormat(ALSource->Format);
 
     CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE);
+
     /* Compute 18.14 fixed point step */
     Pitch = (ALSource->Params.Pitch*ALSource->Frequency) / frequency;
     if(Pitch > (float)MAX_PITCH)  Pitch = (float)MAX_PITCH;
@@ -934,14 +935,6 @@ another_source:
         if(DataPosInt >= DataSize)
             goto skipmix;
 
-        /* Compute the gain steps for each output channel */
-        for(i = 0;i < OUTPUTCHANNELS;i++)
-            dryGainStep[i] = (ALSource->Params.DryGains[i]-
-                              DrySend[i]) / rampLength;
-        for(i = 0;i < MAX_SENDS;i++)
-            wetGainStep[i] = (ALSource->Params.WetGains[i]-
-                              WetSend[i]) / rampLength;
-
         if(BufferListItem->next)
         {
             ALbuffer *NextBuf = BufferListItem->next->buffer;
@@ -962,6 +955,14 @@ another_source:
         }
         else
             memset(&Data[DataSize*Channels], 0, (ALBuffer->padding*Channels*Bytes));
+
+        /* Compute the gain steps for each output channel */
+        for(i = 0;i < OUTPUTCHANNELS;i++)
+            dryGainStep[i] = (ALSource->Params.DryGains[i]-
+                              DrySend[i]) / rampLength;
+        for(i = 0;i < MAX_SENDS;i++)
+            wetGainStep[i] = (ALSource->Params.WetGains[i]-
+                              WetSend[i]) / rampLength;
 
         /* Figure out how many samples we can mix. */
         DataSize64 = DataSize;
@@ -1128,7 +1129,7 @@ another_source:
                 {
                     BufferListItem = ALSource->queue;
                     BuffersPlayed = 0;
-                    if(ALSource->BuffersInQueue == 1 && DataSize)
+                    if(ALSource->BuffersInQueue == 1)
                         DataPosInt %= DataSize;
                     else
                         DataPosInt -= DataSize;

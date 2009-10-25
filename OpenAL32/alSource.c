@@ -530,7 +530,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         // Add the buffer to the queue (as long as it is NOT the NULL buffer)
                         if(lValue != 0)
                         {
-                            buffer = (ALbuffer*)(ALTHUNK_LOOKUPENTRY(lValue));
+                            buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(lValue);
 
                             // Source is now in STATIC mode
                             pSource->lSourceType = AL_STATIC;
@@ -1586,8 +1586,7 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
                 // Change Source Type
                 ALSource->lSourceType = AL_STREAMING;
 
-                if(buffers[0])
-                    buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[0]);
+                buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[0]);
 
                 // All buffers are valid - so add them to the list
                 ALBufferListStart = malloc(sizeof(ALbufferlistitem));
@@ -1601,8 +1600,7 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
 
                 for(i = 1; i < n; i++)
                 {
-                    if(buffers[i])
-                        buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[i]);
+                    buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[i]);
 
                     ALBufferList->next = malloc(sizeof(ALbufferlistitem));
                     ALBufferList->next->buffer = buffer;

@@ -108,7 +108,6 @@ ALAPI ALvoid ALAPIENTRY alGenBuffers(ALsizei n,ALuint *puiBuffers)
                 puiBuffers[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
                 (*list)->buffer = puiBuffers[i];
 
-                (*list)->state = UNUSED;
                 device->BufferCount++;
                 i++;
 
@@ -263,7 +262,6 @@ ALAPI ALboolean ALAPIENTRY alIsBuffer(ALuint uiBuffer)
 ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *data,ALsizei size,ALsizei freq)
 {
     ALCcontext *Context;
-    ALsizei padding = 2;
     ALbuffer *ALBuf;
     ALvoid *temp;
 
@@ -326,19 +324,18 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     size *= 2;
 
                     // Samples are converted to 16 bit here
-                    temp = realloc(ALBuf->data, (padding*NewChannels + size) * sizeof(ALshort));
+                    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + size) * sizeof(ALshort));
                     if(temp)
                     {
                         ALBuf->data = temp;
                         ConvertDataRear(ALBuf->data, data, OrigBytes, size);
 
-                        memset(&(ALBuf->data[size]), 0, padding*NewChannels*sizeof(ALshort));
+                        memset(&(ALBuf->data[size]), 0, BUFFER_PADDING*NewChannels*sizeof(ALshort));
 
                         ALBuf->format = NewFormat;
                         ALBuf->eOriginalFormat = format;
                         ALBuf->size = size*sizeof(ALshort);
                         ALBuf->frequency = freq;
-                        ALBuf->padding = padding;
                     }
                     else
                         alSetError(AL_OUT_OF_MEMORY);
@@ -387,19 +384,18 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     size *= 65;
 
                     // Allocate extra padding samples
-                    temp = realloc(ALBuf->data, (padding*OrigChans + size)*sizeof(ALshort));
+                    temp = realloc(ALBuf->data, (BUFFER_PADDING*OrigChans + size)*sizeof(ALshort));
                     if(temp)
                     {
                         ALBuf->data = temp;
                         ConvertDataIMA4(ALBuf->data, data, OrigChans, size/65);
 
-                        memset(&(ALBuf->data[size]), 0, padding*sizeof(ALshort)*OrigChans);
+                        memset(&(ALBuf->data[size]), 0, BUFFER_PADDING*sizeof(ALshort)*OrigChans);
 
                         ALBuf->format = ((OrigChans==1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16);
                         ALBuf->eOriginalFormat = format;
                         ALBuf->size = size*sizeof(ALshort);
                         ALBuf->frequency = freq;
-                        ALBuf->padding = padding;
                     }
                     else
                         alSetError(AL_OUT_OF_MEMORY);
@@ -942,7 +938,6 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
     ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
     ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
-    ALsizei padding = 2;
     ALvoid *temp;
 
     assert(aluBytesFromFormat(NewFormat) == 2);
@@ -956,19 +951,18 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
 
     // Samples are converted to 16 bit here
     size /= OrigBytes;
-    temp = realloc(ALBuf->data, (padding*NewChannels + size) * sizeof(ALshort));
+    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + size) * sizeof(ALshort));
     if(temp)
     {
         ALBuf->data = temp;
         ConvertData(ALBuf->data, data, OrigBytes, size);
 
-        memset(&(ALBuf->data[size]), 0, padding*NewChannels*sizeof(ALshort));
+        memset(&(ALBuf->data[size]), 0, BUFFER_PADDING*NewChannels*sizeof(ALshort));
 
         ALBuf->format = NewFormat;
         ALBuf->eOriginalFormat = OrigFormat;
         ALBuf->size = size*sizeof(ALshort);
         ALBuf->frequency = freq;
-        ALBuf->padding = padding;
     }
     else
         alSetError(AL_OUT_OF_MEMORY);

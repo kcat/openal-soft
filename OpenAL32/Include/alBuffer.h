@@ -7,21 +7,16 @@
 extern "C" {
 #endif
 
-#define UNUSED    0
-#define PENDING   1
-#define PROCESSED 2
+#define BUFFER_PADDING 2
 
 typedef struct ALbuffer
 {
-    ALenum   format;
-    ALenum   eOriginalFormat;
-
     ALshort *data;
     ALsizei  size;
 
+    ALenum   format;
+    ALenum   eOriginalFormat;
     ALsizei  frequency;
-    ALsizei  padding;
-    ALenum   state;
 
     ALuint   refcount; // Number of sources using this buffer (deletion can only occur when this is 0)
 

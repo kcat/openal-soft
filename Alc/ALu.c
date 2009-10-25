@@ -957,7 +957,8 @@ another_source:
             ALbuffer *NextBuf = BufferListItem->next->buffer;
             if(NextBuf && NextBuf->data)
             {
-                ALuint ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*Bytes));
+                ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
+                ulExtraSamples = min(NextBuf->size, ulExtraSamples);
                 memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
             }
         }
@@ -966,12 +967,13 @@ another_source:
             ALbuffer *NextBuf = ALSource->queue->buffer;
             if(NextBuf && NextBuf->data)
             {
-                ALuint ulExtraSamples = min(NextBuf->size, (ALint)(ALBuffer->padding*Channels*Bytes));
+                ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
+                ulExtraSamples = min(NextBuf->size, ulExtraSamples);
                 memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
             }
         }
         else
-            memset(&Data[DataSize*Channels], 0, (ALBuffer->padding*Channels*Bytes));
+            memset(&Data[DataSize*Channels], 0, (BUFFER_PADDING*Channels*Bytes));
 
         /* Compute the gain steps for each output channel */
         for(i = 0;i < OUTPUTCHANNELS;i++)

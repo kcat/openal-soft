@@ -657,9 +657,11 @@ ALCAPI ALCboolean ALCAPIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 
         ProcessContext(NULL);
 
-        free(pDevice->szDeviceName);
-
         ALCdevice_CloseCapture(pDevice);
+
+        free(pDevice->szDeviceName);
+        pDevice->szDeviceName = NULL;
+
         free(pDevice);
 
         bReturn = ALC_TRUE;

@@ -355,11 +355,9 @@ static void pulse_close(ALCdevice *device) //{{{
     ppa_threaded_mainloop_stop(data->loop);
     ppa_threaded_mainloop_free(data->loop);
 
-    device->ExtraData = NULL;
-    free(device->szDeviceName);
-    device->szDeviceName = NULL;
     DestroyRingBuffer(data->ring);
 
+    device->ExtraData = NULL;
     ppa_xfree(data);
 } //}}}
 //}}}

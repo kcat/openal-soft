@@ -266,7 +266,7 @@ static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
 
-    len -= len&data->attr.minreq;
+    len -= len%data->attr.minreq;
     if(len > 0)
     {
         void *buf = ppa_xmalloc0(len);

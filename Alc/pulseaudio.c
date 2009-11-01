@@ -261,12 +261,14 @@ static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //
 {
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
-    void *buf = ppa_xmalloc0(data->attr.minreq);
-    (void)len;
 
-    aluMixData(Device, buf, data->attr.minreq/data->frame_size);
-    ppa_stream_write(stream, buf, data->attr.minreq, ppa_xfree, 0,
-                     PA_SEEK_RELATIVE);
+    len -= len&data->attr.minreq;
+    if(len > 0)
+    {
+        void *buf = ppa_xmalloc0(len);
+        aluMixData(Device, buf, len/data->frame_size);
+        ppa_stream_write(stream, buf, len, ppa_xfree, 0, PA_SEEK_RELATIVE);
+    }
 } //}}}
 
 static void stream_read_callback(pa_stream *stream, size_t length, void *pdata) //{{{

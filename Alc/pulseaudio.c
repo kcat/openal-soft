@@ -78,6 +78,7 @@ MAKE_FUNC(pa_stream_set_write_callback);
 MAKE_FUNC(pa_threaded_mainloop_new);
 MAKE_FUNC(pa_context_connect);
 MAKE_FUNC(pa_stream_get_buffer_attr);
+MAKE_FUNC(pa_stream_set_buffer_attr_callback);
 MAKE_FUNC(pa_stream_set_read_callback);
 MAKE_FUNC(pa_stream_set_state_callback);
 MAKE_FUNC(pa_stream_new);
@@ -190,6 +191,7 @@ LOAD_FUNC(pa_stream_set_write_callback);
 LOAD_FUNC(pa_threaded_mainloop_new);
 LOAD_FUNC(pa_context_connect);
 LOAD_FUNC(pa_stream_get_buffer_attr);
+LOAD_FUNC(pa_stream_set_buffer_attr_callback);
 LOAD_FUNC(pa_stream_set_read_callback);
 LOAD_FUNC(pa_stream_set_state_callback);
 LOAD_FUNC(pa_stream_new);
@@ -234,6 +236,23 @@ static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
 
     if(ppa_threaded_mainloop_in_thread(data->loop))
         ppa_threaded_mainloop_signal(data->loop, 1);
+}//}}}
+
+static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
+{
+    ALCdevice *Device = pdata;
+    pulse_data *data = Device->ExtraData;
+
+    SuspendContext(NULL);
+
+    data->attr = *(ppa_stream_get_buffer_attr(stream));
+    if((data->attr.tlength%data->attr.minreq) != 0)
+        AL_PRINT("new tlength (%d) is not a multiple of minreq (%d)!\n",
+                 data->attr.tlength, data->attr.minreq);
+    Device->UpdateSize = data->attr.minreq;
+    Device->NumUpdates = data->attr.tlength/data->attr.minreq;
+
+    ProcessContext(NULL);
 }//}}}
 //}}}
 
@@ -500,12 +519,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     }
     ppa_stream_set_state_callback(data->stream, NULL, NULL);
 
-    data->attr = *(ppa_stream_get_buffer_attr(data->stream));
-    if((data->attr.tlength%data->attr.minreq) != 0)
-        AL_PRINT("tlength (%d) is not a multiple of minreq (%d)!\n",
-                 data->attr.tlength, data->attr.minreq);
-    device->UpdateSize = data->attr.minreq;
-    device->NumUpdates = data->attr.tlength/data->attr.minreq;
+    stream_buffer_attr_callback(data->stream, device);
+    ppa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
 
     ppa_threaded_mainloop_unlock(data->loop);
     return ALC_TRUE;

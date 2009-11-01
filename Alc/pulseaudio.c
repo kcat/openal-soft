@@ -84,6 +84,8 @@ MAKE_FUNC(pa_stream_set_state_callback);
 MAKE_FUNC(pa_stream_new);
 MAKE_FUNC(pa_stream_disconnect);
 MAKE_FUNC(pa_threaded_mainloop_lock);
+MAKE_FUNC(pa_channel_map_init_auto);
+MAKE_FUNC(pa_channel_map_parse);
 #undef MAKE_FUNC
 
 #ifndef PATH_MAX
@@ -197,6 +199,8 @@ LOAD_FUNC(pa_stream_set_state_callback);
 LOAD_FUNC(pa_stream_new);
 LOAD_FUNC(pa_stream_disconnect);
 LOAD_FUNC(pa_threaded_mainloop_lock);
+LOAD_FUNC(pa_channel_map_init_auto);
+LOAD_FUNC(pa_channel_map_parse);
 
 #undef LOAD_FUNC
     }
@@ -439,6 +443,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
     pa_stream_state_t state;
+    pa_channel_map chanmap;
 
     ppa_threaded_mainloop_lock(data->loop);
 
@@ -477,7 +482,42 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         return ALC_FALSE;
     }
 
-    data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, NULL);
+#ifdef _WIN32
+    if(!ppa_channel_map_init_auto(&chanmap, data->spec.channels, PA_CHANNEL_MAP_WAVEEX))
+    {
+        AL_PRINT("Couldn't build map for channel count (%d)!", data->spec.channels);
+        ppa_threaded_mainloop_unlock(data->loop);
+        return ALC_FALSE;
+    }
+#else
+    switch(data->spec.channels)
+    {
+    case 1:
+        ppa_channel_map_parse(&chanmap, "mono");
+        break;
+    case 2:
+        ppa_channel_map_parse(&chanmap, "front-left,front-right");
+        break;
+    case 4:
+        ppa_channel_map_parse(&chanmap, "front-left,front-right,rear-left,rear-right");
+        break;
+    case 6:
+        ppa_channel_map_parse(&chanmap, "front-left,front-right,rear-left,rear-right,front-center,lfe");
+        break;
+    case 7:
+        ppa_channel_map_parse(&chanmap, "front-left,front-right,front-center,lfe,rear-center,side-left,side-right");
+        break;
+    case 8:
+        ppa_channel_map_parse(&chanmap, "front-left,front-right,rear-left,rear-right,front-center,lfe,side-left,side-right");
+        break;
+    default:
+        AL_PRINT("Got unhandled channel count (%d)!", data->spec.channels);
+        ppa_threaded_mainloop_unlock(data->loop);
+        return ALC_FALSE;
+    }
+#endif
+
+    data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, &chanmap);
     if(!data->stream)
     {
         AL_PRINT("pa_stream_new() failed: %s\n",

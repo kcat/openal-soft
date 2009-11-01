@@ -258,6 +258,33 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
 
     ProcessContext(NULL);
 }//}}}
+
+static void context_state_callback2(pa_context *context, void *pdata) //{{{
+{
+    ALCdevice *Device = pdata;
+
+    if(ppa_context_get_state(context) == PA_CONTEXT_FAILED)
+    {
+        AL_PRINT("Received context failure!\n");
+        SuspendContext(NULL);
+        aluHandleDisconnect(Device);
+        ProcessContext(NULL);
+    }
+}//}}}
+
+static void stream_state_callback2(pa_stream *stream, void *pdata) //{{{
+{
+    ALCdevice *Device = pdata;
+
+    if(ppa_stream_get_state(stream) == PA_STREAM_FAILED)
+    {
+        AL_PRINT("Received stream failure!\n");
+        SuspendContext(NULL);
+        aluHandleDisconnect(Device);
+        ProcessContext(NULL);
+    }
+}//}}}
+
 //}}}
 
 // PulseAudio I/O Callbacks //{{{
@@ -368,7 +395,7 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
         ppa_threaded_mainloop_wait(data->loop);
         ppa_threaded_mainloop_accept(data->loop);
     }
-    ppa_context_set_state_callback(data->context, NULL, NULL);
+    ppa_context_set_state_callback(data->context, context_state_callback2, device);
 
     device->szDeviceName = strdup(device_name);
 
@@ -559,7 +586,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         ppa_threaded_mainloop_wait(data->loop);
         ppa_threaded_mainloop_accept(data->loop);
     }
-    ppa_stream_set_state_callback(data->stream, NULL, NULL);
+    ppa_stream_set_state_callback(data->stream, stream_state_callback2, device);
 
     stream_buffer_attr_callback(data->stream, device);
     ppa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
@@ -705,7 +732,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         ppa_threaded_mainloop_wait(data->loop);
         ppa_threaded_mainloop_accept(data->loop);
     }
-    ppa_stream_set_state_callback(data->stream, NULL, NULL);
+    ppa_stream_set_state_callback(data->stream, stream_state_callback2, device);
 
     ppa_threaded_mainloop_unlock(data->loop);
     return ALC_TRUE;

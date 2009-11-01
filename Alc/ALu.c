@@ -1362,6 +1362,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
 {
     ALuint i;
 
+    SuspendContext(NULL);
     for(i = 0;i < device->NumContexts;i++)
     {
         ALsource *source;
@@ -1384,4 +1385,5 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
     }
 
     device->Connected = ALC_FALSE;
+    ProcessContext(NULL);
 }

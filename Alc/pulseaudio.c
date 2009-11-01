@@ -266,9 +266,7 @@ static void context_state_callback2(pa_context *context, void *pdata) //{{{
     if(ppa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
         AL_PRINT("Received context failure!\n");
-        SuspendContext(NULL);
         aluHandleDisconnect(Device);
-        ProcessContext(NULL);
     }
 }//}}}
 
@@ -279,9 +277,7 @@ static void stream_state_callback2(pa_stream *stream, void *pdata) //{{{
     if(ppa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         AL_PRINT("Received stream failure!\n");
-        SuspendContext(NULL);
         aluHandleDisconnect(Device);
-        ProcessContext(NULL);
     }
 }//}}}
 

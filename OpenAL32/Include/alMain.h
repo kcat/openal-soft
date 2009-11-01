@@ -28,6 +28,7 @@ typedef DWORD tls_type;
 
 #else
 
+#include <unistd.h>
 #include <assert.h>
 #include <pthread.h>
 #ifdef HAVE_PTHREAD_NP_H
@@ -91,13 +92,22 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
  * as opposed to the actual time. */
 static inline ALuint timeGetTime(void)
 {
-    struct timeval tv;
     int ret;
+#ifdef _POSIX_TIMERS
+    struct timespec ts;
+
+    ret = clock_gettime(CLOCK_REALTIME, &ts);
+    assert(ret == 0);
+
+    return ts.tv_nsec/1000000 + ts.tv_sec*1000;
+#else
+    struct timeval tv;
 
     ret = gettimeofday(&tv, NULL);
     assert(ret == 0);
 
     return tv.tv_usec/1000 + tv.tv_sec*1000;
+#endif
 }
 
 static inline void Sleep(ALuint t)

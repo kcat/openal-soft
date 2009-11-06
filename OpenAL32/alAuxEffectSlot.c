@@ -414,6 +414,47 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, A
 }
 
 
+static ALvoid NoneDestroy(ALeffectState *State)
+{ free(State); }
+static ALboolean NoneDeviceUpdate(ALeffectState *State, ALCdevice *Device)
+{
+    return AL_TRUE;
+    (void)State;
+    (void)Device;
+}
+static ALvoid NoneUpdate(ALeffectState *State, ALCcontext *Context, const ALeffect *Effect)
+{
+    (void)State;
+    (void)Context;
+    (void)Effect;
+}
+static ALvoid NoneProcess(ALeffectState *State, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+{
+    (void)State;
+    (void)Slot;
+    (void)SamplesToDo;
+    (void)SamplesIn;
+    (void)SamplesOut;
+}
+static ALeffectState *NoneCreate(void)
+{
+    ALeffectState *state;
+
+    state = calloc(1, sizeof(*state));
+    if(!state)
+    {
+        alSetError(AL_OUT_OF_MEMORY);
+        return NULL;
+    }
+
+    state->Destroy = NoneDestroy;
+    state->DeviceUpdate = NoneDeviceUpdate;
+    state->Update = NoneUpdate;
+    state->Process = NoneProcess;
+
+    return state;
+}
+
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, ALeffect *effect)
 {
     if((!effect) || (effect->type != ALEffectSlot->effect.type))
@@ -427,6 +468,8 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
                 NewState = VerbCreate();
             else if(effect->type == AL_EFFECT_ECHO)
                 NewState = EchoCreate();
+            else if(effect->type == AL_EFFECT_NULL)
+                NewState = NoneCreate();
             /* No new state? An error occured.. */
             if(NewState == NULL ||
                ALEffect_DeviceUpdate(NewState, Context->Device) == AL_FALSE)

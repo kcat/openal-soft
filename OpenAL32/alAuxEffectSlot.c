@@ -59,9 +59,10 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                 while(i < n)
                 {
                     *list = calloc(1, sizeof(ALeffectslot));
-                    if(!(*list))
+                    if(!(*list) || !((*list)->EffectState=NoneCreate()))
                     {
                         // We must have run out or memory
+                        free(*list); *list = NULL;
                         alDeleteAuxiliaryEffectSlots(i, effectslots);
                         alSetError(AL_OUT_OF_MEMORY);
                         break;
@@ -436,7 +437,7 @@ static ALvoid NoneProcess(ALeffectState *State, const ALeffectslot *Slot, ALuint
     (void)SamplesIn;
     (void)SamplesOut;
 }
-static ALeffectState *NoneCreate(void)
+ALeffectState *NoneCreate(void)
 {
     ALeffectState *state;
 
@@ -457,27 +458,24 @@ static ALeffectState *NoneCreate(void)
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, ALeffect *effect)
 {
-    if((!effect) || (effect->type != ALEffectSlot->effect.type))
+    if(ALEffectSlot->effect.type != (effect?effect->type:AL_EFFECT_NULL))
     {
         ALeffectState *NewState = NULL;
-        if(effect)
+        if(!effect || effect->type == AL_EFFECT_NULL)
+            NewState = NoneCreate();
+        else if(effect->type == AL_EFFECT_EAXREVERB)
+            NewState = EAXVerbCreate();
+        else if(effect->type == AL_EFFECT_REVERB)
+            NewState = VerbCreate();
+        else if(effect->type == AL_EFFECT_ECHO)
+            NewState = EchoCreate();
+        /* No new state? An error occured.. */
+        if(NewState == NULL ||
+           ALEffect_DeviceUpdate(NewState, Context->Device) == AL_FALSE)
         {
-            if(effect->type == AL_EFFECT_EAXREVERB)
-                NewState = EAXVerbCreate();
-            else if(effect->type == AL_EFFECT_REVERB)
-                NewState = VerbCreate();
-            else if(effect->type == AL_EFFECT_ECHO)
-                NewState = EchoCreate();
-            else if(effect->type == AL_EFFECT_NULL)
-                NewState = NoneCreate();
-            /* No new state? An error occured.. */
-            if(NewState == NULL ||
-               ALEffect_DeviceUpdate(NewState, Context->Device) == AL_FALSE)
-            {
-                if(NewState)
-                    ALEffect_Destroy(NewState);
-                return;
-            }
+            if(NewState)
+                ALEffect_Destroy(NewState);
+            return;
         }
         if(ALEffectSlot->EffectState)
             ALEffect_Destroy(ALEffectSlot->EffectState);

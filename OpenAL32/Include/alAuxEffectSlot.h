@@ -60,6 +60,7 @@ struct ALeffectState {
     ALvoid (*Process)(ALeffectState *State, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS]);
 };
 
+ALeffectState *NoneCreate(void);
 ALeffectState *EAXVerbCreate(void);
 ALeffectState *VerbCreate(void);
 ALeffectState *EchoCreate(void);

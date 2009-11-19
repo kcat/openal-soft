@@ -547,7 +547,8 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
 
         RoomRolloff[i] = ALSource->RoomRolloffFactor;
         if(ALSource->Send[i].Slot &&
-           ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB)
+           (ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB ||
+            ALSource->Send[i].Slot->effect.type == AL_EFFECT_EAXREVERB))
             RoomRolloff[i] += ALSource->Send[i].Slot->effect.Reverb.RoomRolloffFactor;
     }
 

@@ -126,24 +126,6 @@ static const ALfloat DECO_MULTIPLIER = 2.0f;
 // the maximum early reflection and late reverb delays).
 static const ALfloat MASTER_LINE_LENGTH = 0.3f + 0.1f;
 
-// Find the next power of 2.  Actually, this will return the input value if
-// it is already a power of 2.
-static ALuint NextPowerOf2(ALuint value)
-{
-    ALuint powerOf2 = 1;
-
-    if(value)
-    {
-        value--;
-        while(value)
-        {
-            value >>= 1;
-            powerOf2 <<= 1;
-        }
-    }
-    return powerOf2;
-}
-
 static ALuint CalcLengths(ALuint length[13], ALuint frequency)
 {
     ALuint samples, totalLength, index;

@@ -53,24 +53,6 @@ typedef struct ALechoState {
     ALfloat history[2];
 } ALechoState;
 
-// Find the next power of 2.  Actually, this will return the input value if
-// it is already a power of 2.
-static ALuint NextPowerOf2(ALuint value)
-{
-    ALuint powerOf2 = 1;
-
-    if(value)
-    {
-        value--;
-        while(value)
-        {
-            value >>= 1;
-            powerOf2 <<= 1;
-        }
-    }
-    return powerOf2;
-}
-
 ALvoid EchoDestroy(ALeffectState *effect)
 {
     ALechoState *state = (ALechoState*)effect;

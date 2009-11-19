@@ -164,6 +164,24 @@ static __inline void al_print(const char *fname, unsigned int line, const char *
 #define LOWPASSFREQCUTOFF          (5000)
 
 
+// Find the next power-of-2 for non-power-of-2 numbers.
+static __inline ALuint NextPowerOf2(ALuint value)
+{
+    ALuint powerOf2 = 1;
+
+    if(value)
+    {
+        value--;
+        while(value)
+        {
+            value >>= 1;
+            powerOf2 <<= 1;
+        }
+    }
+    return powerOf2;
+}
+
+
 typedef struct {
     ALCboolean (*OpenPlayback)(ALCdevice*, const ALCchar*);
     void (*ClosePlayback)(ALCdevice*);

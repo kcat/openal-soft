@@ -29,9 +29,6 @@
 #include "alError.h"
 #include "alu.h"
 
-// Just a soft maximum. Being higher will cause EchoUpdate to reallocate the
-// sample buffer which may cause an abort if realloc fails
-#define MAX_ECHO_FREQ  192000
 
 typedef struct ALechoState {
     // Must be first in all effects!
@@ -106,6 +103,7 @@ ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
             alSetError(AL_OUT_OF_MEMORY);
             return AL_FALSE;
         }
+        state->SampleBuffer = temp;
         state->BufferLength = maxlen;
     }
     for(i = 0;i < state->BufferLength;i++)

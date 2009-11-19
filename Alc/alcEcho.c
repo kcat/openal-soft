@@ -71,9 +71,9 @@ ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
-    maxlen  = (ALuint)(AL_ECHO_MAX_DELAY * Device->Frequency);
-    maxlen += (ALuint)(AL_ECHO_MAX_LRDELAY * Device->Frequency);
-    maxlen  = NextPowerOf2(maxlen+1);
+    maxlen  = (ALuint)(AL_ECHO_MAX_DELAY * Device->Frequency) + 1;
+    maxlen += (ALuint)(AL_ECHO_MAX_LRDELAY * Device->Frequency) + 1;
+    maxlen  = NextPowerOf2(maxlen);
 
     if(maxlen != state->BufferLength)
     {
@@ -100,7 +100,7 @@ ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Ef
     ALuint frequency = Context->Device->Frequency;
     ALfloat lrpan, cw, a, g;
 
-    state->Tap[0].delay = (ALuint)(Effect->Echo.Delay * frequency);
+    state->Tap[0].delay = (ALuint)(Effect->Echo.Delay * frequency) + 1;
     state->Tap[1].delay = (ALuint)(Effect->Echo.LRDelay * frequency);
     state->Tap[1].delay += state->Tap[0].delay;
 

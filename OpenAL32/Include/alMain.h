@@ -163,9 +163,6 @@ static __inline void al_print(const char *fname, unsigned int line, const char *
 
 #define LOWPASSFREQCUTOFF          (5000)
 
-#define QUADRANT_NUM 128
-#define LUT_NUM (4 * QUADRANT_NUM)
-
 
 typedef struct {
     ALCboolean (*OpenPlayback)(ALCdevice*, const ALCchar*);

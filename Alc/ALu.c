@@ -704,9 +704,24 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
                 if(ALSource->WetGainHFAuto)
                     WetGainHF[i] *= ConeHF;
 
-                // Apply minimal attenuation in place of missing
-                // statistical reverb model.
-                WetGain[i] *= pow(DryMix, 1.0f / 2.0f);
+                if(ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB ||
+                   ALSource->Send[i].Slot->effect.type == AL_EFFECT_EAXREVERB)
+                {
+                    /* Apply a decay-time transformation to the wet path,
+                     * based on the attenuation of the dry path.  This should
+                     * better approximate the statistical attenuation model
+                     * for the reverb effect.
+                     *
+                     * This simple equation converts the distance attenuation
+                     * into the time it would take to reach -60 dB. From
+                     * there it establishes an origin (0.333s; the decay time
+                     * that will produce equal attenuation) and applies the
+                     * current decay time.  Finally, it converts the result
+                     * back to an attenuation for the reverb path.
+                     */
+                    WetGain[i] *= pow(10.0f, log10(flAttenuation) * 0.333f /
+                        ALSource->Send[i].Slot->effect.Reverb.DecayTime);
+                }
             }
             else
             {

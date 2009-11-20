@@ -155,14 +155,13 @@ static void printALCInfo (void)
     else
         printf("No device enumeration available\n");
 
+    printf("Default device: %s\n",
+           alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER));
+    printf("Default capture device: %s\n",
+           alcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER));
+
     device = alcGetContextsDevice(alcGetCurrentContext());
     checkForErrors();
-
-    printf("Default device: %s\n",
-           alcGetString(device, ALC_DEFAULT_DEVICE_SPECIFIER));
-
-    printf("Default capture device: %s\n",
-           alcGetString(device, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER));
 
     alcGetIntegerv(device, ALC_MAJOR_VERSION, 1, &major);
     alcGetIntegerv(device, ALC_MINOR_VERSION, 1, &minor);
@@ -276,10 +275,21 @@ static void printEFXInfo(void)
 
 int main()
 {
-    ALCdevice *device = alcOpenDevice(NULL);
-    ALCcontext *context = alcCreateContext(device, NULL);
-    alcMakeContextCurrent(context);
-    checkForErrors();
+    ALCdevice *device;
+    ALCcontext *context;
+
+    device = alcOpenDevice(NULL);
+    if(!device)
+    {
+        printf("Failed to open a device!\n");
+        exit(EXIT_FAILURE);
+    }
+    context = alcCreateContext(device, NULL);
+    if(!context || alcMakeContextCurrent(context) == ALC_FALSE)
+    {
+        printf("Failed to set a context!\n");
+        exit(EXIT_FAILURE);
+    }
 
     printALCInfo();
     printALInfo();

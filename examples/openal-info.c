@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "AL/alc.h"
 #include "AL/al.h"
@@ -67,18 +68,18 @@ static void indent(int *width)
         printChar(' ', width);
 }
 
-static void printExtensions(const char *header, char separator, const char *extensions)
+static void printList(const char *header, char separator, const char *list)
 {
     int width = 0, start = 0, end = 0;
 
     printf("%s:\n", header);
-    if(extensions == NULL || extensions[0] == '\0')
+    if(list == NULL || list[0] == '\0')
         return;
 
     indent(&width);
-    while (1)
+    while(1)
     {
-        if(extensions[end] == separator || extensions[end] == '\0')
+        if(list[end] == separator || list[end] == '\0')
         {
             if(width + end - start + 2 > maxmimumWidth)
             {
@@ -87,14 +88,14 @@ static void printExtensions(const char *header, char separator, const char *exte
             }
             while(start < end)
             {
-                printChar(extensions[start], &width);
+                printChar(list[start], &width);
                 start++;
             }
-            if(extensions[end] == '\0')
+            if(list[end] == '\0')
                 break;
             start++;
             end++;
-            if(extensions[end] == '\0')
+            if(list[end] == '\0')
                 break;
             printChar(',', &width);
             printChar(' ', &width);
@@ -168,8 +169,7 @@ static void printALCInfo (void)
     checkForErrors();
     printf("ALC version: %d.%d\n", (int)major, (int)minor);
 
-    printExtensions("ALC extensions", ' ',
-                    alcGetString(device, ALC_EXTENSIONS));
+    printList("ALC extensions", ' ', alcGetString(device, ALC_EXTENSIONS));
     checkForErrors();
 }
 
@@ -178,7 +178,7 @@ static void printALInfo(void)
     printf("OpenAL vendor string: %s\n", alGetString(AL_VENDOR));
     printf("OpenAL renderer string: %s\n", alGetString(AL_RENDERER));
     printf("OpenAL version string: %s\n", alGetString(AL_VERSION));
-    printExtensions("OpenAL extensions", ' ', alGetString(AL_EXTENSIONS));
+    printList("OpenAL extensions", ' ', alGetString(AL_EXTENSIONS));
     checkForErrors();
 }
 
@@ -188,37 +188,24 @@ static void printEFXInfo(void)
     ALCdevice *device;
     ALuint obj;
     int i;
-    const struct {
-        ALenum type;
-        const char *name;
-    } effects[] = {
-        { AL_EFFECT_EAXREVERB,         "EAX Reverb"        },
-        { AL_EFFECT_REVERB,            "Reverb"            },
-        { AL_EFFECT_CHORUS,            "Chorus"            },
-        { AL_EFFECT_DISTORTION,        "Distortion"        },
-        { AL_EFFECT_ECHO,              "Echo"              },
-        { AL_EFFECT_FLANGER,           "Flanger"           },
-        { AL_EFFECT_FREQUENCY_SHIFTER, "Frequency Shifter" },
-        { AL_EFFECT_VOCAL_MORPHER,     "Vocal Morpher"     },
-        { AL_EFFECT_PITCH_SHIFTER,     "Pitch Shifter"     },
-        { AL_EFFECT_RING_MODULATOR,    "Ring Modulator"    },
-        { AL_EFFECT_AUTOWAH,           "Autowah"           },
-        { AL_EFFECT_COMPRESSOR,        "Compressor"        },
-        { AL_EFFECT_EQUALIZER,         "Equalizer"         },
-        { AL_EFFECT_NULL, NULL }
+    const ALenum effects[] = {
+        AL_EFFECT_EAXREVERB, AL_EFFECT_REVERB, AL_EFFECT_CHORUS,
+        AL_EFFECT_DISTORTION, AL_EFFECT_ECHO, AL_EFFECT_FLANGER,
+        AL_EFFECT_FREQUENCY_SHIFTER, AL_EFFECT_VOCAL_MORPHER,
+        AL_EFFECT_PITCH_SHIFTER, AL_EFFECT_RING_MODULATOR, AL_EFFECT_AUTOWAH,
+        AL_EFFECT_COMPRESSOR, AL_EFFECT_EQUALIZER, AL_EFFECT_NULL
     };
-    const struct {
-        ALenum type;
-        const char *name;
-    } filters[] = {
-        { AL_FILTER_LOWPASS,  "Low-pass"  },
-        { AL_FILTER_HIGHPASS, "High-pass" },
-        { AL_FILTER_BANDPASS, "Band-pass" },
-        { AL_FILTER_NULL, NULL }
+    char effectNames[] = "EAX Reverb,Reverb,Chorus,Distortion,Echo,Flanger,"
+                         "Frequency Shifter,Vocal Morpher,Pitch Shifter,"
+                         "Ring Modulator,Autowah,Compressor,Equalizer,";
+    const ALenum filters[] = {
+        AL_FILTER_LOWPASS, AL_FILTER_HIGHPASS, AL_FILTER_BANDPASS,
+        AL_FILTER_NULL
     };
+    char filterNames[] = "Low-pass,High-pass,Band-pass,";
+    char *current;
 
     device = alcGetContextsDevice(alcGetCurrentContext());
-
     if(alcIsExtensionPresent(device, (const ALCchar*)"ALC_EXT_EFX") == AL_FALSE)
     {
         printf("EFX not available\n");
@@ -250,27 +237,37 @@ static void printEFXInfo(void)
 
     p_alGenFilters(1, &obj);
     checkForErrors();
-    printf("Available filters:\n");
-    for(i = 0;filters[i].type != AL_FILTER_NULL;i++)
+    current = filterNames;
+    for(i = 0;filters[i] != AL_FILTER_NULL;i++)
     {
-        p_alFilteri(obj, AL_FILTER_TYPE, filters[i].type);
+        char *next = strchr(current, ',');
+
+        p_alFilteri(obj, AL_FILTER_TYPE, filters[i]);
         if(alGetError() == AL_NO_ERROR)
-            printf("    %s\n", filters[i].name);
+            current = next+1;
+        else
+            memmove(current, next+1, strlen(next));
     }
     p_alDeleteFilters(1, &obj);
     checkForErrors();
+    printList("Supported filters", ',', filterNames);
 
     p_alGenEffects(1, &obj);
     checkForErrors();
-    printf("Available effects:\n");
-    for(i = 0;effects[i].type != AL_EFFECT_NULL;i++)
+    current = effectNames;
+    for(i = 0;effects[i] != AL_EFFECT_NULL;i++)
     {
-        p_alEffecti(obj, AL_EFFECT_TYPE, effects[i].type);
+        char *next = strchr(current, ',');
+
+        p_alEffecti(obj, AL_EFFECT_TYPE, effects[i]);
         if(alGetError() == AL_NO_ERROR)
-            printf("    %s\n", effects[i].name);
+            current = next+1;
+        else
+            memmove(current, next+1, strlen(next));
     }
     p_alDeleteEffects(1, &obj);
     checkForErrors();
+    printList("Supported effects", ',', effectNames);
 }
 
 int main()

@@ -129,9 +129,7 @@ static void checkForErrors(void)
 static void printDevices(ALCenum which, const char *kind)
 {
     const char *s = alcGetString(NULL, which);
-    checkForErrors();
-
-    printf("Available %sdevices:\n", kind);
+    printf("Available %s devices:\n", kind);
     if(s == NULL || *s == '\0')
         printf("    (none!)\n");
     else do {
@@ -145,17 +143,6 @@ static void printALCInfo (void)
 {
     ALCint major, minor;
     ALCdevice *device;
-
-    if(alcIsExtensionPresent(NULL, (const ALCchar*)"ALC_ENUMERATION_EXT") == AL_TRUE)
-    {
-        if(alcIsExtensionPresent(NULL, (const ALCchar*)"ALC_ENUMERATE_ALL_EXT") == AL_TRUE)
-            printDevices(ALC_ALL_DEVICES_SPECIFIER, "playback ");
-        else
-            printDevices(ALC_DEVICE_SPECIFIER, "playback ");
-        printDevices(ALC_CAPTURE_DEVICE_SPECIFIER, "capture ");
-    }
-    else
-        printf("No device enumeration available\n");
 
     printf("Default device: %s\n",
            alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER));
@@ -275,6 +262,17 @@ int main()
 {
     ALCdevice *device;
     ALCcontext *context;
+
+    if(alcIsExtensionPresent(NULL, (const ALCchar*)"ALC_ENUMERATION_EXT") == AL_TRUE)
+    {
+        if(alcIsExtensionPresent(NULL, (const ALCchar*)"ALC_ENUMERATE_ALL_EXT") == AL_TRUE)
+            printDevices(ALC_ALL_DEVICES_SPECIFIER, "playback");
+        else
+            printDevices(ALC_DEVICE_SPECIFIER, "playback");
+        printDevices(ALC_CAPTURE_DEVICE_SPECIFIER, "capture");
+    }
+    else
+        printf("No device enumeration available\n");
 
     device = alcOpenDevice(NULL);
     if(!device)

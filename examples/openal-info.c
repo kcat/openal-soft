@@ -132,12 +132,13 @@ static void printDevices(ALCenum which, const char *kind)
     checkForErrors();
 
     printf("Available %sdevices:\n", kind);
-    while(*s != '\0')
-    {
+    if(s == NULL || *s == '\0')
+        printf("    (none!)\n");
+    else do {
         printf("    %s\n", s);
         while(*s++ != '\0')
             ;
-    }
+    } while(*s != '\0');
 }
 
 static void printALCInfo (void)

@@ -259,6 +259,7 @@ static void alc_init(void)
         int n;
         size_t len;
         const char *next = devs;
+        int endlist;
 
         i = 0;
         do {
@@ -266,7 +267,11 @@ static void alc_init(void)
             next = strchr(devs, ',');
 
             if(!devs[0] || devs[0] == ',')
+            {
+                endlist = 0;
                 continue;
+            }
+            endlist = 1;
 
             len = (next ? ((size_t)(next-devs)) : strlen(devs));
             for(n = i;BackendList[n].Init;n++)
@@ -274,19 +279,27 @@ static void alc_init(void)
                 if(len == strlen(BackendList[n].name) &&
                    strncmp(BackendList[n].name, devs, len) == 0)
                 {
-                    BackendInfo Bkp = BackendList[i];
-                    BackendList[i] = BackendList[n];
+                    BackendInfo Bkp = BackendList[n];
+                    while(n > i)
+                    {
+                        BackendList[n] = BackendList[n-1];
+                        --n;
+                    }
                     BackendList[n] = Bkp;
 
                     i++;
+                    break;
                 }
             }
         } while(next++);
 
-        BackendList[i].name = NULL;
-        BackendList[i].Init = NULL;
-        BackendList[i].Deinit = NULL;
-        BackendList[i].Probe = NULL;
+        if(endlist)
+        {
+            BackendList[i].name = NULL;
+            BackendList[i].Init = NULL;
+            BackendList[i].Deinit = NULL;
+            BackendList[i].Probe = NULL;
+        }
     }
 
     for(i = 0;BackendList[i].Init;i++)

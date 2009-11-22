@@ -79,8 +79,10 @@
 
 ## drivers:
 #  Sets the backend driver list order, comma-seperated. Unknown backends and
-#  duplicated names are ignored, and unlisted backends won't be considered for
-#  use. An empty list means the default.
+#  duplicated names are ignored. Unlisted backends won't be considered for use
+#  unless the list is ended with a comma (eg. 'oss,' will list OSS first
+#  followed by all other available backends, while 'oss' will list OSS only).
+#  An empty list means the default.
 #drivers = alsa,oss,solaris,dsound,winmm,port,pulse,wave
 
 ## excludefx:

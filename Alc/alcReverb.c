@@ -574,16 +574,15 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
 // coefficients.
 static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoTime, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALverbState *State)
 {
-    // Calculate the energy-based attenuation coefficient for the echo delay
-    // line.
-    State->Echo.DensityGain = CalcDensityGain(CalcDecayCoeff(echoTime,
-                                                             decayTime));
-
     // Update the offset and coefficient for the echo delay line.
     State->Echo.Offset = (ALuint)(echoTime * frequency);
 
     // Calculate the decay coefficient for the echo line.
     State->Echo.Coeff = CalcDecayCoeff(echoTime, decayTime);
+
+    // Calculate the energy-based attenuation coefficient for the echo delay
+    // line.
+    State->Echo.DensityGain = CalcDensityGain(State->Echo.Coeff);
 
     // Calculate the echo all-pass feed coefficient.
     State->Echo.ApFeedCoeff = 0.5f * pow(diffusion, 2.0f);
@@ -914,7 +913,7 @@ static __inline ALvoid EAXEcho(ALverbState *State, ALfloat in, ALfloat *late)
 // four-channel output.
 static __inline ALvoid VerbPass(ALverbState *State, ALfloat in, ALfloat *early, ALfloat *late)
 {
-    ALfloat taps[4];
+    ALfloat feed, taps[4];
 
     // Low-pass filter the incoming sample.
     in = lpFilter2P(&State->LpFilter, 0, in);
@@ -929,11 +928,11 @@ static __inline ALvoid VerbPass(ALverbState *State, ALfloat in, ALfloat *early, 
     // Feed the decorrelator from the energy-attenuated output of the second
     // delay tap.
     in = DelayLineOut(&State->Delay, State->Offset - State->DelayTap[1]);
-    in *= State->Late.DensityGain;
-    DelayLineIn(&State->Decorrelator, State->Offset, in);
+    feed = in * State->Late.DensityGain;
+    DelayLineIn(&State->Decorrelator, State->Offset, feed);
 
     // Calculate the late reverb from the decorrelator taps.
-    taps[0] = in;
+    taps[0] = feed;
     taps[1] = DelayLineOut(&State->Decorrelator, State->Offset - State->DecoTap[0]);
     taps[2] = DelayLineOut(&State->Decorrelator, State->Offset - State->DecoTap[1]);
     taps[3] = DelayLineOut(&State->Decorrelator, State->Offset - State->DecoTap[2]);
@@ -947,7 +946,7 @@ static __inline ALvoid VerbPass(ALverbState *State, ALfloat in, ALfloat *early, 
 // channel output.
 static __inline ALvoid EAXVerbPass(ALverbState *State, ALfloat in, ALfloat *early, ALfloat *late)
 {
-    ALfloat taps[4];
+    ALfloat feed, taps[4];
 
     // Low-pass filter the incoming sample.
     in = lpFilter2P(&State->LpFilter, 0, in);
@@ -965,11 +964,11 @@ static __inline ALvoid EAXVerbPass(ALverbState *State, ALfloat in, ALfloat *earl
     // Feed the decorrelator from the energy-attenuated output of the second
     // delay tap.
     in = DelayLineOut(&State->Delay, State->Offset - State->DelayTap[1]);
-    in *= State->Late.DensityGain;
-    DelayLineIn(&State->Decorrelator, State->Offset, in);
+    feed = in * State->Late.DensityGain;
+    DelayLineIn(&State->Decorrelator, State->Offset, feed);
 
     // Calculate the late reverb from the decorrelator taps.
-    taps[0] = in;
+    taps[0] = feed;
     taps[1] = DelayLineOut(&State->Decorrelator, State->Offset - State->DecoTap[0]);
     taps[2] = DelayLineOut(&State->Decorrelator, State->Offset - State->DecoTap[1]);
     taps[3] = DelayLineOut(&State->Decorrelator, State->Offset - State->DecoTap[2]);

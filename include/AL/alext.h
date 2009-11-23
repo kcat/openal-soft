@@ -146,8 +146,8 @@ typedef ALvoid (AL_APIENTRY*PFNALUNMAPDATABUFFEREXTPROC)(ALuint uiBuffer);
 
 #ifndef ALC_EXT_thread_local_context
 #define ALC_EXT_thread_local_context 1
-typedef ALCboolean (ALCAPIENTRY*PFNALCMAKECURRENTPROC)(ALCcontext *context);
-typedef ALCcontext* (ALCAPIENTRY*PFNALCGETTHREADCONTEXTPROC)(void);
+typedef ALCboolean (ALC_APIENTRY*PFNALCMAKECURRENTPROC)(ALCcontext *context);
+typedef ALCcontext* (ALC_APIENTRY*PFNALCGETTHREADCONTEXTPROC)(void);
 #endif
 
 #ifdef __cplusplus

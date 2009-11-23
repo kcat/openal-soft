@@ -110,14 +110,15 @@ static __inline ALvoid aluNormalize(ALfloat *inVector)
     }
 }
 
-static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat matrix[3][3])
+static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[4][4])
 {
-    ALfloat result[3];
+    ALfloat temp[4] = {
+        vector[0], vector[1], vector[2], w
+    };
 
-    result[0] = vector[0]*matrix[0][0] + vector[1]*matrix[1][0] + vector[2]*matrix[2][0];
-    result[1] = vector[0]*matrix[0][1] + vector[1]*matrix[1][1] + vector[2]*matrix[2][1];
-    result[2] = vector[0]*matrix[0][2] + vector[1]*matrix[1][2] + vector[2]*matrix[2][2];
-    memcpy(vector, result, sizeof(result));
+    vector[0] = temp[0]*matrix[0][0] + temp[1]*matrix[1][0] + temp[2]*matrix[2][0] + temp[3]*matrix[3][0];
+    vector[1] = temp[0]*matrix[0][1] + temp[1]*matrix[1][1] + temp[2]*matrix[2][1] + temp[3]*matrix[3][1];
+    vector[2] = temp[0]*matrix[0][2] + temp[1]*matrix[1][2] + temp[2]*matrix[2][2] + temp[3]*matrix[3][2];
 }
 
 static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPUTCHANNELS],
@@ -408,7 +409,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
     ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound;
-    ALfloat Matrix[3][3];
+    ALfloat Matrix[4][4];
     ALfloat flAttenuation;
     ALfloat RoomAttenuation[MAX_SENDS];
     ALfloat MetersPerUnit;
@@ -503,29 +504,35 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
     //1. Translate Listener to origin (convert to head relative)
     if(ALSource->bHeadRelative==AL_FALSE)
     {
-        ALfloat U[3],V[3],N[3];
+        ALfloat U[3],V[3],N[3],P[3];
 
         // Build transform matrix
-        aluCrossproduct(ALContext->Listener.Forward, ALContext->Listener.Up, U); // Right-vector
-        aluNormalize(U);  // Normalized Right-vector
-        memcpy(V, ALContext->Listener.Up, sizeof(V));   // Up-vector
-        aluNormalize(V);  // Normalized Up-vector
         memcpy(N, ALContext->Listener.Forward, sizeof(N));  // At-vector
         aluNormalize(N);  // Normalized At-vector
-        Matrix[0][0] = U[0]; Matrix[0][1] = V[0]; Matrix[0][2] = -N[0];
-        Matrix[1][0] = U[1]; Matrix[1][1] = V[1]; Matrix[1][2] = -N[1];
-        Matrix[2][0] = U[2]; Matrix[2][1] = V[2]; Matrix[2][2] = -N[2];
+        memcpy(V, ALContext->Listener.Up, sizeof(V));  // Up-vector
+        aluNormalize(V);  // Normalized Up-vector
+        aluCrossproduct(N, V, U); // Right-vector
+        aluNormalize(U);  // Normalized Right-vector
+        P[0] = -(ALContext->Listener.Position[0]*U[0] + // Translation
+                 ALContext->Listener.Position[1]*U[1] +
+                 ALContext->Listener.Position[2]*U[2]);
+        P[1] = -(ALContext->Listener.Position[0]*V[0] +
+                 ALContext->Listener.Position[1]*V[1] +
+                 ALContext->Listener.Position[2]*V[2]);
+        P[2] = -(ALContext->Listener.Position[0]*-N[0] +
+                 ALContext->Listener.Position[1]*-N[1] +
+                 ALContext->Listener.Position[2]*-N[2]);
+        Matrix[0][0] = U[0]; Matrix[0][1] = V[0]; Matrix[0][2] = -N[0]; Matrix[0][3] = 0.0f;
+        Matrix[1][0] = U[1]; Matrix[1][1] = V[1]; Matrix[1][2] = -N[1]; Matrix[1][3] = 0.0f;
+        Matrix[2][0] = U[2]; Matrix[2][1] = V[2]; Matrix[2][2] = -N[2]; Matrix[2][3] = 0.0f;
+        Matrix[3][0] = P[0]; Matrix[3][1] = P[1]; Matrix[3][2] =  P[2]; Matrix[3][3] = 1.0f;
 
-        // Translate source position into listener space
-        Position[0] -= ALContext->Listener.Position[0];
-        Position[1] -= ALContext->Listener.Position[1];
-        Position[2] -= ALContext->Listener.Position[2];
         // Transform source position and direction into listener space
-        aluMatrixVector(Position, Matrix);
-        aluMatrixVector(Direction, Matrix);
+        aluMatrixVector(Position, 1.0f, Matrix);
+        aluMatrixVector(Direction, 0.0f, Matrix);
         // Transform source and listener velocity into listener space
-        aluMatrixVector(Velocity, Matrix);
-        aluMatrixVector(ListenerVel, Matrix);
+        aluMatrixVector(Velocity, 0.0f, Matrix);
+        aluMatrixVector(ListenerVel, 0.0f, Matrix);
     }
     else
         ListenerVel[0] = ListenerVel[1] = ListenerVel[2] = 0.0f;

@@ -698,7 +698,7 @@ static __inline ALfloat EAXModulation(ALverbState *State, ALfloat in)
     // Calculate the sinus rythm (dependent on modulation time and the
     // sampling rate).  The center of the sinus is moved to reduce the delay
     // of the effect when the time or depth are low.
-    sinus = 1.0f + sin(2.0f * M_PI * State->Mod.Index / State->Mod.Range);
+    sinus = 1.0f - cos(2.0f * M_PI * State->Mod.Index / State->Mod.Range);
 
     // The depth determines the range over which to read the input samples
     // from, so it must be filtered to reduce the distortion caused by even

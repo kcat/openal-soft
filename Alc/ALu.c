@@ -628,20 +628,20 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
     }
 
     // Distance-based air absorption
-    if(ALSource->AirAbsorptionFactor > 0.0f)
+    if(ALSource->AirAbsorptionFactor > 0.0f && ALSource->DistanceModel != AL_NONE)
     {
-        ALfloat amount = AIRABSORBGAINDBHF * ALSource->AirAbsorptionFactor *
-                         MetersPerUnit;
+        ALfloat dist = Distance-MinDist;
         ALfloat absorb;
 
-        // Convert a -6dB rolloff into a -0.05dB rolloff
-        absorb = pow(10.0f, log10(flAttenuation) * amount / -6.0f);
-        if(absorb < 1.0f)
-        {
-            DryGainHF *= absorb;
-            for(i = 0;i < MAX_SENDS;i++)
-                WetGainHF[i] *= absorb;
-        }
+        if(dist < 0.0f) dist = 0.0f;
+        // Absorption calculation is done in dB
+        absorb = (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF) *
+                 (dist*MetersPerUnit);
+        // Convert dB to linear gain before applying
+        absorb = pow(10.0, absorb/20.0);
+        DryGainHF *= absorb;
+        for(i = 0;i < MAX_SENDS;i++)
+            WetGainHF[i] *= absorb;
     }
 
     //3. Apply directional soundcones

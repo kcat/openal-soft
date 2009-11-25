@@ -628,17 +628,18 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
     }
 
     // Distance-based air absorption
-    if(ALSource->AirAbsorptionFactor > 0.0f && ALSource->DistanceModel != AL_NONE)
+    if(ALSource->AirAbsorptionFactor > 0.0f && flAttenuation < 1.0f)
     {
-        ALfloat dist = Distance-MinDist;
-        ALfloat absorb;
+        ALfloat absorb = 0.0f;
 
-        if(dist < 0.0f) dist = 0.0f;
         // Absorption calculation is done in dB
-        absorb = (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF) *
-                 (dist*MetersPerUnit);
-        // Convert dB to linear gain before applying
-        absorb = pow(10.0, absorb/20.0);
+        if(flAttenuation > 0.0f)
+        {
+            absorb = (MinDist/flAttenuation - MinDist)*MetersPerUnit *
+                     (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF);
+            // Convert dB to linear gain before applying
+            absorb = pow(10.0, absorb/20.0);
+        }
         DryGainHF *= absorb;
         for(i = 0;i < MAX_SENDS;i++)
             WetGainHF[i] *= absorb;

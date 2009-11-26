@@ -230,6 +230,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->flPitch = flValue;
                     if(pSource->flPitch < 0.001f)
                         pSource->flPitch = 0.001f;
+                    pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -237,91 +238,130 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
 
             case AL_CONE_INNER_ANGLE:
                 if(flValue >= 0.0f && flValue <= 360.0f)
+                {
                     pSource->flInnerAngle = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_ANGLE:
                 if(flValue >= 0.0f && flValue <= 360.0f)
+                {
                     pSource->flOuterAngle = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_GAIN:
                 if(flValue >= 0.0f)
+                {
                     pSource->flGain = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_MAX_DISTANCE:
                 if(flValue >= 0.0f)
+                {
                     pSource->flMaxDistance = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_ROLLOFF_FACTOR:
                 if(flValue >= 0.0f)
+                {
                     pSource->flRollOffFactor = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_REFERENCE_DISTANCE:
                 if(flValue >= 0.0f)
+                {
                     pSource->flRefDistance = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_MIN_GAIN:
                 if(flValue >= 0.0f && flValue <= 1.0f)
+                {
                     pSource->flMinGain = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_MAX_GAIN:
                 if(flValue >= 0.0f && flValue <= 1.0f)
+                {
                     pSource->flMaxGain = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_GAIN:
                 if(flValue >= 0.0f && flValue <= 1.0f)
+                {
                     pSource->flOuterGain = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_GAINHF:
                 if(flValue >= 0.0f && flValue <= 1.0f)
+                {
                     pSource->OuterGainHF = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_AIR_ABSORPTION_FACTOR:
                 if(flValue >= 0.0f && flValue <= 10.0f)
+                {
                     pSource->AirAbsorptionFactor = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_ROOM_ROLLOFF_FACTOR:
                 if(flValue >= 0.0f && flValue <= 10.0f)
+                {
                     pSource->RoomRolloffFactor = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_DOPPLER_FACTOR:
                 if(flValue >= 0.0f && flValue <= 1.0f)
+                {
                     pSource->DopplerFactor = flValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
@@ -378,18 +418,21 @@ ALAPI ALvoid ALAPIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flValue
                 pSource->vPosition[0] = flValue1;
                 pSource->vPosition[1] = flValue2;
                 pSource->vPosition[2] = flValue3;
+                pSource->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_VELOCITY:
                 pSource->vVelocity[0] = flValue1;
                 pSource->vVelocity[1] = flValue2;
                 pSource->vVelocity[2] = flValue3;
+                pSource->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_DIRECTION:
                 pSource->vOrientation[0] = flValue1;
                 pSource->vOrientation[1] = flValue2;
                 pSource->vOrientation[2] = flValue3;
+                pSource->NeedsUpdate = AL_TRUE;
                 break;
 
             default:
@@ -480,21 +523,30 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 
             case AL_SOURCE_RELATIVE:
                 if(lValue == AL_FALSE || lValue == AL_TRUE)
+                {
                     pSource->bHeadRelative = (ALboolean)lValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_INNER_ANGLE:
                 if(lValue >= 0 && lValue <= 360)
+                {
                     pSource->flInnerAngle = (float)lValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_ANGLE:
                 if(lValue >= 0 && lValue <= 360)
+                {
                     pSource->flOuterAngle = (float)lValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
@@ -599,6 +651,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     }
                     else
                         memcpy(&pSource->DirectFilter, filter, sizeof(*filter));
+                    pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -606,21 +659,30 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 
             case AL_DIRECT_FILTER_GAINHF_AUTO:
                 if(lValue == AL_TRUE || lValue == AL_FALSE)
+                {
                     pSource->DryGainHFAuto = lValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
                 if(lValue == AL_TRUE || lValue == AL_FALSE)
+                {
                     pSource->WetGainAuto = lValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
 
             case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
                 if(lValue == AL_TRUE || lValue == AL_FALSE)
+                {
                     pSource->WetGainHFAuto = lValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
@@ -633,7 +695,10 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                    lValue == AL_LINEAR_DISTANCE_CLAMPED ||
                    lValue == AL_EXPONENT_DISTANCE ||
                    lValue == AL_EXPONENT_DISTANCE_CLAMPED)
+                {
                     pSource->DistanceModel = lValue;
+                    pSource->NeedsUpdate = AL_TRUE;
+                }
                 else
                     alSetError(AL_INVALID_VALUE);
                 break;
@@ -694,6 +759,7 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
                     }
                     else
                         memcpy(&pSource->Send[lValue2].WetFilter, ALFilter, sizeof(*ALFilter));
+                    pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -1750,6 +1816,8 @@ static ALvoid InitSourceParams(ALCcontext *Context, ALsource *pSource)
 
     pSource->state = AL_INITIAL;
     pSource->lSourceType = AL_UNDETERMINED;
+
+    pSource->NeedsUpdate = AL_TRUE;
 
     pSource->Buffer = NULL;
 }

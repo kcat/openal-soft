@@ -499,14 +499,30 @@ ALAPI const ALchar* ALAPIENTRY alGetString(ALenum pname)
 ALAPI ALvoid ALAPIENTRY alDopplerFactor(ALfloat value)
 {
     ALCcontext *Context;
+    ALboolean updateSources = AL_FALSE;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
     if(value >= 0.0f)
+    {
         Context->DopplerFactor = value;
+        updateSources = AL_TRUE;
+    }
     else
         alSetError(AL_INVALID_VALUE);
+
+    // Force updating the sources for these parameters, since even head-
+    // relative sources are affected
+    if(updateSources)
+    {
+        ALsource *source = Context->Source;
+        while(source)
+        {
+            source->NeedsUpdate = AL_TRUE;
+            source = source->next;
+        }
+    }
 
     ProcessContext(Context);
 }
@@ -514,14 +530,28 @@ ALAPI ALvoid ALAPIENTRY alDopplerFactor(ALfloat value)
 ALAPI ALvoid ALAPIENTRY alDopplerVelocity(ALfloat value)
 {
     ALCcontext *Context;
+    ALboolean updateSources = AL_FALSE;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
     if(value > 0.0f)
+    {
         Context->DopplerVelocity=value;
+        updateSources = AL_TRUE;
+    }
     else
         alSetError(AL_INVALID_VALUE);
+
+    if(updateSources)
+    {
+        ALsource *source = Context->Source;
+        while(source)
+        {
+            source->NeedsUpdate = AL_TRUE;
+            source = source->next;
+        }
+    }
 
     ProcessContext(Context);
 }
@@ -529,14 +559,28 @@ ALAPI ALvoid ALAPIENTRY alDopplerVelocity(ALfloat value)
 ALAPI ALvoid ALAPIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
 {
     ALCcontext *pContext;
+    ALboolean updateSources = AL_FALSE;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if(flSpeedOfSound > 0.0f)
+    {
         pContext->flSpeedOfSound = flSpeedOfSound;
+        updateSources = AL_TRUE;
+    }
     else
         alSetError(AL_INVALID_VALUE);
+
+    if(updateSources)
+    {
+        ALsource *source = pContext->Source;
+        while(source)
+        {
+            source->NeedsUpdate = AL_TRUE;
+            source = source->next;
+        }
+    }
 
     ProcessContext(pContext);
 }
@@ -560,7 +604,10 @@ ALAPI ALvoid ALAPIENTRY alDistanceModel(ALenum value)
         case AL_EXPONENT_DISTANCE_CLAMPED:
             Context->DistanceModel = value;
             for(Source = Context->Source;Source != NULL;Source = Source->next)
+            {
                 Source->DistanceModel = value;
+                Source->NeedsUpdate = AL_TRUE;
+            }
             break;
 
         default:

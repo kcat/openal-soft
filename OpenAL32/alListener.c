@@ -24,10 +24,12 @@
 #include "AL/alc.h"
 #include "alError.h"
 #include "alListener.h"
+#include "alSource.h"
 
 ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
 {
     ALCcontext *pContext;
+    ALboolean updateAll = AL_FALSE;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
@@ -36,14 +38,20 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
     {
         case AL_GAIN:
             if(flValue >= 0.0f)
+            {
                 pContext->Listener.Gain = flValue;
+                updateAll = AL_TRUE;
+            }
             else
                 alSetError(AL_INVALID_VALUE);
             break;
 
         case AL_METERS_PER_UNIT:
             if(flValue > 0.0f)
+            {
                 pContext->Listener.MetersPerUnit = flValue;
+                updateAll = AL_TRUE;
+            }
             else
                 alSetError(AL_INVALID_VALUE);
             break;
@@ -53,6 +61,18 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
             break;
     }
 
+    // Force updating the sources for these parameters, since even head-
+    // relative sources are affected
+    if(updateAll)
+    {
+        ALsource *source = pContext->Source;
+        while(source)
+        {
+            source->NeedsUpdate = AL_TRUE;
+            source = source->next;
+        }
+    }
+
     ProcessContext(pContext);
 }
 
@@ -60,6 +80,7 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
 ALAPI ALvoid ALAPIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat flValue2, ALfloat flValue3)
 {
     ALCcontext *pContext;
+    ALboolean updateWorld = AL_FALSE;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
@@ -70,17 +91,30 @@ ALAPI ALvoid ALAPIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat fl
             pContext->Listener.Position[0] = flValue1;
             pContext->Listener.Position[1] = flValue2;
             pContext->Listener.Position[2] = flValue3;
+            updateWorld = AL_TRUE;
             break;
 
         case AL_VELOCITY:
             pContext->Listener.Velocity[0] = flValue1;
             pContext->Listener.Velocity[1] = flValue2;
             pContext->Listener.Velocity[2] = flValue3;
+            updateWorld = AL_TRUE;
             break;
 
         default:
             alSetError(AL_INVALID_ENUM);
             break;
+    }
+
+    if(updateWorld)
+    {
+        ALsource *source = pContext->Source;
+        while(source)
+        {
+            if(!source->bHeadRelative)
+                source->NeedsUpdate = AL_TRUE;
+            source = source->next;
+        }
     }
 
     ProcessContext(pContext);
@@ -90,6 +124,7 @@ ALAPI ALvoid ALAPIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat fl
 ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
 {
     ALCcontext *pContext;
+    ALboolean updateWorld = AL_FALSE;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
@@ -99,29 +134,13 @@ ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
         switch(eParam)
         {
             case AL_GAIN:
-                if(pflValues[0] >= 0.0f)
-                    pContext->Listener.Gain = pflValues[0];
-                else
-                    alSetError(AL_INVALID_VALUE);
-                break;
-
             case AL_METERS_PER_UNIT:
-                if(pflValues[0] > 0.0f)
-                    pContext->Listener.MetersPerUnit = pflValues[0];
-                else
-                    alSetError(AL_INVALID_VALUE);
+                alListenerf(eParam, pflValues[0]);
                 break;
 
             case AL_POSITION:
-                pContext->Listener.Position[0] = pflValues[0];
-                pContext->Listener.Position[1] = pflValues[1];
-                pContext->Listener.Position[2] = pflValues[2];
-                break;
-
             case AL_VELOCITY:
-                pContext->Listener.Velocity[0] = pflValues[0];
-                pContext->Listener.Velocity[1] = pflValues[1];
-                pContext->Listener.Velocity[2] = pflValues[2];
+                alListener3f(eParam, pflValues[0], pflValues[1], pflValues[2]);
                 break;
 
             case AL_ORIENTATION:
@@ -132,6 +151,7 @@ ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
                 pContext->Listener.Up[0] = pflValues[3];
                 pContext->Listener.Up[1] = pflValues[4];
                 pContext->Listener.Up[2] = pflValues[5];
+                updateWorld = AL_TRUE;
                 break;
 
             default:
@@ -141,6 +161,17 @@ ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
     }
     else
         alSetError(AL_INVALID_VALUE);
+
+    if(updateWorld)
+    {
+        ALsource *source = pContext->Source;
+        while(source)
+        {
+            if(!source->bHeadRelative)
+                source->NeedsUpdate = AL_TRUE;
+            source = source->next;
+        }
+    }
 
     ProcessContext(pContext);
 }

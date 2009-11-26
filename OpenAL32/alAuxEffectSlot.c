@@ -29,6 +29,7 @@
 #include "alAuxEffectSlot.h"
 #include "alThunk.h"
 #include "alError.h"
+#include "alSource.h"
 
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, ALeffect *effect);
@@ -179,6 +180,7 @@ ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
 ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint iValue)
 {
     ALCcontext *Context;
+    ALboolean updateSources = AL_FALSE;
 
     Context = GetContextSuspended();
     if(!Context) return;
@@ -194,6 +196,7 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint
             {
                 ALeffect *effect = (ALeffect*)ALTHUNK_LOOKUPENTRY(iValue);
                 InitializeEffect(Context, ALEffectSlot, effect);
+                updateSources = AL_TRUE;
             }
             else
                 alSetError(AL_INVALID_VALUE);
@@ -201,7 +204,10 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint
 
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
             if(iValue == AL_TRUE || iValue == AL_FALSE)
+            {
                 ALEffectSlot->AuxSendAuto = iValue;
+                updateSources = AL_TRUE;
+            }
             else
                 alSetError(AL_INVALID_VALUE);
             break;
@@ -213,6 +219,26 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint
     }
     else
         alSetError(AL_INVALID_NAME);
+
+    // Force updating the sources that use this slot, since it affects the
+    // sending parameters
+    if(updateSources)
+    {
+        ALsource *source = Context->Source;
+        while(source)
+        {
+            ALuint i;
+            for(i = 0;i < MAX_SENDS;i++)
+            {
+                if(!source->Send[i].Slot ||
+                   source->Send[i].Slot->effectslot != effectslot)
+                    continue;
+                source->NeedsUpdate = AL_TRUE;
+                break;
+            }
+            source = source->next;
+        }
+    }
 
     ProcessContext(Context);
 }

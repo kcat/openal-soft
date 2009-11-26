@@ -888,7 +888,11 @@ another_source:
     DataPosInt    = ALSource->position;
     DataPosFrac   = ALSource->position_fraction;
 
-    CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE);
+    if(ALSource->NeedsUpdate)
+    {
+        CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE);
+        ALSource->NeedsUpdate = AL_FALSE;
+    }
 
     /* Compute 18.14 fixed point step */
     Pitch = (ALSource->Params.Pitch*Frequency) / DeviceFreq;

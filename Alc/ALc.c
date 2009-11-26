@@ -1249,6 +1249,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 source->Send[s].WetFilter.filter = 0;
                 s++;
             }
+            source->NeedsUpdate = AL_TRUE;
         }
         ProcessContext(context);
     }

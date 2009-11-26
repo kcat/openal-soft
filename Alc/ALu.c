@@ -478,8 +478,29 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
         ALSource->Params.DryGains[FRONT_CENTER] = DryMix * ListenerGain;
         ALSource->Params.DryGains[BACK_CENTER]  = DryMix * ListenerGain;
         ALSource->Params.DryGains[LFE]          = DryMix * ListenerGain;
-        for(i = 0;i < MAX_SENDS;i++)
+
+        for(i = 0;i < NumSends;i++)
+        {
+            WetGain[i] = SourceVolume;
+            WetGain[i] = __min(WetGain[i],MaxVolume);
+            WetGain[i] = __max(WetGain[i],MinVolume);
+            WetGainHF[i] = 1.0f;
+
+            switch(ALSource->Send[i].WetFilter.type)
+            {
+                case AL_FILTER_LOWPASS:
+                    WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
+                    WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
+                    break;
+            }
+
+            ALSource->Params.WetGains[i] = WetGain[i] * ListenerGain;
+        }
+        for(i = NumSends;i < MAX_SENDS;i++)
+        {
             ALSource->Params.WetGains[i] = 0.0f;
+            WetGainHF[i] = 1.0f;
+        }
 
         /* Update filter coefficients. Calculations based on the I3DL2
          * spec. */
@@ -495,8 +516,18 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
             a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
                 (1 - g);
         ALSource->Params.iirFilter.coeff = a;
-        for(i = 0;i < MAX_SENDS;i++)
-            ALSource->Params.Send[i].iirFilter.coeff = 0.0f;
+
+        for(i = 0;i < NumSends;i++)
+        {
+            /* We use a one-pole filter, so we need to take the squared gain */
+            g = __max(WetGainHF[i], 0.1f);
+            g *= g;
+            a = 0.0f;
+            if(g < 0.9999f) /* 1-epsilon */
+                a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
+                    (1 - g);
+            ALSource->Params.Send[i].iirFilter.coeff = a;
+        }
 
         return;
     }
@@ -832,7 +863,7 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALfloat wetGainStep[MAX_SENDS];
     ALuint i, j, k, out;
     ALsource *ALSource;
-    ALfloat value;
+    ALfloat value, outsamp;
     ALbufferlistitem *BufferListItem;
     ALint64 DataSize64,DataPos64;
     FILTER *DryFilter, *WetFilter[MAX_SENDS];
@@ -1009,8 +1040,6 @@ another_source:
 
         if(Channels == 1) /* Mono */
         {
-            ALfloat outsamp;
-
             while(BufferSize--)
             {
                 for(i = 0;i < OUTPUTCHANNELS;i++)
@@ -1050,21 +1079,27 @@ another_source:
             const int chans[] = {
                 FRONT_LEFT, FRONT_RIGHT
             };
+            const ALfloat scaler = aluSqrt(1.0f/Channels);
 
 #define DO_MIX() do { \
-    for(i = 0;i < MAX_SENDS;i++) \
-        WetSend[i] += wetGainStep[i]*BufferSize; \
     while(BufferSize--) \
     { \
         for(i = 0;i < OUTPUTCHANNELS;i++) \
             DrySend[i] += dryGainStep[i]; \
+        for(i = 0;i < MAX_SENDS;i++) \
+            WetSend[i] += wetGainStep[i]; \
  \
         for(i = 0;i < Channels;i++) \
         { \
             value = lerp(Data[k*Channels + i], Data[(k+1)*Channels + i], DataPosFrac); \
-            value = lpFilter2P(DryFilter, chans[i]*2, value)*DrySend[chans[i]]; \
+            outsamp = lpFilter2P(DryFilter, chans[i]*2, value)*DrySend[chans[i]]; \
             for(out = 0;out < OUTPUTCHANNELS;out++) \
-                DryBuffer[j][out] += value*Matrix[chans[i]][out]; \
+                DryBuffer[j][out] += outsamp*Matrix[chans[i]][out]; \
+            for(out = 0;out < MAX_SENDS;out++) \
+            { \
+                outsamp = lpFilter1P(WetFilter[out], chans[out], value); \
+                WetBuffer[out][j] += outsamp*WetSend[out]*scaler; \
+            } \
         } \
  \
         DataPosFrac += increment; \
@@ -1082,6 +1117,7 @@ another_source:
                 FRONT_LEFT, FRONT_RIGHT,
                 BACK_LEFT,  BACK_RIGHT
             };
+            const ALfloat scaler = aluSqrt(1.0f/Channels);
 
             DO_MIX();
         }
@@ -1092,6 +1128,7 @@ another_source:
                 FRONT_CENTER, LFE,
                 BACK_LEFT,    BACK_RIGHT
             };
+            const ALfloat scaler = aluSqrt(1.0f/Channels);
 
             DO_MIX();
         }
@@ -1103,6 +1140,7 @@ another_source:
                 BACK_CENTER,
                 SIDE_LEFT,    SIDE_RIGHT
             };
+            const ALfloat scaler = aluSqrt(1.0f/Channels);
 
             DO_MIX();
         }
@@ -1114,6 +1152,7 @@ another_source:
                 BACK_LEFT,    BACK_RIGHT,
                 SIDE_LEFT,    SIDE_RIGHT
             };
+            const ALfloat scaler = aluSqrt(1.0f/Channels);
 
             DO_MIX();
 #undef DO_MIX

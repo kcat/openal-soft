@@ -93,7 +93,7 @@ typedef struct ALsource
 
         struct {
             FILTER iirFilter;
-            ALfloat history[2];
+            ALfloat history[OUTPUTCHANNELS];
         } Send[MAX_SENDS];
 
         FILTER iirFilter;

@@ -561,6 +561,7 @@ static ALvoid InitContext(ALCcontext *pContext)
 
     //Set globals
     pContext->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
+    pContext->SourceDistanceModel = AL_FALSE;
     pContext->DopplerFactor = 1.0f;
     pContext->DopplerVelocity = 1.0f;
     pContext->flSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;

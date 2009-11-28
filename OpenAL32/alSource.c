@@ -32,7 +32,7 @@
 #include "alThunk.h"
 #include "alAuxEffectSlot.h"
 
-static ALvoid InitSourceParams(ALCcontext *Context, ALsource *pSource);
+static ALvoid InitSourceParams(ALsource *pSource);
 static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset, ALuint updateSize);
 static ALvoid ApplyOffset(ALsource *pSource, ALboolean bUpdateContext);
 static ALint GetByteOffset(ALsource *pSource);
@@ -74,7 +74,7 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
                     sources[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
                     (*list)->source = sources[i];
 
-                    InitSourceParams(Context, *list);
+                    InitSourceParams(*list);
                     Context->SourceCount++;
                     i++;
 
@@ -697,7 +697,8 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                    lValue == AL_EXPONENT_DISTANCE_CLAMPED)
                 {
                     pSource->DistanceModel = lValue;
-                    pSource->NeedsUpdate = AL_TRUE;
+                    if(pContext->SourceDistanceModel)
+                        pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -1781,7 +1782,7 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
 }
 
 
-static ALvoid InitSourceParams(ALCcontext *Context, ALsource *pSource)
+static ALvoid InitSourceParams(ALsource *pSource)
 {
     pSource->flInnerAngle = 360.0f;
     pSource->flOuterAngle = 360.0f;
@@ -1812,7 +1813,7 @@ static ALvoid InitSourceParams(ALCcontext *Context, ALsource *pSource)
     pSource->RoomRolloffFactor = 0.0f;
     pSource->DopplerFactor = 1.0f;
 
-    pSource->DistanceModel = Context->DistanceModel;
+    pSource->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
 
     pSource->state = AL_INITIAL;
     pSource->lSourceType = AL_UNDETERMINED;

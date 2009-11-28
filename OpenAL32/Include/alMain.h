@@ -310,6 +310,7 @@ struct ALCcontext_struct
     ALboolean   InUse;
 
     ALenum      DistanceModel;
+    ALboolean   SourceDistanceModel;
 
     ALfloat     DopplerFactor;
     ALfloat     DopplerVelocity;

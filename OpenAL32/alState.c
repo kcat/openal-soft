@@ -44,15 +44,31 @@ static const ALchar alErrOutOfMemory[] = "Out of Memory";
 ALAPI ALvoid ALAPIENTRY alEnable(ALenum capability)
 {
     ALCcontext *Context;
+    ALboolean  updateSources = AL_FALSE;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
     switch(capability)
     {
+        case AL_SOURCE_DISTANCE_MODEL:
+            Context->SourceDistanceModel = AL_TRUE;
+            updateSources = AL_TRUE;
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
+    }
+
+    if(updateSources)
+    {
+        ALsource *source = Context->Source;
+        while(source)
+        {
+            source->NeedsUpdate = AL_TRUE;
+            source = source->next;
+        }
     }
 
     ProcessContext(Context);
@@ -61,15 +77,31 @@ ALAPI ALvoid ALAPIENTRY alEnable(ALenum capability)
 ALAPI ALvoid ALAPIENTRY alDisable(ALenum capability)
 {
     ALCcontext *Context;
+    ALboolean  updateSources = AL_FALSE;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
     switch(capability)
     {
+        case AL_SOURCE_DISTANCE_MODEL:
+            Context->SourceDistanceModel = AL_FALSE;
+            updateSources = AL_TRUE;
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
+    }
+
+    if(updateSources)
+    {
+        ALsource *source = Context->Source;
+        while(source)
+        {
+            source->NeedsUpdate = AL_TRUE;
+            source = source->next;
+        }
     }
 
     ProcessContext(Context);
@@ -85,6 +117,10 @@ ALAPI ALboolean ALAPIENTRY alIsEnabled(ALenum capability)
 
     switch(capability)
     {
+        case AL_SOURCE_DISTANCE_MODEL:
+            value = Context->SourceDistanceModel;
+            break;
+
         default:
             alSetError(AL_INVALID_ENUM);
             break;
@@ -588,7 +624,7 @@ ALAPI ALvoid ALAPIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
 ALAPI ALvoid ALAPIENTRY alDistanceModel(ALenum value)
 {
     ALCcontext *Context;
-    ALsource *Source;
+    ALboolean updateSources = AL_FALSE;
 
     Context = GetContextSuspended();
     if(!Context) return;
@@ -603,16 +639,22 @@ ALAPI ALvoid ALAPIENTRY alDistanceModel(ALenum value)
         case AL_EXPONENT_DISTANCE:
         case AL_EXPONENT_DISTANCE_CLAMPED:
             Context->DistanceModel = value;
-            for(Source = Context->Source;Source != NULL;Source = Source->next)
-            {
-                Source->DistanceModel = value;
-                Source->NeedsUpdate = AL_TRUE;
-            }
+            updateSources = !Context->SourceDistanceModel;
             break;
 
         default:
             alSetError(AL_INVALID_VALUE);
             break;
+    }
+
+    if(updateSources)
+    {
+        ALsource *source = Context->Source;
+        while(source)
+        {
+            source->NeedsUpdate = AL_TRUE;
+            source = source->next;
+        }
     }
 
     ProcessContext(Context);

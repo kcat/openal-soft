@@ -150,6 +150,11 @@ typedef ALCboolean (ALC_APIENTRY*PFNALCMAKECURRENTPROC)(ALCcontext *context);
 typedef ALCcontext* (ALC_APIENTRY*PFNALCGETTHREADCONTEXTPROC)(void);
 #endif
 
+#ifndef AL_EXT_source_distance_model
+#define AL_EXT_source_distance_model 1
+#define AL_SOURCE_DISTANCE_MODEL                 0x200
+#endif
+
 #ifdef __cplusplus
 }
 #endif

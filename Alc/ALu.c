@@ -589,7 +589,8 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
             RoomRolloff[i] += ALSource->Send[i].Slot->effect.Reverb.RoomRolloffFactor;
     }
 
-    switch(ALSource->DistanceModel)
+    switch(ALContext->SourceDistanceModel ? ALSource->DistanceModel :
+                                            ALContext->DistanceModel)
     {
         case AL_INVERSE_DISTANCE_CLAMPED:
             Distance=__max(Distance,MinDist);

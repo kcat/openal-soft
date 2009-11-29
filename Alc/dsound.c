@@ -445,6 +445,8 @@ static void DSoundStopPlayback(ALCdevice *device)
     StopThread(pData->thread);
     pData->thread = NULL;
 
+    pData->killNow = 0;
+
     IDirectSoundBuffer_Release(pData->DSsbuffer);
     pData->DSsbuffer = NULL;
     if (pData->DSpbuffer)

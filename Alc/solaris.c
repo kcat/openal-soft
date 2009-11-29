@@ -217,6 +217,8 @@ static void solaris_stop_playback(ALCdevice *device)
     StopThread(data->thread);
     data->thread = NULL;
 
+    data->killNow = 0;
+
     free(data->mix_data);
     data->mix_data = NULL;
 }

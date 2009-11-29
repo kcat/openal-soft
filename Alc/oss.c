@@ -292,6 +292,7 @@ static void oss_stop_playback(ALCdevice *device)
     StopThread(data->thread);
     data->thread = NULL;
 
+    data->killNow = 0;
     if(ioctl(data->fd, SNDCTL_DSP_RESET) != 0)
         AL_PRINT("Error resetting device: %s\n", strerror(errno));
 

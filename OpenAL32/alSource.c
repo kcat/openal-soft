@@ -1317,7 +1317,6 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
 ALAPI ALvoid ALAPIENTRY alSourcePlay(ALuint source)
 {
     alSourcePlayv(1, &source);
-    return;
 }
 
 ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
@@ -1421,7 +1420,6 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
 ALAPI ALvoid ALAPIENTRY alSourcePause(ALuint source)
 {
     alSourcePausev(1, &source);
-    return;
 }
 
 ALAPI ALvoid ALAPIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
@@ -1469,7 +1467,6 @@ ALAPI ALvoid ALAPIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
 ALAPI ALvoid ALAPIENTRY alSourceStop(ALuint source)
 {
     alSourceStopv(1, &source);
-    return;
 }
 
 ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
@@ -1521,7 +1518,6 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
 ALAPI ALvoid ALAPIENTRY alSourceRewind(ALuint source)
 {
     alSourceRewindv(1, &source);
-    return;
 }
 
 ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)

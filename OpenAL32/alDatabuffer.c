@@ -170,9 +170,6 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
         alSetError(AL_INVALID_VALUE);
 
     ProcessContext(Context);
-
-    return;
-
 }
 
 /*

@@ -502,7 +502,7 @@ ALvoid ALAPIENTRY alGetDatabufferivEXT(ALuint buffer, ALenum eParam, ALint* plVa
             switch (eParam)
             {
             case AL_SIZE:
-                alGetBufferi(buffer, eParam, plValues);
+                alGetDatabufferiEXT(buffer, eParam, plValues);
                 break;
 
             default:

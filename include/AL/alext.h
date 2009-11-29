@@ -53,6 +53,12 @@ extern "C" {
 #define AL_FORMAT_STEREO_FLOAT32                 0x10011
 #endif
 
+#ifndef AL_EXT_double
+#define AL_EXT_double 1
+#define AL_FORMAT_MONO_DOUBLE_EXT                0x10012
+#define AL_FORMAT_STEREO_DOUBLE_EXT              0x10013
+#endif
+
 #ifndef ALC_LOKI_audio_channel
 #define ALC_LOKI_audio_channel 1
 #define ALC_CHAN_MAIN_LOKI                       0x500001

@@ -508,11 +508,9 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
         ALEffectSlot->EffectState = NewState;
     }
     if(!effect)
-    {
         memset(&ALEffectSlot->effect, 0, sizeof(ALEffectSlot->effect));
-        return;
-    }
-    memcpy(&ALEffectSlot->effect, effect, sizeof(*effect));
+    else
+        memcpy(&ALEffectSlot->effect, effect, sizeof(*effect));
     ALEffect_Update(ALEffectSlot->EffectState, Context, effect);
 }
 

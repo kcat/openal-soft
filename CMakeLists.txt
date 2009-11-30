@@ -247,6 +247,8 @@ IF(NOT HAVE_WINDOWS_H)
         SET(EXTRA_LIBS pthread ${EXTRA_LIBS})
     ENDIF()
 
+    CHECK_LIBRARY_EXISTS(pthread pthread_setschedparam "" HAVE_PTHREAD_SETSCHEDPARAM)
+
     CHECK_LIBRARY_EXISTS(rt clock_gettime "" HAVE_LIBRT)
     IF(HAVE_LIBRT)
         SET(EXTRA_LIBS rt ${EXTRA_LIBS})

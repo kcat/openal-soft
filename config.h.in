@@ -79,4 +79,7 @@
 /* Define if we have _controlfp() */
 #cmakedefine HAVE__CONTROLFP
 
+/* Define if we have pthread_setschedparam() */
+#cmakedefine HAVE_PTHREAD_SETSCHEDPARAM
+
 #endif

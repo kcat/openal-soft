@@ -414,7 +414,6 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
 
     if(SUCCEEDED(hr))
     {
-        device->ExtraData = pData;
         device->Format = format;
         pData->thread = StartThread(DSoundProc, device);
         if(!pData->thread)

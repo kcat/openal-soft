@@ -82,6 +82,8 @@ static ALuint OSSProc(ALvoid *ptr)
     ALint frameSize;
     ssize_t wrote;
 
+    EnableRTPrio();
+
     frameSize = aluChannelsFromFormat(pDevice->Format) *
                 aluBytesFromFormat(pDevice->Format);
 
@@ -121,6 +123,8 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
     oss_data *data = (oss_data*)pDevice->ExtraData;
     int frameSize;
     int amt;
+
+    EnableRTPrio();
 
     frameSize  = aluBytesFromFormat(pDevice->Format);
     frameSize *= aluChannelsFromFormat(pDevice->Format);

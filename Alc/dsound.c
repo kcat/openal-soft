@@ -134,6 +134,8 @@ static ALuint DSoundProc(ALvoid *ptr)
     DWORD avail;
     HRESULT err;
 
+    EnableRTPrio();
+
     memset(&DSBCaps, 0, sizeof(DSBCaps));
     DSBCaps.dwSize = sizeof(DSBCaps);
     err = IDirectSoundBuffer_GetCaps(pData->DSsbuffer, &DSBCaps);
@@ -413,6 +415,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     if(SUCCEEDED(hr))
     {
         device->ExtraData = pData;
+        device->Format = format;
         pData->thread = StartThread(DSoundProc, device);
         if(!pData->thread)
             hr = E_FAIL;
@@ -428,8 +431,6 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
         pData->DSpbuffer = NULL;
         return ALC_FALSE;
     }
-
-    device->Format = format;
 
     return ALC_TRUE;
 }

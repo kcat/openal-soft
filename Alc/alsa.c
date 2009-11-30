@@ -271,6 +271,8 @@ static ALuint ALSAProc(ALvoid *ptr)
     char *WritePtr;
     int err;
 
+    EnableRTPrio();
+
     while(!data->killNow)
     {
         int state = verify_state(data->pcmHandle);
@@ -343,6 +345,8 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
     snd_pcm_sframes_t avail;
     char *WritePtr;
 
+    EnableRTPrio();
+
     while(!data->killNow)
     {
         int state = verify_state(data->pcmHandle);
@@ -395,6 +399,8 @@ static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
     ALCdevice *pDevice = (ALCdevice*)ptr;
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
     snd_pcm_sframes_t avail;
+
+    EnableRTPrio();
 
     while(!data->killNow)
     {
@@ -669,6 +675,9 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             AL_PRINT("buffer malloc failed\n");
             return ALC_FALSE;
         }
+        device->UpdateSize = periodSizeInFrames;
+        device->NumUpdates = periods;
+        device->Frequency = rate;
         data->thread = StartThread(ALSANoMMapProc, device);
     }
     else
@@ -679,6 +688,9 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             AL_PRINT("prepare error: %s\n", psnd_strerror(i));
             return ALC_FALSE;
         }
+        device->UpdateSize = periodSizeInFrames;
+        device->NumUpdates = periods;
+        device->Frequency = rate;
         data->thread = StartThread(ALSAProc, device);
     }
     if(data->thread == NULL)
@@ -688,10 +700,6 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         data->buffer = NULL;
         return ALC_FALSE;
     }
-
-    device->UpdateSize = periodSizeInFrames;
-    device->NumUpdates = periods;
-    device->Frequency = rate;
 
     return ALC_TRUE;
 }

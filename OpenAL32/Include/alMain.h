@@ -181,6 +181,22 @@ static __inline ALuint NextPowerOf2(ALuint value)
     return powerOf2;
 }
 
+static __inline void EnableRTPrio()
+{
+#ifdef _WIN32
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#elif defined(HAVE_PTHREAD_SETSCHEDPARAM)
+    struct sched_param param;
+
+    /* Use the minimum real-time priority possible for now (on Linux this
+     * should be 1 for SCHED_RR) */
+    param.sched_priority = sched_get_priority_min(SCHED_RR);
+    pthread_setschedparam(pthread_self(), SCHED_RR, &param);
+#else
+    /* Real-time priority not available */
+#endif
+}
+
 
 typedef struct {
     ALCboolean (*OpenPlayback)(ALCdevice*, const ALCchar*);

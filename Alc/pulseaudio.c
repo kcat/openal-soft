@@ -250,8 +250,8 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     SuspendContext(NULL);
 
     data->attr = *(ppa_stream_get_buffer_attr(stream));
-    if((data->attr.tlength%data->attr.minreq) != 0)
-        AL_PRINT("new tlength (%d) is not a multiple of minreq (%d)!\n",
+    if(data->attr.tlength < data->attr.minreq*2)
+        AL_PRINT("new tlength (%d) is smaller than two periods (%d x 2)!\n",
                  data->attr.tlength, data->attr.minreq);
     Device->UpdateSize = data->attr.minreq;
     Device->NumUpdates = data->attr.tlength/data->attr.minreq;

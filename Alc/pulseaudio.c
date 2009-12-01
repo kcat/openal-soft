@@ -269,7 +269,7 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     if(data->attr.tlength < data->attr.minreq*2)
         AL_PRINT("new tlength (%d) is smaller than two periods (%d x 2)!\n",
                  data->attr.tlength, data->attr.minreq);
-    Device->UpdateSize = data->attr.minreq;
+    Device->UpdateSize = data->attr.minreq / data->frame_size;
     Device->NumUpdates = data->attr.tlength/data->attr.minreq;
 
     ProcessContext(NULL);

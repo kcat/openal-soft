@@ -226,20 +226,36 @@ static void context_state_callback(pa_context *context, void *pdata) //{{{
 {
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
-    (void)context;
+    pa_context_state_t state;
 
-    if(ppa_threaded_mainloop_in_thread(data->loop))
-        ppa_threaded_mainloop_signal(data->loop, 1);
+    state = ppa_context_get_state(context);
+    if(state == PA_CONTEXT_READY)
+    {
+        if(ppa_threaded_mainloop_in_thread(data->loop))
+            ppa_threaded_mainloop_signal(data->loop, 1);
+        else
+            ppa_threaded_mainloop_signal(data->loop, 0);
+    }
+    else if(!PA_CONTEXT_IS_GOOD(state))
+        ppa_threaded_mainloop_signal(data->loop, 0);
 }//}}}
 
 static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
 {
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
-    (void)stream;
+    pa_stream_state_t state;
 
-    if(ppa_threaded_mainloop_in_thread(data->loop))
-        ppa_threaded_mainloop_signal(data->loop, 1);
+    state = ppa_stream_get_state(stream);
+    if(state == PA_STREAM_READY)
+    {
+        if(ppa_threaded_mainloop_in_thread(data->loop))
+            ppa_threaded_mainloop_signal(data->loop, 1);
+        else
+            ppa_threaded_mainloop_signal(data->loop, 0);
+    }
+    else if(!PA_STREAM_IS_GOOD(state))
+        ppa_threaded_mainloop_signal(data->loop, 0);
 }//}}}
 
 static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
@@ -389,8 +405,8 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
         }
 
         ppa_threaded_mainloop_wait(data->loop);
-        ppa_threaded_mainloop_accept(data->loop);
     }
+    ppa_threaded_mainloop_accept(data->loop);
     ppa_context_set_state_callback(data->context, context_state_callback2, device);
 
     device->szDeviceName = strdup(device_name);
@@ -580,8 +596,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         }
 
         ppa_threaded_mainloop_wait(data->loop);
-        ppa_threaded_mainloop_accept(data->loop);
     }
+    ppa_threaded_mainloop_accept(data->loop);
     ppa_stream_set_state_callback(data->stream, stream_state_callback2, device);
 
     stream_buffer_attr_callback(data->stream, device);
@@ -726,8 +742,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         }
 
         ppa_threaded_mainloop_wait(data->loop);
-        ppa_threaded_mainloop_accept(data->loop);
     }
+    ppa_threaded_mainloop_accept(data->loop);
     ppa_stream_set_state_callback(data->stream, stream_state_callback2, device);
 
     ppa_threaded_mainloop_unlock(data->loop);

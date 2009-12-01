@@ -425,6 +425,9 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
     ALint pos, s, i;
     ALfloat cw, a, g;
 
+    for(i = 0;i < MAX_SENDS;i++)
+        WetGainHF[i] = 1.0f;
+
     //Get context properties
     DopplerFactor   = ALContext->DopplerFactor * ALSource->DopplerFactor;
     DopplerVelocity = ALContext->DopplerVelocity;
@@ -646,18 +649,10 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
             break;
     }
 
-    // Source Gain + Attenuation and clamp to Min/Max Gain
+    // Source Gain + Attenuation
     DryMix = SourceVolume * flAttenuation;
-    DryMix = __min(DryMix,MaxVolume);
-    DryMix = __max(DryMix,MinVolume);
-
     for(i = 0;i < NumSends;i++)
-    {
-        ALfloat WetMix = SourceVolume * RoomAttenuation[i];
-        WetMix = __min(WetMix,MaxVolume);
-        WetGain[i] = __max(WetMix,MinVolume);
-        WetGainHF[i] = 1.0f;
-    }
+        WetGain[i] = SourceVolume * RoomAttenuation[i];
 
     // Distance-based air absorption
     if(ALSource->AirAbsorptionFactor > 0.0f && flAttenuation < 1.0f)
@@ -702,31 +697,9 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
         ConeHF = 1.0f;
     }
 
-    //4. Calculate Velocity
-    if(DopplerFactor != 0.0f)
-    {
-        ALfloat flVSS, flVLS;
-        ALfloat flMaxVelocity = (DopplerVelocity * flSpeedOfSound) /
-                                DopplerFactor;
-
-        flVSS = aluDotproduct(Velocity, SourceToListener);
-        if(flVSS >= flMaxVelocity)
-            flVSS = (flMaxVelocity - 1.0f);
-        else if(flVSS <= -flMaxVelocity)
-            flVSS = -flMaxVelocity + 1.0f;
-
-        flVLS = aluDotproduct(ListenerVel, SourceToListener);
-        if(flVLS >= flMaxVelocity)
-            flVLS = (flMaxVelocity - 1.0f);
-        else if(flVLS <= -flMaxVelocity)
-            flVLS = -flMaxVelocity + 1.0f;
-
-        ALSource->Params.Pitch = ALSource->flPitch *
-            ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /
-            ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVSS));
-    }
-    else
-        ALSource->Params.Pitch = ALSource->flPitch;
+    // Clamp to Min/Max Gain
+    DryMix = __min(DryMix,MaxVolume);
+    DryMix = __max(DryMix,MinVolume);
 
     for(i = 0;i < NumSends;i++)
     {
@@ -739,6 +712,10 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
                     WetGain[i] *= ConeVolume;
                 if(ALSource->WetGainHFAuto)
                     WetGainHF[i] *= ConeHF;
+
+                // Clamp to Min/Max Gain
+                WetGain[i] = __min(WetGain[i],MaxVolume);
+                WetGain[i] = __max(WetGain[i],MinVolume);
 
                 if(ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB ||
                    ALSource->Send[i].Slot->effect.type == AL_EFFECT_EAXREVERB)
@@ -789,7 +766,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
         WetGainHF[i] = 1.0f;
     }
 
-    //5. Apply filter gains and filters
+    // Apply filter gains and filters
     switch(ALSource->DirectFilter.type)
     {
         case AL_FILTER_LOWPASS:
@@ -798,6 +775,32 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
             break;
     }
     DryMix *= ListenerGain;
+
+    // Calculate Velocity
+    if(DopplerFactor != 0.0f)
+    {
+        ALfloat flVSS, flVLS;
+        ALfloat flMaxVelocity = (DopplerVelocity * flSpeedOfSound) /
+                                DopplerFactor;
+
+        flVSS = aluDotproduct(Velocity, SourceToListener);
+        if(flVSS >= flMaxVelocity)
+            flVSS = (flMaxVelocity - 1.0f);
+        else if(flVSS <= -flMaxVelocity)
+            flVSS = -flMaxVelocity + 1.0f;
+
+        flVLS = aluDotproduct(ListenerVel, SourceToListener);
+        if(flVLS >= flMaxVelocity)
+            flVLS = (flMaxVelocity - 1.0f);
+        else if(flVLS <= -flMaxVelocity)
+            flVLS = -flMaxVelocity + 1.0f;
+
+        ALSource->Params.Pitch = ALSource->flPitch *
+            ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /
+            ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVSS));
+    }
+    else
+        ALSource->Params.Pitch = ALSource->flPitch;
 
     // Use energy-preserving panning algorithm for multi-speaker playback
     length = aluSqrt(Position[0]*Position[0] + Position[1]*Position[1] +

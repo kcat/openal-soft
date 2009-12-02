@@ -232,8 +232,6 @@ static void context_state_callback(pa_context *context, void *pdata) //{{{
     if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
     {
         if(ppa_threaded_mainloop_in_thread(data->loop))
-            ppa_threaded_mainloop_signal(data->loop, 1);
-        else
             ppa_threaded_mainloop_signal(data->loop, 0);
     }
 }//}}}
@@ -249,8 +247,6 @@ static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
     {
         if(ppa_threaded_mainloop_in_thread(data->loop))
             ppa_threaded_mainloop_signal(data->loop, 1);
-        else
-            ppa_threaded_mainloop_signal(data->loop, 0);
     }
 }//}}}
 
@@ -396,14 +392,12 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
             ppa_context_unref(data->context);
             data->context = NULL;
 
-            ppa_threaded_mainloop_accept(data->loop);
             ppa_threaded_mainloop_unlock(data->loop);
             goto out;
         }
 
         ppa_threaded_mainloop_wait(data->loop);
     }
-    ppa_threaded_mainloop_accept(data->loop);
     ppa_context_set_state_callback(data->context, context_state_callback2, device);
 
     device->szDeviceName = strdup(device_name);

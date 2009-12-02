@@ -208,6 +208,9 @@ static tls_type LocalContext;
 // Context Error
 static ALCenum g_eLastContextError = ALC_NO_ERROR;
 
+// Mixing Priority Level
+ALint RTPrioLevel;
+
 ///////////////////////////////////////////////////////
 
 
@@ -252,6 +255,8 @@ static void alc_init(void)
     ReadALConfig();
 
     tls_create(&LocalContext);
+
+    RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 0);
 
     devs = GetConfigValue(NULL, "drivers", "");
     if(devs[0])
@@ -422,6 +427,39 @@ void Append##type##List(const ALCchar *name)                                 \
 DECL_APPEND_LIST_FUNC(Device)
 DECL_APPEND_LIST_FUNC(AllDevice)
 DECL_APPEND_LIST_FUNC(CaptureDevice)
+
+
+void EnableRTPrio(ALint level)
+{
+    ALboolean failed;
+
+#ifdef _WIN32
+    if(level > 0)
+        failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+    else
+        failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
+#elif defined(HAVE_PTHREAD_SETSCHEDPARAM)
+    struct sched_param param;
+
+    if(level > 0)
+    {
+        /* Use the minimum real-time priority possible for now (on Linux this
+         * should be 1 for SCHED_RR) */
+        param.sched_priority = sched_get_priority_min(SCHED_RR);
+        failed = !!pthread_setschedparam(pthread_self(), SCHED_RR, &param);
+    }
+    else
+    {
+        param.sched_priority = 0;
+        failed = !!pthread_setschedparam(pthread_self(), SCHED_OTHER, &param);
+    }
+#else
+    /* Real-time priority not available */
+    failed = !!level;
+#endif
+    if(failed)
+        AL_PRINT("Failed to set priority level for thread\n");
+}
 
 
 /*

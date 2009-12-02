@@ -134,7 +134,7 @@ static ALuint DSoundProc(ALvoid *ptr)
     DWORD avail;
     HRESULT err;
 
-    EnableRTPrio();
+    EnableRTPrio(RTPrioLevel);
 
     memset(&DSBCaps, 0, sizeof(DSBCaps));
     DSBCaps.dwSize = sizeof(DSBCaps);

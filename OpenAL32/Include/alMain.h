@@ -181,22 +181,6 @@ static __inline ALuint NextPowerOf2(ALuint value)
     return powerOf2;
 }
 
-static __inline void EnableRTPrio()
-{
-#ifdef _WIN32
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#elif defined(HAVE_PTHREAD_SETSCHEDPARAM)
-    struct sched_param param;
-
-    /* Use the minimum real-time priority possible for now (on Linux this
-     * should be 1 for SCHED_RR) */
-    param.sched_priority = sched_get_priority_min(SCHED_RR);
-    pthread_setschedparam(pthread_self(), SCHED_RR, &param);
-#else
-    /* Real-time priority not available */
-#endif
-}
-
 
 typedef struct {
     ALCboolean (*OpenPlayback)(ALCdevice*, const ALCchar*);
@@ -343,6 +327,8 @@ struct ALCcontext_struct
     ALCcontext *next;
 };
 
+extern ALint RTPrioLevel;
+
 ALCvoid ReleaseALC(ALCvoid);
 
 void AppendDeviceList(const ALCchar *name);
@@ -372,6 +358,8 @@ const char *GetConfigValue(const char *blockName, const char *keyName, const cha
 int GetConfigValueInt(const char *blockName, const char *keyName, int def);
 float GetConfigValueFloat(const char *blockName, const char *keyName, float def);
 int GetConfigValueBool(const char *blockName, const char *keyName, float def);
+
+void EnableRTPrio(ALint level);
 
 ALCboolean  ALCAPIENTRY alcMakeCurrent(ALCcontext *context);
 ALCcontext* ALCAPIENTRY alcGetThreadContext(void);

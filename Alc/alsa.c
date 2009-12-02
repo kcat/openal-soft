@@ -271,7 +271,7 @@ static ALuint ALSAProc(ALvoid *ptr)
     char *WritePtr;
     int err;
 
-    EnableRTPrio();
+    EnableRTPrio(RTPrioLevel);
 
     while(!data->killNow)
     {
@@ -345,7 +345,7 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
     snd_pcm_sframes_t avail;
     char *WritePtr;
 
-    EnableRTPrio();
+    EnableRTPrio(RTPrioLevel);
 
     while(!data->killNow)
     {
@@ -400,7 +400,7 @@ static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
     snd_pcm_sframes_t avail;
 
-    EnableRTPrio();
+    EnableRTPrio(RTPrioLevel);
 
     while(!data->killNow)
     {

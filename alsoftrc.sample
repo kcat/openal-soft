@@ -52,6 +52,15 @@
 #  Sets the output frequency.
 #frequency = 44100
 
+## rt-prio:
+#  Sets real-time priority for the mixing thread. Not all drivers may use this
+#  (eg. PulseAudio) as they already control the priority of the mixing thread.
+#  0 and negative values will disable it. Note that this may constitute a
+#  security risk since a real-time priority thread can indefinitely block
+#  normal-priority threads if it fails to wait. As such, the default is
+#  disabled.
+#rt-prio = 0
+
 ## period_size:
 #  Sets the update period size, in frames. This is the number of frames needed
 #  for each mixing update. If the deprecated 'refresh' option is specified and

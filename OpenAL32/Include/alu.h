@@ -54,7 +54,7 @@
 extern "C" {
 #endif
 
-enum {
+typedef enum {
     FRONT_LEFT = 0,
     FRONT_RIGHT,
     FRONT_CENTER,
@@ -66,7 +66,7 @@ enum {
     LFE,
 
     OUTPUTCHANNELS
-};
+} Channel;
 
 #define BUFFERSIZE 24000
 

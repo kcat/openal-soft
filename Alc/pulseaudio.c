@@ -518,40 +518,13 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         return ALC_FALSE;
     }
 
-#ifdef _WIN32
     if(!ppa_channel_map_init_auto(&chanmap, data->spec.channels, PA_CHANNEL_MAP_WAVEEX))
     {
         AL_PRINT("Couldn't build map for channel count (%d)!", data->spec.channels);
         ppa_threaded_mainloop_unlock(data->loop);
         return ALC_FALSE;
     }
-#else
-    switch(data->spec.channels)
-    {
-    case 1:
-        ppa_channel_map_parse(&chanmap, "mono");
-        break;
-    case 2:
-        ppa_channel_map_parse(&chanmap, "front-left,front-right");
-        break;
-    case 4:
-        ppa_channel_map_parse(&chanmap, "front-left,front-right,rear-left,rear-right");
-        break;
-    case 6:
-        ppa_channel_map_parse(&chanmap, "front-left,front-right,rear-left,rear-right,front-center,lfe");
-        break;
-    case 7:
-        ppa_channel_map_parse(&chanmap, "front-left,front-right,front-center,lfe,rear-center,side-left,side-right");
-        break;
-    case 8:
-        ppa_channel_map_parse(&chanmap, "front-left,front-right,rear-left,rear-right,front-center,lfe,side-left,side-right");
-        break;
-    default:
-        AL_PRINT("Got unhandled channel count (%d)!", data->spec.channels);
-        ppa_threaded_mainloop_unlock(data->loop);
-        return ALC_FALSE;
-    }
-#endif
+    SetDefaultWFXChannelOrder(device);
 
     data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, &chanmap);
     if(!data->stream)

@@ -272,6 +272,8 @@ struct ALCdevice_struct
     // Dry path buffer mix
     float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
 
+    Channel DevChannels[OUTPUTCHANNELS];
+
     // Contexts created on this device
     ALCcontext  **Contexts;
     ALuint        NumContexts;
@@ -363,6 +365,85 @@ void EnableRTPrio(ALint level);
 
 ALCboolean  ALCAPIENTRY alcMakeCurrent(ALCcontext *context);
 ALCcontext* ALCAPIENTRY alcGetThreadContext(void);
+
+// Sets the default channel order used by most non-WaveFormatEx-based APIs
+static __inline void SetDefaultChannelOrder(ALCdevice *device)
+{
+    switch(aluChannelsFromFormat(device->Format))
+    {
+    case 1: /* Mono is rendered as stereo; fall-through... */
+    case 2: device->DevChannels[0] = FRONT_LEFT;
+            device->DevChannels[1] = FRONT_RIGHT; break;
+
+    case 4: device->DevChannels[0] = FRONT_LEFT;
+            device->DevChannels[1] = FRONT_RIGHT;
+            device->DevChannels[2] = BACK_LEFT;
+            device->DevChannels[3] = BACK_RIGHT; break;
+
+    case 6: device->DevChannels[0] = FRONT_LEFT;
+            device->DevChannels[1] = FRONT_RIGHT;
+            device->DevChannels[2] = BACK_LEFT;
+            device->DevChannels[3] = BACK_RIGHT;
+            device->DevChannels[4] = FRONT_CENTER;
+            device->DevChannels[5] = LFE; break;
+
+    case 7: device->DevChannels[0] = FRONT_LEFT;
+            device->DevChannels[1] = FRONT_RIGHT;
+            device->DevChannels[2] = FRONT_CENTER;
+            device->DevChannels[3] = LFE;
+            device->DevChannels[4] = FRONT_CENTER;
+            device->DevChannels[5] = SIDE_LEFT;
+            device->DevChannels[6] = SIDE_RIGHT; break;
+
+    case 8: device->DevChannels[0] = FRONT_LEFT;
+            device->DevChannels[1] = FRONT_RIGHT;
+            device->DevChannels[2] = BACK_LEFT;
+            device->DevChannels[3] = BACK_RIGHT;
+            device->DevChannels[4] = FRONT_CENTER;
+            device->DevChannels[5] = LFE;
+            device->DevChannels[6] = SIDE_LEFT;
+            device->DevChannels[7] = SIDE_RIGHT; break;
+    }
+}
+// Sets the default order used by WaveFormatEx
+static __inline void SetDefaultWFXChannelOrder(ALCdevice *device)
+{
+    switch(aluChannelsFromFormat(device->Format))
+    {
+    case 1: /* Mono is rendered as stereo; fall-through... */
+    case 2: device->DevChannels[0] = FRONT_LEFT;
+            device->DevChannels[1] = FRONT_RIGHT; break;
+
+    case 4: device->DevChannels[0] = FRONT_LEFT;
+            device->DevChannels[1] = FRONT_RIGHT;
+            device->DevChannels[2] = BACK_LEFT;
+            device->DevChannels[3] = BACK_RIGHT; break;
+
+    case 6: device->DevChannels[0] = FRONT_LEFT;
+            device->DevChannels[1] = FRONT_RIGHT;
+            device->DevChannels[2] = FRONT_CENTER;
+            device->DevChannels[3] = LFE;
+            device->DevChannels[4] = BACK_LEFT;
+            device->DevChannels[5] = BACK_RIGHT; break;
+
+    case 7: device->DevChannels[0] = FRONT_LEFT;
+            device->DevChannels[1] = FRONT_RIGHT;
+            device->DevChannels[2] = FRONT_CENTER;
+            device->DevChannels[3] = LFE;
+            device->DevChannels[4] = FRONT_CENTER;
+            device->DevChannels[5] = SIDE_LEFT;
+            device->DevChannels[6] = SIDE_RIGHT; break;
+
+    case 8: device->DevChannels[0] = FRONT_LEFT;
+            device->DevChannels[1] = FRONT_RIGHT;
+            device->DevChannels[2] = FRONT_CENTER;
+            device->DevChannels[3] = LFE;
+            device->DevChannels[4] = BACK_LEFT;
+            device->DevChannels[5] = BACK_RIGHT;
+            device->DevChannels[6] = SIDE_LEFT;
+            device->DevChannels[7] = SIDE_RIGHT; break;
+    }
+}
 
 #ifdef __cplusplus
 }

@@ -415,6 +415,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     if(SUCCEEDED(hr))
     {
         device->Format = format;
+        SetDefaultWFXChannelOrder(device);
         pData->thread = StartThread(DSoundProc, device);
         if(!pData->thread)
             hr = E_FAIL;

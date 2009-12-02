@@ -227,6 +227,8 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
+    SetDefaultWFXChannelOrder(device);
+
     data->thread = StartThread(WaveProc, device);
     if(data->thread == NULL)
     {

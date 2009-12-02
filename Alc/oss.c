@@ -274,6 +274,8 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     data->data_size = device->UpdateSize * frameSize;
     data->mix_data = calloc(1, data->data_size);
 
+    SetDefaultChannelOrder(device);
+
     data->thread = StartThread(OSSProc, device);
     if(data->thread == NULL)
     {

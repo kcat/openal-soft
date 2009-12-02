@@ -189,6 +189,8 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     }
     outParams.channelCount = aluChannelsFromFormat(device->Format);
 
+    SetDefaultChannelOrder(device);
+
     err = pPa_OpenStream(&data->stream, NULL, &outParams, device->Frequency,
                          device->UpdateSize, paNoFlag, pa_callback, device);
     if(err != paNoError)

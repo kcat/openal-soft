@@ -1231,6 +1231,7 @@ another_source:
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     float (*DryBuffer)[OUTPUTCHANNELS];
+    const Channel *ChanMap;
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
     ALCcontext *ALContext;
@@ -1280,14 +1281,15 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         }
 
         //Post processing loop
+        ChanMap = device->DevChannels;
         switch(device->Format)
         {
-#define CHECK_WRITE_FORMAT(bits, type, func, isWin)                           \
+#define CHECK_WRITE_FORMAT(bits, type, func)                                  \
         case AL_FORMAT_MONO##bits:                                            \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT] +        \
-                                            DryBuffer[i][FRONT_RIGHT]);       \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][ChanMap[0]] +        \
+                                            DryBuffer[i][ChanMap[1]]);        \
                 buffer = ((type*)buffer) + 1;                                 \
             }                                                                 \
             break;                                                            \
@@ -1297,8 +1299,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 for(i = 0;i < SamplesToDo;i++)                                \
                 {                                                             \
                     float samples[2];                                         \
-                    samples[0] = DryBuffer[i][FRONT_LEFT];                    \
-                    samples[1] = DryBuffer[i][FRONT_RIGHT];                   \
+                    samples[0] = DryBuffer[i][ChanMap[0]];                    \
+                    samples[1] = DryBuffer[i][ChanMap[1]];                    \
                     bs2b_cross_feed(device->Bs2b, samples);                   \
                     ((type*)buffer)[0] = (func)(samples[0]);                  \
                     ((type*)buffer)[1] = (func)(samples[1]);                  \
@@ -1309,8 +1311,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             {                                                                 \
                 for(i = 0;i < SamplesToDo;i++)                                \
                 {                                                             \
-                    ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT]);    \
-                    ((type*)buffer)[1] = (func)(DryBuffer[i][FRONT_RIGHT]);   \
+                    ((type*)buffer)[0] = (func)(DryBuffer[i][ChanMap[0]]);    \
+                    ((type*)buffer)[1] = (func)(DryBuffer[i][ChanMap[1]]);    \
                     buffer = ((type*)buffer) + 2;                             \
                 }                                                             \
             }                                                                 \
@@ -1318,79 +1320,58 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         case AL_FORMAT_QUAD##bits:                                            \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT]);        \
-                ((type*)buffer)[1] = (func)(DryBuffer[i][FRONT_RIGHT]);       \
-                ((type*)buffer)[2] = (func)(DryBuffer[i][BACK_LEFT]);         \
-                ((type*)buffer)[3] = (func)(DryBuffer[i][BACK_RIGHT]);        \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][ChanMap[0]]);        \
+                ((type*)buffer)[1] = (func)(DryBuffer[i][ChanMap[1]]);        \
+                ((type*)buffer)[2] = (func)(DryBuffer[i][ChanMap[2]]);        \
+                ((type*)buffer)[3] = (func)(DryBuffer[i][ChanMap[3]]);        \
                 buffer = ((type*)buffer) + 4;                                 \
             }                                                                 \
             break;                                                            \
         case AL_FORMAT_51CHN##bits:                                           \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT]);        \
-                ((type*)buffer)[1] = (func)(DryBuffer[i][FRONT_RIGHT]);       \
-                if(isWin) {                                                   \
-                    /* Of course, Windows can't use the same ordering... */   \
-                    ((type*)buffer)[2] = (func)(DryBuffer[i][FRONT_CENTER]);  \
-                    ((type*)buffer)[3] = (func)(DryBuffer[i][LFE]);           \
-                    ((type*)buffer)[4] = (func)(DryBuffer[i][BACK_LEFT]);     \
-                    ((type*)buffer)[5] = (func)(DryBuffer[i][BACK_RIGHT]);    \
-                } else {                                                      \
-                    ((type*)buffer)[2] = (func)(DryBuffer[i][BACK_LEFT]);     \
-                    ((type*)buffer)[3] = (func)(DryBuffer[i][BACK_RIGHT]);    \
-                    ((type*)buffer)[4] = (func)(DryBuffer[i][FRONT_CENTER]);  \
-                    ((type*)buffer)[5] = (func)(DryBuffer[i][LFE]);           \
-                }                                                             \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][ChanMap[0]]);        \
+                ((type*)buffer)[1] = (func)(DryBuffer[i][ChanMap[1]]);        \
+                ((type*)buffer)[2] = (func)(DryBuffer[i][ChanMap[2]]);        \
+                ((type*)buffer)[3] = (func)(DryBuffer[i][ChanMap[3]]);        \
+                ((type*)buffer)[4] = (func)(DryBuffer[i][ChanMap[4]]);        \
+                ((type*)buffer)[5] = (func)(DryBuffer[i][ChanMap[5]]);        \
                 buffer = ((type*)buffer) + 6;                                 \
             }                                                                 \
             break;                                                            \
         case AL_FORMAT_61CHN##bits:                                           \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT]);        \
-                ((type*)buffer)[1] = (func)(DryBuffer[i][FRONT_RIGHT]);       \
-                ((type*)buffer)[2] = (func)(DryBuffer[i][FRONT_CENTER]);      \
-                ((type*)buffer)[3] = (func)(DryBuffer[i][LFE]);               \
-                ((type*)buffer)[4] = (func)(DryBuffer[i][BACK_CENTER]);       \
-                ((type*)buffer)[5] = (func)(DryBuffer[i][SIDE_LEFT]);         \
-                ((type*)buffer)[6] = (func)(DryBuffer[i][SIDE_RIGHT]);        \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][ChanMap[0]]);        \
+                ((type*)buffer)[1] = (func)(DryBuffer[i][ChanMap[1]]);        \
+                ((type*)buffer)[2] = (func)(DryBuffer[i][ChanMap[2]]);        \
+                ((type*)buffer)[3] = (func)(DryBuffer[i][ChanMap[3]]);        \
+                ((type*)buffer)[4] = (func)(DryBuffer[i][ChanMap[4]]);        \
+                ((type*)buffer)[5] = (func)(DryBuffer[i][ChanMap[5]]);        \
+                ((type*)buffer)[6] = (func)(DryBuffer[i][ChanMap[6]]);        \
                 buffer = ((type*)buffer) + 7;                                 \
             }                                                                 \
             break;                                                            \
         case AL_FORMAT_71CHN##bits:                                           \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[0] = (func)(DryBuffer[i][FRONT_LEFT]);        \
-                ((type*)buffer)[1] = (func)(DryBuffer[i][FRONT_RIGHT]);       \
-                if(isWin) {                                                   \
-                    ((type*)buffer)[2] = (func)(DryBuffer[i][FRONT_CENTER]);  \
-                    ((type*)buffer)[3] = (func)(DryBuffer[i][LFE]);           \
-                    ((type*)buffer)[4] = (func)(DryBuffer[i][BACK_LEFT]);     \
-                    ((type*)buffer)[5] = (func)(DryBuffer[i][BACK_RIGHT]);    \
-                } else {                                                      \
-                    ((type*)buffer)[2] = (func)(DryBuffer[i][BACK_LEFT]);     \
-                    ((type*)buffer)[3] = (func)(DryBuffer[i][BACK_RIGHT]);    \
-                    ((type*)buffer)[4] = (func)(DryBuffer[i][FRONT_CENTER]);  \
-                    ((type*)buffer)[5] = (func)(DryBuffer[i][LFE]);           \
-                }                                                             \
-                ((type*)buffer)[6] = (func)(DryBuffer[i][SIDE_LEFT]);         \
-                ((type*)buffer)[7] = (func)(DryBuffer[i][SIDE_RIGHT]);        \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][ChanMap[0]]);        \
+                ((type*)buffer)[1] = (func)(DryBuffer[i][ChanMap[1]]);        \
+                ((type*)buffer)[2] = (func)(DryBuffer[i][ChanMap[2]]);        \
+                ((type*)buffer)[3] = (func)(DryBuffer[i][ChanMap[3]]);        \
+                ((type*)buffer)[4] = (func)(DryBuffer[i][ChanMap[4]]);        \
+                ((type*)buffer)[5] = (func)(DryBuffer[i][ChanMap[5]]);        \
+                ((type*)buffer)[6] = (func)(DryBuffer[i][ChanMap[6]]);        \
+                ((type*)buffer)[7] = (func)(DryBuffer[i][ChanMap[7]]);        \
                 buffer = ((type*)buffer) + 8;                                 \
             }                                                                 \
             break;
 
 #define AL_FORMAT_MONO32 AL_FORMAT_MONO_FLOAT32
 #define AL_FORMAT_STEREO32 AL_FORMAT_STEREO_FLOAT32
-#ifdef _WIN32
-            CHECK_WRITE_FORMAT(8,  ALubyte, aluF2UB, 1)
-            CHECK_WRITE_FORMAT(16, ALshort, aluF2S, 1)
-            CHECK_WRITE_FORMAT(32, ALfloat, aluF2F, 1)
-#else
-            CHECK_WRITE_FORMAT(8,  ALubyte, aluF2UB, 0)
-            CHECK_WRITE_FORMAT(16, ALshort, aluF2S, 0)
-            CHECK_WRITE_FORMAT(32, ALfloat, aluF2F, 0)
-#endif
+            CHECK_WRITE_FORMAT(8,  ALubyte, aluF2UB)
+            CHECK_WRITE_FORMAT(16, ALshort, aluF2S)
+            CHECK_WRITE_FORMAT(32, ALfloat, aluF2F)
 #undef AL_FORMAT_STEREO32
 #undef AL_FORMAT_MONO32
 #undef CHECK_WRITE_FORMAT

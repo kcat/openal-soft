@@ -663,6 +663,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 
     psnd_pcm_sw_params_free(sp);
 
+    SetDefaultChannelOrder(device);
+
     data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, periodSizeInFrames);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {

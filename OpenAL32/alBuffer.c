@@ -303,6 +303,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                 case AL_FORMAT_REAR32: {
                     ALuint NewFormat = AL_FORMAT_QUAD16;
                     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
+                    ALuint NewBytes = aluBytesFromFormat(NewFormat);
                     ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
                                         ((format==AL_FORMAT_REAR16) ? 2 :
                                          4));
@@ -319,17 +320,17 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     size *= 2;
 
                     // Samples are converted to 16 bit here
-                    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + size) * sizeof(ALshort));
+                    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + size) * NewBytes);
                     if(temp)
                     {
                         ALBuf->data = temp;
                         ConvertDataRear(ALBuf->data, data, OrigBytes, size);
 
-                        memset(&(ALBuf->data[size]), 0, BUFFER_PADDING*NewChannels*sizeof(ALshort));
+                        memset(&(ALBuf->data[size]), 0, BUFFER_PADDING*NewChannels*NewBytes);
 
                         ALBuf->format = NewFormat;
                         ALBuf->eOriginalFormat = format;
-                        ALBuf->size = size*sizeof(ALshort);
+                        ALBuf->size = size*NewBytes;
                         ALBuf->frequency = freq;
                     }
                     else
@@ -365,6 +366,9 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                 case AL_FORMAT_MONO_IMA4:
                 case AL_FORMAT_STEREO_IMA4: {
                     int OrigChans = ((format==AL_FORMAT_MONO_IMA4) ? 1 : 2);
+                    ALuint NewFormat = ((OrigChans==1) ? AL_FORMAT_MONO16 :
+                                                         AL_FORMAT_STEREO16);
+                    ALuint NewBytes = aluBytesFromFormat(NewFormat);
 
                     // Here is where things vary:
                     // nVidia and Apple use 64+1 samples per channel per block => block_size=36*chans bytes
@@ -379,17 +383,17 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                     size *= 65;
 
                     // Allocate extra padding samples
-                    temp = realloc(ALBuf->data, (BUFFER_PADDING*OrigChans + size)*sizeof(ALshort));
+                    temp = realloc(ALBuf->data, (BUFFER_PADDING*OrigChans + size)*NewBytes);
                     if(temp)
                     {
                         ALBuf->data = temp;
                         ConvertDataIMA4(ALBuf->data, data, OrigChans, size/65);
 
-                        memset(&(ALBuf->data[size]), 0, BUFFER_PADDING*sizeof(ALshort)*OrigChans);
+                        memset(&(ALBuf->data[size]), 0, BUFFER_PADDING*NewBytes*OrigChans);
 
                         ALBuf->format = ((OrigChans==1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16);
                         ALBuf->eOriginalFormat = format;
-                        ALBuf->size = size*sizeof(ALshort);
+                        ALBuf->size = size*NewBytes;
                         ALBuf->frequency = freq;
                     }
                     else
@@ -468,6 +472,7 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
                     ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
                                         ((format==AL_FORMAT_REAR16) ? 2 :
                                          4));
+                    ALuint NewBytes = aluBytesFromFormat(ALBuf->format);
 
                     if(ALBuf->eOriginalFormat != AL_FORMAT_REAR8 &&
                        ALBuf->eOriginalFormat != AL_FORMAT_REAR16 &&
@@ -477,7 +482,7 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
                         break;
                     }
 
-                    if(ALBuf->size/4/sizeof(ALshort) < (ALuint)offset+length)
+                    if(ALBuf->size/4/NewBytes < (ALuint)offset+length)
                     {
                         alSetError(AL_INVALID_VALUE);
                         break;
@@ -489,6 +494,7 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
                 case AL_FORMAT_MONO_IMA4:
                 case AL_FORMAT_STEREO_IMA4: {
                     int Channels = aluChannelsFromFormat(ALBuf->format);
+                    ALuint Bytes = aluBytesFromFormat(ALBuf->format);
 
                     if(ALBuf->eOriginalFormat != format)
                     {
@@ -497,7 +503,7 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
                     }
 
                     if((offset%65) != 0 || (length%65) != 0 ||
-                       ALBuf->size/Channels/sizeof(ALshort) < (ALuint)offset+length)
+                       ALBuf->size/Channels/Bytes < (ALuint)offset+length)
                     {
                         alSetError(AL_INVALID_VALUE);
                         break;
@@ -509,6 +515,7 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
                 default: {
                     ALuint Channels = aluChannelsFromFormat(format);
                     ALuint Bytes = aluBytesFromFormat(format);
+                    ALuint NewBytes = aluChannelsFromFormat(ALBuf->format);
 
                     if(Channels != aluChannelsFromFormat(ALBuf->format))
                     {
@@ -516,7 +523,7 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
                         break;
                     }
 
-                    if(ALBuf->size/Channels/sizeof(ALshort) < (ALuint)offset+length)
+                    if(ALBuf->size/Channels/NewBytes < (ALuint)offset+length)
                     {
                         alSetError(AL_INVALID_VALUE);
                         break;
@@ -930,12 +937,13 @@ ALAPI void ALAPIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plValue
  */
 static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat)
 {
+    ALuint NewBytes = aluBytesFromFormat(NewFormat);
     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
     ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
     ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
     ALvoid *temp;
 
-    assert(aluBytesFromFormat(NewFormat) == 2);
+    assert(NewBytes == 2);
     assert(NewChannels == OrigChannels);
 
     if ((size%(OrigBytes*OrigChannels)) != 0)
@@ -946,17 +954,17 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
 
     // Samples are converted to 16 bit here
     size /= OrigBytes;
-    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + size) * sizeof(ALshort));
+    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + size) * NewBytes);
     if(temp)
     {
         ALBuf->data = temp;
         ConvertData(ALBuf->data, data, OrigBytes, size);
 
-        memset(&(ALBuf->data[size]), 0, BUFFER_PADDING*NewChannels*sizeof(ALshort));
+        memset(&(ALBuf->data[size]), 0, BUFFER_PADDING*NewChannels*NewBytes);
 
         ALBuf->format = NewFormat;
         ALBuf->eOriginalFormat = OrigFormat;
-        ALBuf->size = size*sizeof(ALshort);
+        ALBuf->size = size*NewBytes;
         ALBuf->frequency = freq;
     }
     else

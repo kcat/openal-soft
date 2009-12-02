@@ -229,15 +229,13 @@ static void context_state_callback(pa_context *context, void *pdata) //{{{
     pa_context_state_t state;
 
     state = ppa_context_get_state(context);
-    if(state == PA_CONTEXT_READY)
+    if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
     {
         if(ppa_threaded_mainloop_in_thread(data->loop))
             ppa_threaded_mainloop_signal(data->loop, 1);
         else
             ppa_threaded_mainloop_signal(data->loop, 0);
     }
-    else if(!PA_CONTEXT_IS_GOOD(state))
-        ppa_threaded_mainloop_signal(data->loop, 0);
 }//}}}
 
 static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
@@ -247,15 +245,13 @@ static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
     pa_stream_state_t state;
 
     state = ppa_stream_get_state(stream);
-    if(state == PA_STREAM_READY)
+    if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
     {
         if(ppa_threaded_mainloop_in_thread(data->loop))
             ppa_threaded_mainloop_signal(data->loop, 1);
         else
             ppa_threaded_mainloop_signal(data->loop, 0);
     }
-    else if(!PA_STREAM_IS_GOOD(state))
-        ppa_threaded_mainloop_signal(data->loop, 0);
 }//}}}
 
 static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
@@ -400,6 +396,7 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
             ppa_context_unref(data->context);
             data->context = NULL;
 
+            ppa_threaded_mainloop_accept(data->loop);
             ppa_threaded_mainloop_unlock(data->loop);
             goto out;
         }
@@ -591,6 +588,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
             ppa_stream_unref(data->stream);
             data->stream = NULL;
 
+            ppa_threaded_mainloop_accept(data->loop);
             ppa_threaded_mainloop_unlock(data->loop);
             return ALC_FALSE;
         }
@@ -733,9 +731,11 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
                      ppa_strerror(ppa_context_errno(data->context)));
 
             ppa_stream_unref(data->stream);
+            data->stream = NULL;
+
+            ppa_threaded_mainloop_accept(data->loop);
             ppa_threaded_mainloop_unlock(data->loop);
 
-            data->stream = NULL;
             pulse_close(device);
             pulse_unload();
             return ALC_FALSE;

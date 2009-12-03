@@ -246,7 +246,7 @@ static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
     if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
     {
         if(ppa_threaded_mainloop_in_thread(data->loop))
-            ppa_threaded_mainloop_signal(data->loop, 1);
+            ppa_threaded_mainloop_signal(data->loop, 0);
     }
 }//}}}
 
@@ -531,7 +531,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     }
 
     ppa_stream_set_state_callback(data->stream, stream_state_callback, device);
-    ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
 
     if(ppa_stream_connect_playback(data->stream, NULL, &data->attr, PA_STREAM_ADJUST_LATENCY, NULL, NULL) < 0)
     {
@@ -555,18 +554,19 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
             ppa_stream_unref(data->stream);
             data->stream = NULL;
 
-            ppa_threaded_mainloop_accept(data->loop);
             ppa_threaded_mainloop_unlock(data->loop);
             return ALC_FALSE;
         }
 
         ppa_threaded_mainloop_wait(data->loop);
     }
-    ppa_threaded_mainloop_accept(data->loop);
     ppa_stream_set_state_callback(data->stream, stream_state_callback2, device);
 
     stream_buffer_attr_callback(data->stream, device);
     ppa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
+
+    stream_write_callback(data->stream, data->attr.tlength, device);
+    ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
 
     ppa_threaded_mainloop_unlock(data->loop);
     return ALC_TRUE;
@@ -700,7 +700,6 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             ppa_stream_unref(data->stream);
             data->stream = NULL;
 
-            ppa_threaded_mainloop_accept(data->loop);
             ppa_threaded_mainloop_unlock(data->loop);
 
             pulse_close(device);
@@ -710,7 +709,6 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
         ppa_threaded_mainloop_wait(data->loop);
     }
-    ppa_threaded_mainloop_accept(data->loop);
     ppa_stream_set_state_callback(data->stream, stream_state_callback2, device);
 
     ppa_threaded_mainloop_unlock(data->loop);

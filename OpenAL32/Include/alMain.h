@@ -38,7 +38,7 @@ typedef DWORD tls_type;
 #include <time.h>
 #include <errno.h>
 
-#define IsBadWritePtr(a,b) (0)
+#define IsBadWritePtr(a,b) ((a) == NULL && (b) != 0)
 
 typedef pthread_key_t tls_type;
 #define tls_create(x) pthread_key_create((x), NULL)

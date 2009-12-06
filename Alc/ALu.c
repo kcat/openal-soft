@@ -581,7 +581,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
     Distance = aluSqrt(aluDotproduct(Position, Position));
 
     flAttenuation = 1.0f;
-    for(i = 0;i < MAX_SENDS;i++)
+    for(i = 0;i < NumSends;i++)
     {
         RoomAttenuation[i] = 1.0f;
 
@@ -668,7 +668,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
             absorb = pow(10.0, absorb/20.0);
         }
         DryGainHF *= absorb;
-        for(i = 0;i < MAX_SENDS;i++)
+        for(i = 0;i < NumSends;i++)
             WetGainHF[i] *= absorb;
     }
 

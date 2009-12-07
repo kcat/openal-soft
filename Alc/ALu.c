@@ -1106,7 +1106,7 @@ another_source:
                 DryBuffer[j][out] += outsamp*Matrix[chans[i]][out]; \
             for(out = 0;out < MAX_SENDS;out++) \
             { \
-                outsamp = lpFilter1P(WetFilter[out], chans[out], value); \
+                outsamp = lpFilter1P(WetFilter[out], chans[i], value); \
                 WetBuffer[out][j] += outsamp*WetSend[out]*scaler; \
             } \
         } \

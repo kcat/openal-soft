@@ -58,12 +58,12 @@ typedef enum {
     FRONT_LEFT = 0,
     FRONT_RIGHT,
     FRONT_CENTER,
-    SIDE_LEFT,
-    SIDE_RIGHT,
+    LFE,
     BACK_LEFT,
     BACK_RIGHT,
     BACK_CENTER,
-    LFE,
+    SIDE_LEFT,
+    SIDE_RIGHT,
 
     OUTPUTCHANNELS
 } Channel;

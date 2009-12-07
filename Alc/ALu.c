@@ -61,18 +61,23 @@ ALboolean DuplicateStereo = AL_FALSE;
 
 static __inline ALfloat aluF2F(ALfloat Value)
 {
-    if(Value < 0.f) return Value/32768.f;
-    if(Value > 0.f) return Value/32767.f;
-    return 0.f;
+    return Value;
 }
 
 static __inline ALshort aluF2S(ALfloat Value)
 {
     ALint i;
 
-    i = (ALint)Value;
-    i = __min( 32767, i);
-    i = __max(-32768, i);
+    if(Value < 0.0f)
+    {
+        i = (ALint)(Value*32768.0f);
+        i = max(-32768, i);
+    }
+    else
+    {
+        i = (ALint)(Value*32767.0f);
+        i = min( 32767, i);
+    }
     return ((ALshort)i);
 }
 
@@ -852,9 +857,9 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
     }
 }
 
-static __inline ALshort lerp(ALshort val1, ALshort val2, ALint frac)
+static __inline ALfloat lerp(ALfloat val1, ALfloat val2, ALint frac)
 {
-    return val1 + (((val2-val1)*frac)>>FRACTIONBITS);
+    return val1 + ((val2-val1)*(frac * (1.0f/(1<<FRACTIONBITS))));
 }
 
 static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo)
@@ -984,7 +989,7 @@ another_source:
     {
         ALuint DataSize = 0;
         ALbuffer *ALBuffer;
-        ALshort *Data;
+        ALfloat *Data;
         ALuint BufferSize;
 
         /* Get buffer info */

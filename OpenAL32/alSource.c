@@ -2039,7 +2039,7 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
 
     Returns the 'true' byte offset into the Source's queue (from the Sample, Byte or Millisecond
     offset supplied by the application).   This takes into account the fact that the buffer format
-    may have been modifed by AL (e.g 8bit samples are converted to 16bit)
+    may have been modifed by AL (e.g 8bit samples are converted to float)
 */
 static ALint GetByteOffset(ALsource *pSource)
 {

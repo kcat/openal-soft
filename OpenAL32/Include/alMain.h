@@ -391,7 +391,7 @@ static __inline void SetDefaultChannelOrder(ALCdevice *device)
             device->DevChannels[1] = FRONT_RIGHT;
             device->DevChannels[2] = FRONT_CENTER;
             device->DevChannels[3] = LFE;
-            device->DevChannels[4] = FRONT_CENTER;
+            device->DevChannels[4] = BACK_CENTER;
             device->DevChannels[5] = SIDE_LEFT;
             device->DevChannels[6] = SIDE_RIGHT; break;
 
@@ -430,7 +430,7 @@ static __inline void SetDefaultWFXChannelOrder(ALCdevice *device)
             device->DevChannels[1] = FRONT_RIGHT;
             device->DevChannels[2] = FRONT_CENTER;
             device->DevChannels[3] = LFE;
-            device->DevChannels[4] = FRONT_CENTER;
+            device->DevChannels[4] = BACK_CENTER;
             device->DevChannels[5] = SIDE_LEFT;
             device->DevChannels[6] = SIDE_RIGHT; break;
 

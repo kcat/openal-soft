@@ -408,7 +408,7 @@ ALvoid aluInitPanning(ALCcontext *Context)
 static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
                                ALboolean isMono)
 {
-    ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix;
+    ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,OrigDist;
     ALfloat Direction[3],Position[3],SourceToListener[3];
     ALfloat Velocity[3],ListenerVel[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
@@ -584,6 +584,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
 
     //2. Calculate distance attenuation
     Distance = aluSqrt(aluDotproduct(Position, Position));
+    OrigDist = Distance;
 
     flAttenuation = 1.0f;
     for(i = 0;i < NumSends;i++)
@@ -808,9 +809,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
         ALSource->Params.Pitch = ALSource->flPitch;
 
     // Use energy-preserving panning algorithm for multi-speaker playback
-    length = aluSqrt(Position[0]*Position[0] + Position[1]*Position[1] +
-                     Position[2]*Position[2]);
-    length = __max(length, MinDist);
+    length = __max(OrigDist, MinDist);
     if(length > 0.0f)
     {
         ALfloat invlen = 1.0f/length;

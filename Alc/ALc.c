@@ -1711,6 +1711,15 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
 
         device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
+        if(aluChannelsFromFormat(device->Format) <= 2)
+        {
+            device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
+            device->HeadDampen = __min(device->HeadDampen, 1.0f);
+            device->HeadDampen = __max(device->HeadDampen, 0.0f);
+        }
+        else
+            device->HeadDampen = 0.0f;
+
         // Find a playback device to open
         SuspendContext(NULL);
         for(i = 0;BackendList[i].Init;i++)

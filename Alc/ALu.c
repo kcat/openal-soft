@@ -685,23 +685,35 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
         ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f)*scale);
         ConeHF = (1.0f+(OuterGainHF-1.0f)*scale);
-        DryMix *= ConeVolume;
-        if(ALSource->DryGainHFAuto)
-            DryGainHF *= ConeHF;
     }
     else if(Angle > OuterAngle)
     {
         ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f));
         ConeHF = (1.0f+(OuterGainHF-1.0f));
-        DryMix *= ConeVolume;
-        if(ALSource->DryGainHFAuto)
-            DryGainHF *= ConeHF;
     }
     else
     {
         ConeVolume = 1.0f;
         ConeHF = 1.0f;
     }
+
+    // Apply some high-frequency attenuation for sources behind the listener
+    // NOTE: This should be aluDotproduct({0,0,-1}, ListenerToSource), however
+    // that is equivalent to aluDotproduct({0,0,1}, SourceToListener), which is
+    // the same as SourceToListener[2]
+    Angle = aluAcos(SourceToListener[2]) * 180.0f/M_PI;
+    // Sources within the minimum distance attenuate less
+    if(OrigDist < MinDist)
+        Angle *= OrigDist/MinDist;
+    if(Angle > 90.0f)
+    {
+        ALfloat scale = (Angle-90.0f) / (180.1f-90.0f); // .1 to account for fp errors
+        ConeHF *= 1.0f - (ALContext->Device->HeadDampen*scale);
+    }
+
+    DryMix *= ConeVolume;
+    if(ALSource->DryGainHFAuto)
+        DryGainHF *= ConeHF;
 
     // Clamp to Min/Max Gain
     DryMix = __min(DryMix,MaxVolume);

@@ -163,6 +163,8 @@ static __inline void al_print(const char *fname, unsigned int line, const char *
 
 #define LOWPASSFREQCUTOFF          (5000)
 
+#define DEFAULT_HEAD_DAMPEN        (0.25f)
+
 
 // Find the next power-of-2 for non-power-of-2 numbers.
 static __inline ALuint NextPowerOf2(ALuint value)
@@ -268,6 +270,9 @@ struct ALCdevice_struct
     // Stereo-to-binaural filter
     struct bs2b *Bs2b;
     ALCint       Bs2bLevel;
+
+    // Simulated dampening from head occlusion
+    ALfloat      HeadDampen;
 
     // Dry path buffer mix
     float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];

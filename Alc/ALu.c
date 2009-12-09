@@ -904,8 +904,7 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     rampLength = max(rampLength, SamplesToDo);
 
 another_source:
-    State = ALSource->state;
-    if(State != AL_PLAYING)
+    if(ALSource->state != AL_PLAYING)
     {
         if((ALSource=ALSource->next) != NULL)
             goto another_source;
@@ -931,11 +930,6 @@ another_source:
         BufferListItem = BufferListItem->next;
     }
 
-    /* Get source info */
-    BuffersPlayed = ALSource->BuffersPlayed;
-    DataPosInt    = ALSource->position;
-    DataPosFrac   = ALSource->position_fraction;
-
     if(ALSource->NeedsUpdate)
     {
         //Only apply 3D calculations for mono buffers
@@ -945,6 +939,12 @@ another_source:
             CalcNonAttnSourceParams(ALContext, ALSource);
         ALSource->NeedsUpdate = AL_FALSE;
     }
+
+    /* Get source info */
+    State         = ALSource->state;
+    BuffersPlayed = ALSource->BuffersPlayed;
+    DataPosInt    = ALSource->position;
+    DataPosFrac   = ALSource->position_fraction;
 
     /* Compute 18.14 fixed point step */
     Pitch = (ALSource->Params.Pitch*Frequency) / DeviceFreq;

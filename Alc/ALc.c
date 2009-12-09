@@ -596,6 +596,7 @@ static ALvoid InitContext(ALCcontext *pContext)
     //Validate pContext
     pContext->LastError = AL_NO_ERROR;
     pContext->InUse = AL_FALSE;
+    pContext->Suspended = AL_FALSE;
 
     //Set globals
     pContext->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
@@ -772,8 +773,10 @@ ALCAPI ALCenum ALCAPIENTRY alcGetError(ALCdevice *device)
 */
 ALCAPI ALCvoid ALCAPIENTRY alcSuspendContext(ALCcontext *pContext)
 {
-    // Not a lot happens here !
-    (void)pContext;
+    SuspendContext(NULL);
+    if(IsContext(pContext))
+        pContext->Suspended = AL_TRUE;
+    ProcessContext(NULL);
 }
 
 
@@ -784,8 +787,10 @@ ALCAPI ALCvoid ALCAPIENTRY alcSuspendContext(ALCcontext *pContext)
 */
 ALCAPI ALCvoid ALCAPIENTRY alcProcessContext(ALCcontext *pContext)
 {
-    // Not a lot happens here !
-    (void)pContext;
+    SuspendContext(NULL);
+    if(IsContext(pContext))
+        pContext->Suspended = AL_FALSE;
+    ProcessContext(NULL);
 }
 
 

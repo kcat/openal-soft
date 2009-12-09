@@ -316,6 +316,8 @@ struct ALCcontext_struct
     ALenum      LastError;
     ALboolean   InUse;
 
+    ALboolean   Suspended;
+
     ALenum      DistanceModel;
     ALboolean   SourceDistanceModel;
 

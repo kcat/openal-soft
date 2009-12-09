@@ -2077,9 +2077,9 @@ static ALint GetByteOffset(ALsource *pSource)
                 (pBuffer->eOriginalFormat == AL_FORMAT_STEREO_IMA4))
             {
                 // Round down to nearest ADPCM block
-                lByteOffset = (pSource->lOffset / (36 * lChannels)) * 36 * lChannels;
+                lByteOffset = pSource->lOffset / (36 * lChannels);
                 // Multiply by compression rate
-                lByteOffset = (ALint)(3.6111f * (ALfloat)lByteOffset);
+                lByteOffset = lByteOffset * 65 * lChannels * lBytes;
                 lByteOffset -= (lByteOffset % (lChannels * lBytes));
             }
             else if (pBuffer->eOriginalFormat == AL_FORMAT_REAR8)

@@ -61,6 +61,22 @@ static __inline ALfloat lpFilter1P(FILTER *iir, ALuint offset, ALfloat input)
     return output;
 }
 
+/* Calculates the low-pass filter coefficient given the pre-scaled gain and
+ * cos(w) value. Note that g should be pre-scaled (sqr(gain) for one-pole,
+ * sqrt(gain) for four-pole, etc) */
+static __inline ALfloat lpCoeffCalc(ALfloat g, ALfloat cw)
+{
+    ALfloat a = 0.0f;
+
+    /* Be careful with gains < 0.01, as that causes the coefficient
+     * head towards 1, which will flatten the signal */
+    g = __max(g, 0.01f);
+    if(g < 0.9999f) /* 1-epsilon */
+        a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
+            (1 - g);
+
+    return a;
+}
 
 #define AL_FILTER_TYPE                                     0x8001
 

@@ -328,24 +328,6 @@ static __inline ALfloat CalcI3DL2HFreq(ALfloat hfRef, ALuint frequency)
     return cos(2.0f * M_PI * hfRef / frequency);
 }
 
-/* Calculate the I3DL2 coefficient given the gain and frequency parameters.
- * To allow for optimization when using multiple chained filters, the gain
- * is not squared in this function.  Callers using a single filter should
- * square it to produce the correct coefficient.  Those using multiple
- * filters should find its N-1 root (where N is the number of chained
- * filters).
- */
-static __inline ALfloat CalcI3DL2Coeff(ALfloat g, ALfloat cw)
-{
-    ALfloat coeff;
-
-    coeff = 0.0f;
-    if(g < 0.9999f) // 1-epsilon
-        coeff = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) / (1 - g);
-
-    return coeff;
-}
-
 // Calculate an attenuation to be applied to the input of any echo models to
 // compensate for modal density and decay time.
 static __inline ALfloat CalcDensityGain(ALfloat a)
@@ -417,11 +399,10 @@ static __inline ALfloat CalcDampingCoeff(ALfloat hfRatio, ALfloat length, ALfloa
         // Calculate the low-pass coefficient by dividing the HF decay
         // coefficient by the full decay coefficient.
         g = CalcDecayCoeff(length, decayTime * hfRatio) / decayCoeff;
-        g  = __max(g, 0.1f);
 
         // Damping is done with a 1-pole filter, so g needs to be squared.
         g *= g;
-        coeff = CalcI3DL2Coeff(g, cw);
+        coeff = lpCoeffCalc(g, cw);
 
         // Very low decay times will produce minimal output, so apply an
         // upper bound to the coefficient.
@@ -1067,13 +1048,12 @@ static ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint frequency = Context->Device->Frequency;
-    ALfloat cw, g, x, y, hfRatio;
+    ALfloat cw, x, y, hfRatio;
 
     // Calculate the master low-pass filter (from the master effect HF gain).
     cw = CalcI3DL2HFreq(Effect->Reverb.HFReference, frequency);
-    g = __max(Effect->Reverb.GainHF, 0.0001f);
     // This is done with 2 chained 1-pole filters, so no need to square g.
-    State->LpFilter.coeff = CalcI3DL2Coeff(g, cw);
+    State->LpFilter.coeff = lpCoeffCalc(Effect->Reverb.GainHF, cw);
 
     // Update the initial effect delay.
     UpdateDelayLine(Effect->Reverb.ReflectionsDelay,
@@ -1110,13 +1090,12 @@ static ALvoid EAXVerbUpdate(ALeffectState *effect, ALCcontext *Context, const AL
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint frequency = Context->Device->Frequency;
-    ALfloat cw, g, x, y, hfRatio;
+    ALfloat cw, x, y, hfRatio;
 
     // Calculate the master low-pass filter (from the master effect HF gain).
     cw = CalcI3DL2HFreq(Effect->Reverb.HFReference, frequency);
-    g = __max(Effect->Reverb.GainHF, 0.0001f);
     // This is done with 2 chained 1-pole filters, so no need to square g.
-    State->LpFilter.coeff = CalcI3DL2Coeff(g, cw);
+    State->LpFilter.coeff = lpCoeffCalc(Effect->Reverb.GainHF, cw);
 
     // Update the modulator line.
     UpdateModulator(Effect->Reverb.ModulationTime,

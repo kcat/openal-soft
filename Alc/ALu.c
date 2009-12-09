@@ -412,8 +412,8 @@ static ALvoid CalcNonAttnSourceParams(const ALCcontext *ALContext, ALsource *ALS
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALint NumSends, Frequency;
+    ALfloat cw;
     ALint i;
-    ALfloat cw, a, g;
 
     //Get context properties
     NumSends  = ALContext->Device->NumAuxSends;
@@ -479,27 +479,16 @@ static ALvoid CalcNonAttnSourceParams(const ALCcontext *ALContext, ALsource *ALS
     /* Update filter coefficients. Calculations based on the I3DL2
      * spec. */
     cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / Frequency);
+
     /* We use two chained one-pole filters, so we need to take the
      * square root of the squared gain, which is the same as the base
      * gain. */
-    g = __max(DryGainHF, 0.01f);
-    a = 0.0f;
-    /* Be careful with gains < 0.0001, as that causes the coefficient
-     * head towards 1, which will flatten the signal */
-    if(g < 0.9999f) /* 1-epsilon */
-        a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
-            (1 - g);
-    ALSource->Params.iirFilter.coeff = a;
+    ALSource->Params.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
 
     for(i = 0;i < NumSends;i++)
     {
         /* We use a one-pole filter, so we need to take the squared gain */
-        g = __max(WetGainHF[i], 0.1f);
-        g *= g;
-        a = 0.0f;
-        if(g < 0.9999f) /* 1-epsilon */
-            a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
-                (1 - g);
+        ALfloat a = lpCoeffCalc(WetGainHF[i]*WetGainHF[i], cw);
         ALSource->Params.Send[i].iirFilter.coeff = a;
     }
 }
@@ -526,7 +515,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
     ALuint Frequency;
     ALint NumSends;
     ALint pos, s, i;
-    ALfloat cw, a, g;
+    ALfloat cw;
 
     for(i = 0;i < MAX_SENDS;i++)
         WetGainHF[i] = 1.0f;
@@ -862,26 +851,17 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
 
     /* Update filter coefficients. */
     cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / Frequency);
+
     /* Spatialized sources use four chained one-pole filters, so we need to
      * take the fourth root of the squared gain, which is the same as the
      * square root of the base gain. */
-    g = aluSqrt(__max(DryGainHF, 0.0001f));
-    a = 0.0f;
-    if(g < 0.9999f) /* 1-epsilon */
-        a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
-            (1 - g);
-    ALSource->Params.iirFilter.coeff = a;
+    ALSource->Params.iirFilter.coeff = lpCoeffCalc(aluSqrt(DryGainHF), cw);
 
     for(i = 0;i < NumSends;i++)
     {
         /* The wet path uses two chained one-pole filters, so take the
          * base gain (square root of the squared gain) */
-        g = __max(WetGainHF[i], 0.01f);
-        a = 0.0f;
-        if(g < 0.9999f) /* 1-epsilon */
-            a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
-                (1 - g);
-        ALSource->Params.Send[i].iirFilter.coeff = a;
+        ALSource->Params.Send[i].iirFilter.coeff = lpCoeffCalc(WetGainHF[i], cw);
     }
 }
 

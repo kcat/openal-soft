@@ -426,8 +426,8 @@ CONFIGURE_FILE(
     "${OpenAL_SOURCE_DIR}/config.h.in"
     "${OpenAL_BINARY_DIR}/config.h")
 CONFIGURE_FILE(
-    "${OpenAL_SOURCE_DIR}/admin/pkgconfig/openal.pc.in"
-    "${OpenAL_BINARY_DIR}/admin/pkgconfig/openal.pc"
+    "${OpenAL_SOURCE_DIR}/openal.pc.in"
+    "${OpenAL_BINARY_DIR}/openal.pc"
     @ONLY)
 
 ADD_DEFINITIONS(-DAL_BUILD_LIBRARY)
@@ -456,7 +456,7 @@ INSTALL(FILES include/AL/al.h
               include/AL/alext.h
         DESTINATION include/AL
 )
-INSTALL(FILES "${OpenAL_BINARY_DIR}/admin/pkgconfig/openal.pc"
+INSTALL(FILES "${OpenAL_BINARY_DIR}/openal.pc"
         DESTINATION "${LIB_INSTALL_DIR}/pkgconfig")
 
 # Install alsoft.conf configuration file

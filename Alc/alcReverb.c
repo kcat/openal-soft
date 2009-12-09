@@ -1330,7 +1330,7 @@ ALeffectState *VerbCreate(void)
     State->Echo.LpCoeff = 0.0f;
     State->Echo.LpSample = 0.0f;
     State->Echo.MixCoeff[0] = 0.0f;
-    State->Echo.MixCoeff[1] = 1.0f;
+    State->Echo.MixCoeff[1] = 0.0f;
 
     State->Offset = 0;
 

@@ -405,8 +405,106 @@ ALvoid aluInitPanning(ALCcontext *Context)
     }
 }
 
-static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
-                               ALboolean isMono)
+static ALvoid CalcNonAttnSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
+{
+    ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
+    ALfloat DryGain, DryGainHF;
+    ALfloat WetGain[MAX_SENDS];
+    ALfloat WetGainHF[MAX_SENDS];
+    ALint NumSends, Frequency;
+    ALint i;
+    ALfloat cw, a, g;
+
+    //Get context properties
+    NumSends  = ALContext->Device->NumAuxSends;
+    Frequency = ALContext->Device->NumAuxSends;
+
+    //Get listener properties
+    ListenerGain = ALContext->Listener.Gain;
+
+    //Get source properties
+    SourceVolume = ALSource->flGain;
+    MinVolume    = ALSource->flMinGain;
+    MaxVolume    = ALSource->flMaxGain;
+
+    //1. Multi-channel buffers always play "normal"
+    ALSource->Params.Pitch = ALSource->flPitch;
+
+    DryGain = SourceVolume;
+    DryGain = __min(DryGain,MaxVolume);
+    DryGain = __max(DryGain,MinVolume);
+    DryGainHF = 1.0f;
+
+    switch(ALSource->DirectFilter.type)
+    {
+        case AL_FILTER_LOWPASS:
+            DryGain *= ALSource->DirectFilter.Gain;
+            DryGainHF *= ALSource->DirectFilter.GainHF;
+            break;
+    }
+
+    ALSource->Params.DryGains[FRONT_LEFT]   = DryGain * ListenerGain;
+    ALSource->Params.DryGains[FRONT_RIGHT]  = DryGain * ListenerGain;
+    ALSource->Params.DryGains[SIDE_LEFT]    = DryGain * ListenerGain;
+    ALSource->Params.DryGains[SIDE_RIGHT]   = DryGain * ListenerGain;
+    ALSource->Params.DryGains[BACK_LEFT]    = DryGain * ListenerGain;
+    ALSource->Params.DryGains[BACK_RIGHT]   = DryGain * ListenerGain;
+    ALSource->Params.DryGains[FRONT_CENTER] = DryGain * ListenerGain;
+    ALSource->Params.DryGains[BACK_CENTER]  = DryGain * ListenerGain;
+    ALSource->Params.DryGains[LFE]          = DryGain * ListenerGain;
+
+    for(i = 0;i < NumSends;i++)
+    {
+        WetGain[i] = SourceVolume;
+        WetGain[i] = __min(WetGain[i],MaxVolume);
+        WetGain[i] = __max(WetGain[i],MinVolume);
+        WetGainHF[i] = 1.0f;
+
+        switch(ALSource->Send[i].WetFilter.type)
+        {
+            case AL_FILTER_LOWPASS:
+                WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
+                WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
+                break;
+        }
+
+        ALSource->Params.WetGains[i] = WetGain[i] * ListenerGain;
+    }
+    for(i = NumSends;i < MAX_SENDS;i++)
+    {
+        ALSource->Params.WetGains[i] = 0.0f;
+        WetGainHF[i] = 1.0f;
+    }
+
+    /* Update filter coefficients. Calculations based on the I3DL2
+     * spec. */
+    cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / Frequency);
+    /* We use two chained one-pole filters, so we need to take the
+     * square root of the squared gain, which is the same as the base
+     * gain. */
+    g = __max(DryGainHF, 0.01f);
+    a = 0.0f;
+    /* Be careful with gains < 0.0001, as that causes the coefficient
+     * head towards 1, which will flatten the signal */
+    if(g < 0.9999f) /* 1-epsilon */
+        a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
+            (1 - g);
+    ALSource->Params.iirFilter.coeff = a;
+
+    for(i = 0;i < NumSends;i++)
+    {
+        /* We use a one-pole filter, so we need to take the squared gain */
+        g = __max(WetGainHF[i], 0.1f);
+        g *= g;
+        a = 0.0f;
+        if(g < 0.9999f) /* 1-epsilon */
+            a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
+                (1 - g);
+        ALSource->Params.Send[i].iirFilter.coeff = a;
+    }
+}
+
+static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
 {
     ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,OrigDist;
     ALfloat Direction[3],Position[3],SourceToListener[3];
@@ -458,87 +556,6 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource,
     InnerAngle   = ALSource->flInnerAngle;
     OuterAngle   = ALSource->flOuterAngle;
     OuterGainHF  = ALSource->OuterGainHF;
-
-    //Only apply 3D calculations for mono buffers
-    if(isMono == AL_FALSE)
-    {
-        //1. Multi-channel buffers always play "normal"
-        ALSource->Params.Pitch = ALSource->flPitch;
-
-        DryMix = SourceVolume;
-        DryMix = __min(DryMix,MaxVolume);
-        DryMix = __max(DryMix,MinVolume);
-
-        switch(ALSource->DirectFilter.type)
-        {
-            case AL_FILTER_LOWPASS:
-                DryMix *= ALSource->DirectFilter.Gain;
-                DryGainHF *= ALSource->DirectFilter.GainHF;
-                break;
-        }
-
-        ALSource->Params.DryGains[FRONT_LEFT]   = DryMix * ListenerGain;
-        ALSource->Params.DryGains[FRONT_RIGHT]  = DryMix * ListenerGain;
-        ALSource->Params.DryGains[SIDE_LEFT]    = DryMix * ListenerGain;
-        ALSource->Params.DryGains[SIDE_RIGHT]   = DryMix * ListenerGain;
-        ALSource->Params.DryGains[BACK_LEFT]    = DryMix * ListenerGain;
-        ALSource->Params.DryGains[BACK_RIGHT]   = DryMix * ListenerGain;
-        ALSource->Params.DryGains[FRONT_CENTER] = DryMix * ListenerGain;
-        ALSource->Params.DryGains[BACK_CENTER]  = DryMix * ListenerGain;
-        ALSource->Params.DryGains[LFE]          = DryMix * ListenerGain;
-
-        for(i = 0;i < NumSends;i++)
-        {
-            WetGain[i] = SourceVolume;
-            WetGain[i] = __min(WetGain[i],MaxVolume);
-            WetGain[i] = __max(WetGain[i],MinVolume);
-            WetGainHF[i] = 1.0f;
-
-            switch(ALSource->Send[i].WetFilter.type)
-            {
-                case AL_FILTER_LOWPASS:
-                    WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
-                    WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
-                    break;
-            }
-
-            ALSource->Params.WetGains[i] = WetGain[i] * ListenerGain;
-        }
-        for(i = NumSends;i < MAX_SENDS;i++)
-        {
-            ALSource->Params.WetGains[i] = 0.0f;
-            WetGainHF[i] = 1.0f;
-        }
-
-        /* Update filter coefficients. Calculations based on the I3DL2
-         * spec. */
-        cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / Frequency);
-        /* We use two chained one-pole filters, so we need to take the
-         * square root of the squared gain, which is the same as the base
-         * gain. */
-        g = __max(DryGainHF, 0.01f);
-        a = 0.0f;
-        /* Be careful with gains < 0.0001, as that causes the coefficient
-         * head towards 1, which will flatten the signal */
-        if(g < 0.9999f) /* 1-epsilon */
-            a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
-                (1 - g);
-        ALSource->Params.iirFilter.coeff = a;
-
-        for(i = 0;i < NumSends;i++)
-        {
-            /* We use a one-pole filter, so we need to take the squared gain */
-            g = __max(WetGainHF[i], 0.1f);
-            g *= g;
-            a = 0.0f;
-            if(g < 0.9999f) /* 1-epsilon */
-                a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
-                    (1 - g);
-            ALSource->Params.Send[i].iirFilter.coeff = a;
-        }
-
-        return;
-    }
 
     //1. Translate Listener to origin (convert to head relative)
     if(ALSource->bHeadRelative==AL_FALSE)
@@ -941,7 +958,11 @@ another_source:
 
     if(ALSource->NeedsUpdate)
     {
-        CalcSourceParams(ALContext, ALSource, (Channels==1)?AL_TRUE:AL_FALSE);
+        //Only apply 3D calculations for mono buffers
+        if(Channels == 1)
+            CalcSourceParams(ALContext, ALSource);
+        else
+            CalcNonAttnSourceParams(ALContext, ALSource);
         ALSource->NeedsUpdate = AL_FALSE;
     }
 

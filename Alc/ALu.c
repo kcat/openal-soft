@@ -502,7 +502,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
     ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound;
     ALfloat Matrix[4][4];
-    ALfloat flAttenuation;
+    ALfloat flAttenuation, effectiveDist;
     ALfloat RoomAttenuation[MAX_SENDS];
     ALfloat MetersPerUnit;
     ALfloat RoomRolloff[MAX_SENDS];
@@ -666,22 +666,22 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
     for(i = 0;i < NumSends;i++)
         WetGain[i] = SourceVolume * RoomAttenuation[i];
 
+    effectiveDist = 0.0f;
+    if(MinDist > 0.0f)
+        effectiveDist = (MinDist/flAttenuation - MinDist)*MetersPerUnit;
+
     // Distance-based air absorption
-    if(ALSource->AirAbsorptionFactor > 0.0f && flAttenuation < 1.0f)
+    if(ALSource->AirAbsorptionFactor > 0.0f && effectiveDist > 0.0f)
     {
-        ALfloat absorb = 0.0f;
+        ALfloat absorb;
 
         // Absorption calculation is done in dB
-        if(flAttenuation > 0.0f)
-        {
-            absorb = (MinDist/flAttenuation - MinDist)*MetersPerUnit *
-                     (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF);
-            // Convert dB to linear gain before applying
-            absorb = pow(10.0, absorb/20.0);
-        }
+        absorb = (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF) *
+                 effectiveDist;
+        // Convert dB to linear gain before applying
+        absorb = pow(10.0, absorb/20.0);
+
         DryGainHF *= absorb;
-        for(i = 0;i < NumSends;i++)
-            WetGainHF[i] *= absorb;
     }
 
     //3. Apply directional soundcones
@@ -727,10 +727,11 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
 
     for(i = 0;i < NumSends;i++)
     {
-        if(ALSource->Send[i].Slot &&
-           ALSource->Send[i].Slot->effect.type != AL_EFFECT_NULL)
+        ALeffectslot *Slot = ALSource->Send[i].Slot;
+
+        if(Slot && Slot->effect.type != AL_EFFECT_NULL)
         {
-            if(ALSource->Send[i].Slot->AuxSendAuto)
+            if(Slot->AuxSendAuto)
             {
                 if(ALSource->WetGainAuto)
                     WetGain[i] *= ConeVolume;
@@ -741,8 +742,8 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
                 WetGain[i] = __min(WetGain[i],MaxVolume);
                 WetGain[i] = __max(WetGain[i],MinVolume);
 
-                if(ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB ||
-                   ALSource->Send[i].Slot->effect.type == AL_EFFECT_EAXREVERB)
+                if(Slot->effect.type == AL_EFFECT_REVERB ||
+                   Slot->effect.type == AL_EFFECT_EAXREVERB)
                 {
                     /* Apply a decay-time transformation to the wet path,
                      * based on the attenuation of the dry path.  This should
@@ -757,7 +758,11 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
                      * back to an attenuation for the reverb path.
                      */
                     WetGain[i] *= pow(10.0f, log10(flAttenuation) * 0.333f /
-                        ALSource->Send[i].Slot->effect.Reverb.DecayTime);
+                                             Slot->effect.Reverb.DecayTime);
+
+                    WetGainHF[i] *= pow(10.0,
+                                        log10(Slot->effect.Reverb.AirAbsorptionGainHF) *
+                                        ALSource->AirAbsorptionFactor * effectiveDist);
                 }
             }
             else

@@ -746,19 +746,16 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
                    Slot->effect.type == AL_EFFECT_EAXREVERB)
                 {
                     /* Apply a decay-time transformation to the wet path,
-                     * based on the attenuation of the dry path.  This should
-                     * better approximate the statistical attenuation model
-                     * for the reverb effect.
+                     * based on the attenuation of the dry path.
                      *
-                     * This simple equation converts the distance attenuation
-                     * into the time it would take to reach -60 dB. From
-                     * there it establishes an origin (0.333s; the decay time
-                     * that will produce equal attenuation) and applies the
-                     * current decay time.  Finally, it converts the result
-                     * back to an attenuation for the reverb path.
+                     * Using the approximate (effective) source to listener
+                     * distance, the initial decay of the reverb effect is
+                     * calculated and applied to the wet path.
                      */
-                    WetGain[i] *= pow(10.0f, log10(flAttenuation) * 0.333f /
-                                             Slot->effect.Reverb.DecayTime);
+                    WetGain[i] *= pow(10.0, effectiveDist /
+                                            (SPEEDOFSOUNDMETRESPERSEC *
+                                             Slot->effect.Reverb.DecayTime) *
+                                            -60.0 / 20.0);
 
                     WetGainHF[i] *= pow(10.0,
                                         log10(Slot->effect.Reverb.AirAbsorptionGainHF) *

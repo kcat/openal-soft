@@ -1041,11 +1041,11 @@ another_source:
 
         /* Compute the gain steps for each output channel */
         for(i = 0;i < OUTPUTCHANNELS;i++)
-            dryGainStep[i] = (ALSource->Params.DryGains[i]-
-                              DrySend[i]) / rampLength;
+            dryGainStep[i] = (ALSource->Params.DryGains[i]-DrySend[i]) /
+                             rampLength;
         for(i = 0;i < MAX_SENDS;i++)
-            wetGainStep[i] = (ALSource->Params.WetGains[i]-
-                              WetSend[i]) / rampLength;
+            wetGainStep[i] = (ALSource->Params.WetGains[i]-WetSend[i]) /
+                             rampLength;
 
         /* Figure out how many samples we can mix. */
         DataSize64 = DataSize;
@@ -1206,25 +1206,22 @@ another_source:
                 BuffersPlayed++;
                 DataPosInt -= DataSize;
             }
+            else if(ALSource->bLooping)
+            {
+                BufferListItem = ALSource->queue;
+                BuffersPlayed = 0;
+                if(ALSource->BuffersInQueue == 1)
+                    DataPosInt %= DataSize;
+                else
+                    DataPosInt -= DataSize;
+            }
             else
             {
-                if(!ALSource->bLooping)
-                {
-                    State = AL_STOPPED;
-                    BufferListItem = ALSource->queue;
-                    BuffersPlayed = ALSource->BuffersInQueue;
-                    DataPosInt = 0;
-                    DataPosFrac = 0;
-                }
-                else
-                {
-                    BufferListItem = ALSource->queue;
-                    BuffersPlayed = 0;
-                    if(ALSource->BuffersInQueue == 1)
-                        DataPosInt %= DataSize;
-                    else
-                        DataPosInt -= DataSize;
-                }
+                State = AL_STOPPED;
+                BufferListItem = ALSource->queue;
+                BuffersPlayed = ALSource->BuffersInQueue;
+                DataPosInt = 0;
+                DataPosFrac = 0;
             }
         }
     }

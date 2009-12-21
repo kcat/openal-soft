@@ -1547,7 +1547,8 @@ void SetDefaultChannelOrder(ALCdevice *device)
 {
     switch(aluChannelsFromFormat(device->Format))
     {
-    case 1: /* Mono is rendered as stereo; fall-through... */
+    case 1: device->DevChannels[0] = FRONT_CENTER; break;
+
     case 2: device->DevChannels[0] = FRONT_LEFT;
             device->DevChannels[1] = FRONT_RIGHT; break;
 
@@ -1586,7 +1587,8 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
     switch(aluChannelsFromFormat(device->Format))
     {
-    case 1: /* Mono is rendered as stereo; fall-through... */
+    case 1: device->DevChannels[0] = FRONT_CENTER; break;
+
     case 2: device->DevChannels[0] = FRONT_LEFT;
             device->DevChannels[1] = FRONT_RIGHT; break;
 

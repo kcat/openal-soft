@@ -235,23 +235,19 @@ ALvoid aluInitPanning(ALCcontext *Context)
 
     switch(Context->Device->Format)
     {
-        /* Mono is rendered as stereo, then downmixed during post-process */
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
         case AL_FORMAT_MONO_FLOAT32:
-            Context->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
-            Context->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
-            Context->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = 1.0f;
-            Context->ChannelMatrix[BACK_LEFT][FRONT_LEFT]     = 1.0f;
-            Context->ChannelMatrix[BACK_RIGHT][FRONT_RIGHT]   = 1.0f;
-            Context->ChannelMatrix[BACK_CENTER][FRONT_LEFT]   = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_CENTER][FRONT_RIGHT]  = aluSqrt(0.5);
-            Context->NumChan = 2;
-            Speaker2Chan[0] = FRONT_LEFT;
-            Speaker2Chan[1] = FRONT_RIGHT;
-            SpeakerAngle[0] = -90.0f * M_PI/180.0f;
-            SpeakerAngle[1] =  90.0f * M_PI/180.0f;
+            Context->ChannelMatrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
+            Context->ChannelMatrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
+            Context->ChannelMatrix[SIDE_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
+            Context->ChannelMatrix[BACK_CENTER][FRONT_CENTER] = 1.0f;
+            Context->NumChan = 1;
+            Speaker2Chan[0] = FRONT_CENTER;
+            SpeakerAngle[0] = 0.0f * M_PI/180.0f;
             break;
 
         case AL_FORMAT_STEREO8:
@@ -371,13 +367,19 @@ ALvoid aluInitPanning(ALCcontext *Context)
 
     for(pos = 0; pos < LUT_NUM; pos++)
     {
-        /* source angle */
-        Theta = aluLUTpos2Angle(pos);
-
         /* clear all values */
         offset = OUTPUTCHANNELS * pos;
         for(s = 0; s < OUTPUTCHANNELS; s++)
             Context->PanningLUT[offset+s] = 0.0f;
+
+        if(Context->NumChan == 1)
+        {
+            Context->PanningLUT[offset + Speaker2Chan[0]] = 1.0f;
+            continue;
+        }
+
+        /* source angle */
+        Theta = aluLUTpos2Angle(pos);
 
         /* set panning values */
         for(s = 0; s < Context->NumChan - 1; s++)
@@ -1251,7 +1253,6 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
     ALCcontext *ALContext;
-    ALfloat scalar;
     int fpuState;
     ALuint i, c;
 
@@ -1303,12 +1304,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
 #define CHECK_WRITE_FORMAT(bits, type, func)                                  \
         case AL_FORMAT_MONO##bits:                                            \
-            scalar = aluSqrt(0.5);                                            \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[0] = (func)((DryBuffer[i][ChanMap[0]] +       \
-                                             DryBuffer[i][ChanMap[1]]) *      \
-                                            scalar);                          \
+                ((type*)buffer)[0] = (func)(DryBuffer[i][ChanMap[0]]);        \
                 buffer = ((type*)buffer) + 1;                                 \
             }                                                                 \
             break;                                                            \

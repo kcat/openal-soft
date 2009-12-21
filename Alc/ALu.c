@@ -1251,6 +1251,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
     ALCcontext *ALContext;
+    ALfloat scalar;
     int fpuState;
     ALuint i, c;
 
@@ -1302,10 +1303,12 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
 #define CHECK_WRITE_FORMAT(bits, type, func)                                  \
         case AL_FORMAT_MONO##bits:                                            \
+            scalar = aluSqrt(0.5);                                            \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[0] = (func)(DryBuffer[i][ChanMap[0]] +        \
-                                            DryBuffer[i][ChanMap[1]]);        \
+                ((type*)buffer)[0] = (func)((DryBuffer[i][ChanMap[0]] +       \
+                                             DryBuffer[i][ChanMap[1]]) *      \
+                                            scalar);                          \
                 buffer = ((type*)buffer) + 1;                                 \
             }                                                                 \
             break;                                                            \

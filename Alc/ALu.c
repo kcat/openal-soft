@@ -417,7 +417,7 @@ static ALvoid CalcNonAttnSourceParams(const ALCcontext *ALContext, ALsource *ALS
 
     //Get context properties
     NumSends  = ALContext->Device->NumAuxSends;
-    Frequency = ALContext->Device->NumAuxSends;
+    Frequency = ALContext->Device->Frequency;
 
     //Get listener properties
     ListenerGain = ALContext->Listener.Gain;

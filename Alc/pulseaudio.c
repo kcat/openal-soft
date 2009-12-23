@@ -532,7 +532,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     ppa_stream_set_state_callback(data->stream, stream_state_callback, device);
 
-    if(ppa_stream_connect_playback(data->stream, NULL, &data->attr, PA_STREAM_ADJUST_LATENCY, NULL, NULL) < 0)
+    if(ppa_stream_connect_playback(data->stream, NULL, &data->attr, 0, NULL, NULL) < 0)
     {
         AL_PRINT("Stream did not connect: %s\n",
                  ppa_strerror(ppa_context_errno(data->context)));

@@ -628,7 +628,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     data->attr.prebuf = -1;
     data->attr.maxlength = -1;
     data->attr.tlength = -1;
-    data->attr.fragsize = data->frame_size * data->samples / 2;
+    data->attr.fragsize = min(data->frame_size * data->samples / 2,
+                              25 * device->Frequency / 1000);
     data->stream_name = "Capture Stream";
 
     data->spec.rate = device->Frequency;

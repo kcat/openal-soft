@@ -71,7 +71,7 @@ MAKE_FUNC(pa_path_get_filename);
 MAKE_FUNC(pa_get_binary_name);
 MAKE_FUNC(pa_threaded_mainloop_free);
 MAKE_FUNC(pa_context_errno);
-MAKE_FUNC(pa_xmalloc0);
+MAKE_FUNC(pa_xmalloc);
 MAKE_FUNC(pa_stream_unref);
 MAKE_FUNC(pa_threaded_mainloop_accept);
 MAKE_FUNC(pa_stream_set_write_callback);
@@ -186,7 +186,7 @@ LOAD_FUNC(pa_path_get_filename);
 LOAD_FUNC(pa_get_binary_name);
 LOAD_FUNC(pa_threaded_mainloop_free);
 LOAD_FUNC(pa_context_errno);
-LOAD_FUNC(pa_xmalloc0);
+LOAD_FUNC(pa_xmalloc);
 LOAD_FUNC(pa_stream_unref);
 LOAD_FUNC(pa_threaded_mainloop_accept);
 LOAD_FUNC(pa_stream_set_write_callback);
@@ -300,7 +300,7 @@ static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //
     len -= len%data->attr.minreq;
     if(len > 0)
     {
-        void *buf = ppa_xmalloc0(len);
+        void *buf = ppa_xmalloc(len);
         aluMixData(Device, buf, len/data->frame_size);
         ppa_stream_write(stream, buf, len, ppa_xfree, 0, PA_SEEK_RELATIVE);
     }
@@ -335,8 +335,10 @@ static void stream_read_callback(pa_stream *stream, size_t length, void *pdata) 
 
 static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{{
 {
-    pulse_data *data = ppa_xmalloc0(sizeof(pulse_data));
+    pulse_data *data = ppa_xmalloc(sizeof(pulse_data));
     pa_context_state_t state;
+
+    memset(data, 0, sizeof(*data));
 
     if(ppa_get_binary_name(data->path_name, sizeof(data->path_name)))
         data->context_name = ppa_path_get_filename(data->path_name);

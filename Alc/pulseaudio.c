@@ -77,7 +77,9 @@ MAKE_FUNC(pa_threaded_mainloop_accept);
 MAKE_FUNC(pa_stream_set_write_callback);
 MAKE_FUNC(pa_threaded_mainloop_new);
 MAKE_FUNC(pa_context_connect);
+MAKE_FUNC(pa_stream_set_buffer_attr);
 MAKE_FUNC(pa_stream_get_buffer_attr);
+MAKE_FUNC(pa_stream_get_sample_spec);
 MAKE_FUNC(pa_stream_set_buffer_attr_callback);
 MAKE_FUNC(pa_stream_set_read_callback);
 MAKE_FUNC(pa_stream_set_state_callback);
@@ -86,6 +88,7 @@ MAKE_FUNC(pa_stream_disconnect);
 MAKE_FUNC(pa_threaded_mainloop_lock);
 MAKE_FUNC(pa_channel_map_init_auto);
 MAKE_FUNC(pa_channel_map_parse);
+MAKE_FUNC(pa_operation_unref);
 #undef MAKE_FUNC
 
 #ifndef PATH_MAX
@@ -192,7 +195,9 @@ LOAD_FUNC(pa_threaded_mainloop_accept);
 LOAD_FUNC(pa_stream_set_write_callback);
 LOAD_FUNC(pa_threaded_mainloop_new);
 LOAD_FUNC(pa_context_connect);
+LOAD_FUNC(pa_stream_set_buffer_attr);
 LOAD_FUNC(pa_stream_get_buffer_attr);
+LOAD_FUNC(pa_stream_get_sample_spec);
 LOAD_FUNC(pa_stream_set_buffer_attr_callback);
 LOAD_FUNC(pa_stream_set_read_callback);
 LOAD_FUNC(pa_stream_set_state_callback);
@@ -201,6 +206,7 @@ LOAD_FUNC(pa_stream_disconnect);
 LOAD_FUNC(pa_threaded_mainloop_lock);
 LOAD_FUNC(pa_channel_map_init_auto);
 LOAD_FUNC(pa_channel_map_parse);
+LOAD_FUNC(pa_operation_unref);
 
 #undef LOAD_FUNC
     }
@@ -474,6 +480,7 @@ static void pulse_close_playback(ALCdevice *device) //{{{
 static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
+    pa_stream_flags_t flags = 0;
     pa_stream_state_t state;
     pa_channel_map chanmap;
 
@@ -522,6 +529,9 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     }
     SetDefaultWFXChannelOrder(device);
 
+    if(*(GetConfigValue(NULL, "frequency", "")) == '\0')
+        flags |= PA_STREAM_FIX_RATE;
+
     data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, &chanmap);
     if(!data->stream)
     {
@@ -534,7 +544,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     ppa_stream_set_state_callback(data->stream, stream_state_callback, device);
 
-    if(ppa_stream_connect_playback(data->stream, NULL, &data->attr, 0, NULL, NULL) < 0)
+    if(ppa_stream_connect_playback(data->stream, NULL, &data->attr, flags, NULL, NULL) < 0)
     {
         AL_PRINT("Stream did not connect: %s\n",
                  ppa_strerror(ppa_context_errno(data->context)));
@@ -563,6 +573,23 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         ppa_threaded_mainloop_wait(data->loop);
     }
     ppa_stream_set_state_callback(data->stream, stream_state_callback2, device);
+
+    data->spec = *(ppa_stream_get_sample_spec(data->stream));
+    if(device->Frequency != data->spec.rate)
+    {
+        pa_operation *o;
+
+        /* Server updated our playback rate, so modify the buffer attribs
+         * accordingly. */
+        data->attr.minreq = (data->attr.minreq/data->frame_size) *
+                            data->spec.rate / device->Frequency * data->frame_size;
+        data->attr.tlength = data->attr.minreq * device->NumUpdates;
+
+        o = ppa_stream_set_buffer_attr(data->stream, &data->attr, NULL, NULL);
+        ppa_operation_unref(o);
+
+        device->Frequency = data->spec.rate;
+    }
 
     stream_buffer_attr_callback(data->stream, device);
     ppa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);

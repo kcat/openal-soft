@@ -37,17 +37,6 @@
 #include "alu.h"
 #include "bs2b.h"
 
-#if defined(HAVE_STDINT_H)
-#include <stdint.h>
-typedef int64_t ALint64;
-#elif defined(HAVE___INT64)
-typedef __int64 ALint64;
-#elif (SIZEOF_LONG == 8)
-typedef long ALint64;
-#elif (SIZEOF_LONG_LONG == 8)
-typedef long long ALint64;
-#endif
-
 #define FRACTIONBITS 14
 #define FRACTIONMASK ((1L<<FRACTIONBITS)-1)
 #define MAX_PITCH 65536

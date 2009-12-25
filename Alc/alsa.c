@@ -654,7 +654,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         err = "sw set avail min";
     if(i == 0 && (i=psnd_pcm_sw_params(data->pcmHandle, sp)) != 0)
         err = "sw set params";
-    if(i == 0)
+    if(i != 0)
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
         psnd_pcm_sw_params_free(sp);

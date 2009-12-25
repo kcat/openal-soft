@@ -44,6 +44,13 @@ static inline int PA_CONTEXT_IS_GOOD(pa_context_state_t x)
 #error Invalid PulseAudio API version
 #endif
 
+#ifndef PA_CHECK_VERSION
+#define PA_CHECK_VERSION(major,minor,micro)                             \
+    ((PA_MAJOR > (major)) ||                                            \
+     (PA_MAJOR == (major) && PA_MINOR > (minor)) ||                     \
+     (PA_MAJOR == (major) && PA_MINOR == (minor) && PA_MICRO >= (micro)))
+#endif
+
 static void *pa_handle;
 #define MAKE_FUNC(x) static typeof(x) * p##x
 MAKE_FUNC(pa_context_unref);
@@ -89,6 +96,9 @@ MAKE_FUNC(pa_threaded_mainloop_lock);
 MAKE_FUNC(pa_channel_map_init_auto);
 MAKE_FUNC(pa_channel_map_parse);
 MAKE_FUNC(pa_operation_unref);
+#if PA_CHECK_VERSION(0,9,16)
+MAKE_FUNC(pa_stream_begin_write);
+#endif
 #undef MAKE_FUNC
 
 #ifndef PATH_MAX
@@ -134,6 +144,9 @@ void pulse_load(void) //{{{
         return; \
     } \
 } while(0)
+#define LOAD_OPTIONAL_FUNC(x) do { \
+    p##x = GetProcAddress(pa_handle, #x); \
+} while(0)
 
 #elif defined (HAVE_DLFCN_H)
 
@@ -154,11 +167,18 @@ void pulse_load(void) //{{{
         return; \
     } \
 } while(0)
+#define LOAD_OPTIONAL_FUNC(x) do { \
+    p##x = dlsym(pa_handle, #x); \
+    if((err=dlerror()) != NULL) { \
+        p##x = NULL; \
+    } \
+} while(0)
 
 #else
 
         pa_handle = (void*)0xDEADBEEF;
 #define LOAD_FUNC(x) p##x = (x)
+#define LOAD_OPTIONAL_FUNC(x) p##x = (x)
 
 #endif
         if(!pa_handle)
@@ -207,6 +227,9 @@ LOAD_FUNC(pa_threaded_mainloop_lock);
 LOAD_FUNC(pa_channel_map_init_auto);
 LOAD_FUNC(pa_channel_map_parse);
 LOAD_FUNC(pa_operation_unref);
+#if PA_CHECK_VERSION(0,9,16)
+LOAD_OPTIONAL_FUNC(pa_stream_begin_write);
+#endif
 
 #undef LOAD_FUNC
     }
@@ -306,9 +329,20 @@ static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //
     len -= len%data->attr.minreq;
     if(len > 0)
     {
-        void *buf = ppa_xmalloc(len);
+        void *buf;
+        pa_free_cb_t free_func = NULL;
+
+#if PA_CHECK_VERSION(0,9,16)
+        if(!ppa_stream_begin_write ||
+           ppa_stream_begin_write(stream, &buf, &len) < 0)
+#endif
+        {
+            buf = ppa_xmalloc(len);
+            free_func = ppa_xfree;
+        }
+
         aluMixData(Device, buf, len/data->frame_size);
-        ppa_stream_write(stream, buf, len, ppa_xfree, 0, PA_SEEK_RELATIVE);
+        ppa_stream_write(stream, buf, len, free_func, 0, PA_SEEK_RELATIVE);
     }
 } //}}}
 

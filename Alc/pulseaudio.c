@@ -87,7 +87,6 @@ MAKE_FUNC(pa_context_connect);
 MAKE_FUNC(pa_stream_set_buffer_attr);
 MAKE_FUNC(pa_stream_get_buffer_attr);
 MAKE_FUNC(pa_stream_get_sample_spec);
-MAKE_FUNC(pa_stream_set_buffer_attr_callback);
 MAKE_FUNC(pa_stream_set_read_callback);
 MAKE_FUNC(pa_stream_set_state_callback);
 MAKE_FUNC(pa_stream_new);
@@ -96,6 +95,9 @@ MAKE_FUNC(pa_threaded_mainloop_lock);
 MAKE_FUNC(pa_channel_map_init_auto);
 MAKE_FUNC(pa_channel_map_parse);
 MAKE_FUNC(pa_operation_unref);
+#if PA_CHECK_VERSION(0,9,15)
+MAKE_FUNC(pa_stream_set_buffer_attr_callback);
+#endif
 #if PA_CHECK_VERSION(0,9,16)
 MAKE_FUNC(pa_stream_begin_write);
 #endif
@@ -218,7 +220,6 @@ LOAD_FUNC(pa_context_connect);
 LOAD_FUNC(pa_stream_set_buffer_attr);
 LOAD_FUNC(pa_stream_get_buffer_attr);
 LOAD_FUNC(pa_stream_get_sample_spec);
-LOAD_FUNC(pa_stream_set_buffer_attr_callback);
 LOAD_FUNC(pa_stream_set_read_callback);
 LOAD_FUNC(pa_stream_set_state_callback);
 LOAD_FUNC(pa_stream_new);
@@ -227,6 +228,9 @@ LOAD_FUNC(pa_threaded_mainloop_lock);
 LOAD_FUNC(pa_channel_map_init_auto);
 LOAD_FUNC(pa_channel_map_parse);
 LOAD_FUNC(pa_operation_unref);
+#if PA_CHECK_VERSION(0,9,15)
+LOAD_OPTIONAL_FUNC(pa_stream_set_buffer_attr_callback);
+#endif
 #if PA_CHECK_VERSION(0,9,16)
 LOAD_OPTIONAL_FUNC(pa_stream_begin_write);
 #endif
@@ -626,7 +630,10 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     }
 
     stream_buffer_attr_callback(data->stream, device);
-    ppa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
+#if PA_CHECK_VERSION(0,9,15)
+    if(ppa_stream_set_buffer_attr_callback)
+        ppa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
+#endif
 
     stream_write_callback(data->stream, data->attr.tlength, device);
     ppa_stream_set_write_callback(data->stream, stream_write_callback, device);

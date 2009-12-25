@@ -607,6 +607,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 
                         // Update AL_BUFFER parameter
                         pSource->Buffer = buffer;
+                        pSource->NeedsUpdate = AL_TRUE;
                     }
                     else
                         alSetError(AL_INVALID_VALUE);
@@ -1581,6 +1582,7 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
     ALint iFrequency;
     ALint iFormat;
     ALboolean bBuffersValid = AL_TRUE;
+    ALboolean hadFormat = AL_FALSE;
 
     if (n == 0)
         return;
@@ -1609,6 +1611,7 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
                 {
                     iFrequency = ALBufferList->buffer->frequency;
                     iFormat = ALBufferList->buffer->format;
+                    hadFormat = AL_TRUE;
                     break;
                 }
                 ALBufferList = ALBufferList->next;
@@ -1693,6 +1696,10 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
 
                 // Update number of buffers in queue
                 ALSource->BuffersInQueue += n;
+                // If no previous format, mark the source dirty now that it may
+                // have one
+                if(!hadFormat)
+                    ALSource->NeedsUpdate = AL_TRUE;
             }
         }
         else

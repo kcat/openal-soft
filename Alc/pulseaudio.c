@@ -235,6 +235,7 @@ LOAD_OPTIONAL_FUNC(pa_stream_set_buffer_attr_callback);
 LOAD_OPTIONAL_FUNC(pa_stream_begin_write);
 #endif
 
+#undef LOAD_OPTIONAL_FUNC
 #undef LOAD_FUNC
     }
     ++load_count;

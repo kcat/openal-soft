@@ -562,7 +562,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     if(!ppa_channel_map_init_auto(&chanmap, data->spec.channels, PA_CHANNEL_MAP_WAVEEX))
     {
-        AL_PRINT("Couldn't build map for channel count (%d)!", data->spec.channels);
+        AL_PRINT("Couldn't build map for channel count (%d)!\n", data->spec.channels);
         ppa_threaded_mainloop_unlock(data->loop);
         return ALC_FALSE;
     }

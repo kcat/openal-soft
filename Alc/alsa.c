@@ -552,14 +552,14 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     if((i=psnd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
         err = "any";
     /* set interleaved access */
-    if(err == NULL && (!allowmmap || (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED)) < 0))
+    if(i >= 0 && (!allowmmap || (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED)) < 0))
     {
         if(periods > 2) periods--;
         if((i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
             err = "set access";
     }
     /* set format (implicitly sets sample bits) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
     {
         switch(aluChannelsFromFormat(device->Format))
         {
@@ -598,7 +598,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         }
     }
     /* set channels (implicitly sets frame bits) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(device->Format))) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(device->Format))) < 0)
     {
         switch(aluBytesFromFormat(device->Format))
         {
@@ -619,24 +619,24 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         }
     }
     /* set periods (implicitly constrains period/buffer parameters) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL)) < 0)
         err = "set periods near";
     /* set rate (implicitly constrains period/buffer parameters) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &rate, NULL)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &rate, NULL)) < 0)
         err = "set rate near";
     /* set period size in frame units (implicitly sets buffer size/bytes/time and period time/bytes) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_period_size_near(data->pcmHandle, p, &periodSizeInFrames, NULL)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_period_size_near(data->pcmHandle, p, &periodSizeInFrames, NULL)) < 0)
         err = "set period size near";
     /* install and prepare hardware configuration */
-    if(err == NULL && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
         err = "set params";
-    if(err == NULL && (i=psnd_pcm_hw_params_get_access(p, &access)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_get_access(p, &access)) < 0)
         err = "get access";
-    if(err == NULL && (i=psnd_pcm_hw_params_get_period_size(p, &periodSizeInFrames, NULL)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_get_period_size(p, &periodSizeInFrames, NULL)) < 0)
         err = "get period size";
-    if(err == NULL && (i=psnd_pcm_hw_params_get_periods(p, &periods, NULL)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_get_periods(p, &periods, NULL)) < 0)
         err = "get periods";
-    if(err != NULL)
+    if(i < 0)
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
         psnd_pcm_hw_params_free(p);
@@ -650,11 +650,11 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 
     if((i=psnd_pcm_sw_params_current(data->pcmHandle, sp)) != 0)
         err = "sw current";
-    if(err == NULL && (i=psnd_pcm_sw_params_set_avail_min(data->pcmHandle, sp, periodSizeInFrames)) != 0)
+    if(i == 0 && (i=psnd_pcm_sw_params_set_avail_min(data->pcmHandle, sp, periodSizeInFrames)) != 0)
         err = "sw set avail min";
-    if(err == NULL && (i=psnd_pcm_sw_params(data->pcmHandle, sp)) != 0)
+    if(i == 0 && (i=psnd_pcm_sw_params(data->pcmHandle, sp)) != 0)
         err = "sw set params";
-    if(err != NULL)
+    if(i == 0)
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
         psnd_pcm_sw_params_free(sp);
@@ -806,24 +806,24 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     if((i=psnd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
         err = "any";
     /* set interleaved access */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
         err = "set access";
     /* set format (implicitly sets sample bits) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
         err = "set format";
     /* set channels (implicitly sets frame bits) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(pDevice->Format))) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(pDevice->Format))) < 0)
         err = "set channels";
     /* set rate (implicitly constrains period/buffer parameters) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, pDevice->Frequency, 0)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, pDevice->Frequency, 0)) < 0)
         err = "set rate near";
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
-    if(err == NULL && (i=psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
         err = "set buffer size near";
     /* install and prepare hardware configuration */
-    if(err == NULL && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
         err = "set params";
-    if(err != NULL)
+    if(i < 0)
     {
         AL_PRINT("%s failed: %s\n", err, psnd_strerror(i));
         psnd_pcm_hw_params_free(p);

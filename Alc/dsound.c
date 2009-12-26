@@ -74,7 +74,7 @@ static ALuint NumDevices;
 static volatile ALuint load_count;
 
 
-void DSoundLoad(void)
+void *DSoundLoad(void)
 {
     if(load_count == 0)
     {
@@ -83,7 +83,7 @@ void DSoundLoad(void)
         if(ds_handle == NULL)
         {
             AL_PRINT("Failed to load dsound.dll\n");
-            return;
+            return NULL;
         }
 
 #define LOAD_FUNC(f) do { \
@@ -93,7 +93,7 @@ void DSoundLoad(void)
         FreeLibrary(ds_handle); \
         ds_handle = NULL; \
         AL_PRINT("Could not load %s from dsound.dll\n", #f); \
-        return; \
+        return NULL; \
     } \
 } while(0)
 #else
@@ -106,6 +106,8 @@ LOAD_FUNC(DirectSoundEnumerateA);
 #undef LOAD_FUNC
     }
     ++load_count;
+
+    return ds_handle;
 }
 
 void DSoundUnload(void)
@@ -223,8 +225,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
             return ALC_FALSE;
     }
 
-    DSoundLoad();
-    if(ds_handle == NULL)
+    if(!DSoundLoad())
         return ALC_FALSE;
 
     //Initialise requested device
@@ -550,8 +551,7 @@ void alcDSoundDeinit(void)
 
 void alcDSoundProbe(int type)
 {
-    DSoundLoad();
-    if(!ds_handle) return;
+    if(!DSoundLoad()) return;
 
     if(type == DEVICE_PROBE)
         AppendDeviceList(dsDevice);

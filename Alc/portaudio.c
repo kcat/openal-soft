@@ -50,7 +50,7 @@ static const ALCchar pa_device[] = "PortAudio Software";
 static volatile ALuint load_count;
 
 
-void pa_load(void)
+void *pa_load(void)
 {
     const char *str;
     PaError err;
@@ -65,7 +65,7 @@ void pa_load(void)
 #endif
         pa_handle = dlopen(PALIB, RTLD_NOW);
         if(!pa_handle)
-            return;
+            return NULL;
         dlerror();
 
 #define LOAD_FUNC(f) do { \
@@ -75,7 +75,7 @@ void pa_load(void)
         dlclose(pa_handle); \
         pa_handle = NULL; \
         AL_PRINT("Could not load %s from "PALIB": %s\n", #f, str); \
-        return; \
+        return NULL; \
     } \
 } while(0)
 #else
@@ -103,11 +103,12 @@ LOAD_FUNC(Pa_GetStreamInfo);
             dlclose(pa_handle);
 #endif
             pa_handle = NULL;
-            return;
+            return NULL;
         }
     }
-
     ++load_count;
+
+    return pa_handle;
 }
 
 void pa_unload(void)
@@ -155,8 +156,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     else if(strcmp(deviceName, pa_device) != 0)
         return ALC_FALSE;
 
-    pa_load();
-    if(pa_handle == NULL)
+    if(!pa_load())
         return ALC_FALSE;
 
     data = (pa_data*)calloc(1, sizeof(pa_data));
@@ -287,8 +287,7 @@ void alc_pa_deinit(void)
 
 void alc_pa_probe(int type)
 {
-    pa_load();
-    if(!pa_handle) return;
+    if(!pa_load()) return;
 
     if(type == DEVICE_PROBE)
         AppendDeviceList(pa_device);

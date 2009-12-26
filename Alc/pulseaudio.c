@@ -134,7 +134,7 @@ static const ALCchar pulse_capture_device[] = "PulseAudio Capture";
 static volatile ALuint load_count;
 
 
-void pulse_load(void) //{{{
+void *pulse_load(void) //{{{
 {
     if(load_count == 0)
     {
@@ -146,7 +146,7 @@ void pulse_load(void) //{{{
         AL_PRINT("Could not load %s from libpulse-0.dll\n", #x); \
         FreeLibrary(pa_handle); \
         pa_handle = NULL; \
-        return; \
+        return NULL; \
     } \
 } while(0)
 #define LOAD_OPTIONAL_FUNC(x) do { \
@@ -169,7 +169,7 @@ void pulse_load(void) //{{{
         AL_PRINT("Could not load %s from libpulse: %s\n", #x, err); \
         dlclose(pa_handle); \
         pa_handle = NULL; \
-        return; \
+        return NULL; \
     } \
 } while(0)
 #define LOAD_OPTIONAL_FUNC(x) do { \
@@ -187,7 +187,7 @@ void pulse_load(void) //{{{
 
 #endif
         if(!pa_handle)
-            return;
+            return NULL;
 
 LOAD_FUNC(pa_context_unref);
 LOAD_FUNC(pa_sample_spec_valid);
@@ -245,6 +245,8 @@ LOAD_OPTIONAL_FUNC(pa_stream_begin_write);
 #undef LOAD_FUNC
     }
     ++load_count;
+
+    return pa_handle;
 } //}}}
 
 void pulse_unload(void) //{{{
@@ -489,8 +491,7 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
     else if(strcmp(device_name, pulse_device) != 0)
         return ALC_FALSE;
 
-    pulse_load();
-    if(!pa_handle)
+    if(!pulse_load())
         return ALC_FALSE;
 
     if(pulse_open(device, device_name) != ALC_FALSE)
@@ -660,8 +661,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     else if(strcmp(device_name, pulse_capture_device) != 0)
         return ALC_FALSE;
 
-    pulse_load();
-    if(!pa_handle)
+    if(!pulse_load())
         return ALC_FALSE;
 
     if(pulse_open(device, device_name) == ALC_FALSE)
@@ -904,8 +904,7 @@ void alc_pulse_deinit(void) //{{{
 
 void alc_pulse_probe(int type) //{{{
 {
-    pulse_load();
-    if(!pa_handle) return;
+    if(!pulse_load()) return;
 
     if(type == DEVICE_PROBE)
         AppendDeviceList(pulse_device);

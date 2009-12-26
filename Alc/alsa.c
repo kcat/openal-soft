@@ -118,7 +118,7 @@ static ALuint numCaptureDevNames;
 static volatile ALuint load_count;
 
 
-void alsa_load(void)
+void *alsa_load(void)
 {
     if(load_count == 0)
     {
@@ -127,7 +127,7 @@ void alsa_load(void)
 #ifdef HAVE_DLFCN_H
         alsa_handle = dlopen("libasound.so.2", RTLD_NOW);
         if(!alsa_handle)
-            return;
+            return NULL;
         dlerror();
 
 #define LOAD_FUNC(f) do { \
@@ -137,7 +137,7 @@ void alsa_load(void)
         dlclose(alsa_handle); \
         alsa_handle = NULL; \
         AL_PRINT("Could not load %s from libasound.so.2: %s\n", #f, str); \
-        return; \
+        return NULL; \
     } \
 } while(0)
 #else
@@ -205,6 +205,8 @@ LOAD_FUNC(snd_card_next);
 #undef LOAD_FUNC
     }
     ++load_count;
+
+    return alsa_handle;
 }
 
 void alsa_unload(void)
@@ -468,8 +470,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
             return ALC_FALSE;
     }
 
-    alsa_load();
-    if(!alsa_handle)
+    if(!alsa_load())
         return ALC_FALSE;
 
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -757,8 +758,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
             return ALC_FALSE;
     }
 
-    alsa_load();
-    if(!alsa_handle)
+    if(!alsa_load())
         return ALC_FALSE;
 
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -970,8 +970,8 @@ void alc_alsa_probe(int type)
     char name[128];
     ALuint i;
 
-    alsa_load();
-    if(!alsa_handle) return;
+    if(!alsa_load())
+        return;
 
     psnd_ctl_card_info_malloc(&info);
     psnd_pcm_info_malloc(&pcminfo);

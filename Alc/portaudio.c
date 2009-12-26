@@ -203,19 +203,9 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     }
     streamInfo = pPa_GetStreamInfo(data->stream);
 
-    err = pPa_StartStream(data->stream);
-    if(err != paNoError)
-    {
-        AL_PRINT("Pa_StartStream() returned an error: %s\n", pPa_GetErrorText(err));
-        pPa_CloseStream(data->stream);
-        device->ExtraData = NULL;
-        free(data);
-        pa_unload();
-        return ALC_FALSE;
-    }
-
     device->szDeviceName = strdup(deviceName);
     device->Frequency = streamInfo->sampleRate;
+
     return ALC_TRUE;
 }
 
@@ -223,10 +213,6 @@ static void pa_close_playback(ALCdevice *device)
 {
     pa_data *data = (pa_data*)device->ExtraData;
     PaError err;
-
-    err = pPa_StopStream(data->stream);
-    if(err != paNoError)
-        fprintf(stderr, "Error stopping stream: %s\n", pPa_GetErrorText(err));
 
     err = pPa_CloseStream(data->stream);
     if(err != paNoError)
@@ -242,16 +228,29 @@ static ALCboolean pa_reset_playback(ALCdevice *device)
 {
     pa_data *data = (pa_data*)device->ExtraData;
     const PaStreamInfo *streamInfo;
+    PaError err;
 
     streamInfo = pPa_GetStreamInfo(data->stream);
     device->Frequency = streamInfo->sampleRate;
+
+    err = pPa_StartStream(data->stream);
+    if(err != paNoError)
+    {
+        AL_PRINT("Pa_StartStream() returned an error: %s\n", pPa_GetErrorText(err));
+        return ALC_FALSE;
+    }
 
     return ALC_TRUE;
 }
 
 static void pa_stop_playback(ALCdevice *device)
 {
-    (void)device;
+    pa_data *data = (pa_data*)device->ExtraData;
+    PaError err;
+
+    err = pPa_StopStream(data->stream);
+    if(err != paNoError)
+        AL_PRINT("Error stopping stream: %s\n", pPa_GetErrorText(err));
 }
 
 

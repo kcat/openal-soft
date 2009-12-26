@@ -216,7 +216,7 @@ static void pa_close_playback(ALCdevice *device)
 
     err = pPa_CloseStream(data->stream);
     if(err != paNoError)
-        fprintf(stderr, "Error closing stream: %s\n", pPa_GetErrorText(err));
+        AL_PRINT("Error closing stream: %s\n", pPa_GetErrorText(err));
 
     free(data);
     device->ExtraData = NULL;

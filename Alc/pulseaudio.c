@@ -74,6 +74,8 @@ MAKE_FUNC(pa_stream_write);
 MAKE_FUNC(pa_xfree);
 MAKE_FUNC(pa_stream_connect_record);
 MAKE_FUNC(pa_stream_connect_playback);
+MAKE_FUNC(pa_stream_readable_size);
+MAKE_FUNC(pa_stream_cork);
 MAKE_FUNC(pa_path_get_filename);
 MAKE_FUNC(pa_get_binary_name);
 MAKE_FUNC(pa_threaded_mainloop_free);
@@ -94,6 +96,7 @@ MAKE_FUNC(pa_stream_disconnect);
 MAKE_FUNC(pa_threaded_mainloop_lock);
 MAKE_FUNC(pa_channel_map_init_auto);
 MAKE_FUNC(pa_channel_map_parse);
+MAKE_FUNC(pa_operation_get_state);
 MAKE_FUNC(pa_operation_unref);
 #if PA_CHECK_VERSION(0,9,15)
 MAKE_FUNC(pa_stream_set_buffer_attr_callback);
@@ -207,6 +210,8 @@ LOAD_FUNC(pa_stream_write);
 LOAD_FUNC(pa_xfree);
 LOAD_FUNC(pa_stream_connect_record);
 LOAD_FUNC(pa_stream_connect_playback);
+LOAD_FUNC(pa_stream_readable_size);
+LOAD_FUNC(pa_stream_cork);
 LOAD_FUNC(pa_path_get_filename);
 LOAD_FUNC(pa_get_binary_name);
 LOAD_FUNC(pa_threaded_mainloop_free);
@@ -227,6 +232,7 @@ LOAD_FUNC(pa_stream_disconnect);
 LOAD_FUNC(pa_threaded_mainloop_lock);
 LOAD_FUNC(pa_channel_map_init_auto);
 LOAD_FUNC(pa_channel_map_parse);
+LOAD_FUNC(pa_operation_get_state);
 LOAD_FUNC(pa_operation_unref);
 #if PA_CHECK_VERSION(0,9,15)
 LOAD_OPTIONAL_FUNC(pa_stream_set_buffer_attr_callback);
@@ -323,6 +329,16 @@ static void stream_state_callback2(pa_stream *stream, void *pdata) //{{{
     }
 }//}}}
 
+static void stream_success_callback(pa_stream *stream, int success, void *pdata) //{{{
+{
+    ALCdevice *Device = pdata;
+    pulse_data *data = Device->ExtraData;
+    (void)stream;
+    (void)success;
+
+    if(ppa_threaded_mainloop_in_thread(data->loop))
+        ppa_threaded_mainloop_signal(data->loop, 0);
+}//}}}
 //}}}
 
 // PulseAudio I/O Callbacks //{{{
@@ -349,32 +365,6 @@ static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //
         aluMixData(Device, buf, len/data->frame_size);
         ppa_stream_write(stream, buf, len, free_func, 0, PA_SEEK_RELATIVE);
     }
-} //}}}
-
-static void stream_read_callback(pa_stream *stream, size_t length, void *pdata) //{{{
-{
-    ALCdevice *Device = pdata;
-    pulse_data *data = Device->ExtraData;
-    const void *buf;
-
-    if(ppa_stream_peek(stream, &buf, &length) < 0)
-    {
-        AL_PRINT("pa_stream_peek() failed: %s\n",
-                 ppa_strerror(ppa_context_errno(data->context)));
-        return;
-    }
-
-    assert(buf);
-    assert(length);
-
-    length /= data->frame_size;
-
-    if(data->samples < length)
-        AL_PRINT("stream_read_callback: buffer overflow!\n");
-
-    WriteRingBuffer(data->ring, buf, (length<data->samples) ? length : data->samples);
-
-    ppa_stream_drop(stream);
 } //}}}
 //}}}
 
@@ -697,10 +687,10 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
     data->attr.minreq = -1;
     data->attr.prebuf = -1;
-    data->attr.maxlength = -1;
+    data->attr.maxlength = data->frame_size * data->samples;
     data->attr.tlength = -1;
-    data->attr.fragsize = min(data->frame_size * data->samples / 2,
-                              25 * device->Frequency / 1000);
+    data->attr.fragsize = min(data->frame_size * data->samples,
+                              10 * device->Frequency / 1000);
     data->stream_name = "Capture Stream";
 
     data->spec.rate = device->Frequency;
@@ -748,7 +738,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
     ppa_stream_set_state_callback(data->stream, stream_state_callback, device);
 
-    if(ppa_stream_connect_record(data->stream, NULL, &data->attr, PA_STREAM_ADJUST_LATENCY) < 0)
+    if(ppa_stream_connect_record(data->stream, NULL, &data->attr, PA_STREAM_START_CORKED) < 0)
     {
         AL_PRINT("Stream did not connect: %s\n",
                  ppa_strerror(ppa_context_errno(data->context)));
@@ -796,18 +786,26 @@ static void pulse_close_capture(ALCdevice *device) //{{{
 static void pulse_start_capture(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
+    pa_operation *o;
 
     ppa_threaded_mainloop_lock(data->loop);
-    ppa_stream_set_read_callback(data->stream, stream_read_callback, device);
+    o = ppa_stream_cork(data->stream, 0, stream_success_callback, device);
+    while(ppa_operation_get_state(o) == PA_OPERATION_RUNNING)
+        ppa_threaded_mainloop_wait(data->loop);
+    ppa_operation_unref(o);
     ppa_threaded_mainloop_unlock(data->loop);
 } //}}}
 
 static void pulse_stop_capture(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
+    pa_operation *o;
 
     ppa_threaded_mainloop_lock(data->loop);
-    ppa_stream_set_read_callback(data->stream, NULL, NULL);
+    o = ppa_stream_cork(data->stream, 1, stream_success_callback, device);
+    while(ppa_operation_get_state(o) == PA_OPERATION_RUNNING)
+        ppa_threaded_mainloop_wait(data->loop);
+    ppa_operation_unref(o);
     ppa_threaded_mainloop_unlock(data->loop);
 } //}}}
 
@@ -815,17 +813,67 @@ static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint sa
 {
     pulse_data *data = device->ExtraData;
     ALCuint available = RingBufferSize(data->ring);
+    const void *buf;
+    size_t length;
 
-    if(available < samples)
+    available *= data->frame_size;
+    samples *= data->frame_size;
+
+    ppa_threaded_mainloop_lock(data->loop);
+    if(available+ppa_stream_readable_size(data->stream) < samples)
+    {
+        ppa_threaded_mainloop_unlock(data->loop);
         alcSetError(ALC_INVALID_VALUE);
-    else
-        ReadRingBuffer(data->ring, buffer, samples);
+        return;
+    }
+
+    available = min(available, samples);
+    if(available > 0)
+    {
+        ReadRingBuffer(data->ring, buffer, available/data->frame_size);
+        buffer = (ALubyte*)buffer + available;
+        samples -= available;
+    }
+
+    /* Capture is done in fragment-sized chunks, so we loop until we get all
+     * that's requested */
+    while(samples > 0)
+    {
+        if(ppa_stream_peek(data->stream, &buf, &length) < 0)
+        {
+            AL_PRINT("pa_stream_peek() failed: %s\n",
+                     ppa_strerror(ppa_context_errno(data->context)));
+            break;
+        }
+        available = min(length, samples);
+
+        memcpy(buffer, buf, available);
+        buffer = (ALubyte*)buffer + available;
+        buf = (const ALubyte*)buf + available;
+        samples -= available;
+        length -= available;
+
+        /* Any unread data in the fragment will be lost, so save it */
+        length /= data->frame_size;
+        if(length > 0)
+            WriteRingBuffer(data->ring, buf, (length<data->samples) ? length : data->samples);
+
+        ppa_stream_drop(data->stream);
+    }
+    ppa_threaded_mainloop_unlock(data->loop);
 } //}}}
 
 static ALCuint pulse_available_samples(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
-    return RingBufferSize(data->ring);
+    ALCuint ret;
+
+    ppa_threaded_mainloop_lock(data->loop);
+    ret  = RingBufferSize(data->ring);
+    ret += ppa_stream_readable_size(data->stream)/data->frame_size;
+    ppa_threaded_mainloop_unlock(data->loop);
+
+    return ret;
 } //}}}
 
 BackendFuncs pulse_funcs = { //{{{

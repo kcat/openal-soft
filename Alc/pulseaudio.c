@@ -655,6 +655,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 {
     pulse_data *data;
     pa_stream_state_t state;
+    pa_channel_map chanmap;
 
     if(!device_name)
         device_name = pulse_capture_device;
@@ -724,7 +725,16 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         return ALC_FALSE;
     }
 
-    data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, NULL);
+    if(!ppa_channel_map_init_auto(&chanmap, data->spec.channels, PA_CHANNEL_MAP_WAVEEX))
+    {
+        AL_PRINT("Couldn't build map for channel count (%d)!\n", data->spec.channels);
+        ppa_threaded_mainloop_unlock(data->loop);
+        pulse_close(device);
+        pulse_unload();
+        return ALC_FALSE;
+    }
+
+    data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, &chanmap);
     if(!data->stream)
     {
         AL_PRINT("pa_stream_new() failed: %s\n",

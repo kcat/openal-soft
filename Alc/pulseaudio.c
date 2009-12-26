@@ -400,8 +400,7 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
     data->context = ppa_context_new(ppa_threaded_mainloop_get_api(data->loop), data->context_name);
     if(!data->context)
     {
-        AL_PRINT("pa_context_new() failed: %s\n",
-                 ppa_strerror(ppa_context_errno(data->context)));
+        AL_PRINT("pa_context_new() failed\n");
 
         ppa_threaded_mainloop_unlock(data->loop);
         goto out;

@@ -681,9 +681,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     if(!(data->ring = CreateRingBuffer(data->frame_size, data->samples)))
     {
         ppa_threaded_mainloop_unlock(data->loop);
-        pulse_close(device);
-        pulse_unload();
-        return ALC_FALSE;
+        goto fail;
     }
 
     data->attr.minreq = -1;
@@ -711,27 +709,21 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         default:
             AL_PRINT("Unknown format: 0x%x\n", device->Format);
             ppa_threaded_mainloop_unlock(data->loop);
-            pulse_close(device);
-            pulse_unload();
-            return ALC_FALSE;
+            goto fail;
     }
 
     if(ppa_sample_spec_valid(&data->spec) == 0)
     {
         AL_PRINT("Invalid sample format\n");
         ppa_threaded_mainloop_unlock(data->loop);
-        pulse_close(device);
-        pulse_unload();
-        return ALC_FALSE;
+        goto fail;
     }
 
     if(!ppa_channel_map_init_auto(&chanmap, data->spec.channels, PA_CHANNEL_MAP_WAVEEX))
     {
         AL_PRINT("Couldn't build map for channel count (%d)!\n", data->spec.channels);
         ppa_threaded_mainloop_unlock(data->loop);
-        pulse_close(device);
-        pulse_unload();
-        return ALC_FALSE;
+        goto fail;
     }
 
     data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, &chanmap);
@@ -741,9 +733,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
                  ppa_strerror(ppa_context_errno(data->context)));
 
         ppa_threaded_mainloop_unlock(data->loop);
-        pulse_close(device);
-        pulse_unload();
-        return ALC_FALSE;
+        goto fail;
     }
 
     ppa_stream_set_state_callback(data->stream, stream_state_callback, device);
@@ -754,12 +744,10 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
                  ppa_strerror(ppa_context_errno(data->context)));
 
         ppa_stream_unref(data->stream);
-        ppa_threaded_mainloop_unlock(data->loop);
-
         data->stream = NULL;
-        pulse_close(device);
-        pulse_unload();
-        return ALC_FALSE;
+
+        ppa_threaded_mainloop_unlock(data->loop);
+        goto fail;
     }
 
     while((state=ppa_stream_get_state(data->stream)) != PA_STREAM_READY)
@@ -773,10 +761,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             data->stream = NULL;
 
             ppa_threaded_mainloop_unlock(data->loop);
-
-            pulse_close(device);
-            pulse_unload();
-            return ALC_FALSE;
+            goto fail;
         }
 
         ppa_threaded_mainloop_wait(data->loop);
@@ -785,6 +770,11 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
     ppa_threaded_mainloop_unlock(data->loop);
     return ALC_TRUE;
+
+fail:
+    pulse_close(device);
+    pulse_unload();
+    return ALC_FALSE;
 } //}}}
 
 static void pulse_close_capture(ALCdevice *device) //{{{

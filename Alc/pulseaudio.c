@@ -856,7 +856,11 @@ static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint sa
         /* Any unread data in the fragment will be lost, so save it */
         length /= data->frame_size;
         if(length > 0)
-            WriteRingBuffer(data->ring, buf, (length<data->samples) ? length : data->samples);
+        {
+            if(length > data->samples)
+                length = data->samples;
+            WriteRingBuffer(data->ring, buf, length);
+        }
 
         ppa_stream_drop(data->stream);
     }

@@ -615,7 +615,10 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
                             data->spec.rate / device->Frequency * data->frame_size;
         data->attr.tlength = data->attr.minreq * device->NumUpdates;
 
-        o = ppa_stream_set_buffer_attr(data->stream, &data->attr, NULL, NULL);
+        o = ppa_stream_set_buffer_attr(data->stream, &data->attr,
+                                       stream_success_callback, device);
+        while(ppa_operation_get_state(o) == PA_OPERATION_RUNNING)
+            ppa_threaded_mainloop_wait(data->loop);
         ppa_operation_unref(o);
 
         device->Frequency = data->spec.rate;

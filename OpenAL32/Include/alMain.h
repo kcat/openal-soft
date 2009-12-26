@@ -381,7 +381,7 @@ void FreeALConfig(void);
 const char *GetConfigValue(const char *blockName, const char *keyName, const char *def);
 int GetConfigValueInt(const char *blockName, const char *keyName, int def);
 float GetConfigValueFloat(const char *blockName, const char *keyName, float def);
-int GetConfigValueBool(const char *blockName, const char *keyName, float def);
+int GetConfigValueBool(const char *blockName, const char *keyName, int def);
 
 void EnableRTPrio(ALint level);
 

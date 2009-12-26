@@ -314,7 +314,7 @@ float GetConfigValueFloat(const char *blockName, const char *keyName, float def)
 #endif
 }
 
-int GetConfigValueBool(const char *blockName, const char *keyName, float def)
+int GetConfigValueBool(const char *blockName, const char *keyName, int def)
 {
     const char *val = GetConfigValue(blockName, keyName, "");
 

@@ -606,8 +606,6 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->flSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
 
     pContext->ExtensionList = "AL_EXTX_buffer_sub_data AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_OFFSET AL_EXTX_sample_buffer_object AL_EXTX_source_distance_model AL_LOKI_quadriphonic";
-
-    aluInitPanning(pContext);
 }
 
 
@@ -1295,6 +1293,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
             }
             source->NeedsUpdate = AL_TRUE;
         }
+        aluInitPanning(context);
         ProcessContext(context);
     }
 
@@ -1335,6 +1334,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
     ALContext->Device = device;
 
     InitContext(ALContext);
+    aluInitPanning(ALContext);
 
     ALContext->next = g_pContextList;
     g_pContextList = ALContext;

@@ -96,6 +96,10 @@ MAKE_FUNC(pa_stream_disconnect);
 MAKE_FUNC(pa_threaded_mainloop_lock);
 MAKE_FUNC(pa_channel_map_init_auto);
 MAKE_FUNC(pa_channel_map_parse);
+MAKE_FUNC(pa_channel_map_snprint);
+MAKE_FUNC(pa_channel_map_superset);
+MAKE_FUNC(pa_context_get_server_info);
+MAKE_FUNC(pa_context_get_sink_info_by_name);
 MAKE_FUNC(pa_operation_get_state);
 MAKE_FUNC(pa_operation_unref);
 #if PA_CHECK_VERSION(0,9,15)
@@ -232,6 +236,10 @@ LOAD_FUNC(pa_stream_disconnect);
 LOAD_FUNC(pa_threaded_mainloop_lock);
 LOAD_FUNC(pa_channel_map_init_auto);
 LOAD_FUNC(pa_channel_map_parse);
+LOAD_FUNC(pa_channel_map_snprint);
+LOAD_FUNC(pa_channel_map_superset);
+LOAD_FUNC(pa_context_get_server_info);
+LOAD_FUNC(pa_context_get_sink_info_by_name);
 LOAD_FUNC(pa_operation_get_state);
 LOAD_FUNC(pa_operation_unref);
 #if PA_CHECK_VERSION(0,9,15)
@@ -340,6 +348,62 @@ static void stream_success_callback(pa_stream *stream, int success, void *pdata)
 
     if(ppa_threaded_mainloop_in_thread(data->loop))
         ppa_threaded_mainloop_signal(data->loop, 0);
+}//}}}
+
+static void server_info_callback(pa_context *context, const pa_server_info *info, void *pdata) //{{{
+{
+    struct {
+        pa_threaded_mainloop *loop;
+        char *name;
+    } *data = pdata;
+    (void)context;
+
+    data->name = strdup(info->default_sink_name);
+    ppa_threaded_mainloop_signal(data->loop, 0);
+}//}}}
+
+static void sink_info_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata) //{{{
+{
+    ALCdevice *device = pdata;
+    pulse_data *data = device->ExtraData;
+    char chanmap_str[256] = "";
+    const struct {
+        const char *str;
+        ALenum format;
+    } chanmaps[] = {
+        { "front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right",
+          AL_FORMAT_71CHN32 },
+        { "front-left,front-right,front-center,lfe,rear-center,side-left,side-right",
+          AL_FORMAT_61CHN32 },
+        { "front-left,front-right,front-center,lfe,rear-left,rear-right",
+          AL_FORMAT_51CHN32 },
+        { "front-left,front-right,rear-left,rear-right", AL_FORMAT_QUAD32 },
+        { "front-left,front-right", AL_FORMAT_STEREO_FLOAT32 },
+        { "mono", AL_FORMAT_MONO_FLOAT32 },
+        { NULL, 0 }
+    };
+    int i;
+    (void)context;
+
+    if(eol)
+    {
+        ppa_threaded_mainloop_signal(data->loop, 0);
+        return;
+    }
+
+    for(i = 0;chanmaps[i].str;i++)
+    {
+        pa_channel_map map;
+        if(ppa_channel_map_parse(&map, chanmaps[i].str) &&
+           ppa_channel_map_superset(&info->channel_map, &map))
+        {
+            device->Format = chanmaps[i].format;
+            return;
+        }
+    }
+
+    ppa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
+    AL_PRINT("Failed to find format for channel map:\n    %s\n", chanmap_str);
 }//}}}
 //}}}
 
@@ -515,6 +579,32 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     ppa_threaded_mainloop_lock(data->loop);
 
+    if(*(GetConfigValue(NULL, "format", "")) == '\0')
+    {
+        pa_operation *o;
+        struct {
+            pa_threaded_mainloop *loop;
+            char *name;
+        } server_data;
+        server_data.loop = data->loop;
+        server_data.name = NULL;
+
+        o = ppa_context_get_server_info(data->context, server_info_callback, &server_data);
+        while(ppa_operation_get_state(o) == PA_OPERATION_RUNNING)
+            ppa_threaded_mainloop_wait(data->loop);
+        ppa_operation_unref(o);
+        if(server_data.name)
+        {
+            o = ppa_context_get_sink_info_by_name(data->context, server_data.name, sink_info_callback, device);
+            while(ppa_operation_get_state(o) == PA_OPERATION_RUNNING)
+                ppa_threaded_mainloop_wait(data->loop);
+            ppa_operation_unref(o);
+            free(server_data.name);
+        }
+    }
+    if(*(GetConfigValue(NULL, "frequency", "")) == '\0')
+        flags |= PA_STREAM_FIX_RATE;
+
     data->frame_size = aluBytesFromFormat(device->Format) *
                        aluChannelsFromFormat(device->Format);
     data->attr.minreq = data->frame_size * device->UpdateSize;
@@ -557,9 +647,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         return ALC_FALSE;
     }
     SetDefaultWFXChannelOrder(device);
-
-    if(*(GetConfigValue(NULL, "frequency", "")) == '\0')
-        flags |= PA_STREAM_FIX_RATE;
 
     data->stream = ppa_stream_new(data->context, data->stream_name, &data->spec, &chanmap);
     if(!data->stream)

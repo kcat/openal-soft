@@ -1216,8 +1216,8 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
             if(attrList[attrIdx] == ALC_FREQUENCY)
             {
                 freq = attrList[attrIdx + 1];
-                if(freq == 0)
-                    freq = device->Frequency;
+                if(freq < 8000)
+                    freq = 8000;
             }
 
             if(attrList[attrIdx] == ALC_STEREO_SOURCES)
@@ -1684,8 +1684,8 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
 
         //Set output format
         device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
-        if(device->Frequency == 0)
-            device->Frequency = SWMIXER_OUTPUT_RATE;
+        if(device->Frequency < 8000)
+            device->Frequency = 8000;
 
         fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
         device->Format = GetFormatFromString(fmt);

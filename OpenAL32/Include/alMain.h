@@ -378,6 +378,7 @@ void ReadRingBuffer(RingBuffer *ring, ALubyte *data, ALsizei len);
 
 void ReadALConfig(void);
 void FreeALConfig(void);
+int ConfigValueExists(const char *blockName, const char *keyName);
 const char *GetConfigValue(const char *blockName, const char *keyName, const char *def);
 int GetConfigValueInt(const char *blockName, const char *keyName, int def);
 float GetConfigValueFloat(const char *blockName, const char *keyName, float def);

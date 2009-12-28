@@ -1213,7 +1213,8 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
         attrIdx = 0;
         while(attrList[attrIdx])
         {
-            if(attrList[attrIdx] == ALC_FREQUENCY)
+            if(attrList[attrIdx] == ALC_FREQUENCY &&
+               !ConfigValueExists(NULL, "frequency"))
             {
                 freq = attrList[attrIdx + 1];
                 if(freq < 8000)
@@ -1230,7 +1231,8 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
                 numMono = device->MaxNoOfSources - numStereo;
             }
 
-            if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
+            if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS &&
+               !ConfigValueExists(NULL, "sends"))
             {
                 numSends = attrList[attrIdx + 1];
                 if(numSends > MAX_SENDS)
@@ -1240,11 +1242,11 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
             attrIdx += 2;
         }
 
-        device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", level);
-        device->Frequency = GetConfigValueInt(NULL, "frequency", freq);
+        device->Bs2bLevel = level;
+        device->Frequency = freq;
         device->lNumMonoSources = numMono;
         device->lNumStereoSources = numStereo;
-        device->NumAuxSends = GetConfigValueInt(NULL, "sends", numSends);
+        device->NumAuxSends = numSends;
     }
 
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)

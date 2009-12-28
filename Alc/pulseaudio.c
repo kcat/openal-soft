@@ -577,7 +577,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     ppa_threaded_mainloop_lock(data->loop);
 
-    if(*(GetConfigValue(NULL, "format", "")) == '\0')
+    if(!ConfigValueExists(NULL, "format"))
     {
         pa_operation *o;
         struct {
@@ -600,7 +600,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
             free(server_data.name);
         }
     }
-    if(*(GetConfigValue(NULL, "frequency", "")) == '\0')
+    if(!ConfigValueExists(NULL, "frequency"))
         flags |= PA_STREAM_FIX_RATE;
 
     data->frame_size = aluBytesFromFormat(device->Format) *

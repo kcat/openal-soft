@@ -341,7 +341,7 @@ void alc_wave_deinit(void)
 
 void alc_wave_probe(int type)
 {
-    if(*(GetConfigValue("wave", "file", "")) == 0)
+    if(!ConfigValueExists("wave", "file"))
         return;
 
     if(type == DEVICE_PROBE)

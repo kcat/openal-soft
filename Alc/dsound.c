@@ -280,7 +280,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     memset(&OutputType, 0, sizeof(OutputType));
 
     hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
-    if(SUCCEEDED(hr) && *(GetConfigValue(NULL, "format", "")) != 0)
+    if(SUCCEEDED(hr) && ConfigValueExists(NULL, "format"))
     {
         if(aluChannelsFromFormat(device->Format) == 1)
             speakers = DSSPEAKER_COMBINED(DSSPEAKER_MONO, 0);

@@ -294,6 +294,12 @@ const char *GetConfigValue(const char *blockName, const char *keyName, const cha
     return def;
 }
 
+int ConfigValueExists(const char *blockName, const char *keyName)
+{
+    const char *val = GetConfigValue(blockName, keyName, "");
+    return !!val[0];
+}
+
 int GetConfigValueInt(const char *blockName, const char *keyName, int def)
 {
     const char *val = GetConfigValue(blockName, keyName, "");

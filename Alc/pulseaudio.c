@@ -135,6 +135,7 @@ typedef struct {
 
 static const ALCchar pulse_device[] = "PulseAudio Software";
 static const ALCchar pulse_capture_device[] = "PulseAudio Capture";
+static pa_context_flags_t pulse_ctx_flags;
 static volatile ALuint load_count;
 
 
@@ -469,7 +470,7 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
 
     ppa_context_set_state_callback(data->context, context_state_callback, device);
 
-    if(ppa_context_connect(data->context, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL) < 0)
+    if(ppa_context_connect(data->context, NULL, pulse_ctx_flags, NULL) < 0)
     {
         AL_PRINT("Context did not connect: %s\n",
                  ppa_strerror(ppa_context_errno(data->context)));
@@ -982,6 +983,10 @@ BackendFuncs pulse_funcs = { //{{{
 void alc_pulse_init(BackendFuncs *func_list) //{{{
 {
     *func_list = pulse_funcs;
+
+    pulse_ctx_flags = 0;
+    if(!GetConfigValueBool("pulse", "spawn-server", 0))
+        pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
 } //}}}
 
 void alc_pulse_deinit(void) //{{{

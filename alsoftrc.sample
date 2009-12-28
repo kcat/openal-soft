@@ -220,6 +220,14 @@
 ##
 [pulse]
 
+## spawn-server:
+#  Attempts to spawn a PulseAudio server when requesting to open a PulseAudio
+#  device. Note that some apps may open and probe all enumerated devices on
+#  startup, causing a server to spawn even if a PulseAudio device is not
+#  actually selected. Setting autospawn to false in Pulse's client.conf will
+#  still prevent autospawning even if this is set to true.
+#spawn-server = false
+
 ##
 ## Wave File Writer stuff
 ##

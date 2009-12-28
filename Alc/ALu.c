@@ -118,23 +118,25 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[
 static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPUTCHANNELS],
                                     ALint Speaker2Chan[OUTPUTCHANNELS], ALint chans)
 {
-    const char *confkey;
-    const char *next;
-    const char *sep;
-    const char *end;
+    char layout_str[256];
+    char *confkey, *next;
+    char *sep, *end;
     int i, val;
 
-    confkey = GetConfigValue(NULL, name, "");
-    next = confkey;
+    strncpy(layout_str, GetConfigValue(NULL, name, ""), sizeof(layout_str));
+    layout_str[255] = 0;
+
+    next = confkey = layout_str;
     while(next && *next)
     {
         confkey = next;
         next = strchr(confkey, ',');
         if(next)
         {
+            *next = 0;
             do {
                 next++;
-            } while(isspace(*next));
+            } while(isspace(*next) || *next == ',');
         }
 
         sep = strchr(confkey, '=');
@@ -144,31 +146,31 @@ static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPU
         end = sep - 1;
         while(isspace(*end) && end != confkey)
             end--;
-        end++;
+        *(++end) = 0;
 
-        if(strncmp(confkey, "fl", end-confkey) == 0)
+        if(strcmp(confkey, "fl") == 0 || strcmp(confkey, "front-left") == 0)
             val = FRONT_LEFT;
-        else if(strncmp(confkey, "fr", end-confkey) == 0)
+        else if(strcmp(confkey, "fr") == 0 || strcmp(confkey, "front-right") == 0)
             val = FRONT_RIGHT;
-        else if(strncmp(confkey, "fc", end-confkey) == 0)
+        else if(strcmp(confkey, "fc") == 0 || strcmp(confkey, "front-center") == 0)
             val = FRONT_CENTER;
-        else if(strncmp(confkey, "bl", end-confkey) == 0)
+        else if(strcmp(confkey, "bl") == 0 || strcmp(confkey, "back-left") == 0)
             val = BACK_LEFT;
-        else if(strncmp(confkey, "br", end-confkey) == 0)
+        else if(strcmp(confkey, "br") == 0 || strcmp(confkey, "back-right") == 0)
             val = BACK_RIGHT;
-        else if(strncmp(confkey, "bc", end-confkey) == 0)
+        else if(strcmp(confkey, "bc") == 0 || strcmp(confkey, "back-center") == 0)
             val = BACK_CENTER;
-        else if(strncmp(confkey, "sl", end-confkey) == 0)
+        else if(strcmp(confkey, "sl") == 0 || strcmp(confkey, "side-left") == 0)
             val = SIDE_LEFT;
-        else if(strncmp(confkey, "sr", end-confkey) == 0)
+        else if(strcmp(confkey, "sr") == 0 || strcmp(confkey, "side-right") == 0)
             val = SIDE_RIGHT;
         else
         {
-            AL_PRINT("Unknown speaker for %s: \"%c%c\"\n", name, confkey[0], confkey[1]);
+            AL_PRINT("Unknown speaker for %s: \"%s\"\n", name, confkey);
             continue;
         }
 
-        sep++;
+        *(sep++) = 0;
         while(isspace(*sep))
             sep++;
 
@@ -180,7 +182,7 @@ static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPU
                 if(val >= -180 && val <= 180)
                     SpeakerAngle[i] = val * M_PI/180.0f;
                 else
-                    AL_PRINT("Invalid angle for speaker \"%c%c\": %d\n", confkey[0], confkey[1], val);
+                    AL_PRINT("Invalid angle for speaker \"%s\": %d\n", confkey);
                 break;
             }
         }

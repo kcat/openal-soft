@@ -288,34 +288,6 @@ static ALCboolean wave_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     return ALC_FALSE;
 }
 
-static void wave_close_capture(ALCdevice *pDevice)
-{
-    (void)pDevice;
-}
-
-static void wave_start_capture(ALCdevice *pDevice)
-{
-    (void)pDevice;
-}
-
-static void wave_stop_capture(ALCdevice *pDevice)
-{
-    (void)pDevice;
-}
-
-static void wave_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
-{
-    (void)pDevice;
-    (void)pBuffer;
-    (void)lSamples;
-}
-
-static ALCuint wave_available_samples(ALCdevice *pDevice)
-{
-    (void)pDevice;
-    return 0;
-}
-
 
 BackendFuncs wave_funcs = {
     wave_open_playback,
@@ -323,11 +295,11 @@ BackendFuncs wave_funcs = {
     wave_reset_playback,
     wave_stop_playback,
     wave_open_capture,
-    wave_close_capture,
-    wave_start_capture,
-    wave_stop_capture,
-    wave_capture_samples,
-    wave_available_samples
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
 };
 
 void alc_wave_init(BackendFuncs *func_list)

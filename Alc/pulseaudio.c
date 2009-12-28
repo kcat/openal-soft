@@ -280,10 +280,7 @@ static void context_state_callback(pa_context *context, void *pdata) //{{{
 
     state = ppa_context_get_state(context);
     if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
-    {
-        if(ppa_threaded_mainloop_in_thread(data->loop))
-            ppa_threaded_mainloop_signal(data->loop, 0);
-    }
+        ppa_threaded_mainloop_signal(data->loop, 0);
 }//}}}
 
 static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
@@ -294,10 +291,7 @@ static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
 
     state = ppa_stream_get_state(stream);
     if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
-    {
-        if(ppa_threaded_mainloop_in_thread(data->loop))
-            ppa_threaded_mainloop_signal(data->loop, 0);
-    }
+        ppa_threaded_mainloop_signal(data->loop, 0);
 }//}}}
 
 static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
@@ -320,23 +314,27 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
 static void context_state_callback2(pa_context *context, void *pdata) //{{{
 {
     ALCdevice *Device = pdata;
+    pulse_data *data = Device->ExtraData;
 
     if(ppa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
         AL_PRINT("Received context failure!\n");
         aluHandleDisconnect(Device);
     }
+    ppa_threaded_mainloop_signal(data->loop, 0);
 }//}}}
 
 static void stream_state_callback2(pa_stream *stream, void *pdata) //{{{
 {
     ALCdevice *Device = pdata;
+    pulse_data *data = Device->ExtraData;
 
     if(ppa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         AL_PRINT("Received stream failure!\n");
         aluHandleDisconnect(Device);
     }
+    ppa_threaded_mainloop_signal(data->loop, 0);
 }//}}}
 
 static void stream_success_callback(pa_stream *stream, int success, void *pdata) //{{{
@@ -346,8 +344,7 @@ static void stream_success_callback(pa_stream *stream, int success, void *pdata)
     (void)stream;
     (void)success;
 
-    if(ppa_threaded_mainloop_in_thread(data->loop))
-        ppa_threaded_mainloop_signal(data->loop, 0);
+    ppa_threaded_mainloop_signal(data->loop, 0);
 }//}}}
 
 static void server_info_callback(pa_context *context, const pa_server_info *info, void *pdata) //{{{

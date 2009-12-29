@@ -764,6 +764,11 @@ ALCAPI ALCenum ALCAPIENTRY alcGetError(ALCdevice *device)
         errorCode = device->LastError;
         device->LastError = ALC_NO_ERROR;
     }
+    else
+    {
+        errorCode = g_eLastContextError;
+        g_eLastContextError = ALC_NO_ERROR;
+    }
     return errorCode;
 }
 

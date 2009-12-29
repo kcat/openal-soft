@@ -915,7 +915,7 @@ static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint l
     if(lSamples <= (ALCuint)RingBufferSize(data->ring))
         ReadRingBuffer(data->ring, pBuffer, lSamples);
     else
-        alcSetError(ALC_INVALID_VALUE);
+        alcSetError(pDevice, ALC_INVALID_VALUE);
 }
 
 static ALCuint alsa_available_samples(ALCdevice *pDevice)

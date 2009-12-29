@@ -233,7 +233,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     pData = calloc(1, sizeof(DSoundData));
     if(!pData)
     {
-        alcSetError(ALC_OUT_OF_MEMORY);
+        alcSetError(device, ALC_OUT_OF_MEMORY);
         DSoundUnload();
         return ALC_FALSE;
     }

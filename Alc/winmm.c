@@ -202,7 +202,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     pData = calloc(1, sizeof(*pData));
     if(!pData)
     {
-        alcSetError(ALC_OUT_OF_MEMORY);
+        alcSetError(pDevice, ALC_OUT_OF_MEMORY);
         return ALC_FALSE;
     }
 
@@ -373,7 +373,7 @@ static void WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lS
                         frameSize;
     if(ulSamples > ulCapturedSamples)
     {
-        alcSetError(ALC_INVALID_VALUE);
+        alcSetError(pDevice, ALC_INVALID_VALUE);
         return;
     }
 

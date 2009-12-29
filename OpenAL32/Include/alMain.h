@@ -257,6 +257,8 @@ struct ALCdevice_struct
 
     ALCchar      *szDeviceName;
 
+    ALCenum      LastError;
+
     // Maximum number of sources that can be created
     ALuint       MaxNoOfSources;
     // Maximum number of slots that can be created
@@ -359,7 +361,7 @@ void AppendDeviceList(const ALCchar *name);
 void AppendAllDeviceList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
 
-ALCvoid alcSetError(ALenum errorCode);
+ALCvoid alcSetError(ALCdevice *device, ALenum errorCode);
 
 ALCvoid SuspendContext(ALCcontext *context);
 ALCvoid ProcessContext(ALCcontext *context);

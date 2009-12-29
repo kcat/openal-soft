@@ -910,7 +910,7 @@ static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint sa
     if(available+ppa_stream_readable_size(data->stream) < samples)
     {
         ppa_threaded_mainloop_unlock(data->loop);
-        alcSetError(ALC_INVALID_VALUE);
+        alcSetError(device, ALC_INVALID_VALUE);
         return;
     }
 

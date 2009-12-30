@@ -741,6 +741,7 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
 static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_name) //{{{
 {
     pulse_data *data;
+    pa_stream_flags_t flags = 0;
     pa_stream_state_t state;
     pa_channel_map chanmap;
 
@@ -825,7 +826,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
     ppa_stream_set_state_callback(data->stream, stream_state_callback, device);
 
-    if(ppa_stream_connect_record(data->stream, NULL, &data->attr, PA_STREAM_START_CORKED) < 0)
+    flags |= PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY;
+    if(ppa_stream_connect_record(data->stream, NULL, &data->attr, flags) < 0)
     {
         AL_PRINT("Stream did not connect: %s\n",
                  ppa_strerror(ppa_context_errno(data->context)));

@@ -362,10 +362,9 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
             case -EAGAIN:
                 continue;
             case -ESTRPIPE:
-                while((ret=psnd_pcm_resume(data->pcmHandle)) == -EAGAIN)
-                    Sleep(1);
-                break;
             case -EPIPE:
+            case -EINTR:
+                ret = psnd_pcm_recover(data->pcmHandle, ret, 1);
                 break;
             default:
                 if (ret >= 0)
@@ -412,10 +411,9 @@ static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
             case -EAGAIN:
                 continue;
             case -ESTRPIPE:
-                while((avail=psnd_pcm_resume(data->pcmHandle)) == -EAGAIN)
-                    Sleep(1);
-                break;
             case -EPIPE:
+            case -EINTR:
+                avail = psnd_pcm_recover(data->pcmHandle, avail, 1);
                 break;
             default:
                 if (avail >= 0 && data->doCapture)

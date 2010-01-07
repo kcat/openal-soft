@@ -228,6 +228,8 @@ static int xrun_recovery(snd_pcm_t *handle, int err)
     if(err == -EINTR || err == -EPIPE || err == -ESTRPIPE)
     {
         err = psnd_pcm_recover(handle, err, 1);
+        if(err >= 0)
+            err = psnd_pcm_prepare(handle);
         if(err < 0)
             AL_PRINT("recover failed: %s\n", psnd_strerror(err));
     }
@@ -365,6 +367,8 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
             case -EPIPE:
             case -EINTR:
                 ret = psnd_pcm_recover(data->pcmHandle, ret, 1);
+                if(ret >= 0)
+                    psnd_pcm_prepare(data->pcmHandle);
                 break;
             default:
                 if (ret >= 0)
@@ -414,6 +418,8 @@ static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
             case -EPIPE:
             case -EINTR:
                 avail = psnd_pcm_recover(data->pcmHandle, avail, 1);
+                if(avail >= 0)
+                    psnd_pcm_prepare(data->pcmHandle);
                 break;
             default:
                 if (avail >= 0 && data->doCapture)

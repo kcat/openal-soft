@@ -92,6 +92,7 @@ MAKE_FUNC(snd_pcm_mmap_commit);
 MAKE_FUNC(snd_pcm_readi);
 MAKE_FUNC(snd_pcm_writei);
 MAKE_FUNC(snd_pcm_drain);
+MAKE_FUNC(snd_pcm_recover);
 MAKE_FUNC(snd_pcm_info_malloc);
 MAKE_FUNC(snd_pcm_info_free);
 MAKE_FUNC(snd_pcm_info_set_device);
@@ -185,6 +186,7 @@ LOAD_FUNC(snd_pcm_mmap_commit);
 LOAD_FUNC(snd_pcm_readi);
 LOAD_FUNC(snd_pcm_writei);
 LOAD_FUNC(snd_pcm_drain);
+LOAD_FUNC(snd_pcm_recover);
 
 LOAD_FUNC(snd_pcm_info_malloc);
 LOAD_FUNC(snd_pcm_info_free);
@@ -223,22 +225,11 @@ void alsa_unload(void)
 
 static int xrun_recovery(snd_pcm_t *handle, int err)
 {
-    if (err == -EPIPE)
-    {    /* under-run */
-        err = psnd_pcm_prepare(handle);
-        if (err < 0)
-            AL_PRINT("prepare failed: %s\n", psnd_strerror(err));
-    }
-    else if (err == -ESTRPIPE)
+    if(err == -EINTR || err == -EPIPE || err == -ESTRPIPE)
     {
-        while ((err = psnd_pcm_resume(handle)) == -EAGAIN)
-            Sleep(1);       /* wait until the suspend flag is released */
-        if (err < 0)
-        {
-            err = psnd_pcm_prepare(handle);
-            if (err < 0)
-                AL_PRINT("prepare failed: %s\n", psnd_strerror(err));
-        }
+        err = psnd_pcm_recover(handle, err, 1);
+        if(err < 0)
+            AL_PRINT("recover failed: %s\n", psnd_strerror(err));
     }
     return err;
 }

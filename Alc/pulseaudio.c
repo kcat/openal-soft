@@ -486,8 +486,9 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
     {
         if(!PA_CONTEXT_IS_GOOD(state))
         {
-            AL_PRINT("Context did not get ready: %s\n",
-                     ppa_strerror(ppa_context_errno(data->context)));
+            int err = ppa_context_errno(data->context);
+            if(err != PA_ERR_CONNECTIONREFUSED)
+                AL_PRINT("Context did not get ready: %s\n", ppa_strerror(err));
 
             ppa_context_unref(data->context);
             data->context = NULL;

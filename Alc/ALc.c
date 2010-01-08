@@ -908,6 +908,12 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
 */
 ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsizei size,ALCint *data)
 {
+    if(size == 0 || data == NULL)
+    {
+        alcSetError(device, ALC_INVALID_VALUE);
+        return;
+    }
+
     if(IsDevice(device) && device->IsCaptureDevice)
     {
         SuspendContext(NULL);
@@ -916,17 +922,11 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
         switch (param)
         {
         case ALC_CAPTURE_SAMPLES:
-            if ((size) && (data))
-                *data = ALCdevice_AvailableSamples(device);
-            else
-                alcSetError(device, ALC_INVALID_VALUE);
+            *data = ALCdevice_AvailableSamples(device);
             break;
 
         case ALC_CONNECTED:
-            if(size <= 0)
-                alcSetError(device, ALC_INVALID_VALUE);
-            else
-                *data = device->Connected;
+            *data = device->Connected;
             break;
 
         default:
@@ -935,155 +935,121 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
         }
 
         ProcessContext(NULL);
+        return;
     }
-    else
+
+    // Playback Device
+    switch (param)
     {
-        if(data)
-        {
-            // Playback Device
-            switch (param)
+        case ALC_MAJOR_VERSION:
+            *data = alcMajorVersion;
+            break;
+
+        case ALC_MINOR_VERSION:
+            *data = alcMinorVersion;
+            break;
+
+        case ALC_EFX_MAJOR_VERSION:
+            *data = alcEFXMajorVersion;
+            break;
+
+        case ALC_EFX_MINOR_VERSION:
+            *data = alcEFXMinorVersion;
+            break;
+
+        case ALC_MAX_AUXILIARY_SENDS:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else
+                *data = device->NumAuxSends;
+            break;
+
+        case ALC_ATTRIBUTES_SIZE:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else
+                *data = 13;
+            break;
+
+        case ALC_ALL_ATTRIBUTES:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else if (size < 13)
+                alcSetError(device, ALC_INVALID_VALUE);
+            else
             {
-                case ALC_MAJOR_VERSION:
-                    if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = alcMajorVersion;
-                    break;
+                int i = 0;
 
-                case ALC_MINOR_VERSION:
-                    if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = alcMinorVersion;
-                    break;
+                SuspendContext(NULL);
+                data[i++] = ALC_FREQUENCY;
+                data[i++] = device->Frequency;
 
-                case ALC_EFX_MAJOR_VERSION:
-                    if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = alcEFXMajorVersion;
-                    break;
+                data[i++] = ALC_REFRESH;
+                data[i++] = device->Frequency / device->UpdateSize;
 
-                case ALC_EFX_MINOR_VERSION:
-                    if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = alcEFXMinorVersion;
-                    break;
+                data[i++] = ALC_SYNC;
+                data[i++] = ALC_FALSE;
 
-                case ALC_MAX_AUXILIARY_SENDS:
-                    if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = (device?device->NumAuxSends:MAX_SENDS);
-                    break;
+                data[i++] = ALC_MONO_SOURCES;
+                data[i++] = device->lNumMonoSources;
 
-                case ALC_ATTRIBUTES_SIZE:
-                    if(!IsDevice(device))
-                        alcSetError(device, ALC_INVALID_DEVICE);
-                    else if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = 13;
-                    break;
+                data[i++] = ALC_STEREO_SOURCES;
+                data[i++] = device->lNumStereoSources;
 
-                case ALC_ALL_ATTRIBUTES:
-                    if(!IsDevice(device))
-                        alcSetError(device, ALC_INVALID_DEVICE);
-                    else if (size < 13)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                    {
-                        int i = 0;
+                data[i++] = ALC_MAX_AUXILIARY_SENDS;
+                data[i++] = device->NumAuxSends;
 
-                        SuspendContext(NULL);
-                        data[i++] = ALC_FREQUENCY;
-                        data[i++] = device->Frequency;
-
-                        data[i++] = ALC_REFRESH;
-                        data[i++] = device->Frequency / device->UpdateSize;
-
-                        data[i++] = ALC_SYNC;
-                        data[i++] = ALC_FALSE;
-
-                        data[i++] = ALC_MONO_SOURCES;
-                        data[i++] = device->lNumMonoSources;
-
-                        data[i++] = ALC_STEREO_SOURCES;
-                        data[i++] = device->lNumStereoSources;
-
-                        data[i++] = ALC_MAX_AUXILIARY_SENDS;
-                        data[i++] = device->NumAuxSends;
-
-                        data[i++] = 0;
-                        ProcessContext(NULL);
-                    }
-                    break;
-
-                case ALC_FREQUENCY:
-                    if(!IsDevice(device))
-                        alcSetError(device, ALC_INVALID_DEVICE);
-                    else if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = device->Frequency;
-                    break;
-
-                case ALC_REFRESH:
-                    if(!IsDevice(device))
-                        alcSetError(device, ALC_INVALID_DEVICE);
-                    else if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = device->Frequency / device->UpdateSize;
-                    break;
-
-                case ALC_SYNC:
-                    if(!IsDevice(device))
-                        alcSetError(device, ALC_INVALID_DEVICE);
-                    else if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = ALC_FALSE;
-                    break;
-
-                case ALC_MONO_SOURCES:
-                    if(!IsDevice(device))
-                        alcSetError(device, ALC_INVALID_DEVICE);
-                    else if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = device->lNumMonoSources;
-                    break;
-
-                case ALC_STEREO_SOURCES:
-                    if(!IsDevice(device))
-                        alcSetError(device, ALC_INVALID_DEVICE);
-                    else if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = device->lNumStereoSources;
-                    break;
-
-                case ALC_CONNECTED:
-                    if(!IsDevice(device))
-                        alcSetError(device, ALC_INVALID_DEVICE);
-                    else if(size <= 0)
-                        alcSetError(device, ALC_INVALID_VALUE);
-                    else
-                        *data = device->Connected;
-                    break;
-
-                default:
-                    alcSetError(device, ALC_INVALID_ENUM);
-                    break;
+                data[i++] = 0;
+                ProcessContext(NULL);
             }
-        }
-        else if(size)
-            alcSetError(device, ALC_INVALID_VALUE);
-    }
+            break;
 
-    return;
+        case ALC_FREQUENCY:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else
+                *data = device->Frequency;
+            break;
+
+        case ALC_REFRESH:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else
+                *data = device->Frequency / device->UpdateSize;
+            break;
+
+        case ALC_SYNC:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else
+                *data = ALC_FALSE;
+            break;
+
+        case ALC_MONO_SOURCES:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else
+                *data = device->lNumMonoSources;
+            break;
+
+        case ALC_STEREO_SOURCES:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else
+                *data = device->lNumStereoSources;
+            break;
+
+        case ALC_CONNECTED:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else
+                *data = device->Connected;
+            break;
+
+        default:
+            alcSetError(device, ALC_INVALID_ENUM);
+            break;
+    }
 }
 
 

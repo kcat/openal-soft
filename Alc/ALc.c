@@ -48,6 +48,9 @@ typedef struct BackendInfo {
     BackendFuncs Funcs;
 } BackendInfo;
 static BackendInfo BackendList[] = {
+#ifdef HAVE_PULSEAUDIO
+    { "pulse", alc_pulse_init, alc_pulse_deinit, alc_pulse_probe, EmptyFuncs },
+#endif
 #ifdef HAVE_ALSA
     { "alsa", alc_alsa_init, alc_alsa_deinit, alc_alsa_probe, EmptyFuncs },
 #endif
@@ -65,9 +68,6 @@ static BackendInfo BackendList[] = {
 #endif
 #ifdef HAVE_PORTAUDIO
     { "port", alc_pa_init, alc_pa_deinit, alc_pa_probe, EmptyFuncs },
-#endif
-#ifdef HAVE_PULSEAUDIO
-    { "pulse", alc_pulse_init, alc_pulse_deinit, alc_pulse_probe, EmptyFuncs },
 #endif
 
     { "wave", alc_wave_init, alc_wave_deinit, alc_wave_probe, EmptyFuncs },

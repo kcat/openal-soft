@@ -169,7 +169,8 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     if(data->fd == -1)
     {
         free(data);
-        AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
+        if(errno != ENOENT)
+            AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
         return ALC_FALSE;
     }
 
@@ -336,7 +337,8 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     if(data->fd == -1)
     {
         free(data);
-        AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
+        if(errno != ENOENT)
+            AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
         return ALC_FALSE;
     }
 
@@ -492,9 +494,27 @@ void alc_oss_deinit(void)
 void alc_oss_probe(int type)
 {
     if(type == DEVICE_PROBE)
-        AppendDeviceList(oss_device);
+    {
+#ifdef HAVE_STAT
+        struct stat buf;
+        if(stat(GetConfigValue("oss", "device", "/dev/dsp"), &buf) == 0)
+#endif
+            AppendDeviceList(oss_device);
+    }
     else if(type == ALL_DEVICE_PROBE)
-        AppendAllDeviceList(oss_device);
+    {
+#ifdef HAVE_STAT
+        struct stat buf;
+        if(stat(GetConfigValue("oss", "device", "/dev/dsp"), &buf) == 0)
+#endif
+            AppendAllDeviceList(oss_device);
+    }
     else if(type == CAPTURE_DEVICE_PROBE)
-        AppendCaptureDeviceList(oss_device_capture);
+    {
+#ifdef HAVE_STAT
+        struct stat buf;
+        if(stat(GetConfigValue("oss", "capture", "/dev/dsp"), &buf) == 0)
+#endif
+            AppendCaptureDeviceList(oss_device_capture);
+    }
 }

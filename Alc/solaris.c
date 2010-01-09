@@ -112,7 +112,8 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
     if(data->fd == -1)
     {
         free(data);
-        AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
+        if(errno != ENOENT)
+            AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
         return ALC_FALSE;
     }
 
@@ -291,6 +292,12 @@ void alc_solaris_deinit(void)
 
 void alc_solaris_probe(ALCboolean capture)
 {
+#ifdef HAVE_STAT
+    struct stat buf;
+    if(stat(GetConfigValue("solaris", "device", "/dev/audio"), &buf) != 0)
+        return;
+#endif
+
     if(type == DEVICE_PROBE)
         AppendDeviceList(solaris_device);
     else if(type == ALL_DEVICE_PROBE)

@@ -212,7 +212,7 @@ static ALCenum g_eLastContextError = ALC_NO_ERROR;
 static const ALchar alExtList[] =
     "AL_EXTX_buffer_sub_data AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 "
     "AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_OFFSET "
-    "AL_EXTX_sample_buffer_object AL_EXTX_source_distance_model "
+    "AL_EXTX_sample_buffer_object AL_EXT_source_distance_model "
     "AL_LOKI_quadriphonic";
 
 // Mixing Priority Level

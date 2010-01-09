@@ -286,7 +286,11 @@ const char *GetConfigValue(const char *blockName, const char *keyName, const cha
             for(j = 0;j < cfgBlocks[i].entryCount;j++)
             {
                 if(strcasecmp(cfgBlocks[i].entries[j].key, keyName) == 0)
-                    return cfgBlocks[i].entries[j].value;
+                {
+                    if(cfgBlocks[i].entries[j].value[0])
+                        return cfgBlocks[i].entries[j].value;
+                    return def;
+                }
             }
         }
     }

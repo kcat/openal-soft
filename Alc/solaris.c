@@ -77,10 +77,10 @@ static ALuint SolarisProc(ALvoid *ptr)
                 {
                     AL_PRINT("write failed: %s\n", strerror(errno));
                     aluHandleDisconnect(pDevice);
-                    len = 0;
+                    break;
                 }
-                else
-                    Sleep(1);
+
+                Sleep(1);
                 continue;
             }
 

@@ -1247,8 +1247,6 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     int fpuState;
     ALuint i, c;
 
-    SuspendContext(NULL);
-
 #if defined(HAVE_FESETROUND)
     fpuState = fegetround();
     fesetround(FE_TOWARDZERO);
@@ -1268,6 +1266,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         /* Clear mixing buffer */
         memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
 
+        SuspendContext(NULL);
         for(c = 0;c < device->NumContexts;c++)
         {
             ALContext = device->Contexts[c];
@@ -1288,6 +1287,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
             ProcessContext(ALContext);
         }
+        ProcessContext(NULL);
 
         //Post processing loop
         ChanMap = device->DevChannels;
@@ -1396,8 +1396,6 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 #elif defined(HAVE__CONTROLFP)
     _controlfp(fpuState, 0xfffff);
 #endif
-
-    ProcessContext(NULL);
 }
 
 ALvoid aluHandleDisconnect(ALCdevice *device)

@@ -870,6 +870,11 @@ static __inline ALfloat lerp(ALfloat val1, ALfloat val2, ALint frac)
 {
     return val1 + ((val2-val1)*(frac * (1.0f/(1<<FRACTIONBITS))));
 }
+static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
+{
+    ALfloat mult = (1.0f-cos(frac * (1.0f/(1<<FRACTIONBITS)) * M_PI)) * 0.5f;
+    return val1 + ((val2-val1)*mult);
+}
 
 static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo)
 {
@@ -1106,6 +1111,8 @@ another_source:
                 break;
                 case LINEAR: DO_MIX(lerp);
                 break;
+                case COSINE: DO_MIX(cos_lerp);
+                break;
                 case RESAMPLER_MAX:
                 break;
             }
@@ -1153,6 +1160,8 @@ another_source:
                 break;
                 case LINEAR: DO_MIX(lerp);
                 break;
+                case COSINE: DO_MIX(cos_lerp);
+                break;
                 case RESAMPLER_MAX:
                 break;
             }
@@ -1170,6 +1179,8 @@ another_source:
                 case POINT: DO_MIX(point);
                 break;
                 case LINEAR: DO_MIX(lerp);
+                break;
+                case COSINE: DO_MIX(cos_lerp);
                 break;
                 case RESAMPLER_MAX:
                 break;
@@ -1189,6 +1200,8 @@ another_source:
                 case POINT: DO_MIX(point);
                 break;
                 case LINEAR: DO_MIX(lerp);
+                break;
+                case COSINE: DO_MIX(cos_lerp);
                 break;
                 case RESAMPLER_MAX:
                 break;
@@ -1210,6 +1223,8 @@ another_source:
                 break;
                 case LINEAR: DO_MIX(lerp);
                 break;
+                case COSINE: DO_MIX(cos_lerp);
+                break;
                 case RESAMPLER_MAX:
                 break;
             }
@@ -1229,6 +1244,8 @@ another_source:
                 case POINT: DO_MIX(point);
                 break;
                 case LINEAR: DO_MIX(lerp);
+                break;
+                case COSINE: DO_MIX(cos_lerp);
                 break;
                 case RESAMPLER_MAX:
                 break;

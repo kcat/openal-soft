@@ -25,6 +25,7 @@ extern "C" {
 typedef enum {
     POINT = 0,
     LINEAR,
+    COSINE,
 
     RESAMPLER_MAX
 } resampler_t;

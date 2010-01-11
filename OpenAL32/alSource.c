@@ -1818,6 +1818,8 @@ static ALvoid InitSourceParams(ALsource *pSource)
 
     pSource->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
 
+    pSource->Resampler = DefaultResampler;
+
     pSource->state = AL_INITIAL;
     pSource->lSourceType = AL_UNDETERMINED;
 

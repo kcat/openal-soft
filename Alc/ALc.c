@@ -218,6 +218,9 @@ static const ALchar alExtList[] =
 // Mixing Priority Level
 ALint RTPrioLevel;
 
+// Resampler Quality
+resampler_t DefaultResampler;
+
 ///////////////////////////////////////////////////////
 
 
@@ -264,6 +267,10 @@ static void alc_init(void)
     tls_create(&LocalContext);
 
     RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 0);
+
+    DefaultResampler = GetConfigValueInt(NULL, "resampler", LINEAR);
+    if(DefaultResampler >= RESAMPLER_MAX || DefaultResampler < POINT)
+        DefaultResampler = LINEAR;
 
     devs = GetConfigValue(NULL, "drivers", "");
     if(devs[0])

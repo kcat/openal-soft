@@ -860,6 +860,12 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
     }
 }
 
+static __inline ALfloat point(ALfloat val1, ALfloat val2, ALint frac)
+{
+    return val1;
+    (void)val2;
+    (void)frac;
+}
 static __inline ALfloat lerp(ALfloat val1, ALfloat val2, ALint frac)
 {
     return val1 + ((val2-val1)*(frac * (1.0f/(1<<FRACTIONBITS))));
@@ -886,6 +892,7 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALuint DataPosInt, DataPosFrac;
     ALuint Channels, Bytes;
     ALuint Frequency;
+    resampler_t Resampler;
     ALuint BuffersPlayed;
     ALfloat Pitch;
     ALenum State;
@@ -936,6 +943,7 @@ another_source:
     }
 
     /* Get source info */
+    Resampler     = ALSource->Resampler;
     State         = ALSource->state;
     BuffersPlayed = ALSource->BuffersPlayed;
     DataPosInt    = ALSource->position;
@@ -1056,39 +1064,52 @@ another_source:
 
         if(Channels == 1) /* Mono */
         {
-            while(BufferSize--)
+#define DO_MIX(resampler) do { \
+    while(BufferSize--) \
+    { \
+        for(i = 0;i < OUTPUTCHANNELS;i++) \
+            DrySend[i] += dryGainStep[i]; \
+        for(i = 0;i < MAX_SENDS;i++) \
+            WetSend[i] += wetGainStep[i]; \
+ \
+        /* First order interpolator */ \
+        value = (resampler)(Data[k], Data[k+1], DataPosFrac); \
+ \
+        /* Direct path final mix buffer and panning */ \
+        outsamp = lpFilter4P(DryFilter, 0, value); \
+        DryBuffer[j][FRONT_LEFT]   += outsamp*DrySend[FRONT_LEFT]; \
+        DryBuffer[j][FRONT_RIGHT]  += outsamp*DrySend[FRONT_RIGHT]; \
+        DryBuffer[j][SIDE_LEFT]    += outsamp*DrySend[SIDE_LEFT]; \
+        DryBuffer[j][SIDE_RIGHT]   += outsamp*DrySend[SIDE_RIGHT]; \
+        DryBuffer[j][BACK_LEFT]    += outsamp*DrySend[BACK_LEFT]; \
+        DryBuffer[j][BACK_RIGHT]   += outsamp*DrySend[BACK_RIGHT]; \
+        DryBuffer[j][FRONT_CENTER] += outsamp*DrySend[FRONT_CENTER]; \
+        DryBuffer[j][BACK_CENTER]  += outsamp*DrySend[BACK_CENTER]; \
+ \
+        /* Room path final mix buffer and panning */ \
+        for(i = 0;i < MAX_SENDS;i++) \
+        { \
+            outsamp = lpFilter2P(WetFilter[i], 0, value); \
+            WetBuffer[i][j] += outsamp*WetSend[i]; \
+        } \
+ \
+        DataPosFrac += increment; \
+        k += DataPosFrac>>FRACTIONBITS; \
+        DataPosFrac &= FRACTIONMASK; \
+        j++; \
+    } \
+} while(0)
+
+            switch(Resampler)
             {
-                for(i = 0;i < OUTPUTCHANNELS;i++)
-                    DrySend[i] += dryGainStep[i];
-                for(i = 0;i < MAX_SENDS;i++)
-                    WetSend[i] += wetGainStep[i];
-
-                /* First order interpolator */
-                value = lerp(Data[k], Data[k+1], DataPosFrac);
-
-                /* Direct path final mix buffer and panning */
-                outsamp = lpFilter4P(DryFilter, 0, value);
-                DryBuffer[j][FRONT_LEFT]   += outsamp*DrySend[FRONT_LEFT];
-                DryBuffer[j][FRONT_RIGHT]  += outsamp*DrySend[FRONT_RIGHT];
-                DryBuffer[j][SIDE_LEFT]    += outsamp*DrySend[SIDE_LEFT];
-                DryBuffer[j][SIDE_RIGHT]   += outsamp*DrySend[SIDE_RIGHT];
-                DryBuffer[j][BACK_LEFT]    += outsamp*DrySend[BACK_LEFT];
-                DryBuffer[j][BACK_RIGHT]   += outsamp*DrySend[BACK_RIGHT];
-                DryBuffer[j][FRONT_CENTER] += outsamp*DrySend[FRONT_CENTER];
-                DryBuffer[j][BACK_CENTER]  += outsamp*DrySend[BACK_CENTER];
-
-                /* Room path final mix buffer and panning */
-                for(i = 0;i < MAX_SENDS;i++)
-                {
-                    outsamp = lpFilter2P(WetFilter[i], 0, value);
-                    WetBuffer[i][j] += outsamp*WetSend[i];
-                }
-
-                DataPosFrac += increment;
-                k += DataPosFrac>>FRACTIONBITS;
-                DataPosFrac &= FRACTIONMASK;
-                j++;
+                case POINT: DO_MIX(point);
+                break;
+                case LINEAR: DO_MIX(lerp);
+                break;
+                case RESAMPLER_MAX:
+                break;
             }
+#undef DO_MIX
         }
         else if(Channels == 2) /* Stereo */
         {
@@ -1097,7 +1118,7 @@ another_source:
             };
             const ALfloat scaler = aluSqrt(1.0f/Channels);
 
-#define DO_MIX() do { \
+#define DO_MIX(resampler) do { \
     while(BufferSize--) \
     { \
         for(i = 0;i < OUTPUTCHANNELS;i++) \
@@ -1107,7 +1128,8 @@ another_source:
  \
         for(i = 0;i < Channels;i++) \
         { \
-            value = lerp(Data[k*Channels + i], Data[(k+1)*Channels + i], DataPosFrac); \
+            value = (resampler)(Data[k*Channels + i], Data[(k+1)*Channels + i], \
+                                DataPosFrac); \
             outsamp = lpFilter2P(DryFilter, chans[i]*2, value)*DrySend[chans[i]]; \
             for(out = 0;out < OUTPUTCHANNELS;out++) \
                 DryBuffer[j][out] += outsamp*Matrix[chans[i]][out]; \
@@ -1125,7 +1147,15 @@ another_source:
     } \
 } while(0)
 
-            DO_MIX();
+            switch(Resampler)
+            {
+                case POINT: DO_MIX(point);
+                break;
+                case LINEAR: DO_MIX(lerp);
+                break;
+                case RESAMPLER_MAX:
+                break;
+            }
         }
         else if(Channels == 4) /* Quad */
         {
@@ -1135,7 +1165,15 @@ another_source:
             };
             const ALfloat scaler = aluSqrt(1.0f/Channels);
 
-            DO_MIX();
+            switch(Resampler)
+            {
+                case POINT: DO_MIX(point);
+                break;
+                case LINEAR: DO_MIX(lerp);
+                break;
+                case RESAMPLER_MAX:
+                break;
+            }
         }
         else if(Channels == 6) /* 5.1 */
         {
@@ -1146,7 +1184,15 @@ another_source:
             };
             const ALfloat scaler = aluSqrt(1.0f/Channels);
 
-            DO_MIX();
+            switch(Resampler)
+            {
+                case POINT: DO_MIX(point);
+                break;
+                case LINEAR: DO_MIX(lerp);
+                break;
+                case RESAMPLER_MAX:
+                break;
+            }
         }
         else if(Channels == 7) /* 6.1 */
         {
@@ -1158,7 +1204,15 @@ another_source:
             };
             const ALfloat scaler = aluSqrt(1.0f/Channels);
 
-            DO_MIX();
+            switch(Resampler)
+            {
+                case POINT: DO_MIX(point);
+                break;
+                case LINEAR: DO_MIX(lerp);
+                break;
+                case RESAMPLER_MAX:
+                break;
+            }
         }
         else if(Channels == 8) /* 7.1 */
         {
@@ -1170,7 +1224,15 @@ another_source:
             };
             const ALfloat scaler = aluSqrt(1.0f/Channels);
 
-            DO_MIX();
+            switch(Resampler)
+            {
+                case POINT: DO_MIX(point);
+                break;
+                case LINEAR: DO_MIX(lerp);
+                break;
+                case RESAMPLER_MAX:
+                break;
+            }
 #undef DO_MIX
         }
         else /* Unknown? */

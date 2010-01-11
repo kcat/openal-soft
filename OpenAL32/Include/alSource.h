@@ -22,6 +22,14 @@
 extern "C" {
 #endif
 
+typedef enum {
+    POINT = 0,
+    LINEAR,
+
+    RESAMPLER_MAX
+} resampler_t;
+extern resampler_t DefaultResampler;
+
 typedef struct ALbufferlistitem
 {
     struct ALbuffer         *buffer;
@@ -46,6 +54,8 @@ typedef struct ALsource
     ALboolean    bHeadRelative;
     ALboolean    bLooping;
     ALenum       DistanceModel;
+
+    resampler_t  Resampler;
 
     ALenum       state;
     ALuint       position;

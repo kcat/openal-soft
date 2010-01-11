@@ -27,7 +27,9 @@ typedef enum {
     LINEAR,
     COSINE,
 
-    RESAMPLER_MAX
+    RESAMPLER_MAX,
+    RESAMPLER_MIN = -1,
+    RESAMPLER_DEFAULT = LINEAR
 } resampler_t;
 extern resampler_t DefaultResampler;
 

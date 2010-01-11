@@ -268,9 +268,9 @@ static void alc_init(void)
 
     RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 0);
 
-    DefaultResampler = GetConfigValueInt(NULL, "resampler", LINEAR);
-    if(DefaultResampler >= RESAMPLER_MAX || DefaultResampler < POINT)
-        DefaultResampler = LINEAR;
+    DefaultResampler = GetConfigValueInt(NULL, "resampler", RESAMPLER_DEFAULT);
+    if(DefaultResampler >= RESAMPLER_MAX || DefaultResampler <= RESAMPLER_MIN)
+        DefaultResampler = RESAMPLER_DEFAULT;
 
     devs = GetConfigValue(NULL, "drivers", "");
     if(devs[0])

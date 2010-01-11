@@ -1113,6 +1113,7 @@ another_source:
                 break;
                 case COSINE: DO_MIX(cos_lerp);
                 break;
+                case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
             }
@@ -1162,6 +1163,7 @@ another_source:
                 break;
                 case COSINE: DO_MIX(cos_lerp);
                 break;
+                case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
             }
@@ -1182,6 +1184,7 @@ another_source:
                 break;
                 case COSINE: DO_MIX(cos_lerp);
                 break;
+                case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
             }
@@ -1203,6 +1206,7 @@ another_source:
                 break;
                 case COSINE: DO_MIX(cos_lerp);
                 break;
+                case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
             }
@@ -1225,6 +1229,7 @@ another_source:
                 break;
                 case COSINE: DO_MIX(cos_lerp);
                 break;
+                case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
             }
@@ -1247,6 +1252,7 @@ another_source:
                 break;
                 case COSINE: DO_MIX(cos_lerp);
                 break;
+                case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
             }

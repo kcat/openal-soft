@@ -1025,7 +1025,7 @@ another_source:
         if(BufferListItem->next)
         {
             ALbuffer *NextBuf = BufferListItem->next->buffer;
-            if(NextBuf && NextBuf->data)
+            if(NextBuf && NextBuf->size)
             {
                 ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
                 ulExtraSamples = min(NextBuf->size, ulExtraSamples);
@@ -1035,7 +1035,7 @@ another_source:
         else if(ALSource->bLooping)
         {
             ALbuffer *NextBuf = ALSource->queue->buffer;
-            if(NextBuf && NextBuf->data)
+            if(NextBuf && NextBuf->size)
             {
                 ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
                 ulExtraSamples = min(NextBuf->size, ulExtraSamples);

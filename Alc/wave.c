@@ -150,21 +150,25 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
 
     bits = aluBytesFromFormat(device->Format) * 8;
     channels = aluChannelsFromFormat(device->Format);
-    switch(bits)
-    {
-        case 8:
-        case 16:
-        case 32:
-            if(channels == 0)
-            {
-                AL_PRINT("Unknown format?! %x\n", device->Format);
-                return ALC_FALSE;
-            }
-            break;
 
-        default:
-            AL_PRINT("Unknown format?! %x\n", device->Format);
-            return ALC_FALSE;
+    if(channels != 1 && channels != 2)
+    {
+        if(bits == 8)
+            device->Format = AL_FORMAT_STEREO8;
+        else
+        {
+            device->Format = AL_FORMAT_STEREO16;
+            bits = 16;
+        }
+        channels = 2;
+    }
+    else if(bits != 8 && bits != 16)
+    {
+        if(channels == 1)
+            device->Format = AL_FORMAT_MONO16;
+        else
+            device->Format = AL_FORMAT_STEREO16;
+        bits = 16;
     }
 
     fprintf(data->f, "RIFF");

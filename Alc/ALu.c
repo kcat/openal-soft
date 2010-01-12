@@ -182,7 +182,7 @@ static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPU
                 if(val >= -180 && val <= 180)
                     SpeakerAngle[i] = val * M_PI/180.0f;
                 else
-                    AL_PRINT("Invalid angle for speaker \"%s\": %d\n", confkey);
+                    AL_PRINT("Invalid angle for speaker \"%s\": %d\n", confkey, val);
                 break;
             }
         }

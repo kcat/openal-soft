@@ -151,31 +151,6 @@ static inline void Sleep(ALuint t)
 extern "C" {
 #endif
 
-static __inline PRINTF_STYLE(3,4) void al_print(const char *fname, unsigned int line, const char *fmt, ...)
-{
-    const char *fn;
-    char str[256];
-    int i;
-
-    fn = strrchr(fname, '/');
-    if(!fn) fn = strrchr(fname, '\\');;
-    if(!fn) fn = fname;
-    else fn += 1;
-
-    i = snprintf(str, sizeof(str), "AL lib: %s:%d: ", fn, line);
-    if(i < (int)sizeof(str) && i > 0)
-    {
-        va_list ap;
-        va_start(ap, fmt);
-        vsnprintf(str+i, sizeof(str)-i, fmt, ap);
-        va_end(ap);
-    }
-    str[sizeof(str)-1] = 0;
-
-    fprintf(stderr, "%s", str);
-}
-#define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
-
 
 #define SWMIXER_OUTPUT_RATE        44100
 
@@ -396,6 +371,10 @@ void EnableRTPrio(ALint level);
 
 void SetDefaultChannelOrder(ALCdevice *device);
 void SetDefaultWFXChannelOrder(ALCdevice *device);
+
+void al_print(const char *fname, unsigned int line, const char *fmt, ...)
+             PRINTF_STYLE(3,4);
+#define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
 
 ALCboolean  ALCAPIENTRY alcMakeCurrent(ALCcontext *context);
 ALCcontext* ALCAPIENTRY alcGetThreadContext(void);

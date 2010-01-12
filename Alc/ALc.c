@@ -443,6 +443,30 @@ DECL_APPEND_LIST_FUNC(AllDevice)
 DECL_APPEND_LIST_FUNC(CaptureDevice)
 
 
+void al_print(const char *fname, unsigned int line, const char *fmt, ...)
+{
+    const char *fn;
+    char str[256];
+    int i;
+
+    fn = strrchr(fname, '/');
+    if(!fn) fn = strrchr(fname, '\\');;
+    if(!fn) fn = fname;
+    else fn += 1;
+
+    i = snprintf(str, sizeof(str), "AL lib: %s:%d: ", fn, line);
+    if(i < (int)sizeof(str) && i > 0)
+    {
+        va_list ap;
+        va_start(ap, fmt);
+        vsnprintf(str+i, sizeof(str)-i, fmt, ap);
+        va_end(ap);
+    }
+    str[sizeof(str)-1] = 0;
+
+    fprintf(stderr, "%s", str);
+}
+
 void EnableRTPrio(ALint level)
 {
     ALboolean failed;

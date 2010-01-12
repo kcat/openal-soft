@@ -290,7 +290,7 @@ void alc_solaris_deinit(void)
 {
 }
 
-void alc_solaris_probe(ALCboolean capture)
+void alc_solaris_probe(int type)
 {
 #ifdef HAVE_STAT
     struct stat buf;

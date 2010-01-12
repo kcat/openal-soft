@@ -28,6 +28,12 @@ typedef long long ALint64;
 typedef unsigned long long ALuint64;
 #endif
 
+#ifdef HAVE_GCC_FORMAT
+#define PRINTF_STYLE(x, y) __attribute__((format(printf, (x), (y))))
+#else
+#define PRINTF_STYLE(x, y)
+#endif
+
 #ifdef _WIN32
 
 #ifndef _WIN32_WINNT
@@ -145,7 +151,7 @@ static inline void Sleep(ALuint t)
 extern "C" {
 #endif
 
-static __inline void al_print(const char *fname, unsigned int line, const char *fmt, ...)
+static __inline PRINTF_STYLE(3,4) void al_print(const char *fname, unsigned int line, const char *fmt, ...)
 {
     const char *fn;
     char str[256];

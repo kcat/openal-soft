@@ -2136,8 +2136,8 @@ static ALint GetByteOffset(ALsource *pSource)
 
         case AL_SEC_OFFSET:
             // Note - lOffset is internally stored as Milliseconds
-            lByteOffset = (ALint)(pSource->lOffset * lChannels * lBytes * flBufferFreq / 1000.0f);
-            lByteOffset -= (lByteOffset % (lChannels * lBytes));
+            lByteOffset = (ALint)(pSource->lOffset / 1000.0f * flBufferFreq);
+            lByteOffset *= lChannels * lBytes;
             break;
         }
 

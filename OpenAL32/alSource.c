@@ -1953,25 +1953,11 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
                 pflOffset[0] = (ALfloat)(readPos / 2 / lBytes * 4);
                 pflOffset[1] = (ALfloat)(writePos / 2 / lBytes * 4);
             }
-            else if (aluBytesFromFormat(eOriginalFormat) == 1)
-            {
-                pflOffset[0] = (ALfloat)(readPos / lBytes * 1);
-                pflOffset[1] = (ALfloat)(writePos / lBytes * 1);
-            }
-            else if (aluBytesFromFormat(eOriginalFormat) == 2)
-            {
-                pflOffset[0] = (ALfloat)(readPos / lBytes * 2);
-                pflOffset[1] = (ALfloat)(writePos / lBytes * 2);
-            }
-            else if (aluBytesFromFormat(eOriginalFormat) == 4)
-            {
-                pflOffset[0] = (ALfloat)(readPos / lBytes * 4);
-                pflOffset[1] = (ALfloat)(writePos / lBytes * 4);
-            }
             else
             {
-                pflOffset[0] = (ALfloat)readPos;
-                pflOffset[1] = (ALfloat)writePos;
+                ALuint OrigBytes = aluBytesFromFormat(eOriginalFormat);
+                pflOffset[0] = (ALfloat)(readPos / lBytes * OrigBytes);
+                pflOffset[1] = (ALfloat)(writePos / lBytes * OrigBytes);
             }
             break;
         }
@@ -2060,6 +2046,7 @@ static ALint GetByteOffset(ALsource *pSource)
     ALint    lChannels, lBytes;
     ALint    lByteOffset = -1;
     ALint    lTotalBufferDataSize;
+    ALenum   OriginalFormat;
 
     // Find the first non-NULL Buffer in the Queue
     pBufferList = pSource->queue;
@@ -2078,14 +2065,15 @@ static ALint GetByteOffset(ALsource *pSource)
         flBufferFreq = ((ALfloat)pBuffer->frequency);
         lChannels = aluChannelsFromFormat(pBuffer->format);
         lBytes = aluBytesFromFormat(pBuffer->format);
+        OriginalFormat = pBuffer->eOriginalFormat;
 
         // Determine the ByteOffset (and ensure it is block aligned)
         switch (pSource->lOffsetType)
         {
         case AL_BYTE_OFFSET:
             // Take into consideration the original format
-            if ((pBuffer->eOriginalFormat == AL_FORMAT_MONO_IMA4) ||
-                (pBuffer->eOriginalFormat == AL_FORMAT_STEREO_IMA4))
+            if(OriginalFormat == AL_FORMAT_MONO_IMA4 ||
+               OriginalFormat == AL_FORMAT_STEREO_IMA4)
             {
                 // Round down to nearest ADPCM block
                 lByteOffset = pSource->lOffset / (36 * lChannels);
@@ -2093,39 +2081,25 @@ static ALint GetByteOffset(ALsource *pSource)
                 lByteOffset = lByteOffset * 65 * lChannels * lBytes;
                 lByteOffset -= (lByteOffset % (lChannels * lBytes));
             }
-            else if (pBuffer->eOriginalFormat == AL_FORMAT_REAR8)
+            else if(OriginalFormat == AL_FORMAT_REAR8)
             {
                 lByteOffset = pSource->lOffset / 1 * lBytes * 2;
                 lByteOffset -= (lByteOffset % (lChannels * lBytes));
             }
-            else if (pBuffer->eOriginalFormat == AL_FORMAT_REAR16)
+            else if(OriginalFormat == AL_FORMAT_REAR16)
             {
                 lByteOffset = pSource->lOffset / 2 * lBytes * 2;
                 lByteOffset -= (lByteOffset % (lChannels * lBytes));
             }
-            else if (pBuffer->eOriginalFormat == AL_FORMAT_REAR32)
+            else if(OriginalFormat == AL_FORMAT_REAR32)
             {
                 lByteOffset = pSource->lOffset / 4 * lBytes * 2;
                 lByteOffset -= (lByteOffset % (lChannels * lBytes));
             }
-            else if (aluBytesFromFormat(pBuffer->eOriginalFormat) == 1)
-            {
-                lByteOffset = pSource->lOffset / 1 * lBytes;
-                lByteOffset -= (lByteOffset % (lChannels * lBytes));
-            }
-            else if (aluBytesFromFormat(pBuffer->eOriginalFormat) == 2)
-            {
-                lByteOffset = pSource->lOffset / 2 * lBytes;
-                lByteOffset -= (lByteOffset % (lChannels * lBytes));
-            }
-            else if (aluBytesFromFormat(pBuffer->eOriginalFormat) == 4)
-            {
-                lByteOffset = pSource->lOffset / 4 * lBytes;
-                lByteOffset -= (lByteOffset % (lChannels * lBytes));
-            }
             else
             {
-                lByteOffset = pSource->lOffset;
+                ALuint OrigBytes = aluBytesFromFormat(OriginalFormat);
+                lByteOffset = pSource->lOffset / OrigBytes * lBytes;
                 lByteOffset -= (lByteOffset % (lChannels * lBytes));
             }
             break;

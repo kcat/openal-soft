@@ -34,7 +34,7 @@
 
 static ALvoid InitSourceParams(ALsource *pSource);
 static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset, ALuint updateSize);
-static ALvoid ApplyOffset(ALsource *pSource, ALboolean bUpdateContext);
+static ALboolean ApplyOffset(ALsource *pSource);
 static ALint GetByteOffset(ALsource *pSource);
 
 ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
@@ -380,7 +380,10 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                         pSource->lOffset = (ALint)flValue;
 
                     if ((pSource->state == AL_PLAYING) || (pSource->state == AL_PAUSED))
-                        ApplyOffset(pSource, AL_TRUE);
+                    {
+                        if(ApplyOffset(pSource) == AL_FALSE)
+                            alSetError(AL_INVALID_VALUE);
+                    }
                 }
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -635,7 +638,10 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         pSource->lOffset = lValue;
 
                     if(pSource->state == AL_PLAYING || pSource->state == AL_PAUSED)
-                        ApplyOffset(pSource, AL_TRUE);
+                    {
+                        if(ApplyOffset(pSource) == AL_FALSE)
+                            alSetError(AL_INVALID_VALUE);
+                    }
                 }
                 else
                     alSetError(AL_INVALID_VALUE);
@@ -1387,7 +1393,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
 
                     // Check if an Offset has been set
                     if(pSource->lOffset)
-                        ApplyOffset(pSource, AL_FALSE);
+                        ApplyOffset(pSource);
 
                     if(pSource->BuffersPlayed == 0 && pSource->position == 0 &&
                        pSource->position_fraction == 0)
@@ -1986,7 +1992,7 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
     Apply a playback offset to the Source.  This function will update the queue (to correctly
     mark buffers as 'pending' or 'processed' depending upon the new offset.
 */
-static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
+static ALboolean ApplyOffset(ALsource *pSource)
 {
     ALbufferlistitem    *pBufferList;
     ALbuffer            *pBuffer;
@@ -1996,50 +2002,46 @@ static void ApplyOffset(ALsource *pSource, ALboolean bUpdateContext)
     // Get true byte offset
     lByteOffset = GetByteOffset(pSource);
 
-    // If this is a valid offset apply it
-    if (lByteOffset != -1)
+    // If the offset is invalid, don't apply it
+    if(lByteOffset == -1)
+        return AL_FALSE;
+
+    // Sort out the queue (pending and processed states)
+    pBufferList = pSource->queue;
+    lTotalBufferSize = 0;
+    pSource->BuffersPlayed = 0;
+
+    while(pBufferList)
     {
-        // Sort out the queue (pending and processed states)
-        pBufferList = pSource->queue;
-        lTotalBufferSize = 0;
-        pSource->BuffersPlayed = 0;
-        while (pBufferList)
+        pBuffer = pBufferList->buffer;
+        lBufferSize = pBuffer ? pBuffer->size : 0;
+
+        if(lTotalBufferSize+lBufferSize <= lByteOffset)
         {
-            pBuffer = pBufferList->buffer;
-            lBufferSize = pBuffer ? pBuffer->size : 0;
-
-            if ((lTotalBufferSize + lBufferSize) <= lByteOffset)
-            {
-                // Offset is past this buffer so increment BuffersPlayed
-                pSource->BuffersPlayed++;
-            }
-            else if (lTotalBufferSize <= lByteOffset)
-            {
-                // Offset is within this buffer
-                // Set Current Buffer
-                pSource->Buffer = pBufferList->buffer;
-
-                // SW Mixer Positions are in Samples
-                pSource->position = (lByteOffset - lTotalBufferSize) /
-                                    aluBytesFromFormat(pBuffer->format) /
-                                    aluChannelsFromFormat(pBuffer->format);
-            }
-
-            // Increment the TotalBufferSize
-            lTotalBufferSize += lBufferSize;
-
-            // Move on to next buffer in the Queue
-            pBufferList = pBufferList->next;
+            // Offset is past this buffer so increment BuffersPlayed
+            pSource->BuffersPlayed++;
         }
-    }
-    else
-    {
-        if (bUpdateContext)
-            alSetError(AL_INVALID_VALUE);
+        else if(lTotalBufferSize <= lByteOffset)
+        {
+            // Offset is within this buffer
+            // Set Current Buffer
+            pSource->Buffer = pBufferList->buffer;
+
+            // SW Mixer Positions are in Samples
+            pSource->position = (lByteOffset - lTotalBufferSize) /
+                                aluBytesFromFormat(pBuffer->format) /
+                                aluChannelsFromFormat(pBuffer->format);
+            break;
+        }
+
+        // Increment the TotalBufferSize
+        lTotalBufferSize += lBufferSize;
+
+        // Move on to next buffer in the Queue
+        pBufferList = pBufferList->next;
     }
 
-    // Clear Offset
-    pSource->lOffset = 0;
+    return AL_TRUE;
 }
 
 
@@ -2152,6 +2154,9 @@ static ALint GetByteOffset(ALsource *pSource)
         if (lByteOffset >= lTotalBufferDataSize)
             lByteOffset = -1;
     }
+
+    // Clear Offset
+    pSource->lOffset = 0;
 
     return lByteOffset;
 }

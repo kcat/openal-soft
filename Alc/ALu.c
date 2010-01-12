@@ -1107,12 +1107,12 @@ another_source:
 
             switch(Resampler)
             {
-                case POINT: DO_MIX(point);
-                break;
-                case LINEAR: DO_MIX(lerp);
-                break;
-                case COSINE: DO_MIX(cos_lerp);
-                break;
+                case POINT_RESAMPLER:
+                DO_MIX(point); break;
+                case LINEAR_RESAMPLER:
+                DO_MIX(lerp); break;
+                case COSINE_RESAMPLER:
+                DO_MIX(cos_lerp); break;
                 case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
@@ -1157,12 +1157,12 @@ another_source:
 
             switch(Resampler)
             {
-                case POINT: DO_MIX(point);
-                break;
-                case LINEAR: DO_MIX(lerp);
-                break;
-                case COSINE: DO_MIX(cos_lerp);
-                break;
+                case POINT_RESAMPLER:
+                DO_MIX(point); break;
+                case LINEAR_RESAMPLER:
+                DO_MIX(lerp); break;
+                case COSINE_RESAMPLER:
+                DO_MIX(cos_lerp); break;
                 case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
@@ -1178,12 +1178,12 @@ another_source:
 
             switch(Resampler)
             {
-                case POINT: DO_MIX(point);
-                break;
-                case LINEAR: DO_MIX(lerp);
-                break;
-                case COSINE: DO_MIX(cos_lerp);
-                break;
+                case POINT_RESAMPLER:
+                DO_MIX(point); break;
+                case LINEAR_RESAMPLER:
+                DO_MIX(lerp); break;
+                case COSINE_RESAMPLER:
+                DO_MIX(cos_lerp); break;
                 case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
@@ -1200,12 +1200,12 @@ another_source:
 
             switch(Resampler)
             {
-                case POINT: DO_MIX(point);
-                break;
-                case LINEAR: DO_MIX(lerp);
-                break;
-                case COSINE: DO_MIX(cos_lerp);
-                break;
+                case POINT_RESAMPLER:
+                DO_MIX(point); break;
+                case LINEAR_RESAMPLER:
+                DO_MIX(lerp); break;
+                case COSINE_RESAMPLER:
+                DO_MIX(cos_lerp); break;
                 case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
@@ -1223,12 +1223,12 @@ another_source:
 
             switch(Resampler)
             {
-                case POINT: DO_MIX(point);
-                break;
-                case LINEAR: DO_MIX(lerp);
-                break;
-                case COSINE: DO_MIX(cos_lerp);
-                break;
+                case POINT_RESAMPLER:
+                DO_MIX(point); break;
+                case LINEAR_RESAMPLER:
+                DO_MIX(lerp); break;
+                case COSINE_RESAMPLER:
+                DO_MIX(cos_lerp); break;
                 case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;
@@ -1246,12 +1246,12 @@ another_source:
 
             switch(Resampler)
             {
-                case POINT: DO_MIX(point);
-                break;
-                case LINEAR: DO_MIX(lerp);
-                break;
-                case COSINE: DO_MIX(cos_lerp);
-                break;
+                case POINT_RESAMPLER:
+                DO_MIX(point); break;
+                case LINEAR_RESAMPLER:
+                DO_MIX(lerp); break;
+                case COSINE_RESAMPLER:
+                DO_MIX(cos_lerp); break;
                 case RESAMPLER_MIN:
                 case RESAMPLER_MAX:
                 break;

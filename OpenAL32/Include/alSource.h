@@ -23,13 +23,13 @@ extern "C" {
 #endif
 
 typedef enum {
-    POINT = 0,
-    LINEAR,
-    COSINE,
+    POINT_RESAMPLER = 0,
+    LINEAR_RESAMPLER,
+    COSINE_RESAMPLER,
 
     RESAMPLER_MAX,
     RESAMPLER_MIN = -1,
-    RESAMPLER_DEFAULT = LINEAR
+    RESAMPLER_DEFAULT = LINEAR_RESAMPLER
 } resampler_t;
 extern resampler_t DefaultResampler;
 

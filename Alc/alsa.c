@@ -510,6 +510,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 {
     alsa_data *data = (alsa_data*)device->ExtraData;
     snd_pcm_uframes_t periodSizeInFrames;
+    snd_pcm_uframes_t bufferSizeInFrames;
     snd_pcm_sw_params_t *sp = NULL;
     snd_pcm_hw_params_t *p = NULL;
     snd_pcm_access_t access;
@@ -614,12 +615,13 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
                 err = "set channels";
         }
     }
-    /* set periods (implicitly constrains period/buffer parameters) */
-    if(i >= 0 && (i=psnd_pcm_hw_params_set_periods_near(data->pcmHandle, p, &periods, NULL)) < 0)
-        err = "set periods near";
     /* set rate (implicitly constrains period/buffer parameters) */
     if(i >= 0 && (i=psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &rate, NULL)) < 0)
         err = "set rate near";
+    /* set buffer size (implicitly constrains period/buffer parameters) */
+    bufferSizeInFrames = periodSizeInFrames * periods;
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
+        err = "set buffer size near";
     /* set period size in frame units (implicitly sets buffer size/bytes/time and period time/bytes) */
     if(i >= 0 && (i=psnd_pcm_hw_params_set_period_size_near(data->pcmHandle, p, &periodSizeInFrames, NULL)) < 0)
         err = "set period size near";

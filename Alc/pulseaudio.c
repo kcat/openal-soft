@@ -97,12 +97,13 @@ MAKE_FUNC(pa_threaded_mainloop_lock);
 MAKE_FUNC(pa_channel_map_init_auto);
 MAKE_FUNC(pa_channel_map_parse);
 MAKE_FUNC(pa_channel_map_snprint);
-MAKE_FUNC(pa_channel_map_superset);
+MAKE_FUNC(pa_channel_map_equal);
 MAKE_FUNC(pa_context_get_server_info);
 MAKE_FUNC(pa_context_get_sink_info_by_name);
 MAKE_FUNC(pa_operation_get_state);
 MAKE_FUNC(pa_operation_unref);
 #if PA_CHECK_VERSION(0,9,15)
+MAKE_FUNC(pa_channel_map_superset);
 MAKE_FUNC(pa_stream_set_buffer_attr_callback);
 #endif
 #if PA_CHECK_VERSION(0,9,16)
@@ -238,12 +239,13 @@ LOAD_FUNC(pa_threaded_mainloop_lock);
 LOAD_FUNC(pa_channel_map_init_auto);
 LOAD_FUNC(pa_channel_map_parse);
 LOAD_FUNC(pa_channel_map_snprint);
-LOAD_FUNC(pa_channel_map_superset);
+LOAD_FUNC(pa_channel_map_equal);
 LOAD_FUNC(pa_context_get_server_info);
 LOAD_FUNC(pa_context_get_sink_info_by_name);
 LOAD_FUNC(pa_operation_get_state);
 LOAD_FUNC(pa_operation_unref);
 #if PA_CHECK_VERSION(0,9,15)
+LOAD_OPTIONAL_FUNC(pa_channel_map_superset);
 LOAD_OPTIONAL_FUNC(pa_stream_set_buffer_attr_callback);
 #endif
 #if PA_CHECK_VERSION(0,9,16)
@@ -392,8 +394,15 @@ static void sink_info_callback(pa_context *context, const pa_sink_info *info, in
     for(i = 0;chanmaps[i].str;i++)
     {
         pa_channel_map map;
-        if(ppa_channel_map_parse(&map, chanmaps[i].str) &&
-           ppa_channel_map_superset(&info->channel_map, &map))
+        if(!ppa_channel_map_parse(&map, chanmaps[i].str))
+            continue;
+
+        if(ppa_channel_map_equal(&info->channel_map, &map)
+#if PA_CHECK_VERSION(0,9,15)
+           || (ppa_channel_map_superset &&
+               ppa_channel_map_superset(&info->channel_map, &map))
+#endif
+            )
         {
             device->Format = chanmaps[i].format;
             return;

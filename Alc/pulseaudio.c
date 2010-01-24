@@ -421,22 +421,24 @@ static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //
     pulse_data *data = Device->ExtraData;
 
     len -= len%data->attr.minreq;
-    if(len > 0)
+    while(len > 0)
     {
+        size_t newlen = len;
         void *buf;
         pa_free_cb_t free_func = NULL;
 
 #if PA_CHECK_VERSION(0,9,16)
         if(!ppa_stream_begin_write ||
-           ppa_stream_begin_write(stream, &buf, &len) < 0)
+           ppa_stream_begin_write(stream, &buf, &newlen) < 0)
 #endif
         {
-            buf = ppa_xmalloc(len);
+            buf = ppa_xmalloc(newlen);
             free_func = ppa_xfree;
         }
 
-        aluMixData(Device, buf, len/data->frame_size);
-        ppa_stream_write(stream, buf, len, free_func, 0, PA_SEEK_RELATIVE);
+        aluMixData(Device, buf, newlen/data->frame_size);
+        ppa_stream_write(stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
+        len -= newlen;
     }
 } //}}}
 //}}}

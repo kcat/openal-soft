@@ -67,6 +67,7 @@ MAKE_FUNC(snd_pcm_hw_params_set_channels);
 MAKE_FUNC(snd_pcm_hw_params_set_periods_near);
 MAKE_FUNC(snd_pcm_hw_params_set_rate_near);
 MAKE_FUNC(snd_pcm_hw_params_set_rate);
+MAKE_FUNC(snd_pcm_hw_params_set_rate_resample);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 MAKE_FUNC(snd_pcm_hw_params_set_period_size_near);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_min);
@@ -161,6 +162,7 @@ LOAD_FUNC(snd_pcm_hw_params_set_channels);
 LOAD_FUNC(snd_pcm_hw_params_set_periods_near);
 LOAD_FUNC(snd_pcm_hw_params_set_rate_near);
 LOAD_FUNC(snd_pcm_hw_params_set_rate);
+LOAD_FUNC(snd_pcm_hw_params_set_rate_resample);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_min);
 LOAD_FUNC(snd_pcm_hw_params_set_period_size_near);
@@ -614,6 +616,12 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             if((i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, 1)) < 0)
                 err = "set channels";
         }
+    }
+    if(i >= 0 && !ConfigValueExists(NULL, "frequency") &&
+       (i=psnd_pcm_hw_params_set_rate_resample(data->pcmHandle, p, 0)) < 0)
+    {
+        AL_PRINT("Failed to disable ALSA resampler\n");
+        i = 0;
     }
     /* set rate (implicitly constrains period/buffer parameters) */
     if(i >= 0 && (i=psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &rate, NULL)) < 0)

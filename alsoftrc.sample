@@ -236,6 +236,16 @@
 #  still prevent autospawning even if this is set to true.
 #spawn-server = false
 
+## buffer-length:
+#  Specifies the PulseAudio buffer length, in sample frames. When set to a
+#  non-0 value, it specifies the total buffer length for the playback stream,
+#  overriding the period settings. Otherwise it uses the period size and count
+#  to calculate a buffer size. PulseAudio, unlike other backends, does not work
+#  in period chunks, but instead just has one buffer block which is refilled as
+#  it nears empty. Because of this, the usual buffering metrics are unsuitable,
+#  with the default 4096 frames being needlessly large.
+#buffer-length = 2048
+
 ##
 ## Wave File Writer stuff
 ##

@@ -305,11 +305,8 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     SuspendContext(NULL);
 
     data->attr = *(ppa_stream_get_buffer_attr(stream));
-    if(data->attr.tlength < data->attr.minreq*2)
-        AL_PRINT("new tlength (%d) is smaller than two periods (%d x 2)!\n",
-                 data->attr.tlength, data->attr.minreq);
-    Device->UpdateSize = data->attr.minreq / data->frame_size;
-    Device->NumUpdates = data->attr.tlength/data->attr.minreq;
+    Device->UpdateSize = data->attr.tlength/data->frame_size;
+    Device->NumUpdates = 1;
 
     ProcessContext(NULL);
 }//}}}
@@ -420,7 +417,6 @@ static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
 
-    len -= len%data->attr.minreq;
     while(len > 0)
     {
         size_t newlen = len;
@@ -617,12 +613,15 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     data->frame_size = aluBytesFromFormat(device->Format) *
                        aluChannelsFromFormat(device->Format);
-    data->attr.minreq = data->frame_size * device->UpdateSize;
+    data->stream_name = "Playback Stream";
+    data->attr.minreq = -1;
     data->attr.prebuf = -1;
     data->attr.maxlength = -1;
     data->attr.fragsize = -1;
-    data->attr.tlength = data->attr.minreq * device->NumUpdates;
-    data->stream_name = "Playback Stream";
+    data->attr.tlength = GetConfigValueInt("pulse", "buffer-length", 2048);
+    if(data->attr.tlength == 0)
+        data->attr.tlength = device->UpdateSize * device->NumUpdates;
+    data->attr.tlength *= data->frame_size;
 
     switch(aluBytesFromFormat(device->Format))
     {
@@ -707,9 +706,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
-        data->attr.minreq = (ALuint64)(data->attr.minreq/data->frame_size) *
-                            data->spec.rate / device->Frequency * data->frame_size;
-        data->attr.tlength = data->attr.minreq * device->NumUpdates;
+        data->attr.tlength = (ALuint64)(data->attr.tlength/data->frame_size) *
+                             data->spec.rate / device->Frequency * data->frame_size;
 
         o = ppa_stream_set_buffer_attr(data->stream, &data->attr,
                                        stream_success_callback, device);

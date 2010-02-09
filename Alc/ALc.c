@@ -1499,8 +1499,13 @@ ALCAPI ALCboolean ALCAPIENTRY alcMakeContextCurrent(ALCcontext *context)
     // context must be a valid Context or NULL
     if(context == NULL || IsContext(context))
     {
-        if((ALContext=GetContextSuspended()) != NULL)
+        ALContext = g_pContextList;
+        while(ALContext && !ALContext->InUse)
+            ALContext = ALContext->next;
+
+        if(ALContext != NULL)
         {
+            SuspendContext(ALContext);
             ALContext->InUse=AL_FALSE;
             ProcessContext(ALContext);
         }

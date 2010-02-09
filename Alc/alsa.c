@@ -617,8 +617,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
                 err = "set channels";
         }
     }
-    if(i >= 0 && !ConfigValueExists(NULL, "frequency") &&
-       (i=psnd_pcm_hw_params_set_rate_resample(data->pcmHandle, p, 0)) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_rate_resample(data->pcmHandle, p, 0)) < 0)
     {
         AL_PRINT("Failed to disable ALSA resampler\n");
         i = 0;

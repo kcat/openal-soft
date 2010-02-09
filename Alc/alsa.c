@@ -68,6 +68,8 @@ MAKE_FUNC(snd_pcm_hw_params_set_periods_near);
 MAKE_FUNC(snd_pcm_hw_params_set_rate_near);
 MAKE_FUNC(snd_pcm_hw_params_set_rate);
 MAKE_FUNC(snd_pcm_hw_params_set_rate_resample);
+MAKE_FUNC(snd_pcm_hw_params_set_buffer_time_near);
+MAKE_FUNC(snd_pcm_hw_params_set_period_time_near);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 MAKE_FUNC(snd_pcm_hw_params_set_period_size_near);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_min);
@@ -163,6 +165,8 @@ LOAD_FUNC(snd_pcm_hw_params_set_periods_near);
 LOAD_FUNC(snd_pcm_hw_params_set_rate_near);
 LOAD_FUNC(snd_pcm_hw_params_set_rate);
 LOAD_FUNC(snd_pcm_hw_params_set_rate_resample);
+LOAD_FUNC(snd_pcm_hw_params_set_buffer_time_near);
+LOAD_FUNC(snd_pcm_hw_params_set_period_time_near);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_min);
 LOAD_FUNC(snd_pcm_hw_params_set_period_size_near);
@@ -512,7 +516,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 {
     alsa_data *data = (alsa_data*)device->ExtraData;
     snd_pcm_uframes_t periodSizeInFrames;
-    snd_pcm_uframes_t bufferSizeInFrames;
+    unsigned int periodLen, bufferLen;
     snd_pcm_sw_params_t *sp = NULL;
     snd_pcm_hw_params_t *p = NULL;
     snd_pcm_access_t access;
@@ -542,7 +546,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 
     allowmmap = GetConfigValueBool("alsa", "mmap", 1);
     periods = device->NumUpdates;
-    periodSizeInFrames = device->UpdateSize;
+    periodLen = (ALuint64)device->UpdateSize * 1000000 / device->Frequency;
     rate = device->Frequency;
 
     err = NULL;
@@ -625,13 +629,13 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     /* set rate (implicitly constrains period/buffer parameters) */
     if(i >= 0 && (i=psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &rate, NULL)) < 0)
         err = "set rate near";
-    /* set buffer size (implicitly constrains period/buffer parameters) */
-    bufferSizeInFrames = periodSizeInFrames * periods;
-    if(i >= 0 && (i=psnd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
-        err = "set buffer size near";
-    /* set period size in frame units (implicitly sets buffer size/bytes/time and period time/bytes) */
-    if(i >= 0 && (i=psnd_pcm_hw_params_set_period_size_near(data->pcmHandle, p, &periodSizeInFrames, NULL)) < 0)
-        err = "set period size near";
+    /* set buffer time (implicitly constrains period/buffer parameters) */
+    bufferLen = periodLen * periods;
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, p, &bufferLen, NULL)) < 0)
+        err = "set buffer time near";
+    /* set period time in frame units (implicitly sets buffer size/bytes/time and period size/bytes) */
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_period_time_near(data->pcmHandle, p, &periodLen, NULL)) < 0)
+        err = "set period time near";
     /* install and prepare hardware configuration */
     if(i >= 0 && (i=psnd_pcm_hw_params(data->pcmHandle, p)) < 0)
         err = "set params";

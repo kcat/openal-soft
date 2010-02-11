@@ -322,13 +322,7 @@ static void alc_init(void)
     }
 
     for(i = 0;BackendList[i].Init;i++)
-    {
         BackendList[i].Init(&BackendList[i].Funcs);
-
-        BackendList[i].Probe(DEVICE_PROBE);
-        BackendList[i].Probe(ALL_DEVICE_PROBE);
-        BackendList[i].Probe(CAPTURE_DEVICE_PROBE);
-    }
 
     DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
 
@@ -685,6 +679,9 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
     if(deviceName && !deviceName[0])
         deviceName = NULL;
 
+    if(!alcCaptureDeviceList)
+        ProbeCaptureDeviceList();
+
     pDevice = malloc(sizeof(ALCdevice));
     if (pDevice)
     {
@@ -901,6 +898,9 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
 
     /* Default devices are always first in the list */
     case ALC_DEFAULT_DEVICE_SPECIFIER:
+        if(!alcDeviceList)
+            ProbeDeviceList();
+
         free(alcDefaultDeviceSpecifier);
         alcDefaultDeviceSpecifier = strdup(alcDeviceList ? alcDeviceList : "");
         if(!alcDefaultDeviceSpecifier)
@@ -909,6 +909,9 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         break;
 
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
+        if(!alcAllDeviceList)
+            ProbeAllDeviceList();
+
         free(alcDefaultAllDeviceSpecifier);
         alcDefaultAllDeviceSpecifier = strdup(alcAllDeviceList ?
                                               alcAllDeviceList : "");
@@ -918,6 +921,9 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         break;
 
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
+        if(!alcCaptureDeviceList)
+            ProbeCaptureDeviceList();
+
         free(alcCaptureDefaultDeviceSpecifier);
         alcCaptureDefaultDeviceSpecifier = strdup(alcCaptureDeviceList ?
                                                   alcCaptureDeviceList : "");
@@ -1677,6 +1683,11 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     if(deviceName && !deviceName[0])
         deviceName = NULL;
+
+    if(!alcDeviceList)
+        ProbeDeviceList();
+    if(!alcAllDeviceList)
+        ProbeAllDeviceList();
 
     device = malloc(sizeof(ALCdevice));
     if (device)

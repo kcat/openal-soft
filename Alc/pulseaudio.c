@@ -147,7 +147,7 @@ void *pulse_load(void) //{{{
 #ifdef _WIN32
         pa_handle = LoadLibrary("libpulse-0.dll");
 #define LOAD_FUNC(x) do { \
-    p##x = GetProcAddress(pa_handle, #x); \
+    p##x = (typeof(p##x))GetProcAddress(pa_handle, #x); \
     if(!(p##x)) { \
         AL_PRINT("Could not load %s from libpulse-0.dll\n", #x); \
         FreeLibrary(pa_handle); \
@@ -156,7 +156,7 @@ void *pulse_load(void) //{{{
     } \
 } while(0)
 #define LOAD_OPTIONAL_FUNC(x) do { \
-    p##x = GetProcAddress(pa_handle, #x); \
+    p##x = (typeof(p##x))GetProcAddress(pa_handle, #x); \
 } while(0)
 
 #elif defined (HAVE_DLFCN_H)

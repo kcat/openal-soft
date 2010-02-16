@@ -180,12 +180,14 @@ static ALCchar *alcDefaultAllDeviceSpecifier;
 static ALCchar *alcCaptureDefaultDeviceSpecifier;
 
 
-static ALCchar alcExtensionList[] = "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE ALC_EXT_disconnect ALC_EXT_EFX ALC_EXTX_thread_local_context";
-static ALCint alcMajorVersion = 1;
-static ALCint alcMinorVersion = 1;
+static const ALCchar alcExtensionList[] =
+    "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
+    "ALC_EXT_disconnect ALC_EXT_EFX ALC_EXTX_thread_local_context";
+static const ALCint alcMajorVersion = 1;
+static const ALCint alcMinorVersion = 1;
 
-static ALCint alcEFXMajorVersion = 1;
-static ALCint alcEFXMinorVersion = 0;
+static const ALCint alcEFXMajorVersion = 1;
+static const ALCint alcEFXMinorVersion = 0;
 
 ///////////////////////////////////////////////////////
 

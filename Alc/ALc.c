@@ -1257,6 +1257,9 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
             attrIdx += 2;
         }
 
+        device->UpdateSize = (ALuint64)device->UpdateSize * freq /
+                             device->Frequency;
+
         device->Bs2bLevel = level;
         device->Frequency = freq;
         device->lNumMonoSources = numMono;

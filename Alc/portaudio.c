@@ -126,6 +126,7 @@ void pa_unload(void)
 
 typedef struct {
     PaStream *stream;
+    ALuint update_size;
 } pa_data;
 
 
@@ -160,6 +161,8 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_FALSE;
 
     data = (pa_data*)calloc(1, sizeof(pa_data));
+    data->update_size = device->UpdateSize;
+
     device->ExtraData = data;
 
     outParams.device = GetConfigValueInt("port", "device", -1);
@@ -232,6 +235,7 @@ static ALCboolean pa_reset_playback(ALCdevice *device)
 
     streamInfo = pPa_GetStreamInfo(data->stream);
     device->Frequency = streamInfo->sampleRate;
+    device->UpdateSize = data->update_size;
 
     err = pPa_StartStream(data->stream);
     if(err != paNoError)

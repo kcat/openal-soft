@@ -1,8 +1,6 @@
 #ifndef _AL_SOURCE_H_
 #define _AL_SOURCE_H_
 
-#define AL_NUM_SOURCE_PARAMS    128
-
 #define MAX_SENDS                 2
 
 #include "alFilter.h"

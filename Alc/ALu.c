@@ -644,9 +644,9 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
         case AL_EXPONENT_DISTANCE:
             if(Distance > 0.0f && MinDist > 0.0f)
             {
-                flAttenuation = (ALfloat)pow(Distance/MinDist, -Rolloff);
+                flAttenuation = aluPow(Distance/MinDist, -Rolloff);
                 for(i = 0;i < NumSends;i++)
-                    RoomAttenuation[i] = (ALfloat)pow(Distance/MinDist, -RoomRolloff[i]);
+                    RoomAttenuation[i] = aluPow(Distance/MinDist, -RoomRolloff[i]);
             }
             break;
 
@@ -672,7 +672,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
         absorb = (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF) *
                  effectiveDist;
         // Convert dB to linear gain before applying
-        absorb = pow(10.0, absorb/20.0);
+        absorb = aluPow(10.0f, absorb/20.0f);
 
         DryGainHF *= absorb;
     }
@@ -722,62 +722,60 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
 
-        if(Slot && Slot->effect.type != AL_EFFECT_NULL)
+        if(!Slot || Slot->effect.type == AL_EFFECT_NULL)
         {
-            if(Slot->AuxSendAuto)
+            ALSource->Params.WetGains[i] = 0.0f;
+            WetGainHF[i] = 1.0f;
+            continue;
+        }
+
+        if(Slot->AuxSendAuto)
+        {
+            if(ALSource->WetGainAuto)
+                WetGain[i] *= ConeVolume;
+            if(ALSource->WetGainHFAuto)
+                WetGainHF[i] *= ConeHF;
+
+            // Clamp to Min/Max Gain
+            WetGain[i] = __min(WetGain[i],MaxVolume);
+            WetGain[i] = __max(WetGain[i],MinVolume);
+
+            if(Slot->effect.type == AL_EFFECT_REVERB ||
+               Slot->effect.type == AL_EFFECT_EAXREVERB)
             {
-                if(ALSource->WetGainAuto)
-                    WetGain[i] *= ConeVolume;
-                if(ALSource->WetGainHFAuto)
-                    WetGainHF[i] *= ConeHF;
-
-                // Clamp to Min/Max Gain
-                WetGain[i] = __min(WetGain[i],MaxVolume);
-                WetGain[i] = __max(WetGain[i],MinVolume);
-
-                if(Slot->effect.type == AL_EFFECT_REVERB ||
-                   Slot->effect.type == AL_EFFECT_EAXREVERB)
-                {
-                    /* Apply a decay-time transformation to the wet path,
-                     * based on the attenuation of the dry path.
-                     *
-                     * Using the approximate (effective) source to listener
-                     * distance, the initial decay of the reverb effect is
-                     * calculated and applied to the wet path.
-                     */
-                    WetGain[i] *= pow(10.0, effectiveDist /
+                /* Apply a decay-time transformation to the wet path, based on
+                 * the attenuation of the dry path.
+                 *
+                 * Using the approximate (effective) source to listener
+                 * distance, the initial decay of the reverb effect is
+                 * calculated and applied to the wet path.
+                 */
+                WetGain[i] *= aluPow(10.0f, effectiveDist /
                                             (SPEEDOFSOUNDMETRESPERSEC *
                                              Slot->effect.Reverb.DecayTime) *
                                             -60.0 / 20.0);
 
-                    WetGainHF[i] *= pow(10.0,
-                                        log10(Slot->effect.Reverb.AirAbsorptionGainHF) *
-                                        ALSource->AirAbsorptionFactor * effectiveDist);
-                }
+                WetGainHF[i] *= aluPow(10.0f,
+                                       log10(Slot->effect.Reverb.AirAbsorptionGainHF) *
+                                       ALSource->AirAbsorptionFactor * effectiveDist);
             }
-            else
-            {
-                // If the slot's auxiliary send auto is off, the data sent to
-                // the effect slot is the same as the dry path, sans filter
-                // effects
-                WetGain[i] = DryMix;
-                WetGainHF[i] = DryGainHF;
-            }
-
-            switch(ALSource->Send[i].WetFilter.type)
-            {
-                case AL_FILTER_LOWPASS:
-                    WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
-                    WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
-                    break;
-            }
-            ALSource->Params.WetGains[i] = WetGain[i] * ListenerGain;
         }
         else
         {
-            ALSource->Params.WetGains[i] = 0.0f;
-            WetGainHF[i] = 1.0f;
+            /* If the slot's auxiliary send auto is off, the data sent to the
+             * effect slot is the same as the dry path, sans filter effects */
+            WetGain[i] = DryMix;
+            WetGainHF[i] = DryGainHF;
         }
+
+        switch(ALSource->Send[i].WetFilter.type)
+        {
+            case AL_FILTER_LOWPASS:
+                WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
+                WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
+                break;
+        }
+        ALSource->Params.WetGains[i] = WetGain[i] * ListenerGain;
     }
     for(i = NumSends;i < MAX_SENDS;i++)
     {

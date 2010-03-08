@@ -311,7 +311,7 @@ static ALboolean AllocLines(ALboolean eaxFlag, ALuint frequency, ALverbState *St
 // until the decay reaches -60 dB.
 static __inline ALfloat CalcDecayCoeff(ALfloat length, ALfloat decayTime)
 {
-    return pow(10.0f, length / decayTime * -60.0f / 20.0f);
+    return aluPow(10.0f, length / decayTime * -60.0f / 20.0f);
 }
 
 // Calculate a decay length from a coefficient and the time until the decay
@@ -488,7 +488,7 @@ static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALverbState 
      */
     for(index = 0;index < 3;index++)
     {
-        length = (DECO_FRACTION * pow(DECO_MULTIPLIER, (ALfloat)index)) *
+        length = (DECO_FRACTION * aluPow(DECO_MULTIPLIER, (ALfloat)index)) *
                  LATE_LINE_LENGTH[0] * (1.0f + (density * LATE_LINE_MULTIPLIER));
         State->DecoTap[index] = (ALuint)(length * frequency);
     }
@@ -522,7 +522,7 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
                                                              decayTime));
 
     // Calculate the all-pass feed-back and feed-forward coefficient.
-    State->Late.ApFeedCoeff = 0.5f * pow(diffusion, 2.0f);
+    State->Late.ApFeedCoeff = 0.5f * aluPow(diffusion, 2.0f);
 
     for(index = 0;index < 4;index++)
     {
@@ -566,7 +566,7 @@ static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoT
     State->Echo.DensityGain = CalcDensityGain(State->Echo.Coeff);
 
     // Calculate the echo all-pass feed coefficient.
-    State->Echo.ApFeedCoeff = 0.5f * pow(diffusion, 2.0f);
+    State->Echo.ApFeedCoeff = 0.5f * aluPow(diffusion, 2.0f);
 
     // Calculate the echo all-pass attenuation coefficient.
     State->Echo.ApCoeff = CalcDecayCoeff(ECHO_ALLPASS_LENGTH, decayTime);
@@ -1022,8 +1022,8 @@ static ALboolean EAXVerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     // is calculated given the current sample rate.  This ensures that the
     // resulting filter response over time is consistent across all sample
     // rates.
-    State->Mod.Coeff = pow(MODULATION_FILTER_COEFF, MODULATION_FILTER_CONST /
-                                                    frequency);
+    State->Mod.Coeff = aluPow(MODULATION_FILTER_COEFF,
+                              MODULATION_FILTER_CONST / frequency);
 
     // The early reflection and late all-pass filter line lengths are static,
     // so their offsets only need to be calculated once.

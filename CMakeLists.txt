@@ -143,6 +143,7 @@ CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(pri
 CHECK_INCLUDE_FILE(fenv.h HAVE_FENV_H)
 CHECK_INCLUDE_FILE(float.h HAVE_FLOAT_H)
 
+CHECK_LIBRARY_EXISTS(m  powf   "" HAVE_POWF)
 CHECK_LIBRARY_EXISTS(m  sqrtf  "" HAVE_SQRTF)
 CHECK_LIBRARY_EXISTS(m  acosf  "" HAVE_ACOSF)
 CHECK_LIBRARY_EXISTS(m  atanf  "" HAVE_ATANF)

@@ -15,6 +15,12 @@
 #define M_PI_2         1.57079632679489661923  /* pi/2 */
 #endif
 
+#ifdef HAVE_POWF
+#define aluPow(x,y) ((ALfloat)powf((float)(x),(float)(y)))
+#else
+#define aluPow(x,y) ((ALfloat)pow((double)(x),(double)(y)))
+#endif
+
 #ifdef HAVE_SQRTF
 #define aluSqrt(x) ((ALfloat)sqrtf((float)(x)))
 #else

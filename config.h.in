@@ -31,6 +31,9 @@
 /* Define if we have the stat function */
 #cmakedefine HAVE_STAT
 
+/* Define if we have the powf function */
+#cmakedefine HAVE_POWF
+
 /* Define if we have the sqrtf function */
 #cmakedefine HAVE_SQRTF
 

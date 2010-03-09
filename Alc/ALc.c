@@ -763,7 +763,11 @@ ALCAPI ALCboolean ALCAPIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 ALCAPI void ALCAPIENTRY alcCaptureStart(ALCdevice *pDevice)
 {
     if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
+    {
+        SuspendContext(NULL);
         ALCdevice_StartCapture(pDevice);
+        ProcessContext(NULL);
+    }
     else
         alcSetError(pDevice, ALC_INVALID_DEVICE);
 }
@@ -771,7 +775,11 @@ ALCAPI void ALCAPIENTRY alcCaptureStart(ALCdevice *pDevice)
 ALCAPI void ALCAPIENTRY alcCaptureStop(ALCdevice *pDevice)
 {
     if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
+    {
+        SuspendContext(NULL);
         ALCdevice_StopCapture(pDevice);
+        ProcessContext(NULL);
+    }
     else
         alcSetError(pDevice, ALC_INVALID_DEVICE);
 }
@@ -779,7 +787,11 @@ ALCAPI void ALCAPIENTRY alcCaptureStop(ALCdevice *pDevice)
 ALCAPI void ALCAPIENTRY alcCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCsizei lSamples)
 {
     if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
+    {
+        SuspendContext(NULL);
         ALCdevice_CaptureSamples(pDevice, pBuffer, lSamples);
+        ProcessContext(NULL);
+    }
     else
         alcSetError(pDevice, ALC_INVALID_DEVICE);
 }

@@ -122,6 +122,33 @@ void DSoundUnload(void)
 }
 
 
+static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
+{
+    (void)data;
+    (void)drvname;
+
+    if(guid)
+    {
+        char str[128];
+        void *temp;
+
+        temp = realloc(DeviceList, sizeof(DevMap) * (NumDevices+1));
+        if(temp)
+        {
+            DeviceList = temp;
+
+            snprintf(str, sizeof(str), "DirectSound Software on %s", desc);
+
+            DeviceList[NumDevices].name = strdup(str);
+            DeviceList[NumDevices].guid = *guid;
+            NumDevices++;
+        }
+    }
+
+    return TRUE;
+}
+
+
 static ALuint DSoundProc(ALvoid *ptr)
 {
     ALCdevice *pDevice = (ALCdevice*)ptr;
@@ -208,11 +235,22 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     LPGUID guid = NULL;
     HRESULT hr;
 
+    if(!DSoundLoad())
+        return ALC_FALSE;
+
     if(!deviceName)
         deviceName = dsDevice;
     else if(strcmp(deviceName, dsDevice) != 0)
     {
         ALuint i;
+
+        if(!DeviceList)
+        {
+            hr = pDirectSoundEnumerateA(DSoundEnumDevices, NULL);
+            if(FAILED(hr))
+                AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+        }
+
         for(i = 0;i < NumDevices;i++)
         {
             if(strcmp(deviceName, DeviceList[i].name) == 0)
@@ -222,14 +260,13 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
             }
         }
         if(i == NumDevices)
+        {
+            DSoundUnload();
             return ALC_FALSE;
+        }
     }
 
-    if(!DSoundLoad())
-        return ALC_FALSE;
-
     //Initialise requested device
-
     pData = calloc(1, sizeof(DSoundData));
     if(!pData)
     {
@@ -506,31 +543,6 @@ BackendFuncs DSoundFuncs = {
     DSoundAvailableSamples
 };
 
-static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
-{
-    (void)data;
-    (void)drvname;
-
-    if(guid)
-    {
-        char str[128];
-        void *temp;
-
-        temp = realloc(DeviceList, sizeof(DevMap) * (NumDevices+1));
-        if(temp)
-        {
-            DeviceList = temp;
-
-            snprintf(str, sizeof(str), "DirectSound Software on %s", desc);
-
-            DeviceList[NumDevices].name = strdup(str);
-            DeviceList[NumDevices].guid = *guid;
-            NumDevices++;
-        }
-    }
-
-    return TRUE;
-}
 
 void alcDSoundInit(BackendFuncs *FuncList)
 {

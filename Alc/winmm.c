@@ -207,6 +207,9 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     ALint lBufferSize;
     ALuint i;
 
+    if(!CaptureDeviceList)
+        ProbeDevices();
+
     // Find the Device ID matching the deviceName if valid
     if(deviceName)
     {

@@ -681,9 +681,6 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
     if(deviceName && !deviceName[0])
         deviceName = NULL;
 
-    if(!alcCaptureDeviceList)
-        ProbeCaptureDeviceList();
-
     pDevice = malloc(sizeof(ALCdevice));
     if (pDevice)
     {
@@ -1688,11 +1685,6 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     if(deviceName && !deviceName[0])
         deviceName = NULL;
-
-    if(!alcDeviceList)
-        ProbeDeviceList();
-    if(!alcAllDeviceList)
-        ProbeAllDeviceList();
 
     device = malloc(sizeof(ALCdevice));
     if (device)

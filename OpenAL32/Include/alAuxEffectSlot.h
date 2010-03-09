@@ -9,12 +9,6 @@
 extern "C" {
 #endif
 
-#define AL_EFFECTSLOT_EFFECT                               0x0001
-#define AL_EFFECTSLOT_GAIN                                 0x0002
-#define AL_EFFECTSLOT_AUXILIARY_SEND_AUTO                  0x0003
-
-#define AL_EFFECTSLOT_NULL                                 0x0000
-
 typedef struct ALeffectState ALeffectState;
 
 typedef struct ALeffectslot

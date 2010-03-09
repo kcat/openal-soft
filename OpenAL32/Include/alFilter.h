@@ -78,16 +78,6 @@ static __inline ALfloat lpCoeffCalc(ALfloat g, ALfloat cw)
     return a;
 }
 
-#define AL_FILTER_TYPE                                     0x8001
-
-#define AL_FILTER_NULL                                     0x0000
-#define AL_FILTER_LOWPASS                                  0x0001
-#define AL_FILTER_HIGHPASS                                 0x0002
-#define AL_FILTER_BANDPASS                                 0x0003
-
-#define AL_LOWPASS_GAIN                                    0x0001
-#define AL_LOWPASS_GAINHF                                  0x0002
-
 
 typedef struct ALfilter
 {

@@ -145,6 +145,11 @@ typedef ALvoid* (AL_APIENTRY*PFNALMAPDATABUFFEREXTPROC)(ALuint uiBuffer, ALuint 
 typedef ALvoid (AL_APIENTRY*PFNALUNMAPDATABUFFEREXTPROC)(ALuint uiBuffer);
 #endif
 
+#ifndef ALC_EXT_EFX
+#define ALC_EXT_EFX 1
+#include "efx.h"
+#endif
+
 #ifndef ALC_EXT_disconnect
 #define ALC_EXT_disconnect 1
 #define ALC_CONNECTED                            0x313

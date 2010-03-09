@@ -522,7 +522,6 @@ static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname,
             DeviceList = temp;
 
             snprintf(str, sizeof(str), "DirectSound Software on %s", desc);
-            AppendAllDeviceList(str);
 
             DeviceList[NumDevices].name = strdup(str);
             DeviceList[NumDevices].guid = *guid;
@@ -569,6 +568,11 @@ void alcDSoundProbe(int type)
         hr = pDirectSoundEnumerateA(DSoundEnumDevices, NULL);
         if(FAILED(hr))
             AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+        else
+        {
+            for(i = 0;i < NumDevices;i++)
+                AppendAllDeviceList(DeviceList[i].name);
+        }
     }
 
     DSoundUnload();

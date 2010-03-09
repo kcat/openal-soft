@@ -53,6 +53,29 @@ typedef struct {
 static ALCchar **CaptureDeviceList;
 static ALuint  NumCaptureDevices;
 
+static void ProbeDevices(void)
+{
+    ALuint i;
+
+    for(i = 0;i < NumCaptureDevices;i++)
+        free(CaptureDeviceList[i]);
+
+    NumCaptureDevices = waveInGetNumDevs();
+    CaptureDeviceList = realloc(CaptureDeviceList, sizeof(ALCchar*) * NumCaptureDevices);
+    for(i = 0;i < NumCaptureDevices;i++)
+    {
+        WAVEINCAPS WaveInCaps;
+
+        CaptureDeviceList[i] = NULL;
+        if(waveInGetDevCaps(i, &WaveInCaps, sizeof(WAVEINCAPS)) == MMSYSERR_NOERROR)
+        {
+            char name[128];
+            snprintf(name, sizeof(name), "WaveIn on %s", WaveInCaps.szPname);
+            CaptureDeviceList[i] = strdup(name);
+        }
+    }
+}
+
 /*
     WaveInProc
 
@@ -185,19 +208,31 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     ALuint i;
 
     // Find the Device ID matching the deviceName if valid
-    if (deviceName)
+    if(deviceName)
     {
         for(i = 0;i < NumCaptureDevices;i++)
         {
-            if (!strcmp(deviceName, CaptureDeviceList[i]))
+            if(CaptureDeviceList[i] &&
+               strcmp(deviceName, CaptureDeviceList[i]) == 0)
             {
                 lDeviceID = i;
                 break;
             }
         }
-        if(i == NumCaptureDevices)
-            return ALC_FALSE;
     }
+    else
+    {
+        for(i = 0;i < NumCaptureDevices;i++)
+        {
+            if(CaptureDeviceList[i])
+            {
+                lDeviceID = i;
+                break;
+            }
+        }
+    }
+    if(i == NumCaptureDevices)
+        return ALC_FALSE;
 
     pData = calloc(1, sizeof(*pData));
     if(!pData)
@@ -443,28 +478,15 @@ void alcWinMMDeinit()
 
 void alcWinMMProbe(int type)
 {
-    ALuint lLoop;
+    ALuint i;
 
     if(type != CAPTURE_DEVICE_PROBE)
         return;
 
-    for(lLoop = 0; lLoop < NumCaptureDevices; lLoop++)
-        free(CaptureDeviceList[lLoop]);
-
-    NumCaptureDevices = waveInGetNumDevs();
-    CaptureDeviceList = realloc(CaptureDeviceList, sizeof(ALCchar*) * NumCaptureDevices);
-    for(lLoop = 0; lLoop < NumCaptureDevices; lLoop++)
+    ProbeDevices();
+    for(i = 0;i < NumCaptureDevices;i++)
     {
-        WAVEINCAPS WaveInCaps;
-
-        if(waveInGetDevCaps(lLoop, &WaveInCaps, sizeof(WAVEINCAPS)) == MMSYSERR_NOERROR)
-        {
-            char name[128];
-            snprintf(name, sizeof(name), "WaveIn on %s", WaveInCaps.szPname);
-            AppendCaptureDeviceList(name);
-            CaptureDeviceList[lLoop] = strdup(name);
-        }
-        else
-            CaptureDeviceList[lLoop] = strdup("");
+        if(CaptureDeviceList[i])
+            AppendCaptureDeviceList(CaptureDeviceList[i]);
     }
 }

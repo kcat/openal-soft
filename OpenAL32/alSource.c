@@ -901,20 +901,6 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
                         alSetError(AL_INVALID_OPERATION);
                     break;
 
-                case AL_SEC_RW_OFFSETS_EXT:
-                case AL_SAMPLE_RW_OFFSETS_EXT:
-                case AL_BYTE_RW_OFFSETS_EXT:
-                    updateLen = (ALfloat)pContext->Device->UpdateSize /
-                                pContext->Device->Frequency;
-                    if(GetSourceOffset(pSource, eParam, flOffset, updateLen))
-                    {
-                        pflValue[0] = flOffset[0];
-                        pflValue[1] = flOffset[1];
-                    }
-                    else
-                        alSetError(AL_INVALID_OPERATION);
-                    break;
-
                 case AL_CONE_INNER_ANGLE:
                     *pflValue = pSource->flInnerAngle;
                     break;
@@ -1005,8 +991,10 @@ ALAPI ALvoid ALAPIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* pfl
 
 ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pflValues)
 {
-    ALCcontext    *pContext;
+    ALCcontext  *pContext;
     ALsource    *pSource;
+    ALfloat     flOffset[2];
+    ALfloat     updateLen;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
@@ -1037,6 +1025,19 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
                 case AL_AIR_ABSORPTION_FACTOR:
                 case AL_ROOM_ROLLOFF_FACTOR:
                     alGetSourcef(source, eParam, pflValues);
+                    break;
+
+                case AL_SAMPLE_RW_OFFSETS_EXT:
+                case AL_BYTE_RW_OFFSETS_EXT:
+                    updateLen = (ALfloat)pContext->Device->UpdateSize /
+                                pContext->Device->Frequency;
+                    if(GetSourceOffset(pSource, eParam, flOffset, updateLen))
+                    {
+                        pflValues[0] = flOffset[0];
+                        pflValues[1] = flOffset[1];
+                    }
+                    else
+                        alSetError(AL_INVALID_OPERATION);
                     break;
 
                 case AL_POSITION:
@@ -1156,20 +1157,6 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                         alSetError(AL_INVALID_OPERATION);
                     break;
 
-                case AL_SEC_RW_OFFSETS_EXT:
-                case AL_SAMPLE_RW_OFFSETS_EXT:
-                case AL_BYTE_RW_OFFSETS_EXT:
-                    updateLen = (ALfloat)pContext->Device->UpdateSize /
-                                pContext->Device->Frequency;
-                    if(GetSourceOffset(pSource, eParam, flOffset, updateLen))
-                    {
-                        plValue[0] = (ALint)flOffset[0];
-                        plValue[1] = (ALint)flOffset[1];
-                    }
-                    else
-                        alSetError(AL_INVALID_OPERATION);
-                    break;
-
                 case AL_DIRECT_FILTER:
                     *plValue = pSource->DirectFilter.filter;
                     break;
@@ -1262,6 +1249,8 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
 {
     ALCcontext  *pContext;
     ALsource    *pSource;
+    ALfloat     flOffset[2];
+    ALfloat     updateLen;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
@@ -1296,6 +1285,19 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
                 case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
                 case AL_DISTANCE_MODEL:
                     alGetSourcei(source, eParam, plValues);
+                    break;
+
+                case AL_SAMPLE_RW_OFFSETS_EXT:
+                case AL_BYTE_RW_OFFSETS_EXT:
+                    updateLen = (ALfloat)pContext->Device->UpdateSize /
+                                pContext->Device->Frequency;
+                    if(GetSourceOffset(pSource, eParam, flOffset, updateLen))
+                    {
+                        plValues[0] = (ALint)flOffset[0];
+                        plValues[1] = (ALint)flOffset[1];
+                    }
+                    else
+                        alSetError(AL_INVALID_OPERATION);
                     break;
 
                 case AL_POSITION:
@@ -1923,7 +1925,6 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
         switch (eName)
         {
         case AL_SEC_OFFSET:
-        case AL_SEC_RW_OFFSETS_EXT:
             pflOffset[0] = (ALfloat)readPos / (lChannels * lBytes * flBufferFreq);
             pflOffset[1] = (ALfloat)writePos / (lChannels * lBytes * flBufferFreq);
             break;

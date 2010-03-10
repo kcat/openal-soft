@@ -101,7 +101,6 @@ extern "C" {
 #define AL_EXT_buffer_sub_data 1
 #define AL_BYTE_RW_OFFSETS_EXT                   0x1031
 #define AL_SAMPLE_RW_OFFSETS_EXT                 0x1032
-#define AL_SEC_RW_OFFSETS_EXT                    0x1033
 typedef ALvoid (AL_APIENTRY*PFNALBUFFERSUBDATAEXTPROC)(ALuint,ALenum,const ALvoid*,ALsizei,ALsizei);
 #endif
 

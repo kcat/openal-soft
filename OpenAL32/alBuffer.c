@@ -38,15 +38,6 @@ static void ConvertDataRear(ALfloat *dst, const ALvoid *src, ALint origBytes, AL
 static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, ALsizei len);
 
 /*
- *  AL Buffer Functions
- *
- *  AL Buffers are shared amoung Contexts, so we store the list of generated Buffers
- *  as a global variable in this module.   (A valid context is not required to make
- *  AL Buffer function calls
- *
- */
-
-/*
 * Global Variables
 */
 

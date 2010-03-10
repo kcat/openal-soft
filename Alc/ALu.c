@@ -958,7 +958,6 @@ another_source:
     increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
     if(increment <= 0)  increment = (1<<FRACTIONBITS);
 
-    /* Compute the gain steps for each output channel */
     if(ALSource->FirstStart)
     {
         for(i = 0;i < OUTPUTCHANNELS;i++)

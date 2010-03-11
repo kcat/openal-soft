@@ -616,12 +616,12 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     data->stream_name = "Playback Stream";
     data->attr.minreq = -1;
     data->attr.prebuf = -1;
-    data->attr.maxlength = -1;
     data->attr.fragsize = -1;
     data->attr.tlength = GetConfigValueInt("pulse", "buffer-length", 2048);
     if(data->attr.tlength == 0)
         data->attr.tlength = device->UpdateSize * device->NumUpdates;
     data->attr.tlength *= data->frame_size;
+    data->attr.maxlength = data->attr.tlength;
 
     switch(aluBytesFromFormat(device->Format))
     {
@@ -708,6 +708,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
          * accordingly. */
         data->attr.tlength = (ALuint64)(data->attr.tlength/data->frame_size) *
                              data->spec.rate / device->Frequency * data->frame_size;
+        data->attr.maxlength = data->attr.tlength;
 
         o = ppa_stream_set_buffer_attr(data->stream, &data->attr,
                                        stream_success_callback, device);

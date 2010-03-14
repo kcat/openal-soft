@@ -74,7 +74,7 @@ typedef enum {
     OUTPUTCHANNELS
 } Channel;
 
-#define BUFFERSIZE 24000
+#define BUFFERSIZE 16384
 
 extern ALboolean DuplicateStereo;
 

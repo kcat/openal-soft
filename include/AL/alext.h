@@ -91,6 +91,17 @@ extern "C" {
 #define AL_FORMAT_71CHN32                        0x1212
 #endif
 
+#ifndef AL_EXT_MULAW_MCFORMATS
+#define AL_EXT_MULAW_MCFORMATS 1
+#define AL_FORMAT_MONO_MULAW                     0x10014
+#define AL_FORMAT_STEREO_MULAW                   0x10015
+#define AL_FORMAT_QUAD_MULAW                     0x10021
+#define AL_FORMAT_REAR_MULAW                     0x10022
+#define AL_FORMAT_51CHN_MULAW                    0x10023
+#define AL_FORMAT_61CHN_MULAW                    0x10024
+#define AL_FORMAT_71CHN_MULAW                    0x10025
+#endif
+
 #ifndef AL_EXT_IMA4
 #define AL_EXT_IMA4 1
 #define AL_FORMAT_MONO_IMA4                      0x1300

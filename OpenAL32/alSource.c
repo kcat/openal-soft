@@ -520,6 +520,8 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
         {
             case AL_MAX_DISTANCE:
             case AL_ROLLOFF_FACTOR:
+            case AL_CONE_INNER_ANGLE:
+            case AL_CONE_OUTER_ANGLE:
             case AL_REFERENCE_DISTANCE:
                 alSourcef(source, eParam, (ALfloat)lValue);
                 break;
@@ -528,26 +530,6 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                 if(lValue == AL_FALSE || lValue == AL_TRUE)
                 {
                     pSource->bHeadRelative = (ALboolean)lValue;
-                    pSource->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(AL_INVALID_VALUE);
-                break;
-
-            case AL_CONE_INNER_ANGLE:
-                if(lValue >= 0 && lValue <= 360)
-                {
-                    pSource->flInnerAngle = (float)lValue;
-                    pSource->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(AL_INVALID_VALUE);
-                break;
-
-            case AL_CONE_OUTER_ANGLE:
-                if(lValue >= 0 && lValue <= 360)
-                {
-                    pSource->flOuterAngle = (float)lValue;
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else

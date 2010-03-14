@@ -36,6 +36,8 @@ static void LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuint 
 static void ConvertData(ALfloat *dst, const ALvoid *src, ALint origBytes, ALsizei len);
 static void ConvertDataRear(ALfloat *dst, const ALvoid *src, ALint origBytes, ALsizei len);
 static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, ALsizei len);
+static void ConvertDataMULaw(ALfloat *dst, const ALvoid *src, ALsizei len);
+static void ConvertDataMULawRear(ALfloat *dst, const ALvoid *src, ALsizei len);
 
 /*
 * Global Variables
@@ -58,6 +60,41 @@ static const long g_IMACodeword_4[16]={            // IMA4 ADPCM Codeword decode
 static const long g_IMAIndex_adjust_4[16]={        // IMA4 ADPCM Step index adjust decode table
    -1,-1,-1,-1, 2, 4, 6, 8,
    -1,-1,-1,-1, 2, 4, 6, 8
+};
+
+static const ALshort muLawDecompressionTable[256] = {
+    -32124,-31100,-30076,-29052,-28028,-27004,-25980,-24956,
+    -23932,-22908,-21884,-20860,-19836,-18812,-17788,-16764,
+    -15996,-15484,-14972,-14460,-13948,-13436,-12924,-12412,
+    -11900,-11388,-10876,-10364, -9852, -9340, -8828, -8316,
+     -7932, -7676, -7420, -7164, -6908, -6652, -6396, -6140,
+     -5884, -5628, -5372, -5116, -4860, -4604, -4348, -4092,
+     -3900, -3772, -3644, -3516, -3388, -3260, -3132, -3004,
+     -2876, -2748, -2620, -2492, -2364, -2236, -2108, -1980,
+     -1884, -1820, -1756, -1692, -1628, -1564, -1500, -1436,
+     -1372, -1308, -1244, -1180, -1116, -1052,  -988,  -924,
+      -876,  -844,  -812,  -780,  -748,  -716,  -684,  -652,
+      -620,  -588,  -556,  -524,  -492,  -460,  -428,  -396,
+      -372,  -356,  -340,  -324,  -308,  -292,  -276,  -260,
+      -244,  -228,  -212,  -196,  -180,  -164,  -148,  -132,
+      -120,  -112,  -104,   -96,   -88,   -80,   -72,   -64,
+       -56,   -48,   -40,   -32,   -24,   -16,    -8,     0,
+     32124, 31100, 30076, 29052, 28028, 27004, 25980, 24956,
+     23932, 22908, 21884, 20860, 19836, 18812, 17788, 16764,
+     15996, 15484, 14972, 14460, 13948, 13436, 12924, 12412,
+     11900, 11388, 10876, 10364,  9852,  9340,  8828,  8316,
+      7932,  7676,  7420,  7164,  6908,  6652,  6396,  6140,
+      5884,  5628,  5372,  5116,  4860,  4604,  4348,  4092,
+      3900,  3772,  3644,  3516,  3388,  3260,  3132,  3004,
+      2876,  2748,  2620,  2492,  2364,  2236,  2108,  1980,
+      1884,  1820,  1756,  1692,  1628,  1564,  1500,  1436,
+      1372,  1308,  1244,  1180,  1116,  1052,   988,   924,
+       876,   844,   812,   780,   748,   716,   684,   652,
+       620,   588,   556,   524,   492,   460,   428,   396,
+       372,   356,   340,   324,   308,   292,   276,   260,
+       244,   228,   212,   196,   180,   164,   148,   132,
+       120,   112,   104,    96,    88,    80,    72,    64,
+        56,    48,    40,    32,    24,    16,     8,     0
 };
 
 /*
@@ -387,6 +424,77 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                         alSetError(AL_OUT_OF_MEMORY);
                 }   break;
 
+                case AL_FORMAT_MONO_MULAW:
+                case AL_FORMAT_STEREO_MULAW:
+                case AL_FORMAT_QUAD_MULAW:
+                case AL_FORMAT_51CHN_MULAW:
+                case AL_FORMAT_61CHN_MULAW:
+                case AL_FORMAT_71CHN_MULAW: {
+                    int Channels = ((format==AL_FORMAT_MONO_MULAW) ? 1 :
+                                    ((format==AL_FORMAT_STEREO_MULAW) ? 2 :
+                                     ((format==AL_FORMAT_QUAD_MULAW) ? 4 :
+                                      ((format==AL_FORMAT_51CHN_MULAW) ? 6 :
+                                       ((format==AL_FORMAT_61CHN_MULAW) ? 7 : 8)))));
+                    ALuint NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
+                                        ((Channels==2) ? AL_FORMAT_STEREO_FLOAT32 :
+                                         ((Channels==4) ? AL_FORMAT_QUAD32 :
+                                          ((Channels==6) ? AL_FORMAT_51CHN32 :
+                                           ((Channels==7) ? AL_FORMAT_61CHN32 :
+                                                            AL_FORMAT_71CHN32)))));
+                    ALuint NewBytes = aluBytesFromFormat(NewFormat);
+
+                    if((size%(1*Channels)) != 0)
+                    {
+                        alSetError(AL_INVALID_VALUE);
+                        break;
+                    }
+
+                    // Allocate extra padding samples
+                    temp = realloc(ALBuf->data, (BUFFER_PADDING*Channels + size)*NewBytes);
+                    if(temp)
+                    {
+                        ALBuf->data = temp;
+                        ConvertDataMULaw(ALBuf->data, data, size);
+
+                        ALBuf->format = NewFormat;
+                        ALBuf->eOriginalFormat = format;
+                        ALBuf->size = size*NewBytes;
+                        ALBuf->frequency = freq;
+                    }
+                    else
+                        alSetError(AL_OUT_OF_MEMORY);
+                }   break;
+
+                case AL_FORMAT_REAR_MULAW: {
+                    int OrigChans = 2;
+                    ALuint NewFormat = AL_FORMAT_QUAD32;
+                    ALuint NewBytes = aluBytesFromFormat(NewFormat);
+                    ALuint NewChannels = aluChannelsFromFormat(NewFormat);
+
+                    if((size%(1*OrigChans)) != 0)
+                    {
+                        alSetError(AL_INVALID_VALUE);
+                        break;
+                    }
+
+                    size *= 2;
+
+                    // Allocate extra padding samples
+                    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + size)*NewBytes);
+                    if(temp)
+                    {
+                        ALBuf->data = temp;
+                        ConvertDataMULawRear(ALBuf->data, data, size);
+
+                        ALBuf->format = NewFormat;
+                        ALBuf->eOriginalFormat = format;
+                        ALBuf->size = size*NewBytes;
+                        ALBuf->frequency = freq;
+                    }
+                    else
+                        alSetError(AL_OUT_OF_MEMORY);
+                }   break;
+
                 default:
                     alSetError(AL_INVALID_ENUM);
                     break;
@@ -497,6 +605,34 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
                     }
 
                     ConvertDataIMA4(&ALBuf->data[offset*Channels], data, Channels, length/65*Channels);
+                }   break;
+
+                case AL_FORMAT_MONO_MULAW:
+                case AL_FORMAT_STEREO_MULAW:
+                case AL_FORMAT_QUAD_MULAW:
+                case AL_FORMAT_REAR_MULAW:
+                case AL_FORMAT_51CHN_MULAW:
+                case AL_FORMAT_61CHN_MULAW:
+                case AL_FORMAT_71CHN_MULAW: {
+                    int Channels = aluChannelsFromFormat(ALBuf->format);
+                    ALuint Bytes = aluBytesFromFormat(ALBuf->format);
+
+                    if(ALBuf->eOriginalFormat != format)
+                    {
+                        alSetError(AL_INVALID_ENUM);
+                        break;
+                    }
+
+                    if(ALBuf->size/Channels/Bytes < (ALuint)offset+length)
+                    {
+                        alSetError(AL_INVALID_VALUE);
+                        break;
+                    }
+
+                    if(ALBuf->eOriginalFormat == AL_FORMAT_REAR_MULAW)
+                        ConvertDataMULawRear(&ALBuf->data[offset*Channels], data, length*2);
+                    else
+                        ConvertDataMULaw(&ALBuf->data[offset*Channels], data, length*Channels);
                 }   break;
 
                 default: {
@@ -1081,6 +1217,32 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, AL
                 }
             }
         }
+    }
+}
+
+static void ConvertDataMULaw(ALfloat *dst, const ALvoid *src, ALsizei len)
+{
+    ALsizei i;
+    ALint smp;
+    for(i = 0;i < len;i++)
+    {
+        smp = muLawDecompressionTable[((ALubyte*)src)[i]];
+        dst[i] = ((smp < 0) ? (smp/32768.0f) : (smp/32767.0f));
+    }
+}
+
+static void ConvertDataMULawRear(ALfloat *dst, const ALvoid *src, ALsizei len)
+{
+    ALsizei i;
+    ALint smp;
+    for(i = 0;i < len;i+=4)
+    {
+        dst[i+0] = 0;
+        dst[i+1] = 0;
+        smp = muLawDecompressionTable[((ALubyte*)src)[i/2+0]];
+        dst[i+2] = ((smp < 0) ? (smp/32768.0f) : (smp/32767.0f));
+        smp = muLawDecompressionTable[((ALubyte*)src)[i/2+1]];
+        dst[i+3] = ((smp < 0) ? (smp/32768.0f) : (smp/32767.0f));
     }
 }
 

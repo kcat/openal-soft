@@ -250,6 +250,13 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_FORMAT_REAR8",                      AL_FORMAT_REAR8                     },
     { (ALchar *)"AL_FORMAT_REAR16",                     AL_FORMAT_REAR16                    },
     { (ALchar *)"AL_FORMAT_REAR32",                     AL_FORMAT_REAR32                    },
+    { (ALchar *)"AL_FORMAT_MONO_MULAW",                 AL_FORMAT_MONO_MULAW                },
+    { (ALchar *)"AL_FORMAT_STEREO_MULAW",               AL_FORMAT_STEREO_MULAW              },
+    { (ALchar *)"AL_FORMAT_QUAD_MULAW",                 AL_FORMAT_QUAD_MULAW                },
+    { (ALchar *)"AL_FORMAT_51CHN_MULAW",                AL_FORMAT_51CHN_MULAW               },
+    { (ALchar *)"AL_FORMAT_61CHN_MULAW",                AL_FORMAT_61CHN_MULAW               },
+    { (ALchar *)"AL_FORMAT_71CHN_MULAW",                AL_FORMAT_71CHN_MULAW               },
+    { (ALchar *)"AL_FORMAT_REAR_MULAW",                 AL_FORMAT_REAR_MULAW                },
 
     // Buffer attributes
     { (ALchar *)"AL_FREQUENCY",                         AL_FREQUENCY                        },

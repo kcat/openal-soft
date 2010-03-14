@@ -317,12 +317,14 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                 case AL_FORMAT_MONO8:
                 case AL_FORMAT_MONO16:
                 case AL_FORMAT_MONO_FLOAT32:
+                case AL_FORMAT_MONO_DOUBLE_EXT:
                     LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO_FLOAT32);
                     break;
 
                 case AL_FORMAT_STEREO8:
                 case AL_FORMAT_STEREO16:
                 case AL_FORMAT_STEREO_FLOAT32:
+                case AL_FORMAT_STEREO_DOUBLE_EXT:
                     LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO_FLOAT32);
                     break;
 
@@ -1117,6 +1119,11 @@ static void ConvertData(ALfloat *dst, const ALvoid *src, ALint origBytes, ALsize
         case 4:
             for(i = 0;i < len;i++)
                 dst[i] = ((ALfloat*)src)[i];
+            break;
+
+        case 8:
+            for(i = 0;i < len;i++)
+                dst[i] = ((ALdouble*)src)[i];
             break;
 
         default:

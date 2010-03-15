@@ -305,8 +305,10 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     SuspendContext(NULL);
 
     data->attr = *(ppa_stream_get_buffer_attr(stream));
-    Device->UpdateSize = data->attr.tlength/data->frame_size;
-    Device->NumUpdates = 1;
+    Device->UpdateSize = 20 * Device->Frequency / 1000;
+    Device->NumUpdates = data->attr.tlength/data->frame_size / Device->UpdateSize;
+    if(Device->NumUpdates == 0)
+        Device->NumUpdates = 1;
 
     ProcessContext(NULL);
 }//}}}

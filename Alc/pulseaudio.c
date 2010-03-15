@@ -566,7 +566,15 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
         return ALC_FALSE;
 
     if(pulse_open(device, device_name) != ALC_FALSE)
+    {
+        ALuint len = GetConfigValueInt("pulse", "buffer-length", 2048);
+        if(len != 0)
+        {
+            device->UpdateSize = len;
+            device->NumUpdates = 1;
+        }
         return ALC_TRUE;
+    }
 
     pulse_unload();
     return ALC_FALSE;
@@ -619,10 +627,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     data->attr.minreq = -1;
     data->attr.prebuf = -1;
     data->attr.fragsize = -1;
-    data->attr.tlength = GetConfigValueInt("pulse", "buffer-length", 2048);
-    if(data->attr.tlength == 0)
-        data->attr.tlength = device->UpdateSize * device->NumUpdates;
-    data->attr.tlength *= data->frame_size;
+    data->attr.tlength = device->UpdateSize * device->NumUpdates *
+                         data->frame_size;
     data->attr.maxlength = data->attr.tlength;
 
     switch(aluBytesFromFormat(device->Format))

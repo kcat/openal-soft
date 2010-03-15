@@ -1748,11 +1748,15 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
                 ALBufferList = ALSource->queue;
 
                 ALSource->queue = ALBufferList->next;
-                // Record name of buffer
-                buffers[i] = ALBufferList->buffer->buffer;
-                // Decrement buffer reference counter
                 if(ALBufferList->buffer)
+                {
+                    // Record name of buffer
+                    buffers[i] = ALBufferList->buffer->buffer;
+                    // Decrement buffer reference counter
                     ALBufferList->buffer->refcount--;
+                }
+                else
+                    buffers[i] = 0;
 
                 // Release memory for buffer list item
                 free(ALBufferList);

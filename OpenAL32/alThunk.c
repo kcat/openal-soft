@@ -70,6 +70,7 @@ ALuint alThunkAddEntry(ALvoid *ptr)
         if(!NewList)
         {
             LeaveCriticalSection(&g_ThunkLock);
+            AL_PRINT("Realloc failed to increase to %u enties!\n", g_ThunkArraySize*2);
             return 0;
         }
         memset(&NewList[g_ThunkArraySize], 0, g_ThunkArraySize*sizeof(ThunkEntry));

@@ -56,7 +56,7 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
             // Check that the requested number of sources can be generated
             if((Context->SourceCount + n) <= Device->MaxNoOfSources)
             {
-                ALsource **list = &Context->Source;
+                ALsource **list = &Context->SourceList;
                 while(*list)
                     list = &(*list)->next;
 
@@ -161,7 +161,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
                     Context->SourceCount--;
 
                     // Remove Source from list of Sources
-                    list = &Context->Source;
+                    list = &Context->SourceList;
                     while(*list && *list != ALSource)
                         list = &(*list)->next;
 
@@ -192,7 +192,7 @@ ALAPI ALboolean ALAPIENTRY alIsSource(ALuint source)
     if(!Context) return AL_FALSE;
 
     // To determine if this is a valid Source name, look through the list of generated Sources
-    Source = Context->Source;
+    Source = Context->SourceList;
     while(Source)
     {
         if(Source->source == source)
@@ -2137,10 +2137,10 @@ ALvoid ReleaseALSources(ALCcontext *Context)
 {
     ALuint j;
 
-    while(Context->Source)
+    while(Context->SourceList)
     {
-        ALsource *temp = Context->Source;
-        Context->Source = temp->next;
+        ALsource *temp = Context->SourceList;
+        Context->SourceList = temp->next;
 
         // For each buffer in the source's queue, decrement its reference counter and remove it
         while(temp->queue != NULL)

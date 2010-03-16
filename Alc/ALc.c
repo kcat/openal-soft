@@ -1291,7 +1291,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
         ALsource *source;
 
         SuspendContext(context);
-        for(slot = context->AuxiliaryEffectSlot;slot != NULL;slot = slot->next)
+        for(slot = context->EffectSlotList;slot != NULL;slot = slot->next)
         {
             if(!slot->EffectState)
                 continue;
@@ -1308,7 +1308,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
             ALEffect_Update(slot->EffectState, context, &slot->effect);
         }
 
-        for(source = context->Source;source != NULL;source = source->next)
+        for(source = context->SourceList;source != NULL;source = source->next)
         {
             ALuint s = device->NumAuxSends;
             while(s < MAX_SENDS)
@@ -1415,10 +1415,10 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
 #endif
             ReleaseALSources(context);
         }
-        if(context->AuxiliaryEffectSlotCount > 0)
+        if(context->EffectSlotCount > 0)
         {
 #ifdef _DEBUG
-            AL_PRINT("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->AuxiliaryEffectSlotCount);
+            AL_PRINT("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->EffectSlotCount);
 #endif
             ReleaseALAuxiliaryEffectSlots(context);
         }

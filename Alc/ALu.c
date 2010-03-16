@@ -900,7 +900,7 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALfloat Pitch;
     ALenum State;
 
-    if(!(ALSource=ALContext->Source))
+    if(!(ALSource=ALContext->SourceList))
         return;
 
     DeviceFreq = ALContext->Device->Frequency;
@@ -1357,7 +1357,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             MixSomeSources(ALContext, DryBuffer, SamplesToDo);
 
             /* effect slot processing */
-            ALEffectSlot = ALContext->AuxiliaryEffectSlot;
+            ALEffectSlot = ALContext->EffectSlotList;
             while(ALEffectSlot)
             {
                 if(ALEffectSlot->EffectState)
@@ -1491,7 +1491,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
 
         SuspendContext(device->Contexts[i]);
 
-        source = device->Contexts[i]->Source;
+        source = device->Contexts[i]->SourceList;
         while(source)
         {
             if(source->state == AL_PLAYING)

@@ -250,20 +250,20 @@ struct ALCdevice_struct
     ALuint       NumAuxSends;
 
     // Linked List of Buffers for this device
-    struct ALbuffer *Buffers;
-    ALuint          BufferCount;
+    struct ALbuffer *BufferList;
+    ALuint           BufferCount;
 
     // Linked List of Effects for this device
     struct ALeffect *EffectList;
-    ALuint          EffectCount;
+    ALuint           EffectCount;
 
     // Linked List of Filters for this device
     struct ALfilter *FilterList;
-    ALuint          FilterCount;
+    ALuint           FilterCount;
 
     // Linked List of Databuffers for this device
-    struct ALdatabuffer *Databuffers;
-    ALuint              DatabufferCount;
+    struct ALdatabuffer *DatabufferList;
+    ALuint               DatabufferCount;
 
     // Stereo-to-binaural filter
     struct bs2b *Bs2b;
@@ -302,11 +302,11 @@ struct ALCcontext_struct
 {
     ALlistener  Listener;
 
-    struct ALsource *Source;
+    struct ALsource *SourceList;
     ALuint           SourceCount;
 
-    struct ALeffectslot *AuxiliaryEffectSlot;
-    ALuint               AuxiliaryEffectSlotCount;
+    struct ALeffectslot *EffectSlotList;
+    ALuint               EffectSlotCount;
 
     struct ALdatabuffer *SampleSource;
     struct ALdatabuffer *SampleSink;

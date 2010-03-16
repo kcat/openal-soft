@@ -63,7 +63,7 @@ ALAPI ALvoid ALAPIENTRY alEnable(ALenum capability)
 
     if(updateSources)
     {
-        ALsource *source = Context->Source;
+        ALsource *source = Context->SourceList;
         while(source)
         {
             source->NeedsUpdate = AL_TRUE;
@@ -96,7 +96,7 @@ ALAPI ALvoid ALAPIENTRY alDisable(ALenum capability)
 
     if(updateSources)
     {
-        ALsource *source = Context->Source;
+        ALsource *source = Context->SourceList;
         while(source)
         {
             source->NeedsUpdate = AL_TRUE;
@@ -552,7 +552,7 @@ ALAPI ALvoid ALAPIENTRY alDopplerFactor(ALfloat value)
     // relative sources are affected
     if(updateSources)
     {
-        ALsource *source = Context->Source;
+        ALsource *source = Context->SourceList;
         while(source)
         {
             source->NeedsUpdate = AL_TRUE;
@@ -581,7 +581,7 @@ ALAPI ALvoid ALAPIENTRY alDopplerVelocity(ALfloat value)
 
     if(updateSources)
     {
-        ALsource *source = Context->Source;
+        ALsource *source = Context->SourceList;
         while(source)
         {
             source->NeedsUpdate = AL_TRUE;
@@ -610,7 +610,7 @@ ALAPI ALvoid ALAPIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
 
     if(updateSources)
     {
-        ALsource *source = pContext->Source;
+        ALsource *source = pContext->SourceList;
         while(source)
         {
             source->NeedsUpdate = AL_TRUE;
@@ -649,7 +649,7 @@ ALAPI ALvoid ALAPIENTRY alDistanceModel(ALenum value)
 
     if(updateSources)
     {
-        ALsource *source = Context->Source;
+        ALsource *source = Context->SourceList;
         while(source)
         {
             source->NeedsUpdate = AL_TRUE;

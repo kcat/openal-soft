@@ -65,7 +65,7 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
     // relative sources are affected
     if(updateAll)
     {
-        ALsource *source = pContext->Source;
+        ALsource *source = pContext->SourceList;
         while(source)
         {
             source->NeedsUpdate = AL_TRUE;
@@ -108,7 +108,7 @@ ALAPI ALvoid ALAPIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat fl
 
     if(updateWorld)
     {
-        ALsource *source = pContext->Source;
+        ALsource *source = pContext->SourceList;
         while(source)
         {
             if(!source->bHeadRelative)
@@ -164,7 +164,7 @@ ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
 
     if(updateWorld)
     {
-        ALsource *source = pContext->Source;
+        ALsource *source = pContext->SourceList;
         while(source)
         {
             if(!source->bHeadRelative)

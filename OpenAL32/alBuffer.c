@@ -118,7 +118,7 @@ ALAPI ALvoid ALAPIENTRY alGenBuffers(ALsizei n,ALuint *puiBuffers)
         // Check the pointer is valid (and points to enough memory to store Buffer Names)
         if (!IsBadWritePtr((void*)puiBuffers, n * sizeof(ALuint)))
         {
-            ALbuffer **list = &device->Buffers;
+            ALbuffer **list = &device->BufferList;
             while(*list)
                 list = &(*list)->next;
 
@@ -205,7 +205,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
             {
                 if (puiBuffers[i] && alIsBuffer(puiBuffers[i]))
                 {
-                    ALbuffer **list = &device->Buffers;
+                    ALbuffer **list = &device->BufferList;
 
                     ALBuf=((ALbuffer *)ALTHUNK_LOOKUPENTRY(puiBuffers[i]));
                     while(*list && *list != ALBuf)
@@ -254,7 +254,7 @@ ALAPI ALboolean ALAPIENTRY alIsBuffer(ALuint uiBuffer)
         TgtALBuf = (ALbuffer *)ALTHUNK_LOOKUPENTRY(uiBuffer);
 
         // Check through list of generated buffers for uiBuffer
-        ALBuf = device->Buffers;
+        ALBuf = device->BufferList;
         while (ALBuf)
         {
             if (ALBuf == TgtALBuf)
@@ -1263,7 +1263,7 @@ ALvoid ReleaseALBuffers(ALCdevice *device)
     ALbuffer *ALBuffer;
     ALbuffer *ALBufferTemp;
 
-    ALBuffer = device->Buffers;
+    ALBuffer = device->BufferList;
     while(ALBuffer)
     {
         // Release sample data
@@ -1275,6 +1275,6 @@ ALvoid ReleaseALBuffers(ALCdevice *device)
         memset(ALBufferTemp, 0, sizeof(ALbuffer));
         free(ALBufferTemp);
     }
-    device->Buffers = NULL;
+    device->BufferList = NULL;
     device->BufferCount = 0;
 }

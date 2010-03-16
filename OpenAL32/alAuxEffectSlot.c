@@ -47,12 +47,12 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
     {
         ALCdevice *Device = Context->Device;
 
-        if(Context->AuxiliaryEffectSlotCount+n <= Device->AuxiliaryEffectSlotMax)
+        if(Context->EffectSlotCount+n <= Device->AuxiliaryEffectSlotMax)
         {
             // Check that enough memory has been allocted in the 'effectslots' array for n Effect Slots
             if (!IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))
             {
-                ALeffectslot **list = &Context->AuxiliaryEffectSlot;
+                ALeffectslot **list = &Context->EffectSlotList;
                 while(*list)
                     list = &(*list)->next;
 
@@ -78,7 +78,7 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                     effectslots[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
                     (*list)->effectslot = effectslots[i];
 
-                    Context->AuxiliaryEffectSlotCount++;
+                    Context->EffectSlotCount++;
                     i++;
 
                     list = &(*list)->next;
@@ -135,7 +135,7 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                     ALAuxiliaryEffectSlot = ((ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslots[i]));
 
                     // Remove Source from list of Sources
-                    list = &Context->AuxiliaryEffectSlot;
+                    list = &Context->EffectSlotList;
                     while(*list && *list != ALAuxiliaryEffectSlot)
                          list = &(*list)->next;
 
@@ -149,7 +149,7 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                     memset(ALAuxiliaryEffectSlot, 0, sizeof(ALeffectslot));
                     free(ALAuxiliaryEffectSlot);
 
-                    Context->AuxiliaryEffectSlotCount--;
+                    Context->EffectSlotCount--;
                 }
             }
         }
@@ -168,7 +168,7 @@ ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    list = &Context->AuxiliaryEffectSlot;
+    list = &Context->EffectSlotList;
     while(*list && (*list)->effectslot != effectslot)
         list = &(*list)->next;
 
@@ -224,7 +224,7 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint
     // sending parameters
     if(updateSources)
     {
-        ALsource *source = Context->Source;
+        ALsource *source = Context->SourceList;
         while(source)
         {
             ALuint i;
@@ -517,10 +517,10 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
 
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
 {
-    while(Context->AuxiliaryEffectSlot)
+    while(Context->EffectSlotList)
     {
-        ALeffectslot *temp = Context->AuxiliaryEffectSlot;
-        Context->AuxiliaryEffectSlot = Context->AuxiliaryEffectSlot->next;
+        ALeffectslot *temp = Context->EffectSlotList;
+        Context->EffectSlotList = temp->next;
 
         // Release effectslot structure
         if(temp->EffectState)
@@ -530,5 +530,5 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
         memset(temp, 0, sizeof(ALeffectslot));
         free(temp);
     }
-    Context->AuxiliaryEffectSlotCount = 0;
+    Context->EffectSlotCount = 0;
 }

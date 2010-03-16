@@ -54,7 +54,7 @@ ALvoid ALAPIENTRY alGenDatabuffersEXT(ALsizei n,ALuint *puiBuffers)
          * Databuffer Names) */
         if(!IsBadWritePtr((void*)puiBuffers, n * sizeof(ALuint)))
         {
-            ALdatabuffer **list = &device->Databuffers;
+            ALdatabuffer **list = &device->DatabufferList;
             while(*list)
                 list = &(*list)->next;
 
@@ -140,7 +140,7 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
             {
                 if(puiBuffers[i] && alIsDatabufferEXT(puiBuffers[i]))
                 {
-                    ALdatabuffer **list = &device->Databuffers;
+                    ALdatabuffer **list = &device->DatabufferList;
 
                     ALBuf = (ALdatabuffer*)ALTHUNK_LOOKUPENTRY(puiBuffers[i]);
                     while(*list && *list != ALBuf)
@@ -186,7 +186,7 @@ ALboolean ALAPIENTRY alIsDatabufferEXT(ALuint uiBuffer)
     if(!Context) return AL_FALSE;
 
     /* Check through list of generated databuffers for uiBuffer */
-    ALBuf = Context->Device->Databuffers;
+    ALBuf = Context->Device->DatabufferList;
     while(ALBuf && ALBuf->databuffer != uiBuffer)
         ALBuf = ALBuf->next;
 
@@ -619,7 +619,7 @@ ALvoid ReleaseALDatabuffers(ALCdevice *device)
     ALdatabuffer *ALBuffer;
     ALdatabuffer *ALBufferTemp;
 
-    ALBuffer = device->Databuffers;
+    ALBuffer = device->DatabufferList;
     while(ALBuffer)
     {
         // Release sample data
@@ -631,6 +631,6 @@ ALvoid ReleaseALDatabuffers(ALCdevice *device)
         memset(ALBufferTemp, 0, sizeof(ALdatabuffer));
         free(ALBufferTemp);
     }
-    device->Databuffers = NULL;
+    device->DatabufferList = NULL;
     device->DatabufferCount = 0;
 }

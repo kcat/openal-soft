@@ -7,8 +7,6 @@
 extern "C" {
 #endif
 
-#define AL_METERS_PER_UNIT                                 0x20004
-
 typedef struct ALlistener_struct
 {
     ALfloat Position[3];

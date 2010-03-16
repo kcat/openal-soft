@@ -7,15 +7,6 @@
 #include "alu.h"
 #include "AL/al.h"
 
-#define AL_DIRECT_FILTER                                   0x20005
-#define AL_AUXILIARY_SEND_FILTER                           0x20006
-#define AL_AIR_ABSORPTION_FACTOR                           0x20007
-#define AL_ROOM_ROLLOFF_FACTOR                             0x20008
-#define AL_CONE_OUTER_GAINHF                               0x20009
-#define AL_DIRECT_FILTER_GAINHF_AUTO                       0x2000A
-#define AL_AUXILIARY_SEND_FILTER_GAIN_AUTO                 0x2000B
-#define AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO               0x2000C
-
 #ifdef __cplusplus
 extern "C" {
 #endif

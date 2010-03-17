@@ -81,10 +81,7 @@ ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
         temp = realloc(state->SampleBuffer, maxlen * sizeof(ALfloat));
         if(!temp)
-        {
-            alSetError(AL_OUT_OF_MEMORY);
             return AL_FALSE;
-        }
         state->SampleBuffer = temp;
         state->BufferLength = maxlen;
     }
@@ -165,10 +162,7 @@ ALeffectState *EchoCreate(void)
 
     state = malloc(sizeof(*state));
     if(!state)
-    {
-        alSetError(AL_OUT_OF_MEMORY);
         return NULL;
-    }
 
     state->state.Destroy = EchoDestroy;
     state->state.DeviceUpdate = EchoDeviceUpdate;

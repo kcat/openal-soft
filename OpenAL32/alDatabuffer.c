@@ -65,7 +65,7 @@ ALvoid ALAPIENTRY alGenDatabuffersEXT(ALsizei n,ALuint *puiBuffers)
                 if(!(*list))
                 {
                     alDeleteDatabuffersEXT(i, puiBuffers);
-                    alSetError(AL_OUT_OF_MEMORY);
+                    alSetError(Context, AL_OUT_OF_MEMORY);
                     break;
                 }
 
@@ -79,7 +79,7 @@ ALvoid ALAPIENTRY alGenDatabuffersEXT(ALsizei n,ALuint *puiBuffers)
             }
         }
         else
-            alSetError(AL_INVALID_VALUE);
+            alSetError(Context, AL_INVALID_VALUE);
     }
 
     ProcessContext(Context);
@@ -119,7 +119,7 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
                     if(ALBuf->state != UNMAPPED)
                     {
                         /* Databuffer still in use, cannot be deleted */
-                        alSetError(AL_INVALID_OPERATION);
+                        alSetError(Context, AL_INVALID_OPERATION);
                         bFailed = AL_TRUE;
                     }
                 }
@@ -127,7 +127,7 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
             else
             {
                 /* Invalid Databuffer */
-                alSetError(AL_INVALID_NAME);
+                alSetError(Context, AL_INVALID_NAME);
                 bFailed = AL_TRUE;
             }
         }
@@ -167,7 +167,7 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
     ProcessContext(Context);
 }
@@ -231,16 +231,16 @@ ALvoid ALAPIENTRY alDatabufferDataEXT(ALuint buffer,const ALvoid *data,ALsizei s
                         memcpy(ALBuf->data, data, size);
                 }
                 else
-                    alSetError(AL_OUT_OF_MEMORY);
+                    alSetError(Context, AL_OUT_OF_MEMORY);
             }
             else
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
         }
         else
-            alSetError(AL_INVALID_OPERATION);
+            alSetError(Context, AL_INVALID_OPERATION);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -262,13 +262,13 @@ ALvoid ALAPIENTRY alDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsizei 
             if(pBuffer->state == UNMAPPED)
                 memcpy(pBuffer->data+start, data, length);
             else
-                alSetError(AL_INVALID_OPERATION);
+                alSetError(pContext, AL_INVALID_OPERATION);
         }
         else
-            alSetError(AL_INVALID_VALUE);
+            alSetError(pContext, AL_INVALID_VALUE);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }
@@ -290,13 +290,13 @@ ALvoid ALAPIENTRY alGetDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsiz
             if(pBuffer->state == UNMAPPED)
                 memcpy(data, pBuffer->data+start, length);
             else
-                alSetError(AL_INVALID_OPERATION);
+                alSetError(pContext, AL_INVALID_OPERATION);
         }
         else
-            alSetError(AL_INVALID_VALUE);
+            alSetError(pContext, AL_INVALID_VALUE);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }
@@ -316,12 +316,12 @@ ALvoid ALAPIENTRY alDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat flValue
         switch(eParam)
         {
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(pContext, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }
@@ -340,12 +340,12 @@ ALvoid ALAPIENTRY alDatabufferfvEXT(ALuint buffer, ALenum eParam, const ALfloat*
         switch(eParam)
         {
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(pContext, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }
@@ -365,12 +365,12 @@ ALvoid ALAPIENTRY alDatabufferiEXT(ALuint buffer, ALenum eParam, ALint lValue)
         switch(eParam)
         {
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(pContext, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }
@@ -389,12 +389,12 @@ ALvoid ALAPIENTRY alDatabufferivEXT(ALuint buffer, ALenum eParam, const ALint* p
         switch(eParam)
         {
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(pContext, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }
@@ -414,15 +414,15 @@ ALvoid ALAPIENTRY alGetDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat *pfl
             switch(eParam)
             {
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -441,15 +441,15 @@ ALvoid ALAPIENTRY alGetDatabufferfvEXT(ALuint buffer, ALenum eParam, ALfloat* pf
             switch(eParam)
             {
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -475,15 +475,15 @@ ALvoid ALAPIENTRY alGetDatabufferiEXT(ALuint buffer, ALenum eParam, ALint *plVal
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -506,15 +506,15 @@ ALvoid ALAPIENTRY alGetDatabufferivEXT(ALuint buffer, ALenum eParam, ALint* plVa
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -536,10 +536,10 @@ ALvoid ALAPIENTRY alSelectDatabufferEXT(ALenum target, ALuint uiBuffer)
         else if(target == AL_SAMPLE_SINK_EXT)
             pContext->SampleSink = pBuffer;
         else
-            alSetError(AL_INVALID_VALUE);
+            alSetError(pContext, AL_INVALID_VALUE);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }
@@ -569,16 +569,16 @@ ALvoid* ALAPIENTRY alMapDatabufferEXT(ALuint uiBuffer, ALuint start, ALsizei len
                     pBuffer->state = MAPPED;
                 }
                 else
-                    alSetError(AL_INVALID_OPERATION);
+                    alSetError(pContext, AL_INVALID_OPERATION);
             }
             else
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
         }
         else
-            alSetError(AL_INVALID_VALUE);
+            alSetError(pContext, AL_INVALID_VALUE);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 
@@ -600,10 +600,10 @@ ALvoid ALAPIENTRY alUnmapDatabufferEXT(ALuint uiBuffer)
         if(pBuffer->state == MAPPED)
             pBuffer->state = UNMAPPED;
         else
-            alSetError(AL_INVALID_OPERATION);
+            alSetError(pContext, AL_INVALID_OPERATION);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }

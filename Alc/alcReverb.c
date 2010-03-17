@@ -985,10 +985,7 @@ static ALboolean VerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
     // Allocate the delay lines.
     if(!AllocLines(AL_FALSE, frequency, State))
-    {
-        alSetError(AL_OUT_OF_MEMORY);
         return AL_FALSE;
-    }
 
     // The early reflection and late all-pass filter line lengths are static,
     // so their offsets only need to be calculated once.
@@ -1013,10 +1010,7 @@ static ALboolean EAXVerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
     // Allocate the delay lines.
     if(!AllocLines(AL_TRUE, frequency, State))
-    {
-        alSetError(AL_OUT_OF_MEMORY);
         return AL_FALSE;
-    }
 
     // Calculate the modulation filter coefficient.  Notice that the exponent
     // is calculated given the current sample rate.  This ensures that the
@@ -1225,10 +1219,7 @@ ALeffectState *VerbCreate(void)
 
     State = malloc(sizeof(ALverbState));
     if(!State)
-    {
-        alSetError(AL_OUT_OF_MEMORY);
         return NULL;
-    }
 
     State->state.Destroy = VerbDestroy;
     State->state.DeviceUpdate = VerbDeviceUpdate;

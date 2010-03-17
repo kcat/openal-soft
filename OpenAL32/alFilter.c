@@ -60,7 +60,7 @@ ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
                 {
                     // We must have run out or memory
                     alDeleteFilters(i, filters);
-                    alSetError(AL_OUT_OF_MEMORY);
+                    alSetError(Context, AL_OUT_OF_MEMORY);
                     break;
                 }
 
@@ -97,7 +97,7 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
         {
             if (!alIsFilter(filters[i]))
             {
-                alSetError(AL_INVALID_NAME);
+                alSetError(Context, AL_INVALID_NAME);
                 break;
             }
         }
@@ -132,7 +132,7 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
     ProcessContext(Context);
 }
@@ -172,16 +172,16 @@ ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
                iValue == AL_FILTER_LOWPASS)
                 InitFilterParams(ALFilter, iValue);
             else
-                alSetError(AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE);
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -202,12 +202,12 @@ ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValues)
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -232,29 +232,29 @@ ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue)
                 if(flValue >= 0.0f && flValue <= 1.0f)
                     ALFilter->Gain = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_LOWPASS_GAINHF:
                 if(flValue >= 0.0f && flValue <= 1.0f)
                     ALFilter->GainHF = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -276,7 +276,7 @@ ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -299,12 +299,12 @@ ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piValue)
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -325,12 +325,12 @@ ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues)
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -360,18 +360,18 @@ ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pflValue)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -393,7 +393,7 @@ ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }

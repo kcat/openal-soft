@@ -65,7 +65,7 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                         // We must have run out or memory
                         free(*list); *list = NULL;
                         alDeleteAuxiliaryEffectSlots(i, effectslots);
-                        alSetError(AL_OUT_OF_MEMORY);
+                        alSetError(Context, AL_OUT_OF_MEMORY);
                         break;
                     }
 
@@ -86,7 +86,7 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
             }
         }
         else
-            alSetError(AL_INVALID_OPERATION);
+            alSetError(Context, AL_INVALID_OPERATION);
     }
 
     ProcessContext(Context);
@@ -108,7 +108,7 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
         {
             if (!alIsAuxiliaryEffectSlot(effectslots[i]))
             {
-                alSetError(AL_INVALID_NAME);
+                alSetError(Context, AL_INVALID_NAME);
                 break;
             }
             else
@@ -116,7 +116,7 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                 ALAuxiliaryEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslots[i]);
                 if(ALAuxiliaryEffectSlot->refcount > 0)
                 {
-                    alSetError(AL_INVALID_NAME);
+                    alSetError(Context, AL_INVALID_NAME);
                     break;
                 }
             }
@@ -155,7 +155,7 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
     ProcessContext(Context);
 }
@@ -199,7 +199,7 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint
                 updateSources = AL_TRUE;
             }
             else
-                alSetError(AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE);
             break;
 
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
@@ -209,16 +209,16 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint
                 updateSources = AL_TRUE;
             }
             else
-                alSetError(AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE);
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     // Force updating the sources that use this slot, since it affects the
     // sending parameters
@@ -260,12 +260,12 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALin
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -287,16 +287,16 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALflo
             if(flValue >= 0.0f && flValue <= 1.0f)
                 ALEffectSlot->Gain = flValue;
             else
-                alSetError(AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE);
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -317,12 +317,12 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfl
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -349,12 +349,12 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, AL
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -376,12 +376,12 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, A
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -404,12 +404,12 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, AL
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -430,12 +430,12 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, A
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -469,10 +469,7 @@ ALeffectState *NoneCreate(void)
 
     state = calloc(1, sizeof(*state));
     if(!state)
-    {
-        alSetError(AL_OUT_OF_MEMORY);
         return NULL;
-    }
 
     state->Destroy = NoneDestroy;
     state->DeviceUpdate = NoneDeviceUpdate;
@@ -501,6 +498,7 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
         {
             if(NewState)
                 ALEffect_Destroy(NewState);
+            alSetError(Context, AL_OUT_OF_MEMORY);
             return;
         }
         if(ALEffectSlot->EffectState)

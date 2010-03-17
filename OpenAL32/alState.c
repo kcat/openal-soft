@@ -57,7 +57,7 @@ ALAPI ALvoid ALAPIENTRY alEnable(ALenum capability)
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
@@ -90,7 +90,7 @@ ALAPI ALvoid ALAPIENTRY alDisable(ALenum capability)
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
@@ -122,7 +122,7 @@ ALAPI ALboolean ALAPIENTRY alIsEnabled(ALenum capability)
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
@@ -162,7 +162,7 @@ ALAPI ALboolean ALAPIENTRY alGetBoolean(ALenum pname)
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
@@ -198,7 +198,7 @@ ALAPI ALdouble ALAPIENTRY alGetDouble(ALenum pname)
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
@@ -234,7 +234,7 @@ ALAPI ALfloat ALAPIENTRY alGetFloat(ALenum pname)
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
@@ -284,7 +284,7 @@ ALAPI ALint ALAPIENTRY alGetInteger(ALenum pname)
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
@@ -321,14 +321,14 @@ ALAPI ALvoid ALAPIENTRY alGetBooleanv(ALenum pname,ALboolean *data)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
     {
         // data is a NULL pointer
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
     }
 
     ProcessContext(Context);
@@ -362,14 +362,14 @@ ALAPI ALvoid ALAPIENTRY alGetDoublev(ALenum pname,ALdouble *data)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
     {
         // data is a NULL pointer
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
     }
 
     ProcessContext(Context);
@@ -403,14 +403,14 @@ ALAPI ALvoid ALAPIENTRY alGetFloatv(ALenum pname,ALfloat *data)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
     {
         // data is a NULL pointer
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
     }
 
     ProcessContext(Context);
@@ -458,14 +458,14 @@ ALAPI ALvoid ALAPIENTRY alGetIntegerv(ALenum pname,ALint *data)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
     {
         // data is a NULL pointer
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
     }
 
     ProcessContext(Context);
@@ -523,7 +523,7 @@ ALAPI const ALchar* ALAPIENTRY alGetString(ALenum pname)
 
         default:
             value=NULL;
-            alSetError(AL_INVALID_ENUM);
+            alSetError(pContext, AL_INVALID_ENUM);
             break;
     }
 
@@ -546,7 +546,7 @@ ALAPI ALvoid ALAPIENTRY alDopplerFactor(ALfloat value)
         updateSources = AL_TRUE;
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
     // Force updating the sources for these parameters, since even head-
     // relative sources are affected
@@ -577,7 +577,7 @@ ALAPI ALvoid ALAPIENTRY alDopplerVelocity(ALfloat value)
         updateSources = AL_TRUE;
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
     if(updateSources)
     {
@@ -606,7 +606,7 @@ ALAPI ALvoid ALAPIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
         updateSources = AL_TRUE;
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     if(updateSources)
     {
@@ -643,7 +643,7 @@ ALAPI ALvoid ALAPIENTRY alDistanceModel(ALenum value)
             break;
 
         default:
-            alSetError(AL_INVALID_VALUE);
+            alSetError(Context, AL_INVALID_VALUE);
             break;
     }
 

@@ -2,12 +2,13 @@
 #define _AL_ERROR_H_
 
 #include "AL/al.h"
+#include "AL/alc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-ALvoid alSetError(ALenum errorCode);
+ALvoid alSetError(ALCcontext *Context, ALenum errorCode);
 
 #ifdef __cplusplus
 }

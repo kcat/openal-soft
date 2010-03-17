@@ -64,7 +64,7 @@ ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 {
                     // We must have run out or memory
                     alDeleteEffects(i, effects);
-                    alSetError(AL_OUT_OF_MEMORY);
+                    alSetError(Context, AL_OUT_OF_MEMORY);
                     break;
                 }
 
@@ -101,7 +101,7 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
         {
             if (!alIsEffect(effects[i]))
             {
-                alSetError(AL_INVALID_NAME);
+                alSetError(Context, AL_INVALID_NAME);
                 break;
             }
         }
@@ -136,7 +136,7 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
     ProcessContext(Context);
 }
@@ -179,7 +179,7 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
             if(isOk)
                 InitEffectParams(ALEffect, iValue);
             else
-                alSetError(AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE);
         }
         else if(ALEffect->type == AL_EFFECT_EAXREVERB)
         {
@@ -190,11 +190,11 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
                    iValue <= AL_EAXREVERB_MAX_DECAY_HFLIMIT)
                     ALEffect->Reverb.DecayHFLimit = iValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -207,11 +207,11 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
                    iValue <= AL_REVERB_MAX_DECAY_HFLIMIT)
                     ALEffect->Reverb.DecayHFLimit = iValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -220,15 +220,15 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
             switch(param)
             {
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -257,7 +257,7 @@ ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -270,7 +270,7 @@ ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -279,15 +279,15 @@ ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
             switch(param)
             {
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -312,7 +312,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_DENSITY)
                     ALEffect->Reverb.Density = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_DIFFUSION:
@@ -320,7 +320,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_DIFFUSION)
                     ALEffect->Reverb.Diffusion = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_GAIN:
@@ -328,7 +328,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_GAIN)
                     ALEffect->Reverb.Gain = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_GAINHF:
@@ -336,7 +336,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_GAIN)
                     ALEffect->Reverb.GainHF = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_GAINLF:
@@ -344,7 +344,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_GAINLF)
                     ALEffect->Reverb.GainLF = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_DECAY_TIME:
@@ -352,7 +352,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_DECAY_TIME)
                     ALEffect->Reverb.DecayTime = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_DECAY_HFRATIO:
@@ -360,7 +360,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_DECAY_HFRATIO)
                     ALEffect->Reverb.DecayHFRatio = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_DECAY_LFRATIO:
@@ -368,7 +368,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_DECAY_LFRATIO)
                     ALEffect->Reverb.DecayLFRatio = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_REFLECTIONS_GAIN:
@@ -376,7 +376,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_REFLECTIONS_GAIN)
                     ALEffect->Reverb.ReflectionsGain = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_REFLECTIONS_DELAY:
@@ -384,7 +384,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_REFLECTIONS_DELAY)
                     ALEffect->Reverb.ReflectionsDelay = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_LATE_REVERB_GAIN:
@@ -392,7 +392,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_LATE_REVERB_GAIN)
                     ALEffect->Reverb.LateReverbGain = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_LATE_REVERB_DELAY:
@@ -400,7 +400,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_LATE_REVERB_DELAY)
                     ALEffect->Reverb.LateReverbDelay = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_AIR_ABSORPTION_GAINHF:
@@ -408,7 +408,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF)
                     ALEffect->Reverb.AirAbsorptionGainHF = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_ECHO_TIME:
@@ -416,7 +416,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_ECHO_TIME)
                     ALEffect->Reverb.EchoTime = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_ECHO_DEPTH:
@@ -424,7 +424,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_ECHO_DEPTH)
                     ALEffect->Reverb.EchoDepth = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_MODULATION_TIME:
@@ -432,7 +432,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_MODULATION_TIME)
                     ALEffect->Reverb.ModulationTime = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_MODULATION_DEPTH:
@@ -440,7 +440,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_MODULATION_DEPTH)
                     ALEffect->Reverb.ModulationDepth = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_HFREFERENCE:
@@ -448,7 +448,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_HFREFERENCE)
                     ALEffect->Reverb.HFReference = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_LFREFERENCE:
@@ -456,18 +456,18 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_EAXREVERB_MAX_LFREFERENCE)
                     ALEffect->Reverb.LFReference = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_EAXREVERB_ROOM_ROLLOFF_FACTOR:
                 if(flValue >= 0.0f && flValue <= 10.0f)
                     ALEffect->Reverb.RoomRolloffFactor = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -480,7 +480,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_DENSITY)
                     ALEffect->Reverb.Density = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_DIFFUSION:
@@ -488,7 +488,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_DIFFUSION)
                     ALEffect->Reverb.Diffusion = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_GAIN:
@@ -496,7 +496,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_GAIN)
                     ALEffect->Reverb.Gain = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_GAINHF:
@@ -504,7 +504,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_GAINHF)
                     ALEffect->Reverb.GainHF = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_DECAY_TIME:
@@ -512,7 +512,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_DECAY_TIME)
                     ALEffect->Reverb.DecayTime = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_DECAY_HFRATIO:
@@ -520,7 +520,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_DECAY_HFRATIO)
                     ALEffect->Reverb.DecayHFRatio = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_REFLECTIONS_GAIN:
@@ -528,7 +528,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_REFLECTIONS_GAIN)
                     ALEffect->Reverb.ReflectionsGain = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_REFLECTIONS_DELAY:
@@ -536,7 +536,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_REFLECTIONS_DELAY)
                     ALEffect->Reverb.ReflectionsDelay = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_LATE_REVERB_GAIN:
@@ -544,7 +544,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_LATE_REVERB_GAIN)
                     ALEffect->Reverb.LateReverbGain = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_LATE_REVERB_DELAY:
@@ -552,7 +552,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_LATE_REVERB_DELAY)
                     ALEffect->Reverb.LateReverbDelay = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_AIR_ABSORPTION_GAINHF:
@@ -560,7 +560,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_AIR_ABSORPTION_GAINHF)
                     ALEffect->Reverb.AirAbsorptionGainHF = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_REVERB_ROOM_ROLLOFF_FACTOR:
@@ -568,11 +568,11 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                    flValue <= AL_REVERB_MAX_ROOM_ROLLOFF_FACTOR)
                     ALEffect->Reverb.RoomRolloffFactor = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -584,47 +584,47 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
                 if(flValue >= AL_ECHO_MIN_DELAY && flValue <= AL_ECHO_MAX_DELAY)
                     ALEffect->Echo.Delay = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_ECHO_LRDELAY:
                 if(flValue >= AL_ECHO_MIN_LRDELAY && flValue <= AL_ECHO_MAX_LRDELAY)
                     ALEffect->Echo.LRDelay = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_ECHO_DAMPING:
                 if(flValue >= AL_ECHO_MIN_DAMPING && flValue <= AL_ECHO_MAX_DAMPING)
                     ALEffect->Echo.Damping = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_ECHO_FEEDBACK:
                 if(flValue >= AL_ECHO_MIN_FEEDBACK && flValue <= AL_ECHO_MAX_FEEDBACK)
                     ALEffect->Echo.Feedback = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_ECHO_SPREAD:
                 if(flValue >= AL_ECHO_MIN_SPREAD && flValue <= AL_ECHO_MAX_SPREAD)
                     ALEffect->Echo.Spread = flValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -675,7 +675,7 @@ ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
                     ALEffect->Reverb.ReflectionsPan[2] = pflValues[2];
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
             case AL_EAXREVERB_LATE_REVERB_PAN:
                 if(!isnan(pflValues[0]) && !isnan(pflValues[1]) && !isnan(pflValues[2]))
@@ -685,11 +685,11 @@ ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
                     ALEffect->Reverb.LateReverbPan[2] = pflValues[2];
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -713,7 +713,7 @@ ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -730,15 +730,15 @@ ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -767,7 +767,7 @@ ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -780,7 +780,7 @@ ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -789,15 +789,15 @@ ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
             switch(param)
             {
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -826,7 +826,7 @@ ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -839,7 +839,7 @@ ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -848,15 +848,15 @@ ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
             switch(param)
             {
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -957,7 +957,7 @@ ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -1014,7 +1014,7 @@ ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -1043,15 +1043,15 @@ ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }
@@ -1106,7 +1106,7 @@ ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -1130,7 +1130,7 @@ ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
@@ -1147,15 +1147,15 @@ ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
             }
         }
         else
-            alSetError(AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
 
     ProcessContext(Context);
 }

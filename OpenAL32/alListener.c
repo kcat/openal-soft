@@ -43,7 +43,7 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
                 updateAll = AL_TRUE;
             }
             else
-                alSetError(AL_INVALID_VALUE);
+                alSetError(pContext, AL_INVALID_VALUE);
             break;
 
         case AL_METERS_PER_UNIT:
@@ -53,11 +53,11 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
                 updateAll = AL_TRUE;
             }
             else
-                alSetError(AL_INVALID_VALUE);
+                alSetError(pContext, AL_INVALID_VALUE);
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(pContext, AL_INVALID_ENUM);
             break;
     }
 
@@ -102,7 +102,7 @@ ALAPI ALvoid ALAPIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat fl
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(pContext, AL_INVALID_ENUM);
             break;
     }
 
@@ -155,12 +155,12 @@ ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     if(updateWorld)
     {
@@ -189,7 +189,7 @@ ALAPI ALvoid ALAPIENTRY alListeneri(ALenum eParam, ALint lValue)
     switch(eParam)
     {
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(pContext, AL_INVALID_ENUM);
             break;
     }
 
@@ -212,7 +212,7 @@ ALAPI void ALAPIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2, 
             break;
 
         default:
-            alSetError(AL_INVALID_ENUM);
+            alSetError(pContext, AL_INVALID_ENUM);
             break;
     }
 
@@ -251,12 +251,12 @@ ALAPI void ALAPIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -282,12 +282,12 @@ ALAPI ALvoid ALAPIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -317,12 +317,12 @@ ALAPI ALvoid ALAPIENTRY alGetListener3f(ALenum eParam, ALfloat *pflValue1, ALflo
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -370,12 +370,12 @@ ALAPI ALvoid ALAPIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -393,12 +393,12 @@ ALAPI ALvoid ALAPIENTRY alGetListeneri(ALenum eParam, ALint *plValue)
         switch(eParam)
         {
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -428,12 +428,12 @@ ALAPI void ALAPIENTRY alGetListener3i(ALenum eParam, ALint *plValue1, ALint *plV
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -473,12 +473,12 @@ ALAPI void ALAPIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }

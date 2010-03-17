@@ -67,7 +67,7 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
                     if(!(*list))
                     {
                         alDeleteSources(i, sources);
-                        alSetError(AL_OUT_OF_MEMORY);
+                        alSetError(Context, AL_OUT_OF_MEMORY);
                         break;
                     }
 
@@ -84,13 +84,13 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
             else
             {
                 // Not enough resources to create the Sources
-                alSetError(AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE);
             }
         }
         else
         {
             // Bad pointer
-            alSetError(AL_INVALID_VALUE);
+            alSetError(Context, AL_INVALID_VALUE);
         }
     }
 
@@ -120,7 +120,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         {
             if (!alIsSource(sources[i]))
             {
-                alSetError(AL_INVALID_NAME);
+                alSetError(Context, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
                 break;
             }
@@ -176,7 +176,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         }
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
     ProcessContext(Context);
 }
@@ -233,7 +233,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_INNER_ANGLE:
@@ -243,7 +243,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_ANGLE:
@@ -253,7 +253,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_GAIN:
@@ -263,7 +263,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_MAX_DISTANCE:
@@ -273,7 +273,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_ROLLOFF_FACTOR:
@@ -283,7 +283,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_REFERENCE_DISTANCE:
@@ -293,7 +293,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_MIN_GAIN:
@@ -303,7 +303,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_MAX_GAIN:
@@ -313,7 +313,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_GAIN:
@@ -323,7 +323,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_CONE_OUTER_GAINHF:
@@ -333,7 +333,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_AIR_ABSORPTION_FACTOR:
@@ -343,7 +343,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_ROOM_ROLLOFF_FACTOR:
@@ -353,7 +353,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_DOPPLER_FACTOR:
@@ -363,7 +363,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_SEC_OFFSET:
@@ -382,22 +382,22 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
                     if ((pSource->state == AL_PLAYING) || (pSource->state == AL_PAUSED))
                     {
                         if(ApplyOffset(pSource) == AL_FALSE)
-                            alSetError(AL_INVALID_VALUE);
+                            alSetError(pContext, AL_INVALID_VALUE);
                     }
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
     {
         // Invalid Source Name
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
     }
 
     ProcessContext(pContext);
@@ -439,12 +439,12 @@ ALAPI ALvoid ALAPIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flValue
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }
@@ -489,15 +489,15 @@ ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *
                     break;
 
                 default:
-                    alSetError(AL_INVALID_ENUM);
+                    alSetError(pContext, AL_INVALID_ENUM);
                     break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -533,14 +533,14 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_LOOPING:
                 if(lValue == AL_FALSE || lValue == AL_TRUE)
                     pSource->bLooping = (ALboolean)lValue;
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_BUFFER:
@@ -595,15 +595,15 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         pSource->NeedsUpdate = AL_TRUE;
                     }
                     else
-                        alSetError(AL_INVALID_VALUE);
+                        alSetError(pContext, AL_INVALID_VALUE);
                 }
                 else
-                    alSetError(AL_INVALID_OPERATION);
+                    alSetError(pContext, AL_INVALID_OPERATION);
                 break;
 
             case AL_SOURCE_STATE:
                 // Query only
-                alSetError(AL_INVALID_OPERATION);
+                alSetError(pContext, AL_INVALID_OPERATION);
                 break;
 
             case AL_SEC_OFFSET:
@@ -622,11 +622,11 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     if(pSource->state == AL_PLAYING || pSource->state == AL_PAUSED)
                     {
                         if(ApplyOffset(pSource) == AL_FALSE)
-                            alSetError(AL_INVALID_VALUE);
+                            alSetError(pContext, AL_INVALID_VALUE);
                     }
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_DIRECT_FILTER:
@@ -643,7 +643,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_DIRECT_FILTER_GAINHF_AUTO:
@@ -653,7 +653,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
@@ -663,7 +663,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
@@ -673,7 +673,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_DISTANCE_MODEL:
@@ -690,16 +690,16 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }
@@ -752,16 +752,16 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
                     pSource->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(AL_INVALID_VALUE);
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(AL_INVALID_ENUM);
+                alSetError(pContext, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(AL_INVALID_NAME);
+        alSetError(pContext, AL_INVALID_NAME);
 
     ProcessContext(pContext);
 }
@@ -808,15 +808,15 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
                     break;
 
                 default:
-                    alSetError(AL_INVALID_ENUM);
+                    alSetError(pContext, AL_INVALID_ENUM);
                     break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -880,7 +880,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
                     if(GetSourceOffset(pSource, eParam, flOffset, updateLen))
                         *pflValue = flOffset[0];
                     else
-                        alSetError(AL_INVALID_OPERATION);
+                        alSetError(pContext, AL_INVALID_OPERATION);
                     break;
 
                 case AL_CONE_INNER_ANGLE:
@@ -908,15 +908,15 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
                     break;
 
                 default:
-                    alSetError(AL_INVALID_ENUM);
+                    alSetError(pContext, AL_INVALID_ENUM);
                     break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -957,15 +957,15 @@ ALAPI ALvoid ALAPIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* pfl
                     break;
 
                 default:
-                    alSetError(AL_INVALID_ENUM);
+                    alSetError(pContext, AL_INVALID_ENUM);
                     break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -1019,7 +1019,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
                         pflValues[1] = flOffset[1];
                     }
                     else
-                        alSetError(AL_INVALID_OPERATION);
+                        alSetError(pContext, AL_INVALID_OPERATION);
                     break;
 
                 case AL_POSITION:
@@ -1041,15 +1041,15 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
                     break;
 
                 default:
-                    alSetError(AL_INVALID_ENUM);
+                    alSetError(pContext, AL_INVALID_ENUM);
                     break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -1136,7 +1136,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                     if(GetSourceOffset(pSource, eParam, flOffset, updateLen))
                         *plValue = (ALint)flOffset[0];
                     else
-                        alSetError(AL_INVALID_OPERATION);
+                        alSetError(pContext, AL_INVALID_OPERATION);
                     break;
 
                 case AL_DIRECT_FILTER:
@@ -1164,15 +1164,15 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                     break;
 
                 default:
-                    alSetError(AL_INVALID_ENUM);
+                    alSetError(pContext, AL_INVALID_ENUM);
                     break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -1213,15 +1213,15 @@ ALAPI void ALAPIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plValue
                     break;
 
                 default:
-                    alSetError(AL_INVALID_ENUM);
+                    alSetError(pContext, AL_INVALID_ENUM);
                     break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -1279,7 +1279,7 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
                         plValues[1] = (ALint)flOffset[1];
                     }
                     else
-                        alSetError(AL_INVALID_OPERATION);
+                        alSetError(pContext, AL_INVALID_OPERATION);
                     break;
 
                 case AL_POSITION:
@@ -1301,15 +1301,15 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
                     break;
 
                 default:
-                    alSetError(AL_INVALID_ENUM);
+                    alSetError(pContext, AL_INVALID_ENUM);
                     break;
             }
         }
         else
-            alSetError(AL_INVALID_NAME);
+            alSetError(pContext, AL_INVALID_NAME);
     }
     else
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
 
     ProcessContext(pContext);
 }
@@ -1339,7 +1339,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
         {
             if(!alIsSource(pSourceList[i]))
             {
-                alSetError(AL_INVALID_NAME);
+                alSetError(pContext, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
                 break;
             }
@@ -1412,7 +1412,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
     else
     {
         // sources is a NULL pointer
-        alSetError(AL_INVALID_VALUE);
+        alSetError(pContext, AL_INVALID_VALUE);
     }
 
     ProcessContext(pContext);
@@ -1440,7 +1440,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
         {
             if(!alIsSource(sources[i]))
             {
-                alSetError(AL_INVALID_NAME);
+                alSetError(Context, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
                 break;
             }
@@ -1459,7 +1459,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     else
     {
         // sources is a NULL pointer
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
     }
 
     ProcessContext(Context);
@@ -1487,7 +1487,7 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
         {
             if(!alIsSource(sources[i]))
             {
-                alSetError(AL_INVALID_NAME);
+                alSetError(Context, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
                 break;
             }
@@ -1510,7 +1510,7 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     else
     {
         // sources is a NULL pointer
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
     }
 
     ProcessContext(Context);
@@ -1538,7 +1538,7 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
         {
             if(!alIsSource(sources[i]))
             {
-                alSetError(AL_INVALID_NAME);
+                alSetError(Context, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
                 break;
             }
@@ -1565,7 +1565,7 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     else
     {
         // sources is a NULL pointer
-        alSetError(AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
     }
 
     ProcessContext(Context);
@@ -1623,7 +1623,7 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
 
                 if(!alIsBuffer(buffers[i]))
                 {
-                    alSetError(AL_INVALID_NAME);
+                    alSetError(Context, AL_INVALID_NAME);
                     bBuffersValid = AL_FALSE;
                     break;
                 }
@@ -1639,7 +1639,7 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
                 else if(iFrequency != buffer->frequency ||
                         iFormat != buffer->format)
                 {
-                    alSetError(AL_INVALID_OPERATION);
+                    alSetError(Context, AL_INVALID_OPERATION);
                     bBuffersValid = AL_FALSE;
                     break;
                 }
@@ -1705,13 +1705,13 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
         else
         {
             // Invalid Source Type (can't queue on a Static Source)
-            alSetError(AL_INVALID_OPERATION);
+            alSetError(Context, AL_INVALID_OPERATION);
         }
     }
     else
     {
         // Invalid Source Name
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
     }
 
     ProcessContext(Context);
@@ -1776,13 +1776,13 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
         else
         {
             // Some buffers can't be unqueue because they have not been processed
-            alSetError(AL_INVALID_VALUE);
+            alSetError(Context, AL_INVALID_VALUE);
         }
     }
     else
     {
         // Invalid Source Name
-        alSetError(AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME);
     }
 
     ProcessContext(Context);

@@ -100,7 +100,10 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
         // Check that all effects are valid
         for (i = 0; i < n; i++)
         {
-            if(effects[i] && !VerifyEffect(device->EffectList, effects[i]))
+            if(!effects[i])
+                continue;
+
+            if(!VerifyEffect(device->EffectList, effects[i]))
             {
                 alSetError(Context, AL_INVALID_NAME);
                 break;
@@ -113,8 +116,7 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
             for (i = 0; i < n; i++)
             {
                 // Recheck that the effect is valid, because there could be duplicated names
-                if(effects[i] &&
-                   (ALEffect=VerifyEffect(device->EffectList, effects[i])) != NULL)
+                if((ALEffect=VerifyEffect(device->EffectList, effects[i])) != NULL)
                 {
                     ALeffect **list;
 
@@ -168,7 +170,7 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
     if(!Context) return;
 
     Device = Context->Device;
-    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
+    if((ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
         if(param == AL_EFFECT_TYPE)
         {
@@ -244,7 +246,7 @@ ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
     if(!Context) return;
 
     Device = Context->Device;
-    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
+    if((ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
         if(param == AL_EFFECT_TYPE)
         {
@@ -304,7 +306,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
     if(!Context) return;
 
     Device = Context->Device;
-    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
+    if((ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
         if(ALEffect->type == AL_EFFECT_EAXREVERB)
         {
@@ -642,7 +644,7 @@ ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
     if(!Context) return;
 
     Device = Context->Device;
-    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
+    if((ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
         if(ALEffect->type == AL_EFFECT_EAXREVERB)
         {
@@ -757,7 +759,7 @@ ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
     if(!Context) return;
 
     Device = Context->Device;
-    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
+    if((ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
         if(param == AL_EFFECT_TYPE)
         {
@@ -817,7 +819,7 @@ ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
     if(!Context) return;
 
     Device = Context->Device;
-    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
+    if((ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
         if(param == AL_EFFECT_TYPE)
         {
@@ -877,7 +879,7 @@ ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
     if(!Context) return;
 
     Device = Context->Device;
-    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
+    if((ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
         if(ALEffect->type == AL_EFFECT_EAXREVERB)
         {
@@ -1073,7 +1075,7 @@ ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues
     if(!Context) return;
 
     Device = Context->Device;
-    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
+    if((ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
         if(ALEffect->type == AL_EFFECT_EAXREVERB)
         {

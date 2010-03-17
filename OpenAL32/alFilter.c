@@ -96,6 +96,9 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
         // Check that all filters are valid
         for (i = 0; i < n; i++)
         {
+            if(!filters[i])
+                continue;
+
             if(!VerifyFilter(device->FilterList, filters[i]))
             {
                 alSetError(Context, AL_INVALID_NAME);
@@ -109,8 +112,7 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
             for (i = 0; i < n; i++)
             {
                 // Recheck that the filter is valid, because there could be duplicated names
-                if(filters[i] &&
-                   (ALFilter=VerifyFilter(device->FilterList, filters[i])) != NULL)
+                if((ALFilter=VerifyFilter(device->FilterList, filters[i])) != NULL)
                 {
                     ALfilter **list;
 
@@ -164,7 +166,7 @@ ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
     if(!Context) return;
 
     Device = Context->Device;
-    if(filter && (ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
+    if((ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
     {
         switch(param)
         {
@@ -196,7 +198,7 @@ ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValues)
     if(!Context) return;
 
     Device = Context->Device;
-    if(filter && VerifyFilter(Device->FilterList, filter) != NULL)
+    if(VerifyFilter(Device->FilterList, filter) != NULL)
     {
         switch(param)
         {
@@ -225,7 +227,7 @@ ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue)
     if(!Context) return;
 
     Device = Context->Device;
-    if(filter && (ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
+    if((ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
     {
         switch(ALFilter->type)
         {
@@ -272,7 +274,7 @@ ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
     if(!Context) return;
 
     Device = Context->Device;
-    if(filter && VerifyFilter(Device->FilterList, filter) != NULL)
+    if(VerifyFilter(Device->FilterList, filter) != NULL)
     {
         switch(param)
         {
@@ -297,7 +299,7 @@ ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piValue)
     if(!Context) return;
 
     Device = Context->Device;
-    if(filter && (ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
+    if((ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
     {
         switch(param)
         {
@@ -325,7 +327,7 @@ ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues)
     if(!Context) return;
 
     Device = Context->Device;
-    if(filter && VerifyFilter(Device->FilterList, filter) != NULL)
+    if(VerifyFilter(Device->FilterList, filter) != NULL)
     {
         switch(param)
         {
@@ -354,7 +356,7 @@ ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pflValue)
     if(!Context) return;
 
     Device = Context->Device;
-    if(filter && (ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
+    if((ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
     {
         switch(ALFilter->type)
         {
@@ -395,7 +397,7 @@ ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues
     if(!Context) return;
 
     Device = Context->Device;
-    if(filter && VerifyFilter(Device->FilterList, filter) != NULL)
+    if(VerifyFilter(Device->FilterList, filter) != NULL)
     {
         switch(param)
         {

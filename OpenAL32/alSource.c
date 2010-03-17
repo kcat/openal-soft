@@ -1706,12 +1706,9 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
     ALsource *ALSource;
     ALsizei i;
     ALbufferlistitem *ALBufferList;
-    ALboolean bBuffersProcessed;
 
     if (n == 0)
         return;
-
-    bBuffersProcessed = AL_TRUE;
 
     Context = GetContextSuspended();
     if(!Context) return;

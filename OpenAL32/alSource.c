@@ -33,7 +33,7 @@
 #include "alAuxEffectSlot.h"
 
 static ALvoid InitSourceParams(ALsource *pSource);
-static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset, ALfloat updateLen);
+static ALvoid GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset, ALfloat updateLen);
 static ALboolean ApplyOffset(ALsource *pSource);
 static ALint GetByteOffset(ALsource *pSource);
 
@@ -865,10 +865,8 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
                 case AL_BYTE_OFFSET:
                     updateLen = (ALfloat)pContext->Device->UpdateSize /
                                 pContext->Device->Frequency;
-                    if(GetSourceOffset(pSource, eParam, flOffset, updateLen))
-                        *pflValue = flOffset[0];
-                    else
-                        alSetError(pContext, AL_INVALID_OPERATION);
+                    GetSourceOffset(pSource, eParam, flOffset, updateLen);
+                    *pflValue = flOffset[0];
                     break;
 
                 case AL_CONE_INNER_ANGLE:
@@ -997,13 +995,9 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
                 case AL_BYTE_RW_OFFSETS_EXT:
                     updateLen = (ALfloat)pContext->Device->UpdateSize /
                                 pContext->Device->Frequency;
-                    if(GetSourceOffset(pSource, eParam, flOffset, updateLen))
-                    {
-                        pflValues[0] = flOffset[0];
-                        pflValues[1] = flOffset[1];
-                    }
-                    else
-                        alSetError(pContext, AL_INVALID_OPERATION);
+                    GetSourceOffset(pSource, eParam, flOffset, updateLen);
+                    pflValues[0] = flOffset[0];
+                    pflValues[1] = flOffset[1];
                     break;
 
                 case AL_POSITION:
@@ -1115,10 +1109,8 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
                 case AL_BYTE_OFFSET:
                     updateLen = (ALfloat)pContext->Device->UpdateSize /
                                 pContext->Device->Frequency;
-                    if(GetSourceOffset(pSource, eParam, flOffset, updateLen))
-                        *plValue = (ALint)flOffset[0];
-                    else
-                        alSetError(pContext, AL_INVALID_OPERATION);
+                    GetSourceOffset(pSource, eParam, flOffset, updateLen);
+                    *plValue = (ALint)flOffset[0];
                     break;
 
                 case AL_DIRECT_FILTER:
@@ -1251,13 +1243,9 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
                 case AL_BYTE_RW_OFFSETS_EXT:
                     updateLen = (ALfloat)pContext->Device->UpdateSize /
                                 pContext->Device->Frequency;
-                    if(GetSourceOffset(pSource, eParam, flOffset, updateLen))
-                    {
-                        plValues[0] = (ALint)flOffset[0];
-                        plValues[1] = (ALint)flOffset[1];
-                    }
-                    else
-                        alSetError(pContext, AL_INVALID_OPERATION);
+                    GetSourceOffset(pSource, eParam, flOffset, updateLen);
+                    plValues[0] = (ALint)flOffset[0];
+                    plValues[1] = (ALint)flOffset[1];
                     break;
 
                 case AL_POSITION:
@@ -1812,7 +1800,7 @@ static ALvoid InitSourceParams(ALsource *pSource)
     Gets the current playback position in the given Source, in the appropriate format (Bytes, Samples or MilliSeconds)
     The offset is relative to the start of the queue (not the start of the current buffer)
 */
-static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset, ALfloat updateLen)
+static ALvoid GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOffset, ALfloat updateLen)
 {
     ALbufferlistitem *pBufferList;
     ALbuffer         *pBuffer;
@@ -1820,7 +1808,6 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
     ALint        lChannels, lBytes;
     ALint        readPos, writePos;
     ALenum        eOriginalFormat;
-    ALboolean    bReturn = AL_TRUE;
     ALint        lTotalBufferDataSize;
     ALuint       i;
 
@@ -1952,8 +1939,6 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
         pflOffset[0] = 0.0f;
         pflOffset[1] = 0.0f;
     }
-
-    return bReturn;
 }
 
 

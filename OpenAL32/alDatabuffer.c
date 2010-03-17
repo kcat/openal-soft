@@ -547,7 +547,8 @@ ALvoid ALAPIENTRY alSelectDatabufferEXT(ALenum target, ALuint uiBuffer)
     if(!pContext) return;
 
     Device = pContext->Device;
-    if((pBuffer=VerifyDatabuffer(Device->DatabufferList, uiBuffer)) != NULL)
+    if(uiBuffer == 0 ||
+       (pBuffer=VerifyDatabuffer(Device->DatabufferList, uiBuffer)) != NULL)
     {
         if(target == AL_SAMPLE_SOURCE_EXT)
             pContext->SampleSource = pBuffer;

@@ -139,8 +139,6 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
                 // Recheck that the Source is valid, because there could be duplicated Source names
                 if((ALSource=VerifySource(Context->SourceList, sources[i])) != NULL)
                 {
-                    alSourceStop((ALuint)ALSource->source);
-
                     // For each buffer in the source's queue, decrement its reference counter and remove it
                     while (ALSource->queue != NULL)
                     {

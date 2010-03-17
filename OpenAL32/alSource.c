@@ -1908,6 +1908,21 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
                 else
                     pflOffset[1] = pflOffset[0];
             }
+            else if(eOriginalFormat == AL_FORMAT_MONO_MULAW ||
+                    eOriginalFormat == AL_FORMAT_STEREO_MULAW ||
+                    eOriginalFormat == AL_FORMAT_QUAD_MULAW ||
+                    eOriginalFormat == AL_FORMAT_51CHN_MULAW ||
+                    eOriginalFormat == AL_FORMAT_61CHN_MULAW ||
+                    eOriginalFormat == AL_FORMAT_71CHN_MULAW)
+            {
+                pflOffset[0] = (ALfloat)(readPos / lBytes * 1);
+                pflOffset[1] = (ALfloat)(writePos / lBytes * 1);
+            }
+            else if(eOriginalFormat == AL_FORMAT_REAR_MULAW)
+            {
+                pflOffset[0] = (ALfloat)(readPos / 2 / lBytes * 1);
+                pflOffset[1] = (ALfloat)(writePos / 2 / lBytes * 1);
+            }
             else if (eOriginalFormat == AL_FORMAT_REAR8)
             {
                 pflOffset[0] = (ALfloat)(readPos / 2 / lBytes * 1);
@@ -2047,31 +2062,36 @@ static ALint GetByteOffset(ALsource *pSource)
             {
                 // Round down to nearest ADPCM block
                 lByteOffset = pSource->lOffset / (36 * lChannels);
-                // Multiply by compression rate
+                // Multiply by compression rate (65 samples per 36 byte block)
                 lByteOffset = lByteOffset * 65 * lChannels * lBytes;
-                lByteOffset -= (lByteOffset % (lChannels * lBytes));
+            }
+            else if(OriginalFormat == AL_FORMAT_MONO_MULAW ||
+                    OriginalFormat == AL_FORMAT_STEREO_MULAW ||
+                    OriginalFormat == AL_FORMAT_QUAD_MULAW ||
+                    OriginalFormat == AL_FORMAT_51CHN_MULAW ||
+                    OriginalFormat == AL_FORMAT_61CHN_MULAW ||
+                    OriginalFormat == AL_FORMAT_71CHN_MULAW)
+            {
+                /* muLaw has 1 byte per sample */
+                lByteOffset = pSource->lOffset / 1 * lBytes;
+            }
+            else if(OriginalFormat == AL_FORMAT_REAR_MULAW)
+            {
+                /* Rear is converted from 2 -> 4 channel */
+                lByteOffset = pSource->lOffset / 1 * lBytes * 2;
             }
             else if(OriginalFormat == AL_FORMAT_REAR8)
-            {
                 lByteOffset = pSource->lOffset / 1 * lBytes * 2;
-                lByteOffset -= (lByteOffset % (lChannels * lBytes));
-            }
             else if(OriginalFormat == AL_FORMAT_REAR16)
-            {
                 lByteOffset = pSource->lOffset / 2 * lBytes * 2;
-                lByteOffset -= (lByteOffset % (lChannels * lBytes));
-            }
             else if(OriginalFormat == AL_FORMAT_REAR32)
-            {
                 lByteOffset = pSource->lOffset / 4 * lBytes * 2;
-                lByteOffset -= (lByteOffset % (lChannels * lBytes));
-            }
             else
             {
                 ALuint OrigBytes = aluBytesFromFormat(OriginalFormat);
                 lByteOffset = pSource->lOffset / OrigBytes * lBytes;
-                lByteOffset -= (lByteOffset % (lChannels * lBytes));
             }
+            lByteOffset -= (lByteOffset % (lChannels * lBytes));
             break;
 
         case AL_SAMPLE_OFFSET:

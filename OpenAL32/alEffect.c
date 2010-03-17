@@ -144,13 +144,14 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
 ALboolean AL_APIENTRY alIsEffect(ALuint effect)
 {
     ALCcontext *Context;
-    ALboolean  result;
+    ALboolean  result = AL_TRUE;
 
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    result = (VerifyEffect(Context->Device->EffectList, effect) ? AL_TRUE :
-                                                                  AL_FALSE);
+    if(effect)
+        result = (VerifyEffect(Context->Device->EffectList, effect) ?
+                  AL_TRUE : AL_FALSE);
 
     ProcessContext(Context);
 

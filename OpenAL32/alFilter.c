@@ -140,13 +140,15 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
 ALboolean AL_APIENTRY alIsFilter(ALuint filter)
 {
     ALCcontext *Context;
-    ALboolean  result;
+    ALboolean  result = AL_TRUE;
 
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    result = (VerifyFilter(Context->Device->FilterList, filter) ? AL_TRUE :
-                                                                  AL_FALSE);
+    if(filter)
+        result = (VerifyFilter(Context->Device->FilterList, filter) ?
+                  AL_TRUE : AL_FALSE);
+
     ProcessContext(Context);
 
     return result;

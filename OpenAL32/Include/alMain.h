@@ -114,7 +114,7 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 static inline ALuint timeGetTime(void)
 {
     int ret;
-#ifdef _POSIX_TIMERS
+#if _POSIX_TIMERS > 0
     struct timespec ts;
 
     ret = clock_gettime(CLOCK_REALTIME, &ts);

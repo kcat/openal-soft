@@ -32,6 +32,7 @@
 
 static void InitFilterParams(ALfilter *filter, ALenum type);
 
+DECL_VERIFIER(Filter, ALfilter, filter)
 
 ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
 {
@@ -95,7 +96,7 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
         // Check that all filters are valid
         for (i = 0; i < n; i++)
         {
-            if (!alIsFilter(filters[i]))
+            if(!VerifyFilter(device->FilterList, filters[i]))
             {
                 alSetError(Context, AL_INVALID_NAME);
                 break;
@@ -108,11 +109,10 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
             for (i = 0; i < n; i++)
             {
                 // Recheck that the filter is valid, because there could be duplicated names
-                if (filters[i] && alIsFilter(filters[i]))
+                if(filters[i] &&
+                   (ALFilter=VerifyFilter(device->FilterList, filters[i])) != NULL)
                 {
                     ALfilter **list;
-
-                    ALFilter = ((ALfilter*)ALTHUNK_LOOKUPENTRY(filters[i]));
 
                     // Remove Source from list of Sources
                     list = &device->FilterList;
@@ -140,31 +140,30 @@ ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
 ALboolean AL_APIENTRY alIsFilter(ALuint filter)
 {
     ALCcontext *Context;
-    ALfilter *list;
+    ALboolean  result;
 
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    list = Context->Device->FilterList;
-    while(list && list->filter != filter)
-        list = list->next;
-
+    result = (VerifyFilter(Context->Device->FilterList, filter) ? AL_TRUE :
+                                                                  AL_FALSE);
     ProcessContext(Context);
 
-    return ((list || !filter) ? AL_TRUE : AL_FALSE);
+    return result;
 }
 
 ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALfilter   *ALFilter;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (filter && alIsFilter(filter))
+    Device = Context->Device;
+    if(filter && (ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
     {
-        ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
-
         switch(param)
         {
         case AL_FILTER_TYPE:
@@ -189,11 +188,13 @@ ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
 ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (filter && alIsFilter(filter))
+    Device = Context->Device;
+    if(filter && VerifyFilter(Device->FilterList, filter) != NULL)
     {
         switch(param)
         {
@@ -215,14 +216,15 @@ ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValues)
 ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALfilter   *ALFilter;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (filter && alIsFilter(filter))
+    Device = Context->Device;
+    if(filter && (ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
     {
-        ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
-
         switch(ALFilter->type)
         {
         case AL_FILTER_LOWPASS:
@@ -262,11 +264,13 @@ ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue)
 ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (filter && alIsFilter(filter))
+    Device = Context->Device;
+    if(filter && VerifyFilter(Device->FilterList, filter) != NULL)
     {
         switch(param)
         {
@@ -284,14 +288,15 @@ ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
 ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piValue)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALfilter   *ALFilter;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (filter && alIsFilter(filter))
+    Device = Context->Device;
+    if(filter && (ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
     {
-        ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
-
         switch(param)
         {
         case AL_FILTER_TYPE:
@@ -312,11 +317,13 @@ ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piValue)
 ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (filter && alIsFilter(filter))
+    Device = Context->Device;
+    if(filter && VerifyFilter(Device->FilterList, filter) != NULL)
     {
         switch(param)
         {
@@ -338,14 +345,15 @@ ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues)
 ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pflValue)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALfilter   *ALFilter;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (filter && alIsFilter(filter))
+    Device = Context->Device;
+    if(filter && (ALFilter=VerifyFilter(Device->FilterList, filter)) != NULL)
     {
-        ALfilter *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(filter);
-
         switch(ALFilter->type)
         {
         case AL_FILTER_LOWPASS:
@@ -379,11 +387,13 @@ ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pflValue)
 ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (filter && alIsFilter(filter))
+    Device = Context->Device;
+    if(filter && VerifyFilter(Device->FilterList, filter) != NULL)
     {
         switch(param)
         {

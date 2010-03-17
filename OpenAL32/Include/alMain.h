@@ -379,6 +379,18 @@ void al_print(const char *fname, unsigned int line, const char *fmt, ...)
 ALCboolean  ALCAPIENTRY alcMakeCurrent(ALCcontext *context);
 ALCcontext* ALCAPIENTRY alcGetThreadContext(void);
 
+#define DECL_VERIFIER(name, type, field)                                      \
+static type* Verify##name(type *list, ALuint id)                              \
+{                                                                             \
+    while(list)                                                               \
+    {                                                                         \
+        if(list->field == id)                                                 \
+            break;                                                            \
+        list = list->next;                                                    \
+    }                                                                         \
+    return list;                                                              \
+}
+
 #ifdef __cplusplus
 }
 #endif

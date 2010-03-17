@@ -37,6 +37,11 @@ static ALboolean GetSourceOffset(ALsource *pSource, ALenum eName, ALfloat *pflOf
 static ALboolean ApplyOffset(ALsource *pSource);
 static ALint GetByteOffset(ALsource *pSource);
 
+DECL_VERIFIER(Source, ALsource, source)
+DECL_VERIFIER(Buffer, ALbuffer, buffer)
+DECL_VERIFIER(Filter, ALfilter, filter)
+DECL_VERIFIER(EffectSlot, ALeffectslot, effectslot)
+
 ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
 {
     ALCcontext *Context;
@@ -118,7 +123,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         // Check that all Sources are valid (and can therefore be deleted)
         for (i = 0; i < n; i++)
         {
-            if (!alIsSource(sources[i]))
+            if(VerifySource(Context->SourceList, sources[i]) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
@@ -132,9 +137,8 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             for(i = 0; i < n; i++)
             {
                 // Recheck that the Source is valid, because there could be duplicated Source names
-                if(alIsSource(sources[i]))
+                if((ALSource=VerifySource(Context->SourceList, sources[i])) != NULL)
                 {
-                    ALSource = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
                     alSourceStop((ALuint)ALSource->source);
 
                     // For each buffer in the source's queue, decrement its reference counter and remove it
@@ -184,25 +188,13 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 
 ALAPI ALboolean ALAPIENTRY alIsSource(ALuint source)
 {
-    ALboolean result=AL_FALSE;
     ALCcontext *Context;
-    ALsource *Source;
+    ALboolean  result;
 
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    // To determine if this is a valid Source name, look through the list of generated Sources
-    Source = Context->SourceList;
-    while(Source)
-    {
-        if(Source->source == source)
-        {
-            result = AL_TRUE;
-            break;
-        }
-
-        Source = Source->next;
-    }
+    result = (VerifySource(Context->SourceList, source) ? AL_TRUE : AL_FALSE);
 
     ProcessContext(Context);
 
@@ -218,10 +210,8 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsSource(source))
+    if((pSource=VerifySource(pContext->SourceList, source)) != NULL)
     {
-        pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-
         switch(eParam)
         {
             case AL_PITCH:
@@ -412,9 +402,8 @@ ALAPI ALvoid ALAPIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flValue
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsSource(source))
+    if((pSource=VerifySource(pContext->SourceList, source)) != NULL)
     {
-        pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
         switch(eParam)
         {
             case AL_POSITION:
@@ -459,7 +448,7 @@ ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *
 
     if(pflValues)
     {
-        if(alIsSource(source))
+        if(VerifySource(pContext->SourceList, source) != NULL)
         {
             switch(eParam)
             {
@@ -512,9 +501,9 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsSource(source))
+    if((pSource=VerifySource(pContext->SourceList, source)) != NULL)
     {
-        pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
+        ALCdevice *device = pContext->Device;
 
         switch(eParam)
         {
@@ -546,10 +535,11 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
             case AL_BUFFER:
                 if(pSource->state == AL_STOPPED || pSource->state == AL_INITIAL)
                 {
-                    if(alIsBuffer(lValue))
-                    {
-                        ALbuffer *buffer = NULL;
+                    ALbuffer *buffer = NULL;
 
+                    if(lValue == 0 ||
+                       (buffer=VerifyBuffer(device->BufferList, lValue)) != NULL)
+                    {
                         // Remove all elements in the queue
                         while(pSource->queue != NULL)
                         {
@@ -567,8 +557,6 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         // Add the buffer to the queue (as long as it is NOT the NULL buffer)
                         if(lValue != 0)
                         {
-                            buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(lValue);
-
                             // Source is now in STATIC mode
                             pSource->lSourceType = AL_STATIC;
 
@@ -629,10 +617,12 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
-            case AL_DIRECT_FILTER:
-                if(alIsFilter(lValue))
+            case AL_DIRECT_FILTER: {
+                ALfilter *filter = NULL;
+
+                if(lValue == 0 ||
+                   (filter=VerifyFilter(pContext->Device->FilterList, lValue)) != NULL)
                 {
-                    ALfilter *filter = (ALfilter*)ALTHUNK_LOOKUPENTRY(lValue);
                     if(!filter)
                     {
                         pSource->DirectFilter.type = AL_FILTER_NULL;
@@ -644,7 +634,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                 }
                 else
                     alSetError(pContext, AL_INVALID_VALUE);
-                break;
+            }   break;
 
             case AL_DIRECT_FILTER_GAINHF_AUTO:
                 if(lValue == AL_TRUE || lValue == AL_FALSE)
@@ -707,15 +697,15 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 
 ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, ALint lValue2, ALint lValue3)
 {
-    ALCcontext    *pContext;
+    ALCcontext *pContext;
+    ALsource   *pSource;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsSource(source))
+    if((pSource=VerifySource(pContext->SourceList, source)) != NULL)
     {
-        ALsource *pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-        ALCdevice *Device = pContext->Device;
+        ALCdevice *device = pContext->Device;
 
         switch (eParam)
         {
@@ -725,14 +715,16 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
                 alSource3f(source, eParam, (ALfloat)lValue1, (ALfloat)lValue2, (ALfloat)lValue3);
                 break;
 
-            case AL_AUXILIARY_SEND_FILTER:
-                if((ALuint)lValue2 < Device->NumAuxSends &&
-                   (lValue1 == 0 || alIsAuxiliaryEffectSlot(lValue1)) &&
-                   alIsFilter(lValue3))
-                {
-                    ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(lValue1);
-                    ALfilter     *ALFilter = (ALfilter*)ALTHUNK_LOOKUPENTRY(lValue3);
+            case AL_AUXILIARY_SEND_FILTER: {
+                ALeffectslot *ALEffectSlot = NULL;
+                ALfilter     *ALFilter = NULL;
 
+                if((ALuint)lValue2 < device->NumAuxSends &&
+                   (lValue1 == 0 ||
+                    (ALEffectSlot=VerifyEffectSlot(pContext->EffectSlotList, lValue1)) != NULL) &&
+                   (lValue3 == 0 ||
+                    (ALFilter=VerifyFilter(device->FilterList, lValue3)) != NULL))
+                {
                     /* Release refcount on the previous slot, and add one for
                      * the new slot */
                     if(pSource->Send[lValue2].Slot)
@@ -753,7 +745,7 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
                 }
                 else
                     alSetError(pContext, AL_INVALID_VALUE);
-                break;
+            }    break;
 
             default:
                 alSetError(pContext, AL_INVALID_ENUM);
@@ -776,7 +768,7 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
 
     if(plValues)
     {
-        if(alIsSource(source))
+        if(VerifySource(pContext->SourceList, source) != NULL)
         {
             switch(eParam)
             {
@@ -834,10 +826,8 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
 
     if(pflValue)
     {
-        if(alIsSource(source))
+        if((pSource=VerifySource(pContext->SourceList, source)) != NULL)
         {
-            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-
             switch(eParam)
             {
                 case AL_PITCH:
@@ -932,10 +922,8 @@ ALAPI ALvoid ALAPIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* pfl
 
     if(pflValue1 && pflValue2 && pflValue3)
     {
-        if(alIsSource(source))
+        if((pSource=VerifySource(pContext->SourceList, source)) != NULL)
         {
-            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-
             switch(eParam)
             {
                 case AL_POSITION:
@@ -983,10 +971,8 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
 
     if(pflValues)
     {
-        if(alIsSource(source))
+        if((pSource=VerifySource(pContext->SourceList, source)) != NULL)
         {
-            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-
             switch(eParam)
             {
                 case AL_PITCH:
@@ -1067,10 +1053,8 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
 
     if(plValue)
     {
-        if(alIsSource(source))
+        if((pSource=VerifySource(pContext->SourceList, source)) != NULL)
         {
-            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-
             switch(eParam)
             {
                 case AL_MAX_DISTANCE:
@@ -1188,10 +1172,8 @@ ALAPI void ALAPIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plValue
 
     if(plValue1 && plValue2 && plValue3)
     {
-        if(alIsSource(source))
+        if((pSource=VerifySource(pContext->SourceList, source)) != NULL)
         {
-            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-
             switch(eParam)
             {
                 case AL_POSITION:
@@ -1239,10 +1221,8 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
 
     if(plValues)
     {
-        if(alIsSource(source))
+        if((pSource=VerifySource(pContext->SourceList, source)) != NULL)
         {
-            pSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-
             switch(eParam)
             {
                 case AL_SOURCE_RELATIVE:
@@ -1337,7 +1317,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
         // Check that all the Sources are valid
         for(i = 0; i < n; i++)
         {
-            if(!alIsSource(pSourceList[i]))
+            if(!VerifySource(pContext->SourceList, pSourceList[i]))
             {
                 alSetError(pContext, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
@@ -1438,7 +1418,7 @@ ALAPI ALvoid ALAPIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
         // Check all the Sources are valid
         for(i=0;i<n;i++)
         {
-            if(!alIsSource(sources[i]))
+            if(!VerifySource(Context->SourceList, sources[i]))
             {
                 alSetError(Context, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
@@ -1485,7 +1465,7 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
         // Check all the Sources are valid
         for(i = 0;i < n;i++)
         {
-            if(!alIsSource(sources[i]))
+            if(!VerifySource(Context->SourceList, sources[i]))
             {
                 alSetError(Context, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
@@ -1536,7 +1516,7 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
         // Check all the Sources are valid
         for(i = 0;i < n;i++)
         {
-            if(!alIsSource(sources[i]))
+            if(!VerifySource(Context->SourceList, sources[i]))
             {
                 alSetError(Context, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
@@ -1593,13 +1573,13 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
     // Check that all buffers are valid or zero and that the source is valid
 
     // Check that this is a valid source
-    if(alIsSource(source))
+    if((ALSource=VerifySource(Context->SourceList, source)) != NULL)
     {
-        ALSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-
         // Check that this is not a STATIC Source
         if(ALSource->lSourceType != AL_STATIC)
         {
+            ALCdevice *device = Context->Device;
+
             iFrequency = -1;
             iFormat = -1;
 
@@ -1621,16 +1601,16 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
             {
                 ALbuffer *buffer;
 
-                if(!alIsBuffer(buffers[i]))
+                if(!buffers[i])
+                    continue;
+
+                if((buffer=VerifyBuffer(device->BufferList, buffers[i])) == NULL)
                 {
                     alSetError(Context, AL_INVALID_NAME);
                     bBuffersValid = AL_FALSE;
                     break;
                 }
-                if(!buffers[i])
-                    continue;
 
-                buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[i]);
                 if(iFrequency == -1 && iFormat == -1)
                 {
                     iFrequency = buffer->frequency;
@@ -1647,7 +1627,7 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
 
             if(bBuffersValid)
             {
-                ALbuffer *buffer = NULL;
+                ALbuffer *buffer;
 
                 // Change Source Type
                 ALSource->lSourceType = AL_STREAMING;
@@ -1736,10 +1716,8 @@ ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(alIsSource(source))
+    if((ALSource=VerifySource(Context->SourceList, source)) != NULL)
     {
-        ALSource = (ALsource*)ALTHUNK_LOOKUPENTRY(source);
-
         // If all 'n' buffers have been processed, remove them from the queue
         if(!ALSource->bLooping && (ALuint)n <= ALSource->BuffersPlayed)
         {

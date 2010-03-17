@@ -36,6 +36,7 @@ ALboolean DisabledEffects[MAX_EFFECTS];
 
 static void InitEffectParams(ALeffect *effect, ALenum type);
 
+DECL_VERIFIER(Effect, ALeffect, effect)
 
 ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 {
@@ -99,7 +100,7 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
         // Check that all effects are valid
         for (i = 0; i < n; i++)
         {
-            if (!alIsEffect(effects[i]))
+            if(effects[i] && !VerifyEffect(device->EffectList, effects[i]))
             {
                 alSetError(Context, AL_INVALID_NAME);
                 break;
@@ -112,13 +113,12 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
             for (i = 0; i < n; i++)
             {
                 // Recheck that the effect is valid, because there could be duplicated names
-                if (effects[i] && alIsEffect(effects[i]))
+                if(effects[i] &&
+                   (ALEffect=VerifyEffect(device->EffectList, effects[i])) != NULL)
                 {
                     ALeffect **list;
 
-                    ALEffect = ((ALeffect*)ALTHUNK_LOOKUPENTRY(effects[i]));
-
-                    // Remove Source from list of Sources
+                    // Remove Effect from list of effects
                     list = &device->EffectList;
                     while(*list && *list != ALEffect)
                          list = &(*list)->next;
@@ -144,31 +144,31 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
 ALboolean AL_APIENTRY alIsEffect(ALuint effect)
 {
     ALCcontext *Context;
-    ALeffect *list;
+    ALboolean  result;
 
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    list = Context->Device->EffectList;
-    while(list && list->effect != effect)
-        list = list->next;
+    result = (VerifyEffect(Context->Device->EffectList, effect) ? AL_TRUE :
+                                                                  AL_FALSE);
 
     ProcessContext(Context);
 
-    return ((list || !effect) ? AL_TRUE : AL_FALSE);
+    return result;
 }
 
 ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALeffect   *ALEffect;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (effect && alIsEffect(effect))
+    Device = Context->Device;
+    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
-        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
-
         if(param == AL_EFFECT_TYPE)
         {
             ALboolean isOk = (iValue == AL_EFFECT_NULL ||
@@ -236,14 +236,15 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
 ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALeffect   *ALEffect;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (effect && alIsEffect(effect))
+    Device = Context->Device;
+    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
-        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
-
         if(param == AL_EFFECT_TYPE)
         {
             alEffecti(effect, param, piValues[0]);
@@ -295,14 +296,15 @@ ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
 ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALeffect   *ALEffect;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (effect && alIsEffect(effect))
+    Device = Context->Device;
+    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
-        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
-
         if(ALEffect->type == AL_EFFECT_EAXREVERB)
         {
             switch(param)
@@ -632,14 +634,15 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
 ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALeffect   *ALEffect;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (effect && alIsEffect(effect))
+    Device = Context->Device;
+    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
-        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
-
         if(ALEffect->type == AL_EFFECT_EAXREVERB)
         {
             switch(param)
@@ -746,14 +749,15 @@ ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
 ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALeffect   *ALEffect;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (effect && alIsEffect(effect))
+    Device = Context->Device;
+    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
-        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
-
         if(param == AL_EFFECT_TYPE)
         {
             *piValue = ALEffect->type;
@@ -805,14 +809,15 @@ ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
 ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALeffect   *ALEffect;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (effect && alIsEffect(effect))
+    Device = Context->Device;
+    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
-        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
-
         if(param == AL_EFFECT_TYPE)
         {
             alGetEffecti(effect, param, piValues);
@@ -864,14 +869,15 @@ ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
 ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALeffect   *ALEffect;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (effect && alIsEffect(effect))
+    Device = Context->Device;
+    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
-        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
-
         if(ALEffect->type == AL_EFFECT_EAXREVERB)
         {
             switch(param)
@@ -1059,14 +1065,15 @@ ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
 ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
+    ALCdevice  *Device;
+    ALeffect   *ALEffect;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (effect && alIsEffect(effect))
+    Device = Context->Device;
+    if(effect && (ALEffect=VerifyEffect(Device->EffectList, effect)) != NULL)
     {
-        ALeffect *ALEffect = (ALeffect*)ALTHUNK_LOOKUPENTRY(effect);
-
         if(ALEffect->type == AL_EFFECT_EAXREVERB)
         {
             switch(param)

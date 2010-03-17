@@ -34,6 +34,8 @@
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, ALeffect *effect);
 
+DECL_VERIFIER(EffectSlot, ALeffectslot, effectslot)
+DECL_VERIFIER(Effect, ALeffect, effect)
 
 ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
@@ -106,14 +108,13 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
         // Check that all effectslots are valid
         for (i = 0; i < n; i++)
         {
-            if (!alIsAuxiliaryEffectSlot(effectslots[i]))
+            if((ALAuxiliaryEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslots[i])) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
                 break;
             }
             else
             {
-                ALAuxiliaryEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslots[i]);
                 if(ALAuxiliaryEffectSlot->refcount > 0)
                 {
                     alSetError(Context, AL_INVALID_NAME);
@@ -128,11 +129,9 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
             for (i = 0; i < n; i++)
             {
                 // Recheck that the effectslot is valid, because there could be duplicated names
-                if (alIsAuxiliaryEffectSlot(effectslots[i]))
+                if((ALAuxiliaryEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslots[i])) != NULL)
                 {
                     ALeffectslot **list;
-
-                    ALAuxiliaryEffectSlot = ((ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslots[i]));
 
                     // Remove Source from list of Sources
                     list = &Context->EffectSlotList;
@@ -163,44 +162,44 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
 {
     ALCcontext *Context;
-    ALeffectslot **list;
+    ALboolean  result;
 
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    list = &Context->EffectSlotList;
-    while(*list && (*list)->effectslot != effectslot)
-        list = &(*list)->next;
+    result = (VerifyEffectSlot(Context->EffectSlotList, effectslot) ?
+              AL_TRUE : AL_FALSE);
 
     ProcessContext(Context);
 
-    return (*list ? AL_TRUE : AL_FALSE);
+    return result;
 }
 
 ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint iValue)
 {
     ALCcontext *Context;
     ALboolean updateSources = AL_FALSE;
+    ALeffectslot *ALEffectSlot;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (alIsAuxiliaryEffectSlot(effectslot))
+    if((ALEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
     {
-        ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslot);
-
         switch(param)
         {
-        case AL_EFFECTSLOT_EFFECT:
-            if(alIsEffect(iValue))
+        case AL_EFFECTSLOT_EFFECT: {
+            ALeffect *effect = NULL;
+
+            if(iValue == 0 ||
+               (effect=VerifyEffect(Context->Device->EffectList, iValue)) != NULL)
             {
-                ALeffect *effect = (ALeffect*)ALTHUNK_LOOKUPENTRY(iValue);
                 InitializeEffect(Context, ALEffectSlot, effect);
                 updateSources = AL_TRUE;
             }
             else
                 alSetError(Context, AL_INVALID_VALUE);
-            break;
+        }   break;
 
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
             if(iValue == AL_TRUE || iValue == AL_FALSE)
@@ -250,7 +249,7 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALin
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (alIsAuxiliaryEffectSlot(effectslot))
+    if(VerifyEffectSlot(Context->EffectSlotList, effectslot) != NULL)
     {
         switch(param)
         {
@@ -273,14 +272,13 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALin
 ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat flValue)
 {
     ALCcontext *Context;
+    ALeffectslot *ALEffectSlot;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (alIsAuxiliaryEffectSlot(effectslot))
+    if((ALEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
     {
-        ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslot);
-
         switch(param)
         {
         case AL_EFFECTSLOT_GAIN:
@@ -308,7 +306,7 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfl
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (alIsAuxiliaryEffectSlot(effectslot))
+    if(VerifyEffectSlot(Context->EffectSlotList, effectslot) != NULL)
     {
         switch(param)
         {
@@ -330,14 +328,13 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfl
 ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *piValue)
 {
     ALCcontext *Context;
+    ALeffectslot *ALEffectSlot;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (alIsAuxiliaryEffectSlot(effectslot))
+    if((ALEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
     {
-        ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslot);
-
         switch(param)
         {
         case AL_EFFECTSLOT_EFFECT:
@@ -366,7 +363,7 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, A
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (alIsAuxiliaryEffectSlot(effectslot))
+    if(VerifyEffectSlot(Context->EffectSlotList, effectslot) != NULL)
     {
         switch(param)
         {
@@ -389,14 +386,13 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, A
 ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *pflValue)
 {
     ALCcontext *Context;
+    ALeffectslot *ALEffectSlot;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (alIsAuxiliaryEffectSlot(effectslot))
+    if((ALEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
     {
-        ALeffectslot *ALEffectSlot = (ALeffectslot*)ALTHUNK_LOOKUPENTRY(effectslot);
-
         switch(param)
         {
         case AL_EFFECTSLOT_GAIN:
@@ -421,7 +417,7 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, A
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (alIsAuxiliaryEffectSlot(effectslot))
+    if(VerifyEffectSlot(Context->EffectSlotList, effectslot) != NULL)
     {
         switch(param)
         {

@@ -32,6 +32,8 @@
 #include "alThunk.h"
 
 
+DECL_VERIFIER(Databuffer, ALdatabuffer, databuffer)
+
 /*
 *    alGenDatabuffersEXT(ALsizei n, ALuint *puiBuffers)
 *
@@ -109,19 +111,18 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
          * deleted */
         for(i = 0;i < n;i++)
         {
-            /* Check for valid Buffer ID (can be NULL buffer) */
-            if(alIsDatabufferEXT(puiBuffers[i]))
+            if(!puiBuffers[i])
+                continue;
+
+            /* Check for valid Buffer ID */
+            if((ALBuf=VerifyDatabuffer(device->DatabufferList, puiBuffers[i])) != NULL)
             {
-                /* If not the NULL buffer, check that it's unmapped */
-                ALBuf = ((ALdatabuffer *)ALTHUNK_LOOKUPENTRY(puiBuffers[i]));
-                if(ALBuf)
+                if(ALBuf->state != UNMAPPED)
                 {
-                    if(ALBuf->state != UNMAPPED)
-                    {
-                        /* Databuffer still in use, cannot be deleted */
-                        alSetError(Context, AL_INVALID_OPERATION);
-                        bFailed = AL_TRUE;
-                    }
+                    /* Databuffer still in use, cannot be deleted */
+                    alSetError(Context, AL_INVALID_OPERATION);
+                    bFailed = AL_TRUE;
+                    break;
                 }
             }
             else
@@ -129,6 +130,7 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
                 /* Invalid Databuffer */
                 alSetError(Context, AL_INVALID_NAME);
                 bFailed = AL_TRUE;
+                break;
             }
         }
 
@@ -138,11 +140,10 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
         {
             for(i = 0;i < n;i++)
             {
-                if(puiBuffers[i] && alIsDatabufferEXT(puiBuffers[i]))
+                if((ALBuf=VerifyDatabuffer(device->DatabufferList, puiBuffers[i])) != NULL)
                 {
                     ALdatabuffer **list = &device->DatabufferList;
 
-                    ALBuf = (ALdatabuffer*)ALTHUNK_LOOKUPENTRY(puiBuffers[i]);
                     while(*list && *list != ALBuf)
                         list = &(*list)->next;
 
@@ -180,19 +181,20 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
 ALboolean ALAPIENTRY alIsDatabufferEXT(ALuint uiBuffer)
 {
     ALCcontext *Context;
-    ALdatabuffer *ALBuf;
+    ALboolean  result = AL_TRUE;
+    ALCdevice *device;
 
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    /* Check through list of generated databuffers for uiBuffer */
-    ALBuf = Context->Device->DatabufferList;
-    while(ALBuf && ALBuf->databuffer != uiBuffer)
-        ALBuf = ALBuf->next;
+    device = Context->Device;
+    if(uiBuffer)
+        result = (VerifyDatabuffer(device->DatabufferList, uiBuffer) ?
+                  AL_TRUE : AL_FALSE);
 
     ProcessContext(Context);
 
-    return ((ALBuf || !uiBuffer) ? AL_TRUE : AL_FALSE);
+    return result;
 }
 
 /*
@@ -204,14 +206,15 @@ ALvoid ALAPIENTRY alDatabufferDataEXT(ALuint buffer,const ALvoid *data,ALsizei s
 {
     ALCcontext *Context;
     ALdatabuffer *ALBuf;
+    ALCdevice *Device;
     ALvoid *temp;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(alIsDatabufferEXT(buffer) && buffer != 0)
+    Device = Context->Device;
+    if((ALBuf=VerifyDatabuffer(Device->DatabufferList, buffer)) != NULL)
     {
-        ALBuf = (ALdatabuffer*)ALTHUNK_LOOKUPENTRY(buffer);
         if(ALBuf->state == UNMAPPED)
         {
             if(usage == AL_STREAM_WRITE_EXT || usage == AL_STREAM_READ_EXT ||
@@ -249,14 +252,14 @@ ALvoid ALAPIENTRY alDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsizei 
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
+    ALCdevice     *Device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsDatabufferEXT(uiBuffer) && uiBuffer != 0)
+    Device = pContext->Device;
+    if((pBuffer=VerifyDatabuffer(Device->DatabufferList, uiBuffer)) != NULL)
     {
-        pBuffer = (ALdatabuffer*)ALTHUNK_LOOKUPENTRY(uiBuffer);
-
         if(length >= 0 && start+length <= pBuffer->size)
         {
             if(pBuffer->state == UNMAPPED)
@@ -277,14 +280,14 @@ ALvoid ALAPIENTRY alGetDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsiz
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
+    ALCdevice     *Device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsDatabufferEXT(uiBuffer) && uiBuffer != 0)
+    Device = pContext->Device;
+    if((pBuffer=VerifyDatabuffer(Device->DatabufferList, uiBuffer)) != NULL)
     {
-        pBuffer = (ALdatabuffer*)ALTHUNK_LOOKUPENTRY(uiBuffer);
-
         if(length >= 0 && start+length <= pBuffer->size)
         {
             if(pBuffer->state == UNMAPPED)
@@ -305,13 +308,15 @@ ALvoid ALAPIENTRY alGetDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsiz
 ALvoid ALAPIENTRY alDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat flValue)
 {
     ALCcontext    *pContext;
+    ALCdevice     *Device;
 
     (void)flValue;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsDatabufferEXT(buffer) && buffer != 0)
+    Device = pContext->Device;
+    if(VerifyDatabuffer(Device->DatabufferList, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -329,13 +334,15 @@ ALvoid ALAPIENTRY alDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat flValue
 ALvoid ALAPIENTRY alDatabufferfvEXT(ALuint buffer, ALenum eParam, const ALfloat* flValues)
 {
     ALCcontext    *pContext;
+    ALCdevice     *Device;
 
     (void)flValues;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsDatabufferEXT(buffer) && buffer != 0)
+    Device = pContext->Device;
+    if(VerifyDatabuffer(Device->DatabufferList, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -354,13 +361,15 @@ ALvoid ALAPIENTRY alDatabufferfvEXT(ALuint buffer, ALenum eParam, const ALfloat*
 ALvoid ALAPIENTRY alDatabufferiEXT(ALuint buffer, ALenum eParam, ALint lValue)
 {
     ALCcontext    *pContext;
+    ALCdevice     *Device;
 
     (void)lValue;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsDatabufferEXT(buffer) && buffer != 0)
+    Device = pContext->Device;
+    if(VerifyDatabuffer(Device->DatabufferList, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -378,13 +387,15 @@ ALvoid ALAPIENTRY alDatabufferiEXT(ALuint buffer, ALenum eParam, ALint lValue)
 ALvoid ALAPIENTRY alDatabufferivEXT(ALuint buffer, ALenum eParam, const ALint* plValues)
 {
     ALCcontext    *pContext;
+    ALCdevice     *Device;
 
     (void)plValues;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsDatabufferEXT(buffer) && buffer != 0)
+    Device = pContext->Device;
+    if(VerifyDatabuffer(Device->DatabufferList, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -403,13 +414,15 @@ ALvoid ALAPIENTRY alDatabufferivEXT(ALuint buffer, ALenum eParam, const ALint* p
 ALvoid ALAPIENTRY alGetDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat *pflValue)
 {
     ALCcontext    *pContext;
+    ALCdevice     *Device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if(pflValue)
     {
-        if(alIsDatabufferEXT(buffer) && buffer != 0)
+        Device = pContext->Device;
+        if(VerifyDatabuffer(Device->DatabufferList, buffer) != NULL)
         {
             switch(eParam)
             {
@@ -430,13 +443,15 @@ ALvoid ALAPIENTRY alGetDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat *pfl
 ALvoid ALAPIENTRY alGetDatabufferfvEXT(ALuint buffer, ALenum eParam, ALfloat* pflValues)
 {
     ALCcontext    *pContext;
+    ALCdevice     *Device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if(pflValues)
     {
-        if(alIsDatabufferEXT(buffer) && buffer != 0)
+        Device = pContext->Device;
+        if(VerifyDatabuffer(Device->DatabufferList, buffer) != NULL)
         {
             switch(eParam)
             {
@@ -458,16 +473,16 @@ ALvoid ALAPIENTRY alGetDatabufferiEXT(ALuint buffer, ALenum eParam, ALint *plVal
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
+    ALCdevice     *Device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if(plValue)
     {
-        if(alIsDatabufferEXT(buffer) && buffer != 0)
+        Device = pContext->Device;
+        if((pBuffer=VerifyDatabuffer(Device->DatabufferList, buffer)) != NULL)
         {
-            pBuffer = (ALdatabuffer*)ALTHUNK_LOOKUPENTRY(buffer);
-
             switch(eParam)
             {
             case AL_SIZE:
@@ -491,13 +506,15 @@ ALvoid ALAPIENTRY alGetDatabufferiEXT(ALuint buffer, ALenum eParam, ALint *plVal
 ALvoid ALAPIENTRY alGetDatabufferivEXT(ALuint buffer, ALenum eParam, ALint* plValues)
 {
     ALCcontext    *pContext;
+    ALCdevice     *Device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if(plValues)
     {
-        if(alIsDatabufferEXT(buffer) && buffer != 0)
+        Device = pContext->Device;
+        if(VerifyDatabuffer(Device->DatabufferList, buffer) != NULL)
         {
             switch (eParam)
             {
@@ -523,14 +540,15 @@ ALvoid ALAPIENTRY alGetDatabufferivEXT(ALuint buffer, ALenum eParam, ALint* plVa
 ALvoid ALAPIENTRY alSelectDatabufferEXT(ALenum target, ALuint uiBuffer)
 {
     ALCcontext    *pContext;
-    ALdatabuffer  *pBuffer;
+    ALdatabuffer  *pBuffer = NULL;
+    ALCdevice     *Device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsDatabufferEXT(uiBuffer))
+    Device = pContext->Device;
+    if((pBuffer=VerifyDatabuffer(Device->DatabufferList, uiBuffer)) != NULL)
     {
-        pBuffer = (ALdatabuffer*)(uiBuffer ? ALTHUNK_LOOKUPENTRY(uiBuffer) : NULL);
         if(target == AL_SAMPLE_SOURCE_EXT)
             pContext->SampleSource = pBuffer;
         else if(target == AL_SAMPLE_SINK_EXT)
@@ -550,14 +568,14 @@ ALvoid* ALAPIENTRY alMapDatabufferEXT(ALuint uiBuffer, ALuint start, ALsizei len
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
     ALvoid        *ret = NULL;
+    ALCdevice     *Device;
 
     pContext = GetContextSuspended();
     if(!pContext) return NULL;
 
-    if(alIsDatabufferEXT(uiBuffer) && uiBuffer != 0)
+    Device = pContext->Device;
+    if((pBuffer=VerifyDatabuffer(Device->DatabufferList, uiBuffer)) != NULL)
     {
-        pBuffer = (ALdatabuffer*)ALTHUNK_LOOKUPENTRY(uiBuffer);
-
         if(length >= 0 && start+length <= pBuffer->size)
         {
             if(access == AL_READ_ONLY_EXT || access == AL_WRITE_ONLY_EXT ||
@@ -589,14 +607,14 @@ ALvoid ALAPIENTRY alUnmapDatabufferEXT(ALuint uiBuffer)
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
+    ALCdevice     *Device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if(alIsDatabufferEXT(uiBuffer) && uiBuffer != 0)
+    Device = pContext->Device;
+    if((pBuffer=VerifyDatabuffer(Device->DatabufferList, uiBuffer)) != NULL)
     {
-        pBuffer = (ALdatabuffer*)ALTHUNK_LOOKUPENTRY(uiBuffer);
-
         if(pBuffer->state == MAPPED)
             pBuffer->state = UNMAPPED;
         else

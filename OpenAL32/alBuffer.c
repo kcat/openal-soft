@@ -39,6 +39,8 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, AL
 static void ConvertDataMULaw(ALfloat *dst, const ALvoid *src, ALsizei len);
 static void ConvertDataMULawRear(ALfloat *dst, const ALvoid *src, ALsizei len);
 
+DECL_VERIFIER(Buffer, ALbuffer, buffer)
+
 /*
 * Global Variables
 */
@@ -175,19 +177,18 @@ ALAPI ALvoid ALAPIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
         // Check that all the buffers are valid and can actually be deleted
         for (i = 0; i < n; i++)
         {
+            if(!puiBuffers[i])
+                continue;
+
             // Check for valid Buffer ID (can be NULL buffer)
-            if (alIsBuffer(puiBuffers[i]))
+            if((ALBuf=VerifyBuffer(device->BufferList, puiBuffers[i])) != NULL)
             {
-                // If not the NULL buffer, check that the reference count is 0
-                ALBuf = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(puiBuffers[i]));
-                if (ALBuf)
+                if(ALBuf->refcount != 0)
                 {
-                    if (ALBuf->refcount != 0)
-                    {
-                        // Buffer still in use, cannot be deleted
-                        alSetError(Context, AL_INVALID_OPERATION);
-                        bFailed = AL_TRUE;
-                    }
+                    // Buffer still in use, cannot be deleted
+                    alSetError(Context, AL_INVALID_OPERATION);
+                    bFailed = AL_TRUE;
+                    break;
                 }
             }
             else
@@ -195,6 +196,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
                 // Invalid Buffer
                 alSetError(Context, AL_INVALID_NAME);
                 bFailed = AL_TRUE;
+                break;
             }
         }
 
@@ -203,11 +205,10 @@ ALAPI ALvoid ALAPIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
         {
             for (i = 0; i < n; i++)
             {
-                if (puiBuffers[i] && alIsBuffer(puiBuffers[i]))
+                if((ALBuf=VerifyBuffer(device->BufferList, puiBuffers[i])) != NULL)
                 {
                     ALbuffer **list = &device->BufferList;
 
-                    ALBuf=((ALbuffer *)ALTHUNK_LOOKUPENTRY(puiBuffers[i]));
                     while(*list && *list != ALBuf)
                         list = &(*list)->next;
 
@@ -240,37 +241,14 @@ ALAPI ALvoid ALAPIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
 ALAPI ALboolean ALAPIENTRY alIsBuffer(ALuint uiBuffer)
 {
     ALCcontext *Context;
-    ALboolean result=AL_FALSE;
-    ALbuffer *ALBuf;
-    ALbuffer *TgtALBuf;
+    ALboolean  result = AL_TRUE;
 
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    if (uiBuffer)
-    {
-        ALCdevice *device = Context->Device;
-
-        TgtALBuf = (ALbuffer *)ALTHUNK_LOOKUPENTRY(uiBuffer);
-
-        // Check through list of generated buffers for uiBuffer
-        ALBuf = device->BufferList;
-        while (ALBuf)
-        {
-            if (ALBuf == TgtALBuf)
-            {
-                result = AL_TRUE;
-                break;
-            }
-
-            ALBuf = ALBuf->next;
-        }
-    }
-    else
-    {
-        result = AL_TRUE;
-    }
-
+    if(uiBuffer)
+        result = (VerifyBuffer(Context->Device->BufferList, uiBuffer) ?
+                  AL_TRUE : AL_FALSE);
 
     ProcessContext(Context);
 
@@ -285,6 +263,7 @@ ALAPI ALboolean ALAPIENTRY alIsBuffer(ALuint uiBuffer)
 ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *data,ALsizei size,ALsizei freq)
 {
     ALCcontext *Context;
+    ALCdevice *device;
     ALbuffer *ALBuf;
     ALvoid *temp;
     ALenum err;
@@ -292,10 +271,9 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (alIsBuffer(buffer) && (buffer != 0))
+    device = Context->Device;
+    if((ALBuf=VerifyBuffer(device->BufferList, buffer)) != NULL)
     {
-        ALBuf=((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
         if(Context->SampleSource)
         {
             ALuint offset;
@@ -538,15 +516,15 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
 ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
 {
     ALCcontext *Context;
-    ALbuffer *ALBuf;
+    ALCdevice  *device;
+    ALbuffer   *ALBuf;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(alIsBuffer(buffer) && buffer != 0)
+    device = Context->Device;
+    if((ALBuf=VerifyBuffer(device->BufferList, buffer)) != NULL)
     {
-        ALBuf = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffer);
-
         if(Context->SampleSource)
         {
             ALuint offset;
@@ -685,13 +663,15 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
 ALAPI void ALAPIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     (void)flValue;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if (alIsBuffer(buffer) && (buffer != 0))
+    device = pContext->Device;
+    if(VerifyBuffer(device->BufferList, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -712,6 +692,7 @@ ALAPI void ALAPIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 ALAPI void ALAPIENTRY alBuffer3f(ALuint buffer, ALenum eParam, ALfloat flValue1, ALfloat flValue2, ALfloat flValue3)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     (void)flValue1;
     (void)flValue2;
@@ -720,7 +701,8 @@ ALAPI void ALAPIENTRY alBuffer3f(ALuint buffer, ALenum eParam, ALfloat flValue1,
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if (alIsBuffer(buffer) && (buffer != 0))
+    device = pContext->Device;
+    if(VerifyBuffer(device->BufferList, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -741,13 +723,15 @@ ALAPI void ALAPIENTRY alBuffer3f(ALuint buffer, ALenum eParam, ALfloat flValue1,
 ALAPI void ALAPIENTRY alBufferfv(ALuint buffer, ALenum eParam, const ALfloat* flValues)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     (void)flValues;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if (alIsBuffer(buffer) && (buffer != 0))
+    device = pContext->Device;
+    if(VerifyBuffer(device->BufferList, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -768,13 +752,15 @@ ALAPI void ALAPIENTRY alBufferfv(ALuint buffer, ALenum eParam, const ALfloat* fl
 ALAPI void ALAPIENTRY alBufferi(ALuint buffer, ALenum eParam, ALint lValue)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     (void)lValue;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if (alIsBuffer(buffer) && (buffer != 0))
+    device = pContext->Device;
+    if(VerifyBuffer(device->BufferList, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -795,6 +781,7 @@ ALAPI void ALAPIENTRY alBufferi(ALuint buffer, ALenum eParam, ALint lValue)
 ALAPI void ALAPIENTRY alBuffer3i( ALuint buffer, ALenum eParam, ALint lValue1, ALint lValue2, ALint lValue3)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     (void)lValue1;
     (void)lValue2;
@@ -803,7 +790,8 @@ ALAPI void ALAPIENTRY alBuffer3i( ALuint buffer, ALenum eParam, ALint lValue1, A
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if (alIsBuffer(buffer) && (buffer != 0))
+    device = pContext->Device;
+    if(VerifyBuffer(device->BufferList, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -824,13 +812,15 @@ ALAPI void ALAPIENTRY alBuffer3i( ALuint buffer, ALenum eParam, ALint lValue1, A
 ALAPI void ALAPIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* plValues)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     (void)plValues;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if (alIsBuffer(buffer) && (buffer != 0))
+    device = pContext->Device;
+    if(VerifyBuffer(device->BufferList, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -851,13 +841,15 @@ ALAPI void ALAPIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* plVa
 ALAPI ALvoid ALAPIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pflValue)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if (pflValue)
     {
-        if (alIsBuffer(buffer) && (buffer != 0))
+        device = pContext->Device;
+        if(VerifyBuffer(device->BufferList, buffer) != NULL)
         {
             switch(eParam)
             {
@@ -883,13 +875,15 @@ ALAPI ALvoid ALAPIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pflV
 ALAPI void ALAPIENTRY alGetBuffer3f(ALuint buffer, ALenum eParam, ALfloat* pflValue1, ALfloat* pflValue2, ALfloat* pflValue3)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if ((pflValue1) && (pflValue2) && (pflValue3))
     {
-        if (alIsBuffer(buffer) && (buffer != 0))
+        device = pContext->Device;
+        if(VerifyBuffer(device->BufferList, buffer) != NULL)
         {
             switch(eParam)
             {
@@ -915,13 +909,15 @@ ALAPI void ALAPIENTRY alGetBuffer3f(ALuint buffer, ALenum eParam, ALfloat* pflVa
 ALAPI void ALAPIENTRY alGetBufferfv(ALuint buffer, ALenum eParam, ALfloat* pflValues)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if (pflValues)
     {
-        if (alIsBuffer(buffer) && (buffer != 0))
+        device = pContext->Device;
+        if(VerifyBuffer(device->BufferList, buffer) != NULL)
         {
             switch(eParam)
             {
@@ -947,17 +943,17 @@ ALAPI void ALAPIENTRY alGetBufferfv(ALuint buffer, ALenum eParam, ALfloat* pflVa
 ALAPI ALvoid ALAPIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plValue)
 {
     ALCcontext    *pContext;
-    ALbuffer    *pBuffer;
+    ALbuffer      *pBuffer;
+    ALCdevice     *device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if (plValue)
     {
-        if (alIsBuffer(buffer) && (buffer != 0))
+        device = pContext->Device;
+        if((pBuffer=VerifyBuffer(device->BufferList, buffer)) != NULL)
         {
-            pBuffer = ((ALbuffer *)ALTHUNK_LOOKUPENTRY(buffer));
-
             switch (eParam)
             {
             case AL_FREQUENCY:
@@ -998,13 +994,15 @@ ALAPI ALvoid ALAPIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plValu
 ALAPI void ALAPIENTRY alGetBuffer3i(ALuint buffer, ALenum eParam, ALint* plValue1, ALint* plValue2, ALint* plValue3)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if ((plValue1) && (plValue2) && (plValue3))
     {
-        if (alIsBuffer(buffer) && (buffer != 0))
+        device = pContext->Device;
+        if(VerifyBuffer(device->BufferList, buffer) != NULL)
         {
             switch(eParam)
             {
@@ -1030,13 +1028,15 @@ ALAPI void ALAPIENTRY alGetBuffer3i(ALuint buffer, ALenum eParam, ALint* plValue
 ALAPI void ALAPIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plValues)
 {
     ALCcontext    *pContext;
+    ALCdevice     *device;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     if (plValues)
     {
-        if (alIsBuffer(buffer) && (buffer != 0))
+        device = pContext->Device;
+        if(VerifyBuffer(device->BufferList, buffer) != NULL)
         {
             switch (eParam)
             {

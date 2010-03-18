@@ -407,7 +407,6 @@ ALAPI ALvoid * ALAPIENTRY alGetProcAddress(const ALchar *funcName)
     return function[i].address;
 }
 
-/* NOTE: This function must be able to run without a context! */
 ALAPI ALenum ALAPIENTRY alGetEnumValue(const ALchar *enumName)
 {
     ALsizei i = 0;

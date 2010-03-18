@@ -276,7 +276,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
     {
         if(Context->SampleSource)
         {
-            ALuint offset;
+            ALintptrEXT offset;
 
             if(Context->SampleSource->state == MAPPED)
             {
@@ -285,7 +285,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                 return;
             }
 
-            offset = (ALuint)data;
+            offset = (ALintptrEXT)data;
             data = Context->SampleSource->data + offset;
         }
 
@@ -525,7 +525,7 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
     {
         if(Context->SampleSource)
         {
-            ALuint offset;
+            ALintptrEXT offset;
 
             if(Context->SampleSource->state == MAPPED)
             {
@@ -534,7 +534,7 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
                 return;
             }
 
-            offset = (ALuint)data;
+            offset = (ALintptrEXT)data;
             data = Context->SampleSource->data + offset;
         }
 

@@ -202,7 +202,7 @@ ALboolean ALAPIENTRY alIsDatabufferEXT(ALuint uiBuffer)
 *
 *    Fill databuffer with data
 */
-ALvoid ALAPIENTRY alDatabufferDataEXT(ALuint buffer,const ALvoid *data,ALsizei size,ALenum usage)
+ALvoid ALAPIENTRY alDatabufferDataEXT(ALuint buffer,const ALvoid *data,ALsizeiptrEXT size,ALenum usage)
 {
     ALCcontext *Context;
     ALdatabuffer *ALBuf;
@@ -223,18 +223,23 @@ ALvoid ALAPIENTRY alDatabufferDataEXT(ALuint buffer,const ALvoid *data,ALsizei s
                usage == AL_DYNAMIC_WRITE_EXT || usage == AL_DYNAMIC_READ_EXT ||
                usage == AL_DYNAMIC_COPY_EXT)
             {
-                /* (Re)allocate data */
-                temp = realloc(ALBuf->data, size);
-                if(temp)
+                if(size >= 0)
                 {
-                    ALBuf->data = temp;
-                    ALBuf->size = size;
-                    ALBuf->usage = usage;
-                    if(data)
-                        memcpy(ALBuf->data, data, size);
+                    /* (Re)allocate data */
+                    temp = realloc(ALBuf->data, size);
+                    if(temp)
+                    {
+                        ALBuf->data = temp;
+                        ALBuf->size = size;
+                        ALBuf->usage = usage;
+                        if(data)
+                            memcpy(ALBuf->data, data, size);
+                    }
+                    else
+                        alSetError(Context, AL_OUT_OF_MEMORY);
                 }
                 else
-                    alSetError(Context, AL_OUT_OF_MEMORY);
+                    alSetError(Context, AL_INVALID_VALUE);
             }
             else
                 alSetError(Context, AL_INVALID_ENUM);
@@ -248,7 +253,7 @@ ALvoid ALAPIENTRY alDatabufferDataEXT(ALuint buffer,const ALvoid *data,ALsizei s
     ProcessContext(Context);
 }
 
-ALvoid ALAPIENTRY alDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsizei length, const ALvoid *data)
+ALvoid ALAPIENTRY alDatabufferSubDataEXT(ALuint uiBuffer, ALintptrEXT start, ALsizeiptrEXT length, const ALvoid *data)
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
@@ -260,7 +265,7 @@ ALvoid ALAPIENTRY alDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsizei 
     Device = pContext->Device;
     if((pBuffer=VerifyDatabuffer(Device->DatabufferList, uiBuffer)) != NULL)
     {
-        if(length >= 0 && start+length <= pBuffer->size)
+        if(start >= 0 && length >= 0 && start+length <= pBuffer->size)
         {
             if(pBuffer->state == UNMAPPED)
                 memcpy(pBuffer->data+start, data, length);
@@ -276,7 +281,7 @@ ALvoid ALAPIENTRY alDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsizei 
     ProcessContext(pContext);
 }
 
-ALvoid ALAPIENTRY alGetDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsizei length, ALvoid *data)
+ALvoid ALAPIENTRY alGetDatabufferSubDataEXT(ALuint uiBuffer, ALintptrEXT start, ALsizeiptrEXT length, ALvoid *data)
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
@@ -288,7 +293,7 @@ ALvoid ALAPIENTRY alGetDatabufferSubDataEXT(ALuint uiBuffer, ALuint start, ALsiz
     Device = pContext->Device;
     if((pBuffer=VerifyDatabuffer(Device->DatabufferList, uiBuffer)) != NULL)
     {
-        if(length >= 0 && start+length <= pBuffer->size)
+        if(start >= 0 && length >= 0 && start+length <= pBuffer->size)
         {
             if(pBuffer->state == UNMAPPED)
                 memcpy(data, pBuffer->data+start, length);
@@ -564,7 +569,7 @@ ALvoid ALAPIENTRY alSelectDatabufferEXT(ALenum target, ALuint uiBuffer)
 }
 
 
-ALvoid* ALAPIENTRY alMapDatabufferEXT(ALuint uiBuffer, ALuint start, ALsizei length, ALenum access)
+ALvoid* ALAPIENTRY alMapDatabufferEXT(ALuint uiBuffer, ALintptrEXT start, ALsizeiptrEXT length, ALenum access)
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
@@ -577,7 +582,7 @@ ALvoid* ALAPIENTRY alMapDatabufferEXT(ALuint uiBuffer, ALuint start, ALsizei len
     Device = pContext->Device;
     if((pBuffer=VerifyDatabuffer(Device->DatabufferList, uiBuffer)) != NULL)
     {
-        if(length >= 0 && start+length <= pBuffer->size)
+        if(start >= 0 && length >= 0 && start+length <= pBuffer->size)
         {
             if(access == AL_READ_ONLY_EXT || access == AL_WRITE_ONLY_EXT ||
                access == AL_READ_WRITE_EXT)

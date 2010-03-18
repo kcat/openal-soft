@@ -18,7 +18,8 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
-#ifdef _WIN32
+#if defined(_WIN32) && (_WIN32_IE < 0x400)
+#undef _WIN32_IE
 #define _WIN32_IE 0x400
 #endif
 

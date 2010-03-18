@@ -316,9 +316,13 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_EFFECT_TYPE",                       AL_EFFECT_TYPE                      },
     { (ALchar *)"AL_EFFECT_NULL",                       AL_EFFECT_NULL                      },
     { (ALchar *)"AL_EFFECT_REVERB",                     AL_EFFECT_REVERB                    },
+    { (ALchar *)"AL_EFFECT_EAXREVERB",                  AL_EFFECT_EAXREVERB                 },
+#if 0
     { (ALchar *)"AL_EFFECT_CHORUS",                     AL_EFFECT_CHORUS                    },
     { (ALchar *)"AL_EFFECT_DISTORTION",                 AL_EFFECT_DISTORTION                },
+#endif
     { (ALchar *)"AL_EFFECT_ECHO",                       AL_EFFECT_ECHO                      },
+#if 0
     { (ALchar *)"AL_EFFECT_FLANGER",                    AL_EFFECT_FLANGER                   },
     { (ALchar *)"AL_EFFECT_FREQUENCY_SHIFTER",          AL_EFFECT_FREQUENCY_SHIFTER         },
     { (ALchar *)"AL_EFFECT_VOCAL_MORPHER",              AL_EFFECT_VOCAL_MORPHER             },
@@ -327,6 +331,7 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_EFFECT_AUTOWAH",                    AL_EFFECT_AUTOWAH                   },
     { (ALchar *)"AL_EFFECT_COMPRESSOR",                 AL_EFFECT_COMPRESSOR                },
     { (ALchar *)"AL_EFFECT_EQUALIZER",                  AL_EFFECT_EQUALIZER                 },
+#endif
 
     // Reverb params
     { (ALchar *)"AL_REVERB_DENSITY",                    AL_REVERB_DENSITY                   },

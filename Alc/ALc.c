@@ -180,6 +180,9 @@ static ALCchar *alcDefaultAllDeviceSpecifier;
 static ALCchar *alcCaptureDefaultDeviceSpecifier;
 
 
+static const ALCchar alcNoDeviceExtList[] =
+    "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
+    "ALC_EXTX_thread_local_context";
 static const ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
     "ALC_EXT_disconnect ALC_EXT_EFX ALC_EXTX_thread_local_context";
@@ -945,7 +948,10 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
         break;
 
     case ALC_EXTENSIONS:
-        value = alcExtensionList;
+        if(IsDevice(pDevice))
+            value = alcExtensionList;
+        else
+            value = alcNoDeviceExtList;
         break;
 
     default:
@@ -1124,7 +1130,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcIsExtensionPresent(ALCdevice *device, const ALC
         size_t len;
 
         len = strlen(extName);
-        ptr = alcExtensionList;
+        ptr = (IsDevice(device) ? alcExtensionList : alcNoDeviceExtList);
         while(ptr && *ptr)
         {
             if(strncasecmp(ptr, extName, len) == 0 &&

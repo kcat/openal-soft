@@ -491,7 +491,7 @@ ALvoid ALAPIENTRY alGetDatabufferiEXT(ALuint buffer, ALenum eParam, ALint *plVal
             switch(eParam)
             {
             case AL_SIZE:
-                *plValue = pBuffer->size;
+                *plValue = (ALint)pBuffer->size;
                 break;
 
             default:

@@ -223,6 +223,11 @@
 #  given by PortAudio itself.
 #device = -1
 
+## capture:
+#  Sets the device index for capture. Negative values will use the default as
+#  given by PortAudio itself.
+#capture = -1
+
 ##
 ## PulseAudio backend stuff
 ##

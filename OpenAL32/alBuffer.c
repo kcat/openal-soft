@@ -321,8 +321,6 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                                         ((format==AL_FORMAT_REAR16) ? 2 :
                                          4));
 
-                    assert(aluBytesFromFormat(NewFormat) == 2);
-
                     if((size%(OrigBytes*2)) != 0)
                     {
                         alSetError(Context, AL_INVALID_VALUE);

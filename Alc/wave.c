@@ -172,6 +172,7 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
 {
     wave_data *data = (wave_data*)device->ExtraData;
     ALuint channels, bits, i;
+    size_t val;
 
     fseek(data->f, 0, SEEK_SET);
     clearerr(data->f);
@@ -244,7 +245,7 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
     fputc((i>>16)&0xff, data->f);
     fputc((i>>24)&0xff, data->f);
     // 16 byte GUID, sub-type format
-    i = fwrite(((bits==32) ? SUBTYPE_FLOAT : SUBTYPE_PCM), 1, 16, data->f);
+    val = fwrite(((bits==32) ? SUBTYPE_FLOAT : SUBTYPE_PCM), 1, 16, data->f);
 
     fprintf(data->f, "data");
     fputc(0xFF, data->f); // 'data' header len; filled in at close

@@ -169,11 +169,11 @@ static const ALCchar alcErrOutOfMemory[] = "Out of Memory";
 /* Device lists. Sizes only include the first ending null character, not the
  * second */
 static ALCchar *alcDeviceList;
-static ALCuint alcDeviceListSize;
+static size_t alcDeviceListSize;
 static ALCchar *alcAllDeviceList;
-static ALCuint alcAllDeviceListSize;
+static size_t alcAllDeviceListSize;
 static ALCchar *alcCaptureDeviceList;
-static ALCuint alcCaptureDeviceListSize;
+static size_t alcCaptureDeviceListSize;
 // Default is always the first in the list
 static ALCchar *alcDefaultDeviceSpecifier;
 static ALCchar *alcDefaultAllDeviceSpecifier;
@@ -420,7 +420,7 @@ static void ProbeCaptureDeviceList()
 #define DECL_APPEND_LIST_FUNC(type)                                          \
 void Append##type##List(const ALCchar *name)                                 \
 {                                                                            \
-    ALCuint len = strlen(name);                                              \
+    size_t len = strlen(name);                                               \
     void *temp;                                                              \
                                                                              \
     if(len == 0)                                                             \

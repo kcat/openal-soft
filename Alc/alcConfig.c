@@ -212,7 +212,7 @@ void ReadALConfig(void)
 #ifdef _WIN32
     if(SHGetSpecialFolderPathA(NULL, buffer, CSIDL_APPDATA, FALSE) != FALSE)
     {
-        int p = strlen(buffer);
+        size_t p = strlen(buffer);
         snprintf(buffer+p, sizeof(buffer)-p, "\\alsoft.ini");
         f = fopen(buffer, "rt");
         if(f)

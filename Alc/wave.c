@@ -42,6 +42,26 @@ typedef struct {
 
 static const ALCchar waveDevice[] = "Wave File Writer";
 
+static const ALubyte SUBTYPE_PCM[] = {
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
+    0x00, 0x38, 0x9b, 0x71
+};
+static const ALubyte SUBTYPE_FLOAT[] = {
+    0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
+    0x00, 0x38, 0x9b, 0x71
+};
+
+static const ALuint channel_masks[] = {
+    0, /* invalid */
+    0x4, /* Mono */
+    0x1 | 0x2, /* Stereo */
+    0, /* 3 channel */
+    0x1 | 0x2 | 0x10 | 0x20, /* Quad */
+    0, /* 5 channel */
+    0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20, /* 5.1 */
+    0x1 | 0x2 | 0x4 | 0x8 | 0x100 | 0x200 | 0x400, /* 6.1 */
+    0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20 | 0x200 | 0x400, /* 7.1 */
+};
 
 static ALuint WaveProc(ALvoid *ptr)
 {
@@ -76,13 +96,21 @@ static ALuint WaveProc(ALvoid *ptr)
         {
             aluMixData(pDevice, data->buffer, pDevice->UpdateSize);
 
-            if(uSB.b[0] != 1 && aluBytesFromFormat(pDevice->Format) > 1)
+            if(uSB.b[0] != 1)
             {
                 ALubyte *bytes = data->buffer;
                 ALuint i;
 
-                for(i = 0;i < data->size;i++)
-                    fputc(bytes[i^1], data->f);
+                if(aluBytesFromFormat(pDevice->Format) == 2)
+                {
+                    for(i = 0;i < data->size;i++)
+                        fputc(bytes[i^1], data->f);
+                }
+                else if(aluBytesFromFormat(pDevice->Format) == 4)
+                {
+                    for(i = 0;i < data->size;i++)
+                        fputc(bytes[i^3], data->f);
+                }
             }
             else
                 fs = fwrite(data->buffer, frameSize, pDevice->UpdateSize,
@@ -151,42 +179,37 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
     bits = aluBytesFromFormat(device->Format) * 8;
     channels = aluChannelsFromFormat(device->Format);
 
-    if(channels != 1 && channels != 2)
+    /* 7.1 max */
+    if(channels > 8)
     {
         if(bits == 8)
-            device->Format = AL_FORMAT_STEREO8;
+            device->Format = AL_FORMAT_71CHN8;
+        else if(bits == 16)
+            device->Format = AL_FORMAT_71CHN16;
         else
         {
-            device->Format = AL_FORMAT_STEREO16;
-            bits = 16;
+            device->Format = AL_FORMAT_71CHN32;
+            bits = 32;
         }
-        channels = 2;
-    }
-    else if(bits != 8 && bits != 16)
-    {
-        if(channels == 1)
-            device->Format = AL_FORMAT_MONO16;
-        else
-            device->Format = AL_FORMAT_STEREO16;
-        bits = 16;
+        channels = 8;
     }
 
     fprintf(data->f, "RIFF");
-    fputc(0, data->f); // 'RIFF' header len; filled in at close
-    fputc(0, data->f);
-    fputc(0, data->f);
-    fputc(0, data->f);
+    fputc(0xFF, data->f); // 'RIFF' header len; filled in at close
+    fputc(0xFF, data->f);
+    fputc(0xFF, data->f);
+    fputc(0xFF, data->f);
 
     fprintf(data->f, "WAVE");
 
     fprintf(data->f, "fmt ");
-    fputc(16, data->f); // 'fmt ' header len; 16 bytes for PCM
+    fputc(40, data->f); // 'fmt ' header len; 40 bytes for EXTENSIVLE
     fputc(0, data->f);
     fputc(0, data->f);
     fputc(0, data->f);
-    // 16-bit val, format type id (PCM: 1)
-    fputc(1, data->f);
-    fputc(0, data->f);
+    // 16-bit val, format type id (extensible: 0xFFFE)
+    fputc(0xFE, data->f);
+    fputc(0xFF, data->f);
     // 16-bit val, channel count
     fputc(channels&0xff, data->f);
     fputc((channels>>8)&0xff, data->f);
@@ -208,12 +231,26 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
     // 16-bit val, bits per sample
     fputc(bits&0xff, data->f);
     fputc((bits>>8)&0xff, data->f);
+    // 16-bit val, extra byte count
+    fputc(22, data->f);
+    fputc(0, data->f);
+    // 16-bit val, valid bits per sample
+    fputc(bits&0xff, data->f);
+    fputc((bits>>8)&0xff, data->f);
+    // 32-bit val, channel mask
+    i = channel_masks[channels];
+    fputc(i&0xff, data->f);
+    fputc((i>>8)&0xff, data->f);
+    fputc((i>>16)&0xff, data->f);
+    fputc((i>>24)&0xff, data->f);
+    // 16 byte GUID, sub-type format
+    i = fwrite(((bits==32) ? SUBTYPE_FLOAT : SUBTYPE_PCM), 1, 16, data->f);
 
     fprintf(data->f, "data");
-    fputc(0, data->f); // 'data' header len; filled in at close
-    fputc(0, data->f);
-    fputc(0, data->f);
-    fputc(0, data->f);
+    fputc(0xFF, data->f); // 'data' header len; filled in at close
+    fputc(0xFF, data->f);
+    fputc(0xFF, data->f);
+    fputc(0xFF, data->f);
 
     if(ferror(data->f))
     {

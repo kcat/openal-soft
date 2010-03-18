@@ -182,7 +182,7 @@ static const ALfloat LATE_LINE_LENGTH[4] =
 static const ALfloat LATE_LINE_MULTIPLIER = 4.0f;
 
 // Calculate the length of a delay line and store its mask and offset.
-static ALuint CalcLineLength(ALfloat length, ALuint offset, ALuint frequency, DelayLine *Delay)
+static ALuint CalcLineLength(ALfloat length, ALintptrEXT offset, ALuint frequency, DelayLine *Delay)
 {
     ALuint samples;
 
@@ -200,7 +200,7 @@ static ALuint CalcLineLength(ALfloat length, ALuint offset, ALuint frequency, De
 // offset.
 static __inline ALvoid RealizeLineOffset(ALfloat * sampleBuffer, DelayLine *Delay)
 {
-    Delay->Line = &sampleBuffer[(ALuint)Delay->Line];
+    Delay->Line = &sampleBuffer[(ALintptrEXT)Delay->Line];
 }
 
 /* Calculates the delay line metrics and allocates the shared sample buffer

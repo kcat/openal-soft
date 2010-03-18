@@ -382,12 +382,8 @@ ALCcontext* ALCAPIENTRY alcGetThreadContext(void);
 #define DECL_VERIFIER(name, type, field)                                      \
 static type* Verify##name(type *list, ALuint id)                              \
 {                                                                             \
-    while(list)                                                               \
-    {                                                                         \
-        if(list->field == id)                                                 \
-            break;                                                            \
+    while(list && list->field != id)                                          \
         list = list->next;                                                    \
-    }                                                                         \
     return list;                                                              \
 }
 

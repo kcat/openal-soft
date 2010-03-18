@@ -18,9 +18,12 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
-#if defined(_WIN32) && (_WIN32_IE < 0x400)
-#undef _WIN32_IE
+#ifdef _WIN32
+#ifdef __MINGW64__
+#define _WIN32_IE 0x501
+#else
 #define _WIN32_IE 0x400
+#endif
 #endif
 
 #include "config.h"

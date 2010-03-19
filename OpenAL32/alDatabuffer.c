@@ -39,7 +39,7 @@ DECL_VERIFIER(Databuffer, ALdatabuffer, databuffer)
 *
 *    Generates n AL Databuffers, and stores the Databuffers Names in the array pointed to by puiBuffers
 */
-ALvoid ALAPIENTRY alGenDatabuffersEXT(ALsizei n,ALuint *puiBuffers)
+ALvoid AL_APIENTRY alGenDatabuffersEXT(ALsizei n,ALuint *puiBuffers)
 {
     ALCcontext *Context;
     ALsizei i=0;
@@ -92,7 +92,7 @@ ALvoid ALAPIENTRY alGenDatabuffersEXT(ALsizei n,ALuint *puiBuffers)
 *
 *    Deletes the n AL Databuffers pointed to by puiBuffers
 */
-ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
+ALvoid AL_APIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
 {
     ALCcontext *Context;
     ALdatabuffer *ALBuf;
@@ -178,7 +178,7 @@ ALvoid ALAPIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
 *
 *    Checks if ulBuffer is a valid Databuffer Name
 */
-ALboolean ALAPIENTRY alIsDatabufferEXT(ALuint uiBuffer)
+ALboolean AL_APIENTRY alIsDatabufferEXT(ALuint uiBuffer)
 {
     ALCcontext *Context;
     ALboolean  result = AL_TRUE;
@@ -202,7 +202,7 @@ ALboolean ALAPIENTRY alIsDatabufferEXT(ALuint uiBuffer)
 *
 *    Fill databuffer with data
 */
-ALvoid ALAPIENTRY alDatabufferDataEXT(ALuint buffer,const ALvoid *data,ALsizeiptrEXT size,ALenum usage)
+ALvoid AL_APIENTRY alDatabufferDataEXT(ALuint buffer,const ALvoid *data,ALsizeiptrEXT size,ALenum usage)
 {
     ALCcontext *Context;
     ALdatabuffer *ALBuf;
@@ -253,7 +253,7 @@ ALvoid ALAPIENTRY alDatabufferDataEXT(ALuint buffer,const ALvoid *data,ALsizeipt
     ProcessContext(Context);
 }
 
-ALvoid ALAPIENTRY alDatabufferSubDataEXT(ALuint uiBuffer, ALintptrEXT start, ALsizeiptrEXT length, const ALvoid *data)
+ALvoid AL_APIENTRY alDatabufferSubDataEXT(ALuint uiBuffer, ALintptrEXT start, ALsizeiptrEXT length, const ALvoid *data)
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
@@ -281,7 +281,7 @@ ALvoid ALAPIENTRY alDatabufferSubDataEXT(ALuint uiBuffer, ALintptrEXT start, ALs
     ProcessContext(pContext);
 }
 
-ALvoid ALAPIENTRY alGetDatabufferSubDataEXT(ALuint uiBuffer, ALintptrEXT start, ALsizeiptrEXT length, ALvoid *data)
+ALvoid AL_APIENTRY alGetDatabufferSubDataEXT(ALuint uiBuffer, ALintptrEXT start, ALsizeiptrEXT length, ALvoid *data)
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
@@ -310,7 +310,7 @@ ALvoid ALAPIENTRY alGetDatabufferSubDataEXT(ALuint uiBuffer, ALintptrEXT start, 
 }
 
 
-ALvoid ALAPIENTRY alDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat flValue)
+ALvoid AL_APIENTRY alDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat flValue)
 {
     ALCcontext    *pContext;
     ALCdevice     *Device;
@@ -336,7 +336,7 @@ ALvoid ALAPIENTRY alDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat flValue
     ProcessContext(pContext);
 }
 
-ALvoid ALAPIENTRY alDatabufferfvEXT(ALuint buffer, ALenum eParam, const ALfloat* flValues)
+ALvoid AL_APIENTRY alDatabufferfvEXT(ALuint buffer, ALenum eParam, const ALfloat* flValues)
 {
     ALCcontext    *pContext;
     ALCdevice     *Device;
@@ -363,7 +363,7 @@ ALvoid ALAPIENTRY alDatabufferfvEXT(ALuint buffer, ALenum eParam, const ALfloat*
 }
 
 
-ALvoid ALAPIENTRY alDatabufferiEXT(ALuint buffer, ALenum eParam, ALint lValue)
+ALvoid AL_APIENTRY alDatabufferiEXT(ALuint buffer, ALenum eParam, ALint lValue)
 {
     ALCcontext    *pContext;
     ALCdevice     *Device;
@@ -389,7 +389,7 @@ ALvoid ALAPIENTRY alDatabufferiEXT(ALuint buffer, ALenum eParam, ALint lValue)
     ProcessContext(pContext);
 }
 
-ALvoid ALAPIENTRY alDatabufferivEXT(ALuint buffer, ALenum eParam, const ALint* plValues)
+ALvoid AL_APIENTRY alDatabufferivEXT(ALuint buffer, ALenum eParam, const ALint* plValues)
 {
     ALCcontext    *pContext;
     ALCdevice     *Device;
@@ -416,7 +416,7 @@ ALvoid ALAPIENTRY alDatabufferivEXT(ALuint buffer, ALenum eParam, const ALint* p
 }
 
 
-ALvoid ALAPIENTRY alGetDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat *pflValue)
+ALvoid AL_APIENTRY alGetDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat *pflValue)
 {
     ALCcontext    *pContext;
     ALCdevice     *Device;
@@ -445,7 +445,7 @@ ALvoid ALAPIENTRY alGetDatabufferfEXT(ALuint buffer, ALenum eParam, ALfloat *pfl
     ProcessContext(pContext);
 }
 
-ALvoid ALAPIENTRY alGetDatabufferfvEXT(ALuint buffer, ALenum eParam, ALfloat* pflValues)
+ALvoid AL_APIENTRY alGetDatabufferfvEXT(ALuint buffer, ALenum eParam, ALfloat* pflValues)
 {
     ALCcontext    *pContext;
     ALCdevice     *Device;
@@ -474,7 +474,7 @@ ALvoid ALAPIENTRY alGetDatabufferfvEXT(ALuint buffer, ALenum eParam, ALfloat* pf
     ProcessContext(pContext);
 }
 
-ALvoid ALAPIENTRY alGetDatabufferiEXT(ALuint buffer, ALenum eParam, ALint *plValue)
+ALvoid AL_APIENTRY alGetDatabufferiEXT(ALuint buffer, ALenum eParam, ALint *plValue)
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
@@ -508,7 +508,7 @@ ALvoid ALAPIENTRY alGetDatabufferiEXT(ALuint buffer, ALenum eParam, ALint *plVal
     ProcessContext(pContext);
 }
 
-ALvoid ALAPIENTRY alGetDatabufferivEXT(ALuint buffer, ALenum eParam, ALint* plValues)
+ALvoid AL_APIENTRY alGetDatabufferivEXT(ALuint buffer, ALenum eParam, ALint* plValues)
 {
     ALCcontext    *pContext;
     ALCdevice     *Device;
@@ -542,7 +542,7 @@ ALvoid ALAPIENTRY alGetDatabufferivEXT(ALuint buffer, ALenum eParam, ALint* plVa
 }
 
 
-ALvoid ALAPIENTRY alSelectDatabufferEXT(ALenum target, ALuint uiBuffer)
+ALvoid AL_APIENTRY alSelectDatabufferEXT(ALenum target, ALuint uiBuffer)
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer = NULL;
@@ -569,7 +569,7 @@ ALvoid ALAPIENTRY alSelectDatabufferEXT(ALenum target, ALuint uiBuffer)
 }
 
 
-ALvoid* ALAPIENTRY alMapDatabufferEXT(ALuint uiBuffer, ALintptrEXT start, ALsizeiptrEXT length, ALenum access)
+ALvoid* AL_APIENTRY alMapDatabufferEXT(ALuint uiBuffer, ALintptrEXT start, ALsizeiptrEXT length, ALenum access)
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;
@@ -609,7 +609,7 @@ ALvoid* ALAPIENTRY alMapDatabufferEXT(ALuint uiBuffer, ALintptrEXT start, ALsize
     return ret;
 }
 
-ALvoid ALAPIENTRY alUnmapDatabufferEXT(ALuint uiBuffer)
+ALvoid AL_APIENTRY alUnmapDatabufferEXT(ALuint uiBuffer)
 {
     ALCcontext    *pContext;
     ALdatabuffer  *pBuffer;

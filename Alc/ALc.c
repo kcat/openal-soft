@@ -670,7 +670,7 @@ static ALCvoid ExitContext(ALCcontext *pContext)
 
 
 // This should probably move to another c file but for now ...
-ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
+ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
 {
     ALCboolean DeviceFound = ALC_FALSE;
     ALCdevice *pDevice = NULL;
@@ -731,7 +731,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, AL
     return pDevice;
 }
 
-ALCAPI ALCboolean ALCAPIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
+ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 {
     ALCboolean bReturn = ALC_FALSE;
     ALCdevice **list;
@@ -764,7 +764,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
     return bReturn;
 }
 
-ALCAPI void ALCAPIENTRY alcCaptureStart(ALCdevice *pDevice)
+ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *pDevice)
 {
     if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
     {
@@ -776,7 +776,7 @@ ALCAPI void ALCAPIENTRY alcCaptureStart(ALCdevice *pDevice)
         alcSetError(pDevice, ALC_INVALID_DEVICE);
 }
 
-ALCAPI void ALCAPIENTRY alcCaptureStop(ALCdevice *pDevice)
+ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *pDevice)
 {
     if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
     {
@@ -788,7 +788,7 @@ ALCAPI void ALCAPIENTRY alcCaptureStop(ALCdevice *pDevice)
         alcSetError(pDevice, ALC_INVALID_DEVICE);
 }
 
-ALCAPI void ALCAPIENTRY alcCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCsizei lSamples)
+ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCsizei lSamples)
 {
     if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
     {
@@ -805,7 +805,7 @@ ALCAPI void ALCAPIENTRY alcCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, 
 
     Return last ALC generated error code
 */
-ALCAPI ALCenum ALCAPIENTRY alcGetError(ALCdevice *device)
+ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 {
     ALCenum errorCode = ALC_NO_ERROR;
 
@@ -828,7 +828,7 @@ ALCAPI ALCenum ALCAPIENTRY alcGetError(ALCdevice *device)
 
     Not functional
 */
-ALCAPI ALCvoid ALCAPIENTRY alcSuspendContext(ALCcontext *pContext)
+ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *pContext)
 {
     SuspendContext(NULL);
     if(IsContext(pContext))
@@ -842,7 +842,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcSuspendContext(ALCcontext *pContext)
 
     Not functional
 */
-ALCAPI ALCvoid ALCAPIENTRY alcProcessContext(ALCcontext *pContext)
+ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *pContext)
 {
     SuspendContext(NULL);
     if(IsContext(pContext))
@@ -856,7 +856,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcProcessContext(ALCcontext *pContext)
 
     Returns information about the Device, and error strings
 */
-ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
+ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
 {
     const ALCchar *value = NULL;
 
@@ -968,7 +968,7 @@ ALCAPI const ALCchar* ALCAPIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
 
     Returns information about the Device and the version of Open AL
 */
-ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsizei size,ALCint *data)
+ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsizei size,ALCint *data)
 {
     if(size == 0 || data == NULL)
     {
@@ -1120,7 +1120,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsize
 
     Determines if there is support for a particular extension
 */
-ALCAPI ALCboolean ALCAPIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName)
+ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName)
 {
     ALCboolean bResult = ALC_FALSE;
 
@@ -1159,7 +1159,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcIsExtensionPresent(ALCdevice *device, const ALC
 
     Retrieves the function address for a particular extension function
 */
-ALCAPI ALCvoid *  ALCAPIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName)
+ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName)
 {
     ALCvoid *pFunction = NULL;
     ALsizei i = 0;
@@ -1183,7 +1183,7 @@ ALCAPI ALCvoid *  ALCAPIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
 
     Get the value for a particular ALC Enumerated Value
 */
-ALCAPI ALCenum ALCAPIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName)
+ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName)
 {
     ALsizei i = 0;
     ALCenum val;
@@ -1204,7 +1204,7 @@ ALCAPI ALCenum ALCAPIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enu
 
     Create and attach a Context to a particular Device.
 */
-ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
+ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
     ALuint attrIdx, reqStereoSources;
     ALCcontext *ALContext;
@@ -1387,7 +1387,7 @@ ALCAPI ALCcontext* ALCAPIENTRY alcCreateContext(ALCdevice *device, const ALCint 
 
     Remove a Context
 */
-ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
+ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALCcontext **list;
     ALuint i;
@@ -1457,7 +1457,7 @@ ALCAPI ALCvoid ALCAPIENTRY alcDestroyContext(ALCcontext *context)
 
     Returns the currently active Context
 */
-ALCAPI ALCcontext * ALCAPIENTRY alcGetCurrentContext(ALCvoid)
+ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(ALCvoid)
 {
     ALCcontext *pContext;
 
@@ -1472,7 +1472,7 @@ ALCAPI ALCcontext * ALCAPIENTRY alcGetCurrentContext(ALCvoid)
 
     Returns the currently active thread-local Context
 */
-ALCcontext * ALCAPIENTRY alcGetThreadContext(void)
+ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 {
     ALCcontext *pContext = NULL;
 
@@ -1496,7 +1496,7 @@ ALCcontext * ALCAPIENTRY alcGetThreadContext(void)
 
     Returns the Device that a particular Context is attached to
 */
-ALCAPI ALCdevice* ALCAPIENTRY alcGetContextsDevice(ALCcontext *pContext)
+ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *pContext)
 {
     ALCdevice *pDevice = NULL;
 
@@ -1516,7 +1516,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcGetContextsDevice(ALCcontext *pContext)
 
     Makes the given Context the active Context
 */
-ALCAPI ALCboolean ALCAPIENTRY alcMakeContextCurrent(ALCcontext *context)
+ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
     ALCcontext *ALContext;
     ALboolean bReturn = AL_TRUE;
@@ -1562,7 +1562,7 @@ ALCAPI ALCboolean ALCAPIENTRY alcMakeContextCurrent(ALCcontext *context)
 
     Makes the given Context the active Context for the current thread
 */
-ALCboolean ALCAPIENTRY alcMakeCurrent(ALCcontext *context)
+ALCboolean ALC_APIENTRY alcMakeCurrent(ALCcontext *context)
 {
     ALboolean bReturn = AL_TRUE;
 
@@ -1696,7 +1696,7 @@ static ALenum GetFormatFromString(const char *str)
 
     Open the Device specified.
 */
-ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
+ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 {
     ALboolean bDeviceFound = AL_FALSE;
     ALCdevice *device;
@@ -1806,7 +1806,7 @@ ALCAPI ALCdevice* ALCAPIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     Close the specified Device
 */
-ALCAPI ALCboolean ALCAPIENTRY alcCloseDevice(ALCdevice *pDevice)
+ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 {
     ALCboolean bReturn = ALC_FALSE;
     ALCdevice **list;

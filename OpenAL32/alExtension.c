@@ -355,7 +355,7 @@ static ALenums enumeration[]={
 
 
 
-ALAPI ALboolean ALAPIENTRY alIsExtensionPresent(const ALchar *extName)
+AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 {
     ALboolean bIsSupported = AL_FALSE;
     ALCcontext *pContext;
@@ -396,7 +396,7 @@ ALAPI ALboolean ALAPIENTRY alIsExtensionPresent(const ALchar *extName)
 }
 
 
-ALAPI ALvoid * ALAPIENTRY alGetProcAddress(const ALchar *funcName)
+AL_API ALvoid * AL_APIENTRY alGetProcAddress(const ALchar *funcName)
 {
     ALsizei i = 0;
 
@@ -407,7 +407,7 @@ ALAPI ALvoid * ALAPIENTRY alGetProcAddress(const ALchar *funcName)
     return function[i].address;
 }
 
-ALAPI ALenum ALAPIENTRY alGetEnumValue(const ALchar *enumName)
+AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName)
 {
     ALsizei i = 0;
 

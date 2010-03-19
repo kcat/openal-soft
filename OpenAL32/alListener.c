@@ -26,7 +26,7 @@
 #include "alListener.h"
 #include "alSource.h"
 
-ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
+AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
 {
     ALCcontext *pContext;
     ALboolean updateAll = AL_FALSE;
@@ -77,7 +77,7 @@ ALAPI ALvoid ALAPIENTRY alListenerf(ALenum eParam, ALfloat flValue)
 }
 
 
-ALAPI ALvoid ALAPIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat flValue2, ALfloat flValue3)
+AL_API ALvoid AL_APIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat flValue2, ALfloat flValue3)
 {
     ALCcontext *pContext;
     ALboolean updateWorld = AL_FALSE;
@@ -121,7 +121,7 @@ ALAPI ALvoid ALAPIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat fl
 }
 
 
-ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
 {
     ALCcontext *pContext;
     ALboolean updateWorld = AL_FALSE;
@@ -177,7 +177,7 @@ ALAPI ALvoid ALAPIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
 }
 
 
-ALAPI ALvoid ALAPIENTRY alListeneri(ALenum eParam, ALint lValue)
+AL_API ALvoid AL_APIENTRY alListeneri(ALenum eParam, ALint lValue)
 {
     ALCcontext *pContext;
 
@@ -197,7 +197,7 @@ ALAPI ALvoid ALAPIENTRY alListeneri(ALenum eParam, ALint lValue)
 }
 
 
-ALAPI void ALAPIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2, ALint lValue3)
+AL_API void AL_APIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2, ALint lValue3)
 {
     ALCcontext *pContext;
 
@@ -220,7 +220,7 @@ ALAPI void ALAPIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2, 
 }
 
 
-ALAPI void ALAPIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
+AL_API void AL_APIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
 {
     ALCcontext *pContext;
     ALfloat flValues[6];
@@ -262,7 +262,7 @@ ALAPI void ALAPIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
 }
 
 
-ALAPI ALvoid ALAPIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
+AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
 {
     ALCcontext *pContext;
 
@@ -293,7 +293,7 @@ ALAPI ALvoid ALAPIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
 }
 
 
-ALAPI ALvoid ALAPIENTRY alGetListener3f(ALenum eParam, ALfloat *pflValue1, ALfloat *pflValue2, ALfloat *pflValue3)
+AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum eParam, ALfloat *pflValue1, ALfloat *pflValue2, ALfloat *pflValue3)
 {
     ALCcontext *pContext;
 
@@ -328,7 +328,7 @@ ALAPI ALvoid ALAPIENTRY alGetListener3f(ALenum eParam, ALfloat *pflValue1, ALflo
 }
 
 
-ALAPI ALvoid ALAPIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
 {
     ALCcontext *pContext;
 
@@ -381,7 +381,7 @@ ALAPI ALvoid ALAPIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
 }
 
 
-ALAPI ALvoid ALAPIENTRY alGetListeneri(ALenum eParam, ALint *plValue)
+AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum eParam, ALint *plValue)
 {
     ALCcontext *pContext;
 
@@ -404,7 +404,7 @@ ALAPI ALvoid ALAPIENTRY alGetListeneri(ALenum eParam, ALint *plValue)
 }
 
 
-ALAPI void ALAPIENTRY alGetListener3i(ALenum eParam, ALint *plValue1, ALint *plValue2, ALint *plValue3)
+AL_API void AL_APIENTRY alGetListener3i(ALenum eParam, ALint *plValue1, ALint *plValue2, ALint *plValue3)
 {
     ALCcontext *pContext;
 
@@ -439,7 +439,7 @@ ALAPI void ALAPIENTRY alGetListener3i(ALenum eParam, ALint *plValue1, ALint *plV
 }
 
 
-ALAPI void ALAPIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
+AL_API void AL_APIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
 {
     ALCcontext *pContext;
 

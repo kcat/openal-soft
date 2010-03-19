@@ -41,7 +41,7 @@ static const ALchar alErrInvalidValue[] = "Invalid Value";
 static const ALchar alErrInvalidOp[] = "Invalid Operation";
 static const ALchar alErrOutOfMemory[] = "Out of Memory";
 
-ALAPI ALvoid ALAPIENTRY alEnable(ALenum capability)
+AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
 {
     ALCcontext *Context;
     ALboolean  updateSources = AL_FALSE;
@@ -74,7 +74,7 @@ ALAPI ALvoid ALAPIENTRY alEnable(ALenum capability)
     ProcessContext(Context);
 }
 
-ALAPI ALvoid ALAPIENTRY alDisable(ALenum capability)
+AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
 {
     ALCcontext *Context;
     ALboolean  updateSources = AL_FALSE;
@@ -107,7 +107,7 @@ ALAPI ALvoid ALAPIENTRY alDisable(ALenum capability)
     ProcessContext(Context);
 }
 
-ALAPI ALboolean ALAPIENTRY alIsEnabled(ALenum capability)
+AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
 {
     ALCcontext *Context;
     ALboolean value=AL_FALSE;
@@ -131,7 +131,7 @@ ALAPI ALboolean ALAPIENTRY alIsEnabled(ALenum capability)
     return value;
 }
 
-ALAPI ALboolean ALAPIENTRY alGetBoolean(ALenum pname)
+AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
 {
     ALCcontext *Context;
     ALboolean value=AL_FALSE;
@@ -171,7 +171,7 @@ ALAPI ALboolean ALAPIENTRY alGetBoolean(ALenum pname)
     return value;
 }
 
-ALAPI ALdouble ALAPIENTRY alGetDouble(ALenum pname)
+AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
 {
     ALCcontext *Context;
     ALdouble value = 0.0;
@@ -207,7 +207,7 @@ ALAPI ALdouble ALAPIENTRY alGetDouble(ALenum pname)
     return value;
 }
 
-ALAPI ALfloat ALAPIENTRY alGetFloat(ALenum pname)
+AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
 {
     ALCcontext *Context;
     ALfloat value = 0.0f;
@@ -243,7 +243,7 @@ ALAPI ALfloat ALAPIENTRY alGetFloat(ALenum pname)
     return value;
 }
 
-ALAPI ALint ALAPIENTRY alGetInteger(ALenum pname)
+AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
 {
     ALCcontext *Context;
     ALint value = 0;
@@ -293,7 +293,7 @@ ALAPI ALint ALAPIENTRY alGetInteger(ALenum pname)
     return value;
 }
 
-ALAPI ALvoid ALAPIENTRY alGetBooleanv(ALenum pname,ALboolean *data)
+AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname,ALboolean *data)
 {
     ALCcontext *Context;
 
@@ -334,7 +334,7 @@ ALAPI ALvoid ALAPIENTRY alGetBooleanv(ALenum pname,ALboolean *data)
     ProcessContext(Context);
 }
 
-ALAPI ALvoid ALAPIENTRY alGetDoublev(ALenum pname,ALdouble *data)
+AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname,ALdouble *data)
 {
     ALCcontext *Context;
 
@@ -375,7 +375,7 @@ ALAPI ALvoid ALAPIENTRY alGetDoublev(ALenum pname,ALdouble *data)
     ProcessContext(Context);
 }
 
-ALAPI ALvoid ALAPIENTRY alGetFloatv(ALenum pname,ALfloat *data)
+AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname,ALfloat *data)
 {
     ALCcontext *Context;
 
@@ -416,7 +416,7 @@ ALAPI ALvoid ALAPIENTRY alGetFloatv(ALenum pname,ALfloat *data)
     ProcessContext(Context);
 }
 
-ALAPI ALvoid ALAPIENTRY alGetIntegerv(ALenum pname,ALint *data)
+AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname,ALint *data)
 {
     ALCcontext *Context;
 
@@ -471,7 +471,7 @@ ALAPI ALvoid ALAPIENTRY alGetIntegerv(ALenum pname,ALint *data)
     ProcessContext(Context);
 }
 
-ALAPI const ALchar* ALAPIENTRY alGetString(ALenum pname)
+AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
 {
     const ALchar *value;
     ALCcontext *pContext;
@@ -532,7 +532,7 @@ ALAPI const ALchar* ALAPIENTRY alGetString(ALenum pname)
     return value;
 }
 
-ALAPI ALvoid ALAPIENTRY alDopplerFactor(ALfloat value)
+AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
 {
     ALCcontext *Context;
     ALboolean updateSources = AL_FALSE;
@@ -563,7 +563,7 @@ ALAPI ALvoid ALAPIENTRY alDopplerFactor(ALfloat value)
     ProcessContext(Context);
 }
 
-ALAPI ALvoid ALAPIENTRY alDopplerVelocity(ALfloat value)
+AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
 {
     ALCcontext *Context;
     ALboolean updateSources = AL_FALSE;
@@ -592,7 +592,7 @@ ALAPI ALvoid ALAPIENTRY alDopplerVelocity(ALfloat value)
     ProcessContext(Context);
 }
 
-ALAPI ALvoid ALAPIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
+AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
 {
     ALCcontext *pContext;
     ALboolean updateSources = AL_FALSE;
@@ -621,7 +621,7 @@ ALAPI ALvoid ALAPIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
     ProcessContext(pContext);
 }
 
-ALAPI ALvoid ALAPIENTRY alDistanceModel(ALenum value)
+AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
 {
     ALCcontext *Context;
     ALboolean updateSources = AL_FALSE;

@@ -42,7 +42,7 @@ DECL_VERIFIER(Buffer, ALbuffer, buffer)
 DECL_VERIFIER(Filter, ALfilter, filter)
 DECL_VERIFIER(EffectSlot, ALeffectslot, effectslot)
 
-ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
+AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
 {
     ALCcontext *Context;
     ALCdevice *Device;
@@ -103,7 +103,7 @@ ALAPI ALvoid ALAPIENTRY alGenSources(ALsizei n,ALuint *sources)
 }
 
 
-ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
+AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 {
     ALCcontext *Context;
     ALCdevice  *Device;
@@ -184,7 +184,7 @@ ALAPI ALvoid ALAPIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 }
 
 
-ALAPI ALboolean ALAPIENTRY alIsSource(ALuint source)
+AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
 {
     ALCcontext *Context;
     ALboolean  result;
@@ -200,7 +200,7 @@ ALAPI ALboolean ALAPIENTRY alIsSource(ALuint source)
 }
 
 
-ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
+AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
 {
     ALCcontext    *pContext;
     ALsource    *pSource;
@@ -392,7 +392,7 @@ ALAPI ALvoid ALAPIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValue)
 }
 
 
-ALAPI ALvoid ALAPIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flValue1,ALfloat flValue2,ALfloat flValue3)
+AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flValue1,ALfloat flValue2,ALfloat flValue3)
 {
     ALCcontext    *pContext;
     ALsource    *pSource;
@@ -437,7 +437,7 @@ ALAPI ALvoid ALAPIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flValue
 }
 
 
-ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *pflValues)
 {
     ALCcontext    *pContext;
 
@@ -490,7 +490,7 @@ ALAPI ALvoid ALAPIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat *
 }
 
 
-ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
+AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 {
     ALCcontext          *pContext;
     ALsource            *pSource;
@@ -693,7 +693,7 @@ ALAPI ALvoid ALAPIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 }
 
 
-ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, ALint lValue2, ALint lValue3)
+AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, ALint lValue2, ALint lValue3)
 {
     ALCcontext *pContext;
     ALsource   *pSource;
@@ -757,7 +757,7 @@ ALAPI void ALAPIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, AL
 }
 
 
-ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plValues)
+AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plValues)
 {
     ALCcontext    *pContext;
 
@@ -812,7 +812,7 @@ ALAPI void ALAPIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* plVa
 }
 
 
-ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflValue)
+AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflValue)
 {
     ALCcontext  *pContext;
     ALsource    *pSource;
@@ -908,7 +908,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pflV
 }
 
 
-ALAPI ALvoid ALAPIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* pflValue1, ALfloat* pflValue2, ALfloat* pflValue3)
+AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* pflValue1, ALfloat* pflValue2, ALfloat* pflValue3)
 {
     ALCcontext    *pContext;
     ALsource    *pSource;
@@ -955,7 +955,7 @@ ALAPI ALvoid ALAPIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* pfl
 }
 
 
-ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pflValues)
 {
     ALCcontext  *pContext;
     ALsource    *pSource;
@@ -1033,7 +1033,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *pfl
 }
 
 
-ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValue)
+AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValue)
 {
     ALCcontext *pContext;
     ALsource   *pSource;
@@ -1152,7 +1152,7 @@ ALAPI ALvoid ALAPIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValu
 }
 
 
-ALAPI void ALAPIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plValue1, ALint* plValue2, ALint* plValue3)
+AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plValue1, ALint* plValue2, ALint* plValue3)
 {
     ALCcontext  *pContext;
     ALsource    *pSource;
@@ -1199,7 +1199,7 @@ ALAPI void ALAPIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plValue
 }
 
 
-ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValues)
+AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValues)
 {
     ALCcontext  *pContext;
     ALsource    *pSource;
@@ -1281,12 +1281,12 @@ ALAPI void ALAPIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plValue
 }
 
 
-ALAPI ALvoid ALAPIENTRY alSourcePlay(ALuint source)
+AL_API ALvoid AL_APIENTRY alSourcePlay(ALuint source)
 {
     alSourcePlayv(1, &source);
 }
 
-ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
+AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
 {
     ALCcontext          *pContext;
     ALsource            *pSource;
@@ -1384,12 +1384,12 @@ ALAPI ALvoid ALAPIENTRY alSourcePlayv(ALsizei n, const ALuint *pSourceList)
     ProcessContext(pContext);
 }
 
-ALAPI ALvoid ALAPIENTRY alSourcePause(ALuint source)
+AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
 {
     alSourcePausev(1, &source);
 }
 
-ALAPI ALvoid ALAPIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
+AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
 {
     ALCcontext *Context;
     ALsource *Source;
@@ -1431,12 +1431,12 @@ ALAPI ALvoid ALAPIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     ProcessContext(Context);
 }
 
-ALAPI ALvoid ALAPIENTRY alSourceStop(ALuint source)
+AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
 {
     alSourceStopv(1, &source);
 }
 
-ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
+AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
 {
     ALCcontext *Context;
     ALsource *Source;
@@ -1482,12 +1482,12 @@ ALAPI ALvoid ALAPIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     ProcessContext(Context);
 }
 
-ALAPI ALvoid ALAPIENTRY alSourceRewind(ALuint source)
+AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
 {
     alSourceRewindv(1, &source);
 }
 
-ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
+AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 {
     ALCcontext *Context;
     ALsource *Source;
@@ -1538,7 +1538,7 @@ ALAPI ALvoid ALAPIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 }
 
 
-ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const ALuint* buffers )
+AL_API ALvoid AL_APIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const ALuint* buffers )
 {
     ALCcontext *Context;
     ALsource *ALSource;
@@ -1686,7 +1686,7 @@ ALAPI ALvoid ALAPIENTRY alSourceQueueBuffers( ALuint source, ALsizei n, const AL
 
 // Implementation assumes that n is the number of buffers to be removed from the queue and buffers is
 // an array of buffer IDs that are to be filled with the names of the buffers removed
-ALAPI ALvoid ALAPIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint* buffers )
+AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALuint* buffers )
 {
     ALCcontext *Context;
     ALsource *ALSource;

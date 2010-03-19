@@ -24,7 +24,7 @@
 #include "AL/alc.h"
 #include "alError.h"
 
-ALAPI ALenum ALAPIENTRY alGetError(ALvoid)
+AL_API ALenum AL_APIENTRY alGetError(ALvoid)
 {
     ALCcontext *Context;
     ALenum errorCode;

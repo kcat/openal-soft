@@ -285,7 +285,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                 return;
             }
 
-            offset = (ALintptrEXT)data;
+            offset = (const ALubyte*)data - (ALubyte*)NULL;
             data = Context->SampleSource->data + offset;
         }
 
@@ -534,7 +534,7 @@ ALvoid ALAPIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *d
                 return;
             }
 
-            offset = (ALintptrEXT)data;
+            offset = (const ALubyte*)data - (ALubyte*)NULL;
             data = Context->SampleSource->data + offset;
         }
 

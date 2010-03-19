@@ -314,7 +314,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                 case AL_FORMAT_REAR8:
                 case AL_FORMAT_REAR16:
                 case AL_FORMAT_REAR32: {
-                    ALuint NewFormat = AL_FORMAT_QUAD32;
+                    ALenum NewFormat = AL_FORMAT_QUAD32;
                     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
                     ALuint NewBytes = aluBytesFromFormat(NewFormat);
                     ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
@@ -383,7 +383,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                 case AL_FORMAT_MONO_IMA4:
                 case AL_FORMAT_STEREO_IMA4: {
                     int OrigChans = ((format==AL_FORMAT_MONO_IMA4) ? 1 : 2);
-                    ALuint NewFormat = ((OrigChans==1) ? AL_FORMAT_MONO_FLOAT32 :
+                    ALenum NewFormat = ((OrigChans==1) ? AL_FORMAT_MONO_FLOAT32 :
                                                          AL_FORMAT_STEREO_FLOAT32);
                     ALuint NewBytes = aluBytesFromFormat(NewFormat);
 
@@ -426,7 +426,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
                                      ((format==AL_FORMAT_QUAD_MULAW) ? 4 :
                                       ((format==AL_FORMAT_51CHN_MULAW) ? 6 :
                                        ((format==AL_FORMAT_61CHN_MULAW) ? 7 : 8)))));
-                    ALuint NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
+                    ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
                                         ((Channels==2) ? AL_FORMAT_STEREO_FLOAT32 :
                                          ((Channels==4) ? AL_FORMAT_QUAD32 :
                                           ((Channels==6) ? AL_FORMAT_51CHN32 :
@@ -458,7 +458,7 @@ ALAPI ALvoid ALAPIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *d
 
                 case AL_FORMAT_REAR_MULAW: {
                     int OrigChans = 2;
-                    ALuint NewFormat = AL_FORMAT_QUAD32;
+                    ALenum NewFormat = AL_FORMAT_QUAD32;
                     ALuint NewBytes = aluBytesFromFormat(NewFormat);
                     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
 

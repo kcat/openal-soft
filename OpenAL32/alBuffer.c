@@ -1189,8 +1189,6 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, AL
     ALuint IMACode[2];
     ALsizei i,j,k,c;
 
-    assert(origChans <= 2);
-
     IMAData = src;
     for(i = 0;i < len/origChans;i++)
     {

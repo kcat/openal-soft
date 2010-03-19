@@ -1405,8 +1405,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         {
             if(Device->Contexts[i] == context)
             {
-                memmove(&Device->Contexts[i], &Device->Contexts[i+1],
-                        (Device->NumContexts-i-1) * sizeof(*Device->Contexts));
+                Device->Contexts[i] = Device->Contexts[Device->NumContexts-1];
                 break;
             }
         }

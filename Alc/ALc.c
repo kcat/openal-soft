@@ -673,7 +673,7 @@ static ALCvoid ExitContext(ALCcontext *pContext)
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
 {
     ALCboolean DeviceFound = ALC_FALSE;
-    ALCdevice *pDevice = NULL;
+    ALCdevice *device = NULL;
     ALCint i;
 
     if(SampleSize <= 0)
@@ -685,119 +685,115 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     if(deviceName && !deviceName[0])
         deviceName = NULL;
 
-    pDevice = malloc(sizeof(ALCdevice));
-    if (pDevice)
+    device = calloc(1, sizeof(ALCdevice));
+    if(!device)
     {
-        //Initialise device structure
-        memset(pDevice, 0, sizeof(ALCdevice));
+        alcSetError(NULL, ALC_OUT_OF_MEMORY);
+        return NULL;
+    }
 
-        //Validate device
-        pDevice->Connected = ALC_TRUE;
-        pDevice->IsCaptureDevice = AL_TRUE;
+    //Validate device
+    device->Connected = ALC_TRUE;
+    device->IsCaptureDevice = AL_TRUE;
 
-        pDevice->szDeviceName = NULL;
+    device->szDeviceName = NULL;
 
-        pDevice->Frequency = frequency;
-        pDevice->Format = format;
-        pDevice->UpdateSize = SampleSize;
-        pDevice->NumUpdates = 1;
+    device->Frequency = frequency;
+    device->Format = format;
+    device->UpdateSize = SampleSize;
+    device->NumUpdates = 1;
 
-        SuspendContext(NULL);
-        for(i = 0;BackendList[i].Init;i++)
+    SuspendContext(NULL);
+    for(i = 0;BackendList[i].Init;i++)
+    {
+        device->Funcs = &BackendList[i].Funcs;
+        if(ALCdevice_OpenCapture(device, deviceName))
         {
-            pDevice->Funcs = &BackendList[i].Funcs;
-            if(ALCdevice_OpenCapture(pDevice, deviceName))
-            {
-                pDevice->next = g_pDeviceList;
-                g_pDeviceList = pDevice;
-                g_ulDeviceCount++;
+            device->next = g_pDeviceList;
+            g_pDeviceList = device;
+            g_ulDeviceCount++;
 
-                DeviceFound = ALC_TRUE;
-                break;
-            }
-        }
-        ProcessContext(NULL);
-
-        if(!DeviceFound)
-        {
-            alcSetError(NULL, ALC_INVALID_VALUE);
-            free(pDevice);
-            pDevice = NULL;
+            DeviceFound = ALC_TRUE;
+            break;
         }
     }
-    else
-        alcSetError(NULL, ALC_OUT_OF_MEMORY);
+    ProcessContext(NULL);
 
-    return pDevice;
+    if(!DeviceFound)
+    {
+        alcSetError(NULL, ALC_INVALID_VALUE);
+        free(device);
+        device = NULL;
+    }
+
+    return device;
 }
 
 ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 {
-    ALCboolean bReturn = ALC_FALSE;
     ALCdevice **list;
 
-    if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
+    if(!IsDevice(pDevice) || !pDevice->IsCaptureDevice)
     {
-        SuspendContext(NULL);
-
-        list = &g_pDeviceList;
-        while(*list != pDevice)
-            list = &(*list)->next;
-
-        *list = (*list)->next;
-        g_ulDeviceCount--;
-
-        ProcessContext(NULL);
-
-        ALCdevice_CloseCapture(pDevice);
-
-        free(pDevice->szDeviceName);
-        pDevice->szDeviceName = NULL;
-
-        free(pDevice);
-
-        bReturn = ALC_TRUE;
-    }
-    else
         alcSetError(pDevice, ALC_INVALID_DEVICE);
+        return ALC_FALSE;
+    }
 
-    return bReturn;
+    SuspendContext(NULL);
+
+    list = &g_pDeviceList;
+    while(*list != pDevice)
+        list = &(*list)->next;
+
+    *list = (*list)->next;
+    g_ulDeviceCount--;
+
+    ProcessContext(NULL);
+
+    ALCdevice_CloseCapture(pDevice);
+
+    free(pDevice->szDeviceName);
+    pDevice->szDeviceName = NULL;
+
+    free(pDevice);
+
+    return ALC_TRUE;
 }
 
-ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *pDevice)
+ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 {
-    if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
+    if(!IsDevice(device) || !device->IsCaptureDevice)
     {
-        SuspendContext(NULL);
-        ALCdevice_StartCapture(pDevice);
-        ProcessContext(NULL);
+        alcSetError(device, ALC_INVALID_DEVICE);
+        return;
     }
-    else
-        alcSetError(pDevice, ALC_INVALID_DEVICE);
+    SuspendContext(NULL);
+    ALCdevice_StartCapture(device);
+    ProcessContext(NULL);
 }
 
-ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *pDevice)
+ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 {
-    if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
+    if(!IsDevice(device) || !device->IsCaptureDevice)
     {
-        SuspendContext(NULL);
-        ALCdevice_StopCapture(pDevice);
-        ProcessContext(NULL);
+        alcSetError(device, ALC_INVALID_DEVICE);
+        return;
     }
-    else
-        alcSetError(pDevice, ALC_INVALID_DEVICE);
+    SuspendContext(NULL);
+    ALCdevice_StopCapture(device);
+    ProcessContext(NULL);
 }
 
-ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCsizei lSamples)
+ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    if(IsDevice(pDevice) && pDevice->IsCaptureDevice)
+    if(!IsDevice(device) || !device->IsCaptureDevice)
     {
-        SuspendContext(NULL);
-        ALCdevice_CaptureSamples(pDevice, pBuffer, lSamples);
-        ProcessContext(NULL);
+        alcSetError(device, ALC_INVALID_DEVICE);
+        return;
     }
-    else
-        alcSetError(pDevice, ALC_INVALID_DEVICE);
+    SuspendContext(NULL);
+    ALCdevice_CaptureSamples(device, buffer, samples);
+    ProcessContext(NULL);
 }
 
 /*
@@ -1123,32 +1119,32 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
 ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName)
 {
     ALCboolean bResult = ALC_FALSE;
+    const char *ptr;
+    size_t len;
 
-    if (extName)
+    if(!extName)
     {
-        const char *ptr;
-        size_t len;
+        alcSetError(device, ALC_INVALID_VALUE);
+        return ALC_FALSE;
+    }
 
-        len = strlen(extName);
-        ptr = (IsDevice(device) ? alcExtensionList : alcNoDeviceExtList);
-        while(ptr && *ptr)
+    len = strlen(extName);
+    ptr = (IsDevice(device) ? alcExtensionList : alcNoDeviceExtList);
+    while(ptr && *ptr)
+    {
+        if(strncasecmp(ptr, extName, len) == 0 &&
+           (ptr[len] == '\0' || isspace(ptr[len])))
         {
-            if(strncasecmp(ptr, extName, len) == 0 &&
-               (ptr[len] == '\0' || isspace(ptr[len])))
-            {
-                bResult = ALC_TRUE;
-                break;
-            }
-            if((ptr=strchr(ptr, ' ')) != NULL)
-            {
-                do {
-                    ++ptr;
-                } while(isspace(*ptr));
-            }
+            bResult = ALC_TRUE;
+            break;
+        }
+        if((ptr=strchr(ptr, ' ')) != NULL)
+        {
+            do {
+                ++ptr;
+            } while(isspace(*ptr));
         }
     }
-    else
-        alcSetError(device, ALC_INVALID_VALUE);
 
     return bResult;
 }
@@ -1161,20 +1157,17 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
 */
 ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName)
 {
-    ALCvoid *pFunction = NULL;
     ALsizei i = 0;
 
-    if (funcName)
+    if(!funcName)
     {
-        while(alcFunctions[i].funcName &&
-              strcmp(alcFunctions[i].funcName,funcName) != 0)
-            i++;
-        pFunction = alcFunctions[i].address;
-    }
-    else
         alcSetError(device, ALC_INVALID_VALUE);
+        return NULL;
+    }
 
-    return pFunction;
+    while(alcFunctions[i].funcName && strcmp(alcFunctions[i].funcName,funcName) != 0)
+        i++;
+    return alcFunctions[i].address;
 }
 
 
@@ -1188,7 +1181,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
     ALsizei i = 0;
     ALCenum val;
 
-    while ((enumeration[i].enumName)&&(strcmp(enumeration[i].enumName,enumName)))
+    while(enumeration[i].enumName && strcmp(enumeration[i].enumName,enumName) == 0)
         i++;
     val = enumeration[i].value;
 
@@ -1389,65 +1382,67 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 */
 ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
+    ALCdevice *Device;
     ALCcontext **list;
     ALuint i;
 
-    if (IsContext(context))
+    if(!IsContext(context))
     {
-        ALCdevice *Device = context->Device;
-
-        if(Device->NumContexts == 1)
-            ALCdevice_StopPlayback(Device);
-
-        SuspendContext(NULL);
-
-        for(i = 0;i < Device->NumContexts-1;i++)
-        {
-            if(Device->Contexts[i] == context)
-            {
-                Device->Contexts[i] = Device->Contexts[Device->NumContexts-1];
-                break;
-            }
-        }
-        Device->NumContexts--;
-
-        // Lock context
-        SuspendContext(context);
-
-        if(context->SourceCount > 0)
-        {
-#ifdef _DEBUG
-            AL_PRINT("alcDestroyContext(): deleting %d Source(s)\n", context->SourceCount);
-#endif
-            ReleaseALSources(context);
-        }
-        if(context->EffectSlotCount > 0)
-        {
-#ifdef _DEBUG
-            AL_PRINT("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->EffectSlotCount);
-#endif
-            ReleaseALAuxiliaryEffectSlots(context);
-        }
-
-        list = &g_pContextList;
-        while(*list != context)
-            list = &(*list)->next;
-
-        *list = (*list)->next;
-        g_ulContextCount--;
-
-        // Unlock context
-        ProcessContext(context);
-        ProcessContext(NULL);
-
-        ExitContext(context);
-
-        // Free memory (MUST do this after ProcessContext)
-        memset(context, 0, sizeof(ALCcontext));
-        free(context);
-    }
-    else
         alcSetError(NULL, ALC_INVALID_CONTEXT);
+        return;
+    }
+
+    Device = context->Device;
+
+    if(Device->NumContexts == 1)
+        ALCdevice_StopPlayback(Device);
+
+    SuspendContext(NULL);
+
+    for(i = 0;i < Device->NumContexts-1;i++)
+    {
+        if(Device->Contexts[i] == context)
+        {
+            Device->Contexts[i] = Device->Contexts[Device->NumContexts-1];
+            break;
+        }
+    }
+    Device->NumContexts--;
+
+    // Lock context
+    SuspendContext(context);
+
+    if(context->SourceCount > 0)
+    {
+#ifdef _DEBUG
+        AL_PRINT("alcDestroyContext(): deleting %d Source(s)\n", context->SourceCount);
+#endif
+        ReleaseALSources(context);
+    }
+    if(context->EffectSlotCount > 0)
+    {
+#ifdef _DEBUG
+        AL_PRINT("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->EffectSlotCount);
+#endif
+        ReleaseALAuxiliaryEffectSlots(context);
+    }
+
+    list = &g_pContextList;
+    while(*list != context)
+        list = &(*list)->next;
+
+    *list = (*list)->next;
+    g_ulContextCount--;
+
+    // Unlock context
+    ProcessContext(context);
+    ProcessContext(NULL);
+
+    ExitContext(context);
+
+    // Free memory (MUST do this after ProcessContext)
+    memset(context, 0, sizeof(ALCcontext));
+    free(context);
 }
 
 
@@ -1500,7 +1495,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *pContext)
     ALCdevice *pDevice = NULL;
 
     SuspendContext(NULL);
-    if (IsContext(pContext))
+    if(IsContext(pContext))
         pDevice = pContext->Device;
     else
         alcSetError(NULL, ALC_INVALID_CONTEXT);
@@ -1698,103 +1693,100 @@ static ALenum GetFormatFromString(const char *str)
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 {
     ALboolean bDeviceFound = AL_FALSE;
+    const ALCchar *fmt;
     ALCdevice *device;
     ALint i;
 
     if(deviceName && !deviceName[0])
         deviceName = NULL;
 
-    device = malloc(sizeof(ALCdevice));
-    if (device)
+    device = calloc(1, sizeof(ALCdevice));
+    if(!device)
     {
-        const char *fmt;
+        alcSetError(NULL, ALC_OUT_OF_MEMORY);
+        return NULL;
+    }
 
-        //Initialise device structure
-        memset(device, 0, sizeof(ALCdevice));
+    //Validate device
+    device->Connected = ALC_TRUE;
+    device->IsCaptureDevice = AL_FALSE;
+    device->LastError = ALC_NO_ERROR;
 
-        //Validate device
-        device->Connected = ALC_TRUE;
-        device->IsCaptureDevice = AL_FALSE;
-        device->LastError = ALC_NO_ERROR;
+    device->Bs2b = NULL;
+    device->szDeviceName = NULL;
 
-        device->Bs2b = NULL;
-        device->szDeviceName = NULL;
+    device->Contexts = NULL;
+    device->NumContexts = 0;
 
-        device->Contexts = NULL;
-        device->NumContexts = 0;
+    //Set output format
+    device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
+    if(device->Frequency < 8000)
+        device->Frequency = 8000;
 
-        //Set output format
-        device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
-        if(device->Frequency < 8000)
-            device->Frequency = 8000;
+    fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
+    device->Format = GetFormatFromString(fmt);
 
-        fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
-        device->Format = GetFormatFromString(fmt);
+    device->NumUpdates = GetConfigValueInt(NULL, "periods", 4);
+    if(device->NumUpdates < 2)
+        device->NumUpdates = 4;
 
-        device->NumUpdates = GetConfigValueInt(NULL, "periods", 4);
-        if(device->NumUpdates < 2)
-            device->NumUpdates = 4;
+    i = GetConfigValueInt(NULL, "refresh", 4096);
+    if(i <= 0) i = 4096;
 
-        i = GetConfigValueInt(NULL, "refresh", 4096);
-        if(i <= 0) i = 4096;
+    device->UpdateSize = GetConfigValueInt(NULL, "period_size", i/device->NumUpdates);
+    if(device->UpdateSize <= 0)
+        device->UpdateSize = i/device->NumUpdates;
 
-        device->UpdateSize = GetConfigValueInt(NULL, "period_size", i/device->NumUpdates);
-        if(device->UpdateSize <= 0)
-            device->UpdateSize = i/device->NumUpdates;
+    device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
+    if((ALint)device->MaxNoOfSources <= 0)
+        device->MaxNoOfSources = 256;
 
-        device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
-        if((ALint)device->MaxNoOfSources <= 0)
-            device->MaxNoOfSources = 256;
+    device->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
+    if((ALint)device->AuxiliaryEffectSlotMax <= 0)
+        device->AuxiliaryEffectSlotMax = 4;
 
-        device->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
-        if((ALint)device->AuxiliaryEffectSlotMax <= 0)
-            device->AuxiliaryEffectSlotMax = 4;
+    device->lNumStereoSources = 1;
+    device->lNumMonoSources = device->MaxNoOfSources - device->lNumStereoSources;
 
-        device->lNumStereoSources = 1;
-        device->lNumMonoSources = device->MaxNoOfSources - device->lNumStereoSources;
+    device->NumAuxSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
+    if(device->NumAuxSends > MAX_SENDS)
+        device->NumAuxSends = MAX_SENDS;
 
-        device->NumAuxSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
-        if(device->NumAuxSends > MAX_SENDS)
-            device->NumAuxSends = MAX_SENDS;
+    device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
-        device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
-
-        if(aluChannelsFromFormat(device->Format) <= 2)
-        {
-            device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
-            device->HeadDampen = __min(device->HeadDampen, 1.0f);
-            device->HeadDampen = __max(device->HeadDampen, 0.0f);
-        }
-        else
-            device->HeadDampen = 0.0f;
-
-        // Find a playback device to open
-        SuspendContext(NULL);
-        for(i = 0;BackendList[i].Init;i++)
-        {
-            device->Funcs = &BackendList[i].Funcs;
-            if(ALCdevice_OpenPlayback(device, deviceName))
-            {
-                device->next = g_pDeviceList;
-                g_pDeviceList = device;
-                g_ulDeviceCount++;
-
-                bDeviceFound = AL_TRUE;
-                break;
-            }
-        }
-        ProcessContext(NULL);
-
-        if (!bDeviceFound)
-        {
-            // No suitable output device found
-            alcSetError(NULL, ALC_INVALID_VALUE);
-            free(device);
-            device = NULL;
-        }
+    if(aluChannelsFromFormat(device->Format) <= 2)
+    {
+        device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
+        device->HeadDampen = __min(device->HeadDampen, 1.0f);
+        device->HeadDampen = __max(device->HeadDampen, 0.0f);
     }
     else
-        alcSetError(NULL, ALC_OUT_OF_MEMORY);
+        device->HeadDampen = 0.0f;
+
+    // Find a playback device to open
+    SuspendContext(NULL);
+    for(i = 0;BackendList[i].Init;i++)
+    {
+        device->Funcs = &BackendList[i].Funcs;
+        if(ALCdevice_OpenPlayback(device, deviceName))
+        {
+            device->next = g_pDeviceList;
+            g_pDeviceList = device;
+            g_ulDeviceCount++;
+
+            bDeviceFound = AL_TRUE;
+            break;
+        }
+    }
+    ProcessContext(NULL);
+
+    if(!bDeviceFound)
+    {
+        // No suitable output device found
+        alcSetError(NULL, ALC_INVALID_VALUE);
+        free(device);
+        device = NULL;
+    }
 
     return device;
 }
@@ -1807,80 +1799,78 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 */
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 {
-    ALCboolean bReturn = ALC_FALSE;
     ALCdevice **list;
 
-    if(IsDevice(pDevice) && !pDevice->IsCaptureDevice)
+    if(!IsDevice(pDevice) || pDevice->IsCaptureDevice)
     {
-        SuspendContext(NULL);
-
-        list = &g_pDeviceList;
-        while(*list != pDevice)
-            list = &(*list)->next;
-
-        *list = (*list)->next;
-        g_ulDeviceCount--;
-
-        ProcessContext(NULL);
-
-        if(pDevice->NumContexts > 0)
-        {
-#ifdef _DEBUG
-            AL_PRINT("alcCloseDevice(): destroying %u Context(s)\n", pDevice->NumContexts);
-#endif
-            while(pDevice->NumContexts > 0)
-                alcDestroyContext(pDevice->Contexts[0]);
-        }
-        ALCdevice_ClosePlayback(pDevice);
-
-        if(pDevice->BufferCount > 0)
-        {
-#ifdef _DEBUG
-            AL_PRINT("alcCloseDevice(): deleting %d Buffer(s)\n", pDevice->BufferCount);
-#endif
-            ReleaseALBuffers(pDevice);
-        }
-        if(pDevice->EffectCount > 0)
-        {
-#ifdef _DEBUG
-            AL_PRINT("alcCloseDevice(): deleting %d Effect(s)\n", pDevice->EffectCount);
-#endif
-            ReleaseALEffects(pDevice);
-        }
-        if(pDevice->FilterCount > 0)
-        {
-#ifdef _DEBUG
-            AL_PRINT("alcCloseDevice(): deleting %d Filter(s)\n", pDevice->FilterCount);
-#endif
-            ReleaseALFilters(pDevice);
-        }
-        if(pDevice->DatabufferCount > 0)
-        {
-#ifdef _DEBUG
-            AL_PRINT("alcCloseDevice(): deleting %d Databuffer(s)\n", pDevice->DatabufferCount);
-#endif
-            ReleaseALDatabuffers(pDevice);
-        }
-
-        free(pDevice->Bs2b);
-        pDevice->Bs2b = NULL;
-
-        free(pDevice->szDeviceName);
-        pDevice->szDeviceName = NULL;
-
-        free(pDevice->Contexts);
-        pDevice->Contexts = NULL;
-
-        //Release device structure
-        memset(pDevice, 0, sizeof(ALCdevice));
-        free(pDevice);
-
-        bReturn = ALC_TRUE;
-    }
-    else
         alcSetError(pDevice, ALC_INVALID_DEVICE);
+        return ALC_FALSE;
+    }
 
-    return bReturn;
+    SuspendContext(NULL);
+
+    list = &g_pDeviceList;
+    while(*list != pDevice)
+        list = &(*list)->next;
+
+    *list = (*list)->next;
+    g_ulDeviceCount--;
+
+    ProcessContext(NULL);
+
+    if(pDevice->NumContexts > 0)
+    {
+#ifdef _DEBUG
+        AL_PRINT("alcCloseDevice(): destroying %u Context(s)\n", pDevice->NumContexts);
+#endif
+        while(pDevice->NumContexts > 0)
+            alcDestroyContext(pDevice->Contexts[0]);
+    }
+    ALCdevice_ClosePlayback(pDevice);
+
+    if(pDevice->BufferCount > 0)
+    {
+#ifdef _DEBUG
+        AL_PRINT("alcCloseDevice(): deleting %d Buffer(s)\n", pDevice->BufferCount);
+#endif
+        ReleaseALBuffers(pDevice);
+    }
+    if(pDevice->EffectCount > 0)
+    {
+#ifdef _DEBUG
+        AL_PRINT("alcCloseDevice(): deleting %d Effect(s)\n", pDevice->EffectCount);
+#endif
+        ReleaseALEffects(pDevice);
+    }
+    if(pDevice->FilterCount > 0)
+    {
+#ifdef _DEBUG
+        AL_PRINT("alcCloseDevice(): deleting %d Filter(s)\n", pDevice->FilterCount);
+#endif
+        ReleaseALFilters(pDevice);
+    }
+    if(pDevice->DatabufferCount > 0)
+    {
+#ifdef _DEBUG
+        AL_PRINT("alcCloseDevice(): deleting %d Databuffer(s)\n", pDevice->DatabufferCount);
+#endif
+        ReleaseALDatabuffers(pDevice);
+    }
+
+    free(pDevice->Bs2b);
+    pDevice->Bs2b = NULL;
+
+    free(pDevice->szDeviceName);
+    pDevice->szDeviceName = NULL;
+
+    free(pDevice->Contexts);
+    pDevice->Contexts = NULL;
+
+    //Release device structure
+    memset(pDevice, 0, sizeof(ALCdevice));
+    free(pDevice);
+
+    return ALC_TRUE;
 }
 
 

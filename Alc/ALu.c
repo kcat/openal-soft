@@ -188,13 +188,29 @@ static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPU
         }
     }
 
-    for(i = 1;i < chans;i++)
+    for(i = 0;i < chans;i++)
     {
-        if(SpeakerAngle[i] <= SpeakerAngle[i-1])
+        int min = i;
+        int i2;
+
+        for(i2 = i+1;i2 < chans;i2++)
         {
-            AL_PRINT("Speaker %d of %d does not follow previous: %f > %f\n", i, chans,
-                     SpeakerAngle[i-1] * 180.0f/M_PI, SpeakerAngle[i] * 180.0f/M_PI);
-            SpeakerAngle[i] = SpeakerAngle[i-1] + 1 * M_PI/180.0f;
+            if(SpeakerAngle[i2] < SpeakerAngle[min])
+                min = i2;
+        }
+
+        if(min != i)
+        {
+            ALfloat tmpf;
+            ALint tmpi;
+
+            tmpf = SpeakerAngle[i];
+            SpeakerAngle[i] = SpeakerAngle[min];
+            SpeakerAngle[min] = tmpf;
+
+            tmpi = Speaker2Chan[i];
+            Speaker2Chan[i] = Speaker2Chan[min];
+            Speaker2Chan[min] = tmpi;
         }
     }
 }

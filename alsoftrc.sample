@@ -132,10 +132,8 @@
 ## layout_STEREO:
 #  Sets the speaker layout when using stereo output. Values are specified in
 #  degrees, where 0 is straight in front, negative goes left, and positive goes
-#  right. The values must define a circular pattern, starting with the back-
-#  left at the most negative, around the front to back-center. Unspecified
-#  speakers will remain at their default position. Available speakers are
-#  front-left(fl) and front-right(fr).
+#  right. Unspecified speakers will remain at their default position. Available
+#  speakers are front-left(fl) and front-right(fr).
 #layout_STEREO = fl=-90, fr=90
 
 ## laytout_QUAD:

@@ -348,6 +348,38 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_REVERB_ROOM_ROLLOFF_FACTOR",        AL_REVERB_ROOM_ROLLOFF_FACTOR       },
     { (ALchar *)"AL_REVERB_DECAY_HFLIMIT",              AL_REVERB_DECAY_HFLIMIT             },
 
+    // EAX Reverb params
+    { (ALchar *)"AL_EAXREVERB_DENSITY",                 AL_EAXREVERB_DENSITY                },
+    { (ALchar *)"AL_EAXREVERB_DIFFUSION",               AL_EAXREVERB_DIFFUSION              },
+    { (ALchar *)"AL_EAXREVERB_GAIN",                    AL_EAXREVERB_GAIN                   },
+    { (ALchar *)"AL_EAXREVERB_GAINHF",                  AL_EAXREVERB_GAINHF                 },
+    { (ALchar *)"AL_EAXREVERB_GAINLF",                  AL_EAXREVERB_GAINLF                 },
+    { (ALchar *)"AL_EAXREVERB_DECAY_TIME",              AL_EAXREVERB_DECAY_TIME             },
+    { (ALchar *)"AL_EAXREVERB_DECAY_HFRATIO",           AL_EAXREVERB_DECAY_HFRATIO          },
+    { (ALchar *)"AL_EAXREVERB_DECAY_LFRATIO",           AL_EAXREVERB_DECAY_LFRATIO          },
+    { (ALchar *)"AL_EAXREVERB_REFLECTIONS_GAIN",        AL_EAXREVERB_REFLECTIONS_GAIN       },
+    { (ALchar *)"AL_EAXREVERB_REFLECTIONS_DELAY",       AL_EAXREVERB_REFLECTIONS_DELAY      },
+    { (ALchar *)"AL_EAXREVERB_REFLECTIONS_PAN",         AL_EAXREVERB_REFLECTIONS_PAN        },
+    { (ALchar *)"AL_EAXREVERB_LATE_REVERB_GAIN",        AL_EAXREVERB_LATE_REVERB_GAIN       },
+    { (ALchar *)"AL_EAXREVERB_LATE_REVERB_DELAY",       AL_EAXREVERB_LATE_REVERB_DELAY      },
+    { (ALchar *)"AL_EAXREVERB_LATE_REVERB_PAN",         AL_EAXREVERB_LATE_REVERB_PAN        },
+    { (ALchar *)"AL_EAXREVERB_ECHO_TIME",               AL_EAXREVERB_ECHO_TIME              },
+    { (ALchar *)"AL_EAXREVERB_ECHO_DEPTH",              AL_EAXREVERB_ECHO_DEPTH             },
+    { (ALchar *)"AL_EAXREVERB_MODULATION_TIME",         AL_EAXREVERB_MODULATION_TIME        },
+    { (ALchar *)"AL_EAXREVERB_MODULATION_DEPTH",        AL_EAXREVERB_MODULATION_DEPTH       },
+    { (ALchar *)"AL_EAXREVERB_AIR_ABSORPTION_GAINHF",   AL_EAXREVERB_AIR_ABSORPTION_GAINHF  },
+    { (ALchar *)"AL_EAXREVERB_HFREFERENCE",             AL_EAXREVERB_HFREFERENCE            },
+    { (ALchar *)"AL_EAXREVERB_LFREFERENCE",             AL_EAXREVERB_LFREFERENCE            },
+    { (ALchar *)"AL_EAXREVERB_ROOM_ROLLOFF_FACTOR",     AL_EAXREVERB_ROOM_ROLLOFF_FACTOR    },
+    { (ALchar *)"AL_EAXREVERB_DECAY_HFLIMIT",           AL_EAXREVERB_DECAY_HFLIMIT          },
+
+    // Echo params
+    { (ALchar *)"AL_ECHO_DELAY",                        AL_ECHO_DELAY                       },
+    { (ALchar *)"AL_ECHO_LRDELAY",                      AL_ECHO_LRDELAY                     },
+    { (ALchar *)"AL_ECHO_DAMPING",                      AL_ECHO_DAMPING                     },
+    { (ALchar *)"AL_ECHO_FEEDBACK",                     AL_ECHO_FEEDBACK                    },
+    { (ALchar *)"AL_ECHO_SPREAD",                       AL_ECHO_SPREAD                      },
+
 
     // Default
     { (ALchar *)NULL,                                   (ALenum)0                           }

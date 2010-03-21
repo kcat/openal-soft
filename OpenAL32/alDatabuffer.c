@@ -650,21 +650,18 @@ ALvoid AL_APIENTRY alUnmapDatabufferEXT(ALuint uiBuffer)
 */
 ALvoid ReleaseALDatabuffers(ALCdevice *device)
 {
-    ALdatabuffer *ALBuffer;
-    ALdatabuffer *ALBufferTemp;
-
-    ALBuffer = device->DatabufferList;
-    while(ALBuffer)
+    while(device->DatabufferList)
     {
-        // Release sample data
-        free(ALBuffer->data);
+        ALdatabuffer *temp = device->DatabufferList;
+        device->DatabufferList = temp->next;
+
+        // Release buffer data
+        free(temp->data);
 
         // Release Buffer structure
-        ALBufferTemp = ALBuffer;
-        ALBuffer = ALBuffer->next;
-        memset(ALBufferTemp, 0, sizeof(ALdatabuffer));
-        free(ALBufferTemp);
+        ALTHUNK_REMOVEENTRY(temp->databuffer);
+        memset(temp, 0, sizeof(ALdatabuffer));
+        free(temp);
     }
-    device->DatabufferList = NULL;
     device->DatabufferCount = 0;
 }

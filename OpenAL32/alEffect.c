@@ -1181,17 +1181,16 @@ ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues
 
 ALvoid ReleaseALEffects(ALCdevice *device)
 {
-    ALeffect *list = device->EffectList;
-    while(list)
+    while(device->EffectList)
     {
-        ALeffect *temp = list;
-        list = list->next;
+        ALeffect *temp = device->EffectList;
+        device->EffectList = temp->next;
 
         // Release effect structure
+        ALTHUNK_REMOVEENTRY(temp->effect);
         memset(temp, 0, sizeof(ALeffect));
         free(temp);
     }
-    device->EffectList = NULL;
     device->EffectCount = 0;
 }
 

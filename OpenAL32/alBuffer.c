@@ -1274,21 +1274,18 @@ static void ConvertDataMULawRear(ALfloat *dst, const ALvoid *src, ALsizei len)
 */
 ALvoid ReleaseALBuffers(ALCdevice *device)
 {
-    ALbuffer *ALBuffer;
-    ALbuffer *ALBufferTemp;
-
-    ALBuffer = device->BufferList;
-    while(ALBuffer)
+    while(device->BufferList)
     {
+        ALbuffer *temp = device->BufferList;
+        device->BufferList = temp->next;
+
         // Release sample data
-        free(ALBuffer->data);
+        free(temp->data);
 
         // Release Buffer structure
-        ALBufferTemp = ALBuffer;
-        ALBuffer = ALBuffer->next;
-        memset(ALBufferTemp, 0, sizeof(ALbuffer));
-        free(ALBufferTemp);
+        ALTHUNK_REMOVEENTRY(temp->buffer);
+        memset(temp, 0, sizeof(ALbuffer));
+        free(temp);
     }
-    device->BufferList = NULL;
     device->BufferCount = 0;
 }

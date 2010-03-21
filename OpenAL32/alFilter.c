@@ -423,17 +423,16 @@ ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues
 
 ALvoid ReleaseALFilters(ALCdevice *device)
 {
-    ALfilter *list = device->FilterList;
-    while(list)
+    while(device->FilterList)
     {
-        ALfilter *temp = list;
-        list = list->next;
+        ALfilter *temp = device->FilterList;
+        device->FilterList = temp->next;
 
         // Release filter structure
+        ALTHUNK_REMOVEENTRY(temp->filter);
         memset(temp, 0, sizeof(ALfilter));
         free(temp);
     }
-    device->FilterList = NULL;
     device->FilterCount = 0;
 }
 

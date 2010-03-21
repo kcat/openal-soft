@@ -527,10 +527,9 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
         Context->EffectSlotList = temp->next;
 
         // Release effectslot structure
-        if(temp->EffectState)
-            ALEffect_Destroy(temp->EffectState);
-        ALTHUNK_REMOVEENTRY(temp->effectslot);
+        ALEffect_Destroy(temp->EffectState);
 
+        ALTHUNK_REMOVEENTRY(temp->effectslot);
         memset(temp, 0, sizeof(ALeffectslot));
         free(temp);
     }

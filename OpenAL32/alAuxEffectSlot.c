@@ -40,7 +40,7 @@ DECL_VERIFIER(Effect, ALeffect, effect)
 ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
     ALCcontext *Context;
-    ALsizei i, j;
+    ALsizei i=0, j;
 
     Context = GetContextSuspended();
     if(!Context) return;
@@ -54,11 +54,12 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
             // Check that enough memory has been allocted in the 'effectslots' array for n Effect Slots
             if (!IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))
             {
+                ALeffectslot *end;
                 ALeffectslot **list = &Context->EffectSlotList;
                 while(*list)
                     list = &(*list)->next;
 
-                i = 0;
+                end = *list;
                 while(i < n)
                 {
                     *list = calloc(1, sizeof(ALeffectslot));
@@ -66,7 +67,16 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
                     {
                         // We must have run out or memory
                         free(*list); *list = NULL;
-                        alDeleteAuxiliaryEffectSlots(i, effectslots);
+                        while(end->next)
+                        {
+                            ALeffectslot *temp = end->next;
+                            end->next = temp->next;
+
+                            ALEffect_Destroy(temp->EffectState);
+                            ALTHUNK_REMOVEENTRY(temp->effectslot);
+                            Context->EffectSlotCount--;
+                            free(temp);
+                        }
                         alSetError(Context, AL_OUT_OF_MEMORY);
                         break;
                     }

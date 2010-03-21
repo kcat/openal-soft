@@ -41,7 +41,7 @@ DECL_VERIFIER(Effect, ALeffect, effect)
 ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 {
     ALCcontext *Context;
-    ALsizei i;
+    ALsizei i=0;
 
     Context = GetContextSuspended();
     if(!Context) return;
@@ -53,18 +53,26 @@ ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
         // Check that enough memory has been allocted in the 'effects' array for n Effects
         if (!IsBadWritePtr((void*)effects, n * sizeof(ALuint)))
         {
+            ALeffect *end;
             ALeffect **list = &device->EffectList;
             while(*list)
                 list = &(*list)->next;
 
-            i = 0;
+            end = *list;
             while(i < n)
             {
                 *list = calloc(1, sizeof(ALeffect));
                 if(!(*list))
                 {
-                    // We must have run out or memory
-                    alDeleteEffects(i, effects);
+                    while(end->next)
+                    {
+                        ALeffect *temp = end->next;
+                        end->next = temp->next;
+
+                        ALTHUNK_REMOVEENTRY(temp->effect);
+                        device->EffectCount--;
+                        free(temp);
+                    }
                     alSetError(Context, AL_OUT_OF_MEMORY);
                     break;
                 }

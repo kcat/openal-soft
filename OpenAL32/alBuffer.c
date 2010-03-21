@@ -120,17 +120,27 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n,ALuint *puiBuffers)
         // Check the pointer is valid (and points to enough memory to store Buffer Names)
         if (!IsBadWritePtr((void*)puiBuffers, n * sizeof(ALuint)))
         {
+            ALbuffer *end;
             ALbuffer **list = &device->BufferList;
             while(*list)
                 list = &(*list)->next;
 
             // Create all the new Buffers
+            end = *list;
             while(i < n)
             {
                 *list = calloc(1, sizeof(ALbuffer));
                 if(!(*list))
                 {
-                    alDeleteBuffers(i, puiBuffers);
+                    while(end->next)
+                    {
+                        ALbuffer *temp = end->next;
+                        end->next = temp->next;
+
+                        ALTHUNK_REMOVEENTRY(temp->buffer);
+                        device->BufferCount--;
+                        free(temp);
+                    }
                     alSetError(Context, AL_OUT_OF_MEMORY);
                     break;
                 }

@@ -56,17 +56,27 @@ ALvoid AL_APIENTRY alGenDatabuffersEXT(ALsizei n,ALuint *puiBuffers)
          * Databuffer Names) */
         if(!IsBadWritePtr((void*)puiBuffers, n * sizeof(ALuint)))
         {
+            ALdatabuffer *end;
             ALdatabuffer **list = &device->DatabufferList;
             while(*list)
                 list = &(*list)->next;
 
             /* Create all the new Databuffers */
+            end = *list;
             while(i < n)
             {
                 *list = calloc(1, sizeof(ALdatabuffer));
                 if(!(*list))
                 {
-                    alDeleteDatabuffersEXT(i, puiBuffers);
+                    while(end->next)
+                    {
+                        ALdatabuffer *temp = end->next;
+                        end->next = temp->next;
+
+                        ALTHUNK_REMOVEENTRY(temp->databuffer);
+                        device->DatabufferCount--;
+                        free(temp);
+                    }
                     alSetError(Context, AL_OUT_OF_MEMORY);
                     break;
                 }

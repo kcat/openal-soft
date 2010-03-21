@@ -61,17 +61,27 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
             // Check that the requested number of sources can be generated
             if((Context->SourceCount + n) <= Device->MaxNoOfSources)
             {
+                ALsource *end;
                 ALsource **list = &Context->SourceList;
                 while(*list)
                     list = &(*list)->next;
 
                 // Add additional sources to the list (Source->next points to the location for the next Source structure)
+                end = *list;
                 while(i < n)
                 {
                     *list = calloc(1, sizeof(ALsource));
                     if(!(*list))
                     {
-                        alDeleteSources(i, sources);
+                        while(end->next)
+                        {
+                            ALsource *temp = end->next;
+                            end->next = temp->next;
+
+                            ALTHUNK_REMOVEENTRY(temp->source);
+                            Context->SourceCount--;
+                            free(temp);
+                        }
                         alSetError(Context, AL_OUT_OF_MEMORY);
                         break;
                     }

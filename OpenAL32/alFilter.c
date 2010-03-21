@@ -37,7 +37,7 @@ DECL_VERIFIER(Filter, ALfilter, filter)
 ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
 {
     ALCcontext *Context;
-    ALsizei i;
+    ALsizei i=0;
 
     Context = GetContextSuspended();
     if(!Context) return;
@@ -49,18 +49,26 @@ ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
         // Check that enough memory has been allocted in the 'filters' array for n Filters
         if (!IsBadWritePtr((void*)filters, n * sizeof(ALuint)))
         {
+            ALfilter *end;
             ALfilter **list = &device->FilterList;
             while(*list)
                 list = &(*list)->next;
 
-            i = 0;
+            end = *list;
             while(i < n)
             {
                 *list = calloc(1, sizeof(ALfilter));
                 if(!(*list))
                 {
-                    // We must have run out or memory
-                    alDeleteFilters(i, filters);
+                    while(end->next)
+                    {
+                        ALfilter *temp = end->next;
+                        end->next = temp->next;
+
+                        ALTHUNK_REMOVEENTRY(temp->filter);
+                        device->FilterCount--;
+                        free(temp);
+                    }
                     alSetError(Context, AL_OUT_OF_MEMORY);
                     break;
                 }

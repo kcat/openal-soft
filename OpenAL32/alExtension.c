@@ -305,8 +305,10 @@ static ALenums enumeration[]={
     { (ALchar *)"AL_FILTER_TYPE",                       AL_FILTER_TYPE                      },
     { (ALchar *)"AL_FILTER_NULL",                       AL_FILTER_NULL                      },
     { (ALchar *)"AL_FILTER_LOWPASS",                    AL_FILTER_LOWPASS                   },
+#if 0
     { (ALchar *)"AL_FILTER_HIGHPASS",                   AL_FILTER_HIGHPASS                  },
     { (ALchar *)"AL_FILTER_BANDPASS",                   AL_FILTER_BANDPASS                  },
+#endif
 
     // Filter params
     { (ALchar *)"AL_LOWPASS_GAIN",                      AL_LOWPASS_GAIN                     },

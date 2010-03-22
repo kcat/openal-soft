@@ -53,12 +53,25 @@ static volatile ALuint load_count;
 
 void *pa_load(void)
 {
-    const char *str;
-    PaError err;
-
     if(load_count == 0)
     {
-#ifdef HAVE_DLFCN_H
+        PaError err;
+
+#ifdef _WIN32
+        pa_handle = LoadLibrary("portaudio.dll");
+#define LOAD_FUNC(x) do { \
+    p##x = (typeof(p##x))GetProcAddress(pa_handle, #x); \
+    if(!(p##x)) { \
+        AL_PRINT("Could not load %s from portaudio.dll\n", #x); \
+        FreeLibrary(pa_handle); \
+        pa_handle = NULL; \
+        return NULL; \
+    } \
+} while(0)
+
+#elif defined(HAVE_DLFCN_H)
+
+    const char *str;
 #if defined(__APPLE__) && defined(__MACH__)
 # define PALIB "libportaudio.2.dylib"
 #else
@@ -79,6 +92,7 @@ void *pa_load(void)
         return NULL; \
     } \
 } while(0)
+
 #else
         str = NULL;
         pa_handle = (void*)0xDEADBEEF;
@@ -100,7 +114,9 @@ LOAD_FUNC(Pa_GetStreamInfo);
         if((err=pPa_Initialize()) != paNoError)
         {
             AL_PRINT("Pa_Initialize() returned an error: %s\n", pPa_GetErrorText(err));
-#ifdef HAVE_DLFCN_H
+#ifdef _WIN32
+            FreeLibrary(pa_handle);
+#elif defined(HAVE_DLFCN_H)
             dlclose(pa_handle);
 #endif
             pa_handle = NULL;
@@ -118,7 +134,9 @@ void pa_unload(void)
         return;
 
     pPa_Terminate();
-#ifdef HAVE_DLFCN_H
+#ifdef _WIN32
+    FreeLibrary(pa_handle);
+#elif defined(HAVE_DLFCN_H)
     dlclose(pa_handle);
 #endif
     pa_handle = NULL;

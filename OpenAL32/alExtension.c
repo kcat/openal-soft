@@ -35,7 +35,7 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-static ALfunction  function[]=   {
+static ALfunction function[] = {
     { "alEnable",                   (ALvoid *) alEnable                  },
     { "alDisable",                  (ALvoid *) alDisable                 },
     { "alIsEnabled",                (ALvoid *) alIsEnabled               },
@@ -166,9 +166,10 @@ static ALfunction  function[]=   {
     { "alMapDatabufferEXT",         (ALvoid *) alMapDatabufferEXT        },
     { "alUnmapDatabufferEXT",       (ALvoid *) alUnmapDatabufferEXT      },
 
-    { NULL,                         (ALvoid *) NULL                      } };
+    { NULL,                         (ALvoid *) NULL                      }
+};
 
-static ALenums enumeration[]={
+static ALenums enumeration[] = {
     // Types
     { (ALchar *)"AL_INVALID",                           AL_INVALID                          },
     { (ALchar *)"AL_NONE",                              AL_NONE                             },
@@ -430,12 +431,11 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 }
 
 
-AL_API ALvoid * AL_APIENTRY alGetProcAddress(const ALchar *funcName)
+AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
 {
     ALsizei i = 0;
 
-    while(function[i].funcName &&
-          strcmp((char*)function[i].funcName, (char*)funcName) != 0)
+    while(function[i].funcName && strcmp(function[i].funcName, funcName) != 0)
         i++;
 
     return function[i].address;

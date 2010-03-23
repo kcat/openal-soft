@@ -14,7 +14,7 @@ extern "C" {
  #endif
 #else
  #if defined(AL_BUILD_LIBRARY) && defined(HAVE_GCC_VISIBILITY)
-  #define AL_API __attribute__((visibility("default")))
+  #define AL_API __attribute__((visibility("protected")))
  #else
   #define AL_API extern
  #endif

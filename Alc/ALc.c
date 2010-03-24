@@ -1466,7 +1466,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(ALCvoid)
 
     Returns the currently active thread-local Context
 */
-ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
+ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 {
     ALCcontext *pContext = NULL;
 
@@ -1556,7 +1556,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 
     Makes the given Context the active Context for the current thread
 */
-ALCboolean ALC_APIENTRY alcMakeCurrent(ALCcontext *context)
+ALC_API ALCboolean ALC_APIENTRY alcMakeCurrent(ALCcontext *context)
 {
     ALboolean bReturn = AL_TRUE;
 

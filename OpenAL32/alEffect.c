@@ -38,7 +38,7 @@ static void InitEffectParams(ALeffect *effect, ALenum type);
 
 DECL_VERIFIER(Effect, ALeffect, effect)
 
-ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
+AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 {
     ALCcontext *Context;
     ALsizei i=0;
@@ -92,7 +92,7 @@ ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
+AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
 {
     ALCcontext *Context;
     ALeffect *ALEffect;
@@ -151,7 +151,7 @@ ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
     ProcessContext(Context);
 }
 
-ALboolean AL_APIENTRY alIsEffect(ALuint effect)
+AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
 {
     ALCcontext *Context;
     ALboolean  result = AL_TRUE;
@@ -168,7 +168,7 @@ ALboolean AL_APIENTRY alIsEffect(ALuint effect)
     return result;
 }
 
-ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
+AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
 {
     ALCcontext *Context;
     ALCdevice  *Device;
@@ -244,7 +244,7 @@ ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
+AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
     ALCdevice  *Device;
@@ -304,7 +304,7 @@ ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
+AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
 {
     ALCcontext *Context;
     ALCdevice  *Device;
@@ -642,7 +642,7 @@ ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
     ALCdevice  *Device;
@@ -757,7 +757,7 @@ ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
+AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
 {
     ALCcontext *Context;
     ALCdevice  *Device;
@@ -817,7 +817,7 @@ ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
+AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
     ALCdevice  *Device;
@@ -877,7 +877,7 @@ ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
+AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
 {
     ALCcontext *Context;
     ALCdevice  *Device;
@@ -1073,7 +1073,7 @@ ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
     ALCdevice  *Device;

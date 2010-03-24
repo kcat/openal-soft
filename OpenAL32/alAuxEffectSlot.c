@@ -37,7 +37,7 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
 DECL_VERIFIER(EffectSlot, ALeffectslot, effectslot)
 DECL_VERIFIER(Effect, ALeffect, effect)
 
-ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
+AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
     ALCcontext *Context;
     ALsizei i=0, j;
@@ -104,7 +104,7 @@ ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
+AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
     ALCcontext *Context;
     ALeffectslot *ALAuxiliaryEffectSlot;
@@ -169,7 +169,7 @@ ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
     ProcessContext(Context);
 }
 
-ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
+AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
 {
     ALCcontext *Context;
     ALboolean  result;
@@ -185,7 +185,7 @@ ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
     return result;
 }
 
-ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint iValue)
+AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint iValue)
 {
     ALCcontext *Context;
     ALboolean updateSources = AL_FALSE;
@@ -252,7 +252,7 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues)
+AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
 
@@ -279,7 +279,7 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALin
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat flValue)
+AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat flValue)
 {
     ALCcontext *Context;
     ALeffectslot *ALEffectSlot;
@@ -309,7 +309,7 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALflo
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
 
@@ -335,7 +335,7 @@ ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfl
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *piValue)
+AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *piValue)
 {
     ALCcontext *Context;
     ALeffectslot *ALEffectSlot;
@@ -366,7 +366,7 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, AL
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues)
+AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues)
 {
     ALCcontext *Context;
 
@@ -393,7 +393,7 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, A
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *pflValue)
+AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *pflValue)
 {
     ALCcontext *Context;
     ALeffectslot *ALEffectSlot;
@@ -420,7 +420,7 @@ ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, AL
     ProcessContext(Context);
 }
 
-ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues)
 {
     ALCcontext *Context;
 

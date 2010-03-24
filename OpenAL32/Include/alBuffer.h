@@ -26,7 +26,7 @@ typedef struct ALbuffer
     struct ALbuffer *next;
 } ALbuffer;
 
-ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length);
+AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length);
 
 ALvoid ReleaseALBuffers(ALCdevice *device);
 

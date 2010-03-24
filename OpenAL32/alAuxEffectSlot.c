@@ -152,8 +152,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
                         *list = (*list)->next;
                     ALTHUNK_REMOVEENTRY(ALAuxiliaryEffectSlot->effectslot);
 
-                    if(ALAuxiliaryEffectSlot->EffectState)
-                        ALEffect_Destroy(ALAuxiliaryEffectSlot->EffectState);
+                    ALEffect_Destroy(ALAuxiliaryEffectSlot->EffectState);
 
                     memset(ALAuxiliaryEffectSlot, 0, sizeof(ALeffectslot));
                     free(ALAuxiliaryEffectSlot);

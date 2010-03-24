@@ -78,8 +78,6 @@ void *pa_load(void)
 # define PALIB "libportaudio.so.2"
 #endif
         pa_handle = dlopen(PALIB, RTLD_NOW);
-        if(!pa_handle)
-            return NULL;
         dlerror();
 
 #define LOAD_FUNC(f) do { \
@@ -98,6 +96,9 @@ void *pa_load(void)
         pa_handle = (void*)0xDEADBEEF;
 #define LOAD_FUNC(f) p##f = f
 #endif
+
+        if(!pa_handle)
+            return NULL;
 
 LOAD_FUNC(Pa_Initialize);
 LOAD_FUNC(Pa_Terminate);

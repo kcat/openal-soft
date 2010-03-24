@@ -204,7 +204,7 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
     fprintf(data->f, "WAVE");
 
     fprintf(data->f, "fmt ");
-    fputc(40, data->f); // 'fmt ' header len; 40 bytes for EXTENSIVLE
+    fputc(40, data->f); // 'fmt ' header len; 40 bytes for EXTENSIBLE
     fputc(0, data->f);
     fputc(0, data->f);
     fputc(0, data->f);

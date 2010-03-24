@@ -376,9 +376,6 @@ void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);
 #define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
 
-ALC_API ALCboolean  ALC_APIENTRY alcMakeCurrent(ALCcontext *context);
-ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void);
-
 #define DECL_VERIFIER(name, type, field)                                      \
 static type* Verify##name(type *list, ALuint id)                              \
 {                                                                             \

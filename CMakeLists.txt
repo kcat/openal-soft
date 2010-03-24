@@ -443,6 +443,7 @@ IF(NOT LIBTYPE)
 ENDIF()
 ADD_LIBRARY(${LIBNAME} ${LIBTYPE} ${OPENAL_OBJS} ${ALC_OBJS})
 SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES DEFINE_SYMBOL AL_BUILD_LIBRARY
+                                            COMPILE_FLAGS -DAL_ALEXT_PROTOTYPES
                                             VERSION ${LIB_VERSION}
                                             SOVERSION ${LIB_MAJOR_VERSION})
 IF(WIN32)

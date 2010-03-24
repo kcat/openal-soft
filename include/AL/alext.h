@@ -196,10 +196,10 @@ AL_API ALvoid AL_APIENTRY alUnmapDatabufferEXT(ALuint uiBuffer);
 
 #ifndef ALC_EXT_thread_local_context
 #define ALC_EXT_thread_local_context 1
-typedef ALCboolean (ALC_APIENTRY*PFNALCMAKECURRENTPROC)(ALCcontext *context);
+typedef ALCboolean  (ALC_APIENTRY*PFNALCSETTHREADCONTEXTPROC)(ALCcontext *context);
 typedef ALCcontext* (ALC_APIENTRY*PFNALCGETTHREADCONTEXTPROC)(void);
 #ifdef AL_ALEXT_PROTOTYPES
-ALC_API ALCboolean  ALC_APIENTRY alcMakeCurrent(ALCcontext *context);
+ALC_API ALCboolean  ALC_APIENTRY alcSetThreadContext(ALCcontext *context);
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void);
 #endif
 #endif

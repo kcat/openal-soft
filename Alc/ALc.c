@@ -113,7 +113,7 @@ static ALCfunction  alcFunctions[] = {
     { "alcCaptureStop",             (ALvoid *) alcCaptureStop           },
     { "alcCaptureSamples",          (ALvoid *) alcCaptureSamples        },
 
-    { "alcMakeCurrent",             (ALvoid *) alcMakeCurrent           },
+    { "alcSetThreadContext",        (ALvoid *) alcSetThreadContext      },
     { "alcGetThreadContext",        (ALvoid *) alcGetThreadContext      },
 
     { NULL,                         (ALvoid *) NULL                     }
@@ -1552,11 +1552,11 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 }
 
 /*
-    alcMakeCurrent
+    alcSetThreadContext
 
     Makes the given Context the active Context for the current thread
 */
-ALC_API ALCboolean ALC_APIENTRY alcMakeCurrent(ALCcontext *context)
+ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 {
     ALboolean bReturn = AL_TRUE;
 

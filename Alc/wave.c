@@ -101,7 +101,12 @@ static ALuint WaveProc(ALvoid *ptr)
                 ALubyte *bytes = data->buffer;
                 ALuint i;
 
-                if(aluBytesFromFormat(pDevice->Format) == 2)
+                if(aluBytesFromFormat(pDevice->Format) == 1)
+                {
+                    for(i = 0;i < data->size;i++)
+                        fputc(bytes[i], data->f);
+                }
+                else if(aluBytesFromFormat(pDevice->Format) == 2)
                 {
                     for(i = 0;i < data->size;i++)
                         fputc(bytes[i^1], data->f);

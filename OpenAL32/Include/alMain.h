@@ -312,7 +312,6 @@ struct ALCcontext_struct
     struct ALdatabuffer *SampleSink;
 
     ALenum      LastError;
-    ALboolean   InUse;
 
     ALboolean   Suspended;
 

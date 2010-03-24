@@ -209,6 +209,8 @@ static ALCuint     g_ulContextCount = 0;
 
 // Thread-local current context
 static tls_type LocalContext;
+// Process-wide current context
+static ALCcontext *GlobalContext;
 
 // Context Error
 static ALCenum g_eLastContextError = ALC_NO_ERROR;
@@ -597,11 +599,8 @@ ALCcontext *GetContextSuspended(void)
         pContext = NULL;
     }
     if(!pContext)
-    {
-        pContext = g_pContextList;
-        while(pContext && !pContext->InUse)
-            pContext = pContext->next;
-    }
+        pContext = GlobalContext;
+
     if(pContext)
         SuspendContext(pContext);
 
@@ -636,7 +635,6 @@ static ALvoid InitContext(ALCcontext *pContext)
 
     //Validate pContext
     pContext->LastError = AL_NO_ERROR;
-    pContext->InUse = AL_FALSE;
     pContext->Suspended = AL_FALSE;
 
     //Set globals
@@ -659,7 +657,6 @@ static ALCvoid ExitContext(ALCcontext *pContext)
 {
     //Invalidate context
     pContext->LastError = AL_NO_ERROR;
-    pContext->InUse = AL_FALSE;
 }
 
 ///////////////////////////////////////////////////////
@@ -1399,6 +1396,9 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 
     SuspendContext(NULL);
 
+    if(context == GlobalContext)
+        GlobalContext = NULL;
+
     for(i = 0;i < Device->NumContexts-1;i++)
     {
         if(Device->Contexts[i] == context)
@@ -1512,7 +1512,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *pContext)
 */
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
-    ALCcontext *ALContext;
     ALboolean bReturn = AL_TRUE;
 
     SuspendContext(NULL);
@@ -1520,24 +1519,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
     // context must be a valid Context or NULL
     if(context == NULL || IsContext(context))
     {
-        ALContext = g_pContextList;
-        while(ALContext && !ALContext->InUse)
-            ALContext = ALContext->next;
-
-        if(ALContext != NULL)
-        {
-            SuspendContext(ALContext);
-            ALContext->InUse=AL_FALSE;
-            ProcessContext(ALContext);
-        }
-
-        if((ALContext=context) != NULL && ALContext->Device)
-        {
-            SuspendContext(ALContext);
-            ALContext->InUse=AL_TRUE;
-            ProcessContext(ALContext);
-        }
-
+        GlobalContext = context;
         tls_set(LocalContext, NULL);
     }
     else

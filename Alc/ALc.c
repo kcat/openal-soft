@@ -1181,16 +1181,16 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
 ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName)
 {
     ALsizei i = 0;
-    ALCenum val;
+
+    if(!enumName)
+    {
+        alcSetError(device, ALC_INVALID_VALUE);
+        return (ALCenum)0;
+    }
 
     while(enumeration[i].enumName && strcmp(enumeration[i].enumName,enumName) == 0)
         i++;
-    val = enumeration[i].value;
-
-    if(!enumeration[i].enumName)
-        alcSetError(device, ALC_INVALID_VALUE);
-
-    return val;
+    return enumeration[i].value;
 }
 
 

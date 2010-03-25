@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include <ctype.h>
+
 #include "alMain.h"
 #include "alSource.h"
 #include "AL/al.h"
@@ -32,7 +33,6 @@
 #include "alThunk.h"
 #include "alSource.h"
 #include "alBuffer.h"
-#include "alExtension.h"
 #include "alAuxEffectSlot.h"
 #include "alDatabuffer.h"
 #include "bs2b.h"
@@ -85,78 +85,83 @@ static BackendInfo BackendList[] = {
 ///////////////////////////////////////////////////////
 // STRING and EXTENSIONS
 
-typedef struct ALCfunction_struct
-{
-    ALCchar        *funcName;
-    ALvoid        *address;
+typedef struct ALCfunction {
+    const ALCchar *funcName;
+    ALCvoid *address;
 } ALCfunction;
 
-static ALCfunction  alcFunctions[] = {
-    { "alcCreateContext",           (ALvoid *) alcCreateContext         },
-    { "alcMakeContextCurrent",      (ALvoid *) alcMakeContextCurrent    },
-    { "alcProcessContext",          (ALvoid *) alcProcessContext        },
-    { "alcSuspendContext",          (ALvoid *) alcSuspendContext        },
-    { "alcDestroyContext",          (ALvoid *) alcDestroyContext        },
-    { "alcGetCurrentContext",       (ALvoid *) alcGetCurrentContext     },
-    { "alcGetContextsDevice",       (ALvoid *) alcGetContextsDevice     },
-    { "alcOpenDevice",              (ALvoid *) alcOpenDevice            },
-    { "alcCloseDevice",             (ALvoid *) alcCloseDevice           },
-    { "alcGetError",                (ALvoid *) alcGetError              },
-    { "alcIsExtensionPresent",      (ALvoid *) alcIsExtensionPresent    },
-    { "alcGetProcAddress",          (ALvoid *) alcGetProcAddress        },
-    { "alcGetEnumValue",            (ALvoid *) alcGetEnumValue          },
-    { "alcGetString",               (ALvoid *) alcGetString             },
-    { "alcGetIntegerv",             (ALvoid *) alcGetIntegerv           },
-    { "alcCaptureOpenDevice",       (ALvoid *) alcCaptureOpenDevice     },
-    { "alcCaptureCloseDevice",      (ALvoid *) alcCaptureCloseDevice    },
-    { "alcCaptureStart",            (ALvoid *) alcCaptureStart          },
-    { "alcCaptureStop",             (ALvoid *) alcCaptureStop           },
-    { "alcCaptureSamples",          (ALvoid *) alcCaptureSamples        },
+typedef struct ALCenums {
+    const ALCchar *enumName;
+    ALCenum value;
+} ALCenums;
 
-    { "alcSetThreadContext",        (ALvoid *) alcSetThreadContext      },
-    { "alcGetThreadContext",        (ALvoid *) alcGetThreadContext      },
 
-    { NULL,                         (ALvoid *) NULL                     }
+static const ALCfunction alcFunctions[] = {
+    { "alcCreateContext",           (ALCvoid *) alcCreateContext         },
+    { "alcMakeContextCurrent",      (ALCvoid *) alcMakeContextCurrent    },
+    { "alcProcessContext",          (ALCvoid *) alcProcessContext        },
+    { "alcSuspendContext",          (ALCvoid *) alcSuspendContext        },
+    { "alcDestroyContext",          (ALCvoid *) alcDestroyContext        },
+    { "alcGetCurrentContext",       (ALCvoid *) alcGetCurrentContext     },
+    { "alcGetContextsDevice",       (ALCvoid *) alcGetContextsDevice     },
+    { "alcOpenDevice",              (ALCvoid *) alcOpenDevice            },
+    { "alcCloseDevice",             (ALCvoid *) alcCloseDevice           },
+    { "alcGetError",                (ALCvoid *) alcGetError              },
+    { "alcIsExtensionPresent",      (ALCvoid *) alcIsExtensionPresent    },
+    { "alcGetProcAddress",          (ALCvoid *) alcGetProcAddress        },
+    { "alcGetEnumValue",            (ALCvoid *) alcGetEnumValue          },
+    { "alcGetString",               (ALCvoid *) alcGetString             },
+    { "alcGetIntegerv",             (ALCvoid *) alcGetIntegerv           },
+    { "alcCaptureOpenDevice",       (ALCvoid *) alcCaptureOpenDevice     },
+    { "alcCaptureCloseDevice",      (ALCvoid *) alcCaptureCloseDevice    },
+    { "alcCaptureStart",            (ALCvoid *) alcCaptureStart          },
+    { "alcCaptureStop",             (ALCvoid *) alcCaptureStop           },
+    { "alcCaptureSamples",          (ALCvoid *) alcCaptureSamples        },
+
+    { "alcSetThreadContext",        (ALCvoid *) alcSetThreadContext      },
+    { "alcGetThreadContext",        (ALCvoid *) alcGetThreadContext      },
+
+    { NULL,                         (ALCvoid *) NULL                     }
 };
 
-static ALenums enumeration[]={
+static const ALCenums enumeration[] = {
     // Types
-    { (ALchar *)"ALC_INVALID",                          ALC_INVALID                         },
-    { (ALchar *)"ALC_FALSE",                            ALC_FALSE                           },
-    { (ALchar *)"ALC_TRUE",                             ALC_TRUE                            },
+    { "ALC_INVALID",                          ALC_INVALID                         },
+    { "ALC_FALSE",                            ALC_FALSE                           },
+    { "ALC_TRUE",                             ALC_TRUE                            },
 
     // ALC Properties
-    { (ALchar *)"ALC_MAJOR_VERSION",                    ALC_MAJOR_VERSION                   },
-    { (ALchar *)"ALC_MINOR_VERSION",                    ALC_MINOR_VERSION                   },
-    { (ALchar *)"ALC_ATTRIBUTES_SIZE",                  ALC_ATTRIBUTES_SIZE                 },
-    { (ALchar *)"ALC_ALL_ATTRIBUTES",                   ALC_ALL_ATTRIBUTES                  },
-    { (ALchar *)"ALC_DEFAULT_DEVICE_SPECIFIER",         ALC_DEFAULT_DEVICE_SPECIFIER        },
-    { (ALchar *)"ALC_DEVICE_SPECIFIER",                 ALC_DEVICE_SPECIFIER                },
-    { (ALchar *)"ALC_ALL_DEVICES_SPECIFIER",            ALC_ALL_DEVICES_SPECIFIER           },
-    { (ALchar *)"ALC_DEFAULT_ALL_DEVICES_SPECIFIER",    ALC_DEFAULT_ALL_DEVICES_SPECIFIER   },
-    { (ALchar *)"ALC_EXTENSIONS",                       ALC_EXTENSIONS                      },
-    { (ALchar *)"ALC_FREQUENCY",                        ALC_FREQUENCY                       },
-    { (ALchar *)"ALC_REFRESH",                          ALC_REFRESH                         },
-    { (ALchar *)"ALC_SYNC",                             ALC_SYNC                            },
-    { (ALchar *)"ALC_MONO_SOURCES",                     ALC_MONO_SOURCES                    },
-    { (ALchar *)"ALC_STEREO_SOURCES",                   ALC_STEREO_SOURCES                  },
-    { (ALchar *)"ALC_CAPTURE_DEVICE_SPECIFIER",         ALC_CAPTURE_DEVICE_SPECIFIER        },
-    { (ALchar *)"ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER", ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER},
-    { (ALchar *)"ALC_CAPTURE_SAMPLES",                  ALC_CAPTURE_SAMPLES                 },
+    { "ALC_MAJOR_VERSION",                    ALC_MAJOR_VERSION                   },
+    { "ALC_MINOR_VERSION",                    ALC_MINOR_VERSION                   },
+    { "ALC_ATTRIBUTES_SIZE",                  ALC_ATTRIBUTES_SIZE                 },
+    { "ALC_ALL_ATTRIBUTES",                   ALC_ALL_ATTRIBUTES                  },
+    { "ALC_DEFAULT_DEVICE_SPECIFIER",         ALC_DEFAULT_DEVICE_SPECIFIER        },
+    { "ALC_DEVICE_SPECIFIER",                 ALC_DEVICE_SPECIFIER                },
+    { "ALC_ALL_DEVICES_SPECIFIER",            ALC_ALL_DEVICES_SPECIFIER           },
+    { "ALC_DEFAULT_ALL_DEVICES_SPECIFIER",    ALC_DEFAULT_ALL_DEVICES_SPECIFIER   },
+    { "ALC_EXTENSIONS",                       ALC_EXTENSIONS                      },
+    { "ALC_FREQUENCY",                        ALC_FREQUENCY                       },
+    { "ALC_REFRESH",                          ALC_REFRESH                         },
+    { "ALC_SYNC",                             ALC_SYNC                            },
+    { "ALC_MONO_SOURCES",                     ALC_MONO_SOURCES                    },
+    { "ALC_STEREO_SOURCES",                   ALC_STEREO_SOURCES                  },
+    { "ALC_CAPTURE_DEVICE_SPECIFIER",         ALC_CAPTURE_DEVICE_SPECIFIER        },
+    { "ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER", ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER},
+    { "ALC_CAPTURE_SAMPLES",                  ALC_CAPTURE_SAMPLES                 },
 
     // EFX Properties
-    { (ALchar *)"ALC_EFX_MAJOR_VERSION",                ALC_EFX_MAJOR_VERSION               },
-    { (ALchar *)"ALC_EFX_MINOR_VERSION",                ALC_EFX_MINOR_VERSION               },
-    { (ALchar *)"ALC_MAX_AUXILIARY_SENDS",              ALC_MAX_AUXILIARY_SENDS             },
+    { "ALC_EFX_MAJOR_VERSION",                ALC_EFX_MAJOR_VERSION               },
+    { "ALC_EFX_MINOR_VERSION",                ALC_EFX_MINOR_VERSION               },
+    { "ALC_MAX_AUXILIARY_SENDS",              ALC_MAX_AUXILIARY_SENDS             },
 
     // ALC Error Message
-    { (ALchar *)"ALC_NO_ERROR",                         ALC_NO_ERROR                        },
-    { (ALchar *)"ALC_INVALID_DEVICE",                   ALC_INVALID_DEVICE                  },
-    { (ALchar *)"ALC_INVALID_CONTEXT",                  ALC_INVALID_CONTEXT                 },
-    { (ALchar *)"ALC_INVALID_ENUM",                     ALC_INVALID_ENUM                    },
-    { (ALchar *)"ALC_INVALID_VALUE",                    ALC_INVALID_VALUE                   },
-    { (ALchar *)"ALC_OUT_OF_MEMORY",                    ALC_OUT_OF_MEMORY                   },
-    { (ALchar *)NULL,                                   (ALenum)0 }
+    { "ALC_NO_ERROR",                         ALC_NO_ERROR                        },
+    { "ALC_INVALID_DEVICE",                   ALC_INVALID_DEVICE                  },
+    { "ALC_INVALID_CONTEXT",                  ALC_INVALID_CONTEXT                 },
+    { "ALC_INVALID_ENUM",                     ALC_INVALID_ENUM                    },
+    { "ALC_INVALID_VALUE",                    ALC_INVALID_VALUE                   },
+    { "ALC_OUT_OF_MEMORY",                    ALC_OUT_OF_MEMORY                   },
+    { NULL,                                   (ALCenum)0 }
 };
 // Error strings
 static const ALCchar alcNoError[] = "No Error";

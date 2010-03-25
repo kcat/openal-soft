@@ -80,12 +80,12 @@ static ALuint WaveProc(ALvoid *ptr)
     frameSize = aluBytesFromFormat(pDevice->Format) *
                 aluChannelsFromFormat(pDevice->Format);
 
-    last = timeGetTime();
+    last = timeGetTime()<<8;
     while(!data->killNow && pDevice->Connected)
     {
-        now = timeGetTime();
+        now = timeGetTime()<<8;
 
-        avail = (now-last) * pDevice->Frequency / 1000;
+        avail = (ALuint64)(now-last) * pDevice->Frequency / (1000<<8);
         if(avail < pDevice->UpdateSize)
         {
             Sleep(1);
@@ -128,8 +128,8 @@ static ALuint WaveProc(ALvoid *ptr)
             }
 
             avail -= pDevice->UpdateSize;
+            last += (ALuint64)pDevice->UpdateSize * (1000<<8) / pDevice->Frequency;
         }
-        last = now;
     }
 
     return 0;

@@ -1188,7 +1188,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
         return (ALCenum)0;
     }
 
-    while(enumeration[i].enumName && strcmp(enumeration[i].enumName,enumName) == 0)
+    while(enumeration[i].enumName && strcmp(enumeration[i].enumName,enumName) != 0)
         i++;
     return enumeration[i].value;
 }

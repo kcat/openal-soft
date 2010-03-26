@@ -32,7 +32,7 @@
 #include "alSource.h"
 
 
-static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, ALeffect *effect);
+static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
 
 DECL_VERIFIER(EffectSlot, ALeffectslot, effectslot)
 DECL_VERIFIER(Effect, ALeffect, effect)
@@ -107,7 +107,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
 AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
     ALCcontext *Context;
-    ALeffectslot *ALAuxiliaryEffectSlot;
+    ALeffectslot *EffectSlot;
     ALsizei i;
 
     Context = GetContextSuspended();
@@ -118,14 +118,14 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
         // Check that all effectslots are valid
         for (i = 0; i < n; i++)
         {
-            if((ALAuxiliaryEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslots[i])) == NULL)
+            if((EffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslots[i])) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
                 break;
             }
             else
             {
-                if(ALAuxiliaryEffectSlot->refcount > 0)
+                if(EffectSlot->refcount > 0)
                 {
                     alSetError(Context, AL_INVALID_NAME);
                     break;
@@ -139,23 +139,23 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
             for (i = 0; i < n; i++)
             {
                 // Recheck that the effectslot is valid, because there could be duplicated names
-                if((ALAuxiliaryEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslots[i])) != NULL)
+                if((EffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslots[i])) != NULL)
                 {
                     ALeffectslot **list;
 
                     // Remove Source from list of Sources
                     list = &Context->EffectSlotList;
-                    while(*list && *list != ALAuxiliaryEffectSlot)
+                    while(*list && *list != EffectSlot)
                          list = &(*list)->next;
 
                     if(*list)
                         *list = (*list)->next;
-                    ALTHUNK_REMOVEENTRY(ALAuxiliaryEffectSlot->effectslot);
+                    ALTHUNK_REMOVEENTRY(EffectSlot->effectslot);
 
-                    ALEffect_Destroy(ALAuxiliaryEffectSlot->EffectState);
+                    ALEffect_Destroy(EffectSlot->EffectState);
 
-                    memset(ALAuxiliaryEffectSlot, 0, sizeof(ALeffectslot));
-                    free(ALAuxiliaryEffectSlot);
+                    memset(EffectSlot, 0, sizeof(ALeffectslot));
+                    free(EffectSlot);
 
                     Context->EffectSlotCount--;
                 }
@@ -188,12 +188,12 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
 {
     ALCcontext *Context;
     ALboolean updateSources = AL_FALSE;
-    ALeffectslot *ALEffectSlot;
+    ALeffectslot *EffectSlot;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if((ALEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
+    if((EffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
     {
         switch(param)
         {
@@ -203,7 +203,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
             if(iValue == 0 ||
                (effect=VerifyEffect(Context->Device->EffectList, iValue)) != NULL)
             {
-                InitializeEffect(Context, ALEffectSlot, effect);
+                InitializeEffect(Context, EffectSlot, effect);
                 updateSources = AL_TRUE;
             }
             else
@@ -213,7 +213,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
             if(iValue == AL_TRUE || iValue == AL_FALSE)
             {
-                ALEffectSlot->AuxSendAuto = iValue;
+                EffectSlot->AuxSendAuto = iValue;
                 updateSources = AL_TRUE;
             }
             else
@@ -281,18 +281,18 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
 AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat flValue)
 {
     ALCcontext *Context;
-    ALeffectslot *ALEffectSlot;
+    ALeffectslot *EffectSlot;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if((ALEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
+    if((EffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
     {
         switch(param)
         {
         case AL_EFFECTSLOT_GAIN:
             if(flValue >= 0.0f && flValue <= 1.0f)
-                ALEffectSlot->Gain = flValue;
+                EffectSlot->Gain = flValue;
             else
                 alSetError(Context, AL_INVALID_VALUE);
             break;
@@ -337,21 +337,21 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *piValue)
 {
     ALCcontext *Context;
-    ALeffectslot *ALEffectSlot;
+    ALeffectslot *EffectSlot;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if((ALEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
+    if((EffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
     {
         switch(param)
         {
         case AL_EFFECTSLOT_EFFECT:
-            *piValue = ALEffectSlot->effect.effect;
+            *piValue = EffectSlot->effect.effect;
             break;
 
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
-            *piValue = ALEffectSlot->AuxSendAuto;
+            *piValue = EffectSlot->AuxSendAuto;
             break;
 
         default:
@@ -395,17 +395,17 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *pflValue)
 {
     ALCcontext *Context;
-    ALeffectslot *ALEffectSlot;
+    ALeffectslot *EffectSlot;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if((ALEffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
+    if((EffectSlot=VerifyEffectSlot(Context->EffectSlotList, effectslot)) != NULL)
     {
         switch(param)
         {
         case AL_EFFECTSLOT_GAIN:
-            *pflValue = ALEffectSlot->Gain;
+            *pflValue = EffectSlot->Gain;
             break;
 
         default:
@@ -484,9 +484,9 @@ ALeffectState *NoneCreate(void)
     return state;
 }
 
-static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, ALeffect *effect)
+static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect)
 {
-    if(ALEffectSlot->effect.type != (effect?effect->type:AL_EFFECT_NULL))
+    if(EffectSlot->effect.type != (effect?effect->type:AL_EFFECT_NULL))
     {
         ALeffectState *NewState = NULL;
         if(!effect || effect->type == AL_EFFECT_NULL)
@@ -506,15 +506,15 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *ALEffectSlot, 
             alSetError(Context, AL_OUT_OF_MEMORY);
             return;
         }
-        if(ALEffectSlot->EffectState)
-            ALEffect_Destroy(ALEffectSlot->EffectState);
-        ALEffectSlot->EffectState = NewState;
+        if(EffectSlot->EffectState)
+            ALEffect_Destroy(EffectSlot->EffectState);
+        EffectSlot->EffectState = NewState;
     }
     if(!effect)
-        memset(&ALEffectSlot->effect, 0, sizeof(ALEffectSlot->effect));
+        memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
     else
-        memcpy(&ALEffectSlot->effect, effect, sizeof(*effect));
-    ALEffect_Update(ALEffectSlot->EffectState, Context, effect);
+        memcpy(&EffectSlot->effect, effect, sizeof(*effect));
+    ALEffect_Update(EffectSlot->EffectState, Context, effect);
 }
 
 

@@ -245,8 +245,8 @@ struct ALCdevice_struct
     // Maximum number of slots that can be created
     ALuint       AuxiliaryEffectSlotMax;
 
-    ALint        lNumMonoSources;
-    ALint        lNumStereoSources;
+    ALCuint      NumMonoSources;
+    ALCuint      NumStereoSources;
     ALuint       NumAuxSends;
 
     // Linked List of Buffers for this device

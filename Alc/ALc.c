@@ -1051,10 +1051,10 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                 data[i++] = ALC_FALSE;
 
                 data[i++] = ALC_MONO_SOURCES;
-                data[i++] = device->lNumMonoSources;
+                data[i++] = device->NumMonoSources;
 
                 data[i++] = ALC_STEREO_SOURCES;
-                data[i++] = device->lNumStereoSources;
+                data[i++] = device->NumStereoSources;
 
                 data[i++] = ALC_MAX_AUXILIARY_SENDS;
                 data[i++] = device->NumAuxSends;
@@ -1089,14 +1089,14 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
             if(!IsDevice(device))
                 alcSetError(device, ALC_INVALID_DEVICE);
             else
-                *data = device->lNumMonoSources;
+                *data = device->NumMonoSources;
             break;
 
         case ALC_STEREO_SOURCES:
             if(!IsDevice(device))
                 alcSetError(device, ALC_INVALID_DEVICE);
             else
-                *data = device->lNumStereoSources;
+                *data = device->NumStereoSources;
             break;
 
         case ALC_CONNECTED:
@@ -1201,8 +1201,8 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 */
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
-    ALuint attrIdx, reqStereoSources;
     ALCcontext *ALContext;
+    ALuint attrIdx;
     void *temp;
     ALuint i;
 
@@ -1232,8 +1232,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         ALCint level = device->Bs2bLevel;
         ALCuint freq = device->Frequency;
-        ALCint numMono = device->lNumMonoSources;
-        ALCint numStereo = device->lNumStereoSources;
+        ALCuint numMono = device->NumMonoSources;
+        ALCuint numStereo = device->NumStereoSources;
         ALCuint numSends = device->NumAuxSends;
 
         attrIdx = 0;
@@ -1249,11 +1249,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
             if(attrList[attrIdx] == ALC_STEREO_SOURCES)
             {
-                reqStereoSources = attrList[attrIdx + 1];
-                if(reqStereoSources > device->MaxNoOfSources)
-                    reqStereoSources = device->MaxNoOfSources;
+                numStereo = attrList[attrIdx + 1];
+                if(numStereo > device->MaxNoOfSources)
+                    numStereo = device->MaxNoOfSources;
 
-                numStereo = reqStereoSources;
                 numMono = device->MaxNoOfSources - numStereo;
             }
 
@@ -1273,8 +1272,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
         device->Bs2bLevel = level;
         device->Frequency = freq;
-        device->lNumMonoSources = numMono;
-        device->lNumStereoSources = numStereo;
+        device->NumMonoSources = numMono;
+        device->NumStereoSources = numStereo;
         device->NumAuxSends = numSends;
     }
 
@@ -1732,8 +1731,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if((ALint)device->AuxiliaryEffectSlotMax <= 0)
         device->AuxiliaryEffectSlotMax = 4;
 
-    device->lNumStereoSources = 1;
-    device->lNumMonoSources = device->MaxNoOfSources - device->lNumStereoSources;
+    device->NumStereoSources = 1;
+    device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
     device->NumAuxSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
     if(device->NumAuxSends > MAX_SENDS)

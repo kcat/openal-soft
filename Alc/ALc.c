@@ -1230,7 +1230,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     // Check for attributes
     if(attrList)
     {
-        ALCint level = device->Bs2bLevel;
         ALCuint freq = device->Frequency;
         ALCuint numMono = device->NumMonoSources;
         ALCuint numStereo = device->NumStereoSources;
@@ -1270,7 +1269,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         device->UpdateSize = (ALuint64)device->UpdateSize * freq /
                              device->Frequency;
 
-        device->Bs2bLevel = level;
         device->Frequency = freq;
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;

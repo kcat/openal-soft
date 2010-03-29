@@ -52,7 +52,7 @@ typedef char ALboolean;
 typedef char ALchar;
 
 /** signed 8-bit 2's complement integer */
-typedef char ALbyte;
+typedef signed char ALbyte;
 
 /** unsigned 8-bit integer */
 typedef unsigned char ALubyte;

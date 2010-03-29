@@ -51,7 +51,7 @@ typedef char ALCboolean;
 typedef char ALCchar;
 
 /** signed 8-bit 2's complement integer */
-typedef char ALCbyte;
+typedef signed char ALCbyte;
 
 /** unsigned 8-bit integer */
 typedef unsigned char ALCubyte;

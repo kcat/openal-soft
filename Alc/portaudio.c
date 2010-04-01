@@ -92,7 +92,6 @@ void *pa_load(void)
 } while(0)
 
 #else
-        str = NULL;
         pa_handle = (void*)0xDEADBEEF;
 #define LOAD_FUNC(f) p##f = f
 #endif

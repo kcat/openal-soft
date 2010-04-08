@@ -279,6 +279,9 @@ struct ALCdevice_struct
 
     ALfloat ChannelMatrix[OUTPUTCHANNELS][OUTPUTCHANNELS];
 
+    ALfloat PanningLUT[OUTPUTCHANNELS * LUT_NUM];
+    ALuint  NumChan;
+
     // Contexts created on this device
     ALCcontext  **Contexts;
     ALuint        NumContexts;
@@ -323,9 +326,6 @@ struct ALCcontext_struct
     ALfloat     DopplerFactor;
     ALfloat     DopplerVelocity;
     ALfloat     flSpeedOfSound;
-
-    ALfloat     PanningLUT[OUTPUTCHANNELS * LUT_NUM];
-    ALint       NumChan;
 
     ALCdevice  *Device;
     const ALCchar *ExtensionList;

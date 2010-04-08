@@ -1131,7 +1131,7 @@ static ALvoid EAXVerbUpdate(ALeffectState *effect, ALCcontext *Context, const AL
 
     // Update early and late 3D panning.
     Update3DPanning(Effect->Reverb.ReflectionsPan, Effect->Reverb.LateReverbPan,
-                    Context->PanningLUT, State);
+                    Context->Device->PanningLUT, State);
 }
 
 // This processes the reverb state, given the input samples and an output

@@ -507,103 +507,6 @@ void EnableRTPrio(ALint level)
         AL_PRINT("Failed to set priority level for thread\n");
 }
 
-static void SetupChannelMatrix(ALCdevice *Device)
-{
-    ALfloat maxout;
-    ALuint s, s2;
-
-    for(s = 0;s < OUTPUTCHANNELS;s++)
-    {
-        for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
-            Device->ChannelMatrix[s][s2] = ((s==s2) ? 1.0f : 0.0f);
-    }
-
-    switch(Device->Format)
-    {
-        case AL_FORMAT_MONO8:
-        case AL_FORMAT_MONO16:
-        case AL_FORMAT_MONO_FLOAT32:
-            Device->ChannelMatrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
-            Device->ChannelMatrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][FRONT_CENTER] = 1.0f;
-            break;
-
-        case AL_FORMAT_STEREO8:
-        case AL_FORMAT_STEREO16:
-        case AL_FORMAT_STEREO_FLOAT32:
-            Device->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
-            Device->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
-            Device->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = 1.0f;
-            Device->ChannelMatrix[BACK_LEFT][FRONT_LEFT]     = 1.0f;
-            Device->ChannelMatrix[BACK_RIGHT][FRONT_RIGHT]   = 1.0f;
-            Device->ChannelMatrix[BACK_CENTER][FRONT_LEFT]   = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][FRONT_RIGHT]  = aluSqrt(0.5);
-            break;
-
-        case AL_FORMAT_QUAD8:
-        case AL_FORMAT_QUAD16:
-        case AL_FORMAT_QUAD32:
-            Device->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
-            Device->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_LEFT][BACK_LEFT]      = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_RIGHT][BACK_RIGHT]    = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][BACK_LEFT]    = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][BACK_RIGHT]   = aluSqrt(0.5);
-            break;
-
-        case AL_FORMAT_51CHN8:
-        case AL_FORMAT_51CHN16:
-        case AL_FORMAT_51CHN32:
-            Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]   = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT] = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_RIGHT][BACK_RIGHT]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
-            break;
-
-        case AL_FORMAT_61CHN8:
-        case AL_FORMAT_61CHN16:
-        case AL_FORMAT_61CHN32:
-            Device->ChannelMatrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_RIGHT][SIDE_RIGHT]  = aluSqrt(0.5);
-            break;
-
-        case AL_FORMAT_71CHN8:
-        case AL_FORMAT_71CHN16:
-        case AL_FORMAT_71CHN32:
-            Device->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
-            break;
-
-        default:
-            assert(0);
-    }
-
-    for(s = 0;s < OUTPUTCHANNELS;s++)
-    {
-        ALfloat out = 0.0f;
-        for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
-            out += Device->ChannelMatrix[s2][s];
-        maxout = __max(maxout, out);
-    }
-
-    maxout = 1.0f/maxout;
-    for(s = 0;s < OUTPUTCHANNELS;s++)
-    {
-        for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
-            Device->ChannelMatrix[s2][s] *= maxout;
-    }
-}
 
 /*
     IsDevice
@@ -1380,7 +1283,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         ProcessContext(NULL);
         return NULL;
     }
-    SetupChannelMatrix(device);
+    aluInitPanning(device);
 
     for(i = 0;i < device->NumContexts;i++)
     {
@@ -1420,7 +1323,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
             }
             source->NeedsUpdate = AL_TRUE;
         }
-        aluInitPanning(context);
         ProcessContext(context);
     }
 
@@ -1461,7 +1363,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALContext->Device = device;
 
     InitContext(ALContext);
-    aluInitPanning(ALContext);
 
     ALContext->next = g_pContextList;
     g_pContextList = ALContext;

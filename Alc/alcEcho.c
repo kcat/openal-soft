@@ -53,7 +53,7 @@ typedef struct ALechoState {
     ALfloat history[2];
 } ALechoState;
 
-ALvoid EchoDestroy(ALeffectState *effect)
+static ALvoid EchoDestroy(ALeffectState *effect)
 {
     ALechoState *state = (ALechoState*)effect;
     if(state)
@@ -64,7 +64,7 @@ ALvoid EchoDestroy(ALeffectState *effect)
     }
 }
 
-ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     ALechoState *state = (ALechoState*)effect;
     ALuint maxlen, i;
@@ -91,7 +91,7 @@ ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     return AL_TRUE;
 }
 
-ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
+static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
 {
     ALechoState *state = (ALechoState*)effect;
     ALuint frequency = Context->Device->Frequency;
@@ -115,7 +115,7 @@ ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Ef
     state->iirFilter.coeff = a;
 }
 
-ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+static ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
     ALechoState *state = (ALechoState*)effect;
     const ALuint mask = state->BufferLength-1;

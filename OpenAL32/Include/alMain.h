@@ -275,7 +275,7 @@ struct ALCdevice_struct
     // Dry path buffer mix
     float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
 
-    Channel DevChannels[OUTPUTCHANNELS];
+    ALuint DevChannels[OUTPUTCHANNELS];
 
     // Contexts created on this device
     ALCcontext  **Contexts;

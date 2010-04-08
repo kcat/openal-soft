@@ -1567,39 +1567,39 @@ void SetDefaultChannelOrder(ALCdevice *device)
 {
     switch(aluChannelsFromFormat(device->Format))
     {
-    case 1: device->DevChannels[0] = FRONT_CENTER; break;
+    case 1: device->DevChannels[FRONT_CENTER] = 0; break;
 
-    case 2: device->DevChannels[0] = FRONT_LEFT;
-            device->DevChannels[1] = FRONT_RIGHT; break;
+    case 2: device->DevChannels[FRONT_LEFT]  = 0;
+            device->DevChannels[FRONT_RIGHT] = 1; break;
 
-    case 4: device->DevChannels[0] = FRONT_LEFT;
-            device->DevChannels[1] = FRONT_RIGHT;
-            device->DevChannels[2] = BACK_LEFT;
-            device->DevChannels[3] = BACK_RIGHT; break;
+    case 4: device->DevChannels[FRONT_LEFT]  = 0;
+            device->DevChannels[FRONT_RIGHT] = 1;
+            device->DevChannels[BACK_LEFT]   = 2;
+            device->DevChannels[BACK_RIGHT]  = 3; break;
 
-    case 6: device->DevChannels[0] = FRONT_LEFT;
-            device->DevChannels[1] = FRONT_RIGHT;
-            device->DevChannels[2] = BACK_LEFT;
-            device->DevChannels[3] = BACK_RIGHT;
-            device->DevChannels[4] = FRONT_CENTER;
-            device->DevChannels[5] = LFE; break;
+    case 6: device->DevChannels[FRONT_LEFT]   = 0;
+            device->DevChannels[FRONT_RIGHT]  = 1;
+            device->DevChannels[BACK_LEFT]    = 2;
+            device->DevChannels[BACK_RIGHT]   = 3;
+            device->DevChannels[FRONT_CENTER] = 4;
+            device->DevChannels[LFE]          = 5; break;
 
-    case 7: device->DevChannels[0] = FRONT_LEFT;
-            device->DevChannels[1] = FRONT_RIGHT;
-            device->DevChannels[2] = FRONT_CENTER;
-            device->DevChannels[3] = LFE;
-            device->DevChannels[4] = BACK_CENTER;
-            device->DevChannels[5] = SIDE_LEFT;
-            device->DevChannels[6] = SIDE_RIGHT; break;
+    case 7: device->DevChannels[FRONT_LEFT]   = 0;
+            device->DevChannels[FRONT_RIGHT]  = 1;
+            device->DevChannels[FRONT_CENTER] = 2;
+            device->DevChannels[LFE]          = 3;
+            device->DevChannels[BACK_CENTER]  = 4;
+            device->DevChannels[SIDE_LEFT]    = 5;
+            device->DevChannels[SIDE_RIGHT]   = 6; break;
 
-    case 8: device->DevChannels[0] = FRONT_LEFT;
-            device->DevChannels[1] = FRONT_RIGHT;
-            device->DevChannels[2] = BACK_LEFT;
-            device->DevChannels[3] = BACK_RIGHT;
-            device->DevChannels[4] = FRONT_CENTER;
-            device->DevChannels[5] = LFE;
-            device->DevChannels[6] = SIDE_LEFT;
-            device->DevChannels[7] = SIDE_RIGHT; break;
+    case 8: device->DevChannels[FRONT_LEFT]   = 0;
+            device->DevChannels[FRONT_RIGHT]  = 1;
+            device->DevChannels[BACK_LEFT]    = 2;
+            device->DevChannels[BACK_RIGHT]   = 3;
+            device->DevChannels[FRONT_CENTER] = 4;
+            device->DevChannels[LFE]          = 5;
+            device->DevChannels[SIDE_LEFT]    = 6;
+            device->DevChannels[SIDE_RIGHT]   = 7; break;
     }
 }
 // Sets the default order used by WaveFormatEx
@@ -1607,39 +1607,39 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
     switch(aluChannelsFromFormat(device->Format))
     {
-    case 1: device->DevChannels[0] = FRONT_CENTER; break;
+    case 1: device->DevChannels[FRONT_CENTER] = 0; break;
 
-    case 2: device->DevChannels[0] = FRONT_LEFT;
-            device->DevChannels[1] = FRONT_RIGHT; break;
+    case 2: device->DevChannels[FRONT_LEFT]  = 0;
+            device->DevChannels[FRONT_RIGHT] = 1; break;
 
-    case 4: device->DevChannels[0] = FRONT_LEFT;
-            device->DevChannels[1] = FRONT_RIGHT;
-            device->DevChannels[2] = BACK_LEFT;
-            device->DevChannels[3] = BACK_RIGHT; break;
+    case 4: device->DevChannels[FRONT_LEFT]  = 0;
+            device->DevChannels[FRONT_RIGHT] = 1;
+            device->DevChannels[BACK_LEFT]   = 2;
+            device->DevChannels[BACK_RIGHT]  = 3; break;
 
-    case 6: device->DevChannels[0] = FRONT_LEFT;
-            device->DevChannels[1] = FRONT_RIGHT;
-            device->DevChannels[2] = FRONT_CENTER;
-            device->DevChannels[3] = LFE;
-            device->DevChannels[4] = BACK_LEFT;
-            device->DevChannels[5] = BACK_RIGHT; break;
+    case 6: device->DevChannels[FRONT_LEFT]   = 0;
+            device->DevChannels[FRONT_RIGHT]  = 1;
+            device->DevChannels[FRONT_CENTER] = 2;
+            device->DevChannels[LFE]          = 3;
+            device->DevChannels[BACK_LEFT]    = 4;
+            device->DevChannels[BACK_RIGHT]   = 5; break;
 
-    case 7: device->DevChannels[0] = FRONT_LEFT;
-            device->DevChannels[1] = FRONT_RIGHT;
-            device->DevChannels[2] = FRONT_CENTER;
-            device->DevChannels[3] = LFE;
-            device->DevChannels[4] = BACK_CENTER;
-            device->DevChannels[5] = SIDE_LEFT;
-            device->DevChannels[6] = SIDE_RIGHT; break;
+    case 7: device->DevChannels[FRONT_LEFT]   = 0;
+            device->DevChannels[FRONT_RIGHT]  = 1;
+            device->DevChannels[FRONT_CENTER] = 2;
+            device->DevChannels[LFE]          = 3;
+            device->DevChannels[BACK_CENTER]  = 4;
+            device->DevChannels[SIDE_LEFT]    = 5;
+            device->DevChannels[SIDE_RIGHT]   = 6; break;
 
-    case 8: device->DevChannels[0] = FRONT_LEFT;
-            device->DevChannels[1] = FRONT_RIGHT;
-            device->DevChannels[2] = FRONT_CENTER;
-            device->DevChannels[3] = LFE;
-            device->DevChannels[4] = BACK_LEFT;
-            device->DevChannels[5] = BACK_RIGHT;
-            device->DevChannels[6] = SIDE_LEFT;
-            device->DevChannels[7] = SIDE_RIGHT; break;
+    case 8: device->DevChannels[FRONT_LEFT]   = 0;
+            device->DevChannels[FRONT_RIGHT]  = 1;
+            device->DevChannels[FRONT_CENTER] = 2;
+            device->DevChannels[LFE]          = 3;
+            device->DevChannels[BACK_LEFT]    = 4;
+            device->DevChannels[BACK_RIGHT]   = 5;
+            device->DevChannels[SIDE_LEFT]    = 6;
+            device->DevChannels[SIDE_RIGHT]   = 7; break;
     }
 }
 

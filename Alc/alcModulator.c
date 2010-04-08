@@ -33,7 +33,24 @@
 typedef struct ALmodulatorState {
     // Must be first in all effects!
     ALeffectState state;
+
+    FILTER iirFilter;
+    ALfloat history[1];
 } ALmodulatorState;
+
+
+static __inline ALfloat hpFilter1P(FILTER *iir, ALuint offset, ALfloat input)
+{
+    ALfloat *history = &iir->history[offset];
+    ALfloat a = iir->coeff;
+    ALfloat output = input;
+
+    output = output + (history[0]-output)*a;
+    history[0] = output;
+
+    return input - output;
+}
+
 
 static ALvoid ModulatorDestroy(ALeffectState *effect)
 {
@@ -44,15 +61,18 @@ static ALvoid ModulatorDestroy(ALeffectState *effect)
 static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     return AL_TRUE;
-    (void)Device;
     (void)effect;
+    (void)Device;
 }
 
 static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
 {
-    (void)effect;
-    (void)Context;
-    (void)Effect;
+    ALmodulatorState *state = (ALmodulatorState*)effect;
+    ALfloat cw, a = 0.0f;
+
+    cw = cos(2.0*M_PI * Effect->Modulator.HighPassCutoff / Context->Device->Frequency);
+    a = (2.0f-cw) - aluSqrt(aluPow(2.0f-cw, 2.0f) - 1.0f);
+    state->iirFilter.coeff = a;
 }
 
 static ALvoid ModulatorProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
@@ -61,11 +81,10 @@ static ALvoid ModulatorProcess(ALeffectState *effect, const ALeffectslot *Slot, 
     const ALfloat gain = Slot->Gain;
     ALfloat samp;
     ALuint i;
-    (void)state;
 
     for(i = 0;i < SamplesToDo;i++)
     {
-        samp = SamplesIn[i];
+        samp = hpFilter1P(&state->iirFilter, 0, SamplesIn[i]);
 
         // Apply slot gain
         samp *= gain;
@@ -91,6 +110,9 @@ ALeffectState *ModulatorCreate(void)
     state->state.DeviceUpdate = ModulatorDeviceUpdate;
     state->state.Update = ModulatorUpdate;
     state->state.Process = ModulatorProcess;
+
+    state->iirFilter.coeff = 0.0f;
+    state->iirFilter.history[0] = 0.0f;
 
     return &state->state;
 }

@@ -113,7 +113,7 @@
 ## excludefx:
 #  Sets which effects to exclude, preventing apps from using them. This can
 #  help for apps that try to use effects which are too CPU intensive for the
-#  system to handle. Available effects are: eaxreverb,reverb,echo
+#  system to handle. Available effects are: eaxreverb,reverb,echo,modulator
 #excludefx =
 
 ## slots:

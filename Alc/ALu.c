@@ -250,7 +250,7 @@ ALvoid aluInitPanning(ALCcontext *Context)
     SpeakerAngle[5] =   90.0f * M_PI/180.0f;
     SpeakerAngle[6] =  150.0f * M_PI/180.0f;
     SpeakerAngle[7] =  180.0f * M_PI/180.0f;
-    SetSpeakerArrangement("layout_81CHN", SpeakerAngle, Speaker2Chan, Context->NumChan);
+    SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Context->NumChan);
 
     for(pos = 0; pos < LUT_NUM; pos++)
     {

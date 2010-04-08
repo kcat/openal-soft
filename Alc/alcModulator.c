@@ -40,6 +40,8 @@ typedef struct ALmodulatorState {
         SQUARE
     } Waveform;
 
+    ALfloat scalar;
+
     ALuint index;
     ALuint step;
 
@@ -87,9 +89,11 @@ static ALvoid ModulatorDestroy(ALeffectState *effect)
 
 static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
+    ALmodulatorState *state = (ALmodulatorState*)effect;
+
+    state->scalar = aluSqrt(1.0f/Device->NumChan);
+
     return AL_TRUE;
-    (void)effect;
-    (void)Device;
 }
 
 static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
@@ -117,7 +121,7 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
 static ALvoid ModulatorProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
     ALmodulatorState *state = (ALmodulatorState*)effect;
-    const ALfloat gain = Slot->Gain;
+    const ALfloat gain = Slot->Gain * state->scalar;
     const ALuint step = state->step;
     ALuint index = state->index;
     ALfloat samp;
@@ -140,12 +144,14 @@ static ALvoid ModulatorProcess(ALeffectState *effect, const ALeffectslot *Slot, 
     /* Apply slot gain */                                                     \
     samp *= gain;                                                             \
                                                                               \
-    SamplesOut[i][FRONT_LEFT]  += samp;                                       \
-    SamplesOut[i][FRONT_RIGHT] += samp;                                       \
-    SamplesOut[i][SIDE_LEFT]   += samp;                                       \
-    SamplesOut[i][SIDE_RIGHT]  += samp;                                       \
-    SamplesOut[i][BACK_LEFT]   += samp;                                       \
-    SamplesOut[i][BACK_RIGHT]  += samp;                                       \
+    SamplesOut[i][FRONT_LEFT]   += samp;                                      \
+    SamplesOut[i][FRONT_RIGHT]  += samp;                                      \
+    SamplesOut[i][FRONT_CENTER] += samp;                                      \
+    SamplesOut[i][SIDE_LEFT]    += samp;                                      \
+    SamplesOut[i][SIDE_RIGHT]   += samp;                                      \
+    SamplesOut[i][BACK_LEFT]    += samp;                                      \
+    SamplesOut[i][BACK_RIGHT]   += samp;                                      \
+    SamplesOut[i][BACK_CENTER]  += samp;                                      \
 } while(0)
             FILTER_OUT(sin_func);
         }

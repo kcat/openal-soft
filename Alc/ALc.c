@@ -509,6 +509,7 @@ void EnableRTPrio(ALint level)
 
 static void SetupChannelMatrix(ALCdevice *Device)
 {
+    ALfloat maxout;
     ALuint s, s2;
 
     for(s = 0;s < OUTPUTCHANNELS;s++)
@@ -586,6 +587,21 @@ static void SetupChannelMatrix(ALCdevice *Device)
 
         default:
             assert(0);
+    }
+
+    for(s = 0;s < OUTPUTCHANNELS;s++)
+    {
+        ALfloat out = 0.0f;
+        for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
+            out += Device->ChannelMatrix[s2][s];
+        maxout = __max(maxout, out);
+    }
+
+    maxout = 1.0f/maxout;
+    for(s = 0;s < OUTPUTCHANNELS;s++)
+    {
+        for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
+            Device->ChannelMatrix[s2][s] *= maxout;
     }
 }
 

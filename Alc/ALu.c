@@ -228,6 +228,7 @@ static __inline ALfloat aluLUTpos2Angle(ALint pos)
 
 ALvoid aluInitPanning(ALCcontext *Context)
 {
+    ALCdevice *Device = Context->Device;
     ALint pos, offset, s;
     ALfloat Alpha, Theta;
     ALfloat SpeakerAngle[OUTPUTCHANNELS];
@@ -237,7 +238,7 @@ ALvoid aluInitPanning(ALCcontext *Context)
     {
         int s2;
         for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
-            Context->ChannelMatrix[s][s2] = ((s==s2) ? 1.0f : 0.0f);
+            Device->ChannelMatrix[s][s2] = ((s==s2) ? 1.0f : 0.0f);
     }
 
     switch(Context->Device->Format)
@@ -245,112 +246,70 @@ ALvoid aluInitPanning(ALCcontext *Context)
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
         case AL_FORMAT_MONO_FLOAT32:
-            Context->ChannelMatrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
-            Context->ChannelMatrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_CENTER][FRONT_CENTER] = 1.0f;
-            Context->NumChan = 1;
-            Speaker2Chan[0] = FRONT_CENTER;
-            SpeakerAngle[0] = 0.0f * M_PI/180.0f;
-            break;
+            Device->ChannelMatrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
+            Device->ChannelMatrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
+            Device->ChannelMatrix[SIDE_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
+            Device->ChannelMatrix[SIDE_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_CENTER][FRONT_CENTER] = 1.0f;
+            goto real_setup;
 
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
         case AL_FORMAT_STEREO_FLOAT32:
-            Context->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
-            Context->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
-            Context->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = 1.0f;
-            Context->ChannelMatrix[BACK_LEFT][FRONT_LEFT]     = 1.0f;
-            Context->ChannelMatrix[BACK_RIGHT][FRONT_RIGHT]   = 1.0f;
-            Context->ChannelMatrix[BACK_CENTER][FRONT_LEFT]   = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_CENTER][FRONT_RIGHT]  = aluSqrt(0.5);
-            Context->NumChan = 2;
-            Speaker2Chan[0] = FRONT_LEFT;
-            Speaker2Chan[1] = FRONT_RIGHT;
-            SpeakerAngle[0] = -90.0f * M_PI/180.0f;
-            SpeakerAngle[1] =  90.0f * M_PI/180.0f;
-            SetSpeakerArrangement("layout_STEREO", SpeakerAngle, Speaker2Chan, Context->NumChan);
-            break;
+            Device->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
+            Device->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
+            Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
+            Device->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = 1.0f;
+            Device->ChannelMatrix[BACK_LEFT][FRONT_LEFT]     = 1.0f;
+            Device->ChannelMatrix[BACK_RIGHT][FRONT_RIGHT]   = 1.0f;
+            Device->ChannelMatrix[BACK_CENTER][FRONT_LEFT]   = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_CENTER][FRONT_RIGHT]  = aluSqrt(0.5);
+            goto real_setup;
 
         case AL_FORMAT_QUAD8:
         case AL_FORMAT_QUAD16:
         case AL_FORMAT_QUAD32:
-            Context->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
-            Context->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_LEFT][BACK_LEFT]      = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_RIGHT][BACK_RIGHT]    = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_CENTER][BACK_LEFT]    = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_CENTER][BACK_RIGHT]   = aluSqrt(0.5);
-            Context->NumChan = 4;
-            Speaker2Chan[0] = BACK_LEFT;
-            Speaker2Chan[1] = FRONT_LEFT;
-            Speaker2Chan[2] = FRONT_RIGHT;
-            Speaker2Chan[3] = BACK_RIGHT;
-            SpeakerAngle[0] = -135.0f * M_PI/180.0f;
-            SpeakerAngle[1] =  -45.0f * M_PI/180.0f;
-            SpeakerAngle[2] =   45.0f * M_PI/180.0f;
-            SpeakerAngle[3] =  135.0f * M_PI/180.0f;
-            SetSpeakerArrangement("layout_QUAD", SpeakerAngle, Speaker2Chan, Context->NumChan);
-            break;
+            Device->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
+            Device->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
+            Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = aluSqrt(0.5);
+            Device->ChannelMatrix[SIDE_LEFT][BACK_LEFT]      = aluSqrt(0.5);
+            Device->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = aluSqrt(0.5);
+            Device->ChannelMatrix[SIDE_RIGHT][BACK_RIGHT]    = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_CENTER][BACK_LEFT]    = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_CENTER][BACK_RIGHT]   = aluSqrt(0.5);
+            goto real_setup;
 
         case AL_FORMAT_51CHN8:
         case AL_FORMAT_51CHN16:
         case AL_FORMAT_51CHN32:
-            Context->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]   = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT] = aluSqrt(0.5);
-            Context->ChannelMatrix[SIDE_RIGHT][BACK_RIGHT]  = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
-            Context->NumChan = 5;
-            Speaker2Chan[0] = BACK_LEFT;
-            Speaker2Chan[1] = FRONT_LEFT;
-            Speaker2Chan[2] = FRONT_CENTER;
-            Speaker2Chan[3] = FRONT_RIGHT;
-            Speaker2Chan[4] = BACK_RIGHT;
-            SpeakerAngle[0] = -110.0f * M_PI/180.0f;
-            SpeakerAngle[1] =  -30.0f * M_PI/180.0f;
-            SpeakerAngle[2] =    0.0f * M_PI/180.0f;
-            SpeakerAngle[3] =   30.0f * M_PI/180.0f;
-            SpeakerAngle[4] =  110.0f * M_PI/180.0f;
-            SetSpeakerArrangement("layout_51CHN", SpeakerAngle, Speaker2Chan, Context->NumChan);
-            break;
+            Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]   = aluSqrt(0.5);
+            Device->ChannelMatrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
+            Device->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT] = aluSqrt(0.5);
+            Device->ChannelMatrix[SIDE_RIGHT][BACK_RIGHT]  = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
+            goto real_setup;
 
         case AL_FORMAT_61CHN8:
         case AL_FORMAT_61CHN16:
         case AL_FORMAT_61CHN32:
-            Context->ChannelMatrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_RIGHT][SIDE_RIGHT]  = aluSqrt(0.5);
-            Context->NumChan = 6;
-            Speaker2Chan[0] = SIDE_LEFT;
-            Speaker2Chan[1] = FRONT_LEFT;
-            Speaker2Chan[2] = FRONT_CENTER;
-            Speaker2Chan[3] = FRONT_RIGHT;
-            Speaker2Chan[4] = SIDE_RIGHT;
-            Speaker2Chan[5] = BACK_CENTER;
-            SpeakerAngle[0] = -90.0f * M_PI/180.0f;
-            SpeakerAngle[1] = -30.0f * M_PI/180.0f;
-            SpeakerAngle[2] =   0.0f * M_PI/180.0f;
-            SpeakerAngle[3] =  30.0f * M_PI/180.0f;
-            SpeakerAngle[4] =  90.0f * M_PI/180.0f;
-            SpeakerAngle[5] = 180.0f * M_PI/180.0f;
-            SetSpeakerArrangement("layout_61CHN", SpeakerAngle, Speaker2Chan, Context->NumChan);
-            break;
+            Device->ChannelMatrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_RIGHT][SIDE_RIGHT]  = aluSqrt(0.5);
+            goto real_setup;
 
         case AL_FORMAT_71CHN8:
         case AL_FORMAT_71CHN16:
         case AL_FORMAT_71CHN32:
-            Context->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
-            Context->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
-            Context->NumChan = 7;
+            Device->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
+            Device->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
+            goto real_setup;
+
+        real_setup:
+            Context->NumChan = 8;
             Speaker2Chan[0] = BACK_LEFT;
             Speaker2Chan[1] = SIDE_LEFT;
             Speaker2Chan[2] = FRONT_LEFT;
@@ -358,6 +317,7 @@ ALvoid aluInitPanning(ALCcontext *Context)
             Speaker2Chan[4] = FRONT_RIGHT;
             Speaker2Chan[5] = SIDE_RIGHT;
             Speaker2Chan[6] = BACK_RIGHT;
+            Speaker2Chan[7] = BACK_CENTER;
             SpeakerAngle[0] = -150.0f * M_PI/180.0f;
             SpeakerAngle[1] =  -90.0f * M_PI/180.0f;
             SpeakerAngle[2] =  -30.0f * M_PI/180.0f;
@@ -365,7 +325,8 @@ ALvoid aluInitPanning(ALCcontext *Context)
             SpeakerAngle[4] =   30.0f * M_PI/180.0f;
             SpeakerAngle[5] =   90.0f * M_PI/180.0f;
             SpeakerAngle[6] =  150.0f * M_PI/180.0f;
-            SetSpeakerArrangement("layout_71CHN", SpeakerAngle, Speaker2Chan, Context->NumChan);
+            SpeakerAngle[7] =  180.0f * M_PI/180.0f;
+            SetSpeakerArrangement("layout_81CHN", SpeakerAngle, Speaker2Chan, Context->NumChan);
             break;
 
         default:
@@ -378,12 +339,6 @@ ALvoid aluInitPanning(ALCcontext *Context)
         offset = OUTPUTCHANNELS * pos;
         for(s = 0; s < OUTPUTCHANNELS; s++)
             Context->PanningLUT[offset+s] = 0.0f;
-
-        if(Context->NumChan == 1)
-        {
-            Context->PanningLUT[offset + Speaker2Chan[0]] = 1.0f;
-            continue;
-        }
 
         /* source angle */
         Theta = aluLUTpos2Angle(pos);
@@ -894,7 +849,6 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
 {
     static float DummyBuffer[BUFFERSIZE];
     ALfloat *WetBuffer[MAX_SENDS];
-    ALfloat (*Matrix)[OUTPUTCHANNELS] = ALContext->ChannelMatrix;
     ALfloat DrySend[OUTPUTCHANNELS];
     ALfloat dryGainStep[OUTPUTCHANNELS];
     ALfloat wetGainStep[MAX_SENDS];
@@ -996,21 +950,6 @@ another_source:
         WetBuffer[i] = (ALSource->Send[i].Slot ?
                         ALSource->Send[i].Slot->WetBuffer :
                         DummyBuffer);
-    }
-
-    if(DuplicateStereo && Channels == 2)
-    {
-        Matrix[FRONT_LEFT][SIDE_LEFT]   = 1.0f;
-        Matrix[FRONT_RIGHT][SIDE_RIGHT] = 1.0f;
-        Matrix[FRONT_LEFT][BACK_LEFT]   = 1.0f;
-        Matrix[FRONT_RIGHT][BACK_RIGHT] = 1.0f;
-    }
-    else if(DuplicateStereo)
-    {
-        Matrix[FRONT_LEFT][SIDE_LEFT]   = 0.0f;
-        Matrix[FRONT_RIGHT][SIDE_RIGHT] = 0.0f;
-        Matrix[FRONT_LEFT][BACK_LEFT]   = 0.0f;
-        Matrix[FRONT_RIGHT][BACK_RIGHT] = 0.0f;
     }
 
     /* Get current buffer queue item */
@@ -1139,33 +1078,32 @@ another_source:
             };
             const ALfloat scaler = aluSqrt(1.0f/Channels);
 
-#define DO_MIX(resampler) do { \
-    while(BufferSize--) \
-    { \
-        for(i = 0;i < OUTPUTCHANNELS;i++) \
-            DrySend[i] += dryGainStep[i]; \
-        for(i = 0;i < MAX_SENDS;i++) \
-            WetSend[i] += wetGainStep[i]; \
- \
-        for(i = 0;i < Channels;i++) \
-        { \
-            value = (resampler)(Data[k*Channels + i], Data[(k+1)*Channels + i], \
-                                DataPosFrac); \
-            outsamp = lpFilter2P(DryFilter, chans[i]*2, value)*DrySend[chans[i]]; \
-            for(out = 0;out < OUTPUTCHANNELS;out++) \
-                DryBuffer[j][out] += outsamp*Matrix[chans[i]][out]; \
-            for(out = 0;out < MAX_SENDS;out++) \
-            { \
-                outsamp = lpFilter1P(WetFilter[out], chans[i], value); \
-                WetBuffer[out][j] += outsamp*WetSend[out]*scaler; \
-            } \
-        } \
- \
-        DataPosFrac += increment; \
-        k += DataPosFrac>>FRACTIONBITS; \
-        DataPosFrac &= FRACTIONMASK; \
-        j++; \
-    } \
+#define DO_MIX(resampler) do {                                                \
+    while(BufferSize--)                                                       \
+    {                                                                         \
+        for(i = 0;i < OUTPUTCHANNELS;i++)                                     \
+            DrySend[i] += dryGainStep[i];                                     \
+        for(i = 0;i < MAX_SENDS;i++)                                          \
+            WetSend[i] += wetGainStep[i];                                     \
+                                                                              \
+        for(i = 0;i < Channels;i++)                                           \
+        {                                                                     \
+            value = (resampler)(Data[k*Channels + i],Data[(k+1)*Channels + i],\
+                                DataPosFrac);                                 \
+            outsamp = lpFilter2P(DryFilter, chans[i]*2, value);               \
+            DryBuffer[j][chans[i]] += outsamp*DrySend[chans[i]];              \
+            for(out = 0;out < MAX_SENDS;out++)                                \
+            {                                                                 \
+                outsamp = lpFilter1P(WetFilter[out], chans[i], value);        \
+                WetBuffer[out][j] += outsamp*WetSend[out]*scaler;             \
+            }                                                                 \
+        }                                                                     \
+                                                                              \
+        DataPosFrac += increment;                                             \
+        k += DataPosFrac>>FRACTIONBITS;                                       \
+        DataPosFrac &= FRACTIONMASK;                                          \
+        j++;                                                                  \
+    }                                                                         \
 } while(0)
 
             switch(Resampler)
@@ -1338,12 +1276,14 @@ another_source:
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     float (*DryBuffer)[OUTPUTCHANNELS];
-    const Channel *ChanMap;
+    ALfloat (*Matrix)[OUTPUTCHANNELS];
+    const ALuint *ChanMap;
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
     ALCcontext *ALContext;
+    ALfloat samp;
     int fpuState;
-    ALuint i, c;
+    ALuint i, j, c;
 
 #if defined(HAVE_FESETROUND)
     fpuState = fegetround();
@@ -1389,14 +1329,17 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
         //Post processing loop
         ChanMap = device->DevChannels;
+        Matrix = device->ChannelMatrix;
         switch(device->Format)
         {
 #define CHECK_WRITE_FORMAT(bits, type, func)                                  \
         case AL_FORMAT_MONO##bits:                                            \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[ChanMap[FRONT_CENTER]] =                      \
-                                           (func)(DryBuffer[i][FRONT_CENTER]);\
+                samp = 0.0f;                                                  \
+                for(c = 0;c < OUTPUTCHANNELS;c++)                             \
+                    samp += DryBuffer[i][c] * Matrix[c][FRONT_CENTER];        \
+                ((type*)buffer)[ChanMap[FRONT_CENTER]] = (func)(samp);        \
                 buffer = ((type*)buffer) + 1;                                 \
             }                                                                 \
             break;                                                            \
@@ -1405,12 +1348,15 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             {                                                                 \
                 for(i = 0;i < SamplesToDo;i++)                                \
                 {                                                             \
-                    float samples[2];                                         \
-                    samples[0] = DryBuffer[i][FRONT_LEFT];                    \
-                    samples[1] = DryBuffer[i][FRONT_RIGHT];                   \
+                    float samples[2] = { 0.0f, 0.0f };                        \
+                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
+                    {                                                         \
+                        samples[0] += DryBuffer[i][c]*Matrix[c][FRONT_LEFT];  \
+                        samples[1] += DryBuffer[i][c]*Matrix[c][FRONT_RIGHT]; \
+                    }                                                         \
                     bs2b_cross_feed(device->Bs2b, samples);                   \
                     ((type*)buffer)[ChanMap[FRONT_LEFT]] = (func)(samples[0]);\
-                    ((type*)buffer)[ChanMap[FRONT_RIGHT]] =(func)(samples[1]);\
+                    ((type*)buffer)[ChanMap[FRONT_RIGHT]]= (func)(samples[1]);\
                     buffer = ((type*)buffer) + 2;                             \
                 }                                                             \
             }                                                                 \
@@ -1418,10 +1364,16 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             {                                                                 \
                 for(i = 0;i < SamplesToDo;i++)                                \
                 {                                                             \
-                    ((type*)buffer)[ChanMap[FRONT_LEFT]] =                    \
-                                             (func)(DryBuffer[i][FRONT_LEFT]);\
-                    ((type*)buffer)[ChanMap[FRONT_RIGHT]] =                   \
-                                            (func)(DryBuffer[i][FRONT_RIGHT]);\
+                    static const Channel chans[] = {                          \
+                        FRONT_LEFT, FRONT_RIGHT                               \
+                    };                                                        \
+                    for(j = 0;j < 2;j++)                                      \
+                    {                                                         \
+                        samp = 0.0f;                                          \
+                        for(c = 0;c < OUTPUTCHANNELS;c++)                     \
+                            samp += DryBuffer[i][c] * Matrix[c][chans[j]];    \
+                        ((type*)buffer)[ChanMap[chans[j]]] = (func)(samp);    \
+                    }                                                         \
                     buffer = ((type*)buffer) + 2;                             \
                 }                                                             \
             }                                                                 \
@@ -1429,71 +1381,72 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         case AL_FORMAT_QUAD##bits:                                            \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[ChanMap[FRONT_LEFT]] =                        \
-                                             (func)(DryBuffer[i][FRONT_LEFT]);\
-                ((type*)buffer)[ChanMap[FRONT_RIGHT]] =                       \
-                                            (func)(DryBuffer[i][FRONT_RIGHT]);\
-                ((type*)buffer)[ChanMap[BACK_LEFT]] =                         \
-                                              (func)(DryBuffer[i][BACK_LEFT]);\
-                ((type*)buffer)[ChanMap[BACK_RIGHT]] =                        \
-                                             (func)(DryBuffer[i][BACK_RIGHT]);\
+                static const Channel chans[] = {                              \
+                    FRONT_LEFT, FRONT_RIGHT,                                  \
+                    BACK_LEFT,  BACK_RIGHT,                                   \
+                };                                                            \
+                for(j = 0;j < 4;j++)                                          \
+                {                                                             \
+                    samp = 0.0f;                                              \
+                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
+                        samp += DryBuffer[i][c] * Matrix[c][chans[j]];        \
+                    ((type*)buffer)[ChanMap[chans[j]]] = (func)(samp);        \
+                }                                                             \
                 buffer = ((type*)buffer) + 4;                                 \
             }                                                                 \
             break;                                                            \
         case AL_FORMAT_51CHN##bits:                                           \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[ChanMap[FRONT_LEFT]] =                        \
-                                             (func)(DryBuffer[i][FRONT_LEFT]);\
-                ((type*)buffer)[ChanMap[FRONT_RIGHT]] =                       \
-                                            (func)(DryBuffer[i][FRONT_RIGHT]);\
-                ((type*)buffer)[ChanMap[FRONT_CENTER]] =                      \
-                                           (func)(DryBuffer[i][FRONT_CENTER]);\
-                ((type*)buffer)[ChanMap[LFE]] = (func)(DryBuffer[i][LFE]);    \
-                ((type*)buffer)[ChanMap[BACK_LEFT]] =                         \
-                                              (func)(DryBuffer[i][BACK_LEFT]);\
-                ((type*)buffer)[ChanMap[BACK_RIGHT]] =                        \
-                                             (func)(DryBuffer[i][BACK_RIGHT]);\
+                static const Channel chans[] = {                              \
+                    FRONT_LEFT, FRONT_RIGHT,                                  \
+                    FRONT_CENTER, LFE,                                        \
+                    BACK_LEFT,  BACK_RIGHT,                                   \
+                };                                                            \
+                for(j = 0;j < 6;j++)                                          \
+                {                                                             \
+                    samp = 0.0f;                                              \
+                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
+                        samp += DryBuffer[i][c] * Matrix[c][chans[j]];        \
+                    ((type*)buffer)[ChanMap[chans[j]]] = (func)(samp);        \
+                }                                                             \
                 buffer = ((type*)buffer) + 6;                                 \
             }                                                                 \
             break;                                                            \
         case AL_FORMAT_61CHN##bits:                                           \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[ChanMap[FRONT_LEFT]] =                        \
-                                             (func)(DryBuffer[i][FRONT_LEFT]);\
-                ((type*)buffer)[ChanMap[FRONT_RIGHT]] =                       \
-                                            (func)(DryBuffer[i][FRONT_RIGHT]);\
-                ((type*)buffer)[ChanMap[FRONT_CENTER]] =                      \
-                                           (func)(DryBuffer[i][FRONT_CENTER]);\
-                ((type*)buffer)[ChanMap[LFE]] = (func)(DryBuffer[i][LFE]);    \
-                ((type*)buffer)[ChanMap[BACK_CENTER]] =                       \
-                                            (func)(DryBuffer[i][BACK_CENTER]);\
-                ((type*)buffer)[ChanMap[SIDE_LEFT]] =                         \
-                                              (func)(DryBuffer[i][SIDE_LEFT]);\
-                ((type*)buffer)[ChanMap[SIDE_RIGHT]] =                        \
-                                             (func)(DryBuffer[i][SIDE_RIGHT]);\
+                static const Channel chans[] = {                              \
+                    FRONT_LEFT, FRONT_RIGHT,                                  \
+                    FRONT_CENTER, LFE, BACK_CENTER,                           \
+                    SIDE_LEFT,  SIDE_RIGHT,                                   \
+                };                                                            \
+                for(j = 0;j < 7;j++)                                          \
+                {                                                             \
+                    samp = 0.0f;                                              \
+                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
+                        samp += DryBuffer[i][c] * Matrix[c][chans[j]];        \
+                    ((type*)buffer)[ChanMap[chans[j]]] = (func)(samp);        \
+                }                                                             \
                 buffer = ((type*)buffer) + 7;                                 \
             }                                                                 \
             break;                                                            \
         case AL_FORMAT_71CHN##bits:                                           \
             for(i = 0;i < SamplesToDo;i++)                                    \
             {                                                                 \
-                ((type*)buffer)[ChanMap[FRONT_LEFT]] =                        \
-                                             (func)(DryBuffer[i][FRONT_LEFT]);\
-                ((type*)buffer)[ChanMap[FRONT_RIGHT]] =                       \
-                                            (func)(DryBuffer[i][FRONT_RIGHT]);\
-                ((type*)buffer)[ChanMap[FRONT_CENTER]] =                      \
-                                           (func)(DryBuffer[i][FRONT_CENTER]);\
-                ((type*)buffer)[ChanMap[LFE]] = (func)(DryBuffer[i][LFE]);    \
-                ((type*)buffer)[ChanMap[BACK_LEFT]] =                         \
-                                              (func)(DryBuffer[i][BACK_LEFT]);\
-                ((type*)buffer)[ChanMap[BACK_RIGHT]] =                        \
-                                             (func)(DryBuffer[i][BACK_RIGHT]);\
-                ((type*)buffer)[ChanMap[SIDE_LEFT]] =                         \
-                                              (func)(DryBuffer[i][SIDE_LEFT]);\
-                ((type*)buffer)[ChanMap[SIDE_RIGHT]] =                        \
-                                             (func)(DryBuffer[i][SIDE_RIGHT]);\
+                static const Channel chans[] = {                              \
+                    FRONT_LEFT, FRONT_RIGHT,                                  \
+                    FRONT_CENTER, LFE,                                        \
+                    BACK_LEFT,  BACK_RIGHT,                                   \
+                    SIDE_LEFT,  SIDE_RIGHT                                    \
+                };                                                            \
+                for(j = 0;j < 8;j++)                                          \
+                {                                                             \
+                    samp = 0.0f;                                              \
+                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
+                        samp += DryBuffer[i][c] * Matrix[c][chans[j]];        \
+                    ((type*)buffer)[ChanMap[chans[j]]] = (func)(samp);        \
+                }                                                             \
                 buffer = ((type*)buffer) + 8;                                 \
             }                                                                 \
             break;

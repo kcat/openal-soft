@@ -349,6 +349,7 @@ static void alc_init(void)
             { "eaxreverb", EAXREVERB },
             { "reverb", REVERB },
             { "echo", ECHO },
+            { "modulator", MODULATOR },
             { NULL, 0 }
         };
         int n;

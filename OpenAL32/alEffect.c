@@ -185,7 +185,8 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
             ALboolean isOk = (iValue == AL_EFFECT_NULL ||
                 (iValue == AL_EFFECT_EAXREVERB && !DisabledEffects[EAXREVERB]) ||
                 (iValue == AL_EFFECT_REVERB && !DisabledEffects[REVERB]) ||
-                (iValue == AL_EFFECT_ECHO && !DisabledEffects[ECHO]));
+                (iValue == AL_EFFECT_ECHO && !DisabledEffects[ECHO]) ||
+                (iValue == AL_EFFECT_RING_MODULATOR && !DisabledEffects[MODULATOR]));
 
             if(isOk)
                 InitEffectParams(ALEffect, iValue);
@@ -230,6 +231,28 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
         {
             switch(param)
             {
+            default:
+                alSetError(Context, AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
+        {
+            switch(param)
+            {
+            case AL_RING_MODULATOR_FREQUENCY:
+            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
+                alEffectf(effect, param, (ALfloat)iValue);
+                break;
+
+            case AL_RING_MODULATOR_WAVEFORM:
+                if(iValue >= AL_RING_MODULATOR_MIN_WAVEFORM &&
+                   iValue <= AL_RING_MODULATOR_MAX_WAVEFORM)
+                    ALEffect->Modulator.Waveform = iValue;
+                else
+                    alSetError(Context, AL_INVALID_VALUE);
+                break;
+
             default:
                 alSetError(Context, AL_INVALID_ENUM);
                 break;
@@ -290,6 +313,21 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValue
         {
             switch(param)
             {
+            default:
+                alSetError(Context, AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
+        {
+            switch(param)
+            {
+            case AL_RING_MODULATOR_FREQUENCY:
+            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
+            case AL_RING_MODULATOR_WAVEFORM:
+                alEffecti(effect, param, piValues[0]);
+                break;
+
             default:
                 alSetError(Context, AL_INVALID_ENUM);
                 break;
@@ -633,6 +671,31 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue
                 break;
             }
         }
+        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
+        {
+            switch(param)
+            {
+            case AL_RING_MODULATOR_FREQUENCY:
+                if(flValue >= AL_RING_MODULATOR_MIN_FREQUENCY &&
+                   flValue <= AL_RING_MODULATOR_MAX_FREQUENCY)
+                    ALEffect->Modulator.Frequency = flValue;
+                else
+                    alSetError(Context, AL_INVALID_VALUE);
+                break;
+
+            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
+                if(flValue >= AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF &&
+                   flValue <= AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF)
+                    ALEffect->Modulator.HighPassCutoff = flValue;
+                else
+                    alSetError(Context, AL_INVALID_VALUE);
+                break;
+
+            default:
+                alSetError(Context, AL_INVALID_ENUM);
+                break;
+            }
+        }
         else
             alSetError(Context, AL_INVALID_ENUM);
     }
@@ -748,6 +811,20 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
                 break;
             }
         }
+        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
+        {
+            switch(param)
+            {
+            case AL_RING_MODULATOR_FREQUENCY:
+            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
+                alEffectf(effect, param, pflValues[0]);
+                break;
+
+            default:
+                alSetError(Context, AL_INVALID_ENUM);
+                break;
+            }
+        }
         else
             alSetError(Context, AL_INVALID_ENUM);
     }
@@ -808,6 +885,25 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piVal
                 break;
             }
         }
+        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
+        {
+            switch(param)
+            {
+            case AL_RING_MODULATOR_FREQUENCY:
+                *piValue = (ALint)ALEffect->Modulator.Frequency;
+                break;
+            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
+                *piValue = (ALint)ALEffect->Modulator.HighPassCutoff;
+                break;
+            case AL_RING_MODULATOR_WAVEFORM:
+                *piValue = ALEffect->Modulator.Waveform;
+                break;
+
+            default:
+                alSetError(Context, AL_INVALID_ENUM);
+                break;
+            }
+        }
         else
             alSetError(Context, AL_INVALID_ENUM);
     }
@@ -863,6 +959,21 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piVa
         {
             switch(param)
             {
+            default:
+                alSetError(Context, AL_INVALID_ENUM);
+                break;
+            }
+        }
+        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
+        {
+            switch(param)
+            {
+            case AL_RING_MODULATOR_FREQUENCY:
+            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
+            case AL_RING_MODULATOR_WAVEFORM:
+                alGetEffecti(effect, param, piValues);
+                break;
+
             default:
                 alSetError(Context, AL_INVALID_ENUM);
                 break;
@@ -1064,6 +1175,22 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pfl
                 break;
             }
         }
+        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
+        {
+            switch(param)
+            {
+            case AL_RING_MODULATOR_FREQUENCY:
+                *pflValue = ALEffect->Modulator.Frequency;
+                break;
+            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
+                *pflValue = ALEffect->Modulator.HighPassCutoff;
+                break;
+
+            default:
+                alSetError(Context, AL_INVALID_ENUM);
+                break;
+            }
+        }
         else
             alSetError(Context, AL_INVALID_ENUM);
     }
@@ -1169,6 +1296,20 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pf
                 break;
             }
         }
+        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
+        {
+            switch(param)
+            {
+            case AL_RING_MODULATOR_FREQUENCY:
+            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
+                alGetEffectf(effect, param, pflValues);
+                break;
+
+            default:
+                alSetError(Context, AL_INVALID_ENUM);
+                break;
+            }
+        }
         else
             alSetError(Context, AL_INVALID_ENUM);
     }
@@ -1240,6 +1381,11 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Echo.Damping = AL_ECHO_DEFAULT_DAMPING;
         effect->Echo.Feedback = AL_ECHO_DEFAULT_FEEDBACK;
         effect->Echo.Spread = AL_ECHO_DEFAULT_SPREAD;
+        break;
+    case AL_EFFECT_RING_MODULATOR:
+        effect->Modulator.Frequency = AL_RING_MODULATOR_DEFAULT_FREQUENCY;
+        effect->Modulator.HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF;
+        effect->Modulator.Waveform = AL_RING_MODULATOR_DEFAULT_WAVEFORM;
         break;
     }
 }

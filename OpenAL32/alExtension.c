@@ -340,7 +340,9 @@ static const ALenums enumeration[] = {
     { "AL_EFFECT_FREQUENCY_SHIFTER",          AL_EFFECT_FREQUENCY_SHIFTER         },
     { "AL_EFFECT_VOCAL_MORPHER",              AL_EFFECT_VOCAL_MORPHER             },
     { "AL_EFFECT_PITCH_SHIFTER",              AL_EFFECT_PITCH_SHIFTER             },
+#endif
     { "AL_EFFECT_RING_MODULATOR",             AL_EFFECT_RING_MODULATOR            },
+#if 0
     { "AL_EFFECT_AUTOWAH",                    AL_EFFECT_AUTOWAH                   },
     { "AL_EFFECT_COMPRESSOR",                 AL_EFFECT_COMPRESSOR                },
     { "AL_EFFECT_EQUALIZER",                  AL_EFFECT_EQUALIZER                 },
@@ -392,6 +394,11 @@ static const ALenums enumeration[] = {
     { "AL_ECHO_DAMPING",                      AL_ECHO_DAMPING                     },
     { "AL_ECHO_FEEDBACK",                     AL_ECHO_FEEDBACK                    },
     { "AL_ECHO_SPREAD",                       AL_ECHO_SPREAD                      },
+
+    // Ring Modulator params
+    { "AL_RING_MODULATOR_FREQUENCY",          AL_RING_MODULATOR_FREQUENCY         },
+    { "AL_RING_MODULATOR_HIGHPASS_CUTOFF",    AL_RING_MODULATOR_HIGHPASS_CUTOFF   },
+    { "AL_RING_MODULATOR_WAVEFORM",           AL_RING_MODULATOR_WAVEFORM          },
 
 
     // Default

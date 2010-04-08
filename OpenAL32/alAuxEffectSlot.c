@@ -497,6 +497,8 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
             NewState = VerbCreate();
         else if(effect->type == AL_EFFECT_ECHO)
             NewState = EchoCreate();
+        else if(effect->type == AL_EFFECT_RING_MODULATOR)
+            NewState = ModulatorCreate();
         /* No new state? An error occured.. */
         if(NewState == NULL ||
            ALEffect_DeviceUpdate(NewState, Context->Device) == AL_FALSE)

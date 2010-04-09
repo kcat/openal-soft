@@ -116,7 +116,7 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[
 }
 
 static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPUTCHANNELS],
-                                    ALint Speaker2Chan[OUTPUTCHANNELS], ALint chans)
+                                    Channel Speaker2Chan[OUTPUTCHANNELS], ALint chans)
 {
     char layout_str[256];
     char *confkey, *next;
@@ -176,7 +176,7 @@ static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPU
 
         for(i = 0;i < chans;i++)
         {
-            if(Speaker2Chan[i] == val)
+            if(Speaker2Chan[i] == (Channel)val)
             {
                 val = strtol(sep, NULL, 10);
                 if(val >= -180 && val <= 180)
@@ -229,7 +229,7 @@ static __inline ALfloat aluLUTpos2Angle(ALint pos)
 ALvoid aluInitPanning(ALCdevice *Device)
 {
     ALfloat SpeakerAngle[OUTPUTCHANNELS];
-    ALint Speaker2Chan[OUTPUTCHANNELS];
+    Channel Speaker2Chan[OUTPUTCHANNELS];
     ALfloat Alpha, Theta;
     ALint pos, offset;
     ALfloat maxout;

@@ -235,6 +235,25 @@ ALvoid aluInitPanning(ALCdevice *Device)
     ALfloat maxout;
     ALuint s, s2;
 
+    Device->NumChan = 8;
+    Speaker2Chan[0] = BACK_LEFT;
+    Speaker2Chan[1] = SIDE_LEFT;
+    Speaker2Chan[2] = FRONT_LEFT;
+    Speaker2Chan[3] = FRONT_CENTER;
+    Speaker2Chan[4] = FRONT_RIGHT;
+    Speaker2Chan[5] = SIDE_RIGHT;
+    Speaker2Chan[6] = BACK_RIGHT;
+    Speaker2Chan[7] = BACK_CENTER;
+    SpeakerAngle[0] = -150.0f * M_PI/180.0f;
+    SpeakerAngle[1] =  -90.0f * M_PI/180.0f;
+    SpeakerAngle[2] =  -30.0f * M_PI/180.0f;
+    SpeakerAngle[3] =    0.0f * M_PI/180.0f;
+    SpeakerAngle[4] =   30.0f * M_PI/180.0f;
+    SpeakerAngle[5] =   90.0f * M_PI/180.0f;
+    SpeakerAngle[6] =  150.0f * M_PI/180.0f;
+    SpeakerAngle[7] =  180.0f * M_PI/180.0f;
+    SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
+
     for(s = 0;s < OUTPUTCHANNELS;s++)
     {
         for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
@@ -328,24 +347,6 @@ ALvoid aluInitPanning(ALCdevice *Device)
             Device->ChannelMatrix[s2][s] *= maxout;
     }
 
-    Device->NumChan = 8;
-    Speaker2Chan[0] = BACK_LEFT;
-    Speaker2Chan[1] = SIDE_LEFT;
-    Speaker2Chan[2] = FRONT_LEFT;
-    Speaker2Chan[3] = FRONT_CENTER;
-    Speaker2Chan[4] = FRONT_RIGHT;
-    Speaker2Chan[5] = SIDE_RIGHT;
-    Speaker2Chan[6] = BACK_RIGHT;
-    Speaker2Chan[7] = BACK_CENTER;
-    SpeakerAngle[0] = -150.0f * M_PI/180.0f;
-    SpeakerAngle[1] =  -90.0f * M_PI/180.0f;
-    SpeakerAngle[2] =  -30.0f * M_PI/180.0f;
-    SpeakerAngle[3] =    0.0f * M_PI/180.0f;
-    SpeakerAngle[4] =   30.0f * M_PI/180.0f;
-    SpeakerAngle[5] =   90.0f * M_PI/180.0f;
-    SpeakerAngle[6] =  150.0f * M_PI/180.0f;
-    SpeakerAngle[7] =  180.0f * M_PI/180.0f;
-    SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
 
     for(pos = 0; pos < LUT_NUM; pos++)
     {

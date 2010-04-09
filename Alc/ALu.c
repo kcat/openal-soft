@@ -1085,6 +1085,61 @@ another_source:
             }
 #undef DO_MIX
         }
+        else if(Channels == 2 && DuplicateStereo) /* Stereo */
+        {
+            const int chans[] = {
+                FRONT_LEFT, FRONT_RIGHT
+            };
+            const int chans2[] = {
+                BACK_LEFT, SIDE_LEFT, BACK_RIGHT, SIDE_RIGHT
+            };
+            const ALfloat scaler = aluSqrt(1.0f/Channels);
+            const ALfloat dupscaler = aluSqrt(1.0f/3.0f);
+
+#define DO_MIX(resampler) do {                                                \
+    while(BufferSize--)                                                       \
+    {                                                                         \
+        for(i = 0;i < OUTPUTCHANNELS;i++)                                     \
+            DrySend[i] += dryGainStep[i];                                     \
+        for(i = 0;i < MAX_SENDS;i++)                                          \
+            WetSend[i] += wetGainStep[i];                                     \
+                                                                              \
+        for(i = 0;i < Channels;i++)                                           \
+        {                                                                     \
+            value = (resampler)(Data[k*Channels + i],Data[(k+1)*Channels + i],\
+                                DataPosFrac);                                 \
+            outsamp = lpFilter2P(DryFilter, chans[i]*2, value) * dupscaler;   \
+            DryBuffer[j][chans[i]] += outsamp*DrySend[chans[i]];              \
+            DryBuffer[j][chans2[i*2+0]] += outsamp*DrySend[chans2[i*2+0]];    \
+            DryBuffer[j][chans2[i*2+1]] += outsamp*DrySend[chans2[i*2+1]];    \
+            for(out = 0;out < MAX_SENDS;out++)                                \
+            {                                                                 \
+                outsamp = lpFilter1P(WetFilter[out], chans[i], value);        \
+                WetBuffer[out][j] += outsamp*WetSend[out]*scaler;             \
+            }                                                                 \
+        }                                                                     \
+                                                                              \
+        DataPosFrac += increment;                                             \
+        k += DataPosFrac>>FRACTIONBITS;                                       \
+        DataPosFrac &= FRACTIONMASK;                                          \
+        j++;                                                                  \
+    }                                                                         \
+} while(0)
+
+            switch(Resampler)
+            {
+                case POINT_RESAMPLER:
+                DO_MIX(point); break;
+                case LINEAR_RESAMPLER:
+                DO_MIX(lerp); break;
+                case COSINE_RESAMPLER:
+                DO_MIX(cos_lerp); break;
+                case RESAMPLER_MIN:
+                case RESAMPLER_MAX:
+                break;
+            }
+#undef DO_MIX
+        }
         else if(Channels == 2) /* Stereo */
         {
             const int chans[] = {

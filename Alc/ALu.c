@@ -235,7 +235,8 @@ ALvoid aluInitPanning(ALCdevice *Device)
     ALfloat maxout;
     ALuint s, s2;
 
-    Device->NumChan = 8;
+    /* Exclude LFE */
+    Device->NumChan = OUTPUTCHANNELS - 1;
     Speaker2Chan[0] = BACK_LEFT;
     Speaker2Chan[1] = SIDE_LEFT;
     Speaker2Chan[2] = FRONT_LEFT;

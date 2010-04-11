@@ -40,8 +40,6 @@ typedef struct ALmodulatorState {
         SQUARE
     } Waveform;
 
-    ALfloat scalar;
-
     ALuint index;
     ALuint step;
 
@@ -89,11 +87,9 @@ static ALvoid ModulatorDestroy(ALeffectState *effect)
 
 static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
-    ALmodulatorState *state = (ALmodulatorState*)effect;
-
-    state->scalar = aluSqrt(1.0f/Device->NumChan);
-
     return AL_TRUE;
+    (void)effect;
+    (void)Device;
 }
 
 static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
@@ -121,7 +117,7 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
 static ALvoid ModulatorProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
     ALmodulatorState *state = (ALmodulatorState*)effect;
-    const ALfloat gain = Slot->Gain * state->scalar;
+    const ALfloat gain = Slot->Gain;
     const ALuint step = state->step;
     ALuint index = state->index;
     ALfloat samp;

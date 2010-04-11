@@ -1143,7 +1143,7 @@ another_source:
             const int chans2[] = {
                 BACK_LEFT, SIDE_LEFT, BACK_RIGHT, SIDE_RIGHT
             };
-            const ALfloat scaler = aluSqrt(1.0f/Channels);
+            const ALfloat scaler = 1.0f/Channels;
             const ALfloat dupscaler = aluSqrt(1.0f/3.0f);
 
 #define DO_MIX(resampler) do {                                                \
@@ -1195,7 +1195,7 @@ another_source:
             const int chans[] = {
                 FRONT_LEFT, FRONT_RIGHT
             };
-            const ALfloat scaler = aluSqrt(1.0f/Channels);
+            const ALfloat scaler = 1.0f/Channels;
 
 #define DO_MIX(resampler) do {                                                \
     while(BufferSize--)                                                       \
@@ -1244,7 +1244,7 @@ another_source:
                 FRONT_LEFT, FRONT_RIGHT,
                 BACK_LEFT,  BACK_RIGHT
             };
-            const ALfloat scaler = aluSqrt(1.0f/Channels);
+            const ALfloat scaler = 1.0f/Channels;
 
             switch(Resampler)
             {
@@ -1266,7 +1266,7 @@ another_source:
                 FRONT_CENTER, LFE,
                 BACK_LEFT,    BACK_RIGHT
             };
-            const ALfloat scaler = aluSqrt(1.0f/Channels);
+            const ALfloat scaler = 1.0f/Channels;
 
             switch(Resampler)
             {
@@ -1289,7 +1289,7 @@ another_source:
                 BACK_CENTER,
                 SIDE_LEFT,    SIDE_RIGHT
             };
-            const ALfloat scaler = aluSqrt(1.0f/Channels);
+            const ALfloat scaler = 1.0f/Channels;
 
             switch(Resampler)
             {
@@ -1312,7 +1312,7 @@ another_source:
                 BACK_LEFT,    BACK_RIGHT,
                 SIDE_LEFT,    SIDE_RIGHT
             };
-            const ALfloat scaler = aluSqrt(1.0f/Channels);
+            const ALfloat scaler = 1.0f/Channels;
 
             switch(Resampler)
             {

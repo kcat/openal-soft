@@ -121,7 +121,8 @@ static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPU
     char layout_str[256];
     char *confkey, *next;
     char *sep, *end;
-    int i, val;
+    Channel val;
+    int i;
 
     strncpy(layout_str, GetConfigValue(NULL, name, ""), sizeof(layout_str));
     layout_str[255] = 0;
@@ -176,13 +177,13 @@ static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPU
 
         for(i = 0;i < chans;i++)
         {
-            if(Speaker2Chan[i] == (Channel)val)
+            if(Speaker2Chan[i] == val)
             {
-                val = strtol(sep, NULL, 10);
-                if(val >= -180 && val <= 180)
-                    SpeakerAngle[i] = val * M_PI/180.0f;
+                long angle = strtol(sep, NULL, 10);
+                if(angle >= -180 && angle <= 180)
+                    SpeakerAngle[i] = angle * M_PI/180.0f;
                 else
-                    AL_PRINT("Invalid angle for speaker \"%s\": %d\n", confkey, val);
+                    AL_PRINT("Invalid angle for speaker \"%s\": %ld\n", confkey, angle);
                 break;
             }
         }

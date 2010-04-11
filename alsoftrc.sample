@@ -132,10 +132,11 @@
 ## layout:
 #  Sets the virtual speaker layout. Values are specified in degrees, where 0 is
 #  straight in front, negative goes left, and positive goes right. Unspecified
-#  speakers will remain at their default position. Available speakers are back-
-#  left(bl), side-left(sl), front-left(fl), front-center(fc), front-right(fr),
-#  side-right(sr), back-right(br), and back-center(bc).
-#layout = bl=-150, sl=-90, fl=-30, fc=0, fr=30, sr=90, br=150, bc=180
+#  speakers will remain at their default positions (which are dependant on the
+#  output format). Available speakers are back-left(bl), side-left(sl), front-
+#  left(fl), front-center(fc), front-right(fr), side-right(sr), back-right(br),
+#  and back-center(bc).
+#layout =
 
 ##
 ## ALSA backend stuff

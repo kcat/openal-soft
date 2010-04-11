@@ -53,9 +53,6 @@ SET(LIB_MAJOR_VERSION "1")
 SET(LIB_MINOR_VERSION "12")
 SET(LIB_BUILD_VERSION "854")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_BUILD_VERSION}")
-IF(NOT DEFINED LIB_INSTALL_DIR)
-  SET(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
-ENDIF(NOT DEFINED LIB_INSTALL_DIR)
 
 
 CHECK_TYPE_SIZE("long" SIZEOF_LONG)
@@ -424,7 +421,7 @@ SET(BACKENDS  "${BACKENDS} WaveFile")
 # Needed for openal.pc.in
 SET(prefix ${CMAKE_INSTALL_PREFIX})
 SET(exec_prefix "\${prefix}")
-SET(libdir "\${exec_prefix}/${LIB_INSTALL_DIR}")
+SET(libdir "\${exec_prefix}/lib${LIB_SUFFIX}")
 SET(bindir "\${exec_prefix}/bin")
 SET(includedir "\${prefix}/include")
 SET(PACKAGE_VERSION "${LIB_VERSION}")
@@ -456,8 +453,8 @@ TARGET_LINK_LIBRARIES(${LIBNAME} ${EXTRA_LIBS})
 # Add an install target here
 INSTALL(TARGETS ${LIBNAME}
         RUNTIME DESTINATION bin
-        LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-        ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+        LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+        ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
 )
 INSTALL(FILES include/AL/al.h
               include/AL/alc.h
@@ -466,7 +463,7 @@ INSTALL(FILES include/AL/al.h
         DESTINATION include/AL
 )
 INSTALL(FILES "${OpenAL_BINARY_DIR}/openal.pc"
-        DESTINATION "${LIB_INSTALL_DIR}/pkgconfig")
+        DESTINATION "lib${LIB_SUFFIX}/pkgconfig")
 
 # Install alsoft.conf configuration file
 IF(ALSOFT_CONFIG)
@@ -481,8 +478,8 @@ IF(EXAMPLES)
     TARGET_LINK_LIBRARIES(openal-info ${LIBNAME})
     INSTALL(TARGETS openal-info
             RUNTIME DESTINATION bin
-            LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-            ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+            ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
     )
 ENDIF()
 

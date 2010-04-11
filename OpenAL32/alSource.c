@@ -1798,7 +1798,8 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALfloat *offset, AL
     BufferList = Source->queue;
     for(i = 0;i < Source->BuffersPlayed && BufferList;i++)
     {
-        readPos += BufferList->buffer->size;
+        if(BufferList->buffer)
+            readPos += BufferList->buffer->size;
         BufferList = BufferList->next;
     }
 

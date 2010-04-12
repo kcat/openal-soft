@@ -203,15 +203,15 @@ static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPU
         if(min != i)
         {
             ALfloat tmpf;
-            ALint tmpi;
+            Channel tmpc;
 
             tmpf = SpeakerAngle[i];
             SpeakerAngle[i] = SpeakerAngle[min];
             SpeakerAngle[min] = tmpf;
 
-            tmpi = Speaker2Chan[i];
+            tmpc = Speaker2Chan[i];
             Speaker2Chan[i] = Speaker2Chan[min];
-            Speaker2Chan[min] = tmpi;
+            Speaker2Chan[min] = tmpc;
         }
     }
 }

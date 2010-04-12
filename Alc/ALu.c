@@ -127,6 +127,9 @@ static ALvoid SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPU
     strncpy(layout_str, GetConfigValue(NULL, name, ""), sizeof(layout_str));
     layout_str[255] = 0;
 
+    if(!layout_str[0])
+        return;
+
     next = confkey = layout_str;
     while(next && *next)
     {

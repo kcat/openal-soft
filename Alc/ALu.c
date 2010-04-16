@@ -580,7 +580,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
     //1. Translate Listener to origin (convert to head relative)
     if(ALSource->bHeadRelative==AL_FALSE)
     {
-        ALfloat U[3],V[3],N[3],P[3];
+        ALfloat U[3],V[3],N[3];
 
         // Build transform matrix
         memcpy(N, ALContext->Listener.Forward, sizeof(N));  // At-vector
@@ -589,19 +589,15 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
         aluNormalize(V);  // Normalized Up-vector
         aluCrossproduct(N, V, U); // Right-vector
         aluNormalize(U);  // Normalized Right-vector
-        P[0] = -(ALContext->Listener.Position[0]*U[0] + // Translation
-                 ALContext->Listener.Position[1]*U[1] +
-                 ALContext->Listener.Position[2]*U[2]);
-        P[1] = -(ALContext->Listener.Position[0]*V[0] +
-                 ALContext->Listener.Position[1]*V[1] +
-                 ALContext->Listener.Position[2]*V[2]);
-        P[2] = -(ALContext->Listener.Position[0]*-N[0] +
-                 ALContext->Listener.Position[1]*-N[1] +
-                 ALContext->Listener.Position[2]*-N[2]);
         Matrix[0][0] = U[0]; Matrix[0][1] = V[0]; Matrix[0][2] = -N[0]; Matrix[0][3] = 0.0f;
         Matrix[1][0] = U[1]; Matrix[1][1] = V[1]; Matrix[1][2] = -N[1]; Matrix[1][3] = 0.0f;
         Matrix[2][0] = U[2]; Matrix[2][1] = V[2]; Matrix[2][2] = -N[2]; Matrix[2][3] = 0.0f;
-        Matrix[3][0] = P[0]; Matrix[3][1] = P[1]; Matrix[3][2] =  P[2]; Matrix[3][3] = 1.0f;
+        Matrix[3][0] = 0.0f; Matrix[3][1] = 0.0f; Matrix[3][2] =  0.0f; Matrix[3][3] = 1.0f;
+
+        // Translate position
+        Position[0] -= ALContext->Listener.Position[0];
+        Position[1] -= ALContext->Listener.Position[1];
+        Position[2] -= ALContext->Listener.Position[2];
 
         // Transform source position and direction into listener space
         aluMatrixVector(Position, 1.0f, Matrix);

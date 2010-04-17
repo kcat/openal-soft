@@ -749,6 +749,7 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
 
     ppa_threaded_mainloop_lock(data->loop);
 
+    ppa_stream_set_write_callback(data->stream, NULL, NULL);
     ppa_stream_disconnect(data->stream);
     ppa_stream_unref(data->stream);
     data->stream = NULL;

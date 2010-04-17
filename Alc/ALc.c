@@ -1203,6 +1203,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
     ALCcontext *ALContext;
+    ALboolean running;
     ALuint attrIdx;
     void *temp;
     ALuint i;
@@ -1216,25 +1217,30 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
+    running = ((device->NumContexts > 0) ? AL_TRUE : AL_FALSE);
+
     // Reset Context Last Error code
     device->LastError = ALC_NO_ERROR;
 
-    // If a context is already running on the device, stop playback so the
-    // device attributes can be updated
-    if(device->NumContexts > 0)
-    {
-        ProcessContext(NULL);
-        ALCdevice_StopPlayback(device);
-        SuspendContext(NULL);
-    }
-
     // Check for attributes
-    if(attrList)
+    if(attrList && attrList[0])
     {
-        ALCuint freq = device->Frequency;
-        ALCuint numMono = device->NumMonoSources;
-        ALCuint numStereo = device->NumStereoSources;
-        ALCuint numSends = device->NumAuxSends;
+        ALCuint freq, numMono, numStereo, numSends;
+
+        // If a context is already running on the device, stop playback so the
+        // device attributes can be updated
+        if(running)
+        {
+            ProcessContext(NULL);
+            ALCdevice_StopPlayback(device);
+            SuspendContext(NULL);
+            running = AL_FALSE;
+        }
+
+        freq = device->Frequency;
+        numMono = device->NumMonoSources;
+        numStereo = device->NumStereoSources;
+        numSends = device->NumAuxSends;
 
         attrIdx = 0;
         while(attrList[attrIdx])
@@ -1276,7 +1282,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         device->NumAuxSends = numSends;
     }
 
-    if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
+    if(running == AL_FALSE && ALCdevice_ResetPlayback(device) == ALC_FALSE)
     {
         alcSetError(device, ALC_INVALID_DEVICE);
         aluHandleDisconnect(device);

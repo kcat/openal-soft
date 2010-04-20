@@ -337,8 +337,6 @@ static void alc_init(void)
     for(i = 0;BackendList[i].Init;i++)
         BackendList[i].Init(&BackendList[i].Funcs);
 
-    DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
-
     str = GetConfigValue(NULL, "excludefx", "");
     if(str[0])
     {

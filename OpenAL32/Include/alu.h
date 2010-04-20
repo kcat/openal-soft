@@ -76,8 +76,6 @@ typedef enum {
 
 #define BUFFERSIZE 16384
 
-extern ALboolean DuplicateStereo;
-
 /* NOTE: The AL_FORMAT_REAR* enums aren't handled here be cause they're
  *       converted to AL_FORMAT_QUAD* when loaded */
 static __inline ALuint aluBytesFromFormat(ALenum format)

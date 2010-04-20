@@ -272,6 +272,9 @@ struct ALCdevice_struct
     // Simulated dampening from head occlusion
     ALfloat      HeadDampen;
 
+    // Duplicate stereo sources on the side/rear channels
+    ALboolean    DuplicateStereo;
+
     // Dry path buffer mix
     float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
 

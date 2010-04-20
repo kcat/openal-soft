@@ -45,8 +45,6 @@
  * adequately reduce clicks and pops from harsh gain changes. */
 #define MIN_RAMP_LENGTH  16
 
-ALboolean DuplicateStereo = AL_FALSE;
-
 
 static __inline ALfloat aluF2F(ALfloat Value)
 {
@@ -250,6 +248,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
         case AL_FORMAT_MONO_FLOAT32:
+            Device->DuplicateStereo = AL_FALSE;
             Device->ChannelMatrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
             Device->ChannelMatrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
             Device->ChannelMatrix[SIDE_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
@@ -265,6 +264,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
         case AL_FORMAT_STEREO_FLOAT32:
+            Device->DuplicateStereo = AL_FALSE;
             Device->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
             Device->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
             Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
@@ -284,6 +284,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_QUAD8:
         case AL_FORMAT_QUAD16:
         case AL_FORMAT_QUAD32:
+            Device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
             Device->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
             Device->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
             Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = aluSqrt(0.5);
@@ -307,6 +308,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_51CHN8:
         case AL_FORMAT_51CHN16:
         case AL_FORMAT_51CHN32:
+            Device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
             Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]   = aluSqrt(0.5);
             Device->ChannelMatrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
             Device->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT] = aluSqrt(0.5);
@@ -330,6 +332,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_61CHN8:
         case AL_FORMAT_61CHN16:
         case AL_FORMAT_61CHN32:
+            Device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
             Device->ChannelMatrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
             Device->ChannelMatrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
             Device->ChannelMatrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
@@ -353,6 +356,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_71CHN8:
         case AL_FORMAT_71CHN16:
         case AL_FORMAT_71CHN32:
+            Device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
             Device->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
             Device->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
             Device->NumChan = 7;
@@ -923,6 +927,7 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     FILTER *DryFilter, *WetFilter[MAX_SENDS];
     ALfloat WetSend[MAX_SENDS];
     ALuint rampLength;
+    ALboolean DuplicateStereo;
     ALuint DeviceFreq;
     ALint increment;
     ALuint DataPosInt, DataPosFrac;
@@ -936,6 +941,7 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     if(!(ALSource=ALContext->SourceList))
         return;
 
+    DuplicateStereo = ALContext->Device->DuplicateStereo;
     DeviceFreq = ALContext->Device->Frequency;
 
     rampLength = DeviceFreq * MIN_RAMP_LENGTH / 1000;

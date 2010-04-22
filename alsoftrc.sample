@@ -96,8 +96,8 @@
 
 ## stereodup:
 #  Sets whether to duplicate stereo sounds on the rear and side speakers for 4+
-#  channel output. This can make stereo sources substantially louder than mono
-#  or even 4+ channel sources, but provides a "fuller" playback quality. True,
+#  channel output. This can make stereo sources noticeably louder than mono or
+#  even 4+ channel sources, but provides a "fuller" playback quality. True,
 #  yes, on, and non-0 values will duplicate stereo sources. 0 and anything else
 #  will cause stereo sounds to only play out the front speakers.
 #stereodup = false

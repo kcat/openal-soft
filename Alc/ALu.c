@@ -234,7 +234,6 @@ ALvoid aluInitPanning(ALCdevice *Device)
     Channel Speaker2Chan[OUTPUTCHANNELS];
     ALfloat Alpha, Theta;
     ALint pos, offset;
-    ALfloat maxout;
     ALuint s, s2;
 
     for(s = 0;s < OUTPUTCHANNELS;s++)
@@ -381,22 +380,24 @@ ALvoid aluInitPanning(ALCdevice *Device)
             assert(0);
     }
 
-    maxout = 1.0f;
-    for(s = 0;s < OUTPUTCHANNELS;s++)
+    if(GetConfigValueBool(NULL, "scalemix", 0))
     {
-        ALfloat out = 0.0f;
-        for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
-            out += Device->ChannelMatrix[s2][s];
-        maxout = __max(maxout, out);
-    }
+        ALfloat maxout = 1.0f;
+        for(s = 0;s < OUTPUTCHANNELS;s++)
+        {
+            ALfloat out = 0.0f;
+            for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
+                out += Device->ChannelMatrix[s2][s];
+            maxout = __max(maxout, out);
+        }
 
-    maxout = 1.0f/maxout;
-    for(s = 0;s < OUTPUTCHANNELS;s++)
-    {
-        for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
-            Device->ChannelMatrix[s2][s] *= maxout;
+        maxout = 1.0f/maxout;
+        for(s = 0;s < OUTPUTCHANNELS;s++)
+        {
+            for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
+                Device->ChannelMatrix[s2][s] *= maxout;
+        }
     }
-
 
     for(pos = 0; pos < LUT_NUM; pos++)
     {

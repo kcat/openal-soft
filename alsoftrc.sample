@@ -102,6 +102,15 @@
 #  will cause stereo sounds to only play out the front speakers.
 #stereodup = false
 
+## scalemix:
+#  Sets whether to scale the remixed output. When the final mix is written to
+#  the device, the multi-channel data is remixed so pure-virtual channels (eg.
+#  front-center on stereo output) are remixed and added to available channels
+#  (eg. front-left and front-right). Scaling helps ensure that no single source
+#  will put out more than 100% on a given physical channel. This can cause a
+#  noticeable reduction in overall volume, however, so it is off by default.
+#scalemix = false
+
 ## drivers:
 #  Sets the backend driver list order, comma-seperated. Unknown backends and
 #  duplicated names are ignored. Unlisted backends won't be considered for use

@@ -1795,27 +1795,22 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALfloat *offset, AL
     // Get Current BytesPlayed (NOTE : This is the byte offset into the *current* buffer)
     readPos = Source->position * Channels * Bytes;
     // Add byte length of any processed buffers in the queue
+    TotalBufferDataSize = 0;
     BufferList = Source->queue;
-    for(i = 0;i < Source->BuffersPlayed && BufferList;i++)
+    for(i = 0;BufferList;i++)
     {
         if(BufferList->buffer)
-            readPos += BufferList->buffer->size;
+        {
+            if(i < Source->BuffersPlayed)
+                readPos += BufferList->buffer->size;
+            TotalBufferDataSize += BufferList->buffer->size;
+        }
         BufferList = BufferList->next;
     }
-
     if(Source->state == AL_PLAYING)
         writePos = readPos + ((ALuint)(updateLen*BufferFreq) * Channels * Bytes);
     else
         writePos = readPos;
-
-    TotalBufferDataSize = 0;
-    BufferList = Source->queue;
-    while(BufferList)
-    {
-        if(BufferList->buffer)
-            TotalBufferDataSize += BufferList->buffer->size;
-        BufferList = BufferList->next;
-    }
 
     if(Source->bLooping)
     {

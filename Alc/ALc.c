@@ -148,6 +148,7 @@ static const ALCenums enumeration[] = {
     { "ALC_CAPTURE_DEVICE_SPECIFIER",         ALC_CAPTURE_DEVICE_SPECIFIER        },
     { "ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER", ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER},
     { "ALC_CAPTURE_SAMPLES",                  ALC_CAPTURE_SAMPLES                 },
+    { "ALC_CONNECTED",                        ALC_CONNECTED                       },
 
     // EFX Properties
     { "ALC_EFX_MAJOR_VERSION",                ALC_EFX_MAJOR_VERSION               },

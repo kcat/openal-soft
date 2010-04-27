@@ -282,6 +282,7 @@ struct ALCdevice_struct
 
     ALfloat ChannelMatrix[OUTPUTCHANNELS][OUTPUTCHANNELS];
 
+    Channel Speaker2Chan[OUTPUTCHANNELS];
     ALfloat PanningLUT[OUTPUTCHANNELS * LUT_NUM];
     ALuint  NumChan;
 

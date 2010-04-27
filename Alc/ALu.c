@@ -231,7 +231,7 @@ static __inline ALfloat aluLUTpos2Angle(ALint pos)
 ALvoid aluInitPanning(ALCdevice *Device)
 {
     ALfloat SpeakerAngle[OUTPUTCHANNELS];
-    Channel Speaker2Chan[OUTPUTCHANNELS];
+    Channel *Speaker2Chan;
     ALfloat Alpha, Theta;
     ALint pos, offset;
     ALuint s, s2;
@@ -242,6 +242,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             Device->ChannelMatrix[s][s2] = ((s==s2) ? 1.0f : 0.0f);
     }
 
+    Speaker2Chan = Device->Speaker2Chan;
     switch(Device->Format)
     {
         case AL_FORMAT_MONO8:
@@ -531,6 +532,7 @@ static ALvoid CalcNonAttnSourceParams(const ALCcontext *ALContext, ALsource *ALS
 
 static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
 {
+    const ALCdevice *Device = ALContext->Device;
     ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,OrigDist;
     ALfloat Direction[3],Position[3],SourceToListener[3];
     ALfloat Velocity[3],ListenerVel[3];
@@ -546,8 +548,8 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat DirGain, AmbientGain;
-    ALfloat length;
     const ALfloat *SpeakerGain;
+    ALfloat length;
     ALuint Frequency;
     ALint NumSends;
     ALint pos, s, i;
@@ -560,8 +562,8 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
     DopplerFactor   = ALContext->DopplerFactor * ALSource->DopplerFactor;
     DopplerVelocity = ALContext->DopplerVelocity;
     flSpeedOfSound  = ALContext->flSpeedOfSound;
-    NumSends        = ALContext->Device->NumAuxSends;
-    Frequency       = ALContext->Device->Frequency;
+    NumSends        = Device->NumAuxSends;
+    Frequency       = Device->Frequency;
 
     //Get listener properties
     ListenerGain = ALContext->Listener.Gain;
@@ -746,7 +748,7 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
     if(Angle > 90.0f)
     {
         ALfloat scale = (Angle-90.0f) / (180.1f-90.0f); // .1 to account for fp errors
-        ConeHF *= 1.0f - (ALContext->Device->HeadDampen*scale);
+        ConeHF *= 1.0f - (Device->HeadDampen*scale);
     }
 
     DryMix *= ConeVolume;
@@ -869,16 +871,19 @@ static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
     }
 
     pos = aluCart2LUTpos(-Position[2], Position[0]);
-    SpeakerGain = &ALContext->Device->PanningLUT[OUTPUTCHANNELS * pos];
+    SpeakerGain = &Device->PanningLUT[OUTPUTCHANNELS * pos];
 
     DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
     // elevation adjustment for directional gain. this sucks, but
     // has low complexity
-    AmbientGain = 1.0/aluSqrt(ALContext->Device->NumChan) * (1.0-DirGain);
-    for(s = 0; s < OUTPUTCHANNELS; s++)
+    AmbientGain = 1.0/aluSqrt(Device->NumChan) * (1.0-DirGain);
+    for(s = 0;s < OUTPUTCHANNELS;s++)
+        ALSource->Params.DryGains[s] = 0.0f;
+    for(s = 0;s < (ALsizei)Device->NumChan;s++)
     {
-        ALfloat gain = SpeakerGain[s]*DirGain + AmbientGain;
-        ALSource->Params.DryGains[s] = DryMix * gain;
+        Channel chan = Device->Speaker2Chan[s];
+        ALfloat gain = SpeakerGain[chan]*DirGain + AmbientGain;
+        ALSource->Params.DryGains[chan] = DryMix * gain;
     }
 
     /* Update filter coefficients. */

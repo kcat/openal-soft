@@ -35,150 +35,11 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-typedef struct ALfunction {
-    const ALchar *funcName;
-    ALvoid *address;
-} ALfunction;
-
 typedef struct ALenums {
     const ALchar *enumName;
     ALenum value;
 } ALenums;
 
-
-static const ALfunction function[] = {
-    { "alEnable",                   (ALvoid *) alEnable                  },
-    { "alDisable",                  (ALvoid *) alDisable                 },
-    { "alIsEnabled",                (ALvoid *) alIsEnabled               },
-    { "alGetString",                (ALvoid *) alGetString               },
-    { "alGetBooleanv",              (ALvoid *) alGetBooleanv             },
-    { "alGetIntegerv",              (ALvoid *) alGetIntegerv             },
-    { "alGetFloatv",                (ALvoid *) alGetFloatv               },
-    { "alGetDoublev",               (ALvoid *) alGetDoublev              },
-    { "alGetBoolean",               (ALvoid *) alGetBoolean              },
-    { "alGetInteger",               (ALvoid *) alGetInteger              },
-    { "alGetFloat",                 (ALvoid *) alGetFloat                },
-    { "alGetDouble",                (ALvoid *) alGetDouble               },
-    { "alGetError",                 (ALvoid *) alGetError                },
-    { "alIsExtensionPresent",       (ALvoid *) alIsExtensionPresent      },
-    { "alGetProcAddress",           (ALvoid *) alGetProcAddress          },
-    { "alGetEnumValue",             (ALvoid *) alGetEnumValue            },
-    { "alListenerf",                (ALvoid *) alListenerf               },
-    { "alListener3f",               (ALvoid *) alListener3f              },
-    { "alListenerfv",               (ALvoid *) alListenerfv              },
-    { "alListeneri",                (ALvoid *) alListeneri               },
-    { "alListener3i",               (ALvoid *) alListener3i              },
-    { "alListeneriv",               (ALvoid *) alListeneriv              },
-    { "alGetListenerf",             (ALvoid *) alGetListenerf            },
-    { "alGetListener3f",            (ALvoid *) alGetListener3f           },
-    { "alGetListenerfv",            (ALvoid *) alGetListenerfv           },
-    { "alGetListeneri",             (ALvoid *) alGetListeneri            },
-    { "alGetListener3i",            (ALvoid *) alGetListener3i           },
-    { "alGetListeneriv",            (ALvoid *) alGetListeneriv           },
-    { "alGenSources",               (ALvoid *) alGenSources              },
-    { "alDeleteSources",            (ALvoid *) alDeleteSources           },
-    { "alIsSource",                 (ALvoid *) alIsSource                },
-    { "alSourcef",                  (ALvoid *) alSourcef                 },
-    { "alSource3f",                 (ALvoid *) alSource3f                },
-    { "alSourcefv",                 (ALvoid *) alSourcefv                },
-    { "alSourcei",                  (ALvoid *) alSourcei                 },
-    { "alSource3i",                 (ALvoid *) alSource3i                },
-    { "alSourceiv",                 (ALvoid *) alSourceiv                },
-    { "alGetSourcef",               (ALvoid *) alGetSourcef              },
-    { "alGetSource3f",              (ALvoid *) alGetSource3f             },
-    { "alGetSourcefv",              (ALvoid *) alGetSourcefv             },
-    { "alGetSourcei",               (ALvoid *) alGetSourcei              },
-    { "alGetSource3i",              (ALvoid *) alGetSource3i             },
-    { "alGetSourceiv",              (ALvoid *) alGetSourceiv             },
-    { "alSourcePlayv",              (ALvoid *) alSourcePlayv             },
-    { "alSourceStopv",              (ALvoid *) alSourceStopv             },
-    { "alSourceRewindv",            (ALvoid *) alSourceRewindv           },
-    { "alSourcePausev",             (ALvoid *) alSourcePausev            },
-    { "alSourcePlay",               (ALvoid *) alSourcePlay              },
-    { "alSourceStop",               (ALvoid *) alSourceStop              },
-    { "alSourceRewind",             (ALvoid *) alSourceRewind            },
-    { "alSourcePause",              (ALvoid *) alSourcePause             },
-    { "alSourceQueueBuffers",       (ALvoid *) alSourceQueueBuffers      },
-    { "alSourceUnqueueBuffers",     (ALvoid *) alSourceUnqueueBuffers    },
-    { "alGenBuffers",               (ALvoid *) alGenBuffers              },
-    { "alDeleteBuffers",            (ALvoid *) alDeleteBuffers           },
-    { "alIsBuffer",                 (ALvoid *) alIsBuffer                },
-    { "alBufferData",               (ALvoid *) alBufferData              },
-    { "alBufferf",                  (ALvoid *) alBufferf                 },
-    { "alBuffer3f",                 (ALvoid *) alBuffer3f                },
-    { "alBufferfv",                 (ALvoid *) alBufferfv                },
-    { "alBufferi",                  (ALvoid *) alBufferi                 },
-    { "alBuffer3i",                 (ALvoid *) alBuffer3i                },
-    { "alBufferiv",                 (ALvoid *) alBufferiv                },
-    { "alGetBufferf",               (ALvoid *) alGetBufferf              },
-    { "alGetBuffer3f",              (ALvoid *) alGetBuffer3f             },
-    { "alGetBufferfv",              (ALvoid *) alGetBufferfv             },
-    { "alGetBufferi",               (ALvoid *) alGetBufferi              },
-    { "alGetBuffer3i",              (ALvoid *) alGetBuffer3i             },
-    { "alGetBufferiv",              (ALvoid *) alGetBufferiv             },
-    { "alDopplerFactor",            (ALvoid *) alDopplerFactor           },
-    { "alDopplerVelocity",          (ALvoid *) alDopplerVelocity         },
-    { "alSpeedOfSound",             (ALvoid *) alSpeedOfSound            },
-    { "alDistanceModel",            (ALvoid *) alDistanceModel           },
-
-    { "alGenFilters",               (ALvoid *) alGenFilters              },
-    { "alDeleteFilters",            (ALvoid *) alDeleteFilters           },
-    { "alIsFilter",                 (ALvoid *) alIsFilter                },
-    { "alFilteri",                  (ALvoid *) alFilteri                 },
-    { "alFilteriv",                 (ALvoid *) alFilteriv                },
-    { "alFilterf",                  (ALvoid *) alFilterf                 },
-    { "alFilterfv",                 (ALvoid *) alFilterfv                },
-    { "alGetFilteri",               (ALvoid *) alGetFilteri              },
-    { "alGetFilteriv",              (ALvoid *) alGetFilteriv             },
-    { "alGetFilterf",               (ALvoid *) alGetFilterf              },
-    { "alGetFilterfv",              (ALvoid *) alGetFilterfv             },
-
-    { "alGenEffects",               (ALvoid *) alGenEffects              },
-    { "alDeleteEffects",            (ALvoid *) alDeleteEffects           },
-    { "alIsEffect",                 (ALvoid *) alIsEffect                },
-    { "alEffecti",                  (ALvoid *) alEffecti                 },
-    { "alEffectiv",                 (ALvoid *) alEffectiv                },
-    { "alEffectf",                  (ALvoid *) alEffectf                 },
-    { "alEffectfv",                 (ALvoid *) alEffectfv                },
-    { "alGetEffecti",               (ALvoid *) alGetEffecti              },
-    { "alGetEffectiv",              (ALvoid *) alGetEffectiv             },
-    { "alGetEffectf",               (ALvoid *) alGetEffectf              },
-    { "alGetEffectfv",              (ALvoid *) alGetEffectfv             },
-
-    { "alGenAuxiliaryEffectSlots",  (ALvoid *) alGenAuxiliaryEffectSlots },
-    { "alDeleteAuxiliaryEffectSlots",(ALvoid *) alDeleteAuxiliaryEffectSlots},
-    { "alIsAuxiliaryEffectSlot",    (ALvoid *) alIsAuxiliaryEffectSlot   },
-    { "alAuxiliaryEffectSloti",     (ALvoid *) alAuxiliaryEffectSloti    },
-    { "alAuxiliaryEffectSlotiv",    (ALvoid *) alAuxiliaryEffectSlotiv   },
-    { "alAuxiliaryEffectSlotf",     (ALvoid *) alAuxiliaryEffectSlotf    },
-    { "alAuxiliaryEffectSlotfv",    (ALvoid *) alAuxiliaryEffectSlotfv   },
-    { "alGetAuxiliaryEffectSloti",  (ALvoid *) alGetAuxiliaryEffectSloti },
-    { "alGetAuxiliaryEffectSlotiv", (ALvoid *) alGetAuxiliaryEffectSlotiv},
-    { "alGetAuxiliaryEffectSlotf",  (ALvoid *) alGetAuxiliaryEffectSlotf },
-    { "alGetAuxiliaryEffectSlotfv", (ALvoid *) alGetAuxiliaryEffectSlotfv},
-
-    { "alBufferSubDataEXT",         (ALvoid *) alBufferSubDataEXT        },
-
-    { "alGenDatabuffersEXT",        (ALvoid *) alGenDatabuffersEXT       },
-    { "alDeleteDatabuffersEXT",     (ALvoid *) alDeleteDatabuffersEXT    },
-    { "alIsDatabufferEXT",          (ALvoid *) alIsDatabufferEXT         },
-    { "alDatabufferDataEXT",        (ALvoid *) alDatabufferDataEXT       },
-    { "alDatabufferSubDataEXT",     (ALvoid *) alDatabufferSubDataEXT    },
-    { "alGetDatabufferSubDataEXT",  (ALvoid *) alGetDatabufferSubDataEXT },
-    { "alDatabufferfEXT",           (ALvoid *) alDatabufferfEXT          },
-    { "alDatabufferfvEXT",          (ALvoid *) alDatabufferfvEXT         },
-    { "alDatabufferiEXT",           (ALvoid *) alDatabufferiEXT          },
-    { "alDatabufferivEXT",          (ALvoid *) alDatabufferivEXT         },
-    { "alGetDatabufferfEXT",        (ALvoid *) alGetDatabufferfEXT       },
-    { "alGetDatabufferfvEXT",       (ALvoid *) alGetDatabufferfvEXT      },
-    { "alGetDatabufferiEXT",        (ALvoid *) alGetDatabufferiEXT       },
-    { "alGetDatabufferivEXT",       (ALvoid *) alGetDatabufferivEXT      },
-    { "alSelectDatabufferEXT",      (ALvoid *) alSelectDatabufferEXT     },
-    { "alMapDatabufferEXT",         (ALvoid *) alMapDatabufferEXT        },
-    { "alUnmapDatabufferEXT",       (ALvoid *) alUnmapDatabufferEXT      },
-
-    { NULL,                         (ALvoid *) NULL                      }
-};
 
 static const ALenums enumeration[] = {
     // Types
@@ -451,12 +312,9 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 
 AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
 {
-    ALsizei i = 0;
-
-    while(function[i].funcName && strcmp(function[i].funcName, funcName) != 0)
-        i++;
-
-    return function[i].address;
+    if(!funcName)
+        return NULL;
+    return alcGetProcAddress(NULL, funcName);
 }
 
 AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName)

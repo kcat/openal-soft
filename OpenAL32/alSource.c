@@ -1768,7 +1768,7 @@ static ALvoid InitSourceParams(ALsource *Source)
 static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALfloat *offset, ALfloat updateLen)
 {
     ALbufferlistitem *BufferList;
-    ALbuffer         *Buffer;
+    ALbuffer         *Buffer = NULL;
     ALfloat          BufferFreq;
     ALint            Channels, Bytes;
     ALint            readPos, writePos;
@@ -1776,15 +1776,24 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALfloat *offset, AL
     ALint            TotalBufferDataSize;
     ALuint           i;
 
-    if((Source->state != AL_PLAYING && Source->state != AL_PAUSED) ||
-       !Source->Buffer)
+    // Find the first non-NULL Buffer in the Queue
+    BufferList = Source->queue;
+    while(BufferList)
+    {
+        if(BufferList->buffer)
+        {
+            Buffer = BufferList->buffer;
+            break;
+        }
+        BufferList = BufferList->next;
+    }
+
+    if((Source->state != AL_PLAYING && Source->state != AL_PAUSED) || !Buffer)
     {
         offset[0] = 0.0f;
         offset[1] = 0.0f;
         return;
     }
-
-    Buffer = Source->Buffer;
 
     // Get Current Buffer Size and frequency (in milliseconds)
     BufferFreq = (ALfloat)Buffer->frequency;

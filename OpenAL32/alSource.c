@@ -37,10 +37,11 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum eName, ALdouble *Offsets,
 static ALboolean ApplyOffset(ALsource *Source);
 static ALint GetByteOffset(ALsource *Source);
 
-DECL_VERIFIER(Source, ALsource, source)
-DECL_VERIFIER(Buffer, ALbuffer, buffer)
 DECL_VERIFIER(Filter, ALfilter, filter)
 DECL_VERIFIER(EffectSlot, ALeffectslot, effectslot)
+
+#define LookupSource(m, k) ((ALsource*)LookupUIntMapKey(&(m), (k)))
+#define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
 {
@@ -59,41 +60,37 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
         if(!IsBadWritePtr((void*)sources, n * sizeof(ALuint)))
         {
             // Check that the requested number of sources can be generated
-            if((Context->SourceCount + n) <= Device->MaxNoOfSources)
+            if((Context->SourceMap.size + n) <= (ALsizei)Device->MaxNoOfSources)
             {
-                ALsource *end;
-                ALsource **list = &Context->SourceList;
-                while(*list)
-                    list = &(*list)->next;
+                ALenum err;
 
-                // Add additional sources to the list (Source->next points to the location for the next Source structure)
-                end = *list;
+                // Add additional sources to the list
                 while(i < n)
                 {
-                    *list = calloc(1, sizeof(ALsource));
-                    if(!(*list))
+                    ALsource *source = calloc(1, sizeof(ALsource));
+                    if(!source)
                     {
-                        while(end->next)
-                        {
-                            ALsource *temp = end->next;
-                            end->next = temp->next;
-
-                            ALTHUNK_REMOVEENTRY(temp->source);
-                            Context->SourceCount--;
-                            free(temp);
-                        }
                         alSetError(Context, AL_OUT_OF_MEMORY);
+                        alDeleteSources(i, sources);
                         break;
                     }
 
-                    sources[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
-                    (*list)->source = sources[i];
+                    source->source = (ALuint)ALTHUNK_ADDENTRY(source);
+                    err = InsertUIntMapEntry(&Context->SourceMap, source->source,
+                                             source);
+                    if(err != AL_NO_ERROR)
+                    {
+                        ALTHUNK_REMOVEENTRY(source->source);
+                        memset(source, 0, sizeof(ALsource));
+                        free(source);
 
-                    InitSourceParams(*list);
-                    Context->SourceCount++;
-                    i++;
+                        alSetError(Context, err);
+                        alDeleteSources(i, sources);
+                        break;
+                    }
 
-                    list = &(*list)->next;
+                    sources[i++] = source->source;
+                    InitSourceParams(source);
                 }
             }
             else
@@ -118,7 +115,6 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     ALCcontext *Context;
     ALCdevice  *Device;
     ALsource *Source;
-    ALsource **list;
     ALsizei i, j;
     ALbufferlistitem *BufferList;
     ALboolean bSourcesValid = AL_TRUE;
@@ -133,7 +129,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         // Check that all Sources are valid (and can therefore be deleted)
         for (i = 0; i < n; i++)
         {
-            if(VerifySource(Context->SourceList, sources[i]) == NULL)
+            if(LookupSource(Context->SourceMap, sources[i]) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
                 bSourcesValid = AL_FALSE;
@@ -147,10 +143,10 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             for(i = 0; i < n; i++)
             {
                 // Recheck that the Source is valid, because there could be duplicated Source names
-                if((Source=VerifySource(Context->SourceList, sources[i])) != NULL)
+                if((Source=LookupSource(Context->SourceMap, sources[i])) != NULL)
                 {
                     // For each buffer in the source's queue, decrement its reference counter and remove it
-                    while (Source->queue != NULL)
+                    while(Source->queue != NULL)
                     {
                         BufferList = Source->queue;
                         // Decrement buffer's reference counter
@@ -169,16 +165,8 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
                         Source->Send[j].Slot = NULL;
                     }
 
-                    // Decrement Source count
-                    Context->SourceCount--;
-
                     // Remove Source from list of Sources
-                    list = &Context->SourceList;
-                    while(*list && *list != Source)
-                        list = &(*list)->next;
-
-                    if(*list)
-                        *list = (*list)->next;
+                    RemoveUIntMapKey(&Context->SourceMap, Source->source);
                     ALTHUNK_REMOVEENTRY(Source->source);
 
                     memset(Source,0,sizeof(ALsource));
@@ -202,7 +190,7 @@ AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    result = (VerifySource(Context->SourceList, source) ? AL_TRUE : AL_FALSE);
+    result = (LookupSource(Context->SourceMap, source) ? AL_TRUE : AL_FALSE);
 
     ProcessContext(Context);
 
@@ -218,7 +206,7 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValu
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if((Source=VerifySource(pContext->SourceList, source)) != NULL)
+    if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
     {
         switch(eParam)
         {
@@ -410,7 +398,7 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flVal
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if((Source=VerifySource(pContext->SourceList, source)) != NULL)
+    if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
     {
         switch(eParam)
         {
@@ -456,7 +444,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat
 
     if(pflValues)
     {
-        if(VerifySource(pContext->SourceList, source) != NULL)
+        if(LookupSource(pContext->SourceMap, source) != NULL)
         {
             switch(eParam)
             {
@@ -509,7 +497,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if((Source=VerifySource(pContext->SourceList, source)) != NULL)
+    if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
     {
         ALCdevice *device = pContext->Device;
 
@@ -546,7 +534,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     ALbuffer *buffer = NULL;
 
                     if(lValue == 0 ||
-                       (buffer=VerifyBuffer(device->BufferList, lValue)) != NULL)
+                       (buffer=LookupBuffer(device->BufferMap, lValue)) != NULL)
                     {
                         // Remove all elements in the queue
                         while(Source->queue != NULL)
@@ -711,7 +699,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if((Source=VerifySource(pContext->SourceList, source)) != NULL)
+    if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
     {
         ALCdevice *device = pContext->Device;
 
@@ -776,7 +764,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* pl
 
     if(plValues)
     {
-        if(VerifySource(pContext->SourceList, source) != NULL)
+        if(LookupSource(pContext->SourceMap, source) != NULL)
         {
             switch(eParam)
             {
@@ -834,7 +822,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pf
 
     if(pflValue)
     {
-        if((Source=VerifySource(pContext->SourceList, source)) != NULL)
+        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
         {
             switch(eParam)
             {
@@ -928,7 +916,7 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* p
 
     if(pflValue1 && pflValue2 && pflValue3)
     {
-        if((Source=VerifySource(pContext->SourceList, source)) != NULL)
+        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
         {
             switch(eParam)
             {
@@ -977,7 +965,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *p
 
     if(pflValues)
     {
-        if((Source=VerifySource(pContext->SourceList, source)) != NULL)
+        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
         {
             switch(eParam)
             {
@@ -1055,7 +1043,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plVa
 
     if(plValue)
     {
-        if((Source=VerifySource(pContext->SourceList, source)) != NULL)
+        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
         {
             switch(eParam)
             {
@@ -1172,7 +1160,7 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plVal
 
     if(plValue1 && plValue2 && plValue3)
     {
-        if((Source=VerifySource(pContext->SourceList, source)) != NULL)
+        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
         {
             switch(eParam)
             {
@@ -1221,7 +1209,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plVal
 
     if(plValues)
     {
-        if((Source=VerifySource(pContext->SourceList, source)) != NULL)
+        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
         {
             switch(eParam)
             {
@@ -1315,7 +1303,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     // Check that all the Sources are valid
     for(i = 0;i < n;i++)
     {
-        if(!VerifySource(Context->SourceList, sources[i]))
+        if(!LookupSource(Context->SourceMap, sources[i]))
         {
             alSetError(Context, AL_INVALID_NAME);
             goto done;
@@ -1405,7 +1393,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     // Check all the Sources are valid
     for(i = 0;i < n;i++)
     {
-        if(!VerifySource(Context->SourceList, sources[i]))
+        if(!LookupSource(Context->SourceMap, sources[i]))
         {
             alSetError(Context, AL_INVALID_NAME);
             goto done;
@@ -1446,7 +1434,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     // Check all the Sources are valid
     for(i = 0;i < n;i++)
     {
-        if(!VerifySource(Context->SourceList, sources[i]))
+        if(!LookupSource(Context->SourceMap, sources[i]))
         {
             alSetError(Context, AL_INVALID_NAME);
             goto done;
@@ -1491,7 +1479,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     // Check all the Sources are valid
     for(i = 0;i < n;i++)
     {
-        if(!VerifySource(Context->SourceList, sources[i]))
+        if(!LookupSource(Context->SourceMap, sources[i]))
         {
             alSetError(Context, AL_INVALID_NAME);
             goto done;
@@ -1540,7 +1528,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     // Check that all buffers are valid or zero and that the source is valid
 
     // Check that this is a valid source
-    if((Source=VerifySource(Context->SourceList, source)) == NULL)
+    if((Source=LookupSource(Context->SourceMap, source)) == NULL)
     {
         alSetError(Context, AL_INVALID_NAME);
         goto done;
@@ -1579,7 +1567,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
         if(!buffers[i])
             continue;
 
-        if((buffer=VerifyBuffer(device->BufferList, buffers[i])) == NULL)
+        if((buffer=LookupBuffer(device->BufferMap, buffers[i])) == NULL)
         {
             alSetError(Context, AL_INVALID_NAME);
             goto done;
@@ -1668,7 +1656,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if((Source=VerifySource(Context->SourceList, source)) == NULL)
+    if((Source=LookupSource(Context->SourceMap, source)) == NULL)
     {
         alSetError(Context, AL_INVALID_NAME);
         goto done;
@@ -2080,12 +2068,12 @@ static ALint GetByteOffset(ALsource *Source)
 
 ALvoid ReleaseALSources(ALCcontext *Context)
 {
+    ALsizei pos;
     ALuint j;
-
-    while(Context->SourceList)
+    for(pos = 0;pos < Context->SourceMap.size;pos++)
     {
-        ALsource *temp = Context->SourceList;
-        Context->SourceList = temp->next;
+        ALsource *temp = Context->SourceMap.array[pos].value;
+        Context->SourceMap.array[pos].value = NULL;
 
         // For each buffer in the source's queue, decrement its reference counter and remove it
         while(temp->queue != NULL)
@@ -2111,5 +2099,4 @@ ALvoid ReleaseALSources(ALCcontext *Context)
         memset(temp, 0, sizeof(ALsource));
         free(temp);
     }
-    Context->SourceCount = 0;
 }

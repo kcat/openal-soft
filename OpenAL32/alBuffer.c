@@ -39,7 +39,7 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, AL
 static void ConvertDataMULaw(ALfloat *dst, const ALvoid *src, ALsizei len);
 static void ConvertDataMULawRear(ALfloat *dst, const ALvoid *src, ALsizei len);
 
-DECL_VERIFIER(Buffer, ALbuffer, buffer)
+#define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
 
 /*
 * Global Variables
@@ -104,7 +104,7 @@ static const ALshort muLawDecompressionTable[256] = {
 *
 *    Generates n AL Buffers, and stores the Buffers Names in the array pointed to by puiBuffers
 */
-AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n,ALuint *puiBuffers)
+AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 {
     ALCcontext *Context;
     ALsizei i=0;
@@ -113,45 +113,39 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n,ALuint *puiBuffers)
     if(!Context) return;
 
     // Check that we are actually generation some Buffers
-    if (n > 0)
+    if(n > 0)
     {
         ALCdevice *device = Context->Device;
+        ALenum err;
 
         // Check the pointer is valid (and points to enough memory to store Buffer Names)
-        if (!IsBadWritePtr((void*)puiBuffers, n * sizeof(ALuint)))
+        if(!IsBadWritePtr((void*)buffers, n * sizeof(ALuint)))
         {
-            ALbuffer *end;
-            ALbuffer **list = &device->BufferList;
-            while(*list)
-                list = &(*list)->next;
-
             // Create all the new Buffers
-            end = *list;
             while(i < n)
             {
-                *list = calloc(1, sizeof(ALbuffer));
-                if(!(*list))
+                ALbuffer *buffer = calloc(1, sizeof(ALbuffer));
+                if(!buffer)
                 {
-                    while(end->next)
-                    {
-                        ALbuffer *temp = end->next;
-                        end->next = temp->next;
-
-                        ALTHUNK_REMOVEENTRY(temp->buffer);
-                        device->BufferCount--;
-                        free(temp);
-                    }
                     alSetError(Context, AL_OUT_OF_MEMORY);
+                    alDeleteBuffers(i, buffers);
                     break;
                 }
 
-                puiBuffers[i] = (ALuint)ALTHUNK_ADDENTRY(*list);
-                (*list)->buffer = puiBuffers[i];
+                buffer->buffer = (ALuint)ALTHUNK_ADDENTRY(buffer);
+                err = InsertUIntMapEntry(&device->BufferMap, buffer->buffer,
+                                         buffer);
+                if(err != AL_NO_ERROR)
+                {
+                    ALTHUNK_REMOVEENTRY(buffer->buffer);
+                    memset(buffer, 0, sizeof(ALbuffer));
+                    free(buffer);
 
-                device->BufferCount++;
-                i++;
-
-                list = &(*list)->next;
+                    alSetError(Context, err);
+                    alDeleteBuffers(i, buffers);
+                    break;
+                }
+                buffers[i++] = buffer->buffer;
             }
         }
         else
@@ -191,7 +185,7 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
                 continue;
 
             // Check for valid Buffer ID (can be NULL buffer)
-            if((ALBuf=VerifyBuffer(device->BufferList, puiBuffers[i])) != NULL)
+            if((ALBuf=LookupBuffer(device->BufferMap, puiBuffers[i])) != NULL)
             {
                 if(ALBuf->refcount != 0)
                 {
@@ -215,23 +209,16 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
         {
             for (i = 0; i < n; i++)
             {
-                if((ALBuf=VerifyBuffer(device->BufferList, puiBuffers[i])) != NULL)
+                if((ALBuf=LookupBuffer(device->BufferMap, puiBuffers[i])) != NULL)
                 {
-                    ALbuffer **list = &device->BufferList;
-
-                    while(*list && *list != ALBuf)
-                        list = &(*list)->next;
-
-                    if(*list)
-                        *list = (*list)->next;
-
                     // Release the memory used to store audio data
                     free(ALBuf->data);
 
                     // Release buffer structure
-                    ALTHUNK_REMOVEENTRY(puiBuffers[i]);
+                    RemoveUIntMapKey(&device->BufferMap, ALBuf->buffer);
+                    ALTHUNK_REMOVEENTRY(ALBuf->buffer);
+
                     memset(ALBuf, 0, sizeof(ALbuffer));
-                    device->BufferCount--;
                     free(ALBuf);
                 }
             }
@@ -257,7 +244,7 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint uiBuffer)
     if(!Context) return AL_FALSE;
 
     if(uiBuffer)
-        result = (VerifyBuffer(Context->Device->BufferList, uiBuffer) ?
+        result = (LookupBuffer(Context->Device->BufferMap, uiBuffer) ?
                   AL_TRUE : AL_FALSE);
 
     ProcessContext(Context);
@@ -282,7 +269,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
     if(!Context) return;
 
     device = Context->Device;
-    if((ALBuf=VerifyBuffer(device->BufferList, buffer)) != NULL)
+    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) != NULL)
     {
         if(Context->SampleSource)
         {
@@ -531,7 +518,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const A
     if(!Context) return;
 
     device = Context->Device;
-    if((ALBuf=VerifyBuffer(device->BufferList, buffer)) != NULL)
+    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) != NULL)
     {
         if(Context->SampleSource)
         {
@@ -679,7 +666,7 @@ AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
     if(!pContext) return;
 
     device = pContext->Device;
-    if(VerifyBuffer(device->BufferList, buffer) != NULL)
+    if(LookupBuffer(device->BufferMap, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -710,7 +697,7 @@ AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum eParam, ALfloat flValue
     if(!pContext) return;
 
     device = pContext->Device;
-    if(VerifyBuffer(device->BufferList, buffer) != NULL)
+    if(LookupBuffer(device->BufferMap, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -739,7 +726,7 @@ AL_API void AL_APIENTRY alBufferfv(ALuint buffer, ALenum eParam, const ALfloat* 
     if(!pContext) return;
 
     device = pContext->Device;
-    if(VerifyBuffer(device->BufferList, buffer) != NULL)
+    if(LookupBuffer(device->BufferMap, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -768,7 +755,7 @@ AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum eParam, ALint lValue)
     if(!pContext) return;
 
     device = pContext->Device;
-    if(VerifyBuffer(device->BufferList, buffer) != NULL)
+    if(LookupBuffer(device->BufferMap, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -799,7 +786,7 @@ AL_API void AL_APIENTRY alBuffer3i( ALuint buffer, ALenum eParam, ALint lValue1,
     if(!pContext) return;
 
     device = pContext->Device;
-    if(VerifyBuffer(device->BufferList, buffer) != NULL)
+    if(LookupBuffer(device->BufferMap, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -828,7 +815,7 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
     if(!pContext) return;
 
     device = pContext->Device;
-    if(VerifyBuffer(device->BufferList, buffer) != NULL)
+    if(LookupBuffer(device->BufferMap, buffer) != NULL)
     {
         switch(eParam)
         {
@@ -857,7 +844,7 @@ AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pf
     if (pflValue)
     {
         device = pContext->Device;
-        if(VerifyBuffer(device->BufferList, buffer) != NULL)
+        if(LookupBuffer(device->BufferMap, buffer) != NULL)
         {
             switch(eParam)
             {
@@ -891,7 +878,7 @@ AL_API void AL_APIENTRY alGetBuffer3f(ALuint buffer, ALenum eParam, ALfloat* pfl
     if ((pflValue1) && (pflValue2) && (pflValue3))
     {
         device = pContext->Device;
-        if(VerifyBuffer(device->BufferList, buffer) != NULL)
+        if(LookupBuffer(device->BufferMap, buffer) != NULL)
         {
             switch(eParam)
             {
@@ -925,7 +912,7 @@ AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum eParam, ALfloat* pfl
     if (pflValues)
     {
         device = pContext->Device;
-        if(VerifyBuffer(device->BufferList, buffer) != NULL)
+        if(LookupBuffer(device->BufferMap, buffer) != NULL)
         {
             switch(eParam)
             {
@@ -960,7 +947,7 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plVa
     if (plValue)
     {
         device = pContext->Device;
-        if((pBuffer=VerifyBuffer(device->BufferList, buffer)) != NULL)
+        if((pBuffer=LookupBuffer(device->BufferMap, buffer)) != NULL)
         {
             switch (eParam)
             {
@@ -1010,7 +997,7 @@ AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum eParam, ALint* plVal
     if ((plValue1) && (plValue2) && (plValue3))
     {
         device = pContext->Device;
-        if(VerifyBuffer(device->BufferList, buffer) != NULL)
+        if(LookupBuffer(device->BufferMap, buffer) != NULL)
         {
             switch(eParam)
             {
@@ -1044,7 +1031,7 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
     if (plValues)
     {
         device = pContext->Device;
-        if(VerifyBuffer(device->BufferList, buffer) != NULL)
+        if(LookupBuffer(device->BufferMap, buffer) != NULL)
         {
             switch (eParam)
             {
@@ -1274,10 +1261,11 @@ static void ConvertDataMULawRear(ALfloat *dst, const ALvoid *src, ALsizei len)
 */
 ALvoid ReleaseALBuffers(ALCdevice *device)
 {
-    while(device->BufferList)
+    ALsizei i;
+    for(i = 0;i < device->BufferMap.size;i++)
     {
-        ALbuffer *temp = device->BufferList;
-        device->BufferList = temp->next;
+        ALbuffer *temp = device->BufferMap.array[i].value;
+        device->BufferMap.array[i].value = NULL;
 
         // Release sample data
         free(temp->data);
@@ -1287,5 +1275,4 @@ ALvoid ReleaseALBuffers(ALCdevice *device)
         memset(temp, 0, sizeof(ALbuffer));
         free(temp);
     }
-    device->BufferCount = 0;
 }

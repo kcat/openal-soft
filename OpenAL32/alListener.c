@@ -65,11 +65,11 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
     // relative sources are affected
     if(updateAll)
     {
-        ALsource *source = pContext->SourceList;
-        while(source)
+        ALsizei pos;
+        for(pos = 0;pos < pContext->SourceMap.size;pos++)
         {
+            ALsource *source = pContext->SourceMap.array[pos].value;
             source->NeedsUpdate = AL_TRUE;
-            source = source->next;
         }
     }
 
@@ -108,12 +108,12 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat 
 
     if(updateWorld)
     {
-        ALsource *source = pContext->SourceList;
-        while(source)
+        ALsizei pos;
+        for(pos = 0;pos < pContext->SourceMap.size;pos++)
         {
+            ALsource *source = pContext->SourceMap.array[pos].value;
             if(!source->bHeadRelative)
                 source->NeedsUpdate = AL_TRUE;
-            source = source->next;
         }
     }
 
@@ -164,12 +164,12 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
 
     if(updateWorld)
     {
-        ALsource *source = pContext->SourceList;
-        while(source)
+        ALsizei pos;
+        for(pos = 0;pos < pContext->SourceMap.size;pos++)
         {
+            ALsource *source = pContext->SourceMap.array[pos].value;
             if(!source->bHeadRelative)
                 source->NeedsUpdate = AL_TRUE;
-            source = source->next;
         }
     }
 

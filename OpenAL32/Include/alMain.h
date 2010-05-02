@@ -226,6 +226,41 @@ void alc_pulse_deinit(void);
 void alc_pulse_probe(int type);
 
 
+typedef struct UIntMap {
+    struct {
+        ALuint key;
+        ALvoid *value;
+    } *array;
+    ALsizei size;
+    ALsizei maxsize;
+} UIntMap;
+
+void InitUIntMap(UIntMap *map);
+void ResetUIntMap(UIntMap *map);
+ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
+void RemoveUIntMapKey(UIntMap *map, ALuint key);
+
+static inline ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
+{
+    if(map->size > 0)
+    {
+        ALsizei low = 0;
+        ALsizei high = map->size - 1;
+        while(low < high)
+        {
+            ALsizei mid = low + (high-low)/2;
+            if(map->array[mid].key < key)
+                low = mid + 1;
+            else
+                high = mid;
+        }
+        if(map->array[low].key == key)
+            return map->array[low].value;
+    }
+    return NULL;
+}
+
+
 struct ALCdevice_struct
 {
     ALCboolean   Connected;
@@ -249,9 +284,8 @@ struct ALCdevice_struct
     ALCuint      NumStereoSources;
     ALuint       NumAuxSends;
 
-    // Linked List of Buffers for this device
-    struct ALbuffer *BufferList;
-    ALuint           BufferCount;
+    // Map of Buffers for this device
+    UIntMap BufferMap;
 
     // Linked List of Effects for this device
     struct ALeffect *EffectList;
@@ -311,8 +345,7 @@ struct ALCcontext_struct
 {
     ALlistener  Listener;
 
-    struct ALsource *SourceList;
-    ALuint           SourceCount;
+    UIntMap SourceMap;
 
     struct ALeffectslot *EffectSlotList;
     ALuint               EffectSlotCount;

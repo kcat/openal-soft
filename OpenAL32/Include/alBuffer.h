@@ -22,8 +22,6 @@ typedef struct ALbuffer
 
     // Index to itself
     ALuint buffer;
-
-    struct ALbuffer *next;
 } ALbuffer;
 
 ALvoid ReleaseALBuffers(ALCdevice *device);

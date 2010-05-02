@@ -63,11 +63,11 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
 
     if(updateSources)
     {
-        ALsource *source = Context->SourceList;
-        while(source)
+        ALsizei pos;
+        for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
+            ALsource *source = Context->SourceMap.array[pos].value;
             source->NeedsUpdate = AL_TRUE;
-            source = source->next;
         }
     }
 
@@ -96,11 +96,11 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
 
     if(updateSources)
     {
-        ALsource *source = Context->SourceList;
-        while(source)
+        ALsizei pos;
+        for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
+            ALsource *source = Context->SourceMap.array[pos].value;
             source->NeedsUpdate = AL_TRUE;
-            source = source->next;
         }
     }
 
@@ -552,11 +552,11 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
     // relative sources are affected
     if(updateSources)
     {
-        ALsource *source = Context->SourceList;
-        while(source)
+        ALsizei pos;
+        for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
+            ALsource *source = Context->SourceMap.array[pos].value;
             source->NeedsUpdate = AL_TRUE;
-            source = source->next;
         }
     }
 
@@ -581,11 +581,11 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
 
     if(updateSources)
     {
-        ALsource *source = Context->SourceList;
-        while(source)
+        ALsizei pos;
+        for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
+            ALsource *source = Context->SourceMap.array[pos].value;
             source->NeedsUpdate = AL_TRUE;
-            source = source->next;
         }
     }
 
@@ -610,11 +610,11 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
 
     if(updateSources)
     {
-        ALsource *source = pContext->SourceList;
-        while(source)
+        ALsizei pos;
+        for(pos = 0;pos < pContext->SourceMap.size;pos++)
         {
+            ALsource *source = pContext->SourceMap.array[pos].value;
             source->NeedsUpdate = AL_TRUE;
-            source = source->next;
         }
     }
 
@@ -649,11 +649,11 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
 
     if(updateSources)
     {
-        ALsource *source = Context->SourceList;
-        while(source)
+        ALsizei pos;
+        for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
+            ALsource *source = Context->SourceMap.array[pos].value;
             source->NeedsUpdate = AL_TRUE;
-            source = source->next;
         }
     }
 

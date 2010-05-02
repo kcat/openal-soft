@@ -232,9 +232,10 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     // sending parameters
     if(updateSources)
     {
-        ALsource *source = Context->SourceList;
-        while(source)
+        ALsizei pos;
+        for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
+            ALsource *source = Context->SourceMap.array[pos].value;
             ALuint i;
             for(i = 0;i < MAX_SENDS;i++)
             {
@@ -244,7 +245,6 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
                 source->NeedsUpdate = AL_TRUE;
                 break;
             }
-            source = source->next;
         }
     }
 

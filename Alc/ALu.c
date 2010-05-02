@@ -943,8 +943,9 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALuint BuffersPlayed;
     ALfloat Pitch;
     ALenum State;
+    ALsizei pos;
 
-    if(!(ALSource=ALContext->SourceList))
+    if(ALContext->SourceMap.size <= 0)
         return;
 
     DuplicateStereo = ALContext->Device->DuplicateStereo;
@@ -953,13 +954,13 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     rampLength = DeviceFreq * MIN_RAMP_LENGTH / 1000;
     rampLength = max(rampLength, SamplesToDo);
 
-another_source:
-    if(ALSource->state != AL_PLAYING)
-    {
-        if((ALSource=ALSource->next) != NULL)
-            goto another_source;
-        return;
-    }
+    pos = ALContext->SourceMap.size;
+next_source:
+    do {
+        if(pos-- <= 0)
+            return;
+        ALSource = ALContext->SourceMap.array[pos].value;
+    } while(ALSource->state != AL_PLAYING);
     j = 0;
 
     /* Find buffer format */
@@ -1399,8 +1400,7 @@ another_source:
 
     ALSource->FirstStart = AL_FALSE;
 
-    if((ALSource=ALSource->next) != NULL)
-        goto another_source;
+    goto next_source;
 }
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
@@ -1611,13 +1611,15 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
     SuspendContext(NULL);
     for(i = 0;i < device->NumContexts;i++)
     {
+        ALCcontext *Context = device->Contexts[i];
         ALsource *source;
+        ALsizei pos;
 
-        SuspendContext(device->Contexts[i]);
+        SuspendContext(Context);
 
-        source = device->Contexts[i]->SourceList;
-        while(source)
+        for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
+            source = Context->SourceMap.array[pos].value;
             if(source->state == AL_PLAYING)
             {
                 source->state = AL_STOPPED;
@@ -1625,9 +1627,8 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
                 source->position = 0;
                 source->position_fraction = 0;
             }
-            source = source->next;
         }
-        ProcessContext(device->Contexts[i]);
+        ProcessContext(Context);
     }
 
     device->Connected = ALC_FALSE;

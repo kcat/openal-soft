@@ -637,6 +637,84 @@ void EnableRTPrio(ALint level)
 }
 
 
+void InitUIntMap(UIntMap *map)
+{
+    map->array = NULL;
+    map->size = 0;
+    map->maxsize = 0;
+}
+
+void ResetUIntMap(UIntMap *map)
+{
+    free(map->array);
+    map->array = NULL;
+    map->size = 0;
+    map->maxsize = 0;
+}
+
+ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
+{
+    ALsizei pos;
+
+    for(pos = 0;pos < map->size;pos++)
+    {
+        if(map->array[pos].key >= key)
+            break;
+    }
+
+    if(pos == map->size || map->array[pos].key != key)
+    {
+        if(map->size == map->maxsize)
+        {
+            ALvoid *temp;
+            ALsizei newsize;
+
+            newsize = (map->maxsize ? (map->maxsize<<1) : 4);
+            if(newsize < map->maxsize)
+                return AL_OUT_OF_MEMORY;
+
+            temp = realloc(map->array, newsize*sizeof(map->array[0]));
+            if(!temp) return AL_OUT_OF_MEMORY;
+            map->array = temp;
+            map->maxsize = newsize;
+        }
+
+        map->size++;
+        if(pos < map->size-1)
+            memmove(&map->array[pos+1], &map->array[pos],
+                    (map->size-1-pos)*sizeof(map->array[0]));
+    }
+    map->array[pos].key = key;
+    map->array[pos].value = value;
+
+    return AL_NO_ERROR;
+}
+
+void RemoveUIntMapKey(UIntMap *map, ALuint key)
+{
+    if(map->size > 0)
+    {
+        ALsizei low = 0;
+        ALsizei high = map->size - 1;
+        while(low < high)
+        {
+            ALsizei mid = low + (high-low)/2;
+            if(map->array[mid].key < key)
+                low = mid + 1;
+            else
+                high = mid;
+        }
+        if(map->array[low].key == key)
+        {
+            if(low < map->size-1)
+                memmove(&map->array[low], &map->array[low+1],
+                        (map->size-1-low)*sizeof(map->array[0]));
+            map->size--;
+        }
+    }
+}
+
+
 /*
     IsDevice
 
@@ -771,6 +849,7 @@ static ALvoid InitContext(ALCcontext *pContext)
     //Validate pContext
     pContext->LastError = AL_NO_ERROR;
     pContext->Suspended = AL_FALSE;
+    InitUIntMap(&pContext->SourceMap);
 
     //Set globals
     pContext->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
@@ -1424,7 +1503,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         ALCcontext *context = device->Contexts[i];
         ALeffectslot *slot;
-        ALsource *source;
+        ALsizei pos;
 
         SuspendContext(context);
         for(slot = context->EffectSlotList;slot != NULL;slot = slot->next)
@@ -1444,8 +1523,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
             ALEffect_Update(slot->EffectState, context, &slot->effect);
         }
 
-        for(source = context->SourceList;source != NULL;source = source->next)
+        for(pos = 0;pos < context->SourceMap.size;pos++)
         {
+            ALsource *source = context->SourceMap.array[pos].value;
             ALuint s = device->NumAuxSends;
             while(s < MAX_SENDS)
             {
@@ -1549,13 +1629,15 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     // Lock context
     SuspendContext(context);
 
-    if(context->SourceCount > 0)
+    if(context->SourceMap.size > 0)
     {
 #ifdef _DEBUG
-        AL_PRINT("alcDestroyContext(): deleting %d Source(s)\n", context->SourceCount);
+        AL_PRINT("alcDestroyContext(): deleting %d Source(s)\n", context->SourceMap.size);
 #endif
         ReleaseALSources(context);
     }
+    ResetUIntMap(&context->SourceMap);
+
     if(context->EffectSlotCount > 0)
     {
 #ifdef _DEBUG
@@ -1837,6 +1919,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Contexts = NULL;
     device->NumContexts = 0;
 
+    InitUIntMap(&device->BufferMap);
+
     //Set output format
     device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
     if(device->Frequency < 8000)
@@ -1947,13 +2031,15 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     }
     ALCdevice_ClosePlayback(pDevice);
 
-    if(pDevice->BufferCount > 0)
+    if(pDevice->BufferMap.size > 0)
     {
 #ifdef _DEBUG
-        AL_PRINT("alcCloseDevice(): deleting %d Buffer(s)\n", pDevice->BufferCount);
+        AL_PRINT("alcCloseDevice(): deleting %d Buffer(s)\n", pDevice->BufferMap.size);
 #endif
         ReleaseALBuffers(pDevice);
     }
+    ResetUIntMap(&pDevice->BufferMap);
+
     if(pDevice->EffectCount > 0)
     {
 #ifdef _DEBUG

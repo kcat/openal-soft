@@ -104,8 +104,6 @@ typedef struct ALsource
 
     // Index to itself
     ALuint source;
-
-    struct ALsource *next;
 } ALsource;
 
 ALvoid ReleaseALSources(ALCcontext *Context);

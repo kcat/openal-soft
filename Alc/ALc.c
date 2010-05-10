@@ -654,12 +654,23 @@ void ResetUIntMap(UIntMap *map)
 
 ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
 {
-    ALsizei pos;
+    ALsizei pos = 0;
 
-    for(pos = 0;pos < map->size;pos++)
+    if(map->size > 0)
     {
-        if(map->array[pos].key >= key)
-            break;
+        ALsizei low = 0;
+        ALsizei high = map->size - 1;
+        while(low < high)
+        {
+            ALsizei mid = low + (high-low)/2;
+            if(map->array[mid].key < key)
+                low = mid + 1;
+            else
+                high = mid;
+        }
+        if(map->array[low].key < key)
+            low++;
+        pos = low;
     }
 
     if(pos == map->size || map->array[pos].key != key)

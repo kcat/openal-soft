@@ -480,15 +480,8 @@ static ALvoid CalcNonAttnSourceParams(const ALCcontext *ALContext, ALsource *ALS
             break;
     }
 
-    ALSource->Params.DryGains[FRONT_LEFT]   = DryGain * ListenerGain;
-    ALSource->Params.DryGains[FRONT_RIGHT]  = DryGain * ListenerGain;
-    ALSource->Params.DryGains[SIDE_LEFT]    = DryGain * ListenerGain;
-    ALSource->Params.DryGains[SIDE_RIGHT]   = DryGain * ListenerGain;
-    ALSource->Params.DryGains[BACK_LEFT]    = DryGain * ListenerGain;
-    ALSource->Params.DryGains[BACK_RIGHT]   = DryGain * ListenerGain;
-    ALSource->Params.DryGains[FRONT_CENTER] = DryGain * ListenerGain;
-    ALSource->Params.DryGains[BACK_CENTER]  = DryGain * ListenerGain;
-    ALSource->Params.DryGains[LFE]          = DryGain * ListenerGain;
+    for(i = 0;i < OUTPUTCHANNELS;i++)
+        ALSource->Params.DryGains[i] = DryGain * ListenerGain;
 
     for(i = 0;i < NumSends;i++)
     {

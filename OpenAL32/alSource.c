@@ -36,6 +36,7 @@ static ALvoid InitSourceParams(ALsource *Source);
 static ALvoid GetSourceOffset(ALsource *Source, ALenum eName, ALdouble *Offsets, ALdouble updateLen);
 static ALboolean ApplyOffset(ALsource *Source);
 static ALint GetByteOffset(ALsource *Source);
+static ALint FramesFromBytes(ALint offset, ALenum format, ALint channels);
 
 DECL_VERIFIER(Filter, ALfilter, filter)
 DECL_VERIFIER(EffectSlot, ALeffectslot, effectslot)
@@ -1970,7 +1971,6 @@ static ALint GetByteOffset(ALsource *Source)
     ALint    Channels, Bytes;
     ALint    ByteOffset = -1;
     ALint    TotalBufferDataSize;
-    ALenum   OriginalFormat;
 
     // Find the first non-NULL Buffer in the Queue
     BufferList = Source->queue;
@@ -1993,59 +1993,26 @@ static ALint GetByteOffset(ALsource *Source)
     BufferFreq = ((ALfloat)Buffer->frequency);
     Channels = aluChannelsFromFormat(Buffer->format);
     Bytes = aluBytesFromFormat(Buffer->format);
-    OriginalFormat = Buffer->eOriginalFormat;
 
     // Determine the ByteOffset (and ensure it is block aligned)
     switch(Source->lOffsetType)
     {
-        case AL_BYTE_OFFSET:
-            // Take into consideration the original format
-            if(OriginalFormat == AL_FORMAT_MONO_IMA4 ||
-               OriginalFormat == AL_FORMAT_STEREO_IMA4)
-            {
-                // Round down to nearest ADPCM block
-                ByteOffset = Source->lOffset / (36 * Channels);
-                // Multiply by compression rate (65 samples per 36 byte block)
-                ByteOffset = ByteOffset * 65 * Channels * Bytes;
-            }
-            else if(OriginalFormat == AL_FORMAT_MONO_MULAW ||
-                    OriginalFormat == AL_FORMAT_STEREO_MULAW ||
-                    OriginalFormat == AL_FORMAT_QUAD_MULAW ||
-                    OriginalFormat == AL_FORMAT_51CHN_MULAW ||
-                    OriginalFormat == AL_FORMAT_61CHN_MULAW ||
-                    OriginalFormat == AL_FORMAT_71CHN_MULAW)
-            {
-                /* muLaw has 1 byte per sample */
-                ByteOffset = Source->lOffset / 1 * Bytes;
-            }
-            else if(OriginalFormat == AL_FORMAT_REAR_MULAW)
-            {
-                /* Rear is converted from 2 -> 4 channel */
-                ByteOffset = Source->lOffset / 1 * Bytes * 2;
-            }
-            else if(OriginalFormat == AL_FORMAT_REAR8)
-                ByteOffset = Source->lOffset / 1 * Bytes * 2;
-            else if(OriginalFormat == AL_FORMAT_REAR16)
-                ByteOffset = Source->lOffset / 2 * Bytes * 2;
-            else if(OriginalFormat == AL_FORMAT_REAR32)
-                ByteOffset = Source->lOffset / 4 * Bytes * 2;
-            else
-            {
-                ALuint OrigBytes = aluBytesFromFormat(OriginalFormat);
-                ByteOffset = Source->lOffset / OrigBytes * Bytes;
-            }
-            ByteOffset -= (ByteOffset % (Channels * Bytes));
-            break;
+    case AL_BYTE_OFFSET:
+        // Take into consideration the original format
+        ByteOffset = FramesFromBytes(Source->lOffset, Buffer->eOriginalFormat,
+                                     Channels);
+        ByteOffset *= Channels * Bytes;
+        break;
 
-        case AL_SAMPLE_OFFSET:
-            ByteOffset = Source->lOffset * Channels * Bytes;
-            break;
+    case AL_SAMPLE_OFFSET:
+        ByteOffset = Source->lOffset * Channels * Bytes;
+        break;
 
-        case AL_SEC_OFFSET:
-            // Note - lOffset is internally stored as Milliseconds
-            ByteOffset = (ALint)(Source->lOffset / 1000.0f * BufferFreq);
-            ByteOffset *= Channels * Bytes;
-            break;
+    case AL_SEC_OFFSET:
+        // Note - lOffset is internally stored as Milliseconds
+        ByteOffset  = (ALint)(Source->lOffset / 1000.0f * BufferFreq);
+        ByteOffset *= Channels * Bytes;
+        break;
     }
     // Clear Offset
     Source->lOffset = 0;
@@ -2064,6 +2031,41 @@ static ALint GetByteOffset(ALsource *Source)
     if(ByteOffset >= TotalBufferDataSize)
         return -1;
     return ByteOffset;
+}
+
+static ALint FramesFromBytes(ALint offset, ALenum format, ALint channels)
+{
+    if(format==AL_FORMAT_MONO_IMA4 || format==AL_FORMAT_STEREO_IMA4)
+    {
+        // Round down to nearest ADPCM block
+        offset /= 36 * channels;
+        // Multiply by compression rate (65 sample frames per block)
+        offset *= 65;
+    }
+    else if(format==AL_FORMAT_MONO_MULAW || format==AL_FORMAT_STEREO_MULAW ||
+            format==AL_FORMAT_QUAD_MULAW || format==AL_FORMAT_51CHN_MULAW ||
+            format==AL_FORMAT_61CHN_MULAW || format==AL_FORMAT_71CHN_MULAW)
+    {
+        /* muLaw has 1 byte per sample */
+        offset /= 1 * channels;
+    }
+    else if(format == AL_FORMAT_REAR_MULAW)
+    {
+        /* Rear is 2 channels */
+        offset /= 1 * 2;
+    }
+    else if(format == AL_FORMAT_REAR8)
+        offset /= 1 * 2;
+    else if(format == AL_FORMAT_REAR16)
+        offset /= 2 * 2;
+    else if(format == AL_FORMAT_REAR32)
+        offset /= 4 * 2;
+    else
+    {
+        ALuint bytes = aluBytesFromFormat(format);
+        offset /= bytes * channels;
+    }
+    return offset;
 }
 
 

@@ -1908,6 +1908,7 @@ static ALboolean ApplyOffset(ALsource *Source)
     ALbufferlistitem    *BufferList;
     ALbuffer            *Buffer;
     ALint                lBufferSize, lTotalBufferSize;
+    ALint                BuffersPlayed;
     ALint                lByteOffset;
 
     // Get true byte offset
@@ -1920,7 +1921,7 @@ static ALboolean ApplyOffset(ALsource *Source)
     // Sort out the queue (pending and processed states)
     BufferList = Source->queue;
     lTotalBufferSize = 0;
-    Source->BuffersPlayed = 0;
+    BuffersPlayed = 0;
 
     while(BufferList)
     {
@@ -1930,19 +1931,21 @@ static ALboolean ApplyOffset(ALsource *Source)
         if(lTotalBufferSize+lBufferSize <= lByteOffset)
         {
             // Offset is past this buffer so increment BuffersPlayed
-            Source->BuffersPlayed++;
+            BuffersPlayed++;
         }
         else if(lTotalBufferSize <= lByteOffset)
         {
+
             // Offset is within this buffer
             // Set Current Buffer
             Source->Buffer = BufferList->buffer;
+            Source->BuffersPlayed = BuffersPlayed;
 
             // SW Mixer Positions are in Samples
             Source->position = (lByteOffset - lTotalBufferSize) /
                                 aluBytesFromFormat(Buffer->format) /
                                 aluChannelsFromFormat(Buffer->format);
-            break;
+            return AL_TRUE;
         }
 
         // Increment the TotalBufferSize
@@ -1951,8 +1954,8 @@ static ALboolean ApplyOffset(ALsource *Source)
         // Move on to next buffer in the Queue
         BufferList = BufferList->next;
     }
-
-    return AL_TRUE;
+    // Offset is out of range of the buffer queue
+    return AL_FALSE;
 }
 
 
@@ -1970,7 +1973,6 @@ static ALint GetByteOffset(ALsource *Source)
     ALfloat  BufferFreq;
     ALint    Channels, Bytes;
     ALint    ByteOffset = -1;
-    ALint    TotalBufferDataSize;
 
     // Find the first non-NULL Buffer in the Queue
     BufferList = Source->queue;
@@ -2017,19 +2019,6 @@ static ALint GetByteOffset(ALsource *Source)
     // Clear Offset
     Source->lOffset = 0;
 
-    TotalBufferDataSize = 0;
-    BufferList = Source->queue;
-    while(BufferList)
-    {
-        if(BufferList->buffer)
-            TotalBufferDataSize += BufferList->buffer->size;
-        BufferList = BufferList->next;
-    }
-
-    // Finally, if the ByteOffset is beyond the length of all the buffers in
-    // the queue, return -1
-    if(ByteOffset >= TotalBufferDataSize)
-        return -1;
     return ByteOffset;
 }
 

@@ -571,8 +571,8 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         {
                             // Source is now in UNDETERMINED mode
                             Source->lSourceType = AL_UNDETERMINED;
-                            Source->BuffersPlayed = 0;
                         }
+                        Source->BuffersPlayed = 0;
 
                         // Update AL_BUFFER parameter
                         Source->Buffer = buffer;
@@ -1088,7 +1088,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plVa
                     break;
 
                 case AL_BUFFERS_PROCESSED:
-                    if(Source->bLooping)
+                    if(Source->bLooping || Source->lSourceType != AL_STREAMING)
                     {
                         /* Buffers on a looping source are in a perpetual state
                          * of PENDING, so don't report any as PROCESSED */
@@ -1662,7 +1662,8 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
         goto done;
     }
 
-    if(Source->bLooping || (ALuint)n > Source->BuffersPlayed)
+    if(Source->bLooping || Source->lSourceType != AL_STREAMING ||
+       (ALuint)n > Source->BuffersPlayed)
     {
         // Some buffers can't be unqueue because they have not been processed
         alSetError(Context, AL_INVALID_VALUE);

@@ -349,7 +349,7 @@ static tls_type LocalContext;
 static ALCcontext *GlobalContext;
 
 // Context Error
-static ALCenum g_eLastContextError = ALC_NO_ERROR;
+static ALCenum g_eLastNullDeviceError = ALC_NO_ERROR;
 
 // Default context extensions
 static const ALchar alExtList[] =
@@ -777,7 +777,7 @@ ALCvoid alcSetError(ALCdevice *device, ALenum errorCode)
     if(IsDevice(device))
         device->LastError = errorCode;
     else
-        g_eLastContextError = errorCode;
+        g_eLastNullDeviceError = errorCode;
 }
 
 
@@ -1025,7 +1025,7 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
 */
 ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 {
-    ALCenum errorCode = ALC_NO_ERROR;
+    ALCenum errorCode;
 
     if(IsDevice(device))
     {
@@ -1034,8 +1034,8 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
     }
     else
     {
-        errorCode = g_eLastContextError;
-        g_eLastContextError = ALC_NO_ERROR;
+        errorCode = g_eLastNullDeviceError;
+        g_eLastNullDeviceError = ALC_NO_ERROR;
     }
     return errorCode;
 }

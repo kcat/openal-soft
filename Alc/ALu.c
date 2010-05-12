@@ -934,6 +934,7 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALuint Frequency;
     resampler_t Resampler;
     ALuint BuffersPlayed;
+    ALboolean Looping;
     ALfloat Pitch;
     ALenum State;
     ALsizei pos;
@@ -990,6 +991,7 @@ next_source:
     BuffersPlayed = ALSource->BuffersPlayed;
     DataPosInt    = ALSource->position;
     DataPosFrac   = ALSource->position_fraction;
+    Looping       = ALSource->bLooping;
 
     /* Compute 18.14 fixed point step */
     Pitch = (ALSource->Params.Pitch*Frequency) / DeviceFreq;
@@ -1053,7 +1055,7 @@ next_source:
                 memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
             }
         }
-        else if(ALSource->bLooping)
+        else if(Looping)
         {
             ALbuffer *NextBuf = ALSource->queue->buffer;
             if(NextBuf && NextBuf->size)
@@ -1359,7 +1361,7 @@ next_source:
                 BuffersPlayed++;
                 DataPosInt -= DataSize;
             }
-            else if(ALSource->bLooping)
+            else if(Looping)
             {
                 BufferListItem = ALSource->queue;
                 BuffersPlayed = 0;

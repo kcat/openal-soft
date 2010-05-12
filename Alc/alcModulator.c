@@ -43,6 +43,8 @@ typedef struct ALmodulatorState {
     ALuint index;
     ALuint step;
 
+    ALfloat Scale;
+
     FILTER iirFilter;
     ALfloat history[1];
 } ALmodulatorState;
@@ -87,9 +89,11 @@ static ALvoid ModulatorDestroy(ALeffectState *effect)
 
 static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
+    ALmodulatorState *state = (ALmodulatorState*)effect;
+
+    state->Scale = aluSqrt(Device->NumChan / 8.0f);
+
     return AL_TRUE;
-    (void)effect;
-    (void)Device;
 }
 
 static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
@@ -117,7 +121,7 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
 static ALvoid ModulatorProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
     ALmodulatorState *state = (ALmodulatorState*)effect;
-    const ALfloat gain = Slot->Gain;
+    const ALfloat gain = Slot->Gain * state->Scale;
     const ALuint step = state->step;
     ALuint index = state->index;
     ALfloat samp;
@@ -186,6 +190,8 @@ ALeffectState *ModulatorCreate(void)
 
     state->index = 0.0f;
     state->step = 1.0f;
+
+    state->Scale = 1.0f;
 
     state->iirFilter.coeff = 0.0f;
     state->iirFilter.history[0] = 0.0f;

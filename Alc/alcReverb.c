@@ -129,6 +129,9 @@ typedef struct ALverbState {
     } Echo;
     // The current read offset for all delay lines.
     ALuint Offset;
+
+    // Gain scale to account for device down-mixing
+    ALfloat Scale;
 } ALverbState;
 
 /* This coefficient is used to define the maximum frequency range controlled
@@ -987,6 +990,8 @@ static ALboolean VerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     if(!AllocLines(AL_FALSE, frequency, State))
         return AL_FALSE;
 
+    State->Scale = aluSqrt(Device->NumChan / 8.0f);
+
     // The early reflection and late all-pass filter line lengths are static,
     // so their offsets only need to be calculated once.
     for(index = 0;index < 4;index++)
@@ -1011,6 +1016,8 @@ static ALboolean EAXVerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     // Allocate the delay lines.
     if(!AllocLines(AL_TRUE, frequency, State))
         return AL_FALSE;
+
+    State->Scale = aluSqrt(Device->NumChan / 8.0f);
 
     // Calculate the modulation filter coefficient.  Notice that the exponent
     // is calculated given the current sample rate.  This ensures that the
@@ -1141,7 +1148,7 @@ static ALvoid VerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuin
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat early[4], late[4], out[4];
-    ALfloat gain = Slot->Gain;
+    ALfloat gain = Slot->Gain * State->Scale;
 
     for(index = 0;index < SamplesToDo;index++)
     {
@@ -1173,7 +1180,7 @@ static ALvoid EAXVerbProcess(ALeffectState *effect, const ALeffectslot *Slot, AL
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat early[4], late[4];
-    ALfloat gain = Slot->Gain;
+    ALfloat gain = Slot->Gain * State->Scale;
 
     for(index = 0;index < SamplesToDo;index++)
     {
@@ -1303,6 +1310,8 @@ ALeffectState *VerbCreate(void)
     State->Echo.MixCoeff[1] = 0.0f;
 
     State->Offset = 0;
+
+    State->Scale = 1.0f;
 
     return &State->state;
 }

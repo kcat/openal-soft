@@ -49,6 +49,8 @@ typedef struct ALechoState {
 
     ALfloat FeedGain;
 
+    ALfloat Scale;
+
     FILTER iirFilter;
     ALfloat history[2];
 } ALechoState;
@@ -88,6 +90,9 @@ static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     for(i = 0;i < state->BufferLength;i++)
         state->SampleBuffer[i] = 0.0f;
 
+    state->Scale = aluSqrt(Device->NumChan / 6.0f);
+    state->Scale = __min(state->Scale, 1.0f);
+
     return AL_TRUE;
 }
 
@@ -122,7 +127,7 @@ static ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuin
     const ALuint tap1 = state->Tap[0].delay;
     const ALuint tap2 = state->Tap[1].delay;
     ALuint offset = state->Offset;
-    const ALfloat gain = Slot->Gain;
+    const ALfloat gain = Slot->Gain * state->Scale;
     ALfloat samp[2], smp;
     ALuint i;
 
@@ -177,6 +182,8 @@ ALeffectState *EchoCreate(void)
     state->Offset = 0;
     state->GainL = 0.0f;
     state->GainR = 0.0f;
+
+    state->Scale = 1.0f;
 
     state->iirFilter.coeff = 0.0f;
     state->iirFilter.history[0] = 0.0f;

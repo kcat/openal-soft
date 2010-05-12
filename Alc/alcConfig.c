@@ -277,24 +277,24 @@ const char *GetConfigValue(const char *blockName, const char *keyName, const cha
 {
     size_t i, j;
 
-    if(keyName)
+    if(!keyName)
+        return def;
+
+    if(!blockName)
+        blockName = "general";
+
+    for(i = 0;i < cfgCount;i++)
     {
-        if(!blockName)
-            blockName = "general";
+        if(strcasecmp(cfgBlocks[i].name, blockName) != 0)
+            continue;
 
-        for(i = 0;i < cfgCount;i++)
+        for(j = 0;j < cfgBlocks[i].entryCount;j++)
         {
-            if(strcasecmp(cfgBlocks[i].name, blockName) != 0)
-                continue;
-
-            for(j = 0;j < cfgBlocks[i].entryCount;j++)
+            if(strcasecmp(cfgBlocks[i].entries[j].key, keyName) == 0)
             {
-                if(strcasecmp(cfgBlocks[i].entries[j].key, keyName) == 0)
-                {
-                    if(cfgBlocks[i].entries[j].value[0])
-                        return cfgBlocks[i].entries[j].value;
-                    return def;
-                }
+                if(cfgBlocks[i].entries[j].value[0])
+                    return cfgBlocks[i].entries[j].value;
+                return def;
             }
         }
     }

@@ -18,6 +18,9 @@ typedef struct ALbuffer
     ALenum   eOriginalFormat;
     ALsizei  frequency;
 
+    ALsizei  OriginalSize;
+    ALsizei  OriginalAlign;
+
     ALuint   refcount; // Number of sources using this buffer (deletion can only occur when this is 0)
 
     // Index to itself

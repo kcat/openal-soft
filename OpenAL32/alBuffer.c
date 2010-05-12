@@ -317,6 +317,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
                                         ((format==AL_FORMAT_REAR16) ? 2 :
                                          4));
+                    ALsizei newsize;
 
                     if((size%(OrigBytes*2)) != 0)
                     {
@@ -324,20 +325,23 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         break;
                     }
 
-                    size /= OrigBytes;
-                    size *= 2;
+                    newsize = size / OrigBytes;
+                    newsize *= 2;
 
                     // Samples are converted here
-                    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + size) * NewBytes);
+                    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + newsize) * NewBytes);
                     if(temp)
                     {
                         ALBuf->data = temp;
-                        ConvertDataRear(ALBuf->data, data, OrigBytes, size);
+                        ConvertDataRear(ALBuf->data, data, OrigBytes, newsize);
 
                         ALBuf->format = NewFormat;
                         ALBuf->eOriginalFormat = format;
-                        ALBuf->size = size*NewBytes;
+                        ALBuf->size = newsize*NewBytes;
                         ALBuf->frequency = freq;
+
+                        ALBuf->OriginalSize = size;
+                        ALBuf->OriginalAlign = OrigBytes * 2;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -383,6 +387,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     ALenum NewFormat = ((OrigChans==1) ? AL_FORMAT_MONO_FLOAT32 :
                                                          AL_FORMAT_STEREO_FLOAT32);
                     ALuint NewBytes = aluBytesFromFormat(NewFormat);
+                    ALsizei newsize;
 
                     // Here is where things vary:
                     // nVidia and Apple use 64+1 samples per channel per block => block_size=36*chans bytes
@@ -393,20 +398,23 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         break;
                     }
 
-                    size /= 36;
-                    size *= 65;
+                    newsize = size / 36;
+                    newsize *= 65;
 
                     // Allocate extra padding samples
-                    temp = realloc(ALBuf->data, (BUFFER_PADDING*OrigChans + size)*NewBytes);
+                    temp = realloc(ALBuf->data, (BUFFER_PADDING*OrigChans + newsize)*NewBytes);
                     if(temp)
                     {
                         ALBuf->data = temp;
-                        ConvertDataIMA4(ALBuf->data, data, OrigChans, size/65);
+                        ConvertDataIMA4(ALBuf->data, data, OrigChans, newsize/65);
 
                         ALBuf->format = NewFormat;
                         ALBuf->eOriginalFormat = format;
-                        ALBuf->size = size*NewBytes;
+                        ALBuf->size = newsize*NewBytes;
                         ALBuf->frequency = freq;
+
+                        ALBuf->OriginalSize = size;
+                        ALBuf->OriginalAlign = 36 * OrigChans;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -448,6 +456,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         ALBuf->eOriginalFormat = format;
                         ALBuf->size = size*NewBytes;
                         ALBuf->frequency = freq;
+
+                        ALBuf->OriginalSize = size;
+                        ALBuf->OriginalAlign = 1 * Channels;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -458,6 +469,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     ALenum NewFormat = AL_FORMAT_QUAD32;
                     ALuint NewBytes = aluBytesFromFormat(NewFormat);
                     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
+                    ALsizei newsize;
 
                     if((size%(1*OrigChans)) != 0)
                     {
@@ -465,19 +477,22 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         break;
                     }
 
-                    size *= 2;
+                    newsize = size * 2;
 
                     // Allocate extra padding samples
-                    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + size)*NewBytes);
+                    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + newsize)*NewBytes);
                     if(temp)
                     {
                         ALBuf->data = temp;
-                        ConvertDataMULawRear(ALBuf->data, data, size);
+                        ConvertDataMULawRear(ALBuf->data, data, newsize);
 
                         ALBuf->format = NewFormat;
                         ALBuf->eOriginalFormat = format;
-                        ALBuf->size = size*NewBytes;
+                        ALBuf->size = newsize*NewBytes;
                         ALBuf->frequency = freq;
+
+                        ALBuf->OriginalSize = size;
+                        ALBuf->OriginalAlign = 1 * OrigChans;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -1074,6 +1089,7 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuin
     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
     ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
     ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
+    ALsizei newsize;
     ALvoid *temp;
 
     assert(NewBytes == 4);
@@ -1083,16 +1099,20 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuin
         return AL_INVALID_VALUE;
 
     // Samples are converted here
-    size /= OrigBytes;
-    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + size) * NewBytes);
+    newsize = size / OrigBytes;
+    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + newsize) * NewBytes);
     if(!temp) return AL_OUT_OF_MEMORY;
+
     ALBuf->data = temp;
-    ConvertData(ALBuf->data, data, OrigBytes, size);
+    ConvertData(ALBuf->data, data, OrigBytes, newsize);
 
     ALBuf->format = NewFormat;
     ALBuf->eOriginalFormat = OrigFormat;
-    ALBuf->size = size*NewBytes;
+    ALBuf->size = newsize*NewBytes;
     ALBuf->frequency = freq;
+
+    ALBuf->OriginalSize = size;
+    ALBuf->OriginalAlign = OrigBytes * OrigChannels;
 
     return AL_NO_ERROR;
 }

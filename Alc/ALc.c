@@ -360,7 +360,7 @@ static const ALchar alExtList[] =
     "AL_LOKI_quadriphonic";
 
 // Mixing Priority Level
-ALint RTPrioLevel;
+static ALint RTPrioLevel;
 
 // Resampler Quality
 resampler_t DefaultResampler;
@@ -604,19 +604,19 @@ void al_print(const char *fname, unsigned int line, const char *fmt, ...)
     fprintf(stderr, "%s", str);
 }
 
-void EnableRTPrio(ALint level)
+void SetRTPriority(void)
 {
     ALboolean failed;
 
 #ifdef _WIN32
-    if(level > 0)
+    if(RTPrioLevel > 0)
         failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
     else
         failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
 #elif defined(HAVE_PTHREAD_SETSCHEDPARAM)
     struct sched_param param;
 
-    if(level > 0)
+    if(RTPrioLevel > 0)
     {
         /* Use the minimum real-time priority possible for now (on Linux this
          * should be 1 for SCHED_RR) */
@@ -630,7 +630,7 @@ void EnableRTPrio(ALint level)
     }
 #else
     /* Real-time priority not available */
-    failed = !!level;
+    failed = (RTPrioLevel>0);
 #endif
     if(failed)
         AL_PRINT("Failed to set priority level for thread\n");

@@ -57,7 +57,7 @@ static ALuint SolarisProc(ALvoid *ptr)
     ALint frameSize;
     int wrote;
 
-    EnableRTPrio(RTPrioLevel);
+    SetRTPriority();
 
     frameSize = aluChannelsFromFormat(pDevice->Format) *
                 aluBytesFromFormat(pDevice->Format);

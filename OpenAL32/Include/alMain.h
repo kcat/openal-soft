@@ -439,8 +439,6 @@ struct ALCcontext_struct
     ALCcontext *next;
 };
 
-extern ALint RTPrioLevel;
-
 ALCvoid ReleaseALC(ALCvoid);
 
 void AppendDeviceList(const ALCchar *name);
@@ -472,7 +470,7 @@ int GetConfigValueInt(const char *blockName, const char *keyName, int def);
 float GetConfigValueFloat(const char *blockName, const char *keyName, float def);
 int GetConfigValueBool(const char *blockName, const char *keyName, int def);
 
-void EnableRTPrio(ALint level);
+void SetRTPriority(void);
 
 void SetDefaultChannelOrder(ALCdevice *device);
 void SetDefaultWFXChannelOrder(ALCdevice *device);

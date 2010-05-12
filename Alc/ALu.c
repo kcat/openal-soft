@@ -1409,6 +1409,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     ALfloat samp;
     int fpuState;
     ALuint i, j, c;
+    ALsizei e;
 
 #if defined(HAVE_FESETROUND)
     fpuState = fegetround();
@@ -1438,15 +1439,14 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             MixSomeSources(ALContext, DryBuffer, SamplesToDo);
 
             /* effect slot processing */
-            ALEffectSlot = ALContext->EffectSlotList;
-            while(ALEffectSlot)
+            for(e = 0;e < ALContext->EffectSlotMap.size;e++)
             {
+                ALEffectSlot = ALContext->EffectSlotMap.array[e].value;
                 if(ALEffectSlot->EffectState)
                     ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
 
                 for(i = 0;i < SamplesToDo;i++)
                     ALEffectSlot->WetBuffer[i] = 0.0f;
-                ALEffectSlot = ALEffectSlot->next;
             }
             ProcessContext(ALContext);
         }

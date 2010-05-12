@@ -346,9 +346,7 @@ struct ALCcontext_struct
     ALlistener  Listener;
 
     UIntMap SourceMap;
-
-    struct ALeffectslot *EffectSlotList;
-    ALuint               EffectSlotCount;
+    UIntMap EffectSlotMap;
 
     struct ALdatabuffer *SampleSource;
     struct ALdatabuffer *SampleSink;

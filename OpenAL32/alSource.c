@@ -39,10 +39,10 @@ static ALint GetByteOffset(ALsource *Source);
 static ALint FramesFromBytes(ALint offset, ALenum format, ALint channels);
 
 DECL_VERIFIER(Filter, ALfilter, filter)
-DECL_VERIFIER(EffectSlot, ALeffectslot, effectslot)
 
 #define LookupSource(m, k) ((ALsource*)LookupUIntMapKey(&(m), (k)))
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
+#define LookupEffectSlot(m, k) ((ALeffectslot*)LookupUIntMapKey(&(m), (k)))
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
 {
@@ -718,7 +718,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
 
                 if((ALuint)lValue2 < device->NumAuxSends &&
                    (lValue1 == 0 ||
-                    (ALEffectSlot=VerifyEffectSlot(pContext->EffectSlotList, lValue1)) != NULL) &&
+                    (ALEffectSlot=LookupEffectSlot(pContext->EffectSlotMap, lValue1)) != NULL) &&
                    (lValue3 == 0 ||
                     (ALFilter=VerifyFilter(device->FilterList, lValue3)) != NULL))
                 {

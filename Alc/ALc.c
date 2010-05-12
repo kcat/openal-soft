@@ -1513,12 +1513,12 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     for(i = 0;i < device->NumContexts;i++)
     {
         ALCcontext *context = device->Contexts[i];
-        ALeffectslot *slot;
         ALsizei pos;
 
         SuspendContext(context);
-        for(slot = context->EffectSlotList;slot != NULL;slot = slot->next)
+        for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
+            ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
             if(!slot->EffectState)
                 continue;
 
@@ -1649,13 +1649,14 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     }
     ResetUIntMap(&context->SourceMap);
 
-    if(context->EffectSlotCount > 0)
+    if(context->EffectSlotMap.size > 0)
     {
 #ifdef _DEBUG
-        AL_PRINT("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->EffectSlotCount);
+        AL_PRINT("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->EffectSlotMap.size);
 #endif
         ReleaseALAuxiliaryEffectSlots(context);
     }
+    ResetUIntMap(&context->EffectSlotMap);
 
     list = &g_pContextList;
     while(*list != context)

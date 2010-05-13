@@ -1078,7 +1078,7 @@ next_source:
             {
                 ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
                 ulExtraSamples = min(NextBuf->size, ulExtraSamples);
-                memcpy(&Data[DataSize*Channels], NextBuf->data, ulExtraSamples);
+                memcpy(&Data[DataSize*Channels], &NextBuf->data[LoopStart*Channels], ulExtraSamples);
             }
         }
         else

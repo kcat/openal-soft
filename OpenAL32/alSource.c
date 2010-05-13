@@ -554,6 +554,8 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         // Add the buffer to the queue (as long as it is NOT the NULL buffer)
                         if(lValue != 0)
                         {
+                            ALuint channels;
+
                             // Source is now in STATIC mode
                             Source->lSourceType = AL_STATIC;
 
@@ -564,6 +566,14 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 
                             Source->queue = BufferListItem;
                             Source->BuffersInQueue = 1;
+
+                            channels = aluChannelsFromFormat(buffer->format);
+                            Source->LoopStart = FramesFromBytes(buffer->LoopStart,
+                                                                buffer->eOriginalFormat,
+                                                                channels);
+                            Source->LoopEnd = FramesFromBytes(buffer->LoopEnd,
+                                                              buffer->eOriginalFormat,
+                                                              channels);
 
                             // Increment reference counter for buffer
                             buffer->refcount++;

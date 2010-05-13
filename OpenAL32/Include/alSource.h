@@ -78,6 +78,10 @@ typedef struct ALsource
     ALint  lOffset;
     ALint  lOffsetType;
 
+    // Only valid for static sources types
+    ALint LoopStart;
+    ALint LoopEnd;
+
     // Source Type (Static, Streaming, or Undetermined)
     ALint  lSourceType;
 

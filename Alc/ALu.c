@@ -1365,7 +1365,7 @@ next_source:
             {
                 BufferListItem = ALSource->queue;
                 BuffersPlayed = 0;
-                if(ALSource->BuffersInQueue == 1)
+                if(ALSource->lSourceType == AL_STATIC)
                     DataPosInt %= DataSize;
                 else
                     DataPosInt -= DataSize;

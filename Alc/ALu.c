@@ -932,6 +932,7 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALuint DataPosInt, DataPosFrac;
     ALuint Channels, Bytes;
     ALuint Frequency;
+    ALuint LoopStart, LoopEnd;
     resampler_t Resampler;
     ALuint BuffersPlayed;
     ALboolean Looping;
@@ -992,6 +993,8 @@ next_source:
     DataPosInt    = ALSource->position;
     DataPosFrac   = ALSource->position_fraction;
     Looping       = ALSource->bLooping;
+    LoopStart     = ALSource->LoopStart;
+    LoopEnd       = ALSource->LoopEnd;
 
     /* Compute 18.14 fixed point step */
     Pitch = (ALSource->Params.Pitch*Frequency) / DeviceFreq;
@@ -1045,6 +1048,19 @@ next_source:
         if(DataPosInt >= DataSize)
             goto skipmix;
 
+        if(Looping && ALSource->lSourceType == AL_STATIC)
+        {
+            /* If current offset is beyond the loop range, do not loop */
+            if(DataPosInt >= LoopEnd)
+                Looping = AL_FALSE;
+        }
+        if(!Looping || ALSource->lSourceType != AL_STATIC)
+        {
+            /* Non-looping and non-static sources ignore loop points */
+            LoopStart = 0;
+            LoopEnd = DataSize;
+        }
+
         if(BufferListItem->next)
         {
             ALbuffer *NextBuf = BufferListItem->next->buffer;
@@ -1077,7 +1093,7 @@ next_source:
                              rampLength;
 
         /* Figure out how many samples we can mix. */
-        DataSize64 = DataSize;
+        DataSize64 = LoopEnd;
         DataSize64 <<= FRACTIONBITS;
         DataPos64 = DataPosInt;
         DataPos64 <<= FRACTIONBITS;
@@ -1353,7 +1369,7 @@ next_source:
 
     skipmix:
         /* Handle looping sources */
-        if(DataPosInt >= DataSize)
+        if(DataPosInt >= LoopEnd)
         {
             if(BuffersPlayed < (ALSource->BuffersInQueue-1))
             {
@@ -1366,7 +1382,7 @@ next_source:
                 BufferListItem = ALSource->queue;
                 BuffersPlayed = 0;
                 if(ALSource->lSourceType == AL_STATIC)
-                    DataPosInt %= DataSize;
+                    DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
                 else
                     DataPosInt -= DataSize;
             }

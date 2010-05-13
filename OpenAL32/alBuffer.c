@@ -342,6 +342,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
                         ALBuf->OriginalSize = size;
                         ALBuf->OriginalAlign = OrigBytes * 2;
+
+                        ALBuf->LoopStart = 0;
+                        ALBuf->LoopEnd = size;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -415,6 +418,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
                         ALBuf->OriginalSize = size;
                         ALBuf->OriginalAlign = 36 * OrigChans;
+
+                        ALBuf->LoopStart = 0;
+                        ALBuf->LoopEnd = size;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -459,6 +465,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
                         ALBuf->OriginalSize = size;
                         ALBuf->OriginalAlign = 1 * Channels;
+
+                        ALBuf->LoopStart = 0;
+                        ALBuf->LoopEnd = size;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -493,6 +502,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
                         ALBuf->OriginalSize = size;
                         ALBuf->OriginalAlign = 1 * OrigChans;
+
+                        ALBuf->LoopStart = 0;
+                        ALBuf->LoopEnd = size;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -823,6 +835,7 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
 {
     ALCcontext    *pContext;
     ALCdevice     *device;
+    ALbuffer      *ALBuf;
 
     (void)plValues;
 
@@ -830,10 +843,27 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
     if(!pContext) return;
 
     device = pContext->Device;
-    if(LookupBuffer(device->BufferMap, buffer) != NULL)
+    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) != NULL)
     {
         switch(eParam)
         {
+        case AL_LOOP_POINTS:
+            if(ALBuf->refcount > 0)
+                alSetError(pContext, AL_INVALID_OPERATION);
+            else if(plValues[0] < 0 || plValues[1] < 0 ||
+                    plValues[0] > ALBuf->OriginalSize ||
+                    plValues[1] > ALBuf->OriginalSize ||
+                    (plValues[0]%ALBuf->OriginalAlign) ||
+                    (plValues[0]%ALBuf->OriginalAlign) ||
+                    plValues[0] >= plValues[1])
+                alSetError(pContext, AL_INVALID_VALUE);
+            else
+            {
+                ALBuf->LoopStart = plValues[0];
+                ALBuf->LoopEnd = plValues[1];
+            }
+            break;
+
         default:
             alSetError(pContext, AL_INVALID_ENUM);
             break;
@@ -1039,6 +1069,7 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
 {
     ALCcontext    *pContext;
     ALCdevice     *device;
+    ALbuffer      *ALBuf;
 
     pContext = GetContextSuspended();
     if(!pContext) return;
@@ -1046,7 +1077,7 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
     if (plValues)
     {
         device = pContext->Device;
-        if(LookupBuffer(device->BufferMap, buffer) != NULL)
+        if((ALBuf=LookupBuffer(device->BufferMap, buffer)) != NULL)
         {
             switch (eParam)
             {
@@ -1055,6 +1086,11 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
             case AL_CHANNELS:
             case AL_SIZE:
                 alGetBufferi(buffer, eParam, plValues);
+                break;
+
+            case AL_LOOP_POINTS:
+                plValues[0] = ALBuf->LoopStart;
+                plValues[1] = ALBuf->LoopEnd;
                 break;
 
             default:
@@ -1113,6 +1149,9 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALubyte *data, ALsizei size, ALuin
 
     ALBuf->OriginalSize = size;
     ALBuf->OriginalAlign = OrigBytes * OrigChannels;
+
+    ALBuf->LoopStart = 0;
+    ALBuf->LoopEnd = size;
 
     return AL_NO_ERROR;
 }

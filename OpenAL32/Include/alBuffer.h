@@ -21,6 +21,9 @@ typedef struct ALbuffer
     ALsizei  OriginalSize;
     ALsizei  OriginalAlign;
 
+    ALsizei  LoopStart;
+    ALsizei  LoopEnd;
+
     ALuint   refcount; // Number of sources using this buffer (deletion can only occur when this is 0)
 
     // Index to itself

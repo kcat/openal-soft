@@ -139,19 +139,19 @@ typedef pthread_key_t tls_type;
 #define tls_set(x, a) pthread_setspecific((x), (a))
 
 typedef pthread_mutex_t CRITICAL_SECTION;
-static inline void EnterCriticalSection(CRITICAL_SECTION *cs)
+static __inline void EnterCriticalSection(CRITICAL_SECTION *cs)
 {
     int ret;
     ret = pthread_mutex_lock(cs);
     assert(ret == 0);
 }
-static inline void LeaveCriticalSection(CRITICAL_SECTION *cs)
+static __inline void LeaveCriticalSection(CRITICAL_SECTION *cs)
 {
     int ret;
     ret = pthread_mutex_unlock(cs);
     assert(ret == 0);
 }
-static inline void InitializeCriticalSection(CRITICAL_SECTION *cs)
+static __inline void InitializeCriticalSection(CRITICAL_SECTION *cs)
 {
     pthread_mutexattr_t attrib;
     int ret;
@@ -171,7 +171,7 @@ static inline void InitializeCriticalSection(CRITICAL_SECTION *cs)
     pthread_mutexattr_destroy(&attrib);
 }
 
-static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
+static __inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 {
     int ret;
     ret = pthread_mutex_destroy(cs);
@@ -182,7 +182,7 @@ static inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
  * to the expected DWORD. Both are defined as unsigned 32-bit types, however.
  * Additionally, Win32 is supposed to measure the time since Windows started,
  * as opposed to the actual time. */
-static inline ALuint timeGetTime(void)
+static __inline ALuint timeGetTime(void)
 {
     int ret;
 #if _POSIX_TIMERS > 0
@@ -202,7 +202,7 @@ static inline ALuint timeGetTime(void)
 #endif
 }
 
-static inline void Sleep(ALuint t)
+static __inline void Sleep(ALuint t)
 {
     struct timespec tv, rem;
     tv.tv_nsec = (t*1000000)%1000000000;
@@ -311,7 +311,7 @@ void ResetUIntMap(UIntMap *map);
 ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
 void RemoveUIntMapKey(UIntMap *map, ALuint key);
 
-static inline ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
+static __inline ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
 {
     if(map->size > 0)
     {

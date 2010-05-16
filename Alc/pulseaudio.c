@@ -29,11 +29,11 @@
 
 #if PA_API_VERSION == 11
 #define PA_STREAM_ADJUST_LATENCY 0x2000U
-static inline int PA_STREAM_IS_GOOD(pa_stream_state_t x)
+static __inline int PA_STREAM_IS_GOOD(pa_stream_state_t x)
 {
     return (x == PA_STREAM_CREATING || x == PA_STREAM_READY);
 }
-static inline int PA_CONTEXT_IS_GOOD(pa_context_state_t x)
+static __inline int PA_CONTEXT_IS_GOOD(pa_context_state_t x)
 {
     return (x == PA_CONTEXT_CONNECTING || x == PA_CONTEXT_AUTHORIZING ||
             x == PA_CONTEXT_SETTING_NAME || x == PA_CONTEXT_READY);

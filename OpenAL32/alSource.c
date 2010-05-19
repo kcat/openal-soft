@@ -1789,8 +1789,8 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
 
     if((Source->state != AL_PLAYING && Source->state != AL_PAUSED) || !Buffer)
     {
-        offset[0] = 0.0f;
-        offset[1] = 0.0f;
+        offset[0] = 0.0;
+        offset[1] = 0.0;
         return;
     }
 
@@ -1944,7 +1944,6 @@ static ALboolean ApplyOffset(ALsource *Source)
         }
         else if(lTotalBufferSize <= lByteOffset)
         {
-
             // Offset is within this buffer
             // Set Current Buffer
             Source->Buffer = BufferList->buffer;

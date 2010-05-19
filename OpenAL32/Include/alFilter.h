@@ -89,8 +89,6 @@ typedef struct ALfilter
 
     // Index to itself
     ALuint filter;
-
-    struct ALfilter *next;
 } ALfilter;
 
 

@@ -38,10 +38,9 @@ static ALboolean ApplyOffset(ALsource *Source);
 static ALint GetByteOffset(ALsource *Source);
 static ALint FramesFromBytes(ALint offset, ALenum format, ALint channels);
 
-DECL_VERIFIER(Filter, ALfilter, filter)
-
 #define LookupSource(m, k) ((ALsource*)LookupUIntMapKey(&(m), (k)))
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
+#define LookupFilter(m, k) ((ALfilter*)LookupUIntMapKey(&(m), (k)))
 #define LookupEffectSlot(m, k) ((ALeffectslot*)LookupUIntMapKey(&(m), (k)))
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
@@ -628,7 +627,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                 ALfilter *filter = NULL;
 
                 if(lValue == 0 ||
-                   (filter=VerifyFilter(pContext->Device->FilterList, lValue)) != NULL)
+                   (filter=LookupFilter(pContext->Device->FilterMap, lValue)) != NULL)
                 {
                     if(!filter)
                     {
@@ -730,7 +729,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
                    (lValue1 == 0 ||
                     (ALEffectSlot=LookupEffectSlot(pContext->EffectSlotMap, lValue1)) != NULL) &&
                    (lValue3 == 0 ||
-                    (ALFilter=VerifyFilter(device->FilterList, lValue3)) != NULL))
+                    (ALFilter=LookupFilter(device->FilterMap, lValue3)) != NULL))
                 {
                     /* Release refcount on the previous slot, and add one for
                      * the new slot */

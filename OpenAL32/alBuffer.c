@@ -235,17 +235,16 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
 *
 *    Checks if ulBuffer is a valid Buffer Name
 */
-AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint uiBuffer)
+AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
 {
     ALCcontext *Context;
-    ALboolean  result = AL_TRUE;
+    ALboolean  result;
 
     Context = GetContextSuspended();
     if(!Context) return AL_FALSE;
 
-    if(uiBuffer)
-        result = (LookupBuffer(Context->Device->BufferMap, uiBuffer) ?
-                  AL_TRUE : AL_FALSE);
+    result = ((!buffer || LookupBuffer(Context->Device->BufferMap, buffer)) ?
+              AL_TRUE : AL_FALSE);
 
     ProcessContext(Context);
 

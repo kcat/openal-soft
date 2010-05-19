@@ -34,9 +34,8 @@
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
 
-DECL_VERIFIER(Effect, ALeffect, effect)
-
 #define LookupEffectSlot(m, k) ((ALeffectslot*)LookupUIntMapKey(&(m), (k)))
+#define LookupEffect(m, k) ((ALeffect*)LookupUIntMapKey(&(m), (k)))
 
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
@@ -187,7 +186,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
             ALeffect *effect = NULL;
 
             if(iValue == 0 ||
-               (effect=VerifyEffect(Context->Device->EffectList, iValue)) != NULL)
+               (effect=LookupEffect(Context->Device->EffectMap, iValue)) != NULL)
             {
                 InitializeEffect(Context, EffectSlot, effect);
                 updateSources = AL_TRUE;

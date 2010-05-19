@@ -358,9 +358,8 @@ struct ALCdevice_struct
     // Map of Buffers for this device
     UIntMap BufferMap;
 
-    // Linked List of Effects for this device
-    struct ALeffect *EffectList;
-    ALuint           EffectCount;
+    // Map of Effects for this device
+    UIntMap EffectMap;
 
     // Linked List of Filters for this device
     struct ALfilter *FilterList;

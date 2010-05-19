@@ -1932,6 +1932,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumContexts = 0;
 
     InitUIntMap(&device->BufferMap);
+    InitUIntMap(&device->EffectMap);
 
     //Set output format
     device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
@@ -2052,13 +2053,15 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     }
     ResetUIntMap(&pDevice->BufferMap);
 
-    if(pDevice->EffectCount > 0)
+    if(pDevice->EffectMap.size > 0)
     {
 #ifdef _DEBUG
-        AL_PRINT("alcCloseDevice(): deleting %d Effect(s)\n", pDevice->EffectCount);
+        AL_PRINT("alcCloseDevice(): deleting %d Effect(s)\n", pDevice->EffectMap.size);
 #endif
         ReleaseALEffects(pDevice);
     }
+    ResetUIntMap(&pDevice->EffectMap);
+
     if(pDevice->FilterCount > 0)
     {
 #ifdef _DEBUG

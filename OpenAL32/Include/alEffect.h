@@ -71,8 +71,6 @@ typedef struct ALeffect
 
     // Index to itself
     ALuint effect;
-
-    struct ALeffect *next;
 } ALeffect;
 
 

@@ -1770,9 +1770,9 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
     ALbuffer         *Buffer = NULL;
     ALfloat          BufferFreq;
     ALint            Channels, Bytes;
-    ALint            readPos, writePos;
+    ALuint           readPos, writePos;
     ALenum           OriginalFormat;
-    ALint            TotalBufferDataSize;
+    ALuint           TotalBufferDataSize;
     ALuint           i;
 
     // Find the first non-NULL Buffer in the Queue
@@ -1827,14 +1827,10 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
     }
     else
     {
-        // Clamp BytesPlayed to within 0 and lTotalBufferDataSize
-        if(readPos < 0)
-            readPos = 0;
-        else if(readPos > TotalBufferDataSize)
+        // Clamp positions to TotalBufferDataSize
+        if(readPos > TotalBufferDataSize)
             readPos = TotalBufferDataSize;
-        if(writePos < 0)
-            writePos = 0;
-        else if(writePos > TotalBufferDataSize)
+        if(writePos > TotalBufferDataSize)
             writePos = TotalBufferDataSize;
     }
 

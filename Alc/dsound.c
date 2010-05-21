@@ -346,6 +346,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
                 format = AL_FORMAT_MONO16;
             else if(aluBytesFromFormat(device->Format) == 4)
                 format = AL_FORMAT_MONO_FLOAT32;
+            OutputType.dwChannelMask = SPEAKER_FRONT_CENTER;
         }
         else if(speakers == DSSPEAKER_STEREO)
         {
@@ -355,6 +356,8 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
                 format = AL_FORMAT_STEREO16;
             else if(aluBytesFromFormat(device->Format) == 4)
                 format = AL_FORMAT_STEREO_FLOAT32;
+            OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                       SPEAKER_FRONT_RIGHT;
         }
         else if(speakers == DSSPEAKER_QUAD)
         {

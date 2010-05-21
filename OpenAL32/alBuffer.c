@@ -339,11 +339,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         ALBuf->size = newsize*NewBytes;
                         ALBuf->frequency = freq;
 
+                        ALBuf->LoopStart = 0;
+                        ALBuf->LoopEnd = newsize / NewChannels;
+
                         ALBuf->OriginalSize = size;
                         ALBuf->OriginalAlign = OrigBytes * 2;
-
-                        ALBuf->LoopStart = 0;
-                        ALBuf->LoopEnd = size;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -415,11 +415,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         ALBuf->size = newsize*NewBytes;
                         ALBuf->frequency = freq;
 
+                        ALBuf->LoopStart = 0;
+                        ALBuf->LoopEnd = newsize / OrigChans;
+
                         ALBuf->OriginalSize = size;
                         ALBuf->OriginalAlign = 36 * OrigChans;
-
-                        ALBuf->LoopStart = 0;
-                        ALBuf->LoopEnd = size;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -462,11 +462,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         ALBuf->size = size*NewBytes;
                         ALBuf->frequency = freq;
 
+                        ALBuf->LoopStart = 0;
+                        ALBuf->LoopEnd = size / Channels;
+
                         ALBuf->OriginalSize = size;
                         ALBuf->OriginalAlign = 1 * Channels;
-
-                        ALBuf->LoopStart = 0;
-                        ALBuf->LoopEnd = size;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -499,11 +499,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         ALBuf->size = newsize*NewBytes;
                         ALBuf->frequency = freq;
 
+                        ALBuf->LoopStart = 0;
+                        ALBuf->LoopEnd = newsize / NewChannels;
+
                         ALBuf->OriginalSize = size;
                         ALBuf->OriginalAlign = 1 * OrigChans;
-
-                        ALBuf->LoopStart = 0;
-                        ALBuf->LoopEnd = size;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -834,16 +834,19 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
             if(ALBuf->refcount > 0)
                 alSetError(pContext, AL_INVALID_OPERATION);
             else if(plValues[0] < 0 || plValues[1] < 0 ||
-                    plValues[0] > ALBuf->OriginalSize ||
-                    plValues[1] > ALBuf->OriginalSize ||
-                    (plValues[0]%ALBuf->OriginalAlign) ||
-                    (plValues[0]%ALBuf->OriginalAlign) ||
-                    plValues[0] >= plValues[1])
+                    plValues[0] >= plValues[1] || ALBuf->size == 0)
                 alSetError(pContext, AL_INVALID_VALUE);
             else
             {
-                ALBuf->LoopStart = plValues[0];
-                ALBuf->LoopEnd = plValues[1];
+                ALint maxlen = ALBuf->size / aluBytesFromFormat(ALBuf->format) /
+                                             aluChannelsFromFormat(ALBuf->format);
+                if(plValues[0] > maxlen || plValues[1] > maxlen)
+                    alSetError(pContext, AL_INVALID_VALUE);
+                else
+                {
+                    ALBuf->LoopStart = plValues[0];
+                    ALBuf->LoopEnd = plValues[1];
+                }
             }
             break;
 
@@ -1130,11 +1133,11 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALBuf->size = newsize*NewBytes;
     ALBuf->frequency = freq;
 
+    ALBuf->LoopStart = 0;
+    ALBuf->LoopEnd = newsize / NewChannels;
+
     ALBuf->OriginalSize = size;
     ALBuf->OriginalAlign = OrigBytes * OrigChannels;
-
-    ALBuf->LoopStart = 0;
-    ALBuf->LoopEnd = size;
 
     return AL_NO_ERROR;
 }

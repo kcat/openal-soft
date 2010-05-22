@@ -1230,7 +1230,7 @@ static void ConvertDataRear(ALfloat *dst, const ALvoid *src, ALint origBytes, AL
 
 static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, ALsizei len)
 {
-    const ALuint *IMAData;
+    const ALubyte *IMAData;
     ALint Sample[2],Index[2];
     ALuint IMACode[2];
     ALsizei i,j,k,c;
@@ -1243,21 +1243,30 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, AL
     {
         for(c = 0;c < origChans;c++)
         {
-            Sample[c] = ((ALshort*)IMAData)[0];
-            Index[c] = ((ALshort*)IMAData)[1];
+            Sample[c]  = IMAData[0];
+            Sample[c] |= IMAData[1] << 8;
+            Sample[c]  = (Sample[c]^0x8000) - 32768;
+            Index[c]  = IMAData[2];
+            Index[c] |= IMAData[3] << 8;
+            Index[c]  = (Index[c]^0x8000) - 32768;
 
             Index[c] = ((Index[c]<0) ? 0 : Index[c]);
             Index[c] = ((Index[c]>88) ? 88 : Index[c]);
 
             dst[i*65*origChans + c] = ((Sample[c] < 0) ? (Sample[c]/32768.0f) : (Sample[c]/32767.0f));
 
-            IMAData++;
+            IMAData += 4;
         }
 
         for(j = 1;j < 65;j += 8)
         {
             for(c = 0;c < origChans;c++)
-                IMACode[c] = *(IMAData++);
+            {
+                IMACode[c]  = *(IMAData++);
+                IMACode[c] |= *(IMAData++) << 8;
+                IMACode[c] |= *(IMAData++) << 16;
+                IMACode[c] |= *(IMAData++) << 24;
+            }
 
             for(k = 0;k < 8;k++)
             {

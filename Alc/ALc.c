@@ -365,6 +365,9 @@ static ALint RTPrioLevel;
 // Resampler Quality
 resampler_t DefaultResampler;
 
+// Output Log File
+static FILE *LogFile;
+
 ///////////////////////////////////////////////////////
 
 
@@ -409,6 +412,16 @@ static void alc_init(void)
     ReadALConfig();
 
     tls_create(&LocalContext);
+
+    str = getenv("ALSOFT_LOGFILE");
+    if(str && str[0])
+    {
+        LogFile = fopen(str, "w");
+        if(!LogFile)
+            fprintf(stderr, "AL lib: Failed to open log file '%s'\n", str);
+    }
+    if(!LogFile)
+        LogFile = stderr;
 
     RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 0);
 
@@ -512,6 +525,10 @@ static void alc_deinit(void)
     for(i = 0;BackendList[i].Deinit;i++)
         BackendList[i].Deinit();
 
+    if(LogFile != stderr)
+        fclose(LogFile);
+    LogFile = NULL;
+
     tls_delete(LocalContext);
 
     FreeALConfig();
@@ -601,7 +618,8 @@ void al_print(const char *fname, unsigned int line, const char *fmt, ...)
     }
     str[sizeof(str)-1] = 0;
 
-    fprintf(stderr, "%s", str);
+    fprintf(LogFile, "%s", str);
+    fflush(LogFile);
 }
 
 void SetRTPriority(void)

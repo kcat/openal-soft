@@ -932,7 +932,6 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALuint DataPosInt, DataPosFrac;
     ALuint Channels, Bytes;
     ALuint Frequency;
-    ALuint LoopStart, LoopEnd;
     resampler_t Resampler;
     ALuint BuffersPlayed;
     ALboolean Looping;
@@ -993,8 +992,6 @@ next_source:
     DataPosInt    = ALSource->position;
     DataPosFrac   = ALSource->position_fraction;
     Looping       = ALSource->bLooping;
-    LoopStart     = ALSource->LoopStart;
-    LoopEnd       = ALSource->LoopEnd;
 
     /* Compute 18.14 fixed point step */
     Pitch = (ALSource->Params.Pitch*Frequency) / DeviceFreq;
@@ -1033,6 +1030,8 @@ next_source:
 
     while(State == AL_PLAYING && j < SamplesToDo)
     {
+        ALuint LoopStart = 0;
+        ALuint LoopEnd = 0;
         ALuint DataSize = 0;
         ALbuffer *ALBuffer;
         ALfloat *Data;
@@ -1044,6 +1043,8 @@ next_source:
             Data      = ALBuffer->data;
             DataSize  = ALBuffer->size;
             DataSize /= Channels * Bytes;
+            LoopStart = ALBuffer->LoopStart;
+            LoopEnd   = ALBuffer->LoopEnd;
         }
         if(DataPosInt >= DataSize)
             goto skipmix;

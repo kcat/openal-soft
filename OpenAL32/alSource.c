@@ -564,9 +564,6 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             Source->queue = BufferListItem;
                             Source->BuffersInQueue = 1;
 
-                            Source->LoopStart = buffer->LoopStart;
-                            Source->LoopEnd = buffer->LoopEnd;
-
                             // Increment reference counter for buffer
                             buffer->refcount++;
                         }

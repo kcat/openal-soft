@@ -268,7 +268,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
     if(!Context) return;
 
     device = Context->Device;
-    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) != NULL)
+    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
+        alSetError(Context, AL_INVALID_NAME); /* Invalid Buffer Name */
+    else
     {
         if(Context->SampleSource)
         {
@@ -285,7 +287,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             data = Context->SampleSource->data + offset;
         }
 
-        if(ALBuf->refcount==0)
+        if(size < 0)
+            alSetError(Context, AL_INVALID_VALUE);
+        else if(ALBuf->refcount != 0)
+            alSetError(Context, AL_INVALID_VALUE);
+        else
         {
             switch(format)
             {
@@ -514,16 +520,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     break;
             }
         }
-        else
-        {
-            // Buffer is in use, or data is a NULL pointer
-            alSetError(Context, AL_INVALID_VALUE);
-        }
-    }
-    else
-    {
-        // Invalid Buffer Name
-        alSetError(Context, AL_INVALID_NAME);
     }
 
     ProcessContext(Context);

@@ -391,16 +391,16 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
                 case AL_FORMAT_MONO_IMA4:
                 case AL_FORMAT_STEREO_IMA4: {
-                    int OrigChans = ((format==AL_FORMAT_MONO_IMA4) ? 1 : 2);
-                    ALenum NewFormat = ((OrigChans==1) ? AL_FORMAT_MONO_FLOAT32 :
-                                                         AL_FORMAT_STEREO_FLOAT32);
+                    int Channels = ((format==AL_FORMAT_MONO_IMA4) ? 1 : 2);
+                    ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
+                                                        AL_FORMAT_STEREO_FLOAT32);
                     ALuint NewBytes = aluBytesFromFormat(NewFormat);
                     ALsizei newsize;
 
                     // Here is where things vary:
                     // nVidia and Apple use 64+1 samples per channel per block => block_size=36*chans bytes
                     // Most PC sound software uses 2040+1 samples per channel per block -> block_size=1024*chans bytes
-                    if((size%(36*OrigChans)) != 0)
+                    if((size%(36*Channels)) != 0)
                     {
                         alSetError(Context, AL_INVALID_VALUE);
                         break;
@@ -410,11 +410,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     newsize *= 65;
 
                     // Allocate extra padding samples
-                    temp = realloc(ALBuf->data, (BUFFER_PADDING*OrigChans + newsize)*NewBytes);
+                    temp = realloc(ALBuf->data, (BUFFER_PADDING*Channels + newsize)*NewBytes);
                     if(temp)
                     {
                         ALBuf->data = temp;
-                        ConvertDataIMA4(ALBuf->data, data, OrigChans, newsize/65);
+                        ConvertDataIMA4(ALBuf->data, data, Channels, newsize/65);
 
                         ALBuf->format = NewFormat;
                         ALBuf->eOriginalFormat = format;
@@ -422,10 +422,10 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         ALBuf->frequency = freq;
 
                         ALBuf->LoopStart = 0;
-                        ALBuf->LoopEnd = newsize / OrigChans;
+                        ALBuf->LoopEnd = newsize / Channels;
 
                         ALBuf->OriginalSize = size;
-                        ALBuf->OriginalAlign = 36 * OrigChans;
+                        ALBuf->OriginalAlign = 36 * Channels;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);
@@ -479,13 +479,12 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 }   break;
 
                 case AL_FORMAT_REAR_MULAW: {
-                    int OrigChans = 2;
                     ALenum NewFormat = AL_FORMAT_QUAD32;
-                    ALuint NewBytes = aluBytesFromFormat(NewFormat);
                     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
+                    ALuint NewBytes = aluBytesFromFormat(NewFormat);
                     ALsizei newsize;
 
-                    if((size%(1*OrigChans)) != 0)
+                    if((size%(1*2)) != 0)
                     {
                         alSetError(Context, AL_INVALID_VALUE);
                         break;
@@ -509,7 +508,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         ALBuf->LoopEnd = newsize / NewChannels;
 
                         ALBuf->OriginalSize = size;
-                        ALBuf->OriginalAlign = 1 * OrigChans;
+                        ALBuf->OriginalAlign = 1 * 2;
                     }
                     else
                         alSetError(Context, AL_OUT_OF_MEMORY);

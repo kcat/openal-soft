@@ -838,13 +838,15 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
     ALCdevice     *device;
     ALbuffer      *ALBuf;
 
-    (void)plValues;
-
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     device = pContext->Device;
-    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) != NULL)
+    if(!plValues)
+        alSetError(pContext, AL_INVALID_VALUE);
+    else if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
+    else
     {
         switch(eParam)
         {
@@ -872,10 +874,6 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
             alSetError(pContext, AL_INVALID_ENUM);
             break;
         }
-    }
-    else
-    {
-        alSetError(pContext, AL_INVALID_NAME);
     }
 
     ProcessContext(pContext);

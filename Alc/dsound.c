@@ -175,8 +175,7 @@ static ALuint DSoundProc(ALvoid *ptr)
         return 1;
     }
 
-    FrameSize = aluChannelsFromFormat(pDevice->Format) *
-                aluBytesFromFormat(pDevice->Format);
+    FrameSize = aluFrameSizeFromFormat(pDevice->Format);
     FragSize = pDevice->UpdateSize * FrameSize;
 
     IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &LastCursor, NULL);
@@ -406,7 +405,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
         }
         else
             format = device->Format;
-        frameSize = aluBytesFromFormat(format) * aluChannelsFromFormat(format);
+        frameSize = aluFrameSizeFromFormat(format);
 
         OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
         OutputType.Format.nChannels = aluChannelsFromFormat(format);

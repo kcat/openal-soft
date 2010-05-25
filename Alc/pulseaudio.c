@@ -621,8 +621,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     if(!ConfigValueExists(NULL, "frequency"))
         flags |= PA_STREAM_FIX_RATE;
 
-    data->frame_size = aluBytesFromFormat(device->Format) *
-                       aluChannelsFromFormat(device->Format);
+    data->frame_size = aluFrameSizeFromFormat(device->Format);
     data->stream_name = "Playback Stream";
     data->attr.minreq = -1;
     data->attr.prebuf = -1;
@@ -783,8 +782,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     ppa_threaded_mainloop_lock(data->loop);
 
     data->samples = device->UpdateSize * device->NumUpdates;
-    data->frame_size = aluBytesFromFormat(device->Format) *
-                       aluChannelsFromFormat(device->Format);
+    data->frame_size = aluFrameSizeFromFormat(device->Format);
 
     if(!(data->ring = CreateRingBuffer(data->frame_size, data->samples)))
     {

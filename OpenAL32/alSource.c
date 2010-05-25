@@ -1937,8 +1937,7 @@ static ALboolean ApplyOffset(ALsource *Source)
 
             // SW Mixer Positions are in Samples
             Source->position = (lByteOffset - lTotalBufferSize) /
-                                aluBytesFromFormat(Buffer->format) /
-                                aluChannelsFromFormat(Buffer->format);
+                                aluFrameSizeFromFormat(Buffer->format);
             return AL_TRUE;
         }
 

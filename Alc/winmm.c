@@ -402,8 +402,7 @@ static void WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lS
     ALuint ulBytes, ulBytesToCopy;
     ALuint ulCapturedSamples;
     ALuint ulReadOffset;
-    ALuint frameSize = aluBytesFromFormat(pDevice->Format) *
-                       aluChannelsFromFormat(pDevice->Format);
+    ALuint frameSize = aluFrameSizeFromFormat(pDevice->Format);
 
     // Check that we have the requested numbers of Samples
     ulCapturedSamples = (pData->ulWriteCapturedDataPos -
@@ -444,8 +443,7 @@ static ALCuint WinMMAvailableSamples(ALCdevice *pDevice)
 {
     WinMMData *pData = (WinMMData*)pDevice->ExtraData;
     ALCuint lCapturedBytes = (pData->ulWriteCapturedDataPos - pData->ulReadCapturedDataPos);
-    return lCapturedBytes / (aluBytesFromFormat(pDevice->Format) *
-                             aluChannelsFromFormat(pDevice->Format));
+    return lCapturedBytes / aluFrameSizeFromFormat(pDevice->Format);
 }
 
 

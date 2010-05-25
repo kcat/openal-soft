@@ -947,8 +947,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
 
     psnd_pcm_hw_params_free(p);
 
-    frameSize  = aluChannelsFromFormat(pDevice->Format);
-    frameSize *= aluBytesFromFormat(pDevice->Format);
+    frameSize = aluFrameSizeFromFormat(pDevice->Format);
 
     data->ring = CreateRingBuffer(frameSize, pDevice->UpdateSize*pDevice->NumUpdates);
     if(!data->ring)

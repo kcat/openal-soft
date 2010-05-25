@@ -316,8 +316,7 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
         return ALC_FALSE;
     }
 
-    frame_size = aluChannelsFromFormat(device->Format) *
-                 aluBytesFromFormat(device->Format);
+    frame_size = aluFrameSizeFromFormat(device->Format);
     data->ring = CreateRingBuffer(frame_size, device->UpdateSize*device->NumUpdates);
     if(data->ring == NULL)
     {

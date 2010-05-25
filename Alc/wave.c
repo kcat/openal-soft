@@ -77,8 +77,7 @@ static ALuint WaveProc(ALvoid *ptr)
     } uSB;
 
     uSB.s = 1;
-    frameSize = aluBytesFromFormat(pDevice->Format) *
-                aluChannelsFromFormat(pDevice->Format);
+    frameSize = aluFrameSizeFromFormat(pDevice->Format);
 
     last = timeGetTime()<<8;
     while(!data->killNow && pDevice->Connected)

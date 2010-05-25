@@ -84,8 +84,7 @@ static ALuint OSSProc(ALvoid *ptr)
 
     SetRTPriority();
 
-    frameSize = aluChannelsFromFormat(pDevice->Format) *
-                aluBytesFromFormat(pDevice->Format);
+    frameSize = aluFrameSizeFromFormat(pDevice->Format);
 
     while(!data->killNow && pDevice->Connected)
     {
@@ -126,8 +125,7 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
 
     SetRTPriority();
 
-    frameSize  = aluBytesFromFormat(pDevice->Format);
-    frameSize *= aluChannelsFromFormat(pDevice->Format);
+    frameSize = aluFrameSizeFromFormat(pDevice->Format);
 
     while(!data->killNow)
     {

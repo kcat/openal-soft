@@ -838,8 +838,7 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
                 alSetError(pContext, AL_INVALID_VALUE);
             else
             {
-                ALint maxlen = ALBuf->size / aluBytesFromFormat(ALBuf->format) /
-                                             aluChannelsFromFormat(ALBuf->format);
+                ALint maxlen = ALBuf->size / aluFrameSizeFromFormat(ALBuf->format);
                 if(plValues[0] > maxlen || plValues[1] > maxlen)
                     alSetError(pContext, AL_INVALID_VALUE);
                 else

@@ -158,6 +158,10 @@ static __inline ALuint aluChannelsFromFormat(ALenum format)
             return 0;
     }
 }
+static __inline ALuint aluFrameSizeFromFormat(ALenum format)
+{
+    return aluBytesFromFormat(format) * aluChannelsFromFormat(format);
+}
 
 static __inline ALint aluCart2LUTpos(ALfloat re, ALfloat im)
 {

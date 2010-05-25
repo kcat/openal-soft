@@ -582,10 +582,10 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const A
             alSetError(Context, AL_INVALID_VALUE);
         else if(ALBuf->eOriginalFormat != format)
             alSetError(Context, AL_INVALID_ENUM);
-        else if(ALBuf->OriginalAlign == 0 ||
+        else if(offset+length < offset ||
+                offset+length > ALBuf->OriginalSize ||
                 (offset%ALBuf->OriginalAlign) != 0 ||
-                (length%ALBuf->OriginalAlign) != 0 ||
-                offset+length > ALBuf->OriginalSize)
+                (length%ALBuf->OriginalAlign) != 0)
             alSetError(Context, AL_INVALID_VALUE);
         else
         {

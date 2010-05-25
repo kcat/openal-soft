@@ -426,7 +426,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     if(temp)
                     {
                         ALBuf->data = temp;
-                        ConvertDataIMA4(ALBuf->data, data, Channels, newsize/65);
+                        ConvertDataIMA4(ALBuf->data, data, Channels, newsize/(65*Channels));
 
                         ALBuf->format = NewFormat;
                         ALBuf->eOriginalFormat = format;
@@ -647,7 +647,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const A
                     // offset -> sample*channel offset, length -> block count
                     offset /= 36;
                     offset *= 65;
-                    length /= 36;
+                    length /= ALBuf->OriginalAlign;
 
                     ConvertDataIMA4(&ALBuf->data[offset], data, Channels, length);
                 }   break;
@@ -1251,7 +1251,7 @@ static void ConvertDataRear(ALfloat *dst, const ALvoid *src, ALint origBytes, AL
     }
 }
 
-static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, ALsizei len)
+static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint chans, ALsizei len)
 {
     const ALubyte *IMAData;
     ALint Sample[2],Index[2];
@@ -1262,9 +1262,9 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, AL
         return;
 
     IMAData = src;
-    for(i = 0;i < len/origChans;i++)
+    for(i = 0;i < len;i++)
     {
-        for(c = 0;c < origChans;c++)
+        for(c = 0;c < chans;c++)
         {
             Sample[c]  = IMAData[0];
             Sample[c] |= IMAData[1] << 8;
@@ -1276,14 +1276,14 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, AL
             Index[c] = ((Index[c]<0) ? 0 : Index[c]);
             Index[c] = ((Index[c]>88) ? 88 : Index[c]);
 
-            dst[i*65*origChans + c] = ((Sample[c] < 0) ? (Sample[c]/32768.0f) : (Sample[c]/32767.0f));
+            dst[i*65*chans + c] = ((Sample[c] < 0) ? (Sample[c]/32768.0f) : (Sample[c]/32767.0f));
 
             IMAData += 4;
         }
 
         for(j = 1;j < 65;j += 8)
         {
-            for(c = 0;c < origChans;c++)
+            for(c = 0;c < chans;c++)
             {
                 IMACode[c]  = *(IMAData++);
                 IMACode[c] |= *(IMAData++) << 8;
@@ -1293,7 +1293,7 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, AL
 
             for(k = 0;k < 8;k++)
             {
-                for(c = 0;c < origChans;c++)
+                for(c = 0;c < chans;c++)
                 {
                     Sample[c] += ((g_IMAStep_size[Index[c]]*g_IMACodeword_4[IMACode[c]&15])/8);
                     Index[c] += g_IMAIndex_adjust_4[IMACode[c]&15];
@@ -1304,7 +1304,7 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, AL
                     if(Index[c]<0) Index[c] = 0;
                     else if(Index[c]>88) Index[c] = 88;
 
-                    dst[(i*65+j+k)*origChans + c] = ((Sample[c] < 0) ? (Sample[c]/32768.0f) : (Sample[c]/32767.0f));
+                    dst[(i*65+j+k)*chans + c] = ((Sample[c] < 0) ? (Sample[c]/32768.0f) : (Sample[c]/32767.0f));
                     IMACode[c] >>= 4;
                 }
             }

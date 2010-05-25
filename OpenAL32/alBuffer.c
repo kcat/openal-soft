@@ -1266,19 +1266,17 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint chans, ALsize
     {
         for(c = 0;c < chans;c++)
         {
-            Sample[c]  = IMAData[0];
-            Sample[c] |= IMAData[1] << 8;
+            Sample[c]  = *(IMAData++);
+            Sample[c] |= *(IMAData++) << 8;
             Sample[c]  = (Sample[c]^0x8000) - 32768;
-            Index[c]  = IMAData[2];
-            Index[c] |= IMAData[3] << 8;
+            Index[c]  = *(IMAData++);
+            Index[c] |= *(IMAData++) << 8;
             Index[c]  = (Index[c]^0x8000) - 32768;
 
             Index[c] = ((Index[c]<0) ? 0 : Index[c]);
             Index[c] = ((Index[c]>88) ? 88 : Index[c]);
 
             dst[i*65*chans + c] = ((Sample[c] < 0) ? (Sample[c]/32768.0f) : (Sample[c]/32767.0f));
-
-            IMAData += 4;
         }
 
         for(j = 1;j < 65;j += 8)

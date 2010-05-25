@@ -74,9 +74,9 @@ typedef enum {
     OUTPUTCHANNELS
 } Channel;
 
-#define BUFFERSIZE 16384
+#define BUFFERSIZE 8192
 
-/* NOTE: The AL_FORMAT_REAR* enums aren't handled here be cause they're
+/* NOTE: The AL_FORMAT_REAR* enums aren't handled here because they're
  *       converted to AL_FORMAT_QUAD* when loaded */
 static __inline ALuint aluBytesFromFormat(ALenum format)
 {

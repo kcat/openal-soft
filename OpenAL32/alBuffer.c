@@ -121,7 +121,9 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
         ALenum err;
 
         // Check the pointer is valid (and points to enough memory to store Buffer Names)
-        if(!IsBadWritePtr((void*)buffers, n * sizeof(ALuint)))
+        if(IsBadWritePtr((void*)buffers, n * sizeof(ALuint)))
+            alSetError(Context, AL_INVALID_VALUE);
+        else
         {
             // Create all the new Buffers
             while(i < n)
@@ -150,11 +152,6 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
                 buffers[i++] = buffer->buffer;
             }
         }
-        else
-        {
-            // Pointer does not point to enough memory to write Buffer names
-            alSetError(Context, AL_INVALID_VALUE);
-        }
     }
 
     ProcessContext(Context);
@@ -170,15 +167,17 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
     ALCcontext *Context;
     ALbuffer *ALBuf;
     ALsizei i;
-    ALboolean bFailed = AL_FALSE;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
     // Check we are actually Deleting some Buffers
-    if (n >= 0)
+    if(n < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
         ALCdevice *device = Context->Device;
+        ALboolean bFailed = AL_FALSE;
 
         // Check that all the buffers are valid and can actually be deleted
         for (i = 0; i < n; i++)
@@ -226,8 +225,6 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
             }
         }
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
 
     ProcessContext(Context);
 }
@@ -562,7 +559,9 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const A
     if(!Context) return;
 
     device = Context->Device;
-    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) != NULL)
+    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else
     {
         if(Context->SampleSource)
         {
@@ -580,10 +579,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const A
         }
 
         if(length < 0 || offset < 0 || (length > 0 && data == NULL))
-        {
-            // data is NULL or offset/length is negative
             alSetError(Context, AL_INVALID_VALUE);
-        }
         else if(ALBuf->eOriginalFormat != format)
             alSetError(Context, AL_INVALID_ENUM);
         else if(ALBuf->OriginalAlign == 0 ||
@@ -673,11 +669,6 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const A
             }
         }
     }
-    else
-    {
-        // Invalid Buffer Name
-        alSetError(Context, AL_INVALID_NAME);
-    }
 
     ProcessContext(Context);
 }
@@ -694,7 +685,8 @@ AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
     if(!pContext) return;
 
     device = pContext->Device;
-    if(LookupBuffer(device->BufferMap, buffer) != NULL)
+    if(LookupBuffer(device->BufferMap, buffer) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
     {
         switch(eParam)
         {
@@ -702,10 +694,6 @@ AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
             alSetError(pContext, AL_INVALID_ENUM);
             break;
         }
-    }
-    else
-    {
-        alSetError(pContext, AL_INVALID_NAME);
     }
 
     ProcessContext(pContext);
@@ -725,7 +713,9 @@ AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum eParam, ALfloat flValue
     if(!pContext) return;
 
     device = pContext->Device;
-    if(LookupBuffer(device->BufferMap, buffer) != NULL)
+    if(LookupBuffer(device->BufferMap, buffer) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
+    else
     {
         switch(eParam)
         {
@@ -733,10 +723,6 @@ AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum eParam, ALfloat flValue
             alSetError(pContext, AL_INVALID_ENUM);
             break;
         }
-    }
-    else
-    {
-        alSetError(pContext, AL_INVALID_NAME);
     }
 
     ProcessContext(pContext);
@@ -748,13 +734,15 @@ AL_API void AL_APIENTRY alBufferfv(ALuint buffer, ALenum eParam, const ALfloat* 
     ALCcontext    *pContext;
     ALCdevice     *device;
 
-    (void)flValues;
-
     pContext = GetContextSuspended();
     if(!pContext) return;
 
     device = pContext->Device;
-    if(LookupBuffer(device->BufferMap, buffer) != NULL)
+    if(!flValues)
+        alSetError(pContext, AL_INVALID_VALUE);
+    else if(LookupBuffer(device->BufferMap, buffer) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
+    else
     {
         switch(eParam)
         {
@@ -762,10 +750,6 @@ AL_API void AL_APIENTRY alBufferfv(ALuint buffer, ALenum eParam, const ALfloat* 
             alSetError(pContext, AL_INVALID_ENUM);
             break;
         }
-    }
-    else
-    {
-        alSetError(pContext, AL_INVALID_NAME);
     }
 
     ProcessContext(pContext);
@@ -783,7 +767,9 @@ AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum eParam, ALint lValue)
     if(!pContext) return;
 
     device = pContext->Device;
-    if(LookupBuffer(device->BufferMap, buffer) != NULL)
+    if(LookupBuffer(device->BufferMap, buffer) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
+    else
     {
         switch(eParam)
         {
@@ -791,10 +777,6 @@ AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum eParam, ALint lValue)
             alSetError(pContext, AL_INVALID_ENUM);
             break;
         }
-    }
-    else
-    {
-        alSetError(pContext, AL_INVALID_NAME);
     }
 
     ProcessContext(pContext);
@@ -814,7 +796,9 @@ AL_API void AL_APIENTRY alBuffer3i( ALuint buffer, ALenum eParam, ALint lValue1,
     if(!pContext) return;
 
     device = pContext->Device;
-    if(LookupBuffer(device->BufferMap, buffer) != NULL)
+    if(LookupBuffer(device->BufferMap, buffer) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
+    else
     {
         switch(eParam)
         {
@@ -822,10 +806,6 @@ AL_API void AL_APIENTRY alBuffer3i( ALuint buffer, ALenum eParam, ALint lValue1,
             alSetError(pContext, AL_INVALID_ENUM);
             break;
         }
-    }
-    else
-    {
-        alSetError(pContext, AL_INVALID_NAME);
     }
 
     ProcessContext(pContext);
@@ -888,26 +868,19 @@ AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pf
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if (pflValue)
-    {
-        device = pContext->Device;
-        if(LookupBuffer(device->BufferMap, buffer) != NULL)
-        {
-            switch(eParam)
-            {
-            default:
-                alSetError(pContext, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else
-        {
-            alSetError(pContext, AL_INVALID_NAME);
-        }
-    }
+    device = pContext->Device;
+    if(!pflValue)
+        alSetError(pContext, AL_INVALID_VALUE);
+    else if(LookupBuffer(device->BufferMap, buffer) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
     else
     {
-        alSetError(pContext, AL_INVALID_VALUE);
+        switch(eParam)
+        {
+        default:
+            alSetError(pContext, AL_INVALID_ENUM);
+            break;
+        }
     }
 
     ProcessContext(pContext);
@@ -922,26 +895,19 @@ AL_API void AL_APIENTRY alGetBuffer3f(ALuint buffer, ALenum eParam, ALfloat* pfl
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if ((pflValue1) && (pflValue2) && (pflValue3))
-    {
-        device = pContext->Device;
-        if(LookupBuffer(device->BufferMap, buffer) != NULL)
-        {
-            switch(eParam)
-            {
-            default:
-                alSetError(pContext, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else
-        {
-            alSetError(pContext, AL_INVALID_NAME);
-        }
-    }
+    device = pContext->Device;
+    if(!pflValue1 || !pflValue2 || !pflValue3)
+        alSetError(pContext, AL_INVALID_VALUE);
+    else if(LookupBuffer(device->BufferMap, buffer) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
     else
     {
-        alSetError(pContext, AL_INVALID_VALUE);
+        switch(eParam)
+        {
+        default:
+            alSetError(pContext, AL_INVALID_ENUM);
+            break;
+        }
     }
 
     ProcessContext(pContext);
@@ -956,26 +922,19 @@ AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum eParam, ALfloat* pfl
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if (pflValues)
-    {
-        device = pContext->Device;
-        if(LookupBuffer(device->BufferMap, buffer) != NULL)
-        {
-            switch(eParam)
-            {
-            default:
-                alSetError(pContext, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else
-        {
-            alSetError(pContext, AL_INVALID_NAME);
-        }
-    }
+    device = pContext->Device;
+    if(!pflValues)
+        alSetError(pContext, AL_INVALID_VALUE);
+    else if(LookupBuffer(device->BufferMap, buffer) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
     else
     {
-        alSetError(pContext, AL_INVALID_VALUE);
+        switch(eParam)
+        {
+        default:
+            alSetError(pContext, AL_INVALID_ENUM);
+            break;
+        }
     }
 
     ProcessContext(pContext);
@@ -991,42 +950,35 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plVa
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if (plValue)
-    {
-        device = pContext->Device;
-        if((pBuffer=LookupBuffer(device->BufferMap, buffer)) != NULL)
-        {
-            switch (eParam)
-            {
-            case AL_FREQUENCY:
-                *plValue = pBuffer->frequency;
-                break;
-
-            case AL_BITS:
-                *plValue = aluBytesFromFormat(pBuffer->format) * 8;
-                break;
-
-            case AL_CHANNELS:
-                *plValue = aluChannelsFromFormat(pBuffer->format);
-                break;
-
-            case AL_SIZE:
-                *plValue = pBuffer->size;
-                break;
-
-            default:
-                alSetError(pContext, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else
-        {
-            alSetError(pContext, AL_INVALID_NAME);
-        }
-    }
+    device = pContext->Device;
+    if(!plValue)
+        alSetError(pContext, AL_INVALID_VALUE);
+    else if((pBuffer=LookupBuffer(device->BufferMap, buffer)) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
     else
     {
-        alSetError(pContext, AL_INVALID_VALUE);
+        switch(eParam)
+        {
+        case AL_FREQUENCY:
+            *plValue = pBuffer->frequency;
+            break;
+
+        case AL_BITS:
+            *plValue = aluBytesFromFormat(pBuffer->format) * 8;
+            break;
+
+        case AL_CHANNELS:
+            *plValue = aluChannelsFromFormat(pBuffer->format);
+            break;
+
+        case AL_SIZE:
+            *plValue = pBuffer->size;
+            break;
+
+        default:
+            alSetError(pContext, AL_INVALID_ENUM);
+            break;
+        }
     }
 
     ProcessContext(pContext);
@@ -1041,26 +993,19 @@ AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum eParam, ALint* plVal
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if ((plValue1) && (plValue2) && (plValue3))
-    {
-        device = pContext->Device;
-        if(LookupBuffer(device->BufferMap, buffer) != NULL)
-        {
-            switch(eParam)
-            {
-            default:
-                alSetError(pContext, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else
-        {
-            alSetError(pContext, AL_INVALID_NAME);
-        }
-    }
+    device = pContext->Device;
+    if(!plValue1 || !plValue2 || !plValue3)
+        alSetError(pContext, AL_INVALID_VALUE);
+    else if(LookupBuffer(device->BufferMap, buffer) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
     else
     {
-        alSetError(pContext, AL_INVALID_VALUE);
+        switch(eParam)
+        {
+        default:
+            alSetError(pContext, AL_INVALID_ENUM);
+            break;
+        }
     }
 
     ProcessContext(pContext);
@@ -1076,38 +1021,31 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
     pContext = GetContextSuspended();
     if(!pContext) return;
 
-    if (plValues)
-    {
-        device = pContext->Device;
-        if((ALBuf=LookupBuffer(device->BufferMap, buffer)) != NULL)
-        {
-            switch (eParam)
-            {
-            case AL_FREQUENCY:
-            case AL_BITS:
-            case AL_CHANNELS:
-            case AL_SIZE:
-                alGetBufferi(buffer, eParam, plValues);
-                break;
-
-            case AL_LOOP_POINTS:
-                plValues[0] = ALBuf->LoopStart;
-                plValues[1] = ALBuf->LoopEnd;
-                break;
-
-            default:
-                alSetError(pContext, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else
-        {
-            alSetError(pContext, AL_INVALID_NAME);
-        }
-    }
+    device = pContext->Device;
+    if(!plValues)
+        alSetError(pContext, AL_INVALID_VALUE);
+    else if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
+        alSetError(pContext, AL_INVALID_NAME);
     else
     {
-        alSetError(pContext, AL_INVALID_VALUE);
+        switch(eParam)
+        {
+        case AL_FREQUENCY:
+        case AL_BITS:
+        case AL_CHANNELS:
+        case AL_SIZE:
+            alGetBufferi(buffer, eParam, plValues);
+            break;
+
+        case AL_LOOP_POINTS:
+            plValues[0] = ALBuf->LoopStart;
+            plValues[1] = ALBuf->LoopEnd;
+            break;
+
+        default:
+            alSetError(pContext, AL_INVALID_ENUM);
+            break;
+        }
     }
 
     ProcessContext(pContext);

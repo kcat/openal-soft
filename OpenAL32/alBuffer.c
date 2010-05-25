@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <limits.h>
+
 #include "alMain.h"
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -322,7 +324,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
                                         ((format==AL_FORMAT_REAR16) ? 2 :
                                          4));
-                    ALsizei newsize;
+                    ALuint64 newsize, allocsize;
 
                     if((size%(OrigBytes*2)) != 0)
                     {
@@ -333,8 +335,13 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     newsize = size / OrigBytes;
                     newsize *= 2;
 
-                    // Samples are converted here
-                    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + newsize) * NewBytes);
+                    allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
+                    if(allocsize > INT_MAX)
+                    {
+                        alSetError(Context, AL_OUT_OF_MEMORY);
+                        break;
+                    }
+                    temp = realloc(ALBuf->data, allocsize);
                     if(temp)
                     {
                         ALBuf->data = temp;
@@ -395,7 +402,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
                                                         AL_FORMAT_STEREO_FLOAT32);
                     ALuint NewBytes = aluBytesFromFormat(NewFormat);
-                    ALsizei newsize;
+                    ALuint64 newsize, allocsize;
 
                     // Here is where things vary:
                     // nVidia and Apple use 64+1 samples per channel per block => block_size=36*chans bytes
@@ -409,8 +416,13 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     newsize = size / 36;
                     newsize *= 65;
 
-                    // Allocate extra padding samples
-                    temp = realloc(ALBuf->data, (BUFFER_PADDING*Channels + newsize)*NewBytes);
+                    allocsize = (BUFFER_PADDING*Channels + newsize)*NewBytes;
+                    if(allocsize > INT_MAX)
+                    {
+                        alSetError(Context, AL_OUT_OF_MEMORY);
+                        break;
+                    }
+                    temp = realloc(ALBuf->data, allocsize);
                     if(temp)
                     {
                         ALBuf->data = temp;
@@ -449,6 +461,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                                            ((Channels==7) ? AL_FORMAT_61CHN32 :
                                                             AL_FORMAT_71CHN32)))));
                     ALuint NewBytes = aluBytesFromFormat(NewFormat);
+                    ALuint64 allocsize;
 
                     if((size%(1*Channels)) != 0)
                     {
@@ -456,8 +469,13 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                         break;
                     }
 
-                    // Allocate extra padding samples
-                    temp = realloc(ALBuf->data, (BUFFER_PADDING*Channels + size)*NewBytes);
+                    allocsize = (BUFFER_PADDING*Channels + size)*NewBytes;
+                    if(allocsize > INT_MAX)
+                    {
+                        alSetError(Context, AL_OUT_OF_MEMORY);
+                        break;
+                    }
+                    temp = realloc(ALBuf->data, allocsize);
                     if(temp)
                     {
                         ALBuf->data = temp;
@@ -482,7 +500,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                     ALenum NewFormat = AL_FORMAT_QUAD32;
                     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
                     ALuint NewBytes = aluBytesFromFormat(NewFormat);
-                    ALsizei newsize;
+                    ALuint64 newsize, allocsize;
 
                     if((size%(1*2)) != 0)
                     {
@@ -492,8 +510,13 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
                     newsize = size * 2;
 
-                    // Allocate extra padding samples
-                    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + newsize)*NewBytes);
+                    allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
+                    if(allocsize > INT_MAX)
+                    {
+                        alSetError(Context, AL_OUT_OF_MEMORY);
+                        break;
+                    }
+                    temp = realloc(ALBuf->data, allocsize);
                     if(temp)
                     {
                         ALBuf->data = temp;
@@ -1106,7 +1129,7 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
     ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
     ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
-    ALsizei newsize;
+    ALuint64 newsize, allocsize;
     ALvoid *temp;
 
     assert(NewBytes == 4);
@@ -1115,12 +1138,17 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     if ((size%(OrigBytes*OrigChannels)) != 0)
         return AL_INVALID_VALUE;
 
-    // Samples are converted here
+    // Allocate extra padding samples
     newsize = size / OrigBytes;
-    temp = realloc(ALBuf->data, (BUFFER_PADDING*NewChannels + newsize) * NewBytes);
-    if(!temp) return AL_OUT_OF_MEMORY;
+    allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
+    if(allocsize > INT_MAX)
+        return AL_OUT_OF_MEMORY;
 
+    temp = realloc(ALBuf->data, allocsize);
+    if(!temp) return AL_OUT_OF_MEMORY;
     ALBuf->data = temp;
+
+    // Samples are converted here
     ConvertData(ALBuf->data, data, OrigBytes, newsize);
 
     ALBuf->format = NewFormat;

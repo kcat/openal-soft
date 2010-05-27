@@ -1586,6 +1586,15 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         device->Bs2b = NULL;
     }
 
+    if(aluChannelsFromFormat(device->Format) <= 2)
+    {
+        device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
+        device->HeadDampen = __min(device->HeadDampen, 1.0f);
+        device->HeadDampen = __max(device->HeadDampen, 0.0f);
+    }
+    else
+        device->HeadDampen = 0.0f;
+
     temp = realloc(device->Contexts, (device->NumContexts+1) * sizeof(*device->Contexts));
     if(!temp)
     {
@@ -1989,14 +1998,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
-    if(aluChannelsFromFormat(device->Format) <= 2)
-    {
-        device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
-        device->HeadDampen = __min(device->HeadDampen, 1.0f);
-        device->HeadDampen = __max(device->HeadDampen, 0.0f);
-    }
-    else
-        device->HeadDampen = 0.0f;
+    device->HeadDampen = 0.0f;
 
     // Find a playback device to open
     SuspendContext(NULL);

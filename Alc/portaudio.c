@@ -48,12 +48,11 @@ MAKE_FUNC(Pa_GetStreamInfo);
 
 static const ALCchar pa_device[] = "PortAudio Software";
 static const ALCchar pa_capture[] = "PortAudio Capture";
-static volatile ALuint load_count;
 
 
 void *pa_load(void)
 {
-    if(load_count == 0)
+    if(!pa_handle)
     {
         PaError err;
 
@@ -123,23 +122,11 @@ LOAD_FUNC(Pa_GetStreamInfo);
             return NULL;
         }
     }
-    ++load_count;
-
     return pa_handle;
 }
 
 void pa_unload(void)
 {
-    if(load_count == 0 || --load_count > 0)
-        return;
-
-    pPa_Terminate();
-#ifdef _WIN32
-    FreeLibrary(pa_handle);
-#elif defined(HAVE_DLFCN_H)
-    dlclose(pa_handle);
-#endif
-    pa_handle = NULL;
 }
 
 
@@ -438,6 +425,16 @@ void alc_pa_init(BackendFuncs *func_list)
 
 void alc_pa_deinit(void)
 {
+    if(pa_handle)
+    {
+        pPa_Terminate();
+#ifdef _WIN32
+        FreeLibrary(pa_handle);
+#elif defined(HAVE_DLFCN_H)
+        dlclose(pa_handle);
+#endif
+        pa_handle = NULL;
+    }
 }
 
 void alc_pa_probe(int type)

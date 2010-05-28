@@ -310,6 +310,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcRing.c
               Alc/alcThread.c
               Alc/bs2b.c
+              Alc/null.c
               Alc/wave.c
 )
 
@@ -424,7 +425,7 @@ IF(PULSEAUDIO)
 ENDIF()
 
 # This is always available
-SET(BACKENDS  "${BACKENDS} WaveFile")
+SET(BACKENDS  "${BACKENDS} WaveFile, Null")
 
 # Needed for openal.pc.in
 SET(prefix ${CMAKE_INSTALL_PREFIX})

@@ -117,7 +117,7 @@
 #  unless the list is ended with a comma (eg. 'oss,' will list OSS first
 #  followed by all other available backends, while 'oss' will list OSS only).
 #  An empty list means the default.
-#drivers = pulse,alsa,oss,solaris,dsound,winmm,port,wave
+#drivers = pulse,alsa,oss,solaris,dsound,winmm,port,null,wave
 
 ## excludefx:
 #  Sets which effects to exclude, preventing apps from using them. This can

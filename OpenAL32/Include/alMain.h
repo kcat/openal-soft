@@ -295,6 +295,9 @@ void alc_wave_probe(int type);
 void alc_pulse_init(BackendFuncs *func_list);
 void alc_pulse_deinit(void);
 void alc_pulse_probe(int type);
+void alc_null_init(BackendFuncs *func_list);
+void alc_null_deinit(void);
+void alc_null_probe(int type);
 
 
 typedef struct UIntMap {

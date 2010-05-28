@@ -70,6 +70,7 @@ static BackendInfo BackendList[] = {
     { "port", alc_pa_init, alc_pa_deinit, alc_pa_probe, EmptyFuncs },
 #endif
 
+    { "null", alc_null_init, alc_null_deinit, alc_null_probe, EmptyFuncs },
     { "wave", alc_wave_init, alc_wave_deinit, alc_wave_probe, EmptyFuncs },
 
     { NULL, NULL, NULL, NULL, EmptyFuncs }

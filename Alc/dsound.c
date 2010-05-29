@@ -71,12 +71,11 @@ typedef struct {
 static const ALCchar dsDevice[] = "DirectSound Software";
 static DevMap *DeviceList;
 static ALuint NumDevices;
-static volatile ALuint load_count;
 
 
 void *DSoundLoad(void)
 {
-    if(load_count == 0)
+    if(!ds_handle)
     {
 #ifdef _WIN32
         ds_handle = LoadLibraryA("dsound.dll");
@@ -105,20 +104,7 @@ LOAD_FUNC(DirectSoundCreate);
 LOAD_FUNC(DirectSoundEnumerateA);
 #undef LOAD_FUNC
     }
-    ++load_count;
-
     return ds_handle;
-}
-
-void DSoundUnload(void)
-{
-    if(load_count == 0 || --load_count > 0)
-        return;
-
-#ifdef _WIN32
-    FreeLibrary(ds_handle);
-#endif
-    ds_handle = NULL;
 }
 
 
@@ -259,10 +245,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
             }
         }
         if(i == NumDevices)
-        {
-            DSoundUnload();
             return ALC_FALSE;
-        }
     }
 
     //Initialise requested device
@@ -270,7 +253,6 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     if(!pData)
     {
         alcSetError(device, ALC_OUT_OF_MEMORY);
-        DSoundUnload();
         return ALC_FALSE;
     }
 
@@ -283,7 +265,6 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         if(pData->lpDS)
             IDirectSound_Release(pData->lpDS);
         free(pData);
-        DSoundUnload();
         return ALC_FALSE;
     }
 
@@ -299,8 +280,6 @@ static void DSoundClosePlayback(ALCdevice *device)
     IDirectSound_Release(pData->lpDS);
     free(pData);
     device->ExtraData = NULL;
-
-    DSoundUnload();
 }
 
 static ALCboolean DSoundResetPlayback(ALCdevice *device)
@@ -560,6 +539,14 @@ void alcDSoundDeinit(void)
     free(DeviceList);
     DeviceList = NULL;
     NumDevices = 0;
+
+    if(ds_handle)
+    {
+#ifdef _WIN32
+        FreeLibrary(ds_handle);
+#endif
+        ds_handle = NULL;
+    }
 }
 
 void alcDSoundProbe(int type)
@@ -588,6 +575,4 @@ void alcDSoundProbe(int type)
                 AppendAllDeviceList(DeviceList[i].name);
         }
     }
-
-    DSoundUnload();
 }

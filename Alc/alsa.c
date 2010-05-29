@@ -119,12 +119,11 @@ static DevMap *allDevNameMap;
 static ALuint numDevNames;
 static DevMap *allCaptureDevNameMap;
 static ALuint numCaptureDevNames;
-static volatile ALuint load_count;
 
 
 void *alsa_load(void)
 {
-    if(load_count == 0)
+    if(!alsa_handle)
     {
         char *str;
 
@@ -212,20 +211,7 @@ LOAD_FUNC(snd_card_next);
 
 #undef LOAD_FUNC
     }
-    ++load_count;
-
     return alsa_handle;
-}
-
-void alsa_unload(void)
-{
-    if(load_count == 0 || --load_count > 0)
-        return;
-
-#ifdef HAVE_DLFCN_H
-    dlclose(alsa_handle);
-#endif
-    alsa_handle = NULL;
 }
 
 static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
@@ -561,10 +547,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
             }
         }
         if(idx == numDevNames)
-        {
-            alsa_unload();
             return ALC_FALSE;
-        }
     }
 
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -585,7 +568,6 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     {
         free(data);
         AL_PRINT("Could not open playback device '%s': %s\n", driver, psnd_strerror(i));
-        alsa_unload();
         return ALC_FALSE;
     }
 
@@ -601,8 +583,6 @@ static void alsa_close_playback(ALCdevice *device)
     psnd_pcm_close(data->pcmHandle);
     free(data);
     device->ExtraData = NULL;
-
-    alsa_unload();
 }
 
 static ALCboolean alsa_reset_playback(ALCdevice *device)
@@ -863,10 +843,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
             }
         }
         if(idx == numCaptureDevNames)
-        {
-            alsa_unload();
             return ALC_FALSE;
-        }
     }
 
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -887,7 +864,6 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     {
         AL_PRINT("Could not open capture device '%s': %s\n", driver, psnd_strerror(i));
         free(data);
-        alsa_unload();
         return ALC_FALSE;
     }
 
@@ -980,7 +956,6 @@ error:
     DestroyRingBuffer(data->ring);
     psnd_pcm_close(data->pcmHandle);
     free(data);
-    alsa_unload();
 
     pDevice->ExtraData = NULL;
     return ALC_FALSE;
@@ -999,8 +974,6 @@ static void alsa_close_capture(ALCdevice *pDevice)
     free(data->buffer);
     free(data);
     pDevice->ExtraData = NULL;
-
-    alsa_unload();
 }
 
 static void alsa_start_capture(ALCdevice *pDevice)
@@ -1065,6 +1038,14 @@ void alc_alsa_deinit(void)
     free(allCaptureDevNameMap);
     allCaptureDevNameMap = NULL;
     numCaptureDevNames = 0;
+
+    if(alsa_handle)
+    {
+#ifdef HAVE_DLFCN_H
+        dlclose(alsa_handle);
+#endif
+        alsa_handle = NULL;
+    }
 }
 
 void alc_alsa_probe(int type)
@@ -1098,6 +1079,4 @@ void alc_alsa_probe(int type)
         for(i = 0;i < numCaptureDevNames;++i)
             AppendCaptureDeviceList(allCaptureDevNameMap[i].name);
     }
-
-    alsa_unload();
 }

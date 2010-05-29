@@ -125,10 +125,6 @@ LOAD_FUNC(Pa_GetStreamInfo);
     return pa_handle;
 }
 
-void pa_unload(void)
-{
-}
-
 
 typedef struct {
     PaStream *stream;
@@ -210,7 +206,6 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
             AL_PRINT("Unknown format: 0x%x\n", device->Format);
             device->ExtraData = NULL;
             free(data);
-            pa_unload();
             return ALC_FALSE;
     }
     outParams.channelCount = aluChannelsFromFormat(device->Format);
@@ -224,7 +219,6 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         AL_PRINT("Pa_OpenStream() returned an error: %s\n", pPa_GetErrorText(err));
         device->ExtraData = NULL;
         free(data);
-        pa_unload();
         return ALC_FALSE;
     }
     streamInfo = pPa_GetStreamInfo(data->stream);
@@ -246,8 +240,6 @@ static void pa_close_playback(ALCdevice *device)
 
     free(data);
     device->ExtraData = NULL;
-
-    pa_unload();
 }
 
 static ALCboolean pa_reset_playback(ALCdevice *device)
@@ -350,7 +342,6 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
 error:
     DestroyRingBuffer(data->ring);
     free(data);
-    pa_unload();
     return ALC_FALSE;
 }
 
@@ -365,8 +356,6 @@ static void pa_close_capture(ALCdevice *device)
 
     free(data);
     device->ExtraData = NULL;
-
-    pa_unload();
 }
 
 static void pa_start_capture(ALCdevice *device)
@@ -447,6 +436,4 @@ void alc_pa_probe(int type)
         AppendAllDeviceList(pa_device);
     else if(type == CAPTURE_DEVICE_PROBE)
         AppendCaptureDeviceList(pa_capture);
-
-    pa_unload();
 }

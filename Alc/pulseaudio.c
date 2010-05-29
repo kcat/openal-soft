@@ -141,12 +141,11 @@ typedef struct {
 static const ALCchar pulse_device[] = "PulseAudio Software";
 static const ALCchar pulse_capture_device[] = "PulseAudio Capture";
 static pa_context_flags_t pulse_ctx_flags;
-static volatile ALuint load_count;
 
 
 void *pulse_load(void) //{{{
 {
-    if(load_count == 0)
+    if(!pa_handle)
     {
 #ifdef _WIN32
         pa_handle = LoadLibrary("libpulse-0.dll");
@@ -262,22 +261,7 @@ LOAD_OPTIONAL_FUNC(pa_stream_begin_write);
 #undef LOAD_OPTIONAL_FUNC
 #undef LOAD_FUNC
     }
-    ++load_count;
-
     return pa_handle;
-} //}}}
-
-void pulse_unload(void) //{{{
-{
-    if(load_count == 0 || --load_count > 0)
-        return;
-
-#ifdef _WIN32
-    FreeLibrary(pa_handle);
-#elif defined (HAVE_DLFCN_H)
-    dlclose(pa_handle);
-#endif
-    pa_handle = NULL;
 } //}}}
 
 
@@ -618,10 +602,7 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
         return ALC_FALSE;
 
     if(pulse_open(device, device_name) == ALC_FALSE)
-    {
-        pulse_unload();
         return ALC_FALSE;
-    }
 
     data = device->ExtraData;
 
@@ -663,14 +644,12 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
 
 fail:
     pulse_close(device);
-    pulse_unload();
     return ALC_FALSE;
 } //}}}
 
 static void pulse_close_playback(ALCdevice *device) //{{{
 {
     pulse_close(device);
-    pulse_unload();
 } //}}}
 
 static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
@@ -817,10 +796,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         return ALC_FALSE;
 
     if(pulse_open(device, device_name) == ALC_FALSE)
-    {
-        pulse_unload();
         return ALC_FALSE;
-    }
 
     data = device->ExtraData;
     ppa_threaded_mainloop_lock(data->loop);
@@ -924,14 +900,12 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
 
 fail:
     pulse_close(device);
-    pulse_unload();
     return ALC_FALSE;
 } //}}}
 
 static void pulse_close_capture(ALCdevice *device) //{{{
 {
     pulse_close(device);
-    pulse_unload();
 } //}}}
 
 static void pulse_start_capture(ALCdevice *device) //{{{
@@ -1055,6 +1029,15 @@ void alc_pulse_init(BackendFuncs *func_list) //{{{
 
 void alc_pulse_deinit(void) //{{{
 {
+    if(pa_handle)
+    {
+#ifdef _WIN32
+        FreeLibrary(pa_handle);
+#elif defined (HAVE_DLFCN_H)
+        dlclose(pa_handle);
+#endif
+        pa_handle = NULL;
+    }
 } //}}}
 
 void alc_pulse_probe(int type) //{{{
@@ -1067,7 +1050,5 @@ void alc_pulse_probe(int type) //{{{
         AppendAllDeviceList(pulse_device);
     else if(type == CAPTURE_DEVICE_PROBE)
         AppendCaptureDeviceList(pulse_capture_device);
-
-    pulse_unload();
 } //}}}
 //}}}

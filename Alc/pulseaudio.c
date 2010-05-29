@@ -93,6 +93,7 @@ MAKE_FUNC(pa_stream_get_buffer_attr);
 MAKE_FUNC(pa_stream_get_sample_spec);
 MAKE_FUNC(pa_stream_set_read_callback);
 MAKE_FUNC(pa_stream_set_state_callback);
+MAKE_FUNC(pa_stream_set_moved_callback);
 MAKE_FUNC(pa_stream_new);
 MAKE_FUNC(pa_stream_disconnect);
 MAKE_FUNC(pa_threaded_mainloop_lock);
@@ -238,6 +239,7 @@ LOAD_FUNC(pa_stream_get_buffer_attr);
 LOAD_FUNC(pa_stream_get_sample_spec);
 LOAD_FUNC(pa_stream_set_read_callback);
 LOAD_FUNC(pa_stream_set_state_callback);
+LOAD_FUNC(pa_stream_set_moved_callback);
 LOAD_FUNC(pa_stream_new);
 LOAD_FUNC(pa_stream_disconnect);
 LOAD_FUNC(pa_threaded_mainloop_lock);
@@ -316,6 +318,15 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
         Device->NumUpdates = 1;
 
     ProcessContext(NULL);
+}//}}}
+
+static void stream_device_callback(pa_stream *stream, void *pdata) //{{{
+{
+    ALCdevice *Device = pdata;
+    pulse_data *data = Device->ExtraData;
+
+    free(data->device_name);
+    data->device_name = strdup(ppa_stream_get_device_name(stream));
 }//}}}
 
 static void context_state_callback2(pa_context *context, void *pdata) //{{{
@@ -758,6 +769,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     if(ppa_stream_set_buffer_attr_callback)
         ppa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
 #endif
+    ppa_stream_set_moved_callback(data->stream, stream_device_callback, device);
 
     stream_write_callback(data->stream, data->attr.tlength, device);
     ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
@@ -775,6 +787,11 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
 
     ppa_threaded_mainloop_lock(data->loop);
 
+#if PA_CHECK_VERSION(0,9,15)
+    if(ppa_stream_set_buffer_attr_callback)
+        ppa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
+#endif
+    ppa_stream_set_moved_callback(data->stream, NULL, NULL);
     ppa_stream_set_write_callback(data->stream, NULL, NULL);
     ppa_stream_disconnect(data->stream);
     ppa_stream_unref(data->stream);

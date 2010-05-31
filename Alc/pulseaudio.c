@@ -268,24 +268,22 @@ LOAD_OPTIONAL_FUNC(pa_stream_begin_write);
 // PulseAudio Event Callbacks //{{{
 static void context_state_callback(pa_context *context, void *pdata) //{{{
 {
-    ALCdevice *Device = pdata;
-    pulse_data *data = Device->ExtraData;
+    pa_threaded_mainloop *loop = pdata;
     pa_context_state_t state;
 
     state = ppa_context_get_state(context);
     if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
-        ppa_threaded_mainloop_signal(data->loop, 0);
+        ppa_threaded_mainloop_signal(loop, 0);
 }//}}}
 
 static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
 {
-    ALCdevice *Device = pdata;
-    pulse_data *data = Device->ExtraData;
+    pa_threaded_mainloop *loop = pdata;
     pa_stream_state_t state;
 
     state = ppa_stream_get_state(stream);
     if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
-        ppa_threaded_mainloop_signal(data->loop, 0);
+        ppa_threaded_mainloop_signal(loop, 0);
 }//}}}
 
 static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
@@ -445,7 +443,7 @@ static pa_stream *connect_playback_stream(ALCdevice *device,
         return NULL;
     }
 
-    ppa_stream_set_state_callback(stream, stream_state_callback, device);
+    ppa_stream_set_state_callback(stream, stream_state_callback, data->loop);
 
     if(ppa_stream_connect_playback(stream, data->device_name, attr, flags, NULL, NULL) < 0)
     {
@@ -508,7 +506,7 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
         goto out;
     }
 
-    ppa_context_set_state_callback(data->context, context_state_callback, device);
+    ppa_context_set_state_callback(data->context, context_state_callback, data->loop);
 
     if(ppa_context_connect(data->context, NULL, pulse_ctx_flags, NULL) < 0)
     {
@@ -862,7 +860,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
         goto fail;
     }
 
-    ppa_stream_set_state_callback(data->stream, stream_state_callback, device);
+    ppa_stream_set_state_callback(data->stream, stream_state_callback, data->loop);
 
     flags |= PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY;
     if(ppa_stream_connect_record(data->stream, NULL, &data->attr, flags) < 0)

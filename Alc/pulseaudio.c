@@ -427,6 +427,46 @@ static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //
 } //}}}
 //}}}
 
+static pa_context *connect_context(pa_threaded_mainloop *loop, const char *name)
+{
+    pa_context_state_t state;
+    pa_context *context;
+    int err;
+
+    context = ppa_context_new(ppa_threaded_mainloop_get_api(loop), name);
+    if(!context)
+    {
+        AL_PRINT("pa_context_new() failed\n");
+        return NULL;
+    }
+
+    ppa_context_set_state_callback(context, context_state_callback, loop);
+
+    if((err=ppa_context_connect(context, NULL, pulse_ctx_flags, NULL)) >= 0)
+    {
+        while((state=ppa_context_get_state(context)) != PA_CONTEXT_READY)
+        {
+            if(!PA_CONTEXT_IS_GOOD(state))
+            {
+                err = ppa_context_errno(context);
+                break;
+            }
+
+            ppa_threaded_mainloop_wait(loop);
+        }
+    }
+    ppa_context_set_state_callback(context, NULL, NULL);
+
+    if(err < 0)
+    {
+        AL_PRINT("Context did not connect: %s\n", ppa_strerror(err));
+        ppa_context_unref(context);
+        return NULL;
+    }
+
+    return context;
+}
+
 static pa_stream *connect_playback_stream(ALCdevice *device,
     pa_stream_flags_t flags, pa_buffer_attr *attr, pa_sample_spec *spec,
     pa_channel_map *chanmap)
@@ -473,7 +513,6 @@ static pa_stream *connect_playback_stream(ALCdevice *device,
 static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{{
 {
     pulse_data *data = ppa_xmalloc(sizeof(pulse_data));
-    pa_context_state_t state;
 
     memset(data, 0, sizeof(*data));
 
@@ -487,7 +526,6 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
         AL_PRINT("pa_threaded_mainloop_new() failed!\n");
         goto out;
     }
-
     if(ppa_threaded_mainloop_start(data->loop) < 0)
     {
         AL_PRINT("pa_threaded_mainloop_start() failed\n");
@@ -497,45 +535,11 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
     ppa_threaded_mainloop_lock(data->loop);
     device->ExtraData = data;
 
-    data->context = ppa_context_new(ppa_threaded_mainloop_get_api(data->loop), data->context_name);
+    data->context = connect_context(data->loop, data->context_name);
     if(!data->context)
     {
-        AL_PRINT("pa_context_new() failed\n");
-
         ppa_threaded_mainloop_unlock(data->loop);
         goto out;
-    }
-
-    ppa_context_set_state_callback(data->context, context_state_callback, data->loop);
-
-    if(ppa_context_connect(data->context, NULL, pulse_ctx_flags, NULL) < 0)
-    {
-        AL_PRINT("Context did not connect: %s\n",
-                 ppa_strerror(ppa_context_errno(data->context)));
-
-        ppa_context_unref(data->context);
-        data->context = NULL;
-
-        ppa_threaded_mainloop_unlock(data->loop);
-        goto out;
-    }
-
-    while((state=ppa_context_get_state(data->context)) != PA_CONTEXT_READY)
-    {
-        if(!PA_CONTEXT_IS_GOOD(state))
-        {
-            int err = ppa_context_errno(data->context);
-            if(err != PA_ERR_CONNECTIONREFUSED)
-                AL_PRINT("Context did not get ready: %s\n", ppa_strerror(err));
-
-            ppa_context_unref(data->context);
-            data->context = NULL;
-
-            ppa_threaded_mainloop_unlock(data->loop);
-            goto out;
-        }
-
-        ppa_threaded_mainloop_wait(data->loop);
     }
     ppa_context_set_state_callback(data->context, context_state_callback2, device);
 

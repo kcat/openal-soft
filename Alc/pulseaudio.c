@@ -104,6 +104,7 @@ MAKE_FUNC(pa_channel_map_equal);
 MAKE_FUNC(pa_context_get_server_info);
 MAKE_FUNC(pa_context_get_sink_info_by_name);
 MAKE_FUNC(pa_context_get_sink_info_list);
+MAKE_FUNC(pa_context_get_source_info_list);
 MAKE_FUNC(pa_operation_get_state);
 MAKE_FUNC(pa_operation_unref);
 #if PA_CHECK_VERSION(0,9,15)
@@ -143,9 +144,10 @@ typedef struct {
 
 
 static const ALCchar pulse_device[] = "PulseAudio Software";
-static const ALCchar pulse_capture_device[] = "PulseAudio Capture";
 static DevMap *allDevNameMap;
 static ALuint numDevNames;
+static DevMap *allCaptureDevNameMap;
+static ALuint numCaptureDevNames;
 static pa_context_flags_t pulse_ctx_flags;
 
 
@@ -255,6 +257,7 @@ LOAD_FUNC(pa_channel_map_equal);
 LOAD_FUNC(pa_context_get_server_info);
 LOAD_FUNC(pa_context_get_sink_info_by_name);
 LOAD_FUNC(pa_context_get_sink_info_list);
+LOAD_FUNC(pa_context_get_source_info_list);
 LOAD_FUNC(pa_operation_get_state);
 LOAD_FUNC(pa_operation_unref);
 #if PA_CHECK_VERSION(0,9,15)
@@ -429,6 +432,32 @@ static void sink_device_callback(pa_context *context, const pa_sink_info *info, 
         numDevNames++;
     }
 }//}}}
+
+static void source_device_callback(pa_context *context, const pa_source_info *info, int eol, void *pdata) //{{{
+{
+    pa_threaded_mainloop *loop = pdata;
+    void *temp;
+
+    (void)context;
+
+    if(eol)
+    {
+        ppa_threaded_mainloop_signal(loop, 0);
+        return;
+    }
+
+    temp = realloc(allCaptureDevNameMap, (numCaptureDevNames+1) * sizeof(*allCaptureDevNameMap));
+    if(temp)
+    {
+        char str[256];
+        snprintf(str, sizeof(str), "PulseAudio on %s", info->description);
+
+        allCaptureDevNameMap = temp;
+        allCaptureDevNameMap[numCaptureDevNames].name = strdup(str);
+        allCaptureDevNameMap[numCaptureDevNames].device_name = strdup(info->name);
+        numCaptureDevNames++;
+    }
+}//}}}
 //}}}
 
 // PulseAudio I/O Callbacks //{{{
@@ -547,7 +576,7 @@ static pa_stream *connect_playback_stream(ALCdevice *device,
     return stream;
 }
 
-static void probe_devices()
+static void probe_devices(ALboolean capture)
 {
     pa_threaded_mainloop *loop;
 
@@ -562,12 +591,22 @@ static void probe_devices()
         {
             pa_operation *o;
 
-            allDevNameMap = malloc(sizeof(DevMap) * 1);
-            allDevNameMap[0].name = strdup("PulseAudio on default");
-            allDevNameMap[0].device_name = NULL;
-            numDevNames = 1;
-
-            o = ppa_context_get_sink_info_list(context, sink_device_callback, loop);
+            if(capture == AL_FALSE)
+            {
+                allDevNameMap = malloc(sizeof(DevMap) * 1);
+                allDevNameMap[0].name = strdup("PulseAudio on default");
+                allDevNameMap[0].device_name = NULL;
+                numDevNames = 1;
+                o = ppa_context_get_sink_info_list(context, sink_device_callback, loop);
+            }
+            else
+            {
+                allCaptureDevNameMap = malloc(sizeof(DevMap) * 1);
+                allCaptureDevNameMap[0].name = strdup("PulseAudio Capture");
+                allCaptureDevNameMap[0].device_name = NULL;
+                numCaptureDevNames = 1;
+                o = ppa_context_get_source_info_list(context, source_device_callback, loop);
+            }
             while(ppa_operation_get_state(o) == PA_OPERATION_RUNNING)
                 ppa_threaded_mainloop_wait(loop);
             ppa_operation_unref(o);
@@ -675,7 +714,7 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
         ALuint i;
 
         if(!allDevNameMap)
-            probe_devices();
+            probe_devices(AL_FALSE);
 
         for(i = 0;i < numDevNames;i++)
         {
@@ -869,18 +908,35 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
 
 static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_name) //{{{
 {
+    char *pulse_name = NULL;
     pulse_data *data;
     pa_stream_flags_t flags = 0;
     pa_stream_state_t state;
     pa_channel_map chanmap;
 
-    if(!device_name)
-        device_name = pulse_capture_device;
-    else if(strcmp(device_name, pulse_capture_device) != 0)
-        return ALC_FALSE;
-
     if(!pulse_load())
         return ALC_FALSE;
+
+    if(!allCaptureDevNameMap)
+        probe_devices(AL_TRUE);
+
+    if(!device_name)
+        device_name = allCaptureDevNameMap[0].name;
+    else
+    {
+        ALuint i;
+
+        for(i = 0;i < numCaptureDevNames;i++)
+        {
+            if(strcmp(device_name, allCaptureDevNameMap[i].name) == 0)
+            {
+                pulse_name = allCaptureDevNameMap[i].device_name;
+                break;
+            }
+        }
+        if(i == numCaptureDevNames)
+            return ALC_FALSE;
+    }
 
     if(pulse_open(device, device_name) == ALC_FALSE)
         return ALC_FALSE;
@@ -951,7 +1007,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     ppa_stream_set_state_callback(data->stream, stream_state_callback, data->loop);
 
     flags |= PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY;
-    if(ppa_stream_connect_record(data->stream, NULL, &data->attr, flags) < 0)
+    if(ppa_stream_connect_record(data->stream, pulse_name, &data->attr, flags) < 0)
     {
         AL_PRINT("Stream did not connect: %s\n",
                  ppa_strerror(ppa_context_errno(data->context)));
@@ -1126,6 +1182,15 @@ void alc_pulse_deinit(void) //{{{
     allDevNameMap = NULL;
     numDevNames = 0;
 
+    for(i = 0;i < numCaptureDevNames;++i)
+    {
+        free(allCaptureDevNameMap[i].name);
+        free(allCaptureDevNameMap[i].device_name);
+    }
+    free(allCaptureDevNameMap);
+    allCaptureDevNameMap = NULL;
+    numCaptureDevNames = 0;
+
     if(pa_handle)
     {
 #ifdef _WIN32
@@ -1156,12 +1221,28 @@ void alc_pulse_probe(int type) //{{{
         allDevNameMap = NULL;
         numDevNames = 0;
 
-        probe_devices();
+        probe_devices(AL_FALSE);
 
         for(i = 0;i < numDevNames;i++)
             AppendAllDeviceList(allDevNameMap[i].name);
     }
     else if(type == CAPTURE_DEVICE_PROBE)
-        AppendCaptureDeviceList(pulse_capture_device);
+    {
+        ALuint i;
+
+        for(i = 0;i < numCaptureDevNames;++i)
+        {
+            free(allCaptureDevNameMap[i].name);
+            free(allCaptureDevNameMap[i].device_name);
+        }
+        free(allCaptureDevNameMap);
+        allCaptureDevNameMap = NULL;
+        numCaptureDevNames = 0;
+
+        probe_devices(AL_TRUE);
+
+        for(i = 0;i < numCaptureDevNames;i++)
+            AppendCaptureDeviceList(allCaptureDevNameMap[i].name);
+    }
 } //}}}
 //}}}

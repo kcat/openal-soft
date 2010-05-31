@@ -580,6 +580,21 @@ static void probe_devices(ALboolean capture)
 {
     pa_threaded_mainloop *loop;
 
+    if(capture == AL_FALSE)
+    {
+        allDevNameMap = malloc(sizeof(DevMap) * 1);
+        allDevNameMap[0].name = strdup("PulseAudio Default");
+        allDevNameMap[0].device_name = NULL;
+        numDevNames = 1;
+    }
+    else
+    {
+        allCaptureDevNameMap = malloc(sizeof(DevMap) * 1);
+        allCaptureDevNameMap[0].name = strdup("PulseAudio Capture");
+        allCaptureDevNameMap[0].device_name = NULL;
+        numCaptureDevNames = 1;
+    }
+
     if((loop=ppa_threaded_mainloop_new()) &&
        ppa_threaded_mainloop_start(loop) >= 0)
     {
@@ -592,21 +607,9 @@ static void probe_devices(ALboolean capture)
             pa_operation *o;
 
             if(capture == AL_FALSE)
-            {
-                allDevNameMap = malloc(sizeof(DevMap) * 1);
-                allDevNameMap[0].name = strdup("PulseAudio on default");
-                allDevNameMap[0].device_name = NULL;
-                numDevNames = 1;
                 o = ppa_context_get_sink_info_list(context, sink_device_callback, loop);
-            }
             else
-            {
-                allCaptureDevNameMap = malloc(sizeof(DevMap) * 1);
-                allCaptureDevNameMap[0].name = strdup("PulseAudio Capture");
-                allCaptureDevNameMap[0].device_name = NULL;
-                numCaptureDevNames = 1;
                 o = ppa_context_get_source_info_list(context, source_device_callback, loop);
-            }
             while(ppa_operation_get_state(o) == PA_OPERATION_RUNNING)
                 ppa_threaded_mainloop_wait(loop);
             ppa_operation_unref(o);

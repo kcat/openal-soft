@@ -46,8 +46,7 @@ MAKE_FUNC(Pa_GetStreamInfo);
 #undef MAKE_FUNC
 
 
-static const ALCchar pa_device[] = "PortAudio Software";
-static const ALCchar pa_capture[] = "PortAudio Capture";
+static const ALCchar pa_device[] = "PortAudio Default";
 
 
 void *pa_load(void)
@@ -281,8 +280,8 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
     PaError err;
 
     if(!deviceName)
-        deviceName = pa_capture;
-    else if(strcmp(deviceName, pa_capture) != 0)
+        deviceName = pa_device;
+    else if(strcmp(deviceName, pa_device) != 0)
         return ALC_FALSE;
 
     if(!pa_load())
@@ -435,5 +434,5 @@ void alc_pa_probe(int type)
     else if(type == ALL_DEVICE_PROBE)
         AppendAllDeviceList(pa_device);
     else if(type == CAPTURE_DEVICE_PROBE)
-        AppendCaptureDeviceList(pa_capture);
+        AppendCaptureDeviceList(pa_device);
 }

@@ -37,7 +37,7 @@
 #include <sys/audioio.h>
 
 
-static const ALCchar solaris_device[] = "Solaris Software";
+static const ALCchar solaris_device[] = "Solaris Default";
 
 typedef struct {
     int fd;

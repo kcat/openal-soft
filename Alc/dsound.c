@@ -123,7 +123,7 @@ static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname,
         {
             DeviceList = temp;
 
-            snprintf(str, sizeof(str), "DirectSound Software on %s", desc);
+            snprintf(str, sizeof(str), "%s via DirectSound", desc);
 
             DeviceList[NumDevices].name = strdup(str);
             DeviceList[NumDevices].guid = *guid;

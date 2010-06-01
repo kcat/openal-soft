@@ -114,7 +114,7 @@ MAKE_FUNC(snd_card_next);
 #undef MAKE_FUNC
 
 
-static const ALCchar alsaDevice[] = "ALSA Software";
+static const ALCchar alsaDevice[] = "ALSA Default";
 static DevMap *allDevNameMap;
 static ALuint numDevNames;
 static DevMap *allCaptureDevNameMap;
@@ -231,9 +231,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
         AL_PRINT("Failed to find a card: %s\n", psnd_strerror(err));
 
     DevList = malloc(sizeof(DevMap) * 1);
-    DevList[0].name = strdup((stream == SND_PCM_STREAM_PLAYBACK) ?
-                             "ALSA Software on default" :
-                             "ALSA Capture on default");
+    DevList[0].name = strdup("ALSA Default");
     idx = 1;
     while(card >= 0)
     {
@@ -276,9 +274,8 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
                 DevList = temp;
                 cname = psnd_ctl_card_info_get_name(info);
                 dname = psnd_pcm_info_get_name(pcminfo);
-                snprintf(name, sizeof(name), "ALSA %s on %s [%s] (hw:%d,%d)",
-                         ((stream == SND_PCM_STREAM_PLAYBACK) ?
-                          "Software" : "Capture"), cname, dname, card, dev);
+                snprintf(name, sizeof(name), "%s [%s] (hw:%d,%d) via ALSA",
+                         cname, dname, card, dev);
                 DevList[idx].name = strdup(name);
                 DevList[idx].card = card;
                 DevList[idx].dev = dev;

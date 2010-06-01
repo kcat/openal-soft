@@ -143,7 +143,7 @@ typedef struct {
 } DevMap;
 
 
-static const ALCchar pulse_device[] = "PulseAudio Software";
+static const ALCchar pulse_device[] = "PulseAudio Default";
 static DevMap *allDevNameMap;
 static ALuint numDevNames;
 static DevMap *allCaptureDevNameMap;
@@ -424,7 +424,7 @@ static void sink_device_callback(pa_context *context, const pa_sink_info *info, 
     if(temp)
     {
         char str[256];
-        snprintf(str, sizeof(str), "PulseAudio on %s", info->description);
+        snprintf(str, sizeof(str), "%s via PulseAudio", info->description);
 
         allDevNameMap = temp;
         allDevNameMap[numDevNames].name = strdup(str);
@@ -450,7 +450,7 @@ static void source_device_callback(pa_context *context, const pa_source_info *in
     if(temp)
     {
         char str[256];
-        snprintf(str, sizeof(str), "PulseAudio on %s", info->description);
+        snprintf(str, sizeof(str), "%s via PulseAudio", info->description);
 
         allCaptureDevNameMap = temp;
         allCaptureDevNameMap[numCaptureDevNames].name = strdup(str);
@@ -590,7 +590,7 @@ static void probe_devices(ALboolean capture)
     else
     {
         allCaptureDevNameMap = malloc(sizeof(DevMap) * 1);
-        allCaptureDevNameMap[0].name = strdup("PulseAudio Capture");
+        allCaptureDevNameMap[0].name = strdup("PulseAudio Default");
         allCaptureDevNameMap[0].device_name = NULL;
         numCaptureDevNames = 1;
     }

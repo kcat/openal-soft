@@ -618,12 +618,10 @@ static void probe_devices(ALboolean capture)
             ppa_context_unref(context);
         }
         ppa_threaded_mainloop_unlock(loop);
+        ppa_threaded_mainloop_stop(loop);
     }
     if(loop)
-    {
-        ppa_threaded_mainloop_stop(loop);
         ppa_threaded_mainloop_free(loop);
-    }
 }
 
 

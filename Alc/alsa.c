@@ -221,7 +221,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
     snd_ctl_card_info_t *info;
     snd_pcm_info_t *pcminfo;
     DevMap *DevList;
-    char name[128];
+    char name[1024];
 
     psnd_ctl_card_info_malloc(&info);
     psnd_pcm_info_malloc(&pcminfo);

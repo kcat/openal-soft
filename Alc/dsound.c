@@ -115,7 +115,7 @@ static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname,
 
     if(guid)
     {
-        char str[128];
+        char str[1024];
         void *temp;
 
         temp = realloc(DeviceList, sizeof(DevMap) * (NumDevices+1));

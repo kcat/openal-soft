@@ -69,7 +69,7 @@ static void ProbeDevices(void)
         CaptureDeviceList[i] = NULL;
         if(waveInGetDevCaps(i, &WaveInCaps, sizeof(WAVEINCAPS)) == MMSYSERR_NOERROR)
         {
-            char name[128];
+            char name[1024];
             snprintf(name, sizeof(name), "%s via WaveIn", WaveInCaps.szPname);
             CaptureDeviceList[i] = strdup(name);
         }

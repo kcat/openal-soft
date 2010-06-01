@@ -423,7 +423,7 @@ static void sink_device_callback(pa_context *context, const pa_sink_info *info, 
     temp = realloc(allDevNameMap, (numDevNames+1) * sizeof(*allDevNameMap));
     if(temp)
     {
-        char str[256];
+        char str[1024];
         snprintf(str, sizeof(str), "%s via PulseAudio", info->description);
 
         allDevNameMap = temp;

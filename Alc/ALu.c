@@ -1030,11 +1030,11 @@ next_source:
 
     while(State == AL_PLAYING && j < SamplesToDo)
     {
+        ALfloat *Data = NULL;
         ALuint LoopStart = 0;
         ALuint LoopEnd = 0;
         ALuint DataSize = 0;
         ALbuffer *ALBuffer;
-        ALfloat *Data;
         ALuint BufferSize;
 
         /* Get buffer info */
@@ -1046,8 +1046,6 @@ next_source:
             LoopStart = ALBuffer->LoopStart;
             LoopEnd   = ALBuffer->LoopEnd;
         }
-        if(DataPosInt >= DataSize)
-            goto skipmix;
 
         if(Looping && ALSource->lSourceType == AL_STATIC)
         {
@@ -1061,6 +1059,9 @@ next_source:
             LoopStart = 0;
             LoopEnd = DataSize;
         }
+
+        if(DataPosInt >= DataSize)
+            goto skipmix;
 
         if(BufferListItem->next)
         {

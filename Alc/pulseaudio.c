@@ -1077,75 +1077,49 @@ static void pulse_stop_capture(ALCdevice *device) //{{{
     ppa_threaded_mainloop_unlock(data->loop);
 } //}}}
 
-static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples) //{{{
+static ALCuint pulse_available_samples(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
-    ALCuint available = RingBufferSize(data->ring);
-    const void *buf;
-    size_t length;
-
-    available *= data->frame_size;
-    samples *= data->frame_size;
+    size_t samples;
+    ALCuint ret;
 
     ppa_threaded_mainloop_lock(data->loop);
-    if(available+ppa_stream_readable_size(data->stream) < samples)
-    {
-        ppa_threaded_mainloop_unlock(data->loop);
-        alcSetError(device, ALC_INVALID_VALUE);
-        return;
-    }
-
-    available = min(available, samples);
-    if(available > 0)
-    {
-        ReadRingBuffer(data->ring, buffer, available/data->frame_size);
-        buffer = (ALubyte*)buffer + available;
-        samples -= available;
-    }
-
     /* Capture is done in fragment-sized chunks, so we loop until we get all
-     * that's requested */
+     * that's available */
+    samples = ppa_stream_readable_size(data->stream);
     while(samples > 0)
     {
+        const void *buf;
+        size_t length;
+
         if(ppa_stream_peek(data->stream, &buf, &length) < 0)
         {
             AL_PRINT("pa_stream_peek() failed: %s\n",
                      ppa_strerror(ppa_context_errno(data->context)));
             break;
         }
-        available = min(length, samples);
 
-        memcpy(buffer, buf, available);
-        buffer = (ALubyte*)buffer + available;
-        buf = (const ALubyte*)buf + available;
-        samples -= available;
-        length -= available;
-
-        /* Any unread data in the fragment will be lost, so save it */
-        length /= data->frame_size;
-        if(length > 0)
-        {
-            if(length > data->samples)
-                length = data->samples;
-            WriteRingBuffer(data->ring, buf, length);
-        }
+        WriteRingBuffer(data->ring, buf, length/data->frame_size);
+        samples -= length;
 
         ppa_stream_drop(data->stream);
     }
-    ppa_threaded_mainloop_unlock(data->loop);
-} //}}}
-
-static ALCuint pulse_available_samples(ALCdevice *device) //{{{
-{
-    pulse_data *data = device->ExtraData;
-    ALCuint ret;
-
-    ppa_threaded_mainloop_lock(data->loop);
-    ret  = RingBufferSize(data->ring);
-    ret += ppa_stream_readable_size(data->stream)/data->frame_size;
+    ret = RingBufferSize(data->ring);
     ppa_threaded_mainloop_unlock(data->loop);
 
     return ret;
+} //}}}
+
+static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples) //{{{
+{
+    pulse_data *data = device->ExtraData;
+
+    ppa_threaded_mainloop_lock(data->loop);
+    if(pulse_available_samples(device) >= samples)
+        ReadRingBuffer(data->ring, buffer, samples);
+    else
+        alcSetError(device, ALC_INVALID_VALUE);
+    ppa_threaded_mainloop_unlock(data->loop);
 } //}}}
 
 BackendFuncs pulse_funcs = { //{{{

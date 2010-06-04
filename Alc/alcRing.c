@@ -46,7 +46,7 @@ RingBuffer *CreateRingBuffer(ALsizei frame_size, ALsizei length)
         ring->frame_size = frame_size;
         ring->length = length+1;
         ring->write_pos = 1;
-        ring->mem = malloc((length+1)*frame_size);
+        ring->mem = malloc(ring->length * ring->frame_size);
         if(!ring->mem)
         {
             free(ring);
@@ -85,20 +85,26 @@ void WriteRingBuffer(RingBuffer *ring, const ALubyte *data, ALsizei len)
 
     EnterCriticalSection(&ring->cs);
 
-    remain = ring->length - ring->write_pos;
-    if((ring->read_pos-ring->write_pos+ring->length)%ring->length < len)
-        ring->read_pos = (ring->write_pos+len) % ring->length;
+    remain = (ring->read_pos-ring->write_pos+ring->length) % ring->length;
+    if(remain < len) len = remain;
 
-    if(remain < len)
+    if(len > 0)
     {
-        memcpy(ring->mem+(ring->write_pos*ring->frame_size), data, remain*ring->frame_size);
-        memcpy(ring->mem, data+(remain*ring->frame_size), (len-remain)*ring->frame_size);
-    }
-    else
-        memcpy(ring->mem+(ring->write_pos*ring->frame_size), data, len*ring->frame_size);
+        remain = ring->length - ring->write_pos;
+        if(remain < len)
+        {
+            memcpy(ring->mem+(ring->write_pos*ring->frame_size), data,
+                   remain*ring->frame_size);
+            memcpy(ring->mem, data+(remain*ring->frame_size),
+                   (len-remain)*ring->frame_size);
+        }
+        else
+            memcpy(ring->mem+(ring->write_pos*ring->frame_size), data,
+                   len*ring->frame_size);
 
-    ring->write_pos += len;
-    ring->write_pos %= ring->length;
+        ring->write_pos += len;
+        ring->write_pos %= ring->length;
+    }
 
     LeaveCriticalSection(&ring->cs);
 }

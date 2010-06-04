@@ -1962,6 +1962,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitUIntMap(&device->BufferMap);
     InitUIntMap(&device->EffectMap);
     InitUIntMap(&device->FilterMap);
+    InitUIntMap(&device->DatabufferMap);
 
     //Set output format
     device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
@@ -2093,13 +2094,14 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     }
     ResetUIntMap(&pDevice->FilterMap);
 
-    if(pDevice->DatabufferCount > 0)
+    if(pDevice->DatabufferMap.size > 0)
     {
 #ifdef _DEBUG
-        AL_PRINT("alcCloseDevice(): deleting %d Databuffer(s)\n", pDevice->DatabufferCount);
+        AL_PRINT("alcCloseDevice(): deleting %d Databuffer(s)\n", pDevice->DatabufferMap.size);
 #endif
         ReleaseALDatabuffers(pDevice);
     }
+    ResetUIntMap(&pDevice->DatabufferMap);
 
     free(pDevice->Bs2b);
     pDevice->Bs2b = NULL;

@@ -367,9 +367,8 @@ struct ALCdevice_struct
     // Map of Filters for this device
     UIntMap FilterMap;
 
-    // Linked List of Databuffers for this device
-    struct ALdatabuffer *DatabufferList;
-    ALuint               DatabufferCount;
+    // Map of Databuffers for this device
+    UIntMap DatabufferMap;
 
     // Stereo-to-binaural filter
     struct bs2b *Bs2b;
@@ -479,14 +478,6 @@ void SetDefaultWFXChannelOrder(ALCdevice *device);
 void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);
 #define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
-
-#define DECL_VERIFIER(name, type, field)                                      \
-static type* Verify##name(type *list, ALuint id)                              \
-{                                                                             \
-    while(list && list->field != id)                                          \
-        list = list->next;                                                    \
-    return list;                                                              \
-}
 
 #ifdef __cplusplus
 }

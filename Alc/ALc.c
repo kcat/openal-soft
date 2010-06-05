@@ -1003,37 +1003,31 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 
 ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 {
-    if(!IsDevice(device) || !device->IsCaptureDevice)
-    {
-        alcSetError(device, ALC_INVALID_DEVICE);
-        return;
-    }
     SuspendContext(NULL);
-    ALCdevice_StartCapture(device);
+    if(!IsDevice(device) || !device->IsCaptureDevice)
+        alcSetError(device, ALC_INVALID_DEVICE);
+    else if(device->Connected)
+        ALCdevice_StartCapture(device);
     ProcessContext(NULL);
 }
 
 ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 {
-    if(!IsDevice(device) || !device->IsCaptureDevice)
-    {
-        alcSetError(device, ALC_INVALID_DEVICE);
-        return;
-    }
     SuspendContext(NULL);
-    ALCdevice_StopCapture(device);
+    if(!IsDevice(device) || !device->IsCaptureDevice)
+        alcSetError(device, ALC_INVALID_DEVICE);
+    else
+        ALCdevice_StopCapture(device);
     ProcessContext(NULL);
 }
 
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    if(!IsDevice(device) || !device->IsCaptureDevice)
-    {
-        alcSetError(device, ALC_INVALID_DEVICE);
-        return;
-    }
     SuspendContext(NULL);
-    ALCdevice_CaptureSamples(device, buffer, samples);
+    if(!IsDevice(device) || !device->IsCaptureDevice)
+        alcSetError(device, ALC_INVALID_DEVICE);
+    else
+        ALCdevice_CaptureSamples(device, buffer, samples);
     ProcessContext(NULL);
 }
 

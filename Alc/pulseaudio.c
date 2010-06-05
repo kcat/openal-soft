@@ -1081,12 +1081,11 @@ static ALCuint pulse_available_samples(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
     size_t samples;
-    ALCuint ret;
 
     ppa_threaded_mainloop_lock(data->loop);
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available */
-    samples = ppa_stream_readable_size(data->stream);
+    samples = (device->Connected ? ppa_stream_readable_size(data->stream) : 0);
     while(samples > 0)
     {
         const void *buf;
@@ -1104,22 +1103,19 @@ static ALCuint pulse_available_samples(ALCdevice *device) //{{{
 
         ppa_stream_drop(data->stream);
     }
-    ret = RingBufferSize(data->ring);
     ppa_threaded_mainloop_unlock(data->loop);
 
-    return ret;
+    return RingBufferSize(data->ring);
 } //}}}
 
 static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples) //{{{
 {
     pulse_data *data = device->ExtraData;
 
-    ppa_threaded_mainloop_lock(data->loop);
     if(pulse_available_samples(device) >= samples)
         ReadRingBuffer(data->ring, buffer, samples);
     else
         alcSetError(device, ALC_INVALID_VALUE);
-    ppa_threaded_mainloop_unlock(data->loop);
 } //}}}
 
 BackendFuncs pulse_funcs = { //{{{

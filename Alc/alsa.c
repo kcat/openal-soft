@@ -40,7 +40,6 @@ typedef struct {
     ALsizei size;
 
     RingBuffer *ring;
-    int doCapture;
 
     volatile int killNow;
     ALvoid *thread;
@@ -58,6 +57,7 @@ MAKE_FUNC(snd_pcm_open);
 MAKE_FUNC(snd_pcm_close);
 MAKE_FUNC(snd_pcm_nonblock);
 MAKE_FUNC(snd_pcm_frames_to_bytes);
+MAKE_FUNC(snd_pcm_bytes_to_frames);
 MAKE_FUNC(snd_pcm_hw_params_malloc);
 MAKE_FUNC(snd_pcm_hw_params_free);
 MAKE_FUNC(snd_pcm_hw_params_any);
@@ -154,6 +154,7 @@ LOAD_FUNC(snd_pcm_open);
 LOAD_FUNC(snd_pcm_close);
 LOAD_FUNC(snd_pcm_nonblock);
 LOAD_FUNC(snd_pcm_frames_to_bytes);
+LOAD_FUNC(snd_pcm_bytes_to_frames);
 LOAD_FUNC(snd_pcm_hw_params_malloc);
 LOAD_FUNC(snd_pcm_hw_params_free);
 LOAD_FUNC(snd_pcm_hw_params_any);
@@ -459,53 +460,6 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
                 if(ret < 0)
                     break;
             }
-        }
-    }
-
-    return 0;
-}
-
-static ALuint ALSANoMMapCaptureProc(ALvoid *ptr)
-{
-    ALCdevice *pDevice = (ALCdevice*)ptr;
-    alsa_data *data = (alsa_data*)pDevice->ExtraData;
-    snd_pcm_sframes_t avail;
-
-    SetRTPriority();
-
-    while(!data->killNow)
-    {
-        int state = verify_state(data->pcmHandle);
-        if(state < 0)
-        {
-            AL_PRINT("Invalid state detected: %s\n", psnd_strerror(state));
-            aluHandleDisconnect(pDevice);
-            break;
-        }
-
-        avail = (snd_pcm_uframes_t)data->size / psnd_pcm_frames_to_bytes(data->pcmHandle, 1);
-        avail = psnd_pcm_readi(data->pcmHandle, data->buffer, avail);
-        switch(avail)
-        {
-            case -EAGAIN:
-                continue;
-            case -ESTRPIPE:
-            case -EPIPE:
-            case -EINTR:
-                avail = psnd_pcm_recover(data->pcmHandle, avail, 1);
-                if(avail >= 0)
-                    psnd_pcm_prepare(data->pcmHandle);
-                break;
-            default:
-                if (avail >= 0 && data->doCapture)
-                    WriteRingBuffer(data->ring, data->buffer, avail);
-                break;
-        }
-        if(avail < 0)
-        {
-            avail = psnd_pcm_prepare(data->pcmHandle);
-            if(avail < 0)
-                AL_PRINT("prepare error: %s\n", psnd_strerror(avail));
         }
     }
 
@@ -937,15 +891,9 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
         goto error;
     }
 
-    pDevice->ExtraData = data;
-    data->thread = StartThread(ALSANoMMapCaptureProc, pDevice);
-    if(data->thread == NULL)
-    {
-        AL_PRINT("Could not create capture thread\n");
-        goto error;
-    }
-
     pDevice->szDeviceName = strdup(deviceName);
+
+    pDevice->ExtraData = data;
     return ALC_TRUE;
 
 error:
@@ -962,9 +910,6 @@ static void alsa_close_capture(ALCdevice *pDevice)
 {
     alsa_data *data = (alsa_data*)pDevice->ExtraData;
 
-    data->killNow = 1;
-    StopThread(data->thread);
-
     psnd_pcm_close(data->pcmHandle);
     DestroyRingBuffer(data->ring);
 
@@ -973,32 +918,79 @@ static void alsa_close_capture(ALCdevice *pDevice)
     pDevice->ExtraData = NULL;
 }
 
-static void alsa_start_capture(ALCdevice *pDevice)
+static void alsa_start_capture(ALCdevice *Device)
 {
-    alsa_data *data = (alsa_data*)pDevice->ExtraData;
-    data->doCapture = 1;
+    alsa_data *data = (alsa_data*)Device->ExtraData;
+    int err;
+
+    err = psnd_pcm_start(data->pcmHandle);
+    if(err < 0)
+    {
+        AL_PRINT("start failed: %s\n", psnd_strerror(err));
+        aluHandleDisconnect(Device);
+    }
 }
 
-static void alsa_stop_capture(ALCdevice *pDevice)
+static void alsa_stop_capture(ALCdevice *Device)
 {
-    alsa_data *data = (alsa_data*)pDevice->ExtraData;
-    data->doCapture = 0;
+    alsa_data *data = (alsa_data*)Device->ExtraData;
+    psnd_pcm_drain(data->pcmHandle);
 }
 
-static void alsa_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
+static ALCuint alsa_available_samples(ALCdevice *Device)
 {
-    alsa_data *data = (alsa_data*)pDevice->ExtraData;
+    alsa_data *data = (alsa_data*)Device->ExtraData;
+    snd_pcm_sframes_t avail;
+    snd_pcm_sframes_t amt;
 
-    if(lSamples <= (ALCuint)RingBufferSize(data->ring))
-        ReadRingBuffer(data->ring, pBuffer, lSamples);
-    else
-        alcSetError(pDevice, ALC_INVALID_VALUE);
-}
+    avail = (Device->Connected ? psnd_pcm_avail_update(data->pcmHandle) : 0);
+    if(avail < 0)
+    {
+        AL_PRINT("avail update failed: %s\n", psnd_strerror(avail));
 
-static ALCuint alsa_available_samples(ALCdevice *pDevice)
-{
-    alsa_data *data = (alsa_data*)pDevice->ExtraData;
+        psnd_pcm_recover(data->pcmHandle, avail, 1);
+        amt = psnd_pcm_prepare(data->pcmHandle);
+        if(amt < 0)
+        {
+            AL_PRINT("prepare error: %s\n", psnd_strerror(amt));
+            aluHandleDisconnect(Device);
+        }
+    }
+    else while(avail > 0)
+    {
+        amt = psnd_pcm_bytes_to_frames(data->pcmHandle, data->size);
+        if(avail < amt) amt = avail;
+
+        amt = psnd_pcm_readi(data->pcmHandle, data->buffer, amt);
+        if(amt < 0)
+        {
+            if(amt == -EAGAIN)
+                continue;
+            psnd_pcm_recover(data->pcmHandle, avail, 1);
+            amt = psnd_pcm_prepare(data->pcmHandle);
+            if(amt < 0)
+            {
+                AL_PRINT("prepare error: %s\n", psnd_strerror(amt));
+                aluHandleDisconnect(Device);
+            }
+            break;
+        }
+
+        WriteRingBuffer(data->ring, data->buffer, amt);
+        avail -= amt;
+    }
+
     return RingBufferSize(data->ring);
+}
+
+static void alsa_capture_samples(ALCdevice *Device, ALCvoid *Buffer, ALCuint Samples)
+{
+    alsa_data *data = (alsa_data*)Device->ExtraData;
+
+    if(Samples <= alsa_available_samples(Device))
+        ReadRingBuffer(data->ring, Buffer, Samples);
+    else
+        alcSetError(Device, ALC_INVALID_VALUE);
 }
 
 

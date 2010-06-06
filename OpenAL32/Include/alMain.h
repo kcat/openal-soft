@@ -433,6 +433,10 @@ struct ALCcontext_struct
     ALfloat     DopplerVelocity;
     ALfloat     flSpeedOfSound;
 
+    struct ALsource **ActiveSources;
+    ALsizei           ActiveSourceCount;
+    ALsizei           MaxActiveSources;
+
     ALCdevice  *Device;
     const ALCchar *ExtensionList;
 

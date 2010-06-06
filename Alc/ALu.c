@@ -939,23 +939,27 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALenum State;
     ALsizei pos;
 
-    if(ALContext->SourceMap.size <= 0)
-        return;
-
     DuplicateStereo = ALContext->Device->DuplicateStereo;
     DeviceFreq = ALContext->Device->Frequency;
 
     rampLength = DeviceFreq * MIN_RAMP_LENGTH / 1000;
     rampLength = max(rampLength, SamplesToDo);
 
-    pos = ALContext->SourceMap.size;
+    pos = 0;
 next_source:
-    do {
-        if(pos-- <= 0)
-            return;
-        ALSource = ALContext->SourceMap.array[pos].value;
-    } while(ALSource->state != AL_PLAYING);
-    j = 0;
+    while(ALContext->ActiveSourceCount > pos)
+    {
+        ALsizei end;
+
+        ALSource = ALContext->ActiveSources[pos];
+        if(ALSource->state == AL_PLAYING)
+            break;
+
+        end = --(ALContext->ActiveSourceCount);
+        ALContext->ActiveSources[pos] = ALContext->ActiveSources[end];
+    }
+    if(pos >= ALContext->ActiveSourceCount)
+        return;
 
     /* Find buffer format */
     Frequency = 0;
@@ -1028,8 +1032,8 @@ next_source:
     for(i = 0;i < BuffersPlayed && BufferListItem;i++)
         BufferListItem = BufferListItem->next;
 
-    while(State == AL_PLAYING && j < SamplesToDo)
-    {
+    j = 0;
+    do {
         ALfloat *Data = NULL;
         ALuint LoopStart = 0;
         ALuint LoopEnd = 0;
@@ -1397,7 +1401,7 @@ next_source:
                 DataPosFrac = 0;
             }
         }
-    }
+    } while(State == AL_PLAYING && j < SamplesToDo);
 
     /* Update source info */
     ALSource->state             = State;
@@ -1413,6 +1417,8 @@ next_source:
 
     ALSource->FirstStart = AL_FALSE;
 
+    if(ALSource->state == AL_PLAYING)
+        pos++;
     goto next_source;
 }
 

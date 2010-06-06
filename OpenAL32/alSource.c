@@ -145,6 +145,16 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
                 // Recheck that the Source is valid, because there could be duplicated Source names
                 if((Source=LookupSource(Context->SourceMap, sources[i])) != NULL)
                 {
+                    for(j = 0;j < Context->ActiveSourceCount;j++)
+                    {
+                        if(Context->ActiveSources[j] == Source)
+                        {
+                            ALsizei end = --(Context->ActiveSourceCount);
+                            Context->ActiveSources[j] = Context->ActiveSources[end];
+                            break;
+                        }
+                    }
+
                     // For each buffer in the source's queue, decrement its reference counter and remove it
                     while(Source->queue != NULL)
                     {
@@ -1310,6 +1320,31 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         }
     }
 
+    if(Context->ActiveSourceCount+n < n)
+    {
+        alSetError(Context, AL_OUT_OF_MEMORY);
+        goto done;
+    }
+
+    while(Context->MaxActiveSources < Context->ActiveSourceCount+n)
+    {
+        void *temp = NULL;
+        ALsizei newcount;
+
+        newcount = Context->MaxActiveSources << 1;
+        if(newcount > 0)
+            temp = realloc(Context->ActiveSources,
+                           sizeof(*Context->ActiveSources) * newcount);
+        if(!temp)
+        {
+            alSetError(Context, AL_OUT_OF_MEMORY);
+            goto done;
+        }
+
+        Context->ActiveSources = temp;
+        Context->MaxActiveSources = newcount;
+    }
+
     for(i = 0;i < n;i++)
     {
         Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
@@ -1363,6 +1398,16 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             Source->BuffersPlayed = Source->BuffersInQueue;
             Source->position = 0;
             Source->position_fraction = 0;
+        }
+        else
+        {
+            for(j = 0;j < Context->ActiveSourceCount;j++)
+            {
+                if(Context->ActiveSources[j] == Source)
+                    break;
+            }
+            if(j == Context->ActiveSourceCount)
+                Context->ActiveSources[Context->ActiveSourceCount++] = Source;
         }
     }
 

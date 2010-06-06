@@ -892,6 +892,7 @@ static ALvoid InitContext(ALCcontext *pContext)
     //Validate pContext
     pContext->LastError = AL_NO_ERROR;
     pContext->Suspended = AL_FALSE;
+    pContext->ActiveSourceCount = 0;
     InitUIntMap(&pContext->SourceMap);
 
     //Set globals
@@ -1613,8 +1614,15 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     device->Contexts = temp;
 
     ALContext = calloc(1, sizeof(ALCcontext));
-    if(!ALContext)
+    if(ALContext)
     {
+        ALContext->MaxActiveSources = 256;
+        ALContext->ActiveSources = malloc(sizeof(*ALContext->ActiveSources) *
+                                          ALContext->MaxActiveSources);
+    }
+    if(!ALContext || !ALContext->ActiveSources)
+    {
+        free(ALContext);
         alcSetError(device, ALC_OUT_OF_MEMORY);
         ProcessContext(NULL);
         return NULL;
@@ -1692,6 +1700,11 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         ReleaseALAuxiliaryEffectSlots(context);
     }
     ResetUIntMap(&context->EffectSlotMap);
+
+    free(context->ActiveSources);
+    context->ActiveSources = NULL;
+    context->MaxActiveSources = 0;
+    context->ActiveSourceCount = 0;
 
     list = &g_pContextList;
     while(*list != context)

@@ -806,12 +806,6 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
         Sleep(200);
         i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
     }
-    if(i >= 0)
-    {
-        i = psnd_pcm_nonblock(data->pcmHandle, 0);
-        if(i < 0)
-            psnd_pcm_close(data->pcmHandle);
-    }
     if(i < 0)
     {
         AL_PRINT("Could not open capture device '%s': %s\n", driver, psnd_strerror(i));

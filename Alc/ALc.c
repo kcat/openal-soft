@@ -1997,12 +1997,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(device->NumUpdates < 2)
         device->NumUpdates = 4;
 
-    i = GetConfigValueInt(NULL, "refresh", 4096);
-    if(i <= 0) i = 4096;
-
-    device->UpdateSize = GetConfigValueInt(NULL, "period_size", i/device->NumUpdates);
+    device->UpdateSize = GetConfigValueInt(NULL, "period_size", 1024);
     if(device->UpdateSize <= 0)
-        device->UpdateSize = i/device->NumUpdates;
+        device->UpdateSize = 1024;
 
     device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
     if((ALint)device->MaxNoOfSources <= 0)

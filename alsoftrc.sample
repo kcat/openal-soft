@@ -79,8 +79,7 @@
 
 ## period_size:
 #  Sets the update period size, in frames. This is the number of frames needed
-#  for each mixing update. If the deprecated 'refresh' option is specified and
-#  this isn't, the value will be calculated as size = refresh/periods.
+#  for each mixing update.
 #period_size = 1024
 
 ## periods:

@@ -894,6 +894,7 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->Suspended = AL_FALSE;
     pContext->ActiveSourceCount = 0;
     InitUIntMap(&pContext->SourceMap);
+    InitUIntMap(&pContext->EffectSlotMap);
 
     //Set globals
     pContext->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;

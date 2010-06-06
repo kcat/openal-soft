@@ -116,7 +116,8 @@
 #  duplicated names are ignored. Unlisted backends won't be considered for use
 #  unless the list is ended with a comma (eg. 'oss,' will list OSS first
 #  followed by all other available backends, while 'oss' will list OSS only).
-#  An empty list means the default.
+#  Backends prepended with - won't be available for use (eg. '-oss,' will allow
+#  all available backends except OSS). An empty list means the default.
 #drivers = pulse,alsa,oss,solaris,dsound,winmm,port,null,wave
 
 ## excludefx:

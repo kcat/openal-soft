@@ -436,12 +436,15 @@ static void alc_init(void)
         int n;
         size_t len;
         const char *next = devs;
-        int endlist;
+        int endlist, delitem;
 
         i = 0;
         do {
             devs = next;
             next = strchr(devs, ',');
+
+            delitem = (devs[0] == '-');
+            if(devs[0] == '-') devs++;
 
             if(!devs[0] || devs[0] == ',')
             {
@@ -456,15 +459,25 @@ static void alc_init(void)
                 if(len == strlen(BackendList[n].name) &&
                    strncmp(BackendList[n].name, devs, len) == 0)
                 {
-                    BackendInfo Bkp = BackendList[n];
-                    while(n > i)
+                    if(delitem)
                     {
-                        BackendList[n] = BackendList[n-1];
-                        --n;
+                        do {
+                            BackendList[n] = BackendList[n+1];
+                            ++n;
+                        } while(BackendList[n].Init);
                     }
-                    BackendList[n] = Bkp;
+                    else
+                    {
+                        BackendInfo Bkp = BackendList[n];
+                        while(n > i)
+                        {
+                            BackendList[n] = BackendList[n-1];
+                            --n;
+                        }
+                        BackendList[n] = Bkp;
 
-                    i++;
+                        i++;
+                    }
                     break;
                 }
             }

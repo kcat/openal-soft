@@ -39,6 +39,7 @@ typedef struct {
     ALvoid *buffer;
     ALsizei size;
 
+    ALboolean doCapture;
     RingBuffer *ring;
 
     volatile int killNow;
@@ -929,51 +930,71 @@ static void alsa_start_capture(ALCdevice *Device)
         AL_PRINT("start failed: %s\n", psnd_strerror(err));
         aluHandleDisconnect(Device);
     }
+    else
+        data->doCapture = AL_TRUE;
 }
 
 static void alsa_stop_capture(ALCdevice *Device)
 {
     alsa_data *data = (alsa_data*)Device->ExtraData;
     psnd_pcm_drain(data->pcmHandle);
+    data->doCapture = AL_FALSE;
 }
 
 static ALCuint alsa_available_samples(ALCdevice *Device)
 {
     alsa_data *data = (alsa_data*)Device->ExtraData;
     snd_pcm_sframes_t avail;
-    snd_pcm_sframes_t amt;
 
     avail = (Device->Connected ? psnd_pcm_avail_update(data->pcmHandle) : 0);
     if(avail < 0)
     {
         AL_PRINT("avail update failed: %s\n", psnd_strerror(avail));
 
-        psnd_pcm_recover(data->pcmHandle, avail, 1);
-        amt = psnd_pcm_prepare(data->pcmHandle);
-        if(amt < 0)
+        if((avail=psnd_pcm_recover(data->pcmHandle, avail, 1)) >= 0 &&
+           (avail=psnd_pcm_prepare(data->pcmHandle)) >= 0)
         {
-            AL_PRINT("prepare error: %s\n", psnd_strerror(amt));
+            if(data->doCapture)
+                avail = psnd_pcm_start(data->pcmHandle);
+            if(avail >= 0)
+                avail = psnd_pcm_avail_update(data->pcmHandle);
+        }
+        if(avail < 0)
+        {
+            AL_PRINT("restore error: %s\n", psnd_strerror(avail));
             aluHandleDisconnect(Device);
         }
     }
-    else while(avail > 0)
+    while(avail > 0)
     {
+        snd_pcm_sframes_t amt;
+
         amt = psnd_pcm_bytes_to_frames(data->pcmHandle, data->size);
         if(avail < amt) amt = avail;
 
         amt = psnd_pcm_readi(data->pcmHandle, data->buffer, amt);
         if(amt < 0)
         {
+            AL_PRINT("read error: %s\n", psnd_strerror(amt));
+
             if(amt == -EAGAIN)
                 continue;
-            psnd_pcm_recover(data->pcmHandle, avail, 1);
-            amt = psnd_pcm_prepare(data->pcmHandle);
+            if((amt=psnd_pcm_recover(data->pcmHandle, amt, 1)) >= 0 &&
+               (amt=psnd_pcm_prepare(data->pcmHandle)) >= 0)
+            {
+                if(data->doCapture)
+                    amt = psnd_pcm_start(data->pcmHandle);
+                if(amt >= 0)
+                    amt = psnd_pcm_avail_update(data->pcmHandle);
+            }
             if(amt < 0)
             {
-                AL_PRINT("prepare error: %s\n", psnd_strerror(amt));
+                AL_PRINT("restore error: %s\n", psnd_strerror(amt));
                 aluHandleDisconnect(Device);
+                break;
             }
-            break;
+            avail = amt;
+            continue;
         }
 
         WriteRingBuffer(data->ring, data->buffer, amt);

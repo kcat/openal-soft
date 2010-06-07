@@ -758,7 +758,6 @@ static void alsa_stop_playback(ALCdevice *device)
 
 static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
-    const char *devName;
     snd_pcm_hw_params_t *p;
     snd_pcm_uframes_t bufferSizeInFrames;
     snd_pcm_format_t format;
@@ -788,7 +787,6 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
             if(allCaptureDevNameMap[idx].name &&
                strcmp(deviceName, allCaptureDevNameMap[idx].name) == 0)
             {
-                devName = allCaptureDevNameMap[idx].name;
                 if(idx > 0)
                     sprintf(driver, "plughw:%d,%d", allCaptureDevNameMap[idx].card, allCaptureDevNameMap[idx].dev);
                 break;

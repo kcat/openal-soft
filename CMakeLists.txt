@@ -32,6 +32,7 @@ OPTION(DSOUND  "Check for DirectSound backend"         ON)
 OPTION(WINMM   "Check for Windows Multimedia backend"  ON)
 OPTION(PORTAUDIO  "Check for PortAudio backend"        ON)
 OPTION(PULSEAUDIO "Check for PulseAudio backend"       ON)
+OPTION(WAVE    "Enable Wave Writer backend"            ON)
 
 OPTION(DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
@@ -311,7 +312,6 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcThread.c
               Alc/bs2b.c
               Alc/null.c
-              Alc/wave.c
 )
 
 SET(BACKENDS "")
@@ -424,8 +424,15 @@ IF(PULSEAUDIO)
     ENDIF()
 ENDIF()
 
+# Optionally enable the Wave Writer backend
+IF(WAVE)
+    SET(HAVE_WAVE 1)
+    SET(ALC_OBJS  ${ALC_OBJS} Alc/wave.c)
+    SET(BACKENDS  "${BACKENDS} WaveFile,")
+ENDIF()
+
 # This is always available
-SET(BACKENDS  "${BACKENDS} WaveFile, Null")
+SET(BACKENDS  "${BACKENDS} Null")
 
 # Needed for openal.pc.in
 SET(prefix ${CMAKE_INSTALL_PREFIX})

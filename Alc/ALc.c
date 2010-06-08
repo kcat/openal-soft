@@ -71,7 +71,9 @@ static BackendInfo BackendList[] = {
 #endif
 
     { "null", alc_null_init, alc_null_deinit, alc_null_probe, EmptyFuncs },
+#ifdef HAVE_WAVE
     { "wave", alc_wave_init, alc_wave_deinit, alc_wave_probe, EmptyFuncs },
+#endif
 
     { NULL, NULL, NULL, NULL, EmptyFuncs }
 };

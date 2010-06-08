@@ -410,12 +410,6 @@ static void alc_init(void)
     int i;
     const char *devs, *str;
 
-    InitializeCriticalSection(&g_csMutex);
-    ALTHUNK_INIT();
-    ReadALConfig();
-
-    tls_create(&LocalContext);
-
     str = getenv("ALSOFT_LOGFILE");
     if(str && str[0])
     {
@@ -425,6 +419,12 @@ static void alc_init(void)
     }
     if(!LogFile)
         LogFile = stderr;
+
+    InitializeCriticalSection(&g_csMutex);
+    ALTHUNK_INIT();
+    ReadALConfig();
+
+    tls_create(&LocalContext);
 
     RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 0);
 

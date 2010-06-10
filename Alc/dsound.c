@@ -158,6 +158,7 @@ static ALuint DSoundProc(ALvoid *ptr)
     DWORD PlayCursor;
     VOID *WritePtr1, *WritePtr2;
     DWORD WriteCnt1,  WriteCnt2;
+    BOOL Playing = FALSE;
     DWORD FrameSize;
     DWORD FragSize;
     DWORD avail;
@@ -187,6 +188,16 @@ static ALuint DSoundProc(ALvoid *ptr)
 
         if(avail < FragSize)
         {
+            if(!Playing)
+            {
+                err = IDirectSoundBuffer_Play(pData->DSsbuffer, 0, 0, DSBPLAY_LOOPING);
+                if(FAILED(err))
+                {
+                    AL_PRINT("Failed to play buffer: 0x%lx\n", err);
+                    aluHandleDisconnect(pDevice);
+                    return 1;
+                }
+            }
             Sleep(1);
             continue;
         }
@@ -197,14 +208,16 @@ static ALuint DSoundProc(ALvoid *ptr)
         WriteCnt2 = 0;
         err = IDirectSoundBuffer_Lock(pData->DSsbuffer, LastCursor, avail, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
 
-        // If the buffer is lost, restore it, play and lock
+        // If the buffer is lost, restore it and lock
         if(err == DSERR_BUFFERLOST)
         {
             err = IDirectSoundBuffer_Restore(pData->DSsbuffer);
             if(SUCCEEDED(err))
-                err = IDirectSoundBuffer_Play(pData->DSsbuffer, 0, 0, DSBPLAY_LOOPING);
-            if(SUCCEEDED(err))
-                err = IDirectSoundBuffer_Lock(pData->DSsbuffer, LastCursor, avail, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
+            {
+                Playing = FALSE;
+                LastCursor = 0;
+                err = IDirectSoundBuffer_Lock(pData->DSsbuffer, 0, DSBCaps.dwBufferBytes, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
+            }
         }
 
         // Successfully locked the output buffer
@@ -218,7 +231,11 @@ static ALuint DSoundProc(ALvoid *ptr)
             IDirectSoundBuffer_Unlock(pData->DSsbuffer, WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
         }
         else
+        {
             AL_PRINT("Buffer lock error: %#lx\n", err);
+            aluHandleDisconnect(pDevice);
+            return 1;
+        }
 
         // Update old write cursor location
         LastCursor += WriteCnt1+WriteCnt2;
@@ -441,9 +458,6 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
         DSBDescription.lpwfxFormat=&OutputType.Format;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
     }
-
-    if(SUCCEEDED(hr))
-        hr = IDirectSoundBuffer_Play(pData->DSsbuffer, 0, 0, DSBPLAY_LOOPING);
 
     if(SUCCEEDED(hr))
     {

@@ -70,7 +70,23 @@ static void ProbeDevices(void)
         if(waveInGetDevCaps(i, &WaveInCaps, sizeof(WAVEINCAPS)) == MMSYSERR_NOERROR)
         {
             char name[1024];
-            snprintf(name, sizeof(name), "%s via WaveIn", WaveInCaps.szPname);
+            ALuint count, j;
+
+            count = 0;
+            do {
+                if(count == 0)
+                    snprintf(name, sizeof(name), "%s via WaveIn", WaveInCaps.szPname);
+                else
+                    snprintf(name, sizeof(name), "%s #%d via WaveIn", WaveInCaps.szPname, count+1);
+                count++;
+
+                for(j = 0;j < i;j++)
+                {
+                    if(strcmp(name, CaptureDeviceList[j]) == 0)
+                        break;
+                }
+            } while(j != i);
+
             CaptureDeviceList[i] = strdup(name);
         }
     }

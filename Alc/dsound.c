@@ -110,25 +110,39 @@ LOAD_FUNC(DirectSoundEnumerateA);
 
 static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
 {
+    char str[1024];
+    void *temp;
+    int count;
+    ALuint i;
+
     (void)data;
     (void)drvname;
 
-    if(guid)
-    {
-        char str[1024];
-        void *temp;
+    if(!guid)
+        return TRUE;
 
-        temp = realloc(DeviceList, sizeof(DevMap) * (NumDevices+1));
-        if(temp)
-        {
-            DeviceList = temp;
-
+    count = 0;
+    do {
+        if(count == 0)
             snprintf(str, sizeof(str), "%s via DirectSound", desc);
+        else
+            snprintf(str, sizeof(str), "%s #%d via DirectSound", desc, count+1);
+        count++;
 
-            DeviceList[NumDevices].name = strdup(str);
-            DeviceList[NumDevices].guid = *guid;
-            NumDevices++;
+        for(i = 0;i < NumDevices;i++)
+        {
+            if(strcmp(str, DeviceList[i].name) == 0)
+                break;
         }
+    } while(i != NumDevices);
+
+    temp = realloc(DeviceList, sizeof(DevMap) * (NumDevices+1));
+    if(temp)
+    {
+        DeviceList = temp;
+        DeviceList[NumDevices].name = strdup(str);
+        DeviceList[NumDevices].guid = *guid;
+        NumDevices++;
     }
 
     return TRUE;

@@ -410,7 +410,10 @@ static void sink_info_callback(pa_context *context, const pa_sink_info *info, in
 static void sink_device_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata) //{{{
 {
     pa_threaded_mainloop *loop = pdata;
+    char str[1024];
     void *temp;
+    int count;
+    ALuint i;
 
     (void)context;
 
@@ -420,12 +423,24 @@ static void sink_device_callback(pa_context *context, const pa_sink_info *info, 
         return;
     }
 
+    count = 0;
+    do {
+        if(count == 0)
+            snprintf(str, sizeof(str), "%s via PulseAudio", info->description);
+        else
+            snprintf(str, sizeof(str), "%s #%d via PulseAudio", info->description, count+1);
+        count++;
+
+        for(i = 0;i < numDevNames;i++)
+        {
+            if(strcmp(str, allDevNameMap[i].name) == 0)
+                break;
+        }
+    } while(i != numDevNames);
+
     temp = realloc(allDevNameMap, (numDevNames+1) * sizeof(*allDevNameMap));
     if(temp)
     {
-        char str[1024];
-        snprintf(str, sizeof(str), "%s via PulseAudio", info->description);
-
         allDevNameMap = temp;
         allDevNameMap[numDevNames].name = strdup(str);
         allDevNameMap[numDevNames].device_name = strdup(info->name);
@@ -436,7 +451,10 @@ static void sink_device_callback(pa_context *context, const pa_sink_info *info, 
 static void source_device_callback(pa_context *context, const pa_source_info *info, int eol, void *pdata) //{{{
 {
     pa_threaded_mainloop *loop = pdata;
+    char str[1024];
     void *temp;
+    int count;
+    ALuint i;
 
     (void)context;
 
@@ -446,12 +464,24 @@ static void source_device_callback(pa_context *context, const pa_source_info *in
         return;
     }
 
+    count = 0;
+    do {
+        if(count == 0)
+            snprintf(str, sizeof(str), "%s via PulseAudio", info->description);
+        else
+            snprintf(str, sizeof(str), "%s #%d via PulseAudio", info->description, count+1);
+        count++;
+
+        for(i = 0;i < numCaptureDevNames;i++)
+        {
+            if(strcmp(str, allCaptureDevNameMap[i].name) == 0)
+                break;
+        }
+    } while(i != numCaptureDevNames);
+
     temp = realloc(allCaptureDevNameMap, (numCaptureDevNames+1) * sizeof(*allCaptureDevNameMap));
     if(temp)
     {
-        char str[256];
-        snprintf(str, sizeof(str), "%s via PulseAudio", info->description);
-
         allCaptureDevNameMap = temp;
         allCaptureDevNameMap[numCaptureDevNames].name = strdup(str);
         allCaptureDevNameMap[numCaptureDevNames].device_name = strdup(info->name);

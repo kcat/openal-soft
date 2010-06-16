@@ -302,14 +302,9 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
 
 static int xrun_recovery(snd_pcm_t *handle, int err)
 {
-    if(err == -EINTR || err == -EPIPE || err == -ESTRPIPE)
-    {
-        err = psnd_pcm_recover(handle, err, 1);
-        if(err >= 0)
-            err = psnd_pcm_prepare(handle);
-        if(err < 0)
-            AL_PRINT("recover failed: %s\n", psnd_strerror(err));
-    }
+    err = psnd_pcm_recover(handle, err, 1);
+    if(err < 0)
+        AL_PRINT("recover failed: %s\n", psnd_strerror(err));
     return err;
 }
 
@@ -444,8 +439,8 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
             case -EPIPE:
             case -EINTR:
                 ret = psnd_pcm_recover(data->pcmHandle, ret, 1);
-                if(ret >= 0)
-                    psnd_pcm_prepare(data->pcmHandle);
+                if(ret < 0)
+                    avail = 0;
                 break;
             default:
                 if (ret >= 0)
@@ -943,8 +938,7 @@ static ALCuint alsa_available_samples(ALCdevice *Device)
     {
         AL_PRINT("avail update failed: %s\n", psnd_strerror(avail));
 
-        if((avail=psnd_pcm_recover(data->pcmHandle, avail, 1)) >= 0 &&
-           (avail=psnd_pcm_prepare(data->pcmHandle)) >= 0)
+        if((avail=psnd_pcm_recover(data->pcmHandle, avail, 1)) >= 0)
         {
             if(data->doCapture)
                 avail = psnd_pcm_start(data->pcmHandle);
@@ -971,8 +965,7 @@ static ALCuint alsa_available_samples(ALCdevice *Device)
 
             if(amt == -EAGAIN)
                 continue;
-            if((amt=psnd_pcm_recover(data->pcmHandle, amt, 1)) >= 0 &&
-               (amt=psnd_pcm_prepare(data->pcmHandle)) >= 0)
+            if((amt=psnd_pcm_recover(data->pcmHandle, amt, 1)) >= 0)
             {
                 if(data->doCapture)
                     amt = psnd_pcm_start(data->pcmHandle);

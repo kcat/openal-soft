@@ -593,7 +593,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             case 7: device->Format = AL_FORMAT_61CHN32; break;
             case 8: device->Format = AL_FORMAT_71CHN32; break;
         }
-        if((i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_FLOAT)) < 0)
+        if(format == SND_PCM_FORMAT_FLOAT ||
+           (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_FLOAT)) < 0)
         {
             switch(aluChannelsFromFormat(device->Format))
             {
@@ -604,7 +605,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
                 case 7: device->Format = AL_FORMAT_61CHN16; break;
                 case 8: device->Format = AL_FORMAT_71CHN16; break;
             }
-            if((i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_S16)) < 0)
+            if(format == SND_PCM_FORMAT_S16 ||
+               (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_S16)) < 0)
             {
                 switch(aluChannelsFromFormat(device->Format))
                 {
@@ -615,7 +617,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
                     case 7: device->Format = AL_FORMAT_61CHN8; break;
                     case 8: device->Format = AL_FORMAT_71CHN8; break;
                 }
-                if((i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_U8)) < 0)
+                if(format == SND_PCM_FORMAT_U8 ||
+                   (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_U8)) < 0)
                     err = "set format";
             }
         }

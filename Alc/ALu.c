@@ -1114,40 +1114,40 @@ next_source:
 
         if(Channels == 1) /* Mono */
         {
-#define DO_MIX(resampler) do { \
-    while(BufferSize--) \
-    { \
-        for(i = 0;i < OUTPUTCHANNELS;i++) \
-            DrySend[i] += dryGainStep[i]; \
-        for(i = 0;i < MAX_SENDS;i++) \
-            WetSend[i] += wetGainStep[i]; \
- \
-        /* First order interpolator */ \
-        value = (resampler)(Data[k], Data[k+1], DataPosFrac); \
- \
-        /* Direct path final mix buffer and panning */ \
-        outsamp = lpFilter4P(DryFilter, 0, value); \
-        DryBuffer[j][FRONT_LEFT]   += outsamp*DrySend[FRONT_LEFT]; \
-        DryBuffer[j][FRONT_RIGHT]  += outsamp*DrySend[FRONT_RIGHT]; \
-        DryBuffer[j][SIDE_LEFT]    += outsamp*DrySend[SIDE_LEFT]; \
-        DryBuffer[j][SIDE_RIGHT]   += outsamp*DrySend[SIDE_RIGHT]; \
-        DryBuffer[j][BACK_LEFT]    += outsamp*DrySend[BACK_LEFT]; \
-        DryBuffer[j][BACK_RIGHT]   += outsamp*DrySend[BACK_RIGHT]; \
-        DryBuffer[j][FRONT_CENTER] += outsamp*DrySend[FRONT_CENTER]; \
-        DryBuffer[j][BACK_CENTER]  += outsamp*DrySend[BACK_CENTER]; \
- \
-        /* Room path final mix buffer and panning */ \
-        for(i = 0;i < MAX_SENDS;i++) \
-        { \
-            outsamp = lpFilter2P(WetFilter[i], 0, value); \
-            WetBuffer[i][j] += outsamp*WetSend[i]; \
-        } \
- \
-        DataPosFrac += increment; \
-        k += DataPosFrac>>FRACTIONBITS; \
-        DataPosFrac &= FRACTIONMASK; \
-        j++; \
-    } \
+#define DO_MIX(resampler) do {                                                \
+    while(BufferSize--)                                                       \
+    {                                                                         \
+        for(i = 0;i < OUTPUTCHANNELS;i++)                                     \
+            DrySend[i] += dryGainStep[i];                                     \
+        for(i = 0;i < MAX_SENDS;i++)                                          \
+            WetSend[i] += wetGainStep[i];                                     \
+                                                                              \
+        /* First order interpolator */                                        \
+        value = (resampler)(Data[k], Data[k+1], DataPosFrac);                 \
+                                                                              \
+        /* Direct path final mix buffer and panning */                        \
+        outsamp = lpFilter4P(DryFilter, 0, value);                            \
+        DryBuffer[j][FRONT_LEFT]   += outsamp*DrySend[FRONT_LEFT];            \
+        DryBuffer[j][FRONT_RIGHT]  += outsamp*DrySend[FRONT_RIGHT];           \
+        DryBuffer[j][SIDE_LEFT]    += outsamp*DrySend[SIDE_LEFT];             \
+        DryBuffer[j][SIDE_RIGHT]   += outsamp*DrySend[SIDE_RIGHT];            \
+        DryBuffer[j][BACK_LEFT]    += outsamp*DrySend[BACK_LEFT];             \
+        DryBuffer[j][BACK_RIGHT]   += outsamp*DrySend[BACK_RIGHT];            \
+        DryBuffer[j][FRONT_CENTER] += outsamp*DrySend[FRONT_CENTER];          \
+        DryBuffer[j][BACK_CENTER]  += outsamp*DrySend[BACK_CENTER];           \
+                                                                              \
+        /* Room path final mix buffer and panning */                          \
+        for(i = 0;i < MAX_SENDS;i++)                                          \
+        {                                                                     \
+            outsamp = lpFilter2P(WetFilter[i], 0, value);                     \
+            WetBuffer[i][j] += outsamp*WetSend[i];                            \
+        }                                                                     \
+                                                                              \
+        DataPosFrac += increment;                                             \
+        k += DataPosFrac>>FRACTIONBITS;                                       \
+        DataPosFrac &= FRACTIONMASK;                                          \
+        j++;                                                                  \
+    }                                                                         \
 } while(0)
 
             switch(Resampler)

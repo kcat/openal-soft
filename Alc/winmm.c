@@ -43,10 +43,7 @@ typedef struct {
     ALint            lWaveInBuffersCommitted;
     HWAVEIN          hWaveInHandle;
     WAVEHDR          WaveInBuffer[4];
-    ALCchar          *pCapturedSampleData;
-    ALuint           ulCapturedDataSize;
-    ALuint           ulReadCapturedDataPos;
-    ALuint           ulWriteCapturedDataPos;
+    RingBuffer       *pRing;
 } WinMMData;
 
 
@@ -100,33 +97,33 @@ static void ProbeDevices(void)
 */
 static void CALLBACK WaveInProc(HWAVEIN hDevice,UINT uMsg,DWORD_PTR dwInstance,DWORD_PTR dwParam1,DWORD_PTR dwParam2)
 {
-    ALCdevice *pDevice = (ALCdevice *)dwInstance;
+    ALCdevice *pDevice = (ALCdevice*)dwInstance;
     WinMMData *pData = pDevice->ExtraData;
 
     (void)hDevice;
     (void)dwParam2;
 
-    if ((uMsg==WIM_DATA))
+    if(uMsg != WIM_DATA)
+        return;
+
+    // Decrement number of buffers in use
+    pData->lWaveInBuffersCommitted--;
+
+    if(pData->bWaveInShutdown == AL_FALSE)
     {
-        // Decrement number of buffers in use
-        pData->lWaveInBuffersCommitted--;
-
-        if (pData->bWaveInShutdown == AL_FALSE)
+        // Notify Wave Processor Thread that a Wave Header has returned
+        PostThreadMessage(pData->ulWaveInThreadID,uMsg,0,dwParam1);
+    }
+    else
+    {
+        if(pData->lWaveInBuffersCommitted == 0)
         {
-            // Notify Wave Processor Thread that a Wave Header has returned
-            PostThreadMessage(pData->ulWaveInThreadID,uMsg,0,dwParam1);
-        }
-        else
-        {
-            if (pData->lWaveInBuffersCommitted == 0)
-            {
-                // Signal Wave Buffers Returned event
-                if (pData->hWaveInHdrEvent)
-                    SetEvent(pData->hWaveInHdrEvent);
+            // Signal Wave Buffers Returned event
+            if(pData->hWaveInHdrEvent)
+                SetEvent(pData->hWaveInHdrEvent);
 
-                // Post 'Quit' Message to WaveIn Processor Thread
-                PostThreadMessage(pData->ulWaveInThreadID,WM_QUIT,0,0);
-            }
+            // Post 'Quit' Message to WaveIn Processor Thread
+            PostThreadMessage(pData->ulWaveInThreadID,WM_QUIT,0,0);
         }
     }
 }
@@ -141,59 +138,29 @@ DWORD WINAPI CaptureThreadProc(LPVOID lpParameter)
 {
     ALCdevice *pDevice = (ALCdevice*)lpParameter;
     WinMMData *pData = pDevice->ExtraData;
-    ALuint ulOffset, ulMaxSize, ulSection;
     LPWAVEHDR pWaveHdr;
+    ALuint FrameSize;
     MSG msg;
 
-    while (GetMessage(&msg, NULL, 0, 0))
+    FrameSize = aluFrameSizeFromFormat(pDevice->Format);
+
+    while(GetMessage(&msg, NULL, 0, 0))
     {
-        if ((msg.message==WIM_DATA)&&(!pData->bWaveInShutdown))
-        {
-            SuspendContext(NULL);
+        if(msg.message != WIM_DATA || pData->bWaveInShutdown)
+            continue;
 
-            pWaveHdr = ((LPWAVEHDR)msg.lParam);
+        pWaveHdr = ((LPWAVEHDR)msg.lParam);
 
-            // Calculate offset in local buffer to write data to
-            ulOffset = pData->ulWriteCapturedDataPos % pData->ulCapturedDataSize;
+        WriteRingBuffer(pData->pRing, (ALubyte*)pWaveHdr->lpData,
+                        pWaveHdr->dwBytesRecorded/FrameSize);
 
-            if ((ulOffset + pWaveHdr->dwBytesRecorded) > pData->ulCapturedDataSize)
-            {
-                ulSection = pData->ulCapturedDataSize - ulOffset;
-                memcpy(pData->pCapturedSampleData + ulOffset, pWaveHdr->lpData, ulSection);
-                memcpy(pData->pCapturedSampleData, pWaveHdr->lpData + ulSection, pWaveHdr->dwBytesRecorded - ulSection);
-            }
-            else
-            {
-                memcpy(pData->pCapturedSampleData + ulOffset, pWaveHdr->lpData, pWaveHdr->dwBytesRecorded);
-            }
-
-            pData->ulWriteCapturedDataPos += pWaveHdr->dwBytesRecorded;
-
-            if (pData->ulWriteCapturedDataPos > (pData->ulReadCapturedDataPos + pData->ulCapturedDataSize))
-            {
-                // Application has not read enough audio data from the capture buffer so data has been
-                // overwritten.  Reset ReadPosition.
-                pData->ulReadCapturedDataPos = pData->ulWriteCapturedDataPos - pData->ulCapturedDataSize;
-            }
-
-            // To prevent an over-flow prevent the offset values from getting too large
-            ulMaxSize = pData->ulCapturedDataSize << 4;
-            if ((pData->ulReadCapturedDataPos > ulMaxSize) && (pData->ulWriteCapturedDataPos > ulMaxSize))
-            {
-                pData->ulReadCapturedDataPos -= ulMaxSize;
-                pData->ulWriteCapturedDataPos -= ulMaxSize;
-            }
-
-            // Send buffer back to capture more data
-            waveInAddBuffer(pData->hWaveInHandle,pWaveHdr,sizeof(WAVEHDR));
-            pData->lWaveInBuffersCommitted++;
-
-            ProcessContext(NULL);
-        }
+        // Send buffer back to capture more data
+        waveInAddBuffer(pData->hWaveInHandle,pWaveHdr,sizeof(WAVEHDR));
+        pData->lWaveInBuffersCommitted++;
     }
 
     // Signal Wave Thread completed event
-    if (pData->hWaveInThreadEvent)
+    if(pData->hWaveInThreadEvent)
         SetEvent(pData->hWaveInThreadEvent);
 
     ExitThread(0);
@@ -218,6 +185,7 @@ static void WinMMClosePlayback(ALCdevice *device)
 static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     WAVEFORMATEX wfexCaptureFormat;
+    DWORD ulCapturedDataSize;
     WinMMData *pData = NULL;
     ALint lDeviceID = 0;
     ALint lBufferSize;
@@ -283,18 +251,16 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
         goto failure;
 
     // Allocate circular memory buffer for the captured audio
-    pData->ulCapturedDataSize = pDevice->UpdateSize*pDevice->NumUpdates *
-                                wfexCaptureFormat.nBlockAlign;
+    ulCapturedDataSize = pDevice->UpdateSize*pDevice->NumUpdates;
 
-    // Make sure circular buffer is at least 100ms in size (and an exact multiple of
-    // the block alignment
-    if (pData->ulCapturedDataSize < (wfexCaptureFormat.nAvgBytesPerSec / 10))
-    {
-        pData->ulCapturedDataSize = wfexCaptureFormat.nAvgBytesPerSec / 10;
-        pData->ulCapturedDataSize -= (pData->ulCapturedDataSize % wfexCaptureFormat.nBlockAlign);
-    }
+    // Make sure circular buffer is at least 100ms in size
+    if(ulCapturedDataSize < (wfexCaptureFormat.nSamplesPerSec / 10))
+        ulCapturedDataSize = wfexCaptureFormat.nSamplesPerSec / 10;
 
-    pData->pCapturedSampleData = (ALCchar*)malloc(pData->ulCapturedDataSize);
+    pData->pRing = CreateRingBuffer(wfexCaptureFormat.nBlockAlign, ulCapturedDataSize);
+    if(!pData->pRing)
+        goto failure;
+
     pData->lWaveInBuffersCommitted=0;
 
     // Create 4 Buffers of 50ms each
@@ -312,9 +278,6 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
         waveInAddBuffer(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
         pData->lWaveInBuffersCommitted++;
     }
-
-    pData->ulReadCapturedDataPos = 0;
-    pData->ulWriteCapturedDataPos = 0;
 
     pDevice->ExtraData = pData;
 
@@ -335,7 +298,6 @@ failure:
         }
     }
 
-    free(pData->pCapturedSampleData);
     if(pData->hWaveInHandle)
         waveInClose(pData->hWaveInHandle);
     if(pData->hWaveInThread)
@@ -372,10 +334,6 @@ static void WinMMCloseCapture(ALCdevice *pDevice)
         free(pData->WaveInBuffer[i].lpData);
     }
 
-    // Free Audio Buffer data
-    free(pData->pCapturedSampleData);
-    pData->pCapturedSampleData = NULL;
-
     // Close the Wave device
     waveInClose(pData->hWaveInHandle);
     pData->hWaveInHandle = 0;
@@ -411,55 +369,20 @@ static void WinMMStopCapture(ALCdevice *pDevice)
     waveInStop(pData->hWaveInHandle);
 }
 
-static void WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
-{
-    WinMMData *pData = (WinMMData*)pDevice->ExtraData;
-    ALuint ulSamples = (unsigned long)lSamples;
-    ALuint ulBytes, ulBytesToCopy;
-    ALuint ulCapturedSamples;
-    ALuint ulReadOffset;
-    ALuint frameSize = aluFrameSizeFromFormat(pDevice->Format);
-
-    // Check that we have the requested numbers of Samples
-    ulCapturedSamples = (pData->ulWriteCapturedDataPos -
-                         pData->ulReadCapturedDataPos) /
-                        frameSize;
-    if(ulSamples > ulCapturedSamples)
-    {
-        alcSetError(pDevice, ALC_INVALID_VALUE);
-        return;
-    }
-
-    ulBytes = ulSamples * frameSize;
-
-    // Get Read Offset
-    ulReadOffset = (pData->ulReadCapturedDataPos % pData->ulCapturedDataSize);
-
-    // Check for wrap-around condition
-    if ((ulReadOffset + ulBytes) > pData->ulCapturedDataSize)
-    {
-        // Copy data from last Read position to end of data
-        ulBytesToCopy = pData->ulCapturedDataSize - ulReadOffset;
-        memcpy(pBuffer, pData->pCapturedSampleData + ulReadOffset, ulBytesToCopy);
-
-        // Copy rest of the data from the start of the captured data
-        memcpy(((char *)pBuffer) + ulBytesToCopy, pData->pCapturedSampleData, ulBytes - ulBytesToCopy);
-    }
-    else
-    {
-        // Copy data from the read position in the captured data
-        memcpy(pBuffer, pData->pCapturedSampleData + ulReadOffset, ulBytes);
-    }
-
-    // Update Read Position
-    pData->ulReadCapturedDataPos += ulBytes;
-}
-
 static ALCuint WinMMAvailableSamples(ALCdevice *pDevice)
 {
     WinMMData *pData = (WinMMData*)pDevice->ExtraData;
-    ALCuint lCapturedBytes = (pData->ulWriteCapturedDataPos - pData->ulReadCapturedDataPos);
-    return lCapturedBytes / aluFrameSizeFromFormat(pDevice->Format);
+    return RingBufferSize(pData->pRing);
+}
+
+static void WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
+{
+    WinMMData *pData = (WinMMData*)pDevice->ExtraData;
+
+    if(WinMMAvailableSamples(pDevice) >= lSamples)
+        ReadRingBuffer(pData->pRing, pBuffer, lSamples);
+    else
+        alcSetError(pDevice, ALC_INVALID_VALUE);
 }
 
 

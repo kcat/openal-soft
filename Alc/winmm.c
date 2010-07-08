@@ -134,7 +134,7 @@ static void CALLBACK WaveInProc(HWAVEIN hDevice,UINT uMsg,DWORD_PTR dwInstance,D
     Used by "MMSYSTEM" Device.  Called when a WaveIn buffer had been filled with new
     audio data.
 */
-DWORD WINAPI CaptureThreadProc(LPVOID lpParameter)
+static DWORD WINAPI CaptureThreadProc(LPVOID lpParameter)
 {
     ALCdevice *pDevice = (ALCdevice*)lpParameter;
     WinMMData *pData = pDevice->ExtraData;
@@ -386,7 +386,7 @@ static void WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lS
 }
 
 
-BackendFuncs WinMMFuncs = {
+static BackendFuncs WinMMFuncs = {
     WinMMOpenPlayback,
     WinMMClosePlayback,
     NULL,

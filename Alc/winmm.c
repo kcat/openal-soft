@@ -267,7 +267,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     lBufferSize = wfexCaptureFormat.nAvgBytesPerSec / 20;
     lBufferSize -= (lBufferSize % wfexCaptureFormat.nBlockAlign);
 
-    for (i=0;i<4;i++)
+    for(i = 0;i < 4;i++)
     {
         memset(&pData->WaveInBuffer[i], 0, sizeof(WAVEHDR));
         pData->WaveInBuffer[i].dwBufferLength = lBufferSize;
@@ -289,7 +289,10 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     return ALC_TRUE;
 
 failure:
-    for (i=0;i<4;i++)
+    if(pData->hWaveInThread)
+        CloseHandle(pData->hWaveInThread);
+
+    for(i = 0;i < 4;i++)
     {
         if(pData->WaveInBuffer[i].lpData)
         {
@@ -298,14 +301,16 @@ failure:
         }
     }
 
+    if(pData->pRing)
+        DestroyRingBuffer(pData->pRing);
+
+    if(pData->hWaveInThreadEvent)
+        CloseHandle(pData->hWaveInThreadEvent);
+    if(pData->hWaveInHdrEvent)
+        CloseHandle(pData->hWaveInHdrEvent);
+
     if(pData->hWaveInHandle)
         waveInClose(pData->hWaveInHandle);
-    if(pData->hWaveInThread)
-        CloseHandle(pData->hWaveInThread);
-    if (pData->hWaveInHdrEvent)
-        CloseHandle(pData->hWaveInHdrEvent);
-    if (pData->hWaveInThreadEvent)
-        CloseHandle(pData->hWaveInThreadEvent);
 
     free(pData);
     pDevice->ExtraData = NULL;
@@ -327,31 +332,29 @@ static void WinMMCloseCapture(ALCdevice *pDevice)
     // Wait for signal that Wave Thread has been destroyed
     WaitForSingleObjectEx(pData->hWaveInThreadEvent, 5000, FALSE);
 
-    // Release the wave buffers
-    for (i=0;i<4;i++)
-    {
-        waveInUnprepareHeader(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
-        free(pData->WaveInBuffer[i].lpData);
-    }
-
-    // Close the Wave device
-    waveInClose(pData->hWaveInHandle);
-    pData->hWaveInHandle = 0;
-
     CloseHandle(pData->hWaveInThread);
     pData->hWaveInThread = 0;
 
-    if (pData->hWaveInHdrEvent)
+    // Release the wave buffers
+    for(i = 0;i < 4;i++)
     {
-        CloseHandle(pData->hWaveInHdrEvent);
-        pData->hWaveInHdrEvent = 0;
+        waveInUnprepareHeader(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
+        free(pData->WaveInBuffer[i].lpData);
+        pData->WaveInBuffer[i].lpData = NULL;
     }
 
-    if (pData->hWaveInThreadEvent)
-    {
-        CloseHandle(pData->hWaveInThreadEvent);
-        pData->hWaveInThreadEvent = 0;
-    }
+    DestroyRingBuffer(pData->pRing);
+    pData->pRing = NULL;
+
+    // Close the Wave device
+    CloseHandle(pData->hWaveInThreadEvent);
+    pData->hWaveInThreadEvent = 0;
+
+    CloseHandle(pData->hWaveInHdrEvent);
+    pData->hWaveInHdrEvent = 0;
+
+    waveInClose(pData->hWaveInHandle);
+    pData->hWaveInHandle = 0;
 
     free(pData);
     pDevice->ExtraData = NULL;

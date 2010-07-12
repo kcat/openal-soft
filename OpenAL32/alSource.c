@@ -1600,7 +1600,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
         if(BufferList->buffer)
         {
             Frequency = BufferList->buffer->frequency;
-            Format = BufferList->buffer->format;
+            Format = BufferList->buffer->eOriginalFormat;
             HadFormat = AL_TRUE;
             break;
         }
@@ -1621,9 +1621,9 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
         if(Frequency == -1 && Format == -1)
         {
             Frequency = buffer->frequency;
-            Format = buffer->format;
+            Format = buffer->eOriginalFormat;
         }
-        else if(Frequency != buffer->frequency || Format != buffer->format)
+        else if(Frequency != buffer->frequency || Format != buffer->eOriginalFormat)
         {
             alSetError(Context, AL_INVALID_OPERATION);
             goto done;

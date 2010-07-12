@@ -188,6 +188,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     DWORD ulCapturedDataSize;
     WinMMData *pData = NULL;
     ALint lDeviceID = 0;
+    ALbyte *BufferData;
     ALint lBufferSize;
     ALuint i;
 
@@ -267,11 +268,17 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     lBufferSize = wfexCaptureFormat.nAvgBytesPerSec / 20;
     lBufferSize -= (lBufferSize % wfexCaptureFormat.nBlockAlign);
 
+    BufferData = calloc(4, lBufferSize);
+    if(!BufferData)
+        goto failure;
+
     for(i = 0;i < 4;i++)
     {
         memset(&pData->WaveInBuffer[i], 0, sizeof(WAVEHDR));
         pData->WaveInBuffer[i].dwBufferLength = lBufferSize;
-        pData->WaveInBuffer[i].lpData = calloc(1,pData->WaveInBuffer[i].dwBufferLength);
+        pData->WaveInBuffer[i].lpData = ((i==0) ? (LPSTR)BufferData :
+                                         (pData->WaveInBuffer[i-1].lpData +
+                                          pData->WaveInBuffer[i-1].dwBufferLength));
         pData->WaveInBuffer[i].dwFlags = 0;
         pData->WaveInBuffer[i].dwLoops = 0;
         waveInPrepareHeader(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
@@ -297,7 +304,8 @@ failure:
         if(pData->WaveInBuffer[i].lpData)
         {
             waveInUnprepareHeader(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
-            free(pData->WaveInBuffer[i].lpData);
+            if(i == 0)
+                free(pData->WaveInBuffer[i].lpData);
         }
     }
 
@@ -339,7 +347,8 @@ static void WinMMCloseCapture(ALCdevice *pDevice)
     for(i = 0;i < 4;i++)
     {
         waveInUnprepareHeader(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
-        free(pData->WaveInBuffer[i].lpData);
+        if(i == 0)
+            free(pData->WaveInBuffer[i].lpData);
         pData->WaveInBuffer[i].lpData = NULL;
     }
 

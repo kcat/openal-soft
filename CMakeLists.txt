@@ -38,7 +38,7 @@ OPTION(DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
 OPTION(WERROR  "Treat compile warnings as errors"      OFF)
 
-OPTION(EXAMPLES  "Build example programs"              ON)
+OPTION(UTILS  "Build and install utility programs"  ON)
 
 OPTION(ALSOFT_CONFIG "Install alsoft.conf configuration file" OFF)
 
@@ -489,23 +489,6 @@ INSTALL(FILES include/AL/al.h
 INSTALL(FILES "${OpenAL_BINARY_DIR}/openal.pc"
         DESTINATION "lib${LIB_SUFFIX}/pkgconfig")
 
-# Install alsoft.conf configuration file
-IF(ALSOFT_CONFIG)
-    INSTALL(FILES alsoftrc.sample
-            DESTINATION /etc/openal
-            RENAME alsoft.conf
-    )
-ENDIF()
-
-IF(EXAMPLES)
-    ADD_EXECUTABLE(openal-info examples/openal-info.c)
-    TARGET_LINK_LIBRARIES(openal-info ${LIBNAME})
-    INSTALL(TARGETS openal-info
-            RUNTIME DESTINATION bin
-            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-            ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-    )
-ENDIF()
 
 MESSAGE(STATUS "")
 MESSAGE(STATUS "Building OpenAL with support for the following backends:")
@@ -518,4 +501,26 @@ IF(WIN32)
         MESSAGE(STATUS "         This is probably NOT what you want!")
         MESSAGE(STATUS "")
     ENDIF()
+ENDIF()
+
+# Install alsoft.conf configuration file
+IF(ALSOFT_CONFIG)
+    INSTALL(FILES alsoftrc.sample
+            DESTINATION /etc/openal
+            RENAME alsoft.conf
+    )
+    MESSAGE(STATUS "Installing sample alsoft.conf")
+    MESSAGE(STATUS "")
+ENDIF()
+
+IF(UTILS)
+    ADD_EXECUTABLE(openal-info utils/openal-info.c)
+    TARGET_LINK_LIBRARIES(openal-info ${LIBNAME})
+    INSTALL(TARGETS openal-info
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+            ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+    )
+    MESSAGE(STATUS "Building utility programs")
+    MESSAGE(STATUS "")
 ENDIF()

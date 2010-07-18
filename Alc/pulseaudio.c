@@ -1,6 +1,7 @@
 /**
  * OpenAL cross platform audio library
  * Copyright (C) 2009 by Konstantinos Natsakis <konstantinos.natsakis@gmail.com>
+ * Copyright (C) 2010 by Chris Robinson <chris.kcat@gmail.com>
  * This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
  *  License as published by the Free Software Foundation; either
@@ -75,6 +76,7 @@ MAKE_FUNC(pa_xfree);
 MAKE_FUNC(pa_stream_connect_record);
 MAKE_FUNC(pa_stream_connect_playback);
 MAKE_FUNC(pa_stream_readable_size);
+MAKE_FUNC(pa_stream_writable_size);
 MAKE_FUNC(pa_stream_cork);
 MAKE_FUNC(pa_stream_is_suspended);
 MAKE_FUNC(pa_stream_get_device_name);
@@ -132,6 +134,9 @@ typedef struct {
     pa_sample_spec spec;
 
     pa_threaded_mainloop *loop;
+
+    ALvoid *thread;
+    ALboolean killNow;
 
     pa_stream *stream;
     pa_context *context;
@@ -228,6 +233,7 @@ LOAD_FUNC(pa_xfree);
 LOAD_FUNC(pa_stream_connect_record);
 LOAD_FUNC(pa_stream_connect_playback);
 LOAD_FUNC(pa_stream_readable_size);
+LOAD_FUNC(pa_stream_writable_size);
 LOAD_FUNC(pa_stream_cork);
 LOAD_FUNC(pa_stream_is_suspended);
 LOAD_FUNC(pa_stream_get_device_name);
@@ -303,8 +309,8 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     SuspendContext(NULL);
 
     data->attr = *(ppa_stream_get_buffer_attr(stream));
-    Device->UpdateSize = 20 * Device->Frequency / 1000;
-    Device->NumUpdates = data->attr.tlength/data->frame_size / Device->UpdateSize;
+    Device->UpdateSize = data->attr.minreq / data->frame_size;
+    Device->NumUpdates = (data->attr.tlength/data->frame_size) / Device->UpdateSize;
     if(Device->NumUpdates == 0)
         Device->NumUpdates = 1;
 
@@ -495,28 +501,58 @@ static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //
 {
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
+    (void)stream;
+    (void)len;
 
-    while(len > 0)
-    {
-        size_t newlen = len;
-        void *buf;
-        pa_free_cb_t free_func = NULL;
-
-#if PA_CHECK_VERSION(0,9,16)
-        if(!ppa_stream_begin_write ||
-           ppa_stream_begin_write(stream, &buf, &newlen) < 0)
-#endif
-        {
-            buf = ppa_xmalloc(newlen);
-            free_func = ppa_xfree;
-        }
-
-        aluMixData(Device, buf, newlen/data->frame_size);
-        ppa_stream_write(stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
-        len -= newlen;
-    }
+    ppa_threaded_mainloop_signal(data->loop, 0);
 } //}}}
 //}}}
+
+static ALuint PulseProc(ALvoid *param)
+{
+    ALCdevice *Device = param;
+    pulse_data *data = Device->ExtraData;
+    ssize_t len;
+
+    SetRTPriority();
+
+    ppa_threaded_mainloop_lock(data->loop);
+    do {
+        len = (Device->Connected ? ppa_stream_writable_size(data->stream) : 0);
+        len -= len%(Device->UpdateSize*data->frame_size);
+        if(len == 0)
+        {
+            ppa_threaded_mainloop_wait(data->loop);
+            continue;
+        }
+        ppa_threaded_mainloop_unlock(data->loop);
+
+        while(len > 0)
+        {
+            size_t newlen = len;
+            void *buf;
+            pa_free_cb_t free_func = NULL;
+
+#if PA_CHECK_VERSION(0,9,16)
+            if(!ppa_stream_begin_write ||
+               ppa_stream_begin_write(data->stream, &buf, &newlen) < 0)
+#endif
+            {
+                buf = ppa_xmalloc(newlen);
+                free_func = ppa_xfree;
+            }
+
+            aluMixData(Device, buf, newlen/data->frame_size);
+            ppa_stream_write(data->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
+            len -= newlen;
+        }
+
+        ppa_threaded_mainloop_lock(data->loop);
+    } while(Device->Connected && !data->killNow);
+    ppa_threaded_mainloop_unlock(data->loop);
+
+    return 0;
+}
 
 static pa_context *connect_context(pa_threaded_mainloop *loop)
 {
@@ -733,7 +769,6 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
     char *pulse_name = NULL;
     pa_sample_spec spec;
     pulse_data *data;
-    ALuint len;
 
     if(!pulse_load())
         return ALC_FALSE;
@@ -792,12 +827,6 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
 
     ppa_threaded_mainloop_unlock(data->loop);
 
-    len = GetConfigValueInt("pulse", "buffer-length", 2048);
-    if(len != 0)
-    {
-        device->UpdateSize = len;
-        device->NumUpdates = 1;
-    }
     return ALC_TRUE;
 
 fail:
@@ -830,12 +859,12 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         flags |= PA_STREAM_FIX_RATE;
 
     data->frame_size = aluFrameSizeFromFormat(device->Format);
-    data->attr.minreq = -1;
     data->attr.prebuf = -1;
     data->attr.fragsize = -1;
-    data->attr.tlength = device->UpdateSize * device->NumUpdates *
-                         data->frame_size;
+    data->attr.minreq = device->UpdateSize * data->frame_size;
+    data->attr.tlength = data->attr.minreq * device->NumUpdates;
     data->attr.maxlength = data->attr.tlength;
+    flags |= PA_STREAM_EARLY_REQUESTS;
 
     switch(aluBytesFromFormat(device->Format))
     {
@@ -887,8 +916,9 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
-        data->attr.tlength = (ALuint64)(data->attr.tlength/data->frame_size) *
-                             data->spec.rate / device->Frequency * data->frame_size;
+        data->attr.minreq = (ALuint64)(data->attr.minreq/data->frame_size) *
+                            data->spec.rate / device->Frequency * data->frame_size;
+        data->attr.tlength = data->attr.minreq * device->NumUpdates;
         data->attr.maxlength = data->attr.tlength;
 
         o = ppa_stream_set_buffer_attr(data->stream, &data->attr,
@@ -906,9 +936,24 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         ppa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
 #endif
     ppa_stream_set_moved_callback(data->stream, stream_device_callback, device);
-
-    stream_write_callback(data->stream, data->attr.tlength, device);
     ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
+
+    data->thread = StartThread(PulseProc, device);
+    if(!data->thread)
+    {
+#if PA_CHECK_VERSION(0,9,15)
+        if(ppa_stream_set_buffer_attr_callback)
+            ppa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
+#endif
+        ppa_stream_set_moved_callback(data->stream, NULL, NULL);
+        ppa_stream_set_write_callback(data->stream, NULL, NULL);
+        ppa_stream_disconnect(data->stream);
+        ppa_stream_unref(data->stream);
+        data->stream = NULL;
+
+        ppa_threaded_mainloop_unlock(data->loop);
+        return ALC_FALSE;
+    }
 
     ppa_threaded_mainloop_unlock(data->loop);
     return ALC_TRUE;
@@ -920,6 +965,15 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
 
     if(!data->stream)
         return;
+
+    data->killNow = AL_TRUE;
+    if(data->thread)
+    {
+        ppa_threaded_mainloop_signal(data->loop, 0);
+        StopThread(data->thread);
+        data->thread = NULL;
+    }
+    data->killNow = AL_FALSE;
 
     ppa_threaded_mainloop_lock(data->loop);
 

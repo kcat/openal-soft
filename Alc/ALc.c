@@ -1612,6 +1612,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         alcSetError(device, ALC_OUT_OF_MEMORY);
         ProcessContext(NULL);
+        if(device->NumContexts == 0)
+            ALCdevice_StopPlayback(device);
         return NULL;
     }
     device->Contexts = temp;
@@ -1628,6 +1630,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         free(ALContext);
         alcSetError(device, ALC_OUT_OF_MEMORY);
         ProcessContext(NULL);
+        if(device->NumContexts == 0)
+            ALCdevice_StopPlayback(device);
         return NULL;
     }
 

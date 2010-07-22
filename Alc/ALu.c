@@ -1474,6 +1474,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
             ProcessContext(ALContext);
         }
+        device->SamplesPlayed += SamplesToDo;
         ProcessContext(NULL);
 
         //Post processing loop

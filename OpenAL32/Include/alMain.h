@@ -405,6 +405,9 @@ struct ALCdevice_struct
     ALCcontext  **Contexts;
     ALuint        NumContexts;
 
+    // Number of samples rendered by this device
+    ALuint64      SamplesPlayed;
+
     BackendFuncs *Funcs;
     void         *ExtraData; // For the backend's use
 

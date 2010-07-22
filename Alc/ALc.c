@@ -1453,6 +1453,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 {
     ALCcontext *ALContext;
     ALboolean running;
+    ALuint oldRate;
     ALuint attrIdx;
     void *temp;
     ALuint i;
@@ -1467,6 +1468,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     }
 
     running = ((device->NumContexts > 0) ? AL_TRUE : AL_FALSE);
+    oldRate = device->Frequency;
 
     // Reset Context Last Error code
     device->LastError = ALC_NO_ERROR;
@@ -1539,6 +1541,11 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
     aluInitPanning(device);
+
+    // Scale the number of samples played according to the new sample rate
+    device->SamplesPlayed *= device->Frequency;
+    device->SamplesPlayed += oldRate-1;
+    device->SamplesPlayed /= oldRate;
 
     for(i = 0;i < device->NumContexts;i++)
     {
@@ -1985,6 +1992,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Contexts = NULL;
     device->NumContexts = 0;
+
+    device->SamplesPlayed = 0;
 
     InitUIntMap(&device->BufferMap);
     InitUIntMap(&device->EffectMap);

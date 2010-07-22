@@ -541,15 +541,15 @@ static void alc_deinit(void)
     for(i = 0;BackendList[i].Deinit;i++)
         BackendList[i].Deinit();
 
-    if(LogFile != stderr)
-        fclose(LogFile);
-    LogFile = NULL;
-
     tls_delete(LocalContext);
 
     FreeALConfig();
     ALTHUNK_EXIT();
     DeleteCriticalSection(&g_csMutex);
+
+    if(LogFile != stderr)
+        fclose(LogFile);
+    LogFile = NULL;
 }
 
 

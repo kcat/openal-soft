@@ -136,7 +136,7 @@ typedef struct {
     pa_threaded_mainloop *loop;
 
     ALvoid *thread;
-    ALboolean killNow;
+    volatile ALboolean killNow;
 
     pa_stream *stream;
     pa_context *context;

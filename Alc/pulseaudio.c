@@ -1204,6 +1204,12 @@ static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint sa
         alcSetError(device, ALC_INVALID_VALUE);
 } //}}}
 
+static ALuint64 pulse_get_time(ALCdevice *Device) //{{{
+{
+    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+} //}}}
+
+
 BackendFuncs pulse_funcs = { //{{{
     pulse_open_playback,
     pulse_close_playback,
@@ -1214,7 +1220,8 @@ BackendFuncs pulse_funcs = { //{{{
     pulse_start_capture,
     pulse_stop_capture,
     pulse_capture_samples,
-    pulse_available_samples
+    pulse_available_samples,
+    pulse_get_time
 }; //}}}
 
 void alc_pulse_init(BackendFuncs *func_list) //{{{

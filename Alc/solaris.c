@@ -266,6 +266,11 @@ static ALCuint solaris_available_samples(ALCdevice *pDevice)
     return 0;
 }
 
+static ALuint64 solaris_get_time(ALCdevice *Device)
+{
+    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+}
+
 
 BackendFuncs solaris_funcs = {
     solaris_open_playback,
@@ -277,7 +282,8 @@ BackendFuncs solaris_funcs = {
     solaris_start_capture,
     solaris_stop_capture,
     solaris_capture_samples,
-    solaris_available_samples
+    solaris_available_samples,
+    solaris_get_time
 };
 
 void alc_solaris_init(BackendFuncs *func_list)

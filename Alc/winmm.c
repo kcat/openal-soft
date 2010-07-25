@@ -397,6 +397,11 @@ static void WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lS
         alcSetError(pDevice, ALC_INVALID_VALUE);
 }
 
+static ALuint64 WinMMGetTime(ALCdevice *Device)
+{
+    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+}
+
 
 static BackendFuncs WinMMFuncs = {
     WinMMOpenPlayback,
@@ -408,7 +413,8 @@ static BackendFuncs WinMMFuncs = {
     WinMMStartCapture,
     WinMMStopCapture,
     WinMMCaptureSamples,
-    WinMMAvailableSamples
+    WinMMAvailableSamples,
+    WinMMGetTime
 };
 
 void alcWinMMInit(BackendFuncs *FuncList)

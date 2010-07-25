@@ -144,6 +144,11 @@ static ALCboolean null_open_capture(ALCdevice *device, const ALCchar *deviceName
     return ALC_FALSE;
 }
 
+static ALuint64 null_get_time(ALCdevice *Device)
+{
+    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+}
+
 
 BackendFuncs null_funcs = {
     null_open_playback,
@@ -155,7 +160,8 @@ BackendFuncs null_funcs = {
     NULL,
     NULL,
     NULL,
-    NULL
+    NULL,
+    null_get_time
 };
 
 void alc_null_init(BackendFuncs *func_list)

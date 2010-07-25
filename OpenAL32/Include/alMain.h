@@ -273,6 +273,8 @@ typedef struct {
     void (*StopCapture)(ALCdevice*);
     void (*CaptureSamples)(ALCdevice*, void*, ALCuint);
     ALCuint (*AvailableSamples)(ALCdevice*);
+
+    ALuint64 (*GetTime)(ALCdevice*);
 } BackendFuncs;
 
 enum {
@@ -424,6 +426,7 @@ struct ALCdevice_struct
 #define ALCdevice_StopCapture(a)         ((a)->Funcs->StopCapture((a)))
 #define ALCdevice_CaptureSamples(a,b,c)  ((a)->Funcs->CaptureSamples((a), (b), (c)))
 #define ALCdevice_AvailableSamples(a)    ((a)->Funcs->AvailableSamples((a)))
+#define ALCdevice_GetTime(a)             ((a)->Funcs->GetTime((a)))
 
 struct ALCcontext_struct
 {

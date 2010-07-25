@@ -334,6 +334,11 @@ static ALCboolean wave_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     return ALC_FALSE;
 }
 
+static ALuint64 wave_get_time(ALCdevice *Device)
+{
+    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+}
+
 
 BackendFuncs wave_funcs = {
     wave_open_playback,
@@ -345,7 +350,8 @@ BackendFuncs wave_funcs = {
     NULL,
     NULL,
     NULL,
-    NULL
+    NULL,
+    wave_get_time
 };
 
 void alc_wave_init(BackendFuncs *func_list)

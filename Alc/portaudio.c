@@ -392,6 +392,11 @@ static ALCuint pa_available_samples(ALCdevice *device)
     return RingBufferSize(data->ring);
 }
 
+static ALuint64 pa_get_time(ALCdevice *Device)
+{
+    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+}
+
 
 static const BackendFuncs pa_funcs = {
     pa_open_playback,
@@ -403,7 +408,8 @@ static const BackendFuncs pa_funcs = {
     pa_start_capture,
     pa_stop_capture,
     pa_capture_samples,
-    pa_available_samples
+    pa_available_samples,
+    pa_get_time
 };
 
 void alc_pa_init(BackendFuncs *func_list)

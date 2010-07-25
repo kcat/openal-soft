@@ -1002,6 +1002,11 @@ static void alsa_capture_samples(ALCdevice *Device, ALCvoid *Buffer, ALCuint Sam
         alcSetError(Device, ALC_INVALID_VALUE);
 }
 
+static ALuint64 alsa_get_time(ALCdevice *Device)
+{
+    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+}
+
 
 BackendFuncs alsa_funcs = {
     alsa_open_playback,
@@ -1013,7 +1018,8 @@ BackendFuncs alsa_funcs = {
     alsa_start_capture,
     alsa_stop_capture,
     alsa_capture_samples,
-    alsa_available_samples
+    alsa_available_samples,
+    alsa_get_time
 };
 
 void alc_alsa_init(BackendFuncs *func_list)

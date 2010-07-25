@@ -538,6 +538,11 @@ static ALCuint DSoundAvailableSamples(ALCdevice *pDevice)
     return 0;
 }
 
+static ALuint64 DSoundGetTime(ALCdevice *Device)
+{
+    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+}
+
 
 BackendFuncs DSoundFuncs = {
     DSoundOpenPlayback,
@@ -549,7 +554,8 @@ BackendFuncs DSoundFuncs = {
     DSoundStartCapture,
     DSoundStopCapture,
     DSoundCaptureSamples,
-    DSoundAvailableSamples
+    DSoundAvailableSamples,
+    DSoundGetTime
 };
 
 

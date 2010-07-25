@@ -938,6 +938,9 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     ppa_stream_set_moved_callback(data->stream, stream_device_callback, device);
     ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
 
+    device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
+                      device->Frequency;
+
     data->thread = StartThread(PulseProc, device);
     if(!data->thread)
     {

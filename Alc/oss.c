@@ -268,6 +268,8 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     device->Frequency = ossSpeed;
     device->UpdateSize = info.fragsize / frameSize;
     device->NumUpdates = info.fragments + 1;
+    device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
+                      device->Frequency;
 
     data->data_size = device->UpdateSize * frameSize;
     data->mix_data = calloc(1, data->data_size);

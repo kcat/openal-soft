@@ -695,6 +695,9 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 
     psnd_pcm_sw_params_free(sp);
 
+    device->TimeRes = (ALuint64)periodSizeInFrames * 1000000000 / rate;
+    device->Frequency = rate;
+
     SetDefaultChannelOrder(device);
 
     data->size = psnd_pcm_frames_to_bytes(data->pcmHandle, periodSizeInFrames);
@@ -711,7 +714,6 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         }
         device->UpdateSize = periodSizeInFrames;
         device->NumUpdates = periods;
-        device->Frequency = rate;
         data->thread = StartThread(ALSANoMMapProc, device);
     }
     else
@@ -724,7 +726,6 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         }
         device->UpdateSize = periodSizeInFrames;
         device->NumUpdates = periods;
-        device->Frequency = rate;
         data->thread = StartThread(ALSAProc, device);
     }
     if(data->thread == NULL)

@@ -108,6 +108,9 @@ static ALCboolean null_reset_playback(ALCdevice *device)
     }
     SetDefaultWFXChannelOrder(device);
 
+    device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
+                      device->Frequency;
+
     data->thread = StartThread(NullProc, device);
     if(data->thread == NULL)
     {

@@ -1995,6 +1995,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->SamplesPlayed = 0;
 
+    device->TimeRes = 1;
+
     InitUIntMap(&device->BufferMap);
     InitUIntMap(&device->EffectMap);
     InitUIntMap(&device->FilterMap);

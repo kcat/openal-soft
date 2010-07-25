@@ -410,6 +410,9 @@ struct ALCdevice_struct
     // Number of samples rendered by this device
     ALuint64      SamplesPlayed;
 
+    // Precision of this device's timing
+    ALuint64      TimeRes;
+
     BackendFuncs *Funcs;
     void         *ExtraData; // For the backend's use
 

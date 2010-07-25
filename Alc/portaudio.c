@@ -250,6 +250,8 @@ static ALCboolean pa_reset_playback(ALCdevice *device)
     streamInfo = pPa_GetStreamInfo(data->stream);
     device->Frequency = streamInfo->sampleRate;
     device->UpdateSize = data->update_size;
+    device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
+                      device->Frequency;
 
     err = pPa_StartStream(data->stream);
     if(err != paNoError)

@@ -84,6 +84,12 @@ AL_API ALvoid AL_APIENTRY alUnmapDatabufferEXT(ALuint uiBuffer);
 #define AL_LOOP_POINTS                           0x2015
 #endif
 
+#ifndef ALC_EXT_device_time
+#define ALC_EXT_device_time 1
+#define ALC_GET_TIME_EXT                        0x314
+#define ALC_GET_TIME_RES_EXT                    0x315
+#endif
+
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
 typedef int64_t ALint64;

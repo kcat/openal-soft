@@ -1356,6 +1356,31 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                 *data = device->Connected;
             break;
 
+        case ALC_GET_TIME_EXT:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else if(size < 2)
+                alcSetError(device, ALC_INVALID_VALUE);
+            else
+            {
+                ALuint64 t = ALCdevice_GetTime(device);
+                data[0] = t&0xffffffff;
+                data[1] = t>>32;
+            }
+            break;
+
+        case ALC_GET_TIME_RES_EXT:
+            if(!IsDevice(device))
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else if(size < 2)
+                alcSetError(device, ALC_INVALID_VALUE);
+            else
+            {
+                data[0] = device->TimeRes&0xffffffff;
+                data[1] = device->TimeRes>>32;
+            }
+            break;
+
         default:
             alcSetError(device, ALC_INVALID_ENUM);
             break;

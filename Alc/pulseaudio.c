@@ -96,6 +96,7 @@ MAKE_FUNC(pa_stream_get_sample_spec);
 MAKE_FUNC(pa_stream_set_read_callback);
 MAKE_FUNC(pa_stream_set_state_callback);
 MAKE_FUNC(pa_stream_set_moved_callback);
+MAKE_FUNC(pa_stream_set_underflow_callback);
 MAKE_FUNC(pa_stream_new);
 MAKE_FUNC(pa_stream_disconnect);
 MAKE_FUNC(pa_threaded_mainloop_lock);
@@ -253,6 +254,7 @@ LOAD_FUNC(pa_stream_get_sample_spec);
 LOAD_FUNC(pa_stream_set_read_callback);
 LOAD_FUNC(pa_stream_set_state_callback);
 LOAD_FUNC(pa_stream_set_moved_callback);
+LOAD_FUNC(pa_stream_set_underflow_callback);
 LOAD_FUNC(pa_stream_new);
 LOAD_FUNC(pa_stream_disconnect);
 LOAD_FUNC(pa_threaded_mainloop_lock);
@@ -299,6 +301,15 @@ static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
     state = ppa_stream_get_state(stream);
     if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
         ppa_threaded_mainloop_signal(loop, 0);
+}//}}}
+
+static void stream_signal_callback(pa_stream *stream, void *pdata) //{{{
+{
+    ALCdevice *Device = pdata;
+    pulse_data *data = Device->ExtraData;
+    (void)stream;
+
+    ppa_threaded_mainloop_signal(data->loop, 0);
 }//}}}
 
 static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
@@ -937,6 +948,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 #endif
     ppa_stream_set_moved_callback(data->stream, stream_device_callback, device);
     ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
+    ppa_stream_set_underflow_callback(data->stream, stream_signal_callback, device);
 
     device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
                       device->Frequency;
@@ -950,6 +962,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 #endif
         ppa_stream_set_moved_callback(data->stream, NULL, NULL);
         ppa_stream_set_write_callback(data->stream, NULL, NULL);
+        ppa_stream_set_underflow_callback(data->stream, NULL, NULL);
         ppa_stream_disconnect(data->stream);
         ppa_stream_unref(data->stream);
         data->stream = NULL;
@@ -986,6 +999,7 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
 #endif
     ppa_stream_set_moved_callback(data->stream, NULL, NULL);
     ppa_stream_set_write_callback(data->stream, NULL, NULL);
+    ppa_stream_set_underflow_callback(data->stream, NULL, NULL);
     ppa_stream_disconnect(data->stream);
     ppa_stream_unref(data->stream);
     data->stream = NULL;

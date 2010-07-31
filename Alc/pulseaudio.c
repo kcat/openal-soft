@@ -536,7 +536,6 @@ static ALuint PulseProc(ALvoid *param)
             ppa_threaded_mainloop_wait(data->loop);
             continue;
         }
-        ppa_threaded_mainloop_unlock(data->loop);
 
         while(len > 0)
         {
@@ -552,13 +551,14 @@ static ALuint PulseProc(ALvoid *param)
                 buf = ppa_xmalloc(newlen);
                 free_func = ppa_xfree;
             }
+            ppa_threaded_mainloop_unlock(data->loop);
 
             aluMixData(Device, buf, newlen/data->frame_size);
+
+            ppa_threaded_mainloop_lock(data->loop);
             ppa_stream_write(data->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
             len -= newlen;
         }
-
-        ppa_threaded_mainloop_lock(data->loop);
     } while(Device->Connected && !data->killNow);
     ppa_threaded_mainloop_unlock(data->loop);
 

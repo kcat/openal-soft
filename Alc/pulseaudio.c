@@ -93,6 +93,7 @@ MAKE_FUNC(pa_context_connect);
 MAKE_FUNC(pa_stream_set_buffer_attr);
 MAKE_FUNC(pa_stream_get_buffer_attr);
 MAKE_FUNC(pa_stream_get_sample_spec);
+MAKE_FUNC(pa_stream_get_time);
 MAKE_FUNC(pa_stream_set_read_callback);
 MAKE_FUNC(pa_stream_set_state_callback);
 MAKE_FUNC(pa_stream_set_moved_callback);
@@ -135,6 +136,8 @@ typedef struct {
     pa_sample_spec spec;
 
     pa_threaded_mainloop *loop;
+
+    ALuint64 baseTime;
 
     ALvoid *thread;
     volatile ALboolean killNow;
@@ -251,6 +254,7 @@ LOAD_FUNC(pa_context_connect);
 LOAD_FUNC(pa_stream_set_buffer_attr);
 LOAD_FUNC(pa_stream_get_buffer_attr);
 LOAD_FUNC(pa_stream_get_sample_spec);
+LOAD_FUNC(pa_stream_get_time);
 LOAD_FUNC(pa_stream_set_read_callback);
 LOAD_FUNC(pa_stream_set_state_callback);
 LOAD_FUNC(pa_stream_set_moved_callback);
@@ -876,6 +880,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     data->attr.tlength = data->attr.minreq * device->NumUpdates;
     data->attr.maxlength = data->attr.tlength;
     flags |= PA_STREAM_EARLY_REQUESTS;
+    flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
 
     switch(aluBytesFromFormat(device->Format))
     {
@@ -950,8 +955,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
     ppa_stream_set_underflow_callback(data->stream, stream_signal_callback, device);
 
-    device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
-                      device->Frequency;
+    device->TimeRes = 1000;
 
     data->thread = StartThread(PulseProc, device);
     if(!data->thread)
@@ -978,6 +982,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 static void pulse_stop_playback(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
+    pa_usec_t usec = 0;
 
     if(!data->stream)
         return;
@@ -992,6 +997,9 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
     data->killNow = AL_FALSE;
 
     ppa_threaded_mainloop_lock(data->loop);
+
+    if(ppa_stream_get_time(data->stream, &usec) != PA_ERR_NODATA)
+        data->baseTime += usec*1000;
 
 #if PA_CHECK_VERSION(0,9,15)
     if(ppa_stream_set_buffer_attr_callback)
@@ -1223,7 +1231,15 @@ static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint sa
 
 static ALuint64 pulse_get_time(ALCdevice *Device) //{{{
 {
-    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+    pulse_data *data = Device->ExtraData;
+    pa_usec_t usec;
+
+    ppa_threaded_mainloop_lock(data->loop);
+    if(!data->stream || ppa_stream_get_time(data->stream, &usec) == PA_ERR_NODATA)
+        usec = 0;
+    ppa_threaded_mainloop_unlock(data->loop);
+
+    return data->baseTime + usec*1000;
 } //}}}
 
 

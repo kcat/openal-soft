@@ -918,7 +918,7 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALfloat DrySend[OUTPUTCHANNELS];
     ALfloat dryGainStep[OUTPUTCHANNELS];
     ALfloat wetGainStep[MAX_SENDS];
-    ALuint i, j, k, out;
+    ALuint i, j, out;
     ALsource *ALSource;
     ALfloat value, outsamp;
     ALbufferlistitem *BufferListItem;
@@ -1108,10 +1108,7 @@ next_source:
 
         BufferSize = min(BufferSize, (SamplesToDo-j));
 
-        /* Actual sample mixing loop */
-        k = 0;
-        Data += DataPosInt*Channels;
-
+        /* Actual sample mixing loops */
         if(Channels == 1) /* Mono */
         {
 #define DO_MIX(resampler) do {                                                \
@@ -1123,7 +1120,8 @@ next_source:
             WetSend[i] += wetGainStep[i];                                     \
                                                                               \
         /* First order interpolator */                                        \
-        value = (resampler)(Data[k], Data[k+1], DataPosFrac);                 \
+        value = (resampler)(Data[DataPosInt], Data[DataPosInt+1],             \
+                            DataPosFrac);                                     \
                                                                               \
         /* Direct path final mix buffer and panning */                        \
         outsamp = lpFilter4P(DryFilter, 0, value);                            \
@@ -1144,7 +1142,7 @@ next_source:
         }                                                                     \
                                                                               \
         DataPosFrac += increment;                                             \
-        k += DataPosFrac>>FRACTIONBITS;                                       \
+        DataPosInt += DataPosFrac>>FRACTIONBITS;                              \
         DataPosFrac &= FRACTIONMASK;                                          \
         j++;                                                                  \
     }                                                                         \
@@ -1185,7 +1183,8 @@ next_source:
                                                                               \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = (resampler)(Data[k*Channels + i],Data[(k+1)*Channels + i],\
+            value = (resampler)(Data[DataPosInt*Channels + i],                \
+                                Data[(DataPosInt+1)*Channels + i],            \
                                 DataPosFrac);                                 \
             outsamp = lpFilter2P(DryFilter, chans[i]*2, value) * dupscaler;   \
             DryBuffer[j][chans[i]] += outsamp*DrySend[chans[i]];              \
@@ -1199,7 +1198,7 @@ next_source:
         }                                                                     \
                                                                               \
         DataPosFrac += increment;                                             \
-        k += DataPosFrac>>FRACTIONBITS;                                       \
+        DataPosInt += DataPosFrac>>FRACTIONBITS;                              \
         DataPosFrac &= FRACTIONMASK;                                          \
         j++;                                                                  \
     }                                                                         \
@@ -1236,7 +1235,8 @@ next_source:
                                                                               \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = (resampler)(Data[k*Channels + i],Data[(k+1)*Channels + i],\
+            value = (resampler)(Data[DataPosInt*Channels + i],                \
+                                Data[(DataPosInt+1)*Channels + i],            \
                                 DataPosFrac);                                 \
             outsamp = lpFilter2P(DryFilter, chans[i]*2, value);               \
             DryBuffer[j][chans[i]] += outsamp*DrySend[chans[i]];              \
@@ -1248,7 +1248,7 @@ next_source:
         }                                                                     \
                                                                               \
         DataPosFrac += increment;                                             \
-        k += DataPosFrac>>FRACTIONBITS;                                       \
+        DataPosInt += DataPosFrac>>FRACTIONBITS;                              \
         DataPosFrac &= FRACTIONMASK;                                          \
         j++;                                                                  \
     }                                                                         \
@@ -1366,12 +1366,11 @@ next_source:
             while(BufferSize--)
             {
                 DataPosFrac += increment;
-                k += DataPosFrac>>FRACTIONBITS;
+                DataPosInt += DataPosFrac>>FRACTIONBITS;
                 DataPosFrac &= FRACTIONMASK;
                 j++;
             }
         }
-        DataPosInt += k;
 
     skipmix:
         /* Handle looping sources */

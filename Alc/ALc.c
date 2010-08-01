@@ -1364,6 +1364,7 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
             else
             {
                 ALuint64 t = ALCdevice_GetTime(device);
+                t -= t%device->TimeRes;
                 data[0] = t&0xffffffff;
                 data[1] = t>>32;
             }

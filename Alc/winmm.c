@@ -190,6 +190,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     ALint lDeviceID = 0;
     ALbyte *BufferData;
     ALint lBufferSize;
+    MMRESULT res;
     ALuint i;
 
     if(!CaptureDeviceList)
@@ -240,16 +241,19 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
                                         wfexCaptureFormat.nBlockAlign;
     wfexCaptureFormat.cbSize = 0;
 
-    if (waveInOpen(&pData->hWaveInHandle, lDeviceID, &wfexCaptureFormat, (DWORD_PTR)&WaveInProc, (DWORD_PTR)pDevice, CALLBACK_FUNCTION) != MMSYSERR_NOERROR)
+    if((res=waveInOpen(&pData->hWaveInHandle, lDeviceID, &wfexCaptureFormat, (DWORD_PTR)&WaveInProc, (DWORD_PTR)pDevice, CALLBACK_FUNCTION)) != MMSYSERR_NOERROR)
+    {
+        AL_PRINT("waveInOpen failed: %u\n", res);
         goto failure;
+    }
 
     pData->hWaveInHdrEvent = CreateEvent(NULL, AL_TRUE, AL_FALSE, "WaveInAllHeadersReturned");
-    if (pData->hWaveInHdrEvent == NULL)
-        goto failure;
-
     pData->hWaveInThreadEvent = CreateEvent(NULL, AL_TRUE, AL_FALSE, "WaveInThreadDestroyed");
-    if (pData->hWaveInThreadEvent == NULL)
+    if(pData->hWaveInHdrEvent == NULL || pData->hWaveInThreadEvent == NULL)
+    {
+        AL_PRINT("CreateEvent failed: %lu\n", GetLastError());
         goto failure;
+    }
 
     // Allocate circular memory buffer for the captured audio
     ulCapturedDataSize = pDevice->UpdateSize*pDevice->NumUpdates;

@@ -830,6 +830,7 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
 
     if(ppa_stream_is_suspended(stream))
     {
+        AL_PRINT("Device is suspended\n");
         ppa_stream_disconnect(stream);
         ppa_stream_unref(stream);
         ppa_threaded_mainloop_unlock(data->loop);

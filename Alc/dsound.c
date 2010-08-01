@@ -296,6 +296,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         if(pData->lpDS)
             IDirectSound_Release(pData->lpDS);
         free(pData);
+        AL_PRINT("Device init failed: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 

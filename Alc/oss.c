@@ -166,8 +166,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     if(data->fd == -1)
     {
         free(data);
-        if(errno != ENOENT)
-            AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
+        AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
         return ALC_FALSE;
     }
 
@@ -336,8 +335,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     if(data->fd == -1)
     {
         free(data);
-        if(errno != ENOENT)
-            AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
+        AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
         return ALC_FALSE;
     }
 

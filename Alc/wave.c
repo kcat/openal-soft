@@ -35,6 +35,8 @@ typedef struct {
     ALvoid *buffer;
     ALuint size;
 
+    ALuint startTime;
+
     volatile int killNow;
     ALvoid *thread;
 } wave_data;
@@ -68,32 +70,42 @@ static ALuint WaveProc(ALvoid *ptr)
     ALCdevice *pDevice = (ALCdevice*)ptr;
     wave_data *data = (wave_data*)pDevice->ExtraData;
     ALuint frameSize;
-    ALuint now, last;
+    ALuint now, start;
+    ALuint64 avail, done;
     size_t fs;
-    ALuint avail;
     union {
         short s;
         char b[sizeof(short)];
     } uSB;
+    const ALuint restTime = (ALuint64)pDevice->UpdateSize * 1000 /
+                            pDevice->Frequency / 2;
 
     uSB.s = 1;
     frameSize = aluFrameSizeFromFormat(pDevice->Format);
 
-    last = timeGetTime()<<8;
+    done = 0;
+    start = data->startTime;
     while(!data->killNow && pDevice->Connected)
     {
-        now = timeGetTime()<<8;
+        now = timeGetTime();
 
-        avail = (ALuint64)(now-last) * pDevice->Frequency / (1000<<8);
-        if(avail < pDevice->UpdateSize)
+        avail = (ALuint64)(now-start) * pDevice->Frequency / 1000;
+        if(avail < done)
         {
-            Sleep(1);
+            AL_PRINT("Timer wrapped\n");
+            aluHandleDisconnect(pDevice);
+            break;
+        }
+        if(avail-done < pDevice->UpdateSize)
+        {
+            Sleep(restTime);
             continue;
         }
 
-        while(avail >= pDevice->UpdateSize)
+        while(avail-done >= pDevice->UpdateSize)
         {
             aluMixData(pDevice, data->buffer, pDevice->UpdateSize);
+            done += pDevice->UpdateSize;
 
             if(uSB.b[0] != 1)
             {
@@ -125,9 +137,6 @@ static ALuint WaveProc(ALvoid *ptr)
                 aluHandleDisconnect(pDevice);
                 break;
             }
-
-            avail -= pDevice->UpdateSize;
-            last += (ALuint64)pDevice->UpdateSize * (1000<<8) / pDevice->Frequency;
         }
     }
 
@@ -277,6 +286,7 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
                       device->Frequency;
     SetDefaultWFXChannelOrder(device);
 
+    data->startTime = timeGetTime();
     data->thread = StartThread(WaveProc, device);
     if(data->thread == NULL)
     {

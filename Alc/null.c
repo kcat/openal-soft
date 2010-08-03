@@ -30,6 +30,8 @@ typedef struct {
     ALvoid *buffer;
     ALuint size;
 
+    ALuint startTime;
+
     volatile int killNow;
     ALvoid *thread;
 } null_data;
@@ -41,30 +43,34 @@ static ALuint NullProc(ALvoid *ptr)
 {
     ALCdevice *Device = (ALCdevice*)ptr;
     null_data *data = (null_data*)Device->ExtraData;
-    ALuint frameSize;
-    ALuint now, last;
-    ALuint avail;
+    ALuint now, start;
+    ALuint64 avail, done;
+    const ALuint restTime = (ALuint64)Device->UpdateSize * 1000 /
+                            Device->Frequency / 2;
 
-    frameSize = aluFrameSizeFromFormat(Device->Format);
-
-    last = timeGetTime()<<8;
+    done = 0;
+    start = data->startTime;
     while(!data->killNow && Device->Connected)
     {
-        now = timeGetTime()<<8;
+        now = timeGetTime();
 
-        avail = (ALuint64)(now-last) * Device->Frequency / (1000<<8);
-        if(avail < Device->UpdateSize)
+        avail = (ALuint64)(now-start) * Device->Frequency / 1000;
+        if(avail < done)
         {
-            Sleep(1);
+            AL_PRINT("Timer wrapped\n");
+            aluHandleDisconnect(Device);
+            break;
+        }
+        if(avail-done < Device->UpdateSize)
+        {
+            Sleep(restTime);
             continue;
         }
 
-        while(avail >= Device->UpdateSize)
+        while(avail-done >= Device->UpdateSize)
         {
             aluMixData(Device, data->buffer, Device->UpdateSize);
-
-            avail -= Device->UpdateSize;
-            last += (ALuint64)Device->UpdateSize * (1000<<8) / Device->Frequency;
+            done += Device->UpdateSize;
         }
     }
 
@@ -111,6 +117,7 @@ static ALCboolean null_reset_playback(ALCdevice *device)
     device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
                       device->Frequency;
 
+    data->startTime = timeGetTime();
     data->thread = StartThread(NullProc, device);
     if(data->thread == NULL)
     {

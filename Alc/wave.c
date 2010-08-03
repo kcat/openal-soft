@@ -36,6 +36,7 @@ typedef struct {
     ALuint size;
 
     ALuint startTime;
+    ALuint64 baseTime;
 
     volatile int killNow;
     ALvoid *thread;
@@ -282,9 +283,8 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
-                      device->Frequency;
     SetDefaultWFXChannelOrder(device);
+    device->TimeRes = 1000000;
 
     data->startTime = timeGetTime();
     data->thread = StartThread(WaveProc, device);
@@ -302,6 +302,7 @@ static void wave_stop_playback(ALCdevice *device)
 {
     wave_data *data = (wave_data*)device->ExtraData;
     ALuint dataLen;
+    ALuint ext;
     long size;
 
     if(!data->thread)
@@ -312,6 +313,9 @@ static void wave_stop_playback(ALCdevice *device)
     data->thread = NULL;
 
     data->killNow = 0;
+
+    ext = timeGetTime() - data->startTime;
+    data->baseTime += (ALuint64)ext * 1000000;
 
     free(data->buffer);
     data->buffer = NULL;
@@ -348,7 +352,11 @@ static ALCboolean wave_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
 
 static ALuint64 wave_get_time(ALCdevice *Device)
 {
-    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+    wave_data *data = (wave_data*)Device->ExtraData;
+    ALuint ext = 0;
+    if(data->thread)
+        ext = timeGetTime() - data->startTime;
+    return data->baseTime + ((ALuint64)ext * 1000000);
 }
 
 

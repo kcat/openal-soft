@@ -31,6 +31,7 @@ typedef struct {
     ALuint size;
 
     ALuint startTime;
+    ALuint64 baseTime;
 
     volatile int killNow;
     ALvoid *thread;
@@ -114,8 +115,7 @@ static ALCboolean null_reset_playback(ALCdevice *device)
     }
     SetDefaultWFXChannelOrder(device);
 
-    device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
-                      device->Frequency;
+    device->TimeRes = 1000000;
 
     data->startTime = timeGetTime();
     data->thread = StartThread(NullProc, device);
@@ -132,6 +132,7 @@ static ALCboolean null_reset_playback(ALCdevice *device)
 static void null_stop_playback(ALCdevice *device)
 {
     null_data *data = (null_data*)device->ExtraData;
+    ALuint ext;
 
     if(!data->thread)
         return;
@@ -141,6 +142,9 @@ static void null_stop_playback(ALCdevice *device)
     data->thread = NULL;
 
     data->killNow = 0;
+
+    ext = timeGetTime() - data->startTime;
+    data->baseTime += (ALuint64)ext * 1000000;
 
     free(data->buffer);
     data->buffer = NULL;
@@ -156,7 +160,11 @@ static ALCboolean null_open_capture(ALCdevice *device, const ALCchar *deviceName
 
 static ALuint64 null_get_time(ALCdevice *Device)
 {
-    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
+    null_data *data = (null_data*)Device->ExtraData;
+    ALuint ext = 0;
+    if(data->thread)
+        ext = timeGetTime() - data->startTime;
+    return data->baseTime + ((ALuint64)ext * 1000000);
 }
 
 

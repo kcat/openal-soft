@@ -582,7 +582,8 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
     return val1 + ((val2-val1)*mult);
 }
 
-static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo)
+static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
+                      float (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo)
 {
     static float DummyBuffer[BUFFERSIZE];
     ALfloat *WetBuffer[MAX_SENDS];
@@ -590,7 +591,6 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALfloat dryGainStep[OUTPUTCHANNELS];
     ALfloat wetGainStep[MAX_SENDS];
     ALuint i, j, out;
-    ALsource *ALSource;
     ALfloat value, outsamp;
     ALbufferlistitem *BufferListItem;
     ALint64 DataSize64,DataPos64;
@@ -608,29 +608,12 @@ static void MixSomeSources(ALCcontext *ALContext, float (*DryBuffer)[OUTPUTCHANN
     ALboolean Looping;
     ALfloat Pitch;
     ALenum State;
-    ALsizei pos;
 
     DuplicateStereo = ALContext->Device->DuplicateStereo;
     DeviceFreq = ALContext->Device->Frequency;
 
     rampLength = DeviceFreq * MIN_RAMP_LENGTH / 1000;
     rampLength = max(rampLength, SamplesToDo);
-
-    pos = 0;
-next_source:
-    while(ALContext->ActiveSourceCount > pos)
-    {
-        ALsizei end;
-
-        ALSource = ALContext->ActiveSources[pos];
-        if(ALSource->state == AL_PLAYING)
-            break;
-
-        end = --(ALContext->ActiveSourceCount);
-        ALContext->ActiveSources[pos] = ALContext->ActiveSources[end];
-    }
-    if(pos >= ALContext->ActiveSourceCount)
-        return;
 
     /* Find buffer format */
     Frequency = 0;
@@ -1082,10 +1065,6 @@ next_source:
         ALSource->WetGains[i] = WetSend[i];
 
     ALSource->FirstStart = AL_FALSE;
-
-    if(ALSource->state == AL_PLAYING)
-        pos++;
-    goto next_source;
 }
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
@@ -1099,7 +1078,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     ALfloat samp;
     int fpuState;
     ALuint i, j, c;
-    ALsizei e;
+    ALsizei e, s;
 
 #if defined(HAVE_FESETROUND)
     fpuState = fegetround();
@@ -1126,7 +1105,19 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             ALContext = device->Contexts[c];
             SuspendContext(ALContext);
 
-            MixSomeSources(ALContext, DryBuffer, SamplesToDo);
+            s = 0;
+            while(s < ALContext->ActiveSourceCount)
+            {
+                ALsource *Source = ALContext->ActiveSources[s];
+                if(Source->state != AL_PLAYING)
+                {
+                    ALsizei end = --(ALContext->ActiveSourceCount);
+                    ALContext->ActiveSources[s] = ALContext->ActiveSources[end];
+                    continue;
+                }
+                MixSource(Source, ALContext, DryBuffer, SamplesToDo);
+                s++;
+            }
 
             /* effect slot processing */
             for(e = 0;e < ALContext->EffectSlotMap.size;e++)

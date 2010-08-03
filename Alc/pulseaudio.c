@@ -326,8 +326,11 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     data->attr = *(ppa_stream_get_buffer_attr(stream));
     Device->UpdateSize = data->attr.minreq / data->frame_size;
     Device->NumUpdates = (data->attr.tlength/data->frame_size) / Device->UpdateSize;
-    if(Device->NumUpdates == 0)
+    if(Device->NumUpdates <= 1)
+    {
         Device->NumUpdates = 1;
+        AL_PRINT("PulseAudio returned tlength < minreq*2; expect break up\n");
+    }
 
     ProcessContext(NULL);
 }//}}}
@@ -879,6 +882,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     data->attr.fragsize = -1;
     data->attr.minreq = device->UpdateSize * data->frame_size;
     data->attr.tlength = data->attr.minreq * device->NumUpdates;
+    if(data->attr.tlength < data->attr.minreq*2)
+        data->attr.tlength = data->attr.minreq*2;
     data->attr.maxlength = data->attr.tlength;
     flags |= PA_STREAM_EARLY_REQUESTS;
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;

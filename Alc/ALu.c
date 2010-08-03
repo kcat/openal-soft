@@ -840,10 +840,12 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
             value = (resampler)(Data[DataPosInt*Channels + i],                \
                                 Data[(DataPosInt+1)*Channels + i],            \
                                 DataPosFrac);                                 \
+                                                                              \
             outsamp = lpFilter2P(DryFilter, chans[i]*2, value) * dupscaler;   \
             DryBuffer[j][chans[i]] += outsamp*DrySend[chans[i]];              \
             DryBuffer[j][chans2[i*2+0]] += outsamp*DrySend[chans2[i*2+0]];    \
             DryBuffer[j][chans2[i*2+1]] += outsamp*DrySend[chans2[i*2+1]];    \
+                                                                              \
             for(out = 0;out < MAX_SENDS;out++)                                \
             {                                                                 \
                 outsamp = lpFilter1P(WetFilter[out], chans[i], value);        \
@@ -892,8 +894,10 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
             value = (resampler)(Data[DataPosInt*Channels + i],                \
                                 Data[(DataPosInt+1)*Channels + i],            \
                                 DataPosFrac);                                 \
+                                                                              \
             outsamp = lpFilter2P(DryFilter, chans[i]*2, value);               \
             DryBuffer[j][chans[i]] += outsamp*DrySend[chans[i]];              \
+                                                                              \
             for(out = 0;out < MAX_SENDS;out++)                                \
             {                                                                 \
                 outsamp = lpFilter1P(WetFilter[out], chans[i], value);        \

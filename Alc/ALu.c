@@ -113,7 +113,7 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[
     vector[2] = temp[0]*matrix[0][2] + temp[1]*matrix[1][2] + temp[2]*matrix[2][2] + temp[3]*matrix[3][2];
 }
 
-static ALvoid CalcNonAttnSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
+ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALfloat DryGain, DryGainHF;
@@ -194,7 +194,7 @@ static ALvoid CalcNonAttnSourceParams(const ALCcontext *ALContext, ALsource *ALS
     }
 }
 
-static ALvoid CalcSourceParams(const ALCcontext *ALContext, ALsource *ALSource)
+ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
     ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,OrigDist;
@@ -635,11 +635,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
 
     if(ALSource->NeedsUpdate)
     {
-        //Only apply 3D calculations for mono buffers
-        if(Channels == 1)
-            CalcSourceParams(ALContext, ALSource);
-        else
-            CalcNonAttnSourceParams(ALContext, ALSource);
+        ALsource_Update(ALSource, ALContext);
         ALSource->NeedsUpdate = AL_FALSE;
     }
 

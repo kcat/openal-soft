@@ -177,7 +177,13 @@ static __inline ALint aluCart2LUTpos(ALfloat re, ALfloat im)
     return pos%LUT_NUM;
 }
 
+struct ALsource;
+
 ALvoid aluInitPanning(ALCdevice *Device);
+
+ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
+ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
+
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);
 ALvoid aluHandleDisconnect(ALCdevice *device);
 

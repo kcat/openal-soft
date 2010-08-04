@@ -666,6 +666,11 @@ static void probe_devices(ALboolean capture)
 {
     pa_threaded_mainloop *loop;
 
+    if(capture == AL_FALSE)
+        allDevNameMap = malloc(sizeof(DevMap) * 1);
+    else
+        allCaptureDevNameMap = malloc(sizeof(DevMap) * 1);
+
     if((loop=ppa_threaded_mainloop_new()) &&
        ppa_threaded_mainloop_start(loop) >= 0)
     {
@@ -679,7 +684,6 @@ static void probe_devices(ALboolean capture)
 
             if(capture == AL_FALSE)
             {
-                allDevNameMap = malloc(sizeof(DevMap) * 1);
                 allDevNameMap[0].name = strdup(pulse_device);
                 allDevNameMap[0].device_name = NULL;
                 numDevNames = 1;
@@ -688,7 +692,6 @@ static void probe_devices(ALboolean capture)
             }
             else
             {
-                allCaptureDevNameMap = malloc(sizeof(DevMap) * 1);
                 allCaptureDevNameMap[0].name = strdup(pulse_device);
                 allCaptureDevNameMap[0].device_name = NULL;
                 numCaptureDevNames = 1;

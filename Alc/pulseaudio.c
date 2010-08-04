@@ -600,6 +600,7 @@ static pa_context *connect_context(pa_threaded_mainloop *loop)
             if(!PA_CONTEXT_IS_GOOD(state))
             {
                 err = ppa_context_errno(context);
+                if(err > 0)  err = -err;
                 break;
             }
 

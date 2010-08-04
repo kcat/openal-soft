@@ -330,7 +330,7 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     if(Device->NumUpdates <= 1)
     {
         Device->NumUpdates = 1;
-        AL_PRINT("PulseAudio returned tlength < minreq*2; expect break up\n");
+        AL_PRINT("PulseAudio returned minreq > tlength/2; expect break up\n");
     }
 
     ProcessContext(NULL);

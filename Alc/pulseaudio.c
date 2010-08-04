@@ -680,7 +680,7 @@ static void probe_devices(ALboolean capture)
             if(capture == AL_FALSE)
             {
                 allDevNameMap = malloc(sizeof(DevMap) * 1);
-                allDevNameMap[0].name = strdup("PulseAudio Default");
+                allDevNameMap[0].name = strdup(pulse_device);
                 allDevNameMap[0].device_name = NULL;
                 numDevNames = 1;
 
@@ -689,7 +689,7 @@ static void probe_devices(ALboolean capture)
             else
             {
                 allCaptureDevNameMap = malloc(sizeof(DevMap) * 1);
-                allCaptureDevNameMap[0].name = strdup("PulseAudio Default");
+                allCaptureDevNameMap[0].name = strdup(pulse_device);
                 allCaptureDevNameMap[0].device_name = NULL;
                 numCaptureDevNames = 1;
 
@@ -792,14 +792,14 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
     if(!pulse_load())
         return ALC_FALSE;
 
-    if(!device_name)
-        device_name = pulse_device;
-    else if(strcmp(device_name, pulse_device) != 0)
+    if(!allDevNameMap)
+        probe_devices(AL_FALSE);
+
+    if(!device_name && numDevNames > 0)
+        device_name = allDevNameMap[0].name;
+    else
     {
         ALuint i;
-
-        if(!allDevNameMap)
-            probe_devices(AL_FALSE);
 
         for(i = 0;i < numDevNames;i++)
         {
@@ -1039,7 +1039,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     if(!allCaptureDevNameMap)
         probe_devices(AL_TRUE);
 
-    if(!device_name)
+    if(!device_name && numCaptureDevNames > 0)
         device_name = allCaptureDevNameMap[0].name;
     else
     {

@@ -576,6 +576,8 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
 
                             if(aluChannelsFromFormat(buffer->format) == 1)
                                 Source->Update = CalcSourceParams;
+                            else if(aluChannelsFromFormat(buffer->format) == 2)
+                                Source->Update = CalcNonAttnStereoSourceParams;
                             else
                                 Source->Update = CalcNonAttnSourceParams;
 
@@ -1626,6 +1628,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
             Format = buffer->eOriginalFormat;
             if(aluChannelsFromFormat(buffer->format) == 1)
                 Source->Update = CalcSourceParams;
+            else if(aluChannelsFromFormat(buffer->format) == 2)
+                Source->Update = CalcNonAttnStereoSourceParams;
             else
                 Source->Update = CalcNonAttnSourceParams;
             Source->NeedsUpdate = AL_TRUE;

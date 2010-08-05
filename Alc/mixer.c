@@ -106,7 +106,6 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     FILTER *DryFilter, *WetFilter[MAX_SENDS];
     ALfloat WetSend[MAX_SENDS];
     ALuint rampLength;
-    ALboolean DuplicateStereo;
     ALuint DeviceFreq;
     ALint increment;
     ALuint DataPosInt, DataPosFrac;
@@ -118,7 +117,6 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     ALfloat Pitch;
     ALenum State;
 
-    DuplicateStereo = ALContext->Device->DuplicateStereo;
     DeviceFreq = ALContext->Device->Frequency;
 
     rampLength = DeviceFreq * MIN_RAMP_LENGTH / 1000;
@@ -321,7 +319,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
             }
 #undef DO_MIX
         }
-        else if(Channels == 2 && DuplicateStereo) /* Stereo */
+        else if(Channels == 2) /* Stereo */
         {
             const int chans[] = {
                 FRONT_LEFT, FRONT_RIGHT
@@ -329,7 +327,6 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
             const int chans2[] = {
                 BACK_LEFT, SIDE_LEFT, BACK_RIGHT, SIDE_RIGHT
             };
-            const ALfloat dupscaler = aluSqrt(1.0f/3.0f);
 
 #define DO_MIX(resampler) do {                                                \
     const ALfloat scaler = 1.0f/Channels;                                     \
@@ -346,7 +343,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
                                 Data[(DataPosInt+1)*Channels + i],            \
                                 DataPosFrac);                                 \
                                                                               \
-            outsamp = lpFilter2P(DryFilter, chans[i]*2, value) * dupscaler;   \
+            outsamp = lpFilter2P(DryFilter, chans[i]*2, value);               \
             DryBuffer[j][chans[i]] += outsamp*DrySend[chans[i]];              \
             DryBuffer[j][chans2[i*2+0]] += outsamp*DrySend[chans2[i*2+0]];    \
             DryBuffer[j][chans2[i*2+1]] += outsamp*DrySend[chans2[i*2+1]];    \
@@ -379,10 +376,11 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
             }
 #undef DO_MIX
         }
-        else if(Channels == 2) /* Stereo */
+        else if(Channels == 4) /* Quad */
         {
             const int chans[] = {
-                FRONT_LEFT, FRONT_RIGHT
+                FRONT_LEFT, FRONT_RIGHT,
+                BACK_LEFT,  BACK_RIGHT
             };
 
 #define DO_MIX(resampler) do {                                                \
@@ -416,26 +414,6 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         j++;                                                                  \
     }                                                                         \
 } while(0)
-
-            switch(Resampler)
-            {
-                case POINT_RESAMPLER:
-                DO_MIX(point); break;
-                case LINEAR_RESAMPLER:
-                DO_MIX(lerp); break;
-                case COSINE_RESAMPLER:
-                DO_MIX(cos_lerp); break;
-                case RESAMPLER_MIN:
-                case RESAMPLER_MAX:
-                break;
-            }
-        }
-        else if(Channels == 4) /* Quad */
-        {
-            const int chans[] = {
-                FRONT_LEFT, FRONT_RIGHT,
-                BACK_LEFT,  BACK_RIGHT
-            };
 
             switch(Resampler)
             {

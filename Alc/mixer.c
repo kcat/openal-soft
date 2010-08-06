@@ -186,7 +186,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
 
     /* Get current buffer queue item */
     BufferListItem = ALSource->queue;
-    for(i = 0;i < BuffersPlayed && BufferListItem;i++)
+    for(i = 0;i < BuffersPlayed;i++)
         BufferListItem = BufferListItem->next;
 
     j = 0;

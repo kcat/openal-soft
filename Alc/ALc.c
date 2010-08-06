@@ -1582,8 +1582,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
-            if(!slot->EffectState)
-                continue;
 
             if(ALEffect_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
             {

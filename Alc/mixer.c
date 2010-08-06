@@ -119,9 +119,6 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
 
     DeviceFreq = ALContext->Device->Frequency;
 
-    rampLength = DeviceFreq * MIN_RAMP_LENGTH / 1000;
-    rampLength = max(rampLength, SamplesToDo);
-
     /* Find buffer format */
     Frequency = 0;
     Channels = 0;
@@ -174,6 +171,17 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         for(i = 0;i < MAX_SENDS;i++)
             WetSend[i] = ALSource->WetGains[i];
     }
+
+    /* Compute the gain steps for each output channel */
+    rampLength = DeviceFreq * MIN_RAMP_LENGTH / 1000;
+    rampLength = max(rampLength, SamplesToDo);
+
+    for(i = 0;i < OUTPUTCHANNELS;i++)
+        dryGainStep[i] = (ALSource->Params.DryGains[i]-DrySend[i]) /
+                         rampLength;
+    for(i = 0;i < MAX_SENDS;i++)
+        wetGainStep[i] = (ALSource->Params.WetGains[i]-WetSend[i]) /
+                         rampLength;
 
     DryFilter = &ALSource->Params.iirFilter;
     for(i = 0;i < MAX_SENDS;i++)
@@ -246,14 +254,6 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         }
         else
             memset(&Data[DataSize*Channels], 0, (BUFFER_PADDING*Channels*Bytes));
-
-        /* Compute the gain steps for each output channel */
-        for(i = 0;i < OUTPUTCHANNELS;i++)
-            dryGainStep[i] = (ALSource->Params.DryGains[i]-DrySend[i]) /
-                             rampLength;
-        for(i = 0;i < MAX_SENDS;i++)
-            wetGainStep[i] = (ALSource->Params.WetGains[i]-WetSend[i]) /
-                             rampLength;
 
         /* Figure out how many samples we can mix. */
         DataSize64 = LoopEnd;

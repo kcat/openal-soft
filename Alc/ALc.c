@@ -1559,7 +1559,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         device->NumAuxSends = numSends;
     }
 
-    if(running == AL_FALSE && ALCdevice_ResetPlayback(device) == ALC_FALSE)
+    if(running != AL_FALSE)
+        goto make_context;
+
+    if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
     {
         alcSetError(device, ALC_INVALID_DEVICE);
         aluHandleDisconnect(device);
@@ -1638,6 +1641,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     else
         device->HeadDampen = 0.0f;
 
+make_context:
     temp = realloc(device->Contexts, (device->NumContexts+1) * sizeof(*device->Contexts));
     if(!temp)
     {

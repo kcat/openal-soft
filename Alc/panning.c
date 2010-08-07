@@ -149,8 +149,10 @@ static ALfloat aluLUTpos2Angle(ALint pos)
 ALvoid aluInitPanning(ALCdevice *Device)
 {
     ALfloat SpeakerAngle[OUTPUTCHANNELS];
+    ALfloat (*Matrix)[OUTPUTCHANNELS];
     Channel *Speaker2Chan;
     ALfloat Alpha, Theta;
+    ALfloat *PanningLUT;
     ALint pos, offset;
     ALuint s, s2;
 
@@ -161,19 +163,19 @@ ALvoid aluInitPanning(ALCdevice *Device)
     }
 
     Speaker2Chan = Device->Speaker2Chan;
+    Matrix = Device->ChannelMatrix;
     switch(Device->Format)
     {
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
         case AL_FORMAT_MONO_FLOAT32:
-            Device->DuplicateStereo = AL_FALSE;
-            Device->ChannelMatrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
-            Device->ChannelMatrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][FRONT_CENTER] = 1.0f;
+            Matrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
+            Matrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
+            Matrix[SIDE_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
+            Matrix[SIDE_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
+            Matrix[BACK_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
+            Matrix[BACK_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
+            Matrix[BACK_CENTER][FRONT_CENTER] = 1.0f;
             Device->NumChan = 1;
             Speaker2Chan[0] = FRONT_CENTER;
             SpeakerAngle[0] = 0.0f * M_PI/180.0f;
@@ -182,15 +184,14 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
         case AL_FORMAT_STEREO_FLOAT32:
-            Device->DuplicateStereo = AL_FALSE;
-            Device->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
-            Device->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
-            Device->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = 1.0f;
-            Device->ChannelMatrix[BACK_LEFT][FRONT_LEFT]     = 1.0f;
-            Device->ChannelMatrix[BACK_RIGHT][FRONT_RIGHT]   = 1.0f;
-            Device->ChannelMatrix[BACK_CENTER][FRONT_LEFT]   = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][FRONT_RIGHT]  = aluSqrt(0.5);
+            Matrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
+            Matrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
+            Matrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
+            Matrix[SIDE_RIGHT][FRONT_RIGHT]   = 1.0f;
+            Matrix[BACK_LEFT][FRONT_LEFT]     = 1.0f;
+            Matrix[BACK_RIGHT][FRONT_RIGHT]   = 1.0f;
+            Matrix[BACK_CENTER][FRONT_LEFT]   = aluSqrt(0.5);
+            Matrix[BACK_CENTER][FRONT_RIGHT]  = aluSqrt(0.5);
             Device->NumChan = 2;
             Speaker2Chan[0] = FRONT_LEFT;
             Speaker2Chan[1] = FRONT_RIGHT;
@@ -202,15 +203,14 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_QUAD8:
         case AL_FORMAT_QUAD16:
         case AL_FORMAT_QUAD32:
-            Device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
-            Device->ChannelMatrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
-            Device->ChannelMatrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]     = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_LEFT][BACK_LEFT]      = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT]   = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_RIGHT][BACK_RIGHT]    = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][BACK_LEFT]    = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][BACK_RIGHT]   = aluSqrt(0.5);
+            Matrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
+            Matrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
+            Matrix[SIDE_LEFT][FRONT_LEFT]     = aluSqrt(0.5);
+            Matrix[SIDE_LEFT][BACK_LEFT]      = aluSqrt(0.5);
+            Matrix[SIDE_RIGHT][FRONT_RIGHT]   = aluSqrt(0.5);
+            Matrix[SIDE_RIGHT][BACK_RIGHT]    = aluSqrt(0.5);
+            Matrix[BACK_CENTER][BACK_LEFT]    = aluSqrt(0.5);
+            Matrix[BACK_CENTER][BACK_RIGHT]   = aluSqrt(0.5);
             Device->NumChan = 4;
             Speaker2Chan[0] = BACK_LEFT;
             Speaker2Chan[1] = FRONT_LEFT;
@@ -226,13 +226,12 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_51CHN8:
         case AL_FORMAT_51CHN16:
         case AL_FORMAT_51CHN32:
-            Device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
-            Device->ChannelMatrix[SIDE_LEFT][FRONT_LEFT]   = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_RIGHT][FRONT_RIGHT] = aluSqrt(0.5);
-            Device->ChannelMatrix[SIDE_RIGHT][BACK_RIGHT]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
+            Matrix[SIDE_LEFT][FRONT_LEFT]   = aluSqrt(0.5);
+            Matrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
+            Matrix[SIDE_RIGHT][FRONT_RIGHT] = aluSqrt(0.5);
+            Matrix[SIDE_RIGHT][BACK_RIGHT]  = aluSqrt(0.5);
+            Matrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
+            Matrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
             Device->NumChan = 5;
             Speaker2Chan[0] = BACK_LEFT;
             Speaker2Chan[1] = FRONT_LEFT;
@@ -250,11 +249,10 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_61CHN8:
         case AL_FORMAT_61CHN16:
         case AL_FORMAT_61CHN32:
-            Device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
-            Device->ChannelMatrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_RIGHT][SIDE_RIGHT]  = aluSqrt(0.5);
+            Matrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
+            Matrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
+            Matrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
+            Matrix[BACK_RIGHT][SIDE_RIGHT]  = aluSqrt(0.5);
             Device->NumChan = 6;
             Speaker2Chan[0] = SIDE_LEFT;
             Speaker2Chan[1] = FRONT_LEFT;
@@ -274,9 +272,8 @@ ALvoid aluInitPanning(ALCdevice *Device)
         case AL_FORMAT_71CHN8:
         case AL_FORMAT_71CHN16:
         case AL_FORMAT_71CHN32:
-            Device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
-            Device->ChannelMatrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
-            Device->ChannelMatrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
+            Matrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
+            Matrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
             Device->NumChan = 7;
             Speaker2Chan[0] = BACK_LEFT;
             Speaker2Chan[1] = SIDE_LEFT;
@@ -299,6 +296,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             assert(0);
     }
 
+    Device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
     if(GetConfigValueBool(NULL, "scalemix", 0))
     {
         ALfloat maxout = 1.0f;
@@ -318,16 +316,17 @@ ALvoid aluInitPanning(ALCdevice *Device)
         }
     }
 
+    PanningLUT = Device->PanningLUT;
     for(pos = 0; pos < LUT_NUM; pos++)
     {
         /* clear all values */
         offset = OUTPUTCHANNELS * pos;
         for(s = 0; s < OUTPUTCHANNELS; s++)
-            Device->PanningLUT[offset+s] = 0.0f;
+            PanningLUT[offset+s] = 0.0f;
 
         if(Device->NumChan == 1)
         {
-            Device->PanningLUT[offset + Speaker2Chan[0]] = 1.0f;
+            PanningLUT[offset + Speaker2Chan[0]] = 1.0f;
             continue;
         }
 
@@ -342,8 +341,8 @@ ALvoid aluInitPanning(ALCdevice *Device)
                 /* source between speaker s and speaker s+1 */
                 Alpha = M_PI_2 * (Theta-SpeakerAngle[s]) /
                                  (SpeakerAngle[s+1]-SpeakerAngle[s]);
-                Device->PanningLUT[offset + Speaker2Chan[s]]   = cos(Alpha);
-                Device->PanningLUT[offset + Speaker2Chan[s+1]] = sin(Alpha);
+                PanningLUT[offset + Speaker2Chan[s]]   = cos(Alpha);
+                PanningLUT[offset + Speaker2Chan[s+1]] = sin(Alpha);
                 break;
             }
         }
@@ -354,8 +353,8 @@ ALvoid aluInitPanning(ALCdevice *Device)
                 Theta += 2.0f * M_PI;
             Alpha = M_PI_2 * (Theta-SpeakerAngle[s]) /
                              (2.0f * M_PI + SpeakerAngle[0]-SpeakerAngle[s]);
-            Device->PanningLUT[offset + Speaker2Chan[s]] = cos(Alpha);
-            Device->PanningLUT[offset + Speaker2Chan[0]] = sin(Alpha);
+            PanningLUT[offset + Speaker2Chan[s]] = cos(Alpha);
+            PanningLUT[offset + Speaker2Chan[0]] = sin(Alpha);
         }
     }
 }

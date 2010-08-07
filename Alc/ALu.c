@@ -84,6 +84,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALint NumSends, Frequency;
+    ALfloat Pitch;
     ALfloat cw;
     ALint i;
 
@@ -100,17 +101,28 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     MaxVolume    = ALSource->flMaxGain;
 
     //1. Multi-channel buffers always play "normal"
+    Pitch = ALSource->flPitch;
     BufferListItem = ALSource->queue;
     while(BufferListItem != NULL)
     {
         ALbuffer *ALBuffer;
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
-            ALSource->Params.Pitch = ALSource->flPitch*ALBuffer->frequency /
-                                     Frequency;
+            Pitch = Pitch * ALBuffer->frequency / Frequency;
             break;
         }
         BufferListItem = BufferListItem->next;
+    }
+
+    if(Pitch > (float)MAX_PITCH)
+        ALSource->Params.Step = MAX_PITCH<<FRACTIONBITS;
+    else if(!(Pitch > 0.0f))
+        ALSource->Params.Step = 1<<FRACTIONBITS;
+    else
+    {
+        ALSource->Params.Step = Pitch*(1<<FRACTIONBITS);
+        if(ALSource->Params.Step == 0)
+            ALSource->Params.Step = 1;
     }
 
     DryGain = SourceVolume;
@@ -178,6 +190,7 @@ ALvoid CalcNonAttnStereoSourceParams(ALsource *ALSource, const ALCcontext *ALCon
     ALfloat WetGainHF[MAX_SENDS];
     ALint NumSends, Frequency;
     ALboolean DupStereo;
+    ALfloat Pitch;
     ALenum Format;
     ALfloat cw;
     ALint i;
@@ -197,17 +210,28 @@ ALvoid CalcNonAttnStereoSourceParams(ALsource *ALSource, const ALCcontext *ALCon
     MaxVolume    = ALSource->flMaxGain;
 
     //1. Multi-channel buffers always play "normal"
+    Pitch = ALSource->flPitch;
     BufferListItem = ALSource->queue;
     while(BufferListItem != NULL)
     {
         ALbuffer *ALBuffer;
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
-            ALSource->Params.Pitch = ALSource->flPitch*ALBuffer->frequency /
-                                     Frequency;
+            Pitch = Pitch * ALBuffer->frequency / Frequency;
             break;
         }
         BufferListItem = BufferListItem->next;
+    }
+
+    if(Pitch > (float)MAX_PITCH)
+        ALSource->Params.Step = MAX_PITCH<<FRACTIONBITS;
+    else if(!(Pitch > 0.0f))
+        ALSource->Params.Step = 1<<FRACTIONBITS;
+    else
+    {
+        ALSource->Params.Step = Pitch*(1<<FRACTIONBITS);
+        if(ALSource->Params.Step == 0)
+            ALSource->Params.Step = 1;
     }
 
     DryGain = SourceVolume;
@@ -663,10 +687,21 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALbuffer *ALBuffer;
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
-            ALSource->Params.Pitch = Pitch*ALBuffer->frequency / Frequency;
+            Pitch = Pitch * ALBuffer->frequency / Frequency;
             break;
         }
         BufferListItem = BufferListItem->next;
+    }
+
+    if(Pitch > (float)MAX_PITCH)
+        ALSource->Params.Step = MAX_PITCH<<FRACTIONBITS;
+    else if(!(Pitch > 0.0f))
+        ALSource->Params.Step = 1<<FRACTIONBITS;
+    else
+    {
+        ALSource->Params.Step = Pitch*(1<<FRACTIONBITS);
+        if(ALSource->Params.Step == 0)
+            ALSource->Params.Step = 1;
     }
 
     // Use energy-preserving panning algorithm for multi-speaker playback

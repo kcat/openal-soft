@@ -91,7 +91,7 @@ typedef struct ALsource
     struct {
         ALfloat DryGains[OUTPUTCHANNELS];
         ALfloat WetGains[MAX_SENDS];
-        ALfloat Pitch;
+        ALint Step;
 
         struct {
             FILTER iirFilter;

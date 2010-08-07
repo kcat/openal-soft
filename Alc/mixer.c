@@ -36,9 +36,6 @@
 #include "alu.h"
 #include "bs2b.h"
 
-#define FRACTIONBITS 14
-#define FRACTIONMASK ((1L<<FRACTIONBITS)-1)
-#define MAX_PITCH 65536
 
 /* Minimum ramp length in milliseconds. The value below was chosen to
  * adequately reduce clicks and pops from harsh gain changes. */
@@ -156,16 +153,8 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         wetGainStep[i] = (ALSource->Params.WetGains[i]-WetSend[i]) /
                          rampLength;
 
-    /* Compute 18.14 fixed point step */
-    if(ALSource->Params.Pitch > (float)MAX_PITCH)
-        increment = MAX_PITCH << FRACTIONBITS;
-    else if(!(ALSource->Params.Pitch > 0.f))
-        increment = (1<<FRACTIONBITS);
-    else
-    {
-        increment = (ALint)(ALSource->Params.Pitch*(1L<<FRACTIONBITS));
-        if(increment == 0)  increment = 1;
-    }
+    /* Get fixed point step */
+    increment = ALSource->Params.Step;
 
     DryFilter = &ALSource->Params.iirFilter;
     for(i = 0;i < MAX_SENDS;i++)

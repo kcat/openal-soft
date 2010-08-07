@@ -79,6 +79,7 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[
 ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
+    ALbufferlistitem *BufferListItem;
     ALfloat DryGain, DryGainHF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
@@ -99,7 +100,18 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     MaxVolume    = ALSource->flMaxGain;
 
     //1. Multi-channel buffers always play "normal"
-    ALSource->Params.Pitch = ALSource->flPitch;
+    BufferListItem = ALSource->queue;
+    while(BufferListItem != NULL)
+    {
+        ALbuffer *ALBuffer;
+        if((ALBuffer=BufferListItem->buffer) != NULL)
+        {
+            ALSource->Params.Pitch = ALSource->flPitch*ALBuffer->frequency /
+                                     Frequency;
+            break;
+        }
+        BufferListItem = BufferListItem->next;
+    }
 
     DryGain = SourceVolume;
     DryGain = __min(DryGain,MaxVolume);
@@ -160,6 +172,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 ALvoid CalcNonAttnStereoSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
+    ALbufferlistitem *BufferListItem;
     ALfloat DryGain, DryGainHF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
@@ -184,7 +197,18 @@ ALvoid CalcNonAttnStereoSourceParams(ALsource *ALSource, const ALCcontext *ALCon
     MaxVolume    = ALSource->flMaxGain;
 
     //1. Multi-channel buffers always play "normal"
-    ALSource->Params.Pitch = ALSource->flPitch;
+    BufferListItem = ALSource->queue;
+    while(BufferListItem != NULL)
+    {
+        ALbuffer *ALBuffer;
+        if((ALBuffer=BufferListItem->buffer) != NULL)
+        {
+            ALSource->Params.Pitch = ALSource->flPitch*ALBuffer->frequency /
+                                     Frequency;
+            break;
+        }
+        BufferListItem = BufferListItem->next;
+    }
 
     DryGain = SourceVolume;
     DryGain = __min(DryGain,MaxVolume);
@@ -310,6 +334,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
     ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound;
+    ALbufferlistitem *BufferListItem;
     ALfloat Matrix[4][4];
     ALfloat flAttenuation, effectiveDist;
     ALfloat RoomAttenuation[MAX_SENDS];
@@ -320,6 +345,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat DirGain, AmbientGain;
     const ALfloat *SpeakerGain;
+    ALfloat Pitch;
     ALfloat length;
     ALuint Frequency;
     ALint NumSends;
@@ -624,12 +650,24 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         else if(flVLS <= -flMaxVelocity)
             flVLS = -flMaxVelocity + 1.0f;
 
-        ALSource->Params.Pitch = ALSource->flPitch *
+        Pitch = ALSource->flPitch *
             ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /
             ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVSS));
     }
     else
-        ALSource->Params.Pitch = ALSource->flPitch;
+        Pitch = ALSource->flPitch;
+
+    BufferListItem = ALSource->queue;
+    while(BufferListItem != NULL)
+    {
+        ALbuffer *ALBuffer;
+        if((ALBuffer=BufferListItem->buffer) != NULL)
+        {
+            ALSource->Params.Pitch = Pitch*ALBuffer->frequency / Frequency;
+            break;
+        }
+        BufferListItem = BufferListItem->next;
+    }
 
     // Use energy-preserving panning algorithm for multi-speaker playback
     length = __max(OrigDist, MinDist);

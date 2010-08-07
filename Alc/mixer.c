@@ -109,33 +109,10 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     ALuint DeviceFreq;
     ALint increment;
     ALuint DataPosInt, DataPosFrac;
-    ALuint Channels, Bytes;
-    ALuint Frequency;
     resampler_t Resampler;
     ALuint BuffersPlayed;
     ALboolean Looping;
-    ALfloat Pitch;
     ALenum State;
-
-    DeviceFreq = ALContext->Device->Frequency;
-
-    /* Find buffer format */
-    Frequency = 0;
-    Channels = 0;
-    Bytes = 0;
-    BufferListItem = ALSource->queue;
-    while(BufferListItem != NULL)
-    {
-        ALbuffer *ALBuffer;
-        if((ALBuffer=BufferListItem->buffer) != NULL)
-        {
-            Channels  = aluChannelsFromFormat(ALBuffer->format);
-            Bytes     = aluBytesFromFormat(ALBuffer->format);
-            Frequency = ALBuffer->frequency;
-            break;
-        }
-        BufferListItem = BufferListItem->next;
-    }
 
     if(ALSource->NeedsUpdate)
     {
@@ -150,12 +127,6 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     DataPosInt    = ALSource->position;
     DataPosFrac   = ALSource->position_fraction;
     Looping       = ALSource->bLooping;
-
-    /* Compute 18.14 fixed point step */
-    Pitch = (ALSource->Params.Pitch*Frequency) / DeviceFreq;
-    if(Pitch > (float)MAX_PITCH)  Pitch = (float)MAX_PITCH;
-    increment = (ALint)(Pitch*(ALfloat)(1L<<FRACTIONBITS));
-    if(increment <= 0)  increment = (1<<FRACTIONBITS);
 
     if(ALSource->FirstStart)
     {
@@ -173,6 +144,8 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     }
 
     /* Compute the gain steps for each output channel */
+    DeviceFreq = ALContext->Device->Frequency;
+
     rampLength = DeviceFreq * MIN_RAMP_LENGTH / 1000;
     rampLength = max(rampLength, SamplesToDo);
 
@@ -199,11 +172,12 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
 
     j = 0;
     do {
+        const ALbuffer *ALBuffer;
         ALfloat *Data = NULL;
+        ALuint DataSize = 0;
         ALuint LoopStart = 0;
         ALuint LoopEnd = 0;
-        ALuint DataSize = 0;
-        ALbuffer *ALBuffer;
+        ALuint Channels, Bytes;
         ALuint BufferSize;
 
         /* Get buffer info */
@@ -211,9 +185,11 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         {
             Data      = ALBuffer->data;
             DataSize  = ALBuffer->size;
-            DataSize /= Channels * Bytes;
+            DataSize /= aluFrameSizeFromFormat(ALBuffer->format);
             LoopStart = ALBuffer->LoopStart;
             LoopEnd   = ALBuffer->LoopEnd;
+            Channels  = aluChannelsFromFormat(ALBuffer->format);
+            Bytes     = aluBytesFromFormat(ALBuffer->format);
         }
 
         if(Looping && ALSource->lSourceType == AL_STATIC)
@@ -254,6 +230,17 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         }
         else
             memset(&Data[DataSize*Channels], 0, (BUFFER_PADDING*Channels*Bytes));
+
+        /* Compute 18.14 fixed point step */
+        if(ALSource->Params.Pitch > (float)MAX_PITCH)
+            increment = MAX_PITCH << FRACTIONBITS;
+        else if(!(ALSource->Params.Pitch > 0.f))
+            increment = (1<<FRACTIONBITS);
+        else
+        {
+            increment = (ALint)(ALSource->Params.Pitch*(1L<<FRACTIONBITS));
+            if(increment == 0)  increment = 1;
+        }
 
         /* Figure out how many samples we can mix. */
         DataSize64 = LoopEnd;

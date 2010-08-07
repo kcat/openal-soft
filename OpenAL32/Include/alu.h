@@ -188,7 +188,6 @@ ALvoid aluInitPanning(ALCdevice *Device);
 
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
-ALvoid CalcNonAttnStereoSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);
 ALvoid aluHandleDisconnect(ALCdevice *device);

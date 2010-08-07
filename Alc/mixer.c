@@ -156,6 +156,17 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         wetGainStep[i] = (ALSource->Params.WetGains[i]-WetSend[i]) /
                          rampLength;
 
+    /* Compute 18.14 fixed point step */
+    if(ALSource->Params.Pitch > (float)MAX_PITCH)
+        increment = MAX_PITCH << FRACTIONBITS;
+    else if(!(ALSource->Params.Pitch > 0.f))
+        increment = (1<<FRACTIONBITS);
+    else
+    {
+        increment = (ALint)(ALSource->Params.Pitch*(1L<<FRACTIONBITS));
+        if(increment == 0)  increment = 1;
+    }
+
     DryFilter = &ALSource->Params.iirFilter;
     for(i = 0;i < MAX_SENDS;i++)
     {
@@ -230,17 +241,6 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         }
         else
             memset(&Data[DataSize*Channels], 0, (BUFFER_PADDING*Channels*Bytes));
-
-        /* Compute 18.14 fixed point step */
-        if(ALSource->Params.Pitch > (float)MAX_PITCH)
-            increment = MAX_PITCH << FRACTIONBITS;
-        else if(!(ALSource->Params.Pitch > 0.f))
-            increment = (1<<FRACTIONBITS);
-        else
-        {
-            increment = (ALint)(ALSource->Params.Pitch*(1L<<FRACTIONBITS));
-            if(increment == 0)  increment = 1;
-        }
 
         /* Figure out how many samples we can mix. */
         DataSize64 = LoopEnd;

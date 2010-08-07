@@ -1006,6 +1006,12 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *p
                     alGetSourcef(source, eParam, pflValues);
                     break;
 
+                case AL_POSITION:
+                case AL_VELOCITY:
+                case AL_DIRECTION:
+                    alGetSource3f(source, eParam, pflValues+0, pflValues+1, pflValues+2);
+                    break;
+
                 case AL_SAMPLE_RW_OFFSETS_EXT:
                 case AL_BYTE_RW_OFFSETS_EXT:
                     updateLen = (ALdouble)pContext->Device->UpdateSize /
@@ -1013,24 +1019,6 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *p
                     GetSourceOffset(Source, eParam, Offsets, updateLen);
                     pflValues[0] = Offsets[0];
                     pflValues[1] = Offsets[1];
-                    break;
-
-                case AL_POSITION:
-                    pflValues[0] = Source->vPosition[0];
-                    pflValues[1] = Source->vPosition[1];
-                    pflValues[2] = Source->vPosition[2];
-                    break;
-
-                case AL_VELOCITY:
-                    pflValues[0] = Source->vVelocity[0];
-                    pflValues[1] = Source->vVelocity[1];
-                    pflValues[2] = Source->vVelocity[2];
-                    break;
-
-                case AL_DIRECTION:
-                    pflValues[0] = Source->vOrientation[0];
-                    pflValues[1] = Source->vOrientation[1];
-                    pflValues[2] = Source->vOrientation[2];
                     break;
 
                 default:
@@ -1254,6 +1242,12 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plVal
                     alGetSourcei(source, eParam, plValues);
                     break;
 
+                case AL_POSITION:
+                case AL_VELOCITY:
+                case AL_DIRECTION:
+                    alGetSource3i(source, eParam, plValues+0, plValues+1, plValues+2);
+                    break;
+
                 case AL_SAMPLE_RW_OFFSETS_EXT:
                 case AL_BYTE_RW_OFFSETS_EXT:
                     updateLen = (ALdouble)pContext->Device->UpdateSize /
@@ -1261,24 +1255,6 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plVal
                     GetSourceOffset(Source, eParam, Offsets, updateLen);
                     plValues[0] = (ALint)Offsets[0];
                     plValues[1] = (ALint)Offsets[1];
-                    break;
-
-                case AL_POSITION:
-                    plValues[0] = (ALint)Source->vPosition[0];
-                    plValues[1] = (ALint)Source->vPosition[1];
-                    plValues[2] = (ALint)Source->vPosition[2];
-                    break;
-
-                case AL_VELOCITY:
-                    plValues[0] = (ALint)Source->vVelocity[0];
-                    plValues[1] = (ALint)Source->vVelocity[1];
-                    plValues[2] = (ALint)Source->vVelocity[2];
-                    break;
-
-                case AL_DIRECTION:
-                    plValues[0] = (ALint)Source->vOrientation[0];
-                    plValues[1] = (ALint)Source->vOrientation[1];
-                    plValues[2] = (ALint)Source->vOrientation[2];
                     break;
 
                 default:

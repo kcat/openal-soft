@@ -1712,15 +1712,15 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     if(context == GlobalContext)
         GlobalContext = NULL;
 
-    for(i = 0;i < Device->NumContexts-1;i++)
+    for(i = 0;i < Device->NumContexts;i++)
     {
         if(Device->Contexts[i] == context)
         {
             Device->Contexts[i] = Device->Contexts[Device->NumContexts-1];
+            Device->NumContexts--;
             break;
         }
     }
-    Device->NumContexts--;
 
     // Lock context
     SuspendContext(context);

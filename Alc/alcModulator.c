@@ -43,7 +43,7 @@ typedef struct ALmodulatorState {
     ALuint index;
     ALuint step;
 
-    ALfloat Scale;
+    ALfloat Gain[OUTPUTCHANNELS];
 
     FILTER iirFilter;
     ALfloat history[1];
@@ -90,8 +90,15 @@ static ALvoid ModulatorDestroy(ALeffectState *effect)
 static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     ALmodulatorState *state = (ALmodulatorState*)effect;
+    ALuint index;
 
-    state->Scale = aluSqrt(Device->NumChan / 8.0f);
+    for(index = 0;index < OUTPUTCHANNELS;index++)
+        state->Gain[index] = 0.0f;
+    for(index = 0;index < Device->NumChan;index++)
+    {
+        Channel chan = Device->Speaker2Chan[index];
+        state->Gain[chan] = 1.0f;
+    }
 
     return AL_TRUE;
 }
@@ -121,7 +128,7 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
 static ALvoid ModulatorProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
 {
     ALmodulatorState *state = (ALmodulatorState*)effect;
-    const ALfloat gain = Slot->Gain * state->Scale;
+    const ALfloat gain = Slot->Gain;
     const ALuint step = state->step;
     ALuint index = state->index;
     ALfloat samp;
@@ -144,14 +151,14 @@ static ALvoid ModulatorProcess(ALeffectState *effect, const ALeffectslot *Slot, 
     /* Apply slot gain */                                                     \
     samp *= gain;                                                             \
                                                                               \
-    SamplesOut[i][FRONT_LEFT]   += samp;                                      \
-    SamplesOut[i][FRONT_RIGHT]  += samp;                                      \
-    SamplesOut[i][FRONT_CENTER] += samp;                                      \
-    SamplesOut[i][SIDE_LEFT]    += samp;                                      \
-    SamplesOut[i][SIDE_RIGHT]   += samp;                                      \
-    SamplesOut[i][BACK_LEFT]    += samp;                                      \
-    SamplesOut[i][BACK_RIGHT]   += samp;                                      \
-    SamplesOut[i][BACK_CENTER]  += samp;                                      \
+    SamplesOut[i][FRONT_LEFT]   += state->Gain[FRONT_LEFT]   * samp;          \
+    SamplesOut[i][FRONT_RIGHT]  += state->Gain[FRONT_RIGHT]  * samp;          \
+    SamplesOut[i][FRONT_CENTER] += state->Gain[FRONT_CENTER] * samp;          \
+    SamplesOut[i][SIDE_LEFT]    += state->Gain[SIDE_LEFT]    * samp;          \
+    SamplesOut[i][SIDE_RIGHT]   += state->Gain[SIDE_RIGHT]   * samp;          \
+    SamplesOut[i][BACK_LEFT]    += state->Gain[BACK_LEFT]    * samp;          \
+    SamplesOut[i][BACK_RIGHT]   += state->Gain[BACK_RIGHT]   * samp;          \
+    SamplesOut[i][BACK_CENTER]  += state->Gain[BACK_CENTER]  * samp;          \
 } while(0)
             FILTER_OUT(sin_func);
         }
@@ -190,8 +197,6 @@ ALeffectState *ModulatorCreate(void)
 
     state->index = 0.0f;
     state->step = 1.0f;
-
-    state->Scale = 1.0f;
 
     state->iirFilter.coeff = 0.0f;
     state->iirFilter.history[0] = 0.0f;

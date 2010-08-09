@@ -815,6 +815,153 @@ ALCvoid alcSetError(ALCdevice *device, ALenum errorCode)
 }
 
 
+/* UpdateDeviceParams:
+ *
+ * Updates device parameters according to the attribute list.
+ */
+static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
+{
+    ALCuint freq, numMono, numStereo, numSends;
+    ALboolean running;
+    ALuint oldRate;
+    ALuint attrIdx;
+    ALuint i;
+
+    // Check for attributes
+    if(!attrList || !attrList[0])
+        return ALC_TRUE;
+
+    running = ((device->NumContexts > 0) ? AL_TRUE : AL_FALSE);
+    oldRate = device->Frequency;
+
+    // If a context is already running on the device, stop playback so the
+    // device attributes can be updated
+    if(running)
+    {
+        ProcessContext(NULL);
+        ALCdevice_StopPlayback(device);
+        SuspendContext(NULL);
+        running = AL_FALSE;
+    }
+
+    freq = device->Frequency;
+    numMono = device->NumMonoSources;
+    numStereo = device->NumStereoSources;
+    numSends = device->NumAuxSends;
+
+    attrIdx = 0;
+    while(attrList[attrIdx])
+    {
+        if(attrList[attrIdx] == ALC_FREQUENCY &&
+           !ConfigValueExists(NULL, "frequency"))
+        {
+            freq = attrList[attrIdx + 1];
+            if(freq < 8000)
+                freq = 8000;
+        }
+
+        if(attrList[attrIdx] == ALC_STEREO_SOURCES)
+        {
+            numStereo = attrList[attrIdx + 1];
+            if(numStereo > device->MaxNoOfSources)
+                numStereo = device->MaxNoOfSources;
+
+            numMono = device->MaxNoOfSources - numStereo;
+        }
+
+        if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS &&
+           !ConfigValueExists(NULL, "sends"))
+        {
+            numSends = attrList[attrIdx + 1];
+            if(numSends > MAX_SENDS)
+                numSends = MAX_SENDS;
+        }
+
+        attrIdx += 2;
+    }
+
+    device->UpdateSize = (ALuint64)device->UpdateSize * freq /
+                         device->Frequency;
+
+    device->Frequency = freq;
+    device->NumMonoSources = numMono;
+    device->NumStereoSources = numStereo;
+    device->NumAuxSends = numSends;
+    if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
+        return ALC_FALSE;
+
+    aluInitPanning(device);
+
+    // Scale the number of samples played according to the new sample rate
+    device->SamplesPlayed *= device->Frequency;
+    device->SamplesPlayed += oldRate-1;
+    device->SamplesPlayed /= oldRate;
+
+    for(i = 0;i < device->NumContexts;i++)
+    {
+        ALCcontext *context = device->Contexts[i];
+        ALsizei pos;
+
+        SuspendContext(context);
+        for(pos = 0;pos < context->EffectSlotMap.size;pos++)
+        {
+            ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
+
+            if(ALEffect_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
+            {
+                ProcessContext(context);
+                return ALC_FALSE;
+            }
+            ALEffect_Update(slot->EffectState, context, &slot->effect);
+        }
+
+        for(pos = 0;pos < context->SourceMap.size;pos++)
+        {
+            ALsource *source = context->SourceMap.array[pos].value;
+            ALuint s = device->NumAuxSends;
+            while(s < MAX_SENDS)
+            {
+                if(source->Send[s].Slot)
+                    source->Send[s].Slot->refcount--;
+                source->Send[s].Slot = NULL;
+                source->Send[s].WetFilter.type = 0;
+                source->Send[s].WetFilter.filter = 0;
+                s++;
+            }
+            source->NeedsUpdate = AL_TRUE;
+        }
+        ProcessContext(context);
+    }
+
+    if(device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
+    {
+        if(!device->Bs2b)
+        {
+            device->Bs2b = calloc(1, sizeof(*device->Bs2b));
+            bs2b_clear(device->Bs2b);
+        }
+        bs2b_set_srate(device->Bs2b, device->Frequency);
+        bs2b_set_level(device->Bs2b, device->Bs2bLevel);
+    }
+    else
+    {
+        free(device->Bs2b);
+        device->Bs2b = NULL;
+    }
+
+    if(aluChannelsFromFormat(device->Format) <= 2)
+    {
+        device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
+        device->HeadDampen = __min(device->HeadDampen, 1.0f);
+        device->HeadDampen = __max(device->HeadDampen, 0.0f);
+    }
+    else
+        device->HeadDampen = 0.0f;
+
+    return ALC_TRUE;
+}
+
+
 /*
     SuspendContext
 
@@ -1478,11 +1625,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
     ALCcontext *ALContext;
-    ALboolean running;
-    ALuint oldRate;
-    ALuint attrIdx;
     void *temp;
-    ALuint i;
 
     SuspendContext(NULL);
 
@@ -1493,172 +1636,31 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
-    running = ((device->NumContexts > 0) ? AL_TRUE : AL_FALSE);
-    oldRate = device->Frequency;
-
     // Reset Context Last Error code
     device->LastError = ALC_NO_ERROR;
 
-    // Check for attributes
-    if(attrList && attrList[0])
-    {
-        ALCuint freq, numMono, numStereo, numSends;
-
-        // If a context is already running on the device, stop playback so the
-        // device attributes can be updated
-        if(running)
-        {
-            ProcessContext(NULL);
-            ALCdevice_StopPlayback(device);
-            SuspendContext(NULL);
-            running = AL_FALSE;
-        }
-
-        freq = device->Frequency;
-        numMono = device->NumMonoSources;
-        numStereo = device->NumStereoSources;
-        numSends = device->NumAuxSends;
-
-        attrIdx = 0;
-        while(attrList[attrIdx])
-        {
-            if(attrList[attrIdx] == ALC_FREQUENCY &&
-               !ConfigValueExists(NULL, "frequency"))
-            {
-                freq = attrList[attrIdx + 1];
-                if(freq < 8000)
-                    freq = 8000;
-            }
-
-            if(attrList[attrIdx] == ALC_STEREO_SOURCES)
-            {
-                numStereo = attrList[attrIdx + 1];
-                if(numStereo > device->MaxNoOfSources)
-                    numStereo = device->MaxNoOfSources;
-
-                numMono = device->MaxNoOfSources - numStereo;
-            }
-
-            if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS &&
-               !ConfigValueExists(NULL, "sends"))
-            {
-                numSends = attrList[attrIdx + 1];
-                if(numSends > MAX_SENDS)
-                    numSends = MAX_SENDS;
-            }
-
-            attrIdx += 2;
-        }
-
-        device->UpdateSize = (ALuint64)device->UpdateSize * freq /
-                             device->Frequency;
-
-        device->Frequency = freq;
-        device->NumMonoSources = numMono;
-        device->NumStereoSources = numStereo;
-        device->NumAuxSends = numSends;
-    }
-
-    if(running != AL_FALSE)
-        goto make_context;
-
-    if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
+    if(UpdateDeviceParams(device, attrList) == ALC_FALSE)
     {
         alcSetError(device, ALC_INVALID_DEVICE);
         aluHandleDisconnect(device);
         ProcessContext(NULL);
+        ALCdevice_StopPlayback(device);
         return NULL;
     }
-    aluInitPanning(device);
 
-    // Scale the number of samples played according to the new sample rate
-    device->SamplesPlayed *= device->Frequency;
-    device->SamplesPlayed += oldRate-1;
-    device->SamplesPlayed /= oldRate;
-
-    for(i = 0;i < device->NumContexts;i++)
-    {
-        ALCcontext *context = device->Contexts[i];
-        ALsizei pos;
-
-        SuspendContext(context);
-        for(pos = 0;pos < context->EffectSlotMap.size;pos++)
-        {
-            ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
-
-            if(ALEffect_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
-            {
-                alcSetError(device, ALC_INVALID_DEVICE);
-                aluHandleDisconnect(device);
-                ProcessContext(context);
-                ProcessContext(NULL);
-                ALCdevice_StopPlayback(device);
-                return NULL;
-            }
-            ALEffect_Update(slot->EffectState, context, &slot->effect);
-        }
-
-        for(pos = 0;pos < context->SourceMap.size;pos++)
-        {
-            ALsource *source = context->SourceMap.array[pos].value;
-            ALuint s = device->NumAuxSends;
-            while(s < MAX_SENDS)
-            {
-                if(source->Send[s].Slot)
-                    source->Send[s].Slot->refcount--;
-                source->Send[s].Slot = NULL;
-                source->Send[s].WetFilter.type = 0;
-                source->Send[s].WetFilter.filter = 0;
-                s++;
-            }
-            source->NeedsUpdate = AL_TRUE;
-        }
-        ProcessContext(context);
-    }
-
-    if(device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
-    {
-        if(!device->Bs2b)
-        {
-            device->Bs2b = calloc(1, sizeof(*device->Bs2b));
-            bs2b_clear(device->Bs2b);
-        }
-        bs2b_set_srate(device->Bs2b, device->Frequency);
-        bs2b_set_level(device->Bs2b, device->Bs2bLevel);
-    }
-    else
-    {
-        free(device->Bs2b);
-        device->Bs2b = NULL;
-    }
-
-    if(aluChannelsFromFormat(device->Format) <= 2)
-    {
-        device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
-        device->HeadDampen = __min(device->HeadDampen, 1.0f);
-        device->HeadDampen = __max(device->HeadDampen, 0.0f);
-    }
-    else
-        device->HeadDampen = 0.0f;
-
-make_context:
+    ALContext = NULL;
     temp = realloc(device->Contexts, (device->NumContexts+1) * sizeof(*device->Contexts));
-    if(!temp)
+    if(temp)
     {
-        alcSetError(device, ALC_OUT_OF_MEMORY);
-        ProcessContext(NULL);
-        if(device->NumContexts == 0)
-            ALCdevice_StopPlayback(device);
-        return NULL;
-    }
-    device->Contexts = temp;
+        device->Contexts = temp;
 
-    ALContext = calloc(1, sizeof(ALCcontext));
-    if(ALContext)
-    {
-        ALContext->MaxActiveSources = 256;
-        ALContext->ActiveSources = malloc(sizeof(*ALContext->ActiveSources) *
-                                          ALContext->MaxActiveSources);
+        ALContext = calloc(1, sizeof(ALCcontext));
+        if(ALContext)
+        {
+            ALContext->MaxActiveSources = 256;
+            ALContext->ActiveSources = malloc(sizeof(ALContext->ActiveSources[0]) *
+                                              ALContext->MaxActiveSources);
+        }
     }
     if(!ALContext || !ALContext->ActiveSources)
     {

@@ -827,66 +827,70 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALuint attrIdx;
     ALuint i;
 
-    // Check for attributes
-    if(!attrList || !attrList[0])
-        return ALC_TRUE;
-
     running = ((device->NumContexts > 0) ? AL_TRUE : AL_FALSE);
     oldRate = device->Frequency;
 
-    // If a context is already running on the device, stop playback so the
-    // device attributes can be updated
+    // Check for attributes
+    if(attrList && attrList[0])
+    {
+        // If a context is already running on the device, stop playback so the
+        // device attributes can be updated
+        if(running)
+        {
+            ProcessContext(NULL);
+            ALCdevice_StopPlayback(device);
+            SuspendContext(NULL);
+            running = AL_FALSE;
+        }
+
+        freq = device->Frequency;
+        numMono = device->NumMonoSources;
+        numStereo = device->NumStereoSources;
+        numSends = device->NumAuxSends;
+
+        attrIdx = 0;
+        while(attrList[attrIdx])
+        {
+            if(attrList[attrIdx] == ALC_FREQUENCY &&
+               !ConfigValueExists(NULL, "frequency"))
+            {
+                freq = attrList[attrIdx + 1];
+                if(freq < 8000)
+                    freq = 8000;
+            }
+
+            if(attrList[attrIdx] == ALC_STEREO_SOURCES)
+            {
+                numStereo = attrList[attrIdx + 1];
+                if(numStereo > device->MaxNoOfSources)
+                    numStereo = device->MaxNoOfSources;
+
+                numMono = device->MaxNoOfSources - numStereo;
+            }
+
+            if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS &&
+               !ConfigValueExists(NULL, "sends"))
+            {
+                numSends = attrList[attrIdx + 1];
+                if(numSends > MAX_SENDS)
+                    numSends = MAX_SENDS;
+            }
+
+            attrIdx += 2;
+        }
+
+        device->UpdateSize = (ALuint64)device->UpdateSize * freq /
+                             device->Frequency;
+
+        device->Frequency = freq;
+        device->NumMonoSources = numMono;
+        device->NumStereoSources = numStereo;
+        device->NumAuxSends = numSends;
+    }
+
     if(running)
-    {
-        ProcessContext(NULL);
-        ALCdevice_StopPlayback(device);
-        SuspendContext(NULL);
-        running = AL_FALSE;
-    }
+        return ALC_TRUE;
 
-    freq = device->Frequency;
-    numMono = device->NumMonoSources;
-    numStereo = device->NumStereoSources;
-    numSends = device->NumAuxSends;
-
-    attrIdx = 0;
-    while(attrList[attrIdx])
-    {
-        if(attrList[attrIdx] == ALC_FREQUENCY &&
-           !ConfigValueExists(NULL, "frequency"))
-        {
-            freq = attrList[attrIdx + 1];
-            if(freq < 8000)
-                freq = 8000;
-        }
-
-        if(attrList[attrIdx] == ALC_STEREO_SOURCES)
-        {
-            numStereo = attrList[attrIdx + 1];
-            if(numStereo > device->MaxNoOfSources)
-                numStereo = device->MaxNoOfSources;
-
-            numMono = device->MaxNoOfSources - numStereo;
-        }
-
-        if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS &&
-           !ConfigValueExists(NULL, "sends"))
-        {
-            numSends = attrList[attrIdx + 1];
-            if(numSends > MAX_SENDS)
-                numSends = MAX_SENDS;
-        }
-
-        attrIdx += 2;
-    }
-
-    device->UpdateSize = (ALuint64)device->UpdateSize * freq /
-                         device->Frequency;
-
-    device->Frequency = freq;
-    device->NumMonoSources = numMono;
-    device->NumStereoSources = numStereo;
-    device->NumAuxSends = numSends;
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
         return ALC_FALSE;
 

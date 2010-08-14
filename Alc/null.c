@@ -38,7 +38,7 @@ typedef struct {
 } null_data;
 
 
-static const ALCchar nullDevice[] = "Null Output";
+static const ALCchar nullDevice[] = "No Output";
 
 static ALuint NullProc(ALvoid *ptr)
 {

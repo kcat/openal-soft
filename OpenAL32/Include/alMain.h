@@ -409,6 +409,8 @@ struct ALCdevice_struct
     ALfloat PanningLUT[OUTPUTCHANNELS * LUT_NUM];
     ALuint  NumChan;
 
+    ALfloat ClickRemoval[OUTPUTCHANNELS];
+
     // Contexts created on this device
     ALCcontext  **Contexts;
     ALuint        NumContexts;

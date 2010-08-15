@@ -901,6 +901,9 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->SamplesPlayed += oldRate-1;
     device->SamplesPlayed /= oldRate;
 
+    for(i = 0;i < OUTPUTCHANNELS;i++)
+        device->ClickRemoval[i] = 0.0f;
+
     for(i = 0;i < device->NumContexts;i++)
     {
         ALCcontext *context = device->Contexts[i];

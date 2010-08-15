@@ -534,6 +534,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     float (*DryBuffer)[OUTPUTCHANNELS];
     ALfloat (*Matrix)[OUTPUTCHANNELS];
+    ALfloat *ClickRemoval;
     const ALuint *ChanMap;
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
@@ -597,6 +598,16 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         ProcessContext(NULL);
 
         //Post processing loop
+        ClickRemoval = device->ClickRemoval;
+        for(i = 0;i < SamplesToDo;i++)
+        {
+            for(c = 0;c < OUTPUTCHANNELS;c++)
+            {
+                ClickRemoval[c] -= ClickRemoval[c] / 256.0f;
+                DryBuffer[i][c] += ClickRemoval[c];
+            }
+        }
+
         ChanMap = device->DevChannels;
         Matrix = device->ChannelMatrix;
         switch(device->Format)

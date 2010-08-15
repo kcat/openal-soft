@@ -1345,11 +1345,6 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             continue;
         }
 
-        for(j = 0;j < OUTPUTCHANNELS;j++)
-            Source->DryGains[j] = 0.0f;
-        for(j = 0;j < MAX_SENDS;j++)
-            Source->WetGains[j] = 0.0f;
-
         if(Source->state != AL_PAUSED)
         {
             Source->state = AL_PLAYING;

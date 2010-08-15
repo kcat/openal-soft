@@ -81,12 +81,8 @@ typedef struct ALsource
     // Source Type (Static, Streaming, or Undetermined)
     ALint  lSourceType;
 
-    // Current gains, which are ramped while mixed
-    ALfloat DryGains[OUTPUTCHANNELS];
-    ALfloat WetGains[MAX_SENDS];
-    ALboolean FirstStart;
-
     // Current target parameters used for mixing
+    ALboolean FirstStart;
     ALboolean NeedsUpdate;
     struct {
         ALfloat DryGains[OUTPUTCHANNELS];

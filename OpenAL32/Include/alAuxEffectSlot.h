@@ -22,6 +22,8 @@ typedef struct ALeffectslot
 
     ALfloat WetBuffer[BUFFERSIZE];
 
+    ALfloat ClickRemoval[1];
+
     ALuint refcount;
 
     // Index to itself

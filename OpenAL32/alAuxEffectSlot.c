@@ -88,6 +88,8 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                     slot->AuxSendAuto = AL_TRUE;
                     for(j = 0;j < BUFFERSIZE;j++)
                         slot->WetBuffer[j] = 0.0f;
+                    for(j = 0;j < 1;j++)
+                        slot->ClickRemoval[j] = 0.0f;
                     slot->refcount = 0;
                 }
             }

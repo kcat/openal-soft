@@ -61,6 +61,43 @@ static __inline ALfloat lpFilter1P(FILTER *iir, ALuint offset, ALfloat input)
     return output;
 }
 
+static __inline ALfloat lpFilter4PC(const FILTER *iir, ALuint offset, ALfloat input)
+{
+    const ALfloat *history = &iir->history[offset];
+    ALfloat a = iir->coeff;
+    ALfloat output = input;
+
+    output = output + (history[0]-output)*a;
+    output = output + (history[1]-output)*a;
+    output = output + (history[2]-output)*a;
+    output = output + (history[3]-output)*a;
+
+    return output;
+}
+
+static __inline ALfloat lpFilter2PC(const FILTER *iir, ALuint offset, ALfloat input)
+{
+    const ALfloat *history = &iir->history[offset];
+    ALfloat a = iir->coeff;
+    ALfloat output = input;
+
+    output = output + (history[0]-output)*a;
+    output = output + (history[1]-output)*a;
+
+    return output;
+}
+
+static __inline ALfloat lpFilter1PC(FILTER *iir, ALuint offset, ALfloat input)
+{
+    const ALfloat *history = &iir->history[offset];
+    ALfloat a = iir->coeff;
+    ALfloat output = input;
+
+    output = output + (history[0]-output)*a;
+
+    return output;
+}
+
 /* Calculates the low-pass filter coefficient given the pre-scaled gain and
  * cos(w) value. Note that g should be pre-scaled (sqr(gain) for one-pole,
  * sqrt(gain) for four-pole, etc) */

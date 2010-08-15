@@ -1366,11 +1366,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(Source->lOffset)
             ApplyOffset(Source);
 
-        if(Source->BuffersPlayed == 0 && Source->position == 0 &&
-           Source->position_fraction == 0)
-            Source->FirstStart = AL_TRUE;
-        else
-            Source->FirstStart = AL_FALSE;
+        Source->FirstStart = AL_TRUE;
 
         // If device is disconnected, go right to stopped
         if(!Context->Device->Connected)

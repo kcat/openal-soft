@@ -265,7 +265,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         for(out = 0;out < MAX_SENDS;out++)                                    \
         {                                                                     \
             outsamp = lpFilter2PC(WetFilter[out], 0, value);                  \
-            WetClickRemoval[out][0] += outsamp*wetGainDiff[BACK_CENTER];      \
+            WetClickRemoval[out][0] += outsamp*wetGainDiff[out];              \
         }                                                                     \
     }                                                                         \
     while(BufferSize--)                                                       \

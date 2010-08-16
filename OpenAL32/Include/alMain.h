@@ -410,6 +410,7 @@ struct ALCdevice_struct
     ALuint  NumChan;
 
     ALfloat ClickRemoval[OUTPUTCHANNELS];
+    ALfloat PendingClicks[OUTPUTCHANNELS];
 
     // Contexts created on this device
     ALCcontext  **Contexts;

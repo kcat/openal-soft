@@ -90,11 +90,9 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     static ALfloat DummyClickRemoval[OUTPUTCHANNELS];
     ALfloat *WetBuffer[MAX_SENDS];
     ALfloat DrySend[OUTPUTCHANNELS];
-    ALfloat dryGainDiff[OUTPUTCHANNELS];
-    ALfloat wetGainDiff[MAX_SENDS];
-    ALboolean UpdateClick;
+    ALfloat *ClickRemoval, *PendingClicks;
     ALfloat *WetClickRemoval[MAX_SENDS];
-    ALfloat *ClickRemoval;
+    ALfloat *WetPendingClicks[MAX_SENDS];
     ALuint i, j, out;
     ALfloat value, outsamp;
     ALbufferlistitem *BufferListItem;
@@ -108,30 +106,13 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     ALboolean Looping;
     ALenum State;
 
-    UpdateClick = (ALSource->FirstStart || ALSource->NeedsUpdate);
     ClickRemoval = ALContext->Device->ClickRemoval;
-
-    if(ALSource->FirstStart)
-    {
-        /* When starting, assume a previous gain of 0 */
-        for(i = 0;i < OUTPUTCHANNELS;i++)
-            DrySend[i] = 0.0f;
-        for(i = 0;i < MAX_SENDS;i++)
-            WetSend[i] = 0.0f;
-    }
-    else
-    {
-        for(i = 0;i < OUTPUTCHANNELS;i++)
-            DrySend[i] = ALSource->Params.DryGains[i];
-        for(i = 0;i < MAX_SENDS;i++)
-            WetSend[i] = ALSource->Params.WetGains[i];
-    }
+    PendingClicks = ALContext->Device->PendingClicks;
 
     if(ALSource->NeedsUpdate)
     {
         ALsource_Update(ALSource, ALContext);
         ALSource->NeedsUpdate = AL_FALSE;
-        UpdateClick = AL_TRUE;
     }
 
     /* Get source info */
@@ -143,15 +124,9 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     Looping       = ALSource->bLooping;
 
     for(i = 0;i < OUTPUTCHANNELS;i++)
-    {
-        dryGainDiff[i] = DrySend[i] - ALSource->Params.DryGains[i];
         DrySend[i] = ALSource->Params.DryGains[i];
-    }
     for(i = 0;i < MAX_SENDS;i++)
-    {
-        wetGainDiff[i] = WetSend[i] - ALSource->Params.WetGains[i];
         WetSend[i] = ALSource->Params.WetGains[i];
-    }
 
     /* Get fixed point step */
     increment = ALSource->Params.Step;
@@ -166,6 +141,9 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         WetClickRemoval[i] = (ALSource->Send[i].Slot ?
                               ALSource->Send[i].Slot->ClickRemoval :
                               DummyClickRemoval);
+        WetPendingClicks[i] = (ALSource->Send[i].Slot ?
+                               ALSource->Send[i].Slot->PendingClicks :
+                               DummyClickRemoval);
     }
 
     /* Get current buffer queue item */
@@ -248,24 +226,25 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         if(Channels == 1) /* Mono */
         {
 #define DO_MIX(resampler) do {                                                \
-    if(j == 0 && UpdateClick)                                                 \
+    if(j == 0)                                                                \
     {                                                                         \
         value = (resampler)(Data[DataPosInt], Data[DataPosInt+1],             \
                             DataPosFrac);                                     \
+                                                                              \
         outsamp = lpFilter4PC(DryFilter, 0, value);                           \
-        ClickRemoval[FRONT_LEFT]   += outsamp*dryGainDiff[FRONT_LEFT];        \
-        ClickRemoval[FRONT_RIGHT]  += outsamp*dryGainDiff[FRONT_RIGHT];       \
-        ClickRemoval[SIDE_LEFT]    += outsamp*dryGainDiff[SIDE_LEFT];         \
-        ClickRemoval[SIDE_RIGHT]   += outsamp*dryGainDiff[SIDE_RIGHT];        \
-        ClickRemoval[BACK_LEFT]    += outsamp*dryGainDiff[BACK_LEFT];         \
-        ClickRemoval[BACK_RIGHT]   += outsamp*dryGainDiff[BACK_RIGHT];        \
-        ClickRemoval[FRONT_CENTER] += outsamp*dryGainDiff[FRONT_CENTER];      \
-        ClickRemoval[BACK_CENTER]  += outsamp*dryGainDiff[BACK_CENTER];       \
+        ClickRemoval[FRONT_LEFT]   -= outsamp*DrySend[FRONT_LEFT];            \
+        ClickRemoval[FRONT_RIGHT]  -= outsamp*DrySend[FRONT_RIGHT];           \
+        ClickRemoval[SIDE_LEFT]    -= outsamp*DrySend[SIDE_LEFT];             \
+        ClickRemoval[SIDE_RIGHT]   -= outsamp*DrySend[SIDE_RIGHT];            \
+        ClickRemoval[BACK_LEFT]    -= outsamp*DrySend[BACK_LEFT];             \
+        ClickRemoval[BACK_RIGHT]   -= outsamp*DrySend[BACK_RIGHT];            \
+        ClickRemoval[FRONT_CENTER] -= outsamp*DrySend[FRONT_CENTER];          \
+        ClickRemoval[BACK_CENTER]  -= outsamp*DrySend[BACK_CENTER];           \
                                                                               \
         for(out = 0;out < MAX_SENDS;out++)                                    \
         {                                                                     \
             outsamp = lpFilter2PC(WetFilter[out], 0, value);                  \
-            WetClickRemoval[out][0] += outsamp*wetGainDiff[out];              \
+            WetClickRemoval[out][0] -= outsamp*WetSend[out];                  \
         }                                                                     \
     }                                                                         \
     while(BufferSize--)                                                       \
@@ -297,6 +276,29 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         DataPosFrac &= FRACTIONMASK;                                          \
         j++;                                                                  \
     }                                                                         \
+    if(j == SamplesToDo)                                                      \
+    {                                                                         \
+        ALuint pos = ((DataPosInt < DataSize) ? DataPosInt : (DataPosInt-1)); \
+        ALuint frac = ((DataPosInt < DataSize) ? DataPosFrac :                \
+                       ((DataPosFrac-increment)&FRACTIONMASK));               \
+        value = (resampler)(Data[pos], Data[pos+1], frac);                    \
+                                                                              \
+        outsamp = lpFilter4PC(DryFilter, 0, value);                           \
+        PendingClicks[FRONT_LEFT]   += outsamp*DrySend[FRONT_LEFT];           \
+        PendingClicks[FRONT_RIGHT]  += outsamp*DrySend[FRONT_RIGHT];          \
+        PendingClicks[SIDE_LEFT]    += outsamp*DrySend[SIDE_LEFT];            \
+        PendingClicks[SIDE_RIGHT]   += outsamp*DrySend[SIDE_RIGHT];           \
+        PendingClicks[BACK_LEFT]    += outsamp*DrySend[BACK_LEFT];            \
+        PendingClicks[BACK_RIGHT]   += outsamp*DrySend[BACK_RIGHT];           \
+        PendingClicks[FRONT_CENTER] += outsamp*DrySend[FRONT_CENTER];         \
+        PendingClicks[BACK_CENTER]  += outsamp*DrySend[BACK_CENTER];          \
+                                                                              \
+        for(out = 0;out < MAX_SENDS;out++)                                    \
+        {                                                                     \
+            outsamp = lpFilter2PC(WetFilter[out], 0, value);                  \
+            WetPendingClicks[out][0] += outsamp*WetSend[out];                 \
+        }                                                                     \
+    }                                                                         \
 } while(0)
 
             switch(Resampler)
@@ -324,7 +326,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
 
 #define DO_MIX(resampler) do {                                                \
     const ALfloat scaler = 1.0f/Channels;                                     \
-    if(j == 0 && UpdateClick)                                                 \
+    if(j == 0)                                                                \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
@@ -333,14 +335,14 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
                                 DataPosFrac);                                 \
                                                                               \
             outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
-            ClickRemoval[chans[i]] += outsamp*dryGainDiff[chans[i]];          \
-            ClickRemoval[chans2[i*2+0]] += outsamp*dryGainDiff[chans2[i*2+0]];\
-            ClickRemoval[chans2[i*2+1]] += outsamp*dryGainDiff[chans2[i*2+1]];\
+            ClickRemoval[chans[i]] -= outsamp*DrySend[chans[i]];              \
+            ClickRemoval[chans2[i*2+0]] -= outsamp*DrySend[chans2[i*2+0]];    \
+            ClickRemoval[chans2[i*2+1]] -= outsamp*DrySend[chans2[i*2+1]];    \
                                                                               \
             for(out = 0;out < MAX_SENDS;out++)                                \
             {                                                                 \
                 outsamp = lpFilter1PC(WetFilter[out], chans[out], value) * scaler;\
-                WetClickRemoval[out][0] += outsamp*wetGainDiff[out];          \
+                WetClickRemoval[out][0] -= outsamp*WetSend[out];              \
             }                                                                 \
         }                                                                     \
     }                                                                         \
@@ -369,6 +371,29 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         DataPosFrac &= FRACTIONMASK;                                          \
         j++;                                                                  \
     }                                                                         \
+    if(j == SamplesToDo)                                                      \
+    {                                                                         \
+        ALuint pos = ((DataPosInt < DataSize) ? DataPosInt : (DataPosInt-1)); \
+        ALuint frac = ((DataPosInt < DataSize) ? DataPosFrac :                \
+                       ((DataPosFrac-increment)&FRACTIONMASK));               \
+        for(i = 0;i < Channels;i++)                                           \
+        {                                                                     \
+            value = (resampler)(Data[pos*Channels + i],                       \
+                                Data[(pos+1)*Channels + i],                   \
+                                frac);                                        \
+                                                                              \
+            outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
+            PendingClicks[chans[i]] += outsamp*DrySend[chans[i]];             \
+            PendingClicks[chans2[i*2+0]] += outsamp*DrySend[chans2[i*2+0]];   \
+            PendingClicks[chans2[i*2+1]] += outsamp*DrySend[chans2[i*2+1]];   \
+                                                                              \
+            for(out = 0;out < MAX_SENDS;out++)                                \
+            {                                                                 \
+                outsamp = lpFilter1PC(WetFilter[out], chans[out], value) * scaler;\
+                WetPendingClicks[out][0] += outsamp*WetSend[out];             \
+            }                                                                 \
+        }                                                                     \
+    }                                                                         \
 } while(0)
 
             switch(Resampler)
@@ -394,7 +419,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
 
 #define DO_MIX(resampler) do {                                                \
     const ALfloat scaler = 1.0f/Channels;                                     \
-    if(j == 0 && UpdateClick)                                                 \
+    if(j == 0)                                                                \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
@@ -403,12 +428,12 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
                                 DataPosFrac);                                 \
                                                                               \
             outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
-            ClickRemoval[chans[i]] += outsamp*dryGainDiff[chans[i]];          \
+            ClickRemoval[chans[i]] -= outsamp*DrySend[chans[i]];              \
                                                                               \
             for(out = 0;out < MAX_SENDS;out++)                                \
             {                                                                 \
                 outsamp = lpFilter1PC(WetFilter[out], chans[out], value) * scaler;\
-                WetClickRemoval[out][0] += outsamp*wetGainDiff[out];          \
+                WetClickRemoval[out][0] -= outsamp*WetSend[out];              \
             }                                                                 \
         }                                                                     \
     }                                                                         \
@@ -434,6 +459,27 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         DataPosInt += DataPosFrac>>FRACTIONBITS;                              \
         DataPosFrac &= FRACTIONMASK;                                          \
         j++;                                                                  \
+    }                                                                         \
+    if(j == SamplesToDo)                                                      \
+    {                                                                         \
+        ALuint pos = ((DataPosInt < DataSize) ? DataPosInt : (DataPosInt-1)); \
+        ALuint frac = ((DataPosInt < DataSize) ? DataPosFrac :                \
+                       ((DataPosFrac-increment)&FRACTIONMASK));               \
+        for(i = 0;i < Channels;i++)                                           \
+        {                                                                     \
+            value = (resampler)(Data[pos*Channels + i],                       \
+                                Data[(pos+1)*Channels + i],                   \
+                                frac);                                        \
+                                                                              \
+            outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
+            PendingClicks[chans[i]] += outsamp*DrySend[chans[i]];             \
+                                                                              \
+            for(out = 0;out < MAX_SENDS;out++)                                \
+            {                                                                 \
+                outsamp = lpFilter1PC(WetFilter[out], chans[out], value) * scaler;\
+                WetPendingClicks[out][0] += outsamp*WetSend[out];             \
+            }                                                                 \
+        }                                                                     \
     }                                                                         \
 } while(0)
 
@@ -631,6 +677,11 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     ClickRemoval[0] -= ClickRemoval[0] / 256.0f;
                     ALEffectSlot->WetBuffer[i] += ClickRemoval[0];
                 }
+                for(i = 0;i < 1;i++)
+                {
+                    ALEffectSlot->ClickRemoval[i] += ALEffectSlot->PendingClicks[i];
+                    ALEffectSlot->PendingClicks[i] = 0.0f;
+                }
 
                 ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
 
@@ -651,6 +702,11 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 ClickRemoval[c] -= ClickRemoval[c] / 256.0f;
                 DryBuffer[i][c] += ClickRemoval[c];
             }
+        }
+        for(i = 0;i < OUTPUTCHANNELS;i++)
+        {
+            device->ClickRemoval[i] += device->PendingClicks[i];
+            device->PendingClicks[i] = 0.0f;
         }
 
         ChanMap = device->DevChannels;

@@ -115,7 +115,9 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
     if(!Context) return;
 
     // Check that we are actually generation some Buffers
-    if(n > 0)
+    if(n < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
         ALCdevice *device = Context->Device;
         ALenum err;
@@ -180,7 +182,7 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
         ALboolean bFailed = AL_FALSE;
 
         // Check that all the buffers are valid and can actually be deleted
-        for (i = 0; i < n; i++)
+        for(i = 0;i < n;i++)
         {
             if(!puiBuffers[i])
                 continue;
@@ -206,9 +208,9 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
         }
 
         // If all the Buffers were valid (and have Reference Counts of 0), then we can delete them
-        if (!bFailed)
+        if(!bFailed)
         {
-            for (i = 0; i < n; i++)
+            for(i = 0;i < n;i++)
             {
                 if((ALBuf=LookupBuffer(device->BufferMap, puiBuffers[i])) != NULL)
                 {
@@ -286,7 +288,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             data = Context->SampleSource->data + offset;
         }
 
-        if(size < 0)
+        if(size < 0 || freq < 0)
             alSetError(Context, AL_INVALID_VALUE);
         else if(ALBuf->refcount != 0)
             alSetError(Context, AL_INVALID_VALUE);
@@ -1070,7 +1072,7 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     assert(NewBytes == 4);
     assert(NewChannels == OrigChannels);
 
-    if ((size%(OrigBytes*OrigChannels)) != 0)
+    if((size%(OrigBytes*OrigChannels)) != 0)
         return AL_INVALID_VALUE;
 
     // Allocate extra padding samples

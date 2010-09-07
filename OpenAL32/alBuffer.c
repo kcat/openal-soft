@@ -689,6 +689,7 @@ AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
     device = pContext->Device;
     if(LookupBuffer(device->BufferMap, buffer) == NULL)
         alSetError(pContext, AL_INVALID_NAME);
+    else
     {
         switch(eParam)
         {

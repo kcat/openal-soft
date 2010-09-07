@@ -52,7 +52,9 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(n > 0)
+    if(n < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
         Device = Context->Device;
 
@@ -122,12 +124,14 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(n >= 0)
+    if(n < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
         Device = Context->Device;
 
         // Check that all Sources are valid (and can therefore be deleted)
-        for (i = 0; i < n; i++)
+        for(i = 0;i < n;i++)
         {
             if(LookupSource(Context->SourceMap, sources[i]) == NULL)
             {
@@ -140,7 +144,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         if(bSourcesValid)
         {
             // All Sources are valid, and can be deleted
-            for(i = 0; i < n; i++)
+            for(i = 0;i < n;i++)
             {
                 // Recheck that the Source is valid, because there could be duplicated Source names
                 if((Source=LookupSource(Context->SourceMap, sources[i])) != NULL)
@@ -185,8 +189,6 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             }
         }
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
 
     ProcessContext(Context);
 }
@@ -1285,7 +1287,12 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(!sources)
+    if(n < 0)
+    {
+        alSetError(Context, AL_INVALID_VALUE);
+        goto done;
+    }
+    if(n > 0 && !sources)
     {
         alSetError(Context, AL_INVALID_VALUE);
         goto done;
@@ -1307,7 +1314,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         goto done;
     }
 
-    while(Context->MaxActiveSources < Context->ActiveSourceCount+n)
+    while(Context->MaxActiveSources-Context->ActiveSourceCount > n)
     {
         void *temp = NULL;
         ALsizei newcount;
@@ -1399,7 +1406,12 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(!sources)
+    if(n < 0)
+    {
+        alSetError(Context, AL_INVALID_VALUE);
+        goto done;
+    }
+    if(n > 0 && !sources)
     {
         alSetError(Context, AL_INVALID_VALUE);
         goto done;
@@ -1440,7 +1452,12 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(!sources)
+    if(n < 0)
+    {
+        alSetError(Context, AL_INVALID_VALUE);
+        goto done;
+    }
+    if(n > 0 && !sources)
     {
         alSetError(Context, AL_INVALID_VALUE);
         goto done;
@@ -1485,7 +1502,12 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(!sources)
+    if(n < 0)
+    {
+        alSetError(Context, AL_INVALID_VALUE);
+        goto done;
+    }
+    if(n > 0 && !sources)
     {
         alSetError(Context, AL_INVALID_VALUE);
         goto done;
@@ -1538,6 +1560,12 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
 
     Context = GetContextSuspended();
     if(!Context) return;
+
+    if(n < 0)
+    {
+        alSetError(Context, AL_INVALID_VALUE);
+        goto done;
+    }
 
     // Check that all buffers are valid or zero and that the source is valid
 
@@ -1669,6 +1697,12 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
 
     Context = GetContextSuspended();
     if(!Context) return;
+
+    if(n < 0)
+    {
+        alSetError(Context, AL_INVALID_VALUE);
+        goto done;
+    }
 
     if((Source=LookupSource(Context->SourceMap, source)) == NULL)
     {

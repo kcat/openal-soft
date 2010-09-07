@@ -608,8 +608,6 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     ALSource->position          = DataPosInt;
     ALSource->position_fraction = DataPosFrac;
     ALSource->Buffer            = BufferListItem->buffer;
-
-    ALSource->FirstStart = AL_FALSE;
 }
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)

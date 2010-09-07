@@ -82,7 +82,6 @@ typedef struct ALsource
     ALint  lSourceType;
 
     // Current target parameters used for mixing
-    ALboolean FirstStart;
     ALboolean NeedsUpdate;
     struct {
         ALfloat DryGains[OUTPUTCHANNELS];

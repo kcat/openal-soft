@@ -1308,12 +1308,6 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         }
     }
 
-    if(Context->ActiveSourceCount+n < n)
-    {
-        alSetError(Context, AL_OUT_OF_MEMORY);
-        goto done;
-    }
-
     while(Context->MaxActiveSources-Context->ActiveSourceCount < n)
     {
         void *temp = NULL;

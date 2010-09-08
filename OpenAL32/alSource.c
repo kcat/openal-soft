@@ -1314,7 +1314,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         goto done;
     }
 
-    while(Context->MaxActiveSources-Context->ActiveSourceCount > n)
+    while(Context->MaxActiveSources-Context->ActiveSourceCount < n)
     {
         void *temp = NULL;
         ALsizei newcount;

@@ -44,18 +44,13 @@ static __inline ALfloat aluF2F(ALfloat Value)
 
 static __inline ALshort aluF2S(ALfloat Value)
 {
-    ALint i;
+    ALint i = 0;
 
-    if(Value < 0.0f)
-    {
-        i = (ALint)(Value*32768.0f);
-        i = max(-32768, i);
-    }
-    else
-    {
-        i = (ALint)(Value*32767.0f);
-        i = min( 32767, i);
-    }
+    if(Value < -1.0f) i = -32768;
+    else if(Value < 0.0f) i = (ALint)(Value*32768.0f);
+    else if(Value > 1.0f) i = 32767;
+    else if(Value > 0.0f) i = (ALint)(Value*32767.0f);
+
     return ((ALshort)i);
 }
 

@@ -617,10 +617,11 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
     ALCcontext **ctx, **ctx_end;
+    ALsource **src, **src_end;
     ALfloat samp;
     int fpuState;
     ALuint i, j, c;
-    ALsizei e, s;
+    ALsizei e;
 
 #if defined(HAVE_FESETROUND)
     fpuState = fegetround();
@@ -642,23 +643,24 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
 
         SuspendContext(NULL);
-        for(ctx=device->Contexts, ctx_end=device->Contexts+device->NumContexts;
-            ctx != ctx_end;ctx++)
+        ctx = device->Contexts;
+        ctx_end = ctx + device->NumContexts;
+        while(ctx != ctx_end)
         {
             SuspendContext(*ctx);
 
-            s = 0;
-            while(s < (*ctx)->ActiveSourceCount)
+            src = (*ctx)->ActiveSources;
+            src_end = src + (*ctx)->ActiveSourceCount;
+            while(src != src_end)
             {
-                ALsource *Source = (*ctx)->ActiveSources[s];
-                if(Source->state != AL_PLAYING)
+                if((*src)->state != AL_PLAYING)
                 {
-                    ALsizei end = --((*ctx)->ActiveSourceCount);
-                    (*ctx)->ActiveSources[s] = (*ctx)->ActiveSources[end];
+                    --((*ctx)->ActiveSourceCount);
+                    *src = *(--src_end);
                     continue;
                 }
-                MixSource(Source, *ctx, DryBuffer, SamplesToDo);
-                s++;
+                MixSource(*src, *ctx, DryBuffer, SamplesToDo);
+                src++;
             }
 
             /* effect slot processing */
@@ -685,6 +687,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
 
             ProcessContext(*ctx);
+            ctx++;
         }
         device->SamplesPlayed += SamplesToDo;
         ProcessContext(NULL);

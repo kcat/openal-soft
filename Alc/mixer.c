@@ -130,15 +130,18 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     for(i = 0;i < MAX_SENDS;i++)
     {
         WetFilter[i] = &ALSource->Params.Send[i].iirFilter;
-        WetBuffer[i] = (ALSource->Send[i].Slot ?
-                        ALSource->Send[i].Slot->WetBuffer :
-                        DummyBuffer);
-        WetClickRemoval[i] = (ALSource->Send[i].Slot ?
-                              ALSource->Send[i].Slot->ClickRemoval :
-                              DummyClickRemoval);
-        WetPendingClicks[i] = (ALSource->Send[i].Slot ?
-                               ALSource->Send[i].Slot->PendingClicks :
-                               DummyClickRemoval);
+        if(ALSource->Send[i].Slot)
+        {
+            WetBuffer[i] = ALSource->Send[i].Slot->WetBuffer;
+            WetClickRemoval[i] = ALSource->Send[i].Slot->ClickRemoval;
+            WetPendingClicks[i] = ALSource->Send[i].Slot->PendingClicks;
+        }
+        else
+        {
+            WetBuffer[i] = DummyBuffer;
+            WetClickRemoval[i] = DummyClickRemoval;
+            WetPendingClicks[i] = DummyClickRemoval;
+        }
     }
 
     /* Get current buffer queue item */

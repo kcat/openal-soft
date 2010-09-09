@@ -616,7 +616,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     const ALuint *ChanMap;
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
-    ALCcontext *ALContext;
+    ALCcontext **ctx, **ctx_end;
     ALfloat samp;
     int fpuState;
     ALuint i, j, c;
@@ -642,29 +642,29 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
 
         SuspendContext(NULL);
-        for(c = 0;c < device->NumContexts;c++)
+        for(ctx=device->Contexts, ctx_end=device->Contexts+device->NumContexts;
+            ctx != ctx_end;ctx++)
         {
-            ALContext = device->Contexts[c];
-            SuspendContext(ALContext);
+            SuspendContext(*ctx);
 
             s = 0;
-            while(s < ALContext->ActiveSourceCount)
+            while(s < (*ctx)->ActiveSourceCount)
             {
-                ALsource *Source = ALContext->ActiveSources[s];
+                ALsource *Source = (*ctx)->ActiveSources[s];
                 if(Source->state != AL_PLAYING)
                 {
-                    ALsizei end = --(ALContext->ActiveSourceCount);
-                    ALContext->ActiveSources[s] = ALContext->ActiveSources[end];
+                    ALsizei end = --((*ctx)->ActiveSourceCount);
+                    (*ctx)->ActiveSources[s] = (*ctx)->ActiveSources[end];
                     continue;
                 }
-                MixSource(Source, ALContext, DryBuffer, SamplesToDo);
+                MixSource(Source, *ctx, DryBuffer, SamplesToDo);
                 s++;
             }
 
             /* effect slot processing */
-            for(e = 0;e < ALContext->EffectSlotMap.size;e++)
+            for(e = 0;e < (*ctx)->EffectSlotMap.size;e++)
             {
-                ALEffectSlot = ALContext->EffectSlotMap.array[e].value;
+                ALEffectSlot = (*ctx)->EffectSlotMap.array[e].value;
 
                 ClickRemoval = ALEffectSlot->ClickRemoval;
                 for(i = 0;i < SamplesToDo;i++)
@@ -683,7 +683,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 for(i = 0;i < SamplesToDo;i++)
                     ALEffectSlot->WetBuffer[i] = 0.0f;
             }
-            ProcessContext(ALContext);
+
+            ProcessContext(*ctx);
         }
         device->SamplesPlayed += SamplesToDo;
         ProcessContext(NULL);

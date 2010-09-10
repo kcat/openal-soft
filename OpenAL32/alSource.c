@@ -1859,11 +1859,11 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
     }
     else
     {
-        // Clamp positions to TotalBufferDataSize
-        if(readPos > TotalBufferDataSize)
-            readPos = TotalBufferDataSize;
-        if(writePos > TotalBufferDataSize)
-            writePos = TotalBufferDataSize;
+        // Wrap positions back to 0
+        if(readPos >= TotalBufferDataSize)
+            readPos = 0;
+        if(writePos >= TotalBufferDataSize)
+            writePos = 0;
     }
 
     switch(name)

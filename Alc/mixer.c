@@ -79,13 +79,13 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
 
 
 static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
-                      float (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo)
+                      float (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo,
+                      ALfloat *ClickRemoval, ALfloat *PendingClicks)
 {
     static float DummyBuffer[BUFFERSIZE];
     static ALfloat DummyClickRemoval[OUTPUTCHANNELS];
     ALfloat *WetBuffer[MAX_SENDS];
     ALfloat DrySend[OUTPUTCHANNELS];
-    ALfloat *ClickRemoval, *PendingClicks;
     ALfloat *WetClickRemoval[MAX_SENDS];
     ALfloat *WetPendingClicks[MAX_SENDS];
     ALuint i, j, out;
@@ -100,9 +100,6 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     ALuint BuffersPlayed;
     ALboolean Looping;
     ALenum State;
-
-    ClickRemoval = ALContext->Device->ClickRemoval;
-    PendingClicks = ALContext->Device->PendingClicks;
 
     if(ALSource->NeedsUpdate)
     {
@@ -659,7 +656,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     *src = *(--src_end);
                     continue;
                 }
-                MixSource(*src, *ctx, DryBuffer, SamplesToDo);
+                MixSource(*src, *ctx, DryBuffer, SamplesToDo,
+                          device->ClickRemoval, device->PendingClicks);
                 src++;
             }
 

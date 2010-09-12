@@ -264,6 +264,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
     ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound;
+    ALfloat AirAbsorptionFactor;
     ALbufferlistitem *BufferListItem;
     ALfloat Matrix[4][4];
     ALfloat flAttenuation, effectiveDist;
@@ -310,6 +311,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     InnerAngle   = ALSource->flInnerAngle;
     OuterAngle   = ALSource->flOuterAngle;
     OuterGainHF  = ALSource->OuterGainHF;
+    AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
 
     //1. Translate Listener to origin (convert to head relative)
     if(ALSource->bHeadRelative==AL_FALSE)
@@ -432,12 +434,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         effectiveDist = (MinDist/flAttenuation - MinDist)*MetersPerUnit;
 
     // Distance-based air absorption
-    if(ALSource->AirAbsorptionFactor > 0.0f && effectiveDist > 0.0f)
+    if(AirAbsorptionFactor > 0.0f && effectiveDist > 0.0f)
     {
         ALfloat absorb;
 
         // Absorption calculation is done in dB
-        absorb = (ALSource->AirAbsorptionFactor*AIRABSORBGAINDBHF) *
+        absorb = (AirAbsorptionFactor*AIRABSORBGAINDBHF) *
                  effectiveDist;
         // Convert dB to linear gain before applying
         absorb = aluPow(10.0f, absorb/20.0f);
@@ -525,7 +527,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
                 WetGainHF[i] *= aluPow(10.0f,
                                        log10(Slot->effect.Reverb.AirAbsorptionGainHF) *
-                                       ALSource->AirAbsorptionFactor * effectiveDist);
+                                       AirAbsorptionFactor * effectiveDist);
             }
         }
         else

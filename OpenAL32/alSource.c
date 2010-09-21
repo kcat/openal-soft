@@ -47,64 +47,48 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
 {
     ALCcontext *Context;
     ALCdevice *Device;
-    ALsizei i=0;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(n < 0)
+    Device = Context->Device;
+    if(n < 0 || IsBadWritePtr((void*)sources, n * sizeof(ALuint)))
+        alSetError(Context, AL_INVALID_VALUE);
+    else if((ALuint)n > Device->MaxNoOfSources - Context->SourceMap.size)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        Device = Context->Device;
+        ALenum err;
+        ALsizei i;
 
-        // Check that enough memory has been allocted in the 'sources' array for n Sources
-        if(!IsBadWritePtr((void*)sources, n * sizeof(ALuint)))
+        // Add additional sources to the list
+        i = 0;
+        while(i < n)
         {
-            // Check that the requested number of sources can be generated
-            if((ALuint)n <= Device->MaxNoOfSources - Context->SourceMap.size)
+            ALsource *source = calloc(1, sizeof(ALsource));
+            if(!source)
             {
-                ALenum err;
-
-                // Add additional sources to the list
-                while(i < n)
-                {
-                    ALsource *source = calloc(1, sizeof(ALsource));
-                    if(!source)
-                    {
-                        alSetError(Context, AL_OUT_OF_MEMORY);
-                        alDeleteSources(i, sources);
-                        break;
-                    }
-
-                    source->source = (ALuint)ALTHUNK_ADDENTRY(source);
-                    err = InsertUIntMapEntry(&Context->SourceMap, source->source,
-                                             source);
-                    if(err != AL_NO_ERROR)
-                    {
-                        ALTHUNK_REMOVEENTRY(source->source);
-                        memset(source, 0, sizeof(ALsource));
-                        free(source);
-
-                        alSetError(Context, err);
-                        alDeleteSources(i, sources);
-                        break;
-                    }
-
-                    sources[i++] = source->source;
-                    InitSourceParams(source);
-                }
+                alSetError(Context, AL_OUT_OF_MEMORY);
+                alDeleteSources(i, sources);
+                break;
             }
-            else
+
+            source->source = (ALuint)ALTHUNK_ADDENTRY(source);
+            err = InsertUIntMapEntry(&Context->SourceMap, source->source,
+                                     source);
+            if(err != AL_NO_ERROR)
             {
-                // Not enough resources to create the Sources
-                alSetError(Context, AL_INVALID_VALUE);
+                ALTHUNK_REMOVEENTRY(source->source);
+                memset(source, 0, sizeof(ALsource));
+                free(source);
+
+                alSetError(Context, err);
+                alDeleteSources(i, sources);
+                break;
             }
-        }
-        else
-        {
-            // Bad pointer
-            alSetError(Context, AL_INVALID_VALUE);
+
+            sources[i++] = source->source;
+            InitSourceParams(source);
         }
     }
 

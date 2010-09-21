@@ -40,67 +40,61 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
     ALCcontext *Context;
-    ALsizei i=0, j;
+    ALCdevice *Device;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(n < 0)
+    Device = Context->Device;
+    if(n < 0 || IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))
+        alSetError(Context, AL_INVALID_VALUE);
+    else if((ALuint)n > Device->AuxiliaryEffectSlotMax - Context->EffectSlotMap.size)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        ALCdevice *Device = Context->Device;
+        ALenum err;
+        ALsizei i, j;
 
-        if((ALuint)n <= Device->AuxiliaryEffectSlotMax - Context->EffectSlotMap.size)
+        i = 0;
+        while(i < n)
         {
-            // Check that enough memory has been allocted in the 'effectslots' array for n Effect Slots
-            if(!IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))
+            ALeffectslot *slot = calloc(1, sizeof(ALeffectslot));
+            if(!slot || !(slot->EffectState=NoneCreate()))
             {
-                ALenum err;
-
-                while(i < n)
-                {
-                    ALeffectslot *slot = calloc(1, sizeof(ALeffectslot));
-                    if(!slot || !(slot->EffectState=NoneCreate()))
-                    {
-                        free(slot);
-                        // We must have run out or memory
-                        alSetError(Context, AL_OUT_OF_MEMORY);
-                        alDeleteAuxiliaryEffectSlots(i, effectslots);
-                        break;
-                    }
-
-                    slot->effectslot = (ALuint)ALTHUNK_ADDENTRY(slot);
-                    err = InsertUIntMapEntry(&Context->EffectSlotMap,
-                                             slot->effectslot, slot);
-                    if(err != AL_NO_ERROR)
-                    {
-                        ALTHUNK_REMOVEENTRY(slot->effectslot);
-                        ALEffect_Destroy(slot->EffectState);
-                        free(slot);
-
-                        alSetError(Context, err);
-                        alDeleteAuxiliaryEffectSlots(i, effectslots);
-                        break;
-                    }
-
-                    effectslots[i++] = slot->effectslot;
-
-                    slot->Gain = 1.0;
-                    slot->AuxSendAuto = AL_TRUE;
-                    for(j = 0;j < BUFFERSIZE;j++)
-                        slot->WetBuffer[j] = 0.0f;
-                    for(j = 0;j < 1;j++)
-                    {
-                        slot->ClickRemoval[j] = 0.0f;
-                        slot->PendingClicks[j] = 0.0f;
-                    }
-                    slot->refcount = 0;
-                }
+                free(slot);
+                // We must have run out or memory
+                alSetError(Context, AL_OUT_OF_MEMORY);
+                alDeleteAuxiliaryEffectSlots(i, effectslots);
+                break;
             }
+
+            slot->effectslot = (ALuint)ALTHUNK_ADDENTRY(slot);
+            err = InsertUIntMapEntry(&Context->EffectSlotMap,
+                                     slot->effectslot, slot);
+            if(err != AL_NO_ERROR)
+            {
+                ALTHUNK_REMOVEENTRY(slot->effectslot);
+                ALEffect_Destroy(slot->EffectState);
+                free(slot);
+
+                alSetError(Context, err);
+                alDeleteAuxiliaryEffectSlots(i, effectslots);
+                break;
+            }
+
+            effectslots[i++] = slot->effectslot;
+
+            slot->Gain = 1.0;
+            slot->AuxSendAuto = AL_TRUE;
+            for(j = 0;j < BUFFERSIZE;j++)
+                slot->WetBuffer[j] = 0.0f;
+            for(j = 0;j < 1;j++)
+            {
+                slot->ClickRemoval[j] = 0.0f;
+                slot->PendingClicks[j] = 0.0f;
+            }
+            slot->refcount = 0;
         }
-        else
-            alSetError(Context, AL_INVALID_OPERATION);
     }
 
     ProcessContext(Context);

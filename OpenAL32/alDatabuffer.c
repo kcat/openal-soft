@@ -48,47 +48,41 @@ AL_API ALvoid AL_APIENTRY alGenDatabuffersEXT(ALsizei n,ALuint *puiBuffers)
     if(!Context) return;
 
     /* Check that we are actually generation some Databuffers */
-    if(n > 0)
+    if(n < 0 || IsBadWritePtr((void*)puiBuffers, n * sizeof(ALuint)))
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
         ALCdevice *device = Context->Device;
+        ALenum err;
 
-        /* Check the pointer is valid (and points to enough memory to store
-         * Databuffer Names) */
-        if(!IsBadWritePtr((void*)puiBuffers, n * sizeof(ALuint)))
+        /* Create all the new Databuffers */
+        while(i < n)
         {
-            ALenum err;
-
-            /* Create all the new Databuffers */
-            while(i < n)
+            ALdatabuffer *buffer = calloc(1, sizeof(ALdatabuffer));
+            if(!buffer)
             {
-                ALdatabuffer *buffer = calloc(1, sizeof(ALdatabuffer));
-                if(!buffer)
-                {
-                    alSetError(Context, AL_OUT_OF_MEMORY);
-                    alDeleteDatabuffersEXT(i, puiBuffers);
-                    break;
-                }
-
-                buffer->databuffer = ALTHUNK_ADDENTRY(buffer);
-                err = InsertUIntMapEntry(&device->DatabufferMap,
-                                         buffer->databuffer, buffer);
-                if(err != AL_NO_ERROR)
-                {
-                    ALTHUNK_REMOVEENTRY(buffer->databuffer);
-                    memset(buffer, 0, sizeof(ALdatabuffer));
-                    free(buffer);
-
-                    alSetError(Context, err);
-                    alDeleteDatabuffersEXT(i, puiBuffers);
-                    break;
-                }
-                puiBuffers[i++] = buffer->databuffer;
-
-                buffer->state = UNMAPPED;
+                alSetError(Context, AL_OUT_OF_MEMORY);
+                alDeleteDatabuffersEXT(i, puiBuffers);
+                break;
             }
+
+            buffer->databuffer = ALTHUNK_ADDENTRY(buffer);
+            err = InsertUIntMapEntry(&device->DatabufferMap,
+                                     buffer->databuffer, buffer);
+            if(err != AL_NO_ERROR)
+            {
+                ALTHUNK_REMOVEENTRY(buffer->databuffer);
+                memset(buffer, 0, sizeof(ALdatabuffer));
+                free(buffer);
+
+                alSetError(Context, err);
+                alDeleteDatabuffersEXT(i, puiBuffers);
+                break;
+            }
+            puiBuffers[i++] = buffer->databuffer;
+
+            buffer->state = UNMAPPED;
         }
-        else
-            alSetError(Context, AL_INVALID_VALUE);
     }
 
     ProcessContext(Context);

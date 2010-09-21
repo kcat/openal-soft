@@ -46,42 +46,38 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (n > 0)
+    if(n < 0 || IsBadWritePtr((void*)effects, n * sizeof(ALuint)))
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
         ALCdevice *device = Context->Device;
+        ALenum err;
 
-        // Check that enough memory has been allocted in the 'effects' array for n Effects
-        if (!IsBadWritePtr((void*)effects, n * sizeof(ALuint)))
+        while(i < n)
         {
-            ALenum err;
-
-            while(i < n)
+            ALeffect *effect = calloc(1, sizeof(ALeffect));
+            if(!effect)
             {
-                ALeffect *effect = calloc(1, sizeof(ALeffect));
-                if(!effect)
-                {
-                    alSetError(Context, AL_OUT_OF_MEMORY);
-                    alDeleteEffects(i, effects);
-                    break;
-                }
-
-                effect->effect = ALTHUNK_ADDENTRY(effect);
-                err = InsertUIntMapEntry(&device->EffectMap, effect->effect,
-                                         effect);
-                if(err != AL_NO_ERROR)
-                {
-                    ALTHUNK_REMOVEENTRY(effect->effect);
-                    memset(effect, 0, sizeof(ALeffect));
-                    free(effect);
-
-                    alSetError(Context, err);
-                    alDeleteEffects(i, effects);
-                    break;
-                }
-
-                effects[i++] = effect->effect;
-                InitEffectParams(effect, AL_EFFECT_NULL);
+                alSetError(Context, AL_OUT_OF_MEMORY);
+                alDeleteEffects(i, effects);
+                break;
             }
+
+            effect->effect = ALTHUNK_ADDENTRY(effect);
+            err = InsertUIntMapEntry(&device->EffectMap, effect->effect, effect);
+            if(err != AL_NO_ERROR)
+            {
+                ALTHUNK_REMOVEENTRY(effect->effect);
+                memset(effect, 0, sizeof(ALeffect));
+                free(effect);
+
+                alSetError(Context, err);
+                alDeleteEffects(i, effects);
+                break;
+            }
+
+            effects[i++] = effect->effect;
+            InitEffectParams(effect, AL_EFFECT_NULL);
         }
     }
 

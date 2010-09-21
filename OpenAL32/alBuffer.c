@@ -114,45 +114,38 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
     Context = GetContextSuspended();
     if(!Context) return;
 
-    // Check that we are actually generation some Buffers
-    if(n < 0)
+    // Check that we are actually generating some Buffers
+    if(n < 0 || IsBadWritePtr((void*)buffers, n * sizeof(ALuint)))
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
         ALCdevice *device = Context->Device;
         ALenum err;
 
-        // Check the pointer is valid (and points to enough memory to store Buffer Names)
-        if(IsBadWritePtr((void*)buffers, n * sizeof(ALuint)))
-            alSetError(Context, AL_INVALID_VALUE);
-        else
+        // Create all the new Buffers
+        while(i < n)
         {
-            // Create all the new Buffers
-            while(i < n)
+            ALbuffer *buffer = calloc(1, sizeof(ALbuffer));
+            if(!buffer)
             {
-                ALbuffer *buffer = calloc(1, sizeof(ALbuffer));
-                if(!buffer)
-                {
-                    alSetError(Context, AL_OUT_OF_MEMORY);
-                    alDeleteBuffers(i, buffers);
-                    break;
-                }
-
-                buffer->buffer = (ALuint)ALTHUNK_ADDENTRY(buffer);
-                err = InsertUIntMapEntry(&device->BufferMap, buffer->buffer,
-                                         buffer);
-                if(err != AL_NO_ERROR)
-                {
-                    ALTHUNK_REMOVEENTRY(buffer->buffer);
-                    memset(buffer, 0, sizeof(ALbuffer));
-                    free(buffer);
-
-                    alSetError(Context, err);
-                    alDeleteBuffers(i, buffers);
-                    break;
-                }
-                buffers[i++] = buffer->buffer;
+                alSetError(Context, AL_OUT_OF_MEMORY);
+                alDeleteBuffers(i, buffers);
+                break;
             }
+
+            buffer->buffer = (ALuint)ALTHUNK_ADDENTRY(buffer);
+            err = InsertUIntMapEntry(&device->BufferMap, buffer->buffer, buffer);
+            if(err != AL_NO_ERROR)
+            {
+                ALTHUNK_REMOVEENTRY(buffer->buffer);
+                memset(buffer, 0, sizeof(ALbuffer));
+                free(buffer);
+
+                alSetError(Context, err);
+                alDeleteBuffers(i, buffers);
+                break;
+            }
+            buffers[i++] = buffer->buffer;
         }
     }
 

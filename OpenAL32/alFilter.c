@@ -42,42 +42,38 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (n > 0)
+    if(n < 0 || IsBadWritePtr((void*)filters, n * sizeof(ALuint)))
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
         ALCdevice *device = Context->Device;
+        ALenum err;
 
-        // Check that enough memory has been allocted in the 'filters' array for n Filters
-        if (!IsBadWritePtr((void*)filters, n * sizeof(ALuint)))
+        while(i < n)
         {
-            ALenum err;
-
-            while(i < n)
+            ALfilter *filter = calloc(1, sizeof(ALfilter));
+            if(!filter)
             {
-                ALfilter *filter = calloc(1, sizeof(ALfilter));
-                if(!filter)
-                {
-                    alSetError(Context, AL_OUT_OF_MEMORY);
-                    alDeleteFilters(i, filters);
-                    break;
-                }
-
-                filter->filter = ALTHUNK_ADDENTRY(filter);
-                err = InsertUIntMapEntry(&device->FilterMap, filter->filter,
-                                         filter);
-                if(err != AL_NO_ERROR)
-                {
-                    ALTHUNK_REMOVEENTRY(filter->filter);
-                    memset(filter, 0, sizeof(ALfilter));
-                    free(filter);
-
-                    alSetError(Context, err);
-                    alDeleteFilters(i, filters);
-                    break;
-                }
-
-                filters[i++] = filter->filter;
-                InitFilterParams(filter, AL_FILTER_NULL);
+                alSetError(Context, AL_OUT_OF_MEMORY);
+                alDeleteFilters(i, filters);
+                break;
             }
+
+            filter->filter = ALTHUNK_ADDENTRY(filter);
+            err = InsertUIntMapEntry(&device->FilterMap, filter->filter, filter);
+            if(err != AL_NO_ERROR)
+            {
+                ALTHUNK_REMOVEENTRY(filter->filter);
+                memset(filter, 0, sizeof(ALfilter));
+                free(filter);
+
+                alSetError(Context, err);
+                alDeleteFilters(i, filters);
+                break;
+            }
+
+            filters[i++] = filter->filter;
+            InitFilterParams(filter, AL_FILTER_NULL);
         }
     }
 

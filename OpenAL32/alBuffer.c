@@ -547,11 +547,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 }
 
 /*
-*    alBufferSubDataEXT(ALuint buffer,ALenum format,ALvoid *data,ALsizei offset,ALsizei length)
+*    alBufferSubDataSOFT(ALuint buffer,ALenum format,ALvoid *data,ALsizei offset,ALsizei length)
 *
 *    Fill buffer with audio data
 */
-AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
+AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
 {
     ALCcontext *Context;
     ALCdevice  *device;
@@ -673,6 +673,11 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const A
     }
 
     ProcessContext(Context);
+}
+
+AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
+{
+    alBufferSubDataSOFT(buffer, format, data, offset, length);
 }
 
 

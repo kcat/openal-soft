@@ -1012,8 +1012,8 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *p
                     alGetSource3f(source, eParam, pflValues+0, pflValues+1, pflValues+2);
                     break;
 
-                case AL_SAMPLE_RW_OFFSETS_EXT:
-                case AL_BYTE_RW_OFFSETS_EXT:
+                case AL_SAMPLE_RW_OFFSETS_SOFT:
+                case AL_BYTE_RW_OFFSETS_SOFT:
                     updateLen = (ALdouble)pContext->Device->UpdateSize /
                                 pContext->Device->Frequency;
                     GetSourceOffset(Source, eParam, Offsets, updateLen);
@@ -1248,8 +1248,8 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plVal
                     alGetSource3i(source, eParam, plValues+0, plValues+1, plValues+2);
                     break;
 
-                case AL_SAMPLE_RW_OFFSETS_EXT:
-                case AL_BYTE_RW_OFFSETS_EXT:
+                case AL_SAMPLE_RW_OFFSETS_SOFT:
+                case AL_BYTE_RW_OFFSETS_SOFT:
                     updateLen = (ALdouble)pContext->Device->UpdateSize /
                                 pContext->Device->Frequency;
                     GetSourceOffset(Source, eParam, Offsets, updateLen);
@@ -1873,12 +1873,12 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
             offset[1] = (ALdouble)writePos / (Channels * Bytes * BufferFreq);
             break;
         case AL_SAMPLE_OFFSET:
-        case AL_SAMPLE_RW_OFFSETS_EXT:
+        case AL_SAMPLE_RW_OFFSETS_SOFT:
             offset[0] = (ALdouble)(readPos / (Channels * Bytes));
             offset[1] = (ALdouble)(writePos / (Channels * Bytes));
             break;
         case AL_BYTE_OFFSET:
-        case AL_BYTE_RW_OFFSETS_EXT:
+        case AL_BYTE_RW_OFFSETS_SOFT:
             // Take into account the original format of the Buffer
             if((OriginalFormat == AL_FORMAT_MONO_IMA4) ||
                (OriginalFormat == AL_FORMAT_STEREO_IMA4))

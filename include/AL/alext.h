@@ -143,6 +143,16 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void);
 #define AL_SOURCE_DISTANCE_MODEL                 0x200
 #endif
 
+#ifndef AL_SOFT_buffer_sub_data
+#define AL_SOFT_buffer_sub_data 1
+#define AL_BYTE_RW_OFFSETS_SOFT                  0x1031
+#define AL_SAMPLE_RW_OFFSETS_SOFT                0x1032
+typedef ALvoid (AL_APIENTRY*PFNALBUFFERSUBDATASOFTPROC)(ALuint,ALenum,const ALvoid*,ALsizei,ALsizei);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length);
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

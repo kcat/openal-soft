@@ -236,6 +236,8 @@ static const ALCfunction alcFunctions[] = {
 
     { "alBufferSubDataEXT",         (ALCvoid *) alBufferSubDataEXT       },
 
+    { "alBufferSubDataSOFT",        (ALCvoid *) alBufferSubDataSOFT      },
+
     { "alGenDatabuffersEXT",        (ALCvoid *) alGenDatabuffersEXT      },
     { "alDeleteDatabuffersEXT",     (ALCvoid *) alDeleteDatabuffersEXT   },
     { "alIsDatabufferEXT",          (ALCvoid *) alIsDatabufferEXT        },
@@ -360,7 +362,7 @@ static const ALchar alExtList[] =
     "AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXTX_loop_points "
     "AL_EXT_MCFORMATS AL_EXT_MULAW AL_EXT_MULAW_MCFORMATS AL_EXT_OFFSET "
     "AL_EXTX_sample_buffer_object AL_EXT_source_distance_model "
-    "AL_LOKI_quadriphonic";
+    "AL_LOKI_quadriphonic AL_SOFT_buffer_sub_data";
 
 // Mixing Priority Level
 static ALint RTPrioLevel;

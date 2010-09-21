@@ -157,67 +157,67 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 *
 *    Deletes the n AL Buffers pointed to by puiBuffers
 */
-AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *puiBuffers)
+AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 {
     ALCcontext *Context;
+    ALCdevice *device;
+    ALboolean Failed;
     ALbuffer *ALBuf;
     ALsizei i;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    // Check we are actually Deleting some Buffers
+    Failed = AL_TRUE;
+    device = Context->Device;
+    /* Check we are actually Deleting some Buffers */
     if(n < 0)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        ALCdevice *device = Context->Device;
-        ALboolean bFailed = AL_FALSE;
+        Failed = AL_FALSE;
 
-        // Check that all the buffers are valid and can actually be deleted
+        /* Check that all the buffers are valid and can actually be deleted */
         for(i = 0;i < n;i++)
         {
-            if(!puiBuffers[i])
+            if(!buffers[i])
                 continue;
 
-            // Check for valid Buffer ID (can be NULL buffer)
-            if((ALBuf=LookupBuffer(device->BufferMap, puiBuffers[i])) != NULL)
-            {
-                if(ALBuf->refcount != 0)
-                {
-                    // Buffer still in use, cannot be deleted
-                    alSetError(Context, AL_INVALID_OPERATION);
-                    bFailed = AL_TRUE;
-                    break;
-                }
-            }
-            else
+            /* Check for valid Buffer ID (can be NULL buffer) */
+            if((ALBuf=LookupBuffer(device->BufferMap, buffers[i])) == NULL)
             {
                 // Invalid Buffer
                 alSetError(Context, AL_INVALID_NAME);
-                bFailed = AL_TRUE;
+                Failed = AL_TRUE;
+                break;
+            }
+            else if(ALBuf->refcount != 0)
+            {
+                /* Buffer still in use, cannot be deleted */
+                alSetError(Context, AL_INVALID_OPERATION);
+                Failed = AL_TRUE;
                 break;
             }
         }
+    }
 
-        // If all the Buffers were valid (and have Reference Counts of 0), then we can delete them
-        if(!bFailed)
+    /* If all the Buffers were valid (and have Reference Counts of 0), then we can delete them */
+    if(!Failed)
+    {
+        for(i = 0;i < n;i++)
         {
-            for(i = 0;i < n;i++)
-            {
-                if((ALBuf=LookupBuffer(device->BufferMap, puiBuffers[i])) != NULL)
-                {
-                    // Release the memory used to store audio data
-                    free(ALBuf->data);
+            if((ALBuf=LookupBuffer(device->BufferMap, buffers[i])) == NULL)
+                continue;
 
-                    // Release buffer structure
-                    RemoveUIntMapKey(&device->BufferMap, ALBuf->buffer);
-                    ALTHUNK_REMOVEENTRY(ALBuf->buffer);
+            /* Release the memory used to store audio data */
+            free(ALBuf->data);
 
-                    memset(ALBuf, 0, sizeof(ALbuffer));
-                    free(ALBuf);
-                }
-            }
+            /* Release buffer structure */
+            RemoveUIntMapKey(&device->BufferMap, ALBuf->buffer);
+            ALTHUNK_REMOVEENTRY(ALBuf->buffer);
+
+            memset(ALBuf, 0, sizeof(ALbuffer));
+            free(ALBuf);
         }
     }
 

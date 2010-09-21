@@ -87,48 +87,52 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
 {
     ALCcontext *Context;
+    ALCdevice *device;
     ALeffect *ALEffect;
+    ALboolean Failed;
     ALsizei i;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (n >= 0)
+    Failed = AL_TRUE;
+    device = Context->Device;
+    if(n < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
-        ALCdevice *device = Context->Device;
-
+        Failed = AL_FALSE;
         // Check that all effects are valid
-        for (i = 0; i < n; i++)
+        for(i = 0;i < n;i++)
         {
             if(!effects[i])
                 continue;
 
-            if(!LookupEffect(device->EffectMap, effects[i]))
+            if(LookupEffect(device->EffectMap, effects[i]) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
+                Failed = AL_TRUE;
                 break;
             }
         }
+    }
 
-        if (i == n)
+    if(!Failed)
+    {
+        // All effects are valid
+        for(i = 0;i < n;i++)
         {
-            // All effects are valid
-            for (i = 0; i < n; i++)
-            {
-                // Recheck that the effect is valid, because there could be duplicated names
-                if((ALEffect=LookupEffect(device->EffectMap, effects[i])) != NULL)
-                {
-                    RemoveUIntMapKey(&device->EffectMap, ALEffect->effect);
-                    ALTHUNK_REMOVEENTRY(ALEffect->effect);
+            // Recheck that the effect is valid, because there could be duplicated names
+            if((ALEffect=LookupEffect(device->EffectMap, effects[i])) == NULL)
+                continue;
 
-                    memset(ALEffect, 0, sizeof(ALeffect));
-                    free(ALEffect);
-                }
-            }
+            RemoveUIntMapKey(&device->EffectMap, ALEffect->effect);
+            ALTHUNK_REMOVEENTRY(ALEffect->effect);
+
+            memset(ALEffect, 0, sizeof(ALeffect));
+            free(ALEffect);
         }
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
 
     ProcessContext(Context);
 }

@@ -93,76 +93,74 @@ AL_API ALvoid AL_APIENTRY alGenDatabuffersEXT(ALsizei n,ALuint *puiBuffers)
 *
 *    Deletes the n AL Databuffers pointed to by puiBuffers
 */
-AL_API ALvoid AL_APIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *puiBuffers)
+AL_API ALvoid AL_APIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *buffers)
 {
     ALCcontext *Context;
+    ALCdevice *device;
     ALdatabuffer *ALBuf;
+    ALboolean Failed;
     ALsizei i;
-    ALboolean bFailed = AL_FALSE;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
     /* Check we are actually Deleting some Databuffers */
-    if(n >= 0)
+    Failed = AL_TRUE;
+    device = Context->Device;
+    if(n < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
-        ALCdevice *device = Context->Device;
-
+        Failed = AL_FALSE;
         /* Check that all the databuffers are valid and can actually be
          * deleted */
         for(i = 0;i < n;i++)
         {
-            if(!puiBuffers[i])
+            if(!buffers[i])
                 continue;
 
             /* Check for valid Buffer ID */
-            if((ALBuf=LookupDatabuffer(device->DatabufferMap, puiBuffers[i])) != NULL)
-            {
-                if(ALBuf->state != UNMAPPED)
-                {
-                    /* Databuffer still in use, cannot be deleted */
-                    alSetError(Context, AL_INVALID_OPERATION);
-                    bFailed = AL_TRUE;
-                    break;
-                }
-            }
-            else
+            if((ALBuf=LookupDatabuffer(device->DatabufferMap, buffers[i])) == NULL)
             {
                 /* Invalid Databuffer */
                 alSetError(Context, AL_INVALID_NAME);
-                bFailed = AL_TRUE;
+                Failed = AL_TRUE;
+                break;
+            }
+            else if(ALBuf->state != UNMAPPED)
+            {
+                /* Databuffer still in use, cannot be deleted */
+                alSetError(Context, AL_INVALID_OPERATION);
+                Failed = AL_TRUE;
                 break;
             }
         }
+    }
 
-        /* If all the Databuffers were valid (and unmapped), then we can
-         * delete them */
-        if(!bFailed)
+    /* If all the Databuffers were valid (and unmapped), then we can delete them */
+    if(!Failed)
+    {
+        for(i = 0;i < n;i++)
         {
-            for(i = 0;i < n;i++)
-            {
-                if((ALBuf=LookupDatabuffer(device->DatabufferMap, puiBuffers[i])) != NULL)
-                {
-                    if(ALBuf == Context->SampleSource)
-                        Context->SampleSource = NULL;
-                    if(ALBuf == Context->SampleSink)
-                        Context->SampleSink = NULL;
+            if((ALBuf=LookupDatabuffer(device->DatabufferMap, buffers[i])) == NULL)
+                continue;
 
-                    // Release the memory used to store audio data
-                    free(ALBuf->data);
+            if(ALBuf == Context->SampleSource)
+                Context->SampleSource = NULL;
+            if(ALBuf == Context->SampleSink)
+                Context->SampleSink = NULL;
 
-                    // Release buffer structure
-                    RemoveUIntMapKey(&device->DatabufferMap, ALBuf->databuffer);
-                    ALTHUNK_REMOVEENTRY(puiBuffers[i]);
+            // Release the memory used to store audio data
+            free(ALBuf->data);
 
-                    memset(ALBuf, 0, sizeof(ALdatabuffer));
-                    free(ALBuf);
-                }
-            }
+            // Release buffer structure
+            RemoveUIntMapKey(&device->DatabufferMap, ALBuf->databuffer);
+            ALTHUNK_REMOVEENTRY(puiBuffers[i]);
+
+            memset(ALBuf, 0, sizeof(ALdatabuffer));
+            free(ALBuf);
         }
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
 
     ProcessContext(Context);
 }

@@ -104,52 +104,53 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
 {
     ALCcontext *Context;
     ALeffectslot *EffectSlot;
+    ALboolean SlotsValid = AL_FALSE;
     ALsizei i;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (n >= 0)
+    if(n < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
+        SlotsValid = AL_TRUE;
         // Check that all effectslots are valid
-        for (i = 0; i < n; i++)
+        for(i = 0;i < n;i++)
         {
             if((EffectSlot=LookupEffectSlot(Context->EffectSlotMap, effectslots[i])) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
+                SlotsValid = AL_FALSE;
                 break;
             }
-            else
+            else if(EffectSlot->refcount > 0)
             {
-                if(EffectSlot->refcount > 0)
-                {
-                    alSetError(Context, AL_INVALID_NAME);
-                    break;
-                }
-            }
-        }
-
-        if (i == n)
-        {
-            // All effectslots are valid
-            for (i = 0; i < n; i++)
-            {
-                // Recheck that the effectslot is valid, because there could be duplicated names
-                if((EffectSlot=LookupEffectSlot(Context->EffectSlotMap, effectslots[i])) != NULL)
-                {
-                    ALEffect_Destroy(EffectSlot->EffectState);
-
-                    RemoveUIntMapKey(&Context->EffectSlotMap, EffectSlot->effectslot);
-                    ALTHUNK_REMOVEENTRY(EffectSlot->effectslot);
-
-                    memset(EffectSlot, 0, sizeof(ALeffectslot));
-                    free(EffectSlot);
-                }
+                alSetError(Context, AL_INVALID_NAME);
+                SlotsValid = AL_FALSE;
+                break;
             }
         }
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
+
+    if(SlotsValid)
+    {
+        // All effectslots are valid
+        for(i = 0;i < n;i++)
+        {
+            // Recheck that the effectslot is valid, because there could be duplicated names
+            if((EffectSlot=LookupEffectSlot(Context->EffectSlotMap, effectslots[i])) == NULL)
+                continue;
+
+            ALEffect_Destroy(EffectSlot->EffectState);
+
+            RemoveUIntMapKey(&Context->EffectSlotMap, EffectSlot->effectslot);
+            ALTHUNK_REMOVEENTRY(EffectSlot->effectslot);
+
+            memset(EffectSlot, 0, sizeof(ALeffectslot));
+            free(EffectSlot);
+        }
+    }
 
     ProcessContext(Context);
 }

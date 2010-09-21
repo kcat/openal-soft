@@ -83,48 +83,52 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
 AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
 {
     ALCcontext *Context;
+    ALCdevice *device;
     ALfilter *ALFilter;
+    ALboolean Failed;
     ALsizei i;
 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if (n >= 0)
+    Failed = AL_TRUE;
+    device = Context->Device;
+    if(n < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
-        ALCdevice *device = Context->Device;
-
+        Failed = AL_FALSE;
         // Check that all filters are valid
-        for (i = 0; i < n; i++)
+        for(i = 0;i < n;i++)
         {
             if(!filters[i])
                 continue;
 
-            if(!LookupFilter(device->FilterMap, filters[i]))
+            if(LookupFilter(device->FilterMap, filters[i]) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
+                Failed = AL_TRUE;
                 break;
             }
         }
+    }
 
-        if (i == n)
+    if(!Failed)
+    {
+        // All filters are valid
+        for(i = 0;i < n;i++)
         {
-            // All filters are valid
-            for (i = 0; i < n; i++)
-            {
-                // Recheck that the filter is valid, because there could be duplicated names
-                if((ALFilter=LookupFilter(device->FilterMap, filters[i])) != NULL)
-                {
-                    RemoveUIntMapKey(&device->FilterMap, ALFilter->filter);
-                    ALTHUNK_REMOVEENTRY(ALFilter->filter);
+            // Recheck that the filter is valid, because there could be duplicated names
+            if((ALFilter=LookupFilter(device->FilterMap, filters[i])) == NULL)
+                continue;
 
-                    memset(ALFilter, 0, sizeof(ALfilter));
-                    free(ALFilter);
-                }
-            }
+            RemoveUIntMapKey(&device->FilterMap, ALFilter->filter);
+            ALTHUNK_REMOVEENTRY(ALFilter->filter);
+
+            memset(ALFilter, 0, sizeof(ALfilter));
+            free(ALFilter);
         }
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
 
     ProcessContext(Context);
 }

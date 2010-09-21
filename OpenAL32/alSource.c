@@ -99,11 +99,10 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
 AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 {
     ALCcontext *Context;
-    ALCdevice  *Device;
     ALsource *Source;
     ALsizei i, j;
     ALbufferlistitem *BufferList;
-    ALboolean bSourcesValid = AL_TRUE;
+    ALboolean SourcesValid = AL_FALSE;
 
     Context = GetContextSuspended();
     if(!Context) return;
@@ -112,65 +111,64 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        Device = Context->Device;
-
+        SourcesValid = AL_TRUE;
         // Check that all Sources are valid (and can therefore be deleted)
         for(i = 0;i < n;i++)
         {
             if(LookupSource(Context->SourceMap, sources[i]) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
-                bSourcesValid = AL_FALSE;
+                SourcesValid = AL_FALSE;
                 break;
             }
         }
+    }
 
-        if(bSourcesValid)
+    if(SourcesValid)
+    {
+        // All Sources are valid, and can be deleted
+        for(i = 0;i < n;i++)
         {
-            // All Sources are valid, and can be deleted
-            for(i = 0;i < n;i++)
+            // Recheck that the Source is valid, because there could be duplicated Source names
+            if((Source=LookupSource(Context->SourceMap, sources[i])) == NULL)
+                continue;
+
+            for(j = 0;j < Context->ActiveSourceCount;j++)
             {
-                // Recheck that the Source is valid, because there could be duplicated Source names
-                if((Source=LookupSource(Context->SourceMap, sources[i])) != NULL)
+                if(Context->ActiveSources[j] == Source)
                 {
-                    for(j = 0;j < Context->ActiveSourceCount;j++)
-                    {
-                        if(Context->ActiveSources[j] == Source)
-                        {
-                            ALsizei end = --(Context->ActiveSourceCount);
-                            Context->ActiveSources[j] = Context->ActiveSources[end];
-                            break;
-                        }
-                    }
-
-                    // For each buffer in the source's queue, decrement its reference counter and remove it
-                    while(Source->queue != NULL)
-                    {
-                        BufferList = Source->queue;
-                        // Decrement buffer's reference counter
-                        if(BufferList->buffer != NULL)
-                            BufferList->buffer->refcount--;
-                        // Update queue to point to next element in list
-                        Source->queue = BufferList->next;
-                        // Release memory allocated for buffer list item
-                        free(BufferList);
-                    }
-
-                    for(j = 0;j < MAX_SENDS;++j)
-                    {
-                        if(Source->Send[j].Slot)
-                            Source->Send[j].Slot->refcount--;
-                        Source->Send[j].Slot = NULL;
-                    }
-
-                    // Remove Source from list of Sources
-                    RemoveUIntMapKey(&Context->SourceMap, Source->source);
-                    ALTHUNK_REMOVEENTRY(Source->source);
-
-                    memset(Source,0,sizeof(ALsource));
-                    free(Source);
+                    ALsizei end = --(Context->ActiveSourceCount);
+                    Context->ActiveSources[j] = Context->ActiveSources[end];
+                    break;
                 }
             }
+
+            // For each buffer in the source's queue...
+            while(Source->queue != NULL)
+            {
+                BufferList = Source->queue;
+                // Decrement buffer's reference counter
+                if(BufferList->buffer != NULL)
+                    BufferList->buffer->refcount--;
+                // Update queue to point to next element in list
+                Source->queue = BufferList->next;
+                // Release memory allocated for buffer list item
+                free(BufferList);
+            }
+
+            for(j = 0;j < MAX_SENDS;++j)
+            {
+                if(Source->Send[j].Slot)
+                    Source->Send[j].Slot->refcount--;
+                Source->Send[j].Slot = NULL;
+            }
+
+            // Remove Source from list of Sources
+            RemoveUIntMapKey(&Context->SourceMap, Source->source);
+            ALTHUNK_REMOVEENTRY(Source->source);
+
+            memset(Source,0,sizeof(ALsource));
+            free(Source);
         }
     }
 

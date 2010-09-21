@@ -45,11 +45,13 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(n > 0)
+    if(n < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
         ALCdevice *Device = Context->Device;
 
-        if(Context->EffectSlotMap.size+n <= (ALsizei)Device->AuxiliaryEffectSlotMax)
+        if((ALuint)n <= Device->AuxiliaryEffectSlotMax - Context->EffectSlotMap.size)
         {
             // Check that enough memory has been allocted in the 'effectslots' array for n Effect Slots
             if(!IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))

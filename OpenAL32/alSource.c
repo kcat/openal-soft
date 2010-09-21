@@ -62,7 +62,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
         if(!IsBadWritePtr((void*)sources, n * sizeof(ALuint)))
         {
             // Check that the requested number of sources can be generated
-            if((Context->SourceMap.size + n) <= (ALsizei)Device->MaxNoOfSources)
+            if((ALuint)n <= Device->MaxNoOfSources - Context->SourceMap.size)
             {
                 ALenum err;
 

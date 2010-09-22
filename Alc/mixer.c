@@ -162,23 +162,22 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
             Data      = ALBuffer->data;
             DataSize  = ALBuffer->size;
             DataSize /= aluFrameSizeFromFormat(ALBuffer->format);
-            LoopStart = ALBuffer->LoopStart;
-            LoopEnd   = ALBuffer->LoopEnd;
             Channels  = aluChannelsFromFormat(ALBuffer->format);
             Bytes     = aluBytesFromFormat(ALBuffer->format);
-        }
 
-        if(Looping && ALSource->lSourceType == AL_STATIC)
-        {
-            /* If current offset is beyond the loop range, do not loop */
-            if(DataPosInt >= LoopEnd)
-                Looping = AL_FALSE;
-        }
-        if(!Looping || ALSource->lSourceType != AL_STATIC)
-        {
-            /* Non-looping and non-static sources ignore loop points */
             LoopStart = 0;
-            LoopEnd = DataSize;
+            LoopEnd   = DataSize;
+            if(Looping && ALSource->lSourceType == AL_STATIC)
+            {
+                /* If current pos is beyond the loop range, do not loop */
+                if(DataPosInt >= LoopEnd)
+                    Looping = AL_FALSE;
+                else
+                {
+                    LoopStart = ALBuffer->LoopStart;
+                    LoopEnd   = ALBuffer->LoopEnd;
+                }
+            }
         }
 
         if(DataPosInt >= DataSize)

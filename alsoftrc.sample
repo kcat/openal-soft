@@ -95,11 +95,14 @@
 
 ## stereodup:
 #  Sets whether to duplicate stereo sounds on the rear and side speakers for 4+
-#  channel output. This can make stereo sources noticeably louder than mono or
-#  even 4+ channel sources, but provides a "fuller" playback quality. True,
-#  yes, on, and non-0 values will duplicate stereo sources. 0 and anything else
-#  will cause stereo sounds to only play out the front speakers.
-#stereodup = false
+#  channel output. This provides a "fuller" playback quality for 4+ channel
+#  output modes, although each individual speaker will have a slight reduction
+#  in volume to compensate for the extra output speakers. True, yes, on, and
+#  non-0 values will duplicate stereo sources. 0 and anything else will cause
+#  stereo sounds to only play out the front speakers. This only has an effect
+#  when a suitable output format is used (ie. those that contain side and/or
+#  rear speakers).
+#stereodup = true
 
 ## scalemix:
 #  Sets whether to scale the remixed output. When the final mix is written to

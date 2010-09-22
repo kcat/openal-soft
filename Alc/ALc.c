@@ -2077,6 +2077,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
+    device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 1);
+
     device->HeadDampen = 0.0f;
 
     // Find a playback device to open

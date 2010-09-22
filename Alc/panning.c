@@ -296,7 +296,6 @@ ALvoid aluInitPanning(ALCdevice *Device)
             assert(0);
     }
 
-    Device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 0);
     if(GetConfigValueBool(NULL, "scalemix", 0))
     {
         ALfloat maxout = 1.0f;

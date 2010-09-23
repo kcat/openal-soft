@@ -61,28 +61,28 @@ static __inline ALubyte aluF2UB(ALfloat Value)
 }
 
 
-static __inline ALfloat point(ALfloat val1, ALfloat val2, ALint frac)
+static __inline ALfloat point32(ALfloat val1, ALfloat val2, ALint frac)
 {
     return val1;
     (void)val2;
     (void)frac;
 }
-static __inline ALfloat lerp(ALfloat val1, ALfloat val2, ALint frac)
+static __inline ALfloat lerp32(ALfloat val1, ALfloat val2, ALint frac)
 {
     return val1 + ((val2-val1)*(frac * (1.0f/(1<<FRACTIONBITS))));
 }
-static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
+static __inline ALfloat cos_lerp32(ALfloat val1, ALfloat val2, ALint frac)
 {
     ALfloat mult = (1.0f-cos(frac * (1.0f/(1<<FRACTIONBITS)) * M_PI)) * 0.5f;
     return val1 + ((val2-val1)*mult);
 }
 
 
-#define DO_MIX_MONO(resampler) do {                                           \
+#define DO_MIX_MONO(S,sampler) do {                                           \
     if(j == 0)                                                                \
     {                                                                         \
-        value = (resampler)(Data.f32[DataPosInt], Data.f32[DataPosInt+1],     \
-                            DataPosFrac);                                     \
+        value = sampler##S(Data.p##S[DataPosInt], Data.p##S[DataPosInt+1],    \
+                           DataPosFrac);                                      \
                                                                               \
         outsamp = lpFilter4PC(DryFilter, 0, value);                           \
         ClickRemoval[FRONT_LEFT]   -= outsamp*DrySend[FRONT_LEFT];            \
@@ -103,8 +103,8 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
     while(BufferSize--)                                                       \
     {                                                                         \
         /* First order interpolator */                                        \
-        value = (resampler)(Data.f32[DataPosInt], Data.f32[DataPosInt+1],     \
-                            DataPosFrac);                                     \
+        value = sampler##S(Data.p##S[DataPosInt], Data.p##S[DataPosInt+1],    \
+                           DataPosFrac);                                      \
                                                                               \
         /* Direct path final mix buffer and panning */                        \
         outsamp = lpFilter4P(DryFilter, 0, value);                            \
@@ -134,7 +134,7 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
         ALuint pos = ((DataPosInt < DataSize) ? DataPosInt : (DataPosInt-1)); \
         ALuint frac = ((DataPosInt < DataSize) ? DataPosFrac :                \
                        ((DataPosFrac-increment)&FRACTIONMASK));               \
-        value = (resampler)(Data.f32[pos], Data.f32[pos+1], frac);            \
+        value = sampler##S(Data.p##S[pos], Data.p##S[pos+1], frac);           \
                                                                               \
         outsamp = lpFilter4PC(DryFilter, 0, value);                           \
         PendingClicks[FRONT_LEFT]   += outsamp*DrySend[FRONT_LEFT];           \
@@ -154,15 +154,15 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
     }                                                                         \
 } while(0)
 
-#define DO_MIX_STEREO(resampler) do {                                         \
+#define DO_MIX_STEREO(S,sampler) do {                                         \
     const ALfloat scaler = 1.0f/Channels;                                     \
     if(j == 0)                                                                \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = (resampler)(Data.f32[DataPosInt*Channels + i],            \
-                                Data.f32[(DataPosInt+1)*Channels + i],        \
-                                DataPosFrac);                                 \
+            value = sampler##S(Data.p##S[DataPosInt*Channels + i],            \
+                               Data.p##S[(DataPosInt+1)*Channels + i],        \
+                               DataPosFrac);                                  \
                                                                               \
             outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
             ClickRemoval[chans[i+0]] -= outsamp*DrySend[chans[i+0]];          \
@@ -180,9 +180,9 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = (resampler)(Data.f32[DataPosInt*Channels + i],            \
-                                Data.f32[(DataPosInt+1)*Channels + i],        \
-                                DataPosFrac);                                 \
+            value = sampler##S(Data.p##S[DataPosInt*Channels + i],            \
+                               Data.p##S[(DataPosInt+1)*Channels + i],        \
+                               DataPosFrac);                                  \
                                                                               \
             outsamp = lpFilter2P(DryFilter, chans[i]*2, value);               \
             DryBuffer[j][chans[i+0]] += outsamp*DrySend[chans[i+0]];          \
@@ -208,9 +208,9 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
                        ((DataPosFrac-increment)&FRACTIONMASK));               \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = (resampler)(Data.f32[pos*Channels + i],                   \
-                                Data.f32[(pos+1)*Channels + i],               \
-                                frac);                                        \
+            value = sampler##S(Data.p##S[pos*Channels + i],                   \
+                               Data.p##S[(pos+1)*Channels + i],               \
+                               frac);                                         \
                                                                               \
             outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
             PendingClicks[chans[i+0]] += outsamp*DrySend[chans[i+0]];         \
@@ -226,15 +226,15 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
     }                                                                         \
 } while(0)
 
-#define DO_MIX_MC(resampler) do {                                             \
+#define DO_MIX_MC(S,sampler) do {                                             \
     const ALfloat scaler = 1.0f/Channels;                                     \
     if(j == 0)                                                                \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = (resampler)(Data.f32[DataPosInt*Channels + i],            \
-                                Data.f32[(DataPosInt+1)*Channels + i],        \
-                                DataPosFrac);                                 \
+            value = sampler##S(Data.p##S[DataPosInt*Channels + i],            \
+                               Data.p##S[(DataPosInt+1)*Channels + i],        \
+                               DataPosFrac);                                  \
                                                                               \
             outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
             ClickRemoval[chans[i]] -= outsamp*DrySend[chans[i]];              \
@@ -250,9 +250,9 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = (resampler)(Data.f32[DataPosInt*Channels + i],            \
-                                Data.f32[(DataPosInt+1)*Channels + i],        \
-                                DataPosFrac);                                 \
+            value = sampler##S(Data.p##S[DataPosInt*Channels + i],            \
+                               Data.p##S[(DataPosInt+1)*Channels + i],        \
+                               DataPosFrac);                                  \
                                                                               \
             outsamp = lpFilter2P(DryFilter, chans[i]*2, value);               \
             DryBuffer[j][chans[i]] += outsamp*DrySend[chans[i]];              \
@@ -276,9 +276,9 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
                        ((DataPosFrac-increment)&FRACTIONMASK));               \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = (resampler)(Data.f32[pos*Channels + i],                   \
-                                Data.f32[(pos+1)*Channels + i],               \
-                                frac);                                        \
+            value = sampler##S(Data.p##S[pos*Channels + i],                   \
+                               Data.p##S[(pos+1)*Channels + i],               \
+                               frac);                                         \
                                                                               \
             outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
             PendingClicks[chans[i]] += outsamp*DrySend[chans[i]];             \
@@ -293,22 +293,22 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
 } while(0)
 
 
-#define MIX_MONO() do {                                                       \
+#define MIX_MONO(S) do {                                                      \
     switch(Resampler)                                                         \
     {                                                                         \
         case POINT_RESAMPLER:                                                 \
-        DO_MIX_MONO(point); break;                                            \
+        DO_MIX_MONO(S,point); break;                                          \
         case LINEAR_RESAMPLER:                                                \
-        DO_MIX_MONO(lerp); break;                                             \
+        DO_MIX_MONO(S,lerp); break;                                           \
         case COSINE_RESAMPLER:                                                \
-        DO_MIX_MONO(cos_lerp); break;                                         \
+        DO_MIX_MONO(S,cos_lerp); break;                                       \
         case RESAMPLER_MIN:                                                   \
         case RESAMPLER_MAX:                                                   \
         break;                                                                \
     }                                                                         \
 } while(0)
 
-#define MIX_STEREO() do {                                                     \
+#define MIX_STEREO(S) do {                                                    \
     const int chans[] = {                                                     \
         FRONT_LEFT, FRONT_RIGHT,                                              \
         SIDE_LEFT, SIDE_RIGHT,                                                \
@@ -318,28 +318,28 @@ static __inline ALfloat cos_lerp(ALfloat val1, ALfloat val2, ALint frac)
     switch(Resampler)                                                         \
     {                                                                         \
         case POINT_RESAMPLER:                                                 \
-        DO_MIX_STEREO(point); break;                                          \
+        DO_MIX_STEREO(S,point); break;                                        \
         case LINEAR_RESAMPLER:                                                \
-        DO_MIX_STEREO(lerp); break;                                           \
+        DO_MIX_STEREO(S,lerp); break;                                         \
         case COSINE_RESAMPLER:                                                \
-        DO_MIX_STEREO(cos_lerp); break;                                       \
+        DO_MIX_STEREO(S,cos_lerp); break;                                     \
         case RESAMPLER_MIN:                                                   \
         case RESAMPLER_MAX:                                                   \
         break;                                                                \
     }                                                                         \
 } while(0)
 
-#define MIX_MC(...) do {                                                      \
+#define MIX_MC(S,...) do {                                                    \
     const int chans[] = { __VA_ARGS__ };                                      \
                                                                               \
     switch(Resampler)                                                         \
     {                                                                         \
         case POINT_RESAMPLER:                                                 \
-        DO_MIX_MC(point); break;                                              \
+        DO_MIX_MC(S,point); break;                                            \
         case LINEAR_RESAMPLER:                                                \
-        DO_MIX_MC(lerp); break;                                               \
+        DO_MIX_MC(S,lerp); break;                                             \
         case COSINE_RESAMPLER:                                                \
-        DO_MIX_MC(cos_lerp); break;                                           \
+        DO_MIX_MC(S,cos_lerp); break;                                         \
         case RESAMPLER_MIN:                                                   \
         case RESAMPLER_MAX:                                                   \
         break;                                                                \
@@ -419,9 +419,9 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     do {
         const ALbuffer *ALBuffer;
         union {
-            ALfloat *f32;
-            ALshort *s16;
-            ALubyte *u8;
+            ALfloat *p32;
+            ALshort *p16;
+            ALubyte *p8;
         } Data = { NULL };
         ALuint DataSize = 0;
         ALuint LoopStart = 0;
@@ -432,7 +432,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         /* Get buffer info */
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
-            Data.u8   = ALBuffer->data;
+            Data.p8   = ALBuffer->data;
             DataSize  = ALBuffer->size;
             DataSize /= aluFrameSizeFromFormat(ALBuffer->format);
             Channels  = aluChannelsFromFormat(ALBuffer->format);
@@ -463,7 +463,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
             {
                 ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
                 ulExtraSamples = min(NextBuf->size, ulExtraSamples);
-                memcpy(&Data.u8[DataSize*Channels*Bytes],
+                memcpy(&Data.p8[DataSize*Channels*Bytes],
                        NextBuf->data, ulExtraSamples);
             }
         }
@@ -474,13 +474,13 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
             {
                 ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
                 ulExtraSamples = min(NextBuf->size, ulExtraSamples);
-                memcpy(&Data.u8[DataSize*Channels*Bytes],
+                memcpy(&Data.p8[DataSize*Channels*Bytes],
                        &((ALubyte*)NextBuf->data)[LoopStart*Channels*Bytes],
                        ulExtraSamples);
             }
         }
         else
-            memset(&Data.u8[DataSize*Channels*Bytes], 0, (BUFFER_PADDING*Channels*Bytes));
+            memset(&Data.p8[DataSize*Channels*Bytes], 0, (BUFFER_PADDING*Channels*Bytes));
 
         /* Figure out how many samples we can mix. */
         DataSize64 = LoopEnd;
@@ -494,26 +494,26 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
 
         /* Actual sample mixing loops */
         if(Channels == 1) /* Mono */
-            MIX_MONO();
+            MIX_MONO(32);
         else if(Channels == 2) /* Stereo */
-            MIX_STEREO();
+            MIX_STEREO(32);
         else if(Channels == 4) /* Quad */
-            MIX_MC(FRONT_LEFT, FRONT_RIGHT,
-                   BACK_LEFT,  BACK_RIGHT);
+            MIX_MC(32, FRONT_LEFT, FRONT_RIGHT,
+                       BACK_LEFT,  BACK_RIGHT);
         else if(Channels == 6) /* 5.1 */
-            MIX_MC(FRONT_LEFT,   FRONT_RIGHT,
-                   FRONT_CENTER, LFE,
-                   BACK_LEFT,    BACK_RIGHT);
+            MIX_MC(32, FRONT_LEFT,   FRONT_RIGHT,
+                       FRONT_CENTER, LFE,
+                       BACK_LEFT,    BACK_RIGHT);
         else if(Channels == 7) /* 6.1 */
-            MIX_MC(FRONT_LEFT,   FRONT_RIGHT,
-                   FRONT_CENTER, LFE,
-                   BACK_CENTER,
-                   SIDE_LEFT,    SIDE_RIGHT);
+            MIX_MC(32, FRONT_LEFT,   FRONT_RIGHT,
+                       FRONT_CENTER, LFE,
+                       BACK_CENTER,
+                       SIDE_LEFT,    SIDE_RIGHT);
         else if(Channels == 8) /* 7.1 */
-            MIX_MC(FRONT_LEFT,   FRONT_RIGHT,
-                   FRONT_CENTER, LFE,
-                   BACK_LEFT,    BACK_RIGHT,
-                   SIDE_LEFT,    SIDE_RIGHT);
+            MIX_MC(32, FRONT_LEFT,   FRONT_RIGHT,
+                       FRONT_CENTER, LFE,
+                       BACK_LEFT,    BACK_RIGHT,
+                       SIDE_LEFT,    SIDE_RIGHT);
         else /* Unknown? */
         {
             while(BufferSize--)

@@ -77,6 +77,24 @@ static __inline ALfloat cos_lerp32(ALfloat val1, ALfloat val2, ALint frac)
     return val1 + ((val2-val1)*mult);
 }
 
+static __inline ALfloat point16(ALfloat val1, ALfloat val2, ALint frac)
+{
+    return (val1+0.5f) / 32767.5f;
+    (void)val2;
+    (void)frac;
+}
+static __inline ALfloat lerp16(ALfloat val1, ALfloat val2, ALint frac)
+{
+    val1 += ((val2-val1)*(frac * (1.0f/(1<<FRACTIONBITS))));
+    return (val1+0.5f) / 32767.5f;
+}
+static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
+{
+    ALfloat mult = (1.0f-cos(frac * (1.0f/(1<<FRACTIONBITS)) * M_PI)) * 0.5f;
+    val1 += ((val2-val1)*mult);
+    return (val1+0.5f) / 32767.5f;
+}
+
 
 #define DO_MIX_MONO(S,sampler) do {                                           \
     if(j == 0)                                                                \
@@ -347,6 +365,31 @@ static __inline ALfloat cos_lerp32(ALfloat val1, ALfloat val2, ALint frac)
 } while(0)
 
 
+#define MIX(S) do {                                                           \
+    if(Channels == 1) /* Mono */                                              \
+        MIX_MONO(S);                                                          \
+    else if(Channels == 2) /* Stereo */                                       \
+        MIX_STEREO(S);                                                        \
+    else if(Channels == 4) /* Quad */                                         \
+        MIX_MC(S, FRONT_LEFT, FRONT_RIGHT,                                    \
+                  BACK_LEFT,  BACK_RIGHT);                                    \
+    else if(Channels == 6) /* 5.1 */                                          \
+        MIX_MC(S, FRONT_LEFT,   FRONT_RIGHT,                                  \
+                  FRONT_CENTER, LFE,                                          \
+                   BACK_LEFT,    BACK_RIGHT);                                 \
+    else if(Channels == 7) /* 6.1 */                                          \
+        MIX_MC(S, FRONT_LEFT,   FRONT_RIGHT,                                  \
+                  FRONT_CENTER, LFE,                                          \
+                  BACK_CENTER,                                                \
+                  SIDE_LEFT,    SIDE_RIGHT);                                  \
+    else if(Channels == 8) /* 7.1 */                                          \
+        MIX_MC(S, FRONT_LEFT,   FRONT_RIGHT,                                  \
+                  FRONT_CENTER, LFE,                                          \
+                  BACK_LEFT,    BACK_RIGHT,                                   \
+                  SIDE_LEFT,    SIDE_RIGHT);                                  \
+} while(0)
+
+
 static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
                       float (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo,
                       ALfloat *ClickRemoval, ALfloat *PendingClicks)
@@ -492,38 +535,10 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
 
         BufferSize = min(BufferSize, (SamplesToDo-j));
 
-        /* Actual sample mixing loops */
-        if(Channels == 1) /* Mono */
-            MIX_MONO(32);
-        else if(Channels == 2) /* Stereo */
-            MIX_STEREO(32);
-        else if(Channels == 4) /* Quad */
-            MIX_MC(32, FRONT_LEFT, FRONT_RIGHT,
-                       BACK_LEFT,  BACK_RIGHT);
-        else if(Channels == 6) /* 5.1 */
-            MIX_MC(32, FRONT_LEFT,   FRONT_RIGHT,
-                       FRONT_CENTER, LFE,
-                       BACK_LEFT,    BACK_RIGHT);
-        else if(Channels == 7) /* 6.1 */
-            MIX_MC(32, FRONT_LEFT,   FRONT_RIGHT,
-                       FRONT_CENTER, LFE,
-                       BACK_CENTER,
-                       SIDE_LEFT,    SIDE_RIGHT);
-        else if(Channels == 8) /* 7.1 */
-            MIX_MC(32, FRONT_LEFT,   FRONT_RIGHT,
-                       FRONT_CENTER, LFE,
-                       BACK_LEFT,    BACK_RIGHT,
-                       SIDE_LEFT,    SIDE_RIGHT);
-        else /* Unknown? */
-        {
-            while(BufferSize--)
-            {
-                DataPosFrac += increment;
-                DataPosInt += DataPosFrac>>FRACTIONBITS;
-                DataPosFrac &= FRACTIONMASK;
-                j++;
-            }
-        }
+        if(Bytes == 4) /* 32-bit float */
+            MIX(32);
+        else if(Bytes == 2) /* signed 16-bit */
+            MIX(16);
 
     skipmix:
         /* Handle looping sources */

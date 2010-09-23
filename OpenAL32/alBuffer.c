@@ -35,11 +35,11 @@
 
 
 static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat);
-static void ConvertData(ALfloat *dst, const ALvoid *src, ALint origBytes, ALsizei len);
-static void ConvertDataRear(ALfloat *dst, const ALvoid *src, ALint origBytes, ALsizei len);
-static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint origChans, ALsizei len);
-static void ConvertDataMULaw(ALfloat *dst, const ALvoid *src, ALsizei len);
-static void ConvertDataMULawRear(ALfloat *dst, const ALvoid *src, ALsizei len);
+static void ConvertData(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len);
+static void ConvertDataRear(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len);
+static void ConvertDataIMA4(ALvoid *dst, const ALvoid *src, ALint origChans, ALsizei len);
+static void ConvertDataMULaw(ALvoid *dst, const ALvoid *src, ALsizei len);
+static void ConvertDataMULawRear(ALvoid *dst, const ALvoid *src, ALsizei len);
 
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
 
@@ -287,6 +287,10 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
     {
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO16);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
         case AL_FORMAT_MONO_FLOAT32:
         case AL_FORMAT_MONO_DOUBLE_EXT:
             err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO_FLOAT32);
@@ -296,6 +300,10 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO16);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
         case AL_FORMAT_STEREO_FLOAT32:
         case AL_FORMAT_STEREO_DOUBLE_EXT:
             err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO_FLOAT32);
@@ -306,11 +314,12 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case AL_FORMAT_REAR8:
         case AL_FORMAT_REAR16:
         case AL_FORMAT_REAR32: {
-            ALenum NewFormat = AL_FORMAT_QUAD32;
-            ALuint NewChannels = aluChannelsFromFormat(NewFormat);
-            ALuint NewBytes = aluBytesFromFormat(NewFormat);
             ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
                                 ((format==AL_FORMAT_REAR16) ? 2 : 4));
+            ALenum NewFormat = ((OrigBytes==4) ? AL_FORMAT_QUAD32 :
+                                                 AL_FORMAT_QUAD16);
+            ALuint NewChannels = aluChannelsFromFormat(NewFormat);
+            ALuint NewBytes = aluBytesFromFormat(NewFormat);
             ALuint64 newsize, allocsize;
 
             if((size%(OrigBytes*2)) != 0)
@@ -353,6 +362,10 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case AL_FORMAT_QUAD16_LOKI:
         case AL_FORMAT_QUAD8:
         case AL_FORMAT_QUAD16:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD16);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
         case AL_FORMAT_QUAD32:
             err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD32);
             if(err != AL_NO_ERROR)
@@ -361,6 +374,10 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
         case AL_FORMAT_51CHN8:
         case AL_FORMAT_51CHN16:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_51CHN16);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
         case AL_FORMAT_51CHN32:
             err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_51CHN32);
             if(err != AL_NO_ERROR)
@@ -369,6 +386,10 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
         case AL_FORMAT_61CHN8:
         case AL_FORMAT_61CHN16:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_61CHN16);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
         case AL_FORMAT_61CHN32:
             err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_61CHN32);
             if(err != AL_NO_ERROR)
@@ -377,6 +398,10 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
         case AL_FORMAT_71CHN8:
         case AL_FORMAT_71CHN16:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_71CHN16);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
         case AL_FORMAT_71CHN32:
             err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_71CHN32);
             if(err != AL_NO_ERROR)
@@ -386,8 +411,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case AL_FORMAT_MONO_IMA4:
         case AL_FORMAT_STEREO_IMA4: {
             ALuint Channels = ((format==AL_FORMAT_MONO_IMA4) ? 1 : 2);
-            ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
-                                                AL_FORMAT_STEREO_FLOAT32);
+            ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO16 :
+                                                AL_FORMAT_STEREO16);
             ALuint NewBytes = aluBytesFromFormat(NewFormat);
             ALuint64 newsize, allocsize;
 
@@ -441,12 +466,12 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                                 ((format==AL_FORMAT_QUAD_MULAW) ? 4 :
                                  ((format==AL_FORMAT_51CHN_MULAW) ? 6 :
                                   ((format==AL_FORMAT_61CHN_MULAW) ? 7 : 8)))));
-            ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
-                                ((Channels==2) ? AL_FORMAT_STEREO_FLOAT32 :
-                                 ((Channels==4) ? AL_FORMAT_QUAD32 :
-                                  ((Channels==6) ? AL_FORMAT_51CHN32 :
-                                   ((Channels==7) ? AL_FORMAT_61CHN32 :
-                                                    AL_FORMAT_71CHN32)))));
+            ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO16 :
+                                ((Channels==2) ? AL_FORMAT_STEREO16 :
+                                 ((Channels==4) ? AL_FORMAT_QUAD16 :
+                                  ((Channels==6) ? AL_FORMAT_51CHN16 :
+                                   ((Channels==7) ? AL_FORMAT_61CHN16 :
+                                                    AL_FORMAT_71CHN16)))));
             ALuint NewBytes = aluBytesFromFormat(NewFormat);
             ALuint64 allocsize;
 
@@ -597,38 +622,44 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         case AL_FORMAT_71CHN8:
         case AL_FORMAT_71CHN16:
         case AL_FORMAT_71CHN32: {
-            ALuint Bytes = aluBytesFromFormat(format);
+            ALuint OldBytes = aluBytesFromFormat(format);
+            ALuint Bytes = aluBytesFromFormat(ALBuf->format);
 
-            offset /= Bytes;
-            length /= Bytes;
+            offset /= OldBytes;
+            offset *= Bytes;
+            length /= OldBytes;
 
-            ConvertData(&((ALfloat*)ALBuf->data)[offset], data, Bytes, length);
+            ConvertData(&((ALubyte*)ALBuf->data)[offset], data, Bytes, length);
         }   break;
 
         case AL_FORMAT_REAR8:
         case AL_FORMAT_REAR16:
         case AL_FORMAT_REAR32: {
-            ALuint Bytes = ((format==AL_FORMAT_REAR8) ? 1 :
-                            ((format==AL_FORMAT_REAR16) ? 2 : 4));
+            ALuint OldBytes = ((format==AL_FORMAT_REAR8) ? 1 :
+                               ((format==AL_FORMAT_REAR16) ? 2 : 4));
+            ALuint Bytes = aluBytesFromFormat(ALBuf->format);
 
-            offset /= Bytes;
+            offset /= OldBytes;
             offset *= 2;
-            length /= Bytes;
+            offset *= Bytes;
+            length /= OldBytes;
             length *= 2;
 
-            ConvertDataRear(&((ALfloat*)ALBuf->data)[offset], data, Bytes, length);
+            ConvertDataRear(&((ALubyte*)ALBuf->data)[offset], data, Bytes, length);
         }   break;
 
         case AL_FORMAT_MONO_IMA4:
         case AL_FORMAT_STEREO_IMA4: {
             ALuint Channels = aluChannelsFromFormat(ALBuf->format);
+            ALuint Bytes = aluBytesFromFormat(ALBuf->format);
 
-            /* offset -> sample offset, length -> block count */
+            /* offset -> byte offset, length -> block count */
             offset /= 36;
             offset *= 65;
+            offset *= Bytes;
             length /= ALBuf->OriginalAlign;
 
-            ConvertDataIMA4(&((ALfloat*)ALBuf->data)[offset], data, Channels, length);
+            ConvertDataIMA4(&((ALubyte*)ALBuf->data)[offset], data, Channels, length);
         }   break;
 
         case AL_FORMAT_MONO_MULAW:
@@ -636,15 +667,23 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         case AL_FORMAT_QUAD_MULAW:
         case AL_FORMAT_51CHN_MULAW:
         case AL_FORMAT_61CHN_MULAW:
-        case AL_FORMAT_71CHN_MULAW:
-            ConvertDataMULaw(&((ALfloat*)ALBuf->data)[offset], data, length);
-            break;
+        case AL_FORMAT_71CHN_MULAW: {
+            ALuint Bytes = aluBytesFromFormat(ALBuf->format);
 
-        case AL_FORMAT_REAR_MULAW:
+            offset *= Bytes;
+
+            ConvertDataMULaw(&((ALubyte*)ALBuf->data)[offset], data, length);
+        }   break;
+
+        case AL_FORMAT_REAR_MULAW: {
+            ALuint Bytes = aluBytesFromFormat(ALBuf->format);
+
             offset *= 2;
+            offset *= Bytes;
             length *= 2;
-            ConvertDataMULawRear(&((ALfloat*)ALBuf->data)[offset], data, length);
-            break;
+
+            ConvertDataMULawRear(&((ALubyte*)ALBuf->data)[offset], data, length);
+        }   break;
 
         default:
             alSetError(Context, AL_INVALID_ENUM);
@@ -1054,8 +1093,12 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALuint64 newsize, allocsize;
     ALvoid *temp;
 
-    assert(NewBytes == 4);
     assert(NewChannels == OrigChannels);
+    assert(NewBytes == 4 || NewBytes == 2);
+    if(NewBytes == 4)
+        assert(OrigBytes == 4 || OrigBytes == 8);
+    else if(NewBytes == 2)
+        assert(OrigBytes == 2 || OrigBytes == 1);
 
     if((size%(OrigBytes*OrigChannels)) != 0)
         return AL_INVALID_VALUE;
@@ -1087,7 +1130,7 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     return AL_NO_ERROR;
 }
 
-static void ConvertData(ALfloat *dst, const ALvoid *src, ALint origBytes, ALsizei len)
+static void ConvertData(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len)
 {
     ALsizei i;
     ALint smp;
@@ -1098,27 +1141,24 @@ static void ConvertData(ALfloat *dst, const ALvoid *src, ALint origBytes, ALsize
         case 1:
             for(i = 0;i < len;i++)
             {
-                smp = ((ALubyte*)src)[i];
-                dst[i] = ((smp < 0x80) ? ((smp-128)/128.0f) : ((smp-128)/127.0f));
+                smp = ((ALubyte*)src)[i] - 128;
+                ((ALshort*)dst)[i] = ((smp < 0) ? (smp*32768/128) : (smp*32767/127));
             }
             break;
 
         case 2:
             for(i = 0;i < len;i++)
-            {
-                smp = ((ALshort*)src)[i];
-                dst[i] = ((smp < 0) ? (smp/32768.0f) : (smp/32767.0f));
-            }
+                ((ALshort*)dst)[i] = ((ALshort*)src)[i];
             break;
 
         case 4:
             for(i = 0;i < len;i++)
-                dst[i] = ((ALfloat*)src)[i];
+                ((ALfloat*)dst)[i] = ((ALfloat*)src)[i];
             break;
 
         case 8:
             for(i = 0;i < len;i++)
-                dst[i] = ((ALdouble*)src)[i];
+                ((ALfloat*)dst)[i] = ((ALdouble*)src)[i];
             break;
 
         default:
@@ -1126,7 +1166,7 @@ static void ConvertData(ALfloat *dst, const ALvoid *src, ALint origBytes, ALsize
     }
 }
 
-static void ConvertDataRear(ALfloat *dst, const ALvoid *src, ALint origBytes, ALsizei len)
+static void ConvertDataRear(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len)
 {
     ALsizei i;
     ALint smp;
@@ -1137,34 +1177,32 @@ static void ConvertDataRear(ALfloat *dst, const ALvoid *src, ALint origBytes, AL
         case 1:
             for(i = 0;i < len;i+=4)
             {
-                dst[i+0] = 0;
-                dst[i+1] = 0;
-                smp = ((ALubyte*)src)[i/2+0];
-                dst[i+2] = ((smp < 0x80) ? ((smp-128)/128.0f) : ((smp-128)/127.0f));
-                smp = ((ALubyte*)src)[i/2+1];
-                dst[i+3] = ((smp < 0x80) ? ((smp-128)/128.0f) : ((smp-128)/127.0f));
+                ((ALshort*)dst)[i+0] = 0;
+                ((ALshort*)dst)[i+1] = 0;
+                smp = ((ALubyte*)src)[i/2+0] - 128;
+                ((ALshort*)dst)[i+2] = ((smp < 0) ? (smp*32768/128) : (smp*32767/127));
+                smp = ((ALubyte*)src)[i/2+1] - 128;
+                ((ALshort*)dst)[i+3] = ((smp < 0) ? (smp*32768/128) : (smp*32767/127));
             }
             break;
 
         case 2:
             for(i = 0;i < len;i+=4)
             {
-                dst[i+0] = 0;
-                dst[i+1] = 0;
-                smp = ((ALshort*)src)[i/2+0];
-                dst[i+2] = ((smp < 0) ? (smp/32768.0f) : (smp/32767.0f));
-                smp = ((ALshort*)src)[i/2+1];
-                dst[i+3] = ((smp < 0) ? (smp/32768.0f) : (smp/32767.0f));
+                ((ALshort*)dst)[i+0] = 0;
+                ((ALshort*)dst)[i+1] = 0;
+                ((ALshort*)dst)[i+2] = ((ALshort*)src)[i/2+0];
+                ((ALshort*)dst)[i+3] = ((ALshort*)src)[i/2+1];
             }
             break;
 
         case 4:
             for(i = 0;i < len;i+=4)
             {
-                dst[i+0] = 0;
-                dst[i+1] = 0;
-                dst[i+2] = ((ALfloat*)src)[i/2+0];
-                dst[i+3] = ((ALfloat*)src)[i/2+1];
+                ((ALfloat*)dst)[i+0] = 0.f;
+                ((ALfloat*)dst)[i+1] = 0.f;
+                ((ALfloat*)dst)[i+2] = ((ALfloat*)src)[i/2+0];
+                ((ALfloat*)dst)[i+3] = ((ALfloat*)src)[i/2+1];
             }
             break;
 
@@ -1173,7 +1211,7 @@ static void ConvertDataRear(ALfloat *dst, const ALvoid *src, ALint origBytes, AL
     }
 }
 
-static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint chans, ALsizei len)
+static void ConvertDataIMA4(ALvoid *dst, const ALvoid *src, ALint chans, ALsizei len)
 {
     const ALubyte *IMAData;
     ALint Sample[2],Index[2];
@@ -1198,7 +1236,7 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint chans, ALsize
             Index[c] = ((Index[c]<0) ? 0 : Index[c]);
             Index[c] = ((Index[c]>88) ? 88 : Index[c]);
 
-            dst[i*65*chans + c] = ((Sample[c] < 0) ? (Sample[c]/32768.0f) : (Sample[c]/32767.0f));
+            ((ALshort*)dst)[i*65*chans + c] = Sample[c];
         }
 
         for(j = 1;j < 65;j += 8)
@@ -1224,7 +1262,7 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint chans, ALsize
                     if(Index[c]<0) Index[c] = 0;
                     else if(Index[c]>88) Index[c] = 88;
 
-                    dst[(i*65+j+k)*chans + c] = ((Sample[c] < 0) ? (Sample[c]/32768.0f) : (Sample[c]/32767.0f));
+                    ((ALshort*)dst)[(i*65+j+k)*chans + c] = Sample[c];
                     IMACode[c] >>= 4;
                 }
             }
@@ -1232,33 +1270,26 @@ static void ConvertDataIMA4(ALfloat *dst, const ALvoid *src, ALint chans, ALsize
     }
 }
 
-static void ConvertDataMULaw(ALfloat *dst, const ALvoid *src, ALsizei len)
+static void ConvertDataMULaw(ALvoid *dst, const ALvoid *src, ALsizei len)
 {
     ALsizei i;
-    ALint smp;
     if(src == NULL)
         return;
     for(i = 0;i < len;i++)
-    {
-        smp = muLawDecompressionTable[((ALubyte*)src)[i]];
-        dst[i] = ((smp < 0) ? (smp/32768.0f) : (smp/32767.0f));
-    }
+        ((ALshort*)dst)[i] = muLawDecompressionTable[((ALubyte*)src)[i]];
 }
 
-static void ConvertDataMULawRear(ALfloat *dst, const ALvoid *src, ALsizei len)
+static void ConvertDataMULawRear(ALvoid *dst, const ALvoid *src, ALsizei len)
 {
     ALsizei i;
-    ALint smp;
     if(src == NULL)
         return;
     for(i = 0;i < len;i+=4)
     {
-        dst[i+0] = 0;
-        dst[i+1] = 0;
-        smp = muLawDecompressionTable[((ALubyte*)src)[i/2+0]];
-        dst[i+2] = ((smp < 0) ? (smp/32768.0f) : (smp/32767.0f));
-        smp = muLawDecompressionTable[((ALubyte*)src)[i/2+1]];
-        dst[i+3] = ((smp < 0) ? (smp/32768.0f) : (smp/32767.0f));
+        ((ALshort*)dst)[i+0] = 0;
+        ((ALshort*)dst)[i+1] = 0;
+        ((ALshort*)dst)[i+2] = muLawDecompressionTable[((ALubyte*)src)[i/2+0]];
+        ((ALshort*)dst)[i+3] = muLawDecompressionTable[((ALubyte*)src)[i/2+1]];
     }
 }
 

@@ -389,7 +389,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 } while(0)
 
 
-static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
+static void MixSource(ALsource *Source, ALCcontext *Context,
                       float (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo,
                       ALfloat *ClickRemoval, ALfloat *PendingClicks)
 {
@@ -412,37 +412,37 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     ALboolean Looping;
     ALenum State;
 
-    if(ALSource->NeedsUpdate)
+    if(Source->NeedsUpdate)
     {
-        ALsource_Update(ALSource, ALContext);
-        ALSource->NeedsUpdate = AL_FALSE;
+        ALsource_Update(Source, Context);
+        Source->NeedsUpdate = AL_FALSE;
     }
 
     /* Get source info */
-    Resampler     = ALSource->Resampler;
-    State         = ALSource->state;
-    BuffersPlayed = ALSource->BuffersPlayed;
-    DataPosInt    = ALSource->position;
-    DataPosFrac   = ALSource->position_fraction;
-    Looping       = ALSource->bLooping;
+    Resampler     = Source->Resampler;
+    State         = Source->state;
+    BuffersPlayed = Source->BuffersPlayed;
+    DataPosInt    = Source->position;
+    DataPosFrac   = Source->position_fraction;
+    Looping       = Source->bLooping;
 
     for(i = 0;i < OUTPUTCHANNELS;i++)
-        DrySend[i] = ALSource->Params.DryGains[i];
+        DrySend[i] = Source->Params.DryGains[i];
     for(i = 0;i < MAX_SENDS;i++)
-        WetSend[i] = ALSource->Params.WetGains[i];
+        WetSend[i] = Source->Params.WetGains[i];
 
     /* Get fixed point step */
-    increment = ALSource->Params.Step;
+    increment = Source->Params.Step;
 
-    DryFilter = &ALSource->Params.iirFilter;
+    DryFilter = &Source->Params.iirFilter;
     for(i = 0;i < MAX_SENDS;i++)
     {
-        WetFilter[i] = &ALSource->Params.Send[i].iirFilter;
-        if(ALSource->Send[i].Slot)
+        WetFilter[i] = &Source->Params.Send[i].iirFilter;
+        if(Source->Send[i].Slot)
         {
-            WetBuffer[i] = ALSource->Send[i].Slot->WetBuffer;
-            WetClickRemoval[i] = ALSource->Send[i].Slot->ClickRemoval;
-            WetPendingClicks[i] = ALSource->Send[i].Slot->PendingClicks;
+            WetBuffer[i] = Source->Send[i].Slot->WetBuffer;
+            WetClickRemoval[i] = Source->Send[i].Slot->ClickRemoval;
+            WetPendingClicks[i] = Source->Send[i].Slot->PendingClicks;
         }
         else
         {
@@ -453,7 +453,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     }
 
     /* Get current buffer queue item */
-    BufferListItem = ALSource->queue;
+    BufferListItem = Source->queue;
     for(i = 0;i < BuffersPlayed;i++)
         BufferListItem = BufferListItem->next;
 
@@ -482,7 +482,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
 
             LoopStart = 0;
             LoopEnd   = DataSize;
-            if(Looping && ALSource->lSourceType == AL_STATIC)
+            if(Looping && Source->lSourceType == AL_STATIC)
             {
                 /* If current pos is beyond the loop range, do not loop */
                 if(DataPosInt >= LoopEnd)
@@ -511,7 +511,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         }
         else if(Looping)
         {
-            ALbuffer *NextBuf = ALSource->queue->buffer;
+            ALbuffer *NextBuf = Source->queue->buffer;
             if(NextBuf && NextBuf->size)
             {
                 ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
@@ -543,7 +543,7 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
         /* Handle looping sources */
         if(DataPosInt >= LoopEnd)
         {
-            if(BuffersPlayed < (ALSource->BuffersInQueue-1))
+            if(BuffersPlayed < (Source->BuffersInQueue-1))
             {
                 BufferListItem = BufferListItem->next;
                 BuffersPlayed++;
@@ -551,9 +551,9 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
             }
             else if(Looping)
             {
-                BufferListItem = ALSource->queue;
+                BufferListItem = Source->queue;
                 BuffersPlayed = 0;
-                if(ALSource->lSourceType == AL_STATIC)
+                if(Source->lSourceType == AL_STATIC)
                     DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
                 else
                     DataPosInt -= DataSize;
@@ -561,8 +561,8 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
             else
             {
                 State = AL_STOPPED;
-                BufferListItem = ALSource->queue;
-                BuffersPlayed = ALSource->BuffersInQueue;
+                BufferListItem = Source->queue;
+                BuffersPlayed = Source->BuffersInQueue;
                 DataPosInt = 0;
                 DataPosFrac = 0;
             }
@@ -570,11 +570,11 @@ static void MixSource(ALsource *ALSource, ALCcontext *ALContext,
     } while(State == AL_PLAYING && j < SamplesToDo);
 
     /* Update source info */
-    ALSource->state             = State;
-    ALSource->BuffersPlayed     = BuffersPlayed;
-    ALSource->position          = DataPosInt;
-    ALSource->position_fraction = DataPosFrac;
-    ALSource->Buffer            = BufferListItem->buffer;
+    Source->state             = State;
+    Source->BuffersPlayed     = BuffersPlayed;
+    Source->position          = DataPosInt;
+    Source->position_fraction = DataPosFrac;
+    Source->Buffer            = BufferListItem->buffer;
 }
 
 #undef DO_MIX_MC

@@ -135,10 +135,10 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         DryBuffer[j][BACK_CENTER]  += outsamp*DrySend[BACK_CENTER];           \
                                                                               \
         /* Room path final mix buffer and panning */                          \
-        for(i = 0;i < MAX_SENDS;i++)                                          \
+        for(out = 0;out < MAX_SENDS;out++)                                    \
         {                                                                     \
-            outsamp = lpFilter2P(WetFilter[i], 0, value);                     \
-            WetBuffer[i][j] += outsamp*WetSend[i];                            \
+            outsamp = lpFilter2P(WetFilter[out], 0, value);                   \
+            WetBuffer[out][j] += outsamp*WetSend[out];                        \
         }                                                                     \
                                                                               \
         DataPosFrac += increment;                                             \

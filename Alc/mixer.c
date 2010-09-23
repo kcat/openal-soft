@@ -375,7 +375,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     else if(Channels == 6) /* 5.1 */                                          \
         MIX_MC(S, FRONT_LEFT,   FRONT_RIGHT,                                  \
                   FRONT_CENTER, LFE,                                          \
-                   BACK_LEFT,    BACK_RIGHT);                                 \
+                  BACK_LEFT,    BACK_RIGHT);                                  \
     else if(Channels == 7) /* 6.1 */                                          \
         MIX_MC(S, FRONT_LEFT,   FRONT_RIGHT,                                  \
                   FRONT_CENTER, LFE,                                          \

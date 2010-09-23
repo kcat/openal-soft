@@ -311,7 +311,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 
 
 #define MIX_MONO(S) do {                                                      \
-    switch(Resampler)                                                         \
+    switch(Source->Resampler)                                                 \
     {                                                                         \
         case POINT_RESAMPLER:                                                 \
         DO_MIX_MONO(S,point); break;                                          \
@@ -332,7 +332,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         BACK_LEFT, BACK_RIGHT                                                 \
     };                                                                        \
                                                                               \
-    switch(Resampler)                                                         \
+    switch(Source->Resampler)                                                 \
     {                                                                         \
         case POINT_RESAMPLER:                                                 \
         DO_MIX_STEREO(S,point); break;                                        \
@@ -349,7 +349,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 #define MIX_MC(S,...) do {                                                    \
     const int chans[] = { __VA_ARGS__ };                                      \
                                                                               \
-    switch(Resampler)                                                         \
+    switch(Source->Resampler)                                                 \
     {                                                                         \
         case POINT_RESAMPLER:                                                 \
         DO_MIX_MC(S,point); break;                                            \
@@ -407,7 +407,6 @@ static void MixSource(ALsource *Source, ALCcontext *Context,
     ALfloat WetSend[MAX_SENDS];
     ALint increment;
     ALuint DataPosInt, DataPosFrac;
-    resampler_t Resampler;
     ALuint BuffersPlayed;
     ALboolean Looping;
     ALenum State;
@@ -419,7 +418,6 @@ static void MixSource(ALsource *Source, ALCcontext *Context,
     }
 
     /* Get source info */
-    Resampler     = Source->Resampler;
     State         = Source->state;
     BuffersPlayed = Source->BuffersPlayed;
     DataPosInt    = Source->position;

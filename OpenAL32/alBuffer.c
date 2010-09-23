@@ -261,279 +261,272 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
     Context = GetContextSuspended();
     if(!Context) return;
 
+    if(Context->SampleSource)
+    {
+        ALintptrEXT offset;
+
+        if(Context->SampleSource->state == MAPPED)
+        {
+            alSetError(Context, AL_INVALID_OPERATION);
+            ProcessContext(Context);
+            return;
+        }
+
+        offset = (const ALubyte*)data - (ALubyte*)NULL;
+        data = Context->SampleSource->data + offset;
+    }
+
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME); /* Invalid Buffer Name */
-    else
+    else if(size < 0 || freq < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else if(ALBuf->refcount != 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else switch(format)
     {
-        if(Context->SampleSource)
-        {
-            ALintptrEXT offset;
+        case AL_FORMAT_MONO8:
+        case AL_FORMAT_MONO16:
+        case AL_FORMAT_MONO_FLOAT32:
+        case AL_FORMAT_MONO_DOUBLE_EXT:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO_FLOAT32);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
 
-            if(Context->SampleSource->state == MAPPED)
+        case AL_FORMAT_STEREO8:
+        case AL_FORMAT_STEREO16:
+        case AL_FORMAT_STEREO_FLOAT32:
+        case AL_FORMAT_STEREO_DOUBLE_EXT:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO_FLOAT32);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
+
+        case AL_FORMAT_REAR8:
+        case AL_FORMAT_REAR16:
+        case AL_FORMAT_REAR32: {
+            ALenum NewFormat = AL_FORMAT_QUAD32;
+            ALuint NewChannels = aluChannelsFromFormat(NewFormat);
+            ALuint NewBytes = aluBytesFromFormat(NewFormat);
+            ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
+                                ((format==AL_FORMAT_REAR16) ? 2 : 4));
+            ALuint64 newsize, allocsize;
+
+            if((size%(OrigBytes*2)) != 0)
             {
-                alSetError(Context, AL_INVALID_OPERATION);
-                ProcessContext(Context);
-                return;
+                alSetError(Context, AL_INVALID_VALUE);
+                break;
             }
 
-            offset = (const ALubyte*)data - (ALubyte*)NULL;
-            data = Context->SampleSource->data + offset;
-        }
+            newsize = size / OrigBytes;
+            newsize *= 2;
 
-        if(size < 0 || freq < 0)
-            alSetError(Context, AL_INVALID_VALUE);
-        else if(ALBuf->refcount != 0)
-            alSetError(Context, AL_INVALID_VALUE);
-        else
-        {
-            switch(format)
+            allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
+            if(allocsize > INT_MAX)
             {
-                case AL_FORMAT_MONO8:
-                case AL_FORMAT_MONO16:
-                case AL_FORMAT_MONO_FLOAT32:
-                case AL_FORMAT_MONO_DOUBLE_EXT:
-                    err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO_FLOAT32);
-                    if(err != AL_NO_ERROR)
-                        alSetError(Context, err);
-                    break;
-
-                case AL_FORMAT_STEREO8:
-                case AL_FORMAT_STEREO16:
-                case AL_FORMAT_STEREO_FLOAT32:
-                case AL_FORMAT_STEREO_DOUBLE_EXT:
-                    err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO_FLOAT32);
-                    if(err != AL_NO_ERROR)
-                        alSetError(Context, err);
-                    break;
-
-                case AL_FORMAT_REAR8:
-                case AL_FORMAT_REAR16:
-                case AL_FORMAT_REAR32: {
-                    ALenum NewFormat = AL_FORMAT_QUAD32;
-                    ALuint NewChannels = aluChannelsFromFormat(NewFormat);
-                    ALuint NewBytes = aluBytesFromFormat(NewFormat);
-                    ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
-                                        ((format==AL_FORMAT_REAR16) ? 2 :
-                                         4));
-                    ALuint64 newsize, allocsize;
-
-                    if((size%(OrigBytes*2)) != 0)
-                    {
-                        alSetError(Context, AL_INVALID_VALUE);
-                        break;
-                    }
-
-                    newsize = size / OrigBytes;
-                    newsize *= 2;
-
-                    allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
-                    if(allocsize > INT_MAX)
-                    {
-                        alSetError(Context, AL_OUT_OF_MEMORY);
-                        break;
-                    }
-                    temp = realloc(ALBuf->data, allocsize);
-                    if(temp)
-                    {
-                        ALBuf->data = temp;
-                        ConvertDataRear(ALBuf->data, data, OrigBytes, newsize);
-
-                        ALBuf->format = NewFormat;
-                        ALBuf->eOriginalFormat = format;
-                        ALBuf->size = newsize*NewBytes;
-                        ALBuf->frequency = freq;
-
-                        ALBuf->LoopStart = 0;
-                        ALBuf->LoopEnd = newsize / NewChannels;
-
-                        ALBuf->OriginalSize = size;
-                        ALBuf->OriginalAlign = OrigBytes * 2;
-                    }
-                    else
-                        alSetError(Context, AL_OUT_OF_MEMORY);
-                }   break;
-
-                case AL_FORMAT_QUAD8_LOKI:
-                case AL_FORMAT_QUAD16_LOKI:
-                case AL_FORMAT_QUAD8:
-                case AL_FORMAT_QUAD16:
-                case AL_FORMAT_QUAD32:
-                    err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD32);
-                    if(err != AL_NO_ERROR)
-                        alSetError(Context, err);
-                    break;
-
-                case AL_FORMAT_51CHN8:
-                case AL_FORMAT_51CHN16:
-                case AL_FORMAT_51CHN32:
-                    err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_51CHN32);
-                    if(err != AL_NO_ERROR)
-                        alSetError(Context, err);
-                    break;
-
-                case AL_FORMAT_61CHN8:
-                case AL_FORMAT_61CHN16:
-                case AL_FORMAT_61CHN32:
-                    err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_61CHN32);
-                    if(err != AL_NO_ERROR)
-                        alSetError(Context, err);
-                    break;
-
-                case AL_FORMAT_71CHN8:
-                case AL_FORMAT_71CHN16:
-                case AL_FORMAT_71CHN32:
-                    err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_71CHN32);
-                    if(err != AL_NO_ERROR)
-                        alSetError(Context, err);
-                    break;
-
-                case AL_FORMAT_MONO_IMA4:
-                case AL_FORMAT_STEREO_IMA4: {
-                    int Channels = ((format==AL_FORMAT_MONO_IMA4) ? 1 : 2);
-                    ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
-                                                        AL_FORMAT_STEREO_FLOAT32);
-                    ALuint NewBytes = aluBytesFromFormat(NewFormat);
-                    ALuint64 newsize, allocsize;
-
-                    // Here is where things vary:
-                    // nVidia and Apple use 64+1 samples per channel per block => block_size=36*chans bytes
-                    // Most PC sound software uses 2040+1 samples per channel per block -> block_size=1024*chans bytes
-                    if((size%(36*Channels)) != 0)
-                    {
-                        alSetError(Context, AL_INVALID_VALUE);
-                        break;
-                    }
-
-                    newsize = size / 36;
-                    newsize *= 65;
-
-                    allocsize = (BUFFER_PADDING*Channels + newsize)*NewBytes;
-                    if(allocsize > INT_MAX)
-                    {
-                        alSetError(Context, AL_OUT_OF_MEMORY);
-                        break;
-                    }
-                    temp = realloc(ALBuf->data, allocsize);
-                    if(temp)
-                    {
-                        ALBuf->data = temp;
-                        ConvertDataIMA4(ALBuf->data, data, Channels, newsize/(65*Channels));
-
-                        ALBuf->format = NewFormat;
-                        ALBuf->eOriginalFormat = format;
-                        ALBuf->size = newsize*NewBytes;
-                        ALBuf->frequency = freq;
-
-                        ALBuf->LoopStart = 0;
-                        ALBuf->LoopEnd = newsize / Channels;
-
-                        ALBuf->OriginalSize = size;
-                        ALBuf->OriginalAlign = 36 * Channels;
-                    }
-                    else
-                        alSetError(Context, AL_OUT_OF_MEMORY);
-                }   break;
-
-                case AL_FORMAT_MONO_MULAW:
-                case AL_FORMAT_STEREO_MULAW:
-                case AL_FORMAT_QUAD_MULAW:
-                case AL_FORMAT_51CHN_MULAW:
-                case AL_FORMAT_61CHN_MULAW:
-                case AL_FORMAT_71CHN_MULAW: {
-                    int Channels = ((format==AL_FORMAT_MONO_MULAW) ? 1 :
-                                    ((format==AL_FORMAT_STEREO_MULAW) ? 2 :
-                                     ((format==AL_FORMAT_QUAD_MULAW) ? 4 :
-                                      ((format==AL_FORMAT_51CHN_MULAW) ? 6 :
-                                       ((format==AL_FORMAT_61CHN_MULAW) ? 7 : 8)))));
-                    ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
-                                        ((Channels==2) ? AL_FORMAT_STEREO_FLOAT32 :
-                                         ((Channels==4) ? AL_FORMAT_QUAD32 :
-                                          ((Channels==6) ? AL_FORMAT_51CHN32 :
-                                           ((Channels==7) ? AL_FORMAT_61CHN32 :
-                                                            AL_FORMAT_71CHN32)))));
-                    ALuint NewBytes = aluBytesFromFormat(NewFormat);
-                    ALuint64 allocsize;
-
-                    if((size%(1*Channels)) != 0)
-                    {
-                        alSetError(Context, AL_INVALID_VALUE);
-                        break;
-                    }
-
-                    allocsize = (BUFFER_PADDING*Channels + size)*NewBytes;
-                    if(allocsize > INT_MAX)
-                    {
-                        alSetError(Context, AL_OUT_OF_MEMORY);
-                        break;
-                    }
-                    temp = realloc(ALBuf->data, allocsize);
-                    if(temp)
-                    {
-                        ALBuf->data = temp;
-                        ConvertDataMULaw(ALBuf->data, data, size);
-
-                        ALBuf->format = NewFormat;
-                        ALBuf->eOriginalFormat = format;
-                        ALBuf->size = size*NewBytes;
-                        ALBuf->frequency = freq;
-
-                        ALBuf->LoopStart = 0;
-                        ALBuf->LoopEnd = size / Channels;
-
-                        ALBuf->OriginalSize = size;
-                        ALBuf->OriginalAlign = 1 * Channels;
-                    }
-                    else
-                        alSetError(Context, AL_OUT_OF_MEMORY);
-                }   break;
-
-                case AL_FORMAT_REAR_MULAW: {
-                    ALenum NewFormat = AL_FORMAT_QUAD32;
-                    ALuint NewChannels = aluChannelsFromFormat(NewFormat);
-                    ALuint NewBytes = aluBytesFromFormat(NewFormat);
-                    ALuint64 newsize, allocsize;
-
-                    if((size%(1*2)) != 0)
-                    {
-                        alSetError(Context, AL_INVALID_VALUE);
-                        break;
-                    }
-
-                    newsize = size * 2;
-
-                    allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
-                    if(allocsize > INT_MAX)
-                    {
-                        alSetError(Context, AL_OUT_OF_MEMORY);
-                        break;
-                    }
-                    temp = realloc(ALBuf->data, allocsize);
-                    if(temp)
-                    {
-                        ALBuf->data = temp;
-                        ConvertDataMULawRear(ALBuf->data, data, newsize);
-
-                        ALBuf->format = NewFormat;
-                        ALBuf->eOriginalFormat = format;
-                        ALBuf->size = newsize*NewBytes;
-                        ALBuf->frequency = freq;
-
-                        ALBuf->LoopStart = 0;
-                        ALBuf->LoopEnd = newsize / NewChannels;
-
-                        ALBuf->OriginalSize = size;
-                        ALBuf->OriginalAlign = 1 * 2;
-                    }
-                    else
-                        alSetError(Context, AL_OUT_OF_MEMORY);
-                }   break;
-
-                default:
-                    alSetError(Context, AL_INVALID_ENUM);
-                    break;
+                alSetError(Context, AL_OUT_OF_MEMORY);
+                break;
             }
-        }
+            temp = realloc(ALBuf->data, allocsize);
+            if(temp)
+            {
+                ALBuf->data = temp;
+                ConvertDataRear(ALBuf->data, data, OrigBytes, newsize);
+
+                ALBuf->format = NewFormat;
+                ALBuf->eOriginalFormat = format;
+                ALBuf->size = newsize*NewBytes;
+                ALBuf->frequency = freq;
+
+                ALBuf->LoopStart = 0;
+                ALBuf->LoopEnd = newsize / NewChannels;
+
+                ALBuf->OriginalSize = size;
+                ALBuf->OriginalAlign = OrigBytes * 2;
+            }
+            else
+                alSetError(Context, AL_OUT_OF_MEMORY);
+        }   break;
+
+        case AL_FORMAT_QUAD8_LOKI:
+        case AL_FORMAT_QUAD16_LOKI:
+        case AL_FORMAT_QUAD8:
+        case AL_FORMAT_QUAD16:
+        case AL_FORMAT_QUAD32:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD32);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
+
+        case AL_FORMAT_51CHN8:
+        case AL_FORMAT_51CHN16:
+        case AL_FORMAT_51CHN32:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_51CHN32);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
+
+        case AL_FORMAT_61CHN8:
+        case AL_FORMAT_61CHN16:
+        case AL_FORMAT_61CHN32:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_61CHN32);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
+
+        case AL_FORMAT_71CHN8:
+        case AL_FORMAT_71CHN16:
+        case AL_FORMAT_71CHN32:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_71CHN32);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
+
+        case AL_FORMAT_MONO_IMA4:
+        case AL_FORMAT_STEREO_IMA4: {
+            ALuint Channels = ((format==AL_FORMAT_MONO_IMA4) ? 1 : 2);
+            ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
+                                                AL_FORMAT_STEREO_FLOAT32);
+            ALuint NewBytes = aluBytesFromFormat(NewFormat);
+            ALuint64 newsize, allocsize;
+
+            // Here is where things vary:
+            // nVidia and Apple use 64+1 samples per channel per block => block_size=36*chans bytes
+            // Most PC sound software uses 2040+1 samples per channel per block -> block_size=1024*chans bytes
+            if((size%(36*Channels)) != 0)
+            {
+                alSetError(Context, AL_INVALID_VALUE);
+                break;
+            }
+
+            newsize = size / 36;
+            newsize *= 65;
+
+            allocsize = (BUFFER_PADDING*Channels + newsize)*NewBytes;
+            if(allocsize > INT_MAX)
+            {
+                alSetError(Context, AL_OUT_OF_MEMORY);
+                break;
+            }
+            temp = realloc(ALBuf->data, allocsize);
+            if(temp)
+            {
+                ALBuf->data = temp;
+                ConvertDataIMA4(ALBuf->data, data, Channels, newsize/(65*Channels));
+
+                ALBuf->format = NewFormat;
+                ALBuf->eOriginalFormat = format;
+                ALBuf->size = newsize*NewBytes;
+                ALBuf->frequency = freq;
+
+                ALBuf->LoopStart = 0;
+                ALBuf->LoopEnd = newsize / Channels;
+
+                ALBuf->OriginalSize = size;
+                ALBuf->OriginalAlign = 36 * Channels;
+            }
+            else
+                alSetError(Context, AL_OUT_OF_MEMORY);
+        }   break;
+
+        case AL_FORMAT_MONO_MULAW:
+        case AL_FORMAT_STEREO_MULAW:
+        case AL_FORMAT_QUAD_MULAW:
+        case AL_FORMAT_51CHN_MULAW:
+        case AL_FORMAT_61CHN_MULAW:
+        case AL_FORMAT_71CHN_MULAW: {
+            ALuint Channels = ((format==AL_FORMAT_MONO_MULAW) ? 1 :
+                               ((format==AL_FORMAT_STEREO_MULAW) ? 2 :
+                                ((format==AL_FORMAT_QUAD_MULAW) ? 4 :
+                                 ((format==AL_FORMAT_51CHN_MULAW) ? 6 :
+                                  ((format==AL_FORMAT_61CHN_MULAW) ? 7 : 8)))));
+            ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO_FLOAT32 :
+                                ((Channels==2) ? AL_FORMAT_STEREO_FLOAT32 :
+                                 ((Channels==4) ? AL_FORMAT_QUAD32 :
+                                  ((Channels==6) ? AL_FORMAT_51CHN32 :
+                                   ((Channels==7) ? AL_FORMAT_61CHN32 :
+                                                    AL_FORMAT_71CHN32)))));
+            ALuint NewBytes = aluBytesFromFormat(NewFormat);
+            ALuint64 allocsize;
+
+            if((size%(1*Channels)) != 0)
+            {
+                alSetError(Context, AL_INVALID_VALUE);
+                break;
+            }
+
+            allocsize = (BUFFER_PADDING*Channels + size)*NewBytes;
+            if(allocsize > INT_MAX)
+            {
+                alSetError(Context, AL_OUT_OF_MEMORY);
+                break;
+            }
+            temp = realloc(ALBuf->data, allocsize);
+            if(temp)
+            {
+                ALBuf->data = temp;
+                ConvertDataMULaw(ALBuf->data, data, size);
+
+                ALBuf->format = NewFormat;
+                ALBuf->eOriginalFormat = format;
+                ALBuf->size = size*NewBytes;
+                ALBuf->frequency = freq;
+
+                ALBuf->LoopStart = 0;
+                ALBuf->LoopEnd = size / Channels;
+
+                ALBuf->OriginalSize = size;
+                ALBuf->OriginalAlign = 1 * Channels;
+            }
+            else
+                alSetError(Context, AL_OUT_OF_MEMORY);
+        }   break;
+
+        case AL_FORMAT_REAR_MULAW: {
+            ALenum NewFormat = AL_FORMAT_QUAD32;
+            ALuint NewChannels = aluChannelsFromFormat(NewFormat);
+            ALuint NewBytes = aluBytesFromFormat(NewFormat);
+            ALuint64 newsize, allocsize;
+
+            if((size%(1*2)) != 0)
+            {
+                alSetError(Context, AL_INVALID_VALUE);
+                break;
+            }
+
+            newsize = size * 2;
+
+            allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
+            if(allocsize > INT_MAX)
+            {
+                alSetError(Context, AL_OUT_OF_MEMORY);
+                break;
+            }
+            temp = realloc(ALBuf->data, allocsize);
+            if(temp)
+            {
+                ALBuf->data = temp;
+                ConvertDataMULawRear(ALBuf->data, data, newsize);
+
+                ALBuf->format = NewFormat;
+                ALBuf->eOriginalFormat = format;
+                ALBuf->size = newsize*NewBytes;
+                ALBuf->frequency = freq;
+
+                ALBuf->LoopStart = 0;
+                ALBuf->LoopEnd = newsize / NewChannels;
+
+                ALBuf->OriginalSize = size;
+                ALBuf->OriginalAlign = 1 * 2;
+            }
+            else
+                alSetError(Context, AL_OUT_OF_MEMORY);
+        }   break;
+
+        default:
+            alSetError(Context, AL_INVALID_ENUM);
+            break;
     }
 
     ProcessContext(Context);
@@ -553,116 +546,109 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
     Context = GetContextSuspended();
     if(!Context) return;
 
+    if(Context->SampleSource)
+    {
+        ALintptrEXT offset;
+
+        if(Context->SampleSource->state == MAPPED)
+        {
+            alSetError(Context, AL_INVALID_OPERATION);
+            ProcessContext(Context);
+            return;
+        }
+
+        offset = (const ALubyte*)data - (ALubyte*)NULL;
+        data = Context->SampleSource->data + offset;
+    }
+
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
-    else
+    else if(length < 0 || offset < 0 || (length > 0 && data == NULL))
+        alSetError(Context, AL_INVALID_VALUE);
+    else if(ALBuf->eOriginalFormat != format)
+        alSetError(Context, AL_INVALID_ENUM);
+    else if(offset > ALBuf->OriginalSize ||
+            length > ALBuf->OriginalSize-offset ||
+            (offset%ALBuf->OriginalAlign) != 0 ||
+            (length%ALBuf->OriginalAlign) != 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else switch(format)
     {
-        if(Context->SampleSource)
-        {
-            ALintptrEXT offset;
+        case AL_FORMAT_MONO8:
+        case AL_FORMAT_MONO16:
+        case AL_FORMAT_MONO_FLOAT32:
+        case AL_FORMAT_MONO_DOUBLE_EXT:
+        case AL_FORMAT_STEREO8:
+        case AL_FORMAT_STEREO16:
+        case AL_FORMAT_STEREO_FLOAT32:
+        case AL_FORMAT_STEREO_DOUBLE_EXT:
+        case AL_FORMAT_QUAD8_LOKI:
+        case AL_FORMAT_QUAD16_LOKI:
+        case AL_FORMAT_QUAD8:
+        case AL_FORMAT_QUAD16:
+        case AL_FORMAT_QUAD32:
+        case AL_FORMAT_51CHN8:
+        case AL_FORMAT_51CHN16:
+        case AL_FORMAT_51CHN32:
+        case AL_FORMAT_61CHN8:
+        case AL_FORMAT_61CHN16:
+        case AL_FORMAT_61CHN32:
+        case AL_FORMAT_71CHN8:
+        case AL_FORMAT_71CHN16:
+        case AL_FORMAT_71CHN32: {
+            ALuint Bytes = aluBytesFromFormat(format);
 
-            if(Context->SampleSource->state == MAPPED)
-            {
-                alSetError(Context, AL_INVALID_OPERATION);
-                ProcessContext(Context);
-                return;
-            }
+            offset /= Bytes;
+            length /= Bytes;
 
-            offset = (const ALubyte*)data - (ALubyte*)NULL;
-            data = Context->SampleSource->data + offset;
-        }
+            ConvertData(&((ALfloat*)ALBuf->data)[offset], data, Bytes, length);
+        }   break;
 
-        if(length < 0 || offset < 0 || (length > 0 && data == NULL))
-            alSetError(Context, AL_INVALID_VALUE);
-        else if(ALBuf->eOriginalFormat != format)
+        case AL_FORMAT_REAR8:
+        case AL_FORMAT_REAR16:
+        case AL_FORMAT_REAR32: {
+            ALuint Bytes = ((format==AL_FORMAT_REAR8) ? 1 :
+                            ((format==AL_FORMAT_REAR16) ? 2 : 4));
+
+            offset /= Bytes;
+            offset *= 2;
+            length /= Bytes;
+            length *= 2;
+
+            ConvertDataRear(&((ALfloat*)ALBuf->data)[offset], data, Bytes, length);
+        }   break;
+
+        case AL_FORMAT_MONO_IMA4:
+        case AL_FORMAT_STEREO_IMA4: {
+            ALuint Channels = aluChannelsFromFormat(ALBuf->format);
+
+            /* offset -> sample offset, length -> block count */
+            offset /= 36;
+            offset *= 65;
+            length /= ALBuf->OriginalAlign;
+
+            ConvertDataIMA4(&((ALfloat*)ALBuf->data)[offset], data, Channels, length);
+        }   break;
+
+        case AL_FORMAT_MONO_MULAW:
+        case AL_FORMAT_STEREO_MULAW:
+        case AL_FORMAT_QUAD_MULAW:
+        case AL_FORMAT_51CHN_MULAW:
+        case AL_FORMAT_61CHN_MULAW:
+        case AL_FORMAT_71CHN_MULAW:
+            ConvertDataMULaw(&((ALfloat*)ALBuf->data)[offset], data, length);
+            break;
+
+        case AL_FORMAT_REAR_MULAW:
+            offset *= 2;
+            length *= 2;
+            ConvertDataMULawRear(&((ALfloat*)ALBuf->data)[offset], data, length);
+            break;
+
+        default:
             alSetError(Context, AL_INVALID_ENUM);
-        else if(offset > ALBuf->OriginalSize ||
-                length > ALBuf->OriginalSize-offset ||
-                (offset%ALBuf->OriginalAlign) != 0 ||
-                (length%ALBuf->OriginalAlign) != 0)
-            alSetError(Context, AL_INVALID_VALUE);
-        else
-        {
-            switch(format)
-            {
-                case AL_FORMAT_MONO8:
-                case AL_FORMAT_MONO16:
-                case AL_FORMAT_MONO_FLOAT32:
-                case AL_FORMAT_MONO_DOUBLE_EXT:
-                case AL_FORMAT_STEREO8:
-                case AL_FORMAT_STEREO16:
-                case AL_FORMAT_STEREO_FLOAT32:
-                case AL_FORMAT_STEREO_DOUBLE_EXT:
-                case AL_FORMAT_QUAD8_LOKI:
-                case AL_FORMAT_QUAD16_LOKI:
-                case AL_FORMAT_QUAD8:
-                case AL_FORMAT_QUAD16:
-                case AL_FORMAT_QUAD32:
-                case AL_FORMAT_51CHN8:
-                case AL_FORMAT_51CHN16:
-                case AL_FORMAT_51CHN32:
-                case AL_FORMAT_61CHN8:
-                case AL_FORMAT_61CHN16:
-                case AL_FORMAT_61CHN32:
-                case AL_FORMAT_71CHN8:
-                case AL_FORMAT_71CHN16:
-                case AL_FORMAT_71CHN32: {
-                    ALuint Bytes = aluBytesFromFormat(format);
-
-                    offset /= Bytes;
-                    length /= Bytes;
-
-                    ConvertData(&ALBuf->data[offset], data, Bytes, length);
-                }   break;
-
-                case AL_FORMAT_REAR8:
-                case AL_FORMAT_REAR16:
-                case AL_FORMAT_REAR32: {
-                    ALuint Bytes = ((format==AL_FORMAT_REAR8) ? 1 :
-                                    ((format==AL_FORMAT_REAR16) ? 2 :
-                                     4));
-
-                    offset /= Bytes;
-                    offset *= 2;
-                    length /= Bytes;
-                    length *= 2;
-
-                    ConvertDataRear(&ALBuf->data[offset], data, Bytes, length);
-                }   break;
-
-                case AL_FORMAT_MONO_IMA4:
-                case AL_FORMAT_STEREO_IMA4: {
-                    int Channels = aluChannelsFromFormat(ALBuf->format);
-
-                    // offset -> sample*channel offset, length -> block count
-                    offset /= 36;
-                    offset *= 65;
-                    length /= ALBuf->OriginalAlign;
-
-                    ConvertDataIMA4(&ALBuf->data[offset], data, Channels, length);
-                }   break;
-
-                case AL_FORMAT_MONO_MULAW:
-                case AL_FORMAT_STEREO_MULAW:
-                case AL_FORMAT_QUAD_MULAW:
-                case AL_FORMAT_51CHN_MULAW:
-                case AL_FORMAT_61CHN_MULAW:
-                case AL_FORMAT_71CHN_MULAW:
-                    ConvertDataMULaw(&ALBuf->data[offset], data, length);
-                    break;
-
-                case AL_FORMAT_REAR_MULAW:
-                    offset *= 2;
-                    length *= 2;
-                    ConvertDataMULawRear(&ALBuf->data[offset], data, length);
-                    break;
-
-                default:
-                    alSetError(Context, AL_INVALID_ENUM);
-                    break;
-            }
-        }
+            break;
     }
 
     ProcessContext(Context);

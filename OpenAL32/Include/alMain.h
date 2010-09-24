@@ -399,7 +399,7 @@ struct ALCdevice_struct
     ALboolean    DuplicateStereo;
 
     // Dry path buffer mix
-    float DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
+    ALfloat DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
 
     ALuint DevChannels[OUTPUTCHANNELS];
 

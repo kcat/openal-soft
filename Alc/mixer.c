@@ -390,10 +390,10 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 
 
 static void MixSource(ALsource *Source, ALCcontext *Context,
-                      float (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo,
+                      ALfloat (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo,
                       ALfloat *ClickRemoval, ALfloat *PendingClicks)
 {
-    static float DummyBuffer[BUFFERSIZE];
+    static ALfloat DummyBuffer[BUFFERSIZE];
     static ALfloat DummyClickRemoval[OUTPUTCHANNELS];
     ALfloat *WetBuffer[MAX_SENDS];
     ALfloat DrySend[OUTPUTCHANNELS];
@@ -581,7 +581,7 @@ static void MixSource(ALsource *Source, ALCcontext *Context,
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
-    float (*DryBuffer)[OUTPUTCHANNELS];
+    ALfloat (*DryBuffer)[OUTPUTCHANNELS];
     ALfloat (*Matrix)[OUTPUTCHANNELS];
     ALfloat *ClickRemoval;
     const ALuint *ChanMap;

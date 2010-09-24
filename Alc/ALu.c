@@ -396,12 +396,15 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 break;
             //fall-through
         case AL_LINEAR_DISTANCE:
-            Distance=__min(Distance,MaxDist);
             if(MaxDist != MinDist)
             {
                 flAttenuation = 1.0f - (Rolloff*(Distance-MinDist)/(MaxDist - MinDist));
+                flAttenuation = __max(flAttenuation, 0.0f);
                 for(i = 0;i < NumSends;i++)
+                {
                     RoomAttenuation[i] = 1.0f - (RoomRolloff[i]*(Distance-MinDist)/(MaxDist - MinDist));
+                    RoomAttenuation[i] = __max(RoomAttenuation[i], 0.0f);
+                }
             }
             break;
 

@@ -145,7 +145,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     {                                                                         \
         ALuint p = pos;                                                       \
         ALuint f = frac;                                                      \
-        if(p >= DataSize)                                                     \
+        if(p >= LoopEnd)                                                      \
         {                                                                     \
             ALuint64 pos64 = pos;                                             \
             pos64 <<= FRACTIONBITS;                                           \
@@ -214,7 +214,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         {                                                                     \
             ALuint p = pos;                                                   \
             ALuint f = frac;                                                  \
-            if(p >= DataSize)                                                 \
+            if(p >= LoopEnd)                                                  \
             {                                                                 \
                 ALuint64 pos64 = pos;                                         \
                 pos64 <<= FRACTIONBITS;                                       \
@@ -280,7 +280,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     {                                                                         \
         ALuint p = pos;                                                       \
         ALuint f = frac;                                                      \
-        if(p >= DataSize)                                                     \
+        if(p >= LoopEnd)                                                      \
         {                                                                     \
             ALuint64 pos64 = pos;                                             \
             pos64 <<= FRACTIONBITS;                                           \
@@ -354,7 +354,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         {                                                                     \
             ALuint p = pos;                                                   \
             ALuint f = frac;                                                  \
-            if(p >= DataSize)                                                 \
+            if(p >= LoopEnd)                                                  \
             {                                                                 \
                 ALuint64 pos64 = pos;                                         \
                 pos64 <<= FRACTIONBITS;                                       \
@@ -420,7 +420,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     {                                                                         \
         ALuint p = pos;                                                       \
         ALuint f = frac;                                                      \
-        if(p >= DataSize)                                                     \
+        if(p >= LoopEnd)                                                      \
         {                                                                     \
             ALuint64 pos64 = pos;                                             \
             pos64 <<= FRACTIONBITS;                                           \
@@ -492,7 +492,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         {                                                                     \
             ALuint p = pos;                                                   \
             ALuint f = frac;                                                  \
-            if(p >= DataSize)                                                 \
+            if(p >= LoopEnd)                                                  \
             {                                                                 \
                 ALuint64 pos64 = pos;                                         \
                 pos64 <<= FRACTIONBITS;                                       \

@@ -96,10 +96,12 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 
 
 #define DO_MIX_MONO(S,sampler) do {                                           \
+    ALuint BufferIdx;                                                         \
+    ALuint pos = DataPosInt;                                                  \
+    ALuint frac = DataPosFrac;                                                \
     if(j == 0)                                                                \
     {                                                                         \
-        value = sampler##S(Data.p##S[DataPosInt], Data.p##S[DataPosInt+1],    \
-                           DataPosFrac);                                      \
+        value = sampler##S(Data.p##S[pos], Data.p##S[pos+1], frac);           \
                                                                               \
         outsamp = lpFilter4PC(DryFilter, 0, value);                           \
         ClickRemoval[FRONT_LEFT]   -= outsamp*DrySend[FRONT_LEFT];            \
@@ -110,18 +112,11 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         ClickRemoval[BACK_RIGHT]   -= outsamp*DrySend[BACK_RIGHT];            \
         ClickRemoval[FRONT_CENTER] -= outsamp*DrySend[FRONT_CENTER];          \
         ClickRemoval[BACK_CENTER]  -= outsamp*DrySend[BACK_CENTER];           \
-                                                                              \
-        for(out = 0;out < MAX_SENDS;out++)                                    \
-        {                                                                     \
-            outsamp = lpFilter2PC(WetFilter[out], 0, value);                  \
-            WetClickRemoval[out][0] -= outsamp*WetSend[out];                  \
-        }                                                                     \
     }                                                                         \
-    while(BufferSize--)                                                       \
+    for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                     \
     {                                                                         \
         /* First order interpolator */                                        \
-        value = sampler##S(Data.p##S[DataPosInt], Data.p##S[DataPosInt+1],    \
-                           DataPosFrac);                                      \
+        value = sampler##S(Data.p##S[pos], Data.p##S[pos+1], frac);           \
                                                                               \
         /* Direct path final mix buffer and panning */                        \
         outsamp = lpFilter4P(DryFilter, 0, value);                            \
@@ -134,24 +129,25 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         DryBuffer[j][FRONT_CENTER] += outsamp*DrySend[FRONT_CENTER];          \
         DryBuffer[j][BACK_CENTER]  += outsamp*DrySend[BACK_CENTER];           \
                                                                               \
-        /* Room path final mix buffer and panning */                          \
-        for(out = 0;out < MAX_SENDS;out++)                                    \
-        {                                                                     \
-            outsamp = lpFilter2P(WetFilter[out], 0, value);                   \
-            WetBuffer[out][j] += outsamp*WetSend[out];                        \
-        }                                                                     \
-                                                                              \
-        DataPosFrac += increment;                                             \
-        DataPosInt += DataPosFrac>>FRACTIONBITS;                              \
-        DataPosFrac &= FRACTIONMASK;                                          \
+        frac += increment;                                                    \
+        pos  += frac>>FRACTIONBITS;                                           \
+        frac &= FRACTIONMASK;                                                 \
         j++;                                                                  \
     }                                                                         \
     if(j == SamplesToDo)                                                      \
     {                                                                         \
-        ALuint pos = ((DataPosInt < DataSize) ? DataPosInt : (DataPosInt-1)); \
-        ALuint frac = ((DataPosInt < DataSize) ? DataPosFrac :                \
-                       ((DataPosFrac-increment)&FRACTIONMASK));               \
-        value = sampler##S(Data.p##S[pos], Data.p##S[pos+1], frac);           \
+        ALuint p = pos;                                                       \
+        ALuint f = frac;                                                      \
+        if(p >= DataSize)                                                     \
+        {                                                                     \
+            ALuint64 pos64 = pos;                                             \
+            pos64 <<= FRACTIONBITS;                                           \
+            pos64 += frac;                                                    \
+            pos64 -= increment;                                               \
+            p = pos64>>FRACTIONBITS;                                          \
+            f = pos64&FRACTIONMASK;                                           \
+        }                                                                     \
+        value = sampler##S(Data.p##S[p], Data.p##S[p+1], f);                  \
                                                                               \
         outsamp = lpFilter4PC(DryFilter, 0, value);                           \
         PendingClicks[FRONT_LEFT]   += outsamp*DrySend[FRONT_LEFT];           \
@@ -162,151 +158,298 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         PendingClicks[BACK_RIGHT]   += outsamp*DrySend[BACK_RIGHT];           \
         PendingClicks[FRONT_CENTER] += outsamp*DrySend[FRONT_CENTER];         \
         PendingClicks[BACK_CENTER]  += outsamp*DrySend[BACK_CENTER];          \
+    }                                                                         \
+    for(out = 0;out < MAX_SENDS;out++)                                        \
+    {                                                                         \
+        if(!WetBuffer[out])                                                   \
+            continue;                                                         \
                                                                               \
-        for(out = 0;out < MAX_SENDS;out++)                                    \
+        pos = DataPosInt;                                                     \
+        frac = DataPosFrac;                                                   \
+        j -= BufferSize;                                                      \
+                                                                              \
+        if(j == 0)                                                            \
         {                                                                     \
+            value = sampler##S(Data.p##S[pos], Data.p##S[pos+1], frac);       \
+                                                                              \
+            outsamp = lpFilter2PC(WetFilter[out], 0, value);                  \
+            WetClickRemoval[out][0] -= outsamp*WetSend[out];                  \
+        }                                                                     \
+        for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
+        {                                                                     \
+            /* First order interpolator */                                    \
+            value = sampler##S(Data.p##S[pos], Data.p##S[pos+1], frac);       \
+                                                                              \
+            /* Room path final mix buffer and panning */                      \
+            outsamp = lpFilter2P(WetFilter[out], 0, value);                   \
+            WetBuffer[out][j] += outsamp*WetSend[out];                        \
+                                                                              \
+            frac += increment;                                                \
+            pos  += frac>>FRACTIONBITS;                                       \
+            frac &= FRACTIONMASK;                                             \
+            j++;                                                              \
+        }                                                                     \
+        if(j == SamplesToDo)                                                  \
+        {                                                                     \
+            ALuint p = pos;                                                   \
+            ALuint f = frac;                                                  \
+            if(p >= DataSize)                                                 \
+            {                                                                 \
+                ALuint64 pos64 = pos;                                         \
+                pos64 <<= FRACTIONBITS;                                       \
+                pos64 += frac;                                                \
+                pos64 -= increment;                                           \
+                p = pos64>>FRACTIONBITS;                                      \
+                f = pos64&FRACTIONMASK;                                       \
+            }                                                                 \
+            value = sampler##S(Data.p##S[p], Data.p##S[p+1], f);              \
+                                                                              \
             outsamp = lpFilter2PC(WetFilter[out], 0, value);                  \
             WetPendingClicks[out][0] += outsamp*WetSend[out];                 \
         }                                                                     \
     }                                                                         \
+    DataPosInt = pos;                                                         \
+    DataPosFrac = frac;                                                       \
 } while(0)
 
 #define DO_MIX_STEREO(S,sampler) do {                                         \
     const ALfloat scaler = 1.0f/Channels;                                     \
+    ALuint BufferIdx;                                                         \
+    ALuint pos = DataPosInt;                                                  \
+    ALuint frac = DataPosFrac;                                                \
     if(j == 0)                                                                \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler##S(Data.p##S[DataPosInt*Channels + i],            \
-                               Data.p##S[(DataPosInt+1)*Channels + i],        \
-                               DataPosFrac);                                  \
+            value = sampler##S(Data.p##S[pos*Channels + i],                   \
+                               Data.p##S[(pos+1)*Channels + i], frac);        \
                                                                               \
             outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
             ClickRemoval[chans[i+0]] -= outsamp*DrySend[chans[i+0]];          \
             ClickRemoval[chans[i+2]] -= outsamp*DrySend[chans[i+2]];          \
             ClickRemoval[chans[i+4]] -= outsamp*DrySend[chans[i+4]];          \
-                                                                              \
-            for(out = 0;out < MAX_SENDS;out++)                                \
-            {                                                                 \
-                outsamp = lpFilter1PC(WetFilter[out], chans[i], value);       \
-                WetClickRemoval[out][0] -= outsamp*WetSend[out] * scaler;     \
-            }                                                                 \
         }                                                                     \
     }                                                                         \
-    while(BufferSize--)                                                       \
+    for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                     \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler##S(Data.p##S[DataPosInt*Channels + i],            \
-                               Data.p##S[(DataPosInt+1)*Channels + i],        \
-                               DataPosFrac);                                  \
+            value = sampler##S(Data.p##S[pos*Channels + i],                   \
+                               Data.p##S[(pos+1)*Channels + i], frac);        \
                                                                               \
             outsamp = lpFilter2P(DryFilter, chans[i]*2, value);               \
             DryBuffer[j][chans[i+0]] += outsamp*DrySend[chans[i+0]];          \
             DryBuffer[j][chans[i+2]] += outsamp*DrySend[chans[i+2]];          \
             DryBuffer[j][chans[i+4]] += outsamp*DrySend[chans[i+4]];          \
-                                                                              \
-            for(out = 0;out < MAX_SENDS;out++)                                \
-            {                                                                 \
-                outsamp = lpFilter1P(WetFilter[out], chans[i], value);        \
-                WetBuffer[out][j] += outsamp*WetSend[out] * scaler;           \
-            }                                                                 \
         }                                                                     \
                                                                               \
-        DataPosFrac += increment;                                             \
-        DataPosInt += DataPosFrac>>FRACTIONBITS;                              \
-        DataPosFrac &= FRACTIONMASK;                                          \
+        frac += increment;                                                    \
+        pos  += frac>>FRACTIONBITS;                                           \
+        frac &= FRACTIONMASK;                                                 \
         j++;                                                                  \
     }                                                                         \
     if(j == SamplesToDo)                                                      \
     {                                                                         \
-        ALuint pos = ((DataPosInt < DataSize) ? DataPosInt : (DataPosInt-1)); \
-        ALuint frac = ((DataPosInt < DataSize) ? DataPosFrac :                \
-                       ((DataPosFrac-increment)&FRACTIONMASK));               \
+        ALuint p = pos;                                                       \
+        ALuint f = frac;                                                      \
+        if(p >= DataSize)                                                     \
+        {                                                                     \
+            ALuint64 pos64 = pos;                                             \
+            pos64 <<= FRACTIONBITS;                                           \
+            pos64 += frac;                                                    \
+            pos64 -= increment;                                               \
+            p = pos64>>FRACTIONBITS;                                          \
+            f = pos64&FRACTIONMASK;                                           \
+        }                                                                     \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler##S(Data.p##S[pos*Channels + i],                   \
-                               Data.p##S[(pos+1)*Channels + i],               \
-                               frac);                                         \
+            value = sampler##S(Data.p##S[p*Channels + i],                     \
+                               Data.p##S[(p+1)*Channels + i], f);             \
                                                                               \
             outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
             PendingClicks[chans[i+0]] += outsamp*DrySend[chans[i+0]];         \
             PendingClicks[chans[i+2]] += outsamp*DrySend[chans[i+2]];         \
             PendingClicks[chans[i+4]] += outsamp*DrySend[chans[i+4]];         \
+        }                                                                     \
+    }                                                                         \
+    for(out = 0;out < MAX_SENDS;out++)                                        \
+    {                                                                         \
+        if(!WetBuffer[out])                                                   \
+            continue;                                                         \
                                                                               \
-            for(out = 0;out < MAX_SENDS;out++)                                \
+        pos = DataPosInt;                                                     \
+        frac = DataPosFrac;                                                   \
+        j -= BufferSize;                                                      \
+                                                                              \
+        if(j == 0)                                                            \
+        {                                                                     \
+            for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
+                value = sampler##S(Data.p##S[pos*Channels + i],               \
+                                   Data.p##S[(pos+1)*Channels + i], frac);    \
+                                                                              \
+                outsamp = lpFilter1PC(WetFilter[out], chans[i], value);       \
+                WetClickRemoval[out][0] -= outsamp*WetSend[out] * scaler;     \
+            }                                                                 \
+        }                                                                     \
+        for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
+        {                                                                     \
+            for(i = 0;i < Channels;i++)                                       \
+            {                                                                 \
+                value = sampler##S(Data.p##S[pos*Channels + i],               \
+                                   Data.p##S[(pos+1)*Channels + i], frac);    \
+                                                                              \
+                outsamp = lpFilter1P(WetFilter[out], chans[i], value);        \
+                WetBuffer[out][j] += outsamp*WetSend[out] * scaler;           \
+            }                                                                 \
+                                                                              \
+            frac += increment;                                                \
+            pos  += frac>>FRACTIONBITS;                                       \
+            frac &= FRACTIONMASK;                                             \
+            j++;                                                              \
+        }                                                                     \
+        if(j == SamplesToDo)                                                  \
+        {                                                                     \
+            ALuint p = pos;                                                   \
+            ALuint f = frac;                                                  \
+            if(p >= DataSize)                                                 \
+            {                                                                 \
+                ALuint64 pos64 = pos;                                         \
+                pos64 <<= FRACTIONBITS;                                       \
+                pos64 += frac;                                                \
+                pos64 -= increment;                                           \
+                p = pos64>>FRACTIONBITS;                                      \
+                f = pos64&FRACTIONMASK;                                       \
+            }                                                                 \
+            for(i = 0;i < Channels;i++)                                       \
+            {                                                                 \
+                value = sampler##S(Data.p##S[p*Channels + i],                 \
+                                   Data.p##S[(p+1)*Channels + i], f);         \
+                                                                              \
                 outsamp = lpFilter1PC(WetFilter[out], chans[i], value);       \
                 WetPendingClicks[out][0] += outsamp*WetSend[out] * scaler;    \
             }                                                                 \
         }                                                                     \
     }                                                                         \
+    DataPosInt = pos;                                                         \
+    DataPosFrac = frac;                                                       \
 } while(0)
 
 #define DO_MIX_MC(S,sampler) do {                                             \
     const ALfloat scaler = 1.0f/Channels;                                     \
+    ALuint BufferIdx;                                                         \
+    ALuint pos = DataPosInt;                                                  \
+    ALuint frac = DataPosFrac;                                                \
     if(j == 0)                                                                \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler##S(Data.p##S[DataPosInt*Channels + i],            \
-                               Data.p##S[(DataPosInt+1)*Channels + i],        \
-                               DataPosFrac);                                  \
+            value = sampler##S(Data.p##S[pos*Channels + i],                   \
+                               Data.p##S[(pos+1)*Channels + i], frac);        \
                                                                               \
             outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
             ClickRemoval[chans[i]] -= outsamp*DrySend[chans[i]];              \
-                                                                              \
-            for(out = 0;out < MAX_SENDS;out++)                                \
-            {                                                                 \
-                outsamp = lpFilter1PC(WetFilter[out], chans[out], value) * scaler;\
-                WetClickRemoval[out][0] -= outsamp*WetSend[out];              \
-            }                                                                 \
         }                                                                     \
     }                                                                         \
-    while(BufferSize--)                                                       \
+    for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                     \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler##S(Data.p##S[DataPosInt*Channels + i],            \
-                               Data.p##S[(DataPosInt+1)*Channels + i],        \
-                               DataPosFrac);                                  \
+            value = sampler##S(Data.p##S[pos*Channels + i],                   \
+                               Data.p##S[(pos+1)*Channels + i], frac);        \
                                                                               \
             outsamp = lpFilter2P(DryFilter, chans[i]*2, value);               \
             DryBuffer[j][chans[i]] += outsamp*DrySend[chans[i]];              \
-                                                                              \
-            for(out = 0;out < MAX_SENDS;out++)                                \
-            {                                                                 \
-                outsamp = lpFilter1P(WetFilter[out], chans[i], value);        \
-                WetBuffer[out][j] += outsamp*WetSend[out]*scaler;             \
-            }                                                                 \
         }                                                                     \
                                                                               \
-        DataPosFrac += increment;                                             \
-        DataPosInt += DataPosFrac>>FRACTIONBITS;                              \
-        DataPosFrac &= FRACTIONMASK;                                          \
+        frac += increment;                                                    \
+        pos  += frac>>FRACTIONBITS;                                           \
+        frac &= FRACTIONMASK;                                                 \
         j++;                                                                  \
     }                                                                         \
     if(j == SamplesToDo)                                                      \
     {                                                                         \
-        ALuint pos = ((DataPosInt < DataSize) ? DataPosInt : (DataPosInt-1)); \
-        ALuint frac = ((DataPosInt < DataSize) ? DataPosFrac :                \
-                       ((DataPosFrac-increment)&FRACTIONMASK));               \
+        ALuint p = pos;                                                       \
+        ALuint f = frac;                                                      \
+        if(p >= DataSize)                                                     \
+        {                                                                     \
+            ALuint64 pos64 = pos;                                             \
+            pos64 <<= FRACTIONBITS;                                           \
+            pos64 += frac;                                                    \
+            pos64 -= increment;                                               \
+            p = pos64>>FRACTIONBITS;                                          \
+            f = pos64&FRACTIONMASK;                                           \
+        }                                                                     \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler##S(Data.p##S[pos*Channels + i],                   \
-                               Data.p##S[(pos+1)*Channels + i],               \
-                               frac);                                         \
+            value = sampler##S(Data.p##S[p*Channels + i],                     \
+                               Data.p##S[(p+1)*Channels + i], f);             \
                                                                               \
             outsamp = lpFilter2PC(DryFilter, chans[i]*2, value);              \
             PendingClicks[chans[i]] += outsamp*DrySend[chans[i]];             \
+        }                                                                     \
+    }                                                                         \
+    for(out = 0;out < MAX_SENDS;out++)                                        \
+    {                                                                         \
+        if(!WetBuffer[out])                                                   \
+            continue;                                                         \
                                                                               \
-            for(out = 0;out < MAX_SENDS;out++)                                \
+        pos = DataPosInt;                                                     \
+        frac = DataPosFrac;                                                   \
+        j -= BufferSize;                                                      \
+                                                                              \
+        if(j == 0)                                                            \
+        {                                                                     \
+            for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
-                outsamp = lpFilter1PC(WetFilter[out], chans[out], value) * scaler;\
-                WetPendingClicks[out][0] += outsamp*WetSend[out];             \
+                value = sampler##S(Data.p##S[pos*Channels + i],               \
+                                   Data.p##S[(pos+1)*Channels + i], frac);    \
+                                                                              \
+                outsamp = lpFilter1PC(WetFilter[out], chans[i], value);       \
+                WetClickRemoval[out][0] -= outsamp*WetSend[out] * scaler;     \
+            }                                                                 \
+        }                                                                     \
+        for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
+        {                                                                     \
+            for(i = 0;i < Channels;i++)                                       \
+            {                                                                 \
+                value = sampler##S(Data.p##S[pos*Channels + i],               \
+                                   Data.p##S[(pos+1)*Channels + i], frac);    \
+                                                                              \
+                outsamp = lpFilter1P(WetFilter[out], chans[i], value);        \
+                WetBuffer[out][j] += outsamp*WetSend[out] * scaler;           \
+            }                                                                 \
+                                                                              \
+            frac += increment;                                                \
+            pos  += frac>>FRACTIONBITS;                                       \
+            frac &= FRACTIONMASK;                                             \
+            j++;                                                              \
+        }                                                                     \
+        if(j == SamplesToDo)                                                  \
+        {                                                                     \
+            ALuint p = pos;                                                   \
+            ALuint f = frac;                                                  \
+            if(p >= DataSize)                                                 \
+            {                                                                 \
+                ALuint64 pos64 = pos;                                         \
+                pos64 <<= FRACTIONBITS;                                       \
+                pos64 += frac;                                                \
+                pos64 -= increment;                                           \
+                p = pos64>>FRACTIONBITS;                                      \
+                f = pos64&FRACTIONMASK;                                       \
+            }                                                                 \
+            for(i = 0;i < Channels;i++)                                       \
+            {                                                                 \
+                value = sampler##S(Data.p##S[p*Channels + i],                 \
+                                   Data.p##S[(p+1)*Channels + i], f);         \
+                                                                              \
+                outsamp = lpFilter1PC(WetFilter[out], chans[i], value);       \
+                WetPendingClicks[out][0] += outsamp*WetSend[out] * scaler;    \
             }                                                                 \
         }                                                                     \
     }                                                                         \
+    DataPosInt = pos;                                                         \
+    DataPosFrac = frac;                                                       \
 } while(0)
 
 
@@ -393,8 +536,6 @@ static void MixSource(ALsource *Source, ALCcontext *Context,
                       ALfloat (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo,
                       ALfloat *ClickRemoval, ALfloat *PendingClicks)
 {
-    static ALfloat DummyBuffer[BUFFERSIZE];
-    static ALfloat DummyClickRemoval[OUTPUTCHANNELS];
     ALfloat *WetBuffer[MAX_SENDS];
     ALfloat DrySend[OUTPUTCHANNELS];
     ALfloat *WetClickRemoval[MAX_SENDS];
@@ -436,7 +577,8 @@ static void MixSource(ALsource *Source, ALCcontext *Context,
     for(i = 0;i < MAX_SENDS;i++)
     {
         WetFilter[i] = &Source->Params.Send[i].iirFilter;
-        if(Source->Send[i].Slot)
+        if(Source->Send[i].Slot &&
+           Source->Send[i].Slot->effect.type != AL_EFFECT_NULL)
         {
             WetBuffer[i] = Source->Send[i].Slot->WetBuffer;
             WetClickRemoval[i] = Source->Send[i].Slot->ClickRemoval;
@@ -444,9 +586,9 @@ static void MixSource(ALsource *Source, ALCcontext *Context,
         }
         else
         {
-            WetBuffer[i] = DummyBuffer;
-            WetClickRemoval[i] = DummyClickRemoval;
-            WetPendingClicks[i] = DummyClickRemoval;
+            WetBuffer[i] = NULL;
+            WetClickRemoval[i] = NULL;
+            WetPendingClicks[i] = NULL;
         }
     }
 

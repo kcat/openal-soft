@@ -99,6 +99,13 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     ALuint BufferIdx;                                                         \
     ALuint pos = DataPosInt;                                                  \
     ALuint frac = DataPosFrac;                                                \
+    ALfloat DrySend[OUTPUTCHANNELS];                                          \
+    FILTER *DryFilter;                                                        \
+                                                                              \
+    DryFilter = &Source->Params.iirFilter;                                    \
+    for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
+        DrySend[i] = Source->Params.DryGains[i];                              \
+                                                                              \
     if(j == 0)                                                                \
     {                                                                         \
         value = sampler##S(Data.p##S[pos], Data.p##S[pos+1], frac);           \
@@ -159,10 +166,24 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         PendingClicks[FRONT_CENTER] += outsamp*DrySend[FRONT_CENTER];         \
         PendingClicks[BACK_CENTER]  += outsamp*DrySend[BACK_CENTER];          \
     }                                                                         \
+                                                                              \
     for(out = 0;out < MAX_SENDS;out++)                                        \
     {                                                                         \
-        if(!WetBuffer[out])                                                   \
+        ALfloat  WetSend;                                                     \
+        ALfloat *WetBuffer;                                                   \
+        ALfloat *WetClickRemoval;                                             \
+        ALfloat *WetPendingClicks;                                            \
+        FILTER  *WetFilter;                                                   \
+                                                                              \
+        if(!Source->Send[out].Slot ||                                         \
+           Source->Send[out].Slot->effect.type == AL_EFFECT_NULL)             \
             continue;                                                         \
+                                                                              \
+        WetSend = Source->Params.WetGains[out];                               \
+        WetBuffer = Source->Send[out].Slot->WetBuffer;                        \
+        WetClickRemoval = Source->Send[out].Slot->ClickRemoval;               \
+        WetPendingClicks = Source->Send[out].Slot->PendingClicks;             \
+        WetFilter = &Source->Params.Send[out].iirFilter;                      \
                                                                               \
         pos = DataPosInt;                                                     \
         frac = DataPosFrac;                                                   \
@@ -172,8 +193,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         {                                                                     \
             value = sampler##S(Data.p##S[pos], Data.p##S[pos+1], frac);       \
                                                                               \
-            outsamp = lpFilter2PC(WetFilter[out], 0, value);                  \
-            WetClickRemoval[out][0] -= outsamp*WetSend[out];                  \
+            outsamp = lpFilter2PC(WetFilter, 0, value);                       \
+            WetClickRemoval[0] -= outsamp*WetSend;                            \
         }                                                                     \
         for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
         {                                                                     \
@@ -181,8 +202,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
             value = sampler##S(Data.p##S[pos], Data.p##S[pos+1], frac);       \
                                                                               \
             /* Room path final mix buffer and panning */                      \
-            outsamp = lpFilter2P(WetFilter[out], 0, value);                   \
-            WetBuffer[out][j] += outsamp*WetSend[out];                        \
+            outsamp = lpFilter2P(WetFilter, 0, value);                        \
+            WetBuffer[j] += outsamp*WetSend;                                  \
                                                                               \
             frac += increment;                                                \
             pos  += frac>>FRACTIONBITS;                                       \
@@ -204,8 +225,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
             }                                                                 \
             value = sampler##S(Data.p##S[p], Data.p##S[p+1], f);              \
                                                                               \
-            outsamp = lpFilter2PC(WetFilter[out], 0, value);                  \
-            WetPendingClicks[out][0] += outsamp*WetSend[out];                 \
+            outsamp = lpFilter2PC(WetFilter, 0, value);                       \
+            WetPendingClicks[0] += outsamp*WetSend;                           \
         }                                                                     \
     }                                                                         \
     DataPosInt = pos;                                                         \
@@ -217,6 +238,13 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     ALuint BufferIdx;                                                         \
     ALuint pos = DataPosInt;                                                  \
     ALuint frac = DataPosFrac;                                                \
+    ALfloat DrySend[OUTPUTCHANNELS];                                          \
+    FILTER *DryFilter;                                                        \
+                                                                              \
+    DryFilter = &Source->Params.iirFilter;                                    \
+    for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
+        DrySend[i] = Source->Params.DryGains[i];                              \
+                                                                              \
     if(j == 0)                                                                \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
@@ -272,10 +300,24 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
             PendingClicks[chans[i+4]] += outsamp*DrySend[chans[i+4]];         \
         }                                                                     \
     }                                                                         \
+                                                                              \
     for(out = 0;out < MAX_SENDS;out++)                                        \
     {                                                                         \
-        if(!WetBuffer[out])                                                   \
+        ALfloat  WetSend;                                                     \
+        ALfloat *WetBuffer;                                                   \
+        ALfloat *WetClickRemoval;                                             \
+        ALfloat *WetPendingClicks;                                            \
+        FILTER  *WetFilter;                                                   \
+                                                                              \
+        if(!Source->Send[out].Slot ||                                         \
+           Source->Send[out].Slot->effect.type == AL_EFFECT_NULL)             \
             continue;                                                         \
+                                                                              \
+        WetSend = Source->Params.WetGains[out];                               \
+        WetBuffer = Source->Send[out].Slot->WetBuffer;                        \
+        WetClickRemoval = Source->Send[out].Slot->ClickRemoval;               \
+        WetPendingClicks = Source->Send[out].Slot->PendingClicks;             \
+        WetFilter = &Source->Params.Send[out].iirFilter;                      \
                                                                               \
         pos = DataPosInt;                                                     \
         frac = DataPosFrac;                                                   \
@@ -288,8 +330,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
                 value = sampler##S(Data.p##S[pos*Channels + i],               \
                                    Data.p##S[(pos+1)*Channels + i], frac);    \
                                                                               \
-                outsamp = lpFilter1PC(WetFilter[out], chans[i], value);       \
-                WetClickRemoval[out][0] -= outsamp*WetSend[out] * scaler;     \
+                outsamp = lpFilter1PC(WetFilter, chans[i], value);            \
+                WetClickRemoval[0] -= outsamp*WetSend * scaler;               \
             }                                                                 \
         }                                                                     \
         for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
@@ -299,8 +341,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
                 value = sampler##S(Data.p##S[pos*Channels + i],               \
                                    Data.p##S[(pos+1)*Channels + i], frac);    \
                                                                               \
-                outsamp = lpFilter1P(WetFilter[out], chans[i], value);        \
-                WetBuffer[out][j] += outsamp*WetSend[out] * scaler;           \
+                outsamp = lpFilter1P(WetFilter, chans[i], value);             \
+                WetBuffer[j] += outsamp*WetSend * scaler;                     \
             }                                                                 \
                                                                               \
             frac += increment;                                                \
@@ -326,8 +368,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
                 value = sampler##S(Data.p##S[p*Channels + i],                 \
                                    Data.p##S[(p+1)*Channels + i], f);         \
                                                                               \
-                outsamp = lpFilter1PC(WetFilter[out], chans[i], value);       \
-                WetPendingClicks[out][0] += outsamp*WetSend[out] * scaler;    \
+                outsamp = lpFilter1PC(WetFilter, chans[i], value);            \
+                WetPendingClicks[0] += outsamp*WetSend * scaler;              \
             }                                                                 \
         }                                                                     \
     }                                                                         \
@@ -340,6 +382,13 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     ALuint BufferIdx;                                                         \
     ALuint pos = DataPosInt;                                                  \
     ALuint frac = DataPosFrac;                                                \
+    ALfloat DrySend[OUTPUTCHANNELS];                                          \
+    FILTER *DryFilter;                                                        \
+                                                                              \
+    DryFilter = &Source->Params.iirFilter;                                    \
+    for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
+        DrySend[i] = Source->Params.DryGains[i];                              \
+                                                                              \
     if(j == 0)                                                                \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
@@ -389,10 +438,24 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
             PendingClicks[chans[i]] += outsamp*DrySend[chans[i]];             \
         }                                                                     \
     }                                                                         \
+                                                                              \
     for(out = 0;out < MAX_SENDS;out++)                                        \
     {                                                                         \
-        if(!WetBuffer[out])                                                   \
+        ALfloat  WetSend;                                                     \
+        ALfloat *WetBuffer;                                                   \
+        ALfloat *WetClickRemoval;                                             \
+        ALfloat *WetPendingClicks;                                            \
+        FILTER  *WetFilter;                                                   \
+                                                                              \
+        if(!Source->Send[out].Slot ||                                         \
+           Source->Send[out].Slot->effect.type == AL_EFFECT_NULL)             \
             continue;                                                         \
+                                                                              \
+        WetSend = Source->Params.WetGains[out];                               \
+        WetBuffer = Source->Send[out].Slot->WetBuffer;                        \
+        WetClickRemoval = Source->Send[out].Slot->ClickRemoval;               \
+        WetPendingClicks = Source->Send[out].Slot->PendingClicks;             \
+        WetFilter = &Source->Params.Send[out].iirFilter;                      \
                                                                               \
         pos = DataPosInt;                                                     \
         frac = DataPosFrac;                                                   \
@@ -405,8 +468,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
                 value = sampler##S(Data.p##S[pos*Channels + i],               \
                                    Data.p##S[(pos+1)*Channels + i], frac);    \
                                                                               \
-                outsamp = lpFilter1PC(WetFilter[out], chans[i], value);       \
-                WetClickRemoval[out][0] -= outsamp*WetSend[out] * scaler;     \
+                outsamp = lpFilter1PC(WetFilter, chans[i], value);            \
+                WetClickRemoval[0] -= outsamp*WetSend * scaler;               \
             }                                                                 \
         }                                                                     \
         for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
@@ -416,8 +479,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
                 value = sampler##S(Data.p##S[pos*Channels + i],               \
                                    Data.p##S[(pos+1)*Channels + i], frac);    \
                                                                               \
-                outsamp = lpFilter1P(WetFilter[out], chans[i], value);        \
-                WetBuffer[out][j] += outsamp*WetSend[out] * scaler;           \
+                outsamp = lpFilter1P(WetFilter, chans[i], value);             \
+                WetBuffer[j] += outsamp*WetSend * scaler;                     \
             }                                                                 \
                                                                               \
             frac += increment;                                                \
@@ -443,8 +506,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
                 value = sampler##S(Data.p##S[p*Channels + i],                 \
                                    Data.p##S[(p+1)*Channels + i], f);         \
                                                                               \
-                outsamp = lpFilter1PC(WetFilter[out], chans[i], value);       \
-                WetPendingClicks[out][0] += outsamp*WetSend[out] * scaler;    \
+                outsamp = lpFilter1PC(WetFilter, chans[i], value);            \
+                WetPendingClicks[0] += outsamp*WetSend * scaler;              \
             }                                                                 \
         }                                                                     \
     }                                                                         \
@@ -536,16 +599,10 @@ static void MixSource(ALsource *Source, ALCcontext *Context,
                       ALfloat (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo,
                       ALfloat *ClickRemoval, ALfloat *PendingClicks)
 {
-    ALfloat *WetBuffer[MAX_SENDS];
-    ALfloat DrySend[OUTPUTCHANNELS];
-    ALfloat *WetClickRemoval[MAX_SENDS];
-    ALfloat *WetPendingClicks[MAX_SENDS];
     ALuint i, j, out;
     ALfloat value, outsamp;
     ALbufferlistitem *BufferListItem;
     ALint64 DataSize64,DataPos64;
-    FILTER *DryFilter, *WetFilter[MAX_SENDS];
-    ALfloat WetSend[MAX_SENDS];
     ALint increment;
     ALuint DataPosInt, DataPosFrac;
     ALuint BuffersPlayed;
@@ -565,32 +622,8 @@ static void MixSource(ALsource *Source, ALCcontext *Context,
     DataPosFrac   = Source->position_fraction;
     Looping       = Source->bLooping;
 
-    for(i = 0;i < OUTPUTCHANNELS;i++)
-        DrySend[i] = Source->Params.DryGains[i];
-    for(i = 0;i < MAX_SENDS;i++)
-        WetSend[i] = Source->Params.WetGains[i];
-
     /* Get fixed point step */
     increment = Source->Params.Step;
-
-    DryFilter = &Source->Params.iirFilter;
-    for(i = 0;i < MAX_SENDS;i++)
-    {
-        WetFilter[i] = &Source->Params.Send[i].iirFilter;
-        if(Source->Send[i].Slot &&
-           Source->Send[i].Slot->effect.type != AL_EFFECT_NULL)
-        {
-            WetBuffer[i] = Source->Send[i].Slot->WetBuffer;
-            WetClickRemoval[i] = Source->Send[i].Slot->ClickRemoval;
-            WetPendingClicks[i] = Source->Send[i].Slot->PendingClicks;
-        }
-        else
-        {
-            WetBuffer[i] = NULL;
-            WetClickRemoval[i] = NULL;
-            WetPendingClicks[i] = NULL;
-        }
-    }
 
     /* Get current buffer queue item */
     BufferListItem = Source->queue;

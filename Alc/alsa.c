@@ -500,11 +500,6 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
 
     i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-    if(i < 0)
-    {
-        Sleep(200);
-        i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-    }
     if(i >= 0)
     {
         i = psnd_pcm_nonblock(data->pcmHandle, 0);
@@ -798,11 +793,6 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
 
     i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
-    if(i < 0)
-    {
-        Sleep(200);
-        i = psnd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
-    }
     if(i < 0)
     {
         AL_PRINT("Could not open capture device '%s': %s\n", driver, psnd_strerror(i));

@@ -715,7 +715,7 @@ ALvoid MixSource(ALsource *Source, ALuint SamplesToDo,
         /* Handle looping sources */
         if(DataPosInt >= LoopEnd)
         {
-            if(BuffersPlayed < (Source->BuffersInQueue-1))
+            if(BufferListItem->next)
             {
                 BufferListItem = BufferListItem->next;
                 BuffersPlayed++;

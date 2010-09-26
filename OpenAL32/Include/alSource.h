@@ -96,12 +96,17 @@ typedef struct ALsource
         FILTER iirFilter;
         ALfloat history[OUTPUTCHANNELS*2];
     } Params;
+
     ALvoid (*Update)(struct ALsource *self, const ALCcontext *context);
+    ALvoid (*Mix)(struct ALsource *self, ALuint SamplesToDo,
+                  ALfloat (*DryBuffer)[OUTPUTCHANNELS],
+                  ALfloat *ClickRemoval, ALfloat *PendingClicks);
 
     // Index to itself
     ALuint source;
 } ALsource;
-#define ALsource_Update(s,a)  ((s)->Update(s,a))
+#define ALsource_Update(s,a)    ((s)->Update(s,a))
+#define ALsource_Mix(s,a,b,c,d) ((s)->Mix(s,a,b,c,d))
 
 ALvoid ReleaseALSources(ALCcontext *Context);
 

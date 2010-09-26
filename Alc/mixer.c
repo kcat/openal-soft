@@ -537,82 +537,58 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 } while(0)
 
 
-#define MIX_MONO(S) do {                                                      \
-    switch(Source->Resampler)                                                 \
-    {                                                                         \
-        case POINT_RESAMPLER:                                                 \
-        DO_MIX_MONO(S,point); break;                                          \
-        case LINEAR_RESAMPLER:                                                \
-        DO_MIX_MONO(S,lerp); break;                                           \
-        case COSINE_RESAMPLER:                                                \
-        DO_MIX_MONO(S,cos_lerp); break;                                       \
-        case RESAMPLER_MIN:                                                   \
-        case RESAMPLER_MAX:                                                   \
-        break;                                                                \
-    }                                                                         \
+#define MIX_MONO(sampler) do {                                                \
+    if(Bytes == 4)                                                            \
+        DO_MIX_MONO(32,sampler);                                              \
+    else if(Bytes == 2)                                                       \
+        DO_MIX_MONO(16,sampler);                                              \
 } while(0)
 
-#define MIX_STEREO(S) do {                                                    \
+#define MIX_STEREO(sampler) do {                                              \
     const int chans[] = {                                                     \
         FRONT_LEFT, FRONT_RIGHT,                                              \
         SIDE_LEFT, SIDE_RIGHT,                                                \
         BACK_LEFT, BACK_RIGHT                                                 \
     };                                                                        \
                                                                               \
-    switch(Source->Resampler)                                                 \
-    {                                                                         \
-        case POINT_RESAMPLER:                                                 \
-        DO_MIX_STEREO(S,point); break;                                        \
-        case LINEAR_RESAMPLER:                                                \
-        DO_MIX_STEREO(S,lerp); break;                                         \
-        case COSINE_RESAMPLER:                                                \
-        DO_MIX_STEREO(S,cos_lerp); break;                                     \
-        case RESAMPLER_MIN:                                                   \
-        case RESAMPLER_MAX:                                                   \
-        break;                                                                \
-    }                                                                         \
+    if(Bytes == 4)                                                            \
+        DO_MIX_STEREO(32,sampler);                                            \
+    else if(Bytes == 2)                                                       \
+        DO_MIX_STEREO(16,sampler);                                            \
 } while(0)
 
-#define MIX_MC(S,...) do {                                                    \
+#define MIX_MC(sampler,...) do {                                              \
     const int chans[] = { __VA_ARGS__ };                                      \
                                                                               \
-    switch(Source->Resampler)                                                 \
-    {                                                                         \
-        case POINT_RESAMPLER:                                                 \
-        DO_MIX_MC(S,point); break;                                            \
-        case LINEAR_RESAMPLER:                                                \
-        DO_MIX_MC(S,lerp); break;                                             \
-        case COSINE_RESAMPLER:                                                \
-        DO_MIX_MC(S,cos_lerp); break;                                         \
-        case RESAMPLER_MIN:                                                   \
-        case RESAMPLER_MAX:                                                   \
-        break;                                                                \
-    }                                                                         \
+    if(Bytes == 4)                                                            \
+        DO_MIX_MC(32,sampler);                                                \
+    else if(Bytes == 2)                                                       \
+        DO_MIX_MC(16,sampler);                                                \
 } while(0)
 
 
-#define MIX(S) do {                                                           \
+#define MIX(sampler) do {                                                     \
     if(Channels == 1) /* Mono */                                              \
-        MIX_MONO(S);                                                          \
+        MIX_MONO(sampler);                                                    \
     else if(Channels == 2) /* Stereo */                                       \
-        MIX_STEREO(S);                                                        \
+        MIX_STEREO(sampler);                                                  \
     else if(Channels == 4) /* Quad */                                         \
-        MIX_MC(S, FRONT_LEFT, FRONT_RIGHT,                                    \
-                  BACK_LEFT,  BACK_RIGHT);                                    \
+        MIX_MC(sampler, FRONT_LEFT, FRONT_RIGHT,                              \
+                        BACK_LEFT,  BACK_RIGHT);                              \
     else if(Channels == 6) /* 5.1 */                                          \
-        MIX_MC(S, FRONT_LEFT,   FRONT_RIGHT,                                  \
-                  FRONT_CENTER, LFE,                                          \
-                  BACK_LEFT,    BACK_RIGHT);                                  \
+        MIX_MC(sampler, FRONT_LEFT,   FRONT_RIGHT,                            \
+                        FRONT_CENTER, LFE,                                    \
+                        BACK_LEFT,    BACK_RIGHT);                            \
     else if(Channels == 7) /* 6.1 */                                          \
-        MIX_MC(S, FRONT_LEFT,   FRONT_RIGHT,                                  \
-                  FRONT_CENTER, LFE,                                          \
-                  BACK_CENTER,                                                \
-                  SIDE_LEFT,    SIDE_RIGHT);                                  \
+        MIX_MC(sampler, FRONT_LEFT,   FRONT_RIGHT,                            \
+                        FRONT_CENTER, LFE,                                    \
+                        BACK_CENTER,                                          \
+                        SIDE_LEFT,    SIDE_RIGHT);                            \
     else if(Channels == 8) /* 7.1 */                                          \
-        MIX_MC(S, FRONT_LEFT,   FRONT_RIGHT,                                  \
-                  FRONT_CENTER, LFE,                                          \
-                  BACK_LEFT,    BACK_RIGHT,                                   \
-                  SIDE_LEFT,    SIDE_RIGHT);                                  \
+        MIX_MC(sampler, FRONT_LEFT,   FRONT_RIGHT,                            \
+                        FRONT_CENTER, LFE,                                    \
+                        BACK_LEFT,    BACK_RIGHT,                             \
+                        SIDE_LEFT,    SIDE_RIGHT);                            \
 } while(0)
 
 
@@ -717,10 +693,18 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
         BufferSize = min(BufferSize, (SamplesToDo-j));
 
-        if(Bytes == 4) /* 32-bit float */
-            MIX(32);
-        else if(Bytes == 2) /* signed 16-bit */
-            MIX(16);
+        switch(Source->Resampler)
+        {
+            case POINT_RESAMPLER:
+            MIX(point); break;
+            case LINEAR_RESAMPLER:
+            MIX(lerp); break;
+            case COSINE_RESAMPLER:
+            MIX(cos_lerp); break;
+            case RESAMPLER_MIN:
+            case RESAMPLER_MAX:
+            break;
+        }
 
     skipmix:
         /* Handle looping sources */

@@ -189,9 +189,7 @@ ALvoid aluInitPanning(ALCdevice *Device);
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 
-ALvoid MixSource(struct ALsource *Source, ALuint SamplesToDo,
-                 ALfloat (*DryBuffer)[OUTPUTCHANNELS],
-                 ALfloat *ClickRemoval, ALfloat *PendingClicks);
+ALvoid MixSource(struct ALsource *Source, ALCdevice *Device, ALuint SamplesToDo);
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);
 ALvoid aluHandleDisconnect(ALCdevice *device);

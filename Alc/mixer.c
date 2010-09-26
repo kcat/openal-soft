@@ -96,6 +96,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 
 
 #define DO_MIX_MONO(S,sampler) do {                                           \
+    ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
+    ALfloat *ClickRemoval, *PendingClicks;                                    \
     ALuint pos = DataPosInt;                                                  \
     ALuint frac = DataPosFrac;                                                \
     ALfloat DrySend[OUTPUTCHANNELS];                                          \
@@ -104,6 +106,9 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     ALuint i, out;                                                            \
     ALfloat value;                                                            \
                                                                               \
+    DryBuffer = Device->DryBuffer;                                            \
+    ClickRemoval = Device->ClickRemoval;                                      \
+    PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
@@ -237,6 +242,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 
 #define DO_MIX_STEREO(S,sampler) do {                                         \
     const ALfloat scaler = 1.0f/Channels;                                     \
+    ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
+    ALfloat *ClickRemoval, *PendingClicks;                                    \
     ALuint pos = DataPosInt;                                                  \
     ALuint frac = DataPosFrac;                                                \
     ALfloat DrySend[OUTPUTCHANNELS];                                          \
@@ -245,6 +252,9 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     ALuint i, out;                                                            \
     ALfloat value;                                                            \
                                                                               \
+    DryBuffer = Device->DryBuffer;                                            \
+    ClickRemoval = Device->ClickRemoval;                                      \
+    PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
@@ -383,6 +393,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 
 #define DO_MIX_MC(S,sampler) do {                                             \
     const ALfloat scaler = 1.0f/Channels;                                     \
+    ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
+    ALfloat *ClickRemoval, *PendingClicks;                                    \
     ALuint pos = DataPosInt;                                                  \
     ALuint frac = DataPosFrac;                                                \
     ALfloat DrySend[OUTPUTCHANNELS];                                          \
@@ -391,6 +403,9 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     ALuint i, out;                                                            \
     ALfloat value;                                                            \
                                                                               \
+    DryBuffer = Device->DryBuffer;                                            \
+    ClickRemoval = Device->ClickRemoval;                                      \
+    PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
@@ -601,9 +616,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 } while(0)
 
 
-ALvoid MixSource(ALsource *Source, ALuint SamplesToDo,
-                 ALfloat (*DryBuffer)[OUTPUTCHANNELS],
-                 ALfloat *ClickRemoval, ALfloat *PendingClicks)
+ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
     ALint64 DataSize64,DataPos64;
@@ -752,8 +765,6 @@ ALvoid MixSource(ALsource *Source, ALuint SamplesToDo,
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
-    ALfloat (*DryBuffer)[OUTPUTCHANNELS];
-    ALfloat *ClickRemoval;
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
     ALCcontext **ctx, **ctx_end;
@@ -773,14 +784,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     (void)fpuState;
 #endif
 
-    DryBuffer = device->DryBuffer;
     while(size > 0)
     {
         /* Setup variables */
         SamplesToDo = min(size, BUFFERSIZE);
 
         /* Clear mixing buffer */
-        memset(DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
+        memset(device->DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
 
         SuspendContext(NULL);
         ctx = device->Contexts;
@@ -806,8 +816,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     (*src)->NeedsUpdate = AL_FALSE;
                 }
 
-                ALsource_Mix(*src, SamplesToDo, DryBuffer,
-                             device->ClickRemoval, device->PendingClicks);
+                ALsource_Mix(*src, device, SamplesToDo);
                 src++;
             }
 
@@ -816,11 +825,10 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             {
                 ALEffectSlot = (*ctx)->EffectSlotMap.array[e].value;
 
-                ClickRemoval = ALEffectSlot->ClickRemoval;
                 for(i = 0;i < SamplesToDo;i++)
                 {
-                    ClickRemoval[0] -= ClickRemoval[0] / 256.0f;
-                    ALEffectSlot->WetBuffer[i] += ClickRemoval[0];
+                    ALEffectSlot->ClickRemoval[0] -= ALEffectSlot->ClickRemoval[0] / 256.0f;
+                    ALEffectSlot->WetBuffer[i] += ALEffectSlot->ClickRemoval[0];
                 }
                 for(i = 0;i < 1;i++)
                 {
@@ -828,7 +836,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     ALEffectSlot->PendingClicks[i] = 0.0f;
                 }
 
-                ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot, SamplesToDo, ALEffectSlot->WetBuffer, DryBuffer);
+                ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot,
+                                 SamplesToDo, ALEffectSlot->WetBuffer,
+                                 device->DryBuffer);
 
                 for(i = 0;i < SamplesToDo;i++)
                     ALEffectSlot->WetBuffer[i] = 0.0f;
@@ -841,13 +851,12 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         ProcessContext(NULL);
 
         //Post processing loop
-        ClickRemoval = device->ClickRemoval;
         for(i = 0;i < SamplesToDo;i++)
         {
             for(c = 0;c < OUTPUTCHANNELS;c++)
             {
-                ClickRemoval[c] -= ClickRemoval[c] / 256.0f;
-                DryBuffer[i][c] += ClickRemoval[c];
+                device->ClickRemoval[c] -= device->ClickRemoval[c] / 256.0f;
+                device->DryBuffer[i][c] += device->ClickRemoval[c];
             }
         }
         for(i = 0;i < OUTPUTCHANNELS;i++)

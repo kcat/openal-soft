@@ -762,9 +762,7 @@ static void MixSource(ALsource *Source, ALCcontext *Context,
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALfloat (*DryBuffer)[OUTPUTCHANNELS];
-    ALfloat (*Matrix)[OUTPUTCHANNELS];
     ALfloat *ClickRemoval;
-    const ALuint *ChanMap;
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
     ALCcontext **ctx, **ctx_end;
@@ -860,24 +858,40 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             device->PendingClicks[i] = 0.0f;
         }
 
-        ChanMap = device->DevChannels;
-        Matrix = device->ChannelMatrix;
         switch(device->Format)
         {
-#define CHECK_WRITE_FORMAT(bits, type, func)                                  \
+#define DO_WRITE(T, func, N, ...) do {                                        \
+    const Channel chans[] = {                                                 \
+        __VA_ARGS__                                                           \
+    };                                                                        \
+    ALfloat (*DryBuffer)[OUTPUTCHANNELS] = device->DryBuffer;                 \
+    ALfloat (*Matrix)[OUTPUTCHANNELS] = device->ChannelMatrix;                \
+    const ALuint *ChanMap = device->DevChannels;                              \
+                                                                              \
+    for(i = 0;i < SamplesToDo;i++)                                            \
+    {                                                                         \
+        for(j = 0;j < N;j++)                                                  \
+        {                                                                     \
+            samp = 0.0f;                                                      \
+            for(c = 0;c < OUTPUTCHANNELS;c++)                                 \
+                samp += DryBuffer[i][c] * Matrix[c][chans[j]];                \
+            ((T*)buffer)[ChanMap[chans[j]]] = func(samp);                     \
+        }                                                                     \
+        buffer = ((T*)buffer) + N;                                            \
+    }                                                                         \
+} while(0)
+
+#define CHECK_WRITE_FORMAT(bits, T, func)                                     \
         case AL_FORMAT_MONO##bits:                                            \
-            for(i = 0;i < SamplesToDo;i++)                                    \
-            {                                                                 \
-                samp = 0.0f;                                                  \
-                for(c = 0;c < OUTPUTCHANNELS;c++)                             \
-                    samp += DryBuffer[i][c] * Matrix[c][FRONT_CENTER];        \
-                ((type*)buffer)[ChanMap[FRONT_CENTER]] = (func)(samp);        \
-                buffer = ((type*)buffer) + 1;                                 \
-            }                                                                 \
+            DO_WRITE(T, func, 1, FRONT_CENTER);                               \
             break;                                                            \
         case AL_FORMAT_STEREO##bits:                                          \
             if(device->Bs2b)                                                  \
             {                                                                 \
+                ALfloat (*DryBuffer)[OUTPUTCHANNELS] = device->DryBuffer;     \
+                ALfloat (*Matrix)[OUTPUTCHANNELS] = device->ChannelMatrix;    \
+                const ALuint *ChanMap = device->DevChannels;                  \
+                                                                              \
                 for(i = 0;i < SamplesToDo;i++)                                \
                 {                                                             \
                     float samples[2] = { 0.0f, 0.0f };                        \
@@ -887,100 +901,33 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                         samples[1] += DryBuffer[i][c]*Matrix[c][FRONT_RIGHT]; \
                     }                                                         \
                     bs2b_cross_feed(device->Bs2b, samples);                   \
-                    ((type*)buffer)[ChanMap[FRONT_LEFT]] = (func)(samples[0]);\
-                    ((type*)buffer)[ChanMap[FRONT_RIGHT]]= (func)(samples[1]);\
-                    buffer = ((type*)buffer) + 2;                             \
+                    ((T*)buffer)[ChanMap[FRONT_LEFT]]  = func(samples[0]);    \
+                    ((T*)buffer)[ChanMap[FRONT_RIGHT]] = func(samples[1]);    \
+                    buffer = ((T*)buffer) + 2;                                \
                 }                                                             \
             }                                                                 \
             else                                                              \
-            {                                                                 \
-                for(i = 0;i < SamplesToDo;i++)                                \
-                {                                                             \
-                    static const Channel chans[] = {                          \
-                        FRONT_LEFT, FRONT_RIGHT                               \
-                    };                                                        \
-                    for(j = 0;j < 2;j++)                                      \
-                    {                                                         \
-                        samp = 0.0f;                                          \
-                        for(c = 0;c < OUTPUTCHANNELS;c++)                     \
-                            samp += DryBuffer[i][c] * Matrix[c][chans[j]];    \
-                        ((type*)buffer)[ChanMap[chans[j]]] = (func)(samp);    \
-                    }                                                         \
-                    buffer = ((type*)buffer) + 2;                             \
-                }                                                             \
-            }                                                                 \
+                DO_WRITE(T, func, 2, FRONT_LEFT, FRONT_RIGHT);                \
             break;                                                            \
         case AL_FORMAT_QUAD##bits:                                            \
-            for(i = 0;i < SamplesToDo;i++)                                    \
-            {                                                                 \
-                static const Channel chans[] = {                              \
-                    FRONT_LEFT, FRONT_RIGHT,                                  \
-                    BACK_LEFT,  BACK_RIGHT,                                   \
-                };                                                            \
-                for(j = 0;j < 4;j++)                                          \
-                {                                                             \
-                    samp = 0.0f;                                              \
-                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
-                        samp += DryBuffer[i][c] * Matrix[c][chans[j]];        \
-                    ((type*)buffer)[ChanMap[chans[j]]] = (func)(samp);        \
-                }                                                             \
-                buffer = ((type*)buffer) + 4;                                 \
-            }                                                                 \
+            DO_WRITE(T, func, 4, FRONT_LEFT, FRONT_RIGHT,                     \
+                                 BACK_LEFT,  BACK_RIGHT);                     \
             break;                                                            \
         case AL_FORMAT_51CHN##bits:                                           \
-            for(i = 0;i < SamplesToDo;i++)                                    \
-            {                                                                 \
-                static const Channel chans[] = {                              \
-                    FRONT_LEFT, FRONT_RIGHT,                                  \
-                    FRONT_CENTER, LFE,                                        \
-                    BACK_LEFT,  BACK_RIGHT,                                   \
-                };                                                            \
-                for(j = 0;j < 6;j++)                                          \
-                {                                                             \
-                    samp = 0.0f;                                              \
-                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
-                        samp += DryBuffer[i][c] * Matrix[c][chans[j]];        \
-                    ((type*)buffer)[ChanMap[chans[j]]] = (func)(samp);        \
-                }                                                             \
-                buffer = ((type*)buffer) + 6;                                 \
-            }                                                                 \
+            DO_WRITE(T, func, 6, FRONT_LEFT, FRONT_RIGHT,                     \
+                                 FRONT_CENTER, LFE,                           \
+                                 BACK_LEFT,  BACK_RIGHT);                     \
             break;                                                            \
         case AL_FORMAT_61CHN##bits:                                           \
-            for(i = 0;i < SamplesToDo;i++)                                    \
-            {                                                                 \
-                static const Channel chans[] = {                              \
-                    FRONT_LEFT, FRONT_RIGHT,                                  \
-                    FRONT_CENTER, LFE, BACK_CENTER,                           \
-                    SIDE_LEFT,  SIDE_RIGHT,                                   \
-                };                                                            \
-                for(j = 0;j < 7;j++)                                          \
-                {                                                             \
-                    samp = 0.0f;                                              \
-                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
-                        samp += DryBuffer[i][c] * Matrix[c][chans[j]];        \
-                    ((type*)buffer)[ChanMap[chans[j]]] = (func)(samp);        \
-                }                                                             \
-                buffer = ((type*)buffer) + 7;                                 \
-            }                                                                 \
+            DO_WRITE(T, func, 7, FRONT_LEFT, FRONT_RIGHT,                     \
+                                 FRONT_CENTER, LFE, BACK_CENTER,              \
+                                 SIDE_LEFT,  SIDE_RIGHT);                     \
             break;                                                            \
         case AL_FORMAT_71CHN##bits:                                           \
-            for(i = 0;i < SamplesToDo;i++)                                    \
-            {                                                                 \
-                static const Channel chans[] = {                              \
-                    FRONT_LEFT, FRONT_RIGHT,                                  \
-                    FRONT_CENTER, LFE,                                        \
-                    BACK_LEFT,  BACK_RIGHT,                                   \
-                    SIDE_LEFT,  SIDE_RIGHT                                    \
-                };                                                            \
-                for(j = 0;j < 8;j++)                                          \
-                {                                                             \
-                    samp = 0.0f;                                              \
-                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
-                        samp += DryBuffer[i][c] * Matrix[c][chans[j]];        \
-                    ((type*)buffer)[ChanMap[chans[j]]] = (func)(samp);        \
-                }                                                             \
-                buffer = ((type*)buffer) + 8;                                 \
-            }                                                                 \
+            DO_WRITE(T, func, 8, FRONT_LEFT, FRONT_RIGHT,                     \
+                                 FRONT_CENTER, LFE,                           \
+                                 BACK_LEFT,  BACK_RIGHT,                      \
+                                 SIDE_LEFT,  SIDE_RIGHT);                     \
             break;
 
 #define AL_FORMAT_MONO32 AL_FORMAT_MONO_FLOAT32
@@ -991,6 +938,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 #undef AL_FORMAT_STEREO32
 #undef AL_FORMAT_MONO32
 #undef CHECK_WRITE_FORMAT
+#undef DO_WRITE
 
             default:
                 break;

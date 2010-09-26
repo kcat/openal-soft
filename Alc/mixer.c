@@ -601,9 +601,9 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 } while(0)
 
 
-static void MixSource(ALsource *Source, ALCcontext *Context,
-                      ALfloat (*DryBuffer)[OUTPUTCHANNELS], ALuint SamplesToDo,
-                      ALfloat *ClickRemoval, ALfloat *PendingClicks)
+static ALvoid MixSource(ALsource *Source, ALfloat (*DryBuffer)[OUTPUTCHANNELS],
+                        ALuint SamplesToDo, ALfloat *ClickRemoval,
+                        ALfloat *PendingClicks)
 {
     ALbufferlistitem *BufferListItem;
     ALint64 DataSize64,DataPos64;
@@ -613,12 +613,6 @@ static void MixSource(ALsource *Source, ALCcontext *Context,
     ALboolean Looping;
     ALenum State;
     ALuint i, j;
-
-    if(Source->NeedsUpdate)
-    {
-        ALsource_Update(Source, Context);
-        Source->NeedsUpdate = AL_FALSE;
-    }
 
     /* Get source info */
     State         = Source->state;
@@ -808,7 +802,14 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     *src = *(--src_end);
                     continue;
                 }
-                MixSource(*src, *ctx, DryBuffer, SamplesToDo,
+
+                if((*src)->NeedsUpdate)
+                {
+                    ALsource_Update(*src, *ctx);
+                    (*src)->NeedsUpdate = AL_FALSE;
+                }
+
+                MixSource(*src, DryBuffer, SamplesToDo,
                           device->ClickRemoval, device->PendingClicks);
                 src++;
             }

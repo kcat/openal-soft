@@ -528,8 +528,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                                              Slot->effect.Reverb.DecayTime) *
                                             -60.0 / 20.0);
 
-                WetGainHF[i] *= aluPow(10.0f,
-                                       log10(Slot->effect.Reverb.AirAbsorptionGainHF) *
+                WetGainHF[i] *= aluPow(Slot->effect.Reverb.AirAbsorptionGainHF,
                                        AirAbsorptionFactor * effectiveDist);
             }
         }

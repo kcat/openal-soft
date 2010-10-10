@@ -263,10 +263,10 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat Velocity[3],ListenerVel[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
-    ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound;
+    ALfloat DopplerFactor, DopplerVelocity, SpeedOfSound;
     ALfloat AirAbsorptionFactor;
     ALbufferlistitem *BufferListItem;
-    ALfloat flAttenuation, effectiveDist;
+    ALfloat Attenuation, EffectiveDist;
     ALfloat RoomAttenuation[MAX_SENDS];
     ALfloat MetersPerUnit;
     ALfloat RoomRolloff[MAX_SENDS];
@@ -290,7 +290,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     //Get context properties
     DopplerFactor   = ALContext->DopplerFactor * ALSource->DopplerFactor;
     DopplerVelocity = ALContext->DopplerVelocity;
-    flSpeedOfSound  = ALContext->flSpeedOfSound;
+    SpeedOfSound    = ALContext->flSpeedOfSound;
     NumSends        = Device->NumAuxSends;
     Frequency       = Device->Frequency;
 
@@ -357,7 +357,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     Distance = aluSqrt(aluDotproduct(Position, Position));
     OrigDist = Distance;
 
-    flAttenuation = 1.0f;
+    Attenuation = 1.0f;
     for(i = 0;i < NumSends;i++)
     {
         RoomAttenuation[i] = 1.0f;
@@ -382,7 +382,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             if(MinDist > 0.0f)
             {
                 if((MinDist + (Rolloff * (Distance - MinDist))) > 0.0f)
-                    flAttenuation = MinDist / (MinDist + (Rolloff * (Distance - MinDist)));
+                    Attenuation = MinDist / (MinDist + (Rolloff * (Distance - MinDist)));
                 for(i = 0;i < NumSends;i++)
                 {
                     if((MinDist + (RoomRolloff[i] * (Distance - MinDist))) > 0.0f)
@@ -400,8 +400,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         case AL_LINEAR_DISTANCE:
             if(MaxDist != MinDist)
             {
-                flAttenuation = 1.0f - (Rolloff*(Distance-MinDist)/(MaxDist - MinDist));
-                flAttenuation = __max(flAttenuation, 0.0f);
+                Attenuation = 1.0f - (Rolloff*(Distance-MinDist)/(MaxDist - MinDist));
+                Attenuation = __max(Attenuation, 0.0f);
                 for(i = 0;i < NumSends;i++)
                 {
                     RoomAttenuation[i] = 1.0f - (RoomRolloff[i]*(Distance-MinDist)/(MaxDist - MinDist));
@@ -419,7 +419,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         case AL_EXPONENT_DISTANCE:
             if(Distance > 0.0f && MinDist > 0.0f)
             {
-                flAttenuation = aluPow(Distance/MinDist, -Rolloff);
+                Attenuation = aluPow(Distance/MinDist, -Rolloff);
                 for(i = 0;i < NumSends;i++)
                     RoomAttenuation[i] = aluPow(Distance/MinDist, -RoomRolloff[i]);
             }
@@ -430,22 +430,22 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     // Source Gain + Attenuation
-    DryGain = SourceVolume * flAttenuation;
+    DryGain = SourceVolume * Attenuation;
     for(i = 0;i < NumSends;i++)
         WetGain[i] = SourceVolume * RoomAttenuation[i];
 
-    effectiveDist = 0.0f;
-    if(MinDist > 0.0f && flAttenuation < 1.0f)
-        effectiveDist = (MinDist/flAttenuation - MinDist)*MetersPerUnit;
+    EffectiveDist = 0.0f;
+    if(MinDist > 0.0f && Attenuation < 1.0f)
+        EffectiveDist = (MinDist/Attenuation - MinDist)*MetersPerUnit;
 
     // Distance-based air absorption
-    if(AirAbsorptionFactor > 0.0f && effectiveDist > 0.0f)
+    if(AirAbsorptionFactor > 0.0f && EffectiveDist > 0.0f)
     {
         ALfloat absorb;
 
         // Absorption calculation is done in dB
         absorb = (AirAbsorptionFactor*AIRABSORBGAINDBHF) *
-                 effectiveDist;
+                 EffectiveDist;
         // Convert dB to linear gain before applying
         absorb = aluPow(10.0f, absorb/20.0f);
 
@@ -525,13 +525,13 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                  * distance, the initial decay of the reverb effect is
                  * calculated and applied to the wet path.
                  */
-                WetGain[i] *= aluPow(10.0f, effectiveDist /
+                WetGain[i] *= aluPow(10.0f, EffectiveDist /
                                             (SPEEDOFSOUNDMETRESPERSEC *
                                              Slot->effect.Reverb.DecayTime) *
                                             -60.0 / 20.0);
 
                 WetGainHF[i] *= aluPow(Slot->effect.Reverb.AirAbsorptionGainHF,
-                                       AirAbsorptionFactor * effectiveDist);
+                                       AirAbsorptionFactor * EffectiveDist);
             }
         }
         else
@@ -568,30 +568,28 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     DryGain *= ListenerGain;
 
     // Calculate Velocity
+    Pitch = ALSource->flPitch;
     if(DopplerFactor != 0.0f)
     {
-        ALfloat flVSS, flVLS;
-        ALfloat flMaxVelocity = (DopplerVelocity * flSpeedOfSound) /
-                                DopplerFactor;
+        ALfloat VSS, VLS;
+        ALfloat MaxVelocity = (SpeedOfSound*DopplerVelocity) /
+                              DopplerFactor;
 
-        flVSS = aluDotproduct(Velocity, SourceToListener);
-        if(flVSS >= flMaxVelocity)
-            flVSS = (flMaxVelocity - 1.0f);
-        else if(flVSS <= -flMaxVelocity)
-            flVSS = -flMaxVelocity + 1.0f;
+        VSS = aluDotproduct(Velocity, SourceToListener);
+        if(VSS >= MaxVelocity)
+            VSS = (MaxVelocity - 1.0f);
+        else if(VSS <= -MaxVelocity)
+            VSS = -MaxVelocity + 1.0f;
 
-        flVLS = aluDotproduct(ListenerVel, SourceToListener);
-        if(flVLS >= flMaxVelocity)
-            flVLS = (flMaxVelocity - 1.0f);
-        else if(flVLS <= -flMaxVelocity)
-            flVLS = -flMaxVelocity + 1.0f;
+        VLS = aluDotproduct(ListenerVel, SourceToListener);
+        if(VLS >= MaxVelocity)
+            VLS = (MaxVelocity - 1.0f);
+        else if(VLS <= -MaxVelocity)
+            VLS = -MaxVelocity + 1.0f;
 
-        Pitch = ALSource->flPitch *
-            ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVLS)) /
-            ((flSpeedOfSound * DopplerVelocity) - (DopplerFactor * flVSS));
+        Pitch *= ((SpeedOfSound*DopplerVelocity) - (DopplerFactor*VLS)) /
+                 ((SpeedOfSound*DopplerVelocity) - (DopplerFactor*VSS));
     }
-    else
-        Pitch = ALSource->flPitch;
 
     BufferListItem = ALSource->queue;
     while(BufferListItem != NULL)

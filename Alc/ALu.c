@@ -258,7 +258,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
-    ALfloat InnerAngle,OuterAngle,Angle,Distance,DryMix,OrigDist;
+    ALfloat InnerAngle,OuterAngle,Angle,Distance,OrigDist;
     ALfloat Direction[3],Position[3],SourceToListener[3];
     ALfloat Velocity[3],ListenerVel[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
@@ -266,12 +266,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat DopplerFactor, DopplerVelocity, flSpeedOfSound;
     ALfloat AirAbsorptionFactor;
     ALbufferlistitem *BufferListItem;
-    ALfloat Matrix[4][4];
     ALfloat flAttenuation, effectiveDist;
     ALfloat RoomAttenuation[MAX_SENDS];
     ALfloat MetersPerUnit;
     ALfloat RoomRolloff[MAX_SENDS];
-    ALfloat DryGainHF = 1.0f;
+    ALfloat DryGain;
+    ALfloat DryGainHF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat DirGain, AmbientGain;
@@ -283,6 +283,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALint pos, s, i;
     ALfloat cw;
 
+    DryGainHF = 1.0f;
     for(i = 0;i < MAX_SENDS;i++)
         WetGainHF[i] = 1.0f;
 
@@ -314,9 +315,10 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
 
     //1. Translate Listener to origin (convert to head relative)
-    if(ALSource->bHeadRelative==AL_FALSE)
+    if(ALSource->bHeadRelative == AL_FALSE)
     {
         ALfloat U[3],V[3],N[3];
+        ALfloat Matrix[4][4];
 
         // Build transform matrix
         memcpy(N, ALContext->Listener.Forward, sizeof(N));  // At-vector
@@ -428,7 +430,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     // Source Gain + Attenuation
-    DryMix = SourceVolume * flAttenuation;
+    DryGain = SourceVolume * flAttenuation;
     for(i = 0;i < NumSends;i++)
         WetGain[i] = SourceVolume * RoomAttenuation[i];
 
@@ -483,13 +485,13 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ConeHF *= 1.0f - (Device->HeadDampen*scale);
     }
 
-    DryMix *= ConeVolume;
+    DryGain *= ConeVolume;
     if(ALSource->DryGainHFAuto)
         DryGainHF *= ConeHF;
 
     // Clamp to Min/Max Gain
-    DryMix = __min(DryMix,MaxVolume);
-    DryMix = __max(DryMix,MinVolume);
+    DryGain = __min(DryGain,MaxVolume);
+    DryGain = __max(DryGain,MinVolume);
 
     for(i = 0;i < NumSends;i++)
     {
@@ -536,7 +538,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         {
             /* If the slot's auxiliary send auto is off, the data sent to the
              * effect slot is the same as the dry path, sans filter effects */
-            WetGain[i] = DryMix;
+            WetGain[i] = DryGain;
             WetGainHF[i] = DryGainHF;
         }
 
@@ -559,11 +561,11 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     switch(ALSource->DirectFilter.type)
     {
         case AL_FILTER_LOWPASS:
-            DryMix *= ALSource->DirectFilter.Gain;
+            DryGain *= ALSource->DirectFilter.Gain;
             DryGainHF *= ALSource->DirectFilter.GainHF;
             break;
     }
-    DryMix *= ListenerGain;
+    DryGain *= ListenerGain;
 
     // Calculate Velocity
     if(DopplerFactor != 0.0f)
@@ -637,7 +639,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         Channel chan = Device->Speaker2Chan[s];
         ALfloat gain = SpeakerGain[chan]*DirGain + AmbientGain;
-        ALSource->Params.DryGains[chan] = DryMix * gain;
+        ALSource->Params.DryGains[chan] = DryGain * gain;
     }
 
     /* Update filter coefficients. */

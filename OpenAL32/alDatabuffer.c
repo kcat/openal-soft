@@ -155,7 +155,7 @@ AL_API ALvoid AL_APIENTRY alDeleteDatabuffersEXT(ALsizei n, const ALuint *buffer
 
             // Release buffer structure
             RemoveUIntMapKey(&device->DatabufferMap, ALBuf->databuffer);
-            ALTHUNK_REMOVEENTRY(puiBuffers[i]);
+            ALTHUNK_REMOVEENTRY(ALBuf->databuffer);
 
             memset(ALBuf, 0, sizeof(ALdatabuffer));
             free(ALBuf);

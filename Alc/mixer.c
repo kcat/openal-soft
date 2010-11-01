@@ -751,7 +751,6 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     ALeffectslot *ALEffectSlot;
     ALCcontext **ctx, **ctx_end;
     ALsource **src, **src_end;
-    ALfloat samp;
     int fpuState;
     ALuint i, j, c;
     ALsizei e;
@@ -860,7 +859,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     {                                                                         \
         for(j = 0;j < N;j++)                                                  \
         {                                                                     \
-            samp = 0.0f;                                                      \
+            ALfloat samp = 0.0f;                                              \
             for(c = 0;c < OUTPUTCHANNELS;c++)                                 \
                 samp += DryBuffer[i][c] * Matrix[c][chans[j]];                \
             ((T*)buffer)[ChanMap[chans[j]]] = func(samp);                     \

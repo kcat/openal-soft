@@ -147,12 +147,10 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             while(Source->queue != NULL)
             {
                 BufferList = Source->queue;
-                // Decrement buffer's reference counter
+                Source->queue = BufferList->next;
+
                 if(BufferList->buffer != NULL)
                     BufferList->buffer->refcount--;
-                // Update queue to point to next element in list
-                Source->queue = BufferList->next;
-                // Release memory allocated for buffer list item
                 free(BufferList);
             }
 
@@ -535,17 +533,15 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         {
                             BufferListItem = Source->queue;
                             Source->queue = BufferListItem->next;
-                            // Decrement reference counter for buffer
+
                             if(BufferListItem->buffer)
                                 BufferListItem->buffer->refcount--;
-                            // Release memory for buffer list item
                             free(BufferListItem);
-                            // Decrement the number of buffers in the queue
-                            Source->BuffersInQueue--;
                         }
+                        Source->BuffersInQueue = 0;
 
                         // Add the buffer to the queue (as long as it is NOT the NULL buffer)
-                        if(lValue != 0)
+                        if(buffer != NULL)
                         {
                             // Source is now in STATIC mode
                             Source->lSourceType = AL_STATIC;
@@ -2094,12 +2090,10 @@ ALvoid ReleaseALSources(ALCcontext *Context)
         while(temp->queue != NULL)
         {
             ALbufferlistitem *BufferList = temp->queue;
-            // Decrement buffer's reference counter
+            temp->queue = BufferList->next;
+
             if(BufferList->buffer != NULL)
                 BufferList->buffer->refcount--;
-            // Update queue to point to next element in list
-            temp->queue = BufferList->next;
-            // Release memory allocated for buffer list item
             free(BufferList);
         }
 
@@ -2107,6 +2101,7 @@ ALvoid ReleaseALSources(ALCcontext *Context)
         {
             if(temp->Send[j].Slot)
                 temp->Send[j].Slot->refcount--;
+            temp->Send[j].Slot = NULL;
         }
 
         // Release source structure

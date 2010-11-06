@@ -232,11 +232,6 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
         ALSource->Params.WetGains[i] = WetGain[i] * ListenerGain;
     }
-    for(i = NumSends;i < MAX_SENDS;i++)
-    {
-        ALSource->Params.WetGains[i] = 0.0f;
-        WetGainHF[i] = 1.0f;
-    }
 
     /* Update filter coefficients. Calculations based on the I3DL2
      * spec. */
@@ -550,11 +545,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 break;
         }
         ALSource->Params.WetGains[i] = WetGain[i] * ListenerGain;
-    }
-    for(i = NumSends;i < MAX_SENDS;i++)
-    {
-        ALSource->Params.WetGains[i] = 0.0f;
-        WetGainHF[i] = 1.0f;
     }
 
     // Apply filter gains and filters

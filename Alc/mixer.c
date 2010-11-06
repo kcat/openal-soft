@@ -174,7 +174,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         PendingClicks[BACK_CENTER]  += value*DrySend[BACK_CENTER];            \
     }                                                                         \
                                                                               \
-    for(out = 0;out < MAX_SENDS;out++)                                        \
+    for(out = 0;out < Device->NumAuxSends;out++)                              \
     {                                                                         \
         ALfloat  WetSend;                                                     \
         ALfloat *WetBuffer;                                                   \
@@ -315,7 +315,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         }                                                                     \
     }                                                                         \
                                                                               \
-    for(out = 0;out < MAX_SENDS;out++)                                        \
+    for(out = 0;out < Device->NumAuxSends;out++)                              \
     {                                                                         \
         ALfloat  WetSend;                                                     \
         ALfloat *WetBuffer;                                                   \
@@ -460,7 +460,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         }                                                                     \
     }                                                                         \
                                                                               \
-    for(out = 0;out < MAX_SENDS;out++)                                        \
+    for(out = 0;out < Device->NumAuxSends;out++)                              \
     {                                                                         \
         ALfloat  WetSend;                                                     \
         ALfloat *WetBuffer;                                                   \

@@ -173,6 +173,7 @@ AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
 
 AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint iValue)
 {
+    ALCdevice *Device;
     ALCcontext *Context;
     ALboolean updateSources = AL_FALSE;
     ALeffectslot *EffectSlot;
@@ -180,6 +181,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     Context = GetContextSuspended();
     if(!Context) return;
 
+    Device = Context->Device;
     if((EffectSlot=LookupEffectSlot(Context->EffectSlotMap, effectslot)) != NULL)
     {
         switch(param)
@@ -188,7 +190,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
             ALeffect *effect = NULL;
 
             if(iValue == 0 ||
-               (effect=LookupEffect(Context->Device->EffectMap, iValue)) != NULL)
+               (effect=LookupEffect(Device->EffectMap, iValue)) != NULL)
             {
                 InitializeEffect(Context, EffectSlot, effect);
                 updateSources = AL_TRUE;
@@ -224,7 +226,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         {
             ALsource *source = Context->SourceMap.array[pos].value;
             ALuint i;
-            for(i = 0;i < MAX_SENDS;i++)
+            for(i = 0;i < Device->NumAuxSends;i++)
             {
                 if(!source->Send[i].Slot ||
                    source->Send[i].Slot->effectslot != effectslot)

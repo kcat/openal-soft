@@ -1,7 +1,7 @@
 #ifndef _AL_SOURCE_H_
 #define _AL_SOURCE_H_
 
-#define MAX_SENDS                 2
+#define MAX_SENDS                 4
 
 #include "alFilter.h"
 #include "alu.h"

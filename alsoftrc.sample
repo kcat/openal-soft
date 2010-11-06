@@ -136,10 +136,10 @@
 #slots = 4
 
 ## sends:
-#  Sets the maximum number of auxiliary sends per source. The total number of
-#  sends possible is defined at compile time and thus can not be increased
-#  beyond the default (2).
-#sends = 2
+#  Sets the number of auxiliary sends per source. When not specified (default),
+#  it allows the app to request how many it wants. The maximum value currently
+#  possible is 4.
+#sends =
 
 ## layout:
 #  Sets the virtual speaker layout. Values are specified in degrees, where 0 is

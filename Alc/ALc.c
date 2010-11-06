@@ -2071,7 +2071,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
-    device->NumAuxSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
+    device->NumAuxSends = GetConfigValueInt(NULL, "sends", 1);
     if(device->NumAuxSends > MAX_SENDS)
         device->NumAuxSends = MAX_SENDS;
 

@@ -472,11 +472,11 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
            Source->Send[out].Slot->effect.type == AL_EFFECT_NULL)             \
             continue;                                                         \
                                                                               \
-        WetSend = Source->Params.WetGains[out];                               \
         WetBuffer = Source->Send[out].Slot->WetBuffer;                        \
         WetClickRemoval = Source->Send[out].Slot->ClickRemoval;               \
         WetPendingClicks = Source->Send[out].Slot->PendingClicks;             \
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
+        WetSend = Source->Params.WetGains[out];                               \
                                                                               \
         pos = DataPosInt;                                                     \
         frac = DataPosFrac;                                                   \
@@ -568,27 +568,36 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 
 
 #define MIX(sampler) do {                                                     \
-    if(Channels == 1) /* Mono */                                              \
+    switch(Channels)                                                          \
+    {                                                                         \
+    case 1: /* Mono */                                                        \
         MIX_MONO(sampler);                                                    \
-    else if(Channels == 2) /* Stereo */                                       \
+        break;                                                                \
+    case 2: /* Stereo */                                                      \
         MIX_STEREO(sampler);                                                  \
-    else if(Channels == 4) /* Quad */                                         \
+        break;                                                                \
+    case 4: /* Quad */                                                        \
         MIX_MC(sampler, FRONT_LEFT, FRONT_RIGHT,                              \
                         BACK_LEFT,  BACK_RIGHT);                              \
-    else if(Channels == 6) /* 5.1 */                                          \
+        break;                                                                \
+    case 6: /* 5.1 */                                                         \
         MIX_MC(sampler, FRONT_LEFT,   FRONT_RIGHT,                            \
                         FRONT_CENTER, LFE,                                    \
                         BACK_LEFT,    BACK_RIGHT);                            \
-    else if(Channels == 7) /* 6.1 */                                          \
+        break;                                                                \
+    case 7: /* 6.1 */                                                         \
         MIX_MC(sampler, FRONT_LEFT,   FRONT_RIGHT,                            \
                         FRONT_CENTER, LFE,                                    \
                         BACK_CENTER,                                          \
                         SIDE_LEFT,    SIDE_RIGHT);                            \
-    else if(Channels == 8) /* 7.1 */                                          \
+        break;                                                                \
+    case 8: /* 7.1 */                                                         \
         MIX_MC(sampler, FRONT_LEFT,   FRONT_RIGHT,                            \
                         FRONT_CENTER, LFE,                                    \
                         BACK_LEFT,    BACK_RIGHT,                             \
                         SIDE_LEFT,    SIDE_RIGHT);                            \
+        break;                                                                \
+    }                                                                         \
 } while(0)
 
 

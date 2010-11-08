@@ -1989,7 +1989,7 @@ static ALint GetByteOffset(ALsource *Source)
 {
     ALbuffer *Buffer = NULL;
     ALbufferlistitem *BufferList;
-    ALfloat  BufferFreq;
+    ALdouble BufferFreq;
     ALint    Channels, Bytes;
     ALint    ByteOffset = -1;
 
@@ -2011,7 +2011,7 @@ static ALint GetByteOffset(ALsource *Source)
         return -1;
     }
 
-    BufferFreq = ((ALfloat)Buffer->frequency);
+    BufferFreq = ((ALdouble)Buffer->frequency);
     Channels = aluChannelsFromFormat(Buffer->format);
     Bytes = aluBytesFromFormat(Buffer->format);
 
@@ -2031,7 +2031,7 @@ static ALint GetByteOffset(ALsource *Source)
 
     case AL_SEC_OFFSET:
         // Note - lOffset is internally stored as Milliseconds
-        ByteOffset  = (ALint)(Source->lOffset / 1000.0f * BufferFreq);
+        ByteOffset  = (ALint)(Source->lOffset / 1000.0 * BufferFreq);
         ByteOffset *= Channels * Bytes;
         break;
     }

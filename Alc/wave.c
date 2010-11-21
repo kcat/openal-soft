@@ -63,6 +63,22 @@ static const ALuint channel_masks[] = {
     0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20 | 0x200 | 0x400, /* 7.1 */
 };
 
+
+static void fwrite16le(ALushort val, FILE *f)
+{
+    fputc(val&0xff, f);
+    fputc((val>>8)&0xff, f);
+}
+
+static void fwrite32le(ALuint val, FILE *f)
+{
+    fputc(val&0xff, f);
+    fputc((val>>8)&0xff, f);
+    fputc((val>>16)&0xff, f);
+    fputc((val>>24)&0xff, f);
+}
+
+
 static ALuint WaveProc(ALvoid *ptr)
 {
     ALCdevice *pDevice = (ALCdevice*)ptr;
@@ -182,7 +198,7 @@ static void wave_close_playback(ALCdevice *device)
 static ALCboolean wave_reset_playback(ALCdevice *device)
 {
     wave_data *data = (wave_data*)device->ExtraData;
-    ALuint channels, bits, i;
+    ALuint channels, bits;
     size_t val;
 
     fseek(data->f, 0, SEEK_SET);
@@ -207,62 +223,36 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
     }
 
     fprintf(data->f, "RIFF");
-    fputc(0xFF, data->f); // 'RIFF' header len; filled in at close
-    fputc(0xFF, data->f);
-    fputc(0xFF, data->f);
-    fputc(0xFF, data->f);
+    fwrite32le(0xFFFFFFFF, data->f); // 'RIFF' header len; filled in at close
 
     fprintf(data->f, "WAVE");
 
     fprintf(data->f, "fmt ");
-    fputc(40, data->f); // 'fmt ' header len; 40 bytes for EXTENSIBLE
-    fputc(0, data->f);
-    fputc(0, data->f);
-    fputc(0, data->f);
+    fwrite32le(40, data->f); // 'fmt ' header len; 40 bytes for EXTENSIBLE
+
     // 16-bit val, format type id (extensible: 0xFFFE)
-    fputc(0xFE, data->f);
-    fputc(0xFF, data->f);
+    fwrite16le(0xFFFE, data->f);
     // 16-bit val, channel count
-    fputc(channels&0xff, data->f);
-    fputc((channels>>8)&0xff, data->f);
+    fwrite16le(channels, data->f);
     // 32-bit val, frequency
-    fputc(device->Frequency&0xff, data->f);
-    fputc((device->Frequency>>8)&0xff, data->f);
-    fputc((device->Frequency>>16)&0xff, data->f);
-    fputc((device->Frequency>>24)&0xff, data->f);
+    fwrite32le(device->Frequency, data->f);
     // 32-bit val, bytes per second
-    i = device->Frequency * channels * bits / 8;
-    fputc(i&0xff, data->f);
-    fputc((i>>8)&0xff, data->f);
-    fputc((i>>16)&0xff, data->f);
-    fputc((i>>24)&0xff, data->f);
+    fwrite32le(device->Frequency * channels * bits / 8, data->f);
     // 16-bit val, frame size
-    i = channels * bits / 8;
-    fputc(i&0xff, data->f);
-    fputc((i>>8)&0xff, data->f);
+    fwrite16le(channels * bits / 8, data->f);
     // 16-bit val, bits per sample
-    fputc(bits&0xff, data->f);
-    fputc((bits>>8)&0xff, data->f);
+    fwrite16le(bits, data->f);
     // 16-bit val, extra byte count
-    fputc(22, data->f);
-    fputc(0, data->f);
+    fwrite16le(22, data->f);
     // 16-bit val, valid bits per sample
-    fputc(bits&0xff, data->f);
-    fputc((bits>>8)&0xff, data->f);
+    fwrite16le(bits, data->f);
     // 32-bit val, channel mask
-    i = channel_masks[channels];
-    fputc(i&0xff, data->f);
-    fputc((i>>8)&0xff, data->f);
-    fputc((i>>16)&0xff, data->f);
-    fputc((i>>24)&0xff, data->f);
+    fwrite32le(channel_masks[channels], data->f);
     // 16 byte GUID, sub-type format
     val = fwrite(((bits==32) ? SUBTYPE_FLOAT : SUBTYPE_PCM), 1, 16, data->f);
 
     fprintf(data->f, "data");
-    fputc(0xFF, data->f); // 'data' header len; filled in at close
-    fputc(0xFF, data->f);
-    fputc(0xFF, data->f);
-    fputc(0xFF, data->f);
+    fwrite32le(0xFFFFFFFF, data->f); // 'data' header len; filled in at close
 
     if(ferror(data->f))
     {
@@ -316,20 +306,9 @@ static void wave_stop_playback(ALCdevice *device)
     {
         dataLen = size - data->DataStart;
         if(fseek(data->f, data->DataStart-4, SEEK_SET) == 0)
-        {
-            fputc(dataLen&0xff, data->f); // 'data' header len
-            fputc((dataLen>>8)&0xff, data->f);
-            fputc((dataLen>>16)&0xff, data->f);
-            fputc((dataLen>>24)&0xff, data->f);
-        }
+            fwrite32le(dataLen, data->f); // 'data' header len
         if(fseek(data->f, 4, SEEK_SET) == 0)
-        {
-            size -= 8;
-            fputc(size&0xff, data->f); // 'WAVE' header len
-            fputc((size>>8)&0xff, data->f);
-            fputc((size>>16)&0xff, data->f);
-            fputc((size>>24)&0xff, data->f);
-        }
+            fwrite32le(size-8, data->f); // 'WAVE' header len
     }
 }
 

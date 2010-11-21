@@ -106,9 +106,10 @@ static ALuint WaveProc(ALvoid *ptr)
         avail = (ALuint64)(now-start) * pDevice->Frequency / 1000;
         if(avail < done)
         {
-            AL_PRINT("Timer wrapped\n");
-            aluHandleDisconnect(pDevice);
-            break;
+            /* Timer wrapped. Add the remainder of the cycle to the available
+             * count and reset the number of samples done */
+            avail += 0xFFFFFFFFu*pDevice->Frequency/1000 - done;
+            done = 0;
         }
         if(avail-done < pDevice->UpdateSize)
         {

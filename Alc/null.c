@@ -55,9 +55,10 @@ static ALuint NullProc(ALvoid *ptr)
         avail = (ALuint64)(now-start) * Device->Frequency / 1000;
         if(avail < done)
         {
-            AL_PRINT("Timer wrapped\n");
-            aluHandleDisconnect(Device);
-            break;
+            /* Timer wrapped. Add the remainder of the cycle to the available
+             * count and reset the number of samples done */
+            avail += 0xFFFFFFFFu*Device->Frequency/1000 - done;
+            done = 0;
         }
         if(avail-done < Device->UpdateSize)
         {

@@ -45,12 +45,13 @@ static __inline ALfloat point32(ALfloat val1, ALfloat val2, ALint frac)
 }
 static __inline ALfloat lerp32(ALfloat val1, ALfloat val2, ALint frac)
 {
-    return val1 + ((val2-val1)*(frac * (1.0f/(1<<FRACTIONBITS))));
+    val1 += ((val2-val1) * (frac * (1.0/(1<<FRACTIONBITS))));
+    return val1;
 }
 static __inline ALfloat cos_lerp32(ALfloat val1, ALfloat val2, ALint frac)
 {
-    ALfloat mult = (1.0f-cos(frac * (1.0f/(1<<FRACTIONBITS)) * M_PI)) * 0.5f;
-    return val1 + ((val2-val1)*mult);
+    val1 += ((val2-val1) * ((1.0-cos(frac * (1.0/(1<<FRACTIONBITS)) * M_PI)) * 0.5));
+    return val1;
 }
 
 static __inline ALfloat point16(ALfloat val1, ALfloat val2, ALint frac)
@@ -61,13 +62,12 @@ static __inline ALfloat point16(ALfloat val1, ALfloat val2, ALint frac)
 }
 static __inline ALfloat lerp16(ALfloat val1, ALfloat val2, ALint frac)
 {
-    val1 += ((val2-val1)*(frac * (1.0f/(1<<FRACTIONBITS))));
+    val1 += (val2-val1) * (frac * (1.0/(1<<FRACTIONBITS)));
     return val1 / 32767.0f;
 }
 static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 {
-    ALfloat mult = (1.0f-cos(frac * (1.0f/(1<<FRACTIONBITS)) * M_PI)) * 0.5f;
-    val1 += ((val2-val1)*mult);
+    val1 += (val2-val1) * ((1.0-cos(frac * (1.0/(1<<FRACTIONBITS)) * M_PI)) * 0.5);
     return val1 / 32767.0f;
 }
 

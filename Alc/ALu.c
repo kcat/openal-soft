@@ -647,6 +647,223 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 }
 
 
+static __inline ALfloat aluF2F(ALfloat Value)
+{
+    return Value;
+}
+static __inline ALshort aluF2S(ALfloat Value)
+{
+    ALint i;
+
+    if(Value <= -1.0f) i = -32768;
+    else if(Value >= 1.0f) i = 32767;
+    else i = (ALint)(Value*32767.0f);
+
+    return ((ALshort)i);
+}
+static __inline ALubyte aluF2UB(ALfloat Value)
+{
+    ALshort i = aluF2S(Value);
+    return (i>>8)+128;
+}
+
+ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
+{
+    ALuint SamplesToDo;
+    ALeffectslot *ALEffectSlot;
+    ALCcontext **ctx, **ctx_end;
+    ALsource **src, **src_end;
+    int fpuState;
+    ALuint i, j, c;
+    ALsizei e;
+
+#if defined(HAVE_FESETROUND)
+    fpuState = fegetround();
+    fesetround(FE_TOWARDZERO);
+#elif defined(HAVE__CONTROLFP)
+    fpuState = _controlfp(_RC_CHOP, _MCW_RC);
+#else
+    (void)fpuState;
+#endif
+
+    while(size > 0)
+    {
+        /* Setup variables */
+        SamplesToDo = min(size, BUFFERSIZE);
+
+        /* Clear mixing buffer */
+        memset(device->DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
+
+        SuspendContext(NULL);
+        ctx = device->Contexts;
+        ctx_end = ctx + device->NumContexts;
+        while(ctx != ctx_end)
+        {
+            SuspendContext(*ctx);
+
+            src = (*ctx)->ActiveSources;
+            src_end = src + (*ctx)->ActiveSourceCount;
+            while(src != src_end)
+            {
+                if((*src)->state != AL_PLAYING)
+                {
+                    --((*ctx)->ActiveSourceCount);
+                    *src = *(--src_end);
+                    continue;
+                }
+
+                if((*src)->NeedsUpdate)
+                {
+                    ALsource_Update(*src, *ctx);
+                    (*src)->NeedsUpdate = AL_FALSE;
+                }
+
+                ALsource_Mix(*src, device, SamplesToDo);
+                src++;
+            }
+
+            /* effect slot processing */
+            for(e = 0;e < (*ctx)->EffectSlotMap.size;e++)
+            {
+                ALEffectSlot = (*ctx)->EffectSlotMap.array[e].value;
+
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ALEffectSlot->ClickRemoval[0] -= ALEffectSlot->ClickRemoval[0] / 256.0f;
+                    ALEffectSlot->WetBuffer[i] += ALEffectSlot->ClickRemoval[0];
+                }
+                for(i = 0;i < 1;i++)
+                {
+                    ALEffectSlot->ClickRemoval[i] += ALEffectSlot->PendingClicks[i];
+                    ALEffectSlot->PendingClicks[i] = 0.0f;
+                }
+
+                ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot,
+                                 SamplesToDo, ALEffectSlot->WetBuffer,
+                                 device->DryBuffer);
+
+                for(i = 0;i < SamplesToDo;i++)
+                    ALEffectSlot->WetBuffer[i] = 0.0f;
+            }
+
+            ProcessContext(*ctx);
+            ctx++;
+        }
+        device->SamplesPlayed += SamplesToDo;
+        ProcessContext(NULL);
+
+        //Post processing loop
+        for(i = 0;i < SamplesToDo;i++)
+        {
+            for(c = 0;c < OUTPUTCHANNELS;c++)
+            {
+                device->ClickRemoval[c] -= device->ClickRemoval[c] / 256.0f;
+                device->DryBuffer[i][c] += device->ClickRemoval[c];
+            }
+        }
+        for(i = 0;i < OUTPUTCHANNELS;i++)
+        {
+            device->ClickRemoval[i] += device->PendingClicks[i];
+            device->PendingClicks[i] = 0.0f;
+        }
+
+        switch(device->Format)
+        {
+#define DO_WRITE(T, func, N, ...) do {                                        \
+    const Channel chans[] = {                                                 \
+        __VA_ARGS__                                                           \
+    };                                                                        \
+    ALfloat (*DryBuffer)[OUTPUTCHANNELS] = device->DryBuffer;                 \
+    ALfloat (*Matrix)[OUTPUTCHANNELS] = device->ChannelMatrix;                \
+    const ALuint *ChanMap = device->DevChannels;                              \
+                                                                              \
+    for(i = 0;i < SamplesToDo;i++)                                            \
+    {                                                                         \
+        for(j = 0;j < N;j++)                                                  \
+        {                                                                     \
+            ALfloat samp = 0.0f;                                              \
+            for(c = 0;c < OUTPUTCHANNELS;c++)                                 \
+                samp += DryBuffer[i][c] * Matrix[c][chans[j]];                \
+            ((T*)buffer)[ChanMap[chans[j]]] = func(samp);                     \
+        }                                                                     \
+        buffer = ((T*)buffer) + N;                                            \
+    }                                                                         \
+} while(0)
+
+#define CHECK_WRITE_FORMAT(bits, T, func)                                     \
+        case AL_FORMAT_MONO##bits:                                            \
+            DO_WRITE(T, func, 1, FRONT_CENTER);                               \
+            break;                                                            \
+        case AL_FORMAT_STEREO##bits:                                          \
+            if(device->Bs2b)                                                  \
+            {                                                                 \
+                ALfloat (*DryBuffer)[OUTPUTCHANNELS] = device->DryBuffer;     \
+                ALfloat (*Matrix)[OUTPUTCHANNELS] = device->ChannelMatrix;    \
+                const ALuint *ChanMap = device->DevChannels;                  \
+                                                                              \
+                for(i = 0;i < SamplesToDo;i++)                                \
+                {                                                             \
+                    float samples[2] = { 0.0f, 0.0f };                        \
+                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
+                    {                                                         \
+                        samples[0] += DryBuffer[i][c]*Matrix[c][FRONT_LEFT];  \
+                        samples[1] += DryBuffer[i][c]*Matrix[c][FRONT_RIGHT]; \
+                    }                                                         \
+                    bs2b_cross_feed(device->Bs2b, samples);                   \
+                    ((T*)buffer)[ChanMap[FRONT_LEFT]]  = func(samples[0]);    \
+                    ((T*)buffer)[ChanMap[FRONT_RIGHT]] = func(samples[1]);    \
+                    buffer = ((T*)buffer) + 2;                                \
+                }                                                             \
+            }                                                                 \
+            else                                                              \
+                DO_WRITE(T, func, 2, FRONT_LEFT, FRONT_RIGHT);                \
+            break;                                                            \
+        case AL_FORMAT_QUAD##bits:                                            \
+            DO_WRITE(T, func, 4, FRONT_LEFT, FRONT_RIGHT,                     \
+                                 BACK_LEFT,  BACK_RIGHT);                     \
+            break;                                                            \
+        case AL_FORMAT_51CHN##bits:                                           \
+            DO_WRITE(T, func, 6, FRONT_LEFT, FRONT_RIGHT,                     \
+                                 FRONT_CENTER, LFE,                           \
+                                 BACK_LEFT,  BACK_RIGHT);                     \
+            break;                                                            \
+        case AL_FORMAT_61CHN##bits:                                           \
+            DO_WRITE(T, func, 7, FRONT_LEFT, FRONT_RIGHT,                     \
+                                 FRONT_CENTER, LFE, BACK_CENTER,              \
+                                 SIDE_LEFT,  SIDE_RIGHT);                     \
+            break;                                                            \
+        case AL_FORMAT_71CHN##bits:                                           \
+            DO_WRITE(T, func, 8, FRONT_LEFT, FRONT_RIGHT,                     \
+                                 FRONT_CENTER, LFE,                           \
+                                 BACK_LEFT,  BACK_RIGHT,                      \
+                                 SIDE_LEFT,  SIDE_RIGHT);                     \
+            break;
+
+#define AL_FORMAT_MONO32 AL_FORMAT_MONO_FLOAT32
+#define AL_FORMAT_STEREO32 AL_FORMAT_STEREO_FLOAT32
+            CHECK_WRITE_FORMAT(8,  ALubyte, aluF2UB)
+            CHECK_WRITE_FORMAT(16, ALshort, aluF2S)
+            CHECK_WRITE_FORMAT(32, ALfloat, aluF2F)
+#undef AL_FORMAT_STEREO32
+#undef AL_FORMAT_MONO32
+#undef CHECK_WRITE_FORMAT
+#undef DO_WRITE
+
+            default:
+                break;
+        }
+
+        size -= SamplesToDo;
+    }
+
+#if defined(HAVE_FESETROUND)
+    fesetround(fpuState);
+#elif defined(HAVE__CONTROLFP)
+    _controlfp(fpuState, _MCW_RC);
+#endif
+}
+
+
 ALvoid aluHandleDisconnect(ALCdevice *device)
 {
     ALuint i;

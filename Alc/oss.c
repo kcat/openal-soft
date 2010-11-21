@@ -267,8 +267,6 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     device->Frequency = ossSpeed;
     device->UpdateSize = info.fragsize / frameSize;
     device->NumUpdates = info.fragments + 1;
-    device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
-                      device->Frequency;
 
     data->data_size = device->UpdateSize * frameSize;
     data->mix_data = calloc(1, data->data_size);
@@ -465,11 +463,6 @@ static ALCuint oss_available_samples(ALCdevice *pDevice)
     return RingBufferSize(data->ring);
 }
 
-static ALuint64 oss_get_time(ALCdevice *Device)
-{
-    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
-}
-
 
 BackendFuncs oss_funcs = {
     oss_open_playback,
@@ -481,8 +474,7 @@ BackendFuncs oss_funcs = {
     oss_start_capture,
     oss_stop_capture,
     oss_capture_samples,
-    oss_available_samples,
-    oss_get_time
+    oss_available_samples
 };
 
 void alc_oss_init(BackendFuncs *func_list)

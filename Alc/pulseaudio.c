@@ -137,9 +137,6 @@ typedef struct {
 
     pa_threaded_mainloop *loop;
 
-    ALuint64 baseTime;
-    pa_usec_t lastTime;
-
     ALvoid *thread;
     volatile ALboolean killNow;
 
@@ -965,8 +962,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     ppa_stream_set_write_callback(data->stream, stream_write_callback, device);
     ppa_stream_set_underflow_callback(data->stream, stream_signal_callback, device);
 
-    device->TimeRes = 1000;
-
     data->thread = StartThread(PulseProc, device);
     if(!data->thread)
     {
@@ -992,7 +987,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 static void pulse_stop_playback(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
-    pa_usec_t usec = 0;
 
     if(!data->stream)
         return;
@@ -1007,11 +1001,6 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
     data->killNow = AL_FALSE;
 
     ppa_threaded_mainloop_lock(data->loop);
-
-    if(ppa_stream_get_time(data->stream, &usec) != PA_OK)
-        usec = data->lastTime;
-    data->baseTime += usec*1000;
-    data->lastTime = 0;
 
 #if PA_CHECK_VERSION(0,9,15)
     if(ppa_stream_set_buffer_attr_callback)
@@ -1241,21 +1230,6 @@ static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint sa
         alcSetError(device, ALC_INVALID_VALUE);
 } //}}}
 
-static ALuint64 pulse_get_time(ALCdevice *Device) //{{{
-{
-    pulse_data *data = Device->ExtraData;
-    pa_usec_t usec;
-
-    ppa_threaded_mainloop_lock(data->loop);
-    if(!data->stream || ppa_stream_get_time(data->stream, &usec) != PA_OK)
-        usec = data->lastTime;
-    else
-        data->lastTime = usec;
-    ppa_threaded_mainloop_unlock(data->loop);
-
-    return data->baseTime + usec*1000;
-} //}}}
-
 
 BackendFuncs pulse_funcs = { //{{{
     pulse_open_playback,
@@ -1267,8 +1241,7 @@ BackendFuncs pulse_funcs = { //{{{
     pulse_start_capture,
     pulse_stop_capture,
     pulse_capture_samples,
-    pulse_available_samples,
-    pulse_get_time
+    pulse_available_samples
 }; //}}}
 
 void alc_pulse_init(BackendFuncs *func_list) //{{{

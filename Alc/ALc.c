@@ -39,7 +39,7 @@
 #include "alu.h"
 
 
-#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 typedef struct BackendInfo {
     const char *name;
     void (*Init)(BackendFuncs*);
@@ -897,11 +897,6 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     aluInitPanning(device);
 
-    // Scale the number of samples played according to the new sample rate
-    device->SamplesPlayed *= device->Frequency;
-    device->SamplesPlayed += oldRate-1;
-    device->SamplesPlayed /= oldRate;
-
     for(i = 0;i < OUTPUTCHANNELS;i++)
     {
         device->ClickRemoval[i] = 0.0f;
@@ -1514,32 +1509,6 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                 *data = device->Connected;
             break;
 
-        case ALC_GET_TIME_EXT:
-            if(!IsDevice(device))
-                alcSetError(device, ALC_INVALID_DEVICE);
-            else if(size < 2)
-                alcSetError(device, ALC_INVALID_VALUE);
-            else
-            {
-                ALuint64 t = ALCdevice_GetTime(device);
-                t -= t%device->TimeRes;
-                data[0] = t&0xffffffff;
-                data[1] = t>>32;
-            }
-            break;
-
-        case ALC_GET_TIME_RES_EXT:
-            if(!IsDevice(device))
-                alcSetError(device, ALC_INVALID_DEVICE);
-            else if(size < 2)
-                alcSetError(device, ALC_INVALID_VALUE);
-            else
-            {
-                data[0] = device->TimeRes&0xffffffff;
-                data[1] = device->TimeRes>>32;
-            }
-            break;
-
         default:
             alcSetError(device, ALC_INVALID_ENUM);
             break;
@@ -2033,10 +2002,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Contexts = NULL;
     device->NumContexts = 0;
-
-    device->SamplesPlayed = 0;
-
-    device->TimeRes = 1;
 
     InitUIntMap(&device->BufferMap);
     InitUIntMap(&device->EffectMap);

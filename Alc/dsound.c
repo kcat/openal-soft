@@ -462,8 +462,6 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
 
     if(SUCCEEDED(hr))
     {
-        device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
-                          device->Frequency;
         device->Format = format;
         SetDefaultWFXChannelOrder(device);
         pData->thread = StartThread(DSoundProc, device);
@@ -541,11 +539,6 @@ static ALCuint DSoundAvailableSamples(ALCdevice *pDevice)
     return 0;
 }
 
-static ALuint64 DSoundGetTime(ALCdevice *Device)
-{
-    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
-}
-
 
 BackendFuncs DSoundFuncs = {
     DSoundOpenPlayback,
@@ -557,8 +550,7 @@ BackendFuncs DSoundFuncs = {
     DSoundStartCapture,
     DSoundStopCapture,
     DSoundCaptureSamples,
-    DSoundAvailableSamples,
-    DSoundGetTime
+    DSoundAvailableSamples
 };
 
 

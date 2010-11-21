@@ -250,8 +250,6 @@ static ALCboolean pa_reset_playback(ALCdevice *device)
     streamInfo = pPa_GetStreamInfo(data->stream);
     device->Frequency = streamInfo->sampleRate;
     device->UpdateSize = data->update_size;
-    device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
-                      device->Frequency;
 
     err = pPa_StartStream(data->stream);
     if(err != paNoError)
@@ -394,11 +392,6 @@ static ALCuint pa_available_samples(ALCdevice *device)
     return RingBufferSize(data->ring);
 }
 
-static ALuint64 pa_get_time(ALCdevice *Device)
-{
-    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
-}
-
 
 static const BackendFuncs pa_funcs = {
     pa_open_playback,
@@ -410,8 +403,7 @@ static const BackendFuncs pa_funcs = {
     pa_start_capture,
     pa_stop_capture,
     pa_capture_samples,
-    pa_available_samples,
-    pa_get_time
+    pa_available_samples
 };
 
 void alc_pa_init(BackendFuncs *func_list)

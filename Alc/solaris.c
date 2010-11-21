@@ -99,6 +99,7 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
 
     strncpy(driver, GetConfigValue("solaris", "device", "/dev/audio"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
+
     if(!deviceName)
         deviceName = solaris_device;
     else if(strcmp(deviceName, solaris_device) != 0)
@@ -192,8 +193,6 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
 
     device->Frequency = info.play.sample_rate;
     device->UpdateSize = (info.play.buffer_size/device->NumUpdates) + 1;
-    device->TimeRes = (ALuint64)device->UpdateSize * 1000000000 /
-                      device->Frequency;
 
     data->data_size = device->UpdateSize * frameSize;
     data->mix_data = calloc(1, data->data_size);
@@ -267,11 +266,6 @@ static ALCuint solaris_available_samples(ALCdevice *pDevice)
     return 0;
 }
 
-static ALuint64 solaris_get_time(ALCdevice *Device)
-{
-    return Device->SamplesPlayed * 1000000000 / Device->Frequency;
-}
-
 
 BackendFuncs solaris_funcs = {
     solaris_open_playback,
@@ -283,8 +277,7 @@ BackendFuncs solaris_funcs = {
     solaris_start_capture,
     solaris_stop_capture,
     solaris_capture_samples,
-    solaris_available_samples,
-    solaris_get_time
+    solaris_available_samples
 };
 
 void alc_solaris_init(BackendFuncs *func_list)

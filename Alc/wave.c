@@ -35,9 +35,6 @@ typedef struct {
     ALvoid *buffer;
     ALuint size;
 
-    ALuint startTime;
-    ALuint64 baseTime;
-
     volatile int killNow;
     ALvoid *thread;
 } wave_data;
@@ -85,7 +82,7 @@ static ALuint WaveProc(ALvoid *ptr)
     frameSize = aluFrameSizeFromFormat(pDevice->Format);
 
     done = 0;
-    start = data->startTime;
+    start = timeGetTime();
     while(!data->killNow && pDevice->Connected)
     {
         now = timeGetTime();
@@ -284,9 +281,7 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
     }
 
     SetDefaultWFXChannelOrder(device);
-    device->TimeRes = 1000000;
 
-    data->startTime = timeGetTime();
     data->thread = StartThread(WaveProc, device);
     if(data->thread == NULL)
     {
@@ -302,7 +297,6 @@ static void wave_stop_playback(ALCdevice *device)
 {
     wave_data *data = (wave_data*)device->ExtraData;
     ALuint dataLen;
-    ALuint ext;
     long size;
 
     if(!data->thread)
@@ -313,9 +307,6 @@ static void wave_stop_playback(ALCdevice *device)
     data->thread = NULL;
 
     data->killNow = 0;
-
-    ext = timeGetTime() - data->startTime;
-    data->baseTime += (ALuint64)ext * 1000000;
 
     free(data->buffer);
     data->buffer = NULL;
@@ -350,15 +341,6 @@ static ALCboolean wave_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     return ALC_FALSE;
 }
 
-static ALuint64 wave_get_time(ALCdevice *Device)
-{
-    wave_data *data = (wave_data*)Device->ExtraData;
-    ALuint ext = 0;
-    if(data->thread)
-        ext = timeGetTime() - data->startTime;
-    return data->baseTime + ((ALuint64)ext * 1000000);
-}
-
 
 BackendFuncs wave_funcs = {
     wave_open_playback,
@@ -370,8 +352,7 @@ BackendFuncs wave_funcs = {
     NULL,
     NULL,
     NULL,
-    NULL,
-    wave_get_time
+    NULL
 };
 
 void alc_wave_init(BackendFuncs *func_list)

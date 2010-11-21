@@ -84,11 +84,6 @@ AL_API ALvoid AL_APIENTRY alUnmapDatabufferEXT(ALuint uiBuffer);
 #define AL_LOOP_POINTS                           0x2015
 #endif
 
-#ifndef ALC_EXT_device_time
-#define ALC_EXT_device_time 1
-#define ALC_GET_TIME_EXT                        0x314
-#define ALC_GET_TIME_RES_EXT                    0x315
-#endif
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
@@ -279,8 +274,6 @@ typedef struct {
     void (*StopCapture)(ALCdevice*);
     void (*CaptureSamples)(ALCdevice*, void*, ALCuint);
     ALCuint (*AvailableSamples)(ALCdevice*);
-
-    ALuint64 (*GetTime)(ALCdevice*);
 } BackendFuncs;
 
 enum {
@@ -415,12 +408,6 @@ struct ALCdevice_struct
     // Contexts created on this device
     ALCcontext  **Contexts;
     ALuint        NumContexts;
-
-    // Number of samples rendered by this device
-    ALuint64      SamplesPlayed;
-
-    // Precision of this device's timing
-    ALuint64      TimeRes;
 
     BackendFuncs *Funcs;
     void         *ExtraData; // For the backend's use

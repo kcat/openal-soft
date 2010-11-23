@@ -562,6 +562,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     allowmmap = GetConfigValueBool("alsa", "mmap", 1);
     periods = device->NumUpdates;
     periodLen = (ALuint64)device->UpdateSize * 1000000 / device->Frequency;
+    bufferLen = periodLen * periods;
     rate = device->Frequency;
 
     err = NULL;
@@ -572,7 +573,11 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     /* set interleaved access */
     if(i >= 0 && (!allowmmap || (i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED)) < 0))
     {
-        if(periods > 2) periods--;
+        if(periods > 2)
+        {
+            periods--;
+            bufferLen = periodLen * periods;
+        }
         if((i=psnd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
             err = "set access";
     }
@@ -648,7 +653,6 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     if(i >= 0 && (i=psnd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &rate, NULL)) < 0)
         err = "set rate near";
     /* set buffer time (implicitly constrains period/buffer parameters) */
-    bufferLen = periodLen * periods;
     if(i >= 0 && (i=psnd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, p, &bufferLen, NULL)) < 0)
         err = "set buffer time near";
     /* set period time in frame units (implicitly sets buffer size/bytes/time and period size/bytes) */

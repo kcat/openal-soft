@@ -75,8 +75,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 #define DO_MIX_MONO(data,sampler) do {                                        \
     ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
-    ALuint pos = DataPosInt;                                                  \
-    ALuint frac = DataPosFrac;                                                \
+    ALuint pos, frac;                                                         \
     ALfloat DrySend[OUTPUTCHANNELS];                                          \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
@@ -89,6 +88,9 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     DryFilter = &Source->Params.iirFilter;                                    \
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
+                                                                              \
+    pos = DataPosInt;                                                         \
+    frac = DataPosFrac;                                                       \
                                                                               \
     if(j == 0)                                                                \
     {                                                                         \
@@ -221,8 +223,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     const ALfloat scaler = 1.0f/Channels;                                     \
     ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
-    ALuint pos = DataPosInt;                                                  \
-    ALuint frac = DataPosFrac;                                                \
+    ALuint pos, frac;                                                         \
     ALfloat DrySend[OUTPUTCHANNELS];                                          \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
@@ -235,6 +236,9 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     DryFilter = &Source->Params.iirFilter;                                    \
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
+                                                                              \
+    pos = DataPosInt;                                                         \
+    frac = DataPosFrac;                                                       \
                                                                               \
     if(j == 0)                                                                \
     {                                                                         \
@@ -372,8 +376,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     const ALfloat scaler = 1.0f/Channels;                                     \
     ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
-    ALuint pos = DataPosInt;                                                  \
-    ALuint frac = DataPosFrac;                                                \
+    ALuint pos, frac;                                                         \
     ALfloat DrySend[OUTPUTCHANNELS];                                          \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
@@ -386,6 +389,9 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     DryFilter = &Source->Params.iirFilter;                                    \
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
+                                                                              \
+    pos = DataPosInt;                                                         \
+    frac = DataPosFrac;                                                       \
                                                                               \
     if(j == 0)                                                                \
     {                                                                         \

@@ -642,6 +642,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         if(DataPosInt >= DataSize)
             goto skipmix;
 
+        memset(&Data.p8[DataSize*Channels*Bytes], 0, BUFFER_PADDING*Channels*Bytes);
         if(BufferListItem->next)
         {
             ALbuffer *NextBuf = BufferListItem->next->buffer;
@@ -665,8 +666,6 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                        ulExtraSamples);
             }
         }
-        else
-            memset(&Data.p8[DataSize*Channels*Bytes], 0, (BUFFER_PADDING*Channels*Bytes));
 
         /* Figure out how many samples we can mix. */
         increment = Source->Params.Step;

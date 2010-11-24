@@ -1322,7 +1322,11 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
         if(!BufferList)
         {
+            Source->state = AL_STOPPED;
             Source->BuffersPlayed = Source->BuffersInQueue;
+            Source->position = 0;
+            Source->position_fraction = 0;
+            Source->lOffset = 0;
             continue;
         }
 

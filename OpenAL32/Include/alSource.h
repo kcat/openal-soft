@@ -84,17 +84,17 @@ typedef struct ALsource
     // Current target parameters used for mixing
     ALboolean NeedsUpdate;
     struct {
-        ALfloat DryGains[OUTPUTCHANNELS];
-        ALfloat WetGains[MAX_SENDS];
         ALint Step;
 
+        ALfloat DryGains[OUTPUTCHANNELS];
+        FILTER iirFilter;
+        ALfloat history[OUTPUTCHANNELS*2];
+
         struct {
+            ALfloat WetGain;
             FILTER iirFilter;
             ALfloat history[OUTPUTCHANNELS];
         } Send[MAX_SENDS];
-
-        FILTER iirFilter;
-        ALfloat history[OUTPUTCHANNELS*2];
     } Params;
 
     ALvoid (*Update)(struct ALsource *self, const ALCcontext *context);

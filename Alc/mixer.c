@@ -163,11 +163,11 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
            Source->Send[out].Slot->effect.type == AL_EFFECT_NULL)             \
             continue;                                                         \
                                                                               \
-        WetSend = Source->Params.WetGains[out];                               \
         WetBuffer = Source->Send[out].Slot->WetBuffer;                        \
         WetClickRemoval = Source->Send[out].Slot->ClickRemoval;               \
         WetPendingClicks = Source->Send[out].Slot->PendingClicks;             \
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
+        WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \
         pos = DataPosInt;                                                     \
         frac = DataPosFrac;                                                   \
@@ -304,11 +304,11 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
            Source->Send[out].Slot->effect.type == AL_EFFECT_NULL)             \
             continue;                                                         \
                                                                               \
-        WetSend = Source->Params.WetGains[out];                               \
         WetBuffer = Source->Send[out].Slot->WetBuffer;                        \
         WetClickRemoval = Source->Send[out].Slot->ClickRemoval;               \
         WetPendingClicks = Source->Send[out].Slot->PendingClicks;             \
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
+        WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \
         pos = DataPosInt;                                                     \
         frac = DataPosFrac;                                                   \
@@ -453,7 +453,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         WetClickRemoval = Source->Send[out].Slot->ClickRemoval;               \
         WetPendingClicks = Source->Send[out].Slot->PendingClicks;             \
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
-        WetSend = Source->Params.WetGains[out];                               \
+        WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \
         pos = DataPosInt;                                                     \
         frac = DataPosFrac;                                                   \

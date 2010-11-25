@@ -663,6 +663,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
         BufferSize = sizeof(SrcData) - SrcDataSize;
         BufferSize = min(DataSize64, BufferSize);
+        BufferSize -= BufferSize%FrameSize;
 
         if(Source->lSourceType == AL_STATIC)
         {

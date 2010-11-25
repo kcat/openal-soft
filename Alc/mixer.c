@@ -105,6 +105,8 @@ static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
     ALfloat value;                                                            \
                                                                               \
     increment = Source->Params.Step;                                          \
+    data += *DataPosInt;                                                      \
+    DataEnd -= *DataPosInt;                                                   \
                                                                               \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
@@ -113,7 +115,7 @@ static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
                                                                               \
-    pos = *DataPosInt;                                                        \
+    pos = 0;                                                                  \
     frac = *DataPosFrac;                                                      \
                                                                               \
     if(j == 0)                                                                \
@@ -195,7 +197,7 @@ static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
         WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \
-        pos = *DataPosInt;                                                    \
+        pos = 0;                                                              \
         frac = *DataPosFrac;                                                  \
         j -= BufferSize;                                                      \
                                                                               \
@@ -239,7 +241,7 @@ static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
             WetPendingClicks[0] += value*WetSend;                             \
         }                                                                     \
     }                                                                         \
-    *DataPosInt = pos;                                                        \
+    *DataPosInt += pos;                                                       \
     *DataPosFrac = frac;                                                      \
 }
 
@@ -279,6 +281,8 @@ static void MixStereo_##T##_##sampler(ALsource *Source, ALCdevice *Device,    \
     ALfloat value;                                                            \
                                                                               \
     increment = Source->Params.Step;                                          \
+    data += *DataPosInt * Channels;                                           \
+    DataEnd -= *DataPosInt;                                                   \
                                                                               \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
@@ -287,7 +291,7 @@ static void MixStereo_##T##_##sampler(ALsource *Source, ALCdevice *Device,    \
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
                                                                               \
-    pos = *DataPosInt;                                                        \
+    pos = 0;                                                                  \
     frac = *DataPosFrac;                                                      \
                                                                               \
     if(j == 0)                                                                \
@@ -364,7 +368,7 @@ static void MixStereo_##T##_##sampler(ALsource *Source, ALCdevice *Device,    \
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
         WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \
-        pos = *DataPosInt;                                                    \
+        pos = 0;                                                              \
         frac = *DataPosFrac;                                                  \
         j -= BufferSize;                                                      \
                                                                               \
@@ -418,7 +422,7 @@ static void MixStereo_##T##_##sampler(ALsource *Source, ALCdevice *Device,    \
             }                                                                 \
         }                                                                     \
     }                                                                         \
-    *DataPosInt = pos;                                                        \
+    *DataPosInt += pos;                                                       \
     *DataPosFrac = frac;                                                      \
 }
 
@@ -433,7 +437,6 @@ DECL_MIX_STEREO(ALshort, cos_lerp16)
 DECL_MIX_STEREO(ALubyte, point8)
 DECL_MIX_STEREO(ALubyte, lerp8)
 DECL_MIX_STEREO(ALubyte, cos_lerp8)
-
 
 
 #define DECL_MIX_MC(T,chans,sampler)                                          \
@@ -454,6 +457,8 @@ static void MixMC_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,
     ALfloat value;                                                            \
                                                                               \
     increment = Source->Params.Step;                                          \
+    data += *DataPosInt * Channels;                                           \
+    DataEnd -= *DataPosInt;                                                   \
                                                                               \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
@@ -462,7 +467,7 @@ static void MixMC_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
                                                                               \
-    pos = *DataPosInt;                                                        \
+    pos = 0;                                                                  \
     frac = *DataPosFrac;                                                      \
                                                                               \
     if(j == 0)                                                                \
@@ -533,7 +538,7 @@ static void MixMC_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
         WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \
-        pos = *DataPosInt;                                                    \
+        pos = 0;                                                              \
         frac = *DataPosFrac;                                                  \
         j -= BufferSize;                                                      \
                                                                               \
@@ -587,7 +592,7 @@ static void MixMC_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,
             }                                                                 \
         }                                                                     \
     }                                                                         \
-    *DataPosInt = pos;                                                        \
+    *DataPosInt += pos;                                                       \
     *DataPosFrac = frac;                                                      \
 }
 

@@ -287,26 +287,45 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
     {
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO16);
+        case AL_FORMAT_MONO_FLOAT32:
+        case AL_FORMAT_STEREO8:
+        case AL_FORMAT_STEREO16:
+        case AL_FORMAT_STEREO_FLOAT32:
+        case AL_FORMAT_QUAD8:
+        case AL_FORMAT_QUAD16:
+        case AL_FORMAT_QUAD32:
+        case AL_FORMAT_51CHN8:
+        case AL_FORMAT_51CHN16:
+        case AL_FORMAT_51CHN32:
+        case AL_FORMAT_61CHN8:
+        case AL_FORMAT_61CHN16:
+        case AL_FORMAT_61CHN32:
+        case AL_FORMAT_71CHN8:
+        case AL_FORMAT_71CHN16:
+        case AL_FORMAT_71CHN32:
+            err = LoadData(ALBuf, data, size, freq, format, format);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
             break;
-        case AL_FORMAT_MONO_FLOAT32:
+
         case AL_FORMAT_MONO_DOUBLE_EXT:
             err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO_FLOAT32);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
             break;
-
-        case AL_FORMAT_STEREO8:
-        case AL_FORMAT_STEREO16:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO16);
+        case AL_FORMAT_STEREO_DOUBLE_EXT:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO_FLOAT32);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
             break;
-        case AL_FORMAT_STEREO_FLOAT32:
-        case AL_FORMAT_STEREO_DOUBLE_EXT:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO_FLOAT32);
+
+        case AL_FORMAT_QUAD8_LOKI:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD8);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
+        case AL_FORMAT_QUAD16_LOKI:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD16);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
             break;
@@ -317,7 +336,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             ALuint OrigBytes = ((format==AL_FORMAT_REAR8) ? 1 :
                                 ((format==AL_FORMAT_REAR16) ? 2 : 4));
             ALenum NewFormat = ((OrigBytes==4) ? AL_FORMAT_QUAD32 :
-                                                 AL_FORMAT_QUAD16);
+                                ((OrigBytes==2) ? AL_FORMAT_QUAD16 :
+                                                   AL_FORMAT_QUAD8));
             ALuint NewChannels = aluChannelsFromFormat(NewFormat);
             ALuint NewBytes = aluBytesFromFormat(NewFormat);
             ALuint64 newsize, allocsize;
@@ -357,56 +377,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             else
                 alSetError(Context, AL_OUT_OF_MEMORY);
         }   break;
-
-        case AL_FORMAT_QUAD8_LOKI:
-        case AL_FORMAT_QUAD16_LOKI:
-        case AL_FORMAT_QUAD8:
-        case AL_FORMAT_QUAD16:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD16);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-        case AL_FORMAT_QUAD32:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD32);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-
-        case AL_FORMAT_51CHN8:
-        case AL_FORMAT_51CHN16:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_51CHN16);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-        case AL_FORMAT_51CHN32:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_51CHN32);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-
-        case AL_FORMAT_61CHN8:
-        case AL_FORMAT_61CHN16:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_61CHN16);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-        case AL_FORMAT_61CHN32:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_61CHN32);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-
-        case AL_FORMAT_71CHN8:
-        case AL_FORMAT_71CHN16:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_71CHN16);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-        case AL_FORMAT_71CHN32:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_71CHN32);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
 
         case AL_FORMAT_MONO_IMA4:
         case AL_FORMAT_STEREO_IMA4: {
@@ -1094,11 +1064,11 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALvoid *temp;
 
     assert(NewChannels == OrigChannels);
-    assert(NewBytes == 4 || NewBytes == 2);
-    if(NewBytes == 4)
-        assert(OrigBytes == 4 || OrigBytes == 8);
-    else if(NewBytes == 2)
-        assert(OrigBytes == 2 || OrigBytes == 1);
+    assert(NewBytes == 4 || NewBytes == 2 || NewBytes == 1);
+    if(OrigBytes == 8)
+        assert(NewBytes == 4);
+    else
+        assert(NewBytes == OrigBytes);
 
     if((size%(OrigBytes*OrigChannels)) != 0)
         return AL_INVALID_VALUE;
@@ -1133,17 +1103,13 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
 static void ConvertData(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len)
 {
     ALsizei i;
-    ALint smp;
     if(src == NULL)
         return;
     switch(origBytes)
     {
         case 1:
             for(i = 0;i < len;i++)
-            {
-                smp = ((ALubyte*)src)[i] - 128;
-                ((ALshort*)dst)[i] = ((smp < 0) ? (smp*32768/128) : (smp*32767/127));
-            }
+                ((ALubyte*)dst)[i] = ((ALubyte*)src)[i];
             break;
 
         case 2:
@@ -1169,7 +1135,6 @@ static void ConvertData(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei
 static void ConvertDataRear(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len)
 {
     ALsizei i;
-    ALint smp;
     if(src == NULL)
         return;
     switch(origBytes)
@@ -1177,12 +1142,10 @@ static void ConvertDataRear(ALvoid *dst, const ALvoid *src, ALint origBytes, ALs
         case 1:
             for(i = 0;i < len;i+=4)
             {
-                ((ALshort*)dst)[i+0] = 0;
-                ((ALshort*)dst)[i+1] = 0;
-                smp = ((ALubyte*)src)[i/2+0] - 128;
-                ((ALshort*)dst)[i+2] = ((smp < 0) ? (smp*32768/128) : (smp*32767/127));
-                smp = ((ALubyte*)src)[i/2+1] - 128;
-                ((ALshort*)dst)[i+3] = ((smp < 0) ? (smp*32768/128) : (smp*32767/127));
+                ((ALubyte*)dst)[i+0] = 0;
+                ((ALubyte*)dst)[i+1] = 0;
+                ((ALubyte*)dst)[i+2] = ((ALubyte*)src)[i/2+0];
+                ((ALubyte*)dst)[i+3] = ((ALubyte*)src)[i/2+1];
             }
             break;
 

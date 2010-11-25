@@ -71,6 +71,23 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     return val1 / 32767.0f;
 }
 
+static __inline ALfloat point8(ALfloat val1, ALfloat val2, ALint frac)
+{
+    return (val1-128.0f) / 127.0f;
+    (void)val2;
+    (void)frac;
+}
+static __inline ALfloat lerp8(ALfloat val1, ALfloat val2, ALint frac)
+{
+    val1 += (val2-val1) * (frac * (1.0/(1<<FRACTIONBITS)));
+    return (val1-128.0f) / 127.0f;
+}
+static __inline ALfloat cos_lerp8(ALfloat val1, ALfloat val2, ALint frac)
+{
+    val1 += (val2-val1) * ((1.0-cos(frac * (1.0/(1<<FRACTIONBITS)) * M_PI)) * 0.5);
+    return (val1-128.0f) / 127.0f;
+}
+
 
 #define DECL_MIX_MONO(T,sampler)                                              \
 static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
@@ -233,6 +250,10 @@ DECL_MIX_MONO(ALfloat, cos_lerp32)
 DECL_MIX_MONO(ALshort, point16)
 DECL_MIX_MONO(ALshort, lerp16)
 DECL_MIX_MONO(ALshort, cos_lerp16)
+
+DECL_MIX_MONO(ALubyte, point8)
+DECL_MIX_MONO(ALubyte, lerp8)
+DECL_MIX_MONO(ALubyte, cos_lerp8)
 
 
 #define DECL_MIX_STEREO(T,sampler)                                            \
@@ -409,6 +430,10 @@ DECL_MIX_STEREO(ALshort, point16)
 DECL_MIX_STEREO(ALshort, lerp16)
 DECL_MIX_STEREO(ALshort, cos_lerp16)
 
+DECL_MIX_STEREO(ALubyte, point8)
+DECL_MIX_STEREO(ALubyte, lerp8)
+DECL_MIX_STEREO(ALubyte, cos_lerp8)
+
 
 
 #define DECL_MIX_MC(T,chans,sampler)                                          \
@@ -576,6 +601,10 @@ DECL_MIX_MC(ALshort, QuadChans, point16)
 DECL_MIX_MC(ALshort, QuadChans, lerp16)
 DECL_MIX_MC(ALshort, QuadChans, cos_lerp16)
 
+DECL_MIX_MC(ALubyte, QuadChans, point8)
+DECL_MIX_MC(ALubyte, QuadChans, lerp8)
+DECL_MIX_MC(ALubyte, QuadChans, cos_lerp8)
+
 
 static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
@@ -587,6 +616,10 @@ DECL_MIX_MC(ALfloat, X51Chans, cos_lerp32)
 DECL_MIX_MC(ALshort, X51Chans, point16)
 DECL_MIX_MC(ALshort, X51Chans, lerp16)
 DECL_MIX_MC(ALshort, X51Chans, cos_lerp16)
+
+DECL_MIX_MC(ALubyte, X51Chans, point8)
+DECL_MIX_MC(ALubyte, X51Chans, lerp8)
+DECL_MIX_MC(ALubyte, X51Chans, cos_lerp8)
 
 
 static const Channel X61Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
@@ -601,6 +634,10 @@ DECL_MIX_MC(ALshort, X61Chans, point16)
 DECL_MIX_MC(ALshort, X61Chans, lerp16)
 DECL_MIX_MC(ALshort, X61Chans, cos_lerp16)
 
+DECL_MIX_MC(ALubyte, X61Chans, point8)
+DECL_MIX_MC(ALubyte, X61Chans, lerp8)
+DECL_MIX_MC(ALubyte, X61Chans, cos_lerp8)
+
 
 static const Channel X71Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
@@ -613,6 +650,10 @@ DECL_MIX_MC(ALfloat, X71Chans, cos_lerp32)
 DECL_MIX_MC(ALshort, X71Chans, point16)
 DECL_MIX_MC(ALshort, X71Chans, lerp16)
 DECL_MIX_MC(ALshort, X71Chans, cos_lerp16)
+
+DECL_MIX_MC(ALubyte, X71Chans, point8)
+DECL_MIX_MC(ALubyte, X71Chans, lerp8)
+DECL_MIX_MC(ALubyte, X71Chans, cos_lerp8)
 
 
 #define DECL_MIX(T, sampler)                                                  \
@@ -662,6 +703,10 @@ DECL_MIX(ALfloat, cos_lerp32)
 DECL_MIX(ALshort, point16)
 DECL_MIX(ALshort, lerp16)
 DECL_MIX(ALshort, cos_lerp16)
+
+DECL_MIX(ALubyte, point8)
+DECL_MIX(ALubyte, lerp8)
+DECL_MIX(ALubyte, cos_lerp8)
 
 
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
@@ -724,7 +769,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         if(DataPosInt >= DataSize)
             goto skipmix;
 
-        memset(&Data[DataSize*Channels*Bytes], 0, BUFFER_PADDING*Channels*Bytes);
+        memset(&Data[DataSize*Channels*Bytes], (Bytes==1)?0x80:0, BUFFER_PADDING*Channels*Bytes);
         if(BufferListItem->next)
         {
             ALbuffer *NextBuf = BufferListItem->next->buffer;
@@ -771,6 +816,10 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     Mix_ALshort_point16(Source, Device, Channels,
                                         Data, &DataPosInt, &DataPosFrac, LoopEnd,
                                         j, SamplesToDo, BufferSize);
+                else if(Bytes == 1)
+                    Mix_ALubyte_point8(Source, Device, Channels,
+                                       Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                       j, SamplesToDo, BufferSize);
                 break;
             case LINEAR_RESAMPLER:
                 if(Bytes == 4)
@@ -781,6 +830,10 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     Mix_ALshort_lerp16(Source, Device, Channels,
                                        Data, &DataPosInt, &DataPosFrac, LoopEnd,
                                        j, SamplesToDo, BufferSize);
+                else if(Bytes == 1)
+                    Mix_ALubyte_lerp8(Source, Device, Channels,
+                                      Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                      j, SamplesToDo, BufferSize);
                 break;
             case COSINE_RESAMPLER:
                 if(Bytes == 4)
@@ -791,6 +844,10 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     Mix_ALshort_cos_lerp16(Source, Device, Channels,
                                            Data, &DataPosInt, &DataPosFrac, LoopEnd,
                                            j, SamplesToDo, BufferSize);
+                else if(Bytes == 1)
+                    Mix_ALubyte_cos_lerp8(Source, Device, Channels,
+                                          Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                          j, SamplesToDo, BufferSize);
                 break;
             case RESAMPLER_MIN:
             case RESAMPLER_MAX:

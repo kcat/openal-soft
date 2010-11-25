@@ -72,15 +72,22 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
 }
 
 
-#define DO_MIX_MONO(data,sampler) do {                                        \
+#define DECL_MIX_MONO(T,sampler)                                              \
+static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
+  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac, ALuint DataEnd,     \
+  ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
+{                                                                             \
     ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
     ALuint pos, frac;                                                         \
     ALfloat DrySend[OUTPUTCHANNELS];                                          \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
+    ALuint increment;                                                         \
     ALuint i, out;                                                            \
     ALfloat value;                                                            \
+                                                                              \
+    increment = Source->Params.Step;                                          \
                                                                               \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
@@ -89,8 +96,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
                                                                               \
-    pos = DataPosInt;                                                         \
-    frac = DataPosFrac;                                                       \
+    pos = *DataPosInt;                                                        \
+    frac = *DataPosFrac;                                                      \
                                                                               \
     if(j == 0)                                                                \
     {                                                                         \
@@ -131,7 +138,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     {                                                                         \
         ALuint p = pos;                                                       \
         ALuint f = frac;                                                      \
-        if(p >= LoopEnd)                                                      \
+        if(p >= DataEnd)                                                      \
         {                                                                     \
             ALuint64 pos64 = pos;                                             \
             pos64 <<= FRACTIONBITS;                                           \
@@ -171,8 +178,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
         WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \
-        pos = DataPosInt;                                                     \
-        frac = DataPosFrac;                                                   \
+        pos = *DataPosInt;                                                    \
+        frac = *DataPosFrac;                                                  \
         j -= BufferSize;                                                      \
                                                                               \
         if(j == 0)                                                            \
@@ -200,7 +207,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         {                                                                     \
             ALuint p = pos;                                                   \
             ALuint f = frac;                                                  \
-            if(p >= LoopEnd)                                                  \
+            if(p >= DataEnd)                                                  \
             {                                                                 \
                 ALuint64 pos64 = pos;                                         \
                 pos64 <<= FRACTIONBITS;                                       \
@@ -215,11 +222,30 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
             WetPendingClicks[0] += value*WetSend;                             \
         }                                                                     \
     }                                                                         \
-    DataPosInt = pos;                                                         \
-    DataPosFrac = frac;                                                       \
-} while(0)
+    *DataPosInt = pos;                                                        \
+    *DataPosFrac = frac;                                                      \
+}
 
-#define DO_MIX_STEREO(data,sampler) do {                                      \
+DECL_MIX_MONO(ALfloat, point32)
+DECL_MIX_MONO(ALfloat, lerp32)
+DECL_MIX_MONO(ALfloat, cos_lerp32)
+
+DECL_MIX_MONO(ALshort, point16)
+DECL_MIX_MONO(ALshort, lerp16)
+DECL_MIX_MONO(ALshort, cos_lerp16)
+
+
+#define DECL_MIX_STEREO(T,sampler)                                            \
+static void MixStereo_##T##_##sampler(ALsource *Source, ALCdevice *Device,    \
+  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac, ALuint DataEnd,     \
+  ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
+{                                                                             \
+    static const ALuint Channels = 2;                                         \
+    static const Channel chans[] = {                                          \
+        FRONT_LEFT, FRONT_RIGHT,                                              \
+        SIDE_LEFT, SIDE_RIGHT,                                                \
+        BACK_LEFT, BACK_RIGHT                                                 \
+    };                                                                        \
     const ALfloat scaler = 1.0f/Channels;                                     \
     ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
@@ -227,8 +253,11 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     ALfloat DrySend[OUTPUTCHANNELS];                                          \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
+    ALuint increment;                                                         \
     ALuint i, out;                                                            \
     ALfloat value;                                                            \
+                                                                              \
+    increment = Source->Params.Step;                                          \
                                                                               \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
@@ -237,8 +266,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
                                                                               \
-    pos = DataPosInt;                                                         \
-    frac = DataPosFrac;                                                       \
+    pos = *DataPosInt;                                                        \
+    frac = *DataPosFrac;                                                      \
                                                                               \
     if(j == 0)                                                                \
     {                                                                         \
@@ -275,7 +304,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     {                                                                         \
         ALuint p = pos;                                                       \
         ALuint f = frac;                                                      \
-        if(p >= LoopEnd)                                                      \
+        if(p >= DataEnd)                                                      \
         {                                                                     \
             ALuint64 pos64 = pos;                                             \
             pos64 <<= FRACTIONBITS;                                           \
@@ -314,8 +343,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
         WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \
-        pos = DataPosInt;                                                     \
-        frac = DataPosFrac;                                                   \
+        pos = *DataPosInt;                                                    \
+        frac = *DataPosFrac;                                                  \
         j -= BufferSize;                                                      \
                                                                               \
         if(j == 0)                                                            \
@@ -349,7 +378,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         {                                                                     \
             ALuint p = pos;                                                   \
             ALuint f = frac;                                                  \
-            if(p >= LoopEnd)                                                  \
+            if(p >= DataEnd)                                                  \
             {                                                                 \
                 ALuint64 pos64 = pos;                                         \
                 pos64 <<= FRACTIONBITS;                                       \
@@ -368,11 +397,26 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
             }                                                                 \
         }                                                                     \
     }                                                                         \
-    DataPosInt = pos;                                                         \
-    DataPosFrac = frac;                                                       \
-} while(0)
+    *DataPosInt = pos;                                                        \
+    *DataPosFrac = frac;                                                      \
+}
 
-#define DO_MIX_MC(data,sampler) do {                                          \
+DECL_MIX_STEREO(ALfloat, point32)
+DECL_MIX_STEREO(ALfloat, lerp32)
+DECL_MIX_STEREO(ALfloat, cos_lerp32)
+
+DECL_MIX_STEREO(ALshort, point16)
+DECL_MIX_STEREO(ALshort, lerp16)
+DECL_MIX_STEREO(ALshort, cos_lerp16)
+
+
+
+#define DECL_MIX_MC(T,chans,sampler)                                          \
+static void MixMC_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
+  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac, ALuint DataEnd,     \
+  ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
+{                                                                             \
+    static const ALuint Channels = sizeof(chans)/sizeof(chans[0]);            \
     const ALfloat scaler = 1.0f/Channels;                                     \
     ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
@@ -380,8 +424,11 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     ALfloat DrySend[OUTPUTCHANNELS];                                          \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
+    ALuint increment;                                                         \
     ALuint i, out;                                                            \
     ALfloat value;                                                            \
+                                                                              \
+    increment = Source->Params.Step;                                          \
                                                                               \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
@@ -390,8 +437,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
         DrySend[i] = Source->Params.DryGains[i];                              \
                                                                               \
-    pos = DataPosInt;                                                         \
-    frac = DataPosFrac;                                                       \
+    pos = *DataPosInt;                                                        \
+    frac = *DataPosFrac;                                                      \
                                                                               \
     if(j == 0)                                                                \
     {                                                                         \
@@ -424,7 +471,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
     {                                                                         \
         ALuint p = pos;                                                       \
         ALuint f = frac;                                                      \
-        if(p >= LoopEnd)                                                      \
+        if(p >= DataEnd)                                                      \
         {                                                                     \
             ALuint64 pos64 = pos;                                             \
             pos64 <<= FRACTIONBITS;                                           \
@@ -461,8 +508,8 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
         WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \
-        pos = DataPosInt;                                                     \
-        frac = DataPosFrac;                                                   \
+        pos = *DataPosInt;                                                    \
+        frac = *DataPosFrac;                                                  \
         j -= BufferSize;                                                      \
                                                                               \
         if(j == 0)                                                            \
@@ -496,7 +543,7 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
         {                                                                     \
             ALuint p = pos;                                                   \
             ALuint f = frac;                                                  \
-            if(p >= LoopEnd)                                                  \
+            if(p >= DataEnd)                                                  \
             {                                                                 \
                 ALuint64 pos64 = pos;                                         \
                 pos64 <<= FRACTIONBITS;                                       \
@@ -515,73 +562,133 @@ static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
             }                                                                 \
         }                                                                     \
     }                                                                         \
-    DataPosInt = pos;                                                         \
-    DataPosFrac = frac;                                                       \
-} while(0)
+    *DataPosInt = pos;                                                        \
+    *DataPosFrac = frac;                                                      \
+}
+
+static const Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
+                                     BACK_LEFT,  BACK_RIGHT };
+DECL_MIX_MC(ALfloat, QuadChans, point32)
+DECL_MIX_MC(ALfloat, QuadChans, lerp32)
+DECL_MIX_MC(ALfloat, QuadChans, cos_lerp32)
+
+DECL_MIX_MC(ALshort, QuadChans, point16)
+DECL_MIX_MC(ALshort, QuadChans, lerp16)
+DECL_MIX_MC(ALshort, QuadChans, cos_lerp16)
 
 
-#define MIX_MONO(sampler) do {                                                \
-    if(Bytes == 4)                                                            \
-        DO_MIX_MONO(Data.p32,sampler##32);                                    \
-    else if(Bytes == 2)                                                       \
-        DO_MIX_MONO(Data.p16,sampler##16);                                    \
-} while(0)
+static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
+                                    FRONT_CENTER, LFE,
+                                    BACK_LEFT,  BACK_RIGHT };
+DECL_MIX_MC(ALfloat, X51Chans, point32)
+DECL_MIX_MC(ALfloat, X51Chans, lerp32)
+DECL_MIX_MC(ALfloat, X51Chans, cos_lerp32)
 
-#define MIX_STEREO(sampler) do {                                              \
-    const int chans[] = {                                                     \
-        FRONT_LEFT, FRONT_RIGHT,                                              \
-        SIDE_LEFT, SIDE_RIGHT,                                                \
-        BACK_LEFT, BACK_RIGHT                                                 \
-    };                                                                        \
-                                                                              \
-    if(Bytes == 4)                                                            \
-        DO_MIX_STEREO(Data.p32,sampler##32);                                  \
-    else if(Bytes == 2)                                                       \
-        DO_MIX_STEREO(Data.p16,sampler##16);                                  \
-} while(0)
-
-#define MIX_MC(sampler,...) do {                                              \
-    const int chans[] = { __VA_ARGS__ };                                      \
-                                                                              \
-    if(Bytes == 4)                                                            \
-        DO_MIX_MC(Data.p32,sampler##32);                                      \
-    else if(Bytes == 2)                                                       \
-        DO_MIX_MC(Data.p16,sampler##16);                                      \
-} while(0)
+DECL_MIX_MC(ALshort, X51Chans, point16)
+DECL_MIX_MC(ALshort, X51Chans, lerp16)
+DECL_MIX_MC(ALshort, X51Chans, cos_lerp16)
 
 
-#define MIX(sampler) do {                                                     \
+static const Channel X61Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
+                                    FRONT_CENTER, LFE,
+                                    BACK_CENTER,
+                                    SIDE_LEFT,    SIDE_RIGHT };
+DECL_MIX_MC(ALfloat, X61Chans, point32)
+DECL_MIX_MC(ALfloat, X61Chans, lerp32)
+DECL_MIX_MC(ALfloat, X61Chans, cos_lerp32)
+
+DECL_MIX_MC(ALshort, X61Chans, point16)
+DECL_MIX_MC(ALshort, X61Chans, lerp16)
+DECL_MIX_MC(ALshort, X61Chans, cos_lerp16)
+
+
+static const Channel X71Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
+                                    FRONT_CENTER, LFE,
+                                    BACK_LEFT,    BACK_RIGHT,
+                                    SIDE_LEFT,    SIDE_RIGHT };
+DECL_MIX_MC(ALfloat, X71Chans, point32)
+DECL_MIX_MC(ALfloat, X71Chans, lerp32)
+DECL_MIX_MC(ALfloat, X71Chans, cos_lerp32)
+
+DECL_MIX_MC(ALshort, X71Chans, point16)
+DECL_MIX_MC(ALshort, X71Chans, lerp16)
+DECL_MIX_MC(ALshort, X71Chans, cos_lerp16)
+
+
+#define DECL_MIX(sampler)                                                     \
+static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
+  const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac, ALuint DataEnd,\
+  ALuint Channels, ALuint Bytes,                                              \
+  ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
+{                                                                             \
     switch(Channels)                                                          \
     {                                                                         \
     case 1: /* Mono */                                                        \
-        MIX_MONO(sampler);                                                    \
+        if(Bytes == 4)                                                        \
+            MixMono_ALfloat_##sampler##32(Source, Device,                     \
+                            Data, DataPosInt, DataPosFrac, DataEnd,           \
+                            j, SamplesToDo, BufferSize);                      \
+        else if(Bytes == 2)                                                   \
+            MixMono_ALshort_##sampler##16(Source, Device,                     \
+                            Data, DataPosInt, DataPosFrac, DataEnd,           \
+                            j, SamplesToDo, BufferSize);                      \
         break;                                                                \
     case 2: /* Stereo */                                                      \
-        MIX_STEREO(sampler);                                                  \
+        if(Bytes == 4)                                                        \
+            MixStereo_ALfloat_##sampler##32(Source, Device,                   \
+                              Data, DataPosInt, DataPosFrac, DataEnd,         \
+                              j, SamplesToDo, BufferSize);                    \
+        else if(Bytes == 2)                                                   \
+            MixStereo_ALshort_##sampler##16(Source, Device,                   \
+                              Data, DataPosInt, DataPosFrac, DataEnd,         \
+                              j, SamplesToDo, BufferSize);                    \
         break;                                                                \
     case 4: /* Quad */                                                        \
-        MIX_MC(sampler, FRONT_LEFT, FRONT_RIGHT,                              \
-                        BACK_LEFT,  BACK_RIGHT);                              \
+        if(Bytes == 4)                                                        \
+            MixMC_ALfloat_QuadChans_##sampler##32(Source, Device,             \
+                          Data, DataPosInt, DataPosFrac, DataEnd,             \
+                          j, SamplesToDo, BufferSize);                        \
+        else if(Bytes == 2)                                                   \
+            MixMC_ALshort_QuadChans_##sampler##16(Source, Device,             \
+                          Data, DataPosInt, DataPosFrac, DataEnd,             \
+                          j, SamplesToDo, BufferSize);                        \
         break;                                                                \
     case 6: /* 5.1 */                                                         \
-        MIX_MC(sampler, FRONT_LEFT,   FRONT_RIGHT,                            \
-                        FRONT_CENTER, LFE,                                    \
-                        BACK_LEFT,    BACK_RIGHT);                            \
+        if(Bytes == 4)                                                        \
+            MixMC_ALfloat_X51Chans_##sampler##32(Source, Device,              \
+                          Data, DataPosInt, DataPosFrac, DataEnd,             \
+                          j, SamplesToDo, BufferSize);                        \
+        else if(Bytes == 2)                                                   \
+            MixMC_ALshort_X51Chans_##sampler##16(Source, Device,              \
+                          Data, DataPosInt, DataPosFrac, DataEnd,             \
+                          j, SamplesToDo, BufferSize);                        \
         break;                                                                \
     case 7: /* 6.1 */                                                         \
-        MIX_MC(sampler, FRONT_LEFT,   FRONT_RIGHT,                            \
-                        FRONT_CENTER, LFE,                                    \
-                        BACK_CENTER,                                          \
-                        SIDE_LEFT,    SIDE_RIGHT);                            \
+        if(Bytes == 4)                                                        \
+            MixMC_ALfloat_X61Chans_##sampler##32(Source, Device,              \
+                          Data, DataPosInt, DataPosFrac, DataEnd,             \
+                          j, SamplesToDo, BufferSize);                        \
+        else if(Bytes == 2)                                                   \
+            MixMC_ALshort_X61Chans_##sampler##16(Source, Device,              \
+                          Data, DataPosInt, DataPosFrac, DataEnd,             \
+                          j, SamplesToDo, BufferSize);                        \
         break;                                                                \
     case 8: /* 7.1 */                                                         \
-        MIX_MC(sampler, FRONT_LEFT,   FRONT_RIGHT,                            \
-                        FRONT_CENTER, LFE,                                    \
-                        BACK_LEFT,    BACK_RIGHT,                             \
-                        SIDE_LEFT,    SIDE_RIGHT);                            \
+        if(Bytes == 4)                                                        \
+            MixMC_ALfloat_X71Chans_##sampler##32(Source, Device,              \
+                          Data, DataPosInt, DataPosFrac, DataEnd,             \
+                          j, SamplesToDo, BufferSize);                        \
+        else if(Bytes == 2)                                                   \
+            MixMC_ALshort_X71Chans_##sampler##16(Source, Device,              \
+                          Data, DataPosInt, DataPosFrac, DataEnd,             \
+                          j, SamplesToDo, BufferSize);                        \
         break;                                                                \
     }                                                                         \
-} while(0)
+}
+
+DECL_MIX(point)
+DECL_MIX(lerp)
+DECL_MIX(cos_lerp)
 
 
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
@@ -687,15 +794,28 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         switch(Source->Resampler)
         {
             case POINT_RESAMPLER:
-            MIX(point); break;
+                Mix_point(Source, Device,
+                          Data.p8, &DataPosInt, &DataPosFrac, LoopEnd,
+                          Channels, Bytes,
+                          j, SamplesToDo, BufferSize);
+                break;
             case LINEAR_RESAMPLER:
-            MIX(lerp); break;
+                Mix_lerp(Source, Device,
+                         Data.p8, &DataPosInt, &DataPosFrac, LoopEnd,
+                         Channels, Bytes,
+                         j, SamplesToDo, BufferSize);
+                break;
             case COSINE_RESAMPLER:
-            MIX(cos_lerp); break;
+                Mix_cos_lerp(Source, Device,
+                             Data.p8, &DataPosInt, &DataPosFrac, LoopEnd,
+                             Channels, Bytes,
+                             j, SamplesToDo, BufferSize);
+                break;
             case RESAMPLER_MIN:
             case RESAMPLER_MAX:
             break;
         }
+        j += BufferSize;
 
     skipmix:
         /* Handle looping sources */

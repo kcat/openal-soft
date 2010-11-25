@@ -102,10 +102,10 @@ static const ALshort muLawDecompressionTable[256] = {
 };
 
 /*
-*    alGenBuffers(ALsizei n, ALuint *puiBuffers)
-*
-*    Generates n AL Buffers, and stores the Buffers Names in the array pointed to by puiBuffers
-*/
+ *    alGenBuffers(ALsizei n, ALuint *buffers)
+ *
+ *    Generates n AL Buffers, and stores the Buffers Names in the array pointed to by buffers
+ */
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 {
     ALCcontext *Context;
@@ -153,10 +153,10 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 }
 
 /*
-*    alDeleteBuffers(ALsizei n, ALuint *puiBuffers)
-*
-*    Deletes the n AL Buffers pointed to by puiBuffers
-*/
+ *    alDeleteBuffers(ALsizei n, ALuint *buffers)
+ *
+ *    Deletes the n AL Buffers pointed to by buffers
+ */
 AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 {
     ALCcontext *Context;
@@ -183,10 +183,9 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
             if(!buffers[i])
                 continue;
 
-            /* Check for valid Buffer ID (can be NULL buffer) */
+            /* Check for valid Buffer ID */
             if((ALBuf=LookupBuffer(device->BufferMap, buffers[i])) == NULL)
             {
-                // Invalid Buffer
                 alSetError(Context, AL_INVALID_NAME);
                 Failed = AL_TRUE;
                 break;
@@ -225,10 +224,10 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 }
 
 /*
-*    alIsBuffer(ALuint uiBuffer)
-*
-*    Checks if ulBuffer is a valid Buffer Name
-*/
+ *    alIsBuffer(ALuint buffer)
+ *
+ *    Checks if buffer is a valid Buffer Name
+ */
 AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
 {
     ALCcontext *Context;
@@ -246,10 +245,10 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
 }
 
 /*
-*    alBufferData(ALuint buffer,ALenum format,ALvoid *data,ALsizei size,ALsizei freq)
-*
-*    Fill buffer with audio data
-*/
+ *    alBufferData(ALuint buffer,ALenum format,const ALvoid *data,ALsizei size,ALsizei freq)
+ *
+ *    Fill buffer with audio data
+ */
 AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *data,ALsizei size,ALsizei freq)
 {
     ALCcontext *Context;
@@ -278,7 +277,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
-        alSetError(Context, AL_INVALID_NAME); /* Invalid Buffer Name */
+        alSetError(Context, AL_INVALID_NAME);
     else if(size < 0 || freq < 0)
         alSetError(Context, AL_INVALID_VALUE);
     else if(ALBuf->refcount != 0)
@@ -377,9 +376,10 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             ALuint NewBytes = aluBytesFromFormat(NewFormat);
             ALuint64 newsize, allocsize;
 
-            // Here is where things vary:
-            // nVidia and Apple use 64+1 samples per channel per block => block_size=36*chans bytes
-            // Most PC sound software uses 2040+1 samples per channel per block -> block_size=1024*chans bytes
+            /* Here is where things vary:
+             * nVidia and Apple use 64+1 sample frames per block => block_size=36*chans bytes
+             * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024*chans bytes
+             */
             if((size%(36*Channels)) != 0)
             {
                 alSetError(Context, AL_INVALID_VALUE);
@@ -519,10 +519,10 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 }
 
 /*
-*    alBufferSubDataSOFT(ALuint buffer,ALenum format,ALvoid *data,ALsizei offset,ALsizei length)
-*
-*    Fill buffer with audio data
-*/
+ *    alBufferSubDataSOFT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
+ *
+ *    Update buffer's audio data
+ */
 AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
 {
     ALCcontext *Context;
@@ -1041,9 +1041,10 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
  * LoadData
  *
  * Loads the specified data into the buffer, using the specified formats.
- * Currently, the new format must be 32-bit float, and must have the same
- * channel configuration as the original format. This does NOT handle
- * compressed formats (eg. IMA4).
+ * Currently, the new format must have the same channel configuration as the
+ * original format, and must have the same sample format (except for double,
+ * which converts to float). This does NOT handle compressed formats (eg. IMA4
+ * and muLaw).
  */
 static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat)
 {
@@ -1064,7 +1065,6 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     if((size%(OrigBytes*OrigChannels)) != 0)
         return AL_INVALID_VALUE;
 
-    // Allocate extra padding samples
     newsize = size / OrigBytes;
     allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
     if(allocsize > INT_MAX)
@@ -1248,10 +1248,10 @@ static void ConvertDataMULawRear(ALvoid *dst, const ALvoid *src, ALsizei len)
 }
 
 /*
-*    ReleaseALBuffers()
-*
-*    INTERNAL FN : Called by DLLMain on exit to destroy any buffers that still exist
-*/
+ *    ReleaseALBuffers()
+ *
+ *    INTERNAL FN : Called by alcCloseDevice to destroy any buffers that still exist
+ */
 ALvoid ReleaseALBuffers(ALCdevice *device)
 {
     ALsizei i;

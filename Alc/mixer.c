@@ -60,8 +60,7 @@ static __inline ALdouble lerp8(ALdouble val1, ALdouble val2, ALint frac)
 { return (lerp(val1, val2, frac)-128.0) / 127.0; }
 
 
-
-#define DECL_MIX_MONO(T,sampler)                                              \
+#define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
@@ -193,17 +192,19 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
     *DataPosFrac = frac;                                                      \
 }
 
-DECL_MIX_MONO(ALfloat, point)
-DECL_MIX_MONO(ALfloat, lerp)
+DECL_TEMPLATE(ALfloat, point)
+DECL_TEMPLATE(ALfloat, lerp)
 
-DECL_MIX_MONO(ALshort, point16)
-DECL_MIX_MONO(ALshort, lerp16)
+DECL_TEMPLATE(ALshort, point16)
+DECL_TEMPLATE(ALshort, lerp16)
 
-DECL_MIX_MONO(ALubyte, point8)
-DECL_MIX_MONO(ALubyte, lerp8)
+DECL_TEMPLATE(ALubyte, point8)
+DECL_TEMPLATE(ALubyte, lerp8)
+
+#undef DECL_TEMPLATE
 
 
-#define DECL_MIX_STEREO(T,sampler)                                            \
+#define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
@@ -347,17 +348,19 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
     *DataPosFrac = frac;                                                      \
 }
 
-DECL_MIX_STEREO(ALfloat, point)
-DECL_MIX_STEREO(ALfloat, lerp)
+DECL_TEMPLATE(ALfloat, point)
+DECL_TEMPLATE(ALfloat, lerp)
 
-DECL_MIX_STEREO(ALshort, point16)
-DECL_MIX_STEREO(ALshort, lerp16)
+DECL_TEMPLATE(ALshort, point16)
+DECL_TEMPLATE(ALshort, lerp16)
 
-DECL_MIX_STEREO(ALubyte, point8)
-DECL_MIX_STEREO(ALubyte, lerp8)
+DECL_TEMPLATE(ALubyte, point8)
+DECL_TEMPLATE(ALubyte, lerp8)
+
+#undef DECL_TEMPLATE
 
 
-#define DECL_MIX_MC(T,chans,sampler)                                          \
+#define DECL_TEMPLATE(T, chans, sampler)                                      \
 static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
@@ -492,58 +495,60 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
 
 static const Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
                                      BACK_LEFT,  BACK_RIGHT };
-DECL_MIX_MC(ALfloat, QuadChans, point)
-DECL_MIX_MC(ALfloat, QuadChans, lerp)
+DECL_TEMPLATE(ALfloat, QuadChans, point)
+DECL_TEMPLATE(ALfloat, QuadChans, lerp)
 
-DECL_MIX_MC(ALshort, QuadChans, point16)
-DECL_MIX_MC(ALshort, QuadChans, lerp16)
+DECL_TEMPLATE(ALshort, QuadChans, point16)
+DECL_TEMPLATE(ALshort, QuadChans, lerp16)
 
-DECL_MIX_MC(ALubyte, QuadChans, point8)
-DECL_MIX_MC(ALubyte, QuadChans, lerp8)
+DECL_TEMPLATE(ALubyte, QuadChans, point8)
+DECL_TEMPLATE(ALubyte, QuadChans, lerp8)
 
 
 static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_LEFT,  BACK_RIGHT };
-DECL_MIX_MC(ALfloat, X51Chans, point)
-DECL_MIX_MC(ALfloat, X51Chans, lerp)
+DECL_TEMPLATE(ALfloat, X51Chans, point)
+DECL_TEMPLATE(ALfloat, X51Chans, lerp)
 
-DECL_MIX_MC(ALshort, X51Chans, point16)
-DECL_MIX_MC(ALshort, X51Chans, lerp16)
+DECL_TEMPLATE(ALshort, X51Chans, point16)
+DECL_TEMPLATE(ALshort, X51Chans, lerp16)
 
-DECL_MIX_MC(ALubyte, X51Chans, point8)
-DECL_MIX_MC(ALubyte, X51Chans, lerp8)
+DECL_TEMPLATE(ALubyte, X51Chans, point8)
+DECL_TEMPLATE(ALubyte, X51Chans, lerp8)
 
 
 static const Channel X61Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_CENTER,
                                     SIDE_LEFT,    SIDE_RIGHT };
-DECL_MIX_MC(ALfloat, X61Chans, point)
-DECL_MIX_MC(ALfloat, X61Chans, lerp)
+DECL_TEMPLATE(ALfloat, X61Chans, point)
+DECL_TEMPLATE(ALfloat, X61Chans, lerp)
 
-DECL_MIX_MC(ALshort, X61Chans, point16)
-DECL_MIX_MC(ALshort, X61Chans, lerp16)
+DECL_TEMPLATE(ALshort, X61Chans, point16)
+DECL_TEMPLATE(ALshort, X61Chans, lerp16)
 
-DECL_MIX_MC(ALubyte, X61Chans, point8)
-DECL_MIX_MC(ALubyte, X61Chans, lerp8)
+DECL_TEMPLATE(ALubyte, X61Chans, point8)
+DECL_TEMPLATE(ALubyte, X61Chans, lerp8)
 
 
 static const Channel X71Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_LEFT,    BACK_RIGHT,
                                     SIDE_LEFT,    SIDE_RIGHT };
-DECL_MIX_MC(ALfloat, X71Chans, point)
-DECL_MIX_MC(ALfloat, X71Chans, lerp)
+DECL_TEMPLATE(ALfloat, X71Chans, point)
+DECL_TEMPLATE(ALfloat, X71Chans, lerp)
 
-DECL_MIX_MC(ALshort, X71Chans, point16)
-DECL_MIX_MC(ALshort, X71Chans, lerp16)
+DECL_TEMPLATE(ALshort, X71Chans, point16)
+DECL_TEMPLATE(ALshort, X71Chans, lerp16)
 
-DECL_MIX_MC(ALubyte, X71Chans, point8)
-DECL_MIX_MC(ALubyte, X71Chans, lerp8)
+DECL_TEMPLATE(ALubyte, X71Chans, point8)
+DECL_TEMPLATE(ALubyte, X71Chans, lerp8)
+
+#undef DECL_TEMPLATE
 
 
-#define DECL_MIX(T, sampler)                                                  \
+#define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device, ALuint Channels, \
   const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac,                \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
@@ -583,14 +588,16 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device, ALuint Chan
     }                                                                         \
 }
 
-DECL_MIX(ALfloat, point)
-DECL_MIX(ALfloat, lerp)
+DECL_TEMPLATE(ALfloat, point)
+DECL_TEMPLATE(ALfloat, lerp)
 
-DECL_MIX(ALshort, point16)
-DECL_MIX(ALshort, lerp16)
+DECL_TEMPLATE(ALshort, point16)
+DECL_TEMPLATE(ALshort, lerp16)
 
-DECL_MIX(ALubyte, point8)
-DECL_MIX(ALubyte, lerp8)
+DECL_TEMPLATE(ALubyte, point8)
+DECL_TEMPLATE(ALubyte, lerp8)
+
+#undef DECL_TEMPLATE
 
 
 /* Stack data size can be whatever. Larger values need more stack, while

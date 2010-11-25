@@ -615,80 +615,53 @@ DECL_MIX_MC(ALshort, X71Chans, lerp16)
 DECL_MIX_MC(ALshort, X71Chans, cos_lerp16)
 
 
-#define DECL_MIX(sampler)                                                     \
-static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
+#define DECL_MIX(T, sampler)                                                  \
+static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device, ALuint Channels, \
   const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac, ALuint DataEnd,\
-  ALuint Channels, ALuint Bytes,                                              \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
 {                                                                             \
     switch(Channels)                                                          \
     {                                                                         \
     case 1: /* Mono */                                                        \
-        if(Bytes == 4)                                                        \
-            MixMono_ALfloat_##sampler##32(Source, Device,                     \
-                            Data, DataPosInt, DataPosFrac, DataEnd,           \
-                            j, SamplesToDo, BufferSize);                      \
-        else if(Bytes == 2)                                                   \
-            MixMono_ALshort_##sampler##16(Source, Device,                     \
-                            Data, DataPosInt, DataPosFrac, DataEnd,           \
-                            j, SamplesToDo, BufferSize);                      \
+        MixMono_##T##_##sampler(Source, Device,                               \
+                      Data, DataPosInt, DataPosFrac, DataEnd,                 \
+                      j, SamplesToDo, BufferSize);                            \
         break;                                                                \
     case 2: /* Stereo */                                                      \
-        if(Bytes == 4)                                                        \
-            MixStereo_ALfloat_##sampler##32(Source, Device,                   \
-                              Data, DataPosInt, DataPosFrac, DataEnd,         \
-                              j, SamplesToDo, BufferSize);                    \
-        else if(Bytes == 2)                                                   \
-            MixStereo_ALshort_##sampler##16(Source, Device,                   \
-                              Data, DataPosInt, DataPosFrac, DataEnd,         \
-                              j, SamplesToDo, BufferSize);                    \
+        MixStereo_##T##_##sampler(Source, Device,                             \
+                        Data, DataPosInt, DataPosFrac, DataEnd,               \
+                        j, SamplesToDo, BufferSize);                          \
         break;                                                                \
     case 4: /* Quad */                                                        \
-        if(Bytes == 4)                                                        \
-            MixMC_ALfloat_QuadChans_##sampler##32(Source, Device,             \
-                          Data, DataPosInt, DataPosFrac, DataEnd,             \
-                          j, SamplesToDo, BufferSize);                        \
-        else if(Bytes == 2)                                                   \
-            MixMC_ALshort_QuadChans_##sampler##16(Source, Device,             \
-                          Data, DataPosInt, DataPosFrac, DataEnd,             \
-                          j, SamplesToDo, BufferSize);                        \
+        MixMC_##T##_QuadChans_##sampler(Source, Device,                       \
+                    Data, DataPosInt, DataPosFrac, DataEnd,                   \
+                    j, SamplesToDo, BufferSize);                              \
         break;                                                                \
     case 6: /* 5.1 */                                                         \
-        if(Bytes == 4)                                                        \
-            MixMC_ALfloat_X51Chans_##sampler##32(Source, Device,              \
-                          Data, DataPosInt, DataPosFrac, DataEnd,             \
-                          j, SamplesToDo, BufferSize);                        \
-        else if(Bytes == 2)                                                   \
-            MixMC_ALshort_X51Chans_##sampler##16(Source, Device,              \
-                          Data, DataPosInt, DataPosFrac, DataEnd,             \
-                          j, SamplesToDo, BufferSize);                        \
+        MixMC_##T##_X51Chans_##sampler(Source, Device,                        \
+                    Data, DataPosInt, DataPosFrac, DataEnd,                   \
+                    j, SamplesToDo, BufferSize);                              \
         break;                                                                \
     case 7: /* 6.1 */                                                         \
-        if(Bytes == 4)                                                        \
-            MixMC_ALfloat_X61Chans_##sampler##32(Source, Device,              \
-                          Data, DataPosInt, DataPosFrac, DataEnd,             \
-                          j, SamplesToDo, BufferSize);                        \
-        else if(Bytes == 2)                                                   \
-            MixMC_ALshort_X61Chans_##sampler##16(Source, Device,              \
-                          Data, DataPosInt, DataPosFrac, DataEnd,             \
-                          j, SamplesToDo, BufferSize);                        \
+        MixMC_##T##_X61Chans_##sampler(Source, Device,                        \
+                    Data, DataPosInt, DataPosFrac, DataEnd,                   \
+                    j, SamplesToDo, BufferSize);                              \
         break;                                                                \
     case 8: /* 7.1 */                                                         \
-        if(Bytes == 4)                                                        \
-            MixMC_ALfloat_X71Chans_##sampler##32(Source, Device,              \
-                          Data, DataPosInt, DataPosFrac, DataEnd,             \
-                          j, SamplesToDo, BufferSize);                        \
-        else if(Bytes == 2)                                                   \
-            MixMC_ALshort_X71Chans_##sampler##16(Source, Device,              \
-                          Data, DataPosInt, DataPosFrac, DataEnd,             \
-                          j, SamplesToDo, BufferSize);                        \
+        MixMC_##T##_X71Chans_##sampler(Source, Device,                        \
+                    Data, DataPosInt, DataPosFrac, DataEnd,                   \
+                    j, SamplesToDo, BufferSize);                              \
         break;                                                                \
     }                                                                         \
 }
 
-DECL_MIX(point)
-DECL_MIX(lerp)
-DECL_MIX(cos_lerp)
+DECL_MIX(ALfloat, point32)
+DECL_MIX(ALfloat, lerp32)
+DECL_MIX(ALfloat, cos_lerp32)
+
+DECL_MIX(ALshort, point16)
+DECL_MIX(ALshort, lerp16)
+DECL_MIX(ALshort, cos_lerp16)
 
 
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
@@ -790,22 +763,34 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         switch(Source->Resampler)
         {
             case POINT_RESAMPLER:
-                Mix_point(Source, Device,
-                          Data, &DataPosInt, &DataPosFrac, LoopEnd,
-                          Channels, Bytes,
-                          j, SamplesToDo, BufferSize);
+                if(Bytes == 4)
+                    Mix_ALfloat_point32(Source, Device, Channels,
+                                        Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                        j, SamplesToDo, BufferSize);
+                else if(Bytes == 2)
+                    Mix_ALshort_point16(Source, Device, Channels,
+                                        Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                        j, SamplesToDo, BufferSize);
                 break;
             case LINEAR_RESAMPLER:
-                Mix_lerp(Source, Device,
-                         Data, &DataPosInt, &DataPosFrac, LoopEnd,
-                         Channels, Bytes,
-                         j, SamplesToDo, BufferSize);
+                if(Bytes == 4)
+                    Mix_ALfloat_lerp32(Source, Device, Channels,
+                                       Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                       j, SamplesToDo, BufferSize);
+                else if(Bytes == 2)
+                    Mix_ALshort_lerp16(Source, Device, Channels,
+                                       Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                       j, SamplesToDo, BufferSize);
                 break;
             case COSINE_RESAMPLER:
-                Mix_cos_lerp(Source, Device,
-                             Data, &DataPosInt, &DataPosFrac, LoopEnd,
-                             Channels, Bytes,
-                             j, SamplesToDo, BufferSize);
+                if(Bytes == 4)
+                    Mix_ALfloat_cos_lerp32(Source, Device, Channels,
+                                           Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                           j, SamplesToDo, BufferSize);
+                else if(Bytes == 2)
+                    Mix_ALshort_cos_lerp16(Source, Device, Channels,
+                                           Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                           j, SamplesToDo, BufferSize);
                 break;
             case RESAMPLER_MIN:
             case RESAMPLER_MAX:

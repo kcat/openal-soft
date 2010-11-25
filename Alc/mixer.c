@@ -37,56 +37,37 @@
 #include "bs2b.h"
 
 
-static __inline ALfloat point32(ALfloat val1, ALfloat val2, ALint frac)
+static __inline ALdouble point(ALdouble val1, ALdouble val2, ALint frac)
 {
     return val1;
     (void)val2;
     (void)frac;
 }
-static __inline ALfloat lerp32(ALfloat val1, ALfloat val2, ALint frac)
+static __inline ALdouble lerp(ALdouble val1, ALdouble val2, ALint frac)
 {
     val1 += ((val2-val1) * (frac * (1.0/(1<<FRACTIONBITS))));
     return val1;
 }
-static __inline ALfloat cos_lerp32(ALfloat val1, ALfloat val2, ALint frac)
+static __inline ALdouble cos_lerp(ALdouble val1, ALdouble val2, ALint frac)
 {
     val1 += ((val2-val1) * ((1.0-cos(frac * (1.0/(1<<FRACTIONBITS)) * M_PI)) * 0.5));
     return val1;
 }
 
-static __inline ALfloat point16(ALfloat val1, ALfloat val2, ALint frac)
-{
-    return val1 / 32767.0f;
-    (void)val2;
-    (void)frac;
-}
-static __inline ALfloat lerp16(ALfloat val1, ALfloat val2, ALint frac)
-{
-    val1 += (val2-val1) * (frac * (1.0/(1<<FRACTIONBITS)));
-    return val1 / 32767.0f;
-}
-static __inline ALfloat cos_lerp16(ALfloat val1, ALfloat val2, ALint frac)
-{
-    val1 += (val2-val1) * ((1.0-cos(frac * (1.0/(1<<FRACTIONBITS)) * M_PI)) * 0.5);
-    return val1 / 32767.0f;
-}
+static __inline ALdouble point16(ALdouble val1, ALdouble val2, ALint frac)
+{ return point(val1, val2, frac) / 32767.0; }
+static __inline ALdouble lerp16(ALdouble val1, ALdouble val2, ALint frac)
+{ return lerp(val1, val2, frac) / 32767.0; }
+static __inline ALdouble cos_lerp16(ALdouble val1, ALdouble val2, ALint frac)
+{ return cos_lerp(val1, val2, frac) / 32767.0; }
 
-static __inline ALfloat point8(ALfloat val1, ALfloat val2, ALint frac)
-{
-    return (val1-128.0f) / 127.0f;
-    (void)val2;
-    (void)frac;
-}
-static __inline ALfloat lerp8(ALfloat val1, ALfloat val2, ALint frac)
-{
-    val1 += (val2-val1) * (frac * (1.0/(1<<FRACTIONBITS)));
-    return (val1-128.0f) / 127.0f;
-}
-static __inline ALfloat cos_lerp8(ALfloat val1, ALfloat val2, ALint frac)
-{
-    val1 += (val2-val1) * ((1.0-cos(frac * (1.0/(1<<FRACTIONBITS)) * M_PI)) * 0.5);
-    return (val1-128.0f) / 127.0f;
-}
+static __inline ALdouble point8(ALdouble val1, ALdouble val2, ALint frac)
+{ return (point(val1, val2, frac)-128.0) / 127.0; }
+static __inline ALdouble lerp8(ALdouble val1, ALdouble val2, ALint frac)
+{ return (lerp(val1, val2, frac)-128.0) / 127.0; }
+static __inline ALdouble cos_lerp8(ALdouble val1, ALdouble val2, ALint frac)
+{ return (cos_lerp(val1, val2, frac)-128.0) / 127.0; }
+
 
 
 #define DECL_MIX_MONO(T,sampler)                                              \
@@ -221,9 +202,9 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
     *DataPosFrac = frac;                                                      \
 }
 
-DECL_MIX_MONO(ALfloat, point32)
-DECL_MIX_MONO(ALfloat, lerp32)
-DECL_MIX_MONO(ALfloat, cos_lerp32)
+DECL_MIX_MONO(ALfloat, point)
+DECL_MIX_MONO(ALfloat, lerp)
+DECL_MIX_MONO(ALfloat, cos_lerp)
 
 DECL_MIX_MONO(ALshort, point16)
 DECL_MIX_MONO(ALshort, lerp16)
@@ -378,9 +359,9 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
     *DataPosFrac = frac;                                                      \
 }
 
-DECL_MIX_STEREO(ALfloat, point32)
-DECL_MIX_STEREO(ALfloat, lerp32)
-DECL_MIX_STEREO(ALfloat, cos_lerp32)
+DECL_MIX_STEREO(ALfloat, point)
+DECL_MIX_STEREO(ALfloat, lerp)
+DECL_MIX_STEREO(ALfloat, cos_lerp)
 
 DECL_MIX_STEREO(ALshort, point16)
 DECL_MIX_STEREO(ALshort, lerp16)
@@ -526,9 +507,9 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
 
 static const Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
                                      BACK_LEFT,  BACK_RIGHT };
-DECL_MIX_MC(ALfloat, QuadChans, point32)
-DECL_MIX_MC(ALfloat, QuadChans, lerp32)
-DECL_MIX_MC(ALfloat, QuadChans, cos_lerp32)
+DECL_MIX_MC(ALfloat, QuadChans, point)
+DECL_MIX_MC(ALfloat, QuadChans, lerp)
+DECL_MIX_MC(ALfloat, QuadChans, cos_lerp)
 
 DECL_MIX_MC(ALshort, QuadChans, point16)
 DECL_MIX_MC(ALshort, QuadChans, lerp16)
@@ -542,9 +523,9 @@ DECL_MIX_MC(ALubyte, QuadChans, cos_lerp8)
 static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_LEFT,  BACK_RIGHT };
-DECL_MIX_MC(ALfloat, X51Chans, point32)
-DECL_MIX_MC(ALfloat, X51Chans, lerp32)
-DECL_MIX_MC(ALfloat, X51Chans, cos_lerp32)
+DECL_MIX_MC(ALfloat, X51Chans, point)
+DECL_MIX_MC(ALfloat, X51Chans, lerp)
+DECL_MIX_MC(ALfloat, X51Chans, cos_lerp)
 
 DECL_MIX_MC(ALshort, X51Chans, point16)
 DECL_MIX_MC(ALshort, X51Chans, lerp16)
@@ -559,9 +540,9 @@ static const Channel X61Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_CENTER,
                                     SIDE_LEFT,    SIDE_RIGHT };
-DECL_MIX_MC(ALfloat, X61Chans, point32)
-DECL_MIX_MC(ALfloat, X61Chans, lerp32)
-DECL_MIX_MC(ALfloat, X61Chans, cos_lerp32)
+DECL_MIX_MC(ALfloat, X61Chans, point)
+DECL_MIX_MC(ALfloat, X61Chans, lerp)
+DECL_MIX_MC(ALfloat, X61Chans, cos_lerp)
 
 DECL_MIX_MC(ALshort, X61Chans, point16)
 DECL_MIX_MC(ALshort, X61Chans, lerp16)
@@ -576,9 +557,9 @@ static const Channel X71Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_LEFT,    BACK_RIGHT,
                                     SIDE_LEFT,    SIDE_RIGHT };
-DECL_MIX_MC(ALfloat, X71Chans, point32)
-DECL_MIX_MC(ALfloat, X71Chans, lerp32)
-DECL_MIX_MC(ALfloat, X71Chans, cos_lerp32)
+DECL_MIX_MC(ALfloat, X71Chans, point)
+DECL_MIX_MC(ALfloat, X71Chans, lerp)
+DECL_MIX_MC(ALfloat, X71Chans, cos_lerp)
 
 DECL_MIX_MC(ALshort, X71Chans, point16)
 DECL_MIX_MC(ALshort, X71Chans, lerp16)
@@ -629,9 +610,9 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device, ALuint Chan
     }                                                                         \
 }
 
-DECL_MIX(ALfloat, point32)
-DECL_MIX(ALfloat, lerp32)
-DECL_MIX(ALfloat, cos_lerp32)
+DECL_MIX(ALfloat, point)
+DECL_MIX(ALfloat, lerp)
+DECL_MIX(ALfloat, cos_lerp)
 
 DECL_MIX(ALshort, point16)
 DECL_MIX(ALshort, lerp16)
@@ -820,9 +801,9 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         {
             case POINT_RESAMPLER:
                 if(Bytes == 4)
-                    Mix_ALfloat_point32(Source, Device, Channels,
-                                        SrcData, &DataPosInt, &DataPosFrac,
-                                        j, SamplesToDo, BufferSize);
+                    Mix_ALfloat_point(Source, Device, Channels,
+                                      SrcData, &DataPosInt, &DataPosFrac,
+                                      j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_point16(Source, Device, Channels,
                                         SrcData, &DataPosInt, &DataPosFrac,
@@ -834,9 +815,9 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 break;
             case LINEAR_RESAMPLER:
                 if(Bytes == 4)
-                    Mix_ALfloat_lerp32(Source, Device, Channels,
-                                       SrcData, &DataPosInt, &DataPosFrac,
-                                       j, SamplesToDo, BufferSize);
+                    Mix_ALfloat_lerp(Source, Device, Channels,
+                                     SrcData, &DataPosInt, &DataPosFrac,
+                                     j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_lerp16(Source, Device, Channels,
                                        SrcData, &DataPosInt, &DataPosFrac,
@@ -848,9 +829,9 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 break;
             case COSINE_RESAMPLER:
                 if(Bytes == 4)
-                    Mix_ALfloat_cos_lerp32(Source, Device, Channels,
-                                           SrcData, &DataPosInt, &DataPosFrac,
-                                           j, SamplesToDo, BufferSize);
+                    Mix_ALfloat_cos_lerp(Source, Device, Channels,
+                                         SrcData, &DataPosInt, &DataPosFrac,
+                                         j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_cos_lerp16(Source, Device, Channels,
                                            SrcData, &DataPosInt, &DataPosFrac,

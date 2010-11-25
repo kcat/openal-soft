@@ -68,7 +68,7 @@ typedef struct {
     GUID guid;
 } DevMap;
 
-static const ALCchar dsDevice[] = "DirectSound Software";
+static const ALCchar dsDevice[] = "DirectSound Default";
 static DevMap *DeviceList;
 static ALuint NumDevices;
 
@@ -117,6 +117,18 @@ static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname,
 
     (void)data;
     (void)drvname;
+
+    if(NumDevices == 0)
+    {
+        temp = realloc(DeviceList, sizeof(DevMap) * (NumDevices+1));
+        if(temp)
+        {
+            DeviceList = temp;
+            DeviceList[NumDevices].name = strdup(dsDevice);
+            DeviceList[NumDevices].guid = GUID_NULL;
+            NumDevices++;
+        }
+    }
 
     if(!guid)
         return TRUE;
@@ -271,7 +283,8 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         {
             if(strcmp(deviceName, DeviceList[i].name) == 0)
             {
-                guid = &DeviceList[i].guid;
+                if(i > 0)
+                    guid = &DeviceList[i].guid;
                 break;
             }
         }

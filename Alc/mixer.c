@@ -105,8 +105,6 @@ static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
     ALfloat value;                                                            \
                                                                               \
     increment = Source->Params.Step;                                          \
-    data += *DataPosInt;                                                      \
-    DataEnd -= *DataPosInt;                                                   \
                                                                               \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
@@ -281,8 +279,6 @@ static void MixStereo_##T##_##sampler(ALsource *Source, ALCdevice *Device,    \
     ALfloat value;                                                            \
                                                                               \
     increment = Source->Params.Step;                                          \
-    data += *DataPosInt * Channels;                                           \
-    DataEnd -= *DataPosInt;                                                   \
                                                                               \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
@@ -457,8 +453,6 @@ static void MixMC_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,
     ALfloat value;                                                            \
                                                                               \
     increment = Source->Params.Step;                                          \
-    data += *DataPosInt * Channels;                                           \
-    DataEnd -= *DataPosInt;                                                   \
                                                                               \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
@@ -714,11 +708,18 @@ DECL_MIX(ALubyte, lerp8)
 DECL_MIX(ALubyte, cos_lerp8)
 
 
+/* Stack data size can be whatever. Larger values need more stack, while
+ * smaller values may need more iterations */
+#ifndef STACK_DATA_SIZE
+#define STACK_DATA_SIZE  16384
+#endif
+
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
     ALint64 DataSize64,DataPos64;
     ALint increment;
+    ALuint FrameSize, Channels, Bytes;
     ALuint DataPosInt, DataPosFrac;
     ALuint BuffersPlayed;
     ALboolean Looping;
@@ -731,6 +732,23 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     DataPosInt    = Source->position;
     DataPosFrac   = Source->position_fraction;
     Looping       = Source->bLooping;
+    increment     = Source->Params.Step;
+
+    /* Get buffer info */
+    FrameSize = Channels = Bytes = 0;
+    BufferListItem = Source->queue;
+    for(i = 0;i < Source->BuffersInQueue;i++)
+    {
+        const ALbuffer *ALBuffer;
+        if((ALBuffer=BufferListItem->buffer) != NULL)
+        {
+            FrameSize = aluFrameSizeFromFormat(ALBuffer->format);
+            Channels = aluChannelsFromFormat(ALBuffer->format);
+            Bytes = aluBytesFromFormat(ALBuffer->format);
+            break;
+        }
+        BufferListItem = BufferListItem->next;
+    }
 
     /* Get current buffer queue item */
     BufferListItem = Source->queue;
@@ -739,75 +757,119 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
     j = 0;
     do {
-        const ALbuffer *ALBuffer;
-        ALubyte *Data = NULL;
-        ALuint DataSize = 0;
-        ALuint LoopStart = 0;
-        ALuint LoopEnd = 0;
-        ALuint Channels, Bytes;
+        ALubyte SrcData[STACK_DATA_SIZE];
+        ALuint SrcDataSize = 0;
         ALuint BufferSize;
 
-        /* Get buffer info */
-        if((ALBuffer=BufferListItem->buffer) != NULL)
-        {
-            Data      = ALBuffer->data;
-            DataSize  = ALBuffer->size;
-            DataSize /= aluFrameSizeFromFormat(ALBuffer->format);
-            Channels  = aluChannelsFromFormat(ALBuffer->format);
-            Bytes     = aluBytesFromFormat(ALBuffer->format);
+        /* Figure out how many buffer bytes will be needed */
+        DataSize64  = SamplesToDo-j;
+        DataSize64 *= increment;
+        DataSize64 += DataPosFrac+FRACTIONMASK;
+        DataSize64 >>= FRACTIONBITS;
+        DataSize64 += BUFFER_PADDING;
+        DataSize64 *= FrameSize;
 
-            LoopStart = 0;
-            LoopEnd   = DataSize;
-            if(Looping && Source->lSourceType == AL_STATIC)
+        BufferSize = sizeof(SrcData) - SrcDataSize;
+        BufferSize = min(DataSize64, BufferSize);
+
+        if(Source->lSourceType == AL_STATIC)
+        {
+            const ALbuffer *ALBuffer = Source->Buffer;
+            const ALubyte *Data = ALBuffer->data;
+            ALuint DataSize;
+
+            /* If current pos is beyond the loop range, do not loop */
+            if(Looping == AL_FALSE || DataPosInt >= (ALuint)ALBuffer->LoopEnd)
             {
-                /* If current pos is beyond the loop range, do not loop */
-                if(DataPosInt >= LoopEnd)
-                    Looping = AL_FALSE;
-                else
+                Looping = AL_FALSE;
+
+                /* Copy what's left to play in the source buffer, and clear the
+                 * rest of the temp buffer */
+                DataSize = ALBuffer->size - DataPosInt*FrameSize;
+                DataSize = min(BufferSize, DataSize);
+
+                memcpy(&SrcData[SrcDataSize], &Data[DataPosInt*FrameSize], DataSize);
+                SrcDataSize += DataSize;
+                BufferSize -= DataSize;
+
+                memset(&SrcData[SrcDataSize], (Bytes==1)?0x80:0, BufferSize);
+                SrcDataSize += BufferSize;
+                BufferSize -= BufferSize;
+            }
+            else
+            {
+                ALuint LoopStart = ALBuffer->LoopStart;
+                ALuint LoopEnd   = ALBuffer->LoopEnd;
+
+                /* Copy what's left of this loop iteration, then copy repeats
+                 * of the loop section */
+                DataSize = (LoopEnd-DataPosInt) * FrameSize;
+                DataSize = min(BufferSize, DataSize);
+
+                memcpy(&SrcData[SrcDataSize], &Data[DataPosInt*FrameSize], DataSize);
+                SrcDataSize += DataSize;
+                BufferSize -= DataSize;
+
+                DataSize = (LoopEnd-LoopStart) * FrameSize;
+                while(BufferSize > 0)
                 {
-                    LoopStart = ALBuffer->LoopStart;
-                    LoopEnd   = ALBuffer->LoopEnd;
+                    DataSize = min(BufferSize, DataSize);
+
+                    memcpy(&SrcData[SrcDataSize], &Data[LoopStart*FrameSize], DataSize);
+                    SrcDataSize += DataSize;
+                    BufferSize -= DataSize;
+                }
+            }
+        }
+        else
+        {
+            /* Crawl the buffer queue to fill in the temp buffer */
+            ALbufferlistitem *BufferListIter = BufferListItem;
+            ALuint pos = DataPosInt*FrameSize;
+
+            while(BufferListIter && BufferSize > 0)
+            {
+                const ALbuffer *ALBuffer;
+                if((ALBuffer=BufferListIter->buffer) != NULL)
+                {
+                    const ALubyte *Data = ALBuffer->data;
+                    ALuint DataSize = ALBuffer->size;
+
+                    /* Skip the data already played */
+                    if(DataSize <= pos)
+                        pos -= DataSize;
+                    else
+                    {
+                        Data += pos;
+                        DataSize -= pos;
+                        pos -= pos;
+
+                        DataSize = min(BufferSize, DataSize);
+                        memcpy(&SrcData[SrcDataSize], Data, DataSize);
+                        SrcDataSize += DataSize;
+                        BufferSize -= DataSize;
+                    }
+                }
+                BufferListIter = BufferListIter->next;
+                if(!BufferListIter && Looping)
+                    BufferListIter = Source->queue;
+                else if(!BufferListIter)
+                {
+                    memset(&SrcData[SrcDataSize], (Bytes==1)?0x80:0, BufferSize);
+                    SrcDataSize += BufferSize;
+                    BufferSize -= BufferSize;
                 }
             }
         }
 
-        if(DataPosInt >= DataSize)
-            goto skipmix;
-
-        memset(&Data[DataSize*Channels*Bytes], (Bytes==1)?0x80:0, BUFFER_PADDING*Channels*Bytes);
-        if(BufferListItem->next)
-        {
-            ALbuffer *NextBuf = BufferListItem->next->buffer;
-            if(NextBuf && NextBuf->size)
-            {
-                ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
-                ulExtraSamples = min(NextBuf->size, ulExtraSamples);
-                memcpy(&Data[DataSize*Channels*Bytes],
-                       NextBuf->data, ulExtraSamples);
-            }
-        }
-        else if(Looping)
-        {
-            ALbuffer *NextBuf = Source->queue->buffer;
-            if(NextBuf && NextBuf->size)
-            {
-                ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
-                ulExtraSamples = min(NextBuf->size, ulExtraSamples);
-                memcpy(&Data[DataSize*Channels*Bytes],
-                       &((ALubyte*)NextBuf->data)[LoopStart*Channels*Bytes],
-                       ulExtraSamples);
-            }
-        }
-
         /* Figure out how many samples we can mix. */
-        increment = Source->Params.Step;
-        DataSize64 = LoopEnd;
+        SrcDataSize /= FrameSize;
+        SrcDataSize -= BUFFER_PADDING;
+        DataSize64 = SrcDataSize;
         DataSize64 <<= FRACTIONBITS;
-        DataPos64 = DataPosInt;
-        DataPos64 <<= FRACTIONBITS;
-        DataPos64 += DataPosFrac;
-        BufferSize = (ALuint)((DataSize64-DataPos64+(increment-1)) / increment);
+        DataPos64 = DataPosFrac;
 
+        BufferSize = (ALuint)((DataSize64-DataPos64+(increment-1)) / increment);
         BufferSize = min(BufferSize, (SamplesToDo-j));
 
         switch(Source->Resampler)
@@ -815,43 +877,43 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             case POINT_RESAMPLER:
                 if(Bytes == 4)
                     Mix_ALfloat_point32(Source, Device, Channels,
-                                        Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                        SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
                                         j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_point16(Source, Device, Channels,
-                                        Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                        SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
                                         j, SamplesToDo, BufferSize);
                 else if(Bytes == 1)
                     Mix_ALubyte_point8(Source, Device, Channels,
-                                       Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                       SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
                                        j, SamplesToDo, BufferSize);
                 break;
             case LINEAR_RESAMPLER:
                 if(Bytes == 4)
                     Mix_ALfloat_lerp32(Source, Device, Channels,
-                                       Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                       SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
                                        j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_lerp16(Source, Device, Channels,
-                                       Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                       SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
                                        j, SamplesToDo, BufferSize);
                 else if(Bytes == 1)
                     Mix_ALubyte_lerp8(Source, Device, Channels,
-                                      Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                      SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
                                       j, SamplesToDo, BufferSize);
                 break;
             case COSINE_RESAMPLER:
                 if(Bytes == 4)
                     Mix_ALfloat_cos_lerp32(Source, Device, Channels,
-                                           Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                           SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
                                            j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_cos_lerp16(Source, Device, Channels,
-                                           Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                           SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
                                            j, SamplesToDo, BufferSize);
                 else if(Bytes == 1)
                     Mix_ALubyte_cos_lerp8(Source, Device, Channels,
-                                          Data, &DataPosInt, &DataPosFrac, LoopEnd,
+                                          SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
                                           j, SamplesToDo, BufferSize);
                 break;
             case RESAMPLER_MIN:
@@ -860,24 +922,37 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         }
         j += BufferSize;
 
-    skipmix:
         /* Handle looping sources */
-        if(DataPosInt >= LoopEnd)
+        while(1)
         {
+            const ALbuffer *ALBuffer;
+            ALuint DataSize = 0;
+            ALuint LoopStart = 0;
+            ALuint LoopEnd = 0;
+
+            if((ALBuffer=BufferListItem->buffer) != NULL)
+            {
+                DataSize = ALBuffer->size / FrameSize;
+                if(DataSize > DataPosInt)
+                    break;
+                LoopStart = ALBuffer->LoopStart;
+                LoopEnd = ALBuffer->LoopEnd;
+            }
+
             if(BufferListItem->next)
             {
                 BufferListItem = BufferListItem->next;
                 BuffersPlayed++;
-                DataPosInt -= DataSize;
             }
             else if(Looping)
             {
                 BufferListItem = Source->queue;
                 BuffersPlayed = 0;
                 if(Source->lSourceType == AL_STATIC)
+                {
                     DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
-                else
-                    DataPosInt -= DataSize;
+                    break;
+                }
             }
             else
             {
@@ -886,7 +961,10 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 BuffersPlayed = Source->BuffersInQueue;
                 DataPosInt = 0;
                 DataPosFrac = 0;
+                break;
             }
+
+            DataPosInt -= DataSize;
         }
     } while(State == AL_PLAYING && j < SamplesToDo);
 

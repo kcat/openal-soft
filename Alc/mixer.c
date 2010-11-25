@@ -90,7 +90,7 @@ static __inline ALfloat cos_lerp8(ALfloat val1, ALfloat val2, ALint frac)
 
 
 #define DECL_MIX_MONO(T,sampler)                                              \
-static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
+static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
 {                                                                             \
@@ -235,7 +235,7 @@ DECL_MIX_MONO(ALubyte, cos_lerp8)
 
 
 #define DECL_MIX_STEREO(T,sampler)                                            \
-static void MixStereo_##T##_##sampler(ALsource *Source, ALCdevice *Device,    \
+static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
 {                                                                             \
@@ -392,7 +392,7 @@ DECL_MIX_STEREO(ALubyte, cos_lerp8)
 
 
 #define DECL_MIX_MC(T,chans,sampler)                                          \
-static void MixMC_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
+static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
 {                                                                             \
@@ -597,34 +597,34 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device, ALuint Chan
     switch(Channels)                                                          \
     {                                                                         \
     case 1: /* Mono */                                                        \
-        MixMono_##T##_##sampler(Source, Device,                               \
-                                Data, DataPosInt, DataPosFrac,                \
-                                j, SamplesToDo, BufferSize);                  \
+        Mix_##T##_Mono_##sampler(Source, Device,                              \
+                                 Data, DataPosInt, DataPosFrac,               \
+                                 j, SamplesToDo, BufferSize);                 \
         break;                                                                \
     case 2: /* Stereo */                                                      \
-        MixStereo_##T##_##sampler(Source, Device,                             \
-                                  Data, DataPosInt, DataPosFrac,              \
-                                  j, SamplesToDo, BufferSize);                \
+        Mix_##T##_Stereo_##sampler(Source, Device,                            \
+                                   Data, DataPosInt, DataPosFrac,             \
+                                   j, SamplesToDo, BufferSize);               \
         break;                                                                \
     case 4: /* Quad */                                                        \
-        MixMC_##T##_QuadChans_##sampler(Source, Device,                       \
-                                        Data, DataPosInt, DataPosFrac,        \
-                                        j, SamplesToDo, BufferSize);          \
+        Mix_##T##_QuadChans_##sampler(Source, Device,                         \
+                                      Data, DataPosInt, DataPosFrac,          \
+                                      j, SamplesToDo, BufferSize);            \
         break;                                                                \
     case 6: /* 5.1 */                                                         \
-        MixMC_##T##_X51Chans_##sampler(Source, Device,                        \
-                                       Data, DataPosInt, DataPosFrac,         \
-                                       j, SamplesToDo, BufferSize);           \
+        Mix_##T##_X51Chans_##sampler(Source, Device,                          \
+                                     Data, DataPosInt, DataPosFrac,           \
+                                     j, SamplesToDo, BufferSize);             \
         break;                                                                \
     case 7: /* 6.1 */                                                         \
-        MixMC_##T##_X61Chans_##sampler(Source, Device,                        \
-                                       Data, DataPosInt, DataPosFrac,         \
-                                       j, SamplesToDo, BufferSize);           \
+        Mix_##T##_X61Chans_##sampler(Source, Device,                          \
+                                     Data, DataPosInt, DataPosFrac,           \
+                                     j, SamplesToDo, BufferSize);             \
         break;                                                                \
     case 8: /* 7.1 */                                                         \
-        MixMC_##T##_X71Chans_##sampler(Source, Device,                        \
-                                       Data, DataPosInt, DataPosFrac,         \
-                                       j, SamplesToDo, BufferSize);           \
+        Mix_##T##_X71Chans_##sampler(Source, Device,                          \
+                                     Data, DataPosInt, DataPosFrac,           \
+                                     j, SamplesToDo, BufferSize);             \
         break;                                                                \
     }                                                                         \
 }

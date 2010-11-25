@@ -717,11 +717,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     j = 0;
     do {
         const ALbuffer *ALBuffer;
-        union {
-            ALfloat *p32;
-            ALshort *p16;
-            ALubyte *p8;
-        } Data = { NULL };
+        ALubyte *Data = NULL;
         ALuint DataSize = 0;
         ALuint LoopStart = 0;
         ALuint LoopEnd = 0;
@@ -731,7 +727,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         /* Get buffer info */
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
-            Data.p8   = ALBuffer->data;
+            Data      = ALBuffer->data;
             DataSize  = ALBuffer->size;
             DataSize /= aluFrameSizeFromFormat(ALBuffer->format);
             Channels  = aluChannelsFromFormat(ALBuffer->format);
@@ -755,7 +751,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         if(DataPosInt >= DataSize)
             goto skipmix;
 
-        memset(&Data.p8[DataSize*Channels*Bytes], 0, BUFFER_PADDING*Channels*Bytes);
+        memset(&Data[DataSize*Channels*Bytes], 0, BUFFER_PADDING*Channels*Bytes);
         if(BufferListItem->next)
         {
             ALbuffer *NextBuf = BufferListItem->next->buffer;
@@ -763,7 +759,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             {
                 ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
                 ulExtraSamples = min(NextBuf->size, ulExtraSamples);
-                memcpy(&Data.p8[DataSize*Channels*Bytes],
+                memcpy(&Data[DataSize*Channels*Bytes],
                        NextBuf->data, ulExtraSamples);
             }
         }
@@ -774,7 +770,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             {
                 ALint ulExtraSamples = BUFFER_PADDING*Channels*Bytes;
                 ulExtraSamples = min(NextBuf->size, ulExtraSamples);
-                memcpy(&Data.p8[DataSize*Channels*Bytes],
+                memcpy(&Data[DataSize*Channels*Bytes],
                        &((ALubyte*)NextBuf->data)[LoopStart*Channels*Bytes],
                        ulExtraSamples);
             }
@@ -795,19 +791,19 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         {
             case POINT_RESAMPLER:
                 Mix_point(Source, Device,
-                          Data.p8, &DataPosInt, &DataPosFrac, LoopEnd,
+                          Data, &DataPosInt, &DataPosFrac, LoopEnd,
                           Channels, Bytes,
                           j, SamplesToDo, BufferSize);
                 break;
             case LINEAR_RESAMPLER:
                 Mix_lerp(Source, Device,
-                         Data.p8, &DataPosInt, &DataPosFrac, LoopEnd,
+                         Data, &DataPosInt, &DataPosFrac, LoopEnd,
                          Channels, Bytes,
                          j, SamplesToDo, BufferSize);
                 break;
             case COSINE_RESAMPLER:
                 Mix_cos_lerp(Source, Device,
-                             Data.p8, &DataPosInt, &DataPosFrac, LoopEnd,
+                             Data, &DataPosInt, &DataPosFrac, LoopEnd,
                              Channels, Bytes,
                              j, SamplesToDo, BufferSize);
                 break;

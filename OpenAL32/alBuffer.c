@@ -291,6 +291,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
         case AL_FORMAT_STEREO_FLOAT32:
+        case AL_FORMAT_QUAD8_LOKI:
+        case AL_FORMAT_QUAD16_LOKI:
         case AL_FORMAT_QUAD8:
         case AL_FORMAT_QUAD16:
         case AL_FORMAT_QUAD32:
@@ -315,17 +317,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             break;
         case AL_FORMAT_STEREO_DOUBLE_EXT:
             err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO_FLOAT32);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-
-        case AL_FORMAT_QUAD8_LOKI:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD8);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-        case AL_FORMAT_QUAD16_LOKI:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_QUAD16);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
             break;

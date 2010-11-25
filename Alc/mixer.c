@@ -91,7 +91,7 @@ static __inline ALfloat cos_lerp8(ALfloat val1, ALfloat val2, ALint frac)
 
 #define DECL_MIX_MONO(T,sampler)                                              \
 static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
-  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac, ALuint DataEnd,     \
+  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
 {                                                                             \
     ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
@@ -153,18 +153,7 @@ static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
     }                                                                         \
     if(j == SamplesToDo)                                                      \
     {                                                                         \
-        ALuint p = pos;                                                       \
-        ALuint f = frac;                                                      \
-        if(p >= DataEnd)                                                      \
-        {                                                                     \
-            ALuint64 pos64 = pos;                                             \
-            pos64 <<= FRACTIONBITS;                                           \
-            pos64 += frac;                                                    \
-            pos64 -= increment;                                               \
-            p = pos64>>FRACTIONBITS;                                          \
-            f = pos64&FRACTIONMASK;                                           \
-        }                                                                     \
-        value = sampler(data[p], data[p+1], f);                               \
+        value = sampler(data[pos], data[pos+1], frac);                        \
                                                                               \
         value = lpFilter4PC(DryFilter, 0, value);                             \
         PendingClicks[FRONT_LEFT]   += value*DrySend[FRONT_LEFT];             \
@@ -222,18 +211,7 @@ static void MixMono_##T##_##sampler(ALsource *Source, ALCdevice *Device,      \
         }                                                                     \
         if(j == SamplesToDo)                                                  \
         {                                                                     \
-            ALuint p = pos;                                                   \
-            ALuint f = frac;                                                  \
-            if(p >= DataEnd)                                                  \
-            {                                                                 \
-                ALuint64 pos64 = pos;                                         \
-                pos64 <<= FRACTIONBITS;                                       \
-                pos64 += frac;                                                \
-                pos64 -= increment;                                           \
-                p = pos64>>FRACTIONBITS;                                      \
-                f = pos64&FRACTIONMASK;                                       \
-            }                                                                 \
-            value = sampler(data[p], data[p+1], f);                           \
+            value = sampler(data[pos], data[pos+1], frac);                    \
                                                                               \
             value = lpFilter2PC(WetFilter, 0, value);                         \
             WetPendingClicks[0] += value*WetSend;                             \
@@ -258,7 +236,7 @@ DECL_MIX_MONO(ALubyte, cos_lerp8)
 
 #define DECL_MIX_STEREO(T,sampler)                                            \
 static void MixStereo_##T##_##sampler(ALsource *Source, ALCdevice *Device,    \
-  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac, ALuint DataEnd,     \
+  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
 {                                                                             \
     static const ALuint Channels = 2;                                         \
@@ -323,21 +301,10 @@ static void MixStereo_##T##_##sampler(ALsource *Source, ALCdevice *Device,    \
     }                                                                         \
     if(j == SamplesToDo)                                                      \
     {                                                                         \
-        ALuint p = pos;                                                       \
-        ALuint f = frac;                                                      \
-        if(p >= DataEnd)                                                      \
-        {                                                                     \
-            ALuint64 pos64 = pos;                                             \
-            pos64 <<= FRACTIONBITS;                                           \
-            pos64 += frac;                                                    \
-            pos64 -= increment;                                               \
-            p = pos64>>FRACTIONBITS;                                          \
-            f = pos64&FRACTIONMASK;                                           \
-        }                                                                     \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler(data[p*Channels + i],                             \
-                            data[(p+1)*Channels + i], f);                     \
+            value = sampler(data[pos*Channels + i],                           \
+                            data[(pos+1)*Channels + i], frac);                \
                                                                               \
             value = lpFilter2PC(DryFilter, chans[i]*2, value);                \
             PendingClicks[chans[i+0]] += value*DrySend[chans[i+0]];           \
@@ -397,21 +364,10 @@ static void MixStereo_##T##_##sampler(ALsource *Source, ALCdevice *Device,    \
         }                                                                     \
         if(j == SamplesToDo)                                                  \
         {                                                                     \
-            ALuint p = pos;                                                   \
-            ALuint f = frac;                                                  \
-            if(p >= DataEnd)                                                  \
-            {                                                                 \
-                ALuint64 pos64 = pos;                                         \
-                pos64 <<= FRACTIONBITS;                                       \
-                pos64 += frac;                                                \
-                pos64 -= increment;                                           \
-                p = pos64>>FRACTIONBITS;                                      \
-                f = pos64&FRACTIONMASK;                                       \
-            }                                                                 \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
-                value = sampler(data[p*Channels + i],                         \
-                                data[(p+1)*Channels + i], f);                 \
+                value = sampler(data[pos*Channels + i],                       \
+                                data[(pos+1)*Channels + i], frac);            \
                                                                               \
                 value = lpFilter1PC(WetFilter, chans[i], value);              \
                 WetPendingClicks[0] += value*WetSend * scaler;                \
@@ -437,7 +393,7 @@ DECL_MIX_STEREO(ALubyte, cos_lerp8)
 
 #define DECL_MIX_MC(T,chans,sampler)                                          \
 static void MixMC_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
-  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac, ALuint DataEnd,     \
+  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
 {                                                                             \
     static const ALuint Channels = sizeof(chans)/sizeof(chans[0]);            \
@@ -493,21 +449,10 @@ static void MixMC_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,
     }                                                                         \
     if(j == SamplesToDo)                                                      \
     {                                                                         \
-        ALuint p = pos;                                                       \
-        ALuint f = frac;                                                      \
-        if(p >= DataEnd)                                                      \
-        {                                                                     \
-            ALuint64 pos64 = pos;                                             \
-            pos64 <<= FRACTIONBITS;                                           \
-            pos64 += frac;                                                    \
-            pos64 -= increment;                                               \
-            p = pos64>>FRACTIONBITS;                                          \
-            f = pos64&FRACTIONMASK;                                           \
-        }                                                                     \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler(data[p*Channels + i],                             \
-                            data[(p+1)*Channels + i], f);                     \
+            value = sampler(data[pos*Channels + i],                           \
+                            data[(pos+1)*Channels + i], frac);                \
                                                                               \
             value = lpFilter2PC(DryFilter, chans[i]*2, value);                \
             PendingClicks[chans[i]] += value*DrySend[chans[i]];               \
@@ -565,21 +510,10 @@ static void MixMC_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,
         }                                                                     \
         if(j == SamplesToDo)                                                  \
         {                                                                     \
-            ALuint p = pos;                                                   \
-            ALuint f = frac;                                                  \
-            if(p >= DataEnd)                                                  \
-            {                                                                 \
-                ALuint64 pos64 = pos;                                         \
-                pos64 <<= FRACTIONBITS;                                       \
-                pos64 += frac;                                                \
-                pos64 -= increment;                                           \
-                p = pos64>>FRACTIONBITS;                                      \
-                f = pos64&FRACTIONMASK;                                       \
-            }                                                                 \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
-                value = sampler(data[p*Channels + i],                         \
-                                data[(p+1)*Channels + i], f);                 \
+                value = sampler(data[pos*Channels + i],                       \
+                                data[(pos+1)*Channels + i], frac);            \
                                                                               \
                 value = lpFilter1PC(WetFilter, chans[i], value);              \
                 WetPendingClicks[0] += value*WetSend * scaler;                \
@@ -657,40 +591,40 @@ DECL_MIX_MC(ALubyte, X71Chans, cos_lerp8)
 
 #define DECL_MIX(T, sampler)                                                  \
 static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device, ALuint Channels, \
-  const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac, ALuint DataEnd,\
+  const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac,                \
   ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
 {                                                                             \
     switch(Channels)                                                          \
     {                                                                         \
     case 1: /* Mono */                                                        \
         MixMono_##T##_##sampler(Source, Device,                               \
-                      Data, DataPosInt, DataPosFrac, DataEnd,                 \
-                      j, SamplesToDo, BufferSize);                            \
+                                Data, DataPosInt, DataPosFrac,                \
+                                j, SamplesToDo, BufferSize);                  \
         break;                                                                \
     case 2: /* Stereo */                                                      \
         MixStereo_##T##_##sampler(Source, Device,                             \
-                        Data, DataPosInt, DataPosFrac, DataEnd,               \
-                        j, SamplesToDo, BufferSize);                          \
+                                  Data, DataPosInt, DataPosFrac,              \
+                                  j, SamplesToDo, BufferSize);                \
         break;                                                                \
     case 4: /* Quad */                                                        \
         MixMC_##T##_QuadChans_##sampler(Source, Device,                       \
-                    Data, DataPosInt, DataPosFrac, DataEnd,                   \
-                    j, SamplesToDo, BufferSize);                              \
+                                        Data, DataPosInt, DataPosFrac,        \
+                                        j, SamplesToDo, BufferSize);          \
         break;                                                                \
     case 6: /* 5.1 */                                                         \
         MixMC_##T##_X51Chans_##sampler(Source, Device,                        \
-                    Data, DataPosInt, DataPosFrac, DataEnd,                   \
-                    j, SamplesToDo, BufferSize);                              \
+                                       Data, DataPosInt, DataPosFrac,         \
+                                       j, SamplesToDo, BufferSize);           \
         break;                                                                \
     case 7: /* 6.1 */                                                         \
         MixMC_##T##_X61Chans_##sampler(Source, Device,                        \
-                    Data, DataPosInt, DataPosFrac, DataEnd,                   \
-                    j, SamplesToDo, BufferSize);                              \
+                                       Data, DataPosInt, DataPosFrac,         \
+                                       j, SamplesToDo, BufferSize);           \
         break;                                                                \
     case 8: /* 7.1 */                                                         \
         MixMC_##T##_X71Chans_##sampler(Source, Device,                        \
-                    Data, DataPosInt, DataPosFrac, DataEnd,                   \
-                    j, SamplesToDo, BufferSize);                              \
+                                       Data, DataPosInt, DataPosFrac,         \
+                                       j, SamplesToDo, BufferSize);           \
         break;                                                                \
     }                                                                         \
 }
@@ -717,14 +651,14 @@ DECL_MIX(ALubyte, cos_lerp8)
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
-    ALint64 DataSize64,DataPos64;
-    ALint increment;
     ALuint FrameSize, Channels, Bytes;
     ALuint DataPosInt, DataPosFrac;
     ALuint BuffersPlayed;
     ALboolean Looping;
+    ALuint increment;
     ALenum State;
     ALuint i, j;
+    ALint64 DataSize64;
 
     /* Get source info */
     State         = Source->state;
@@ -762,7 +696,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         ALuint BufferSize;
 
         /* Figure out how many buffer bytes will be needed */
-        DataSize64  = SamplesToDo-j;
+        DataSize64  = SamplesToDo-j+1;
         DataSize64 *= increment;
         DataSize64 += DataPosFrac+FRACTIONMASK;
         DataSize64 >>= FRACTIONBITS;
@@ -863,57 +797,67 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         }
 
         /* Figure out how many samples we can mix. */
-        SrcDataSize /= FrameSize;
-        SrcDataSize -= BUFFER_PADDING;
-        DataSize64 = SrcDataSize;
+        DataSize64  = SrcDataSize / FrameSize;
+        DataSize64 -= BUFFER_PADDING;
         DataSize64 <<= FRACTIONBITS;
-        DataPos64 = DataPosFrac;
+        DataSize64 -= increment;
 
-        BufferSize = (ALuint)((DataSize64-DataPos64+(increment-1)) / increment);
+        BufferSize = (ALuint)((DataSize64-DataPosFrac+(increment-1)) / increment);
         BufferSize = min(BufferSize, (SamplesToDo-j));
+        if(BufferSize == 0)
+        {
+            AL_PRINT("No samples to mix! Pitch too high (%u, %g)?\n",
+                     increment, increment/(double)(1<<FRACTIONBITS));
+            State = AL_STOPPED;
+            BufferListItem = Source->queue;
+            BuffersPlayed = Source->BuffersInQueue;
+            DataPosInt = 0;
+            DataPosFrac = 0;
+            break;
+        }
 
         switch(Source->Resampler)
         {
             case POINT_RESAMPLER:
                 if(Bytes == 4)
                     Mix_ALfloat_point32(Source, Device, Channels,
-                                        SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
+                                        SrcData, &DataPosInt, &DataPosFrac,
                                         j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_point16(Source, Device, Channels,
-                                        SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
+                                        SrcData, &DataPosInt, &DataPosFrac,
                                         j, SamplesToDo, BufferSize);
                 else if(Bytes == 1)
                     Mix_ALubyte_point8(Source, Device, Channels,
-                                       SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
+                                       SrcData, &DataPosInt, &DataPosFrac,
                                        j, SamplesToDo, BufferSize);
                 break;
             case LINEAR_RESAMPLER:
                 if(Bytes == 4)
                     Mix_ALfloat_lerp32(Source, Device, Channels,
-                                       SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
+                                       SrcData, &DataPosInt, &DataPosFrac,
                                        j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_lerp16(Source, Device, Channels,
-                                       SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
+                                       SrcData, &DataPosInt, &DataPosFrac,
                                        j, SamplesToDo, BufferSize);
                 else if(Bytes == 1)
                     Mix_ALubyte_lerp8(Source, Device, Channels,
-                                      SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
+                                      SrcData, &DataPosInt, &DataPosFrac,
                                       j, SamplesToDo, BufferSize);
                 break;
             case COSINE_RESAMPLER:
                 if(Bytes == 4)
                     Mix_ALfloat_cos_lerp32(Source, Device, Channels,
-                                           SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
+                                           SrcData, &DataPosInt, &DataPosFrac,
                                            j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_cos_lerp16(Source, Device, Channels,
-                                           SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
+                                           SrcData, &DataPosInt, &DataPosFrac,
                                            j, SamplesToDo, BufferSize);
                 else if(Bytes == 1)
                     Mix_ALubyte_cos_lerp8(Source, Device, Channels,
-                                          SrcData, &DataPosInt, &DataPosFrac, SrcDataSize,
+                                          SrcData, &DataPosInt, &DataPosFrac,
                                           j, SamplesToDo, BufferSize);
                 break;
             case RESAMPLER_MIN:

@@ -855,8 +855,9 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         DataSize64 -= BufferPadding+BufferPrePadding;
         DataSize64 <<= FRACTIONBITS;
         DataSize64 -= increment;
+        DataSize64 -= DataPosFrac;
 
-        BufferSize = (ALuint)((DataSize64-DataPosFrac+(increment-1)) / increment);
+        BufferSize = (ALuint)((DataSize64+(increment-1)) / increment);
         BufferSize = min(BufferSize, (SamplesToDo-OutPos));
         if(BufferSize == 0)
         {

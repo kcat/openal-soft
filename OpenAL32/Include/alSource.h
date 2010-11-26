@@ -14,6 +14,7 @@ extern "C" {
 typedef enum {
     POINT_RESAMPLER = 0,
     LINEAR_RESAMPLER,
+    CUBIC_RESAMPLER,
 
     RESAMPLER_MAX,
     RESAMPLER_MIN = -1,

@@ -64,6 +64,7 @@
 #  Selects the resampler used when mixing sources. Valid values are:
 #  0 - None (nearest sample, no interpolation)
 #  1 - Linear (extrapolates samples using a linear slope between samples)
+#  2 - Cubic (extrapolates samples using a Catmull-Rom spline)
 #  Specifying other values will result in using the default (linear).
 #resampler = 1
 

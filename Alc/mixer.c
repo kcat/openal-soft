@@ -42,21 +42,38 @@ static __inline ALdouble lerp(ALdouble val1, ALdouble val2, ALint frac)
     val1 += ((val2-val1) * (frac * (1.0/(1<<FRACTIONBITS))));
     return val1;
 }
+static __inline ALdouble cubic(ALdouble val0, ALdouble val1, ALdouble val2, ALdouble val3, ALint frac)
+{
+    ALdouble mu  = frac * (1.0/(1<<FRACTIONBITS));
+    ALdouble mu2 = mu*mu;
+    ALdouble a0 = -0.5*val0 +  1.5*val1 + -1.5*val2 +  0.5*val3;
+    ALdouble a1 =      val0 + -2.5*val1 +  2.0*val2 + -0.5*val3;
+    ALdouble a2 = -0.5*val0             +  0.5*val2;
+    ALdouble a3 =                  val1;
 
-static __inline ALdouble point32(const ALfloat *vals, ALuint step, ALint frac)
+    return a0*mu*mu2 + a1*mu2 + a2*mu + a3;
+}
+
+static __inline ALdouble point32(const ALfloat *vals, ALint step, ALint frac)
 { return vals[0]; (void)step; (void)frac; }
-static __inline ALdouble lerp32(const ALfloat *vals, ALuint step, ALint frac)
+static __inline ALdouble lerp32(const ALfloat *vals, ALint step, ALint frac)
 { return lerp(vals[0], vals[step], frac); }
+static __inline ALdouble cubic32(const ALfloat *vals, ALint step, ALint frac)
+{ return cubic(vals[-step], vals[0], vals[step], vals[step+step], frac); }
 
-static __inline ALdouble point16(const ALshort *vals, ALuint step, ALint frac)
+static __inline ALdouble point16(const ALshort *vals, ALint step, ALint frac)
 { return vals[0] / 32767.0; (void)step; (void)frac; }
-static __inline ALdouble lerp16(const ALshort *vals, ALuint step, ALint frac)
+static __inline ALdouble lerp16(const ALshort *vals, ALint step, ALint frac)
 { return lerp(vals[0], vals[step], frac) / 32767.0; }
+static __inline ALdouble cubic16(const ALshort *vals, ALint step, ALint frac)
+{ return cubic(vals[-step], vals[0], vals[step], vals[step+step], frac) / 32767.0; }
 
-static __inline ALdouble point8(const ALubyte *vals, ALuint step, ALint frac)
+static __inline ALdouble point8(const ALubyte *vals, ALint step, ALint frac)
 { return (vals[0]-128.0) / 127.0; (void)step; (void)frac; }
-static __inline ALdouble lerp8(const ALubyte *vals, ALuint step, ALint frac)
+static __inline ALdouble lerp8(const ALubyte *vals, ALint step, ALint frac)
 { return (lerp(vals[0], vals[step], frac)-128.0) / 127.0; }
+static __inline ALdouble cubic8(const ALubyte *vals, ALint step, ALint frac)
+{ return (cubic(vals[-step], vals[0], vals[step], vals[step+step], frac)-128.0) / 127.0; }
 
 
 #define DECL_TEMPLATE(T, sampler)                                             \
@@ -193,12 +210,15 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
 
 DECL_TEMPLATE(ALfloat, point32)
 DECL_TEMPLATE(ALfloat, lerp32)
+DECL_TEMPLATE(ALfloat, cubic32)
 
 DECL_TEMPLATE(ALshort, point16)
 DECL_TEMPLATE(ALshort, lerp16)
+DECL_TEMPLATE(ALshort, cubic16)
 
 DECL_TEMPLATE(ALubyte, point8)
 DECL_TEMPLATE(ALubyte, lerp8)
+DECL_TEMPLATE(ALubyte, cubic8)
 
 #undef DECL_TEMPLATE
 
@@ -343,12 +363,15 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
 
 DECL_TEMPLATE(ALfloat, point32)
 DECL_TEMPLATE(ALfloat, lerp32)
+DECL_TEMPLATE(ALfloat, cubic32)
 
 DECL_TEMPLATE(ALshort, point16)
 DECL_TEMPLATE(ALshort, lerp16)
+DECL_TEMPLATE(ALshort, cubic16)
 
 DECL_TEMPLATE(ALubyte, point8)
 DECL_TEMPLATE(ALubyte, lerp8)
+DECL_TEMPLATE(ALubyte, cubic8)
 
 #undef DECL_TEMPLATE
 
@@ -484,12 +507,15 @@ static const Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
                                      BACK_LEFT,  BACK_RIGHT };
 DECL_TEMPLATE(ALfloat, QuadChans, point32)
 DECL_TEMPLATE(ALfloat, QuadChans, lerp32)
+DECL_TEMPLATE(ALfloat, QuadChans, cubic32)
 
 DECL_TEMPLATE(ALshort, QuadChans, point16)
 DECL_TEMPLATE(ALshort, QuadChans, lerp16)
+DECL_TEMPLATE(ALshort, QuadChans, cubic16)
 
 DECL_TEMPLATE(ALubyte, QuadChans, point8)
 DECL_TEMPLATE(ALubyte, QuadChans, lerp8)
+DECL_TEMPLATE(ALubyte, QuadChans, cubic8)
 
 
 static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
@@ -497,12 +523,15 @@ static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     BACK_LEFT,  BACK_RIGHT };
 DECL_TEMPLATE(ALfloat, X51Chans, point32)
 DECL_TEMPLATE(ALfloat, X51Chans, lerp32)
+DECL_TEMPLATE(ALfloat, X51Chans, cubic32)
 
 DECL_TEMPLATE(ALshort, X51Chans, point16)
 DECL_TEMPLATE(ALshort, X51Chans, lerp16)
+DECL_TEMPLATE(ALshort, X51Chans, cubic16)
 
 DECL_TEMPLATE(ALubyte, X51Chans, point8)
 DECL_TEMPLATE(ALubyte, X51Chans, lerp8)
+DECL_TEMPLATE(ALubyte, X51Chans, cubic8)
 
 
 static const Channel X61Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
@@ -511,12 +540,15 @@ static const Channel X61Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     SIDE_LEFT,    SIDE_RIGHT };
 DECL_TEMPLATE(ALfloat, X61Chans, point32)
 DECL_TEMPLATE(ALfloat, X61Chans, lerp32)
+DECL_TEMPLATE(ALfloat, X61Chans, cubic32)
 
 DECL_TEMPLATE(ALshort, X61Chans, point16)
 DECL_TEMPLATE(ALshort, X61Chans, lerp16)
+DECL_TEMPLATE(ALshort, X61Chans, cubic16)
 
 DECL_TEMPLATE(ALubyte, X61Chans, point8)
 DECL_TEMPLATE(ALubyte, X61Chans, lerp8)
+DECL_TEMPLATE(ALubyte, X61Chans, cubic8)
 
 
 static const Channel X71Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
@@ -525,12 +557,15 @@ static const Channel X71Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     SIDE_LEFT,    SIDE_RIGHT };
 DECL_TEMPLATE(ALfloat, X71Chans, point32)
 DECL_TEMPLATE(ALfloat, X71Chans, lerp32)
+DECL_TEMPLATE(ALfloat, X71Chans, cubic32)
 
 DECL_TEMPLATE(ALshort, X71Chans, point16)
 DECL_TEMPLATE(ALshort, X71Chans, lerp16)
+DECL_TEMPLATE(ALshort, X71Chans, cubic16)
 
 DECL_TEMPLATE(ALubyte, X71Chans, point8)
 DECL_TEMPLATE(ALubyte, X71Chans, lerp8)
+DECL_TEMPLATE(ALubyte, X71Chans, cubic8)
 
 #undef DECL_TEMPLATE
 
@@ -577,12 +612,15 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device, ALuint Chan
 
 DECL_TEMPLATE(ALfloat, point32)
 DECL_TEMPLATE(ALfloat, lerp32)
+DECL_TEMPLATE(ALfloat, cubic32)
 
 DECL_TEMPLATE(ALshort, point16)
 DECL_TEMPLATE(ALshort, lerp16)
+DECL_TEMPLATE(ALshort, cubic16)
 
 DECL_TEMPLATE(ALubyte, point8)
 DECL_TEMPLATE(ALubyte, lerp8)
+DECL_TEMPLATE(ALubyte, cubic8)
 
 #undef DECL_TEMPLATE
 
@@ -869,6 +907,19 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     Mix_ALubyte_lerp8(Source, Device, Channels,
                                       SrcData, &DataPosInt, &DataPosFrac,
                                       j, SamplesToDo, BufferSize);
+            case CUBIC_RESAMPLER:
+                if(Bytes == 4)
+                    Mix_ALfloat_cubic32(Source, Device, Channels,
+                                        SrcData, &DataPosInt, &DataPosFrac,
+                                        j, SamplesToDo, BufferSize);
+                else if(Bytes == 2)
+                    Mix_ALshort_cubic16(Source, Device, Channels,
+                                        SrcData, &DataPosInt, &DataPosFrac,
+                                        j, SamplesToDo, BufferSize);
+                else if(Bytes == 1)
+                    Mix_ALubyte_cubic8(Source, Device, Channels,
+                                       SrcData, &DataPosInt, &DataPosFrac,
+                                       j, SamplesToDo, BufferSize);
                 break;
             case RESAMPLER_MIN:
             case RESAMPLER_MAX:

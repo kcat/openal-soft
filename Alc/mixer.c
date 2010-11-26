@@ -840,7 +840,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         }
 
         SrcData += BUFFER_PREPADDING*FrameSize;
-        switch(Source->Resampler)
+        switch((increment != (1<<FRACTIONBITS)) ? Source->Resampler : POINT_RESAMPLER)
         {
             case POINT_RESAMPLER:
                 if(Bytes == 4)

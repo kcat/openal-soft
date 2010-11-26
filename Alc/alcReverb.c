@@ -700,8 +700,8 @@ static __inline ALfloat EAXModulation(ALverbState *State, ALfloat in)
     // The depth determines the range over which to read the input samples
     // from, so it must be filtered to reduce the distortion caused by even
     // small parameter changes.
-    State->Mod.Filter += (State->Mod.Depth - State->Mod.Filter) *
-                         State->Mod.Coeff;
+    State->Mod.Filter = lerp(State->Mod.Filter, State->Mod.Depth,
+                             State->Mod.Coeff);
 
     // Calculate the read offset and fraction between it and the next sample.
     frac   = (1.0f + (State->Mod.Filter * sinus));
@@ -719,7 +719,7 @@ static __inline ALfloat EAXModulation(ALverbState *State, ALfloat in)
 
     // The output is obtained by linearly interpolating the two samples that
     // were acquired above.
-    return out0 + ((out1 - out0) * frac);
+    return lerp(out0, out1, frac);
 }
 
 // Delay line output routine for early reflections.
@@ -796,9 +796,9 @@ static __inline ALfloat LateDelayLineOut(ALverbState *State, ALuint index)
 // Low-pass filter input/output routine for late reverb.
 static __inline ALfloat LateLowPassInOut(ALverbState *State, ALuint index, ALfloat in)
 {
-    State->Late.LpSample[index] = in +
-        ((State->Late.LpSample[index] - in) * State->Late.LpCoeff[index]);
-    return State->Late.LpSample[index];
+    in = lerp(in, State->Late.LpSample[index], State->Late.LpCoeff[index]);
+    State->Late.LpSample[index] = in;
+    return in;
 }
 
 // Given four decorrelated input samples, this function produces four-channel
@@ -853,10 +853,10 @@ static __inline ALvoid LateReverb(ALverbState *State, ALfloat *in, ALfloat *out)
      * the cyclical delay line coefficients.  Thus only the y coefficient is
      * applied when mixing, and is modified to be:  y / x.
      */
-    f[0] = d[0] + (State->Late.MixCoeff * ( d[1] - d[2] + d[3]));
-    f[1] = d[1] + (State->Late.MixCoeff * (-d[0] + d[2] + d[3]));
-    f[2] = d[2] + (State->Late.MixCoeff * ( d[0] - d[1] + d[3]));
-    f[3] = d[3] + (State->Late.MixCoeff * (-d[0] - d[1] - d[2]));
+    f[0] = d[0] + (State->Late.MixCoeff * (         d[1] + -d[2] + d[3]));
+    f[1] = d[1] + (State->Late.MixCoeff * (-d[0]         +  d[2] + d[3]));
+    f[2] = d[2] + (State->Late.MixCoeff * ( d[0] + -d[1]         + d[3]));
+    f[3] = d[3] + (State->Late.MixCoeff * (-d[0] + -d[1] + -d[2]       ));
 
     // Output the results of the matrix for all four channels, attenuated by
     // the late reverb gain (which is attenuated by the 'x' mix coefficient).
@@ -893,14 +893,14 @@ static __inline ALvoid EAXEcho(ALverbState *State, ALfloat in, ALfloat *late)
     // Mix the energy-attenuated input with the output and pass it through
     // the echo low-pass filter.
     feed += State->Echo.DensityGain * in;
-    feed += ((State->Echo.LpSample - feed) * State->Echo.LpCoeff);
+    feed = lerp(feed, State->Echo.LpSample, State->Echo.LpCoeff);
     State->Echo.LpSample = feed;
 
     // Then the echo all-pass filter.
     feed = AllpassInOut(&State->Echo.ApDelay,
-                       State->Offset - State->Echo.ApOffset,
-                       State->Offset, feed, State->Echo.ApFeedCoeff,
-                       State->Echo.ApCoeff);
+                        State->Offset - State->Echo.ApOffset,
+                        State->Offset, feed, State->Echo.ApFeedCoeff,
+                        State->Echo.ApCoeff);
 
     // Feed the delay with the mixed and filtered sample.
     DelayLineIn(&State->Echo.Delay, State->Offset, feed);

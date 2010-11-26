@@ -182,6 +182,22 @@ static __inline ALint aluCart2LUTpos(ALfloat re, ALfloat im)
     return pos%LUT_NUM;
 }
 
+static __inline ALdouble lerp(ALdouble val1, ALdouble val2, ALdouble mu)
+{
+    val1 += (val2-val1) * mu;
+    return val1;
+}
+static __inline ALdouble cubic(ALdouble val0, ALdouble val1, ALdouble val2, ALdouble val3, ALdouble mu)
+{
+    ALdouble mu2 = mu*mu;
+    ALdouble a0 = -0.5*val0 +  1.5*val1 + -1.5*val2 +  0.5*val3;
+    ALdouble a1 =      val0 + -2.5*val1 +  2.0*val2 + -0.5*val3;
+    ALdouble a2 = -0.5*val0             +  0.5*val2;
+    ALdouble a3 =                  val1;
+
+    return a0*mu*mu2 + a1*mu2 + a2*mu + a3;
+}
+
 struct ALsource;
 
 ALvoid aluInitPanning(ALCdevice *Device);

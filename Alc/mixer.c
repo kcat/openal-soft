@@ -37,43 +37,29 @@
 #include "bs2b.h"
 
 
-static __inline ALdouble lerp(ALdouble val1, ALdouble val2, ALint frac)
-{
-    val1 += ((val2-val1) * (frac * (1.0/(1<<FRACTIONBITS))));
-    return val1;
-}
-static __inline ALdouble cubic(ALdouble val0, ALdouble val1, ALdouble val2, ALdouble val3, ALint frac)
-{
-    ALdouble mu  = frac * (1.0/(1<<FRACTIONBITS));
-    ALdouble mu2 = mu*mu;
-    ALdouble a0 = -0.5*val0 +  1.5*val1 + -1.5*val2 +  0.5*val3;
-    ALdouble a1 =      val0 + -2.5*val1 +  2.0*val2 + -0.5*val3;
-    ALdouble a2 = -0.5*val0             +  0.5*val2;
-    ALdouble a3 =                  val1;
-
-    return a0*mu*mu2 + a1*mu2 + a2*mu + a3;
-}
-
 static __inline ALdouble point32(const ALfloat *vals, ALint step, ALint frac)
 { return vals[0]; (void)step; (void)frac; }
 static __inline ALdouble lerp32(const ALfloat *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac); }
+{ return lerp(vals[0], vals[step], frac * (1.0/(1<<FRACTIONBITS))); }
 static __inline ALdouble cubic32(const ALfloat *vals, ALint step, ALint frac)
-{ return cubic(vals[-step], vals[0], vals[step], vals[step+step], frac); }
+{ return cubic(vals[-step], vals[0], vals[step], vals[step+step],
+               frac * (1.0/(1<<FRACTIONBITS))); }
 
 static __inline ALdouble point16(const ALshort *vals, ALint step, ALint frac)
 { return vals[0] / 32767.0; (void)step; (void)frac; }
 static __inline ALdouble lerp16(const ALshort *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac) / 32767.0; }
+{ return lerp(vals[0], vals[step], frac * (1.0/(1<<FRACTIONBITS))) / 32767.0; }
 static __inline ALdouble cubic16(const ALshort *vals, ALint step, ALint frac)
-{ return cubic(vals[-step], vals[0], vals[step], vals[step+step], frac) / 32767.0; }
+{ return cubic(vals[-step], vals[0], vals[step], vals[step+step],
+               frac * (1.0/(1<<FRACTIONBITS))) / 32767.0; }
 
 static __inline ALdouble point8(const ALubyte *vals, ALint step, ALint frac)
 { return (vals[0]-128.0) / 127.0; (void)step; (void)frac; }
 static __inline ALdouble lerp8(const ALubyte *vals, ALint step, ALint frac)
-{ return (lerp(vals[0], vals[step], frac)-128.0) / 127.0; }
+{ return (lerp(vals[0], vals[step], frac * (1.0/(1<<FRACTIONBITS)))-128.0) / 127.0; }
 static __inline ALdouble cubic8(const ALubyte *vals, ALint step, ALint frac)
-{ return (cubic(vals[-step], vals[0], vals[step], vals[step+step], frac)-128.0) / 127.0; }
+{ return (cubic(vals[-step], vals[0], vals[step], vals[step+step],
+                frac * (1.0/(1<<FRACTIONBITS)))-128.0) / 127.0; }
 
 
 #define DECL_TEMPLATE(T, sampler)                                             \

@@ -626,6 +626,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     ALuint BuffersPlayed;
     ALboolean Looping;
     ALuint increment;
+    resampler_t Resampler;
     ALenum State;
     ALuint i, j;
     ALint64 DataSize64;
@@ -637,6 +638,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     DataPosFrac   = Source->position_fraction;
     Looping       = Source->bLooping;
     increment     = Source->Params.Step;
+    Resampler     = (increment == FRACTIONONE) ? POINT_RESAMPLER :
+                                                 Source->Resampler;
 
     /* Get buffer info */
     FrameSize = Channels = Bytes = 0;
@@ -661,6 +664,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
     j = 0;
     do {
+        const ALuint BufferPrePadding = ResamplerPrePadding[Resampler];
+        const ALuint BufferPadding = ResamplerPadding[Resampler];
         ALubyte StackData[STACK_DATA_SIZE];
         ALubyte *SrcData = StackData;
         ALuint SrcDataSize = 0;
@@ -671,7 +676,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         DataSize64 *= increment;
         DataSize64 += DataPosFrac+FRACTIONMASK;
         DataSize64 >>= FRACTIONBITS;
-        DataSize64 += BUFFER_PADDING+BUFFER_PREPADDING;
+        DataSize64 += BufferPadding+BufferPrePadding;
         DataSize64 *= FrameSize;
 
         BufferSize = min(DataSize64, STACK_DATA_SIZE);
@@ -689,11 +694,11 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             {
                 Looping = AL_FALSE;
 
-                if(DataPosInt >= BUFFER_PREPADDING)
-                    pos = (DataPosInt-BUFFER_PREPADDING)*FrameSize;
+                if(DataPosInt >= BufferPrePadding)
+                    pos = (DataPosInt-BufferPrePadding)*FrameSize;
                 else
                 {
-                    DataSize = (BUFFER_PREPADDING-DataPosInt)*FrameSize;
+                    DataSize = (BufferPrePadding-DataPosInt)*FrameSize;
                     DataSize = min(BufferSize, DataSize);
 
                     memset(&SrcData[SrcDataSize], (Bytes==1)?0x80:0, DataSize);
@@ -724,17 +729,17 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 if(DataPosInt >= LoopStart)
                 {
                     pos = DataPosInt-LoopStart;
-                    while(pos < BUFFER_PREPADDING)
+                    while(pos < BufferPrePadding)
                         pos += LoopEnd-LoopStart;
-                    pos -= BUFFER_PREPADDING;
+                    pos -= BufferPrePadding;
                     pos += LoopStart;
                     pos *= FrameSize;
                 }
-                else if(DataPosInt >= BUFFER_PREPADDING)
-                    pos = (DataPosInt-BUFFER_PREPADDING)*FrameSize;
+                else if(DataPosInt >= BufferPrePadding)
+                    pos = (DataPosInt-BufferPrePadding)*FrameSize;
                 else
                 {
-                    DataSize = (BUFFER_PREPADDING-DataPosInt)*FrameSize;
+                    DataSize = (BufferPrePadding-DataPosInt)*FrameSize;
                     DataSize = min(BufferSize, DataSize);
 
                     memset(&SrcData[SrcDataSize], (Bytes==1)?0x80:0, DataSize);
@@ -770,11 +775,11 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             ALbufferlistitem *BufferListIter = BufferListItem;
             ALuint pos;
 
-            if(DataPosInt >= BUFFER_PREPADDING)
-                pos = (DataPosInt-BUFFER_PREPADDING)*FrameSize;
+            if(DataPosInt >= BufferPrePadding)
+                pos = (DataPosInt-BufferPrePadding)*FrameSize;
             else
             {
-                pos = (BUFFER_PREPADDING-DataPosInt)*FrameSize;
+                pos = (BufferPrePadding-DataPosInt)*FrameSize;
                 while(pos > 0)
                 {
                     if(!BufferListIter->prev && !Looping)
@@ -846,7 +851,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
         /* Figure out how many samples we can mix. */
         DataSize64  = SrcDataSize / FrameSize;
-        DataSize64 -= BUFFER_PADDING+BUFFER_PREPADDING;
+        DataSize64 -= BufferPadding+BufferPrePadding;
         DataSize64 <<= FRACTIONBITS;
         DataSize64 -= increment;
 
@@ -864,8 +869,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             break;
         }
 
-        SrcData += BUFFER_PREPADDING*FrameSize;
-        switch((increment != FRACTIONONE) ? Source->Resampler : POINT_RESAMPLER)
+        SrcData += BufferPrePadding*FrameSize;
+        switch(Resampler)
         {
             case POINT_RESAMPLER:
                 if(Bytes == 4)

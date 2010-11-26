@@ -7,9 +7,6 @@
 extern "C" {
 #endif
 
-#define BUFFER_PADDING 2
-#define BUFFER_PREPADDING 1
-
 typedef struct ALbuffer
 {
     ALvoid  *data;

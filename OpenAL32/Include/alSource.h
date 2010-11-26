@@ -22,6 +22,17 @@ typedef enum {
 } resampler_t;
 extern resampler_t DefaultResampler;
 
+static const ALsizei ResamplerPadding[RESAMPLER_MAX] = {
+    0, /* Point */
+    1, /* Linear */
+    2, /* Cubic */
+};
+static const ALsizei ResamplerPrePadding[RESAMPLER_MAX] = {
+    0, /* Point */
+    0, /* Linear */
+    1, /* Cubic */
+};
+
 typedef struct ALbufferlistitem
 {
     struct ALbuffer         *buffer;

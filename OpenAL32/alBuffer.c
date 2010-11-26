@@ -330,7 +330,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                                                    AL_FORMAT_QUAD8));
             ALuint NewChannels = aluChannelsFromFormat(NewFormat);
             ALuint NewBytes = aluBytesFromFormat(NewFormat);
-            ALuint64 newsize, allocsize;
+            ALuint64 newsize;
 
             if((size%(OrigBytes*2)) != 0)
             {
@@ -340,26 +340,26 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
             newsize = size / OrigBytes;
             newsize *= 2;
+            newsize *= NewBytes;
 
-            allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
-            if(allocsize > INT_MAX)
+            if(newsize > INT_MAX)
             {
                 alSetError(Context, AL_OUT_OF_MEMORY);
                 break;
             }
-            temp = realloc(ALBuf->data, allocsize);
+            temp = realloc(ALBuf->data, newsize);
             if(temp)
             {
                 ALBuf->data = temp;
-                ConvertDataRear(ALBuf->data, data, OrigBytes, newsize);
+                ConvertDataRear(ALBuf->data, data, OrigBytes, newsize/NewBytes);
 
                 ALBuf->format = NewFormat;
                 ALBuf->eOriginalFormat = format;
-                ALBuf->size = newsize*NewBytes;
+                ALBuf->size = newsize;
                 ALBuf->frequency = freq;
 
                 ALBuf->LoopStart = 0;
-                ALBuf->LoopEnd = newsize / NewChannels;
+                ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
                 ALBuf->OriginalSize = size;
                 ALBuf->OriginalAlign = OrigBytes * 2;
@@ -374,7 +374,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO16 :
                                                 AL_FORMAT_STEREO16);
             ALuint NewBytes = aluBytesFromFormat(NewFormat);
-            ALuint64 newsize, allocsize;
+            ALuint64 newsize;
 
             /* Here is where things vary:
              * nVidia and Apple use 64+1 sample frames per block => block_size=36*chans bytes
@@ -388,26 +388,26 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 
             newsize = size / 36;
             newsize *= 65;
+            newsize *= NewBytes;
 
-            allocsize = (BUFFER_PADDING*Channels + newsize)*NewBytes;
-            if(allocsize > INT_MAX)
+            if(newsize > INT_MAX)
             {
                 alSetError(Context, AL_OUT_OF_MEMORY);
                 break;
             }
-            temp = realloc(ALBuf->data, allocsize);
+            temp = realloc(ALBuf->data, newsize);
             if(temp)
             {
                 ALBuf->data = temp;
-                ConvertDataIMA4(ALBuf->data, data, Channels, newsize/(65*Channels));
+                ConvertDataIMA4(ALBuf->data, data, Channels, newsize/(65*Channels*NewBytes));
 
                 ALBuf->format = NewFormat;
                 ALBuf->eOriginalFormat = format;
-                ALBuf->size = newsize*NewBytes;
+                ALBuf->size = newsize;
                 ALBuf->frequency = freq;
 
                 ALBuf->LoopStart = 0;
-                ALBuf->LoopEnd = newsize / Channels;
+                ALBuf->LoopEnd = newsize / Channels / NewBytes;
 
                 ALBuf->OriginalSize = size;
                 ALBuf->OriginalAlign = 36 * Channels;
@@ -434,7 +434,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                                    ((Channels==7) ? AL_FORMAT_61CHN16 :
                                                     AL_FORMAT_71CHN16)))));
             ALuint NewBytes = aluBytesFromFormat(NewFormat);
-            ALuint64 allocsize;
+            ALuint64 newsize;
 
             if((size%(1*Channels)) != 0)
             {
@@ -442,25 +442,25 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 break;
             }
 
-            allocsize = (BUFFER_PADDING*Channels + size)*NewBytes;
-            if(allocsize > INT_MAX)
+            newsize = size * NewBytes;
+            if(newsize > INT_MAX)
             {
                 alSetError(Context, AL_OUT_OF_MEMORY);
                 break;
             }
-            temp = realloc(ALBuf->data, allocsize);
+            temp = realloc(ALBuf->data, newsize);
             if(temp)
             {
                 ALBuf->data = temp;
-                ConvertDataMULaw(ALBuf->data, data, size);
+                ConvertDataMULaw(ALBuf->data, data, newsize/NewBytes);
 
                 ALBuf->format = NewFormat;
                 ALBuf->eOriginalFormat = format;
-                ALBuf->size = size*NewBytes;
+                ALBuf->size = newsize;
                 ALBuf->frequency = freq;
 
                 ALBuf->LoopStart = 0;
-                ALBuf->LoopEnd = size / Channels;
+                ALBuf->LoopEnd = newsize / Channels / NewBytes;
 
                 ALBuf->OriginalSize = size;
                 ALBuf->OriginalAlign = 1 * Channels;
@@ -473,7 +473,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             ALenum NewFormat = AL_FORMAT_QUAD32;
             ALuint NewChannels = aluChannelsFromFormat(NewFormat);
             ALuint NewBytes = aluBytesFromFormat(NewFormat);
-            ALuint64 newsize, allocsize;
+            ALuint64 newsize;
 
             if((size%(1*2)) != 0)
             {
@@ -482,26 +482,26 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             }
 
             newsize = size * 2;
+            newsize *= NewBytes;
 
-            allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
-            if(allocsize > INT_MAX)
+            if(newsize > INT_MAX)
             {
                 alSetError(Context, AL_OUT_OF_MEMORY);
                 break;
             }
-            temp = realloc(ALBuf->data, allocsize);
+            temp = realloc(ALBuf->data, newsize);
             if(temp)
             {
                 ALBuf->data = temp;
-                ConvertDataMULawRear(ALBuf->data, data, newsize);
+                ConvertDataMULawRear(ALBuf->data, data, newsize/NewBytes);
 
                 ALBuf->format = NewFormat;
                 ALBuf->eOriginalFormat = format;
-                ALBuf->size = newsize*NewBytes;
+                ALBuf->size = newsize;
                 ALBuf->frequency = freq;
 
                 ALBuf->LoopStart = 0;
-                ALBuf->LoopEnd = newsize / NewChannels;
+                ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
                 ALBuf->OriginalSize = size;
                 ALBuf->OriginalAlign = 1 * 2;
@@ -1052,7 +1052,7 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
     ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
     ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
-    ALuint64 newsize, allocsize;
+    ALuint64 newsize;
     ALvoid *temp;
 
     assert(NewChannels == OrigChannels);
@@ -1066,24 +1066,24 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
         return AL_INVALID_VALUE;
 
     newsize = size / OrigBytes;
-    allocsize = (BUFFER_PADDING*NewChannels + newsize)*NewBytes;
-    if(allocsize > INT_MAX)
+    newsize *= NewBytes;
+    if(newsize > INT_MAX)
         return AL_OUT_OF_MEMORY;
 
-    temp = realloc(ALBuf->data, allocsize);
+    temp = realloc(ALBuf->data, newsize);
     if(!temp) return AL_OUT_OF_MEMORY;
     ALBuf->data = temp;
 
     // Samples are converted here
-    ConvertData(ALBuf->data, data, OrigBytes, newsize);
+    ConvertData(ALBuf->data, data, OrigBytes, newsize/NewBytes);
 
     ALBuf->format = NewFormat;
     ALBuf->eOriginalFormat = OrigFormat;
-    ALBuf->size = newsize*NewBytes;
+    ALBuf->size = newsize;
     ALBuf->frequency = freq;
 
     ALBuf->LoopStart = 0;
-    ALBuf->LoopEnd = newsize / NewChannels;
+    ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
     ALBuf->OriginalSize = size;
     ALBuf->OriginalAlign = OrigBytes * OrigChannels;

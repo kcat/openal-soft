@@ -907,6 +907,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     Mix_ALubyte_lerp8(Source, Device, Channels,
                                       SrcData, &DataPosInt, &DataPosFrac,
                                       j, SamplesToDo, BufferSize);
+                break;
             case CUBIC_RESAMPLER:
                 if(Bytes == 4)
                     Mix_ALfloat_cubic32(Source, Device, Channels,

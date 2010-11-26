@@ -75,7 +75,7 @@ typedef enum {
     OUTPUTCHANNELS
 } Channel;
 
-#define BUFFERSIZE 8192
+#define BUFFERSIZE 4096
 
 #define FRACTIONBITS (14)
 #define FRACTIONONE  (1<<FRACTIONBITS)

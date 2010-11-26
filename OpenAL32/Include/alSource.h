@@ -99,13 +99,11 @@ typedef struct ALsource
     } Params;
 
     ALvoid (*Update)(struct ALsource *self, const ALCcontext *context);
-    ALvoid (*Mix)(struct ALsource *self, ALCdevice *Device, ALuint SamplesToDo);
 
     // Index to itself
     ALuint source;
 } ALsource;
 #define ALsource_Update(s,a)  ((s)->Update(s,a))
-#define ALsource_Mix(s,a,b)   ((s)->Mix(s,a,b))
 
 ALvoid ReleaseALSources(ALCcontext *Context);
 

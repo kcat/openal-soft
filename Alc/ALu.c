@@ -718,7 +718,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     (*src)->NeedsUpdate = AL_FALSE;
                 }
 
-                ALsource_Mix(*src, device, SamplesToDo);
+                MixSource(*src, device, SamplesToDo);
                 src++;
             }
 

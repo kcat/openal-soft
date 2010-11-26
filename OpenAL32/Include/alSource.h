@@ -25,6 +25,7 @@ typedef struct ALbufferlistitem
 {
     struct ALbuffer         *buffer;
     struct ALbufferlistitem *next;
+    struct ALbufferlistitem *prev;
 } ALbufferlistitem;
 
 typedef struct ALsource

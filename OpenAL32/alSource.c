@@ -550,6 +550,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             BufferListItem = malloc(sizeof(ALbufferlistitem));
                             BufferListItem->buffer = buffer;
                             BufferListItem->next = NULL;
+                            BufferListItem->prev = NULL;
 
                             Source->queue = BufferListItem;
                             Source->BuffersInQueue = 1;
@@ -1621,6 +1622,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     BufferListStart = malloc(sizeof(ALbufferlistitem));
     BufferListStart->buffer = buffer;
     BufferListStart->next = NULL;
+    BufferListStart->prev = NULL;
 
     // Increment reference counter for buffer
     if(buffer) buffer->refcount++;
@@ -1634,6 +1636,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
         BufferList->next = malloc(sizeof(ALbufferlistitem));
         BufferList->next->buffer = buffer;
         BufferList->next->next = NULL;
+        BufferList->next->prev = BufferList;
 
         // Increment reference counter for buffer
         if(buffer) buffer->refcount++;
@@ -1655,6 +1658,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
             BufferList = BufferList->next;
 
         BufferList->next = BufferListStart;
+        BufferList->next->prev = BufferList;
     }
 
     // Update number of buffers in queue
@@ -1719,6 +1723,8 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
         free(BufferList);
         Source->BuffersInQueue--;
     }
+    if(Source->queue)
+        Source->queue->prev = NULL;
 
     if(Source->state != AL_PLAYING)
     {

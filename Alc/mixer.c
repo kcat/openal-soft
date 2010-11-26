@@ -37,27 +37,26 @@
 #include "bs2b.h"
 
 
-static __inline ALdouble point(ALdouble val1, ALdouble val2, ALint frac)
-{
-    return val1;
-    (void)val2;
-    (void)frac;
-}
 static __inline ALdouble lerp(ALdouble val1, ALdouble val2, ALint frac)
 {
     val1 += ((val2-val1) * (frac * (1.0/(1<<FRACTIONBITS))));
     return val1;
 }
 
-static __inline ALdouble point16(ALdouble val1, ALdouble val2, ALint frac)
-{ return point(val1, val2, frac) / 32767.0; }
-static __inline ALdouble lerp16(ALdouble val1, ALdouble val2, ALint frac)
-{ return lerp(val1, val2, frac) / 32767.0; }
+static __inline ALdouble point32(const ALfloat *vals, ALuint step, ALint frac)
+{ return vals[0]; (void)step; (void)frac; }
+static __inline ALdouble lerp32(const ALfloat *vals, ALuint step, ALint frac)
+{ return lerp(vals[0], vals[step], frac); }
 
-static __inline ALdouble point8(ALdouble val1, ALdouble val2, ALint frac)
-{ return (point(val1, val2, frac)-128.0) / 127.0; }
-static __inline ALdouble lerp8(ALdouble val1, ALdouble val2, ALint frac)
-{ return (lerp(val1, val2, frac)-128.0) / 127.0; }
+static __inline ALdouble point16(const ALshort *vals, ALuint step, ALint frac)
+{ return vals[0] / 32767.0; (void)step; (void)frac; }
+static __inline ALdouble lerp16(const ALshort *vals, ALuint step, ALint frac)
+{ return lerp(vals[0], vals[step], frac) / 32767.0; }
+
+static __inline ALdouble point8(const ALubyte *vals, ALuint step, ALint frac)
+{ return (vals[0]-128.0) / 127.0; (void)step; (void)frac; }
+static __inline ALdouble lerp8(const ALubyte *vals, ALuint step, ALint frac)
+{ return (lerp(vals[0], vals[step], frac)-128.0) / 127.0; }
 
 
 #define DECL_TEMPLATE(T, sampler)                                             \
@@ -89,7 +88,7 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
                                                                               \
     if(j == 0)                                                                \
     {                                                                         \
-        value = sampler(data[pos], data[pos+1], frac);                        \
+        value = sampler(data+pos, 1, frac);                                   \
                                                                               \
         value = lpFilter4PC(DryFilter, 0, value);                             \
         ClickRemoval[FRONT_LEFT]   -= value*DrySend[FRONT_LEFT];              \
@@ -104,7 +103,7 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
     for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                     \
     {                                                                         \
         /* First order interpolator */                                        \
-        value = sampler(data[pos], data[pos+1], frac);                        \
+        value = sampler(data+pos, 1, frac);                                   \
                                                                               \
         /* Direct path final mix buffer and panning */                        \
         value = lpFilter4P(DryFilter, 0, value);                              \
@@ -124,7 +123,7 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
     }                                                                         \
     if(j == SamplesToDo)                                                      \
     {                                                                         \
-        value = sampler(data[pos], data[pos+1], frac);                        \
+        value = sampler(data+pos, 1, frac);                                   \
                                                                               \
         value = lpFilter4PC(DryFilter, 0, value);                             \
         PendingClicks[FRONT_LEFT]   += value*DrySend[FRONT_LEFT];             \
@@ -161,7 +160,7 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
                                                                               \
         if(j == 0)                                                            \
         {                                                                     \
-            value = sampler(data[pos], data[pos+1], frac);                    \
+            value = sampler(data+pos, 1, frac);                               \
                                                                               \
             value = lpFilter2PC(WetFilter, 0, value);                         \
             WetClickRemoval[0] -= value*WetSend;                              \
@@ -169,7 +168,7 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
         for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
         {                                                                     \
             /* First order interpolator */                                    \
-            value = sampler(data[pos], data[pos+1], frac);                    \
+            value = sampler(data+pos, 1, frac);                               \
                                                                               \
             /* Room path final mix buffer and panning */                      \
             value = lpFilter2P(WetFilter, 0, value);                          \
@@ -182,7 +181,7 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
         }                                                                     \
         if(j == SamplesToDo)                                                  \
         {                                                                     \
-            value = sampler(data[pos], data[pos+1], frac);                    \
+            value = sampler(data+pos, 1, frac);                               \
                                                                               \
             value = lpFilter2PC(WetFilter, 0, value);                         \
             WetPendingClicks[0] += value*WetSend;                             \
@@ -192,8 +191,8 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
     *DataPosFrac = frac;                                                      \
 }
 
-DECL_TEMPLATE(ALfloat, point)
-DECL_TEMPLATE(ALfloat, lerp)
+DECL_TEMPLATE(ALfloat, point32)
+DECL_TEMPLATE(ALfloat, lerp32)
 
 DECL_TEMPLATE(ALshort, point16)
 DECL_TEMPLATE(ALshort, lerp16)
@@ -242,8 +241,7 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler(data[pos*Channels + i],                           \
-                            data[(pos+1)*Channels + i], frac);                \
+            value = sampler(data + pos*Channels + i, Channels, frac);         \
                                                                               \
             value = lpFilter2PC(DryFilter, chans[i]*2, value);                \
             ClickRemoval[chans[i+0]] -= value*DrySend[chans[i+0]];            \
@@ -255,8 +253,7 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler(data[pos*Channels + i],                           \
-                            data[(pos+1)*Channels + i], frac);                \
+            value = sampler(data + pos*Channels + i, Channels, frac);         \
                                                                               \
             value = lpFilter2P(DryFilter, chans[i]*2, value);                 \
             DryBuffer[j][chans[i+0]] += value*DrySend[chans[i+0]];            \
@@ -273,8 +270,7 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler(data[pos*Channels + i],                           \
-                            data[(pos+1)*Channels + i], frac);                \
+            value = sampler(data + pos*Channels + i, Channels, frac);         \
                                                                               \
             value = lpFilter2PC(DryFilter, chans[i]*2, value);                \
             PendingClicks[chans[i+0]] += value*DrySend[chans[i+0]];           \
@@ -309,8 +305,7 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
         {                                                                     \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
-                value = sampler(data[pos*Channels + i],                       \
-                                data[(pos+1)*Channels + i], frac);            \
+                value = sampler(data + pos*Channels + i, Channels, frac);     \
                                                                               \
                 value = lpFilter1PC(WetFilter, chans[i], value);              \
                 WetClickRemoval[0] -= value*WetSend * scaler;                 \
@@ -320,8 +315,7 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
         {                                                                     \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
-                value = sampler(data[pos*Channels + i],                       \
-                                data[(pos+1)*Channels + i], frac);            \
+                value = sampler(data + pos*Channels + i, Channels, frac);     \
                                                                               \
                 value = lpFilter1P(WetFilter, chans[i], value);               \
                 WetBuffer[j] += value*WetSend * scaler;                       \
@@ -336,8 +330,7 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
         {                                                                     \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
-                value = sampler(data[pos*Channels + i],                       \
-                                data[(pos+1)*Channels + i], frac);            \
+                value = sampler(data + pos*Channels + i, Channels, frac);     \
                                                                               \
                 value = lpFilter1PC(WetFilter, chans[i], value);              \
                 WetPendingClicks[0] += value*WetSend * scaler;                \
@@ -348,8 +341,8 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
     *DataPosFrac = frac;                                                      \
 }
 
-DECL_TEMPLATE(ALfloat, point)
-DECL_TEMPLATE(ALfloat, lerp)
+DECL_TEMPLATE(ALfloat, point32)
+DECL_TEMPLATE(ALfloat, lerp32)
 
 DECL_TEMPLATE(ALshort, point16)
 DECL_TEMPLATE(ALshort, lerp16)
@@ -393,8 +386,7 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler(data[pos*Channels + i],                           \
-                            data[(pos+1)*Channels + i], frac);                \
+            value = sampler(data + pos*Channels + i, Channels, frac);         \
                                                                               \
             value = lpFilter2PC(DryFilter, chans[i]*2, value);                \
             ClickRemoval[chans[i]] -= value*DrySend[chans[i]];                \
@@ -404,8 +396,7 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler(data[pos*Channels + i],                           \
-                            data[(pos+1)*Channels + i], frac);                \
+            value = sampler(data + pos*Channels + i, Channels, frac);         \
                                                                               \
             value = lpFilter2P(DryFilter, chans[i]*2, value);                 \
             DryBuffer[j][chans[i]] += value*DrySend[chans[i]];                \
@@ -420,8 +411,7 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
-            value = sampler(data[pos*Channels + i],                           \
-                            data[(pos+1)*Channels + i], frac);                \
+            value = sampler(data + pos*Channels + i, Channels, frac);         \
                                                                               \
             value = lpFilter2PC(DryFilter, chans[i]*2, value);                \
             PendingClicks[chans[i]] += value*DrySend[chans[i]];               \
@@ -454,8 +444,7 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
         {                                                                     \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
-                value = sampler(data[pos*Channels + i],                       \
-                                data[(pos+1)*Channels + i], frac);            \
+                value = sampler(data + pos*Channels + i, Channels, frac);     \
                                                                               \
                 value = lpFilter1PC(WetFilter, chans[i], value);              \
                 WetClickRemoval[0] -= value*WetSend * scaler;                 \
@@ -465,8 +454,7 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
         {                                                                     \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
-                value = sampler(data[pos*Channels + i],                       \
-                                data[(pos+1)*Channels + i], frac);            \
+                value = sampler(data + pos*Channels + i, Channels, frac);     \
                                                                               \
                 value = lpFilter1P(WetFilter, chans[i], value);               \
                 WetBuffer[j] += value*WetSend * scaler;                       \
@@ -481,8 +469,7 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
         {                                                                     \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
-                value = sampler(data[pos*Channels + i],                       \
-                                data[(pos+1)*Channels + i], frac);            \
+                value = sampler(data + pos*Channels + i, Channels, frac);     \
                                                                               \
                 value = lpFilter1PC(WetFilter, chans[i], value);              \
                 WetPendingClicks[0] += value*WetSend * scaler;                \
@@ -495,8 +482,8 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
 
 static const Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
                                      BACK_LEFT,  BACK_RIGHT };
-DECL_TEMPLATE(ALfloat, QuadChans, point)
-DECL_TEMPLATE(ALfloat, QuadChans, lerp)
+DECL_TEMPLATE(ALfloat, QuadChans, point32)
+DECL_TEMPLATE(ALfloat, QuadChans, lerp32)
 
 DECL_TEMPLATE(ALshort, QuadChans, point16)
 DECL_TEMPLATE(ALshort, QuadChans, lerp16)
@@ -508,8 +495,8 @@ DECL_TEMPLATE(ALubyte, QuadChans, lerp8)
 static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_LEFT,  BACK_RIGHT };
-DECL_TEMPLATE(ALfloat, X51Chans, point)
-DECL_TEMPLATE(ALfloat, X51Chans, lerp)
+DECL_TEMPLATE(ALfloat, X51Chans, point32)
+DECL_TEMPLATE(ALfloat, X51Chans, lerp32)
 
 DECL_TEMPLATE(ALshort, X51Chans, point16)
 DECL_TEMPLATE(ALshort, X51Chans, lerp16)
@@ -522,8 +509,8 @@ static const Channel X61Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_CENTER,
                                     SIDE_LEFT,    SIDE_RIGHT };
-DECL_TEMPLATE(ALfloat, X61Chans, point)
-DECL_TEMPLATE(ALfloat, X61Chans, lerp)
+DECL_TEMPLATE(ALfloat, X61Chans, point32)
+DECL_TEMPLATE(ALfloat, X61Chans, lerp32)
 
 DECL_TEMPLATE(ALshort, X61Chans, point16)
 DECL_TEMPLATE(ALshort, X61Chans, lerp16)
@@ -536,8 +523,8 @@ static const Channel X71Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_LEFT,    BACK_RIGHT,
                                     SIDE_LEFT,    SIDE_RIGHT };
-DECL_TEMPLATE(ALfloat, X71Chans, point)
-DECL_TEMPLATE(ALfloat, X71Chans, lerp)
+DECL_TEMPLATE(ALfloat, X71Chans, point32)
+DECL_TEMPLATE(ALfloat, X71Chans, lerp32)
 
 DECL_TEMPLATE(ALshort, X71Chans, point16)
 DECL_TEMPLATE(ALshort, X71Chans, lerp16)
@@ -588,8 +575,8 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device, ALuint Chan
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALfloat, point)
-DECL_TEMPLATE(ALfloat, lerp)
+DECL_TEMPLATE(ALfloat, point32)
+DECL_TEMPLATE(ALfloat, lerp32)
 
 DECL_TEMPLATE(ALshort, point16)
 DECL_TEMPLATE(ALshort, lerp16)
@@ -857,9 +844,9 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         {
             case POINT_RESAMPLER:
                 if(Bytes == 4)
-                    Mix_ALfloat_point(Source, Device, Channels,
-                                      SrcData, &DataPosInt, &DataPosFrac,
-                                      j, SamplesToDo, BufferSize);
+                    Mix_ALfloat_point32(Source, Device, Channels,
+                                        SrcData, &DataPosInt, &DataPosFrac,
+                                        j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_point16(Source, Device, Channels,
                                         SrcData, &DataPosInt, &DataPosFrac,
@@ -871,9 +858,9 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 break;
             case LINEAR_RESAMPLER:
                 if(Bytes == 4)
-                    Mix_ALfloat_lerp(Source, Device, Channels,
-                                     SrcData, &DataPosInt, &DataPosFrac,
-                                     j, SamplesToDo, BufferSize);
+                    Mix_ALfloat_lerp32(Source, Device, Channels,
+                                       SrcData, &DataPosInt, &DataPosFrac,
+                                       j, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_lerp16(Source, Device, Channels,
                                        SrcData, &DataPosInt, &DataPosFrac,

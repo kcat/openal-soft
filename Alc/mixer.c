@@ -40,26 +40,26 @@
 static __inline ALdouble point32(const ALfloat *vals, ALint step, ALint frac)
 { return vals[0]; (void)step; (void)frac; }
 static __inline ALdouble lerp32(const ALfloat *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0/(1<<FRACTIONBITS))); }
+{ return lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE)); }
 static __inline ALdouble cubic32(const ALfloat *vals, ALint step, ALint frac)
 { return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0/(1<<FRACTIONBITS))); }
+               frac * (1.0/FRACTIONONE)); }
 
 static __inline ALdouble point16(const ALshort *vals, ALint step, ALint frac)
 { return vals[0] / 32767.0; (void)step; (void)frac; }
 static __inline ALdouble lerp16(const ALshort *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0/(1<<FRACTIONBITS))) / 32767.0; }
+{ return lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE)) / 32767.0; }
 static __inline ALdouble cubic16(const ALshort *vals, ALint step, ALint frac)
 { return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0/(1<<FRACTIONBITS))) / 32767.0; }
+               frac * (1.0/FRACTIONONE)) / 32767.0; }
 
 static __inline ALdouble point8(const ALubyte *vals, ALint step, ALint frac)
 { return (vals[0]-128.0) / 127.0; (void)step; (void)frac; }
 static __inline ALdouble lerp8(const ALubyte *vals, ALint step, ALint frac)
-{ return (lerp(vals[0], vals[step], frac * (1.0/(1<<FRACTIONBITS)))-128.0) / 127.0; }
+{ return (lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE))-128.0) / 127.0; }
 static __inline ALdouble cubic8(const ALubyte *vals, ALint step, ALint frac)
 { return (cubic(vals[-step], vals[0], vals[step], vals[step+step],
-                frac * (1.0/(1<<FRACTIONBITS)))-128.0) / 127.0; }
+                frac * (1.0/FRACTIONONE))-128.0) / 127.0; }
 
 
 #define DECL_TEMPLATE(T, sampler)                                             \
@@ -854,7 +854,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         if(BufferSize == 0)
         {
             AL_PRINT("No samples to mix! Pitch too high (%u, %g)?\n",
-                     increment, increment/(double)(1<<FRACTIONBITS));
+                     increment, increment/(double)FRACTIONONE);
             State = AL_STOPPED;
             BufferListItem = Source->queue;
             BuffersPlayed = Source->BuffersInQueue;
@@ -864,7 +864,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         }
 
         SrcData += BUFFER_PREPADDING*FrameSize;
-        switch((increment != (1<<FRACTIONBITS)) ? Source->Resampler : POINT_RESAMPLER)
+        switch((increment != FRACTIONONE) ? Source->Resampler : POINT_RESAMPLER)
         {
             case POINT_RESAMPLER:
                 if(Bytes == 4)

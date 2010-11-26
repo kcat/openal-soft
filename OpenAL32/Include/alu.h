@@ -78,7 +78,8 @@ typedef enum {
 #define BUFFERSIZE 8192
 
 #define FRACTIONBITS (14)
-#define FRACTIONMASK ((1<<FRACTIONBITS)-1)
+#define FRACTIONONE  (1<<FRACTIONBITS)
+#define FRACTIONMASK (FRACTIONONE-1)
 #define MAX_PITCH    (INT_MAX & ~FRACTIONMASK)
 
 /* NOTE: The AL_FORMAT_REAR* enums aren't handled here because they're

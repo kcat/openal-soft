@@ -596,7 +596,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     ALfloat latePan[3] = { LateReverbPan[0], LateReverbPan[1],
                            LateReverbPan[2] };
     const ALfloat *speakerGain;
-    ALfloat dirGain, ambientGain;
+    ALfloat dirGain;
     ALfloat length;
     ALuint index;
     ALint pos;
@@ -629,27 +629,26 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     pos = aluCart2LUTpos(earlyPan[2], earlyPan[0]);
     speakerGain = &Device->PanningLUT[OUTPUTCHANNELS * pos];
     dirGain = aluSqrt((earlyPan[0] * earlyPan[0]) + (earlyPan[2] * earlyPan[2]));
-    ambientGain = (1.0 - dirGain);
+
     for(index = 0;index < OUTPUTCHANNELS;index++)
         State->Early.PanGain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)
     {
         Channel chan = Device->Speaker2Chan[index];
-        State->Early.PanGain[chan] = speakerGain[chan]*dirGain +
-                                     ambientGain;
+        State->Early.PanGain[chan] = 1.0 + (speakerGain[chan]-1.0)*dirGain;
     }
+
 
     pos = aluCart2LUTpos(latePan[2], latePan[0]);
     speakerGain = &Device->PanningLUT[OUTPUTCHANNELS * pos];
     dirGain = aluSqrt((latePan[0] * latePan[0]) + (latePan[2] * latePan[2]));
-    ambientGain = (1.0 - dirGain);
+
     for(index = 0;index < OUTPUTCHANNELS;index++)
          State->Late.PanGain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)
     {
         Channel chan = Device->Speaker2Chan[index];
-        State->Late.PanGain[chan] = speakerGain[chan]*dirGain +
-                                    ambientGain;
+        State->Late.PanGain[chan] = 1.0 + (speakerGain[chan]-1.0)*dirGain;
     }
 }
 

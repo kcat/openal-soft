@@ -620,13 +620,13 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
     // elevation adjustment for directional gain. this sucks, but
     // has low complexity
-    AmbientGain = 1.0/aluSqrt(Device->NumChan) * (1.0-DirGain);
+    AmbientGain = aluSqrt(1.0/Device->NumChan);
     for(s = 0;s < OUTPUTCHANNELS;s++)
         ALSource->Params.DryGains[s] = 0.0f;
     for(s = 0;s < (ALsizei)Device->NumChan;s++)
     {
         Channel chan = Device->Speaker2Chan[s];
-        ALfloat gain = SpeakerGain[chan]*DirGain + AmbientGain;
+        ALfloat gain = AmbientGain + (SpeakerGain[chan]-AmbientGain)*DirGain;
         ALSource->Params.DryGains[chan] = DryGain * gain;
     }
 

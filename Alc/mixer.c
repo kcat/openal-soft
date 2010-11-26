@@ -66,7 +66,7 @@ static __inline ALdouble cubic8(const ALubyte *vals, ALint step, ALint frac)
 #define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
-  ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
@@ -90,7 +90,7 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
     pos = 0;                                                                  \
     frac = *DataPosFrac;                                                      \
                                                                               \
-    if(j == 0)                                                                \
+    if(OutPos == 0)                                                           \
     {                                                                         \
         value = sampler(data+pos, 1, frac);                                   \
                                                                               \
@@ -111,21 +111,21 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
                                                                               \
         /* Direct path final mix buffer and panning */                        \
         value = lpFilter4P(DryFilter, 0, value);                              \
-        DryBuffer[j][FRONT_LEFT]   += value*DrySend[FRONT_LEFT];              \
-        DryBuffer[j][FRONT_RIGHT]  += value*DrySend[FRONT_RIGHT];             \
-        DryBuffer[j][SIDE_LEFT]    += value*DrySend[SIDE_LEFT];               \
-        DryBuffer[j][SIDE_RIGHT]   += value*DrySend[SIDE_RIGHT];              \
-        DryBuffer[j][BACK_LEFT]    += value*DrySend[BACK_LEFT];               \
-        DryBuffer[j][BACK_RIGHT]   += value*DrySend[BACK_RIGHT];              \
-        DryBuffer[j][FRONT_CENTER] += value*DrySend[FRONT_CENTER];            \
-        DryBuffer[j][BACK_CENTER]  += value*DrySend[BACK_CENTER];             \
+        DryBuffer[OutPos][FRONT_LEFT]   += value*DrySend[FRONT_LEFT];         \
+        DryBuffer[OutPos][FRONT_RIGHT]  += value*DrySend[FRONT_RIGHT];        \
+        DryBuffer[OutPos][SIDE_LEFT]    += value*DrySend[SIDE_LEFT];          \
+        DryBuffer[OutPos][SIDE_RIGHT]   += value*DrySend[SIDE_RIGHT];         \
+        DryBuffer[OutPos][BACK_LEFT]    += value*DrySend[BACK_LEFT];          \
+        DryBuffer[OutPos][BACK_RIGHT]   += value*DrySend[BACK_RIGHT];         \
+        DryBuffer[OutPos][FRONT_CENTER] += value*DrySend[FRONT_CENTER];       \
+        DryBuffer[OutPos][BACK_CENTER]  += value*DrySend[BACK_CENTER];        \
                                                                               \
         frac += increment;                                                    \
         pos  += frac>>FRACTIONBITS;                                           \
         frac &= FRACTIONMASK;                                                 \
-        j++;                                                                  \
+        OutPos++;                                                             \
     }                                                                         \
-    if(j == SamplesToDo)                                                      \
+    if(OutPos == SamplesToDo)                                                 \
     {                                                                         \
         value = sampler(data+pos, 1, frac);                                   \
                                                                               \
@@ -160,9 +160,9 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
                                                                               \
         pos = 0;                                                              \
         frac = *DataPosFrac;                                                  \
-        j -= BufferSize;                                                      \
+        OutPos -= BufferSize;                                                 \
                                                                               \
-        if(j == 0)                                                            \
+        if(OutPos == 0)                                                       \
         {                                                                     \
             value = sampler(data+pos, 1, frac);                               \
                                                                               \
@@ -176,14 +176,14 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
                                                                               \
             /* Room path final mix buffer and panning */                      \
             value = lpFilter2P(WetFilter, 0, value);                          \
-            WetBuffer[j] += value*WetSend;                                    \
+            WetBuffer[OutPos] += value*WetSend;                               \
                                                                               \
             frac += increment;                                                \
             pos  += frac>>FRACTIONBITS;                                       \
             frac &= FRACTIONMASK;                                             \
-            j++;                                                              \
+            OutPos++;                                                         \
         }                                                                     \
-        if(j == SamplesToDo)                                                  \
+        if(OutPos == SamplesToDo)                                             \
         {                                                                     \
             value = sampler(data+pos, 1, frac);                               \
                                                                               \
@@ -213,7 +213,7 @@ DECL_TEMPLATE(ALubyte, cubic8)
 #define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
-  ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     static const ALuint Channels = 2;                                         \
     static const Channel chans[] = {                                          \
@@ -244,7 +244,7 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
     pos = 0;                                                                  \
     frac = *DataPosFrac;                                                      \
                                                                               \
-    if(j == 0)                                                                \
+    if(OutPos == 0)                                                           \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
@@ -263,17 +263,17 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
             value = sampler(data + pos*Channels + i, Channels, frac);         \
                                                                               \
             value = lpFilter2P(DryFilter, chans[i]*2, value);                 \
-            DryBuffer[j][chans[i+0]] += value*DrySend[chans[i+0]];            \
-            DryBuffer[j][chans[i+2]] += value*DrySend[chans[i+2]];            \
-            DryBuffer[j][chans[i+4]] += value*DrySend[chans[i+4]];            \
+            DryBuffer[OutPos][chans[i+0]] += value*DrySend[chans[i+0]];       \
+            DryBuffer[OutPos][chans[i+2]] += value*DrySend[chans[i+2]];       \
+            DryBuffer[OutPos][chans[i+4]] += value*DrySend[chans[i+4]];       \
         }                                                                     \
                                                                               \
         frac += increment;                                                    \
         pos  += frac>>FRACTIONBITS;                                           \
         frac &= FRACTIONMASK;                                                 \
-        j++;                                                                  \
+        OutPos++;                                                             \
     }                                                                         \
-    if(j == SamplesToDo)                                                      \
+    if(OutPos == SamplesToDo)                                                 \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
@@ -306,9 +306,9 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
                                                                               \
         pos = 0;                                                              \
         frac = *DataPosFrac;                                                  \
-        j -= BufferSize;                                                      \
+        OutPos -= BufferSize;                                                 \
                                                                               \
-        if(j == 0)                                                            \
+        if(OutPos == 0)                                                       \
         {                                                                     \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
@@ -325,15 +325,15 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
                 value = sampler(data + pos*Channels + i, Channels, frac);     \
                                                                               \
                 value = lpFilter1P(WetFilter, chans[i], value);               \
-                WetBuffer[j] += value*WetSend * scaler;                       \
+                WetBuffer[OutPos] += value*WetSend * scaler;                  \
             }                                                                 \
                                                                               \
             frac += increment;                                                \
             pos  += frac>>FRACTIONBITS;                                       \
             frac &= FRACTIONMASK;                                             \
-            j++;                                                              \
+            OutPos++;                                                         \
         }                                                                     \
-        if(j == SamplesToDo)                                                  \
+        if(OutPos == SamplesToDo)                                             \
         {                                                                     \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
@@ -366,7 +366,7 @@ DECL_TEMPLATE(ALubyte, cubic8)
 #define DECL_TEMPLATE(T, chans, sampler)                                      \
 static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
-  ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     static const ALuint Channels = sizeof(chans)/sizeof(chans[0]);            \
     const ALfloat scaler = 1.0f/Channels;                                     \
@@ -392,7 +392,7 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
     pos = 0;                                                                  \
     frac = *DataPosFrac;                                                      \
                                                                               \
-    if(j == 0)                                                                \
+    if(OutPos == 0)                                                           \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
@@ -409,15 +409,15 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
             value = sampler(data + pos*Channels + i, Channels, frac);         \
                                                                               \
             value = lpFilter2P(DryFilter, chans[i]*2, value);                 \
-            DryBuffer[j][chans[i]] += value*DrySend[chans[i]];                \
+            DryBuffer[OutPos][chans[i]] += value*DrySend[chans[i]];           \
         }                                                                     \
                                                                               \
         frac += increment;                                                    \
         pos  += frac>>FRACTIONBITS;                                           \
         frac &= FRACTIONMASK;                                                 \
-        j++;                                                                  \
+        OutPos++;                                                             \
     }                                                                         \
-    if(j == SamplesToDo)                                                      \
+    if(OutPos == SamplesToDo)                                                 \
     {                                                                         \
         for(i = 0;i < Channels;i++)                                           \
         {                                                                     \
@@ -448,9 +448,9 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
                                                                               \
         pos = 0;                                                              \
         frac = *DataPosFrac;                                                  \
-        j -= BufferSize;                                                      \
+        OutPos -= BufferSize;                                                 \
                                                                               \
-        if(j == 0)                                                            \
+        if(OutPos == 0)                                                       \
         {                                                                     \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
@@ -467,15 +467,15 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
                 value = sampler(data + pos*Channels + i, Channels, frac);     \
                                                                               \
                 value = lpFilter1P(WetFilter, chans[i], value);               \
-                WetBuffer[j] += value*WetSend * scaler;                       \
+                WetBuffer[OutPos] += value*WetSend * scaler;                  \
             }                                                                 \
                                                                               \
             frac += increment;                                                \
             pos  += frac>>FRACTIONBITS;                                       \
             frac &= FRACTIONMASK;                                             \
-            j++;                                                              \
+            OutPos++;                                                         \
         }                                                                     \
-        if(j == SamplesToDo)                                                  \
+        if(OutPos == SamplesToDo)                                             \
         {                                                                     \
             for(i = 0;i < Channels;i++)                                       \
             {                                                                 \
@@ -560,39 +560,39 @@ DECL_TEMPLATE(ALubyte, X71Chans, cubic8)
 #define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device, ALuint Channels, \
   const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac,                \
-  ALuint j, ALuint SamplesToDo, ALuint BufferSize)                            \
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     switch(Channels)                                                          \
     {                                                                         \
     case 1: /* Mono */                                                        \
         Mix_##T##_Mono_##sampler(Source, Device,                              \
                                  Data, DataPosInt, DataPosFrac,               \
-                                 j, SamplesToDo, BufferSize);                 \
+                                 OutPos, SamplesToDo, BufferSize);            \
         break;                                                                \
     case 2: /* Stereo */                                                      \
         Mix_##T##_Stereo_##sampler(Source, Device,                            \
                                    Data, DataPosInt, DataPosFrac,             \
-                                   j, SamplesToDo, BufferSize);               \
+                                   OutPos, SamplesToDo, BufferSize);          \
         break;                                                                \
     case 4: /* Quad */                                                        \
         Mix_##T##_QuadChans_##sampler(Source, Device,                         \
                                       Data, DataPosInt, DataPosFrac,          \
-                                      j, SamplesToDo, BufferSize);            \
+                                      OutPos, SamplesToDo, BufferSize);       \
         break;                                                                \
     case 6: /* 5.1 */                                                         \
         Mix_##T##_X51Chans_##sampler(Source, Device,                          \
                                      Data, DataPosInt, DataPosFrac,           \
-                                     j, SamplesToDo, BufferSize);             \
+                                     OutPos, SamplesToDo, BufferSize);        \
         break;                                                                \
     case 7: /* 6.1 */                                                         \
         Mix_##T##_X61Chans_##sampler(Source, Device,                          \
                                      Data, DataPosInt, DataPosFrac,           \
-                                     j, SamplesToDo, BufferSize);             \
+                                     OutPos, SamplesToDo, BufferSize);        \
         break;                                                                \
     case 8: /* 7.1 */                                                         \
         Mix_##T##_X71Chans_##sampler(Source, Device,                          \
                                      Data, DataPosInt, DataPosFrac,           \
-                                     j, SamplesToDo, BufferSize);             \
+                                     OutPos, SamplesToDo, BufferSize);        \
         break;                                                                \
     }                                                                         \
 }
@@ -628,7 +628,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     ALuint increment;
     resampler_t Resampler;
     ALenum State;
-    ALuint i, j;
+    ALuint OutPos;
+    ALuint i;
     ALint64 DataSize64;
 
     /* Get source info */
@@ -662,7 +663,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     for(i = 0;i < BuffersPlayed;i++)
         BufferListItem = BufferListItem->next;
 
-    j = 0;
+    OutPos = 0;
     do {
         const ALuint BufferPrePadding = ResamplerPrePadding[Resampler];
         const ALuint BufferPadding = ResamplerPadding[Resampler];
@@ -672,7 +673,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         ALuint BufferSize;
 
         /* Figure out how many buffer bytes will be needed */
-        DataSize64  = SamplesToDo-j+1;
+        DataSize64  = SamplesToDo-OutPos+1;
         DataSize64 *= increment;
         DataSize64 += DataPosFrac+FRACTIONMASK;
         DataSize64 >>= FRACTIONBITS;
@@ -856,7 +857,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         DataSize64 -= increment;
 
         BufferSize = (ALuint)((DataSize64-DataPosFrac+(increment-1)) / increment);
-        BufferSize = min(BufferSize, (SamplesToDo-j));
+        BufferSize = min(BufferSize, (SamplesToDo-OutPos));
         if(BufferSize == 0)
         {
             AL_PRINT("No samples to mix! Pitch too high (%u, %g)?\n",
@@ -876,49 +877,49 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 if(Bytes == 4)
                     Mix_ALfloat_point32(Source, Device, Channels,
                                         SrcData, &DataPosInt, &DataPosFrac,
-                                        j, SamplesToDo, BufferSize);
+                                        OutPos, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_point16(Source, Device, Channels,
                                         SrcData, &DataPosInt, &DataPosFrac,
-                                        j, SamplesToDo, BufferSize);
+                                        OutPos, SamplesToDo, BufferSize);
                 else if(Bytes == 1)
                     Mix_ALubyte_point8(Source, Device, Channels,
                                        SrcData, &DataPosInt, &DataPosFrac,
-                                       j, SamplesToDo, BufferSize);
+                                       OutPos, SamplesToDo, BufferSize);
                 break;
             case LINEAR_RESAMPLER:
                 if(Bytes == 4)
                     Mix_ALfloat_lerp32(Source, Device, Channels,
                                        SrcData, &DataPosInt, &DataPosFrac,
-                                       j, SamplesToDo, BufferSize);
+                                       OutPos, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_lerp16(Source, Device, Channels,
                                        SrcData, &DataPosInt, &DataPosFrac,
-                                       j, SamplesToDo, BufferSize);
+                                       OutPos, SamplesToDo, BufferSize);
                 else if(Bytes == 1)
                     Mix_ALubyte_lerp8(Source, Device, Channels,
                                       SrcData, &DataPosInt, &DataPosFrac,
-                                      j, SamplesToDo, BufferSize);
+                                      OutPos, SamplesToDo, BufferSize);
                 break;
             case CUBIC_RESAMPLER:
                 if(Bytes == 4)
                     Mix_ALfloat_cubic32(Source, Device, Channels,
                                         SrcData, &DataPosInt, &DataPosFrac,
-                                        j, SamplesToDo, BufferSize);
+                                        OutPos, SamplesToDo, BufferSize);
                 else if(Bytes == 2)
                     Mix_ALshort_cubic16(Source, Device, Channels,
                                         SrcData, &DataPosInt, &DataPosFrac,
-                                        j, SamplesToDo, BufferSize);
+                                        OutPos, SamplesToDo, BufferSize);
                 else if(Bytes == 1)
                     Mix_ALubyte_cubic8(Source, Device, Channels,
                                        SrcData, &DataPosInt, &DataPosFrac,
-                                       j, SamplesToDo, BufferSize);
+                                       OutPos, SamplesToDo, BufferSize);
                 break;
             case RESAMPLER_MIN:
             case RESAMPLER_MAX:
             break;
         }
-        j += BufferSize;
+        OutPos += BufferSize;
 
         /* Handle looping sources */
         while(1)
@@ -964,7 +965,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
             DataPosInt -= DataSize;
         }
-    } while(State == AL_PLAYING && j < SamplesToDo);
+    } while(State == AL_PLAYING && OutPos < SamplesToDo);
 
     /* Update source info */
     Source->state             = State;

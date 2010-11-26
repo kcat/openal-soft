@@ -34,23 +34,27 @@
 
 
 typedef struct {
-    // MMSYSTEM Capture Device
-    ALboolean        bWaveInShutdown;
-    HANDLE           hWaveInHdrEvent;
-    HANDLE           hWaveInThreadEvent;
-    HANDLE           hWaveInThread;
-    DWORD            ulWaveInThreadID;
-    ALint            lWaveInBuffersCommitted;
-    HWAVEIN          hWaveInHandle;
-    WAVEHDR          WaveInBuffer[4];
-    RingBuffer       *pRing;
+    // MMSYSTEM Device
+    volatile ALboolean bWaveShutdown;
+    HANDLE       hWaveHdrEvent;
+    HANDLE       hWaveThreadEvent;
+    HANDLE       hWaveThread;
+    DWORD        ulWaveThreadID;
+    ALint        lWaveBuffersCommitted;
+    WAVEHDR      WaveBuffer[4];
+
+    union {
+        HWAVEIN  In;
+    } hWaveHandle;
+
+    RingBuffer   *pRing;
 } WinMMData;
 
 
 static ALCchar **CaptureDeviceList;
 static ALuint  NumCaptureDevices;
 
-static void ProbeDevices(void)
+static void ProbeCaptureDevices(void)
 {
     ALuint i;
 
@@ -89,6 +93,7 @@ static void ProbeDevices(void)
     }
 }
 
+
 /*
     WaveInProc
 
@@ -107,23 +112,23 @@ static void CALLBACK WaveInProc(HWAVEIN hDevice,UINT uMsg,DWORD_PTR dwInstance,D
         return;
 
     // Decrement number of buffers in use
-    pData->lWaveInBuffersCommitted--;
+    pData->lWaveBuffersCommitted--;
 
-    if(pData->bWaveInShutdown == AL_FALSE)
+    if(pData->bWaveShutdown == AL_FALSE)
     {
         // Notify Wave Processor Thread that a Wave Header has returned
-        PostThreadMessage(pData->ulWaveInThreadID,uMsg,0,dwParam1);
+        PostThreadMessage(pData->ulWaveThreadID,uMsg,0,dwParam1);
     }
     else
     {
-        if(pData->lWaveInBuffersCommitted == 0)
+        if(pData->lWaveBuffersCommitted == 0)
         {
             // Signal Wave Buffers Returned event
-            if(pData->hWaveInHdrEvent)
-                SetEvent(pData->hWaveInHdrEvent);
+            if(pData->hWaveHdrEvent)
+                SetEvent(pData->hWaveHdrEvent);
 
             // Post 'Quit' Message to WaveIn Processor Thread
-            PostThreadMessage(pData->ulWaveInThreadID,WM_QUIT,0,0);
+            PostThreadMessage(pData->ulWaveThreadID,WM_QUIT,0,0);
         }
     }
 }
@@ -146,7 +151,7 @@ static DWORD WINAPI CaptureThreadProc(LPVOID lpParameter)
 
     while(GetMessage(&msg, NULL, 0, 0))
     {
-        if(msg.message != WIM_DATA || pData->bWaveInShutdown)
+        if(msg.message != WIM_DATA || pData->bWaveShutdown)
             continue;
 
         pWaveHdr = ((LPWAVEHDR)msg.lParam);
@@ -155,13 +160,13 @@ static DWORD WINAPI CaptureThreadProc(LPVOID lpParameter)
                         pWaveHdr->dwBytesRecorded/FrameSize);
 
         // Send buffer back to capture more data
-        waveInAddBuffer(pData->hWaveInHandle,pWaveHdr,sizeof(WAVEHDR));
-        pData->lWaveInBuffersCommitted++;
+        waveInAddBuffer(pData->hWaveHandle.In,pWaveHdr,sizeof(WAVEHDR));
+        pData->lWaveBuffersCommitted++;
     }
 
     // Signal Wave Thread completed event
-    if(pData->hWaveInThreadEvent)
-        SetEvent(pData->hWaveInThreadEvent);
+    if(pData->hWaveThreadEvent)
+        SetEvent(pData->hWaveThreadEvent);
 
     ExitThread(0);
 
@@ -181,7 +186,6 @@ static void WinMMClosePlayback(ALCdevice *device)
     (void)device;
 }
 
-
 static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     WAVEFORMATEX wfexCaptureFormat;
@@ -194,7 +198,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     ALuint i;
 
     if(!CaptureDeviceList)
-        ProbeDevices();
+        ProbeCaptureDevices();
 
     // Find the Device ID matching the deviceName if valid
     if(deviceName)
@@ -241,15 +245,15 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
                                         wfexCaptureFormat.nBlockAlign;
     wfexCaptureFormat.cbSize = 0;
 
-    if((res=waveInOpen(&pData->hWaveInHandle, lDeviceID, &wfexCaptureFormat, (DWORD_PTR)&WaveInProc, (DWORD_PTR)pDevice, CALLBACK_FUNCTION)) != MMSYSERR_NOERROR)
+    if((res=waveInOpen(&pData->hWaveHandle.In, lDeviceID, &wfexCaptureFormat, (DWORD_PTR)&WaveInProc, (DWORD_PTR)pDevice, CALLBACK_FUNCTION)) != MMSYSERR_NOERROR)
     {
         AL_PRINT("waveInOpen failed: %u\n", res);
         goto failure;
     }
 
-    pData->hWaveInHdrEvent = CreateEvent(NULL, AL_TRUE, AL_FALSE, "WaveInAllHeadersReturned");
-    pData->hWaveInThreadEvent = CreateEvent(NULL, AL_TRUE, AL_FALSE, "WaveInThreadDestroyed");
-    if(pData->hWaveInHdrEvent == NULL || pData->hWaveInThreadEvent == NULL)
+    pData->hWaveHdrEvent = CreateEvent(NULL, AL_TRUE, AL_FALSE, "WaveInAllHeadersReturned");
+    pData->hWaveThreadEvent = CreateEvent(NULL, AL_TRUE, AL_FALSE, "WaveInThreadDestroyed");
+    if(pData->hWaveHdrEvent == NULL || pData->hWaveThreadEvent == NULL)
     {
         AL_PRINT("CreateEvent failed: %lu\n", GetLastError());
         goto failure;
@@ -266,7 +270,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     if(!pData->pRing)
         goto failure;
 
-    pData->lWaveInBuffersCommitted=0;
+    pData->lWaveBuffersCommitted = 0;
 
     // Create 4 Buffers of 50ms each
     lBufferSize = wfexCaptureFormat.nAvgBytesPerSec / 20;
@@ -278,51 +282,51 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
 
     for(i = 0;i < 4;i++)
     {
-        memset(&pData->WaveInBuffer[i], 0, sizeof(WAVEHDR));
-        pData->WaveInBuffer[i].dwBufferLength = lBufferSize;
-        pData->WaveInBuffer[i].lpData = ((i==0) ? (LPSTR)BufferData :
-                                         (pData->WaveInBuffer[i-1].lpData +
-                                          pData->WaveInBuffer[i-1].dwBufferLength));
-        pData->WaveInBuffer[i].dwFlags = 0;
-        pData->WaveInBuffer[i].dwLoops = 0;
-        waveInPrepareHeader(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
-        waveInAddBuffer(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
-        pData->lWaveInBuffersCommitted++;
+        memset(&pData->WaveBuffer[i], 0, sizeof(WAVEHDR));
+        pData->WaveBuffer[i].dwBufferLength = lBufferSize;
+        pData->WaveBuffer[i].lpData = ((i==0) ? (LPSTR)BufferData :
+                                       (pData->WaveBuffer[i-1].lpData +
+                                        pData->WaveBuffer[i-1].dwBufferLength));
+        pData->WaveBuffer[i].dwFlags = 0;
+        pData->WaveBuffer[i].dwLoops = 0;
+        waveInPrepareHeader(pData->hWaveHandle.In, &pData->WaveBuffer[i], sizeof(WAVEHDR));
+        waveInAddBuffer(pData->hWaveHandle.In, &pData->WaveBuffer[i], sizeof(WAVEHDR));
+        pData->lWaveBuffersCommitted++;
     }
 
     pDevice->ExtraData = pData;
 
-    pData->hWaveInThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CaptureThreadProc, (LPVOID)pDevice, 0, &pData->ulWaveInThreadID);
-    if (pData->hWaveInThread == NULL)
+    pData->hWaveThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CaptureThreadProc, (LPVOID)pDevice, 0, &pData->ulWaveThreadID);
+    if (pData->hWaveThread == NULL)
         goto failure;
 
     pDevice->szDeviceName = strdup(CaptureDeviceList[lDeviceID]);
     return ALC_TRUE;
 
 failure:
-    if(pData->hWaveInThread)
-        CloseHandle(pData->hWaveInThread);
+    if(pData->hWaveThread)
+        CloseHandle(pData->hWaveThread);
 
     for(i = 0;i < 4;i++)
     {
-        if(pData->WaveInBuffer[i].lpData)
+        if(pData->WaveBuffer[i].lpData)
         {
-            waveInUnprepareHeader(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
+            waveInUnprepareHeader(pData->hWaveHandle.In, &pData->WaveBuffer[i], sizeof(WAVEHDR));
             if(i == 0)
-                free(pData->WaveInBuffer[i].lpData);
+                free(pData->WaveBuffer[i].lpData);
         }
     }
 
     if(pData->pRing)
         DestroyRingBuffer(pData->pRing);
 
-    if(pData->hWaveInThreadEvent)
-        CloseHandle(pData->hWaveInThreadEvent);
-    if(pData->hWaveInHdrEvent)
-        CloseHandle(pData->hWaveInHdrEvent);
+    if(pData->hWaveThreadEvent)
+        CloseHandle(pData->hWaveThreadEvent);
+    if(pData->hWaveHdrEvent)
+        CloseHandle(pData->hWaveHdrEvent);
 
-    if(pData->hWaveInHandle)
-        waveInClose(pData->hWaveInHandle);
+    if(pData->hWaveHandle.In)
+        waveInClose(pData->hWaveHandle.In);
 
     free(pData);
     pDevice->ExtraData = NULL;
@@ -335,39 +339,39 @@ static void WinMMCloseCapture(ALCdevice *pDevice)
     int i;
 
     // Call waveOutReset to shutdown wave device
-    pData->bWaveInShutdown = AL_TRUE;
-    waveInReset(pData->hWaveInHandle);
+    pData->bWaveShutdown = AL_TRUE;
+    waveInReset(pData->hWaveHandle.In);
 
     // Wait for signal that all Wave Buffers have returned
-    WaitForSingleObjectEx(pData->hWaveInHdrEvent, 5000, FALSE);
+    WaitForSingleObjectEx(pData->hWaveHdrEvent, 5000, FALSE);
 
     // Wait for signal that Wave Thread has been destroyed
-    WaitForSingleObjectEx(pData->hWaveInThreadEvent, 5000, FALSE);
+    WaitForSingleObjectEx(pData->hWaveThreadEvent, 5000, FALSE);
 
-    CloseHandle(pData->hWaveInThread);
-    pData->hWaveInThread = 0;
+    CloseHandle(pData->hWaveThread);
+    pData->hWaveThread = 0;
 
     // Release the wave buffers
     for(i = 0;i < 4;i++)
     {
-        waveInUnprepareHeader(pData->hWaveInHandle, &pData->WaveInBuffer[i], sizeof(WAVEHDR));
+        waveInUnprepareHeader(pData->hWaveHandle.In, &pData->WaveBuffer[i], sizeof(WAVEHDR));
         if(i == 0)
-            free(pData->WaveInBuffer[i].lpData);
-        pData->WaveInBuffer[i].lpData = NULL;
+            free(pData->WaveBuffer[i].lpData);
+        pData->WaveBuffer[i].lpData = NULL;
     }
 
     DestroyRingBuffer(pData->pRing);
     pData->pRing = NULL;
 
     // Close the Wave device
-    CloseHandle(pData->hWaveInThreadEvent);
-    pData->hWaveInThreadEvent = 0;
+    CloseHandle(pData->hWaveThreadEvent);
+    pData->hWaveThreadEvent = 0;
 
-    CloseHandle(pData->hWaveInHdrEvent);
-    pData->hWaveInHdrEvent = 0;
+    CloseHandle(pData->hWaveHdrEvent);
+    pData->hWaveHdrEvent = 0;
 
-    waveInClose(pData->hWaveInHandle);
-    pData->hWaveInHandle = 0;
+    waveInClose(pData->hWaveHandle.In);
+    pData->hWaveHandle.In = 0;
 
     free(pData);
     pDevice->ExtraData = NULL;
@@ -376,13 +380,13 @@ static void WinMMCloseCapture(ALCdevice *pDevice)
 static void WinMMStartCapture(ALCdevice *pDevice)
 {
     WinMMData *pData = (WinMMData*)pDevice->ExtraData;
-    waveInStart(pData->hWaveInHandle);
+    waveInStart(pData->hWaveHandle.In);
 }
 
 static void WinMMStopCapture(ALCdevice *pDevice)
 {
     WinMMData *pData = (WinMMData*)pDevice->ExtraData;
-    waveInStop(pData->hWaveInHandle);
+    waveInStop(pData->hWaveHandle.In);
 }
 
 static ALCuint WinMMAvailableSamples(ALCdevice *pDevice)
@@ -436,13 +440,13 @@ void alcWinMMProbe(int type)
 {
     ALuint i;
 
-    if(type != CAPTURE_DEVICE_PROBE)
-        return;
-
-    ProbeDevices();
-    for(i = 0;i < NumCaptureDevices;i++)
+    if(type == CAPTURE_DEVICE_PROBE)
     {
-        if(CaptureDeviceList[i])
-            AppendCaptureDeviceList(CaptureDeviceList[i]);
+        ProbeCaptureDevices();
+        for(i = 0;i < NumCaptureDevices;i++)
+        {
+            if(CaptureDeviceList[i])
+                AppendCaptureDeviceList(CaptureDeviceList[i]);
+        }
     }
 }

@@ -46,20 +46,21 @@ static __inline ALdouble cubic32(const ALfloat *vals, ALint step, ALint frac)
                frac * (1.0/FRACTIONONE)); }
 
 static __inline ALdouble point16(const ALshort *vals, ALint step, ALint frac)
-{ return vals[0] / 32767.0; (void)step; (void)frac; }
+{ return vals[0] * (1.0/32767.0); (void)step; (void)frac; }
 static __inline ALdouble lerp16(const ALshort *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE)) / 32767.0; }
+{ return lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE)) * (1.0/32767.0); }
 static __inline ALdouble cubic16(const ALshort *vals, ALint step, ALint frac)
 { return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0/FRACTIONONE)) / 32767.0; }
+               frac * (1.0/FRACTIONONE)) * (1.0/32767.0); }
 
 static __inline ALdouble point8(const ALubyte *vals, ALint step, ALint frac)
-{ return (vals[0]-128.0) / 127.0; (void)step; (void)frac; }
+{ return (vals[0]-128.0) * (1.0/127.0); (void)step; (void)frac; }
 static __inline ALdouble lerp8(const ALubyte *vals, ALint step, ALint frac)
-{ return (lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE))-128.0) / 127.0; }
+{ return (lerp(vals[0], vals[step],
+               frac * (1.0/FRACTIONONE))-128.0) * (1.0/127.0); }
 static __inline ALdouble cubic8(const ALubyte *vals, ALint step, ALint frac)
 { return (cubic(vals[-step], vals[0], vals[step], vals[step+step],
-                frac * (1.0/FRACTIONONE))-128.0) / 127.0; }
+                frac * (1.0/FRACTIONONE))-128.0) * (1.0/127.0); }
 
 
 #define DECL_TEMPLATE(T, sampler)                                             \

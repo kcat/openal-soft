@@ -128,8 +128,6 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Params.Step = Pitch*FRACTIONONE;
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
-                else if(ALSource->Params.Step > maxstep)
-                    ALSource->Params.Step = maxstep;
             }
 
             Channels = aluChannelsFromFormat(ALBuffer->format);
@@ -608,8 +606,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Params.Step = Pitch*FRACTIONONE;
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
-                else if(ALSource->Params.Step > maxstep)
-                    ALSource->Params.Step = maxstep;
             }
             break;
         }

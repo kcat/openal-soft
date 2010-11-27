@@ -11,6 +11,7 @@ enum FmtType {
     FmtUByte,
     FmtShort,
     FmtFloat,
+    FmtDouble,
 };
 
 enum FmtChannels {

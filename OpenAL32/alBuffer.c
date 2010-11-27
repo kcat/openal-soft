@@ -287,9 +287,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
         case AL_FORMAT_MONO_FLOAT32:
+        case AL_FORMAT_MONO_DOUBLE_EXT:
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
         case AL_FORMAT_STEREO_FLOAT32:
+        case AL_FORMAT_STEREO_DOUBLE_EXT:
         case AL_FORMAT_QUAD8_LOKI:
         case AL_FORMAT_QUAD16_LOKI:
         case AL_FORMAT_QUAD8:
@@ -305,17 +307,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case AL_FORMAT_71CHN16:
         case AL_FORMAT_71CHN32:
             err = LoadData(ALBuf, data, size, freq, format, format);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-
-        case AL_FORMAT_MONO_DOUBLE_EXT:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO_FLOAT32);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-        case AL_FORMAT_STEREO_DOUBLE_EXT:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO_FLOAT32);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
             break;
@@ -1064,11 +1055,7 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALvoid *temp;
 
     assert(NewChannels == OrigChannels);
-    assert(NewBytes == 4 || NewBytes == 2 || NewBytes == 1);
-    if(OrigBytes == 8)
-        assert(NewBytes == 4);
-    else
-        assert(NewBytes == OrigBytes);
+    assert(NewBytes == OrigBytes);
 
     if((size%(OrigBytes*OrigChannels)) != 0)
         return AL_INVALID_VALUE;
@@ -1125,7 +1112,7 @@ static void ConvertData(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei
 
         case 8:
             for(i = 0;i < len;i++)
-                ((ALfloat*)dst)[i] = ((ALdouble*)src)[i];
+                ((ALdouble*)dst)[i] = ((ALdouble*)src)[i];
             break;
 
         default:

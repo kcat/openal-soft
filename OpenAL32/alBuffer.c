@@ -352,7 +352,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 ALBuf->LoopStart = 0;
                 ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
-                DecompFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
+                DecomposeFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
 
                 ALBuf->OriginalSize = size;
                 ALBuf->OriginalAlign = OrigBytes * 2;
@@ -402,7 +402,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 ALBuf->LoopStart = 0;
                 ALBuf->LoopEnd = newsize / Channels / NewBytes;
 
-                DecompFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
+                DecomposeFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
 
                 ALBuf->OriginalSize = size;
                 ALBuf->OriginalAlign = 36 * Channels;
@@ -457,7 +457,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 ALBuf->LoopStart = 0;
                 ALBuf->LoopEnd = newsize / Channels / NewBytes;
 
-                DecompFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
+                DecomposeFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
 
                 ALBuf->OriginalSize = size;
                 ALBuf->OriginalAlign = 1 * Channels;
@@ -500,7 +500,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 ALBuf->LoopStart = 0;
                 ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
-                DecompFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
+                DecomposeFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
 
                 ALBuf->OriginalSize = size;
                 ALBuf->OriginalAlign = 1 * 2;
@@ -1080,7 +1080,7 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
-    DecompFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
+    DecomposeFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
 
     ALBuf->OriginalSize = size;
     ALBuf->OriginalAlign = OrigBytes * OrigChannels;

@@ -24,8 +24,8 @@ enum FmtChannels {
 };
 
 
-static __inline void DecompFormat(ALenum format, enum FmtType *type,
-                                  enum FmtChannels *order)
+static __inline void DecomposeFormat(ALenum format, enum FmtType *type,
+                                     enum FmtChannels *order)
 {
     switch(format)
     {

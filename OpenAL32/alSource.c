@@ -1873,15 +1873,19 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
             if((OriginalFormat == AL_FORMAT_MONO_IMA4) ||
                (OriginalFormat == AL_FORMAT_STEREO_IMA4))
             {
+                ALuint FrameBlockSize = 65 * Bytes * Channels;
+                ALuint BlockSize = 36 * Channels;
+
                 // Round down to nearest ADPCM block
-                offset[0] = (ALdouble)((readPos / (65 * Bytes * Channels)) * 36 * Channels);
-                if(Source->state == AL_PLAYING)
+                offset[0] = (ALdouble)(readPos / FrameBlockSize * BlockSize);
+                if(Source->state != AL_PLAYING)
+                    offset[1] = offset[0];
+                else
                 {
                     // Round up to nearest ADPCM block
-                    offset[1] = (ALdouble)(((writePos + (65 * Bytes * Channels) - 1) / (65 * Bytes * Channels)) * 36 * Channels);
+                    offset[1] = (ALdouble)((writePos+FrameBlockSize-1) /
+                                           FrameBlockSize * BlockSize);
                 }
-                else
-                    offset[1] = offset[0];
             }
             else if(OriginalFormat == AL_FORMAT_MONO_MULAW ||
                     OriginalFormat == AL_FORMAT_STEREO_MULAW ||

@@ -80,12 +80,12 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
+    enum FmtChannels Channels;
     ALfloat DryGain, DryGainHF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALint NumSends, Frequency;
     ALboolean DupStereo;
-    ALint Channels;
     ALfloat Pitch;
     ALenum Format;
     ALfloat cw;
@@ -107,7 +107,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     Pitch        = ALSource->flPitch;
 
     /* Calculate the stepping value */
-    Channels = 0;
+    Channels = FmtMono;
     BufferListItem = ALSource->queue;
     while(BufferListItem != NULL)
     {
@@ -130,7 +130,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                     ALSource->Params.Step = 1;
             }
 
-            Channels = aluChannelsFromFormat(ALBuffer->format);
+            Channels = ALBuffer->FmtChannels;
             break;
         }
         BufferListItem = BufferListItem->next;
@@ -150,7 +150,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             break;
     }
 
-    if(Channels == 2)
+    if(Channels == FmtStereo)
     {
         for(i = 0;i < OUTPUTCHANNELS;i++)
             ALSource->Params.DryGains[i] = 0.0f;

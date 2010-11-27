@@ -555,7 +555,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             Source->queue = BufferListItem;
                             Source->BuffersInQueue = 1;
 
-                            if(aluChannelsFromFormat(buffer->format) == 1)
+                            if(buffer->FmtChannels == FmtMono)
                                 Source->Update = CalcSourceParams;
                             else
                                 Source->Update = CalcNonAttnSourceParams;
@@ -1595,7 +1595,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
             Frequency = buffer->frequency;
             Format = buffer->eOriginalFormat;
 
-            if(aluChannelsFromFormat(buffer->format) == 1)
+            if(buffer->FmtChannels == FmtMono)
                 Source->Update = CalcSourceParams;
             else
                 Source->Update = CalcNonAttnSourceParams;

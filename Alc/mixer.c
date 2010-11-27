@@ -612,6 +612,41 @@ DECL_TEMPLATE(ALubyte, cubic8)
 #undef DECL_TEMPLATE
 
 
+#define DECL_TEMPLATE(sampler)                                                \
+static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
+  ALuint Channels, ALuint Bytes,                                              \
+  const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac,                \
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
+{                                                                             \
+    switch(Bytes)                                                             \
+    {                                                                         \
+    case 1:                                                                   \
+        Mix_ALubyte_##sampler##8(Source, Device, Channels,                    \
+                                 Data, DataPosInt, DataPosFrac,               \
+                                 OutPos, SamplesToDo, BufferSize);            \
+        break;                                                                \
+                                                                              \
+    case 2:                                                                   \
+        Mix_ALshort_##sampler##16(Source, Device, Channels,                   \
+                                  Data, DataPosInt, DataPosFrac,              \
+                                  OutPos, SamplesToDo, BufferSize);           \
+        break;                                                                \
+                                                                              \
+    case 4:                                                                   \
+        Mix_ALfloat_##sampler##32(Source, Device, Channels,                   \
+                                  Data, DataPosInt, DataPosFrac,              \
+                                  OutPos, SamplesToDo, BufferSize);           \
+        break;                                                                \
+    }                                                                         \
+}
+
+DECL_TEMPLATE(point)
+DECL_TEMPLATE(lerp)
+DECL_TEMPLATE(cubic)
+
+#undef DECL_TEMPLATE
+
+
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
@@ -858,46 +893,19 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         switch(Resampler)
         {
             case POINT_RESAMPLER:
-                if(Bytes == 4)
-                    Mix_ALfloat_point32(Source, Device, Channels,
-                                        SrcData, &DataPosInt, &DataPosFrac,
-                                        OutPos, SamplesToDo, BufferSize);
-                else if(Bytes == 2)
-                    Mix_ALshort_point16(Source, Device, Channels,
-                                        SrcData, &DataPosInt, &DataPosFrac,
-                                        OutPos, SamplesToDo, BufferSize);
-                else if(Bytes == 1)
-                    Mix_ALubyte_point8(Source, Device, Channels,
-                                       SrcData, &DataPosInt, &DataPosFrac,
-                                       OutPos, SamplesToDo, BufferSize);
+                Mix_point(Source, Device, Channels, Bytes,
+                          SrcData, &DataPosInt, &DataPosFrac,
+                          OutPos, SamplesToDo, BufferSize);
                 break;
             case LINEAR_RESAMPLER:
-                if(Bytes == 4)
-                    Mix_ALfloat_lerp32(Source, Device, Channels,
-                                       SrcData, &DataPosInt, &DataPosFrac,
-                                       OutPos, SamplesToDo, BufferSize);
-                else if(Bytes == 2)
-                    Mix_ALshort_lerp16(Source, Device, Channels,
-                                       SrcData, &DataPosInt, &DataPosFrac,
-                                       OutPos, SamplesToDo, BufferSize);
-                else if(Bytes == 1)
-                    Mix_ALubyte_lerp8(Source, Device, Channels,
-                                      SrcData, &DataPosInt, &DataPosFrac,
-                                      OutPos, SamplesToDo, BufferSize);
+                Mix_lerp(Source, Device, Channels, Bytes,
+                         SrcData, &DataPosInt, &DataPosFrac,
+                         OutPos, SamplesToDo, BufferSize);
                 break;
             case CUBIC_RESAMPLER:
-                if(Bytes == 4)
-                    Mix_ALfloat_cubic32(Source, Device, Channels,
-                                        SrcData, &DataPosInt, &DataPosFrac,
-                                        OutPos, SamplesToDo, BufferSize);
-                else if(Bytes == 2)
-                    Mix_ALshort_cubic16(Source, Device, Channels,
-                                        SrcData, &DataPosInt, &DataPosFrac,
-                                        OutPos, SamplesToDo, BufferSize);
-                else if(Bytes == 1)
-                    Mix_ALubyte_cubic8(Source, Device, Channels,
-                                       SrcData, &DataPosInt, &DataPosFrac,
-                                       OutPos, SamplesToDo, BufferSize);
+                Mix_cubic(Source, Device, Channels, Bytes,
+                          SrcData, &DataPosInt, &DataPosFrac,
+                          OutPos, SamplesToDo, BufferSize);
                 break;
             case RESAMPLER_MIN:
             case RESAMPLER_MAX:

@@ -35,13 +35,14 @@
 
 
 static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat);
-static void ConvertData(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len);
+static void ConvertData(ALvoid *dst, const ALvoid *src, enum SrcFmtType srcType, ALsizei len);
 static void ConvertDataRear(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len);
 static void ConvertDataIMA4(ALvoid *dst, const ALvoid *src, ALint origChans, ALsizei len);
 static void ConvertDataMULaw(ALvoid *dst, const ALvoid *src, ALsizei len);
 static void ConvertDataMULawRear(ALvoid *dst, const ALvoid *src, ALsizei len);
 
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
+
 
 /*
 * Global Variables
@@ -584,12 +585,15 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         case AL_FORMAT_71CHN32: {
             ALuint OldBytes = aluBytesFromFormat(format);
             ALuint Bytes = aluBytesFromFormat(ALBuf->format);
+            enum SrcFmtChannels SrcChannels;
+            enum SrcFmtType SrcType;
 
             offset /= OldBytes;
             offset *= Bytes;
             length /= OldBytes;
 
-            ConvertData(&((ALubyte*)ALBuf->data)[offset], data, Bytes, length);
+            DecomposeInputFormat(format, &SrcType, &SrcChannels);
+            ConvertData(&((ALubyte*)ALBuf->data)[offset], data, SrcType, length);
         }   break;
 
         case AL_FORMAT_REAR8:
@@ -1051,11 +1055,18 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
     ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
     ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
+    enum SrcFmtChannels SrcChannels;
+    enum FmtChannels DstChannels;
+    enum SrcFmtType SrcType;
+    enum FmtType DstType;
     ALuint64 newsize;
     ALvoid *temp;
 
     assert(NewChannels == OrigChannels);
     assert(NewBytes == OrigBytes);
+
+    DecomposeInputFormat(OrigFormat, &SrcType, &SrcChannels);
+    DecomposeFormat(NewFormat, &DstType, &DstChannels);
 
     if((size%(OrigBytes*OrigChannels)) != 0)
         return AL_INVALID_VALUE;
@@ -1070,7 +1081,7 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALBuf->data = temp;
 
     // Samples are converted here
-    ConvertData(ALBuf->data, data, OrigBytes, newsize/NewBytes);
+    ConvertData(ALBuf->data, data, SrcType, newsize/NewBytes);
 
     ALBuf->format = NewFormat;
     ALBuf->eOriginalFormat = OrigFormat;
@@ -1080,7 +1091,8 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
-    DecomposeFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
+    ALBuf->FmtType = DstType;
+    ALBuf->FmtChannels = DstChannels;
 
     ALBuf->OriginalSize = size;
     ALBuf->OriginalAlign = OrigBytes * OrigChannels;
@@ -1088,35 +1100,42 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     return AL_NO_ERROR;
 }
 
-static void ConvertData(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len)
+static void ConvertData(ALvoid *dst, const ALvoid *src, enum SrcFmtType srcType, ALsizei len)
 {
     ALsizei i;
     if(src == NULL)
         return;
-    switch(origBytes)
+    switch(srcType)
     {
-        case 1:
+        case SrcFmtByte: /* signed byte -> unsigned byte */
+            for(i = 0;i < len;i++)
+                ((ALubyte*)dst)[i] = ((ALbyte*)src)[i] ^ 0x80;
+            break;
+
+        case SrcFmtUByte:
             for(i = 0;i < len;i++)
                 ((ALubyte*)dst)[i] = ((ALubyte*)src)[i];
             break;
 
-        case 2:
+        case SrcFmtShort:
             for(i = 0;i < len;i++)
                 ((ALshort*)dst)[i] = ((ALshort*)src)[i];
             break;
 
-        case 4:
+        case SrcFmtUShort: /* unsigned short -> signed short */
+            for(i = 0;i < len;i++)
+                ((ALshort*)dst)[i] = ((ALushort*)src)[i] ^ 0x8000;
+            break;
+
+        case SrcFmtFloat:
             for(i = 0;i < len;i++)
                 ((ALfloat*)dst)[i] = ((ALfloat*)src)[i];
             break;
 
-        case 8:
+        case SrcFmtDouble:
             for(i = 0;i < len;i++)
                 ((ALdouble*)dst)[i] = ((ALdouble*)src)[i];
             break;
-
-        default:
-            assert(0);
     }
 }
 
@@ -1241,6 +1260,101 @@ static void ConvertDataMULawRear(ALvoid *dst, const ALvoid *src, ALsizei len)
         ((ALshort*)dst)[i+1] = 0;
         ((ALshort*)dst)[i+2] = muLawDecompressionTable[((ALubyte*)src)[i/2+0]];
         ((ALshort*)dst)[i+3] = muLawDecompressionTable[((ALubyte*)src)[i/2+1]];
+    }
+}
+
+
+void DecomposeInputFormat(ALenum format, enum SrcFmtType *type,
+                          enum SrcFmtChannels *order)
+{
+    switch(format)
+    {
+        case AL_FORMAT_MONO8:
+            *type  = SrcFmtUByte;
+            *order = SrcFmtMono;
+            break;
+        case AL_FORMAT_MONO16:
+            *type  = SrcFmtShort;
+            *order = SrcFmtMono;
+            break;
+        case AL_FORMAT_MONO_FLOAT32:
+            *type  = SrcFmtFloat;
+            *order = SrcFmtMono;
+            break;
+        case AL_FORMAT_MONO_DOUBLE_EXT:
+            *type  = SrcFmtDouble;
+            *order = SrcFmtMono;
+            break;
+        case AL_FORMAT_STEREO8:
+            *type  = SrcFmtUByte;
+            *order = SrcFmtStereo;
+            break;
+        case AL_FORMAT_STEREO16:
+            *type  = SrcFmtShort;
+            *order = SrcFmtStereo;
+            break;
+        case AL_FORMAT_STEREO_FLOAT32:
+            *type  = SrcFmtFloat;
+            *order = SrcFmtStereo;
+            break;
+        case AL_FORMAT_STEREO_DOUBLE_EXT:
+            *type  = SrcFmtDouble;
+            *order = SrcFmtStereo;
+            break;
+        case AL_FORMAT_QUAD8_LOKI:
+        case AL_FORMAT_QUAD8:
+            *type  = SrcFmtUByte;
+            *order = SrcFmtQuad;
+            break;
+        case AL_FORMAT_QUAD16_LOKI:
+        case AL_FORMAT_QUAD16:
+            *type  = SrcFmtShort;
+            *order = SrcFmtQuad;
+            break;
+        case AL_FORMAT_QUAD32:
+            *type  = SrcFmtFloat;
+            *order = SrcFmtQuad;
+            break;
+        case AL_FORMAT_51CHN8:
+            *type  = SrcFmtUByte;
+            *order = SrcFmtX51;
+            break;
+        case AL_FORMAT_51CHN16:
+            *type  = SrcFmtShort;
+            *order = SrcFmtX51;
+            break;
+        case AL_FORMAT_51CHN32:
+            *type  = SrcFmtFloat;
+            *order = SrcFmtX51;
+            break;
+        case AL_FORMAT_61CHN8:
+            *type  = SrcFmtUByte;
+            *order = SrcFmtX61;
+            break;
+        case AL_FORMAT_61CHN16:
+            *type  = SrcFmtShort;
+            *order = SrcFmtX61;
+            break;
+        case AL_FORMAT_61CHN32:
+            *type  = SrcFmtFloat;
+            *order = SrcFmtX61;
+            break;
+        case AL_FORMAT_71CHN8:
+            *type  = SrcFmtUByte;
+            *order = SrcFmtX71;
+            break;
+        case AL_FORMAT_71CHN16:
+            *type  = SrcFmtShort;
+            *order = SrcFmtX71;
+            break;
+        case AL_FORMAT_71CHN32:
+            *type  = SrcFmtFloat;
+            *order = SrcFmtX71;
+            break;
+
+        default:
+            AL_PRINT("Unhandled format specified: 0x%X\n", format);
+            abort();
     }
 }
 

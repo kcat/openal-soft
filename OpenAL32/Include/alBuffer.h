@@ -7,6 +7,29 @@
 extern "C" {
 #endif
 
+/* Input formats (some are currently theoretical) */
+enum SrcFmtType {
+    SrcFmtByte,   /* AL_BYTE */
+    SrcFmtUByte,  /* AL_UNSIGNED_BYTE */
+    SrcFmtShort,  /* AL_SHORT */
+    SrcFmtUShort, /* AL_UNSIGNED_SHORT */
+    SrcFmtFloat,  /* AL_FLOAT */
+    SrcFmtDouble, /* AL_DOUBLE */
+};
+enum SrcFmtChannels {
+    SrcFmtMono,   /* AL_MONO */
+    SrcFmtStereo, /* AL_STEREO */
+    SrcFmtRear,   /* AL_REAR */
+    SrcFmtQuad,   /* AL_QUAD */
+    SrcFmtX51,    /* AL_5POINT1 (WFX order) */
+    SrcFmtX61,    /* AL_6POINT1 (WFX order) */
+    SrcFmtX71,    /* AL_7POINT1 (WFX order) */
+};
+
+void DecomposeInputFormat(ALenum format, enum SrcFmtType *type,
+                          enum SrcFmtChannels *order);
+
+/* Storable formats */
 enum FmtType {
     FmtUByte,
     FmtShort,

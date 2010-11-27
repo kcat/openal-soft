@@ -91,22 +91,22 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat cw;
     ALint i;
 
-    //Get context properties
+    /* Get device properties */
     Format    = ALContext->Device->Format;
     DupStereo = ALContext->Device->DuplicateStereo;
     NumSends  = ALContext->Device->NumAuxSends;
     Frequency = ALContext->Device->Frequency;
 
-    //Get listener properties
+    /* Get listener properties */
     ListenerGain = ALContext->Listener.Gain;
 
-    //Get source properties
+    /* Get source properties */
     SourceVolume = ALSource->flGain;
     MinVolume    = ALSource->flMinGain;
     MaxVolume    = ALSource->flMaxGain;
     Pitch        = ALSource->flPitch;
 
-    //1. Multi-channel buffers always play "normal"
+    /* Calculate the stepping value */
     Channels = 0;
     BufferListItem = ALSource->queue;
     while(BufferListItem != NULL)
@@ -138,6 +138,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         BufferListItem = BufferListItem->next;
     }
 
+    /* Calculate gains */
     DryGain = SourceVolume;
     DryGain = __min(DryGain,MaxVolume);
     DryGain = __max(DryGain,MinVolume);

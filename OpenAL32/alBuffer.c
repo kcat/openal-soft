@@ -476,7 +476,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         }   break;
 
         case AL_FORMAT_REAR_MULAW: {
-            ALenum NewFormat = AL_FORMAT_QUAD32;
+            ALenum NewFormat = AL_FORMAT_QUAD16;
             ALuint NewChannels = aluChannelsFromFormat(NewFormat);
             ALuint NewBytes = aluBytesFromFormat(NewFormat);
             ALuint64 newsize;

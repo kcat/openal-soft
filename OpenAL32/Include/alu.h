@@ -80,7 +80,20 @@ typedef enum {
 #define FRACTIONBITS (14)
 #define FRACTIONONE  (1<<FRACTIONBITS)
 #define FRACTIONMASK (FRACTIONONE-1)
-#define MAX_PITCH    (INT_MAX & ~FRACTIONMASK)
+
+/* Size for temporary stack storage of buffer data. Larger values need more
+ * stack, while smaller values may need more iterations. The value needs to be
+ * a sensible size, however, as it constrains the max stepping value used for
+ * mixing.
+ * The mixer requires being able to do two samplings per mixing loop. A 16KB
+ * buffer can hold 512 sample frames for a 7.1 float buffer. With the cubic
+ * resampler (which requires 3 padding sample frames), this limits the maximum
+ * step to about 508. This means that buffer_freq*source_pitch cannot exceed
+ * device_freq*508 for an 8-channel 32-bit buffer. */
+#ifndef STACK_DATA_SIZE
+#define STACK_DATA_SIZE  16384
+#endif
+
 
 /* NOTE: The AL_FORMAT_REAR* enums aren't handled here because they're
  *       converted to AL_FORMAT_QUAD* when loaded */

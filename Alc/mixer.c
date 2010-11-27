@@ -612,12 +612,6 @@ DECL_TEMPLATE(ALubyte, cubic8)
 #undef DECL_TEMPLATE
 
 
-/* Stack data size can be whatever. Larger values need more stack, while
- * smaller values may need more iterations */
-#ifndef STACK_DATA_SIZE
-#define STACK_DATA_SIZE  16384
-#endif
-
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
@@ -859,17 +853,6 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
         BufferSize = (ALuint)((DataSize64+(increment-1)) / increment);
         BufferSize = min(BufferSize, (SamplesToDo-OutPos));
-        if(BufferSize == 0)
-        {
-            AL_PRINT("No samples to mix! Pitch too high (%u, %g)?\n",
-                     increment, increment/(double)FRACTIONONE);
-            State = AL_STOPPED;
-            BufferListItem = Source->queue;
-            BuffersPlayed = Source->BuffersInQueue;
-            DataPosInt = 0;
-            DataPosFrac = 0;
-            break;
-        }
 
         SrcData += BufferPrePadding*FrameSize;
         switch(Resampler)

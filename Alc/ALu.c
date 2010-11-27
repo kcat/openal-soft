@@ -104,32 +104,38 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     SourceVolume = ALSource->flGain;
     MinVolume    = ALSource->flMinGain;
     MaxVolume    = ALSource->flMaxGain;
+    Pitch        = ALSource->flPitch;
 
     //1. Multi-channel buffers always play "normal"
     Channels = 0;
-    Pitch = ALSource->flPitch;
     BufferListItem = ALSource->queue;
     while(BufferListItem != NULL)
     {
         ALbuffer *ALBuffer;
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
-            Channels = aluChannelsFromFormat(ALBuffer->format);
+            ALint maxstep = STACK_DATA_SIZE /
+                            aluFrameSizeFromFormat(ALBuffer->format);
+            maxstep -= ResamplerPadding[ALSource->Resampler] +
+                       ResamplerPrePadding[ALSource->Resampler] + 1;
+            maxstep = min(maxstep, INT_MAX>>FRACTIONBITS);
+
             Pitch = Pitch * ALBuffer->frequency / Frequency;
+            if(Pitch > (ALfloat)maxstep)
+                ALSource->Params.Step = maxstep<<FRACTIONBITS;
+            else
+            {
+                ALSource->Params.Step = Pitch*FRACTIONONE;
+                if(ALSource->Params.Step == 0)
+                    ALSource->Params.Step = 1;
+                else if(ALSource->Params.Step > maxstep)
+                    ALSource->Params.Step = maxstep;
+            }
+
+            Channels = aluChannelsFromFormat(ALBuffer->format);
             break;
         }
         BufferListItem = BufferListItem->next;
-    }
-
-    if(Pitch > (float)MAX_PITCH)
-        ALSource->Params.Step = MAX_PITCH<<FRACTIONBITS;
-    else if(!(Pitch > 0.0f))
-        ALSource->Params.Step = FRACTIONONE;
-    else
-    {
-        ALSource->Params.Step = Pitch*FRACTIONONE;
-        if(ALSource->Params.Step == 0)
-            ALSource->Params.Step = 1;
     }
 
     DryGain = SourceVolume;
@@ -587,21 +593,26 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALbuffer *ALBuffer;
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
+            ALint maxstep = STACK_DATA_SIZE /
+                            aluFrameSizeFromFormat(ALBuffer->format);
+            maxstep -= ResamplerPadding[ALSource->Resampler] +
+                       ResamplerPrePadding[ALSource->Resampler] + 1;
+            maxstep = min(maxstep, INT_MAX>>FRACTIONBITS);
+
             Pitch = Pitch * ALBuffer->frequency / Frequency;
+            if(Pitch > (ALfloat)maxstep)
+                ALSource->Params.Step = maxstep<<FRACTIONBITS;
+            else
+            {
+                ALSource->Params.Step = Pitch*FRACTIONONE;
+                if(ALSource->Params.Step == 0)
+                    ALSource->Params.Step = 1;
+                else if(ALSource->Params.Step > maxstep)
+                    ALSource->Params.Step = maxstep;
+            }
             break;
         }
         BufferListItem = BufferListItem->next;
-    }
-
-    if(Pitch > (float)MAX_PITCH)
-        ALSource->Params.Step = MAX_PITCH<<FRACTIONBITS;
-    else if(!(Pitch > 0.0f))
-        ALSource->Params.Step = FRACTIONONE;
-    else
-    {
-        ALSource->Params.Step = Pitch*FRACTIONONE;
-        if(ALSource->Params.Step == 0)
-            ALSource->Params.Step = 1;
     }
 
     // Use energy-preserving panning algorithm for multi-speaker playback

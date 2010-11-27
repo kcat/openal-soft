@@ -558,38 +558,39 @@ DECL_TEMPLATE(ALubyte, X71Chans, cubic8)
 
 
 #define DECL_TEMPLATE(T, sampler)                                             \
-static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device, ALuint Channels, \
+static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
+  enum FmtChannels FmtChannels,                                               \
   const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac,                \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
-    switch(Channels)                                                          \
+    switch(FmtChannels)                                                       \
     {                                                                         \
-    case 1: /* Mono */                                                        \
+    case FmtMono:                                                             \
         Mix_##T##_Mono_##sampler(Source, Device,                              \
                                  Data, DataPosInt, DataPosFrac,               \
                                  OutPos, SamplesToDo, BufferSize);            \
         break;                                                                \
-    case 2: /* Stereo */                                                      \
+    case FmtStereo:                                                           \
         Mix_##T##_Stereo_##sampler(Source, Device,                            \
                                    Data, DataPosInt, DataPosFrac,             \
                                    OutPos, SamplesToDo, BufferSize);          \
         break;                                                                \
-    case 4: /* Quad */                                                        \
+    case FmtQuad:                                                             \
         Mix_##T##_QuadChans_##sampler(Source, Device,                         \
                                       Data, DataPosInt, DataPosFrac,          \
                                       OutPos, SamplesToDo, BufferSize);       \
         break;                                                                \
-    case 6: /* 5.1 */                                                         \
+    case Fmt51ChanWFX:                                                        \
         Mix_##T##_X51Chans_##sampler(Source, Device,                          \
                                      Data, DataPosInt, DataPosFrac,           \
                                      OutPos, SamplesToDo, BufferSize);        \
         break;                                                                \
-    case 7: /* 6.1 */                                                         \
+    case Fmt61ChanWFX:                                                        \
         Mix_##T##_X61Chans_##sampler(Source, Device,                          \
                                      Data, DataPosInt, DataPosFrac,           \
                                      OutPos, SamplesToDo, BufferSize);        \
         break;                                                                \
-    case 8: /* 7.1 */                                                         \
+    case Fmt71ChanWFX:                                                        \
         Mix_##T##_X71Chans_##sampler(Source, Device,                          \
                                      Data, DataPosInt, DataPosFrac,           \
                                      OutPos, SamplesToDo, BufferSize);        \
@@ -614,26 +615,26 @@ DECL_TEMPLATE(ALubyte, cubic8)
 
 #define DECL_TEMPLATE(sampler)                                                \
 static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
-  ALuint Channels, ALuint Bytes,                                              \
+  enum FmtChannels FmtChannels, enum FmtType FmtType,                         \
   const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac,                \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
-    switch(Bytes)                                                             \
+    switch(FmtType)                                                           \
     {                                                                         \
-    case 1:                                                                   \
-        Mix_ALubyte_##sampler##8(Source, Device, Channels,                    \
+    case FmtUByte:                                                            \
+        Mix_ALubyte_##sampler##8(Source, Device, FmtChannels,                 \
                                  Data, DataPosInt, DataPosFrac,               \
                                  OutPos, SamplesToDo, BufferSize);            \
         break;                                                                \
                                                                               \
-    case 2:                                                                   \
-        Mix_ALshort_##sampler##16(Source, Device, Channels,                   \
+    case FmtShort:                                                            \
+        Mix_ALshort_##sampler##16(Source, Device, FmtChannels,                \
                                   Data, DataPosInt, DataPosFrac,              \
                                   OutPos, SamplesToDo, BufferSize);           \
         break;                                                                \
                                                                               \
-    case 4:                                                                   \
-        Mix_ALfloat_##sampler##32(Source, Device, Channels,                   \
+    case FmtFloat:                                                            \
+        Mix_ALfloat_##sampler##32(Source, Device, FmtChannels,                \
                                   Data, DataPosInt, DataPosFrac,              \
                                   OutPos, SamplesToDo, BufferSize);           \
         break;                                                                \
@@ -650,16 +651,18 @@ DECL_TEMPLATE(cubic)
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
-    ALuint FrameSize, Channels, Bytes;
     ALuint DataPosInt, DataPosFrac;
+    enum FmtChannels FmtChannels;
+    enum FmtType FmtType;
     ALuint BuffersPlayed;
     ALboolean Looping;
     ALuint increment;
     resampler_t Resampler;
     ALenum State;
     ALuint OutPos;
-    ALuint i;
+    ALuint FrameSize;
     ALint64 DataSize64;
+    ALuint i;
 
     /* Get source info */
     State         = Source->state;
@@ -672,7 +675,9 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                                                  Source->Resampler;
 
     /* Get buffer info */
-    FrameSize = Channels = Bytes = 0;
+    FrameSize = 0;
+    FmtChannels = FmtMono;
+    FmtType = FmtUByte;
     BufferListItem = Source->queue;
     for(i = 0;i < Source->BuffersInQueue;i++)
     {
@@ -680,8 +685,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
             FrameSize = aluFrameSizeFromFormat(ALBuffer->format);
-            Channels = aluChannelsFromFormat(ALBuffer->format);
-            Bytes = aluBytesFromFormat(ALBuffer->format);
+            FmtChannels = ALBuffer->FmtChannels;
+            FmtType = ALBuffer->FmtType;
             break;
         }
         BufferListItem = BufferListItem->next;
@@ -731,7 +736,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     DataSize = (BufferPrePadding-DataPosInt)*FrameSize;
                     DataSize = min(BufferSize, DataSize);
 
-                    memset(&SrcData[SrcDataSize], (Bytes==1)?0x80:0, DataSize);
+                    memset(&SrcData[SrcDataSize], (FmtType==FmtUByte)?0x80:0, DataSize);
                     SrcDataSize += DataSize;
                     BufferSize -= DataSize;
 
@@ -747,7 +752,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 SrcDataSize += DataSize;
                 BufferSize -= DataSize;
 
-                memset(&SrcData[SrcDataSize], (Bytes==1)?0x80:0, BufferSize);
+                memset(&SrcData[SrcDataSize], (FmtType==FmtUByte)?0x80:0, BufferSize);
                 SrcDataSize += BufferSize;
                 BufferSize -= BufferSize;
             }
@@ -772,7 +777,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     DataSize = (BufferPrePadding-DataPosInt)*FrameSize;
                     DataSize = min(BufferSize, DataSize);
 
-                    memset(&SrcData[SrcDataSize], (Bytes==1)?0x80:0, DataSize);
+                    memset(&SrcData[SrcDataSize], (FmtType==FmtUByte)?0x80:0, DataSize);
                     SrcDataSize += DataSize;
                     BufferSize -= DataSize;
 
@@ -816,7 +821,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     {
                         ALuint DataSize = min(BufferSize, pos);
 
-                        memset(&SrcData[SrcDataSize], (Bytes==1)?0x80:0, DataSize);
+                        memset(&SrcData[SrcDataSize], (FmtType==FmtUByte)?0x80:0, DataSize);
                         SrcDataSize += DataSize;
                         BufferSize -= DataSize;
 
@@ -872,7 +877,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     BufferListIter = Source->queue;
                 else if(!BufferListIter)
                 {
-                    memset(&SrcData[SrcDataSize], (Bytes==1)?0x80:0, BufferSize);
+                    memset(&SrcData[SrcDataSize], (FmtType==FmtUByte)?0x80:0, BufferSize);
                     SrcDataSize += BufferSize;
                     BufferSize -= BufferSize;
                 }
@@ -893,17 +898,17 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         switch(Resampler)
         {
             case POINT_RESAMPLER:
-                Mix_point(Source, Device, Channels, Bytes,
+                Mix_point(Source, Device, FmtChannels, FmtType,
                           SrcData, &DataPosInt, &DataPosFrac,
                           OutPos, SamplesToDo, BufferSize);
                 break;
             case LINEAR_RESAMPLER:
-                Mix_lerp(Source, Device, Channels, Bytes,
+                Mix_lerp(Source, Device, FmtChannels, FmtType,
                          SrcData, &DataPosInt, &DataPosFrac,
                          OutPos, SamplesToDo, BufferSize);
                 break;
             case CUBIC_RESAMPLER:
-                Mix_cubic(Source, Device, Channels, Bytes,
+                Mix_cubic(Source, Device, FmtChannels, FmtType,
                           SrcData, &DataPosInt, &DataPosFrac,
                           OutPos, SamplesToDo, BufferSize);
                 break;

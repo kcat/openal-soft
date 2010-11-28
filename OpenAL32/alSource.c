@@ -1887,16 +1887,6 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
                                            FrameBlockSize * BlockSize);
                 }
             }
-            else if(OriginalFormat == AL_FORMAT_MONO_MULAW ||
-                    OriginalFormat == AL_FORMAT_STEREO_MULAW ||
-                    OriginalFormat == AL_FORMAT_QUAD_MULAW ||
-                    OriginalFormat == AL_FORMAT_51CHN_MULAW ||
-                    OriginalFormat == AL_FORMAT_61CHN_MULAW ||
-                    OriginalFormat == AL_FORMAT_71CHN_MULAW)
-            {
-                offset[0] = (ALdouble)(readPos / Bytes * 1);
-                offset[1] = (ALdouble)(writePos / Bytes * 1);
-            }
             else if(OriginalFormat == AL_FORMAT_REAR_MULAW)
             {
                 offset[0] = (ALdouble)(readPos / 2 / Bytes * 1);
@@ -2059,13 +2049,6 @@ static ALint FramesFromBytes(ALint offset, ALenum format, ALint channels)
         offset /= 36 * channels;
         // Multiply by compression rate (65 sample frames per block)
         offset *= 65;
-    }
-    else if(format==AL_FORMAT_MONO_MULAW || format==AL_FORMAT_STEREO_MULAW ||
-            format==AL_FORMAT_QUAD_MULAW || format==AL_FORMAT_51CHN_MULAW ||
-            format==AL_FORMAT_61CHN_MULAW || format==AL_FORMAT_71CHN_MULAW)
-    {
-        /* muLaw has 1 byte per sample */
-        offset /= 1 * channels;
     }
     else if(format == AL_FORMAT_REAR_MULAW)
     {

@@ -119,11 +119,11 @@ ELSE()
         "Flags used by the compiler during debug builds."
         FORCE)
 
+    CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));
+                             int main() {return 0;}" HAVE_GCC_DESTRUCTOR)
+
     # Set visibility options if available
     IF(NOT WIN32)
-        CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));
-                                 int main() {return 0;}" HAVE_GCC_DESTRUCTOR)
-
         CHECK_C_COMPILER_FLAG(-fvisibility=hidden HAVE_VISIBILITY_SWITCH)
         IF(HAVE_VISIBILITY_SWITCH)
             CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"default\")));

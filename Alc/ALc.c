@@ -377,6 +377,10 @@ static FILE *LogFile;
 
 ///////////////////////////////////////////////////////
 // ALC Related helper functions
+#ifdef HAVE_GCC_DESTRUCTOR
+static void alc_init(void) __attribute__((constructor));
+static void alc_deinit(void) __attribute__((destructor));
+#else
 #ifdef _WIN32
 static void alc_init(void);
 static void alc_deinit(void);
@@ -399,10 +403,6 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
     }
     return TRUE;
 }
-#else
-#ifdef HAVE_GCC_DESTRUCTOR
-static void alc_init(void) __attribute__((constructor));
-static void alc_deinit(void) __attribute__((destructor));
 #endif
 #endif
 

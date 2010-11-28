@@ -30,6 +30,41 @@ enum SrcFmtChannels {
 void DecomposeInputFormat(ALenum format, enum SrcFmtType *type,
                           enum SrcFmtChannels *order);
 
+static __inline ALuint BytesFromSrcFmt(enum SrcFmtType type)
+{
+    switch(type)
+    {
+    case SrcFmtByte: return sizeof(ALbyte);
+    case SrcFmtUByte: return sizeof(ALubyte);
+    case SrcFmtShort: return sizeof(ALshort);
+    case SrcFmtUShort: return sizeof(ALushort);
+    case SrcFmtFloat: return sizeof(ALfloat);
+    case SrcFmtDouble: return sizeof(ALdouble);
+    case SrcFmtMulaw: return sizeof(ALubyte);
+    }
+    return 0;
+}
+static __inline ALuint ChannelsFromSrcFmt(enum SrcFmtChannels chans)
+{
+    switch(chans)
+    {
+    case SrcFmtMono: return 1;
+    case SrcFmtStereo: return 2;
+    case SrcFmtRear: return 2;
+    case SrcFmtQuad: return 4;
+    case SrcFmtX51: return 6;
+    case SrcFmtX61: return 7;
+    case SrcFmtX71: return 8;
+    }
+    return 0;
+}
+static __inline ALuint FrameSizeFromSrcFmt(enum SrcFmtType type,
+                                           enum SrcFmtChannels chans)
+{
+    return BytesFromSrcFmt(type) * ChannelsFromSrcFmt(chans);
+}
+
+
 /* Storable formats */
 enum FmtType {
     FmtUByte,
@@ -40,8 +75,8 @@ enum FmtType {
 enum FmtChannels {
     FmtMono,
     FmtStereo,
-    FmtQuad,
     FmtRear,
+    FmtQuad,
     Fmt51ChanWFX,
     Fmt61ChanWFX,
     Fmt71ChanWFX,
@@ -49,24 +84,52 @@ enum FmtChannels {
 
 void DecomposeFormat(ALenum format, enum FmtType *type, enum FmtChannels *order);
 
+static __inline ALuint BytesFromFmt(enum FmtType type)
+{
+    switch(type)
+    {
+    case FmtUByte: return sizeof(ALubyte);
+    case FmtShort: return sizeof(ALshort);
+    case FmtFloat: return sizeof(ALfloat);
+    case FmtDouble: return sizeof(ALdouble);
+    }
+    return 0;
+}
+static __inline ALuint ChannelsFromFmt(enum FmtChannels chans)
+{
+    switch(chans)
+    {
+    case FmtMono: return 1;
+    case FmtStereo: return 2;
+    case FmtRear: return 2;
+    case FmtQuad: return 4;
+    case Fmt51ChanWFX: return 6;
+    case Fmt61ChanWFX: return 7;
+    case Fmt71ChanWFX: return 8;
+    }
+    return 0;
+}
+static __inline ALuint FrameSizeFromFmt(enum FmtType type, enum FmtChannels chans)
+{
+    return BytesFromFmt(type) * ChannelsFromFmt(chans);
+}
+
 
 typedef struct ALbuffer
 {
     ALvoid  *data;
     ALsizei  size;
 
-    ALenum   format;
-    ALenum   eOriginalFormat;
-    ALsizei  frequency;
+    ALsizei          frequency;
+    enum FmtType     FmtType;
+    enum FmtChannels FmtChannels;
 
+    ALenum   eOriginalFormat;
     ALsizei  OriginalSize;
     ALsizei  OriginalAlign;
 
     ALsizei  LoopStart;
     ALsizei  LoopEnd;
-
-    enum FmtType     FmtType;
-    enum FmtChannels FmtChannels;
 
     ALuint   refcount; // Number of sources using this buffer (deletion can only occur when this is 0)
 

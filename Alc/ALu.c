@@ -114,8 +114,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALbuffer *ALBuffer;
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
-            ALint maxstep = STACK_DATA_SIZE /
-                            aluFrameSizeFromFormat(ALBuffer->format);
+            ALint maxstep = STACK_DATA_SIZE / FrameSizeFromFmt(ALBuffer->FmtType,
+                                                               ALBuffer->FmtChannels);
             maxstep -= ResamplerPadding[ALSource->Resampler] +
                        ResamplerPrePadding[ALSource->Resampler] + 1;
             maxstep = min(maxstep, INT_MAX>>FRACTIONBITS);
@@ -592,8 +592,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALbuffer *ALBuffer;
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
-            ALint maxstep = STACK_DATA_SIZE /
-                            aluFrameSizeFromFormat(ALBuffer->format);
+            ALint maxstep = STACK_DATA_SIZE / FrameSizeFromFmt(ALBuffer->FmtType,
+                                                               ALBuffer->FmtChannels);
             maxstep -= ResamplerPadding[ALSource->Resampler] +
                        ResamplerPrePadding[ALSource->Resampler] + 1;
             maxstep = min(maxstep, INT_MAX>>FRACTIONBITS);

@@ -1819,8 +1819,8 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
     // Get Current Buffer Size and frequency (in milliseconds)
     BufferFreq = (ALfloat)Buffer->frequency;
     OriginalFormat = Buffer->eOriginalFormat;
-    Channels = aluChannelsFromFormat(Buffer->format);
-    Bytes = aluBytesFromFormat(Buffer->format);
+    Channels = ChannelsFromFmt(Buffer->FmtChannels);
+    Bytes = BytesFromFmt(Buffer->FmtType);
 
     // Get Current BytesPlayed (NOTE : This is the byte offset into the *current* buffer)
     readPos = Source->position * Channels * Bytes;
@@ -1943,7 +1943,7 @@ static ALboolean ApplyOffset(ALsource *Source)
 
             // SW Mixer Positions are in Samples
             Source->position = (lByteOffset - lTotalBufferSize) /
-                                aluFrameSizeFromFormat(Buffer->format);
+                                FrameSizeFromFmt(Buffer->FmtType, Buffer->FmtChannels);
             return AL_TRUE;
         }
 
@@ -1995,17 +1995,17 @@ static ALint GetByteOffset(ALsource *Source)
     case AL_BYTE_OFFSET:
         // Take into consideration the original format
         ByteOffset = FramesFromBytes(Source->lOffset, Buffer->eOriginalFormat);
-        ByteOffset *= aluFrameSizeFromFormat(Buffer->format);
+        ByteOffset *= FrameSizeFromFmt(Buffer->FmtType, Buffer->FmtChannels);
         break;
 
     case AL_SAMPLE_OFFSET:
-        ByteOffset = Source->lOffset * aluBytesFromFormat(Buffer->format);
+        ByteOffset = Source->lOffset * BytesFromFmt(Buffer->FmtType);
         break;
 
     case AL_SEC_OFFSET:
         // Note - lOffset is internally stored as Milliseconds
         ByteOffset  = (ALint)(Source->lOffset / 1000.0 * Buffer->frequency);
-        ByteOffset *= aluBytesFromFormat(Buffer->format);
+        ByteOffset *= BytesFromFmt(Buffer->FmtType);
         break;
     }
     // Clear Offset

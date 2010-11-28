@@ -373,7 +373,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 ALBuf->data = temp;
                 ConvertDataIMA4(ALBuf->data, data, Channels, newsize/(65*Channels*NewBytes));
 
-                ALBuf->format = NewFormat;
                 ALBuf->eOriginalFormat = format;
                 ALBuf->size = newsize;
                 ALBuf->frequency = freq;
@@ -474,7 +473,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         case AL_FORMAT_71CHN32:
         case AL_FORMAT_71CHN_MULAW: {
             ALuint OldBytes = aluBytesFromFormat(format);
-            ALuint Bytes = aluBytesFromFormat(ALBuf->format);
+            ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
             enum SrcFmtChannels SrcChannels;
             enum SrcFmtType SrcType;
 
@@ -489,8 +488,8 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
 
         case AL_FORMAT_MONO_IMA4:
         case AL_FORMAT_STEREO_IMA4: {
-            ALuint Channels = aluChannelsFromFormat(ALBuf->format);
-            ALuint Bytes = aluBytesFromFormat(ALBuf->format);
+            ALuint Channels = ChannelsFromFmt(ALBuf->FmtChannels);
+            ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
 
             /* offset -> byte offset, length -> block count */
             offset /= 36;
@@ -680,7 +679,8 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
                 alSetError(pContext, AL_INVALID_VALUE);
             else
             {
-                ALint maxlen = ALBuf->size / aluFrameSizeFromFormat(ALBuf->format);
+                ALint maxlen = ALBuf->size /
+                               FrameSizeFromFmt(ALBuf->FmtType, ALBuf->FmtChannels);
                 if(plValues[0] > maxlen || plValues[1] > maxlen)
                     alSetError(pContext, AL_INVALID_VALUE);
                 else
@@ -805,11 +805,11 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plVa
             break;
 
         case AL_BITS:
-            *plValue = aluBytesFromFormat(pBuffer->format) * 8;
+            *plValue = BytesFromFmt(pBuffer->FmtType) * 8;
             break;
 
         case AL_CHANNELS:
-            *plValue = aluChannelsFromFormat(pBuffer->format);
+            *plValue = ChannelsFromFmt(pBuffer->FmtChannels);
             break;
 
         case AL_SIZE:
@@ -1219,7 +1219,6 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
         ConvertData(ALBuf->data, DstType, data, SrcType, newsize/NewBytes);
     }
 
-    ALBuf->format = NewFormat;
     ALBuf->eOriginalFormat = OrigFormat;
     ALBuf->size = newsize;
     ALBuf->frequency = freq;

@@ -1949,7 +1949,7 @@ static ALboolean ApplyOffset(ALsource *Source)
         Buffer = BufferList->buffer;
         lBufferSize = Buffer ? Buffer->size : 0;
 
-        if(lTotalBufferSize+lBufferSize <= lByteOffset)
+        if(lBufferSize <= lByteOffset-lTotalBufferSize)
         {
             // Offset is past this buffer so increment BuffersPlayed
             BuffersPlayed++;

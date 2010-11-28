@@ -35,7 +35,7 @@
 
 
 static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat);
-static void ConvertData(ALvoid *dst, const ALvoid *src, enum SrcFmtType srcType, ALsizei len);
+static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum SrcFmtType srcType, ALsizei len);
 static void ConvertDataRear(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len);
 static void ConvertDataIMA4(ALvoid *dst, const ALvoid *src, ALint origChans, ALsizei len);
 static void ConvertDataMULaw(ALvoid *dst, const ALvoid *src, ALsizei len);
@@ -593,7 +593,8 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
             length /= OldBytes;
 
             DecomposeInputFormat(format, &SrcType, &SrcChannels);
-            ConvertData(&((ALubyte*)ALBuf->data)[offset], data, SrcType, length);
+            ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                        data, SrcType, length);
         }   break;
 
         case AL_FORMAT_REAR8:
@@ -1040,104 +1041,6 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
     ProcessContext(pContext);
 }
 
-/*
- * LoadData
- *
- * Loads the specified data into the buffer, using the specified formats.
- * Currently, the new format must have the same channel configuration as the
- * original format, and must have the same sample format (except for double,
- * which converts to float). This does NOT handle compressed formats (eg. IMA4
- * and muLaw).
- */
-static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat)
-{
-    ALuint NewBytes = aluBytesFromFormat(NewFormat);
-    ALuint NewChannels = aluChannelsFromFormat(NewFormat);
-    ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
-    ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
-    enum SrcFmtChannels SrcChannels;
-    enum FmtChannels DstChannels;
-    enum SrcFmtType SrcType;
-    enum FmtType DstType;
-    ALuint64 newsize;
-    ALvoid *temp;
-
-    assert(NewChannels == OrigChannels);
-    assert(NewBytes == OrigBytes);
-
-    DecomposeInputFormat(OrigFormat, &SrcType, &SrcChannels);
-    DecomposeFormat(NewFormat, &DstType, &DstChannels);
-
-    if((size%(OrigBytes*OrigChannels)) != 0)
-        return AL_INVALID_VALUE;
-
-    newsize = size / OrigBytes;
-    newsize *= NewBytes;
-    if(newsize > INT_MAX)
-        return AL_OUT_OF_MEMORY;
-
-    temp = realloc(ALBuf->data, newsize);
-    if(!temp) return AL_OUT_OF_MEMORY;
-    ALBuf->data = temp;
-
-    // Samples are converted here
-    ConvertData(ALBuf->data, data, SrcType, newsize/NewBytes);
-
-    ALBuf->format = NewFormat;
-    ALBuf->eOriginalFormat = OrigFormat;
-    ALBuf->size = newsize;
-    ALBuf->frequency = freq;
-
-    ALBuf->LoopStart = 0;
-    ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
-
-    ALBuf->FmtType = DstType;
-    ALBuf->FmtChannels = DstChannels;
-
-    ALBuf->OriginalSize = size;
-    ALBuf->OriginalAlign = OrigBytes * OrigChannels;
-
-    return AL_NO_ERROR;
-}
-
-static void ConvertData(ALvoid *dst, const ALvoid *src, enum SrcFmtType srcType, ALsizei len)
-{
-    ALsizei i;
-    if(src == NULL)
-        return;
-    switch(srcType)
-    {
-        case SrcFmtByte: /* signed byte -> unsigned byte */
-            for(i = 0;i < len;i++)
-                ((ALubyte*)dst)[i] = ((ALbyte*)src)[i] ^ 0x80;
-            break;
-
-        case SrcFmtUByte:
-            for(i = 0;i < len;i++)
-                ((ALubyte*)dst)[i] = ((ALubyte*)src)[i];
-            break;
-
-        case SrcFmtShort:
-            for(i = 0;i < len;i++)
-                ((ALshort*)dst)[i] = ((ALshort*)src)[i];
-            break;
-
-        case SrcFmtUShort: /* unsigned short -> signed short */
-            for(i = 0;i < len;i++)
-                ((ALshort*)dst)[i] = ((ALushort*)src)[i] ^ 0x8000;
-            break;
-
-        case SrcFmtFloat:
-            for(i = 0;i < len;i++)
-                ((ALfloat*)dst)[i] = ((ALfloat*)src)[i];
-            break;
-
-        case SrcFmtDouble:
-            for(i = 0;i < len;i++)
-                ((ALdouble*)dst)[i] = ((ALdouble*)src)[i];
-            break;
-    }
-}
 
 static void ConvertDataRear(ALvoid *dst, const ALvoid *src, ALint origBytes, ALsizei len)
 {
@@ -1260,6 +1163,289 @@ static void ConvertDataMULawRear(ALvoid *dst, const ALvoid *src, ALsizei len)
         ((ALshort*)dst)[i+1] = 0;
         ((ALshort*)dst)[i+2] = muLawDecompressionTable[((ALubyte*)src)[i/2+0]];
         ((ALshort*)dst)[i+3] = muLawDecompressionTable[((ALubyte*)src)[i/2+1]];
+    }
+}
+
+
+static __inline ALbyte Conv_ALbyte_ALbyte(ALbyte val)
+{ return val; }
+static __inline ALbyte Conv_ALbyte_ALubyte(ALubyte val)
+{ return val^0x80; }
+static __inline ALbyte Conv_ALbyte_ALshort(ALshort val)
+{ return val>>8; }
+static __inline ALbyte Conv_ALbyte_ALushort(ALushort val)
+{ return (val>>8)-128; }
+static __inline ALbyte Conv_ALbyte_ALfloat(ALfloat val)
+{
+    if(val >= 1.0f) return 127;
+    if(val <= -1.0f) return -128;
+    return (ALint)(val * 127.0f);
+}
+static __inline ALbyte Conv_ALbyte_ALdouble(ALdouble val)
+{
+    if(val >= 1.0) return 127;
+    if(val <= -1.0) return -128;
+    return (ALint)(val * 127.0);
+}
+
+static __inline ALubyte Conv_ALubyte_ALbyte(ALbyte val)
+{ return val^0x80; }
+static __inline ALubyte Conv_ALubyte_ALubyte(ALubyte val)
+{ return val; }
+static __inline ALubyte Conv_ALubyte_ALshort(ALshort val)
+{ return (val>>8)+128; }
+static __inline ALubyte Conv_ALubyte_ALushort(ALushort val)
+{ return val>>8; }
+static __inline ALubyte Conv_ALubyte_ALfloat(ALfloat val)
+{
+    if(val >= 1.0f) return 255;
+    if(val <= -1.0f) return 0;
+    return (ALint)(val * 127.0f) + 128;
+}
+static __inline ALubyte Conv_ALubyte_ALdouble(ALdouble val)
+{
+    if(val >= 1.0) return 255;
+    if(val <= -1.0) return 0;
+    return (ALint)(val * 127.0) + 128;
+}
+
+static __inline ALshort Conv_ALshort_ALbyte(ALbyte val)
+{ return val<<8; }
+static __inline ALshort Conv_ALshort_ALubyte(ALubyte val)
+{ return (val-128)<<8; }
+static __inline ALshort Conv_ALshort_ALshort(ALshort val)
+{ return val; }
+static __inline ALshort Conv_ALshort_ALushort(ALushort val)
+{ return val^0x8000; }
+static __inline ALshort Conv_ALshort_ALfloat(ALfloat val)
+{
+    if(val >= 1.0f) return 32767;
+    if(val <= -1.0f) return -32768;
+    return (ALint)(val * 32767.0f);
+}
+static __inline ALshort Conv_ALshort_ALdouble(ALdouble val)
+{
+    if(val >= 1.0) return 32767;
+    if(val <= -1.0) return -32768;
+    return (ALint)(val * 32767.0);
+}
+
+static __inline ALushort Conv_ALushort_ALbyte(ALbyte val)
+{ return (val+128)<<8; }
+static __inline ALushort Conv_ALushort_ALubyte(ALubyte val)
+{ return val<<8; }
+static __inline ALushort Conv_ALushort_ALshort(ALshort val)
+{ return val^0x8000; }
+static __inline ALushort Conv_ALushort_ALushort(ALushort val)
+{ return val; }
+static __inline ALushort Conv_ALushort_ALfloat(ALfloat val)
+{
+    if(val >= 1.0f) return 65535;
+    if(val <= -1.0f) return 0;
+    return (ALint)(val * 32767.0f) + 32768;
+}
+static __inline ALushort Conv_ALushort_ALdouble(ALdouble val)
+{
+    if(val >= 1.0) return 65535;
+    if(val <= -1.0) return 0;
+    return (ALint)(val * 32767.0) + 32768;
+}
+
+static __inline ALfloat Conv_ALfloat_ALbyte(ALbyte val)
+{ return val * (1.0f/127.0f); }
+static __inline ALfloat Conv_ALfloat_ALubyte(ALubyte val)
+{ return (val-128) * (1.0f/127.0f); }
+static __inline ALfloat Conv_ALfloat_ALshort(ALshort val)
+{ return val * (1.0f/32767.0f); }
+static __inline ALfloat Conv_ALfloat_ALushort(ALushort val)
+{ return (val-32768) * (1.0f/32767.0f); }
+static __inline ALfloat Conv_ALfloat_ALfloat(ALfloat val)
+{ return val; }
+static __inline ALfloat Conv_ALfloat_ALdouble(ALdouble val)
+{ return val; }
+
+static __inline ALdouble Conv_ALdouble_ALbyte(ALbyte val)
+{ return val * (1.0/127.0); }
+static __inline ALdouble Conv_ALdouble_ALubyte(ALubyte val)
+{ return (val-128) * (1.0/127.0); }
+static __inline ALdouble Conv_ALdouble_ALshort(ALshort val)
+{ return val * (1.0/32767.0); }
+static __inline ALdouble Conv_ALdouble_ALushort(ALushort val)
+{ return (val-32768) * (1.0/32767.0); }
+static __inline ALdouble Conv_ALdouble_ALfloat(ALfloat val)
+{ return val; }
+static __inline ALdouble Conv_ALdouble_ALdouble(ALdouble val)
+{ return val; }
+
+
+#define DECL_TEMPLATE(T1, T2)                                                 \
+static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALuint len)           \
+{                                                                             \
+    ALuint i;                                                                 \
+    for(i = 0;i < len;i++)                                                    \
+        *(dst++) = Conv_##T1##_##T2(*(src++));                                \
+}
+
+DECL_TEMPLATE(ALubyte, ALbyte)
+DECL_TEMPLATE(ALubyte, ALubyte)
+DECL_TEMPLATE(ALubyte, ALshort)
+DECL_TEMPLATE(ALubyte, ALushort)
+DECL_TEMPLATE(ALubyte, ALfloat)
+DECL_TEMPLATE(ALubyte, ALdouble)
+
+DECL_TEMPLATE(ALbyte, ALbyte)
+DECL_TEMPLATE(ALbyte, ALubyte)
+DECL_TEMPLATE(ALbyte, ALshort)
+DECL_TEMPLATE(ALbyte, ALushort)
+DECL_TEMPLATE(ALbyte, ALfloat)
+DECL_TEMPLATE(ALbyte, ALdouble)
+
+DECL_TEMPLATE(ALshort, ALbyte)
+DECL_TEMPLATE(ALshort, ALubyte)
+DECL_TEMPLATE(ALshort, ALshort)
+DECL_TEMPLATE(ALshort, ALushort)
+DECL_TEMPLATE(ALshort, ALfloat)
+DECL_TEMPLATE(ALshort, ALdouble)
+
+DECL_TEMPLATE(ALushort, ALbyte)
+DECL_TEMPLATE(ALushort, ALubyte)
+DECL_TEMPLATE(ALushort, ALshort)
+DECL_TEMPLATE(ALushort, ALushort)
+DECL_TEMPLATE(ALushort, ALfloat)
+DECL_TEMPLATE(ALushort, ALdouble)
+
+DECL_TEMPLATE(ALfloat, ALbyte)
+DECL_TEMPLATE(ALfloat, ALubyte)
+DECL_TEMPLATE(ALfloat, ALshort)
+DECL_TEMPLATE(ALfloat, ALushort)
+DECL_TEMPLATE(ALfloat, ALfloat)
+DECL_TEMPLATE(ALfloat, ALdouble)
+
+DECL_TEMPLATE(ALdouble, ALbyte)
+DECL_TEMPLATE(ALdouble, ALubyte)
+DECL_TEMPLATE(ALdouble, ALshort)
+DECL_TEMPLATE(ALdouble, ALushort)
+DECL_TEMPLATE(ALdouble, ALfloat)
+DECL_TEMPLATE(ALdouble, ALdouble)
+
+#undef DECL_TEMPLATE
+
+#define DECL_TEMPLATE(T)                                                      \
+static void Convert_##T(T *dst, const ALvoid *src, enum SrcFmtType srcType,   \
+                        ALsizei len)                                          \
+{                                                                             \
+    switch(srcType)                                                           \
+    {                                                                         \
+        case SrcFmtByte:                                                      \
+            Convert_##T##_ALbyte(dst, src, len);                              \
+            break;                                                            \
+        case SrcFmtUByte:                                                     \
+            Convert_##T##_ALubyte(dst, src, len);                             \
+            break;                                                            \
+        case SrcFmtShort:                                                     \
+            Convert_##T##_ALshort(dst, src, len);                             \
+            break;                                                            \
+        case SrcFmtUShort:                                                    \
+            Convert_##T##_ALushort(dst, src, len);                            \
+            break;                                                            \
+        case SrcFmtFloat:                                                     \
+            Convert_##T##_ALfloat(dst, src, len);                             \
+            break;                                                            \
+        case SrcFmtDouble:                                                    \
+            Convert_##T##_ALdouble(dst, src, len);                            \
+            break;                                                            \
+    }                                                                         \
+}
+
+DECL_TEMPLATE(ALbyte)
+DECL_TEMPLATE(ALubyte)
+DECL_TEMPLATE(ALshort)
+DECL_TEMPLATE(ALushort)
+DECL_TEMPLATE(ALfloat)
+DECL_TEMPLATE(ALdouble)
+
+#undef DECL_TEMPLATE
+
+
+/*
+ * LoadData
+ *
+ * Loads the specified data into the buffer, using the specified formats.
+ * Currently, the new format must have the same channel configuration as the
+ * original format. This does NOT handle compressed formats (eg. IMA4).
+ */
+static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat)
+{
+    ALuint NewBytes = aluBytesFromFormat(NewFormat);
+    ALuint NewChannels = aluChannelsFromFormat(NewFormat);
+    ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
+    ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
+    enum SrcFmtChannels SrcChannels;
+    enum FmtChannels DstChannels;
+    enum SrcFmtType SrcType;
+    enum FmtType DstType;
+    ALuint64 newsize;
+    ALvoid *temp;
+
+    assert(NewChannels == OrigChannels);
+    assert(NewBytes == OrigBytes);
+
+    DecomposeInputFormat(OrigFormat, &SrcType, &SrcChannels);
+    DecomposeFormat(NewFormat, &DstType, &DstChannels);
+
+    if((size%(OrigBytes*OrigChannels)) != 0)
+        return AL_INVALID_VALUE;
+
+    newsize = size / OrigBytes;
+    newsize *= NewBytes;
+    if(newsize > INT_MAX)
+        return AL_OUT_OF_MEMORY;
+
+    temp = realloc(ALBuf->data, newsize);
+    if(!temp) return AL_OUT_OF_MEMORY;
+    ALBuf->data = temp;
+
+    if(data != NULL)
+    {
+        // Samples are converted here
+        ConvertData(ALBuf->data, DstType, data, SrcType, newsize/NewBytes);
+    }
+
+    ALBuf->format = NewFormat;
+    ALBuf->eOriginalFormat = OrigFormat;
+    ALBuf->size = newsize;
+    ALBuf->frequency = freq;
+
+    ALBuf->LoopStart = 0;
+    ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
+
+    ALBuf->FmtType = DstType;
+    ALBuf->FmtChannels = DstChannels;
+
+    ALBuf->OriginalSize = size;
+    ALBuf->OriginalAlign = OrigBytes * OrigChannels;
+
+    return AL_NO_ERROR;
+}
+
+static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum SrcFmtType srcType, ALsizei len)
+{
+    switch(dstType)
+    {
+        (void)Convert_ALbyte;
+        case FmtUByte:
+            Convert_ALubyte(dst, src, srcType, len);
+            break;
+        case FmtShort:
+            Convert_ALshort(dst, src, srcType, len);
+            break;
+        (void)Convert_ALushort;
+        case FmtFloat:
+            Convert_ALfloat(dst, src, srcType, len);
+            break;
+        case FmtDouble:
+            Convert_ALdouble(dst, src, srcType, len);
+            break;
     }
 }
 

@@ -1887,26 +1887,6 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
                                            FrameBlockSize * BlockSize);
                 }
             }
-            else if(OriginalFormat == AL_FORMAT_REAR_MULAW)
-            {
-                offset[0] = (ALdouble)(readPos / 2 / Bytes * 1);
-                offset[1] = (ALdouble)(writePos / 2 / Bytes * 1);
-            }
-            else if(OriginalFormat == AL_FORMAT_REAR8)
-            {
-                offset[0] = (ALdouble)(readPos / 2 / Bytes * 1);
-                offset[1] = (ALdouble)(writePos / 2 / Bytes * 1);
-            }
-            else if(OriginalFormat == AL_FORMAT_REAR16)
-            {
-                offset[0] = (ALdouble)(readPos / 2 / Bytes * 2);
-                offset[1] = (ALdouble)(writePos / 2 / Bytes * 2);
-            }
-            else if(OriginalFormat == AL_FORMAT_REAR32)
-            {
-                offset[0] = (ALdouble)(readPos / 2 / Bytes * 4);
-                offset[1] = (ALdouble)(writePos / 2 / Bytes * 4);
-            }
             else
             {
                 ALuint OrigBytes = aluBytesFromFormat(OriginalFormat);
@@ -2048,17 +2028,6 @@ static ALint FramesFromBytes(ALint offset, ALenum format)
         offset /= 36 * 2;
         offset *= 65;
     }
-    else if(format == AL_FORMAT_REAR_MULAW)
-    {
-        /* Rear is 2 channels */
-        offset /= 1 * 2;
-    }
-    else if(format == AL_FORMAT_REAR8)
-        offset /= 1 * 2;
-    else if(format == AL_FORMAT_REAR16)
-        offset /= 2 * 2;
-    else if(format == AL_FORMAT_REAR32)
-        offset /= 4 * 2;
     else
         offset /= aluFrameSizeFromFormat(format);
     return offset;

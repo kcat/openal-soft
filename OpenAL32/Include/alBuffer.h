@@ -41,6 +41,7 @@ enum FmtChannels {
     FmtMono,
     FmtStereo,
     FmtQuad,
+    FmtRear,
     Fmt51ChanWFX,
     Fmt61ChanWFX,
     Fmt71ChanWFX,

@@ -525,6 +525,24 @@ DECL_TEMPLATE(ALubyte, QuadChans, lerp8)
 DECL_TEMPLATE(ALubyte, QuadChans, cubic8)
 
 
+static const Channel RearChans[] = { BACK_LEFT,  BACK_RIGHT };
+DECL_TEMPLATE(ALdouble, RearChans, point64)
+DECL_TEMPLATE(ALdouble, RearChans, lerp64)
+DECL_TEMPLATE(ALdouble, RearChans, cubic64)
+
+DECL_TEMPLATE(ALfloat, RearChans, point32)
+DECL_TEMPLATE(ALfloat, RearChans, lerp32)
+DECL_TEMPLATE(ALfloat, RearChans, cubic32)
+
+DECL_TEMPLATE(ALshort, RearChans, point16)
+DECL_TEMPLATE(ALshort, RearChans, lerp16)
+DECL_TEMPLATE(ALshort, RearChans, cubic16)
+
+DECL_TEMPLATE(ALubyte, RearChans, point8)
+DECL_TEMPLATE(ALubyte, RearChans, lerp8)
+DECL_TEMPLATE(ALubyte, RearChans, cubic8)
+
+
 static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_LEFT,  BACK_RIGHT };
@@ -609,6 +627,11 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
         break;                                                                \
     case FmtQuad:                                                             \
         Mix_##T##_QuadChans_##sampler(Source, Device,                         \
+                                      Data, DataPosInt, DataPosFrac,          \
+                                      OutPos, SamplesToDo, BufferSize);       \
+        break;                                                                \
+    case FmtRear:                                                             \
+        Mix_##T##_RearChans_##sampler(Source, Device,                         \
                                       Data, DataPosInt, DataPosFrac,          \
                                       OutPos, SamplesToDo, BufferSize);       \
         break;                                                                \

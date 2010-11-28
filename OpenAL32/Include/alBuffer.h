@@ -77,9 +77,9 @@ enum FmtChannels {
     FmtStereo,
     FmtRear,
     FmtQuad,
-    Fmt51ChanWFX,
-    Fmt61ChanWFX,
-    Fmt71ChanWFX,
+    FmtX51,
+    FmtX61,
+    FmtX71,
 };
 
 void DecomposeFormat(ALenum format, enum FmtType *type, enum FmtChannels *order);
@@ -103,9 +103,9 @@ static __inline ALuint ChannelsFromFmt(enum FmtChannels chans)
     case FmtStereo: return 2;
     case FmtRear: return 2;
     case FmtQuad: return 4;
-    case Fmt51ChanWFX: return 6;
-    case Fmt61ChanWFX: return 7;
-    case Fmt71ChanWFX: return 8;
+    case FmtX51: return 6;
+    case FmtX61: return 7;
+    case FmtX71: return 8;
     }
     return 0;
 }
@@ -120,11 +120,11 @@ typedef struct ALbuffer
     ALvoid  *data;
     ALsizei  size;
 
-    ALsizei          frequency;
+    ALsizei          Frequency;
     enum FmtType     FmtType;
     enum FmtChannels FmtChannels;
 
-    ALenum   eOriginalFormat;
+    ALenum   OriginalFormat;
     ALsizei  OriginalSize;
     ALsizei  OriginalAlign;
 

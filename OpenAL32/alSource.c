@@ -1572,8 +1572,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     {
         if(BufferList->buffer)
         {
-            Frequency = BufferList->buffer->frequency;
-            Format = BufferList->buffer->eOriginalFormat;
+            Frequency = BufferList->buffer->Frequency;
+            Format = BufferList->buffer->OriginalFormat;
             break;
         }
         BufferList = BufferList->next;
@@ -1592,8 +1592,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
 
         if(Frequency == -1 && Format == -1)
         {
-            Frequency = buffer->frequency;
-            Format = buffer->eOriginalFormat;
+            Frequency = buffer->Frequency;
+            Format = buffer->OriginalFormat;
 
             if(buffer->FmtChannels == FmtMono)
                 Source->Update = CalcSourceParams;
@@ -1602,7 +1602,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
 
             Source->NeedsUpdate = AL_TRUE;
         }
-        else if(Frequency != buffer->frequency || Format != buffer->eOriginalFormat)
+        else if(Frequency != buffer->Frequency || Format != buffer->OriginalFormat)
         {
             alSetError(Context, AL_INVALID_OPERATION);
             goto done;
@@ -1817,8 +1817,8 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
     }
 
     // Get Current Buffer Size and frequency (in milliseconds)
-    BufferFreq = (ALfloat)Buffer->frequency;
-    OriginalFormat = Buffer->eOriginalFormat;
+    BufferFreq = (ALfloat)Buffer->Frequency;
+    OriginalFormat = Buffer->OriginalFormat;
     Channels = ChannelsFromFmt(Buffer->FmtChannels);
     Bytes = BytesFromFmt(Buffer->FmtType);
 
@@ -1994,7 +1994,7 @@ static ALint GetByteOffset(ALsource *Source)
     {
     case AL_BYTE_OFFSET:
         // Take into consideration the original format
-        ByteOffset = FramesFromBytes(Source->lOffset, Buffer->eOriginalFormat);
+        ByteOffset = FramesFromBytes(Source->lOffset, Buffer->OriginalFormat);
         ByteOffset *= FrameSizeFromFmt(Buffer->FmtType, Buffer->FmtChannels);
         break;
 
@@ -2004,7 +2004,7 @@ static ALint GetByteOffset(ALsource *Source)
 
     case AL_SEC_OFFSET:
         // Note - lOffset is internally stored as Milliseconds
-        ByteOffset  = (ALint)(Source->lOffset / 1000.0 * Buffer->frequency);
+        ByteOffset  = (ALint)(Source->lOffset / 1000.0 * Buffer->Frequency);
         ByteOffset *= BytesFromFmt(Buffer->FmtType);
         break;
     }

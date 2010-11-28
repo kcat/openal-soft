@@ -635,17 +635,17 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
                                       Data, DataPosInt, DataPosFrac,          \
                                       OutPos, SamplesToDo, BufferSize);       \
         break;                                                                \
-    case Fmt51ChanWFX:                                                        \
+    case FmtX51:                                                              \
         Mix_##T##_X51Chans_##sampler(Source, Device,                          \
                                      Data, DataPosInt, DataPosFrac,           \
                                      OutPos, SamplesToDo, BufferSize);        \
         break;                                                                \
-    case Fmt61ChanWFX:                                                        \
+    case FmtX61:                                                              \
         Mix_##T##_X61Chans_##sampler(Source, Device,                          \
                                      Data, DataPosInt, DataPosFrac,           \
                                      OutPos, SamplesToDo, BufferSize);        \
         break;                                                                \
-    case Fmt71ChanWFX:                                                        \
+    case FmtX71:                                                              \
         Mix_##T##_X71Chans_##sampler(Source, Device,                          \
                                      Data, DataPosInt, DataPosFrac,           \
                                      OutPos, SamplesToDo, BufferSize);        \

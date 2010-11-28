@@ -120,7 +120,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                        ResamplerPrePadding[ALSource->Resampler] + 1;
             maxstep = min(maxstep, INT_MAX>>FRACTIONBITS);
 
-            Pitch = Pitch * ALBuffer->frequency / Frequency;
+            Pitch = Pitch * ALBuffer->Frequency / Frequency;
             if(Pitch > (ALfloat)maxstep)
                 ALSource->Params.Step = maxstep<<FRACTIONBITS;
             else
@@ -598,7 +598,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                        ResamplerPrePadding[ALSource->Resampler] + 1;
             maxstep = min(maxstep, INT_MAX>>FRACTIONBITS);
 
-            Pitch = Pitch * ALBuffer->frequency / Frequency;
+            Pitch = Pitch * ALBuffer->Frequency / Frequency;
             if(Pitch > (ALfloat)maxstep)
                 ALSource->Params.Step = maxstep<<FRACTIONBITS;
             else

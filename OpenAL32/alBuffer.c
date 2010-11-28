@@ -371,19 +371,19 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             if(temp)
             {
                 ALBuf->data = temp;
+                ALBuf->size = newsize;
+
                 ConvertDataIMA4(ALBuf->data, data, Channels, newsize/(65*Channels*NewBytes));
 
-                ALBuf->eOriginalFormat = format;
-                ALBuf->size = newsize;
-                ALBuf->frequency = freq;
+                ALBuf->Frequency = freq;
+                DecomposeFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
 
                 ALBuf->LoopStart = 0;
                 ALBuf->LoopEnd = newsize / Channels / NewBytes;
 
-                DecomposeFormat(NewFormat, &ALBuf->FmtType, &ALBuf->FmtChannels);
-
-                ALBuf->OriginalSize = size;
-                ALBuf->OriginalAlign = 36 * Channels;
+                ALBuf->OriginalFormat = format;
+                ALBuf->OriginalSize   = size;
+                ALBuf->OriginalAlign  = 36 * Channels;
             }
             else
                 alSetError(Context, AL_OUT_OF_MEMORY);
@@ -431,7 +431,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         alSetError(Context, AL_INVALID_NAME);
     else if(length < 0 || offset < 0 || (length > 0 && data == NULL))
         alSetError(Context, AL_INVALID_VALUE);
-    else if(ALBuf->eOriginalFormat != format)
+    else if(ALBuf->OriginalFormat != format)
         alSetError(Context, AL_INVALID_ENUM);
     else if(offset > ALBuf->OriginalSize ||
             length > ALBuf->OriginalSize-offset ||
@@ -801,7 +801,7 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plVa
         switch(eParam)
         {
         case AL_FREQUENCY:
-            *plValue = pBuffer->frequency;
+            *plValue = pBuffer->Frequency;
             break;
 
         case AL_BITS:
@@ -1212,6 +1212,7 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     temp = realloc(ALBuf->data, newsize);
     if(!temp) return AL_OUT_OF_MEMORY;
     ALBuf->data = temp;
+    ALBuf->size = newsize;
 
     if(data != NULL)
     {
@@ -1219,18 +1220,16 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
         ConvertData(ALBuf->data, DstType, data, SrcType, newsize/NewBytes);
     }
 
-    ALBuf->eOriginalFormat = OrigFormat;
-    ALBuf->size = newsize;
-    ALBuf->frequency = freq;
+    ALBuf->Frequency = freq;
+    ALBuf->FmtType = DstType;
+    ALBuf->FmtChannels = DstChannels;
 
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
-    ALBuf->FmtType = DstType;
-    ALBuf->FmtChannels = DstChannels;
-
-    ALBuf->OriginalSize = size;
-    ALBuf->OriginalAlign = OrigBytes * OrigChannels;
+    ALBuf->OriginalFormat = OrigFormat;
+    ALBuf->OriginalSize   = size;
+    ALBuf->OriginalAlign  = OrigBytes * OrigChannels;
 
     return AL_NO_ERROR;
 }
@@ -1455,39 +1454,39 @@ void DecomposeFormat(ALenum format, enum FmtType *type, enum FmtChannels *order)
             break;
         case AL_FORMAT_51CHN8:
             *type  = FmtUByte;
-            *order = Fmt51ChanWFX;
+            *order = FmtX51;
             break;
         case AL_FORMAT_51CHN16:
             *type  = FmtShort;
-            *order = Fmt51ChanWFX;
+            *order = FmtX51;
             break;
         case AL_FORMAT_51CHN32:
             *type  = FmtFloat;
-            *order = Fmt51ChanWFX;
+            *order = FmtX51;
             break;
         case AL_FORMAT_61CHN8:
             *type  = FmtUByte;
-            *order = Fmt61ChanWFX;
+            *order = FmtX61;
             break;
         case AL_FORMAT_61CHN16:
             *type  = FmtShort;
-            *order = Fmt61ChanWFX;
+            *order = FmtX61;
             break;
         case AL_FORMAT_61CHN32:
             *type  = FmtFloat;
-            *order = Fmt61ChanWFX;
+            *order = FmtX61;
             break;
         case AL_FORMAT_71CHN8:
             *type  = FmtUByte;
-            *order = Fmt71ChanWFX;
+            *order = FmtX71;
             break;
         case AL_FORMAT_71CHN16:
             *type  = FmtShort;
-            *order = Fmt71ChanWFX;
+            *order = FmtX71;
             break;
         case AL_FORMAT_71CHN32:
             *type  = FmtFloat;
-            *order = Fmt71ChanWFX;
+            *order = FmtX71;
             break;
 
         default:

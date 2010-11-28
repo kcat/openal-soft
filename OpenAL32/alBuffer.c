@@ -1388,7 +1388,6 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALvoid *temp;
 
     assert(NewChannels == OrigChannels);
-    assert(NewBytes == OrigBytes);
 
     DecomposeInputFormat(OrigFormat, &SrcType, &SrcChannels);
     DecomposeFormat(NewFormat, &DstType, &DstChannels);

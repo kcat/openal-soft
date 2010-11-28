@@ -36,7 +36,7 @@ static ALvoid InitSourceParams(ALsource *Source);
 static ALvoid GetSourceOffset(ALsource *Source, ALenum eName, ALdouble *Offsets, ALdouble updateLen);
 static ALboolean ApplyOffset(ALsource *Source);
 static ALint GetByteOffset(ALsource *Source);
-static ALint FramesFromBytes(ALint offset, ALenum format, ALint channels);
+static ALint FramesFromBytes(ALint offset, ALenum format);
 
 #define LookupSource(m, k) ((ALsource*)LookupUIntMapKey(&(m), (k)))
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
@@ -1989,8 +1989,6 @@ static ALint GetByteOffset(ALsource *Source)
 {
     ALbuffer *Buffer = NULL;
     ALbufferlistitem *BufferList;
-    ALdouble BufferFreq;
-    ALint    Channels, Bytes;
     ALint    ByteOffset = -1;
 
     // Find the first non-NULL Buffer in the Queue
@@ -2011,28 +2009,23 @@ static ALint GetByteOffset(ALsource *Source)
         return -1;
     }
 
-    BufferFreq = ((ALdouble)Buffer->frequency);
-    Channels = aluChannelsFromFormat(Buffer->format);
-    Bytes = aluBytesFromFormat(Buffer->format);
-
     // Determine the ByteOffset (and ensure it is block aligned)
     switch(Source->lOffsetType)
     {
     case AL_BYTE_OFFSET:
         // Take into consideration the original format
-        ByteOffset = FramesFromBytes(Source->lOffset, Buffer->eOriginalFormat,
-                                     Channels);
-        ByteOffset *= Channels * Bytes;
+        ByteOffset = FramesFromBytes(Source->lOffset, Buffer->eOriginalFormat);
+        ByteOffset *= aluFrameSizeFromFormat(Buffer->format);
         break;
 
     case AL_SAMPLE_OFFSET:
-        ByteOffset = Source->lOffset * Channels * Bytes;
+        ByteOffset = Source->lOffset * aluBytesFromFormat(Buffer->format);
         break;
 
     case AL_SEC_OFFSET:
         // Note - lOffset is internally stored as Milliseconds
-        ByteOffset  = (ALint)(Source->lOffset / 1000.0 * BufferFreq);
-        ByteOffset *= Channels * Bytes;
+        ByteOffset  = (ALint)(Source->lOffset / 1000.0 * Buffer->frequency);
+        ByteOffset *= aluBytesFromFormat(Buffer->format);
         break;
     }
     // Clear Offset
@@ -2041,13 +2034,18 @@ static ALint GetByteOffset(ALsource *Source)
     return ByteOffset;
 }
 
-static ALint FramesFromBytes(ALint offset, ALenum format, ALint channels)
+static ALint FramesFromBytes(ALint offset, ALenum format)
 {
-    if(format==AL_FORMAT_MONO_IMA4 || format==AL_FORMAT_STEREO_IMA4)
+    if(format==AL_FORMAT_MONO_IMA4)
     {
         // Round down to nearest ADPCM block
-        offset /= 36 * channels;
+        offset /= 36;
         // Multiply by compression rate (65 sample frames per block)
+        offset *= 65;
+    }
+    else if(format==AL_FORMAT_STEREO_IMA4)
+    {
+        offset /= 36 * 2;
         offset *= 65;
     }
     else if(format == AL_FORMAT_REAR_MULAW)
@@ -2062,10 +2060,7 @@ static ALint FramesFromBytes(ALint offset, ALenum format, ALint channels)
     else if(format == AL_FORMAT_REAR32)
         offset /= 4 * 2;
     else
-    {
-        ALuint bytes = aluBytesFromFormat(format);
-        offset /= bytes * channels;
-    }
+        offset /= aluFrameSizeFromFormat(format);
     return offset;
 }
 

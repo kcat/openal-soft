@@ -27,8 +27,8 @@ enum SrcFmtChannels {
     SrcFmtX71,    /* AL_7POINT1 (WFX order) */
 };
 
-void DecomposeInputFormat(ALenum format, enum SrcFmtType *type,
-                          enum SrcFmtChannels *order);
+void DecomposeInputFormat(ALenum format, enum SrcFmtChannels *chans,
+                          enum SrcFmtType *type);
 ALuint BytesFromSrcFmt(enum SrcFmtType type);
 ALuint ChannelsFromSrcFmt(enum SrcFmtChannels chans);
 static __inline ALuint FrameSizeFromSrcFmt(enum SrcFmtType type,
@@ -54,7 +54,7 @@ enum FmtChannels {
     FmtX71,
 };
 
-void DecomposeFormat(ALenum format, enum FmtType *type, enum FmtChannels *order);
+void DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
 ALuint BytesFromFmt(enum FmtType type);
 ALuint ChannelsFromFmt(enum FmtChannels chans);
 static __inline ALuint FrameSizeFromFmt(enum FmtType type, enum FmtChannels chans)
@@ -69,8 +69,8 @@ typedef struct ALbuffer
     ALsizei  size;
 
     ALsizei          Frequency;
-    enum FmtType     FmtType;
     enum FmtChannels FmtChannels;
+    enum FmtType     FmtType;
 
     ALenum   OriginalFormat;
     ALsizei  OriginalSize;

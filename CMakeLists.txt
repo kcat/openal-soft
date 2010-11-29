@@ -50,6 +50,10 @@ ELSE()
     SET(LIBNAME openal)
 ENDIF()
 
+IF(NOT LIBTYPE)
+    SET(LIBTYPE SHARED)
+ENDIF()
+
 SET(LIB_MAJOR_VERSION "1")
 SET(LIB_MINOR_VERSION "12")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}")
@@ -284,6 +288,7 @@ IF(WIN32)
     CHECK_SHARED_LIBRARY_EXISTS(winmm timeGetTime 0 "" HAVE_LIBWINMM)
     IF(HAVE_LIBWINMM)
         SET(EXTRA_LIBS winmm ${EXTRA_LIBS})
+        SET(PKG_CONFIG_LIBS ${PKG_CONFIG_LIBS} -lwinmm)
     ENDIF()
 ENDIF()
 
@@ -384,15 +389,10 @@ ENDIF()
 IF(HAVE_WINDOWS_H)
     IF(WINMM)
         CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H -D_WIN32_WINNT=0x0500)
-        IF(HAVE_MMSYSTEM_H)
-            CHECK_SHARED_LIBRARY_EXISTS(winmm waveInOpen 6 "" HAVE_LIBWINMM)
-            IF(HAVE_LIBWINMM)
-                SET(HAVE_WINMM 1)
-                SET(ALC_OBJS  ${ALC_OBJS} Alc/winmm.c)
-                SET(BACKENDS  "${BACKENDS} WinMM,")
-
-                SET(EXTRA_LIBS winmm ${EXTRA_LIBS})
-            ENDIF()
+        IF(HAVE_MMSYSTEM_H AND HAVE_LIBWINMM)
+            SET(HAVE_WINMM 1)
+            SET(ALC_OBJS  ${ALC_OBJS} Alc/winmm.c)
+            SET(BACKENDS  "${BACKENDS} WinMM,")
         ENDIF()
     ENDIF()
 ENDIF()
@@ -443,6 +443,11 @@ ENDIF()
 # This is always available
 SET(BACKENDS  "${BACKENDS} Null")
 
+IF(LIBTYPE STREQUAL "STATIC")
+    ADD_DEFINITIONS(-DAL_LIBTYPE_STATIC)
+    SET(PKG_CONFIG_CFLAGS -DAL_LIBTYPE_STATIC ${PKG_CONFIG_CFLAGS})
+ENDIF()
+
 # Needed for openal.pc.in
 SET(prefix ${CMAKE_INSTALL_PREFIX})
 SET(exec_prefix "\${prefix}")
@@ -461,15 +466,12 @@ CONFIGURE_FILE(
     @ONLY)
 
 # Build a library
-IF(NOT LIBTYPE)
-    SET(LIBTYPE SHARED)
-ENDIF()
 ADD_LIBRARY(${LIBNAME} ${LIBTYPE} ${OPENAL_OBJS} ${ALC_OBJS})
 SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES DEFINE_SYMBOL AL_BUILD_LIBRARY
                                             COMPILE_FLAGS -DAL_ALEXT_PROTOTYPES
                                             VERSION ${LIB_VERSION}
                                             SOVERSION ${LIB_MAJOR_VERSION})
-IF(WIN32)
+IF(WIN32 AND NOT LIBTYPE STREQUAL "STATIC")
     SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES PREFIX "")
 ENDIF()
 

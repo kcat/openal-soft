@@ -104,8 +104,7 @@ static __inline ALuint aluFrameSizeFromFormat(ALenum format)
 
 static __inline ALdouble lerp(ALdouble val1, ALdouble val2, ALdouble mu)
 {
-    val1 += (val2-val1) * mu;
-    return val1;
+    return val1 + (val2-val1)*mu;
 }
 static __inline ALdouble cubic(ALdouble val0, ALdouble val1, ALdouble val2, ALdouble val3, ALdouble mu)
 {

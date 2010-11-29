@@ -70,7 +70,6 @@ enum FmtType {
     FmtUByte,
     FmtShort,
     FmtFloat,
-    FmtDouble,
 };
 enum FmtChannels {
     FmtMono,
@@ -91,7 +90,6 @@ static __inline ALuint BytesFromFmt(enum FmtType type)
     case FmtUByte: return sizeof(ALubyte);
     case FmtShort: return sizeof(ALshort);
     case FmtFloat: return sizeof(ALfloat);
-    case FmtDouble: return sizeof(ALdouble);
     }
     return 0;
 }

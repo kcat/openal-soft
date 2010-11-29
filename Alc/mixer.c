@@ -37,14 +37,6 @@
 #include "bs2b.h"
 
 
-static __inline ALdouble point64(const ALdouble *vals, ALint step, ALint frac)
-{ return vals[0]; (void)step; (void)frac; }
-static __inline ALdouble lerp64(const ALdouble *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE)); }
-static __inline ALdouble cubic64(const ALdouble *vals, ALint step, ALint frac)
-{ return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0/FRACTIONONE)); }
-
 static __inline ALdouble point32(const ALfloat *vals, ALint step, ALint frac)
 { return vals[0]; (void)step; (void)frac; }
 static __inline ALdouble lerp32(const ALfloat *vals, ALint step, ALint frac)
@@ -203,10 +195,6 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
     *DataPosFrac = frac;                                                      \
 }
 
-DECL_TEMPLATE(ALdouble, point64)
-DECL_TEMPLATE(ALdouble, lerp64)
-DECL_TEMPLATE(ALdouble, cubic64)
-
 DECL_TEMPLATE(ALfloat, point32)
 DECL_TEMPLATE(ALfloat, lerp32)
 DECL_TEMPLATE(ALfloat, cubic32)
@@ -360,10 +348,6 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
     *DataPosFrac = frac;                                                      \
 }
 
-DECL_TEMPLATE(ALdouble, point64)
-DECL_TEMPLATE(ALdouble, lerp64)
-DECL_TEMPLATE(ALdouble, cubic64)
-
 DECL_TEMPLATE(ALfloat, point32)
 DECL_TEMPLATE(ALfloat, lerp32)
 DECL_TEMPLATE(ALfloat, cubic32)
@@ -508,10 +492,6 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
 
 static const Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
                                      BACK_LEFT,  BACK_RIGHT };
-DECL_TEMPLATE(ALdouble, QuadChans, point64)
-DECL_TEMPLATE(ALdouble, QuadChans, lerp64)
-DECL_TEMPLATE(ALdouble, QuadChans, cubic64)
-
 DECL_TEMPLATE(ALfloat, QuadChans, point32)
 DECL_TEMPLATE(ALfloat, QuadChans, lerp32)
 DECL_TEMPLATE(ALfloat, QuadChans, cubic32)
@@ -526,10 +506,6 @@ DECL_TEMPLATE(ALubyte, QuadChans, cubic8)
 
 
 static const Channel RearChans[] = { BACK_LEFT,  BACK_RIGHT };
-DECL_TEMPLATE(ALdouble, RearChans, point64)
-DECL_TEMPLATE(ALdouble, RearChans, lerp64)
-DECL_TEMPLATE(ALdouble, RearChans, cubic64)
-
 DECL_TEMPLATE(ALfloat, RearChans, point32)
 DECL_TEMPLATE(ALfloat, RearChans, lerp32)
 DECL_TEMPLATE(ALfloat, RearChans, cubic32)
@@ -546,10 +522,6 @@ DECL_TEMPLATE(ALubyte, RearChans, cubic8)
 static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_LEFT,  BACK_RIGHT };
-DECL_TEMPLATE(ALdouble, X51Chans, point64)
-DECL_TEMPLATE(ALdouble, X51Chans, lerp64)
-DECL_TEMPLATE(ALdouble, X51Chans, cubic64)
-
 DECL_TEMPLATE(ALfloat, X51Chans, point32)
 DECL_TEMPLATE(ALfloat, X51Chans, lerp32)
 DECL_TEMPLATE(ALfloat, X51Chans, cubic32)
@@ -567,10 +539,6 @@ static const Channel X61Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_CENTER,
                                     SIDE_LEFT,    SIDE_RIGHT };
-DECL_TEMPLATE(ALdouble, X61Chans, point64)
-DECL_TEMPLATE(ALdouble, X61Chans, lerp64)
-DECL_TEMPLATE(ALdouble, X61Chans, cubic64)
-
 DECL_TEMPLATE(ALfloat, X61Chans, point32)
 DECL_TEMPLATE(ALfloat, X61Chans, lerp32)
 DECL_TEMPLATE(ALfloat, X61Chans, cubic32)
@@ -588,10 +556,6 @@ static const Channel X71Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_LEFT,    BACK_RIGHT,
                                     SIDE_LEFT,    SIDE_RIGHT };
-DECL_TEMPLATE(ALdouble, X71Chans, point64)
-DECL_TEMPLATE(ALdouble, X71Chans, lerp64)
-DECL_TEMPLATE(ALdouble, X71Chans, cubic64)
-
 DECL_TEMPLATE(ALfloat, X71Chans, point32)
 DECL_TEMPLATE(ALfloat, X71Chans, lerp32)
 DECL_TEMPLATE(ALfloat, X71Chans, cubic32)
@@ -653,10 +617,6 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALdouble, point64)
-DECL_TEMPLATE(ALdouble, lerp64)
-DECL_TEMPLATE(ALdouble, cubic64)
-
 DECL_TEMPLATE(ALfloat, point32)
 DECL_TEMPLATE(ALfloat, lerp32)
 DECL_TEMPLATE(ALfloat, cubic32)
@@ -696,12 +656,6 @@ static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
         Mix_ALfloat_##sampler##32(Source, Device, FmtChannels,                \
                                   Data, DataPosInt, DataPosFrac,              \
                                   OutPos, SamplesToDo, BufferSize);           \
-        break;                                                                \
-                                                                              \
-    case FmtDouble:                                                           \
-        Mix_ALdouble_##sampler##64(Source, Device, FmtChannels,               \
-                                   Data, DataPosInt, DataPosFrac,             \
-                                   OutPos, SamplesToDo, BufferSize);          \
         break;                                                                \
     }                                                                         \
 }

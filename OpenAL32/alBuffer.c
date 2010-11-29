@@ -285,11 +285,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case AL_FORMAT_MONO8:
         case AL_FORMAT_MONO16:
         case AL_FORMAT_MONO_FLOAT32:
-        case AL_FORMAT_MONO_DOUBLE_EXT:
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
         case AL_FORMAT_STEREO_FLOAT32:
-        case AL_FORMAT_STEREO_DOUBLE_EXT:
         case AL_FORMAT_QUAD8_LOKI:
         case AL_FORMAT_QUAD16_LOKI:
         case AL_FORMAT_QUAD8:
@@ -308,6 +306,17 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case AL_FORMAT_71CHN16:
         case AL_FORMAT_71CHN32:
             err = LoadData(ALBuf, data, size, freq, format, format);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
+
+        case AL_FORMAT_MONO_DOUBLE_EXT:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO_FLOAT32);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
+        case AL_FORMAT_STEREO_DOUBLE_EXT:
+            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO_FLOAT32);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
             break;
@@ -1249,9 +1258,7 @@ static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, en
         case FmtFloat:
             Convert_ALfloat(dst, src, srcType, len);
             break;
-        case FmtDouble:
-            Convert_ALdouble(dst, src, srcType, len);
-            break;
+        (void)Convert_ALdouble;
     }
 }
 
@@ -1406,10 +1413,6 @@ void DecomposeFormat(ALenum format, enum FmtType *type, enum FmtChannels *order)
             *type  = FmtFloat;
             *order = FmtMono;
             break;
-        case AL_FORMAT_MONO_DOUBLE_EXT:
-            *type  = FmtDouble;
-            *order = FmtMono;
-            break;
         case AL_FORMAT_STEREO8:
             *type  = FmtUByte;
             *order = FmtStereo;
@@ -1420,10 +1423,6 @@ void DecomposeFormat(ALenum format, enum FmtType *type, enum FmtChannels *order)
             break;
         case AL_FORMAT_STEREO_FLOAT32:
             *type  = FmtFloat;
-            *order = FmtStereo;
-            break;
-        case AL_FORMAT_STEREO_DOUBLE_EXT:
-            *type  = FmtDouble;
             *order = FmtStereo;
             break;
         case AL_FORMAT_QUAD8_LOKI:

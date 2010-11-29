@@ -366,9 +366,6 @@ static const ALchar alExtList[] =
 // Mixing Priority Level
 static ALint RTPrioLevel;
 
-// Resampler Quality
-resampler_t DefaultResampler;
-
 // Output Log File
 static FILE *LogFile;
 

@@ -32,6 +32,20 @@
 #include "alThunk.h"
 #include "alAuxEffectSlot.h"
 
+
+resampler_t DefaultResampler;
+const ALsizei ResamplerPadding[RESAMPLER_MAX] = {
+    0, /* Point */
+    1, /* Linear */
+    2, /* Cubic */
+};
+const ALsizei ResamplerPrePadding[RESAMPLER_MAX] = {
+    0, /* Point */
+    0, /* Linear */
+    1, /* Cubic */
+};
+
+
 static ALvoid InitSourceParams(ALsource *Source);
 static ALvoid GetSourceOffset(ALsource *Source, ALenum eName, ALdouble *Offsets, ALdouble updateLen);
 static ALboolean ApplyOffset(ALsource *Source);

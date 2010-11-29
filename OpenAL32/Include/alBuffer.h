@@ -29,35 +29,8 @@ enum SrcFmtChannels {
 
 void DecomposeInputFormat(ALenum format, enum SrcFmtType *type,
                           enum SrcFmtChannels *order);
-
-static __inline ALuint BytesFromSrcFmt(enum SrcFmtType type)
-{
-    switch(type)
-    {
-    case SrcFmtByte: return sizeof(ALbyte);
-    case SrcFmtUByte: return sizeof(ALubyte);
-    case SrcFmtShort: return sizeof(ALshort);
-    case SrcFmtUShort: return sizeof(ALushort);
-    case SrcFmtFloat: return sizeof(ALfloat);
-    case SrcFmtDouble: return sizeof(ALdouble);
-    case SrcFmtMulaw: return sizeof(ALubyte);
-    }
-    return 0;
-}
-static __inline ALuint ChannelsFromSrcFmt(enum SrcFmtChannels chans)
-{
-    switch(chans)
-    {
-    case SrcFmtMono: return 1;
-    case SrcFmtStereo: return 2;
-    case SrcFmtRear: return 2;
-    case SrcFmtQuad: return 4;
-    case SrcFmtX51: return 6;
-    case SrcFmtX61: return 7;
-    case SrcFmtX71: return 8;
-    }
-    return 0;
-}
+ALuint BytesFromSrcFmt(enum SrcFmtType type);
+ALuint ChannelsFromSrcFmt(enum SrcFmtChannels chans);
 static __inline ALuint FrameSizeFromSrcFmt(enum SrcFmtType type,
                                            enum SrcFmtChannels chans)
 {
@@ -82,31 +55,8 @@ enum FmtChannels {
 };
 
 void DecomposeFormat(ALenum format, enum FmtType *type, enum FmtChannels *order);
-
-static __inline ALuint BytesFromFmt(enum FmtType type)
-{
-    switch(type)
-    {
-    case FmtUByte: return sizeof(ALubyte);
-    case FmtShort: return sizeof(ALshort);
-    case FmtFloat: return sizeof(ALfloat);
-    }
-    return 0;
-}
-static __inline ALuint ChannelsFromFmt(enum FmtChannels chans)
-{
-    switch(chans)
-    {
-    case FmtMono: return 1;
-    case FmtStereo: return 2;
-    case FmtRear: return 2;
-    case FmtQuad: return 4;
-    case FmtX51: return 6;
-    case FmtX61: return 7;
-    case FmtX71: return 8;
-    }
-    return 0;
-}
+ALuint BytesFromFmt(enum FmtType type);
+ALuint ChannelsFromFmt(enum FmtChannels chans);
 static __inline ALuint FrameSizeFromFmt(enum FmtType type, enum FmtChannels chans)
 {
     return BytesFromFmt(type) * ChannelsFromFmt(chans);

@@ -757,6 +757,26 @@ void RemoveUIntMapKey(UIntMap *map, ALuint key)
     }
 }
 
+ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
+{
+    if(map->size > 0)
+    {
+        ALsizei low = 0;
+        ALsizei high = map->size - 1;
+        while(low < high)
+        {
+            ALsizei mid = low + (high-low)/2;
+            if(map->array[mid].key < key)
+                low = mid + 1;
+            else
+                high = mid;
+        }
+        if(map->array[low].key == key)
+            return map->array[low].value;
+    }
+    return NULL;
+}
+
 
 /*
     IsDevice

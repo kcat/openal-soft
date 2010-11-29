@@ -146,6 +146,20 @@ static ALfloat aluLUTpos2Angle(ALint pos)
     return aluAtan((ALfloat)(pos - 3 * QUADRANT_NUM) / (ALfloat)(4 * QUADRANT_NUM - pos)) - M_PI_2;
 }
 
+ALint aluCart2LUTpos(ALfloat re, ALfloat im)
+{
+    ALint pos = 0;
+    ALfloat denom = aluFabs(re) + aluFabs(im);
+    if(denom > 0.0f)
+        pos = (ALint)(QUADRANT_NUM*aluFabs(im) / denom + 0.5);
+
+    if(re < 0.0)
+        pos = 2 * QUADRANT_NUM - pos;
+    if(im < 0.0)
+        pos = LUT_NUM - pos;
+    return pos%LUT_NUM;
+}
+
 ALvoid aluInitPanning(ALCdevice *Device)
 {
     ALfloat SpeakerAngle[OUTPUTCHANNELS];

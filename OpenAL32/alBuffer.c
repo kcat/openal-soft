@@ -415,6 +415,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
  */
 AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
 {
+    enum SrcFmtChannels SrcChannels;
+    enum SrcFmtType SrcType;
     ALCcontext *Context;
     ALCdevice  *device;
     ALbuffer   *ALBuf;
@@ -454,11 +456,13 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         case AL_FORMAT_MONO_FLOAT32:
         case AL_FORMAT_MONO_DOUBLE_EXT:
         case AL_FORMAT_MONO_MULAW:
+        case AL_FORMAT_MONO_IMA4:
         case AL_FORMAT_STEREO8:
         case AL_FORMAT_STEREO16:
         case AL_FORMAT_STEREO_FLOAT32:
         case AL_FORMAT_STEREO_DOUBLE_EXT:
         case AL_FORMAT_STEREO_MULAW:
+        case AL_FORMAT_STEREO_IMA4:
         case AL_FORMAT_QUAD8_LOKI:
         case AL_FORMAT_QUAD16_LOKI:
         case AL_FORMAT_QUAD8:
@@ -480,36 +484,11 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         case AL_FORMAT_71CHN8:
         case AL_FORMAT_71CHN16:
         case AL_FORMAT_71CHN32:
-        case AL_FORMAT_71CHN_MULAW: {
-            enum SrcFmtChannels SrcChannels;
-            enum SrcFmtType SrcType;
-
+        case AL_FORMAT_71CHN_MULAW:
             DecomposeInputFormat(format, &SrcChannels, &SrcType);
             if(SrcChannels != ALBuf->OriginalChannels || SrcType != ALBuf->OriginalType)
                 alSetError(Context, AL_INVALID_ENUM);
-            else
-            {
-                ALuint OldBytes = BytesFromFmt(SrcType);
-                ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
-
-                offset /= OldBytes;
-                offset *= Bytes;
-                length /= OldBytes;
-
-                ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
-                            data, SrcType, length);
-            }
-        }   break;
-
-        case AL_FORMAT_MONO_IMA4:
-        case AL_FORMAT_STEREO_IMA4: {
-            enum SrcFmtChannels SrcChannels;
-            enum SrcFmtType SrcType;
-
-            DecomposeInputFormat(format, &SrcChannels, &SrcType);
-            if(SrcChannels != ALBuf->OriginalChannels || SrcType != SrcFmtIMA4)
-                alSetError(Context, AL_INVALID_ENUM);
-            else
+            else if(SrcType == SrcFmtIMA4)
             {
                 ALuint Channels = ChannelsFromFmt(ALBuf->FmtChannels);
                 ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
@@ -522,7 +501,19 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
 
                 ConvertDataIMA4(&((ALubyte*)ALBuf->data)[offset], data, Channels, length);
             }
-        }   break;
+            else
+            {
+                ALuint OldBytes = BytesFromFmt(SrcType);
+                ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
+
+                offset /= OldBytes;
+                offset *= Bytes;
+                length /= OldBytes;
+
+                ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                            data, SrcType, length);
+            }
+            break;
 
         default:
             alSetError(Context, AL_INVALID_ENUM);

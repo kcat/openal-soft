@@ -1288,6 +1288,8 @@ static void Convert_##T(T *dst, const ALvoid *src, enum SrcFmtType srcType,   \
         case SrcFmtMulaw:                                                     \
             Convert_##T##_ALmulaw(dst, src, len);                             \
             break;                                                            \
+        case SrcFmtIMA4:                                                      \
+            break; /* not handled here */                                     \
     }                                                                         \
 }
 
@@ -1396,6 +1398,7 @@ ALuint BytesFromSrcFmt(enum SrcFmtType type)
     case SrcFmtFloat: return sizeof(ALfloat);
     case SrcFmtDouble: return sizeof(ALdouble);
     case SrcFmtMulaw: return sizeof(ALubyte);
+    case SrcFmtIMA4: break; /* not handled here */
     }
     return 0;
 }
@@ -1434,6 +1437,10 @@ void DecomposeInputFormat(ALenum format, enum SrcFmtChannels *chans,
             *chans = SrcFmtMono;
             *type  = SrcFmtDouble;
             break;
+        case AL_FORMAT_MONO_IMA4:
+            *chans = SrcFmtMono;
+            *type  = SrcFmtIMA4;
+            break;
         case AL_FORMAT_STEREO8:
             *chans = SrcFmtStereo;
             *type  = SrcFmtUByte;
@@ -1449,6 +1456,10 @@ void DecomposeInputFormat(ALenum format, enum SrcFmtChannels *chans,
         case AL_FORMAT_STEREO_DOUBLE_EXT:
             *chans = SrcFmtStereo;
             *type  = SrcFmtDouble;
+            break;
+        case AL_FORMAT_STEREO_IMA4:
+            *chans = SrcFmtStereo;
+            *type  = SrcFmtIMA4;
             break;
         case AL_FORMAT_QUAD8_LOKI:
         case AL_FORMAT_QUAD8:

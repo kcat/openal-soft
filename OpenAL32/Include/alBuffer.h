@@ -18,6 +18,7 @@ enum SrcFmtType {
     SrcFmtFloat,  /* AL_FLOAT */
     SrcFmtDouble, /* AL_DOUBLE */
     SrcFmtMulaw,  /* AL_MULAW */
+    SrcFmtIMA4,   /* AL_IMA4 */
 };
 enum SrcFmtChannels {
     SrcFmtMono,   /* AL_MONO */

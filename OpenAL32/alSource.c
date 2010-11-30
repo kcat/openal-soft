@@ -2018,13 +2018,13 @@ static ALint GetByteOffset(ALsource *Source)
         break;
 
     case AL_SAMPLE_OFFSET:
-        ByteOffset = Source->lOffset * BytesFromFmt(Buffer->FmtType);
+        ByteOffset = Source->lOffset * FrameSizeFromFmt(Buffer->FmtType, Buffer->FmtChannels);
         break;
 
     case AL_SEC_OFFSET:
         // Note - lOffset is internally stored as Milliseconds
         ByteOffset  = (ALint)(Source->lOffset / 1000.0 * Buffer->Frequency);
-        ByteOffset *= BytesFromFmt(Buffer->FmtType);
+        ByteOffset *= FrameSizeFromFmt(Buffer->FmtType, Buffer->FmtChannels);
         break;
     }
     // Clear Offset

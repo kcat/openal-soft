@@ -36,7 +36,7 @@
 
 static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum SrcFmtChannels chans, enum SrcFmtType type, const ALvoid *data);
 static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum SrcFmtType srcType, ALsizei len);
-static void ConvertDataIMA4(ALvoid *dst, const ALvoid *src, ALint origChans, ALsizei len);
+static void ConvertDataIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len);
 
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
 
@@ -326,10 +326,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             break;
 
         case SrcFmtIMA4: {
-            ALuint Channels = ((SrcChannels==SrcFmtMono) ? 1 : 2);
-            ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO16 :
-                                                AL_FORMAT_STEREO16);
-            ALuint NewBytes = aluBytesFromFormat(NewFormat);
+            enum FmtChannels DstChannels = ((SrcChannels==SrcFmtMono) ?
+                                            FmtMono : FmtStereo);
+            enum FmtType DstType = FmtShort;
+            ALuint Channels = ChannelsFromFmt(DstChannels);
+            ALuint NewBytes = BytesFromFmt(DstType);
             ALuint64 newsize;
 
             /* Here is where things vary:
@@ -357,10 +358,13 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 ALBuf->data = temp;
                 ALBuf->size = newsize;
 
-                ConvertDataIMA4(ALBuf->data, data, Channels, newsize/(65*Channels*NewBytes));
+                if(data != NULL)
+                    ConvertDataIMA4(ALBuf->data, DstType, data, Channels,
+                                    newsize/(65*Channels*NewBytes));
 
                 ALBuf->Frequency = freq;
-                DecomposeFormat(NewFormat, &ALBuf->FmtChannels, &ALBuf->FmtType);
+                ALBuf->FmtChannels = DstChannels;
+                ALBuf->FmtType = DstType;
 
                 ALBuf->LoopStart = 0;
                 ALBuf->LoopEnd = newsize / Channels / NewBytes;
@@ -436,7 +440,8 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
             offset *= Bytes;
             length /= ALBuf->OriginalAlign;
 
-            ConvertDataIMA4(&((ALubyte*)ALBuf->data)[offset], data, Channels, length);
+            ConvertDataIMA4(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                            data, Channels, length);
         }
         else
         {
@@ -840,60 +845,53 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
 }
 
 
-static void ConvertDataIMA4(ALvoid *dst, const ALvoid *src, ALint chans, ALsizei len)
+static void ConvertIMA4Block(ALshort *dst, const ALubyte *IMAData, ALint numchans)
 {
-    const ALubyte *IMAData;
     ALint Sample[2],Index[2];
     ALuint IMACode[2];
-    ALsizei i,j,k,c;
+    ALsizei j,k,c;
 
-    if(src == NULL)
-        return;
-
-    IMAData = src;
-    for(i = 0;i < len;i++)
+    for(c = 0;c < numchans;c++)
     {
-        for(c = 0;c < chans;c++)
+        Sample[c]  = *(IMAData++);
+        Sample[c] |= *(IMAData++) << 8;
+        Sample[c]  = (Sample[c]^0x8000) - 32768;
+        Index[c]  = *(IMAData++);
+        Index[c] |= *(IMAData++) << 8;
+        Index[c]  = (Index[c]^0x8000) - 32768;
+
+        Index[c] = ((Index[c]<0) ? 0 : Index[c]);
+        Index[c] = ((Index[c]>88) ? 88 : Index[c]);
+
+        dst[c] = Sample[c];
+    }
+
+    j = 1;
+    while(j < 65)
+    {
+        for(c = 0;c < numchans;c++)
         {
-            Sample[c]  = *(IMAData++);
-            Sample[c] |= *(IMAData++) << 8;
-            Sample[c]  = (Sample[c]^0x8000) - 32768;
-            Index[c]  = *(IMAData++);
-            Index[c] |= *(IMAData++) << 8;
-            Index[c]  = (Index[c]^0x8000) - 32768;
-
-            Index[c] = ((Index[c]<0) ? 0 : Index[c]);
-            Index[c] = ((Index[c]>88) ? 88 : Index[c]);
-
-            ((ALshort*)dst)[i*65*chans + c] = Sample[c];
+            IMACode[c]  = *(IMAData++);
+            IMACode[c] |= *(IMAData++) << 8;
+            IMACode[c] |= *(IMAData++) << 16;
+            IMACode[c] |= *(IMAData++) << 24;
         }
 
-        for(j = 1;j < 65;j += 8)
+        for(k = 0;k < 8;k++,j++)
         {
-            for(c = 0;c < chans;c++)
+            for(c = 0;c < numchans;c++)
             {
-                IMACode[c]  = *(IMAData++);
-                IMACode[c] |= *(IMAData++) << 8;
-                IMACode[c] |= *(IMAData++) << 16;
-                IMACode[c] |= *(IMAData++) << 24;
-            }
+                Sample[c] += ((g_IMAStep_size[Index[c]]*g_IMACodeword_4[IMACode[c]&15])/8);
+                Index[c] += g_IMAIndex_adjust_4[IMACode[c]&15];
 
-            for(k = 0;k < 8;k++)
-            {
-                for(c = 0;c < chans;c++)
-                {
-                    Sample[c] += ((g_IMAStep_size[Index[c]]*g_IMACodeword_4[IMACode[c]&15])/8);
-                    Index[c] += g_IMAIndex_adjust_4[IMACode[c]&15];
+                if(Sample[c] < -32768) Sample[c] = -32768;
+                else if(Sample[c] > 32767) Sample[c] = 32767;
 
-                    if(Sample[c] < -32768) Sample[c] = -32768;
-                    else if(Sample[c] > 32767) Sample[c] = 32767;
+                if(Index[c]<0) Index[c] = 0;
+                else if(Index[c]>88) Index[c] = 88;
 
-                    if(Index[c]<0) Index[c] = 0;
-                    else if(Index[c]>88) Index[c] = 88;
-
-                    ((ALshort*)dst)[(i*65+j+k)*chans + c] = Sample[c];
-                    IMACode[c] >>= 4;
-                }
+                dst[(j+k)*numchans + c] = Sample[c];
+                IMACode[c] >>= 4;
             }
         }
     }
@@ -1194,6 +1192,32 @@ DECL_TEMPLATE(ALdouble, ALmulaw)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
+static void Convert_##T##_IMA4(T *dst, const ALubyte *src, ALuint numchans,   \
+                               ALuint numblocks)                              \
+{                                                                             \
+    ALshort tmp[65*2]; /* Max samples an IMA4 frame can be */                 \
+    ALuint i, j;                                                              \
+    for(i = 0;i < numblocks;i++)                                              \
+    {                                                                         \
+        ConvertIMA4Block(tmp, src, numchans);                                 \
+        src += 36*numchans;                                                   \
+        for(j = 0;j < 65*numchans;j++)                                        \
+            *(dst++) = Conv_##T##_ALshort(tmp[j]);                            \
+    }                                                                         \
+}
+
+DECL_TEMPLATE(ALbyte)
+DECL_TEMPLATE(ALubyte)
+DECL_TEMPLATE(ALshort)
+DECL_TEMPLATE(ALushort)
+DECL_TEMPLATE(ALint)
+DECL_TEMPLATE(ALuint)
+DECL_TEMPLATE(ALfloat)
+DECL_TEMPLATE(ALdouble)
+
+#undef DECL_TEMPLATE
+
+#define DECL_TEMPLATE(T)                                                      \
 static void Convert_##T(T *dst, const ALvoid *src, enum SrcFmtType srcType,   \
                         ALsizei len)                                          \
 {                                                                             \
@@ -1241,6 +1265,49 @@ DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 
 #undef DECL_TEMPLATE
+
+
+static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum SrcFmtType srcType, ALsizei len)
+{
+    switch(dstType)
+    {
+        (void)Convert_ALbyte;
+        case FmtUByte:
+            Convert_ALubyte(dst, src, srcType, len);
+            break;
+        case FmtShort:
+            Convert_ALshort(dst, src, srcType, len);
+            break;
+        (void)Convert_ALushort;
+        (void)Convert_ALint;
+        (void)Convert_ALuint;
+        case FmtFloat:
+            Convert_ALfloat(dst, src, srcType, len);
+            break;
+        (void)Convert_ALdouble;
+    }
+}
+
+static void ConvertDataIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len)
+{
+    switch(dstType)
+    {
+        (void)Convert_ALbyte_IMA4;
+        case FmtUByte:
+            Convert_ALubyte_IMA4(dst, src, chans, len);
+            break;
+        case FmtShort:
+            Convert_ALshort_IMA4(dst, src, chans, len);
+            break;
+        (void)Convert_ALushort_IMA4;
+        (void)Convert_ALint_IMA4;
+        (void)Convert_ALuint_IMA4;
+        case FmtFloat:
+            Convert_ALfloat_IMA4(dst, src, chans, len);
+            break;
+        (void)Convert_ALdouble_IMA4;
+    }
+}
 
 
 /*
@@ -1297,27 +1364,6 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
     ALBuf->OriginalAlign    = OrigBytes * OrigChannels;
 
     return AL_NO_ERROR;
-}
-
-static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum SrcFmtType srcType, ALsizei len)
-{
-    switch(dstType)
-    {
-        (void)Convert_ALbyte;
-        case FmtUByte:
-            Convert_ALubyte(dst, src, srcType, len);
-            break;
-        case FmtShort:
-            Convert_ALshort(dst, src, srcType, len);
-            break;
-        (void)Convert_ALushort;
-        (void)Convert_ALint;
-        (void)Convert_ALuint;
-        case FmtFloat:
-            Convert_ALfloat(dst, src, srcType, len);
-            break;
-        (void)Convert_ALdouble;
-    }
 }
 
 

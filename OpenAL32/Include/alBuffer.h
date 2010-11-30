@@ -13,6 +13,8 @@ enum SrcFmtType {
     SrcFmtUByte,  /* AL_UNSIGNED_BYTE */
     SrcFmtShort,  /* AL_SHORT */
     SrcFmtUShort, /* AL_UNSIGNED_SHORT */
+    SrcFmtInt,    /* AL_INT */
+    SrcFmtUInt,   /* AL_UNSIGNED_INT */
     SrcFmtFloat,  /* AL_FLOAT */
     SrcFmtDouble, /* AL_DOUBLE */
     SrcFmtMulaw,  /* AL_MULAW */

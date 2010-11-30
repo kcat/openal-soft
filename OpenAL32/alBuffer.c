@@ -972,6 +972,10 @@ static __inline ALbyte Conv_ALbyte_ALshort(ALshort val)
 { return val>>8; }
 static __inline ALbyte Conv_ALbyte_ALushort(ALushort val)
 { return (val>>8)-128; }
+static __inline ALbyte Conv_ALbyte_ALint(ALint val)
+{ return val>>24; }
+static __inline ALbyte Conv_ALbyte_ALuint(ALuint val)
+{ return (val>>24)-128; }
 static __inline ALbyte Conv_ALbyte_ALfloat(ALfloat val)
 {
     if(val >= 1.0f) return 127;
@@ -995,6 +999,10 @@ static __inline ALubyte Conv_ALubyte_ALshort(ALshort val)
 { return (val>>8)+128; }
 static __inline ALubyte Conv_ALubyte_ALushort(ALushort val)
 { return val>>8; }
+static __inline ALubyte Conv_ALubyte_ALint(ALint val)
+{ return (val>>24)+128; }
+static __inline ALubyte Conv_ALubyte_ALuint(ALuint val)
+{ return val>>24; }
 static __inline ALubyte Conv_ALubyte_ALfloat(ALfloat val)
 {
     if(val >= 1.0f) return 255;
@@ -1018,6 +1026,10 @@ static __inline ALshort Conv_ALshort_ALshort(ALshort val)
 { return val; }
 static __inline ALshort Conv_ALshort_ALushort(ALushort val)
 { return val^0x8000; }
+static __inline ALshort Conv_ALshort_ALint(ALint val)
+{ return val>>16; }
+static __inline ALshort Conv_ALshort_ALuint(ALuint val)
+{ return (val>>16)-32768; }
 static __inline ALshort Conv_ALshort_ALfloat(ALfloat val)
 {
     if(val >= 1.0f) return 32767;
@@ -1041,6 +1053,10 @@ static __inline ALushort Conv_ALushort_ALshort(ALshort val)
 { return val^0x8000; }
 static __inline ALushort Conv_ALushort_ALushort(ALushort val)
 { return val; }
+static __inline ALushort Conv_ALushort_ALint(ALint val)
+{ return (val>>16)+32768; }
+static __inline ALushort Conv_ALushort_ALuint(ALuint val)
+{ return val>>16; }
 static __inline ALushort Conv_ALushort_ALfloat(ALfloat val)
 {
     if(val >= 1.0f) return 65535;
@@ -1056,6 +1072,60 @@ static __inline ALushort Conv_ALushort_ALdouble(ALdouble val)
 static __inline ALushort Conv_ALushort_ALmulaw(ALmulaw val)
 { return muLawDecompressionTable[val]^0x8000; }
 
+static __inline ALint Conv_ALint_ALbyte(ALbyte val)
+{ return val<<24; }
+static __inline ALint Conv_ALint_ALubyte(ALubyte val)
+{ return (val-128)<<24; }
+static __inline ALint Conv_ALint_ALshort(ALshort val)
+{ return val<<16; }
+static __inline ALint Conv_ALint_ALushort(ALushort val)
+{ return (val-32768)<<16; }
+static __inline ALint Conv_ALint_ALint(ALint val)
+{ return val; }
+static __inline ALint Conv_ALint_ALuint(ALuint val)
+{ return val-2147483648u; }
+static __inline ALint Conv_ALint_ALfloat(ALfloat val)
+{
+    if(val >= 1.0f) return 2147483647;
+    if(val <= -1.0f) return -2147483648u;
+    return (ALint)(val * 2147483647.0);
+}
+static __inline ALint Conv_ALint_ALdouble(ALdouble val)
+{
+    if(val >= 1.0) return 2147483647;
+    if(val <= -1.0) return -2147483648u;
+    return (ALint)(val * 2147483647.0);
+}
+static __inline ALint Conv_ALint_ALmulaw(ALmulaw val)
+{ return muLawDecompressionTable[val]<<16; }
+
+static __inline ALuint Conv_ALuint_ALbyte(ALbyte val)
+{ return (val+128)<<24; }
+static __inline ALuint Conv_ALuint_ALubyte(ALubyte val)
+{ return val<<24; }
+static __inline ALuint Conv_ALuint_ALshort(ALshort val)
+{ return (val+32768)<<16; }
+static __inline ALuint Conv_ALuint_ALushort(ALushort val)
+{ return val<<16; }
+static __inline ALuint Conv_ALuint_ALint(ALint val)
+{ return val+2147483648u; }
+static __inline ALuint Conv_ALuint_ALuint(ALuint val)
+{ return val; }
+static __inline ALuint Conv_ALuint_ALfloat(ALfloat val)
+{
+    if(val >= 1.0f) return 4294967295u;
+    if(val <= -1.0f) return 0;
+    return (ALint)(val * 2147483647.0) + 2147483648u;
+}
+static __inline ALuint Conv_ALuint_ALdouble(ALdouble val)
+{
+    if(val >= 1.0) return 4294967295u;
+    if(val <= -1.0) return 0;
+    return (ALint)(val * 2147483647.0) + 2147483648u;
+}
+static __inline ALuint Conv_ALuint_ALmulaw(ALmulaw val)
+{ return (muLawDecompressionTable[val]+32768)<<16; }
+
 static __inline ALfloat Conv_ALfloat_ALbyte(ALbyte val)
 { return val * (1.0f/127.0f); }
 static __inline ALfloat Conv_ALfloat_ALubyte(ALubyte val)
@@ -1064,6 +1134,10 @@ static __inline ALfloat Conv_ALfloat_ALshort(ALshort val)
 { return val * (1.0f/32767.0f); }
 static __inline ALfloat Conv_ALfloat_ALushort(ALushort val)
 { return (val-32768) * (1.0f/32767.0f); }
+static __inline ALfloat Conv_ALfloat_ALint(ALint val)
+{ return val * (1.0/2147483647.0); }
+static __inline ALfloat Conv_ALfloat_ALuint(ALuint val)
+{ return (ALint)(val-2147483648u) * (1.0/2147483647.0); }
 static __inline ALfloat Conv_ALfloat_ALfloat(ALfloat val)
 { return val; }
 static __inline ALfloat Conv_ALfloat_ALdouble(ALdouble val)
@@ -1079,6 +1153,10 @@ static __inline ALdouble Conv_ALdouble_ALshort(ALshort val)
 { return val * (1.0/32767.0); }
 static __inline ALdouble Conv_ALdouble_ALushort(ALushort val)
 { return (val-32768) * (1.0/32767.0); }
+static __inline ALdouble Conv_ALdouble_ALint(ALint val)
+{ return val * (1.0/214748364.0); }
+static __inline ALdouble Conv_ALdouble_ALuint(ALuint val)
+{ return (ALint)(val-2147483648u) * (1.0/2147483647.0); }
 static __inline ALdouble Conv_ALdouble_ALfloat(ALfloat val)
 { return val; }
 static __inline ALdouble Conv_ALdouble_ALdouble(ALdouble val)
@@ -1099,6 +1177,8 @@ DECL_TEMPLATE(ALbyte, ALbyte)
 DECL_TEMPLATE(ALbyte, ALubyte)
 DECL_TEMPLATE(ALbyte, ALshort)
 DECL_TEMPLATE(ALbyte, ALushort)
+DECL_TEMPLATE(ALbyte, ALint)
+DECL_TEMPLATE(ALbyte, ALuint)
 DECL_TEMPLATE(ALbyte, ALfloat)
 DECL_TEMPLATE(ALbyte, ALdouble)
 DECL_TEMPLATE(ALbyte, ALmulaw)
@@ -1107,6 +1187,8 @@ DECL_TEMPLATE(ALubyte, ALbyte)
 DECL_TEMPLATE(ALubyte, ALubyte)
 DECL_TEMPLATE(ALubyte, ALshort)
 DECL_TEMPLATE(ALubyte, ALushort)
+DECL_TEMPLATE(ALubyte, ALint)
+DECL_TEMPLATE(ALubyte, ALuint)
 DECL_TEMPLATE(ALubyte, ALfloat)
 DECL_TEMPLATE(ALubyte, ALdouble)
 DECL_TEMPLATE(ALubyte, ALmulaw)
@@ -1115,6 +1197,8 @@ DECL_TEMPLATE(ALshort, ALbyte)
 DECL_TEMPLATE(ALshort, ALubyte)
 DECL_TEMPLATE(ALshort, ALshort)
 DECL_TEMPLATE(ALshort, ALushort)
+DECL_TEMPLATE(ALshort, ALint)
+DECL_TEMPLATE(ALshort, ALuint)
 DECL_TEMPLATE(ALshort, ALfloat)
 DECL_TEMPLATE(ALshort, ALdouble)
 DECL_TEMPLATE(ALshort, ALmulaw)
@@ -1123,14 +1207,38 @@ DECL_TEMPLATE(ALushort, ALbyte)
 DECL_TEMPLATE(ALushort, ALubyte)
 DECL_TEMPLATE(ALushort, ALshort)
 DECL_TEMPLATE(ALushort, ALushort)
+DECL_TEMPLATE(ALushort, ALint)
+DECL_TEMPLATE(ALushort, ALuint)
 DECL_TEMPLATE(ALushort, ALfloat)
 DECL_TEMPLATE(ALushort, ALdouble)
 DECL_TEMPLATE(ALushort, ALmulaw)
+
+DECL_TEMPLATE(ALint, ALbyte)
+DECL_TEMPLATE(ALint, ALubyte)
+DECL_TEMPLATE(ALint, ALshort)
+DECL_TEMPLATE(ALint, ALushort)
+DECL_TEMPLATE(ALint, ALint)
+DECL_TEMPLATE(ALint, ALuint)
+DECL_TEMPLATE(ALint, ALfloat)
+DECL_TEMPLATE(ALint, ALdouble)
+DECL_TEMPLATE(ALint, ALmulaw)
+
+DECL_TEMPLATE(ALuint, ALbyte)
+DECL_TEMPLATE(ALuint, ALubyte)
+DECL_TEMPLATE(ALuint, ALshort)
+DECL_TEMPLATE(ALuint, ALushort)
+DECL_TEMPLATE(ALuint, ALint)
+DECL_TEMPLATE(ALuint, ALuint)
+DECL_TEMPLATE(ALuint, ALfloat)
+DECL_TEMPLATE(ALuint, ALdouble)
+DECL_TEMPLATE(ALuint, ALmulaw)
 
 DECL_TEMPLATE(ALfloat, ALbyte)
 DECL_TEMPLATE(ALfloat, ALubyte)
 DECL_TEMPLATE(ALfloat, ALshort)
 DECL_TEMPLATE(ALfloat, ALushort)
+DECL_TEMPLATE(ALfloat, ALint)
+DECL_TEMPLATE(ALfloat, ALuint)
 DECL_TEMPLATE(ALfloat, ALfloat)
 DECL_TEMPLATE(ALfloat, ALdouble)
 DECL_TEMPLATE(ALfloat, ALmulaw)
@@ -1139,6 +1247,8 @@ DECL_TEMPLATE(ALdouble, ALbyte)
 DECL_TEMPLATE(ALdouble, ALubyte)
 DECL_TEMPLATE(ALdouble, ALshort)
 DECL_TEMPLATE(ALdouble, ALushort)
+DECL_TEMPLATE(ALdouble, ALint)
+DECL_TEMPLATE(ALdouble, ALuint)
 DECL_TEMPLATE(ALdouble, ALfloat)
 DECL_TEMPLATE(ALdouble, ALdouble)
 DECL_TEMPLATE(ALdouble, ALmulaw)
@@ -1163,6 +1273,12 @@ static void Convert_##T(T *dst, const ALvoid *src, enum SrcFmtType srcType,   \
         case SrcFmtUShort:                                                    \
             Convert_##T##_ALushort(dst, src, len);                            \
             break;                                                            \
+        case SrcFmtInt:                                                       \
+            Convert_##T##_ALint(dst, src, len);                               \
+            break;                                                            \
+        case SrcFmtUInt:                                                      \
+            Convert_##T##_ALuint(dst, src, len);                              \
+            break;                                                            \
         case SrcFmtFloat:                                                     \
             Convert_##T##_ALfloat(dst, src, len);                             \
             break;                                                            \
@@ -1179,6 +1295,8 @@ DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 DECL_TEMPLATE(ALshort)
 DECL_TEMPLATE(ALushort)
+DECL_TEMPLATE(ALint)
+DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 
@@ -1255,6 +1373,8 @@ static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, en
             Convert_ALshort(dst, src, srcType, len);
             break;
         (void)Convert_ALushort;
+        (void)Convert_ALint;
+        (void)Convert_ALuint;
         case FmtFloat:
             Convert_ALfloat(dst, src, srcType, len);
             break;
@@ -1271,6 +1391,8 @@ ALuint BytesFromSrcFmt(enum SrcFmtType type)
     case SrcFmtUByte: return sizeof(ALubyte);
     case SrcFmtShort: return sizeof(ALshort);
     case SrcFmtUShort: return sizeof(ALushort);
+    case SrcFmtInt: return sizeof(ALint);
+    case SrcFmtUInt: return sizeof(ALuint);
     case SrcFmtFloat: return sizeof(ALfloat);
     case SrcFmtDouble: return sizeof(ALdouble);
     case SrcFmtMulaw: return sizeof(ALubyte);

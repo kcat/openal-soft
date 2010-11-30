@@ -1543,8 +1543,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     ALsizei i;
     ALbufferlistitem *BufferListStart;
     ALbufferlistitem *BufferList;
-    ALint Frequency;
-    ALint Format;
+    ALbuffer *BufferFmt;
 
     if(n == 0)
         return;
@@ -1577,8 +1576,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
 
     device = Context->Device;
 
-    Frequency = -1;
-    Format = -1;
+    BufferFmt = NULL;
 
     // Check existing Queue (if any) for a valid Buffers and get its frequency and format
     BufferList = Source->queue;
@@ -1586,8 +1584,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     {
         if(BufferList->buffer)
         {
-            Frequency = BufferList->buffer->Frequency;
-            Format = BufferList->buffer->OriginalFormat;
+            BufferFmt = BufferList->buffer;
             break;
         }
         BufferList = BufferList->next;
@@ -1604,10 +1601,9 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
             goto done;
         }
 
-        if(Frequency == -1 && Format == -1)
+        if(BufferFmt == NULL)
         {
-            Frequency = buffer->Frequency;
-            Format = buffer->OriginalFormat;
+            BufferFmt = buffer;
 
             if(buffer->FmtChannels == FmtMono)
                 Source->Update = CalcSourceParams;
@@ -1616,7 +1612,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
 
             Source->NeedsUpdate = AL_TRUE;
         }
-        else if(Frequency != buffer->Frequency || Format != buffer->OriginalFormat)
+        else if(BufferFmt->Frequency != buffer->Frequency ||
+                BufferFmt->OriginalFormat != buffer->OriginalFormat)
         {
             alSetError(Context, AL_INVALID_OPERATION);
             goto done;

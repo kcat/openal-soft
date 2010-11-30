@@ -34,7 +34,7 @@
 #include "alThunk.h"
 
 
-static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat);
+static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum SrcFmtChannels chans, enum SrcFmtType type, const ALvoid *data);
 static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum SrcFmtType srcType, ALsizei len);
 static void ConvertDataIMA4(ALvoid *dst, const ALvoid *src, ALint origChans, ALsizei len);
 
@@ -249,6 +249,8 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
  */
 AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *data,ALsizei size,ALsizei freq)
 {
+    enum SrcFmtChannels SrcChannels;
+    enum SrcFmtType SrcType;
     ALCcontext *Context;
     ALCdevice *device;
     ALbuffer *ALBuf;
@@ -276,82 +278,53 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
-    else if(size < 0 || freq < 0)
-        alSetError(Context, AL_INVALID_VALUE);
     else if(ALBuf->refcount != 0)
         alSetError(Context, AL_INVALID_VALUE);
-    else switch(format)
+    else if(size < 0 || freq < 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else if(DecomposeInputFormat(format, &SrcChannels, &SrcType) == AL_FALSE)
+        alSetError(Context, AL_INVALID_ENUM);
+    else switch(SrcType)
     {
-        case AL_FORMAT_MONO8:
-        case AL_FORMAT_MONO16:
-        case AL_FORMAT_MONO_FLOAT32:
-        case AL_FORMAT_STEREO8:
-        case AL_FORMAT_STEREO16:
-        case AL_FORMAT_STEREO_FLOAT32:
-        case AL_FORMAT_QUAD8_LOKI:
-        case AL_FORMAT_QUAD16_LOKI:
-        case AL_FORMAT_QUAD8:
-        case AL_FORMAT_QUAD16:
-        case AL_FORMAT_QUAD32:
-        case AL_FORMAT_REAR8:
-        case AL_FORMAT_REAR16:
-        case AL_FORMAT_REAR32:
-        case AL_FORMAT_51CHN8:
-        case AL_FORMAT_51CHN16:
-        case AL_FORMAT_51CHN32:
-        case AL_FORMAT_61CHN8:
-        case AL_FORMAT_61CHN16:
-        case AL_FORMAT_61CHN32:
-        case AL_FORMAT_71CHN8:
-        case AL_FORMAT_71CHN16:
-        case AL_FORMAT_71CHN32:
-            err = LoadData(ALBuf, data, size, freq, format, format);
+        case SrcFmtByte:
+        case SrcFmtUByte:
+        case SrcFmtShort:
+        case SrcFmtUShort:
+        case SrcFmtFloat:
+            err = LoadData(ALBuf, freq, format, size, SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
             break;
 
-        case AL_FORMAT_MONO_DOUBLE_EXT:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_MONO_FLOAT32);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-        case AL_FORMAT_STEREO_DOUBLE_EXT:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_STEREO_FLOAT32);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-            break;
-
-        case AL_FORMAT_MONO_MULAW:
-        case AL_FORMAT_STEREO_MULAW:
-        case AL_FORMAT_QUAD_MULAW:
-        case AL_FORMAT_51CHN_MULAW:
-        case AL_FORMAT_61CHN_MULAW:
-        case AL_FORMAT_71CHN_MULAW: {
-            ALuint Channels = ((format==AL_FORMAT_MONO_MULAW) ? 1 :
-                               ((format==AL_FORMAT_STEREO_MULAW) ? 2 :
-                                ((format==AL_FORMAT_QUAD_MULAW) ? 4 :
-                                 ((format==AL_FORMAT_51CHN_MULAW) ? 6 :
-                                  ((format==AL_FORMAT_61CHN_MULAW) ? 7 : 8)))));
-            ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO16 :
-                                ((Channels==2) ? AL_FORMAT_STEREO16 :
-                                 ((Channels==4) ? AL_FORMAT_QUAD16 :
-                                  ((Channels==6) ? AL_FORMAT_51CHN16 :
-                                   ((Channels==7) ? AL_FORMAT_61CHN16 :
-                                                    AL_FORMAT_71CHN16)))));
-            err = LoadData(ALBuf, data, size, freq, format, NewFormat);
-            if(err != AL_NO_ERROR)
-                alSetError(Context, err);
-        }   break;
-
-        case AL_FORMAT_REAR_MULAW:
-            err = LoadData(ALBuf, data, size, freq, format, AL_FORMAT_REAR16);
+        case SrcFmtDouble:
+            if(SrcChannels == SrcFmtMono)
+                err = LoadData(ALBuf, freq, AL_FORMAT_MONO_FLOAT32, size, SrcChannels, SrcType, data);
+            else
+                err = LoadData(ALBuf, freq, AL_FORMAT_STEREO_FLOAT32, size, SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
             break;
 
-        case AL_FORMAT_MONO_IMA4:
-        case AL_FORMAT_STEREO_IMA4: {
-            ALuint Channels = ((format==AL_FORMAT_MONO_IMA4) ? 1 : 2);
+        case SrcFmtMulaw:
+            if(SrcChannels == SrcFmtRear)
+                err = LoadData(ALBuf, freq, AL_FORMAT_REAR16, size, SrcChannels, SrcType, data);
+            else
+            {
+                ALuint Channels = ChannelsFromSrcFmt(SrcChannels);
+                ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO16 :
+                                    ((Channels==2) ? AL_FORMAT_STEREO16 :
+                                     ((Channels==4) ? AL_FORMAT_QUAD16 :
+                                      ((Channels==6) ? AL_FORMAT_51CHN16 :
+                                       ((Channels==7) ? AL_FORMAT_61CHN16 :
+                                                        AL_FORMAT_71CHN16)))));
+                err = LoadData(ALBuf, freq, NewFormat, size, SrcChannels, SrcType, data);
+            }
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
+
+        case SrcFmtIMA4: {
+            ALuint Channels = ((SrcChannels==SrcFmtMono) ? 1 : 2);
             ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO16 :
                                                 AL_FORMAT_STEREO16);
             ALuint NewBytes = aluBytesFromFormat(NewFormat);
@@ -390,9 +363,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 ALBuf->LoopStart = 0;
                 ALBuf->LoopEnd = newsize / Channels / NewBytes;
 
-                ALBuf->OriginalChannels = ((Channels==1) ? SrcFmtMono :
-                                                           SrcFmtStereo);
-                ALBuf->OriginalType     = SrcFmtIMA4;
+                ALBuf->OriginalChannels = SrcChannels;
+                ALBuf->OriginalType     = SrcType;
                 ALBuf->OriginalSize     = size;
                 ALBuf->OriginalAlign    = 36 * Channels;
             }
@@ -1318,22 +1290,19 @@ DECL_TEMPLATE(ALdouble)
  * Currently, the new format must have the same channel configuration as the
  * original format. This does NOT handle compressed formats (eg. IMA4).
  */
-static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint freq, ALenum OrigFormat, ALenum NewFormat)
+static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum SrcFmtChannels SrcChannels, enum SrcFmtType SrcType, const ALvoid *data)
 {
     ALuint NewBytes = aluBytesFromFormat(NewFormat);
     ALuint NewChannels = aluChannelsFromFormat(NewFormat);
-    ALuint OrigBytes = aluBytesFromFormat(OrigFormat);
-    ALuint OrigChannels = aluChannelsFromFormat(OrigFormat);
-    enum SrcFmtChannels SrcChannels;
+    ALuint OrigBytes = BytesFromSrcFmt(SrcType);
+    ALuint OrigChannels = ChannelsFromSrcFmt(SrcChannels);
     enum FmtChannels DstChannels;
-    enum SrcFmtType SrcType;
     enum FmtType DstType;
     ALuint64 newsize;
     ALvoid *temp;
 
     assert(NewChannels == OrigChannels);
 
-    DecomposeInputFormat(OrigFormat, &SrcChannels, &SrcType);
     DecomposeFormat(NewFormat, &DstChannels, &DstType);
 
     if((size%(OrigBytes*OrigChannels)) != 0)

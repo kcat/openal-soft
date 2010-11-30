@@ -704,7 +704,7 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
             else
             {
                 ALint maxlen = ALBuf->size /
-                               FrameSizeFromFmt(ALBuf->FmtType, ALBuf->FmtChannels);
+                               FrameSizeFromFmt(ALBuf->FmtChannels, ALBuf->FmtType);
                 if(plValues[0] > maxlen || plValues[1] > maxlen)
                     alSetError(pContext, AL_INVALID_VALUE);
                 else

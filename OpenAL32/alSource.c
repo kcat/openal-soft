@@ -1953,7 +1953,7 @@ static ALboolean ApplyOffset(ALsource *Source)
 
             // SW Mixer Positions are in Samples
             Source->position = (lByteOffset - lTotalBufferSize) /
-                                FrameSizeFromFmt(Buffer->FmtType, Buffer->FmtChannels);
+                                FrameSizeFromFmt(Buffer->FmtChannels, Buffer->FmtType);
             return AL_TRUE;
         }
 
@@ -2014,17 +2014,17 @@ static ALint GetByteOffset(ALsource *Source)
         }
         else
             ByteOffset /= FrameSizeFromSrcFmt(Buffer->OriginalChannels, Buffer->OriginalType);
-        ByteOffset *= FrameSizeFromFmt(Buffer->FmtType, Buffer->FmtChannels);
+        ByteOffset *= FrameSizeFromFmt(Buffer->FmtChannels, Buffer->FmtType);
         break;
 
     case AL_SAMPLE_OFFSET:
-        ByteOffset = Source->lOffset * FrameSizeFromFmt(Buffer->FmtType, Buffer->FmtChannels);
+        ByteOffset = Source->lOffset * FrameSizeFromFmt(Buffer->FmtChannels, Buffer->FmtType);
         break;
 
     case AL_SEC_OFFSET:
         // Note - lOffset is internally stored as Milliseconds
         ByteOffset  = (ALint)(Source->lOffset / 1000.0 * Buffer->Frequency);
-        ByteOffset *= FrameSizeFromFmt(Buffer->FmtType, Buffer->FmtChannels);
+        ByteOffset *= FrameSizeFromFmt(Buffer->FmtChannels, Buffer->FmtType);
         break;
     }
     // Clear Offset

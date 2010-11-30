@@ -705,7 +705,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         {
             FmtChannels = ALBuffer->FmtChannels;
             FmtType = ALBuffer->FmtType;
-            FrameSize = FrameSizeFromFmt(FmtType, FmtChannels);
+            FrameSize = FrameSizeFromFmt(FmtChannels, FmtType);
             break;
         }
         BufferListItem = BufferListItem->next;

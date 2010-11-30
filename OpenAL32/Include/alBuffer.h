@@ -34,10 +34,10 @@ void DecomposeInputFormat(ALenum format, enum SrcFmtChannels *chans,
                           enum SrcFmtType *type);
 ALuint BytesFromSrcFmt(enum SrcFmtType type);
 ALuint ChannelsFromSrcFmt(enum SrcFmtChannels chans);
-static __inline ALuint FrameSizeFromSrcFmt(enum SrcFmtType type,
-                                           enum SrcFmtChannels chans)
+static __inline ALuint FrameSizeFromSrcFmt(enum SrcFmtChannels chans,
+                                           enum SrcFmtType type)
 {
-    return BytesFromSrcFmt(type) * ChannelsFromSrcFmt(chans);
+    return ChannelsFromSrcFmt(chans) * BytesFromSrcFmt(type);
 }
 
 
@@ -60,9 +60,9 @@ enum FmtChannels {
 void DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
 ALuint BytesFromFmt(enum FmtType type);
 ALuint ChannelsFromFmt(enum FmtChannels chans);
-static __inline ALuint FrameSizeFromFmt(enum FmtType type, enum FmtChannels chans)
+static __inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)
 {
-    return BytesFromFmt(type) * ChannelsFromFmt(chans);
+    return ChannelsFromFmt(chans) * BytesFromFmt(type);
 }
 
 

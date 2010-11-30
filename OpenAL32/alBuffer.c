@@ -824,6 +824,9 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
 
 typedef ALubyte ALmulaw;
 
+static __inline ALshort DecodeMuLaw(ALmulaw val)
+{ return muLawDecompressionTable[val]; }
+
 static ALmulaw EncodeMuLaw(ALshort val)
 {
     ALint mant, exp, sign;
@@ -918,7 +921,7 @@ static __inline ALbyte Conv_ALbyte_ALdouble(ALdouble val)
     return (ALint)(val * 127.0);
 }
 static __inline ALbyte Conv_ALbyte_ALmulaw(ALmulaw val)
-{ return muLawDecompressionTable[val]>>8; }
+{ return Conv_ALbyte_ALshort(DecodeMuLaw(val)); }
 
 static __inline ALubyte Conv_ALubyte_ALbyte(ALbyte val)
 { return val^0x80; }
@@ -945,7 +948,7 @@ static __inline ALubyte Conv_ALubyte_ALdouble(ALdouble val)
     return (ALint)(val * 127.0) + 128;
 }
 static __inline ALubyte Conv_ALubyte_ALmulaw(ALmulaw val)
-{ return (muLawDecompressionTable[val]>>8)+128; }
+{ return Conv_ALubyte_ALshort(DecodeMuLaw(val)); }
 
 static __inline ALshort Conv_ALshort_ALbyte(ALbyte val)
 { return val<<8; }
@@ -972,7 +975,7 @@ static __inline ALshort Conv_ALshort_ALdouble(ALdouble val)
     return (ALint)(val * 32767.0);
 }
 static __inline ALshort Conv_ALshort_ALmulaw(ALmulaw val)
-{ return muLawDecompressionTable[val]; }
+{ return Conv_ALshort_ALshort(DecodeMuLaw(val)); }
 
 static __inline ALushort Conv_ALushort_ALbyte(ALbyte val)
 { return (val+128)<<8; }
@@ -999,7 +1002,7 @@ static __inline ALushort Conv_ALushort_ALdouble(ALdouble val)
     return (ALint)(val * 32767.0) + 32768;
 }
 static __inline ALushort Conv_ALushort_ALmulaw(ALmulaw val)
-{ return muLawDecompressionTable[val]^0x8000; }
+{ return Conv_ALushort_ALshort(DecodeMuLaw(val)); }
 
 static __inline ALint Conv_ALint_ALbyte(ALbyte val)
 { return val<<24; }
@@ -1026,7 +1029,7 @@ static __inline ALint Conv_ALint_ALdouble(ALdouble val)
     return (ALint)(val * 2147483647.0);
 }
 static __inline ALint Conv_ALint_ALmulaw(ALmulaw val)
-{ return muLawDecompressionTable[val]<<16; }
+{ return Conv_ALint_ALshort(DecodeMuLaw(val)); }
 
 static __inline ALuint Conv_ALuint_ALbyte(ALbyte val)
 { return (val+128)<<24; }
@@ -1053,7 +1056,7 @@ static __inline ALuint Conv_ALuint_ALdouble(ALdouble val)
     return (ALint)(val * 2147483647.0) + 2147483648u;
 }
 static __inline ALuint Conv_ALuint_ALmulaw(ALmulaw val)
-{ return (muLawDecompressionTable[val]+32768)<<16; }
+{ return Conv_ALuint_ALshort(DecodeMuLaw(val)); }
 
 static __inline ALfloat Conv_ALfloat_ALbyte(ALbyte val)
 { return val * (1.0f/127.0f); }
@@ -1072,7 +1075,7 @@ static __inline ALfloat Conv_ALfloat_ALfloat(ALfloat val)
 static __inline ALfloat Conv_ALfloat_ALdouble(ALdouble val)
 { return val; }
 static __inline ALfloat Conv_ALfloat_ALmulaw(ALmulaw val)
-{ return muLawDecompressionTable[val] * (1.0f/32767.0f); }
+{ return Conv_ALfloat_ALshort(DecodeMuLaw(val)); }
 
 static __inline ALdouble Conv_ALdouble_ALbyte(ALbyte val)
 { return val * (1.0/127.0); }
@@ -1091,7 +1094,7 @@ static __inline ALdouble Conv_ALdouble_ALfloat(ALfloat val)
 static __inline ALdouble Conv_ALdouble_ALdouble(ALdouble val)
 { return val; }
 static __inline ALdouble Conv_ALdouble_ALmulaw(ALmulaw val)
-{ return muLawDecompressionTable[val] * (1.0/32767.0); }
+{ return Conv_ALdouble_ALshort(DecodeMuLaw(val)); }
 
 #define DECL_TEMPLATE(T)                                                      \
 static ALmulaw Conv_ALmulaw_##T(T val)                                        \

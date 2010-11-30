@@ -43,18 +43,18 @@ static __inline ALuint FrameSizeFromSrcFmt(enum SrcFmtChannels chans,
 
 /* Storable formats */
 enum FmtType {
-    FmtUByte,
-    FmtShort,
-    FmtFloat,
+    FmtUByte = SrcFmtUByte,
+    FmtShort = SrcFmtShort,
+    FmtFloat = SrcFmtFloat,
 };
 enum FmtChannels {
-    FmtMono,
-    FmtStereo,
-    FmtRear,
-    FmtQuad,
-    FmtX51,
-    FmtX61,
-    FmtX71,
+    FmtMono = SrcFmtMono,
+    FmtStereo = SrcFmtStereo,
+    FmtRear = SrcFmtRear,
+    FmtQuad = SrcFmtQuad,
+    FmtX51 = SrcFmtX51,
+    FmtX61 = SrcFmtX61,
+    FmtX71 = SrcFmtX71,
 };
 
 ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);

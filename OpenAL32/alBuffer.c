@@ -254,7 +254,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
     ALCcontext *Context;
     ALCdevice *device;
     ALbuffer *ALBuf;
-    ALvoid *temp;
     ALenum err;
 
     Context = GetContextSuspended();
@@ -307,7 +306,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 alSetError(Context, err);
             break;
 
-        case SrcFmtMulaw: {
+        case SrcFmtMulaw:
+        case SrcFmtIMA4: {
             ALenum NewFormat = AL_FORMAT_MONO16;
             switch(SrcChannels)
             {
@@ -322,59 +322,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             err = LoadData(ALBuf, freq, NewFormat, size, SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
-        }   break;
-
-        case SrcFmtIMA4: {
-            enum FmtChannels DstChannels = ((SrcChannels==SrcFmtMono) ?
-                                            FmtMono : FmtStereo);
-            enum FmtType DstType = FmtShort;
-            ALuint Channels = ChannelsFromFmt(DstChannels);
-            ALuint NewBytes = BytesFromFmt(DstType);
-            ALuint64 newsize;
-
-            /* Here is where things vary:
-             * nVidia and Apple use 64+1 sample frames per block => block_size=36*chans bytes
-             * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024*chans bytes
-             */
-            if((size%(36*Channels)) != 0)
-            {
-                alSetError(Context, AL_INVALID_VALUE);
-                break;
-            }
-
-            newsize = size / 36;
-            newsize *= 65;
-            newsize *= NewBytes;
-
-            if(newsize > INT_MAX)
-            {
-                alSetError(Context, AL_OUT_OF_MEMORY);
-                break;
-            }
-            temp = realloc(ALBuf->data, newsize);
-            if(temp)
-            {
-                ALBuf->data = temp;
-                ALBuf->size = newsize;
-
-                if(data != NULL)
-                    ConvertDataIMA4(ALBuf->data, DstType, data, Channels,
-                                    newsize/(65*Channels*NewBytes));
-
-                ALBuf->Frequency = freq;
-                ALBuf->FmtChannels = DstChannels;
-                ALBuf->FmtType = DstType;
-
-                ALBuf->LoopStart = 0;
-                ALBuf->LoopEnd = newsize / Channels / NewBytes;
-
-                ALBuf->OriginalChannels = SrcChannels;
-                ALBuf->OriginalType     = SrcType;
-                ALBuf->OriginalSize     = size;
-                ALBuf->OriginalAlign    = 36 * Channels;
-            }
-            else
-                alSetError(Context, AL_OUT_OF_MEMORY);
         }   break;
     }
 
@@ -1314,53 +1261,86 @@ static void ConvertDataIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src
  *
  * Loads the specified data into the buffer, using the specified formats.
  * Currently, the new format must have the same channel configuration as the
- * original format. This does NOT handle compressed formats (eg. IMA4).
+ * original format.
  */
 static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum SrcFmtChannels SrcChannels, enum SrcFmtType SrcType, const ALvoid *data)
 {
-    ALuint NewBytes = aluBytesFromFormat(NewFormat);
-    ALuint NewChannels = aluChannelsFromFormat(NewFormat);
-    ALuint OrigBytes = BytesFromSrcFmt(SrcType);
-    ALuint OrigChannels = ChannelsFromSrcFmt(SrcChannels);
+    ALuint NewChannels, NewBytes;
     enum FmtChannels DstChannels;
     enum FmtType DstType;
     ALuint64 newsize;
     ALvoid *temp;
 
-    assert(NewChannels == OrigChannels);
-
     DecomposeFormat(NewFormat, &DstChannels, &DstType);
+    NewChannels = ChannelsFromFmt(DstChannels);
+    NewBytes = BytesFromFmt(DstType);
 
-    if((size%(OrigBytes*OrigChannels)) != 0)
-        return AL_INVALID_VALUE;
+    assert(SrcChannels == DstChannels);
 
-    newsize = size / OrigBytes;
-    newsize *= NewBytes;
-    if(newsize > INT_MAX)
-        return AL_OUT_OF_MEMORY;
-
-    temp = realloc(ALBuf->data, newsize);
-    if(!temp) return AL_OUT_OF_MEMORY;
-    ALBuf->data = temp;
-    ALBuf->size = newsize;
-
-    if(data != NULL)
+    if(SrcType == SrcFmtIMA4)
     {
-        // Samples are converted here
-        ConvertData(ALBuf->data, DstType, data, SrcType, newsize/NewBytes);
+        ALuint OrigChannels = ChannelsFromSrcFmt(SrcChannels);
+
+        /* Here is where things vary:
+         * nVidia and Apple use 64+1 sample frames per block => block_size=36*chans bytes
+         * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024*chans bytes
+         */
+        if((size%(36*OrigChannels)) != 0)
+            return AL_INVALID_VALUE;
+
+        newsize = size / 36;
+        newsize *= 65;
+        newsize *= NewBytes;
+        if(newsize > INT_MAX)
+            return AL_OUT_OF_MEMORY;
+
+        temp = realloc(ALBuf->data, newsize);
+        if(!temp) return AL_OUT_OF_MEMORY;
+        ALBuf->data = temp;
+        ALBuf->size = newsize;
+
+        if(data != NULL)
+            ConvertDataIMA4(ALBuf->data, DstType, data, OrigChannels,
+                            newsize/(65*NewChannels*NewBytes));
+
+        ALBuf->OriginalChannels = SrcChannels;
+        ALBuf->OriginalType     = SrcType;
+        ALBuf->OriginalSize     = size;
+        ALBuf->OriginalAlign    = 36 * OrigChannels;
+    }
+    else
+    {
+        ALuint OrigBytes = BytesFromSrcFmt(SrcType);
+        ALuint OrigChannels = ChannelsFromSrcFmt(SrcChannels);
+
+        if((size%(OrigBytes*OrigChannels)) != 0)
+            return AL_INVALID_VALUE;
+
+        newsize = size / OrigBytes;
+        newsize *= NewBytes;
+        if(newsize > INT_MAX)
+            return AL_OUT_OF_MEMORY;
+
+        temp = realloc(ALBuf->data, newsize);
+        if(!temp) return AL_OUT_OF_MEMORY;
+        ALBuf->data = temp;
+        ALBuf->size = newsize;
+
+        if(data != NULL)
+            ConvertData(ALBuf->data, DstType, data, SrcType, newsize/NewBytes);
+
+        ALBuf->OriginalChannels = SrcChannels;
+        ALBuf->OriginalType     = SrcType;
+        ALBuf->OriginalSize     = size;
+        ALBuf->OriginalAlign    = OrigBytes * OrigChannels;
     }
 
     ALBuf->Frequency = freq;
-    ALBuf->FmtType = DstType;
     ALBuf->FmtChannels = DstChannels;
+    ALBuf->FmtType = DstType;
 
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
-
-    ALBuf->OriginalChannels = SrcChannels;
-    ALBuf->OriginalType     = SrcType;
-    ALBuf->OriginalSize     = size;
-    ALBuf->OriginalAlign    = OrigBytes * OrigChannels;
 
     return AL_NO_ERROR;
 }

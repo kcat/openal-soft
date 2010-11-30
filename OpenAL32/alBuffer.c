@@ -99,6 +99,29 @@ static const ALshort muLawDecompressionTable[256] = {
         56,    48,    40,    32,    24,    16,     8,     0
 };
 
+static const int muLawBias = 0x84;
+static const int muLawClip = 32635;
+
+static const char muLawCompressTable[256] =
+{
+     0,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,
+     4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
+     5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
+     5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
+     6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+     6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+     6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+     6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
+};
+
 /*
  *    alGenBuffers(ALsizei n, ALuint *buffers)
  *
@@ -799,6 +822,24 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
 }
 
 
+typedef ALubyte ALmulaw;
+
+static ALmulaw EncodeMuLaw(ALshort val)
+{
+    ALint mant, exp, sign;
+
+    sign = (val>>8) & 0x80;
+    if(sign) val = (ALshort)-val;
+
+    val = min(val, muLawClip);
+    val += muLawBias;
+
+    exp = muLawCompressTable[(val>>7) & 0xff];
+    mant = (val >> (exp+3)) & 0x0f;
+
+    return ~(sign | (exp<<4) | mant);
+}
+
 static void DecodeIMA4Block(ALshort *dst, const ALubyte *IMAData, ALint numchans)
 {
     ALint Sample[2],Index[2];
@@ -851,8 +892,6 @@ static void DecodeIMA4Block(ALshort *dst, const ALubyte *IMAData, ALint numchans
     }
 }
 
-
-typedef ALubyte ALmulaw;
 
 static __inline ALbyte Conv_ALbyte_ALbyte(ALbyte val)
 { return val; }
@@ -1054,6 +1093,21 @@ static __inline ALdouble Conv_ALdouble_ALdouble(ALdouble val)
 static __inline ALdouble Conv_ALdouble_ALmulaw(ALmulaw val)
 { return muLawDecompressionTable[val] * (1.0/32767.0); }
 
+#define DECL_TEMPLATE(T)                                                      \
+static ALmulaw Conv_ALmulaw_##T(T val)                                        \
+{ return EncodeMuLaw(Conv_ALshort_##T(val)); }
+
+DECL_TEMPLATE(ALbyte)
+DECL_TEMPLATE(ALubyte)
+DECL_TEMPLATE(ALshort)
+DECL_TEMPLATE(ALushort)
+DECL_TEMPLATE(ALint)
+DECL_TEMPLATE(ALuint)
+DECL_TEMPLATE(ALfloat)
+DECL_TEMPLATE(ALdouble)
+DECL_TEMPLATE(ALmulaw)
+
+#undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T1, T2)                                                 \
 static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALuint len)           \
@@ -1143,6 +1197,16 @@ DECL_TEMPLATE(ALdouble, ALfloat)
 DECL_TEMPLATE(ALdouble, ALdouble)
 DECL_TEMPLATE(ALdouble, ALmulaw)
 
+DECL_TEMPLATE(ALmulaw, ALbyte)
+DECL_TEMPLATE(ALmulaw, ALubyte)
+DECL_TEMPLATE(ALmulaw, ALshort)
+DECL_TEMPLATE(ALmulaw, ALushort)
+DECL_TEMPLATE(ALmulaw, ALint)
+DECL_TEMPLATE(ALmulaw, ALuint)
+DECL_TEMPLATE(ALmulaw, ALfloat)
+DECL_TEMPLATE(ALmulaw, ALdouble)
+DECL_TEMPLATE(ALmulaw, ALmulaw)
+
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
@@ -1168,6 +1232,7 @@ DECL_TEMPLATE(ALint)
 DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
+DECL_TEMPLATE(ALmulaw)
 
 #undef DECL_TEMPLATE
 
@@ -1217,6 +1282,7 @@ DECL_TEMPLATE(ALint)
 DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
+DECL_TEMPLATE(ALmulaw)
 
 #undef DECL_TEMPLATE
 
@@ -1239,6 +1305,7 @@ static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, en
             Convert_ALfloat(dst, src, srcType, len);
             break;
         (void)Convert_ALdouble;
+        (void)Convert_ALmulaw;
     }
 }
 
@@ -1260,6 +1327,7 @@ static void ConvertDataIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src
             Convert_ALfloat_IMA4(dst, src, chans, len);
             break;
         (void)Convert_ALdouble_IMA4;
+        (void)Convert_ALmulaw_IMA4;
     }
 }
 

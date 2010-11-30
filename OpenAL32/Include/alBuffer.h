@@ -30,8 +30,8 @@ enum SrcFmtChannels {
     SrcFmtX71,    /* AL_7POINT1 (WFX order) */
 };
 
-void DecomposeInputFormat(ALenum format, enum SrcFmtChannels *chans,
-                          enum SrcFmtType *type);
+ALboolean DecomposeInputFormat(ALenum format, enum SrcFmtChannels *chans,
+                               enum SrcFmtType *type);
 ALuint BytesFromSrcFmt(enum SrcFmtType type);
 ALuint ChannelsFromSrcFmt(enum SrcFmtChannels chans);
 static __inline ALuint FrameSizeFromSrcFmt(enum SrcFmtChannels chans,
@@ -57,7 +57,7 @@ enum FmtChannels {
     FmtX71,
 };
 
-void DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
+ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
 ALuint BytesFromFmt(enum FmtType type);
 ALuint ChannelsFromFmt(enum FmtChannels chans);
 static __inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)

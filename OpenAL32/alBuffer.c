@@ -307,23 +307,22 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 alSetError(Context, err);
             break;
 
-        case SrcFmtMulaw:
-            if(SrcChannels == SrcFmtRear)
-                err = LoadData(ALBuf, freq, AL_FORMAT_REAR16, size, SrcChannels, SrcType, data);
-            else
+        case SrcFmtMulaw: {
+            ALenum NewFormat = AL_FORMAT_MONO16;
+            switch(SrcChannels)
             {
-                ALuint Channels = ChannelsFromSrcFmt(SrcChannels);
-                ALenum NewFormat = ((Channels==1) ? AL_FORMAT_MONO16 :
-                                    ((Channels==2) ? AL_FORMAT_STEREO16 :
-                                     ((Channels==4) ? AL_FORMAT_QUAD16 :
-                                      ((Channels==6) ? AL_FORMAT_51CHN16 :
-                                       ((Channels==7) ? AL_FORMAT_61CHN16 :
-                                                        AL_FORMAT_71CHN16)))));
-                err = LoadData(ALBuf, freq, NewFormat, size, SrcChannels, SrcType, data);
+                case SrcFmtMono: NewFormat = AL_FORMAT_MONO16; break;
+                case SrcFmtStereo: NewFormat = AL_FORMAT_STEREO16; break;
+                case SrcFmtRear: NewFormat = AL_FORMAT_REAR16; break;
+                case SrcFmtQuad: NewFormat = AL_FORMAT_QUAD16; break;
+                case SrcFmtX51: NewFormat = AL_FORMAT_51CHN16; break;
+                case SrcFmtX61: NewFormat = AL_FORMAT_61CHN16; break;
+                case SrcFmtX71: NewFormat = AL_FORMAT_71CHN16; break;
             }
+            err = LoadData(ALBuf, freq, NewFormat, size, SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
-            break;
+        }   break;
 
         case SrcFmtIMA4: {
             enum FmtChannels DstChannels = ((SrcChannels==SrcFmtMono) ?

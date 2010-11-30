@@ -290,6 +290,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case SrcFmtUByte:
         case SrcFmtShort:
         case SrcFmtUShort:
+        case SrcFmtInt:
+        case SrcFmtUInt:
         case SrcFmtFloat:
             err = LoadData(ALBuf, freq, format, size, SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
@@ -371,10 +373,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             else
                 alSetError(Context, AL_OUT_OF_MEMORY);
         }   break;
-
-        default:
-            alSetError(Context, AL_INVALID_ENUM);
-            break;
     }
 
     ProcessContext(Context);

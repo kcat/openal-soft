@@ -390,9 +390,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 ALBuf->LoopStart = 0;
                 ALBuf->LoopEnd = newsize / Channels / NewBytes;
 
-                ALBuf->OriginalFormat = format;
-                ALBuf->OriginalSize   = size;
-                ALBuf->OriginalAlign  = 36 * Channels;
+                ALBuf->OriginalChannels = ((Channels==1) ? SrcFmtMono :
+                                                           SrcFmtStereo);
+                ALBuf->OriginalType     = SrcFmtIMA4;
+                ALBuf->OriginalSize     = size;
+                ALBuf->OriginalAlign    = 36 * Channels;
             }
             else
                 alSetError(Context, AL_OUT_OF_MEMORY);
@@ -440,8 +442,6 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         alSetError(Context, AL_INVALID_NAME);
     else if(length < 0 || offset < 0 || (length > 0 && data == NULL))
         alSetError(Context, AL_INVALID_VALUE);
-    else if(ALBuf->OriginalFormat != format)
-        alSetError(Context, AL_INVALID_ENUM);
     else if(offset > ALBuf->OriginalSize ||
             length > ALBuf->OriginalSize-offset ||
             (offset%ALBuf->OriginalAlign) != 0 ||
@@ -481,32 +481,47 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         case AL_FORMAT_71CHN16:
         case AL_FORMAT_71CHN32:
         case AL_FORMAT_71CHN_MULAW: {
-            ALuint OldBytes = aluBytesFromFormat(format);
-            ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
             enum SrcFmtChannels SrcChannels;
             enum SrcFmtType SrcType;
 
-            offset /= OldBytes;
-            offset *= Bytes;
-            length /= OldBytes;
-
             DecomposeInputFormat(format, &SrcChannels, &SrcType);
-            ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
-                        data, SrcType, length);
+            if(SrcChannels != ALBuf->OriginalChannels || SrcType != ALBuf->OriginalType)
+                alSetError(Context, AL_INVALID_ENUM);
+            else
+            {
+                ALuint OldBytes = BytesFromFmt(SrcType);
+                ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
+
+                offset /= OldBytes;
+                offset *= Bytes;
+                length /= OldBytes;
+
+                ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                            data, SrcType, length);
+            }
         }   break;
 
         case AL_FORMAT_MONO_IMA4:
         case AL_FORMAT_STEREO_IMA4: {
-            ALuint Channels = ChannelsFromFmt(ALBuf->FmtChannels);
-            ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
+            enum SrcFmtChannels SrcChannels;
+            enum SrcFmtType SrcType;
 
-            /* offset -> byte offset, length -> block count */
-            offset /= 36;
-            offset *= 65;
-            offset *= Bytes;
-            length /= ALBuf->OriginalAlign;
+            DecomposeInputFormat(format, &SrcChannels, &SrcType);
+            if(SrcChannels != ALBuf->OriginalChannels || SrcType != SrcFmtIMA4)
+                alSetError(Context, AL_INVALID_ENUM);
+            else
+            {
+                ALuint Channels = ChannelsFromFmt(ALBuf->FmtChannels);
+                ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
 
-            ConvertDataIMA4(&((ALubyte*)ALBuf->data)[offset], data, Channels, length);
+                /* offset -> byte offset, length -> block count */
+                offset /= 36;
+                offset *= 65;
+                offset *= Bytes;
+                length /= ALBuf->OriginalAlign;
+
+                ConvertDataIMA4(&((ALubyte*)ALBuf->data)[offset], data, Channels, length);
+            }
         }   break;
 
         default:
@@ -1356,9 +1371,10 @@ static ALenum LoadData(ALbuffer *ALBuf, const ALvoid *data, ALsizei size, ALuint
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
-    ALBuf->OriginalFormat = OrigFormat;
-    ALBuf->OriginalSize   = size;
-    ALBuf->OriginalAlign  = OrigBytes * OrigChannels;
+    ALBuf->OriginalChannels = SrcChannels;
+    ALBuf->OriginalType     = SrcType;
+    ALBuf->OriginalSize     = size;
+    ALBuf->OriginalAlign    = OrigBytes * OrigChannels;
 
     return AL_NO_ERROR;
 }

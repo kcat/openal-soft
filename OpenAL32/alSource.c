@@ -50,7 +50,6 @@ static ALvoid InitSourceParams(ALsource *Source);
 static ALvoid GetSourceOffset(ALsource *Source, ALenum eName, ALdouble *Offsets, ALdouble updateLen);
 static ALboolean ApplyOffset(ALsource *Source);
 static ALint GetByteOffset(ALsource *Source);
-static ALint FramesFromBytes(ALint offset, ALenum format);
 
 #define LookupSource(m, k) ((ALsource*)LookupUIntMapKey(&(m), (k)))
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
@@ -1613,7 +1612,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
             Source->NeedsUpdate = AL_TRUE;
         }
         else if(BufferFmt->Frequency != buffer->Frequency ||
-                BufferFmt->OriginalFormat != buffer->OriginalFormat)
+                BufferFmt->OriginalChannels != buffer->OriginalChannels ||
+                BufferFmt->OriginalType != buffer->OriginalType)
         {
             alSetError(Context, AL_INVALID_OPERATION);
             goto done;
@@ -1804,7 +1804,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
     ALfloat          BufferFreq;
     ALint            Channels, Bytes;
     ALuint           readPos, writePos;
-    ALenum           OriginalFormat;
+    enum SrcFmtType  OriginalType;
     ALuint           TotalBufferDataSize;
     ALuint           i;
 
@@ -1829,7 +1829,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
 
     // Get Current Buffer Size and frequency (in milliseconds)
     BufferFreq = (ALfloat)Buffer->Frequency;
-    OriginalFormat = Buffer->OriginalFormat;
+    OriginalType = Buffer->OriginalType;
     Channels = ChannelsFromFmt(Buffer->FmtChannels);
     Bytes = BytesFromFmt(Buffer->FmtType);
 
@@ -1881,8 +1881,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
         case AL_BYTE_OFFSET:
         case AL_BYTE_RW_OFFSETS_SOFT:
             // Take into account the original format of the Buffer
-            if((OriginalFormat == AL_FORMAT_MONO_IMA4) ||
-               (OriginalFormat == AL_FORMAT_STEREO_IMA4))
+            if(OriginalType == SrcFmtIMA4)
             {
                 ALuint FrameBlockSize = 65 * Bytes * Channels;
                 ALuint BlockSize = 36 * Channels;
@@ -1900,7 +1899,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
             }
             else
             {
-                ALuint OrigBytes = aluBytesFromFormat(OriginalFormat);
+                ALuint OrigBytes = BytesFromSrcFmt(OriginalType);
                 offset[0] = (ALdouble)(readPos / Bytes * OrigBytes);
                 offset[1] = (ALdouble)(writePos / Bytes * OrigBytes);
             }
@@ -2005,7 +2004,16 @@ static ALint GetByteOffset(ALsource *Source)
     {
     case AL_BYTE_OFFSET:
         // Take into consideration the original format
-        ByteOffset = FramesFromBytes(Source->lOffset, Buffer->OriginalFormat);
+        ByteOffset = Source->lOffset;
+        if(Buffer->OriginalType == SrcFmtIMA4)
+        {
+            // Round down to nearest ADPCM block
+            ByteOffset /= 36 * ChannelsFromSrcFmt(Buffer->OriginalChannels);
+            // Multiply by compression rate (65 sample frames per block)
+            ByteOffset *= 65;
+        }
+        else
+            ByteOffset /= FrameSizeFromSrcFmt(Buffer->OriginalChannels, Buffer->OriginalType);
         ByteOffset *= FrameSizeFromFmt(Buffer->FmtType, Buffer->FmtChannels);
         break;
 
@@ -2023,25 +2031,6 @@ static ALint GetByteOffset(ALsource *Source)
     Source->lOffset = 0;
 
     return ByteOffset;
-}
-
-static ALint FramesFromBytes(ALint offset, ALenum format)
-{
-    if(format==AL_FORMAT_MONO_IMA4)
-    {
-        // Round down to nearest ADPCM block
-        offset /= 36;
-        // Multiply by compression rate (65 sample frames per block)
-        offset *= 65;
-    }
-    else if(format==AL_FORMAT_STEREO_IMA4)
-    {
-        offset /= 36 * 2;
-        offset *= 65;
-    }
-    else
-        offset /= aluFrameSizeFromFormat(format);
-    return offset;
 }
 
 

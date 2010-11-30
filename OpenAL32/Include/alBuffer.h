@@ -75,9 +75,10 @@ typedef struct ALbuffer
     enum FmtChannels FmtChannels;
     enum FmtType     FmtType;
 
-    ALenum   OriginalFormat;
-    ALsizei  OriginalSize;
-    ALsizei  OriginalAlign;
+    enum SrcFmtChannels OriginalChannels;
+    enum SrcFmtType     OriginalType;
+    ALsizei OriginalSize;
+    ALsizei OriginalAlign;
 
     ALsizei  LoopStart;
     ALsizei  LoopEnd;

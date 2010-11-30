@@ -416,80 +416,42 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         alSetError(Context, AL_INVALID_NAME);
     else if(length < 0 || offset < 0 || (length > 0 && data == NULL))
         alSetError(Context, AL_INVALID_VALUE);
+    else if(DecomposeInputFormat(format, &SrcChannels, &SrcType) == AL_FALSE ||
+            SrcChannels != ALBuf->OriginalChannels ||
+            SrcType != ALBuf->OriginalType)
+        alSetError(Context, AL_INVALID_ENUM);
     else if(offset > ALBuf->OriginalSize ||
             length > ALBuf->OriginalSize-offset ||
             (offset%ALBuf->OriginalAlign) != 0 ||
             (length%ALBuf->OriginalAlign) != 0)
         alSetError(Context, AL_INVALID_VALUE);
-    else switch(format)
+    else
     {
-        case AL_FORMAT_MONO8:
-        case AL_FORMAT_MONO16:
-        case AL_FORMAT_MONO_FLOAT32:
-        case AL_FORMAT_MONO_DOUBLE_EXT:
-        case AL_FORMAT_MONO_MULAW:
-        case AL_FORMAT_MONO_IMA4:
-        case AL_FORMAT_STEREO8:
-        case AL_FORMAT_STEREO16:
-        case AL_FORMAT_STEREO_FLOAT32:
-        case AL_FORMAT_STEREO_DOUBLE_EXT:
-        case AL_FORMAT_STEREO_MULAW:
-        case AL_FORMAT_STEREO_IMA4:
-        case AL_FORMAT_QUAD8_LOKI:
-        case AL_FORMAT_QUAD16_LOKI:
-        case AL_FORMAT_QUAD8:
-        case AL_FORMAT_QUAD16:
-        case AL_FORMAT_QUAD32:
-        case AL_FORMAT_QUAD_MULAW:
-        case AL_FORMAT_REAR8:
-        case AL_FORMAT_REAR16:
-        case AL_FORMAT_REAR32:
-        case AL_FORMAT_REAR_MULAW:
-        case AL_FORMAT_51CHN8:
-        case AL_FORMAT_51CHN16:
-        case AL_FORMAT_51CHN32:
-        case AL_FORMAT_51CHN_MULAW:
-        case AL_FORMAT_61CHN8:
-        case AL_FORMAT_61CHN16:
-        case AL_FORMAT_61CHN32:
-        case AL_FORMAT_61CHN_MULAW:
-        case AL_FORMAT_71CHN8:
-        case AL_FORMAT_71CHN16:
-        case AL_FORMAT_71CHN32:
-        case AL_FORMAT_71CHN_MULAW:
-            DecomposeInputFormat(format, &SrcChannels, &SrcType);
-            if(SrcChannels != ALBuf->OriginalChannels || SrcType != ALBuf->OriginalType)
-                alSetError(Context, AL_INVALID_ENUM);
-            else if(SrcType == SrcFmtIMA4)
-            {
-                ALuint Channels = ChannelsFromFmt(ALBuf->FmtChannels);
-                ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
+        if(SrcType == SrcFmtIMA4)
+        {
+            ALuint Channels = ChannelsFromFmt(ALBuf->FmtChannels);
+            ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
 
-                /* offset -> byte offset, length -> block count */
-                offset /= 36;
-                offset *= 65;
-                offset *= Bytes;
-                length /= ALBuf->OriginalAlign;
+            /* offset -> byte offset, length -> block count */
+            offset /= 36;
+            offset *= 65;
+            offset *= Bytes;
+            length /= ALBuf->OriginalAlign;
 
-                ConvertDataIMA4(&((ALubyte*)ALBuf->data)[offset], data, Channels, length);
-            }
-            else
-            {
-                ALuint OldBytes = BytesFromFmt(SrcType);
-                ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
+            ConvertDataIMA4(&((ALubyte*)ALBuf->data)[offset], data, Channels, length);
+        }
+        else
+        {
+            ALuint OldBytes = BytesFromFmt(SrcType);
+            ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
 
-                offset /= OldBytes;
-                offset *= Bytes;
-                length /= OldBytes;
+            offset /= OldBytes;
+            offset *= Bytes;
+            length /= OldBytes;
 
-                ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
-                            data, SrcType, length);
-            }
-            break;
-
-        default:
-            alSetError(Context, AL_INVALID_ENUM);
-            break;
+            ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                        data, SrcType, length);
+        }
     }
 
     ProcessContext(Context);

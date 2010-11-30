@@ -1086,7 +1086,7 @@ static __inline ALdouble Conv_ALdouble_ALshort(ALshort val)
 static __inline ALdouble Conv_ALdouble_ALushort(ALushort val)
 { return (val-32768) * (1.0/32767.0); }
 static __inline ALdouble Conv_ALdouble_ALint(ALint val)
-{ return val * (1.0/214748364.0); }
+{ return val * (1.0/2147483647.0); }
 static __inline ALdouble Conv_ALdouble_ALuint(ALuint val)
 { return (ALint)(val-2147483648u) * (1.0/2147483647.0); }
 static __inline ALdouble Conv_ALdouble_ALfloat(ALfloat val)

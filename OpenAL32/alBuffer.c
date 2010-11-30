@@ -799,7 +799,7 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
 }
 
 
-static void ConvertIMA4Block(ALshort *dst, const ALubyte *IMAData, ALint numchans)
+static void DecodeIMA4Block(ALshort *dst, const ALubyte *IMAData, ALint numchans)
 {
     ALint Sample[2],Index[2];
     ALuint IMACode[2];
@@ -1153,7 +1153,7 @@ static void Convert_##T##_IMA4(T *dst, const ALubyte *src, ALuint numchans,   \
     ALuint i, j;                                                              \
     for(i = 0;i < numblocks;i++)                                              \
     {                                                                         \
-        ConvertIMA4Block(tmp, src, numchans);                                 \
+        DecodeIMA4Block(tmp, src, numchans);                                  \
         src += 36*numchans;                                                   \
         for(j = 0;j < 65*numchans;j++)                                        \
             *(dst++) = Conv_##T##_ALshort(tmp[j]);                            \

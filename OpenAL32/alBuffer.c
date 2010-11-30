@@ -297,14 +297,22 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 alSetError(Context, err);
             break;
 
-        case SrcFmtDouble:
-            if(SrcChannels == SrcFmtMono)
-                err = LoadData(ALBuf, freq, AL_FORMAT_MONO_FLOAT32, size, SrcChannels, SrcType, data);
-            else
-                err = LoadData(ALBuf, freq, AL_FORMAT_STEREO_FLOAT32, size, SrcChannels, SrcType, data);
+        case SrcFmtDouble: {
+            ALenum NewFormat = AL_FORMAT_MONO_FLOAT32;
+            switch(SrcChannels)
+            {
+                case SrcFmtMono: NewFormat = AL_FORMAT_MONO_FLOAT32; break;
+                case SrcFmtStereo: NewFormat = AL_FORMAT_STEREO_FLOAT32; break;
+                case SrcFmtRear: NewFormat = AL_FORMAT_REAR32; break;
+                case SrcFmtQuad: NewFormat = AL_FORMAT_QUAD32; break;
+                case SrcFmtX51: NewFormat = AL_FORMAT_51CHN32; break;
+                case SrcFmtX61: NewFormat = AL_FORMAT_61CHN32; break;
+                case SrcFmtX71: NewFormat = AL_FORMAT_71CHN32; break;
+            }
+            err = LoadData(ALBuf, freq, NewFormat, size, SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
-            break;
+        }   break;
 
         case SrcFmtMulaw:
         case SrcFmtIMA4: {

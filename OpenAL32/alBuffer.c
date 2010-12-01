@@ -46,7 +46,7 @@ static void ConvertDataIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src
  */
 
 /* IMA ADPCM Stepsize table */
-static const long g_IMAStep_size[89] = {
+static const long IMAStep_size[89] = {
        7,    8,    9,   10,   11,   12,   13,   14,   16,   17,   19,
       21,   23,   25,   28,   31,   34,   37,   41,   45,   50,   55,
       60,   66,   73,   80,   88,   97,  107,  118,  130,  143,  157,
@@ -59,13 +59,13 @@ static const long g_IMAStep_size[89] = {
 };
 
 /* IMA4 ADPCM Codeword decode table */
-static const long g_IMACodeword_4[16] = {
+static const long IMA4Codeword[16] = {
     1, 3, 5, 7, 9, 11, 13, 15,
    -1,-3,-5,-7,-9,-11,-13,-15,
 };
 
 /* IMA4 ADPCM Step index adjust decode table */
-static const long g_IMAIndex_adjust_4[16] = {
+static const long IMA4Index_adjust[16] = {
    -1,-1,-1,-1, 2, 4, 6, 8,
    -1,-1,-1,-1, 2, 4, 6, 8
 };
@@ -855,25 +855,25 @@ static ALmulaw EncodeMuLaw(ALshort val)
     return ~(sign | (exp<<4) | mant);
 }
 
-static void DecodeIMA4Block(ALshort *dst, const ALubyte *IMAData, ALint numchans)
+static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans)
 {
-    ALint Sample[2],Index[2];
-    ALuint IMACode[2];
+    ALint sample[2], index[2];
+    ALuint code[2];
     ALsizei j,k,c;
 
     for(c = 0;c < numchans;c++)
     {
-        Sample[c]  = *(IMAData++);
-        Sample[c] |= *(IMAData++) << 8;
-        Sample[c]  = (Sample[c]^0x8000) - 32768;
-        Index[c]  = *(IMAData++);
-        Index[c] |= *(IMAData++) << 8;
-        Index[c]  = (Index[c]^0x8000) - 32768;
+        sample[c]  = *(src++);
+        sample[c] |= *(src++) << 8;
+        sample[c]  = (sample[c]^0x8000) - 32768;
+        index[c]  = *(src++);
+        index[c] |= *(src++) << 8;
+        index[c]  = (index[c]^0x8000) - 32768;
 
-        Index[c] = max(0, Index[c]);
-        Index[c] = min(Index[c], 88);
+        index[c] = max(0, index[c]);
+        index[c] = min(index[c], 88);
 
-        dst[c] = Sample[c];
+        dst[c] = sample[c];
     }
 
     j = 1;
@@ -881,28 +881,28 @@ static void DecodeIMA4Block(ALshort *dst, const ALubyte *IMAData, ALint numchans
     {
         for(c = 0;c < numchans;c++)
         {
-            IMACode[c]  = *(IMAData++);
-            IMACode[c] |= *(IMAData++) << 8;
-            IMACode[c] |= *(IMAData++) << 16;
-            IMACode[c] |= *(IMAData++) << 24;
+            code[c]  = *(src++);
+            code[c] |= *(src++) << 8;
+            code[c] |= *(src++) << 16;
+            code[c] |= *(src++) << 24;
         }
 
         for(k = 0;k < 8;k++,j++)
         {
             for(c = 0;c < numchans;c++)
             {
-                Sample[c] += g_IMAStep_size[Index[c]] *
-                             g_IMACodeword_4[IMACode[c]&15] / 8;
-                Index[c] += g_IMAIndex_adjust_4[IMACode[c]&15];
+                int nibble = code[c]&0xf;
+                code[c] >>= 4;
 
-                Sample[c] = max(-32768, Sample[c]);
-                Sample[c] = min(Sample[c], 32767);
+                sample[c] += IMA4Codeword[nibble] * IMAStep_size[index[c]] / 8;
+                sample[c] = max(-32768, sample[c]);
+                sample[c] = min(sample[c], 32767);
 
-                Index[c] = max(0, Index[c]);
-                Index[c] = min(Index[c], 88);
+                index[c] += IMA4Index_adjust[nibble];
+                index[c] = max(0, index[c]);
+                index[c] = min(index[c], 88);
 
-                dst[j*numchans + c] = Sample[c];
-                IMACode[c] >>= 4;
+                dst[j*numchans + c] = sample[c];
             }
         }
     }

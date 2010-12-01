@@ -870,8 +870,8 @@ static void DecodeIMA4Block(ALshort *dst, const ALubyte *IMAData, ALint numchans
         Index[c] |= *(IMAData++) << 8;
         Index[c]  = (Index[c]^0x8000) - 32768;
 
-        Index[c] = ((Index[c]<0) ? 0 : Index[c]);
-        Index[c] = ((Index[c]>88) ? 88 : Index[c]);
+        Index[c] = max(0, Index[c]);
+        Index[c] = min(Index[c], 88);
 
         dst[c] = Sample[c];
     }
@@ -895,11 +895,11 @@ static void DecodeIMA4Block(ALshort *dst, const ALubyte *IMAData, ALint numchans
                              g_IMACodeword_4[IMACode[c]&15] / 8;
                 Index[c] += g_IMAIndex_adjust_4[IMACode[c]&15];
 
-                if(Sample[c] < -32768) Sample[c] = -32768;
-                else if(Sample[c] > 32767) Sample[c] = 32767;
+                Sample[c] = max(-32768, Sample[c]);
+                Sample[c] = min(Sample[c], 32767);
 
-                if(Index[c] < 0) Index[c] = 0;
-                else if(Index[c] > 88) Index[c] = 88;
+                Index[c] = max(0, Index[c]);
+                Index[c] = min(Index[c], 88);
 
                 dst[j*numchans + c] = Sample[c];
                 IMACode[c] >>= 4;

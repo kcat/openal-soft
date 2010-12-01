@@ -1104,7 +1104,7 @@ static __inline ALdouble Conv_ALdouble_ALmulaw(ALmulaw val)
 { return Conv_ALdouble_ALshort(DecodeMuLaw(val)); }
 
 #define DECL_TEMPLATE(T)                                                      \
-static ALmulaw Conv_ALmulaw_##T(T val)                                        \
+static __inline ALmulaw Conv_ALmulaw_##T(T val)                               \
 { return EncodeMuLaw(Conv_ALshort_##T(val)); }
 
 DECL_TEMPLATE(ALbyte)

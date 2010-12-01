@@ -1381,7 +1381,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
             return AL_OUT_OF_MEMORY;
 
         temp = realloc(ALBuf->data, newsize);
-        if(!temp) return AL_OUT_OF_MEMORY;
+        if(!temp && newsize) return AL_OUT_OF_MEMORY;
         ALBuf->data = temp;
         ALBuf->size = newsize;
 
@@ -1408,7 +1408,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
             return AL_OUT_OF_MEMORY;
 
         temp = realloc(ALBuf->data, newsize);
-        if(!temp) return AL_OUT_OF_MEMORY;
+        if(!temp && newsize) return AL_OUT_OF_MEMORY;
         ALBuf->data = temp;
         ALBuf->size = newsize;
 

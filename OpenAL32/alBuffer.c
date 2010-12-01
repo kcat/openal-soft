@@ -838,7 +838,13 @@ static ALmulaw EncodeMuLaw(ALshort val)
     ALint mant, exp, sign;
 
     sign = (val>>8) & 0x80;
-    if(sign) val = (ALshort)-val;
+    if(sign)
+    {
+        /* -32768 doesn't properly negate on a short; it results in itself.
+         * So clamp to -32767 */
+        val = max(val, -32767);
+        val = -val;
+    }
 
     val = min(val, muLawClip);
     val += muLawBias;

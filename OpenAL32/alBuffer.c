@@ -857,8 +857,8 @@ static ALmulaw EncodeMuLaw(ALshort val)
 
 static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans)
 {
-    ALint sample[2], index[2];
-    ALuint code[2];
+    ALint sample[MAXCHANNELS], index[MAXCHANNELS];
+    ALuint code[MAXCHANNELS];
     ALsizei j,k,c;
 
     for(c = 0;c < numchans;c++)
@@ -1229,8 +1229,8 @@ DECL_TEMPLATE(ALmulaw, ALmulaw)
 static void Convert_##T##_IMA4(T *dst, const ALubyte *src, ALuint numchans,   \
                                ALuint numblocks)                              \
 {                                                                             \
-    ALshort tmp[65*2]; /* Max samples an IMA4 frame can be */                 \
     ALuint i, j;                                                              \
+    ALshort tmp[65*MAXCHANNELS]; /* Max samples an IMA4 frame can be */       \
     for(i = 0;i < numblocks;i++)                                              \
     {                                                                         \
         DecodeIMA4Block(tmp, src, numchans);                                  \

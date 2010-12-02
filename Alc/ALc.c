@@ -603,7 +603,7 @@ void Append##type##List(const ALCchar *name)                                 \
         return;                                                              \
     }                                                                        \
     alc##type##List = temp;                                                  \
-    sprintf(alc##type##List+alc##type##ListSize, "%s", name);                \
+    memcpy(alc##type##List+alc##type##ListSize, name, len+1);                \
     alc##type##ListSize += len+1;                                            \
     alc##type##List[alc##type##ListSize] = 0;                                \
 }

@@ -77,7 +77,7 @@ typedef struct ALverbState {
         ALuint    Offset[4];
         // The gain for each output channel based on 3D panning (only for the
         // EAX path).
-        ALfloat   PanGain[OUTPUTCHANNELS];
+        ALfloat   PanGain[MAXCHANNELS];
     } Early;
     // Decorrelator delay line.
     DelayLine Decorrelator;
@@ -107,7 +107,7 @@ typedef struct ALverbState {
         ALfloat   LpSample[4];
         // The gain for each output channel based on 3D panning (only for the
         // EAX path).
-        ALfloat   PanGain[OUTPUTCHANNELS];
+        ALfloat   PanGain[MAXCHANNELS];
     } Late;
     struct {
         // Attenuation to compensate for the modal density and decay rate of
@@ -627,10 +627,10 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
      * panning direction.
      */
     pos = aluCart2LUTpos(earlyPan[2], earlyPan[0]);
-    speakerGain = &Device->PanningLUT[OUTPUTCHANNELS * pos];
+    speakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
     dirGain = aluSqrt((earlyPan[0] * earlyPan[0]) + (earlyPan[2] * earlyPan[2]));
 
-    for(index = 0;index < OUTPUTCHANNELS;index++)
+    for(index = 0;index < MAXCHANNELS;index++)
         State->Early.PanGain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)
     {
@@ -640,10 +640,10 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 
 
     pos = aluCart2LUTpos(latePan[2], latePan[0]);
-    speakerGain = &Device->PanningLUT[OUTPUTCHANNELS * pos];
+    speakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
     dirGain = aluSqrt((latePan[0] * latePan[0]) + (latePan[2] * latePan[2]));
 
-    for(index = 0;index < OUTPUTCHANNELS;index++)
+    for(index = 0;index < MAXCHANNELS;index++)
          State->Late.PanGain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)
     {
@@ -1014,7 +1014,7 @@ static ALboolean VerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
                                                frequency);
     }
 
-    for(index = 0;index < OUTPUTCHANNELS;index++)
+    for(index = 0;index < MAXCHANNELS;index++)
          State->Gain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)
     {
@@ -1161,7 +1161,7 @@ static ALvoid EAXVerbUpdate(ALeffectState *effect, ALCcontext *Context, const AL
 
 // This processes the reverb state, given the input samples and an output
 // buffer.
-static ALvoid VerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+static ALvoid VerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
@@ -1194,7 +1194,7 @@ static ALvoid VerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuin
 
 // This processes the EAX reverb state, given the input samples and an output
 // buffer.
-static ALvoid EAXVerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+static ALvoid EAXVerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
@@ -1207,7 +1207,7 @@ static ALvoid EAXVerbProcess(ALeffectState *effect, const ALeffectslot *Slot, AL
         EAXVerbPass(State, SamplesIn[index], early, late);
 
         // Unfortunately, while the number and configuration of gains for
-        // panning adjust according to OUTPUTCHANNELS, the output from the
+        // panning adjust according to MAXCHANNELS, the output from the
         // reverb engine is not so scalable.
         SamplesOut[index][FRONT_LEFT] +=
            (State->Early.PanGain[FRONT_LEFT]*early[0] +
@@ -1307,7 +1307,7 @@ ALeffectState *VerbCreate(void)
         State->Late.LpSample[index] = 0.0f;
     }
 
-    for(index = 0;index < OUTPUTCHANNELS;index++)
+    for(index = 0;index < MAXCHANNELS;index++)
     {
         State->Early.PanGain[index] = 0.0f;
         State->Late.PanGain[index] = 0.0f;

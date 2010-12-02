@@ -914,7 +914,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     aluInitPanning(device);
 
-    for(i = 0;i < OUTPUTCHANNELS;i++)
+    for(i = 0;i < MAXCHANNELS;i++)
     {
         device->ClickRemoval[i] = 0.0f;
         device->PendingClicks[i] = 0.0f;

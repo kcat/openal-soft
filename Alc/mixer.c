@@ -68,10 +68,10 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
-    ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
+    ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
     ALuint pos, frac;                                                         \
-    ALfloat DrySend[OUTPUTCHANNELS];                                          \
+    ALfloat DrySend[MAXCHANNELS];                                             \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
     ALuint increment;                                                         \
@@ -84,7 +84,7 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
-    for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
+    for(i = 0;i < MAXCHANNELS;i++)                                            \
         DrySend[i] = Source->Params.DryGains[i];                              \
                                                                               \
     pos = 0;                                                                  \
@@ -222,10 +222,10 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
         BACK_LEFT, BACK_RIGHT                                                 \
     };                                                                        \
     const ALfloat scaler = 1.0f/Channels;                                     \
-    ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
+    ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
     ALuint pos, frac;                                                         \
-    ALfloat DrySend[OUTPUTCHANNELS];                                          \
+    ALfloat DrySend[MAXCHANNELS];                                             \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
     ALuint increment;                                                         \
@@ -238,7 +238,7 @@ static void Mix_##T##_Stereo_##sampler(ALsource *Source, ALCdevice *Device,   \
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
-    for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
+    for(i = 0;i < MAXCHANNELS;i++)                                            \
         DrySend[i] = Source->Params.DryGains[i];                              \
                                                                               \
     pos = 0;                                                                  \
@@ -370,10 +370,10 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
 {                                                                             \
     static const ALuint Channels = sizeof(chans)/sizeof(chans[0]);            \
     const ALfloat scaler = 1.0f/Channels;                                     \
-    ALfloat (*DryBuffer)[OUTPUTCHANNELS];                                     \
+    ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
     ALuint pos, frac;                                                         \
-    ALfloat DrySend[OUTPUTCHANNELS];                                          \
+    ALfloat DrySend[MAXCHANNELS];                                             \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
     ALuint increment;                                                         \
@@ -386,7 +386,7 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
-    for(i = 0;i < OUTPUTCHANNELS;i++)                                         \
+    for(i = 0;i < MAXCHANNELS;i++)                                            \
         DrySend[i] = Source->Params.DryGains[i];                              \
                                                                               \
     pos = 0;                                                                  \

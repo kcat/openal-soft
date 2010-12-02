@@ -72,7 +72,7 @@ typedef enum {
     SIDE_LEFT,
     SIDE_RIGHT,
 
-    OUTPUTCHANNELS
+    MAXCHANNELS
 } Channel;
 
 #define BUFFERSIZE 4096

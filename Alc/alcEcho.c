@@ -49,7 +49,7 @@ typedef struct ALechoState {
 
     ALfloat FeedGain;
 
-    ALfloat Gain[OUTPUTCHANNELS];
+    ALfloat Gain[MAXCHANNELS];
 
     FILTER iirFilter;
     ALfloat history[2];
@@ -90,7 +90,7 @@ static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     for(i = 0;i < state->BufferLength;i++)
         state->SampleBuffer[i] = 0.0f;
 
-    for(i = 0;i < OUTPUTCHANNELS;i++)
+    for(i = 0;i < MAXCHANNELS;i++)
         state->Gain[i] = 0.0f;
     for(i = 0;i < Device->NumChan;i++)
     {
@@ -125,7 +125,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
     state->iirFilter.coeff = a;
 }
 
-static ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS])
+static ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALechoState *state = (ALechoState*)effect;
     const ALuint mask = state->BufferLength-1;

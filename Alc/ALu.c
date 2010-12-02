@@ -258,7 +258,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     if(Channels == FmtStereo)
     {
-        for(i = 0;i < OUTPUTCHANNELS;i++)
+        for(i = 0;i < MAXCHANNELS;i++)
             ALSource->Params.DryGains[i] = 0.0f;
 
         if(DupStereo == AL_FALSE)
@@ -322,7 +322,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
-        for(i = 0;i < OUTPUTCHANNELS;i++)
+        for(i = 0;i < MAXCHANNELS;i++)
             ALSource->Params.DryGains[i] = DryGain * ListenerGain;
     }
 
@@ -729,13 +729,13 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     pos = aluCart2LUTpos(-Position[2], Position[0]);
-    SpeakerGain = &Device->PanningLUT[OUTPUTCHANNELS * pos];
+    SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
 
     DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
     // elevation adjustment for directional gain. this sucks, but
     // has low complexity
     AmbientGain = aluSqrt(1.0/Device->NumChan);
-    for(s = 0;s < OUTPUTCHANNELS;s++)
+    for(s = 0;s < MAXCHANNELS;s++)
         ALSource->Params.DryGains[s] = 0.0f;
     for(s = 0;s < (ALsizei)Device->NumChan;s++)
     {
@@ -806,7 +806,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         SamplesToDo = min(size, BUFFERSIZE);
 
         /* Clear mixing buffer */
-        memset(device->DryBuffer, 0, SamplesToDo*OUTPUTCHANNELS*sizeof(ALfloat));
+        memset(device->DryBuffer, 0, SamplesToDo*MAXCHANNELS*sizeof(ALfloat));
 
         SuspendContext(NULL);
         ctx = device->Contexts;
@@ -868,13 +868,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         //Post processing loop
         for(i = 0;i < SamplesToDo;i++)
         {
-            for(c = 0;c < OUTPUTCHANNELS;c++)
+            for(c = 0;c < MAXCHANNELS;c++)
             {
                 device->ClickRemoval[c] -= device->ClickRemoval[c] / 256.0f;
                 device->DryBuffer[i][c] += device->ClickRemoval[c];
             }
         }
-        for(i = 0;i < OUTPUTCHANNELS;i++)
+        for(i = 0;i < MAXCHANNELS;i++)
         {
             device->ClickRemoval[i] += device->PendingClicks[i];
             device->PendingClicks[i] = 0.0f;
@@ -886,8 +886,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     const Channel chans[] = {                                                 \
         __VA_ARGS__                                                           \
     };                                                                        \
-    ALfloat (*DryBuffer)[OUTPUTCHANNELS] = device->DryBuffer;                 \
-    ALfloat (*Matrix)[OUTPUTCHANNELS] = device->ChannelMatrix;                \
+    ALfloat (*DryBuffer)[MAXCHANNELS] = device->DryBuffer;                    \
+    ALfloat (*Matrix)[MAXCHANNELS] = device->ChannelMatrix;                   \
     const ALuint *ChanMap = device->DevChannels;                              \
                                                                               \
     for(i = 0;i < SamplesToDo;i++)                                            \
@@ -895,7 +895,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         for(j = 0;j < N;j++)                                                  \
         {                                                                     \
             ALfloat samp = 0.0f;                                              \
-            for(c = 0;c < OUTPUTCHANNELS;c++)                                 \
+            for(c = 0;c < MAXCHANNELS;c++)                                    \
                 samp += DryBuffer[i][c] * Matrix[c][chans[j]];                \
             ((T*)buffer)[ChanMap[chans[j]]] = func(samp);                     \
         }                                                                     \
@@ -910,14 +910,14 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         case AL_FORMAT_STEREO##bits:                                          \
             if(device->Bs2b)                                                  \
             {                                                                 \
-                ALfloat (*DryBuffer)[OUTPUTCHANNELS] = device->DryBuffer;     \
-                ALfloat (*Matrix)[OUTPUTCHANNELS] = device->ChannelMatrix;    \
+                ALfloat (*DryBuffer)[MAXCHANNELS] = device->DryBuffer;        \
+                ALfloat (*Matrix)[MAXCHANNELS] = device->ChannelMatrix;       \
                 const ALuint *ChanMap = device->DevChannels;                  \
                                                                               \
                 for(i = 0;i < SamplesToDo;i++)                                \
                 {                                                             \
                     float samples[2] = { 0.0f, 0.0f };                        \
-                    for(c = 0;c < OUTPUTCHANNELS;c++)                         \
+                    for(c = 0;c < MAXCHANNELS;c++)                            \
                     {                                                         \
                         samples[0] += DryBuffer[i][c]*Matrix[c][FRONT_LEFT];  \
                         samples[1] += DryBuffer[i][c]*Matrix[c][FRONT_RIGHT]; \

@@ -91,14 +91,14 @@ typedef struct ALsource
     struct {
         ALint Step;
 
-        ALfloat DryGains[OUTPUTCHANNELS];
+        ALfloat DryGains[MAXCHANNELS];
         FILTER iirFilter;
-        ALfloat history[OUTPUTCHANNELS*2];
+        ALfloat history[MAXCHANNELS*2];
 
         struct {
             ALfloat WetGain;
             FILTER iirFilter;
-            ALfloat history[OUTPUTCHANNELS];
+            ALfloat history[MAXCHANNELS];
         } Send[MAX_SENDS];
     } Params;
 

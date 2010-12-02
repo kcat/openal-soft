@@ -373,18 +373,18 @@ struct ALCdevice_struct
     ALboolean    DuplicateStereo;
 
     // Dry path buffer mix
-    ALfloat DryBuffer[BUFFERSIZE][OUTPUTCHANNELS];
+    ALfloat DryBuffer[BUFFERSIZE][MAXCHANNELS];
 
-    ALuint DevChannels[OUTPUTCHANNELS];
+    ALuint DevChannels[MAXCHANNELS];
 
-    ALfloat ChannelMatrix[OUTPUTCHANNELS][OUTPUTCHANNELS];
+    ALfloat ChannelMatrix[MAXCHANNELS][MAXCHANNELS];
 
-    Channel Speaker2Chan[OUTPUTCHANNELS];
-    ALfloat PanningLUT[OUTPUTCHANNELS * LUT_NUM];
+    Channel Speaker2Chan[MAXCHANNELS];
+    ALfloat PanningLUT[MAXCHANNELS * LUT_NUM];
     ALuint  NumChan;
 
-    ALfloat ClickRemoval[OUTPUTCHANNELS];
-    ALfloat PendingClicks[OUTPUTCHANNELS];
+    ALfloat ClickRemoval[MAXCHANNELS];
+    ALfloat PendingClicks[MAXCHANNELS];
 
     // Contexts created on this device
     ALCcontext  **Contexts;

@@ -41,7 +41,7 @@ struct ALeffectState {
     ALvoid (*Destroy)(ALeffectState *State);
     ALboolean (*DeviceUpdate)(ALeffectState *State, ALCdevice *Device);
     ALvoid (*Update)(ALeffectState *State, ALCcontext *Context, const ALeffect *Effect);
-    ALvoid (*Process)(ALeffectState *State, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[OUTPUTCHANNELS]);
+    ALvoid (*Process)(ALeffectState *State, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS]);
 };
 
 ALeffectState *NoneCreate(void);

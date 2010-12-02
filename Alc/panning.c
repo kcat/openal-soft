@@ -31,8 +31,8 @@
 #include "AL/alc.h"
 #include "alu.h"
 
-static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[OUTPUTCHANNELS],
-                                  Channel Speaker2Chan[OUTPUTCHANNELS], ALint chans)
+static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHANNELS],
+                                  Channel Speaker2Chan[MAXCHANNELS], ALint chans)
 {
     char layout_str[256];
     char *confkey, *next;
@@ -162,17 +162,17 @@ ALint aluCart2LUTpos(ALfloat re, ALfloat im)
 
 ALvoid aluInitPanning(ALCdevice *Device)
 {
-    ALfloat SpeakerAngle[OUTPUTCHANNELS];
-    ALfloat (*Matrix)[OUTPUTCHANNELS];
+    ALfloat SpeakerAngle[MAXCHANNELS];
+    ALfloat (*Matrix)[MAXCHANNELS];
     Channel *Speaker2Chan;
     ALfloat Alpha, Theta;
     ALfloat *PanningLUT;
     ALint pos, offset;
     ALuint s, s2;
 
-    for(s = 0;s < OUTPUTCHANNELS;s++)
+    for(s = 0;s < MAXCHANNELS;s++)
     {
-        for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
+        for(s2 = 0;s2 < MAXCHANNELS;s2++)
             Device->ChannelMatrix[s][s2] = ((s==s2) ? 1.0f : 0.0f);
     }
 
@@ -313,18 +313,18 @@ ALvoid aluInitPanning(ALCdevice *Device)
     if(GetConfigValueBool(NULL, "scalemix", 0))
     {
         ALfloat maxout = 1.0f;
-        for(s = 0;s < OUTPUTCHANNELS;s++)
+        for(s = 0;s < MAXCHANNELS;s++)
         {
             ALfloat out = 0.0f;
-            for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
+            for(s2 = 0;s2 < MAXCHANNELS;s2++)
                 out += Device->ChannelMatrix[s2][s];
             maxout = __max(maxout, out);
         }
 
         maxout = 1.0f/maxout;
-        for(s = 0;s < OUTPUTCHANNELS;s++)
+        for(s = 0;s < MAXCHANNELS;s++)
         {
-            for(s2 = 0;s2 < OUTPUTCHANNELS;s2++)
+            for(s2 = 0;s2 < MAXCHANNELS;s2++)
                 Device->ChannelMatrix[s2][s] *= maxout;
         }
     }
@@ -333,8 +333,8 @@ ALvoid aluInitPanning(ALCdevice *Device)
     for(pos = 0; pos < LUT_NUM; pos++)
     {
         /* clear all values */
-        offset = OUTPUTCHANNELS * pos;
-        for(s = 0; s < OUTPUTCHANNELS; s++)
+        offset = MAXCHANNELS * pos;
+        for(s = 0; s < MAXCHANNELS; s++)
             PanningLUT[offset+s] = 0.0f;
 
         if(Device->NumChan == 1)

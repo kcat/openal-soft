@@ -374,6 +374,8 @@ static FILE *LogFile;
 
 ///////////////////////////////////////////////////////
 // ALC Related helper functions
+static void ReleaseALC(void);
+
 #ifdef HAVE_GCC_DESTRUCTOR
 static void alc_init(void) __attribute__((constructor));
 static void alc_deinit(void) __attribute__((destructor));
@@ -2180,7 +2182,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 }
 
 
-ALCvoid ReleaseALC(ALCvoid)
+static void ReleaseALC(void)
 {
     free(alcDeviceList); alcDeviceList = NULL;
     alcDeviceListSize = 0;

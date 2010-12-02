@@ -70,6 +70,8 @@ static const long IMA4Index_adjust[16] = {
    -1,-1,-1,-1, 2, 4, 6, 8
 };
 
+/* A quick'n'dirty lookup table to decode a muLaw-encoded byte sample into a
+ * signed 16-bit sample */
 static const ALshort muLawDecompressionTable[256] = {
     -32124,-31100,-30076,-29052,-28028,-27004,-25980,-24956,
     -23932,-22908,-21884,-20860,-19836,-18812,-17788,-16764,
@@ -105,9 +107,9 @@ static const ALshort muLawDecompressionTable[256] = {
         56,    48,    40,    32,    24,    16,     8,     0
 };
 
+/* Values used when encoding a muLaw sample */
 static const int muLawBias = 0x84;
 static const int muLawClip = 32635;
-
 static const char muLawCompressTable[256] =
 {
      0,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,
@@ -131,7 +133,8 @@ static const char muLawCompressTable[256] =
 /*
  *    alGenBuffers(ALsizei n, ALuint *buffers)
  *
- *    Generates n AL Buffers, and stores the Buffers Names in the array pointed to by buffers
+ *    Generates n AL Buffers, and stores the Buffers Names in the array pointed
+ *    to by buffers
  */
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 {
@@ -141,7 +144,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
     Context = GetContextSuspended();
     if(!Context) return;
 
-    // Check that we are actually generating some Buffers
+    /* Check that we are actually generating some Buffers */
     if(n < 0 || IsBadWritePtr((void*)buffers, n * sizeof(ALuint)))
         alSetError(Context, AL_INVALID_VALUE);
     else
@@ -227,7 +230,8 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
         }
     }
 
-    /* If all the Buffers were valid (and have Reference Counts of 0), then we can delete them */
+    /* If all the Buffers were valid (and have Reference Counts of 0), then we
+     * can delete them */
     if(!Failed)
     {
         for(i = 0;i < n;i++)
@@ -272,7 +276,8 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
 }
 
 /*
- *    alBufferData(ALuint buffer,ALenum format,const ALvoid *data,ALsizei size,ALsizei freq)
+ *    alBufferData(ALuint buffer, ALenum format, const ALvoid *data,
+ *                 ALsizei size, ALsizei freq)
  *
  *    Fill buffer with audio data
  */
@@ -366,7 +371,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
 }
 
 /*
- *    alBufferSubDataSOFT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
+ *    alBufferSubDataSOFT(ALuint buffer, ALenum format, const ALvoid *data,
+ *                        ALsizei offset, ALsizei length)
  *
  *    Update buffer's audio data
  */
@@ -1028,7 +1034,7 @@ static __inline ALint Conv_ALint_ALushort(ALushort val)
 static __inline ALint Conv_ALint_ALint(ALint val)
 { return val; }
 static __inline ALint Conv_ALint_ALuint(ALuint val)
-{ return val-2147483648u; }
+{ return val^0x80000000; }
 static __inline ALint Conv_ALint_ALfloat(ALfloat val)
 {
     if(val >= 1.0f) return 2147483647;
@@ -1053,7 +1059,7 @@ static __inline ALuint Conv_ALuint_ALshort(ALshort val)
 static __inline ALuint Conv_ALuint_ALushort(ALushort val)
 { return val<<16; }
 static __inline ALuint Conv_ALuint_ALint(ALint val)
-{ return val+2147483648u; }
+{ return val^0x80000000; }
 static __inline ALuint Conv_ALuint_ALuint(ALuint val)
 { return val; }
 static __inline ALuint Conv_ALuint_ALfloat(ALfloat val)
@@ -1374,8 +1380,8 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
         ALuint OrigChannels = ChannelsFromSrcFmt(SrcChannels);
 
         /* Here is where things vary:
-         * nVidia and Apple use 64+1 sample frames per block => block_size=36*chans bytes
-         * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024*chans bytes
+         * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
+         * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024 bytes per channel
          */
         if((size%(36*OrigChannels)) != 0)
             return AL_INVALID_VALUE;
@@ -1730,7 +1736,7 @@ ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *
 /*
  *    ReleaseALBuffers()
  *
- *    INTERNAL FN : Called by alcCloseDevice to destroy any buffers that still exist
+ *    INTERNAL: Called to destroy any buffers that still exist on the device
  */
 ALvoid ReleaseALBuffers(ALCdevice *device)
 {
@@ -1740,10 +1746,8 @@ ALvoid ReleaseALBuffers(ALCdevice *device)
         ALbuffer *temp = device->BufferMap.array[i].value;
         device->BufferMap.array[i].value = NULL;
 
-        // Release sample data
         free(temp->data);
 
-        // Release Buffer structure
         ALTHUNK_REMOVEENTRY(temp->buffer);
         memset(temp, 0, sizeof(ALbuffer));
         free(temp);

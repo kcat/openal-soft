@@ -13,16 +13,6 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#ifndef AL_EXT_buffer_sub_data
-#define AL_EXT_buffer_sub_data 1
-#define AL_BYTE_RW_OFFSETS_EXT                   0x1031
-#define AL_SAMPLE_RW_OFFSETS_EXT                 0x1032
-typedef ALvoid (AL_APIENTRY*PFNALBUFFERSUBDATAEXTPROC)(ALuint,ALenum,const ALvoid*,ALsizei,ALsizei);
-#ifdef AL_ALEXT_PROTOTYPES
-AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length);
-#endif
-#endif
-
 #ifndef AL_EXT_sample_buffer_object
 #define AL_EXT_sample_buffer_object 1
 typedef ptrdiff_t ALintptrEXT;

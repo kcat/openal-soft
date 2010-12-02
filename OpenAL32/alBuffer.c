@@ -449,11 +449,6 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
     ProcessContext(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alBufferSubDataEXT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
-{
-    alBufferSubDataSOFT(buffer, format, data, offset, length);
-}
-
 
 AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 {

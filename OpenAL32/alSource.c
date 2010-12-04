@@ -219,8 +219,6 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValu
                 if(flValue >= 0.0f)
                 {
                     Source->flPitch = flValue;
-                    if(Source->flPitch < 0.001f)
-                        Source->flPitch = 0.001f;
                     Source->NeedsUpdate = AL_TRUE;
                 }
                 else

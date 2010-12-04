@@ -1804,7 +1804,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
     ALfloat          BufferFreq;
     ALint            Channels, Bytes;
     ALuint           readPos, writePos;
-    enum SrcFmtType  OriginalType;
+    enum UserFmtType OriginalType;
     ALuint           TotalBufferDataSize;
     ALuint           i;
 
@@ -1881,7 +1881,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
         case AL_BYTE_OFFSET:
         case AL_BYTE_RW_OFFSETS_SOFT:
             // Take into account the original format of the Buffer
-            if(OriginalType == SrcFmtIMA4)
+            if(OriginalType == UserFmtIMA4)
             {
                 ALuint FrameBlockSize = 65 * Bytes * Channels;
                 ALuint BlockSize = 36 * Channels;
@@ -1899,7 +1899,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
             }
             else
             {
-                ALuint OrigBytes = BytesFromSrcFmt(OriginalType);
+                ALuint OrigBytes = BytesFromUserFmt(OriginalType);
                 offset[0] = (ALdouble)(readPos / Bytes * OrigBytes);
                 offset[1] = (ALdouble)(writePos / Bytes * OrigBytes);
             }
@@ -2005,15 +2005,15 @@ static ALint GetByteOffset(ALsource *Source)
     case AL_BYTE_OFFSET:
         // Take into consideration the original format
         ByteOffset = Source->lOffset;
-        if(Buffer->OriginalType == SrcFmtIMA4)
+        if(Buffer->OriginalType == UserFmtIMA4)
         {
             // Round down to nearest ADPCM block
-            ByteOffset /= 36 * ChannelsFromSrcFmt(Buffer->OriginalChannels);
+            ByteOffset /= 36 * ChannelsFromUserFmt(Buffer->OriginalChannels);
             // Multiply by compression rate (65 sample frames per block)
             ByteOffset *= 65;
         }
         else
-            ByteOffset /= FrameSizeFromSrcFmt(Buffer->OriginalChannels, Buffer->OriginalType);
+            ByteOffset /= FrameSizeFromUserFmt(Buffer->OriginalChannels, Buffer->OriginalType);
         ByteOffset *= FrameSizeFromFmt(Buffer->FmtChannels, Buffer->FmtType);
         break;
 

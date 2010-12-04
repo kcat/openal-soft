@@ -8,53 +8,53 @@ extern "C" {
 #endif
 
 /* Input formats (some are currently theoretical) */
-enum SrcFmtType {
-    SrcFmtByte,   /* AL_BYTE */
-    SrcFmtUByte,  /* AL_UNSIGNED_BYTE */
-    SrcFmtShort,  /* AL_SHORT */
-    SrcFmtUShort, /* AL_UNSIGNED_SHORT */
-    SrcFmtInt,    /* AL_INT */
-    SrcFmtUInt,   /* AL_UNSIGNED_INT */
-    SrcFmtFloat,  /* AL_FLOAT */
-    SrcFmtDouble, /* AL_DOUBLE */
-    SrcFmtMulaw,  /* AL_MULAW */
-    SrcFmtIMA4,   /* AL_IMA4 */
+enum UserFmtType {
+    UserFmtByte,   /* AL_BYTE */
+    UserFmtUByte,  /* AL_UNSIGNED_BYTE */
+    UserFmtShort,  /* AL_SHORT */
+    UserFmtUShort, /* AL_UNSIGNED_SHORT */
+    UserFmtInt,    /* AL_INT */
+    UserFmtUInt,   /* AL_UNSIGNED_INT */
+    UserFmtFloat,  /* AL_FLOAT */
+    UserFmtDouble, /* AL_DOUBLE */
+    UserFmtMulaw,  /* AL_MULAW */
+    UserFmtIMA4,   /* AL_IMA4 */
 };
-enum SrcFmtChannels {
-    SrcFmtMono,   /* AL_MONO */
-    SrcFmtStereo, /* AL_STEREO */
-    SrcFmtRear,   /* AL_REAR */
-    SrcFmtQuad,   /* AL_QUAD */
-    SrcFmtX51,    /* AL_5POINT1 (WFX order) */
-    SrcFmtX61,    /* AL_6POINT1 (WFX order) */
-    SrcFmtX71,    /* AL_7POINT1 (WFX order) */
+enum UserFmtChannels {
+    UserFmtMono,   /* AL_MONO */
+    UserFmtStereo, /* AL_STEREO */
+    UserFmtRear,   /* AL_REAR */
+    UserFmtQuad,   /* AL_QUAD */
+    UserFmtX51,    /* AL_5POINT1 (WFX order) */
+    UserFmtX61,    /* AL_6POINT1 (WFX order) */
+    UserFmtX71,    /* AL_7POINT1 (WFX order) */
 };
 
-ALboolean DecomposeInputFormat(ALenum format, enum SrcFmtChannels *chans,
-                               enum SrcFmtType *type);
-ALuint BytesFromSrcFmt(enum SrcFmtType type);
-ALuint ChannelsFromSrcFmt(enum SrcFmtChannels chans);
-static __inline ALuint FrameSizeFromSrcFmt(enum SrcFmtChannels chans,
-                                           enum SrcFmtType type)
+ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
+                              enum UserFmtType *type);
+ALuint BytesFromUserFmt(enum UserFmtType type);
+ALuint ChannelsFromUserFmt(enum UserFmtChannels chans);
+static __inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans,
+                                            enum UserFmtType type)
 {
-    return ChannelsFromSrcFmt(chans) * BytesFromSrcFmt(type);
+    return ChannelsFromUserFmt(chans) * BytesFromUserFmt(type);
 }
 
 
 /* Storable formats */
 enum FmtType {
-    FmtUByte = SrcFmtUByte,
-    FmtShort = SrcFmtShort,
-    FmtFloat = SrcFmtFloat,
+    FmtUByte = UserFmtUByte,
+    FmtShort = UserFmtShort,
+    FmtFloat = UserFmtFloat,
 };
 enum FmtChannels {
-    FmtMono = SrcFmtMono,
-    FmtStereo = SrcFmtStereo,
-    FmtRear = SrcFmtRear,
-    FmtQuad = SrcFmtQuad,
-    FmtX51 = SrcFmtX51,
-    FmtX61 = SrcFmtX61,
-    FmtX71 = SrcFmtX71,
+    FmtMono = UserFmtMono,
+    FmtStereo = UserFmtStereo,
+    FmtRear = UserFmtRear,
+    FmtQuad = UserFmtQuad,
+    FmtX51 = UserFmtX51,
+    FmtX61 = UserFmtX61,
+    FmtX71 = UserFmtX71,
 };
 
 ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
@@ -75,8 +75,8 @@ typedef struct ALbuffer
     enum FmtChannels FmtChannels;
     enum FmtType     FmtType;
 
-    enum SrcFmtChannels OriginalChannels;
-    enum SrcFmtType     OriginalType;
+    enum UserFmtChannels OriginalChannels;
+    enum UserFmtType     OriginalType;
     ALsizei OriginalSize;
     ALsizei OriginalAlign;
 

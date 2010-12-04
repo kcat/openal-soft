@@ -34,8 +34,8 @@
 #include "alThunk.h"
 
 
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum SrcFmtChannels chans, enum SrcFmtType type, const ALvoid *data);
-static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum SrcFmtType srcType, ALsizei len);
+static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data);
+static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len);
 static void ConvertDataIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len);
 
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
@@ -283,8 +283,8 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
  */
 AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid *data,ALsizei size,ALsizei freq)
 {
-    enum SrcFmtChannels SrcChannels;
-    enum SrcFmtType SrcType;
+    enum UserFmtChannels SrcChannels;
+    enum UserFmtType SrcType;
     ALCcontext *Context;
     ALCdevice *device;
     ALbuffer *ALBuf;
@@ -315,51 +315,51 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         alSetError(Context, AL_INVALID_VALUE);
     else if(size < 0 || freq < 0)
         alSetError(Context, AL_INVALID_VALUE);
-    else if(DecomposeInputFormat(format, &SrcChannels, &SrcType) == AL_FALSE)
+    else if(DecomposeUserFormat(format, &SrcChannels, &SrcType) == AL_FALSE)
         alSetError(Context, AL_INVALID_ENUM);
     else switch(SrcType)
     {
-        case SrcFmtByte:
-        case SrcFmtUByte:
-        case SrcFmtShort:
-        case SrcFmtUShort:
-        case SrcFmtInt:
-        case SrcFmtUInt:
-        case SrcFmtFloat:
+        case UserFmtByte:
+        case UserFmtUByte:
+        case UserFmtShort:
+        case UserFmtUShort:
+        case UserFmtInt:
+        case UserFmtUInt:
+        case UserFmtFloat:
             err = LoadData(ALBuf, freq, format, size, SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
             break;
 
-        case SrcFmtDouble: {
+        case UserFmtDouble: {
             ALenum NewFormat = AL_FORMAT_MONO_FLOAT32;
             switch(SrcChannels)
             {
-                case SrcFmtMono: NewFormat = AL_FORMAT_MONO_FLOAT32; break;
-                case SrcFmtStereo: NewFormat = AL_FORMAT_STEREO_FLOAT32; break;
-                case SrcFmtRear: NewFormat = AL_FORMAT_REAR32; break;
-                case SrcFmtQuad: NewFormat = AL_FORMAT_QUAD32; break;
-                case SrcFmtX51: NewFormat = AL_FORMAT_51CHN32; break;
-                case SrcFmtX61: NewFormat = AL_FORMAT_61CHN32; break;
-                case SrcFmtX71: NewFormat = AL_FORMAT_71CHN32; break;
+                case UserFmtMono: NewFormat = AL_FORMAT_MONO_FLOAT32; break;
+                case UserFmtStereo: NewFormat = AL_FORMAT_STEREO_FLOAT32; break;
+                case UserFmtRear: NewFormat = AL_FORMAT_REAR32; break;
+                case UserFmtQuad: NewFormat = AL_FORMAT_QUAD32; break;
+                case UserFmtX51: NewFormat = AL_FORMAT_51CHN32; break;
+                case UserFmtX61: NewFormat = AL_FORMAT_61CHN32; break;
+                case UserFmtX71: NewFormat = AL_FORMAT_71CHN32; break;
             }
             err = LoadData(ALBuf, freq, NewFormat, size, SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
         }   break;
 
-        case SrcFmtMulaw:
-        case SrcFmtIMA4: {
+        case UserFmtMulaw:
+        case UserFmtIMA4: {
             ALenum NewFormat = AL_FORMAT_MONO16;
             switch(SrcChannels)
             {
-                case SrcFmtMono: NewFormat = AL_FORMAT_MONO16; break;
-                case SrcFmtStereo: NewFormat = AL_FORMAT_STEREO16; break;
-                case SrcFmtRear: NewFormat = AL_FORMAT_REAR16; break;
-                case SrcFmtQuad: NewFormat = AL_FORMAT_QUAD16; break;
-                case SrcFmtX51: NewFormat = AL_FORMAT_51CHN16; break;
-                case SrcFmtX61: NewFormat = AL_FORMAT_61CHN16; break;
-                case SrcFmtX71: NewFormat = AL_FORMAT_71CHN16; break;
+                case UserFmtMono: NewFormat = AL_FORMAT_MONO16; break;
+                case UserFmtStereo: NewFormat = AL_FORMAT_STEREO16; break;
+                case UserFmtRear: NewFormat = AL_FORMAT_REAR16; break;
+                case UserFmtQuad: NewFormat = AL_FORMAT_QUAD16; break;
+                case UserFmtX51: NewFormat = AL_FORMAT_51CHN16; break;
+                case UserFmtX61: NewFormat = AL_FORMAT_61CHN16; break;
+                case UserFmtX71: NewFormat = AL_FORMAT_71CHN16; break;
             }
             err = LoadData(ALBuf, freq, NewFormat, size, SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
@@ -378,8 +378,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
  */
 AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length)
 {
-    enum SrcFmtChannels SrcChannels;
-    enum SrcFmtType SrcType;
+    enum UserFmtChannels SrcChannels;
+    enum UserFmtType SrcType;
     ALCcontext *Context;
     ALCdevice  *device;
     ALbuffer   *ALBuf;
@@ -407,7 +407,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         alSetError(Context, AL_INVALID_NAME);
     else if(length < 0 || offset < 0 || (length > 0 && data == NULL))
         alSetError(Context, AL_INVALID_VALUE);
-    else if(DecomposeInputFormat(format, &SrcChannels, &SrcType) == AL_FALSE ||
+    else if(DecomposeUserFormat(format, &SrcChannels, &SrcType) == AL_FALSE ||
             SrcChannels != ALBuf->OriginalChannels ||
             SrcType != ALBuf->OriginalType)
         alSetError(Context, AL_INVALID_ENUM);
@@ -418,7 +418,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        if(SrcType == SrcFmtIMA4)
+        if(SrcType == UserFmtIMA4)
         {
             ALuint Channels = ChannelsFromFmt(ALBuf->FmtChannels);
             ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
@@ -434,7 +434,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         }
         else
         {
-            ALuint OldBytes = BytesFromFmt(SrcType);
+            ALuint OldBytes = BytesFromUserFmt(SrcType);
             ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
 
             offset /= OldBytes;
@@ -1254,39 +1254,39 @@ DECL_TEMPLATE(ALmulaw)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
-static void Convert_##T(T *dst, const ALvoid *src, enum SrcFmtType srcType,   \
+static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
                         ALsizei len)                                          \
 {                                                                             \
     switch(srcType)                                                           \
     {                                                                         \
-        case SrcFmtByte:                                                      \
+        case UserFmtByte:                                                     \
             Convert_##T##_ALbyte(dst, src, len);                              \
             break;                                                            \
-        case SrcFmtUByte:                                                     \
+        case UserFmtUByte:                                                    \
             Convert_##T##_ALubyte(dst, src, len);                             \
             break;                                                            \
-        case SrcFmtShort:                                                     \
+        case UserFmtShort:                                                    \
             Convert_##T##_ALshort(dst, src, len);                             \
             break;                                                            \
-        case SrcFmtUShort:                                                    \
+        case UserFmtUShort:                                                   \
             Convert_##T##_ALushort(dst, src, len);                            \
             break;                                                            \
-        case SrcFmtInt:                                                       \
+        case UserFmtInt:                                                      \
             Convert_##T##_ALint(dst, src, len);                               \
             break;                                                            \
-        case SrcFmtUInt:                                                      \
+        case UserFmtUInt:                                                     \
             Convert_##T##_ALuint(dst, src, len);                              \
             break;                                                            \
-        case SrcFmtFloat:                                                     \
+        case UserFmtFloat:                                                    \
             Convert_##T##_ALfloat(dst, src, len);                             \
             break;                                                            \
-        case SrcFmtDouble:                                                    \
+        case UserFmtDouble:                                                   \
             Convert_##T##_ALdouble(dst, src, len);                            \
             break;                                                            \
-        case SrcFmtMulaw:                                                     \
+        case UserFmtMulaw:                                                    \
             Convert_##T##_ALmulaw(dst, src, len);                             \
             break;                                                            \
-        case SrcFmtIMA4:                                                      \
+        case UserFmtIMA4:                                                     \
             break; /* not handled here */                                     \
     }                                                                         \
 }
@@ -1304,7 +1304,7 @@ DECL_TEMPLATE(ALmulaw)
 #undef DECL_TEMPLATE
 
 
-static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum SrcFmtType srcType, ALsizei len)
+static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len)
 {
     switch(dstType)
     {
@@ -1356,7 +1356,7 @@ static void ConvertDataIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src
  * Currently, the new format must have the same channel configuration as the
  * original format.
  */
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum SrcFmtChannels SrcChannels, enum SrcFmtType SrcType, const ALvoid *data)
+static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data)
 {
     ALuint NewChannels, NewBytes;
     enum FmtChannels DstChannels;
@@ -1370,9 +1370,9 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
 
     assert(SrcChannels == DstChannels);
 
-    if(SrcType == SrcFmtIMA4)
+    if(SrcType == UserFmtIMA4)
     {
-        ALuint OrigChannels = ChannelsFromSrcFmt(SrcChannels);
+        ALuint OrigChannels = ChannelsFromUserFmt(SrcChannels);
 
         /* Here is where things vary:
          * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
@@ -1403,8 +1403,8 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
     }
     else
     {
-        ALuint OrigBytes = BytesFromSrcFmt(SrcType);
-        ALuint OrigChannels = ChannelsFromSrcFmt(SrcChannels);
+        ALuint OrigBytes = BytesFromUserFmt(SrcType);
+        ALuint OrigChannels = ChannelsFromUserFmt(SrcChannels);
 
         if((size%(OrigBytes*OrigChannels)) != 0)
             return AL_INVALID_VALUE;
@@ -1439,171 +1439,171 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
 }
 
 
-ALuint BytesFromSrcFmt(enum SrcFmtType type)
+ALuint BytesFromUserFmt(enum UserFmtType type)
 {
     switch(type)
     {
-    case SrcFmtByte: return sizeof(ALbyte);
-    case SrcFmtUByte: return sizeof(ALubyte);
-    case SrcFmtShort: return sizeof(ALshort);
-    case SrcFmtUShort: return sizeof(ALushort);
-    case SrcFmtInt: return sizeof(ALint);
-    case SrcFmtUInt: return sizeof(ALuint);
-    case SrcFmtFloat: return sizeof(ALfloat);
-    case SrcFmtDouble: return sizeof(ALdouble);
-    case SrcFmtMulaw: return sizeof(ALubyte);
-    case SrcFmtIMA4: break; /* not handled here */
+    case UserFmtByte: return sizeof(ALbyte);
+    case UserFmtUByte: return sizeof(ALubyte);
+    case UserFmtShort: return sizeof(ALshort);
+    case UserFmtUShort: return sizeof(ALushort);
+    case UserFmtInt: return sizeof(ALint);
+    case UserFmtUInt: return sizeof(ALuint);
+    case UserFmtFloat: return sizeof(ALfloat);
+    case UserFmtDouble: return sizeof(ALdouble);
+    case UserFmtMulaw: return sizeof(ALubyte);
+    case UserFmtIMA4: break; /* not handled here */
     }
     return 0;
 }
-ALuint ChannelsFromSrcFmt(enum SrcFmtChannels chans)
+ALuint ChannelsFromUserFmt(enum UserFmtChannels chans)
 {
     switch(chans)
     {
-    case SrcFmtMono: return 1;
-    case SrcFmtStereo: return 2;
-    case SrcFmtRear: return 2;
-    case SrcFmtQuad: return 4;
-    case SrcFmtX51: return 6;
-    case SrcFmtX61: return 7;
-    case SrcFmtX71: return 8;
+    case UserFmtMono: return 1;
+    case UserFmtStereo: return 2;
+    case UserFmtRear: return 2;
+    case UserFmtQuad: return 4;
+    case UserFmtX51: return 6;
+    case UserFmtX61: return 7;
+    case UserFmtX71: return 8;
     }
     return 0;
 }
-ALboolean DecomposeInputFormat(ALenum format, enum SrcFmtChannels *chans,
-                               enum SrcFmtType *type)
+ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
+                              enum UserFmtType *type)
 {
     switch(format)
     {
         case AL_FORMAT_MONO8:
-            *chans = SrcFmtMono;
-            *type  = SrcFmtUByte;
+            *chans = UserFmtMono;
+            *type  = UserFmtUByte;
             return AL_TRUE;
         case AL_FORMAT_MONO16:
-            *chans = SrcFmtMono;
-            *type  = SrcFmtShort;
+            *chans = UserFmtMono;
+            *type  = UserFmtShort;
             return AL_TRUE;
         case AL_FORMAT_MONO_FLOAT32:
-            *chans = SrcFmtMono;
-            *type  = SrcFmtFloat;
+            *chans = UserFmtMono;
+            *type  = UserFmtFloat;
             return AL_TRUE;
         case AL_FORMAT_MONO_DOUBLE_EXT:
-            *chans = SrcFmtMono;
-            *type  = SrcFmtDouble;
+            *chans = UserFmtMono;
+            *type  = UserFmtDouble;
             return AL_TRUE;
         case AL_FORMAT_MONO_IMA4:
-            *chans = SrcFmtMono;
-            *type  = SrcFmtIMA4;
+            *chans = UserFmtMono;
+            *type  = UserFmtIMA4;
             return AL_TRUE;
         case AL_FORMAT_STEREO8:
-            *chans = SrcFmtStereo;
-            *type  = SrcFmtUByte;
+            *chans = UserFmtStereo;
+            *type  = UserFmtUByte;
             return AL_TRUE;
         case AL_FORMAT_STEREO16:
-            *chans = SrcFmtStereo;
-            *type  = SrcFmtShort;
+            *chans = UserFmtStereo;
+            *type  = UserFmtShort;
             return AL_TRUE;
         case AL_FORMAT_STEREO_FLOAT32:
-            *chans = SrcFmtStereo;
-            *type  = SrcFmtFloat;
+            *chans = UserFmtStereo;
+            *type  = UserFmtFloat;
             return AL_TRUE;
         case AL_FORMAT_STEREO_DOUBLE_EXT:
-            *chans = SrcFmtStereo;
-            *type  = SrcFmtDouble;
+            *chans = UserFmtStereo;
+            *type  = UserFmtDouble;
             return AL_TRUE;
         case AL_FORMAT_STEREO_IMA4:
-            *chans = SrcFmtStereo;
-            *type  = SrcFmtIMA4;
+            *chans = UserFmtStereo;
+            *type  = UserFmtIMA4;
             return AL_TRUE;
         case AL_FORMAT_QUAD8_LOKI:
         case AL_FORMAT_QUAD8:
-            *chans = SrcFmtQuad;
-            *type  = SrcFmtUByte;
+            *chans = UserFmtQuad;
+            *type  = UserFmtUByte;
             return AL_TRUE;
         case AL_FORMAT_QUAD16_LOKI:
         case AL_FORMAT_QUAD16:
-            *chans = SrcFmtQuad;
-            *type  = SrcFmtShort;
+            *chans = UserFmtQuad;
+            *type  = UserFmtShort;
             return AL_TRUE;
         case AL_FORMAT_QUAD32:
-            *chans = SrcFmtQuad;
-            *type  = SrcFmtFloat;
+            *chans = UserFmtQuad;
+            *type  = UserFmtFloat;
             return AL_TRUE;
         case AL_FORMAT_REAR8:
-            *chans = SrcFmtRear;
-            *type  = SrcFmtUByte;
+            *chans = UserFmtRear;
+            *type  = UserFmtUByte;
             return AL_TRUE;
         case AL_FORMAT_REAR16:
-            *chans = SrcFmtRear;
-            *type  = SrcFmtShort;
+            *chans = UserFmtRear;
+            *type  = UserFmtShort;
             return AL_TRUE;
         case AL_FORMAT_REAR32:
-            *chans = SrcFmtRear;
-            *type  = SrcFmtFloat;
+            *chans = UserFmtRear;
+            *type  = UserFmtFloat;
             return AL_TRUE;
         case AL_FORMAT_51CHN8:
-            *chans = SrcFmtX51;
-            *type  = SrcFmtUByte;
+            *chans = UserFmtX51;
+            *type  = UserFmtUByte;
             return AL_TRUE;
         case AL_FORMAT_51CHN16:
-            *chans = SrcFmtX51;
-            *type  = SrcFmtShort;
+            *chans = UserFmtX51;
+            *type  = UserFmtShort;
             return AL_TRUE;
         case AL_FORMAT_51CHN32:
-            *chans = SrcFmtX51;
-            *type  = SrcFmtFloat;
+            *chans = UserFmtX51;
+            *type  = UserFmtFloat;
             return AL_TRUE;
         case AL_FORMAT_61CHN8:
-            *chans = SrcFmtX61;
-            *type  = SrcFmtUByte;
+            *chans = UserFmtX61;
+            *type  = UserFmtUByte;
             return AL_TRUE;
         case AL_FORMAT_61CHN16:
-            *chans = SrcFmtX61;
-            *type  = SrcFmtShort;
+            *chans = UserFmtX61;
+            *type  = UserFmtShort;
             return AL_TRUE;
         case AL_FORMAT_61CHN32:
-            *chans = SrcFmtX61;
-            *type  = SrcFmtFloat;
+            *chans = UserFmtX61;
+            *type  = UserFmtFloat;
             return AL_TRUE;
         case AL_FORMAT_71CHN8:
-            *chans = SrcFmtX71;
-            *type  = SrcFmtUByte;
+            *chans = UserFmtX71;
+            *type  = UserFmtUByte;
             return AL_TRUE;
         case AL_FORMAT_71CHN16:
-            *chans = SrcFmtX71;
-            *type  = SrcFmtShort;
+            *chans = UserFmtX71;
+            *type  = UserFmtShort;
             return AL_TRUE;
         case AL_FORMAT_71CHN32:
-            *chans = SrcFmtX71;
-            *type  = SrcFmtFloat;
+            *chans = UserFmtX71;
+            *type  = UserFmtFloat;
             return AL_TRUE;
         case AL_FORMAT_MONO_MULAW:
-            *chans = SrcFmtMono;
-            *type  = SrcFmtMulaw;
+            *chans = UserFmtMono;
+            *type  = UserFmtMulaw;
             return AL_TRUE;
         case AL_FORMAT_STEREO_MULAW:
-            *chans = SrcFmtStereo;
-            *type  = SrcFmtMulaw;
+            *chans = UserFmtStereo;
+            *type  = UserFmtMulaw;
             return AL_TRUE;
         case AL_FORMAT_QUAD_MULAW:
-            *chans = SrcFmtQuad;
-            *type  = SrcFmtMulaw;
+            *chans = UserFmtQuad;
+            *type  = UserFmtMulaw;
             return AL_TRUE;
         case AL_FORMAT_REAR_MULAW:
-            *chans = SrcFmtRear;
-            *type  = SrcFmtMulaw;
+            *chans = UserFmtRear;
+            *type  = UserFmtMulaw;
             return AL_TRUE;
         case AL_FORMAT_51CHN_MULAW:
-            *chans = SrcFmtX51;
-            *type  = SrcFmtMulaw;
+            *chans = UserFmtX51;
+            *type  = UserFmtMulaw;
             return AL_TRUE;
         case AL_FORMAT_61CHN_MULAW:
-            *chans = SrcFmtX61;
-            *type  = SrcFmtMulaw;
+            *chans = UserFmtX61;
+            *type  = UserFmtMulaw;
             return AL_TRUE;
         case AL_FORMAT_71CHN_MULAW:
-            *chans = SrcFmtX71;
-            *type  = SrcFmtMulaw;
+            *chans = UserFmtX71;
+            *type  = UserFmtMulaw;
             return AL_TRUE;
     }
     return AL_FALSE;

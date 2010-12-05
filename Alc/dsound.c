@@ -209,6 +209,7 @@ static ALuint DSoundProc(ALvoid *ptr)
                     aluHandleDisconnect(pDevice);
                     return 1;
                 }
+                Playing = TRUE;
             }
             Sleep(1);
             continue;

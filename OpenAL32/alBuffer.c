@@ -909,6 +909,77 @@ static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans)
     }
 }
 
+static void EncodeIMA4Block(ALubyte *dst, const ALshort *src, ALint *sample, ALint *index, ALint numchans)
+{
+    ALsizei j,k,c;
+
+    for(c = 0;c < numchans;c++)
+    {
+        int diff = src[c] - sample[c];
+        int step = IMAStep_size[index[c]];
+        int nibble;
+
+        nibble = 0;
+        if(diff < 0)
+        {
+            nibble = 0x8;
+            diff = -diff;
+        }
+
+        diff = min(step*2, diff);
+        nibble |= (diff*8/step - 1) / 2;
+
+        sample[c] += IMA4Codeword[nibble] * step / 8;
+        sample[c] = max(-32768, sample[c]);
+        sample[c] = min(sample[c], 32767);
+
+        index[c] += IMA4Index_adjust[nibble];
+        index[c] = max(0, index[c]);
+        index[c] = min(index[c], 88);
+
+        *(dst++) = sample[c] & 0xff;
+        *(dst++) = (sample[c]>>8) & 0xff;
+        *(dst++) = index[c] & 0xff;
+        *(dst++) = (index[c]>>8) & 0xff;
+    }
+
+    j = 1;
+    while(j < 65)
+    {
+        for(c = 0;c < numchans;c++)
+        {
+            for(k = 0;k < 8;k++)
+            {
+                int diff = src[(j+k)*numchans + c] - sample[c];
+                int step = IMAStep_size[index[c]];
+                int nibble;
+
+                nibble = 0;
+                if(diff < 0)
+                {
+                    nibble = 0x8;
+                    diff = -diff;
+                }
+
+                diff = min(step*2, diff);
+                nibble |= (diff*8/step - 1) / 2;
+
+                sample[c] += IMA4Codeword[nibble] * step / 8;
+                sample[c] = max(-32768, sample[c]);
+                sample[c] = min(sample[c], 32767);
+
+                index[c] += IMA4Index_adjust[nibble];
+                index[c] = max(0, index[c]);
+                index[c] = min(index[c], 88);
+
+                if(!(k&1)) *dst = nibble;
+                else *(dst++) |= nibble<<4;
+            }
+        }
+        j += 8;
+    }
+}
+
 
 static __inline ALbyte Conv_ALbyte_ALbyte(ALbyte val)
 { return val; }
@@ -1254,6 +1325,35 @@ DECL_TEMPLATE(ALmulaw)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
+static void Convert_IMA4_##T(ALubyte *dst, const T *src, ALuint numchans,     \
+                             ALuint numblocks)                                \
+{                                                                             \
+    ALuint i, j;                                                              \
+    ALshort tmp[65*MAXCHANNELS]; /* Max samples an IMA4 frame can be */       \
+    ALint sample[MAXCHANNELS] = {0,0,0,0,0,0,0,0};                            \
+    ALint index[MAXCHANNELS] = {0,0,0,0,0,0,0,0};                             \
+    for(i = 0;i < numblocks;i++)                                              \
+    {                                                                         \
+        for(j = 0;j < 65*numchans;j++)                                        \
+            tmp[j] = Conv_ALshort_##T(*(src++));                              \
+        EncodeIMA4Block(dst, tmp, sample, index, numchans);                   \
+        dst += 36*numchans;                                                   \
+    }                                                                         \
+}
+
+DECL_TEMPLATE(ALbyte)
+DECL_TEMPLATE(ALubyte)
+DECL_TEMPLATE(ALshort)
+DECL_TEMPLATE(ALushort)
+DECL_TEMPLATE(ALint)
+DECL_TEMPLATE(ALuint)
+DECL_TEMPLATE(ALfloat)
+DECL_TEMPLATE(ALdouble)
+DECL_TEMPLATE(ALmulaw)
+
+#undef DECL_TEMPLATE
+
+#define DECL_TEMPLATE(T)                                                      \
 static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
                         ALsizei len)                                          \
 {                                                                             \
@@ -1303,6 +1403,44 @@ DECL_TEMPLATE(ALmulaw)
 
 #undef DECL_TEMPLATE
 
+static void Convert_IMA4(ALubyte *dst, const ALvoid *src, enum UserFmtType srcType,
+                         ALint chans, ALsizei len)
+{
+    switch(srcType)
+    {
+        case UserFmtByte:
+            Convert_IMA4_ALbyte(dst, src, chans, len);
+            break;
+        case UserFmtUByte:
+            Convert_IMA4_ALubyte(dst, src, chans, len);
+            break;
+        case UserFmtShort:
+            Convert_IMA4_ALshort(dst, src, chans, len);
+            break;
+        case UserFmtUShort:
+            Convert_IMA4_ALushort(dst, src, chans, len);
+            break;
+        case UserFmtInt:
+            Convert_IMA4_ALint(dst, src, chans, len);
+            break;
+        case UserFmtUInt:
+            Convert_IMA4_ALuint(dst, src, chans, len);
+            break;
+        case UserFmtFloat:
+            Convert_IMA4_ALfloat(dst, src, chans, len);
+            break;
+        case UserFmtDouble:
+            Convert_IMA4_ALdouble(dst, src, chans, len);
+            break;
+        case UserFmtMulaw:
+            Convert_IMA4_ALmulaw(dst, src, chans, len);
+            break;
+        case UserFmtIMA4:
+            memcpy(dst, src, len*36*chans);
+            break;
+    }
+}
+
 
 static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len)
 {
@@ -1323,6 +1461,7 @@ static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, en
             break;
         (void)Convert_ALdouble;
         (void)Convert_ALmulaw;
+        (void)Convert_IMA4;
     }
 }
 

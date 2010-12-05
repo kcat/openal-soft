@@ -190,24 +190,25 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
                                  (float)device->Frequency;
     outParams.hostApiSpecificStreamInfo = NULL;
 
-    switch(aluBytesFromFormat(device->Format))
+    switch(device->FmtType)
     {
-        case 1:
+        case DevFmtByte:
+            outParams.sampleFormat = paInt8;
+            break;
+        case DevFmtUByte:
             outParams.sampleFormat = paUInt8;
             break;
-        case 2:
+        case DevFmtUShort:
+            device->FmtType = DevFmtShort;
+            /* fall-through */
+        case DevFmtShort:
             outParams.sampleFormat = paInt16;
             break;
-        case 4:
+        case DevFmtFloat:
             outParams.sampleFormat = paFloat32;
             break;
-        default:
-            AL_PRINT("Unknown format: 0x%x\n", device->Format);
-            device->ExtraData = NULL;
-            free(data);
-            return ALC_FALSE;
     }
-    outParams.channelCount = aluChannelsFromFormat(device->Format);
+    outParams.channelCount = ChannelsFromDevFmt(device->FmtChans);
 
     SetDefaultChannelOrder(device);
 
@@ -294,7 +295,7 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
         return ALC_FALSE;
     }
 
-    frame_size = aluFrameSizeFromFormat(device->Format);
+    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     data->ring = CreateRingBuffer(frame_size, device->UpdateSize*device->NumUpdates);
     if(data->ring == NULL)
     {
@@ -308,22 +309,25 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
     inParams.suggestedLatency = 0.0f;
     inParams.hostApiSpecificStreamInfo = NULL;
 
-    switch(aluBytesFromFormat(device->Format))
+    switch(device->FmtType)
     {
-        case 1:
+        case DevFmtByte:
+            inParams.sampleFormat = paInt8;
+            break;
+        case DevFmtUByte:
             inParams.sampleFormat = paUInt8;
             break;
-        case 2:
+        case DevFmtShort:
             inParams.sampleFormat = paInt16;
             break;
-        case 4:
+        case DevFmtFloat:
             inParams.sampleFormat = paFloat32;
             break;
-        default:
-            AL_PRINT("Unknown format: 0x%x\n", device->Format);
+        case DevFmtUShort:
+            AL_PRINT("Unsigned short not supported\n");
             goto error;
     }
-    inParams.channelCount = aluChannelsFromFormat(device->Format);
+    inParams.channelCount = ChannelsFromDevFmt(device->FmtChans);
 
     err = pPa_OpenStream(&data->stream, &inParams, NULL, device->Frequency,
                          paFramesPerBufferUnspecified, paNoFlag, pa_capture_cb, device);

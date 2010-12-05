@@ -778,6 +778,112 @@ ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
 }
 
 
+ALuint BytesFromDevFmt(enum DevFmtType type)
+{
+    switch(type)
+    {
+    case DevFmtByte: return sizeof(ALbyte);
+    case DevFmtUByte: return sizeof(ALubyte);
+    case DevFmtShort: return sizeof(ALshort);
+    case DevFmtUShort: return sizeof(ALushort);
+    case DevFmtFloat: return sizeof(ALfloat);
+    }
+    return 0;
+}
+ALuint ChannelsFromDevFmt(enum DevFmtChannels chans)
+{
+    switch(chans)
+    {
+    case DevFmtMono: return 1;
+    case DevFmtStereo: return 2;
+    case DevFmtQuad: return 4;
+    case DevFmtX51: return 6;
+    case DevFmtX61: return 7;
+    case DevFmtX71: return 8;
+    }
+    return 0;
+}
+ALboolean DecomposeDevFormat(ALenum format, enum DevFmtChannels *chans,
+                             enum DevFmtType *type)
+{
+    switch(format)
+    {
+        case AL_FORMAT_MONO8:
+            *chans = DevFmtMono;
+            *type  = DevFmtUByte;
+            return AL_TRUE;
+        case AL_FORMAT_MONO16:
+            *chans = DevFmtMono;
+            *type  = DevFmtShort;
+            return AL_TRUE;
+        case AL_FORMAT_MONO_FLOAT32:
+            *chans = DevFmtMono;
+            *type  = DevFmtFloat;
+            return AL_TRUE;
+        case AL_FORMAT_STEREO8:
+            *chans = DevFmtStereo;
+            *type  = DevFmtUByte;
+            return AL_TRUE;
+        case AL_FORMAT_STEREO16:
+            *chans = DevFmtStereo;
+            *type  = DevFmtShort;
+            return AL_TRUE;
+        case AL_FORMAT_STEREO_FLOAT32:
+            *chans = DevFmtStereo;
+            *type  = DevFmtFloat;
+            return AL_TRUE;
+        case AL_FORMAT_QUAD8:
+            *chans = DevFmtQuad;
+            *type  = DevFmtUByte;
+            return AL_TRUE;
+        case AL_FORMAT_QUAD16:
+            *chans = DevFmtQuad;
+            *type  = DevFmtShort;
+            return AL_TRUE;
+        case AL_FORMAT_QUAD32:
+            *chans = DevFmtQuad;
+            *type  = DevFmtFloat;
+            return AL_TRUE;
+        case AL_FORMAT_51CHN8:
+            *chans = DevFmtX51;
+            *type  = DevFmtUByte;
+            return AL_TRUE;
+        case AL_FORMAT_51CHN16:
+            *chans = DevFmtX51;
+            *type  = DevFmtShort;
+            return AL_TRUE;
+        case AL_FORMAT_51CHN32:
+            *chans = DevFmtX51;
+            *type  = DevFmtFloat;
+            return AL_TRUE;
+        case AL_FORMAT_61CHN8:
+            *chans = DevFmtX61;
+            *type  = DevFmtUByte;
+            return AL_TRUE;
+        case AL_FORMAT_61CHN16:
+            *chans = DevFmtX61;
+            *type  = DevFmtShort;
+            return AL_TRUE;
+        case AL_FORMAT_61CHN32:
+            *chans = DevFmtX61;
+            *type  = DevFmtFloat;
+            return AL_TRUE;
+        case AL_FORMAT_71CHN8:
+            *chans = DevFmtX71;
+            *type  = DevFmtUByte;
+            return AL_TRUE;
+        case AL_FORMAT_71CHN16:
+            *chans = DevFmtX71;
+            *type  = DevFmtShort;
+            return AL_TRUE;
+        case AL_FORMAT_71CHN32:
+            *chans = DevFmtX71;
+            *type  = DevFmtFloat;
+            return AL_TRUE;
+    }
+    return AL_FALSE;
+}
+
 /*
     IsDevice
 
@@ -972,7 +1078,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Bs2b = NULL;
     }
 
-    if(aluChannelsFromFormat(device->Format) <= 2)
+    if(ChannelsFromDevFmt(device->FmtChans) <= 2)
     {
         device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
         device->HeadDampen = __min(device->HeadDampen, 1.0f);
@@ -1127,7 +1233,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->szDeviceName = NULL;
 
     device->Frequency = frequency;
-    device->Format = format;
+    if(DecomposeDevFormat(format, &device->FmtChans, &device->FmtType) == AL_FALSE)
+    {
+        free(device);
+        alcSetError(NULL, ALC_INVALID_ENUM);
+        return NULL;
+    }
+
     device->UpdateSize = SampleSize;
     device->NumUpdates = 1;
 
@@ -1882,81 +1994,81 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 // Sets the default channel order used by most non-WaveFormatEx-based APIs
 void SetDefaultChannelOrder(ALCdevice *device)
 {
-    switch(aluChannelsFromFormat(device->Format))
+    switch(device->FmtChans)
     {
-    case 1: device->DevChannels[FRONT_CENTER] = 0; break;
+    case DevFmtMono: device->DevChannels[FRONT_CENTER] = 0; break;
 
-    case 2: device->DevChannels[FRONT_LEFT]  = 0;
-            device->DevChannels[FRONT_RIGHT] = 1; break;
+    case DevFmtStereo: device->DevChannels[FRONT_LEFT]  = 0;
+                       device->DevChannels[FRONT_RIGHT] = 1; break;
 
-    case 4: device->DevChannels[FRONT_LEFT]  = 0;
-            device->DevChannels[FRONT_RIGHT] = 1;
-            device->DevChannels[BACK_LEFT]   = 2;
-            device->DevChannels[BACK_RIGHT]  = 3; break;
+    case DevFmtQuad: device->DevChannels[FRONT_LEFT]  = 0;
+                     device->DevChannels[FRONT_RIGHT] = 1;
+                     device->DevChannels[BACK_LEFT]   = 2;
+                     device->DevChannels[BACK_RIGHT]  = 3; break;
 
-    case 6: device->DevChannels[FRONT_LEFT]   = 0;
-            device->DevChannels[FRONT_RIGHT]  = 1;
-            device->DevChannels[BACK_LEFT]    = 2;
-            device->DevChannels[BACK_RIGHT]   = 3;
-            device->DevChannels[FRONT_CENTER] = 4;
-            device->DevChannels[LFE]          = 5; break;
+    case DevFmtX51: device->DevChannels[FRONT_LEFT]   = 0;
+                    device->DevChannels[FRONT_RIGHT]  = 1;
+                    device->DevChannels[BACK_LEFT]    = 2;
+                    device->DevChannels[BACK_RIGHT]   = 3;
+                    device->DevChannels[FRONT_CENTER] = 4;
+                    device->DevChannels[LFE]          = 5; break;
 
-    case 7: device->DevChannels[FRONT_LEFT]   = 0;
-            device->DevChannels[FRONT_RIGHT]  = 1;
-            device->DevChannels[FRONT_CENTER] = 2;
-            device->DevChannels[LFE]          = 3;
-            device->DevChannels[BACK_CENTER]  = 4;
-            device->DevChannels[SIDE_LEFT]    = 5;
-            device->DevChannels[SIDE_RIGHT]   = 6; break;
+    case DevFmtX61: device->DevChannels[FRONT_LEFT]   = 0;
+                    device->DevChannels[FRONT_RIGHT]  = 1;
+                    device->DevChannels[FRONT_CENTER] = 2;
+                    device->DevChannels[LFE]          = 3;
+                    device->DevChannels[BACK_CENTER]  = 4;
+                    device->DevChannels[SIDE_LEFT]    = 5;
+                    device->DevChannels[SIDE_RIGHT]   = 6; break;
 
-    case 8: device->DevChannels[FRONT_LEFT]   = 0;
-            device->DevChannels[FRONT_RIGHT]  = 1;
-            device->DevChannels[BACK_LEFT]    = 2;
-            device->DevChannels[BACK_RIGHT]   = 3;
-            device->DevChannels[FRONT_CENTER] = 4;
-            device->DevChannels[LFE]          = 5;
-            device->DevChannels[SIDE_LEFT]    = 6;
-            device->DevChannels[SIDE_RIGHT]   = 7; break;
+    case DevFmtX71: device->DevChannels[FRONT_LEFT]   = 0;
+                    device->DevChannels[FRONT_RIGHT]  = 1;
+                    device->DevChannels[BACK_LEFT]    = 2;
+                    device->DevChannels[BACK_RIGHT]   = 3;
+                    device->DevChannels[FRONT_CENTER] = 4;
+                    device->DevChannels[LFE]          = 5;
+                    device->DevChannels[SIDE_LEFT]    = 6;
+                    device->DevChannels[SIDE_RIGHT]   = 7; break;
     }
 }
 // Sets the default order used by WaveFormatEx
 void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
-    switch(aluChannelsFromFormat(device->Format))
+    switch(device->FmtChans)
     {
-    case 1: device->DevChannels[FRONT_CENTER] = 0; break;
+    case DevFmtMono: device->DevChannels[FRONT_CENTER] = 0; break;
 
-    case 2: device->DevChannels[FRONT_LEFT]  = 0;
-            device->DevChannels[FRONT_RIGHT] = 1; break;
+    case DevFmtStereo: device->DevChannels[FRONT_LEFT]  = 0;
+                       device->DevChannels[FRONT_RIGHT] = 1; break;
 
-    case 4: device->DevChannels[FRONT_LEFT]  = 0;
-            device->DevChannels[FRONT_RIGHT] = 1;
-            device->DevChannels[BACK_LEFT]   = 2;
-            device->DevChannels[BACK_RIGHT]  = 3; break;
+    case DevFmtQuad: device->DevChannels[FRONT_LEFT]  = 0;
+                     device->DevChannels[FRONT_RIGHT] = 1;
+                     device->DevChannels[BACK_LEFT]   = 2;
+                     device->DevChannels[BACK_RIGHT]  = 3; break;
 
-    case 6: device->DevChannels[FRONT_LEFT]   = 0;
-            device->DevChannels[FRONT_RIGHT]  = 1;
-            device->DevChannels[FRONT_CENTER] = 2;
-            device->DevChannels[LFE]          = 3;
-            device->DevChannels[BACK_LEFT]    = 4;
-            device->DevChannels[BACK_RIGHT]   = 5; break;
+    case DevFmtX51: device->DevChannels[FRONT_LEFT]   = 0;
+                    device->DevChannels[FRONT_RIGHT]  = 1;
+                    device->DevChannels[FRONT_CENTER] = 2;
+                    device->DevChannels[LFE]          = 3;
+                    device->DevChannels[BACK_LEFT]    = 4;
+                    device->DevChannels[BACK_RIGHT]   = 5; break;
 
-    case 7: device->DevChannels[FRONT_LEFT]   = 0;
-            device->DevChannels[FRONT_RIGHT]  = 1;
-            device->DevChannels[FRONT_CENTER] = 2;
-            device->DevChannels[LFE]          = 3;
-            device->DevChannels[BACK_CENTER]  = 4;
-            device->DevChannels[SIDE_LEFT]    = 5;
-            device->DevChannels[SIDE_RIGHT]   = 6; break;
+    case DevFmtX61: device->DevChannels[FRONT_LEFT]   = 0;
+                    device->DevChannels[FRONT_RIGHT]  = 1;
+                    device->DevChannels[FRONT_CENTER] = 2;
+                    device->DevChannels[LFE]          = 3;
+                    device->DevChannels[BACK_CENTER]  = 4;
+                    device->DevChannels[SIDE_LEFT]    = 5;
+                    device->DevChannels[SIDE_RIGHT]   = 6; break;
 
-    case 8: device->DevChannels[FRONT_LEFT]   = 0;
-            device->DevChannels[FRONT_RIGHT]  = 1;
-            device->DevChannels[FRONT_CENTER] = 2;
-            device->DevChannels[LFE]          = 3;
-            device->DevChannels[BACK_LEFT]    = 4;
-            device->DevChannels[BACK_RIGHT]   = 5;
-            device->DevChannels[SIDE_LEFT]    = 6;
-            device->DevChannels[SIDE_RIGHT]   = 7; break;
+    case DevFmtX71: device->DevChannels[FRONT_LEFT]   = 0;
+                    device->DevChannels[FRONT_RIGHT]  = 1;
+                    device->DevChannels[FRONT_CENTER] = 2;
+                    device->DevChannels[LFE]          = 3;
+                    device->DevChannels[BACK_LEFT]    = 4;
+                    device->DevChannels[BACK_RIGHT]   = 5;
+                    device->DevChannels[SIDE_LEFT]    = 6;
+                    device->DevChannels[SIDE_RIGHT]   = 7; break;
     }
 }
 
@@ -2031,7 +2143,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->Frequency = 8000;
 
     fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
-    device->Format = GetFormatFromString(fmt);
+    if(DecomposeDevFormat(GetFormatFromString(fmt),
+                          &device->FmtChans, &device->FmtType) == AL_FALSE)
+    {
+        /* Should never happen... */
+        device->FmtChans = DevFmtStereo;
+        device->FmtType = DevFmtShort;
+    }
 
     device->NumUpdates = GetConfigValueInt(NULL, "periods", 4);
     if(device->NumUpdates < 2)

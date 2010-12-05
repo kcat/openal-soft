@@ -385,17 +385,17 @@ static void sink_info_callback(pa_context *context, const pa_sink_info *info, in
     char chanmap_str[256] = "";
     const struct {
         const char *str;
-        ALenum format;
+        enum DevFmtChannels chans;
     } chanmaps[] = {
         { "front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right",
-          AL_FORMAT_71CHN32 },
+          DevFmtX71 },
         { "front-left,front-right,front-center,lfe,rear-center,side-left,side-right",
-          AL_FORMAT_61CHN32 },
+          DevFmtX61 },
         { "front-left,front-right,front-center,lfe,rear-left,rear-right",
-          AL_FORMAT_51CHN32 },
-        { "front-left,front-right,rear-left,rear-right", AL_FORMAT_QUAD32 },
-        { "front-left,front-right", AL_FORMAT_STEREO_FLOAT32 },
-        { "mono", AL_FORMAT_MONO_FLOAT32 },
+          DevFmtX51 },
+        { "front-left,front-right,rear-left,rear-right", DevFmtQuad },
+        { "front-left,front-right", DevFmtStereo },
+        { "mono", DevFmtMono },
         { NULL, 0 }
     };
     int i;
@@ -420,7 +420,7 @@ static void sink_info_callback(pa_context *context, const pa_sink_info *info, in
 #endif
             )
         {
-            device->Format = chanmaps[i].format;
+            device->FmtChans = chanmaps[i].chans;
             return;
         }
     }
@@ -878,7 +878,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     if(!ConfigValueExists(NULL, "frequency"))
         flags |= PA_STREAM_FIX_RATE;
 
-    data->frame_size = aluFrameSizeFromFormat(device->Format);
+    data->frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     data->attr.prebuf = -1;
     data->attr.fragsize = -1;
     data->attr.minreq = device->UpdateSize * data->frame_size;
@@ -889,24 +889,26 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     flags |= PA_STREAM_EARLY_REQUESTS;
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
 
-    switch(aluBytesFromFormat(device->Format))
+    switch(device->FmtType)
     {
-        case 1:
+        case DevFmtByte:
+            device->FmtType = DevFmtUByte;
+            /* fall-through */
+        case DevFmtUByte:
             data->spec.format = PA_SAMPLE_U8;
             break;
-        case 2:
+        case DevFmtUShort:
+            device->FmtType = DevFmtShort;
+            /* fall-through */
+        case DevFmtShort:
             data->spec.format = PA_SAMPLE_S16NE;
             break;
-        case 4:
+        case DevFmtFloat:
             data->spec.format = PA_SAMPLE_FLOAT32NE;
             break;
-        default:
-            AL_PRINT("Unknown format: 0x%x\n", device->Format);
-            ppa_threaded_mainloop_unlock(data->loop);
-            return ALC_FALSE;
     }
     data->spec.rate = device->Frequency;
-    data->spec.channels = aluChannelsFromFormat(device->Format);
+    data->spec.channels = ChannelsFromDevFmt(device->FmtChans);
 
     if(ppa_sample_spec_valid(&data->spec) == 0)
     {
@@ -1056,7 +1058,7 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     ppa_threaded_mainloop_lock(data->loop);
 
     data->samples = device->UpdateSize * device->NumUpdates;
-    data->frame_size = aluFrameSizeFromFormat(device->Format);
+    data->frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     if(data->samples < 100 * device->Frequency / 1000)
         data->samples = 100 * device->Frequency / 1000;
 
@@ -1074,21 +1076,22 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
                           data->frame_size;
 
     data->spec.rate = device->Frequency;
-    data->spec.channels = aluChannelsFromFormat(device->Format);
+    data->spec.channels = ChannelsFromDevFmt(device->FmtChans);
 
-    switch(aluBytesFromFormat(device->Format))
+    switch(device->FmtType)
     {
-        case 1:
+        case DevFmtUByte:
             data->spec.format = PA_SAMPLE_U8;
             break;
-        case 2:
+        case DevFmtShort:
             data->spec.format = PA_SAMPLE_S16NE;
             break;
-        case 4:
+        case DevFmtFloat:
             data->spec.format = PA_SAMPLE_FLOAT32NE;
             break;
-        default:
-            AL_PRINT("Unknown format: 0x%x\n", device->Format);
+        case DevFmtByte:
+        case DevFmtUShort:
+            AL_PRINT("Capture format type %#x capture not supported on PulseAudio\n", device->FmtType);
             ppa_threaded_mainloop_unlock(data->loop);
             goto fail;
     }

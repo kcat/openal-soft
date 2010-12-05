@@ -186,6 +186,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
+    enum DevFmtChannels DevChans;
     enum FmtChannels Channels;
     ALfloat DryGain, DryGainHF;
     ALfloat WetGain[MAX_SENDS];
@@ -193,12 +194,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALint NumSends, Frequency;
     ALboolean DupStereo;
     ALfloat Pitch;
-    ALenum Format;
     ALfloat cw;
     ALint i;
 
     /* Get device properties */
-    Format    = ALContext->Device->Format;
+    DevChans  = ALContext->Device->FmtChans;
     DupStereo = ALContext->Device->DuplicateStereo;
     NumSends  = ALContext->Device->NumAuxSends;
     Frequency = ALContext->Device->Frequency;
@@ -268,24 +268,16 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         else
         {
-            switch(Format)
+            switch(DevChans)
             {
-            case AL_FORMAT_MONO8:
-            case AL_FORMAT_MONO16:
-            case AL_FORMAT_MONO_FLOAT32:
-            case AL_FORMAT_STEREO8:
-            case AL_FORMAT_STEREO16:
-            case AL_FORMAT_STEREO_FLOAT32:
+            case DevFmtMono:
+            case DevFmtStereo:
                 ALSource->Params.DryGains[FRONT_LEFT]  = DryGain * ListenerGain;
                 ALSource->Params.DryGains[FRONT_RIGHT] = DryGain * ListenerGain;
                 break;
 
-            case AL_FORMAT_QUAD8:
-            case AL_FORMAT_QUAD16:
-            case AL_FORMAT_QUAD32:
-            case AL_FORMAT_51CHN8:
-            case AL_FORMAT_51CHN16:
-            case AL_FORMAT_51CHN32:
+            case DevFmtQuad:
+            case DevFmtX51:
                 DryGain *= aluSqrt(2.0f/4.0f);
                 ALSource->Params.DryGains[FRONT_LEFT]  = DryGain * ListenerGain;
                 ALSource->Params.DryGains[FRONT_RIGHT] = DryGain * ListenerGain;
@@ -293,9 +285,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Params.DryGains[BACK_RIGHT]  = DryGain * ListenerGain;
                 break;
 
-            case AL_FORMAT_61CHN8:
-            case AL_FORMAT_61CHN16:
-            case AL_FORMAT_61CHN32:
+            case DevFmtX61:
                 DryGain *= aluSqrt(2.0f/4.0f);
                 ALSource->Params.DryGains[FRONT_LEFT]  = DryGain * ListenerGain;
                 ALSource->Params.DryGains[FRONT_RIGHT] = DryGain * ListenerGain;
@@ -303,9 +293,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Params.DryGains[SIDE_RIGHT]  = DryGain * ListenerGain;
                 break;
 
-            case AL_FORMAT_71CHN8:
-            case AL_FORMAT_71CHN16:
-            case AL_FORMAT_71CHN32:
+            case DevFmtX71:
                 DryGain *= aluSqrt(2.0f/6.0f);
                 ALSource->Params.DryGains[FRONT_LEFT]  = DryGain * ListenerGain;
                 ALSource->Params.DryGains[FRONT_RIGHT] = DryGain * ListenerGain;
@@ -313,9 +301,6 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Params.DryGains[BACK_RIGHT]  = DryGain * ListenerGain;
                 ALSource->Params.DryGains[SIDE_LEFT]   = DryGain * ListenerGain;
                 ALSource->Params.DryGains[SIDE_RIGHT]  = DryGain * ListenerGain;
-                break;
-
-            default:
                 break;
             }
         }
@@ -915,24 +900,24 @@ DECL_TEMPLATE(ALbyte, StereoChans,2, aluF2B)
 #define DECL_TEMPLATE(T, func)                                                \
 static void Write_##T(ALCdevice *device, T *buffer, ALuint SamplesToDo)       \
 {                                                                             \
-    switch(aluChannelsFromFormat(device->Format))                             \
+    switch(device->FmtChans)                                                  \
     {                                                                         \
-        case 1:                                                               \
+        case DevFmtMono:                                                      \
             Write_##T##_MonoChans(device, buffer, SamplesToDo);               \
             break;                                                            \
-        case 2:                                                               \
+        case DevFmtStereo:                                                    \
             Write_##T##_StereoChans(device, buffer, SamplesToDo);             \
             break;                                                            \
-        case 4:                                                               \
+        case DevFmtQuad:                                                      \
             Write_##T##_QuadChans(device, buffer, SamplesToDo);               \
             break;                                                            \
-        case 6:                                                               \
+        case DevFmtX51:                                                       \
             Write_##T##_X51Chans(device, buffer, SamplesToDo);                \
             break;                                                            \
-        case 7:                                                               \
+        case DevFmtX61:                                                       \
             Write_##T##_X61Chans(device, buffer, SamplesToDo);                \
             break;                                                            \
-        case 8:                                                               \
+        case DevFmtX71:                                                       \
             Write_##T##_X71Chans(device, buffer, SamplesToDo);                \
             break;                                                            \
     }                                                                         \
@@ -1045,17 +1030,21 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             device->PendingClicks[i] = 0.0f;
         }
 
-        switch(aluBytesFromFormat(device->Format))
+        switch(device->FmtType)
         {
-            (void)Write_ALbyte;
-            case 1:
+            case DevFmtByte:
+                Write_ALbyte(device, buffer, SamplesToDo);
+                break;
+            case DevFmtUByte:
                 Write_ALubyte(device, buffer, SamplesToDo);
                 break;
-            case 2:
+            case DevFmtShort:
                 Write_ALshort(device, buffer, SamplesToDo);
                 break;
-            (void)Write_ALushort;
-            case 4:
+            case DevFmtUShort:
+                Write_ALushort(device, buffer, SamplesToDo);
+                break;
+            case DevFmtFloat:
                 Write_ALfloat(device, buffer, SamplesToDo);
                 break;
         }

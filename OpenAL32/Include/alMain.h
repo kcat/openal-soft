@@ -316,6 +316,31 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
 void RemoveUIntMapKey(UIntMap *map, ALuint key);
 ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
 
+/* Device formats */
+enum DevFmtType {
+    DevFmtByte,   /* AL_BYTE */
+    DevFmtUByte,  /* AL_UNSIGNED_BYTE */
+    DevFmtShort,  /* AL_SHORT */
+    DevFmtUShort, /* AL_UNSIGNED_SHORT */
+    DevFmtFloat,  /* AL_FLOAT */
+};
+enum DevFmtChannels {
+    DevFmtMono,   /* AL_MONO */
+    DevFmtStereo, /* AL_STEREO */
+    DevFmtQuad,   /* AL_QUAD */
+    DevFmtX51,    /* AL_5POINT1 */
+    DevFmtX61,    /* AL_6POINT1 */
+    DevFmtX71,    /* AL_7POINT1 */
+};
+
+ALuint BytesFromDevFmt(enum DevFmtType type);
+ALuint ChannelsFromDevFmt(enum DevFmtChannels chans);
+static __inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans,
+                                           enum DevFmtType type)
+{
+    return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
+}
+
 
 struct ALCdevice_struct
 {
@@ -325,7 +350,8 @@ struct ALCdevice_struct
     ALuint       Frequency;
     ALuint       UpdateSize;
     ALuint       NumUpdates;
-    ALenum       Format;
+    enum DevFmtChannels FmtChans;
+    enum DevFmtType     FmtType;
 
     ALCchar      *szDeviceName;
 

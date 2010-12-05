@@ -194,7 +194,7 @@ static DWORD WINAPI PlaybackThreadProc(LPVOID lpParameter)
     ALuint FrameSize;
     MSG msg;
 
-    FrameSize = aluFrameSizeFromFormat(pDevice->Format);
+    FrameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
 
     while(GetMessage(&msg, NULL, 0, 0))
     {
@@ -272,7 +272,7 @@ static DWORD WINAPI CaptureThreadProc(LPVOID lpParameter)
     ALuint FrameSize;
     MSG msg;
 
-    FrameSize = aluFrameSizeFromFormat(pDevice->Format);
+    FrameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
 
     while(GetMessage(&msg, NULL, 0, 0))
     {
@@ -336,25 +336,26 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
     }
     pDevice->ExtraData = pData;
 
-    if(aluChannelsFromFormat(pDevice->Format) >= 2)
+    if(pDevice->FmtChans != DevFmtMono)
+        pDevice->FmtChans = DevFmtStereo;
+    switch(pDevice->FmtType)
     {
-        if(aluBytesFromFormat(pDevice->Format) >= 2)
-            pDevice->Format = AL_FORMAT_STEREO16;
-        else
-            pDevice->Format = AL_FORMAT_STEREO8;
-    }
-    else
-    {
-        if(aluBytesFromFormat(pDevice->Format) >= 2)
-            pDevice->Format = AL_FORMAT_MONO16;
-        else
-            pDevice->Format = AL_FORMAT_MONO8;
+        case DevFmtByte:
+            pDevice->FmtType = DevFmtUByte;
+            break;
+        case DevFmtUShort:
+        case DevFmtFloat:
+            pDevice->FmtType = DevFmtShort;
+            break;
+        case DevFmtUByte:
+        case DevFmtShort:
+            break;
     }
 
     memset(&wfexFormat, 0, sizeof(WAVEFORMATEX));
     wfexFormat.wFormatTag = WAVE_FORMAT_PCM;
-    wfexFormat.nChannels = aluChannelsFromFormat(pDevice->Format);
-    wfexFormat.wBitsPerSample = aluBytesFromFormat(pDevice->Format) * 8;
+    wfexFormat.nChannels = ChannelsFromDevFmt(pDevice->FmtChans);
+    wfexFormat.wBitsPerSample = BytesFromDevFmt(pDevice->FmtType) * 8;
     wfexFormat.nBlockAlign = wfexFormat.wBitsPerSample *
                              wfexFormat.nChannels / 8;
     wfexFormat.nSamplesPerSec = pDevice->Frequency;
@@ -433,7 +434,7 @@ static ALCboolean WinMMResetPlayback(ALCdevice *device)
 
     // Create 4 Buffers
     lBufferSize  = device->UpdateSize*device->NumUpdates / 4;
-    lBufferSize *= aluFrameSizeFromFormat(device->Format);
+    lBufferSize *= FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
 
     BufferData = calloc(4, lBufferSize);
     for(i = 0;i < 4;i++)
@@ -533,10 +534,17 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     }
     pDevice->ExtraData = pData;
 
+    if((pDevice->FmtChans != DevFmtMono && pDevice->FmtChans != DevFmtStereo) ||
+       (pDevice->FmtType != DevFmtUByte && pDevice->FmtType != DevFmtShort))
+    {
+        alcSetError(pDevice, ALC_INVALID_ENUM);
+        goto failure;
+    }
+
     memset(&wfexCaptureFormat, 0, sizeof(WAVEFORMATEX));
     wfexCaptureFormat.wFormatTag = WAVE_FORMAT_PCM;
-    wfexCaptureFormat.nChannels = aluChannelsFromFormat(pDevice->Format);
-    wfexCaptureFormat.wBitsPerSample = aluBytesFromFormat(pDevice->Format) * 8;
+    wfexCaptureFormat.nChannels = ChannelsFromDevFmt(pDevice->FmtChans);
+    wfexCaptureFormat.wBitsPerSample = BytesFromDevFmt(pDevice->FmtType) * 8;
     wfexCaptureFormat.nBlockAlign = wfexCaptureFormat.wBitsPerSample *
                                     wfexCaptureFormat.nChannels / 8;
     wfexCaptureFormat.nSamplesPerSec = pDevice->Frequency;

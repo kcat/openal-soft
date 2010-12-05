@@ -83,7 +83,7 @@ static ALuint OSSProc(ALvoid *ptr)
 
     SetRTPriority();
 
-    frameSize = aluFrameSizeFromFormat(pDevice->Format);
+    frameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
 
     while(!data->killNow && pDevice->Connected)
     {
@@ -124,7 +124,7 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
 
     SetRTPriority();
 
-    frameSize = aluFrameSizeFromFormat(pDevice->Format);
+    frameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
 
     while(!data->killNow)
     {
@@ -198,33 +198,26 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     char *err;
     int i;
 
-    switch(aluBytesFromFormat(device->Format))
+    switch(device->FmtType)
     {
-        case 1:
+        case DevFmtByte:
+            ossFormat = AFMT_S8;
+            break;
+        case DevFmtUByte:
             ossFormat = AFMT_U8;
             break;
-        case 4:
-            switch(aluChannelsFromFormat(device->Format))
-            {
-                case 1: device->Format = AL_FORMAT_MONO16; break;
-                case 2: device->Format = AL_FORMAT_STEREO16; break;
-                case 4: device->Format = AL_FORMAT_QUAD16; break;
-                case 6: device->Format = AL_FORMAT_51CHN16; break;
-                case 7: device->Format = AL_FORMAT_61CHN16; break;
-                case 8: device->Format = AL_FORMAT_71CHN16; break;
-            }
+        case DevFmtUShort:
+        case DevFmtFloat:
+            device->FmtType = DevFmtShort;
             /* fall-through */
-        case 2:
+        case DevFmtShort:
             ossFormat = AFMT_S16_NE;
             break;
-        default:
-            AL_PRINT("Unknown format: 0x%x\n", device->Format);
-            return ALC_FALSE;
     }
 
     periods = device->NumUpdates;
-    numChannels = aluChannelsFromFormat(device->Format);
-    frameSize = numChannels * aluBytesFromFormat(device->Format);
+    numChannels = ChannelsFromDevFmt(device->FmtChans);
+    frameSize = numChannels * BytesFromDevFmt(device->FmtType);
 
     ossSpeed = device->Frequency;
     log2FragmentSize = log2i(device->UpdateSize * frameSize);
@@ -251,16 +244,17 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     }
 #undef ok
 
-    if((int)aluChannelsFromFormat(device->Format) != numChannels)
+    if((int)ChannelsFromDevFmt(device->FmtChans) != numChannels)
     {
-        AL_PRINT("Could not set %d channels, got %d instead\n", aluChannelsFromFormat(device->Format), numChannels);
+        AL_PRINT("Could not set %d channels, got %d instead\n", ChannelsFromDevFmt(device->FmtChans), numChannels);
         return ALC_FALSE;
     }
 
-    if(!((ossFormat == AFMT_U8 && aluBytesFromFormat(device->Format) == 1) ||
-         (ossFormat == AFMT_S16_NE && aluBytesFromFormat(device->Format) == 2)))
+    if(!((ossFormat == AFMT_S8 && device->FmtType == DevFmtByte) ||
+         (ossFormat == AFMT_U8 && device->FmtType == DevFmtUByte) ||
+         (ossFormat == AFMT_S16_NE && device->FmtType == DevFmtShort)))
     {
-        AL_PRINT("Could not set %d-bit output, got format %#x\n", aluBytesFromFormat(device->Format)*8, ossFormat);
+        AL_PRINT("Could not set %#x format type, got OSS format %#x\n", device->FmtType, ossFormat);
         return ALC_FALSE;
     }
 
@@ -337,24 +331,27 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         return ALC_FALSE;
     }
 
-    switch(aluBytesFromFormat(device->Format))
+    switch(device->FmtType)
     {
-        case 1:
+        case DevFmtByte:
+            ossFormat = AFMT_S8;
+            break;
+        case DevFmtUByte:
             ossFormat = AFMT_U8;
             break;
-        case 2:
+        case DevFmtShort:
             ossFormat = AFMT_S16_NE;
             break;
-        default:
-            AL_PRINT("Unknown format: 0x%x\n", device->Format);
-            close(data->fd);
+        case DevFmtUShort:
+        case DevFmtFloat:
             free(data);
+            AL_PRINT("Format type %#x capture not supported on OSS\n", device->FmtType);
             return ALC_FALSE;
     }
 
     periods = 4;
-    numChannels = aluChannelsFromFormat(device->Format);
-    frameSize = numChannels * aluBytesFromFormat(device->Format);
+    numChannels = ChannelsFromDevFmt(device->FmtChans);
+    frameSize = numChannels * BytesFromDevFmt(device->FmtType);
     ossSpeed = device->Frequency;
     log2FragmentSize = log2i(device->UpdateSize * device->NumUpdates *
                              frameSize / periods);
@@ -378,18 +375,19 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     }
 #undef ok
 
-    if((int)aluChannelsFromFormat(device->Format) != numChannels)
+    if((int)ChannelsFromDevFmt(device->FmtChans) != numChannels)
     {
-        AL_PRINT("Could not set %d channels, got %d instead\n", aluChannelsFromFormat(device->Format), numChannels);
+        AL_PRINT("Could not set %d channels, got %d instead\n", ChannelsFromDevFmt(device->FmtChans), numChannels);
         close(data->fd);
         free(data);
         return ALC_FALSE;
     }
 
-    if(!((ossFormat == AFMT_U8 && aluBytesFromFormat(device->Format) == 1) ||
-         (ossFormat == AFMT_S16_NE && aluBytesFromFormat(device->Format) == 2)))
+    if(!((ossFormat == AFMT_S8 && device->FmtType == DevFmtByte) ||
+         (ossFormat == AFMT_U8 && device->FmtType == DevFmtUByte) ||
+         (ossFormat == AFMT_S16_NE && device->FmtType == DevFmtShort)))
     {
-        AL_PRINT("Could not set %d-bit input, got format %#x\n", aluBytesFromFormat(device->Format)*8, ossFormat);
+        AL_PRINT("Could not set %#x format type, got OSS format %#x\n", device->FmtType, ossFormat);
         close(data->fd);
         free(data);
         return ALC_FALSE;

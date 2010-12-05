@@ -178,11 +178,9 @@ ALvoid aluInitPanning(ALCdevice *Device)
 
     Speaker2Chan = Device->Speaker2Chan;
     Matrix = Device->ChannelMatrix;
-    switch(Device->Format)
+    switch(Device->FmtChans)
     {
-        case AL_FORMAT_MONO8:
-        case AL_FORMAT_MONO16:
-        case AL_FORMAT_MONO_FLOAT32:
+        case DevFmtMono:
             Matrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
             Matrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
             Matrix[SIDE_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
@@ -195,9 +193,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[0] = 0.0f * M_PI/180.0f;
             break;
 
-        case AL_FORMAT_STEREO8:
-        case AL_FORMAT_STEREO16:
-        case AL_FORMAT_STEREO_FLOAT32:
+        case DevFmtStereo:
             Matrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
             Matrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
             Matrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
@@ -214,9 +210,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
 
-        case AL_FORMAT_QUAD8:
-        case AL_FORMAT_QUAD16:
-        case AL_FORMAT_QUAD32:
+        case DevFmtQuad:
             Matrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
             Matrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
             Matrix[SIDE_LEFT][FRONT_LEFT]     = aluSqrt(0.5);
@@ -237,9 +231,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
 
-        case AL_FORMAT_51CHN8:
-        case AL_FORMAT_51CHN16:
-        case AL_FORMAT_51CHN32:
+        case DevFmtX51:
             Matrix[SIDE_LEFT][FRONT_LEFT]   = aluSqrt(0.5);
             Matrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
             Matrix[SIDE_RIGHT][FRONT_RIGHT] = aluSqrt(0.5);
@@ -260,9 +252,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
 
-        case AL_FORMAT_61CHN8:
-        case AL_FORMAT_61CHN16:
-        case AL_FORMAT_61CHN32:
+        case DevFmtX61:
             Matrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
             Matrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
             Matrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
@@ -283,9 +273,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
 
-        case AL_FORMAT_71CHN8:
-        case AL_FORMAT_71CHN16:
-        case AL_FORMAT_71CHN32:
+        case DevFmtX71:
             Matrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
             Matrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
             Device->NumChan = 7;
@@ -305,9 +293,6 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[6] =  150.0f * M_PI/180.0f;
             SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
-
-        default:
-            assert(0);
     }
 
     if(GetConfigValueBool(NULL, "scalemix", 0))

@@ -104,7 +104,8 @@ static ALCboolean null_reset_playback(ALCdevice *device)
 {
     null_data *data = (null_data*)device->ExtraData;
 
-    data->size = device->UpdateSize * aluFrameSizeFromFormat(device->Format);
+    data->size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans,
+                                                          device->FmtType);
     data->buffer = malloc(data->size);
     if(!data->buffer)
     {

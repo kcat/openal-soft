@@ -188,7 +188,7 @@ static ALuint DSoundProc(ALvoid *ptr)
         return 1;
     }
 
-    FrameSize = aluFrameSizeFromFormat(pDevice->Format);
+    FrameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
     FragSize = pDevice->UpdateSize * FrameSize;
 
     IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &LastCursor, NULL);
@@ -332,30 +332,48 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     DSoundData *pData = (DSoundData*)device->ExtraData;
     DSBUFFERDESC DSBDescription;
     WAVEFORMATEXTENSIBLE OutputType;
-    DWORD frameSize = 0;
-    ALenum format = 0;
     DWORD speakers;
     HRESULT hr;
 
     memset(&OutputType, 0, sizeof(OutputType));
 
+    switch(device->FmtType)
+    {
+        case DevFmtByte:
+            device->FmtType = DevFmtUByte;
+            break;
+        case DevFmtUShort:
+            device->FmtType = DevFmtShort;
+            break;
+        case DevFmtUByte:
+        case DevFmtShort:
+        case DevFmtFloat:
+            break;
+    }
+
     hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
     if(SUCCEEDED(hr) && ConfigValueExists(NULL, "format"))
     {
-        if(aluChannelsFromFormat(device->Format) == 1)
-            speakers = DSSPEAKER_COMBINED(DSSPEAKER_MONO, 0);
-        else if(aluChannelsFromFormat(device->Format) == 2)
-            speakers = DSSPEAKER_COMBINED(DSSPEAKER_STEREO, 0);
-        else if(aluChannelsFromFormat(device->Format) == 4)
-            speakers = DSSPEAKER_COMBINED(DSSPEAKER_QUAD, 0);
-        else if(aluChannelsFromFormat(device->Format) == 6)
-            speakers = DSSPEAKER_COMBINED(DSSPEAKER_5POINT1, 0);
-        else if(aluChannelsFromFormat(device->Format) == 8)
-            speakers = DSSPEAKER_COMBINED(DSSPEAKER_7POINT1, 0);
-        else
+        switch(device->FmtChans)
         {
-            AL_PRINT("Unknown format: 0x%x\n", device->Format);
-            return ALC_FALSE;
+            case DevFmtMono:
+                speakers = DSSPEAKER_COMBINED(DSSPEAKER_MONO, 0);
+                break;
+            case DevFmtStereo:
+                speakers = DSSPEAKER_COMBINED(DSSPEAKER_STEREO, 0);
+                break;
+            case DevFmtQuad:
+                speakers = DSSPEAKER_COMBINED(DSSPEAKER_QUAD, 0);
+                break;
+            case DevFmtX51:
+                speakers = DSSPEAKER_COMBINED(DSSPEAKER_5POINT1, 0);
+                break;
+            case DevFmtX61:
+                /* ??? */;
+                break;
+            case DevFmtX71:
+                speakers = DSSPEAKER_COMBINED(DSSPEAKER_7POINT1, 0);
+                break;
         }
     }
     if(SUCCEEDED(hr))
@@ -363,33 +381,18 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
         speakers = DSSPEAKER_CONFIG(speakers);
         if(speakers == DSSPEAKER_MONO)
         {
-            if(aluBytesFromFormat(device->Format) == 1)
-                format = AL_FORMAT_MONO8;
-            else if(aluBytesFromFormat(device->Format) == 2)
-                format = AL_FORMAT_MONO16;
-            else if(aluBytesFromFormat(device->Format) == 4)
-                format = AL_FORMAT_MONO_FLOAT32;
+            device->FmtChans = DevFmtMono;
             OutputType.dwChannelMask = SPEAKER_FRONT_CENTER;
         }
-        else if(speakers == DSSPEAKER_STEREO)
+        else if(speakers == DSSPEAKER_STEREO || speakers == DSSPEAKER_HEADPHONE)
         {
-            if(aluBytesFromFormat(device->Format) == 1)
-                format = AL_FORMAT_STEREO8;
-            else if(aluBytesFromFormat(device->Format) == 2)
-                format = AL_FORMAT_STEREO16;
-            else if(aluBytesFromFormat(device->Format) == 4)
-                format = AL_FORMAT_STEREO_FLOAT32;
+            device->FmtChans = DevFmtStereo;
             OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                        SPEAKER_FRONT_RIGHT;
         }
         else if(speakers == DSSPEAKER_QUAD)
         {
-            if(aluBytesFromFormat(device->Format) == 1)
-                format = AL_FORMAT_QUAD8;
-            else if(aluBytesFromFormat(device->Format) == 2)
-                format = AL_FORMAT_QUAD16;
-            else if(aluBytesFromFormat(device->Format) == 4)
-                format = AL_FORMAT_QUAD32;
+            device->FmtChans = DevFmtQuad;
             OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                        SPEAKER_FRONT_RIGHT |
                                        SPEAKER_BACK_LEFT |
@@ -397,12 +400,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
         }
         else if(speakers == DSSPEAKER_5POINT1)
         {
-            if(aluBytesFromFormat(device->Format) == 1)
-                format = AL_FORMAT_51CHN8;
-            else if(aluBytesFromFormat(device->Format) == 2)
-                format = AL_FORMAT_51CHN16;
-            else if(aluBytesFromFormat(device->Format) == 4)
-                format = AL_FORMAT_51CHN32;
+            device->FmtChans = DevFmtX51;
             OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                        SPEAKER_FRONT_RIGHT |
                                        SPEAKER_FRONT_CENTER |
@@ -412,12 +410,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
         }
         else if(speakers == DSSPEAKER_7POINT1)
         {
-            if(aluBytesFromFormat(device->Format) == 1)
-                format = AL_FORMAT_71CHN8;
-            else if(aluBytesFromFormat(device->Format) == 2)
-                format = AL_FORMAT_71CHN16;
-            else if(aluBytesFromFormat(device->Format) == 4)
-                format = AL_FORMAT_71CHN32;
+            device->FmtChans = DevFmtX71;
             OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                        SPEAKER_FRONT_RIGHT |
                                        SPEAKER_FRONT_CENTER |
@@ -427,13 +420,10 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
                                        SPEAKER_SIDE_LEFT |
                                        SPEAKER_SIDE_RIGHT;
         }
-        else
-            format = device->Format;
-        frameSize = aluFrameSizeFromFormat(format);
 
         OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-        OutputType.Format.nChannels = aluChannelsFromFormat(format);
-        OutputType.Format.wBitsPerSample = aluBytesFromFormat(format) * 8;
+        OutputType.Format.nChannels = ChannelsFromDevFmt(device->FmtChans);
+        OutputType.Format.wBitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
         OutputType.Format.nBlockAlign = OutputType.Format.nChannels*OutputType.Format.wBitsPerSample/8;
         OutputType.Format.nSamplesPerSec = device->Frequency;
         OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec*OutputType.Format.nBlockAlign;
@@ -468,14 +458,14 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
         memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
         DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;
-        DSBDescription.dwBufferBytes=device->UpdateSize * device->NumUpdates * frameSize;
+        DSBDescription.dwBufferBytes=device->UpdateSize * device->NumUpdates *
+                                     OutputType.Format.nBlockAlign;
         DSBDescription.lpwfxFormat=&OutputType.Format;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
     }
 
     if(SUCCEEDED(hr))
     {
-        device->Format = format;
         SetDefaultWFXChannelOrder(device);
         pData->thread = StartThread(DSoundProc, device);
         if(!pData->thread)

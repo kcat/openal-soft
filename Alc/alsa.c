@@ -543,20 +543,24 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     int i;
 
 
-    switch(aluBytesFromFormat(device->Format))
+    format = -1;
+    switch(device->FmtType)
     {
-        case 1:
+        case DevFmtByte:
+            format = SND_PCM_FORMAT_S8;
+            break;
+        case DevFmtUByte:
             format = SND_PCM_FORMAT_U8;
             break;
-        case 2:
+        case DevFmtShort:
             format = SND_PCM_FORMAT_S16;
             break;
-        case 4:
+        case DevFmtUShort:
+            format = SND_PCM_FORMAT_U16;
+            break;
+        case DevFmtFloat:
             format = SND_PCM_FORMAT_FLOAT;
             break;
-        default:
-            AL_PRINT("Unknown format: 0x%x\n", device->Format);
-            return ALC_FALSE;
     }
 
     allowmmap = GetConfigValueBool("alsa", "mmap", 1);
@@ -584,39 +588,15 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     /* set format (implicitly sets sample bits) */
     if(i >= 0 && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
     {
-        switch(aluChannelsFromFormat(device->Format))
-        {
-            case 1: device->Format = AL_FORMAT_MONO_FLOAT32; break;
-            case 2: device->Format = AL_FORMAT_STEREO_FLOAT32; break;
-            case 4: device->Format = AL_FORMAT_QUAD32; break;
-            case 6: device->Format = AL_FORMAT_51CHN32; break;
-            case 7: device->Format = AL_FORMAT_61CHN32; break;
-            case 8: device->Format = AL_FORMAT_71CHN32; break;
-        }
+        device->FmtType = DevFmtFloat;
         if(format == SND_PCM_FORMAT_FLOAT ||
            (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_FLOAT)) < 0)
         {
-            switch(aluChannelsFromFormat(device->Format))
-            {
-                case 1: device->Format = AL_FORMAT_MONO16; break;
-                case 2: device->Format = AL_FORMAT_STEREO16; break;
-                case 4: device->Format = AL_FORMAT_QUAD16; break;
-                case 6: device->Format = AL_FORMAT_51CHN16; break;
-                case 7: device->Format = AL_FORMAT_61CHN16; break;
-                case 8: device->Format = AL_FORMAT_71CHN16; break;
-            }
+            device->FmtType = DevFmtShort;
             if(format == SND_PCM_FORMAT_S16 ||
                (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_S16)) < 0)
             {
-                switch(aluChannelsFromFormat(device->Format))
-                {
-                    case 1: device->Format = AL_FORMAT_MONO8; break;
-                    case 2: device->Format = AL_FORMAT_STEREO8; break;
-                    case 4: device->Format = AL_FORMAT_QUAD8; break;
-                    case 6: device->Format = AL_FORMAT_51CHN8; break;
-                    case 7: device->Format = AL_FORMAT_61CHN8; break;
-                    case 8: device->Format = AL_FORMAT_71CHN8; break;
-                }
+                device->FmtType = DevFmtUByte;
                 if(format == SND_PCM_FORMAT_U8 ||
                    (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_U8)) < 0)
                     err = "set format";
@@ -624,22 +604,12 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         }
     }
     /* set channels (implicitly sets frame bits) */
-    if(i >= 0 && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(device->Format))) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, ChannelsFromDevFmt(device->FmtChans))) < 0)
     {
-        switch(aluBytesFromFormat(device->Format))
-        {
-            case 1: device->Format = AL_FORMAT_STEREO8; break;
-            case 2: device->Format = AL_FORMAT_STEREO16; break;
-            case 4: device->Format = AL_FORMAT_STEREO_FLOAT32; break;
-        }
+        device->FmtChans = DevFmtStereo;
         if((i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, 2)) < 0)
         {
-            switch(aluBytesFromFormat(device->Format))
-            {
-                case 1: device->Format = AL_FORMAT_MONO8; break;
-                case 2: device->Format = AL_FORMAT_MONO16; break;
-                case 4: device->Format = AL_FORMAT_MONO_FLOAT32; break;
-            }
+            device->FmtChans = DevFmtMono;
             if((i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, 1)) < 0)
                 err = "set channels";
         }
@@ -803,20 +773,24 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
         return ALC_FALSE;
     }
 
-    switch(aluBytesFromFormat(pDevice->Format))
+    format = -1;
+    switch(pDevice->FmtType)
     {
-        case 1:
+        case DevFmtByte:
+            format = SND_PCM_FORMAT_S8;
+            break;
+        case DevFmtUByte:
             format = SND_PCM_FORMAT_U8;
             break;
-        case 2:
+        case DevFmtShort:
             format = SND_PCM_FORMAT_S16;
             break;
-        case 4:
+        case DevFmtUShort:
+            format = SND_PCM_FORMAT_U16;
+            break;
+        case DevFmtFloat:
             format = SND_PCM_FORMAT_FLOAT;
             break;
-        default:
-            AL_PRINT("Unknown format: 0x%x\n", pDevice->Format);
-            goto error;
     }
 
     err = NULL;
@@ -832,7 +806,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     if(i >= 0 && (i=psnd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
         err = "set format";
     /* set channels (implicitly sets frame bits) */
-    if(i >= 0 && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, aluChannelsFromFormat(pDevice->Format))) < 0)
+    if(i >= 0 && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, ChannelsFromDevFmt(pDevice->FmtChans))) < 0)
         err = "set channels";
     /* set rate (implicitly constrains period/buffer parameters) */
     if(i >= 0 && (i=psnd_pcm_hw_params_set_rate(data->pcmHandle, p, pDevice->Frequency, 0)) < 0)
@@ -859,7 +833,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
 
     psnd_pcm_hw_params_free(p);
 
-    frameSize = aluFrameSizeFromFormat(pDevice->Format);
+    frameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
 
     data->ring = CreateRingBuffer(frameSize, pDevice->UpdateSize*pDevice->NumUpdates);
     if(!data->ring)

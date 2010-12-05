@@ -59,7 +59,7 @@ static ALuint SolarisProc(ALvoid *ptr)
 
     SetRTPriority();
 
-    frameSize = aluFrameSizeFromFormat(pDevice->Format);
+    frameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
 
     while(!data->killNow && pDevice->Connected)
     {
@@ -139,37 +139,30 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
 
     AUDIO_INITINFO(&info);
 
-    switch(aluBytesFromFormat(device->Format))
+    switch(device->FmtType)
     {
-        case 1:
+        case DevFmtByte:
+            device->FmtType = DevFmtUByte;
+            /* fall-through */
+        case DevFmtUByte:
             info.play.precision = 8;
             info.play.encoding = AUDIO_ENCODING_LINEAR8;
             break;
-        case 4:
-            switch(numChannels)
-            {
-                case 1: device->Format = AL_FORMAT_MONO16; break;
-                case 2: device->Format = AL_FORMAT_STEREO16; break;
-                case 4: device->Format = AL_FORMAT_QUAD16; break;
-                case 6: device->Format = AL_FORMAT_51CHN16; break;
-                case 7: device->Format = AL_FORMAT_61CHN16; break;
-                case 8: device->Format = AL_FORMAT_71CHN16; break;
-            }
+        case DevFmtUShort:
+        case DevFmtFloat:
+            device->FmtType = DevFmtShort;
             /* fall-through */
-        case 2:
+        case DevFmtShort:
             info.play.precision = 16;
             info.play.encoding = AUDIO_ENCODING_LINEAR;
             break;
-        default:
-            AL_PRINT("Unknown format: 0x%x\n", device->Format);
-            return ALC_FALSE;
     }
 
-    numChannels = aluChannelsFromFormat(device->Format);
+    numChannels = ChannelsFromDevFmt(device->FmtChans);
     info.play.sample_rate = device->Frequency;
     info.play.channels = numChannels;
 
-    frameSize = numChannels * aluBytesFromFormat(device->Format);
+    frameSize = numChannels * BytesFromDevFmt(device->FmtType);
     info.play.buffer_size = device->UpdateSize*device->NumUpdates * frameSize;
 
     if(ioctl(data->fd, AUDIO_SETINFO, &info) < 0)
@@ -178,16 +171,16 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    if(aluChannelsFromFormat(device->Format) != info.play.channels)
+    if(ChannelsFromDevFmt(device->FmtChans) != info.play.channels)
     {
-        AL_PRINT("Could not set %d channels, got %d instead\n", aluChannelsFromFormat(device->Format), info.play.channels);
+        AL_PRINT("Could not set %d channels, got %d instead\n", ChannelsFromDevFmt(device->FmtChans), info.play.channels);
         return ALC_FALSE;
     }
 
-    if(!((info.play.precision == 8 && aluBytesFromFormat(device->Format) == 1) ||
-         (info.play.precision == 16 && aluBytesFromFormat(device->Format) == 2)))
+    if(!((info.play.precision == 8 && device->FmtType == DevFmtUByte) ||
+         (info.play.precision == 16 && device->FmtType == DevFmtShort)))
     {
-        AL_PRINT("Could not set %d-bit output, got %d\n", aluBytesFromFormat(device->Format)*8, info.play.precision);
+        AL_PRINT("Could not set %#x sample type, got %d\n", device->FmtType, info.play.precision);
         return ALC_FALSE;
     }
 

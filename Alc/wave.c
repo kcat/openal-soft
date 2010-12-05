@@ -95,7 +95,7 @@ static ALuint WaveProc(ALvoid *ptr)
                             pDevice->Frequency / 2;
 
     uSB.s = 1;
-    frameSize = aluFrameSizeFromFormat(pDevice->Format);
+    frameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
 
     done = 0;
     start = timeGetTime();
@@ -124,20 +124,21 @@ static ALuint WaveProc(ALvoid *ptr)
 
             if(uSB.b[0] != 1)
             {
+                ALuint bytesize = BytesFromDevFmt(pDevice->FmtType);
                 ALubyte *bytes = data->buffer;
                 ALuint i;
 
-                if(aluBytesFromFormat(pDevice->Format) == 1)
+                if(bytesize == 1)
                 {
                     for(i = 0;i < data->size;i++)
                         fputc(bytes[i], data->f);
                 }
-                else if(aluBytesFromFormat(pDevice->Format) == 2)
+                else if(bytesize == 2)
                 {
                     for(i = 0;i < data->size;i++)
                         fputc(bytes[i^1], data->f);
                 }
-                else if(aluBytesFromFormat(pDevice->Format) == 4)
+                else if(bytesize == 4)
                 {
                     for(i = 0;i < data->size;i++)
                         fputc(bytes[i^3], data->f);
@@ -199,29 +200,27 @@ static void wave_close_playback(ALCdevice *device)
 static ALCboolean wave_reset_playback(ALCdevice *device)
 {
     wave_data *data = (wave_data*)device->ExtraData;
-    ALuint channels, bits;
+    ALuint channels=0, bits=0;
     size_t val;
 
     fseek(data->f, 0, SEEK_SET);
     clearerr(data->f);
 
-    bits = aluBytesFromFormat(device->Format) * 8;
-    channels = aluChannelsFromFormat(device->Format);
-
-    /* 7.1 max */
-    if(channels > 8)
+    switch(device->FmtType)
     {
-        if(bits == 8)
-            device->Format = AL_FORMAT_71CHN8;
-        else if(bits == 16)
-            device->Format = AL_FORMAT_71CHN16;
-        else
-        {
-            device->Format = AL_FORMAT_71CHN32;
-            bits = 32;
-        }
-        channels = 8;
+        case DevFmtByte:
+            device->FmtType = DevFmtUByte;
+            break;
+        case DevFmtUShort:
+            device->FmtType = DevFmtShort;
+            break;
+        case DevFmtUByte:
+        case DevFmtShort:
+        case DevFmtFloat:
+            break;
     }
+    bits = BytesFromDevFmt(device->FmtType) * 8;
+    channels = ChannelsFromDevFmt(device->FmtChans);
 
     fprintf(data->f, "RIFF");
     fwrite32le(0xFFFFFFFF, data->f); // 'RIFF' header len; filled in at close

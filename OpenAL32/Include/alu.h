@@ -95,13 +95,6 @@ typedef enum {
 #endif
 
 
-ALuint aluBytesFromFormat(ALenum format);
-ALuint aluChannelsFromFormat(ALenum format);
-static __inline ALuint aluFrameSizeFromFormat(ALenum format)
-{
-    return aluBytesFromFormat(format) * aluChannelsFromFormat(format);
-}
-
 static __inline ALdouble lerp(ALdouble val1, ALdouble val2, ALdouble mu)
 {
     return val1 + (val2-val1)*mu;

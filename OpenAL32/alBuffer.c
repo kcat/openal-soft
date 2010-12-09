@@ -995,14 +995,14 @@ static __inline ALbyte Conv_ALbyte_ALuint(ALuint val)
 { return (val>>24)-128; }
 static __inline ALbyte Conv_ALbyte_ALfloat(ALfloat val)
 {
-    if(val >= 1.0f) return 127;
-    if(val <= -1.0f) return -128;
+    if(val > 1.0f) return 127;
+    if(val < -1.0f) return -128;
     return (ALint)(val * 127.0f);
 }
 static __inline ALbyte Conv_ALbyte_ALdouble(ALdouble val)
 {
-    if(val >= 1.0) return 127;
-    if(val <= -1.0) return -128;
+    if(val > 1.0) return 127;
+    if(val < -1.0) return -128;
     return (ALint)(val * 127.0);
 }
 static __inline ALbyte Conv_ALbyte_ALmulaw(ALmulaw val)
@@ -1022,14 +1022,14 @@ static __inline ALubyte Conv_ALubyte_ALuint(ALuint val)
 { return val>>24; }
 static __inline ALubyte Conv_ALubyte_ALfloat(ALfloat val)
 {
-    if(val >= 1.0f) return 255;
-    if(val <= -1.0f) return 0;
+    if(val > 1.0f) return 255;
+    if(val < -1.0f) return 0;
     return (ALint)(val * 127.0f) + 128;
 }
 static __inline ALubyte Conv_ALubyte_ALdouble(ALdouble val)
 {
-    if(val >= 1.0) return 255;
-    if(val <= -1.0) return 0;
+    if(val > 1.0) return 255;
+    if(val < -1.0) return 0;
     return (ALint)(val * 127.0) + 128;
 }
 static __inline ALubyte Conv_ALubyte_ALmulaw(ALmulaw val)
@@ -1049,14 +1049,14 @@ static __inline ALshort Conv_ALshort_ALuint(ALuint val)
 { return (val>>16)-32768; }
 static __inline ALshort Conv_ALshort_ALfloat(ALfloat val)
 {
-    if(val >= 1.0f) return 32767;
-    if(val <= -1.0f) return -32768;
+    if(val > 1.0f) return 32767;
+    if(val < -1.0f) return -32768;
     return (ALint)(val * 32767.0f);
 }
 static __inline ALshort Conv_ALshort_ALdouble(ALdouble val)
 {
-    if(val >= 1.0) return 32767;
-    if(val <= -1.0) return -32768;
+    if(val > 1.0) return 32767;
+    if(val < -1.0) return -32768;
     return (ALint)(val * 32767.0);
 }
 static __inline ALshort Conv_ALshort_ALmulaw(ALmulaw val)
@@ -1076,14 +1076,14 @@ static __inline ALushort Conv_ALushort_ALuint(ALuint val)
 { return val>>16; }
 static __inline ALushort Conv_ALushort_ALfloat(ALfloat val)
 {
-    if(val >= 1.0f) return 65535;
-    if(val <= -1.0f) return 0;
+    if(val > 1.0f) return 65535;
+    if(val < -1.0f) return 0;
     return (ALint)(val * 32767.0f) + 32768;
 }
 static __inline ALushort Conv_ALushort_ALdouble(ALdouble val)
 {
-    if(val >= 1.0) return 65535;
-    if(val <= -1.0) return 0;
+    if(val > 1.0) return 65535;
+    if(val < -1.0) return 0;
     return (ALint)(val * 32767.0) + 32768;
 }
 static __inline ALushort Conv_ALushort_ALmulaw(ALmulaw val)
@@ -1103,14 +1103,14 @@ static __inline ALint Conv_ALint_ALuint(ALuint val)
 { return val^0x80000000; }
 static __inline ALint Conv_ALint_ALfloat(ALfloat val)
 {
-    if(val >= 1.0f) return 2147483647;
-    if(val <= -1.0f) return -2147483648u;
+    if(val > 1.0f) return 2147483647;
+    if(val < -1.0f) return -2147483648u;
     return (ALint)(val * 2147483647.0);
 }
 static __inline ALint Conv_ALint_ALdouble(ALdouble val)
 {
-    if(val >= 1.0) return 2147483647;
-    if(val <= -1.0) return -2147483648u;
+    if(val > 1.0) return 2147483647;
+    if(val < -1.0) return -2147483648u;
     return (ALint)(val * 2147483647.0);
 }
 static __inline ALint Conv_ALint_ALmulaw(ALmulaw val)
@@ -1130,14 +1130,14 @@ static __inline ALuint Conv_ALuint_ALuint(ALuint val)
 { return val; }
 static __inline ALuint Conv_ALuint_ALfloat(ALfloat val)
 {
-    if(val >= 1.0f) return 4294967295u;
-    if(val <= -1.0f) return 0;
+    if(val > 1.0f) return 4294967295u;
+    if(val < -1.0f) return 0;
     return (ALint)(val * 2147483647.0) + 2147483648u;
 }
 static __inline ALuint Conv_ALuint_ALdouble(ALdouble val)
 {
-    if(val >= 1.0) return 4294967295u;
-    if(val <= -1.0) return 0;
+    if(val > 1.0) return 4294967295u;
+    if(val < -1.0) return 0;
     return (ALint)(val * 2147483647.0) + 2147483648u;
 }
 static __inline ALuint Conv_ALuint_ALmulaw(ALmulaw val)

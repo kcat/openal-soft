@@ -640,38 +640,30 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 }
 
 
-static __inline ALfloat aluF2F(ALfloat Value)
+static __inline ALfloat aluF2F(ALfloat val)
 {
-    return Value;
+    return val;
 }
-static __inline ALshort aluF2US(ALfloat Value)
+static __inline ALushort aluF2US(ALfloat val)
 {
-    ALint i;
-
-    if(Value <= -1.0f) i = 0;
-    else if(Value >= 1.0f) i = 65535;
-    else i = (ALint)(Value*32767.0f) + 32768;
-
-    return ((ALushort)i);
+    if(val > 1.0f) return 65535;
+    if(val < -1.0f) return 0;
+    return (ALint)(val*32767.0f) + 32768;
 }
-static __inline ALshort aluF2S(ALfloat Value)
+static __inline ALshort aluF2S(ALfloat val)
 {
-    ALint i;
-
-    if(Value <= -1.0f) i = -32768;
-    else if(Value >= 1.0f) i = 32767;
-    else i = (ALint)(Value*32767.0f);
-
-    return ((ALshort)i);
+    if(val > 1.0f) return 32767;
+    if(val < -1.0f) return -32768;
+    return (ALint)(val*32767.0f);
 }
-static __inline ALubyte aluF2UB(ALfloat Value)
+static __inline ALubyte aluF2UB(ALfloat val)
 {
-    ALshort i = aluF2US(Value);
+    ALushort i = aluF2US(val);
     return i>>8;
 }
-static __inline ALubyte aluF2B(ALfloat Value)
+static __inline ALbyte aluF2B(ALfloat val)
 {
-    ALshort i = aluF2S(Value);
+    ALshort i = aluF2S(val);
     return i>>8;
 }
 

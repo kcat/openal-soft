@@ -362,13 +362,28 @@ DECL_TEMPLATE(ALubyte, cubic8)
 
 #undef DECL_TEMPLATE
 
+static const Channel RearChans[] = { BACK_LEFT,  BACK_RIGHT };
+static const Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
+                                     BACK_LEFT,  BACK_RIGHT };
+static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
+                                    FRONT_CENTER, LFE,
+                                    BACK_LEFT,  BACK_RIGHT };
+static const Channel X61Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
+                                    FRONT_CENTER, LFE,
+                                    BACK_CENTER,
+                                    SIDE_LEFT,    SIDE_RIGHT };
+static const Channel X71Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
+                                    FRONT_CENTER, LFE,
+                                    BACK_LEFT,    BACK_RIGHT,
+                                    SIDE_LEFT,    SIDE_RIGHT };
 
-#define DECL_TEMPLATE(T, chans, sampler)                                      \
-static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
+#define DECL_TEMPLATE(T, count, sampler)                                      \
+static void Mix_##T##_##count##_##sampler(ALsource *Source, ALCdevice *Device,\
   const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
+  const Channel chans[count],                                                 \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
-    static const ALuint Channels = sizeof(chans)/sizeof(chans[0]);            \
+    const ALuint Channels = count;                                            \
     const ALfloat scaler = 1.0f/Channels;                                     \
     ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
@@ -490,83 +505,69 @@ static void Mix_##T##_##chans##_##sampler(ALsource *Source, ALCdevice *Device,\
     *DataPosFrac = frac;                                                      \
 }
 
-static const Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
-                                     BACK_LEFT,  BACK_RIGHT };
-DECL_TEMPLATE(ALfloat, QuadChans, point32)
-DECL_TEMPLATE(ALfloat, QuadChans, lerp32)
-DECL_TEMPLATE(ALfloat, QuadChans, cubic32)
+DECL_TEMPLATE(ALfloat, 2, point32)
+DECL_TEMPLATE(ALfloat, 2, lerp32)
+DECL_TEMPLATE(ALfloat, 2, cubic32)
 
-DECL_TEMPLATE(ALshort, QuadChans, point16)
-DECL_TEMPLATE(ALshort, QuadChans, lerp16)
-DECL_TEMPLATE(ALshort, QuadChans, cubic16)
+DECL_TEMPLATE(ALshort, 2, point16)
+DECL_TEMPLATE(ALshort, 2, lerp16)
+DECL_TEMPLATE(ALshort, 2, cubic16)
 
-DECL_TEMPLATE(ALubyte, QuadChans, point8)
-DECL_TEMPLATE(ALubyte, QuadChans, lerp8)
-DECL_TEMPLATE(ALubyte, QuadChans, cubic8)
+DECL_TEMPLATE(ALubyte, 2, point8)
+DECL_TEMPLATE(ALubyte, 2, lerp8)
+DECL_TEMPLATE(ALubyte, 2, cubic8)
 
 
-static const Channel RearChans[] = { BACK_LEFT,  BACK_RIGHT };
-DECL_TEMPLATE(ALfloat, RearChans, point32)
-DECL_TEMPLATE(ALfloat, RearChans, lerp32)
-DECL_TEMPLATE(ALfloat, RearChans, cubic32)
+DECL_TEMPLATE(ALfloat, 4, point32)
+DECL_TEMPLATE(ALfloat, 4, lerp32)
+DECL_TEMPLATE(ALfloat, 4, cubic32)
 
-DECL_TEMPLATE(ALshort, RearChans, point16)
-DECL_TEMPLATE(ALshort, RearChans, lerp16)
-DECL_TEMPLATE(ALshort, RearChans, cubic16)
+DECL_TEMPLATE(ALshort, 4, point16)
+DECL_TEMPLATE(ALshort, 4, lerp16)
+DECL_TEMPLATE(ALshort, 4, cubic16)
 
-DECL_TEMPLATE(ALubyte, RearChans, point8)
-DECL_TEMPLATE(ALubyte, RearChans, lerp8)
-DECL_TEMPLATE(ALubyte, RearChans, cubic8)
-
-
-static const Channel X51Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
-                                    FRONT_CENTER, LFE,
-                                    BACK_LEFT,  BACK_RIGHT };
-DECL_TEMPLATE(ALfloat, X51Chans, point32)
-DECL_TEMPLATE(ALfloat, X51Chans, lerp32)
-DECL_TEMPLATE(ALfloat, X51Chans, cubic32)
-
-DECL_TEMPLATE(ALshort, X51Chans, point16)
-DECL_TEMPLATE(ALshort, X51Chans, lerp16)
-DECL_TEMPLATE(ALshort, X51Chans, cubic16)
-
-DECL_TEMPLATE(ALubyte, X51Chans, point8)
-DECL_TEMPLATE(ALubyte, X51Chans, lerp8)
-DECL_TEMPLATE(ALubyte, X51Chans, cubic8)
+DECL_TEMPLATE(ALubyte, 4, point8)
+DECL_TEMPLATE(ALubyte, 4, lerp8)
+DECL_TEMPLATE(ALubyte, 4, cubic8)
 
 
-static const Channel X61Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
-                                    FRONT_CENTER, LFE,
-                                    BACK_CENTER,
-                                    SIDE_LEFT,    SIDE_RIGHT };
-DECL_TEMPLATE(ALfloat, X61Chans, point32)
-DECL_TEMPLATE(ALfloat, X61Chans, lerp32)
-DECL_TEMPLATE(ALfloat, X61Chans, cubic32)
+DECL_TEMPLATE(ALfloat, 6, point32)
+DECL_TEMPLATE(ALfloat, 6, lerp32)
+DECL_TEMPLATE(ALfloat, 6, cubic32)
 
-DECL_TEMPLATE(ALshort, X61Chans, point16)
-DECL_TEMPLATE(ALshort, X61Chans, lerp16)
-DECL_TEMPLATE(ALshort, X61Chans, cubic16)
+DECL_TEMPLATE(ALshort, 6, point16)
+DECL_TEMPLATE(ALshort, 6, lerp16)
+DECL_TEMPLATE(ALshort, 6, cubic16)
 
-DECL_TEMPLATE(ALubyte, X61Chans, point8)
-DECL_TEMPLATE(ALubyte, X61Chans, lerp8)
-DECL_TEMPLATE(ALubyte, X61Chans, cubic8)
+DECL_TEMPLATE(ALubyte, 6, point8)
+DECL_TEMPLATE(ALubyte, 6, lerp8)
+DECL_TEMPLATE(ALubyte, 6, cubic8)
 
 
-static const Channel X71Chans[] = { FRONT_LEFT,   FRONT_RIGHT,
-                                    FRONT_CENTER, LFE,
-                                    BACK_LEFT,    BACK_RIGHT,
-                                    SIDE_LEFT,    SIDE_RIGHT };
-DECL_TEMPLATE(ALfloat, X71Chans, point32)
-DECL_TEMPLATE(ALfloat, X71Chans, lerp32)
-DECL_TEMPLATE(ALfloat, X71Chans, cubic32)
+DECL_TEMPLATE(ALfloat, 7, point32)
+DECL_TEMPLATE(ALfloat, 7, lerp32)
+DECL_TEMPLATE(ALfloat, 7, cubic32)
 
-DECL_TEMPLATE(ALshort, X71Chans, point16)
-DECL_TEMPLATE(ALshort, X71Chans, lerp16)
-DECL_TEMPLATE(ALshort, X71Chans, cubic16)
+DECL_TEMPLATE(ALshort, 7, point16)
+DECL_TEMPLATE(ALshort, 7, lerp16)
+DECL_TEMPLATE(ALshort, 7, cubic16)
 
-DECL_TEMPLATE(ALubyte, X71Chans, point8)
-DECL_TEMPLATE(ALubyte, X71Chans, lerp8)
-DECL_TEMPLATE(ALubyte, X71Chans, cubic8)
+DECL_TEMPLATE(ALubyte, 7, point8)
+DECL_TEMPLATE(ALubyte, 7, lerp8)
+DECL_TEMPLATE(ALubyte, 7, cubic8)
+
+
+DECL_TEMPLATE(ALfloat, 8, point32)
+DECL_TEMPLATE(ALfloat, 8, lerp32)
+DECL_TEMPLATE(ALfloat, 8, cubic32)
+
+DECL_TEMPLATE(ALshort, 8, point16)
+DECL_TEMPLATE(ALshort, 8, lerp16)
+DECL_TEMPLATE(ALshort, 8, cubic16)
+
+DECL_TEMPLATE(ALubyte, 8, point8)
+DECL_TEMPLATE(ALubyte, 8, lerp8)
+DECL_TEMPLATE(ALubyte, 8, cubic8)
 
 #undef DECL_TEMPLATE
 
@@ -590,29 +591,24 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
                                    OutPos, SamplesToDo, BufferSize);          \
         break;                                                                \
     case FmtQuad:                                                             \
-        Mix_##T##_QuadChans_##sampler(Source, Device,                         \
-                                      Data, DataPosInt, DataPosFrac,          \
-                                      OutPos, SamplesToDo, BufferSize);       \
+        Mix_##T##_4_##sampler(Source, Device, Data, DataPosInt, DataPosFrac,  \
+                              QuadChans, OutPos, SamplesToDo, BufferSize);    \
         break;                                                                \
     case FmtRear:                                                             \
-        Mix_##T##_RearChans_##sampler(Source, Device,                         \
-                                      Data, DataPosInt, DataPosFrac,          \
-                                      OutPos, SamplesToDo, BufferSize);       \
+        Mix_##T##_2_##sampler(Source, Device, Data, DataPosInt, DataPosFrac,  \
+                              RearChans, OutPos, SamplesToDo, BufferSize);    \
         break;                                                                \
     case FmtX51:                                                              \
-        Mix_##T##_X51Chans_##sampler(Source, Device,                          \
-                                     Data, DataPosInt, DataPosFrac,           \
-                                     OutPos, SamplesToDo, BufferSize);        \
+        Mix_##T##_6_##sampler(Source, Device, Data, DataPosInt, DataPosFrac,  \
+                              X51Chans, OutPos, SamplesToDo, BufferSize);     \
         break;                                                                \
     case FmtX61:                                                              \
-        Mix_##T##_X61Chans_##sampler(Source, Device,                          \
-                                     Data, DataPosInt, DataPosFrac,           \
-                                     OutPos, SamplesToDo, BufferSize);        \
+        Mix_##T##_7_##sampler(Source, Device, Data, DataPosInt, DataPosFrac,  \
+                              X61Chans, OutPos, SamplesToDo, BufferSize);     \
         break;                                                                \
     case FmtX71:                                                              \
-        Mix_##T##_X71Chans_##sampler(Source, Device,                          \
-                                     Data, DataPosInt, DataPosFrac,           \
-                                     OutPos, SamplesToDo, BufferSize);        \
+        Mix_##T##_8_##sampler(Source, Device, Data, DataPosInt, DataPosFrac,  \
+                              X71Chans, OutPos, SamplesToDo, BufferSize);     \
         break;                                                                \
     }                                                                         \
 }

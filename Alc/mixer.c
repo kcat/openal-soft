@@ -95,14 +95,8 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
         value = sampler(data+pos, 1, frac);                                   \
                                                                               \
         value = lpFilter4PC(DryFilter, 0, value);                             \
-        ClickRemoval[FRONT_LEFT]   -= value*DrySend[FRONT_LEFT];              \
-        ClickRemoval[FRONT_RIGHT]  -= value*DrySend[FRONT_RIGHT];             \
-        ClickRemoval[SIDE_LEFT]    -= value*DrySend[SIDE_LEFT];               \
-        ClickRemoval[SIDE_RIGHT]   -= value*DrySend[SIDE_RIGHT];              \
-        ClickRemoval[BACK_LEFT]    -= value*DrySend[BACK_LEFT];               \
-        ClickRemoval[BACK_RIGHT]   -= value*DrySend[BACK_RIGHT];              \
-        ClickRemoval[FRONT_CENTER] -= value*DrySend[FRONT_CENTER];            \
-        ClickRemoval[BACK_CENTER]  -= value*DrySend[BACK_CENTER];             \
+        for(i = 0;i < MAXCHANNELS;i++)                                        \
+            ClickRemoval[i] -= value*DrySend[i];                              \
     }                                                                         \
     for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                     \
     {                                                                         \
@@ -111,14 +105,8 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
                                                                               \
         /* Direct path final mix buffer and panning */                        \
         value = lpFilter4P(DryFilter, 0, value);                              \
-        DryBuffer[OutPos][FRONT_LEFT]   += value*DrySend[FRONT_LEFT];         \
-        DryBuffer[OutPos][FRONT_RIGHT]  += value*DrySend[FRONT_RIGHT];        \
-        DryBuffer[OutPos][SIDE_LEFT]    += value*DrySend[SIDE_LEFT];          \
-        DryBuffer[OutPos][SIDE_RIGHT]   += value*DrySend[SIDE_RIGHT];         \
-        DryBuffer[OutPos][BACK_LEFT]    += value*DrySend[BACK_LEFT];          \
-        DryBuffer[OutPos][BACK_RIGHT]   += value*DrySend[BACK_RIGHT];         \
-        DryBuffer[OutPos][FRONT_CENTER] += value*DrySend[FRONT_CENTER];       \
-        DryBuffer[OutPos][BACK_CENTER]  += value*DrySend[BACK_CENTER];        \
+        for(i = 0;i < MAXCHANNELS;i++)                                        \
+            DryBuffer[OutPos][i] += value*DrySend[i];                         \
                                                                               \
         frac += increment;                                                    \
         pos  += frac>>FRACTIONBITS;                                           \
@@ -130,14 +118,8 @@ static void Mix_##T##_Mono_##sampler(ALsource *Source, ALCdevice *Device,     \
         value = sampler(data+pos, 1, frac);                                   \
                                                                               \
         value = lpFilter4PC(DryFilter, 0, value);                             \
-        PendingClicks[FRONT_LEFT]   += value*DrySend[FRONT_LEFT];             \
-        PendingClicks[FRONT_RIGHT]  += value*DrySend[FRONT_RIGHT];            \
-        PendingClicks[SIDE_LEFT]    += value*DrySend[SIDE_LEFT];              \
-        PendingClicks[SIDE_RIGHT]   += value*DrySend[SIDE_RIGHT];             \
-        PendingClicks[BACK_LEFT]    += value*DrySend[BACK_LEFT];              \
-        PendingClicks[BACK_RIGHT]   += value*DrySend[BACK_RIGHT];             \
-        PendingClicks[FRONT_CENTER] += value*DrySend[FRONT_CENTER];           \
-        PendingClicks[BACK_CENTER]  += value*DrySend[BACK_CENTER];            \
+        for(i = 0;i < MAXCHANNELS;i++)                                        \
+            PendingClicks[i] += value*DrySend[i];                             \
     }                                                                         \
                                                                               \
     for(out = 0;out < Device->NumAuxSends;out++)                              \

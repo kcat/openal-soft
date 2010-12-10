@@ -1797,14 +1797,14 @@ static ALvoid InitSourceParams(ALsource *Source)
 */
 static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, ALdouble updateLen)
 {
-    ALbufferlistitem *BufferList;
-    ALbuffer         *Buffer = NULL;
-    ALfloat          BufferFreq;
-    ALint            Channels, Bytes;
-    ALuint           readPos, writePos;
+    const ALbufferlistitem *BufferList;
+    const ALbuffer         *Buffer = NULL;
     enum UserFmtType OriginalType;
-    ALuint           TotalBufferDataSize;
-    ALuint           i;
+    ALfloat BufferFreq;
+    ALint   Channels, Bytes;
+    ALuint  readPos, writePos;
+    ALuint  TotalBufferDataSize;
+    ALuint  i;
 
     // Find the first non-NULL Buffer in the Queue
     BufferList = Source->queue;
@@ -1914,11 +1914,11 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
 */
 static ALboolean ApplyOffset(ALsource *Source)
 {
-    ALbufferlistitem    *BufferList;
-    ALbuffer            *Buffer;
-    ALint                lBufferSize, lTotalBufferSize;
-    ALint                BuffersPlayed;
-    ALint                lByteOffset;
+    const ALbufferlistitem *BufferList;
+    const ALbuffer         *Buffer;
+    ALint lBufferSize, lTotalBufferSize;
+    ALint BuffersPlayed;
+    ALint lByteOffset;
 
     // Get true byte offset
     lByteOffset = GetByteOffset(Source);
@@ -1975,9 +1975,9 @@ static ALboolean ApplyOffset(ALsource *Source)
 */
 static ALint GetByteOffset(ALsource *Source)
 {
-    ALbuffer *Buffer = NULL;
-    ALbufferlistitem *BufferList;
-    ALint    ByteOffset = -1;
+    const ALbuffer *Buffer = NULL;
+    const ALbufferlistitem *BufferList;
+    ALint ByteOffset = -1;
 
     // Find the first non-NULL Buffer in the Queue
     BufferList = Source->queue;

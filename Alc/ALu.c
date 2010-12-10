@@ -150,15 +150,23 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             break;
     }
 
-    if(Channels == FmtStereo)
+    for(i = 0;i < MAXCHANNELS;i++)
     {
-        for(i = 0;i < MAXCHANNELS;i++)
-            ALSource->Params.DryGains[i] = 0.0f;
+        ALuint i2;
+        for(i2 = 0;i2 < MAXCHANNELS;i2++)
+            ALSource->Params.DryGains[i][i2] = 0.0f;
+    }
 
+    switch(Channels)
+    {
+    case FmtMono:
+        ALSource->Params.DryGains[0][FRONT_CENTER]  = DryGain * ListenerGain;
+        break;
+    case FmtStereo:
         if(DupStereo == AL_FALSE)
         {
-            ALSource->Params.DryGains[FRONT_LEFT]  = DryGain * ListenerGain;
-            ALSource->Params.DryGains[FRONT_RIGHT] = DryGain * ListenerGain;
+            ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
+            ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
         }
         else
         {
@@ -166,43 +174,81 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             {
             case DevFmtMono:
             case DevFmtStereo:
-                ALSource->Params.DryGains[FRONT_LEFT]  = DryGain * ListenerGain;
-                ALSource->Params.DryGains[FRONT_RIGHT] = DryGain * ListenerGain;
+                ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
+                ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
                 break;
 
             case DevFmtQuad:
             case DevFmtX51:
                 DryGain *= aluSqrt(2.0f/4.0f);
-                ALSource->Params.DryGains[FRONT_LEFT]  = DryGain * ListenerGain;
-                ALSource->Params.DryGains[FRONT_RIGHT] = DryGain * ListenerGain;
-                ALSource->Params.DryGains[BACK_LEFT]   = DryGain * ListenerGain;
-                ALSource->Params.DryGains[BACK_RIGHT]  = DryGain * ListenerGain;
+                ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
+                ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
+                ALSource->Params.DryGains[0][BACK_LEFT]   = DryGain * ListenerGain;
+                ALSource->Params.DryGains[1][BACK_RIGHT]  = DryGain * ListenerGain;
                 break;
 
             case DevFmtX61:
                 DryGain *= aluSqrt(2.0f/4.0f);
-                ALSource->Params.DryGains[FRONT_LEFT]  = DryGain * ListenerGain;
-                ALSource->Params.DryGains[FRONT_RIGHT] = DryGain * ListenerGain;
-                ALSource->Params.DryGains[SIDE_LEFT]   = DryGain * ListenerGain;
-                ALSource->Params.DryGains[SIDE_RIGHT]  = DryGain * ListenerGain;
+                ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
+                ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
+                ALSource->Params.DryGains[0][SIDE_LEFT]   = DryGain * ListenerGain;
+                ALSource->Params.DryGains[1][SIDE_RIGHT]  = DryGain * ListenerGain;
                 break;
 
             case DevFmtX71:
                 DryGain *= aluSqrt(2.0f/6.0f);
-                ALSource->Params.DryGains[FRONT_LEFT]  = DryGain * ListenerGain;
-                ALSource->Params.DryGains[FRONT_RIGHT] = DryGain * ListenerGain;
-                ALSource->Params.DryGains[BACK_LEFT]   = DryGain * ListenerGain;
-                ALSource->Params.DryGains[BACK_RIGHT]  = DryGain * ListenerGain;
-                ALSource->Params.DryGains[SIDE_LEFT]   = DryGain * ListenerGain;
-                ALSource->Params.DryGains[SIDE_RIGHT]  = DryGain * ListenerGain;
+                ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
+                ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
+                ALSource->Params.DryGains[0][BACK_LEFT]   = DryGain * ListenerGain;
+                ALSource->Params.DryGains[1][BACK_RIGHT]  = DryGain * ListenerGain;
+                ALSource->Params.DryGains[0][SIDE_LEFT]   = DryGain * ListenerGain;
+                ALSource->Params.DryGains[1][SIDE_RIGHT]  = DryGain * ListenerGain;
                 break;
             }
         }
-    }
-    else
-    {
-        for(i = 0;i < MAXCHANNELS;i++)
-            ALSource->Params.DryGains[i] = DryGain * ListenerGain;
+        break;
+
+    case FmtRear:
+        ALSource->Params.DryGains[0][BACK_LEFT]  = DryGain * ListenerGain;
+        ALSource->Params.DryGains[1][BACK_RIGHT] = DryGain * ListenerGain;
+        break;
+
+    case FmtQuad:
+        ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
+        ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
+        ALSource->Params.DryGains[2][BACK_LEFT]   = DryGain * ListenerGain;
+        ALSource->Params.DryGains[3][BACK_RIGHT]  = DryGain * ListenerGain;
+        break;
+
+    case FmtX51:
+        ALSource->Params.DryGains[0][FRONT_LEFT]   = DryGain * ListenerGain;
+        ALSource->Params.DryGains[1][FRONT_RIGHT]  = DryGain * ListenerGain;
+        ALSource->Params.DryGains[2][FRONT_CENTER] = DryGain * ListenerGain;
+        ALSource->Params.DryGains[3][LFE]          = DryGain * ListenerGain;
+        ALSource->Params.DryGains[4][BACK_LEFT]    = DryGain * ListenerGain;
+        ALSource->Params.DryGains[5][BACK_RIGHT]   = DryGain * ListenerGain;
+        break;
+
+    case FmtX61:
+        ALSource->Params.DryGains[0][FRONT_LEFT]   = DryGain * ListenerGain;
+        ALSource->Params.DryGains[1][FRONT_RIGHT]  = DryGain * ListenerGain;
+        ALSource->Params.DryGains[2][FRONT_CENTER] = DryGain * ListenerGain;
+        ALSource->Params.DryGains[3][LFE]          = DryGain * ListenerGain;
+        ALSource->Params.DryGains[4][BACK_CENTER]  = DryGain * ListenerGain;
+        ALSource->Params.DryGains[5][SIDE_LEFT]    = DryGain * ListenerGain;
+        ALSource->Params.DryGains[6][SIDE_RIGHT]   = DryGain * ListenerGain;
+        break;
+
+    case FmtX71:
+        ALSource->Params.DryGains[0][FRONT_LEFT]   = DryGain * ListenerGain;
+        ALSource->Params.DryGains[1][FRONT_RIGHT]  = DryGain * ListenerGain;
+        ALSource->Params.DryGains[2][FRONT_CENTER] = DryGain * ListenerGain;
+        ALSource->Params.DryGains[3][LFE]          = DryGain * ListenerGain;
+        ALSource->Params.DryGains[4][BACK_LEFT]    = DryGain * ListenerGain;
+        ALSource->Params.DryGains[5][BACK_RIGHT]   = DryGain * ListenerGain;
+        ALSource->Params.DryGains[6][SIDE_LEFT]    = DryGain * ListenerGain;
+        ALSource->Params.DryGains[7][SIDE_RIGHT]   = DryGain * ListenerGain;
+        break;
     }
 
     for(i = 0;i < NumSends;i++)
@@ -615,12 +661,16 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     // has low complexity
     AmbientGain = aluSqrt(1.0/Device->NumChan);
     for(s = 0;s < MAXCHANNELS;s++)
-        ALSource->Params.DryGains[s] = 0.0f;
+    {
+        ALuint s2;
+        for(s2 = 0;s2 < MAXCHANNELS;s2++)
+            ALSource->Params.DryGains[s][s2] = 0.0f;
+    }
     for(s = 0;s < (ALsizei)Device->NumChan;s++)
     {
         Channel chan = Device->Speaker2Chan[s];
         ALfloat gain = AmbientGain + (SpeakerGain[chan]-AmbientGain)*DirGain;
-        ALSource->Params.DryGains[chan] = DryGain * gain;
+        ALSource->Params.DryGains[0][chan] = DryGain * gain;
     }
 
     /* Update filter coefficients. */

@@ -91,7 +91,10 @@ typedef struct ALsource
     struct {
         ALint Step;
 
-        ALfloat DryGains[MAXCHANNELS];
+        /* A mixing matrix. First subscript is the channel number of the input
+         * data (regardless of channel configuration) and the second is the
+         * channel target (eg. FRONT_LEFT) */
+        ALfloat DryGains[MAXCHANNELS][MAXCHANNELS];
         FILTER iirFilter;
         ALfloat history[MAXCHANNELS*2];
 

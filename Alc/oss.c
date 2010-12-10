@@ -196,7 +196,6 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     int ossFormat;
     int ossSpeed;
     char *err;
-    int i;
 
     switch(device->FmtType)
     {
@@ -230,19 +229,24 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     if(periods > 2) periods--;
     numFragmentsLogSize = (periods << 16) | log2FragmentSize;
 
-#define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
+#define CHECKERR(func) if((func) < 0) {                                       \
+    err = #func;                                                              \
+    goto err;                                                                 \
+}
     /* Don't fail if SETFRAGMENT fails. We can handle just about anything
      * that's reported back via GETOSPACE */
     ioctl(data->fd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize);
-    if (!(ok(ioctl(data->fd, SNDCTL_DSP_SETFMT, &ossFormat), "set format") &&
-          ok(ioctl(data->fd, SNDCTL_DSP_CHANNELS, &numChannels), "set channels") &&
-          ok(ioctl(data->fd, SNDCTL_DSP_SPEED, &ossSpeed), "set speed") &&
-          ok(ioctl(data->fd, SNDCTL_DSP_GETOSPACE, &info), "get space")))
+    CHECKERR(ioctl(data->fd, SNDCTL_DSP_SETFMT, &ossFormat));
+    CHECKERR(ioctl(data->fd, SNDCTL_DSP_CHANNELS, &numChannels));
+    CHECKERR(ioctl(data->fd, SNDCTL_DSP_SPEED, &ossSpeed));
+    CHECKERR(ioctl(data->fd, SNDCTL_DSP_GETOSPACE, &info));
+    if(0)
     {
+    err:
         AL_PRINT("%s failed: %s\n", err, strerror(errno));
         return ALC_FALSE;
     }
-#undef ok
+#undef CHECKERR
 
     if((int)ChannelsFromDevFmt(device->FmtChans) != numChannels)
     {
@@ -311,7 +315,6 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     int ossFormat;
     int ossSpeed;
     char *err;
-    int i;
 
     strncpy(driver, GetConfigValue("oss", "capture", "/dev/dsp"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
@@ -361,19 +364,24 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         log2FragmentSize = 4;
     numFragmentsLogSize = (periods << 16) | log2FragmentSize;
 
-#define ok(func, str) (i=(func),((i<0)?(err=(str)),0:1))
-    if (!(ok(ioctl(data->fd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize), "set fragment") &&
-          ok(ioctl(data->fd, SNDCTL_DSP_SETFMT, &ossFormat), "set format") &&
-          ok(ioctl(data->fd, SNDCTL_DSP_CHANNELS, &numChannels), "set channels") &&
-          ok(ioctl(data->fd, SNDCTL_DSP_SPEED, &ossSpeed), "set speed") &&
-          ok(ioctl(data->fd, SNDCTL_DSP_GETISPACE, &info), "get space")))
+#define CHECKERR(func) if((func) < 0) {                                       \
+    err = #func;                                                              \
+    goto err;                                                                 \
+}
+    CHECKERR(ioctl(data->fd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize));
+    CHECKERR(ioctl(data->fd, SNDCTL_DSP_SETFMT, &ossFormat));
+    CHECKERR(ioctl(data->fd, SNDCTL_DSP_CHANNELS, &numChannels));
+    CHECKERR(ioctl(data->fd, SNDCTL_DSP_SPEED, &ossSpeed));
+    CHECKERR(ioctl(data->fd, SNDCTL_DSP_GETISPACE, &info));
+    if(0)
     {
+    err:
         AL_PRINT("%s failed: %s\n", err, strerror(errno));
         close(data->fd);
         free(data);
         return ALC_FALSE;
     }
-#undef ok
+#undef CHECKERR
 
     if((int)ChannelsFromDevFmt(device->FmtChans) != numChannels)
     {

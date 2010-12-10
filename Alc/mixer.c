@@ -75,7 +75,7 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
     ALuint increment;                                                         \
-    ALuint i, out;                                                            \
+    ALuint out, c;                                                            \
     ALfloat value;                                                            \
                                                                               \
     increment = Source->Params.Step;                                          \
@@ -84,8 +84,8 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
-    for(i = 0;i < MAXCHANNELS;i++)                                            \
-        DrySend[i] = Source->Params.DryGains[0][i];                           \
+    for(c = 0;c < MAXCHANNELS;c++)                                            \
+        DrySend[c] = Source->Params.DryGains[0][c];                           \
                                                                               \
     pos = 0;                                                                  \
     frac = *DataPosFrac;                                                      \
@@ -95,8 +95,8 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
         value = sampler(data+pos, 1, frac);                                   \
                                                                               \
         value = lpFilter4PC(DryFilter, 0, value);                             \
-        for(i = 0;i < MAXCHANNELS;i++)                                        \
-            ClickRemoval[i] -= value*DrySend[i];                              \
+        for(c = 0;c < MAXCHANNELS;c++)                                        \
+            ClickRemoval[c] -= value*DrySend[c];                              \
     }                                                                         \
     for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                     \
     {                                                                         \
@@ -105,8 +105,8 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
                                                                               \
         /* Direct path final mix buffer and panning */                        \
         value = lpFilter4P(DryFilter, 0, value);                              \
-        for(i = 0;i < MAXCHANNELS;i++)                                        \
-            DryBuffer[OutPos][i] += value*DrySend[i];                         \
+        for(c = 0;c < MAXCHANNELS;c++)                                        \
+            DryBuffer[OutPos][c] += value*DrySend[c];                         \
                                                                               \
         frac += increment;                                                    \
         pos  += frac>>FRACTIONBITS;                                           \
@@ -118,8 +118,8 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
         value = sampler(data+pos, 1, frac);                                   \
                                                                               \
         value = lpFilter4PC(DryFilter, 0, value);                             \
-        for(i = 0;i < MAXCHANNELS;i++)                                        \
-            PendingClicks[i] += value*DrySend[i];                             \
+        for(c = 0;c < MAXCHANNELS;c++)                                        \
+            PendingClicks[c] += value*DrySend[c];                             \
     }                                                                         \
                                                                               \
     for(out = 0;out < Device->NumAuxSends;out++)                              \

@@ -1104,13 +1104,13 @@ static __inline ALint Conv_ALint_ALuint(ALuint val)
 static __inline ALint Conv_ALint_ALfloat(ALfloat val)
 {
     if(val > 1.0f) return 2147483647;
-    if(val < -1.0f) return 0u-2147483648u;
+    if(val < -1.0f) return -2147483647-1;
     return (ALint)(val * 2147483647.0);
 }
 static __inline ALint Conv_ALint_ALdouble(ALdouble val)
 {
     if(val > 1.0) return 2147483647;
-    if(val < -1.0) return 0u-2147483648u;
+    if(val < -1.0) return -2147483647-1;
     return (ALint)(val * 2147483647.0);
 }
 static __inline ALint Conv_ALint_ALmulaw(ALmulaw val)

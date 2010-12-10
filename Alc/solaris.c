@@ -177,10 +177,15 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    if(!((info.play.precision == 8 && device->FmtType == DevFmtUByte) ||
-         (info.play.precision == 16 && device->FmtType == DevFmtShort)))
+    if(!((info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR &&
+          device->FmtType == DevFmtByte) ||
+         (info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR8 &&
+          device->FmtType == DevFmtUByte) ||
+         (info.play.precision == 16 && info.play.encoding == AUDIO_ENCODING_LINEAR &&
+          device->FmtType == DevFmtShort)))
     {
-        AL_PRINT("Could not set %#x sample type, got %d\n", device->FmtType, info.play.precision);
+        AL_PRINT("Could not set %#x sample type, got %d (%#x)\n",
+                 device->FmtType, info.play.precision, info.play.encoding);
         return ALC_FALSE;
     }
 

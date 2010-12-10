@@ -984,7 +984,7 @@ static void EncodeIMA4Block(ALubyte *dst, const ALshort *src, ALint *sample, ALi
 static __inline ALbyte Conv_ALbyte_ALbyte(ALbyte val)
 { return val; }
 static __inline ALbyte Conv_ALbyte_ALubyte(ALubyte val)
-{ return val^0x80; }
+{ return val-128; }
 static __inline ALbyte Conv_ALbyte_ALshort(ALshort val)
 { return val>>8; }
 static __inline ALbyte Conv_ALbyte_ALushort(ALushort val)
@@ -1009,7 +1009,7 @@ static __inline ALbyte Conv_ALbyte_ALmulaw(ALmulaw val)
 { return Conv_ALbyte_ALshort(DecodeMuLaw(val)); }
 
 static __inline ALubyte Conv_ALubyte_ALbyte(ALbyte val)
-{ return val^0x80; }
+{ return val+128; }
 static __inline ALubyte Conv_ALubyte_ALubyte(ALubyte val)
 { return val; }
 static __inline ALubyte Conv_ALubyte_ALshort(ALshort val)
@@ -1042,7 +1042,7 @@ static __inline ALshort Conv_ALshort_ALubyte(ALubyte val)
 static __inline ALshort Conv_ALshort_ALshort(ALshort val)
 { return val; }
 static __inline ALshort Conv_ALshort_ALushort(ALushort val)
-{ return val^0x8000; }
+{ return val-32768; }
 static __inline ALshort Conv_ALshort_ALint(ALint val)
 { return val>>16; }
 static __inline ALshort Conv_ALshort_ALuint(ALuint val)
@@ -1067,7 +1067,7 @@ static __inline ALushort Conv_ALushort_ALbyte(ALbyte val)
 static __inline ALushort Conv_ALushort_ALubyte(ALubyte val)
 { return val<<8; }
 static __inline ALushort Conv_ALushort_ALshort(ALshort val)
-{ return val^0x8000; }
+{ return val+32768; }
 static __inline ALushort Conv_ALushort_ALushort(ALushort val)
 { return val; }
 static __inline ALushort Conv_ALushort_ALint(ALint val)
@@ -1100,17 +1100,17 @@ static __inline ALint Conv_ALint_ALushort(ALushort val)
 static __inline ALint Conv_ALint_ALint(ALint val)
 { return val; }
 static __inline ALint Conv_ALint_ALuint(ALuint val)
-{ return val^0x80000000; }
+{ return val-2147483648u; }
 static __inline ALint Conv_ALint_ALfloat(ALfloat val)
 {
     if(val > 1.0f) return 2147483647;
-    if(val < -1.0f) return -2147483648u;
+    if(val < -1.0f) return 0u-2147483648u;
     return (ALint)(val * 2147483647.0);
 }
 static __inline ALint Conv_ALint_ALdouble(ALdouble val)
 {
     if(val > 1.0) return 2147483647;
-    if(val < -1.0) return -2147483648u;
+    if(val < -1.0) return 0u-2147483648u;
     return (ALint)(val * 2147483647.0);
 }
 static __inline ALint Conv_ALint_ALmulaw(ALmulaw val)
@@ -1125,7 +1125,7 @@ static __inline ALuint Conv_ALuint_ALshort(ALshort val)
 static __inline ALuint Conv_ALuint_ALushort(ALushort val)
 { return val<<16; }
 static __inline ALuint Conv_ALuint_ALint(ALint val)
-{ return val^0x80000000; }
+{ return val+2147483648u; }
 static __inline ALuint Conv_ALuint_ALuint(ALuint val)
 { return val; }
 static __inline ALuint Conv_ALuint_ALfloat(ALfloat val)
@@ -1193,7 +1193,8 @@ DECL_TEMPLATE(ALint)
 DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
-DECL_TEMPLATE(ALmulaw)
+static __inline ALmulaw Conv_ALmulaw_ALmulaw(ALmulaw val)
+{ return val; }
 
 #undef DECL_TEMPLATE
 
@@ -1353,6 +1354,12 @@ DECL_TEMPLATE(ALmulaw)
 
 #undef DECL_TEMPLATE
 
+static void Convert_IMA4_IMA4(ALubyte *dst, const ALubyte *src, ALuint numchans,
+                              ALuint numblocks)
+{
+    memcpy(dst, src, numblocks*36*numchans);
+}
+
 #define DECL_TEMPLATE(T)                                                      \
 static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
                         ALsizei len)                                          \
@@ -1436,7 +1443,7 @@ static void Convert_IMA4(ALubyte *dst, const ALvoid *src, enum UserFmtType srcTy
             Convert_IMA4_ALmulaw(dst, src, chans, len);
             break;
         case UserFmtIMA4:
-            memcpy(dst, src, len*36*chans);
+            Convert_IMA4_IMA4(dst, src, chans, len);
             break;
     }
 }

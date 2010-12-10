@@ -138,6 +138,13 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
 
     AUDIO_INITINFO(&info);
 
+    info.play.sample_rate = device->Frequency;
+
+    if(device->FmtChans != DevFmtMono)
+        device->FmtChans = DevFmtStereo;
+    numChannels = ChannelsFromDevFmt(device->FmtChans);
+    info.play.channels = numChannels;
+
     switch(device->FmtType)
     {
         case DevFmtByte:
@@ -157,10 +164,6 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
             info.play.encoding = AUDIO_ENCODING_LINEAR;
             break;
     }
-
-    numChannels = ChannelsFromDevFmt(device->FmtChans);
-    info.play.sample_rate = device->Frequency;
-    info.play.channels = numChannels;
 
     frameSize = numChannels * BytesFromDevFmt(device->FmtType);
     info.play.buffer_size = device->UpdateSize*device->NumUpdates * frameSize;
@@ -220,6 +223,8 @@ static void solaris_stop_playback(ALCdevice *device)
     data->thread = NULL;
 
     data->killNow = 0;
+    if(ioctl(data->fd, AUDIO_DRAIN) < 0)
+        AL_PRINT("Error draining device: %s\n", strerror(errno));
 
     free(data->mix_data);
     data->mix_data = NULL;

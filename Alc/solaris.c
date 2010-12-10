@@ -53,7 +53,6 @@ static ALuint SolarisProc(ALvoid *ptr)
 {
     ALCdevice *pDevice = (ALCdevice*)ptr;
     solaris_data *data = (solaris_data*)pDevice->ExtraData;
-    int remaining = 0;
     ALint frameSize;
     int wrote;
 
@@ -221,13 +220,10 @@ static void solaris_stop_playback(ALCdevice *device)
 }
 
 
-static ALCboolean solaris_open_capture(ALCdevice *device, const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
+static ALCboolean solaris_open_capture(ALCdevice *device, const ALCchar *deviceName)
 {
     (void)device;
     (void)deviceName;
-    (void)frequency;
-    (void)format;
-    (void)SampleSize;
     return ALC_FALSE;
 }
 

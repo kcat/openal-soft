@@ -141,8 +141,9 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
     switch(device->FmtType)
     {
         case DevFmtByte:
-            device->FmtType = DevFmtUByte;
-            /* fall-through */
+            info.play.precision = 8;
+            info.play.encoding = AUDIO_ENCODING_LINEAR;
+            break;
         case DevFmtUByte:
             info.play.precision = 8;
             info.play.encoding = AUDIO_ENCODING_LINEAR8;

@@ -659,13 +659,13 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                         break;
                     }
 
-                    if(Looping)
+                    if(BufferListIter->prev)
+                        BufferListIter = BufferListIter->prev;
+                    else
                     {
                         while(BufferListIter->next)
                             BufferListIter = BufferListIter->next;
                     }
-                    else
-                        BufferListIter = BufferListIter->prev;
 
                     if(BufferListIter->buffer)
                     {

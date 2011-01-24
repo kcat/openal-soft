@@ -40,6 +40,9 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHAN
     Channel val;
     int i;
 
+    if(!ConfigValueExists(NULL, name))
+        name = "layout";
+
     strncpy(layout_str, GetConfigValue(NULL, name, ""), sizeof(layout_str));
     layout_str[sizeof(layout_str)-1] = 0;
 
@@ -207,7 +210,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             Speaker2Chan[1] = FRONT_RIGHT;
             SpeakerAngle[0] = -90.0f * M_PI/180.0f;
             SpeakerAngle[1] =  90.0f * M_PI/180.0f;
-            SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            SetSpeakerArrangement("layout_STEREO", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
 
         case DevFmtQuad:
@@ -228,7 +231,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[1] =  -45.0f * M_PI/180.0f;
             SpeakerAngle[2] =   45.0f * M_PI/180.0f;
             SpeakerAngle[3] =  135.0f * M_PI/180.0f;
-            SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            SetSpeakerArrangement("layout_QUAD", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
 
         case DevFmtX51:
@@ -249,7 +252,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[2] =    0.0f * M_PI/180.0f;
             SpeakerAngle[3] =   30.0f * M_PI/180.0f;
             SpeakerAngle[4] =  110.0f * M_PI/180.0f;
-            SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            SetSpeakerArrangement("layout_51CHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
 
         case DevFmtX61:
@@ -270,7 +273,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[3] =  30.0f * M_PI/180.0f;
             SpeakerAngle[4] =  90.0f * M_PI/180.0f;
             SpeakerAngle[5] = 180.0f * M_PI/180.0f;
-            SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            SetSpeakerArrangement("layout_61CHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
 
         case DevFmtX71:
@@ -291,7 +294,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[4] =   30.0f * M_PI/180.0f;
             SpeakerAngle[5] =   90.0f * M_PI/180.0f;
             SpeakerAngle[6] =  150.0f * M_PI/180.0f;
-            SetSpeakerArrangement("layout", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            SetSpeakerArrangement("layout_71CHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
     }
 

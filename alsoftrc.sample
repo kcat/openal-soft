@@ -150,6 +150,16 @@
 #  and back-center(bc).
 #layout =
 
+## layout_*:
+#  Channel-specific layouts may be specified to override the layout option. The
+#  same speakers as the layout option are available, and the default settings
+#  are shown below.
+#layout_STEREO = fl=-90, fr=90
+#layout_QUAD   = fl=-45, fr=45, bl=-135, br=135
+#layout_51CHN  = fl=-30, fr=30, fc=0, bl=-110, br=110
+#layout_61CHN  = fl=-30, fr=30, fc=0, sl=-90, sr=90, bc=180
+#layout_71CHN  = fl=-30, fr=30, fc=0, sl=-90, sr=90, bl=-150, br=150
+
 ##
 ## ALSA backend stuff
 ##

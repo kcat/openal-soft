@@ -585,30 +585,36 @@ static void ProbeCaptureDeviceList()
 }
 
 
+static void AppendList(const ALCchar *name, ALCchar **List, size_t *ListSize)
+{
+    size_t len = strlen(name);
+    void *temp;
+
+    if(len == 0)
+        return;
+
+    temp = realloc(*List, (*ListSize) + len + 2);
+    if(!temp)
+    {
+        AL_PRINT("Realloc failed to add %s!\n", name);
+        return;
+    }
+    *List = temp;
+
+    memcpy((*List)+(*ListSize), name, len+1);
+    *ListSize += len+1;
+    (*List)[*ListSize] = 0;
+}
+
 #define DECL_APPEND_LIST_FUNC(type)                                          \
 void Append##type##List(const ALCchar *name)                                 \
-{                                                                            \
-    size_t len = strlen(name);                                               \
-    void *temp;                                                              \
-                                                                             \
-    if(len == 0)                                                             \
-        return;                                                              \
-                                                                             \
-    temp = realloc(alc##type##List, alc##type##ListSize + len + 2);          \
-    if(!temp)                                                                \
-    {                                                                        \
-        AL_PRINT("Realloc failed to add %s!\n", name);                       \
-        return;                                                              \
-    }                                                                        \
-    alc##type##List = temp;                                                  \
-    memcpy(alc##type##List+alc##type##ListSize, name, len+1);                \
-    alc##type##ListSize += len+1;                                            \
-    alc##type##List[alc##type##ListSize] = 0;                                \
-}
+{ AppendList(name, &alc##type##List, &alc##type##ListSize); }
 
 DECL_APPEND_LIST_FUNC(Device)
 DECL_APPEND_LIST_FUNC(AllDevice)
 DECL_APPEND_LIST_FUNC(CaptureDevice)
+
+#undef DECL_APPEND_LIST_FUNC
 
 
 void al_print(const char *fname, unsigned int line, const char *fmt, ...)

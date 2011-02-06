@@ -759,11 +759,21 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             if((ALBuffer=BufferListItem->buffer) != NULL)
             {
                 DataSize = ALBuffer->size / FrameSize;
-                if(DataSize > DataPosInt)
-                    break;
                 LoopStart = ALBuffer->LoopStart;
                 LoopEnd = ALBuffer->LoopEnd;
+                if(LoopEnd > DataPosInt)
+                    break;
             }
+
+            if(Looping && Source->lSourceType == AL_STATIC)
+            {
+                BufferListItem = Source->queue;
+                DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
+                break;
+            }
+
+            if(DataSize > DataPosInt)
+                break;
 
             if(BufferListItem->next)
             {
@@ -774,11 +784,6 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             {
                 BufferListItem = Source->queue;
                 BuffersPlayed = 0;
-                if(Source->lSourceType == AL_STATIC)
-                {
-                    DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
-                    break;
-                }
             }
             else
             {

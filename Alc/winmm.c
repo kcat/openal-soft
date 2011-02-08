@@ -303,7 +303,7 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
 {
     WAVEFORMATEX wfexFormat;
     WinMMData *pData = NULL;
-    UINT_PTR lDeviceID = 0;
+    UINT lDeviceID = 0;
     MMRESULT res;
     ALuint i = 0;
 
@@ -490,7 +490,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     WAVEFORMATEX wfexCaptureFormat;
     DWORD ulCapturedDataSize;
     WinMMData *pData = NULL;
-    ALint lDeviceID = 0;
+    UINT lDeviceID = 0;
     ALbyte *BufferData;
     ALint lBufferSize;
     MMRESULT res;

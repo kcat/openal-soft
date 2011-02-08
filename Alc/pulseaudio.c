@@ -30,6 +30,7 @@
 
 #if PA_API_VERSION == 11
 #define PA_STREAM_ADJUST_LATENCY 0x2000U
+#define PA_STREAM_EARLY_REQUESTS 0x4000U
 static __inline int PA_STREAM_IS_GOOD(pa_stream_state_t x)
 {
     return (x == PA_STREAM_CREATING || x == PA_STREAM_READY);

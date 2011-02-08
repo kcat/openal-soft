@@ -27,6 +27,7 @@
 #include <memory.h>
 
 #include <dsound.h>
+#include <cguid.h>
 #include <mmreg.h>
 #ifndef _WAVEFORMATEXTENSIBLE_
 #include <ks.h>

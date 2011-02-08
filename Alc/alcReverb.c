@@ -369,7 +369,7 @@ static __inline ALvoid CalcMatrixCoeffs(ALfloat diffusion, ALfloat *x, ALfloat *
 
 // Calculate the limited HF ratio for use with the late reverb low-pass
 // filters.
-static __inline ALfloat CalcLimitedHfRatio(ALfloat hfRatio, ALfloat airAbsorptionGainHF, ALfloat decayTime)
+static ALfloat CalcLimitedHfRatio(ALfloat hfRatio, ALfloat airAbsorptionGainHF, ALfloat decayTime)
 {
     ALfloat limitRatio;
 

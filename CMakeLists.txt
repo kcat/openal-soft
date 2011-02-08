@@ -99,6 +99,17 @@ IF(MSVC)
         INCLUDE_DIRECTORIES("${DXSDK_DIR}/Include")
         LINK_DIRECTORIES("${DXSDK_DIR}/Lib")
     ENDIF()
+
+    OPTION(FORCE_STATIC_VCRT "Force /MT for static VC runtimes" OFF)
+    IF(FORCE_STATIC_VCRT)
+        FOREACH(flag_var
+                CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+                CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
+            IF(${flag_var} MATCHES "/MD")
+                STRING(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+            ENDIF()
+        ENDFOREACH(flag_var)
+    ENDIF()
 ELSE()
     ADD_DEFINITIONS(-Winline -Wall)
     CHECK_C_COMPILER_FLAG(-Wextra HAVE_W_EXTRA)

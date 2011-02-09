@@ -1800,7 +1800,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
     const ALbufferlistitem *BufferList;
     const ALbuffer         *Buffer = NULL;
     enum UserFmtType OriginalType;
-    ALfloat BufferFreq;
+    ALsizei BufferFreq;
     ALint   Channels, Bytes;
     ALuint  readPos, writePos;
     ALuint  TotalBufferDataSize;
@@ -1826,7 +1826,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
     }
 
     // Get Current Buffer Size and frequency (in milliseconds)
-    BufferFreq = (ALfloat)Buffer->Frequency;
+    BufferFreq = Buffer->Frequency;
     OriginalType = Buffer->OriginalType;
     Channels = ChannelsFromFmt(Buffer->FmtChannels);
     Bytes = BytesFromFmt(Buffer->FmtType);

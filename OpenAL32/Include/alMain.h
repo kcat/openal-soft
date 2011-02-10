@@ -69,11 +69,6 @@ AL_API ALvoid AL_APIENTRY alUnmapDatabufferEXT(ALuint uiBuffer);
 #endif
 #endif
 
-#ifndef AL_EXT_loop_points
-#define AL_EXT_loop_points 1
-#define AL_LOOP_POINTS                           0x2015
-#endif
-
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>

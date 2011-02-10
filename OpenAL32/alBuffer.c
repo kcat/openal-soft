@@ -607,7 +607,7 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
     {
         switch(eParam)
         {
-        case AL_LOOP_POINTS:
+        case AL_LOOP_POINTS_SOFT:
             if(ALBuf->refcount > 0)
                 alSetError(pContext, AL_INVALID_OPERATION);
             else if(plValues[0] < 0 || plValues[1] < 0 ||
@@ -814,7 +814,7 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
             alGetBufferi(buffer, eParam, plValues);
             break;
 
-        case AL_LOOP_POINTS:
+        case AL_LOOP_POINTS_SOFT:
             plValues[0] = ALBuf->LoopStart;
             plValues[1] = ALBuf->LoopEnd;
             break;

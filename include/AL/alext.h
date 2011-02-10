@@ -153,6 +153,11 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
 #endif
 #endif
 
+#ifndef AL_SOFT_loop_points
+#define AL_SOFT_loop_points 1
+#define AL_LOOP_POINTS_SOFT                      0x2015
+#endif
+
 #ifdef __cplusplus
 }
 #endif

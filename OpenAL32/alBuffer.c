@@ -1156,9 +1156,9 @@ static __inline ALfloat Conv_ALfloat_ALint(ALint val)
 static __inline ALfloat Conv_ALfloat_ALuint(ALuint val)
 { return (ALint)(val-2147483648u) * (1.0/2147483647.0); }
 static __inline ALfloat Conv_ALfloat_ALfloat(ALfloat val)
-{ return val; }
+{ return (val==val) ? val : 0.0f; }
 static __inline ALfloat Conv_ALfloat_ALdouble(ALdouble val)
-{ return val; }
+{ return (val==val) ? val : 0.0; }
 static __inline ALfloat Conv_ALfloat_ALmulaw(ALmulaw val)
 { return Conv_ALfloat_ALshort(DecodeMuLaw(val)); }
 
@@ -1175,9 +1175,9 @@ static __inline ALdouble Conv_ALdouble_ALint(ALint val)
 static __inline ALdouble Conv_ALdouble_ALuint(ALuint val)
 { return (ALint)(val-2147483648u) * (1.0/2147483647.0); }
 static __inline ALdouble Conv_ALdouble_ALfloat(ALfloat val)
-{ return val; }
+{ return (val==val) ? val : 0.0f; }
 static __inline ALdouble Conv_ALdouble_ALdouble(ALdouble val)
-{ return val; }
+{ return (val==val) ? val : 0.0; }
 static __inline ALdouble Conv_ALdouble_ALmulaw(ALmulaw val)
 { return Conv_ALdouble_ALshort(DecodeMuLaw(val)); }
 

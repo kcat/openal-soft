@@ -13,6 +13,37 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#ifndef ALC_SOFT_device_loopback
+#define ALC_SOFT_device_loopback 1
+#define AL_BYTE                                  1
+#define AL_UNSIGNED_BYTE                         2
+#define AL_SHORT                                 3
+#define AL_UNSIGNED_SHORT                        4
+#define AL_INT                                   5
+#define AL_UNSIGNED_INT                          6
+#define AL_FLOAT                                 7
+#define AL_DOUBLE                                8
+#define AL_MULAW                                 9
+#define AL_IMA4                                  10
+#define AL_MONO                                  1
+#define AL_STEREO                                2
+#define AL_REAR                                  3
+#define AL_QUAD                                  4
+#define AL_5POINT1                               5 /* (WFX order) */
+#define AL_6POINT1                               6 /* (WFX order) */
+#define AL_7POINT1                               7 /* (WFX order) */
+#define ALC_FORMAT_CHANNELS                      0x1990
+#define ALC_FORMAT_TYPE                          0x1991
+typedef ALCdevice* (ALC_APIENTRY*LPALCLOOPBACKOPENDEVICE)(void);
+typedef ALCboolean (ALC_APIENTRY*LPALCISRENDERFORMATSUPPORTED)(ALCdevice *device, ALCsizei freq, ALenum channels, ALenum type);
+typedef void (ALC_APIENTRY*LPALCRENDERSAMPLES)(ALCdevice *device, ALCvoid *buffer, ALCsizei samples);
+#ifdef AL_ALEXT_PROTOTYPES
+ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDevice(void);
+ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupported(ALCdevice *device, ALCsizei freq, ALenum channels, ALenum type);
+ALC_API void ALC_APIENTRY alcRenderSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples);
+#endif
+#endif
+
 #ifndef AL_EXT_sample_buffer_object
 #define AL_EXT_sample_buffer_object 1
 typedef ptrdiff_t ALintptrEXT;
@@ -294,6 +325,9 @@ void alc_pulse_probe(int type);
 void alc_null_init(BackendFuncs *func_list);
 void alc_null_deinit(void);
 void alc_null_probe(int type);
+void alc_loopback_init(BackendFuncs *func_list);
+void alc_loopback_deinit(void);
+void alc_loopback_probe(int type);
 
 
 typedef struct UIntMap {
@@ -313,19 +347,19 @@ ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
 
 /* Device formats */
 enum DevFmtType {
-    DevFmtByte,   /* AL_BYTE */
-    DevFmtUByte,  /* AL_UNSIGNED_BYTE */
-    DevFmtShort,  /* AL_SHORT */
-    DevFmtUShort, /* AL_UNSIGNED_SHORT */
-    DevFmtFloat,  /* AL_FLOAT */
+    DevFmtByte   = AL_BYTE,
+    DevFmtUByte  = AL_UNSIGNED_BYTE,
+    DevFmtShort  = AL_SHORT,
+    DevFmtUShort = AL_UNSIGNED_SHORT,
+    DevFmtFloat  = AL_FLOAT
 };
 enum DevFmtChannels {
-    DevFmtMono,   /* AL_MONO */
-    DevFmtStereo, /* AL_STEREO */
-    DevFmtQuad,   /* AL_QUAD */
-    DevFmtX51,    /* AL_5POINT1 */
-    DevFmtX61,    /* AL_6POINT1 */
-    DevFmtX71,    /* AL_7POINT1 */
+    DevFmtMono   = AL_MONO,
+    DevFmtStereo = AL_STEREO,
+    DevFmtQuad   = AL_QUAD,
+    DevFmtX51    = AL_5POINT1,
+    DevFmtX61    = AL_6POINT1,
+    DevFmtX71    = AL_7POINT1
 };
 
 ALuint BytesFromDevFmt(enum DevFmtType type);
@@ -341,6 +375,7 @@ struct ALCdevice_struct
 {
     ALCboolean   Connected;
     ALboolean    IsCaptureDevice;
+    ALboolean    IsLoopbackDevice;
 
     ALuint       Frequency;
     ALuint       UpdateSize;

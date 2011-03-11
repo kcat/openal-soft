@@ -77,6 +77,9 @@ static BackendInfo BackendList[] = {
 
     { NULL, NULL, NULL, NULL, EmptyFuncs }
 };
+static BackendInfo BackendLoopback = {
+    "loopback", alc_loopback_init, alc_loopback_deinit, alc_loopback_probe, EmptyFuncs
+};
 #undef EmptyFuncs
 
 ///////////////////////////////////////////////////////
@@ -123,6 +126,10 @@ static const ALCfunction alcFunctions[] = {
 
     { "alcSetThreadContext",        (ALCvoid *) alcSetThreadContext      },
     { "alcGetThreadContext",        (ALCvoid *) alcGetThreadContext      },
+
+    { "alcLoopbackOpenDevice",      (ALCvoid *) alcLoopbackOpenDevice    },
+    { "alcIsRenderFormatSupported", (ALCvoid *) alcIsRenderFormatSupported},
+    { "alcRenderSamples",           (ALCvoid *) alcRenderSamples         },
 
     { "alEnable",                   (ALCvoid *) alEnable                 },
     { "alDisable",                  (ALCvoid *) alDisable                },
@@ -494,6 +501,7 @@ static void alc_init(void)
 
     for(i = 0;BackendList[i].Init;i++)
         BackendList[i].Init(&BackendList[i].Funcs);
+    BackendLoopback.Init(&BackendLoopback.Funcs);
 
     str = GetConfigValue(NULL, "excludefx", "");
     if(str[0])
@@ -538,6 +546,7 @@ static void alc_deinit(void)
 
     for(i = 0;BackendList[i].Deinit;i++)
         BackendList[i].Deinit();
+    BackendLoopback.Deinit();
 
     tls_delete(LocalContext);
 
@@ -890,6 +899,41 @@ ALboolean DecomposeDevFormat(ALenum format, enum DevFmtChannels *chans,
     return AL_FALSE;
 }
 
+static ALboolean IsValidType(ALenum type)
+{
+    switch(type)
+    {
+        case AL_BYTE:
+        case AL_UNSIGNED_BYTE:
+        case AL_SHORT:
+        case AL_UNSIGNED_SHORT:
+        case AL_INT:
+        case AL_UNSIGNED_INT:
+        case AL_FLOAT:
+        case AL_DOUBLE:
+        case AL_MULAW:
+        case AL_IMA4:
+            return AL_TRUE;
+    }
+    return AL_FALSE;
+}
+
+static ALboolean IsValidChannels(ALenum channels)
+{
+    switch(channels)
+    {
+        case AL_MONO:
+        case AL_STEREO:
+        case AL_REAR:
+        case AL_QUAD:
+        case AL_5POINT1:
+        case AL_6POINT1:
+        case AL_7POINT1:
+            return AL_TRUE;
+    }
+    return AL_FALSE;
+}
+
 /*
     IsDevice
 
@@ -952,6 +996,8 @@ ALCvoid alcSetError(ALCdevice *device, ALenum errorCode)
 static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
     ALCuint freq, numMono, numStereo, numSends;
+    enum DevFmtChannels schans;
+    enum DevFmtType stype;
     ALboolean running;
     ALuint oldRate;
     ALuint attrIdx;
@@ -974,6 +1020,8 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 
         freq = device->Frequency;
+        schans = device->FmtChans;
+        stype = device->FmtType;
         numMono = device->NumMonoSources;
         numStereo = device->NumStereoSources;
         numSends = device->NumAuxSends;
@@ -981,12 +1029,47 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         attrIdx = 0;
         while(attrList[attrIdx])
         {
-            if(attrList[attrIdx] == ALC_FREQUENCY &&
-               !ConfigValueExists(NULL, "frequency"))
+            if(attrList[attrIdx] == ALC_FORMAT_CHANNELS &&
+               device->IsLoopbackDevice)
             {
-                freq = attrList[attrIdx + 1];
-                if(freq < 8000)
-                    freq = 8000;
+                ALCint val = attrList[attrIdx + 1];
+                if(!IsValidChannels(val) || !ChannelsFromDevFmt(val))
+                {
+                    alcSetError(device, ALC_INVALID_VALUE);
+                    return ALC_FALSE;
+                }
+                schans = val;
+            }
+
+            if(attrList[attrIdx] == ALC_FORMAT_TYPE &&
+               device->IsLoopbackDevice)
+            {
+                ALCint val = attrList[attrIdx + 1];
+                if(!IsValidType(val) || !BytesFromDevFmt(val))
+                {
+                    alcSetError(device, ALC_INVALID_VALUE);
+                    return ALC_FALSE;
+                }
+                stype = val;
+            }
+
+            if(attrList[attrIdx] == ALC_FREQUENCY)
+            {
+                if(device->IsLoopbackDevice)
+                {
+                    freq = attrList[attrIdx + 1];
+                    if(freq < 8000)
+                    {
+                        alcSetError(device, ALC_INVALID_VALUE);
+                        return ALC_FALSE;
+                    }
+                }
+                else if(!ConfigValueExists(NULL, "frequency"))
+                {
+                    freq = attrList[attrIdx + 1];
+                    if(freq < 8000)
+                        freq = 8000;
+                }
             }
 
             if(attrList[attrIdx] == ALC_STEREO_SOURCES)
@@ -1013,6 +1096,8 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                              device->Frequency;
 
         device->Frequency = freq;
+        device->FmtChans = schans;
+        device->FmtType = stype;
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
         device->NumAuxSends = numSends;
@@ -1235,6 +1320,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     //Validate device
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_TRUE;
+    device->IsLoopbackDevice = AL_FALSE;
 
     device->szDeviceName = NULL;
 
@@ -1582,11 +1668,22 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                 data[i++] = ALC_FREQUENCY;
                 data[i++] = device->Frequency;
 
-                data[i++] = ALC_REFRESH;
-                data[i++] = device->Frequency / device->UpdateSize;
+                if(!device->IsLoopbackDevice)
+                {
+                    data[i++] = ALC_REFRESH;
+                    data[i++] = device->Frequency / device->UpdateSize;
 
-                data[i++] = ALC_SYNC;
-                data[i++] = ALC_FALSE;
+                    data[i++] = ALC_SYNC;
+                    data[i++] = ALC_FALSE;
+                }
+                else
+                {
+                    data[i++] = ALC_FORMAT_CHANNELS;
+                    data[i++] = device->FmtChans;
+
+                    data[i++] = ALC_FORMAT_TYPE;
+                    data[i++] = device->FmtType;
+                }
 
                 data[i++] = ALC_MONO_SOURCES;
                 data[i++] = device->NumMonoSources;
@@ -1610,17 +1707,31 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
             break;
 
         case ALC_REFRESH:
-            if(!IsDevice(device))
+            if(!IsDevice(device) || device->IsLoopbackDevice)
                 alcSetError(device, ALC_INVALID_DEVICE);
             else
                 *data = device->Frequency / device->UpdateSize;
             break;
 
         case ALC_SYNC:
-            if(!IsDevice(device))
+            if(!IsDevice(device) || device->IsLoopbackDevice)
                 alcSetError(device, ALC_INVALID_DEVICE);
             else
                 *data = ALC_FALSE;
+            break;
+
+        case ALC_FORMAT_CHANNELS:
+            if(!IsDevice(device) || !device->IsLoopbackDevice)
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else
+                *data = device->FmtChans;
+            break;
+
+        case ALC_FORMAT_TYPE:
+            if(!IsDevice(device) || !device->IsLoopbackDevice)
+                alcSetError(device, ALC_INVALID_DEVICE);
+            else
+                *data = device->FmtType;
             break;
 
         case ALC_MONO_SOURCES:
@@ -2130,6 +2241,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     //Validate device
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_FALSE;
+    device->IsLoopbackDevice = AL_FALSE;
     device->LastError = ALC_NO_ERROR;
 
     device->Bs2b = NULL;
@@ -2301,6 +2413,120 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     free(pDevice);
 
     return ALC_TRUE;
+}
+
+
+ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDevice(void)
+{
+    ALCdevice *device;
+
+    device = calloc(1, sizeof(ALCdevice));
+    if(!device)
+    {
+        alcSetError(NULL, ALC_OUT_OF_MEMORY);
+        return NULL;
+    }
+
+    //Validate device
+    device->Connected = ALC_TRUE;
+    device->IsCaptureDevice = AL_FALSE;
+    device->IsLoopbackDevice = AL_TRUE;
+    device->LastError = ALC_NO_ERROR;
+
+    device->Bs2b = NULL;
+    device->szDeviceName = NULL;
+
+    device->Contexts = NULL;
+    device->NumContexts = 0;
+
+    InitUIntMap(&device->BufferMap);
+    InitUIntMap(&device->EffectMap);
+    InitUIntMap(&device->FilterMap);
+    InitUIntMap(&device->DatabufferMap);
+
+    //Set output format
+    device->Frequency = 44100;
+    device->FmtChans = DevFmtStereo;
+    device->FmtType = DevFmtShort;
+
+    device->NumUpdates = 0;
+    device->UpdateSize = 0;
+
+    device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
+    if((ALint)device->MaxNoOfSources <= 0)
+        device->MaxNoOfSources = 256;
+
+    device->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
+    if((ALint)device->AuxiliaryEffectSlotMax <= 0)
+        device->AuxiliaryEffectSlotMax = 4;
+
+    device->NumStereoSources = 1;
+    device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
+
+    device->NumAuxSends = GetConfigValueInt(NULL, "sends", 1);
+    if(device->NumAuxSends > MAX_SENDS)
+        device->NumAuxSends = MAX_SENDS;
+
+    device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
+
+    device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 1);
+
+    device->HeadDampen = 0.0f;
+
+    // Open the "backend"
+    SuspendContext(NULL);
+    device->Funcs = &BackendLoopback.Funcs;
+    ALCdevice_OpenPlayback(device, "Loopback");
+
+    device->next = g_pDeviceList;
+    g_pDeviceList = device;
+    g_ulDeviceCount++;
+    ProcessContext(NULL);
+
+    return device;
+}
+
+ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupported(ALCdevice *device, ALCsizei freq, ALenum channels, ALenum type)
+{
+    if(!IsDevice(device) || !device->IsLoopbackDevice)
+    {
+        alcSetError(device, ALC_INVALID_DEVICE);
+        return ALC_FALSE;
+    }
+
+    if(freq < 8000)
+    {
+        if(freq <= 0)
+            alcSetError(device, ALC_INVALID_VALUE);
+        return ALC_FALSE;
+    }
+
+    if(IsValidType(type) == AL_FALSE || IsValidChannels(channels) == AL_FALSE)
+    {
+        alcSetError(device, ALC_INVALID_ENUM);
+        return ALC_FALSE;
+    }
+
+    if((type == DevFmtByte || type == DevFmtUByte || type == DevFmtShort ||
+        type == DevFmtUShort || type == DevFmtFloat) &&
+       (channels == DevFmtMono || channels == DevFmtStereo ||
+        channels == DevFmtQuad || channels == DevFmtX51 ||
+        channels == DevFmtX61 || channels == DevFmtX71))
+        return ALC_TRUE;
+
+    return ALC_FALSE;
+}
+
+ALC_API void ALC_APIENTRY alcRenderSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
+{
+    SuspendContext(NULL);
+    if(!IsDevice(device) || !device->IsLoopbackDevice)
+        alcSetError(device, ALC_INVALID_DEVICE);
+    else if(samples < 0)
+        alcSetError(device, ALC_INVALID_VALUE);
+    else
+        aluMixData(device, buffer, samples);
+    ProcessContext(NULL);
 }
 
 

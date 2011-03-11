@@ -327,6 +327,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/bs2b.c
               Alc/mixer.c
               Alc/panning.c
+              Alc/loopback.c
               Alc/null.c
 )
 

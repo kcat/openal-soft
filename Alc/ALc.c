@@ -1854,7 +1854,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     void *temp;
 
     SuspendContext(NULL);
-
     if(!IsDevice(device) || device->IsCaptureDevice || !device->Connected)
     {
         alcSetError(device, ALC_INVALID_DEVICE);
@@ -1924,18 +1923,28 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     ALCcontext **list;
     ALuint i;
 
+    SuspendContext(NULL);
     if(!IsContext(context))
     {
         alcSetError(NULL, ALC_INVALID_CONTEXT);
+        ProcessContext(NULL);
         return;
     }
 
+    list = &g_pContextList;
+    while(*list != context)
+        list = &(*list)->next;
+
+    *list = (*list)->next;
+    g_ulContextCount--;
+
     Device = context->Device;
-
     if(Device->NumContexts == 1)
+    {
+        ProcessContext(NULL);
         ALCdevice_StopPlayback(Device);
-
-    SuspendContext(NULL);
+        SuspendContext(NULL);
+    }
 
     if(context == GlobalContext)
         GlobalContext = NULL;
@@ -1975,13 +1984,6 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     context->ActiveSources = NULL;
     context->MaxActiveSources = 0;
     context->ActiveSourceCount = 0;
-
-    list = &g_pContextList;
-    while(*list != context)
-        list = &(*list)->next;
-
-    *list = (*list)->next;
-    g_ulContextCount--;
 
     // Unlock context
     ProcessContext(context);
@@ -2336,13 +2338,13 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 {
     ALCdevice **list;
 
+    SuspendContext(NULL);
     if(!IsDevice(pDevice) || pDevice->IsCaptureDevice)
     {
         alcSetError(pDevice, ALC_INVALID_DEVICE);
+        ProcessContext(NULL);
         return ALC_FALSE;
     }
-
-    SuspendContext(NULL);
 
     list = &g_pDeviceList;
     while(*list != pDevice)
@@ -2488,33 +2490,29 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDevice(void)
 
 ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupported(ALCdevice *device, ALCsizei freq, ALenum channels, ALenum type)
 {
+    ALCboolean ret = ALC_FALSE;
+
+    SuspendContext(NULL);
     if(!IsDevice(device) || !device->IsLoopbackDevice)
-    {
         alcSetError(device, ALC_INVALID_DEVICE);
-        return ALC_FALSE;
-    }
-
-    if(freq < 8000)
-    {
-        if(freq <= 0)
-            alcSetError(device, ALC_INVALID_VALUE);
-        return ALC_FALSE;
-    }
-
-    if(IsValidType(type) == AL_FALSE || IsValidChannels(channels) == AL_FALSE)
-    {
+    else if(freq <= 0)
+        alcSetError(device, ALC_INVALID_VALUE);
+    else if(IsValidType(type) == AL_FALSE ||
+            IsValidChannels(channels) == AL_FALSE)
         alcSetError(device, ALC_INVALID_ENUM);
-        return ALC_FALSE;
+    else
+    {
+        if((type == DevFmtByte || type == DevFmtUByte || type == DevFmtShort ||
+            type == DevFmtUShort || type == DevFmtFloat) &&
+           (channels == DevFmtMono || channels == DevFmtStereo ||
+            channels == DevFmtQuad || channels == DevFmtX51 ||
+            channels == DevFmtX61 || channels == DevFmtX71) &&
+           freq >= 8000)
+            ret = ALC_TRUE;
     }
+    ProcessContext(NULL);
 
-    if((type == DevFmtByte || type == DevFmtUByte || type == DevFmtShort ||
-        type == DevFmtUShort || type == DevFmtFloat) &&
-       (channels == DevFmtMono || channels == DevFmtStereo ||
-        channels == DevFmtQuad || channels == DevFmtX51 ||
-        channels == DevFmtX61 || channels == DevFmtX71))
-        return ALC_TRUE;
-
-    return ALC_FALSE;
+    return ret;
 }
 
 ALC_API void ALC_APIENTRY alcRenderSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)

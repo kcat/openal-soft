@@ -175,6 +175,13 @@ AL_API void AL_APIENTRY alRequestFoldbackStop(void);
 #endif
 #endif
 
+#ifndef ALC_EXT_DEDICATED
+#define ALC_EXT_DEDICATED 1
+#define AL_DEDICATED_GAIN                        0x0001
+#define AL_EFFECT_DEDICATED_DIALOGUE             0x9001
+#define AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT 0x9000
+#endif
+
 #ifdef __cplusplus
 }
 #endif

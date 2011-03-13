@@ -74,6 +74,11 @@ static LPALGENEFFECTS    palGenEffects;
 static LPALDELETEEFFECTS palDeleteEffects;
 static LPALEFFECTI       palEffecti;
 
+#ifndef ALC_EXT_DEDICATED
+#define AL_EFFECT_DEDICATED_DIALOGUE             0x9001
+#define AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT 0x9000
+#endif
+
 
 #define MAX_WIDTH  80
 
@@ -198,9 +203,14 @@ static void printEFXInfo(ALCdevice *device)
         AL_EFFECT_PITCH_SHIFTER, AL_EFFECT_RING_MODULATOR, AL_EFFECT_AUTOWAH,
         AL_EFFECT_COMPRESSOR, AL_EFFECT_EQUALIZER, AL_EFFECT_NULL
     };
+    const ALenum dedeffects[] = {
+        AL_EFFECT_DEDICATED_DIALOGUE,
+        AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, AL_EFFECT_NULL
+    };
     char effectNames[] = "EAX Reverb,Reverb,Chorus,Distortion,Echo,Flanger,"
                          "Frequency Shifter,Vocal Morpher,Pitch Shifter,"
-                         "Ring Modulator,Autowah,Compressor,Equalizer,";
+                         "Ring Modulator,Autowah,Compressor,Equalizer,"
+                         "Dedicated Dialog,Dedicated LFE,";
     char *current;
 
     if(alcIsExtensionPresent(device, "ALC_EXT_EFX") == AL_FALSE)
@@ -265,6 +275,27 @@ static void printEFXInfo(ALCdevice *device)
                 current = next+1;
             else
                 memmove(current, next+1, strlen(next));
+        }
+        if(alcIsExtensionPresent(device, "ALC_EXT_DEDICATED"))
+        {
+            for(i = 0;dedeffects[i] != AL_EFFECT_NULL;i++)
+            {
+                char *next = strchr(current, ',');
+
+                palEffecti(obj, AL_EFFECT_TYPE, dedeffects[i]);
+                if(alGetError() == AL_NO_ERROR)
+                    current = next+1;
+                else
+                    memmove(current, next+1, strlen(next));
+            }
+        }
+        else
+        {
+            for(i = 0;dedeffects[i] != AL_EFFECT_NULL;i++)
+            {
+                char *next = strchr(current, ',');
+                memmove(current, next+1, strlen(next));
+            }
         }
         palDeleteEffects(1, &obj);
         checkALErrors();

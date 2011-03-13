@@ -167,13 +167,14 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
     {
         if(param == AL_EFFECT_TYPE)
         {
-            ALboolean isOk = (iValue == AL_EFFECT_NULL ||
-                (iValue == AL_EFFECT_EAXREVERB && !DisabledEffects[EAXREVERB]) ||
-                (iValue == AL_EFFECT_REVERB && !DisabledEffects[REVERB]) ||
-                (iValue == AL_EFFECT_ECHO && !DisabledEffects[ECHO]) ||
-                (iValue == AL_EFFECT_RING_MODULATOR && !DisabledEffects[MODULATOR]) ||
-                ((iValue == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT ||
-                  iValue == AL_EFFECT_DEDICATED_DIALOGUE) && !DisabledEffects[DEDICATED]));
+            ALboolean isOk = (iValue == AL_EFFECT_NULL);
+            ALint i;
+            for(i = 0;!isOk && EffectList[i].val;i++)
+            {
+                if(iValue == EffectList[i].val &&
+                   !DisabledEffects[EffectList[i].type])
+                    isOk = AL_TRUE;
+            }
 
             if(isOk)
                 InitEffectParams(ALEffect, iValue);

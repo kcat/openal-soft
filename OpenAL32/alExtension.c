@@ -276,13 +276,13 @@ static const ALenums enumeration[] = {
 
 
 const struct EffectList EffectList[] = {
-    { "eaxreverb", EAXREVERB, "AL_EFFECT_EAXREVERB" },
-    { "reverb",    REVERB,    "AL_EFFECT_REVERB" },
-    { "echo",      ECHO,      "AL_EFFECT_ECHO" },
-    { "modulator", MODULATOR, "AL_EFFECT_RING_MODULATOR" },
-    { "dedicated", DEDICATED, "AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT" },
-    { "dedicated", DEDICATED, "AL_EFFECT_DEDICATED_DIALOGUE" },
-    { NULL, 0, NULL }
+    { "eaxreverb", EAXREVERB, "AL_EFFECT_EAXREVERB",      AL_EFFECT_EAXREVERB },
+    { "reverb",    REVERB,    "AL_EFFECT_REVERB",         AL_EFFECT_REVERB },
+    { "echo",      ECHO,      "AL_EFFECT_ECHO",           AL_EFFECT_ECHO },
+    { "modulator", MODULATOR, "AL_EFFECT_RING_MODULATOR", AL_EFFECT_RING_MODULATOR },
+    { "dedicated", DEDICATED, "AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT", AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT },
+    { "dedicated", DEDICATED, "AL_EFFECT_DEDICATED_DIALOGUE", AL_EFFECT_DEDICATED_DIALOGUE },
+    { NULL, 0, NULL, (ALenum)0 }
 };
 
 

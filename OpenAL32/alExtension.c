@@ -211,6 +211,8 @@ static const ALenums enumeration[] = {
     { "AL_EFFECT_COMPRESSOR",                 AL_EFFECT_COMPRESSOR                },
     { "AL_EFFECT_EQUALIZER",                  AL_EFFECT_EQUALIZER                 },
 #endif
+    { "AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT",AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT},
+    { "AL_EFFECT_DEDICATED_DIALOGUE",         AL_EFFECT_DEDICATED_DIALOGUE        },
 
     // Reverb params
     { "AL_REVERB_DENSITY",                    AL_REVERB_DENSITY                   },
@@ -263,6 +265,9 @@ static const ALenums enumeration[] = {
     { "AL_RING_MODULATOR_FREQUENCY",          AL_RING_MODULATOR_FREQUENCY         },
     { "AL_RING_MODULATOR_HIGHPASS_CUTOFF",    AL_RING_MODULATOR_HIGHPASS_CUTOFF   },
     { "AL_RING_MODULATOR_WAVEFORM",           AL_RING_MODULATOR_WAVEFORM          },
+
+    // Dedicated Dialogue/LFE params
+    { "AL_DEDICATED_GAIN",                    AL_DEDICATED_GAIN                   },
 
 
     // Default

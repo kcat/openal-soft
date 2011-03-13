@@ -14,6 +14,7 @@ enum {
     REVERB,
     ECHO,
     MODULATOR,
+    DEDICATED,
 
     MAX_EFFECTS
 };
@@ -68,6 +69,10 @@ typedef struct ALeffect
         ALfloat HighPassCutoff;
         ALint Waveform;
     } Modulator;
+
+    struct {
+        ALfloat Gain;
+    } Dedicated;
 
     // Index to itself
     ALuint effect;

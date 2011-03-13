@@ -331,7 +331,8 @@ static const ALCchar alcNoDeviceExtList[] =
     "ALC_EXT_thread_local_context";
 static const ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
-    "ALC_EXT_disconnect ALC_EXT_EFX ALC_EXT_thread_local_context";
+    "ALC_EXT_DEDICATED ALC_EXT_disconnect ALC_EXT_EFX "
+    "ALC_EXT_thread_local_context";
 static const ALCint alcMajorVersion = 1;
 static const ALCint alcMinorVersion = 1;
 
@@ -514,6 +515,7 @@ static void alc_init(void)
             { "reverb", REVERB },
             { "echo", ECHO },
             { "modulator", MODULATOR },
+            { "dedicated", DEDICATED },
             { NULL, 0 }
         };
         int n;

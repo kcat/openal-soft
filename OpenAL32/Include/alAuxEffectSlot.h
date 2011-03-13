@@ -49,6 +49,8 @@ ALeffectState *EAXVerbCreate(void);
 ALeffectState *VerbCreate(void);
 ALeffectState *EchoCreate(void);
 ALeffectState *ModulatorCreate(void);
+ALeffectState *DedicatedDLGCreate(void);
+ALeffectState *DedicatedLFECreate(void);
 
 #define ALEffect_Destroy(a)         ((a)->Destroy((a)))
 #define ALEffect_DeviceUpdate(a,b)  ((a)->DeviceUpdate((a),(b)))

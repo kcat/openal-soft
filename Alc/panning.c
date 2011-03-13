@@ -184,27 +184,27 @@ ALvoid aluInitPanning(ALCdevice *Device)
     switch(Device->FmtChans)
     {
         case DevFmtMono:
-            Matrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
-            Matrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
-            Matrix[SIDE_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
-            Matrix[SIDE_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
-            Matrix[BACK_LEFT][FRONT_CENTER]   = aluSqrt(0.5);
-            Matrix[BACK_RIGHT][FRONT_CENTER]  = aluSqrt(0.5);
-            Matrix[BACK_CENTER][FRONT_CENTER] = 1.0f;
+            Matrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
+            Matrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
+            Matrix[FRONT_CENTER][SIDE_LEFT]   = aluSqrt(0.5);
+            Matrix[FRONT_CENTER][SIDE_RIGHT]  = aluSqrt(0.5);
+            Matrix[FRONT_CENTER][BACK_LEFT]   = aluSqrt(0.5);
+            Matrix[FRONT_CENTER][BACK_RIGHT]  = aluSqrt(0.5);
+            Matrix[FRONT_CENTER][BACK_CENTER] = 1.0f;
             Device->NumChan = 1;
             Speaker2Chan[0] = FRONT_CENTER;
             SpeakerAngle[0] = 0.0f * M_PI/180.0f;
             break;
 
         case DevFmtStereo:
-            Matrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
-            Matrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
-            Matrix[SIDE_LEFT][FRONT_LEFT]     = 1.0f;
-            Matrix[SIDE_RIGHT][FRONT_RIGHT]   = 1.0f;
-            Matrix[BACK_LEFT][FRONT_LEFT]     = 1.0f;
-            Matrix[BACK_RIGHT][FRONT_RIGHT]   = 1.0f;
-            Matrix[BACK_CENTER][FRONT_LEFT]   = aluSqrt(0.5);
-            Matrix[BACK_CENTER][FRONT_RIGHT]  = aluSqrt(0.5);
+            Matrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
+            Matrix[FRONT_LEFT][SIDE_LEFT]     = 1.0f;
+            Matrix[FRONT_LEFT][BACK_LEFT]     = 1.0f;
+            Matrix[FRONT_LEFT][BACK_CENTER]   = aluSqrt(0.5);
+            Matrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
+            Matrix[FRONT_RIGHT][SIDE_RIGHT]   = 1.0f;
+            Matrix[FRONT_RIGHT][BACK_RIGHT]   = 1.0f;
+            Matrix[FRONT_RIGHT][BACK_CENTER]  = aluSqrt(0.5);
             Device->NumChan = 2;
             Speaker2Chan[0] = FRONT_LEFT;
             Speaker2Chan[1] = FRONT_RIGHT;
@@ -214,14 +214,14 @@ ALvoid aluInitPanning(ALCdevice *Device)
             break;
 
         case DevFmtQuad:
-            Matrix[FRONT_CENTER][FRONT_LEFT]  = aluSqrt(0.5);
-            Matrix[FRONT_CENTER][FRONT_RIGHT] = aluSqrt(0.5);
-            Matrix[SIDE_LEFT][FRONT_LEFT]     = aluSqrt(0.5);
-            Matrix[SIDE_LEFT][BACK_LEFT]      = aluSqrt(0.5);
-            Matrix[SIDE_RIGHT][FRONT_RIGHT]   = aluSqrt(0.5);
-            Matrix[SIDE_RIGHT][BACK_RIGHT]    = aluSqrt(0.5);
-            Matrix[BACK_CENTER][BACK_LEFT]    = aluSqrt(0.5);
-            Matrix[BACK_CENTER][BACK_RIGHT]   = aluSqrt(0.5);
+            Matrix[FRONT_LEFT][FRONT_CENTER]  = aluSqrt(0.5);
+            Matrix[FRONT_LEFT][SIDE_LEFT]     = aluSqrt(0.5);
+            Matrix[FRONT_RIGHT][FRONT_CENTER] = aluSqrt(0.5);
+            Matrix[FRONT_RIGHT][SIDE_RIGHT]   = aluSqrt(0.5);
+            Matrix[BACK_LEFT][SIDE_LEFT]      = aluSqrt(0.5);
+            Matrix[BACK_LEFT][BACK_CENTER]    = aluSqrt(0.5);
+            Matrix[BACK_RIGHT][SIDE_RIGHT]    = aluSqrt(0.5);
+            Matrix[BACK_RIGHT][BACK_CENTER]   = aluSqrt(0.5);
             Device->NumChan = 4;
             Speaker2Chan[0] = BACK_LEFT;
             Speaker2Chan[1] = FRONT_LEFT;
@@ -235,12 +235,12 @@ ALvoid aluInitPanning(ALCdevice *Device)
             break;
 
         case DevFmtX51:
-            Matrix[SIDE_LEFT][FRONT_LEFT]   = aluSqrt(0.5);
-            Matrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
-            Matrix[SIDE_RIGHT][FRONT_RIGHT] = aluSqrt(0.5);
-            Matrix[SIDE_RIGHT][BACK_RIGHT]  = aluSqrt(0.5);
-            Matrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
-            Matrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
+            Matrix[FRONT_LEFT][SIDE_LEFT]   = aluSqrt(0.5);
+            Matrix[FRONT_RIGHT][SIDE_RIGHT] = aluSqrt(0.5);
+            Matrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
+            Matrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
+            Matrix[BACK_RIGHT][SIDE_RIGHT]  = aluSqrt(0.5);
+            Matrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
             Device->NumChan = 5;
             Speaker2Chan[0] = BACK_LEFT;
             Speaker2Chan[1] = FRONT_LEFT;
@@ -256,10 +256,10 @@ ALvoid aluInitPanning(ALCdevice *Device)
             break;
 
         case DevFmtX61:
-            Matrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
-            Matrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
-            Matrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
-            Matrix[BACK_RIGHT][SIDE_RIGHT]  = aluSqrt(0.5);
+            Matrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
+            Matrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
+            Matrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
+            Matrix[SIDE_RIGHT][BACK_RIGHT]  = aluSqrt(0.5);
             Device->NumChan = 6;
             Speaker2Chan[0] = SIDE_LEFT;
             Speaker2Chan[1] = FRONT_LEFT;
@@ -277,8 +277,8 @@ ALvoid aluInitPanning(ALCdevice *Device)
             break;
 
         case DevFmtX71:
-            Matrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
-            Matrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
+            Matrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
+            Matrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
             Device->NumChan = 7;
             Speaker2Chan[0] = BACK_LEFT;
             Speaker2Chan[1] = SIDE_LEFT;
@@ -305,7 +305,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
         {
             ALfloat out = 0.0f;
             for(s2 = 0;s2 < MAXCHANNELS;s2++)
-                out += Device->ChannelMatrix[s2][s];
+                out += Device->ChannelMatrix[s][s2];
             maxout = __max(maxout, out);
         }
 
@@ -313,7 +313,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
         for(s = 0;s < MAXCHANNELS;s++)
         {
             for(s2 = 0;s2 < MAXCHANNELS;s2++)
-                Device->ChannelMatrix[s2][s] *= maxout;
+                Device->ChannelMatrix[s][s2] *= maxout;
         }
     }
 

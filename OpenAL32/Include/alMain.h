@@ -371,6 +371,13 @@ static __inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans,
 }
 
 
+extern const struct EffectList {
+    const char *name;
+    int type;
+    const char *ename;
+} EffectList[];
+
+
 struct ALCdevice_struct
 {
     ALCboolean   Connected;

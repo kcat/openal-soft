@@ -507,17 +507,6 @@ static void alc_init(void)
     str = GetConfigValue(NULL, "excludefx", "");
     if(str[0])
     {
-        const struct {
-            const char *name;
-            int type;
-        } EffectList[] = {
-            { "eaxreverb", EAXREVERB },
-            { "reverb", REVERB },
-            { "echo", ECHO },
-            { "modulator", MODULATOR },
-            { "dedicated", DEDICATED },
-            { NULL, 0 }
-        };
         int n;
         size_t len;
         const char *next = str;

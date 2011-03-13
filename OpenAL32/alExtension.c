@@ -275,6 +275,16 @@ static const ALenums enumeration[] = {
 };
 
 
+const struct EffectList EffectList[] = {
+    { "eaxreverb", EAXREVERB, "AL_EFFECT_EAXREVERB" },
+    { "reverb",    REVERB,    "AL_EFFECT_REVERB" },
+    { "echo",      ECHO,      "AL_EFFECT_ECHO" },
+    { "modulator", MODULATOR, "AL_EFFECT_RING_MODULATOR" },
+    { "dedicated", DEDICATED, "AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT" },
+    { "dedicated", DEDICATED, "AL_EFFECT_DEDICATED_DIALOGUE" },
+    { NULL, 0, NULL }
+};
+
 
 AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 {
@@ -326,24 +336,12 @@ AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
 
 AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName)
 {
-    const struct {
-        const char *name;
-        int type;
-    } EffectList[] = {
-        { "AL_EFFECT_EAXREVERB", EAXREVERB },
-        { "AL_EFFECT_REVERB", REVERB },
-        { "AL_EFFECT_ECHO", ECHO },
-        { "AL_EFFECT_RING_MODULATOR", MODULATOR },
-        { "AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT", DEDICATED },
-        { "AL_EFFECT_DEDICATED_DIALOGUE", DEDICATED },
-        { NULL, 0 }
-    };
     ALsizei i;
 
-    for(i = 0;EffectList[i].name;i++)
+    for(i = 0;EffectList[i].ename;i++)
     {
         if(DisabledEffects[EffectList[i].type] &&
-           strcmp(EffectList[i].name, enumName) == 0)
+           strcmp(EffectList[i].ename, enumName) == 0)
             return (ALenum)0;
     }
 

@@ -432,12 +432,12 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
         OutputType.Format.cbSize = 0;
     }
 
-    if(OutputType.Format.nChannels > 2 || OutputType.Format.wBitsPerSample > 16)
+    if(OutputType.Format.nChannels > 2 || device->FmtType == DevFmtFloat)
     {
         OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
         OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
         OutputType.Format.cbSize = 22;
-        if(OutputType.Format.wBitsPerSample == 32)
+        if(device->FmtType == DevFmtFloat)
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
         else
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;

@@ -326,8 +326,28 @@ AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
 
 AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName)
 {
-    ALsizei i = 0;
+    const struct {
+        const char *name;
+        int type;
+    } EffectList[] = {
+        { "AL_EFFECT_EAXREVERB", EAXREVERB },
+        { "AL_EFFECT_REVERB", REVERB },
+        { "AL_EFFECT_ECHO", ECHO },
+        { "AL_EFFECT_RING_MODULATOR", MODULATOR },
+        { "AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT", DEDICATED },
+        { "AL_EFFECT_DEDICATED_DIALOGUE", DEDICATED },
+        { NULL, 0 }
+    };
+    ALsizei i;
 
+    for(i = 0;EffectList[i].name;i++)
+    {
+        if(DisabledEffects[EffectList[i].type] &&
+           strcmp(EffectList[i].name, enumName) == 0)
+            return (ALenum)0;
+    }
+
+    i = 0;
     while(enumeration[i].enumName &&
           strcmp(enumeration[i].enumName, enumName) != 0)
         i++;

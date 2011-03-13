@@ -747,9 +747,9 @@ static void Write_##T##_##chans(ALCdevice *device, T *buffer, ALuint SamplesToDo
             ALfloat samp = 0.0f;                                              \
             for(c = 0;c < MAXCHANNELS;c++)                                    \
                 samp += DryBuffer[i][c] * Matrix[c][chans[j]];                \
-            ((T*)buffer)[ChanMap[chans[j]]] = func(samp);                     \
+            buffer[ChanMap[chans[j]]] = func(samp);                           \
         }                                                                     \
-        buffer = ((T*)buffer) + N;                                            \
+        buffer += N;                                                          \
     }                                                                         \
 }
 

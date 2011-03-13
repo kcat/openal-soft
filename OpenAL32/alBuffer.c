@@ -35,8 +35,8 @@
 
 
 static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data);
-static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len);
-static void ConvertDataIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len);
+static void ConvertInput(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len);
+static void ConvertInputIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len);
 
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
 
@@ -429,8 +429,8 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
             offset *= Bytes;
             length /= ALBuf->OriginalAlign;
 
-            ConvertDataIMA4(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
-                            data, Channels, length);
+            ConvertInputIMA4(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                             data, Channels, length);
         }
         else
         {
@@ -441,8 +441,8 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
             offset *= Bytes;
             length /= OldBytes;
 
-            ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
-                        data, SrcType, length);
+            ConvertInput(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                         data, SrcType, length);
         }
     }
 
@@ -1449,7 +1449,7 @@ static void Convert_IMA4(ALubyte *dst, const ALvoid *src, enum UserFmtType srcTy
 }
 
 
-static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len)
+static void ConvertInput(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len)
 {
     switch(dstType)
     {
@@ -1472,7 +1472,7 @@ static void ConvertData(ALvoid *dst, enum FmtType dstType, const ALvoid *src, en
     }
 }
 
-static void ConvertDataIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len)
+static void ConvertInputIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len)
 {
     switch(dstType)
     {
@@ -1539,8 +1539,8 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
         ALBuf->size = newsize;
 
         if(data != NULL)
-            ConvertDataIMA4(ALBuf->data, DstType, data, OrigChannels,
-                            newsize/(65*NewChannels*NewBytes));
+            ConvertInputIMA4(ALBuf->data, DstType, data, OrigChannels,
+                             newsize/(65*NewChannels*NewBytes));
 
         ALBuf->OriginalChannels = SrcChannels;
         ALBuf->OriginalType     = SrcType;
@@ -1566,7 +1566,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
         ALBuf->size = newsize;
 
         if(data != NULL)
-            ConvertData(ALBuf->data, DstType, data, SrcType, newsize/NewBytes);
+            ConvertInput(ALBuf->data, DstType, data, SrcType, newsize/NewBytes);
 
         ALBuf->OriginalChannels = SrcChannels;
         ALBuf->OriginalType     = SrcType;

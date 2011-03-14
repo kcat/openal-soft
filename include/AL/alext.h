@@ -68,12 +68,6 @@ extern "C" {
 #define ALC_CHAN_CD_LOKI                         0x500003
 #endif
 
-#ifndef ALC_ENUMERATE_ALL_EXT
-#define ALC_ENUMERATE_ALL_EXT 1
-#define ALC_DEFAULT_ALL_DEVICES_SPECIFIER        0x1012
-#define ALC_ALL_DEVICES_SPECIFIER                0x1013
-#endif
-
 #ifndef AL_EXT_MCFORMATS
 #define AL_EXT_MCFORMATS 1
 #define AL_FORMAT_QUAD8                          0x1204

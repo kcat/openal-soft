@@ -84,7 +84,7 @@ static ALCboolean ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
     device->ExtraData = data;
 
     err = OpenAComponent(comp, &data->OutputUnit);
-    if(err != NoErr)
+    if(err != noErr)
     {
         AL_PRINT("OpenAComponent failed\n");
         free(data);
@@ -115,14 +115,14 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
 
     /* init and start the default audio unit... */
     err = AudioUnitInitialize(data->OutputUnit);
-    if(err != NoErr)
+    if(err != noErr)
     {
         AL_PRINT("AudioUnitInitialize failed\n");
         return ALC_FALSE;
     }
 
     err = AudioOutputUnitStart(data->OutputUnit);
-    if(err != NoErr)
+    if(err != noErr)
     {
         AL_PRINT("AudioOutputUnitStart failed\n");
         return ALC_FALSE;
@@ -131,7 +131,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     /* retrieve default output unit's properties (output side) */
     size = sizeof(AudioStreamBasicDescription);
     err = AudioUnitGetProperty(data->OutputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &streamFormat, &size);
-    if(err != NoErr || size != sizeof(AudioStreamBasicDescription))
+    if(err != noErr || size != sizeof(AudioStreamBasicDescription))
     {
         AL_PRINT("AudioUnitGetProperty failed\n");
         return ALC_FALSE;
@@ -149,7 +149,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
 
     /* set default output unit's input side to match output side */
     err = AudioUnitSetProperty(data->OutputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, size);
-    if(err != NoErr)
+    if(err != noErr)
     {
         AL_PRINT("AudioUnitSetProperty failed\n");
         return ALC_FALSE;
@@ -220,7 +220,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
                                 kLinearPCMFormatFlagIsPacked;
 
     err = AudioUnitSetProperty(data->OutputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, sizeof(AudioStreamBasicDescription));
-    if(err != NoErr)
+    if(err != noErr)
     {
         AL_PRINT("AudioUnitSetProperty failed\n");
         return ALC_FALSE;
@@ -232,7 +232,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     input.inputProcRefCon = device;
 
     err = AudioUnitSetProperty(data->OutputUnit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &input, sizeof(AURenderCallbackStruct));
-    if(err != NoErr)
+    if(err != noErr)
     {
         AL_PRINT("AudioUnitSetProperty failed\n");
         return ALC_FALSE;
@@ -248,7 +248,7 @@ static void ca_stop_playback(ALCdevice *device)
 
     AudioOutputUnitStop(data->OutputUnit);
     err = AudioUnitUninitialize(data->OutputUnit);
-    if(err != NoErr)
+    if(err != noErr)
         AL_PRINT("-- AudioUnitUninitialize failed.\n");
 }
 

@@ -25,6 +25,9 @@
 /* Define if we have the PulseAudio backend */
 #cmakedefine HAVE_PULSEAUDIO
 
+/* Define if we have the CoreAudio backend */
+#cmakedefine HAVE_COREAUDIO
+
 /* Define if we have the Wave Writer backend */
 #cmakedefine HAVE_WAVE
 

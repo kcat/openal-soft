@@ -54,6 +54,9 @@ static BackendInfo BackendList[] = {
 #ifdef HAVE_ALSA
     { "alsa", alc_alsa_init, alc_alsa_deinit, alc_alsa_probe, EmptyFuncs },
 #endif
+#ifdef HAVE_COREAUDIO
+    { "core", alc_ca_init, alc_ca_deinit, alc_ca_probe, EmptyFuncs },
+#endif
 #ifdef HAVE_OSS
     { "oss", alc_oss_init, alc_oss_deinit, alc_oss_probe, EmptyFuncs },
 #endif

@@ -13,8 +13,6 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#ifndef ALC_SOFT_device_loopback
-#define ALC_SOFT_device_loopback 1
 #define AL_BYTE                                  1
 #define AL_UNSIGNED_BYTE                         2
 #define AL_SHORT                                 3
@@ -32,6 +30,9 @@
 #define AL_5POINT1                               5 /* (WFX order) */
 #define AL_6POINT1                               6 /* (WFX order) */
 #define AL_7POINT1                               7 /* (WFX order) */
+
+#ifndef ALC_SOFT_device_loopback
+#define ALC_SOFT_device_loopback 1
 #define ALC_FORMAT_CHANNELS                      0x1990
 #define ALC_FORMAT_TYPE                          0x1991
 typedef ALCdevice* (ALC_APIENTRY*LPALCLOOPBACKOPENDEVICE)(void);

@@ -9,25 +9,25 @@ extern "C" {
 
 /* Input formats (some are currently theoretical) */
 enum UserFmtType {
-    UserFmtByte,   /* AL_BYTE */
-    UserFmtUByte,  /* AL_UNSIGNED_BYTE */
-    UserFmtShort,  /* AL_SHORT */
-    UserFmtUShort, /* AL_UNSIGNED_SHORT */
-    UserFmtInt,    /* AL_INT */
-    UserFmtUInt,   /* AL_UNSIGNED_INT */
-    UserFmtFloat,  /* AL_FLOAT */
-    UserFmtDouble, /* AL_DOUBLE */
-    UserFmtMulaw,  /* AL_MULAW */
-    UserFmtIMA4,   /* AL_IMA4 */
+    UserFmtByte   = AL_BYTE,
+    UserFmtUByte  = AL_UNSIGNED_BYTE,
+    UserFmtShort  = AL_SHORT,
+    UserFmtUShort = AL_UNSIGNED_SHORT,
+    UserFmtInt    = AL_INT,
+    UserFmtUInt   = AL_UNSIGNED_INT,
+    UserFmtFloat  = AL_FLOAT,
+    UserFmtDouble = AL_DOUBLE,
+    UserFmtMulaw  = AL_MULAW,
+    UserFmtIMA4   = AL_IMA4
 };
 enum UserFmtChannels {
-    UserFmtMono,   /* AL_MONO */
-    UserFmtStereo, /* AL_STEREO */
-    UserFmtRear,   /* AL_REAR */
-    UserFmtQuad,   /* AL_QUAD */
-    UserFmtX51,    /* AL_5POINT1 (WFX order) */
-    UserFmtX61,    /* AL_6POINT1 (WFX order) */
-    UserFmtX71,    /* AL_7POINT1 (WFX order) */
+    UserFmtMono   = AL_MONO,
+    UserFmtStereo = AL_STEREO,
+    UserFmtRear   = AL_REAR,
+    UserFmtQuad   = AL_QUAD,
+    UserFmtX51    = AL_5POINT1, /* (WFX order) */
+    UserFmtX61    = AL_6POINT1, /* (WFX order) */
+    UserFmtX71    = AL_7POINT1  /* (WFX order) */
 };
 
 ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
@@ -48,13 +48,13 @@ enum FmtType {
     FmtFloat = UserFmtFloat,
 };
 enum FmtChannels {
-    FmtMono = UserFmtMono,
+    FmtMono   = UserFmtMono,
     FmtStereo = UserFmtStereo,
-    FmtRear = UserFmtRear,
-    FmtQuad = UserFmtQuad,
-    FmtX51 = UserFmtX51,
-    FmtX61 = UserFmtX61,
-    FmtX71 = UserFmtX71,
+    FmtRear   = UserFmtRear,
+    FmtQuad   = UserFmtQuad,
+    FmtX51    = UserFmtX51,
+    FmtX61    = UserFmtX61,
+    FmtX71    = UserFmtX71,
 };
 
 ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);

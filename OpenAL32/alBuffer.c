@@ -638,6 +638,23 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
     ProcessContext(Context);
 }
 
+AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format)
+{
+    enum FmtChannels DstChannels;
+    enum FmtType DstType;
+    ALCcontext *Context;
+    ALboolean ret;
+
+    Context = GetContextSuspended();
+    if(!Context) return AL_FALSE;
+
+    ret = DecomposeFormat(format, &DstChannels, &DstType);
+
+    ProcessContext(Context);
+
+    return ret;
+}
+
 
 AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 {

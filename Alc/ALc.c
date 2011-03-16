@@ -893,7 +893,7 @@ ALboolean DecomposeDevFormat(ALenum format, enum DevFmtChannels *chans,
     return AL_FALSE;
 }
 
-static ALboolean IsValidType(ALenum type)
+ALboolean IsValidType(ALenum type)
 {
     switch(type)
     {
@@ -912,7 +912,7 @@ static ALboolean IsValidType(ALenum type)
     return AL_FALSE;
 }
 
-static ALboolean IsValidChannels(ALenum channels)
+ALboolean IsValidChannels(ALenum channels)
 {
     switch(channels)
     {

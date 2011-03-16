@@ -45,6 +45,16 @@ ALC_API void ALC_APIENTRY alcRenderSamples(ALCdevice *device, ALCvoid *buffer, A
 #endif
 #endif
 
+#ifndef AL_SOFT_buffer_samples
+#define AL_SOFT_buffer_samples 1
+typedef void (AL_APIENTRY*LPALBUFFERSAMPLESSOFT)(ALuint,ALuint,ALenum,ALsizei,ALenum,ALenum,const ALvoid*);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
+    ALuint samplerate, ALenum internalformat, ALsizei frames,
+    ALenum channels, ALenum type, const ALvoid *data);
+#endif
+#endif
+
 #ifndef AL_EXT_sample_buffer_object
 #define AL_EXT_sample_buffer_object 1
 typedef ptrdiff_t ALintptrEXT;
@@ -529,6 +539,9 @@ void SetRTPriority(void);
 
 void SetDefaultChannelOrder(ALCdevice *device);
 void SetDefaultWFXChannelOrder(ALCdevice *device);
+
+ALboolean IsValidType(ALenum type);
+ALboolean IsValidChannels(ALenum type);
 
 void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);

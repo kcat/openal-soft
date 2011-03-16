@@ -471,6 +471,67 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
 }
 
 
+AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
+  ALuint samplerate, ALenum internalformat, ALsizei frames,
+  ALenum channels, ALenum type, const ALvoid *data)
+{
+    enum FmtChannels DstChannels;
+    enum FmtType DstType;
+    ALCcontext *Context;
+    ALCdevice *device;
+    ALbuffer *ALBuf;
+    ALenum err;
+
+    Context = GetContextSuspended();
+    if(!Context) return;
+
+    if(Context->SampleSource)
+    {
+        ALintptrEXT offset;
+
+        if(Context->SampleSource->state == MAPPED)
+        {
+            alSetError(Context, AL_INVALID_OPERATION);
+            ProcessContext(Context);
+            return;
+        }
+
+        offset = (const ALubyte*)data - (ALubyte*)NULL;
+        data = Context->SampleSource->data + offset;
+    }
+
+    device = Context->Device;
+    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else if(ALBuf->refcount != 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else if(frames < 0 || samplerate == 0)
+        alSetError(Context, AL_INVALID_VALUE);
+    else if(DecomposeFormat(internalformat, &DstChannels, &DstType) == AL_FALSE)
+        alSetError(Context, AL_INVALID_ENUM);
+    else if(IsValidType(type) == AL_FALSE || IsValidChannels(channels) == AL_FALSE)
+        alSetError(Context, AL_INVALID_ENUM);
+    else if(channels != (ALenum)DstChannels)
+        alSetError(Context, AL_INVALID_ENUM);
+    else
+    {
+        err = AL_NO_ERROR;
+        if(type == UserFmtIMA4)
+        {
+            if((frames%65) == 0) frames /= 65;
+            else err = AL_INVALID_VALUE;
+        }
+        if(err == AL_NO_ERROR)
+            err = LoadData(ALBuf, samplerate, internalformat, frames,
+                           channels, type, data);
+        if(err != AL_NO_ERROR)
+            alSetError(Context, err);
+    }
+
+    ProcessContext(Context);
+}
+
+
 AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 {
     ALCcontext    *pContext;

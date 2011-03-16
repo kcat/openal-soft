@@ -531,6 +531,70 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
     ProcessContext(Context);
 }
 
+AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
+  ALsizei offset, ALsizei frames,
+  ALenum channels, ALenum type, const ALvoid *data)
+{
+    ALCcontext *Context;
+    ALCdevice  *device;
+    ALbuffer   *ALBuf;
+
+    Context = GetContextSuspended();
+    if(!Context) return;
+
+    if(Context->SampleSource)
+    {
+        ALintptrEXT offset;
+
+        if(Context->SampleSource->state == MAPPED)
+        {
+            alSetError(Context, AL_INVALID_OPERATION);
+            ProcessContext(Context);
+            return;
+        }
+
+        offset = (const ALubyte*)data - (ALubyte*)NULL;
+        data = Context->SampleSource->data + offset;
+    }
+
+    device = Context->Device;
+    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else if(frames < 0 || offset < 0 || (frames > 0 && data == NULL))
+        alSetError(Context, AL_INVALID_VALUE);
+    else if(channels != (ALenum)ALBuf->FmtChannels ||
+            IsValidType(type) == AL_FALSE)
+        alSetError(Context, AL_INVALID_ENUM);
+    else
+    {
+        ALuint FrameSize = FrameSizeFromFmt(ALBuf->FmtChannels, ALBuf->FmtType);
+        ALuint FrameCount = ALBuf->size / FrameSize;
+        if((ALuint)offset > FrameCount || (ALuint)frames > FrameCount-offset)
+            alSetError(Context, AL_INVALID_VALUE);
+        else if(type == UserFmtIMA4 && (frames%65) != 0)
+            alSetError(Context, AL_INVALID_VALUE);
+        else if(type == UserFmtIMA4)
+        {
+            /* offset -> byte offset, length -> block count */
+            offset *= FrameSize;
+            frames /= 65;
+            ConvertInputIMA4(&((ALubyte*)ALBuf->data)[offset],
+                             ALBuf->FmtType, data,
+                             ChannelsFromFmt(ALBuf->FmtChannels),
+                             frames);
+        }
+        else
+        {
+            /* offset -> byte offset */
+            offset *= FrameSize;
+            ConvertInput(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                         data, type, frames*ChannelsFromUserFmt(channels));
+        }
+    }
+
+    ProcessContext(Context);
+}
+
 
 AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum eParam, ALfloat flValue)
 {

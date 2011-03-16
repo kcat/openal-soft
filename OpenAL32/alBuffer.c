@@ -34,7 +34,7 @@
 #include "alThunk.h"
 
 
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data);
+static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data, ALboolean storesrc);
 static void ConvertInput(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len);
 static void ConvertInputIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len);
 
@@ -331,7 +331,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 err = AL_INVALID_VALUE;
             else
                 err = LoadData(ALBuf, freq, format, size/FrameSize,
-                               SrcChannels, SrcType, data);
+                               SrcChannels, SrcType, data, AL_TRUE);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
         }   break;
@@ -353,7 +353,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 err = AL_INVALID_VALUE;
             else
                 err = LoadData(ALBuf, freq, NewFormat, size/FrameSize,
-                               SrcChannels, SrcType, data);
+                               SrcChannels, SrcType, data, AL_TRUE);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
         }   break;
@@ -382,7 +382,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 err = AL_INVALID_VALUE;
             else
                 err = LoadData(ALBuf, freq, NewFormat, size/FrameSize,
-                               SrcChannels, SrcType, data);
+                               SrcChannels, SrcType, data, AL_TRUE);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
         }   break;
@@ -523,7 +523,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
         }
         if(err == AL_NO_ERROR)
             err = LoadData(ALBuf, samplerate, internalformat, frames,
-                           channels, type, data);
+                           channels, type, data, AL_FALSE);
         if(err != AL_NO_ERROR)
             alSetError(Context, err);
     }
@@ -1648,7 +1648,7 @@ static void ConvertInputIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *sr
  * Currently, the new format must have the same channel configuration as the
  * original format.
  */
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data)
+static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALboolean storesrc)
 {
     ALuint NewChannels, NewBytes;
     enum FmtChannels DstChannels;
@@ -1682,10 +1682,13 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
             ConvertInputIMA4(ALBuf->data, DstType, data, OrigChannels,
                              newsize/(65*NewChannels*NewBytes));
 
-        ALBuf->OriginalChannels = SrcChannels;
-        ALBuf->OriginalType     = SrcType;
-        ALBuf->OriginalSize     = frames * 36 * OrigChannels;
-        ALBuf->OriginalAlign    = 36 * OrigChannels;
+        if(storesrc)
+        {
+            ALBuf->OriginalChannels = SrcChannels;
+            ALBuf->OriginalType     = SrcType;
+            ALBuf->OriginalSize     = frames * 36 * OrigChannels;
+            ALBuf->OriginalAlign    = 36 * OrigChannels;
+        }
     }
     else
     {
@@ -1706,12 +1709,22 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         if(data != NULL)
             ConvertInput(ALBuf->data, DstType, data, SrcType, newsize/NewBytes);
 
-        ALBuf->OriginalChannels = SrcChannels;
-        ALBuf->OriginalType     = SrcType;
-        ALBuf->OriginalSize     = frames * OrigBytes * OrigChannels;
-        ALBuf->OriginalAlign    = OrigBytes * OrigChannels;
+        if(storesrc)
+        {
+            ALBuf->OriginalChannels = SrcChannels;
+            ALBuf->OriginalType     = SrcType;
+            ALBuf->OriginalSize     = frames * OrigBytes * OrigChannels;
+            ALBuf->OriginalAlign    = OrigBytes * OrigChannels;
+        }
     }
 
+    if(!storesrc)
+    {
+        ALBuf->OriginalChannels = DstChannels;
+        ALBuf->OriginalType     = DstType;
+        ALBuf->OriginalSize     = frames * NewBytes * NewChannels;
+        ALBuf->OriginalAlign    = NewBytes * NewChannels;
+    }
     ALBuf->Frequency = freq;
     ALBuf->FmtChannels = DstChannels;
     ALBuf->FmtType = DstType;

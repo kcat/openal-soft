@@ -37,6 +37,8 @@
 static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data, ALboolean storesrc);
 static void ConvertInput(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len);
 static void ConvertInputIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len);
+static void ConvertOutput(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum FmtType srcType, ALsizei len);
+static void ConvertOutputIMA4(ALvoid *dst, const ALvoid *src, enum FmtType srcType, ALint chans, ALsizei len);
 
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
 
@@ -589,6 +591,71 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
             offset *= FrameSize;
             ConvertInput(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
                          data, type, frames*ChannelsFromUserFmt(channels));
+        }
+    }
+
+    ProcessContext(Context);
+}
+
+AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
+  ALsizei offset, ALsizei frames,
+  ALenum channels, ALenum type, ALvoid *data)
+{
+    ALCcontext *Context;
+    ALCdevice  *device;
+    ALbuffer   *ALBuf;
+
+    Context = GetContextSuspended();
+    if(!Context) return;
+
+    if(Context->SampleSink)
+    {
+        ALintptrEXT offset;
+
+        if(Context->SampleSink->state == MAPPED)
+        {
+            alSetError(Context, AL_INVALID_OPERATION);
+            ProcessContext(Context);
+            return;
+        }
+
+        offset = (const ALubyte*)data - (ALubyte*)NULL;
+        data = Context->SampleSink->data + offset;
+    }
+
+    device = Context->Device;
+    if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else if(frames < 0 || offset < 0 || (frames > 0 && data == NULL))
+        alSetError(Context, AL_INVALID_VALUE);
+    else if(channels != (ALenum)ALBuf->FmtChannels ||
+            IsValidType(type) == AL_FALSE)
+        alSetError(Context, AL_INVALID_ENUM);
+    else
+    {
+        ALuint FrameSize = FrameSizeFromFmt(ALBuf->FmtChannels, ALBuf->FmtType);
+        ALuint FrameCount = ALBuf->size / FrameSize;
+        if((ALuint)offset > FrameCount || (ALuint)frames > FrameCount-offset)
+            alSetError(Context, AL_INVALID_VALUE);
+        else if(type == UserFmtIMA4 && (frames%65) != 0)
+            alSetError(Context, AL_INVALID_VALUE);
+        else if(type == UserFmtIMA4)
+        {
+            /* offset -> byte offset, length -> block count */
+            offset *= FrameSize;
+            frames /= 65;
+            ConvertOutputIMA4(data, &((ALubyte*)ALBuf->data)[offset],
+                              ALBuf->FmtType,
+                              ChannelsFromFmt(ALBuf->FmtChannels),
+                              frames);
+        }
+        else
+        {
+            /* offset -> byte offset */
+            offset *= FrameSize;
+            ConvertOutput(data, type,
+                          &((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                          frames*ChannelsFromUserFmt(channels));
         }
     }
 
@@ -1599,22 +1666,15 @@ static void ConvertInput(ALvoid *dst, enum FmtType dstType, const ALvoid *src, e
 {
     switch(dstType)
     {
-        (void)Convert_ALbyte;
         case FmtUByte:
             Convert_ALubyte(dst, src, srcType, len);
             break;
         case FmtShort:
             Convert_ALshort(dst, src, srcType, len);
             break;
-        (void)Convert_ALushort;
-        (void)Convert_ALint;
-        (void)Convert_ALuint;
         case FmtFloat:
             Convert_ALfloat(dst, src, srcType, len);
             break;
-        (void)Convert_ALdouble;
-        (void)Convert_ALmulaw;
-        (void)Convert_IMA4;
     }
 }
 
@@ -1733,6 +1793,48 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
     return AL_NO_ERROR;
+}
+
+
+static void ConvertOutput(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum FmtType srcType, ALsizei len)
+{
+    switch(dstType)
+    {
+        case UserFmtByte:
+            Convert_ALbyte(dst, src, srcType, len);
+            break;
+        case UserFmtUByte:
+            Convert_ALubyte(dst, src, srcType, len);
+            break;
+        case UserFmtShort:
+            Convert_ALshort(dst, src, srcType, len);
+            break;
+        case UserFmtUShort:
+            Convert_ALushort(dst, src, srcType, len);
+            break;
+        case UserFmtInt:
+            Convert_ALint(dst, src, srcType, len);
+            break;
+        case UserFmtUInt:
+            Convert_ALuint(dst, src, srcType, len);
+            break;
+        case UserFmtFloat:
+            Convert_ALfloat(dst, src, srcType, len);
+            break;
+        case UserFmtDouble:
+            Convert_ALdouble(dst, src, srcType, len);
+            break;
+        case UserFmtMulaw:
+            Convert_ALmulaw(dst, src, srcType, len);
+            break;
+        case UserFmtIMA4:
+            break; /* not handled here */
+    }
+}
+
+static void ConvertOutputIMA4(ALvoid *dst, const ALvoid *src, enum FmtType srcType, ALint chans, ALsizei len)
+{
+    Convert_IMA4(dst, src, srcType, chans, len);
 }
 
 

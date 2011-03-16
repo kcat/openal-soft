@@ -49,6 +49,7 @@ ALC_API void ALC_APIENTRY alcRenderSamples(ALCdevice *device, ALCvoid *buffer, A
 #define AL_SOFT_buffer_samples 1
 typedef void (AL_APIENTRY*LPALBUFFERSAMPLESSOFT)(ALuint,ALuint,ALenum,ALsizei,ALenum,ALenum,const ALvoid*);
 typedef void (AL_APIENTRY*LPALBUFFERSUBSAMPLESSOFT)(ALuint,ALsizei,ALsizei,ALenum,ALenum,const ALvoid*);
+typedef void (AL_APIENTRY*LPALGETBUFFERSAMPLESSOFT)(ALuint,ALsizei,ALsizei,ALenum,ALenum,ALvoid*);
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
     ALuint samplerate, ALenum internalformat, ALsizei frames,
@@ -56,6 +57,9 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
 AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
     ALsizei offset, ALsizei frames,
     ALenum channels, ALenum type, const ALvoid *data);
+AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
+    ALsizei offset, ALsizei frames,
+    ALenum channels, ALenum type, ALvoid *data);
 #endif
 #endif
 

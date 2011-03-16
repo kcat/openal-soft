@@ -34,7 +34,7 @@
 #include "alThunk.h"
 
 
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data);
+static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data);
 static void ConvertInput(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len);
 static void ConvertInputIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len);
 
@@ -325,13 +325,19 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case UserFmtUShort:
         case UserFmtInt:
         case UserFmtUInt:
-        case UserFmtFloat:
-            err = LoadData(ALBuf, freq, format, size, SrcChannels, SrcType, data);
+        case UserFmtFloat: {
+            ALuint FrameSize = FrameSizeFromUserFmt(SrcChannels, SrcType);
+            if((size%FrameSize) != 0)
+                err = AL_INVALID_VALUE;
+            else
+                err = LoadData(ALBuf, freq, format, size/FrameSize,
+                               SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
-            break;
+        }   break;
 
         case UserFmtDouble: {
+            ALuint FrameSize = FrameSizeFromUserFmt(SrcChannels, SrcType);
             ALenum NewFormat = AL_FORMAT_MONO_FLOAT32;
             switch(SrcChannels)
             {
@@ -343,13 +349,24 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 case UserFmtX61: NewFormat = AL_FORMAT_61CHN32; break;
                 case UserFmtX71: NewFormat = AL_FORMAT_71CHN32; break;
             }
-            err = LoadData(ALBuf, freq, NewFormat, size, SrcChannels, SrcType, data);
+            if((size%FrameSize) != 0)
+                err = AL_INVALID_VALUE;
+            else
+                err = LoadData(ALBuf, freq, NewFormat, size/FrameSize,
+                               SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
         }   break;
 
         case UserFmtMulaw:
         case UserFmtIMA4: {
+            /* Here is where things vary:
+             * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
+             * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024 bytes per channel
+             */
+            ALuint FrameSize = (SrcType == UserFmtIMA4) ?
+                               (ChannelsFromUserFmt(SrcChannels) * 36) :
+                               FrameSizeFromUserFmt(SrcChannels, SrcType);
             ALenum NewFormat = AL_FORMAT_MONO16;
             switch(SrcChannels)
             {
@@ -361,7 +378,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 case UserFmtX61: NewFormat = AL_FORMAT_61CHN16; break;
                 case UserFmtX71: NewFormat = AL_FORMAT_71CHN16; break;
             }
-            err = LoadData(ALBuf, freq, NewFormat, size, SrcChannels, SrcType, data);
+            if((size%FrameSize) != 0)
+                err = AL_INVALID_VALUE;
+            else
+                err = LoadData(ALBuf, freq, NewFormat, size/FrameSize,
+                               SrcChannels, SrcType, data);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
         }   break;
@@ -1502,7 +1523,7 @@ static void ConvertInputIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *sr
  * Currently, the new format must have the same channel configuration as the
  * original format.
  */
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei size, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data)
+static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data)
 {
     ALuint NewChannels, NewBytes;
     enum FmtChannels DstChannels;
@@ -1520,16 +1541,10 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
     {
         ALuint OrigChannels = ChannelsFromUserFmt(SrcChannels);
 
-        /* Here is where things vary:
-         * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
-         * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024 bytes per channel
-         */
-        if((size%(36*OrigChannels)) != 0)
-            return AL_INVALID_VALUE;
-
-        newsize = size / 36;
+        newsize = frames;
         newsize *= 65;
         newsize *= NewBytes;
+        newsize *= NewChannels;
         if(newsize > INT_MAX)
             return AL_OUT_OF_MEMORY;
 
@@ -1544,7 +1559,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
 
         ALBuf->OriginalChannels = SrcChannels;
         ALBuf->OriginalType     = SrcType;
-        ALBuf->OriginalSize     = size;
+        ALBuf->OriginalSize     = frames * 36 * OrigChannels;
         ALBuf->OriginalAlign    = 36 * OrigChannels;
     }
     else
@@ -1552,11 +1567,9 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
         ALuint OrigBytes = BytesFromUserFmt(SrcType);
         ALuint OrigChannels = ChannelsFromUserFmt(SrcChannels);
 
-        if((size%(OrigBytes*OrigChannels)) != 0)
-            return AL_INVALID_VALUE;
-
-        newsize = size / OrigBytes;
+        newsize = frames;
         newsize *= NewBytes;
+        newsize *= NewChannels;
         if(newsize > INT_MAX)
             return AL_OUT_OF_MEMORY;
 
@@ -1570,7 +1583,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei s
 
         ALBuf->OriginalChannels = SrcChannels;
         ALBuf->OriginalType     = SrcType;
-        ALBuf->OriginalSize     = size;
+        ALBuf->OriginalSize     = frames * OrigBytes * OrigChannels;
         ALBuf->OriginalAlign    = OrigBytes * OrigChannels;
     }
 

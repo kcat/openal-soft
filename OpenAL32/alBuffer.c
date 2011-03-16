@@ -35,10 +35,7 @@
 
 
 static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data, ALboolean storesrc);
-static void ConvertInput(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len);
-static void ConvertInputIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len);
-static void ConvertOutput(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum FmtType srcType, ALsizei len);
-static void ConvertOutputIMA4(ALvoid *dst, const ALvoid *src, enum FmtType srcType, ALint chans, ALsizei len);
+static void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei numchans, ALsizei len);
 
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
 
@@ -441,32 +438,26 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
+        ALuint Channels = ChannelsFromFmt(ALBuf->FmtChannels);
+        ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
         if(SrcType == UserFmtIMA4)
         {
-            ALuint Channels = ChannelsFromFmt(ALBuf->FmtChannels);
-            ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
-
             /* offset -> byte offset, length -> block count */
             offset /= 36;
             offset *= 65;
             offset *= Bytes;
             length /= ALBuf->OriginalAlign;
-
-            ConvertInputIMA4(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
-                             data, Channels, length);
         }
         else
         {
             ALuint OldBytes = BytesFromUserFmt(SrcType);
-            ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
 
             offset /= OldBytes;
             offset *= Bytes;
-            length /= OldBytes;
-
-            ConvertInput(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
-                         data, SrcType, length);
+            length /= OldBytes * Channels;
         }
+        ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                    data, SrcType, Channels, length);
     }
 
     ProcessContext(Context);
@@ -575,22 +566,15 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
             alSetError(Context, AL_INVALID_VALUE);
         else if(type == UserFmtIMA4 && (frames%65) != 0)
             alSetError(Context, AL_INVALID_VALUE);
-        else if(type == UserFmtIMA4)
-        {
-            /* offset -> byte offset, length -> block count */
-            offset *= FrameSize;
-            frames /= 65;
-            ConvertInputIMA4(&((ALubyte*)ALBuf->data)[offset],
-                             ALBuf->FmtType, data,
-                             ChannelsFromFmt(ALBuf->FmtChannels),
-                             frames);
-        }
         else
         {
             /* offset -> byte offset */
             offset *= FrameSize;
-            ConvertInput(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
-                         data, type, frames*ChannelsFromUserFmt(channels));
+            /* frames -> IMA4 block count */
+            if(type == UserFmtIMA4) frames /= 65;
+            ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                        data, type,
+                        ChannelsFromFmt(ALBuf->FmtChannels), frames);
         }
     }
 
@@ -639,23 +623,15 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
             alSetError(Context, AL_INVALID_VALUE);
         else if(type == UserFmtIMA4 && (frames%65) != 0)
             alSetError(Context, AL_INVALID_VALUE);
-        else if(type == UserFmtIMA4)
-        {
-            /* offset -> byte offset, length -> block count */
-            offset *= FrameSize;
-            frames /= 65;
-            ConvertOutputIMA4(data, &((ALubyte*)ALBuf->data)[offset],
-                              ALBuf->FmtType,
-                              ChannelsFromFmt(ALBuf->FmtChannels),
-                              frames);
-        }
         else
         {
             /* offset -> byte offset */
             offset *= FrameSize;
-            ConvertOutput(data, type,
-                          &((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
-                          frames*ChannelsFromUserFmt(channels));
+            /* frames -> IMA4 block count */
+            if(type == UserFmtIMA4) frames /= 65;
+            ConvertData(data, type,
+                        &((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+                        ChannelsFromFmt(ALBuf->FmtChannels), frames);
         }
     }
 
@@ -1412,9 +1388,10 @@ static __inline ALmulaw Conv_ALmulaw_ALmulaw(ALmulaw val)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T1, T2)                                                 \
-static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALuint len)           \
+static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALuint chans, ALuint len)\
 {                                                                             \
     ALuint i;                                                                 \
+    len *= chans;                                                             \
     for(i = 0;i < len;i++)                                                    \
         *(dst++) = Conv_##T1##_##T2(*(src++));                                \
 }
@@ -1575,39 +1552,40 @@ static void Convert_IMA4_IMA4(ALubyte *dst, const ALubyte *src, ALuint numchans,
 
 #define DECL_TEMPLATE(T)                                                      \
 static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
-                        ALsizei len)                                          \
+                        ALsizei numchans, ALsizei len)                        \
 {                                                                             \
     switch(srcType)                                                           \
     {                                                                         \
         case UserFmtByte:                                                     \
-            Convert_##T##_ALbyte(dst, src, len);                              \
+            Convert_##T##_ALbyte(dst, src, numchans, len);                    \
             break;                                                            \
         case UserFmtUByte:                                                    \
-            Convert_##T##_ALubyte(dst, src, len);                             \
+            Convert_##T##_ALubyte(dst, src, numchans, len);                   \
             break;                                                            \
         case UserFmtShort:                                                    \
-            Convert_##T##_ALshort(dst, src, len);                             \
+            Convert_##T##_ALshort(dst, src, numchans, len);                   \
             break;                                                            \
         case UserFmtUShort:                                                   \
-            Convert_##T##_ALushort(dst, src, len);                            \
+            Convert_##T##_ALushort(dst, src, numchans, len);                  \
             break;                                                            \
         case UserFmtInt:                                                      \
-            Convert_##T##_ALint(dst, src, len);                               \
+            Convert_##T##_ALint(dst, src, numchans, len);                     \
             break;                                                            \
         case UserFmtUInt:                                                     \
-            Convert_##T##_ALuint(dst, src, len);                              \
+            Convert_##T##_ALuint(dst, src, numchans, len);                    \
             break;                                                            \
         case UserFmtFloat:                                                    \
-            Convert_##T##_ALfloat(dst, src, len);                             \
+            Convert_##T##_ALfloat(dst, src, numchans, len);                   \
             break;                                                            \
         case UserFmtDouble:                                                   \
-            Convert_##T##_ALdouble(dst, src, len);                            \
+            Convert_##T##_ALdouble(dst, src, numchans, len);                  \
             break;                                                            \
         case UserFmtMulaw:                                                    \
-            Convert_##T##_ALmulaw(dst, src, len);                             \
+            Convert_##T##_ALmulaw(dst, src, numchans, len);                   \
             break;                                                            \
         case UserFmtIMA4:                                                     \
-            break; /* not handled here */                                     \
+            Convert_##T##_IMA4(dst, src, numchans, len);                      \
+            break;                                                            \
     }                                                                         \
 }
 
@@ -1662,41 +1640,40 @@ static void Convert_IMA4(ALubyte *dst, const ALvoid *src, enum UserFmtType srcTy
 }
 
 
-static void ConvertInput(ALvoid *dst, enum FmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei len)
+static void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei numchans, ALsizei len)
 {
     switch(dstType)
     {
-        case FmtUByte:
-            Convert_ALubyte(dst, src, srcType, len);
+        case UserFmtByte:
+            Convert_ALbyte(dst, src, srcType, numchans, len);
             break;
-        case FmtShort:
-            Convert_ALshort(dst, src, srcType, len);
+        case UserFmtUByte:
+            Convert_ALubyte(dst, src, srcType, numchans, len);
             break;
-        case FmtFloat:
-            Convert_ALfloat(dst, src, srcType, len);
+        case UserFmtShort:
+            Convert_ALshort(dst, src, srcType, numchans, len);
             break;
-    }
-}
-
-static void ConvertInputIMA4(ALvoid *dst, enum FmtType dstType, const ALvoid *src, ALint chans, ALsizei len)
-{
-    switch(dstType)
-    {
-        (void)Convert_ALbyte_IMA4;
-        case FmtUByte:
-            Convert_ALubyte_IMA4(dst, src, chans, len);
+        case UserFmtUShort:
+            Convert_ALushort(dst, src, srcType, numchans, len);
             break;
-        case FmtShort:
-            Convert_ALshort_IMA4(dst, src, chans, len);
+        case UserFmtInt:
+            Convert_ALint(dst, src, srcType, numchans, len);
             break;
-        (void)Convert_ALushort_IMA4;
-        (void)Convert_ALint_IMA4;
-        (void)Convert_ALuint_IMA4;
-        case FmtFloat:
-            Convert_ALfloat_IMA4(dst, src, chans, len);
+        case UserFmtUInt:
+            Convert_ALuint(dst, src, srcType, numchans, len);
             break;
-        (void)Convert_ALdouble_IMA4;
-        (void)Convert_ALmulaw_IMA4;
+        case UserFmtFloat:
+            Convert_ALfloat(dst, src, srcType, numchans, len);
+            break;
+        case UserFmtDouble:
+            Convert_ALdouble(dst, src, srcType, numchans, len);
+            break;
+        case UserFmtMulaw:
+            Convert_ALmulaw(dst, src, srcType, numchans, len);
+            break;
+        case UserFmtIMA4:
+            Convert_IMA4(dst, src, srcType, numchans, len);
+            break;
     }
 }
 
@@ -1739,8 +1716,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         ALBuf->size = newsize;
 
         if(data != NULL)
-            ConvertInputIMA4(ALBuf->data, DstType, data, OrigChannels,
-                             newsize/(65*NewChannels*NewBytes));
+            ConvertData(ALBuf->data, DstType, data, SrcType, NewChannels, frames);
 
         if(storesrc)
         {
@@ -1767,7 +1743,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         ALBuf->size = newsize;
 
         if(data != NULL)
-            ConvertInput(ALBuf->data, DstType, data, SrcType, newsize/NewBytes);
+            ConvertData(ALBuf->data, DstType, data, SrcType, NewChannels, frames);
 
         if(storesrc)
         {
@@ -1793,48 +1769,6 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
     return AL_NO_ERROR;
-}
-
-
-static void ConvertOutput(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum FmtType srcType, ALsizei len)
-{
-    switch(dstType)
-    {
-        case UserFmtByte:
-            Convert_ALbyte(dst, src, srcType, len);
-            break;
-        case UserFmtUByte:
-            Convert_ALubyte(dst, src, srcType, len);
-            break;
-        case UserFmtShort:
-            Convert_ALshort(dst, src, srcType, len);
-            break;
-        case UserFmtUShort:
-            Convert_ALushort(dst, src, srcType, len);
-            break;
-        case UserFmtInt:
-            Convert_ALint(dst, src, srcType, len);
-            break;
-        case UserFmtUInt:
-            Convert_ALuint(dst, src, srcType, len);
-            break;
-        case UserFmtFloat:
-            Convert_ALfloat(dst, src, srcType, len);
-            break;
-        case UserFmtDouble:
-            Convert_ALdouble(dst, src, srcType, len);
-            break;
-        case UserFmtMulaw:
-            Convert_ALmulaw(dst, src, srcType, len);
-            break;
-        case UserFmtIMA4:
-            break; /* not handled here */
-    }
-}
-
-static void ConvertOutputIMA4(ALvoid *dst, const ALvoid *src, enum FmtType srcType, ALint chans, ALsizei len)
-{
-    Convert_IMA4(dst, src, srcType, chans, len);
 }
 
 

@@ -468,8 +468,6 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
   ALuint samplerate, ALenum internalformat, ALsizei frames,
   ALenum channels, ALenum type, const ALvoid *data)
 {
-    enum FmtChannels DstChannels;
-    enum FmtType DstType;
     ALCcontext *Context;
     ALCdevice *device;
     ALbuffer *ALBuf;
@@ -500,11 +498,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
         alSetError(Context, AL_INVALID_VALUE);
     else if(frames < 0 || samplerate == 0)
         alSetError(Context, AL_INVALID_VALUE);
-    else if(DecomposeFormat(internalformat, &DstChannels, &DstType) == AL_FALSE)
-        alSetError(Context, AL_INVALID_ENUM);
     else if(IsValidType(type) == AL_FALSE || IsValidChannels(channels) == AL_FALSE)
-        alSetError(Context, AL_INVALID_ENUM);
-    else if(channels != (ALenum)DstChannels)
         alSetError(Context, AL_INVALID_ENUM);
     else
     {
@@ -1710,11 +1704,12 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALuint64 newsize;
     ALvoid *temp;
 
-    DecomposeFormat(NewFormat, &DstChannels, &DstType);
+    if(DecomposeFormat(NewFormat, &DstChannels, &DstType) == AL_FALSE ||
+       (long)SrcChannels != (long)DstChannels)
+        return AL_INVALID_ENUM;
+
     NewChannels = ChannelsFromFmt(DstChannels);
     NewBytes = BytesFromFmt(DstType);
-
-    assert((long)SrcChannels == (long)DstChannels);
 
     if(SrcType == UserFmtIMA4)
     {

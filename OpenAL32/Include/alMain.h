@@ -31,6 +31,28 @@
 #define AL_6POINT1                               6 /* (WFX order) */
 #define AL_7POINT1                               7 /* (WFX order) */
 
+#define AL_MONO8                                 0x1100
+#define AL_MONO16                                0x1101
+#define AL_MONO32F                               0x10010
+#define AL_STEREO8                               0x1102
+#define AL_STEREO16                              0x1103
+#define AL_STEREO32F                             0x10011
+#define AL_QUAD8                                 0x1204
+#define AL_QUAD16                                0x1205
+#define AL_QUAD32F                               0x1206
+#define AL_REAR8                                 0x1207
+#define AL_REAR16                                0x1208
+#define AL_REAR32F                               0x1209
+#define AL_5POINT1_8                             0x120A
+#define AL_5POINT1_16                            0x120B
+#define AL_5POINT1_32F                           0x120C
+#define AL_6POINT1_8                             0x120D
+#define AL_6POINT1_16                            0x120E
+#define AL_6POINT1_32F                           0x120F
+#define AL_7POINT1_8                             0x1210
+#define AL_7POINT1_16                            0x1211
+#define AL_7POINT1_32F                           0x1212
+
 #ifndef ALC_SOFT_device_loopback
 #define ALC_SOFT_device_loopback 1
 #define ALC_FORMAT_CHANNELS                      0x1990

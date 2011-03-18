@@ -13,24 +13,28 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#define AL_BYTE                                  1
-#define AL_UNSIGNED_BYTE                         2
-#define AL_SHORT                                 3
-#define AL_UNSIGNED_SHORT                        4
-#define AL_INT                                   5
-#define AL_UNSIGNED_INT                          6
-#define AL_FLOAT                                 7
-#define AL_DOUBLE                                8
-#define AL_MULAW                                 9
-#define AL_IMA4                                  10
-#define AL_MONO                                  1
-#define AL_STEREO                                2
-#define AL_REAR                                  3
-#define AL_QUAD                                  4
-#define AL_5POINT1                               5 /* (WFX order) */
-#define AL_6POINT1                               6 /* (WFX order) */
-#define AL_7POINT1                               7 /* (WFX order) */
+/* Sample types */
+#define AL_BYTE                                  0x1400
+#define AL_UNSIGNED_BYTE                         0x1401
+#define AL_SHORT                                 0x1402
+#define AL_UNSIGNED_SHORT                        0x1403
+#define AL_INT                                   0x1404
+#define AL_UNSIGNED_INT                          0x1405
+#define AL_FLOAT                                 0x1406
+#define AL_DOUBLE                                0x1407
+#define AL_MULAW                                 0x1408
+#define AL_IMA4                                  0x1409
 
+/* Channel configurations */
+#define AL_MONO                                  0x1500
+#define AL_STEREO                                0x1501
+#define AL_REAR                                  0x1502
+#define AL_QUAD                                  0x1503
+#define AL_5POINT1                               0x1504 /* (WFX order) */
+#define AL_6POINT1                               0x1505 /* (WFX order) */
+#define AL_7POINT1                               0x1506 /* (WFX order) */
+
+/* Storage formats */
 #define AL_MONO8                                 0x1100
 #define AL_MONO16                                0x1101
 #define AL_MONO32F                               0x10010

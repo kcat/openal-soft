@@ -1399,12 +1399,15 @@ static __inline ALmulaw Conv_ALmulaw_ALmulaw(ALmulaw val)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T1, T2)                                                 \
-static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALuint chans, ALuint len)\
+static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALuint numchans,      \
+                                ALuint len)                                   \
 {                                                                             \
-    ALuint i;                                                                 \
-    len *= chans;                                                             \
+    ALuint i, j;                                                              \
     for(i = 0;i < len;i++)                                                    \
-        *(dst++) = Conv_##T1##_##T2(*(src++));                                \
+    {                                                                         \
+        for(j = 0;j < numchans;j++)                                           \
+            *(dst++) = Conv_##T1##_##T2(*(src++));                            \
+    }                                                                         \
 }
 
 DECL_TEMPLATE(ALbyte, ALbyte)

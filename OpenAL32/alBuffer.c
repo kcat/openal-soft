@@ -1030,6 +1030,7 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
 
 
 typedef ALubyte ALmulaw;
+typedef ALubyte ALima4;
 
 static __inline ALshort DecodeMuLaw(ALmulaw val)
 { return muLawDecompressionTable[val]; }
@@ -1056,7 +1057,7 @@ static ALmulaw EncodeMuLaw(ALshort val)
     return ~(sign | (exp<<4) | mant);
 }
 
-static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans)
+static void DecodeIMA4Block(ALshort *dst, const ALima4 *src, ALint numchans)
 {
     ALint sample[MAXCHANNELS], index[MAXCHANNELS];
     ALuint code[MAXCHANNELS];
@@ -1109,7 +1110,7 @@ static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans)
     }
 }
 
-static void EncodeIMA4Block(ALubyte *dst, const ALshort *src, ALint *sample, ALint *index, ALint numchans)
+static void EncodeIMA4Block(ALima4 *dst, const ALshort *src, ALint *sample, ALint *index, ALint numchans)
 {
     ALsizei j,k,c;
 
@@ -1503,8 +1504,8 @@ DECL_TEMPLATE(ALmulaw, ALmulaw)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
-static void Convert_##T##_IMA4(T *dst, const ALubyte *src, ALuint numchans,   \
-                               ALuint numblocks)                              \
+static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALuint numchans,  \
+                                 ALuint numblocks)                            \
 {                                                                             \
     ALuint i, j;                                                              \
     ALshort tmp[65*MAXCHANNELS]; /* Max samples an IMA4 frame can be */       \
@@ -1530,8 +1531,8 @@ DECL_TEMPLATE(ALmulaw)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
-static void Convert_IMA4_##T(ALubyte *dst, const T *src, ALuint numchans,     \
-                             ALuint numblocks)                                \
+static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALuint numchans,    \
+                               ALuint numblocks)                              \
 {                                                                             \
     ALuint i, j;                                                              \
     ALshort tmp[65*MAXCHANNELS]; /* Max samples an IMA4 frame can be */       \
@@ -1555,14 +1556,11 @@ DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
+static void Convert_ALima4_ALima4(ALima4 *dst, const ALima4 *src,
+                                  ALuint numchans, ALuint numblocks)
+{ memcpy(dst, src, numblocks*36*numchans); }
 
 #undef DECL_TEMPLATE
-
-static void Convert_IMA4_IMA4(ALubyte *dst, const ALubyte *src, ALuint numchans,
-                              ALuint numblocks)
-{
-    memcpy(dst, src, numblocks*36*numchans);
-}
 
 #define DECL_TEMPLATE(T)                                                      \
 static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
@@ -1598,7 +1596,7 @@ static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
             Convert_##T##_ALmulaw(dst, src, numchans, len);                   \
             break;                                                            \
         case UserFmtIMA4:                                                     \
-            Convert_##T##_IMA4(dst, src, numchans, len);                      \
+            Convert_##T##_ALima4(dst, src, numchans, len);                    \
             break;                                                            \
     }                                                                         \
 }
@@ -1612,46 +1610,9 @@ DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
+DECL_TEMPLATE(ALima4)
 
 #undef DECL_TEMPLATE
-
-static void Convert_IMA4(ALubyte *dst, const ALvoid *src, enum UserFmtType srcType,
-                         ALint chans, ALsizei len)
-{
-    switch(srcType)
-    {
-        case UserFmtByte:
-            Convert_IMA4_ALbyte(dst, src, chans, len);
-            break;
-        case UserFmtUByte:
-            Convert_IMA4_ALubyte(dst, src, chans, len);
-            break;
-        case UserFmtShort:
-            Convert_IMA4_ALshort(dst, src, chans, len);
-            break;
-        case UserFmtUShort:
-            Convert_IMA4_ALushort(dst, src, chans, len);
-            break;
-        case UserFmtInt:
-            Convert_IMA4_ALint(dst, src, chans, len);
-            break;
-        case UserFmtUInt:
-            Convert_IMA4_ALuint(dst, src, chans, len);
-            break;
-        case UserFmtFloat:
-            Convert_IMA4_ALfloat(dst, src, chans, len);
-            break;
-        case UserFmtDouble:
-            Convert_IMA4_ALdouble(dst, src, chans, len);
-            break;
-        case UserFmtMulaw:
-            Convert_IMA4_ALmulaw(dst, src, chans, len);
-            break;
-        case UserFmtIMA4:
-            Convert_IMA4_IMA4(dst, src, chans, len);
-            break;
-    }
-}
 
 
 static void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei numchans, ALsizei len)
@@ -1686,7 +1647,7 @@ static void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src
             Convert_ALmulaw(dst, src, srcType, numchans, len);
             break;
         case UserFmtIMA4:
-            Convert_IMA4(dst, src, srcType, numchans, len);
+            Convert_ALima4(dst, src, srcType, numchans, len);
             break;
     }
 }

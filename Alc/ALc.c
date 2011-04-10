@@ -245,6 +245,12 @@ static const ALCfunction alcFunctions[] = {
     { "alGetAuxiliaryEffectSlotfv", (ALCvoid *) alGetAuxiliaryEffectSlotfv},
 
     { "alBufferSubDataSOFT",        (ALCvoid *) alBufferSubDataSOFT      },
+
+    { "alBufferSamplesSOFT",        (ALCvoid *) alBufferSamplesSOFT      },
+    { "alBufferSubSamplesSOFT",     (ALCvoid *) alBufferSubSamplesSOFT   },
+    { "alGetBufferSamplesSOFT",     (ALCvoid *) alGetBufferSamplesSOFT   },
+    { "alIsBufferFormatSupportedSOFT",(ALCvoid *) alIsBufferFormatSupportedSOFT},
+
 #if 0
     { "alGenDatabuffersEXT",        (ALCvoid *) alGenDatabuffersEXT      },
     { "alDeleteDatabuffersEXT",     (ALCvoid *) alDeleteDatabuffersEXT   },

@@ -249,6 +249,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SetSpeakerArrangement("layout_51CHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
             Matrix[FRONT_LEFT][SIDE_LEFT]   = aluSqrt(0.5);
             Matrix[FRONT_RIGHT][SIDE_RIGHT] = aluSqrt(0.5);
+            Matrix[LFE][LFE]                = 1.0f;
             Matrix[BACK_LEFT][SIDE_LEFT]    = aluSqrt(0.5);
             Matrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
             Matrix[BACK_RIGHT][SIDE_RIGHT]  = aluSqrt(0.5);
@@ -270,6 +271,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[4] =  90.0f * M_PI/180.0f;
             SpeakerAngle[5] = 180.0f * M_PI/180.0f;
             SetSpeakerArrangement("layout_61CHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            Matrix[LFE][LFE]                = 1.0f;
             Matrix[BACK_CENTER][BACK_LEFT]  = aluSqrt(0.5);
             Matrix[BACK_CENTER][BACK_RIGHT] = aluSqrt(0.5);
             Matrix[SIDE_LEFT][BACK_LEFT]    = aluSqrt(0.5);
@@ -293,6 +295,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[5] =   90.0f * M_PI/180.0f;
             SpeakerAngle[6] =  150.0f * M_PI/180.0f;
             SetSpeakerArrangement("layout_71CHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            Matrix[LFE][LFE]                = 1.0f;
             Matrix[BACK_LEFT][BACK_CENTER]  = aluSqrt(0.5);
             Matrix[BACK_RIGHT][BACK_CENTER] = aluSqrt(0.5);
             break;

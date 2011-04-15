@@ -82,6 +82,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALbufferlistitem *BufferListItem;
     enum DevFmtChannels DevChans;
     enum FmtChannels Channels;
+    ALfloat SrcMatrix[MAXCHANNELS][MAXCHANNELS];
     ALfloat DryGain, DryGainHF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
@@ -154,19 +155,18 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         ALuint i2;
         for(i2 = 0;i2 < MAXCHANNELS;i2++)
-            ALSource->Params.DryGains[i][i2] = 0.0f;
+            SrcMatrix[i][i2] = 0.0f;
     }
-
     switch(Channels)
     {
     case FmtMono:
-        ALSource->Params.DryGains[0][FRONT_CENTER]  = DryGain * ListenerGain;
+        SrcMatrix[0][FRONT_CENTER] = DryGain * ListenerGain;
         break;
     case FmtStereo:
         if(DupStereo == AL_FALSE)
         {
-            ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
-            ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
+            SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
+            SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
         }
         else
         {
@@ -174,81 +174,98 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             {
             case DevFmtMono:
             case DevFmtStereo:
-                ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
-                ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
+                SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
+                SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
                 break;
 
             case DevFmtQuad:
             case DevFmtX51:
                 DryGain *= aluSqrt(2.0f/4.0f);
-                ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
-                ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
-                ALSource->Params.DryGains[0][BACK_LEFT]   = DryGain * ListenerGain;
-                ALSource->Params.DryGains[1][BACK_RIGHT]  = DryGain * ListenerGain;
+                SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
+                SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
+                SrcMatrix[0][BACK_LEFT]   = DryGain * ListenerGain;
+                SrcMatrix[1][BACK_RIGHT]  = DryGain * ListenerGain;
                 break;
 
             case DevFmtX61:
                 DryGain *= aluSqrt(2.0f/4.0f);
-                ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
-                ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
-                ALSource->Params.DryGains[0][SIDE_LEFT]   = DryGain * ListenerGain;
-                ALSource->Params.DryGains[1][SIDE_RIGHT]  = DryGain * ListenerGain;
+                SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
+                SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
+                SrcMatrix[0][SIDE_LEFT]   = DryGain * ListenerGain;
+                SrcMatrix[1][SIDE_RIGHT]  = DryGain * ListenerGain;
                 break;
 
             case DevFmtX71:
                 DryGain *= aluSqrt(2.0f/6.0f);
-                ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
-                ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
-                ALSource->Params.DryGains[0][BACK_LEFT]   = DryGain * ListenerGain;
-                ALSource->Params.DryGains[1][BACK_RIGHT]  = DryGain * ListenerGain;
-                ALSource->Params.DryGains[0][SIDE_LEFT]   = DryGain * ListenerGain;
-                ALSource->Params.DryGains[1][SIDE_RIGHT]  = DryGain * ListenerGain;
+                SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
+                SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
+                SrcMatrix[0][BACK_LEFT]   = DryGain * ListenerGain;
+                SrcMatrix[1][BACK_RIGHT]  = DryGain * ListenerGain;
+                SrcMatrix[0][SIDE_LEFT]   = DryGain * ListenerGain;
+                SrcMatrix[1][SIDE_RIGHT]  = DryGain * ListenerGain;
                 break;
             }
         }
         break;
 
     case FmtRear:
-        ALSource->Params.DryGains[0][BACK_LEFT]  = DryGain * ListenerGain;
-        ALSource->Params.DryGains[1][BACK_RIGHT] = DryGain * ListenerGain;
+        SrcMatrix[0][BACK_LEFT]  = DryGain * ListenerGain;
+        SrcMatrix[1][BACK_RIGHT] = DryGain * ListenerGain;
         break;
 
     case FmtQuad:
-        ALSource->Params.DryGains[0][FRONT_LEFT]  = DryGain * ListenerGain;
-        ALSource->Params.DryGains[1][FRONT_RIGHT] = DryGain * ListenerGain;
-        ALSource->Params.DryGains[2][BACK_LEFT]   = DryGain * ListenerGain;
-        ALSource->Params.DryGains[3][BACK_RIGHT]  = DryGain * ListenerGain;
+        SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
+        SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
+        SrcMatrix[2][BACK_LEFT]   = DryGain * ListenerGain;
+        SrcMatrix[3][BACK_RIGHT]  = DryGain * ListenerGain;
         break;
 
     case FmtX51:
-        ALSource->Params.DryGains[0][FRONT_LEFT]   = DryGain * ListenerGain;
-        ALSource->Params.DryGains[1][FRONT_RIGHT]  = DryGain * ListenerGain;
-        ALSource->Params.DryGains[2][FRONT_CENTER] = DryGain * ListenerGain;
-        ALSource->Params.DryGains[3][LFE]          = DryGain * ListenerGain;
-        ALSource->Params.DryGains[4][BACK_LEFT]    = DryGain * ListenerGain;
-        ALSource->Params.DryGains[5][BACK_RIGHT]   = DryGain * ListenerGain;
+        SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
+        SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
+        SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
+        SrcMatrix[3][LFE]          = DryGain * ListenerGain;
+        SrcMatrix[4][BACK_LEFT]    = DryGain * ListenerGain;
+        SrcMatrix[5][BACK_RIGHT]   = DryGain * ListenerGain;
         break;
 
     case FmtX61:
-        ALSource->Params.DryGains[0][FRONT_LEFT]   = DryGain * ListenerGain;
-        ALSource->Params.DryGains[1][FRONT_RIGHT]  = DryGain * ListenerGain;
-        ALSource->Params.DryGains[2][FRONT_CENTER] = DryGain * ListenerGain;
-        ALSource->Params.DryGains[3][LFE]          = DryGain * ListenerGain;
-        ALSource->Params.DryGains[4][BACK_CENTER]  = DryGain * ListenerGain;
-        ALSource->Params.DryGains[5][SIDE_LEFT]    = DryGain * ListenerGain;
-        ALSource->Params.DryGains[6][SIDE_RIGHT]   = DryGain * ListenerGain;
+        SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
+        SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
+        SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
+        SrcMatrix[3][LFE]          = DryGain * ListenerGain;
+        SrcMatrix[4][BACK_CENTER]  = DryGain * ListenerGain;
+        SrcMatrix[5][SIDE_LEFT]    = DryGain * ListenerGain;
+        SrcMatrix[6][SIDE_RIGHT]   = DryGain * ListenerGain;
         break;
 
     case FmtX71:
-        ALSource->Params.DryGains[0][FRONT_LEFT]   = DryGain * ListenerGain;
-        ALSource->Params.DryGains[1][FRONT_RIGHT]  = DryGain * ListenerGain;
-        ALSource->Params.DryGains[2][FRONT_CENTER] = DryGain * ListenerGain;
-        ALSource->Params.DryGains[3][LFE]          = DryGain * ListenerGain;
-        ALSource->Params.DryGains[4][BACK_LEFT]    = DryGain * ListenerGain;
-        ALSource->Params.DryGains[5][BACK_RIGHT]   = DryGain * ListenerGain;
-        ALSource->Params.DryGains[6][SIDE_LEFT]    = DryGain * ListenerGain;
-        ALSource->Params.DryGains[7][SIDE_RIGHT]   = DryGain * ListenerGain;
+        SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
+        SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
+        SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
+        SrcMatrix[3][LFE]          = DryGain * ListenerGain;
+        SrcMatrix[4][BACK_LEFT]    = DryGain * ListenerGain;
+        SrcMatrix[5][BACK_RIGHT]   = DryGain * ListenerGain;
+        SrcMatrix[6][SIDE_LEFT]    = DryGain * ListenerGain;
+        SrcMatrix[7][SIDE_RIGHT]   = DryGain * ListenerGain;
         break;
+    }
+    for(i = 0;i < MAXCHANNELS;i++)
+    {
+        ALuint j, k;
+        for(j = 0;j < MAXCHANNELS;j++)
+        {
+            ALfloat (*DevMatrix)[MAXCHANNELS] = ALContext->Device->ChannelMatrix;
+            ALSource->Params.DryGains[i][j] = 0.0f;
+            for(k = 0;k < MAXCHANNELS;k++)
+            {
+                /* Matrix mult: O[i][j] += A[i][k] * B[k][j]
+                 * However, our device matrix is transposed, so we do:
+                 * O[i][j] += A[i][k] * B[j][k]
+                 */
+                ALSource->Params.DryGains[i][j] += SrcMatrix[i][k] * DevMatrix[j][k];
+            }
+        }
     }
 
     for(i = 0;i < NumSends;i++)
@@ -736,19 +753,13 @@ static const Channel X71Chans[] = { FRONT_LEFT, FRONT_RIGHT,
 static void Write_##T##_##chans(ALCdevice *device, T *buffer, ALuint SamplesToDo)\
 {                                                                             \
     ALfloat (*DryBuffer)[MAXCHANNELS] = device->DryBuffer;                    \
-    ALfloat (*Matrix)[MAXCHANNELS] = device->ChannelMatrix;                   \
     const ALuint *ChanMap = device->DevChannels;                              \
-    ALuint i, j, c;                                                           \
+    ALuint i, j;                                                              \
                                                                               \
     for(i = 0;i < SamplesToDo;i++)                                            \
     {                                                                         \
         for(j = 0;j < N;j++)                                                  \
-        {                                                                     \
-            ALfloat samp = 0.0f;                                              \
-            for(c = 0;c < MAXCHANNELS;c++)                                    \
-                samp += DryBuffer[i][c] * Matrix[chans[j]][c];                \
-            buffer[ChanMap[chans[j]]] = func(samp);                           \
-        }                                                                     \
+            buffer[ChanMap[chans[j]]] = func(DryBuffer[i][chans[j]]);         \
         buffer += N;                                                          \
     }                                                                         \
 }
@@ -789,23 +800,19 @@ DECL_TEMPLATE(ALbyte, X71Chans,8, aluF2B)
 static void Write_##T##_##chans(ALCdevice *device, T *buffer, ALuint SamplesToDo)\
 {                                                                             \
     ALfloat (*DryBuffer)[MAXCHANNELS] = device->DryBuffer;                    \
-    ALfloat (*Matrix)[MAXCHANNELS] = device->ChannelMatrix;                   \
     const ALuint *ChanMap = device->DevChannels;                              \
-    ALuint i, j, c;                                                           \
+    ALuint i, j;                                                              \
                                                                               \
     if(device->Bs2b)                                                          \
     {                                                                         \
         for(i = 0;i < SamplesToDo;i++)                                        \
         {                                                                     \
-            float samples[2] = { 0.0f, 0.0f };                                \
-            for(c = 0;c < MAXCHANNELS;c++)                                    \
-            {                                                                 \
-                samples[0] += DryBuffer[i][c]*Matrix[FRONT_LEFT][c];          \
-                samples[1] += DryBuffer[i][c]*Matrix[FRONT_RIGHT][c];         \
-            }                                                                 \
+            float samples[2];                                                 \
+            samples[0] = DryBuffer[i][chans[0]];                              \
+            samples[1] = DryBuffer[i][chans[1]];                              \
             bs2b_cross_feed(device->Bs2b, samples);                           \
-            buffer[ChanMap[FRONT_LEFT]]  = func(samples[0]);                  \
-            buffer[ChanMap[FRONT_RIGHT]] = func(samples[1]);                  \
+            buffer[ChanMap[chans[0]]]  = func(samples[0]);                    \
+            buffer[ChanMap[chans[1]]] = func(samples[1]);                     \
             buffer += 2;                                                      \
         }                                                                     \
     }                                                                         \
@@ -814,12 +821,7 @@ static void Write_##T##_##chans(ALCdevice *device, T *buffer, ALuint SamplesToDo
         for(i = 0;i < SamplesToDo;i++)                                        \
         {                                                                     \
             for(j = 0;j < N;j++)                                              \
-            {                                                                 \
-                ALfloat samp = 0.0f;                                          \
-                for(c = 0;c < MAXCHANNELS;c++)                                \
-                    samp += DryBuffer[i][c] * Matrix[chans[j]][c];            \
-                buffer[ChanMap[chans[j]]] = func(samp);                       \
-            }                                                                 \
+                buffer[ChanMap[chans[j]]] = func(DryBuffer[i][chans[j]]);     \
             buffer += N;                                                      \
         }                                                                     \
     }                                                                         \

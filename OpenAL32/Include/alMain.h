@@ -583,6 +583,8 @@ void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);
 #define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
 
+extern ALdouble ConeScale;
+
 #ifdef __cplusplus
 }
 #endif

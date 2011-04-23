@@ -384,6 +384,9 @@ static ALint RTPrioLevel;
 // Output Log File
 static FILE *LogFile;
 
+// Cone scalar
+ALdouble ConeScale = 0.5;
+
 ///////////////////////////////////////////////////////
 
 
@@ -434,6 +437,10 @@ static void alc_init(void)
     }
     if(!LogFile)
         LogFile = stderr;
+
+    str = getenv("__ALSOFT_HALF_ANGLE_CONES");
+    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
+        ConeScale = 1.0;
 
     InitializeCriticalSection(&g_csMutex);
     ALTHUNK_INIT();

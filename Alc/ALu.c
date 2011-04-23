@@ -357,8 +357,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     MinDist      = ALSource->flRefDistance;
     MaxDist      = ALSource->flMaxDistance;
     Rolloff      = ALSource->flRollOffFactor;
-    InnerAngle   = ALSource->flInnerAngle * 0.5f;
-    OuterAngle   = ALSource->flOuterAngle * 0.5f;
+    InnerAngle   = ALSource->flInnerAngle * ConeScale;
+    OuterAngle   = ALSource->flOuterAngle * ConeScale;
     OuterGainHF  = ALSource->OuterGainHF;
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
 

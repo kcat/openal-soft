@@ -357,8 +357,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     MinDist      = ALSource->flRefDistance;
     MaxDist      = ALSource->flMaxDistance;
     Rolloff      = ALSource->flRollOffFactor;
-    InnerAngle   = ALSource->flInnerAngle;
-    OuterAngle   = ALSource->flOuterAngle;
+    InnerAngle   = ALSource->flInnerAngle * 0.5f;
+    OuterAngle   = ALSource->flOuterAngle * 0.5f;
     OuterGainHF  = ALSource->OuterGainHF;
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
 
@@ -501,7 +501,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     //3. Apply directional soundcones
-    Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0f/M_PI;
+    Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0/M_PI;
     if(Angle >= InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);

@@ -1189,22 +1189,52 @@ static void EncodeIMA4Block(ALima4 *dst, const ALshort *src, ALint *sample, ALin
     }
 }
 
+static const union {
+    ALuint u;
+    ALubyte b[sizeof(ALuint)];
+} EndianTest = { 1 };
+#define IS_LITTLE_ENDIAN (EndianTest.b[0] == 1)
+
 static __inline ALint DecodeByte3(ALbyte3 val)
-{ return ((ALubyte)val.b[0]) | (((ALubyte)val.b[1])<<8) | (val.b[2]<<16); }
+{
+    if(IS_LITTLE_ENDIAN)
+        return (val.b[2]<<16) | (((ALubyte)val.b[1])<<8) | ((ALubyte)val.b[0]);
+    return (val.b[0]<<16) | (((ALubyte)val.b[1])<<8) | ((ALubyte)val.b[2]);
+}
 
 static __inline ALbyte3 EncodeByte3(ALint val)
 {
-    ALbyte3 ret = {{ val, val>>8, val>>16 }};
-    return ret;
+    if(IS_LITTLE_ENDIAN)
+    {
+        ALbyte3 ret = {{ val, val>>8, val>>16 }};
+        return ret;
+    }
+    else
+    {
+        ALbyte3 ret = {{ val>>16, val>>8, val }};
+        return ret;
+    }
 }
 
 static __inline ALint DecodeUByte3(ALubyte3 val)
-{ return val.b[0] | (val.b[1]<<8) | (val.b[2]<<16); }
+{
+    if(IS_LITTLE_ENDIAN)
+        return (val.b[2]<<16) | (val.b[1]<<8) | (val.b[0]);
+    return (val.b[0]<<16) | (val.b[1]<<8) | val.b[2];
+}
 
 static __inline ALubyte3 EncodeUByte3(ALint val)
 {
-    ALubyte3 ret = {{ val, val>>8, val>>16 }};
-    return ret;
+    if(IS_LITTLE_ENDIAN)
+    {
+        ALubyte3 ret = {{ val, val>>8, val>>16 }};
+        return ret;
+    }
+    else
+    {
+        ALubyte3 ret = {{ val>>16, val>>8, val }};
+        return ret;
+    }
 }
 
 

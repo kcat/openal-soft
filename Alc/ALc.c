@@ -304,6 +304,10 @@ static const ALCenums enumeration[] = {
     { "ALC_EFX_MINOR_VERSION",                ALC_EFX_MINOR_VERSION               },
     { "ALC_MAX_AUXILIARY_SENDS",              ALC_MAX_AUXILIARY_SENDS             },
 
+    // Loopback device Properties
+    { "ALC_FORMAT_CHANNELS",                  ALC_FORMAT_CHANNELS                 },
+    { "ALC_FORMAT_TYPE",                      ALC_FORMAT_TYPE                     },
+
     // ALC Error Message
     { "ALC_NO_ERROR",                         ALC_NO_ERROR                        },
     { "ALC_INVALID_DEVICE",                   ALC_INVALID_DEVICE                  },
@@ -311,6 +315,7 @@ static const ALCenums enumeration[] = {
     { "ALC_INVALID_ENUM",                     ALC_INVALID_ENUM                    },
     { "ALC_INVALID_VALUE",                    ALC_INVALID_VALUE                   },
     { "ALC_OUT_OF_MEMORY",                    ALC_OUT_OF_MEMORY                   },
+
     { NULL,                                   (ALCenum)0 }
 };
 // Error strings

@@ -337,11 +337,11 @@ static ALCchar *alcCaptureDefaultDeviceSpecifier;
 
 static const ALCchar alcNoDeviceExtList[] =
     "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
-    "ALC_EXT_thread_local_context";
+    "ALC_EXT_thread_local_context ALC_SOFTX_loopback_device";
 static const ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
     "ALC_EXT_DEDICATED ALC_EXT_disconnect ALC_EXT_EFX "
-    "ALC_EXT_thread_local_context";
+    "ALC_EXT_thread_local_context ALC_SOFTX_loopback_device";
 static const ALCint alcMajorVersion = 1;
 static const ALCint alcMinorVersion = 1;
 
@@ -376,7 +376,8 @@ static const ALchar alExtList[] =
     "AL_EXT_DOUBLE AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 "
     "AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_MULAW "
     "AL_EXT_MULAW_MCFORMATS AL_EXT_OFFSET AL_EXT_source_distance_model "
-    "AL_LOKI_quadriphonic AL_SOFT_buffer_sub_data AL_SOFT_loop_points";
+    "AL_LOKI_quadriphonic AL_SOFTX_buffer_samples AL_SOFT_buffer_sub_data "
+    "AL_SOFT_loop_points";
 
 // Mixing Priority Level
 static ALint RTPrioLevel;

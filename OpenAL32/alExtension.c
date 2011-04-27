@@ -179,6 +179,8 @@ static const ALenums enumeration[] = {
     { "AL_DOUBLE",                            AL_DOUBLE                           },
     { "AL_MULAW",                             AL_MULAW                            },
     { "AL_IMA4",                              AL_IMA4                             },
+    { "AL_BYTE3",                             AL_BYTE3                            },
+    { "AL_UNSIGNED_BYTE3",                    AL_UNSIGNED_BYTE3                   },
 
     // Buffer attributes
     { "AL_FREQUENCY",                         AL_FREQUENCY                        },

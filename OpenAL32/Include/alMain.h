@@ -24,6 +24,8 @@
 #define AL_DOUBLE                                0x1407
 #define AL_MULAW                                 0x1408
 #define AL_IMA4                                  0x1409
+#define AL_BYTE3                                 0x1410
+#define AL_UNSIGNED_BYTE3                        0x1411
 
 /* Channel configurations */
 #define AL_MONO                                  0x1500

@@ -335,6 +335,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 alSetError(Context, err);
         }   break;
 
+        case UserFmtByte3:
+        case UserFmtUByte3:
         case UserFmtDouble: {
             ALuint FrameSize = FrameSizeFromUserFmt(SrcChannels, SrcType);
             ALenum NewFormat = AL_FORMAT_MONO_FLOAT32;
@@ -1031,6 +1033,12 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
 
 typedef ALubyte ALmulaw;
 typedef ALubyte ALima4;
+typedef struct {
+    ALbyte b[3];
+} ALbyte3;
+typedef struct {
+    ALubyte b[3];
+} ALubyte3;
 
 static __inline ALshort DecodeMuLaw(ALmulaw val)
 { return muLawDecompressionTable[val]; }
@@ -1181,6 +1189,24 @@ static void EncodeIMA4Block(ALima4 *dst, const ALshort *src, ALint *sample, ALin
     }
 }
 
+static __inline ALint DecodeByte3(ALbyte3 val)
+{ return ((ALubyte)val.b[0]) | (((ALubyte)val.b[1])<<8) | (val.b[2]<<16); }
+
+static __inline ALbyte3 EncodeByte3(ALint val)
+{
+    ALbyte3 ret = {{ val, val>>8, val>>16 }};
+    return ret;
+}
+
+static __inline ALint DecodeUByte3(ALubyte3 val)
+{ return val.b[0] | (val.b[1]<<8) | (val.b[2]<<16); }
+
+static __inline ALubyte3 EncodeUByte3(ALint val)
+{
+    ALubyte3 ret = {{ val, val>>8, val>>16 }};
+    return ret;
+}
+
 
 static __inline ALbyte Conv_ALbyte_ALbyte(ALbyte val)
 { return val; }
@@ -1208,6 +1234,10 @@ static __inline ALbyte Conv_ALbyte_ALdouble(ALdouble val)
 }
 static __inline ALbyte Conv_ALbyte_ALmulaw(ALmulaw val)
 { return Conv_ALbyte_ALshort(DecodeMuLaw(val)); }
+static __inline ALbyte Conv_ALbyte_ALbyte3(ALbyte3 val)
+{ return DecodeByte3(val)>>16; }
+static __inline ALbyte Conv_ALbyte_ALubyte3(ALubyte3 val)
+{ return (DecodeUByte3(val)>>16)-128; }
 
 static __inline ALubyte Conv_ALubyte_ALbyte(ALbyte val)
 { return val+128; }
@@ -1235,6 +1265,10 @@ static __inline ALubyte Conv_ALubyte_ALdouble(ALdouble val)
 }
 static __inline ALubyte Conv_ALubyte_ALmulaw(ALmulaw val)
 { return Conv_ALubyte_ALshort(DecodeMuLaw(val)); }
+static __inline ALubyte Conv_ALubyte_ALbyte3(ALbyte3 val)
+{ return (DecodeByte3(val)>>16)+128; }
+static __inline ALubyte Conv_ALubyte_ALubyte3(ALubyte3 val)
+{ return DecodeUByte3(val)>>16; }
 
 static __inline ALshort Conv_ALshort_ALbyte(ALbyte val)
 { return val<<8; }
@@ -1262,6 +1296,10 @@ static __inline ALshort Conv_ALshort_ALdouble(ALdouble val)
 }
 static __inline ALshort Conv_ALshort_ALmulaw(ALmulaw val)
 { return Conv_ALshort_ALshort(DecodeMuLaw(val)); }
+static __inline ALshort Conv_ALshort_ALbyte3(ALbyte3 val)
+{ return DecodeByte3(val)>>8; }
+static __inline ALshort Conv_ALshort_ALubyte3(ALubyte3 val)
+{ return (DecodeUByte3(val)>>8)-32768; }
 
 static __inline ALushort Conv_ALushort_ALbyte(ALbyte val)
 { return (val+128)<<8; }
@@ -1289,6 +1327,10 @@ static __inline ALushort Conv_ALushort_ALdouble(ALdouble val)
 }
 static __inline ALushort Conv_ALushort_ALmulaw(ALmulaw val)
 { return Conv_ALushort_ALshort(DecodeMuLaw(val)); }
+static __inline ALushort Conv_ALushort_ALbyte3(ALbyte3 val)
+{ return (DecodeByte3(val)>>8)+32768; }
+static __inline ALushort Conv_ALushort_ALubyte3(ALubyte3 val)
+{ return DecodeUByte3(val)>>8; }
 
 static __inline ALint Conv_ALint_ALbyte(ALbyte val)
 { return val<<24; }
@@ -1316,6 +1358,10 @@ static __inline ALint Conv_ALint_ALdouble(ALdouble val)
 }
 static __inline ALint Conv_ALint_ALmulaw(ALmulaw val)
 { return Conv_ALint_ALshort(DecodeMuLaw(val)); }
+static __inline ALint Conv_ALint_ALbyte3(ALbyte3 val)
+{ return DecodeByte3(val)<<8; }
+static __inline ALint Conv_ALint_ALubyte3(ALubyte3 val)
+{ return (DecodeUByte3(val)-8388608)<<8; }
 
 static __inline ALuint Conv_ALuint_ALbyte(ALbyte val)
 { return (val+128)<<24; }
@@ -1343,6 +1389,10 @@ static __inline ALuint Conv_ALuint_ALdouble(ALdouble val)
 }
 static __inline ALuint Conv_ALuint_ALmulaw(ALmulaw val)
 { return Conv_ALuint_ALshort(DecodeMuLaw(val)); }
+static __inline ALuint Conv_ALuint_ALbyte3(ALbyte3 val)
+{ return (DecodeByte3(val)+8388608)<<8; }
+static __inline ALuint Conv_ALuint_ALubyte3(ALubyte3 val)
+{ return DecodeUByte3(val)<<8; }
 
 static __inline ALfloat Conv_ALfloat_ALbyte(ALbyte val)
 { return val * (1.0f/127.0f); }
@@ -1362,6 +1412,10 @@ static __inline ALfloat Conv_ALfloat_ALdouble(ALdouble val)
 { return (val==val) ? val : 0.0; }
 static __inline ALfloat Conv_ALfloat_ALmulaw(ALmulaw val)
 { return Conv_ALfloat_ALshort(DecodeMuLaw(val)); }
+static __inline ALfloat Conv_ALfloat_ALbyte3(ALbyte3 val)
+{ return DecodeByte3(val) * (1.0/8388608.0); }
+static __inline ALfloat Conv_ALfloat_ALubyte3(ALubyte3 val)
+{ return (DecodeUByte3(val)-8388608) * (1.0/8388608.0); }
 
 static __inline ALdouble Conv_ALdouble_ALbyte(ALbyte val)
 { return val * (1.0/127.0); }
@@ -1381,6 +1435,10 @@ static __inline ALdouble Conv_ALdouble_ALdouble(ALdouble val)
 { return (val==val) ? val : 0.0; }
 static __inline ALdouble Conv_ALdouble_ALmulaw(ALmulaw val)
 { return Conv_ALdouble_ALshort(DecodeMuLaw(val)); }
+static __inline ALdouble Conv_ALdouble_ALbyte3(ALbyte3 val)
+{ return DecodeByte3(val) * (1.0/8388608.0); }
+static __inline ALdouble Conv_ALdouble_ALubyte3(ALubyte3 val)
+{ return (DecodeUByte3(val)-8388608) * (1.0/8388608.0); }
 
 #define DECL_TEMPLATE(T)                                                      \
 static __inline ALmulaw Conv_ALmulaw_##T(T val)                               \
@@ -1396,8 +1454,49 @@ DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 static __inline ALmulaw Conv_ALmulaw_ALmulaw(ALmulaw val)
 { return val; }
+DECL_TEMPLATE(ALbyte3)
+DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
+
+#define DECL_TEMPLATE(T)                                                      \
+static __inline ALbyte3 Conv_ALbyte3_##T(T val)                               \
+{ return EncodeByte3(Conv_ALint_##T(val)>>8); }
+
+DECL_TEMPLATE(ALbyte)
+DECL_TEMPLATE(ALubyte)
+DECL_TEMPLATE(ALshort)
+DECL_TEMPLATE(ALushort)
+DECL_TEMPLATE(ALint)
+DECL_TEMPLATE(ALuint)
+DECL_TEMPLATE(ALfloat)
+DECL_TEMPLATE(ALdouble)
+DECL_TEMPLATE(ALmulaw)
+static __inline ALbyte3 Conv_ALbyte3_ALbyte3(ALbyte3 val)
+{ return val; }
+DECL_TEMPLATE(ALubyte3)
+
+#undef DECL_TEMPLATE
+
+#define DECL_TEMPLATE(T)                                                      \
+static __inline ALubyte3 Conv_ALubyte3_##T(T val)                             \
+{ return EncodeUByte3(Conv_ALuint_##T(val)>>8); }
+
+DECL_TEMPLATE(ALbyte)
+DECL_TEMPLATE(ALubyte)
+DECL_TEMPLATE(ALshort)
+DECL_TEMPLATE(ALushort)
+DECL_TEMPLATE(ALint)
+DECL_TEMPLATE(ALuint)
+DECL_TEMPLATE(ALfloat)
+DECL_TEMPLATE(ALdouble)
+DECL_TEMPLATE(ALmulaw)
+DECL_TEMPLATE(ALbyte3)
+static __inline ALubyte3 Conv_ALubyte3_ALubyte3(ALubyte3 val)
+{ return val; }
+
+#undef DECL_TEMPLATE
+
 
 #define DECL_TEMPLATE(T1, T2)                                                 \
 static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALuint numchans,      \
@@ -1420,6 +1519,8 @@ DECL_TEMPLATE(ALbyte, ALuint)
 DECL_TEMPLATE(ALbyte, ALfloat)
 DECL_TEMPLATE(ALbyte, ALdouble)
 DECL_TEMPLATE(ALbyte, ALmulaw)
+DECL_TEMPLATE(ALbyte, ALbyte3)
+DECL_TEMPLATE(ALbyte, ALubyte3)
 
 DECL_TEMPLATE(ALubyte, ALbyte)
 DECL_TEMPLATE(ALubyte, ALubyte)
@@ -1430,6 +1531,8 @@ DECL_TEMPLATE(ALubyte, ALuint)
 DECL_TEMPLATE(ALubyte, ALfloat)
 DECL_TEMPLATE(ALubyte, ALdouble)
 DECL_TEMPLATE(ALubyte, ALmulaw)
+DECL_TEMPLATE(ALubyte, ALbyte3)
+DECL_TEMPLATE(ALubyte, ALubyte3)
 
 DECL_TEMPLATE(ALshort, ALbyte)
 DECL_TEMPLATE(ALshort, ALubyte)
@@ -1440,6 +1543,8 @@ DECL_TEMPLATE(ALshort, ALuint)
 DECL_TEMPLATE(ALshort, ALfloat)
 DECL_TEMPLATE(ALshort, ALdouble)
 DECL_TEMPLATE(ALshort, ALmulaw)
+DECL_TEMPLATE(ALshort, ALbyte3)
+DECL_TEMPLATE(ALshort, ALubyte3)
 
 DECL_TEMPLATE(ALushort, ALbyte)
 DECL_TEMPLATE(ALushort, ALubyte)
@@ -1450,6 +1555,8 @@ DECL_TEMPLATE(ALushort, ALuint)
 DECL_TEMPLATE(ALushort, ALfloat)
 DECL_TEMPLATE(ALushort, ALdouble)
 DECL_TEMPLATE(ALushort, ALmulaw)
+DECL_TEMPLATE(ALushort, ALbyte3)
+DECL_TEMPLATE(ALushort, ALubyte3)
 
 DECL_TEMPLATE(ALint, ALbyte)
 DECL_TEMPLATE(ALint, ALubyte)
@@ -1460,6 +1567,8 @@ DECL_TEMPLATE(ALint, ALuint)
 DECL_TEMPLATE(ALint, ALfloat)
 DECL_TEMPLATE(ALint, ALdouble)
 DECL_TEMPLATE(ALint, ALmulaw)
+DECL_TEMPLATE(ALint, ALbyte3)
+DECL_TEMPLATE(ALint, ALubyte3)
 
 DECL_TEMPLATE(ALuint, ALbyte)
 DECL_TEMPLATE(ALuint, ALubyte)
@@ -1470,6 +1579,8 @@ DECL_TEMPLATE(ALuint, ALuint)
 DECL_TEMPLATE(ALuint, ALfloat)
 DECL_TEMPLATE(ALuint, ALdouble)
 DECL_TEMPLATE(ALuint, ALmulaw)
+DECL_TEMPLATE(ALuint, ALbyte3)
+DECL_TEMPLATE(ALuint, ALubyte3)
 
 DECL_TEMPLATE(ALfloat, ALbyte)
 DECL_TEMPLATE(ALfloat, ALubyte)
@@ -1480,6 +1591,8 @@ DECL_TEMPLATE(ALfloat, ALuint)
 DECL_TEMPLATE(ALfloat, ALfloat)
 DECL_TEMPLATE(ALfloat, ALdouble)
 DECL_TEMPLATE(ALfloat, ALmulaw)
+DECL_TEMPLATE(ALfloat, ALbyte3)
+DECL_TEMPLATE(ALfloat, ALubyte3)
 
 DECL_TEMPLATE(ALdouble, ALbyte)
 DECL_TEMPLATE(ALdouble, ALubyte)
@@ -1490,6 +1603,8 @@ DECL_TEMPLATE(ALdouble, ALuint)
 DECL_TEMPLATE(ALdouble, ALfloat)
 DECL_TEMPLATE(ALdouble, ALdouble)
 DECL_TEMPLATE(ALdouble, ALmulaw)
+DECL_TEMPLATE(ALdouble, ALbyte3)
+DECL_TEMPLATE(ALdouble, ALubyte3)
 
 DECL_TEMPLATE(ALmulaw, ALbyte)
 DECL_TEMPLATE(ALmulaw, ALubyte)
@@ -1500,6 +1615,32 @@ DECL_TEMPLATE(ALmulaw, ALuint)
 DECL_TEMPLATE(ALmulaw, ALfloat)
 DECL_TEMPLATE(ALmulaw, ALdouble)
 DECL_TEMPLATE(ALmulaw, ALmulaw)
+DECL_TEMPLATE(ALmulaw, ALbyte3)
+DECL_TEMPLATE(ALmulaw, ALubyte3)
+
+DECL_TEMPLATE(ALbyte3, ALbyte)
+DECL_TEMPLATE(ALbyte3, ALubyte)
+DECL_TEMPLATE(ALbyte3, ALshort)
+DECL_TEMPLATE(ALbyte3, ALushort)
+DECL_TEMPLATE(ALbyte3, ALint)
+DECL_TEMPLATE(ALbyte3, ALuint)
+DECL_TEMPLATE(ALbyte3, ALfloat)
+DECL_TEMPLATE(ALbyte3, ALdouble)
+DECL_TEMPLATE(ALbyte3, ALmulaw)
+DECL_TEMPLATE(ALbyte3, ALbyte3)
+DECL_TEMPLATE(ALbyte3, ALubyte3)
+
+DECL_TEMPLATE(ALubyte3, ALbyte)
+DECL_TEMPLATE(ALubyte3, ALubyte)
+DECL_TEMPLATE(ALubyte3, ALshort)
+DECL_TEMPLATE(ALubyte3, ALushort)
+DECL_TEMPLATE(ALubyte3, ALint)
+DECL_TEMPLATE(ALubyte3, ALuint)
+DECL_TEMPLATE(ALubyte3, ALfloat)
+DECL_TEMPLATE(ALubyte3, ALdouble)
+DECL_TEMPLATE(ALubyte3, ALmulaw)
+DECL_TEMPLATE(ALubyte3, ALbyte3)
+DECL_TEMPLATE(ALubyte3, ALubyte3)
 
 #undef DECL_TEMPLATE
 
@@ -1527,6 +1668,8 @@ DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
+DECL_TEMPLATE(ALbyte3)
+DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
 
@@ -1559,6 +1702,8 @@ DECL_TEMPLATE(ALmulaw)
 static void Convert_ALima4_ALima4(ALima4 *dst, const ALima4 *src,
                                   ALuint numchans, ALuint numblocks)
 { memcpy(dst, src, numblocks*36*numchans); }
+DECL_TEMPLATE(ALbyte3)
+DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
 
@@ -1598,6 +1743,12 @@ static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
         case UserFmtIMA4:                                                     \
             Convert_##T##_ALima4(dst, src, numchans, len);                    \
             break;                                                            \
+        case UserFmtByte3:                                                    \
+            Convert_##T##_ALbyte3(dst, src, numchans, len);                   \
+            break;                                                            \
+        case UserFmtUByte3:                                                   \
+            Convert_##T##_ALubyte3(dst, src, numchans, len);                  \
+            break;                                                            \
     }                                                                         \
 }
 
@@ -1611,6 +1762,8 @@ DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
 DECL_TEMPLATE(ALima4)
+DECL_TEMPLATE(ALbyte3)
+DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
 
@@ -1648,6 +1801,12 @@ static void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src
             break;
         case UserFmtIMA4:
             Convert_ALima4(dst, src, srcType, numchans, len);
+            break;
+        case UserFmtByte3:
+            Convert_ALbyte3(dst, src, srcType, numchans, len);
+            break;
+        case UserFmtUByte3:
+            Convert_ALubyte3(dst, src, srcType, numchans, len);
             break;
     }
 }
@@ -1762,6 +1921,8 @@ ALuint BytesFromUserFmt(enum UserFmtType type)
     case UserFmtDouble: return sizeof(ALdouble);
     case UserFmtMulaw: return sizeof(ALubyte);
     case UserFmtIMA4: break; /* not handled here */
+    case UserFmtByte3: return sizeof(ALbyte3);
+    case UserFmtUByte3: return sizeof(ALubyte3);
     }
     return 0;
 }

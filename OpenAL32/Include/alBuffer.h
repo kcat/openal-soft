@@ -18,7 +18,9 @@ enum UserFmtType {
     UserFmtFloat  = AL_FLOAT,
     UserFmtDouble = AL_DOUBLE,
     UserFmtMulaw  = AL_MULAW,
-    UserFmtIMA4   = AL_IMA4
+    UserFmtIMA4   = AL_IMA4,
+    UserFmtByte3  = AL_BYTE3,
+    UserFmtUByte3 = AL_UNSIGNED_BYTE3,
 };
 enum UserFmtChannels {
     UserFmtMono   = AL_MONO,

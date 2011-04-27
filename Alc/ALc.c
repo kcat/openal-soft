@@ -920,6 +920,8 @@ ALboolean IsValidType(ALenum type)
         case AL_DOUBLE:
         case AL_MULAW:
         case AL_IMA4:
+        case AL_BYTE3:
+        case AL_UNSIGNED_BYTE3:
             return AL_TRUE;
     }
     return AL_FALSE;

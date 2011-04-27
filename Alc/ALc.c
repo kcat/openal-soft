@@ -408,6 +408,7 @@ static void alc_deinit(void) __attribute__((destructor));
 static void alc_init(void);
 static void alc_deinit(void);
 
+#ifndef AL_LIBTYPE_STATIC
 BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 {
     (void)lpReserved;
@@ -426,6 +427,23 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
     }
     return TRUE;
 }
+#elif defined(_MSC_VER)
+#pragma section(".CRT$XCU",read)
+static void alc_constructor(void);
+static void alc_destructor(void);
+__declspec(allocate(".CRT$XCU")) void (__cdecl* alc_constructor_)(void) = alc_constructor;
+
+static void alc_constructor(void)
+{
+    atexit(alc_destructor);
+    alc_init();
+}
+
+static void alc_destructor(void)
+{
+    alc_deinit();
+}
+#endif
 #endif
 #endif
 

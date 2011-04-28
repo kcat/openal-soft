@@ -1443,9 +1443,9 @@ static __inline ALfloat Conv_ALfloat_ALdouble(ALdouble val)
 static __inline ALfloat Conv_ALfloat_ALmulaw(ALmulaw val)
 { return Conv_ALfloat_ALshort(DecodeMuLaw(val)); }
 static __inline ALfloat Conv_ALfloat_ALbyte3(ALbyte3 val)
-{ return DecodeByte3(val) * (1.0/8388608.0); }
+{ return DecodeByte3(val) * (1.0/8388607.0); }
 static __inline ALfloat Conv_ALfloat_ALubyte3(ALubyte3 val)
-{ return (DecodeUByte3(val)-8388608) * (1.0/8388608.0); }
+{ return (DecodeUByte3(val)-8388608) * (1.0/8388607.0); }
 
 static __inline ALdouble Conv_ALdouble_ALbyte(ALbyte val)
 { return val * (1.0/127.0); }
@@ -1466,9 +1466,9 @@ static __inline ALdouble Conv_ALdouble_ALdouble(ALdouble val)
 static __inline ALdouble Conv_ALdouble_ALmulaw(ALmulaw val)
 { return Conv_ALdouble_ALshort(DecodeMuLaw(val)); }
 static __inline ALdouble Conv_ALdouble_ALbyte3(ALbyte3 val)
-{ return DecodeByte3(val) * (1.0/8388608.0); }
+{ return DecodeByte3(val) * (1.0/8388607.0); }
 static __inline ALdouble Conv_ALdouble_ALubyte3(ALubyte3 val)
-{ return (DecodeUByte3(val)-8388608) * (1.0/8388608.0); }
+{ return (DecodeUByte3(val)-8388608) * (1.0/8388607.0); }
 
 #define DECL_TEMPLATE(T)                                                      \
 static __inline ALmulaw Conv_ALmulaw_##T(T val)                               \

@@ -1949,10 +1949,10 @@ ALuint BytesFromUserFmt(enum UserFmtType type)
     case UserFmtUInt: return sizeof(ALuint);
     case UserFmtFloat: return sizeof(ALfloat);
     case UserFmtDouble: return sizeof(ALdouble);
-    case UserFmtMulaw: return sizeof(ALubyte);
-    case UserFmtIMA4: break; /* not handled here */
     case UserFmtByte3: return sizeof(ALbyte3);
     case UserFmtUByte3: return sizeof(ALubyte3);
+    case UserFmtMulaw: return sizeof(ALubyte);
+    case UserFmtIMA4: break; /* not handled here */
     }
     return 0;
 }

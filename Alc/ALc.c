@@ -130,9 +130,9 @@ static const ALCfunction alcFunctions[] = {
     { "alcSetThreadContext",        (ALCvoid *) alcSetThreadContext      },
     { "alcGetThreadContext",        (ALCvoid *) alcGetThreadContext      },
 
-    { "alcLoopbackOpenDevice",      (ALCvoid *) alcLoopbackOpenDevice    },
-    { "alcIsRenderFormatSupported", (ALCvoid *) alcIsRenderFormatSupported},
-    { "alcRenderSamples",           (ALCvoid *) alcRenderSamples         },
+    { "alcLoopbackOpenDeviceSOFT",  (ALCvoid *) alcLoopbackOpenDeviceSOFT},
+    { "alcIsRenderFormatSupportedSOFT",(ALCvoid *) alcIsRenderFormatSupportedSOFT},
+    { "alcRenderSamplesSOFT",       (ALCvoid *) alcRenderSamplesSOFT         },
 
     { "alEnable",                   (ALCvoid *) alEnable                 },
     { "alDisable",                  (ALCvoid *) alDisable                },
@@ -305,8 +305,8 @@ static const ALCenums enumeration[] = {
     { "ALC_MAX_AUXILIARY_SENDS",              ALC_MAX_AUXILIARY_SENDS             },
 
     // Loopback device Properties
-    { "ALC_FORMAT_CHANNELS",                  ALC_FORMAT_CHANNELS                 },
-    { "ALC_FORMAT_TYPE",                      ALC_FORMAT_TYPE                     },
+    { "ALC_FORMAT_CHANNELS_SOFT",             ALC_FORMAT_CHANNELS_SOFT            },
+    { "ALC_FORMAT_TYPE_SOFT",                 ALC_FORMAT_TYPE_SOFT                },
 
     // ALC Error Message
     { "ALC_NO_ERROR",                         ALC_NO_ERROR                        },
@@ -1062,7 +1062,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         attrIdx = 0;
         while(attrList[attrIdx])
         {
-            if(attrList[attrIdx] == ALC_FORMAT_CHANNELS &&
+            if(attrList[attrIdx] == ALC_FORMAT_CHANNELS_SOFT &&
                device->IsLoopbackDevice)
             {
                 ALCint val = attrList[attrIdx + 1];
@@ -1074,7 +1074,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 schans = val;
             }
 
-            if(attrList[attrIdx] == ALC_FORMAT_TYPE &&
+            if(attrList[attrIdx] == ALC_FORMAT_TYPE_SOFT &&
                device->IsLoopbackDevice)
             {
                 ALCint val = attrList[attrIdx + 1];
@@ -1711,10 +1711,10 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                 }
                 else
                 {
-                    data[i++] = ALC_FORMAT_CHANNELS;
+                    data[i++] = ALC_FORMAT_CHANNELS_SOFT;
                     data[i++] = device->FmtChans;
 
-                    data[i++] = ALC_FORMAT_TYPE;
+                    data[i++] = ALC_FORMAT_TYPE_SOFT;
                     data[i++] = device->FmtType;
                 }
 
@@ -1753,14 +1753,14 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                 *data = ALC_FALSE;
             break;
 
-        case ALC_FORMAT_CHANNELS:
+        case ALC_FORMAT_CHANNELS_SOFT:
             if(!IsDevice(device) || !device->IsLoopbackDevice)
                 alcSetError(device, ALC_INVALID_DEVICE);
             else
                 *data = device->FmtChans;
             break;
 
-        case ALC_FORMAT_TYPE:
+        case ALC_FORMAT_TYPE_SOFT:
             if(!IsDevice(device) || !device->IsLoopbackDevice)
                 alcSetError(device, ALC_INVALID_DEVICE);
             else
@@ -2451,7 +2451,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 }
 
 
-ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDevice(void)
+ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
 {
     ALCdevice *device;
 
@@ -2521,7 +2521,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDevice(void)
     return device;
 }
 
-ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupported(ALCdevice *device, ALCsizei freq, ALenum channels, ALenum type)
+ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALenum channels, ALenum type)
 {
     ALCboolean ret = ALC_FALSE;
 
@@ -2548,7 +2548,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupported(ALCdevice *device, AL
     return ret;
 }
 
-ALC_API void ALC_APIENTRY alcRenderSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
+ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
     SuspendContext(NULL);
     if(!IsDevice(device) || !device->IsLoopbackDevice)

@@ -2137,89 +2137,89 @@ ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *
 {
     switch(format)
     {
-        case AL_FORMAT_MONO8:
+        case AL_MONO8:
             *chans = FmtMono;
             *type  = FmtUByte;
             return AL_TRUE;
-        case AL_FORMAT_MONO16:
+        case AL_MONO16:
             *chans = FmtMono;
             *type  = FmtShort;
             return AL_TRUE;
-        case AL_FORMAT_MONO_FLOAT32:
+        case AL_MONO32F:
             *chans = FmtMono;
             *type  = FmtFloat;
             return AL_TRUE;
-        case AL_FORMAT_STEREO8:
+        case AL_STEREO8:
             *chans = FmtStereo;
             *type  = FmtUByte;
             return AL_TRUE;
-        case AL_FORMAT_STEREO16:
+        case AL_STEREO16:
             *chans = FmtStereo;
             *type  = FmtShort;
             return AL_TRUE;
-        case AL_FORMAT_STEREO_FLOAT32:
+        case AL_STEREO32F:
             *chans = FmtStereo;
             *type  = FmtFloat;
             return AL_TRUE;
         case AL_FORMAT_QUAD8_LOKI:
-        case AL_FORMAT_QUAD8:
+        case AL_QUAD8:
             *chans = FmtQuad;
             *type  = FmtUByte;
             return AL_TRUE;
         case AL_FORMAT_QUAD16_LOKI:
-        case AL_FORMAT_QUAD16:
+        case AL_QUAD16:
             *chans = FmtQuad;
             *type  = FmtShort;
             return AL_TRUE;
-        case AL_FORMAT_QUAD32:
+        case AL_QUAD32F:
             *chans = FmtQuad;
             *type  = FmtFloat;
             return AL_TRUE;
-        case AL_FORMAT_REAR8:
+        case AL_REAR8:
             *chans = FmtRear;
             *type  = FmtUByte;
             return AL_TRUE;
-        case AL_FORMAT_REAR16:
+        case AL_REAR16:
             *chans = FmtRear;
             *type  = FmtShort;
             return AL_TRUE;
-        case AL_FORMAT_REAR32:
+        case AL_REAR32F:
             *chans = FmtRear;
             *type  = FmtFloat;
             return AL_TRUE;
-        case AL_FORMAT_51CHN8:
+        case AL_5POINT1_8:
             *chans = FmtX51;
             *type  = FmtUByte;
             return AL_TRUE;
-        case AL_FORMAT_51CHN16:
+        case AL_5POINT1_16:
             *chans = FmtX51;
             *type  = FmtShort;
             return AL_TRUE;
-        case AL_FORMAT_51CHN32:
+        case AL_5POINT1_32F:
             *chans = FmtX51;
             *type  = FmtFloat;
             return AL_TRUE;
-        case AL_FORMAT_61CHN8:
+        case AL_6POINT1_8:
             *chans = FmtX61;
             *type  = FmtUByte;
             return AL_TRUE;
-        case AL_FORMAT_61CHN16:
+        case AL_6POINT1_16:
             *chans = FmtX61;
             *type  = FmtShort;
             return AL_TRUE;
-        case AL_FORMAT_61CHN32:
+        case AL_6POINT1_32F:
             *chans = FmtX61;
             *type  = FmtFloat;
             return AL_TRUE;
-        case AL_FORMAT_71CHN8:
+        case AL_7POINT1_8:
             *chans = FmtX71;
             *type  = FmtUByte;
             return AL_TRUE;
-        case AL_FORMAT_71CHN16:
+        case AL_7POINT1_16:
             *chans = FmtX71;
             *type  = FmtShort;
             return AL_TRUE;
-        case AL_FORMAT_71CHN32:
+        case AL_7POINT1_32F:
             *chans = FmtX71;
             *type  = FmtFloat;
             return AL_TRUE;

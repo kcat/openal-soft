@@ -1348,6 +1348,10 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             Source->BuffersPlayed = 0;
 
             Source->Buffer = Source->queue->buffer;
+
+            for(j = 0;j < HRTF_LENGTH;j++)
+                Source->HrtfHistory[j] = 0.0f;
+            Source->HrtfOffset = 0;
         }
         else
             Source->state = AL_PLAYING;

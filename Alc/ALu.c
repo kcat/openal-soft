@@ -670,24 +670,42 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         Position[2] *= invlen;
     }
 
-    pos = aluCart2LUTpos(-Position[2], Position[0]);
-    SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+    if(Device->UseHRTF)
+    {
+        const ALshort *hrtf_left, *hrtf_right;
 
-    DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
-    // elevation adjustment for directional gain. this sucks, but
-    // has low complexity
-    AmbientGain = aluSqrt(1.0/Device->NumChan);
-    for(s = 0;s < MAXCHANNELS;s++)
-    {
-        ALuint s2;
-        for(s2 = 0;s2 < MAXCHANNELS;s2++)
-            ALSource->Params.DryGains[s][s2] = 0.0f;
+        GetHrtfCoeffs(atan2(Position[1], -Position[2]) * (180.0/M_PI),
+                      atan2(Position[0], -Position[2]) * (180.0/M_PI),
+                      &hrtf_left, &hrtf_right);
+        for(i = 0;i < HRTF_LENGTH;i++)
+        {
+            ALSource->Params.HrtfCoeffs[i][0] = hrtf_left[i]*(1.0/32767.0) *
+                                                DryGain;
+            ALSource->Params.HrtfCoeffs[i][1] = hrtf_right[i]*(1.0/32767.0) *
+                                                DryGain;
+        }
     }
-    for(s = 0;s < (ALsizei)Device->NumChan;s++)
+    else
     {
-        Channel chan = Device->Speaker2Chan[s];
-        ALfloat gain = AmbientGain + (SpeakerGain[chan]-AmbientGain)*DirGain;
-        ALSource->Params.DryGains[0][chan] = DryGain * gain;
+        pos = aluCart2LUTpos(-Position[2], Position[0]);
+        SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+
+        DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
+        // elevation adjustment for directional gain. this sucks, but
+        // has low complexity
+        AmbientGain = aluSqrt(1.0/Device->NumChan);
+        for(s = 0;s < MAXCHANNELS;s++)
+        {
+            ALuint s2;
+            for(s2 = 0;s2 < MAXCHANNELS;s2++)
+                ALSource->Params.DryGains[s][s2] = 0.0f;
+        }
+        for(s = 0;s < (ALsizei)Device->NumChan;s++)
+        {
+            Channel chan = Device->Speaker2Chan[s];
+            ALfloat gain = AmbientGain + (SpeakerGain[chan]-AmbientGain)*DirGain;
+            ALSource->Params.DryGains[0][chan] = DryGain * gain;
+        }
     }
 
     /* Update filter coefficients. */

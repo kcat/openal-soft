@@ -587,6 +587,7 @@ ALboolean IsValidChannels(ALenum type);
 #define HRTF_BITS        (7)
 #define HRTF_LENGTH      (1<<HRTF_BITS)
 #define HRTF_LENGTH_MASK (HRTF_LENGTH-1)
+void GetHrtfCoeffs(ALfloat azimuth, ALfloat angle, const ALshort **left, const ALshort **right);
 
 void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);

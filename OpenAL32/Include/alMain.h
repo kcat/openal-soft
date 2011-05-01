@@ -584,6 +584,10 @@ void SetDefaultWFXChannelOrder(ALCdevice *device);
 ALboolean IsValidType(ALenum type);
 ALboolean IsValidChannels(ALenum type);
 
+#define HRTF_BITS        (7)
+#define HRTF_LENGTH      (1<<HRTF_BITS)
+#define HRTF_LENGTH_MASK (HRTF_LENGTH-1)
+
 void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);
 #define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)

@@ -571,7 +571,7 @@ static ALuint PulseProc(ALvoid *param)
     return 0;
 }
 
-static pa_context *connect_context(pa_threaded_mainloop *loop)
+static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
 {
     const char *name = "OpenAL Soft";
     char path_name[PATH_MAX];
@@ -609,7 +609,8 @@ static pa_context *connect_context(pa_threaded_mainloop *loop)
 
     if(err < 0)
     {
-        AL_PRINT("Context did not connect: %s\n", ppa_strerror(err));
+        if(!silent)
+            AL_PRINT("Context did not connect: %s\n", ppa_strerror(err));
         ppa_context_unref(context);
         return NULL;
     }
@@ -675,7 +676,7 @@ static void probe_devices(ALboolean capture)
         pa_context *context;
 
         ppa_threaded_mainloop_lock(loop);
-        context = connect_context(loop);
+        context = connect_context(loop, AL_TRUE);
         if(context)
         {
             pa_operation *o;
@@ -730,7 +731,7 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
     ppa_threaded_mainloop_lock(data->loop);
     device->ExtraData = data;
 
-    data->context = connect_context(data->loop);
+    data->context = connect_context(data->loop, AL_FALSE);
     if(!data->context)
     {
         ppa_threaded_mainloop_unlock(data->loop);
@@ -1304,7 +1305,7 @@ void alc_pulse_probe(int type) //{{{
             pa_context *context;
 
             ppa_threaded_mainloop_lock(loop);
-            context = connect_context(loop);
+            context = connect_context(loop, AL_TRUE);
             if(context)
             {
                 AppendDeviceList(pulse_device);

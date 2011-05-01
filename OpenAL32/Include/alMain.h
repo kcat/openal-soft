@@ -478,6 +478,9 @@ struct ALCdevice_struct
     // Duplicate stereo sources on the side/rear channels
     ALboolean    DuplicateStereo;
 
+    // Use HRTF filters for mixing sounds
+    ALboolean    UseHRTF;
+
     // Dry path buffer mix
     ALfloat DryBuffer[BUFFERSIZE][MAXCHANNELS];
 

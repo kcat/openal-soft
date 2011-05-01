@@ -1186,7 +1186,11 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ProcessContext(context);
     }
 
-    if(device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
+    device->UseHRTF = AL_FALSE;
+    if(ChannelsFromDevFmt(device->FmtChans) == 2 && device->Frequency == 44100)
+        device->UseHRTF = GetConfigValueBool(NULL, "hrtf", AL_FALSE);
+
+    if(!device->UseHRTF && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
     {
         if(!device->Bs2b)
         {
@@ -1202,14 +1206,13 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Bs2b = NULL;
     }
 
-    if(ChannelsFromDevFmt(device->FmtChans) <= 2)
+    device->HeadDampen = 0.0f;
+    if(!device->UseHRTF && ChannelsFromDevFmt(device->FmtChans) <= 2)
     {
         device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
         device->HeadDampen = __min(device->HeadDampen, 1.0f);
         device->HeadDampen = __max(device->HeadDampen, 0.0f);
     }
-    else
-        device->HeadDampen = 0.0f;
 
     return ALC_TRUE;
 }
@@ -2279,6 +2282,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->IsLoopbackDevice = AL_FALSE;
     device->LastError = ALC_NO_ERROR;
 
+    device->UseHRTF = AL_FALSE;
     device->Bs2b = NULL;
     device->szDeviceName = NULL;
 

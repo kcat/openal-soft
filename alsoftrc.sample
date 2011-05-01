@@ -35,6 +35,13 @@
 #  AL_FORMAT_71CHN32  (32-bit float 7.1 output)
 #format = AL_FORMAT_STEREO16
 
+## hrtf:
+#  Enables HRTF filters. These filters provide for better sound spatialization
+#  while using headphones. The filters will only work when output is 44100hz
+#  stereo. While HRTF is active, both cf_level and head_dampen are disabled.
+#  Default is disabled since stereo speaker output quality may suffer.
+#hrtf = false
+
 ## cf_level:
 #  Sets the crossfeed level for stereo output. Valid values are:
 #  0 - No crossfeed

@@ -161,7 +161,26 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         SrcMatrix[0][FRONT_CENTER] = DryGain * ListenerGain;
         break;
     case FmtStereo:
-        if(!(ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
+        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
+        {
+            ALfloat angles[2] = { -30.0f, 30.0f };
+            ALint c;
+
+            for(c = 0;c < 2;c++)
+            {
+                const ALshort *hrtf_left, *hrtf_right;
+
+                GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
+                for(i = 0;i < HRTF_LENGTH;i++)
+                {
+                    ALSource->Params.HrtfCoeffs[c][i][0] =
+                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                    ALSource->Params.HrtfCoeffs[c][i][1] =
+                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                }
+            }
+        }
+        else if(!(ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
         {
             SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
             SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
@@ -207,61 +226,177 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         break;
 
     case FmtRear:
-        SrcMatrix[0][BACK_LEFT]  = DryGain * ListenerGain;
-        SrcMatrix[1][BACK_RIGHT] = DryGain * ListenerGain;
+        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
+        {
+            ALfloat angles[2] = { -150.0f, 150.0f };
+            ALint c;
+
+            for(c = 0;c < 2;c++)
+            {
+                const ALshort *hrtf_left, *hrtf_right;
+
+                GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
+                for(i = 0;i < HRTF_LENGTH;i++)
+                {
+                    ALSource->Params.HrtfCoeffs[c][i][0] =
+                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                    ALSource->Params.HrtfCoeffs[c][i][1] =
+                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                }
+            }
+        }
+        else
+        {
+            SrcMatrix[0][BACK_LEFT]  = DryGain * ListenerGain;
+            SrcMatrix[1][BACK_RIGHT] = DryGain * ListenerGain;
+        }
         break;
 
     case FmtQuad:
-        SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
-        SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
-        SrcMatrix[2][BACK_LEFT]   = DryGain * ListenerGain;
-        SrcMatrix[3][BACK_RIGHT]  = DryGain * ListenerGain;
+        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
+        {
+            ALfloat angles[4] = { -45.0f, 45.0f, -135.0f, 135.0f };
+            ALint c;
+
+            for(c = 0;c < 4;c++)
+            {
+                const ALshort *hrtf_left, *hrtf_right;
+
+                GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
+                for(i = 0;i < HRTF_LENGTH;i++)
+                {
+                    ALSource->Params.HrtfCoeffs[c][i][0] =
+                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                    ALSource->Params.HrtfCoeffs[c][i][1] =
+                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                }
+            }
+        }
+        else
+        {
+            SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
+            SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
+            SrcMatrix[2][BACK_LEFT]   = DryGain * ListenerGain;
+            SrcMatrix[3][BACK_RIGHT]  = DryGain * ListenerGain;
+        }
         break;
 
     case FmtX51:
-        SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
-        SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
-        SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
-        SrcMatrix[3][LFE]          = DryGain * ListenerGain;
-        SrcMatrix[4][BACK_LEFT]    = DryGain * ListenerGain;
-        SrcMatrix[5][BACK_RIGHT]   = DryGain * ListenerGain;
+        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
+        {
+            ALfloat angles[6] = { -30.0f, 30.0f, 0.0f, 0.0f, -110.0f, 110.0f };
+            ALint c;
+
+            for(c = 0;c < 6;c++)
+            {
+                const ALshort *hrtf_left, *hrtf_right;
+
+                GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
+                for(i = 0;i < HRTF_LENGTH;i++)
+                {
+                    ALSource->Params.HrtfCoeffs[c][i][0] =
+                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                    ALSource->Params.HrtfCoeffs[c][i][1] =
+                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                }
+            }
+        }
+        else
+        {
+            SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
+            SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
+            SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
+            SrcMatrix[3][LFE]          = DryGain * ListenerGain;
+            SrcMatrix[4][BACK_LEFT]    = DryGain * ListenerGain;
+            SrcMatrix[5][BACK_RIGHT]   = DryGain * ListenerGain;
+        }
         break;
 
     case FmtX61:
-        SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
-        SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
-        SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
-        SrcMatrix[3][LFE]          = DryGain * ListenerGain;
-        SrcMatrix[4][BACK_CENTER]  = DryGain * ListenerGain;
-        SrcMatrix[5][SIDE_LEFT]    = DryGain * ListenerGain;
-        SrcMatrix[6][SIDE_RIGHT]   = DryGain * ListenerGain;
+        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
+        {
+            ALfloat angles[7] = { -30.0f, 30.0f, 0.0f, 0.0f,
+                                  -90.0f, 90.0f, 180.0f };
+            ALint c;
+
+            for(c = 0;c < 7;c++)
+            {
+                const ALshort *hrtf_left, *hrtf_right;
+
+                GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
+                for(i = 0;i < HRTF_LENGTH;i++)
+                {
+                    ALSource->Params.HrtfCoeffs[c][i][0] =
+                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                    ALSource->Params.HrtfCoeffs[c][i][1] =
+                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                }
+            }
+        }
+        else
+        {
+            SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
+            SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
+            SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
+            SrcMatrix[3][LFE]          = DryGain * ListenerGain;
+            SrcMatrix[4][BACK_CENTER]  = DryGain * ListenerGain;
+            SrcMatrix[5][SIDE_LEFT]    = DryGain * ListenerGain;
+            SrcMatrix[6][SIDE_RIGHT]   = DryGain * ListenerGain;
+        }
         break;
 
     case FmtX71:
-        SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
-        SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
-        SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
-        SrcMatrix[3][LFE]          = DryGain * ListenerGain;
-        SrcMatrix[4][BACK_LEFT]    = DryGain * ListenerGain;
-        SrcMatrix[5][BACK_RIGHT]   = DryGain * ListenerGain;
-        SrcMatrix[6][SIDE_LEFT]    = DryGain * ListenerGain;
-        SrcMatrix[7][SIDE_RIGHT]   = DryGain * ListenerGain;
+        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
+        {
+            ALfloat angles[8] = { -30.0f, 30.0f, 0.0f, 0.0f,
+                                  -90.0f, 90.0f, -110.0f, 110.0f };
+            ALint c;
+
+            for(c = 0;c < 8;c++)
+            {
+                const ALshort *hrtf_left, *hrtf_right;
+
+                GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
+                for(i = 0;i < HRTF_LENGTH;i++)
+                {
+                    ALSource->Params.HrtfCoeffs[c][i][0] =
+                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                    ALSource->Params.HrtfCoeffs[c][i][1] =
+                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                }
+            }
+        }
+        else
+        {
+            SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
+            SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
+            SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
+            SrcMatrix[3][LFE]          = DryGain * ListenerGain;
+            SrcMatrix[4][BACK_LEFT]    = DryGain * ListenerGain;
+            SrcMatrix[5][BACK_RIGHT]   = DryGain * ListenerGain;
+            SrcMatrix[6][SIDE_LEFT]    = DryGain * ListenerGain;
+            SrcMatrix[7][SIDE_RIGHT]   = DryGain * ListenerGain;
+        }
         break;
     }
-    for(i = 0;i < MAXCHANNELS;i++)
+    if(!(ALContext->Device->Flags&DEVICE_USE_HRTF))
     {
-        ALuint j, k;
-        for(j = 0;j < MAXCHANNELS;j++)
+        for(i = 0;i < MAXCHANNELS;i++)
         {
-            ALfloat (*DevMatrix)[MAXCHANNELS] = ALContext->Device->ChannelMatrix;
-            ALSource->Params.DryGains[i][j] = 0.0f;
-            for(k = 0;k < MAXCHANNELS;k++)
+            ALuint j, k;
+            for(j = 0;j < MAXCHANNELS;j++)
             {
-                /* Matrix mult: O[i][j] += A[i][k] * B[k][j]
-                 * However, our device matrix is transposed, so we do:
-                 * O[i][j] += A[i][k] * B[j][k]
-                 */
-                ALSource->Params.DryGains[i][j] += SrcMatrix[i][k] * DevMatrix[j][k];
+                ALfloat (*DevMatrix)[MAXCHANNELS] = ALContext->Device->ChannelMatrix;
+                ALSource->Params.DryGains[i][j] = 0.0f;
+                for(k = 0;k < MAXCHANNELS;k++)
+                {
+                    /* Matrix mult: O[i][j] += A[i][k] * B[k][j]
+                     * However, our device matrix is transposed, so we do:
+                     * O[i][j] += A[i][k] * B[j][k]
+                     */
+                    ALSource->Params.DryGains[i][j] += SrcMatrix[i][k] *
+                                                       DevMatrix[j][k];
+                }
             }
         }
     }
@@ -677,10 +812,10 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                       &hrtf_left, &hrtf_right);
         for(i = 0;i < HRTF_LENGTH;i++)
         {
-            ALSource->Params.HrtfCoeffs[i][0] = hrtf_left[i]*(1.0/32767.0) *
-                                                DryGain;
-            ALSource->Params.HrtfCoeffs[i][1] = hrtf_right[i]*(1.0/32767.0) *
-                                                DryGain;
+            ALSource->Params.HrtfCoeffs[0][i][0] = hrtf_left[i]*(1.0/32767.0)*
+                                                   DryGain;
+            ALSource->Params.HrtfCoeffs[0][i][1] = hrtf_right[i]*(1.0/32767.0)*
+                                                   DryGain;
         }
     }
     else

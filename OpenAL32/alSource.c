@@ -1349,8 +1349,12 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
             Source->Buffer = Source->queue->buffer;
 
-            for(j = 0;j < HRTF_LENGTH;j++)
-                Source->HrtfHistory[j] = 0.0f;
+            for(j = 0;j < MAXCHANNELS;j++)
+            {
+                ALuint k;
+                for(k = 0;k < HRTF_LENGTH;k++)
+                    Source->HrtfHistory[j][k] = 0.0f;
+            }
             Source->HrtfOffset = 0;
         }
         else

@@ -94,8 +94,8 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
                                                                               \
-    HrtfCoeffs = &Source->Params.HrtfCoeffs[0][0];                            \
-    HrtfHistory = Source->HrtfHistory;                                        \
+    HrtfCoeffs = &Source->Params.HrtfCoeffs[0][0][0];                         \
+    HrtfHistory = Source->HrtfHistory[0];                                     \
     HrtfOffset = Source->HrtfOffset + OutPos;                                 \
                                                                               \
     pos = 0;                                                                  \
@@ -224,6 +224,233 @@ DECL_TEMPLATE(ALshort, cubic16)
 DECL_TEMPLATE(ALubyte, point8)
 DECL_TEMPLATE(ALubyte, lerp8)
 DECL_TEMPLATE(ALubyte, cubic8)
+
+#undef DECL_TEMPLATE
+
+
+#define DECL_TEMPLATE(T, chnct, sampler)                                      \
+static void Mix_Hrtf_##T##_##chnct##_##sampler(                               \
+  ALsource *Source, ALCdevice *Device,                                        \
+  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
+{                                                                             \
+    const ALuint Channels = chnct;                                            \
+    const ALfloat scaler = 1.0f/chnct;                                        \
+    ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
+    ALfloat *ClickRemoval, *PendingClicks;                                    \
+    const ALfloat (*HrtfCoeffs)[HRTF_LENGTH][2];                              \
+    ALfloat (*HrtfHistory)[HRTF_LENGTH];                                      \
+    ALuint HrtfOffset;                                                        \
+    ALuint pos, frac;                                                         \
+    FILTER *DryFilter;                                                        \
+    ALuint BufferIdx;                                                         \
+    ALuint increment;                                                         \
+    ALuint i, out, c;                                                         \
+    ALfloat value;                                                            \
+                                                                              \
+    increment = Source->Params.Step;                                          \
+                                                                              \
+    DryBuffer = Device->DryBuffer;                                            \
+    ClickRemoval = Device->ClickRemoval;                                      \
+    PendingClicks = Device->PendingClicks;                                    \
+    DryFilter = &Source->Params.iirFilter;                                    \
+                                                                              \
+    HrtfCoeffs = &Source->Params.HrtfCoeffs[0];                               \
+    HrtfHistory = Source->HrtfHistory;                                        \
+    HrtfOffset = Source->HrtfOffset + OutPos;                                 \
+                                                                              \
+    pos = 0;                                                                  \
+    frac = *DataPosFrac;                                                      \
+                                                                              \
+    if(LIKELY(OutPos == 0))                                                   \
+    {                                                                         \
+        for(i = 0;i < Channels;i++)                                           \
+        {                                                                     \
+            value = sampler(data + pos*Channels + i, Channels, frac);         \
+            value = lpFilter2PC(DryFilter, i*2, value);                       \
+                                                                              \
+            HrtfHistory[i][HrtfOffset&HRTF_LENGTH_MASK] = value;              \
+            for(c = 0;c < HRTF_LENGTH;c++)                                    \
+            {                                                                 \
+                ClickRemoval[FRONT_LEFT] -=                                   \
+                            HrtfHistory[i][(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
+                            HrtfCoeffs[i][c][0];                              \
+                ClickRemoval[FRONT_RIGHT] -=                                  \
+                            HrtfHistory[i][(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
+                            HrtfCoeffs[i][c][1];                              \
+            }                                                                 \
+        }                                                                     \
+    }                                                                         \
+    for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                     \
+    {                                                                         \
+        for(i = 0;i < Channels;i++)                                           \
+        {                                                                     \
+            value = sampler(data + pos*Channels + i, Channels, frac);         \
+            value = lpFilter2P(DryFilter, i*2, value);                        \
+                                                                              \
+            HrtfHistory[i][HrtfOffset&HRTF_LENGTH_MASK] = value;              \
+            for(c = 0;c < HRTF_LENGTH;c++)                                    \
+            {                                                                 \
+                DryBuffer[OutPos][FRONT_LEFT] +=                              \
+                            HrtfHistory[i][(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
+                            HrtfCoeffs[i][c][0];                              \
+                DryBuffer[OutPos][FRONT_RIGHT] +=                             \
+                            HrtfHistory[i][(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
+                            HrtfCoeffs[i][c][1];                              \
+            }                                                                 \
+        }                                                                     \
+        HrtfOffset++;                                                         \
+                                                                              \
+        frac += increment;                                                    \
+        pos  += frac>>FRACTIONBITS;                                           \
+        frac &= FRACTIONMASK;                                                 \
+        OutPos++;                                                             \
+    }                                                                         \
+    if(LIKELY(OutPos == SamplesToDo))                                         \
+    {                                                                         \
+        for(i = 0;i < Channels;i++)                                           \
+        {                                                                     \
+            value = sampler(data + pos*Channels + i, Channels, frac);         \
+            value = lpFilter2PC(DryFilter, i*2, value);                       \
+                                                                              \
+            HrtfHistory[i][HrtfOffset&HRTF_LENGTH_MASK] = value;              \
+            for(c = 0;c < HRTF_LENGTH;c++)                                    \
+            {                                                                 \
+                PendingClicks[FRONT_LEFT] +=                                  \
+                            HrtfHistory[i][(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
+                            HrtfCoeffs[i][c][0];                              \
+                PendingClicks[FRONT_RIGHT] +=                                 \
+                            HrtfHistory[i][(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
+                            HrtfCoeffs[i][c][1];                              \
+            }                                                                 \
+        }                                                                     \
+    }                                                                         \
+                                                                              \
+    for(out = 0;out < Device->NumAuxSends;out++)                              \
+    {                                                                         \
+        ALfloat  WetSend;                                                     \
+        ALfloat *WetBuffer;                                                   \
+        ALfloat *WetClickRemoval;                                             \
+        ALfloat *WetPendingClicks;                                            \
+        FILTER  *WetFilter;                                                   \
+                                                                              \
+        if(!Source->Send[out].Slot ||                                         \
+           Source->Send[out].Slot->effect.type == AL_EFFECT_NULL)             \
+            continue;                                                         \
+                                                                              \
+        WetBuffer = Source->Send[out].Slot->WetBuffer;                        \
+        WetClickRemoval = Source->Send[out].Slot->ClickRemoval;               \
+        WetPendingClicks = Source->Send[out].Slot->PendingClicks;             \
+        WetFilter = &Source->Params.Send[out].iirFilter;                      \
+        WetSend = Source->Params.Send[out].WetGain;                           \
+                                                                              \
+        pos = 0;                                                              \
+        frac = *DataPosFrac;                                                  \
+        OutPos -= BufferSize;                                                 \
+                                                                              \
+        if(LIKELY(OutPos == 0))                                               \
+        {                                                                     \
+            for(i = 0;i < Channels;i++)                                       \
+            {                                                                 \
+                value = sampler(data + pos*Channels + i, Channels, frac);     \
+                value = lpFilter1PC(WetFilter, i, value);                     \
+                                                                              \
+                WetClickRemoval[0] -= value*WetSend * scaler;                 \
+            }                                                                 \
+        }                                                                     \
+        for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
+        {                                                                     \
+            for(i = 0;i < Channels;i++)                                       \
+            {                                                                 \
+                value = sampler(data + pos*Channels + i, Channels, frac);     \
+                value = lpFilter1P(WetFilter, i, value);                      \
+                                                                              \
+                WetBuffer[OutPos] += value*WetSend * scaler;                  \
+            }                                                                 \
+                                                                              \
+            frac += increment;                                                \
+            pos  += frac>>FRACTIONBITS;                                       \
+            frac &= FRACTIONMASK;                                             \
+            OutPos++;                                                         \
+        }                                                                     \
+        if(LIKELY(OutPos == SamplesToDo))                                     \
+        {                                                                     \
+            for(i = 0;i < Channels;i++)                                       \
+            {                                                                 \
+                value = sampler(data + pos*Channels + i, Channels, frac);     \
+                value = lpFilter1PC(WetFilter, i, value);                     \
+                                                                              \
+                WetPendingClicks[0] += value*WetSend * scaler;                \
+            }                                                                 \
+        }                                                                     \
+    }                                                                         \
+    *DataPosInt += pos;                                                       \
+    *DataPosFrac = frac;                                                      \
+}
+
+DECL_TEMPLATE(ALfloat, 2, point32)
+DECL_TEMPLATE(ALfloat, 2, lerp32)
+DECL_TEMPLATE(ALfloat, 2, cubic32)
+
+DECL_TEMPLATE(ALshort, 2, point16)
+DECL_TEMPLATE(ALshort, 2, lerp16)
+DECL_TEMPLATE(ALshort, 2, cubic16)
+
+DECL_TEMPLATE(ALubyte, 2, point8)
+DECL_TEMPLATE(ALubyte, 2, lerp8)
+DECL_TEMPLATE(ALubyte, 2, cubic8)
+
+
+DECL_TEMPLATE(ALfloat, 4, point32)
+DECL_TEMPLATE(ALfloat, 4, lerp32)
+DECL_TEMPLATE(ALfloat, 4, cubic32)
+
+DECL_TEMPLATE(ALshort, 4, point16)
+DECL_TEMPLATE(ALshort, 4, lerp16)
+DECL_TEMPLATE(ALshort, 4, cubic16)
+
+DECL_TEMPLATE(ALubyte, 4, point8)
+DECL_TEMPLATE(ALubyte, 4, lerp8)
+DECL_TEMPLATE(ALubyte, 4, cubic8)
+
+
+DECL_TEMPLATE(ALfloat, 6, point32)
+DECL_TEMPLATE(ALfloat, 6, lerp32)
+DECL_TEMPLATE(ALfloat, 6, cubic32)
+
+DECL_TEMPLATE(ALshort, 6, point16)
+DECL_TEMPLATE(ALshort, 6, lerp16)
+DECL_TEMPLATE(ALshort, 6, cubic16)
+
+DECL_TEMPLATE(ALubyte, 6, point8)
+DECL_TEMPLATE(ALubyte, 6, lerp8)
+DECL_TEMPLATE(ALubyte, 6, cubic8)
+
+
+DECL_TEMPLATE(ALfloat, 7, point32)
+DECL_TEMPLATE(ALfloat, 7, lerp32)
+DECL_TEMPLATE(ALfloat, 7, cubic32)
+
+DECL_TEMPLATE(ALshort, 7, point16)
+DECL_TEMPLATE(ALshort, 7, lerp16)
+DECL_TEMPLATE(ALshort, 7, cubic16)
+
+DECL_TEMPLATE(ALubyte, 7, point8)
+DECL_TEMPLATE(ALubyte, 7, lerp8)
+DECL_TEMPLATE(ALubyte, 7, cubic8)
+
+
+DECL_TEMPLATE(ALfloat, 8, point32)
+DECL_TEMPLATE(ALfloat, 8, lerp32)
+DECL_TEMPLATE(ALfloat, 8, cubic32)
+
+DECL_TEMPLATE(ALshort, 8, point16)
+DECL_TEMPLATE(ALshort, 8, lerp16)
+DECL_TEMPLATE(ALshort, 8, cubic16)
+
+DECL_TEMPLATE(ALubyte, 8, point8)
+DECL_TEMPLATE(ALubyte, 8, lerp8)
+DECL_TEMPLATE(ALubyte, 8, cubic8)
 
 #undef DECL_TEMPLATE
 
@@ -577,24 +804,54 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
         break;                                                                \
     case FmtStereo:                                                           \
     case FmtRear:                                                             \
-        Mix_##T##_2_##sampler(Source, Device, Data, DataPosInt, DataPosFrac,  \
-                              OutPos, SamplesToDo, BufferSize);               \
+        if((Device->Flags&DEVICE_USE_HRTF))                                   \
+            Mix_Hrtf_##T##_2_##sampler(Source, Device, Data,                  \
+                                       DataPosInt, DataPosFrac,               \
+                                       OutPos, SamplesToDo, BufferSize);      \
+        else                                                                  \
+            Mix_##T##_2_##sampler(Source, Device, Data,                       \
+                                  DataPosInt, DataPosFrac,                    \
+                                  OutPos, SamplesToDo, BufferSize);           \
         break;                                                                \
     case FmtQuad:                                                             \
-        Mix_##T##_4_##sampler(Source, Device, Data, DataPosInt, DataPosFrac,  \
-                              OutPos, SamplesToDo, BufferSize);               \
+        if((Device->Flags&DEVICE_USE_HRTF))                                   \
+            Mix_Hrtf_##T##_4_##sampler(Source, Device, Data,                  \
+                                       DataPosInt, DataPosFrac,               \
+                                       OutPos, SamplesToDo, BufferSize);      \
+        else                                                                  \
+            Mix_##T##_4_##sampler(Source, Device, Data,                       \
+                                  DataPosInt, DataPosFrac,                    \
+                                  OutPos, SamplesToDo, BufferSize);           \
         break;                                                                \
     case FmtX51:                                                              \
-        Mix_##T##_6_##sampler(Source, Device, Data, DataPosInt, DataPosFrac,  \
-                              OutPos, SamplesToDo, BufferSize);               \
+        if((Device->Flags&DEVICE_USE_HRTF))                                   \
+            Mix_Hrtf_##T##_6_##sampler(Source, Device, Data,                  \
+                                       DataPosInt, DataPosFrac,               \
+                                       OutPos, SamplesToDo, BufferSize);      \
+        else                                                                  \
+            Mix_##T##_6_##sampler(Source, Device, Data,                       \
+                                  DataPosInt, DataPosFrac,                    \
+                                  OutPos, SamplesToDo, BufferSize);           \
         break;                                                                \
     case FmtX61:                                                              \
-        Mix_##T##_7_##sampler(Source, Device, Data, DataPosInt, DataPosFrac,  \
-                              OutPos, SamplesToDo, BufferSize);               \
+        if((Device->Flags&DEVICE_USE_HRTF))                                   \
+            Mix_Hrtf_##T##_7_##sampler(Source, Device, Data,                  \
+                                       DataPosInt, DataPosFrac,               \
+                                       OutPos, SamplesToDo, BufferSize);      \
+        else                                                                  \
+            Mix_##T##_7_##sampler(Source, Device, Data,                       \
+                                  DataPosInt, DataPosFrac,                    \
+                                  OutPos, SamplesToDo, BufferSize);           \
         break;                                                                \
     case FmtX71:                                                              \
-        Mix_##T##_8_##sampler(Source, Device, Data, DataPosInt, DataPosFrac,  \
-                              OutPos, SamplesToDo, BufferSize);               \
+        if((Device->Flags&DEVICE_USE_HRTF))                                   \
+            Mix_Hrtf_##T##_8_##sampler(Source, Device, Data,                  \
+                                       DataPosInt, DataPosFrac,               \
+                                       OutPos, SamplesToDo, BufferSize);      \
+        else                                                                  \
+            Mix_##T##_8_##sampler(Source, Device, Data,                       \
+                                  DataPosInt, DataPosFrac,                    \
+                                  OutPos, SamplesToDo, BufferSize);           \
         break;                                                                \
     }                                                                         \
 }

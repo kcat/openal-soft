@@ -87,7 +87,7 @@ typedef struct ALsource
     ALint  lSourceType;
 
     /* HRTF info */
-    ALfloat HrtfHistory[HRTF_LENGTH];
+    ALfloat HrtfHistory[MAXCHANNELS][HRTF_LENGTH];
     ALuint HrtfOffset;
 
     // Current target parameters used for mixing
@@ -95,7 +95,7 @@ typedef struct ALsource
     struct {
         ALint Step;
 
-        ALfloat HrtfCoeffs[HRTF_LENGTH][2];
+        ALfloat HrtfCoeffs[MAXCHANNELS][HRTF_LENGTH][2];
 
         /* A mixing matrix. First subscript is the channel number of the input
          * data (regardless of channel configuration) and the second is the

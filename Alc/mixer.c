@@ -94,7 +94,7 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
                                                                               \
-    HrtfCoeffs = Source->Params.HrtfCoeffs[0];                                \
+    HrtfCoeffs = (const ALfloat(*)[2])Source->Params.HrtfCoeffs[0];           \
     HrtfHistory = Source->HrtfHistory[0];                                     \
     HrtfOffset = Source->HrtfOffset + OutPos;                                 \
                                                                               \
@@ -255,7 +255,7 @@ static void Mix_Hrtf_##T##_##chnct##_##sampler(                               \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
                                                                               \
-    HrtfCoeffs = &Source->Params.HrtfCoeffs[0];                               \
+    HrtfCoeffs = (const ALfloat(*)[HRTF_LENGTH][2])Source->Params.HrtfCoeffs; \
     HrtfHistory = Source->HrtfHistory;                                        \
     HrtfOffset = Source->HrtfOffset + OutPos;                                 \
                                                                               \

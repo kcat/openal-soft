@@ -78,7 +78,7 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
     ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
     ALuint pos, frac;                                                         \
-    const ALfloat *HrtfCoeffs;                                                \
+    const ALfloat (*HrtfCoeffs)[2];                                           \
     ALfloat *HrtfHistory;                                                     \
     ALuint HrtfOffset;                                                        \
     FILTER *DryFilter;                                                        \
@@ -94,7 +94,7 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
                                                                               \
-    HrtfCoeffs = &Source->Params.HrtfCoeffs[0][0][0];                         \
+    HrtfCoeffs = Source->Params.HrtfCoeffs[0];                                \
     HrtfHistory = Source->HrtfHistory[0];                                     \
     HrtfOffset = Source->HrtfOffset + OutPos;                                 \
                                                                               \
@@ -111,10 +111,10 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
         {                                                                     \
             ClickRemoval[FRONT_LEFT] -=                                       \
                                HrtfHistory[(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
-                               HrtfCoeffs[c*2 + 0];                           \
+                               HrtfCoeffs[c][0];                              \
             ClickRemoval[FRONT_RIGHT] -=                                      \
                                HrtfHistory[(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
-                               HrtfCoeffs[c*2 + 1];                           \
+                               HrtfCoeffs[c][1];                              \
         }                                                                     \
     }                                                                         \
     for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                     \
@@ -129,10 +129,10 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
         {                                                                     \
             DryBuffer[OutPos][FRONT_LEFT] +=                                  \
                                HrtfHistory[(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
-                               HrtfCoeffs[c*2 + 0];                           \
+                               HrtfCoeffs[c][0];                              \
             DryBuffer[OutPos][FRONT_RIGHT] +=                                 \
                                HrtfHistory[(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
-                               HrtfCoeffs[c*2 + 1];                           \
+                               HrtfCoeffs[c][1];                              \
         }                                                                     \
         HrtfOffset++;                                                         \
                                                                               \
@@ -151,10 +151,10 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
         {                                                                     \
             PendingClicks[FRONT_LEFT] +=                                      \
                                HrtfHistory[(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
-                               HrtfCoeffs[c*2 + 0];                           \
+                               HrtfCoeffs[c][0];                              \
             PendingClicks[FRONT_RIGHT] +=                                     \
                                HrtfHistory[(HrtfOffset-c)&HRTF_LENGTH_MASK] * \
-                               HrtfCoeffs[c*2 + 1];                           \
+                               HrtfCoeffs[c][1];                              \
         }                                                                     \
     }                                                                         \
                                                                               \

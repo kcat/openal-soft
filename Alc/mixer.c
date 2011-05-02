@@ -566,7 +566,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
     switch(FmtChannels)                                                       \
     {                                                                         \
     case FmtMono:                                                             \
-        if(Device->UseHRTF)                                                   \
+        if((Device->Flags&DEVICE_USE_HRTF))                                   \
             Mix_Hrtf_##T##_1_##sampler(Source, Device, Data,                  \
                                        DataPosInt, DataPosFrac,               \
                                        OutPos, SamplesToDo, BufferSize);      \

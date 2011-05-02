@@ -1186,11 +1186,12 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ProcessContext(context);
     }
 
-    device->UseHRTF = AL_FALSE;
-    if(ChannelsFromDevFmt(device->FmtChans) == 2 && device->Frequency == 44100)
-        device->UseHRTF = GetConfigValueBool(NULL, "hrtf", AL_FALSE);
+    device->Flags &= ~DEVICE_USE_HRTF;
+    if(ChannelsFromDevFmt(device->FmtChans) == 2 && device->Frequency == 44100 &&
+       GetConfigValueBool(NULL, "hrtf", AL_FALSE))
+        device->Flags |= DEVICE_USE_HRTF;
 
-    if(!device->UseHRTF && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
+    if(!(device->Flags&DEVICE_USE_HRTF) && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
     {
         if(!device->Bs2b)
         {
@@ -1207,7 +1208,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     device->HeadDampen = 0.0f;
-    if(!device->UseHRTF && ChannelsFromDevFmt(device->FmtChans) <= 2)
+    if(!(device->Flags&DEVICE_USE_HRTF) && ChannelsFromDevFmt(device->FmtChans) <= 2)
     {
         device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
         device->HeadDampen = __min(device->HeadDampen, 1.0f);
@@ -2282,7 +2283,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->IsLoopbackDevice = AL_FALSE;
     device->LastError = ALC_NO_ERROR;
 
-    device->UseHRTF = AL_FALSE;
+    device->Flags = 0;
     device->Bs2b = NULL;
     device->szDeviceName = NULL;
 
@@ -2333,7 +2334,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
-    device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 1);
+    if(GetConfigValueBool(NULL, "stereodup", AL_TRUE))
+        device->Flags |= DEVICE_DUPLICATE_STEREO;
 
     device->HeadDampen = 0.0f;
 
@@ -2472,6 +2474,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     device->IsLoopbackDevice = AL_TRUE;
     device->LastError = ALC_NO_ERROR;
 
+    device->Flags = 0;
     device->Bs2b = NULL;
     device->szDeviceName = NULL;
 
@@ -2508,7 +2511,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
 
     device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
-    device->DuplicateStereo = GetConfigValueBool(NULL, "stereodup", 1);
+    if(GetConfigValueBool(NULL, "stereodup", AL_TRUE))
+        device->Flags |= DEVICE_DUPLICATE_STEREO;
 
     device->HeadDampen = 0.0f;
 

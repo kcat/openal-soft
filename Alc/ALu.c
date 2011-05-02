@@ -87,14 +87,12 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALint NumSends, Frequency;
-    ALboolean DupStereo;
     ALfloat Pitch;
     ALfloat cw;
     ALint i;
 
     /* Get device properties */
     DevChans  = ALContext->Device->FmtChans;
-    DupStereo = ALContext->Device->DuplicateStereo;
     NumSends  = ALContext->Device->NumAuxSends;
     Frequency = ALContext->Device->Frequency;
 
@@ -163,7 +161,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         SrcMatrix[0][FRONT_CENTER] = DryGain * ListenerGain;
         break;
     case FmtStereo:
-        if(DupStereo == AL_FALSE)
+        if(!(ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
         {
             SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
             SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
@@ -670,7 +668,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         Position[2] *= invlen;
     }
 
-    if(Device->UseHRTF)
+    if((Device->Flags&DEVICE_USE_HRTF))
     {
         const ALshort *hrtf_left, *hrtf_right;
 

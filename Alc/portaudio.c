@@ -249,7 +249,13 @@ static ALCboolean pa_reset_playback(ALCdevice *device)
     PaError err;
 
     streamInfo = pPa_GetStreamInfo(data->stream);
-    device->Frequency = streamInfo->sampleRate;
+    if(device->Frequency != streamInfo->sampleRate)
+    {
+        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
+            AL_PRINT("PortAudio does not support changing sample rates (wanted %dhz, got %.1fhz)\n", device->Frequency, streamInfo->sampleRate);
+        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
+        device->Frequency = streamInfo->sampleRate;
+    }
     device->UpdateSize = data->update_size;
 
     err = pPa_StartStream(data->stream);

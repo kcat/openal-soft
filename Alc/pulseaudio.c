@@ -877,7 +877,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
             ppa_threaded_mainloop_wait(data->loop);
         ppa_operation_unref(o);
     }
-    if(!ConfigValueExists(NULL, "frequency"))
+    if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
 
     data->frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
@@ -940,6 +940,10 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     if(device->Frequency != data->spec.rate)
     {
         pa_operation *o;
+
+        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
+            AL_PRINT("Failed to set frequency %dhz, got %dhz instead\n", device->Frequency, data->spec.rate);
+        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
 
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */

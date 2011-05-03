@@ -155,11 +155,17 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    /* set AL device's sample rate */
-    device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
-                                  streamFormat.mSampleRate /
-                                  device->Frequency);
-    device->Frequency = streamFormat.mSampleRate;
+    if(device->Frequency != streamFormat.mSampleRate)
+    {
+        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
+            AL_PRINT("CoreAudio does not support changing sample rates (wanted %dhz, got %dhz)\n", device->Frequency, streamFormat.mSampleRate);
+        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
+
+        device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
+                                      streamFormat.mSampleRate /
+                                      device->Frequency);
+        device->Frequency = streamFormat.mSampleRate;
+    }
 
     /* FIXME: How to tell what channels are what in the output device, and how
      * to specify what we're giving?  eg, 6.0 vs 5.1 */

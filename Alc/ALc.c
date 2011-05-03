@@ -1032,12 +1032,10 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     enum DevFmtChannels schans;
     enum DevFmtType stype;
     ALboolean running;
-    ALuint oldRate;
     ALuint attrIdx;
     ALuint i;
 
     running = ((device->NumContexts > 0) ? AL_TRUE : AL_FALSE);
-    oldRate = device->Frequency;
 
     // Check for attributes
     if(attrList && attrList[0])
@@ -1058,6 +1056,14 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         numMono = device->NumMonoSources;
         numStereo = device->NumStereoSources;
         numSends = device->NumAuxSends;
+
+        if(!ConfigValueExists(NULL, "frequency"))
+            device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
+        else
+        {
+            freq = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
+            if(freq < 8000) freq = 8000;
+        }
 
         attrIdx = 0;
         while(attrList[attrIdx])
@@ -1100,8 +1106,8 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 else if(!ConfigValueExists(NULL, "frequency"))
                 {
                     freq = attrList[attrIdx + 1];
-                    if(freq < 8000)
-                        freq = 8000;
+                    if(freq < 8000) freq = 8000;
+                    device->Flags |= DEVICE_FREQUENCY_REQUEST;
                 }
             }
 
@@ -1361,6 +1367,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     device->szDeviceName = NULL;
 
+    device->Flags |= DEVICE_FREQUENCY_REQUEST;
     device->Frequency = frequency;
     if(DecomposeDevFormat(format, &device->FmtChans, &device->FmtType) == AL_FALSE)
     {
@@ -2296,6 +2303,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitUIntMap(&device->DatabufferMap);
 
     //Set output format
+    if(ConfigValueExists(NULL, "frequency"))
+        device->Flags |= DEVICE_FREQUENCY_REQUEST;
     device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
     if(device->Frequency < 8000)
         device->Frequency = 8000;

@@ -428,7 +428,13 @@ static ALCboolean WinMMResetPlayback(ALCdevice *device)
 
     device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
                                   pData->Frequency / device->Frequency);
-    device->Frequency = pData->Frequency;
+    if(device->Frequency != streamInfo->sampleRate)
+    {
+        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
+            AL_PRINT("WinMM does not support changing sample rates (wanted %dhz, got %dhz)\n", device->Frequency, pData->Frequency);
+        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
+        device->Frequency = pData->Frequency;
+    }
 
     pData->lWaveBuffersCommitted = 0;
 

@@ -525,6 +525,8 @@ struct ALCdevice_struct
 #define DEVICE_DUPLICATE_STEREO                  (1<<0)
 // Use HRTF filters for mixing sounds
 #define DEVICE_USE_HRTF                          (1<<1)
+// Frequency was requested by the app or config file
+#define DEVICE_FREQUENCY_REQUEST                 (1<<2)
 
 
 struct ALCcontext_struct

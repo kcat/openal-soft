@@ -664,7 +664,13 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 
     psnd_pcm_sw_params_free(sp);
 
-    device->Frequency = rate;
+    if(device->Frequency != rate)
+    {
+        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
+            AL_PRINT("Failed to set requested frequency %dhz, got %dhz instead\n", device->Frequency, rate);
+        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
+        device->Frequency = rate;
+    }
 
     SetDefaultChannelOrder(device);
 

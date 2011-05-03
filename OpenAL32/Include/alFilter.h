@@ -16,7 +16,7 @@ typedef struct {
     ALfloat history[1];
 #endif
 } FILTER;
-
+/*
 static __inline ALfloat lpFilter4P(FILTER *iir, ALuint offset, ALfloat input)
 {
     ALfloat *history = &iir->history[offset];
@@ -34,7 +34,7 @@ static __inline ALfloat lpFilter4P(FILTER *iir, ALuint offset, ALfloat input)
 
     return output;
 }
-
+*/
 static __inline ALfloat lpFilter2P(FILTER *iir, ALuint offset, ALfloat input)
 {
     ALfloat *history = &iir->history[offset];
@@ -60,7 +60,7 @@ static __inline ALfloat lpFilter1P(FILTER *iir, ALuint offset, ALfloat input)
 
     return output;
 }
-
+/*
 static __inline ALfloat lpFilter4PC(const FILTER *iir, ALuint offset, ALfloat input)
 {
     const ALfloat *history = &iir->history[offset];
@@ -74,7 +74,7 @@ static __inline ALfloat lpFilter4PC(const FILTER *iir, ALuint offset, ALfloat in
 
     return output;
 }
-
+*/
 static __inline ALfloat lpFilter2PC(const FILTER *iir, ALuint offset, ALfloat input)
 {
     const ALfloat *history = &iir->history[offset];

@@ -104,7 +104,7 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
     if(LIKELY(OutPos == 0))                                                   \
     {                                                                         \
         value = sampler(data+pos, 1, frac);                                   \
-        value = lpFilter4P(DryFilter, 0, value);                              \
+        value = lpFilter2PC(DryFilter, 0, value);                             \
                                                                               \
         HrtfHistory[HrtfOffset&HRTF_LENGTH_MASK] = value;                     \
         for(c = 0;c < HRTF_LENGTH;c++)                                        \
@@ -121,7 +121,7 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
     {                                                                         \
         /* First order interpolator */                                        \
         value = sampler(data+pos, 1, frac);                                   \
-        value = lpFilter4P(DryFilter, 0, value);                              \
+        value = lpFilter2P(DryFilter, 0, value);                              \
                                                                               \
         /* Direct path final mix buffer and panning */                        \
         HrtfHistory[HrtfOffset&HRTF_LENGTH_MASK] = value;                     \
@@ -144,7 +144,7 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
     if(LIKELY(OutPos == SamplesToDo))                                         \
     {                                                                         \
         value = sampler(data+pos, 1, frac);                                   \
-        value = lpFilter4P(DryFilter, 0, value);                              \
+        value = lpFilter2PC(DryFilter, 0, value);                             \
                                                                               \
         HrtfHistory[HrtfOffset&HRTF_LENGTH_MASK] = value;                     \
         for(c = 0;c < HRTF_LENGTH;c++)                                        \
@@ -183,7 +183,7 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
         if(LIKELY(OutPos == 0))                                               \
         {                                                                     \
             value = sampler(data+pos, 1, frac);                               \
-            value = lpFilter2PC(WetFilter, 0, value);                         \
+            value = lpFilter1PC(WetFilter, 0, value);                         \
                                                                               \
             WetClickRemoval[0] -= value*WetSend;                              \
         }                                                                     \
@@ -191,7 +191,7 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
         {                                                                     \
             /* First order interpolator */                                    \
             value = sampler(data+pos, 1, frac);                               \
-            value = lpFilter2P(WetFilter, 0, value);                          \
+            value = lpFilter1P(WetFilter, 0, value);                          \
                                                                               \
             /* Room path final mix buffer and panning */                      \
             WetBuffer[OutPos] += value*WetSend;                               \
@@ -204,7 +204,7 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
         if(LIKELY(OutPos == SamplesToDo))                                     \
         {                                                                     \
             value = sampler(data+pos, 1, frac);                               \
-            value = lpFilter2PC(WetFilter, 0, value);                         \
+            value = lpFilter1PC(WetFilter, 0, value);                         \
                                                                               \
             WetPendingClicks[0] += value*WetSend;                             \
         }                                                                     \
@@ -486,7 +486,7 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
     {                                                                         \
         value = sampler(data+pos, 1, frac);                                   \
                                                                               \
-        value = lpFilter4PC(DryFilter, 0, value);                             \
+        value = lpFilter2PC(DryFilter, 0, value);                             \
         for(c = 0;c < MAXCHANNELS;c++)                                        \
             ClickRemoval[c] -= value*DrySend[c];                              \
     }                                                                         \
@@ -496,7 +496,7 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
         value = sampler(data+pos, 1, frac);                                   \
                                                                               \
         /* Direct path final mix buffer and panning */                        \
-        value = lpFilter4P(DryFilter, 0, value);                              \
+        value = lpFilter2P(DryFilter, 0, value);                              \
         for(c = 0;c < MAXCHANNELS;c++)                                        \
             DryBuffer[OutPos][c] += value*DrySend[c];                         \
                                                                               \
@@ -509,7 +509,7 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
     {                                                                         \
         value = sampler(data+pos, 1, frac);                                   \
                                                                               \
-        value = lpFilter4PC(DryFilter, 0, value);                             \
+        value = lpFilter2PC(DryFilter, 0, value);                             \
         for(c = 0;c < MAXCHANNELS;c++)                                        \
             PendingClicks[c] += value*DrySend[c];                             \
     }                                                                         \
@@ -540,7 +540,7 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
         {                                                                     \
             value = sampler(data+pos, 1, frac);                               \
                                                                               \
-            value = lpFilter2PC(WetFilter, 0, value);                         \
+            value = lpFilter1PC(WetFilter, 0, value);                         \
             WetClickRemoval[0] -= value*WetSend;                              \
         }                                                                     \
         for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
@@ -549,7 +549,7 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
             value = sampler(data+pos, 1, frac);                               \
                                                                               \
             /* Room path final mix buffer and panning */                      \
-            value = lpFilter2P(WetFilter, 0, value);                          \
+            value = lpFilter1P(WetFilter, 0, value);                          \
             WetBuffer[OutPos] += value*WetSend;                               \
                                                                               \
             frac += increment;                                                \
@@ -561,7 +561,7 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
         {                                                                     \
             value = sampler(data+pos, 1, frac);                               \
                                                                               \
-            value = lpFilter2PC(WetFilter, 0, value);                         \
+            value = lpFilter1PC(WetFilter, 0, value);                         \
             WetPendingClicks[0] += value*WetSend;                             \
         }                                                                     \
     }                                                                         \

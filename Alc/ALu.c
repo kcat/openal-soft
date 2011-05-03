@@ -858,16 +858,11 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     /* Update filter coefficients. */
     cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / Frequency);
 
-    /* Spatialized sources use four chained one-pole filters, so we need to
-     * take the fourth root of the squared gain, which is the same as the
-     * square root of the base gain. */
-    ALSource->Params.iirFilter.coeff = lpCoeffCalc(aluSqrt(DryGainHF), cw);
-
+    ALSource->Params.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
     for(i = 0;i < NumSends;i++)
     {
-        /* The wet path uses two chained one-pole filters, so take the
-         * base gain (square root of the squared gain) */
-        ALSource->Params.Send[i].iirFilter.coeff = lpCoeffCalc(WetGainHF[i], cw);
+        ALfloat a = lpCoeffCalc(WetGainHF[i]*WetGainHF[i], cw);
+        ALSource->Params.Send[i].iirFilter.coeff = a;
     }
 }
 

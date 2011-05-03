@@ -66,6 +66,12 @@ CHECK_TYPE_SIZE("unsigned int" SIZEOF_UINT)
 CHECK_TYPE_SIZE("void*" SIZEOF_VOIDP)
 
 
+CHECK_C_SOURCE_COMPILES("int *restrict foo;
+                         int main() {return 0;}" HAVE_RESTRICT)
+CHECK_C_SOURCE_COMPILES("int *__restrict foo;
+                         int main() {return 0;}" HAVE___RESTRICT)
+
+
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES(OpenAL32/Include include "${OpenAL_BINARY_DIR}")
 

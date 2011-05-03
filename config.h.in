@@ -97,4 +97,10 @@
 /* Define if we have pthread_setschedparam() */
 #cmakedefine HAVE_PTHREAD_SETSCHEDPARAM
 
+/* Define if we have the restrict keyword */
+#cmakedefine HAVE_RESTRICT
+
+/* Define if we have the __restrict keyword */
+#cmakedefine HAVE___RESTRICT
+
 #endif

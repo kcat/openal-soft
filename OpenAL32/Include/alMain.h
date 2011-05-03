@@ -171,6 +171,14 @@ typedef unsigned long long ALuint64;
 #define PRINTF_STYLE(x, y)
 #endif
 
+#if defined(HAVE_RESTRICT)
+#define RESTRICT restrict
+#elif defined(HAVE___RESTRICT)
+#define RESTRICT __restrict
+#else
+#define RESTRICT
+#endif
+
 #ifdef _WIN32
 
 #ifndef _WIN32_WINNT

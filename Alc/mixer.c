@@ -72,14 +72,14 @@ static __inline ALdouble cubic8(const ALubyte *vals, ALint step, ALint frac)
 
 #define DECL_TEMPLATE(T, sampler)                                             \
 void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
-  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
+  const T *RESTRICT data, ALuint *DataPosInt, ALuint *DataPosFrac,            \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
-    ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
-    ALfloat *ClickRemoval, *PendingClicks;                                    \
+    ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
+    ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
     ALuint pos, frac;                                                         \
-    const ALfloat (*HrtfCoeffs)[2];                                           \
-    ALfloat *HrtfHistory;                                                     \
+    ALfloat (*RESTRICT HrtfCoeffs)[2];                                        \
+    ALfloat *RESTRICT HrtfHistory;                                            \
     ALuint HrtfOffset;                                                        \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
@@ -94,7 +94,7 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
                                                                               \
-    HrtfCoeffs = (const ALfloat(*)[2])Source->Params.HrtfCoeffs[0];           \
+    HrtfCoeffs = Source->Params.HrtfCoeffs[0];                                \
     HrtfHistory = Source->HrtfHistory[0];                                     \
     HrtfOffset = Source->HrtfOffset + OutPos;                                 \
                                                                               \
@@ -161,9 +161,9 @@ void Mix_Hrtf_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,          \
     for(out = 0;out < Device->NumAuxSends;out++)                              \
     {                                                                         \
         ALfloat  WetSend;                                                     \
-        ALfloat *WetBuffer;                                                   \
-        ALfloat *WetClickRemoval;                                             \
-        ALfloat *WetPendingClicks;                                            \
+        ALfloat *RESTRICT WetBuffer;                                          \
+        ALfloat *RESTRICT WetClickRemoval;                                    \
+        ALfloat *RESTRICT WetPendingClicks;                                   \
         FILTER  *WetFilter;                                                   \
                                                                               \
         if(!Source->Send[out].Slot ||                                         \
@@ -231,15 +231,15 @@ DECL_TEMPLATE(ALubyte, cubic8)
 #define DECL_TEMPLATE(T, chnct, sampler)                                      \
 static void Mix_Hrtf_##T##_##chnct##_##sampler(                               \
   ALsource *Source, ALCdevice *Device,                                        \
-  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
+  const T *RESTRICT data, ALuint *DataPosInt, ALuint *DataPosFrac,            \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALuint Channels = chnct;                                            \
     const ALfloat scaler = 1.0f/chnct;                                        \
-    ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
-    ALfloat *ClickRemoval, *PendingClicks;                                    \
-    const ALfloat (*HrtfCoeffs)[HRTF_LENGTH][2];                              \
-    ALfloat (*HrtfHistory)[HRTF_LENGTH];                                      \
+    ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
+    ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
+    ALfloat (*RESTRICT HrtfCoeffs)[HRTF_LENGTH][2];                           \
+    ALfloat (*RESTRICT HrtfHistory)[HRTF_LENGTH];                             \
     ALuint HrtfOffset;                                                        \
     ALuint pos, frac;                                                         \
     FILTER *DryFilter;                                                        \
@@ -255,7 +255,7 @@ static void Mix_Hrtf_##T##_##chnct##_##sampler(                               \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
                                                                               \
-    HrtfCoeffs = (const ALfloat(*)[HRTF_LENGTH][2])Source->Params.HrtfCoeffs; \
+    HrtfCoeffs = Source->Params.HrtfCoeffs;                                   \
     HrtfHistory = Source->HrtfHistory;                                        \
     HrtfOffset = Source->HrtfOffset + OutPos;                                 \
                                                                               \
@@ -329,9 +329,9 @@ static void Mix_Hrtf_##T##_##chnct##_##sampler(                               \
     for(out = 0;out < Device->NumAuxSends;out++)                              \
     {                                                                         \
         ALfloat  WetSend;                                                     \
-        ALfloat *WetBuffer;                                                   \
-        ALfloat *WetClickRemoval;                                             \
-        ALfloat *WetPendingClicks;                                            \
+        ALfloat *RESTRICT WetBuffer;                                          \
+        ALfloat *RESTRICT WetClickRemoval;                                    \
+        ALfloat *RESTRICT WetPendingClicks;                                   \
         FILTER  *WetFilter;                                                   \
                                                                               \
         if(!Source->Send[out].Slot ||                                         \
@@ -457,11 +457,11 @@ DECL_TEMPLATE(ALubyte, 8, cubic8)
 
 #define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
-  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
+  const T *RESTRICT data, ALuint *DataPosInt, ALuint *DataPosFrac,            \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
-    ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
-    ALfloat *ClickRemoval, *PendingClicks;                                    \
+    ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
+    ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
     ALuint pos, frac;                                                         \
     ALfloat DrySend[MAXCHANNELS];                                             \
     FILTER *DryFilter;                                                        \
@@ -517,9 +517,9 @@ static void Mix_##T##_1_##sampler(ALsource *Source, ALCdevice *Device,        \
     for(out = 0;out < Device->NumAuxSends;out++)                              \
     {                                                                         \
         ALfloat  WetSend;                                                     \
-        ALfloat *WetBuffer;                                                   \
-        ALfloat *WetClickRemoval;                                             \
-        ALfloat *WetPendingClicks;                                            \
+        ALfloat *RESTRICT WetBuffer;                                          \
+        ALfloat *RESTRICT WetClickRemoval;                                    \
+        ALfloat *RESTRICT WetPendingClicks;                                   \
         FILTER  *WetFilter;                                                   \
                                                                               \
         if(!Source->Send[out].Slot ||                                         \
@@ -586,7 +586,7 @@ DECL_TEMPLATE(ALubyte, cubic8)
 
 #define DECL_TEMPLATE(T, chnct, sampler)                                      \
 static void Mix_##T##_##chnct##_##sampler(ALsource *Source, ALCdevice *Device,\
-  const T *data, ALuint *DataPosInt, ALuint *DataPosFrac,                     \
+  const T *RESTRICT data, ALuint *DataPosInt, ALuint *DataPosFrac,            \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALuint Channels = chnct;                                            \
@@ -787,7 +787,7 @@ DECL_TEMPLATE(ALubyte, 8, cubic8)
 #define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
   enum FmtChannels FmtChannels,                                               \
-  const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac,                \
+  const ALvoid *RESTRICT Data, ALuint *DataPosInt, ALuint *DataPosFrac,       \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     switch(FmtChannels)                                                       \
@@ -874,7 +874,7 @@ DECL_TEMPLATE(ALubyte, cubic8)
 #define DECL_TEMPLATE(sampler)                                                \
 static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
   enum FmtChannels FmtChannels, enum FmtType FmtType,                         \
-  const ALvoid *Data, ALuint *DataPosInt, ALuint *DataPosFrac,                \
+  const ALvoid *RESTRICT Data, ALuint *DataPosInt, ALuint *DataPosFrac,       \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     switch(FmtType)                                                           \

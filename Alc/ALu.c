@@ -158,7 +158,21 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     switch(Channels)
     {
     case FmtMono:
-        SrcMatrix[0][FRONT_CENTER] = DryGain * ListenerGain;
+        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
+        {
+            const ALshort *hrtf_left, *hrtf_right;
+
+            GetHrtfCoeffs(0.0, 0.0, &hrtf_left, &hrtf_right);
+            for(i = 0;i < HRTF_LENGTH;i++)
+            {
+                ALSource->Params.HrtfCoeffs[0][i][0] =
+                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                ALSource->Params.HrtfCoeffs[0][i][1] =
+                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
+            }
+        }
+        else
+            SrcMatrix[0][FRONT_CENTER] = DryGain * ListenerGain;
         break;
     case FmtStereo:
         if((ALContext->Device->Flags&DEVICE_USE_HRTF))

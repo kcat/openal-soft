@@ -27,6 +27,7 @@
 
 typedef struct {
     ALsizei num_angles;
+    ALsizei max_angle;
     ALshort coeffs[][2][HRTF_LENGTH];
 } HrtfFilterCoeffs;
 
@@ -36,15 +37,17 @@ static void get_angle_coeffs(const HrtfFilterCoeffs *elev, ALfloat angle, const 
 {
     if(angle < 0)
     {
-        int idx = ((angle > -180.0) ? (int)(angle*(elev->num_angles-1)/-180.0 + 0.5) :
-                                      (elev->num_angles-1));
+        int idx = ((angle > -elev->max_angle) ?
+                   (int)(angle*(elev->num_angles-1)/-elev->max_angle + 0.5) :
+                   (elev->num_angles-1));
         *left  = elev->coeffs[idx][1];
         *right = elev->coeffs[idx][0];
     }
     else
     {
-        int idx = ((angle < 180.0) ? (int)(angle*(elev->num_angles-1)/180.0 + 0.5) :
-                                     (elev->num_angles-1));
+        int idx = ((angle < elev->max_angle) ?
+                   (int)(angle*(elev->num_angles-1)/elev->max_angle + 0.5) :
+                   (elev->num_angles-1));
         *left  = elev->coeffs[idx][0];
         *right = elev->coeffs[idx][1];
     }

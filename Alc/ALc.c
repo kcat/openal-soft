@@ -1142,9 +1142,11 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumAuxSends = numSends;
     }
 
+    if(!device->IsLoopbackDevice && GetConfigValueBool(NULL, "hrtf", AL_FALSE))
+        device->Flags |= DEVICE_USE_HRTF;
+
     if(running)
         return ALC_TRUE;
-
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
         return ALC_FALSE;
 
@@ -1192,10 +1194,12 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ProcessContext(context);
     }
 
-    device->Flags &= ~DEVICE_USE_HRTF;
-    if(ChannelsFromDevFmt(device->FmtChans) == 2 && device->Frequency == 44100 &&
-       GetConfigValueBool(NULL, "hrtf", AL_FALSE))
-        device->Flags |= DEVICE_USE_HRTF;
+    if(device->FmtChans != DevFmtStereo || device->Frequency != 44100)
+    {
+        if((device->Flags&DEVICE_USE_HRTF))
+            AL_PRINT("HRTF disabled (format is not 44100hz stereo)\n");
+        device->Flags &= ~DEVICE_USE_HRTF;
+    }
 
     if(!(device->Flags&DEVICE_USE_HRTF) && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
     {

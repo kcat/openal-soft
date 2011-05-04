@@ -612,7 +612,12 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             device->FmtChans = DevFmtMono;
             if((i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, 1)) < 0)
                 err = "set channels";
+            else if((device->Flags&DEVICE_CHANNELS_REQUEST))
+                AL_PRINT("Failed to set requested channel config %#x, got mono instead\n", device->FmtChans);
         }
+        else if((device->Flags&DEVICE_CHANNELS_REQUEST))
+            AL_PRINT("Failed to set requested channel config %#x, got stereo instead\n", device->FmtChans);
+        device->Flags &= ~DEVICE_CHANNELS_REQUEST;
     }
     if(i >= 0 && (i=psnd_pcm_hw_params_set_rate_resample(data->pcmHandle, p, 0)) < 0)
     {

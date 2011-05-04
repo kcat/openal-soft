@@ -172,25 +172,62 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     switch(streamFormat.mChannelsPerFrame)
     {
         case 1:
+            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
+               device->FmtChans != DevFmtMono)
+            {
+                AL_PRINT("Failed to set requested channel config %#x, got mono instead\n", device->FmtChans);
+                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+            }
             device->FmtChans = DevFmtMono;
             break;
         case 2:
+            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
+               device->FmtChans != DevFmtStereo)
+            {
+                AL_PRINT("Failed to set requested channel config %#x, got stereo instead\n", device->FmtChans);
+                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+            }
             device->FmtChans = DevFmtStereo;
             break;
         case 4:
+            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
+               device->FmtChans != DevFmtQuad)
+            {
+                AL_PRINT("Failed to set requested channel config %#x, got quad instead\n", device->FmtChans);
+                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+            }
             device->FmtChans = DevFmtQuad;
             break;
         case 6:
+            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
+               device->FmtChans != DevFmtX51)
+            {
+                AL_PRINT("Failed to set requested channel config %#x, got 5.1 instead\n", device->FmtChans);
+                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+            }
             device->FmtChans = DevFmtX51;
             break;
         case 7:
+            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
+               device->FmtChans != DevFmtX61)
+            {
+                AL_PRINT("Failed to set requested channel config %#x, got 6.1 instead\n", device->FmtChans);
+                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+            }
             device->FmtChans = DevFmtX61;
             break;
         case 8:
+            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
+               device->FmtChans != DevFmtX71)
+            {
+                AL_PRINT("Failed to set requested channel config %#x, got 7.1 instead\n", device->FmtChans);
+                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+            }
             device->FmtChans = DevFmtX71;
             break;
         default:
             AL_PRINT("Unhandled channel count (%d), using stereo\n", streamFormat.mChannelsPerFrame);
+            device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             device->FmtChans = DevFmtStereo;
             streamFormat.mChannelsPerFrame = 2;
             break;

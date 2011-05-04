@@ -1369,6 +1369,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     device->Flags |= DEVICE_FREQUENCY_REQUEST;
     device->Frequency = frequency;
+
+    device->Flags |= DEVICE_CHANNELS_REQUEST;
     if(DecomposeDevFormat(format, &device->FmtChans, &device->FmtType) == AL_FALSE)
     {
         free(device);
@@ -2309,6 +2311,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(device->Frequency < 8000)
         device->Frequency = 8000;
 
+    if(ConfigValueExists(NULL, "format"))
+        device->Flags |= DEVICE_CHANNELS_REQUEST;
     fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
     if(DecomposeDevFormat(GetFormatFromString(fmt),
                           &device->FmtChans, &device->FmtType) == AL_FALSE)

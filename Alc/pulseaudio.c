@@ -869,7 +869,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     ppa_threaded_mainloop_lock(data->loop);
 
-    if(!ConfigValueExists(NULL, "format"))
+    if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
     {
         pa_operation *o;
         o = ppa_context_get_sink_info_by_name(data->context, data->device_name, sink_info_callback, device);

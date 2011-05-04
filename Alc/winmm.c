@@ -337,7 +337,15 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
     pDevice->ExtraData = pData;
 
     if(pDevice->FmtChans != DevFmtMono)
+    {
+        if((pDevice->Flags&DEVICE_CHANNELS_REQUEST) &&
+           pDevice->FmtChans != DevFmtStereo)
+        {
+            AL_PRINT("Failed to set requested channel config %#x, got stereo instead\n", pDevice->FmtChans);
+            pDevice->Flags &= ~DEVICE_CHANNELS_REQUEST;
+        }
         pDevice->FmtChans = DevFmtStereo;
+    }
     switch(pDevice->FmtType)
     {
         case DevFmtByte:

@@ -354,7 +354,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     }
 
     hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
-    if(SUCCEEDED(hr) && ConfigValueExists(NULL, "format"))
+    if(FAILED(hr) || (device->Flags&DEVICE_FREQUENCY_REQUEST))
     {
         switch(device->FmtChans)
         {
@@ -371,7 +371,9 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
                 speakers = DSSPEAKER_COMBINED(DSSPEAKER_5POINT1, 0);
                 break;
             case DevFmtX61:
-                /* ??? */;
+                /* ??? */
+                AL_PRINT("6.1 not supported with DirectSound\n");
+                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
                 break;
             case DevFmtX71:
                 speakers = DSSPEAKER_COMBINED(DSSPEAKER_7POINT1, 0);

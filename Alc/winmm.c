@@ -48,7 +48,7 @@ typedef struct {
         HWAVEOUT Out;
     } hWaveHandle;
 
-    ALsizei Frequency;
+    ALuint Frequency;
 
     RingBuffer *pRing;
 } WinMMData;
@@ -436,7 +436,7 @@ static ALCboolean WinMMResetPlayback(ALCdevice *device)
 
     device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
                                   pData->Frequency / device->Frequency);
-    if(device->Frequency != streamInfo->sampleRate)
+    if(device->Frequency != pData->Frequency)
     {
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
             AL_PRINT("WinMM does not support changing sample rates (wanted %dhz, got %dhz)\n", device->Frequency, pData->Frequency);

@@ -488,8 +488,6 @@ struct ALCdevice_struct
 
     ALuint DevChannels[MAXCHANNELS];
 
-    ALfloat ChannelMatrix[MAXCHANNELS][MAXCHANNELS];
-
     Channel Speaker2Chan[MAXCHANNELS];
     ALfloat PanningLUT[MAXCHANNELS * LUT_NUM];
     ALuint  NumChan;

@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/* Input formats (some are currently theoretical) */
+/* User formats */
 enum UserFmtType {
     UserFmtByte   = AL_BYTE,
     UserFmtUByte  = AL_UNSIGNED_BYTE,

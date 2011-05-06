@@ -53,14 +53,13 @@ static __inline ALdouble cubic16(const ALshort *vals, ALint step, ALint frac)
 { return cubic(vals[-step], vals[0], vals[step], vals[step+step],
                frac * (1.0/FRACTIONONE)) * (1.0/32767.0); }
 
-static __inline ALdouble point8(const ALubyte *vals, ALint step, ALint frac)
-{ return (vals[0]-128.0) * (1.0/127.0); (void)step; (void)frac; }
-static __inline ALdouble lerp8(const ALubyte *vals, ALint step, ALint frac)
-{ return (lerp(vals[0], vals[step],
-               frac * (1.0/FRACTIONONE))-128.0) * (1.0/127.0); }
-static __inline ALdouble cubic8(const ALubyte *vals, ALint step, ALint frac)
-{ return (cubic(vals[-step], vals[0], vals[step], vals[step+step],
-                frac * (1.0/FRACTIONONE))-128.0) * (1.0/127.0); }
+static __inline ALdouble point8(const ALbyte *vals, ALint step, ALint frac)
+{ return vals[0] * (1.0/127.0); (void)step; (void)frac; }
+static __inline ALdouble lerp8(const ALbyte *vals, ALint step, ALint frac)
+{ return lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE)) * (1.0/127.0); }
+static __inline ALdouble cubic8(const ALbyte *vals, ALint step, ALint frac)
+{ return cubic(vals[-step], vals[0], vals[step], vals[step+step],
+               frac * (1.0/FRACTIONONE)) * (1.0/127.0); }
 
 #ifdef __GNUC__
 #define LIKELY(x) __builtin_expect(!!(x), 1)
@@ -237,9 +236,9 @@ DECL_TEMPLATE(ALshort, 1, point16)
 DECL_TEMPLATE(ALshort, 1, lerp16)
 DECL_TEMPLATE(ALshort, 1, cubic16)
 
-DECL_TEMPLATE(ALubyte, 1, point8)
-DECL_TEMPLATE(ALubyte, 1, lerp8)
-DECL_TEMPLATE(ALubyte, 1, cubic8)
+DECL_TEMPLATE(ALbyte, 1, point8)
+DECL_TEMPLATE(ALbyte, 1, lerp8)
+DECL_TEMPLATE(ALbyte, 1, cubic8)
 
 
 DECL_TEMPLATE(ALfloat, 2, point32)
@@ -250,9 +249,9 @@ DECL_TEMPLATE(ALshort, 2, point16)
 DECL_TEMPLATE(ALshort, 2, lerp16)
 DECL_TEMPLATE(ALshort, 2, cubic16)
 
-DECL_TEMPLATE(ALubyte, 2, point8)
-DECL_TEMPLATE(ALubyte, 2, lerp8)
-DECL_TEMPLATE(ALubyte, 2, cubic8)
+DECL_TEMPLATE(ALbyte, 2, point8)
+DECL_TEMPLATE(ALbyte, 2, lerp8)
+DECL_TEMPLATE(ALbyte, 2, cubic8)
 
 
 DECL_TEMPLATE(ALfloat, 4, point32)
@@ -263,9 +262,9 @@ DECL_TEMPLATE(ALshort, 4, point16)
 DECL_TEMPLATE(ALshort, 4, lerp16)
 DECL_TEMPLATE(ALshort, 4, cubic16)
 
-DECL_TEMPLATE(ALubyte, 4, point8)
-DECL_TEMPLATE(ALubyte, 4, lerp8)
-DECL_TEMPLATE(ALubyte, 4, cubic8)
+DECL_TEMPLATE(ALbyte, 4, point8)
+DECL_TEMPLATE(ALbyte, 4, lerp8)
+DECL_TEMPLATE(ALbyte, 4, cubic8)
 
 
 DECL_TEMPLATE(ALfloat, 6, point32)
@@ -276,9 +275,9 @@ DECL_TEMPLATE(ALshort, 6, point16)
 DECL_TEMPLATE(ALshort, 6, lerp16)
 DECL_TEMPLATE(ALshort, 6, cubic16)
 
-DECL_TEMPLATE(ALubyte, 6, point8)
-DECL_TEMPLATE(ALubyte, 6, lerp8)
-DECL_TEMPLATE(ALubyte, 6, cubic8)
+DECL_TEMPLATE(ALbyte, 6, point8)
+DECL_TEMPLATE(ALbyte, 6, lerp8)
+DECL_TEMPLATE(ALbyte, 6, cubic8)
 
 
 DECL_TEMPLATE(ALfloat, 7, point32)
@@ -289,9 +288,9 @@ DECL_TEMPLATE(ALshort, 7, point16)
 DECL_TEMPLATE(ALshort, 7, lerp16)
 DECL_TEMPLATE(ALshort, 7, cubic16)
 
-DECL_TEMPLATE(ALubyte, 7, point8)
-DECL_TEMPLATE(ALubyte, 7, lerp8)
-DECL_TEMPLATE(ALubyte, 7, cubic8)
+DECL_TEMPLATE(ALbyte, 7, point8)
+DECL_TEMPLATE(ALbyte, 7, lerp8)
+DECL_TEMPLATE(ALbyte, 7, cubic8)
 
 
 DECL_TEMPLATE(ALfloat, 8, point32)
@@ -302,9 +301,9 @@ DECL_TEMPLATE(ALshort, 8, point16)
 DECL_TEMPLATE(ALshort, 8, lerp16)
 DECL_TEMPLATE(ALshort, 8, cubic16)
 
-DECL_TEMPLATE(ALubyte, 8, point8)
-DECL_TEMPLATE(ALubyte, 8, lerp8)
-DECL_TEMPLATE(ALubyte, 8, cubic8)
+DECL_TEMPLATE(ALbyte, 8, point8)
+DECL_TEMPLATE(ALbyte, 8, lerp8)
+DECL_TEMPLATE(ALbyte, 8, cubic8)
 
 #undef DECL_TEMPLATE
 
@@ -449,9 +448,9 @@ DECL_TEMPLATE(ALshort, 1, point16)
 DECL_TEMPLATE(ALshort, 1, lerp16)
 DECL_TEMPLATE(ALshort, 1, cubic16)
 
-DECL_TEMPLATE(ALubyte, 1, point8)
-DECL_TEMPLATE(ALubyte, 1, lerp8)
-DECL_TEMPLATE(ALubyte, 1, cubic8)
+DECL_TEMPLATE(ALbyte, 1, point8)
+DECL_TEMPLATE(ALbyte, 1, lerp8)
+DECL_TEMPLATE(ALbyte, 1, cubic8)
 
 
 DECL_TEMPLATE(ALfloat, 2, point32)
@@ -462,9 +461,9 @@ DECL_TEMPLATE(ALshort, 2, point16)
 DECL_TEMPLATE(ALshort, 2, lerp16)
 DECL_TEMPLATE(ALshort, 2, cubic16)
 
-DECL_TEMPLATE(ALubyte, 2, point8)
-DECL_TEMPLATE(ALubyte, 2, lerp8)
-DECL_TEMPLATE(ALubyte, 2, cubic8)
+DECL_TEMPLATE(ALbyte, 2, point8)
+DECL_TEMPLATE(ALbyte, 2, lerp8)
+DECL_TEMPLATE(ALbyte, 2, cubic8)
 
 
 DECL_TEMPLATE(ALfloat, 4, point32)
@@ -475,9 +474,9 @@ DECL_TEMPLATE(ALshort, 4, point16)
 DECL_TEMPLATE(ALshort, 4, lerp16)
 DECL_TEMPLATE(ALshort, 4, cubic16)
 
-DECL_TEMPLATE(ALubyte, 4, point8)
-DECL_TEMPLATE(ALubyte, 4, lerp8)
-DECL_TEMPLATE(ALubyte, 4, cubic8)
+DECL_TEMPLATE(ALbyte, 4, point8)
+DECL_TEMPLATE(ALbyte, 4, lerp8)
+DECL_TEMPLATE(ALbyte, 4, cubic8)
 
 
 DECL_TEMPLATE(ALfloat, 6, point32)
@@ -488,9 +487,9 @@ DECL_TEMPLATE(ALshort, 6, point16)
 DECL_TEMPLATE(ALshort, 6, lerp16)
 DECL_TEMPLATE(ALshort, 6, cubic16)
 
-DECL_TEMPLATE(ALubyte, 6, point8)
-DECL_TEMPLATE(ALubyte, 6, lerp8)
-DECL_TEMPLATE(ALubyte, 6, cubic8)
+DECL_TEMPLATE(ALbyte, 6, point8)
+DECL_TEMPLATE(ALbyte, 6, lerp8)
+DECL_TEMPLATE(ALbyte, 6, cubic8)
 
 
 DECL_TEMPLATE(ALfloat, 7, point32)
@@ -501,9 +500,9 @@ DECL_TEMPLATE(ALshort, 7, point16)
 DECL_TEMPLATE(ALshort, 7, lerp16)
 DECL_TEMPLATE(ALshort, 7, cubic16)
 
-DECL_TEMPLATE(ALubyte, 7, point8)
-DECL_TEMPLATE(ALubyte, 7, lerp8)
-DECL_TEMPLATE(ALubyte, 7, cubic8)
+DECL_TEMPLATE(ALbyte, 7, point8)
+DECL_TEMPLATE(ALbyte, 7, lerp8)
+DECL_TEMPLATE(ALbyte, 7, cubic8)
 
 
 DECL_TEMPLATE(ALfloat, 8, point32)
@@ -514,9 +513,9 @@ DECL_TEMPLATE(ALshort, 8, point16)
 DECL_TEMPLATE(ALshort, 8, lerp16)
 DECL_TEMPLATE(ALshort, 8, cubic16)
 
-DECL_TEMPLATE(ALubyte, 8, point8)
-DECL_TEMPLATE(ALubyte, 8, lerp8)
-DECL_TEMPLATE(ALubyte, 8, cubic8)
+DECL_TEMPLATE(ALbyte, 8, point8)
+DECL_TEMPLATE(ALbyte, 8, lerp8)
+DECL_TEMPLATE(ALbyte, 8, cubic8)
 
 #undef DECL_TEMPLATE
 
@@ -601,9 +600,9 @@ DECL_TEMPLATE(ALshort, point16)
 DECL_TEMPLATE(ALshort, lerp16)
 DECL_TEMPLATE(ALshort, cubic16)
 
-DECL_TEMPLATE(ALubyte, point8)
-DECL_TEMPLATE(ALubyte, lerp8)
-DECL_TEMPLATE(ALubyte, cubic8)
+DECL_TEMPLATE(ALbyte, point8)
+DECL_TEMPLATE(ALbyte, lerp8)
+DECL_TEMPLATE(ALbyte, cubic8)
 
 #undef DECL_TEMPLATE
 
@@ -616,10 +615,10 @@ static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
 {                                                                             \
     switch(FmtType)                                                           \
     {                                                                         \
-    case FmtUByte:                                                            \
-        Mix_ALubyte_##sampler##8(Source, Device, FmtChannels,                 \
-                                 Data, DataPosInt, DataPosFrac,               \
-                                 OutPos, SamplesToDo, BufferSize);            \
+    case FmtByte:                                                             \
+        Mix_ALbyte_##sampler##8(Source, Device, FmtChannels,                  \
+                                Data, DataPosInt, DataPosFrac,                \
+                                OutPos, SamplesToDo, BufferSize);             \
         break;                                                                \
                                                                               \
     case FmtShort:                                                            \
@@ -672,7 +671,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     /* Get buffer info */
     FrameSize = 0;
     FmtChannels = FmtMono;
-    FmtType = FmtUByte;
+    FmtType = FmtByte;
     BufferListItem = Source->queue;
     for(i = 0;i < Source->BuffersInQueue;i++)
     {
@@ -731,7 +730,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     DataSize = (BufferPrePadding-DataPosInt)*FrameSize;
                     DataSize = min(BufferSize, DataSize);
 
-                    memset(&SrcData[SrcDataSize], (FmtType==FmtUByte)?0x80:0, DataSize);
+                    memset(&SrcData[SrcDataSize], 0, DataSize);
                     SrcDataSize += DataSize;
                     BufferSize -= DataSize;
 
@@ -747,7 +746,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 SrcDataSize += DataSize;
                 BufferSize -= DataSize;
 
-                memset(&SrcData[SrcDataSize], (FmtType==FmtUByte)?0x80:0, BufferSize);
+                memset(&SrcData[SrcDataSize], 0, BufferSize);
                 SrcDataSize += BufferSize;
                 BufferSize -= BufferSize;
             }
@@ -772,7 +771,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     DataSize = (BufferPrePadding-DataPosInt)*FrameSize;
                     DataSize = min(BufferSize, DataSize);
 
-                    memset(&SrcData[SrcDataSize], (FmtType==FmtUByte)?0x80:0, DataSize);
+                    memset(&SrcData[SrcDataSize], 0, DataSize);
                     SrcDataSize += DataSize;
                     BufferSize -= DataSize;
 
@@ -816,7 +815,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     {
                         ALuint DataSize = min(BufferSize, pos);
 
-                        memset(&SrcData[SrcDataSize], (FmtType==FmtUByte)?0x80:0, DataSize);
+                        memset(&SrcData[SrcDataSize], 0, DataSize);
                         SrcDataSize += DataSize;
                         BufferSize -= DataSize;
 
@@ -872,7 +871,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     BufferListIter = Source->queue;
                 else if(!BufferListIter)
                 {
-                    memset(&SrcData[SrcDataSize], (FmtType==FmtUByte)?0x80:0, BufferSize);
+                    memset(&SrcData[SrcDataSize], 0, BufferSize);
                     SrcDataSize += BufferSize;
                     BufferSize -= BufferSize;
                 }

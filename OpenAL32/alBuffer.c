@@ -2113,7 +2113,7 @@ ALuint BytesFromFmt(enum FmtType type)
 {
     switch(type)
     {
-    case FmtUByte: return sizeof(ALubyte);
+    case FmtByte: return sizeof(ALbyte);
     case FmtShort: return sizeof(ALshort);
     case FmtFloat: return sizeof(ALfloat);
     }
@@ -2139,7 +2139,7 @@ ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *
     {
         case AL_MONO8:
             *chans = FmtMono;
-            *type  = FmtUByte;
+            *type  = FmtByte;
             return AL_TRUE;
         case AL_MONO16:
             *chans = FmtMono;
@@ -2151,7 +2151,7 @@ ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *
             return AL_TRUE;
         case AL_STEREO8:
             *chans = FmtStereo;
-            *type  = FmtUByte;
+            *type  = FmtByte;
             return AL_TRUE;
         case AL_STEREO16:
             *chans = FmtStereo;
@@ -2164,7 +2164,7 @@ ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *
         case AL_FORMAT_QUAD8_LOKI:
         case AL_QUAD8:
             *chans = FmtQuad;
-            *type  = FmtUByte;
+            *type  = FmtByte;
             return AL_TRUE;
         case AL_FORMAT_QUAD16_LOKI:
         case AL_QUAD16:
@@ -2177,7 +2177,7 @@ ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *
             return AL_TRUE;
         case AL_REAR8:
             *chans = FmtRear;
-            *type  = FmtUByte;
+            *type  = FmtByte;
             return AL_TRUE;
         case AL_REAR16:
             *chans = FmtRear;
@@ -2189,7 +2189,7 @@ ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *
             return AL_TRUE;
         case AL_5POINT1_8:
             *chans = FmtX51;
-            *type  = FmtUByte;
+            *type  = FmtByte;
             return AL_TRUE;
         case AL_5POINT1_16:
             *chans = FmtX51;
@@ -2201,7 +2201,7 @@ ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *
             return AL_TRUE;
         case AL_6POINT1_8:
             *chans = FmtX61;
-            *type  = FmtUByte;
+            *type  = FmtByte;
             return AL_TRUE;
         case AL_6POINT1_16:
             *chans = FmtX61;
@@ -2213,7 +2213,7 @@ ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *
             return AL_TRUE;
         case AL_7POINT1_8:
             *chans = FmtX71;
-            *type  = FmtUByte;
+            *type  = FmtByte;
             return AL_TRUE;
         case AL_7POINT1_16:
             *chans = FmtX71;

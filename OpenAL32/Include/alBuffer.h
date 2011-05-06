@@ -45,7 +45,7 @@ static __inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans,
 
 /* Storable formats */
 enum FmtType {
-    FmtUByte = UserFmtUByte,
+    FmtByte  = UserFmtByte,
     FmtShort = UserFmtShort,
     FmtFloat = UserFmtFloat,
 };

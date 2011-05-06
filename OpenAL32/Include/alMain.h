@@ -525,7 +525,7 @@ struct ALCdevice_struct
 // Frequency was requested by the app or config file
 #define DEVICE_FREQUENCY_REQUEST                 (1<<2)
 // Channel configuration was requested by the config file
-#define DEVICE_CHANNELS_REQUEST                  (1<<2)
+#define DEVICE_CHANNELS_REQUEST                  (1<<3)
 
 
 struct ALCcontext_struct

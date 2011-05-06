@@ -648,7 +648,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     //3. Apply directional soundcones
-    Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * 180.0/M_PI;
+    Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * (180.0/M_PI);
     if(Angle >= InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
@@ -709,7 +709,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 WetGain[i] *= aluPow(10.0f, EffectiveDist /
                                             (SPEEDOFSOUNDMETRESPERSEC *
                                              Slot->effect.Reverb.DecayTime) *
-                                            -60.0 / 20.0);
+                                            (-60.0/20.0));
 
                 WetGainHF[i] *= aluPow(Slot->effect.Reverb.AirAbsorptionGainHF,
                                        AirAbsorptionFactor * EffectiveDist);
@@ -836,7 +836,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         for(s = 0;s < (ALsizei)Device->NumChan;s++)
         {
             Channel chan = Device->Speaker2Chan[s];
-            ALfloat gain = AmbientGain + (SpeakerGain[chan]-AmbientGain)*DirGain;
+            ALfloat gain = lerp(AmbientGain, SpeakerGain[chan], DirGain);
             ALSource->Params.DryGains[0][chan] = DryGain * gain;
         }
     }

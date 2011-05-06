@@ -910,9 +910,10 @@ static const Channel X71Chans[] = { FRONT_LEFT, FRONT_RIGHT,
                                     SIDE_LEFT, SIDE_RIGHT };
 
 #define DECL_TEMPLATE(T, chans,N, func)                                       \
-static void Write_##T##_##chans(ALCdevice *device, T *buffer, ALuint SamplesToDo)\
+static void Write_##T##_##chans(ALCdevice *device, T *RESTRICT buffer,        \
+                                ALuint SamplesToDo)                           \
 {                                                                             \
-    ALfloat (*DryBuffer)[MAXCHANNELS] = device->DryBuffer;                    \
+    ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS] = device->DryBuffer;           \
     const ALuint *ChanMap = device->DevChannels;                              \
     ALuint i, j;                                                              \
                                                                               \

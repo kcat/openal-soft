@@ -1057,13 +1057,8 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         numStereo = device->NumStereoSources;
         numSends = device->NumAuxSends;
 
-        if(!ConfigValueExists(NULL, "frequency"))
-            device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
-        else
-        {
-            freq = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
-            if(freq < 8000) freq = 8000;
-        }
+        freq = GetConfigValueInt(NULL, "frequency", freq);
+        if(freq < 8000) freq = 8000;
 
         attrIdx = 0;
         while(attrList[attrIdx])

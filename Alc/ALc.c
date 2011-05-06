@@ -1158,6 +1158,29 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->PendingClicks[i] = 0.0f;
     }
 
+    if(device->FmtChans != DevFmtStereo || device->Frequency != 44100)
+    {
+        if((device->Flags&DEVICE_USE_HRTF))
+            AL_PRINT("HRTF disabled (format is not 44100hz stereo)\n");
+        device->Flags &= ~DEVICE_USE_HRTF;
+    }
+
+    if(!(device->Flags&DEVICE_USE_HRTF) && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
+    {
+        if(!device->Bs2b)
+        {
+            device->Bs2b = calloc(1, sizeof(*device->Bs2b));
+            bs2b_clear(device->Bs2b);
+        }
+        bs2b_set_srate(device->Bs2b, device->Frequency);
+        bs2b_set_level(device->Bs2b, device->Bs2bLevel);
+    }
+    else
+    {
+        free(device->Bs2b);
+        device->Bs2b = NULL;
+    }
+
     for(i = 0;i < device->NumContexts;i++)
     {
         ALCcontext *context = device->Contexts[i];
@@ -1189,32 +1212,10 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 source->Send[s].WetFilter.filter = 0;
                 s++;
             }
-            source->NeedsUpdate = AL_TRUE;
+            ALsource_Update(source, context);
+            source->NeedsUpdate = AL_FALSE;
         }
         ProcessContext(context);
-    }
-
-    if(device->FmtChans != DevFmtStereo || device->Frequency != 44100)
-    {
-        if((device->Flags&DEVICE_USE_HRTF))
-            AL_PRINT("HRTF disabled (format is not 44100hz stereo)\n");
-        device->Flags &= ~DEVICE_USE_HRTF;
-    }
-
-    if(!(device->Flags&DEVICE_USE_HRTF) && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
-    {
-        if(!device->Bs2b)
-        {
-            device->Bs2b = calloc(1, sizeof(*device->Bs2b));
-            bs2b_clear(device->Bs2b);
-        }
-        bs2b_set_srate(device->Bs2b, device->Frequency);
-        bs2b_set_level(device->Bs2b, device->Bs2bLevel);
-    }
-    else
-    {
-        free(device->Bs2b);
-        device->Bs2b = NULL;
     }
 
     return ALC_TRUE;

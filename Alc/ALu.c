@@ -78,17 +78,20 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[
 
 ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
+    ALCdevice *Device = ALContext->Device;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
     enum DevFmtChannels DevChans;
     enum FmtChannels Channels;
-    ALfloat SrcMatrix[MAXCHANNELS][MAXCHANNELS];
+    ALfloat (*SrcMatrix)[MAXCHANNELS];
     ALfloat DryGain, DryGainHF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALint NumSends, Frequency;
+    const ALfloat *SpeakerGain;
     ALfloat Pitch;
     ALfloat cw;
+    ALuint pos;
     ALint i;
 
     /* Get device properties */
@@ -149,6 +152,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             break;
     }
 
+    SrcMatrix = ALSource->Params.DryGains;
     for(i = 0;i < MAXCHANNELS;i++)
     {
         ALuint i2;
@@ -172,12 +176,21 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             }
         }
         else
-            SrcMatrix[0][FRONT_CENTER] = DryGain * ListenerGain;
+        {
+            pos = aluCart2LUTpos(cos(0.0), sin(0.0));
+            SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+
+            for(i = 0;i < (ALint)Device->NumChan;i++)
+            {
+                Channel chan = Device->Speaker2Chan[i];
+                SrcMatrix[0][chan] = DryGain * ListenerGain * SpeakerGain[chan];
+            }
+        }
         break;
     case FmtStereo:
         if((ALContext->Device->Flags&DEVICE_USE_HRTF))
         {
-            ALfloat angles[2] = { -30.0f, 30.0f };
+            static const ALfloat angles[2] = { -30.0f, 30.0f };
             ALint c;
 
             for(c = 0;c < 2;c++)
@@ -194,47 +207,23 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 }
             }
         }
-        else if(!(ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
-        {
-            SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
-            SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
-        }
         else
         {
-            switch(DevChans)
+            static const ALfloat angles[2] = { -30.0f, 30.0f };
+            ALint c;
+
+            for(c = 0;c < 2;c++)
             {
-            case DevFmtMono:
-            case DevFmtStereo:
-                SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
-                SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
-                break;
+                pos = aluCart2LUTpos(cos(angles[c] * (M_PI/180.0)),
+                                     sin(angles[c] * (M_PI/180.0)));
+                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
 
-            case DevFmtQuad:
-            case DevFmtX51:
-                DryGain *= aluSqrt(2.0f/4.0f);
-                SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
-                SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
-                SrcMatrix[0][BACK_LEFT]   = DryGain * ListenerGain;
-                SrcMatrix[1][BACK_RIGHT]  = DryGain * ListenerGain;
-                break;
-
-            case DevFmtX61:
-                DryGain *= aluSqrt(2.0f/4.0f);
-                SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
-                SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
-                SrcMatrix[0][SIDE_LEFT]   = DryGain * ListenerGain;
-                SrcMatrix[1][SIDE_RIGHT]  = DryGain * ListenerGain;
-                break;
-
-            case DevFmtX71:
-                DryGain *= aluSqrt(2.0f/6.0f);
-                SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
-                SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
-                SrcMatrix[0][BACK_LEFT]   = DryGain * ListenerGain;
-                SrcMatrix[1][BACK_RIGHT]  = DryGain * ListenerGain;
-                SrcMatrix[0][SIDE_LEFT]   = DryGain * ListenerGain;
-                SrcMatrix[1][SIDE_RIGHT]  = DryGain * ListenerGain;
-                break;
+                for(i = 0;i < (ALint)Device->NumChan;i++)
+                {
+                    Channel chan = Device->Speaker2Chan[i];
+                    SrcMatrix[c][chan] = DryGain * ListenerGain *
+                                         SpeakerGain[chan];
+                }
             }
         }
         break;
@@ -242,7 +231,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     case FmtRear:
         if((ALContext->Device->Flags&DEVICE_USE_HRTF))
         {
-            ALfloat angles[2] = { -150.0f, 150.0f };
+            static const ALfloat angles[2] = { -150.0f, 150.0f };
             ALint c;
 
             for(c = 0;c < 2;c++)
@@ -261,15 +250,29 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         else
         {
-            SrcMatrix[0][BACK_LEFT]  = DryGain * ListenerGain;
-            SrcMatrix[1][BACK_RIGHT] = DryGain * ListenerGain;
+            static const ALfloat angles[2] = { -150.0f, 150.0f };
+            ALint c;
+
+            for(c = 0;c < 2;c++)
+            {
+                pos = aluCart2LUTpos(cos(angles[c] * (M_PI/180.0)),
+                                     sin(angles[c] * (M_PI/180.0)));
+                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+
+                for(i = 0;i < (ALint)Device->NumChan;i++)
+                {
+                    Channel chan = Device->Speaker2Chan[i];
+                    SrcMatrix[c][chan] = DryGain * ListenerGain *
+                                         SpeakerGain[chan];
+                }
+            }
         }
         break;
 
     case FmtQuad:
         if((ALContext->Device->Flags&DEVICE_USE_HRTF))
         {
-            ALfloat angles[4] = { -45.0f, 45.0f, -135.0f, 135.0f };
+            static const ALfloat angles[4] = { -45.0f, 45.0f, -135.0f, 135.0f };
             ALint c;
 
             for(c = 0;c < 4;c++)
@@ -288,17 +291,30 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         else
         {
-            SrcMatrix[0][FRONT_LEFT]  = DryGain * ListenerGain;
-            SrcMatrix[1][FRONT_RIGHT] = DryGain * ListenerGain;
-            SrcMatrix[2][BACK_LEFT]   = DryGain * ListenerGain;
-            SrcMatrix[3][BACK_RIGHT]  = DryGain * ListenerGain;
+            static const ALfloat angles[4] = { -45.0f, 45.0f, -135.0f, 135.0f };
+            ALint c;
+
+            for(c = 0;c < 4;c++)
+            {
+                pos = aluCart2LUTpos(cos(angles[c] * (M_PI/180.0)),
+                                     sin(angles[c] * (M_PI/180.0)));
+                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+
+                for(i = 0;i < (ALint)Device->NumChan;i++)
+                {
+                    Channel chan = Device->Speaker2Chan[i];
+                    SrcMatrix[c][chan] = DryGain * ListenerGain *
+                                         SpeakerGain[chan];
+                }
+            }
         }
         break;
 
     case FmtX51:
         if((ALContext->Device->Flags&DEVICE_USE_HRTF))
         {
-            ALfloat angles[6] = { -30.0f, 30.0f, 0.0f, 0.0f, -110.0f, 110.0f };
+            static const ALfloat angles[6] = { -30.0f, 30.0f, 0.0f, 0.0f,
+                                               -110.0f, 110.0f };
             ALint c;
 
             for(c = 0;c < 6;c++)
@@ -317,20 +333,36 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         else
         {
-            SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
-            SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
-            SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
-            SrcMatrix[3][LFE]          = DryGain * ListenerGain;
-            SrcMatrix[4][BACK_LEFT]    = DryGain * ListenerGain;
-            SrcMatrix[5][BACK_RIGHT]   = DryGain * ListenerGain;
+            static const ALfloat angles[6] = { -30.0f, 30.0f, 0.0f, 0.0f,
+                                               -110.0f, 110.0f };
+            ALint c;
+
+            for(c = 0;c < 6;c++)
+            {
+                if(c == 3) /* Special-case LFE */
+                {
+                    SrcMatrix[3][LFE] = DryGain * ListenerGain;
+                    continue;
+                }
+                pos = aluCart2LUTpos(cos(angles[c] * (M_PI/180.0)),
+                                     sin(angles[c] * (M_PI/180.0)));
+                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+
+                for(i = 0;i < (ALint)Device->NumChan;i++)
+                {
+                    Channel chan = Device->Speaker2Chan[i];
+                    SrcMatrix[c][chan] = DryGain * ListenerGain *
+                                         SpeakerGain[chan];
+                }
+            }
         }
         break;
 
     case FmtX61:
         if((ALContext->Device->Flags&DEVICE_USE_HRTF))
         {
-            ALfloat angles[7] = { -30.0f, 30.0f, 0.0f, 0.0f,
-                                  -90.0f, 90.0f, 180.0f };
+            static const ALfloat angles[7] = { -30.0f, 30.0f, 0.0f, 0.0f,
+                                               180.0f, -90.0f, 90.0f };
             ALint c;
 
             for(c = 0;c < 7;c++)
@@ -349,21 +381,36 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         else
         {
-            SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
-            SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
-            SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
-            SrcMatrix[3][LFE]          = DryGain * ListenerGain;
-            SrcMatrix[4][BACK_CENTER]  = DryGain * ListenerGain;
-            SrcMatrix[5][SIDE_LEFT]    = DryGain * ListenerGain;
-            SrcMatrix[6][SIDE_RIGHT]   = DryGain * ListenerGain;
+            static const ALfloat angles[7] = { -30.0f, 30.0f, 0.0f, 0.0f,
+                                               180.0f, -90.0f, 90.0f };
+            ALint c;
+
+            for(c = 0;c < 7;c++)
+            {
+                if(c == 3) /* Special-case LFE */
+                {
+                    SrcMatrix[3][LFE] = DryGain * ListenerGain;
+                    continue;
+                }
+                pos = aluCart2LUTpos(cos(angles[c] * (M_PI/180.0)),
+                                     sin(angles[c] * (M_PI/180.0)));
+                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+
+                for(i = 0;i < (ALint)Device->NumChan;i++)
+                {
+                    Channel chan = Device->Speaker2Chan[i];
+                    SrcMatrix[c][chan] = DryGain * ListenerGain *
+                                         SpeakerGain[chan];
+                }
+            }
         }
         break;
 
     case FmtX71:
         if((ALContext->Device->Flags&DEVICE_USE_HRTF))
         {
-            ALfloat angles[8] = { -30.0f, 30.0f, 0.0f, 0.0f,
-                                  -90.0f, 90.0f, -110.0f, 110.0f };
+            static const ALfloat angles[8] = {-30.0f, 30.0f, 0.0f, 0.0f,
+                                              -110.0f, 110.0f, -90.0f, 90.0f};
             ALint c;
 
             for(c = 0;c < 8;c++)
@@ -382,37 +429,30 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         else
         {
-            SrcMatrix[0][FRONT_LEFT]   = DryGain * ListenerGain;
-            SrcMatrix[1][FRONT_RIGHT]  = DryGain * ListenerGain;
-            SrcMatrix[2][FRONT_CENTER] = DryGain * ListenerGain;
-            SrcMatrix[3][LFE]          = DryGain * ListenerGain;
-            SrcMatrix[4][BACK_LEFT]    = DryGain * ListenerGain;
-            SrcMatrix[5][BACK_RIGHT]   = DryGain * ListenerGain;
-            SrcMatrix[6][SIDE_LEFT]    = DryGain * ListenerGain;
-            SrcMatrix[7][SIDE_RIGHT]   = DryGain * ListenerGain;
-        }
-        break;
-    }
-    if(!(ALContext->Device->Flags&DEVICE_USE_HRTF))
-    {
-        for(i = 0;i < MAXCHANNELS;i++)
-        {
-            ALuint j, k;
-            for(j = 0;j < MAXCHANNELS;j++)
+            static const ALfloat angles[8] = {-30.0f, 30.0f, 0.0f, 0.0f,
+                                              -110.0f, 110.0f, -90.0f, 90.0f};
+            ALint c;
+
+            for(c = 0;c < 8;c++)
             {
-                ALfloat (*DevMatrix)[MAXCHANNELS] = ALContext->Device->ChannelMatrix;
-                ALSource->Params.DryGains[i][j] = 0.0f;
-                for(k = 0;k < MAXCHANNELS;k++)
+                if(c == 3) /* Special-case LFE */
                 {
-                    /* Matrix mult: O[i][j] += A[i][k] * B[k][j]
-                     * However, our device matrix is transposed, so we do:
-                     * O[i][j] += A[i][k] * B[j][k]
-                     */
-                    ALSource->Params.DryGains[i][j] += SrcMatrix[i][k] *
-                                                       DevMatrix[j][k];
+                    SrcMatrix[3][LFE] = DryGain * ListenerGain;
+                    continue;
+                }
+                pos = aluCart2LUTpos(cos(angles[c] * (M_PI/180.0)),
+                                     sin(angles[c] * (M_PI/180.0)));
+                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+
+                for(i = 0;i < (ALint)Device->NumChan;i++)
+                {
+                    Channel chan = Device->Speaker2Chan[i];
+                    SrcMatrix[c][chan] = DryGain * ListenerGain *
+                                         SpeakerGain[chan];
                 }
             }
         }
+        break;
     }
 
     for(i = 0;i < NumSends;i++)

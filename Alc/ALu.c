@@ -321,6 +321,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             {
                 const ALshort *hrtf_left, *hrtf_right;
 
+                if(c == 3) /* Skip LFE */
+                    continue;
+
                 GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
                 for(i = 0;i < HRTF_LENGTH;i++)
                 {
@@ -369,6 +372,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             {
                 const ALshort *hrtf_left, *hrtf_right;
 
+                if(c == 3) /* Skip LFE */
+                    continue;
+
                 GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
                 for(i = 0;i < HRTF_LENGTH;i++)
                 {
@@ -416,6 +422,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             for(c = 0;c < 8;c++)
             {
                 const ALshort *hrtf_left, *hrtf_right;
+
+                if(c == 3) /* Skip LFE */
+                    continue;
 
                 GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
                 for(i = 0;i < HRTF_LENGTH;i++)

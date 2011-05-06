@@ -354,7 +354,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     }
 
     hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
-    if(FAILED(hr) || (device->Flags&DEVICE_FREQUENCY_REQUEST))
+    if(FAILED(hr) || (device->Flags&DEVICE_CHANNELS_REQUEST))
     {
         switch(device->FmtChans)
         {

@@ -456,7 +456,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat InnerAngle,OuterAngle,Angle,Distance,OrigDist;
     ALfloat Direction[3],Position[3],SourceToListener[3];
     ALfloat Velocity[3],ListenerVel[3];
-    ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff,OuterGainHF;
+    ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
     ALfloat DopplerFactor, DopplerVelocity, SpeedOfSound;
     ALfloat AirAbsorptionFactor;
@@ -506,7 +506,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     Rolloff      = ALSource->flRollOffFactor;
     InnerAngle   = ALSource->flInnerAngle * ConeScale;
     OuterAngle   = ALSource->flOuterAngle * ConeScale;
-    OuterGainHF  = ALSource->OuterGainHF;
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
 
     //1. Translate Listener to origin (convert to head relative)
@@ -652,13 +651,13 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if(Angle >= InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
-        ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f)*scale);
-        ConeHF = (1.0f+(OuterGainHF-1.0f)*scale);
+        ConeVolume = lerp(1.0, ALSource->flOuterGain, scale);
+        ConeHF = lerp(1.0, ALSource->OuterGainHF, scale);
     }
     else if(Angle > OuterAngle)
     {
-        ConeVolume = (1.0f+(ALSource->flOuterGain-1.0f));
-        ConeHF = (1.0f+(OuterGainHF-1.0f));
+        ConeVolume = ALSource->flOuterGain;
+        ConeHF = ALSource->OuterGainHF;
     }
     else
     {

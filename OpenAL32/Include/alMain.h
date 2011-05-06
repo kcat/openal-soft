@@ -480,9 +480,6 @@ struct ALCdevice_struct
     struct bs2b *Bs2b;
     ALCint       Bs2bLevel;
 
-    // Simulated dampening from head occlusion
-    ALfloat      HeadDampen;
-
     // Device flags
     ALuint       Flags;
 

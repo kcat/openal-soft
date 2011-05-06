@@ -666,20 +666,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ConeHF = 1.0f;
     }
 
-    // Apply some high-frequency attenuation for sources behind the listener
-    // NOTE: This should be aluDotproduct({0,0,-1}, ListenerToSource), however
-    // that is equivalent to aluDotproduct({0,0,1}, SourceToListener), which is
-    // the same as SourceToListener[2]
-    Angle = aluAcos(SourceToListener[2]) * 180.0f/M_PI;
-    // Sources within the minimum distance attenuate less
-    if(OrigDist < MinDist)
-        Angle *= OrigDist/MinDist;
-    if(Angle > 90.0f)
-    {
-        ALfloat scale = (Angle-90.0f) / (180.1f-90.0f); // .1 to account for fp errors
-        ConeHF *= 1.0f - (Device->HeadDampen*scale);
-    }
-
     DryGain *= ConeVolume;
     if(ALSource->DryGainHFAuto)
         DryGainHF *= ConeHF;

@@ -55,14 +55,6 @@
 #  stereo modes.
 #cf_level = 0
 
-## head_dampen:
-#  Sets the amount of dampening on sounds emanating from behind the listener.
-#  This is used to simulate the natural occlusion of the head, which is
-#  typically missing with mono and stereo output, and as such, only works on
-#  mono and stereo output modes. Valid values range from 0 to 1 (inclusive),
-#  and higher values provide a stronger effect.
-#head_dampen = 0.25
-
 ## frequency:
 #  Sets the output frequency.
 #frequency = 44100

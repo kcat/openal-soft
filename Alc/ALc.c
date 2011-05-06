@@ -1217,14 +1217,6 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Bs2b = NULL;
     }
 
-    device->HeadDampen = 0.0f;
-    if(!(device->Flags&DEVICE_USE_HRTF) && ChannelsFromDevFmt(device->FmtChans) <= 2)
-    {
-        device->HeadDampen = GetConfigValueFloat(NULL, "head_dampen", DEFAULT_HEAD_DAMPEN);
-        device->HeadDampen = __min(device->HeadDampen, 1.0f);
-        device->HeadDampen = __max(device->HeadDampen, 0.0f);
-    }
-
     return ALC_TRUE;
 }
 
@@ -2354,8 +2346,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(GetConfigValueBool(NULL, "stereodup", AL_TRUE))
         device->Flags |= DEVICE_DUPLICATE_STEREO;
 
-    device->HeadDampen = 0.0f;
-
     // Find a playback device to open
     SuspendContext(NULL);
     for(i = 0;BackendList[i].Init;i++)
@@ -2530,8 +2520,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
 
     if(GetConfigValueBool(NULL, "stereodup", AL_TRUE))
         device->Flags |= DEVICE_DUPLICATE_STEREO;
-
-    device->HeadDampen = 0.0f;
 
     // Open the "backend"
     SuspendContext(NULL);

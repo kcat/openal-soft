@@ -112,11 +112,21 @@ typedef struct ALsource
     } Params;
 
     ALvoid (*Update)(struct ALsource *self, const ALCcontext *context);
+    ALvoid (*DoMix)(struct ALsource *self, ALCdevice *Device,
+                    const ALvoid *RESTRICT data,
+                    ALuint *DataPosInt, ALuint *DataPosFrac,
+                    ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize);
+    ALvoid (*DoHrtfMix)(struct ALsource *self, ALCdevice *Device,
+                        const ALvoid *RESTRICT data,
+                        ALuint *DataPosInt, ALuint *DataPosFrac,
+                        ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize);
 
     // Index to itself
     ALuint source;
 } ALsource;
-#define ALsource_Update(s,a)  ((s)->Update(s,a))
+#define ALsource_Update(s,a)                 ((s)->Update(s,a))
+#define ALsource_DoMix(s,a,b,c,d,e,f,g)      ((s)->DoMix(s,a,b,c,d,e,f,g))
+#define ALsource_DoHrtfMix(s,a,b,c,d,e,f,g)  ((s)->DoHrtfMix(s,a,b,c,d,e,f,g))
 
 ALvoid ReleaseALSources(ALCcontext *Context);
 

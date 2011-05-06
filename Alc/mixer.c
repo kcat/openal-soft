@@ -72,10 +72,11 @@ static __inline ALdouble cubic8(const ALbyte *vals, ALint step, ALint frac)
 #define DECL_TEMPLATE(T, chnct, sampler)                                      \
 static void Mix_Hrtf_##T##_##chnct##_##sampler(                               \
   ALsource *Source, ALCdevice *Device,                                        \
-  const T *RESTRICT data, ALuint *DataPosInt, ALuint *DataPosFrac,            \
+  const ALvoid *srcdata, ALuint *DataPosInt, ALuint *DataPosFrac,             \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALfloat scaler = 1.0f/chnct;                                        \
+    const T *RESTRICT data = srcdata;                                         \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
     ALfloat (*RESTRICT HrtfCoeffs)[HRTF_LENGTH][2];                           \
@@ -310,10 +311,11 @@ DECL_TEMPLATE(ALbyte, 8, cubic8)
 
 #define DECL_TEMPLATE(T, chnct, sampler)                                      \
 static void Mix_##T##_##chnct##_##sampler(ALsource *Source, ALCdevice *Device,\
-  const T *RESTRICT data, ALuint *DataPosInt, ALuint *DataPosFrac,            \
+  const ALvoid *srcdata, ALuint *DataPosInt, ALuint *DataPosFrac,             \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALfloat scaler = 1.0f/chnct;                                        \
+    const T *RESTRICT data = srcdata;                                         \
     ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
     ALuint pos, frac;                                                         \
@@ -521,73 +523,35 @@ DECL_TEMPLATE(ALbyte, 8, cubic8)
 
 
 #define DECL_TEMPLATE(T, sampler)                                             \
-static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
-  enum FmtChannels FmtChannels,                                               \
-  const ALvoid *RESTRICT Data, ALuint *DataPosInt, ALuint *DataPosFrac,       \
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
+static void Select_##T##_##sampler(ALsource *Source,                          \
+                                   enum FmtChannels FmtChannels)              \
 {                                                                             \
     switch(FmtChannels)                                                       \
     {                                                                         \
     case FmtMono:                                                             \
-        if((Device->Flags&DEVICE_USE_HRTF))                                   \
-            Mix_Hrtf_##T##_1_##sampler(Source, Device, Data,                  \
-                                       DataPosInt, DataPosFrac,               \
-                                       OutPos, SamplesToDo, BufferSize);      \
-        else                                                                  \
-            Mix_##T##_1_##sampler(Source, Device, Data,                       \
-                                  DataPosInt, DataPosFrac,                    \
-                                  OutPos, SamplesToDo, BufferSize);           \
+        Source->DoMix = Mix_##T##_1_##sampler;                                \
+        Source->DoHrtfMix = Mix_Hrtf_##T##_1_##sampler;                       \
         break;                                                                \
     case FmtStereo:                                                           \
     case FmtRear:                                                             \
-        if((Device->Flags&DEVICE_USE_HRTF))                                   \
-            Mix_Hrtf_##T##_2_##sampler(Source, Device, Data,                  \
-                                       DataPosInt, DataPosFrac,               \
-                                       OutPos, SamplesToDo, BufferSize);      \
-        else                                                                  \
-            Mix_##T##_2_##sampler(Source, Device, Data,                       \
-                                  DataPosInt, DataPosFrac,                    \
-                                  OutPos, SamplesToDo, BufferSize);           \
+        Source->DoMix = Mix_##T##_2_##sampler;                                \
+        Source->DoHrtfMix = Mix_Hrtf_##T##_2_##sampler;                       \
         break;                                                                \
     case FmtQuad:                                                             \
-        if((Device->Flags&DEVICE_USE_HRTF))                                   \
-            Mix_Hrtf_##T##_4_##sampler(Source, Device, Data,                  \
-                                       DataPosInt, DataPosFrac,               \
-                                       OutPos, SamplesToDo, BufferSize);      \
-        else                                                                  \
-            Mix_##T##_4_##sampler(Source, Device, Data,                       \
-                                  DataPosInt, DataPosFrac,                    \
-                                  OutPos, SamplesToDo, BufferSize);           \
+        Source->DoMix = Mix_##T##_4_##sampler;                                \
+        Source->DoHrtfMix = Mix_Hrtf_##T##_4_##sampler;                       \
         break;                                                                \
     case FmtX51:                                                              \
-        if((Device->Flags&DEVICE_USE_HRTF))                                   \
-            Mix_Hrtf_##T##_6_##sampler(Source, Device, Data,                  \
-                                       DataPosInt, DataPosFrac,               \
-                                       OutPos, SamplesToDo, BufferSize);      \
-        else                                                                  \
-            Mix_##T##_6_##sampler(Source, Device, Data,                       \
-                                  DataPosInt, DataPosFrac,                    \
-                                  OutPos, SamplesToDo, BufferSize);           \
+        Source->DoMix = Mix_##T##_6_##sampler;                                \
+        Source->DoHrtfMix = Mix_Hrtf_##T##_6_##sampler;                       \
         break;                                                                \
     case FmtX61:                                                              \
-        if((Device->Flags&DEVICE_USE_HRTF))                                   \
-            Mix_Hrtf_##T##_7_##sampler(Source, Device, Data,                  \
-                                       DataPosInt, DataPosFrac,               \
-                                       OutPos, SamplesToDo, BufferSize);      \
-        else                                                                  \
-            Mix_##T##_7_##sampler(Source, Device, Data,                       \
-                                  DataPosInt, DataPosFrac,                    \
-                                  OutPos, SamplesToDo, BufferSize);           \
+        Source->DoMix = Mix_##T##_7_##sampler;                                \
+        Source->DoHrtfMix = Mix_Hrtf_##T##_7_##sampler;                       \
         break;                                                                \
     case FmtX71:                                                              \
-        if((Device->Flags&DEVICE_USE_HRTF))                                   \
-            Mix_Hrtf_##T##_8_##sampler(Source, Device, Data,                  \
-                                       DataPosInt, DataPosFrac,               \
-                                       OutPos, SamplesToDo, BufferSize);      \
-        else                                                                  \
-            Mix_##T##_8_##sampler(Source, Device, Data,                       \
-                                  DataPosInt, DataPosFrac,                    \
-                                  OutPos, SamplesToDo, BufferSize);           \
+        Source->DoMix = Mix_##T##_8_##sampler;                                \
+        Source->DoHrtfMix = Mix_Hrtf_##T##_8_##sampler;                       \
         break;                                                                \
     }                                                                         \
 }
@@ -608,29 +572,19 @@ DECL_TEMPLATE(ALbyte, cubic8)
 
 
 #define DECL_TEMPLATE(sampler)                                                \
-static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
-  enum FmtChannels FmtChannels, enum FmtType FmtType,                         \
-  const ALvoid *RESTRICT Data, ALuint *DataPosInt, ALuint *DataPosFrac,       \
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
+static void Select_##sampler(ALsource *Source,                                \
+  enum FmtChannels FmtChannels, enum FmtType FmtType)                         \
 {                                                                             \
     switch(FmtType)                                                           \
     {                                                                         \
     case FmtByte:                                                             \
-        Mix_ALbyte_##sampler##8(Source, Device, FmtChannels,                  \
-                                Data, DataPosInt, DataPosFrac,                \
-                                OutPos, SamplesToDo, BufferSize);             \
+        Select_ALbyte_##sampler##8(Source, FmtChannels);                      \
         break;                                                                \
-                                                                              \
     case FmtShort:                                                            \
-        Mix_ALshort_##sampler##16(Source, Device, FmtChannels,                \
-                                  Data, DataPosInt, DataPosFrac,              \
-                                  OutPos, SamplesToDo, BufferSize);           \
+        Select_ALshort_##sampler##16(Source, FmtChannels);                    \
         break;                                                                \
-                                                                              \
     case FmtFloat:                                                            \
-        Mix_ALfloat_##sampler##32(Source, Device, FmtChannels,                \
-                                  Data, DataPosInt, DataPosFrac,              \
-                                  OutPos, SamplesToDo, BufferSize);           \
+        Select_ALfloat_##sampler##32(Source, FmtChannels);                    \
         break;                                                                \
     }                                                                         \
 }
@@ -642,12 +596,30 @@ DECL_TEMPLATE(cubic)
 #undef DECL_TEMPLATE
 
 
+ALvoid SelectMixer(ALsource *Source, ALbuffer *Buffer)
+{
+    switch(Source->Resampler)
+    {
+        case POINT_RESAMPLER:
+            Select_point(Source, Buffer->FmtChannels, Buffer->FmtType);
+            break;
+        case LINEAR_RESAMPLER:
+            Select_lerp(Source, Buffer->FmtChannels, Buffer->FmtType);
+            break;
+        case CUBIC_RESAMPLER:
+            Select_cubic(Source, Buffer->FmtChannels, Buffer->FmtType);
+            break;
+        case RESAMPLER_MIN:
+        case RESAMPLER_MAX:
+            break;
+    }
+}
+
+
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
     ALuint DataPosInt, DataPosFrac;
-    enum FmtChannels FmtChannels;
-    enum FmtType FmtType;
     ALuint BuffersPlayed;
     ALboolean Looping;
     ALuint increment;
@@ -665,22 +637,18 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     DataPosFrac   = Source->position_fraction;
     Looping       = Source->bLooping;
     increment     = Source->Params.Step;
-    Resampler     = (increment == FRACTIONONE) ? POINT_RESAMPLER :
-                                                 Source->Resampler;
+    Resampler     = Source->Resampler;
 
     /* Get buffer info */
     FrameSize = 0;
-    FmtChannels = FmtMono;
-    FmtType = FmtByte;
     BufferListItem = Source->queue;
     for(i = 0;i < Source->BuffersInQueue;i++)
     {
         const ALbuffer *ALBuffer;
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
-            FmtChannels = ALBuffer->FmtChannels;
-            FmtType = ALBuffer->FmtType;
-            FrameSize = FrameSizeFromFmt(FmtChannels, FmtType);
+            FrameSize = FrameSizeFromFmt(ALBuffer->FmtChannels,
+                                         ALBuffer->FmtType);
             break;
         }
         BufferListItem = BufferListItem->next;
@@ -889,27 +857,12 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         BufferSize = min(BufferSize, (SamplesToDo-OutPos));
 
         SrcData += BufferPrePadding*FrameSize;
-        switch(Resampler)
-        {
-            case POINT_RESAMPLER:
-                Mix_point(Source, Device, FmtChannels, FmtType,
-                          SrcData, &DataPosInt, &DataPosFrac,
-                          OutPos, SamplesToDo, BufferSize);
-                break;
-            case LINEAR_RESAMPLER:
-                Mix_lerp(Source, Device, FmtChannels, FmtType,
-                         SrcData, &DataPosInt, &DataPosFrac,
-                         OutPos, SamplesToDo, BufferSize);
-                break;
-            case CUBIC_RESAMPLER:
-                Mix_cubic(Source, Device, FmtChannels, FmtType,
-                          SrcData, &DataPosInt, &DataPosFrac,
-                          OutPos, SamplesToDo, BufferSize);
-                break;
-            case RESAMPLER_MIN:
-            case RESAMPLER_MAX:
-            break;
-        }
+        if((Device->Flags&DEVICE_USE_HRTF))
+            ALsource_DoHrtfMix(Source, Device, SrcData, &DataPosInt, &DataPosFrac,
+                               OutPos, SamplesToDo, BufferSize);
+        else
+            ALsource_DoMix(Source, Device, SrcData, &DataPosInt, &DataPosFrac,
+                           OutPos, SamplesToDo, BufferSize);
         OutPos += BufferSize;
 
         /* Handle looping sources */

@@ -111,6 +111,7 @@ static __inline ALdouble cubic(ALdouble val0, ALdouble val1, ALdouble val2, ALdo
 }
 
 struct ALsource;
+struct ALbuffer;
 
 ALvoid aluInitPanning(ALCdevice *Device);
 ALint aluCart2LUTpos(ALfloat re, ALfloat im);
@@ -118,6 +119,7 @@ ALint aluCart2LUTpos(ALfloat re, ALfloat im);
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 
+ALvoid SelectMixer(struct ALsource *Source, struct ALbuffer *Buffer);
 ALvoid MixSource(struct ALsource *Source, ALCdevice *Device, ALuint SamplesToDo);
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);

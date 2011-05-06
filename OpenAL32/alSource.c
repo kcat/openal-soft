@@ -570,6 +570,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                                 Source->Update = CalcSourceParams;
                             else
                                 Source->Update = CalcNonAttnSourceParams;
+                            SelectMixer(Source, buffer);
 
                             // Increment reference counter for buffer
                             buffer->refcount++;
@@ -1614,6 +1615,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
                 Source->Update = CalcSourceParams;
             else
                 Source->Update = CalcNonAttnSourceParams;
+            SelectMixer(Source, buffer);
 
             Source->NeedsUpdate = AL_TRUE;
         }

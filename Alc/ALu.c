@@ -959,9 +959,10 @@ DECL_TEMPLATE(ALbyte, X71Chans,8, aluF2B)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T, chans,N, func)                                       \
-static void Write_##T##_##chans(ALCdevice *device, T *buffer, ALuint SamplesToDo)\
+static void Write_##T##_##chans(ALCdevice *device, T *RESTRICT buffer,        \
+                                ALuint SamplesToDo)                           \
 {                                                                             \
-    ALfloat (*DryBuffer)[MAXCHANNELS] = device->DryBuffer;                    \
+    ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS] = device->DryBuffer;           \
     const ALuint *ChanMap = device->DevChannels;                              \
     ALuint i, j;                                                              \
                                                                               \

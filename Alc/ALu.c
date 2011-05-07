@@ -997,7 +997,7 @@ DECL_TEMPLATE(ALbyte, StereoChans,2, aluF2B)
 
 #undef DECL_TEMPLATE
 
-#define DECL_TEMPLATE(T, func)                                                \
+#define DECL_TEMPLATE(T)                                                      \
 static void Write_##T(ALCdevice *device, T *buffer, ALuint SamplesToDo)       \
 {                                                                             \
     switch(device->FmtChans)                                                  \
@@ -1023,11 +1023,11 @@ static void Write_##T(ALCdevice *device, T *buffer, ALuint SamplesToDo)       \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALfloat, aluF2F)
-DECL_TEMPLATE(ALushort, aluF2US)
-DECL_TEMPLATE(ALshort, aluF2S)
-DECL_TEMPLATE(ALubyte, aluF2UB)
-DECL_TEMPLATE(ALbyte, aluF2B)
+DECL_TEMPLATE(ALfloat)
+DECL_TEMPLATE(ALushort)
+DECL_TEMPLATE(ALshort)
+DECL_TEMPLATE(ALubyte)
+DECL_TEMPLATE(ALbyte)
 
 #undef DECL_TEMPLATE
 

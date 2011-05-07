@@ -671,7 +671,7 @@ void al_print(const char *fname, unsigned int line, const char *fmt, ...)
     int i;
 
     fn = strrchr(fname, '/');
-    if(!fn) fn = strrchr(fname, '\\');;
+    if(!fn) fn = strrchr(fname, '\\');
     if(!fn) fn = fname;
     else fn += 1;
 

@@ -244,7 +244,6 @@ static __inline void InitializeCriticalSection(CRITICAL_SECTION *cs)
 
     pthread_mutexattr_destroy(&attrib);
 }
-
 static __inline void DeleteCriticalSection(CRITICAL_SECTION *cs)
 {
     int ret;

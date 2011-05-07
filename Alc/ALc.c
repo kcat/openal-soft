@@ -393,6 +393,9 @@ static FILE *LogFile;
 // Cone scalar
 ALdouble ConeScale = 0.5;
 
+// Localized Z scalar for mono sources
+ALdouble ZScale = 1.0;
+
 ///////////////////////////////////////////////////////
 
 
@@ -465,6 +468,10 @@ static void alc_init(void)
     str = getenv("__ALSOFT_HALF_ANGLE_CONES");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         ConeScale = 1.0;
+
+    str = getenv("__ALSOFT_REVERSE_Z");
+    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
+        ZScale = -1.0;
 
     InitializeCriticalSection(&g_csMutex);
     ALTHUNK_INIT();

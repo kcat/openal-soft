@@ -604,6 +604,7 @@ void al_print(const char *fname, unsigned int line, const char *fmt, ...)
 #define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
 
 extern ALdouble ConeScale;
+extern ALdouble ZScale;
 
 #ifdef __cplusplus
 }

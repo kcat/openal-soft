@@ -822,8 +822,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         const ALshort *hrtf_left, *hrtf_right;
 
-        GetHrtfCoeffs(atan2(Position[1], -Position[2]) * (180.0/M_PI),
-                      atan2(Position[0], -Position[2]) * (180.0/M_PI),
+        GetHrtfCoeffs(atan2(Position[1], -Position[2]*ZScale) * (180.0/M_PI),
+                      atan2(Position[0], -Position[2]*ZScale) * (180.0/M_PI),
                       &hrtf_left, &hrtf_right);
         for(i = 0;i < HRTF_LENGTH;i++)
         {
@@ -835,7 +835,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
-        pos = aluCart2LUTpos(-Position[2], Position[0]);
+        pos = aluCart2LUTpos(-Position[2]*ZScale, Position[0]);
         SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
 
         DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);

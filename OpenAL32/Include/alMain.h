@@ -306,14 +306,12 @@ extern "C" {
 #endif
 
 
-#define SWMIXER_OUTPUT_RATE        44100
+#define DEFAULT_OUTPUT_RATE        (44100)
 
 #define SPEEDOFSOUNDMETRESPERSEC   (343.3f)
 #define AIRABSORBGAINDBHF          (-0.05f)
 
 #define LOWPASSFREQCUTOFF          (5000)
-
-#define DEFAULT_HEAD_DAMPEN        (0.25f)
 
 
 // Find the next power-of-2 for non-power-of-2 numbers.

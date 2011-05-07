@@ -2306,7 +2306,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     //Set output format
     if(ConfigValueExists(NULL, "frequency"))
         device->Flags |= DEVICE_FREQUENCY_REQUEST;
-    device->Frequency = GetConfigValueInt(NULL, "frequency", SWMIXER_OUTPUT_RATE);
+    device->Frequency = GetConfigValueInt(NULL, "frequency", DEFAULT_OUTPUT_RATE);
     if(device->Frequency < 8000)
         device->Frequency = 8000;
 

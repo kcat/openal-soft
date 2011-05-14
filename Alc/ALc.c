@@ -1183,6 +1183,21 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Bs2b = NULL;
     }
 
+    device->Flags &= ~DEVICE_DUPLICATE_STEREO;
+    switch(device->FmtChans)
+    {
+        case DevFmtMono:
+        case DevFmtStereo:
+            break;
+        case DevFmtQuad:
+        case DevFmtX51:
+        case DevFmtX61:
+        case DevFmtX71:
+            if(GetConfigValueBool(NULL, "stereodup", AL_TRUE))
+                device->Flags |= DEVICE_DUPLICATE_STEREO;
+            break;
+    }
+
     for(i = 0;i < device->NumContexts;i++)
     {
         ALCcontext *context = device->Contexts[i];
@@ -2346,9 +2361,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
-    if(GetConfigValueBool(NULL, "stereodup", AL_TRUE))
-        device->Flags |= DEVICE_DUPLICATE_STEREO;
-
     // Find a playback device to open
     SuspendContext(NULL);
     for(i = 0;BackendList[i].Init;i++)
@@ -2520,9 +2532,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
         device->NumAuxSends = MAX_SENDS;
 
     device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
-
-    if(GetConfigValueBool(NULL, "stereodup", AL_TRUE))
-        device->Flags |= DEVICE_DUPLICATE_STEREO;
 
     // Open the "backend"
     SuspendContext(NULL);

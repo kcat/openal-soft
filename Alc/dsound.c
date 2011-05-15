@@ -354,75 +354,67 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     }
 
     hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
-    if(FAILED(hr) || (device->Flags&DEVICE_CHANNELS_REQUEST))
+    if(SUCCEEDED(hr))
     {
+        if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
+        {
+            speakers = DSSPEAKER_CONFIG(speakers);
+            if(speakers == DSSPEAKER_MONO)
+                device->FmtChans = DevFmtMono;
+            else if(speakers == DSSPEAKER_STEREO || speakers == DSSPEAKER_HEADPHONE)
+                device->FmtChans = DevFmtStereo;
+            else if(speakers == DSSPEAKER_QUAD)
+                device->FmtChans = DevFmtQuad;
+            else if(speakers == DSSPEAKER_5POINT1)
+                device->FmtChans = DevFmtX51;
+            else if(speakers == DSSPEAKER_7POINT1)
+                device->FmtChans = DevFmtX71;
+            else
+                AL_PRINT("Unknown system speaker config: 0x%lx\n", speakers);
+        }
+
         switch(device->FmtChans)
         {
             case DevFmtMono:
-                speakers = DSSPEAKER_COMBINED(DSSPEAKER_MONO, 0);
+                OutputType.dwChannelMask = SPEAKER_FRONT_CENTER;
                 break;
             case DevFmtStereo:
-                speakers = DSSPEAKER_COMBINED(DSSPEAKER_STEREO, 0);
+                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                           SPEAKER_FRONT_RIGHT;
                 break;
             case DevFmtQuad:
-                speakers = DSSPEAKER_COMBINED(DSSPEAKER_QUAD, 0);
+                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                           SPEAKER_FRONT_RIGHT |
+                                           SPEAKER_BACK_LEFT |
+                                           SPEAKER_BACK_RIGHT;
                 break;
             case DevFmtX51:
-                speakers = DSSPEAKER_COMBINED(DSSPEAKER_5POINT1, 0);
+                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                           SPEAKER_FRONT_RIGHT |
+                                           SPEAKER_FRONT_CENTER |
+                                           SPEAKER_LOW_FREQUENCY |
+                                           SPEAKER_BACK_LEFT |
+                                           SPEAKER_BACK_RIGHT;
                 break;
             case DevFmtX61:
-                /* ??? */
-                AL_PRINT("6.1 not supported with DirectSound\n");
-                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                           SPEAKER_FRONT_RIGHT |
+                                           SPEAKER_FRONT_CENTER |
+                                           SPEAKER_LOW_FREQUENCY |
+                                           SPEAKER_BACK_CENTER |
+                                           SPEAKER_SIDE_LEFT |
+                                           SPEAKER_SIDE_RIGHT;
                 break;
             case DevFmtX71:
-                speakers = DSSPEAKER_COMBINED(DSSPEAKER_7POINT1, 0);
+                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                           SPEAKER_FRONT_RIGHT |
+                                           SPEAKER_FRONT_CENTER |
+                                           SPEAKER_LOW_FREQUENCY |
+                                           SPEAKER_BACK_LEFT |
+                                           SPEAKER_BACK_RIGHT |
+                                           SPEAKER_SIDE_LEFT |
+                                           SPEAKER_SIDE_RIGHT;
                 break;
-        }
-    }
-    if(SUCCEEDED(hr))
-    {
-        speakers = DSSPEAKER_CONFIG(speakers);
-        if(speakers == DSSPEAKER_MONO)
-        {
-            device->FmtChans = DevFmtMono;
-            OutputType.dwChannelMask = SPEAKER_FRONT_CENTER;
-        }
-        else if(speakers == DSSPEAKER_STEREO || speakers == DSSPEAKER_HEADPHONE)
-        {
-            device->FmtChans = DevFmtStereo;
-            OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                       SPEAKER_FRONT_RIGHT;
-        }
-        else if(speakers == DSSPEAKER_QUAD)
-        {
-            device->FmtChans = DevFmtQuad;
-            OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                       SPEAKER_FRONT_RIGHT |
-                                       SPEAKER_BACK_LEFT |
-                                       SPEAKER_BACK_RIGHT;
-        }
-        else if(speakers == DSSPEAKER_5POINT1)
-        {
-            device->FmtChans = DevFmtX51;
-            OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                       SPEAKER_FRONT_RIGHT |
-                                       SPEAKER_FRONT_CENTER |
-                                       SPEAKER_LOW_FREQUENCY |
-                                       SPEAKER_BACK_LEFT |
-                                       SPEAKER_BACK_RIGHT;
-        }
-        else if(speakers == DSSPEAKER_7POINT1)
-        {
-            device->FmtChans = DevFmtX71;
-            OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                       SPEAKER_FRONT_RIGHT |
-                                       SPEAKER_FRONT_CENTER |
-                                       SPEAKER_LOW_FREQUENCY |
-                                       SPEAKER_BACK_LEFT |
-                                       SPEAKER_BACK_RIGHT |
-                                       SPEAKER_SIDE_LEFT |
-                                       SPEAKER_SIDE_RIGHT;
         }
 
         OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
@@ -438,7 +430,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     {
         OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
         OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
-        OutputType.Format.cbSize = 22;
+        OutputType.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
         if(device->FmtType == DevFmtFloat)
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
         else

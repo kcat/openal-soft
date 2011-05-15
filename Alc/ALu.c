@@ -78,6 +78,7 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[
 
 ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
+    static const ALfloat angles_Mono[1] = { 0.0f };
     static const ALfloat angles_Stereo[2] = { -30.0f, 30.0f };
     static const ALfloat angles_Rear[2] = { -150.0f, 150.0f };
     static const ALfloat angles_Quad[4] = { -45.0f, 45.0f, -135.0f, 135.0f };
@@ -99,6 +100,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat WetGainHF[MAX_SENDS];
     ALint NumSends, Frequency;
     const ALfloat *SpeakerGain;
+    const ALfloat *angles = NULL;
+    ALint num_channels = 0;
+    ALint lfe_chan = -1;
     ALfloat Pitch;
     ALfloat cw;
     ALuint pos;
@@ -171,49 +175,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     switch(Channels)
     {
     case FmtMono:
-        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
-        {
-            const ALshort *hrtf_left, *hrtf_right;
-
-            GetHrtfCoeffs(0.0, 0.0, &hrtf_left, &hrtf_right);
-            for(i = 0;i < HRTF_LENGTH;i++)
-            {
-                ALSource->Params.HrtfCoeffs[0][i][0] =
-                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                ALSource->Params.HrtfCoeffs[0][i][1] =
-                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
-            }
-        }
-        else
-        {
-            pos = aluCart2LUTpos(cos(0.0), sin(0.0));
-            SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
-
-            for(i = 0;i < (ALint)Device->NumChan;i++)
-            {
-                Channel chan = Device->Speaker2Chan[i];
-                SrcMatrix[0][chan] = DryGain * ListenerGain * SpeakerGain[chan];
-            }
-        }
+        angles = angles_Mono;
+        num_channels = 1;
         break;
     case FmtStereo:
-        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
-        {
-            for(c = 0;c < 2;c++)
-            {
-                const ALshort *hrtf_left, *hrtf_right;
-
-                GetHrtfCoeffs(0.0, angles_Stereo[c], &hrtf_left, &hrtf_right);
-                for(i = 0;i < HRTF_LENGTH;i++)
-                {
-                    ALSource->Params.HrtfCoeffs[c][i][0] =
-                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                    ALSource->Params.HrtfCoeffs[c][i][1] =
-                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                }
-            }
-        }
-        else if((ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
+        if((ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
         {
             static const ALfloat angles_StereoDup[4] = { -30.0f, -150.0f,
                                                           30.0f,  150.0f };
@@ -234,189 +200,52 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         else
         {
-            for(c = 0;c < 2;c++)
-            {
-                pos = aluCart2LUTpos(cos(angles_Stereo[c] * (M_PI/180.0)),
-                                     sin(angles_Stereo[c] * (M_PI/180.0)));
-                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
-
-                for(i = 0;i < (ALint)Device->NumChan;i++)
-                {
-                    Channel chan = Device->Speaker2Chan[i];
-                    SrcMatrix[c][chan] = DryGain * ListenerGain *
-                                         SpeakerGain[chan];
-                }
-            }
+            angles = angles_Stereo;
+            num_channels = 2;
         }
         break;
 
     case FmtRear:
-        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
-        {
-            for(c = 0;c < 2;c++)
-            {
-                const ALshort *hrtf_left, *hrtf_right;
-
-                GetHrtfCoeffs(0.0, angles_Rear[c], &hrtf_left, &hrtf_right);
-                for(i = 0;i < HRTF_LENGTH;i++)
-                {
-                    ALSource->Params.HrtfCoeffs[c][i][0] =
-                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                    ALSource->Params.HrtfCoeffs[c][i][1] =
-                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                }
-            }
-        }
-        else
-        {
-            for(c = 0;c < 2;c++)
-            {
-                pos = aluCart2LUTpos(cos(angles_Rear[c] * (M_PI/180.0)),
-                                     sin(angles_Rear[c] * (M_PI/180.0)));
-                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
-
-                for(i = 0;i < (ALint)Device->NumChan;i++)
-                {
-                    Channel chan = Device->Speaker2Chan[i];
-                    SrcMatrix[c][chan] = DryGain * ListenerGain *
-                                         SpeakerGain[chan];
-                }
-            }
-        }
+        angles = angles_Rear;
+        num_channels = 2;
         break;
 
     case FmtQuad:
-        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
-        {
-            for(c = 0;c < 4;c++)
-            {
-                const ALshort *hrtf_left, *hrtf_right;
-
-                GetHrtfCoeffs(0.0, angles_Quad[c], &hrtf_left, &hrtf_right);
-                for(i = 0;i < HRTF_LENGTH;i++)
-                {
-                    ALSource->Params.HrtfCoeffs[c][i][0] =
-                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                    ALSource->Params.HrtfCoeffs[c][i][1] =
-                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                }
-            }
-        }
-        else
-        {
-            for(c = 0;c < 4;c++)
-            {
-                pos = aluCart2LUTpos(cos(angles_Quad[c] * (M_PI/180.0)),
-                                     sin(angles_Quad[c] * (M_PI/180.0)));
-                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
-
-                for(i = 0;i < (ALint)Device->NumChan;i++)
-                {
-                    Channel chan = Device->Speaker2Chan[i];
-                    SrcMatrix[c][chan] = DryGain * ListenerGain *
-                                         SpeakerGain[chan];
-                }
-            }
-        }
+        angles = angles_Quad;
+        num_channels = 4;
         break;
 
     case FmtX51:
-        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
-        {
-            for(c = 0;c < 6;c++)
-            {
-                const ALshort *hrtf_left, *hrtf_right;
-
-                if(c == 3) /* Skip LFE */
-                    continue;
-
-                GetHrtfCoeffs(0.0, angles_X51[c], &hrtf_left, &hrtf_right);
-                for(i = 0;i < HRTF_LENGTH;i++)
-                {
-                    ALSource->Params.HrtfCoeffs[c][i][0] =
-                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                    ALSource->Params.HrtfCoeffs[c][i][1] =
-                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                }
-            }
-        }
-        else
-        {
-            for(c = 0;c < 6;c++)
-            {
-                if(c == 3) /* Special-case LFE */
-                {
-                    SrcMatrix[3][LFE] = DryGain * ListenerGain;
-                    continue;
-                }
-                pos = aluCart2LUTpos(cos(angles_X51[c] * (M_PI/180.0)),
-                                     sin(angles_X51[c] * (M_PI/180.0)));
-                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
-
-                for(i = 0;i < (ALint)Device->NumChan;i++)
-                {
-                    Channel chan = Device->Speaker2Chan[i];
-                    SrcMatrix[c][chan] = DryGain * ListenerGain *
-                                         SpeakerGain[chan];
-                }
-            }
-        }
+        angles = angles_X51;
+        num_channels = 6;
+        lfe_chan = 3;
         break;
 
     case FmtX61:
-        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
-        {
-            for(c = 0;c < 7;c++)
-            {
-                const ALshort *hrtf_left, *hrtf_right;
-
-                if(c == 3) /* Skip LFE */
-                    continue;
-
-                GetHrtfCoeffs(0.0, angles_X61[c], &hrtf_left, &hrtf_right);
-                for(i = 0;i < HRTF_LENGTH;i++)
-                {
-                    ALSource->Params.HrtfCoeffs[c][i][0] =
-                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                    ALSource->Params.HrtfCoeffs[c][i][1] =
-                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                }
-            }
-        }
-        else
-        {
-            for(c = 0;c < 7;c++)
-            {
-                if(c == 3) /* Special-case LFE */
-                {
-                    SrcMatrix[3][LFE] = DryGain * ListenerGain;
-                    continue;
-                }
-                pos = aluCart2LUTpos(cos(angles_X61[c] * (M_PI/180.0)),
-                                     sin(angles_X61[c] * (M_PI/180.0)));
-                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
-
-                for(i = 0;i < (ALint)Device->NumChan;i++)
-                {
-                    Channel chan = Device->Speaker2Chan[i];
-                    SrcMatrix[c][chan] = DryGain * ListenerGain *
-                                         SpeakerGain[chan];
-                }
-            }
-        }
+        angles = angles_X61;
+        num_channels = 7;
+        lfe_chan = 3;
         break;
 
     case FmtX71:
-        if((ALContext->Device->Flags&DEVICE_USE_HRTF))
+        angles = angles_X71;
+        num_channels = 8;
+        lfe_chan = 3;
+        break;
+    }
+
+    if(angles)
+    {
+        if((Device->Flags&DEVICE_USE_HRTF))
         {
-            for(c = 0;c < 8;c++)
+            for(c = 0;c < num_channels;c++)
             {
                 const ALshort *hrtf_left, *hrtf_right;
 
-                if(c == 3) /* Skip LFE */
+                if(c == lfe_chan) /* Skip LFE */
                     continue;
 
-                GetHrtfCoeffs(0.0, angles_X71[c], &hrtf_left, &hrtf_right);
+                GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
                 for(i = 0;i < HRTF_LENGTH;i++)
                 {
                     ALSource->Params.HrtfCoeffs[c][i][0] =
@@ -428,15 +257,15 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         else
         {
-            for(c = 0;c < 8;c++)
+            for(c = 0;c < num_channels;c++)
             {
-                if(c == 3) /* Special-case LFE */
+                if(c == lfe_chan) /* Special-case LFE */
                 {
-                    SrcMatrix[3][LFE] = DryGain * ListenerGain;
+                    SrcMatrix[c][LFE] = DryGain * ListenerGain;
                     continue;
                 }
-                pos = aluCart2LUTpos(cos(angles_X71[c] * (M_PI/180.0)),
-                                     sin(angles_X71[c] * (M_PI/180.0)));
+                pos = aluCart2LUTpos(cos(angles[c] * (M_PI/180.0)),
+                                     sin(angles[c] * (M_PI/180.0)));
                 SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
 
                 for(i = 0;i < (ALint)Device->NumChan;i++)
@@ -447,7 +276,6 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 }
             }
         }
-        break;
     }
 
     for(i = 0;i < NumSends;i++)

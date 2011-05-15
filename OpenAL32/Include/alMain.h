@@ -588,6 +588,9 @@ void SetRTPriority(void);
 void SetDefaultChannelOrder(ALCdevice *device);
 void SetDefaultWFXChannelOrder(ALCdevice *device);
 
+const ALCchar *DevFmtTypeString(enum DevFmtType type);
+const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
+
 ALboolean IsValidType(ALenum type);
 ALboolean IsValidChannels(ALenum type);
 

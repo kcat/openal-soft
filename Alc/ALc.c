@@ -831,6 +831,32 @@ ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
 }
 
 
+const ALCchar *DevFmtTypeString(enum DevFmtType type)
+{
+    switch(type)
+    {
+    case DevFmtByte: return "Signed Byte";
+    case DevFmtUByte: return "Unsigned Byte";
+    case DevFmtShort: return "Signed Short";
+    case DevFmtUShort: return "Unsigned Short";
+    case DevFmtFloat: return "Float";
+    }
+    return "(unknown type)";
+}
+const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
+{
+    switch(chans)
+    {
+    case DevFmtMono: return "Mono";
+    case DevFmtStereo: return "Stereo";
+    case DevFmtQuad: return "Quad";
+    case DevFmtX51: return "5.1 Surround";
+    case DevFmtX61: return "6.1 Surround";
+    case DevFmtX71: return "7.1 Surround";
+    }
+    return "(unknown channels)";
+}
+
 ALuint BytesFromDevFmt(enum DevFmtType type)
 {
     switch(type)
@@ -1163,7 +1189,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(device->FmtChans != DevFmtStereo || device->Frequency != 44100)
     {
         if((device->Flags&DEVICE_USE_HRTF))
-            AL_PRINT("HRTF disabled (format is not 44100hz stereo)\n");
+            AL_PRINT("HRTF disabled (format is not 44100hz Stereo)\n");
         device->Flags &= ~DEVICE_USE_HRTF;
     }
 

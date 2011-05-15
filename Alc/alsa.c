@@ -606,17 +606,23 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     /* set channels (implicitly sets frame bits) */
     if(i >= 0 && (i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, ChannelsFromDevFmt(device->FmtChans))) < 0)
     {
-        device->FmtChans = DevFmtStereo;
         if((i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, 2)) < 0)
         {
-            device->FmtChans = DevFmtMono;
             if((i=psnd_pcm_hw_params_set_channels(data->pcmHandle, p, 1)) < 0)
                 err = "set channels";
-            else if((device->Flags&DEVICE_CHANNELS_REQUEST))
-                AL_PRINT("Failed to set requested channel config %#x, got mono instead\n", device->FmtChans);
+            else
+            {
+                if((device->Flags&DEVICE_CHANNELS_REQUEST))
+                    AL_PRINT("Failed to set %s, got Mono instead\n", DevFmtChannelsString(device->FmtChans));
+                device->FmtChans = DevFmtMono;
+            }
         }
-        else if((device->Flags&DEVICE_CHANNELS_REQUEST))
-            AL_PRINT("Failed to set requested channel config %#x, got stereo instead\n", device->FmtChans);
+        else
+        {
+            if((device->Flags&DEVICE_CHANNELS_REQUEST))
+                AL_PRINT("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(device->FmtChans));
+            device->FmtChans = DevFmtStereo;
+        }
         device->Flags &= ~DEVICE_CHANNELS_REQUEST;
     }
     if(i >= 0 && (i=psnd_pcm_hw_params_set_rate_resample(data->pcmHandle, p, 0)) < 0)
@@ -672,7 +678,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     if(device->Frequency != rate)
     {
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            AL_PRINT("Failed to set requested frequency %dhz, got %dhz instead\n", device->Frequency, rate);
+            AL_PRINT("Failed to set %dhz, got %dhz instead\n", device->Frequency, rate);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
         device->Frequency = rate;
     }

@@ -175,7 +175,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtMono)
             {
-                AL_PRINT("Failed to set requested channel config %#x, got mono instead\n", device->FmtChans);
+                AL_PRINT("Failed to set %s, got Mono instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtMono;
@@ -184,7 +184,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtStereo)
             {
-                AL_PRINT("Failed to set requested channel config %#x, got stereo instead\n", device->FmtChans);
+                AL_PRINT("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtStereo;
@@ -193,7 +193,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtQuad)
             {
-                AL_PRINT("Failed to set requested channel config %#x, got quad instead\n", device->FmtChans);
+                AL_PRINT("Failed to set %s, got Quad instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtQuad;
@@ -202,7 +202,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtX51)
             {
-                AL_PRINT("Failed to set requested channel config %#x, got 5.1 instead\n", device->FmtChans);
+                AL_PRINT("Failed to set %s, got 5.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtX51;
@@ -211,7 +211,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtX61)
             {
-                AL_PRINT("Failed to set requested channel config %#x, got 6.1 instead\n", device->FmtChans);
+                AL_PRINT("Failed to set %s, got 6.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtX61;
@@ -220,13 +220,13 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtX71)
             {
-                AL_PRINT("Failed to set requested channel config %#x, got 7.1 instead\n", device->FmtChans);
+                AL_PRINT("Failed to set %s, got 7.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtX71;
             break;
         default:
-            AL_PRINT("Unhandled channel count (%d), using stereo\n", streamFormat.mChannelsPerFrame);
+            AL_PRINT("Unhandled channel count (%d), using Stereo\n", streamFormat.mChannelsPerFrame);
             device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             device->FmtChans = DevFmtStereo;
             streamFormat.mChannelsPerFrame = 2;

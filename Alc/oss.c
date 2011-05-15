@@ -250,7 +250,7 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
 
     if((int)ChannelsFromDevFmt(device->FmtChans) != numChannels)
     {
-        AL_PRINT("Could not set %d channels, got %d instead\n", ChannelsFromDevFmt(device->FmtChans), numChannels);
+        AL_PRINT("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(device->FmtChans), numChannels);
         return ALC_FALSE;
     }
 
@@ -258,14 +258,14 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
          (ossFormat == AFMT_U8 && device->FmtType == DevFmtUByte) ||
          (ossFormat == AFMT_S16_NE && device->FmtType == DevFmtShort)))
     {
-        AL_PRINT("Could not set %#x format type, got OSS format %#x\n", device->FmtType, ossFormat);
+        AL_PRINT("Failed to set %s output, got OSS format %#x\n", DevFmtTypeString(device->FmtType), ossFormat);
         return ALC_FALSE;
     }
 
     if(device->Frequency != (ALuint)ossSpeed)
     {
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            AL_PRINT("Failed to set requested frequency %dhz, got %dhz instead\n", device->Frequency, ossSpeed);
+            AL_PRINT("Failed to set %dhz, got %dhz instead\n", device->Frequency, ossSpeed);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
         device->Frequency = ossSpeed;
     }
@@ -354,7 +354,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         case DevFmtUShort:
         case DevFmtFloat:
             free(data);
-            AL_PRINT("Format type %#x capture not supported on OSS\n", device->FmtType);
+            AL_PRINT("%s capture samples not supported on OSS\n", DevFmtTypeString(device->FmtType));
             return ALC_FALSE;
     }
 
@@ -391,7 +391,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
 
     if((int)ChannelsFromDevFmt(device->FmtChans) != numChannels)
     {
-        AL_PRINT("Could not set %d channels, got %d instead\n", ChannelsFromDevFmt(device->FmtChans), numChannels);
+        AL_PRINT("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(device->FmtChans), numChannels);
         close(data->fd);
         free(data);
         return ALC_FALSE;
@@ -401,7 +401,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
          (ossFormat == AFMT_U8 && device->FmtType == DevFmtUByte) ||
          (ossFormat == AFMT_S16_NE && device->FmtType == DevFmtShort)))
     {
-        AL_PRINT("Could not set %#x format type, got OSS format %#x\n", device->FmtType, ossFormat);
+        AL_PRINT("Failed to set %s output, got OSS format %#x\n", DevFmtTypeString(device->FmtType), ossFormat);
         close(data->fd);
         free(data);
         return ALC_FALSE;

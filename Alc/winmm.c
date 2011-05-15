@@ -341,7 +341,7 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
         if((pDevice->Flags&DEVICE_CHANNELS_REQUEST) &&
            pDevice->FmtChans != DevFmtStereo)
         {
-            AL_PRINT("Failed to set requested channel config %#x, got stereo instead\n", pDevice->FmtChans);
+            AL_PRINT("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(pDevice->FmtChans));
             pDevice->Flags &= ~DEVICE_CHANNELS_REQUEST;
         }
         pDevice->FmtChans = DevFmtStereo;

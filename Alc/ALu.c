@@ -213,6 +213,25 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 }
             }
         }
+        else if((ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
+        {
+            static const ALfloat angles_StereoDup[4] = { -30.0f, -150.0f,
+                                                          30.0f,  150.0f };
+            DryGain *= aluSqrt(2.0f/4.0f);
+            for(c = 0;c < 4;c++)
+            {
+                pos = aluCart2LUTpos(cos(angles_StereoDup[c] * (M_PI/180.0)),
+                                     sin(angles_StereoDup[c] * (M_PI/180.0)));
+                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+
+                for(i = 0;i < (ALint)Device->NumChan;i++)
+                {
+                    Channel chan = Device->Speaker2Chan[i];
+                    SrcMatrix[c>>1][chan] += DryGain * ListenerGain *
+                                             SpeakerGain[chan];
+                }
+            }
+        }
         else
         {
             for(c = 0;c < 2;c++)

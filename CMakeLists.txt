@@ -154,6 +154,22 @@ ELSE()
                 ADD_DEFINITIONS(-fvisibility=internal -DHAVE_GCC_VISIBILITY)
             ENDIF()
         ENDIF()
+    ELSE()
+        OPTION(WINE "Enable use of Wine headers when compiling" ON)
+        IF(WINE)
+            FIND_PATH(WINE_INCLUDE_DIR library.h
+                      PATHS
+                      /usr/include/wine
+                      /usr/local/include/wine
+                      PATH_SUFFIXES ".")
+            IF(WINE_INCLUDE_DIR)
+                MESSAGE(STATUS "Found Wine header files - ${WINE_INCLUDE_DIR}" )
+                INCLUDE_DIRECTORIES("${WINE_INCLUDE_DIR}/windows")
+                SET(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} "${WINE_INCLUDE_DIR}/windows")
+            ELSE()
+                MESSAGE(STATUS "Could not find Wine header files" )
+            ENDIF()
+        ENDIF()
     ENDIF()
 ENDIF()
 

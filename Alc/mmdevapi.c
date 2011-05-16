@@ -71,7 +71,9 @@ static void *MMDevApiLoad(void)
     if(!Enumerator)
     {
         void *mme = NULL;
-        HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+        HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+        if(FAILED(hr))
+            hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
         if(SUCCEEDED(hr))
         {
             hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &mme);

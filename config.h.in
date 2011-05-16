@@ -13,6 +13,9 @@
 /* Define if we have the Solaris backend */
 #cmakedefine HAVE_SOLARIS
 
+/* Define if we have the MMDevApi backend */
+#cmakedefine HAVE_MMDEVAPI
+
 /* Define if we have the DSound backend */
 #cmakedefine HAVE_DSOUND
 

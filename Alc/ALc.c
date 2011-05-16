@@ -20,6 +20,29 @@
 
 #include "config.h"
 
+#ifdef HAVE_MMDEVAPI
+#define INITGUID
+#include <mmdeviceapi.h>
+#include <audioclient.h>
+#include <cguid.h>
+#include <mmreg.h>
+#ifndef _WAVEFORMATEXTENSIBLE_
+#include <ks.h>
+#include <ksmedia.h>
+#endif
+#endif
+
+#ifdef HAVE_DSOUND
+#define INITGUID
+#include <dsound.h>
+#include <cguid.h>
+#include <mmreg.h>
+#ifndef _WAVEFORMATEXTENSIBLE_
+#include <ks.h>
+#include <ksmedia.h>
+#endif
+#endif
+
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>

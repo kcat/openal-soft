@@ -444,6 +444,8 @@ static ALCboolean WinMMResetPlayback(ALCdevice *device)
         device->Frequency = pData->Frequency;
     }
 
+    SetDefaultWFXChannelOrder(device);
+
     pData->lWaveBuffersCommitted = 0;
 
     // Create 4 Buffers

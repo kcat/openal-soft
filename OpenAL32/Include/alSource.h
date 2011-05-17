@@ -86,6 +86,8 @@ typedef struct ALsource
     // Source Type (Static, Streaming, or Undetermined)
     ALint  lSourceType;
 
+    ALuint NumChannels;
+
     /* HRTF info */
     ALfloat HrtfHistory[MAXCHANNELS][HRTF_LENGTH];
     ALuint HrtfOffset;

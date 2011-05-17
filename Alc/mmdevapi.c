@@ -66,6 +66,42 @@ typedef struct {
 static const ALCchar mmDevice[] = "WASAPI Default";
 
 
+static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
+{
+    memset(out, 0, sizeof(*out));
+    if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
+        *out = *(WAVEFORMATEXTENSIBLE*)in;
+    else if(in->wFormatTag == WAVE_FORMAT_PCM)
+    {
+        out->Format = *in;
+        out->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+        out->Format.cbSize = sizeof(*out) - sizeof(*in);
+        if(out->Format.nChannels == 1)
+            out->dwChannelMask = MONO;
+        else if(out->Format.nChannels == 2)
+            out->dwChannelMask = STEREO;
+        out->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+    }
+    else if(in->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
+    {
+        out->Format = *in;
+        out->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+        out->Format.cbSize = sizeof(*out) - sizeof(*in);
+        if(out->Format.nChannels == 1)
+            out->dwChannelMask = MONO;
+        else if(out->Format.nChannels == 2)
+            out->dwChannelMask = STEREO;
+        out->SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+    }
+    else
+    {
+        AL_PRINT("Unhandled format tag: 0x%04x\n", in->wFormatTag);
+        return ALC_FALSE;
+    }
+    return ALC_TRUE;
+}
+
+
 static void *MMDevApiLoad(void)
 {
     if(!Enumerator)
@@ -218,96 +254,32 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
-        device->Frequency = wfx->nSamplesPerSec;
-    if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
+    if(!MakeExtensible(&OutputType, wfx))
     {
-        if(wfx->wFormatTag == WAVE_FORMAT_PCM)
-        {
-            if(wfx->nChannels == 1)
-                device->FmtChans = DevFmtMono;
-            else if(wfx->nChannels == 2)
-                device->FmtChans = DevFmtStereo;
-            else
-            {
-                AL_PRINT("Unhandled PCM channels: %d\n", wfx->nChannels);
-                device->FmtChans = DevFmtStereo;
-            }
-        }
-        else if(wfx->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
-        {
-            WAVEFORMATEXTENSIBLE *wfe = (WAVEFORMATEXTENSIBLE*)wfx;
-
-            if(wfe->Format.nChannels == 1 && wfe->dwChannelMask == MONO)
-                device->FmtChans = DevFmtMono;
-            else if(wfe->Format.nChannels == 2 && wfe->dwChannelMask == STEREO)
-                device->FmtChans = DevFmtStereo;
-            else if(wfe->Format.nChannels == 4 && wfe->dwChannelMask == QUAD)
-                device->FmtChans = DevFmtQuad;
-            else if(wfe->Format.nChannels == 6 && wfe->dwChannelMask == X5DOT1)
-                device->FmtChans = DevFmtX51;
-            else if(wfe->Format.nChannels == 7 && wfe->dwChannelMask == X6DOT1)
-                device->FmtChans = DevFmtX61;
-            else if(wfe->Format.nChannels == 8 && wfe->dwChannelMask == X7DOT1)
-                device->FmtChans = DevFmtX71;
-            else
-            {
-                AL_PRINT("Unhandled extensible channels: %d -- 0x%08lx\n", wfe->Format.nChannels, wfe->dwChannelMask);
-                device->FmtChans = DevFmtStereo;
-            }
-        }
+        CoTaskMemFree(wfx);
+        return ALC_FALSE;
     }
-
-    if(wfx->wFormatTag == WAVE_FORMAT_PCM)
-    {
-        if(wfx->wBitsPerSample == 8)
-            device->FmtType = DevFmtUByte;
-        else if(wfx->wBitsPerSample == 16)
-            device->FmtType = DevFmtShort;
-    }
-    else if(wfx->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
-    {
-        WAVEFORMATEXTENSIBLE *wfe = (WAVEFORMATEXTENSIBLE*)wfx;
-
-        if(IsEqualGUID(&wfe->SubFormat, &KSDATAFORMAT_SUBTYPE_PCM))
-        {
-            if(wfx->wBitsPerSample == 8)
-                device->FmtType = DevFmtUByte;
-            else if(wfx->wBitsPerSample == 16)
-                device->FmtType = DevFmtShort;
-        }
-        else if(IsEqualGUID(&wfe->SubFormat, &KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
-            device->FmtType = DevFmtFloat;
-    }
-
     CoTaskMemFree(wfx);
     wfx = NULL;
 
-    SetDefaultWFXChannelOrder(device);
-
-    memset(&OutputType, 0, sizeof(OutputType));
-    OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-
-    switch(device->FmtType)
+    if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
+        device->Frequency = OutputType.Format.nSamplesPerSec;
+    if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
     {
-        case DevFmtByte:
-            device->FmtType = DevFmtUByte;
-            /* fall-through */
-        case DevFmtUByte:
-            OutputType.Format.wBitsPerSample = 8;
-            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-            break;
-        case DevFmtUShort:
-            device->FmtType = DevFmtShort;
-            /* fall-through */
-        case DevFmtShort:
-            OutputType.Format.wBitsPerSample = 16;
-            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-            break;
-        case DevFmtFloat:
-            OutputType.Format.wBitsPerSample = 32;
-            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
-            break;
+        if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
+            device->FmtChans = DevFmtMono;
+        else if(OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO)
+            device->FmtChans = DevFmtStereo;
+        else if(OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD)
+            device->FmtChans = DevFmtQuad;
+        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
+            device->FmtChans = DevFmtX51;
+        else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
+            device->FmtChans = DevFmtX61;
+        else if(OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)
+            device->FmtChans = DevFmtX71;
+        else
+            AL_PRINT("Unhandled channel config: %d -- 0x%08x\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
     }
 
     switch(device->FmtChans)
@@ -337,11 +309,143 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
             OutputType.dwChannelMask = X7DOT1;
             break;
     }
-
-    OutputType.Format.nBlockAlign = OutputType.Format.nChannels*OutputType.Format.wBitsPerSample/8;
+    switch(device->FmtType)
+    {
+        case DevFmtByte:
+            device->FmtType = DevFmtUByte;
+            /* fall-through */
+        case DevFmtUByte:
+            OutputType.Format.wBitsPerSample = 8;
+            OutputType.Samples.wValidBitsPerSample = 8;
+            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+            break;
+        case DevFmtUShort:
+            device->FmtType = DevFmtShort;
+            /* fall-through */
+        case DevFmtShort:
+            OutputType.Format.wBitsPerSample = 16;
+            OutputType.Samples.wValidBitsPerSample = 16;
+            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+            break;
+        case DevFmtFloat:
+            OutputType.Format.wBitsPerSample = 32;
+            OutputType.Samples.wValidBitsPerSample = 32;
+            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+            break;
+    }
     OutputType.Format.nSamplesPerSec = device->Frequency;
-    OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec*OutputType.Format.nBlockAlign;
-    OutputType.Format.cbSize = sizeof(OutputType) - sizeof(OutputType.Format);
+
+    OutputType.Format.nBlockAlign = OutputType.Format.nChannels *
+                                    OutputType.Format.wBitsPerSample / 8;
+    OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
+                                        OutputType.Format.nBlockAlign;
+
+    hr = IAudioClient_IsFormatSupported(data->client, AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
+    if(FAILED(hr))
+        hr = IAudioClient_GetMixFormat(data->client, &wfx);
+    if(FAILED(hr))
+    {
+        AL_PRINT("Failed to find a supported format\n");
+        return ALC_FALSE;
+    }
+
+    if(wfx != NULL)
+    {
+        if(!MakeExtensible(&OutputType, wfx))
+        {
+            CoTaskMemFree(wfx);
+            return ALC_FALSE;
+        }
+        CoTaskMemFree(wfx);
+        wfx = NULL;
+
+        if(device->Frequency != OutputType.Format.nSamplesPerSec)
+        {
+            if((device->Flags&DEVICE_FREQUENCY_REQUEST))
+                AL_PRINT("Failed to set %dhz, got %dhz instead\n", device->Frequency, OutputType.Format.nSamplesPerSec);
+            device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
+            device->Frequency = OutputType.Format.nSamplesPerSec;
+        }
+
+        if(!((device->FmtChans == DevFmtMono && OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO) ||
+             (device->FmtChans == DevFmtStereo && OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO) ||
+             (device->FmtChans == DevFmtQuad && OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD) ||
+             (device->FmtChans == DevFmtX51 && OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1) ||
+             (device->FmtChans == DevFmtX61 && OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1) ||
+             (device->FmtChans == DevFmtX71 && OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)))
+        {
+            if((device->Flags&DEVICE_CHANNELS_REQUEST))
+                AL_PRINT("Failed to set %s, got %d channels (0x%08x) instead\n", DevFmtChannelsString(device->FmtChans), OutputType.Format.nChannels, OutputType.dwChannelMask);
+            device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+
+            if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
+                device->FmtChans = DevFmtMono;
+            else if(OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO)
+                device->FmtChans = DevFmtStereo;
+            else if(OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD)
+                device->FmtChans = DevFmtQuad;
+            else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
+                device->FmtChans = DevFmtX51;
+            else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
+                device->FmtChans = DevFmtX61;
+            else if(OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)
+                device->FmtChans = DevFmtX71;
+            else
+            {
+                AL_PRINT("Unhandled extensible channels: %d -- 0x%08x\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
+                device->FmtChans = DevFmtStereo;
+                OutputType.Format.nChannels = 2;
+                OutputType.dwChannelMask = STEREO;
+            }
+        }
+
+        if(IsEqualGUID(&OutputType.SubFormat, &KSDATAFORMAT_SUBTYPE_PCM))
+        {
+            if(OutputType.Samples.wValidBitsPerSample == 0)
+                OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+            if(OutputType.Samples.wValidBitsPerSample != OutputType.Format.wBitsPerSample ||
+               !((device->FmtType == DevFmtUByte && OutputType.Format.wBitsPerSample == 8) ||
+                 (device->FmtType == DevFmtShort && OutputType.Format.wBitsPerSample == 16)))
+            {
+                AL_PRINT("Failed to set %s, got %d/%d-bit instead\n", DevFmtTypeString(device->FmtType), OutputType.Samples.wValidBitsPerSample, OutputType.Format.wBitsPerSample);
+                if(OutputType.Format.wBitsPerSample == 8)
+                    device->FmtType = DevFmtUByte;
+                else if(OutputType.Format.wBitsPerSample == 16)
+                    device->FmtType = DevFmtShort;
+                else
+                {
+                    device->FmtType = DevFmtShort;
+                    OutputType.Format.wBitsPerSample = 16;
+                }
+                OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+            }
+        }
+        else if(IsEqualGUID(&OutputType.SubFormat, &KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
+        {
+            if(OutputType.Samples.wValidBitsPerSample == 0)
+                OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+            if(OutputType.Samples.wValidBitsPerSample != OutputType.Format.wBitsPerSample ||
+               !((device->FmtType == DevFmtFloat && OutputType.Format.wBitsPerSample == 32)))
+            {
+                AL_PRINT("Failed to set %s, got %d/%d-bit instead\n", DevFmtTypeString(device->FmtType), OutputType.Samples.wValidBitsPerSample, OutputType.Format.wBitsPerSample);
+                if(OutputType.Format.wBitsPerSample != 32)
+                {
+                    device->FmtType = DevFmtFloat;
+                    OutputType.Format.wBitsPerSample = 32;
+                }
+                OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+            }
+        }
+        else
+        {
+            AL_PRINT("Unhandled format sub-type\n");
+            device->FmtType = DevFmtShort;
+            OutputType.Format.wBitsPerSample = 16;
+            OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+        }
+    }
+
+    SetDefaultWFXChannelOrder(device);
 
 
     hr = IAudioClient_Initialize(data->client, AUDCLNT_SHAREMODE_SHARED, 0,
@@ -353,7 +457,6 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         AL_PRINT("Failed to initialize audio client: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
-
 
     hr = IAudioClient_Start(data->client);
     if(FAILED(hr))

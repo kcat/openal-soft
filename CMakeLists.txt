@@ -60,6 +60,8 @@ SET(LIB_MAJOR_VERSION "1")
 SET(LIB_MINOR_VERSION "13")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}")
 
+SET(EXPORT_DECL "")
+
 
 CHECK_TYPE_SIZE("long" SIZEOF_LONG)
 CHECK_TYPE_SIZE("long long" SIZEOF_LONG_LONG)
@@ -144,33 +146,33 @@ ELSE()
 
     CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));
                              int main() {return 0;}" HAVE_GCC_DESTRUCTOR)
+ENDIF()
 
-    # Set visibility options if available
-    IF(NOT WIN32)
-        CHECK_C_COMPILER_FLAG(-fvisibility=internal HAVE_VISIBILITY_SWITCH)
-        IF(HAVE_VISIBILITY_SWITCH)
-            CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"default\")));
-                                     int main() {return 0;}" HAVE_GCC_VISIBILITY)
-            IF(HAVE_GCC_VISIBILITY)
-                ADD_DEFINITIONS(-fvisibility=internal -DHAVE_GCC_VISIBILITY)
-            ENDIF()
+# Set visibility/export options if available
+IF(WIN32)
+    SET(EXPORT_DECL "__declspec(dllexport)")
+
+    OPTION(WINE "Enable use of Wine headers when compiling" ON)
+    IF(WINE)
+        FIND_PATH(WINE_INCLUDE_DIR library.h
+                  PATHS
+                  /usr/include/wine
+                  /usr/local/include/wine)
+        IF(WINE_INCLUDE_DIR)
+            MESSAGE(STATUS "Found Wine header files - ${WINE_INCLUDE_DIR}" )
+            INCLUDE_DIRECTORIES("${WINE_INCLUDE_DIR}/windows")
+            SET(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} "${WINE_INCLUDE_DIR}/windows")
+        ELSE()
+            MESSAGE(STATUS "Could not find Wine header files" )
         ENDIF()
-    ELSE()
-        OPTION(WINE "Enable use of Wine headers when compiling" ON)
-        IF(WINE)
-            FIND_PATH(WINE_INCLUDE_DIR library.h
-                      PATHS
-                      /usr/include/wine
-                      /usr/local/include/wine
-                      PATH_SUFFIXES ".")
-            IF(WINE_INCLUDE_DIR)
-                MESSAGE(STATUS "Found Wine header files - ${WINE_INCLUDE_DIR}" )
-                INCLUDE_DIRECTORIES("${WINE_INCLUDE_DIR}/windows")
-                SET(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} "${WINE_INCLUDE_DIR}/windows")
-            ELSE()
-                MESSAGE(STATUS "Could not find Wine header files" )
-            ENDIF()
-        ENDIF()
+    ENDIF()
+ELSE()
+    CHECK_C_COMPILER_FLAG(-fvisibility=internal HAVE_VISIBILITY_SWITCH)
+    CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"protected\")));
+                             int main() {return 0;}" HAVE_GCC_VISIBILITY)
+    IF(HAVE_VISIBILITY_SWITCH AND HAVE_GCC_VISIBILITY)
+        ADD_DEFINITIONS(-fvisibility=internal)
+        SET(EXPORT_DECL "__attribute__((visibility(\"protected\")))")
     ENDIF()
 ENDIF()
 

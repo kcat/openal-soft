@@ -1,5 +1,6 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+/* API declaration export attribute */
+#define AL_API  ${EXPORT_DECL}
+#define ALC_API ${EXPORT_DECL}
 
 /* Define to the library version */
 #define ALSOFT_VERSION "${LIB_VERSION}"
@@ -105,5 +106,3 @@
 
 /* Define if we have the __restrict keyword */
 #cmakedefine HAVE___RESTRICT
-
-#endif

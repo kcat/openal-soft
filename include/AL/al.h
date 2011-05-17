@@ -5,17 +5,11 @@
 extern "C" {
 #endif
 
-#if defined(AL_LIBTYPE_STATIC)
- #define AL_API
-#elif defined(_WIN32) && !defined(_XBOX)
- #if defined(AL_BUILD_LIBRARY)
-  #define AL_API __declspec(dllexport)
- #else
+#ifndef AL_API
+ #if defined(AL_LIBTYPE_STATIC)
+  #define AL_API
+ #elif defined(_WIN32)
   #define AL_API __declspec(dllimport)
- #endif
-#else
- #if defined(AL_BUILD_LIBRARY) && defined(HAVE_GCC_VISIBILITY)
-  #define AL_API __attribute__((visibility("protected")))
  #else
   #define AL_API extern
  #endif

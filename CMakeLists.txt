@@ -318,13 +318,11 @@ IF(NOT HAVE_STDINT_H)
     ENDIF()
 ENDIF()
 
-IF(WIN32)
-    # Windows needs winmm for timeGetTime, even if the backend is disabled
-    CHECK_SHARED_LIBRARY_EXISTS(winmm timeGetTime 0 "" HAVE_LIBWINMM)
-    IF(HAVE_LIBWINMM)
-        SET(EXTRA_LIBS winmm ${EXTRA_LIBS})
-        SET(PKG_CONFIG_LIBS ${PKG_CONFIG_LIBS} -lwinmm)
-    ENDIF()
+# Windows needs winmm for timeGetTime, even if the backend is disabled
+CHECK_SHARED_LIBRARY_EXISTS(winmm timeGetTime 0 "" HAVE_LIBWINMM)
+IF(HAVE_LIBWINMM)
+    SET(EXTRA_LIBS winmm ${EXTRA_LIBS})
+    SET(PKG_CONFIG_LIBS ${PKG_CONFIG_LIBS} -lwinmm)
 ENDIF()
 
 

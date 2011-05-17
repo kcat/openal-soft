@@ -206,6 +206,7 @@ static void LoadConfigFromFile(FILE *f)
 
 void ReadALConfig(void)
 {
+    const char *str;
     FILE *f;
 
     cfgBlocks = calloc(1, sizeof(ConfigBlock));
@@ -231,9 +232,9 @@ void ReadALConfig(void)
         LoadConfigFromFile(f);
         fclose(f);
     }
-    if(getenv("HOME") && *(getenv("HOME")))
+    if((str=getenv("HOME")) != NULL && *str)
     {
-        snprintf(buffer, sizeof(buffer), "%s/.alsoftrc", getenv("HOME"));
+        snprintf(buffer, sizeof(buffer), "%s/.alsoftrc", str);
         f = fopen(buffer, "r");
         if(f)
         {
@@ -242,9 +243,9 @@ void ReadALConfig(void)
         }
     }
 #endif
-    if(getenv("ALSOFT_CONF"))
+    if((str=getenv("ALSOFT_CONF")) != NULL && *str)
     {
-        f = fopen(getenv("ALSOFT_CONF"), "r");
+        f = fopen(str, "r");
         if(f)
         {
             LoadConfigFromFile(f);

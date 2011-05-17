@@ -118,7 +118,7 @@
 #  followed by all other available backends, while 'oss' will list OSS only).
 #  Backends prepended with - won't be available for use (eg. '-oss,' will allow
 #  all available backends except OSS). An empty list means the default.
-#drivers = pulse,alsa,core,oss,solaris,dsound,winmm,port,null,wave
+#drivers = pulse,alsa,core,oss,solaris,mmdevapi,dsound,winmm,port,null,wave
 
 ## excludefx:
 #  Sets which effects to exclude, preventing apps from using them. This can

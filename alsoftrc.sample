@@ -38,8 +38,8 @@
 ## hrtf:
 #  Enables HRTF filters. These filters provide for better sound spatialization
 #  while using headphones. The filters will only work when output is 44100hz
-#  stereo. While HRTF is active, both cf_level and head_dampen are disabled.
-#  Default is disabled since stereo speaker output quality may suffer.
+#  stereo. While HRTF is active, the cf_level option is disabled. Default is
+#  disabled since stereo speaker output quality may suffer.
 #hrtf = false
 
 ## cf_level:
@@ -101,15 +101,6 @@
 #  sounds to only play in front. This only has an effect when a suitable output
 #  format is used (ie. those that contain side and/or rear speakers).
 #stereodup = true
-
-## scalemix:
-#  Sets whether to scale the remixed output. When the final mix is written to
-#  the device, the multi-channel data is remixed so pure-virtual channels (eg.
-#  front-center on stereo output) are remixed and added to available channels
-#  (eg. front-left and front-right). Scaling helps ensure that no single source
-#  will put out more than 100% on a given physical channel. This can cause a
-#  noticeable reduction in overall volume, however, so it is off by default.
-#scalemix = false
 
 ## drivers:
 #  Sets the backend driver list order, comma-seperated. Unknown backends and
@@ -200,6 +191,11 @@
 ## device:
 #  Sets the device name for Solaris output.
 #device = /dev/audio
+
+##
+## MMDevApi backend stuff
+##
+[mmdevapi]
 
 ##
 ## DirectSound backend stuff

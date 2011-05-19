@@ -245,6 +245,8 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     MMDevApiData *data = device->ExtraData;
     WAVEFORMATEXTENSIBLE OutputType;
     WAVEFORMATEX *wfx = NULL;
+    REFERENCE_TIME def_per;
+    UINT32 buffer_len;
     HRESULT hr;
 
     hr = IAudioClient_GetMixFormat(data->client, &wfx);
@@ -458,10 +460,28 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         return ALC_FALSE;
     }
 
+    hr = IAudioClient_GetDevicePeriod(data->client, &def_per, NULL);
+    if(SUCCEEDED(hr))
+        hr = IAudioClient_GetBufferSize(data->client, &buffer_len);
+    if(FAILED(hr))
+    {
+        AL_PRINT("Failed to get audio buffer info: 0x%08lx\n", hr);
+        return ALC_FALSE;
+    }
+
+    device->NumUpdates = (ALuint)((REFERENCE_TIME)buffer_len * 10000000 /
+                                  device->Frequency / def_per);
+    if(device->NumUpdates <= 1)
+    {
+        device->NumUpdates = 1;
+        AL_PRINT("Audio client returned default_period > buffer_len/2; expect break up\n");
+    }
+    device->UpdateSize = buffer_len / device->NumUpdates;
+
     hr = IAudioClient_Start(data->client);
     if(FAILED(hr))
     {
-        AL_PRINT("Failed to start audio client\n");
+        AL_PRINT("Failed to start audio client: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 

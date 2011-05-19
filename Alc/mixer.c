@@ -111,7 +111,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
         if(LIKELY(OutPos == 0))                                               \
         {                                                                     \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
-            value = lpFilter2PC(DryFilter, i*2, value);                       \
+            value = lpFilter2PC(DryFilter, i, value);                         \
                                                                               \
             HrtfHistory[i][HrtfOffset&HRTF_LENGTH_MASK] = value;              \
             for(c = 0;c < HRTF_LENGTH;c++)                                    \
@@ -127,7 +127,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
         for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
         {                                                                     \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
-            value = lpFilter2P(DryFilter, i*2, value);                        \
+            value = lpFilter2P(DryFilter, i, value);                          \
                                                                               \
             HrtfHistory[i][HrtfOffset&HRTF_LENGTH_MASK] = value;              \
             for(c = 0;c < HRTF_LENGTH;c++)                                    \
@@ -149,7 +149,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
         if(LIKELY(OutPos == SamplesToDo))                                     \
         {                                                                     \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
-            value = lpFilter2PC(DryFilter, i*2, value);                       \
+            value = lpFilter2PC(DryFilter, i, value);                         \
                                                                               \
             HrtfHistory[i][HrtfOffset&HRTF_LENGTH_MASK] = value;              \
             for(c = 0;c < HRTF_LENGTH;c++)                                    \
@@ -278,7 +278,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
         {                                                                     \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
                                                                               \
-            value = lpFilter2PC(DryFilter, i*2, value);                       \
+            value = lpFilter2PC(DryFilter, i, value);                         \
             for(c = 0;c < MAXCHANNELS;c++)                                    \
                 ClickRemoval[c] -= value*DrySend[i][c];                       \
         }                                                                     \
@@ -286,7 +286,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
         {                                                                     \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
                                                                               \
-            value = lpFilter2P(DryFilter, i*2, value);                        \
+            value = lpFilter2P(DryFilter, i, value);                          \
             for(c = 0;c < MAXCHANNELS;c++)                                    \
                 DryBuffer[OutPos][c] += value*DrySend[i][c];                  \
                                                                               \
@@ -299,7 +299,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
         {                                                                     \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
                                                                               \
-            value = lpFilter2PC(DryFilter, i*2, value);                       \
+            value = lpFilter2PC(DryFilter, i, value);                         \
             for(c = 0;c < MAXCHANNELS;c++)                                    \
                 PendingClicks[c] += value*DrySend[i][c];                      \
         }                                                                     \

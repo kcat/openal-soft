@@ -446,21 +446,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     Looping       = Source->bLooping;
     increment     = Source->Params.Step;
     Resampler     = Source->Resampler;
-
-    /* Get buffer info */
-    FrameSize = 0;
-    BufferListItem = Source->queue;
-    for(i = 0;i < Source->BuffersInQueue;i++)
-    {
-        const ALbuffer *ALBuffer;
-        if((ALBuffer=BufferListItem->buffer) != NULL)
-        {
-            FrameSize = FrameSizeFromFmt(ALBuffer->FmtChannels,
-                                         ALBuffer->FmtType);
-            break;
-        }
-        BufferListItem = BufferListItem->next;
-    }
+    FrameSize     = Source->NumChannels * Source->SampleSize;
 
     /* Get current buffer queue item */
     BufferListItem = Source->queue;

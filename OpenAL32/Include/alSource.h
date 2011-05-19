@@ -87,6 +87,7 @@ typedef struct ALsource
     ALint  lSourceType;
 
     ALuint NumChannels;
+    ALuint SampleSize;
 
     /* HRTF info */
     ALfloat HrtfHistory[MAXCHANNELS][HRTF_LENGTH];

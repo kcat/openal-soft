@@ -567,6 +567,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             Source->BuffersInQueue = 1;
 
                             Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
+                            Source->SampleSize  = BytesFromFmt(buffer->FmtType);
                             if(buffer->FmtChannels == FmtMono)
                                 Source->Update = CalcSourceParams;
                             else
@@ -1613,6 +1614,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
             BufferFmt = buffer;
 
             Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
+            Source->SampleSize  = BytesFromFmt(buffer->FmtType);
             if(buffer->FmtChannels == FmtMono)
                 Source->Update = CalcSourceParams;
             else

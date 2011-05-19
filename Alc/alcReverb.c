@@ -635,7 +635,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     for(index = 0;index < Device->NumChan;index++)
     {
         Channel chan = Device->Speaker2Chan[index];
-        State->Early.PanGain[chan] = 1.0 + (speakerGain[chan]-1.0)*dirGain;
+        State->Early.PanGain[chan] = lerp(1.0, speakerGain[chan], dirGain);
     }
 
 
@@ -648,7 +648,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     for(index = 0;index < Device->NumChan;index++)
     {
         Channel chan = Device->Speaker2Chan[index];
-        State->Late.PanGain[chan] = 1.0 + (speakerGain[chan]-1.0)*dirGain;
+        State->Late.PanGain[chan] = lerp(1.0, speakerGain[chan], dirGain);
     }
 }
 

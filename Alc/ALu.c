@@ -423,7 +423,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         if(ALSource->Send[i].Slot &&
            (ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB ||
             ALSource->Send[i].Slot->effect.type == AL_EFFECT_EAXREVERB))
-            RoomRolloff[i] += ALSource->Send[i].Slot->effect.Reverb.RoomRolloffFactor;
+            RoomRolloff[i] += ALSource->Send[i].Slot->effect.Params.Reverb.RoomRolloffFactor;
     }
 
     switch(ALContext->SourceDistanceModel ? ALSource->DistanceModel :
@@ -570,10 +570,10 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                  */
                 WetGain[i] *= aluPow(10.0f, EffectiveDist /
                                             (SPEEDOFSOUNDMETRESPERSEC *
-                                             Slot->effect.Reverb.DecayTime) *
+                                             Slot->effect.Params.Reverb.DecayTime) *
                                             (-60.0/20.0));
 
-                WetGainHF[i] *= aluPow(Slot->effect.Reverb.AirAbsorptionGainHF,
+                WetGainHF[i] *= aluPow(Slot->effect.Params.Reverb.AirAbsorptionGainHF,
                                        AirAbsorptionFactor * EffectiveDist);
             }
         }

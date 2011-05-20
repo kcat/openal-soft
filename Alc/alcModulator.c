@@ -108,19 +108,20 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
     ALmodulatorState *state = (ALmodulatorState*)effect;
     ALfloat cw, a = 0.0f;
 
-    if(Effect->Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
+    if(Effect->Params.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
         state->Waveform = SINUSOID;
-    else if(Effect->Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
+    else if(Effect->Params.Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
         state->Waveform = SAWTOOTH;
-    else if(Effect->Modulator.Waveform == AL_RING_MODULATOR_SQUARE)
+    else if(Effect->Params.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)
         state->Waveform = SQUARE;
 
-    state->step = Effect->Modulator.Frequency*(1<<WAVEFORM_FRACBITS) /
+    state->step = Effect->Params.Modulator.Frequency*(1<<WAVEFORM_FRACBITS) /
                   Context->Device->Frequency;
     if(!state->step)
         state->step = 1;
 
-    cw = cos(2.0*M_PI * Effect->Modulator.HighPassCutoff / Context->Device->Frequency);
+    cw = cos(2.0*M_PI * Effect->Params.Modulator.HighPassCutoff /
+                        Context->Device->Frequency);
     a = (2.0f-cw) - aluSqrt(aluPow(2.0f-cw, 2.0f) - 1.0f);
     state->iirFilter.coeff = a;
 }

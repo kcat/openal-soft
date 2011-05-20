@@ -669,7 +669,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         const ALshort *hrtf_left, *hrtf_right;
 
-        GetHrtfCoeffs(atan2(Position[1], -Position[2]*ZScale) * (180.0/M_PI),
+        GetHrtfCoeffs(asin(Position[1]) * (180.0/M_PI),
                       atan2(Position[0], -Position[2]*ZScale) * (180.0/M_PI),
                       &hrtf_left, &hrtf_right);
         for(i = 0;i < HRTF_LENGTH;i++)

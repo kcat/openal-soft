@@ -53,14 +53,14 @@ static void get_angle_coeffs(const HrtfFilterCoeffs *elev, ALfloat angle, const 
     }
 }
 
-void GetHrtfCoeffs(ALfloat azimuth, ALfloat angle, const ALshort **left, const ALshort **right)
+void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const ALshort **right)
 {
     int idx;
 
-    if(azimuth > 90.f) azimuth = 90.f - (azimuth - 90.f);
-    else if(azimuth < -90.f) azimuth = -90.f - (azimuth - -90.f);
+    if(elevation > 90.f) elevation = 90.f - (elevation - 90.f);
+    else if(elevation < -90.f) elevation = -90.f - (elevation - -90.f);
 
-    idx = (int)(azimuth/10.0 + 0.5);
+    idx = (int)(elevation/10.0 + 0.5);
     if(idx >= 9) return get_angle_coeffs(&Elev90, angle, left, right);
     if(idx >= 8) return get_angle_coeffs(&Elev80, angle, left, right);
     if(idx >= 7) return get_angle_coeffs(&Elev70, angle, left, right);

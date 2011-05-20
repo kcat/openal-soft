@@ -372,7 +372,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue
 
             case AL_EAXREVERB_GAINHF:
                 if(flValue >= AL_EAXREVERB_MIN_GAINHF &&
-                   flValue <= AL_EAXREVERB_MAX_GAIN)
+                   flValue <= AL_EAXREVERB_MAX_GAINHF)
                     ALEffect->Reverb.GainHF = flValue;
                 else
                     alSetError(Context, AL_INVALID_VALUE);

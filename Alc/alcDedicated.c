@@ -58,7 +58,7 @@ static ALvoid DedicatedDLGUpdate(ALeffectState *effect, ALCcontext *Context, con
     ALint pos;
     ALsizei s;
 
-    pos = aluCart2LUTpos(-1.0f, 0.0f);
+    pos = aluCart2LUTpos(1.0f, 0.0f);
     SpeakerGain = &device->PanningLUT[MAXCHANNELS * pos];
 
     for(s = 0;s < MAXCHANNELS;s++)

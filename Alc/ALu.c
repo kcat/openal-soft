@@ -656,18 +656,18 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     // Use energy-preserving panning algorithm for multi-speaker playback
-    length = __max(OrigDist, MinDist);
-    if(length > 0.0f)
-    {
-        ALfloat invlen = 1.0f/length;
-        Position[0] *= invlen;
-        Position[1] *= invlen;
-        Position[2] *= invlen;
-    }
-
     if((Device->Flags&DEVICE_USE_HRTF))
     {
         const ALshort *hrtf_left, *hrtf_right;
+
+        length = OrigDist;
+        if(length > 0.0f)
+        {
+            ALfloat invlen = 1.0f/length;
+            Position[0] *= invlen;
+            Position[1] *= invlen;
+            Position[2] *= invlen;
+        }
 
         GetHrtfCoeffs(asin(Position[1]) * (180.0/M_PI),
                       atan2(Position[0], -Position[2]*ZScale) * (180.0/M_PI),
@@ -682,6 +682,15 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
+        length = __max(OrigDist, MinDist);
+        if(length > 0.0f)
+        {
+            ALfloat invlen = 1.0f/length;
+            Position[0] *= invlen;
+            Position[1] *= invlen;
+            Position[2] *= invlen;
+        }
+
         pos = aluCart2LUTpos(-Position[2]*ZScale, Position[0]);
         SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
 

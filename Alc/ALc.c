@@ -112,12 +112,6 @@ static BackendInfo BackendLoopback = {
 #undef EmptyFuncs
 
 ///////////////////////////////////////////////////////
-
-#define ALC_EFX_MAJOR_VERSION                              0x20001
-#define ALC_EFX_MINOR_VERSION                              0x20002
-#define ALC_MAX_AUXILIARY_SENDS                            0x20003
-
-///////////////////////////////////////////////////////
 // STRING and EXTENSIONS
 
 typedef struct ALCfunction {

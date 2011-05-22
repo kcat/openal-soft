@@ -86,6 +86,12 @@
 /* Define if we have pthread_np.h */
 #cmakedefine HAVE_PTHREAD_NP_H
 
+/* Define if we have guiddef.h */
+#cmakedefine HAVE_GUIDDEF_H
+
+/* Define if we have guiddef.h */
+#cmakedefine HAVE_INITGUID_H
+
 /* Define if we have float.h */
 #cmakedefine HAVE_FLOAT_H
 
@@ -106,6 +112,3 @@
 
 /* Define if we have the __restrict keyword */
 #cmakedefine HAVE___RESTRICT
-
-/* Define if we have libuuid */
-#cmakedefine HAVE_LIBUUID

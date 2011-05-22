@@ -59,7 +59,7 @@ static ALvoid DedicatedDLGUpdate(ALeffectState *effect, ALCcontext *Context, con
     ALsizei s;
 
     pos = aluCart2LUTpos(1.0f, 0.0f);
-    SpeakerGain = &device->PanningLUT[MAXCHANNELS * pos];
+    SpeakerGain = device->PanningLUT[pos];
 
     for(s = 0;s < MAXCHANNELS;s++)
         state->gains[s] = SpeakerGain[s] * Effect->Params.Dedicated.Gain;

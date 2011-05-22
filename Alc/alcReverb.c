@@ -627,7 +627,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
      * panning direction.
      */
     pos = aluCart2LUTpos(earlyPan[2], earlyPan[0]);
-    speakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+    speakerGain = Device->PanningLUT[pos];
     dirGain = aluSqrt((earlyPan[0] * earlyPan[0]) + (earlyPan[2] * earlyPan[2]));
 
     for(index = 0;index < MAXCHANNELS;index++)
@@ -640,7 +640,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 
 
     pos = aluCart2LUTpos(latePan[2], latePan[0]);
-    speakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+    speakerGain = Device->PanningLUT[pos];
     dirGain = aluSqrt((latePan[0] * latePan[0]) + (latePan[2] * latePan[2]));
 
     for(index = 0;index < MAXCHANNELS;index++)

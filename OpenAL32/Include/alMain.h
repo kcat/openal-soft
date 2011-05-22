@@ -489,7 +489,7 @@ struct ALCdevice_struct
     ALuint DevChannels[MAXCHANNELS];
 
     Channel Speaker2Chan[MAXCHANNELS];
-    ALfloat PanningLUT[MAXCHANNELS * LUT_NUM];
+    ALfloat PanningLUT[LUT_NUM][MAXCHANNELS];
     ALuint  NumChan;
 
     ALfloat ClickRemoval[MAXCHANNELS];

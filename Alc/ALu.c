@@ -188,7 +188,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             {
                 pos = aluCart2LUTpos(cos(angles_StereoDup[c] * (M_PI/180.0)),
                                      sin(angles_StereoDup[c] * (M_PI/180.0)));
-                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+                SpeakerGain = Device->PanningLUT[pos];
 
                 for(i = 0;i < (ALint)Device->NumChan;i++)
                 {
@@ -266,7 +266,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 }
                 pos = aluCart2LUTpos(cos(angles[c] * (M_PI/180.0)),
                                      sin(angles[c] * (M_PI/180.0)));
-                SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+                SpeakerGain = Device->PanningLUT[pos];
 
                 for(i = 0;i < (ALint)Device->NumChan;i++)
                 {
@@ -692,7 +692,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
 
         pos = aluCart2LUTpos(-Position[2]*ZScale, Position[0]);
-        SpeakerGain = &Device->PanningLUT[MAXCHANNELS * pos];
+        SpeakerGain = Device->PanningLUT[pos];
 
         DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
         // elevation adjustment for directional gain. this sucks, but

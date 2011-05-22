@@ -338,6 +338,12 @@ IF(HAVE_LIBWINMM)
 ENDIF()
 
 
+CHECK_LIBRARY_EXISTS(uuid CLSID_MMDeviceEnumerator "" HAVE_LIBUUID)
+IF(HAVE_LIBUUID)
+    SET(EXTRA_LIBS uuid ${EXTRA_LIBS})
+ENDIF()
+
+
 SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
                  OpenAL32/alBuffer.c
                  OpenAL32/alDatabuffer.c

@@ -106,3 +106,6 @@
 
 /* Define if we have the __restrict keyword */
 #cmakedefine HAVE___RESTRICT
+
+/* Define if we have libuuid */
+#cmakedefine HAVE_LIBUUID

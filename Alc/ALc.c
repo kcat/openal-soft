@@ -20,6 +20,7 @@
 
 #include "config.h"
 
+#ifndef HAVE_LIBUUID
 #ifdef HAVE_MMDEVAPI
 #define INITGUID
 #include <mmdeviceapi.h>
@@ -40,6 +41,7 @@
 #ifndef _WAVEFORMATEXTENSIBLE_
 #include <ks.h>
 #include <ksmedia.h>
+#endif
 #endif
 #endif
 

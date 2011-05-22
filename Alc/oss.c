@@ -476,7 +476,7 @@ static ALCuint oss_available_samples(ALCdevice *pDevice)
 }
 
 
-BackendFuncs oss_funcs = {
+static const BackendFuncs oss_funcs = {
     oss_open_playback,
     oss_close_playback,
     oss_reset_playback,

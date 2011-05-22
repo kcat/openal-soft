@@ -151,7 +151,7 @@ static ALCboolean null_open_capture(ALCdevice *device, const ALCchar *deviceName
 }
 
 
-BackendFuncs null_funcs = {
+static const BackendFuncs null_funcs = {
     null_open_playback,
     null_close_playback,
     null_reset_playback,

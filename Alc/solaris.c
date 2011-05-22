@@ -273,7 +273,7 @@ static ALCuint solaris_available_samples(ALCdevice *pDevice)
 }
 
 
-BackendFuncs solaris_funcs = {
+static const BackendFuncs solaris_funcs = {
     solaris_open_playback,
     solaris_close_playback,
     solaris_reset_playback,

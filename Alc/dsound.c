@@ -73,7 +73,7 @@ static DevMap *DeviceList;
 static ALuint NumDevices;
 
 
-void *DSoundLoad(void)
+static void *DSoundLoad(void)
 {
     if(!ds_handle)
     {
@@ -538,7 +538,7 @@ static ALCuint DSoundAvailableSamples(ALCdevice *pDevice)
 }
 
 
-BackendFuncs DSoundFuncs = {
+static const BackendFuncs DSoundFuncs = {
     DSoundOpenPlayback,
     DSoundClosePlayback,
     DSoundResetPlayback,

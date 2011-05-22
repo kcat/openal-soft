@@ -321,7 +321,7 @@ static ALCboolean wave_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
 }
 
 
-BackendFuncs wave_funcs = {
+static const BackendFuncs wave_funcs = {
     wave_open_playback,
     wave_close_playback,
     wave_reset_playback,

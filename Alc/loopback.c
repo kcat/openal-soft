@@ -48,7 +48,7 @@ static void loopback_stop_playback(ALCdevice *device)
     (void)device;
 }
 
-static BackendFuncs loopback_funcs = {
+static const BackendFuncs loopback_funcs = {
     loopback_open_playback,
     loopback_close_playback,
     loopback_reset_playback,

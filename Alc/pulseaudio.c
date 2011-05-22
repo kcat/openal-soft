@@ -1240,7 +1240,7 @@ static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint sa
 } //}}}
 
 
-BackendFuncs pulse_funcs = { //{{{
+static const BackendFuncs pulse_funcs = { //{{{
     pulse_open_playback,
     pulse_close_playback,
     pulse_reset_playback,

@@ -729,7 +729,7 @@ static void WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lS
 }
 
 
-static BackendFuncs WinMMFuncs = {
+static const BackendFuncs WinMMFuncs = {
     WinMMOpenPlayback,
     WinMMClosePlayback,
     WinMMResetPlayback,

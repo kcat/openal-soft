@@ -988,7 +988,7 @@ static void alsa_capture_samples(ALCdevice *Device, ALCvoid *Buffer, ALCuint Sam
 }
 
 
-BackendFuncs alsa_funcs = {
+static const BackendFuncs alsa_funcs = {
     alsa_open_playback,
     alsa_close_playback,
     alsa_reset_playback,

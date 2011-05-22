@@ -660,10 +660,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         const ALshort *hrtf_left, *hrtf_right;
 
-        length = OrigDist;
-        if(length > 0.0f)
+        if(OrigDist > 0.0f)
         {
-            ALfloat invlen = 1.0f/length;
+            ALfloat invlen = 1.0f/OrigDist;
             Position[0] *= invlen;
             Position[1] *= invlen;
             Position[2] *= invlen;
@@ -674,10 +673,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                       &hrtf_left, &hrtf_right);
         for(i = 0;i < HRTF_LENGTH;i++)
         {
-            ALSource->Params.HrtfCoeffs[0][i][0] = hrtf_left[i]*(1.0/32767.0)*
-                                                   DryGain;
-            ALSource->Params.HrtfCoeffs[0][i][1] = hrtf_right[i]*(1.0/32767.0)*
-                                                   DryGain;
+            ALSource->Params.HrtfCoeffs[0][i][0] = hrtf_left[i]*(1.0/32767.0) * DryGain;
+            ALSource->Params.HrtfCoeffs[0][i][1] = hrtf_right[i]*(1.0/32767.0) * DryGain;
         }
     }
     else

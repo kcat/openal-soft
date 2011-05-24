@@ -865,7 +865,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     {
     case DevFmtMono: return "Mono";
     case DevFmtStereo: return "Stereo";
-    case DevFmtQuad: return "Quad";
+    case DevFmtQuad: return "Quadraphonic";
     case DevFmtX51: return "5.1 Surround";
     case DevFmtX61: return "6.1 Surround";
     case DevFmtX71: return "7.1 Surround";

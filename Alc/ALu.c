@@ -242,8 +242,16 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             {
                 const ALshort *hrtf_left, *hrtf_right;
 
-                if(c == lfe_chan) /* Skip LFE */
+                if(c == lfe_chan)
+                {
+                    /* Skip LFE */
+                    for(i = 0;i < HRTF_LENGTH;i++)
+                    {
+                        ALSource->Params.HrtfCoeffs[c][i][0] = 0.0f;
+                        ALSource->Params.HrtfCoeffs[c][i][1] = 0.0f;
+                    }
                     continue;
+                }
 
                 GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
                 for(i = 0;i < HRTF_LENGTH;i++)

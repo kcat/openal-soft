@@ -217,6 +217,21 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SetSpeakerArrangement("layout_51CHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
 
+        case DevFmtX51Side:
+            Device->NumChan = 5;
+            Speaker2Chan[0] = SIDE_LEFT;
+            Speaker2Chan[1] = FRONT_LEFT;
+            Speaker2Chan[2] = FRONT_CENTER;
+            Speaker2Chan[3] = FRONT_RIGHT;
+            Speaker2Chan[4] = SIDE_RIGHT;
+            SpeakerAngle[0] = -90.0f * M_PI/180.0f;
+            SpeakerAngle[1] = -30.0f * M_PI/180.0f;
+            SpeakerAngle[2] =   0.0f * M_PI/180.0f;
+            SpeakerAngle[3] =  30.0f * M_PI/180.0f;
+            SpeakerAngle[4] =  90.0f * M_PI/180.0f;
+            SetSpeakerArrangement("layout_51SIDECHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            break;
+
         case DevFmtX61:
             Device->NumChan = 6;
             Speaker2Chan[0] = SIDE_LEFT;

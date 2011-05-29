@@ -867,6 +867,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     case DevFmtStereo: return "Stereo";
     case DevFmtQuad: return "Quadraphonic";
     case DevFmtX51: return "5.1 Surround";
+    case DevFmtX51Side: return "5.1 Side";
     case DevFmtX61: return "6.1 Surround";
     case DevFmtX71: return "7.1 Surround";
     }
@@ -893,6 +894,7 @@ ALuint ChannelsFromDevFmt(enum DevFmtChannels chans)
     case DevFmtStereo: return 2;
     case DevFmtQuad: return 4;
     case DevFmtX51: return 6;
+    case DevFmtX51Side: return 6;
     case DevFmtX61: return 7;
     case DevFmtX71: return 8;
     }
@@ -1233,6 +1235,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             break;
         case DevFmtQuad:
         case DevFmtX51:
+        case DevFmtX51Side:
         case DevFmtX61:
         case DevFmtX71:
             if(GetConfigValueBool(NULL, "stereodup", AL_TRUE))
@@ -2234,6 +2237,13 @@ void SetDefaultChannelOrder(ALCdevice *device)
                     device->DevChannels[FRONT_CENTER] = 4;
                     device->DevChannels[LFE]          = 5; break;
 
+    case DevFmtX51Side: device->DevChannels[FRONT_LEFT]   = 0;
+                        device->DevChannels[FRONT_RIGHT]  = 1;
+                        device->DevChannels[FRONT_CENTER] = 2;
+                        device->DevChannels[LFE]          = 3;
+                        device->DevChannels[SIDE_LEFT]    = 4;
+                        device->DevChannels[SIDE_RIGHT]   = 5; break;
+
     case DevFmtX61: device->DevChannels[FRONT_LEFT]   = 0;
                     device->DevChannels[FRONT_RIGHT]  = 1;
                     device->DevChannels[FRONT_CENTER] = 2;
@@ -2273,6 +2283,13 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
                     device->DevChannels[LFE]          = 3;
                     device->DevChannels[BACK_LEFT]    = 4;
                     device->DevChannels[BACK_RIGHT]   = 5; break;
+
+    case DevFmtX51Side: device->DevChannels[FRONT_LEFT]   = 0;
+                        device->DevChannels[FRONT_RIGHT]  = 1;
+                        device->DevChannels[FRONT_CENTER] = 2;
+                        device->DevChannels[LFE]          = 3;
+                        device->DevChannels[SIDE_LEFT]    = 4;
+                        device->DevChannels[SIDE_RIGHT]   = 5; break;
 
     case DevFmtX61: device->DevChannels[FRONT_LEFT]   = 0;
                     device->DevChannels[FRONT_RIGHT]  = 1;

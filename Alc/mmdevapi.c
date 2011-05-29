@@ -47,6 +47,7 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 #define STEREO (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT)
 #define QUAD (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT)
 #define X5DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT)
+#define X5DOT1SIDE (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X6DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_CENTER|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 
@@ -276,6 +277,8 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
             device->FmtChans = DevFmtQuad;
         else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
             device->FmtChans = DevFmtX51;
+        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1SIDE)
+            device->FmtChans = DevFmtX51Side;
         else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
             device->FmtChans = DevFmtX61;
         else if(OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)
@@ -301,6 +304,10 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         case DevFmtX51:
             OutputType.Format.nChannels = 6;
             OutputType.dwChannelMask = X5DOT1;
+            break;
+        case DevFmtX51Side:
+            OutputType.Format.nChannels = 6;
+            OutputType.dwChannelMask = X5DOT1SIDE;
             break;
         case DevFmtX61:
             OutputType.Format.nChannels = 7;
@@ -373,6 +380,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
              (device->FmtChans == DevFmtStereo && OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO) ||
              (device->FmtChans == DevFmtQuad && OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD) ||
              (device->FmtChans == DevFmtX51 && OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1) ||
+             (device->FmtChans == DevFmtX51Side && OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1SIDE) ||
              (device->FmtChans == DevFmtX61 && OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1) ||
              (device->FmtChans == DevFmtX71 && OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)))
         {
@@ -388,6 +396,8 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
                 device->FmtChans = DevFmtQuad;
             else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
                 device->FmtChans = DevFmtX51;
+            else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1SIDE)
+                device->FmtChans = DevFmtX51Side;
             else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
                 device->FmtChans = DevFmtX61;
             else if(OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)

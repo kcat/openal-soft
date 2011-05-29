@@ -394,6 +394,8 @@ static void sink_info_callback(pa_context *context, const pa_sink_info *info, in
           DevFmtX61 },
         { "front-left,front-right,front-center,lfe,rear-left,rear-right",
           DevFmtX51 },
+        { "front-left,front-right,front-center,lfe,side-left,side-right",
+          DevFmtX51Side },
         { "front-left,front-right,rear-left,rear-right", DevFmtQuad },
         { "front-left,front-right", DevFmtStereo },
         { "mono", DevFmtMono },

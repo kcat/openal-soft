@@ -419,7 +419,10 @@ enum DevFmtChannels {
     DevFmtQuad   = AL_QUAD,
     DevFmtX51    = AL_5POINT1,
     DevFmtX61    = AL_6POINT1,
-    DevFmtX71    = AL_7POINT1
+    DevFmtX71    = AL_7POINT1,
+
+    /* Similar to 5.1, except using the side channels instead of back */
+    DevFmtX51Side = 0x80000000 | AL_5POINT1
 };
 
 ALuint BytesFromDevFmt(enum DevFmtType type);

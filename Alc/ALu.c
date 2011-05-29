@@ -763,6 +763,9 @@ static const Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
 static const Channel X51Chans[] = { FRONT_LEFT, FRONT_RIGHT,
                                     FRONT_CENTER, LFE,
                                     BACK_LEFT, BACK_RIGHT };
+static const Channel X51SideChans[] = { FRONT_LEFT, FRONT_RIGHT,
+                                        FRONT_CENTER, LFE,
+                                        SIDE_LEFT, SIDE_RIGHT };
 static const Channel X61Chans[] = { FRONT_LEFT, FRONT_LEFT,
                                     FRONT_CENTER, LFE, BACK_CENTER,
                                     SIDE_LEFT, SIDE_RIGHT };
@@ -790,30 +793,35 @@ static void Write_##T##_##chans(ALCdevice *device, T *RESTRICT buffer,        \
 DECL_TEMPLATE(ALfloat, MonoChans,1, aluF2F)
 DECL_TEMPLATE(ALfloat, QuadChans,4, aluF2F)
 DECL_TEMPLATE(ALfloat, X51Chans,6, aluF2F)
+DECL_TEMPLATE(ALfloat, X51SideChans,6, aluF2F)
 DECL_TEMPLATE(ALfloat, X61Chans,7, aluF2F)
 DECL_TEMPLATE(ALfloat, X71Chans,8, aluF2F)
 
 DECL_TEMPLATE(ALushort, MonoChans,1, aluF2US)
 DECL_TEMPLATE(ALushort, QuadChans,4, aluF2US)
 DECL_TEMPLATE(ALushort, X51Chans,6, aluF2US)
+DECL_TEMPLATE(ALushort, X51SideChans,6, aluF2US)
 DECL_TEMPLATE(ALushort, X61Chans,7, aluF2US)
 DECL_TEMPLATE(ALushort, X71Chans,8, aluF2US)
 
 DECL_TEMPLATE(ALshort, MonoChans,1, aluF2S)
 DECL_TEMPLATE(ALshort, QuadChans,4, aluF2S)
 DECL_TEMPLATE(ALshort, X51Chans,6, aluF2S)
+DECL_TEMPLATE(ALshort, X51SideChans,6, aluF2S)
 DECL_TEMPLATE(ALshort, X61Chans,7, aluF2S)
 DECL_TEMPLATE(ALshort, X71Chans,8, aluF2S)
 
 DECL_TEMPLATE(ALubyte, MonoChans,1, aluF2UB)
 DECL_TEMPLATE(ALubyte, QuadChans,4, aluF2UB)
 DECL_TEMPLATE(ALubyte, X51Chans,6, aluF2UB)
+DECL_TEMPLATE(ALubyte, X51SideChans,6, aluF2UB)
 DECL_TEMPLATE(ALubyte, X61Chans,7, aluF2UB)
 DECL_TEMPLATE(ALubyte, X71Chans,8, aluF2UB)
 
 DECL_TEMPLATE(ALbyte, MonoChans,1, aluF2B)
 DECL_TEMPLATE(ALbyte, QuadChans,4, aluF2B)
 DECL_TEMPLATE(ALbyte, X51Chans,6, aluF2B)
+DECL_TEMPLATE(ALbyte, X51SideChans,6, aluF2B)
 DECL_TEMPLATE(ALbyte, X61Chans,7, aluF2B)
 DECL_TEMPLATE(ALbyte, X71Chans,8, aluF2B)
 
@@ -875,6 +883,9 @@ static void Write_##T(ALCdevice *device, T *buffer, ALuint SamplesToDo)       \
             break;                                                            \
         case DevFmtX51:                                                       \
             Write_##T##_X51Chans(device, buffer, SamplesToDo);                \
+            break;                                                            \
+        case DevFmtX51Side:                                                   \
+            Write_##T##_X51SideChans(device, buffer, SamplesToDo);            \
             break;                                                            \
         case DevFmtX61:                                                       \
             Write_##T##_X61Chans(device, buffer, SamplesToDo);                \

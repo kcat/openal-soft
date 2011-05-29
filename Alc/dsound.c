@@ -395,6 +395,14 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
                                            SPEAKER_BACK_LEFT |
                                            SPEAKER_BACK_RIGHT;
                 break;
+            case DevFmtX51Side:
+                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                           SPEAKER_FRONT_RIGHT |
+                                           SPEAKER_FRONT_CENTER |
+                                           SPEAKER_LOW_FREQUENCY |
+                                           SPEAKER_SIDE_LEFT |
+                                           SPEAKER_SIDE_RIGHT;
+                break;
             case DevFmtX61:
                 OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                            SPEAKER_FRONT_RIGHT |

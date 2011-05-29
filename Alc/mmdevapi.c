@@ -454,6 +454,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
             device->FmtType = DevFmtShort;
             OutputType.Format.wBitsPerSample = 16;
             OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
         }
     }
 

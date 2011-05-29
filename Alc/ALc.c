@@ -1027,13 +1027,9 @@ static ALCboolean IsDevice(ALCdevice *pDevice)
 {
     ALCdevice *pTempDevice;
 
-    SuspendContext(NULL);
-
     pTempDevice = g_pDeviceList;
     while(pTempDevice && pTempDevice != pDevice)
         pTempDevice = pTempDevice->next;
-
-    ProcessContext(NULL);
 
     return (pTempDevice ? ALC_TRUE : ALC_FALSE);
 }
@@ -1047,13 +1043,9 @@ static ALCboolean IsContext(ALCcontext *pContext)
 {
     ALCcontext *pTempContext;
 
-    SuspendContext(NULL);
-
     pTempContext = g_pContextList;
     while (pTempContext && pTempContext != pContext)
         pTempContext = pTempContext->next;
-
-    ProcessContext(NULL);
 
     return (pTempContext ? ALC_TRUE : ALC_FALSE);
 }
@@ -1066,10 +1058,12 @@ static ALCboolean IsContext(ALCcontext *pContext)
 */
 ALCvoid alcSetError(ALCdevice *device, ALenum errorCode)
 {
+    SuspendContext(NULL);
     if(IsDevice(device))
         device->LastError = errorCode;
     else
         g_eLastNullDeviceError = errorCode;
+    ProcessContext(NULL);
 }
 
 
@@ -1470,13 +1464,13 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 {
     ALCdevice **list;
 
+    SuspendContext(NULL);
     if(!IsDevice(pDevice) || !pDevice->IsCaptureDevice)
     {
         alcSetError(pDevice, ALC_INVALID_DEVICE);
+        ProcessContext(NULL);
         return ALC_FALSE;
     }
-
-    SuspendContext(NULL);
 
     list = &g_pDeviceList;
     while(*list != pDevice)
@@ -1536,6 +1530,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 {
     ALCenum errorCode;
 
+    SuspendContext(NULL);
     if(IsDevice(device))
     {
         errorCode = device->LastError;
@@ -1546,6 +1541,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
         errorCode = g_eLastNullDeviceError;
         g_eLastNullDeviceError = ALC_NO_ERROR;
     }
+    ProcessContext(NULL);
     return errorCode;
 }
 
@@ -1614,10 +1610,15 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_DEVICE_SPECIFIER:
+        SuspendContext(NULL);
         if(IsDevice(pDevice))
+        {
             value = pDevice->szDeviceName;
+            ProcessContext(NULL);
+        }
         else
         {
+            ProcessContext(NULL);
             ProbeDeviceList();
             value = alcDeviceList;
         }
@@ -1629,10 +1630,15 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
+        SuspendContext(NULL);
         if(IsDevice(pDevice))
+        {
             value = pDevice->szDeviceName;
+            ProcessContext(NULL);
+        }
         else
         {
+            ProcessContext(NULL);
             ProbeCaptureDeviceList();
             value = alcCaptureDeviceList;
         }
@@ -1675,10 +1681,12 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_EXTENSIONS:
+        SuspendContext(NULL);
         if(IsDevice(pDevice))
             value = alcExtensionList;
         else
             value = alcNoDeviceExtList;
+        ProcessContext(NULL);
         break;
 
     default:
@@ -1703,10 +1711,9 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
         return;
     }
 
+    SuspendContext(NULL);
     if(IsDevice(device) && device->IsCaptureDevice)
     {
-        SuspendContext(NULL);
-
         // Capture device
         switch (param)
         {
@@ -1769,7 +1776,6 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
             {
                 int i = 0;
 
-                SuspendContext(NULL);
                 data[i++] = ALC_FREQUENCY;
                 data[i++] = device->Frequency;
 
@@ -1800,7 +1806,6 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                 data[i++] = device->NumAuxSends;
 
                 data[i++] = 0;
-                ProcessContext(NULL);
             }
             break;
 
@@ -1864,6 +1869,7 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
             alcSetError(device, ALC_INVALID_ENUM);
             break;
     }
+    ProcessContext(NULL);
 }
 
 
@@ -1885,7 +1891,9 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
     }
 
     len = strlen(extName);
+    SuspendContext(NULL);
     ptr = (IsDevice(device) ? alcExtensionList : alcNoDeviceExtList);
+    ProcessContext(NULL);
     while(ptr && *ptr)
     {
         if(strncasecmp(ptr, extName, len) == 0 &&

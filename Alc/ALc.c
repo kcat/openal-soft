@@ -1199,8 +1199,13 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(running)
         return ALC_TRUE;
+
+    SuspendContext(NULL);
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
+    {
+        ProcessContext(NULL);
         return ALC_FALSE;
+    }
 
     aluInitPanning(device);
 
@@ -1262,6 +1267,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(ALEffect_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
             {
                 ProcessContext(context);
+                ProcessContext(NULL);
                 return ALC_FALSE;
             }
             ALEffect_Update(slot->EffectState, context, &slot->effect);
@@ -1285,6 +1291,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         ProcessContext(context);
     }
+    ProcessContext(NULL);
 
     return ALC_TRUE;
 }

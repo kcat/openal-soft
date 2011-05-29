@@ -1022,6 +1022,36 @@ ALboolean IsValidChannels(ALenum channels)
     return AL_FALSE;
 }
 
+
+#ifndef _WIN32
+void InitializeCriticalSection(CRITICAL_SECTION *cs)
+{
+    pthread_mutexattr_t attrib;
+    int ret;
+
+    ret = pthread_mutexattr_init(&attrib);
+    assert(ret == 0);
+
+    ret = pthread_mutexattr_settype(&attrib, PTHREAD_MUTEX_RECURSIVE);
+#ifdef HAVE_PTHREAD_NP_H
+    if(ret != 0)
+        ret = pthread_mutexattr_setkind_np(&attrib, PTHREAD_MUTEX_RECURSIVE);
+#endif
+    assert(ret == 0);
+    ret = pthread_mutex_init(cs, &attrib);
+    assert(ret == 0);
+
+    pthread_mutexattr_destroy(&attrib);
+}
+void DeleteCriticalSection(CRITICAL_SECTION *cs)
+{
+    int ret;
+    ret = pthread_mutex_destroy(cs);
+    assert(ret == 0);
+}
+#endif
+
+
 static void LockLists(void)
 {
     EnterCriticalSection(&ListLock);

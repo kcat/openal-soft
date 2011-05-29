@@ -2310,31 +2310,122 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
     }
 }
 
-static ALenum GetFormatFromString(const char *str)
+static void GetFormatFromString(const char *str, enum DevFmtChannels *chans, enum DevFmtType *type)
 {
-    if(strcasecmp(str, "AL_FORMAT_MONO32") == 0)    return AL_FORMAT_MONO_FLOAT32;
-    if(strcasecmp(str, "AL_FORMAT_STEREO32") == 0)  return AL_FORMAT_STEREO_FLOAT32;
-    if(strcasecmp(str, "AL_FORMAT_QUAD32") == 0)    return AL_FORMAT_QUAD32;
-    if(strcasecmp(str, "AL_FORMAT_51CHN32") == 0)   return AL_FORMAT_51CHN32;
-    if(strcasecmp(str, "AL_FORMAT_61CHN32") == 0)   return AL_FORMAT_61CHN32;
-    if(strcasecmp(str, "AL_FORMAT_71CHN32") == 0)   return AL_FORMAT_71CHN32;
+    if(strcasecmp(str, "AL_FORMAT_MONO32") == 0)
+    {
+        *chans = DevFmtMono;
+        *type = DevFmtFloat;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_STEREO32") == 0)
+    {
+        *chans = DevFmtStereo;
+        *type = DevFmtFloat;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_QUAD32") == 0)
+    {
+        *chans = DevFmtQuad;
+        *type = DevFmtFloat;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_51CHN32") == 0)
+    {
+        *chans = DevFmtX51;
+        *type = DevFmtFloat;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_61CHN32") == 0)
+    {
+        *chans = DevFmtX61;
+        *type = DevFmtFloat;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_71CHN32") == 0)
+    {
+        *chans = DevFmtX71;
+        *type = DevFmtFloat;
+        return;
+    }
 
-    if(strcasecmp(str, "AL_FORMAT_MONO16") == 0)    return AL_FORMAT_MONO16;
-    if(strcasecmp(str, "AL_FORMAT_STEREO16") == 0)  return AL_FORMAT_STEREO16;
-    if(strcasecmp(str, "AL_FORMAT_QUAD16") == 0)    return AL_FORMAT_QUAD16;
-    if(strcasecmp(str, "AL_FORMAT_51CHN16") == 0)   return AL_FORMAT_51CHN16;
-    if(strcasecmp(str, "AL_FORMAT_61CHN16") == 0)   return AL_FORMAT_61CHN16;
-    if(strcasecmp(str, "AL_FORMAT_71CHN16") == 0)   return AL_FORMAT_71CHN16;
+    if(strcasecmp(str, "AL_FORMAT_MONO16") == 0)
+    {
+        *chans = DevFmtMono;
+        *type = DevFmtShort;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_STEREO16") == 0)
+    {
+        *chans = DevFmtStereo;
+        *type = DevFmtShort;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_QUAD16") == 0)
+    {
+        *chans = DevFmtQuad;
+        *type = DevFmtShort;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_51CHN16") == 0)
+    {
+        *chans = DevFmtX51;
+        *type = DevFmtShort;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_61CHN16") == 0)
+    {
+        *chans = DevFmtX61;
+        *type = DevFmtShort;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_71CHN16") == 0)
+    {
+        *chans = DevFmtX71;
+        *type = DevFmtShort;
+        return;
+    }
 
-    if(strcasecmp(str, "AL_FORMAT_MONO8") == 0)    return AL_FORMAT_MONO8;
-    if(strcasecmp(str, "AL_FORMAT_STEREO8") == 0)  return AL_FORMAT_STEREO8;
-    if(strcasecmp(str, "AL_FORMAT_QUAD8") == 0)    return AL_FORMAT_QUAD8;
-    if(strcasecmp(str, "AL_FORMAT_51CHN8") == 0)   return AL_FORMAT_51CHN8;
-    if(strcasecmp(str, "AL_FORMAT_61CHN8") == 0)   return AL_FORMAT_61CHN8;
-    if(strcasecmp(str, "AL_FORMAT_71CHN8") == 0)   return AL_FORMAT_71CHN8;
+    if(strcasecmp(str, "AL_FORMAT_MONO8") == 0)
+    {
+        *chans = DevFmtMono;
+        *type = DevFmtByte;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_STEREO8") == 0)
+    {
+        *chans = DevFmtStereo;
+        *type = DevFmtByte;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_QUAD8") == 0)
+    {
+        *chans = DevFmtQuad;
+        *type = DevFmtByte;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_51CHN8") == 0)
+    {
+        *chans = DevFmtX51;
+        *type = DevFmtByte;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_61CHN8") == 0)
+    {
+        *chans = DevFmtX61;
+        *type = DevFmtByte;
+        return;
+    }
+    if(strcasecmp(str, "AL_FORMAT_71CHN8") == 0)
+    {
+        *chans = DevFmtX71;
+        *type = DevFmtByte;
+        return;
+    }
 
     AL_PRINT("Unknown format: \"%s\"\n", str);
-    return AL_FORMAT_STEREO16;
+    *chans = DevFmtStereo;
+    *type = DevFmtShort;
 }
 
 /*
@@ -2387,13 +2478,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(ConfigValueExists(NULL, "format"))
         device->Flags |= DEVICE_CHANNELS_REQUEST;
     fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
-    if(DecomposeDevFormat(GetFormatFromString(fmt),
-                          &device->FmtChans, &device->FmtType) == AL_FALSE)
-    {
-        /* Should never happen... */
-        device->FmtChans = DevFmtStereo;
-        device->FmtType = DevFmtShort;
-    }
+    GetFormatFromString(fmt, &device->FmtChans, &device->FmtType);
 
     device->NumUpdates = GetConfigValueInt(NULL, "periods", 4);
     if(device->NumUpdates < 2)

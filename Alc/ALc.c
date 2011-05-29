@@ -375,10 +375,12 @@ static const ALCint alcEFXMinorVersion = 0;
 ///////////////////////////////////////////////////////
 // Global Variables
 
+static CRITICAL_SECTION g_csMutex;
+static CRITICAL_SECTION ListLock;
+
+/* Device List */
 static ALCdevice *g_pDeviceList = NULL;
 static ALCuint    g_ulDeviceCount = 0;
-
-static CRITICAL_SECTION g_csMutex;
 
 // Context List
 static ALCcontext *g_pContextList = NULL;
@@ -490,6 +492,7 @@ static void alc_init(void)
         ZScale = -1.0;
 
     InitializeCriticalSection(&g_csMutex);
+    InitializeCriticalSection(&ListLock);
     ALTHUNK_INIT();
     ReadALConfig();
 
@@ -606,6 +609,7 @@ static void alc_deinit(void)
 
     FreeALConfig();
     ALTHUNK_EXIT();
+    DeleteCriticalSection(&ListLock);
     DeleteCriticalSection(&g_csMutex);
 
     if(LogFile != stderr)
@@ -1018,6 +1022,16 @@ ALboolean IsValidChannels(ALenum channels)
     return AL_FALSE;
 }
 
+static void LockLists(void)
+{
+    EnterCriticalSection(&ListLock);
+}
+
+static void UnlockLists(void)
+{
+    LeaveCriticalSection(&ListLock);
+}
+
 /*
     IsDevice
 
@@ -1058,12 +1072,12 @@ static ALCboolean IsContext(ALCcontext *pContext)
 */
 ALCvoid alcSetError(ALCdevice *device, ALenum errorCode)
 {
-    SuspendContext(NULL);
+    LockLists();
     if(IsDevice(device))
         device->LastError = errorCode;
     else
         g_eLastNullDeviceError = errorCode;
-    ProcessContext(NULL);
+    UnlockLists();
 }
 
 
@@ -1089,9 +1103,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         // device attributes can be updated
         if(running)
         {
-            ProcessContext(NULL);
             ALCdevice_StopPlayback(device);
-            SuspendContext(NULL);
             running = AL_FALSE;
         }
 
@@ -1311,7 +1323,7 @@ ALCcontext *GetContextSuspended(void)
 {
     ALCcontext *pContext = NULL;
 
-    SuspendContext(NULL);
+    LockLists();
 
     pContext = tls_get(LocalContext);
     if(pContext && !IsContext(pContext))
@@ -1321,11 +1333,10 @@ ALCcontext *GetContextSuspended(void)
     }
     if(!pContext)
         pContext = GlobalContext;
-
     if(pContext)
         SuspendContext(pContext);
 
-    ProcessContext(NULL);
+    UnlockLists();
 
     return pContext;
 }
@@ -1434,7 +1445,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->UpdateSize = SampleSize;
     device->NumUpdates = 1;
 
-    SuspendContext(NULL);
+    LockLists();
     for(i = 0;BackendList[i].Init;i++)
     {
         device->Funcs = &BackendList[i].Funcs;
@@ -1448,7 +1459,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
             break;
         }
     }
-    ProcessContext(NULL);
+    UnlockLists();
 
     if(!DeviceFound)
     {
@@ -1464,11 +1475,11 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 {
     ALCdevice **list;
 
-    SuspendContext(NULL);
+    LockLists();
     if(!IsDevice(pDevice) || !pDevice->IsCaptureDevice)
     {
         alcSetError(pDevice, ALC_INVALID_DEVICE);
-        ProcessContext(NULL);
+        UnlockLists();
         return ALC_FALSE;
     }
 
@@ -1479,7 +1490,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
     *list = (*list)->next;
     g_ulDeviceCount--;
 
-    ProcessContext(NULL);
+    UnlockLists();
 
     ALCdevice_CloseCapture(pDevice);
 
@@ -1493,32 +1504,32 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 
 ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 {
-    SuspendContext(NULL);
+    LockLists();
     if(!IsDevice(device) || !device->IsCaptureDevice)
         alcSetError(device, ALC_INVALID_DEVICE);
     else if(device->Connected)
         ALCdevice_StartCapture(device);
-    ProcessContext(NULL);
+    UnlockLists();
 }
 
 ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 {
-    SuspendContext(NULL);
+    LockLists();
     if(!IsDevice(device) || !device->IsCaptureDevice)
         alcSetError(device, ALC_INVALID_DEVICE);
     else
         ALCdevice_StopCapture(device);
-    ProcessContext(NULL);
+    UnlockLists();
 }
 
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    SuspendContext(NULL);
+    LockLists();
     if(!IsDevice(device) || !device->IsCaptureDevice)
         alcSetError(device, ALC_INVALID_DEVICE);
     else
         ALCdevice_CaptureSamples(device, buffer, samples);
-    ProcessContext(NULL);
+    UnlockLists();
 }
 
 /*
@@ -1530,7 +1541,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 {
     ALCenum errorCode;
 
-    SuspendContext(NULL);
+    LockLists();
     if(IsDevice(device))
     {
         errorCode = device->LastError;
@@ -1541,7 +1552,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
         errorCode = g_eLastNullDeviceError;
         g_eLastNullDeviceError = ALC_NO_ERROR;
     }
-    ProcessContext(NULL);
+    UnlockLists();
     return errorCode;
 }
 
@@ -1553,10 +1564,10 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 */
 ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *pContext)
 {
-    SuspendContext(NULL);
+    LockLists();
     if(IsContext(pContext))
         pContext->Suspended = AL_TRUE;
-    ProcessContext(NULL);
+    UnlockLists();
 }
 
 
@@ -1567,10 +1578,10 @@ ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *pContext)
 */
 ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *pContext)
 {
-    SuspendContext(NULL);
+    LockLists();
     if(IsContext(pContext))
         pContext->Suspended = AL_FALSE;
-    ProcessContext(NULL);
+    UnlockLists();
 }
 
 
@@ -1610,18 +1621,15 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_DEVICE_SPECIFIER:
-        SuspendContext(NULL);
+        LockLists();
         if(IsDevice(pDevice))
-        {
             value = pDevice->szDeviceName;
-            ProcessContext(NULL);
-        }
         else
         {
-            ProcessContext(NULL);
             ProbeDeviceList();
             value = alcDeviceList;
         }
+        UnlockLists();
         break;
 
     case ALC_ALL_DEVICES_SPECIFIER:
@@ -1630,18 +1638,15 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
-        SuspendContext(NULL);
+        LockLists();
         if(IsDevice(pDevice))
-        {
             value = pDevice->szDeviceName;
-            ProcessContext(NULL);
-        }
         else
         {
-            ProcessContext(NULL);
             ProbeCaptureDeviceList();
             value = alcCaptureDeviceList;
         }
+        UnlockLists();
         break;
 
     /* Default devices are always first in the list */
@@ -1681,12 +1686,12 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_EXTENSIONS:
-        SuspendContext(NULL);
+        LockLists();
         if(IsDevice(pDevice))
             value = alcExtensionList;
         else
             value = alcNoDeviceExtList;
-        ProcessContext(NULL);
+        UnlockLists();
         break;
 
     default:
@@ -1711,7 +1716,7 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
         return;
     }
 
-    SuspendContext(NULL);
+    LockLists();
     if(IsDevice(device) && device->IsCaptureDevice)
     {
         // Capture device
@@ -1730,7 +1735,7 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
             break;
         }
 
-        ProcessContext(NULL);
+        UnlockLists();
         return;
     }
 
@@ -1869,7 +1874,7 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
             alcSetError(device, ALC_INVALID_ENUM);
             break;
     }
-    ProcessContext(NULL);
+    UnlockLists();
 }
 
 
@@ -1891,9 +1896,9 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
     }
 
     len = strlen(extName);
-    SuspendContext(NULL);
+    LockLists();
     ptr = (IsDevice(device) ? alcExtensionList : alcNoDeviceExtList);
-    ProcessContext(NULL);
+    UnlockLists();
     while(ptr && *ptr)
     {
         if(strncasecmp(ptr, extName, len) == 0 &&
@@ -1966,11 +1971,11 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALCcontext *ALContext;
     void *temp;
 
-    SuspendContext(NULL);
+    LockLists();
     if(!IsDevice(device) || device->IsCaptureDevice || !device->Connected)
     {
         alcSetError(device, ALC_INVALID_DEVICE);
-        ProcessContext(NULL);
+        UnlockLists();
         return NULL;
     }
 
@@ -1981,8 +1986,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         alcSetError(device, ALC_INVALID_DEVICE);
         aluHandleDisconnect(device);
-        ProcessContext(NULL);
         ALCdevice_StopPlayback(device);
+        UnlockLists();
         return NULL;
     }
 
@@ -2004,22 +2009,24 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         free(ALContext);
         alcSetError(device, ALC_OUT_OF_MEMORY);
-        ProcessContext(NULL);
         if(device->NumContexts == 0)
             ALCdevice_StopPlayback(device);
+        UnlockLists();
         return NULL;
     }
 
+    SuspendContext(NULL);
     device->Contexts[device->NumContexts++] = ALContext;
     ALContext->Device = device;
 
     InitContext(ALContext);
+    ProcessContext(NULL);
 
     ALContext->next = g_pContextList;
     g_pContextList = ALContext;
     g_ulContextCount++;
 
-    ProcessContext(NULL);
+    UnlockLists();
 
     return ALContext;
 }
@@ -2036,11 +2043,11 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     ALCcontext **list;
     ALuint i;
 
-    SuspendContext(NULL);
+    LockLists();
     if(!IsContext(context))
     {
         alcSetError(NULL, ALC_INVALID_CONTEXT);
-        ProcessContext(NULL);
+        UnlockLists();
         return;
     }
 
@@ -2053,15 +2060,12 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 
     Device = context->Device;
     if(Device->NumContexts == 1)
-    {
-        ProcessContext(NULL);
         ALCdevice_StopPlayback(Device);
-        SuspendContext(NULL);
-    }
 
     if(context == GlobalContext)
         GlobalContext = NULL;
 
+    SuspendContext(NULL);
     for(i = 0;i < Device->NumContexts;i++)
     {
         if(Device->Contexts[i] == context)
@@ -2101,6 +2105,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     // Unlock context
     ProcessContext(context);
     ProcessContext(NULL);
+    UnlockLists();
 
     ExitContext(context);
 
@@ -2134,7 +2139,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 {
     ALCcontext *pContext = NULL;
 
-    SuspendContext(NULL);
+    LockLists();
 
     pContext = tls_get(LocalContext);
     if(pContext && !IsContext(pContext))
@@ -2143,7 +2148,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
         pContext = NULL;
     }
 
-    ProcessContext(NULL);
+    UnlockLists();
 
     return pContext;
 }
@@ -2158,12 +2163,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *pContext)
 {
     ALCdevice *pDevice = NULL;
 
-    SuspendContext(NULL);
+    LockLists();
     if(IsContext(pContext))
         pDevice = pContext->Device;
     else
         alcSetError(NULL, ALC_INVALID_CONTEXT);
-    ProcessContext(NULL);
+    UnlockLists();
 
     return pDevice;
 }
@@ -2178,7 +2183,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
     ALboolean bReturn = AL_TRUE;
 
-    SuspendContext(NULL);
+    LockLists();
 
     // context must be a valid Context or NULL
     if(context == NULL || IsContext(context))
@@ -2192,7 +2197,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
         bReturn = AL_FALSE;
     }
 
-    ProcessContext(NULL);
+    UnlockLists();
 
     return bReturn;
 }
@@ -2206,7 +2211,7 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 {
     ALboolean bReturn = AL_TRUE;
 
-    SuspendContext(NULL);
+    LockLists();
 
     // context must be a valid Context or NULL
     if(context == NULL || IsContext(context))
@@ -2217,7 +2222,7 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
         bReturn = AL_FALSE;
     }
 
-    ProcessContext(NULL);
+    UnlockLists();
 
     return bReturn;
 }
@@ -2514,7 +2519,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
     // Find a playback device to open
-    SuspendContext(NULL);
+    LockLists();
     for(i = 0;BackendList[i].Init;i++)
     {
         device->Funcs = &BackendList[i].Funcs;
@@ -2528,7 +2533,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             break;
         }
     }
-    ProcessContext(NULL);
+    UnlockLists();
 
     if(!bDeviceFound)
     {
@@ -2551,11 +2556,11 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 {
     ALCdevice **list;
 
-    SuspendContext(NULL);
+    LockLists();
     if(!IsDevice(pDevice) || pDevice->IsCaptureDevice)
     {
         alcSetError(pDevice, ALC_INVALID_DEVICE);
-        ProcessContext(NULL);
+        UnlockLists();
         return ALC_FALSE;
     }
 
@@ -2566,7 +2571,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     *list = (*list)->next;
     g_ulDeviceCount--;
 
-    ProcessContext(NULL);
+    UnlockLists();
 
     if(pDevice->NumContexts > 0)
     {
@@ -2686,14 +2691,14 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
     // Open the "backend"
-    SuspendContext(NULL);
+    LockLists();
     device->Funcs = &BackendLoopback.Funcs;
     ALCdevice_OpenPlayback(device, "Loopback");
 
     device->next = g_pDeviceList;
     g_pDeviceList = device;
     g_ulDeviceCount++;
-    ProcessContext(NULL);
+    UnlockLists();
 
     return device;
 }
@@ -2702,7 +2707,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
 {
     ALCboolean ret = ALC_FALSE;
 
-    SuspendContext(NULL);
+    LockLists();
     if(!IsDevice(device) || !device->IsLoopbackDevice)
         alcSetError(device, ALC_INVALID_DEVICE);
     else if(freq <= 0)
@@ -2720,21 +2725,21 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
            freq >= 8000)
             ret = ALC_TRUE;
     }
-    ProcessContext(NULL);
+    UnlockLists();
 
     return ret;
 }
 
 ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    SuspendContext(NULL);
+    LockLists();
     if(!IsDevice(device) || !device->IsLoopbackDevice)
         alcSetError(device, ALC_INVALID_DEVICE);
     else if(samples < 0)
         alcSetError(device, ALC_INVALID_VALUE);
     else
         aluMixData(device, buffer, samples);
-    ProcessContext(NULL);
+    UnlockLists();
 }
 
 

@@ -1998,6 +1998,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
+    SuspendContext(NULL);
     ALContext = NULL;
     temp = realloc(device->Contexts, (device->NumContexts+1) * sizeof(*device->Contexts));
     if(temp)
@@ -2016,13 +2017,13 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         free(ALContext);
         alcSetError(device, ALC_OUT_OF_MEMORY);
+        ProcessContext(NULL);
         if(device->NumContexts == 0)
             ALCdevice_StopPlayback(device);
         UnlockLists();
         return NULL;
     }
 
-    SuspendContext(NULL);
     device->Contexts[device->NumContexts++] = ALContext;
     ALContext->Device = device;
 

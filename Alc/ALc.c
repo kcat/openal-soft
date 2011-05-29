@@ -1049,6 +1049,18 @@ void DeleteCriticalSection(CRITICAL_SECTION *cs)
     ret = pthread_mutex_destroy(cs);
     assert(ret == 0);
 }
+void EnterCriticalSection(CRITICAL_SECTION *cs)
+{
+    int ret;
+    ret = pthread_mutex_lock(cs);
+    assert(ret == 0);
+}
+void LeaveCriticalSection(CRITICAL_SECTION *cs)
+{
+    int ret;
+    ret = pthread_mutex_unlock(cs);
+    assert(ret == 0);
+}
 #endif
 
 

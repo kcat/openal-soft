@@ -215,18 +215,8 @@ typedef pthread_key_t tls_type;
 typedef pthread_mutex_t CRITICAL_SECTION;
 void InitializeCriticalSection(CRITICAL_SECTION *cs);
 void DeleteCriticalSection(CRITICAL_SECTION *cs);
-static __inline void EnterCriticalSection(CRITICAL_SECTION *cs)
-{
-    int ret;
-    ret = pthread_mutex_lock(cs);
-    assert(ret == 0);
-}
-static __inline void LeaveCriticalSection(CRITICAL_SECTION *cs)
-{
-    int ret;
-    ret = pthread_mutex_unlock(cs);
-    assert(ret == 0);
-}
+void EnterCriticalSection(CRITICAL_SECTION *cs);
+void LeaveCriticalSection(CRITICAL_SECTION *cs);
 
 /* NOTE: This wrapper isn't quite accurate as it returns an ALuint, as opposed
  * to the expected DWORD. Both are defined as unsigned 32-bit types, however.

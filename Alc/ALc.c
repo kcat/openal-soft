@@ -2125,9 +2125,8 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
             break;
         }
     }
-
-    // Lock context
-    SuspendContext(context);
+    ProcessContext(NULL);
+    UnlockLists();
 
     if(context->SourceMap.size > 0)
     {
@@ -2152,14 +2151,8 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     context->MaxActiveSources = 0;
     context->ActiveSourceCount = 0;
 
-    // Unlock context
-    ProcessContext(context);
-    ProcessContext(NULL);
-    UnlockLists();
-
     ExitContext(context);
 
-    // Free memory (MUST do this after ProcessContext)
     memset(context, 0, sizeof(ALCcontext));
     free(context);
 }

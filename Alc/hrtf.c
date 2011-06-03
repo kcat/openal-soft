@@ -75,49 +75,49 @@ void InitHrtf(void)
 
     str = GetConfigValue(NULL, "hrtf_tables", "");
     if(str[0] != '\0')
+    {
         f = fopen(str, "rb");
+        if(f == NULL)
+            AL_PRINT("Could not open %s\n", str);
+    }
     if(f != NULL)
     {
         const ALubyte maxDelay = SRC_HISTORY_LENGTH - HRIR_LENGTH;
+        ALboolean failed = AL_FALSE;
         struct HRTF newdata;
         size_t i, j;
-        union {
-            ALfloat f;
-            ALubyte ub[4];
-        } val;
 
         for(i = 0;i < HRIR_COUNT;i++)
         {
             for(j = 0;j < HRIR_LENGTH;j++)
             {
-                val.ub[0] = fgetc(f);
-                val.ub[1] = fgetc(f);
-                val.ub[2] = fgetc(f);
-                val.ub[3] = fgetc(f);
-                if(val.f > 1.0f) newdata.coeffs[i][j] = 32767;
-                else if(val.f < -1.0f) newdata.coeffs[i][j] = -32768;
-                else newdata.coeffs[i][j] = (ALshort)(val.f*32767.0f);
+                ALshort val;
+                val  = fgetc(f);
+                val |= fgetc(f)<<8;
+                newdata.coeffs[i][j] = val;
             }
         }
-        val.ub[0] = fgetc(f);
-        val.ub[1] = fgetc(f);
-        val.ub[2] = fgetc(f);
-        val.ub[3] = fgetc(f);
-        /* skip maxHrtd */
         for(i = 0;i < HRIR_COUNT;i++)
         {
-            val.ub[0] = fgetc(f);
-            val.ub[1] = fgetc(f);
-            val.ub[2] = fgetc(f);
-            val.ub[3] = fgetc(f);
-            val.f *= 44100.0f;
-            if(val.f >= maxDelay) newdata.delays[i] = maxDelay;
-            else newdata.delays[i] = (ALubyte)val.f;
+            ALubyte val;
+            val = fgetc(f);
+            newdata.delays[i] = val;
+            if(val > maxDelay)
+            {
+                AL_PRINT("Invalid delay at idx %d: %u (max: %u), in %s\n", i, val, maxDelay, str);
+                failed = AL_TRUE;
+            }
         }
-        if(!feof(f))
-            Hrtf = newdata;
+        if(feof(f))
+        {
+            AL_PRINT("Premature end of data while reading %s\n", str);
+            failed = AL_TRUE;
+        }
 
         fclose(f);
         f = NULL;
+
+        if(!failed)
+            Hrtf = newdata;
     }
 }

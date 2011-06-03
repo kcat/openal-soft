@@ -34,7 +34,9 @@ static const ALubyte azCount[19] = { 1, 12, 24, 36, 45, 56, 60, 72, 72, 72, 72, 
 static struct HRTF {
     ALshort coeffs[HRIR_COUNT][HRIR_LENGTH];
     ALubyte delays[HRIR_COUNT];
-} Hrtf;
+} Hrtf = {
+#include "hrtf_tables.inc"
+};
 
 static ALuint CalcEvIndex(ALdouble ev)
 {

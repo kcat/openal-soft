@@ -496,6 +496,8 @@ static void alc_init(void)
     ALTHUNK_INIT();
     ReadALConfig();
 
+    InitHrtf();
+
     tls_create(&LocalContext);
 
     RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 0);

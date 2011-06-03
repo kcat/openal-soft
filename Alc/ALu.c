@@ -245,7 +245,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 if(c == lfe_chan)
                 {
                     /* Skip LFE */
-                    for(i = 0;i < HRTF_LENGTH;i++)
+                    ALSource->Params.HrtfDelay[c][0] = 0;
+                    ALSource->Params.HrtfDelay[c][1] = 0;
+                    for(i = 0;i < HRIR_LENGTH;i++)
                     {
                         ALSource->Params.HrtfCoeffs[c][i][0] = 0.0f;
                         ALSource->Params.HrtfCoeffs[c][i][1] = 0.0f;
@@ -253,8 +255,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                     continue;
                 }
 
-                GetHrtfCoeffs(0.0, angles[c], &hrtf_left, &hrtf_right);
-                for(i = 0;i < HRTF_LENGTH;i++)
+                GetHrtfCoeffs(0.0, angles[c] * (M_PI/180.0),
+                              &hrtf_left, &hrtf_right,
+                              &ALSource->Params.HrtfDelay[c][0],
+                              &ALSource->Params.HrtfDelay[c][1]);
+                for(i = 0;i < HRIR_LENGTH;i++)
                 {
                     ALSource->Params.HrtfCoeffs[c][i][0] =
                                hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
@@ -676,10 +681,11 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             Position[2] *= invlen;
         }
 
-        GetHrtfCoeffs(asin(Position[1]) * (180.0/M_PI),
-                      atan2(Position[0], -Position[2]*ZScale) * (180.0/M_PI),
-                      &hrtf_left, &hrtf_right);
-        for(i = 0;i < HRTF_LENGTH;i++)
+        GetHrtfCoeffs(asin(Position[1]), atan2(Position[0], -Position[2]*ZScale),
+                      &hrtf_left, &hrtf_right,
+                      &ALSource->Params.HrtfDelay[0][0],
+                      &ALSource->Params.HrtfDelay[0][1]);
+        for(i = 0;i < HRIR_LENGTH;i++)
         {
             ALSource->Params.HrtfCoeffs[0][i][0] = hrtf_left[i]*(1.0/32767.0) * DryGain;
             ALSource->Params.HrtfCoeffs[0][i][1] = hrtf_right[i]*(1.0/32767.0) * DryGain;

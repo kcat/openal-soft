@@ -11,6 +11,10 @@
 extern "C" {
 #endif
 
+#define SRC_HISTORY_BITS   (7)
+#define SRC_HISTORY_LENGTH (1<<SRC_HISTORY_BITS)
+#define SRC_HISTORY_MASK   (SRC_HISTORY_LENGTH-1)
+
 typedef enum {
     POINT_RESAMPLER = 0,
     LINEAR_RESAMPLER,
@@ -90,20 +94,21 @@ typedef struct ALsource
     ALuint SampleSize;
 
     /* HRTF info */
-    ALfloat HrtfHistory[MAXCHANNELS][HRTF_LENGTH];
+    ALfloat HrtfHistory[MAXCHANNELS][SRC_HISTORY_LENGTH][2];
     ALuint HrtfOffset;
 
-    // Current target parameters used for mixing
-    ALboolean NeedsUpdate;
+    /* Current target parameters used for mixing */
     struct {
         ALint Step;
 
-        ALfloat HrtfCoeffs[MAXCHANNELS][HRTF_LENGTH][2];
+        ALfloat HrtfCoeffs[MAXCHANNELS][HRIR_LENGTH][2];
+        ALuint HrtfDelay[MAXCHANNELS][2];
 
         /* A mixing matrix. First subscript is the channel number of the input
          * data (regardless of channel configuration) and the second is the
          * channel target (eg. FRONT_LEFT) */
         ALfloat DryGains[MAXCHANNELS][MAXCHANNELS];
+
         FILTER iirFilter;
         ALfloat history[MAXCHANNELS*2];
 
@@ -113,6 +118,7 @@ typedef struct ALsource
             ALfloat history[MAXCHANNELS];
         } Send[MAX_SENDS];
     } Params;
+    ALboolean NeedsUpdate;
 
     ALvoid (*Update)(struct ALsource *self, const ALCcontext *context);
     ALvoid (*DoMix)(struct ALsource *self, ALCdevice *Device,

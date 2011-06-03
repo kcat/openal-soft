@@ -23,56 +23,99 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "alMain.h"
+#include "alSource.h"
 
+#define HRIR_COUNT 828
 
-typedef struct {
-    ALsizei num_angles;
-    ALsizei max_angle;
-    ALshort coeffs[][2][HRTF_LENGTH];
-} HrtfFilterCoeffs;
+static const ALubyte evCount = 19;
+static const ALushort evOffset[19] = { 0, 1, 13, 37, 73, 118, 174, 234, 306, 378, 450, 522, 594, 654, 710, 755, 791, 815, 827 };
+static const ALubyte azCount[19] = { 1, 12, 24, 36, 45, 56, 60, 72, 72, 72, 72, 72, 60, 56, 45, 36, 24, 12, 1 };
 
-#include "hrtf_tables.inc"
+static struct HRTF {
+    ALshort coeffs[HRIR_COUNT][HRIR_LENGTH];
+    ALubyte delays[HRIR_COUNT];
+} Hrtf;
 
-static void get_angle_coeffs(const HrtfFilterCoeffs *elev, ALfloat angle, const ALshort **left, const ALshort **right)
+static ALuint CalcEvIndex(ALdouble ev)
 {
-    if(angle < 0)
-    {
-        int idx = ((angle > -elev->max_angle) ?
-                   (int)(angle*(elev->num_angles-1)/-elev->max_angle + 0.5) :
-                   (elev->num_angles-1));
-        *left  = elev->coeffs[idx][1];
-        *right = elev->coeffs[idx][0];
-    }
-    else
-    {
-        int idx = ((angle < elev->max_angle) ?
-                   (int)(angle*(elev->num_angles-1)/elev->max_angle + 0.5) :
-                   (elev->num_angles-1));
-        *left  = elev->coeffs[idx][0];
-        *right = elev->coeffs[idx][1];
-    }
+    ev = (M_PI/2.0 + ev) * (evCount-1) / M_PI;
+    return (ALuint)(ev+0.5);
 }
 
-void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const ALshort **right)
+static ALuint CalcAzIndex(ALint evidx, ALdouble az)
 {
-    int idx;
+    az = (M_PI*2.0 + az) * azCount[evidx] / (M_PI*2.0);
+    return (ALuint)(az+0.5) % azCount[evidx];
+}
 
-    if(elevation > 90.f) elevation = 90.f - (elevation - 90.f);
-    else if(elevation < -90.f) elevation = -90.f - (elevation - -90.f);
+void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const ALshort **right, ALuint *ldelay, ALuint *rdelay)
+{
+    ALuint lidx, ridx;
+    ALuint evidx, azidx;
 
-    idx = (int)(elevation/10.0 + 0.5);
-    if(idx >= 9) return get_angle_coeffs(&Elev90, angle, left, right);
-    if(idx >= 8) return get_angle_coeffs(&Elev80, angle, left, right);
-    if(idx >= 7) return get_angle_coeffs(&Elev70, angle, left, right);
-    if(idx >= 6) return get_angle_coeffs(&Elev60, angle, left, right);
-    if(idx >= 5) return get_angle_coeffs(&Elev50, angle, left, right);
-    if(idx >= 4) return get_angle_coeffs(&Elev40, angle, left, right);
-    if(idx >= 3) return get_angle_coeffs(&Elev30, angle, left, right);
-    if(idx >= 2) return get_angle_coeffs(&Elev20, angle, left, right);
-    if(idx >= 1) return get_angle_coeffs(&Elev10, angle, left, right);
-    if(idx >= 0) return get_angle_coeffs(&Elev0, angle, left, right);
-    if(idx >= -1) return get_angle_coeffs(&Elev10n, angle, left, right);
-    if(idx >= -2) return get_angle_coeffs(&Elev20n, angle, left, right);
-    if(idx >= -3) return get_angle_coeffs(&Elev30n, angle, left, right);
-    return get_angle_coeffs(&Elev40n, angle, left, right);
+    evidx = CalcEvIndex(elevation);
+    azidx = CalcAzIndex(evidx, angle);
+
+    lidx = evOffset[evidx] + azidx;
+    ridx = evOffset[evidx] + ((azCount[evidx]-azidx) % azCount[evidx]);
+
+    *ldelay = Hrtf.delays[lidx];
+    *rdelay = Hrtf.delays[ridx];
+
+    *left  = Hrtf.coeffs[lidx];
+    *right = Hrtf.coeffs[ridx];
+}
+
+void InitHrtf(void)
+{
+    const char *str;
+    FILE *f = NULL;
+
+    str = GetConfigValue(NULL, "hrtf_tables", "");
+    if(str[0] != '\0')
+        f = fopen(str, "rb");
+    if(f != NULL)
+    {
+        const ALubyte maxDelay = SRC_HISTORY_LENGTH - HRIR_LENGTH;
+        struct HRTF newdata;
+        size_t i, j;
+        union {
+            ALfloat f;
+            ALubyte ub[4];
+        } val;
+
+        for(i = 0;i < HRIR_COUNT;i++)
+        {
+            for(j = 0;j < HRIR_LENGTH;j++)
+            {
+                val.ub[0] = fgetc(f);
+                val.ub[1] = fgetc(f);
+                val.ub[2] = fgetc(f);
+                val.ub[3] = fgetc(f);
+                if(val.f > 1.0f) newdata.coeffs[i][j] = 32767;
+                else if(val.f < -1.0f) newdata.coeffs[i][j] = -32768;
+                else newdata.coeffs[i][j] = (ALshort)(val.f*32767.0f);
+            }
+        }
+        val.ub[0] = fgetc(f);
+        val.ub[1] = fgetc(f);
+        val.ub[2] = fgetc(f);
+        val.ub[3] = fgetc(f);
+        /* skip maxHrtd */
+        for(i = 0;i < HRIR_COUNT;i++)
+        {
+            val.ub[0] = fgetc(f);
+            val.ub[1] = fgetc(f);
+            val.ub[2] = fgetc(f);
+            val.ub[3] = fgetc(f);
+            val.f *= 44100.0f;
+            if(val.f >= maxDelay) newdata.delays[i] = maxDelay;
+            else newdata.delays[i] = (ALubyte)val.f;
+        }
+        if(!feof(f))
+            Hrtf = newdata;
+
+        fclose(f);
+        f = NULL;
+    }
 }

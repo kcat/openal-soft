@@ -567,10 +567,11 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 ALboolean IsValidType(ALenum type);
 ALboolean IsValidChannels(ALenum type);
 
-#define HRTF_BITS        (7)
-#define HRTF_LENGTH      (1<<HRTF_BITS)
-#define HRTF_LENGTH_MASK (HRTF_LENGTH-1)
-void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const ALshort **right);
+#define HRIR_BITS        (5)
+#define HRIR_LENGTH      (1<<HRIR_BITS)
+#define HRIR_LENGTH_MASK (HRIR_LENGTH-1)
+void InitHrtf(void);
+void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const ALshort **right, ALuint *ldelay, ALuint *rdelay);
 
 void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);

@@ -47,9 +47,13 @@
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 
+
 static void *ds_handle;
 static HRESULT (WINAPI *pDirectSoundCreate)(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter);
 static HRESULT (WINAPI *pDirectSoundEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallback, LPVOID pContext);
+
+#define DirectSoundCreate     pDirectSoundCreate
+#define DirectSoundEnumerateA pDirectSoundEnumerateA
 
 
 typedef struct {
@@ -77,7 +81,8 @@ static void *DSoundLoad(void)
 {
     if(!ds_handle)
     {
-#ifdef _WIN32
+        ALboolean failed = AL_FALSE;
+
         ds_handle = LoadLibraryA("dsound.dll");
         if(ds_handle == NULL)
         {
@@ -85,24 +90,21 @@ static void *DSoundLoad(void)
             return NULL;
         }
 
-#define LOAD_FUNC(f) do { \
-    p##f = (void*)GetProcAddress((HMODULE)ds_handle, #f); \
-    if(p##f == NULL) \
-    { \
-        FreeLibrary(ds_handle); \
-        ds_handle = NULL; \
-        AL_PRINT("Could not load %s from dsound.dll\n", #f); \
-        return NULL; \
-    } \
+#define LOAD_FUNC(x) do {                                                     \
+    if((p##x = (void*)GetProcAddress((HMODULE)ds_handle, #x)) == NULL) {      \
+        AL_PRINT("Could not load %s from dsound.dll\n", #x);                  \
+        failed = AL_TRUE;                                                     \
+    }                                                                         \
 } while(0)
-#else
-        ds_handle = (void*)0xDEADBEEF;
-#define LOAD_FUNC(f) p##f = f
-#endif
-
-LOAD_FUNC(DirectSoundCreate);
-LOAD_FUNC(DirectSoundEnumerateA);
+        LOAD_FUNC(DirectSoundCreate);
+        LOAD_FUNC(DirectSoundEnumerateA);
 #undef LOAD_FUNC
+
+        if(failed)
+        {
+            FreeLibrary(ds_handle);
+            ds_handle = NULL;
+        }
     }
     return ds_handle;
 }
@@ -275,7 +277,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
 
         if(!DeviceList)
         {
-            hr = pDirectSoundEnumerateA(DSoundEnumDevices, NULL);
+            hr = DirectSoundEnumerateA(DSoundEnumDevices, NULL);
             if(FAILED(hr))
                 AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
         }
@@ -302,7 +304,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     }
 
     //DirectSound Init code
-    hr = pDirectSoundCreate(guid, &pData->lpDS, NULL);
+    hr = DirectSoundCreate(guid, &pData->lpDS, NULL);
     if(SUCCEEDED(hr))
         hr = IDirectSound_SetCooperativeLevel(pData->lpDS, GetForegroundWindow(), DSSCL_PRIORITY);
     if(FAILED(hr))
@@ -601,7 +603,7 @@ void alcDSoundProbe(int type)
         DeviceList = NULL;
         NumDevices = 0;
 
-        hr = pDirectSoundEnumerateA(DSoundEnumDevices, NULL);
+        hr = DirectSoundEnumerateA(DSoundEnumDevices, NULL);
         if(FAILED(hr))
             AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
         else

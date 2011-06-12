@@ -44,6 +44,9 @@ DEFINE_GUID(IID_IAudioRenderClient, 0xf294acfc, 0x3146, 0x4483, 0xa7,0xbf, 0xad,
 #include <stdio.h>
 #include <memory.h>
 #include <ctype.h>
+#ifdef HAVE_DLFCN_H
+#include <dlfcn.h>
+#endif
 
 #include "alMain.h"
 #include "alSource.h"
@@ -1065,6 +1068,65 @@ void LeaveCriticalSection(CRITICAL_SECTION *cs)
 }
 #endif
 
+#if defined(_WIN32)
+void *LoadLib(const char *name)
+{
+    HANDLE handle;
+
+    handle = LoadLibraryA(name);
+    if(handle == NULL)
+        AL_PRINT("Failed to open %s\n", name);
+    return handle;
+}
+
+void CloseLib(void *handle)
+{ FreeLibrary((HANDLE)handle); }
+
+void *GetSymbol(void *handle, const char *name)
+{
+    void *ret;
+
+    ret = (void*)GetProcAddress((HANDLE)handle, name);
+    if(ret == NULL)
+        AL_PRINT("Failed to load %s\n", name);
+    return ret;
+}
+
+#elif defined(HAVE_DLFCN_H)
+
+void *LoadLib(const char *name)
+{
+    const char *err;
+    void *handle;
+
+    dlerror();
+    handle = dlopen(name, RTLD_NOW);
+    if((err=dlerror()) != NULL)
+    {
+        AL_PRINT("Failed to open %s: %s\n", name, err);
+        handle = NULL;
+    }
+    return handle;
+}
+
+void CloseLib(void *handle)
+{ dlclose(handle); }
+
+void *GetSymbol(void *handle, const char *name)
+{
+    const char *err;
+    void *sym;
+
+    dlerror();
+    sym = dlsym(handle, name);
+    if((err=dlerror()) != NULL)
+    {
+        AL_PRINT("Failed to load %s: %s\n", name, err);
+        sym = NULL;
+    }
+    return sym;
+}
+#endif
 
 static void LockLists(void)
 {

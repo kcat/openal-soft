@@ -192,6 +192,8 @@ typedef DWORD tls_type;
 #define tls_get(x) TlsGetValue((x))
 #define tls_set(x, a) TlsSetValue((x), (a))
 
+#define HAVE_DYNLOAD 1
+
 #else
 
 #include <unistd.h>
@@ -261,8 +263,14 @@ static __inline void Sleep(ALuint t)
     while(nanosleep(&tv, &rem) == -1 && errno == EINTR)
         tv = rem;
 }
+
 #define min(x,y) (((x)<(y))?(x):(y))
 #define max(x,y) (((x)>(y))?(x):(y))
+
+#if defined(HAVE_DLFCN_H)
+#define HAVE_DYNLOAD 1
+#endif
+
 #endif
 
 #include "alListener.h"
@@ -576,6 +584,14 @@ void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const
 void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);
 #define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
+
+
+#if defined(_WIN32) || defined(HAVE_DLFCN_H)
+#define HAVE_DYNLOAD 1
+void *LoadLib(const char *name);
+void CloseLib(void *handle);
+void *GetSymbol(void *handle, const char *name);
+#endif
 
 extern ALdouble ConeScale;
 extern ALdouble ZScale;

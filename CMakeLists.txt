@@ -34,6 +34,7 @@ OPTION(WINMM   "Check for Windows Multimedia backend"  ON)
 OPTION(PORTAUDIO  "Check for PortAudio backend"        ON)
 OPTION(PULSEAUDIO "Check for PulseAudio backend"       ON)
 OPTION(COREAUDIO  "Check for CoreAudio backend"        ON)
+OPTION(OPENSL     "Check for OpenSL backend"           ON)
 OPTION(WAVE    "Enable Wave Writer backend"            ON)
 
 OPTION(REQUIRE_ALSA       "Require ALSA backend"               OFF)
@@ -45,6 +46,7 @@ OPTION(REQUIRE_WINMM      "Require Windows Multimedia backend" OFF)
 OPTION(REQUIRE_PORTAUDIO  "Require PortAudio backend"          OFF)
 OPTION(REQUIRE_PULSEAUDIO "Require PulseAudio backend"         OFF)
 OPTION(REQUIRE_COREAUDIO  "Require CoreAudio backend"          OFF)
+OPTION(REQUIRE_OPENSL     "Require OpenSL backend"             OFF)
 
 OPTION(DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
@@ -380,6 +382,7 @@ SET(HAVE_WINMM      0)
 SET(HAVE_PORTAUDIO  0)
 SET(HAVE_PULSEAUDIO 0)
 SET(HAVE_COREAUDIO  0)
+SET(HAVE_OPENSL     0)
 SET(HAVE_WAVE       0)
 
 # Check ALSA backend
@@ -537,6 +540,23 @@ IF(COREAUDIO)
 ENDIF()
 IF(REQUIRE_COREAUDIO AND NOT HAVE_COREAUDIO)
     MESSAGE(FATAL_ERROR "Failed to enabled required CoreAudio backend")
+ENDIF()
+
+# Check for OpenSL (Android) backend
+IF(OPENSL)
+    CHECK_INCLUDE_FILE(SLES/OpenSLES_Android.h HAVE_SLES_OPENSLES_ANDROID_H)
+    IF(HAVE_SLES_OPENSLES_ANDROID_H)
+        CHECK_SHARED_LIBRARY_EXISTS(OpenSLES slCreateEngine 6 "" HAVE_LIBOPENSLES)
+        IF(HAVE_LIBOPENSLES)
+            SET(HAVE_OPENSL 1)
+            SET(ALC_OBJS  ${ALC_OBJS} Alc/opensl.c)
+            SET(BACKENDS  "${BACKENDS} OpenSL,")
+            SET(EXTRA_LIBS OpenSLES ${EXTRA_LIBS})
+        ENDIF()
+    ENDIF()
+ENDIF()
+IF(REQUIRE_OPENSL AND NOT HAVE_OPENSL)
+    MESSAGE(FATAL_ERROR "Failed to enabled required OpenSL backend")
 ENDIF()
 
 # Optionally enable the Wave Writer backend

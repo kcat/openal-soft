@@ -1069,6 +1069,40 @@ void LeaveCriticalSection(CRITICAL_SECTION *cs)
     ret = pthread_mutex_unlock(cs);
     assert(ret == 0);
 }
+
+/* NOTE: This wrapper isn't quite accurate as it returns an ALuint, as opposed
+ * to the expected DWORD. Both are defined as unsigned 32-bit types, however.
+ * Additionally, Win32 is supposed to measure the time since Windows started,
+ * as opposed to the actual time. */
+ALuint timeGetTime(void)
+{
+#if _POSIX_TIMERS > 0
+    struct timespec ts;
+    int ret = -1;
+
+#if defined(_POSIX_MONOTONIC_CLOCK) && (_POSIX_MONOTONIC_CLOCK >= 0)
+#if _POSIX_MONOTONIC_CLOCK == 0
+    static int hasmono = 0;
+    if(hasmono > 0 || (hasmono == 0 &&
+                       (hasmono=sysconf(_SC_MONOTONIC_CLOCK)) > 0))
+#endif
+        ret = clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
+    if(ret != 0)
+        ret = clock_gettime(CLOCK_REALTIME, &ts);
+    assert(ret == 0);
+
+    return ts.tv_nsec/1000000 + ts.tv_sec*1000;
+#else
+    struct timeval tv;
+    int ret;
+
+    ret = gettimeofday(&tv, NULL);
+    assert(ret == 0);
+
+    return tv.tv_usec/1000 + tv.tv_sec*1000;
+#endif
+}
 #endif
 
 #if defined(_WIN32)

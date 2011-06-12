@@ -266,7 +266,7 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
 
         free(data->buffer);
         data->buffer = NULL;
-        data->bufferSize = 0
+        data->bufferSize = 0;
 
         return ALC_FALSE;
     }

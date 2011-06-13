@@ -259,7 +259,7 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
     req = SL_BOOLEAN_TRUE;
 
     loc_bufq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
-    loc_bufq.numBuffers = 2;
+    loc_bufq.numBuffers = Device->NumUpdates;
 
     format_pcm.formatType = SL_DATAFORMAT_PCM;
     format_pcm.numChannels = 2;
@@ -307,7 +307,7 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
         }
     }
     /* enqueue the first buffer to kick off the callbacks */
-    for(i = 0;i < loc_bufq.numBuffers;i++)
+    for(i = 0;i < Device->NumUpdates;i++)
     {
         if(SL_RESULT_SUCCESS == result)
         {

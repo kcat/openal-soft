@@ -105,6 +105,39 @@ typedef struct {
 static const ALCchar opensl_device[] = "OpenSL";
 
 
+static const char *res_str(SLresult result)
+{
+    switch(result)
+    {
+        case SL_RESULT_SUCCESS: return "Success";
+        case SL_RESULT_PRECONDITIONS_VIOLATED: return "Preconditions violated";
+        case SL_RESULT_PARAMETER_INVALID: return "Parameter invalid";
+        case SL_RESULT_MEMORY_FAILURE: return "Memory failure";
+        case SL_RESULT_RESOURCE_ERROR: return "Resource error";
+        case SL_RESULT_RESOURCE_LOST: return "Resource lost";
+        case SL_RESULT_IO_ERROR: return "I/O error";
+        case SL_RESULT_BUFFER_INSUFFICIENT: return "Buffer insufficient";
+        case SL_RESULT_CONTENT_CORRUPTED: return "Content corrupted";
+        case SL_RESULT_CONTENT_UNSUPPORTED: return "Content unsupported";
+        case SL_RESULT_CONTENT_NOT_FOUND: return "Content not found";
+        case SL_RESULT_PERMISSION_DENIED: return "Permission denied";
+        case SL_RESULT_FEATURE_UNSUPPORTED: return "Feature unsupported";
+        case SL_RESULT_INTERNAL_ERROR: return "Internal error";
+        case SL_RESULT_UNKNOWN_ERROR: return "Unknown error";
+        case SL_RESULT_OPERATION_ABORTED: return "Operation aborted";
+        case SL_RESULT_CONTROL_LOST: return "Control lost";
+        case SL_RESULT_READONLY: return "ReadOnly";
+        case SL_RESULT_ENGINEOPTION_UNSUPPORTED: return "Engine option unsupported";
+        case SL_RESULT_SOURCE_SINK_INCOMPATIBLE: return "Source/Sink incompatible";
+    }
+    return "Unknown error code";
+}
+
+#define PRINTERR(x, s) do {                                                      \
+    if((x) != SL_RESULT_SUCCESS)                                                 \
+        AL_PRINT("%s: %s\n", (s), res_str((x)));                                 \
+} while(0)
+
 /* this callback handler is called every time a buffer finishes playing */
 static void opensl_callback(SLAndroidSimpleBufferQueueItf bq, void *context)
 {
@@ -136,14 +169,27 @@ static ALCboolean opensl_open_playback(ALCdevice *Device, const ALCchar *deviceN
 
     // create engine
     result = slCreateEngine(&data->engineObject, 0, NULL, 0, NULL, NULL);
+    PRINTERR(result, "slCreateEngine");
     if(SL_RESULT_SUCCESS == result)
+    {
         result = SLObjectItf_Realize(data->engineObject, SL_BOOLEAN_FALSE);
+        PRINTERR(result, "engine->Realize");
+    }
     if(SL_RESULT_SUCCESS == result)
+    {
         result = SLObjectItf_GetInterface(data->engineObject, SL_IID_ENGINE, &data->engine);
+        PRINTERR(result, "engine->GetInterface");
+    }
     if(SL_RESULT_SUCCESS == result)
+    {
         result = SLEngineItf_CreateOutputMix(data->engine, &data->outputMix, 0, NULL, NULL);
+        PRINTERR(result, "engine->CreateOutputMix");
+    }
     if(SL_RESULT_SUCCESS == result)
+    {
         result = SLObjectItf_Realize(data->outputMix, SL_BOOLEAN_FALSE);
+        PRINTERR(result, "outputMix->Realize");
+    }
 
     if(SL_RESULT_SUCCESS != result)
     {
@@ -233,30 +279,52 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
 
 
     result = SLEngineItf_CreateAudioPlayer(data->engine, &data->bufferQueueObject, &audioSrc, &audioSnk, 1, &id, &req);
+    PRINTERR(result, "engine->CreateAudioPlayer");
     if(SL_RESULT_SUCCESS == result)
+    {
         result = SLObjectItf_Realize(data->bufferQueueObject, SL_BOOLEAN_FALSE);
+        PRINTERR(result, "bufferQueue->Realize");
+    }
     if(SL_RESULT_SUCCESS == result)
+    {
         result = SLObjectItf_GetInterface(data->bufferQueueObject, SL_IID_BUFFERQUEUE, &bufferQueue);
+        PRINTERR(result, "bufferQueue->GetInterface");
+    }
     if(SL_RESULT_SUCCESS == result)
+    {
         result = (*bufferQueue)->RegisterCallback(bufferQueue, opensl_callback, Device);
+        PRINTERR(result, "bufferQueue->RegisterCallback");
+    }
     if(SL_RESULT_SUCCESS == result)
     {
         data->frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
         data->bufferSize = Device->UpdateSize * data->frameSize;
         data->buffer = calloc(1, data->bufferSize);
         if(!data->buffer)
+        {
             result = SL_RESULT_MEMORY_FAILURE;
+            PRINTERR(result, "calloc");
+        }
     }
     /* enqueue the first buffer to kick off the callbacks */
     for(i = 0;i < loc_bufq.numBuffers;i++)
     {
         if(SL_RESULT_SUCCESS == result)
+        {
             result = (*bufferQueue)->Enqueue(bufferQueue, data->buffer, data->bufferSize);
+            PRINTERR(result, "bufferQueue->Enqueue");
+        }
     }
     if(SL_RESULT_SUCCESS == result)
+    {
         result = SLObjectItf_GetInterface(data->bufferQueueObject, SL_IID_PLAY, &player);
+        PRINTERR(result, "bufferQueue->GetInterface");
+    }
     if(SL_RESULT_SUCCESS == result)
+    {
         result = SLPlayItf_SetPlayState(player, SL_PLAYSTATE_PLAYING);
+        PRINTERR(result, "player->SetPlayState");
+    }
 
     if(SL_RESULT_SUCCESS != result)
     {
@@ -285,7 +353,7 @@ static void opensl_stop_playback(ALCdevice *Device)
 
     free(data->buffer);
     data->buffer = NULL;
-    data->bufferSize = 0
+    data->bufferSize = 0;
 }
 
 static ALCboolean opensl_open_capture(ALCdevice *Device, const ALCchar *deviceName)

@@ -427,6 +427,8 @@ ALdouble ZScale = 1.0;
 // ALC Related helper functions
 static void ReleaseALC(void);
 
+static void alc_initconfig(void);
+
 #ifdef HAVE_GCC_DESTRUCTOR
 static void alc_init(void) __attribute__((constructor));
 static void alc_deinit(void) __attribute__((destructor));
@@ -445,6 +447,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
         case DLL_PROCESS_ATTACH:
             DisableThreadLibraryCalls(hModule);
             alc_init();
+            alc_initconfig();
             break;
 
         case DLL_PROCESS_DETACH:
@@ -463,6 +466,7 @@ static void alc_constructor(void)
 {
     atexit(alc_destructor);
     alc_init();
+    alc_initconfig();
 }
 
 static void alc_destructor(void)
@@ -479,8 +483,7 @@ static void alc_destructor(void)
 
 static void alc_init(void)
 {
-    int i;
-    const char *devs, *str;
+    const char *str;
 
     str = getenv("ALSOFT_LOGFILE");
     if(str && str[0])
@@ -504,6 +507,33 @@ static void alc_init(void)
     InitializeCriticalSection(&g_csMutex);
     InitializeCriticalSection(&ListLock);
     ALTHUNK_INIT();
+}
+
+static void alc_deinit(void)
+{
+    int i;
+
+    ReleaseALC();
+
+    for(i = 0;BackendList[i].Deinit;i++)
+        BackendList[i].Deinit();
+    BackendLoopback.Deinit();
+
+    FreeALConfig();
+    ALTHUNK_EXIT();
+    DeleteCriticalSection(&ListLock);
+    DeleteCriticalSection(&g_csMutex);
+    tls_delete(LocalContext);
+
+    if(LogFile != stderr)
+        fclose(LogFile);
+    LogFile = NULL;
+}
+
+static void alc_initconfig(void)
+{
+    int i;
+    const char *devs, *str;
 
     ReadALConfig();
 
@@ -606,28 +636,12 @@ static void alc_init(void)
     }
 }
 
-static void alc_deinit(void)
-{
-    int i;
-
-    ReleaseALC();
-
-    for(i = 0;BackendList[i].Deinit;i++)
-        BackendList[i].Deinit();
-    BackendLoopback.Deinit();
-
-    tls_delete(LocalContext);
-
-    FreeALConfig();
-    ALTHUNK_EXIT();
-    DeleteCriticalSection(&ListLock);
-    DeleteCriticalSection(&g_csMutex);
-
-    if(LogFile != stderr)
-        fclose(LogFile);
-    LogFile = NULL;
-}
-
+#ifndef _WIN32
+static pthread_once_t once_control = PTHREAD_ONCE_INIT;
+#define DO_INITCONFIG() pthread_once(&once_control, alc_initconfig)
+#else
+#define DO_INITCONFIG()
+#endif
 
 static void ProbeList(ALCchar **list, size_t *listsize, int type)
 {
@@ -637,6 +651,7 @@ static void ProbeList(ALCchar **list, size_t *listsize, int type)
     *list = NULL;
     *listsize = 0;
 
+    DO_INITCONFIG();
     for(i = 0;BackendList[i].Probe;i++)
         BackendList[i].Probe(type);
 }
@@ -1547,6 +1562,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     ALCdevice *device = NULL;
     ALCint i;
 
+    DO_INITCONFIG();
+
     if(SampleSize <= 0)
     {
         alcSetError(NULL, ALC_INVALID_VALUE);
@@ -1733,7 +1750,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
 {
     const ALCchar *value = NULL;
 
-    switch (param)
+    switch(param)
     {
     case ALC_NO_ERROR:
         value = alcNoError;
@@ -2594,6 +2611,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ALCdevice *device;
     ALint i;
 
+    DO_INITCONFIG();
+
     if(deviceName && !deviceName[0])
         deviceName = NULL;
 
@@ -2780,6 +2799,8 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
 {
     ALCdevice *device;
+
+    DO_INITCONFIG();
 
     device = calloc(1, sizeof(ALCdevice));
     if(!device)

@@ -482,7 +482,7 @@ static void alc_init(void)
     str = getenv("ALSOFT_LOGFILE");
     if(str && str[0])
     {
-        LogFile = fopen(str, "w");
+        LogFile = fopen(str, "wat");
         if(!LogFile)
             fprintf(stderr, "AL lib: Failed to open log file '%s'\n", str);
     }

@@ -23,12 +23,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
-#ifdef HAVE_DLFCN_H
-#include <dlfcn.h>
-#endif
+
 #include "alMain.h"
-#include "AL/al.h"
-#include "AL/alc.h"
 
 #include <alsa/asoundlib.h>
 

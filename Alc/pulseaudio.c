@@ -22,9 +22,6 @@
 #include "config.h"
 
 #include "alMain.h"
-#ifdef HAVE_DLFCN_H
-#include <dlfcn.h>
-#endif
 
 #include <pulse/pulseaudio.h>
 

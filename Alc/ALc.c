@@ -626,38 +626,24 @@ static void alc_deinit(void)
 }
 
 
+static void ProbeList(ALCchar **list, size_t *listsize, int type)
+{
+    ALint i;
+
+    free(*list);
+    *list = NULL;
+    *listsize = 0;
+
+    for(i = 0;BackendList[i].Probe;i++)
+        BackendList[i].Probe(type);
+}
+
 static void ProbeDeviceList()
-{
-    ALint i;
-
-    free(alcDeviceList); alcDeviceList = NULL;
-    alcDeviceListSize = 0;
-
-    for(i = 0;BackendList[i].Probe;i++)
-        BackendList[i].Probe(DEVICE_PROBE);
-}
-
+{ ProbeList(&alcDeviceList, &alcDeviceListSize, DEVICE_PROBE); }
 static void ProbeAllDeviceList()
-{
-    ALint i;
-
-    free(alcAllDeviceList); alcAllDeviceList = NULL;
-    alcAllDeviceListSize = 0;
-
-    for(i = 0;BackendList[i].Probe;i++)
-        BackendList[i].Probe(ALL_DEVICE_PROBE);
-}
-
+{ ProbeList(&alcAllDeviceList, &alcAllDeviceListSize, ALL_DEVICE_PROBE); }
 static void ProbeCaptureDeviceList()
-{
-    ALint i;
-
-    free(alcCaptureDeviceList); alcCaptureDeviceList = NULL;
-    alcCaptureDeviceListSize = 0;
-
-    for(i = 0;BackendList[i].Probe;i++)
-        BackendList[i].Probe(CAPTURE_DEVICE_PROBE);
-}
+{ ProbeList(&alcCaptureDeviceList, &alcCaptureDeviceListSize, CAPTURE_DEVICE_PROBE); }
 
 
 static void AppendList(const ALCchar *name, ALCchar **List, size_t *ListSize)

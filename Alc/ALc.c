@@ -430,8 +430,7 @@ static void ReleaseALC(void);
 #ifdef HAVE_GCC_DESTRUCTOR
 static void alc_init(void) __attribute__((constructor));
 static void alc_deinit(void) __attribute__((destructor));
-#else
-#ifdef _WIN32
+#elif defined(_WIN32)
 static void alc_init(void);
 static void alc_deinit(void);
 
@@ -470,8 +469,12 @@ static void alc_destructor(void)
 {
     alc_deinit();
 }
+#else
+#error "No static initialization available on this platform!"
 #endif
-#endif
+
+#else
+#error "No global initialization available on this platform!"
 #endif
 
 static void alc_init(void)

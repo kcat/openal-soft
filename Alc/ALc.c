@@ -1612,16 +1612,16 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
     ALCdevice **list;
 
     LockLists();
-    if(!IsDevice(pDevice) || !pDevice->IsCaptureDevice)
+    list = &g_pDeviceList;
+    while(*list && *list != pDevice)
+        list = &(*list)->next;
+
+    if(!*list || !(*list)->IsCaptureDevice)
     {
-        alcSetError(pDevice, ALC_INVALID_DEVICE);
+        alcSetError(*list, ALC_INVALID_DEVICE);
         UnlockLists();
         return ALC_FALSE;
     }
-
-    list = &g_pDeviceList;
-    while(*list != pDevice)
-        list = &(*list)->next;
 
     *list = (*list)->next;
     g_ulDeviceCount--;
@@ -2187,16 +2187,16 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     ALuint i;
 
     LockLists();
-    if(!IsContext(context))
+    list = &g_pContextList;
+    while(*list && *list != context)
+        list = &(*list)->next;
+
+    if(!*list)
     {
         alcSetError(NULL, ALC_INVALID_CONTEXT);
         UnlockLists();
         return;
     }
-
-    list = &g_pContextList;
-    while(*list != context)
-        list = &(*list)->next;
 
     *list = (*list)->next;
     g_ulContextCount--;
@@ -2693,16 +2693,16 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     ALCdevice **list;
 
     LockLists();
-    if(!IsDevice(pDevice) || pDevice->IsCaptureDevice)
+    list = &g_pDeviceList;
+    while(*list && *list != pDevice)
+        list = &(*list)->next;
+
+    if(!*list || (*list)->IsCaptureDevice)
     {
-        alcSetError(pDevice, ALC_INVALID_DEVICE);
+        alcSetError(*list, ALC_INVALID_DEVICE);
         UnlockLists();
         return ALC_FALSE;
     }
-
-    list = &g_pDeviceList;
-    while(*list != pDevice)
-        list = &(*list)->next;
 
     *list = (*list)->next;
     g_ulDeviceCount--;

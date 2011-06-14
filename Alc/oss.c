@@ -498,30 +498,38 @@ void alc_oss_deinit(void)
 {
 }
 
-void alc_oss_probe(int type)
+void alc_oss_probe(enum DevProbe type)
 {
-    if(type == DEVICE_PROBE)
+    switch(type)
     {
+        case DEVICE_PROBE:
+        {
 #ifdef HAVE_STAT
-        struct stat buf;
-        if(stat(GetConfigValue("oss", "device", "/dev/dsp"), &buf) == 0)
+            struct stat buf;
+            if(stat(GetConfigValue("oss", "device", "/dev/dsp"), &buf) == 0)
 #endif
-            AppendDeviceList(oss_device);
-    }
-    else if(type == ALL_DEVICE_PROBE)
-    {
+                AppendDeviceList(oss_device);
+        }
+        break;
+
+        case ALL_DEVICE_PROBE:
+        {
 #ifdef HAVE_STAT
-        struct stat buf;
-        if(stat(GetConfigValue("oss", "device", "/dev/dsp"), &buf) == 0)
+            struct stat buf;
+            if(stat(GetConfigValue("oss", "device", "/dev/dsp"), &buf) == 0)
 #endif
-            AppendAllDeviceList(oss_device);
-    }
-    else if(type == CAPTURE_DEVICE_PROBE)
-    {
+                AppendAllDeviceList(oss_device);
+        }
+        break;
+
+        case CAPTURE_DEVICE_PROBE:
+        {
 #ifdef HAVE_STAT
-        struct stat buf;
-        if(stat(GetConfigValue("oss", "capture", "/dev/dsp"), &buf) == 0)
+            struct stat buf;
+            if(stat(GetConfigValue("oss", "capture", "/dev/dsp"), &buf) == 0)
 #endif
-            AppendCaptureDeviceList(oss_device);
+                AppendCaptureDeviceList(oss_device);
+        }
+        break;
     }
 }

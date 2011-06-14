@@ -70,7 +70,7 @@ void alc_loopback_deinit(void)
 {
 }
 
-void alc_loopback_probe(int type)
+void alc_loopback_probe(enum DevProbe type)
 {
     (void)type;
 }

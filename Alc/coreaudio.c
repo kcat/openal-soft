@@ -324,10 +324,17 @@ void alc_ca_deinit(void)
 {
 }
 
-void alc_ca_probe(int type)
+void alc_ca_probe(enum DevProbe type)
 {
-    if(type == DEVICE_PROBE)
-        AppendDeviceList(ca_device);
-    else if(type == ALL_DEVICE_PROBE)
-        AppendAllDeviceList(ca_device);
+    switch(type)
+    {
+        case DEVICE_PROBE:
+            AppendDeviceList(ca_device);
+            break;
+        case ALL_DEVICE_PROBE:
+            AppendAllDeviceList(ca_device);
+            break;
+        case CAPTURE_DEVICE_PROBE:
+            break;
+    }
 }

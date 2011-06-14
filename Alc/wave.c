@@ -343,13 +343,20 @@ void alc_wave_deinit(void)
 {
 }
 
-void alc_wave_probe(int type)
+void alc_wave_probe(enum DevProbe type)
 {
     if(!ConfigValueExists("wave", "file"))
         return;
 
-    if(type == DEVICE_PROBE)
-        AppendDeviceList(waveDevice);
-    else if(type == ALL_DEVICE_PROBE)
-        AppendAllDeviceList(waveDevice);
+    switch(type)
+    {
+        case DEVICE_PROBE:
+            AppendDeviceList(waveDevice);
+            break;
+        case ALL_DEVICE_PROBE:
+            AppendAllDeviceList(waveDevice);
+            break;
+        case CAPTURE_DEVICE_PROBE:
+            break;
+    }
 }

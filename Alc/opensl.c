@@ -415,7 +415,7 @@ void alc_opensl_deinit(void)
 {
 }
 
-void alc_opensl_probe(int type)
+void alc_opensl_probe(enum DevProbe type)
 {
     switch(type)
     {
@@ -425,7 +425,7 @@ void alc_opensl_probe(int type)
         case ALL_DEVICE_PROBE:
             AppendAllDeviceList(opensl_device);
             break;
-        default:
+        case CAPTURE_DEVICE_PROBE:
             break;
     }
 }

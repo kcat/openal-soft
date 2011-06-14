@@ -767,34 +767,36 @@ void alcWinMMDeinit()
     NumCaptureDevices = 0;
 }
 
-void alcWinMMProbe(int type)
+void alcWinMMProbe(enum DevProbe type)
 {
     ALuint i;
 
-    if(type == DEVICE_PROBE)
+    switch(type)
     {
-        ProbePlaybackDevices();
-        if(NumPlaybackDevices > 0)
-            AppendDeviceList(woDefault);
-    }
-    else if(type == ALL_DEVICE_PROBE)
-    {
-        ProbePlaybackDevices();
-        if(NumPlaybackDevices > 0)
-            AppendAllDeviceList(woDefault);
-        for(i = 0;i < NumPlaybackDevices;i++)
-        {
-            if(PlaybackDeviceList[i])
-                AppendAllDeviceList(PlaybackDeviceList[i]);
-        }
-    }
-    else if(type == CAPTURE_DEVICE_PROBE)
-    {
-        ProbeCaptureDevices();
-        for(i = 0;i < NumCaptureDevices;i++)
-        {
-            if(CaptureDeviceList[i])
-                AppendCaptureDeviceList(CaptureDeviceList[i]);
-        }
+        case DEVICE_PROBE:
+            ProbePlaybackDevices();
+            if(NumPlaybackDevices > 0)
+                AppendDeviceList(woDefault);
+            break;
+
+        case ALL_DEVICE_PROBE:
+            ProbePlaybackDevices();
+            if(NumPlaybackDevices > 0)
+                AppendAllDeviceList(woDefault);
+            for(i = 0;i < NumPlaybackDevices;i++)
+            {
+                if(PlaybackDeviceList[i])
+                    AppendAllDeviceList(PlaybackDeviceList[i]);
+            }
+            break;
+
+        case CAPTURE_DEVICE_PROBE:
+            ProbeCaptureDevices();
+            for(i = 0;i < NumCaptureDevices;i++)
+            {
+                if(CaptureDeviceList[i])
+                    AppendCaptureDeviceList(CaptureDeviceList[i]);
+            }
+            break;
     }
 }

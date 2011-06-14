@@ -66,7 +66,7 @@ typedef struct BackendInfo {
     const char *name;
     void (*Init)(BackendFuncs*);
     void (*Deinit)(void);
-    void (*Probe)(int);
+    void (*Probe)(enum DevProbe);
     BackendFuncs Funcs;
 } BackendInfo;
 static BackendInfo BackendList[] = {

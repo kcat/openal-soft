@@ -295,7 +295,7 @@ void alc_solaris_deinit(void)
 {
 }
 
-void alc_solaris_probe(int type)
+void alc_solaris_probe(enum DevProbe type)
 {
 #ifdef HAVE_STAT
     struct stat buf;
@@ -303,8 +303,15 @@ void alc_solaris_probe(int type)
         return;
 #endif
 
-    if(type == DEVICE_PROBE)
-        AppendDeviceList(solaris_device);
-    else if(type == ALL_DEVICE_PROBE)
-        AppendAllDeviceList(solaris_device);
+    switch(type)
+    {
+        case DEVICE_PROBE:
+            AppendDeviceList(solaris_device);
+            break;
+        case ALL_DEVICE_PROBE:
+            AppendAllDeviceList(solaris_device);
+            break;
+        case CAPTURE_DEVICE_PROBE:
+            break;
+    }
 }

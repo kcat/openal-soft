@@ -430,14 +430,20 @@ void alc_pa_deinit(void)
     }
 }
 
-void alc_pa_probe(int type)
+void alc_pa_probe(enum DevProbe type)
 {
     if(!pa_load()) return;
 
-    if(type == DEVICE_PROBE)
-        AppendDeviceList(pa_device);
-    else if(type == ALL_DEVICE_PROBE)
-        AppendAllDeviceList(pa_device);
-    else if(type == CAPTURE_DEVICE_PROBE)
-        AppendCaptureDeviceList(pa_device);
+    switch(type)
+    {
+        case DEVICE_PROBE:
+            AppendDeviceList(pa_device);
+            break;
+        case ALL_DEVICE_PROBE:
+            AppendAllDeviceList(pa_device);
+            break;
+        case CAPTURE_DEVICE_PROBE:
+            AppendCaptureDeviceList(pa_device);
+            break;
+    }
 }

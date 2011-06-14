@@ -1031,35 +1031,39 @@ void alc_alsa_deinit(void)
     }
 }
 
-void alc_alsa_probe(int type)
+void alc_alsa_probe(enum DevProbe type)
 {
     ALuint i;
 
     if(!alsa_load())
         return;
 
-    if(type == DEVICE_PROBE)
-        AppendDeviceList(alsaDevice);
-    else if(type == ALL_DEVICE_PROBE)
+    switch(type)
     {
-        for(i = 0;i < numDevNames;++i)
-            free(allDevNameMap[i].name);
+        case DEVICE_PROBE:
+            AppendDeviceList(alsaDevice);
+            break;
 
-        free(allDevNameMap);
-        allDevNameMap = probe_devices(SND_PCM_STREAM_PLAYBACK, &numDevNames);
+        case ALL_DEVICE_PROBE:
+            for(i = 0;i < numDevNames;++i)
+                free(allDevNameMap[i].name);
 
-        for(i = 0;i < numDevNames;++i)
-            AppendAllDeviceList(allDevNameMap[i].name);
-    }
-    else if(type == CAPTURE_DEVICE_PROBE)
-    {
-        for(i = 0;i < numCaptureDevNames;++i)
-            free(allCaptureDevNameMap[i].name);
+            free(allDevNameMap);
+            allDevNameMap = probe_devices(SND_PCM_STREAM_PLAYBACK, &numDevNames);
 
-        free(allCaptureDevNameMap);
-        allCaptureDevNameMap = probe_devices(SND_PCM_STREAM_CAPTURE, &numCaptureDevNames);
+            for(i = 0;i < numDevNames;++i)
+                AppendAllDeviceList(allDevNameMap[i].name);
+            break;
 
-        for(i = 0;i < numCaptureDevNames;++i)
-            AppendCaptureDeviceList(allCaptureDevNameMap[i].name);
+        case CAPTURE_DEVICE_PROBE:
+            for(i = 0;i < numCaptureDevNames;++i)
+                free(allCaptureDevNameMap[i].name);
+
+            free(allCaptureDevNameMap);
+            allCaptureDevNameMap = probe_devices(SND_PCM_STREAM_CAPTURE, &numCaptureDevNames);
+
+            for(i = 0;i < numCaptureDevNames;++i)
+                AppendCaptureDeviceList(allCaptureDevNameMap[i].name);
+            break;
     }
 }

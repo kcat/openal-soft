@@ -586,30 +586,37 @@ void alcDSoundDeinit(void)
     }
 }
 
-void alcDSoundProbe(int type)
+void alcDSoundProbe(enum DevProbe type)
 {
+    HRESULT hr;
+    ALuint i;
+
     if(!DSoundLoad()) return;
 
-    if(type == DEVICE_PROBE)
-        AppendDeviceList(dsDevice);
-    else if(type == ALL_DEVICE_PROBE)
+    switch(type)
     {
-        HRESULT hr;
-        ALuint i;
+        case DEVICE_PROBE:
+            AppendDeviceList(dsDevice);
+            break;
 
-        for(i = 0;i < NumDevices;++i)
-            free(DeviceList[i].name);
-        free(DeviceList);
-        DeviceList = NULL;
-        NumDevices = 0;
+        case ALL_DEVICE_PROBE:
+            for(i = 0;i < NumDevices;++i)
+                free(DeviceList[i].name);
+            free(DeviceList);
+            DeviceList = NULL;
+            NumDevices = 0;
 
-        hr = DirectSoundEnumerateA(DSoundEnumDevices, NULL);
-        if(FAILED(hr))
-            AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
-        else
-        {
-            for(i = 0;i < NumDevices;i++)
-                AppendAllDeviceList(DeviceList[i].name);
-        }
+            hr = DirectSoundEnumerateA(DSoundEnumDevices, NULL);
+            if(FAILED(hr))
+                AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+            else
+            {
+                for(i = 0;i < NumDevices;i++)
+                    AppendAllDeviceList(DeviceList[i].name);
+            }
+            break;
+
+        case CAPTURE_DEVICE_PROBE:
+            break;
     }
 }

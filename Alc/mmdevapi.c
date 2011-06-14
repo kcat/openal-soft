@@ -561,12 +561,19 @@ void alcMMDevApiDeinit(void)
     }
 }
 
-void alcMMDevApiProbe(int type)
+void alcMMDevApiProbe(enum DevProbe type)
 {
     if(!MMDevApiLoad()) return;
 
-    if(type == DEVICE_PROBE)
-        AppendDeviceList(mmDevice);
-    else if(type == ALL_DEVICE_PROBE)
-        AppendAllDeviceList(mmDevice);
+    switch(type)
+    {
+        case DEVICE_PROBE:
+            AppendDeviceList(mmDevice);
+            break;
+        case ALL_DEVICE_PROBE:
+            AppendAllDeviceList(mmDevice);
+            break;
+        case CAPTURE_DEVICE_PROBE:
+            break;
+    }
 }

@@ -1297,69 +1297,68 @@ void alc_pulse_deinit(void) //{{{
     }
 } //}}}
 
-void alc_pulse_probe(int type) //{{{
+void alc_pulse_probe(enum DevProbe type) //{{{
 {
+    pa_threaded_mainloop *loop;
+    ALuint i;
+
     if(!pulse_load()) return;
 
-    if(type == DEVICE_PROBE)
+    switch(type)
     {
-        pa_threaded_mainloop *loop;
-
-        if((loop=ppa_threaded_mainloop_new()) &&
-           ppa_threaded_mainloop_start(loop) >= 0)
-        {
-            pa_context *context;
-
-            ppa_threaded_mainloop_lock(loop);
-            context = connect_context(loop, AL_TRUE);
-            if(context)
+        case DEVICE_PROBE:
+            if((loop=ppa_threaded_mainloop_new()) &&
+               ppa_threaded_mainloop_start(loop) >= 0)
             {
-                AppendDeviceList(pulse_device);
+                pa_context *context;
 
-                ppa_context_disconnect(context);
-                ppa_context_unref(context);
+                ppa_threaded_mainloop_lock(loop);
+                context = connect_context(loop, AL_TRUE);
+                if(context)
+                {
+                    AppendDeviceList(pulse_device);
+
+                    ppa_context_disconnect(context);
+                    ppa_context_unref(context);
+                }
+                ppa_threaded_mainloop_unlock(loop);
+                ppa_threaded_mainloop_stop(loop);
             }
-            ppa_threaded_mainloop_unlock(loop);
-            ppa_threaded_mainloop_stop(loop);
-        }
-        if(loop)
-            ppa_threaded_mainloop_free(loop);
-    }
-    else if(type == ALL_DEVICE_PROBE)
-    {
-        ALuint i;
+            if(loop)
+                ppa_threaded_mainloop_free(loop);
+            break;
 
-        for(i = 0;i < numDevNames;++i)
-        {
-            free(allDevNameMap[i].name);
-            free(allDevNameMap[i].device_name);
-        }
-        free(allDevNameMap);
-        allDevNameMap = NULL;
-        numDevNames = 0;
+        case ALL_DEVICE_PROBE:
+            for(i = 0;i < numDevNames;++i)
+            {
+                free(allDevNameMap[i].name);
+                free(allDevNameMap[i].device_name);
+            }
+            free(allDevNameMap);
+            allDevNameMap = NULL;
+            numDevNames = 0;
 
-        probe_devices(AL_FALSE);
+            probe_devices(AL_FALSE);
 
-        for(i = 0;i < numDevNames;i++)
-            AppendAllDeviceList(allDevNameMap[i].name);
-    }
-    else if(type == CAPTURE_DEVICE_PROBE)
-    {
-        ALuint i;
+            for(i = 0;i < numDevNames;i++)
+                AppendAllDeviceList(allDevNameMap[i].name);
+            break;
 
-        for(i = 0;i < numCaptureDevNames;++i)
-        {
-            free(allCaptureDevNameMap[i].name);
-            free(allCaptureDevNameMap[i].device_name);
-        }
-        free(allCaptureDevNameMap);
-        allCaptureDevNameMap = NULL;
-        numCaptureDevNames = 0;
+        case CAPTURE_DEVICE_PROBE:
+            for(i = 0;i < numCaptureDevNames;++i)
+            {
+                free(allCaptureDevNameMap[i].name);
+                free(allCaptureDevNameMap[i].device_name);
+            }
+            free(allCaptureDevNameMap);
+            allCaptureDevNameMap = NULL;
+            numCaptureDevNames = 0;
 
-        probe_devices(AL_TRUE);
+            probe_devices(AL_TRUE);
 
-        for(i = 0;i < numCaptureDevNames;i++)
-            AppendCaptureDeviceList(allCaptureDevNameMap[i].name);
+            for(i = 0;i < numCaptureDevNames;i++)
+                AppendCaptureDeviceList(allCaptureDevNameMap[i].name);
+            break;
     }
 } //}}}
 //}}}

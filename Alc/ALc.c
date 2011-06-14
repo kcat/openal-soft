@@ -497,14 +497,14 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         ZScale = -1.0;
 
+    tls_create(&LocalContext);
     InitializeCriticalSection(&g_csMutex);
     InitializeCriticalSection(&ListLock);
     ALTHUNK_INIT();
+
     ReadALConfig();
 
     InitHrtf();
-
-    tls_create(&LocalContext);
 
     RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 0);
 

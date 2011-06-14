@@ -169,10 +169,12 @@ static void opensl_callback(SLAndroidSimpleBufferQueueItf bq, void *context)
 {
     ALCdevice *Device = context;
     osl_data *data = Device->ExtraData;
+    SLresult result;
 
     aluMixData(Device, data->buffer, data->bufferSize/data->frameSize);
 
-    (*bq)->Enqueue(bq, data->buffer, data->bufferSize);
+    result = (*bq)->Enqueue(bq, data->buffer, data->bufferSize);
+    PRINTERR(result, "bq->Enqueue");
 }
 
 

@@ -2205,6 +2205,8 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     if(Device->NumContexts == 1)
         ALCdevice_StopPlayback(Device);
 
+    if(context == tls_get(LocalContext))
+        tls_set(LocalContext, NULL);
     if(context == GlobalContext)
         GlobalContext = NULL;
 

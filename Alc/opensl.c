@@ -105,6 +105,32 @@ typedef struct {
 static const ALCchar opensl_device[] = "OpenSL";
 
 
+static SLuint32 GetChannelMask(enum DevFmtChannels chans)
+{
+    switch(chans)
+    {
+        case DevFmtMono: return SL_SPEAKER_FRONT_CENTER;
+        case DevFmtStereo: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT;
+        case DevFmtQuad: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
+                                SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT;
+        case DevFmtX51: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
+                               SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
+                               SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT;
+        case DevFmtX61: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
+                               SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
+                               SL_SPEAKER_BACK_CENTER|
+                               SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
+        case DevFmtX71: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
+                               SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
+                               SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT|
+                               SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
+        case DevFmtX51Side: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
+                                   SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
+                                   SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
+    }
+    return 0;
+}
+
 static const char *res_str(SLresult result)
 {
     switch(result)
@@ -262,11 +288,11 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
     loc_bufq.numBuffers = Device->NumUpdates;
 
     format_pcm.formatType = SL_DATAFORMAT_PCM;
-    format_pcm.numChannels = 2;
-    format_pcm.samplesPerSec = SL_SAMPLINGRATE_44_1;
-    format_pcm.bitsPerSample = SL_PCMSAMPLEFORMAT_FIXED_16;
-    format_pcm.containerSize = SL_PCMSAMPLEFORMAT_FIXED_16;
-    format_pcm.channelMask = SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT;
+    format_pcm.numChannels = ChannelsFromDevFmt(Device->FmtChans);
+    format_pcm.samplesPerSec = Device->Frequency * 1000;
+    format_pcm.bitsPerSample = BytesFromDevFmt(Device->FmtType) * 8;
+    format_pcm.containerSize = format_pcm.bitsPerSample;
+    format_pcm.channelMask = GetChannelMask(Device->FmtChans);
     format_pcm.endianness = SL_BYTEORDER_NATIVE;
 
     audioSrc.pLocator = &loc_bufq;

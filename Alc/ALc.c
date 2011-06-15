@@ -1336,9 +1336,6 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumAuxSends = numSends;
     }
 
-    if(!device->IsLoopbackDevice && GetConfigValueBool(NULL, "hrtf", AL_FALSE))
-        device->Flags |= DEVICE_USE_HRTF;
-
     if((device->Flags&DEVICE_RUNNING))
         return ALC_TRUE;
 
@@ -1358,6 +1355,8 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->PendingClicks[i] = 0.0f;
     }
 
+    if(!device->IsLoopbackDevice && GetConfigValueBool(NULL, "hrtf", AL_FALSE))
+        device->Flags |= DEVICE_USE_HRTF;
     if(device->FmtChans != DevFmtStereo || device->Frequency != 44100)
     {
         if((device->Flags&DEVICE_USE_HRTF))

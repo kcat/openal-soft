@@ -1237,22 +1237,17 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALCuint freq, numMono, numStereo, numSends;
     enum DevFmtChannels schans;
     enum DevFmtType stype;
-    ALboolean running;
     ALuint attrIdx;
     ALuint i;
-
-    running = ((device->NumContexts > 0) ? AL_TRUE : AL_FALSE);
 
     // Check for attributes
     if(attrList && attrList[0])
     {
         // If a context is already running on the device, stop playback so the
         // device attributes can be updated
-        if(running)
-        {
+        if((device->Flags&DEVICE_RUNNING))
             ALCdevice_StopPlayback(device);
-            running = AL_FALSE;
-        }
+        device->Flags &= ~DEVICE_RUNNING;
 
         freq = device->Frequency;
         schans = device->FmtChans;
@@ -1344,7 +1339,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(!device->IsLoopbackDevice && GetConfigValueBool(NULL, "hrtf", AL_FALSE))
         device->Flags |= DEVICE_USE_HRTF;
 
-    if(running)
+    if((device->Flags&DEVICE_RUNNING))
         return ALC_TRUE;
 
     SuspendContext(NULL);
@@ -1353,6 +1348,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ProcessContext(NULL);
         return ALC_FALSE;
     }
+    device->Flags |= DEVICE_RUNNING;
 
     aluInitPanning(device);
 
@@ -1415,6 +1411,8 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 ProcessContext(context);
                 ProcessContext(NULL);
+                ALCdevice_StopPlayback(device);
+                device->Flags &= ~DEVICE_RUNNING;
                 return ALC_FALSE;
             }
             ALEffect_Update(slot->EffectState, context, &slot->effect);
@@ -2148,7 +2146,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         alcSetError(device, ALC_INVALID_DEVICE);
         aluHandleDisconnect(device);
-        ALCdevice_StopPlayback(device);
         UnlockLists();
         return NULL;
     }
@@ -2174,7 +2171,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         alcSetError(device, ALC_OUT_OF_MEMORY);
         ProcessContext(NULL);
         if(device->NumContexts == 0)
+        {
             ALCdevice_StopPlayback(device);
+            device->Flags &= ~DEVICE_RUNNING;
+        }
         UnlockLists();
         return NULL;
     }
@@ -2221,15 +2221,12 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     *list = (*list)->next;
     g_ulContextCount--;
 
-    Device = context->Device;
-    if(Device->NumContexts == 1)
-        ALCdevice_StopPlayback(Device);
-
     if(context == tls_get(LocalContext))
         tls_set(LocalContext, NULL);
     if(context == GlobalContext)
         GlobalContext = NULL;
 
+    Device = context->Device;
     SuspendContext(NULL);
     for(i = 0;i < Device->NumContexts;i++)
     {
@@ -2241,6 +2238,12 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         }
     }
     ProcessContext(NULL);
+
+    if(Device->NumContexts == 0)
+    {
+        ALCdevice_StopPlayback(Device);
+        Device->Flags &= ~DEVICE_RUNNING;
+    }
     UnlockLists();
 
     if(context->SourceMap.size > 0)

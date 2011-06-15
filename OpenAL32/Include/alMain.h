@@ -480,6 +480,8 @@ struct ALCdevice_struct
 // Channel configuration was requested by the config file
 #define DEVICE_CHANNELS_REQUEST                  (1<<3)
 
+// Specifies if the device is currently running
+#define DEVICE_RUNNING                           (1<<31)
 
 struct ALCcontext_struct
 {

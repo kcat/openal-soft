@@ -1234,15 +1234,16 @@ ALCvoid alcSetError(ALCdevice *device, ALenum errorCode)
  */
 static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
-    ALCuint freq, numMono, numStereo, numSends;
-    enum DevFmtChannels schans;
-    enum DevFmtType stype;
-    ALuint attrIdx;
     ALuint i;
 
     // Check for attributes
     if(attrList && attrList[0])
     {
+        ALCuint freq, numMono, numStereo, numSends;
+        enum DevFmtChannels schans;
+        enum DevFmtType stype;
+        ALuint attrIdx;
+
         // If a context is already running on the device, stop playback so the
         // device attributes can be updated
         if((device->Flags&DEVICE_RUNNING))

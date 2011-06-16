@@ -578,12 +578,8 @@ void alcDSoundDeinit(void)
     NumDevices = 0;
 
     if(ds_handle)
-    {
-#ifdef _WIN32
         FreeLibrary(ds_handle);
-#endif
-        ds_handle = NULL;
-    }
+    ds_handle = NULL;
 }
 
 void alcDSoundProbe(enum DevProbe type)

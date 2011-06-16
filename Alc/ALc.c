@@ -2382,37 +2382,13 @@ void SetDefaultChannelOrder(ALCdevice *device)
 {
     switch(device->FmtChans)
     {
-    case DevFmtMono: device->DevChannels[FRONT_CENTER] = 0; break;
-
-    case DevFmtStereo: device->DevChannels[FRONT_LEFT]  = 0;
-                       device->DevChannels[FRONT_RIGHT] = 1; break;
-
-    case DevFmtQuad: device->DevChannels[FRONT_LEFT]  = 0;
-                     device->DevChannels[FRONT_RIGHT] = 1;
-                     device->DevChannels[BACK_LEFT]   = 2;
-                     device->DevChannels[BACK_RIGHT]  = 3; break;
-
     case DevFmtX51: device->DevChannels[FRONT_LEFT]   = 0;
                     device->DevChannels[FRONT_RIGHT]  = 1;
                     device->DevChannels[BACK_LEFT]    = 2;
                     device->DevChannels[BACK_RIGHT]   = 3;
                     device->DevChannels[FRONT_CENTER] = 4;
-                    device->DevChannels[LFE]          = 5; break;
-
-    case DevFmtX51Side: device->DevChannels[FRONT_LEFT]   = 0;
-                        device->DevChannels[FRONT_RIGHT]  = 1;
-                        device->DevChannels[FRONT_CENTER] = 2;
-                        device->DevChannels[LFE]          = 3;
-                        device->DevChannels[SIDE_LEFT]    = 4;
-                        device->DevChannels[SIDE_RIGHT]   = 5; break;
-
-    case DevFmtX61: device->DevChannels[FRONT_LEFT]   = 0;
-                    device->DevChannels[FRONT_RIGHT]  = 1;
-                    device->DevChannels[FRONT_CENTER] = 2;
-                    device->DevChannels[LFE]          = 3;
-                    device->DevChannels[BACK_CENTER]  = 4;
-                    device->DevChannels[SIDE_LEFT]    = 5;
-                    device->DevChannels[SIDE_RIGHT]   = 6; break;
+                    device->DevChannels[LFE]          = 5;
+                    return;
 
     case DevFmtX71: device->DevChannels[FRONT_LEFT]   = 0;
                     device->DevChannels[FRONT_RIGHT]  = 1;
@@ -2421,8 +2397,18 @@ void SetDefaultChannelOrder(ALCdevice *device)
                     device->DevChannels[FRONT_CENTER] = 4;
                     device->DevChannels[LFE]          = 5;
                     device->DevChannels[SIDE_LEFT]    = 6;
-                    device->DevChannels[SIDE_RIGHT]   = 7; break;
+                    device->DevChannels[SIDE_RIGHT]   = 7;
+                    return;
+
+    /* Same as WFX order */
+    case DevFmtMono:
+    case DevFmtStereo:
+    case DevFmtQuad:
+    case DevFmtX51Side:
+    case DevFmtX61:
+        break;
     }
+    SetDefaultWFXChannelOrder(device);
 }
 // Sets the default order used by WaveFormatEx
 void SetDefaultWFXChannelOrder(ALCdevice *device)

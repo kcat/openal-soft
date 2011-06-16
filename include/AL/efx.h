@@ -279,35 +279,35 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
 /* Filter ranges and defaults. */
 
 /* Lowpass filter */
-#define LOWPASS_MIN_GAIN                         (0.0f)
-#define LOWPASS_MAX_GAIN                         (1.0f)
-#define LOWPASS_DEFAULT_GAIN                     (1.0f)
+#define AL_LOWPASS_MIN_GAIN                      (0.0f)
+#define AL_LOWPASS_MAX_GAIN                      (1.0f)
+#define AL_LOWPASS_DEFAULT_GAIN                  (1.0f)
 
-#define LOWPASS_MIN_GAINHF                       (0.0f)
-#define LOWPASS_MAX_GAINHF                       (1.0f)
-#define LOWPASS_DEFAULT_GAINHF                   (1.0f)
+#define AL_LOWPASS_MIN_GAINHF                    (0.0f)
+#define AL_LOWPASS_MAX_GAINHF                    (1.0f)
+#define AL_LOWPASS_DEFAULT_GAINHF                (1.0f)
 
 /* Highpass filter */
-#define HIGHPASS_MIN_GAIN                        (0.0f)
-#define HIGHPASS_MAX_GAIN                        (1.0f)
-#define HIGHPASS_DEFAULT_GAIN                    (1.0f)
+#define AL_HIGHPASS_MIN_GAIN                     (0.0f)
+#define AL_HIGHPASS_MAX_GAIN                     (1.0f)
+#define AL_HIGHPASS_DEFAULT_GAIN                 (1.0f)
 
-#define HIGHPASS_MIN_GAINLF                      (0.0f)
-#define HIGHPASS_MAX_GAINLF                      (1.0f)
-#define HIGHPASS_DEFAULT_GAINLF                  (1.0f)
+#define AL_HIGHPASS_MIN_GAINLF                   (0.0f)
+#define AL_HIGHPASS_MAX_GAINLF                   (1.0f)
+#define AL_HIGHPASS_DEFAULT_GAINLF               (1.0f)
 
 /* Bandpass filter */
-#define BANDPASS_MIN_GAIN                        (0.0f)
-#define BANDPASS_MAX_GAIN                        (1.0f)
-#define BANDPASS_DEFAULT_GAIN                    (1.0f)
+#define AL_BANDPASS_MIN_GAIN                     (0.0f)
+#define AL_BANDPASS_MAX_GAIN                     (1.0f)
+#define AL_BANDPASS_DEFAULT_GAIN                 (1.0f)
 
-#define BANDPASS_MIN_GAINHF                      (0.0f)
-#define BANDPASS_MAX_GAINHF                      (1.0f)
-#define BANDPASS_DEFAULT_GAINHF                  (1.0f)
+#define AL_BANDPASS_MIN_GAINHF                   (0.0f)
+#define AL_BANDPASS_MAX_GAINHF                   (1.0f)
+#define AL_BANDPASS_DEFAULT_GAINHF               (1.0f)
 
-#define BANDPASS_MIN_GAINLF                      (0.0f)
-#define BANDPASS_MAX_GAINLF                      (1.0f)
-#define BANDPASS_DEFAULT_GAINLF                  (1.0f)
+#define AL_BANDPASS_MIN_GAINLF                   (0.0f)
+#define AL_BANDPASS_MAX_GAINLF                   (1.0f)
+#define AL_BANDPASS_DEFAULT_GAINLF               (1.0f)
 
 
 /* Effect parameter ranges and defaults. */

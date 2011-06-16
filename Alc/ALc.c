@@ -2652,11 +2652,11 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->UpdateSize = 1024;
 
     device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
-    if((ALint)device->MaxNoOfSources <= 0)
+    if(device->MaxNoOfSources <= 0)
         device->MaxNoOfSources = 256;
 
     device->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
-    if((ALint)device->AuxiliaryEffectSlotMax <= 0)
+    if(device->AuxiliaryEffectSlotMax <= 0)
         device->AuxiliaryEffectSlotMax = 4;
 
     device->NumStereoSources = 1;
@@ -2816,11 +2816,11 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     device->UpdateSize = 0;
 
     device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
-    if((ALint)device->MaxNoOfSources <= 0)
+    if(device->MaxNoOfSources <= 0)
         device->MaxNoOfSources = 256;
 
     device->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
-    if((ALint)device->AuxiliaryEffectSlotMax <= 0)
+    if(device->AuxiliaryEffectSlotMax <= 0)
         device->AuxiliaryEffectSlotMax = 4;
 
     device->NumStereoSources = 1;

@@ -56,7 +56,6 @@ DEFINE_GUID(IID_IAudioRenderClient, 0xf294acfc, 0x3146, 0x4483, 0xa7,0xbf, 0xad,
 #include "alSource.h"
 #include "alBuffer.h"
 #include "alAuxEffectSlot.h"
-#include "alDatabuffer.h"
 #include "bs2b.h"
 #include "alu.h"
 
@@ -273,25 +272,6 @@ static const ALCfunction alcFunctions[] = {
     { "alGetBufferSamplesSOFT",     (ALCvoid *) alGetBufferSamplesSOFT   },
     { "alIsBufferFormatSupportedSOFT",(ALCvoid *) alIsBufferFormatSupportedSOFT},
 
-#if 0
-    { "alGenDatabuffersEXT",        (ALCvoid *) alGenDatabuffersEXT      },
-    { "alDeleteDatabuffersEXT",     (ALCvoid *) alDeleteDatabuffersEXT   },
-    { "alIsDatabufferEXT",          (ALCvoid *) alIsDatabufferEXT        },
-    { "alDatabufferDataEXT",        (ALCvoid *) alDatabufferDataEXT      },
-    { "alDatabufferSubDataEXT",     (ALCvoid *) alDatabufferSubDataEXT   },
-    { "alGetDatabufferSubDataEXT",  (ALCvoid *) alGetDatabufferSubDataEXT},
-    { "alDatabufferfEXT",           (ALCvoid *) alDatabufferfEXT         },
-    { "alDatabufferfvEXT",          (ALCvoid *) alDatabufferfvEXT        },
-    { "alDatabufferiEXT",           (ALCvoid *) alDatabufferiEXT         },
-    { "alDatabufferivEXT",          (ALCvoid *) alDatabufferivEXT        },
-    { "alGetDatabufferfEXT",        (ALCvoid *) alGetDatabufferfEXT      },
-    { "alGetDatabufferfvEXT",       (ALCvoid *) alGetDatabufferfvEXT     },
-    { "alGetDatabufferiEXT",        (ALCvoid *) alGetDatabufferiEXT      },
-    { "alGetDatabufferivEXT",       (ALCvoid *) alGetDatabufferivEXT     },
-    { "alSelectDatabufferEXT",      (ALCvoid *) alSelectDatabufferEXT    },
-    { "alMapDatabufferEXT",         (ALCvoid *) alMapDatabufferEXT       },
-    { "alUnmapDatabufferEXT",       (ALCvoid *) alUnmapDatabufferEXT     },
-#endif
     { NULL,                         (ALCvoid *) NULL                     }
 };
 
@@ -2650,7 +2630,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitUIntMap(&device->BufferMap);
     InitUIntMap(&device->EffectMap);
     InitUIntMap(&device->FilterMap);
-    InitUIntMap(&device->DatabufferMap);
 
     //Set output format
     if(ConfigValueExists(NULL, "frequency"))
@@ -2781,15 +2760,6 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     }
     ResetUIntMap(&pDevice->FilterMap);
 
-    if(pDevice->DatabufferMap.size > 0)
-    {
-#ifdef _DEBUG
-        AL_PRINT("alcCloseDevice(): deleting %d Databuffer(s)\n", pDevice->DatabufferMap.size);
-#endif
-        ReleaseALDatabuffers(pDevice);
-    }
-    ResetUIntMap(&pDevice->DatabufferMap);
-
     free(pDevice->Bs2b);
     pDevice->Bs2b = NULL;
 
@@ -2836,7 +2806,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     InitUIntMap(&device->BufferMap);
     InitUIntMap(&device->EffectMap);
     InitUIntMap(&device->FilterMap);
-    InitUIntMap(&device->DatabufferMap);
 
     //Set output format
     device->Frequency = 44100;

@@ -30,7 +30,6 @@
 #include "AL/alc.h"
 #include "alError.h"
 #include "alBuffer.h"
-#include "alDatabuffer.h"
 #include "alThunk.h"
 
 
@@ -292,21 +291,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(Context->SampleSource)
-    {
-        ALintptrEXT offset;
-
-        if(Context->SampleSource->state == MAPPED)
-        {
-            alSetError(Context, AL_INVALID_OPERATION);
-            ProcessContext(Context);
-            return;
-        }
-
-        offset = (const ALubyte*)data - (ALubyte*)NULL;
-        data = Context->SampleSource->data + offset;
-    }
-
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
@@ -409,21 +393,6 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(Context->SampleSource)
-    {
-        ALintptrEXT offset;
-
-        if(Context->SampleSource->state == MAPPED)
-        {
-            alSetError(Context, AL_INVALID_OPERATION);
-            ProcessContext(Context);
-            return;
-        }
-
-        offset = (const ALubyte*)data - (ALubyte*)NULL;
-        data = Context->SampleSource->data + offset;
-    }
-
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
@@ -478,21 +447,6 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
     Context = GetContextSuspended();
     if(!Context) return;
 
-    if(Context->SampleSource)
-    {
-        ALintptrEXT offset;
-
-        if(Context->SampleSource->state == MAPPED)
-        {
-            alSetError(Context, AL_INVALID_OPERATION);
-            ProcessContext(Context);
-            return;
-        }
-
-        offset = (const ALubyte*)data - (ALubyte*)NULL;
-        data = Context->SampleSource->data + offset;
-    }
-
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
@@ -530,21 +484,6 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
 
     Context = GetContextSuspended();
     if(!Context) return;
-
-    if(Context->SampleSource)
-    {
-        ALintptrEXT offset;
-
-        if(Context->SampleSource->state == MAPPED)
-        {
-            alSetError(Context, AL_INVALID_OPERATION);
-            ProcessContext(Context);
-            return;
-        }
-
-        offset = (const ALubyte*)data - (ALubyte*)NULL;
-        data = Context->SampleSource->data + offset;
-    }
 
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
@@ -587,21 +526,6 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
 
     Context = GetContextSuspended();
     if(!Context) return;
-
-    if(Context->SampleSink)
-    {
-        ALintptrEXT offset;
-
-        if(Context->SampleSink->state == MAPPED)
-        {
-            alSetError(Context, AL_INVALID_OPERATION);
-            ProcessContext(Context);
-            return;
-        }
-
-        offset = (const ALubyte*)data - (ALubyte*)NULL;
-        data = Context->SampleSink->data + offset;
-    }
 
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)

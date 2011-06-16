@@ -2283,12 +2283,20 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 */
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(ALCvoid)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
-    if((pContext=GetContextSuspended()) != NULL)
-        ProcessContext(pContext);
+    LockLists();
+    Context = tls_get(LocalContext);
+    if(Context && !IsContext(Context))
+    {
+        tls_set(LocalContext, NULL);
+        Context = NULL;
+    }
+    if(!Context)
+        Context = GlobalContext;
+    UnlockLists();
 
-    return pContext;
+    return Context;
 }
 
 /*

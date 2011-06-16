@@ -265,26 +265,8 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue
 
 AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
 {
-    ALCcontext *Context;
-    ALCdevice  *Device;
-
-    Context = GetContextSuspended();
-    if(!Context) return;
-
-    Device = Context->Device;
-    if(LookupFilter(Device->FilterMap, filter) != NULL)
-    {
-        switch(param)
-        {
-        default:
-            alFilterf(filter, param, pflValues[0]);
-            break;
-        }
-    }
-    else
-        alSetError(Context, AL_INVALID_NAME);
-
-    ProcessContext(Context);
+    /* There are currently no multi-value filter parameters */
+    alFilterf(filter, param, pflValues[0]);
 }
 
 AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piValue)
@@ -391,26 +373,8 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pfl
 
 AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
 {
-    ALCcontext *Context;
-    ALCdevice  *Device;
-
-    Context = GetContextSuspended();
-    if(!Context) return;
-
-    Device = Context->Device;
-    if(LookupFilter(Device->FilterMap, filter) != NULL)
-    {
-        switch(param)
-        {
-        default:
-            alGetFilterf(filter, param, pflValues);
-            break;
-        }
-    }
-    else
-        alSetError(Context, AL_INVALID_NAME);
-
-    ProcessContext(Context);
+    /* There are currently no multi-value filter parameters */
+    alGetFilterf(filter, param, pflValues);
 }
 
 

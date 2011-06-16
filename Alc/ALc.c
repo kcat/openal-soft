@@ -424,7 +424,6 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
         case DLL_PROCESS_ATTACH:
             DisableThreadLibraryCalls(hModule);
             alc_init();
-            alc_initconfig();
             break;
 
         case DLL_PROCESS_DETACH:
@@ -443,7 +442,6 @@ static void alc_constructor(void)
 {
     atexit(alc_destructor);
     alc_init();
-    alc_initconfig();
 }
 
 static void alc_destructor(void)
@@ -489,6 +487,10 @@ static void alc_init(void)
     InitializeCriticalSection(&g_csMutex);
     InitializeCriticalSection(&ListLock);
     ALTHUNK_INIT();
+
+#ifdef _WIN32
+    alc_initconfig();
+#endif
 }
 
 static void alc_deinit(void)

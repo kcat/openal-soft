@@ -921,6 +921,16 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
     ALCdevice     *device;
     ALbuffer      *ALBuf;
 
+    switch(eParam)
+    {
+    case AL_FREQUENCY:
+    case AL_BITS:
+    case AL_CHANNELS:
+    case AL_SIZE:
+        alGetBufferi(buffer, eParam, plValues);
+        return;
+    }
+
     pContext = GetContextSuspended();
     if(!pContext) return;
 
@@ -933,13 +943,6 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
     {
         switch(eParam)
         {
-        case AL_FREQUENCY:
-        case AL_BITS:
-        case AL_CHANNELS:
-        case AL_SIZE:
-            alGetBufferi(buffer, eParam, plValues);
-            break;
-
         case AL_LOOP_POINTS_SOFT:
             plValues[0] = ALBuf->LoopStart;
             plValues[1] = ALBuf->LoopEnd;

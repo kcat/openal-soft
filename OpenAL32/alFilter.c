@@ -187,6 +187,13 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValue
     ALCcontext *Context;
     ALCdevice  *Device;
 
+    switch(param)
+    {
+        case AL_FILTER_TYPE:
+            alFilteri(filter, param, piValues[0]);
+            return;
+    }
+
     Context = GetContextSuspended();
     if(!Context) return;
 
@@ -195,10 +202,6 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValue
     {
         switch(param)
         {
-        case AL_FILTER_TYPE:
-            alFilteri(filter, param, piValues[0]);
-            break;
-
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;
@@ -316,6 +319,13 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piVa
     ALCcontext *Context;
     ALCdevice  *Device;
 
+    switch(param)
+    {
+        case AL_FILTER_TYPE:
+            alGetFilteri(filter, param, piValues);
+            return;
+    }
+
     Context = GetContextSuspended();
     if(!Context) return;
 
@@ -324,10 +334,6 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piVa
     {
         switch(param)
         {
-        case AL_FILTER_TYPE:
-            alGetFilteri(filter, param, piValues);
-            break;
-
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;

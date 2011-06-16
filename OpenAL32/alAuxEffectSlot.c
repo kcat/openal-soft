@@ -244,6 +244,14 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
 {
     ALCcontext *Context;
 
+    switch(param)
+    {
+        case AL_EFFECTSLOT_EFFECT:
+        case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
+            alAuxiliaryEffectSloti(effectslot, param, piValues[0]);
+            return;
+    }
+
     Context = GetContextSuspended();
     if(!Context) return;
 
@@ -251,11 +259,6 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
     {
         switch(param)
         {
-        case AL_EFFECTSLOT_EFFECT:
-        case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
-            alAuxiliaryEffectSloti(effectslot, param, piValues[0]);
-            break;
-
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;
@@ -301,6 +304,13 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
 {
     ALCcontext *Context;
 
+    switch(param)
+    {
+        case AL_EFFECTSLOT_GAIN:
+            alAuxiliaryEffectSlotf(effectslot, param, pflValues[0]);
+            return;
+    }
+
     Context = GetContextSuspended();
     if(!Context) return;
 
@@ -308,10 +318,6 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
     {
         switch(param)
         {
-        case AL_EFFECTSLOT_GAIN:
-            alAuxiliaryEffectSlotf(effectslot, param, pflValues[0]);
-            break;
-
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;
@@ -358,6 +364,14 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
 {
     ALCcontext *Context;
 
+    switch(param)
+    {
+        case AL_EFFECTSLOT_EFFECT:
+        case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
+            alGetAuxiliaryEffectSloti(effectslot, param, piValues);
+            return;
+    }
+
     Context = GetContextSuspended();
     if(!Context) return;
 
@@ -365,11 +379,6 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
     {
         switch(param)
         {
-        case AL_EFFECTSLOT_EFFECT:
-        case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
-            alGetAuxiliaryEffectSloti(effectslot, param, piValues);
-            break;
-
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;
@@ -412,6 +421,13 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
 {
     ALCcontext *Context;
 
+    switch(param)
+    {
+        case AL_EFFECTSLOT_GAIN:
+            alGetAuxiliaryEffectSlotf(effectslot, param, pflValues);
+            return;
+    }
+
     Context = GetContextSuspended();
     if(!Context) return;
 
@@ -419,10 +435,6 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
     {
         switch(param)
         {
-        case AL_EFFECTSLOT_GAIN:
-            alGetAuxiliaryEffectSlotf(effectslot, param, pflValues);
-            break;
-
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;

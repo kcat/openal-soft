@@ -126,9 +126,6 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
     ALCcontext *pContext;
     ALboolean updateWorld = AL_FALSE;
 
-    pContext = GetContextSuspended();
-    if(!pContext) return;
-
     if(pflValues)
     {
         switch(eParam)
@@ -136,13 +133,22 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
             case AL_GAIN:
             case AL_METERS_PER_UNIT:
                 alListenerf(eParam, pflValues[0]);
-                break;
+                return;
 
             case AL_POSITION:
             case AL_VELOCITY:
                 alListener3f(eParam, pflValues[0], pflValues[1], pflValues[2]);
-                break;
+                return;
+        }
+    }
 
+    pContext = GetContextSuspended();
+    if(!pContext) return;
+
+    if(pflValues)
+    {
+        switch(eParam)
+        {
             case AL_ORIENTATION:
                 // AT then UP
                 pContext->Listener.Forward[0] = pflValues[0];
@@ -201,16 +207,19 @@ AL_API void AL_APIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2
 {
     ALCcontext *pContext;
 
-    pContext = GetContextSuspended();
-    if(!pContext) return;
-
     switch(eParam)
     {
         case AL_POSITION:
         case AL_VELOCITY:
             alListener3f(eParam, (ALfloat)lValue1, (ALfloat)lValue2, (ALfloat)lValue3);
-            break;
+            return;
+    }
 
+    pContext = GetContextSuspended();
+    if(!pContext) return;
+
+    switch(eParam)
+    {
         default:
             alSetError(pContext, AL_INVALID_ENUM);
             break;
@@ -332,6 +341,19 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
 {
     ALCcontext *pContext;
 
+    switch(eParam)
+    {
+        case AL_GAIN:
+        case AL_METERS_PER_UNIT:
+            alGetListenerf(eParam, pflValues);
+            return;
+
+        case AL_POSITION:
+        case AL_VELOCITY:
+            alGetListener3f(eParam, pflValues+0, pflValues+1, pflValues+2);
+            return;
+    }
+
     pContext = GetContextSuspended();
     if(!pContext) return;
 
@@ -339,26 +361,6 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
     {
         switch(eParam)
         {
-            case AL_GAIN:
-                pflValues[0] = pContext->Listener.Gain;
-                break;
-
-            case AL_METERS_PER_UNIT:
-                pflValues[0] = pContext->Listener.MetersPerUnit;
-                break;
-
-            case AL_POSITION:
-                pflValues[0] = pContext->Listener.Position[0];
-                pflValues[1] = pContext->Listener.Position[1];
-                pflValues[2] = pContext->Listener.Position[2];
-                break;
-
-            case AL_VELOCITY:
-                pflValues[0] = pContext->Listener.Velocity[0];
-                pflValues[1] = pContext->Listener.Velocity[1];
-                pflValues[2] = pContext->Listener.Velocity[2];
-                break;
-
             case AL_ORIENTATION:
                 // AT then UP
                 pflValues[0] = pContext->Listener.Forward[0];
@@ -443,6 +445,14 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
 {
     ALCcontext *pContext;
 
+    switch(eParam)
+    {
+        case AL_POSITION:
+        case AL_VELOCITY:
+            alGetListener3i(eParam, plValues+0, plValues+1, plValues+2);
+            return;
+    }
+
     pContext = GetContextSuspended();
     if(!pContext) return;
 
@@ -450,18 +460,6 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
     {
         switch(eParam)
         {
-            case AL_POSITION:
-                plValues[0] = (ALint)pContext->Listener.Position[0];
-                plValues[1] = (ALint)pContext->Listener.Position[1];
-                plValues[2] = (ALint)pContext->Listener.Position[2];
-                break;
-
-            case AL_VELOCITY:
-                plValues[0] = (ALint)pContext->Listener.Velocity[0];
-                plValues[1] = (ALint)pContext->Listener.Velocity[1];
-                plValues[2] = (ALint)pContext->Listener.Velocity[2];
-                break;
-
             case AL_ORIENTATION:
                 // AT then UP
                 plValues[0] = (ALint)pContext->Listener.Forward[0];

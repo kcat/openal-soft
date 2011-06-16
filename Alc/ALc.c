@@ -1382,7 +1382,6 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ALCcontext *context = device->Contexts[i];
         ALsizei pos;
 
-        SuspendContext(context);
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
@@ -1414,7 +1413,6 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             ALsource_Update(source, context);
             source->NeedsUpdate = AL_FALSE;
         }
-        ProcessContext(context);
     }
     ProcessContext(NULL);
 

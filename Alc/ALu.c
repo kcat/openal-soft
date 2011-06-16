@@ -942,8 +942,6 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         ctx_end = ctx + device->NumContexts;
         while(ctx != ctx_end)
         {
-            SuspendContext(*ctx);
-
             src = (*ctx)->ActiveSources;
             src_end = src + (*ctx)->ActiveSourceCount;
             while(src != src_end)
@@ -989,7 +987,6 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     ALEffectSlot->WetBuffer[i] = 0.0f;
             }
 
-            ProcessContext(*ctx);
             ctx++;
         }
         ProcessContext(NULL);

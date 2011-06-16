@@ -231,14 +231,16 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue
             switch(param)
             {
             case AL_LOWPASS_GAIN:
-                if(flValue >= 0.0f && flValue <= 1.0f)
+                if(flValue >= AL_LOWPASS_MIN_GAIN &&
+                   flValue <= AL_LOWPASS_MAX_GAIN)
                     ALFilter->Gain = flValue;
                 else
                     alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_LOWPASS_GAINHF:
-                if(flValue >= 0.0f && flValue <= 1.0f)
+                if(flValue >= AL_LOWPASS_MIN_GAINHF &&
+                   flValue <= AL_LOWPASS_MAX_GAINHF)
                     ALFilter->GainHF = flValue;
                 else
                     alSetError(Context, AL_INVALID_VALUE);
@@ -446,6 +448,6 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
 {
     filter->type = type;
 
-    filter->Gain = 1.0;
-    filter->GainHF = 1.0;
+    filter->Gain = AL_LOWPASS_DEFAULT_GAIN;
+    filter->GainHF = AL_LOWPASS_DEFAULT_GAINHF;
 }

@@ -181,28 +181,23 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     case FmtStereo:
         if((ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
         {
-            static const ALfloat angles_StereoDup[4] = { -30.0f, -150.0f,
-                                                          30.0f,  150.0f };
             DryGain *= aluSqrt(2.0f/4.0f);
-            for(c = 0;c < 4;c++)
+            for(c = 0;c < 2;c++)
             {
-                pos = aluCart2LUTpos(cos(angles_StereoDup[c] * (M_PI/180.0)),
-                                     sin(angles_StereoDup[c] * (M_PI/180.0)));
+                pos = aluCart2LUTpos(cos(angles_Rear[c] * (M_PI/180.0)),
+                                     sin(angles_Rear[c] * (M_PI/180.0)));
                 SpeakerGain = Device->PanningLUT[pos];
 
                 for(i = 0;i < (ALint)Device->NumChan;i++)
                 {
                     Channel chan = Device->Speaker2Chan[i];
-                    SrcMatrix[c>>1][chan] += DryGain * ListenerGain *
-                                             SpeakerGain[chan];
+                    SrcMatrix[c][chan] += DryGain * ListenerGain *
+                                          SpeakerGain[chan];
                 }
             }
         }
-        else
-        {
-            angles = angles_Stereo;
-            num_channels = 2;
-        }
+        angles = angles_Stereo;
+        num_channels = 2;
         break;
 
     case FmtRear:
@@ -234,59 +229,56 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         break;
     }
 
-    if(angles)
+    if((Device->Flags&DEVICE_USE_HRTF))
     {
-        if((Device->Flags&DEVICE_USE_HRTF))
+        for(c = 0;c < num_channels;c++)
         {
-            for(c = 0;c < num_channels;c++)
+            const ALshort *hrtf_left, *hrtf_right;
+
+            if(c == lfe_chan)
             {
-                const ALshort *hrtf_left, *hrtf_right;
-
-                if(c == lfe_chan)
-                {
-                    /* Skip LFE */
-                    ALSource->Params.HrtfDelay[c][0] = 0;
-                    ALSource->Params.HrtfDelay[c][1] = 0;
-                    for(i = 0;i < HRIR_LENGTH;i++)
-                    {
-                        ALSource->Params.HrtfCoeffs[c][i][0] = 0.0f;
-                        ALSource->Params.HrtfCoeffs[c][i][1] = 0.0f;
-                    }
-                    continue;
-                }
-
-                GetHrtfCoeffs(0.0, angles[c] * (M_PI/180.0),
-                              &hrtf_left, &hrtf_right,
-                              &ALSource->Params.HrtfDelay[c][0],
-                              &ALSource->Params.HrtfDelay[c][1]);
+                /* Skip LFE */
+                ALSource->Params.HrtfDelay[c][0] = 0;
+                ALSource->Params.HrtfDelay[c][1] = 0;
                 for(i = 0;i < HRIR_LENGTH;i++)
                 {
-                    ALSource->Params.HrtfCoeffs[c][i][0] =
-                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                    ALSource->Params.HrtfCoeffs[c][i][1] =
-                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                    ALSource->Params.HrtfCoeffs[c][i][0] = 0.0f;
+                    ALSource->Params.HrtfCoeffs[c][i][1] = 0.0f;
                 }
+                continue;
+            }
+
+            GetHrtfCoeffs(0.0, angles[c] * (M_PI/180.0),
+                          &hrtf_left, &hrtf_right,
+                          &ALSource->Params.HrtfDelay[c][0],
+                          &ALSource->Params.HrtfDelay[c][1]);
+            for(i = 0;i < HRIR_LENGTH;i++)
+            {
+                ALSource->Params.HrtfCoeffs[c][i][0] =
+                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
+                ALSource->Params.HrtfCoeffs[c][i][1] =
+                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
             }
         }
-        else
+    }
+    else
+    {
+        for(c = 0;c < num_channels;c++)
         {
-            for(c = 0;c < num_channels;c++)
+            if(c == lfe_chan) /* Special-case LFE */
             {
-                if(c == lfe_chan) /* Special-case LFE */
-                {
-                    SrcMatrix[c][LFE] = DryGain * ListenerGain;
-                    continue;
-                }
-                pos = aluCart2LUTpos(cos(angles[c] * (M_PI/180.0)),
-                                     sin(angles[c] * (M_PI/180.0)));
-                SpeakerGain = Device->PanningLUT[pos];
+                SrcMatrix[c][LFE] += DryGain * ListenerGain;
+                continue;
+            }
+            pos = aluCart2LUTpos(cos(angles[c] * (M_PI/180.0)),
+                                 sin(angles[c] * (M_PI/180.0)));
+            SpeakerGain = Device->PanningLUT[pos];
 
-                for(i = 0;i < (ALint)Device->NumChan;i++)
-                {
-                    Channel chan = Device->Speaker2Chan[i];
-                    SrcMatrix[c][chan] = DryGain * ListenerGain *
-                                         SpeakerGain[chan];
-                }
+            for(i = 0;i < (ALint)Device->NumChan;i++)
+            {
+                Channel chan = Device->Speaker2Chan[i];
+                SrcMatrix[c][chan] += DryGain * ListenerGain *
+                                      SpeakerGain[chan];
             }
         }
     }

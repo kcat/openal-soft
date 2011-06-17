@@ -1357,7 +1357,9 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             BufferList = BufferList->next;
         }
 
-        if(!BufferList)
+        /* If there's nothing to play, or device is disconnected, go right to
+         * stopped */
+        if(!BufferList || !Context->Device->Connected)
         {
             Source->state = AL_STOPPED;
             Source->BuffersPlayed = Source->BuffersInQueue;
@@ -1394,24 +1396,13 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(Source->lOffset)
             ApplyOffset(Source);
 
-        // If device is disconnected, go right to stopped
-        if(!Context->Device->Connected)
+        for(j = 0;j < Context->ActiveSourceCount;j++)
         {
-            Source->state = AL_STOPPED;
-            Source->BuffersPlayed = Source->BuffersInQueue;
-            Source->position = 0;
-            Source->position_fraction = 0;
+            if(Context->ActiveSources[j] == Source)
+                break;
         }
-        else
-        {
-            for(j = 0;j < Context->ActiveSourceCount;j++)
-            {
-                if(Context->ActiveSources[j] == Source)
-                    break;
-            }
-            if(j == Context->ActiveSourceCount)
-                Context->ActiveSources[Context->ActiveSourceCount++] = Source;
-        }
+        if(j == Context->ActiveSourceCount)
+            Context->ActiveSources[Context->ActiveSourceCount++] = Source;
     }
 
 done:

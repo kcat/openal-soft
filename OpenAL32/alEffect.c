@@ -229,8 +229,19 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
             switch(param)
             {
             case AL_RING_MODULATOR_FREQUENCY:
+                if(iValue >= AL_RING_MODULATOR_MIN_FREQUENCY &&
+                   iValue <= AL_RING_MODULATOR_MAX_FREQUENCY)
+                    ALEffect->Params.Modulator.Frequency = iValue;
+                else
+                    alSetError(Context, AL_INVALID_VALUE);
+                break;
+
             case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-                alEffectf(effect, param, (ALfloat)iValue);
+                if(iValue >= AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF &&
+                   iValue <= AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF)
+                    ALEffect->Params.Modulator.HighPassCutoff = iValue;
+                else
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             case AL_RING_MODULATOR_WAVEFORM:
@@ -257,77 +268,8 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
 
 AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
 {
-    ALCcontext *Context;
-    ALCdevice  *Device;
-    ALeffect   *ALEffect;
-
-    Context = GetContextSuspended();
-    if(!Context) return;
-
-    Device = Context->Device;
-    if((ALEffect=LookupEffect(Device->EffectMap, effect)) != NULL)
-    {
-        if(param == AL_EFFECT_TYPE)
-        {
-            alEffecti(effect, param, piValues[0]);
-        }
-        else if(ALEffect->type == AL_EFFECT_EAXREVERB)
-        {
-            switch(param)
-            {
-            case AL_EAXREVERB_DECAY_HFLIMIT:
-                alEffecti(effect, param, piValues[0]);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_REVERB)
-        {
-            switch(param)
-            {
-            case AL_REVERB_DECAY_HFLIMIT:
-                alEffecti(effect, param, piValues[0]);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_ECHO)
-        {
-            switch(param)
-            {
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
-        {
-            switch(param)
-            {
-            case AL_RING_MODULATOR_FREQUENCY:
-            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            case AL_RING_MODULATOR_WAVEFORM:
-                alEffecti(effect, param, piValues[0]);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else
-            alSetError(Context, AL_INVALID_ENUM);
-    }
-    else
-        alSetError(Context, AL_INVALID_NAME);
-
-    ProcessContext(Context);
+    /* There are no multi-value int effect parameters */
+    alEffecti(effect, param, piValues[0]);
 }
 
 AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
@@ -821,8 +763,19 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
             switch(param)
             {
             case AL_RING_MODULATOR_FREQUENCY:
+                if(pflValues[0] >= AL_RING_MODULATOR_MIN_FREQUENCY &&
+                   pflValues[0] <= AL_RING_MODULATOR_MAX_FREQUENCY)
+                    ALEffect->Params.Modulator.Frequency = pflValues[0];
+                else
+                    alSetError(Context, AL_INVALID_VALUE);
+                break;
+
             case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-                alEffectf(effect, param, pflValues[0]);
+                if(pflValues[0] >= AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF &&
+                   pflValues[0] <= AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF)
+                    ALEffect->Params.Modulator.HighPassCutoff = pflValues[0];
+                else
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             default:
@@ -934,77 +887,8 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piVal
 
 AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
 {
-    ALCcontext *Context;
-    ALCdevice  *Device;
-    ALeffect   *ALEffect;
-
-    Context = GetContextSuspended();
-    if(!Context) return;
-
-    Device = Context->Device;
-    if((ALEffect=LookupEffect(Device->EffectMap, effect)) != NULL)
-    {
-        if(param == AL_EFFECT_TYPE)
-        {
-            alGetEffecti(effect, param, piValues);
-        }
-        else if(ALEffect->type == AL_EFFECT_EAXREVERB)
-        {
-            switch(param)
-            {
-            case AL_EAXREVERB_DECAY_HFLIMIT:
-                alGetEffecti(effect, param, piValues);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_REVERB)
-        {
-            switch(param)
-            {
-            case AL_REVERB_DECAY_HFLIMIT:
-                alGetEffecti(effect, param, piValues);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_ECHO)
-        {
-            switch(param)
-            {
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
-        {
-            switch(param)
-            {
-            case AL_RING_MODULATOR_FREQUENCY:
-            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            case AL_RING_MODULATOR_WAVEFORM:
-                alGetEffecti(effect, param, piValues);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else
-            alSetError(Context, AL_INVALID_ENUM);
-    }
-    else
-        alSetError(Context, AL_INVALID_NAME);
-
-    ProcessContext(Context);
+    /* There are no multi-value int effect parameters */
+    alGetEffecti(effect, param, piValues);
 }
 
 AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)

@@ -1342,10 +1342,10 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(!device->IsLoopbackDevice && GetConfigValueBool(NULL, "hrtf", AL_FALSE))
         device->Flags |= DEVICE_USE_HRTF;
-    if(device->FmtChans != DevFmtStereo || device->Frequency != 44100)
+    if((device->FmtChans != DevFmtStereo || device->Frequency != 44100) &&
+       (device->Flags&DEVICE_USE_HRTF))
     {
-        if((device->Flags&DEVICE_USE_HRTF))
-            AL_PRINT("HRTF disabled (format is %uhz %s)\n", device->Frequency, DevFmtChannelsString(device->FmtChans));
+        AL_PRINT("HRTF disabled (format is %uhz %s)\n", device->Frequency, DevFmtChannelsString(device->FmtChans));
         device->Flags &= ~DEVICE_USE_HRTF;
     }
 

@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#define SRC_HISTORY_BITS   (7)
+#define SRC_HISTORY_BITS   (6)
 #define SRC_HISTORY_LENGTH (1<<SRC_HISTORY_BITS)
 #define SRC_HISTORY_MASK   (SRC_HISTORY_LENGTH-1)
 
@@ -94,7 +94,8 @@ typedef struct ALsource
     ALuint SampleSize;
 
     /* HRTF info */
-    ALfloat HrtfHistory[MAXCHANNELS][SRC_HISTORY_LENGTH][2];
+    ALfloat HrtfHistory[MAXCHANNELS][SRC_HISTORY_LENGTH];
+    ALfloat HrtfValues[MAXCHANNELS][HRIR_LENGTH][2];
     ALuint HrtfOffset;
 
     /* Current target parameters used for mixing */

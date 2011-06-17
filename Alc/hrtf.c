@@ -82,7 +82,7 @@ void InitHrtf(void)
     }
     if(f != NULL)
     {
-        const ALubyte maxDelay = SRC_HISTORY_LENGTH - HRIR_LENGTH;
+        const ALubyte maxDelay = SRC_HISTORY_LENGTH;
         ALboolean failed = AL_FALSE;
         struct HRTF newdata;
         size_t i, j;

@@ -1382,9 +1382,11 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             {
                 ALuint k;
                 for(k = 0;k < SRC_HISTORY_LENGTH;k++)
+                    Source->HrtfHistory[j][k] = 0.0f;
+                for(k = 0;k < HRIR_LENGTH;k++)
                 {
-                    Source->HrtfHistory[j][k][0] = 0.0f;
-                    Source->HrtfHistory[j][k][1] = 0.0f;
+                    Source->HrtfValues[j][k][0] = 0.0f;
+                    Source->HrtfValues[j][k][1] = 0.0f;
                 }
             }
             Source->HrtfOffset = 0;

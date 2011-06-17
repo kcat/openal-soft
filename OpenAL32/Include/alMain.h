@@ -497,7 +497,7 @@ ALboolean IsValidChannels(ALenum type);
 
 #define HRIR_BITS        (5)
 #define HRIR_LENGTH      (1<<HRIR_BITS)
-#define HRIR_LENGTH_MASK (HRIR_LENGTH-1)
+#define HRIR_MASK        (HRIR_LENGTH-1)
 void InitHrtf(void);
 void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const ALshort **right, ALuint *ldelay, ALuint *rdelay);
 

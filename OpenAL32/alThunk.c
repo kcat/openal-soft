@@ -50,7 +50,7 @@ void alThunkExit(void)
     DeleteCriticalSection(&g_ThunkLock);
 }
 
-ALuint alThunkAddEntry(ALvoid *ptr)
+ALenum alThunkAddEntry(ALvoid *ptr, ALuint *idx)
 {
     ALuint index;
 
@@ -71,7 +71,7 @@ ALuint alThunkAddEntry(ALvoid *ptr)
         {
             LeaveCriticalSection(&g_ThunkLock);
             AL_PRINT("Realloc failed to increase to %u enties!\n", g_ThunkArraySize*2);
-            return 0;
+            return AL_OUT_OF_MEMORY;
         }
         memset(&NewList[g_ThunkArraySize], 0, g_ThunkArraySize*sizeof(ThunkEntry));
         g_ThunkArraySize *= 2;
@@ -80,10 +80,11 @@ ALuint alThunkAddEntry(ALvoid *ptr)
 
     g_ThunkArray[index].ptr = ptr;
     g_ThunkArray[index].InUse = AL_TRUE;
+    *idx = index+1;
 
     LeaveCriticalSection(&g_ThunkLock);
 
-    return index+1;
+    return AL_NO_ERROR;
 }
 
 void alThunkRemoveEntry(ALuint index)

@@ -63,8 +63,9 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 break;
             }
 
-            effect->effect = ALTHUNK_ADDENTRY(effect);
-            err = InsertUIntMapEntry(&device->EffectMap, effect->effect, effect);
+            err = ALTHUNK_ADDENTRY(effect, &effect->effect);
+            if(err == AL_NO_ERROR)
+                err = InsertUIntMapEntry(&device->EffectMap, effect->effect, effect);
             if(err != AL_NO_ERROR)
             {
                 ALTHUNK_REMOVEENTRY(effect->effect);

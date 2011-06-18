@@ -86,9 +86,9 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
                 break;
             }
 
-            source->source = (ALuint)ALTHUNK_ADDENTRY(source);
-            err = InsertUIntMapEntry(&Context->SourceMap, source->source,
-                                     source);
+            err = ALTHUNK_ADDENTRY(source, &source->source);
+            if(err == AL_NO_ERROR)
+                err = InsertUIntMapEntry(&Context->SourceMap, source->source, source);
             if(err != AL_NO_ERROR)
             {
                 ALTHUNK_REMOVEENTRY(source->source);

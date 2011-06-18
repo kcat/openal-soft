@@ -68,9 +68,9 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                 break;
             }
 
-            slot->effectslot = (ALuint)ALTHUNK_ADDENTRY(slot);
-            err = InsertUIntMapEntry(&Context->EffectSlotMap,
-                                     slot->effectslot, slot);
+            err = ALTHUNK_ADDENTRY(slot, &slot->effectslot);
+            if(err == AL_NO_ERROR)
+                err = InsertUIntMapEntry(&Context->EffectSlotMap, slot->effectslot, slot);
             if(err != AL_NO_ERROR)
             {
                 ALTHUNK_REMOVEENTRY(slot->effectslot);

@@ -161,8 +161,9 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
                 break;
             }
 
-            buffer->buffer = (ALuint)ALTHUNK_ADDENTRY(buffer);
-            err = InsertUIntMapEntry(&device->BufferMap, buffer->buffer, buffer);
+            err = ALTHUNK_ADDENTRY(buffer, &buffer->buffer);
+            if(err == AL_NO_ERROR)
+                err = InsertUIntMapEntry(&device->BufferMap, buffer->buffer, buffer);
             if(err != AL_NO_ERROR)
             {
                 ALTHUNK_REMOVEENTRY(buffer->buffer);

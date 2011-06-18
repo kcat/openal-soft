@@ -12,7 +12,7 @@ extern "C" {
 
 void alThunkInit(void);
 void alThunkExit(void);
-ALuint alThunkAddEntry(ALvoid *ptr);
+ALenum alThunkAddEntry(ALvoid *ptr, ALuint *idx);
 void alThunkRemoveEntry(ALuint index);
 ALvoid *alThunkLookupEntry(ALuint index);
 
@@ -20,7 +20,7 @@ ALvoid *alThunkLookupEntry(ALuint index);
 
 #define ALTHUNK_INIT()          alThunkInit()
 #define ALTHUNK_EXIT()          alThunkExit()
-#define ALTHUNK_ADDENTRY(p)     alThunkAddEntry(p)
+#define ALTHUNK_ADDENTRY(p,i)   alThunkAddEntry(p,i)
 #define ALTHUNK_REMOVEENTRY(i)  alThunkRemoveEntry(i)
 #define ALTHUNK_LOOKUPENTRY(i)  alThunkLookupEntry(i)
 
@@ -28,7 +28,7 @@ ALvoid *alThunkLookupEntry(ALuint index);
 
 #define ALTHUNK_INIT()
 #define ALTHUNK_EXIT()
-#define ALTHUNK_ADDENTRY(p)     ((ALuint)p)
+#define ALTHUNK_ADDENTRY(p,i)   ((*(i) = (ALuint)p),AL_NO_ERROR)
 #define ALTHUNK_REMOVEENTRY(i)  ((ALvoid)i)
 #define ALTHUNK_LOOKUPENTRY(i)  ((ALvoid*)(i))
 

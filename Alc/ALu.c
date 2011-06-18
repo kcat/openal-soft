@@ -491,14 +491,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             break;
     }
 
-    // Source Gain + Attenuation
-    DryGain = SourceVolume * Attenuation;
-    for(i = 0;i < NumSends;i++)
-        WetGain[i] = SourceVolume * RoomAttenuation[i];
-
     EffectiveDist = 0.0f;
     if(MinDist > 0.0f && Attenuation < 1.0f)
         EffectiveDist = (MinDist/Attenuation - MinDist)*MetersPerUnit;
+
+    // Source Gain + Attenuation
+    DryGain = SourceVolume * Attenuation;
 
     // Distance-based air absorption
     if(AirAbsorptionFactor > 0.0f && EffectiveDist > 0.0f)
@@ -554,6 +552,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
         if(Slot->AuxSendAuto)
         {
+            WetGain[i] = SourceVolume * RoomAttenuation[i];
             if(ALSource->WetGainAuto)
                 WetGain[i] *= ConeVolume;
             if(ALSource->WetGainHFAuto)

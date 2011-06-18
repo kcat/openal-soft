@@ -465,15 +465,7 @@ static void alc_init(void)
 {
     const char *str;
 
-    str = getenv("ALSOFT_LOGFILE");
-    if(str && str[0])
-    {
-        LogFile = fopen(str, "wat");
-        if(!LogFile)
-            fprintf(stderr, "AL lib: Failed to open log file '%s'\n", str);
-    }
-    if(!LogFile)
-        LogFile = stderr;
+    LogFile = stderr;
 
     str = getenv("__ALSOFT_HALF_ANGLE_CONES");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
@@ -518,6 +510,14 @@ static void alc_initconfig(void)
 {
     int i;
     const char *devs, *str;
+
+    str = getenv("ALSOFT_LOGFILE");
+    if(str && str[0])
+    {
+        FILE *logfile = fopen(str, "wat");
+        if(logfile) LogFile = logfile;
+        else AL_PRINT("Failed to open log file '%s'\n", str);
+    }
 
     ReadALConfig();
 

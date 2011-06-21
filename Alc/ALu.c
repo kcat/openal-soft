@@ -321,7 +321,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
-    ALfloat InnerAngle,OuterAngle,Angle,Distance,OrigDist;
+    ALfloat InnerAngle,OuterAngle,Angle,Distance,ClampedDist;
     ALfloat Direction[3],Position[3],SourceToListener[3];
     ALfloat Velocity[3],ListenerVel[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
@@ -417,7 +417,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     //2. Calculate distance attenuation
     Distance = aluSqrt(aluDotproduct(Position, Position));
-    OrigDist = Distance;
+    ClampedDist = Distance;
 
     Attenuation = 1.0f;
     for(i = 0;i < NumSends;i++)
@@ -435,55 +435,55 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                                             ALContext->DistanceModel)
     {
         case AL_INVERSE_DISTANCE_CLAMPED:
-            Distance=__max(Distance,MinDist);
-            Distance=__min(Distance,MaxDist);
+            ClampedDist=__max(ClampedDist,MinDist);
+            ClampedDist=__min(ClampedDist,MaxDist);
             if(MaxDist < MinDist)
                 break;
             //fall-through
         case AL_INVERSE_DISTANCE:
             if(MinDist > 0.0f)
             {
-                if((MinDist + (Rolloff * (Distance - MinDist))) > 0.0f)
-                    Attenuation = MinDist / (MinDist + (Rolloff * (Distance - MinDist)));
+                if((MinDist + (Rolloff * (ClampedDist - MinDist))) > 0.0f)
+                    Attenuation = MinDist / (MinDist + (Rolloff * (ClampedDist - MinDist)));
                 for(i = 0;i < NumSends;i++)
                 {
-                    if((MinDist + (RoomRolloff[i] * (Distance - MinDist))) > 0.0f)
-                        RoomAttenuation[i] = MinDist / (MinDist + (RoomRolloff[i] * (Distance - MinDist)));
+                    if((MinDist + (RoomRolloff[i] * (ClampedDist - MinDist))) > 0.0f)
+                        RoomAttenuation[i] = MinDist / (MinDist + (RoomRolloff[i] * (ClampedDist - MinDist)));
                 }
             }
             break;
 
         case AL_LINEAR_DISTANCE_CLAMPED:
-            Distance=__max(Distance,MinDist);
-            Distance=__min(Distance,MaxDist);
+            ClampedDist=__max(ClampedDist,MinDist);
+            ClampedDist=__min(ClampedDist,MaxDist);
             if(MaxDist < MinDist)
                 break;
             //fall-through
         case AL_LINEAR_DISTANCE:
             if(MaxDist != MinDist)
             {
-                Attenuation = 1.0f - (Rolloff*(Distance-MinDist)/(MaxDist - MinDist));
+                Attenuation = 1.0f - (Rolloff*(ClampedDist-MinDist)/(MaxDist - MinDist));
                 Attenuation = __max(Attenuation, 0.0f);
                 for(i = 0;i < NumSends;i++)
                 {
-                    RoomAttenuation[i] = 1.0f - (RoomRolloff[i]*(Distance-MinDist)/(MaxDist - MinDist));
+                    RoomAttenuation[i] = 1.0f - (RoomRolloff[i]*(ClampedDist-MinDist)/(MaxDist - MinDist));
                     RoomAttenuation[i] = __max(RoomAttenuation[i], 0.0f);
                 }
             }
             break;
 
         case AL_EXPONENT_DISTANCE_CLAMPED:
-            Distance=__max(Distance,MinDist);
-            Distance=__min(Distance,MaxDist);
+            ClampedDist=__max(ClampedDist,MinDist);
+            ClampedDist=__min(ClampedDist,MaxDist);
             if(MaxDist < MinDist)
                 break;
             //fall-through
         case AL_EXPONENT_DISTANCE:
-            if(Distance > 0.0f && MinDist > 0.0f)
+            if(ClampedDist > 0.0f && MinDist > 0.0f)
             {
-                Attenuation = aluPow(Distance/MinDist, -Rolloff);
+                Attenuation = aluPow(ClampedDist/MinDist, -Rolloff);
                 for(i = 0;i < NumSends;i++)
-                    RoomAttenuation[i] = aluPow(Distance/MinDist, -RoomRolloff[i]);
+                    RoomAttenuation[i] = aluPow(ClampedDist/MinDist, -RoomRolloff[i]);
             }
             break;
 
@@ -664,9 +664,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         const ALshort *hrtf_left, *hrtf_right;
 
-        if(OrigDist > 0.0f)
+        if(Distance > 0.0f)
         {
-            ALfloat invlen = 1.0f/OrigDist;
+            ALfloat invlen = 1.0f/Distance;
             Position[0] *= invlen;
             Position[1] *= invlen;
             Position[2] *= invlen;
@@ -684,7 +684,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
-        length = __max(OrigDist, MinDist);
+        length = __max(Distance, MinDist);
         if(length > 0.0f)
         {
             ALfloat invlen = 1.0f/length;

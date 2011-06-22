@@ -67,6 +67,8 @@ void *pa_load(void)
 # define PALIB "portaudio.dll"
 #elif defined(__APPLE__) && defined(__MACH__)
 # define PALIB "libportaudio.2.dylib"
+#elif defined(__OpenBSD__)
+# define PALIB "libportaudio.so"
 #else
 # define PALIB "libportaudio.so.2"
 #endif

@@ -1098,14 +1098,7 @@ ALuint timeGetTime(void)
 
 #if defined(_WIN32)
 void *LoadLib(const char *name)
-{
-    HANDLE handle;
-
-    handle = LoadLibraryA(name);
-    if(handle == NULL)
-        AL_PRINT("Failed to open %s\n", name);
-    return handle;
-}
+{ return LoadLibraryA(name); }
 
 void CloseLib(void *handle)
 { FreeLibrary((HANDLE)handle); }
@@ -1130,10 +1123,7 @@ void *LoadLib(const char *name)
     dlerror();
     handle = dlopen(name, RTLD_NOW);
     if((err=dlerror()) != NULL)
-    {
-        AL_PRINT("Failed to open %s: %s\n", name, err);
         handle = NULL;
-    }
     return handle;
 }
 

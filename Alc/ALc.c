@@ -717,7 +717,7 @@ void SetRTPriority(void)
         failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
     else
         failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
-#elif defined(HAVE_PTHREAD_SETSCHEDPARAM)
+#elif defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
     struct sched_param param;
 
     if(RTPrioLevel > 0)

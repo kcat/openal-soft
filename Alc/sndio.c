@@ -240,7 +240,8 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
     par.le = SIO_LE_NATIVE;
 
     par.round = device->UpdateSize;
-    par.appbufsz = device->UpdateSize * device->NumUpdates;
+    par.appbufsz = device->UpdateSize * (device->NumUpdates-1);
+    if(!par.appbufsz) par.appbufsz = device->UpdateSize;
 
 
     if(!sio_setpar(data->sndHandle, &par) || !sio_getpar(data->sndHandle, &par))
@@ -292,7 +293,7 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
 
 
     device->UpdateSize = par.round;
-    device->NumUpdates = (par.appbufsz+par.round-1) / par.round;
+    device->NumUpdates = (par.bufsz/par.round) + 1;
 
     SetDefaultChannelOrder(device);
 

@@ -170,6 +170,9 @@ static ALCboolean sndio_open_playback(ALCdevice *device, const ALCchar *deviceNa
 {
     sndio_data *data;
 
+    if(!sndio_load())
+        return ALC_FALSE;
+
     if(!deviceName)
         deviceName = sndio_device;
     else if(strcmp(deviceName, sndio_device) != 0)
@@ -372,6 +375,9 @@ void alc_sndio_deinit(void)
 
 void alc_sndio_probe(enum DevProbe type)
 {
+    if(!sndio_load())
+        return;
+
     switch(type)
     {
         case DEVICE_PROBE:

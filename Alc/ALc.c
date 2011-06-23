@@ -84,6 +84,9 @@ static BackendInfo BackendList[] = {
 #ifdef HAVE_SOLARIS
     { "solaris", alc_solaris_init, alc_solaris_deinit, alc_solaris_probe, EmptyFuncs },
 #endif
+#ifdef HAVE_SNDIO
+    { "sndio", alc_sndio_init, alc_sndio_deinit, alc_sndio_probe, EmptyFuncs },
+#endif
 #ifdef HAVE_MMDEVAPI
     { "mmdevapi", alcMMDevApiInit, alcMMDevApiDeinit, alcMMDevApiProbe, EmptyFuncs },
 #endif

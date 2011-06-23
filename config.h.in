@@ -14,6 +14,9 @@
 /* Define if we have the Solaris backend */
 #cmakedefine HAVE_SOLARIS
 
+/* Define if we have the SndIO backend */
+#cmakedefine HAVE_SNDIO
+
 /* Define if we have the MMDevApi backend */
 #cmakedefine HAVE_MMDEVAPI
 

@@ -104,7 +104,7 @@ void InitHrtf(void)
             newdata.delays[i] = val;
             if(val > maxDelay)
             {
-                AL_PRINT("Invalid delay at idx %d: %u (max: %u), in %s\n", i, val, maxDelay, str);
+                AL_PRINT("Invalid delay at idx %zu: %u (max: %u), in %s\n", i, val, maxDelay, str);
                 failed = AL_TRUE;
             }
         }

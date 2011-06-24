@@ -527,7 +527,7 @@ IF(REQUIRE_PORTAUDIO AND NOT HAVE_PORTAUDIO)
     MESSAGE(FATAL_ERROR "Failed to enabled required PortAudio backend")
 ENDIF()
 
-# Check PortAudio backend
+# Check PulseAudio backend
 IF(PULSEAUDIO)
     CHECK_INCLUDE_FILE(pulse/pulseaudio.h HAVE_PULSE_PULSEAUDIO_H)
     IF(HAVE_PULSE_PULSEAUDIO_H)

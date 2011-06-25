@@ -12,7 +12,7 @@ SET(CMAKE_C_COMPILER "${HOST}-gcc")
 SET(CMAKE_CXX_COMPILER "${HOST}-g++")
 
 # here is where stuff gets installed to
-SET(CMAKE_INSTALL_PREFIX "/usr/${HOST}/usr")
+SET(CMAKE_INSTALL_PREFIX "/usr/${HOST}/usr" CACHE STRING "Install path prefix, prepended onto install directories." FORCE)
 
 # here is the target environment located
 SET(CMAKE_FIND_ROOT_PATH "/usr/${HOST}/usr")
@@ -23,3 +23,8 @@ SET(CMAKE_FIND_ROOT_PATH "/usr/${HOST}/usr")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+# set env vars so that pkg-config will look in the appropriate directory for
+# .pc files (as there seems to be no way to force using ${HOST}-pkg-config)
+set(ENV{PKG_CONFIG_LIBDIR} "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
+set(ENV{PKG_CONFIG_PATH} "")

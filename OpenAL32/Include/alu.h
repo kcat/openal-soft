@@ -61,6 +61,25 @@
 extern "C" {
 #endif
 
+struct ALsource;
+struct ALbuffer;
+
+typedef ALvoid (*MixerFunc)(struct ALsource *self, ALCdevice *Device,
+                            const ALvoid *RESTRICT data,
+                            ALuint *DataPosInt, ALuint *DataPosFrac,
+                            ALuint OutPos, ALuint SamplesToDo,
+                            ALuint BufferSize);
+
+typedef enum {
+    POINT_RESAMPLER = 0,
+    LINEAR_RESAMPLER,
+    CUBIC_RESAMPLER,
+
+    RESAMPLER_MAX,
+    RESAMPLER_MIN = -1,
+    RESAMPLER_DEFAULT = LINEAR_RESAMPLER
+} resampler_t;
+
 typedef enum {
     FRONT_LEFT = 0,
     FRONT_RIGHT,
@@ -110,16 +129,15 @@ static __inline ALdouble cubic(ALdouble val0, ALdouble val1, ALdouble val2, ALdo
     return a0*mu*mu2 + a1*mu2 + a2*mu + a3;
 }
 
-struct ALsource;
-struct ALbuffer;
-
 ALvoid aluInitPanning(ALCdevice *Device);
 ALint aluCart2LUTpos(ALfloat re, ALfloat im);
 
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 
-ALvoid SelectMixer(struct ALsource *Source, struct ALbuffer *Buffer);
+MixerFunc SelectMixer(struct ALbuffer *Buffer, resampler_t Resampler);
+MixerFunc SelectHrtfMixer(struct ALbuffer *Buffer, resampler_t Resampler);
+
 ALvoid MixSource(struct ALsource *Source, ALCdevice *Device, ALuint SamplesToDo);
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);

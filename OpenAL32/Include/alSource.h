@@ -15,15 +15,6 @@ extern "C" {
 #define SRC_HISTORY_LENGTH (1<<SRC_HISTORY_BITS)
 #define SRC_HISTORY_MASK   (SRC_HISTORY_LENGTH-1)
 
-typedef enum {
-    POINT_RESAMPLER = 0,
-    LINEAR_RESAMPLER,
-    CUBIC_RESAMPLER,
-
-    RESAMPLER_MAX,
-    RESAMPLER_MIN = -1,
-    RESAMPLER_DEFAULT = LINEAR_RESAMPLER
-} resampler_t;
 extern resampler_t DefaultResampler;
 
 extern const ALsizei ResamplerPadding[RESAMPLER_MAX];
@@ -100,6 +91,8 @@ typedef struct ALsource
 
     /* Current target parameters used for mixing */
     struct {
+        MixerFunc DoMix;
+
         ALint Step;
 
         ALfloat HrtfCoeffs[MAXCHANNELS][HRIR_LENGTH][2];
@@ -122,21 +115,11 @@ typedef struct ALsource
     ALboolean NeedsUpdate;
 
     ALvoid (*Update)(struct ALsource *self, const ALCcontext *context);
-    ALvoid (*DoMix)(struct ALsource *self, ALCdevice *Device,
-                    const ALvoid *RESTRICT data,
-                    ALuint *DataPosInt, ALuint *DataPosFrac,
-                    ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize);
-    ALvoid (*DoHrtfMix)(struct ALsource *self, ALCdevice *Device,
-                        const ALvoid *RESTRICT data,
-                        ALuint *DataPosInt, ALuint *DataPosFrac,
-                        ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize);
 
     // Index to itself
     ALuint source;
 } ALsource;
 #define ALsource_Update(s,a)                 ((s)->Update(s,a))
-#define ALsource_DoMix(s,a,b,c,d,e,f,g)      ((s)->DoMix(s,a,b,c,d,e,f,g))
-#define ALsource_DoHrtfMix(s,a,b,c,d,e,f,g)  ((s)->DoHrtfMix(s,a,b,c,d,e,f,g))
 
 ALvoid ReleaseALSources(ALCcontext *Context);
 

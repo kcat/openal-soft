@@ -383,23 +383,18 @@ DECL_TEMPLATE(ALbyte, cubic8)
 
 
 #define DECL_TEMPLATE(sampler)                                                \
-static void Select_##sampler(ALsource *Source, enum FmtType FmtType)          \
+static MixerFunc Select_##sampler(enum FmtType FmtType)                       \
 {                                                                             \
     switch(FmtType)                                                           \
     {                                                                         \
     case FmtByte:                                                             \
-        Source->DoMix = Mix_ALbyte_##sampler##8;                              \
-        Source->DoHrtfMix = Mix_Hrtf_ALbyte_##sampler##8;                     \
-        break;                                                                \
+        return Mix_ALbyte_##sampler##8;                                       \
     case FmtShort:                                                            \
-        Source->DoMix = Mix_ALshort_##sampler##16;                            \
-        Source->DoHrtfMix = Mix_Hrtf_ALshort_##sampler##16;                   \
-        break;                                                                \
+        return Mix_ALshort_##sampler##16;                                     \
     case FmtFloat:                                                            \
-        Source->DoMix = Mix_ALfloat_##sampler##32;                            \
-        Source->DoHrtfMix = Mix_Hrtf_ALfloat_##sampler##32;                   \
-        break;                                                                \
+        return Mix_ALfloat_##sampler##32;                                     \
     }                                                                         \
+    return NULL;                                                              \
 }
 
 DECL_TEMPLATE(point)
@@ -408,24 +403,59 @@ DECL_TEMPLATE(cubic)
 
 #undef DECL_TEMPLATE
 
-
-ALvoid SelectMixer(ALsource *Source, ALbuffer *Buffer)
+MixerFunc SelectMixer(ALbuffer *Buffer, resampler_t Resampler)
 {
-    switch(Source->Resampler)
+    switch(Resampler)
     {
         case POINT_RESAMPLER:
-            Select_point(Source, Buffer->FmtType);
-            break;
+            return Select_point(Buffer->FmtType);
         case LINEAR_RESAMPLER:
-            Select_lerp(Source, Buffer->FmtType);
-            break;
+            return Select_lerp(Buffer->FmtType);
         case CUBIC_RESAMPLER:
-            Select_cubic(Source, Buffer->FmtType);
-            break;
+            return Select_cubic(Buffer->FmtType);
         case RESAMPLER_MIN:
         case RESAMPLER_MAX:
             break;
     }
+    return NULL;
+}
+
+#define DECL_TEMPLATE(sampler)                                                \
+static MixerFunc Select_Hrtf_##sampler(enum FmtType FmtType)                  \
+{                                                                             \
+    switch(FmtType)                                                           \
+    {                                                                         \
+    case FmtByte:                                                             \
+        return Mix_Hrtf_ALbyte_##sampler##8;                                  \
+    case FmtShort:                                                            \
+        return Mix_Hrtf_ALshort_##sampler##16;                                \
+    case FmtFloat:                                                            \
+        return Mix_Hrtf_ALfloat_##sampler##32;                                \
+    }                                                                         \
+    return NULL;                                                              \
+}
+
+DECL_TEMPLATE(point)
+DECL_TEMPLATE(lerp)
+DECL_TEMPLATE(cubic)
+
+#undef DECL_TEMPLATE
+
+MixerFunc SelectHrtfMixer(ALbuffer *Buffer, resampler_t Resampler)
+{
+    switch(Resampler)
+    {
+        case POINT_RESAMPLER:
+            return Select_Hrtf_point(Buffer->FmtType);
+        case LINEAR_RESAMPLER:
+            return Select_Hrtf_lerp(Buffer->FmtType);
+        case CUBIC_RESAMPLER:
+            return Select_Hrtf_cubic(Buffer->FmtType);
+        case RESAMPLER_MIN:
+        case RESAMPLER_MAX:
+            break;
+    }
+    return NULL;
 }
 
 
@@ -656,12 +686,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         BufferSize = min(BufferSize, (SamplesToDo-OutPos));
 
         SrcData += BufferPrePadding*FrameSize;
-        if((Device->Flags&DEVICE_USE_HRTF))
-            ALsource_DoHrtfMix(Source, Device, SrcData, &DataPosInt, &DataPosFrac,
-                               OutPos, SamplesToDo, BufferSize);
-        else
-            ALsource_DoMix(Source, Device, SrcData, &DataPosInt, &DataPosFrac,
-                           OutPos, SamplesToDo, BufferSize);
+        Source->Params.DoMix(Source, Device, SrcData, &DataPosInt, &DataPosFrac,
+                             OutPos, SamplesToDo, BufferSize);
         OutPos += BufferSize;
 
         /* Handle looping sources */

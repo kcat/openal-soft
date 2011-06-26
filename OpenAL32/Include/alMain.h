@@ -502,6 +502,7 @@ ALboolean IsValidChannels(ALenum type);
 #define HRIR_LENGTH      (1<<HRIR_BITS)
 #define HRIR_MASK        (HRIR_LENGTH-1)
 void InitHrtf(void);
+ALCboolean IsHrtfCompatible(ALCdevice *device);
 void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const ALshort **right, ALuint *ldelay, ALuint *rdelay);
 
 void al_print(const char *fname, unsigned int line, const char *fmt, ...)

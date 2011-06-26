@@ -27,6 +27,7 @@
 
 #define HRIR_COUNT 828
 
+static const ALuint sampleRate = 44100;
 static const ALubyte evCount = 19;
 static const ALushort evOffset[19] = { 0, 1, 13, 37, 73, 118, 174, 234, 306, 378, 450, 522, 594, 654, 710, 755, 791, 815, 827 };
 static const ALubyte azCount[19] = { 1, 12, 24, 36, 45, 56, 60, 72, 72, 72, 72, 72, 60, 56, 45, 36, 24, 12, 1 };
@@ -66,6 +67,13 @@ void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const
 
     *left  = Hrtf.coeffs[lidx];
     *right = Hrtf.coeffs[ridx];
+}
+
+ALCboolean IsHrtfCompatible(ALCdevice *device)
+{
+    if(device->FmtChans == DevFmtStereo && device->Frequency == sampleRate)
+        return ALC_TRUE;
+    return ALC_FALSE;
 }
 
 void InitHrtf(void)

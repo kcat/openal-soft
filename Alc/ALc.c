@@ -1384,7 +1384,6 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
             if(ALEffect_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
             {
-                ProcessContext(context);
                 ProcessContext(NULL);
                 ALCdevice_StopPlayback(device);
                 device->Flags &= ~DEVICE_RUNNING;

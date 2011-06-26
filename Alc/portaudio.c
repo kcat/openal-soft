@@ -56,6 +56,7 @@ MAKE_FUNC(Pa_GetStreamInfo);
 #define Pa_CloseStream                 pPa_CloseStream
 #define Pa_GetDefaultOutputDevice      pPa_GetDefaultOutputDevice
 #define Pa_GetStreamInfo               pPa_GetStreamInfo
+#endif
 
 void *pa_load(void)
 {
@@ -63,6 +64,7 @@ void *pa_load(void)
     {
         PaError err;
 
+#ifdef HAVE_DYNLOAD
 #ifdef _WIN32
 # define PALIB "portaudio.dll"
 #elif defined(__APPLE__) && defined(__MACH__)
@@ -96,6 +98,9 @@ void *pa_load(void)
         LOAD_FUNC(Pa_GetDefaultOutputDevice);
         LOAD_FUNC(Pa_GetStreamInfo);
 #undef LOAD_FUNC
+#else
+        pa_handle = (void*)0xDEADBEEF;
+#endif
 
         if((err=Pa_Initialize()) != paNoError)
         {
@@ -107,21 +112,6 @@ void *pa_load(void)
     }
     return pa_handle;
 }
-#else
-void *pa_load(void)
-{
-    if(!pa_handle)
-    {
-        pa_handle = (void*)0xDEADBEEF;
-        if((err=Pa_Initialize()) != paNoError)
-        {
-            AL_PRINT("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
-            pa_handle = NULL;
-        }
-    }
-    return pa_handle;
-}
-#endif
 
 
 typedef struct {

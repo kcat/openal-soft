@@ -154,7 +154,6 @@ static int pa_capture_cb(const void *inputBuffer, void *outputBuffer,
 
 static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
-    const PaStreamInfo *streamInfo;
     PaStreamParameters outParams;
     pa_data *data;
     PaError err;
@@ -197,7 +196,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
             outParams.sampleFormat = paFloat32;
             break;
     }
-    outParams.channelCount = ChannelsFromDevFmt(device->FmtChans);
+    outParams.channelCount = ((device->FmtChans == DevFmtMono) ? 1 : 2);
 
     SetDefaultChannelOrder(device);
 
@@ -210,10 +209,24 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         free(data);
         return ALC_FALSE;
     }
-    streamInfo = Pa_GetStreamInfo(data->stream);
 
     device->szDeviceName = strdup(deviceName);
-    device->Frequency = streamInfo->sampleRate;
+
+    if((ALuint)outParams.channelCount != ChannelsFromDevFmt(device->FmtChans))
+    {
+        if(outParams.channelCount != 1 && outParams.channelCount != 2)
+        {
+            AL_PRINT("Unhandled channel count: %u\n", outParams.channelCount);
+            Pa_CloseStream(data->stream);
+            device->ExtraData = NULL;
+            free(data);
+            return ALC_FALSE;
+        }
+        if((device->Flags&DEVICE_CHANNELS_REQUEST))
+            AL_PRINT("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans), outParams.channelCount);
+        device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+        device->FmtChans = ((outParams.channelCount==1) ? DevFmtMono : DevFmtStereo);
+    }
 
     return ALC_TRUE;
 }

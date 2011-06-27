@@ -40,18 +40,15 @@ struct RingBuffer {
 
 RingBuffer *CreateRingBuffer(ALsizei frame_size, ALsizei length)
 {
-    RingBuffer *ring = calloc(1, sizeof(*ring));
+    RingBuffer *ring = calloc(1, sizeof(*ring) + ((length+1) * frame_size));
     if(ring)
     {
+        ring->mem = (ALubyte*)(ring+1);
+
         ring->frame_size = frame_size;
         ring->length = length+1;
-        ring->write_pos = 1;
-        ring->mem = malloc(ring->length * ring->frame_size);
-        if(!ring->mem)
-        {
-            free(ring);
-            ring = NULL;
-        }
+        ring->read_pos = 0;
+        ring->write_pos = 0;
 
         InitializeCriticalSection(&ring->cs);
     }
@@ -63,7 +60,6 @@ void DestroyRingBuffer(RingBuffer *ring)
     if(ring)
     {
         DeleteCriticalSection(&ring->cs);
-        free(ring->mem);
         free(ring);
     }
 }
@@ -73,7 +69,7 @@ ALsizei RingBufferSize(RingBuffer *ring)
     ALsizei s;
 
     EnterCriticalSection(&ring->cs);
-    s = (ring->write_pos-ring->read_pos-1+ring->length) % ring->length;
+    s = (ring->write_pos-ring->read_pos+ring->length) % ring->length;
     LeaveCriticalSection(&ring->cs);
 
     return s;
@@ -85,7 +81,7 @@ void WriteRingBuffer(RingBuffer *ring, const ALubyte *data, ALsizei len)
 
     EnterCriticalSection(&ring->cs);
 
-    remain = (ring->read_pos-ring->write_pos+ring->length) % ring->length;
+    remain = (ring->read_pos-ring->write_pos-1+ring->length) % ring->length;
     if(remain < len) len = remain;
 
     if(len > 0)

@@ -149,8 +149,10 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             Channels = ALBuffer->FmtChannels;
 
             ALSource->Params.DoMix = ((Device->Flags&DEVICE_USE_HRTF) ?
-                SelectHrtfMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE)) :
-                SelectMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE)));
+                SelectHrtfMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE) ?
+                                          POINT_RESAMPLER : ALSource->Resampler) :
+                SelectMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE) ?
+                                      POINT_RESAMPLER : ALSource->Resampler));
             break;
         }
         BufferListItem = BufferListItem->next;
@@ -660,8 +662,10 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             }
 
             ALSource->Params.DoMix = ((Device->Flags&DEVICE_USE_HRTF) ?
-                SelectHrtfMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE)) :
-                SelectMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE)));
+                SelectHrtfMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE) ?
+                                          POINT_RESAMPLER : ALSource->Resampler) :
+                SelectMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE) ?
+                                      POINT_RESAMPLER : ALSource->Resampler));
             break;
         }
         BufferListItem = BufferListItem->next;

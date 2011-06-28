@@ -31,25 +31,107 @@
 #include <CoreServices/CoreServices.h>
 #include <unistd.h>
 #include <AudioUnit/AudioUnit.h>
+#include <AudioToolbox/AudioToolbox.h>
 
 /* toggle verbose tty output among CoreAudio code */
 #define CA_VERBOSE 1
 
 typedef struct {
-    AudioUnit OutputUnit;
-    ALuint FrameSize;
+    AudioUnit audioUnit;
+
+    ALuint frameSize;
+    ALdouble sampleRateRatio;              // Ratio of hardware sample rate / requested sample rate
+    AudioStreamBasicDescription format;    // This is the OpenAL format as a CoreAudio ASBD
+
+    AudioConverterRef audioConverter;      // Sample rate converter if needed
+    AudioBufferList *bufferList;           // Buffer for data coming from the input device
+    ALCvoid *resampleBuffer;               // Buffer for returned RingBuffer data when resampling
+
+    RingBuffer *ring;
 } ca_data;
 
 static const ALCchar ca_device[] = "CoreAudio Default";
 
-static int ca_callback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp,
-                       UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData)
+
+static void destroy_buffer_list(AudioBufferList* list)
+{
+    if(list)
+    {
+        for(UInt32 i = 0;i < list->mNumberBuffers;i++)
+            free(list->mBuffers[i].mData);
+        free(list);
+    }
+}
+
+static AudioBufferList* allocate_buffer_list(UInt32 channelCount, UInt32 byteSize)
+{
+    AudioBufferList *list;
+
+    list = calloc(1, sizeof(AudioBufferList) + sizeof(AudioBuffer));
+    if(list)
+    {
+        list->mNumberBuffers = 1;
+
+        list->mBuffers[0].mNumberChannels = channelCount;
+        list->mBuffers[0].mDataByteSize = byteSize;
+        list->mBuffers[0].mData = malloc(byteSize);
+        if(list->mBuffers[0].mData == NULL)
+        {
+            free(list);
+            list = NULL;
+        }
+    }
+    return list;
+}
+
+static OSStatus ca_callback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp,
+                            UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData)
 {
     ALCdevice *device = (ALCdevice*)inRefCon;
     ca_data *data = (ca_data*)device->ExtraData;
 
     aluMixData(device, ioData->mBuffers[0].mData,
-               ioData->mBuffers[0].mDataByteSize / data->FrameSize);
+               ioData->mBuffers[0].mDataByteSize / data->frameSize);
+
+    return noErr;
+}
+
+static OSStatus ca_capture_conversion_callback(AudioConverterRef inAudioConverter, UInt32 *ioNumberDataPackets,
+        AudioBufferList *ioData, AudioStreamPacketDescription **outDataPacketDescription, void* inUserData)
+{
+    ALCdevice *device = (ALCdevice*)inUserData;
+    ca_data *data = (ca_data*)device->ExtraData;
+
+    // Read from the ring buffer and store temporarily in a large buffer
+    ReadRingBuffer(data->ring, data->resampleBuffer, (ALsizei)(*ioNumberDataPackets));
+
+    // Set the input data
+    ioData->mNumberBuffers = 1;
+    ioData->mBuffers[0].mNumberChannels = data->format.mChannelsPerFrame;
+    ioData->mBuffers[0].mData = data->resampleBuffer;
+    ioData->mBuffers[0].mDataByteSize = (*ioNumberDataPackets) * data->format.mBytesPerFrame;
+
+    return noErr;
+}
+
+static OSStatus ca_capture_callback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
+                                    const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber,
+                                    UInt32 inNumberFrames, AudioBufferList *ioData)
+{
+    ALCdevice *device = (ALCdevice*)inRefCon;
+    ca_data *data = (ca_data*)device->ExtraData;
+    AudioUnitRenderActionFlags flags = 0;
+    OSStatus err;
+
+    // fill the bufferList with data from the input device
+    err = AudioUnitRender(data->audioUnit, &flags, inTimeStamp, 1, inNumberFrames, data->bufferList);
+    if(err != noErr)
+    {
+        AL_PRINT("AudioUnitRender error: %d\n", err);
+        return err;
+    }
+
+    WriteRingBuffer(data->ring, data->bufferList->mBuffers[0].mData, inNumberFrames);
 
     return noErr;
 }
@@ -83,7 +165,7 @@ static ALCboolean ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
     data = calloc(1, sizeof(*data));
     device->ExtraData = data;
 
-    err = OpenAComponent(comp, &data->OutputUnit);
+    err = OpenAComponent(comp, &data->audioUnit);
     if(err != noErr)
     {
         AL_PRINT("OpenAComponent failed\n");
@@ -99,7 +181,7 @@ static void ca_close_playback(ALCdevice *device)
 {
     ca_data *data = (ca_data*)device->ExtraData;
 
-    CloseComponent(data->OutputUnit);
+    CloseComponent(data->audioUnit);
 
     free(data);
     device->ExtraData = NULL;
@@ -114,14 +196,14 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     UInt32 size;
 
     /* init and start the default audio unit... */
-    err = AudioUnitInitialize(data->OutputUnit);
+    err = AudioUnitInitialize(data->audioUnit);
     if(err != noErr)
     {
         AL_PRINT("AudioUnitInitialize failed\n");
         return ALC_FALSE;
     }
 
-    err = AudioOutputUnitStart(data->OutputUnit);
+    err = AudioOutputUnitStart(data->audioUnit);
     if(err != noErr)
     {
         AL_PRINT("AudioOutputUnitStart failed\n");
@@ -130,7 +212,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
 
     /* retrieve default output unit's properties (output side) */
     size = sizeof(AudioStreamBasicDescription);
-    err = AudioUnitGetProperty(data->OutputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &streamFormat, &size);
+    err = AudioUnitGetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &streamFormat, &size);
     if(err != noErr || size != sizeof(AudioStreamBasicDescription))
     {
         AL_PRINT("AudioUnitGetProperty failed\n");
@@ -148,7 +230,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
 #endif
 
     /* set default output unit's input side to match output side */
-    err = AudioUnitSetProperty(data->OutputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, size);
+    err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, size);
     if(err != noErr)
     {
         AL_PRINT("AudioUnitSetProperty failed\n");
@@ -262,7 +344,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
                                 kAudioFormatFlagsNativeEndian |
                                 kLinearPCMFormatFlagIsPacked;
 
-    err = AudioUnitSetProperty(data->OutputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, sizeof(AudioStreamBasicDescription));
+    err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, sizeof(AudioStreamBasicDescription));
     if(err != noErr)
     {
         AL_PRINT("AudioUnitSetProperty failed\n");
@@ -270,11 +352,11 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     }
 
     /* setup callback */
-    data->FrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    data->frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     input.inputProc = ca_callback;
     input.inputProcRefCon = device;
 
-    err = AudioUnitSetProperty(data->OutputUnit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &input, sizeof(AURenderCallbackStruct));
+    err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
     {
         AL_PRINT("AudioUnitSetProperty failed\n");
@@ -289,17 +371,313 @@ static void ca_stop_playback(ALCdevice *device)
     ca_data *data = (ca_data*)device->ExtraData;
     OSStatus err;
 
-    AudioOutputUnitStop(data->OutputUnit);
-    err = AudioUnitUninitialize(data->OutputUnit);
+    AudioOutputUnitStop(data->audioUnit);
+    err = AudioUnitUninitialize(data->audioUnit);
     if(err != noErr)
         AL_PRINT("-- AudioUnitUninitialize failed.\n");
 }
 
 static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
 {
+    AudioStreamBasicDescription requestedFormat;  // The application requested format
+    AudioStreamBasicDescription hardwareFormat;   // The hardware format
+    AudioStreamBasicDescription outputFormat;     // The AudioUnit output format
+    AURenderCallbackStruct input;
+    ComponentDescription desc;
+    AudioDeviceID inputDevice;
+    UInt32 outputFrameCount;
+    UInt32 propertySize;
+    UInt32 enableIO;
+    Component comp;
+    ca_data *data;
+    OSStatus err;
+
+    desc.componentType = kAudioUnitType_Output;
+    desc.componentSubType = kAudioUnitSubType_HALOutput;
+    desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+    desc.componentFlags = 0;
+    desc.componentFlagsMask = 0;
+
+    // Search for component with given description
+    comp = FindNextComponent(NULL, &desc);
+    if(comp == NULL)
+    {
+        AL_PRINT("FindNextComponent failed\n");
+        return ALC_FALSE;
+    }
+
+    data = calloc(1, sizeof(*data));
+    device->ExtraData = data;
+
+    // Open the component
+    err = OpenAComponent(comp, &data->audioUnit);
+    if(err != noErr)
+    {
+        AL_PRINT("OpenAComponent failed\n");
+        goto error;
+    }
+
+    // Turn off AudioUnit output
+    enableIO = 0;
+    err = AudioUnitSetProperty(data->audioUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output, 0, &enableIO, sizeof(ALuint));
+    if(err != noErr)
+    {
+        AL_PRINT("AudioUnitSetProperty failed\n");
+        goto error;
+    }
+
+    // Turn on AudioUnit input
+    enableIO = 1;
+    err = AudioUnitSetProperty(data->audioUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, 1, &enableIO, sizeof(ALuint));
+    if(err != noErr)
+    {
+        AL_PRINT("AudioUnitSetProperty failed\n");
+        goto error;
+    }
+
+    // Get the default input device
+    propertySize = sizeof(AudioDeviceID);
+    err = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultInputDevice, &propertySize, &inputDevice);
+    if(err != noErr)
+    {
+        AL_PRINT("AudioHardwareGetProperty failed\n");
+        goto error;
+    }
+
+    if(inputDevice == kAudioDeviceUnknown)
+    {
+        AL_PRINT("No input device found\n");
+        goto error;
+    }
+
+    // Track the input device
+    err = AudioUnitSetProperty(data->audioUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &inputDevice, sizeof(AudioDeviceID));
+    if(err != noErr)
+    {
+        AL_PRINT("AudioUnitSetProperty failed\n");
+        goto error;
+    }
+
+    // set capture callback
+    input.inputProc = ca_capture_callback;
+    input.inputProcRefCon = device;
+
+    err = AudioUnitSetProperty(data->audioUnit, kAudioOutputUnitProperty_SetInputCallback, kAudioUnitScope_Global, 0, &input, sizeof(AURenderCallbackStruct));
+    if(err != noErr)
+    {
+        AL_PRINT("AudioUnitSetProperty failed\n");
+        goto error;
+    }
+
+    // Initialize the device
+    err = AudioUnitInitialize(data->audioUnit);
+    if(err != noErr)
+    {
+        AL_PRINT("AudioUnitInitialize failed\n");
+        goto error;
+    }
+
+    // Get the hardware format
+    propertySize = sizeof(AudioStreamBasicDescription);
+    err = AudioUnitGetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 1, &hardwareFormat, &propertySize);
+    if(err != noErr || propertySize != sizeof(AudioStreamBasicDescription))
+    {
+        AL_PRINT("AudioUnitGetProperty failed\n");
+        goto error;
+    }
+
+    // Set up the requested format description
+    switch(device->FmtType)
+    {
+        case DevFmtUByte:
+            requestedFormat.mBitsPerChannel = 8;
+            requestedFormat.mFormatFlags = kAudioFormatFlagIsPacked;
+            break;
+        case DevFmtShort:
+            requestedFormat.mBitsPerChannel = 16;
+            requestedFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
+            break;
+        case DevFmtFloat:
+            requestedFormat.mBitsPerChannel = 32;
+            requestedFormat.mFormatFlags = kAudioFormatFlagIsPacked;
+            break;
+        case DevFmtByte:
+        case DevFmtUShort:
+            AL_PRINT("%s samples not supported\n", DevFmtTypeString(device->FmtType));
+            goto error;
+    }
+
+    switch(device->FmtChans)
+    {
+        case DevFmtMono:
+            requestedFormat.mChannelsPerFrame = 1;
+            break;
+        case DevFmtStereo:
+            requestedFormat.mChannelsPerFrame = 2;
+            break;
+
+        case DevFmtQuad:
+        case DevFmtX51:
+        case DevFmtX51Side:
+        case DevFmtX61:
+        case DevFmtX71:
+            AL_PRINT("%s not supported\n", DevFmtChannelsString(device->FmtChans));
+            goto error;
+    }
+
+    requestedFormat.mBytesPerFrame = requestedFormat.mChannelsPerFrame * requestedFormat.mBitsPerChannel / 8;
+    requestedFormat.mBytesPerPacket = requestedFormat.mBytesPerFrame;
+    requestedFormat.mSampleRate = device->Frequency;
+    requestedFormat.mFormatID = kAudioFormatLinearPCM;
+    requestedFormat.mReserved = 0;
+    requestedFormat.mFramesPerPacket = 1;
+
+    // save requested format description for later use
+    data->format = requestedFormat;
+    data->frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+
+    // Use intermediate format for sample rate conversion (outputFormat)
+    // Set sample rate to the same as hardware for resampling later
+    outputFormat = requestedFormat;
+    outputFormat.mSampleRate = hardwareFormat.mSampleRate;
+
+    // Determine sample rate ratio for resampling
+    data->sampleRateRatio = outputFormat.mSampleRate / device->Frequency;
+
+    // The output format should be the requested format, but using the hardware sample rate
+    // This is because the AudioUnit will automatically scale other properties, except for sample rate
+    err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, (void *)&outputFormat, sizeof(outputFormat));
+    if(err != noErr)
+    {
+        AL_PRINT("AudioUnitSetProperty failed\n");
+        goto error;
+    }
+
+    // Set the AudioUnit output format frame count
+    outputFrameCount = device->UpdateSize * data->sampleRateRatio;
+    err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Output, 0, &outputFrameCount, sizeof(outputFrameCount));
+    if(err != noErr)
+    {
+        AL_PRINT("AudioUnitSetProperty failed: %d\n", err);
+        goto error;
+    }
+
+    // Set up sample converter
+    err = AudioConverterNew(&outputFormat, &requestedFormat, &data->audioConverter);
+    if(err != noErr)
+    {
+        AL_PRINT("AudioConverterNew failed: %d\n", err);
+        goto error;
+    }
+
+    // Create a buffer for use in the resample callback
+    data->resampleBuffer = malloc(device->UpdateSize * data->frameSize * data->sampleRateRatio);
+
+    // Allocate buffer for the AudioUnit output
+    data->bufferList = allocate_buffer_list(outputFormat.mChannelsPerFrame, device->UpdateSize * data->frameSize * data->sampleRateRatio);
+    if(data->bufferList == NULL)
+    {
+        alcSetError(device, ALC_OUT_OF_MEMORY);
+        goto error;
+    }
+
+    data->ring = CreateRingBuffer(data->frameSize, (device->UpdateSize * data->sampleRateRatio) * device->NumUpdates);
+    if(data->ring == NULL)
+    {
+        alcSetError(device, ALC_OUT_OF_MEMORY);
+        goto error;
+    }
+
+    return ALC_TRUE;
+
+error:
+    DestroyRingBuffer(data->ring);
+    free(data->resampleBuffer);
+    destroy_buffer_list(data->bufferList);
+
+    if(data->audioConverter)
+        AudioConverterDispose(data->audioConverter);
+    if(data->audioUnit)
+        CloseComponent(data->audioUnit);
+
+    free(data);
+    device->ExtraData = NULL;
+
     return ALC_FALSE;
-    (void)device;
-    (void)deviceName;
+}
+
+static void ca_close_capture(ALCdevice *device)
+{
+    ca_data *data = (ca_data*)device->ExtraData;
+
+    DestroyRingBuffer(data->ring);
+    free(data->resampleBuffer);
+    destroy_buffer_list(data->bufferList);
+
+    AudioConverterDispose(data->audioConverter);
+    CloseComponent(data->audioUnit);
+
+    free(data);
+    device->ExtraData = NULL;
+}
+
+static void ca_start_capture(ALCdevice *device)
+{
+    ca_data *data = (ca_data*)device->ExtraData;
+    OSStatus err = AudioOutputUnitStart(data->audioUnit);
+    if(err != noErr)
+        AL_PRINT("AudioOutputUnitStart failed\n");
+}
+
+static void ca_stop_capture(ALCdevice *device)
+{
+    ca_data *data = (ca_data*)device->ExtraData;
+    OSStatus err = AudioOutputUnitStop(data->audioUnit);
+    if(err != noErr)
+        AL_PRINT("AudioOutputUnitStop failed\n");
+}
+
+static ALCuint ca_available_samples(ALCdevice *device)
+{
+    ca_data *data = device->ExtraData;
+    return RingBufferSize(data->ring) / data->sampleRateRatio;
+}
+
+static void ca_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples)
+{
+    ca_data *data = (ca_data*)device->ExtraData;
+
+    if(samples <= ca_available_samples(device))
+    {
+        AudioBufferList *list;
+        UInt32 frameCount;
+        OSStatus err;
+
+        // If no samples are requested, just return
+        if(samples == 0)
+            return;
+
+        // Allocate a temporary AudioBufferList to use as the return resamples data
+        list = alloca(sizeof(AudioBufferList) + sizeof(AudioBuffer));
+
+        // Point the resampling buffer to the capture buffer
+        list->mNumberBuffers = 1;
+        list->mBuffers[0].mNumberChannels = data->format.mChannelsPerFrame;
+        list->mBuffers[0].mDataByteSize = samples * data->frameSize;
+        list->mBuffers[0].mData = buffer;
+
+        // Resample into another AudioBufferList
+        frameCount = samples;
+        err = AudioConverterFillComplexBuffer(data->audioConverter, ca_capture_conversion_callback, device,
+                                              &frameCount, list, NULL);
+        if(err != noErr)
+        {
+            AL_PRINT("AudioConverterFillComplexBuffer error: %d\n", err);
+            alcSetError(device, ALC_INVALID_VALUE);
+        }
+    }
+    else
+        alcSetError(device, ALC_INVALID_VALUE);
 }
 
 static const BackendFuncs ca_funcs = {
@@ -308,11 +686,11 @@ static const BackendFuncs ca_funcs = {
     ca_reset_playback,
     ca_stop_playback,
     ca_open_capture,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL
+    ca_close_capture,
+    ca_start_capture,
+    ca_stop_capture,
+    ca_capture_samples,
+    ca_available_samples
 };
 
 void alc_ca_init(BackendFuncs *func_list)
@@ -335,6 +713,7 @@ void alc_ca_probe(enum DevProbe type)
             AppendAllDeviceList(ca_device);
             break;
         case CAPTURE_DEVICE_PROBE:
+            AppendCaptureDeviceList(ca_device);
             break;
     }
 }

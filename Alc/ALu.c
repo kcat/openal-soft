@@ -373,14 +373,11 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat DryGainHF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
-    ALfloat DirGain, AmbientGain;
-    const ALfloat *SpeakerGain;
     ALfloat Pitch;
-    ALfloat length;
     ALuint Frequency;
     ALint NumSends;
-    ALint pos, s, i;
     ALfloat cw;
+    ALint i;
 
     DryGainHF = 1.0f;
     for(i = 0;i < MAX_SENDS;i++)
@@ -726,6 +723,11 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
+        ALfloat DirGain, AmbientGain;
+        const ALfloat *SpeakerGain;
+        ALfloat length;
+        ALint pos;
+
         length = __max(Distance, MinDist);
         if(length > 0.0f)
         {
@@ -742,15 +744,15 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         // elevation adjustment for directional gain. this sucks, but
         // has low complexity
         AmbientGain = aluSqrt(1.0/Device->NumChan);
-        for(s = 0;s < MAXCHANNELS;s++)
+        for(i = 0;i < MAXCHANNELS;i++)
         {
-            ALuint s2;
-            for(s2 = 0;s2 < MAXCHANNELS;s2++)
-                ALSource->Params.DryGains[s][s2] = 0.0f;
+            ALuint i2;
+            for(i2 = 0;i2 < MAXCHANNELS;i2++)
+                ALSource->Params.DryGains[i][i2] = 0.0f;
         }
-        for(s = 0;s < (ALsizei)Device->NumChan;s++)
+        for(i = 0;i < (ALint)Device->NumChan;i++)
         {
-            Channel chan = Device->Speaker2Chan[s];
+            Channel chan = Device->Speaker2Chan[i];
             ALfloat gain = lerp(AmbientGain, SpeakerGain[chan], DirGain);
             ALSource->Params.DryGains[0][chan] = DryGain * gain;
         }

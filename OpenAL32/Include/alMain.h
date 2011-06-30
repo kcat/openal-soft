@@ -93,6 +93,11 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 #endif
 #endif
 
+#ifndef AL_SOFT_non_virtual_channels
+#define AL_SOFT_non_virtual_channels 1
+#define AL_VIRTUAL_CHANNELS_SOFT                 0x1033
+#endif
+
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>

@@ -75,6 +75,7 @@ static const ALenums enumeration[] = {
     { "AL_STREAMING",                         AL_STREAMING                        },
     { "AL_UNDETERMINED",                      AL_UNDETERMINED                     },
     { "AL_METERS_PER_UNIT",                   AL_METERS_PER_UNIT                  },
+    { "AL_VIRTUAL_CHANNELS_SOFT",             AL_VIRTUAL_CHANNELS_SOFT            },
 
     // Source EFX Properties
     { "AL_DIRECT_FILTER",                     AL_DIRECT_FILTER                    },

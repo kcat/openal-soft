@@ -680,6 +680,16 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
+            case AL_VIRTUAL_CHANNELS_SOFT:
+                if(lValue == AL_TRUE || lValue == AL_FALSE)
+                {
+                    Source->VirtualChannels = lValue;
+                    Source->NeedsUpdate = AL_TRUE;
+                }
+                else
+                    alSetError(pContext, AL_INVALID_VALUE);
+                break;
+
             case AL_DISTANCE_MODEL:
                 if(lValue == AL_NONE ||
                    lValue == AL_INVERSE_DISTANCE ||
@@ -801,6 +811,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* pl
             case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
             case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
             case AL_DISTANCE_MODEL:
+            case AL_VIRTUAL_CHANNELS_SOFT:
                 alSourcei(source, eParam, plValues[0]);
                 return;
 
@@ -1149,6 +1160,10 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plVa
                     *plValue = (ALint)Source->DopplerFactor;
                     break;
 
+                case AL_VIRTUAL_CHANNELS_SOFT:
+                    *plValue = Source->VirtualChannels;
+                    break;
+
                 case AL_DISTANCE_MODEL:
                     *plValue = Source->DistanceModel;
                     break;
@@ -1245,6 +1260,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plVal
         case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
         case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
         case AL_DISTANCE_MODEL:
+        case AL_VIRTUAL_CHANNELS_SOFT:
             alGetSourcei(source, eParam, plValues);
             return;
 
@@ -1807,6 +1823,7 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->AirAbsorptionFactor = 0.0f;
     Source->RoomRolloffFactor = 0.0f;
     Source->DopplerFactor = 1.0f;
+    Source->VirtualChannels = AL_TRUE;
 
     Source->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
 

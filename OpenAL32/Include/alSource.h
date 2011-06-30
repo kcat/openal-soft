@@ -46,6 +46,7 @@ typedef struct ALsource
     ALboolean    bHeadRelative;
     ALboolean    bLooping;
     ALenum       DistanceModel;
+    ALboolean    VirtualChannels;
 
     resampler_t  Resampler;
 

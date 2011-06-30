@@ -89,6 +89,22 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     static const ALfloat angles_X71[8] = { -30.0f, 30.0f, 0.0f, 0.0f,
                                            -110.0f, 110.0f, -90.0f, 90.0f };
 
+    static const Channel chans_Mono[1] = { FRONT_CENTER };
+    static const Channel chans_Stereo[2] = { FRONT_LEFT, FRONT_RIGHT };
+    static const Channel chans_Rear[2] = { BACK_LEFT, BACK_RIGHT };
+    static const Channel chans_Quad[4] = { FRONT_LEFT, FRONT_RIGHT,
+                                           BACK_LEFT, BACK_RIGHT };
+    static const Channel chans_X51[6] = { FRONT_LEFT, FRONT_RIGHT,
+                                          FRONT_CENTER, LFE,
+                                          BACK_LEFT, BACK_RIGHT };
+    static const Channel chans_X61[7] = { FRONT_LEFT, FRONT_RIGHT,
+                                          FRONT_CENTER, LFE, BACK_CENTER,
+                                          SIDE_LEFT, SIDE_RIGHT };
+    static const Channel chans_X71[8] = { FRONT_LEFT, FRONT_RIGHT,
+                                          FRONT_CENTER, LFE,
+                                          BACK_LEFT, BACK_RIGHT,
+                                          SIDE_LEFT, SIDE_RIGHT };
+
     ALCdevice *Device = ALContext->Device;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
@@ -101,8 +117,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALint NumSends, Frequency;
     const ALfloat *SpeakerGain;
     const ALfloat *angles = NULL;
+    const Channel *chans = NULL;
     ALint num_channels = 0;
-    ALint lfe_chan = -1;
+    ALboolean VirtualChannels;
     ALfloat Pitch;
     ALfloat cw;
     ALuint pos;
@@ -117,10 +134,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ListenerGain = ALContext->Listener.Gain;
 
     /* Get source properties */
-    SourceVolume = ALSource->flGain;
-    MinVolume    = ALSource->flMinGain;
-    MaxVolume    = ALSource->flMaxGain;
-    Pitch        = ALSource->flPitch;
+    SourceVolume    = ALSource->flGain;
+    MinVolume       = ALSource->flMinGain;
+    MaxVolume       = ALSource->flMaxGain;
+    Pitch           = ALSource->flPitch;
+    VirtualChannels = ALSource->VirtualChannels;
 
     /* Calculate the stepping value */
     Channels = FmtMono;
@@ -148,11 +166,14 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
             Channels = ALBuffer->FmtChannels;
 
-            ALSource->Params.DoMix = ((Device->Flags&DEVICE_USE_HRTF) ?
-                SelectHrtfMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE) ?
-                                          POINT_RESAMPLER : ALSource->Resampler) :
-                SelectMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE) ?
-                                      POINT_RESAMPLER : ALSource->Resampler));
+            if(ALSource->VirtualChannels && (Device->Flags&DEVICE_USE_HRTF))
+                ALSource->Params.DoMix = SelectHrtfMixer(ALBuffer,
+                       (ALSource->Params.Step==FRACTIONONE) ? POINT_RESAMPLER :
+                       ALSource->Resampler);
+            else
+                ALSource->Params.DoMix = SelectMixer(ALBuffer,
+                       (ALSource->Params.Step==FRACTIONONE) ? POINT_RESAMPLER :
+                       ALSource->Resampler);
             break;
         }
         BufferListItem = BufferListItem->next;
@@ -182,10 +203,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
     case FmtMono:
         angles = angles_Mono;
+        chans = chans_Mono;
         num_channels = 1;
         break;
     case FmtStereo:
-        if((ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
+        if(VirtualChannels && (ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
         {
             DryGain *= aluSqrt(2.0f/4.0f);
             for(c = 0;c < 2;c++)
@@ -203,45 +225,53 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             }
         }
         angles = angles_Stereo;
+        chans = chans_Stereo;
         num_channels = 2;
         break;
 
     case FmtRear:
         angles = angles_Rear;
+        chans = chans_Rear;
         num_channels = 2;
         break;
 
     case FmtQuad:
         angles = angles_Quad;
+        chans = chans_Quad;
         num_channels = 4;
         break;
 
     case FmtX51:
         angles = angles_X51;
+        chans = chans_X51;
         num_channels = 6;
-        lfe_chan = 3;
         break;
 
     case FmtX61:
         angles = angles_X61;
+        chans = chans_X61;
         num_channels = 7;
-        lfe_chan = 3;
         break;
 
     case FmtX71:
         angles = angles_X71;
+        chans = chans_X71;
         num_channels = 8;
-        lfe_chan = 3;
         break;
     }
 
-    if((Device->Flags&DEVICE_USE_HRTF))
+    if(VirtualChannels == AL_FALSE)
+    {
+        for(c = 0;c < num_channels;c++)
+            SrcMatrix[c][chans[c]] += DryGain * ListenerGain;
+    }
+    else if((Device->Flags&DEVICE_USE_HRTF))
     {
         for(c = 0;c < num_channels;c++)
         {
             const ALshort *hrtf_left, *hrtf_right;
 
-            if(c == lfe_chan)
+            if(chans[c] == LFE)
             {
                 /* Skip LFE */
                 ALSource->Params.HrtfDelay[c][0] = 0;
@@ -271,7 +301,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         for(c = 0;c < num_channels;c++)
         {
-            if(c == lfe_chan) /* Special-case LFE */
+            if(chans[c] == LFE) /* Special-case LFE */
             {
                 SrcMatrix[c][LFE] += DryGain * ListenerGain;
                 continue;

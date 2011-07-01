@@ -669,29 +669,6 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
         {
             switch(param)
             {
-            case AL_EAXREVERB_DENSITY:
-            case AL_EAXREVERB_DIFFUSION:
-            case AL_EAXREVERB_GAIN:
-            case AL_EAXREVERB_GAINHF:
-            case AL_EAXREVERB_GAINLF:
-            case AL_EAXREVERB_DECAY_TIME:
-            case AL_EAXREVERB_DECAY_HFRATIO:
-            case AL_EAXREVERB_DECAY_LFRATIO:
-            case AL_EAXREVERB_REFLECTIONS_GAIN:
-            case AL_EAXREVERB_REFLECTIONS_DELAY:
-            case AL_EAXREVERB_LATE_REVERB_GAIN:
-            case AL_EAXREVERB_LATE_REVERB_DELAY:
-            case AL_EAXREVERB_AIR_ABSORPTION_GAINHF:
-            case AL_EAXREVERB_ECHO_TIME:
-            case AL_EAXREVERB_ECHO_DEPTH:
-            case AL_EAXREVERB_MODULATION_TIME:
-            case AL_EAXREVERB_MODULATION_DEPTH:
-            case AL_EAXREVERB_HFREFERENCE:
-            case AL_EAXREVERB_LFREFERENCE:
-            case AL_EAXREVERB_ROOM_ROLLOFF_FACTOR:
-                alEffectf(effect, param, pflValues[0]);
-                break;
-
             case AL_EAXREVERB_REFLECTIONS_PAN:
                 if(!isnan(pflValues[0]) && !isnan(pflValues[1]) && !isnan(pflValues[2]))
                 {
@@ -714,92 +691,17 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
                 break;
 
             default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_REVERB)
-        {
-            switch(param)
-            {
-            case AL_REVERB_DENSITY:
-            case AL_REVERB_DIFFUSION:
-            case AL_REVERB_GAIN:
-            case AL_REVERB_GAINHF:
-            case AL_REVERB_DECAY_TIME:
-            case AL_REVERB_DECAY_HFRATIO:
-            case AL_REVERB_REFLECTIONS_GAIN:
-            case AL_REVERB_REFLECTIONS_DELAY:
-            case AL_REVERB_LATE_REVERB_GAIN:
-            case AL_REVERB_LATE_REVERB_DELAY:
-            case AL_REVERB_AIR_ABSORPTION_GAINHF:
-            case AL_REVERB_ROOM_ROLLOFF_FACTOR:
+                UnlockContext(Context);
                 alEffectf(effect, param, pflValues[0]);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_ECHO)
-        {
-            switch(param)
-            {
-            case AL_ECHO_DELAY:
-            case AL_ECHO_LRDELAY:
-            case AL_ECHO_DAMPING:
-            case AL_ECHO_FEEDBACK:
-            case AL_ECHO_SPREAD:
-                alEffectf(effect, param, pflValues[0]);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
-        {
-            switch(param)
-            {
-            case AL_RING_MODULATOR_FREQUENCY:
-                if(pflValues[0] >= AL_RING_MODULATOR_MIN_FREQUENCY &&
-                   pflValues[0] <= AL_RING_MODULATOR_MAX_FREQUENCY)
-                    ALEffect->Params.Modulator.Frequency = pflValues[0];
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
-                break;
-
-            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-                if(pflValues[0] >= AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF &&
-                   pflValues[0] <= AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF)
-                    ALEffect->Params.Modulator.HighPassCutoff = pflValues[0];
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT ||
-                ALEffect->type == AL_EFFECT_DEDICATED_DIALOGUE)
-        {
-            switch(param)
-            {
-            case AL_DEDICATED_GAIN:
-                alEffectf(effect, param, pflValues[0]);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
+                return;
             }
         }
         else
-            alSetError(Context, AL_INVALID_ENUM);
+        {
+            UnlockContext(Context);
+            alEffectf(effect, param, pflValues[0]);
+            return;
+        }
     }
     else
         alSetError(Context, AL_INVALID_NAME);
@@ -1134,29 +1036,6 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pf
         {
             switch(param)
             {
-            case AL_EAXREVERB_DENSITY:
-            case AL_EAXREVERB_DIFFUSION:
-            case AL_EAXREVERB_GAIN:
-            case AL_EAXREVERB_GAINHF:
-            case AL_EAXREVERB_GAINLF:
-            case AL_EAXREVERB_DECAY_TIME:
-            case AL_EAXREVERB_DECAY_HFRATIO:
-            case AL_EAXREVERB_DECAY_LFRATIO:
-            case AL_EAXREVERB_REFLECTIONS_GAIN:
-            case AL_EAXREVERB_REFLECTIONS_DELAY:
-            case AL_EAXREVERB_LATE_REVERB_GAIN:
-            case AL_EAXREVERB_LATE_REVERB_DELAY:
-            case AL_EAXREVERB_AIR_ABSORPTION_GAINHF:
-            case AL_EAXREVERB_ECHO_TIME:
-            case AL_EAXREVERB_ECHO_DEPTH:
-            case AL_EAXREVERB_MODULATION_TIME:
-            case AL_EAXREVERB_MODULATION_DEPTH:
-            case AL_EAXREVERB_HFREFERENCE:
-            case AL_EAXREVERB_LFREFERENCE:
-            case AL_EAXREVERB_ROOM_ROLLOFF_FACTOR:
-                alGetEffectf(effect, param, pflValues);
-                break;
-
             case AL_EAXREVERB_REFLECTIONS_PAN:
                 pflValues[0] = ALEffect->Params.Reverb.ReflectionsPan[0];
                 pflValues[1] = ALEffect->Params.Reverb.ReflectionsPan[1];
@@ -1169,81 +1048,17 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pf
                 break;
 
             default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_REVERB)
-        {
-            switch(param)
-            {
-            case AL_REVERB_DENSITY:
-            case AL_REVERB_DIFFUSION:
-            case AL_REVERB_GAIN:
-            case AL_REVERB_GAINHF:
-            case AL_REVERB_DECAY_TIME:
-            case AL_REVERB_DECAY_HFRATIO:
-            case AL_REVERB_REFLECTIONS_GAIN:
-            case AL_REVERB_REFLECTIONS_DELAY:
-            case AL_REVERB_LATE_REVERB_GAIN:
-            case AL_REVERB_LATE_REVERB_DELAY:
-            case AL_REVERB_AIR_ABSORPTION_GAINHF:
-            case AL_REVERB_ROOM_ROLLOFF_FACTOR:
+                UnlockContext(Context);
                 alGetEffectf(effect, param, pflValues);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_ECHO)
-        {
-            switch(param)
-            {
-            case AL_ECHO_DELAY:
-            case AL_ECHO_LRDELAY:
-            case AL_ECHO_DAMPING:
-            case AL_ECHO_FEEDBACK:
-            case AL_ECHO_SPREAD:
-                alGetEffectf(effect, param, pflValues);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_RING_MODULATOR)
-        {
-            switch(param)
-            {
-            case AL_RING_MODULATOR_FREQUENCY:
-            case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-                alGetEffectf(effect, param, pflValues);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
-            }
-        }
-        else if(ALEffect->type == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT ||
-                ALEffect->type == AL_EFFECT_DEDICATED_DIALOGUE)
-        {
-            switch(param)
-            {
-            case AL_DEDICATED_GAIN:
-                alGetEffectf(effect, param, pflValues);
-                break;
-
-            default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
+                return;
             }
         }
         else
-            alSetError(Context, AL_INVALID_ENUM);
+        {
+            UnlockContext(Context);
+            alGetEffectf(effect, param, pflValues);
+            return;
+        }
     }
     else
         alSetError(Context, AL_INVALID_NAME);

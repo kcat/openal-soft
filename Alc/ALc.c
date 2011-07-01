@@ -1317,10 +1317,10 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if((device->Flags&DEVICE_RUNNING))
         return ALC_TRUE;
 
-    SuspendContext(NULL);
+    LockContext(NULL);
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
     {
-        ProcessContext(NULL);
+        UnlockContext(NULL);
         return ALC_FALSE;
     }
     device->Flags |= DEVICE_RUNNING;
@@ -1384,7 +1384,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
             if(ALEffect_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
             {
-                ProcessContext(NULL);
+                UnlockContext(NULL);
                 ALCdevice_StopPlayback(device);
                 device->Flags &= ~DEVICE_RUNNING;
                 return ALC_FALSE;
@@ -1409,18 +1409,18 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             source->NeedsUpdate = AL_FALSE;
         }
     }
-    ProcessContext(NULL);
+    UnlockContext(NULL);
 
     return ALC_TRUE;
 }
 
 
 /*
-    SuspendContext
+    LockContext
 
     Thread-safe entry
 */
-ALCvoid SuspendContext(ALCcontext *pContext)
+ALCvoid LockContext(ALCcontext *pContext)
 {
     (void)pContext;
     EnterCriticalSection(&g_csMutex);
@@ -1428,11 +1428,11 @@ ALCvoid SuspendContext(ALCcontext *pContext)
 
 
 /*
-    ProcessContext
+    UnlockContext
 
     Thread-safe exit
 */
-ALCvoid ProcessContext(ALCcontext *pContext)
+ALCvoid UnlockContext(ALCcontext *pContext)
 {
     (void)pContext;
     LeaveCriticalSection(&g_csMutex);
@@ -1440,11 +1440,11 @@ ALCvoid ProcessContext(ALCcontext *pContext)
 
 
 /*
-    GetContextSuspended
+    GetLockedContext
 
     Returns the currently active Context, in a locked state
 */
-ALCcontext *GetContextSuspended(void)
+ALCcontext *GetLockedContext(void)
 {
     ALCcontext *pContext = NULL;
 
@@ -1459,7 +1459,7 @@ ALCcontext *GetContextSuspended(void)
     if(!pContext)
         pContext = GlobalContext;
     if(pContext)
-        SuspendContext(pContext);
+        LockContext(pContext);
 
     UnlockLists();
 
@@ -2123,7 +2123,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
-    SuspendContext(NULL);
+    LockContext(NULL);
     ALContext = NULL;
     temp = realloc(device->Contexts, (device->NumContexts+1) * sizeof(*device->Contexts));
     if(temp)
@@ -2142,7 +2142,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         free(ALContext);
         alcSetError(device, ALC_OUT_OF_MEMORY);
-        ProcessContext(NULL);
+        UnlockContext(NULL);
         if(device->NumContexts == 0)
         {
             ALCdevice_StopPlayback(device);
@@ -2156,7 +2156,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALContext->Device = device;
 
     InitContext(ALContext);
-    ProcessContext(NULL);
+    UnlockContext(NULL);
 
     ALContext->next = g_pContextList;
     g_pContextList = ALContext;
@@ -2200,7 +2200,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         GlobalContext = NULL;
 
     Device = context->Device;
-    SuspendContext(NULL);
+    LockContext(NULL);
     for(i = 0;i < Device->NumContexts;i++)
     {
         if(Device->Contexts[i] == context)
@@ -2210,7 +2210,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
             break;
         }
     }
-    ProcessContext(NULL);
+    UnlockContext(NULL);
 
     if(Device->NumContexts == 0)
     {

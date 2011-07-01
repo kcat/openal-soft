@@ -29,13 +29,13 @@ AL_API ALenum AL_APIENTRY alGetError(ALvoid)
     ALCcontext *Context;
     ALenum errorCode;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return AL_INVALID_OPERATION;
 
     errorCode = Context->LastError;
     Context->LastError = AL_NO_ERROR;
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 
     return errorCode;
 }

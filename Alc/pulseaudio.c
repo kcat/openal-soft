@@ -361,7 +361,7 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
 
-    SuspendContext(NULL);
+    LockContext(NULL);
 
     data->attr = *(pa_stream_get_buffer_attr(stream));
     Device->UpdateSize = data->attr.minreq / data->frame_size;
@@ -372,7 +372,7 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
         AL_PRINT("PulseAudio returned minreq > tlength/2; expect break up\n");
     }
 
-    ProcessContext(NULL);
+    UnlockContext(NULL);
 }//}}}
 
 static void stream_device_callback(pa_stream *stream, void *pdata) //{{{

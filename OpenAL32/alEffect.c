@@ -43,7 +43,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     ALCcontext *Context;
     ALsizei i=0;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(n < 0 || IsBadWritePtr((void*)effects, n * sizeof(ALuint)))
@@ -82,7 +82,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
         }
     }
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
@@ -93,7 +93,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
     ALboolean Failed;
     ALsizei i;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Failed = AL_TRUE;
@@ -135,7 +135,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
         }
     }
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
@@ -143,13 +143,13 @@ AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return AL_FALSE;
 
     result = ((!effect || LookupEffect(Context->Device->EffectMap, effect)) ?
               AL_TRUE : AL_FALSE);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 
     return result;
 }
@@ -160,7 +160,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -264,7 +264,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
@@ -279,7 +279,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -650,7 +650,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
@@ -659,7 +659,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -804,7 +804,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
@@ -813,7 +813,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piVal
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -883,7 +883,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piVal
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
@@ -898,7 +898,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pfl
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -1115,7 +1115,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pfl
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
@@ -1124,7 +1124,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pf
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -1248,7 +1248,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pf
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 

@@ -31,7 +31,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
     ALCcontext *pContext;
     ALboolean updateAll = AL_FALSE;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     switch(eParam)
@@ -73,7 +73,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
         }
     }
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -82,7 +82,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat 
     ALCcontext *pContext;
     ALboolean updateWorld = AL_FALSE;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     switch(eParam)
@@ -117,7 +117,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat 
         }
     }
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -142,7 +142,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
         }
     }
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(pflValues)
@@ -179,7 +179,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
         }
     }
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -189,7 +189,7 @@ AL_API ALvoid AL_APIENTRY alListeneri(ALenum eParam, ALint lValue)
 
     (void)lValue;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     switch(eParam)
@@ -199,7 +199,7 @@ AL_API ALvoid AL_APIENTRY alListeneri(ALenum eParam, ALint lValue)
             break;
     }
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -215,7 +215,7 @@ AL_API void AL_APIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2
             return;
     }
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     switch(eParam)
@@ -225,7 +225,7 @@ AL_API void AL_APIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2
             break;
     }
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -234,7 +234,7 @@ AL_API void AL_APIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
     ALCcontext *pContext;
     ALfloat flValues[6];
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(plValues)
@@ -267,7 +267,7 @@ AL_API void AL_APIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -275,7 +275,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
 {
     ALCcontext *pContext;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(pflValue)
@@ -298,7 +298,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -306,7 +306,7 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum eParam, ALfloat *pflValue1, ALf
 {
     ALCcontext *pContext;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(pflValue1 && pflValue2 && pflValue3)
@@ -333,7 +333,7 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum eParam, ALfloat *pflValue1, ALf
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -354,7 +354,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
             return;
     }
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(pflValues)
@@ -379,7 +379,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -387,7 +387,7 @@ AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum eParam, ALint *plValue)
 {
     ALCcontext *pContext;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(plValue)
@@ -402,7 +402,7 @@ AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum eParam, ALint *plValue)
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -410,7 +410,7 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum eParam, ALint *plValue1, ALint *p
 {
     ALCcontext *pContext;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(plValue1 && plValue2 && plValue3)
@@ -437,7 +437,7 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum eParam, ALint *plValue1, ALint *p
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -453,7 +453,7 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
             return;
     }
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(plValues)
@@ -478,5 +478,5 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }

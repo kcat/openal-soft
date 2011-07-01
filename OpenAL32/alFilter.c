@@ -39,7 +39,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
     ALCcontext *Context;
     ALsizei i=0;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(n < 0 || IsBadWritePtr((void*)filters, n * sizeof(ALuint)))
@@ -78,7 +78,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
         }
     }
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
@@ -89,7 +89,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
     ALboolean Failed;
     ALsizei i;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Failed = AL_TRUE;
@@ -131,7 +131,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
         }
     }
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter)
@@ -139,13 +139,13 @@ AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return AL_FALSE;
 
     result = ((!filter || LookupFilter(Context->Device->FilterMap, filter)) ?
               AL_TRUE : AL_FALSE);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 
     return result;
 }
@@ -156,7 +156,7 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
     ALCdevice  *Device;
     ALfilter   *ALFilter;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -180,7 +180,7 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue)
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValues)
@@ -195,7 +195,7 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValue
             return;
     }
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -211,7 +211,7 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, ALint *piValue
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue)
@@ -220,7 +220,7 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue
     ALCdevice  *Device;
     ALfilter   *ALFilter;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -261,7 +261,7 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)
@@ -276,7 +276,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piVal
     ALCdevice  *Device;
     ALfilter   *ALFilter;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -296,7 +296,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piVal
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues)
@@ -311,7 +311,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piVa
             return;
     }
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -327,7 +327,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piVa
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pflValue)
@@ -336,7 +336,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pfl
     ALCdevice  *Device;
     ALfilter   *ALFilter;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -369,7 +369,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pfl
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues)

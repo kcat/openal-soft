@@ -42,7 +42,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     ALCcontext *Context;
     ALCdevice *Device;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -97,7 +97,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         }
     }
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
@@ -107,7 +107,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
     ALboolean SlotsValid = AL_FALSE;
     ALsizei i;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(n < 0)
@@ -152,7 +152,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
         }
     }
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
@@ -160,13 +160,13 @@ AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return AL_FALSE;
 
     result = (LookupEffectSlot(Context->EffectSlotMap, effectslot) ?
               AL_TRUE : AL_FALSE);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 
     return result;
 }
@@ -178,7 +178,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     ALboolean updateSources = AL_FALSE;
     ALeffectslot *EffectSlot;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -237,7 +237,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         }
     }
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues)
@@ -252,7 +252,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
             return;
     }
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(LookupEffectSlot(Context->EffectSlotMap, effectslot) != NULL)
@@ -267,7 +267,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat flValue)
@@ -275,7 +275,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
     ALCcontext *Context;
     ALeffectslot *EffectSlot;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if((EffectSlot=LookupEffectSlot(Context->EffectSlotMap, effectslot)) != NULL)
@@ -297,7 +297,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues)
@@ -311,7 +311,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
             return;
     }
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(LookupEffectSlot(Context->EffectSlotMap, effectslot) != NULL)
@@ -326,7 +326,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *piValue)
@@ -334,7 +334,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
     ALCcontext *Context;
     ALeffectslot *EffectSlot;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if((EffectSlot=LookupEffectSlot(Context->EffectSlotMap, effectslot)) != NULL)
@@ -357,7 +357,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues)
@@ -372,7 +372,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
             return;
     }
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(LookupEffectSlot(Context->EffectSlotMap, effectslot) != NULL)
@@ -387,7 +387,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *pflValue)
@@ -395,7 +395,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum pa
     ALCcontext *Context;
     ALeffectslot *EffectSlot;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if((EffectSlot=LookupEffectSlot(Context->EffectSlotMap, effectslot)) != NULL)
@@ -414,7 +414,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum pa
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues)
@@ -428,7 +428,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
             return;
     }
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(LookupEffectSlot(Context->EffectSlotMap, effectslot) != NULL)
@@ -443,7 +443,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 

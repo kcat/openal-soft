@@ -61,7 +61,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
     ALCcontext *Context;
     ALCdevice *Device;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -105,7 +105,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
         }
     }
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 
@@ -117,7 +117,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     ALbufferlistitem *BufferList;
     ALboolean SourcesValid = AL_FALSE;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(n < 0)
@@ -183,7 +183,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         }
     }
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 
@@ -192,12 +192,12 @@ AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return AL_FALSE;
 
     result = (LookupSource(Context->SourceMap, source) ? AL_TRUE : AL_FALSE);
 
-    ProcessContext(Context);
+    UnlockContext(Context);
 
     return result;
 }
@@ -208,7 +208,7 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValu
     ALCcontext    *pContext;
     ALsource    *Source;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
@@ -389,7 +389,7 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValu
         alSetError(pContext, AL_INVALID_NAME);
     }
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -398,7 +398,7 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flVal
     ALCcontext    *pContext;
     ALsource    *Source;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
@@ -434,7 +434,7 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flVal
     else
         alSetError(pContext, AL_INVALID_NAME);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -473,7 +473,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat
         }
     }
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(pflValues)
@@ -493,7 +493,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -514,7 +514,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
             return;
     }
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
@@ -715,7 +715,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
     else
         alSetError(pContext, AL_INVALID_NAME);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -733,7 +733,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
             return;
     }
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
@@ -782,7 +782,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
     else
         alSetError(pContext, AL_INVALID_NAME);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -824,7 +824,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* pl
         }
     }
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(plValues)
@@ -844,7 +844,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* pl
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -855,7 +855,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pf
     ALdouble    Offsets[2];
     ALdouble    updateLen;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(pflValue)
@@ -940,7 +940,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pf
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -949,7 +949,7 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* p
     ALCcontext    *pContext;
     ALsource    *Source;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(pflValue1 && pflValue2 && pflValue3)
@@ -987,7 +987,7 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* p
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -1027,7 +1027,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *p
             return;
     }
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(pflValues)
@@ -1056,7 +1056,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *p
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -1067,7 +1067,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plVa
     ALdouble   Offsets[2];
     ALdouble   updateLen;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(plValue)
@@ -1179,7 +1179,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plVa
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -1188,7 +1188,7 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plVal
     ALCcontext  *pContext;
     ALsource    *Source;
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(plValue1 && plValue2 && plValue3)
@@ -1226,7 +1226,7 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plVal
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -1271,7 +1271,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plVal
             return;
     }
 
-    pContext = GetContextSuspended();
+    pContext = GetLockedContext();
     if(!pContext) return;
 
     if(plValues)
@@ -1300,7 +1300,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plVal
     else
         alSetError(pContext, AL_INVALID_VALUE);
 
-    ProcessContext(pContext);
+    UnlockContext(pContext);
 }
 
 
@@ -1316,7 +1316,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     ALbufferlistitem *BufferList;
     ALsizei          i, j;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(n < 0)
@@ -1423,7 +1423,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     }
 
 done:
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
@@ -1437,7 +1437,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     ALsource *Source;
     ALsizei i;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(n < 0)
@@ -1469,7 +1469,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     }
 
 done:
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
@@ -1483,7 +1483,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     ALsource *Source;
     ALsizei i;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(n < 0)
@@ -1519,7 +1519,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     }
 
 done:
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
@@ -1533,7 +1533,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     ALsource *Source;
     ALsizei i;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(n < 0)
@@ -1573,7 +1573,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     }
 
 done:
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 
@@ -1591,7 +1591,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     if(n == 0)
         return;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(n < 0)
@@ -1718,7 +1718,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     Source->BuffersInQueue += n;
 
 done:
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 
@@ -1734,7 +1734,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
     if(n == 0)
         return;
 
-    Context = GetContextSuspended();
+    Context = GetLockedContext();
     if(!Context) return;
 
     if(n < 0)
@@ -1789,7 +1789,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
     Source->BuffersPlayed -= n;
 
 done:
-    ProcessContext(Context);
+    UnlockContext(Context);
 }
 
 

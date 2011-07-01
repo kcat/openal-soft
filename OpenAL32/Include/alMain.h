@@ -469,13 +469,13 @@ void AppendCaptureDeviceList(const ALCchar *name);
 
 ALCvoid alcSetError(ALCdevice *device, ALenum errorCode);
 
-ALCvoid SuspendContext(ALCcontext *context);
-ALCvoid ProcessContext(ALCcontext *context);
+ALCvoid LockContext(ALCcontext *context);
+ALCvoid UnlockContext(ALCcontext *context);
 
 ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr);
 ALuint StopThread(ALvoid *thread);
 
-ALCcontext *GetContextSuspended(void);
+ALCcontext *GetLockedContext(void);
 
 typedef struct RingBuffer RingBuffer;
 RingBuffer *CreateRingBuffer(ALsizei frame_size, ALsizei length);

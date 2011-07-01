@@ -335,39 +335,37 @@ const struct EffectList EffectList[] = {
 AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 {
     ALboolean bIsSupported = AL_FALSE;
-    ALCcontext *pContext;
+    ALCcontext *Context;
     const char *ptr;
     size_t len;
 
-    pContext = GetContextSuspended();
-    if(!pContext) return AL_FALSE;
+    Context = GetLockedContext();
+    if(!Context) return AL_FALSE;
 
     if(!extName)
+        alSetError(Context, AL_INVALID_VALUE);
+    else
     {
-        alSetError(pContext, AL_INVALID_VALUE);
-        ProcessContext(pContext);
-        return AL_FALSE;
-    }
-
-    len = strlen(extName);
-    ptr = pContext->ExtensionList;
-    while(ptr && *ptr)
-    {
-        if(strncasecmp(ptr, extName, len) == 0 &&
-           (ptr[len] == '\0' || isspace(ptr[len])))
+        len = strlen(extName);
+        ptr = Context->ExtensionList;
+        while(ptr && *ptr)
         {
-            bIsSupported = AL_TRUE;
-            break;
-        }
-        if((ptr=strchr(ptr, ' ')) != NULL)
-        {
-            do {
-                ++ptr;
-            } while(isspace(*ptr));
+            if(strncasecmp(ptr, extName, len) == 0 &&
+               (ptr[len] == '\0' || isspace(ptr[len])))
+            {
+                bIsSupported = AL_TRUE;
+                break;
+            }
+            if((ptr=strchr(ptr, ' ')) != NULL)
+            {
+                do {
+                    ++ptr;
+                } while(isspace(*ptr));
+            }
         }
     }
 
-    ProcessContext(pContext);
+    UnlockContext(Context);
 
     return bIsSupported;
 }

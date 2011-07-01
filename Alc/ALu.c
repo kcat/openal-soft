@@ -373,6 +373,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat DryGainHF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
+    ALboolean WetGainAuto;
+    ALboolean WetGainHFAuto;
     ALfloat Pitch;
     ALuint Frequency;
     ALint NumSends;
@@ -407,6 +409,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     Rolloff      = ALSource->flRollOffFactor;
     InnerAngle   = ALSource->flInnerAngle * ConeScale;
     OuterAngle   = ALSource->flOuterAngle * ConeScale;
+    WetGainAuto  = ALSource->WetGainAuto;
+    WetGainHFAuto = ALSource->WetGainHFAuto;
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
 
     //1. Translate Listener to origin (convert to head relative)
@@ -586,9 +590,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         if(Slot->AuxSendAuto)
         {
             WetGain[i] = SourceVolume * RoomAttenuation[i];
-            if(ALSource->WetGainAuto)
+            if(WetGainAuto)
                 WetGain[i] *= ConeVolume;
-            if(ALSource->WetGainHFAuto)
+            if(WetGainHFAuto)
                 WetGainHF[i] *= ConeHF;
 
             // Clamp to Min/Max Gain
@@ -605,10 +609,11 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                  * distance, the initial decay of the reverb effect is
                  * calculated and applied to the wet path.
                  */
-                WetGain[i] *= aluPow(10.0f, EffectiveDist /
-                                            (SPEEDOFSOUNDMETRESPERSEC *
-                                             Slot->effect.Params.Reverb.DecayTime) *
-                                            (-60.0/20.0));
+                if(WetGainAuto)
+                    WetGain[i] *= aluPow(10.0f, EffectiveDist /
+                                                (SPEEDOFSOUNDMETRESPERSEC *
+                                                 Slot->effect.Params.Reverb.DecayTime) *
+                                                (-60.0/20.0));
 
                 WetGainHF[i] *= aluPow(Slot->effect.Params.Reverb.AirAbsorptionGainHF,
                                        AirAbsorptionFactor * EffectiveDist);

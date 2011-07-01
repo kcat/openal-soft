@@ -537,17 +537,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     // Distance-based air absorption
     if(AirAbsorptionFactor > 0.0f && EffectiveDist > 0.0f)
-    {
-        ALfloat absorb;
-
-        // Absorption calculation is done in dB
-        absorb = (AirAbsorptionFactor*AIRABSORBGAINDBHF) *
-                 EffectiveDist;
-        // Convert dB to linear gain before applying
-        absorb = aluPow(10.0f, absorb/20.0f);
-
-        DryGainHF *= absorb;
-    }
+        DryGainHF *= aluPow(AIRABSORBGAINHF, AirAbsorptionFactor*EffectiveDist);
 
     //3. Apply directional soundcones
     Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * (180.0/M_PI);

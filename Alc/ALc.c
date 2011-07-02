@@ -313,6 +313,23 @@ static const ALCenums enumeration[] = {
     { "ALC_FORMAT_CHANNELS_SOFT",             ALC_FORMAT_CHANNELS_SOFT            },
     { "ALC_FORMAT_TYPE_SOFT",                 ALC_FORMAT_TYPE_SOFT                },
 
+    // Buffer Channel Configurations
+    { "ALC_MONO",                             ALC_MONO                            },
+    { "ALC_STEREO",                           ALC_STEREO                          },
+    { "ALC_QUAD",                             ALC_QUAD                            },
+    { "ALC_5POINT1",                          ALC_5POINT1                         },
+    { "ALC_6POINT1",                          ALC_6POINT1                         },
+    { "ALC_7POINT1",                          ALC_7POINT1                         },
+
+    // Buffer Sample Types
+    { "ALC_BYTE",                             ALC_BYTE                            },
+    { "ALC_UNSIGNED_BYTE",                    ALC_UNSIGNED_BYTE                   },
+    { "ALC_SHORT",                            ALC_SHORT                           },
+    { "ALC_UNSIGNED_SHORT",                   ALC_UNSIGNED_SHORT                  },
+    { "ALC_INT",                              ALC_INT                             },
+    { "ALC_UNSIGNED_INT",                     ALC_UNSIGNED_INT                    },
+    { "ALC_FLOAT",                            ALC_FLOAT                           },
+
     // ALC Error Message
     { "ALC_NO_ERROR",                         ALC_NO_ERROR                        },
     { "ALC_INVALID_DEVICE",                   ALC_INVALID_DEVICE                  },

@@ -518,9 +518,6 @@ void SetDefaultWFXChannelOrder(ALCdevice *device);
 const ALCchar *DevFmtTypeString(enum DevFmtType type);
 const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 
-ALboolean IsValidType(ALenum type);
-ALboolean IsValidChannels(ALenum type);
-
 #define HRIR_BITS        (5)
 #define HRIR_LENGTH      (1<<HRIR_BITS)
 #define HRIR_MASK        (HRIR_LENGTH-1)

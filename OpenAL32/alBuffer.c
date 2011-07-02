@@ -35,6 +35,8 @@
 
 static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data, ALboolean storesrc);
 static void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei numchans, ALsizei len);
+static ALboolean IsValidType(ALenum type);
+static ALboolean IsValidChannels(ALenum channels);
 
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
 
@@ -2150,6 +2152,44 @@ ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *
         case AL_7POINT1_32F:
             *chans = FmtX71;
             *type  = FmtFloat;
+            return AL_TRUE;
+    }
+    return AL_FALSE;
+}
+
+
+static ALboolean IsValidType(ALenum type)
+{
+    switch(type)
+    {
+        case AL_BYTE:
+        case AL_UNSIGNED_BYTE:
+        case AL_SHORT:
+        case AL_UNSIGNED_SHORT:
+        case AL_INT:
+        case AL_UNSIGNED_INT:
+        case AL_FLOAT:
+        case AL_DOUBLE:
+        case AL_MULAW:
+        case AL_IMA4:
+        case AL_BYTE3:
+        case AL_UNSIGNED_BYTE3:
+            return AL_TRUE;
+    }
+    return AL_FALSE;
+}
+
+static ALboolean IsValidChannels(ALenum channels)
+{
+    switch(channels)
+    {
+        case AL_MONO:
+        case AL_STEREO:
+        case AL_REAR:
+        case AL_QUAD:
+        case AL_5POINT1:
+        case AL_6POINT1:
+        case AL_7POINT1:
             return AL_TRUE;
     }
     return AL_FALSE;

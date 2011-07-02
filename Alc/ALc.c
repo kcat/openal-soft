@@ -1033,44 +1033,6 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
 }
 
 
-ALboolean IsValidType(ALenum type)
-{
-    switch(type)
-    {
-        case AL_BYTE:
-        case AL_UNSIGNED_BYTE:
-        case AL_SHORT:
-        case AL_UNSIGNED_SHORT:
-        case AL_INT:
-        case AL_UNSIGNED_INT:
-        case AL_FLOAT:
-        case AL_DOUBLE:
-        case AL_MULAW:
-        case AL_IMA4:
-        case AL_BYTE3:
-        case AL_UNSIGNED_BYTE3:
-            return AL_TRUE;
-    }
-    return AL_FALSE;
-}
-
-ALboolean IsValidChannels(ALenum channels)
-{
-    switch(channels)
-    {
-        case AL_MONO:
-        case AL_STEREO:
-        case AL_REAR:
-        case AL_QUAD:
-        case AL_5POINT1:
-        case AL_6POINT1:
-        case AL_7POINT1:
-            return AL_TRUE;
-    }
-    return AL_FALSE;
-}
-
-
 #ifndef _WIN32
 void InitializeCriticalSection(CRITICAL_SECTION *cs)
 {

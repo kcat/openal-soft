@@ -1001,6 +1001,38 @@ ALboolean DecomposeDevFormat(ALenum format, enum DevFmtChannels *chans,
     return AL_FALSE;
 }
 
+static ALCboolean IsValidALCType(ALCenum type)
+{
+    switch(type)
+    {
+        case ALC_BYTE:
+        case ALC_UNSIGNED_BYTE:
+        case ALC_SHORT:
+        case ALC_UNSIGNED_SHORT:
+        case ALC_INT:
+        case ALC_UNSIGNED_INT:
+        case ALC_FLOAT:
+            return ALC_TRUE;
+    }
+    return ALC_FALSE;
+}
+
+static ALCboolean IsValidALCChannels(ALCenum channels)
+{
+    switch(channels)
+    {
+        case ALC_MONO:
+        case ALC_STEREO:
+        case ALC_QUAD:
+        case ALC_5POINT1:
+        case ALC_6POINT1:
+        case ALC_7POINT1:
+            return ALC_TRUE;
+    }
+    return ALC_FALSE;
+}
+
+
 ALboolean IsValidType(ALenum type)
 {
     switch(type)
@@ -1261,7 +1293,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                device->IsLoopbackDevice)
             {
                 ALCint val = attrList[attrIdx + 1];
-                if(!IsValidChannels(val) || !ChannelsFromDevFmt(val))
+                if(!IsValidALCChannels(val) || !ChannelsFromDevFmt(val))
                 {
                     alcSetError(device, ALC_INVALID_VALUE);
                     return ALC_FALSE;
@@ -1273,7 +1305,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                device->IsLoopbackDevice)
             {
                 ALCint val = attrList[attrIdx + 1];
-                if(!IsValidType(val) || !BytesFromDevFmt(val))
+                if(!IsValidALCType(val) || !BytesFromDevFmt(val))
                 {
                     alcSetError(device, ALC_INVALID_VALUE);
                     return ALC_FALSE;
@@ -2841,7 +2873,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     return device;
 }
 
-ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALenum channels, ALenum type)
+ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type)
 {
     ALCboolean ret = ALC_FALSE;
 
@@ -2850,16 +2882,11 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
         alcSetError(device, ALC_INVALID_DEVICE);
     else if(freq <= 0)
         alcSetError(device, ALC_INVALID_VALUE);
-    else if(IsValidType(type) == AL_FALSE ||
-            IsValidChannels(channels) == AL_FALSE)
+    else if(!IsValidALCType(type) || !IsValidALCChannels(channels))
         alcSetError(device, ALC_INVALID_ENUM);
     else
     {
-        if((type == DevFmtByte || type == DevFmtUByte || type == DevFmtShort ||
-            type == DevFmtUShort || type == DevFmtFloat) &&
-           (channels == DevFmtMono || channels == DevFmtStereo ||
-            channels == DevFmtQuad || channels == DevFmtX51 ||
-            channels == DevFmtX61 || channels == DevFmtX71) &&
+        if(BytesFromDevFmt(type) > 0 && ChannelsFromDevFmt(channels) > 0 &&
            freq >= 8000)
             ret = ALC_TRUE;
     }

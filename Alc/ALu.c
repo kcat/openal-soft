@@ -954,7 +954,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     fpuState = fegetround();
     fesetround(FE_TOWARDZERO);
 #elif defined(HAVE__CONTROLFP)
-    fpuState = _controlfp(_RC_CHOP, _MCW_RC);
+    fpuState = _controlfp(0, 0);
+    (void)_controlfp(_RC_CHOP, _MCW_RC);
 #else
     (void)fpuState;
 #endif

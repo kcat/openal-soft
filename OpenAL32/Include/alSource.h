@@ -15,7 +15,7 @@ extern "C" {
 #define SRC_HISTORY_LENGTH (1<<SRC_HISTORY_BITS)
 #define SRC_HISTORY_MASK   (SRC_HISTORY_LENGTH-1)
 
-extern resampler_t DefaultResampler;
+extern enum Resampler DefaultResampler;
 
 extern const ALsizei ResamplerPadding[RESAMPLER_MAX];
 extern const ALsizei ResamplerPrePadding[RESAMPLER_MAX];
@@ -48,7 +48,7 @@ typedef struct ALsource
     ALenum       DistanceModel;
     ALboolean    VirtualChannels;
 
-    resampler_t  Resampler;
+    enum Resampler Resampler;
 
     ALenum       state;
     ALuint       position;

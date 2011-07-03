@@ -94,7 +94,7 @@ static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
         state->Gain[i] = 0.0f;
     for(i = 0;i < Device->NumChan;i++)
     {
-        Channel chan = Device->Speaker2Chan[i];
+        enum Channel chan = Device->Speaker2Chan[i];
         state->Gain[chan] = 1.0f;
     }
 

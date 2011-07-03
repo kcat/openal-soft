@@ -403,7 +403,7 @@ DECL_TEMPLATE(cubic)
 
 #undef DECL_TEMPLATE
 
-MixerFunc SelectMixer(ALbuffer *Buffer, resampler_t Resampler)
+MixerFunc SelectMixer(ALbuffer *Buffer, enum Resampler Resampler)
 {
     switch(Resampler)
     {
@@ -441,7 +441,7 @@ DECL_TEMPLATE(cubic)
 
 #undef DECL_TEMPLATE
 
-MixerFunc SelectHrtfMixer(ALbuffer *Buffer, resampler_t Resampler)
+MixerFunc SelectHrtfMixer(ALbuffer *Buffer, enum Resampler Resampler)
 {
     switch(Resampler)
     {
@@ -466,7 +466,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     ALuint BuffersPlayed;
     ALboolean Looping;
     ALuint increment;
-    resampler_t Resampler;
+    enum Resampler Resampler;
     ALenum State;
     ALuint OutPos;
     ALuint FrameSize;

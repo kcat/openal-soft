@@ -70,7 +70,7 @@ typedef ALvoid (*MixerFunc)(struct ALsource *self, ALCdevice *Device,
                             ALuint OutPos, ALuint SamplesToDo,
                             ALuint BufferSize);
 
-typedef enum {
+enum Resampler {
     POINT_RESAMPLER = 0,
     LINEAR_RESAMPLER,
     CUBIC_RESAMPLER,
@@ -78,9 +78,9 @@ typedef enum {
     RESAMPLER_MAX,
     RESAMPLER_MIN = -1,
     RESAMPLER_DEFAULT = LINEAR_RESAMPLER
-} resampler_t;
+};
 
-typedef enum {
+enum Channel {
     FRONT_LEFT = 0,
     FRONT_RIGHT,
     FRONT_CENTER,
@@ -92,7 +92,7 @@ typedef enum {
     SIDE_RIGHT,
 
     MAXCHANNELS
-} Channel;
+};
 
 #define BUFFERSIZE 4096
 
@@ -135,8 +135,8 @@ ALint aluCart2LUTpos(ALfloat re, ALfloat im);
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 
-MixerFunc SelectMixer(struct ALbuffer *Buffer, resampler_t Resampler);
-MixerFunc SelectHrtfMixer(struct ALbuffer *Buffer, resampler_t Resampler);
+MixerFunc SelectMixer(struct ALbuffer *Buffer, enum Resampler Resampler);
+MixerFunc SelectHrtfMixer(struct ALbuffer *Buffer, enum Resampler Resampler);
 
 ALvoid MixSource(struct ALsource *Source, ALCdevice *Device, ALuint SamplesToDo);
 

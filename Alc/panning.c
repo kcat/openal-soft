@@ -32,12 +32,12 @@
 #include "alu.h"
 
 static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHANNELS],
-                                  Channel Speaker2Chan[MAXCHANNELS], ALint chans)
+                                  enum Channel Speaker2Chan[MAXCHANNELS], ALint chans)
 {
     char layout_str[256];
     char *confkey, *next;
     char *sep, *end;
-    Channel val;
+    enum Channel val;
     int i;
 
     if(!ConfigValueExists(NULL, name))
@@ -125,7 +125,7 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHAN
         if(min != i)
         {
             ALfloat tmpf;
-            Channel tmpc;
+            enum Channel tmpc;
 
             tmpf = SpeakerAngle[i];
             SpeakerAngle[i] = SpeakerAngle[min];
@@ -166,7 +166,7 @@ ALint aluCart2LUTpos(ALfloat re, ALfloat im)
 ALvoid aluInitPanning(ALCdevice *Device)
 {
     ALfloat SpeakerAngle[MAXCHANNELS];
-    Channel *Speaker2Chan;
+    enum Channel *Speaker2Chan;
     ALfloat Alpha, Theta;
     ALint pos;
     ALuint s;

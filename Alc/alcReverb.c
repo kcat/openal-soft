@@ -634,7 +634,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         State->Early.PanGain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)
     {
-        Channel chan = Device->Speaker2Chan[index];
+        enum Channel chan = Device->Speaker2Chan[index];
         State->Early.PanGain[chan] = lerp(1.0, speakerGain[chan], dirGain);
     }
 
@@ -647,7 +647,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
          State->Late.PanGain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)
     {
-        Channel chan = Device->Speaker2Chan[index];
+        enum Channel chan = Device->Speaker2Chan[index];
         State->Late.PanGain[chan] = lerp(1.0, speakerGain[chan], dirGain);
     }
 }
@@ -1018,7 +1018,7 @@ static ALboolean VerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
          State->Gain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)
     {
-        Channel chan = Device->Speaker2Chan[index];
+        enum Channel chan = Device->Speaker2Chan[index];
         State->Gain[chan] = 1.0f;
     }
 

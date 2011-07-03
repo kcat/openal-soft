@@ -89,21 +89,21 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     static const ALfloat angles_X71[8] = { -30.0f, 30.0f, 0.0f, 0.0f,
                                            -110.0f, 110.0f, -90.0f, 90.0f };
 
-    static const Channel chans_Mono[1] = { FRONT_CENTER };
-    static const Channel chans_Stereo[2] = { FRONT_LEFT, FRONT_RIGHT };
-    static const Channel chans_Rear[2] = { BACK_LEFT, BACK_RIGHT };
-    static const Channel chans_Quad[4] = { FRONT_LEFT, FRONT_RIGHT,
-                                           BACK_LEFT, BACK_RIGHT };
-    static const Channel chans_X51[6] = { FRONT_LEFT, FRONT_RIGHT,
-                                          FRONT_CENTER, LFE,
-                                          BACK_LEFT, BACK_RIGHT };
-    static const Channel chans_X61[7] = { FRONT_LEFT, FRONT_RIGHT,
-                                          FRONT_CENTER, LFE, BACK_CENTER,
-                                          SIDE_LEFT, SIDE_RIGHT };
-    static const Channel chans_X71[8] = { FRONT_LEFT, FRONT_RIGHT,
-                                          FRONT_CENTER, LFE,
-                                          BACK_LEFT, BACK_RIGHT,
-                                          SIDE_LEFT, SIDE_RIGHT };
+    static const enum Channel chans_Mono[1] = { FRONT_CENTER };
+    static const enum Channel chans_Stereo[2] = { FRONT_LEFT, FRONT_RIGHT };
+    static const enum Channel chans_Rear[2] = { BACK_LEFT, BACK_RIGHT };
+    static const enum Channel chans_Quad[4] = { FRONT_LEFT, FRONT_RIGHT,
+                                                BACK_LEFT, BACK_RIGHT };
+    static const enum Channel chans_X51[6] = { FRONT_LEFT, FRONT_RIGHT,
+                                               FRONT_CENTER, LFE,
+                                               BACK_LEFT, BACK_RIGHT };
+    static const enum Channel chans_X61[7] = { FRONT_LEFT, FRONT_RIGHT,
+                                               FRONT_CENTER, LFE, BACK_CENTER,
+                                               SIDE_LEFT, SIDE_RIGHT };
+    static const enum Channel chans_X71[8] = { FRONT_LEFT, FRONT_RIGHT,
+                                               FRONT_CENTER, LFE,
+                                               BACK_LEFT, BACK_RIGHT,
+                                               SIDE_LEFT, SIDE_RIGHT };
 
     ALCdevice *Device = ALContext->Device;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
@@ -117,7 +117,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALint NumSends, Frequency;
     const ALfloat *SpeakerGain;
     const ALfloat *angles = NULL;
-    const Channel *chans = NULL;
+    const enum Channel *chans = NULL;
     ALint num_channels = 0;
     ALboolean VirtualChannels;
     ALfloat Pitch;
@@ -218,7 +218,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
                 for(i = 0;i < (ALint)Device->NumChan;i++)
                 {
-                    Channel chan = Device->Speaker2Chan[i];
+                    enum Channel chan = Device->Speaker2Chan[i];
                     SrcMatrix[c][chan] += DryGain * ListenerGain *
                                           SpeakerGain[chan];
                 }
@@ -312,7 +312,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
             for(i = 0;i < (ALint)Device->NumChan;i++)
             {
-                Channel chan = Device->Speaker2Chan[i];
+                enum Channel chan = Device->Speaker2Chan[i];
                 SrcMatrix[c][chan] += DryGain * ListenerGain *
                                       SpeakerGain[chan];
             }
@@ -747,7 +747,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         for(i = 0;i < (ALint)Device->NumChan;i++)
         {
-            Channel chan = Device->Speaker2Chan[i];
+            enum Channel chan = Device->Speaker2Chan[i];
             ALfloat gain = lerp(AmbientGain, SpeakerGain[chan], DirGain);
             ALSource->Params.DryGains[0][chan] = DryGain * gain;
         }
@@ -792,23 +792,23 @@ static __inline ALbyte aluF2B(ALfloat val)
     return i>>8;
 }
 
-static const Channel MonoChans[] = { FRONT_CENTER };
-static const Channel StereoChans[] = { FRONT_LEFT, FRONT_RIGHT };
-static const Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
-                                     BACK_LEFT, BACK_RIGHT };
-static const Channel X51Chans[] = { FRONT_LEFT, FRONT_RIGHT,
-                                    FRONT_CENTER, LFE,
-                                    BACK_LEFT, BACK_RIGHT };
-static const Channel X51SideChans[] = { FRONT_LEFT, FRONT_RIGHT,
-                                        FRONT_CENTER, LFE,
-                                        SIDE_LEFT, SIDE_RIGHT };
-static const Channel X61Chans[] = { FRONT_LEFT, FRONT_LEFT,
-                                    FRONT_CENTER, LFE, BACK_CENTER,
-                                    SIDE_LEFT, SIDE_RIGHT };
-static const Channel X71Chans[] = { FRONT_LEFT, FRONT_RIGHT,
-                                    FRONT_CENTER, LFE,
-                                    BACK_LEFT, BACK_RIGHT,
-                                    SIDE_LEFT, SIDE_RIGHT };
+static const enum Channel MonoChans[] = { FRONT_CENTER };
+static const enum Channel StereoChans[] = { FRONT_LEFT, FRONT_RIGHT };
+static const enum Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
+                                          BACK_LEFT, BACK_RIGHT };
+static const enum Channel X51Chans[] = { FRONT_LEFT, FRONT_RIGHT,
+                                         FRONT_CENTER, LFE,
+                                         BACK_LEFT, BACK_RIGHT };
+static const enum Channel X51SideChans[] = { FRONT_LEFT, FRONT_RIGHT,
+                                             FRONT_CENTER, LFE,
+                                             SIDE_LEFT, SIDE_RIGHT };
+static const enum Channel X61Chans[] = { FRONT_LEFT, FRONT_LEFT,
+                                         FRONT_CENTER, LFE, BACK_CENTER,
+                                         SIDE_LEFT, SIDE_RIGHT };
+static const enum Channel X71Chans[] = { FRONT_LEFT, FRONT_RIGHT,
+                                         FRONT_CENTER, LFE,
+                                         BACK_LEFT, BACK_RIGHT,
+                                         SIDE_LEFT, SIDE_RIGHT };
 
 #define DECL_TEMPLATE(T, chans,N, func)                                       \
 static void Write_##T##_##chans(ALCdevice *device, T *RESTRICT buffer,        \

@@ -139,7 +139,7 @@ static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
         state->Gain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)
     {
-        Channel chan = Device->Speaker2Chan[index];
+        enum Channel chan = Device->Speaker2Chan[index];
         state->Gain[chan] = 1.0f;
     }
 

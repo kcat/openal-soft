@@ -412,6 +412,15 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     WetGainAuto  = ALSource->WetGainAuto;
     WetGainHFAuto = ALSource->WetGainHFAuto;
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
+    for(i = 0;i < NumSends;i++)
+    {
+        RoomRolloff[i] = ((i==0) ? ALSource->RoomRolloffFactor :
+                                   RoomRolloff[i-1]);
+        if(ALSource->Send[i].Slot &&
+           (ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB ||
+            ALSource->Send[i].Slot->effect.type == AL_EFFECT_EAXREVERB))
+            RoomRolloff[i] += ALSource->Send[i].Slot->effect.Params.Reverb.RoomRolloffFactor;
+    }
 
     //1. Translate Listener to origin (convert to head relative)
     if(ALSource->bHeadRelative == AL_FALSE)
@@ -458,16 +467,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     Attenuation = 1.0f;
     for(i = 0;i < NumSends;i++)
-    {
         RoomAttenuation[i] = 1.0f;
-
-        RoomRolloff[i] = ALSource->RoomRolloffFactor;
-        if(ALSource->Send[i].Slot &&
-           (ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB ||
-            ALSource->Send[i].Slot->effect.type == AL_EFFECT_EAXREVERB))
-            RoomRolloff[i] += ALSource->Send[i].Slot->effect.Params.Reverb.RoomRolloffFactor;
-    }
-
     switch(ALContext->SourceDistanceModel ? ALSource->DistanceModel :
                                             ALContext->DistanceModel)
     {

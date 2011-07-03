@@ -2888,7 +2888,7 @@ static void ReleaseALC(void)
 
 #ifdef _DEBUG
     if(g_ulDeviceCount > 0)
-        AL_PRINT("exit(): closing %u Device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
+        AL_PRINT("ReleaseALC(): closing %u Device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
 #endif
 
     while(g_pDeviceList)

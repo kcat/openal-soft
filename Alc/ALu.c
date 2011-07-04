@@ -269,8 +269,6 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         for(c = 0;c < num_channels;c++)
         {
-            const ALshort *hrtf_left, *hrtf_right;
-
             if(chans[c] == LFE)
             {
                 /* Skip LFE */
@@ -284,17 +282,10 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 continue;
             }
 
-            GetHrtfCoeffs(0.0, angles[c] * (M_PI/180.0),
-                          &hrtf_left, &hrtf_right,
-                          &ALSource->Params.HrtfDelay[c][0],
-                          &ALSource->Params.HrtfDelay[c][1]);
-            for(i = 0;i < HRIR_LENGTH;i++)
-            {
-                ALSource->Params.HrtfCoeffs[c][i][0] =
-                               hrtf_left[i]*(1.0/32767.0)*DryGain*ListenerGain;
-                ALSource->Params.HrtfCoeffs[c][i][1] =
-                              hrtf_right[i]*(1.0/32767.0)*DryGain*ListenerGain;
-            }
+            GetLerpedHrtfCoeffs(0.0, angles[c] * (M_PI/180.0),
+                                DryGain*ListenerGain,
+                                ALSource->Params.HrtfCoeffs[c],
+                                ALSource->Params.HrtfDelay[c]);
         }
     }
     else
@@ -692,11 +683,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         BufferListItem = BufferListItem->next;
     }
 
-    // Use energy-preserving panning algorithm for multi-speaker playback
     if((Device->Flags&DEVICE_USE_HRTF))
     {
-        const ALshort *hrtf_left, *hrtf_right;
-
+        // Use a binaural HRTF algorithm for stereo headphone playback
         if(Distance > 0.0f)
         {
             ALfloat invlen = 1.0f/Distance;
@@ -705,18 +694,14 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             Position[2] *= invlen;
         }
 
-        GetHrtfCoeffs(asin(Position[1]), atan2(Position[0], -Position[2]*ZScale),
-                      &hrtf_left, &hrtf_right,
-                      &ALSource->Params.HrtfDelay[0][0],
-                      &ALSource->Params.HrtfDelay[0][1]);
-        for(i = 0;i < HRIR_LENGTH;i++)
-        {
-            ALSource->Params.HrtfCoeffs[0][i][0] = hrtf_left[i]*(1.0/32767.0) * DryGain;
-            ALSource->Params.HrtfCoeffs[0][i][1] = hrtf_right[i]*(1.0/32767.0) * DryGain;
-        }
+        GetLerpedHrtfCoeffs(asin(Position[1]),
+                            atan2(Position[0], -Position[2]*ZScale), DryGain,
+                            ALSource->Params.HrtfCoeffs[0],
+                            ALSource->Params.HrtfDelay[0]);
     }
     else
     {
+        // Use energy-preserving panning algorithm for multi-speaker playback
         ALfloat DirGain, AmbientGain;
         const ALfloat *SpeakerGain;
         ALfloat length;

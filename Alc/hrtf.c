@@ -39,34 +39,96 @@ static struct HRTF {
 #include "hrtf_tables.inc"
 };
 
-static ALuint CalcEvIndex(ALdouble ev)
+// Calculate the elevation indices given the polar elevation in radians.
+// This will return two indices between 0 and (evCount - 1) and an
+// interpolation factor between 0.0 and 1.0.
+static void CalcEvIndices (ALfloat ev, ALuint evidx [2], ALfloat * evmu)
 {
-    ev = (M_PI/2.0 + ev) * (evCount-1) / M_PI;
-    return (ALuint)(ev+0.5);
+    ev = (M_PI/2.0f + ev) * (evCount-1) / M_PI;
+    evidx[0] = (ALuint)ev;
+    evidx[1] = __min(evidx[0] + 1, evCount - 1);
+    *evmu = ev - evidx[0];
 }
 
-static ALuint CalcAzIndex(ALint evidx, ALdouble az)
+// Calculate the azimuth indices given the polar azimuth in radians.  This
+// will return two indices between 0 and (azCount [ei] - 1) and an
+// interpolation factor between 0.0 and 1.0.
+static void CalcAzIndices (ALuint evidx, ALfloat az, ALuint azidx [2], ALfloat * azmu)
 {
-    az = (M_PI*2.0 + az) * azCount[evidx] / (M_PI*2.0);
-    return (ALuint)(az+0.5) % azCount[evidx];
+    az = (M_PI*2.0f + az) * azCount[evidx] / (M_PI*2.0f);
+    azidx[0] = (ALuint)az % azCount[evidx];
+    azidx[1] = (azidx[0] + 1) % azCount[evidx];
+    *azmu = az - (ALuint)az;
 }
 
-void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const ALshort **right, ALuint *ldelay, ALuint *rdelay)
+// Calculates static HRIR coefficients and delays for the given polar
+// elevation and azimuth in radians.  Linear interpolation is used to
+// increase the apparent resolution of the HRIR dataset.  The coefficients
+// are also normalized and attenuated by the specified gain.
+void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
 {
-    ALuint lidx, ridx;
-    ALuint evidx, azidx;
+    ALuint evidx[2], azidx[2];
+    ALfloat mu[3];
+    ALuint lidx[4], ridx[4];
+    ALuint i;
 
-    evidx = CalcEvIndex(elevation);
-    azidx = CalcAzIndex(evidx, angle);
+    // Claculate elevation indices and interpolation factor.
+    CalcEvIndices(elevation, evidx, &mu[2]);
 
-    lidx = evOffset[evidx] + azidx;
-    ridx = evOffset[evidx] + ((azCount[evidx]-azidx) % azCount[evidx]);
+    // Calculate azimuth indices and interpolation factor for the first
+    // elevation.
+    CalcAzIndices(evidx[0], azimuth, azidx, &mu[0]);
 
-    *ldelay = Hrtf.delays[lidx];
-    *rdelay = Hrtf.delays[ridx];
+    // Calculate the first set of linear HRIR indices for left and right
+    // channels.
+    lidx[0] = evOffset[evidx[0]] + azidx[0];
+    lidx[1] = evOffset[evidx[0]] + azidx[1];
+    ridx[0] = evOffset[evidx[0]] + ((azCount[evidx[0]]-azidx[0]) % azCount[evidx[0]]);
+    ridx[1] = evOffset[evidx[0]] + ((azCount[evidx[0]]-azidx[1]) % azCount[evidx[0]]);
 
-    *left  = Hrtf.coeffs[lidx];
-    *right = Hrtf.coeffs[ridx];
+    // Calculate azimuth indices and interpolation factor for the second
+    // elevation.
+    CalcAzIndices (evidx[1], azimuth, azidx, &mu[1]);
+
+    // Calculate the second set of linear HRIR indices for left and right
+    // channels.
+    lidx[2] = evOffset[evidx[1]] + azidx[0];
+    lidx[3] = evOffset[evidx[1]] + azidx[1];
+    ridx[2] = evOffset[evidx[1]] + ((azCount[evidx[1]]-azidx[0]) % azCount[evidx[1]]);
+    ridx[3] = evOffset[evidx[1]] + ((azCount[evidx[1]]-azidx[1]) % azCount[evidx[1]]);
+
+    // Calculate the normalized and attenuated HRIR coefficients using linear
+    // interpolation when there is enough gain to warrant it.  Zero the
+    // coefficients if gain is too low.
+    if(gain > 0.0001f)
+    {
+        ALdouble scale = gain * (1.0/32767.0);
+        for(i = 0;i < HRIR_LENGTH;i++)
+        {
+            coeffs[i][0] = lerp(lerp(Hrtf.coeffs[lidx[0]][i], Hrtf.coeffs[lidx[1]][i], mu[0]),
+                                lerp(Hrtf.coeffs[lidx[2]][i], Hrtf.coeffs[lidx[3]][i], mu[1]),
+                                mu[2]) * scale;
+            coeffs[i][1] = lerp(lerp(Hrtf.coeffs[ridx[0]][i], Hrtf.coeffs[ridx[1]][i], mu[0]),
+                                lerp(Hrtf.coeffs[ridx[2]][i], Hrtf.coeffs[ridx[3]][i], mu[1]),
+                                mu[2]) * scale;
+        }
+    }
+    else
+    {
+        for(i = 0;i < HRIR_LENGTH;i++)
+        {
+            coeffs[i][0] = 0.0f;
+            coeffs[i][1] = 0.0f;
+        }
+    }
+
+    // Calculate the HRIR delays using linear interpolation.
+    delays[0] = (ALuint)(lerp(lerp(Hrtf.delays[lidx[0]], Hrtf.delays[lidx[1]], mu[0]),
+                              lerp(Hrtf.delays[lidx[2]], Hrtf.delays[lidx[3]], mu[1]),
+                              mu[2]) + 0.5f);
+    delays[1] = (ALuint)(lerp(lerp(Hrtf.delays[ridx[0]], Hrtf.delays[ridx[1]], mu[0]),
+                              lerp(Hrtf.delays[ridx[2]], Hrtf.delays[ridx[3]], mu[1]),
+                              mu[2]) + 0.5f);
 }
 
 ALCboolean IsHrtfCompatible(ALCdevice *device)

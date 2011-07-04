@@ -523,7 +523,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 #define HRIR_MASK        (HRIR_LENGTH-1)
 void InitHrtf(void);
 ALCboolean IsHrtfCompatible(ALCdevice *device);
-void GetHrtfCoeffs(ALfloat elevation, ALfloat angle, const ALshort **left, const ALshort **right, ALuint *ldelay, ALuint *rdelay);
+void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
 
 void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);

@@ -405,8 +405,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
     for(i = 0;i < NumSends;i++)
     {
-        RoomRolloff[i] = ((i==0) ? ALSource->RoomRolloffFactor :
-                                   RoomRolloff[i-1]);
+        RoomRolloff[i] = ALSource->RoomRolloffFactor;
         if(ALSource->Send[i].Slot &&
            (ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB ||
             ALSource->Send[i].Slot->effect.type == AL_EFFECT_EAXREVERB))

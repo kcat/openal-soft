@@ -600,10 +600,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                  * calculated and applied to the wet path.
                  */
                 if(WetGainAuto)
-                    WetGain[i] *= aluPow(10.0f, EffectiveDist /
-                                                (SPEEDOFSOUNDMETRESPERSEC *
-                                                 Slot->effect.Params.Reverb.DecayTime) *
-                                                (-60.0/20.0));
+                    WetGain[i] *= aluPow(0.001f, /* -60dB */
+                                         (1.0f/SPEEDOFSOUNDMETRESPERSEC)*EffectiveDist /
+                                         Slot->effect.Params.Reverb.DecayTime);
 
                 WetGainHF[i] *= aluPow(Slot->effect.Params.Reverb.AirAbsorptionGainHF,
                                        AirAbsorptionFactor * EffectiveDist);

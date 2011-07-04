@@ -45,7 +45,7 @@ typedef struct ALsource
     ALfloat      vOrientation[3];
     ALboolean    bHeadRelative;
     ALboolean    bLooping;
-    ALenum       DistanceModel;
+    enum DistanceModel DistanceModel;
     ALboolean    VirtualChannels;
 
     enum Resampler Resampler;

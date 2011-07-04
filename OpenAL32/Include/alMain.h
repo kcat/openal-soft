@@ -464,8 +464,8 @@ struct ALCcontext_struct
 
     ALboolean   Suspended;
 
-    ALenum      DistanceModel;
-    ALboolean   SourceDistanceModel;
+    enum DistanceModel DistanceModel;
+    ALboolean SourceDistanceModel;
 
     ALfloat     DopplerFactor;
     ALfloat     DopplerVelocity;

@@ -471,13 +471,13 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     switch(ALContext->SourceDistanceModel ? ALSource->DistanceModel :
                                             ALContext->DistanceModel)
     {
-        case AL_INVERSE_DISTANCE_CLAMPED:
+        case InverseDistanceClamped:
             ClampedDist=__max(ClampedDist,MinDist);
             ClampedDist=__min(ClampedDist,MaxDist);
             if(MaxDist < MinDist)
                 break;
             //fall-through
-        case AL_INVERSE_DISTANCE:
+        case InverseDistance:
             if(MinDist > 0.0f)
             {
                 if((MinDist + (Rolloff * (ClampedDist - MinDist))) > 0.0f)
@@ -490,13 +490,13 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             }
             break;
 
-        case AL_LINEAR_DISTANCE_CLAMPED:
+        case LinearDistanceClamped:
             ClampedDist=__max(ClampedDist,MinDist);
             ClampedDist=__min(ClampedDist,MaxDist);
             if(MaxDist < MinDist)
                 break;
             //fall-through
-        case AL_LINEAR_DISTANCE:
+        case LinearDistance:
             if(MaxDist != MinDist)
             {
                 Attenuation = 1.0f - (Rolloff*(ClampedDist-MinDist)/(MaxDist - MinDist));
@@ -509,13 +509,13 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             }
             break;
 
-        case AL_EXPONENT_DISTANCE_CLAMPED:
+        case ExponentDistanceClamped:
             ClampedDist=__max(ClampedDist,MinDist);
             ClampedDist=__min(ClampedDist,MaxDist);
             if(MaxDist < MinDist)
                 break;
             //fall-through
-        case AL_EXPONENT_DISTANCE:
+        case ExponentDistance:
             if(ClampedDist > 0.0f && MinDist > 0.0f)
             {
                 Attenuation = aluPow(ClampedDist/MinDist, -Rolloff);
@@ -524,7 +524,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             }
             break;
 
-        case AL_NONE:
+        case DisableDistance:
             break;
     }
 

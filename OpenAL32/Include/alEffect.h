@@ -78,6 +78,8 @@ typedef struct ALeffect
     ALuint effect;
 } ALeffect;
 
+static __inline ALboolean IsReverbEffect(ALenum type)
+{ return type == AL_EFFECT_REVERB || type == AL_EFFECT_EAXREVERB; }
 
 ALvoid ReleaseALEffects(ALCdevice *device);
 

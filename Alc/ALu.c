@@ -404,9 +404,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     for(i = 0;i < NumSends;i++)
     {
         RoomRolloff[i] = Rolloff;
-        if(ALSource->Send[i].Slot &&
-           (ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB ||
-            ALSource->Send[i].Slot->effect.type == AL_EFFECT_EAXREVERB))
+        if(ALSource->Send[i].Slot && IsReverbEffect(ALSource->Send[i].Slot->effect.type))
             RoomRolloff[i] += ALSource->Send[i].Slot->effect.Params.Reverb.RoomRolloffFactor;
     }
     MinDist = ALSource->flRefDistance;
@@ -580,8 +578,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             WetGain[i] = __min(WetGain[i],MaxVolume);
             WetGain[i] = __max(WetGain[i],MinVolume);
 
-            if(Slot->effect.type == AL_EFFECT_REVERB ||
-               Slot->effect.type == AL_EFFECT_EAXREVERB)
+            if(IsReverbEffect(Slot->effect.type))
             {
                 /* Apply a decay-time transformation to the wet path, based on
                  * the attenuation of the dry path.

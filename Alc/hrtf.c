@@ -42,7 +42,7 @@ static struct HRTF {
 // Calculate the elevation indices given the polar elevation in radians.
 // This will return two indices between 0 and (evCount - 1) and an
 // interpolation factor between 0.0 and 1.0.
-static void CalcEvIndices (ALfloat ev, ALuint evidx [2], ALfloat * evmu)
+static void CalcEvIndices(ALfloat ev, ALuint *evidx, ALfloat *evmu)
 {
     ev = (M_PI/2.0f + ev) * (evCount-1) / M_PI;
     evidx[0] = (ALuint)ev;
@@ -53,7 +53,7 @@ static void CalcEvIndices (ALfloat ev, ALuint evidx [2], ALfloat * evmu)
 // Calculate the azimuth indices given the polar azimuth in radians.  This
 // will return two indices between 0 and (azCount [ei] - 1) and an
 // interpolation factor between 0.0 and 1.0.
-static void CalcAzIndices (ALuint evidx, ALfloat az, ALuint azidx [2], ALfloat * azmu)
+static void CalcAzIndices(ALuint evidx, ALfloat az, ALuint *azidx, ALfloat *azmu)
 {
     az = (M_PI*2.0f + az) * azCount[evidx] / (M_PI*2.0f);
     azidx[0] = (ALuint)az % azCount[evidx];

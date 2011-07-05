@@ -390,27 +390,28 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     //Get source properties
     SourceVolume = ALSource->flGain;
+    MinVolume    = ALSource->flMinGain;
+    MaxVolume    = ALSource->flMaxGain;
     memcpy(Position,  ALSource->vPosition,    sizeof(ALSource->vPosition));
     memcpy(Direction, ALSource->vOrientation, sizeof(ALSource->vOrientation));
     memcpy(Velocity,  ALSource->vVelocity,    sizeof(ALSource->vVelocity));
-    MinVolume    = ALSource->flMinGain;
-    MaxVolume    = ALSource->flMaxGain;
-    MinDist      = ALSource->flRefDistance;
-    MaxDist      = ALSource->flMaxDistance;
-    Rolloff      = ALSource->flRollOffFactor;
-    InnerAngle   = ALSource->flInnerAngle * ConeScale;
-    OuterAngle   = ALSource->flOuterAngle * ConeScale;
-    WetGainAuto  = ALSource->WetGainAuto;
+    InnerAngle = ALSource->flInnerAngle * ConeScale;
+    OuterAngle = ALSource->flOuterAngle * ConeScale;
+    WetGainAuto   = ALSource->WetGainAuto;
     WetGainHFAuto = ALSource->WetGainHFAuto;
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
+    Rolloff = ALSource->RoomRolloffFactor;
     for(i = 0;i < NumSends;i++)
     {
-        RoomRolloff[i] = ALSource->RoomRolloffFactor;
+        RoomRolloff[i] = Rolloff;
         if(ALSource->Send[i].Slot &&
            (ALSource->Send[i].Slot->effect.type == AL_EFFECT_REVERB ||
             ALSource->Send[i].Slot->effect.type == AL_EFFECT_EAXREVERB))
             RoomRolloff[i] += ALSource->Send[i].Slot->effect.Params.Reverb.RoomRolloffFactor;
     }
+    MinDist = ALSource->flRefDistance;
+    MaxDist = ALSource->flMaxDistance;
+    Rolloff = ALSource->flRollOffFactor;
 
     //1. Translate Listener to origin (convert to head relative)
     if(ALSource->bHeadRelative == AL_FALSE)

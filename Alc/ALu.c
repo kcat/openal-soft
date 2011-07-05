@@ -184,13 +184,26 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     DryGain = __min(DryGain,MaxVolume);
     DryGain = __max(DryGain,MinVolume);
     DryGainHF = 1.0f;
-
     switch(ALSource->DirectFilter.type)
     {
         case AL_FILTER_LOWPASS:
             DryGain *= ALSource->DirectFilter.Gain;
             DryGainHF *= ALSource->DirectFilter.GainHF;
             break;
+    }
+    for(i = 0;i < NumSends;i++)
+    {
+        WetGain[i] = SourceVolume;
+        WetGain[i] = __min(WetGain[i],MaxVolume);
+        WetGain[i] = __max(WetGain[i],MinVolume);
+        WetGainHF[i] = 1.0f;
+        switch(ALSource->Send[i].WetFilter.type)
+        {
+            case AL_FILTER_LOWPASS:
+                WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
+                WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
+                break;
+        }
     }
 
     SrcMatrix = ALSource->Params.DryGains;
@@ -309,24 +322,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             }
         }
     }
-
     for(i = 0;i < NumSends;i++)
-    {
-        WetGain[i] = SourceVolume;
-        WetGain[i] = __min(WetGain[i],MaxVolume);
-        WetGain[i] = __max(WetGain[i],MinVolume);
-        WetGainHF[i] = 1.0f;
-
-        switch(ALSource->Send[i].WetFilter.type)
-        {
-            case AL_FILTER_LOWPASS:
-                WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
-                WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
-                break;
-        }
-
         ALSource->Params.Send[i].WetGain = WetGain[i] * ListenerGain;
-    }
 
     /* Update filter coefficients. Calculations based on the I3DL2
      * spec. */
@@ -336,7 +333,6 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
      * square root of the squared gain, which is the same as the base
      * gain. */
     ALSource->Params.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
-
     for(i = 0;i < NumSends;i++)
     {
         /* We use a one-pole filter, so we need to take the squared gain */
@@ -355,13 +351,17 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
     ALfloat DopplerFactor, DopplerVelocity, SpeedOfSound;
     ALfloat AirAbsorptionFactor;
+    ALfloat RoomAirAbsorption[MAX_SENDS];
     ALbufferlistitem *BufferListItem;
     ALfloat Attenuation, EffectiveDist;
     ALfloat RoomAttenuation[MAX_SENDS];
     ALfloat MetersPerUnit;
+    ALfloat RoomRolloffBase;
     ALfloat RoomRolloff[MAX_SENDS];
+    ALfloat DecayDistance[MAX_SENDS];
     ALfloat DryGain;
     ALfloat DryGainHF;
+    ALboolean DryGainHFAuto;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALboolean WetGainAuto;
@@ -395,21 +395,55 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     memcpy(Position,  ALSource->vPosition,    sizeof(ALSource->vPosition));
     memcpy(Direction, ALSource->vOrientation, sizeof(ALSource->vOrientation));
     memcpy(Velocity,  ALSource->vVelocity,    sizeof(ALSource->vVelocity));
-    InnerAngle = ALSource->flInnerAngle * ConeScale;
-    OuterAngle = ALSource->flOuterAngle * ConeScale;
-    WetGainAuto   = ALSource->WetGainAuto;
-    WetGainHFAuto = ALSource->WetGainHFAuto;
-    AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
-    Rolloff = ALSource->RoomRolloffFactor;
-    for(i = 0;i < NumSends;i++)
-    {
-        RoomRolloff[i] = Rolloff;
-        if(ALSource->Send[i].Slot && IsReverbEffect(ALSource->Send[i].Slot->effect.type))
-            RoomRolloff[i] += ALSource->Send[i].Slot->effect.Params.Reverb.RoomRolloffFactor;
-    }
     MinDist = ALSource->flRefDistance;
     MaxDist = ALSource->flMaxDistance;
     Rolloff = ALSource->flRollOffFactor;
+    InnerAngle = ALSource->flInnerAngle * ConeScale;
+    OuterAngle = ALSource->flOuterAngle * ConeScale;
+    AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
+    DryGainHFAuto = ALSource->DryGainHFAuto;
+    WetGainAuto   = ALSource->WetGainAuto;
+    WetGainHFAuto = ALSource->WetGainHFAuto;
+    RoomRolloffBase = ALSource->RoomRolloffFactor;
+    for(i = 0;i < NumSends;i++)
+    {
+        ALeffectslot *Slot = ALSource->Send[i].Slot;
+
+        if(!Slot || Slot->effect.type == AL_EFFECT_NULL)
+        {
+            RoomRolloff[i] = 0.0f;
+            DecayDistance[i] = 0.0f;
+            RoomAirAbsorption[i] = 0.0f;
+            WetGainAuto   = AL_FALSE;
+            WetGainHFAuto = AL_FALSE;
+        }
+        else if(Slot->AuxSendAuto)
+        {
+            RoomRolloff[i] = RoomRolloffBase;
+            if(IsReverbEffect(Slot->effect.type))
+            {
+                RoomRolloff[i] += Slot->effect.Params.Reverb.RoomRolloffFactor;
+                DecayDistance[i] = Slot->effect.Params.Reverb.DecayTime *
+                                   SPEEDOFSOUNDMETRESPERSEC;
+                RoomAirAbsorption[i] = Slot->effect.Params.Reverb.AirAbsorptionGainHF;
+            }
+            else
+            {
+                DecayDistance[i] = 0.0f;
+                RoomAirAbsorption[i] = 0.0f;
+            }
+        }
+        else
+        {
+            /* If the slot's auxiliary send auto is off, the data sent to the
+             * effect slot is the same as the dry path, sans filter effects */
+            RoomRolloff[i] = Rolloff;
+            DecayDistance[i] = 0.0f;
+            RoomAirAbsorption[i] = AIRABSORBGAINHF;
+            WetGainAuto   = AL_TRUE;
+            WetGainHFAuto = DryGainHFAuto;
+        }
+    }
 
     //1. Translate Listener to origin (convert to head relative)
     if(ALSource->bHeadRelative == AL_FALSE)
@@ -517,16 +551,22 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             break;
     }
 
+    // Source Gain + Attenuation
+    DryGain = SourceVolume * Attenuation;
+    for(i = 0;i < NumSends;i++)
+        WetGain[i] = SourceVolume * RoomAttenuation[i];
+
+    // Distance-based air absorption
     EffectiveDist = 0.0f;
     if(MinDist > 0.0f && Attenuation < 1.0f)
         EffectiveDist = (MinDist/Attenuation - MinDist)*MetersPerUnit;
-
-    // Source Gain + Attenuation
-    DryGain = SourceVolume * Attenuation;
-
-    // Distance-based air absorption
     if(AirAbsorptionFactor > 0.0f && EffectiveDist > 0.0f)
+    {
         DryGainHF *= aluPow(AIRABSORBGAINHF, AirAbsorptionFactor*EffectiveDist);
+        for(i = 0;i < NumSends;i++)
+            WetGainHF[i] *= aluPow(RoomAirAbsorption[i],
+                                   AirAbsorptionFactor*EffectiveDist);
+    }
 
     //3. Apply directional soundcones
     Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * (180.0/M_PI);
@@ -548,70 +588,26 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     DryGain *= ConeVolume;
-    if(ALSource->DryGainHFAuto)
+    if(WetGainAuto)
+    {
+        for(i = 0;i < NumSends;i++)
+            WetGain[i] *= ConeVolume;
+    }
+    if(DryGainHFAuto)
         DryGainHF *= ConeHF;
+    if(WetGainHFAuto)
+    {
+        for(i = 0;i < NumSends;i++)
+            WetGain[i] *= ConeHF;
+    }
 
     // Clamp to Min/Max Gain
     DryGain = __min(DryGain,MaxVolume);
     DryGain = __max(DryGain,MinVolume);
-
     for(i = 0;i < NumSends;i++)
     {
-        ALeffectslot *Slot = ALSource->Send[i].Slot;
-
-        if(!Slot || Slot->effect.type == AL_EFFECT_NULL)
-        {
-            ALSource->Params.Send[i].WetGain = 0.0f;
-            WetGainHF[i] = 1.0f;
-            continue;
-        }
-
-        if(Slot->AuxSendAuto)
-        {
-            WetGain[i] = SourceVolume * RoomAttenuation[i];
-            if(WetGainAuto)
-                WetGain[i] *= ConeVolume;
-            if(WetGainHFAuto)
-                WetGainHF[i] *= ConeHF;
-
-            // Clamp to Min/Max Gain
-            WetGain[i] = __min(WetGain[i],MaxVolume);
-            WetGain[i] = __max(WetGain[i],MinVolume);
-
-            if(IsReverbEffect(Slot->effect.type))
-            {
-                /* Apply a decay-time transformation to the wet path, based on
-                 * the attenuation of the dry path.
-                 *
-                 * Using the approximate (effective) source to listener
-                 * distance, the initial decay of the reverb effect is
-                 * calculated and applied to the wet path.
-                 */
-                if(WetGainAuto)
-                    WetGain[i] *= aluPow(0.001f, /* -60dB */
-                                         (1.0f/SPEEDOFSOUNDMETRESPERSEC)*EffectiveDist /
-                                         Slot->effect.Params.Reverb.DecayTime);
-
-                WetGainHF[i] *= aluPow(Slot->effect.Params.Reverb.AirAbsorptionGainHF,
-                                       AirAbsorptionFactor * EffectiveDist);
-            }
-        }
-        else
-        {
-            /* If the slot's auxiliary send auto is off, the data sent to the
-             * effect slot is the same as the dry path, sans filter effects */
-            WetGain[i] = DryGain;
-            WetGainHF[i] = DryGainHF;
-        }
-
-        switch(ALSource->Send[i].WetFilter.type)
-        {
-            case AL_FILTER_LOWPASS:
-                WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
-                WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
-                break;
-        }
-        ALSource->Params.Send[i].WetGain = WetGain[i] * ListenerGain;
+        WetGain[i] = __min(WetGain[i],MaxVolume);
+        WetGain[i] = __max(WetGain[i],MinVolume);
     }
 
     // Apply filter gains and filters
@@ -623,6 +619,34 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             break;
     }
     DryGain *= ListenerGain;
+    for(i = 0;i < NumSends;i++)
+    {
+        switch(ALSource->Send[i].WetFilter.type)
+        {
+            case AL_FILTER_LOWPASS:
+                WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
+                WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
+                break;
+        }
+        WetGain[i] *= ListenerGain;
+    }
+
+    if(WetGainAuto)
+    {
+        /* Apply a decay-time transformation to the wet path, based on the
+         * attenuation of the dry path.
+         *
+         * Using the approximate (effective) source to listener distance, the
+         * initial decay of the reverb effect is calculated and applied to the
+         * wet path.
+         */
+        for(i = 0;i < NumSends;i++)
+        {
+            if(DecayDistance[i] > 0.0f)
+                WetGain[i] *= aluPow(0.001f /* -60dB */,
+                                     EffectiveDist / DecayDistance[i]);
+        }
+    }
 
     // Calculate Velocity
     Pitch = ALSource->flPitch;
@@ -740,6 +764,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             ALSource->Params.DryGains[0][chan] = DryGain * gain;
         }
     }
+    for(i = 0;i < NumSends;i++)
+        ALSource->Params.Send[i].WetGain = WetGain[i];
 
     /* Update filter coefficients. */
     cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / Frequency);

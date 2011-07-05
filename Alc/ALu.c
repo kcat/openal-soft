@@ -323,8 +323,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
     }
     for(i = 0;i < NumSends;i++)
+    {
+        ALSource->Params.Send[i].Slot = ALSource->Send[i].Slot;
         ALSource->Params.Send[i].WetGain = WetGain[i] * ListenerGain /
                                            ALSource->NumChannels;
+    }
 
     /* Update filter coefficients. Calculations based on the I3DL2
      * spec. */
@@ -444,6 +447,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             WetGainAuto   = AL_TRUE;
             WetGainHFAuto = DryGainHFAuto;
         }
+
+        ALSource->Params.Send[i].Slot = Slot;
     }
 
     //1. Translate Listener to origin (convert to head relative)

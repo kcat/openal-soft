@@ -168,19 +168,19 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
                                                                               \
     for(out = 0;out < Device->NumAuxSends;out++)                              \
     {                                                                         \
+        ALeffectslot *Slot = Source->Params.Send[i].Slot;                     \
         ALfloat  WetSend;                                                     \
         ALfloat *RESTRICT WetBuffer;                                          \
         ALfloat *RESTRICT WetClickRemoval;                                    \
         ALfloat *RESTRICT WetPendingClicks;                                   \
         FILTER  *WetFilter;                                                   \
                                                                               \
-        if(!Source->Send[out].Slot ||                                         \
-           Source->Send[out].Slot->effect.type == AL_EFFECT_NULL)             \
+        if(!Slot || Slot->effect.type == AL_EFFECT_NULL)                      \
             continue;                                                         \
                                                                               \
-        WetBuffer = Source->Send[out].Slot->WetBuffer;                        \
-        WetClickRemoval = Source->Send[out].Slot->ClickRemoval;               \
-        WetPendingClicks = Source->Send[out].Slot->PendingClicks;             \
+        WetBuffer = Slot->WetBuffer;                                          \
+        WetClickRemoval = Slot->ClickRemoval;                                 \
+        WetPendingClicks = Slot->PendingClicks;                               \
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
         WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \
@@ -308,19 +308,19 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
                                                                               \
     for(out = 0;out < Device->NumAuxSends;out++)                              \
     {                                                                         \
+        ALeffectslot *Slot = Source->Params.Send[i].Slot;                     \
         ALfloat  WetSend;                                                     \
         ALfloat *WetBuffer;                                                   \
         ALfloat *WetClickRemoval;                                             \
         ALfloat *WetPendingClicks;                                            \
         FILTER  *WetFilter;                                                   \
                                                                               \
-        if(!Source->Send[out].Slot ||                                         \
-           Source->Send[out].Slot->effect.type == AL_EFFECT_NULL)             \
+        if(!Slot || Slot->effect.type == AL_EFFECT_NULL)                      \
             continue;                                                         \
                                                                               \
-        WetBuffer = Source->Send[out].Slot->WetBuffer;                        \
-        WetClickRemoval = Source->Send[out].Slot->ClickRemoval;               \
-        WetPendingClicks = Source->Send[out].Slot->PendingClicks;             \
+        WetBuffer = Slot->WetBuffer;                                          \
+        WetClickRemoval = Slot->ClickRemoval;                                 \
+        WetPendingClicks = Slot->PendingClicks;                               \
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
         WetSend = Source->Params.Send[out].WetGain;                           \
                                                                               \

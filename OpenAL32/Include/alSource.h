@@ -108,6 +108,7 @@ typedef struct ALsource
         ALfloat history[MAXCHANNELS*2];
 
         struct {
+            struct ALeffectslot *Slot;
             ALfloat WetGain;
             FILTER iirFilter;
             ALfloat history[MAXCHANNELS];

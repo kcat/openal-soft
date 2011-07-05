@@ -691,12 +691,19 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             Position[0] *= invlen;
             Position[1] *= invlen;
             Position[2] *= invlen;
+            GetLerpedHrtfCoeffs(asin(Position[1]),
+                                atan2(Position[0], -Position[2]*ZScale),
+                                DryGain, ALSource->Params.HrtfCoeffs[0],
+                                ALSource->Params.HrtfDelay[0]);
         }
-
-        GetLerpedHrtfCoeffs(asin(Position[1]),
-                            atan2(Position[0], -Position[2]*ZScale), DryGain,
-                            ALSource->Params.HrtfCoeffs[0],
-                            ALSource->Params.HrtfDelay[0]);
+        else
+        {
+            /* Force front-centered for sounds that comes from the listener,
+             * to prevent +0 and -0 Z from producing inconsistent panning */
+            GetLerpedHrtfCoeffs(0.0f, 0.0f, DryGain,
+                                ALSource->Params.HrtfCoeffs[0],
+                                ALSource->Params.HrtfDelay[0]);
+        }
     }
     else
     {

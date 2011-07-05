@@ -75,7 +75,6 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
-    const ALfloat scaler = 1.0f/NumChannels;                                  \
     const T *RESTRICT data = srcdata;                                         \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
@@ -195,14 +194,14 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
                 value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
                 value = lpFilter1PC(WetFilter, i, value);                     \
                                                                               \
-                WetClickRemoval[0] -= value*WetSend * scaler;                 \
+                WetClickRemoval[0] -= value * WetSend;                        \
             }                                                                 \
             for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)             \
             {                                                                 \
                 value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
                 value = lpFilter1P(WetFilter, i, value);                      \
                                                                               \
-                WetBuffer[OutPos] += value*WetSend * scaler;                  \
+                WetBuffer[OutPos] += value * WetSend;                         \
                                                                               \
                 frac += increment;                                            \
                 pos  += frac>>FRACTIONBITS;                                   \
@@ -214,7 +213,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
                 value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
                 value = lpFilter1PC(WetFilter, i, value);                     \
                                                                               \
-                WetPendingClicks[0] += value*WetSend * scaler;                \
+                WetPendingClicks[0] += value * WetSend;                       \
             }                                                                 \
             OutPos -= BufferSize;                                             \
         }                                                                     \
@@ -244,7 +243,6 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
-    const ALfloat scaler = 1.0f/NumChannels;                                  \
     const T *RESTRICT data = srcdata;                                         \
     ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
@@ -336,14 +334,14 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
                 value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
                                                                               \
                 value = lpFilter1PC(WetFilter, i, value);                     \
-                WetClickRemoval[0] -= value*WetSend * scaler;                 \
+                WetClickRemoval[0] -= value * WetSend;                        \
             }                                                                 \
             for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)             \
             {                                                                 \
                 value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
                                                                               \
                 value = lpFilter1P(WetFilter, i, value);                      \
-                WetBuffer[OutPos] += value*WetSend * scaler;                  \
+                WetBuffer[OutPos] += value * WetSend;                         \
                                                                               \
                 frac += increment;                                            \
                 pos  += frac>>FRACTIONBITS;                                   \
@@ -355,7 +353,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
                 value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
                                                                               \
                 value = lpFilter1PC(WetFilter, i, value);                     \
-                WetPendingClicks[0] += value*WetSend * scaler;                \
+                WetPendingClicks[0] += value * WetSend;                       \
             }                                                                 \
             OutPos -= BufferSize;                                             \
         }                                                                     \

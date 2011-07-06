@@ -373,6 +373,8 @@ struct ALCdevice_struct
     ALboolean    IsCaptureDevice;
     ALboolean    IsLoopbackDevice;
 
+    CRITICAL_SECTION Mutex;
+
     ALuint       Frequency;
     ALuint       UpdateSize;
     ALuint       NumUpdates;

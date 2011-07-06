@@ -381,7 +381,6 @@ static const ALCint alcEFXMinorVersion = 0;
 ///////////////////////////////////////////////////////
 // Global Variables
 
-static CRITICAL_SECTION g_csMutex;
 static CRITICAL_SECTION ListLock;
 
 /* Device List */
@@ -496,7 +495,6 @@ static void alc_init(void)
         ZScale = -1.0;
 
     tls_create(&LocalContext);
-    InitializeCriticalSection(&g_csMutex);
     InitializeCriticalSection(&ListLock);
     ALTHUNK_INIT();
 
@@ -518,7 +516,6 @@ static void alc_deinit(void)
     FreeALConfig();
     ALTHUNK_EXIT();
     DeleteCriticalSection(&ListLock);
-    DeleteCriticalSection(&g_csMutex);
     tls_delete(LocalContext);
 
     if(LogFile != stderr)
@@ -1428,14 +1425,12 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
 ALCvoid LockDevice(ALCdevice *device)
 {
-    (void)device;
-    EnterCriticalSection(&g_csMutex);
+    EnterCriticalSection(&device->Mutex);
 }
 
 ALCvoid UnlockDevice(ALCdevice *device)
 {
-    (void)device;
-    LeaveCriticalSection(&g_csMutex);
+    LeaveCriticalSection(&device->Mutex);
 }
 
 /*
@@ -1443,10 +1438,9 @@ ALCvoid UnlockDevice(ALCdevice *device)
 
     Thread-safe entry
 */
-ALCvoid LockContext(ALCcontext *pContext)
+ALCvoid LockContext(ALCcontext *context)
 {
-    (void)pContext;
-    EnterCriticalSection(&g_csMutex);
+    EnterCriticalSection(&context->Device->Mutex);
 }
 
 
@@ -1455,10 +1449,9 @@ ALCvoid LockContext(ALCcontext *pContext)
 
     Thread-safe exit
 */
-ALCvoid UnlockContext(ALCcontext *pContext)
+ALCvoid UnlockContext(ALCcontext *context)
 {
-    (void)pContext;
-    LeaveCriticalSection(&g_csMutex);
+    LeaveCriticalSection(&context->Device->Mutex);
 }
 
 
@@ -1578,6 +1571,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_TRUE;
     device->IsLoopbackDevice = AL_FALSE;
+    InitializeCriticalSection(&device->Mutex);
 
     device->szDeviceName = NULL;
 
@@ -1646,6 +1640,8 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 
     free(pDevice->szDeviceName);
     pDevice->szDeviceName = NULL;
+
+    DeleteCriticalSection(&pDevice->Mutex);
 
     free(pDevice);
 
@@ -2620,6 +2616,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_FALSE;
     device->IsLoopbackDevice = AL_FALSE;
+    InitializeCriticalSection(&device->Mutex);
     device->LastError = ALC_NO_ERROR;
 
     device->Flags = 0;
@@ -2771,6 +2768,8 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     free(pDevice->Contexts);
     pDevice->Contexts = NULL;
 
+    DeleteCriticalSection(&pDevice->Mutex);
+
     //Release device structure
     memset(pDevice, 0, sizeof(ALCdevice));
     free(pDevice);
@@ -2796,6 +2795,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_FALSE;
     device->IsLoopbackDevice = AL_TRUE;
+    InitializeCriticalSection(&device->Mutex);
     device->LastError = ALC_NO_ERROR;
 
     device->Flags = 0;

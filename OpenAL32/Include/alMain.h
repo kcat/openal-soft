@@ -487,6 +487,8 @@ void AppendCaptureDeviceList(const ALCchar *name);
 
 ALCvoid alcSetError(ALCdevice *device, ALenum errorCode);
 
+ALCvoid LockDevice(ALCdevice *device);
+ALCvoid UnlockDevice(ALCdevice *device);
 ALCvoid LockContext(ALCcontext *context);
 ALCvoid UnlockContext(ALCcontext *context);
 

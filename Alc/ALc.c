@@ -1328,10 +1328,10 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if((device->Flags&DEVICE_RUNNING))
         return ALC_TRUE;
 
-    LockContext(NULL);
+    LockDevice(device);
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
     {
-        UnlockContext(NULL);
+        UnlockDevice(device);
         return ALC_FALSE;
     }
     device->Flags |= DEVICE_RUNNING;
@@ -1395,7 +1395,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
             if(ALEffect_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
             {
-                UnlockContext(NULL);
+                UnlockDevice(device);
                 ALCdevice_StopPlayback(device);
                 device->Flags &= ~DEVICE_RUNNING;
                 return ALC_FALSE;
@@ -1420,11 +1420,23 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             source->NeedsUpdate = AL_FALSE;
         }
     }
-    UnlockContext(NULL);
+    UnlockDevice(device);
 
     return ALC_TRUE;
 }
 
+
+ALCvoid LockDevice(ALCdevice *device)
+{
+    (void)device;
+    EnterCriticalSection(&g_csMutex);
+}
+
+ALCvoid UnlockDevice(ALCdevice *device)
+{
+    (void)device;
+    LeaveCriticalSection(&g_csMutex);
+}
 
 /*
     LockContext
@@ -2134,7 +2146,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
-    LockContext(NULL);
+    LockDevice(device);
     ALContext = NULL;
     temp = realloc(device->Contexts, (device->NumContexts+1) * sizeof(*device->Contexts));
     if(temp)
@@ -2153,7 +2165,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         free(ALContext);
         alcSetError(device, ALC_OUT_OF_MEMORY);
-        UnlockContext(NULL);
+        UnlockDevice(device);
         if(device->NumContexts == 0)
         {
             ALCdevice_StopPlayback(device);
@@ -2167,7 +2179,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALContext->Device = device;
 
     InitContext(ALContext);
-    UnlockContext(NULL);
+    UnlockDevice(device);
 
     ALContext->next = g_pContextList;
     g_pContextList = ALContext;
@@ -2211,7 +2223,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         GlobalContext = NULL;
 
     Device = context->Device;
-    LockContext(NULL);
+    LockDevice(Device);
     for(i = 0;i < Device->NumContexts;i++)
     {
         if(Device->Contexts[i] == context)
@@ -2221,7 +2233,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
             break;
         }
     }
-    UnlockContext(NULL);
+    UnlockDevice(Device);
 
     if(Device->NumContexts == 0)
     {

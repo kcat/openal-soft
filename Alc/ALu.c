@@ -984,7 +984,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         /* Clear mixing buffer */
         memset(device->DryBuffer, 0, SamplesToDo*MAXCHANNELS*sizeof(ALfloat));
 
-        LockContext(NULL);
+        LockDevice(device);
         ctx = device->Contexts;
         ctx_end = ctx + device->NumContexts;
         while(ctx != ctx_end)
@@ -1036,7 +1036,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
             ctx++;
         }
-        UnlockContext(NULL);
+        UnlockDevice(device);
 
         //Post processing loop
         for(i = 0;i < SamplesToDo;i++)
@@ -1087,7 +1087,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
 {
     ALuint i;
 
-    LockContext(NULL);
+    LockDevice(device);
     for(i = 0;i < device->NumContexts;i++)
     {
         ALCcontext *Context = device->Contexts[i];
@@ -1108,5 +1108,5 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
     }
 
     device->Connected = ALC_FALSE;
-    UnlockContext(NULL);
+    UnlockDevice(device);
 }

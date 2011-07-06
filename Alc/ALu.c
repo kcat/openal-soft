@@ -418,8 +418,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             RoomRolloff[i] = 0.0f;
             DecayDistance[i] = 0.0f;
             RoomAirAbsorption[i] = 0.0f;
-            WetGainAuto   = AL_FALSE;
-            WetGainHFAuto = AL_FALSE;
         }
         else if(Slot->AuxSendAuto)
         {
@@ -444,8 +442,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             RoomRolloff[i] = Rolloff;
             DecayDistance[i] = 0.0f;
             RoomAirAbsorption[i] = AIRABSORBGAINHF;
-            WetGainAuto   = AL_TRUE;
-            WetGainHFAuto = DryGainHFAuto;
         }
 
         ALSource->Params.Send[i].Slot = Slot;

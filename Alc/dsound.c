@@ -86,13 +86,13 @@ static void *DSoundLoad(void)
         ds_handle = LoadLibraryA("dsound.dll");
         if(ds_handle == NULL)
         {
-            AL_PRINT("Failed to load dsound.dll\n");
+            ERROR("Failed to load dsound.dll\n");
             return NULL;
         }
 
 #define LOAD_FUNC(x) do {                                                     \
     if((p##x = (void*)GetProcAddress((HMODULE)ds_handle, #x)) == NULL) {      \
-        AL_PRINT("Could not load %s from dsound.dll\n", #x);                  \
+        ERROR("Could not load %s from dsound.dll\n", #x);                     \
         failed = AL_TRUE;                                                     \
     }                                                                         \
 } while(0)
@@ -185,7 +185,7 @@ static ALuint DSoundProc(ALvoid *ptr)
     err = IDirectSoundBuffer_GetCaps(pData->DSsbuffer, &DSBCaps);
     if(FAILED(err))
     {
-        AL_PRINT("Failed to get buffer caps: 0x%lx\n", err);
+        ERROR("Failed to get buffer caps: 0x%lx\n", err);
         aluHandleDisconnect(pDevice);
         return 1;
     }
@@ -207,7 +207,7 @@ static ALuint DSoundProc(ALvoid *ptr)
                 err = IDirectSoundBuffer_Play(pData->DSsbuffer, 0, 0, DSBPLAY_LOOPING);
                 if(FAILED(err))
                 {
-                    AL_PRINT("Failed to play buffer: 0x%lx\n", err);
+                    ERROR("Failed to play buffer: 0x%lx\n", err);
                     aluHandleDisconnect(pDevice);
                     return 1;
                 }
@@ -226,6 +226,7 @@ static ALuint DSoundProc(ALvoid *ptr)
         // If the buffer is lost, restore it and lock
         if(err == DSERR_BUFFERLOST)
         {
+            WARN("Buffer lost, restoring...\n");
             err = IDirectSoundBuffer_Restore(pData->DSsbuffer);
             if(SUCCEEDED(err))
             {
@@ -247,7 +248,7 @@ static ALuint DSoundProc(ALvoid *ptr)
         }
         else
         {
-            AL_PRINT("Buffer lock error: %#lx\n", err);
+            ERROR("Buffer lock error: %#lx\n", err);
             aluHandleDisconnect(pDevice);
             return 1;
         }
@@ -279,7 +280,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         {
             hr = DirectSoundEnumerateA(DSoundEnumDevices, NULL);
             if(FAILED(hr))
-                AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+                ERROR("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
         }
 
         for(i = 0;i < NumDevices;i++)
@@ -312,7 +313,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         if(pData->lpDS)
             IDirectSound_Release(pData->lpDS);
         free(pData);
-        AL_PRINT("Device init failed: 0x%08lx\n", hr);
+        ERROR("Device init failed: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 
@@ -371,7 +372,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
             else if(speakers == DSSPEAKER_7POINT1)
                 device->FmtChans = DevFmtX71;
             else
-                AL_PRINT("Unknown system speaker config: 0x%lx\n", speakers);
+                ERROR("Unknown system speaker config: 0x%lx\n", speakers);
         }
 
         switch(device->FmtChans)
@@ -604,7 +605,7 @@ void alcDSoundProbe(enum DevProbe type)
 
             hr = DirectSoundEnumerateA(DSoundEnumDevices, NULL);
             if(FAILED(hr))
-                AL_PRINT("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+                ERROR("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
             else
             {
                 for(i = 0;i < NumDevices;i++)

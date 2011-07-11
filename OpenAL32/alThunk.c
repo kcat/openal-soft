@@ -70,7 +70,7 @@ ALenum alThunkAddEntry(ALvoid *ptr, ALuint *idx)
         if(!NewList)
         {
             LeaveCriticalSection(&g_ThunkLock);
-            AL_PRINT("Realloc failed to increase to %u enties!\n", g_ThunkArraySize*2);
+            ERROR("Realloc failed to increase to %u enties!\n", g_ThunkArraySize*2);
             return AL_OUT_OF_MEMORY;
         }
         memset(&NewList[g_ThunkArraySize], 0, g_ThunkArraySize*sizeof(ThunkEntry));

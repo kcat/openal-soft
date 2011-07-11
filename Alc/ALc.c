@@ -1341,12 +1341,14 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         return ALC_TRUE;
 
     LockDevice(device);
+    TRACE("Format request: %s, %s, %uhz\n", DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType), device->Frequency);
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
     {
         UnlockDevice(device);
         return ALC_FALSE;
     }
     device->Flags |= DEVICE_RUNNING;
+    TRACE("Format retrieved: %s, %s, %uhz\n", DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType), device->Frequency);
 
     aluInitPanning(device);
 
@@ -1363,6 +1365,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ERROR("HRTF disabled (format is %uhz %s)\n", device->Frequency, DevFmtChannelsString(device->FmtChans));
         device->Flags &= ~DEVICE_USE_HRTF;
     }
+    TRACE("HRTF %s\n", (device->Flags&DEVICE_USE_HRTF)?"enabled":"disabled");
 
     if(!(device->Flags&DEVICE_USE_HRTF) && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
     {
@@ -1373,11 +1376,13 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         bs2b_set_srate(device->Bs2b, device->Frequency);
         bs2b_set_level(device->Bs2b, device->Bs2bLevel);
+        TRACE("BS2B level %d\n", device->Bs2bLevel);
     }
     else
     {
         free(device->Bs2b);
         device->Bs2b = NULL;
+        TRACE("BS2B disabled\n");
     }
 
     device->Flags &= ~DEVICE_DUPLICATE_STEREO;
@@ -1395,6 +1400,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->Flags |= DEVICE_DUPLICATE_STEREO;
             break;
     }
+    TRACE("Stereo duplication %s\n", (device->Flags&DEVICE_DUPLICATE_STEREO)?"enabled":"disabled");
 
     for(i = 0;i < device->NumContexts;i++)
     {

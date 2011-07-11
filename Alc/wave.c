@@ -149,7 +149,7 @@ static ALuint WaveProc(ALvoid *ptr)
                             data->f);
             if(ferror(data->f))
             {
-                AL_PRINT("Error writing to file\n");
+                ERROR("Error writing to file\n");
                 aluHandleDisconnect(pDevice);
                 break;
             }
@@ -179,7 +179,7 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
     if(!data->f)
     {
         free(data);
-        AL_PRINT("Could not open file '%s': %s\n", fname, strerror(errno));
+        ERROR("Could not open file '%s': %s\n", fname, strerror(errno));
         return ALC_FALSE;
     }
 
@@ -256,7 +256,7 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
 
     if(ferror(data->f))
     {
-        AL_PRINT("Error writing header: %s\n", strerror(errno));
+        ERROR("Error writing header: %s\n", strerror(errno));
         return ALC_FALSE;
     }
 
@@ -266,7 +266,7 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
     data->buffer = malloc(data->size);
     if(!data->buffer)
     {
-        AL_PRINT("buffer malloc failed\n");
+        ERROR("Buffer malloc failed\n");
         return ALC_FALSE;
     }
 

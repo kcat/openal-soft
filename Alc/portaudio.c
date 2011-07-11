@@ -104,7 +104,7 @@ void *pa_load(void)
 
         if((err=Pa_Initialize()) != paNoError)
         {
-            AL_PRINT("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
+            ERROR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
             CloseLib(pa_handle);
             pa_handle = NULL;
             return NULL;
@@ -204,7 +204,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
                         device->UpdateSize, paNoFlag, pa_callback, device);
     if(err != paNoError)
     {
-        AL_PRINT("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
+        ERROR("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
         device->ExtraData = NULL;
         free(data);
         return ALC_FALSE;
@@ -216,14 +216,14 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     {
         if(outParams.channelCount != 1 && outParams.channelCount != 2)
         {
-            AL_PRINT("Unhandled channel count: %u\n", outParams.channelCount);
+            ERROR("Unhandled channel count: %u\n", outParams.channelCount);
             Pa_CloseStream(data->stream);
             device->ExtraData = NULL;
             free(data);
             return ALC_FALSE;
         }
         if((device->Flags&DEVICE_CHANNELS_REQUEST))
-            AL_PRINT("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans), outParams.channelCount);
+            ERROR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans), outParams.channelCount);
         device->Flags &= ~DEVICE_CHANNELS_REQUEST;
         device->FmtChans = ((outParams.channelCount==1) ? DevFmtMono : DevFmtStereo);
     }
@@ -238,7 +238,7 @@ static void pa_close_playback(ALCdevice *device)
 
     err = Pa_CloseStream(data->stream);
     if(err != paNoError)
-        AL_PRINT("Error closing stream: %s\n", Pa_GetErrorText(err));
+        ERROR("Error closing stream: %s\n", Pa_GetErrorText(err));
 
     free(data);
     device->ExtraData = NULL;
@@ -254,7 +254,7 @@ static ALCboolean pa_reset_playback(ALCdevice *device)
     if(device->Frequency != streamInfo->sampleRate)
     {
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            AL_PRINT("PortAudio does not support changing sample rates (wanted %dhz, got %.1fhz)\n", device->Frequency, streamInfo->sampleRate);
+            ERROR("PortAudio does not support changing sample rates (wanted %dhz, got %.1fhz)\n", device->Frequency, streamInfo->sampleRate);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
         device->Frequency = streamInfo->sampleRate;
     }
@@ -263,7 +263,7 @@ static ALCboolean pa_reset_playback(ALCdevice *device)
     err = Pa_StartStream(data->stream);
     if(err != paNoError)
     {
-        AL_PRINT("Pa_StartStream() returned an error: %s\n", Pa_GetErrorText(err));
+        ERROR("Pa_StartStream() returned an error: %s\n", Pa_GetErrorText(err));
         return ALC_FALSE;
     }
 
@@ -277,7 +277,7 @@ static void pa_stop_playback(ALCdevice *device)
 
     err = Pa_StopStream(data->stream);
     if(err != paNoError)
-        AL_PRINT("Error stopping stream: %s\n", Pa_GetErrorText(err));
+        ERROR("Error stopping stream: %s\n", Pa_GetErrorText(err));
 }
 
 
@@ -332,7 +332,7 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
             inParams.sampleFormat = paFloat32;
             break;
         case DevFmtUShort:
-            AL_PRINT("Unsigned short not supported\n");
+            ERROR("Unsigned short samples not supported\n");
             goto error;
     }
     inParams.channelCount = ChannelsFromDevFmt(device->FmtChans);
@@ -341,7 +341,7 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
                         paFramesPerBufferUnspecified, paNoFlag, pa_capture_cb, device);
     if(err != paNoError)
     {
-        AL_PRINT("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
+        ERROR("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
         goto error;
     }
 
@@ -363,7 +363,7 @@ static void pa_close_capture(ALCdevice *device)
 
     err = Pa_CloseStream(data->stream);
     if(err != paNoError)
-        AL_PRINT("Error closing stream: %s\n", Pa_GetErrorText(err));
+        ERROR("Error closing stream: %s\n", Pa_GetErrorText(err));
 
     free(data);
     device->ExtraData = NULL;
@@ -376,7 +376,7 @@ static void pa_start_capture(ALCdevice *device)
 
     err = Pa_StartStream(data->stream);
     if(err != paNoError)
-        AL_PRINT("Error starting stream: %s\n", Pa_GetErrorText(err));
+        ERROR("Error starting stream: %s\n", Pa_GetErrorText(err));
 }
 
 static void pa_stop_capture(ALCdevice *device)
@@ -386,7 +386,7 @@ static void pa_stop_capture(ALCdevice *device)
 
     err = Pa_StopStream(data->stream);
     if(err != paNoError)
-        AL_PRINT("Error stopping stream: %s\n", Pa_GetErrorText(err));
+        ERROR("Error stopping stream: %s\n", Pa_GetErrorText(err));
 }
 
 static void pa_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples)

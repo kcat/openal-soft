@@ -175,7 +175,6 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
 {
     ALCdevice *Device;
     ALCcontext *Context;
-    ALboolean updateSources = AL_FALSE;
     ALeffectslot *EffectSlot;
 
     Context = GetLockedContext();
@@ -193,7 +192,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
                (effect=LookupEffect(Device->EffectMap, iValue)) != NULL)
             {
                 InitializeEffect(Context, EffectSlot, effect);
-                updateSources = AL_TRUE;
+                Context->UpdateSources = AL_TRUE;
             }
             else
                 alSetError(Context, AL_INVALID_VALUE);
@@ -203,7 +202,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
             if(iValue == AL_TRUE || iValue == AL_FALSE)
             {
                 EffectSlot->AuxSendAuto = iValue;
-                updateSources = AL_TRUE;
+                Context->UpdateSources = AL_TRUE;
             }
             else
                 alSetError(Context, AL_INVALID_VALUE);
@@ -216,26 +215,6 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     }
     else
         alSetError(Context, AL_INVALID_NAME);
-
-    // Force updating the sources that use this slot, since it affects the
-    // sending parameters
-    if(updateSources)
-    {
-        ALsizei pos;
-        for(pos = 0;pos < Context->SourceMap.size;pos++)
-        {
-            ALsource *source = Context->SourceMap.array[pos].value;
-            ALuint i;
-            for(i = 0;i < Device->NumAuxSends;i++)
-            {
-                if(!source->Send[i].Slot ||
-                   source->Send[i].Slot->effectslot != effectslot)
-                    continue;
-                source->NeedsUpdate = AL_TRUE;
-                break;
-            }
-        }
-    }
 
     UnlockContext(Context);
 }

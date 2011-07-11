@@ -341,7 +341,7 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
         if((pDevice->Flags&DEVICE_CHANNELS_REQUEST) &&
            pDevice->FmtChans != DevFmtStereo)
         {
-            AL_PRINT("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(pDevice->FmtChans));
+            ERROR("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(pDevice->FmtChans));
             pDevice->Flags &= ~DEVICE_CHANNELS_REQUEST;
         }
         pDevice->FmtChans = DevFmtStereo;
@@ -373,7 +373,7 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
 
     if((res=waveOutOpen(&pData->hWaveHandle.Out, lDeviceID, &wfexFormat, (DWORD_PTR)&WaveOutProc, (DWORD_PTR)pDevice, CALLBACK_FUNCTION)) != MMSYSERR_NOERROR)
     {
-        AL_PRINT("waveInOpen failed: %u\n", res);
+        ERROR("waveOutOpen failed: %u\n", res);
         goto failure;
     }
 
@@ -381,7 +381,7 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
     pData->hWaveThreadEvent = CreateEvent(NULL, AL_TRUE, AL_FALSE, "WaveOutThreadDestroyed");
     if(pData->hWaveHdrEvent == NULL || pData->hWaveThreadEvent == NULL)
     {
-        AL_PRINT("CreateEvent failed: %lu\n", GetLastError());
+        ERROR("CreateEvent failed: %lu\n", GetLastError());
         goto failure;
     }
 
@@ -439,7 +439,7 @@ static ALCboolean WinMMResetPlayback(ALCdevice *device)
     if(device->Frequency != pData->Frequency)
     {
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            AL_PRINT("WinMM does not support changing sample rates (wanted %dhz, got %dhz)\n", device->Frequency, pData->Frequency);
+            ERROR("WinMM does not support changing sample rates (wanted %dhz, got %dhz)\n", device->Frequency, pData->Frequency);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
         device->Frequency = pData->Frequency;
     }
@@ -570,7 +570,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
 
     if((res=waveInOpen(&pData->hWaveHandle.In, lDeviceID, &wfexCaptureFormat, (DWORD_PTR)&WaveInProc, (DWORD_PTR)pDevice, CALLBACK_FUNCTION)) != MMSYSERR_NOERROR)
     {
-        AL_PRINT("waveInOpen failed: %u\n", res);
+        ERROR("waveInOpen failed: %u\n", res);
         goto failure;
     }
 
@@ -578,7 +578,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
     pData->hWaveThreadEvent = CreateEvent(NULL, AL_TRUE, AL_FALSE, "WaveInThreadDestroyed");
     if(pData->hWaveHdrEvent == NULL || pData->hWaveThreadEvent == NULL)
     {
-        AL_PRINT("CreateEvent failed: %lu\n", GetLastError());
+        ERROR("CreateEvent failed: %lu\n", GetLastError());
         goto failure;
     }
 

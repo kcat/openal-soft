@@ -1448,6 +1448,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             ALsource_Update(source, context);
             source->NeedsUpdate = AL_FALSE;
         }
+        context->UpdateSources = AL_FALSE;
     }
     UnlockDevice(device);
 
@@ -1540,6 +1541,7 @@ static ALvoid InitContext(ALCcontext *pContext)
 
     //Validate pContext
     pContext->LastError = AL_NO_ERROR;
+    pContext->UpdateSources = AL_FALSE;
     pContext->Suspended = AL_FALSE;
     pContext->ActiveSourceCount = 0;
     InitUIntMap(&pContext->SourceMap);

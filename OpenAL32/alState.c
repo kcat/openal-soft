@@ -43,7 +43,6 @@ static const ALchar alErrOutOfMemory[] = "Out of Memory";
 AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
 {
     ALCcontext *Context;
-    ALboolean  updateSources = AL_FALSE;
 
     Context = GetLockedContext();
     if(!Context) return;
@@ -52,22 +51,12 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     {
         case AL_SOURCE_DISTANCE_MODEL:
             Context->SourceDistanceModel = AL_TRUE;
-            updateSources = AL_TRUE;
+            Context->UpdateSources = AL_TRUE;
             break;
 
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;
-    }
-
-    if(updateSources)
-    {
-        ALsizei pos;
-        for(pos = 0;pos < Context->SourceMap.size;pos++)
-        {
-            ALsource *source = Context->SourceMap.array[pos].value;
-            source->NeedsUpdate = AL_TRUE;
-        }
     }
 
     UnlockContext(Context);
@@ -76,7 +65,6 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
 AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
 {
     ALCcontext *Context;
-    ALboolean  updateSources = AL_FALSE;
 
     Context = GetLockedContext();
     if(!Context) return;
@@ -85,22 +73,12 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     {
         case AL_SOURCE_DISTANCE_MODEL:
             Context->SourceDistanceModel = AL_FALSE;
-            updateSources = AL_TRUE;
+            Context->UpdateSources = AL_TRUE;
             break;
 
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;
-    }
-
-    if(updateSources)
-    {
-        ALsizei pos;
-        for(pos = 0;pos < Context->SourceMap.size;pos++)
-        {
-            ALsource *source = Context->SourceMap.array[pos].value;
-            source->NeedsUpdate = AL_TRUE;
-        }
     }
 
     UnlockContext(Context);
@@ -494,7 +472,6 @@ AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
 AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
 {
     ALCcontext *Context;
-    ALboolean updateSources = AL_FALSE;
 
     Context = GetLockedContext();
     if(!Context) return;
@@ -502,22 +479,10 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
     if(value >= 0.0f)
     {
         Context->DopplerFactor = value;
-        updateSources = AL_TRUE;
+        Context->UpdateSources = AL_TRUE;
     }
     else
         alSetError(Context, AL_INVALID_VALUE);
-
-    // Force updating the sources for these parameters, since even head-
-    // relative sources are affected
-    if(updateSources)
-    {
-        ALsizei pos;
-        for(pos = 0;pos < Context->SourceMap.size;pos++)
-        {
-            ALsource *source = Context->SourceMap.array[pos].value;
-            source->NeedsUpdate = AL_TRUE;
-        }
-    }
 
     UnlockContext(Context);
 }
@@ -525,7 +490,6 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
 AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
 {
     ALCcontext *Context;
-    ALboolean updateSources = AL_FALSE;
 
     Context = GetLockedContext();
     if(!Context) return;
@@ -533,20 +497,10 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     if(value > 0.0f)
     {
         Context->DopplerVelocity=value;
-        updateSources = AL_TRUE;
+        Context->UpdateSources = AL_TRUE;
     }
     else
         alSetError(Context, AL_INVALID_VALUE);
-
-    if(updateSources)
-    {
-        ALsizei pos;
-        for(pos = 0;pos < Context->SourceMap.size;pos++)
-        {
-            ALsource *source = Context->SourceMap.array[pos].value;
-            source->NeedsUpdate = AL_TRUE;
-        }
-    }
 
     UnlockContext(Context);
 }
@@ -554,7 +508,6 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
 AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
 {
     ALCcontext *pContext;
-    ALboolean updateSources = AL_FALSE;
 
     pContext = GetLockedContext();
     if(!pContext) return;
@@ -562,20 +515,10 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
     if(flSpeedOfSound > 0.0f)
     {
         pContext->flSpeedOfSound = flSpeedOfSound;
-        updateSources = AL_TRUE;
+        pContext->UpdateSources = AL_TRUE;
     }
     else
         alSetError(pContext, AL_INVALID_VALUE);
-
-    if(updateSources)
-    {
-        ALsizei pos;
-        for(pos = 0;pos < pContext->SourceMap.size;pos++)
-        {
-            ALsource *source = pContext->SourceMap.array[pos].value;
-            source->NeedsUpdate = AL_TRUE;
-        }
-    }
 
     UnlockContext(pContext);
 }
@@ -583,7 +526,6 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
 AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
 {
     ALCcontext *Context;
-    ALboolean updateSources = AL_FALSE;
 
     Context = GetLockedContext();
     if(!Context) return;
@@ -598,22 +540,12 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
         case AL_EXPONENT_DISTANCE:
         case AL_EXPONENT_DISTANCE_CLAMPED:
             Context->DistanceModel = value;
-            updateSources = !Context->SourceDistanceModel;
+            Context->UpdateSources = AL_TRUE;
             break;
 
         default:
             alSetError(Context, AL_INVALID_VALUE);
             break;
-    }
-
-    if(updateSources)
-    {
-        ALsizei pos;
-        for(pos = 0;pos < Context->SourceMap.size;pos++)
-        {
-            ALsource *source = Context->SourceMap.array[pos].value;
-            source->NeedsUpdate = AL_TRUE;
-        }
     }
 
     UnlockContext(Context);

@@ -29,7 +29,6 @@
 AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
 {
     ALCcontext *pContext;
-    ALboolean updateAll = AL_FALSE;
 
     pContext = GetLockedContext();
     if(!pContext) return;
@@ -40,7 +39,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
             if(flValue >= 0.0f)
             {
                 pContext->Listener.Gain = flValue;
-                updateAll = AL_TRUE;
+                pContext->UpdateSources = AL_TRUE;
             }
             else
                 alSetError(pContext, AL_INVALID_VALUE);
@@ -50,7 +49,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
             if(flValue > 0.0f)
             {
                 pContext->Listener.MetersPerUnit = flValue;
-                updateAll = AL_TRUE;
+                pContext->UpdateSources = AL_TRUE;
             }
             else
                 alSetError(pContext, AL_INVALID_VALUE);
@@ -61,18 +60,6 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
             break;
     }
 
-    // Force updating the sources for these parameters, since even head-
-    // relative sources are affected
-    if(updateAll)
-    {
-        ALsizei pos;
-        for(pos = 0;pos < pContext->SourceMap.size;pos++)
-        {
-            ALsource *source = pContext->SourceMap.array[pos].value;
-            source->NeedsUpdate = AL_TRUE;
-        }
-    }
-
     UnlockContext(pContext);
 }
 
@@ -80,7 +67,6 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
 AL_API ALvoid AL_APIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat flValue2, ALfloat flValue3)
 {
     ALCcontext *pContext;
-    ALboolean updateWorld = AL_FALSE;
 
     pContext = GetLockedContext();
     if(!pContext) return;
@@ -91,30 +77,19 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat 
             pContext->Listener.Position[0] = flValue1;
             pContext->Listener.Position[1] = flValue2;
             pContext->Listener.Position[2] = flValue3;
-            updateWorld = AL_TRUE;
+            pContext->UpdateSources = AL_TRUE;
             break;
 
         case AL_VELOCITY:
             pContext->Listener.Velocity[0] = flValue1;
             pContext->Listener.Velocity[1] = flValue2;
             pContext->Listener.Velocity[2] = flValue3;
-            updateWorld = AL_TRUE;
+            pContext->UpdateSources = AL_TRUE;
             break;
 
         default:
             alSetError(pContext, AL_INVALID_ENUM);
             break;
-    }
-
-    if(updateWorld)
-    {
-        ALsizei pos;
-        for(pos = 0;pos < pContext->SourceMap.size;pos++)
-        {
-            ALsource *source = pContext->SourceMap.array[pos].value;
-            if(!source->bHeadRelative)
-                source->NeedsUpdate = AL_TRUE;
-        }
     }
 
     UnlockContext(pContext);
@@ -124,7 +99,6 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat 
 AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
 {
     ALCcontext *pContext;
-    ALboolean updateWorld = AL_FALSE;
 
     if(pflValues)
     {
@@ -157,7 +131,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
                 pContext->Listener.Up[0] = pflValues[3];
                 pContext->Listener.Up[1] = pflValues[4];
                 pContext->Listener.Up[2] = pflValues[5];
-                updateWorld = AL_TRUE;
+                pContext->UpdateSources = AL_TRUE;
                 break;
 
             default:
@@ -167,17 +141,6 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
     }
     else
         alSetError(pContext, AL_INVALID_VALUE);
-
-    if(updateWorld)
-    {
-        ALsizei pos;
-        for(pos = 0;pos < pContext->SourceMap.size;pos++)
-        {
-            ALsource *source = pContext->SourceMap.array[pos].value;
-            if(!source->bHeadRelative)
-                source->NeedsUpdate = AL_TRUE;
-        }
-    }
 
     UnlockContext(pContext);
 }

@@ -989,6 +989,11 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         ctx_end = ctx + device->NumContexts;
         while(ctx != ctx_end)
         {
+            ALboolean UpdateSources;
+
+            UpdateSources = (*ctx)->UpdateSources;
+            (*ctx)->UpdateSources = AL_FALSE;
+
             src = (*ctx)->ActiveSources;
             src_end = src + (*ctx)->ActiveSourceCount;
             while(src != src_end)
@@ -1000,10 +1005,10 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     continue;
                 }
 
-                if((*src)->NeedsUpdate)
+                if((*src)->NeedsUpdate || UpdateSources)
                 {
-                    ALsource_Update(*src, *ctx);
                     (*src)->NeedsUpdate = AL_FALSE;
+                    ALsource_Update(*src, *ctx);
                 }
 
                 MixSource(*src, device, SamplesToDo);

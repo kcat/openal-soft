@@ -464,6 +464,7 @@ struct ALCcontext_struct
 
     ALenum      LastError;
 
+    ALboolean   UpdateSources;
     ALboolean   Suspended;
 
     enum DistanceModel DistanceModel;

@@ -81,7 +81,7 @@ static void LoadConfigFromFile(FILE *f)
 
             if(!buffer[i])
             {
-                 AL_PRINT("config parse error: bad line \"%s\"\n", buffer);
+                 ERROR("config parse error: bad line \"%s\"\n", buffer);
                  continue;
             }
             buffer[i] = 0;
@@ -91,7 +91,7 @@ static void LoadConfigFromFile(FILE *f)
                 if(buffer[i] && !isspace(buffer[i]))
                 {
                     if(buffer[i] != '#')
-                        AL_PRINT("config warning: extra data after block: \"%s\"\n", buffer+i);
+                        WARN("config warning: extra data after block: \"%s\"\n", buffer+i);
                     break;
                 }
             } while(buffer[i]);
@@ -102,7 +102,7 @@ static void LoadConfigFromFile(FILE *f)
                 if(strcasecmp(cfgBlocks[i].name, buffer+1) == 0)
                 {
                     nextBlock = cfgBlocks+i;
-//                    AL_PRINT("found block '%s'\n", nextBlock->name);
+                    TRACE("found block '%s'\n", nextBlock->name);
                     break;
                 }
             }
@@ -112,7 +112,7 @@ static void LoadConfigFromFile(FILE *f)
                 nextBlock = realloc(cfgBlocks, (cfgCount+1)*sizeof(ConfigBlock));
                 if(!nextBlock)
                 {
-                     AL_PRINT("config parse error: error reallocating config blocks\n");
+                     ERROR("config parse error: error reallocating config blocks\n");
                      continue;
                 }
                 cfgBlocks = nextBlock;
@@ -123,7 +123,7 @@ static void LoadConfigFromFile(FILE *f)
                 nextBlock->entries = NULL;
                 nextBlock->entryCount = 0;
 
-//                AL_PRINT("found new block '%s'\n", nextBlock->name);
+                TRACE("found new block '%s'\n", nextBlock->name);
             }
             curBlock = nextBlock;
             continue;
@@ -137,7 +137,7 @@ static void LoadConfigFromFile(FILE *f)
 
         if(!buffer[i] || buffer[i] == '#' || i == 0)
         {
-            AL_PRINT("config parse error: malformed option line: \"%s\"\n", buffer);
+            ERROR("config parse error: malformed option line: \"%s\"\n", buffer);
             continue;
         }
 
@@ -150,7 +150,7 @@ static void LoadConfigFromFile(FILE *f)
                 i++;
             if(buffer[i] != '=')
             {
-                AL_PRINT("config parse error: option without a value: \"%s\"\n", buffer);
+                ERROR("config parse error: option without a value: \"%s\"\n", buffer);
                 continue;
             }
         }
@@ -174,7 +174,7 @@ static void LoadConfigFromFile(FILE *f)
             ent = realloc(curBlock->entries, (curBlock->entryCount+1)*sizeof(ConfigEntry));
             if(!ent)
             {
-                 AL_PRINT("config parse error: error reallocating config entries\n");
+                 ERROR("config parse error: error reallocating config entries\n");
                  continue;
             }
             curBlock->entries = ent;
@@ -200,7 +200,7 @@ static void LoadConfigFromFile(FILE *f)
         free(ent->value);
         ent->value = strdup(buffer);
 
-//        AL_PRINT("found '%s' = '%s'\n", ent->key, ent->value);
+        TRACE("found '%s' = '%s'\n", ent->key, ent->value);
     }
 }
 
@@ -293,6 +293,8 @@ const char *GetConfigValue(const char *blockName, const char *keyName, const cha
         {
             if(strcasecmp(cfgBlocks[i].entries[j].key, keyName) == 0)
             {
+                TRACE("Found %s:%s = \"%s\"\n", blockName, keyName,
+                      cfgBlocks[i].entries[j].value);
                 if(cfgBlocks[i].entries[j].value[0])
                     return cfgBlocks[i].entries[j].value;
                 return def;
@@ -300,6 +302,7 @@ const char *GetConfigValue(const char *blockName, const char *keyName, const cha
         }
     }
 
+    TRACE("Key %s:%s not found\n", blockName, keyName);
     return def;
 }
 

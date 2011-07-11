@@ -161,7 +161,7 @@ static const char *res_str(SLresult result)
 
 #define PRINTERR(x, s) do {                                                      \
     if((x) != SL_RESULT_SUCCESS)                                                 \
-        AL_PRINT("%s: %s\n", (s), res_str((x)));                                 \
+        ERROR("%s: %s\n", (s), res_str((x)));                                    \
 } while(0)
 
 /* this callback handler is called every time a buffer finishes playing */

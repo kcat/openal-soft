@@ -89,7 +89,7 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHAN
             val = SIDE_RIGHT;
         else
         {
-            AL_PRINT("Unknown speaker for %s: \"%s\"\n", name, confkey);
+            ERROR("Unknown speaker for %s: \"%s\"\n", name, confkey);
             continue;
         }
 
@@ -105,7 +105,7 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHAN
                 if(angle >= -180 && angle <= 180)
                     SpeakerAngle[i] = angle * M_PI/180.0f;
                 else
-                    AL_PRINT("Invalid angle for speaker \"%s\": %ld\n", confkey, angle);
+                    ERROR("Invalid angle for speaker \"%s\": %ld\n", confkey, angle);
                 break;
             }
         }

@@ -1572,7 +1572,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return NULL;
     }
 
-    if(deviceName && !deviceName[0])
+    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, "openal soft") == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = NULL;
 
     device = calloc(1, sizeof(ALCdevice));
@@ -2613,7 +2613,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     DO_INITCONFIG();
 
-    if(deviceName && !deviceName[0])
+    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, "openal soft") == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = NULL;
 
     device = calloc(1, sizeof(ALCdevice));

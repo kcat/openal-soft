@@ -109,7 +109,7 @@ static ALCboolean null_reset_playback(ALCdevice *device)
     data->buffer = malloc(data->size);
     if(!data->buffer)
     {
-        AL_PRINT("buffer malloc failed\n");
+        ERROR("Buffer malloc failed\n");
         return ALC_FALSE;
     }
     SetDefaultWFXChannelOrder(device);

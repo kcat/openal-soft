@@ -1341,14 +1341,22 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         return ALC_TRUE;
 
     LockDevice(device);
-    TRACE("Format request: %s, %s, %uhz\n", DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType), device->Frequency);
+    TRACE("Format pre-setup: %s%s, %s, %uhz%s\n",
+          DevFmtChannelsString(device->FmtChans),
+          (device->Flags&DEVICE_CHANNELS_REQUEST)?" (requested)":"",
+          DevFmtTypeString(device->FmtType), device->Frequency,
+          (device->Flags&DEVICE_FREQUENCY_REQUEST)?" (requested)":"");
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
     {
         UnlockDevice(device);
         return ALC_FALSE;
     }
     device->Flags |= DEVICE_RUNNING;
-    TRACE("Format retrieved: %s, %s, %uhz\n", DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType), device->Frequency);
+    TRACE("Format post-setup: %s%s, %s, %uhz%s\n",
+          DevFmtChannelsString(device->FmtChans),
+          (device->Flags&DEVICE_CHANNELS_REQUEST)?" (requested)":"",
+          DevFmtTypeString(device->FmtType), device->Frequency,
+          (device->Flags&DEVICE_FREQUENCY_REQUEST)?" (requested)":"");
 
     aluInitPanning(device);
 

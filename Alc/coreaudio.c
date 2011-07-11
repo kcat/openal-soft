@@ -33,8 +33,6 @@
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
 
-/* toggle verbose tty output among CoreAudio code */
-#define CA_VERBOSE 1
 
 typedef struct {
     AudioUnit audioUnit;
@@ -127,7 +125,7 @@ static OSStatus ca_capture_callback(void *inRefCon, AudioUnitRenderActionFlags *
     err = AudioUnitRender(data->audioUnit, &flags, inTimeStamp, 1, inNumberFrames, data->bufferList);
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitRender error: %d\n", err);
+        ERROR("AudioUnitRender error: %d\n", err);
         return err;
     }
 
@@ -158,7 +156,7 @@ static ALCboolean ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
     comp = FindNextComponent(NULL, &desc);
     if(comp == NULL)
     {
-        AL_PRINT("FindNextComponent failed\n");
+        ERROR("FindNextComponent failed\n");
         return ALC_FALSE;
     }
 
@@ -168,7 +166,7 @@ static ALCboolean ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
     err = OpenAComponent(comp, &data->audioUnit);
     if(err != noErr)
     {
-        AL_PRINT("OpenAComponent failed\n");
+        ERROR("OpenAComponent failed\n");
         free(data);
         device->ExtraData = NULL;
         return ALC_FALSE;
@@ -199,14 +197,14 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     err = AudioUnitInitialize(data->audioUnit);
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitInitialize failed\n");
+        ERROR("AudioUnitInitialize failed\n");
         return ALC_FALSE;
     }
 
     err = AudioOutputUnitStart(data->audioUnit);
     if(err != noErr)
     {
-        AL_PRINT("AudioOutputUnitStart failed\n");
+        ERROR("AudioOutputUnitStart failed\n");
         return ALC_FALSE;
     }
 
@@ -215,32 +213,32 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     err = AudioUnitGetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &streamFormat, &size);
     if(err != noErr || size != sizeof(AudioStreamBasicDescription))
     {
-        AL_PRINT("AudioUnitGetProperty failed\n");
+        ERROR("AudioUnitGetProperty failed\n");
         return ALC_FALSE;
     }
 
 #if 0
-    AL_PRINT("Output streamFormat of default output unit -\n");
-    AL_PRINT("  streamFormat.mFramesPerPacket = %d\n", streamFormat.mFramesPerPacket);
-    AL_PRINT("  streamFormat.mChannelsPerFrame = %d\n", streamFormat.mChannelsPerFrame);
-    AL_PRINT("  streamFormat.mBitsPerChannel = %d\n", streamFormat.mBitsPerChannel);
-    AL_PRINT("  streamFormat.mBytesPerPacket = %d\n", streamFormat.mBytesPerPacket);
-    AL_PRINT("  streamFormat.mBytesPerFrame = %d\n", streamFormat.mBytesPerFrame);
-    AL_PRINT("  streamFormat.mSampleRate = %5.0f\n", streamFormat.mSampleRate);
+    TRACE("Output streamFormat of default output unit -\n");
+    TRACE("  streamFormat.mFramesPerPacket = %d\n", streamFormat.mFramesPerPacket);
+    TRACE("  streamFormat.mChannelsPerFrame = %d\n", streamFormat.mChannelsPerFrame);
+    TRACE("  streamFormat.mBitsPerChannel = %d\n", streamFormat.mBitsPerChannel);
+    TRACE("  streamFormat.mBytesPerPacket = %d\n", streamFormat.mBytesPerPacket);
+    TRACE("  streamFormat.mBytesPerFrame = %d\n", streamFormat.mBytesPerFrame);
+    TRACE("  streamFormat.mSampleRate = %5.0f\n", streamFormat.mSampleRate);
 #endif
 
     /* set default output unit's input side to match output side */
     err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, size);
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitSetProperty failed\n");
+        ERROR("AudioUnitSetProperty failed\n");
         return ALC_FALSE;
     }
 
     if(device->Frequency != streamFormat.mSampleRate)
     {
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            AL_PRINT("CoreAudio does not support changing sample rates (wanted %dhz, got %dhz)\n", device->Frequency, streamFormat.mSampleRate);
+            ERROR("CoreAudio does not support changing sample rates (wanted %dhz, got %dhz)\n", device->Frequency, streamFormat.mSampleRate);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
 
         device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
@@ -257,7 +255,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtMono)
             {
-                AL_PRINT("Failed to set %s, got Mono instead\n", DevFmtChannelsString(device->FmtChans));
+                ERROR("Failed to set %s, got Mono instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtMono;
@@ -266,7 +264,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtStereo)
             {
-                AL_PRINT("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(device->FmtChans));
+                ERROR("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtStereo;
@@ -275,7 +273,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtQuad)
             {
-                AL_PRINT("Failed to set %s, got Quad instead\n", DevFmtChannelsString(device->FmtChans));
+                ERROR("Failed to set %s, got Quad instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtQuad;
@@ -284,7 +282,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtX51)
             {
-                AL_PRINT("Failed to set %s, got 5.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
+                ERROR("Failed to set %s, got 5.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtX51;
@@ -293,7 +291,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtX61)
             {
-                AL_PRINT("Failed to set %s, got 6.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
+                ERROR("Failed to set %s, got 6.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtX61;
@@ -302,13 +300,13 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
                device->FmtChans != DevFmtX71)
             {
-                AL_PRINT("Failed to set %s, got 7.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
+                ERROR("Failed to set %s, got 7.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
                 device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             }
             device->FmtChans = DevFmtX71;
             break;
         default:
-            AL_PRINT("Unhandled channel count (%d), using Stereo\n", streamFormat.mChannelsPerFrame);
+            ERROR("Unhandled channel count (%d), using Stereo\n", streamFormat.mChannelsPerFrame);
             device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             device->FmtChans = DevFmtStereo;
             streamFormat.mChannelsPerFrame = 2;
@@ -347,7 +345,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, sizeof(AudioStreamBasicDescription));
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitSetProperty failed\n");
+        ERROR("AudioUnitSetProperty failed\n");
         return ALC_FALSE;
     }
 
@@ -359,7 +357,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitSetProperty failed\n");
+        ERROR("AudioUnitSetProperty failed\n");
         return ALC_FALSE;
     }
 
@@ -374,7 +372,7 @@ static void ca_stop_playback(ALCdevice *device)
     AudioOutputUnitStop(data->audioUnit);
     err = AudioUnitUninitialize(data->audioUnit);
     if(err != noErr)
-        AL_PRINT("-- AudioUnitUninitialize failed.\n");
+        ERROR("-- AudioUnitUninitialize failed.\n");
 }
 
 static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
@@ -402,7 +400,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     comp = FindNextComponent(NULL, &desc);
     if(comp == NULL)
     {
-        AL_PRINT("FindNextComponent failed\n");
+        ERROR("FindNextComponent failed\n");
         return ALC_FALSE;
     }
 
@@ -413,7 +411,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = OpenAComponent(comp, &data->audioUnit);
     if(err != noErr)
     {
-        AL_PRINT("OpenAComponent failed\n");
+        ERROR("OpenAComponent failed\n");
         goto error;
     }
 
@@ -422,7 +420,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = AudioUnitSetProperty(data->audioUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output, 0, &enableIO, sizeof(ALuint));
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitSetProperty failed\n");
+        ERROR("AudioUnitSetProperty failed\n");
         goto error;
     }
 
@@ -431,7 +429,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = AudioUnitSetProperty(data->audioUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, 1, &enableIO, sizeof(ALuint));
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitSetProperty failed\n");
+        ERROR("AudioUnitSetProperty failed\n");
         goto error;
     }
 
@@ -440,13 +438,13 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultInputDevice, &propertySize, &inputDevice);
     if(err != noErr)
     {
-        AL_PRINT("AudioHardwareGetProperty failed\n");
+        ERROR("AudioHardwareGetProperty failed\n");
         goto error;
     }
 
     if(inputDevice == kAudioDeviceUnknown)
     {
-        AL_PRINT("No input device found\n");
+        ERROR("No input device found\n");
         goto error;
     }
 
@@ -454,7 +452,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = AudioUnitSetProperty(data->audioUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &inputDevice, sizeof(AudioDeviceID));
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitSetProperty failed\n");
+        ERROR("AudioUnitSetProperty failed\n");
         goto error;
     }
 
@@ -465,7 +463,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = AudioUnitSetProperty(data->audioUnit, kAudioOutputUnitProperty_SetInputCallback, kAudioUnitScope_Global, 0, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitSetProperty failed\n");
+        ERROR("AudioUnitSetProperty failed\n");
         goto error;
     }
 
@@ -473,7 +471,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = AudioUnitInitialize(data->audioUnit);
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitInitialize failed\n");
+        ERROR("AudioUnitInitialize failed\n");
         goto error;
     }
 
@@ -482,7 +480,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = AudioUnitGetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 1, &hardwareFormat, &propertySize);
     if(err != noErr || propertySize != sizeof(AudioStreamBasicDescription))
     {
-        AL_PRINT("AudioUnitGetProperty failed\n");
+        ERROR("AudioUnitGetProperty failed\n");
         goto error;
     }
 
@@ -503,7 +501,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
             break;
         case DevFmtByte:
         case DevFmtUShort:
-            AL_PRINT("%s samples not supported\n", DevFmtTypeString(device->FmtType));
+            ERROR("%s samples not supported\n", DevFmtTypeString(device->FmtType));
             goto error;
     }
 
@@ -521,7 +519,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
         case DevFmtX51Side:
         case DevFmtX61:
         case DevFmtX71:
-            AL_PRINT("%s not supported\n", DevFmtChannelsString(device->FmtChans));
+            ERROR("%s not supported\n", DevFmtChannelsString(device->FmtChans));
             goto error;
     }
 
@@ -549,7 +547,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, (void *)&outputFormat, sizeof(outputFormat));
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitSetProperty failed\n");
+        ERROR("AudioUnitSetProperty failed\n");
         goto error;
     }
 
@@ -558,7 +556,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Output, 0, &outputFrameCount, sizeof(outputFrameCount));
     if(err != noErr)
     {
-        AL_PRINT("AudioUnitSetProperty failed: %d\n", err);
+        ERROR("AudioUnitSetProperty failed: %d\n", err);
         goto error;
     }
 
@@ -566,7 +564,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     err = AudioConverterNew(&outputFormat, &requestedFormat, &data->audioConverter);
     if(err != noErr)
     {
-        AL_PRINT("AudioConverterNew failed: %d\n", err);
+        ERROR("AudioConverterNew failed: %d\n", err);
         goto error;
     }
 
@@ -626,7 +624,7 @@ static void ca_start_capture(ALCdevice *device)
     ca_data *data = (ca_data*)device->ExtraData;
     OSStatus err = AudioOutputUnitStart(data->audioUnit);
     if(err != noErr)
-        AL_PRINT("AudioOutputUnitStart failed\n");
+        ERROR("AudioOutputUnitStart failed\n");
 }
 
 static void ca_stop_capture(ALCdevice *device)
@@ -634,7 +632,7 @@ static void ca_stop_capture(ALCdevice *device)
     ca_data *data = (ca_data*)device->ExtraData;
     OSStatus err = AudioOutputUnitStop(data->audioUnit);
     if(err != noErr)
-        AL_PRINT("AudioOutputUnitStop failed\n");
+        ERROR("AudioOutputUnitStop failed\n");
 }
 
 static ALCuint ca_available_samples(ALCdevice *device)
@@ -672,7 +670,7 @@ static void ca_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint sampl
                                               &frameCount, list, NULL);
         if(err != noErr)
         {
-            AL_PRINT("AudioConverterFillComplexBuffer error: %d\n", err);
+            ERROR("AudioConverterFillComplexBuffer error: %d\n", err);
             alcSetError(device, ALC_INVALID_VALUE);
         }
     }

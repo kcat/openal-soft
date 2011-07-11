@@ -500,7 +500,7 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
         memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
     else
         memcpy(&EffectSlot->effect, effect, sizeof(*effect));
-    ALEffect_Update(EffectSlot->EffectState, Context, effect);
+    ALEffect_Update(EffectSlot->EffectState, Context, &EffectSlot->effect);
 }
 
 

@@ -413,6 +413,13 @@ static ALint RTPrioLevel;
 // Output Log File
 static FILE *LogFile;
 
+// Output Log Level
+#ifdef _DEBUG
+enum LogLevel LogLevel = LogWarning;
+#else
+enum LogLevel LogLevel = LogError;
+#endif
+
 // Cone scalar
 ALdouble ConeScale = 0.5;
 
@@ -528,12 +535,20 @@ static void alc_initconfig(void)
     int i;
     const char *devs, *str;
 
+    str = getenv("ALSOFT_LOGLEVEL");
+    if(str)
+    {
+        long lvl = strtol(str, NULL, 0);
+        if(lvl >= NoLog && lvl <= LogTrace)
+            LogLevel = lvl;
+    }
+
     str = getenv("ALSOFT_LOGFILE");
     if(str && str[0])
     {
         FILE *logfile = fopen(str, "wat");
         if(logfile) LogFile = logfile;
-        else AL_PRINT("Failed to open log file '%s'\n", str);
+        else ERROR("Failed to open log file '%s'\n", str);
     }
 
     ReadALConfig();
@@ -676,7 +691,7 @@ static void AppendList(const ALCchar *name, ALCchar **List, size_t *ListSize)
     temp = realloc(*List, (*ListSize) + len + 2);
     if(!temp)
     {
-        AL_PRINT("Realloc failed to add %s!\n", name);
+        ERROR("Realloc failed to add %s!\n", name);
         return;
     }
     *List = temp;
@@ -751,7 +766,7 @@ void SetRTPriority(void)
     failed = (RTPrioLevel>0);
 #endif
     if(failed)
-        AL_PRINT("Failed to set priority level for thread\n");
+        ERROR("Failed to set priority level for thread\n");
 }
 
 
@@ -1117,7 +1132,7 @@ void *GetSymbol(void *handle, const char *name)
 
     ret = (void*)GetProcAddress((HANDLE)handle, name);
     if(ret == NULL)
-        AL_PRINT("Failed to load %s\n", name);
+        ERROR("Failed to load %s\n", name);
     return ret;
 }
 
@@ -1147,7 +1162,7 @@ void *GetSymbol(void *handle, const char *name)
     sym = dlsym(handle, name);
     if((err=dlerror()) != NULL)
     {
-        AL_PRINT("Failed to load %s: %s\n", name, err);
+        ERROR("Failed to load %s: %s\n", name, err);
         sym = NULL;
     }
     return sym;
@@ -1345,7 +1360,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Flags |= DEVICE_USE_HRTF;
     if((device->Flags&DEVICE_USE_HRTF) && !IsHrtfCompatible(device))
     {
-        AL_PRINT("HRTF disabled (format is %uhz %s)\n", device->Frequency, DevFmtChannelsString(device->FmtChans));
+        ERROR("HRTF disabled (format is %uhz %s)\n", device->Frequency, DevFmtChannelsString(device->FmtChans));
         device->Flags &= ~DEVICE_USE_HRTF;
     }
 
@@ -2240,18 +2255,14 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 
     if(context->SourceMap.size > 0)
     {
-#ifdef _DEBUG
-        AL_PRINT("alcDestroyContext(): deleting %d Source(s)\n", context->SourceMap.size);
-#endif
+        ERROR("alcDestroyContext(): deleting %d Source(s)\n", context->SourceMap.size);
         ReleaseALSources(context);
     }
     ResetUIntMap(&context->SourceMap);
 
     if(context->EffectSlotMap.size > 0)
     {
-#ifdef _DEBUG
-        AL_PRINT("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->EffectSlotMap.size);
-#endif
+        ERROR("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->EffectSlotMap.size);
         ReleaseALAuxiliaryEffectSlots(context);
     }
     ResetUIntMap(&context->EffectSlotMap);
@@ -2583,7 +2594,7 @@ static void GetFormatFromString(const char *str, enum DevFmtChannels *chans, enu
         return;
     }
 
-    AL_PRINT("Unknown format: \"%s\"\n", str);
+    ERROR("Unknown format: \"%s\"\n", str);
     *chans = DevFmtStereo;
     *type = DevFmtShort;
 }
@@ -2724,9 +2735,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 
     if(pDevice->NumContexts > 0)
     {
-#ifdef _DEBUG
-        AL_PRINT("alcCloseDevice(): destroying %u Context(s)\n", pDevice->NumContexts);
-#endif
+        WARN("alcCloseDevice(): destroying %u Context(s)\n", pDevice->NumContexts);
         while(pDevice->NumContexts > 0)
             alcDestroyContext(pDevice->Contexts[0]);
     }
@@ -2734,27 +2743,21 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 
     if(pDevice->BufferMap.size > 0)
     {
-#ifdef _DEBUG
-        AL_PRINT("alcCloseDevice(): deleting %d Buffer(s)\n", pDevice->BufferMap.size);
-#endif
+        WARN("alcCloseDevice(): deleting %d Buffer(s)\n", pDevice->BufferMap.size);
         ReleaseALBuffers(pDevice);
     }
     ResetUIntMap(&pDevice->BufferMap);
 
     if(pDevice->EffectMap.size > 0)
     {
-#ifdef _DEBUG
-        AL_PRINT("alcCloseDevice(): deleting %d Effect(s)\n", pDevice->EffectMap.size);
-#endif
+        WARN("alcCloseDevice(): deleting %d Effect(s)\n", pDevice->EffectMap.size);
         ReleaseALEffects(pDevice);
     }
     ResetUIntMap(&pDevice->EffectMap);
 
     if(pDevice->FilterMap.size > 0)
     {
-#ifdef _DEBUG
-        AL_PRINT("alcCloseDevice(): deleting %d Filter(s)\n", pDevice->FilterMap.size);
-#endif
+        WARN("alcCloseDevice(): deleting %d Filter(s)\n", pDevice->FilterMap.size);
         ReleaseALFilters(pDevice);
     }
     ResetUIntMap(&pDevice->FilterMap);
@@ -2898,10 +2901,8 @@ static void ReleaseALC(void)
     free(alcCaptureDefaultDeviceSpecifier);
     alcCaptureDefaultDeviceSpecifier = NULL;
 
-#ifdef _DEBUG
     if(g_ulDeviceCount > 0)
-        AL_PRINT("ReleaseALC(): closing %u Device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
-#endif
+        WARN("ReleaseALC(): closing %u Device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
 
     while(g_pDeviceList)
     {

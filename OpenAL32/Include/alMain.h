@@ -533,6 +533,30 @@ void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);
 #define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
 
+enum LogLevel {
+    NoLog,
+    LogError,
+    LogWarning,
+    LogTrace
+};
+extern enum LogLevel LogLevel;
+
+#define TRACE(...) do {                                                       \
+    if(LogLevel >= LogTrace)                                                  \
+        AL_PRINT(__VA_ARGS__);                                                \
+} while(0)
+
+#define WARN(...) do {                                                        \
+    if(LogLevel >= LogWarning)                                                \
+        AL_PRINT(__VA_ARGS__);                                                \
+} while(0)
+
+#define ERROR(...) do {                                                       \
+    if(LogLevel >= LogError)                                                  \
+        AL_PRINT(__VA_ARGS__);                                                \
+} while(0)
+
+
 extern ALdouble ConeScale;
 extern ALdouble ZScale;
 

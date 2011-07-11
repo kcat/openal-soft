@@ -369,7 +369,7 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     if(Device->NumUpdates <= 1)
     {
         Device->NumUpdates = 1;
-        AL_PRINT("PulseAudio returned minreq > tlength/2; expect break up\n");
+        ERROR("PulseAudio returned minreq > tlength/2; expect break up\n");
     }
 
     UnlockDevice(Device);
@@ -391,7 +391,7 @@ static void context_state_callback2(pa_context *context, void *pdata) //{{{
 
     if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
-        AL_PRINT("Received context failure!\n");
+        ERROR("Received context failure!\n");
         aluHandleDisconnect(Device);
     }
     pa_threaded_mainloop_signal(data->loop, 0);
@@ -404,7 +404,7 @@ static void stream_state_callback2(pa_stream *stream, void *pdata) //{{{
 
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
-        AL_PRINT("Received stream failure!\n");
+        ERROR("Received stream failure!\n");
         aluHandleDisconnect(Device);
     }
     pa_threaded_mainloop_signal(data->loop, 0);
@@ -470,7 +470,7 @@ static void sink_info_callback(pa_context *context, const pa_sink_info *info, in
     }
 
     pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
-    AL_PRINT("Failed to find format for channel map:\n    %s\n", chanmap_str);
+    ERROR("Failed to find format for channel map:\n    %s\n", chanmap_str);
 }//}}}
 
 static void sink_device_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata) //{{{
@@ -628,7 +628,7 @@ static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
     context = pa_context_new(pa_threaded_mainloop_get_api(loop), name);
     if(!context)
     {
-        AL_PRINT("pa_context_new() failed\n");
+        ERROR("pa_context_new() failed\n");
         return NULL;
     }
 
@@ -653,7 +653,7 @@ static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
     if(err < 0)
     {
         if(!silent)
-            AL_PRINT("Context did not connect: %s\n", pa_strerror(err));
+            ERROR("Context did not connect: %s\n", pa_strerror(err));
         pa_context_unref(context);
         return NULL;
     }
@@ -672,8 +672,8 @@ static pa_stream *connect_playback_stream(ALCdevice *device,
     stream = pa_stream_new(data->context, "Playback Stream", spec, chanmap);
     if(!stream)
     {
-        AL_PRINT("pa_stream_new() failed: %s\n",
-                 pa_strerror(pa_context_errno(data->context)));
+        ERROR("pa_stream_new() failed: %s\n",
+              pa_strerror(pa_context_errno(data->context)));
         return NULL;
     }
 
@@ -681,8 +681,8 @@ static pa_stream *connect_playback_stream(ALCdevice *device,
 
     if(pa_stream_connect_playback(stream, data->device_name, attr, flags, NULL, NULL) < 0)
     {
-        AL_PRINT("Stream did not connect: %s\n",
-                 pa_strerror(pa_context_errno(data->context)));
+        ERROR("Stream did not connect: %s\n",
+              pa_strerror(pa_context_errno(data->context)));
         pa_stream_unref(stream);
         return NULL;
     }
@@ -691,8 +691,8 @@ static pa_stream *connect_playback_stream(ALCdevice *device,
     {
         if(!PA_STREAM_IS_GOOD(state))
         {
-            AL_PRINT("Stream did not get ready: %s\n",
-                     pa_strerror(pa_context_errno(data->context)));
+            ERROR("Stream did not get ready: %s\n",
+                  pa_strerror(pa_context_errno(data->context)));
             pa_stream_unref(stream);
             return NULL;
         }
@@ -762,12 +762,12 @@ static ALCboolean pulse_open(ALCdevice *device, const ALCchar *device_name) //{{
 
     if(!(data->loop = pa_threaded_mainloop_new()))
     {
-        AL_PRINT("pa_threaded_mainloop_new() failed!\n");
+        ERROR("pa_threaded_mainloop_new() failed!\n");
         goto out;
     }
     if(pa_threaded_mainloop_start(data->loop) < 0)
     {
-        AL_PRINT("pa_threaded_mainloop_start() failed\n");
+        ERROR("pa_threaded_mainloop_start() failed\n");
         goto out;
     }
 
@@ -879,7 +879,7 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
 
     if(pa_stream_is_suspended(stream))
     {
-        AL_PRINT("Device is suspended\n");
+        ERROR("Device is suspended\n");
         pa_stream_disconnect(stream);
         pa_stream_unref(stream);
         pa_threaded_mainloop_unlock(data->loop);
@@ -957,14 +957,14 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     if(pa_sample_spec_valid(&data->spec) == 0)
     {
-        AL_PRINT("Invalid sample format\n");
+        ERROR("Invalid sample format\n");
         pa_threaded_mainloop_unlock(data->loop);
         return ALC_FALSE;
     }
 
     if(!pa_channel_map_init_auto(&chanmap, data->spec.channels, PA_CHANNEL_MAP_WAVEEX))
     {
-        AL_PRINT("Couldn't build map for channel count (%d)!\n", data->spec.channels);
+        ERROR("Couldn't build map for channel count (%d)!\n", data->spec.channels);
         pa_threaded_mainloop_unlock(data->loop);
         return ALC_FALSE;
     }
@@ -985,7 +985,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         pa_operation *o;
 
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            AL_PRINT("Failed to set frequency %dhz, got %dhz instead\n", device->Frequency, data->spec.rate);
+            ERROR("Failed to set frequency %dhz, got %dhz instead\n", device->Frequency, data->spec.rate);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
 
         /* Server updated our playback rate, so modify the buffer attribs
@@ -1140,21 +1140,21 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             break;
         case DevFmtByte:
         case DevFmtUShort:
-            AL_PRINT("Capture format type %#x capture not supported on PulseAudio\n", device->FmtType);
+            ERROR("Capture format type %#x capture not supported on PulseAudio\n", device->FmtType);
             pa_threaded_mainloop_unlock(data->loop);
             goto fail;
     }
 
     if(pa_sample_spec_valid(&data->spec) == 0)
     {
-        AL_PRINT("Invalid sample format\n");
+        ERROR("Invalid sample format\n");
         pa_threaded_mainloop_unlock(data->loop);
         goto fail;
     }
 
     if(!pa_channel_map_init_auto(&chanmap, data->spec.channels, PA_CHANNEL_MAP_WAVEEX))
     {
-        AL_PRINT("Couldn't build map for channel count (%d)!\n", data->spec.channels);
+        ERROR("Couldn't build map for channel count (%d)!\n", data->spec.channels);
         pa_threaded_mainloop_unlock(data->loop);
         goto fail;
     }
@@ -1162,8 +1162,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     data->stream = pa_stream_new(data->context, "Capture Stream", &data->spec, &chanmap);
     if(!data->stream)
     {
-        AL_PRINT("pa_stream_new() failed: %s\n",
-                 pa_strerror(pa_context_errno(data->context)));
+        ERROR("pa_stream_new() failed: %s\n",
+              pa_strerror(pa_context_errno(data->context)));
 
         pa_threaded_mainloop_unlock(data->loop);
         goto fail;
@@ -1174,8 +1174,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     flags |= PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY;
     if(pa_stream_connect_record(data->stream, pulse_name, &data->attr, flags) < 0)
     {
-        AL_PRINT("Stream did not connect: %s\n",
-                 pa_strerror(pa_context_errno(data->context)));
+        ERROR("Stream did not connect: %s\n",
+              pa_strerror(pa_context_errno(data->context)));
 
         pa_stream_unref(data->stream);
         data->stream = NULL;
@@ -1188,8 +1188,8 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     {
         if(!PA_STREAM_IS_GOOD(state))
         {
-            AL_PRINT("Stream did not get ready: %s\n",
-                     pa_strerror(pa_context_errno(data->context)));
+            ERROR("Stream did not get ready: %s\n",
+                  pa_strerror(pa_context_errno(data->context)));
 
             pa_stream_unref(data->stream);
             data->stream = NULL;
@@ -1257,8 +1257,8 @@ static ALCuint pulse_available_samples(ALCdevice *device) //{{{
 
         if(pa_stream_peek(data->stream, &buf, &length) < 0)
         {
-            AL_PRINT("pa_stream_peek() failed: %s\n",
-                     pa_strerror(pa_context_errno(data->context)));
+            ERROR("pa_stream_peek() failed: %s\n",
+                  pa_strerror(pa_context_errno(data->context)));
             break;
         }
 

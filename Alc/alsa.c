@@ -282,7 +282,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
 
     card = -1;
     if((err=snd_card_next(&card)) < 0)
-        AL_PRINT("Failed to find a card: %s\n", snd_strerror(err));
+        ERROR("Failed to find a card: %s\n", snd_strerror(err));
 
     DevList = malloc(sizeof(DevMap) * 1);
     DevList[0].name = strdup("ALSA Default");
@@ -292,12 +292,12 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
         sprintf(name, "hw:%d", card);
         if((err = snd_ctl_open(&handle, name, 0)) < 0)
         {
-            AL_PRINT("control open (%i): %s\n", card, snd_strerror(err));
+            ERROR("control open (%i): %s\n", card, snd_strerror(err));
             goto next_card;
         }
         if((err = snd_ctl_card_info(handle, info)) < 0)
         {
-            AL_PRINT("control hardware info (%i): %s\n", card, snd_strerror(err));
+            ERROR("control hardware info (%i): %s\n", card, snd_strerror(err));
             snd_ctl_close(handle);
             goto next_card;
         }
@@ -309,7 +309,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
             void *temp;
 
             if(snd_ctl_pcm_next_device(handle, &dev) < 0)
-                AL_PRINT("snd_ctl_pcm_next_device failed\n");
+                ERROR("snd_ctl_pcm_next_device failed\n");
             if(dev < 0)
                 break;
 
@@ -318,7 +318,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
             snd_pcm_info_set_stream(pcminfo, stream);
             if((err = snd_ctl_pcm_info(handle, pcminfo)) < 0) {
                 if(err != -ENOENT)
-                    AL_PRINT("control digital audio info (%i): %s\n", card, snd_strerror(err));
+                    ERROR("control digital audio info (%i): %s\n", card, snd_strerror(err));
                 continue;
             }
 
@@ -339,7 +339,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
         snd_ctl_close(handle);
     next_card:
         if(snd_card_next(&card) < 0) {
-            AL_PRINT("snd_card_next failed\n");
+            ERROR("snd_card_next failed\n");
             break;
         }
     }
@@ -356,7 +356,7 @@ static int xrun_recovery(snd_pcm_t *handle, int err)
 {
     err = snd_pcm_recover(handle, err, 1);
     if(err < 0)
-        AL_PRINT("recover failed: %s\n", snd_strerror(err));
+        ERROR("recover failed: %s\n", snd_strerror(err));
     return err;
 }
 
@@ -397,7 +397,7 @@ static ALuint ALSAProc(ALvoid *ptr)
         int state = verify_state(data->pcmHandle);
         if(state < 0)
         {
-            AL_PRINT("Invalid state detected: %s\n", snd_strerror(state));
+            ERROR("Invalid state detected: %s\n", snd_strerror(state));
             aluHandleDisconnect(pDevice);
             break;
         }
@@ -405,7 +405,7 @@ static ALuint ALSAProc(ALvoid *ptr)
         avail = snd_pcm_avail_update(data->pcmHandle);
         if(avail < 0)
         {
-            AL_PRINT("available update failed: %s\n", snd_strerror(avail));
+            ERROR("available update failed: %s\n", snd_strerror(avail));
             continue;
         }
 
@@ -417,12 +417,12 @@ static ALuint ALSAProc(ALvoid *ptr)
                 err = snd_pcm_start(data->pcmHandle);
                 if(err < 0)
                 {
-                    AL_PRINT("start failed: %s\n", snd_strerror(err));
+                    ERROR("start failed: %s\n", snd_strerror(err));
                     continue;
                 }
             }
             if(snd_pcm_wait(data->pcmHandle, 1000) == 0)
-                AL_PRINT("Wait timeout... buffer size too low?\n");
+                ERROR("Wait timeout... buffer size too low?\n");
             continue;
         }
         avail -= avail%pDevice->UpdateSize;
@@ -435,7 +435,7 @@ static ALuint ALSAProc(ALvoid *ptr)
             err = snd_pcm_mmap_begin(data->pcmHandle, &areas, &offset, &frames);
             if(err < 0)
             {
-                AL_PRINT("mmap begin error: %s\n", snd_strerror(err));
+                ERROR("mmap begin error: %s\n", snd_strerror(err));
                 break;
             }
 
@@ -445,8 +445,8 @@ static ALuint ALSAProc(ALvoid *ptr)
             commitres = snd_pcm_mmap_commit(data->pcmHandle, offset, frames);
             if(commitres < 0 || (commitres-frames) != 0)
             {
-                AL_PRINT("mmap commit error: %s\n",
-                         snd_strerror(commitres >= 0 ? -EPIPE : commitres));
+                ERROR("mmap commit error: %s\n",
+                      snd_strerror(commitres >= 0 ? -EPIPE : commitres));
                 break;
             }
 
@@ -471,7 +471,7 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
         int state = verify_state(data->pcmHandle);
         if(state < 0)
         {
-            AL_PRINT("Invalid state detected: %s\n", snd_strerror(state));
+            ERROR("Invalid state detected: %s\n", snd_strerror(state));
             aluHandleDisconnect(pDevice);
             break;
         }
@@ -561,7 +561,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     if(i < 0)
     {
         free(data);
-        AL_PRINT("Could not open playback device '%s': %s\n", driver, snd_strerror(i));
+        ERROR("Could not open playback device '%s': %s\n", driver, snd_strerror(i));
         return ALC_FALSE;
     }
 
@@ -665,21 +665,21 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             else
             {
                 if((device->Flags&DEVICE_CHANNELS_REQUEST))
-                    AL_PRINT("Failed to set %s, got Mono instead\n", DevFmtChannelsString(device->FmtChans));
+                    ERROR("Failed to set %s, got Mono instead\n", DevFmtChannelsString(device->FmtChans));
                 device->FmtChans = DevFmtMono;
             }
         }
         else
         {
             if((device->Flags&DEVICE_CHANNELS_REQUEST))
-                AL_PRINT("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(device->FmtChans));
+                ERROR("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(device->FmtChans));
             device->FmtChans = DevFmtStereo;
         }
         device->Flags &= ~DEVICE_CHANNELS_REQUEST;
     }
     if(i >= 0 && (i=snd_pcm_hw_params_set_rate_resample(data->pcmHandle, p, 0)) < 0)
     {
-        AL_PRINT("Failed to disable ALSA resampler\n");
+        ERROR("Failed to disable ALSA resampler\n");
         i = 0;
     }
     /* set rate (implicitly constrains period/buffer parameters) */
@@ -702,7 +702,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         err = "get periods";
     if(i < 0)
     {
-        AL_PRINT("%s failed: %s\n", err, snd_strerror(i));
+        ERROR("%s failed: %s\n", err, snd_strerror(i));
         snd_pcm_hw_params_free(p);
         return ALC_FALSE;
     }
@@ -720,7 +720,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         err = "sw set params";
     if(i != 0)
     {
-        AL_PRINT("%s failed: %s\n", err, snd_strerror(i));
+        ERROR("%s failed: %s\n", err, snd_strerror(i));
         snd_pcm_sw_params_free(sp);
         return ALC_FALSE;
     }
@@ -730,7 +730,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     if(device->Frequency != rate)
     {
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            AL_PRINT("Failed to set %dhz, got %dhz instead\n", device->Frequency, rate);
+            ERROR("Failed to set %dhz, got %dhz instead\n", device->Frequency, rate);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
         device->Frequency = rate;
     }
@@ -746,7 +746,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         data->buffer = malloc(data->size);
         if(!data->buffer)
         {
-            AL_PRINT("buffer malloc failed\n");
+            ERROR("buffer malloc failed\n");
             return ALC_FALSE;
         }
         device->UpdateSize = periodSizeInFrames;
@@ -758,7 +758,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         i = snd_pcm_prepare(data->pcmHandle);
         if(i < 0)
         {
-            AL_PRINT("prepare error: %s\n", snd_strerror(i));
+            ERROR("prepare error: %s\n", snd_strerror(i));
             return ALC_FALSE;
         }
         device->UpdateSize = periodSizeInFrames;
@@ -767,7 +767,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     }
     if(data->thread == NULL)
     {
-        AL_PRINT("Could not create playback thread\n");
+        ERROR("Could not create playback thread\n");
         free(data->buffer);
         data->buffer = NULL;
         return ALC_FALSE;
@@ -837,7 +837,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     i = snd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
     if(i < 0)
     {
-        AL_PRINT("Could not open capture device '%s': %s\n", driver, snd_strerror(i));
+        ERROR("Could not open capture device '%s': %s\n", driver, snd_strerror(i));
         free(data);
         return ALC_FALSE;
     }
@@ -888,14 +888,14 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
         err = "set params";
     if(i < 0)
     {
-        AL_PRINT("%s failed: %s\n", err, snd_strerror(i));
+        ERROR("%s failed: %s\n", err, snd_strerror(i));
         snd_pcm_hw_params_free(p);
         goto error;
     }
 
     if((i=snd_pcm_hw_params_get_period_size(p, &bufferSizeInFrames, NULL)) < 0)
     {
-        AL_PRINT("get size failed: %s\n", snd_strerror(i));
+        ERROR("get size failed: %s\n", snd_strerror(i));
         snd_pcm_hw_params_free(p);
         goto error;
     }
@@ -907,7 +907,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     data->ring = CreateRingBuffer(frameSize, pDevice->UpdateSize*pDevice->NumUpdates);
     if(!data->ring)
     {
-        AL_PRINT("ring buffer create failed\n");
+        ERROR("ring buffer create failed\n");
         goto error;
     }
 
@@ -915,7 +915,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     data->buffer = malloc(data->size);
     if(!data->buffer)
     {
-        AL_PRINT("buffer malloc failed\n");
+        ERROR("buffer malloc failed\n");
         goto error;
     }
 
@@ -954,7 +954,7 @@ static void alsa_start_capture(ALCdevice *Device)
     err = snd_pcm_start(data->pcmHandle);
     if(err < 0)
     {
-        AL_PRINT("start failed: %s\n", snd_strerror(err));
+        ERROR("start failed: %s\n", snd_strerror(err));
         aluHandleDisconnect(Device);
     }
     else
@@ -976,7 +976,7 @@ static ALCuint alsa_available_samples(ALCdevice *Device)
     avail = (Device->Connected ? snd_pcm_avail_update(data->pcmHandle) : 0);
     if(avail < 0)
     {
-        AL_PRINT("avail update failed: %s\n", snd_strerror(avail));
+        ERROR("avail update failed: %s\n", snd_strerror(avail));
 
         if((avail=snd_pcm_recover(data->pcmHandle, avail, 1)) >= 0)
         {
@@ -987,7 +987,7 @@ static ALCuint alsa_available_samples(ALCdevice *Device)
         }
         if(avail < 0)
         {
-            AL_PRINT("restore error: %s\n", snd_strerror(avail));
+            ERROR("restore error: %s\n", snd_strerror(avail));
             aluHandleDisconnect(Device);
         }
     }
@@ -1001,7 +1001,7 @@ static ALCuint alsa_available_samples(ALCdevice *Device)
         amt = snd_pcm_readi(data->pcmHandle, data->buffer, amt);
         if(amt < 0)
         {
-            AL_PRINT("read error: %s\n", snd_strerror(amt));
+            ERROR("read error: %s\n", snd_strerror(amt));
 
             if(amt == -EAGAIN)
                 continue;
@@ -1014,7 +1014,7 @@ static ALCuint alsa_available_samples(ALCdevice *Device)
             }
             if(amt < 0)
             {
-                AL_PRINT("restore error: %s\n", snd_strerror(amt));
+                ERROR("restore error: %s\n", snd_strerror(amt));
                 aluHandleDisconnect(Device);
                 break;
             }

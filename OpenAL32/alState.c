@@ -282,6 +282,19 @@ AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname,ALboolean *data)
 {
     ALCcontext *Context;
 
+    if(data)
+    {
+        switch(pname)
+        {
+            case AL_DOPPLER_FACTOR:
+            case AL_DOPPLER_VELOCITY:
+            case AL_DISTANCE_MODEL:
+            case AL_SPEED_OF_SOUND:
+                *data = alGetBoolean(pname);
+                return;
+        }
+    }
+
     Context = GetLockedContext();
     if(!Context) return;
 
@@ -289,22 +302,6 @@ AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname,ALboolean *data)
     {
         switch(pname)
         {
-            case AL_DOPPLER_FACTOR:
-                *data = (ALboolean)((Context->DopplerFactor != 0.0f) ? AL_TRUE : AL_FALSE);
-                break;
-
-            case AL_DOPPLER_VELOCITY:
-                *data = (ALboolean)((Context->DopplerVelocity != 0.0f) ? AL_TRUE : AL_FALSE);
-                break;
-
-            case AL_DISTANCE_MODEL:
-                *data = (ALboolean)((Context->DistanceModel == AL_INVERSE_DISTANCE_CLAMPED) ? AL_TRUE : AL_FALSE);
-                break;
-
-            case AL_SPEED_OF_SOUND:
-                *data = (ALboolean)((Context->flSpeedOfSound != 0.0f) ? AL_TRUE : AL_FALSE);
-                break;
-
             default:
                 alSetError(Context, AL_INVALID_ENUM);
                 break;
@@ -323,6 +320,19 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname,ALdouble *data)
 {
     ALCcontext *Context;
 
+    if(data)
+    {
+        switch(pname)
+        {
+            case AL_DOPPLER_FACTOR:
+            case AL_DOPPLER_VELOCITY:
+            case AL_DISTANCE_MODEL:
+            case AL_SPEED_OF_SOUND:
+                *data = alGetDouble(pname);
+                return;
+        }
+    }
+
     Context = GetLockedContext();
     if(!Context) return;
 
@@ -330,22 +340,6 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname,ALdouble *data)
     {
         switch(pname)
         {
-            case AL_DOPPLER_FACTOR:
-                *data = (double)Context->DopplerFactor;
-                break;
-
-            case AL_DOPPLER_VELOCITY:
-                *data = (double)Context->DopplerVelocity;
-                break;
-
-            case AL_DISTANCE_MODEL:
-                *data = (double)Context->DistanceModel;
-                break;
-
-            case AL_SPEED_OF_SOUND:
-                *data = (double)Context->flSpeedOfSound;
-                break;
-
             default:
                 alSetError(Context, AL_INVALID_ENUM);
                 break;
@@ -364,6 +358,19 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname,ALfloat *data)
 {
     ALCcontext *Context;
 
+    if(data)
+    {
+        switch(pname)
+        {
+            case AL_DOPPLER_FACTOR:
+            case AL_DOPPLER_VELOCITY:
+            case AL_DISTANCE_MODEL:
+            case AL_SPEED_OF_SOUND:
+                *data = alGetFloat(pname);
+                return;
+        }
+    }
+
     Context = GetLockedContext();
     if(!Context) return;
 
@@ -371,22 +378,6 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname,ALfloat *data)
     {
         switch(pname)
         {
-            case AL_DOPPLER_FACTOR:
-                *data = Context->DopplerFactor;
-                break;
-
-            case AL_DOPPLER_VELOCITY:
-                *data = Context->DopplerVelocity;
-                break;
-
-            case AL_DISTANCE_MODEL:
-                *data = (float)Context->DistanceModel;
-                break;
-
-            case AL_SPEED_OF_SOUND:
-                *data = Context->flSpeedOfSound;
-                break;
-
             default:
                 alSetError(Context, AL_INVALID_ENUM);
                 break;
@@ -405,6 +396,19 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname,ALint *data)
 {
     ALCcontext *Context;
 
+    if(data)
+    {
+        switch(pname)
+        {
+            case AL_DOPPLER_FACTOR:
+            case AL_DOPPLER_VELOCITY:
+            case AL_DISTANCE_MODEL:
+            case AL_SPEED_OF_SOUND:
+                *data = alGetInteger(pname);
+                return;
+        }
+    }
+
     Context = GetLockedContext();
     if(!Context) return;
 
@@ -412,22 +416,6 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname,ALint *data)
     {
         switch(pname)
         {
-            case AL_DOPPLER_FACTOR:
-                *data = (ALint)Context->DopplerFactor;
-                break;
-
-            case AL_DOPPLER_VELOCITY:
-                *data = (ALint)Context->DopplerVelocity;
-                break;
-
-            case AL_DISTANCE_MODEL:
-                *data = (ALint)Context->DistanceModel;
-                break;
-
-            case AL_SPEED_OF_SOUND:
-                *data = (ALint)Context->flSpeedOfSound;
-                break;
-
             default:
                 alSetError(Context, AL_INVALID_ENUM);
                 break;

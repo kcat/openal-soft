@@ -81,6 +81,8 @@ static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *
             out->dwChannelMask = MONO;
         else if(out->Format.nChannels == 2)
             out->dwChannelMask = STEREO;
+        else
+            ERROR("Unhandled PCM channel count: %d\n", out->Format.nChannels);
         out->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
     }
     else if(in->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
@@ -92,11 +94,13 @@ static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *
             out->dwChannelMask = MONO;
         else if(out->Format.nChannels == 2)
             out->dwChannelMask = STEREO;
+        else
+            ERROR("Unhandled IEEE float channel count: %d\n", out->Format.nChannels);
         out->SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
     }
     else
     {
-        AL_PRINT("Unhandled format tag: 0x%04x\n", in->wFormatTag);
+        ERROR("Unhandled format tag: 0x%04x\n", in->wFormatTag);
         return ALC_FALSE;
     }
     return ALC_TRUE;
@@ -110,14 +114,22 @@ static void *MMDevApiLoad(void)
         void *mme = NULL;
         HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
         if(FAILED(hr))
+        {
+            WARN("Failed to initialize apartment-threaded COM: 0x%08lx\n", hr);
             hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+            if(FAILED(hr))
+                WARN("Failed to initialize multi-threaded COM: 0x%08lx\n", hr);
+        }
         if(SUCCEEDED(hr))
         {
             hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &mme);
-            if(FAILED(hr))
-                CoUninitialize();
-            else
+            if(SUCCEEDED(hr))
                 Enumerator = mme;
+            else
+            {
+                WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
+                CoUninitialize();
+            }
         }
     }
     return Enumerator;
@@ -139,7 +151,7 @@ static ALuint MMDevApiProc(ALvoid *ptr)
     hr = IAudioClient_GetService(data->client, &IID_IAudioRenderClient, &render.ptr);
     if(FAILED(hr))
     {
-        AL_PRINT("Failed to get AudioRenderClient service: 0x%08lx\n", hr);
+        ERROR("Failed to get AudioRenderClient service: 0x%08lx\n", hr);
         aluHandleDisconnect(device);
         return 0;
     }
@@ -151,7 +163,7 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         hr = IAudioClient_GetCurrentPadding(data->client, &written);
         if(FAILED(hr))
         {
-            AL_PRINT("Failed to get padding: 0x%08lx\n", hr);
+            ERROR("Failed to get padding: 0x%08lx\n", hr);
             aluHandleDisconnect(device);
             break;
         }
@@ -172,7 +184,7 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         }
         if(FAILED(hr))
         {
-            AL_PRINT("Failed to buffer data: 0x%08lx\n", hr);
+            ERROR("Failed to buffer data: 0x%08lx\n", hr);
             aluHandleDisconnect(device);
             break;
         }
@@ -217,7 +229,7 @@ static ALCboolean MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceN
         data->mmdev = NULL;
         free(data);
 
-        AL_PRINT("Device init failed: 0x%08lx\n", hr);
+        ERROR("Device init failed: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
     data->client = client;
@@ -253,7 +265,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     hr = IAudioClient_GetMixFormat(data->client, &wfx);
     if(FAILED(hr))
     {
-        AL_PRINT("Failed to get mix format: 0x%08lx\n", hr);
+        ERROR("Failed to get mix format: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 
@@ -284,7 +296,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         else if(OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)
             device->FmtChans = DevFmtX71;
         else
-            AL_PRINT("Unhandled channel config: %d -- 0x%08x\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
+            ERROR("Unhandled channel config: %d -- 0x%08x\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
     }
 
     switch(device->FmtChans)
@@ -351,10 +363,13 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
 
     hr = IAudioClient_IsFormatSupported(data->client, AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
     if(FAILED(hr))
+    {
+        ERROR("Failed to check format support: 0x%08lx\n", hr);
         hr = IAudioClient_GetMixFormat(data->client, &wfx);
+    }
     if(FAILED(hr))
     {
-        AL_PRINT("Failed to find a supported format\n");
+        ERROR("Failed to find a supported format: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 
@@ -371,7 +386,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         if(device->Frequency != OutputType.Format.nSamplesPerSec)
         {
             if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-                AL_PRINT("Failed to set %dhz, got %dhz instead\n", device->Frequency, OutputType.Format.nSamplesPerSec);
+                ERROR("Failed to set %dhz, got %dhz instead\n", device->Frequency, OutputType.Format.nSamplesPerSec);
             device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
             device->Frequency = OutputType.Format.nSamplesPerSec;
         }
@@ -385,7 +400,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
              (device->FmtChans == DevFmtX71 && OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)))
         {
             if((device->Flags&DEVICE_CHANNELS_REQUEST))
-                AL_PRINT("Failed to set %s, got %d channels (0x%08x) instead\n", DevFmtChannelsString(device->FmtChans), OutputType.Format.nChannels, OutputType.dwChannelMask);
+                ERROR("Failed to set %s, got %d channels (0x%08x) instead\n", DevFmtChannelsString(device->FmtChans), OutputType.Format.nChannels, OutputType.dwChannelMask);
             device->Flags &= ~DEVICE_CHANNELS_REQUEST;
 
             if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
@@ -404,7 +419,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
                 device->FmtChans = DevFmtX71;
             else
             {
-                AL_PRINT("Unhandled extensible channels: %d -- 0x%08x\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
+                ERROR("Unhandled extensible channels: %d -- 0x%08x\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
                 device->FmtChans = DevFmtStereo;
                 OutputType.Format.nChannels = 2;
                 OutputType.dwChannelMask = STEREO;
@@ -419,7 +434,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
                !((device->FmtType == DevFmtUByte && OutputType.Format.wBitsPerSample == 8) ||
                  (device->FmtType == DevFmtShort && OutputType.Format.wBitsPerSample == 16)))
             {
-                AL_PRINT("Failed to set %s, got %d/%d-bit instead\n", DevFmtTypeString(device->FmtType), OutputType.Samples.wValidBitsPerSample, OutputType.Format.wBitsPerSample);
+                ERROR("Failed to set %s samples, got %d/%d-bit instead\n", DevFmtTypeString(device->FmtType), OutputType.Samples.wValidBitsPerSample, OutputType.Format.wBitsPerSample);
                 if(OutputType.Format.wBitsPerSample == 8)
                     device->FmtType = DevFmtUByte;
                 else if(OutputType.Format.wBitsPerSample == 16)
@@ -439,7 +454,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
             if(OutputType.Samples.wValidBitsPerSample != OutputType.Format.wBitsPerSample ||
                !((device->FmtType == DevFmtFloat && OutputType.Format.wBitsPerSample == 32)))
             {
-                AL_PRINT("Failed to set %s, got %d/%d-bit instead\n", DevFmtTypeString(device->FmtType), OutputType.Samples.wValidBitsPerSample, OutputType.Format.wBitsPerSample);
+                ERROR("Failed to set %s samples, got %d/%d-bit instead\n", DevFmtTypeString(device->FmtType), OutputType.Samples.wValidBitsPerSample, OutputType.Format.wBitsPerSample);
                 if(OutputType.Format.wBitsPerSample != 32)
                 {
                     device->FmtType = DevFmtFloat;
@@ -450,7 +465,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         }
         else
         {
-            AL_PRINT("Unhandled format sub-type\n");
+            ERROR("Unhandled format sub-type\n");
             device->FmtType = DevFmtShort;
             OutputType.Format.wBitsPerSample = 16;
             OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
@@ -467,7 +482,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
                                  0, &OutputType.Format, NULL);
     if(FAILED(hr))
     {
-        AL_PRINT("Failed to initialize audio client: 0x%08lx\n", hr);
+        ERROR("Failed to initialize audio client: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 
@@ -476,7 +491,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         hr = IAudioClient_GetBufferSize(data->client, &buffer_len);
     if(FAILED(hr))
     {
-        AL_PRINT("Failed to get audio buffer info: 0x%08lx\n", hr);
+        ERROR("Failed to get audio buffer info: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 
@@ -485,14 +500,14 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     if(device->NumUpdates <= 1)
     {
         device->NumUpdates = 1;
-        AL_PRINT("Audio client returned default_period > buffer_len/2; expect break up\n");
+        ERROR("Audio client returned default_period > buffer_len/2; expect break up\n");
     }
     device->UpdateSize = buffer_len / device->NumUpdates;
 
     hr = IAudioClient_Start(data->client);
     if(FAILED(hr))
     {
-        AL_PRINT("Failed to start audio client: 0x%08lx\n", hr);
+        ERROR("Failed to start audio client: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 
@@ -500,7 +515,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     if(!data->thread)
     {
         IAudioClient_Stop(data->client);
-        AL_PRINT("Failed to start thread\n");
+        ERROR("Failed to start thread\n");
         return ALC_FALSE;
     }
 

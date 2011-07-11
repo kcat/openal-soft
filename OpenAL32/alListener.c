@@ -197,20 +197,14 @@ AL_API void AL_APIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
     ALCcontext *pContext;
     ALfloat flValues[6];
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
-
     if(plValues)
     {
         switch(eParam)
         {
             case AL_POSITION:
             case AL_VELOCITY:
-                flValues[0] = (ALfloat)plValues[0];
-                flValues[1] = (ALfloat)plValues[1];
-                flValues[2] = (ALfloat)plValues[2];
-                alListenerfv(eParam, flValues);
-                break;
+                alListener3f(eParam, plValues[0], plValues[1], plValues[2]);
+                return;
 
             case AL_ORIENTATION:
                 flValues[0] = (ALfloat)plValues[0];
@@ -220,8 +214,17 @@ AL_API void AL_APIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
                 flValues[4] = (ALfloat)plValues[4];
                 flValues[5] = (ALfloat)plValues[5];
                 alListenerfv(eParam, flValues);
-                break;
+                return;
+        }
+    }
 
+    pContext = GetLockedContext();
+    if(!pContext) return;
+
+    if(plValues)
+    {
+        switch(eParam)
+        {
             default:
                 alSetError(pContext, AL_INVALID_ENUM);
                 break;

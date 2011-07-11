@@ -73,7 +73,7 @@ static ALuint SolarisProc(ALvoid *ptr)
             {
                 if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
                 {
-                    AL_PRINT("write failed: %s\n", strerror(errno));
+                    ERROR("write failed: %s\n", strerror(errno));
                     aluHandleDisconnect(pDevice);
                     break;
                 }
@@ -111,7 +111,7 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
     if(data->fd == -1)
     {
         free(data);
-        AL_PRINT("Could not open %s: %s\n", driver, strerror(errno));
+        ERROR("Could not open %s: %s\n", driver, strerror(errno));
         return ALC_FALSE;
     }
 
@@ -170,13 +170,13 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
 
     if(ioctl(data->fd, AUDIO_SETINFO, &info) < 0)
     {
-        AL_PRINT("ioctl failed: %s\n", strerror(errno));
+        ERROR("ioctl failed: %s\n", strerror(errno));
         return ALC_FALSE;
     }
 
     if(ChannelsFromDevFmt(device->FmtChans) != info.play.channels)
     {
-        AL_PRINT("Could not set %d channels, got %d instead\n", ChannelsFromDevFmt(device->FmtChans), info.play.channels);
+        ERROR("Could not set %d channels, got %d instead\n", ChannelsFromDevFmt(device->FmtChans), info.play.channels);
         return ALC_FALSE;
     }
 
@@ -187,15 +187,15 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
          (info.play.precision == 16 && info.play.encoding == AUDIO_ENCODING_LINEAR &&
           device->FmtType == DevFmtShort)))
     {
-        AL_PRINT("Could not set %#x sample type, got %d (%#x)\n",
-                 device->FmtType, info.play.precision, info.play.encoding);
+        ERROR("Could not set %#x sample type, got %d (%#x)\n",
+              device->FmtType, info.play.precision, info.play.encoding);
         return ALC_FALSE;
     }
 
     if(device->Frequency != info.play.sample_rate)
     {
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            AL_PRINT("Failed to set requested frequency %dhz, got %dhz instead\n", device->Frequency, info.play.sample_rate);
+            ERROR("Failed to set requested frequency %dhz, got %dhz instead\n", device->Frequency, info.play.sample_rate);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
         device->Frequency = info.play.sample_rate;
     }
@@ -230,7 +230,7 @@ static void solaris_stop_playback(ALCdevice *device)
 
     data->killNow = 0;
     if(ioctl(data->fd, AUDIO_DRAIN) < 0)
-        AL_PRINT("Error draining device: %s\n", strerror(errno));
+        ERROR("Error draining device: %s\n", strerror(errno));
 
     free(data->mix_data);
     data->mix_data = NULL;

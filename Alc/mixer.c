@@ -168,7 +168,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
                                                                               \
     for(out = 0;out < Device->NumAuxSends;out++)                              \
     {                                                                         \
-        ALeffectslot *Slot = Source->Params.Send[i].Slot;                     \
+        ALeffectslot *Slot = Source->Params.Send[out].Slot;                   \
         ALfloat  WetSend;                                                     \
         ALfloat *RESTRICT WetBuffer;                                          \
         ALfloat *RESTRICT WetClickRemoval;                                    \
@@ -308,7 +308,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
                                                                               \
     for(out = 0;out < Device->NumAuxSends;out++)                              \
     {                                                                         \
-        ALeffectslot *Slot = Source->Params.Send[i].Slot;                     \
+        ALeffectslot *Slot = Source->Params.Send[out].Slot;                   \
         ALfloat  WetSend;                                                     \
         ALfloat *WetBuffer;                                                   \
         ALfloat *WetClickRemoval;                                             \

@@ -417,7 +417,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         {
             RoomRolloff[i] = 0.0f;
             DecayDistance[i] = 0.0f;
-            RoomAirAbsorption[i] = 0.0f;
+            RoomAirAbsorption[i] = 1.0f;
         }
         else if(Slot->AuxSendAuto)
         {
@@ -432,7 +432,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             else
             {
                 DecayDistance[i] = 0.0f;
-                RoomAirAbsorption[i] = 0.0f;
+                RoomAirAbsorption[i] = 1.0f;
             }
         }
         else

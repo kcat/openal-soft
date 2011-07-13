@@ -1670,7 +1670,9 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 
     UnlockLists();
 
+    LockDevice(pDevice);
     ALCdevice_CloseCapture(pDevice);
+    UnlockDevice(pDevice);
 
     free(pDevice->szDeviceName);
     pDevice->szDeviceName = NULL;
@@ -1686,30 +1688,48 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 {
     LockLists();
     if(!IsDevice(device) || !device->IsCaptureDevice)
+    {
         alcSetError(device, ALC_INVALID_DEVICE);
-    else if(device->Connected)
-        ALCdevice_StartCapture(device);
+        UnlockLists();
+        return;
+    }
+    LockDevice(device);
     UnlockLists();
+    if(device->Connected)
+        ALCdevice_StartCapture(device);
+    UnlockDevice(device);
 }
 
 ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 {
     LockLists();
     if(!IsDevice(device) || !device->IsCaptureDevice)
+    {
         alcSetError(device, ALC_INVALID_DEVICE);
-    else
-        ALCdevice_StopCapture(device);
+        UnlockLists();
+        return;
+    }
+    LockDevice(device);
     UnlockLists();
+    if(device->Connected)
+        ALCdevice_StopCapture(device);
+    UnlockDevice(device);
 }
 
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
     LockLists();
     if(!IsDevice(device) || !device->IsCaptureDevice)
+    {
         alcSetError(device, ALC_INVALID_DEVICE);
-    else
-        ALCdevice_CaptureSamples(device, buffer, samples);
+        UnlockLists();
+        return;
+    }
+    LockDevice(device);
     UnlockLists();
+    if(device->Connected)
+        ALCdevice_CaptureSamples(device, buffer, samples);
+    UnlockDevice(device);
 }
 
 /*
@@ -1931,7 +1951,9 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
         switch(param)
         {
             case ALC_CAPTURE_SAMPLES:
+                LockDevice(device);
                 *data = ALCdevice_AvailableSamples(device);
+                UnlockDevice(device);
                 break;
 
             case ALC_CONNECTED:

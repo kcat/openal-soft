@@ -11,11 +11,11 @@ SET(CMAKE_SYSTEM_NAME Windows)
 SET(CMAKE_C_COMPILER "${HOST}-gcc")
 SET(CMAKE_CXX_COMPILER "${HOST}-g++")
 
-# here is where stuff gets installed to
-SET(CMAKE_INSTALL_PREFIX "/usr/${HOST}/usr" CACHE STRING "Install path prefix, prepended onto install directories." FORCE)
-
 # here is the target environment located
-SET(CMAKE_FIND_ROOT_PATH "/usr/${HOST}/usr")
+SET(CMAKE_FIND_ROOT_PATH "/usr/${HOST}")
+
+# here is where stuff gets installed to
+SET(CMAKE_INSTALL_PREFIX "${CMAKE_FIND_ROOT_PATH}/usr" CACHE STRING "Install path prefix, prepended onto install directories." FORCE)
 
 # adjust the default behaviour of the FIND_XXX() commands:
 # search headers and libraries in the target environment, search 

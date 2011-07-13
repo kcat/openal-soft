@@ -548,7 +548,7 @@ static void alc_initconfig(void)
     {
         FILE *logfile = fopen(str, "wat");
         if(logfile) LogFile = logfile;
-        else ERROR("Failed to open log file '%s'\n", str);
+        else ERR("Failed to open log file '%s'\n", str);
     }
 
     ReadALConfig();
@@ -691,7 +691,7 @@ static void AppendList(const ALCchar *name, ALCchar **List, size_t *ListSize)
     temp = realloc(*List, (*ListSize) + len + 2);
     if(!temp)
     {
-        ERROR("Realloc failed to add %s!\n", name);
+        ERR("Realloc failed to add %s!\n", name);
         return;
     }
     *List = temp;
@@ -766,7 +766,7 @@ void SetRTPriority(void)
     failed = (RTPrioLevel>0);
 #endif
     if(failed)
-        ERROR("Failed to set priority level for thread\n");
+        ERR("Failed to set priority level for thread\n");
 }
 
 
@@ -1132,7 +1132,7 @@ void *GetSymbol(void *handle, const char *name)
 
     ret = (void*)GetProcAddress((HANDLE)handle, name);
     if(ret == NULL)
-        ERROR("Failed to load %s\n", name);
+        ERR("Failed to load %s\n", name);
     return ret;
 }
 
@@ -1162,7 +1162,7 @@ void *GetSymbol(void *handle, const char *name)
     sym = dlsym(handle, name);
     if((err=dlerror()) != NULL)
     {
-        ERROR("Failed to load %s: %s\n", name, err);
+        ERR("Failed to load %s: %s\n", name, err);
         sym = NULL;
     }
     return sym;
@@ -1372,7 +1372,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Flags |= DEVICE_USE_HRTF;
     if((device->Flags&DEVICE_USE_HRTF) && !IsHrtfCompatible(device))
     {
-        ERROR("HRTF disabled (format is %uhz %s)\n", device->Frequency, DevFmtChannelsString(device->FmtChans));
+        ERR("HRTF disabled (format is %uhz %s)\n", device->Frequency, DevFmtChannelsString(device->FmtChans));
         device->Flags &= ~DEVICE_USE_HRTF;
     }
     else
@@ -2296,14 +2296,14 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 
     if(context->SourceMap.size > 0)
     {
-        ERROR("alcDestroyContext(): deleting %d Source(s)\n", context->SourceMap.size);
+        ERR("alcDestroyContext(): deleting %d Source(s)\n", context->SourceMap.size);
         ReleaseALSources(context);
     }
     ResetUIntMap(&context->SourceMap);
 
     if(context->EffectSlotMap.size > 0)
     {
-        ERROR("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->EffectSlotMap.size);
+        ERR("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->EffectSlotMap.size);
         ReleaseALAuxiliaryEffectSlots(context);
     }
     ResetUIntMap(&context->EffectSlotMap);
@@ -2635,7 +2635,7 @@ static void GetFormatFromString(const char *str, enum DevFmtChannels *chans, enu
         return;
     }
 
-    ERROR("Unknown format: \"%s\"\n", str);
+    ERR("Unknown format: \"%s\"\n", str);
     *chans = DevFmtStereo;
     *type = DevFmtShort;
 }

@@ -148,7 +148,7 @@ void InitHrtf(void)
     {
         f = fopen(str, "rb");
         if(f == NULL)
-            ERROR("Could not open %s\n", str);
+            ERR("Could not open %s\n", str);
     }
     if(f != NULL)
     {
@@ -174,13 +174,13 @@ void InitHrtf(void)
             newdata.delays[i] = val;
             if(val > maxDelay)
             {
-                ERROR("Invalid delay at idx %zu: %u (max: %u), in %s\n", i, val, maxDelay, str);
+                ERR("Invalid delay at idx %zu: %u (max: %u), in %s\n", i, val, maxDelay, str);
                 failed = AL_TRUE;
             }
         }
         if(feof(f))
         {
-            ERROR("Premature end of data while reading %s\n", str);
+            ERR("Premature end of data while reading %s\n", str);
             failed = AL_TRUE;
         }
 

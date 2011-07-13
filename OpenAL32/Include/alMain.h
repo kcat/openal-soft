@@ -552,7 +552,7 @@ extern enum LogLevel LogLevel;
         AL_PRINT(__VA_ARGS__);                                                \
 } while(0)
 
-#define ERROR(...) do {                                                       \
+#define ERR(...) do {                                                         \
     if(LogLevel >= LogError)                                                  \
         AL_PRINT(__VA_ARGS__);                                                \
 } while(0)

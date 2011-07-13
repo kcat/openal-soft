@@ -98,7 +98,7 @@ static ALuint OSSProc(ALvoid *ptr)
             {
                 if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
                 {
-                    ERROR("write failed: %s\n", strerror(errno));
+                    ERR("write failed: %s\n", strerror(errno));
                     aluHandleDisconnect(pDevice);
                     break;
                 }
@@ -131,7 +131,7 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
         amt = read(data->fd, data->mix_data, data->data_size);
         if(amt < 0)
         {
-            ERROR("read failed: %s\n", strerror(errno));
+            ERR("read failed: %s\n", strerror(errno));
             aluHandleDisconnect(pDevice);
             break;
         }
@@ -166,7 +166,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     if(data->fd == -1)
     {
         free(data);
-        ERROR("Could not open %s: %s\n", driver, strerror(errno));
+        ERR("Could not open %s: %s\n", driver, strerror(errno));
         return ALC_FALSE;
     }
 
@@ -243,14 +243,14 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     if(0)
     {
     err:
-        ERROR("%s failed: %s\n", err, strerror(errno));
+        ERR("%s failed: %s\n", err, strerror(errno));
         return ALC_FALSE;
     }
 #undef CHECKERR
 
     if((int)ChannelsFromDevFmt(device->FmtChans) != numChannels)
     {
-        ERROR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(device->FmtChans), numChannels);
+        ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(device->FmtChans), numChannels);
         return ALC_FALSE;
     }
 
@@ -258,14 +258,14 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
          (ossFormat == AFMT_U8 && device->FmtType == DevFmtUByte) ||
          (ossFormat == AFMT_S16_NE && device->FmtType == DevFmtShort)))
     {
-        ERROR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(device->FmtType), ossFormat);
+        ERR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(device->FmtType), ossFormat);
         return ALC_FALSE;
     }
 
     if(device->Frequency != (ALuint)ossSpeed)
     {
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            ERROR("Failed to set %dhz, got %dhz instead\n", device->Frequency, ossSpeed);
+            ERR("Failed to set %dhz, got %dhz instead\n", device->Frequency, ossSpeed);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
         device->Frequency = ossSpeed;
     }
@@ -301,7 +301,7 @@ static void oss_stop_playback(ALCdevice *device)
 
     data->killNow = 0;
     if(ioctl(data->fd, SNDCTL_DSP_RESET) != 0)
-        ERROR("Error resetting device: %s\n", strerror(errno));
+        ERR("Error resetting device: %s\n", strerror(errno));
 
     free(data->mix_data);
     data->mix_data = NULL;
@@ -336,7 +336,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     if(data->fd == -1)
     {
         free(data);
-        ERROR("Could not open %s: %s\n", driver, strerror(errno));
+        ERR("Could not open %s: %s\n", driver, strerror(errno));
         return ALC_FALSE;
     }
 
@@ -354,7 +354,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         case DevFmtUShort:
         case DevFmtFloat:
             free(data);
-            ERROR("%s capture samples not supported on OSS\n", DevFmtTypeString(device->FmtType));
+            ERR("%s capture samples not supported on OSS\n", DevFmtTypeString(device->FmtType));
             return ALC_FALSE;
     }
 
@@ -382,7 +382,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     if(0)
     {
     err:
-        ERROR("%s failed: %s\n", err, strerror(errno));
+        ERR("%s failed: %s\n", err, strerror(errno));
         close(data->fd);
         free(data);
         return ALC_FALSE;
@@ -391,7 +391,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
 
     if((int)ChannelsFromDevFmt(device->FmtChans) != numChannels)
     {
-        ERROR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(device->FmtChans), numChannels);
+        ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(device->FmtChans), numChannels);
         close(data->fd);
         free(data);
         return ALC_FALSE;
@@ -401,7 +401,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
          (ossFormat == AFMT_U8 && device->FmtType == DevFmtUByte) ||
          (ossFormat == AFMT_S16_NE && device->FmtType == DevFmtShort)))
     {
-        ERROR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(device->FmtType), ossFormat);
+        ERR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(device->FmtType), ossFormat);
         close(data->fd);
         free(data);
         return ALC_FALSE;
@@ -410,7 +410,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     data->ring = CreateRingBuffer(frameSize, device->UpdateSize * device->NumUpdates);
     if(!data->ring)
     {
-        ERROR("Ring buffer create failed\n");
+        ERR("Ring buffer create failed\n");
         close(data->fd);
         free(data);
         return ALC_FALSE;

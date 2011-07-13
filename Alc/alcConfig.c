@@ -81,7 +81,7 @@ static void LoadConfigFromFile(FILE *f)
 
             if(!buffer[i])
             {
-                 ERROR("config parse error: bad line \"%s\"\n", buffer);
+                 ERR("config parse error: bad line \"%s\"\n", buffer);
                  continue;
             }
             buffer[i] = 0;
@@ -112,7 +112,7 @@ static void LoadConfigFromFile(FILE *f)
                 nextBlock = realloc(cfgBlocks, (cfgCount+1)*sizeof(ConfigBlock));
                 if(!nextBlock)
                 {
-                     ERROR("config parse error: error reallocating config blocks\n");
+                     ERR("config parse error: error reallocating config blocks\n");
                      continue;
                 }
                 cfgBlocks = nextBlock;
@@ -137,7 +137,7 @@ static void LoadConfigFromFile(FILE *f)
 
         if(!buffer[i] || buffer[i] == '#' || i == 0)
         {
-            ERROR("config parse error: malformed option line: \"%s\"\n", buffer);
+            ERR("config parse error: malformed option line: \"%s\"\n", buffer);
             continue;
         }
 
@@ -150,7 +150,7 @@ static void LoadConfigFromFile(FILE *f)
                 i++;
             if(buffer[i] != '=')
             {
-                ERROR("config parse error: option without a value: \"%s\"\n", buffer);
+                ERR("config parse error: option without a value: \"%s\"\n", buffer);
                 continue;
             }
         }
@@ -174,7 +174,7 @@ static void LoadConfigFromFile(FILE *f)
             ent = realloc(curBlock->entries, (curBlock->entryCount+1)*sizeof(ConfigEntry));
             if(!ent)
             {
-                 ERROR("config parse error: error reallocating config entries\n");
+                 ERR("config parse error: error reallocating config entries\n");
                  continue;
             }
             curBlock->entries = ent;

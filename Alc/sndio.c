@@ -151,7 +151,7 @@ static ALuint sndio_proc(ALvoid *ptr)
             wrote = sio_write(data->sndHandle, WritePtr, len);
             if(wrote == 0)
             {
-                ERROR("sio_write failed\n");
+                ERR("sio_write failed\n");
                 aluHandleDisconnect(device);
                 break;
             }
@@ -185,7 +185,7 @@ static ALCboolean sndio_open_playback(ALCdevice *device, const ALCchar *deviceNa
     if(data->sndHandle == NULL)
     {
         free(data);
-        ERROR("Could not open device\n");
+        ERR("Could not open device\n");
         return ALC_FALSE;
     }
 
@@ -246,14 +246,14 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
 
     if(!sio_setpar(data->sndHandle, &par) || !sio_getpar(data->sndHandle, &par))
     {
-        ERROR("Failed to set device parameters\n");
+        ERR("Failed to set device parameters\n");
         return ALC_FALSE;
     }
 
     if(par.rate != device->Frequency)
     {
         if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            ERROR("Failed to set frequency %uhz, got %uhz instead\n", device->Frequency, par.rate);
+            ERR("Failed to set frequency %uhz, got %uhz instead\n", device->Frequency, par.rate);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
         device->Frequency = par.rate;
     }
@@ -262,18 +262,18 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
     {
         if(par.pchan != 1 && par.pchan != 2)
         {
-            ERROR("Unhandled channel count: %u\n", par.pchan);
+            ERR("Unhandled channel count: %u\n", par.pchan);
             return ALC_FALSE;
         }
         if((device->Flags&DEVICE_CHANNELS_REQUEST))
-            ERROR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans), par.pchan);
+            ERR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans), par.pchan);
         device->Flags &= ~DEVICE_CHANNELS_REQUEST;
         device->FmtChans = ((par.pchan==1) ? DevFmtMono : DevFmtStereo);
     }
 
     if(par.bits != par.bps*8)
     {
-        ERROR("Padded samples not supported (%u of %u bits)\n", par.bits, par.bps*8);
+        ERR("Padded samples not supported (%u of %u bits)\n", par.bits, par.bps*8);
         return ALC_FALSE;
     }
 
@@ -287,7 +287,7 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
         device->FmtType = DevFmtUShort;
     else
     {
-        ERROR("Unhandled sample format: %s %u-bit\n", (par.sig?"signed":"unsigned"), par.bits);
+        ERR("Unhandled sample format: %s %u-bit\n", (par.sig?"signed":"unsigned"), par.bits);
         return ALC_FALSE;
     }
 
@@ -300,7 +300,7 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
 
     if(!sio_start(data->sndHandle))
     {
-        ERROR("Error starting playback\n");
+        ERR("Error starting playback\n");
         return ALC_FALSE;
     }
 
@@ -332,7 +332,7 @@ static void sndio_stop_playback(ALCdevice *device)
 
     data->killNow = 0;
     if(!sio_stop(data->sndHandle))
-        ERROR("Error stopping device\n");
+        ERR("Error stopping device\n");
 
     free(data->mix_data);
     data->mix_data = NULL;

@@ -166,12 +166,13 @@ ENDIF()
 IF(WIN32)
     SET(EXPORT_DECL "__declspec(dllexport)")
 
-    OPTION(WINE "Enable use of Wine headers when compiling" ON)
+    OPTION(WINE "Enable use of Wine headers when compiling" OFF)
     IF(WINE)
         FIND_PATH(WINE_INCLUDE_DIR library.h
                   PATHS
                   /usr/include/wine
-                  /usr/local/include/wine)
+                  /usr/local/include/wine
+                  CMAKE_FIND_ROOT_PATH_BOTH)
         IF(WINE_INCLUDE_DIR)
             MESSAGE(STATUS "Found Wine header files - ${WINE_INCLUDE_DIR}" )
             INCLUDE_DIRECTORIES("${WINE_INCLUDE_DIR}/windows")

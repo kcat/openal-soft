@@ -76,8 +76,10 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
     const T *RESTRICT data = srcdata;                                         \
+    const ALint *RESTRICT DelayStep = Source->Params.HrtfDelayStep;           \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
+    ALfloat (*RESTRICT CoeffStep)[2] = Source->Params.HrtfCoeffStep;          \
     ALuint pos, frac;                                                         \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
@@ -97,15 +99,27 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
-        ALfloat (*RESTRICT Coeffs)[2] = Source->Params.HrtfCoeffs[i];         \
-        const ALuint *RESTRICT Delay = Source->Params.HrtfDelay[i];           \
+        ALfloat (*RESTRICT TargetCoeffs)[2] = Source->Params.HrtfCoeffs[i];   \
+        ALuint *RESTRICT TargetDelay = Source->Params.HrtfDelay[i];           \
         ALfloat *RESTRICT History = Source->HrtfHistory[i];                   \
         ALfloat (*RESTRICT Values)[2] = Source->HrtfValues[i];                \
+        ALint Counter = __max(Source->HrtfCounter, OutPos) - OutPos;          \
         ALuint Offset = Source->HrtfOffset + OutPos;                          \
+        ALfloat Coeffs[HRIR_LENGTH][2];                                       \
+        ALuint Delay[2];                                                      \
         ALfloat left, right;                                                  \
                                                                               \
         pos = 0;                                                              \
         frac = *DataPosFrac;                                                  \
+                                                                              \
+        for(c = 0;c < HRIR_LENGTH;c++)                                        \
+        {                                                                     \
+            Coeffs[c][0] = TargetCoeffs[c][0] - (CoeffStep[c][0]*Counter);    \
+            Coeffs[c][1] = TargetCoeffs[c][1] - (CoeffStep[c][1]*Counter);    \
+        }                                                                     \
+                                                                              \
+        Delay[0] = TargetDelay[0] - (DelayStep[0]*Counter) + 32768;           \
+        Delay[1] = TargetDelay[1] - (DelayStep[1]*Counter) + 32768;           \
                                                                               \
         if(LIKELY(OutPos == 0))                                               \
         {                                                                     \
@@ -113,22 +127,57 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
             value = lpFilter2PC(DryFilter, i, value);                         \
                                                                               \
             History[Offset&SRC_HISTORY_MASK] = value;                         \
-            left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];               \
-            right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];              \
+            left = History[(Offset-(Delay[0]>>16))&SRC_HISTORY_MASK];         \
+            right = History[(Offset-(Delay[1]>>16))&SRC_HISTORY_MASK];        \
                                                                               \
             ClickRemoval[FRONT_LEFT]  -= Values[(Offset+1)&HRIR_MASK][0] +    \
                                          Coeffs[0][0] * left;                 \
             ClickRemoval[FRONT_RIGHT] -= Values[(Offset+1)&HRIR_MASK][1] +    \
                                          Coeffs[0][1] * right;                \
         }                                                                     \
-        for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
+        for(BufferIdx = 0;BufferIdx < BufferSize && Counter > 0;BufferIdx++)  \
         {                                                                     \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
             value = lpFilter2P(DryFilter, i, value);                          \
                                                                               \
             History[Offset&SRC_HISTORY_MASK] = value;                         \
-            left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];               \
-            right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];              \
+            left = History[(Offset-(Delay[0]>>16))&SRC_HISTORY_MASK];         \
+            right = History[(Offset-(Delay[1]>>16))&SRC_HISTORY_MASK];        \
+                                                                              \
+            Delay[0] += DelayStep[0];                                         \
+            Delay[1] += DelayStep[1];                                         \
+                                                                              \
+            Values[Offset&HRIR_MASK][0] = 0.0f;                               \
+            Values[Offset&HRIR_MASK][1] = 0.0f;                               \
+            Offset++;                                                         \
+                                                                              \
+            for(c = 0;c < HRIR_LENGTH;c++)                                    \
+            {                                                                 \
+                const ALuint off = (Offset+c)&HRIR_MASK;                      \
+                Values[off][0] += Coeffs[c][0] * left;                        \
+                Values[off][1] += Coeffs[c][1] * right;                       \
+                Coeffs[c][0] += CoeffStep[c][0];                              \
+                Coeffs[c][1] += CoeffStep[c][1];                              \
+            }                                                                 \
+                                                                              \
+            DryBuffer[OutPos][FRONT_LEFT]  += Values[Offset&HRIR_MASK][0];    \
+            DryBuffer[OutPos][FRONT_RIGHT] += Values[Offset&HRIR_MASK][1];    \
+                                                                              \
+            frac += increment;                                                \
+            pos  += frac>>FRACTIONBITS;                                       \
+            frac &= FRACTIONMASK;                                             \
+            OutPos++;                                                         \
+            Counter--;                                                        \
+        }                                                                     \
+                                                                              \
+        for(;BufferIdx < BufferSize;BufferIdx++)                              \
+        {                                                                     \
+            value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
+            value = lpFilter2P(DryFilter, i, value);                          \
+                                                                              \
+            History[Offset&SRC_HISTORY_MASK] = value;                         \
+            left = History[(Offset-(Delay[0]>>16))&SRC_HISTORY_MASK];         \
+            right = History[(Offset-(Delay[1]>>16))&SRC_HISTORY_MASK];        \
                                                                               \
             Values[Offset&HRIR_MASK][0] = 0.0f;                               \
             Values[Offset&HRIR_MASK][1] = 0.0f;                               \
@@ -155,8 +204,8 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
             value = lpFilter2PC(DryFilter, i, value);                         \
                                                                               \
             History[Offset&SRC_HISTORY_MASK] = value;                         \
-            left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];               \
-            right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];              \
+            left = History[(Offset-(Delay[0]>>16))&SRC_HISTORY_MASK];         \
+            right = History[(Offset-(Delay[1]>>16))&SRC_HISTORY_MASK];        \
                                                                               \
             PendingClicks[FRONT_LEFT]  += Values[(Offset+1)&HRIR_MASK][0] +   \
                                           Coeffs[0][0] * left;                \
@@ -743,4 +792,14 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     Source->position_fraction = DataPosFrac;
     Source->Buffer            = BufferListItem->buffer;
     Source->HrtfOffset       += OutPos;
+    if(State == AL_PLAYING)
+    {
+        Source->HrtfCounter = __max(Source->HrtfCounter, OutPos) - OutPos;
+        Source->HrtfMoving  = AL_TRUE;
+    }
+    else
+    {
+        Source->HrtfCounter = 0;
+        Source->HrtfMoving  = AL_FALSE;
+    }
 }

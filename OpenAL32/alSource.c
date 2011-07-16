@@ -1314,7 +1314,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     ALCcontext       *Context;
     ALsource         *Source;
     ALbufferlistitem *BufferList;
-    ALsizei          i, j;
+    ALsizei          i, j, k;
 
     Context = GetLockedContext();
     if(!Context) return;
@@ -1384,18 +1384,10 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             continue;
         }
 
-        if(Source->state != AL_PAUSED)
+        if(Source->state != AL_PLAYING)
         {
-            Source->state = AL_PLAYING;
-            Source->position = 0;
-            Source->position_fraction = 0;
-            Source->BuffersPlayed = 0;
-
-            Source->Buffer = Source->queue->buffer;
-
             for(j = 0;j < MAXCHANNELS;j++)
             {
-                ALuint k;
                 for(k = 0;k < SRC_HISTORY_LENGTH;k++)
                     Source->HrtfHistory[j][k] = 0.0f;
                 for(k = 0;k < HRIR_LENGTH;k++)
@@ -1404,7 +1396,16 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                     Source->HrtfValues[j][k][1] = 0.0f;
                 }
             }
-            Source->HrtfOffset = 0;
+        }
+
+        if(Source->state != AL_PAUSED)
+        {
+            Source->state = AL_PLAYING;
+            Source->position = 0;
+            Source->position_fraction = 0;
+            Source->BuffersPlayed = 0;
+
+            Source->Buffer = Source->queue->buffer;
         }
         else
             Source->state = AL_PLAYING;
@@ -1465,7 +1466,11 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     {
         Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
         if(Source->state == AL_PLAYING)
+        {
             Source->state = AL_PAUSED;
+            Source->HrtfMoving = AL_FALSE;
+            Source->HrtfCounter = 0;
+        }
     }
 
 done:
@@ -1514,6 +1519,8 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
         {
             Source->state = AL_STOPPED;
             Source->BuffersPlayed = Source->BuffersInQueue;
+            Source->HrtfMoving = AL_FALSE;
+            Source->HrtfCounter = 0;
         }
         Source->lOffset = 0;
     }
@@ -1568,6 +1575,8 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
             Source->BuffersPlayed = 0;
             if(Source->queue)
                 Source->Buffer = Source->queue->buffer;
+            Source->HrtfMoving = AL_FALSE;
+            Source->HrtfCounter = 0;
         }
         Source->lOffset = 0;
     }
@@ -1835,6 +1844,9 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->NeedsUpdate = AL_TRUE;
 
     Source->Buffer = NULL;
+
+    Source->HrtfMoving = AL_FALSE;
+    Source->HrtfCounter = 0;
 }
 
 

@@ -292,13 +292,17 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                     ALSource->Params.HrtfCoeffs[c][i][0] = 0.0f;
                     ALSource->Params.HrtfCoeffs[c][i][1] = 0.0f;
                 }
-                continue;
             }
-
-            GetLerpedHrtfCoeffs(0.0, angles[c] * (M_PI/180.0),
-                                DryGain*ListenerGain,
-                                ALSource->Params.HrtfCoeffs[c],
-                                ALSource->Params.HrtfDelay[c]);
+            else
+            {
+                /* Get the static HRIR coefficients and delays for this
+                 * channel. */
+                GetLerpedHrtfCoeffs(0.0, angles[c] * (M_PI/180.0),
+                                    DryGain*ListenerGain,
+                                    ALSource->Params.HrtfCoeffs[c],
+                                    ALSource->Params.HrtfDelay[c]);
+            }
+            ALSource->HrtfCounter = 0;
         }
     }
     else
@@ -709,24 +713,55 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if((Device->Flags&DEVICE_USE_HRTF))
     {
         // Use a binaural HRTF algorithm for stereo headphone playback
+        ALfloat delta, ev = 0.0f, az = 0.0f;
+
         if(Distance > 0.0f)
         {
             ALfloat invlen = 1.0f/Distance;
             Position[0] *= invlen;
             Position[1] *= invlen;
             Position[2] *= invlen;
-            GetLerpedHrtfCoeffs(asin(Position[1]),
-                                atan2(Position[0], -Position[2]*ZScale),
-                                DryGain, ALSource->Params.HrtfCoeffs[0],
-                                ALSource->Params.HrtfDelay[0]);
+
+            // Calculate elevation and azimuth only when the source is not at
+            // the listener.  This prevents +0 and -0 Z from producing
+            // inconsistent panning.
+            ev = asin(Position[1]);
+            az = atan2(Position[0], -Position[2]*ZScale);
+        }
+
+        // Check to see if the HRIR is already moving.
+        if(ALSource->HrtfMoving)
+        {
+            // Calculate the normalized HRTF transition factor (delta).
+            delta = CalcHrtfDelta(ALSource->Params.HrtfGain, DryGain,
+                                  ALSource->Params.HrtfDir, Position);
+            // If the delta is large enough, get the moving HRIR target
+            // coefficients, target delays, steppping values, and counter.
+            if(delta > 0.001f)
+            {
+                ALSource->HrtfCounter = GetMovingHrtfCoeffs(ev, az, DryGain,
+                                          delta, ALSource->HrtfCounter,
+                                          ALSource->Params.HrtfCoeffs[0],
+                                          ALSource->Params.HrtfDelay[0],
+                                          ALSource->Params.HrtfCoeffStep,
+                                          ALSource->Params.HrtfDelayStep);
+                ALSource->Params.HrtfGain = DryGain;
+                ALSource->Params.HrtfDir[0] = Position[0];
+                ALSource->Params.HrtfDir[1] = Position[1];
+                ALSource->Params.HrtfDir[2] = Position[2];
+            }
         }
         else
         {
-            /* Force front-centered for sounds that comes from the listener,
-             * to prevent +0 and -0 Z from producing inconsistent panning */
-            GetLerpedHrtfCoeffs(0.0f, 0.0f, DryGain,
+            // Get the initial (static) HRIR coefficients and delays.
+            GetLerpedHrtfCoeffs(ev, az, DryGain,
                                 ALSource->Params.HrtfCoeffs[0],
                                 ALSource->Params.HrtfDelay[0]);
+            ALSource->HrtfCounter = 0;
+            ALSource->Params.HrtfGain = DryGain;
+            ALSource->Params.HrtfDir[0] = Position[0];
+            ALSource->Params.HrtfDir[1] = Position[1];
+            ALSource->Params.HrtfDir[2] = Position[2];
         }
     }
     else

@@ -86,6 +86,8 @@ typedef struct ALsource
     ALuint SampleSize;
 
     /* HRTF info */
+    ALboolean HrtfMoving;
+    ALuint HrtfCounter;
     ALfloat HrtfHistory[MAXCHANNELS][SRC_HISTORY_LENGTH];
     ALfloat HrtfValues[MAXCHANNELS][HRIR_LENGTH][2];
     ALuint HrtfOffset;
@@ -96,8 +98,12 @@ typedef struct ALsource
 
         ALint Step;
 
+        ALfloat HrtfGain;
+        ALfloat HrtfDir[3];
         ALfloat HrtfCoeffs[MAXCHANNELS][HRIR_LENGTH][2];
         ALuint HrtfDelay[MAXCHANNELS][2];
+        ALfloat HrtfCoeffStep[HRIR_LENGTH][2];
+        ALint HrtfDelayStep[2];
 
         /* A mixing matrix. First subscript is the channel number of the input
          * data (regardless of channel configuration) and the second is the

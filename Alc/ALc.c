@@ -1414,6 +1414,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ALCcontext *context = device->Contexts[i];
         ALsizei pos;
 
+        context->UpdateSources = AL_FALSE;
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
@@ -1425,6 +1426,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->Flags &= ~DEVICE_RUNNING;
                 return ALC_FALSE;
             }
+            slot->NeedsUpdate = AL_FALSE;
             ALEffect_Update(slot->EffectState, context, &slot->effect);
         }
 
@@ -1441,10 +1443,9 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 source->Send[s].WetFilter.filter = 0;
                 s++;
             }
-            ALsource_Update(source, context);
             source->NeedsUpdate = AL_FALSE;
+            ALsource_Update(source, context);
         }
-        context->UpdateSources = AL_FALSE;
     }
     UnlockDevice(device);
 

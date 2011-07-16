@@ -1031,6 +1031,12 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     ALEffectSlot->PendingClicks[i] = 0.0f;
                 }
 
+                if(ALEffectSlot->NeedsUpdate)
+                {
+                    ALEffectSlot->NeedsUpdate = AL_FALSE;
+                    ALEffect_Update(ALEffectSlot->EffectState, *ctx, &ALEffectSlot->effect);
+                }
+
                 ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot,
                                  SamplesToDo, ALEffectSlot->WetBuffer,
                                  device->DryBuffer);

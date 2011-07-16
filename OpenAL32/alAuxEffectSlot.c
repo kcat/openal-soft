@@ -86,6 +86,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
 
             slot->Gain = 1.0;
             slot->AuxSendAuto = AL_TRUE;
+            slot->NeedsUpdate = AL_FALSE;
             for(j = 0;j < BUFFERSIZE;j++)
                 slot->WetBuffer[j] = 0.0f;
             for(j = 0;j < 1;j++)
@@ -495,12 +496,26 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
         if(EffectSlot->EffectState)
             ALEffect_Destroy(EffectSlot->EffectState);
         EffectSlot->EffectState = NewState;
+
+        if(!effect)
+            memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
+        else
+            memcpy(&EffectSlot->effect, effect, sizeof(*effect));
+        /* FIXME: This should be done asychronously, but since the EfefctState
+         * object was changed, it needs an update before its Process method can
+         * be called (coming changes may not guarantee an update when the
+         * NeedsUpdate flag is set). */
+        EffectSlot->NeedsUpdate = AL_FALSE;
+        ALEffect_Update(EffectSlot->EffectState, Context, &EffectSlot->effect);
     }
-    if(!effect)
-        memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
     else
-        memcpy(&EffectSlot->effect, effect, sizeof(*effect));
-    ALEffect_Update(EffectSlot->EffectState, Context, &EffectSlot->effect);
+    {
+        if(!effect)
+            memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
+        else
+            memcpy(&EffectSlot->effect, effect, sizeof(*effect));
+        EffectSlot->NeedsUpdate = AL_TRUE;
+    }
 }
 
 

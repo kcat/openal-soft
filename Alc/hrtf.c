@@ -27,15 +27,16 @@
 
 #define HRIR_COUNT 828
 
-static const ALuint sampleRate = 44100;
 static const ALubyte evCount = 19;
 static const ALushort evOffset[19] = { 0, 1, 13, 37, 73, 118, 174, 234, 306, 378, 450, 522, 594, 654, 710, 755, 791, 815, 827 };
 static const ALubyte azCount[19] = { 1, 12, 24, 36, 45, 56, 60, 72, 72, 72, 72, 72, 60, 56, 45, 36, 24, 12, 1 };
 
-static struct HRTF {
+static struct Hrtf {
+    ALuint sampleRate;
     ALshort coeffs[HRIR_COUNT][HRIR_LENGTH];
     ALubyte delays[HRIR_COUNT];
 } Hrtf = {
+    44100,
 #include "hrtf_tables.inc"
 };
 
@@ -88,7 +89,7 @@ void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALflo
 
     // Calculate azimuth indices and interpolation factor for the second
     // elevation.
-    CalcAzIndices (evidx[1], azimuth, azidx, &mu[1]);
+    CalcAzIndices(evidx[1], azimuth, azidx, &mu[1]);
 
     // Calculate the second set of linear HRIR indices for left and right
     // channels.
@@ -133,7 +134,7 @@ void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALflo
 
 ALCboolean IsHrtfCompatible(ALCdevice *device)
 {
-    if(device->FmtChans == DevFmtStereo && device->Frequency == sampleRate)
+    if(device->FmtChans == DevFmtStereo && device->Frequency == Hrtf.sampleRate)
         return ALC_TRUE;
     return ALC_FALSE;
 }
@@ -154,9 +155,10 @@ void InitHrtf(void)
     {
         const ALubyte maxDelay = SRC_HISTORY_LENGTH;
         ALboolean failed = AL_FALSE;
-        struct HRTF newdata;
+        struct Hrtf newdata;
         size_t i, j;
 
+        newdata.sampleRate = 44100;
         for(i = 0;i < HRIR_COUNT;i++)
         {
             for(j = 0;j < HRIR_LENGTH;j++)

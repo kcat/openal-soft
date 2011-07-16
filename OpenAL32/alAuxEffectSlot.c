@@ -264,7 +264,10 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
         {
         case AL_EFFECTSLOT_GAIN:
             if(flValue >= 0.0f && flValue <= 1.0f)
+            {
                 EffectSlot->Gain = flValue;
+                EffectSlot->NeedsUpdate = AL_TRUE;
+            }
             else
                 alSetError(Context, AL_INVALID_VALUE);
             break;

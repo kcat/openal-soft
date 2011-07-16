@@ -101,24 +101,24 @@ static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     return AL_TRUE;
 }
 
-static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
+static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
 {
     ALechoState *state = (ALechoState*)effect;
     ALuint frequency = Context->Device->Frequency;
     ALfloat lrpan, cw, g;
 
-    state->Tap[0].delay = (ALuint)(Effect->Params.Echo.Delay * frequency) + 1;
-    state->Tap[1].delay = (ALuint)(Effect->Params.Echo.LRDelay * frequency);
+    state->Tap[0].delay = (ALuint)(Slot->effect.Params.Echo.Delay * frequency) + 1;
+    state->Tap[1].delay = (ALuint)(Slot->effect.Params.Echo.LRDelay * frequency);
     state->Tap[1].delay += state->Tap[0].delay;
 
-    lrpan = Effect->Params.Echo.Spread*0.5f + 0.5f;
+    lrpan = Slot->effect.Params.Echo.Spread*0.5f + 0.5f;
     state->GainL = aluSqrt(     lrpan);
     state->GainR = aluSqrt(1.0f-lrpan);
 
-    state->FeedGain = Effect->Params.Echo.Feedback;
+    state->FeedGain = Slot->effect.Params.Echo.Feedback;
 
     cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / frequency);
-    g = 1.0f - Effect->Params.Echo.Damping;
+    g = 1.0f - Slot->effect.Params.Echo.Damping;
     state->iirFilter.coeff = lpCoeffCalc(g, cw);
 }
 

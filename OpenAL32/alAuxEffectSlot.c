@@ -435,11 +435,11 @@ static ALboolean NoneDeviceUpdate(ALeffectState *State, ALCdevice *Device)
     (void)State;
     (void)Device;
 }
-static ALvoid NoneUpdate(ALeffectState *State, ALCcontext *Context, const ALeffect *Effect)
+static ALvoid NoneUpdate(ALeffectState *State, ALCcontext *Context, const ALeffectslot *Slot)
 {
     (void)State;
     (void)Context;
-    (void)Effect;
+    (void)Slot;
 }
 static ALvoid NoneProcess(ALeffectState *State, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
@@ -506,7 +506,7 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
          * be called (coming changes may not guarantee an update when the
          * NeedsUpdate flag is set). */
         EffectSlot->NeedsUpdate = AL_FALSE;
-        ALEffect_Update(EffectSlot->EffectState, Context, &EffectSlot->effect);
+        ALEffect_Update(EffectSlot->EffectState, Context, EffectSlot);
     }
     else
     {

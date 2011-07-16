@@ -50,7 +50,7 @@ static ALboolean DedicatedDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     return AL_TRUE;
 }
 
-static ALvoid DedicatedDLGUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
+static ALvoid DedicatedDLGUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
 {
     ALdedicatedState *state = (ALdedicatedState*)effect;
     ALCdevice *device = Context->Device;
@@ -62,10 +62,10 @@ static ALvoid DedicatedDLGUpdate(ALeffectState *effect, ALCcontext *Context, con
     SpeakerGain = device->PanningLUT[pos];
 
     for(s = 0;s < MAXCHANNELS;s++)
-        state->gains[s] = SpeakerGain[s] * Effect->Params.Dedicated.Gain;
+        state->gains[s] = SpeakerGain[s] * Slot->effect.Params.Dedicated.Gain;
 }
 
-static ALvoid DedicatedLFEUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffect *Effect)
+static ALvoid DedicatedLFEUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
 {
     ALdedicatedState *state = (ALdedicatedState*)effect;
     ALsizei s;
@@ -73,7 +73,7 @@ static ALvoid DedicatedLFEUpdate(ALeffectState *effect, ALCcontext *Context, con
 
     for(s = 0;s < MAXCHANNELS;s++)
         state->gains[s] = 0.0f;
-    state->gains[LFE] = Effect->Params.Dedicated.Gain;
+    state->gains[LFE] = Slot->effect.Params.Dedicated.Gain;
 }
 
 static ALvoid DedicatedProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])

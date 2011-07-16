@@ -1034,7 +1034,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 if(ALEffectSlot->NeedsUpdate)
                 {
                     ALEffectSlot->NeedsUpdate = AL_FALSE;
-                    ALEffect_Update(ALEffectSlot->EffectState, *ctx, &ALEffectSlot->effect);
+                    ALEffect_Update(ALEffectSlot->EffectState, *ctx, ALEffectSlot);
                 }
 
                 ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot,

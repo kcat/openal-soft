@@ -1427,7 +1427,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 return ALC_FALSE;
             }
             slot->NeedsUpdate = AL_FALSE;
-            ALEffect_Update(slot->EffectState, context, &slot->effect);
+            ALEffect_Update(slot->EffectState, context, slot);
         }
 
         for(pos = 0;pos < context->SourceMap.size;pos++)

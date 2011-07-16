@@ -116,6 +116,17 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 #define AL_VIRTUAL_CHANNELS_SOFT                 0x1033
 #endif
 
+#ifndef AL_SOFT_deferred_updates
+#define AL_SOFT_deferred_updates 1
+#define AL_DEFERRED_UPDATES_SOFT                 0xC002
+typedef ALvoid (AL_APIENTRY*LPALDEFERUPDATESSOFT)(void);
+typedef ALvoid (AL_APIENTRY*LPALPROCESSUPDATESSOFT)(void);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void);
+AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void);
+#endif
+#endif
+
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
@@ -465,14 +476,14 @@ struct ALCcontext_struct
     ALenum      LastError;
 
     ALboolean   UpdateSources;
-    ALboolean   Suspended;
 
     enum DistanceModel DistanceModel;
-    ALboolean SourceDistanceModel;
+    ALboolean   SourceDistanceModel;
 
     ALfloat     DopplerFactor;
     ALfloat     DopplerVelocity;
     ALfloat     flSpeedOfSound;
+    ALboolean   DeferUpdates;
 
     struct ALsource **ActiveSources;
     ALsizei           ActiveSourceCount;

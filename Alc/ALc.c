@@ -275,6 +275,9 @@ static const ALCfunction alcFunctions[] = {
     { "alGetBufferSamplesSOFT",     (ALCvoid *) alGetBufferSamplesSOFT   },
     { "alIsBufferFormatSupportedSOFT",(ALCvoid *) alIsBufferFormatSupportedSOFT},
 
+    { "alDeferUpdatesSOFT",         (ALCvoid *) alDeferUpdatesSOFT       },
+    { "alProcessUpdatesSOFT",       (ALCvoid *) alProcessUpdatesSOFT     },
+
     { NULL,                         (ALCvoid *) NULL                     }
 };
 
@@ -1539,7 +1542,6 @@ static ALvoid InitContext(ALCcontext *pContext)
     //Validate pContext
     pContext->LastError = AL_NO_ERROR;
     pContext->UpdateSources = AL_FALSE;
-    pContext->Suspended = AL_FALSE;
     pContext->ActiveSourceCount = 0;
     InitUIntMap(&pContext->SourceMap);
     InitUIntMap(&pContext->EffectSlotMap);
@@ -1550,6 +1552,7 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->DopplerFactor = 1.0f;
     pContext->DopplerVelocity = 1.0f;
     pContext->flSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
+    pContext->DeferUpdates = AL_FALSE;
 
     pContext->ExtensionList = alExtList;
 }
@@ -1759,12 +1762,9 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 
     Not functional
 */
-ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *pContext)
+ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *Context)
 {
-    LockLists();
-    if(IsContext(pContext))
-        pContext->Suspended = AL_TRUE;
-    UnlockLists();
+    (void)Context;
 }
 
 
@@ -1773,12 +1773,9 @@ ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *pContext)
 
     Not functional
 */
-ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *pContext)
+ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *Context)
 {
-    LockLists();
-    if(IsContext(pContext))
-        pContext->Suspended = AL_FALSE;
-    UnlockLists();
+    (void)Context;
 }
 
 

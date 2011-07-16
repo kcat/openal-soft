@@ -138,6 +138,10 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
                 value = AL_TRUE;
             break;
 
+        case AL_DEFERRED_UPDATES_SOFT:
+            value = Context->DeferUpdates;
+            break;
+
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;
@@ -172,6 +176,10 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
 
         case AL_SPEED_OF_SOUND:
             value = (double)Context->flSpeedOfSound;
+            break;
+
+        case AL_DEFERRED_UPDATES_SOFT:
+            value = (ALdouble)Context->DeferUpdates;
             break;
 
         default:
@@ -210,6 +218,10 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
             value = Context->flSpeedOfSound;
             break;
 
+        case AL_DEFERRED_UPDATES_SOFT:
+            value = (ALfloat)Context->DeferUpdates;
+            break;
+
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;
@@ -246,6 +258,10 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
             value = (ALint)Context->flSpeedOfSound;
             break;
 
+        case AL_DEFERRED_UPDATES_SOFT:
+            value = (ALint)Context->DeferUpdates;
+            break;
+
         default:
             alSetError(Context, AL_INVALID_ENUM);
             break;
@@ -268,6 +284,7 @@ AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname,ALboolean *data)
             case AL_DOPPLER_VELOCITY:
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
+            case AL_DEFERRED_UPDATES_SOFT:
                 *data = alGetBoolean(pname);
                 return;
         }
@@ -306,6 +323,7 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname,ALdouble *data)
             case AL_DOPPLER_VELOCITY:
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
+            case AL_DEFERRED_UPDATES_SOFT:
                 *data = alGetDouble(pname);
                 return;
         }
@@ -344,6 +362,7 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname,ALfloat *data)
             case AL_DOPPLER_VELOCITY:
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
+            case AL_DEFERRED_UPDATES_SOFT:
                 *data = alGetFloat(pname);
                 return;
         }
@@ -382,6 +401,7 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname,ALint *data)
             case AL_DOPPLER_VELOCITY:
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
+            case AL_DEFERRED_UPDATES_SOFT:
                 *data = alGetInteger(pname);
                 return;
         }
@@ -547,6 +567,31 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
             alSetError(Context, AL_INVALID_VALUE);
             break;
     }
+
+    UnlockContext(Context);
+}
+
+
+AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
+{
+    ALCcontext *Context;
+
+    Context = GetLockedContext();
+    if(!Context) return;
+
+    Context->DeferUpdates = AL_TRUE;
+
+    UnlockContext(Context);
+}
+
+AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
+{
+    ALCcontext *Context;
+
+    Context = GetLockedContext();
+    if(!Context) return;
+
+    Context->DeferUpdates = AL_FALSE;
 
     UnlockContext(Context);
 }

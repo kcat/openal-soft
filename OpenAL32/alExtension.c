@@ -213,6 +213,7 @@ static const ALenums enumeration[] = {
     { "AL_DISTANCE_MODEL",                    AL_DISTANCE_MODEL                   },
     { "AL_SPEED_OF_SOUND",                    AL_SPEED_OF_SOUND                   },
     { "AL_SOURCE_DISTANCE_MODEL",             AL_SOURCE_DISTANCE_MODEL            },
+    { "AL_DEFERRED_UPDATES_SOFT",             AL_DEFERRED_UPDATES_SOFT            },
 
     // Distance Models
     { "AL_INVERSE_DISTANCE",                  AL_INVERSE_DISTANCE                 },

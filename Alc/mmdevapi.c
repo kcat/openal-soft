@@ -296,7 +296,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         else if(OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)
             device->FmtChans = DevFmtX71;
         else
-            ERR("Unhandled channel config: %d -- 0x%08x\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
+            ERR("Unhandled channel config: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
     }
 
     switch(device->FmtChans)
@@ -386,7 +386,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         if(device->Frequency != OutputType.Format.nSamplesPerSec)
         {
             if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-                ERR("Failed to set %dhz, got %dhz instead\n", device->Frequency, OutputType.Format.nSamplesPerSec);
+                ERR("Failed to set %dhz, got %ldhz instead\n", device->Frequency, OutputType.Format.nSamplesPerSec);
             device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
             device->Frequency = OutputType.Format.nSamplesPerSec;
         }
@@ -400,7 +400,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
              (device->FmtChans == DevFmtX71 && OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)))
         {
             if((device->Flags&DEVICE_CHANNELS_REQUEST))
-                ERR("Failed to set %s, got %d channels (0x%08x) instead\n", DevFmtChannelsString(device->FmtChans), OutputType.Format.nChannels, OutputType.dwChannelMask);
+                ERR("Failed to set %s, got %d channels (0x%08lx) instead\n", DevFmtChannelsString(device->FmtChans), OutputType.Format.nChannels, OutputType.dwChannelMask);
             device->Flags &= ~DEVICE_CHANNELS_REQUEST;
 
             if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
@@ -419,7 +419,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
                 device->FmtChans = DevFmtX71;
             else
             {
-                ERR("Unhandled extensible channels: %d -- 0x%08x\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
+                ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
                 device->FmtChans = DevFmtStereo;
                 OutputType.Format.nChannels = 2;
                 OutputType.dwChannelMask = STEREO;

@@ -90,22 +90,16 @@ static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     for(i = 0;i < state->BufferLength;i++)
         state->SampleBuffer[i] = 0.0f;
 
-    for(i = 0;i < MAXCHANNELS;i++)
-        state->Gain[i] = 0.0f;
-    for(i = 0;i < Device->NumChan;i++)
-    {
-        enum Channel chan = Device->Speaker2Chan[i];
-        state->Gain[chan] = 1.0f;
-    }
-
     return AL_TRUE;
 }
 
 static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
 {
     ALechoState *state = (ALechoState*)effect;
-    ALuint frequency = Context->Device->Frequency;
-    ALfloat lrpan, cw, g;
+    ALCdevice *Device = Context->Device;
+    ALuint frequency = Device->Frequency;
+    ALfloat lrpan, cw, g, gain;
+    ALuint i;
 
     state->Tap[0].delay = (ALuint)(Slot->effect.Params.Echo.Delay * frequency) + 1;
     state->Tap[1].delay = (ALuint)(Slot->effect.Params.Echo.LRDelay * frequency);
@@ -120,6 +114,15 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
     cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / frequency);
     g = 1.0f - Slot->effect.Params.Echo.Damping;
     state->iirFilter.coeff = lpCoeffCalc(g, cw);
+
+    gain = Slot->Gain;
+    for(i = 0;i < MAXCHANNELS;i++)
+        state->Gain[i] = 0.0f;
+    for(i = 0;i < Device->NumChan;i++)
+    {
+        enum Channel chan = Device->Speaker2Chan[i];
+        state->Gain[chan] = gain;
+    }
 }
 
 static ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
@@ -129,9 +132,9 @@ static ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuin
     const ALuint tap1 = state->Tap[0].delay;
     const ALuint tap2 = state->Tap[1].delay;
     ALuint offset = state->Offset;
-    const ALfloat gain = Slot->Gain;
     ALfloat samp[2], smp;
     ALuint i;
+    (void)Slot;
 
     for(i = 0;i < SamplesToDo;i++,offset++)
     {
@@ -148,10 +151,6 @@ static ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuin
         // new sample
         smp = lpFilter2P(&state->iirFilter, 0, smp+SamplesIn[i]);
         state->SampleBuffer[offset&mask] = smp * state->FeedGain;
-
-        // Apply slot gain
-        samp[0] *= gain;
-        samp[1] *= gain;
 
         SamplesOut[i][FRONT_LEFT]  += state->Gain[FRONT_LEFT]  * samp[0];
         SamplesOut[i][FRONT_RIGHT] += state->Gain[FRONT_RIGHT] * samp[1];

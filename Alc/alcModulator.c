@@ -82,11 +82,9 @@ static __inline ALfloat hpFilter1P(FILTER *iir, ALuint offset, ALfloat input)
 
 
 #define DECL_TEMPLATE(func)                                                   \
-static void Process##func(ALmodulatorState *state, const ALeffectslot *Slot,  \
-  ALuint SamplesToDo, const ALfloat *SamplesIn,                               \
-  ALfloat (*SamplesOut)[MAXCHANNELS])                                         \
+static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
+  const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])               \
 {                                                                             \
-    const ALfloat gain = Slot->Gain;                                          \
     const ALuint step = state->step;                                          \
     ALuint index = state->index;                                              \
     ALfloat samp;                                                             \
@@ -101,9 +99,6 @@ static void Process##func(ALmodulatorState *state, const ALeffectslot *Slot,  \
         samp *= func(index);                                                  \
                                                                               \
         samp = hpFilter1P(&state->iirFilter, 0, samp);                        \
-                                                                              \
-        /* Apply slot gain */                                                 \
-        samp *= gain;                                                         \
                                                                               \
         SamplesOut[i][FRONT_LEFT]   += state->Gain[FRONT_LEFT]   * samp;      \
         SamplesOut[i][FRONT_RIGHT]  += state->Gain[FRONT_RIGHT]  * samp;      \
@@ -132,24 +127,17 @@ static ALvoid ModulatorDestroy(ALeffectState *effect)
 
 static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
-    ALmodulatorState *state = (ALmodulatorState*)effect;
-    ALuint index;
-
-    for(index = 0;index < MAXCHANNELS;index++)
-        state->Gain[index] = 0.0f;
-    for(index = 0;index < Device->NumChan;index++)
-    {
-        enum Channel chan = Device->Speaker2Chan[index];
-        state->Gain[chan] = 1.0f;
-    }
-
     return AL_TRUE;
+    (void)effect;
+    (void)Device;
 }
 
 static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
 {
     ALmodulatorState *state = (ALmodulatorState*)effect;
-    ALfloat cw, a = 0.0f;
+    ALCdevice *Device = Context->Device;
+    ALfloat gain, cw, a = 0.0f;
+    ALuint index;
 
     if(Slot->effect.Params.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
         state->Waveform = SINUSOID;
@@ -159,32 +147,42 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
         state->Waveform = SQUARE;
 
     state->step = Slot->effect.Params.Modulator.Frequency*(1<<WAVEFORM_FRACBITS) /
-                  Context->Device->Frequency;
+                  Device->Frequency;
     if(!state->step)
         state->step = 1;
 
     cw = cos(2.0*M_PI * Slot->effect.Params.Modulator.HighPassCutoff /
-                        Context->Device->Frequency);
+                        Device->Frequency);
     a = (2.0f-cw) - aluSqrt(aluPow(2.0f-cw, 2.0f) - 1.0f);
     state->iirFilter.coeff = a;
+
+    gain = Slot->Gain;
+    for(index = 0;index < MAXCHANNELS;index++)
+        state->Gain[index] = 0.0f;
+    for(index = 0;index < Device->NumChan;index++)
+    {
+        enum Channel chan = Device->Speaker2Chan[index];
+        state->Gain[chan] = gain;
+    }
 }
 
 static ALvoid ModulatorProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALmodulatorState *state = (ALmodulatorState*)effect;
+    (void)Slot;
 
     switch(state->Waveform)
     {
         case SINUSOID:
-            ProcessSin(state, Slot, SamplesToDo, SamplesIn, SamplesOut);
+            ProcessSin(state, SamplesToDo, SamplesIn, SamplesOut);
             break;
 
         case SAWTOOTH:
-            ProcessSaw(state, Slot, SamplesToDo, SamplesIn, SamplesOut);
+            ProcessSaw(state, SamplesToDo, SamplesIn, SamplesOut);
             break;
 
         case SQUARE:
-            ProcessSquare(state, Slot, SamplesToDo, SamplesIn, SamplesOut);
+            ProcessSquare(state, SamplesToDo, SamplesIn, SamplesOut);
             break;
     }
 }

@@ -589,7 +589,7 @@ static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoT
 }
 
 // Update the early and late 3D panning gains.
-static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALverbState *State)
+static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALverbState *State)
 {
     ALfloat earlyPan[3] = { ReflectionsPan[0], ReflectionsPan[1],
                             ReflectionsPan[2] };
@@ -635,7 +635,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     for(index = 0;index < Device->NumChan;index++)
     {
         enum Channel chan = Device->Speaker2Chan[index];
-        State->Early.PanGain[chan] = lerp(1.0, speakerGain[chan], dirGain);
+        State->Early.PanGain[chan] = lerp(1.0, speakerGain[chan], dirGain) * Gain;
     }
 
 
@@ -648,7 +648,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     for(index = 0;index < Device->NumChan;index++)
     {
         enum Channel chan = Device->Speaker2Chan[index];
-        State->Late.PanGain[chan] = lerp(1.0, speakerGain[chan], dirGain);
+        State->Late.PanGain[chan] = lerp(1.0, speakerGain[chan], dirGain) * Gain;
     }
 }
 
@@ -1014,14 +1014,6 @@ static ALboolean VerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
                                                frequency);
     }
 
-    for(index = 0;index < MAXCHANNELS;index++)
-         State->Gain[index] = 0.0f;
-    for(index = 0;index < Device->NumChan;index++)
-    {
-        enum Channel chan = Device->Speaker2Chan[index];
-        State->Gain[chan] = 1.0f;
-    }
-
     return AL_TRUE;
 }
 
@@ -1066,8 +1058,10 @@ static ALboolean EAXVerbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 static ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
 {
     ALverbState *State = (ALverbState*)effect;
-    ALuint frequency = Context->Device->Frequency;
-    ALfloat cw, x, y, hfRatio;
+    ALCdevice *Device = Context->Device;
+    ALuint frequency = Device->Frequency;
+    ALfloat cw, x, y, hfRatio, gain;
+    ALuint index;
 
     // Calculate the master low-pass filter (from the master effect HF gain).
     cw = CalcI3DL2HFreq(Slot->effect.Params.Reverb.HFReference, frequency);
@@ -1105,6 +1099,16 @@ static ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
     UpdateLateLines(Slot->effect.Params.Reverb.Gain, Slot->effect.Params.Reverb.LateReverbGain,
                     x, Slot->effect.Params.Reverb.Density, Slot->effect.Params.Reverb.DecayTime,
                     Slot->effect.Params.Reverb.Diffusion, hfRatio, cw, frequency, State);
+
+    // Update channel gains
+    gain = Slot->Gain;
+    for(index = 0;index < MAXCHANNELS;index++)
+         State->Gain[index] = 0.0f;
+    for(index = 0;index < Device->NumChan;index++)
+    {
+        enum Channel chan = Device->Speaker2Chan[index];
+        State->Gain[chan] = gain;
+    }
 }
 
 // This updates the EAX reverb state.  This is called any time the EAX reverb
@@ -1165,7 +1169,7 @@ static ALvoid EAXVerbUpdate(ALeffectState *effect, ALCcontext *Context, const AL
 
     // Update early and late 3D panning.
     Update3DPanning(Context->Device, Slot->effect.Params.Reverb.ReflectionsPan,
-                    Slot->effect.Params.Reverb.LateReverbPan, State);
+                    Slot->effect.Params.Reverb.LateReverbPan, Slot->Gain, State);
 }
 
 // This processes the reverb state, given the input samples and an output
@@ -1175,8 +1179,8 @@ static ALvoid VerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuin
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat early[4], late[4], out[4];
-    ALfloat gain = Slot->Gain;
     const ALfloat *panGain = State->Gain;
+    (void)Slot;
 
     for(index = 0;index < SamplesToDo;index++)
     {
@@ -1184,10 +1188,10 @@ static ALvoid VerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuin
         VerbPass(State, SamplesIn[index], early, late);
 
         // Mix early reflections and late reverb.
-        out[0] = (early[0] + late[0]) * gain;
-        out[1] = (early[1] + late[1]) * gain;
-        out[2] = (early[2] + late[2]) * gain;
-        out[3] = (early[3] + late[3]) * gain;
+        out[0] = (early[0] + late[0]);
+        out[1] = (early[1] + late[1]);
+        out[2] = (early[2] + late[2]);
+        out[3] = (early[3] + late[3]);
 
         // Output the results.
         SamplesOut[index][FRONT_LEFT]   += panGain[FRONT_LEFT]   * out[0];
@@ -1208,7 +1212,7 @@ static ALvoid EAXVerbProcess(ALeffectState *effect, const ALeffectslot *Slot, AL
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat early[4], late[4];
-    ALfloat gain = Slot->Gain;
+    (void)Slot;
 
     for(index = 0;index < SamplesToDo;index++)
     {
@@ -1220,28 +1224,28 @@ static ALvoid EAXVerbProcess(ALeffectState *effect, const ALeffectslot *Slot, AL
         // reverb engine is not so scalable.
         SamplesOut[index][FRONT_LEFT] +=
            (State->Early.PanGain[FRONT_LEFT]*early[0] +
-            State->Late.PanGain[FRONT_LEFT]*late[0]) * gain;
+            State->Late.PanGain[FRONT_LEFT]*late[0]);
         SamplesOut[index][FRONT_RIGHT] +=
            (State->Early.PanGain[FRONT_RIGHT]*early[1] +
-            State->Late.PanGain[FRONT_RIGHT]*late[1]) * gain;
+            State->Late.PanGain[FRONT_RIGHT]*late[1]);
         SamplesOut[index][FRONT_CENTER] +=
            (State->Early.PanGain[FRONT_CENTER]*early[3] +
-            State->Late.PanGain[FRONT_CENTER]*late[3]) * gain;
+            State->Late.PanGain[FRONT_CENTER]*late[3]);
         SamplesOut[index][SIDE_LEFT] +=
            (State->Early.PanGain[SIDE_LEFT]*early[0] +
-            State->Late.PanGain[SIDE_LEFT]*late[0]) * gain;
+            State->Late.PanGain[SIDE_LEFT]*late[0]);
         SamplesOut[index][SIDE_RIGHT] +=
            (State->Early.PanGain[SIDE_RIGHT]*early[1] +
-            State->Late.PanGain[SIDE_RIGHT]*late[1]) * gain;
+            State->Late.PanGain[SIDE_RIGHT]*late[1]);
         SamplesOut[index][BACK_LEFT] +=
            (State->Early.PanGain[BACK_LEFT]*early[0] +
-            State->Late.PanGain[BACK_LEFT]*late[0]) * gain;
+            State->Late.PanGain[BACK_LEFT]*late[0]);
         SamplesOut[index][BACK_RIGHT] +=
            (State->Early.PanGain[BACK_RIGHT]*early[1] +
-            State->Late.PanGain[BACK_RIGHT]*late[1]) * gain;
+            State->Late.PanGain[BACK_RIGHT]*late[1]);
         SamplesOut[index][BACK_CENTER] +=
            (State->Early.PanGain[BACK_CENTER]*early[2] +
-            State->Late.PanGain[BACK_CENTER]*late[2]) * gain;
+            State->Late.PanGain[BACK_CENTER]*late[2]);
     }
 }
 

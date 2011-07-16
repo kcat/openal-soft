@@ -55,38 +55,45 @@ static ALvoid DedicatedDLGUpdate(ALeffectState *effect, ALCcontext *Context, con
     ALdedicatedState *state = (ALdedicatedState*)effect;
     ALCdevice *device = Context->Device;
     const ALfloat *SpeakerGain;
+    ALfloat Gain;
     ALint pos;
     ALsizei s;
 
     pos = aluCart2LUTpos(1.0f, 0.0f);
     SpeakerGain = device->PanningLUT[pos];
 
+    Gain = Slot->Gain * Slot->effect.Params.Dedicated.Gain;
     for(s = 0;s < MAXCHANNELS;s++)
-        state->gains[s] = SpeakerGain[s] * Slot->effect.Params.Dedicated.Gain;
+        state->gains[s] = SpeakerGain[s] * Gain;
 }
 
 static ALvoid DedicatedLFEUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
 {
     ALdedicatedState *state = (ALdedicatedState*)effect;
+    ALfloat Gain;
     ALsizei s;
     (void)Context;
 
+    Gain = Slot->Gain * Slot->effect.Params.Dedicated.Gain;
     for(s = 0;s < MAXCHANNELS;s++)
         state->gains[s] = 0.0f;
-    state->gains[LFE] = Slot->effect.Params.Dedicated.Gain;
+    state->gains[LFE] = Gain;
 }
 
 static ALvoid DedicatedProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALdedicatedState *state = (ALdedicatedState*)effect;
     const ALfloat *gains = state->gains;
-    ALuint i;
+    ALuint i, s;
+    (void)Slot;
 
     for(i = 0;i < SamplesToDo;i++)
     {
-        ALsizei s;
+        ALfloat sample;
+
+        sample = SamplesIn[i];
         for(s = 0;s < MAXCHANNELS;s++)
-            SamplesOut[i][s] = SamplesIn[i] * gains[s] * Slot->Gain;
+            SamplesOut[i][s] = sample * gains[s];
     }
 }
 

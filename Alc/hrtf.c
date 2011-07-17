@@ -187,7 +187,7 @@ void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALflo
 // HRIR dataset.  The coefficients are also normalized and attenuated by the
 // specified gain.  Stepping resolution and count is determined using the
 // given delta factor between 0.0 and 1.0.
-ALint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep)
+ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep)
 {
     ALfloat step;
     ALuint evidx[2], azidx[2];

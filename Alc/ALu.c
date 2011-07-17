@@ -843,83 +843,59 @@ static __inline ALbyte aluF2B(ALfloat val)
     return i>>8;
 }
 
-static const enum Channel MonoChans[] = { FRONT_CENTER };
-static const enum Channel StereoChans[] = { FRONT_LEFT, FRONT_RIGHT };
-static const enum Channel QuadChans[] = { FRONT_LEFT, FRONT_RIGHT,
-                                          BACK_LEFT, BACK_RIGHT };
-static const enum Channel X51Chans[] = { FRONT_LEFT, FRONT_RIGHT,
-                                         FRONT_CENTER, LFE,
-                                         BACK_LEFT, BACK_RIGHT };
-static const enum Channel X51SideChans[] = { FRONT_LEFT, FRONT_RIGHT,
-                                             FRONT_CENTER, LFE,
-                                             SIDE_LEFT, SIDE_RIGHT };
-static const enum Channel X61Chans[] = { FRONT_LEFT, FRONT_LEFT,
-                                         FRONT_CENTER, LFE, BACK_CENTER,
-                                         SIDE_LEFT, SIDE_RIGHT };
-static const enum Channel X71Chans[] = { FRONT_LEFT, FRONT_RIGHT,
-                                         FRONT_CENTER, LFE,
-                                         BACK_LEFT, BACK_RIGHT,
-                                         SIDE_LEFT, SIDE_RIGHT };
-
-#define DECL_TEMPLATE(T, chans,N, func)                                       \
-static void Write_##T##_##chans(ALCdevice *device, T *RESTRICT buffer,        \
-                                ALuint SamplesToDo)                           \
+#define DECL_TEMPLATE(T, N, func)                                             \
+static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
+                            ALuint SamplesToDo)                               \
 {                                                                             \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS] = device->DryBuffer;           \
-    const ALuint *ChanMap = device->DevChannels;                              \
+    const enum Channel *ChanMap = device->DevChannels;                        \
     ALuint i, j;                                                              \
                                                                               \
     for(i = 0;i < SamplesToDo;i++)                                            \
     {                                                                         \
         for(j = 0;j < N;j++)                                                  \
-            buffer[ChanMap[chans[j]]] = func(DryBuffer[i][chans[j]]);         \
-        buffer += N;                                                          \
+            *(buffer++) = func(DryBuffer[i][ChanMap[j]]);                     \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALfloat, MonoChans,1, aluF2F)
-DECL_TEMPLATE(ALfloat, QuadChans,4, aluF2F)
-DECL_TEMPLATE(ALfloat, X51Chans,6, aluF2F)
-DECL_TEMPLATE(ALfloat, X51SideChans,6, aluF2F)
-DECL_TEMPLATE(ALfloat, X61Chans,7, aluF2F)
-DECL_TEMPLATE(ALfloat, X71Chans,8, aluF2F)
+DECL_TEMPLATE(ALfloat, 1, aluF2F)
+DECL_TEMPLATE(ALfloat, 4, aluF2F)
+DECL_TEMPLATE(ALfloat, 6, aluF2F)
+DECL_TEMPLATE(ALfloat, 7, aluF2F)
+DECL_TEMPLATE(ALfloat, 8, aluF2F)
 
-DECL_TEMPLATE(ALushort, MonoChans,1, aluF2US)
-DECL_TEMPLATE(ALushort, QuadChans,4, aluF2US)
-DECL_TEMPLATE(ALushort, X51Chans,6, aluF2US)
-DECL_TEMPLATE(ALushort, X51SideChans,6, aluF2US)
-DECL_TEMPLATE(ALushort, X61Chans,7, aluF2US)
-DECL_TEMPLATE(ALushort, X71Chans,8, aluF2US)
+DECL_TEMPLATE(ALushort, 1, aluF2US)
+DECL_TEMPLATE(ALushort, 4, aluF2US)
+DECL_TEMPLATE(ALushort, 6, aluF2US)
+DECL_TEMPLATE(ALushort, 7, aluF2US)
+DECL_TEMPLATE(ALushort, 8, aluF2US)
 
-DECL_TEMPLATE(ALshort, MonoChans,1, aluF2S)
-DECL_TEMPLATE(ALshort, QuadChans,4, aluF2S)
-DECL_TEMPLATE(ALshort, X51Chans,6, aluF2S)
-DECL_TEMPLATE(ALshort, X51SideChans,6, aluF2S)
-DECL_TEMPLATE(ALshort, X61Chans,7, aluF2S)
-DECL_TEMPLATE(ALshort, X71Chans,8, aluF2S)
+DECL_TEMPLATE(ALshort, 1, aluF2S)
+DECL_TEMPLATE(ALshort, 4, aluF2S)
+DECL_TEMPLATE(ALshort, 6, aluF2S)
+DECL_TEMPLATE(ALshort, 7, aluF2S)
+DECL_TEMPLATE(ALshort, 8, aluF2S)
 
-DECL_TEMPLATE(ALubyte, MonoChans,1, aluF2UB)
-DECL_TEMPLATE(ALubyte, QuadChans,4, aluF2UB)
-DECL_TEMPLATE(ALubyte, X51Chans,6, aluF2UB)
-DECL_TEMPLATE(ALubyte, X51SideChans,6, aluF2UB)
-DECL_TEMPLATE(ALubyte, X61Chans,7, aluF2UB)
-DECL_TEMPLATE(ALubyte, X71Chans,8, aluF2UB)
+DECL_TEMPLATE(ALubyte, 1, aluF2UB)
+DECL_TEMPLATE(ALubyte, 4, aluF2UB)
+DECL_TEMPLATE(ALubyte, 6, aluF2UB)
+DECL_TEMPLATE(ALubyte, 7, aluF2UB)
+DECL_TEMPLATE(ALubyte, 8, aluF2UB)
 
-DECL_TEMPLATE(ALbyte, MonoChans,1, aluF2B)
-DECL_TEMPLATE(ALbyte, QuadChans,4, aluF2B)
-DECL_TEMPLATE(ALbyte, X51Chans,6, aluF2B)
-DECL_TEMPLATE(ALbyte, X51SideChans,6, aluF2B)
-DECL_TEMPLATE(ALbyte, X61Chans,7, aluF2B)
-DECL_TEMPLATE(ALbyte, X71Chans,8, aluF2B)
+DECL_TEMPLATE(ALbyte, 1, aluF2B)
+DECL_TEMPLATE(ALbyte, 4, aluF2B)
+DECL_TEMPLATE(ALbyte, 6, aluF2B)
+DECL_TEMPLATE(ALbyte, 7, aluF2B)
+DECL_TEMPLATE(ALbyte, 8, aluF2B)
 
 #undef DECL_TEMPLATE
 
-#define DECL_TEMPLATE(T, chans,N, func)                                       \
-static void Write_##T##_##chans(ALCdevice *device, T *RESTRICT buffer,        \
-                                ALuint SamplesToDo)                           \
+#define DECL_TEMPLATE(T, N, func)                                             \
+static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
+                            ALuint SamplesToDo)                               \
 {                                                                             \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS] = device->DryBuffer;           \
-    const ALuint *ChanMap = device->DevChannels;                              \
+    const enum Channel *ChanMap = device->DevChannels;                        \
     ALuint i, j;                                                              \
                                                                               \
     if(device->Bs2b)                                                          \
@@ -927,12 +903,11 @@ static void Write_##T##_##chans(ALCdevice *device, T *RESTRICT buffer,        \
         for(i = 0;i < SamplesToDo;i++)                                        \
         {                                                                     \
             float samples[2];                                                 \
-            samples[0] = DryBuffer[i][chans[0]];                              \
-            samples[1] = DryBuffer[i][chans[1]];                              \
+            samples[0] = DryBuffer[i][ChanMap[0]];                            \
+            samples[1] = DryBuffer[i][ChanMap[1]];                            \
             bs2b_cross_feed(device->Bs2b, samples);                           \
-            buffer[ChanMap[chans[0]]]  = func(samples[0]);                    \
-            buffer[ChanMap[chans[1]]] = func(samples[1]);                     \
-            buffer += 2;                                                      \
+            *(buffer++) = func(samples[0]);                                   \
+            *(buffer++) = func(samples[1]);                                   \
         }                                                                     \
     }                                                                         \
     else                                                                      \
@@ -940,17 +915,16 @@ static void Write_##T##_##chans(ALCdevice *device, T *RESTRICT buffer,        \
         for(i = 0;i < SamplesToDo;i++)                                        \
         {                                                                     \
             for(j = 0;j < N;j++)                                              \
-                buffer[ChanMap[chans[j]]] = func(DryBuffer[i][chans[j]]);     \
-            buffer += N;                                                      \
+                *(buffer++) = func(DryBuffer[i][ChanMap[j]]);                 \
         }                                                                     \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALfloat, StereoChans,2, aluF2F)
-DECL_TEMPLATE(ALushort, StereoChans,2, aluF2US)
-DECL_TEMPLATE(ALshort, StereoChans,2, aluF2S)
-DECL_TEMPLATE(ALubyte, StereoChans,2, aluF2UB)
-DECL_TEMPLATE(ALbyte, StereoChans,2, aluF2B)
+DECL_TEMPLATE(ALfloat, 2, aluF2F)
+DECL_TEMPLATE(ALushort, 2, aluF2US)
+DECL_TEMPLATE(ALshort, 2, aluF2S)
+DECL_TEMPLATE(ALubyte, 2, aluF2UB)
+DECL_TEMPLATE(ALbyte, 2, aluF2B)
 
 #undef DECL_TEMPLATE
 
@@ -960,25 +934,23 @@ static void Write_##T(ALCdevice *device, T *buffer, ALuint SamplesToDo)       \
     switch(device->FmtChans)                                                  \
     {                                                                         \
         case DevFmtMono:                                                      \
-            Write_##T##_MonoChans(device, buffer, SamplesToDo);               \
+            Write_##T##_1(device, buffer, SamplesToDo);                       \
             break;                                                            \
         case DevFmtStereo:                                                    \
-            Write_##T##_StereoChans(device, buffer, SamplesToDo);             \
+            Write_##T##_2(device, buffer, SamplesToDo);                       \
             break;                                                            \
         case DevFmtQuad:                                                      \
-            Write_##T##_QuadChans(device, buffer, SamplesToDo);               \
+            Write_##T##_4(device, buffer, SamplesToDo);                       \
             break;                                                            \
         case DevFmtX51:                                                       \
-            Write_##T##_X51Chans(device, buffer, SamplesToDo);                \
-            break;                                                            \
         case DevFmtX51Side:                                                   \
-            Write_##T##_X51SideChans(device, buffer, SamplesToDo);            \
+            Write_##T##_6(device, buffer, SamplesToDo);                       \
             break;                                                            \
         case DevFmtX61:                                                       \
-            Write_##T##_X61Chans(device, buffer, SamplesToDo);                \
+            Write_##T##_7(device, buffer, SamplesToDo);                       \
             break;                                                            \
         case DevFmtX71:                                                       \
-            Write_##T##_X71Chans(device, buffer, SamplesToDo);                \
+            Write_##T##_8(device, buffer, SamplesToDo);                       \
             break;                                                            \
     }                                                                         \
 }

@@ -424,7 +424,7 @@ struct ALCdevice_struct
     // Dry path buffer mix
     ALfloat DryBuffer[BUFFERSIZE][MAXCHANNELS];
 
-    ALuint DevChannels[MAXCHANNELS];
+    enum Channel DevChannels[MAXCHANNELS];
 
     enum Channel Speaker2Chan[MAXCHANNELS];
     ALfloat PanningLUT[LUT_NUM][MAXCHANNELS];

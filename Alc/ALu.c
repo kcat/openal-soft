@@ -1029,8 +1029,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
                 for(i = 0;i < SamplesToDo;i++)
                 {
-                    ALEffectSlot->ClickRemoval[0] -= ALEffectSlot->ClickRemoval[0] / 256.0f;
                     ALEffectSlot->WetBuffer[i] += ALEffectSlot->ClickRemoval[0];
+                    ALEffectSlot->ClickRemoval[0] -= ALEffectSlot->ClickRemoval[0] / 256.0f;
                 }
                 for(i = 0;i < 1;i++)
                 {
@@ -1061,8 +1061,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             for(c = 0;c < MAXCHANNELS;c++)
             {
-                device->ClickRemoval[c] -= device->ClickRemoval[c] / 256.0f;
                 device->DryBuffer[i][c] += device->ClickRemoval[c];
+                device->ClickRemoval[c] -= device->ClickRemoval[c] / 256.0f;
             }
         }
         for(i = 0;i < MAXCHANNELS;i++)

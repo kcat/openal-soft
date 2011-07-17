@@ -170,14 +170,16 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
             Counter--;                                                        \
         }                                                                     \
                                                                               \
+        Delay[0] >>= 16;                                                      \
+        Delay[1] >>= 16;                                                      \
         for(;BufferIdx < BufferSize;BufferIdx++)                              \
         {                                                                     \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
             value = lpFilter2P(DryFilter, i, value);                          \
                                                                               \
             History[Offset&SRC_HISTORY_MASK] = value;                         \
-            left = History[(Offset-(Delay[0]>>16))&SRC_HISTORY_MASK];         \
-            right = History[(Offset-(Delay[1]>>16))&SRC_HISTORY_MASK];        \
+            left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];               \
+            right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];              \
                                                                               \
             Values[Offset&HRIR_MASK][0] = 0.0f;                               \
             Values[Offset&HRIR_MASK][1] = 0.0f;                               \
@@ -204,8 +206,8 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
             value = lpFilter2PC(DryFilter, i, value);                         \
                                                                               \
             History[Offset&SRC_HISTORY_MASK] = value;                         \
-            left = History[(Offset-(Delay[0]>>16))&SRC_HISTORY_MASK];         \
-            right = History[(Offset-(Delay[1]>>16))&SRC_HISTORY_MASK];        \
+            left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];               \
+            right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];              \
                                                                               \
             PendingClicks[FRONT_LEFT]  += Values[(Offset+1)&HRIR_MASK][0] +   \
                                           Coeffs[0][0] * left;                \

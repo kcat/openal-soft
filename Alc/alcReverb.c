@@ -315,14 +315,14 @@ static ALboolean AllocLines(ALboolean eaxFlag, ALuint frequency, ALverbState *St
 // until the decay reaches -60 dB.
 static __inline ALfloat CalcDecayCoeff(ALfloat length, ALfloat decayTime)
 {
-    return aluPow(10.0f, length / decayTime * -60.0f / 20.0f);
+    return aluPow(0.001f/*-60 dB*/, length/decayTime);
 }
 
 // Calculate a decay length from a coefficient and the time until the decay
 // reaches -60 dB.
 static __inline ALfloat CalcDecayLength(ALfloat coeff, ALfloat decayTime)
 {
-    return log10(coeff) / -60.0 * 20.0f * decayTime;
+    return log10(coeff) * decayTime / -3.0f/*log10(0.001)*/;
 }
 
 // Calculate the high frequency parameter for the I3DL2 coefficient

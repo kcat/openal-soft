@@ -258,8 +258,8 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     MMDevApiData *data = device->ExtraData;
     WAVEFORMATEXTENSIBLE OutputType;
     WAVEFORMATEX *wfx = NULL;
-    REFERENCE_TIME def_per;
-    UINT32 buffer_len;
+    REFERENCE_TIME min_per;
+    UINT32 buffer_len, min_len;
     HRESULT hr;
 
     hr = IAudioClient_GetMixFormat(data->client, &wfx);
@@ -477,8 +477,9 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
 
 
     hr = IAudioClient_Initialize(data->client, AUDCLNT_SHAREMODE_SHARED, 0,
-                                 (ALuint64)device->UpdateSize * 10000000 /
-                                 device->Frequency * device->NumUpdates,
+                                 ((ALuint64)device->UpdateSize*
+                                  device->NumUpdates*10000000 +
+                                  device->Frequency-1) / device->Frequency,
                                  0, &OutputType.Format, NULL);
     if(FAILED(hr))
     {
@@ -486,7 +487,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    hr = IAudioClient_GetDevicePeriod(data->client, &def_per, NULL);
+    hr = IAudioClient_GetDevicePeriod(data->client, NULL, &min_per);
     if(SUCCEEDED(hr))
         hr = IAudioClient_GetBufferSize(data->client, &buffer_len);
     if(FAILED(hr))
@@ -495,14 +496,14 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    device->NumUpdates = (ALuint)((REFERENCE_TIME)buffer_len * 10000000 /
-                                  device->Frequency / def_per);
+    min_len = (min_per*device->Frequency + 10000000-1) / 10000000;
+    device->UpdateSize = __max(device->UpdateSize, min_len);
+    device->NumUpdates = buffer_len / device->UpdateSize;
     if(device->NumUpdates <= 1)
     {
         device->NumUpdates = 1;
-        ERR("Audio client returned default_period > buffer_len/2; expect break up\n");
+        ERR("Audio client returned min_period > buffer_len/2; expect break up\n");
     }
-    device->UpdateSize = buffer_len / device->NumUpdates;
 
     hr = IAudioClient_Start(data->client);
     if(FAILED(hr))

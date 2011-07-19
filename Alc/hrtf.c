@@ -89,8 +89,9 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
     ALfloat gainChange, angleChange, delta;
 
     // Calculate the normalized dB gain change.
-    gainChange = aluFabs((log10(__max(newGain, 0.0001f)) -
-                          log10(__max(oldGain, 0.0001f))) / log10(0.0001f));
+    newGain = __max(newGain, 0.0001f);
+    oldGain = __max(oldGain, 0.0001f);
+    gainChange = aluFabs(log10(newGain / oldGain) / log10(0.0001f));
 
     // Calculate the normalized listener to source angle change when there is
     // enough gain to notice it.

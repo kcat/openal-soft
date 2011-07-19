@@ -106,7 +106,8 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
 
     }
 
-    // Use the largest of the two changes for the delta factor.
+    // Use the largest of the two changes for the delta factor, and apply a
+    // significance shaping function to it.
     delta = __max(gainChange, angleChange) * 2.0f;
     return __min(delta, 1.0f);
 }

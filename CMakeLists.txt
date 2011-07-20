@@ -256,6 +256,16 @@ IF(NOT HAVE_VSNPRINTF)
     ADD_DEFINITIONS(-Dvsnprintf=_vsnprintf)
 ENDIF()
 
+CHECK_SYMBOL_EXISTS(isfinite math.h HAVE_ISFINITE)
+IF(NOT HAVE_ISFINITE)
+    CHECK_FUNCTION_EXISTS(_finite HAVE__FINITE)
+    IF(NOT HAVE__FINITE)
+        MESSAGE(FATAL_ERROR "No isfinite function found, please report!")
+    ENDIF()
+
+    ADD_DEFINITIONS(-Disfinite=_finite)
+ENDIF()
+
 CHECK_SYMBOL_EXISTS(isnan math.h HAVE_ISNAN)
 IF(NOT HAVE_ISNAN)
     CHECK_FUNCTION_EXISTS(_isnan HAVE__ISNAN)

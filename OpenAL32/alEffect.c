@@ -633,7 +633,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue
             switch(param)
             {
             case AL_DEDICATED_GAIN:
-                if(flValue >= 0.0f)
+                if(flValue >= 0.0f && isfinite(flValue))
                     ALEffect->Params.Dedicated.Gain = flValue;
                 else
                     alSetError(Context, AL_INVALID_VALUE);
@@ -670,7 +670,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
             switch(param)
             {
             case AL_EAXREVERB_REFLECTIONS_PAN:
-                if(!isnan(pflValues[0]) && !isnan(pflValues[1]) && !isnan(pflValues[2]))
+                if(isfinite(pflValues[0]) && isfinite(pflValues[1]) && isfinite(pflValues[2]))
                 {
                     ALEffect->Params.Reverb.ReflectionsPan[0] = pflValues[0];
                     ALEffect->Params.Reverb.ReflectionsPan[1] = pflValues[1];
@@ -680,7 +680,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
                     alSetError(Context, AL_INVALID_VALUE);
                 break;
             case AL_EAXREVERB_LATE_REVERB_PAN:
-                if(!isnan(pflValues[0]) && !isnan(pflValues[1]) && !isnan(pflValues[2]))
+                if(isfinite(pflValues[0]) && isfinite(pflValues[1]) && isfinite(pflValues[2]))
                 {
                     ALEffect->Params.Reverb.LateReverbPan[0] = pflValues[0];
                     ALEffect->Params.Reverb.LateReverbPan[1] = pflValues[1];

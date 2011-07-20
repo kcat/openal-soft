@@ -36,7 +36,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
     switch(eParam)
     {
         case AL_GAIN:
-            if(flValue >= 0.0f)
+            if(flValue >= 0.0f && isfinite(flValue))
             {
                 pContext->Listener.Gain = flValue;
                 pContext->UpdateSources = AL_TRUE;
@@ -46,7 +46,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
             break;
 
         case AL_METERS_PER_UNIT:
-            if(flValue > 0.0f)
+            if(flValue > 0.0f && isfinite(flValue))
             {
                 pContext->Listener.MetersPerUnit = flValue;
                 pContext->UpdateSources = AL_TRUE;
@@ -74,17 +74,27 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat 
     switch(eParam)
     {
         case AL_POSITION:
-            pContext->Listener.Position[0] = flValue1;
-            pContext->Listener.Position[1] = flValue2;
-            pContext->Listener.Position[2] = flValue3;
-            pContext->UpdateSources = AL_TRUE;
+            if(isfinite(flValue1) && isfinite(flValue2) && isfinite(flValue3))
+            {
+                pContext->Listener.Position[0] = flValue1;
+                pContext->Listener.Position[1] = flValue2;
+                pContext->Listener.Position[2] = flValue3;
+                pContext->UpdateSources = AL_TRUE;
+            }
+            else
+                alSetError(pContext, AL_INVALID_VALUE);
             break;
 
         case AL_VELOCITY:
-            pContext->Listener.Velocity[0] = flValue1;
-            pContext->Listener.Velocity[1] = flValue2;
-            pContext->Listener.Velocity[2] = flValue3;
-            pContext->UpdateSources = AL_TRUE;
+            if(isfinite(flValue1) && isfinite(flValue2) && isfinite(flValue3))
+            {
+                pContext->Listener.Velocity[0] = flValue1;
+                pContext->Listener.Velocity[1] = flValue2;
+                pContext->Listener.Velocity[2] = flValue3;
+                pContext->UpdateSources = AL_TRUE;
+            }
+            else
+                alSetError(pContext, AL_INVALID_VALUE);
             break;
 
         default:
@@ -124,14 +134,21 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
         switch(eParam)
         {
             case AL_ORIENTATION:
-                // AT then UP
-                pContext->Listener.Forward[0] = pflValues[0];
-                pContext->Listener.Forward[1] = pflValues[1];
-                pContext->Listener.Forward[2] = pflValues[2];
-                pContext->Listener.Up[0] = pflValues[3];
-                pContext->Listener.Up[1] = pflValues[4];
-                pContext->Listener.Up[2] = pflValues[5];
-                pContext->UpdateSources = AL_TRUE;
+                if(isfinite(pflValues[0]) && isfinite(pflValues[1]) &&
+                   isfinite(pflValues[2]) && isfinite(pflValues[3]) &&
+                   isfinite(pflValues[4]) && isfinite(pflValues[5]))
+                {
+                    // AT then UP
+                    pContext->Listener.Forward[0] = pflValues[0];
+                    pContext->Listener.Forward[1] = pflValues[1];
+                    pContext->Listener.Forward[2] = pflValues[2];
+                    pContext->Listener.Up[0] = pflValues[3];
+                    pContext->Listener.Up[1] = pflValues[4];
+                    pContext->Listener.Up[2] = pflValues[5];
+                    pContext->UpdateSources = AL_TRUE;
+                }
+                else
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             default:

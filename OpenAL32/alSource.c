@@ -406,24 +406,39 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flVal
         switch(eParam)
         {
             case AL_POSITION:
-                Source->vPosition[0] = flValue1;
-                Source->vPosition[1] = flValue2;
-                Source->vPosition[2] = flValue3;
-                Source->NeedsUpdate = AL_TRUE;
+                if(isfinite(flValue1) && isfinite(flValue2) && isfinite(flValue3))
+                {
+                    Source->vPosition[0] = flValue1;
+                    Source->vPosition[1] = flValue2;
+                    Source->vPosition[2] = flValue3;
+                    Source->NeedsUpdate = AL_TRUE;
+                }
+                else
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_VELOCITY:
-                Source->vVelocity[0] = flValue1;
-                Source->vVelocity[1] = flValue2;
-                Source->vVelocity[2] = flValue3;
-                Source->NeedsUpdate = AL_TRUE;
+                if(isfinite(flValue1) && isfinite(flValue2) && isfinite(flValue3))
+                {
+                    Source->vVelocity[0] = flValue1;
+                    Source->vVelocity[1] = flValue2;
+                    Source->vVelocity[2] = flValue3;
+                    Source->NeedsUpdate = AL_TRUE;
+                }
+                else
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             case AL_DIRECTION:
-                Source->vOrientation[0] = flValue1;
-                Source->vOrientation[1] = flValue2;
-                Source->vOrientation[2] = flValue3;
-                Source->NeedsUpdate = AL_TRUE;
+                if(isfinite(flValue1) && isfinite(flValue2) && isfinite(flValue3))
+                {
+                    Source->vOrientation[0] = flValue1;
+                    Source->vOrientation[1] = flValue2;
+                    Source->vOrientation[2] = flValue3;
+                    Source->NeedsUpdate = AL_TRUE;
+                }
+                else
+                    alSetError(pContext, AL_INVALID_VALUE);
                 break;
 
             default:

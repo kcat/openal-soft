@@ -566,6 +566,7 @@ static void alc_initconfig(void)
 
     ReverbBoost *= aluPow(10.0f, GetConfigValueFloat("reverb", "boost", 0.0f) /
                                  20.0f);
+    EmulateEAXReverb = GetConfigValueBool("reverb", "emulate-eax", AL_FALSE);
 
     devs = GetConfigValue(NULL, "drivers", "");
     if(devs[0])

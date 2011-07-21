@@ -162,6 +162,12 @@
 #  value of 0 means no change.
 #boost = 0
 
+## emulate-eax:
+#  Allows the standard reverb effect to be used in place of EAX reverb. EAX
+#  reverb processing is a bit more CPU intensive than standard, so this option
+#  allows a simpler effect to be used at the loss of some quality.
+#emulate-eax = false
+
 ##
 ## ALSA backend stuff
 ##

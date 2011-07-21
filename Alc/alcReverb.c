@@ -140,6 +140,9 @@ typedef struct ALverbState {
  */
 ALfloat ReverbBoost = 1.0f;
 
+/* Specifies whether to use a standard reverb effect in place of EAX reverb */
+ALboolean EmulateEAXReverb = AL_FALSE;
+
 /* This coefficient is used to define the maximum frequency range controlled
  * by the modulation depth.  The current value of 0.1 will allow it to swing
  * from 0.9x to 1.1x.  This value must be below 1.  At 1 it will cause the
@@ -1364,7 +1367,7 @@ ALeffectState *VerbCreate(void)
 ALeffectState *EAXVerbCreate(void)
 {
     ALeffectState *State = VerbCreate();
-    if(State)
+    if(State && EmulateEAXReverb == AL_FALSE)
     {
         State->DeviceUpdate = EAXVerbDeviceUpdate;
         State->Update = EAXVerbUpdate;

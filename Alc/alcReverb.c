@@ -596,10 +596,14 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     ALfloat latePan[3] = { LateReverbPan[0], LateReverbPan[1],
                            LateReverbPan[2] };
     const ALfloat *speakerGain;
+    ALfloat ambientGain;
     ALfloat dirGain;
     ALfloat length;
     ALuint index;
     ALint pos;
+
+    // Attenuate non-directional reverb according to the number of channels
+    ambientGain = aluSqrt(2.0f/Device->NumChan);
 
     // Calculate the 3D-panning gains for the early reflections and late
     // reverb.
@@ -635,7 +639,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     for(index = 0;index < Device->NumChan;index++)
     {
         enum Channel chan = Device->Speaker2Chan[index];
-        State->Early.PanGain[chan] = lerp(1.0, speakerGain[chan], dirGain) * Gain;
+        State->Early.PanGain[chan] = lerp(ambientGain, speakerGain[chan], dirGain) * Gain;
     }
 
 
@@ -648,7 +652,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     for(index = 0;index < Device->NumChan;index++)
     {
         enum Channel chan = Device->Speaker2Chan[index];
-        State->Late.PanGain[chan] = lerp(1.0, speakerGain[chan], dirGain) * Gain;
+        State->Late.PanGain[chan] = lerp(ambientGain, speakerGain[chan], dirGain) * Gain;
     }
 }
 
@@ -1102,6 +1106,7 @@ static ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
 
     // Update channel gains
     gain = Slot->Gain;
+    gain *= aluSqrt(2.0/Device->NumChan);
     for(index = 0;index < MAXCHANNELS;index++)
          State->Gain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)

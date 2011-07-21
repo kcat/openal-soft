@@ -58,6 +58,7 @@ static IMMDeviceEnumerator *Enumerator = NULL;
 typedef struct {
     IMMDevice *mmdev;
     IAudioClient *client;
+    HANDLE hNotifyEvent;
 
     volatile int killNow;
     ALvoid *thread;
@@ -171,7 +172,10 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         len = device->UpdateSize*device->NumUpdates - written;
         if(len < device->UpdateSize)
         {
-            Sleep(10);
+            DWORD res;
+            res = WaitForSingleObjectEx(data->hNotifyEvent, 2000, FALSE);
+            if(res != WAIT_OBJECT_0)
+                ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
             continue;
         }
         len -= len%device->UpdateSize;
@@ -217,8 +221,14 @@ static ALCboolean MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceN
         return ALC_FALSE;
     }
 
+    hr = S_OK;
+    data->hNotifyEvent = CreateEvent(NULL, FALSE, TRUE, NULL);
+    if(data->hNotifyEvent == NULL)
+        hr = E_FAIL;
+
     //MMDevApi Init code
-    hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(Enumerator, eRender, eMultimedia, &data->mmdev);
+    if(SUCCEEDED(hr))
+        hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(Enumerator, eRender, eMultimedia, &data->mmdev);
     if(SUCCEEDED(hr))
         hr = IMMDevice_Activate(data->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &client);
 
@@ -227,6 +237,9 @@ static ALCboolean MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceN
         if(data->mmdev)
             IMMDevice_Release(data->mmdev);
         data->mmdev = NULL;
+        if(data->hNotifyEvent != NULL)
+            CloseHandle(data->hNotifyEvent);
+        data->hNotifyEvent = NULL;
         free(data);
 
         ERR("Device init failed: 0x%08lx\n", hr);
@@ -248,6 +261,9 @@ static void MMDevApiClosePlayback(ALCdevice *device)
 
     IMMDevice_Release(data->mmdev);
     data->mmdev = NULL;
+
+    CloseHandle(data->hNotifyEvent);
+    data->hNotifyEvent = NULL;
 
     free(data);
     device->ExtraData = NULL;
@@ -475,37 +491,48 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
 
     SetDefaultWFXChannelOrder(device);
 
+    hr = IAudioClient_GetDevicePeriod(data->client, &min_per, NULL);
+    if(SUCCEEDED(hr))
+    {
+        min_len = (min_per*device->Frequency + 10000000-1) / 10000000;
+        if(min_len < device->UpdateSize)
+            min_len *= device->UpdateSize/min_len;
 
-    hr = IAudioClient_Initialize(data->client, AUDCLNT_SHAREMODE_SHARED, 0,
-                                 ((ALuint64)device->UpdateSize*
-                                  device->NumUpdates*10000000 +
-                                  device->Frequency-1) / device->Frequency,
-                                 0, &OutputType.Format, NULL);
+        device->NumUpdates = (device->NumUpdates*device->UpdateSize + min_len/2) /
+                             min_len;
+        device->NumUpdates = __max(device->NumUpdates, 2);
+        device->UpdateSize = min_len;
+
+        hr = IAudioClient_Initialize(data->client, AUDCLNT_SHAREMODE_SHARED,
+                                     AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                                     ((REFERENCE_TIME)device->UpdateSize*
+                                      device->NumUpdates*10000000 +
+                                      device->Frequency-1) / device->Frequency,
+                                     0, &OutputType.Format, NULL);
+    }
     if(FAILED(hr))
     {
         ERR("Failed to initialize audio client: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 
-    hr = IAudioClient_GetDevicePeriod(data->client, NULL, &min_per);
-    if(SUCCEEDED(hr))
-        hr = IAudioClient_GetBufferSize(data->client, &buffer_len);
+    hr = IAudioClient_GetBufferSize(data->client, &buffer_len);
     if(FAILED(hr))
     {
         ERR("Failed to get audio buffer info: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 
-    min_len = (min_per*device->Frequency + 10000000-1) / 10000000;
-    device->UpdateSize = __max(device->UpdateSize, min_len);
     device->NumUpdates = buffer_len / device->UpdateSize;
     if(device->NumUpdates <= 1)
     {
         device->NumUpdates = 1;
-        ERR("Audio client returned min_period > buffer_len/2; expect break up\n");
+        ERR("Audio client returned buffer_len < period*2; expect break up\n");
     }
 
-    hr = IAudioClient_Start(data->client);
+    hr = IAudioClient_SetEventHandle(data->client, data->hNotifyEvent);
+    if(SUCCEEDED(hr))
+        hr = IAudioClient_Start(data->client);
     if(FAILED(hr))
     {
         ERR("Failed to start audio client: 0x%08lx\n", hr);
@@ -537,6 +564,7 @@ static void MMDevApiStopPlayback(ALCdevice *device)
     data->killNow = 0;
 
     IAudioClient_Stop(data->client);
+    ResetEvent(data->hNotifyEvent);
 }
 
 

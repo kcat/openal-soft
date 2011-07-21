@@ -310,14 +310,22 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
         return ALC_FALSE;
     }
 
+    hr = DS_OK;
+    pData->hNotifyEvent = CreateEvent(NULL, FALSE, TRUE, NULL);
+    if(pData->hNotifyEvent == NULL)
+        hr = E_FAIL;
+
     //DirectSound Init code
-    hr = DirectSoundCreate(guid, &pData->lpDS, NULL);
+    if(SUCCEEDED(hr))
+        hr = DirectSoundCreate(guid, &pData->lpDS, NULL);
     if(SUCCEEDED(hr))
         hr = IDirectSound_SetCooperativeLevel(pData->lpDS, GetForegroundWindow(), DSSCL_PRIORITY);
     if(FAILED(hr))
     {
         if(pData->lpDS)
             IDirectSound_Release(pData->lpDS);
+        if(pData->hNotifyEvent)
+            CloseHandle(pData->hNotifyEvent);
         free(pData);
         ERR("Device init failed: 0x%08lx\n", hr);
         return ALC_FALSE;
@@ -333,6 +341,7 @@ static void DSoundClosePlayback(ALCdevice *device)
     DSoundData *pData = device->ExtraData;
 
     IDirectSound_Release(pData->lpDS);
+    CloseHandle(pData->hNotifyEvent);
     free(pData);
     device->ExtraData = NULL;
 }
@@ -488,23 +497,17 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
         hr = IDirectSoundBuffer_QueryInterface(pData->DSsbuffer, &IID_IDirectSoundNotify, (LPVOID *)&pData->DSnotify);
         if(SUCCEEDED(hr))
         {
-            pData->hNotifyEvent = CreateEvent(NULL, FALSE, TRUE, NULL);
-            if(pData->hNotifyEvent == NULL)
-                hr = E_FAIL;
-            else
-            {
-                DSBPOSITIONNOTIFY notifies[MAX_UPDATES];
-                ALuint i;
+            DSBPOSITIONNOTIFY notifies[MAX_UPDATES];
+            ALuint i;
 
-                for(i = 0;i < device->NumUpdates;++i)
-                {
-                    notifies[i].dwOffset = i * device->UpdateSize *
-                                           OutputType.Format.nBlockAlign;
-                    notifies[i].hEventNotify = pData->hNotifyEvent;
-                }
-                if(IDirectSoundNotify_SetNotificationPositions(pData->DSnotify, device->NumUpdates, notifies) != DS_OK)
-                    hr = E_FAIL;
+            for(i = 0;i < device->NumUpdates;++i)
+            {
+                notifies[i].dwOffset = i * device->UpdateSize *
+                                       OutputType.Format.nBlockAlign;
+                notifies[i].hEventNotify = pData->hNotifyEvent;
             }
+            if(IDirectSoundNotify_SetNotificationPositions(pData->DSnotify, device->NumUpdates, notifies) != DS_OK)
+                hr = E_FAIL;
         }
     }
 
@@ -518,9 +521,6 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
 
     if(FAILED(hr))
     {
-        if(pData->hNotifyEvent != NULL)
-            CloseHandle(pData->hNotifyEvent);
-        pData->hNotifyEvent = NULL;
         if(pData->DSnotify != NULL)
             IDirectSoundNotify_Release(pData->DSnotify);
         pData->DSnotify = NULL;
@@ -549,8 +549,6 @@ static void DSoundStopPlayback(ALCdevice *device)
 
     pData->killNow = 0;
 
-    CloseHandle(pData->hNotifyEvent);
-    pData->hNotifyEvent = NULL;
     IDirectSoundNotify_Release(pData->DSnotify);
     pData->DSnotify = NULL;
     IDirectSoundBuffer_Release(pData->DSsbuffer);
@@ -558,6 +556,8 @@ static void DSoundStopPlayback(ALCdevice *device)
     if(pData->DSpbuffer != NULL)
         IDirectSoundBuffer_Release(pData->DSpbuffer);
     pData->DSpbuffer = NULL;
+
+    ResetEvent(pData->hNotifyEvent);
 }
 
 

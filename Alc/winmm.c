@@ -196,6 +196,8 @@ static DWORD WINAPI PlaybackThreadProc(LPVOID lpParameter)
 
     FrameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
 
+    SetRTPriority();
+
     while(GetMessage(&msg, NULL, 0, 0))
     {
         if(msg.message != WOM_DONE || pData->bWaveShutdown)

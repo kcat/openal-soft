@@ -61,6 +61,8 @@ typedef struct {
     LPDIRECTSOUND          lpDS;
     LPDIRECTSOUNDBUFFER    DSpbuffer;
     LPDIRECTSOUNDBUFFER    DSsbuffer;
+    LPDIRECTSOUNDNOTIFY    DSnotify;
+    HANDLE                 hNotifyEvent;
 
     volatile int killNow;
     ALvoid *thread;
@@ -76,6 +78,7 @@ static const ALCchar dsDevice[] = "DirectSound Default";
 static DevMap *DeviceList;
 static ALuint NumDevices;
 
+#define MAX_UPDATES 128
 
 static void *DSoundLoad(void)
 {
@@ -196,7 +199,7 @@ static ALuint DSoundProc(ALvoid *ptr)
     IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &LastCursor, NULL);
     while(!pData->killNow)
     {
-        // Get current play and write cursors
+        // Get current play cursor
         IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &PlayCursor, NULL);
         avail = (PlayCursor-LastCursor+DSBCaps.dwBufferBytes) % DSBCaps.dwBufferBytes;
 
@@ -213,7 +216,10 @@ static ALuint DSoundProc(ALvoid *ptr)
                 }
                 Playing = TRUE;
             }
-            Sleep(1);
+
+            avail = WaitForSingleObjectEx(pData->hNotifyEvent, 2000, FALSE);
+            if(avail != WAIT_OBJECT_0)
+                ERR("WaitForSingleObjectEx error: 0x%lx\n", avail);
             continue;
         }
         avail -= avail%FragSize;
@@ -461,9 +467,16 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
 
     if(SUCCEEDED(hr))
     {
+        if(device->NumUpdates > MAX_UPDATES)
+        {
+            device->UpdateSize = ((ALuint64)device->UpdateSize*MAX_UPDATES +
+                                  device->NumUpdates-1) / device->NumUpdates;
+            device->NumUpdates = MAX_UPDATES;
+        }
+
         memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
         DSBDescription.dwSize=sizeof(DSBUFFERDESC);
-        DSBDescription.dwFlags=DSBCAPS_GLOBALFOCUS|DSBCAPS_GETCURRENTPOSITION2;
+        DSBDescription.dwFlags=DSBCAPS_CTRLPOSITIONNOTIFY|DSBCAPS_GETCURRENTPOSITION2|DSBCAPS_GLOBALFOCUS;
         DSBDescription.dwBufferBytes=device->UpdateSize * device->NumUpdates *
                                      OutputType.Format.nBlockAlign;
         DSBDescription.lpwfxFormat=&OutputType.Format;
@@ -472,18 +485,49 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
 
     if(SUCCEEDED(hr))
     {
+        hr = IDirectSoundBuffer_QueryInterface(pData->DSsbuffer, &IID_IDirectSoundNotify, (LPVOID *)&pData->DSnotify);
+        if(SUCCEEDED(hr))
+        {
+            pData->hNotifyEvent = CreateEvent(NULL, FALSE, TRUE, NULL);
+            if(pData->hNotifyEvent == NULL)
+                hr = E_FAIL;
+            else
+            {
+                DSBPOSITIONNOTIFY notifies[MAX_UPDATES];
+                ALuint i;
+
+                for(i = 0;i < device->NumUpdates;++i)
+                {
+                    notifies[i].dwOffset = i * device->UpdateSize *
+                                           OutputType.Format.nBlockAlign;
+                    notifies[i].hEventNotify = pData->hNotifyEvent;
+                }
+                if(IDirectSoundNotify_SetNotificationPositions(pData->DSnotify, device->NumUpdates, notifies) != DS_OK)
+                    hr = E_FAIL;
+            }
+        }
+    }
+
+    if(SUCCEEDED(hr))
+    {
         SetDefaultWFXChannelOrder(device);
         pData->thread = StartThread(DSoundProc, device);
-        if(!pData->thread)
+        if(pData->thread == NULL)
             hr = E_FAIL;
     }
 
     if(FAILED(hr))
     {
-        if (pData->DSsbuffer)
+        if(pData->hNotifyEvent != NULL)
+            CloseHandle(pData->hNotifyEvent);
+        pData->hNotifyEvent = NULL;
+        if(pData->DSnotify != NULL)
+            IDirectSoundNotify_Release(pData->DSnotify);
+        pData->DSnotify = NULL;
+        if(pData->DSsbuffer != NULL)
             IDirectSoundBuffer_Release(pData->DSsbuffer);
         pData->DSsbuffer = NULL;
-        if (pData->DSpbuffer)
+        if(pData->DSpbuffer != NULL)
             IDirectSoundBuffer_Release(pData->DSpbuffer);
         pData->DSpbuffer = NULL;
         return ALC_FALSE;
@@ -505,9 +549,13 @@ static void DSoundStopPlayback(ALCdevice *device)
 
     pData->killNow = 0;
 
+    CloseHandle(pData->hNotifyEvent);
+    pData->hNotifyEvent = NULL;
+    IDirectSoundNotify_Release(pData->DSnotify);
+    pData->DSnotify = NULL;
     IDirectSoundBuffer_Release(pData->DSsbuffer);
     pData->DSsbuffer = NULL;
-    if (pData->DSpbuffer)
+    if(pData->DSpbuffer != NULL)
         IDirectSoundBuffer_Release(pData->DSpbuffer);
     pData->DSpbuffer = NULL;
 }

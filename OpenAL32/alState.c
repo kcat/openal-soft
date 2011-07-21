@@ -496,7 +496,7 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
     Context = GetLockedContext();
     if(!Context) return;
 
-    if(value >= 0.0f)
+    if(value >= 0.0f && isfinite(value))
     {
         Context->DopplerFactor = value;
         Context->UpdateSources = AL_TRUE;
@@ -514,7 +514,7 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     Context = GetLockedContext();
     if(!Context) return;
 
-    if(value > 0.0f)
+    if(value > 0.0f && isfinite(value))
     {
         Context->DopplerVelocity=value;
         Context->UpdateSources = AL_TRUE;
@@ -532,7 +532,7 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
     pContext = GetLockedContext();
     if(!pContext) return;
 
-    if(flSpeedOfSound > 0.0f)
+    if(flSpeedOfSound > 0.0f && isfinite(flSpeedOfSound))
     {
         pContext->flSpeedOfSound = flSpeedOfSound;
         pContext->UpdateSources = AL_TRUE;

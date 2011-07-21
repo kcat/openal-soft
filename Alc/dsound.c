@@ -478,8 +478,8 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     {
         if(device->NumUpdates > MAX_UPDATES)
         {
-            device->UpdateSize = ((ALuint64)device->UpdateSize*MAX_UPDATES +
-                                  device->NumUpdates-1) / device->NumUpdates;
+            device->UpdateSize = (device->UpdateSize*device->NumUpdates +
+                                  MAX_UPDATES-1) / MAX_UPDATES;
             device->NumUpdates = MAX_UPDATES;
         }
 

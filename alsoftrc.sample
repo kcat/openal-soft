@@ -151,6 +151,18 @@
 #layout_71CHN  = fl=-30, fr=30, fc=0, sl=-90, sr=90, bl=-150, br=150
 
 ##
+## Reverb effect stuff (includes EAX reverb)
+##
+[reverb]
+
+## boost:
+#  A global amplification for reverb output, expressed in decibels. The value
+#  is logarithmic, so +6 will be a scale of (approximately) 2x, +12 will be a
+#  scale of 4x, etc. Similarly, -6 will be about half, and -12 about 1/4th. A
+#  value of 0 means no change.
+#boost = 0
+
+##
 ## ALSA backend stuff
 ##
 [alsa]

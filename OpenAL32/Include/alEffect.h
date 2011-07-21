@@ -18,6 +18,8 @@ enum {
 };
 extern ALboolean DisabledEffects[MAX_EFFECTS];
 
+extern ALfloat ReverbBoost;
+
 typedef struct ALeffect
 {
     // Effect type (AL_EFFECT_NULL, ...)

@@ -564,6 +564,9 @@ static void alc_initconfig(void)
     if(DefaultResampler >= RESAMPLER_MAX || DefaultResampler <= RESAMPLER_MIN)
         DefaultResampler = RESAMPLER_DEFAULT;
 
+    ReverbBoost *= aluPow(10.0f, GetConfigValueFloat("reverb", "boost", 0.0f) /
+                                 20.0f);
+
     devs = GetConfigValue(NULL, "drivers", "");
     if(devs[0])
     {

@@ -135,6 +135,11 @@ typedef struct ALverbState {
     ALfloat *Gain;
 } ALverbState;
 
+/* This is a user config option for modifying the overall output of the reverb
+ * effect.
+ */
+ALfloat ReverbBoost = 1.0f;
+
 /* This coefficient is used to define the maximum frequency range controlled
  * by the modulation depth.  The current value of 0.1 will allow it to swing
  * from 0.9x to 1.1x.  This value must be below 1.  At 1 it will cause the
@@ -601,6 +606,8 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     ALfloat length;
     ALuint index;
     ALint pos;
+
+    Gain *= ReverbBoost;
 
     // Attenuate non-directional reverb according to the number of channels
     ambientGain = aluSqrt(2.0f/Device->NumChan);
@@ -1106,7 +1113,8 @@ static ALvoid VerbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
 
     // Update channel gains
     gain = Slot->Gain;
-    gain *= aluSqrt(2.0/Device->NumChan);
+    gain *= aluSqrt(2.0f/Device->NumChan);
+    gain *= ReverbBoost;
     for(index = 0;index < MAXCHANNELS;index++)
          State->Gain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)

@@ -530,6 +530,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         ERR("Audio client returned buffer_len < period*2; expect break up\n");
     }
 
+    ResetEvent(data->hNotifyEvent);
     hr = IAudioClient_SetEventHandle(data->client, data->hNotifyEvent);
     if(SUCCEEDED(hr))
         hr = IAudioClient_Start(data->client);
@@ -564,7 +565,6 @@ static void MMDevApiStopPlayback(ALCdevice *device)
     data->killNow = 0;
 
     IAudioClient_Stop(data->client);
-    ResetEvent(data->hNotifyEvent);
 }
 
 

@@ -513,6 +513,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
 
     if(SUCCEEDED(hr))
     {
+        ResetEvent(pData->hNotifyEvent);
         SetDefaultWFXChannelOrder(device);
         pData->thread = StartThread(DSoundProc, device);
         if(pData->thread == NULL)
@@ -556,8 +557,6 @@ static void DSoundStopPlayback(ALCdevice *device)
     if(pData->DSpbuffer != NULL)
         IDirectSoundBuffer_Release(pData->DSpbuffer);
     pData->DSpbuffer = NULL;
-
-    ResetEvent(pData->hNotifyEvent);
 }
 
 

@@ -496,7 +496,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     {
         min_len = (min_per*device->Frequency + 10000000-1) / 10000000;
         if(min_len < device->UpdateSize)
-            min_len *= device->UpdateSize/min_len;
+            min_len *= (device->UpdateSize + min_len/2)/min_len;
 
         device->NumUpdates = (device->NumUpdates*device->UpdateSize + min_len/2) /
                              min_len;

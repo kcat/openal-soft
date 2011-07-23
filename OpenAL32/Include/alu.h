@@ -17,31 +17,31 @@
 #endif
 
 #ifdef HAVE_POWF
-#define aluPow(x,y) ((ALfloat)powf((float)(x),(float)(y)))
+#define aluPow(x,y) (powf((x),(y)))
 #else
 #define aluPow(x,y) ((ALfloat)pow((double)(x),(double)(y)))
 #endif
 
 #ifdef HAVE_SQRTF
-#define aluSqrt(x) ((ALfloat)sqrtf((float)(x)))
+#define aluSqrt(x) (sqrtf((x)))
 #else
 #define aluSqrt(x) ((ALfloat)sqrt((double)(x)))
 #endif
 
 #ifdef HAVE_ACOSF
-#define aluAcos(x) ((ALfloat)acosf((float)(x)))
+#define aluAcos(x) (acosf((x)))
 #else
 #define aluAcos(x) ((ALfloat)acos((double)(x)))
 #endif
 
 #ifdef HAVE_ATANF
-#define aluAtan(x) ((ALfloat)atanf((float)(x)))
+#define aluAtan(x) (atanf((x)))
 #else
 #define aluAtan(x) ((ALfloat)atan((double)(x)))
 #endif
 
 #ifdef HAVE_FABSF
-#define aluFabs(x) ((ALfloat)fabsf((float)(x)))
+#define aluFabs(x) (fabsf((x)))
 #else
 #define aluFabs(x) ((ALfloat)fabs((double)(x)))
 #endif

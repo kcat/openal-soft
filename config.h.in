@@ -98,6 +98,9 @@
 /* Define if we have guiddef.h */
 #cmakedefine HAVE_INITGUID_H
 
+/* Define if we have ieeefp.h */
+#cmakedefine HAVE_IEEEFP_H
+
 /* Define if we have float.h */
 #cmakedefine HAVE_FLOAT_H
 

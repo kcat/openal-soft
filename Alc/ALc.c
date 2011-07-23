@@ -560,7 +560,11 @@ static void alc_initconfig(void)
 
     InitHrtf();
 
+#ifdef _WIN32
+    RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 1);
+#else
     RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 0);
+#endif
 
     DefaultResampler = GetConfigValueInt(NULL, "resampler", RESAMPLER_DEFAULT);
     if(DefaultResampler >= RESAMPLER_MAX || DefaultResampler <= RESAMPLER_MIN)

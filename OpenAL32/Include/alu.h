@@ -10,6 +10,9 @@
 #ifdef HAVE_FLOAT_H
 #include <float.h>
 #endif
+#ifdef HAVE_IEEEFP_H
+#include <ieeefp.h>
+#endif
 
 #ifndef M_PI
 #define M_PI           3.14159265358979323846  /* pi */

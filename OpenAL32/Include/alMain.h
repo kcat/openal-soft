@@ -8,9 +8,6 @@
 #ifdef HAVE_FENV_H
 #include <fenv.h>
 #endif
-#ifdef HAVE_IEEEFP_H
-#include <ieeefp.h>
-#endif
 
 #include "AL/al.h"
 #include "AL/alc.h"

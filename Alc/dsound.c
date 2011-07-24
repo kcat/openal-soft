@@ -311,7 +311,7 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     }
 
     hr = DS_OK;
-    pData->hNotifyEvent = CreateEvent(NULL, FALSE, TRUE, NULL);
+    pData->hNotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if(pData->hNotifyEvent == NULL)
         hr = E_FAIL;
 

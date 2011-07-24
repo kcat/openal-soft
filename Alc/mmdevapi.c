@@ -222,7 +222,7 @@ static ALCboolean MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceN
     }
 
     hr = S_OK;
-    data->hNotifyEvent = CreateEvent(NULL, FALSE, TRUE, NULL);
+    data->hNotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if(data->hNotifyEvent == NULL)
         hr = E_FAIL;
 

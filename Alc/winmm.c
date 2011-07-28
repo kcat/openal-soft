@@ -458,6 +458,7 @@ static ALCboolean WinMMResetPlayback(ALCdevice *device)
 static void WinMMStopPlayback(ALCdevice *device)
 {
     WinMMData *pData = (WinMMData*)device->ExtraData;
+    void *buffer = NULL;
     int i;
 
     if(pData->hWaveThread == NULL)
@@ -478,10 +479,10 @@ static void WinMMStopPlayback(ALCdevice *device)
     for(i = 0;i < 4;i++)
     {
         waveOutUnprepareHeader(pData->hWaveHandle.Out, &pData->WaveBuffer[i], sizeof(WAVEHDR));
-        if(i == 0)
-            free(pData->WaveBuffer[i].lpData);
+        if(i == 0) buffer = pData->WaveBuffer[i].lpData;
         pData->WaveBuffer[i].lpData = NULL;
     }
+    free(buffer);
 }
 
 
@@ -640,6 +641,7 @@ failure:
 static void WinMMCloseCapture(ALCdevice *pDevice)
 {
     WinMMData *pData = (WinMMData*)pDevice->ExtraData;
+    void *buffer = NULL;
     int i;
 
     // Call waveOutReset to shutdown wave device
@@ -656,10 +658,10 @@ static void WinMMCloseCapture(ALCdevice *pDevice)
     for(i = 0;i < 4;i++)
     {
         waveInUnprepareHeader(pData->hWaveHandle.In, &pData->WaveBuffer[i], sizeof(WAVEHDR));
-        if(i == 0)
-            free(pData->WaveBuffer[i].lpData);
+        if(i == 0) buffer = pData->WaveBuffer[i].lpData;
         pData->WaveBuffer[i].lpData = NULL;
     }
+    free(buffer);
 
     DestroyRingBuffer(pData->pRing);
     pData->pRing = NULL;

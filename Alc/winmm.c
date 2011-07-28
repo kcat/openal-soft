@@ -36,7 +36,6 @@
 typedef struct {
     // MMSYSTEM Device
     volatile ALboolean bWaveShutdown;
-    HANDLE  hWaveHdrEvent;
     HANDLE  hWaveThreadEvent;
     HANDLE  hWaveThread;
     DWORD   ulWaveThreadID;
@@ -170,10 +169,6 @@ static void CALLBACK WaveOutProc(HWAVEOUT hDevice,UINT uMsg,DWORD_PTR dwInstance
     {
         if(pData->lWaveBuffersCommitted == 0)
         {
-            // Signal Wave Buffers Returned event
-            if(pData->hWaveHdrEvent)
-                SetEvent(pData->hWaveHdrEvent);
-
             // Post 'Quit' Message to WaveOut Processor Thread
             PostThreadMessage(pData->ulWaveThreadID, WM_QUIT, 0, 0);
         }
@@ -250,10 +245,6 @@ static void CALLBACK WaveInProc(HWAVEIN hDevice,UINT uMsg,DWORD_PTR dwInstance,D
     {
         if(pData->lWaveBuffersCommitted == 0)
         {
-            // Signal Wave Buffers Returned event
-            if(pData->hWaveHdrEvent)
-                SetEvent(pData->hWaveHdrEvent);
-
             // Post 'Quit' Message to WaveIn Processor Thread
             PostThreadMessage(pData->ulWaveThreadID,WM_QUIT,0,0);
         }
@@ -379,9 +370,8 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
         goto failure;
     }
 
-    pData->hWaveHdrEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     pData->hWaveThreadEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-    if(pData->hWaveHdrEvent == NULL || pData->hWaveThreadEvent == NULL)
+    if(pData->hWaveThreadEvent == NULL)
     {
         ERR("CreateEvent failed: %lu\n", GetLastError());
         goto failure;
@@ -396,8 +386,6 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
 failure:
     if(pData->hWaveThreadEvent)
         CloseHandle(pData->hWaveThreadEvent);
-    if(pData->hWaveHdrEvent)
-        CloseHandle(pData->hWaveHdrEvent);
 
     if(pData->hWaveHandle.Out)
         waveOutClose(pData->hWaveHandle.Out);
@@ -414,9 +402,6 @@ static void WinMMClosePlayback(ALCdevice *device)
     // Close the Wave device
     CloseHandle(pData->hWaveThreadEvent);
     pData->hWaveThreadEvent = 0;
-
-    CloseHandle(pData->hWaveHdrEvent);
-    pData->hWaveHdrEvent = 0;
 
     waveOutClose(pData->hWaveHandle.Out);
     pData->hWaveHandle.In = 0;
@@ -480,9 +465,6 @@ static void WinMMStopPlayback(ALCdevice *device)
 
     // Set flag to stop processing headers
     pData->bWaveShutdown = AL_TRUE;
-
-    // Wait for signal that all Wave Buffers have returned
-    WaitForSingleObjectEx(pData->hWaveHdrEvent, 5000, FALSE);
 
     // Wait for signal that Wave Thread has been destroyed
     WaitForSingleObjectEx(pData->hWaveThreadEvent, 5000, FALSE);
@@ -576,9 +558,8 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
         goto failure;
     }
 
-    pData->hWaveHdrEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     pData->hWaveThreadEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-    if(pData->hWaveHdrEvent == NULL || pData->hWaveThreadEvent == NULL)
+    if(pData->hWaveThreadEvent == NULL)
     {
         ERR("CreateEvent failed: %lu\n", GetLastError());
         goto failure;
@@ -647,8 +628,6 @@ failure:
 
     if(pData->hWaveThreadEvent)
         CloseHandle(pData->hWaveThreadEvent);
-    if(pData->hWaveHdrEvent)
-        CloseHandle(pData->hWaveHdrEvent);
 
     if(pData->hWaveHandle.In)
         waveInClose(pData->hWaveHandle.In);
@@ -666,9 +645,6 @@ static void WinMMCloseCapture(ALCdevice *pDevice)
     // Call waveOutReset to shutdown wave device
     pData->bWaveShutdown = AL_TRUE;
     waveInReset(pData->hWaveHandle.In);
-
-    // Wait for signal that all Wave Buffers have returned
-    WaitForSingleObjectEx(pData->hWaveHdrEvent, 5000, FALSE);
 
     // Wait for signal that Wave Thread has been destroyed
     WaitForSingleObjectEx(pData->hWaveThreadEvent, 5000, FALSE);
@@ -691,9 +667,6 @@ static void WinMMCloseCapture(ALCdevice *pDevice)
     // Close the Wave device
     CloseHandle(pData->hWaveThreadEvent);
     pData->hWaveThreadEvent = 0;
-
-    CloseHandle(pData->hWaveHdrEvent);
-    pData->hWaveHdrEvent = 0;
 
     waveInClose(pData->hWaveHandle.In);
     pData->hWaveHandle.In = 0;

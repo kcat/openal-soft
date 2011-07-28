@@ -370,7 +370,7 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
         goto failure;
     }
 
-    pData->hWaveThreadEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    pData->hWaveThreadEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if(pData->hWaveThreadEvent == NULL)
     {
         ERR("CreateEvent failed: %lu\n", GetLastError());
@@ -558,7 +558,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
         goto failure;
     }
 
-    pData->hWaveThreadEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    pData->hWaveThreadEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if(pData->hWaveThreadEvent == NULL)
     {
         ERR("CreateEvent failed: %lu\n", GetLastError());

@@ -1057,18 +1057,48 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         UnlockDevice(device);
 
         //Post processing loop
-        for(i = 0;i < SamplesToDo;i++)
+        if(device->FmtChans == DevFmtMono)
         {
-            for(c = 0;c < MAXCHANNELS;c++)
+            for(i = 0;i < SamplesToDo;i++)
             {
-                device->DryBuffer[i][c] += device->ClickRemoval[c];
-                device->ClickRemoval[c] -= device->ClickRemoval[c] / 256.0f;
+                device->DryBuffer[i][FRONT_CENTER] += device->ClickRemoval[FRONT_CENTER];
+                device->ClickRemoval[FRONT_CENTER] -= device->ClickRemoval[FRONT_CENTER] / 256.0f;
+            }
+            device->ClickRemoval[FRONT_CENTER] += device->PendingClicks[FRONT_CENTER];
+            device->PendingClicks[FRONT_CENTER] = 0.0f;
+        }
+        else if(device->FmtChans == DevFmtStereo)
+        {
+            /* Assumes the first two channels are FRONT_LEFT and FRONT_RIGHT */
+            for(i = 0;i < SamplesToDo;i++)
+            {
+                for(c = 0;c < 2;c++)
+                {
+                    device->DryBuffer[i][c] += device->ClickRemoval[c];
+                    device->ClickRemoval[c] -= device->ClickRemoval[c] / 256.0f;
+                }
+            }
+            for(c = 0;c < 2;c++)
+            {
+                device->ClickRemoval[c] += device->PendingClicks[c];
+                device->PendingClicks[c] = 0.0f;
             }
         }
-        for(i = 0;i < MAXCHANNELS;i++)
+        else
         {
-            device->ClickRemoval[i] += device->PendingClicks[i];
-            device->PendingClicks[i] = 0.0f;
+            for(i = 0;i < SamplesToDo;i++)
+            {
+                for(c = 0;c < MAXCHANNELS;c++)
+                {
+                    device->DryBuffer[i][c] += device->ClickRemoval[c];
+                    device->ClickRemoval[c] -= device->ClickRemoval[c] / 256.0f;
+                }
+            }
+            for(c = 0;c < MAXCHANNELS;c++)
+            {
+                device->ClickRemoval[c] += device->PendingClicks[c];
+                device->PendingClicks[c] = 0.0f;
+            }
         }
 
         switch(device->FmtType)

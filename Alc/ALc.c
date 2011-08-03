@@ -509,10 +509,6 @@ static void alc_init(void)
     tls_create(&LocalContext);
     InitializeCriticalSection(&ListLock);
     ALTHUNK_INIT();
-
-#ifdef _WIN32
-    alc_initconfig();
-#endif
 }
 
 static void alc_deinit(void)
@@ -665,11 +661,23 @@ static void alc_initconfig(void)
     }
 }
 
-#ifndef _WIN32
+#ifdef _WIN32
+static struct once_control {
+    LONG canpass;
+    LONG hasrun;
+} once_control = { TRUE, FALSE };
+static void call_once(struct once_control *once, void (*callback)(void))
+{
+    while(InterlockedExchange(&once->canpass, FALSE) == FALSE)
+        Sleep(0);
+    if(InterlockedExchange(&once->hasrun, TRUE) == FALSE)
+        callback();
+    InterlockedExchange(&once->canpass, TRUE);
+}
+#define DO_INITCONFIG() call_once(&once_control, alc_initconfig)
+#else
 static pthread_once_t once_control = PTHREAD_ONCE_INIT;
 #define DO_INITCONFIG() pthread_once(&once_control, alc_initconfig)
-#else
-#define DO_INITCONFIG()
 #endif
 
 static void ProbeList(ALCchar **list, size_t *listsize, int type)

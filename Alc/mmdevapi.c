@@ -52,13 +52,12 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 
 
-static IMMDeviceEnumerator *Enumerator = NULL;
-
-
 typedef struct {
     IMMDevice *mmdev;
     IAudioClient *client;
     HANDLE hNotifyEvent;
+
+    HANDLE MsgEvent;
 
     volatile int killNow;
     ALvoid *thread;
@@ -68,72 +67,25 @@ typedef struct {
 static const ALCchar mmDevice[] = "WASAPI Default";
 
 
-static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
-{
-    memset(out, 0, sizeof(*out));
-    if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
-        *out = *(WAVEFORMATEXTENSIBLE*)in;
-    else if(in->wFormatTag == WAVE_FORMAT_PCM)
-    {
-        out->Format = *in;
-        out->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-        out->Format.cbSize = sizeof(*out) - sizeof(*in);
-        if(out->Format.nChannels == 1)
-            out->dwChannelMask = MONO;
-        else if(out->Format.nChannels == 2)
-            out->dwChannelMask = STEREO;
-        else
-            ERR("Unhandled PCM channel count: %d\n", out->Format.nChannels);
-        out->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-    }
-    else if(in->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
-    {
-        out->Format = *in;
-        out->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-        out->Format.cbSize = sizeof(*out) - sizeof(*in);
-        if(out->Format.nChannels == 1)
-            out->dwChannelMask = MONO;
-        else if(out->Format.nChannels == 2)
-            out->dwChannelMask = STEREO;
-        else
-            ERR("Unhandled IEEE float channel count: %d\n", out->Format.nChannels);
-        out->SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
-    }
-    else
-    {
-        ERR("Unhandled format tag: 0x%04x\n", in->wFormatTag);
-        return ALC_FALSE;
-    }
-    return ALC_TRUE;
-}
+static HANDLE ThreadHdl;
+static DWORD ThreadID;
 
+typedef struct {
+    HANDLE FinishedEvt;
+    HRESULT result;
+} ThreadRequest;
 
-static void *MMDevApiLoad(void)
+#define WM_USER_OpenDevice  (WM_USER+0)
+#define WM_USER_ResetDevice (WM_USER+1)
+#define WM_USER_StopDevice  (WM_USER+2)
+#define WM_USER_CloseDevice (WM_USER+3)
+
+static HRESULT WaitForResponse(ThreadRequest *req)
 {
-    if(!Enumerator)
-    {
-        void *mme = NULL;
-        HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-        if(FAILED(hr))
-        {
-            WARN("Failed to initialize apartment-threaded COM: 0x%08lx\n", hr);
-            hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-            if(FAILED(hr))
-                WARN("Failed to initialize multi-threaded COM: 0x%08lx\n", hr);
-        }
-        if(SUCCEEDED(hr))
-        {
-            hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &mme);
-            if(SUCCEEDED(hr))
-                Enumerator = mme;
-            else
-            {
-                WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
-                CoUninitialize();
-            }
-        }
-    }
-    return Enumerator;
+    if(WaitForSingleObject(req->FinishedEvt, INFINITE) == WAIT_OBJECT_0)
+        return req->result;
+    ERR("Message response error: %lu\n", GetLastError());
+    return E_FAIL;
 }
 
 
@@ -148,6 +100,14 @@ static ALuint MMDevApiProc(ALvoid *ptr)
     UINT32 written, len;
     BYTE *buffer;
     HRESULT hr;
+
+    hr = CoInitialize(NULL);
+    if(FAILED(hr))
+    {
+        ERR("CoInitialize(NULL) failed: 0x%08lx\n", hr);
+        aluHandleDisconnect(device);
+        return 0;
+    }
 
     hr = IAudioClient_GetService(data->client, &IID_IAudioRenderClient, &render.ptr);
     if(FAILED(hr))
@@ -195,81 +155,52 @@ static ALuint MMDevApiProc(ALvoid *ptr)
     }
 
     IAudioRenderClient_Release(render.iface);
+
+    CoUninitialize();
     return 0;
 }
 
 
-static ALCboolean MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
+static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
 {
-    MMDevApiData *data = NULL;
-    void *client = NULL;
-    HRESULT hr;
-
-    if(!MMDevApiLoad())
-        return ALC_FALSE;
-
-    if(!deviceName)
-        deviceName = mmDevice;
-    else if(strcmp(deviceName, mmDevice) != 0)
-        return ALC_FALSE;
-
-    //Initialise requested device
-    data = calloc(1, sizeof(MMDevApiData));
-    if(!data)
+    memset(out, 0, sizeof(*out));
+    if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
+        *out = *(WAVEFORMATEXTENSIBLE*)in;
+    else if(in->wFormatTag == WAVE_FORMAT_PCM)
     {
-        alcSetError(device, ALC_OUT_OF_MEMORY);
+        out->Format = *in;
+        out->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+        out->Format.cbSize = sizeof(*out) - sizeof(*in);
+        if(out->Format.nChannels == 1)
+            out->dwChannelMask = MONO;
+        else if(out->Format.nChannels == 2)
+            out->dwChannelMask = STEREO;
+        else
+            ERR("Unhandled PCM channel count: %d\n", out->Format.nChannels);
+        out->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+    }
+    else if(in->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
+    {
+        out->Format = *in;
+        out->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+        out->Format.cbSize = sizeof(*out) - sizeof(*in);
+        if(out->Format.nChannels == 1)
+            out->dwChannelMask = MONO;
+        else if(out->Format.nChannels == 2)
+            out->dwChannelMask = STEREO;
+        else
+            ERR("Unhandled IEEE float channel count: %d\n", out->Format.nChannels);
+        out->SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+    }
+    else
+    {
+        ERR("Unhandled format tag: 0x%04x\n", in->wFormatTag);
         return ALC_FALSE;
     }
-
-    hr = S_OK;
-    data->hNotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if(data->hNotifyEvent == NULL)
-        hr = E_FAIL;
-
-    //MMDevApi Init code
-    if(SUCCEEDED(hr))
-        hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(Enumerator, eRender, eMultimedia, &data->mmdev);
-    if(SUCCEEDED(hr))
-        hr = IMMDevice_Activate(data->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &client);
-
-    if(FAILED(hr))
-    {
-        if(data->mmdev)
-            IMMDevice_Release(data->mmdev);
-        data->mmdev = NULL;
-        if(data->hNotifyEvent != NULL)
-            CloseHandle(data->hNotifyEvent);
-        data->hNotifyEvent = NULL;
-        free(data);
-
-        ERR("Device init failed: 0x%08lx\n", hr);
-        return ALC_FALSE;
-    }
-    data->client = client;
-
-    device->szDeviceName = strdup(deviceName);
-    device->ExtraData = data;
     return ALC_TRUE;
 }
 
-static void MMDevApiClosePlayback(ALCdevice *device)
-{
-    MMDevApiData *data = device->ExtraData;
-
-    IAudioClient_Release(data->client);
-    data->client = NULL;
-
-    IMMDevice_Release(data->mmdev);
-    data->mmdev = NULL;
-
-    CloseHandle(data->hNotifyEvent);
-    data->hNotifyEvent = NULL;
-
-    free(data);
-    device->ExtraData = NULL;
-}
-
-static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
+static HRESULT DoReset(ALCdevice *device)
 {
     MMDevApiData *data = device->ExtraData;
     WAVEFORMATEXTENSIBLE OutputType;
@@ -282,13 +213,13 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     if(FAILED(hr))
     {
         ERR("Failed to get mix format: 0x%08lx\n", hr);
-        return ALC_FALSE;
+        return hr;
     }
 
     if(!MakeExtensible(&OutputType, wfx))
     {
         CoTaskMemFree(wfx);
-        return ALC_FALSE;
+        return E_FAIL;
     }
     CoTaskMemFree(wfx);
     wfx = NULL;
@@ -386,7 +317,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     if(FAILED(hr))
     {
         ERR("Failed to find a supported format: 0x%08lx\n", hr);
-        return ALC_FALSE;
+        return hr;
     }
 
     if(wfx != NULL)
@@ -394,7 +325,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
         if(!MakeExtensible(&OutputType, wfx))
         {
             CoTaskMemFree(wfx);
-            return ALC_FALSE;
+            return E_FAIL;
         }
         CoTaskMemFree(wfx);
         wfx = NULL;
@@ -513,14 +444,14 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     if(FAILED(hr))
     {
         ERR("Failed to initialize audio client: 0x%08lx\n", hr);
-        return ALC_FALSE;
+        return hr;
     }
 
     hr = IAudioClient_GetBufferSize(data->client, &buffer_len);
     if(FAILED(hr))
     {
         ERR("Failed to get audio buffer info: 0x%08lx\n", hr);
-        return ALC_FALSE;
+        return hr;
     }
 
     device->NumUpdates = buffer_len / device->UpdateSize;
@@ -537,7 +468,7 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     if(FAILED(hr))
     {
         ERR("Failed to start audio client: 0x%08lx\n", hr);
-        return ALC_FALSE;
+        return hr;
     }
 
     data->thread = StartThread(MMDevApiProc, device);
@@ -545,26 +476,256 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     {
         IAudioClient_Stop(data->client);
         ERR("Failed to start thread\n");
+        return E_FAIL;
+    }
+
+    return hr;
+}
+
+
+static DWORD CALLBACK MessageProc(void *ptr)
+{
+    ThreadRequest *req = ptr;
+    IMMDeviceEnumerator *Enumerator;
+    MMDevApiData *data;
+    ALCdevice *device;
+    HRESULT hr;
+    MSG msg;
+
+    TRACE("Starting message thread\n");
+
+    hr = CoInitialize(NULL);
+    if(FAILED(hr))
+    {
+        WARN("Failed to initialize COM: 0x%08lx\n", hr);
+        req->result = hr;
+        SetEvent(req->FinishedEvt);
+        return 0;
+    }
+
+    hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
+    if(FAILED(hr))
+    {
+        WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
+        CoUninitialize();
+        req->result = hr;
+        SetEvent(req->FinishedEvt);
+        return 0;
+    }
+    Enumerator = ptr;
+    IMMDeviceEnumerator_Release(Enumerator);
+    Enumerator = NULL;
+
+    req->result = S_OK;
+    SetEvent(req->FinishedEvt);
+
+    TRACE("Starting message loop\n");
+    while(GetMessage(&msg, NULL, 0, 0))
+    {
+        TRACE("Got message %u\n", msg.message);
+        switch(msg.message)
+        {
+        case WM_USER_OpenDevice:
+            req = (ThreadRequest*)msg.wParam;
+            device = (ALCdevice*)msg.lParam;
+            data = device->ExtraData;
+
+            hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
+            if(SUCCEEDED(hr))
+            {
+                Enumerator = ptr;
+                hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(Enumerator, eRender, eMultimedia, &data->mmdev);
+                IMMDeviceEnumerator_Release(Enumerator);
+                Enumerator = NULL;
+            }
+            if(SUCCEEDED(hr))
+                hr = IMMDevice_Activate(data->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &ptr);
+            if(SUCCEEDED(hr))
+                data->client = ptr;
+
+            if(FAILED(hr))
+            {
+                if(data->mmdev)
+                    IMMDevice_Release(data->mmdev);
+                data->mmdev = NULL;
+            }
+
+            req->result = hr;
+            SetEvent(req->FinishedEvt);
+            continue;
+
+        case WM_USER_ResetDevice:
+            req = (ThreadRequest*)msg.wParam;
+            device = (ALCdevice*)msg.lParam;
+
+            req->result = DoReset(device);
+            SetEvent(req->FinishedEvt);
+            continue;
+
+        case WM_USER_StopDevice:
+            req = (ThreadRequest*)msg.wParam;
+            device = (ALCdevice*)msg.lParam;
+            data = device->ExtraData;
+
+            if(data->thread)
+            {
+                data->killNow = 1;
+                StopThread(data->thread);
+                data->thread = NULL;
+
+                data->killNow = 0;
+
+                IAudioClient_Stop(data->client);
+            }
+
+            req->result = S_OK;
+            SetEvent(req->FinishedEvt);
+            continue;
+
+        case WM_USER_CloseDevice:
+            req = (ThreadRequest*)msg.wParam;
+            device = (ALCdevice*)msg.lParam;
+            data = device->ExtraData;
+
+            IAudioClient_Release(data->client);
+            data->client = NULL;
+
+            IMMDevice_Release(data->mmdev);
+            data->mmdev = NULL;
+
+            req->result = S_OK;
+            SetEvent(req->FinishedEvt);
+            continue;
+
+        default:
+            ERR("Unexpected message: %u\n", msg.message);
+            continue;
+        }
+    }
+    TRACE("Message loop finished\n");
+
+    CoUninitialize();
+    return 0;
+}
+
+
+static BOOL MMDevApiLoad(void)
+{
+    static HRESULT InitResult;
+    if(!ThreadHdl)
+    {
+        ThreadRequest req;
+        InitResult = E_FAIL;
+
+        req.FinishedEvt = CreateEvent(NULL, FALSE, FALSE, NULL);
+        if(req.FinishedEvt == NULL)
+            ERR("Failed to create event: %lu\n", GetLastError());
+        else
+        {
+            ThreadHdl = CreateThread(NULL, 0, MessageProc, &req, 0, &ThreadID);
+            if(ThreadHdl != NULL)
+                InitResult = WaitForResponse(&req);
+            CloseHandle(req.FinishedEvt);
+        }
+    }
+    return SUCCEEDED(InitResult);
+}
+
+
+static ALCboolean MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
+{
+    MMDevApiData *data = NULL;
+    HRESULT hr;
+
+    if(!MMDevApiLoad())
+        return ALC_FALSE;
+
+    if(!deviceName)
+        deviceName = mmDevice;
+    else if(strcmp(deviceName, mmDevice) != 0)
+        return ALC_FALSE;
+
+    //Initialise requested device
+    data = calloc(1, sizeof(MMDevApiData));
+    if(!data)
+    {
+        alcSetError(device, ALC_OUT_OF_MEMORY);
+        return ALC_FALSE;
+    }
+    device->ExtraData = data;
+
+    hr = S_OK;
+    data->hNotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    data->MsgEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if(data->hNotifyEvent == NULL || data->MsgEvent == NULL)
+        hr = E_FAIL;
+
+    if(SUCCEEDED(hr))
+    {
+        ThreadRequest req = { data->MsgEvent, 0 };
+
+        hr = E_FAIL;
+        if(PostThreadMessage(ThreadID, WM_USER_OpenDevice, (WPARAM)&req, (LPARAM)device))
+            hr = WaitForResponse(&req);
+    }
+
+    if(FAILED(hr))
+    {
+        if(data->hNotifyEvent != NULL)
+            CloseHandle(data->hNotifyEvent);
+        data->hNotifyEvent = NULL;
+        if(data->MsgEvent != NULL)
+            CloseHandle(data->MsgEvent);
+        data->MsgEvent = NULL;
+
+        free(data);
+        device->ExtraData = NULL;
+
+        ERR("Device init failed: 0x%08lx\n", hr);
         return ALC_FALSE;
     }
 
+    device->szDeviceName = strdup(deviceName);
     return ALC_TRUE;
+}
+
+static void MMDevApiClosePlayback(ALCdevice *device)
+{
+    MMDevApiData *data = device->ExtraData;
+    ThreadRequest req = { data->MsgEvent, 0 };
+
+    if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)device))
+        (void)WaitForResponse(&req);
+
+    CloseHandle(data->MsgEvent);
+    data->MsgEvent = NULL;
+
+    CloseHandle(data->hNotifyEvent);
+    data->hNotifyEvent = NULL;
+
+    free(data);
+    device->ExtraData = NULL;
+}
+
+static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
+{
+    MMDevApiData *data = device->ExtraData;
+    ThreadRequest req = { data->MsgEvent, 0 };
+    HRESULT hr = E_FAIL;
+
+    if(PostThreadMessage(ThreadID, WM_USER_ResetDevice, (WPARAM)&req, (LPARAM)device))
+        hr = WaitForResponse(&req);
+
+    return SUCCEEDED(hr) ? ALC_TRUE : ALC_FALSE;
 }
 
 static void MMDevApiStopPlayback(ALCdevice *device)
 {
     MMDevApiData *data = device->ExtraData;
+    ThreadRequest req = { data->MsgEvent, 0 };
 
-    if(!data->thread)
-        return;
-
-    data->killNow = 1;
-    StopThread(data->thread);
-    data->thread = NULL;
-
-    data->killNow = 0;
-
-    IAudioClient_Stop(data->client);
+    if(PostThreadMessage(ThreadID, WM_USER_StopDevice, (WPARAM)&req, (LPARAM)device))
+        (void)WaitForResponse(&req);
 }
 
 
@@ -597,11 +758,12 @@ void alcMMDevApiInit(BackendFuncs *FuncList)
 
 void alcMMDevApiDeinit(void)
 {
-    if(Enumerator)
+    if(ThreadHdl)
     {
-        IMMDeviceEnumerator_Release(Enumerator);
-        Enumerator = NULL;
-        CoUninitialize();
+        TRACE("Sending WM_QUIT to Thread %04lx\n", ThreadID);
+        PostThreadMessage(ThreadID, WM_QUIT, 0, 0);
+        CloseHandle(ThreadHdl);
+        ThreadHdl = NULL;
     }
 }
 

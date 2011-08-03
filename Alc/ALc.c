@@ -436,19 +436,18 @@ ALdouble ZScale = 1.0;
 
 ///////////////////////////////////////////////////////
 // ALC Related helper functions
-static void ReleaseALC(void);
+static void ReleaseALC(ALCboolean doclose);
 
 static void alc_initconfig(void);
 
 #if defined(_WIN32)
 static void alc_init(void);
 static void alc_deinit(void);
+static void alc_deinit_safe(void);
 
 #ifndef AL_LIBTYPE_STATIC
 BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 {
-    (void)lpReserved;
-
     // Perform actions based on the reason for calling.
     switch(ul_reason_for_call)
     {
@@ -458,7 +457,10 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             break;
 
         case DLL_PROCESS_DETACH:
-            alc_deinit();
+            if(!lpReserved)
+                alc_deinit();
+            else
+                alc_deinit_safe();
             break;
     }
     return TRUE;
@@ -511,15 +513,9 @@ static void alc_init(void)
     ALTHUNK_INIT();
 }
 
-static void alc_deinit(void)
+static void alc_deinit_safe(void)
 {
-    int i;
-
-    ReleaseALC();
-
-    for(i = 0;BackendList[i].Deinit;i++)
-        BackendList[i].Deinit();
-    BackendLoopback.Deinit();
+    ReleaseALC(ALC_FALSE);
 
     FreeALConfig();
     ALTHUNK_EXIT();
@@ -529,6 +525,19 @@ static void alc_deinit(void)
     if(LogFile != stderr)
         fclose(LogFile);
     LogFile = NULL;
+}
+
+static void alc_deinit(void)
+{
+    int i;
+
+    ReleaseALC(ALC_TRUE);
+
+    for(i = 0;BackendList[i].Deinit;i++)
+        BackendList[i].Deinit();
+    BackendLoopback.Deinit();
+
+    alc_deinit_safe();
 }
 
 static void alc_initconfig(void)
@@ -2938,7 +2947,7 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
 }
 
 
-static void ReleaseALC(void)
+static void ReleaseALC(ALCboolean doclose)
 {
     free(alcDeviceList); alcDeviceList = NULL;
     alcDeviceListSize = 0;
@@ -2954,15 +2963,23 @@ static void ReleaseALC(void)
     free(alcCaptureDefaultDeviceSpecifier);
     alcCaptureDefaultDeviceSpecifier = NULL;
 
-    if(g_ulDeviceCount > 0)
-        WARN("ReleaseALC(): closing %u Device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
-
-    while(g_pDeviceList)
+    if(doclose)
     {
-        if(g_pDeviceList->IsCaptureDevice)
-            alcCaptureCloseDevice(g_pDeviceList);
-        else
-            alcCloseDevice(g_pDeviceList);
+        if(g_ulDeviceCount > 0)
+            WARN("ReleaseALC(): closing %u Device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
+
+        while(g_pDeviceList)
+        {
+            if(g_pDeviceList->IsCaptureDevice)
+                alcCaptureCloseDevice(g_pDeviceList);
+            else
+                alcCloseDevice(g_pDeviceList);
+        }
+    }
+    else
+    {
+        if(g_ulDeviceCount > 0)
+            WARN("ReleaseALC(): %u Device%s not closed\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
     }
 }
 

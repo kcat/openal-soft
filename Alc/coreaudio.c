@@ -55,7 +55,8 @@ static void destroy_buffer_list(AudioBufferList* list)
 {
     if(list)
     {
-        for(UInt32 i = 0;i < list->mNumberBuffers;i++)
+        UInt32 i;
+        for(i = 0;i < list->mNumberBuffers;i++)
             free(list->mBuffers[i].mData);
         free(list);
     }

@@ -2937,7 +2937,7 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
     LockLists();
     if(!IsDevice(device) || !device->IsLoopbackDevice)
         alcSetError(device, ALC_INVALID_DEVICE);
-    else if(samples < 0)
+    else if(samples < 0 || (samples > 0 && buffer == NULL))
         alcSetError(device, ALC_INVALID_VALUE);
     else
         aluMixData(device, buffer, samples);

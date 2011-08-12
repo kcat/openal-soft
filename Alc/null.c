@@ -27,9 +27,6 @@
 
 
 typedef struct {
-    ALvoid *buffer;
-    ALuint size;
-
     volatile int killNow;
     ALvoid *thread;
 } null_data;
@@ -68,7 +65,7 @@ static ALuint NullProc(ALvoid *ptr)
 
         while(avail-done >= Device->UpdateSize)
         {
-            aluMixData(Device, data->buffer, Device->UpdateSize);
+            aluMixData(Device, NULL, Device->UpdateSize);
             done += Device->UpdateSize;
         }
     }
@@ -104,23 +101,11 @@ static ALCboolean null_reset_playback(ALCdevice *device)
 {
     null_data *data = (null_data*)device->ExtraData;
 
-    data->size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans,
-                                                          device->FmtType);
-    data->buffer = malloc(data->size);
-    if(!data->buffer)
-    {
-        ERR("Buffer malloc failed\n");
-        return ALC_FALSE;
-    }
     SetDefaultWFXChannelOrder(device);
 
     data->thread = StartThread(NullProc, device);
     if(data->thread == NULL)
-    {
-        free(data->buffer);
-        data->buffer = NULL;
         return ALC_FALSE;
-    }
 
     return ALC_TRUE;
 }
@@ -137,9 +122,6 @@ static void null_stop_playback(ALCdevice *device)
     data->thread = NULL;
 
     data->killNow = 0;
-
-    free(data->buffer);
-    data->buffer = NULL;
 }
 
 

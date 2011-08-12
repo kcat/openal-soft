@@ -69,6 +69,53 @@ static __inline ALdouble cubic8(const ALbyte *vals, ALint step, ALint frac)
 #define UNLIKELY(x) (x)
 #endif
 
+#if defined(__ARM_NEON__) && defined(HAVE_ARM_NEON_H)
+#include <arm_neon.h>
+
+static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                 ALfloat (*RESTRICT Coeffs)[2],
+                                 ALfloat left, ALfloat right)
+{
+    ALuint c;
+    float32x4_t leftright4;
+    {
+        float32x2_t leftright2 = vdup_n_f32(0.0);
+        leftright2 = vset_lane_f32(left, leftright2, 0);
+        leftright2 = vset_lane_f32(right, leftright2, 1);
+        leftright4 = vcombine_f32(leftright2, leftright2);
+    }
+    for(c = 0;c < HRIR_LENGTH;c += 2)
+    {
+        const ALuint o0 = (Offset+c)&HRIR_MASK;
+        const ALuint o1 = (o0+1)&HRIR_MASK;
+        float32x4_t vals = vcombine_f32(vld1_f32((float32_t*)&Values[o0][0]),
+                                        vld1_f32((float32_t*)&Values[o1][0]));
+        float32x4_t coefs = vld1q_f32((float32_t*)&Coeffs[c][0]);
+
+        vals = vmlaq_f32(vals, coefs, leftright4);
+
+        vst1_f32((float32_t*)&Values[o0][0], vget_low_f32(vals));
+        vst1_f32((float32_t*)&Values[o1][0], vget_high_f32(vals));
+    }
+}
+
+#else
+
+static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                 ALfloat (*RESTRICT Coeffs)[2],
+                                 ALfloat left, ALfloat right)
+{
+    ALuint c;
+    for(c = 0;c < HRIR_LENGTH;c++)
+    {
+        const ALuint off = (Offset+c)&HRIR_MASK;
+        Values[off][0] += Coeffs[c][0] * left;
+        Values[off][1] += Coeffs[c][1] * right;
+    }
+}
+
+#endif
+
 #define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
   const ALvoid *srcdata, ALuint *DataPosInt, ALuint *DataPosFrac,             \
@@ -185,13 +232,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
             Values[Offset&HRIR_MASK][1] = 0.0f;                               \
             Offset++;                                                         \
                                                                               \
-            for(c = 0;c < HRIR_LENGTH;c++)                                    \
-            {                                                                 \
-                const ALuint off = (Offset+c)&HRIR_MASK;                      \
-                Values[off][0] += Coeffs[c][0] * left;                        \
-                Values[off][1] += Coeffs[c][1] * right;                       \
-            }                                                                 \
-                                                                              \
+            ApplyCoeffs(Offset, Values, Coeffs, left, right);                 \
             DryBuffer[OutPos][FRONT_LEFT]  += Values[Offset&HRIR_MASK][0];    \
             DryBuffer[OutPos][FRONT_RIGHT] += Values[Offset&HRIR_MASK][1];    \
                                                                               \

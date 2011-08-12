@@ -92,6 +92,9 @@
 /* Define if we have pthread_np.h */
 #cmakedefine HAVE_PTHREAD_NP_H
 
+/* Define if we have arm_neon.h */
+#cmakedefine HAVE_ARM_NEON_H
+
 /* Define if we have guiddef.h */
 #cmakedefine HAVE_GUIDDEF_H
 

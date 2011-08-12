@@ -191,12 +191,12 @@ void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALflo
 // given delta factor between 0.0 and 1.0.
 ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep)
 {
-    ALfloat step;
     ALuint evidx[2], azidx[2];
-    ALfloat mu[3];
     ALuint lidx[4], ridx[4];
-    ALuint i;
     ALfloat left, right;
+    ALfloat mu[3];
+    ALfloat step;
+    ALuint i;
 
     // Claculate elevation indices and interpolation factor.
     CalcEvIndices(elevation, evidx, &mu[2]);
@@ -224,7 +224,8 @@ ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALf
     ridx[3] = evOffset[evidx[1]] + ((azCount[evidx[1]]-azidx[1]) % azCount[evidx[1]]);
 
     // Calculate the stepping parameters.
-    delta = __max(0.015f * delta * Hrtf.sampleRate, 1.0f);
+    delta = floor(delta*(Hrtf.sampleRate*0.015f) + 0.5);
+    delta = __max(delta, 1.0f);
     step = 1.0f / delta;
 
     // Calculate the normalized and attenuated target HRIR coefficients using

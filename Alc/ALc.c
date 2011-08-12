@@ -1586,14 +1586,15 @@ static ALvoid InitContext(ALCcontext *pContext)
 
 
 /*
-    ExitContext
+    FreeContext
 
     Clean up Context, destroy any remaining Sources
 */
-static ALCvoid ExitContext(ALCcontext *pContext)
+static ALCvoid FreeContext(ALCcontext *context)
 {
     //Invalidate context
-    pContext->LastError = AL_NO_ERROR;
+    memset(context, 0, sizeof(ALCcontext));
+    free(context);
 }
 
 ///////////////////////////////////////////////////////
@@ -2334,10 +2335,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     context->MaxActiveSources = 0;
     context->ActiveSourceCount = 0;
 
-    ExitContext(context);
-
-    memset(context, 0, sizeof(ALCcontext));
-    free(context);
+    FreeContext(context);
 }
 
 

@@ -604,7 +604,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if(WetGainHFAuto)
     {
         for(i = 0;i < NumSends;i++)
-            WetGain[i] *= ConeHF;
+            WetGainHF[i] *= ConeHF;
     }
 
     // Clamp to Min/Max Gain

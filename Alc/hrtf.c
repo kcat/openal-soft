@@ -77,7 +77,7 @@ static void CalcAzIndices(ALuint evidx, ALfloat az, ALuint *azidx, ALfloat *azmu
     az = (M_PI*2.0f + az) * azCount[evidx] / (M_PI*2.0f);
     azidx[0] = (ALuint)az % azCount[evidx];
     azidx[1] = (azidx[0] + 1) % azCount[evidx];
-    *azmu = az - (ALuint)az;
+    *azmu = az - floor(az);
 }
 
 // Calculates the normalized HRTF transition factor (delta) from the changes

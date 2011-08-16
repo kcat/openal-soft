@@ -388,13 +388,10 @@ static ALfloat CalcLimitedHfRatio(ALfloat hfRatio, ALfloat airAbsorptionGainHF, 
      */
     limitRatio = 1.0f / (CalcDecayLength(airAbsorptionGainHF, decayTime) *
                          SPEEDOFSOUNDMETRESPERSEC);
-    // Need to limit the result to a minimum of 0.1, just like the HF ratio
-    // parameter.
-    limitRatio = __max(limitRatio, 0.1f);
-
-    // Using the limit calculated above, apply the upper bound to the HF
-    // ratio.
-    return __min(hfRatio, limitRatio);
+    /* Using the limit calculated above, apply the upper bound to the HF
+     * ratio. Also need to limit the result to a minimum of 0.1, just like the
+     * HF ratio parameter. */
+    return clampF(limitRatio, 0.1f, hfRatio);
 }
 
 // Calculate the coefficient for a HF (and eventually LF) decay damping
@@ -418,7 +415,7 @@ static __inline ALfloat CalcDampingCoeff(ALfloat hfRatio, ALfloat length, ALfloa
 
         // Very low decay times will produce minimal output, so apply an
         // upper bound to the coefficient.
-        coeff = __min(coeff, 0.98f);
+        coeff = minF(coeff, 0.98f);
     }
     return coeff;
 }

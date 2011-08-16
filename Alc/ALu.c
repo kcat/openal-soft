@@ -180,9 +180,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     /* Calculate gains */
-    DryGain = SourceVolume;
-    DryGain = __min(DryGain,MaxVolume);
-    DryGain = __max(DryGain,MinVolume);
+    DryGain = clampF(SourceVolume, MinVolume, MaxVolume);
     DryGainHF = 1.0f;
     switch(ALSource->DirectFilter.type)
     {
@@ -193,9 +191,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     for(i = 0;i < NumSends;i++)
     {
-        WetGain[i] = SourceVolume;
-        WetGain[i] = __min(WetGain[i],MaxVolume);
-        WetGain[i] = __max(WetGain[i],MinVolume);
+        WetGain[i] = clampF(SourceVolume, MinVolume, MaxVolume);
         WetGainHF[i] = 1.0f;
         switch(ALSource->Send[i].WetFilter.type)
         {
@@ -501,8 +497,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                                             ALContext->DistanceModel)
     {
         case InverseDistanceClamped:
-            ClampedDist=__max(ClampedDist,MinDist);
-            ClampedDist=__min(ClampedDist,MaxDist);
+            ClampedDist = clampF(ClampedDist, MinDist, MaxDist);
             if(MaxDist < MinDist)
                 break;
             //fall-through
@@ -520,8 +515,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             break;
 
         case LinearDistanceClamped:
-            ClampedDist=__max(ClampedDist,MinDist);
-            ClampedDist=__min(ClampedDist,MaxDist);
+            ClampedDist = clampF(ClampedDist, MinDist, MaxDist);
             if(MaxDist < MinDist)
                 break;
             //fall-through
@@ -529,18 +523,17 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             if(MaxDist != MinDist)
             {
                 Attenuation = 1.0f - (Rolloff*(ClampedDist-MinDist)/(MaxDist - MinDist));
-                Attenuation = __max(Attenuation, 0.0f);
+                Attenuation = maxF(Attenuation, 0.0f);
                 for(i = 0;i < NumSends;i++)
                 {
                     RoomAttenuation[i] = 1.0f - (RoomRolloff[i]*(ClampedDist-MinDist)/(MaxDist - MinDist));
-                    RoomAttenuation[i] = __max(RoomAttenuation[i], 0.0f);
+                    RoomAttenuation[i] = maxF(RoomAttenuation[i], 0.0f);
                 }
             }
             break;
 
         case ExponentDistanceClamped:
-            ClampedDist=__max(ClampedDist,MinDist);
-            ClampedDist=__min(ClampedDist,MaxDist);
+            ClampedDist = clampF(ClampedDist, MinDist, MaxDist);
             if(MaxDist < MinDist)
                 break;
             //fall-through
@@ -608,13 +601,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     // Clamp to Min/Max Gain
-    DryGain = __min(DryGain,MaxVolume);
-    DryGain = __max(DryGain,MinVolume);
+    DryGain = clampF(DryGain, MinVolume, MaxVolume);
     for(i = 0;i < NumSends;i++)
-    {
-        WetGain[i] = __min(WetGain[i],MaxVolume);
-        WetGain[i] = __max(WetGain[i],MinVolume);
-    }
+        WetGain[i] = clampF(WetGain[i], MinVolume, MaxVolume);
 
     // Apply filter gains and filters
     switch(ALSource->DirectFilter.type)
@@ -772,7 +761,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALfloat length;
         ALint pos;
 
-        length = __max(Distance, MinDist);
+        length = maxF(Distance, MinDist);
         if(length > 0.0f)
         {
             ALfloat invlen = 1.0f/length;

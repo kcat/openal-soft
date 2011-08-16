@@ -65,7 +65,7 @@ static void CalcEvIndices(ALfloat ev, ALuint *evidx, ALfloat *evmu)
 {
     ev = (M_PI/2.0f + ev) * (ELEV_COUNT-1) / M_PI;
     evidx[0] = (ALuint)ev;
-    evidx[1] = __min(evidx[0] + 1, ELEV_COUNT-1);
+    evidx[1] = minF(evidx[0] + 1, ELEV_COUNT-1);
     *evmu = ev - evidx[0];
 }
 
@@ -86,11 +86,11 @@ static void CalcAzIndices(ALuint evidx, ALfloat az, ALuint *azidx, ALfloat *azmu
 // values.
 ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3], const ALfloat newdir[3])
 {
-    ALfloat gainChange, angleChange, delta;
+    ALfloat gainChange, angleChange;
 
     // Calculate the normalized dB gain change.
-    newGain = __max(newGain, 0.0001f);
-    oldGain = __max(oldGain, 0.0001f);
+    newGain = maxF(newGain, 0.0001f);
+    oldGain = maxF(oldGain, 0.0001f);
     gainChange = aluFabs(log10(newGain / oldGain) / log10(0.0001f));
 
     // Calculate the normalized listener to source angle change when there is
@@ -109,8 +109,7 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
 
     // Use the largest of the two changes for the delta factor, and apply a
     // significance shaping function to it.
-    delta = __max(gainChange, angleChange) * 2.0f;
-    return __min(delta, 1.0f);
+    return clampF(angleChange*2.0f, gainChange*2.0f, 1.0f);
 }
 
 // Calculates static HRIR coefficients and delays for the given polar
@@ -224,8 +223,7 @@ ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALf
     ridx[3] = evOffset[evidx[1]] + ((azCount[evidx[1]]-azidx[1]) % azCount[evidx[1]]);
 
     // Calculate the stepping parameters.
-    delta = floor(delta*(Hrtf.sampleRate*0.015f) + 0.5);
-    delta = __max(delta, 1.0f);
+    delta = maxF(floor(delta*(Hrtf.sampleRate*0.015f) + 0.5), 1.0f);
     step = 1.0f / delta;
 
     // Calculate the normalized and attenuated target HRIR coefficients using

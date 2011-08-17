@@ -118,6 +118,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     const ALfloat *SpeakerGain;
     const ALfloat *angles = NULL;
     const enum Channel *chans = NULL;
+    enum Resampler Resampler;
     ALint num_channels = 0;
     ALboolean VirtualChannels;
     ALfloat Pitch;
@@ -138,6 +139,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     MinVolume       = ALSource->flMinGain;
     MaxVolume       = ALSource->flMaxGain;
     Pitch           = ALSource->flPitch;
+    Resampler       = ALSource->Resampler;
     VirtualChannels = ALSource->VirtualChannels;
 
     /* Calculate the stepping value */
@@ -150,8 +152,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         {
             ALint maxstep = STACK_DATA_SIZE / ALSource->NumChannels /
                                               ALSource->SampleSize;
-            maxstep -= ResamplerPadding[ALSource->Resampler] +
-                       ResamplerPrePadding[ALSource->Resampler] + 1;
+            maxstep -= ResamplerPadding[Resampler] +
+                       ResamplerPrePadding[Resampler] + 1;
             maxstep = mini(maxstep, INT_MAX>>FRACTIONBITS);
 
             Pitch = Pitch * ALBuffer->Frequency / Frequency;
@@ -169,11 +171,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             if(ALSource->VirtualChannels && (Device->Flags&DEVICE_USE_HRTF))
                 ALSource->Params.DoMix = SelectHrtfMixer(ALBuffer,
                        (ALSource->Params.Step==FRACTIONONE) ? POINT_RESAMPLER :
-                       ALSource->Resampler);
+                                                              Resampler);
             else
                 ALSource->Params.DoMix = SelectMixer(ALBuffer,
                        (ALSource->Params.Step==FRACTIONONE) ? POINT_RESAMPLER :
-                       ALSource->Resampler);
+                                                              Resampler);
             break;
         }
         BufferListItem = BufferListItem->next;
@@ -370,6 +372,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat WetGainHF[MAX_SENDS];
     ALboolean WetGainAuto;
     ALboolean WetGainHFAuto;
+    enum Resampler Resampler;
     ALfloat Pitch;
     ALuint Frequency;
     ALint NumSends;
@@ -396,6 +399,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     SourceVolume = ALSource->flGain;
     MinVolume    = ALSource->flMinGain;
     MaxVolume    = ALSource->flMaxGain;
+    Pitch        = ALSource->flPitch;
+    Resampler    = ALSource->Resampler;
     memcpy(Position,  ALSource->vPosition,    sizeof(ALSource->vPosition));
     memcpy(Direction, ALSource->vOrientation, sizeof(ALSource->vOrientation));
     memcpy(Velocity,  ALSource->vVelocity,    sizeof(ALSource->vVelocity));
@@ -644,7 +649,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     // Calculate Velocity
-    Pitch = ALSource->flPitch;
     if(DopplerFactor != 0.0f)
     {
         ALfloat VSS, VLS;
@@ -675,8 +679,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         {
             ALint maxstep = STACK_DATA_SIZE / ALSource->NumChannels /
                                               ALSource->SampleSize;
-            maxstep -= ResamplerPadding[ALSource->Resampler] +
-                       ResamplerPrePadding[ALSource->Resampler] + 1;
+            maxstep -= ResamplerPadding[Resampler] +
+                       ResamplerPrePadding[Resampler] + 1;
             maxstep = mini(maxstep, INT_MAX>>FRACTIONBITS);
 
             Pitch = Pitch * ALBuffer->Frequency / Frequency;
@@ -689,11 +693,14 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                     ALSource->Params.Step = 1;
             }
 
-            ALSource->Params.DoMix = ((Device->Flags&DEVICE_USE_HRTF) ?
-                SelectHrtfMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE) ?
-                                          POINT_RESAMPLER : ALSource->Resampler) :
-                SelectMixer(ALBuffer, (ALSource->Params.Step==FRACTIONONE) ?
-                                      POINT_RESAMPLER : ALSource->Resampler));
+            if((Device->Flags&DEVICE_USE_HRTF))
+                ALSource->Params.DoMix = SelectHrtfMixer(ALBuffer,
+                       (ALSource->Params.Step==FRACTIONONE) ? POINT_RESAMPLER :
+                                                              Resampler);
+            else
+                ALSource->Params.DoMix = SelectMixer(ALBuffer,
+                       (ALSource->Params.Step==FRACTIONONE) ? POINT_RESAMPLER :
+                                                              Resampler);
             break;
         }
         BufferListItem = BufferListItem->next;

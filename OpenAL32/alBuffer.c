@@ -982,11 +982,11 @@ static ALmulaw EncodeMuLaw(ALshort val)
     {
         /* -32768 doesn't properly negate on a short; it results in itself.
          * So clamp to -32767 */
-        val = max(val, -32767);
+        val = maxi(val, -32767);
         val = -val;
     }
 
-    val = min(val, muLawClip);
+    val = mini(val, muLawClip);
     val += muLawBias;
 
     exp = muLawCompressTable[(val>>7) & 0xff];
@@ -1010,8 +1010,7 @@ static void DecodeIMA4Block(ALshort *dst, const ALima4 *src, ALint numchans)
         index[c] |= *(src++) << 8;
         index[c]  = (index[c]^0x8000) - 32768;
 
-        index[c] = max(0, index[c]);
-        index[c] = min(index[c], 88);
+        index[c] = clampi(index[c], 0, 88);
 
         dst[c] = sample[c];
     }
@@ -1035,12 +1034,10 @@ static void DecodeIMA4Block(ALshort *dst, const ALima4 *src, ALint numchans)
                 code[c] >>= 4;
 
                 sample[c] += IMA4Codeword[nibble] * IMAStep_size[index[c]] / 8;
-                sample[c] = max(-32768, sample[c]);
-                sample[c] = min(sample[c], 32767);
+                sample[c] = clampi(sample[c], -32768, 32767);
 
                 index[c] += IMA4Index_adjust[nibble];
-                index[c] = max(0, index[c]);
-                index[c] = min(index[c], 88);
+                index[c] = clampi(index[c], 0, 88);
 
                 dst[j*numchans + c] = sample[c];
             }
@@ -1065,16 +1062,14 @@ static void EncodeIMA4Block(ALima4 *dst, const ALshort *src, ALint *sample, ALin
             diff = -diff;
         }
 
-        diff = min(step*2, diff);
+        diff = mini(step*2, diff);
         nibble |= (diff*8/step - 1) / 2;
 
         sample[c] += IMA4Codeword[nibble] * step / 8;
-        sample[c] = max(-32768, sample[c]);
-        sample[c] = min(sample[c], 32767);
+        sample[c] = clampi(sample[c], -32768, 32767);
 
         index[c] += IMA4Index_adjust[nibble];
-        index[c] = max(0, index[c]);
-        index[c] = min(index[c], 88);
+        index[c] = clampi(index[c], 0, 88);
 
         *(dst++) = sample[c] & 0xff;
         *(dst++) = (sample[c]>>8) & 0xff;
@@ -1100,16 +1095,14 @@ static void EncodeIMA4Block(ALima4 *dst, const ALshort *src, ALint *sample, ALin
                     diff = -diff;
                 }
 
-                diff = min(step*2, diff);
+                diff = mini(step*2, diff);
                 nibble |= (diff*8/step - 1) / 2;
 
                 sample[c] += IMA4Codeword[nibble] * step / 8;
-                sample[c] = max(-32768, sample[c]);
-                sample[c] = min(sample[c], 32767);
+                sample[c] = clampi(sample[c], -32768, 32767);
 
                 index[c] += IMA4Index_adjust[nibble];
-                index[c] = max(0, index[c]);
-                index[c] = min(index[c], 88);
+                index[c] = clampi(index[c], 0, 88);
 
                 if(!(k&1)) *dst = nibble;
                 else *(dst++) |= nibble<<4;

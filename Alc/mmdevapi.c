@@ -431,7 +431,7 @@ static HRESULT DoReset(ALCdevice *device)
 
         device->NumUpdates = (device->NumUpdates*device->UpdateSize + min_len/2) /
                              min_len;
-        device->NumUpdates = __max(device->NumUpdates, 2);
+        device->NumUpdates = maxu(device->NumUpdates, 2);
         device->UpdateSize = min_len;
 
         hr = IAudioClient_Initialize(data->client, AUDCLNT_SHAREMODE_SHARED,

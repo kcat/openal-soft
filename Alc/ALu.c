@@ -152,7 +152,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                                               ALSource->SampleSize;
             maxstep -= ResamplerPadding[ALSource->Resampler] +
                        ResamplerPrePadding[ALSource->Resampler] + 1;
-            maxstep = min(maxstep, INT_MAX>>FRACTIONBITS);
+            maxstep = mini(maxstep, INT_MAX>>FRACTIONBITS);
 
             Pitch = Pitch * ALBuffer->Frequency / Frequency;
             if(Pitch > (ALfloat)maxstep)
@@ -677,7 +677,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                                               ALSource->SampleSize;
             maxstep -= ResamplerPadding[ALSource->Resampler] +
                        ResamplerPrePadding[ALSource->Resampler] + 1;
-            maxstep = min(maxstep, INT_MAX>>FRACTIONBITS);
+            maxstep = mini(maxstep, INT_MAX>>FRACTIONBITS);
 
             Pitch = Pitch * ALBuffer->Frequency / Frequency;
             if(Pitch > (ALfloat)maxstep)
@@ -975,7 +975,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     while(size > 0)
     {
         /* Setup variables */
-        SamplesToDo = min(size, BUFFERSIZE);
+        SamplesToDo = minu(size, BUFFERSIZE);
 
         /* Clear mixing buffer */
         memset(device->DryBuffer, 0, SamplesToDo*MAXCHANNELS*sizeof(ALfloat));

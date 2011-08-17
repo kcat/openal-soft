@@ -150,7 +150,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
         ALuint *RESTRICT TargetDelay = Source->Params.HrtfDelay[i];           \
         ALfloat *RESTRICT History = Source->HrtfHistory[i];                   \
         ALfloat (*RESTRICT Values)[2] = Source->HrtfValues[i];                \
-        ALint Counter = __max(Source->HrtfCounter, OutPos) - OutPos;          \
+        ALint Counter = maxu(Source->HrtfCounter, OutPos) - OutPos;           \
         ALuint Offset = Source->HrtfOffset + OutPos;                          \
         ALfloat Coeffs[HRIR_LENGTH][2];                                       \
         ALuint Delay[2];                                                      \
@@ -612,7 +612,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 else
                 {
                     DataSize = (BufferPrePadding-DataPosInt)*FrameSize;
-                    DataSize = min(BufferSize, DataSize);
+                    DataSize = minu(BufferSize, DataSize);
 
                     memset(&SrcData[SrcDataSize], 0, DataSize);
                     SrcDataSize += DataSize;
@@ -624,7 +624,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 /* Copy what's left to play in the source buffer, and clear the
                  * rest of the temp buffer */
                 DataSize = ALBuffer->size - pos;
-                DataSize = min(BufferSize, DataSize);
+                DataSize = minu(BufferSize, DataSize);
 
                 memcpy(&SrcData[SrcDataSize], &Data[pos], DataSize);
                 SrcDataSize += DataSize;
@@ -653,7 +653,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 else
                 {
                     DataSize = (BufferPrePadding-DataPosInt)*FrameSize;
-                    DataSize = min(BufferSize, DataSize);
+                    DataSize = minu(BufferSize, DataSize);
 
                     memset(&SrcData[SrcDataSize], 0, DataSize);
                     SrcDataSize += DataSize;
@@ -665,7 +665,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 /* Copy what's left of this loop iteration, then copy repeats
                  * of the loop section */
                 DataSize = LoopEnd*FrameSize - pos;
-                DataSize = min(BufferSize, DataSize);
+                DataSize = minu(BufferSize, DataSize);
 
                 memcpy(&SrcData[SrcDataSize], &Data[pos], DataSize);
                 SrcDataSize += DataSize;
@@ -674,7 +674,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 DataSize = (LoopEnd-LoopStart) * FrameSize;
                 while(BufferSize > 0)
                 {
-                    DataSize = min(BufferSize, DataSize);
+                    DataSize = minu(BufferSize, DataSize);
 
                     memcpy(&SrcData[SrcDataSize], &Data[LoopStart*FrameSize], DataSize);
                     SrcDataSize += DataSize;
@@ -697,7 +697,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 {
                     if(!BufferListIter->prev && !Looping)
                     {
-                        ALuint DataSize = min(BufferSize, pos);
+                        ALuint DataSize = minu(BufferSize, pos);
 
                         memset(&SrcData[SrcDataSize], 0, DataSize);
                         SrcDataSize += DataSize;
@@ -744,7 +744,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                         DataSize -= pos;
                         pos -= pos;
 
-                        DataSize = min(BufferSize, DataSize);
+                        DataSize = minu(BufferSize, DataSize);
                         memcpy(&SrcData[SrcDataSize], Data, DataSize);
                         SrcDataSize += DataSize;
                         BufferSize -= DataSize;
@@ -770,7 +770,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         DataSize64 -= DataPosFrac;
 
         BufferSize = (ALuint)((DataSize64+(increment-1)) / increment);
-        BufferSize = min(BufferSize, (SamplesToDo-OutPos));
+        BufferSize = minu(BufferSize, (SamplesToDo-OutPos));
 
         SrcData += BufferPrePadding*FrameSize;
         Source->Params.DoMix(Source, Device, SrcData, &DataPosInt, &DataPosFrac,
@@ -837,7 +837,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     Source->HrtfOffset       += OutPos;
     if(State == AL_PLAYING)
     {
-        Source->HrtfCounter = __max(Source->HrtfCounter, OutPos) - OutPos;
+        Source->HrtfCounter = maxu(Source->HrtfCounter, OutPos) - OutPos;
         Source->HrtfMoving  = AL_TRUE;
     }
     else

@@ -134,6 +134,20 @@ static __inline ALfloat maxF(ALfloat a, ALfloat b)
 static __inline ALfloat clampF(ALfloat val, ALfloat mn, ALfloat mx)
 { return minF(mx, maxF(mn, val)); }
 
+static __inline ALuint minu(ALuint a, ALuint b)
+{ return ((a > b) ? b : a); }
+static __inline ALuint maxu(ALuint a, ALuint b)
+{ return ((a > b) ? a : b); }
+static __inline ALuint clampu(ALuint val, ALuint min, ALuint max)
+{ return minu(max, maxu(min, val)); }
+
+static __inline ALint mini(ALint a, ALint b)
+{ return ((a > b) ? b : a); }
+static __inline ALint maxi(ALint a, ALint b)
+{ return ((a > b) ? a : b); }
+static __inline ALint clampi(ALint val, ALint min, ALint max)
+{ return mini(max, maxi(min, val)); }
+
 
 static __inline ALdouble lerp(ALdouble val1, ALdouble val2, ALdouble mu)
 {

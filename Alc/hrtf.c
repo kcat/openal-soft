@@ -65,7 +65,7 @@ static void CalcEvIndices(ALfloat ev, ALuint *evidx, ALfloat *evmu)
 {
     ev = (M_PI/2.0f + ev) * (ELEV_COUNT-1) / M_PI;
     evidx[0] = (ALuint)ev;
-    evidx[1] = minF(evidx[0] + 1, ELEV_COUNT-1);
+    evidx[1] = minu(evidx[0] + 1, ELEV_COUNT-1);
     *evmu = ev - evidx[0];
 }
 

@@ -127,12 +127,12 @@ enum DistanceModel {
 #endif
 
 
-static __inline ALfloat minF(ALfloat a, ALfloat b)
+static __inline ALfloat minf(ALfloat a, ALfloat b)
 { return ((a > b) ? b : a); }
-static __inline ALfloat maxF(ALfloat a, ALfloat b)
+static __inline ALfloat maxf(ALfloat a, ALfloat b)
 { return ((a > b) ? a : b); }
-static __inline ALfloat clampF(ALfloat val, ALfloat mn, ALfloat mx)
-{ return minF(mx, maxF(mn, val)); }
+static __inline ALfloat clampf(ALfloat val, ALfloat min, ALfloat max)
+{ return minf(max, maxf(min, val)); }
 
 static __inline ALuint minu(ALuint a, ALuint b)
 { return ((a > b) ? b : a); }

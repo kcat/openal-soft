@@ -387,7 +387,7 @@ ALfloat lpCoeffCalc(ALfloat g, ALfloat cw)
      * head towards 1, which will flatten the signal */
     if(g < 0.9999f) /* 1-epsilon */
     {
-        g = maxF(g, 0.01f);
+        g = maxf(g, 0.01f);
         a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
             (1 - g);
     }

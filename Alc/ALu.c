@@ -813,31 +813,19 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
 
 static __inline ALfloat aluF2F(ALfloat val)
-{
-    return val;
-}
-static __inline ALushort aluF2US(ALfloat val)
-{
-    if(val > 1.0f) return 65535;
-    if(val < -1.0f) return 0;
-    return (ALint)(val*32767.0f) + 32768;
-}
+{ return val; }
 static __inline ALshort aluF2S(ALfloat val)
 {
     if(val > 1.0f) return 32767;
     if(val < -1.0f) return -32768;
     return (ALint)(val*32767.0f);
 }
-static __inline ALubyte aluF2UB(ALfloat val)
-{
-    ALushort i = aluF2US(val);
-    return i>>8;
-}
+static __inline ALushort aluF2US(ALfloat val)
+{ return aluF2S(val)+32768; }
 static __inline ALbyte aluF2B(ALfloat val)
-{
-    ALshort i = aluF2S(val);
-    return i>>8;
-}
+{ return aluF2S(val)>>8; }
+static __inline ALubyte aluF2UB(ALfloat val)
+{ return aluF2US(val)>>8; }
 
 #define DECL_TEMPLATE(T, N, func)                                             \
 static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \

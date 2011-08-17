@@ -146,9 +146,10 @@ static const BackendFuncs null_funcs = {
     NULL
 };
 
-void alc_null_init(BackendFuncs *func_list)
+ALCboolean alc_null_init(BackendFuncs *func_list)
 {
     *func_list = null_funcs;
+    return ALC_TRUE;
 }
 
 void alc_null_deinit(void)

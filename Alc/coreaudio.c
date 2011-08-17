@@ -692,9 +692,10 @@ static const BackendFuncs ca_funcs = {
     ca_available_samples
 };
 
-void alc_ca_init(BackendFuncs *func_list)
+ALCboolean alc_ca_init(BackendFuncs *func_list)
 {
     *func_list = ca_funcs;
+    return ALC_TRUE;
 }
 
 void alc_ca_deinit(void)

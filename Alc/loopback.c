@@ -61,9 +61,10 @@ static const BackendFuncs loopback_funcs = {
     NULL
 };
 
-void alc_loopback_init(BackendFuncs *func_list)
+ALCboolean alc_loopback_init(BackendFuncs *func_list)
 {
     *func_list = loopback_funcs;
+    return ALC_TRUE;
 }
 
 void alc_loopback_deinit(void)

@@ -1053,9 +1053,10 @@ static const BackendFuncs alsa_funcs = {
     alsa_available_samples
 };
 
-void alc_alsa_init(BackendFuncs *func_list)
+ALCboolean alc_alsa_init(BackendFuncs *func_list)
 {
     *func_list = alsa_funcs;
+    return ALC_TRUE;
 }
 
 void alc_alsa_deinit(void)

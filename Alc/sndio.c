@@ -360,9 +360,10 @@ static const BackendFuncs sndio_funcs = {
     NULL
 };
 
-void alc_sndio_init(BackendFuncs *func_list)
+ALCboolean alc_sndio_init(BackendFuncs *func_list)
 {
     *func_list = sndio_funcs;
+    return ALC_TRUE;
 }
 
 void alc_sndio_deinit(void)

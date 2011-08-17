@@ -286,9 +286,10 @@ static const BackendFuncs solaris_funcs = {
     solaris_available_samples
 };
 
-void alc_solaris_init(BackendFuncs *func_list)
+ALCboolean alc_solaris_init(BackendFuncs *func_list)
 {
     *func_list = solaris_funcs;
+    return ALC_TRUE;
 }
 
 void alc_solaris_deinit(void)

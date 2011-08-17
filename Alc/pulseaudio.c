@@ -1296,13 +1296,15 @@ static const BackendFuncs pulse_funcs = { //{{{
     pulse_available_samples
 }; //}}}
 
-void alc_pulse_init(BackendFuncs *func_list) //{{{
+ALCboolean alc_pulse_init(BackendFuncs *func_list) //{{{
 {
     *func_list = pulse_funcs;
 
     pulse_ctx_flags = 0;
     if(!GetConfigValueBool("pulse", "spawn-server", 0))
         pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
+
+    return ALC_TRUE;
 } //}}}
 
 void alc_pulse_deinit(void) //{{{

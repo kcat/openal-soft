@@ -406,9 +406,10 @@ static const BackendFuncs opensl_funcs = {
 };
 
 
-void alc_opensl_init(BackendFuncs *func_list)
+ALCboolean alc_opensl_init(BackendFuncs *func_list)
 {
     *func_list = opensl_funcs;
+    return ALC_TRUE;
 }
 
 void alc_opensl_deinit(void)

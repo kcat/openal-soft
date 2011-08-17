@@ -65,7 +65,7 @@ DEFINE_GUID(IID_IAudioRenderClient, 0xf294acfc, 0x3146, 0x4483, 0xa7,0xbf, 0xad,
 #define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 typedef struct BackendInfo {
     const char *name;
-    void (*Init)(BackendFuncs*);
+    ALCboolean (*Init)(BackendFuncs*);
     void (*Deinit)(void);
     void (*Probe)(enum DevProbe);
     BackendFuncs Funcs;

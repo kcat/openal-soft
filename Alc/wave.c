@@ -334,9 +334,10 @@ static const BackendFuncs wave_funcs = {
     NULL
 };
 
-void alc_wave_init(BackendFuncs *func_list)
+ALCboolean alc_wave_init(BackendFuncs *func_list)
 {
     *func_list = wave_funcs;
+    return ALC_TRUE;
 }
 
 void alc_wave_deinit(void)

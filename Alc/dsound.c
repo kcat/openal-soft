@@ -610,9 +610,10 @@ static const BackendFuncs DSoundFuncs = {
 };
 
 
-void alcDSoundInit(BackendFuncs *FuncList)
+ALCboolean alcDSoundInit(BackendFuncs *FuncList)
 {
     *FuncList = DSoundFuncs;
+    return ALC_TRUE;
 }
 
 void alcDSoundDeinit(void)

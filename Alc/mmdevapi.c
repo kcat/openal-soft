@@ -751,9 +751,10 @@ static const BackendFuncs MMDevApiFuncs = {
 };
 
 
-void alcMMDevApiInit(BackendFuncs *FuncList)
+ALCboolean alcMMDevApiInit(BackendFuncs *FuncList)
 {
     *FuncList = MMDevApiFuncs;
+    return ALC_TRUE;
 }
 
 void alcMMDevApiDeinit(void)

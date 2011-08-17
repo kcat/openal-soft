@@ -719,9 +719,10 @@ static const BackendFuncs WinMMFuncs = {
     WinMMAvailableSamples
 };
 
-void alcWinMMInit(BackendFuncs *FuncList)
+ALCboolean alcWinMMInit(BackendFuncs *FuncList)
 {
     *FuncList = WinMMFuncs;
+    return ALC_TRUE;
 }
 
 void alcWinMMDeinit()

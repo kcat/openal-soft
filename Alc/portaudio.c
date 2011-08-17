@@ -418,9 +418,10 @@ static const BackendFuncs pa_funcs = {
     pa_available_samples
 };
 
-void alc_pa_init(BackendFuncs *func_list)
+ALCboolean alc_pa_init(BackendFuncs *func_list)
 {
     *func_list = pa_funcs;
+    return ALC_TRUE;
 }
 
 void alc_pa_deinit(void)

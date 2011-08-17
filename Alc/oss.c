@@ -489,9 +489,10 @@ static const BackendFuncs oss_funcs = {
     oss_available_samples
 };
 
-void alc_oss_init(BackendFuncs *func_list)
+ALCboolean alc_oss_init(BackendFuncs *func_list)
 {
     *func_list = oss_funcs;
+    return ALC_TRUE;
 }
 
 void alc_oss_deinit(void)

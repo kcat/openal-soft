@@ -641,8 +641,20 @@ static void alc_initconfig(void)
         }
     }
 
-    for(i = 0;BackendList[i].Init;i++)
-        BackendList[i].Init(&BackendList[i].Funcs);
+    i = 0;
+    while(BackendList[i].Init)
+    {
+        if(BackendList[i].Init(&BackendList[i].Funcs))
+            i++;
+        else
+        {
+            int n = i;
+            do {
+                BackendList[n] = BackendList[n+1];
+                ++n;
+            } while(BackendList[n].Init);
+        }
+    }
     BackendLoopback.Init(&BackendLoopback.Funcs);
 
     str = GetConfigValue(NULL, "excludefx", "");

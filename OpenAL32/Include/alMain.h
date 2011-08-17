@@ -216,9 +216,6 @@ static __inline void Sleep(ALuint t)
         tv = rem;
 }
 
-#define min(x,y) (((x)<(y))?(x):(y))
-#define max(x,y) (((x)>(y))?(x):(y))
-
 #if defined(HAVE_DLFCN_H)
 #define HAVE_DYNLOAD 1
 void *LoadLib(const char *name);

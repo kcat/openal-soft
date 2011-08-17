@@ -49,14 +49,6 @@
 #define aluFabs(x) ((ALfloat)fabs((double)(x)))
 #endif
 
-// fixes for mingw32.
-#if defined(max) && !defined(__max)
-#define __max max
-#endif
-#if defined(min) && !defined(__min)
-#define __min min
-#endif
-
 #define QUADRANT_NUM  128
 #define LUT_NUM       (4 * QUADRANT_NUM)
 

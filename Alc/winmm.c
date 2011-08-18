@@ -404,7 +404,7 @@ static void WinMMClosePlayback(ALCdevice *device)
     pData->hWaveThreadEvent = 0;
 
     waveOutClose(pData->hWaveHandle.Out);
-    pData->hWaveHandle.In = 0;
+    pData->hWaveHandle.Out = 0;
 
     free(pData);
     device->ExtraData = NULL;

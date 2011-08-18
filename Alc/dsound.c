@@ -48,7 +48,7 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 
 
-static void *ds_handle;
+static HMODULE ds_handle;
 static HRESULT (WINAPI *pDirectSoundCreate)(LPCGUID pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
 static HRESULT (WINAPI *pDirectSoundEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallback, void *pContext);
 
@@ -80,36 +80,35 @@ static ALuint NumDevices;
 
 #define MAX_UPDATES 128
 
-static void *DSoundLoad(void)
+static ALCboolean DSoundLoad(void)
 {
+    ALCboolean ok = ALC_TRUE;
     if(!ds_handle)
     {
-        ALboolean failed = AL_FALSE;
-
         ds_handle = LoadLibraryA("dsound.dll");
         if(ds_handle == NULL)
         {
             ERR("Failed to load dsound.dll\n");
-            return NULL;
+            return ALC_FALSE;
         }
 
 #define LOAD_FUNC(x) do {                                                     \
-    if((p##x = (void*)GetProcAddress((HMODULE)ds_handle, #x)) == NULL) {      \
+    if((p##x = (void*)GetProcAddress(ds_handle, #x)) == NULL) {               \
         ERR("Could not load %s from dsound.dll\n", #x);                       \
-        failed = AL_TRUE;                                                     \
+        ok = ALC_FALSE;                                                       \
     }                                                                         \
 } while(0)
         LOAD_FUNC(DirectSoundCreate);
         LOAD_FUNC(DirectSoundEnumerateA);
 #undef LOAD_FUNC
 
-        if(failed)
+        if(!ok)
         {
             FreeLibrary(ds_handle);
             ds_handle = NULL;
         }
     }
-    return ds_handle;
+    return ok;
 }
 
 

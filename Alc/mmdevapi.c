@@ -637,9 +637,6 @@ static ALCboolean MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceN
     MMDevApiData *data = NULL;
     HRESULT hr;
 
-    if(!MMDevApiLoad())
-        return ALC_FALSE;
-
     if(!deviceName)
         deviceName = mmDevice;
     else if(strcmp(deviceName, mmDevice) != 0)
@@ -753,6 +750,8 @@ static const BackendFuncs MMDevApiFuncs = {
 
 ALCboolean alcMMDevApiInit(BackendFuncs *FuncList)
 {
+    if(!MMDevApiLoad())
+        return ALC_FALSE;
     *FuncList = MMDevApiFuncs;
     return ALC_TRUE;
 }
@@ -770,8 +769,6 @@ void alcMMDevApiDeinit(void)
 
 void alcMMDevApiProbe(enum DevProbe type)
 {
-    if(!MMDevApiLoad()) return;
-
     switch(type)
     {
         case DEVICE_PROBE:

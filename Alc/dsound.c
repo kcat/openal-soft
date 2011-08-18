@@ -273,9 +273,6 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
     LPGUID guid = NULL;
     HRESULT hr;
 
-    if(!DSoundLoad())
-        return ALC_FALSE;
-
     if(!deviceName)
         deviceName = dsDevice;
     else if(strcmp(deviceName, dsDevice) != 0)
@@ -612,6 +609,8 @@ static const BackendFuncs DSoundFuncs = {
 
 ALCboolean alcDSoundInit(BackendFuncs *FuncList)
 {
+    if(!DSoundLoad())
+        return ALC_FALSE;
     *FuncList = DSoundFuncs;
     return ALC_TRUE;
 }
@@ -635,8 +634,6 @@ void alcDSoundProbe(enum DevProbe type)
 {
     HRESULT hr;
     ALuint i;
-
-    if(!DSoundLoad()) return;
 
     switch(type)
     {

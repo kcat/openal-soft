@@ -49,8 +49,8 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 
 
 static void *ds_handle;
-static HRESULT (WINAPI *pDirectSoundCreate)(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter);
-static HRESULT (WINAPI *pDirectSoundEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallback, LPVOID pContext);
+static HRESULT (WINAPI *pDirectSoundCreate)(LPCGUID pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
+static HRESULT (WINAPI *pDirectSoundEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallback, void *pContext);
 
 #define DirectSoundCreate     pDirectSoundCreate
 #define DirectSoundEnumerateA pDirectSoundEnumerateA
@@ -58,11 +58,11 @@ static HRESULT (WINAPI *pDirectSoundEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallbac
 
 typedef struct {
     // DirectSound Playback Device
-    LPDIRECTSOUND          lpDS;
-    LPDIRECTSOUNDBUFFER    DSpbuffer;
-    LPDIRECTSOUNDBUFFER    DSsbuffer;
-    LPDIRECTSOUNDNOTIFY    DSnotify;
-    HANDLE                 hNotifyEvent;
+    IDirectSound       *lpDS;
+    IDirectSoundBuffer *DSpbuffer;
+    IDirectSoundBuffer *DSsbuffer;
+    IDirectSoundNotify *DSnotify;
+    HANDLE             hNotifyEvent;
 
     volatile int killNow;
     ALvoid *thread;

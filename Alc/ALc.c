@@ -647,38 +647,26 @@ static void alc_initconfig(void)
         }
     }
 
-    i = 0;
-    while(BackendList[i].Init && (!PlaybackBackend.name || !CaptureBackend.name))
+    for(i = 0;BackendList[i].Init && (!PlaybackBackend.name || !CaptureBackend.name);i++)
     {
-        if(BackendList[i].Init(&BackendList[i].Funcs))
+        if(!BackendList[i].Init(&BackendList[i].Funcs))
         {
-            TRACE("Initialized backend \"%s\"\n", BackendList[i].name);
-            if(BackendList[i].Funcs.OpenPlayback && !PlaybackBackend.name)
-            {
-                PlaybackBackend = BackendList[i];
-                TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
-            }
-            if(BackendList[i].Funcs.OpenCapture && !CaptureBackend.name)
-            {
-                CaptureBackend = BackendList[i];
-                TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
-            }
-            i++;
+            WARN("Failed to initialize backend \"%s\"\n", BackendList[i].name);
+            continue;
         }
-        else
+
+        TRACE("Initialized backend \"%s\"\n", BackendList[i].name);
+        if(BackendList[i].Funcs.OpenPlayback && !PlaybackBackend.name)
         {
-            TRACE("Failed to initialize backend \"%s\"\n", BackendList[i].name);
-            n = i;
-            do {
-                BackendList[n] = BackendList[n+1];
-                ++n;
-            } while(BackendList[n].Init);
+            PlaybackBackend = BackendList[i];
+            TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
+        }
+        if(BackendList[i].Funcs.OpenCapture && !CaptureBackend.name)
+        {
+            CaptureBackend = BackendList[i];
+            TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
         }
     }
-    BackendList[i].name = NULL;
-    BackendList[i].Init = NULL;
-    BackendList[i].Deinit = NULL;
-    BackendList[i].Probe = NULL;
     BackendLoopback.Init(&BackendLoopback.Funcs);
 
     str = GetConfigValue(NULL, "excludefx", "");

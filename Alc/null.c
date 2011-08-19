@@ -125,20 +125,12 @@ static void null_stop_playback(ALCdevice *device)
 }
 
 
-static ALCboolean null_open_capture(ALCdevice *device, const ALCchar *deviceName)
-{
-    (void)device;
-    (void)deviceName;
-    return ALC_FALSE;
-}
-
-
 static const BackendFuncs null_funcs = {
     null_open_playback,
     null_close_playback,
     null_reset_playback,
     null_stop_playback,
-    null_open_capture,
+    NULL,
     NULL,
     NULL,
     NULL,

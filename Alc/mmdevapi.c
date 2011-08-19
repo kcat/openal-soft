@@ -726,20 +726,12 @@ static void MMDevApiStopPlayback(ALCdevice *device)
 }
 
 
-static ALCboolean MMDevApiOpenCapture(ALCdevice *device, const ALCchar *deviceName)
-{
-    (void)device;
-    (void)deviceName;
-    return ALC_FALSE;
-}
-
-
 static const BackendFuncs MMDevApiFuncs = {
     MMDevApiOpenPlayback,
     MMDevApiClosePlayback,
     MMDevApiResetPlayback,
     MMDevApiStopPlayback,
-    MMDevApiOpenCapture,
+    NULL,
     NULL,
     NULL,
     NULL,

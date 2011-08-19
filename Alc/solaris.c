@@ -237,53 +237,17 @@ static void solaris_stop_playback(ALCdevice *device)
 }
 
 
-static ALCboolean solaris_open_capture(ALCdevice *device, const ALCchar *deviceName)
-{
-    (void)device;
-    (void)deviceName;
-    return ALC_FALSE;
-}
-
-static void solaris_close_capture(ALCdevice *device)
-{
-    (void)device;
-}
-
-static void solaris_start_capture(ALCdevice *pDevice)
-{
-    (void)pDevice;
-}
-
-static void solaris_stop_capture(ALCdevice *pDevice)
-{
-    (void)pDevice;
-}
-
-static void solaris_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
-{
-    (void)pDevice;
-    (void)pBuffer;
-    (void)lSamples;
-}
-
-static ALCuint solaris_available_samples(ALCdevice *pDevice)
-{
-    (void)pDevice;
-    return 0;
-}
-
-
 static const BackendFuncs solaris_funcs = {
     solaris_open_playback,
     solaris_close_playback,
     solaris_reset_playback,
     solaris_stop_playback,
-    solaris_open_capture,
-    solaris_close_capture,
-    solaris_start_capture,
-    solaris_stop_capture,
-    solaris_capture_samples,
-    solaris_available_samples
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
 };
 
 ALCboolean alc_solaris_init(BackendFuncs *func_list)

@@ -556,53 +556,17 @@ static void DSoundStopPlayback(ALCdevice *device)
 }
 
 
-static ALCboolean DSoundOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
-{
-    (void)pDevice;
-    (void)deviceName;
-    return ALC_FALSE;
-}
-
-static void DSoundCloseCapture(ALCdevice *pDevice)
-{
-    (void)pDevice;
-}
-
-static void DSoundStartCapture(ALCdevice *pDevice)
-{
-    (void)pDevice;
-}
-
-static void DSoundStopCapture(ALCdevice *pDevice)
-{
-    (void)pDevice;
-}
-
-static void DSoundCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
-{
-    (void)pDevice;
-    (void)pBuffer;
-    (void)lSamples;
-}
-
-static ALCuint DSoundAvailableSamples(ALCdevice *pDevice)
-{
-    (void)pDevice;
-    return 0;
-}
-
-
 static const BackendFuncs DSoundFuncs = {
     DSoundOpenPlayback,
     DSoundClosePlayback,
     DSoundResetPlayback,
     DSoundStopPlayback,
-    DSoundOpenCapture,
-    DSoundCloseCapture,
-    DSoundStartCapture,
-    DSoundStopCapture,
-    DSoundCaptureSamples,
-    DSoundAvailableSamples
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
 };
 
 

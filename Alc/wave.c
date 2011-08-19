@@ -313,20 +313,12 @@ static void wave_stop_playback(ALCdevice *device)
 }
 
 
-static ALCboolean wave_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
-{
-    (void)pDevice;
-    (void)deviceName;
-    return ALC_FALSE;
-}
-
-
 static const BackendFuncs wave_funcs = {
     wave_open_playback,
     wave_close_playback,
     wave_reset_playback,
     wave_stop_playback,
-    wave_open_capture,
+    NULL,
     NULL,
     NULL,
     NULL,

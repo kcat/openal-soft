@@ -384,20 +384,13 @@ static void opensl_stop_playback(ALCdevice *Device)
     data->bufferSize = 0;
 }
 
-static ALCboolean opensl_open_capture(ALCdevice *Device, const ALCchar *deviceName)
-{
-    return ALC_FALSE;
-    (void)Device;
-    (void)deviceName;
-}
-
 
 static const BackendFuncs opensl_funcs = {
     opensl_open_playback,
     opensl_close_playback,
     opensl_reset_playback,
     opensl_stop_playback,
-    opensl_open_capture,
+    NULL,
     NULL,
     NULL,
     NULL,

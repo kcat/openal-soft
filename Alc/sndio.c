@@ -335,20 +335,12 @@ static void sndio_stop_playback(ALCdevice *device)
 }
 
 
-static ALCboolean sndio_open_capture(ALCdevice *device, const ALCchar *deviceName)
-{
-    (void)device;
-    (void)deviceName;
-    return ALC_FALSE;
-}
-
-
 static const BackendFuncs sndio_funcs = {
     sndio_open_playback,
     sndio_close_playback,
     sndio_reset_playback,
     sndio_stop_playback,
-    sndio_open_capture,
+    NULL,
     NULL,
     NULL,
     NULL,

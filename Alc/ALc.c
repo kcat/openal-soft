@@ -1630,7 +1630,6 @@ static ALCvoid FreeContext(ALCcontext *context)
 // This should probably move to another c file but for now ...
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
 {
-    ALCboolean DeviceFound = ALC_FALSE;
     ALCdevice *device = NULL;
 
     DO_INITCONFIG();
@@ -1686,18 +1685,15 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         device->next = g_pDeviceList;
         g_pDeviceList = device;
         g_ulDeviceCount++;
-
-        DeviceFound = ALC_TRUE;
     }
-    UnlockLists();
-
-    if(!DeviceFound)
+    else
     {
-        alcSetError(NULL, ALC_INVALID_VALUE);
         DeleteCriticalSection(&device->Mutex);
         free(device);
         device = NULL;
+        alcSetError(NULL, ALC_INVALID_VALUE);
     }
+    UnlockLists();
 
     return device;
 }
@@ -2691,7 +2687,6 @@ static void GetFormatFromString(const char *str, enum DevFmtChannels *chans, enu
 */
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 {
-    ALboolean bDeviceFound = AL_FALSE;
     const ALCchar *fmt;
     ALCdevice *device;
 
@@ -2776,19 +2771,16 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->next = g_pDeviceList;
         g_pDeviceList = device;
         g_ulDeviceCount++;
-
-        bDeviceFound = AL_TRUE;
     }
-    UnlockLists();
-
-    if(!bDeviceFound)
+    else
     {
         // No suitable output device found
-        alcSetError(NULL, ALC_INVALID_VALUE);
         DeleteCriticalSection(&device->Mutex);
         free(device);
         device = NULL;
+        alcSetError(NULL, ALC_INVALID_VALUE);
     }
+    UnlockLists();
 
     return device;
 }

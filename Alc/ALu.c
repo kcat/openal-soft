@@ -327,8 +327,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     for(i = 0;i < NumSends;i++)
     {
         ALSource->Params.Send[i].Slot = ALSource->Send[i].Slot;
-        ALSource->Params.Send[i].WetGain = WetGain[i] * ListenerGain /
-                                           ALSource->NumChannels;
+        ALSource->Params.Send[i].WetGain = WetGain[i] * ListenerGain;
     }
 
     /* Update filter coefficients. Calculations based on the I3DL2

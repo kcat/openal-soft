@@ -571,9 +571,9 @@ static void sink_device_callback(pa_context *context, const pa_sink_info *info, 
     count = 0;
     do {
         if(count == 0)
-            snprintf(str, sizeof(str), "%s via PulseAudio", info->description);
+            snprintf(str, sizeof(str), "%s", info->description);
         else
-            snprintf(str, sizeof(str), "%s #%d via PulseAudio", info->description, count+1);
+            snprintf(str, sizeof(str), "%s #%d", info->description, count+1);
         count++;
 
         for(i = 0;i < numDevNames;i++)
@@ -612,9 +612,9 @@ static void source_device_callback(pa_context *context, const pa_source_info *in
     count = 0;
     do {
         if(count == 0)
-            snprintf(str, sizeof(str), "%s via PulseAudio", info->description);
+            snprintf(str, sizeof(str), "%s", info->description);
         else
-            snprintf(str, sizeof(str), "%s #%d via PulseAudio", info->description, count+1);
+            snprintf(str, sizeof(str), "%s #%d", info->description, count+1);
         count++;
 
         for(i = 0;i < numCaptureDevNames;i++)

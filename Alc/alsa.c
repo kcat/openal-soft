@@ -327,7 +327,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
                 DevList = temp;
                 cname = snd_ctl_card_info_get_name(info);
                 dname = snd_pcm_info_get_name(pcminfo);
-                snprintf(name, sizeof(name), "%s [%s] (hw:%d,%d) via ALSA",
+                snprintf(name, sizeof(name), "%s [%s] (hw:%d,%d)",
                          cname, dname, card, dev);
                 DevList[idx].name = strdup(name);
                 DevList[idx].card = card;

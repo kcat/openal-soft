@@ -83,9 +83,9 @@ static void ProbePlaybackDevices(void)
             count = 0;
             do {
                 if(count == 0)
-                    snprintf(name, sizeof(name), "%s via WaveOut", WaveCaps.szPname);
+                    snprintf(name, sizeof(name), "%s", WaveCaps.szPname);
                 else
-                    snprintf(name, sizeof(name), "%s #%d via WaveOut", WaveCaps.szPname, count+1);
+                    snprintf(name, sizeof(name), "%s #%d", WaveCaps.szPname, count+1);
                 count++;
 
                 for(j = 0;j < i;j++)
@@ -122,9 +122,9 @@ static void ProbeCaptureDevices(void)
             count = 0;
             do {
                 if(count == 0)
-                    snprintf(name, sizeof(name), "%s via WaveIn", WaveInCaps.szPname);
+                    snprintf(name, sizeof(name), "%s", WaveInCaps.szPname);
                 else
-                    snprintf(name, sizeof(name), "%s #%d via WaveIn", WaveInCaps.szPname, count+1);
+                    snprintf(name, sizeof(name), "%s #%d", WaveInCaps.szPname, count+1);
                 count++;
 
                 for(j = 0;j < i;j++)

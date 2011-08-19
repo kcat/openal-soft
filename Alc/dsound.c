@@ -140,9 +140,9 @@ static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname,
     count = 0;
     do {
         if(count == 0)
-            snprintf(str, sizeof(str), "%s via DirectSound", desc);
+            snprintf(str, sizeof(str), "%s", desc);
         else
-            snprintf(str, sizeof(str), "%s #%d via DirectSound", desc, count+1);
+            snprintf(str, sizeof(str), "%s #%d", desc, count+1);
         count++;
 
         for(i = 0;i < NumDevices;i++)

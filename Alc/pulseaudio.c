@@ -224,10 +224,71 @@ static ALuint numCaptureDevNames;
 static pa_context_flags_t pulse_ctx_flags;
 
 
+static void context_state_callback(pa_context *context, void *pdata)
+{
+    pa_threaded_mainloop *loop = pdata;
+    pa_context_state_t state;
+
+    state = pa_context_get_state(context);
+    if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
+        pa_threaded_mainloop_signal(loop, 0);
+}
+
+static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
+{
+    const char *name = "OpenAL Soft";
+    char path_name[PATH_MAX];
+    pa_context_state_t state;
+    pa_context *context;
+    int err;
+
+    if(pa_get_binary_name(path_name, sizeof(path_name)))
+        name = pa_path_get_filename(path_name);
+
+    context = pa_context_new(pa_threaded_mainloop_get_api(loop), name);
+    if(!context)
+    {
+        ERR("pa_context_new() failed\n");
+        return NULL;
+    }
+
+    pa_context_set_state_callback(context, context_state_callback, loop);
+
+    if((err=pa_context_connect(context, NULL, pulse_ctx_flags, NULL)) >= 0)
+    {
+        while((state=pa_context_get_state(context)) != PA_CONTEXT_READY)
+        {
+            if(!PA_CONTEXT_IS_GOOD(state))
+            {
+                err = pa_context_errno(context);
+                if(err > 0)  err = -err;
+                break;
+            }
+
+            pa_threaded_mainloop_wait(loop);
+        }
+    }
+    pa_context_set_state_callback(context, NULL, NULL);
+
+    if(err < 0)
+    {
+        if(!silent)
+            ERR("Context did not connect: %s\n", pa_strerror(err));
+        pa_context_unref(context);
+        return NULL;
+    }
+
+    return context;
+}
+
+
 static ALCboolean pulse_load(void) //{{{
 {
+    ALCboolean ret = ALC_FALSE;
     if(!pa_handle)
     {
+        pa_threaded_mainloop *loop;
+
 #ifdef HAVE_DYNLOAD
 
 #ifdef _WIN32
@@ -322,21 +383,39 @@ static ALCboolean pulse_load(void) //{{{
 #else /* HAVE_DYNLOAD */
         pa_handle = (void*)0xDEADBEEF;
 #endif
+
+        if((loop=pa_threaded_mainloop_new()) &&
+           pa_threaded_mainloop_start(loop) >= 0)
+        {
+            pa_context *context;
+
+            pa_threaded_mainloop_lock(loop);
+            context = connect_context(loop, AL_TRUE);
+            if(context)
+            {
+                ret = ALC_TRUE;
+
+                pa_context_disconnect(context);
+                pa_context_unref(context);
+            }
+            pa_threaded_mainloop_unlock(loop);
+            pa_threaded_mainloop_stop(loop);
+        }
+        if(loop)
+            pa_threaded_mainloop_free(loop);
+
+        if(!ret)
+        {
+#ifdef HAVE_DYNLOAD
+            CloseLib(pa_handle);
+#endif
+            pa_handle = NULL;
+        }
     }
-    return ALC_TRUE;
+    return ret;
 } //}}}
 
 // PulseAudio Event Callbacks //{{{
-static void context_state_callback(pa_context *context, void *pdata) //{{{
-{
-    pa_threaded_mainloop *loop = pdata;
-    pa_context_state_t state;
-
-    state = pa_context_get_state(context);
-    if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
-        pa_threaded_mainloop_signal(loop, 0);
-}//}}}
-
 static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
 {
     pa_threaded_mainloop *loop = pdata;
@@ -614,53 +693,6 @@ static ALuint PulseProc(ALvoid *param)
     return 0;
 }
 
-static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
-{
-    const char *name = "OpenAL Soft";
-    char path_name[PATH_MAX];
-    pa_context_state_t state;
-    pa_context *context;
-    int err;
-
-    if(pa_get_binary_name(path_name, sizeof(path_name)))
-        name = pa_path_get_filename(path_name);
-
-    context = pa_context_new(pa_threaded_mainloop_get_api(loop), name);
-    if(!context)
-    {
-        ERR("pa_context_new() failed\n");
-        return NULL;
-    }
-
-    pa_context_set_state_callback(context, context_state_callback, loop);
-
-    if((err=pa_context_connect(context, NULL, pulse_ctx_flags, NULL)) >= 0)
-    {
-        while((state=pa_context_get_state(context)) != PA_CONTEXT_READY)
-        {
-            if(!PA_CONTEXT_IS_GOOD(state))
-            {
-                err = pa_context_errno(context);
-                if(err > 0)  err = -err;
-                break;
-            }
-
-            pa_threaded_mainloop_wait(loop);
-        }
-    }
-    pa_context_set_state_callback(context, NULL, NULL);
-
-    if(err < 0)
-    {
-        if(!silent)
-            ERR("Context did not connect: %s\n", pa_strerror(err));
-        pa_context_unref(context);
-        return NULL;
-    }
-
-    return context;
-}
-
 static pa_stream *connect_playback_stream(ALCdevice *device,
     pa_stream_flags_t flags, pa_buffer_attr *attr, pa_sample_spec *spec,
     pa_channel_map *chanmap)
@@ -719,7 +751,7 @@ static void probe_devices(ALboolean capture)
         pa_context *context;
 
         pa_threaded_mainloop_lock(loop);
-        context = connect_context(loop, AL_TRUE);
+        context = connect_context(loop, AL_FALSE);
         if(context)
         {
             pa_operation *o;
@@ -1347,7 +1379,7 @@ void alc_pulse_probe(enum DevProbe type) //{{{
                 pa_context *context;
 
                 pa_threaded_mainloop_lock(loop);
-                context = connect_context(loop, AL_TRUE);
+                context = connect_context(loop, AL_FALSE);
                 if(context)
                 {
                     AppendDeviceList(pulse_device);

@@ -177,9 +177,21 @@
 #  Sets the device name for the default playback device.
 #device = default
 
+## device-prefix:
+#  Sets the prefix used by the discovered (non-default) playback devices. This
+#  will be appended with "CARD=c,DEV=d", where c is the card number and d is
+#  the device number for the requested device name.
+#device-prefix = plughw:
+
 ## capture:
 #  Sets the device name for the default capture device.
 #capture = default
+
+## capture-prefix:
+#  Sets the prefix used by the discovered (non-default) capture devices. This
+#  will be appended with "CARD=c,DEV=d", where c is the card number and d is
+#  the device number for the requested device name.
+#capture-prefix = plughw:
 
 ## mmap:
 #  Sets whether to try using mmap mode (helps reduce latencies and CPU

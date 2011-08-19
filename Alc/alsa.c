@@ -266,6 +266,9 @@ static ALuint numDevNames;
 static DevMap *allCaptureDevNameMap;
 static ALuint numCaptureDevNames;
 
+static const char *device_prefix;
+static const char *capture_prefix;
+
 
 static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
 {
@@ -327,7 +330,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
                 DevList = temp;
                 cname = snd_ctl_card_info_get_name(info);
                 dname = snd_pcm_info_get_name(pcminfo);
-                snprintf(name, sizeof(name), "%s [%s] (hw:%d,%d)",
+                snprintf(name, sizeof(name), "%s, %s (CARD=%d,DEV=%d)",
                          cname, dname, card, dev);
                 DevList[idx].name = strdup(name);
                 DevList[idx].card = card;
@@ -516,7 +519,7 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
 static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     alsa_data *data;
-    char driver[64];
+    char driver[128];
     int i;
 
     strncpy(driver, GetConfigValue("alsa", "device", "default"), sizeof(driver)-1);
@@ -537,7 +540,8 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
                strcmp(deviceName, allDevNameMap[idx].name) == 0)
             {
                 if(idx > 0)
-                    sprintf(driver, "hw:%d,%d", allDevNameMap[idx].card, allDevNameMap[idx].dev);
+                    snprintf(driver, sizeof(driver), "%sCARD=%d,DEV=%d", device_prefix,
+                            allDevNameMap[idx].card, allDevNameMap[idx].dev);
                 break;
             }
         }
@@ -795,7 +799,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     snd_pcm_format_t format;
     ALuint frameSize;
     alsa_data *data;
-    char driver[64];
+    char driver[128];
     char *err;
     int i;
 
@@ -817,7 +821,8 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
                strcmp(deviceName, allCaptureDevNameMap[idx].name) == 0)
             {
                 if(idx > 0)
-                    sprintf(driver, "plughw:%d,%d", allCaptureDevNameMap[idx].card, allCaptureDevNameMap[idx].dev);
+                    snprintf(driver, sizeof(driver), "%sCARD=%d,DEV=%d", capture_prefix,
+                             allCaptureDevNameMap[idx].card, allCaptureDevNameMap[idx].dev);
                 break;
             }
         }
@@ -1050,6 +1055,8 @@ ALCboolean alc_alsa_init(BackendFuncs *func_list)
 {
     if(!alsa_load())
         return ALC_FALSE;
+    device_prefix = GetConfigValue("alsa", "device-prefix", "plughw:");
+    capture_prefix = GetConfigValue("alsa", "capture-prefix", "plughw:");
     *func_list = alsa_funcs;
     return ALC_TRUE;
 }

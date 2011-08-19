@@ -1694,6 +1694,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     if(!DeviceFound)
     {
         alcSetError(NULL, ALC_INVALID_VALUE);
+        DeleteCriticalSection(&device->Mutex);
         free(device);
         device = NULL;
     }
@@ -2784,6 +2785,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     {
         // No suitable output device found
         alcSetError(NULL, ALC_INVALID_VALUE);
+        DeleteCriticalSection(&device->Mutex);
         free(device);
         device = NULL;
     }

@@ -224,7 +224,7 @@ static ALuint numCaptureDevNames;
 static pa_context_flags_t pulse_ctx_flags;
 
 
-void *pulse_load(void) //{{{
+static ALCboolean pulse_load(void) //{{{
 {
     if(!pa_handle)
     {
@@ -239,14 +239,14 @@ void *pulse_load(void) //{{{
 #endif
         pa_handle = LoadLib(PALIB);
         if(!pa_handle)
-            return NULL;
+            return ALC_FALSE;
 
 #define LOAD_FUNC(x) do {                                                     \
     p##x = GetSymbol(pa_handle, #x);                                          \
     if(!(p##x)) {                                                             \
         CloseLib(pa_handle);                                                  \
         pa_handle = NULL;                                                     \
-        return NULL;                                                          \
+        return ALC_FALSE;                                                     \
     }                                                                         \
 } while(0)
         LOAD_FUNC(pa_context_unref);
@@ -323,7 +323,7 @@ void *pulse_load(void) //{{{
         pa_handle = (void*)0xDEADBEEF;
 #endif
     }
-    return pa_handle;
+    return ALC_TRUE;
 } //}}}
 
 // PulseAudio Event Callbacks //{{{
@@ -834,9 +834,6 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
     pa_sample_spec spec;
     pulse_data *data;
 
-    if(!pulse_load())
-        return ALC_FALSE;
-
     if(!allDevNameMap)
         probe_devices(AL_FALSE);
 
@@ -1076,9 +1073,6 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     pa_stream_state_t state;
     pa_channel_map chanmap;
 
-    if(!pulse_load())
-        return ALC_FALSE;
-
     if(!allCaptureDevNameMap)
         probe_devices(AL_TRUE);
 
@@ -1298,6 +1292,9 @@ static const BackendFuncs pulse_funcs = { //{{{
 
 ALCboolean alc_pulse_init(BackendFuncs *func_list) //{{{
 {
+    if(!pulse_load())
+        return ALC_FALSE;
+
     *func_list = pulse_funcs;
 
     pulse_ctx_flags = 0;
@@ -1340,8 +1337,6 @@ void alc_pulse_probe(enum DevProbe type) //{{{
 {
     pa_threaded_mainloop *loop;
     ALuint i;
-
-    if(!pulse_load()) return;
 
     switch(type)
     {

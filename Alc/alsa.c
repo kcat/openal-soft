@@ -158,22 +158,21 @@ MAKE_FUNC(snd_card_next);
 #endif
 
 
-void *alsa_load(void)
+static ALCboolean alsa_load(void)
 {
     if(!alsa_handle)
     {
 #ifdef HAVE_DYNLOAD
         alsa_handle = LoadLib("libasound.so.2");
         if(!alsa_handle)
-            return NULL;
+            return ALC_FALSE;
 
 #define LOAD_FUNC(f) do {                                                     \
     p##f = GetSymbol(alsa_handle, #f);                                        \
-    if(p##f == NULL)                                                          \
-    {                                                                         \
+    if(p##f == NULL) {                                                        \
         CloseLib(alsa_handle);                                                \
         alsa_handle = NULL;                                                   \
-        return NULL;                                                          \
+        return ALC_FALSE;                                                     \
     }                                                                         \
 } while(0)
         LOAD_FUNC(snd_strerror);
@@ -240,7 +239,7 @@ void *alsa_load(void)
         alsa_handle = (void*)0xDEADBEEF;
 #endif
     }
-    return alsa_handle;
+    return ALC_TRUE;
 }
 
 
@@ -519,9 +518,6 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     alsa_data *data;
     char driver[64];
     int i;
-
-    if(!alsa_load())
-        return ALC_FALSE;
 
     strncpy(driver, GetConfigValue("alsa", "device", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
@@ -803,9 +799,6 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     char *err;
     int i;
 
-    if(!alsa_load())
-        return ALC_FALSE;
-
     strncpy(driver, GetConfigValue("alsa", "capture", "default"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
 
@@ -1055,6 +1048,8 @@ static const BackendFuncs alsa_funcs = {
 
 ALCboolean alc_alsa_init(BackendFuncs *func_list)
 {
+    if(!alsa_load())
+        return ALC_FALSE;
     *func_list = alsa_funcs;
     return ALC_TRUE;
 }
@@ -1085,9 +1080,6 @@ void alc_alsa_deinit(void)
 void alc_alsa_probe(enum DevProbe type)
 {
     ALuint i;
-
-    if(!alsa_load())
-        return;
 
     switch(type)
     {

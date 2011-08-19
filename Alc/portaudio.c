@@ -58,7 +58,7 @@ MAKE_FUNC(Pa_GetStreamInfo);
 #define Pa_GetStreamInfo               pPa_GetStreamInfo
 #endif
 
-void *pa_load(void)
+static ALCboolean pa_load(void)
 {
     if(!pa_handle)
     {
@@ -77,7 +77,7 @@ void *pa_load(void)
 
         pa_handle = LoadLib(PALIB);
         if(!pa_handle)
-            return NULL;
+            return ALC_FALSE;
 
 #define LOAD_FUNC(f) do {                                                     \
     p##f = GetSymbol(pa_handle, #f);                                          \
@@ -85,7 +85,7 @@ void *pa_load(void)
     {                                                                         \
         CloseLib(pa_handle);                                                  \
         pa_handle = NULL;                                                     \
-        return NULL;                                                          \
+        return ALC_FALSE;                                                     \
     }                                                                         \
 } while(0)
         LOAD_FUNC(Pa_Initialize);
@@ -107,10 +107,10 @@ void *pa_load(void)
             ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
             CloseLib(pa_handle);
             pa_handle = NULL;
-            return NULL;
+            return ALC_FALSE;
         }
     }
-    return pa_handle;
+    return ALC_TRUE;
 }
 
 
@@ -161,9 +161,6 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     if(!deviceName)
         deviceName = pa_device;
     else if(strcmp(deviceName, pa_device) != 0)
-        return ALC_FALSE;
-
-    if(!pa_load())
         return ALC_FALSE;
 
     data = (pa_data*)calloc(1, sizeof(pa_data));
@@ -293,9 +290,6 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
     else if(strcmp(deviceName, pa_device) != 0)
         return ALC_FALSE;
 
-    if(!pa_load())
-        return ALC_FALSE;
-
     data = (pa_data*)calloc(1, sizeof(pa_data));
     if(data == NULL)
     {
@@ -420,6 +414,8 @@ static const BackendFuncs pa_funcs = {
 
 ALCboolean alc_pa_init(BackendFuncs *func_list)
 {
+    if(!pa_load())
+        return ALC_FALSE;
     *func_list = pa_funcs;
     return ALC_TRUE;
 }
@@ -438,8 +434,6 @@ void alc_pa_deinit(void)
 
 void alc_pa_probe(enum DevProbe type)
 {
-    if(!pa_load()) return;
-
     switch(type)
     {
         case DEVICE_PROBE:

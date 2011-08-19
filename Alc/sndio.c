@@ -74,22 +74,21 @@ MAKE_FUNC(sio_onvol);
 #endif
 
 
-void *sndio_load(void)
+static ALCboolean sndio_load(void)
 {
     if(!sndio_handle)
     {
 #ifdef HAVE_DYNLOAD
         sndio_handle = LoadLib("libsndio.so");
         if(!sndio_handle)
-            return NULL;
+            return ALC_FALSE;
 
 #define LOAD_FUNC(f) do {                                                     \
     p##f = GetSymbol(sndio_handle, #f);                                       \
-    if(p##f == NULL)                                                          \
-    {                                                                         \
+    if(p##f == NULL) {                                                        \
         CloseLib(sndio_handle);                                               \
         sndio_handle = NULL;                                                  \
-        return NULL;                                                          \
+        return ALC_FALSE;                                                     \
     }                                                                         \
 } while(0)
         LOAD_FUNC(sio_initpar);
@@ -114,7 +113,7 @@ void *sndio_load(void)
         sndio_handle = (void*)0xDEADBEEF;
 #endif
     }
-    return sndio_handle;
+    return ALC_TRUE;
 }
 
 
@@ -169,9 +168,6 @@ static ALuint sndio_proc(ALvoid *ptr)
 static ALCboolean sndio_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     sndio_data *data;
-
-    if(!sndio_load())
-        return ALC_FALSE;
 
     if(!deviceName)
         deviceName = sndio_device;
@@ -362,6 +358,8 @@ static const BackendFuncs sndio_funcs = {
 
 ALCboolean alc_sndio_init(BackendFuncs *func_list)
 {
+    if(!sndio_load())
+        return ALC_FALSE;
     *func_list = sndio_funcs;
     return ALC_TRUE;
 }
@@ -377,9 +375,6 @@ void alc_sndio_deinit(void)
 
 void alc_sndio_probe(enum DevProbe type)
 {
-    if(!sndio_load())
-        return;
-
     switch(type)
     {
         case DEVICE_PROBE:

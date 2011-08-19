@@ -63,14 +63,14 @@ DEFINE_GUID(IID_IAudioRenderClient, 0xf294acfc, 0x3146, 0x4483, 0xa7,0xbf, 0xad,
 
 
 #define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
-typedef struct BackendInfo {
+struct BackendInfo {
     const char *name;
     ALCboolean (*Init)(BackendFuncs*);
     void (*Deinit)(void);
     void (*Probe)(enum DevProbe);
     BackendFuncs Funcs;
-} BackendInfo;
-static BackendInfo BackendList[] = {
+};
+static struct BackendInfo BackendList[] = {
 #ifdef HAVE_PULSEAUDIO
     { "pulse", alc_pulse_init, alc_pulse_deinit, alc_pulse_probe, EmptyFuncs },
 #endif
@@ -112,7 +112,7 @@ static BackendInfo BackendList[] = {
 
     { NULL, NULL, NULL, NULL, EmptyFuncs }
 };
-static BackendInfo BackendLoopback = {
+static struct BackendInfo BackendLoopback = {
     "loopback", alc_loopback_init, alc_loopback_deinit, alc_loopback_probe, EmptyFuncs
 };
 #undef EmptyFuncs
@@ -617,7 +617,7 @@ static void alc_initconfig(void)
                     }
                     else
                     {
-                        BackendInfo Bkp = BackendList[n];
+                        struct BackendInfo Bkp = BackendList[n];
                         while(n > i)
                         {
                             BackendList[n] = BackendList[n-1];

@@ -117,10 +117,8 @@ static struct BackendInfo BackendLoopback = {
 };
 #undef EmptyFuncs
 
-static struct BackendInfo PlaybackBackend[sizeof(BackendList)/sizeof(BackendList[0])];
-static ALCuint NumPlaybackBackends;
-static struct BackendInfo CaptureBackend[sizeof(BackendList)/sizeof(BackendList[0])];
-static ALCuint NumCaptureBackends;
+static struct BackendInfo PlaybackBackend;
+static struct BackendInfo CaptureBackend;
 
 ///////////////////////////////////////////////////////
 // STRING and EXTENSIONS
@@ -538,8 +536,8 @@ static void alc_deinit(void)
 
     ReleaseALC(ALC_TRUE);
 
-    memset(PlaybackBackend, 0, sizeof(PlaybackBackend));
-    memset(CaptureBackend, 0, sizeof(CaptureBackend));
+    memset(&PlaybackBackend, 0, sizeof(PlaybackBackend));
+    memset(&CaptureBackend, 0, sizeof(CaptureBackend));
 
     for(i = 0;BackendList[i].Deinit;i++)
         BackendList[i].Deinit();
@@ -550,8 +548,8 @@ static void alc_deinit(void)
 
 static void alc_initconfig(void)
 {
-    int i, n;
     const char *devs, *str;
+    int i, n;
 
     str = getenv("ALSOFT_LOGLEVEL");
     if(str)
@@ -650,20 +648,20 @@ static void alc_initconfig(void)
     }
 
     i = 0;
-    while(BackendList[i].Init)
+    while(BackendList[i].Init && (!PlaybackBackend.name || !CaptureBackend.name))
     {
         if(BackendList[i].Init(&BackendList[i].Funcs))
         {
             TRACE("Initialized backend \"%s\"\n", BackendList[i].name);
-            if(BackendList[i].Funcs.OpenPlayback)
+            if(BackendList[i].Funcs.OpenPlayback && !PlaybackBackend.name)
             {
-                PlaybackBackend[NumPlaybackBackends++] = BackendList[i];
-                TRACE("Added \"%s\" for playback\n", BackendList[i].name);
+                PlaybackBackend = BackendList[i];
+                TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
             }
-            if(BackendList[i].Funcs.OpenCapture)
+            if(BackendList[i].Funcs.OpenCapture && !CaptureBackend.name)
             {
-                CaptureBackend[NumCaptureBackends++] = BackendList[i];
-                TRACE("Added \"%s\" for capture\n", BackendList[i].name);
+                CaptureBackend = BackendList[i];
+                TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
             }
             i++;
         }
@@ -677,6 +675,10 @@ static void alc_initconfig(void)
             } while(BackendList[n].Init);
         }
     }
+    BackendList[i].name = NULL;
+    BackendList[i].Init = NULL;
+    BackendList[i].Deinit = NULL;
+    BackendList[i].Probe = NULL;
     BackendLoopback.Init(&BackendLoopback.Funcs);
 
     str = GetConfigValue(NULL, "excludefx", "");
@@ -724,23 +726,15 @@ static pthread_once_t once_control = PTHREAD_ONCE_INIT;
 
 static void ProbeList(ALCchar **list, size_t *listsize, int type)
 {
-    ALCuint i;
-
     free(*list);
     *list = NULL;
     *listsize = 0;
 
     DO_INITCONFIG();
     if(type == CAPTURE_DEVICE_PROBE)
-    {
-        for(i = 0;i < NumCaptureBackends;i++)
-            CaptureBackend[i].Probe(type);
-    }
+        CaptureBackend.Probe(type);
     else
-    {
-        for(i = 0;i < NumPlaybackBackends;i++)
-            PlaybackBackend[i].Probe(type);
-    }
+        PlaybackBackend.Probe(type);
 }
 
 static void ProbeDeviceList()
@@ -1650,7 +1644,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 {
     ALCboolean DeviceFound = ALC_FALSE;
     ALCdevice *device = NULL;
-    ALCuint i;
 
     DO_INITCONFIG();
 
@@ -1671,6 +1664,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     }
 
     //Validate device
+    device->Funcs = &CaptureBackend.Funcs;
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_TRUE;
     device->IsLoopbackDevice = AL_FALSE;
@@ -1693,18 +1687,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->NumUpdates = 1;
 
     LockLists();
-    for(i = 0;i < NumCaptureBackends;i++)
+    if(ALCdevice_OpenCapture(device, deviceName))
     {
-        device->Funcs = &CaptureBackend[i].Funcs;
-        if(ALCdevice_OpenCapture(device, deviceName))
-        {
-            device->next = g_pDeviceList;
-            g_pDeviceList = device;
-            g_ulDeviceCount++;
+        device->next = g_pDeviceList;
+        g_pDeviceList = device;
+        g_ulDeviceCount++;
 
-            DeviceFound = ALC_TRUE;
-            break;
-        }
+        DeviceFound = ALC_TRUE;
     }
     UnlockLists();
 
@@ -2710,7 +2699,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ALboolean bDeviceFound = AL_FALSE;
     const ALCchar *fmt;
     ALCdevice *device;
-    ALCuint i;
 
     DO_INITCONFIG();
 
@@ -2725,6 +2713,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
 
     //Validate device
+    device->Funcs = &PlaybackBackend.Funcs;
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_FALSE;
     device->IsLoopbackDevice = AL_FALSE;
@@ -2781,18 +2770,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     // Find a playback device to open
     LockLists();
-    for(i = 0;i < NumPlaybackBackends;i++)
+    if(ALCdevice_OpenPlayback(device, deviceName))
     {
-        device->Funcs = &PlaybackBackend[i].Funcs;
-        if(ALCdevice_OpenPlayback(device, deviceName))
-        {
-            device->next = g_pDeviceList;
-            g_pDeviceList = device;
-            g_ulDeviceCount++;
+        device->next = g_pDeviceList;
+        g_pDeviceList = device;
+        g_ulDeviceCount++;
 
-            bDeviceFound = AL_TRUE;
-            break;
-        }
+        bDeviceFound = AL_TRUE;
     }
     UnlockLists();
 

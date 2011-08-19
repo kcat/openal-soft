@@ -1635,6 +1635,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     DO_INITCONFIG();
 
+    if(!CaptureBackend.name)
+    {
+        alcSetError(NULL, ALC_INVALID_VALUE);
+        return NULL;
+    }
+
     if(SampleSize <= 0)
     {
         alcSetError(NULL, ALC_INVALID_VALUE);
@@ -2689,6 +2695,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ALCdevice *device;
 
     DO_INITCONFIG();
+
+    if(!PlaybackBackend.name)
+    {
+        alcSetError(NULL, ALC_INVALID_VALUE);
+        return NULL;
+    }
 
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, "openal soft") == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = NULL;

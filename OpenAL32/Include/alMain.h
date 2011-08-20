@@ -178,6 +178,10 @@ void *LoadLib(const char *name);
 void CloseLib(void *handle);
 void *GetSymbol(void *handle, const char *name);
 
+typedef LONG pthread_once_t;
+#define PTHREAD_ONCE_INIT 0
+void pthread_once(pthread_once_t *once, void (*callback)(void));
+
 #else
 
 #include <unistd.h>
@@ -259,6 +263,12 @@ static __inline ALuint NextPowerOf2(ALuint value)
 }
 
 
+enum DevProbe {
+    DEVICE_PROBE,
+    ALL_DEVICE_PROBE,
+    CAPTURE_DEVICE_PROBE
+};
+
 typedef struct {
     ALCboolean (*OpenPlayback)(ALCdevice*, const ALCchar*);
     void (*ClosePlayback)(ALCdevice*);
@@ -273,10 +283,12 @@ typedef struct {
     ALCuint (*AvailableSamples)(ALCdevice*);
 } BackendFuncs;
 
-enum DevProbe {
-    DEVICE_PROBE,
-    ALL_DEVICE_PROBE,
-    CAPTURE_DEVICE_PROBE
+struct BackendInfo {
+    const char *name;
+    ALCboolean (*Init)(BackendFuncs*);
+    void (*Deinit)(void);
+    void (*Probe)(enum DevProbe);
+    BackendFuncs Funcs;
 };
 
 ALCboolean alc_alsa_init(BackendFuncs *func_list);
@@ -544,6 +556,7 @@ void al_print(const char *fname, unsigned int line, const char *fmt, ...)
              PRINTF_STYLE(3,4);
 #define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
 
+extern FILE *LogFile;
 enum LogLevel {
     NoLog,
     LogError,
@@ -570,6 +583,8 @@ extern enum LogLevel LogLevel;
 
 extern ALdouble ConeScale;
 extern ALdouble ZScale;
+
+extern ALint RTPrioLevel;
 
 #ifdef __cplusplus
 }

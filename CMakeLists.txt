@@ -384,6 +384,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcRing.c
               Alc/alcThread.c
               Alc/bs2b.c
+              Alc/helpers.c
               Alc/hrtf.c
               Alc/mixer.c
               Alc/panning.c

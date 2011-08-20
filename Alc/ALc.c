@@ -46,9 +46,6 @@ DEFINE_GUID(IID_IAudioRenderClient, 0xf294acfc, 0x3146, 0x4483, 0xa7,0xbf, 0xad,
 #include <stdio.h>
 #include <memory.h>
 #include <ctype.h>
-#ifdef HAVE_DLFCN_H
-#include <dlfcn.h>
-#endif
 
 #include "alMain.h"
 #include "alSource.h"
@@ -63,13 +60,6 @@ DEFINE_GUID(IID_IAudioRenderClient, 0xf294acfc, 0x3146, 0x4483, 0xa7,0xbf, 0xad,
 
 
 #define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
-struct BackendInfo {
-    const char *name;
-    ALCboolean (*Init)(BackendFuncs*);
-    void (*Deinit)(void);
-    void (*Probe)(enum DevProbe);
-    BackendFuncs Funcs;
-};
 static struct BackendInfo BackendList[] = {
 #ifdef HAVE_PULSEAUDIO
     { "pulse", alc_pulse_init, alc_pulse_deinit, alc_pulse_probe, EmptyFuncs },
@@ -364,7 +354,7 @@ static ALCchar *alcAllDeviceList;
 static size_t alcAllDeviceListSize;
 static ALCchar *alcCaptureDeviceList;
 static size_t alcCaptureDeviceListSize;
-// Default is always the first in the list
+/* Default is always the first in the list */
 static ALCchar *alcDefaultDeviceSpecifier;
 static ALCchar *alcDefaultAllDeviceSpecifier;
 static ALCchar *alcCaptureDefaultDeviceSpecifier;
@@ -416,10 +406,10 @@ static const ALchar alExtList[] =
     "AL_SOFT_loop_points AL_SOFTX_non_virtual_channels";
 
 // Mixing Priority Level
-static ALint RTPrioLevel;
+ALint RTPrioLevel;
 
 // Output Log File
-static FILE *LogFile;
+FILE *LogFile;
 
 // Output Log Level
 #ifdef _DEBUG
@@ -434,6 +424,9 @@ ALdouble ConeScale = 0.5;
 // Localized Z scalar for mono sources
 ALdouble ZScale = 1.0;
 
+/* One-time configuration init control */
+static pthread_once_t alc_config_once = PTHREAD_ONCE_INIT;
+
 ///////////////////////////////////////////////////////
 
 
@@ -442,6 +435,7 @@ ALdouble ZScale = 1.0;
 static void ReleaseALC(ALCboolean doclose);
 
 static void alc_initconfig(void);
+#define DO_INITCONFIG() pthread_once(&alc_config_once, alc_initconfig)
 
 #if defined(_WIN32)
 static void alc_init(void);
@@ -693,24 +687,6 @@ static void alc_initconfig(void)
     }
 }
 
-#ifdef _WIN32
-typedef LONG pthread_once_t;
-#define PTHREAD_ONCE_INIT 0
-
-static void pthread_once(pthread_once_t *once, void (*callback)(void))
-{
-    LONG ret;
-    while((ret=InterlockedExchange(once, 1)) == 1)
-        Sleep(0);
-    if(ret == 0)
-        callback();
-    InterlockedExchange(once, 2);
-}
-#endif
-
-static pthread_once_t once_control = PTHREAD_ONCE_INIT;
-#define DO_INITCONFIG() pthread_once(&once_control, alc_initconfig)
-
 
 static void ProbeList(ALCchar **list, size_t *listsize, enum DevProbe type)
 {
@@ -725,11 +701,11 @@ static void ProbeList(ALCchar **list, size_t *listsize, enum DevProbe type)
         PlaybackBackend.Probe(type);
 }
 
-static void ProbeDeviceList()
+static void ProbeDeviceList(void)
 { ProbeList(&alcDeviceList, &alcDeviceListSize, DEVICE_PROBE); }
-static void ProbeAllDeviceList()
+static void ProbeAllDeviceList(void)
 { ProbeList(&alcAllDeviceList, &alcAllDeviceListSize, ALL_DEVICE_PROBE); }
-static void ProbeCaptureDeviceList()
+static void ProbeCaptureDeviceList(void)
 { ProbeList(&alcCaptureDeviceList, &alcCaptureDeviceListSize, CAPTURE_DEVICE_PROBE); }
 
 
@@ -765,170 +741,85 @@ DECL_APPEND_LIST_FUNC(CaptureDevice)
 #undef DECL_APPEND_LIST_FUNC
 
 
-void al_print(const char *fname, unsigned int line, const char *fmt, ...)
+/* Sets the default channel order used by most non-WaveFormatEx-based APIs */
+void SetDefaultChannelOrder(ALCdevice *device)
 {
-    const char *fn;
-    char str[256];
-    int i;
-
-    fn = strrchr(fname, '/');
-    if(!fn) fn = strrchr(fname, '\\');
-    if(!fn) fn = fname;
-    else fn += 1;
-
-    i = snprintf(str, sizeof(str), "AL lib: %s:%d: ", fn, line);
-    if(i < (int)sizeof(str) && i > 0)
+    switch(device->FmtChans)
     {
-        va_list ap;
-        va_start(ap, fmt);
-        vsnprintf(str+i, sizeof(str)-i, fmt, ap);
-        va_end(ap);
-    }
-    str[sizeof(str)-1] = 0;
+    case DevFmtX51: device->DevChannels[0] = FRONT_LEFT;
+                    device->DevChannels[1] = FRONT_RIGHT;
+                    device->DevChannels[2] = BACK_LEFT;
+                    device->DevChannels[3] = BACK_RIGHT;
+                    device->DevChannels[4] = FRONT_CENTER;
+                    device->DevChannels[5] = LFE;
+                    return;
 
-    fprintf(LogFile, "%s", str);
-    fflush(LogFile);
+    case DevFmtX71: device->DevChannels[0] = FRONT_LEFT;
+                    device->DevChannels[1] = FRONT_RIGHT;
+                    device->DevChannels[2] = BACK_LEFT;
+                    device->DevChannels[3] = BACK_RIGHT;
+                    device->DevChannels[4] = FRONT_CENTER;
+                    device->DevChannels[5] = LFE;
+                    device->DevChannels[6] = SIDE_LEFT;
+                    device->DevChannels[7] = SIDE_RIGHT;
+                    return;
+
+    /* Same as WFX order */
+    case DevFmtMono:
+    case DevFmtStereo:
+    case DevFmtQuad:
+    case DevFmtX51Side:
+    case DevFmtX61:
+        break;
+    }
+    SetDefaultWFXChannelOrder(device);
 }
-
-void SetRTPriority(void)
+/* Sets the default order used by WaveFormatEx */
+void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
-    ALboolean failed;
-
-#ifdef _WIN32
-    if(RTPrioLevel > 0)
-        failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-    else
-        failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
-#elif defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
-    struct sched_param param;
-
-    if(RTPrioLevel > 0)
+    switch(device->FmtChans)
     {
-        /* Use the minimum real-time priority possible for now (on Linux this
-         * should be 1 for SCHED_RR) */
-        param.sched_priority = sched_get_priority_min(SCHED_RR);
-        failed = !!pthread_setschedparam(pthread_self(), SCHED_RR, &param);
+    case DevFmtMono: device->DevChannels[0] = FRONT_CENTER; break;
+
+    case DevFmtStereo: device->DevChannels[0] = FRONT_LEFT;
+                       device->DevChannels[1] = FRONT_RIGHT; break;
+
+    case DevFmtQuad: device->DevChannels[0] = FRONT_LEFT;
+                     device->DevChannels[1] = FRONT_RIGHT;
+                     device->DevChannels[2] = BACK_LEFT;
+                     device->DevChannels[3] = BACK_RIGHT; break;
+
+    case DevFmtX51: device->DevChannels[0] = FRONT_LEFT;
+                    device->DevChannels[1] = FRONT_RIGHT;
+                    device->DevChannels[2] = FRONT_CENTER;
+                    device->DevChannels[3] = LFE;
+                    device->DevChannels[4] = BACK_LEFT;
+                    device->DevChannels[5] = BACK_RIGHT; break;
+
+    case DevFmtX51Side: device->DevChannels[0] = FRONT_LEFT;
+                        device->DevChannels[1] = FRONT_RIGHT;
+                        device->DevChannels[2] = FRONT_CENTER;
+                        device->DevChannels[3] = LFE;
+                        device->DevChannels[4] = SIDE_LEFT;
+                        device->DevChannels[5] = SIDE_RIGHT; break;
+
+    case DevFmtX61: device->DevChannels[0] = FRONT_LEFT;
+                    device->DevChannels[1] = FRONT_RIGHT;
+                    device->DevChannels[2] = FRONT_CENTER;
+                    device->DevChannels[3] = LFE;
+                    device->DevChannels[4] = BACK_CENTER;
+                    device->DevChannels[5] = SIDE_LEFT;
+                    device->DevChannels[6] = SIDE_RIGHT; break;
+
+    case DevFmtX71: device->DevChannels[0] = FRONT_LEFT;
+                    device->DevChannels[1] = FRONT_RIGHT;
+                    device->DevChannels[2] = FRONT_CENTER;
+                    device->DevChannels[3] = LFE;
+                    device->DevChannels[4] = BACK_LEFT;
+                    device->DevChannels[5] = BACK_RIGHT;
+                    device->DevChannels[6] = SIDE_LEFT;
+                    device->DevChannels[7] = SIDE_RIGHT; break;
     }
-    else
-    {
-        param.sched_priority = 0;
-        failed = !!pthread_setschedparam(pthread_self(), SCHED_OTHER, &param);
-    }
-#else
-    /* Real-time priority not available */
-    failed = (RTPrioLevel>0);
-#endif
-    if(failed)
-        ERR("Failed to set priority level for thread\n");
-}
-
-
-void InitUIntMap(UIntMap *map)
-{
-    map->array = NULL;
-    map->size = 0;
-    map->maxsize = 0;
-}
-
-void ResetUIntMap(UIntMap *map)
-{
-    free(map->array);
-    map->array = NULL;
-    map->size = 0;
-    map->maxsize = 0;
-}
-
-ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
-{
-    ALsizei pos = 0;
-
-    if(map->size > 0)
-    {
-        ALsizei low = 0;
-        ALsizei high = map->size - 1;
-        while(low < high)
-        {
-            ALsizei mid = low + (high-low)/2;
-            if(map->array[mid].key < key)
-                low = mid + 1;
-            else
-                high = mid;
-        }
-        if(map->array[low].key < key)
-            low++;
-        pos = low;
-    }
-
-    if(pos == map->size || map->array[pos].key != key)
-    {
-        if(map->size == map->maxsize)
-        {
-            ALvoid *temp;
-            ALsizei newsize;
-
-            newsize = (map->maxsize ? (map->maxsize<<1) : 4);
-            if(newsize < map->maxsize)
-                return AL_OUT_OF_MEMORY;
-
-            temp = realloc(map->array, newsize*sizeof(map->array[0]));
-            if(!temp) return AL_OUT_OF_MEMORY;
-            map->array = temp;
-            map->maxsize = newsize;
-        }
-
-        map->size++;
-        if(pos < map->size-1)
-            memmove(&map->array[pos+1], &map->array[pos],
-                    (map->size-1-pos)*sizeof(map->array[0]));
-    }
-    map->array[pos].key = key;
-    map->array[pos].value = value;
-
-    return AL_NO_ERROR;
-}
-
-void RemoveUIntMapKey(UIntMap *map, ALuint key)
-{
-    if(map->size > 0)
-    {
-        ALsizei low = 0;
-        ALsizei high = map->size - 1;
-        while(low < high)
-        {
-            ALsizei mid = low + (high-low)/2;
-            if(map->array[mid].key < key)
-                low = mid + 1;
-            else
-                high = mid;
-        }
-        if(map->array[low].key == key)
-        {
-            if(low < map->size-1)
-                memmove(&map->array[low], &map->array[low+1],
-                        (map->size-1-low)*sizeof(map->array[0]));
-            map->size--;
-        }
-    }
-}
-
-ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
-{
-    if(map->size > 0)
-    {
-        ALsizei low = 0;
-        ALsizei high = map->size - 1;
-        while(low < high)
-        {
-            ALsizei mid = low + (high-low)/2;
-            if(map->array[mid].key < key)
-                low = mid + 1;
-            else
-                high = mid;
-        }
-        if(map->array[low].key == key)
-            return map->array[low].value;
-    }
-    return NULL;
 }
 
 
@@ -1097,130 +988,6 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
     return ALC_FALSE;
 }
 
-
-#ifndef _WIN32
-void InitializeCriticalSection(CRITICAL_SECTION *cs)
-{
-    pthread_mutexattr_t attrib;
-    int ret;
-
-    ret = pthread_mutexattr_init(&attrib);
-    assert(ret == 0);
-
-    ret = pthread_mutexattr_settype(&attrib, PTHREAD_MUTEX_RECURSIVE);
-#ifdef HAVE_PTHREAD_NP_H
-    if(ret != 0)
-        ret = pthread_mutexattr_setkind_np(&attrib, PTHREAD_MUTEX_RECURSIVE);
-#endif
-    assert(ret == 0);
-    ret = pthread_mutex_init(cs, &attrib);
-    assert(ret == 0);
-
-    pthread_mutexattr_destroy(&attrib);
-}
-void DeleteCriticalSection(CRITICAL_SECTION *cs)
-{
-    int ret;
-    ret = pthread_mutex_destroy(cs);
-    assert(ret == 0);
-}
-void EnterCriticalSection(CRITICAL_SECTION *cs)
-{
-    int ret;
-    ret = pthread_mutex_lock(cs);
-    assert(ret == 0);
-}
-void LeaveCriticalSection(CRITICAL_SECTION *cs)
-{
-    int ret;
-    ret = pthread_mutex_unlock(cs);
-    assert(ret == 0);
-}
-
-/* NOTE: This wrapper isn't quite accurate as it returns an ALuint, as opposed
- * to the expected DWORD. Both are defined as unsigned 32-bit types, however.
- * Additionally, Win32 is supposed to measure the time since Windows started,
- * as opposed to the actual time. */
-ALuint timeGetTime(void)
-{
-#if _POSIX_TIMERS > 0
-    struct timespec ts;
-    int ret = -1;
-
-#if defined(_POSIX_MONOTONIC_CLOCK) && (_POSIX_MONOTONIC_CLOCK >= 0)
-#if _POSIX_MONOTONIC_CLOCK == 0
-    static int hasmono = 0;
-    if(hasmono > 0 || (hasmono == 0 &&
-                       (hasmono=sysconf(_SC_MONOTONIC_CLOCK)) > 0))
-#endif
-        ret = clock_gettime(CLOCK_MONOTONIC, &ts);
-#endif
-    if(ret != 0)
-        ret = clock_gettime(CLOCK_REALTIME, &ts);
-    assert(ret == 0);
-
-    return ts.tv_nsec/1000000 + ts.tv_sec*1000;
-#else
-    struct timeval tv;
-    int ret;
-
-    ret = gettimeofday(&tv, NULL);
-    assert(ret == 0);
-
-    return tv.tv_usec/1000 + tv.tv_sec*1000;
-#endif
-}
-#endif
-
-#if defined(_WIN32)
-void *LoadLib(const char *name)
-{ return LoadLibraryA(name); }
-
-void CloseLib(void *handle)
-{ FreeLibrary((HANDLE)handle); }
-
-void *GetSymbol(void *handle, const char *name)
-{
-    void *ret;
-
-    ret = (void*)GetProcAddress((HANDLE)handle, name);
-    if(ret == NULL)
-        ERR("Failed to load %s\n", name);
-    return ret;
-}
-
-#elif defined(HAVE_DLFCN_H)
-
-void *LoadLib(const char *name)
-{
-    const char *err;
-    void *handle;
-
-    dlerror();
-    handle = dlopen(name, RTLD_NOW);
-    if((err=dlerror()) != NULL)
-        handle = NULL;
-    return handle;
-}
-
-void CloseLib(void *handle)
-{ dlclose(handle); }
-
-void *GetSymbol(void *handle, const char *name)
-{
-    const char *err;
-    void *sym;
-
-    dlerror();
-    sym = dlsym(handle, name);
-    if((err=dlerror()) != NULL)
-    {
-        ERR("Failed to load %s: %s\n", name, err);
-        sym = NULL;
-    }
-    return sym;
-}
-#endif
 
 static void LockLists(void)
 {
@@ -2480,87 +2247,6 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
     return bReturn;
 }
 
-
-// Sets the default channel order used by most non-WaveFormatEx-based APIs
-void SetDefaultChannelOrder(ALCdevice *device)
-{
-    switch(device->FmtChans)
-    {
-    case DevFmtX51: device->DevChannels[0] = FRONT_LEFT;
-                    device->DevChannels[1] = FRONT_RIGHT;
-                    device->DevChannels[2] = BACK_LEFT;
-                    device->DevChannels[3] = BACK_RIGHT;
-                    device->DevChannels[4] = FRONT_CENTER;
-                    device->DevChannels[5] = LFE;
-                    return;
-
-    case DevFmtX71: device->DevChannels[0] = FRONT_LEFT;
-                    device->DevChannels[1] = FRONT_RIGHT;
-                    device->DevChannels[2] = BACK_LEFT;
-                    device->DevChannels[3] = BACK_RIGHT;
-                    device->DevChannels[4] = FRONT_CENTER;
-                    device->DevChannels[5] = LFE;
-                    device->DevChannels[6] = SIDE_LEFT;
-                    device->DevChannels[7] = SIDE_RIGHT;
-                    return;
-
-    /* Same as WFX order */
-    case DevFmtMono:
-    case DevFmtStereo:
-    case DevFmtQuad:
-    case DevFmtX51Side:
-    case DevFmtX61:
-        break;
-    }
-    SetDefaultWFXChannelOrder(device);
-}
-// Sets the default order used by WaveFormatEx
-void SetDefaultWFXChannelOrder(ALCdevice *device)
-{
-    switch(device->FmtChans)
-    {
-    case DevFmtMono: device->DevChannels[0] = FRONT_CENTER; break;
-
-    case DevFmtStereo: device->DevChannels[0] = FRONT_LEFT;
-                       device->DevChannels[1] = FRONT_RIGHT; break;
-
-    case DevFmtQuad: device->DevChannels[0] = FRONT_LEFT;
-                     device->DevChannels[1] = FRONT_RIGHT;
-                     device->DevChannels[2] = BACK_LEFT;
-                     device->DevChannels[3] = BACK_RIGHT; break;
-
-    case DevFmtX51: device->DevChannels[0] = FRONT_LEFT;
-                    device->DevChannels[1] = FRONT_RIGHT;
-                    device->DevChannels[2] = FRONT_CENTER;
-                    device->DevChannels[3] = LFE;
-                    device->DevChannels[4] = BACK_LEFT;
-                    device->DevChannels[5] = BACK_RIGHT; break;
-
-    case DevFmtX51Side: device->DevChannels[0] = FRONT_LEFT;
-                        device->DevChannels[1] = FRONT_RIGHT;
-                        device->DevChannels[2] = FRONT_CENTER;
-                        device->DevChannels[3] = LFE;
-                        device->DevChannels[4] = SIDE_LEFT;
-                        device->DevChannels[5] = SIDE_RIGHT; break;
-
-    case DevFmtX61: device->DevChannels[0] = FRONT_LEFT;
-                    device->DevChannels[1] = FRONT_RIGHT;
-                    device->DevChannels[2] = FRONT_CENTER;
-                    device->DevChannels[3] = LFE;
-                    device->DevChannels[4] = BACK_CENTER;
-                    device->DevChannels[5] = SIDE_LEFT;
-                    device->DevChannels[6] = SIDE_RIGHT; break;
-
-    case DevFmtX71: device->DevChannels[0] = FRONT_LEFT;
-                    device->DevChannels[1] = FRONT_RIGHT;
-                    device->DevChannels[2] = FRONT_CENTER;
-                    device->DevChannels[3] = LFE;
-                    device->DevChannels[4] = BACK_LEFT;
-                    device->DevChannels[5] = BACK_RIGHT;
-                    device->DevChannels[6] = SIDE_LEFT;
-                    device->DevChannels[7] = SIDE_RIGHT; break;
-    }
-}
 
 static void GetFormatFromString(const char *str, enum DevFmtChannels *chans, enum DevFmtType *type)
 {

@@ -694,23 +694,23 @@ static void alc_initconfig(void)
 }
 
 #ifdef _WIN32
-static struct once_control {
-    LONG canpass;
-    LONG hasrun;
-} once_control = { TRUE, FALSE };
-static void call_once(struct once_control *once, void (*callback)(void))
+typedef LONG pthread_once_t;
+#define PTHREAD_ONCE_INIT 0
+
+static void pthread_once(pthread_once_t *once, void (*callback)(void))
 {
-    while(InterlockedExchange(&once->canpass, FALSE) == FALSE)
+    LONG ret;
+    while((ret=InterlockedExchange(once, 1)) == 1)
         Sleep(0);
-    if(InterlockedExchange(&once->hasrun, TRUE) == FALSE)
+    if(ret == 0)
         callback();
-    InterlockedExchange(&once->canpass, TRUE);
+    InterlockedExchange(once, 2);
 }
-#define DO_INITCONFIG() call_once(&once_control, alc_initconfig)
-#else
+#endif
+
 static pthread_once_t once_control = PTHREAD_ONCE_INIT;
 #define DO_INITCONFIG() pthread_once(&once_control, alc_initconfig)
-#endif
+
 
 static void ProbeList(ALCchar **list, size_t *listsize, enum DevProbe type)
 {

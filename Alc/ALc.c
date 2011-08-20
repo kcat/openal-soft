@@ -712,7 +712,7 @@ static pthread_once_t once_control = PTHREAD_ONCE_INIT;
 #define DO_INITCONFIG() pthread_once(&once_control, alc_initconfig)
 #endif
 
-static void ProbeList(ALCchar **list, size_t *listsize, int type)
+static void ProbeList(ALCchar **list, size_t *listsize, enum DevProbe type)
 {
     free(*list);
     *list = NULL;

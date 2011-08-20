@@ -1328,8 +1328,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 {
     ALCcontext       *Context;
     ALsource         *Source;
-    ALbufferlistitem *BufferList;
-    ALsizei          i, j, k;
+    ALsizei          i;
 
     Context = GetLockedContext();
     if(!Context) return;
@@ -1377,65 +1376,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
-
-        // Check that there is a queue containing at least one non-null, non zero length AL Buffer
-        BufferList = Source->queue;
-        while(BufferList)
-        {
-            if(BufferList->buffer != NULL && BufferList->buffer->size)
-                break;
-            BufferList = BufferList->next;
-        }
-
-        /* If there's nothing to play, or device is disconnected, go right to
-         * stopped */
-        if(!BufferList || !Context->Device->Connected)
-        {
-            Source->state = AL_STOPPED;
-            Source->BuffersPlayed = Source->BuffersInQueue;
-            Source->position = 0;
-            Source->position_fraction = 0;
-            Source->lOffset = 0;
-            continue;
-        }
-
-        if(Source->state != AL_PLAYING)
-        {
-            for(j = 0;j < MAXCHANNELS;j++)
-            {
-                for(k = 0;k < SRC_HISTORY_LENGTH;k++)
-                    Source->HrtfHistory[j][k] = 0.0f;
-                for(k = 0;k < HRIR_LENGTH;k++)
-                {
-                    Source->HrtfValues[j][k][0] = 0.0f;
-                    Source->HrtfValues[j][k][1] = 0.0f;
-                }
-            }
-        }
-
-        if(Source->state != AL_PAUSED)
-        {
-            Source->state = AL_PLAYING;
-            Source->position = 0;
-            Source->position_fraction = 0;
-            Source->BuffersPlayed = 0;
-
-            Source->Buffer = Source->queue->buffer;
-        }
-        else
-            Source->state = AL_PLAYING;
-
-        // Check if an Offset has been set
-        if(Source->lOffset)
-            ApplyOffset(Source);
-
-        for(j = 0;j < Context->ActiveSourceCount;j++)
-        {
-            if(Context->ActiveSources[j] == Source)
-                break;
-        }
-        if(j == Context->ActiveSourceCount)
-            Context->ActiveSources[Context->ActiveSourceCount++] = Source;
+        SetSourceState(Source, Context, AL_PLAYING);
     }
 
 done:
@@ -1480,12 +1421,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
-        if(Source->state == AL_PLAYING)
-        {
-            Source->state = AL_PAUSED;
-            Source->HrtfMoving = AL_FALSE;
-            Source->HrtfCounter = 0;
-        }
+        SetSourceState(Source, Context, AL_PAUSED);
     }
 
 done:
@@ -1530,14 +1466,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
-        if(Source->state != AL_INITIAL)
-        {
-            Source->state = AL_STOPPED;
-            Source->BuffersPlayed = Source->BuffersInQueue;
-            Source->HrtfMoving = AL_FALSE;
-            Source->HrtfCounter = 0;
-        }
-        Source->lOffset = 0;
+        SetSourceState(Source, Context, AL_STOPPED);
     }
 
 done:
@@ -1582,18 +1511,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
-        if(Source->state != AL_INITIAL)
-        {
-            Source->state = AL_INITIAL;
-            Source->position = 0;
-            Source->position_fraction = 0;
-            Source->BuffersPlayed = 0;
-            if(Source->queue)
-                Source->Buffer = Source->queue->buffer;
-            Source->HrtfMoving = AL_FALSE;
-            Source->HrtfCounter = 0;
-        }
-        Source->lOffset = 0;
+        SetSourceState(Source, Context, AL_INITIAL);
     }
 
 done:
@@ -1864,6 +1782,110 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->HrtfCounter = 0;
 }
 
+
+/*
+ * SetSourceState
+ *
+ * Sets the source's new play state given its current state
+ */
+ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
+{
+    if(state == AL_PLAYING)
+    {
+        ALbufferlistitem *BufferList;
+        ALsizei j, k;
+
+        /* Check that there is a queue containing at least one non-null, non zero length AL Buffer */
+        BufferList = Source->queue;
+        while(BufferList)
+        {
+            if(BufferList->buffer != NULL && BufferList->buffer->size)
+                break;
+            BufferList = BufferList->next;
+        }
+
+        /* If there's nothing to play, or device is disconnected, go right to
+         * stopped */
+        if(!BufferList || !Context->Device->Connected)
+        {
+            SetSourceState(Source, Context, AL_STOPPED);
+            return;
+        }
+
+        if(Source->state != AL_PLAYING)
+        {
+            for(j = 0;j < MAXCHANNELS;j++)
+            {
+                for(k = 0;k < SRC_HISTORY_LENGTH;k++)
+                    Source->HrtfHistory[j][k] = 0.0f;
+                for(k = 0;k < HRIR_LENGTH;k++)
+                {
+                    Source->HrtfValues[j][k][0] = 0.0f;
+                    Source->HrtfValues[j][k][1] = 0.0f;
+                }
+            }
+        }
+
+        if(Source->state != AL_PAUSED)
+        {
+            Source->state = AL_PLAYING;
+            Source->position = 0;
+            Source->position_fraction = 0;
+            Source->BuffersPlayed = 0;
+
+            Source->Buffer = Source->queue->buffer;
+        }
+        else
+            Source->state = AL_PLAYING;
+
+        // Check if an Offset has been set
+        if(Source->lOffset)
+            ApplyOffset(Source);
+
+        for(j = 0;j < Context->ActiveSourceCount;j++)
+        {
+            if(Context->ActiveSources[j] == Source)
+                break;
+        }
+        if(j == Context->ActiveSourceCount)
+            Context->ActiveSources[Context->ActiveSourceCount++] = Source;
+    }
+    else if(state == AL_PAUSED)
+    {
+        if(Source->state == AL_PLAYING)
+        {
+            Source->state = AL_PAUSED;
+            Source->HrtfMoving = AL_FALSE;
+            Source->HrtfCounter = 0;
+        }
+    }
+    else if(state == AL_STOPPED)
+    {
+        if(Source->state != AL_INITIAL)
+        {
+            Source->state = AL_STOPPED;
+            Source->BuffersPlayed = Source->BuffersInQueue;
+            Source->HrtfMoving = AL_FALSE;
+            Source->HrtfCounter = 0;
+        }
+        Source->lOffset = 0;
+    }
+    else if(state == AL_INITIAL)
+    {
+        if(Source->state != AL_INITIAL)
+        {
+            Source->state = AL_INITIAL;
+            Source->position = 0;
+            Source->position_fraction = 0;
+            Source->BuffersPlayed = 0;
+            if(Source->queue)
+                Source->Buffer = Source->queue->buffer;
+            Source->HrtfMoving = AL_FALSE;
+            Source->HrtfCounter = 0;
+        }
+        Source->lOffset = 0;
+    }
+}
 
 /*
     GetSourceOffset

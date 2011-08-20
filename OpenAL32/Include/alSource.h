@@ -129,6 +129,7 @@ typedef struct ALsource
 } ALsource;
 #define ALsource_Update(s,a)                 ((s)->Update(s,a))
 
+ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state);
 ALvoid ReleaseALSources(ALCcontext *Context);
 
 #ifdef __cplusplus

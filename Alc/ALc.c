@@ -2560,6 +2560,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     }
 
     //Validate device
+    device->Funcs = &BackendLoopback.Funcs;
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_FALSE;
     device->IsLoopbackDevice = AL_TRUE;
@@ -2604,7 +2605,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
 
     // Open the "backend"
     LockLists();
-    device->Funcs = &BackendLoopback.Funcs;
     ALCdevice_OpenPlayback(device, "Loopback");
 
     device->next = g_pDeviceList;

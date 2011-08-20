@@ -217,7 +217,6 @@ static const ALCfunction alcFunctions[] = {
     { "alGetFilteriv",              (ALCvoid *) alGetFilteriv            },
     { "alGetFilterf",               (ALCvoid *) alGetFilterf             },
     { "alGetFilterfv",              (ALCvoid *) alGetFilterfv            },
-
     { "alGenEffects",               (ALCvoid *) alGenEffects             },
     { "alDeleteEffects",            (ALCvoid *) alDeleteEffects          },
     { "alIsEffect",                 (ALCvoid *) alIsEffect               },
@@ -229,7 +228,6 @@ static const ALCfunction alcFunctions[] = {
     { "alGetEffectiv",              (ALCvoid *) alGetEffectiv            },
     { "alGetEffectf",               (ALCvoid *) alGetEffectf             },
     { "alGetEffectfv",              (ALCvoid *) alGetEffectfv            },
-
     { "alGenAuxiliaryEffectSlots",  (ALCvoid *) alGenAuxiliaryEffectSlots},
     { "alDeleteAuxiliaryEffectSlots",(ALCvoid *) alDeleteAuxiliaryEffectSlots},
     { "alIsAuxiliaryEffectSlot",    (ALCvoid *) alIsAuxiliaryEffectSlot  },

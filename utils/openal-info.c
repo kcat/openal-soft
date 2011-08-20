@@ -323,8 +323,12 @@ int main(int argc, char *argv[])
     printf("Available capture devices:\n");
     printDeviceList(alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER));
 
-    printf("Default playback device: %s\n",
-           alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER));
+    if(alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT") != AL_FALSE)
+        printf("Default playback device: %s\n",
+               alcGetString(NULL, ALC_DEFAULT_ALL_DEVICES_SPECIFIER));
+    else
+        printf("Default playback device: %s\n",
+               alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER));
     printf("Default capture device: %s\n",
            alcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER));
 

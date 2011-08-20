@@ -757,21 +757,9 @@ static void probe_devices(ALboolean capture)
             pa_operation *o;
 
             if(capture == AL_FALSE)
-            {
-                allDevNameMap[0].name = strdup(pulse_device);
-                allDevNameMap[0].device_name = NULL;
-                numDevNames = 1;
-
                 o = pa_context_get_sink_info_list(context, sink_device_callback, loop);
-            }
             else
-            {
-                allCaptureDevNameMap[0].name = strdup(pulse_device);
-                allCaptureDevNameMap[0].device_name = NULL;
-                numCaptureDevNames = 1;
-
                 o = pa_context_get_source_info_list(context, source_device_callback, loop);
-            }
             while(pa_operation_get_state(o) == PA_OPERATION_RUNNING)
                 pa_threaded_mainloop_wait(loop);
             pa_operation_unref(o);
@@ -869,9 +857,9 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
     if(!allDevNameMap)
         probe_devices(AL_FALSE);
 
-    if(!device_name && numDevNames > 0)
-        device_name = allDevNameMap[0].name;
-    else
+    if(!device_name)
+        device_name = pulse_device;
+    else if(strcmp(device_name, pulse_device) != 0)
     {
         ALuint i;
 
@@ -1108,9 +1096,9 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     if(!allCaptureDevNameMap)
         probe_devices(AL_TRUE);
 
-    if(!device_name && numCaptureDevNames > 0)
-        device_name = allCaptureDevNameMap[0].name;
-    else
+    if(!device_name)
+        device_name = pulse_device;
+    else if(strcmp(device_name, pulse_device) != 0)
     {
         ALuint i;
 

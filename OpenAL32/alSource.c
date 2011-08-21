@@ -1376,7 +1376,8 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
-        SetSourceState(Source, Context, AL_PLAYING);
+        if(Context->DeferUpdates) Source->new_state = AL_PLAYING;
+        else SetSourceState(Source, Context, AL_PLAYING);
     }
 
 done:
@@ -1421,7 +1422,8 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
-        SetSourceState(Source, Context, AL_PAUSED);
+        if(Context->DeferUpdates) Source->new_state = AL_PAUSED;
+        else SetSourceState(Source, Context, AL_PAUSED);
     }
 
 done:
@@ -1466,7 +1468,8 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
-        SetSourceState(Source, Context, AL_STOPPED);
+        if(Context->DeferUpdates) Source->new_state = AL_STOPPED;
+        else SetSourceState(Source, Context, AL_STOPPED);
     }
 
 done:
@@ -1511,7 +1514,8 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
-        SetSourceState(Source, Context, AL_INITIAL);
+        if(Context->DeferUpdates) Source->new_state = AL_INITIAL;
+        else SetSourceState(Source, Context, AL_INITIAL);
     }
 
 done:
@@ -1772,6 +1776,7 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->Resampler = DefaultResampler;
 
     Source->state = AL_INITIAL;
+    Source->new_state = AL_NONE;
     Source->lSourceType = AL_UNDETERMINED;
 
     Source->NeedsUpdate = AL_TRUE;

@@ -591,7 +591,23 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
     Context = GetLockedContext();
     if(!Context) return;
 
-    Context->DeferUpdates = AL_FALSE;
+    if(Context->DeferUpdates)
+    {
+        ALsizei pos;
+
+        Context->DeferUpdates = AL_FALSE;
+
+        for(pos = 0;pos < Context->SourceMap.size;pos++)
+        {
+            ALsource *src = Context->SourceMap.array[pos].value;
+            ALenum new_state;
+
+            new_state = src->new_state;
+            src->new_state = AL_NONE;
+            if(new_state)
+                SetSourceState(src, Context, new_state);
+        }
+    }
 
     UnlockContext(Context);
 }

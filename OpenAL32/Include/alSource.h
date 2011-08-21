@@ -51,6 +51,7 @@ typedef struct ALsource
     enum Resampler Resampler;
 
     ALenum       state;
+    ALenum       new_state;
     ALuint       position;
     ALuint       position_fraction;
 

@@ -1778,6 +1778,7 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->state = AL_INITIAL;
     Source->new_state = AL_NONE;
     Source->lSourceType = AL_UNDETERMINED;
+    Source->lOffset = -1;
 
     Source->NeedsUpdate = AL_TRUE;
 
@@ -1844,7 +1845,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->state = AL_PLAYING;
 
         // Check if an Offset has been set
-        if(Source->lOffset)
+        if(Source->lOffset != -1)
             ApplyOffset(Source);
 
         for(j = 0;j < Context->ActiveSourceCount;j++)
@@ -1873,7 +1874,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->HrtfMoving = AL_FALSE;
             Source->HrtfCounter = 0;
         }
-        Source->lOffset = 0;
+        Source->lOffset = -1;
     }
     else if(state == AL_INITIAL)
     {
@@ -1888,7 +1889,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->HrtfMoving = AL_FALSE;
             Source->HrtfCounter = 0;
         }
-        Source->lOffset = 0;
+        Source->lOffset = -1;
     }
 }
 
@@ -2096,7 +2097,7 @@ static ALint GetByteOffset(ALsource *Source)
 
     if(!Buffer)
     {
-        Source->lOffset = 0;
+        Source->lOffset = -1;
         return -1;
     }
 
@@ -2129,7 +2130,7 @@ static ALint GetByteOffset(ALsource *Source)
         break;
     }
     // Clear Offset
-    Source->lOffset = 0;
+    Source->lOffset = -1;
 
     return ByteOffset;
 }

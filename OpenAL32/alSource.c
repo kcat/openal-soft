@@ -48,7 +48,6 @@ const ALsizei ResamplerPrePadding[RESAMPLER_MAX] = {
 
 static ALvoid InitSourceParams(ALsource *Source);
 static ALvoid GetSourceOffset(ALsource *Source, ALenum eName, ALdouble *Offsets, ALdouble updateLen);
-static ALboolean ApplyOffset(ALsource *Source);
 static ALint GetByteOffset(ALsource *Source);
 
 #define LookupSource(m, k) ((ALsource*)LookupUIntMapKey(&(m), (k)))
@@ -368,7 +367,8 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValu
                     else
                         Source->lOffset = (ALint)flValue;
 
-                    if ((Source->state == AL_PLAYING) || (Source->state == AL_PAUSED))
+                    if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
+                       !pContext->DeferUpdates)
                     {
                         if(ApplyOffset(Source) == AL_FALSE)
                             alSetError(pContext, AL_INVALID_VALUE);
@@ -636,7 +636,8 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     else
                         Source->lOffset = lValue;
 
-                    if(Source->state == AL_PLAYING || Source->state == AL_PAUSED)
+                    if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
+                       !pContext->DeferUpdates)
                     {
                         if(ApplyOffset(Source) == AL_FALSE)
                             alSetError(pContext, AL_INVALID_VALUE);
@@ -2016,7 +2017,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
     Apply a playback offset to the Source.  This function will update the queue (to correctly
     mark buffers as 'pending' or 'processed' depending upon the new offset.
 */
-static ALboolean ApplyOffset(ALsource *Source)
+ALboolean ApplyOffset(ALsource *Source)
 {
     const ALbufferlistitem *BufferList;
     const ALbuffer         *Buffer;

@@ -599,13 +599,16 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
 
         for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
-            ALsource *src = Context->SourceMap.array[pos].value;
+            ALsource *Source = Context->SourceMap.array[pos].value;
             ALenum new_state;
 
-            new_state = src->new_state;
-            src->new_state = AL_NONE;
+            if(Source->lOffset != -1)
+                ApplyOffset(Source);
+
+            new_state = Source->new_state;
+            Source->new_state = AL_NONE;
             if(new_state)
-                SetSourceState(src, Context, new_state);
+                SetSourceState(Source, Context, new_state);
         }
     }
 

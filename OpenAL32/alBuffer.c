@@ -163,7 +163,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
                 break;
             }
 
-            err = ALTHUNK_ADDENTRY(buffer, &buffer->buffer);
+            err = ALTHUNK_NEWENTRY(buffer, &buffer->buffer);
             if(err == AL_NO_ERROR)
                 err = InsertUIntMapEntry(&device->BufferMap, buffer->buffer, buffer);
             if(err != AL_NO_ERROR)

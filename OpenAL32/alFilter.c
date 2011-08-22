@@ -59,7 +59,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
                 break;
             }
 
-            err = ALTHUNK_ADDENTRY(filter, &filter->filter);
+            err = ALTHUNK_NEWENTRY(filter, &filter->filter);
             if(err == AL_NO_ERROR)
                 err = InsertUIntMapEntry(&device->FilterMap, filter->filter, filter);
             if(err != AL_NO_ERROR)

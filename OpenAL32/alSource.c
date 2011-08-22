@@ -85,7 +85,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
                 break;
             }
 
-            err = ALTHUNK_ADDENTRY(source, &source->source);
+            err = ALTHUNK_NEWENTRY(source, &source->source);
             if(err == AL_NO_ERROR)
                 err = InsertUIntMapEntry(&Context->SourceMap, source->source, source);
             if(err != AL_NO_ERROR)
@@ -1376,7 +1376,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
     for(i = 0;i < n;i++)
     {
-        Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
+        Source = LookupSource(Context->SourceMap, sources[i]);
         if(Context->DeferUpdates) Source->new_state = AL_PLAYING;
         else SetSourceState(Source, Context, AL_PLAYING);
     }
@@ -1422,7 +1422,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
 
     for(i = 0;i < n;i++)
     {
-        Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
+        Source = LookupSource(Context->SourceMap, sources[i]);
         if(Context->DeferUpdates) Source->new_state = AL_PAUSED;
         else SetSourceState(Source, Context, AL_PAUSED);
     }
@@ -1468,7 +1468,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
 
     for(i = 0;i < n;i++)
     {
-        Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
+        Source = LookupSource(Context->SourceMap, sources[i]);
         if(Context->DeferUpdates) Source->new_state = AL_STOPPED;
         else SetSourceState(Source, Context, AL_STOPPED);
     }
@@ -1514,7 +1514,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 
     for(i = 0;i < n;i++)
     {
-        Source = (ALsource*)ALTHUNK_LOOKUPENTRY(sources[i]);
+        Source = LookupSource(Context->SourceMap, sources[i]);
         if(Context->DeferUpdates) Source->new_state = AL_INITIAL;
         else SetSourceState(Source, Context, AL_INITIAL);
     }
@@ -1616,7 +1616,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     // Change Source Type
     Source->lSourceType = AL_STREAMING;
 
-    buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[0]);
+    buffer = LookupBuffer(device->BufferMap, buffers[0]);
 
     // All buffers are valid - so add them to the list
     BufferListStart = malloc(sizeof(ALbufferlistitem));
@@ -1631,7 +1631,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
 
     for(i = 1;i < n;i++)
     {
-        buffer = (ALbuffer*)ALTHUNK_LOOKUPENTRY(buffers[i]);
+        buffer = LookupBuffer(device->BufferMap, buffers[i]);
 
         BufferList->next = malloc(sizeof(ALbufferlistitem));
         BufferList->next->buffer = buffer;

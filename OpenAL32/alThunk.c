@@ -25,12 +25,8 @@
 #include "alMain.h"
 #include "alThunk.h"
 
-typedef struct {
-    ALvoid *ptr;
-    ALboolean InUse;
-} ThunkEntry;
 
-static ThunkEntry *g_ThunkArray;
+static ALboolean  *g_ThunkArray;
 static ALuint      g_ThunkArraySize;
 
 static CRITICAL_SECTION g_ThunkLock;
@@ -39,7 +35,7 @@ void alThunkInit(void)
 {
     InitializeCriticalSection(&g_ThunkLock);
     g_ThunkArraySize = 1;
-    g_ThunkArray = calloc(1, g_ThunkArraySize * sizeof(ThunkEntry));
+    g_ThunkArray = calloc(1, g_ThunkArraySize * sizeof(*g_ThunkArray));
 }
 
 void alThunkExit(void)
@@ -50,7 +46,7 @@ void alThunkExit(void)
     DeleteCriticalSection(&g_ThunkLock);
 }
 
-ALenum alThunkAddEntry(ALvoid *ptr, ALuint *idx)
+ALenum alThunkNewEntry(ALuint *idx)
 {
     ALuint index;
 
@@ -58,28 +54,27 @@ ALenum alThunkAddEntry(ALvoid *ptr, ALuint *idx)
 
     for(index = 0;index < g_ThunkArraySize;index++)
     {
-        if(g_ThunkArray[index].InUse == AL_FALSE)
+        if(g_ThunkArray[index] == AL_FALSE)
             break;
     }
 
     if(index == g_ThunkArraySize)
     {
-        ThunkEntry *NewList;
+        ALboolean *NewList;
 
-        NewList = realloc(g_ThunkArray, g_ThunkArraySize*2 * sizeof(ThunkEntry));
+        NewList = realloc(g_ThunkArray, g_ThunkArraySize*2 * sizeof(*g_ThunkArray));
         if(!NewList)
         {
             LeaveCriticalSection(&g_ThunkLock);
             ERR("Realloc failed to increase to %u enties!\n", g_ThunkArraySize*2);
             return AL_OUT_OF_MEMORY;
         }
-        memset(&NewList[g_ThunkArraySize], 0, g_ThunkArraySize*sizeof(ThunkEntry));
+        memset(&NewList[g_ThunkArraySize], 0, g_ThunkArraySize*sizeof(*g_ThunkArray));
         g_ThunkArraySize *= 2;
         g_ThunkArray = NewList;
     }
 
-    g_ThunkArray[index].ptr = ptr;
-    g_ThunkArray[index].InUse = AL_TRUE;
+    g_ThunkArray[index] = AL_TRUE;
     *idx = index+1;
 
     LeaveCriticalSection(&g_ThunkLock);
@@ -92,21 +87,7 @@ void alThunkRemoveEntry(ALuint index)
     EnterCriticalSection(&g_ThunkLock);
 
     if(index > 0 && index <= g_ThunkArraySize)
-        g_ThunkArray[index-1].InUse = AL_FALSE;
+        g_ThunkArray[index-1] = AL_FALSE;
 
     LeaveCriticalSection(&g_ThunkLock);
-}
-
-ALvoid *alThunkLookupEntry(ALuint index)
-{
-    ALvoid *ptr = NULL;
-
-    EnterCriticalSection(&g_ThunkLock);
-
-    if(index > 0 && index <= g_ThunkArraySize)
-        ptr = g_ThunkArray[index-1].ptr;
-
-    LeaveCriticalSection(&g_ThunkLock);
-
-    return ptr;
 }

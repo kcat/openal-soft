@@ -46,19 +46,19 @@ void ThunkExit(void)
     DeleteCriticalSection(&g_ThunkLock);
 }
 
-ALenum NewThunkEntry(ALuint *idx)
+ALenum NewThunkEntry(ALuint *index)
 {
-    ALuint index;
+    ALuint i;
 
     EnterCriticalSection(&g_ThunkLock);
 
-    for(index = 0;index < g_ThunkArraySize;index++)
+    for(i = 0;i < g_ThunkArraySize;i++)
     {
-        if(g_ThunkArray[index] == AL_FALSE)
+        if(g_ThunkArray[i] == AL_FALSE)
             break;
     }
 
-    if(index == g_ThunkArraySize)
+    if(i == g_ThunkArraySize)
     {
         ALboolean *NewList;
 
@@ -74,8 +74,8 @@ ALenum NewThunkEntry(ALuint *idx)
         g_ThunkArray = NewList;
     }
 
-    g_ThunkArray[index] = AL_TRUE;
-    *idx = index+1;
+    g_ThunkArray[i] = AL_TRUE;
+    *index = i+1;
 
     LeaveCriticalSection(&g_ThunkLock);
 

@@ -85,12 +85,12 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
                 break;
             }
 
-            err = ALTHUNK_NEWENTRY(source, &source->source);
+            err = NewThunkEntry(&source->source);
             if(err == AL_NO_ERROR)
                 err = InsertUIntMapEntry(&Context->SourceMap, source->source, source);
             if(err != AL_NO_ERROR)
             {
-                ALTHUNK_REMOVEENTRY(source->source);
+                FreeThunkEntry(source->source);
                 memset(source, 0, sizeof(ALsource));
                 free(source);
 
@@ -175,7 +175,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 
             // Remove Source from list of Sources
             RemoveUIntMapKey(&Context->SourceMap, Source->source);
-            ALTHUNK_REMOVEENTRY(Source->source);
+            FreeThunkEntry(Source->source);
 
             memset(Source,0,sizeof(ALsource));
             free(Source);
@@ -2165,7 +2165,7 @@ ALvoid ReleaseALSources(ALCcontext *Context)
         }
 
         // Release source structure
-        ALTHUNK_REMOVEENTRY(temp->source);
+        FreeThunkEntry(temp->source);
         memset(temp, 0, sizeof(ALsource));
         free(temp);
     }

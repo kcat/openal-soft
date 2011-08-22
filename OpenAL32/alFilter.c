@@ -59,12 +59,12 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
                 break;
             }
 
-            err = ALTHUNK_NEWENTRY(filter, &filter->filter);
+            err = NewThunkEntry(&filter->filter);
             if(err == AL_NO_ERROR)
                 err = InsertUIntMapEntry(&device->FilterMap, filter->filter, filter);
             if(err != AL_NO_ERROR)
             {
-                ALTHUNK_REMOVEENTRY(filter->filter);
+                FreeThunkEntry(filter->filter);
                 memset(filter, 0, sizeof(ALfilter));
                 free(filter);
 
@@ -124,7 +124,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
                 continue;
 
             RemoveUIntMapKey(&device->FilterMap, ALFilter->filter);
-            ALTHUNK_REMOVEENTRY(ALFilter->filter);
+            FreeThunkEntry(ALFilter->filter);
 
             memset(ALFilter, 0, sizeof(ALfilter));
             free(ALFilter);
@@ -404,7 +404,7 @@ ALvoid ReleaseALFilters(ALCdevice *device)
         device->FilterMap.array[i].value = NULL;
 
         // Release filter structure
-        ALTHUNK_REMOVEENTRY(temp->filter);
+        FreeThunkEntry(temp->filter);
         memset(temp, 0, sizeof(ALfilter));
         free(temp);
     }

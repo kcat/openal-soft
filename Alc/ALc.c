@@ -484,7 +484,7 @@ static void alc_init(void)
 
     tls_create(&LocalContext);
     InitializeCriticalSection(&ListLock);
-    ALTHUNK_INIT();
+    ThunkInit();
 }
 
 static void alc_deinit_safe(void)
@@ -492,7 +492,8 @@ static void alc_deinit_safe(void)
     ReleaseALC(ALC_FALSE);
 
     FreeALConfig();
-    ALTHUNK_EXIT();
+
+    ThunkExit();
     DeleteCriticalSection(&ListLock);
     tls_delete(LocalContext);
 

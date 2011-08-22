@@ -163,12 +163,12 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
                 break;
             }
 
-            err = ALTHUNK_NEWENTRY(buffer, &buffer->buffer);
+            err = NewThunkEntry(&buffer->buffer);
             if(err == AL_NO_ERROR)
                 err = InsertUIntMapEntry(&device->BufferMap, buffer->buffer, buffer);
             if(err != AL_NO_ERROR)
             {
-                ALTHUNK_REMOVEENTRY(buffer->buffer);
+                FreeThunkEntry(buffer->buffer);
                 memset(buffer, 0, sizeof(ALbuffer));
                 free(buffer);
 
@@ -245,7 +245,7 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 
             /* Release buffer structure */
             RemoveUIntMapKey(&device->BufferMap, ALBuf->buffer);
-            ALTHUNK_REMOVEENTRY(ALBuf->buffer);
+            FreeThunkEntry(ALBuf->buffer);
 
             memset(ALBuf, 0, sizeof(ALbuffer));
             free(ALBuf);
@@ -2204,7 +2204,7 @@ ALvoid ReleaseALBuffers(ALCdevice *device)
 
         free(temp->data);
 
-        ALTHUNK_REMOVEENTRY(temp->buffer);
+        FreeThunkEntry(temp->buffer);
         memset(temp, 0, sizeof(ALbuffer));
         free(temp);
     }

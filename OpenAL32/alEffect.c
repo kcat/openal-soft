@@ -63,12 +63,12 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 break;
             }
 
-            err = ALTHUNK_NEWENTRY(effect, &effect->effect);
+            err = NewThunkEntry(&effect->effect);
             if(err == AL_NO_ERROR)
                 err = InsertUIntMapEntry(&device->EffectMap, effect->effect, effect);
             if(err != AL_NO_ERROR)
             {
-                ALTHUNK_REMOVEENTRY(effect->effect);
+                FreeThunkEntry(effect->effect);
                 memset(effect, 0, sizeof(ALeffect));
                 free(effect);
 
@@ -128,7 +128,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
                 continue;
 
             RemoveUIntMapKey(&device->EffectMap, ALEffect->effect);
-            ALTHUNK_REMOVEENTRY(ALEffect->effect);
+            FreeThunkEntry(ALEffect->effect);
 
             memset(ALEffect, 0, sizeof(ALeffect));
             free(ALEffect);
@@ -1076,7 +1076,7 @@ ALvoid ReleaseALEffects(ALCdevice *device)
         device->EffectMap.array[i].value = NULL;
 
         // Release effect structure
-        ALTHUNK_REMOVEENTRY(temp->effect);
+        FreeThunkEntry(temp->effect);
         memset(temp, 0, sizeof(ALeffect));
         free(temp);
     }

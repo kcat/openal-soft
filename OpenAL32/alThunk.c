@@ -31,14 +31,14 @@ static ALuint      g_ThunkArraySize;
 
 static CRITICAL_SECTION g_ThunkLock;
 
-void alThunkInit(void)
+void ThunkInit(void)
 {
     InitializeCriticalSection(&g_ThunkLock);
     g_ThunkArraySize = 1;
     g_ThunkArray = calloc(1, g_ThunkArraySize * sizeof(*g_ThunkArray));
 }
 
-void alThunkExit(void)
+void ThunkExit(void)
 {
     free(g_ThunkArray);
     g_ThunkArray = NULL;
@@ -46,7 +46,7 @@ void alThunkExit(void)
     DeleteCriticalSection(&g_ThunkLock);
 }
 
-ALenum alThunkNewEntry(ALuint *idx)
+ALenum NewThunkEntry(ALuint *idx)
 {
     ALuint index;
 
@@ -82,7 +82,7 @@ ALenum alThunkNewEntry(ALuint *idx)
     return AL_NO_ERROR;
 }
 
-void alThunkRemoveEntry(ALuint index)
+void FreeThunkEntry(ALuint index)
 {
     EnterCriticalSection(&g_ThunkLock);
 

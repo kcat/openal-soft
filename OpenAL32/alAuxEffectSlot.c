@@ -68,12 +68,12 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                 break;
             }
 
-            err = ALTHUNK_NEWENTRY(slot, &slot->effectslot);
+            err = NewThunkEntry(&slot->effectslot);
             if(err == AL_NO_ERROR)
                 err = InsertUIntMapEntry(&Context->EffectSlotMap, slot->effectslot, slot);
             if(err != AL_NO_ERROR)
             {
-                ALTHUNK_REMOVEENTRY(slot->effectslot);
+                FreeThunkEntry(slot->effectslot);
                 ALEffect_Destroy(slot->EffectState);
                 free(slot);
 
@@ -146,7 +146,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
             ALEffect_Destroy(EffectSlot->EffectState);
 
             RemoveUIntMapKey(&Context->EffectSlotMap, EffectSlot->effectslot);
-            ALTHUNK_REMOVEENTRY(EffectSlot->effectslot);
+            FreeThunkEntry(EffectSlot->effectslot);
 
             memset(EffectSlot, 0, sizeof(ALeffectslot));
             free(EffectSlot);
@@ -533,7 +533,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
         // Release effectslot structure
         ALEffect_Destroy(temp->EffectState);
 
-        ALTHUNK_REMOVEENTRY(temp->effectslot);
+        FreeThunkEntry(temp->effectslot);
         memset(temp, 0, sizeof(ALeffectslot));
         free(temp);
     }

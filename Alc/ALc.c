@@ -380,7 +380,8 @@ static const ALchar alExtList[] =
     "AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_MULAW "
     "AL_EXT_MULAW_MCFORMATS AL_EXT_OFFSET AL_EXT_source_distance_model "
     "AL_LOKI_quadriphonic AL_SOFTX_buffer_samples AL_SOFT_buffer_sub_data "
-    "AL_SOFT_loop_points AL_SOFTX_non_virtual_channels";
+    "AL_SOFTX_deferred_updates AL_SOFT_loop_points "
+    "AL_SOFTX_non_virtual_channels";
 
 // Mixing Priority Level
 ALint RTPrioLevel;

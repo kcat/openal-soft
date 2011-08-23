@@ -1657,8 +1657,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
         while(BufferList->next != NULL)
             BufferList = BufferList->next;
 
+        BufferListStart->prev = BufferList;
         BufferList->next = BufferListStart;
-        BufferList->next->prev = BufferList;
     }
 
     // Update number of buffers in queue

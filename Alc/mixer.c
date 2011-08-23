@@ -597,7 +597,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
         if(Source->lSourceType == AL_STATIC)
         {
-            const ALbuffer *ALBuffer = Source->Buffer;
+            const ALbuffer *ALBuffer = Source->queue->buffer;
             const ALubyte *Data = ALBuffer->data;
             ALuint DataSize;
             ALuint pos;
@@ -833,7 +833,6 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     Source->BuffersPlayed     = BuffersPlayed;
     Source->position          = DataPosInt;
     Source->position_fraction = DataPosFrac;
-    Source->Buffer            = BufferListItem->buffer;
     Source->HrtfOffset       += OutPos;
     if(State == AL_PLAYING)
     {

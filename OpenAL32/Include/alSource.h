@@ -55,8 +55,6 @@ typedef struct ALsource
     ALuint       position;
     ALuint       position_fraction;
 
-    struct ALbuffer *Buffer;
-
     ALbufferlistitem *queue; // Linked list of buffers in queue
     ALuint BuffersInQueue;   // Number of buffers in queue
     ALuint BuffersPlayed;    // Number of buffers played on this loop

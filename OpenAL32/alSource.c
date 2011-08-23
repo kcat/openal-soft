@@ -607,8 +607,6 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         }
                         Source->BuffersPlayed = 0;
 
-                        // Update AL_BUFFER parameter
-                        Source->Buffer = buffer;
                         Source->NeedsUpdate = AL_TRUE;
                     }
                     else
@@ -1078,6 +1076,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *p
 
 AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plValue)
 {
+    ALbufferlistitem *BufferList;
     ALCcontext *pContext;
     ALsource   *Source;
     ALdouble   Offsets[2];
@@ -1121,7 +1120,18 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plVa
                     break;
 
                 case AL_BUFFER:
-                    *plValue = (Source->Buffer ? Source->Buffer->buffer : 0);
+                    BufferList = Source->queue;
+                    if(Source->lSourceType != AL_STATIC)
+                    {
+                        ALuint i = Source->BuffersPlayed;
+                        while(i > 0)
+                        {
+                            BufferList = BufferList->next;
+                            i--;
+                        }
+                    }
+                    *plValue = ((BufferList && BufferList->buffer) ?
+                                BufferList->buffer->buffer : 0);
                     break;
 
                 case AL_SOURCE_STATE:
@@ -1645,11 +1655,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     }
 
     if(Source->queue == NULL)
-    {
         Source->queue = BufferListStart;
-        // Update Current Buffer
-        Source->Buffer = BufferListStart->buffer;
-    }
     else
     {
         // Find end of queue
@@ -1708,6 +1714,8 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
     {
         BufferList = Source->queue;
         Source->queue = BufferList->next;
+        Source->BuffersInQueue--;
+        Source->BuffersPlayed--;
 
         if(BufferList->buffer)
         {
@@ -1721,19 +1729,10 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
 
         // Release memory for buffer list item
         free(BufferList);
-        Source->BuffersInQueue--;
     }
     if(Source->queue)
         Source->queue->prev = NULL;
 
-    if(Source->state != AL_PLAYING)
-    {
-        if(Source->queue)
-            Source->Buffer = Source->queue->buffer;
-        else
-            Source->Buffer = NULL;
-    }
-    Source->BuffersPlayed -= n;
 
 done:
     UnlockContext(Context);
@@ -1782,8 +1781,6 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->lOffset = -1;
 
     Source->NeedsUpdate = AL_TRUE;
-
-    Source->Buffer = NULL;
 
     Source->HrtfMoving = AL_FALSE;
     Source->HrtfCounter = 0;
@@ -1839,8 +1836,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->position = 0;
             Source->position_fraction = 0;
             Source->BuffersPlayed = 0;
-
-            Source->Buffer = Source->queue->buffer;
         }
         else
             Source->state = AL_PLAYING;
@@ -1885,8 +1880,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->position = 0;
             Source->position_fraction = 0;
             Source->BuffersPlayed = 0;
-            if(Source->queue)
-                Source->Buffer = Source->queue->buffer;
             Source->HrtfMoving = AL_FALSE;
             Source->HrtfCounter = 0;
         }
@@ -2050,8 +2043,6 @@ ALboolean ApplyOffset(ALsource *Source)
         else if(lTotalBufferSize <= lByteOffset)
         {
             // Offset is within this buffer
-            // Set Current Buffer
-            Source->Buffer = BufferList->buffer;
             Source->BuffersPlayed = BuffersPlayed;
 
             // SW Mixer Positions are in Samples

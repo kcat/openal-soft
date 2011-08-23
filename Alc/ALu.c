@@ -979,10 +979,14 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         ctx_end = ctx + device->NumContexts;
         while(ctx != ctx_end)
         {
-            ALboolean UpdateSources;
+            ALboolean DeferUpdates = (*ctx)->DeferUpdates;
+            ALboolean UpdateSources = AL_FALSE;
 
-            UpdateSources = (*ctx)->UpdateSources;
-            (*ctx)->UpdateSources = AL_FALSE;
+            if(!DeferUpdates)
+            {
+                UpdateSources = (*ctx)->UpdateSources;
+                (*ctx)->UpdateSources = AL_FALSE;
+            }
 
             src = (*ctx)->ActiveSources;
             src_end = src + (*ctx)->ActiveSourceCount;
@@ -995,7 +999,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     continue;
                 }
 
-                if((*src)->NeedsUpdate || UpdateSources)
+                if(!DeferUpdates && ((*src)->NeedsUpdate || UpdateSources))
                 {
                     (*src)->NeedsUpdate = AL_FALSE;
                     ALsource_Update(*src, *ctx);
@@ -1021,7 +1025,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     ALEffectSlot->PendingClicks[i] = 0.0f;
                 }
 
-                if(ALEffectSlot->NeedsUpdate)
+                if(!DeferUpdates && ALEffectSlot->NeedsUpdate)
                 {
                     ALEffectSlot->NeedsUpdate = AL_FALSE;
                     ALEffect_Update(ALEffectSlot->EffectState, *ctx, ALEffectSlot);

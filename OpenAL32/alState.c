@@ -26,6 +26,7 @@
 #include "AL/alext.h"
 #include "alError.h"
 #include "alSource.h"
+#include "alAuxEffectSlot.h"
 #include "alState.h"
 
 static const ALchar alVendor[] = "OpenAL Community";
@@ -579,7 +580,48 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
     Context = GetLockedContext();
     if(!Context) return;
 
-    Context->DeferUpdates = AL_TRUE;
+    if(!Context->DeferUpdates)
+    {
+        ALboolean UpdateSources;
+        ALsource **src, **src_end;
+        ALeffectslot *ALEffectSlot;
+        ALsizei e;
+
+        Context->DeferUpdates = AL_TRUE;
+
+        /* Make sure all pending updates are performed */
+        UpdateSources = Context->UpdateSources;
+        Context->UpdateSources = AL_FALSE;
+
+        src = Context->ActiveSources;
+        src_end = src + Context->ActiveSourceCount;
+        while(src != src_end)
+        {
+            if((*src)->state != AL_PLAYING)
+            {
+                Context->ActiveSourceCount--;
+                *src = *(--src_end);
+                continue;
+            }
+
+            if((*src)->NeedsUpdate || UpdateSources)
+            {
+                (*src)->NeedsUpdate = AL_FALSE;
+                ALsource_Update(*src, Context);
+            }
+            src++;
+        }
+
+        for(e = 0;e < Context->EffectSlotMap.size;e++)
+        {
+            ALEffectSlot = Context->EffectSlotMap.array[e].value;
+            if(ALEffectSlot->NeedsUpdate)
+            {
+                ALEffectSlot->NeedsUpdate = AL_FALSE;
+                ALEffect_Update(ALEffectSlot->EffectState, Context, ALEffectSlot);
+            }
+        }
+    }
 
     UnlockContext(Context);
 }

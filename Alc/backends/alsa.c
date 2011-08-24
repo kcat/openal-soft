@@ -799,7 +799,7 @@ static void alsa_stop_playback(ALCdevice *device)
 }
 
 
-static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
+static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     snd_pcm_hw_params_t *p;
     snd_pcm_uframes_t bufferSizeInFrames;
@@ -834,7 +834,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
             }
         }
         if(idx == numCaptureDevNames)
-            return ALC_FALSE;
+            return ALC_INVALID_VALUE;
     }
 
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -844,7 +844,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     {
         ERR("Could not open capture device '%s': %s\n", driver, snd_strerror(i));
         free(data);
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     format = -1;
@@ -927,7 +927,7 @@ static ALCboolean alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceNam
     pDevice->szDeviceName = strdup(deviceName);
 
     pDevice->ExtraData = data;
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 
 error:
     free(data->buffer);
@@ -936,7 +936,7 @@ error:
     free(data);
 
     pDevice->ExtraData = NULL;
-    return ALC_FALSE;
+    return ALC_INVALID_VALUE;
 }
 
 static void alsa_close_capture(ALCdevice *pDevice)

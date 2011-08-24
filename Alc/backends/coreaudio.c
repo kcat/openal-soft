@@ -376,7 +376,7 @@ static void ca_stop_playback(ALCdevice *device)
         ERR("-- AudioUnitUninitialize failed.\n");
 }
 
-static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
 {
     AudioStreamBasicDescription requestedFormat;  // The application requested format
     AudioStreamBasicDescription hardwareFormat;   // The hardware format
@@ -402,7 +402,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     if(comp == NULL)
     {
         ERR("FindNextComponent failed\n");
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     data = calloc(1, sizeof(*data));
@@ -587,7 +587,7 @@ static ALCboolean ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
         goto error;
     }
 
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 
 error:
     DestroyRingBuffer(data->ring);
@@ -602,7 +602,7 @@ error:
     free(data);
     device->ExtraData = NULL;
 
-    return ALC_FALSE;
+    return ALC_INVALID_VALUE;
 }
 
 static void ca_close_capture(ALCdevice *device)

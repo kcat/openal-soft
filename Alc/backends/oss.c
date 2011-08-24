@@ -308,7 +308,7 @@ static void oss_stop_playback(ALCdevice *device)
 }
 
 
-static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
 {
     int numFragmentsLogSize;
     int log2FragmentSize;
@@ -324,10 +324,11 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
 
     strncpy(driver, GetConfigValue("oss", "capture", "/dev/dsp"), sizeof(driver)-1);
     driver[sizeof(driver)-1] = 0;
+
     if(!deviceName)
         deviceName = oss_device;
     else if(strcmp(deviceName, oss_device) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = (oss_data*)calloc(1, sizeof(oss_data));
     data->killNow = 0;
@@ -337,7 +338,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     {
         free(data);
         ERR("Could not open %s: %s\n", driver, strerror(errno));
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     switch(device->FmtType)
@@ -355,7 +356,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         case DevFmtFloat:
             free(data);
             ERR("%s capture samples not supported on OSS\n", DevFmtTypeString(device->FmtType));
-            return ALC_FALSE;
+            return ALC_INVALID_VALUE;
     }
 
     periods = 4;
@@ -385,7 +386,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         ERR("%s failed: %s\n", err, strerror(errno));
         close(data->fd);
         free(data);
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 #undef CHECKERR
 
@@ -394,7 +395,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(device->FmtChans), numChannels);
         close(data->fd);
         free(data);
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     if(!((ossFormat == AFMT_S8 && device->FmtType == DevFmtByte) ||
@@ -404,7 +405,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         ERR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(device->FmtType), ossFormat);
         close(data->fd);
         free(data);
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     data->ring = CreateRingBuffer(frameSize, device->UpdateSize * device->NumUpdates);
@@ -413,7 +414,7 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         ERR("Ring buffer create failed\n");
         close(data->fd);
         free(data);
-        return ALC_FALSE;
+        return ALC_OUT_OF_MEMORY;
     }
 
     data->data_size = info.fragsize;
@@ -426,11 +427,11 @@ static ALCboolean oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         device->ExtraData = NULL;
         free(data->mix_data);
         free(data);
-        return ALC_FALSE;
+        return ALC_OUT_OF_MEMORY;
     }
 
     device->szDeviceName = strdup(deviceName);
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void oss_close_capture(ALCdevice *device)

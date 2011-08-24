@@ -278,7 +278,7 @@ static void pa_stop_playback(ALCdevice *device)
 }
 
 
-static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
 {
     PaStreamParameters inParams;
     ALuint frame_size;
@@ -288,22 +288,16 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
     if(!deviceName)
         deviceName = pa_device;
     else if(strcmp(deviceName, pa_device) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = (pa_data*)calloc(1, sizeof(pa_data));
     if(data == NULL)
-    {
-        alcSetError(device, ALC_OUT_OF_MEMORY);
-        return ALC_FALSE;
-    }
+        return ALC_OUT_OF_MEMORY;
 
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     data->ring = CreateRingBuffer(frame_size, device->UpdateSize*device->NumUpdates);
     if(data->ring == NULL)
-    {
-        alcSetError(device, ALC_OUT_OF_MEMORY);
         goto error;
-    }
 
     inParams.device = GetConfigValueInt("port", "capture", -1);
     if(inParams.device < 0)
@@ -342,12 +336,12 @@ static ALCboolean pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
     device->szDeviceName = strdup(deviceName);
 
     device->ExtraData = data;
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 
 error:
     DestroyRingBuffer(data->ring);
     free(data);
-    return ALC_FALSE;
+    return ALC_INVALID_VALUE;
 }
 
 static void pa_close_capture(ALCdevice *device)

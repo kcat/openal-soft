@@ -1377,6 +1377,7 @@ static ALCvoid FreeContext(ALCcontext *context)
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
 {
     ALCdevice *device = NULL;
+    ALCenum err;
 
     DO_INITCONFIG();
 
@@ -1426,7 +1427,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->NumUpdates = 1;
 
     LockLists();
-    if(ALCdevice_OpenCapture(device, deviceName))
+    if((err=ALCdevice_OpenCapture(device, deviceName)) == ALC_NO_ERROR)
     {
         device->next = g_pDeviceList;
         g_pDeviceList = device;
@@ -1437,7 +1438,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         DeleteCriticalSection(&device->Mutex);
         free(device);
         device = NULL;
-        alcSetError(NULL, ALC_INVALID_VALUE);
+        alcSetError(NULL, err);
     }
     UnlockLists();
 

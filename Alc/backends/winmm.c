@@ -483,7 +483,7 @@ static void WinMMStopPlayback(ALCdevice *device)
 }
 
 
-static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
+static ALCenum WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     WAVEFORMATEX wfexCaptureFormat;
     DWORD ulCapturedDataSize;
@@ -522,22 +522,16 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
         }
     }
     if(i == NumCaptureDevices)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     pData = calloc(1, sizeof(*pData));
     if(!pData)
-    {
-        alcSetError(pDevice, ALC_OUT_OF_MEMORY);
-        return ALC_FALSE;
-    }
+        return ALC_OUT_OF_MEMORY;
     pDevice->ExtraData = pData;
 
     if((pDevice->FmtChans != DevFmtMono && pDevice->FmtChans != DevFmtStereo) ||
        (pDevice->FmtType != DevFmtUByte && pDevice->FmtType != DevFmtShort))
-    {
-        alcSetError(pDevice, ALC_INVALID_ENUM);
         goto failure;
-    }
 
     memset(&wfexCaptureFormat, 0, sizeof(WAVEFORMATEX));
     wfexCaptureFormat.wFormatTag = WAVE_FORMAT_PCM;
@@ -605,7 +599,7 @@ static ALCboolean WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName
         goto failure;
 
     pDevice->szDeviceName = strdup(CaptureDeviceList[lDeviceID]);
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 
 failure:
     if(pData->hWaveThread)
@@ -632,7 +626,7 @@ failure:
 
     free(pData);
     pDevice->ExtraData = NULL;
-    return ALC_FALSE;
+    return ALC_INVALID_VALUE;
 }
 
 static void WinMMCloseCapture(ALCdevice *pDevice)

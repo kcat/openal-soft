@@ -275,7 +275,7 @@ typedef struct {
     ALCboolean (*ResetPlayback)(ALCdevice*);
     void (*StopPlayback)(ALCdevice*);
 
-    ALCboolean (*OpenCapture)(ALCdevice*, const ALCchar*);
+    ALCenum (*OpenCapture)(ALCdevice*, const ALCchar*);
     void (*CloseCapture)(ALCdevice*);
     void (*StartCapture)(ALCdevice*);
     void (*StopCapture)(ALCdevice*);

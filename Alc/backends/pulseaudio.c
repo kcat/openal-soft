@@ -1085,7 +1085,7 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
 } //}}}
 
 
-static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_name) //{{{
+static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name) //{{{
 {
     char *pulse_name = NULL;
     pulse_data *data;
@@ -1111,11 +1111,11 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
             }
         }
         if(i == numCaptureDevNames)
-            return ALC_FALSE;
+            return ALC_INVALID_VALUE;
     }
 
     if(pulse_open(device, device_name) == ALC_FALSE)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = device->ExtraData;
     pa_threaded_mainloop_lock(data->loop);
@@ -1217,11 +1217,11 @@ static ALCboolean pulse_open_capture(ALCdevice *device, const ALCchar *device_na
     pa_stream_set_state_callback(data->stream, stream_state_callback2, device);
 
     pa_threaded_mainloop_unlock(data->loop);
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 
 fail:
     pulse_close(device);
-    return ALC_FALSE;
+    return ALC_INVALID_VALUE;
 } //}}}
 
 static void pulse_close_capture(ALCdevice *device) //{{{

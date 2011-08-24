@@ -135,7 +135,7 @@ static OSStatus ca_capture_callback(void *inRefCon, AudioUnitRenderActionFlags *
     return noErr;
 }
 
-static ALCboolean ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     ComponentDescription desc;
     Component comp;
@@ -145,7 +145,7 @@ static ALCboolean ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
     if(!deviceName)
         deviceName = ca_device;
     else if(strcmp(deviceName, ca_device) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     /* open the default output unit */
     desc.componentType = kAudioUnitType_Output;
@@ -158,7 +158,7 @@ static ALCboolean ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
     if(comp == NULL)
     {
         ERR("FindNextComponent failed\n");
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     data = calloc(1, sizeof(*data));
@@ -170,10 +170,10 @@ static ALCboolean ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
         ERR("OpenAComponent failed\n");
         free(data);
         device->ExtraData = NULL;
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void ca_close_playback(ALCdevice *device)

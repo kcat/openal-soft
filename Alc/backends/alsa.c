@@ -523,7 +523,7 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
     return 0;
 }
 
-static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     alsa_data *data;
     char driver[128];
@@ -553,7 +553,7 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
             }
         }
         if(idx == numDevNames)
-            return ALC_FALSE;
+            return ALC_INVALID_VALUE;
     }
 
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -569,12 +569,12 @@ static ALCboolean alsa_open_playback(ALCdevice *device, const ALCchar *deviceNam
     {
         free(data);
         ERR("Could not open playback device '%s': %s\n", driver, snd_strerror(i));
-        return ALC_FALSE;
+        return ALC_OUT_OF_MEMORY;
     }
 
     device->szDeviceName = strdup(deviceName);
     device->ExtraData = data;
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void alsa_close_playback(ALCdevice *device)

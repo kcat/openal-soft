@@ -73,20 +73,20 @@ static ALuint NullProc(ALvoid *ptr)
     return 0;
 }
 
-static ALCboolean null_open_playback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum null_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     null_data *data;
 
     if(!deviceName)
         deviceName = nullDevice;
     else if(strcmp(deviceName, nullDevice) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = (null_data*)calloc(1, sizeof(*data));
 
     device->szDeviceName = strdup(deviceName);
     device->ExtraData = data;
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void null_close_playback(ALCdevice *device)

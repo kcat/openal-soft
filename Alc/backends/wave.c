@@ -159,19 +159,19 @@ static ALuint WaveProc(ALvoid *ptr)
     return 0;
 }
 
-static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum wave_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     wave_data *data;
     const char *fname;
 
     fname = GetConfigValue("wave", "file", "");
     if(!fname[0])
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     if(!deviceName)
         deviceName = waveDevice;
     else if(strcmp(deviceName, waveDevice) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = (wave_data*)calloc(1, sizeof(wave_data));
 
@@ -180,12 +180,12 @@ static ALCboolean wave_open_playback(ALCdevice *device, const ALCchar *deviceNam
     {
         free(data);
         ERR("Could not open file '%s': %s\n", fname, strerror(errno));
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     device->szDeviceName = strdup(deviceName);
     device->ExtraData = data;
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void wave_close_playback(ALCdevice *device)

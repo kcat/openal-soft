@@ -848,7 +848,7 @@ static void pulse_close(ALCdevice *device) //{{{
 //}}}
 
 // OpenAL {{{
-static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_name) //{{{
+static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name) //{{{
 {
     char *pulse_name = NULL;
     pa_sample_spec spec;
@@ -872,11 +872,11 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
             }
         }
         if(i == numDevNames)
-            return ALC_FALSE;
+            return ALC_INVALID_VALUE;
     }
 
     if(pulse_open(device, device_name) == ALC_FALSE)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = device->ExtraData;
 
@@ -909,11 +909,11 @@ static ALCboolean pulse_open_playback(ALCdevice *device, const ALCchar *device_n
 
     pa_threaded_mainloop_unlock(data->loop);
 
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 
 fail:
     pulse_close(device);
-    return ALC_FALSE;
+    return ALC_INVALID_VALUE;
 } //}}}
 
 static void pulse_close_playback(ALCdevice *device) //{{{

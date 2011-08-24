@@ -178,7 +178,7 @@ static void opensl_callback(SLAndroidSimpleBufferQueueItf bq, void *context)
 }
 
 
-static ALCboolean opensl_open_playback(ALCdevice *Device, const ALCchar *deviceName)
+static ALCenum opensl_open_playback(ALCdevice *Device, const ALCchar *deviceName)
 {
     osl_data *data = NULL;
     SLresult result;
@@ -186,14 +186,11 @@ static ALCboolean opensl_open_playback(ALCdevice *Device, const ALCchar *deviceN
     if(!deviceName)
         deviceName = opensl_device;
     else if(strcmp(deviceName, opensl_device) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = calloc(1, sizeof(*data));
     if(!data)
-    {
-        alcSetError(Device, ALC_OUT_OF_MEMORY);
-        return ALC_FALSE;
-    }
+        return ALC_OUT_OF_MEMORY;
 
     // create engine
     result = slCreateEngine(&data->engineObject, 0, NULL, 0, NULL, NULL);
@@ -231,13 +228,13 @@ static ALCboolean opensl_open_playback(ALCdevice *Device, const ALCchar *deviceN
         data->engine = NULL;
 
         free(data);
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     Device->szDeviceName = strdup(deviceName);
     Device->ExtraData = data;
 
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 

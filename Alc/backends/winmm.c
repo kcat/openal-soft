@@ -292,7 +292,7 @@ static DWORD WINAPI CaptureThreadProc(LPVOID lpParameter)
 }
 
 
-static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceName)
+static ALCenum WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     WAVEFORMATEX wfexFormat;
     WinMMData *pData = NULL;
@@ -318,15 +318,12 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
             }
         }
         if(i == NumPlaybackDevices)
-            return ALC_FALSE;
+            return ALC_INVALID_VALUE;
     }
 
     pData = calloc(1, sizeof(*pData));
     if(!pData)
-    {
-        alcSetError(pDevice, ALC_OUT_OF_MEMORY);
-        return ALC_FALSE;
-    }
+        return ALC_OUT_OF_MEMORY;
     pDevice->ExtraData = pData;
 
     if(pDevice->FmtChans != DevFmtMono)
@@ -381,7 +378,7 @@ static ALCboolean WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceNam
 
     pDevice->szDeviceName = strdup((lDeviceID==WAVE_MAPPER) ? woDefault :
                                    PlaybackDeviceList[lDeviceID]);
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 
 failure:
     if(pData->hWaveThreadEvent)
@@ -392,7 +389,7 @@ failure:
 
     free(pData);
     pDevice->ExtraData = NULL;
-    return ALC_FALSE;
+    return ALC_INVALID_VALUE;
 }
 
 static void WinMMClosePlayback(ALCdevice *device)

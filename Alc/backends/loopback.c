@@ -26,10 +26,10 @@
 #include "AL/alc.h"
 
 
-static ALCboolean loopback_open_playback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum loopback_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     device->szDeviceName = strdup(deviceName);
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void loopback_close_playback(ALCdevice *device)

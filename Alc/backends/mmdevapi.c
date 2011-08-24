@@ -632,7 +632,7 @@ static BOOL MMDevApiLoad(void)
 }
 
 
-static ALCboolean MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 {
     MMDevApiData *data = NULL;
     HRESULT hr;
@@ -640,15 +640,12 @@ static ALCboolean MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceN
     if(!deviceName)
         deviceName = mmDevice;
     else if(strcmp(deviceName, mmDevice) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     //Initialise requested device
     data = calloc(1, sizeof(MMDevApiData));
     if(!data)
-    {
-        alcSetError(device, ALC_OUT_OF_MEMORY);
-        return ALC_FALSE;
-    }
+        return ALC_OUT_OF_MEMORY;
     device->ExtraData = data;
 
     hr = S_OK;
@@ -679,11 +676,11 @@ static ALCboolean MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceN
         device->ExtraData = NULL;
 
         ERR("Device init failed: 0x%08lx\n", hr);
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     device->szDeviceName = strdup(deviceName);
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void MMDevApiClosePlayback(ALCdevice *device)

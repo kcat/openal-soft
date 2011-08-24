@@ -152,7 +152,7 @@ static int pa_capture_cb(const void *inputBuffer, void *outputBuffer,
 }
 
 
-static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     PaStreamParameters outParams;
     pa_data *data;
@@ -161,7 +161,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     if(!deviceName)
         deviceName = pa_device;
     else if(strcmp(deviceName, pa_device) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = (pa_data*)calloc(1, sizeof(pa_data));
     data->update_size = device->UpdateSize;
@@ -204,7 +204,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         ERR("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
         device->ExtraData = NULL;
         free(data);
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     device->szDeviceName = strdup(deviceName);
@@ -217,7 +217,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
             Pa_CloseStream(data->stream);
             device->ExtraData = NULL;
             free(data);
-            return ALC_FALSE;
+            return ALC_INVALID_VALUE;
         }
         if((device->Flags&DEVICE_CHANNELS_REQUEST))
             ERR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans), outParams.channelCount);
@@ -225,7 +225,7 @@ static ALCboolean pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         device->FmtChans = ((outParams.channelCount==1) ? DevFmtMono : DevFmtStereo);
     }
 
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void pa_close_playback(ALCdevice *device)

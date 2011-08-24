@@ -147,7 +147,7 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
     return 0;
 }
 
-static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum oss_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     char driver[64];
     oss_data *data;
@@ -157,7 +157,7 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     if(!deviceName)
         deviceName = oss_device;
     else if(strcmp(deviceName, oss_device) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = (oss_data*)calloc(1, sizeof(oss_data));
     data->killNow = 0;
@@ -167,12 +167,12 @@ static ALCboolean oss_open_playback(ALCdevice *device, const ALCchar *deviceName
     {
         free(data);
         ERR("Could not open %s: %s\n", driver, strerror(errno));
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     device->szDeviceName = strdup(deviceName);
     device->ExtraData = data;
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void oss_close_playback(ALCdevice *device)

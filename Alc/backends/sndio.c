@@ -165,14 +165,14 @@ static ALuint sndio_proc(ALvoid *ptr)
 
 
 
-static ALCboolean sndio_open_playback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum sndio_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     sndio_data *data;
 
     if(!deviceName)
         deviceName = sndio_device;
     else if(strcmp(deviceName, sndio_device) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = calloc(1, sizeof(*data));
     data->killNow = 0;
@@ -182,13 +182,13 @@ static ALCboolean sndio_open_playback(ALCdevice *device, const ALCchar *deviceNa
     {
         free(data);
         ERR("Could not open device\n");
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     device->szDeviceName = strdup(deviceName);
     device->ExtraData = data;
 
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void sndio_close_playback(ALCdevice *device)

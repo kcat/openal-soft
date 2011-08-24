@@ -91,7 +91,7 @@ static ALuint SolarisProc(ALvoid *ptr)
 }
 
 
-static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum solaris_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     char driver[64];
     solaris_data *data;
@@ -102,7 +102,7 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
     if(!deviceName)
         deviceName = solaris_device;
     else if(strcmp(deviceName, solaris_device) != 0)
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
 
     data = (solaris_data*)calloc(1, sizeof(solaris_data));
     data->killNow = 0;
@@ -112,12 +112,12 @@ static ALCboolean solaris_open_playback(ALCdevice *device, const ALCchar *device
     {
         free(data);
         ERR("Could not open %s: %s\n", driver, strerror(errno));
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     device->szDeviceName = strdup(deviceName);
     device->ExtraData = data;
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void solaris_close_playback(ALCdevice *device)

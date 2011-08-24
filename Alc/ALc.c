@@ -2354,6 +2354,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 {
     const ALCchar *fmt;
     ALCdevice *device;
+    ALCenum err;
 
     DO_INITCONFIG();
 
@@ -2431,7 +2432,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     // Find a playback device to open
     LockLists();
-    if(ALCdevice_OpenPlayback(device, deviceName))
+    if((err=ALCdevice_OpenPlayback(device, deviceName)) == ALC_NO_ERROR)
     {
         device->next = g_pDeviceList;
         g_pDeviceList = device;
@@ -2443,7 +2444,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         DeleteCriticalSection(&device->Mutex);
         free(device);
         device = NULL;
-        alcSetError(NULL, ALC_INVALID_VALUE);
+        alcSetError(NULL, err);
     }
     UnlockLists();
 

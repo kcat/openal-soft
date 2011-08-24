@@ -270,7 +270,7 @@ enum DevProbe {
 };
 
 typedef struct {
-    ALCboolean (*OpenPlayback)(ALCdevice*, const ALCchar*);
+    ALCenum (*OpenPlayback)(ALCdevice*, const ALCchar*);
     void (*ClosePlayback)(ALCdevice*);
     ALCboolean (*ResetPlayback)(ALCdevice*);
     void (*StopPlayback)(ALCdevice*);

@@ -254,7 +254,7 @@ static ALuint DSoundProc(ALvoid *ptr)
     return 0;
 }
 
-static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 {
     DSoundData *pData = NULL;
     LPGUID guid = NULL;
@@ -282,16 +282,13 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
             }
         }
         if(i == NumDevices)
-            return ALC_FALSE;
+            return ALC_INVALID_VALUE;
     }
 
     //Initialise requested device
     pData = calloc(1, sizeof(DSoundData));
     if(!pData)
-    {
-        alcSetError(device, ALC_OUT_OF_MEMORY);
-        return ALC_FALSE;
-    }
+        return ALC_OUT_OF_MEMORY;
 
     hr = DS_OK;
     pData->hNotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -311,12 +308,12 @@ static ALCboolean DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceNam
             CloseHandle(pData->hNotifyEvent);
         free(pData);
         ERR("Device init failed: 0x%08lx\n", hr);
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
     device->szDeviceName = strdup(deviceName);
     device->ExtraData = pData;
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 static void DSoundClosePlayback(ALCdevice *device)

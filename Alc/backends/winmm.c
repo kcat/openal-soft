@@ -486,10 +486,10 @@ static void WinMMStopPlayback(ALCdevice *device)
 static ALCenum WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     WAVEFORMATEX wfexCaptureFormat;
+    ALbyte *BufferData = NULL;
     DWORD ulCapturedDataSize;
     WinMMData *pData = NULL;
     UINT lDeviceID = 0;
-    ALbyte *BufferData;
     ALint lBufferSize;
     MMRESULT res;
     ALuint i;
@@ -605,14 +605,11 @@ failure:
     if(pData->hWaveThread)
         CloseHandle(pData->hWaveThread);
 
-    for(i = 0;i < 4;i++)
+    if(BufferData)
     {
-        if(pData->WaveBuffer[i].lpData)
-        {
+        for(i = 0;i < 4;i++)
             waveInUnprepareHeader(pData->hWaveHandle.In, &pData->WaveBuffer[i], sizeof(WAVEHDR));
-            if(i == 0)
-                free(pData->WaveBuffer[i].lpData);
-        }
+        free(BufferData);
     }
 
     if(pData->pRing)

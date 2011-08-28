@@ -1361,9 +1361,39 @@ static ALvoid InitContext(ALCcontext *pContext)
 */
 static ALCvoid FreeContext(ALCcontext *context)
 {
+    LockLists();
+    if(context == GlobalContext)
+        GlobalContext = NULL;
+    UnlockLists();
+
+    if(context->SourceMap.size > 0)
+    {
+        ERR("FreeContext(%p): deleting %d Source(s)\n", context, context->SourceMap.size);
+        ReleaseALSources(context);
+    }
+    ResetUIntMap(&context->SourceMap);
+
+    if(context->EffectSlotMap.size > 0)
+    {
+        ERR("FreeContext(%p): deleting %d AuxiliaryEffectSlot(s)\n", context, context->EffectSlotMap.size);
+        ReleaseALAuxiliaryEffectSlots(context);
+    }
+    ResetUIntMap(&context->EffectSlotMap);
+
+    free(context->ActiveSources);
+    context->ActiveSources = NULL;
+    context->MaxActiveSources = 0;
+    context->ActiveSourceCount = 0;
+
     //Invalidate context
     memset(context, 0, sizeof(ALCcontext));
     free(context);
+}
+
+static void ALCcontext_Deref(ALCcontext *context)
+{
+    if(DecrementRef(&context->ref) == 0)
+        FreeContext(context);
 }
 
 ///////////////////////////////////////////////////////
@@ -1998,6 +2028,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         ALContext = calloc(1, sizeof(ALCcontext));
         if(ALContext)
         {
+            ALContext->ref = 1;
+
             ALContext->MaxActiveSources = 256;
             ALContext->ActiveSources = malloc(sizeof(ALContext->ActiveSources[0]) *
                                               ALContext->MaxActiveSources);
@@ -2059,11 +2091,6 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     *list = (*list)->next;
     g_ulContextCount--;
 
-    if(context == tls_get(LocalContext))
-        tls_set(LocalContext, NULL);
-    if(context == GlobalContext)
-        GlobalContext = NULL;
-
     Device = context->Device;
     LockDevice(Device);
     for(i = 0;i < Device->NumContexts;i++)
@@ -2084,26 +2111,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     }
     UnlockLists();
 
-    if(context->SourceMap.size > 0)
-    {
-        ERR("alcDestroyContext(): deleting %d Source(s)\n", context->SourceMap.size);
-        ReleaseALSources(context);
-    }
-    ResetUIntMap(&context->SourceMap);
-
-    if(context->EffectSlotMap.size > 0)
-    {
-        ERR("alcDestroyContext(): deleting %d AuxiliaryEffectSlot(s)\n", context->EffectSlotMap.size);
-        ReleaseALAuxiliaryEffectSlots(context);
-    }
-    ResetUIntMap(&context->EffectSlotMap);
-
-    free(context->ActiveSources);
-    context->ActiveSources = NULL;
-    context->MaxActiveSources = 0;
-    context->ActiveSourceCount = 0;
-
-    FreeContext(context);
+    ALCcontext_Deref(context);
 }
 
 

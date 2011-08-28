@@ -229,6 +229,36 @@ void *GetSymbol(void *handle, const char *name);
 
 #endif
 
+#ifdef __GNUC__
+typedef ALuint RefCount;
+static __inline RefCount IncrementRef(volatile RefCount *ptr)
+{ return __sync_add_and_fetch(ptr, 1); }
+static __inline RefCount DecrementRef(volatile RefCount *ptr)
+{ return __sync_sub_and_fetch(ptr, 1); }
+
+#elif defined(_WIN32)
+
+typedef LONG RefCount;
+static __inline RefCount IncrementRef(volatile RefCount *ptr)
+{ return InterlockedInrement(ptr); }
+static __inline RefCount DecrementRef(volatile RefCount *ptr)
+{ return InterlockedDecrement(ptr); }
+
+#elif defined(__APPLE__)
+
+#include <libkern/OSAtomic.h>
+
+typedef int32_t RefCount;
+static __inline RefCount IncrementRef(volatile RefCount *ptr)
+{ return OSAtomicIncrement32Barrier(ptr); }
+static __inline RefCount DecrementRef(volatile RefCount *ptr)
+{ return OSAtomicDecrement32Barrier(ptr); }
+
+#else
+#error "No atomic functions available on this platform!"
+#endif
+
+
 #include "alListener.h"
 #include "alu.h"
 
@@ -477,6 +507,8 @@ struct ALCdevice_struct
 
 struct ALCcontext_struct
 {
+    volatile RefCount ref;
+
     ALlistener  Listener;
 
     UIntMap SourceMap;

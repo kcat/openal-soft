@@ -64,7 +64,10 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHAN
 
         sep = strchr(confkey, '=');
         if(!sep || confkey == sep)
+        {
+            ERR("Malformed speaker key: %s\n", confkey);
             continue;
+        }
 
         end = sep - 1;
         while(isspace(*end) && end != confkey)

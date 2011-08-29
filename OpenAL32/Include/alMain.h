@@ -160,6 +160,23 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #define RESTRICT
 #endif
 
+
+typedef struct UIntMap {
+    struct {
+        ALuint key;
+        ALvoid *value;
+    } *array;
+    ALsizei size;
+    ALsizei maxsize;
+} UIntMap;
+
+void InitUIntMap(UIntMap *map);
+void ResetUIntMap(UIntMap *map);
+ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
+void RemoveUIntMapKey(UIntMap *map, ALuint key);
+ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
+
+
 #ifdef _WIN32
 
 #ifndef _WIN32_WINNT
@@ -167,11 +184,13 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #endif
 #include <windows.h>
 
-typedef DWORD tls_type;
-#define tls_create(x) (*(x) = TlsAlloc())
-#define tls_delete(x) TlsFree((x))
-#define tls_get(x) TlsGetValue((x))
-#define tls_set(x, a) TlsSetValue((x), (a))
+extern UIntMap TlsDestructor;
+
+typedef DWORD pthread_key_t;
+int pthread_key_create(pthread_key_t *key, void (*callback)(void*));
+int pthread_key_delete(pthread_key_t key);
+void *pthread_getspecific(pthread_key_t key);
+int pthread_setspecific(pthread_key_t key, void *val);
 
 #define HAVE_DYNLOAD 1
 void *LoadLib(const char *name);
@@ -195,12 +214,6 @@ void pthread_once(pthread_once_t *once, void (*callback)(void));
 #include <errno.h>
 
 #define IsBadWritePtr(a,b) ((a) == NULL && (b) != 0)
-
-typedef pthread_key_t tls_type;
-#define tls_create(x) pthread_key_create((x), NULL)
-#define tls_delete(x) pthread_key_delete((x))
-#define tls_get(x) pthread_getspecific((x))
-#define tls_set(x, a) pthread_setspecific((x), (a))
 
 typedef pthread_mutex_t CRITICAL_SECTION;
 void InitializeCriticalSection(CRITICAL_SECTION *cs);
@@ -364,21 +377,6 @@ ALCboolean alc_loopback_init(BackendFuncs *func_list);
 void alc_loopback_deinit(void);
 void alc_loopback_probe(enum DevProbe type);
 
-
-typedef struct UIntMap {
-    struct {
-        ALuint key;
-        ALvoid *value;
-    } *array;
-    ALsizei size;
-    ALsizei maxsize;
-} UIntMap;
-
-void InitUIntMap(UIntMap *map);
-void ResetUIntMap(UIntMap *map);
-ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
-void RemoveUIntMapKey(UIntMap *map, ALuint key);
-ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
 
 /* Device formats */
 enum DevFmtType {

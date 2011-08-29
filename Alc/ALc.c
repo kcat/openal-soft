@@ -367,7 +367,7 @@ static ALCcontext *g_pContextList = NULL;
 static ALCuint     g_ulContextCount = 0;
 
 // Thread-local current context
-static tls_type LocalContext;
+static pthread_key_t LocalContext;
 // Process-wide current context
 static ALCcontext *GlobalContext;
 
@@ -421,14 +421,29 @@ static void alc_deinit(void);
 static void alc_deinit_safe(void);
 
 #ifndef AL_LIBTYPE_STATIC
+UIntMap TlsDestructor;
+
 BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 {
+    ALsizei i;
+    (void)hModule;
+
     // Perform actions based on the reason for calling.
     switch(ul_reason_for_call)
     {
         case DLL_PROCESS_ATTACH:
-            DisableThreadLibraryCalls(hModule);
+            InitUIntMap(&TlsDestructor);
             alc_init();
+            break;
+
+        case DLL_THREAD_DETACH:
+            for(i = 0;i < TlsDestructor.size;i++)
+            {
+                void *ptr = pthread_getspecific(TlsDestructor.array[i].key);
+                void (*callback)(void*) = (void(*)(void*))TlsDestructor.array[i].value;
+                if(ptr && callback)
+                    callback(ptr);
+            }
             break;
 
         case DLL_PROCESS_DETACH:
@@ -436,6 +451,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
                 alc_deinit();
             else
                 alc_deinit_safe();
+            ResetUIntMap(&TlsDestructor);
             break;
     }
     return TRUE;
@@ -483,7 +499,7 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         ZScale = -1.0;
 
-    tls_create(&LocalContext);
+    pthread_key_create(&LocalContext, NULL);
     InitializeCriticalSection(&ListLock);
     ThunkInit();
 }
@@ -496,7 +512,7 @@ static void alc_deinit_safe(void)
 
     ThunkExit();
     DeleteCriticalSection(&ListLock);
-    tls_delete(LocalContext);
+    pthread_key_delete(LocalContext);
 
     if(LogFile != stderr)
         fclose(LogFile);
@@ -1295,10 +1311,10 @@ ALCcontext *GetLockedContext(void)
 
     LockLists();
 
-    pContext = tls_get(LocalContext);
+    pContext = pthread_getspecific(LocalContext);
     if(pContext && !IsContext(pContext))
     {
-        tls_set(LocalContext, NULL);
+        pthread_setspecific(LocalContext, NULL);
         pContext = NULL;
     }
     if(!pContext)
@@ -2125,10 +2141,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(ALCvoid)
     ALCcontext *Context;
 
     LockLists();
-    Context = tls_get(LocalContext);
+    Context = pthread_getspecific(LocalContext);
     if(Context && !IsContext(Context))
     {
-        tls_set(LocalContext, NULL);
+        pthread_setspecific(LocalContext, NULL);
         Context = NULL;
     }
     if(!Context)
@@ -2149,10 +2165,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 
     LockLists();
 
-    pContext = tls_get(LocalContext);
+    pContext = pthread_getspecific(LocalContext);
     if(pContext && !IsContext(pContext))
     {
-        tls_set(LocalContext, NULL);
+        pthread_setspecific(LocalContext, NULL);
         pContext = NULL;
     }
 
@@ -2197,7 +2213,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
     if(context == NULL || IsContext(context))
     {
         GlobalContext = context;
-        tls_set(LocalContext, NULL);
+        pthread_setspecific(LocalContext, NULL);
     }
     else
     {
@@ -2223,7 +2239,7 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 
     // context must be a valid Context or NULL
     if(context == NULL || IsContext(context))
-        tls_set(LocalContext, context);
+        pthread_setspecific(LocalContext, context);
     else
     {
         alcSetError(NULL, ALC_INVALID_CONTEXT);

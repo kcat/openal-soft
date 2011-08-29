@@ -59,6 +59,32 @@ void pthread_once(pthread_once_t *once, void (*callback)(void))
     InterlockedExchange(once, 2);
 }
 
+
+int pthread_key_create(pthread_key_t *key, void (*callback)(void*))
+{
+    *key = TlsAlloc();
+    if(callback)
+        InsertUIntMapEntry(&TlsDestructor, *key, callback);
+    return 0;
+}
+
+int pthread_key_delete(pthread_key_t key)
+{
+    InsertUIntMapEntry(&TlsDestructor, key, NULL);
+    TlsFree(key);
+    return 0;
+}
+
+void *pthread_getspecific(pthread_key_t key)
+{ return TlsGetValue(key); }
+
+int pthread_setspecific(pthread_key_t key, void *val)
+{
+    TlsSetValue(key, val);
+    return 0;
+}
+
+
 void *LoadLib(const char *name)
 { return LoadLibraryA(name); }
 void CloseLib(void *handle)

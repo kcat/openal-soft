@@ -1406,7 +1406,7 @@ static ALCvoid FreeContext(ALCcontext *context)
     free(context);
 }
 
-static void ALCcontext_Deref(ALCcontext *context)
+static void ALCcontext_DecRef(ALCcontext *context)
 {
     if(DecrementRef(&context->ref) == 0)
         FreeContext(context);
@@ -2127,7 +2127,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     }
     UnlockLists();
 
-    ALCcontext_Deref(context);
+    ALCcontext_DecRef(context);
 }
 
 

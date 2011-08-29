@@ -1287,52 +1287,6 @@ ALCvoid UnlockDevice(ALCdevice *device)
     LeaveCriticalSection(&device->Mutex);
 }
 
-/*
-    LockContext
-
-    Thread-safe entry
-*/
-ALCvoid LockContext(ALCcontext *context)
-{
-    EnterCriticalSection(&context->Device->Mutex);
-}
-
-
-/*
-    UnlockContext
-
-    Thread-safe exit
-*/
-ALCvoid UnlockContext(ALCcontext *context)
-{
-    LeaveCriticalSection(&context->Device->Mutex);
-}
-
-
-/*
-    GetLockedContext
-
-    Returns the currently active Context, in a locked state
-*/
-ALCcontext *GetLockedContext(void)
-{
-    ALCcontext *context = NULL;
-
-    context = pthread_getspecific(LocalContext);
-    if(context)
-        LockContext(context);
-    else
-    {
-        LockLists();
-        context = GlobalContext;
-        if(context)
-            LockContext(context);
-        UnlockLists();
-    }
-
-    return context;
-}
-
 
 /*
     InitContext
@@ -1431,6 +1385,44 @@ static void ReleaseThreadCtx(void *ptr)
 {
     ALCcontext_DecRef(ptr);
 }
+
+
+ALCvoid LockContext(ALCcontext *context)
+{
+    ALCcontext_IncRef(context);
+    EnterCriticalSection(&context->Device->Mutex);
+}
+
+ALCvoid UnlockContext(ALCcontext *context)
+{
+    LeaveCriticalSection(&context->Device->Mutex);
+    ALCcontext_DecRef(context);
+}
+
+/*
+ *  GetLockedContext
+ *
+ *  Returns the currently active Context, in a locked state
+ */
+ALCcontext *GetLockedContext(void)
+{
+    ALCcontext *context = NULL;
+
+    context = pthread_getspecific(LocalContext);
+    if(context)
+        LockContext(context);
+    else
+    {
+        LockLists();
+        context = GlobalContext;
+        if(context)
+            LockContext(context);
+        UnlockLists();
+    }
+
+    return context;
+}
+
 
 ///////////////////////////////////////////////////////
 

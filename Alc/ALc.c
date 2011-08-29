@@ -362,10 +362,6 @@ static CRITICAL_SECTION ListLock;
 static ALCdevice *g_pDeviceList = NULL;
 static ALCuint    g_ulDeviceCount = 0;
 
-// Context List
-static ALCcontext *g_pContextList = NULL;
-static ALCuint     g_ulContextCount = 0;
-
 // Thread-local current context
 static pthread_key_t LocalContext;
 // Process-wide current context
@@ -1016,15 +1012,23 @@ static ALCboolean IsDevice(ALCdevice *pDevice)
 
     Check pContext is a valid Context pointer
 */
-static ALCboolean IsContext(ALCcontext *pContext)
+static ALCboolean IsContext(ALCcontext *context)
 {
-    ALCcontext *pTempContext;
+    ALCdevice *tmp_dev;
 
-    pTempContext = g_pContextList;
-    while (pTempContext && pTempContext != pContext)
-        pTempContext = pTempContext->next;
+    tmp_dev = g_pDeviceList;
+    while(tmp_dev)
+    {
+        ALuint i;
+        for(i = 0;i < tmp_dev->NumContexts;i++)
+        {
+            if(tmp_dev->Contexts[i] == context)
+                return ALC_TRUE;
+        }
+        tmp_dev = tmp_dev->next;
+    }
 
-    return (pTempContext ? ALC_TRUE : ALC_FALSE);
+    return ALC_FALSE;
 }
 
 
@@ -2081,12 +2085,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALContext->Device = device;
 
     InitContext(ALContext);
+
     UnlockDevice(device);
-
-    ALContext->next = g_pContextList;
-    g_pContextList = ALContext;
-    g_ulContextCount++;
-
     UnlockLists();
 
     return ALContext;
@@ -2101,25 +2101,16 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALCdevice *Device;
-    ALCcontext **list;
     ALuint i;
 
     LockLists();
-    list = &g_pContextList;
-    while(*list && *list != context)
-        list = &(*list)->next;
-
-    if(!*list)
+    Device = alcGetContextsDevice(context);
+    if(!Device)
     {
-        alcSetError(NULL, ALC_INVALID_CONTEXT);
         UnlockLists();
         return;
     }
 
-    *list = (*list)->next;
-    g_ulContextCount--;
-
-    Device = context->Device;
     LockDevice(Device);
     for(i = 0;i < Device->NumContexts;i++)
     {

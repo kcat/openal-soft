@@ -1337,11 +1337,6 @@ static ALvoid InitContext(ALCcontext *pContext)
 */
 static ALCvoid FreeContext(ALCcontext *context)
 {
-    LockLists();
-    if(context == GlobalContext)
-        GlobalContext = NULL;
-    UnlockLists();
-
     if(context->SourceMap.size > 0)
     {
         ERR("FreeContext(%p): deleting %d Source(s)\n", context, context->SourceMap.size);
@@ -2119,6 +2114,12 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         ALCdevice_StopPlayback(Device);
         Device->Flags &= ~DEVICE_RUNNING;
     }
+
+    if(GlobalContext == context)
+    {
+        GlobalContext = NULL;
+        ALCcontext_DecRef(context);
+    }
     UnlockLists();
 
     ALCcontext_DecRef(context);
@@ -2192,11 +2193,15 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
     // context must be a valid Context or NULL
     if(context == NULL || IsContext(context))
     {
+        ALCcontext *old = GlobalContext;
+        if(context) ALCcontext_IncRef(context);
         GlobalContext = context;
-        if((context=pthread_getspecific(LocalContext)) != NULL)
+        if(old) ALCcontext_DecRef(old);
+
+        if((old=pthread_getspecific(LocalContext)) != NULL)
         {
             pthread_setspecific(LocalContext, NULL);
-            ALCcontext_DecRef(context);
+            ALCcontext_DecRef(old);
         }
     }
     else

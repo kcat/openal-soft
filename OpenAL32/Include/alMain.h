@@ -559,7 +559,7 @@ struct ALCcontext_struct
     ALfloat     DopplerFactor;
     ALfloat     DopplerVelocity;
     ALfloat     flSpeedOfSound;
-    ALenum      DeferUpdates;
+    volatile ALenum DeferUpdates;
 
     struct ALsource **ActiveSources;
     ALsizei           ActiveSourceCount;

@@ -1019,11 +1019,12 @@ static ALCboolean IsContext(ALCcontext *context)
     tmp_dev = g_pDeviceList;
     while(tmp_dev)
     {
-        ALuint i;
-        for(i = 0;i < tmp_dev->NumContexts;i++)
+        ALCcontext *tmp_ctx = tmp_dev->ContextList;
+        while(tmp_ctx)
         {
-            if(tmp_dev->Contexts[i] == context)
+            if(tmp_ctx == context)
                 return ALC_TRUE;
+            tmp_ctx = tmp_ctx->next;
         }
         tmp_dev = tmp_dev->next;
     }
@@ -1054,6 +1055,7 @@ ALCvoid alcSetError(ALCdevice *device, ALenum errorCode)
  */
 static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
+    ALCcontext *context;
     ALuint i;
 
     // Check for attributes
@@ -1229,9 +1231,9 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
     TRACE("Stereo duplication %s\n", (device->Flags&DEVICE_DUPLICATE_STEREO)?"enabled":"disabled");
 
-    for(i = 0;i < device->NumContexts;i++)
+    context = device->ContextList;
+    while(context)
     {
-        ALCcontext *context = device->Contexts[i];
         ALsizei pos;
 
         context->UpdateSources = AL_FALSE;
@@ -1266,6 +1268,8 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             source->NeedsUpdate = AL_FALSE;
             ALsource_Update(source, context);
         }
+
+        context = context->next;
     }
     UnlockDevice(device);
 
@@ -2029,7 +2033,6 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
     ALCcontext *ALContext;
-    void *temp;
 
     LockLists();
     if(!IsDevice(device) || device->IsCaptureDevice || !device->Connected)
@@ -2050,28 +2053,19 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
-    LockDevice(device);
-    ALContext = NULL;
-    temp = realloc(device->Contexts, (device->NumContexts+1) * sizeof(*device->Contexts));
-    if(temp)
+    ALContext = calloc(1, sizeof(ALCcontext));
+    if(ALContext)
     {
-        device->Contexts = temp;
+        ALContext->ref = 1;
 
-        ALContext = calloc(1, sizeof(ALCcontext));
-        if(ALContext)
-        {
-            ALContext->ref = 1;
-
-            ALContext->MaxActiveSources = 256;
-            ALContext->ActiveSources = malloc(sizeof(ALContext->ActiveSources[0]) *
-                                              ALContext->MaxActiveSources);
-        }
+        ALContext->MaxActiveSources = 256;
+        ALContext->ActiveSources = malloc(sizeof(ALContext->ActiveSources[0]) *
+                                          ALContext->MaxActiveSources);
     }
     if(!ALContext || !ALContext->ActiveSources)
     {
         free(ALContext);
         alcSetError(device, ALC_OUT_OF_MEMORY);
-        UnlockDevice(device);
         if(device->NumContexts == 0)
         {
             ALCdevice_StopPlayback(device);
@@ -2080,14 +2074,17 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         UnlockLists();
         return NULL;
     }
-
-    device->Contexts[device->NumContexts++] = ALContext;
     ALContext->Device = device;
 
-    InitContext(ALContext);
-
-    UnlockDevice(device);
+    LockDevice(device);
     UnlockLists();
+
+    ALContext->next = device->ContextList;
+    device->ContextList = ALContext;
+    device->NumContexts++;
+
+    InitContext(ALContext);
+    UnlockDevice(device);
 
     return ALContext;
 }
@@ -2101,7 +2098,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALCdevice *Device;
-    ALuint i;
+    ALCcontext **tmp_ctx;
 
     LockLists();
     Device = alcGetContextsDevice(context);
@@ -2112,14 +2109,16 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     }
 
     LockDevice(Device);
-    for(i = 0;i < Device->NumContexts;i++)
+    tmp_ctx = &Device->ContextList;
+    while(*tmp_ctx)
     {
-        if(Device->Contexts[i] == context)
+        if(*tmp_ctx == context)
         {
-            Device->Contexts[i] = Device->Contexts[Device->NumContexts-1];
+            *tmp_ctx = (*tmp_ctx)->next;
             Device->NumContexts--;
             break;
         }
+        tmp_ctx = &(*tmp_ctx)->next;
     }
     UnlockDevice(Device);
 
@@ -2411,7 +2410,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Bs2b = NULL;
     device->szDeviceName = NULL;
 
-    device->Contexts = NULL;
+    device->ContextList = NULL;
     device->NumContexts = 0;
 
     InitUIntMap(&device->BufferMap);
@@ -2506,8 +2505,8 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     if(pDevice->NumContexts > 0)
     {
         WARN("alcCloseDevice(): destroying %u Context(s)\n", pDevice->NumContexts);
-        while(pDevice->NumContexts > 0)
-            alcDestroyContext(pDevice->Contexts[0]);
+        while(pDevice->ContextList)
+            alcDestroyContext(pDevice->ContextList);
     }
     ALCdevice_ClosePlayback(pDevice);
 
@@ -2537,9 +2536,6 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 
     free(pDevice->szDeviceName);
     pDevice->szDeviceName = NULL;
-
-    free(pDevice->Contexts);
-    pDevice->Contexts = NULL;
 
     DeleteCriticalSection(&pDevice->Mutex);
 
@@ -2576,7 +2572,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     device->Bs2b = NULL;
     device->szDeviceName = NULL;
 
-    device->Contexts = NULL;
+    device->ContextList = NULL;
     device->NumContexts = 0;
 
     InitUIntMap(&device->BufferMap);

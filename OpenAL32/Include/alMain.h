@@ -471,8 +471,8 @@ struct ALCdevice_struct
     ALfloat PendingClicks[MAXCHANNELS];
 
     // Contexts created on this device
-    ALCcontext  **Contexts;
-    ALuint        NumContexts;
+    ALCcontext  *ContextList;
+    ALuint       NumContexts;
 
     BackendFuncs *Funcs;
     void         *ExtraData; // For the backend's use

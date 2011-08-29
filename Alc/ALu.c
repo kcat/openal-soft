@@ -950,8 +950,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALuint SamplesToDo;
     ALeffectslot *ALEffectSlot;
-    ALCcontext **ctx, **ctx_end;
     ALsource **src, **src_end;
+    ALCcontext *ctx;
     int fpuState;
     ALuint i, c;
     ALsizei e;
@@ -975,26 +975,25 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         memset(device->DryBuffer, 0, SamplesToDo*MAXCHANNELS*sizeof(ALfloat));
 
         LockDevice(device);
-        ctx = device->Contexts;
-        ctx_end = ctx + device->NumContexts;
-        while(ctx != ctx_end)
+        ctx = device->ContextList;
+        while(ctx)
         {
-            ALboolean DeferUpdates = (*ctx)->DeferUpdates;
+            ALboolean DeferUpdates = ctx->DeferUpdates;
             ALboolean UpdateSources = AL_FALSE;
 
             if(!DeferUpdates)
             {
-                UpdateSources = (*ctx)->UpdateSources;
-                (*ctx)->UpdateSources = AL_FALSE;
+                UpdateSources = ctx->UpdateSources;
+                ctx->UpdateSources = AL_FALSE;
             }
 
-            src = (*ctx)->ActiveSources;
-            src_end = src + (*ctx)->ActiveSourceCount;
+            src = ctx->ActiveSources;
+            src_end = src + ctx->ActiveSourceCount;
             while(src != src_end)
             {
                 if((*src)->state != AL_PLAYING)
                 {
-                    --((*ctx)->ActiveSourceCount);
+                    --(ctx->ActiveSourceCount);
                     *src = *(--src_end);
                     continue;
                 }
@@ -1002,7 +1001,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 if(!DeferUpdates && ((*src)->NeedsUpdate || UpdateSources))
                 {
                     (*src)->NeedsUpdate = AL_FALSE;
-                    ALsource_Update(*src, *ctx);
+                    ALsource_Update(*src, ctx);
                 }
 
                 MixSource(*src, device, SamplesToDo);
@@ -1010,9 +1009,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
 
             /* effect slot processing */
-            for(e = 0;e < (*ctx)->EffectSlotMap.size;e++)
+            for(e = 0;e < ctx->EffectSlotMap.size;e++)
             {
-                ALEffectSlot = (*ctx)->EffectSlotMap.array[e].value;
+                ALEffectSlot = ctx->EffectSlotMap.array[e].value;
 
                 for(i = 0;i < SamplesToDo;i++)
                 {
@@ -1028,7 +1027,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 if(!DeferUpdates && ALEffectSlot->NeedsUpdate)
                 {
                     ALEffectSlot->NeedsUpdate = AL_FALSE;
-                    ALEffect_Update(ALEffectSlot->EffectState, *ctx, ALEffectSlot);
+                    ALEffect_Update(ALEffectSlot->EffectState, ctx, ALEffectSlot);
                 }
 
                 ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot,
@@ -1039,7 +1038,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     ALEffectSlot->WetBuffer[i] = 0.0f;
             }
 
-            ctx++;
+            ctx = ctx->next;
         }
         UnlockDevice(device);
 
@@ -1123,12 +1122,12 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
 ALvoid aluHandleDisconnect(ALCdevice *device)
 {
-    ALuint i;
+    ALCcontext *Context;
 
     LockDevice(device);
-    for(i = 0;i < device->NumContexts;i++)
+    Context = device->ContextList;
+    while(Context)
     {
-        ALCcontext *Context = device->Contexts[i];
         ALsource *source;
         ALsizei pos;
 
@@ -1143,6 +1142,8 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
                 source->position_fraction = 0;
             }
         }
+
+        Context = Context->next;
     }
 
     device->Connected = ALC_FALSE;

@@ -2236,27 +2236,26 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 {
     ALboolean bReturn = AL_TRUE;
-
-    LockLists();
+    ALCcontext *old;
 
     // context must be a valid Context or NULL
-    if(context == NULL || IsContext(context))
+    old = pthread_getspecific(LocalContext);
+    if(old != context)
     {
-        ALCcontext *old = pthread_getspecific(LocalContext);
-        if(old != context)
+        LockLists();
+        if(context == NULL || IsContext(context))
         {
             if(context) ALCcontext_IncRef(context);
             pthread_setspecific(LocalContext, context);
             if(old) ALCcontext_DecRef(old);
         }
+        else
+        {
+            alcSetError(NULL, ALC_INVALID_CONTEXT);
+            bReturn = AL_FALSE;
+        }
+        UnlockLists();
     }
-    else
-    {
-        alcSetError(NULL, ALC_INVALID_CONTEXT);
-        bReturn = AL_FALSE;
-    }
-
-    UnlockLists();
 
     return bReturn;
 }

@@ -411,6 +411,7 @@ static pthread_once_t alc_config_once = PTHREAD_ONCE_INIT;
 ///////////////////////////////////////////////////////
 // ALC Related helper functions
 static void ReleaseALC(ALCboolean doclose);
+static void ReleaseThreadCtx(void *ptr);
 
 static void alc_initconfig(void);
 #define DO_INITCONFIG() pthread_once(&alc_config_once, alc_initconfig)
@@ -499,7 +500,7 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         ZScale = -1.0;
 
-    pthread_key_create(&LocalContext, NULL);
+    pthread_key_create(&LocalContext, ReleaseThreadCtx);
     InitializeCriticalSection(&ListLock);
     ThunkInit();
 }
@@ -1307,24 +1308,21 @@ ALCvoid UnlockContext(ALCcontext *context)
 */
 ALCcontext *GetLockedContext(void)
 {
-    ALCcontext *pContext = NULL;
+    ALCcontext *context = NULL;
 
-    LockLists();
-
-    pContext = pthread_getspecific(LocalContext);
-    if(pContext && !IsContext(pContext))
+    context = pthread_getspecific(LocalContext);
+    if(context)
+        LockContext(context);
+    else
     {
-        pthread_setspecific(LocalContext, NULL);
-        pContext = NULL;
+        LockLists();
+        context = GlobalContext;
+        if(context)
+            LockContext(context);
+        UnlockLists();
     }
-    if(!pContext)
-        pContext = GlobalContext;
-    if(pContext)
-        LockContext(pContext);
 
-    UnlockLists();
-
-    return pContext;
+    return context;
 }
 
 
@@ -1406,10 +1404,24 @@ static ALCvoid FreeContext(ALCcontext *context)
     free(context);
 }
 
+static void ALCcontext_IncRef(ALCcontext *context)
+{
+    RefCount ref;
+    ref = IncrementRef(&context->ref);
+    TRACE("%p refcount increment to %d\n", context, ref);
+}
+
 static void ALCcontext_DecRef(ALCcontext *context)
 {
-    if(DecrementRef(&context->ref) == 0)
-        FreeContext(context);
+    RefCount ref;
+    ref = DecrementRef(&context->ref);
+    TRACE("%p refcount decrement to %d\n", context, ref);
+    if(ref == 0) FreeContext(context);
+}
+
+static void ReleaseThreadCtx(void *ptr)
+{
+    ALCcontext_DecRef(ptr);
 }
 
 ///////////////////////////////////////////////////////
@@ -2140,16 +2152,13 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(ALCvoid)
 {
     ALCcontext *Context;
 
-    LockLists();
     Context = pthread_getspecific(LocalContext);
-    if(Context && !IsContext(Context))
-    {
-        pthread_setspecific(LocalContext, NULL);
-        Context = NULL;
-    }
     if(!Context)
+    {
+        LockLists();
         Context = GlobalContext;
-    UnlockLists();
+        UnlockLists();
+    }
 
     return Context;
 }
@@ -2161,20 +2170,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(ALCvoid)
 */
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 {
-    ALCcontext *pContext = NULL;
-
-    LockLists();
-
-    pContext = pthread_getspecific(LocalContext);
-    if(pContext && !IsContext(pContext))
-    {
-        pthread_setspecific(LocalContext, NULL);
-        pContext = NULL;
-    }
-
-    UnlockLists();
-
-    return pContext;
+    ALCcontext *Context;
+    Context = pthread_getspecific(LocalContext);
+    return Context;
 }
 
 
@@ -2213,7 +2211,11 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
     if(context == NULL || IsContext(context))
     {
         GlobalContext = context;
-        pthread_setspecific(LocalContext, NULL);
+        if((context=pthread_getspecific(LocalContext)) != NULL)
+        {
+            pthread_setspecific(LocalContext, NULL);
+            ALCcontext_DecRef(context);
+        }
     }
     else
     {
@@ -2239,7 +2241,15 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 
     // context must be a valid Context or NULL
     if(context == NULL || IsContext(context))
-        pthread_setspecific(LocalContext, context);
+    {
+        ALCcontext *old = pthread_getspecific(LocalContext);
+        if(old != context)
+        {
+            if(context) ALCcontext_IncRef(context);
+            pthread_setspecific(LocalContext, context);
+            if(old) ALCcontext_DecRef(old);
+        }
+    }
     else
     {
         alcSetError(NULL, ALC_INVALID_CONTEXT);

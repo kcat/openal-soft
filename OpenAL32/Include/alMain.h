@@ -249,6 +249,12 @@ static __inline RefCount IncrementRef(volatile RefCount *ptr)
 static __inline RefCount DecrementRef(volatile RefCount *ptr)
 { return __sync_sub_and_fetch(ptr, 1); }
 
+#define DECL_TEMPLATE(T)                                                      \
+static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
+{                                                                             \
+    return __sync_lock_test_and_set(ptr, newval);                             \
+}
+
 #elif defined(_WIN32)
 
 typedef LONG RefCount;
@@ -256,6 +262,16 @@ static __inline RefCount IncrementRef(volatile RefCount *ptr)
 { return InterlockedInrement(ptr); }
 static __inline RefCount DecrementRef(volatile RefCount *ptr)
 { return InterlockedDecrement(ptr); }
+
+#define DECL_TEMPLATE(T)                                                      \
+static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
+{                                                                             \
+    union {                                                                   \
+        volatile T *t;                                                        \
+        volatile LONG *l;                                                     \
+    } u = { ptr };                                                            \
+    return InterlockedExchange(u.l, newval);                                  \
+}
 
 #elif defined(__APPLE__)
 
@@ -267,9 +283,28 @@ static __inline RefCount IncrementRef(volatile RefCount *ptr)
 static __inline RefCount DecrementRef(volatile RefCount *ptr)
 { return OSAtomicDecrement32Barrier(ptr); }
 
+#define DECL_TEMPLATE(T)                                                      \
+static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
+{                                                                             \
+    union {                                                                   \
+        volatile T *t;                                                        \
+        volatile int32_t *l;                                                  \
+    } u = { ptr };                                                            \
+    /* Really? No regular old atomic swap? */                                 \
+    T oldval;                                                                 \
+    do {                                                                      \
+        oldval = *u.i;                                                        \
+    } while(!OSAtomicCompareAndSwap32Barrier(oldval, newval, u.i));           \
+    return oldval;                                                            \
+}
+
 #else
 #error "No atomic functions available on this platform!"
 #endif
+
+DECL_TEMPLATE(ALenum)
+
+#undef DECL_TEMPLATE
 
 
 #include "alListener.h"

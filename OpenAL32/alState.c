@@ -604,22 +604,17 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
                 continue;
             }
 
-            if((*src)->NeedsUpdate || UpdateSources)
-            {
-                (*src)->NeedsUpdate = AL_FALSE;
+            if(Exchange_ALenum(&(*src)->NeedsUpdate, AL_FALSE) || UpdateSources)
                 ALsource_Update(*src, Context);
-            }
+
             src++;
         }
 
         for(e = 0;e < Context->EffectSlotMap.size;e++)
         {
             ALEffectSlot = Context->EffectSlotMap.array[e].value;
-            if(ALEffectSlot->NeedsUpdate)
-            {
-                ALEffectSlot->NeedsUpdate = AL_FALSE;
+            if(Exchange_ALenum(&ALEffectSlot->NeedsUpdate, AL_FALSE))
                 ALEffect_Update(ALEffectSlot->EffectState, Context, ALEffectSlot);
-            }
         }
     }
 

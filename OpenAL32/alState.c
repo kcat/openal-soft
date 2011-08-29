@@ -642,8 +642,7 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
             if(Source->lOffset != -1)
                 ApplyOffset(Source);
 
-            new_state = Source->new_state;
-            Source->new_state = AL_NONE;
+            new_state = Exchange_ALenum(&Source->new_state, AL_NONE);
             if(new_state)
                 SetSourceState(Source, Context, new_state);
         }

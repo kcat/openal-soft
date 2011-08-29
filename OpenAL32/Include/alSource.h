@@ -119,7 +119,7 @@ typedef struct ALsource
             ALfloat history[MAXCHANNELS];
         } Send[MAX_SENDS];
     } Params;
-    ALboolean NeedsUpdate;
+    ALenum NeedsUpdate;
 
     ALvoid (*Update)(struct ALsource *self, const ALCcontext *context);
 

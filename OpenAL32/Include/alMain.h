@@ -514,7 +514,7 @@ struct ALCcontext_struct
 
     ALenum      LastError;
 
-    ALboolean   UpdateSources;
+    ALenum      UpdateSources;
 
     enum DistanceModel DistanceModel;
     ALboolean   SourceDistanceModel;
@@ -522,7 +522,7 @@ struct ALCcontext_struct
     ALfloat     DopplerFactor;
     ALfloat     DopplerVelocity;
     ALfloat     flSpeedOfSound;
-    ALboolean   DeferUpdates;
+    ALenum      DeferUpdates;
 
     struct ALsource **ActiveSources;
     ALsizei           ActiveSourceCount;

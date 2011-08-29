@@ -18,7 +18,7 @@ typedef struct ALeffectslot
     ALfloat Gain;
     ALboolean AuxSendAuto;
 
-    ALboolean     NeedsUpdate;
+    ALenum        NeedsUpdate;
     ALeffectState *EffectState;
 
     ALfloat WetBuffer[BUFFERSIZE];

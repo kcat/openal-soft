@@ -242,7 +242,7 @@ void *GetSymbol(void *handle, const char *name);
 
 #endif
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1))
 typedef ALuint RefCount;
 static __inline RefCount IncrementRef(volatile RefCount *ptr)
 { return __sync_add_and_fetch(ptr, 1); }
@@ -300,6 +300,8 @@ static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
 
 #else
 #error "No atomic functions available on this platform!"
+typedef ALuint RefCount;
+#define DECL_TEMPLATE(T)
 #endif
 
 DECL_TEMPLATE(ALenum)

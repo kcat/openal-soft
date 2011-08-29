@@ -259,7 +259,7 @@ static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
 
 typedef LONG RefCount;
 static __inline RefCount IncrementRef(volatile RefCount *ptr)
-{ return InterlockedInrement(ptr); }
+{ return InterlockedIncrement(ptr); }
 static __inline RefCount DecrementRef(volatile RefCount *ptr)
 { return InterlockedDecrement(ptr); }
 

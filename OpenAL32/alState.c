@@ -577,7 +577,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
 {
     ALCcontext *Context;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return;
 
     if(!Context->DeferUpdates)
@@ -587,11 +587,11 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         ALeffectslot *ALEffectSlot;
         ALsizei e;
 
+        LockContext(Context);
         Context->DeferUpdates = AL_TRUE;
 
         /* Make sure all pending updates are performed */
-        UpdateSources = Context->UpdateSources;
-        Context->UpdateSources = AL_FALSE;
+        UpdateSources = Exchange_ALenum(&Context->UpdateSources, AL_FALSE);
 
         src = Context->ActiveSources;
         src_end = src + Context->ActiveSourceCount;
@@ -616,24 +616,24 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
             if(Exchange_ALenum(&ALEffectSlot->NeedsUpdate, AL_FALSE))
                 ALEffect_Update(ALEffectSlot->EffectState, Context, ALEffectSlot);
         }
+        UnlockContext(Context);
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
 {
     ALCcontext *Context;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return;
 
-    if(Context->DeferUpdates)
+    if(Exchange_ALenum(&Context->DeferUpdates, AL_FALSE))
     {
         ALsizei pos;
 
-        Context->DeferUpdates = AL_FALSE;
-
+        LockContext(Context);
         for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
             ALsource *Source = Context->SourceMap.array[pos].value;
@@ -647,7 +647,8 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
             if(new_state)
                 SetSourceState(Source, Context, new_state);
         }
+        UnlockContext(Context);
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }

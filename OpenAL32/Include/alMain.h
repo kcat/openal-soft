@@ -571,6 +571,9 @@ struct ALCcontext_struct
     ALCcontext *next;
 };
 
+void ALCcontext_IncRef(ALCcontext *context);
+void ALCcontext_DecRef(ALCcontext *context);
+
 void AppendDeviceList(const ALCchar *name);
 void AppendAllDeviceList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
@@ -586,6 +589,7 @@ ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr);
 ALuint StopThread(ALvoid *thread);
 
 ALCcontext *GetLockedContext(void);
+ALCcontext *GetReffedContext(void);
 
 typedef struct RingBuffer RingBuffer;
 RingBuffer *CreateRingBuffer(ALsizei frame_size, ALsizei length);

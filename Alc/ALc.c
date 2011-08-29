@@ -1361,14 +1361,14 @@ static ALCvoid FreeContext(ALCcontext *context)
     free(context);
 }
 
-static void ALCcontext_IncRef(ALCcontext *context)
+void ALCcontext_IncRef(ALCcontext *context)
 {
     RefCount ref;
     ref = IncrementRef(&context->ref);
     TRACE("%p refcount increment to %d\n", context, ref);
 }
 
-static void ALCcontext_DecRef(ALCcontext *context)
+void ALCcontext_DecRef(ALCcontext *context)
 {
     RefCount ref;
     ref = DecrementRef(&context->ref);
@@ -1418,6 +1418,30 @@ ALCcontext *GetLockedContext(void)
     return context;
 }
 
+/*
+ * GetReffedContext(void)
+ *
+ * Returns the currently active Context, and add a reference to it without
+ * locking
+ */
+ALCcontext *GetReffedContext(void)
+{
+    ALCcontext *context;
+
+    context = pthread_getspecific(LocalContext);
+    if(context)
+        ALCcontext_IncRef(context);
+    else
+    {
+        LockLists();
+        context = GlobalContext;
+        if(context)
+            ALCcontext_IncRef(context);
+        UnlockLists();
+    }
+
+    return context;
+}
 
 ///////////////////////////////////////////////////////
 

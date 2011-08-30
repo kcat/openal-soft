@@ -235,6 +235,10 @@ static __inline RefCount DecrementRef(volatile RefCount *ptr)
 static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
 {                                                                             \
     return __sync_lock_test_and_set(ptr, newval);                             \
+}                                                                             \
+static __inline ALboolean CompExchange_##T(volatile T *ptr, T oldval, T newval)\
+{                                                                             \
+    return __sync_bool_compare_and_swap(ptr, oldval, newval);                 \
 }
 
 #elif defined(_WIN32)
@@ -253,6 +257,14 @@ static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
         volatile LONG *l;                                                     \
     } u = { ptr };                                                            \
     return InterlockedExchange(u.l, newval);                                  \
+}                                                                             \
+static __inline ALboolean CompExchange_##T(volatile T *ptr, T oldval, T newval)\
+{                                                                             \
+    union {                                                                   \
+        volatile T *t;                                                        \
+        volatile LONG *l;                                                     \
+    } u = { ptr };                                                            \
+    return InterlockedCompareExchange(u.l, newval, oldval) == oldval;         \
 }
 
 #elif defined(__APPLE__)
@@ -278,6 +290,14 @@ static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
         oldval = *u.i;                                                        \
     } while(!OSAtomicCompareAndSwap32Barrier(oldval, newval, u.i));           \
     return oldval;                                                            \
+}                                                                             \
+static __inline ALboolean CompExchange_##T(volatile T *ptr, T oldval, T newval)\
+{                                                                             \
+    union {                                                                   \
+        volatile T *t;                                                        \
+        volatile int32_t *i;                                                  \
+    } u = { ptr };                                                            \
+    return OSAtomicCompareAndSwap32Barrier(oldval, newval, u.i);              \
 }
 
 #else

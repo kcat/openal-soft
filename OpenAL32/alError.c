@@ -29,18 +29,17 @@ AL_API ALenum AL_APIENTRY alGetError(ALvoid)
     ALCcontext *Context;
     ALenum errorCode;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return AL_INVALID_OPERATION;
 
     errorCode = Exchange_ALenum(&Context->LastError, AL_NO_ERROR);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return errorCode;
 }
 
 ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
 {
-    if(Context->LastError == AL_NO_ERROR)
-        Context->LastError = errorCode;
+    CompExchange_ALenum(&Context->LastError, AL_NO_ERROR, errorCode);
 }

@@ -982,7 +982,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             ALenum UpdateSources = AL_FALSE;
 
             if(!DeferUpdates)
-                UpdateSources = Exchange_ALenum(&ctx->UpdateSources, AL_FALSE);
+                UpdateSources = ExchangeInt(&ctx->UpdateSources, AL_FALSE);
 
             src = ctx->ActiveSources;
             src_end = src + ctx->ActiveSourceCount;
@@ -995,7 +995,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     continue;
                 }
 
-                if(!DeferUpdates && (Exchange_ALenum(&(*src)->NeedsUpdate, AL_FALSE) ||
+                if(!DeferUpdates && (ExchangeInt(&(*src)->NeedsUpdate, AL_FALSE) ||
                                      UpdateSources))
                     ALsource_Update(*src, ctx);
 
@@ -1019,7 +1019,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     ALEffectSlot->PendingClicks[i] = 0.0f;
                 }
 
-                if(!DeferUpdates && Exchange_ALenum(&ALEffectSlot->NeedsUpdate, AL_FALSE))
+                if(!DeferUpdates && ExchangeInt(&ALEffectSlot->NeedsUpdate, AL_FALSE))
                     ALEffect_Update(ALEffectSlot->EffectState, ctx, ALEffectSlot);
 
                 ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot,

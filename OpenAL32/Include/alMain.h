@@ -231,14 +231,13 @@ static __inline RefCount IncrementRef(volatile RefCount *ptr)
 static __inline RefCount DecrementRef(volatile RefCount *ptr)
 { return __sync_sub_and_fetch(ptr, 1); }
 
-#define DECL_TEMPLATE(T)                                                      \
-static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
-{                                                                             \
-    return __sync_lock_test_and_set(ptr, newval);                             \
-}                                                                             \
-static __inline ALboolean CompExchange_##T(volatile T *ptr, T oldval, T newval)\
-{                                                                             \
-    return __sync_bool_compare_and_swap(ptr, oldval, newval);                 \
+static __inline int ExchangeInt(volatile int *ptr, int newval)
+{
+    return __sync_lock_test_and_set(ptr, newval);
+}
+static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
+{
+    return __sync_bool_compare_and_swap(ptr, oldval, newval);
 }
 
 #elif defined(_WIN32)
@@ -249,22 +248,23 @@ static __inline RefCount IncrementRef(volatile RefCount *ptr)
 static __inline RefCount DecrementRef(volatile RefCount *ptr)
 { return InterlockedDecrement(ptr); }
 
-#define DECL_TEMPLATE(T)                                                      \
-static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
-{                                                                             \
-    union {                                                                   \
-        volatile T *t;                                                        \
-        volatile LONG *l;                                                     \
-    } u = { ptr };                                                            \
-    return InterlockedExchange(u.l, newval);                                  \
-}                                                                             \
-static __inline ALboolean CompExchange_##T(volatile T *ptr, T oldval, T newval)\
-{                                                                             \
-    union {                                                                   \
-        volatile T *t;                                                        \
-        volatile LONG *l;                                                     \
-    } u = { ptr };                                                            \
-    return InterlockedCompareExchange(u.l, newval, oldval) == oldval;         \
+static LONG_size_does_not_match_int[(sizeof(LONG)==sizeof(int))?0:-1];
+
+static __inline int ExchangeInt(volatile int *ptr, int newval)
+{
+    union {
+        volatile int *i;
+        volatile LONG *l;
+    } u = { ptr };
+    return InterlockedExchange(u.l, newval);
+}
+static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
+{
+    union {
+        volatile int *i;
+        volatile LONG *l;
+    } u = { ptr };
+    return InterlockedCompareExchange(u.l, newval, oldval) == oldval;
 }
 
 #elif defined(__APPLE__)
@@ -277,38 +277,24 @@ static __inline RefCount IncrementRef(volatile RefCount *ptr)
 static __inline RefCount DecrementRef(volatile RefCount *ptr)
 { return OSAtomicDecrement32Barrier(ptr); }
 
-#define DECL_TEMPLATE(T)                                                      \
-static __inline T Exchange_##T(volatile T *ptr, T newval)                     \
-{                                                                             \
-    union {                                                                   \
-        volatile T *t;                                                        \
-        volatile int32_t *l;                                                  \
-    } u = { ptr };                                                            \
-    /* Really? No regular old atomic swap? */                                 \
-    T oldval;                                                                 \
-    do {                                                                      \
-        oldval = *u.i;                                                        \
-    } while(!OSAtomicCompareAndSwap32Barrier(oldval, newval, u.i));           \
-    return oldval;                                                            \
-}                                                                             \
-static __inline ALboolean CompExchange_##T(volatile T *ptr, T oldval, T newval)\
-{                                                                             \
-    union {                                                                   \
-        volatile T *t;                                                        \
-        volatile int32_t *i;                                                  \
-    } u = { ptr };                                                            \
-    return OSAtomicCompareAndSwap32Barrier(oldval, newval, u.i);              \
+static __inline int ExchangeInt(volatile int *ptr, int newval)
+{
+    /* Really? No regular old atomic swap? */
+    int oldval;
+    do {
+        oldval = *ptr;
+    } while(!OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr));
+    return oldval;
+}
+static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
+{
+    return OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr);
 }
 
 #else
 #error "No atomic functions available on this platform!"
 typedef ALuint RefCount;
-#define DECL_TEMPLATE(T)
 #endif
-
-DECL_TEMPLATE(ALenum)
-
-#undef DECL_TEMPLATE
 
 
 typedef struct {

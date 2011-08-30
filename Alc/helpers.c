@@ -268,13 +268,13 @@ void SetRTPriority(void)
 
 static void Lock(volatile ALenum *l)
 {
-    while(Exchange_ALenum(l, AL_TRUE) == AL_TRUE)
+    while(ExchangeInt(l, AL_TRUE) == AL_TRUE)
         Sleep(0);
 }
 
 static void Unlock(volatile ALenum *l)
 {
-    Exchange_ALenum(l, AL_FALSE);
+    ExchangeInt(l, AL_FALSE);
 }
 
 void ReadLock(RWLock *lock)

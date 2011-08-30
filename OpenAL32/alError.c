@@ -32,7 +32,7 @@ AL_API ALenum AL_APIENTRY alGetError(ALvoid)
     Context = GetReffedContext();
     if(!Context) return AL_INVALID_OPERATION;
 
-    errorCode = Exchange_ALenum(&Context->LastError, AL_NO_ERROR);
+    errorCode = ExchangeInt(&Context->LastError, AL_NO_ERROR);
 
     ALCcontext_DecRef(Context);
 
@@ -41,5 +41,5 @@ AL_API ALenum AL_APIENTRY alGetError(ALvoid)
 
 ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
 {
-    CompExchange_ALenum(&Context->LastError, AL_NO_ERROR, errorCode);
+    CompExchangeInt(&Context->LastError, AL_NO_ERROR, errorCode);
 }

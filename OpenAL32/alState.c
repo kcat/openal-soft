@@ -591,7 +591,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         Context->DeferUpdates = AL_TRUE;
 
         /* Make sure all pending updates are performed */
-        UpdateSources = Exchange_ALenum(&Context->UpdateSources, AL_FALSE);
+        UpdateSources = ExchangeInt(&Context->UpdateSources, AL_FALSE);
 
         src = Context->ActiveSources;
         src_end = src + Context->ActiveSourceCount;
@@ -604,7 +604,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
                 continue;
             }
 
-            if(Exchange_ALenum(&(*src)->NeedsUpdate, AL_FALSE) || UpdateSources)
+            if(ExchangeInt(&(*src)->NeedsUpdate, AL_FALSE) || UpdateSources)
                 ALsource_Update(*src, Context);
 
             src++;
@@ -614,7 +614,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         for(e = 0;e < Context->EffectSlotMap.size;e++)
         {
             ALEffectSlot = Context->EffectSlotMap.array[e].value;
-            if(Exchange_ALenum(&ALEffectSlot->NeedsUpdate, AL_FALSE))
+            if(ExchangeInt(&ALEffectSlot->NeedsUpdate, AL_FALSE))
                 ALEffect_Update(ALEffectSlot->EffectState, Context, ALEffectSlot);
         }
         UnlockUIntMapRead(&Context->EffectSlotMap);
@@ -631,7 +631,7 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
     Context = GetReffedContext();
     if(!Context) return;
 
-    if(Exchange_ALenum(&Context->DeferUpdates, AL_FALSE))
+    if(ExchangeInt(&Context->DeferUpdates, AL_FALSE))
     {
         ALsizei pos;
 
@@ -645,7 +645,7 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
             if(Source->lOffset != -1)
                 ApplyOffset(Source);
 
-            new_state = Exchange_ALenum(&Source->new_state, AL_NONE);
+            new_state = ExchangeInt(&Source->new_state, AL_NONE);
             if(new_state)
                 SetSourceState(Source, Context, new_state);
         }

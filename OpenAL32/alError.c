@@ -32,8 +32,7 @@ AL_API ALenum AL_APIENTRY alGetError(ALvoid)
     Context = GetLockedContext();
     if(!Context) return AL_INVALID_OPERATION;
 
-    errorCode = Context->LastError;
-    Context->LastError = AL_NO_ERROR;
+    errorCode = Exchange_ALenum(&Context->LastError, AL_NO_ERROR);
 
     UnlockContext(Context);
 

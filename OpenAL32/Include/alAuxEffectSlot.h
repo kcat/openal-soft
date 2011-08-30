@@ -26,7 +26,7 @@ typedef struct ALeffectslot
     ALfloat ClickRemoval[1];
     ALfloat PendingClicks[1];
 
-    ALuint refcount;
+    RefCount ref;
 
     // Index to itself
     ALuint effectslot;

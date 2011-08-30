@@ -1265,7 +1265,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             while(s < MAX_SENDS)
             {
                 if(source->Send[s].Slot)
-                    source->Send[s].Slot->refcount--;
+                    DecrementRef(&source->Send[s].Slot->ref);
                 source->Send[s].Slot = NULL;
                 source->Send[s].WetFilter.type = 0;
                 source->Send[s].WetFilter.filter = 0;

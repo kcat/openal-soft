@@ -221,7 +221,7 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
                 Failed = AL_TRUE;
                 break;
             }
-            else if(ALBuf->refcount != 0)
+            else if(ALBuf->ref != 0)
             {
                 /* Buffer still in use, cannot be deleted */
                 alSetError(Context, AL_INVALID_OPERATION);
@@ -297,7 +297,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
-    else if(ALBuf->refcount != 0)
+    else if(ALBuf->ref != 0)
         alSetError(Context, AL_INVALID_VALUE);
     else if(size < 0 || freq < 0)
         alSetError(Context, AL_INVALID_VALUE);
@@ -453,7 +453,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
     device = Context->Device;
     if((ALBuf=LookupBuffer(device->BufferMap, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
-    else if(ALBuf->refcount != 0)
+    else if(ALBuf->ref != 0)
         alSetError(Context, AL_INVALID_VALUE);
     else if(frames < 0 || samplerate == 0)
         alSetError(Context, AL_INVALID_VALUE);
@@ -737,7 +737,7 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
         switch(eParam)
         {
         case AL_LOOP_POINTS_SOFT:
-            if(ALBuf->refcount > 0)
+            if(ALBuf->ref != 0)
                 alSetError(pContext, AL_INVALID_OPERATION);
             else if(plValues[0] < 0 || plValues[1] < 0 ||
                     plValues[0] >= plValues[1] || ALBuf->size == 0)

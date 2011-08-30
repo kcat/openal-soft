@@ -94,7 +94,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                 slot->ClickRemoval[j] = 0.0f;
                 slot->PendingClicks[j] = 0.0f;
             }
-            slot->refcount = 0;
+            slot->ref = 0;
         }
     }
 
@@ -125,7 +125,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
                 SlotsValid = AL_FALSE;
                 break;
             }
-            else if(EffectSlot->refcount > 0)
+            else if(EffectSlot->ref != 0)
             {
                 alSetError(Context, AL_INVALID_NAME);
                 SlotsValid = AL_FALSE;

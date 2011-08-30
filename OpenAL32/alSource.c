@@ -166,14 +166,14 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
                 Source->queue = BufferList->next;
 
                 if(BufferList->buffer != NULL)
-                    BufferList->buffer->refcount--;
+                    DecrementRef(&BufferList->buffer->ref);
                 free(BufferList);
             }
 
             for(j = 0;j < MAX_SENDS;++j)
             {
                 if(Source->Send[j].Slot)
-                    Source->Send[j].Slot->refcount--;
+                    DecrementRef(&Source->Send[j].Slot->ref);
                 Source->Send[j].Slot = NULL;
             }
 
@@ -571,7 +571,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             Source->queue = BufferListItem->next;
 
                             if(BufferListItem->buffer)
-                                BufferListItem->buffer->refcount--;
+                                DecrementRef(&BufferListItem->buffer->ref);
                             free(BufferListItem);
                         }
                         Source->BuffersInQueue = 0;
@@ -599,7 +599,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                                 Source->Update = CalcNonAttnSourceParams;
 
                             // Increment reference counter for buffer
-                            buffer->refcount++;
+                            IncrementRef(&buffer->ref);
                         }
                         else
                         {
@@ -770,10 +770,10 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
                     /* Release refcount on the previous slot, and add one for
                      * the new slot */
                     if(Source->Send[lValue2].Slot)
-                        Source->Send[lValue2].Slot->refcount--;
+                        DecrementRef(&Source->Send[lValue2].Slot->ref);
                     Source->Send[lValue2].Slot = ALEffectSlot;
                     if(Source->Send[lValue2].Slot)
-                        Source->Send[lValue2].Slot->refcount++;
+                        IncrementRef(&Source->Send[lValue2].Slot->ref);
 
                     if(!ALFilter)
                     {
@@ -1636,7 +1636,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     BufferListStart->prev = NULL;
 
     // Increment reference counter for buffer
-    if(buffer) buffer->refcount++;
+    if(buffer) IncrementRef(&buffer->ref);
 
     BufferList = BufferListStart;
 
@@ -1650,7 +1650,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
         BufferList->next->prev = BufferList;
 
         // Increment reference counter for buffer
-        if(buffer) buffer->refcount++;
+        if(buffer) IncrementRef(&buffer->ref);
 
         BufferList = BufferList->next;
     }
@@ -1723,7 +1723,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
             // Record name of buffer
             buffers[i] = BufferList->buffer->buffer;
             // Decrement buffer reference counter
-            BufferList->buffer->refcount--;
+            DecrementRef(&BufferList->buffer->ref);
         }
         else
             buffers[i] = 0;
@@ -2145,14 +2145,14 @@ ALvoid ReleaseALSources(ALCcontext *Context)
             temp->queue = BufferList->next;
 
             if(BufferList->buffer != NULL)
-                BufferList->buffer->refcount--;
+                DecrementRef(&BufferList->buffer->ref);
             free(BufferList);
         }
 
         for(j = 0;j < MAX_SENDS;++j)
         {
             if(temp->Send[j].Slot)
-                temp->Send[j].Slot->refcount--;
+                DecrementRef(&temp->Send[j].Slot->ref);
             temp->Send[j].Slot = NULL;
         }
 

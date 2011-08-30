@@ -60,13 +60,11 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
     ALCcontext *Context;
     ALCdevice *Device;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return;
 
     Device = Context->Device;
     if(n < 0 || IsBadWritePtr((void*)sources, n * sizeof(ALuint)))
-        alSetError(Context, AL_INVALID_VALUE);
-    else if((ALuint)n > Device->MaxNoOfSources - Context->SourceMap.size)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
@@ -87,7 +85,14 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
 
             err = NewThunkEntry(&source->source);
             if(err == AL_NO_ERROR)
-                err = InsertUIntMapEntry(&Context->SourceMap, source->source, source);
+            {
+                LockContext(Context);
+                if(Device->MaxNoOfSources == (ALuint)Context->SourceMap.size)
+                    err = AL_INVALID_VALUE;
+                else
+                    err = InsertUIntMapEntry(&Context->SourceMap, source->source, source);
+                UnlockContext(Context);
+            }
             if(err != AL_NO_ERROR)
             {
                 FreeThunkEntry(source->source);
@@ -99,12 +104,12 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
                 break;
             }
 
-            sources[i++] = source->source;
             InitSourceParams(source);
+            sources[i++] = source->source;
         }
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 
@@ -114,36 +119,35 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     ALsource *Source;
     ALsizei i, j;
     ALbufferlistitem *BufferList;
-    ALboolean SourcesValid = AL_FALSE;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return;
 
     if(n < 0)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        SourcesValid = AL_TRUE;
+        LockContext(Context);
         // Check that all Sources are valid (and can therefore be deleted)
         for(i = 0;i < n;i++)
         {
             if(LookupSource(Context->SourceMap, sources[i]) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
-                SourcesValid = AL_FALSE;
+                n = 0;
                 break;
             }
         }
-    }
 
-    if(SourcesValid)
-    {
         // All Sources are valid, and can be deleted
         for(i = 0;i < n;i++)
         {
-            // Recheck that the Source is valid, because there could be duplicated Source names
             if((Source=LookupSource(Context->SourceMap, sources[i])) == NULL)
                 continue;
+
+            // Remove Source from list of Sources
+            RemoveUIntMapKey(&Context->SourceMap, Source->source);
+            FreeThunkEntry(Source->source);
 
             for(j = 0;j < Context->ActiveSourceCount;j++)
             {
@@ -173,16 +177,13 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
                 Source->Send[j].Slot = NULL;
             }
 
-            // Remove Source from list of Sources
-            RemoveUIntMapKey(&Context->SourceMap, Source->source);
-            FreeThunkEntry(Source->source);
-
             memset(Source,0,sizeof(ALsource));
             free(Source);
         }
+        UnlockContext(Context);
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 

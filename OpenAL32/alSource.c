@@ -127,7 +127,6 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        LockContext(Context);
         // Check that all Sources are valid (and can therefore be deleted)
         for(i = 0;i < n;i++)
         {
@@ -142,22 +141,32 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         // All Sources are valid, and can be deleted
         for(i = 0;i < n;i++)
         {
+            ALsource **srclist, **srclistend;
+
+            LockContext(Context);
             if((Source=LookupSource(Context->SourceMap, sources[i])) == NULL)
+            {
+                UnlockContext(Context);
                 continue;
+            }
 
             // Remove Source from list of Sources
             RemoveUIntMapKey(&Context->SourceMap, Source->source);
             FreeThunkEntry(Source->source);
 
-            for(j = 0;j < Context->ActiveSourceCount;j++)
+            srclist = Context->ActiveSources;
+            srclistend = srclist + Context->ActiveSourceCount;
+            while(srclist != srclistend)
             {
-                if(Context->ActiveSources[j] == Source)
+                if(*srclist == Source)
                 {
-                    ALsizei end = --(Context->ActiveSourceCount);
-                    Context->ActiveSources[j] = Context->ActiveSources[end];
+                    Context->ActiveSourceCount--;
+                    *srclist = *(--srclistend);
                     break;
                 }
+                srclist++;
             }
+            UnlockContext(Context);
 
             // For each buffer in the source's queue...
             while(Source->queue != NULL)
@@ -180,7 +189,6 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             memset(Source,0,sizeof(ALsource));
             free(Source);
         }
-        UnlockContext(Context);
     }
 
     ALCcontext_DecRef(Context);

@@ -610,14 +610,14 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
             src++;
         }
 
-        ReadLock(&Context->EffectSlotMap.lock);
+        LockUIntMapRead(&Context->EffectSlotMap);
         for(e = 0;e < Context->EffectSlotMap.size;e++)
         {
             ALEffectSlot = Context->EffectSlotMap.array[e].value;
             if(Exchange_ALenum(&ALEffectSlot->NeedsUpdate, AL_FALSE))
                 ALEffect_Update(ALEffectSlot->EffectState, Context, ALEffectSlot);
         }
-        ReadUnlock(&Context->EffectSlotMap.lock);
+        UnlockUIntMapRead(&Context->EffectSlotMap);
         UnlockContext(Context);
     }
 
@@ -636,7 +636,7 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
         ALsizei pos;
 
         LockContext(Context);
-        ReadLock(&Context->SourceMap.lock);
+        LockUIntMapRead(&Context->SourceMap);
         for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
             ALsource *Source = Context->SourceMap.array[pos].value;
@@ -649,7 +649,7 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
             if(new_state)
                 SetSourceState(Source, Context, new_state);
         }
-        ReadUnlock(&Context->SourceMap.lock);
+        UnlockUIntMapRead(&Context->SourceMap);
         UnlockContext(Context);
     }
 

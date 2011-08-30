@@ -322,6 +322,14 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
 void RemoveUIntMapKey(UIntMap *map, ALuint key);
 ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
 
+static __inline void LockUIntMapRead(UIntMap *map)
+{ ReadLock(&map->lock); }
+static __inline void UnlockUIntMapRead(UIntMap *map)
+{ ReadUnlock(&map->lock); }
+static __inline void LockUIntMapWrite(UIntMap *map)
+{ WriteLock(&map->lock); }
+static __inline void UnlockUIntMapWrite(UIntMap *map)
+{ WriteUnlock(&map->lock); }
 
 #include "alListener.h"
 #include "alu.h"

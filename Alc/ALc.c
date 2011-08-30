@@ -434,7 +434,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
             break;
 
         case DLL_THREAD_DETACH:
-            ReadLock(&TlsDestructor.lock);
+            LockUIntMapRead(&TlsDestructor);
             for(i = 0;i < TlsDestructor.size;i++)
             {
                 void *ptr = pthread_getspecific(TlsDestructor.array[i].key);
@@ -442,7 +442,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
                 if(ptr && callback)
                     callback(ptr);
             }
-            ReadUnlock(&TlsDestructor.lock);
+            UnlockUIntMapRead(&TlsDestructor);
             break;
 
         case DLL_PROCESS_DETACH:
@@ -1239,14 +1239,14 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ALsizei pos;
 
         context->UpdateSources = AL_FALSE;
-        ReadLock(&context->EffectSlotMap.lock);
+        LockUIntMapRead(&context->EffectSlotMap);
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
 
             if(ALEffect_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
             {
-                ReadUnlock(&context->EffectSlotMap.lock);
+                UnlockUIntMapRead(&context->EffectSlotMap);
                 UnlockDevice(device);
                 ALCdevice_StopPlayback(device);
                 device->Flags &= ~DEVICE_RUNNING;
@@ -1255,9 +1255,9 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             slot->NeedsUpdate = AL_FALSE;
             ALEffect_Update(slot->EffectState, context, slot);
         }
-        ReadUnlock(&context->EffectSlotMap.lock);
+        UnlockUIntMapRead(&context->EffectSlotMap);
 
-        ReadLock(&context->SourceMap.lock);
+        LockUIntMapRead(&context->SourceMap);
         for(pos = 0;pos < context->SourceMap.size;pos++)
         {
             ALsource *source = context->SourceMap.array[pos].value;
@@ -1274,7 +1274,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             source->NeedsUpdate = AL_FALSE;
             ALsource_Update(source, context);
         }
-        ReadUnlock(&context->SourceMap.lock);
+        UnlockUIntMapRead(&context->SourceMap);
 
         context = context->next;
     }

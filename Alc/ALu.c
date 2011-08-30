@@ -1123,7 +1123,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
         ALsource *source;
         ALsizei pos;
 
-        ReadLock(&Context->SourceMap.lock);
+        LockUIntMapRead(&Context->SourceMap);
         for(pos = 0;pos < Context->SourceMap.size;pos++)
         {
             source = Context->SourceMap.array[pos].value;
@@ -1135,7 +1135,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
                 source->position_fraction = 0;
             }
         }
-        ReadUnlock(&Context->SourceMap.lock);
+        UnlockUIntMapRead(&Context->SourceMap);
 
         Context = Context->next;
     }

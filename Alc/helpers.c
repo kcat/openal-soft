@@ -266,25 +266,75 @@ void SetRTPriority(void)
 }
 
 
+static void Lock(volatile ALenum *l)
+{
+    while(Exchange_ALenum(l, AL_TRUE) == AL_TRUE)
+        Sleep(0);
+}
+
+static void Unlock(volatile ALenum *l)
+{
+    Exchange_ALenum(l, AL_FALSE);
+}
+
+void ReadLock(RWLock *lock)
+{
+    Lock(&lock->read_entry_lock);
+    Lock(&lock->read_lock);
+    if(IncrementRef(&lock->read_count) == 1)
+        Lock(&lock->write_lock);
+    Unlock(&lock->read_lock);
+    Unlock(&lock->read_entry_lock);
+}
+
+void ReadUnlock(RWLock *lock)
+{
+    if(DecrementRef(&lock->read_count) == 0)
+        Unlock(&lock->write_lock);
+}
+
+void WriteLock(RWLock *lock)
+{
+    if(IncrementRef(&lock->write_count) == 1)
+        Lock(&lock->read_lock);
+     Lock(&lock->write_lock);
+}
+
+void WriteUnlock(RWLock *lock)
+{
+    Unlock(&lock->write_lock);
+    if(DecrementRef(&lock->write_count) == 0)
+        Unlock(&lock->read_lock);
+}
+
+
 void InitUIntMap(UIntMap *map)
 {
     map->array = NULL;
     map->size = 0;
     map->maxsize = 0;
+    map->lock.read_count = 0;
+    map->lock.write_count = 0;
+    map->lock.read_lock = AL_FALSE;
+    map->lock.read_entry_lock = AL_FALSE;
+    map->lock.write_lock = AL_FALSE;
 }
 
 void ResetUIntMap(UIntMap *map)
 {
+    WriteLock(&map->lock);
     free(map->array);
     map->array = NULL;
     map->size = 0;
     map->maxsize = 0;
+    WriteUnlock(&map->lock);
 }
 
 ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
 {
     ALsizei pos = 0;
 
+    WriteLock(&map->lock);
     if(map->size > 0)
     {
         ALsizei low = 0;
@@ -306,15 +356,17 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
     {
         if(map->size == map->maxsize)
         {
-            ALvoid *temp;
+            ALvoid *temp = NULL;
             ALsizei newsize;
 
             newsize = (map->maxsize ? (map->maxsize<<1) : 4);
-            if(newsize < map->maxsize)
+            if(newsize >= map->maxsize)
+                temp = realloc(map->array, newsize*sizeof(map->array[0]));
+            if(!temp)
+            {
+                WriteUnlock(&map->lock);
                 return AL_OUT_OF_MEMORY;
-
-            temp = realloc(map->array, newsize*sizeof(map->array[0]));
-            if(!temp) return AL_OUT_OF_MEMORY;
+            }
             map->array = temp;
             map->maxsize = newsize;
         }
@@ -326,12 +378,14 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
     }
     map->array[pos].key = key;
     map->array[pos].value = value;
+    WriteUnlock(&map->lock);
 
     return AL_NO_ERROR;
 }
 
 void RemoveUIntMapKey(UIntMap *map, ALuint key)
 {
+    WriteLock(&map->lock);
     if(map->size > 0)
     {
         ALsizei low = 0;
@@ -352,10 +406,13 @@ void RemoveUIntMapKey(UIntMap *map, ALuint key)
             map->size--;
         }
     }
+    WriteUnlock(&map->lock);
 }
 
 ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
 {
+    ALvoid *ptr = NULL;
+    ReadLock(&map->lock);
     if(map->size > 0)
     {
         ALsizei low = 0;
@@ -369,7 +426,8 @@ ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
                 high = mid;
         }
         if(map->array[low].key == key)
-            return map->array[low].value;
+            ptr = map->array[low].value;
     }
-    return NULL;
+    ReadUnlock(&map->lock);
+    return ptr;
 }

@@ -161,30 +161,12 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #endif
 
 
-typedef struct UIntMap {
-    struct {
-        ALuint key;
-        ALvoid *value;
-    } *array;
-    ALsizei size;
-    ALsizei maxsize;
-} UIntMap;
-
-void InitUIntMap(UIntMap *map);
-void ResetUIntMap(UIntMap *map);
-ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
-void RemoveUIntMapKey(UIntMap *map, ALuint key);
-ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
-
-
 #ifdef _WIN32
 
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0500
 #endif
 #include <windows.h>
-
-extern UIntMap TlsDestructor;
 
 typedef DWORD pthread_key_t;
 int pthread_key_create(pthread_key_t *key, void (*callback)(void*));
@@ -307,6 +289,38 @@ typedef ALuint RefCount;
 DECL_TEMPLATE(ALenum)
 
 #undef DECL_TEMPLATE
+
+
+typedef struct {
+    volatile RefCount read_count;
+    volatile RefCount write_count;
+    volatile ALenum read_lock;
+    volatile ALenum read_entry_lock;
+    volatile ALenum write_lock;
+} RWLock;
+
+void ReadLock(RWLock *lock);
+void ReadUnlock(RWLock *lock);
+void WriteLock(RWLock *lock);
+void WriteUnlock(RWLock *lock);
+
+
+typedef struct UIntMap {
+    struct {
+        ALuint key;
+        ALvoid *value;
+    } *array;
+    ALsizei size;
+    ALsizei maxsize;
+    RWLock lock;
+} UIntMap;
+extern UIntMap TlsDestructor;
+
+void InitUIntMap(UIntMap *map);
+void ResetUIntMap(UIntMap *map);
+ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
+void RemoveUIntMapKey(UIntMap *map, ALuint key);
+ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
 
 
 #include "alListener.h"

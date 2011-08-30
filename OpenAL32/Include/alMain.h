@@ -235,6 +235,10 @@ static __inline int ExchangeInt(volatile int *ptr, int newval)
 {
     return __sync_lock_test_and_set(ptr, newval);
 }
+static __inline void *ExchangePtr(void *volatile*ptr, void *newval)
+{
+    return __sync_lock_test_and_set(ptr, newval);
+}
 static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
 {
     return __sync_bool_compare_and_swap(ptr, oldval, newval);
@@ -257,6 +261,10 @@ static __inline int ExchangeInt(volatile int *ptr, int newval)
         volatile LONG *l;
     } u = { ptr };
     return InterlockedExchange(u.l, newval);
+}
+static __inline void *ExchangePtr(void *volatile*ptr, void *newval)
+{
+    return InterlockedExchangePtr(ptr, newval);
 }
 static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
 {
@@ -284,6 +292,14 @@ static __inline int ExchangeInt(volatile int *ptr, int newval)
     do {
         oldval = *ptr;
     } while(!OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr));
+    return oldval;
+}
+static __inline void *ExchangePtr(void *volatile*ptr, void *newval)
+{
+    void *oldval;
+    do {
+        oldval = *ptr;
+    } while(!OSAtomicCompareAndSwapPtrBarrier(oldval, newval, ptr));
     return oldval;
 }
 static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)

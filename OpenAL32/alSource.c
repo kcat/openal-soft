@@ -559,22 +559,14 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
             case AL_BUFFER:
                 if(Source->state == AL_STOPPED || Source->state == AL_INITIAL)
                 {
+                    ALbufferlistitem *oldlist;
                     ALbuffer *buffer = NULL;
 
                     if(lValue == 0 ||
                        (buffer=LookupBuffer(device->BufferMap, lValue)) != NULL)
                     {
-                        // Remove all elements in the queue
-                        while(Source->queue != NULL)
-                        {
-                            BufferListItem = Source->queue;
-                            Source->queue = BufferListItem->next;
-
-                            if(BufferListItem->buffer)
-                                DecrementRef(&BufferListItem->buffer->ref);
-                            free(BufferListItem);
-                        }
                         Source->BuffersInQueue = 0;
+                        Source->BuffersPlayed = 0;
 
                         // Add the buffer to the queue (as long as it is NOT the NULL buffer)
                         if(buffer != NULL)
@@ -587,8 +579,10 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             BufferListItem->buffer = buffer;
                             BufferListItem->next = NULL;
                             BufferListItem->prev = NULL;
+                            // Increment reference counter for buffer
+                            IncrementRef(&buffer->ref);
 
-                            Source->queue = BufferListItem;
+                            oldlist = ExchangePtr((void**)&Source->queue, BufferListItem);
                             Source->BuffersInQueue = 1;
 
                             Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
@@ -597,18 +591,25 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                                 Source->Update = CalcSourceParams;
                             else
                                 Source->Update = CalcNonAttnSourceParams;
-
-                            // Increment reference counter for buffer
-                            IncrementRef(&buffer->ref);
+                            Source->NeedsUpdate = AL_TRUE;
                         }
                         else
                         {
                             // Source is now in UNDETERMINED mode
                             Source->lSourceType = AL_UNDETERMINED;
+                            oldlist = ExchangePtr((void**)&Source->queue, NULL);
                         }
-                        Source->BuffersPlayed = 0;
 
-                        Source->NeedsUpdate = AL_TRUE;
+                        // Delete all previous elements in the queue
+                        while(oldlist != NULL)
+                        {
+                            BufferListItem = oldlist;
+                            oldlist = BufferListItem->next;
+
+                            if(BufferListItem->buffer)
+                                DecrementRef(&BufferListItem->buffer->ref);
+                            free(BufferListItem);
+                        }
                     }
                     else
                         alSetError(pContext, AL_INVALID_VALUE);

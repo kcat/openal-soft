@@ -143,13 +143,13 @@ AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return AL_FALSE;
 
     result = ((!effect || LookupEffect(Context->Device->EffectMap, effect)) ?
               AL_TRUE : AL_FALSE);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return result;
 }

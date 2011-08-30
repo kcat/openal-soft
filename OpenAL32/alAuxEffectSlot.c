@@ -161,13 +161,13 @@ AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return AL_FALSE;
 
     result = (LookupEffectSlot(Context->EffectSlotMap, effectslot) ?
               AL_TRUE : AL_FALSE);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return result;
 }

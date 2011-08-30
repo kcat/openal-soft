@@ -265,13 +265,13 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return AL_FALSE;
 
     result = ((!buffer || LookupBuffer(Context->Device->BufferMap, buffer)) ?
               AL_TRUE : AL_FALSE);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return result;
 }

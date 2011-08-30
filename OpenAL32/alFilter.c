@@ -139,13 +139,13 @@ AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return AL_FALSE;
 
     result = ((!filter || LookupFilter(Context->Device->FilterMap, filter)) ?
               AL_TRUE : AL_FALSE);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return result;
 }

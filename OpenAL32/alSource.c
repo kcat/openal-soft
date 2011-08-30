@@ -192,12 +192,12 @@ AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return AL_FALSE;
 
     result = (LookupSource(Context->SourceMap, source) ? AL_TRUE : AL_FALSE);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return result;
 }

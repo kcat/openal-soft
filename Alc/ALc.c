@@ -1358,10 +1358,15 @@ static ALCvoid FreeContext(ALCcontext *context)
     }
     ResetUIntMap(&context->EffectSlotMap);
 
+    context->ActiveSourceCount = 0;
     free(context->ActiveSources);
     context->ActiveSources = NULL;
     context->MaxActiveSources = 0;
-    context->ActiveSourceCount = 0;
+
+    context->ActiveEffectSlotCount = 0;
+    free(context->ActiveEffectSlots);
+    context->ActiveEffectSlots = NULL;
+    context->MaxActiveEffectSlots = 0;
 
     //Invalidate context
     memset(context, 0, sizeof(ALCcontext));

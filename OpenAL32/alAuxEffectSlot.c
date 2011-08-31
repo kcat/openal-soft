@@ -33,6 +33,8 @@
 
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
+static ALenum ResizeEffectSlotArray(ALCcontext *Context, ALsizei count);
+static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *val);
 
 #define LookupEffectSlot(m, k) ((ALeffectslot*)LookupUIntMapKey(&(m), (k)))
 #define LookupEffect(m, k) ((ALeffect*)LookupUIntMapKey(&(m), (k)))
@@ -55,8 +57,14 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         ALenum err;
         ALsizei i, j;
 
-        i = 0;
-        while(i < n)
+        err = ResizeEffectSlotArray(Context, n);
+        if(err != AL_NO_ERROR)
+        {
+            alSetError(Context, err);
+            n = 0;
+        }
+
+        for(i = 0;i < n;i++)
         {
             ALeffectslot *slot = calloc(1, sizeof(ALeffectslot));
             if(!slot || !(slot->EffectState=NoneCreate()))
@@ -67,22 +75,6 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                 alDeleteAuxiliaryEffectSlots(i, effectslots);
                 break;
             }
-
-            err = NewThunkEntry(&slot->effectslot);
-            if(err == AL_NO_ERROR)
-                err = InsertUIntMapEntry(&Context->EffectSlotMap, slot->effectslot, slot);
-            if(err != AL_NO_ERROR)
-            {
-                FreeThunkEntry(slot->effectslot);
-                ALEffect_Destroy(slot->EffectState);
-                free(slot);
-
-                alSetError(Context, err);
-                alDeleteAuxiliaryEffectSlots(i, effectslots);
-                break;
-            }
-
-            effectslots[i++] = slot->effectslot;
 
             slot->Gain = 1.0;
             slot->AuxSendAuto = AL_TRUE;
@@ -95,6 +87,28 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                 slot->PendingClicks[j] = 0.0f;
             }
             slot->ref = 0;
+
+            err = ResizeEffectSlotArray(Context, 1);
+            if(err == AL_NO_ERROR)
+            {
+                Context->ActiveEffectSlots[Context->ActiveEffectSlotCount++] = slot;
+                err = NewThunkEntry(&slot->effectslot);
+            }
+            if(err == AL_NO_ERROR)
+                err = InsertUIntMapEntry(&Context->EffectSlotMap, slot->effectslot, slot);
+            if(err != AL_NO_ERROR)
+            {
+                RemoveEffectSlotArray(Context, slot);
+                FreeThunkEntry(slot->effectslot);
+                ALEffect_Destroy(slot->EffectState);
+                free(slot);
+
+                alSetError(Context, err);
+                alDeleteAuxiliaryEffectSlots(i, effectslots);
+                break;
+            }
+
+            effectslots[i] = slot->effectslot;
         }
     }
 
@@ -143,6 +157,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
             if((EffectSlot=LookupEffectSlot(Context->EffectSlotMap, effectslots[i])) == NULL)
                 continue;
 
+            RemoveEffectSlotArray(Context, EffectSlot);
             ALEffect_Destroy(EffectSlot->EffectState);
 
             RemoveUIntMapKey(&Context->EffectSlotMap, EffectSlot->effectslot);
@@ -466,6 +481,44 @@ ALeffectState *NoneCreate(void)
     state->Process = NoneProcess;
 
     return state;
+}
+
+
+static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *slot)
+{
+    ALeffectslot **slotlist, **slotlistend;
+
+    slotlist = Context->ActiveEffectSlots;
+    slotlistend = slotlist + Context->ActiveEffectSlotCount;
+    while(slotlist != slotlistend)
+    {
+        if(*slotlist == slot)
+        {
+            *slotlist = *(--slotlistend);
+            Context->ActiveEffectSlotCount--;
+            break;
+        }
+    }
+}
+
+static ALenum ResizeEffectSlotArray(ALCcontext *Context, ALsizei count)
+{
+    ALsizei newcount;
+    void *temp;
+
+    if(count <= Context->MaxActiveEffectSlots-Context->ActiveEffectSlotCount)
+        return AL_NO_ERROR;
+
+    newcount = Context->MaxActiveEffectSlots ?
+               (Context->MaxActiveEffectSlots<<1) : 1;
+    if(newcount <= Context->MaxActiveEffectSlots ||
+       !(temp=realloc(Context->ActiveEffectSlots, newcount *
+                                                  sizeof(*Context->ActiveEffectSlots))))
+        return AL_OUT_OF_MEMORY;
+
+    Context->ActiveEffectSlots = temp;
+    Context->MaxActiveEffectSlots = newcount;
+    return AL_NO_ERROR;
 }
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect)

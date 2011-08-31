@@ -610,6 +610,10 @@ struct ALCcontext_struct
     ALsizei           ActiveSourceCount;
     ALsizei           MaxActiveSources;
 
+    struct ALeffectslot **ActiveEffectSlots;
+    ALsizei               ActiveEffectSlotCount;
+    ALsizei               MaxActiveEffectSlots;
+
     ALCdevice  *Device;
     const ALCchar *ExtensionList;
 

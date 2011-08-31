@@ -949,12 +949,11 @@ DECL_TEMPLATE(ALbyte)
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALuint SamplesToDo;
-    ALeffectslot *ALEffectSlot;
+    ALeffectslot **slot, **slot_end;
     ALsource **src, **src_end;
     ALCcontext *ctx;
     int fpuState;
     ALuint i, c;
-    ALsizei e;
 
 #if defined(HAVE_FESETROUND)
     fpuState = fegetround();
@@ -1004,30 +1003,31 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
 
             /* effect slot processing */
-            for(e = 0;e < ctx->EffectSlotMap.size;e++)
+            slot = ctx->ActiveEffectSlots;
+            slot_end = slot + ctx->ActiveEffectSlotCount;
+            while(slot != slot_end)
             {
-                ALEffectSlot = ctx->EffectSlotMap.array[e].value;
-
                 for(i = 0;i < SamplesToDo;i++)
                 {
-                    ALEffectSlot->WetBuffer[i] += ALEffectSlot->ClickRemoval[0];
-                    ALEffectSlot->ClickRemoval[0] -= ALEffectSlot->ClickRemoval[0] / 256.0f;
+                    (*slot)->WetBuffer[i] += (*slot)->ClickRemoval[0];
+                    (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] / 256.0f;
                 }
                 for(i = 0;i < 1;i++)
                 {
-                    ALEffectSlot->ClickRemoval[i] += ALEffectSlot->PendingClicks[i];
-                    ALEffectSlot->PendingClicks[i] = 0.0f;
+                    (*slot)->ClickRemoval[i] += (*slot)->PendingClicks[i];
+                    (*slot)->PendingClicks[i] = 0.0f;
                 }
 
-                if(!DeferUpdates && ExchangeInt(&ALEffectSlot->NeedsUpdate, AL_FALSE))
-                    ALEffect_Update(ALEffectSlot->EffectState, ctx, ALEffectSlot);
+                if(!DeferUpdates && ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
+                    ALEffect_Update((*slot)->EffectState, ctx, *slot);
 
-                ALEffect_Process(ALEffectSlot->EffectState, ALEffectSlot,
-                                 SamplesToDo, ALEffectSlot->WetBuffer,
-                                 device->DryBuffer);
+                ALEffect_Process((*slot)->EffectState, *slot, SamplesToDo,
+                                 (*slot)->WetBuffer, device->DryBuffer);
 
                 for(i = 0;i < SamplesToDo;i++)
-                    ALEffectSlot->WetBuffer[i] = 0.0f;
+                    (*slot)->WetBuffer[i] = 0.0f;
+
+                slot++;
             }
 
             ctx = ctx->next;

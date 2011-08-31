@@ -235,27 +235,19 @@ void al_print(const char *fname, unsigned int line, const char *fmt, ...)
 
 void SetRTPriority(void)
 {
-    ALboolean failed;
+    ALboolean failed = AL_FALSE;
 
 #ifdef _WIN32
     if(RTPrioLevel > 0)
         failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-    else
-        failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
 #elif defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
-    struct sched_param param;
-
     if(RTPrioLevel > 0)
     {
+        struct sched_param param;
         /* Use the minimum real-time priority possible for now (on Linux this
          * should be 1 for SCHED_RR) */
         param.sched_priority = sched_get_priority_min(SCHED_RR);
         failed = !!pthread_setschedparam(pthread_self(), SCHED_RR, &param);
-    }
-    else
-    {
-        param.sched_priority = 0;
-        failed = !!pthread_setschedparam(pthread_self(), SCHED_OTHER, &param);
     }
 #else
     /* Real-time priority not available */

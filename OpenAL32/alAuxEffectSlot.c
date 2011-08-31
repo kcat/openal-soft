@@ -141,7 +141,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
             }
             else if(EffectSlot->ref != 0)
             {
-                alSetError(Context, AL_INVALID_NAME);
+                alSetError(Context, AL_INVALID_OPERATION);
                 n = 0;
                 break;
             }

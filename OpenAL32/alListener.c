@@ -28,87 +28,91 @@
 
 AL_API ALvoid AL_APIENTRY alListenerf(ALenum eParam, ALfloat flValue)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     switch(eParam)
     {
         case AL_GAIN:
             if(flValue >= 0.0f && isfinite(flValue))
             {
-                pContext->Listener.Gain = flValue;
-                pContext->UpdateSources = AL_TRUE;
+                Context->Listener.Gain = flValue;
+                Context->UpdateSources = AL_TRUE;
             }
             else
-                alSetError(pContext, AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE);
             break;
 
         case AL_METERS_PER_UNIT:
             if(flValue > 0.0f && isfinite(flValue))
             {
-                pContext->Listener.MetersPerUnit = flValue;
-                pContext->UpdateSources = AL_TRUE;
+                Context->Listener.MetersPerUnit = flValue;
+                Context->UpdateSources = AL_TRUE;
             }
             else
-                alSetError(pContext, AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE);
             break;
 
         default:
-            alSetError(pContext, AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alListener3f(ALenum eParam, ALfloat flValue1, ALfloat flValue2, ALfloat flValue3)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     switch(eParam)
     {
         case AL_POSITION:
             if(isfinite(flValue1) && isfinite(flValue2) && isfinite(flValue3))
             {
-                pContext->Listener.Position[0] = flValue1;
-                pContext->Listener.Position[1] = flValue2;
-                pContext->Listener.Position[2] = flValue3;
-                pContext->UpdateSources = AL_TRUE;
+                LockContext(Context);
+                Context->Listener.Position[0] = flValue1;
+                Context->Listener.Position[1] = flValue2;
+                Context->Listener.Position[2] = flValue3;
+                Context->UpdateSources = AL_TRUE;
+                UnlockContext(Context);
             }
             else
-                alSetError(pContext, AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE);
             break;
 
         case AL_VELOCITY:
             if(isfinite(flValue1) && isfinite(flValue2) && isfinite(flValue3))
             {
-                pContext->Listener.Velocity[0] = flValue1;
-                pContext->Listener.Velocity[1] = flValue2;
-                pContext->Listener.Velocity[2] = flValue3;
-                pContext->UpdateSources = AL_TRUE;
+                LockContext(Context);
+                Context->Listener.Velocity[0] = flValue1;
+                Context->Listener.Velocity[1] = flValue2;
+                Context->Listener.Velocity[2] = flValue3;
+                Context->UpdateSources = AL_TRUE;
+                UnlockContext(Context);
             }
             else
-                alSetError(pContext, AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE);
             break;
 
         default:
-            alSetError(pContext, AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
     if(pflValues)
     {
@@ -126,8 +130,8 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
         }
     }
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     if(pflValues)
     {
@@ -138,54 +142,56 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
                    isfinite(pflValues[2]) && isfinite(pflValues[3]) &&
                    isfinite(pflValues[4]) && isfinite(pflValues[5]))
                 {
+                    LockContext(Context);
                     // AT then UP
-                    pContext->Listener.Forward[0] = pflValues[0];
-                    pContext->Listener.Forward[1] = pflValues[1];
-                    pContext->Listener.Forward[2] = pflValues[2];
-                    pContext->Listener.Up[0] = pflValues[3];
-                    pContext->Listener.Up[1] = pflValues[4];
-                    pContext->Listener.Up[2] = pflValues[5];
-                    pContext->UpdateSources = AL_TRUE;
+                    Context->Listener.Forward[0] = pflValues[0];
+                    Context->Listener.Forward[1] = pflValues[1];
+                    Context->Listener.Forward[2] = pflValues[2];
+                    Context->Listener.Up[0] = pflValues[3];
+                    Context->Listener.Up[1] = pflValues[4];
+                    Context->Listener.Up[2] = pflValues[5];
+                    Context->UpdateSources = AL_TRUE;
+                    UnlockContext(Context);
                 }
                 else
-                    alSetError(pContext, AL_INVALID_VALUE);
+                    alSetError(Context, AL_INVALID_VALUE);
                 break;
 
             default:
-                alSetError(pContext, AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(pContext, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alListeneri(ALenum eParam, ALint lValue)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
     (void)lValue;
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     switch(eParam)
     {
         default:
-            alSetError(pContext, AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API void AL_APIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2, ALint lValue3)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
     switch(eParam)
     {
@@ -195,23 +201,23 @@ AL_API void AL_APIENTRY alListener3i(ALenum eParam, ALint lValue1, ALint lValue2
             return;
     }
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     switch(eParam)
     {
         default:
-            alSetError(pContext, AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API void AL_APIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
     ALfloat flValues[6];
 
     if(plValues)
@@ -235,94 +241,98 @@ AL_API void AL_APIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
         }
     }
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     if(plValues)
     {
         switch(eParam)
         {
             default:
-                alSetError(pContext, AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(pContext, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum eParam, ALfloat *pflValue)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     if(pflValue)
     {
         switch(eParam)
         {
             case AL_GAIN:
-                *pflValue = pContext->Listener.Gain;
+                *pflValue = Context->Listener.Gain;
                 break;
 
             case AL_METERS_PER_UNIT:
-                *pflValue = pContext->Listener.MetersPerUnit;
+                *pflValue = Context->Listener.MetersPerUnit;
                 break;
 
             default:
-                alSetError(pContext, AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(pContext, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum eParam, ALfloat *pflValue1, ALfloat *pflValue2, ALfloat *pflValue3)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     if(pflValue1 && pflValue2 && pflValue3)
     {
         switch(eParam)
         {
             case AL_POSITION:
-                *pflValue1 = pContext->Listener.Position[0];
-                *pflValue2 = pContext->Listener.Position[1];
-                *pflValue3 = pContext->Listener.Position[2];
+                LockContext(Context);
+                *pflValue1 = Context->Listener.Position[0];
+                *pflValue2 = Context->Listener.Position[1];
+                *pflValue3 = Context->Listener.Position[2];
+                UnlockContext(Context);
                 break;
 
             case AL_VELOCITY:
-                *pflValue1 = pContext->Listener.Velocity[0];
-                *pflValue2 = pContext->Listener.Velocity[1];
-                *pflValue3 = pContext->Listener.Velocity[2];
+                LockContext(Context);
+                *pflValue1 = Context->Listener.Velocity[0];
+                *pflValue2 = Context->Listener.Velocity[1];
+                *pflValue3 = Context->Listener.Velocity[2];
+                UnlockContext(Context);
                 break;
 
             default:
-                alSetError(pContext, AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(pContext, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
     switch(eParam)
     {
@@ -337,96 +347,102 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum eParam, ALfloat *pflValues)
             return;
     }
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     if(pflValues)
     {
         switch(eParam)
         {
             case AL_ORIENTATION:
+                LockContext(Context);
                 // AT then UP
-                pflValues[0] = pContext->Listener.Forward[0];
-                pflValues[1] = pContext->Listener.Forward[1];
-                pflValues[2] = pContext->Listener.Forward[2];
-                pflValues[3] = pContext->Listener.Up[0];
-                pflValues[4] = pContext->Listener.Up[1];
-                pflValues[5] = pContext->Listener.Up[2];
+                pflValues[0] = Context->Listener.Forward[0];
+                pflValues[1] = Context->Listener.Forward[1];
+                pflValues[2] = Context->Listener.Forward[2];
+                pflValues[3] = Context->Listener.Up[0];
+                pflValues[4] = Context->Listener.Up[1];
+                pflValues[5] = Context->Listener.Up[2];
+                UnlockContext(Context);
                 break;
 
             default:
-                alSetError(pContext, AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(pContext, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum eParam, ALint *plValue)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     if(plValue)
     {
         switch(eParam)
         {
             default:
-                alSetError(pContext, AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(pContext, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API void AL_APIENTRY alGetListener3i(ALenum eParam, ALint *plValue1, ALint *plValue2, ALint *plValue3)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     if(plValue1 && plValue2 && plValue3)
     {
         switch (eParam)
         {
             case AL_POSITION:
-                *plValue1 = (ALint)pContext->Listener.Position[0];
-                *plValue2 = (ALint)pContext->Listener.Position[1];
-                *plValue3 = (ALint)pContext->Listener.Position[2];
+                LockContext(Context);
+                *plValue1 = (ALint)Context->Listener.Position[0];
+                *plValue2 = (ALint)Context->Listener.Position[1];
+                *plValue3 = (ALint)Context->Listener.Position[2];
+                UnlockContext(Context);
                 break;
 
             case AL_VELOCITY:
-                *plValue1 = (ALint)pContext->Listener.Velocity[0];
-                *plValue2 = (ALint)pContext->Listener.Velocity[1];
-                *plValue3 = (ALint)pContext->Listener.Velocity[2];
+                LockContext(Context);
+                *plValue1 = (ALint)Context->Listener.Velocity[0];
+                *plValue2 = (ALint)Context->Listener.Velocity[1];
+                *plValue3 = (ALint)Context->Listener.Velocity[2];
+                UnlockContext(Context);
                 break;
 
             default:
-                alSetError(pContext, AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(pContext, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 
 AL_API void AL_APIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
     switch(eParam)
     {
@@ -436,30 +452,32 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum eParam, ALint* plValues)
             return;
     }
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     if(plValues)
     {
         switch(eParam)
         {
             case AL_ORIENTATION:
+                LockContext(Context);
                 // AT then UP
-                plValues[0] = (ALint)pContext->Listener.Forward[0];
-                plValues[1] = (ALint)pContext->Listener.Forward[1];
-                plValues[2] = (ALint)pContext->Listener.Forward[2];
-                plValues[3] = (ALint)pContext->Listener.Up[0];
-                plValues[4] = (ALint)pContext->Listener.Up[1];
-                plValues[5] = (ALint)pContext->Listener.Up[2];
+                plValues[0] = (ALint)Context->Listener.Forward[0];
+                plValues[1] = (ALint)Context->Listener.Forward[1];
+                plValues[2] = (ALint)Context->Listener.Forward[2];
+                plValues[3] = (ALint)Context->Listener.Up[0];
+                plValues[4] = (ALint)Context->Listener.Up[1];
+                plValues[5] = (ALint)Context->Listener.Up[2];
+                UnlockContext(Context);
                 break;
 
             default:
-                alSetError(pContext, AL_INVALID_ENUM);
+                alSetError(Context, AL_INVALID_ENUM);
                 break;
         }
     }
     else
-        alSetError(pContext, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }

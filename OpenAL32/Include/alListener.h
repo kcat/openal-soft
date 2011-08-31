@@ -13,8 +13,8 @@ typedef struct ALlistener_struct
     ALfloat Velocity[3];
     ALfloat Forward[3];
     ALfloat Up[3];
-    ALfloat Gain;
-    ALfloat MetersPerUnit;
+    volatile ALfloat Gain;
+    volatile ALfloat MetersPerUnit;
 } ALlistener;
 
 #ifdef __cplusplus

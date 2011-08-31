@@ -595,17 +595,17 @@ struct ALCcontext_struct
     UIntMap SourceMap;
     UIntMap EffectSlotMap;
 
-    ALenum      LastError;
+    ALenum LastError;
 
-    ALenum      UpdateSources;
+    volatile ALenum UpdateSources;
 
-    enum DistanceModel DistanceModel;
-    ALboolean   SourceDistanceModel;
+    volatile enum DistanceModel DistanceModel;
+    volatile ALboolean SourceDistanceModel;
 
-    ALfloat     DopplerFactor;
-    ALfloat     DopplerVelocity;
-    ALfloat     flSpeedOfSound;
-    volatile ALenum DeferUpdates;
+    volatile ALfloat DopplerFactor;
+    volatile ALfloat DopplerVelocity;
+    volatile ALfloat flSpeedOfSound;
+    volatile ALenum  DeferUpdates;
 
     struct ALsource **ActiveSources;
     ALsizei           ActiveSourceCount;

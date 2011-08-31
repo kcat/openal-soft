@@ -45,7 +45,7 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
 {
     ALCcontext *Context;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     switch(capability)
@@ -60,14 +60,14 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
             break;
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
 {
     ALCcontext *Context;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     switch(capability)
@@ -82,7 +82,7 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
             break;
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
@@ -90,7 +90,7 @@ AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
     ALCcontext *Context;
     ALboolean value=AL_FALSE;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
     switch(capability)
@@ -104,7 +104,7 @@ AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
             break;
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return value;
 }
@@ -114,7 +114,7 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
     ALCcontext *Context;
     ALboolean value=AL_FALSE;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
     switch(pname)
@@ -148,7 +148,7 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
             break;
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return value;
 }
@@ -158,7 +158,7 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
     ALCcontext *Context;
     ALdouble value = 0.0;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return 0.0;
 
     switch(pname)
@@ -188,7 +188,7 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
             break;
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return value;
 }
@@ -198,7 +198,7 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
     ALCcontext *Context;
     ALfloat value = 0.0f;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return 0.0f;
 
     switch(pname)
@@ -228,7 +228,7 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
             break;
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return value;
 }
@@ -238,7 +238,7 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
     ALCcontext *Context;
     ALint value = 0;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return 0;
 
     switch(pname)
@@ -268,7 +268,7 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
             break;
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 
     return value;
 }
@@ -291,7 +291,7 @@ AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname,ALboolean *data)
         }
     }
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(data)
@@ -309,7 +309,7 @@ AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname,ALboolean *data)
         alSetError(Context, AL_INVALID_VALUE);
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname,ALdouble *data)
@@ -330,7 +330,7 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname,ALdouble *data)
         }
     }
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(data)
@@ -348,7 +348,7 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname,ALdouble *data)
         alSetError(Context, AL_INVALID_VALUE);
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname,ALfloat *data)
@@ -369,7 +369,7 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname,ALfloat *data)
         }
     }
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(data)
@@ -387,7 +387,7 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname,ALfloat *data)
         alSetError(Context, AL_INVALID_VALUE);
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname,ALint *data)
@@ -408,7 +408,7 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname,ALint *data)
         }
     }
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(data)
@@ -426,16 +426,16 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname,ALint *data)
         alSetError(Context, AL_INVALID_VALUE);
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
 {
     const ALchar *value;
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
-    pContext = GetLockedContext();
-    if(!pContext) return NULL;
+    Context = GetContextRef();
+    if(!Context) return NULL;
 
     switch(pname)
     {
@@ -452,7 +452,7 @@ AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
             break;
 
         case AL_EXTENSIONS:
-            value=pContext->ExtensionList;//alExtensions;
+            value=Context->ExtensionList;
             break;
 
         case AL_NO_ERROR:
@@ -481,11 +481,11 @@ AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
 
         default:
             value=NULL;
-            alSetError(pContext, AL_INVALID_ENUM);
+            alSetError(Context, AL_INVALID_ENUM);
             break;
     }
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 
     return value;
 }
@@ -494,7 +494,7 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
 {
     ALCcontext *Context;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(value >= 0.0f && isfinite(value))
@@ -505,14 +505,14 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
     else
         alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
 {
     ALCcontext *Context;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(value > 0.0f && isfinite(value))
@@ -523,32 +523,32 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     else
         alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
 {
-    ALCcontext *pContext;
+    ALCcontext *Context;
 
-    pContext = GetLockedContext();
-    if(!pContext) return;
+    Context = GetContextRef();
+    if(!Context) return;
 
     if(flSpeedOfSound > 0.0f && isfinite(flSpeedOfSound))
     {
-        pContext->flSpeedOfSound = flSpeedOfSound;
-        pContext->UpdateSources = AL_TRUE;
+        Context->flSpeedOfSound = flSpeedOfSound;
+        Context->UpdateSources = AL_TRUE;
     }
     else
-        alSetError(pContext, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE);
 
-    UnlockContext(pContext);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
 {
     ALCcontext *Context;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     switch(value)
@@ -569,7 +569,7 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
             break;
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 

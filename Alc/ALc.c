@@ -429,7 +429,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
     switch(ul_reason_for_call)
     {
         case DLL_PROCESS_ATTACH:
-            InitUIntMap(&TlsDestructor);
+            InitUIntMap(&TlsDestructor, ~0);
             alc_init();
             break;
 
@@ -1322,8 +1322,8 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->LastError = AL_NO_ERROR;
     pContext->UpdateSources = AL_FALSE;
     pContext->ActiveSourceCount = 0;
-    InitUIntMap(&pContext->SourceMap);
-    InitUIntMap(&pContext->EffectSlotMap);
+    InitUIntMap(&pContext->SourceMap, pContext->Device->MaxNoOfSources);
+    InitUIntMap(&pContext->EffectSlotMap, pContext->Device->AuxiliaryEffectSlotMax);
 
     //Set globals
     pContext->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
@@ -2446,9 +2446,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->ContextList = NULL;
     device->NumContexts = 0;
 
-    InitUIntMap(&device->BufferMap);
-    InitUIntMap(&device->EffectMap);
-    InitUIntMap(&device->FilterMap);
+    InitUIntMap(&device->BufferMap, ~0);
+    InitUIntMap(&device->EffectMap, ~0);
+    InitUIntMap(&device->FilterMap, ~0);
 
     //Set output format
     if(ConfigValueExists(NULL, "frequency"))
@@ -2608,9 +2608,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     device->ContextList = NULL;
     device->NumContexts = 0;
 
-    InitUIntMap(&device->BufferMap);
-    InitUIntMap(&device->EffectMap);
-    InitUIntMap(&device->FilterMap);
+    InitUIntMap(&device->BufferMap, ~0);
+    InitUIntMap(&device->EffectMap, ~0);
+    InitUIntMap(&device->FilterMap, ~0);
 
     //Set output format
     device->Frequency = 44100;

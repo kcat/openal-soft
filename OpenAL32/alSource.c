@@ -86,14 +86,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
 
             err = NewThunkEntry(&source->source);
             if(err == AL_NO_ERROR)
-            {
-                LockContext(Context);
-                if(Device->MaxNoOfSources == (ALuint)Context->SourceMap.size)
-                    err = AL_INVALID_VALUE;
-                else
-                    err = InsertUIntMapEntry(&Context->SourceMap, source->source, source);
-                UnlockContext(Context);
-            }
+                err = InsertUIntMapEntry(&Context->SourceMap, source->source, source);
             if(err != AL_NO_ERROR)
             {
                 FreeThunkEntry(source->source);

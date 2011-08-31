@@ -50,8 +50,6 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     Device = Context->Device;
     if(n < 0 || IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))
         alSetError(Context, AL_INVALID_VALUE);
-    else if((ALuint)n > Device->AuxiliaryEffectSlotMax - Context->EffectSlotMap.size)
-        alSetError(Context, AL_INVALID_VALUE);
     else
     {
         ALenum err;

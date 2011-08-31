@@ -334,11 +334,12 @@ typedef struct UIntMap {
     } *array;
     ALsizei size;
     ALsizei maxsize;
+    ALsizei limit;
     RWLock lock;
 } UIntMap;
 extern UIntMap TlsDestructor;
 
-void InitUIntMap(UIntMap *map);
+void InitUIntMap(UIntMap *map, ALsizei limit);
 void ResetUIntMap(UIntMap *map);
 ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
 void RemoveUIntMapKey(UIntMap *map, ALuint key);

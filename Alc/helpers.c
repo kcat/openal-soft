@@ -308,11 +308,12 @@ void WriteUnlock(RWLock *lock)
 }
 
 
-void InitUIntMap(UIntMap *map)
+void InitUIntMap(UIntMap *map, ALsizei limit)
 {
     map->array = NULL;
     map->size = 0;
     map->maxsize = 0;
+    map->limit = limit;
     map->lock.read_count = 0;
     map->lock.write_count = 0;
     map->lock.read_lock = AL_FALSE;
@@ -335,6 +336,12 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
     ALsizei pos = 0;
 
     WriteLock(&map->lock);
+    if(map->size == map->limit)
+    {
+        WriteUnlock(&map->lock);
+        return AL_OUT_OF_MEMORY;
+    }
+
     if(map->size > 0)
     {
         ALsizei low = 0;

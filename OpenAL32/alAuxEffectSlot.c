@@ -495,6 +495,7 @@ static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *slot)
             Context->ActiveEffectSlotCount--;
             break;
         }
+        slotlist++;
     }
 }
 

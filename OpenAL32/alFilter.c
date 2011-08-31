@@ -33,13 +33,14 @@
 static void InitFilterParams(ALfilter *filter, ALenum type);
 
 #define LookupFilter(m, k) ((ALfilter*)LookupUIntMapKey(&(m), (k)))
+#define RemoveFilter(m, k) ((ALfilter*)PopUIntMapValue(&(m), (k)))
 
 AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
 {
     ALCcontext *Context;
-    ALsizei i=0;
+    ALsizei i;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(n < 0 || IsBadWritePtr((void*)filters, n * sizeof(ALuint)))
@@ -49,7 +50,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
         ALCdevice *device = Context->Device;
         ALenum err;
 
-        while(i < n)
+        for(i = 0;i < n;i++)
         {
             ALfilter *filter = calloc(1, sizeof(ALfilter));
             if(!filter)
@@ -58,6 +59,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
                 alDeleteFilters(i, filters);
                 break;
             }
+            InitFilterParams(filter, AL_FILTER_NULL);
 
             err = NewThunkEntry(&filter->filter);
             if(err == AL_NO_ERROR)
@@ -73,12 +75,11 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
                 break;
             }
 
-            filters[i++] = filter->filter;
-            InitFilterParams(filter, AL_FILTER_NULL);
+            filters[i] = filter->filter;
         }
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
@@ -86,19 +87,16 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
     ALCcontext *Context;
     ALCdevice *device;
     ALfilter *ALFilter;
-    ALboolean Failed;
     ALsizei i;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
-    Failed = AL_TRUE;
     device = Context->Device;
     if(n < 0)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        Failed = AL_FALSE;
         // Check that all filters are valid
         for(i = 0;i < n;i++)
         {
@@ -108,22 +106,16 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
             if(LookupFilter(device->FilterMap, filters[i]) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
-                Failed = AL_TRUE;
+                n = 0;
                 break;
             }
         }
-    }
 
-    if(!Failed)
-    {
-        // All filters are valid
         for(i = 0;i < n;i++)
         {
             // Recheck that the filter is valid, because there could be duplicated names
-            if((ALFilter=LookupFilter(device->FilterMap, filters[i])) == NULL)
+            if((ALFilter=RemoveFilter(device->FilterMap, filters[i])) == NULL)
                 continue;
-
-            RemoveUIntMapKey(&device->FilterMap, ALFilter->filter);
             FreeThunkEntry(ALFilter->filter);
 
             memset(ALFilter, 0, sizeof(ALfilter));
@@ -131,7 +123,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, ALuint *filters)
         }
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter)

@@ -37,13 +37,14 @@ ALboolean DisabledEffects[MAX_EFFECTS];
 static void InitEffectParams(ALeffect *effect, ALenum type);
 
 #define LookupEffect(m, k) ((ALeffect*)LookupUIntMapKey(&(m), (k)))
+#define RemoveEffect(m, k) ((ALeffect*)PopUIntMapValue(&(m), (k)))
 
 AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 {
     ALCcontext *Context;
-    ALsizei i=0;
+    ALsizei i;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(n < 0 || IsBadWritePtr((void*)effects, n * sizeof(ALuint)))
@@ -53,7 +54,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
         ALCdevice *device = Context->Device;
         ALenum err;
 
-        while(i < n)
+        for(i = 0;i < n;i++)
         {
             ALeffect *effect = calloc(1, sizeof(ALeffect));
             if(!effect)
@@ -62,6 +63,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 alDeleteEffects(i, effects);
                 break;
             }
+            InitEffectParams(effect, AL_EFFECT_NULL);
 
             err = NewThunkEntry(&effect->effect);
             if(err == AL_NO_ERROR)
@@ -77,12 +79,11 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 break;
             }
 
-            effects[i++] = effect->effect;
-            InitEffectParams(effect, AL_EFFECT_NULL);
+            effects[i] = effect->effect;
         }
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
@@ -90,19 +91,16 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
     ALCcontext *Context;
     ALCdevice *device;
     ALeffect *ALEffect;
-    ALboolean Failed;
     ALsizei i;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
-    Failed = AL_TRUE;
     device = Context->Device;
     if(n < 0)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        Failed = AL_FALSE;
         // Check that all effects are valid
         for(i = 0;i < n;i++)
         {
@@ -112,22 +110,16 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
             if(LookupEffect(device->EffectMap, effects[i]) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
-                Failed = AL_TRUE;
+                n = 0;
                 break;
             }
         }
-    }
 
-    if(!Failed)
-    {
-        // All effects are valid
         for(i = 0;i < n;i++)
         {
             // Recheck that the effect is valid, because there could be duplicated names
-            if((ALEffect=LookupEffect(device->EffectMap, effects[i])) == NULL)
+            if((ALEffect=RemoveEffect(device->EffectMap, effects[i])) == NULL)
                 continue;
-
-            RemoveUIntMapKey(&device->EffectMap, ALEffect->effect);
             FreeThunkEntry(ALEffect->effect);
 
             memset(ALEffect, 0, sizeof(ALeffect));
@@ -135,7 +127,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
         }
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)

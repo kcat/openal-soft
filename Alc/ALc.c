@@ -1431,12 +1431,12 @@ ALCcontext *GetLockedContext(void)
 }
 
 /*
- * GetReffedContext(void)
+ * GetContextRef
  *
- * Returns the currently active Context, and add a reference to it without
+ * Returns the currently active Context, and adds a reference to it without
  * locking
  */
-ALCcontext *GetReffedContext(void)
+ALCcontext *GetContextRef(void)
 {
     ALCcontext *context;
 

@@ -45,7 +45,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     ALCcontext *Context;
     ALCdevice *Device;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
@@ -123,7 +123,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
     ALeffectslot *EffectSlot;
     ALsizei i;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(n < 0)
@@ -173,7 +173,7 @@ AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
     result = (LookupEffectSlot(Context->EffectSlotMap, effectslot) ?

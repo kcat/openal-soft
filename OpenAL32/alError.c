@@ -24,12 +24,12 @@
 #include "AL/alc.h"
 #include "alError.h"
 
-AL_API ALenum AL_APIENTRY alGetError(ALvoid)
+AL_API ALenum AL_APIENTRY alGetError(void)
 {
     ALCcontext *Context;
     ALenum errorCode;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return AL_INVALID_OPERATION;
 
     errorCode = ExchangeInt(&Context->LastError, AL_NO_ERROR);

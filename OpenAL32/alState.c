@@ -577,7 +577,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
 {
     ALCcontext *Context;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(!Context->DeferUpdates)
@@ -628,7 +628,7 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
 {
     ALCcontext *Context;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(ExchangeInt(&Context->DeferUpdates, AL_FALSE))

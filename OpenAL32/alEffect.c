@@ -143,7 +143,7 @@ AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
     result = ((!effect || LookupEffect(Context->Device->EffectMap, effect)) ?

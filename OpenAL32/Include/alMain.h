@@ -639,7 +639,7 @@ ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr);
 ALuint StopThread(ALvoid *thread);
 
 ALCcontext *GetLockedContext(void);
-ALCcontext *GetReffedContext(void);
+ALCcontext *GetContextRef(void);
 
 typedef struct RingBuffer RingBuffer;
 RingBuffer *CreateRingBuffer(ALsizei frame_size, ALsizei length);

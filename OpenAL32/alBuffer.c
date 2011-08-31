@@ -265,7 +265,7 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
     result = ((!buffer || LookupBuffer(Context->Device->BufferMap, buffer)) ?

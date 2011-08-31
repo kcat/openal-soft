@@ -61,7 +61,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
     ALCcontext *Context;
     ALCdevice *Device;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
@@ -114,7 +114,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     ALsizei i, j;
     ALbufferlistitem *BufferList;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(n < 0)
@@ -190,7 +190,7 @@ AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
     ALCcontext *Context;
     ALboolean  result;
 
-    Context = GetReffedContext();
+    Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
     result = (LookupSource(Context->SourceMap, source) ? AL_TRUE : AL_FALSE);

@@ -39,6 +39,7 @@ static ALboolean IsValidType(ALenum type);
 static ALboolean IsValidChannels(ALenum channels);
 
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
+#define RemoveBuffer(m, k) ((ALbuffer*)PopUIntMapValue(&(m), (k)))
 
 
 /*
@@ -141,7 +142,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
     ALCcontext *Context;
     ALsizei i=0;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     /* Check that we are actually generating some Buffers */
@@ -180,7 +181,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
         }
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 /*
@@ -192,22 +193,18 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 {
     ALCcontext *Context;
     ALCdevice *device;
-    ALboolean Failed;
     ALbuffer *ALBuf;
     ALsizei i;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
-    Failed = AL_TRUE;
     device = Context->Device;
     /* Check we are actually Deleting some Buffers */
     if(n < 0)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        Failed = AL_FALSE;
-
         /* Check that all the buffers are valid and can actually be deleted */
         for(i = 0;i < n;i++)
         {
@@ -218,41 +215,34 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
             if((ALBuf=LookupBuffer(device->BufferMap, buffers[i])) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
-                Failed = AL_TRUE;
+                n = 0;
                 break;
             }
             else if(ALBuf->ref != 0)
             {
                 /* Buffer still in use, cannot be deleted */
                 alSetError(Context, AL_INVALID_OPERATION);
-                Failed = AL_TRUE;
+                n = 0;
                 break;
             }
         }
-    }
 
-    /* If all the Buffers were valid (and have Reference Counts of 0), then we
-     * can delete them */
-    if(!Failed)
-    {
         for(i = 0;i < n;i++)
         {
-            if((ALBuf=LookupBuffer(device->BufferMap, buffers[i])) == NULL)
+            if((ALBuf=RemoveBuffer(device->BufferMap, buffers[i])) == NULL)
                 continue;
+            FreeThunkEntry(ALBuf->buffer);
 
             /* Release the memory used to store audio data */
             free(ALBuf->data);
 
             /* Release buffer structure */
-            RemoveUIntMapKey(&device->BufferMap, ALBuf->buffer);
-            FreeThunkEntry(ALBuf->buffer);
-
             memset(ALBuf, 0, sizeof(ALbuffer));
             free(ALBuf);
         }
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 /*

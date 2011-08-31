@@ -37,6 +37,7 @@ static ALenum ResizeEffectSlotArray(ALCcontext *Context, ALsizei count);
 static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *val);
 
 #define LookupEffectSlot(m, k) ((ALeffectslot*)LookupUIntMapKey(&(m), (k)))
+#define RemoveEffectSlot(m, k) ((ALeffectslot*)PopUIntMapValue(&(m), (k)))
 #define LookupEffect(m, k) ((ALeffect*)LookupUIntMapKey(&(m), (k)))
 
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
@@ -44,7 +45,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     ALCcontext *Context;
     ALCdevice *Device;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return;
 
     Device = Context->Device;
@@ -86,17 +87,20 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             }
             slot->ref = 0;
 
+            LockContext(Context);
             err = ResizeEffectSlotArray(Context, 1);
             if(err == AL_NO_ERROR)
-            {
                 Context->ActiveEffectSlots[Context->ActiveEffectSlotCount++] = slot;
+            UnlockContext(Context);
+            if(err == AL_NO_ERROR)
                 err = NewThunkEntry(&slot->effectslot);
-            }
             if(err == AL_NO_ERROR)
                 err = InsertUIntMapEntry(&Context->EffectSlotMap, slot->effectslot, slot);
             if(err != AL_NO_ERROR)
             {
+                LockContext(Context);
                 RemoveEffectSlotArray(Context, slot);
+                UnlockContext(Context);
                 FreeThunkEntry(slot->effectslot);
                 ALEffect_Destroy(slot->EffectState);
                 free(slot);
@@ -110,63 +114,58 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         }
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
     ALCcontext *Context;
     ALeffectslot *EffectSlot;
-    ALboolean SlotsValid = AL_FALSE;
     ALsizei i;
 
-    Context = GetLockedContext();
+    Context = GetReffedContext();
     if(!Context) return;
 
     if(n < 0)
         alSetError(Context, AL_INVALID_VALUE);
     else
     {
-        SlotsValid = AL_TRUE;
         // Check that all effectslots are valid
         for(i = 0;i < n;i++)
         {
             if((EffectSlot=LookupEffectSlot(Context->EffectSlotMap, effectslots[i])) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
-                SlotsValid = AL_FALSE;
+                n = 0;
                 break;
             }
             else if(EffectSlot->ref != 0)
             {
                 alSetError(Context, AL_INVALID_NAME);
-                SlotsValid = AL_FALSE;
+                n = 0;
                 break;
             }
         }
-    }
 
-    if(SlotsValid)
-    {
         // All effectslots are valid
         for(i = 0;i < n;i++)
         {
             // Recheck that the effectslot is valid, because there could be duplicated names
-            if((EffectSlot=LookupEffectSlot(Context->EffectSlotMap, effectslots[i])) == NULL)
+            if((EffectSlot=RemoveEffectSlot(Context->EffectSlotMap, effectslots[i])) == NULL)
                 continue;
-
-            RemoveEffectSlotArray(Context, EffectSlot);
-            ALEffect_Destroy(EffectSlot->EffectState);
-
-            RemoveUIntMapKey(&Context->EffectSlotMap, EffectSlot->effectslot);
             FreeThunkEntry(EffectSlot->effectslot);
+
+            LockContext(Context);
+            RemoveEffectSlotArray(Context, EffectSlot);
+            UnlockContext(Context);
+            ALEffect_Destroy(EffectSlot->EffectState);
 
             memset(EffectSlot, 0, sizeof(ALeffectslot));
             free(EffectSlot);
         }
     }
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)

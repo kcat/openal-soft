@@ -343,6 +343,7 @@ void ResetUIntMap(UIntMap *map);
 ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
 void RemoveUIntMapKey(UIntMap *map, ALuint key);
 ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
+ALvoid *PopUIntMapValue(UIntMap *map, ALuint key);
 
 static __inline void LockUIntMapRead(UIntMap *map)
 { ReadLock(&map->lock); }

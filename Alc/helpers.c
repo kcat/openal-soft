@@ -431,3 +431,32 @@ ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
     ReadUnlock(&map->lock);
     return ptr;
 }
+
+ALvoid *PopUIntMapValue(UIntMap *map, ALuint key)
+{
+    ALvoid *ptr = NULL;
+    WriteLock(&map->lock);
+    if(map->size > 0)
+    {
+        ALsizei low = 0;
+        ALsizei high = map->size - 1;
+        while(low < high)
+        {
+            ALsizei mid = low + (high-low)/2;
+            if(map->array[mid].key < key)
+                low = mid + 1;
+            else
+                high = mid;
+        }
+        if(map->array[low].key == key)
+        {
+            ptr = map->array[low].value;
+            if(low < map->size-1)
+                memmove(&map->array[low], &map->array[low+1],
+                        (map->size-1-low)*sizeof(map->array[0]));
+            map->size--;
+        }
+    }
+    WriteUnlock(&map->lock);
+    return ptr;
+}

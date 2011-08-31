@@ -51,6 +51,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum eName, ALdouble *Offsets,
 static ALint GetByteOffset(ALsource *Source);
 
 #define LookupSource(m, k) ((ALsource*)LookupUIntMapKey(&(m), (k)))
+#define RemoveSource(m, k) ((ALsource*)PopUIntMapValue(&(m), (k)))
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
 #define LookupFilter(m, k) ((ALfilter*)LookupUIntMapKey(&(m), (k)))
 #define LookupEffectSlot(m, k) ((ALeffectslot*)LookupUIntMapKey(&(m), (k)))
@@ -143,17 +144,13 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         {
             ALsource **srclist, **srclistend;
 
-            LockContext(Context);
-            if((Source=LookupSource(Context->SourceMap, sources[i])) == NULL)
-            {
-                UnlockContext(Context);
-                continue;
-            }
-
             // Remove Source from list of Sources
-            RemoveUIntMapKey(&Context->SourceMap, Source->source);
+            if((Source=RemoveSource(Context->SourceMap, sources[i])) == NULL)
+                continue;
+
             FreeThunkEntry(Source->source);
 
+            LockContext(Context);
             srclist = Context->ActiveSources;
             srclistend = srclist + Context->ActiveSourceCount;
             while(srclist != srclistend)

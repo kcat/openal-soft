@@ -321,6 +321,7 @@ typedef struct {
     volatile ALenum write_lock;
 } RWLock;
 
+void RWLockInit(RWLock *lock);
 void ReadLock(RWLock *lock);
 void ReadUnlock(RWLock *lock);
 void WriteLock(RWLock *lock);

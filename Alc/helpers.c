@@ -277,6 +277,15 @@ static void Unlock(volatile ALenum *l)
     ExchangeInt(l, AL_FALSE);
 }
 
+void RWLockInit(RWLock *lock)
+{
+    lock->read_count = 0;
+    lock->write_count = 0;
+    lock->read_lock = AL_FALSE;
+    lock->read_entry_lock = AL_FALSE;
+    lock->write_lock = AL_FALSE;
+}
+
 void ReadLock(RWLock *lock)
 {
     Lock(&lock->read_entry_lock);
@@ -314,11 +323,7 @@ void InitUIntMap(UIntMap *map, ALsizei limit)
     map->size = 0;
     map->maxsize = 0;
     map->limit = limit;
-    map->lock.read_count = 0;
-    map->lock.write_count = 0;
-    map->lock.read_lock = AL_FALSE;
-    map->lock.read_entry_lock = AL_FALSE;
-    map->lock.write_lock = AL_FALSE;
+    RWLockInit(&map->lock);
 }
 
 void ResetUIntMap(UIntMap *map)

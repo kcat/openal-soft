@@ -32,11 +32,7 @@ static RWLock  ThunkLock;
 
 void ThunkInit(void)
 {
-    ThunkLock.read_count = 0;
-    ThunkLock.write_count = 0;
-    ThunkLock.read_lock = AL_FALSE;
-    ThunkLock.read_entry_lock = AL_FALSE;
-    ThunkLock.write_lock = AL_FALSE;
+    RWLockInit(&ThunkLock);
     ThunkArraySize = 1;
     ThunkArray = calloc(1, ThunkArraySize * sizeof(*ThunkArray));
 }

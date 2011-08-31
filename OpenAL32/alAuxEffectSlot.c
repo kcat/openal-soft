@@ -555,10 +555,9 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
             memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
         else
             memcpy(&EffectSlot->effect, effect, sizeof(*effect));
-        /* FIXME: This should be done asychronously, but since the EfefctState
+        /* FIXME: This should be done asynchronously, but since the EffectState
          * object was changed, it needs an update before its Process method can
-         * be called (coming changes may not guarantee an update when the
-         * NeedsUpdate flag is set). */
+         * be called. */
         EffectSlot->NeedsUpdate = AL_FALSE;
         ALEffect_Update(EffectSlot->EffectState, Context, EffectSlot);
     }

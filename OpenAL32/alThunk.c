@@ -26,14 +26,17 @@
 #include "alThunk.h"
 
 
-static ALboolean  *ThunkArray;
-static ALuint      ThunkArraySize;
-
-static CRITICAL_SECTION ThunkLock;
+static ALenum *ThunkArray;
+static ALuint  ThunkArraySize;
+static RWLock  ThunkLock;
 
 void ThunkInit(void)
 {
-    InitializeCriticalSection(&ThunkLock);
+    ThunkLock.read_count = 0;
+    ThunkLock.write_count = 0;
+    ThunkLock.read_lock = AL_FALSE;
+    ThunkLock.read_entry_lock = AL_FALSE;
+    ThunkLock.write_lock = AL_FALSE;
     ThunkArraySize = 1;
     ThunkArray = calloc(1, ThunkArraySize * sizeof(*ThunkArray));
 }
@@ -43,51 +46,48 @@ void ThunkExit(void)
     free(ThunkArray);
     ThunkArray = NULL;
     ThunkArraySize = 0;
-    DeleteCriticalSection(&ThunkLock);
 }
 
 ALenum NewThunkEntry(ALuint *index)
 {
+    ALenum *NewList;
     ALuint i;
 
-    EnterCriticalSection(&ThunkLock);
-
+    ReadLock(&ThunkLock);
     for(i = 0;i < ThunkArraySize;i++)
     {
-        if(ThunkArray[i] == AL_FALSE)
-            break;
-    }
-
-    if(i == ThunkArraySize)
-    {
-        ALboolean *NewList;
-
-        NewList = realloc(ThunkArray, ThunkArraySize*2 * sizeof(*ThunkArray));
-        if(!NewList)
+        if(ExchangeInt(&ThunkArray[i], AL_TRUE) == AL_FALSE)
         {
-            LeaveCriticalSection(&ThunkLock);
-            ERR("Realloc failed to increase to %u enties!\n", ThunkArraySize*2);
-            return AL_OUT_OF_MEMORY;
+            ReadUnlock(&ThunkLock);
+            *index = i+1;
+            return AL_NO_ERROR;
         }
-        memset(&NewList[ThunkArraySize], 0, ThunkArraySize*sizeof(*ThunkArray));
-        ThunkArraySize *= 2;
-        ThunkArray = NewList;
     }
+    ReadUnlock(&ThunkLock);
+
+    WriteLock(&ThunkLock);
+    NewList = realloc(ThunkArray, ThunkArraySize*2 * sizeof(*ThunkArray));
+    if(!NewList)
+    {
+        WriteUnlock(&ThunkLock);
+        ERR("Realloc failed to increase to %u enties!\n", ThunkArraySize*2);
+        return AL_OUT_OF_MEMORY;
+    }
+    memset(&NewList[ThunkArraySize], 0, ThunkArraySize*sizeof(*ThunkArray));
+    ThunkArraySize *= 2;
+    ThunkArray = NewList;
 
     ThunkArray[i] = AL_TRUE;
+    WriteUnlock(&ThunkLock);
+
     *index = i+1;
-
-    LeaveCriticalSection(&ThunkLock);
-
     return AL_NO_ERROR;
 }
 
 void FreeThunkEntry(ALuint index)
 {
-    EnterCriticalSection(&ThunkLock);
-
+    ReadLock(&ThunkLock);
     if(index > 0 && index <= ThunkArraySize)
-        ThunkArray[index-1] = AL_FALSE;
-
-    LeaveCriticalSection(&ThunkLock);
+        ExchangeInt(&ThunkArray[index-1], AL_FALSE);
+    ReadUnlock(&ThunkLock);
 }

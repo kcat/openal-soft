@@ -252,7 +252,7 @@ static __inline RefCount IncrementRef(volatile RefCount *ptr)
 static __inline RefCount DecrementRef(volatile RefCount *ptr)
 { return InterlockedDecrement(ptr); }
 
-static LONG_size_does_not_match_int[(sizeof(LONG)==sizeof(int))?0:-1];
+extern ALbyte LONG_size_does_not_match_int[(sizeof(LONG)==sizeof(int))?1:-1];
 
 static __inline int ExchangeInt(volatile int *ptr, int newval)
 {
@@ -264,7 +264,7 @@ static __inline int ExchangeInt(volatile int *ptr, int newval)
 }
 static __inline void *ExchangePtr(void *volatile*ptr, void *newval)
 {
-    return InterlockedExchangePtr(ptr, newval);
+    return InterlockedExchangePointer(ptr, newval);
 }
 static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
 {

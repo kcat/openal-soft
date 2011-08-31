@@ -584,8 +584,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
     {
         ALboolean UpdateSources;
         ALsource **src, **src_end;
-        ALeffectslot *ALEffectSlot;
-        ALsizei e;
+        ALeffectslot **slot, **slot_end;
 
         LockContext(Context);
         Context->DeferUpdates = AL_TRUE;
@@ -610,14 +609,15 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
             src++;
         }
 
-        LockUIntMapRead(&Context->EffectSlotMap);
-        for(e = 0;e < Context->EffectSlotMap.size;e++)
+        slot = Context->ActiveEffectSlots;
+        slot_end = slot + Context->ActiveEffectSlotCount;
+        while(slot != slot_end)
         {
-            ALEffectSlot = Context->EffectSlotMap.array[e].value;
-            if(ExchangeInt(&ALEffectSlot->NeedsUpdate, AL_FALSE))
-                ALEffect_Update(ALEffectSlot->EffectState, Context, ALEffectSlot);
+            if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
+                ALEffect_Update((*slot)->EffectState, Context, *slot);
+            slot++;
         }
-        UnlockUIntMapRead(&Context->EffectSlotMap);
+
         UnlockContext(Context);
     }
 

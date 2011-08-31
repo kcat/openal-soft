@@ -182,26 +182,14 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     /* Calculate gains */
-    DryGain = clampf(SourceVolume, MinVolume, MaxVolume);
-    DryGainHF = 1.0f;
-    switch(ALSource->DirectFilter.type)
-    {
-        case AL_FILTER_LOWPASS:
-            DryGain *= ALSource->DirectFilter.Gain;
-            DryGainHF *= ALSource->DirectFilter.GainHF;
-            break;
-    }
+    DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
+    DryGain *= ALSource->DirectGain;
+    DryGainHF = ALSource->DirectGainHF;
     for(i = 0;i < NumSends;i++)
     {
-        WetGain[i] = clampf(SourceVolume, MinVolume, MaxVolume);
-        WetGainHF[i] = 1.0f;
-        switch(ALSource->Send[i].WetFilter.type)
-        {
-            case AL_FILTER_LOWPASS:
-                WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
-                WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
-                break;
-        }
+        WetGain[i]  = clampf(SourceVolume, MinVolume, MaxVolume);
+        WetGain[i] *= ALSource->Send[i].WetGain;
+        WetGainHF[i] = WetGainHF[i] *= ALSource->Send[i].WetGainHF;
     }
 
     SrcMatrix = ALSource->Params.DryGains;
@@ -610,24 +598,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         WetGain[i] = clampf(WetGain[i], MinVolume, MaxVolume);
 
     // Apply filter gains and filters
-    switch(ALSource->DirectFilter.type)
-    {
-        case AL_FILTER_LOWPASS:
-            DryGain *= ALSource->DirectFilter.Gain;
-            DryGainHF *= ALSource->DirectFilter.GainHF;
-            break;
-    }
-    DryGain *= ListenerGain;
+    DryGain   *= ALSource->DirectGain * ListenerGain;
+    DryGainHF *= ALSource->DirectGainHF;
     for(i = 0;i < NumSends;i++)
     {
-        switch(ALSource->Send[i].WetFilter.type)
-        {
-            case AL_FILTER_LOWPASS:
-                WetGain[i] *= ALSource->Send[i].WetFilter.Gain;
-                WetGainHF[i] *= ALSource->Send[i].WetFilter.GainHF;
-                break;
-        }
-        WetGain[i] *= ListenerGain;
+        WetGain[i]   *= ALSource->Send[i].WetGain * ListenerGain;
+        WetGainHF[i] *= ALSource->Send[i].WetGainHF;
     }
 
     if(WetGainAuto)

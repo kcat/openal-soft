@@ -59,11 +59,13 @@ typedef struct ALsource
     ALuint BuffersInQueue;   // Number of buffers in queue
     ALuint BuffersPlayed;    // Number of buffers played on this loop
 
-    ALfilter DirectFilter;
+    ALfloat DirectGain;
+    ALfloat DirectGainHF;
 
     struct {
         struct ALeffectslot *Slot;
-        ALfilter WetFilter;
+        ALfloat WetGain;
+        ALfloat WetGainHF;
     } Send[MAX_SENDS];
 
     ALboolean DryGainHFAuto;

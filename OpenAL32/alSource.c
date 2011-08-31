@@ -653,11 +653,14 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                 {
                     if(!filter)
                     {
-                        Source->DirectFilter.type = AL_FILTER_NULL;
-                        Source->DirectFilter.filter = 0;
+                        Source->DirectGain = 1.0f;
+                        Source->DirectGainHF = 1.0f;
                     }
                     else
-                        memcpy(&Source->DirectFilter, filter, sizeof(*filter));
+                    {
+                        Source->DirectGain = filter->Gain;
+                        Source->DirectGainHF = filter->GainHF;
+                    }
                     Source->NeedsUpdate = AL_TRUE;
                 }
                 else
@@ -777,11 +780,14 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
                     if(!ALFilter)
                     {
                         /* Disable filter */
-                        Source->Send[lValue2].WetFilter.type = 0;
-                        Source->Send[lValue2].WetFilter.filter = 0;
+                        Source->Send[lValue2].WetGain = 1.0f;
+                        Source->Send[lValue2].WetGainHF = 1.0f;
                     }
                     else
-                        memcpy(&Source->Send[lValue2].WetFilter, ALFilter, sizeof(*ALFilter));
+                    {
+                        Source->Send[lValue2].WetGain = ALFilter->Gain;
+                        Source->Send[lValue2].WetGainHF = ALFilter->GainHF;
+                    }
                     Source->NeedsUpdate = AL_TRUE;
                 }
                 else
@@ -1164,10 +1170,6 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plVa
                                 pContext->Device->Frequency;
                     GetSourceOffset(Source, eParam, Offsets, updateLen);
                     *plValue = (ALint)Offsets[0];
-                    break;
-
-                case AL_DIRECT_FILTER:
-                    *plValue = Source->DirectFilter.filter;
                     break;
 
                 case AL_DIRECT_FILTER_GAINHF_AUTO:
@@ -1741,6 +1743,8 @@ done:
 
 static ALvoid InitSourceParams(ALsource *Source)
 {
+    ALuint i;
+
     Source->flInnerAngle = 360.0f;
     Source->flOuterAngle = 360.0f;
     Source->flPitch = 1.0f;
@@ -1779,6 +1783,14 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->new_state = AL_NONE;
     Source->lSourceType = AL_UNDETERMINED;
     Source->lOffset = -1;
+
+    Source->DirectGain = 1.0f;
+    Source->DirectGainHF = 1.0f;
+    for(i = 0;i < MAX_SENDS;i++)
+    {
+        Source->Send[i].WetGain = 1.0f;
+        Source->Send[i].WetGainHF = 1.0f;
+    }
 
     Source->NeedsUpdate = AL_TRUE;
 

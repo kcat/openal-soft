@@ -2147,16 +2147,13 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     }
     UnlockDevice(Device);
 
+    if(CompExchangePtr((void**)&GlobalContext, context, NULL))
+        ALCcontext_DecRef(context);
+
     if(Device->NumContexts == 0)
     {
         ALCdevice_StopPlayback(Device);
         Device->Flags &= ~DEVICE_RUNNING;
-    }
-
-    if(GlobalContext == context)
-    {
-        GlobalContext = NULL;
-        ALCcontext_DecRef(context);
     }
     UnlockLists();
 

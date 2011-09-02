@@ -243,6 +243,10 @@ static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int new
 {
     return __sync_bool_compare_and_swap(ptr, oldval, newval);
 }
+static __inline ALboolean CompExchangePtr(void *volatile*ptr, void *oldval, void *newval)
+{
+    return __sync_bool_compare_and_swap(ptr, oldval, newval);
+}
 
 #elif defined(_WIN32)
 
@@ -273,6 +277,10 @@ static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int new
         volatile LONG *l;
     } u = { ptr };
     return InterlockedCompareExchange(u.l, newval, oldval) == oldval;
+}
+static __inline void *CompExchangePtr(void *volatile*ptr, void *oldval, void *newval)
+{
+    return InterlockedCompareExchangePointer(ptr, newval, oldval);
 }
 
 #elif defined(__APPLE__)
@@ -305,6 +313,10 @@ static __inline void *ExchangePtr(void *volatile*ptr, void *newval)
 static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
 {
     return OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr);
+}
+static __inline ALboolean CompExchangeInt(void *volatile*ptr, void *oldval, void *newval)
+{
+    return OSAtomicCompareAndSwapPtrBarrier(oldval, newval, ptr);
 }
 
 #else

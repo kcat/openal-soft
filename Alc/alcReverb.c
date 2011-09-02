@@ -684,6 +684,7 @@ static ALboolean AllocLines(ALuint frequency, ALverbState *State)
 
     if(totalSamples != State->TotalSamples)
     {
+        TRACE("New reverb buffer length: %u samples (%f sec)\n", totalSamples, totalSamples/(float)frequency);
         newBuffer = realloc(State->SampleBuffer, sizeof(ALfloat) * totalSamples);
         if(newBuffer == NULL)
             return AL_FALSE;

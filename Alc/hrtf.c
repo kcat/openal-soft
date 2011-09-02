@@ -291,7 +291,7 @@ ALCboolean IsHrtfCompatible(ALCdevice *device)
 {
     if(device->FmtChans == DevFmtStereo && device->Frequency == Hrtf.sampleRate)
         return ALC_TRUE;
-    ERR("Incompatible HRTF format: %s %uhz (%s %uhz needed)\n",
+    ERR("format: %s %uhz (needed: %s %uhz)\n",
         DevFmtChannelsString(device->FmtChans), device->Frequency,
         DevFmtChannelsString(DevFmtStereo), Hrtf.sampleRate);
     return ALC_FALSE;

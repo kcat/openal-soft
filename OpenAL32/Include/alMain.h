@@ -674,9 +674,8 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
 void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
 ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep);
 
-void al_print(const char *fname, unsigned int line, const char *fmt, ...)
-             PRINTF_STYLE(3,4);
-#define AL_PRINT(...) al_print(__FILE__, __LINE__, __VA_ARGS__)
+void al_print(const char *func, const char *fmt, ...) PRINTF_STYLE(2,3);
+#define AL_PRINT(...) al_print(__FUNCTION__, __VA_ARGS__)
 
 extern FILE *LogFile;
 enum LogLevel {

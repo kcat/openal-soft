@@ -1344,16 +1344,18 @@ static ALvoid InitContext(ALCcontext *pContext)
 */
 static ALCvoid FreeContext(ALCcontext *context)
 {
+    TRACE("%p\n", context);
+
     if(context->SourceMap.size > 0)
     {
-        ERR("FreeContext(%p): deleting %d Source(s)\n", context, context->SourceMap.size);
+        ERR("(%p) Deleting %d Source(s)\n", context, context->SourceMap.size);
         ReleaseALSources(context);
     }
     ResetUIntMap(&context->SourceMap);
 
     if(context->EffectSlotMap.size > 0)
     {
-        ERR("FreeContext(%p): deleting %d AuxiliaryEffectSlot(s)\n", context, context->EffectSlotMap.size);
+        ERR("(%p) Deleting %d AuxiliaryEffectSlot(s)\n", context, context->EffectSlotMap.size);
         ReleaseALAuxiliaryEffectSlots(context);
     }
     ResetUIntMap(&context->EffectSlotMap);
@@ -1377,14 +1379,14 @@ void ALCcontext_IncRef(ALCcontext *context)
 {
     RefCount ref;
     ref = IncrementRef(&context->ref);
-    TRACE("%p refcount increment to %d\n", context, ref);
+    TRACE("%p increasing refcount to %u\n", context, ref);
 }
 
 void ALCcontext_DecRef(ALCcontext *context)
 {
     RefCount ref;
     ref = DecrementRef(&context->ref);
-    TRACE("%p refcount decrement to %d\n", context, ref);
+    TRACE("%p decreasing refcount to %u\n", context, ref);
     if(ref == 0) FreeContext(context);
 }
 
@@ -2537,7 +2539,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 
     if(pDevice->NumContexts > 0)
     {
-        WARN("alcCloseDevice(): destroying %u Context(s)\n", pDevice->NumContexts);
+        WARN("Destroying %u Context(s)\n", pDevice->NumContexts);
         while(pDevice->ContextList)
             alcDestroyContext(pDevice->ContextList);
     }
@@ -2545,21 +2547,21 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 
     if(pDevice->BufferMap.size > 0)
     {
-        WARN("alcCloseDevice(): deleting %d Buffer(s)\n", pDevice->BufferMap.size);
+        WARN("Deleting %d Buffer(s)\n", pDevice->BufferMap.size);
         ReleaseALBuffers(pDevice);
     }
     ResetUIntMap(&pDevice->BufferMap);
 
     if(pDevice->EffectMap.size > 0)
     {
-        WARN("alcCloseDevice(): deleting %d Effect(s)\n", pDevice->EffectMap.size);
+        WARN("Deleting %d Effect(s)\n", pDevice->EffectMap.size);
         ReleaseALEffects(pDevice);
     }
     ResetUIntMap(&pDevice->EffectMap);
 
     if(pDevice->FilterMap.size > 0)
     {
-        WARN("alcCloseDevice(): deleting %d Filter(s)\n", pDevice->FilterMap.size);
+        WARN("Deleting %d Filter(s)\n", pDevice->FilterMap.size);
         ReleaseALFilters(pDevice);
     }
     ResetUIntMap(&pDevice->FilterMap);
@@ -2703,7 +2705,7 @@ static void ReleaseALC(ALCboolean doclose)
     if(doclose)
     {
         if(g_ulDeviceCount > 0)
-            WARN("ReleaseALC(): closing %u Device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
+            WARN("Closing %u device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
 
         while(g_pDeviceList)
         {
@@ -2716,7 +2718,7 @@ static void ReleaseALC(ALCboolean doclose)
     else
     {
         if(g_ulDeviceCount > 0)
-            WARN("ReleaseALC(): %u Device%s not closed\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
+            WARN("%u device%s not closed\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
     }
 }
 

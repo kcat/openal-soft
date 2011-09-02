@@ -207,18 +207,12 @@ void *GetSymbol(void *handle, const char *name)
 #endif
 
 
-void al_print(const char *fname, unsigned int line, const char *fmt, ...)
+void al_print(const char *func, const char *fmt, ...)
 {
-    const char *fn;
     char str[256];
     int i;
 
-    fn = strrchr(fname, '/');
-    if(!fn) fn = strrchr(fname, '\\');
-    if(!fn) fn = fname;
-    else fn += 1;
-
-    i = snprintf(str, sizeof(str), "AL lib: %s:%d: ", fn, line);
+    i = snprintf(str, sizeof(str), "AL lib: %s: ", func);
     if(i < (int)sizeof(str) && i > 0)
     {
         va_list ap;

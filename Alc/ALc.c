@@ -2231,9 +2231,10 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
     // context must be a valid Context or NULL
     if(context == NULL || IsContext(context))
     {
-        ALCcontext *old = GlobalContext;
+        ALCcontext *old;
+
         if(context) ALCcontext_IncRef(context);
-        GlobalContext = context;
+        old = ExchangePtr((void**)&GlobalContext, context);
         if(old) ALCcontext_DecRef(old);
 
         if((old=pthread_getspecific(LocalContext)) != NULL)

@@ -2171,12 +2171,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(ALCvoid)
     ALCcontext *Context;
 
     Context = pthread_getspecific(LocalContext);
-    if(!Context)
-    {
-        LockLists();
-        Context = GlobalContext;
-        UnlockLists();
-    }
+    if(!Context) Context = GlobalContext;
 
     return Context;
 }

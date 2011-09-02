@@ -46,8 +46,7 @@ struct ALeffectState {
 };
 
 ALeffectState *NoneCreate(void);
-ALeffectState *EAXVerbCreate(void);
-ALeffectState *VerbCreate(void);
+ALeffectState *ReverbCreate(void);
 ALeffectState *EchoCreate(void);
 ALeffectState *ModulatorCreate(void);
 ALeffectState *DedicatedCreate(void);

@@ -530,15 +530,13 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
         NewState = NoneCreate();
         if(!NewState) err = AL_OUT_OF_MEMORY;
     }
-    else if(newtype == AL_EFFECT_EAXREVERB && EffectSlot->effect.type != AL_EFFECT_EAXREVERB)
+    else if(newtype == AL_EFFECT_EAXREVERB || newtype == AL_EFFECT_REVERB)
     {
-        NewState = EAXVerbCreate();
-        if(!NewState) err = AL_OUT_OF_MEMORY;
-    }
-    else if(newtype == AL_EFFECT_REVERB && EffectSlot->effect.type != AL_EFFECT_REVERB)
-    {
-        NewState = VerbCreate();
-        if(!NewState) err = AL_OUT_OF_MEMORY;
+        if(EffectSlot->effect.type != AL_EFFECT_EAXREVERB && EffectSlot->effect.type != AL_EFFECT_REVERB)
+        {
+            NewState = ReverbCreate();
+            if(!NewState) err = AL_OUT_OF_MEMORY;
+        }
     }
     else if(newtype == AL_EFFECT_ECHO && EffectSlot->effect.type != AL_EFFECT_ECHO)
     {
@@ -550,11 +548,13 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
         NewState = ModulatorCreate();
         if(!NewState) err = AL_OUT_OF_MEMORY;
     }
-    else if((newtype == AL_EFFECT_DEDICATED_DIALOGUE || newtype == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT) &&
-            EffectSlot->effect.type != AL_EFFECT_DEDICATED_DIALOGUE && EffectSlot->effect.type != AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
+    else if(newtype == AL_EFFECT_DEDICATED_DIALOGUE || newtype == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
     {
-        NewState = DedicatedCreate();
-        if(!NewState) err = AL_OUT_OF_MEMORY;
+        if(EffectSlot->effect.type != AL_EFFECT_DEDICATED_DIALOGUE && EffectSlot->effect.type != AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
+        {
+            NewState = DedicatedCreate();
+            if(!NewState) err = AL_OUT_OF_MEMORY;
+        }
     }
 
     if(err != AL_NO_ERROR)

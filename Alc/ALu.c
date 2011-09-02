@@ -189,7 +189,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         WetGain[i]  = clampf(SourceVolume, MinVolume, MaxVolume);
         WetGain[i] *= ALSource->Send[i].WetGain;
-        WetGainHF[i] = WetGainHF[i] *= ALSource->Send[i].WetGainHF;
+        WetGainHF[i] = ALSource->Send[i].WetGainHF;
     }
 
     SrcMatrix = ALSource->Params.DryGains;

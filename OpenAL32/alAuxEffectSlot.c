@@ -535,9 +535,9 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
         else if(effect->type == AL_EFFECT_RING_MODULATOR)
             NewState = ModulatorCreate();
         else if(effect->type == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
-            NewState = DedicatedLFECreate();
+            NewState = DedicatedCreate();
         else if(effect->type == AL_EFFECT_DEDICATED_DIALOGUE)
-            NewState = DedicatedDLGCreate();
+            NewState = DedicatedCreate();
         /* No new state? An error occured.. */
         if(NewState == NULL ||
            ALEffect_DeviceUpdate(NewState, Context->Device) == AL_FALSE)

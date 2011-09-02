@@ -50,7 +50,7 @@ static ALboolean DedicatedDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     return AL_TRUE;
 }
 
-static ALvoid DedicatedDLGUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
+static ALvoid DedicatedUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
 {
     ALdedicatedState *state = (ALdedicatedState*)effect;
     ALCdevice *device = Context->Device;
@@ -59,25 +59,20 @@ static ALvoid DedicatedDLGUpdate(ALeffectState *effect, ALCcontext *Context, con
     ALint pos;
     ALsizei s;
 
-    pos = aluCart2LUTpos(1.0f, 0.0f);
-    SpeakerGain = device->PanningLUT[pos];
-
-    Gain = Slot->Gain * Slot->effect.Params.Dedicated.Gain;
-    for(s = 0;s < MAXCHANNELS;s++)
-        state->gains[s] = SpeakerGain[s] * Gain;
-}
-
-static ALvoid DedicatedLFEUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
-{
-    ALdedicatedState *state = (ALdedicatedState*)effect;
-    ALfloat Gain;
-    ALsizei s;
-    (void)Context;
-
     Gain = Slot->Gain * Slot->effect.Params.Dedicated.Gain;
     for(s = 0;s < MAXCHANNELS;s++)
         state->gains[s] = 0.0f;
-    state->gains[LFE] = Gain;
+
+    if(Slot->effect.type == AL_EFFECT_DEDICATED_DIALOGUE)
+    {
+        pos = aluCart2LUTpos(1.0f, 0.0f);
+        SpeakerGain = device->PanningLUT[pos];
+
+        for(s = 0;s < MAXCHANNELS;s++)
+            state->gains[s] = SpeakerGain[s] * Gain;
+    }
+    else if(Slot->effect.type == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
+        state->gains[LFE] = Gain;
 }
 
 static ALvoid DedicatedProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
@@ -97,7 +92,7 @@ static ALvoid DedicatedProcess(ALeffectState *effect, const ALeffectslot *Slot, 
     }
 }
 
-ALeffectState *DedicatedDLGCreate(void)
+ALeffectState *DedicatedCreate(void)
 {
     ALdedicatedState *state;
     ALsizei s;
@@ -108,27 +103,7 @@ ALeffectState *DedicatedDLGCreate(void)
 
     state->state.Destroy = DedicatedDestroy;
     state->state.DeviceUpdate = DedicatedDeviceUpdate;
-    state->state.Update = DedicatedDLGUpdate;
-    state->state.Process = DedicatedProcess;
-
-    for(s = 0;s < MAXCHANNELS;s++)
-        state->gains[s] = 0.0f;
-
-    return &state->state;
-}
-
-ALeffectState *DedicatedLFECreate(void)
-{
-    ALdedicatedState *state;
-    ALsizei s;
-
-    state = malloc(sizeof(*state));
-    if(!state)
-        return NULL;
-
-    state->state.Destroy = DedicatedDestroy;
-    state->state.DeviceUpdate = DedicatedDeviceUpdate;
-    state->state.Update = DedicatedLFEUpdate;
+    state->state.Update = DedicatedUpdate;
     state->state.Process = DedicatedProcess;
 
     for(s = 0;s < MAXCHANNELS;s++)

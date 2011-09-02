@@ -521,35 +521,59 @@ static ALenum ResizeEffectSlotArray(ALCcontext *Context, ALsizei count)
 
 static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect)
 {
-    if(EffectSlot->effect.type != (effect?effect->type:AL_EFFECT_NULL))
+    ALenum newtype = (effect ? effect->type : AL_EFFECT_NULL);
+    ALeffectState *NewState = NULL;
+    ALenum err = AL_NO_ERROR;
+
+    if(newtype == AL_EFFECT_NULL && EffectSlot->effect.type != AL_EFFECT_NULL)
     {
-        ALeffectState *NewState = NULL;
-        if(!effect || effect->type == AL_EFFECT_NULL)
-            NewState = NoneCreate();
-        else if(effect->type == AL_EFFECT_EAXREVERB)
-            NewState = EAXVerbCreate();
-        else if(effect->type == AL_EFFECT_REVERB)
-            NewState = VerbCreate();
-        else if(effect->type == AL_EFFECT_ECHO)
-            NewState = EchoCreate();
-        else if(effect->type == AL_EFFECT_RING_MODULATOR)
-            NewState = ModulatorCreate();
-        else if(effect->type == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
-            NewState = DedicatedCreate();
-        else if(effect->type == AL_EFFECT_DEDICATED_DIALOGUE)
-            NewState = DedicatedCreate();
-        /* No new state? An error occured.. */
-        if(NewState == NULL ||
-           ALEffect_DeviceUpdate(NewState, Context->Device) == AL_FALSE)
+        NewState = NoneCreate();
+        if(!NewState) err = AL_OUT_OF_MEMORY;
+    }
+    else if(newtype == AL_EFFECT_EAXREVERB && EffectSlot->effect.type != AL_EFFECT_EAXREVERB)
+    {
+        NewState = EAXVerbCreate();
+        if(!NewState) err = AL_OUT_OF_MEMORY;
+    }
+    else if(newtype == AL_EFFECT_REVERB && EffectSlot->effect.type != AL_EFFECT_REVERB)
+    {
+        NewState = VerbCreate();
+        if(!NewState) err = AL_OUT_OF_MEMORY;
+    }
+    else if(newtype == AL_EFFECT_ECHO && EffectSlot->effect.type != AL_EFFECT_ECHO)
+    {
+        NewState = EchoCreate();
+        if(!NewState) err = AL_OUT_OF_MEMORY;
+    }
+    else if(newtype == AL_EFFECT_RING_MODULATOR && EffectSlot->effect.type != AL_EFFECT_RING_MODULATOR)
+    {
+        NewState = ModulatorCreate();
+        if(!NewState) err = AL_OUT_OF_MEMORY;
+    }
+    else if((newtype == AL_EFFECT_DEDICATED_DIALOGUE || newtype == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT) &&
+            EffectSlot->effect.type != AL_EFFECT_DEDICATED_DIALOGUE && EffectSlot->effect.type != AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
+    {
+        NewState = DedicatedCreate();
+        if(!NewState) err = AL_OUT_OF_MEMORY;
+    }
+
+    if(err != AL_NO_ERROR)
+    {
+        alSetError(Context, err);
+        return;
+    }
+
+    if(NewState)
+    {
+        if(ALEffect_DeviceUpdate(NewState, Context->Device) == AL_FALSE)
         {
-            if(NewState)
-                ALEffect_Destroy(NewState);
+            ALEffect_Destroy(NewState);
             alSetError(Context, AL_OUT_OF_MEMORY);
             return;
         }
-        if(EffectSlot->EffectState)
-            ALEffect_Destroy(EffectSlot->EffectState);
-        EffectSlot->EffectState = NewState;
+        NewState = ExchangePtr((void**)&EffectSlot->EffectState, NewState);
+        ALEffect_Destroy(NewState);
+        NewState = NULL;
 
         if(!effect)
             memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));

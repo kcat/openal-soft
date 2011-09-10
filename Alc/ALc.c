@@ -1012,11 +1012,11 @@ static void UnlockLists(void)
     LeaveCriticalSection(&ListLock);
 }
 
-/*
-    IsDevice
-
-    Check pDevice is a valid Device pointer
-*/
+/* IsDevice
+ *
+ * Check if the device pointer is valid (caller is responsible for holding the
+ * list lock).
+ */
 static ALCboolean IsDevice(ALCdevice *pDevice)
 {
     ALCdevice *pTempDevice;
@@ -1028,11 +1028,11 @@ static ALCboolean IsDevice(ALCdevice *pDevice)
     return (pTempDevice ? ALC_TRUE : ALC_FALSE);
 }
 
-/*
-    IsContext
-
-    Check pContext is a valid Context pointer
-*/
+/* IsContext
+ *
+ * Check if the context pointer is valid (caller is responsible for holding the
+ * list lock).
+ */
 static ALCboolean IsContext(ALCcontext *context)
 {
     ALCdevice *tmp_dev;
@@ -1054,9 +1054,10 @@ static ALCboolean IsContext(ALCcontext *context)
 }
 
 
-/* UpdateDeviceParams:
+/* UpdateDeviceParams
  *
- * Updates device parameters according to the attribute list.
+ * Updates device parameters according to the attribute list (caller is
+ * responsible for holding the list lock).
  */
 static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
@@ -1286,18 +1287,11 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     return ALC_TRUE;
 }
 
-
-ALCvoid LockDevice(ALCdevice *device)
-{
-    EnterCriticalSection(&device->Mutex);
-}
-
-ALCvoid UnlockDevice(ALCdevice *device)
-{
-    LeaveCriticalSection(&device->Mutex);
-}
-
-
+/* FreeDevice
+ *
+ * Frees the device structure, and destroys any objects the app failed to
+ * delete.
+ */
 static ALCvoid FreeDevice(ALCdevice *device)
 {
     TRACE("%p\n", device);
@@ -1334,6 +1328,7 @@ static ALCvoid FreeDevice(ALCdevice *device)
     free(device);
 }
 
+
 void ALCdevice_IncRef(ALCdevice *device)
 {
     RefCount ref;
@@ -1351,8 +1346,7 @@ void ALCdevice_DecRef(ALCdevice *device)
 
 /* VerifyDevice
  *
- * Verifies that the device handle is valid, and increments its ref count if
- * so.
+ * Checks if the device handle is valid, and increments its ref count if so.
  */
 static ALCdevice *VerifyDevice(ALCdevice *device)
 {
@@ -1375,7 +1369,7 @@ static ALCdevice *VerifyDevice(ALCdevice *device)
 
 /* alcSetError
  *
- * Store latest ALC Error
+ * Stores the latest ALC Error
  */
 ALCvoid alcSetError(ALCdevice *device, ALCenum errorCode)
 {
@@ -1400,11 +1394,21 @@ ALCvoid alcSetError(ALCdevice *device, ALCenum errorCode)
 }
 
 
-/*
-    InitContext
+ALCvoid LockDevice(ALCdevice *device)
+{
+    EnterCriticalSection(&device->Mutex);
+}
 
-    Initialize Context variables
-*/
+ALCvoid UnlockDevice(ALCdevice *device)
+{
+    LeaveCriticalSection(&device->Mutex);
+}
+
+
+/* InitContext
+ *
+ * Initializes context variables
+ */
 static ALvoid InitContext(ALCcontext *pContext)
 {
     ALCdevice_IncRef(pContext->Device);
@@ -1444,11 +1448,11 @@ static ALvoid InitContext(ALCcontext *pContext)
 }
 
 
-/*
-    FreeContext
-
-    Clean up Context, destroy any remaining Sources
-*/
+/* FreeContext
+ *
+ * Cleans up the context, and destroy any remaining objects the app failed to
+ * delete.
+ */
 static ALCvoid FreeContext(ALCcontext *context)
 {
     TRACE("%p\n", context);
@@ -1485,6 +1489,11 @@ static ALCvoid FreeContext(ALCcontext *context)
     free(context);
 }
 
+/* ReleaseContext
+ *
+ * Removes the context reference from the given device and removes it from
+ * being current on the running thread or globally.
+ */
 static void ReleaseContext(ALCcontext *context, ALCdevice *device)
 {
     ALCcontext *volatile*tmp_ctx;
@@ -1539,7 +1548,7 @@ void ALCcontext_DecRef(ALCcontext *context)
 
 static void ReleaseThreadCtx(void *ptr)
 {
-    WARN("Context %p still current for thread being destroyed\n", ptr);
+    WARN("Context %p current for thread being destroyed\n", ptr);
     ALCcontext_DecRef(ptr);
 }
 
@@ -1556,10 +1565,9 @@ ALCvoid UnlockContext(ALCcontext *context)
     ALCcontext_DecRef(context);
 }
 
-/*
- *  GetLockedContext
+/* GetLockedContext
  *
- *  Returns the currently active Context, in a locked state
+ * Returns the currently active context, in a locked state.
  */
 ALCcontext *GetLockedContext(void)
 {
@@ -1580,11 +1588,10 @@ ALCcontext *GetLockedContext(void)
     return context;
 }
 
-/*
- * GetContextRef
+/* GetContextRef
  *
- * Returns the currently active Context, and adds a reference to it without
- * locking
+ * Returns the currently active context, and adds a reference without locking
+ * it.
  */
 ALCcontext *GetContextRef(void)
 {

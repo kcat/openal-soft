@@ -38,43 +38,6 @@
 #define ALC_EFX_MAJOR_VERSION                    0x20001
 #define ALC_EFX_MINOR_VERSION                    0x20002
 #define ALC_MAX_AUXILIARY_SENDS                  0x20003
-#define AL_FILTER_TYPE                           0x8001
-#define AL_FILTER_NULL                           0x0000
-#define AL_FILTER_LOWPASS                        0x0001
-#define AL_FILTER_HIGHPASS                       0x0002
-#define AL_FILTER_BANDPASS                       0x0003
-#define AL_EFFECT_TYPE                           0x8001
-#define AL_EFFECT_NULL                           0x0000
-#define AL_EFFECT_EAXREVERB                      0x8000
-#define AL_EFFECT_REVERB                         0x0001
-#define AL_EFFECT_CHORUS                         0x0002
-#define AL_EFFECT_DISTORTION                     0x0003
-#define AL_EFFECT_ECHO                           0x0004
-#define AL_EFFECT_FLANGER                        0x0005
-#define AL_EFFECT_FREQUENCY_SHIFTER              0x0006
-#define AL_EFFECT_VOCAL_MORPHER                  0x0007
-#define AL_EFFECT_PITCH_SHIFTER                  0x0008
-#define AL_EFFECT_RING_MODULATOR                 0x0009
-#define AL_EFFECT_AUTOWAH                        0x000A
-#define AL_EFFECT_COMPRESSOR                     0x000B
-#define AL_EFFECT_EQUALIZER                      0x000C
-typedef void (AL_APIENTRY *LPALGENFILTERS)(ALsizei, ALuint*);
-typedef void (AL_APIENTRY *LPALDELETEFILTERS)(ALsizei, ALuint*);
-typedef void (AL_APIENTRY *LPALFILTERI)(ALuint, ALenum, ALint);
-typedef void (AL_APIENTRY *LPALGENEFFECTS)(ALsizei, ALuint*);
-typedef void (AL_APIENTRY *LPALDELETEEFFECTS)(ALsizei, ALuint*);
-typedef void (AL_APIENTRY *LPALEFFECTI)(ALuint, ALenum, ALint);
-#endif
-static LPALGENFILTERS    palGenFilters;
-static LPALDELETEFILTERS palDeleteFilters;
-static LPALFILTERI       palFilteri;
-static LPALGENEFFECTS    palGenEffects;
-static LPALDELETEEFFECTS palDeleteEffects;
-static LPALEFFECTI       palEffecti;
-
-#ifndef ALC_EXT_DEDICATED
-#define AL_EFFECT_DEDICATED_DIALOGUE             0x9001
-#define AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT 0x9000
 #endif
 
 
@@ -187,29 +150,27 @@ static void printALInfo(void)
 static void printEFXInfo(ALCdevice *device)
 {
     ALCint major, minor, sends;
-    ALuint obj;
-    int i;
-    const ALenum filters[] = {
-        AL_FILTER_LOWPASS, AL_FILTER_HIGHPASS, AL_FILTER_BANDPASS,
-        AL_FILTER_NULL
+    static const ALchar filters[][32] = {
+        "AL_FILTER_LOWPASS", "AL_FILTER_HIGHPASS", "AL_FILTER_BANDPASS", ""
     };
     char filterNames[] = "Low-pass,High-pass,Band-pass,";
-    const ALenum effects[] = {
-        AL_EFFECT_EAXREVERB, AL_EFFECT_REVERB, AL_EFFECT_CHORUS,
-        AL_EFFECT_DISTORTION, AL_EFFECT_ECHO, AL_EFFECT_FLANGER,
-        AL_EFFECT_FREQUENCY_SHIFTER, AL_EFFECT_VOCAL_MORPHER,
-        AL_EFFECT_PITCH_SHIFTER, AL_EFFECT_RING_MODULATOR, AL_EFFECT_AUTOWAH,
-        AL_EFFECT_COMPRESSOR, AL_EFFECT_EQUALIZER, AL_EFFECT_NULL
+    static const ALchar effects[][32] = {
+        "AL_EFFECT_EAXREVERB", "AL_EFFECT_REVERB", "AL_EFFECT_CHORUS",
+        "AL_EFFECT_DISTORTION", "AL_EFFECT_ECHO", "AL_EFFECT_FLANGER",
+        "AL_EFFECT_FREQUENCY_SHIFTER", "AL_EFFECT_VOCAL_MORPHER",
+        "AL_EFFECT_PITCH_SHIFTER", "AL_EFFECT_RING_MODULATOR",
+        "AL_EFFECT_AUTOWAH", "AL_EFFECT_COMPRESSOR", "AL_EFFECT_EQUALIZER", ""
     };
-    const ALenum dedeffects[] = {
-        AL_EFFECT_DEDICATED_DIALOGUE,
-        AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, AL_EFFECT_NULL
+    static const ALchar dedeffects[][64] = {
+        "AL_EFFECT_DEDICATED_DIALOGUE",
+        "AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT", ""
     };
     char effectNames[] = "EAX Reverb,Reverb,Chorus,Distortion,Echo,Flanger,"
                          "Frequency Shifter,Vocal Morpher,Pitch Shifter,"
                          "Ring Modulator,Autowah,Compressor,Equalizer,"
                          "Dedicated Dialog,Dedicated LFE,";
     char *current;
+    int i;
 
     if(alcIsExtensionPresent(device, "ALC_EXT_EFX") == AL_FALSE)
     {
@@ -225,82 +186,57 @@ static void printEFXInfo(ALCdevice *device)
     if(checkALCErrors(device) == ALC_NO_ERROR)
         printf("Max auxiliary sends: %d\n", sends);
 
-    palGenFilters = alGetProcAddress("alGenFilters");
-    palDeleteFilters = alGetProcAddress("alDeleteFilters");
-    palFilteri = alGetProcAddress("alFilteri");
-    palGenEffects = alGetProcAddress("alGenEffects");
-    palDeleteEffects = alGetProcAddress("alDeleteEffects");
-    palEffecti = alGetProcAddress("alEffecti");
-    if(checkALErrors() != AL_NO_ERROR ||
-       !palGenFilters || !palDeleteFilters || !palFilteri ||
-       !palGenEffects || !palDeleteEffects || !palEffecti)
+    current = filterNames;
+    for(i = 0;filters[i][0];i++)
     {
-        printf("!!! Missing EFX functions !!!\n");
-        return;
-    }
+        char *next = strchr(current, ',');
+        ALenum val;
 
-    palGenFilters(1, &obj);
-    if(checkALErrors() == AL_NO_ERROR)
-    {
-        current = filterNames;
-        for(i = 0;filters[i] != AL_FILTER_NULL;i++)
-        {
-            char *next = strchr(current, ',');
-
-            palFilteri(obj, AL_FILTER_TYPE, filters[i]);
-            if(alGetError() == AL_NO_ERROR)
-                current = next+1;
-            else
-                memmove(current, next+1, strlen(next));
-        }
-        palDeleteFilters(1, &obj);
-        checkALErrors();
-
-        printf("Supported filters:");
-        printList(filterNames, ',');
-    }
-
-    palGenEffects(1, &obj);
-    if(checkALErrors() == AL_NO_ERROR)
-    {
-        current = effectNames;
-        for(i = 0;effects[i] != AL_EFFECT_NULL;i++)
-        {
-            char *next = strchr(current, ',');
-
-            palEffecti(obj, AL_EFFECT_TYPE, effects[i]);
-            if(alGetError() == AL_NO_ERROR)
-                current = next+1;
-            else
-                memmove(current, next+1, strlen(next));
-        }
-        if(alcIsExtensionPresent(device, "ALC_EXT_DEDICATED"))
-        {
-            for(i = 0;dedeffects[i] != AL_EFFECT_NULL;i++)
-            {
-                char *next = strchr(current, ',');
-
-                palEffecti(obj, AL_EFFECT_TYPE, dedeffects[i]);
-                if(alGetError() == AL_NO_ERROR)
-                    current = next+1;
-                else
-                    memmove(current, next+1, strlen(next));
-            }
-        }
+        val = alGetEnumValue(filters[i]);
+        if(alGetError() != AL_NO_ERROR || val == 0 || val == -1)
+            memmove(current, next+1, strlen(next));
         else
-        {
-            for(i = 0;dedeffects[i] != AL_EFFECT_NULL;i++)
-            {
-                char *next = strchr(current, ',');
-                memmove(current, next+1, strlen(next));
-            }
-        }
-        palDeleteEffects(1, &obj);
-        checkALErrors();
-
-        printf("Supported effects:");
-        printList(effectNames, ',');
+            current = next+1;
     }
+    printf("Supported filters:");
+    printList(filterNames, ',');
+
+    current = effectNames;
+    for(i = 0;effects[i][0];i++)
+    {
+        char *next = strchr(current, ',');
+        ALenum val;
+
+        val = alGetEnumValue(effects[i]);
+        if(alGetError() != AL_NO_ERROR || val == 0 || val == -1)
+            memmove(current, next+1, strlen(next));
+        else
+            current = next+1;
+    }
+    if(alcIsExtensionPresent(device, "ALC_EXT_DEDICATED"))
+    {
+        for(i = 0;dedeffects[i][0];i++)
+        {
+            char *next = strchr(current, ',');
+            ALenum val;
+
+            val = alGetEnumValue(dedeffects[i]);
+            if(alGetError() != AL_NO_ERROR || val == 0 || val == -1)
+                memmove(current, next+1, strlen(next));
+            else
+                current = next+1;
+        }
+    }
+    else
+    {
+        for(i = 0;dedeffects[i][0];i++)
+        {
+            char *next = strchr(current, ',');
+            memmove(current, next+1, strlen(next));
+        }
+    }
+    printf("Supported effects:");
+    printList(effectNames, ',');
 }
 
 int main(int argc, char *argv[])

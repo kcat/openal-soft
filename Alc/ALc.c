@@ -1485,6 +1485,43 @@ static ALCvoid FreeContext(ALCcontext *context)
     free(context);
 }
 
+static void ReleaseContext(ALCcontext *context, ALCdevice *device)
+{
+    ALCcontext *volatile*tmp_ctx;
+
+    tmp_ctx = &device->ContextList;
+    while(*tmp_ctx)
+    {
+        if(*tmp_ctx == context)
+        {
+            *tmp_ctx = context->next;
+            break;
+        }
+        tmp_ctx = &(*tmp_ctx)->next;
+    }
+
+    LockDevice(device);
+    /* Lock the device to make sure the mixer is not using the contexts in the
+     * list before we go about deleting this one. There should be a more
+     * efficient way of doing this. */
+    UnlockDevice(device);
+
+    if(pthread_getspecific(LocalContext) == context)
+    {
+        WARN("Context %p released while current on thread\n", context);
+        pthread_setspecific(LocalContext, NULL);
+        ALCcontext_DecRef(context);
+    }
+
+    if(CompExchangePtr((void**)&GlobalContext, context, NULL))
+    {
+        WARN("Context %p released while globally current\n", context);
+        ALCcontext_DecRef(context);
+    }
+
+    ALCcontext_DecRef(context);
+}
+
 void ALCcontext_IncRef(ALCcontext *context)
 {
     RefCount ref;
@@ -2260,7 +2297,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALCdevice *Device;
-    ALCcontext *volatile*tmp_ctx;
 
     LockLists();
     Device = alcGetContextsDevice(context);
@@ -2270,35 +2306,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         return;
     }
 
-    tmp_ctx = &Device->ContextList;
-    while(*tmp_ctx)
-    {
-        if(*tmp_ctx == context)
-        {
-            *tmp_ctx = context->next;
-            break;
-        }
-        tmp_ctx = &(*tmp_ctx)->next;
-    }
-
-    LockDevice(Device);
-    /* Lock the device to make sure the mixer is not using the contexts in the
-     * list before we go about deleting this one. There should be a more
-     * efficient way of doing this. */
-    UnlockDevice(Device);
-
-    if(pthread_getspecific(LocalContext) == context)
-    {
-        WARN("Context %p destroyed while current on thread\n", context);
-        pthread_setspecific(LocalContext, NULL);
-        ALCcontext_DecRef(context);
-    }
-
-    if(CompExchangePtr((void**)&GlobalContext, context, NULL))
-    {
-        WARN("Context %p destroyed while globally current\n", context);
-        ALCcontext_DecRef(context);
-    }
+    ReleaseContext(context, Device);
 
     if(!Device->ContextList)
     {
@@ -2306,8 +2314,6 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         Device->Flags &= ~DEVICE_RUNNING;
     }
     UnlockLists();
-
-    ALCcontext_DecRef(context);
 }
 
 
@@ -2605,14 +2611,17 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 
     *list = (*list)->next;
     g_ulDeviceCount--;
-
     UnlockLists();
 
-    while((ctx=pDevice->ContextList) != NULL)
+    if((ctx=pDevice->ContextList) != NULL)
     {
-        WARN("Destroying context %p\n", ctx);
-        alcDestroyContext(ctx);
-    }
+        do {
+            WARN("Destroying context %p\n", ctx);
+            ReleaseContext(ctx, pDevice);
+        } while((ctx=pDevice->ContextList) != NULL);
+        ALCdevice_StopPlayback(pDevice);
+        pDevice->Flags &= ~DEVICE_RUNNING;
+    };
     ALCdevice_ClosePlayback(pDevice);
 
     ALCdevice_DecRef(pDevice);

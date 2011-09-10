@@ -701,17 +701,31 @@ static void alc_initconfig(void)
 }
 
 
+static void LockLists(void)
+{
+    EnterCriticalSection(&ListLock);
+}
+
+static void UnlockLists(void)
+{
+    LeaveCriticalSection(&ListLock);
+}
+
+
 static void ProbeList(ALCchar **list, size_t *listsize, enum DevProbe type)
 {
+    DO_INITCONFIG();
+
+    LockLists();
     free(*list);
     *list = NULL;
     *listsize = 0;
 
-    DO_INITCONFIG();
     if(type == CAPTURE_DEVICE_PROBE)
         CaptureBackend.Probe(type);
     else
         PlaybackBackend.Probe(type);
+    UnlockLists();
 }
 
 static void ProbeDeviceList(void)
@@ -999,17 +1013,6 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
             return ALC_TRUE;
     }
     return ALC_FALSE;
-}
-
-
-static void LockLists(void)
-{
-    EnterCriticalSection(&ListLock);
-}
-
-static void UnlockLists(void)
-{
-    LeaveCriticalSection(&ListLock);
 }
 
 /* IsDevice
@@ -1884,10 +1887,10 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
 
     /* Default devices are always first in the list */
     case ALC_DEFAULT_DEVICE_SPECIFIER:
-        pDevice = VerifyDevice(pDevice);
-
         if(!alcDeviceList)
             ProbeDeviceList();
+
+        pDevice = VerifyDevice(pDevice);
 
         free(alcDefaultDeviceSpecifier);
         alcDefaultDeviceSpecifier = strdup(alcDeviceList ? alcDeviceList : "");
@@ -1899,10 +1902,10 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
-        pDevice = VerifyDevice(pDevice);
-
         if(!alcAllDeviceList)
             ProbeAllDeviceList();
+
+        pDevice = VerifyDevice(pDevice);
 
         free(alcDefaultAllDeviceSpecifier);
         alcDefaultAllDeviceSpecifier = strdup(alcAllDeviceList ?
@@ -1915,10 +1918,10 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
-        pDevice = VerifyDevice(pDevice);
-
         if(!alcCaptureDeviceList)
             ProbeCaptureDeviceList();
+
+        pDevice = VerifyDevice(pDevice);
 
         free(alcCaptureDefaultDeviceSpecifier);
         alcCaptureDefaultDeviceSpecifier = strdup(alcCaptureDeviceList ?

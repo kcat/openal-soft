@@ -448,7 +448,7 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     if(Device->NumUpdates <= 1)
     {
         Device->NumUpdates = 1;
-        ERR("PulseAudio returned minreq > tlength/2; expect break up\n");
+        ERR("PulseAudio returned minreq > tlength/2; expect lag or break up\n");
     }
 
     UnlockDevice(Device);
@@ -944,10 +944,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     data->attr.prebuf = -1;
     data->attr.fragsize = -1;
     data->attr.minreq = device->UpdateSize * data->frame_size;
-    data->attr.tlength = data->attr.minreq * device->NumUpdates;
-    if(data->attr.tlength < data->attr.minreq*2)
-        data->attr.tlength = data->attr.minreq*2;
-    data->attr.maxlength = data->attr.tlength;
+    data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
+    data->attr.maxlength = -1;
     flags |= PA_STREAM_EARLY_REQUESTS;
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
 
@@ -1009,8 +1007,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
          * accordingly. */
         data->attr.minreq = (ALuint64)(data->attr.minreq/data->frame_size) *
                             data->spec.rate / device->Frequency * data->frame_size;
-        data->attr.tlength = data->attr.minreq * device->NumUpdates;
-        data->attr.maxlength = data->attr.tlength;
+        data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
 
         o = pa_stream_set_buffer_attr(data->stream, &data->attr,
                                       stream_success_callback, device);
@@ -1022,6 +1019,21 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     }
 
     stream_buffer_attr_callback(data->stream, device);
+    if(device->NumUpdates < 2)
+    {
+        pa_operation *o;
+
+        /* Server gave a comparatively large minreq, so modify the tlength. */
+        device->NumUpdates = 2;
+        data->attr.tlength = data->attr.minreq * device->NumUpdates;
+
+        o = pa_stream_set_buffer_attr(data->stream, &data->attr,
+                                      stream_success_callback, device);
+        while(pa_operation_get_state(o) == PA_OPERATION_RUNNING)
+            pa_threaded_mainloop_wait(data->loop);
+        pa_operation_unref(o);
+    }
+
 #if PA_CHECK_VERSION(0,9,15)
     if(pa_stream_set_buffer_attr_callback)
         pa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);

@@ -1481,6 +1481,7 @@ void ALCcontext_DecRef(ALCcontext *context)
 
 static void ReleaseThreadCtx(void *ptr)
 {
+    WARN("Context %p still current for thread being destroyed\n", ptr);
     ALCcontext_DecRef(ptr);
 }
 
@@ -2236,8 +2237,18 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     }
     UnlockDevice(Device);
 
-    if(CompExchangePtr((void**)&GlobalContext, context, NULL))
+    if(pthread_getspecific(LocalContext) == context)
+    {
+        WARN("Context %p destroyed while current on thread\n", context);
+        pthread_setspecific(LocalContext, NULL);
         ALCcontext_DecRef(context);
+    }
+
+    if(CompExchangePtr((void**)&GlobalContext, context, NULL))
+    {
+        WARN("Context %p destroyed while globally current\n", context);
+        ALCcontext_DecRef(context);
+    }
 
     if(Device->NumContexts == 0)
     {

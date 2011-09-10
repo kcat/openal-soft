@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include <ctype.h>
+#include <signal.h>
 
 #include "alMain.h"
 #include "alSource.h"
@@ -399,6 +400,9 @@ ALdouble ConeScale = 0.5;
 // Localized Z scalar for mono sources
 ALdouble ZScale = 1.0;
 
+/* Flag to trap ALC device errors */
+static ALCboolean TrapALCError = ALC_FALSE;
+
 /* One-time configuration init control */
 static pthread_once_t alc_config_once = PTHREAD_ONCE_INIT;
 
@@ -503,6 +507,10 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         TrapALError = AL_TRUE;
 
+    str = getenv("__ALSOFT_TRAP_ALC_ERROR");
+    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
+        TrapALCError = ALC_TRUE;
+
     pthread_key_create(&LocalContext, ReleaseThreadCtx);
     InitializeCriticalSection(&ListLock);
     ThunkInit();
@@ -573,6 +581,9 @@ static void alc_initconfig(void)
     DefaultResampler = GetConfigValueInt(NULL, "resampler", RESAMPLER_DEFAULT);
     if(DefaultResampler >= RESAMPLER_MAX || DefaultResampler <= RESAMPLER_MIN)
         DefaultResampler = RESAMPLER_DEFAULT;
+
+    if(!TrapALCError)
+        TrapALCError = GetConfigValueBool(NULL, "trap-alc-error", ALC_FALSE);
 
     if(!TrapALError)
         TrapALError = GetConfigValueBool(NULL, "trap-al-error", AL_FALSE);
@@ -1050,6 +1061,20 @@ static ALCboolean IsContext(ALCcontext *context)
 */
 ALCvoid alcSetError(ALCdevice *device, ALenum errorCode)
 {
+    if(TrapALCError)
+    {
+#ifdef _WIN32
+        /* Safely catch a breakpoint exception that wasn't caught by a debugger */
+        __try  {
+            DebugBreak();
+        } __except((GetExceptionCode()==EXCEPTION_BREAKPOINT) ?
+                   EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
+        }
+#elif defined(SIGTRAP)
+        kill(getpid(), SIGTRAP);
+#endif
+    }
+
     LockLists();
     if(IsDevice(device))
         device->LastError = errorCode;

@@ -529,7 +529,7 @@ struct ALCdevice_struct
 
     ALCchar      *szDeviceName;
 
-    ALCenum      LastError;
+    volatile ALCenum LastError;
 
     // Maximum number of sources that can be created
     ALuint       MaxNoOfSources;

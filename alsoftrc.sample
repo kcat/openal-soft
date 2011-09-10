@@ -150,6 +150,14 @@
 #layout_61CHN  = fl=-30, fr=30, fc=0, sl=-90, sr=90, bc=180
 #layout_71CHN  = fl=-30, fr=30, fc=0, sl=-90, sr=90, bl=-150, br=150
 
+## trap-al-error:
+#  Generates a SIGTRAP signal when an AL context error is generated, on systems
+#  that support it. This helps when debugging, while trying to find the cause
+#  of a context error. On Windows, a breakpoint exception is generated.
+#  Optionally, the __ALSOFT_TRAP_AL_ERROR env var may be set before running the
+#  app instead.
+#trap-al-error = false
+
 ##
 ## Reverb effect stuff (includes EAX reverb)
 ##

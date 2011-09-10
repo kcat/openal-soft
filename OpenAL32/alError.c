@@ -20,9 +20,13 @@
 
 #include "config.h"
 
+#include <signal.h>
+
 #include "alMain.h"
 #include "AL/alc.h"
 #include "alError.h"
+
+ALboolean TrapALError = AL_FALSE;
 
 AL_API ALenum AL_APIENTRY alGetError(void)
 {
@@ -41,5 +45,18 @@ AL_API ALenum AL_APIENTRY alGetError(void)
 
 ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
 {
+    if(TrapALError)
+    {
+#ifdef _WIN32
+        /* Safely catch a breakpoint exception that wasn't caught by a debugger */
+        __try  {
+            DebugBreak();
+        } __except((GetExceptionCode()==EXCEPTION_BREAKPOINT) ?
+                   EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
+        }
+#elif defined(SIGTRAP)
+        kill(getpid(), SIGTRAP);
+#endif
+    }
     CompExchangeInt(&Context->LastError, AL_NO_ERROR, errorCode);
 }

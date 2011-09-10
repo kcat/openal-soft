@@ -34,6 +34,7 @@
 #include "alSource.h"
 #include "alBuffer.h"
 #include "alAuxEffectSlot.h"
+#include "alError.h"
 #include "bs2b.h"
 #include "alu.h"
 
@@ -498,6 +499,10 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         ZScale = -1.0;
 
+    str = getenv("__ALSOFT_TRAP_AL_ERROR");
+    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
+        TrapALError = AL_TRUE;
+
     pthread_key_create(&LocalContext, ReleaseThreadCtx);
     InitializeCriticalSection(&ListLock);
     ThunkInit();
@@ -568,6 +573,9 @@ static void alc_initconfig(void)
     DefaultResampler = GetConfigValueInt(NULL, "resampler", RESAMPLER_DEFAULT);
     if(DefaultResampler >= RESAMPLER_MAX || DefaultResampler <= RESAMPLER_MIN)
         DefaultResampler = RESAMPLER_DEFAULT;
+
+    if(!TrapALError)
+        TrapALError = GetConfigValueBool(NULL, "trap-al-error", AL_FALSE);
 
     ReverbBoost *= aluPow(10.0f, GetConfigValueFloat("reverb", "boost", 0.0f) /
                                  20.0f);

@@ -2225,7 +2225,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     }
     if(!ALContext || !ALContext->ActiveSources)
     {
-        if(device->NumContexts == 0)
+        if(!device->ContextList)
         {
             ALCdevice_StopPlayback(device);
             device->Flags &= ~DEVICE_RUNNING;
@@ -2243,11 +2243,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALContext->Device = device;
     InitContext(ALContext);
 
-    LockDevice(device);
-    device->NumContexts++;
     ALContext->next = device->ContextList;
     device->ContextList = ALContext;
-    UnlockDevice(device);
     UnlockLists();
 
     ALCdevice_DecRef(device);
@@ -2263,7 +2260,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALCdevice *Device;
-    ALCcontext **tmp_ctx;
+    ALCcontext *volatile*tmp_ctx;
 
     LockLists();
     Device = alcGetContextsDevice(context);
@@ -2273,18 +2270,21 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         return;
     }
 
-    LockDevice(Device);
     tmp_ctx = &Device->ContextList;
     while(*tmp_ctx)
     {
         if(*tmp_ctx == context)
         {
-            *tmp_ctx = (*tmp_ctx)->next;
-            Device->NumContexts--;
+            *tmp_ctx = context->next;
             break;
         }
         tmp_ctx = &(*tmp_ctx)->next;
     }
+
+    LockDevice(Device);
+    /* Lock the device to make sure the mixer is not using the contexts in the
+     * list before we go about deleting this one. There should be a more
+     * efficient way of doing this. */
     UnlockDevice(Device);
 
     if(pthread_getspecific(LocalContext) == context)
@@ -2300,7 +2300,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         ALCcontext_DecRef(context);
     }
 
-    if(Device->NumContexts == 0)
+    if(!Device->ContextList)
     {
         ALCdevice_StopPlayback(Device);
         Device->Flags &= ~DEVICE_RUNNING;
@@ -2517,7 +2517,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->szDeviceName = NULL;
 
     device->ContextList = NULL;
-    device->NumContexts = 0;
 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
@@ -2590,6 +2589,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 {
     ALCdevice **list;
+    ALCcontext *ctx;
 
     LockLists();
     list = &g_pDeviceList;
@@ -2608,11 +2608,10 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 
     UnlockLists();
 
-    if(pDevice->NumContexts > 0)
+    while((ctx=pDevice->ContextList) != NULL)
     {
-        WARN("Destroying %u Context(s)\n", pDevice->NumContexts);
-        while(pDevice->ContextList)
-            alcDestroyContext(pDevice->ContextList);
+        WARN("Destroying context %p\n", ctx);
+        alcDestroyContext(ctx);
     }
     ALCdevice_ClosePlayback(pDevice);
 
@@ -2649,7 +2648,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     device->szDeviceName = NULL;
 
     device->ContextList = NULL;
-    device->NumContexts = 0;
 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);

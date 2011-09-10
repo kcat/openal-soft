@@ -1330,6 +1330,8 @@ ALCvoid UnlockDevice(ALCdevice *device)
 
 static ALCvoid FreeDevice(ALCdevice *device)
 {
+    TRACE("%p\n", device);
+
     if(device->BufferMap.size > 0)
     {
         WARN("Deleting %d Buffer(s)\n", device->BufferMap.size);
@@ -1362,6 +1364,13 @@ static ALCvoid FreeDevice(ALCdevice *device)
     free(device);
 }
 
+void ALCdevice_IncRef(ALCdevice *device)
+{
+    RefCount ref;
+    ref = IncrementRef(&device->ref);
+    TRACE("%p increasing refcount to %u\n", device, ref);
+}
+
 void ALCdevice_DecRef(ALCdevice *device)
 {
     RefCount ref;
@@ -1377,6 +1386,8 @@ void ALCdevice_DecRef(ALCdevice *device)
 */
 static ALvoid InitContext(ALCcontext *pContext)
 {
+    ALCdevice_IncRef(pContext->Device);
+
     //Initialise listener
     pContext->Listener.Gain = 1.0f;
     pContext->Listener.MetersPerUnit = 1.0f;
@@ -1444,6 +1455,9 @@ static ALCvoid FreeContext(ALCcontext *context)
     free(context->ActiveEffectSlots);
     context->ActiveEffectSlots = NULL;
     context->MaxActiveEffectSlots = 0;
+
+    ALCdevice_DecRef(context->Device);
+    context->Device = NULL;
 
     //Invalidate context
     memset(context, 0, sizeof(ALCcontext));

@@ -1059,7 +1059,7 @@ static ALCboolean IsContext(ALCcontext *context)
 
     Store latest ALC Error
 */
-ALCvoid alcSetError(ALCdevice *device, ALenum errorCode)
+ALCvoid alcSetError(ALCdevice *device, ALCenum errorCode)
 {
     if(TrapALCError)
     {

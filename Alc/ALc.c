@@ -1515,7 +1515,7 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
 
     if(CompExchangePtr((void**)&GlobalContext, context, NULL))
     {
-        WARN("Context %p released while globally current\n", context);
+        WARN("Context %p released while current\n", context);
         ALCcontext_DecRef(context);
     }
 

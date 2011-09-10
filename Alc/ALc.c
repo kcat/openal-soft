@@ -1328,6 +1328,48 @@ ALCvoid UnlockDevice(ALCdevice *device)
 }
 
 
+static ALCvoid FreeDevice(ALCdevice *device)
+{
+    if(device->BufferMap.size > 0)
+    {
+        WARN("Deleting %d Buffer(s)\n", device->BufferMap.size);
+        ReleaseALBuffers(device);
+    }
+    ResetUIntMap(&device->BufferMap);
+
+    if(device->EffectMap.size > 0)
+    {
+        WARN("Deleting %d Effect(s)\n", device->EffectMap.size);
+        ReleaseALEffects(device);
+    }
+    ResetUIntMap(&device->EffectMap);
+
+    if(device->FilterMap.size > 0)
+    {
+        WARN("Deleting %d Filter(s)\n", device->FilterMap.size);
+        ReleaseALFilters(device);
+    }
+    ResetUIntMap(&device->FilterMap);
+
+    free(device->Bs2b);
+    device->Bs2b = NULL;
+
+    free(device->szDeviceName);
+    device->szDeviceName = NULL;
+
+    DeleteCriticalSection(&device->Mutex);
+
+    free(device);
+}
+
+void ALCdevice_DecRef(ALCdevice *device)
+{
+    RefCount ref;
+    ref = DecrementRef(&device->ref);
+    TRACE("%p decreasing refcount to %u\n", device, ref);
+    if(ref == 0) FreeDevice(device);
+}
+
 /*
     InitContext
 
@@ -1529,10 +1571,15 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     //Validate device
     device->Funcs = &CaptureBackend.Funcs;
+    device->ref = 1;
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_TRUE;
     device->IsLoopbackDevice = AL_FALSE;
     InitializeCriticalSection(&device->Mutex);
+
+    InitUIntMap(&device->BufferMap, ~0);
+    InitUIntMap(&device->EffectMap, ~0);
+    InitUIntMap(&device->FilterMap, ~0);
 
     device->szDeviceName = NULL;
 
@@ -1594,12 +1641,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
     ALCdevice_CloseCapture(pDevice);
     UnlockDevice(pDevice);
 
-    free(pDevice->szDeviceName);
-    pDevice->szDeviceName = NULL;
-
-    DeleteCriticalSection(&pDevice->Mutex);
-
-    free(pDevice);
+    ALCdevice_DecRef(pDevice);
 
     return ALC_TRUE;
 }
@@ -2388,6 +2430,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     //Validate device
     device->Funcs = &PlaybackBackend.Funcs;
+    device->ref = 1;
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_FALSE;
     device->IsLoopbackDevice = AL_FALSE;
@@ -2498,38 +2541,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     }
     ALCdevice_ClosePlayback(pDevice);
 
-    if(pDevice->BufferMap.size > 0)
-    {
-        WARN("Deleting %d Buffer(s)\n", pDevice->BufferMap.size);
-        ReleaseALBuffers(pDevice);
-    }
-    ResetUIntMap(&pDevice->BufferMap);
-
-    if(pDevice->EffectMap.size > 0)
-    {
-        WARN("Deleting %d Effect(s)\n", pDevice->EffectMap.size);
-        ReleaseALEffects(pDevice);
-    }
-    ResetUIntMap(&pDevice->EffectMap);
-
-    if(pDevice->FilterMap.size > 0)
-    {
-        WARN("Deleting %d Filter(s)\n", pDevice->FilterMap.size);
-        ReleaseALFilters(pDevice);
-    }
-    ResetUIntMap(&pDevice->FilterMap);
-
-    free(pDevice->Bs2b);
-    pDevice->Bs2b = NULL;
-
-    free(pDevice->szDeviceName);
-    pDevice->szDeviceName = NULL;
-
-    DeleteCriticalSection(&pDevice->Mutex);
-
-    //Release device structure
-    memset(pDevice, 0, sizeof(ALCdevice));
-    free(pDevice);
+    ALCdevice_DecRef(pDevice);
 
     return ALC_TRUE;
 }
@@ -2550,6 +2562,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
 
     //Validate device
     device->Funcs = &BackendLoopback.Funcs;
+    device->ref = 1;
     device->Connected = ALC_TRUE;
     device->IsCaptureDevice = AL_FALSE;
     device->IsLoopbackDevice = AL_TRUE;

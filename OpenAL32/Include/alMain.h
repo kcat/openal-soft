@@ -513,6 +513,8 @@ extern const struct EffectList {
 
 struct ALCdevice_struct
 {
+    volatile RefCount ref;
+
     ALCboolean   Connected;
     ALboolean    IsCaptureDevice;
     ALboolean    IsLoopbackDevice;

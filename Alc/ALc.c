@@ -2281,115 +2281,42 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 
 static void GetFormatFromString(const char *str, enum DevFmtChannels *chans, enum DevFmtType *type)
 {
-    if(strcasecmp(str, "AL_FORMAT_MONO32") == 0)
-    {
-        *chans = DevFmtMono;
-        *type = DevFmtFloat;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_STEREO32") == 0)
-    {
-        *chans = DevFmtStereo;
-        *type = DevFmtFloat;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_QUAD32") == 0)
-    {
-        *chans = DevFmtQuad;
-        *type = DevFmtFloat;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_51CHN32") == 0)
-    {
-        *chans = DevFmtX51;
-        *type = DevFmtFloat;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_61CHN32") == 0)
-    {
-        *chans = DevFmtX61;
-        *type = DevFmtFloat;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_71CHN32") == 0)
-    {
-        *chans = DevFmtX71;
-        *type = DevFmtFloat;
-        return;
-    }
+    static const struct {
+        const char name[32];
+        enum DevFmtChannels channels;
+        enum DevFmtType type;
+    } formats[] = {
+        { "AL_FORMAT_MONO32",   DevFmtMono,   DevFmtFloat },
+        { "AL_FORMAT_STEREO32", DevFmtStereo, DevFmtFloat },
+        { "AL_FORMAT_QUAD32",   DevFmtQuad,   DevFmtFloat },
+        { "AL_FORMAT_51CHN32",  DevFmtX51,    DevFmtFloat },
+        { "AL_FORMAT_61CHN32",  DevFmtX61,    DevFmtFloat },
+        { "AL_FORMAT_71CHN32",  DevFmtX71,    DevFmtFloat },
 
-    if(strcasecmp(str, "AL_FORMAT_MONO16") == 0)
-    {
-        *chans = DevFmtMono;
-        *type = DevFmtShort;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_STEREO16") == 0)
-    {
-        *chans = DevFmtStereo;
-        *type = DevFmtShort;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_QUAD16") == 0)
-    {
-        *chans = DevFmtQuad;
-        *type = DevFmtShort;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_51CHN16") == 0)
-    {
-        *chans = DevFmtX51;
-        *type = DevFmtShort;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_61CHN16") == 0)
-    {
-        *chans = DevFmtX61;
-        *type = DevFmtShort;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_71CHN16") == 0)
-    {
-        *chans = DevFmtX71;
-        *type = DevFmtShort;
-        return;
-    }
+        { "AL_FORMAT_MONO16",   DevFmtMono,   DevFmtShort },
+        { "AL_FORMAT_STEREO16", DevFmtStereo, DevFmtShort },
+        { "AL_FORMAT_QUAD16",   DevFmtQuad,   DevFmtShort },
+        { "AL_FORMAT_51CHN16",  DevFmtX51,    DevFmtShort },
+        { "AL_FORMAT_61CHN16",  DevFmtX61,    DevFmtShort },
+        { "AL_FORMAT_71CHN16",  DevFmtX71,    DevFmtShort },
 
-    if(strcasecmp(str, "AL_FORMAT_MONO8") == 0)
+        { "AL_FORMAT_MONO8",   DevFmtMono,   DevFmtByte },
+        { "AL_FORMAT_STEREO8", DevFmtStereo, DevFmtByte },
+        { "AL_FORMAT_QUAD8",   DevFmtQuad,   DevFmtByte },
+        { "AL_FORMAT_51CHN8",  DevFmtX51,    DevFmtByte },
+        { "AL_FORMAT_61CHN8",  DevFmtX61,    DevFmtByte },
+        { "AL_FORMAT_71CHN8",  DevFmtX71,    DevFmtByte }
+    };
+    size_t i;
+
+    for(i = 0;i < sizeof(formats)/sizeof(formats[0]);i++)
     {
-        *chans = DevFmtMono;
-        *type = DevFmtByte;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_STEREO8") == 0)
-    {
-        *chans = DevFmtStereo;
-        *type = DevFmtByte;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_QUAD8") == 0)
-    {
-        *chans = DevFmtQuad;
-        *type = DevFmtByte;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_51CHN8") == 0)
-    {
-        *chans = DevFmtX51;
-        *type = DevFmtByte;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_61CHN8") == 0)
-    {
-        *chans = DevFmtX61;
-        *type = DevFmtByte;
-        return;
-    }
-    if(strcasecmp(str, "AL_FORMAT_71CHN8") == 0)
-    {
-        *chans = DevFmtX71;
-        *type = DevFmtByte;
-        return;
+        if(strcasecmp(str, formats[i].name) == 0)
+        {
+            *chans = formats[i].channels;
+            *type = formats[i].type;
+            return;
+        }
     }
 
     ERR("Unknown format: \"%s\"\n", str);

@@ -2297,19 +2297,16 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     ALCdevice *Device;
 
     LockLists();
+    /* alcGetContextsDevice sets an error for invalid contexts */
     Device = alcGetContextsDevice(context);
-    if(!Device)
+    if(Device)
     {
-        UnlockLists();
-        return;
-    }
-
-    ReleaseContext(context, Device);
-
-    if(!Device->ContextList)
-    {
-        ALCdevice_StopPlayback(Device);
-        Device->Flags &= ~DEVICE_RUNNING;
+        ReleaseContext(context, Device);
+        if(!Device->ContextList)
+        {
+            ALCdevice_StopPlayback(Device);
+            Device->Flags &= ~DEVICE_RUNNING;
+        }
     }
     UnlockLists();
 }

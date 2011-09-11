@@ -59,7 +59,7 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCcontext *Context, const 
     ALint pos;
     ALsizei s;
 
-    Gain = Slot->Gain * Slot->effect.Params.Dedicated.Gain;
+    Gain = Slot->Gain * Slot->effect.Dedicated.Gain;
     for(s = 0;s < MAXCHANNELS;s++)
         state->gains[s] = 0.0f;
 

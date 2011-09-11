@@ -424,10 +424,10 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             RoomRolloff[i] = RoomRolloffBase;
             if(IsReverbEffect(Slot->effect.type))
             {
-                RoomRolloff[i] += Slot->effect.Params.Reverb.RoomRolloffFactor;
-                DecayDistance[i] = Slot->effect.Params.Reverb.DecayTime *
+                RoomRolloff[i] += Slot->effect.Reverb.RoomRolloffFactor;
+                DecayDistance[i] = Slot->effect.Reverb.DecayTime *
                                    SPEEDOFSOUNDMETRESPERSEC;
-                RoomAirAbsorption[i] = Slot->effect.Params.Reverb.AirAbsorptionGainHF;
+                RoomAirAbsorption[i] = Slot->effect.Reverb.AirAbsorptionGainHF;
             }
             else
             {

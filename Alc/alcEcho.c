@@ -101,18 +101,18 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
     ALfloat lrpan, cw, g, gain;
     ALuint i;
 
-    state->Tap[0].delay = (ALuint)(Slot->effect.Params.Echo.Delay * frequency) + 1;
-    state->Tap[1].delay = (ALuint)(Slot->effect.Params.Echo.LRDelay * frequency);
+    state->Tap[0].delay = (ALuint)(Slot->effect.Echo.Delay * frequency) + 1;
+    state->Tap[1].delay = (ALuint)(Slot->effect.Echo.LRDelay * frequency);
     state->Tap[1].delay += state->Tap[0].delay;
 
-    lrpan = Slot->effect.Params.Echo.Spread*0.5f + 0.5f;
+    lrpan = Slot->effect.Echo.Spread*0.5f + 0.5f;
     state->GainL = aluSqrt(     lrpan);
     state->GainR = aluSqrt(1.0f-lrpan);
 
-    state->FeedGain = Slot->effect.Params.Echo.Feedback;
+    state->FeedGain = Slot->effect.Echo.Feedback;
 
     cw = cos(2.0*M_PI * LOWPASSFREQCUTOFF / frequency);
-    g = 1.0f - Slot->effect.Params.Echo.Damping;
+    g = 1.0f - Slot->effect.Echo.Damping;
     state->iirFilter.coeff = lpCoeffCalc(g, cw);
 
     gain = Slot->Gain;

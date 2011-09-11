@@ -1113,61 +1113,61 @@ static ALvoid ReverbUpdate(ALeffectState *effect, ALCcontext *Context, const ALe
     }
 
     // Calculate the master low-pass filter (from the master effect HF gain).
-    cw = CalcI3DL2HFreq(Slot->effect.Params.Reverb.HFReference, frequency);
+    cw = CalcI3DL2HFreq(Slot->effect.Reverb.HFReference, frequency);
     // This is done with 2 chained 1-pole filters, so no need to square g.
-    State->LpFilter.coeff = lpCoeffCalc(Slot->effect.Params.Reverb.GainHF, cw);
+    State->LpFilter.coeff = lpCoeffCalc(Slot->effect.Reverb.GainHF, cw);
 
     if(isEAX)
     {
         // Update the modulator line.
-        UpdateModulator(Slot->effect.Params.Reverb.ModulationTime,
-                        Slot->effect.Params.Reverb.ModulationDepth,
+        UpdateModulator(Slot->effect.Reverb.ModulationTime,
+                        Slot->effect.Reverb.ModulationDepth,
                         frequency, State);
     }
 
     // Update the initial effect delay.
-    UpdateDelayLine(Slot->effect.Params.Reverb.ReflectionsDelay,
-                    Slot->effect.Params.Reverb.LateReverbDelay,
+    UpdateDelayLine(Slot->effect.Reverb.ReflectionsDelay,
+                    Slot->effect.Reverb.LateReverbDelay,
                     frequency, State);
 
     // Update the early lines.
-    UpdateEarlyLines(Slot->effect.Params.Reverb.Gain,
-                     Slot->effect.Params.Reverb.ReflectionsGain,
-                     Slot->effect.Params.Reverb.LateReverbDelay, State);
+    UpdateEarlyLines(Slot->effect.Reverb.Gain,
+                     Slot->effect.Reverb.ReflectionsGain,
+                     Slot->effect.Reverb.LateReverbDelay, State);
 
     // Update the decorrelator.
-    UpdateDecorrelator(Slot->effect.Params.Reverb.Density, frequency, State);
+    UpdateDecorrelator(Slot->effect.Reverb.Density, frequency, State);
 
     // Get the mixing matrix coefficients (x and y).
-    CalcMatrixCoeffs(Slot->effect.Params.Reverb.Diffusion, &x, &y);
+    CalcMatrixCoeffs(Slot->effect.Reverb.Diffusion, &x, &y);
     // Then divide x into y to simplify the matrix calculation.
     State->Late.MixCoeff = y / x;
 
     // If the HF limit parameter is flagged, calculate an appropriate limit
     // based on the air absorption parameter.
-    hfRatio = Slot->effect.Params.Reverb.DecayHFRatio;
-    if(Slot->effect.Params.Reverb.DecayHFLimit &&
-       Slot->effect.Params.Reverb.AirAbsorptionGainHF < 1.0f)
+    hfRatio = Slot->effect.Reverb.DecayHFRatio;
+    if(Slot->effect.Reverb.DecayHFLimit &&
+       Slot->effect.Reverb.AirAbsorptionGainHF < 1.0f)
         hfRatio = CalcLimitedHfRatio(hfRatio,
-                                     Slot->effect.Params.Reverb.AirAbsorptionGainHF,
-                                     Slot->effect.Params.Reverb.DecayTime);
+                                     Slot->effect.Reverb.AirAbsorptionGainHF,
+                                     Slot->effect.Reverb.DecayTime);
 
     // Update the late lines.
-    UpdateLateLines(Slot->effect.Params.Reverb.Gain, Slot->effect.Params.Reverb.LateReverbGain,
-                    x, Slot->effect.Params.Reverb.Density, Slot->effect.Params.Reverb.DecayTime,
-                    Slot->effect.Params.Reverb.Diffusion, hfRatio, cw, frequency, State);
+    UpdateLateLines(Slot->effect.Reverb.Gain, Slot->effect.Reverb.LateReverbGain,
+                    x, Slot->effect.Reverb.Density, Slot->effect.Reverb.DecayTime,
+                    Slot->effect.Reverb.Diffusion, hfRatio, cw, frequency, State);
 
     if(isEAX)
     {
         // Update the echo line.
-        UpdateEchoLine(Slot->effect.Params.Reverb.Gain, Slot->effect.Params.Reverb.LateReverbGain,
-                       Slot->effect.Params.Reverb.EchoTime, Slot->effect.Params.Reverb.DecayTime,
-                       Slot->effect.Params.Reverb.Diffusion, Slot->effect.Params.Reverb.EchoDepth,
+        UpdateEchoLine(Slot->effect.Reverb.Gain, Slot->effect.Reverb.LateReverbGain,
+                       Slot->effect.Reverb.EchoTime, Slot->effect.Reverb.DecayTime,
+                       Slot->effect.Reverb.Diffusion, Slot->effect.Reverb.EchoDepth,
                        hfRatio, cw, frequency, State);
 
         // Update early and late 3D panning.
-        Update3DPanning(Context->Device, Slot->effect.Params.Reverb.ReflectionsPan,
-                        Slot->effect.Params.Reverb.LateReverbPan, Slot->Gain, State);
+        Update3DPanning(Context->Device, Slot->effect.Reverb.ReflectionsPan,
+                        Slot->effect.Reverb.LateReverbPan, Slot->Gain, State);
     }
     else
     {

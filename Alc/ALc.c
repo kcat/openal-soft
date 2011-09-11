@@ -1556,14 +1556,12 @@ static void ReleaseThreadCtx(void *ptr)
 
 ALCvoid LockContext(ALCcontext *context)
 {
-    ALCcontext_IncRef(context);
     EnterCriticalSection(&context->Device->Mutex);
 }
 
 ALCvoid UnlockContext(ALCcontext *context)
 {
     LeaveCriticalSection(&context->Device->Mutex);
-    ALCcontext_DecRef(context);
 }
 
 /* GetContextRef

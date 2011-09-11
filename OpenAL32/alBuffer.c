@@ -177,6 +177,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
                 alDeleteBuffers(i, buffers);
                 break;
             }
+
             buffers[i++] = buffer->buffer;
         }
     }

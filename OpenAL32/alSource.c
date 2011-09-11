@@ -83,6 +83,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
                 alDeleteSources(i, sources);
                 break;
             }
+            InitSourceParams(source);
 
             err = NewThunkEntry(&source->source);
             if(err == AL_NO_ERROR)
@@ -98,7 +99,6 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
                 break;
             }
 
-            InitSourceParams(source);
             sources[i++] = source->source;
         }
     }

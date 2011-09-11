@@ -152,7 +152,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
@@ -183,7 +183,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
@@ -192,7 +192,7 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValue
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
@@ -204,7 +204,7 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValue
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue)
@@ -213,7 +213,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
@@ -225,7 +225,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
@@ -234,7 +234,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
@@ -246,7 +246,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflVa
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue)
@@ -255,7 +255,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piVal
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
@@ -274,7 +274,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piVal
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues)
@@ -283,7 +283,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piVa
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
@@ -295,7 +295,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piVa
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue)
@@ -304,7 +304,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pfl
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
@@ -316,7 +316,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pfl
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
@@ -325,7 +325,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pf
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
@@ -337,7 +337,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pf
     else
         alSetError(Context, AL_INVALID_NAME);
 
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 
@@ -536,9 +536,11 @@ static void eaxreverb_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum p
         case AL_EAXREVERB_REFLECTIONS_PAN:
             if(isfinite(vals[0]) && isfinite(vals[1]) && isfinite(vals[2]))
             {
+                LockContext(context);
                 effect->Reverb.ReflectionsPan[0] = vals[0];
                 effect->Reverb.ReflectionsPan[1] = vals[1];
                 effect->Reverb.ReflectionsPan[2] = vals[2];
+                UnlockContext(context);
             }
             else
                 alSetError(context, AL_INVALID_VALUE);
@@ -546,9 +548,11 @@ static void eaxreverb_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum p
         case AL_EAXREVERB_LATE_REVERB_PAN:
             if(isfinite(vals[0]) && isfinite(vals[1]) && isfinite(vals[2]))
             {
+                LockContext(context);
                 effect->Reverb.LateReverbPan[0] = vals[0];
                 effect->Reverb.LateReverbPan[1] = vals[1];
                 effect->Reverb.LateReverbPan[2] = vals[2];
+                UnlockContext(context);
             }
             else
                 alSetError(context, AL_INVALID_VALUE);
@@ -671,14 +675,18 @@ static void eaxreverb_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum p
     switch(param)
     {
         case AL_EAXREVERB_REFLECTIONS_PAN:
+            LockContext(context);
             vals[0] = effect->Reverb.ReflectionsPan[0];
             vals[1] = effect->Reverb.ReflectionsPan[1];
             vals[2] = effect->Reverb.ReflectionsPan[2];
+            UnlockContext(context);
             break;
         case AL_EAXREVERB_LATE_REVERB_PAN:
+            LockContext(context);
             vals[0] = effect->Reverb.LateReverbPan[0];
             vals[1] = effect->Reverb.LateReverbPan[1];
             vals[2] = effect->Reverb.LateReverbPan[2];
+            UnlockContext(context);
             break;
 
         default:
@@ -1196,7 +1204,6 @@ ALvoid ReleaseALEffects(ALCdevice *device)
 
 static void InitEffectParams(ALeffect *effect, ALenum type)
 {
-    effect->type = type;
     switch(type)
     {
     case AL_EFFECT_EAXREVERB:
@@ -1310,4 +1317,5 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->GetParamfv = null_GetParamfv;
         break;
     }
+    effect->type = type;
 }

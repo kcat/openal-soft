@@ -15,10 +15,10 @@ typedef struct ALeffectslot
 {
     ALeffect effect;
 
-    ALfloat Gain;
-    ALboolean AuxSendAuto;
+    volatile ALfloat   Gain;
+    volatile ALboolean AuxSendAuto;
 
-    ALenum        NeedsUpdate;
+    volatile ALenum NeedsUpdate;
     ALeffectState *EffectState;
 
     ALfloat WetBuffer[BUFFERSIZE];

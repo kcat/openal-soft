@@ -1383,7 +1383,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     ALsource         *Source;
     ALsizei          i;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(n < 0)
@@ -1407,6 +1407,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         }
     }
 
+    LockContext(Context);
     while(Context->MaxActiveSources-Context->ActiveSourceCount < n)
     {
         void *temp = NULL;
@@ -1418,6 +1419,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                            sizeof(*Context->ActiveSources) * newcount);
         if(!temp)
         {
+            UnlockContext(Context);
             alSetError(Context, AL_OUT_OF_MEMORY);
             goto done;
         }
@@ -1432,9 +1434,10 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(Context->DeferUpdates) Source->new_state = AL_PLAYING;
         else SetSourceState(Source, Context, AL_PLAYING);
     }
+    UnlockContext(Context);
 
 done:
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
@@ -1448,7 +1451,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     ALsource *Source;
     ALsizei i;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(n < 0)
@@ -1472,15 +1475,17 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
         }
     }
 
+    LockContext(Context);
     for(i = 0;i < n;i++)
     {
         Source = LookupSource(Context->SourceMap, sources[i]);
         if(Context->DeferUpdates) Source->new_state = AL_PAUSED;
         else SetSourceState(Source, Context, AL_PAUSED);
     }
+    UnlockContext(Context);
 
 done:
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
@@ -1494,7 +1499,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     ALsource *Source;
     ALsizei i;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(n < 0)
@@ -1518,15 +1523,17 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
         }
     }
 
+    LockContext(Context);
     for(i = 0;i < n;i++)
     {
         Source = LookupSource(Context->SourceMap, sources[i]);
         Source->new_state = AL_NONE;
         SetSourceState(Source, Context, AL_STOPPED);
     }
+    UnlockContext(Context);
 
 done:
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
@@ -1540,7 +1547,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     ALsource *Source;
     ALsizei i;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(n < 0)
@@ -1564,15 +1571,17 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
         }
     }
 
+    LockContext(Context);
     for(i = 0;i < n;i++)
     {
         Source = LookupSource(Context->SourceMap, sources[i]);
         Source->new_state = AL_NONE;
         SetSourceState(Source, Context, AL_INITIAL);
     }
+    UnlockContext(Context);
 
 done:
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 
@@ -1589,7 +1598,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     if(n == 0)
         return;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(n < 0)
@@ -1607,9 +1616,11 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
         goto error;
     }
 
+    LockContext(Context);
     // Check that this is not a STATIC Source
     if(Source->lSourceType == AL_STATIC)
     {
+        UnlockContext(Context);
         // Invalid Source Type (can't queue on a Static Source)
         alSetError(Context, AL_INVALID_OPERATION);
         goto error;
@@ -1636,6 +1647,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
         ALbuffer *buffer = NULL;
         if(buffers[i] && (buffer=LookupBuffer(device->BufferMap, buffers[i])) == NULL)
         {
+            UnlockContext(Context);
             alSetError(Context, AL_INVALID_NAME);
             goto error;
         }
@@ -1679,6 +1691,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
             ReadUnlock(&buffer->lock);
+            UnlockContext(Context);
             alSetError(Context, AL_INVALID_OPERATION);
             goto error;
         }
@@ -1705,6 +1718,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     Source->BuffersInQueue += n;
 
     UnlockContext(Context);
+    ALCcontext_DecRef(Context);
     return;
 
 error:
@@ -1717,7 +1731,7 @@ error:
             DecrementRef(&BufferList->buffer->ref);
         free(BufferList);
     }
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 
@@ -1733,7 +1747,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
     if(n == 0)
         return;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return;
 
     if(n < 0)
@@ -1748,9 +1762,11 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
         goto done;
     }
 
+    LockContext(Context);
     if(Source->bLooping || Source->lSourceType != AL_STREAMING ||
        (ALuint)n > Source->BuffersPlayed)
     {
+        UnlockContext(Context);
         // Some buffers can't be unqueue because they have not been processed
         alSetError(Context, AL_INVALID_VALUE);
         goto done;
@@ -1778,9 +1794,10 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
     }
     if(Source->queue)
         Source->queue->prev = NULL;
+    UnlockContext(Context);
 
 done:
-    UnlockContext(Context);
+    ALCcontext_DecRef(Context);
 }
 
 

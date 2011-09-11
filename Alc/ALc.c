@@ -1566,29 +1566,6 @@ ALCvoid UnlockContext(ALCcontext *context)
     ALCcontext_DecRef(context);
 }
 
-/* GetLockedContext
- *
- * Returns the currently active context, in a locked state.
- */
-ALCcontext *GetLockedContext(void)
-{
-    ALCcontext *context = NULL;
-
-    context = pthread_getspecific(LocalContext);
-    if(context)
-        LockContext(context);
-    else
-    {
-        LockLists();
-        context = GlobalContext;
-        if(context)
-            LockContext(context);
-        UnlockLists();
-    }
-
-    return context;
-}
-
 /* GetContextRef
  *
  * Returns the currently active context, and adds a reference without locking

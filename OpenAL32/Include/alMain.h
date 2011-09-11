@@ -635,6 +635,8 @@ struct ALCcontext_struct
     ALCcontext *volatile next;
 };
 
+ALCcontext *GetContextRef(void);
+
 void ALCcontext_IncRef(ALCcontext *context);
 void ALCcontext_DecRef(ALCcontext *context);
 
@@ -651,9 +653,6 @@ ALCvoid UnlockContext(ALCcontext *context);
 
 ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr);
 ALuint StopThread(ALvoid *thread);
-
-ALCcontext *GetLockedContext(void);
-ALCcontext *GetContextRef(void);
 
 typedef struct RingBuffer RingBuffer;
 RingBuffer *CreateRingBuffer(ALsizei frame_size, ALsizei length);

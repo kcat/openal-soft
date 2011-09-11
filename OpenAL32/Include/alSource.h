@@ -30,30 +30,30 @@ typedef struct ALbufferlistitem
 
 typedef struct ALsource
 {
-    ALfloat      flPitch;
-    ALfloat      flGain;
-    ALfloat      flOuterGain;
-    ALfloat      flMinGain;
-    ALfloat      flMaxGain;
-    ALfloat      flInnerAngle;
-    ALfloat      flOuterAngle;
-    ALfloat      flRefDistance;
-    ALfloat      flMaxDistance;
-    ALfloat      flRollOffFactor;
-    ALfloat      vPosition[3];
-    ALfloat      vVelocity[3];
-    ALfloat      vOrientation[3];
-    ALboolean    bHeadRelative;
-    ALboolean    bLooping;
-    enum DistanceModel DistanceModel;
-    ALboolean    VirtualChannels;
+    volatile ALfloat   flPitch;
+    volatile ALfloat   flGain;
+    volatile ALfloat   flOuterGain;
+    volatile ALfloat   flMinGain;
+    volatile ALfloat   flMaxGain;
+    volatile ALfloat   flInnerAngle;
+    volatile ALfloat   flOuterAngle;
+    volatile ALfloat   flRefDistance;
+    volatile ALfloat   flMaxDistance;
+    volatile ALfloat   flRollOffFactor;
+    volatile ALfloat   vPosition[3];
+    volatile ALfloat   vVelocity[3];
+    volatile ALfloat   vOrientation[3];
+    volatile ALboolean bHeadRelative;
+    volatile ALboolean bLooping;
+    volatile enum DistanceModel DistanceModel;
+    volatile ALboolean VirtualChannels;
 
     enum Resampler Resampler;
 
-    ALenum       state;
-    ALenum       new_state;
-    ALuint       position;
-    ALuint       position_fraction;
+    volatile ALenum state;
+    ALenum new_state;
+    ALuint position;
+    ALuint position_fraction;
 
     ALbufferlistitem *queue; // Linked list of buffers in queue
     ALuint BuffersInQueue;   // Number of buffers in queue
@@ -68,20 +68,20 @@ typedef struct ALsource
         ALfloat WetGainHF;
     } Send[MAX_SENDS];
 
-    ALboolean DryGainHFAuto;
-    ALboolean WetGainAuto;
-    ALboolean WetGainHFAuto;
-    ALfloat   OuterGainHF;
+    volatile ALboolean DryGainHFAuto;
+    volatile ALboolean WetGainAuto;
+    volatile ALboolean WetGainHFAuto;
+    volatile ALfloat   OuterGainHF;
 
-    ALfloat AirAbsorptionFactor;
-    ALfloat RoomRolloffFactor;
-    ALfloat DopplerFactor;
+    volatile ALfloat AirAbsorptionFactor;
+    volatile ALfloat RoomRolloffFactor;
+    volatile ALfloat DopplerFactor;
 
-    ALint  lOffset;
-    ALint  lOffsetType;
+    ALint lOffset;
+    ALint lOffsetType;
 
     // Source Type (Static, Streaming, or Undetermined)
-    ALint  lSourceType;
+    volatile ALint lSourceType;
 
     ALuint NumChannels;
     ALuint SampleSize;

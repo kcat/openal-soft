@@ -383,23 +383,29 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     memcpy(ListenerVel, ALContext->Listener.Velocity, sizeof(ALContext->Listener.Velocity));
 
     //Get source properties
-    SourceVolume = ALSource->flGain;
-    MinVolume    = ALSource->flMinGain;
-    MaxVolume    = ALSource->flMaxGain;
-    Pitch        = ALSource->flPitch;
-    Resampler    = ALSource->Resampler;
-    memcpy(Position,  ALSource->vPosition,    sizeof(ALSource->vPosition));
-    memcpy(Direction, ALSource->vOrientation, sizeof(ALSource->vOrientation));
-    memcpy(Velocity,  ALSource->vVelocity,    sizeof(ALSource->vVelocity));
-    MinDist = ALSource->flRefDistance;
-    MaxDist = ALSource->flMaxDistance;
-    Rolloff = ALSource->flRollOffFactor;
-    InnerAngle = ALSource->flInnerAngle * ConeScale;
-    OuterAngle = ALSource->flOuterAngle * ConeScale;
+    SourceVolume   = ALSource->flGain;
+    MinVolume      = ALSource->flMinGain;
+    MaxVolume      = ALSource->flMaxGain;
+    Pitch          = ALSource->flPitch;
+    Resampler      = ALSource->Resampler;
+    Position[0]    = ALSource->vPosition[0];
+    Position[1]    = ALSource->vPosition[1];
+    Position[2]    = ALSource->vPosition[2];
+    Direction[0]   = ALSource->vOrientation[0];
+    Direction[1]   = ALSource->vOrientation[1];
+    Direction[2]   = ALSource->vOrientation[2];
+    Velocity[0]    = ALSource->vVelocity[0];
+    Velocity[1]    = ALSource->vVelocity[1];
+    Velocity[2]    = ALSource->vVelocity[2];
+    MinDist        = ALSource->flRefDistance;
+    MaxDist        = ALSource->flMaxDistance;
+    Rolloff        = ALSource->flRollOffFactor;
+    InnerAngle     = ALSource->flInnerAngle * ConeScale;
+    OuterAngle     = ALSource->flOuterAngle * ConeScale;
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
-    DryGainHFAuto = ALSource->DryGainHFAuto;
-    WetGainAuto   = ALSource->WetGainAuto;
-    WetGainHFAuto = ALSource->WetGainHFAuto;
+    DryGainHFAuto   = ALSource->DryGainHFAuto;
+    WetGainAuto     = ALSource->WetGainAuto;
+    WetGainHFAuto   = ALSource->WetGainHFAuto;
     RoomRolloffBase = ALSource->RoomRolloffFactor;
     for(i = 0;i < NumSends;i++)
     {

@@ -131,9 +131,6 @@ static const char muLawCompressTable[256] =
      7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
 };
 
-/* TODO: These functions shouldn't need to take the device lock, but will need
- * a RWLock to protect from concurrent writes.
- */
 
 /*
  *    alGenBuffers(ALsizei n, ALuint *buffers)
@@ -167,6 +164,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
                 alDeleteBuffers(i, buffers);
                 break;
             }
+            RWLockInit(&buffer->lock);
 
             err = NewThunkEntry(&buffer->buffer);
             if(err == AL_NO_ERROR)
@@ -309,12 +307,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             if((size%FrameSize) != 0)
                 err = AL_INVALID_VALUE;
             else
-            {
-                LockDevice(device);
                 err = LoadData(ALBuf, freq, format, size/FrameSize,
                                SrcChannels, SrcType, data, AL_TRUE);
-                UnlockDevice(device);
-            }
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
         }   break;
@@ -337,12 +331,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             if((size%FrameSize) != 0)
                 err = AL_INVALID_VALUE;
             else
-            {
-                LockDevice(device);
                 err = LoadData(ALBuf, freq, NewFormat, size/FrameSize,
                                SrcChannels, SrcType, data, AL_TRUE);
-                UnlockDevice(device);
-            }
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
         }   break;
@@ -370,12 +360,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
             if((size%FrameSize) != 0)
                 err = AL_INVALID_VALUE;
             else
-            {
-                LockDevice(device);
                 err = LoadData(ALBuf, freq, NewFormat, size/FrameSize,
                                SrcChannels, SrcType, data, AL_TRUE);
-                UnlockDevice(device);
-            }
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
         }   break;
@@ -410,7 +396,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         alSetError(Context, AL_INVALID_ENUM);
     else
     {
-        LockDevice(device);
+        WriteLock(&ALBuf->lock);
         if(SrcChannels != ALBuf->OriginalChannels || SrcType != ALBuf->OriginalType)
             alSetError(Context, AL_INVALID_ENUM);
         else if(offset > ALBuf->OriginalSize ||
@@ -441,7 +427,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
             ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
                         data, SrcType, Channels, length);
         }
-        UnlockDevice(device);
+        WriteUnlock(&ALBuf->lock);
     }
 
     ALCcontext_DecRef(Context);
@@ -476,12 +462,8 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
             else err = AL_INVALID_VALUE;
         }
         if(err == AL_NO_ERROR)
-        {
-            LockDevice(device);
             err = LoadData(ALBuf, samplerate, internalformat, frames,
                            channels, type, data, AL_FALSE);
-            UnlockDevice(device);
-        }
         if(err != AL_NO_ERROR)
             alSetError(Context, err);
     }
@@ -512,7 +494,7 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
         ALuint FrameSize;
         ALuint FrameCount;
 
-        LockDevice(device);
+        WriteLock(&ALBuf->lock);
         FrameSize = FrameSizeFromFmt(ALBuf->FmtChannels, ALBuf->FmtType);
         FrameCount = ALBuf->size / FrameSize;
         if(channels != (ALenum)ALBuf->FmtChannels)
@@ -531,7 +513,7 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
                         data, type,
                         ChannelsFromFmt(ALBuf->FmtChannels), frames);
         }
-        UnlockDevice(device);
+        WriteUnlock(&ALBuf->lock);
     }
 
     ALCcontext_DecRef(Context);
@@ -560,7 +542,7 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
         ALuint FrameSize;
         ALuint FrameCount;
 
-        LockDevice(device);
+        ReadLock(&ALBuf->lock);
         FrameSize = FrameSizeFromFmt(ALBuf->FmtChannels, ALBuf->FmtType);
         FrameCount = ALBuf->size / FrameSize;
         if(channels != (ALenum)ALBuf->FmtChannels)
@@ -579,7 +561,7 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
                         &((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
                         ChannelsFromFmt(ALBuf->FmtChannels), frames);
         }
-        UnlockDevice(device);
+        ReadUnlock(&ALBuf->lock);
     }
 
     ALCcontext_DecRef(Context);
@@ -761,7 +743,7 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
         switch(eParam)
         {
         case AL_LOOP_POINTS_SOFT:
-            LockDevice(device);
+            WriteLock(&ALBuf->lock);
             if(ALBuf->ref != 0)
                 alSetError(pContext, AL_INVALID_OPERATION);
             else if(plValues[0] < 0 || plValues[1] < 0 ||
@@ -779,7 +761,7 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
                     ALBuf->LoopEnd = plValues[1];
                 }
             }
-            UnlockDevice(device);
+            WriteUnlock(&ALBuf->lock);
             break;
 
         default:
@@ -973,10 +955,10 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
         switch(eParam)
         {
         case AL_LOOP_POINTS_SOFT:
-            LockDevice(device);
+            ReadLock(&ALBuf->lock);
             plValues[0] = ALBuf->LoopStart;
             plValues[1] = ALBuf->LoopEnd;
-            UnlockDevice(device);
+            ReadUnlock(&ALBuf->lock);
             break;
 
         default:
@@ -1808,12 +1790,19 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALuint64 newsize;
     ALvoid *temp;
 
+    WriteLock(&ALBuf->lock);
     if(ALBuf->ref != 0)
+    {
+        WriteUnlock(&ALBuf->lock);
         return AL_INVALID_OPERATION;
+    }
 
     if(DecomposeFormat(NewFormat, &DstChannels, &DstType) == AL_FALSE ||
        (long)SrcChannels != (long)DstChannels)
+    {
+        WriteUnlock(&ALBuf->lock);
         return AL_INVALID_ENUM;
+    }
 
     NewChannels = ChannelsFromFmt(DstChannels);
     NewBytes = BytesFromFmt(DstType);
@@ -1827,10 +1816,17 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         newsize *= NewBytes;
         newsize *= NewChannels;
         if(newsize > INT_MAX)
+        {
+            WriteUnlock(&ALBuf->lock);
             return AL_OUT_OF_MEMORY;
+        }
 
         temp = realloc(ALBuf->data, newsize);
-        if(!temp && newsize) return AL_OUT_OF_MEMORY;
+        if(!temp && newsize)
+        {
+            WriteUnlock(&ALBuf->lock);
+            return AL_OUT_OF_MEMORY;
+        }
         ALBuf->data = temp;
         ALBuf->size = newsize;
 
@@ -1854,10 +1850,17 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         newsize *= NewBytes;
         newsize *= NewChannels;
         if(newsize > INT_MAX)
+        {
+            WriteUnlock(&ALBuf->lock);
             return AL_OUT_OF_MEMORY;
+        }
 
         temp = realloc(ALBuf->data, newsize);
-        if(!temp && newsize) return AL_OUT_OF_MEMORY;
+        if(!temp && newsize)
+        {
+            WriteUnlock(&ALBuf->lock);
+            return AL_OUT_OF_MEMORY;
+        }
         ALBuf->data = temp;
         ALBuf->size = newsize;
 
@@ -1887,6 +1890,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
 
+    WriteUnlock(&ALBuf->lock);
     return AL_NO_ERROR;
 }
 

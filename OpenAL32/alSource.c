@@ -592,8 +592,10 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             oldlist = ExchangePtr((void**)&Source->queue, BufferListItem);
                             Source->BuffersInQueue = 1;
 
+                            ReadLock(&buffer->lock);
                             Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
                             Source->SampleSize  = BytesFromFmt(buffer->FmtType);
+                            ReadUnlock(&buffer->lock);
                             if(buffer->FmtChannels == FmtMono)
                                 Source->Update = CalcSourceParams;
                             else
@@ -1579,9 +1581,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     ALCcontext *Context;
     ALCdevice *device;
     ALsource *Source;
-    ALbuffer *buffer;
     ALsizei i;
-    ALbufferlistitem *BufferListStart;
+    ALbufferlistitem *BufferListStart = NULL;
     ALbufferlistitem *BufferList;
     ALbuffer *BufferFmt;
 
@@ -1594,7 +1595,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     if(n < 0)
     {
         alSetError(Context, AL_INVALID_VALUE);
-        goto done;
+        goto error;
     }
 
     // Check that all buffers are valid or zero and that the source is valid
@@ -1603,7 +1604,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     if((Source=LookupSource(Context->SourceMap, source)) == NULL)
     {
         alSetError(Context, AL_INVALID_NAME);
-        goto done;
+        goto error;
     }
 
     // Check that this is not a STATIC Source
@@ -1611,7 +1612,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     {
         // Invalid Source Type (can't queue on a Static Source)
         alSetError(Context, AL_INVALID_OPERATION);
-        goto done;
+        goto error;
     }
 
     device = Context->Device;
@@ -1632,15 +1633,34 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
 
     for(i = 0;i < n;i++)
     {
-        if(!buffers[i])
-            continue;
-
-        if((buffer=LookupBuffer(device->BufferMap, buffers[i])) == NULL)
+        ALbuffer *buffer = NULL;
+        if(buffers[i] && (buffer=LookupBuffer(device->BufferMap, buffers[i])) == NULL)
         {
             alSetError(Context, AL_INVALID_NAME);
-            goto done;
+            goto error;
         }
 
+        if(!BufferListStart)
+        {
+            BufferListStart = malloc(sizeof(ALbufferlistitem));
+            BufferListStart->buffer = buffer;
+            BufferListStart->next = NULL;
+            BufferListStart->prev = NULL;
+            BufferList = BufferListStart;
+        }
+        else
+        {
+            BufferList->next = malloc(sizeof(ALbufferlistitem));
+            BufferList->next->buffer = buffer;
+            BufferList->next->next = NULL;
+            BufferList->next->prev = BufferList;
+            BufferList = BufferList->next;
+        }
+        if(!buffer) continue;
+
+        // Increment reference counter for buffer
+        IncrementRef(&buffer->ref);
+        ReadLock(&buffer->lock);
         if(BufferFmt == NULL)
         {
             BufferFmt = buffer;
@@ -1658,41 +1678,15 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
                 BufferFmt->OriginalChannels != buffer->OriginalChannels ||
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
+            ReadUnlock(&buffer->lock);
             alSetError(Context, AL_INVALID_OPERATION);
-            goto done;
+            goto error;
         }
+        ReadUnlock(&buffer->lock);
     }
 
     // Change Source Type
     Source->lSourceType = AL_STREAMING;
-
-    buffer = LookupBuffer(device->BufferMap, buffers[0]);
-
-    // All buffers are valid - so add them to the list
-    BufferListStart = malloc(sizeof(ALbufferlistitem));
-    BufferListStart->buffer = buffer;
-    BufferListStart->next = NULL;
-    BufferListStart->prev = NULL;
-
-    // Increment reference counter for buffer
-    if(buffer) IncrementRef(&buffer->ref);
-
-    BufferList = BufferListStart;
-
-    for(i = 1;i < n;i++)
-    {
-        buffer = LookupBuffer(device->BufferMap, buffers[i]);
-
-        BufferList->next = malloc(sizeof(ALbufferlistitem));
-        BufferList->next->buffer = buffer;
-        BufferList->next->next = NULL;
-        BufferList->next->prev = BufferList;
-
-        // Increment reference counter for buffer
-        if(buffer) IncrementRef(&buffer->ref);
-
-        BufferList = BufferList->next;
-    }
 
     if(Source->queue == NULL)
         Source->queue = BufferListStart;
@@ -1710,7 +1704,19 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     // Update number of buffers in queue
     Source->BuffersInQueue += n;
 
-done:
+    UnlockContext(Context);
+    return;
+
+error:
+    while(BufferListStart)
+    {
+        BufferList = BufferListStart;
+        BufferListStart = BufferList->next;
+
+        if(BufferList->buffer)
+            DecrementRef(&BufferList->buffer->ref);
+        free(BufferList);
+    }
     UnlockContext(Context);
 }
 

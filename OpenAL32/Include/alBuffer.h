@@ -87,6 +87,8 @@ typedef struct ALbuffer
 
     RefCount ref; // Number of sources using this buffer (deletion can only occur when this is 0)
 
+    RWLock lock;
+
     // Index to itself
     ALuint buffer;
 } ALbuffer;

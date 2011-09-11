@@ -75,9 +75,29 @@ typedef struct ALeffect
         ALfloat Gain;
     } Dedicated;
 
+    void (*SetParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
+    void (*SetParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
+    void (*SetParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
+    void (*SetParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
+
+    void (*GetParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
+    void (*GetParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
+    void (*GetParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
+    void (*GetParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
+
     // Index to itself
     ALuint effect;
 } ALeffect;
+
+#define ALeffect_SetParami(x, c, p, v)  ((x)->SetParami((x),(c),(p),(v)))
+#define ALeffect_SetParamiv(x, c, p, v) ((x)->SetParamiv((x),(c),(p),(v)))
+#define ALeffect_SetParamf(x, c, p, v)  ((x)->SetParamf((x),(c),(p),(v)))
+#define ALeffect_SetParamfv(x, c, p, v) ((x)->SetParamfv((x),(c),(p),(v)))
+
+#define ALeffect_GetParami(x, c, p, v)  ((x)->GetParami((x),(c),(p),(v)))
+#define ALeffect_GetParamiv(x, c, p, v) ((x)->GetParamiv((x),(c),(p),(v)))
+#define ALeffect_GetParamf(x, c, p, v)  ((x)->GetParamf((x),(c),(p),(v)))
+#define ALeffect_GetParamfv(x, c, p, v) ((x)->GetParamfv((x),(c),(p),(v)))
 
 static __inline ALboolean IsReverbEffect(ALenum type)
 { return type == AL_EFFECT_REVERB || type == AL_EFFECT_EAXREVERB; }

@@ -378,9 +378,11 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     Frequency       = Device->Frequency;
 
     //Get listener properties
-    ListenerGain = ALContext->Listener.Gain;
-    MetersPerUnit = ALContext->Listener.MetersPerUnit;
-    memcpy(ListenerVel, ALContext->Listener.Velocity, sizeof(ALContext->Listener.Velocity));
+    ListenerGain   = ALContext->Listener.Gain;
+    MetersPerUnit  = ALContext->Listener.MetersPerUnit;
+    ListenerVel[0] = ALContext->Listener.Velocity[0];
+    ListenerVel[1] = ALContext->Listener.Velocity[1];
+    ListenerVel[2] = ALContext->Listener.Velocity[2];
 
     //Get source properties
     SourceVolume   = ALSource->flGain;
@@ -452,9 +454,13 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALfloat Matrix[4][4];
 
         // Build transform matrix
-        memcpy(N, ALContext->Listener.Forward, sizeof(N));  // At-vector
+        N[0] = ALContext->Listener.Forward[0];  // At-vector
+        N[1] = ALContext->Listener.Forward[1];
+        N[2] = ALContext->Listener.Forward[2];
         aluNormalize(N);  // Normalized At-vector
-        memcpy(V, ALContext->Listener.Up, sizeof(V));  // Up-vector
+        V[0] = ALContext->Listener.Up[0];  // Up-vector
+        V[1] = ALContext->Listener.Up[1];
+        V[2] = ALContext->Listener.Up[2];
         aluNormalize(V);  // Normalized Up-vector
         aluCrossproduct(N, V, U); // Right-vector
         aluNormalize(U);  // Normalized Right-vector

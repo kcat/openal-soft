@@ -1414,8 +1414,6 @@ ALCvoid UnlockDevice(ALCdevice *device)
  */
 static ALvoid InitContext(ALCcontext *pContext)
 {
-    ALCdevice_IncRef(pContext->Device);
-
     //Initialise listener
     pContext->Listener.Gain = 1.0f;
     pContext->Listener.MetersPerUnit = 1.0f;
@@ -1797,33 +1795,29 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 }
 
 
-/*
-    alcSuspendContext
-
-    Not functional
-*/
+/* alcSuspendContext
+ *
+ * Not functional
+ */
 ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *Context)
 {
     (void)Context;
 }
 
-
-/*
-    alcProcessContext
-
-    Not functional
-*/
+/* alcProcessContext
+ *
+ * Not functional
+ */
 ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *Context)
 {
     (void)Context;
 }
 
 
-/*
-    alcGetString
-
-    Returns information about the Device, and error strings
-*/
+/* alcGetString
+ *
+ * Returns information about the Device, and error strings
+ */
 ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
 {
     const ALCchar *value = NULL;
@@ -1954,11 +1948,10 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
 }
 
 
-/*
-    alcGetIntegerv
-
-    Returns information about the Device and the version of Open AL
-*/
+/* alcGetIntegerv
+ *
+ * Returns information about the Device and the version of Open AL
+ */
 ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsizei size,ALCint *data)
 {
     device = VerifyDevice(device);
@@ -2140,11 +2133,10 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
 }
 
 
-/*
-    alcIsExtensionPresent
-
-    Determines if there is support for a particular extension
-*/
+/* alcIsExtensionPresent
+ *
+ * Determines if there is support for a particular extension
+ */
 ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName)
 {
     ALCboolean bResult = ALC_FALSE;
@@ -2179,11 +2171,10 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
 }
 
 
-/*
-    alcGetProcAddress
-
-    Retrieves the function address for a particular extension function
-*/
+/* alcGetProcAddress
+ *
+ * Retrieves the function address for a particular extension function
+ */
 ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName)
 {
     ALCvoid *ptr = NULL;
@@ -2205,11 +2196,10 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
 }
 
 
-/*
-    alcGetEnumValue
-
-    Get the value for a particular ALC Enumerated Value
-*/
+/* alcGetEnumValue
+ *
+ * Get the value for a particular ALC Enumerated Value
+ */
 ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName)
 {
     ALCenum val = 0;
@@ -2231,11 +2221,10 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 }
 
 
-/*
-    alcCreateContext
-
-    Create and attach a Context to a particular Device.
-*/
+/* alcCreateContext
+ *
+ * Create and attach a Context to a particular Device.
+ */
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
     ALCcontext *ALContext;
@@ -2288,6 +2277,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     }
 
     ALContext->Device = device;
+    ALCdevice_IncRef(device);
     InitContext(ALContext);
 
     ALContext->next = device->ContextList;
@@ -2298,12 +2288,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     return ALContext;
 }
 
-
-/*
-    alcDestroyContext
-
-    Remove a Context
-*/
+/* alcDestroyContext
+ *
+ * Remove a Context
+ */
 ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALCdevice *Device;
@@ -2327,11 +2315,10 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 }
 
 
-/*
-    alcGetCurrentContext
-
-    Returns the currently active Context
-*/
+/* alcGetCurrentContext
+ *
+ * Returns the currently active Context
+ */
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(ALCvoid)
 {
     ALCcontext *Context;
@@ -2342,11 +2329,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(ALCvoid)
     return Context;
 }
 
-/*
-    alcGetThreadContext
-
-    Returns the currently active thread-local Context
-*/
+/* alcGetThreadContext
+ *
+ * Returns the currently active thread-local Context
+ */
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 {
     ALCcontext *Context;
@@ -2355,31 +2341,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 }
 
 
-/*
-    alcGetContextsDevice
-
-    Returns the Device that a particular Context is attached to
-*/
-ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *pContext)
-{
-    ALCdevice *pDevice = NULL;
-
-    LockLists();
-    if(IsContext(pContext))
-        pDevice = pContext->Device;
-    else
-        alcSetError(NULL, ALC_INVALID_CONTEXT);
-    UnlockLists();
-
-    return pDevice;
-}
-
-
-/*
-    alcMakeContextCurrent
-
-    Makes the given Context the active Context
-*/
+/* alcMakeContextCurrent
+ *
+ * Makes the given Context the active Context
+ */
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
     ALboolean bReturn = AL_TRUE;
@@ -2412,11 +2377,10 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
     return bReturn;
 }
 
-/*
-    alcSetThreadContext
-
-    Makes the given Context the active Context for the current thread
-*/
+/* alcSetThreadContext
+ *
+ * Makes the given Context the active Context for the current thread
+ */
 ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 {
     ALboolean bReturn = AL_TRUE;
@@ -2442,6 +2406,25 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
     }
 
     return bReturn;
+}
+
+
+/* alcGetContextsDevice
+ *
+ * Returns the Device that a particular Context is attached to
+ */
+ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *pContext)
+{
+    ALCdevice *pDevice = NULL;
+
+    LockLists();
+    if(IsContext(pContext))
+        pDevice = pContext->Device;
+    else
+        alcSetError(NULL, ALC_INVALID_CONTEXT);
+    UnlockLists();
+
+    return pDevice;
 }
 
 
@@ -2490,11 +2473,10 @@ static void GetFormatFromString(const char *str, enum DevFmtChannels *chans, enu
     *type = DevFmtShort;
 }
 
-/*
-    alcOpenDevice
-
-    Open the Device specified.
-*/
+/* alcOpenDevice
+ *
+ * Open the Device specified.
+ */
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 {
     const ALCchar *fmt;
@@ -2596,12 +2578,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     return device;
 }
 
-
-/*
-    alcCloseDevice
-
-    Close the specified Device
-*/
+/* alcCloseDevice
+ *
+ * Close the specified Device
+ */
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 {
     ALCdevice **list;
@@ -2631,7 +2611,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
         } while((ctx=pDevice->ContextList) != NULL);
         ALCdevice_StopPlayback(pDevice);
         pDevice->Flags &= ~DEVICE_RUNNING;
-    };
+    }
     ALCdevice_ClosePlayback(pDevice);
 
     ALCdevice_DecRef(pDevice);
@@ -2640,6 +2620,10 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 }
 
 
+/* alcLoopbackOpenDeviceSOFT
+ *
+ * Open a loopback device, for manual rendering.
+ */
 ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
 {
     ALCdevice *device;
@@ -2709,6 +2693,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     return device;
 }
 
+/* alcIsRenderFormatSupportedSOFT
+ *
+ * Determines if the loopback device supports the given format for rendering.
+ */
 ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type)
 {
     ALCboolean ret = ALC_FALSE;
@@ -2733,6 +2721,11 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
     return ret;
 }
 
+/* alcRenderSamplesSOFT
+ *
+ * Renders some samples into a buffer, using the format last set by the
+ * attributes given to alcCreateContext.
+ */
 ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
     LockLists();

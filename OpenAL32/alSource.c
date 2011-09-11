@@ -1481,8 +1481,8 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         Source = LookupSource(Context->SourceMap, sources[i]);
-        if(Context->DeferUpdates) Source->new_state = AL_STOPPED;
-        else SetSourceState(Source, Context, AL_STOPPED);
+        Source->new_state = AL_NONE;
+        SetSourceState(Source, Context, AL_STOPPED);
     }
 
 done:
@@ -1527,8 +1527,8 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         Source = LookupSource(Context->SourceMap, sources[i]);
-        if(Context->DeferUpdates) Source->new_state = AL_INITIAL;
-        else SetSourceState(Source, Context, AL_INITIAL);
+        Source->new_state = AL_NONE;
+        SetSourceState(Source, Context, AL_INITIAL);
     }
 
 done:

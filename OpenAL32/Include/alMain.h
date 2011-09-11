@@ -278,9 +278,9 @@ static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int new
     } u = { ptr };
     return InterlockedCompareExchange(u.l, newval, oldval) == oldval;
 }
-static __inline void *CompExchangePtr(void *volatile*ptr, void *oldval, void *newval)
+static __inline ALboolean CompExchangePtr(void *volatile*ptr, void *oldval, void *newval)
 {
-    return InterlockedCompareExchangePointer(ptr, newval, oldval);
+    return InterlockedCompareExchangePointer(ptr, newval, oldval) == oldval;
 }
 
 #elif defined(__APPLE__)
@@ -314,7 +314,7 @@ static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int new
 {
     return OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr);
 }
-static __inline ALboolean CompExchangeInt(void *volatile*ptr, void *oldval, void *newval)
+static __inline ALboolean CompExchangePtr(void *volatile*ptr, void *oldval, void *newval)
 {
     return OSAtomicCompareAndSwapPtrBarrier(oldval, newval, ptr);
 }

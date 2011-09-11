@@ -1301,21 +1301,21 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     if(device->BufferMap.size > 0)
     {
-        WARN("Deleting %d Buffer(s)\n", device->BufferMap.size);
+        WARN("(%p) Deleting %d Buffer(s)\n", device, device->BufferMap.size);
         ReleaseALBuffers(device);
     }
     ResetUIntMap(&device->BufferMap);
 
     if(device->EffectMap.size > 0)
     {
-        WARN("Deleting %d Effect(s)\n", device->EffectMap.size);
+        WARN("(%p) Deleting %d Effect(s)\n", device, device->EffectMap.size);
         ReleaseALEffects(device);
     }
     ResetUIntMap(&device->EffectMap);
 
     if(device->FilterMap.size > 0)
     {
-        WARN("Deleting %d Filter(s)\n", device->FilterMap.size);
+        WARN("(%p) Deleting %d Filter(s)\n", device, device->FilterMap.size);
         ReleaseALFilters(device);
     }
     ResetUIntMap(&device->FilterMap);

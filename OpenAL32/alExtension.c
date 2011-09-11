@@ -340,7 +340,7 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
     const char *ptr;
     size_t len;
 
-    Context = GetLockedContext();
+    Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
     if(!extName)
@@ -366,8 +366,7 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
         }
     }
 
-    UnlockContext(Context);
-
+    ALCcontext_DecRef(Context);
     return bIsSupported;
 }
 

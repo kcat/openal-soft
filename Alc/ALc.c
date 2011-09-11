@@ -1293,7 +1293,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 /* FreeDevice
  *
  * Frees the device structure, and destroys any objects the app failed to
- * delete.
+ * delete. Called once there's no more references on the device.
  */
 static ALCvoid FreeDevice(ALCdevice *device)
 {
@@ -1451,8 +1451,8 @@ static ALvoid InitContext(ALCcontext *pContext)
 
 /* FreeContext
  *
- * Cleans up the context, and destroy any remaining objects the app failed to
- * delete.
+ * Cleans up the context, and destroys any remaining objects the app failed to
+ * delete. Called once there's no more references on the context.
  */
 static ALCvoid FreeContext(ALCcontext *context)
 {

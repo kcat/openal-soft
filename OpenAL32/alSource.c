@@ -663,6 +663,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                 if(lValue == 0 ||
                    (filter=LookupFilter(pContext->Device->FilterMap, lValue)) != NULL)
                 {
+                    LockContext(pContext);
                     if(!filter)
                     {
                         Source->DirectGain = 1.0f;
@@ -673,6 +674,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         Source->DirectGain = filter->Gain;
                         Source->DirectGainHF = filter->GainHF;
                     }
+                    UnlockContext(pContext);
                     Source->NeedsUpdate = AL_TRUE;
                 }
                 else
@@ -784,11 +786,9 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
                 {
                     /* Release refcount on the previous slot, and add one for
                      * the new slot */
-                    if(Source->Send[lValue2].Slot)
-                        DecrementRef(&Source->Send[lValue2].Slot->ref);
-                    Source->Send[lValue2].Slot = ALEffectSlot;
-                    if(Source->Send[lValue2].Slot)
-                        IncrementRef(&Source->Send[lValue2].Slot->ref);
+                    if(ALEffectSlot) IncrementRef(&ALEffectSlot->ref);
+                    ALEffectSlot = ExchangePtr((void**)&Source->Send[lValue2].Slot, ALEffectSlot);
+                    if(ALEffectSlot) DecrementRef(&ALEffectSlot->ref);
 
                     if(!ALFilter)
                     {

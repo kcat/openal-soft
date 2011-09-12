@@ -1107,22 +1107,22 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
     Context = device->ContextList;
     while(Context)
     {
-        ALsource *source;
-        ALsizei pos;
+        ALsource **src, **src_end;
 
-        LockUIntMapRead(&Context->SourceMap);
-        for(pos = 0;pos < Context->SourceMap.size;pos++)
+        src = Context->ActiveSources;
+        src_end = src + Context->ActiveSourceCount;
+        while(src != src_end)
         {
-            source = Context->SourceMap.array[pos].value;
-            if(source->state == AL_PLAYING)
+            if((*src)->state == AL_PLAYING)
             {
-                source->state = AL_STOPPED;
-                source->BuffersPlayed = source->BuffersInQueue;
-                source->position = 0;
-                source->position_fraction = 0;
+                (*src)->state = AL_STOPPED;
+                (*src)->BuffersPlayed = (*src)->BuffersInQueue;
+                (*src)->position = 0;
+                (*src)->position_fraction = 0;
             }
+            src++;
         }
-        UnlockUIntMapRead(&Context->SourceMap);
+        Context->ActiveSourceCount = 0;
 
         Context = Context->next;
     }

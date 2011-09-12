@@ -1024,31 +1024,6 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
     return ALC_FALSE;
 }
 
-/* IsContext
- *
- * Check if the context pointer is valid (caller is responsible for holding the
- * list lock).
- */
-static ALCboolean IsContext(ALCcontext *context)
-{
-    ALCdevice *tmp_dev;
-
-    tmp_dev = g_pDeviceList;
-    while(tmp_dev)
-    {
-        ALCcontext *tmp_ctx = tmp_dev->ContextList;
-        while(tmp_ctx)
-        {
-            if(tmp_ctx == context)
-                return ALC_TRUE;
-            tmp_ctx = tmp_ctx->next;
-        }
-        tmp_dev = tmp_dev->next;
-    }
-
-    return ALC_FALSE;
-}
-
 
 /* UpdateDeviceParams
  *
@@ -1544,6 +1519,36 @@ static void ReleaseThreadCtx(void *ptr)
 {
     WARN("%p current for thread being destroyed\n", ptr);
     ALCcontext_DecRef(ptr);
+}
+
+/* VerifyContext
+ *
+ * Checks that the given context is valid, and increments its reference count.
+ */
+static ALCcontext *VerifyContext(ALCcontext *context)
+{
+    ALCdevice *dev;
+
+    LockLists();
+    dev = g_pDeviceList;
+    while(dev)
+    {
+        ALCcontext *tmp_ctx = dev->ContextList;
+        while(tmp_ctx)
+        {
+            if(tmp_ctx == context)
+            {
+                ALCcontext_IncRef(tmp_ctx);
+                UnlockLists();
+                return tmp_ctx;
+            }
+            tmp_ctx = tmp_ctx->next;
+        }
+        dev = dev->next;
+    }
+    UnlockLists();
+
+    return NULL;
 }
 
 
@@ -2312,34 +2317,23 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
  */
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
-    ALboolean bReturn = AL_TRUE;
-
-    LockLists();
-
-    // context must be a valid Context or NULL
-    if(context == NULL || IsContext(context))
-    {
-        ALCcontext *old;
-
-        if(context) ALCcontext_IncRef(context);
-        old = ExchangePtr((void**)&GlobalContext, context);
-        if(old) ALCcontext_DecRef(old);
-
-        if((old=pthread_getspecific(LocalContext)) != NULL)
-        {
-            pthread_setspecific(LocalContext, NULL);
-            ALCcontext_DecRef(old);
-        }
-    }
-    else
+    /* context must be a valid Context or NULL */
+    if(context && !(context=VerifyContext(context)))
     {
         alcSetError(NULL, ALC_INVALID_CONTEXT);
-        bReturn = AL_FALSE;
+        return ALC_FALSE;
+    }
+    /* context's reference count is already incremented */
+    context = ExchangePtr((void**)&GlobalContext, context);
+    if(context) ALCcontext_DecRef(context);
+
+    if((context=pthread_getspecific(LocalContext)) != NULL)
+    {
+        pthread_setspecific(LocalContext, NULL);
+        ALCcontext_DecRef(context);
     }
 
-    UnlockLists();
-
-    return bReturn;
+    return ALC_TRUE;
 }
 
 /* alcSetThreadContext
@@ -2348,29 +2342,20 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
  */
 ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 {
-    ALboolean bReturn = AL_TRUE;
     ALCcontext *old;
 
-    // context must be a valid Context or NULL
-    old = pthread_getspecific(LocalContext);
-    if(old != context)
+    /* context must be a valid Context or NULL */
+    if(context && !(context=VerifyContext(context)))
     {
-        LockLists();
-        if(context == NULL || IsContext(context))
-        {
-            if(context) ALCcontext_IncRef(context);
-            pthread_setspecific(LocalContext, context);
-            if(old) ALCcontext_DecRef(old);
-        }
-        else
-        {
-            alcSetError(NULL, ALC_INVALID_CONTEXT);
-            bReturn = AL_FALSE;
-        }
-        UnlockLists();
+        alcSetError(NULL, ALC_INVALID_CONTEXT);
+        return ALC_FALSE;
     }
+    /* context's reference count is already incremented */
+    old = pthread_getspecific(LocalContext);
+    pthread_setspecific(LocalContext, context);
+    if(old) ALCcontext_DecRef(old);
 
-    return bReturn;
+    return ALC_TRUE;
 }
 
 
@@ -2378,18 +2363,19 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
  *
  * Returns the Device that a particular Context is attached to
  */
-ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *pContext)
+ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
 {
-    ALCdevice *pDevice = NULL;
+    ALCdevice *Device;
 
-    LockLists();
-    if(IsContext(pContext))
-        pDevice = pContext->Device;
-    else
+    if(!(Context=VerifyContext(Context)))
+    {
         alcSetError(NULL, ALC_INVALID_CONTEXT);
-    UnlockLists();
+        return NULL;
+    }
+    Device = Context->Device;
+    ALCcontext_DecRef(Context);
 
-    return pDevice;
+    return Device;
 }
 
 

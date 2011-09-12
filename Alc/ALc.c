@@ -503,13 +503,22 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         ZScale = -1.0;
 
-    str = getenv("__ALSOFT_TRAP_AL_ERROR");
+    str = getenv("__ALSOFT_TRAP_ERROR");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-        TrapALError = AL_TRUE;
+    {
+        TrapALError  = AL_TRUE;
+        TrapALCError = AL_TRUE;
+    }
+    else
+    {
+        str = getenv("__ALSOFT_TRAP_AL_ERROR");
+        if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
+            TrapALError = AL_TRUE;
 
-    str = getenv("__ALSOFT_TRAP_ALC_ERROR");
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-        TrapALCError = ALC_TRUE;
+        str = getenv("__ALSOFT_TRAP_ALC_ERROR");
+        if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
+            TrapALCError = ALC_TRUE;
+    }
 
     pthread_key_create(&LocalContext, ReleaseThreadCtx);
     InitializeCriticalSection(&ListLock);

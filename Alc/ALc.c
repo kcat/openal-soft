@@ -1024,22 +1024,6 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
     return ALC_FALSE;
 }
 
-/* IsDevice
- *
- * Check if the device pointer is valid (caller is responsible for holding the
- * list lock).
- */
-static ALCboolean IsDevice(ALCdevice *pDevice)
-{
-    ALCdevice *pTempDevice;
-
-    pTempDevice = g_pDeviceList;
-    while(pTempDevice && pTempDevice != pDevice)
-        pTempDevice = pTempDevice->next;
-
-    return (pTempDevice ? ALC_TRUE : ALC_FALSE);
-}
-
 /* IsContext
  *
  * Check if the context pointer is valid (caller is responsible for holding the
@@ -2682,10 +2666,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
 {
     ALCboolean ret = ALC_FALSE;
 
-    LockLists();
-    if(!IsDevice(device))
-        alcSetError(NULL, ALC_INVALID_DEVICE);
-    else if(!device->IsLoopbackDevice)
+    if(!(device=VerifyDevice(device)) || !device->IsLoopbackDevice)
         alcSetError(device, ALC_INVALID_DEVICE);
     else if(freq <= 0)
         alcSetError(device, ALC_INVALID_VALUE);
@@ -2697,7 +2678,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
            freq >= 8000)
             ret = ALC_TRUE;
     }
-    UnlockLists();
+    if(device) ALCdevice_DecRef(device);
 
     return ret;
 }
@@ -2709,16 +2690,13 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
  */
 ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    LockLists();
-    if(!IsDevice(device))
-        alcSetError(NULL, ALC_INVALID_DEVICE);
-    else if(!device->IsLoopbackDevice)
+    if(!(device=VerifyDevice(device)) || !device->IsLoopbackDevice)
         alcSetError(device, ALC_INVALID_DEVICE);
     else if(samples < 0 || (samples > 0 && buffer == NULL))
         alcSetError(device, ALC_INVALID_VALUE);
     else
         aluMixData(device, buffer, samples);
-    UnlockLists();
+    if(device) ALCdevice_DecRef(device);
 }
 
 

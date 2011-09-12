@@ -995,16 +995,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             slot_end = slot + ctx->ActiveEffectSlotCount;
             while(slot != slot_end)
             {
-                for(i = 0;i < SamplesToDo;i++)
+                for(c = 0;c < SamplesToDo;c++)
                 {
-                    (*slot)->WetBuffer[i] += (*slot)->ClickRemoval[0];
+                    (*slot)->WetBuffer[c] += (*slot)->ClickRemoval[0];
                     (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] / 256.0f;
                 }
-                for(i = 0;i < 1;i++)
-                {
-                    (*slot)->ClickRemoval[i] += (*slot)->PendingClicks[i];
-                    (*slot)->PendingClicks[i] = 0.0f;
-                }
+                (*slot)->ClickRemoval[0] += (*slot)->PendingClicks[0];
+                (*slot)->PendingClicks[0] = 0.0f;
 
                 if(!DeferUpdates && ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
                     ALEffect_Update((*slot)->EffectState, ctx, *slot);

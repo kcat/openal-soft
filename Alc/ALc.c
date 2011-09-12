@@ -1218,7 +1218,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
 
-            if(ALEffect_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
+            if(ALeffectState_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
                 UnlockDevice(device);
@@ -1227,7 +1227,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 return ALC_FALSE;
             }
             slot->NeedsUpdate = AL_FALSE;
-            ALEffect_Update(slot->EffectState, context, slot);
+            ALeffectState_Update(slot->EffectState, context, slot);
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
 

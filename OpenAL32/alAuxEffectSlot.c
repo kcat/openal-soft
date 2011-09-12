@@ -100,7 +100,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             {
                 RemoveEffectSlotArray(Context, slot);
                 FreeThunkEntry(slot->effectslot);
-                ALEffect_Destroy(slot->EffectState);
+                ALeffectState_Destroy(slot->EffectState);
                 free(slot);
 
                 alSetError(Context, err);
@@ -154,7 +154,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, ALuint *effect
             FreeThunkEntry(EffectSlot->effectslot);
 
             RemoveEffectSlotArray(Context, EffectSlot);
-            ALEffect_Destroy(EffectSlot->EffectState);
+            ALeffectState_Destroy(EffectSlot->EffectState);
 
             memset(EffectSlot, 0, sizeof(ALeffectslot));
             free(EffectSlot);
@@ -564,10 +564,10 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
 
     if(State)
     {
-        if(ALEffect_DeviceUpdate(State, Context->Device) == AL_FALSE)
+        if(ALeffectState_DeviceUpdate(State, Context->Device) == AL_FALSE)
         {
             UnlockContext(Context);
-            ALEffect_Destroy(State);
+            ALeffectState_Destroy(State);
             alSetError(Context, AL_OUT_OF_MEMORY);
             return;
         }
@@ -581,10 +581,10 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
          * object was changed, it needs an update before its Process method can
          * be called. */
         EffectSlot->NeedsUpdate = AL_FALSE;
-        ALEffect_Update(EffectSlot->EffectState, Context, EffectSlot);
+        ALeffectState_Update(EffectSlot->EffectState, Context, EffectSlot);
         UnlockContext(Context);
 
-        ALEffect_Destroy(State);
+        ALeffectState_Destroy(State);
         State = NULL;
     }
     else
@@ -608,7 +608,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
         Context->EffectSlotMap.array[pos].value = NULL;
 
         // Release effectslot structure
-        ALEffect_Destroy(temp->EffectState);
+        ALeffectState_Destroy(temp->EffectState);
 
         FreeThunkEntry(temp->effectslot);
         memset(temp, 0, sizeof(ALeffectslot));

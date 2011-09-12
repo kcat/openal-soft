@@ -51,10 +51,10 @@ ALeffectState *EchoCreate(void);
 ALeffectState *ModulatorCreate(void);
 ALeffectState *DedicatedCreate(void);
 
-#define ALEffect_Destroy(a)        ((a)->Destroy((a)))
-#define ALEffect_DeviceUpdate(a,b) ((a)->DeviceUpdate((a),(b)))
-#define ALEffect_Update(a,b,c)     ((a)->Update((a),(b),(c)))
-#define ALEffect_Process(a,b,c,d)  ((a)->Process((a),(b),(c),(d)))
+#define ALeffectState_Destroy(a)        ((a)->Destroy((a)))
+#define ALeffectState_DeviceUpdate(a,b) ((a)->DeviceUpdate((a),(b)))
+#define ALeffectState_Update(a,b,c)     ((a)->Update((a),(b),(c)))
+#define ALeffectState_Process(a,b,c,d)  ((a)->Process((a),(b),(c),(d)))
 
 
 #ifdef __cplusplus

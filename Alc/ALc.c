@@ -1467,6 +1467,19 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
 {
     ALCcontext *volatile*tmp_ctx;
 
+    if(pthread_getspecific(LocalContext) == context)
+    {
+        WARN("%p released while current on thread\n", context);
+        pthread_setspecific(LocalContext, NULL);
+        ALCcontext_DecRef(context);
+    }
+
+    if(CompExchangePtr((void**)&GlobalContext, context, NULL))
+    {
+        WARN("%p released while current\n", context);
+        ALCcontext_DecRef(context);
+    }
+
     tmp_ctx = &device->ContextList;
     while(*tmp_ctx)
     {
@@ -1483,19 +1496,6 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
      * list before we go about deleting this one. There should be a more
      * efficient way of doing this. */
     UnlockDevice(device);
-
-    if(pthread_getspecific(LocalContext) == context)
-    {
-        WARN("%p released while current on thread\n", context);
-        pthread_setspecific(LocalContext, NULL);
-        ALCcontext_DecRef(context);
-    }
-
-    if(CompExchangePtr((void**)&GlobalContext, context, NULL))
-    {
-        WARN("%p released while current\n", context);
-        ALCcontext_DecRef(context);
-    }
 
     ALCcontext_DecRef(context);
 }

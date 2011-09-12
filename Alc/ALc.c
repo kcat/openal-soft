@@ -1518,14 +1518,14 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
 
     if(pthread_getspecific(LocalContext) == context)
     {
-        WARN("Context %p released while current on thread\n", context);
+        WARN("%p released while current on thread\n", context);
         pthread_setspecific(LocalContext, NULL);
         ALCcontext_DecRef(context);
     }
 
     if(CompExchangePtr((void**)&GlobalContext, context, NULL))
     {
-        WARN("Context %p released while current\n", context);
+        WARN("%p released while current\n", context);
         ALCcontext_DecRef(context);
     }
 
@@ -1549,7 +1549,7 @@ void ALCcontext_DecRef(ALCcontext *context)
 
 static void ReleaseThreadCtx(void *ptr)
 {
-    WARN("Context %p current for thread being destroyed\n", ptr);
+    WARN("%p current for thread being destroyed\n", ptr);
     ALCcontext_DecRef(ptr);
 }
 

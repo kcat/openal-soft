@@ -361,8 +361,7 @@ static const ALCint alcEFXMinorVersion = 0;
 static CRITICAL_SECTION ListLock;
 
 /* Device List */
-static ALCdevice *g_pDeviceList = NULL;
-static ALCuint    g_ulDeviceCount = 0;
+static ALCdevice *volatile DeviceList = NULL;
 
 // Thread-local current context
 static pthread_key_t LocalContext;
@@ -1327,7 +1326,7 @@ static ALCdevice *VerifyDevice(ALCdevice *device)
         return NULL;
 
     LockLists();
-    tmpDevice = g_pDeviceList;
+    tmpDevice = DeviceList;
     while(tmpDevice && tmpDevice != device)
         tmpDevice = tmpDevice->next;
 
@@ -1530,7 +1529,7 @@ static ALCcontext *VerifyContext(ALCcontext *context)
     ALCdevice *dev;
 
     LockLists();
-    dev = g_pDeviceList;
+    dev = DeviceList;
     while(dev)
     {
         ALCcontext *tmp_ctx = dev->ContextList;
@@ -1652,30 +1651,29 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->NumUpdates = 1;
 
     LockLists();
-    if((err=ALCdevice_OpenCapture(device, deviceName)) == ALC_NO_ERROR)
+    if((err=ALCdevice_OpenCapture(device, deviceName)) != ALC_NO_ERROR)
     {
-        device->next = g_pDeviceList;
-        g_pDeviceList = device;
-        g_ulDeviceCount++;
-    }
-    else
-    {
+        UnlockLists();
         DeleteCriticalSection(&device->Mutex);
         free(device);
-        device = NULL;
         alcSetError(NULL, err);
+        return NULL;
     }
     UnlockLists();
+
+    do {
+        device->next = DeviceList;
+    } while(!CompExchangePtr((void**)&DeviceList, device->next, device));
 
     return device;
 }
 
 ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 {
-    ALCdevice **list;
+    ALCdevice *volatile*list;
 
     LockLists();
-    list = &g_pDeviceList;
+    list = &DeviceList;
     while(*list && *list != pDevice)
         list = &(*list)->next;
 
@@ -1687,8 +1685,6 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
     }
 
     *list = (*list)->next;
-    g_ulDeviceCount--;
-
     UnlockLists();
 
     LockDevice(pDevice);
@@ -2510,21 +2506,19 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     // Find a playback device to open
     LockLists();
-    if((err=ALCdevice_OpenPlayback(device, deviceName)) == ALC_NO_ERROR)
+    if((err=ALCdevice_OpenPlayback(device, deviceName)) != ALC_NO_ERROR)
     {
-        device->next = g_pDeviceList;
-        g_pDeviceList = device;
-        g_ulDeviceCount++;
-    }
-    else
-    {
-        // No suitable output device found
+        UnlockLists();
         DeleteCriticalSection(&device->Mutex);
         free(device);
-        device = NULL;
         alcSetError(NULL, err);
+        return NULL;
     }
     UnlockLists();
+
+    do {
+        device->next = DeviceList;
+    } while(!CompExchangePtr((void**)&DeviceList, device->next, device));
 
     return device;
 }
@@ -2535,11 +2529,11 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
  */
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
 {
-    ALCdevice **list;
+    ALCdevice *volatile*list;
     ALCcontext *ctx;
 
     LockLists();
-    list = &g_pDeviceList;
+    list = &DeviceList;
     while(*list && *list != pDevice)
         list = &(*list)->next;
 
@@ -2551,7 +2545,6 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     }
 
     *list = (*list)->next;
-    g_ulDeviceCount--;
     UnlockLists();
 
     if((ctx=pDevice->ContextList) != NULL)
@@ -2633,14 +2626,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
     // Open the "backend"
-    LockLists();
     ALCdevice_OpenPlayback(device, "Loopback");
-
-    device->next = g_pDeviceList;
-    g_pDeviceList = device;
-    g_ulDeviceCount++;
-    UnlockLists();
-
+    do {
+        device->next = DeviceList;
+    } while(!CompExchangePtr((void**)&DeviceList, device->next, device));
     return device;
 }
 
@@ -2704,21 +2693,25 @@ static void ReleaseALC(ALCboolean doclose)
 
     if(doclose)
     {
-        if(g_ulDeviceCount > 0)
-            WARN("Closing %u device%s\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
-
-        while(g_pDeviceList)
+        ALCdevice *dev;
+        while((dev=DeviceList) != NULL)
         {
-            if(g_pDeviceList->IsCaptureDevice)
-                alcCaptureCloseDevice(g_pDeviceList);
-            else
-                alcCloseDevice(g_pDeviceList);
+            WARN("Closing device %p\n", dev);
+            if(!dev->IsCaptureDevice) alcCloseDevice(dev);
+            else alcCaptureCloseDevice(dev);
         }
     }
     else
     {
-        if(g_ulDeviceCount > 0)
-            WARN("%u device%s not closed\n", g_ulDeviceCount, (g_ulDeviceCount>1)?"s":"");
+        ALCdevice *dev;
+        if((dev=DeviceList) != NULL)
+        {
+            ALCuint num = 0;
+            do {
+                num++;
+            } while((dev=dev->next) != NULL);
+            WARN("%u device%s not closed\n", num, (num>1)?"s":"");
+        }
     }
 }
 

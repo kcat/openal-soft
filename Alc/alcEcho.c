@@ -125,7 +125,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
     }
 }
 
-static ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
+static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALechoState *state = (ALechoState*)effect;
     const ALuint mask = state->BufferLength-1;
@@ -134,7 +134,6 @@ static ALvoid EchoProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuin
     ALuint offset = state->Offset;
     ALfloat samp[2], smp;
     ALuint i;
-    (void)Slot;
 
     for(i = 0;i < SamplesToDo;i++,offset++)
     {

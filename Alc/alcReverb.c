@@ -522,13 +522,12 @@ static __inline ALvoid EAXVerbPass(ALverbState *State, ALfloat in, ALfloat *earl
 
 // This processes the reverb state, given the input samples and an output
 // buffer.
-static ALvoid VerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
+static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat early[4], late[4], out[4];
     const ALfloat *panGain = State->Gain;
-    (void)Slot;
 
     for(index = 0;index < SamplesToDo;index++)
     {
@@ -555,12 +554,11 @@ static ALvoid VerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuin
 
 // This processes the EAX reverb state, given the input samples and an output
 // buffer.
-static ALvoid EAXVerbProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
+static ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint index;
     ALfloat early[4], late[4];
-    (void)Slot;
 
     for(index = 0;index < SamplesToDo;index++)
     {

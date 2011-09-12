@@ -42,7 +42,7 @@ struct ALeffectState {
     ALvoid (*Destroy)(ALeffectState *State);
     ALboolean (*DeviceUpdate)(ALeffectState *State, ALCdevice *Device);
     ALvoid (*Update)(ALeffectState *State, ALCcontext *Context, const ALeffectslot *Slot);
-    ALvoid (*Process)(ALeffectState *State, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS]);
+    ALvoid (*Process)(ALeffectState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS]);
 };
 
 ALeffectState *NoneCreate(void);
@@ -51,10 +51,10 @@ ALeffectState *EchoCreate(void);
 ALeffectState *ModulatorCreate(void);
 ALeffectState *DedicatedCreate(void);
 
-#define ALEffect_Destroy(a)         ((a)->Destroy((a)))
-#define ALEffect_DeviceUpdate(a,b)  ((a)->DeviceUpdate((a),(b)))
-#define ALEffect_Update(a,b,c)      ((a)->Update((a),(b),(c)))
-#define ALEffect_Process(a,b,c,d,e) ((a)->Process((a),(b),(c),(d),(e)))
+#define ALEffect_Destroy(a)        ((a)->Destroy((a)))
+#define ALEffect_DeviceUpdate(a,b) ((a)->DeviceUpdate((a),(b)))
+#define ALEffect_Update(a,b,c)     ((a)->Update((a),(b),(c)))
+#define ALEffect_Process(a,b,c,d)  ((a)->Process((a),(b),(c),(d)))
 
 
 #ifdef __cplusplus

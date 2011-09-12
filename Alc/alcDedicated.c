@@ -75,12 +75,11 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCcontext *Context, const 
         state->gains[LFE] = Gain;
 }
 
-static ALvoid DedicatedProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
+static ALvoid DedicatedProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALdedicatedState *state = (ALdedicatedState*)effect;
     const ALfloat *gains = state->gains;
     ALuint i, s;
-    (void)Slot;
 
     for(i = 0;i < SamplesToDo;i++)
     {

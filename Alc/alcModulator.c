@@ -166,10 +166,9 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
     }
 }
 
-static ALvoid ModulatorProcess(ALeffectState *effect, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
+static ALvoid ModulatorProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALmodulatorState *state = (ALmodulatorState*)effect;
-    (void)Slot;
 
     switch(state->Waveform)
     {

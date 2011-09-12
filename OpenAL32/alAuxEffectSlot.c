@@ -452,10 +452,9 @@ static ALvoid NoneUpdate(ALeffectState *State, ALCcontext *Context, const ALeffe
     (void)Context;
     (void)Slot;
 }
-static ALvoid NoneProcess(ALeffectState *State, const ALeffectslot *Slot, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
+static ALvoid NoneProcess(ALeffectState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     (void)State;
-    (void)Slot;
     (void)SamplesToDo;
     (void)SamplesIn;
     (void)SamplesOut;

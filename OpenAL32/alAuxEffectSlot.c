@@ -523,6 +523,7 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
     ALeffectState *State = NULL;
     ALenum err = AL_NO_ERROR;
 
+    LockContext(Context);
     if(newtype == AL_EFFECT_NULL && EffectSlot->effect.type != AL_EFFECT_NULL)
     {
         State = NoneCreate();
@@ -557,13 +558,13 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
 
     if(err != AL_NO_ERROR)
     {
+        UnlockContext(Context);
         alSetError(Context, err);
         return;
     }
 
     if(State)
     {
-        LockContext(Context);
         if(ALEffect_DeviceUpdate(State, Context->Device) == AL_FALSE)
         {
             UnlockContext(Context);
@@ -589,7 +590,6 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
     }
     else
     {
-        LockContext(Context);
         if(!effect)
             memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
         else

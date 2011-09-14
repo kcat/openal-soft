@@ -1297,14 +1297,14 @@ static ALCuint pulse_available_samples(ALCdevice *device) //{{{
     return RingBufferSize(data->ring);
 } //}}}
 
-static void pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples) //{{{
+static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples) //{{{
 {
     pulse_data *data = device->ExtraData;
 
-    if(pulse_available_samples(device) >= samples)
-        ReadRingBuffer(data->ring, buffer, samples);
-    else
-        alcSetError(device, ALC_INVALID_VALUE);
+    if(pulse_available_samples(device) < samples)
+        return ALC_INVALID_VALUE;
+    ReadRingBuffer(data->ring, buffer, samples);
+    return ALC_NO_ERROR;
 } //}}}
 
 

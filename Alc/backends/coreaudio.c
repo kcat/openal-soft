@@ -642,42 +642,41 @@ static ALCuint ca_available_samples(ALCdevice *device)
     return RingBufferSize(data->ring) / data->sampleRateRatio;
 }
 
-static void ca_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples)
+static ALCenum ca_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples)
 {
     ca_data *data = (ca_data*)device->ExtraData;
+    AudioBufferList *list;
+    UInt32 frameCount;
+    OSStatus err;
 
-    if(samples <= ca_available_samples(device))
+    if(ca_available_samples(device) < samples)
+        return ALC_INVALID_VALUE;
+
+    // If no samples are requested, just return
+    if(samples == 0)
+        return ALC_NO_ERROR;
+
+    // Allocate a temporary AudioBufferList to use as the return resamples data
+    list = alloca(sizeof(AudioBufferList) + sizeof(AudioBuffer));
+
+    // Point the resampling buffer to the capture buffer
+    list->mNumberBuffers = 1;
+    list->mBuffers[0].mNumberChannels = data->format.mChannelsPerFrame;
+    list->mBuffers[0].mDataByteSize = samples * data->frameSize;
+    list->mBuffers[0].mData = buffer;
+
+    // Resample into another AudioBufferList
+    frameCount = samples;
+    err = AudioConverterFillComplexBuffer(data->audioConverter, ca_capture_conversion_callback,
+                                          device, &frameCount, list, NULL);
+    if(err != noErr)
     {
-        AudioBufferList *list;
-        UInt32 frameCount;
-        OSStatus err;
-
-        // If no samples are requested, just return
-        if(samples == 0)
-            return;
-
-        // Allocate a temporary AudioBufferList to use as the return resamples data
-        list = alloca(sizeof(AudioBufferList) + sizeof(AudioBuffer));
-
-        // Point the resampling buffer to the capture buffer
-        list->mNumberBuffers = 1;
-        list->mBuffers[0].mNumberChannels = data->format.mChannelsPerFrame;
-        list->mBuffers[0].mDataByteSize = samples * data->frameSize;
-        list->mBuffers[0].mData = buffer;
-
-        // Resample into another AudioBufferList
-        frameCount = samples;
-        err = AudioConverterFillComplexBuffer(data->audioConverter, ca_capture_conversion_callback, device,
-                                              &frameCount, list, NULL);
-        if(err != noErr)
-        {
-            ERR("AudioConverterFillComplexBuffer error: %d\n", err);
-            alcSetError(device, ALC_INVALID_VALUE);
-        }
+        ERR("AudioConverterFillComplexBuffer error: %d\n", err);
+        return ALC_INVALID_VALUE;
     }
-    else
-        alcSetError(device, ALC_INVALID_VALUE);
+    return ALC_NO_ERROR;
 }
+
 
 static const BackendFuncs ca_funcs = {
     ca_open_playback,

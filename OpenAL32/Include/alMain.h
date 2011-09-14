@@ -418,7 +418,7 @@ typedef struct {
     void (*CloseCapture)(ALCdevice*);
     void (*StartCapture)(ALCdevice*);
     void (*StopCapture)(ALCdevice*);
-    void (*CaptureSamples)(ALCdevice*, void*, ALCuint);
+    ALCenum (*CaptureSamples)(ALCdevice*, void*, ALCuint);
     ALCuint (*AvailableSamples)(ALCdevice*);
 } BackendFuncs;
 

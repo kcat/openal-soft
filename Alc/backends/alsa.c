@@ -1040,14 +1040,14 @@ static ALCuint alsa_available_samples(ALCdevice *Device)
     return RingBufferSize(data->ring);
 }
 
-static void alsa_capture_samples(ALCdevice *Device, ALCvoid *Buffer, ALCuint Samples)
+static ALCenum alsa_capture_samples(ALCdevice *Device, ALCvoid *Buffer, ALCuint Samples)
 {
     alsa_data *data = (alsa_data*)Device->ExtraData;
 
-    if(Samples <= alsa_available_samples(Device))
-        ReadRingBuffer(data->ring, Buffer, Samples);
-    else
-        alcSetError(Device, ALC_INVALID_VALUE);
+    if(alsa_available_samples(Device) < Samples)
+        return ALC_INVALID_VALUE;
+    ReadRingBuffer(data->ring, Buffer, Samples);
+    return ALC_NO_ERROR;
 }
 
 

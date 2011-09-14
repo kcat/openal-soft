@@ -683,14 +683,14 @@ static ALCuint WinMMAvailableSamples(ALCdevice *pDevice)
     return RingBufferSize(pData->pRing);
 }
 
-static void WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
+static ALCenum WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
 {
     WinMMData *pData = (WinMMData*)pDevice->ExtraData;
 
-    if(WinMMAvailableSamples(pDevice) >= lSamples)
-        ReadRingBuffer(pData->pRing, pBuffer, lSamples);
-    else
-        alcSetError(pDevice, ALC_INVALID_VALUE);
+    if(WinMMAvailableSamples(pDevice) < lSamples)
+        return ALC_INVALID_VALUE;
+    ReadRingBuffer(pData->pRing, pBuffer, lSamples);
+    return ALC_NO_ERROR;
 }
 
 

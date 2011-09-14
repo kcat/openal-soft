@@ -1730,17 +1730,16 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    if(!(device=VerifyDevice(device)) || !device->IsCaptureDevice)
+    ALCenum err = ALC_INVALID_DEVICE;
+    if((device=VerifyDevice(device)) != NULL && device->IsCaptureDevice)
     {
-        alcSetError(device, ALC_INVALID_DEVICE);
-        if(device) ALCdevice_DecRef(device);
-        return;
+        LockDevice(device);
+        err = ALCdevice_CaptureSamples(device, buffer, samples);
+        UnlockDevice(device);
     }
-    LockDevice(device);
-    ALCdevice_CaptureSamples(device, buffer, samples);
-    UnlockDevice(device);
-
-    ALCdevice_DecRef(device);
+    if(err != ALC_NO_ERROR)
+        alcSetError(device, err);
+    if(device) ALCdevice_DecRef(device);
 }
 
 /*

@@ -803,6 +803,7 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
     snd_pcm_hw_params_t *p;
     snd_pcm_uframes_t bufferSizeInFrames;
+    snd_pcm_uframes_t periodSizeInFrames;
     snd_pcm_format_t format;
     ALuint frameSize;
     alsa_data *data;
@@ -868,7 +869,9 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
     }
 
     err = NULL;
-    bufferSizeInFrames = pDevice->UpdateSize * pDevice->NumUpdates;
+    bufferSizeInFrames = maxu(pDevice->UpdateSize*pDevice->NumUpdates,
+                              100*pDevice->Frequency/1000);
+    periodSizeInFrames = minu(bufferSizeInFrames, 50*pDevice->Frequency/1000);
     snd_pcm_hw_params_malloc(&p);
 
     if((i=snd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
@@ -888,6 +891,9 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
         err = "set buffer size near";
+    /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
+    if(i >= 0 && (i=snd_pcm_hw_params_set_period_size_near(data->pcmHandle, p, &periodSizeInFrames, NULL)) < 0)
+        err = "set period size near";
     /* install and prepare hardware configuration */
     if(i >= 0 && (i=snd_pcm_hw_params(data->pcmHandle, p)) < 0)
         err = "set params";

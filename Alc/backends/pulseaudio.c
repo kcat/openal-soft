@@ -1134,8 +1134,7 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
 
     data->samples = device->UpdateSize * device->NumUpdates;
     data->frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
-    if(data->samples < 100 * device->Frequency / 1000)
-        data->samples = 100 * device->Frequency / 1000;
+    data->samples = maxu(data->samples, 100 * device->Frequency / 1000);
 
     if(!(data->ring = CreateRingBuffer(data->frame_size, data->samples)))
     {

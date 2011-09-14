@@ -1346,12 +1346,9 @@ ALCvoid alcSetError(ALCdevice *device, ALCenum errorCode)
     if(TrapALCError)
     {
 #ifdef _WIN32
-        /* Safely catch a breakpoint exception that wasn't caught by a debugger */
-        __try  {
+        /* DebugBreak() will cause an exception if there is no debugger */
+        if(IsDebuggerPresent())
             DebugBreak();
-        } __except((GetExceptionCode()==EXCEPTION_BREAKPOINT) ?
-                   EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
-        }
 #elif defined(SIGTRAP)
         kill(getpid(), SIGTRAP);
 #endif

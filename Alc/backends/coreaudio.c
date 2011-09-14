@@ -575,17 +575,11 @@ static ALCenum ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     // Allocate buffer for the AudioUnit output
     data->bufferList = allocate_buffer_list(outputFormat.mChannelsPerFrame, device->UpdateSize * data->frameSize * data->sampleRateRatio);
     if(data->bufferList == NULL)
-    {
-        alcSetError(device, ALC_OUT_OF_MEMORY);
         goto error;
-    }
 
     data->ring = CreateRingBuffer(data->frameSize, (device->UpdateSize * data->sampleRateRatio) * device->NumUpdates);
     if(data->ring == NULL)
-    {
-        alcSetError(device, ALC_OUT_OF_MEMORY);
         goto error;
-    }
 
     return ALC_NO_ERROR;
 

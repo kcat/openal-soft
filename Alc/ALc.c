@@ -1024,6 +1024,30 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
 }
 
 
+/* alcSetError
+ *
+ * Stores the latest ALC Error
+ */
+static void alcSetError(ALCdevice *device, ALCenum errorCode)
+{
+    if(TrapALCError)
+    {
+#ifdef _WIN32
+        /* DebugBreak() will cause an exception if there is no debugger */
+        if(IsDebuggerPresent())
+            DebugBreak();
+#elif defined(SIGTRAP)
+        kill(getpid(), SIGTRAP);
+#endif
+    }
+
+    if(device)
+        device->LastError = errorCode;
+    else
+        g_eLastNullDeviceError = errorCode;
+}
+
+
 /* UpdateDeviceParams
  *
  * Updates device parameters according to the attribute list (caller is
@@ -1334,30 +1358,6 @@ static ALCdevice *VerifyDevice(ALCdevice *device)
         ALCdevice_IncRef(tmpDevice);
     UnlockLists();
     return tmpDevice;
-}
-
-
-/* alcSetError
- *
- * Stores the latest ALC Error
- */
-ALCvoid alcSetError(ALCdevice *device, ALCenum errorCode)
-{
-    if(TrapALCError)
-    {
-#ifdef _WIN32
-        /* DebugBreak() will cause an exception if there is no debugger */
-        if(IsDebuggerPresent())
-            DebugBreak();
-#elif defined(SIGTRAP)
-        kill(getpid(), SIGTRAP);
-#endif
-    }
-
-    if(device)
-        device->LastError = errorCode;
-    else
-        g_eLastNullDeviceError = errorCode;
 }
 
 

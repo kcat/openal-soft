@@ -644,8 +644,6 @@ void AppendDeviceList(const ALCchar *name);
 void AppendAllDeviceList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
 
-ALCvoid alcSetError(ALCdevice *device, ALCenum errorCode);
-
 ALCvoid LockDevice(ALCdevice *device);
 ALCvoid UnlockDevice(ALCdevice *device);
 ALCvoid LockContext(ALCcontext *context);

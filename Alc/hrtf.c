@@ -291,9 +291,8 @@ ALCboolean IsHrtfCompatible(ALCdevice *device)
 {
     if(device->FmtChans == DevFmtStereo && device->Frequency == Hrtf.sampleRate)
         return ALC_TRUE;
-    ERR("format: %s %uhz (needed: %s %uhz)\n",
-        DevFmtChannelsString(device->FmtChans), device->Frequency,
-        DevFmtChannelsString(DevFmtStereo), Hrtf.sampleRate);
+    ERR("Incompatible format: %s %uhz\n",
+        DevFmtChannelsString(device->FmtChans), device->Frequency);
     return ALC_FALSE;
 }
 
@@ -409,4 +408,6 @@ void InitHrtf(void)
         else
             ERR("Failed to load %s\n", fname);
     }
+    TRACE("HRTF support for format: %s %uhz\n",
+          DevFmtChannelsString(DevFmtStereo), Hrtf.sampleRate);
 }

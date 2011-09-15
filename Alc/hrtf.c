@@ -37,8 +37,8 @@
  * ALushort evOffset[evCount]; // Required values:
  *   { 0, 1, 13, 37, 73, 118, 174, 234, 306, 378, 450, 522, 594, 654, 710, 755, 791, 815, 827 }
  *
- * ALushort coefficients[hrirCount][hrirSize];
- * ALubyte  delays[hrirCount]; // Element values must not exceed 127
+ * ALshort coefficients[hrirCount][hrirSize];
+ * ALubyte delays[hrirCount]; // Element values must not exceed 127
  */
 
 static const ALchar magicMarker[8] = "MinPHR00";

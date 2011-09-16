@@ -1639,6 +1639,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->Flags |= DEVICE_CHANNELS_REQUEST;
     if(DecomposeDevFormat(format, &device->FmtChans, &device->FmtType) == AL_FALSE)
     {
+        DeleteCriticalSection(&device->Mutex);
         free(device);
         alcSetError(NULL, ALC_INVALID_ENUM);
         return NULL;

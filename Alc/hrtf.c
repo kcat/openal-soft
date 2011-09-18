@@ -21,6 +21,7 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -304,6 +305,8 @@ const struct Hrtf *GetHrtf(ALCdevice *device)
             if(device->Frequency == LoadedHrtfs[i].sampleRate)
                 return &LoadedHrtfs[i];
         }
+        if(device->Frequency == DefaultHrtf.sampleRate)
+            return &DefaultHrtf;
     }
     ERR("Incompatible format: %s %uhz\n",
         DevFmtChannelsString(device->FmtChans), device->Frequency);
@@ -312,24 +315,48 @@ const struct Hrtf *GetHrtf(ALCdevice *device)
 
 void InitHrtf(void)
 {
-    const char *fname;
-    FILE *f = NULL;
+    char *fnamelist, *next;
 
-    fname = GetConfigValue(NULL, "hrtf_tables", "");
-    if(fname[0] != '\0')
-    {
-        f = fopen(fname, "rb");
-        if(f == NULL)
-            ERR("Could not open %s\n", fname);
-    }
-    if(f != NULL)
+    fnamelist = strdup(GetConfigValue(NULL, "hrtf_tables", ""));
+    next = fnamelist;
+    while(next && *next)
     {
         const ALubyte maxDelay = SRC_HISTORY_LENGTH-1;
-        ALboolean failed = AL_FALSE;
         struct Hrtf newdata;
+        ALboolean failed;
         ALchar magic[9];
         ALsizei i, j;
+        char *fname;
+        FILE *f;
 
+        fname = next;
+        next = strchr(fname, ',');
+        if(next)
+        {
+            while(next != fname)
+            {
+                next--;
+                if(!isspace(*next))
+                {
+                    *(next++) = '\0';
+                    break;
+                }
+            }
+            while(isspace(*next) || *next == ',')
+                next++;
+        }
+
+        if(!fname[0])
+            continue;
+        TRACE("Loading %s\n", fname);
+        f = fopen(fname, "rb");
+        if(f == NULL)
+        {
+            ERR("Could not open %s\n", fname);
+            continue;
+        }
+
+        failed = AL_FALSE;
         if(fread(magic, 1, sizeof(magicMarker), f) != sizeof(magicMarker))
         {
             ERR("Failed to read magic marker\n");
@@ -423,7 +450,7 @@ void InitHrtf(void)
             if(temp != NULL)
             {
                 LoadedHrtfs = temp;
-                TRACE("HRTF support for format: %s %uhz\n",
+                TRACE("Loaded HRTF support for format: %s %uhz\n",
                       DevFmtChannelsString(DevFmtStereo), newdata.sampleRate);
                 LoadedHrtfs[NumLoadedHrtfs++] = newdata;
             }
@@ -431,16 +458,8 @@ void InitHrtf(void)
         else
             ERR("Failed to load %s\n", fname);
     }
-    if(NumLoadedHrtfs == 0)
-    {
-        LoadedHrtfs = malloc(sizeof(LoadedHrtfs[0]));
-        if(LoadedHrtfs != NULL)
-        {
-            TRACE("Default HRTF support for format: %s %uhz\n",
-                  DevFmtChannelsString(DevFmtStereo), DefaultHrtf.sampleRate);
-            LoadedHrtfs[NumLoadedHrtfs++] = DefaultHrtf;
-        }
-    }
+    free(fnamelist);
+    fnamelist = NULL;
 }
 
 void FreeHrtf(void)

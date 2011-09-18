@@ -559,6 +559,7 @@ static void alc_deinit(void)
 static void alc_initconfig(void)
 {
     const char *devs, *str;
+    float valf;
     int i, n;
 
     str = getenv("ALSOFT_LOGLEVEL");
@@ -582,14 +583,17 @@ static void alc_initconfig(void)
     InitHrtf();
 
 #ifdef _WIN32
-    RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 1);
+    RTPrioLevel = 1;
 #else
-    RTPrioLevel = GetConfigValueInt(NULL, "rt-prio", 0);
+    RTPrioLevel = 0;
 #endif
+    ConfigValueInt(NULL, "rt-prio", &RTPrioLevel);
 
-    DefaultResampler = GetConfigValueInt(NULL, "resampler", RESAMPLER_DEFAULT);
-    if(DefaultResampler >= RESAMPLER_MAX || DefaultResampler <= RESAMPLER_MIN)
-        DefaultResampler = RESAMPLER_DEFAULT;
+    if(ConfigValueInt(NULL, "resampler", &n))
+    {
+        if(n < RESAMPLER_MAX && n > RESAMPLER_MIN)
+            DefaultResampler = n;
+    }
 
     if(!TrapALCError)
         TrapALCError = GetConfigValueBool(NULL, "trap-alc-error", ALC_FALSE);
@@ -597,8 +601,9 @@ static void alc_initconfig(void)
     if(!TrapALError)
         TrapALError = GetConfigValueBool(NULL, "trap-al-error", AL_FALSE);
 
-    ReverbBoost *= aluPow(10.0f, GetConfigValueFloat("reverb", "boost", 0.0f) /
-                                 20.0f);
+    if(ConfigValueFloat("reverb", "boost", &valf))
+        ReverbBoost *= aluPow(10.0f, valf / 20.0f);
+
     EmulateEAXReverb = GetConfigValueBool("reverb", "emulate-eax", AL_FALSE);
 
     devs = GetConfigValue(NULL, "drivers", "");
@@ -1080,9 +1085,6 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         numStereo = device->NumStereoSources;
         numSends = device->NumAuxSends;
 
-        freq = GetConfigValueInt(NULL, "frequency", freq);
-        if(freq < 8000) freq = 8000;
-
         attrIdx = 0;
         while(attrList[attrIdx])
         {
@@ -1121,10 +1123,9 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                         return ALC_FALSE;
                     }
                 }
-                else if(!ConfigValueExists(NULL, "frequency"))
+                else
                 {
                     freq = attrList[attrIdx + 1];
-                    if(freq < 8000) freq = 8000;
                     device->Flags |= DEVICE_FREQUENCY_REQUEST;
                 }
             }
@@ -1138,16 +1139,19 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 numMono = device->MaxNoOfSources - numStereo;
             }
 
-            if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS &&
-               !ConfigValueExists(NULL, "sends"))
-            {
+            if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
                 numSends = attrList[attrIdx + 1];
-                if(numSends > MAX_SENDS)
-                    numSends = MAX_SENDS;
-            }
 
             attrIdx += 2;
         }
+
+        if(!device->IsLoopbackDevice)
+        {
+            ConfigValueUInt(NULL, "frequency", &freq);
+            freq = maxu(freq, 8000);
+        }
+        ConfigValueUInt(NULL, "sends", &numSends);
+        numSends = minu(MAX_SENDS, numSends);
 
         device->UpdateSize = (ALuint64)device->UpdateSize * freq /
                              device->Frequency;
@@ -2459,50 +2463,52 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Flags = 0;
     device->Bs2b = NULL;
+    device->Bs2bLevel = 0;
     device->szDeviceName = NULL;
 
     device->ContextList = NULL;
+
+    device->MaxNoOfSources = 256;
+    device->AuxiliaryEffectSlotMax = 4;
+    device->NumAuxSends = MAX_SENDS;
 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
 
     //Set output format
-    if(ConfigValueExists(NULL, "frequency"))
+    device->NumUpdates = 4;
+    device->UpdateSize = 1024;
+
+    device->Frequency = DEFAULT_OUTPUT_RATE;
+    if(ConfigValueUInt(NULL, "frequency", &device->Frequency))
         device->Flags |= DEVICE_FREQUENCY_REQUEST;
-    device->Frequency = GetConfigValueInt(NULL, "frequency", DEFAULT_OUTPUT_RATE);
-    if(device->Frequency < 8000)
-        device->Frequency = 8000;
+    device->Frequency = maxu(device->Frequency, 8000);
 
     if(ConfigValueExists(NULL, "format"))
         device->Flags |= DEVICE_CHANNELS_REQUEST;
     fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
     GetFormatFromString(fmt, &device->FmtChans, &device->FmtType);
 
-    device->NumUpdates = GetConfigValueInt(NULL, "periods", 4);
-    if(device->NumUpdates < 2)
-        device->NumUpdates = 4;
+    ConfigValueUInt(NULL, "periods", &device->NumUpdates);
+    if(device->NumUpdates < 2) device->NumUpdates = 4;
 
-    device->UpdateSize = GetConfigValueInt(NULL, "period_size", 1024);
-    if(device->UpdateSize <= 0)
-        device->UpdateSize = 1024;
+    ConfigValueUInt(NULL, "period_size", &device->UpdateSize);
+    if(device->UpdateSize == 0) device->UpdateSize = 1024;
 
-    device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
-    if(device->MaxNoOfSources <= 0)
-        device->MaxNoOfSources = 256;
+    ConfigValueUInt(NULL, "sources", &device->MaxNoOfSources);
+    if(device->MaxNoOfSources == 0) device->MaxNoOfSources = 256;
 
-    device->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
-    if(device->AuxiliaryEffectSlotMax <= 0)
-        device->AuxiliaryEffectSlotMax = 4;
+    ConfigValueUInt(NULL, "slots", &device->AuxiliaryEffectSlotMax);
+    if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 4;
+
+    ConfigValueUInt(NULL, "sends", &device->NumAuxSends);
+    if(device->NumAuxSends > MAX_SENDS) device->NumAuxSends = MAX_SENDS;
+
+    ConfigValueInt(NULL, "cf_level", &device->Bs2bLevel);
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
-
-    device->NumAuxSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
-    if(device->NumAuxSends > MAX_SENDS)
-        device->NumAuxSends = MAX_SENDS;
-
-    device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
     // Find a playback device to open
     LockLists();
@@ -2592,44 +2598,47 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
 
     device->Flags = 0;
     device->Bs2b = NULL;
+    device->Bs2bLevel = 0;
     device->szDeviceName = NULL;
 
     device->ContextList = NULL;
+
+    device->MaxNoOfSources = 256;
+    device->AuxiliaryEffectSlotMax = 4;
+    device->NumAuxSends = MAX_SENDS;
 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
 
     //Set output format
+    device->NumUpdates = 0;
+    device->UpdateSize = 0;
+
     device->Frequency = 44100;
     device->FmtChans = DevFmtStereo;
     device->FmtType = DevFmtShort;
 
-    device->NumUpdates = 0;
-    device->UpdateSize = 0;
+    ConfigValueUInt(NULL, "sources", &device->MaxNoOfSources);
+    if(device->MaxNoOfSources == 0) device->MaxNoOfSources = 256;
 
-    device->MaxNoOfSources = GetConfigValueInt(NULL, "sources", 256);
-    if(device->MaxNoOfSources <= 0)
-        device->MaxNoOfSources = 256;
+    ConfigValueUInt(NULL, "slots", &device->AuxiliaryEffectSlotMax);
+    if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 4;
 
-    device->AuxiliaryEffectSlotMax = GetConfigValueInt(NULL, "slots", 4);
-    if(device->AuxiliaryEffectSlotMax <= 0)
-        device->AuxiliaryEffectSlotMax = 4;
+    ConfigValueUInt(NULL, "sends", &device->NumAuxSends);
+    if(device->NumAuxSends > MAX_SENDS) device->NumAuxSends = MAX_SENDS;
+
+    ConfigValueInt(NULL, "cf_level", &device->Bs2bLevel);
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
-
-    device->NumAuxSends = GetConfigValueInt(NULL, "sends", MAX_SENDS);
-    if(device->NumAuxSends > MAX_SENDS)
-        device->NumAuxSends = MAX_SENDS;
-
-    device->Bs2bLevel = GetConfigValueInt(NULL, "cf_level", 0);
 
     // Open the "backend"
     ALCdevice_OpenPlayback(device, "Loopback");
     do {
         device->next = DeviceList;
     } while(!CompExchangePtr((void**)&DeviceList, device->next, device));
+
     return device;
 }
 

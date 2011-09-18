@@ -313,24 +313,35 @@ int ConfigValueExists(const char *blockName, const char *keyName)
     return !!val[0];
 }
 
-int GetConfigValueInt(const char *blockName, const char *keyName, int def)
+int ConfigValueInt(const char *blockName, const char *keyName, int *ret)
 {
     const char *val = GetConfigValue(blockName, keyName, "");
+    if(!val[0]) return 0;
 
-    if(!val[0]) return def;
-    return strtol(val, NULL, 0);
+    *ret = strtol(val, NULL, 0);
+    return 1;
 }
 
-float GetConfigValueFloat(const char *blockName, const char *keyName, float def)
+int ConfigValueUInt(const char *blockName, const char *keyName, unsigned int *ret)
 {
     const char *val = GetConfigValue(blockName, keyName, "");
+    if(!val[0]) return 0;
 
-    if(!val[0]) return def;
+    *ret = strtoul(val, NULL, 0);
+    return 1;
+}
+
+int ConfigValueFloat(const char *blockName, const char *keyName, float *ret)
+{
+    const char *val = GetConfigValue(blockName, keyName, "");
+    if(!val[0]) return 0;
+
 #ifdef HAVE_STRTOF
-    return strtof(val, NULL);
+    *ret = strtof(val, NULL);
 #else
-    return (float)strtod(val, NULL);
+    *ret = (float)strtod(val, NULL);
 #endif
+    return 1;
 }
 
 int GetConfigValueBool(const char *blockName, const char *keyName, int def)

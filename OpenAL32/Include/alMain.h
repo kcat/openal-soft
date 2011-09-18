@@ -669,9 +669,10 @@ void ReadALConfig(void);
 void FreeALConfig(void);
 int ConfigValueExists(const char *blockName, const char *keyName);
 const char *GetConfigValue(const char *blockName, const char *keyName, const char *def);
-int GetConfigValueInt(const char *blockName, const char *keyName, int def);
-float GetConfigValueFloat(const char *blockName, const char *keyName, float def);
 int GetConfigValueBool(const char *blockName, const char *keyName, int def);
+int ConfigValueInt(const char *blockName, const char *keyName, int *ret);
+int ConfigValueUInt(const char *blockName, const char *keyName, unsigned int *ret);
+int ConfigValueFloat(const char *blockName, const char *keyName, float *ret);
 
 void SetRTPriority(void);
 

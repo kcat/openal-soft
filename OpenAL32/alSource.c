@@ -33,7 +33,7 @@
 #include "alAuxEffectSlot.h"
 
 
-enum Resampler DefaultResampler;
+enum Resampler DefaultResampler = RESAMPLER_DEFAULT;
 const ALsizei ResamplerPadding[RESAMPLER_MAX] = {
     0, /* Point */
     1, /* Linear */

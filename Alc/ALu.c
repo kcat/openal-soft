@@ -283,7 +283,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             {
                 /* Get the static HRIR coefficients and delays for this
                  * channel. */
-                GetLerpedHrtfCoeffs(0.0, angles[c] * (M_PI/180.0),
+                GetLerpedHrtfCoeffs(ALContext->Device->Hrtf,
+                                    0.0, angles[c] * (M_PI/180.0),
                                     DryGain*ListenerGain,
                                     ALSource->Params.HrtfCoeffs[c],
                                     ALSource->Params.HrtfDelay[c]);
@@ -722,8 +723,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             // coefficients, target delays, steppping values, and counter.
             if(delta > 0.001f)
             {
-                ALSource->HrtfCounter = GetMovingHrtfCoeffs(ev, az, DryGain,
-                                          delta, ALSource->HrtfCounter,
+                ALSource->HrtfCounter = GetMovingHrtfCoeffs(Device->Hrtf,
+                                          ev, az, DryGain, delta,
+                                          ALSource->HrtfCounter,
                                           ALSource->Params.HrtfCoeffs[0],
                                           ALSource->Params.HrtfDelay[0],
                                           ALSource->Params.HrtfCoeffStep,
@@ -737,7 +739,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         else
         {
             // Get the initial (static) HRIR coefficients and delays.
-            GetLerpedHrtfCoeffs(ev, az, DryGain,
+            GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, DryGain,
                                 ALSource->Params.HrtfCoeffs[0],
                                 ALSource->Params.HrtfDelay[0]);
             ALSource->HrtfCounter = 0;

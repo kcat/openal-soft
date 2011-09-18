@@ -53,7 +53,7 @@ static struct Hrtf {
     ALuint sampleRate;
     ALshort coeffs[HRIR_COUNT][HRIR_LENGTH];
     ALubyte delays[HRIR_COUNT];
-} Hrtf = {
+} LoadedHrtf = {
     44100,
 #include "hrtf_tables.inc"
 };
@@ -116,7 +116,7 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
 // elevation and azimuth in radians.  Linear interpolation is used to
 // increase the apparent resolution of the HRIR dataset.  The coefficients
 // are also normalized and attenuated by the specified gain.
-void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
+void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
 {
     ALuint evidx[2], azidx[2];
     ALfloat mu[3];
@@ -156,11 +156,11 @@ void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALflo
         ALdouble scale = gain * (1.0/32767.0);
         for(i = 0;i < HRIR_LENGTH;i++)
         {
-            coeffs[i][0] = lerp(lerp(Hrtf.coeffs[lidx[0]][i], Hrtf.coeffs[lidx[1]][i], mu[0]),
-                                lerp(Hrtf.coeffs[lidx[2]][i], Hrtf.coeffs[lidx[3]][i], mu[1]),
+            coeffs[i][0] = lerp(lerp(Hrtf->coeffs[lidx[0]][i], Hrtf->coeffs[lidx[1]][i], mu[0]),
+                                lerp(Hrtf->coeffs[lidx[2]][i], Hrtf->coeffs[lidx[3]][i], mu[1]),
                                 mu[2]) * scale;
-            coeffs[i][1] = lerp(lerp(Hrtf.coeffs[ridx[0]][i], Hrtf.coeffs[ridx[1]][i], mu[0]),
-                                lerp(Hrtf.coeffs[ridx[2]][i], Hrtf.coeffs[ridx[3]][i], mu[1]),
+            coeffs[i][1] = lerp(lerp(Hrtf->coeffs[ridx[0]][i], Hrtf->coeffs[ridx[1]][i], mu[0]),
+                                lerp(Hrtf->coeffs[ridx[2]][i], Hrtf->coeffs[ridx[3]][i], mu[1]),
                                 mu[2]) * scale;
         }
     }
@@ -174,11 +174,11 @@ void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALflo
     }
 
     // Calculate the HRIR delays using linear interpolation.
-    delays[0] = (ALuint)(lerp(lerp(Hrtf.delays[lidx[0]], Hrtf.delays[lidx[1]], mu[0]),
-                              lerp(Hrtf.delays[lidx[2]], Hrtf.delays[lidx[3]], mu[1]),
+    delays[0] = (ALuint)(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
+                              lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),
                               mu[2]) * 65536.0f);
-    delays[1] = (ALuint)(lerp(lerp(Hrtf.delays[ridx[0]], Hrtf.delays[ridx[1]], mu[0]),
-                              lerp(Hrtf.delays[ridx[2]], Hrtf.delays[ridx[3]], mu[1]),
+    delays[1] = (ALuint)(lerp(lerp(Hrtf->delays[ridx[0]], Hrtf->delays[ridx[1]], mu[0]),
+                              lerp(Hrtf->delays[ridx[2]], Hrtf->delays[ridx[3]], mu[1]),
                               mu[2]) * 65536.0f);
 }
 
@@ -188,7 +188,7 @@ void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALflo
 // HRIR dataset.  The coefficients are also normalized and attenuated by the
 // specified gain.  Stepping resolution and count is determined using the
 // given delta factor between 0.0 and 1.0.
-ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep)
+ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep)
 {
     ALuint evidx[2], azidx[2];
     ALuint lidx[4], ridx[4];
@@ -223,7 +223,7 @@ ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALf
     ridx[3] = evOffset[evidx[1]] + ((azCount[evidx[1]]-azidx[1]) % azCount[evidx[1]]);
 
     // Calculate the stepping parameters.
-    delta = maxf(floor(delta*(Hrtf.sampleRate*0.015f) + 0.5), 1.0f);
+    delta = maxf(floor(delta*(Hrtf->sampleRate*0.015f) + 0.5), 1.0f);
     step = 1.0f / delta;
 
     // Calculate the normalized and attenuated target HRIR coefficients using
@@ -239,11 +239,11 @@ ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALf
             left = coeffs[i][0] - (coeffStep[i][0] * counter);
             right = coeffs[i][1] - (coeffStep[i][1] * counter);
 
-            coeffs[i][0] = lerp(lerp(Hrtf.coeffs[lidx[0]][i], Hrtf.coeffs[lidx[1]][i], mu[0]),
-                                lerp(Hrtf.coeffs[lidx[2]][i], Hrtf.coeffs[lidx[3]][i], mu[1]),
+            coeffs[i][0] = lerp(lerp(Hrtf->coeffs[lidx[0]][i], Hrtf->coeffs[lidx[1]][i], mu[0]),
+                                lerp(Hrtf->coeffs[lidx[2]][i], Hrtf->coeffs[lidx[3]][i], mu[1]),
                                 mu[2]) * scale;
-            coeffs[i][1] = lerp(lerp(Hrtf.coeffs[ridx[0]][i], Hrtf.coeffs[ridx[1]][i], mu[0]),
-                                lerp(Hrtf.coeffs[ridx[2]][i], Hrtf.coeffs[ridx[3]][i], mu[1]),
+            coeffs[i][1] = lerp(lerp(Hrtf->coeffs[ridx[0]][i], Hrtf->coeffs[ridx[1]][i], mu[0]),
+                                lerp(Hrtf->coeffs[ridx[2]][i], Hrtf->coeffs[ridx[3]][i], mu[1]),
                                 mu[2]) * scale;
 
             coeffStep[i][0] = step * (coeffs[i][0] - left);
@@ -271,11 +271,11 @@ ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALf
     left = delays[0] - (delayStep[0] * counter);
     right = delays[1] - (delayStep[1] * counter);
 
-    delays[0] = (ALuint)(lerp(lerp(Hrtf.delays[lidx[0]], Hrtf.delays[lidx[1]], mu[0]),
-                              lerp(Hrtf.delays[lidx[2]], Hrtf.delays[lidx[3]], mu[1]),
+    delays[0] = (ALuint)(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
+                              lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),
                               mu[2]) * 65536.0f);
-    delays[1] = (ALuint)(lerp(lerp(Hrtf.delays[ridx[0]], Hrtf.delays[ridx[1]], mu[0]),
-                              lerp(Hrtf.delays[ridx[2]], Hrtf.delays[ridx[3]], mu[1]),
+    delays[1] = (ALuint)(lerp(lerp(Hrtf->delays[ridx[0]], Hrtf->delays[ridx[1]], mu[0]),
+                              lerp(Hrtf->delays[ridx[2]], Hrtf->delays[ridx[3]], mu[1]),
                               mu[2]) * 65536.0f);
 
     delayStep[0] = (ALint)(step * (delays[0] - left));
@@ -287,13 +287,13 @@ ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALf
     return (ALuint)delta;
 }
 
-ALCboolean IsHrtfCompatible(ALCdevice *device)
+const struct Hrtf *GetHrtf(ALCdevice *device)
 {
-    if(device->FmtChans == DevFmtStereo && device->Frequency == Hrtf.sampleRate)
-        return ALC_TRUE;
+    if(device->FmtChans == DevFmtStereo && device->Frequency == LoadedHrtf.sampleRate)
+        return &LoadedHrtf;
     ERR("Incompatible format: %s %uhz\n",
         DevFmtChannelsString(device->FmtChans), device->Frequency);
-    return ALC_FALSE;
+    return NULL;
 }
 
 void InitHrtf(void)
@@ -404,10 +404,10 @@ void InitHrtf(void)
         f = NULL;
 
         if(!failed)
-            Hrtf = newdata;
+            LoadedHrtf = newdata;
         else
             ERR("Failed to load %s\n", fname);
     }
     TRACE("HRTF support for format: %s %uhz\n",
-          DevFmtChannelsString(DevFmtStereo), Hrtf.sampleRate);
+          DevFmtChannelsString(DevFmtStereo), LoadedHrtf.sampleRate);
 }

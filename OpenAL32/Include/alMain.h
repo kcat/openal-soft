@@ -384,6 +384,9 @@ extern "C" {
 #define LOWPASSFREQCUTOFF          (5000)
 
 
+struct Hrtf;
+
+
 // Find the next power-of-2 for non-power-of-2 numbers.
 static __inline ALuint NextPowerOf2(ALuint value)
 {
@@ -549,6 +552,9 @@ struct ALCdevice_struct
     // Map of Filters for this device
     UIntMap FilterMap;
 
+    /* HRTF filter tables */
+    const struct Hrtf *Hrtf;
+
     // Stereo-to-binaural filter
     struct bs2b *Bs2b;
     ALCint       Bs2bLevel;
@@ -679,10 +685,10 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 #define HRIR_LENGTH      (1<<HRIR_BITS)
 #define HRIR_MASK        (HRIR_LENGTH-1)
 void InitHrtf(void);
-ALCboolean IsHrtfCompatible(ALCdevice *device);
+const struct Hrtf *GetHrtf(ALCdevice *device);
 ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3], const ALfloat newdir[3]);
-void GetLerpedHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
-ALuint GetMovingHrtfCoeffs(ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep);
+void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
+ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep);
 
 void al_print(const char *func, const char *fmt, ...) PRINTF_STYLE(2,3);
 #define AL_PRINT(...) al_print(__FUNCTION__, __VA_ARGS__)

@@ -62,7 +62,7 @@ static void LoadConfigFromFile(FILE *f)
 
     while(fgets(buffer, sizeof(buffer), f))
     {
-        size_t i = 0;
+        ssize_t i = 0;
 
         while(isspace(buffer[i]))
             i++;
@@ -74,6 +74,7 @@ static void LoadConfigFromFile(FILE *f)
         if(buffer[0] == '[')
         {
             ConfigBlock *nextBlock;
+            size_t i;
 
             i = 1;
             while(buffer[i] && buffer[i] != ']')
@@ -194,7 +195,7 @@ static void LoadConfigFromFile(FILE *f)
             i++;
         do {
             i--;
-        } while(isspace(buffer[i]));
+        } while(i >= 0 && isspace(buffer[i]));
         buffer[++i] = 0;
 
         free(ent->value);

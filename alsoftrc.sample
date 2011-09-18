@@ -37,9 +37,9 @@
 
 ## hrtf:
 #  Enables HRTF filters. These filters provide for better sound spatialization
-#  while using headphones. The filters will only work when output is 44100hz
-#  stereo. While HRTF is active, the cf_level option is disabled. Default is
-#  disabled since stereo speaker output quality may suffer.
+#  while using headphones. The default filter will only work when output is
+#  44100hz stereo. While HRTF is active, the cf_level option is disabled.
+#  Default is disabled since stereo speaker output quality may suffer.
 #hrtf = false
 
 ## cf_level:

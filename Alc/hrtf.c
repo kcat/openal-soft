@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include <stdlib.h>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "alMain.h"
@@ -49,14 +51,19 @@ static const ALchar magicMarker[8] = "MinPHR00";
 static const ALushort evOffset[ELEV_COUNT] = { 0, 1, 13, 37, 73, 118, 174, 234, 306, 378, 450, 522, 594, 654, 710, 755, 791, 815, 827 };
 static const ALubyte azCount[ELEV_COUNT] = { 1, 12, 24, 36, 45, 56, 60, 72, 72, 72, 72, 72, 60, 56, 45, 36, 24, 12, 1 };
 
-static struct Hrtf {
+
+static const struct Hrtf {
     ALuint sampleRate;
     ALshort coeffs[HRIR_COUNT][HRIR_LENGTH];
     ALubyte delays[HRIR_COUNT];
-} LoadedHrtf = {
+} DefaultHrtf = {
     44100,
 #include "hrtf_tables.inc"
 };
+
+static struct Hrtf *LoadedHrtfs = NULL;
+static ALuint NumLoadedHrtfs = 0;
+
 
 // Calculate the elevation indices given the polar elevation in radians.
 // This will return two indices between 0 and (ELEV_COUNT-1) and an
@@ -289,8 +296,15 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 
 const struct Hrtf *GetHrtf(ALCdevice *device)
 {
-    if(device->FmtChans == DevFmtStereo && device->Frequency == LoadedHrtf.sampleRate)
-        return &LoadedHrtf;
+    if(device->FmtChans == DevFmtStereo)
+    {
+        ALuint i;
+        for(i = 0;i < NumLoadedHrtfs;i++)
+        {
+            if(device->Frequency == LoadedHrtfs[i].sampleRate)
+                return &LoadedHrtfs[i];
+        }
+    }
     ERR("Incompatible format: %s %uhz\n",
         DevFmtChannelsString(device->FmtChans), device->Frequency);
     return NULL;
@@ -404,10 +418,34 @@ void InitHrtf(void)
         f = NULL;
 
         if(!failed)
-            LoadedHrtf = newdata;
+        {
+            void *temp = realloc(LoadedHrtfs, (NumLoadedHrtfs+1)*sizeof(LoadedHrtfs[0]));
+            if(temp != NULL)
+            {
+                LoadedHrtfs = temp;
+                TRACE("HRTF support for format: %s %uhz\n",
+                      DevFmtChannelsString(DevFmtStereo), newdata.sampleRate);
+                LoadedHrtfs[NumLoadedHrtfs++] = newdata;
+            }
+        }
         else
             ERR("Failed to load %s\n", fname);
     }
-    TRACE("HRTF support for format: %s %uhz\n",
-          DevFmtChannelsString(DevFmtStereo), LoadedHrtf.sampleRate);
+    if(NumLoadedHrtfs == 0)
+    {
+        LoadedHrtfs = malloc(sizeof(LoadedHrtfs[0]));
+        if(LoadedHrtfs != NULL)
+        {
+            TRACE("Default HRTF support for format: %s %uhz\n",
+                  DevFmtChannelsString(DevFmtStereo), DefaultHrtf.sampleRate);
+            LoadedHrtfs[NumLoadedHrtfs++] = DefaultHrtf;
+        }
+    }
+}
+
+void FreeHrtf(void)
+{
+    NumLoadedHrtfs = 0;
+    free(LoadedHrtfs);
+    LoadedHrtfs = NULL;
 }

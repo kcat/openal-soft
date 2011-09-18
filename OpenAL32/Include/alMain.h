@@ -685,6 +685,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 #define HRIR_LENGTH      (1<<HRIR_BITS)
 #define HRIR_MASK        (HRIR_LENGTH-1)
 void InitHrtf(void);
+void FreeHrtf(void);
 const struct Hrtf *GetHrtf(ALCdevice *device);
 ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3], const ALfloat newdir[3]);
 void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);

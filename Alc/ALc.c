@@ -528,6 +528,7 @@ static void alc_deinit_safe(void)
 {
     ReleaseALC(ALC_FALSE);
 
+    FreeHrtf();
     FreeALConfig();
 
     ThunkExit();

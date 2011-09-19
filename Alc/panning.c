@@ -34,21 +34,17 @@
 static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHANNELS],
                                   enum Channel Speaker2Chan[MAXCHANNELS], ALint chans)
 {
-    char layout_str[256];
     char *confkey, *next;
+    char *layout_str;
     char *sep, *end;
     enum Channel val;
+    const char *str;
     int i;
 
-    if(!ConfigValueExists(NULL, name))
-        name = "layout";
-
-    strncpy(layout_str, GetConfigValue(NULL, name, ""), sizeof(layout_str));
-    layout_str[sizeof(layout_str)-1] = 0;
-
-    if(!layout_str[0])
+    if(!ConfigValueStr(NULL, name, &str) && !ConfigValueStr(NULL, "layout", &str))
         return;
 
+    layout_str = strdup(str);
     next = confkey = layout_str;
     while(next && *next)
     {
@@ -113,6 +109,8 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHAN
             }
         }
     }
+    free(layout_str);
+    layout_str = NULL;
 
     for(i = 0;i < chans;i++)
     {

@@ -606,8 +606,7 @@ static void alc_initconfig(void)
 
     EmulateEAXReverb = GetConfigValueBool("reverb", "emulate-eax", AL_FALSE);
 
-    devs = GetConfigValue(NULL, "drivers", "");
-    if(devs[0])
+    if(ConfigValueStr(NULL, "drivers", &devs))
     {
         int n;
         size_t len;
@@ -690,8 +689,7 @@ static void alc_initconfig(void)
     }
     BackendLoopback.Init(&BackendLoopback.Funcs);
 
-    str = GetConfigValue(NULL, "excludefx", "");
-    if(str[0])
+    if(ConfigValueStr(NULL, "excludefx", &str))
     {
         size_t len;
         const char *next = str;
@@ -2453,9 +2451,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->Flags |= DEVICE_FREQUENCY_REQUEST;
     device->Frequency = maxu(device->Frequency, 8000);
 
-    if(ConfigValueExists(NULL, "format"))
+    fmt = "AL_FORMAT_STEREO16";
+    if(ConfigValueStr(NULL, "format", &fmt))
         device->Flags |= DEVICE_CHANNELS_REQUEST;
-    fmt = GetConfigValue(NULL, "format", "AL_FORMAT_STEREO16");
     GetFormatFromString(fmt, &device->FmtChans, &device->FmtType);
 
     ConfigValueUInt(NULL, "periods", &device->NumUpdates);

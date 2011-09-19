@@ -525,12 +525,12 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
 
 static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
+    const char *driver = "default";
     alsa_data *data;
-    char driver[128];
+    char str[128];
     int i;
 
-    strncpy(driver, GetConfigValue("alsa", "device", "default"), sizeof(driver)-1);
-    driver[sizeof(driver)-1] = 0;
+    ConfigValueStr("alsa", "device", &driver);
 
     if(!deviceName)
         deviceName = alsaDevice;
@@ -547,8 +547,11 @@ static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
                strcmp(deviceName, allDevNameMap[idx].name) == 0)
             {
                 if(idx > 0)
-                    snprintf(driver, sizeof(driver), "%sCARD=%s,DEV=%d", device_prefix,
-                            allDevNameMap[idx].card, allDevNameMap[idx].dev);
+                {
+                    snprintf(str, sizeof(str), "%sCARD=%s,DEV=%d", device_prefix,
+                             allDevNameMap[idx].card, allDevNameMap[idx].dev);
+                    driver = str;
+                }
                 break;
             }
         }
@@ -801,18 +804,18 @@ static void alsa_stop_playback(ALCdevice *device)
 
 static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
 {
+    const char *driver = "default";
     snd_pcm_hw_params_t *p;
     snd_pcm_uframes_t bufferSizeInFrames;
     snd_pcm_uframes_t periodSizeInFrames;
     snd_pcm_format_t format;
     ALuint frameSize;
     alsa_data *data;
-    char driver[128];
+    char str[128];
     char *err;
     int i;
 
-    strncpy(driver, GetConfigValue("alsa", "capture", "default"), sizeof(driver)-1);
-    driver[sizeof(driver)-1] = 0;
+    ConfigValueStr("alsa", "capture", &driver);
 
     if(!allCaptureDevNameMap)
         allCaptureDevNameMap = probe_devices(SND_PCM_STREAM_CAPTURE, &numCaptureDevNames);
@@ -829,8 +832,11 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
                strcmp(deviceName, allCaptureDevNameMap[idx].name) == 0)
             {
                 if(idx > 0)
-                    snprintf(driver, sizeof(driver), "%sCARD=%s,DEV=%d", capture_prefix,
+                {
+                    snprintf(str, sizeof(str), "%sCARD=%s,DEV=%d", capture_prefix,
                              allCaptureDevNameMap[idx].card, allCaptureDevNameMap[idx].dev);
+                    driver = str;
+                }
                 break;
             }
         }

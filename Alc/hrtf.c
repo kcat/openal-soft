@@ -315,10 +315,11 @@ const struct Hrtf *GetHrtf(ALCdevice *device)
 
 void InitHrtf(void)
 {
-    char *fnamelist, *next;
+    char *fnamelist=NULL, *next=NULL;
+    const char *val;
 
-    fnamelist = strdup(GetConfigValue(NULL, "hrtf_tables", ""));
-    next = fnamelist;
+    if(ConfigValueStr(NULL, "hrtf_tables", &val))
+        next = fnamelist = strdup(val);
     while(next && *next)
     {
         const ALubyte maxDelay = SRC_HISTORY_LENGTH-1;

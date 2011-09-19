@@ -670,6 +670,7 @@ void FreeALConfig(void);
 int ConfigValueExists(const char *blockName, const char *keyName);
 const char *GetConfigValue(const char *blockName, const char *keyName, const char *def);
 int GetConfigValueBool(const char *blockName, const char *keyName, int def);
+int ConfigValueStr(const char *blockName, const char *keyName, const char **ret);
 int ConfigValueInt(const char *blockName, const char *keyName, int *ret);
 int ConfigValueUInt(const char *blockName, const char *keyName, unsigned int *ret);
 int ConfigValueFloat(const char *blockName, const char *keyName, float *ret);

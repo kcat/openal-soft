@@ -313,6 +313,15 @@ int ConfigValueExists(const char *blockName, const char *keyName)
     return !!val[0];
 }
 
+int ConfigValueStr(const char *blockName, const char *keyName, const char **ret)
+{
+    const char *val = GetConfigValue(blockName, keyName, "");
+    if(!val[0]) return 0;
+
+    *ret = val;
+    return 1;
+}
+
 int ConfigValueInt(const char *blockName, const char *keyName, int *ret)
 {
     const char *val = GetConfigValue(blockName, keyName, "");

@@ -1704,8 +1704,10 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
     ALCenum err = ALC_INVALID_DEVICE;
     if((device=VerifyDevice(device)) != NULL && device->IsCaptureDevice)
     {
+        err = ALC_INVALID_VALUE;
         LockDevice(device);
-        err = ALCdevice_CaptureSamples(device, buffer, samples);
+        if(samples >= 0 && ALCdevice_AvailableSamples(device) >= (ALCuint)samples)
+            err = ALCdevice_CaptureSamples(device, buffer, samples);
         UnlockDevice(device);
     }
     if(err != ALC_NO_ERROR)

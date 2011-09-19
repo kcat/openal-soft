@@ -630,21 +630,12 @@ static void ca_stop_capture(ALCdevice *device)
         ERR("AudioOutputUnitStop failed\n");
 }
 
-static ALCuint ca_available_samples(ALCdevice *device)
-{
-    ca_data *data = device->ExtraData;
-    return RingBufferSize(data->ring) / data->sampleRateRatio;
-}
-
 static ALCenum ca_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples)
 {
     ca_data *data = (ca_data*)device->ExtraData;
     AudioBufferList *list;
     UInt32 frameCount;
     OSStatus err;
-
-    if(ca_available_samples(device) < samples)
-        return ALC_INVALID_VALUE;
 
     // If no samples are requested, just return
     if(samples == 0)
@@ -669,6 +660,12 @@ static ALCenum ca_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint sa
         return ALC_INVALID_VALUE;
     }
     return ALC_NO_ERROR;
+}
+
+static ALCuint ca_available_samples(ALCdevice *device)
+{
+    ca_data *data = device->ExtraData;
+    return RingBufferSize(data->ring) / data->sampleRateRatio;
 }
 
 

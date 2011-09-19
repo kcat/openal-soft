@@ -979,6 +979,13 @@ static void alsa_stop_capture(ALCdevice *Device)
     data->doCapture = AL_FALSE;
 }
 
+static ALCenum alsa_capture_samples(ALCdevice *Device, ALCvoid *Buffer, ALCuint Samples)
+{
+    alsa_data *data = (alsa_data*)Device->ExtraData;
+    ReadRingBuffer(data->ring, Buffer, Samples);
+    return ALC_NO_ERROR;
+}
+
 static ALCuint alsa_available_samples(ALCdevice *Device)
 {
     alsa_data *data = (alsa_data*)Device->ExtraData;
@@ -1038,16 +1045,6 @@ static ALCuint alsa_available_samples(ALCdevice *Device)
     }
 
     return RingBufferSize(data->ring);
-}
-
-static ALCenum alsa_capture_samples(ALCdevice *Device, ALCvoid *Buffer, ALCuint Samples)
-{
-    alsa_data *data = (alsa_data*)Device->ExtraData;
-
-    if(alsa_available_samples(Device) < Samples)
-        return ALC_INVALID_VALUE;
-    ReadRingBuffer(data->ring, Buffer, Samples);
-    return ALC_NO_ERROR;
 }
 
 

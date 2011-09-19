@@ -461,19 +461,17 @@ static void oss_stop_capture(ALCdevice *pDevice)
     data->doCapture = 0;
 }
 
+static ALCenum oss_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
+{
+    oss_data *data = (oss_data*)pDevice->ExtraData;
+    ReadRingBuffer(data->ring, pBuffer, lSamples);
+    return ALC_NO_ERROR;
+}
+
 static ALCuint oss_available_samples(ALCdevice *pDevice)
 {
     oss_data *data = (oss_data*)pDevice->ExtraData;
     return RingBufferSize(data->ring);
-}
-
-static ALCenum oss_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
-{
-    oss_data *data = (oss_data*)pDevice->ExtraData;
-    if(oss_available_samples(pDevice) < lSamples)
-        return ALC_INVALID_VALUE;
-    ReadRingBuffer(data->ring, pBuffer, lSamples);
-    return ALC_NO_ERROR;
 }
 
 

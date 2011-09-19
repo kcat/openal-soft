@@ -377,20 +377,17 @@ static void pa_stop_capture(ALCdevice *device)
         ERR("Error stopping stream: %s\n", Pa_GetErrorText(err));
 }
 
+static ALCenum pa_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples)
+{
+    pa_data *data = device->ExtraData;
+    ReadRingBuffer(data->ring, buffer, samples);
+    return ALC_NO_ERROR;
+}
+
 static ALCuint pa_available_samples(ALCdevice *device)
 {
     pa_data *data = device->ExtraData;
     return RingBufferSize(data->ring);
-}
-
-static ALCenum pa_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples)
-{
-    pa_data *data = device->ExtraData;
-
-    if(pa_available_samples(device) < samples)
-        return ALC_INVALID_VALUE;
-    ReadRingBuffer(data->ring, buffer, samples);
-    return ALC_NO_ERROR;
 }
 
 

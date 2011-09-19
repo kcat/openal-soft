@@ -677,20 +677,17 @@ static void WinMMStopCapture(ALCdevice *pDevice)
     waveInStop(pData->hWaveHandle.In);
 }
 
+static ALCenum WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
+{
+    WinMMData *pData = (WinMMData*)pDevice->ExtraData;
+    ReadRingBuffer(pData->pRing, pBuffer, lSamples);
+    return ALC_NO_ERROR;
+}
+
 static ALCuint WinMMAvailableSamples(ALCdevice *pDevice)
 {
     WinMMData *pData = (WinMMData*)pDevice->ExtraData;
     return RingBufferSize(pData->pRing);
-}
-
-static ALCenum WinMMCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
-{
-    WinMMData *pData = (WinMMData*)pDevice->ExtraData;
-
-    if(WinMMAvailableSamples(pDevice) < lSamples)
-        return ALC_INVALID_VALUE;
-    ReadRingBuffer(pData->pRing, pBuffer, lSamples);
-    return ALC_NO_ERROR;
 }
 
 

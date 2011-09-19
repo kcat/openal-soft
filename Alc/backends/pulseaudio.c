@@ -1266,6 +1266,13 @@ static void pulse_stop_capture(ALCdevice *device) //{{{
     pa_threaded_mainloop_unlock(data->loop);
 } //}}}
 
+static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples) //{{{
+{
+    pulse_data *data = device->ExtraData;
+    ReadRingBuffer(data->ring, buffer, samples);
+    return ALC_NO_ERROR;
+} //}}}
+
 static ALCuint pulse_available_samples(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
@@ -1295,16 +1302,6 @@ static ALCuint pulse_available_samples(ALCdevice *device) //{{{
     pa_threaded_mainloop_unlock(data->loop);
 
     return RingBufferSize(data->ring);
-} //}}}
-
-static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples) //{{{
-{
-    pulse_data *data = device->ExtraData;
-
-    if(pulse_available_samples(device) < samples)
-        return ALC_INVALID_VALUE;
-    ReadRingBuffer(data->ring, buffer, samples);
-    return ALC_NO_ERROR;
 } //}}}
 
 

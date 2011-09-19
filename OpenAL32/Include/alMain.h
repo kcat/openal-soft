@@ -479,22 +479,22 @@ void alc_loopback_probe(enum DevProbe type);
 
 /* Device formats */
 enum DevFmtType {
-    DevFmtByte   = AL_BYTE,
-    DevFmtUByte  = AL_UNSIGNED_BYTE,
-    DevFmtShort  = AL_SHORT,
-    DevFmtUShort = AL_UNSIGNED_SHORT,
-    DevFmtFloat  = AL_FLOAT
+    DevFmtByte   = ALC_BYTE,
+    DevFmtUByte  = ALC_UNSIGNED_BYTE,
+    DevFmtShort  = ALC_SHORT,
+    DevFmtUShort = ALC_UNSIGNED_SHORT,
+    DevFmtFloat  = ALC_FLOAT
 };
 enum DevFmtChannels {
-    DevFmtMono   = AL_MONO,
-    DevFmtStereo = AL_STEREO,
-    DevFmtQuad   = AL_QUAD,
-    DevFmtX51    = AL_5POINT1,
-    DevFmtX61    = AL_6POINT1,
-    DevFmtX71    = AL_7POINT1,
+    DevFmtMono   = ALC_MONO,
+    DevFmtStereo = ALC_STEREO,
+    DevFmtQuad   = ALC_QUAD,
+    DevFmtX51    = ALC_5POINT1,
+    DevFmtX61    = ALC_6POINT1,
+    DevFmtX71    = ALC_7POINT1,
 
     /* Similar to 5.1, except using the side channels instead of back */
-    DevFmtX51Side = 0x80000000 | AL_5POINT1
+    DevFmtX51Side = 0x80000000 | ALC_5POINT1
 };
 
 ALuint BytesFromDevFmt(enum DevFmtType type);

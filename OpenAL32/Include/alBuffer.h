@@ -32,8 +32,6 @@ enum UserFmtChannels {
     UserFmtX71    = AL_7POINT1  /* (WFX order) */
 };
 
-ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
-                              enum UserFmtType *type);
 ALuint BytesFromUserFmt(enum UserFmtType type);
 ALuint ChannelsFromUserFmt(enum UserFmtChannels chans);
 static __inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans,
@@ -59,7 +57,6 @@ enum FmtChannels {
     FmtX71    = UserFmtX71,
 };
 
-ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
 ALuint BytesFromFmt(enum FmtType type);
 ALuint ChannelsFromFmt(enum FmtChannels chans);
 static __inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)

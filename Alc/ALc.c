@@ -917,84 +917,50 @@ ALuint ChannelsFromDevFmt(enum DevFmtChannels chans)
     }
     return 0;
 }
-ALboolean DecomposeDevFormat(ALenum format, enum DevFmtChannels *chans,
-                             enum DevFmtType *type)
+static ALboolean DecomposeDevFormat(ALenum format, enum DevFmtChannels *chans,
+                                    enum DevFmtType *type)
 {
-    switch(format)
+    static const struct {
+        ALenum format;
+        enum DevFmtChannels channels;
+        enum DevFmtType type;
+    } list[] = {
+        { AL_FORMAT_MONO8,        DevFmtMono, DevFmtUByte },
+        { AL_FORMAT_MONO16,       DevFmtMono, DevFmtShort },
+        { AL_FORMAT_MONO_FLOAT32, DevFmtMono, DevFmtFloat },
+
+        { AL_FORMAT_STEREO8,        DevFmtStereo, DevFmtUByte },
+        { AL_FORMAT_STEREO16,       DevFmtStereo, DevFmtShort },
+        { AL_FORMAT_STEREO_FLOAT32, DevFmtStereo, DevFmtFloat },
+
+        { AL_FORMAT_QUAD8,  DevFmtQuad, DevFmtUByte },
+        { AL_FORMAT_QUAD16, DevFmtQuad, DevFmtShort },
+        { AL_FORMAT_QUAD32, DevFmtQuad, DevFmtFloat },
+
+        { AL_FORMAT_51CHN8,  DevFmtX51, DevFmtUByte },
+        { AL_FORMAT_51CHN16, DevFmtX51, DevFmtShort },
+        { AL_FORMAT_51CHN32, DevFmtX51, DevFmtFloat },
+
+        { AL_FORMAT_61CHN8,  DevFmtX61, DevFmtUByte },
+        { AL_FORMAT_61CHN16, DevFmtX61, DevFmtShort },
+        { AL_FORMAT_61CHN32, DevFmtX61, DevFmtFloat },
+
+        { AL_FORMAT_71CHN8,  DevFmtX71, DevFmtUByte },
+        { AL_FORMAT_71CHN16, DevFmtX71, DevFmtShort },
+        { AL_FORMAT_71CHN32, DevFmtX71, DevFmtFloat },
+    };
+    ALuint i;
+
+    for(i = 0;i < sizeof(list)/sizeof(list[0]);i++)
     {
-        case AL_FORMAT_MONO8:
-            *chans = DevFmtMono;
-            *type  = DevFmtUByte;
+        if(list[i].format == format)
+        {
+            *chans = list[i].channels;
+            *type  = list[i].type;
             return AL_TRUE;
-        case AL_FORMAT_MONO16:
-            *chans = DevFmtMono;
-            *type  = DevFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_MONO_FLOAT32:
-            *chans = DevFmtMono;
-            *type  = DevFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_STEREO8:
-            *chans = DevFmtStereo;
-            *type  = DevFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_STEREO16:
-            *chans = DevFmtStereo;
-            *type  = DevFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_STEREO_FLOAT32:
-            *chans = DevFmtStereo;
-            *type  = DevFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_QUAD8:
-            *chans = DevFmtQuad;
-            *type  = DevFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_QUAD16:
-            *chans = DevFmtQuad;
-            *type  = DevFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_QUAD32:
-            *chans = DevFmtQuad;
-            *type  = DevFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_51CHN8:
-            *chans = DevFmtX51;
-            *type  = DevFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_51CHN16:
-            *chans = DevFmtX51;
-            *type  = DevFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_51CHN32:
-            *chans = DevFmtX51;
-            *type  = DevFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_61CHN8:
-            *chans = DevFmtX61;
-            *type  = DevFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_61CHN16:
-            *chans = DevFmtX61;
-            *type  = DevFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_61CHN32:
-            *chans = DevFmtX61;
-            *type  = DevFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_71CHN8:
-            *chans = DevFmtX71;
-            *type  = DevFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_71CHN16:
-            *chans = DevFmtX71;
-            *type  = DevFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_71CHN32:
-            *chans = DevFmtX71;
-            *type  = DevFmtFloat;
-            return AL_TRUE;
+        }
     }
+
     return AL_FALSE;
 }
 

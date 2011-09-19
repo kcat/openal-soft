@@ -37,6 +37,8 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
 static void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei numchans, ALsizei len);
 static ALboolean IsValidType(ALenum type);
 static ALboolean IsValidChannels(ALenum channels);
+static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);
+static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
 
 #define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
 #define RemoveBuffer(m, k) ((ALbuffer*)PopUIntMapValue(&(m), (k)))
@@ -1928,142 +1930,68 @@ ALuint ChannelsFromUserFmt(enum UserFmtChannels chans)
     }
     return 0;
 }
-ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
-                              enum UserFmtType *type)
+static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
+                                     enum UserFmtType *type)
 {
-    switch(format)
+    static const struct {
+        ALenum format;
+        enum UserFmtChannels channels;
+        enum UserFmtType type;
+    } list[] = {
+        { AL_FORMAT_MONO8,           UserFmtMono, UserFmtUByte  },
+        { AL_FORMAT_MONO16,          UserFmtMono, UserFmtShort  },
+        { AL_FORMAT_MONO_FLOAT32,    UserFmtMono, UserFmtFloat  },
+        { AL_FORMAT_MONO_DOUBLE_EXT, UserFmtMono, UserFmtDouble },
+        { AL_FORMAT_MONO_IMA4,       UserFmtMono, UserFmtIMA4   },
+        { AL_FORMAT_MONO_MULAW,      UserFmtMono, UserFmtMulaw  },
+
+        { AL_FORMAT_STEREO8,           UserFmtStereo, UserFmtUByte  },
+        { AL_FORMAT_STEREO16,          UserFmtStereo, UserFmtShort  },
+        { AL_FORMAT_STEREO_FLOAT32,    UserFmtStereo, UserFmtFloat  },
+        { AL_FORMAT_STEREO_DOUBLE_EXT, UserFmtStereo, UserFmtDouble },
+        { AL_FORMAT_STEREO_IMA4,       UserFmtStereo, UserFmtIMA4   },
+        { AL_FORMAT_STEREO_MULAW,      UserFmtStereo, UserFmtMulaw  },
+
+        { AL_FORMAT_REAR8,      UserFmtRear, UserFmtUByte },
+        { AL_FORMAT_REAR16,     UserFmtRear, UserFmtShort },
+        { AL_FORMAT_REAR32,     UserFmtRear, UserFmtFloat },
+        { AL_FORMAT_REAR_MULAW, UserFmtRear, UserFmtMulaw },
+
+        { AL_FORMAT_QUAD8_LOKI,  UserFmtQuad, UserFmtUByte },
+        { AL_FORMAT_QUAD16_LOKI, UserFmtQuad, UserFmtShort },
+
+        { AL_FORMAT_QUAD8,      UserFmtQuad, UserFmtUByte },
+        { AL_FORMAT_QUAD16,     UserFmtQuad, UserFmtShort },
+        { AL_FORMAT_QUAD32,     UserFmtQuad, UserFmtFloat },
+        { AL_FORMAT_QUAD_MULAW, UserFmtQuad, UserFmtMulaw },
+
+        { AL_FORMAT_51CHN8,      UserFmtX51, UserFmtUByte },
+        { AL_FORMAT_51CHN16,     UserFmtX51, UserFmtShort },
+        { AL_FORMAT_51CHN32,     UserFmtX51, UserFmtFloat },
+        { AL_FORMAT_51CHN_MULAW, UserFmtX51, UserFmtMulaw },
+
+        { AL_FORMAT_61CHN8,      UserFmtX61, UserFmtUByte },
+        { AL_FORMAT_61CHN16,     UserFmtX61, UserFmtShort },
+        { AL_FORMAT_61CHN32,     UserFmtX61, UserFmtFloat },
+        { AL_FORMAT_61CHN_MULAW, UserFmtX61, UserFmtMulaw },
+
+        { AL_FORMAT_71CHN8,      UserFmtX71, UserFmtUByte },
+        { AL_FORMAT_71CHN16,     UserFmtX71, UserFmtShort },
+        { AL_FORMAT_71CHN32,     UserFmtX71, UserFmtFloat },
+        { AL_FORMAT_71CHN_MULAW, UserFmtX71, UserFmtMulaw },
+    };
+    ALuint i;
+
+    for(i = 0;i < sizeof(list)/sizeof(list[0]);i++)
     {
-        case AL_FORMAT_MONO8:
-            *chans = UserFmtMono;
-            *type  = UserFmtUByte;
+        if(list[i].format == format)
+        {
+            *chans = list[i].channels;
+            *type  = list[i].type;
             return AL_TRUE;
-        case AL_FORMAT_MONO16:
-            *chans = UserFmtMono;
-            *type  = UserFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_MONO_FLOAT32:
-            *chans = UserFmtMono;
-            *type  = UserFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_MONO_DOUBLE_EXT:
-            *chans = UserFmtMono;
-            *type  = UserFmtDouble;
-            return AL_TRUE;
-        case AL_FORMAT_MONO_IMA4:
-            *chans = UserFmtMono;
-            *type  = UserFmtIMA4;
-            return AL_TRUE;
-        case AL_FORMAT_STEREO8:
-            *chans = UserFmtStereo;
-            *type  = UserFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_STEREO16:
-            *chans = UserFmtStereo;
-            *type  = UserFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_STEREO_FLOAT32:
-            *chans = UserFmtStereo;
-            *type  = UserFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_STEREO_DOUBLE_EXT:
-            *chans = UserFmtStereo;
-            *type  = UserFmtDouble;
-            return AL_TRUE;
-        case AL_FORMAT_STEREO_IMA4:
-            *chans = UserFmtStereo;
-            *type  = UserFmtIMA4;
-            return AL_TRUE;
-        case AL_FORMAT_QUAD8_LOKI:
-        case AL_FORMAT_QUAD8:
-            *chans = UserFmtQuad;
-            *type  = UserFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_QUAD16_LOKI:
-        case AL_FORMAT_QUAD16:
-            *chans = UserFmtQuad;
-            *type  = UserFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_QUAD32:
-            *chans = UserFmtQuad;
-            *type  = UserFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_REAR8:
-            *chans = UserFmtRear;
-            *type  = UserFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_REAR16:
-            *chans = UserFmtRear;
-            *type  = UserFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_REAR32:
-            *chans = UserFmtRear;
-            *type  = UserFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_51CHN8:
-            *chans = UserFmtX51;
-            *type  = UserFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_51CHN16:
-            *chans = UserFmtX51;
-            *type  = UserFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_51CHN32:
-            *chans = UserFmtX51;
-            *type  = UserFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_61CHN8:
-            *chans = UserFmtX61;
-            *type  = UserFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_61CHN16:
-            *chans = UserFmtX61;
-            *type  = UserFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_61CHN32:
-            *chans = UserFmtX61;
-            *type  = UserFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_71CHN8:
-            *chans = UserFmtX71;
-            *type  = UserFmtUByte;
-            return AL_TRUE;
-        case AL_FORMAT_71CHN16:
-            *chans = UserFmtX71;
-            *type  = UserFmtShort;
-            return AL_TRUE;
-        case AL_FORMAT_71CHN32:
-            *chans = UserFmtX71;
-            *type  = UserFmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_MONO_MULAW:
-            *chans = UserFmtMono;
-            *type  = UserFmtMulaw;
-            return AL_TRUE;
-        case AL_FORMAT_STEREO_MULAW:
-            *chans = UserFmtStereo;
-            *type  = UserFmtMulaw;
-            return AL_TRUE;
-        case AL_FORMAT_QUAD_MULAW:
-            *chans = UserFmtQuad;
-            *type  = UserFmtMulaw;
-            return AL_TRUE;
-        case AL_FORMAT_REAR_MULAW:
-            *chans = UserFmtRear;
-            *type  = UserFmtMulaw;
-            return AL_TRUE;
-        case AL_FORMAT_51CHN_MULAW:
-            *chans = UserFmtX51;
-            *type  = UserFmtMulaw;
-            return AL_TRUE;
-        case AL_FORMAT_61CHN_MULAW:
-            *chans = UserFmtX61;
-            *type  = UserFmtMulaw;
-            return AL_TRUE;
-        case AL_FORMAT_71CHN_MULAW:
-            *chans = UserFmtX71;
-            *type  = UserFmtMulaw;
-            return AL_TRUE;
+        }
     }
+
     return AL_FALSE;
 }
 
@@ -2091,97 +2019,56 @@ ALuint ChannelsFromFmt(enum FmtChannels chans)
     }
     return 0;
 }
-ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type)
+static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type)
 {
-    switch(format)
+    static const struct {
+        ALenum format;
+        enum FmtChannels channels;
+        enum FmtType type;
+    } list[] = {
+        { AL_MONO8,   FmtMono, FmtByte  },
+        { AL_MONO16,  FmtMono, FmtShort },
+        { AL_MONO32F, FmtMono, FmtFloat },
+
+        { AL_STEREO8,   FmtStereo, FmtByte  },
+        { AL_STEREO16,  FmtStereo, FmtShort },
+        { AL_STEREO32F, FmtStereo, FmtFloat },
+
+        { AL_REAR8,   FmtRear, FmtByte  },
+        { AL_REAR16,  FmtRear, FmtShort },
+        { AL_REAR32F, FmtRear, FmtFloat },
+
+        { AL_FORMAT_QUAD8_LOKI,  FmtQuad, FmtByte  },
+        { AL_FORMAT_QUAD16_LOKI, FmtQuad, FmtShort },
+
+        { AL_QUAD8,   FmtQuad, FmtByte  },
+        { AL_QUAD16,  FmtQuad, FmtShort },
+        { AL_QUAD32F, FmtQuad, FmtFloat },
+
+        { AL_5POINT1_8,   FmtX51, FmtByte  },
+        { AL_5POINT1_16,  FmtX51, FmtShort },
+        { AL_5POINT1_32F, FmtX51, FmtFloat },
+
+        { AL_6POINT1_8,   FmtX61, FmtByte  },
+        { AL_6POINT1_16,  FmtX61, FmtShort },
+        { AL_6POINT1_32F, FmtX61, FmtFloat },
+
+        { AL_7POINT1_8,   FmtX71, FmtByte  },
+        { AL_7POINT1_16,  FmtX71, FmtShort },
+        { AL_7POINT1_32F, FmtX71, FmtFloat },
+    };
+    ALuint i;
+
+    for(i = 0;i < sizeof(list)/sizeof(list[0]);i++)
     {
-        case AL_MONO8:
-            *chans = FmtMono;
-            *type  = FmtByte;
+        if(list[i].format == format)
+        {
+            *chans = list[i].channels;
+            *type  = list[i].type;
             return AL_TRUE;
-        case AL_MONO16:
-            *chans = FmtMono;
-            *type  = FmtShort;
-            return AL_TRUE;
-        case AL_MONO32F:
-            *chans = FmtMono;
-            *type  = FmtFloat;
-            return AL_TRUE;
-        case AL_STEREO8:
-            *chans = FmtStereo;
-            *type  = FmtByte;
-            return AL_TRUE;
-        case AL_STEREO16:
-            *chans = FmtStereo;
-            *type  = FmtShort;
-            return AL_TRUE;
-        case AL_STEREO32F:
-            *chans = FmtStereo;
-            *type  = FmtFloat;
-            return AL_TRUE;
-        case AL_FORMAT_QUAD8_LOKI:
-        case AL_QUAD8:
-            *chans = FmtQuad;
-            *type  = FmtByte;
-            return AL_TRUE;
-        case AL_FORMAT_QUAD16_LOKI:
-        case AL_QUAD16:
-            *chans = FmtQuad;
-            *type  = FmtShort;
-            return AL_TRUE;
-        case AL_QUAD32F:
-            *chans = FmtQuad;
-            *type  = FmtFloat;
-            return AL_TRUE;
-        case AL_REAR8:
-            *chans = FmtRear;
-            *type  = FmtByte;
-            return AL_TRUE;
-        case AL_REAR16:
-            *chans = FmtRear;
-            *type  = FmtShort;
-            return AL_TRUE;
-        case AL_REAR32F:
-            *chans = FmtRear;
-            *type  = FmtFloat;
-            return AL_TRUE;
-        case AL_5POINT1_8:
-            *chans = FmtX51;
-            *type  = FmtByte;
-            return AL_TRUE;
-        case AL_5POINT1_16:
-            *chans = FmtX51;
-            *type  = FmtShort;
-            return AL_TRUE;
-        case AL_5POINT1_32F:
-            *chans = FmtX51;
-            *type  = FmtFloat;
-            return AL_TRUE;
-        case AL_6POINT1_8:
-            *chans = FmtX61;
-            *type  = FmtByte;
-            return AL_TRUE;
-        case AL_6POINT1_16:
-            *chans = FmtX61;
-            *type  = FmtShort;
-            return AL_TRUE;
-        case AL_6POINT1_32F:
-            *chans = FmtX61;
-            *type  = FmtFloat;
-            return AL_TRUE;
-        case AL_7POINT1_8:
-            *chans = FmtX71;
-            *type  = FmtByte;
-            return AL_TRUE;
-        case AL_7POINT1_16:
-            *chans = FmtX71;
-            *type  = FmtShort;
-            return AL_TRUE;
-        case AL_7POINT1_32F:
-            *chans = FmtX71;
-            *type  = FmtFloat;
-            return AL_TRUE;
+        }
     }
+
     return AL_FALSE;
 }
 

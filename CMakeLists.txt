@@ -180,13 +180,32 @@ IF(WIN32)
         ENDIF()
     ENDIF()
 ELSE()
-    CHECK_C_COMPILER_FLAG(-fvisibility=internal HAVE_VISIBILITY_SWITCH)
+    SET(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+    SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS} -Werror")
+
     CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"protected\")));
-                             int main() {return 0;}" HAVE_GCC_VISIBILITY)
-    IF(HAVE_VISIBILITY_SWITCH AND HAVE_GCC_VISIBILITY)
-        ADD_DEFINITIONS(-fvisibility=internal)
+                             int main() {return 0;}" HAVE_GCC_PROTECTED_VISIBILITY)
+    IF(HAVE_GCC_PROTECTED_VISIBILITY)
         SET(EXPORT_DECL "__attribute__((visibility(\"protected\")))")
+    ELSE()
+        CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"default\")));
+                                 int main() {return 0;}" HAVE_GCC_DEFAULT_VISIBILITY)
+        IF(HAVE_GCC_DEFAULT_VISIBILITY)
+            SET(EXPORT_DECL "__attribute__((visibility(\"default\")))")
+        ENDIF()
     ENDIF()
+
+    CHECK_C_COMPILER_FLAG(-fvisibility=internal HAVE_VISIBILITY_INTERNAL_SWITCH)
+    IF(HAVE_VISIBILITY_INTERNAL_SWITCH)
+        ADD_DEFINITIONS(-fvisibility=internal)
+    ELSE()
+        CHECK_C_COMPILER_FLAG(-fvisibility=internal HAVE_VISIBILITY_HIDDEN_SWITCH)
+        IF(HAVE_VISIBILITY_HIDDEN_SWITCH)
+            ADD_DEFINITIONS(-fvisibility=hidden)
+        ENDIF()
+    ENDIF()
+
+    SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
 ENDIF()
 
 CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(printf, 1, 2)));

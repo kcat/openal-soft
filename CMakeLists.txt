@@ -61,7 +61,7 @@ OPTION(ALSOFT_CONFIG "Install alsoft.conf configuration file" OFF)
 
 IF(WIN32)
     SET(LIBNAME OpenAL32)
-    ADD_DEFINITIONS("-D_WIN32")
+    ADD_DEFINITIONS("-D_WIN32 -D_WIN32_WINNT=0x0500")
 ELSE()
     SET(LIBNAME openal)
 ENDIF()

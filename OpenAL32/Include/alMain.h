@@ -163,9 +163,6 @@ typedef ptrdiff_t ALsizeiptrEXT;
 
 #ifdef _WIN32
 
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500
-#endif
 #include <windows.h>
 
 typedef DWORD pthread_key_t;

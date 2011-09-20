@@ -292,7 +292,7 @@ void WriteLock(RWLock *lock)
 {
     if(IncrementRef(&lock->write_count) == 1)
         Lock(&lock->read_lock);
-     Lock(&lock->write_lock);
+    Lock(&lock->write_lock);
 }
 
 void WriteUnlock(RWLock *lock)

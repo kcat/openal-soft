@@ -53,7 +53,7 @@ void pthread_once(pthread_once_t *once, void (*callback)(void))
 {
     LONG ret;
     while((ret=InterlockedExchange(once, 1)) == 1)
-        Sleep(0);
+        sched_yield();
     if(ret == 0)
         callback();
     InterlockedExchange(once, 2);
@@ -173,6 +173,16 @@ ALuint timeGetTime(void)
 #endif
 }
 
+void Sleep(ALuint t)
+{
+    struct timespec tv, rem;
+    tv.tv_nsec = (t*1000000)%1000000000;
+    tv.tv_sec = t/1000;
+
+    while(nanosleep(&tv, &rem) == -1 && errno == EINTR)
+        tv = rem;
+}
+
 #ifdef HAVE_DLFCN_H
 
 void *LoadLib(const char *name)
@@ -255,7 +265,7 @@ void SetRTPriority(void)
 static void Lock(volatile ALenum *l)
 {
     while(ExchangeInt(l, AL_TRUE) == AL_TRUE)
-        Sleep(0);
+        sched_yield();
 }
 
 static void Unlock(volatile ALenum *l)

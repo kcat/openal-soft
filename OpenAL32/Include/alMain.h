@@ -183,6 +183,9 @@ typedef LONG pthread_once_t;
 #define PTHREAD_ONCE_INIT 0
 void pthread_once(pthread_once_t *once, void (*callback)(void));
 
+static __inline int sched_yield(void)
+{ SwitchToThread(); return 0; }
+
 #else
 
 #include <unistd.h>
@@ -204,16 +207,7 @@ void EnterCriticalSection(CRITICAL_SECTION *cs);
 void LeaveCriticalSection(CRITICAL_SECTION *cs);
 
 ALuint timeGetTime(void);
-
-static __inline void Sleep(ALuint t)
-{
-    struct timespec tv, rem;
-    tv.tv_nsec = (t*1000000)%1000000000;
-    tv.tv_sec = t/1000;
-
-    while(nanosleep(&tv, &rem) == -1 && errno == EINTR)
-        tv = rem;
-}
+void Sleep(ALuint t);
 
 #if defined(HAVE_DLFCN_H)
 #define HAVE_DYNLOAD 1

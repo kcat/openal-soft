@@ -1634,6 +1634,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         device->next = DeviceList;
     } while(!CompExchangePtr((void**)&DeviceList, device->next, device));
 
+    TRACE("Created device %p\n", device);
     return device;
 }
 
@@ -2224,6 +2225,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     UnlockLists();
 
     ALCdevice_DecRef(device);
+
+    TRACE("Created context %p\n", ALContext);
     return ALContext;
 }
 
@@ -2492,6 +2495,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->next = DeviceList;
     } while(!CompExchangePtr((void**)&DeviceList, device->next, device));
 
+    TRACE("Created device %p\n", device);
     return device;
 }
 
@@ -2605,6 +2609,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
         device->next = DeviceList;
     } while(!CompExchangePtr((void**)&DeviceList, device->next, device));
 
+    TRACE("Created device %p\n", device);
     return device;
 }
 

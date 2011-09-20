@@ -2526,7 +2526,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     if((ctx=pDevice->ContextList) != NULL)
     {
         do {
-            WARN("Destroying context %p\n", ctx);
+            WARN("Releasing context %p\n", ctx);
             ReleaseContext(ctx, pDevice);
         } while((ctx=pDevice->ContextList) != NULL);
         ALCdevice_StopPlayback(pDevice);

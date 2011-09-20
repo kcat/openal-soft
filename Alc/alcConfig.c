@@ -47,11 +47,11 @@ typedef struct ConfigEntry {
 typedef struct ConfigBlock {
     char *name;
     ConfigEntry *entries;
-    size_t entryCount;
+    unsigned int entryCount;
 } ConfigBlock;
 
 static ConfigBlock *cfgBlocks;
-static size_t cfgCount;
+static unsigned int cfgCount;
 
 static char buffer[1024];
 
@@ -62,7 +62,7 @@ static void LoadConfigFromFile(FILE *f)
 
     while(fgets(buffer, sizeof(buffer), f))
     {
-        ssize_t i = 0;
+        int i = 0;
 
         while(isspace(buffer[i]))
             i++;
@@ -74,7 +74,7 @@ static void LoadConfigFromFile(FILE *f)
         if(buffer[0] == '[')
         {
             ConfigBlock *nextBlock;
-            size_t i;
+            unsigned int i;
 
             i = 1;
             while(buffer[i] && buffer[i] != ']')
@@ -162,14 +162,14 @@ static void LoadConfigFromFile(FILE *f)
 
         /* Check if we already have this option set */
         ent = curBlock->entries;
-        while((size_t)(ent-curBlock->entries) < curBlock->entryCount)
+        while((unsigned int)(ent-curBlock->entries) < curBlock->entryCount)
         {
             if(strcasecmp(ent->key, buffer) == 0)
                 break;
             ent++;
         }
 
-        if((size_t)(ent-curBlock->entries) >= curBlock->entryCount)
+        if((unsigned int)(ent-curBlock->entries) >= curBlock->entryCount)
         {
             /* Allocate a new option entry */
             ent = realloc(curBlock->entries, (curBlock->entryCount+1)*sizeof(ConfigEntry));
@@ -257,11 +257,11 @@ void ReadALConfig(void)
 
 void FreeALConfig(void)
 {
-    size_t i;
+    unsigned int i;
 
     for(i = 0;i < cfgCount;i++)
     {
-        size_t j;
+        unsigned int j;
         for(j = 0;j < cfgBlocks[i].entryCount;j++)
         {
            free(cfgBlocks[i].entries[j].key);
@@ -277,7 +277,7 @@ void FreeALConfig(void)
 
 const char *GetConfigValue(const char *blockName, const char *keyName, const char *def)
 {
-    size_t i, j;
+    unsigned int i, j;
 
     if(!keyName)
         return def;

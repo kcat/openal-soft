@@ -77,12 +77,6 @@
 /* Define to the size of a long long int type */
 #cmakedefine SIZEOF_LONG_LONG ${SIZEOF_LONG_LONG}
 
-/* Define to the size of an unsigned int type */
-#cmakedefine SIZEOF_UINT ${SIZEOF_UINT}
-
-/* Define to the size of a void pointer type */
-#cmakedefine SIZEOF_VOIDP ${SIZEOF_VOIDP}
-
 /* Define if we have GCC's destructor attribute */
 #cmakedefine HAVE_GCC_DESTRUCTOR
 

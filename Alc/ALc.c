@@ -566,7 +566,7 @@ static void alc_initconfig(void)
     if(str)
     {
         long lvl = strtol(str, NULL, 0);
-        if(lvl >= NoLog && lvl <= LogTrace)
+        if(lvl >= NoLog && lvl <= LogRef)
             LogLevel = lvl;
     }
 
@@ -1298,14 +1298,14 @@ void ALCdevice_IncRef(ALCdevice *device)
 {
     RefCount ref;
     ref = IncrementRef(&device->ref);
-    TRACE("%p increasing refcount to %u\n", device, ref);
+    TRACEREF("%p increasing refcount to %u\n", device, ref);
 }
 
 void ALCdevice_DecRef(ALCdevice *device)
 {
     RefCount ref;
     ref = DecrementRef(&device->ref);
-    TRACE("%p decreasing refcount to %u\n", device, ref);
+    TRACEREF("%p decreasing refcount to %u\n", device, ref);
     if(ref == 0) FreeDevice(device);
 }
 
@@ -1471,14 +1471,14 @@ void ALCcontext_IncRef(ALCcontext *context)
 {
     RefCount ref;
     ref = IncrementRef(&context->ref);
-    TRACE("%p increasing refcount to %u\n", context, ref);
+    TRACEREF("%p increasing refcount to %u\n", context, ref);
 }
 
 void ALCcontext_DecRef(ALCcontext *context)
 {
     RefCount ref;
     ref = DecrementRef(&context->ref);
-    TRACE("%p decreasing refcount to %u\n", context, ref);
+    TRACEREF("%p decreasing refcount to %u\n", context, ref);
     if(ref == 0) FreeContext(context);
 }
 

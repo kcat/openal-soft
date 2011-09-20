@@ -701,9 +701,15 @@ enum LogLevel {
     NoLog,
     LogError,
     LogWarning,
-    LogTrace
+    LogTrace,
+    LogRef
 };
 extern enum LogLevel LogLevel;
+
+#define TRACEREF(...) do {                                                    \
+    if(LogLevel >= LogRef)                                                    \
+        AL_PRINT(__VA_ARGS__);                                                \
+} while(0)
 
 #define TRACE(...) do {                                                       \
     if(LogLevel >= LogTrace)                                                  \

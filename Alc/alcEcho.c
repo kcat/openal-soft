@@ -111,7 +111,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
 
     state->FeedGain = Slot->effect.Echo.Feedback;
 
-    cw = aluCos((ALfloat)M_PI*2.0f * LOWPASSFREQCUTOFF / frequency);
+    cw = aluCos(F_PI*2.0f * LOWPASSFREQCUTOFF / frequency);
     g = 1.0f - Slot->effect.Echo.Damping;
     state->iirFilter.coeff = lpCoeffCalc(g, cw);
 

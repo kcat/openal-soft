@@ -19,6 +19,9 @@
 #define M_PI_2         1.57079632679489661923  /* pi/2 */
 #endif
 
+#define F_PI    ((float)M_PI)
+#define F_PI_2  ((float)M_PI_2)
+
 #ifdef HAVE_POWF
 #define aluPow(x,y) (powf((x),(y)))
 #else

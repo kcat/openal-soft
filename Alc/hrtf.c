@@ -71,7 +71,7 @@ static ALuint NumLoadedHrtfs = 0;
 // interpolation factor between 0.0 and 1.0.
 static void CalcEvIndices(ALfloat ev, ALuint *evidx, ALfloat *evmu)
 {
-    ev = (M_PI/2.0f + ev) * (ELEV_COUNT-1) / M_PI;
+    ev = (F_PI_2 + ev) * (ELEV_COUNT-1) / F_PI;
     evidx[0] = (ALuint)ev;
     evidx[1] = minu(evidx[0] + 1, ELEV_COUNT-1);
     *evmu = ev - evidx[0];
@@ -82,7 +82,7 @@ static void CalcEvIndices(ALfloat ev, ALuint *evidx, ALfloat *evmu)
 // interpolation factor between 0.0 and 1.0.
 static void CalcAzIndices(ALuint evidx, ALfloat az, ALuint *azidx, ALfloat *azmu)
 {
-    az = (M_PI*2.0f + az) * azCount[evidx] / (M_PI*2.0f);
+    az = (F_PI*2.0f + az) * azCount[evidx] / (F_PI*2.0f);
     azidx[0] = (ALuint)az % azCount[evidx];
     azidx[1] = (azidx[0] + 1) % azCount[evidx];
     *azmu = az - floor(az);
@@ -111,7 +111,7 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
         if(newdir[0]-olddir[0] || newdir[1]-olddir[1] || newdir[2]-olddir[2])
             angleChange = aluAcos(olddir[0]*newdir[0] +
                                   olddir[1]*newdir[1] +
-                                  olddir[2]*newdir[2]) / M_PI;
+                                  olddir[2]*newdir[2]) / F_PI;
 
     }
 

@@ -211,8 +211,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             DryGain *= aluSqrt(2.0f/4.0f);
             for(c = 0;c < 2;c++)
             {
-                pos = aluCart2LUTpos(aluCos((ALfloat)M_PI/180.0f * angles_Rear[c]),
-                                     aluSin((ALfloat)M_PI/180.0f * angles_Rear[c]));
+                pos = aluCart2LUTpos(aluCos(F_PI/180.0f * angles_Rear[c]),
+                                     aluSin(F_PI/180.0f * angles_Rear[c]));
                 SpeakerGain = Device->PanningLUT[pos];
 
                 for(i = 0;i < (ALint)Device->NumChan;i++)
@@ -284,7 +284,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 /* Get the static HRIR coefficients and delays for this
                  * channel. */
                 GetLerpedHrtfCoeffs(ALContext->Device->Hrtf,
-                                    0.0f, (ALfloat)M_PI/180.0f * angles[c],
+                                    0.0f, F_PI/180.0f * angles[c],
                                     DryGain*ListenerGain,
                                     ALSource->Params.HrtfCoeffs[c],
                                     ALSource->Params.HrtfDelay[c]);
@@ -301,8 +301,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 SrcMatrix[c][LFE] += DryGain * ListenerGain;
                 continue;
             }
-            pos = aluCart2LUTpos(aluCos((ALfloat)M_PI/180.0f * angles[c]),
-                                 aluSin((ALfloat)M_PI/180.0f * angles[c]));
+            pos = aluCart2LUTpos(aluCos(F_PI/180.0f * angles[c]),
+                                 aluSin(F_PI/180.0f * angles[c]));
             SpeakerGain = Device->PanningLUT[pos];
 
             for(i = 0;i < (ALint)Device->NumChan;i++)
@@ -321,7 +321,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     /* Update filter coefficients. Calculations based on the I3DL2
      * spec. */
-    cw = aluCos((ALfloat)M_PI*2.0f * LOWPASSFREQCUTOFF / Frequency);
+    cw = aluCos(F_PI*2.0f * LOWPASSFREQCUTOFF / Frequency);
 
     /* We use two chained one-pole filters, so we need to take the
      * square root of the squared gain, which is the same as the base
@@ -573,7 +573,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     //3. Apply directional soundcones
-    Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * (180.0/M_PI);
+    Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * (180.0f/F_PI);
     if(Angle >= InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
@@ -790,7 +790,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALSource->Params.Send[i].WetGain = WetGain[i];
 
     /* Update filter coefficients. */
-    cw = aluCos((ALfloat)M_PI*2.0f * LOWPASSFREQCUTOFF / Frequency);
+    cw = aluCos(F_PI*2.0f * LOWPASSFREQCUTOFF / Frequency);
 
     ALSource->Params.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
     for(i = 0;i < NumSends;i++)

@@ -237,7 +237,7 @@ static __inline ALfloat EAXModulation(ALverbState *State, ALfloat in)
     // Calculate the sinus rythm (dependent on modulation time and the
     // sampling rate).  The center of the sinus is moved to reduce the delay
     // of the effect when the time or depth are low.
-    sinus = 1.0f - aluCos((ALfloat)M_PI*2.0f * State->Mod.Index / State->Mod.Range);
+    sinus = 1.0f - aluCos(F_PI*2.0f * State->Mod.Index / State->Mod.Range);
 
     // The depth determines the range over which to read the input samples
     // from, so it must be filtered to reduce the distortion caused by even
@@ -764,7 +764,7 @@ static __inline ALfloat CalcDecayLength(ALfloat coeff, ALfloat decayTime)
 // calculation.
 static __inline ALfloat CalcI3DL2HFreq(ALfloat hfRef, ALuint frequency)
 {
-    return aluCos((ALfloat)M_PI*2.0f * hfRef / frequency);
+    return aluCos(F_PI*2.0f * hfRef / frequency);
 }
 
 // Calculate an attenuation to be applied to the input of any echo models to

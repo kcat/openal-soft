@@ -52,19 +52,19 @@ typedef struct ALmodulatorState {
 #define WAVEFORM_FRACBITS  16
 #define WAVEFORM_FRACMASK  ((1<<WAVEFORM_FRACBITS)-1)
 
-static __inline ALdouble Sin(ALuint index)
+static __inline ALfloat Sin(ALuint index)
 {
-    return sin(index * (M_PI*2.0 / (1<<WAVEFORM_FRACBITS)));
+    return aluSin(index * ((ALfloat)M_PI*2.0f / (1<<WAVEFORM_FRACBITS)));
 }
 
-static __inline ALdouble Saw(ALuint index)
+static __inline ALfloat Saw(ALuint index)
 {
-    return index*(2.0/(1<<WAVEFORM_FRACBITS)) - 1.0;
+    return index*(2.0f/(1<<WAVEFORM_FRACBITS)) - 1.0f;
 }
 
-static __inline ALdouble Square(ALuint index)
+static __inline ALfloat Square(ALuint index)
 {
-    return (index&(1<<(WAVEFORM_FRACBITS-1))) ? -1.0 : 1.0;
+    return (index&(1<<(WAVEFORM_FRACBITS-1))) ? -1.0f : 1.0f;
 }
 
 
@@ -151,8 +151,8 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
     if(!state->step)
         state->step = 1;
 
-    cw = cos(2.0*M_PI * Slot->effect.Modulator.HighPassCutoff /
-                        Device->Frequency);
+    cw = aluCos((ALfloat)M_PI*2.0f * Slot->effect.Modulator.HighPassCutoff /
+                                     Device->Frequency);
     a = (2.0f-cw) - aluSqrt(aluPow(2.0f-cw, 2.0f) - 1.0f);
     state->iirFilter.coeff = a;
 

@@ -31,6 +31,18 @@
 #define aluSqrt(x) ((ALfloat)sqrt((double)(x)))
 #endif
 
+#ifdef HAVE_COSF
+#define aluCos(x) (cosf((x)))
+#else
+#define aluCos(x) ((ALfloat)cos((double)(x)))
+#endif
+
+#ifdef HAVE_SINF
+#define aluSin(x) (sinf((x)))
+#else
+#define aluSin(x) ((ALfloat)sin((double)(x)))
+#endif
+
 #ifdef HAVE_ACOSF
 #define aluAcos(x) (acosf((x)))
 #else

@@ -53,6 +53,12 @@
 /* Define if we have the sqrtf function */
 #cmakedefine HAVE_SQRTF
 
+/* Define if we have the cosf function */
+#cmakedefine HAVE_COSF
+
+/* Define if we have the sinf function */
+#cmakedefine HAVE_SINF
+
 /* Define if we have the acosf function */
 #cmakedefine HAVE_ACOSF
 

@@ -940,7 +940,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pf
                                 pContext->Device->Frequency;
                     GetSourceOffset(Source, eParam, Offsets, updateLen);
                     UnlockContext(pContext);
-                    *pflValue = Offsets[0];
+                    *pflValue = (ALfloat)Offsets[0];
                     break;
 
                 case AL_CONE_INNER_ANGLE:
@@ -1087,8 +1087,8 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *p
                                 pContext->Device->Frequency;
                     GetSourceOffset(Source, eParam, Offsets, updateLen);
                     UnlockContext(pContext);
-                    pflValues[0] = Offsets[0];
-                    pflValues[1] = Offsets[1];
+                    pflValues[0] = (ALfloat)Offsets[0];
+                    pflValues[1] = (ALfloat)Offsets[1];
                     break;
 
                 default:

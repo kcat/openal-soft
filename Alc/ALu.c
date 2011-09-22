@@ -161,7 +161,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Params.Step = maxstep<<FRACTIONBITS;
             else
             {
-                ALSource->Params.Step = Pitch*FRACTIONONE;
+                ALSource->Params.Step = (ALint)(Pitch*FRACTIONONE);
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
             }
@@ -676,7 +676,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Params.Step = maxstep<<FRACTIONBITS;
             else
             {
-                ALSource->Params.Step = Pitch*FRACTIONONE;
+                ALSource->Params.Step = (ALint)(Pitch*FRACTIONONE);
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
             }

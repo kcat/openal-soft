@@ -1368,19 +1368,19 @@ static __inline ALfloat Conv_ALfloat_ALshort(ALshort val)
 static __inline ALfloat Conv_ALfloat_ALushort(ALushort val)
 { return (val-32768) * (1.0f/32767.0f); }
 static __inline ALfloat Conv_ALfloat_ALint(ALint val)
-{ return val * (1.0/2147483647.0); }
+{ return (ALfloat)(val * (1.0/2147483647.0)); }
 static __inline ALfloat Conv_ALfloat_ALuint(ALuint val)
-{ return (ALint)(val-2147483648u) * (1.0/2147483647.0); }
+{ return (ALfloat)((ALint)(val-2147483648u) * (1.0/2147483647.0)); }
 static __inline ALfloat Conv_ALfloat_ALfloat(ALfloat val)
 { return (val==val) ? val : 0.0f; }
 static __inline ALfloat Conv_ALfloat_ALdouble(ALdouble val)
-{ return (val==val) ? val : 0.0; }
+{ return (val==val) ? (ALfloat)val : 0.0f; }
 static __inline ALfloat Conv_ALfloat_ALmulaw(ALmulaw val)
 { return Conv_ALfloat_ALshort(DecodeMuLaw(val)); }
 static __inline ALfloat Conv_ALfloat_ALbyte3(ALbyte3 val)
-{ return DecodeByte3(val) * (1.0/8388607.0); }
+{ return (ALfloat)(DecodeByte3(val) * (1.0/8388607.0)); }
 static __inline ALfloat Conv_ALfloat_ALubyte3(ALubyte3 val)
-{ return (DecodeUByte3(val)-8388608) * (1.0/8388607.0); }
+{ return (ALfloat)((DecodeUByte3(val)-8388608) * (1.0/8388607.0)); }
 
 static __inline ALdouble Conv_ALdouble_ALbyte(ALbyte val)
 { return val * (1.0/127.0); }
@@ -1823,14 +1823,14 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
             return AL_OUT_OF_MEMORY;
         }
 
-        temp = realloc(ALBuf->data, newsize);
+        temp = realloc(ALBuf->data, (size_t)newsize);
         if(!temp && newsize)
         {
             WriteUnlock(&ALBuf->lock);
             return AL_OUT_OF_MEMORY;
         }
         ALBuf->data = temp;
-        ALBuf->size = newsize;
+        ALBuf->size = (ALsizei)newsize;
 
         if(data != NULL)
             ConvertData(ALBuf->data, DstType, data, SrcType, NewChannels, frames);
@@ -1857,14 +1857,14 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
             return AL_OUT_OF_MEMORY;
         }
 
-        temp = realloc(ALBuf->data, newsize);
+        temp = realloc(ALBuf->data, (size_t)newsize);
         if(!temp && newsize)
         {
             WriteUnlock(&ALBuf->lock);
             return AL_OUT_OF_MEMORY;
         }
         ALBuf->data = temp;
-        ALBuf->size = newsize;
+        ALBuf->size = (ALsizei)newsize;
 
         if(data != NULL)
             ConvertData(ALBuf->data, DstType, data, SrcType, NewChannels, frames);
@@ -1890,7 +1890,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALBuf->FmtType = DstType;
 
     ALBuf->LoopStart = 0;
-    ALBuf->LoopEnd = newsize / NewChannels / NewBytes;
+    ALBuf->LoopEnd = (ALsizei)(newsize / NewChannels / NewBytes);
 
     WriteUnlock(&ALBuf->lock);
     return AL_NO_ERROR;

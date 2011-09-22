@@ -226,7 +226,7 @@ AL_API void AL_APIENTRY alListeneriv( ALenum eParam, const ALint* plValues )
         {
             case AL_POSITION:
             case AL_VELOCITY:
-                alListener3f(eParam, plValues[0], plValues[1], plValues[2]);
+                alListener3f(eParam, (ALfloat)plValues[0], (ALfloat)plValues[1], (ALfloat)plValues[2]);
                 return;
 
             case AL_ORIENTATION:

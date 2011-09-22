@@ -1003,43 +1003,6 @@ static void echo_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param,
 }
 
 
-static void mod_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{
-    switch(param)
-    {
-        case AL_RING_MODULATOR_FREQUENCY:
-            if(val >= AL_RING_MODULATOR_MIN_FREQUENCY &&
-               val <= AL_RING_MODULATOR_MAX_FREQUENCY)
-                effect->Modulator.Frequency = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
-            break;
-
-        case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            if(val >= AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF &&
-               val <= AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF)
-                effect->Modulator.HighPassCutoff = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
-            break;
-
-        case AL_RING_MODULATOR_WAVEFORM:
-            if(val >= AL_RING_MODULATOR_MIN_WAVEFORM &&
-               val <= AL_RING_MODULATOR_MAX_WAVEFORM)
-                effect->Modulator.Waveform = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
-            break;
-
-        default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
-    }
-}
-static void mod_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{
-    mod_SetParami(effect, context, param, vals[0]);
-}
 static void mod_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
@@ -1068,6 +1031,32 @@ static void mod_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, A
 static void mod_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
     mod_SetParamf(effect, context, param, vals[0]);
+}
+static void mod_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+{
+    switch(param)
+    {
+        case AL_RING_MODULATOR_FREQUENCY:
+        case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
+            mod_SetParamf(effect, context, param, (ALfloat)val);
+            break;
+
+        case AL_RING_MODULATOR_WAVEFORM:
+            if(val >= AL_RING_MODULATOR_MIN_WAVEFORM &&
+               val <= AL_RING_MODULATOR_MAX_WAVEFORM)
+                effect->Modulator.Waveform = val;
+            else
+                alSetError(context, AL_INVALID_VALUE);
+            break;
+
+        default:
+            alSetError(context, AL_INVALID_ENUM);
+            break;
+    }
+}
+static void mod_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+{
+    mod_SetParami(effect, context, param, vals[0]);
 }
 
 static void mod_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)

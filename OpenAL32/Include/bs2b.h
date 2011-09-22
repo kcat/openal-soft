@@ -60,7 +60,7 @@ struct bs2b {
     double b1_hi;
 
     /* Global gain against overloading */
-    double gain;
+    float gain;
 
     /* Buffer of last filtered sample.
      * [0] - first channel, [1] - second channel

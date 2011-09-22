@@ -86,7 +86,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, ALuint *effects)
+AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
 {
     ALCcontext *Context;
     ALCdevice *device;
@@ -186,7 +186,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue)
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, ALint *piValues)
+AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *piValues)
 {
     ALCcontext *Context;
     ALCdevice  *Device;
@@ -228,7 +228,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *pflValues)
 {
     ALCcontext *Context;
     ALCdevice  *Device;

@@ -239,6 +239,76 @@ static __inline ALboolean CompExchangePtr(void *volatile*ptr, void *oldval, void
     return __sync_bool_compare_and_swap(ptr, oldval, newval);
 }
 
+#elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+
+static __inline int xaddl(volatile int *dest, int incr)
+{
+    int ret;
+    __asm__ __volatile__("lock; xaddl %0,(%1)"
+                         : "=r" (ret)
+                         : "r" (dest), "0" (incr)
+                         : "memory");
+    return ret;
+}
+
+typedef int RefCount;
+static __inline RefCount IncrementRef(volatile RefCount *ptr)
+{ return xaddl(ptr, 1)+1; }
+static __inline RefCount DecrementRef(volatile RefCount *ptr)
+{ return xaddl(ptr, -1)-1; }
+
+static __inline int ExchangeInt(volatile int *dest, int newval)
+{
+    int ret;
+    __asm__ __volatile__("lock; xchgl %0,(%1)"
+                         : "=r" (ret)
+                         : "r" (dest), "0" (newval)
+                         : "memory");
+    return ret;
+}
+
+static __inline ALboolean CompExchangeInt(volatile int *dest, int oldval, int newval)
+{
+    int ret;
+    __asm__ __volatile__("lock; cmpxchgl %2,(%1)"
+                         : "=a" (ret)
+                         : "r" (dest), "r" (newval), "0" (oldval)
+                         : "memory");
+    return ret == oldval;
+}
+
+static __inline void *ExchangePtr(void *volatile*dest, void *newval)
+{
+    void *ret;
+    __asm__ __volatile__(
+#ifdef __i386__
+                         "lock; xchgl %0,(%1)"
+#else
+                         "lock; xchgq %0,(%1)"
+#endif
+                         : "=r" (ret)
+                         : "r" (dest), "0" (newval)
+                         : "memory"
+    );
+    return ret;
+}
+
+static __inline ALboolean CompExchangePtr(void *volatile*dest, void *oldval, void *newval)
+{
+    void *ret;
+    __asm__ __volatile__(
+#ifdef __i386__
+                         "lock; cmpxchgl %2,(%1)"
+#else
+                         "lock; cmpxchgq %2,(%1)"
+#endif
+                         : "=a" (ret)
+                         : "r" (dest), "r" (newval), "0" (oldval)
+                         : "memory"
+    );
+    return ret == oldval;
+}
+
 #elif defined(_WIN32)
 
 typedef LONG RefCount;

@@ -231,7 +231,7 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     ridx[3] = evOffset[evidx[1]] + ((azCount[evidx[1]]-azidx[1]) % azCount[evidx[1]]);
 
     // Calculate the stepping parameters.
-    delta = maxf(floor(delta*(Hrtf->sampleRate*0.015f) + 0.5), 1.0f);
+    delta = maxf(floor(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);
     step = 1.0f / delta;
 
     // Calculate the normalized and attenuated target HRIR coefficients using
@@ -276,8 +276,8 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     // Calculate the HRIR delays using linear interpolation.  Then calculate
     // the delay stepping values using the target and previous running
     // delays.
-    left = delays[0] - (delayStep[0] * counter);
-    right = delays[1] - (delayStep[1] * counter);
+    left = (ALfloat)(delays[0] - (delayStep[0] * counter));
+    right = (ALfloat)(delays[1] - (delayStep[1] * counter));
 
     delays[0] = (ALuint)(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
                               lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),

@@ -50,21 +50,22 @@ typedef struct ALmodulatorState {
 } ALmodulatorState;
 
 #define WAVEFORM_FRACBITS  16
-#define WAVEFORM_FRACMASK  ((1<<WAVEFORM_FRACBITS)-1)
+#define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
+#define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
 
 static __inline ALfloat Sin(ALuint index)
 {
-    return aluSin(index * (F_PI*2.0f / (1<<WAVEFORM_FRACBITS)));
+    return aluSin(index * (F_PI*2.0f / WAVEFORM_FRACONE));
 }
 
 static __inline ALfloat Saw(ALuint index)
 {
-    return index*(2.0f/(1<<WAVEFORM_FRACBITS)) - 1.0f;
+    return index*(2.0f/WAVEFORM_FRACONE) - 1.0f;
 }
 
 static __inline ALfloat Square(ALuint index)
 {
-    return (index&(1<<(WAVEFORM_FRACBITS-1))) ? -1.0f : 1.0f;
+    return ((index>>(WAVEFORM_FRACBITS-1))&1)*2.0f - 1.0f;
 }
 
 
@@ -146,10 +147,9 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
     else if(Slot->effect.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)
         state->Waveform = SQUARE;
 
-    state->step = Slot->effect.Modulator.Frequency*(1<<WAVEFORM_FRACBITS) /
-                  Device->Frequency;
-    if(!state->step)
-        state->step = 1;
+    state->step = (ALuint)(Slot->effect.Modulator.Frequency*WAVEFORM_FRACONE /
+                           Device->Frequency);
+    if(state->step == 0) state->step = 1;
 
     cw = aluCos(F_PI*2.0f * Slot->effect.Modulator.HighPassCutoff /
                             Device->Frequency);
@@ -199,8 +199,8 @@ ALeffectState *ModulatorCreate(void)
     state->state.Update = ModulatorUpdate;
     state->state.Process = ModulatorProcess;
 
-    state->index = 0.0f;
-    state->step = 1.0f;
+    state->index = 0;
+    state->step = 1;
 
     state->iirFilter.coeff = 0.0f;
     state->iirFilter.history[0] = 0.0f;

@@ -717,7 +717,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             // the listener.  This prevents +0 and -0 Z from producing
             // inconsistent panning.
             ev = aluAsin(Position[1]);
-            az = atan2(Position[0], -Position[2]*ZScale);
+            az = aluAtan2(Position[0], -Position[2]*ZScale);
         }
 
         // Check to see if the HRIR is already moving.

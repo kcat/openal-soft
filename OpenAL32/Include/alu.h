@@ -64,10 +64,28 @@
 #define aluAtan(x) ((ALfloat)atan((double)(x)))
 #endif
 
+#ifdef HAVE_ATAN2F
+#define aluAtan2(x,y) (atan2f((x),(y)))
+#else
+#define aluAtan2(x,y) ((ALfloat)atan2((double)(x),(double)(y)))
+#endif
+
 #ifdef HAVE_FABSF
 #define aluFabs(x) (fabsf((x)))
 #else
 #define aluFabs(x) ((ALfloat)fabs((double)(x)))
+#endif
+
+#ifdef HAVE_LOG10F
+#define aluLog10(x) (log10f((x)))
+#else
+#define aluLog10(x) ((ALfloat)log10((double)(x)))
+#endif
+
+#ifdef HAVE_FLOORF
+#define aluFloor(x) (floorf((x)))
+#else
+#define aluFloor(x) ((ALfloat)floor((double)(x)))
 #endif
 
 #define QUADRANT_NUM  128

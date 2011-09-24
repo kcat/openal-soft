@@ -68,8 +68,17 @@
 /* Define if we have the atanf function */
 #cmakedefine HAVE_ATANF
 
+/* Define if we have the atan2f function */
+#cmakedefine HAVE_ATAN2F
+
 /* Define if we have the fabsf function */
 #cmakedefine HAVE_FABSF
+
+/* Define if we have the log10f function */
+#cmakedefine HAVE_LOG10F
+
+/* Define if we have the floorf function */
+#cmakedefine HAVE_FLOORF
 
 /* Define if we have the strtof function */
 #cmakedefine HAVE_STRTOF

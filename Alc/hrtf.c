@@ -85,7 +85,7 @@ static void CalcAzIndices(ALuint evidx, ALfloat az, ALuint *azidx, ALfloat *azmu
     az = (F_PI*2.0f + az) * azCount[evidx] / (F_PI*2.0f);
     azidx[0] = (ALuint)az % azCount[evidx];
     azidx[1] = (azidx[0] + 1) % azCount[evidx];
-    *azmu = az - floor(az);
+    *azmu = az - aluFloor(az);
 }
 
 // Calculates the normalized HRTF transition factor (delta) from the changes
@@ -99,7 +99,7 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
     // Calculate the normalized dB gain change.
     newGain = maxf(newGain, 0.0001f);
     oldGain = maxf(oldGain, 0.0001f);
-    gainChange = aluFabs(log10(newGain / oldGain) / log10(0.0001f));
+    gainChange = aluFabs(aluLog10(newGain / oldGain) / aluLog10(0.0001f));
 
     // Calculate the normalized listener to source angle change when there is
     // enough gain to notice it.
@@ -231,7 +231,7 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     ridx[3] = evOffset[evidx[1]] + ((azCount[evidx[1]]-azidx[1]) % azCount[evidx[1]]);
 
     // Calculate the stepping parameters.
-    delta = maxf(floor(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);
+    delta = maxf(aluFloor(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);
     step = 1.0f / delta;
 
     // Calculate the normalized and attenuated target HRIR coefficients using

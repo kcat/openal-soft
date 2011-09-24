@@ -757,7 +757,7 @@ static __inline ALfloat CalcDecayCoeff(ALfloat length, ALfloat decayTime)
 // reaches -60 dB.
 static __inline ALfloat CalcDecayLength(ALfloat coeff, ALfloat decayTime)
 {
-    return log10(coeff) * decayTime / -3.0f/*log10(0.001)*/;
+    return aluLog10(coeff) * decayTime / aluLog10(0.001)/*-60 dB*/;
 }
 
 // Calculate the high frequency parameter for the I3DL2 coefficient

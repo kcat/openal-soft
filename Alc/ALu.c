@@ -779,7 +779,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
         // elevation adjustment for directional gain. this sucks, but
         // has low complexity
-        AmbientGain = aluSqrt(1.0/Device->NumChan);
+        AmbientGain = aluSqrt(1.0f/Device->NumChan);
         for(i = 0;i < MAXCHANNELS;i++)
         {
             ALuint i2;

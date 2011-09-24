@@ -482,7 +482,7 @@ static HRESULT DoReset(ALCdevice *device)
 }
 
 
-static DWORD CALLBACK MessageProc(void *ptr)
+static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
 {
     ThreadRequest *req = ptr;
     IMMDeviceEnumerator *Enumerator;
@@ -621,7 +621,7 @@ static BOOL MMDevApiLoad(void)
             ERR("Failed to create event: %lu\n", GetLastError());
         else
         {
-            ThreadHdl = CreateThread(NULL, 0, MessageProc, &req, 0, &ThreadID);
+            ThreadHdl = CreateThread(NULL, 0, MMDevApiMsgProc, &req, 0, &ThreadID);
             if(ThreadHdl != NULL)
                 InitResult = WaitForResponse(&req);
             CloseHandle(req.FinishedEvt);

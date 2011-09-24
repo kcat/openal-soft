@@ -584,8 +584,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if(Angle >= InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
-        ConeVolume = lerp(1.0, ALSource->flOuterGain, scale);
-        ConeHF = lerp(1.0, ALSource->OuterGainHF, scale);
+        ConeVolume = lerp(1.0f, ALSource->flOuterGain, scale);
+        ConeHF = lerp(1.0f, ALSource->OuterGainHF, scale);
     }
     else if(Angle > OuterAngle)
     {

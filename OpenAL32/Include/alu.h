@@ -162,17 +162,17 @@ static __inline ALint clampi(ALint val, ALint min, ALint max)
 { return mini(max, maxi(min, val)); }
 
 
-static __inline ALdouble lerp(ALdouble val1, ALdouble val2, ALdouble mu)
+static __inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {
     return val1 + (val2-val1)*mu;
 }
-static __inline ALdouble cubic(ALdouble val0, ALdouble val1, ALdouble val2, ALdouble val3, ALdouble mu)
+static __inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat mu)
 {
-    ALdouble mu2 = mu*mu;
-    ALdouble a0 = -0.5*val0 +  1.5*val1 + -1.5*val2 +  0.5*val3;
-    ALdouble a1 =      val0 + -2.5*val1 +  2.0*val2 + -0.5*val3;
-    ALdouble a2 = -0.5*val0             +  0.5*val2;
-    ALdouble a3 =                  val1;
+    ALfloat mu2 = mu*mu;
+    ALfloat a0 = -0.5f*val0 +  1.5f*val1 + -1.5f*val2 +  0.5f*val3;
+    ALfloat a1 =       val0 + -2.5f*val1 +  2.0f*val2 + -0.5f*val3;
+    ALfloat a2 = -0.5f*val0              +  0.5f*val2;
+    ALfloat a3 =                    val1;
 
     return a0*mu*mu2 + a1*mu2 + a2*mu + a3;
 }

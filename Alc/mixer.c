@@ -37,29 +37,29 @@
 #include "bs2b.h"
 
 
-static __inline ALdouble point32(const ALfloat *vals, ALint step, ALint frac)
+static __inline ALfloat point32(const ALfloat *vals, ALint step, ALint frac)
 { return vals[0]; (void)step; (void)frac; }
-static __inline ALdouble lerp32(const ALfloat *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE)); }
-static __inline ALdouble cubic32(const ALfloat *vals, ALint step, ALint frac)
+static __inline ALfloat lerp32(const ALfloat *vals, ALint step, ALint frac)
+{ return lerp(vals[0], vals[step], frac * (1.0f/FRACTIONONE)); }
+static __inline ALfloat cubic32(const ALfloat *vals, ALint step, ALint frac)
 { return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0/FRACTIONONE)); }
+               frac * (1.0f/FRACTIONONE)); }
 
-static __inline ALdouble point16(const ALshort *vals, ALint step, ALint frac)
-{ return vals[0] * (1.0/32767.0); (void)step; (void)frac; }
-static __inline ALdouble lerp16(const ALshort *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE)) * (1.0/32767.0); }
-static __inline ALdouble cubic16(const ALshort *vals, ALint step, ALint frac)
+static __inline ALfloat point16(const ALshort *vals, ALint step, ALint frac)
+{ return vals[0] * (1.0f/32767.0f); (void)step; (void)frac; }
+static __inline ALfloat lerp16(const ALshort *vals, ALint step, ALint frac)
+{ return lerp(vals[0], vals[step], frac * (1.0f/FRACTIONONE)) * (1.0f/32767.0f); }
+static __inline ALfloat cubic16(const ALshort *vals, ALint step, ALint frac)
 { return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0/FRACTIONONE)) * (1.0/32767.0); }
+               frac * (1.0f/FRACTIONONE)) * (1.0f/32767.0f); }
 
-static __inline ALdouble point8(const ALbyte *vals, ALint step, ALint frac)
-{ return vals[0] * (1.0/127.0); (void)step; (void)frac; }
-static __inline ALdouble lerp8(const ALbyte *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0/FRACTIONONE)) * (1.0/127.0); }
-static __inline ALdouble cubic8(const ALbyte *vals, ALint step, ALint frac)
+static __inline ALfloat point8(const ALbyte *vals, ALint step, ALint frac)
+{ return vals[0] * (1.0f/127.0f); (void)step; (void)frac; }
+static __inline ALfloat lerp8(const ALbyte *vals, ALint step, ALint frac)
+{ return lerp(vals[0], vals[step], frac * (1.0f/FRACTIONONE)) * (1.0f/127.0f); }
+static __inline ALfloat cubic8(const ALbyte *vals, ALint step, ALint frac)
 { return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0/FRACTIONONE)) * (1.0/127.0); }
+               frac * (1.0f/FRACTIONONE)) * (1.0f/127.0f); }
 
 #ifdef __GNUC__
 #define LIKELY(x) __builtin_expect(!!(x), 1)

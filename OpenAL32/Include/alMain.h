@@ -440,7 +440,7 @@ extern "C" {
 #define DEFAULT_OUTPUT_RATE        (44100)
 
 #define SPEEDOFSOUNDMETRESPERSEC   (343.3f)
-#define AIRABSORBGAINHF            (0.99426) /* -0.05dB */
+#define AIRABSORBGAINHF            (0.99426f) /* -0.05dB */
 
 #define LOWPASSFREQCUTOFF          (5000)
 

@@ -207,7 +207,7 @@ void *GetSymbol(void *handle, const char *name)
     sym = dlsym(handle, name);
     if((err=dlerror()) != NULL)
     {
-        ERR("Failed to load %s: %s\n", name, err);
+        WARN("Failed to load %s: %s\n", name, err);
         sym = NULL;
     }
     return sym;

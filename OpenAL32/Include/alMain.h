@@ -788,9 +788,6 @@ extern enum LogLevel LogLevel;
 } while(0)
 
 
-extern ALdouble ConeScale;
-extern ALdouble ZScale;
-
 extern ALint RTPrioLevel;
 
 #ifdef __cplusplus

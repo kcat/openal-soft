@@ -37,6 +37,13 @@
 #include "bs2b.h"
 
 
+/* Cone scalar */
+ALfloat ConeScale = 0.5f;
+
+/* Localized Z scalar for mono sources */
+ALfloat ZScale = 1.0f;
+
+
 static __inline ALvoid aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
 {
     outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];

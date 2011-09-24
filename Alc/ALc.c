@@ -393,12 +393,6 @@ enum LogLevel LogLevel = LogWarning;
 enum LogLevel LogLevel = LogError;
 #endif
 
-// Cone scalar
-ALdouble ConeScale = 0.5;
-
-// Localized Z scalar for mono sources
-ALdouble ZScale = 1.0;
-
 /* Flag to trap ALC device errors */
 static ALCboolean TrapALCError = ALC_FALSE;
 
@@ -496,11 +490,11 @@ static void alc_init(void)
 
     str = getenv("__ALSOFT_HALF_ANGLE_CONES");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-        ConeScale = 1.0;
+        ConeScale = 1.0f;
 
     str = getenv("__ALSOFT_REVERSE_Z");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-        ZScale = -1.0;
+        ZScale = -1.0f;
 
     str = getenv("__ALSOFT_TRAP_ERROR");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))

@@ -185,6 +185,9 @@ ALvoid MixSource(struct ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);
 ALvoid aluHandleDisconnect(ALCdevice *device);
 
+extern ALfloat ConeScale;
+extern ALfloat ZScale;
+
 #ifdef __cplusplus
 }
 #endif

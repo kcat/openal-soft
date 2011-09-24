@@ -794,7 +794,7 @@ static __inline ALvoid CalcMatrixCoeffs(ALfloat diffusion, ALfloat *x, ALfloat *
 
     // The matrix is of order 4, so n is sqrt (4 - 1).
     n = aluSqrt(3.0f);
-    t = diffusion * atan(n);
+    t = diffusion * aluAtan(n);
 
     // Calculate the first mixing matrix coefficient.
     *x = aluCos(t);

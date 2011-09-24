@@ -52,6 +52,12 @@
 #define aluAcos(x) ((ALfloat)acos((double)(x)))
 #endif
 
+#ifdef HAVE_ASINF
+#define aluAsin(x) (asinf((x)))
+#else
+#define aluAsin(x) ((ALfloat)asin((double)(x)))
+#endif
+
 #ifdef HAVE_ATANF
 #define aluAtan(x) (atanf((x)))
 #else

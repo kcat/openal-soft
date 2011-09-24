@@ -62,6 +62,9 @@
 /* Define if we have the acosf function */
 #cmakedefine HAVE_ACOSF
 
+/* Define if we have the asinf function */
+#cmakedefine HAVE_ASINF
+
 /* Define if we have the atanf function */
 #cmakedefine HAVE_ATANF
 

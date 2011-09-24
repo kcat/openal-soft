@@ -716,7 +716,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             // Calculate elevation and azimuth only when the source is not at
             // the listener.  This prevents +0 and -0 Z from producing
             // inconsistent panning.
-            ev = asin(Position[1]);
+            ev = aluAsin(Position[1]);
             az = atan2(Position[0], -Position[2]*ZScale);
         }
 

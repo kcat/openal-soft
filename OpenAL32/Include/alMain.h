@@ -667,6 +667,14 @@ struct ALCdevice_struct
 // Specifies if the device is currently running
 #define DEVICE_RUNNING                           (1<<31)
 
+#define LookupBuffer(m, k) ((struct ALbuffer*)LookupUIntMapKey(&(m)->BufferMap, (k)))
+#define LookupEffect(m, k) ((struct ALeffect*)LookupUIntMapKey(&(m)->EffectMap, (k)))
+#define LookupFilter(m, k) ((struct ALfilter*)LookupUIntMapKey(&(m)->FilterMap, (k)))
+#define RemoveBuffer(m, k) ((struct ALbuffer*)PopUIntMapValue(&(m)->BufferMap, (k)))
+#define RemoveEffect(m, k) ((struct ALeffect*)PopUIntMapValue(&(m)->EffectMap, (k)))
+#define RemoveFilter(m, k) ((struct ALfilter*)PopUIntMapValue(&(m)->FilterMap, (k)))
+
+
 struct ALCcontext_struct
 {
     volatile RefCount ref;
@@ -701,6 +709,11 @@ struct ALCcontext_struct
 
     ALCcontext *volatile next;
 };
+
+#define LookupSource(m, k) ((struct ALsource*)LookupUIntMapKey(&(m)->SourceMap, (k)))
+#define LookupEffectSlot(m, k) ((struct ALeffectslot*)LookupUIntMapKey(&(m)->EffectSlotMap, (k)))
+#define RemoveSource(m, k) ((struct ALsource*)PopUIntMapValue(&(m)->SourceMap, (k)))
+#define RemoveEffectSlot(m, k) ((struct ALeffectslot*)PopUIntMapValue(&(m)->EffectSlotMap, (k)))
 
 ALCcontext *GetContextRef(void);
 

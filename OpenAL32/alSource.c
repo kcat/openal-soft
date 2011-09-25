@@ -50,11 +50,6 @@ static ALvoid InitSourceParams(ALsource *Source);
 static ALvoid GetSourceOffset(ALsource *Source, ALenum eName, ALdouble *Offsets, ALdouble updateLen);
 static ALint GetByteOffset(ALsource *Source);
 
-#define LookupSource(m, k) ((ALsource*)LookupUIntMapKey(&(m), (k)))
-#define RemoveSource(m, k) ((ALsource*)PopUIntMapValue(&(m), (k)))
-#define LookupBuffer(m, k) ((ALbuffer*)LookupUIntMapKey(&(m), (k)))
-#define LookupFilter(m, k) ((ALfilter*)LookupUIntMapKey(&(m), (k)))
-#define LookupEffectSlot(m, k) ((ALeffectslot*)LookupUIntMapKey(&(m), (k)))
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
 {
@@ -124,7 +119,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         // Check that all Sources are valid (and can therefore be deleted)
         for(i = 0;i < n;i++)
         {
-            if(LookupSource(Context->SourceMap, sources[i]) == NULL)
+            if(LookupSource(Context, sources[i]) == NULL)
             {
                 alSetError(Context, AL_INVALID_NAME);
                 n = 0;
@@ -138,7 +133,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             ALsource **srclist, **srclistend;
 
             // Remove Source from list of Sources
-            if((Source=RemoveSource(Context->SourceMap, sources[i])) == NULL)
+            if((Source=RemoveSource(Context, sources[i])) == NULL)
                 continue;
 
             FreeThunkEntry(Source->source);
@@ -193,7 +188,7 @@ AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
     Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
-    result = (LookupSource(Context->SourceMap, source) ? AL_TRUE : AL_FALSE);
+    result = (LookupSource(Context, source) ? AL_TRUE : AL_FALSE);
 
     ALCcontext_DecRef(Context);
 
@@ -209,7 +204,7 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValu
     pContext = GetContextRef();
     if(!pContext) return;
 
-    if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
+    if((Source=LookupSource(pContext, source)) != NULL)
     {
         switch(eParam)
         {
@@ -402,7 +397,7 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum eParam, ALfloat flVal
     pContext = GetContextRef();
     if(!pContext) return;
 
-    if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
+    if((Source=LookupSource(pContext, source)) != NULL)
     {
         switch(eParam)
         {
@@ -500,7 +495,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum eParam, const ALfloat
 
     if(pflValues)
     {
-        if(LookupSource(pContext->SourceMap, source) != NULL)
+        if(LookupSource(pContext, source) != NULL)
         {
             switch(eParam)
             {
@@ -539,7 +534,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
     pContext = GetContextRef();
     if(!pContext) return;
 
-    if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
+    if((Source=LookupSource(pContext, source)) != NULL)
     {
         ALCdevice *device = pContext->Device;
 
@@ -569,8 +564,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                     ALbufferlistitem *oldlist;
                     ALbuffer *buffer = NULL;
 
-                    if(lValue == 0 ||
-                       (buffer=LookupBuffer(device->BufferMap, lValue)) != NULL)
+                    if(lValue == 0 || (buffer=LookupBuffer(device, lValue)) != NULL)
                     {
                         Source->BuffersInQueue = 0;
                         Source->BuffersPlayed = 0;
@@ -662,8 +656,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
             case AL_DIRECT_FILTER: {
                 ALfilter *filter = NULL;
 
-                if(lValue == 0 ||
-                   (filter=LookupFilter(pContext->Device->FilterMap, lValue)) != NULL)
+                if(lValue == 0 || (filter=LookupFilter(pContext->Device, lValue)) != NULL)
                 {
                     LockContext(pContext);
                     if(!filter)
@@ -769,7 +762,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
     pContext = GetContextRef();
     if(!pContext) return;
 
-    if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
+    if((Source=LookupSource(pContext, source)) != NULL)
     {
         ALCdevice *device = pContext->Device;
 
@@ -781,10 +774,8 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
 
                 LockContext(pContext);
                 if((ALuint)lValue2 < device->NumAuxSends &&
-                   (lValue1 == 0 ||
-                    (ALEffectSlot=LookupEffectSlot(pContext->EffectSlotMap, lValue1)) != NULL) &&
-                   (lValue3 == 0 ||
-                    (ALFilter=LookupFilter(device->FilterMap, lValue3)) != NULL))
+                   (lValue1 == 0 || (ALEffectSlot=LookupEffectSlot(pContext, lValue1)) != NULL) &&
+                   (lValue3 == 0 || (ALFilter=LookupFilter(device, lValue3)) != NULL))
                 {
                     /* Release refcount on the previous slot, and add one for
                      * the new slot */
@@ -865,7 +856,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum eParam, const ALint* pl
 
     if(plValues)
     {
-        if(LookupSource(pContext->SourceMap, source) != NULL)
+        if(LookupSource(pContext, source) != NULL)
         {
             switch(eParam)
             {
@@ -896,7 +887,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum eParam, ALfloat *pf
 
     if(pflValue)
     {
-        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
+        if((Source=LookupSource(pContext, source)) != NULL)
         {
             switch(eParam)
             {
@@ -992,7 +983,7 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum eParam, ALfloat* p
 
     if(pflValue1 && pflValue2 && pflValue3)
     {
-        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
+        if((Source=LookupSource(pContext, source)) != NULL)
         {
             switch(eParam)
             {
@@ -1076,7 +1067,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum eParam, ALfloat *p
 
     if(pflValues)
     {
-        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
+        if((Source=LookupSource(pContext, source)) != NULL)
         {
             switch(eParam)
             {
@@ -1119,7 +1110,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum eParam, ALint *plVa
 
     if(plValue)
     {
-        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
+        if((Source=LookupSource(pContext, source)) != NULL)
         {
             switch(eParam)
             {
@@ -1253,7 +1244,7 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum eParam, ALint* plVal
 
     if(plValue1 && plValue2 && plValue3)
     {
-        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
+        if((Source=LookupSource(pContext, source)) != NULL)
         {
             switch(eParam)
             {
@@ -1342,7 +1333,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum eParam, ALint* plVal
 
     if(plValues)
     {
-        if((Source=LookupSource(pContext->SourceMap, source)) != NULL)
+        if((Source=LookupSource(pContext, source)) != NULL)
         {
             switch(eParam)
             {
@@ -1400,7 +1391,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     // Check that all the Sources are valid
     for(i = 0;i < n;i++)
     {
-        if(!LookupSource(Context->SourceMap, sources[i]))
+        if(!LookupSource(Context, sources[i]))
         {
             alSetError(Context, AL_INVALID_NAME);
             goto done;
@@ -1430,7 +1421,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
     for(i = 0;i < n;i++)
     {
-        Source = LookupSource(Context->SourceMap, sources[i]);
+        Source = LookupSource(Context, sources[i]);
         if(Context->DeferUpdates) Source->new_state = AL_PLAYING;
         else SetSourceState(Source, Context, AL_PLAYING);
     }
@@ -1468,7 +1459,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     // Check all the Sources are valid
     for(i = 0;i < n;i++)
     {
-        if(!LookupSource(Context->SourceMap, sources[i]))
+        if(!LookupSource(Context, sources[i]))
         {
             alSetError(Context, AL_INVALID_NAME);
             goto done;
@@ -1478,7 +1469,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     LockContext(Context);
     for(i = 0;i < n;i++)
     {
-        Source = LookupSource(Context->SourceMap, sources[i]);
+        Source = LookupSource(Context, sources[i]);
         if(Context->DeferUpdates) Source->new_state = AL_PAUSED;
         else SetSourceState(Source, Context, AL_PAUSED);
     }
@@ -1516,7 +1507,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     // Check all the Sources are valid
     for(i = 0;i < n;i++)
     {
-        if(!LookupSource(Context->SourceMap, sources[i]))
+        if(!LookupSource(Context, sources[i]))
         {
             alSetError(Context, AL_INVALID_NAME);
             goto done;
@@ -1526,7 +1517,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     LockContext(Context);
     for(i = 0;i < n;i++)
     {
-        Source = LookupSource(Context->SourceMap, sources[i]);
+        Source = LookupSource(Context, sources[i]);
         Source->new_state = AL_NONE;
         SetSourceState(Source, Context, AL_STOPPED);
     }
@@ -1564,7 +1555,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     // Check all the Sources are valid
     for(i = 0;i < n;i++)
     {
-        if(!LookupSource(Context->SourceMap, sources[i]))
+        if(!LookupSource(Context, sources[i]))
         {
             alSetError(Context, AL_INVALID_NAME);
             goto done;
@@ -1574,7 +1565,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     LockContext(Context);
     for(i = 0;i < n;i++)
     {
-        Source = LookupSource(Context->SourceMap, sources[i]);
+        Source = LookupSource(Context, sources[i]);
         Source->new_state = AL_NONE;
         SetSourceState(Source, Context, AL_INITIAL);
     }
@@ -1610,7 +1601,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     // Check that all buffers are valid or zero and that the source is valid
 
     // Check that this is a valid source
-    if((Source=LookupSource(Context->SourceMap, source)) == NULL)
+    if((Source=LookupSource(Context, source)) == NULL)
     {
         alSetError(Context, AL_INVALID_NAME);
         goto error;
@@ -1645,7 +1636,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const A
     for(i = 0;i < n;i++)
     {
         ALbuffer *buffer = NULL;
-        if(buffers[i] && (buffer=LookupBuffer(device->BufferMap, buffers[i])) == NULL)
+        if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
         {
             UnlockContext(Context);
             alSetError(Context, AL_INVALID_NAME);
@@ -1756,7 +1747,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers( ALuint source, ALsizei n, ALui
         goto done;
     }
 
-    if((Source=LookupSource(Context->SourceMap, source)) == NULL)
+    if((Source=LookupSource(Context, source)) == NULL)
     {
         alSetError(Context, AL_INVALID_NAME);
         goto done;

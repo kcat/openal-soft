@@ -338,9 +338,9 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
     const T *RESTRICT data = srcdata;                                         \
     ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
     ALfloat *ClickRemoval, *PendingClicks;                                    \
-    ALuint pos, frac;                                                         \
-    ALfloat DrySend[MAXCHANNELS][MAXCHANNELS];                                \
+    ALfloat DrySend[MAXCHANNELS];                                             \
     FILTER *DryFilter;                                                        \
+    ALuint pos, frac;                                                         \
     ALuint BufferIdx;                                                         \
     ALuint increment;                                                         \
     ALuint i, out, c;                                                         \
@@ -352,17 +352,15 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.iirFilter;                                    \
-    for(i = 0;i < NumChannels;i++)                                            \
-    {                                                                         \
-        for(c = 0;c < MAXCHANNELS;c++)                                        \
-            DrySend[i][c] = Source->Params.DryGains[i][c];                    \
-    }                                                                         \
                                                                               \
     pos = 0;                                                                  \
     frac = *DataPosFrac;                                                      \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
+        for(c = 0;c < MAXCHANNELS;c++)                                        \
+            DrySend[c] = Source->Params.DryGains[i][c];                       \
+                                                                              \
         pos = 0;                                                              \
         frac = *DataPosFrac;                                                  \
                                                                               \
@@ -372,7 +370,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
                                                                               \
             value = lpFilter2PC(DryFilter, i, value);                         \
             for(c = 0;c < MAXCHANNELS;c++)                                    \
-                ClickRemoval[c] -= value*DrySend[i][c];                       \
+                ClickRemoval[c] -= value*DrySend[c];                          \
         }                                                                     \
         for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
         {                                                                     \
@@ -380,7 +378,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
                                                                               \
             value = lpFilter2P(DryFilter, i, value);                          \
             for(c = 0;c < MAXCHANNELS;c++)                                    \
-                DryBuffer[OutPos][c] += value*DrySend[i][c];                  \
+                DryBuffer[OutPos][c] += value*DrySend[c];                     \
                                                                               \
             frac += increment;                                                \
             pos  += frac>>FRACTIONBITS;                                       \
@@ -393,7 +391,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
                                                                               \
             value = lpFilter2PC(DryFilter, i, value);                         \
             for(c = 0;c < MAXCHANNELS;c++)                                    \
-                PendingClicks[c] += value*DrySend[i][c];                      \
+                PendingClicks[c] += value*DrySend[c];                         \
         }                                                                     \
         OutPos -= BufferSize;                                                 \
     }                                                                         \

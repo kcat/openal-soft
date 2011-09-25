@@ -348,11 +348,11 @@ ALfloat lpCoeffCalc(ALfloat g, ALfloat cw)
 {
     ALfloat a = 0.0f;
 
-    /* Be careful with gains < 0.01, as that causes the coefficient
-     * head towards 1, which will flatten the signal */
+    /* Be careful with gains < 0.001, as that causes the coefficient head
+     * towards 1, which will flatten the signal */
     if(g < 0.9999f) /* 1-epsilon */
     {
-        g = maxf(g, 0.01f);
+        g = maxf(g, 0.001f);
         a = (1 - g*cw - aluSqrt(2*g*(1-cw) - g*g*(1 - cw*cw))) /
             (1 - g);
     }

@@ -119,6 +119,9 @@
 /* Define if we have float.h */
 #cmakedefine HAVE_FLOAT_H
 
+/* Define if we have fpu_control.h */
+#cmakedefine HAVE_FPU_CONTROL_H
+
 /* Define if we have fenv.h */
 #cmakedefine HAVE_FENV_H
 

@@ -215,6 +215,7 @@ CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(pri
                          int main() {return 0;}" HAVE_GCC_FORMAT)
 
 CHECK_INCLUDE_FILE(fenv.h HAVE_FENV_H)
+CHECK_INCLUDE_FILE(fpu_control.h HAVE_FPU_CONTROL_H)
 CHECK_INCLUDE_FILE(float.h HAVE_FLOAT_H)
 CHECK_INCLUDE_FILE(ieeefp.h HAVE_IEEEFP_H)
 CHECK_INCLUDE_FILE(guiddef.h HAVE_GUIDDEF_H)

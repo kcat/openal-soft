@@ -198,23 +198,35 @@ static __inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat 
 
 static __inline int SetMixerFPUMode(void)
 {
-    int fpuState = 0;
-#if defined(HAVE_FESETROUND)
+#if defined(_FPU_GETCW) && defined(_FPU_SETCW)
+    fpu_control_t fpuState, newState;
+    _FPU_GETCW(fpuState);
+    newState = fpuState&~(_FPU_EXTENDED|_FPU_DOUBLE|_FPU_SINGLE |
+                          _FPU_RC_NEAREST|_FPU_RC_DOWN|_FPU_RC_UP|_FPU_RC_ZERO);
+    newState |= _FPU_SINGLE | _FPU_RC_ZERO;
+    _FPU_SETCW(newState);
+#else
+    int fpuState;
+#if defined(HAVE__CONTROLFP)
+    fpuState = _controlfp(0, 0);
+    (void)_controlfp(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC);
+#elif defined(HAVE_FESETROUND)
     fpuState = fegetround();
     fesetround(FE_TOWARDZERO);
-#elif defined(HAVE__CONTROLFP)
-    fpuState = _controlfp(0, 0);
-    (void)_controlfp(_RC_CHOP, _MCW_RC);
+#endif
 #endif
     return fpuState;
 }
 
 static __inline void RestoreFPUMode(int state)
 {
-#if defined(HAVE_FESETROUND)
-    fesetround(state);
+#if defined(_FPU_GETCW) && defined(_FPU_SETCW)
+    fpu_control_t fpuState = state;
+    _FPU_SETCW(fpuState);
 #elif defined(HAVE__CONTROLFP)
-    _controlfp(state, _MCW_RC);
+    _controlfp(state, _MCW_RC|_MCW_PC);
+#elif defined(HAVE_FESETROUND)
+    fesetround(state);
 #endif
 }
 

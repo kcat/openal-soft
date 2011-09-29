@@ -147,8 +147,8 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
     else if(Slot->effect.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)
         state->Waveform = SQUARE;
 
-    state->step = (ALuint)(Slot->effect.Modulator.Frequency*WAVEFORM_FRACONE /
-                           Device->Frequency);
+    state->step = fastf2u(Slot->effect.Modulator.Frequency*WAVEFORM_FRACONE /
+                          Device->Frequency);
     if(state->step == 0) state->step = 1;
 
     cw = aluCos(F_PI*2.0f * Slot->effect.Modulator.HighPassCutoff /

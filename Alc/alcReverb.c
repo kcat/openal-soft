@@ -247,7 +247,7 @@ static __inline ALfloat EAXModulation(ALverbState *State, ALfloat in)
 
     // Calculate the read offset and fraction between it and the next sample.
     frac   = (1.0f + (State->Mod.Filter * sinus));
-    offset = (ALuint)frac;
+    offset = fastf2u(frac);
     frac  -= offset;
 
     // Get the two samples crossed by the offset, and feed the delay line
@@ -610,7 +610,7 @@ static ALuint CalcLineLength(ALfloat length, ALintptrEXT offset, ALuint frequenc
 
     // All line lengths are powers of 2, calculated from their lengths, with
     // an additional sample in case of rounding errors.
-    samples = NextPowerOf2((ALuint)(length * frequency) + 1);
+    samples = NextPowerOf2(fastf2u(length * frequency) + 1);
     // All lines share a single sample buffer.
     Delay->Mask = samples - 1;
     Delay->Line = (ALfloat*)offset;
@@ -733,15 +733,15 @@ static ALboolean ReverbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     // so their offsets only need to be calculated once.
     for(index = 0;index < 4;index++)
     {
-        State->Early.Offset[index] = (ALuint)(EARLY_LINE_LENGTH[index] *
+        State->Early.Offset[index] = fastf2u(EARLY_LINE_LENGTH[index] *
+                                             frequency);
+        State->Late.ApOffset[index] = fastf2u(ALLPASS_LINE_LENGTH[index] *
                                               frequency);
-        State->Late.ApOffset[index] = (ALuint)(ALLPASS_LINE_LENGTH[index] *
-                                               frequency);
     }
 
     // The echo all-pass filter line length is static, so its offset only
     // needs to be calculated once.
-    State->Echo.ApOffset = (ALuint)(ECHO_ALLPASS_LENGTH * frequency);
+    State->Echo.ApOffset = fastf2u(ECHO_ALLPASS_LENGTH * frequency);
 
     return AL_TRUE;
 }
@@ -864,9 +864,9 @@ static ALvoid UpdateModulator(ALfloat modTime, ALfloat modDepth, ALuint frequenc
      */
     length = modTime * frequency;
     if (length >= 1.0f) {
-       State->Mod.Index = (ALuint)(State->Mod.Index * length /
-                                   State->Mod.Range);
-       State->Mod.Range = (ALuint)length;
+       State->Mod.Index = fastf2u(State->Mod.Index * length /
+                                  State->Mod.Range);
+       State->Mod.Range = fastf2u(length);
     } else {
        State->Mod.Index = 0;
        State->Mod.Range = 1;
@@ -888,8 +888,8 @@ static ALvoid UpdateModulator(ALfloat modTime, ALfloat modDepth, ALuint frequenc
 static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALuint frequency, ALverbState *State)
 {
     // Calculate the initial delay taps.
-    State->DelayTap[0] = (ALuint)(earlyDelay * frequency);
-    State->DelayTap[1] = (ALuint)((earlyDelay + lateDelay) * frequency);
+    State->DelayTap[0] = fastf2u(earlyDelay * frequency);
+    State->DelayTap[1] = fastf2u((earlyDelay + lateDelay) * frequency);
 }
 
 // Update the early reflections gain and line coefficients.
@@ -926,7 +926,7 @@ static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALverbState 
     {
         length = (DECO_FRACTION * aluPow(DECO_MULTIPLIER, (ALfloat)index)) *
                  LATE_LINE_LENGTH[0] * (1.0f + (density * LATE_LINE_MULTIPLIER));
-        State->DecoTap[index] = (ALuint)(length * frequency);
+        State->DecoTap[index] = fastf2u(length * frequency);
     }
 }
 
@@ -971,7 +971,7 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
                                                     LATE_LINE_MULTIPLIER));
 
         // Calculate the delay offset for each cyclical delay line.
-        State->Late.Offset[index] = (ALuint)(length * frequency);
+        State->Late.Offset[index] = fastf2u(length * frequency);
 
         // Calculate the gain (coefficient) for each cyclical line.
         State->Late.Coeff[index] = CalcDecayCoeff(length, decayTime);
@@ -992,7 +992,7 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
 static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoTime, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALverbState *State)
 {
     // Update the offset and coefficient for the echo delay line.
-    State->Echo.Offset = (ALuint)(echoTime * frequency);
+    State->Echo.Offset = fastf2u(echoTime * frequency);
 
     // Calculate the decay coefficient for the echo line.
     State->Echo.Coeff = CalcDecayCoeff(echoTime, decayTime);

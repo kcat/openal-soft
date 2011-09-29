@@ -1020,6 +1020,7 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
     ALCcontext *context;
+    int oldMode;
     ALuint i;
 
     // Check for attributes
@@ -1196,6 +1197,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
     TRACE("Stereo duplication %s\n", (device->Flags&DEVICE_DUPLICATE_STEREO)?"enabled":"disabled");
 
+    oldMode = SetMixerFPUMode();
     context = device->ContextList;
     while(context)
     {
@@ -1241,6 +1243,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         context = context->next;
     }
+    RestoreFPUMode(oldMode);
     UnlockDevice(device);
 
     return ALC_TRUE;

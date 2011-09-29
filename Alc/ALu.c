@@ -952,15 +952,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     int fpuState;
     ALuint i, c;
 
-#if defined(HAVE_FESETROUND)
-    fpuState = fegetround();
-    fesetround(FE_TOWARDZERO);
-#elif defined(HAVE__CONTROLFP)
-    fpuState = _controlfp(0, 0);
-    (void)_controlfp(_RC_CHOP, _MCW_RC);
-#else
-    (void)fpuState;
-#endif
+    fpuState = SetMixerFPUMode();
 
     while(size > 0)
     {
@@ -1098,11 +1090,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         size -= SamplesToDo;
     }
 
-#if defined(HAVE_FESETROUND)
-    fesetround(fpuState);
-#elif defined(HAVE__CONTROLFP)
-    _controlfp(fpuState, _MCW_RC);
-#endif
+    RestoreFPUMode(fpuState);
 }
 
 

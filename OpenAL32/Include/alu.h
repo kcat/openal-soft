@@ -195,6 +195,30 @@ static __inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat 
     return a0*mu*mu2 + a1*mu2 + a2*mu + a3;
 }
 
+
+static __inline int SetMixerFPUMode(void)
+{
+    int fpuState = 0;
+#if defined(HAVE_FESETROUND)
+    fpuState = fegetround();
+    fesetround(FE_TOWARDZERO);
+#elif defined(HAVE__CONTROLFP)
+    fpuState = _controlfp(0, 0);
+    (void)_controlfp(_RC_CHOP, _MCW_RC);
+#endif
+    return fpuState;
+}
+
+static __inline void RestoreFPUMode(int state)
+{
+#if defined(HAVE_FESETROUND)
+    fesetround(state);
+#elif defined(HAVE__CONTROLFP)
+    _controlfp(state, _MCW_RC);
+#endif
+}
+
+
 ALvoid aluInitPanning(ALCdevice *Device);
 ALint aluCart2LUTpos(ALfloat re, ALfloat im);
 

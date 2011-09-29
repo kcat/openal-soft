@@ -587,17 +587,9 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         ALeffectslot **slot, **slot_end;
         int fpuState;
 
-        LockContext(Context);
-#if defined(HAVE_FESETROUND)
-        fpuState = fegetround();
-        fesetround(FE_TOWARDZERO);
-#elif defined(HAVE__CONTROLFP)
-        fpuState = _controlfp(0, 0);
-        (void)_controlfp(_RC_CHOP, _MCW_RC);
-#else
-        (void)fpuState;
-#endif
+        fpuState = SetMixerFPUMode();
 
+        LockContext(Context);
         Context->DeferUpdates = AL_TRUE;
 
         /* Make sure all pending updates are performed */
@@ -630,11 +622,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         }
 
         UnlockContext(Context);
-#if defined(HAVE_FESETROUND)
-        fesetround(fpuState);
-#elif defined(HAVE__CONTROLFP)
-        _controlfp(fpuState, _MCW_RC);
-#endif
+        RestoreFPUMode(fpuState);
     }
 
     ALCcontext_DecRef(Context);

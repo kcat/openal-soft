@@ -560,6 +560,9 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
 
     if(State)
     {
+        int oldMode;
+        oldMode = SetMixerFPUMode();
+
         if(ALeffectState_DeviceUpdate(State, Context->Device) == AL_FALSE)
         {
             UnlockContext(Context);
@@ -579,6 +582,8 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
         EffectSlot->NeedsUpdate = AL_FALSE;
         ALeffectState_Update(EffectSlot->EffectState, Context, EffectSlot);
         UnlockContext(Context);
+
+        RestoreFPUMode(oldMode);
 
         ALeffectState_Destroy(State);
         State = NULL;

@@ -168,7 +168,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Params.Step = maxstep<<FRACTIONBITS;
             else
             {
-                ALSource->Params.Step = (ALint)(Pitch*FRACTIONONE);
+                ALSource->Params.Step = fastf2i(Pitch*FRACTIONONE);
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
             }
@@ -683,7 +683,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Params.Step = maxstep<<FRACTIONBITS;
             else
             {
-                ALSource->Params.Step = (ALint)(Pitch*FRACTIONONE);
+                ALSource->Params.Step = fastf2i(Pitch*FRACTIONONE);
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
             }
@@ -814,7 +814,7 @@ static __inline ALshort aluF2S(ALfloat val)
 {
     if(val > 1.0f) return 32767;
     if(val < -1.0f) return -32768;
-    return (ALint)(val*32767.0f);
+    return fastf2i(val*32767.0f);
 }
 static __inline ALushort aluF2US(ALfloat val)
 { return aluF2S(val)+32768; }

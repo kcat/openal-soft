@@ -72,7 +72,7 @@ static ALuint NumLoadedHrtfs = 0;
 static void CalcEvIndices(ALfloat ev, ALuint *evidx, ALfloat *evmu)
 {
     ev = (F_PI_2 + ev) * (ELEV_COUNT-1) / F_PI;
-    evidx[0] = (ALuint)ev;
+    evidx[0] = fastf2u(ev);
     evidx[1] = minu(evidx[0] + 1, ELEV_COUNT-1);
     *evmu = ev - evidx[0];
 }
@@ -83,7 +83,7 @@ static void CalcEvIndices(ALfloat ev, ALuint *evidx, ALfloat *evmu)
 static void CalcAzIndices(ALuint evidx, ALfloat az, ALuint *azidx, ALfloat *azmu)
 {
     az = (F_PI*2.0f + az) * azCount[evidx] / (F_PI*2.0f);
-    azidx[0] = (ALuint)az % azCount[evidx];
+    azidx[0] = fastf2u(az) % azCount[evidx];
     azidx[1] = (azidx[0] + 1) % azCount[evidx];
     *azmu = az - aluFloor(az);
 }
@@ -182,12 +182,12 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
     }
 
     // Calculate the HRIR delays using linear interpolation.
-    delays[0] = (ALuint)(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
-                              lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),
-                              mu[2]) * 65536.0f);
-    delays[1] = (ALuint)(lerp(lerp(Hrtf->delays[ridx[0]], Hrtf->delays[ridx[1]], mu[0]),
-                              lerp(Hrtf->delays[ridx[2]], Hrtf->delays[ridx[3]], mu[1]),
-                              mu[2]) * 65536.0f);
+    delays[0] = fastf2u(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
+                             lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),
+                             mu[2]) * 65536.0f);
+    delays[1] = fastf2u(lerp(lerp(Hrtf->delays[ridx[0]], Hrtf->delays[ridx[1]], mu[0]),
+                             lerp(Hrtf->delays[ridx[2]], Hrtf->delays[ridx[3]], mu[1]),
+                             mu[2]) * 65536.0f);
 }
 
 // Calculates the moving HRIR target coefficients, target delays, and
@@ -279,20 +279,20 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     left = (ALfloat)(delays[0] - (delayStep[0] * counter));
     right = (ALfloat)(delays[1] - (delayStep[1] * counter));
 
-    delays[0] = (ALuint)(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
-                              lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),
-                              mu[2]) * 65536.0f);
-    delays[1] = (ALuint)(lerp(lerp(Hrtf->delays[ridx[0]], Hrtf->delays[ridx[1]], mu[0]),
-                              lerp(Hrtf->delays[ridx[2]], Hrtf->delays[ridx[3]], mu[1]),
-                              mu[2]) * 65536.0f);
+    delays[0] = fastf2u(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
+                             lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),
+                             mu[2]) * 65536.0f);
+    delays[1] = fastf2u(lerp(lerp(Hrtf->delays[ridx[0]], Hrtf->delays[ridx[1]], mu[0]),
+                             lerp(Hrtf->delays[ridx[2]], Hrtf->delays[ridx[3]], mu[1]),
+                             mu[2]) * 65536.0f);
 
-    delayStep[0] = (ALint)(step * (delays[0] - left));
-    delayStep[1] = (ALint)(step * (delays[1] - right));
+    delayStep[0] = fastf2i(step * (delays[0] - left));
+    delayStep[1] = fastf2i(step * (delays[1] - right));
 
     // The stepping count is the number of samples necessary for the HRIR to
     // complete its transition.  The mixer will only apply stepping for this
     // many samples.
-    return (ALuint)delta;
+    return fastf2u(delta);
 }
 
 const struct Hrtf *GetHrtf(ALCdevice *device)

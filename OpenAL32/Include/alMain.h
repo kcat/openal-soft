@@ -465,6 +465,30 @@ static __inline ALuint NextPowerOf2(ALuint value)
     return powerOf2;
 }
 
+/* Fast float-to-int conversion. Assumes the FPU is already in round-to-zero
+ * mode. */
+static __inline ALint fastf2i(ALfloat f)
+{
+    ALint i;
+#if defined(_MSC_VER)
+    __asm fld f
+    __asm fistp i
+#elif defined(__GNUC__)
+    __asm__ __volatile__("flds %1\n\t"
+                         "fistpl %0\n\t"
+                         : "=m" (i)
+                         : "m" (f));
+#else
+    i = (ALint)f;
+#endif
+    return i;
+}
+
+/* Fast float-to-uint conversion. Assumes the FPU is already in round-to-zero
+ * mode. */
+static __inline ALuint fastf2u(ALfloat f)
+{ return fastf2i(f); }
+
 
 enum DevProbe {
     DEVICE_PROBE,

@@ -999,7 +999,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 for(c = 0;c < SamplesToDo;c++)
                 {
                     (*slot)->WetBuffer[c] += (*slot)->ClickRemoval[0];
-                    (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] / 256.0f;
+                    (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] * (1.0f/256.0f);
                 }
                 (*slot)->ClickRemoval[0] += (*slot)->PendingClicks[0];
                 (*slot)->PendingClicks[0] = 0.0f;
@@ -1026,7 +1026,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             for(i = 0;i < SamplesToDo;i++)
             {
                 device->DryBuffer[i][FRONT_CENTER] += device->ClickRemoval[FRONT_CENTER];
-                device->ClickRemoval[FRONT_CENTER] -= device->ClickRemoval[FRONT_CENTER] / 256.0f;
+                device->ClickRemoval[FRONT_CENTER] -= device->ClickRemoval[FRONT_CENTER] * (1.0f/256.0f);
             }
             device->ClickRemoval[FRONT_CENTER] += device->PendingClicks[FRONT_CENTER];
             device->PendingClicks[FRONT_CENTER] = 0.0f;
@@ -1039,7 +1039,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 for(c = 0;c < 2;c++)
                 {
                     device->DryBuffer[i][c] += device->ClickRemoval[c];
-                    device->ClickRemoval[c] -= device->ClickRemoval[c] / 256.0f;
+                    device->ClickRemoval[c] -= device->ClickRemoval[c] * (1.0f/256.0f);
                 }
             }
             for(c = 0;c < 2;c++)
@@ -1055,7 +1055,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 for(c = 0;c < MAXCHANNELS;c++)
                 {
                     device->DryBuffer[i][c] += device->ClickRemoval[c];
-                    device->ClickRemoval[c] -= device->ClickRemoval[c] / 256.0f;
+                    device->ClickRemoval[c] -= device->ClickRemoval[c] * (1.0f/256.0f);
                 }
             }
             for(c = 0;c < MAXCHANNELS;c++)

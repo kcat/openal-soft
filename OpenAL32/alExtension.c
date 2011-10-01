@@ -135,6 +135,8 @@ static const ALenums enumeration[] = {
     { "AL_FORMAT_61CHN_MULAW",                AL_FORMAT_61CHN_MULAW               },
     { "AL_FORMAT_71CHN_MULAW",                AL_FORMAT_71CHN_MULAW               },
     { "AL_FORMAT_REAR_MULAW",                 AL_FORMAT_REAR_MULAW                },
+    { "AL_FORMAT_MONO_ALAW_EXT",              AL_FORMAT_MONO_ALAW_EXT             },
+    { "AL_FORMAT_STEREO_ALAW_EXT",            AL_FORMAT_STEREO_ALAW_EXT           },
 
     // Internal Buffer Formats
     { "AL_MONO8",                             AL_MONO8                            },
@@ -178,6 +180,7 @@ static const ALenums enumeration[] = {
     { "AL_FLOAT",                             AL_FLOAT                            },
     { "AL_DOUBLE",                            AL_DOUBLE                           },
     { "AL_MULAW",                             AL_MULAW                            },
+    { "AL_ALAW",                              AL_ALAW                             },
     { "AL_IMA4",                              AL_IMA4                             },
     { "AL_BYTE3",                             AL_BYTE3                            },
     { "AL_UNSIGNED_BYTE3",                    AL_UNSIGNED_BYTE3                   },

@@ -1001,7 +1001,7 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
         if(IsDebuggerPresent())
             DebugBreak();
 #elif defined(SIGTRAP)
-        kill(getpid(), SIGTRAP);
+        raise(SIGTRAP);
 #endif
     }
 

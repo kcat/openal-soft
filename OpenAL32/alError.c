@@ -52,7 +52,7 @@ ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
         if(IsDebuggerPresent())
             DebugBreak();
 #elif defined(SIGTRAP)
-        kill(getpid(), SIGTRAP);
+        raise(SIGTRAP);
 #endif
     }
     CompExchangeInt(&Context->LastError, AL_NO_ERROR, errorCode);

@@ -844,9 +844,12 @@ AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pf
         {
         case AL_SEC_LENGTH:
             ReadLock(&pBuffer->lock);
-            *pflValue = (pBuffer->size /
-                         FrameSizeFromFmt(pBuffer->FmtChannels, pBuffer->FmtType)) /
-                        (ALfloat)pBuffer->Frequency;
+            if(pBuffer->size != 0)
+                *pflValue = (pBuffer->size /
+                             FrameSizeFromFmt(pBuffer->FmtChannels, pBuffer->FmtType)) /
+                            (ALfloat)pBuffer->Frequency;
+            else
+                *pflValue = 0.0f;
             ReadUnlock(&pBuffer->lock);
             break;
 
@@ -965,8 +968,11 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plVa
 
         case AL_SAMPLE_LENGTH:
             ReadLock(&pBuffer->lock);
-            *plValue = pBuffer->size /
-                       FrameSizeFromFmt(pBuffer->FmtChannels, pBuffer->FmtType);
+            if(pBuffer->size != 0)
+                *plValue = pBuffer->size /
+                           FrameSizeFromFmt(pBuffer->FmtChannels, pBuffer->FmtType);
+            else
+                *plValue = 0;
             ReadUnlock(&pBuffer->lock);
             break;
 

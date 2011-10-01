@@ -48,85 +48,109 @@ typedef struct ALverbState {
     // fragmentation and management code.
     ALfloat  *SampleBuffer;
     ALuint    TotalSamples;
+
     // Master effect low-pass filter (2 chained 1-pole filters).
     FILTER    LpFilter;
     ALfloat   LpHistory[2];
+
     struct {
         // Modulator delay line.
         DelayLine Delay;
+
         // The vibrato time is tracked with an index over a modulus-wrapped
         // range (in samples).
         ALuint    Index;
         ALuint    Range;
+
         // The depth of frequency change (also in samples) and its filter.
         ALfloat   Depth;
         ALfloat   Coeff;
         ALfloat   Filter;
     } Mod;
+
     // Initial effect delay.
     DelayLine Delay;
     // The tap points for the initial delay.  First tap goes to early
     // reflections, the last to late reverb.
     ALuint    DelayTap[2];
+
     struct {
         // Output gain for early reflections.
         ALfloat   Gain;
+
         // Early reflections are done with 4 delay lines.
         ALfloat   Coeff[4];
         DelayLine Delay[4];
         ALuint    Offset[4];
+
         // The gain for each output channel based on 3D panning (only for the
         // EAX path).
         ALfloat   PanGain[MAXCHANNELS];
     } Early;
+
     // Decorrelator delay line.
     DelayLine Decorrelator;
     // There are actually 4 decorrelator taps, but the first occurs at the
     // initial sample.
     ALuint    DecoTap[3];
+
     struct {
         // Output gain for late reverb.
         ALfloat   Gain;
+
         // Attenuation to compensate for the modal density and decay rate of
         // the late lines.
         ALfloat   DensityGain;
+
         // The feed-back and feed-forward all-pass coefficient.
         ALfloat   ApFeedCoeff;
+
         // Mixing matrix coefficient.
         ALfloat   MixCoeff;
+
         // Late reverb has 4 parallel all-pass filters.
         ALfloat   ApCoeff[4];
         DelayLine ApDelay[4];
         ALuint    ApOffset[4];
+
         // In addition to 4 cyclical delay lines.
         ALfloat   Coeff[4];
         DelayLine Delay[4];
         ALuint    Offset[4];
+
         // The cyclical delay lines are 1-pole low-pass filtered.
         ALfloat   LpCoeff[4];
         ALfloat   LpSample[4];
+
         // The gain for each output channel based on 3D panning (only for the
         // EAX path).
         ALfloat   PanGain[MAXCHANNELS];
     } Late;
+
     struct {
         // Attenuation to compensate for the modal density and decay rate of
         // the echo line.
         ALfloat   DensityGain;
+
         // Echo delay and all-pass lines.
         DelayLine Delay;
         DelayLine ApDelay;
+
         ALfloat   Coeff;
         ALfloat   ApFeedCoeff;
         ALfloat   ApCoeff;
+
         ALuint    Offset;
         ALuint    ApOffset;
+
         // The echo line is 1-pole low-pass filtered.
         ALfloat   LpCoeff;
         ALfloat   LpSample;
+
         // Echo mixing coefficients.
         ALfloat   MixCoeff[2];
     } Echo;
+
     // The current read offset for all delay lines.
     ALuint Offset;
 

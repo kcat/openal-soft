@@ -72,6 +72,7 @@ typedef struct ALbuffer
     ALsizei  size;
 
     ALsizei          Frequency;
+    ALenum           Format;
     enum FmtChannels FmtChannels;
     enum FmtType     FmtType;
 

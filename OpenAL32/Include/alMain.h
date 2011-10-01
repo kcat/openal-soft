@@ -98,6 +98,12 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
 #define AL_7POINT1_16                            0x1211
 #define AL_7POINT1_32F                           0x1212
 
+/* Buffer attributes */
+#define AL_INTERNAL_FORMAT                       0x2008
+#define AL_BYTE_LENGTH                           0x2009
+#define AL_SAMPLE_LENGTH                         0x200A
+#define AL_SEC_LENGTH                            0x200B
+
 typedef void (AL_APIENTRY*LPALBUFFERSAMPLESSOFT)(ALuint,ALuint,ALenum,ALsizei,ALenum,ALenum,const ALvoid*);
 typedef void (AL_APIENTRY*LPALBUFFERSUBSAMPLESSOFT)(ALuint,ALsizei,ALsizei,ALenum,ALenum,const ALvoid*);
 typedef void (AL_APIENTRY*LPALGETBUFFERSAMPLESSOFT)(ALuint,ALsizei,ALsizei,ALenum,ALenum,ALvoid*);

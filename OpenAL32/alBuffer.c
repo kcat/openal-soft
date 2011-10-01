@@ -828,6 +828,7 @@ AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pf
 {
     ALCcontext    *pContext;
     ALCdevice     *device;
+    ALbuffer      *pBuffer;
 
     pContext = GetContextRef();
     if(!pContext) return;
@@ -835,12 +836,20 @@ AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pf
     device = pContext->Device;
     if(!pflValue)
         alSetError(pContext, AL_INVALID_VALUE);
-    else if(LookupBuffer(device, buffer) == NULL)
+    else if((pBuffer=LookupBuffer(device, buffer)) == NULL)
         alSetError(pContext, AL_INVALID_NAME);
     else
     {
         switch(eParam)
         {
+        case AL_SEC_LENGTH:
+            ReadLock(&pBuffer->lock);
+            *pflValue = (pBuffer->size /
+                         FrameSizeFromFmt(pBuffer->FmtChannels, pBuffer->FmtType)) /
+                        (ALfloat)pBuffer->Frequency;
+            ReadUnlock(&pBuffer->lock);
+            break;
+
         default:
             alSetError(pContext, AL_INVALID_ENUM);
             break;
@@ -882,6 +891,13 @@ AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum eParam, ALfloat* pfl
 {
     ALCcontext    *pContext;
     ALCdevice     *device;
+
+    switch(eParam)
+    {
+    case AL_SEC_LENGTH:
+        alGetBufferf(buffer, eParam, pflValues);
+        return;
+    }
 
     pContext = GetContextRef();
     if(!pContext) return;
@@ -939,6 +955,21 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plVa
             *plValue = pBuffer->size;
             break;
 
+        case AL_INTERNAL_FORMAT:
+            *plValue = pBuffer->Format;
+            break;
+
+        case AL_BYTE_LENGTH:
+            *plValue = pBuffer->OriginalSize;
+            break;
+
+        case AL_SAMPLE_LENGTH:
+            ReadLock(&pBuffer->lock);
+            *plValue = pBuffer->size /
+                       FrameSizeFromFmt(pBuffer->FmtChannels, pBuffer->FmtType);
+            ReadUnlock(&pBuffer->lock);
+            break;
+
         default:
             alSetError(pContext, AL_INVALID_ENUM);
             break;
@@ -988,6 +1019,9 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
     case AL_BITS:
     case AL_CHANNELS:
     case AL_SIZE:
+    case AL_INTERNAL_FORMAT:
+    case AL_BYTE_LENGTH:
+    case AL_SAMPLE_LENGTH:
         alGetBufferi(buffer, eParam, plValues);
         return;
     }
@@ -2038,6 +2072,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALBuf->Frequency = freq;
     ALBuf->FmtChannels = DstChannels;
     ALBuf->FmtType = DstType;
+    ALBuf->Format = NewFormat;
 
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = (ALsizei)(newsize / NewChannels / NewBytes);

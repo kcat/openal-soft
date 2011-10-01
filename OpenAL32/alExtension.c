@@ -190,6 +190,10 @@ static const ALenums enumeration[] = {
     { "AL_BITS",                              AL_BITS                             },
     { "AL_CHANNELS",                          AL_CHANNELS                         },
     { "AL_SIZE",                              AL_SIZE                             },
+    { "AL_INTERNAL_FORMAT",                   AL_INTERNAL_FORMAT                  },
+    { "AL_BYTE_LENGTH",                       AL_BYTE_LENGTH                      },
+    { "AL_SAMPLE_LENGTH",                     AL_SAMPLE_LENGTH                    },
+    { "AL_SEC_LENGTH",                        AL_SEC_LENGTH                       },
 
     // Buffer States (not supported yet)
     { "AL_UNUSED",                            AL_UNUSED                           },

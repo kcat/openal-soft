@@ -579,7 +579,24 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                                    AirAbsorptionFactor*EffectiveDist);
     }
 
-    //3. Apply directional soundcones
+    if(WetGainAuto)
+    {
+        /* Apply a decay-time transformation to the wet path, based on the
+         * attenuation of the dry path.
+         *
+         * Using the approximate (effective) source to listener distance, the
+         * initial decay of the reverb effect is calculated and applied to the
+         * wet path.
+         */
+        for(i = 0;i < NumSends;i++)
+        {
+            if(DecayDistance[i] > 0.0f)
+                WetGain[i] *= aluPow(0.001f /* -60dB */,
+                                     EffectiveDist / DecayDistance[i]);
+        }
+    }
+
+    /* Calculate directional soundcones */
     Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * (180.0f/F_PI);
     if(Angle >= InnerAngle && Angle <= OuterAngle)
     {
@@ -624,23 +641,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         WetGain[i]   *= ALSource->Send[i].WetGain * ListenerGain;
         WetGainHF[i] *= ALSource->Send[i].WetGainHF;
-    }
-
-    if(WetGainAuto)
-    {
-        /* Apply a decay-time transformation to the wet path, based on the
-         * attenuation of the dry path.
-         *
-         * Using the approximate (effective) source to listener distance, the
-         * initial decay of the reverb effect is calculated and applied to the
-         * wet path.
-         */
-        for(i = 0;i < NumSends;i++)
-        {
-            if(DecayDistance[i] > 0.0f)
-                WetGain[i] *= aluPow(0.001f /* -60dB */,
-                                     EffectiveDist / DecayDistance[i]);
-        }
     }
 
     // Calculate Velocity

@@ -328,7 +328,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     /* Update filter coefficients. Calculations based on the I3DL2
      * spec. */
-    cw = aluCos(F_PI*2.0f * LOWPASSFREQCUTOFF / Frequency);
+    cw = aluCos(F_PI*2.0f * LOWPASSFREQREF / Frequency);
 
     /* We use two chained one-pole filters, so we need to take the
      * square root of the squared gain, which is the same as the base
@@ -797,7 +797,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALSource->Params.Send[i].WetGain = WetGain[i];
 
     /* Update filter coefficients. */
-    cw = aluCos(F_PI*2.0f * LOWPASSFREQCUTOFF / Frequency);
+    cw = aluCos(F_PI*2.0f * LOWPASSFREQREF / Frequency);
 
     ALSource->Params.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
     for(i = 0;i < NumSends;i++)

@@ -446,7 +446,7 @@ extern "C" {
 #define SPEEDOFSOUNDMETRESPERSEC   (343.3f)
 #define AIRABSORBGAINHF            (0.99426f) /* -0.05dB */
 
-#define LOWPASSFREQCUTOFF          (5000)
+#define LOWPASSFREQREF             (5000)
 
 
 struct Hrtf;

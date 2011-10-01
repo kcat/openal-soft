@@ -1112,7 +1112,7 @@ static ALvoid ReverbUpdate(ALeffectState *effect, ALCcontext *Context, const ALe
 
     // Calculate the master low-pass filter (from the master effect HF gain).
     if(isEAX) cw = CalcI3DL2HFreq(Slot->effect.Reverb.HFReference, frequency);
-    else cw = CalcI3DL2HFreq(LOWPASSFREQCUTOFF, frequency);
+    else cw = CalcI3DL2HFreq(LOWPASSFREQREF, frequency);
     // This is done with 2 chained 1-pole filters, so no need to square g.
     State->LpFilter.coeff = lpCoeffCalc(Slot->effect.Reverb.GainHF, cw);
 

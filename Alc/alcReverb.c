@@ -876,7 +876,7 @@ static __inline ALfloat CalcDampingCoeff(ALfloat hfRatio, ALfloat length, ALfloa
 // downswing will sound stronger than the upswing.
 static ALvoid UpdateModulator(ALfloat modTime, ALfloat modDepth, ALuint frequency, ALverbState *State)
 {
-    ALfloat length;
+    ALuint range;
 
     /* Modulation is calculated in two parts.
      *
@@ -886,15 +886,10 @@ static ALvoid UpdateModulator(ALfloat modTime, ALfloat modDepth, ALuint frequenc
      * minimum (1 sample) and when the timing changes, the index is rescaled
      * to the new range (to keep the sinus consistent).
      */
-    length = modTime * frequency;
-    if (length >= 1.0f) {
-       State->Mod.Index = fastf2u(State->Mod.Index * length /
-                                  State->Mod.Range);
-       State->Mod.Range = fastf2u(length);
-    } else {
-       State->Mod.Index = 0;
-       State->Mod.Range = 1;
-    }
+    range = maxu(fastf2u(modTime*frequency), 1);
+    State->Mod.Index = (ALuint)(State->Mod.Index * (ALuint64)range /
+                                State->Mod.Range);
+    State->Mod.Range = range;
 
     /* The modulation depth effects the amount of frequency change over the
      * range of the sinus.  It needs to be scaled by the modulation time so

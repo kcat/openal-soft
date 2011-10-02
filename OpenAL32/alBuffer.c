@@ -550,14 +550,14 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
     else
     {
         ALuint FrameSize;
-        ALuint FrameCount;
+        ALsizei FrameCount;
 
         WriteLock(&ALBuf->lock);
         FrameSize = FrameSizeFromFmt(ALBuf->FmtChannels, ALBuf->FmtType);
         FrameCount = ALBuf->size / FrameSize;
         if(channels != (ALenum)ALBuf->FmtChannels)
             alSetError(Context, AL_INVALID_ENUM);
-        else if((ALuint)offset > FrameCount || (ALuint)samples > FrameCount-offset)
+        else if(offset > FrameCount || samples > FrameCount-offset)
             alSetError(Context, AL_INVALID_VALUE);
         else if(type == UserFmtIMA4 && (samples%65) != 0)
             alSetError(Context, AL_INVALID_VALUE);
@@ -598,14 +598,14 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
     else
     {
         ALuint FrameSize;
-        ALuint FrameCount;
+        ALsizei FrameCount;
 
         ReadLock(&ALBuf->lock);
         FrameSize = FrameSizeFromFmt(ALBuf->FmtChannels, ALBuf->FmtType);
         FrameCount = ALBuf->size / FrameSize;
         if(channels != (ALenum)ALBuf->FmtChannels)
             alSetError(Context, AL_INVALID_ENUM);
-        else if((ALuint)offset > FrameCount || (ALuint)samples > FrameCount-offset)
+        else if(offset > FrameCount || samples > FrameCount-offset)
             alSetError(Context, AL_INVALID_VALUE);
         else if(type == UserFmtIMA4 && (samples%65) != 0)
             alSetError(Context, AL_INVALID_VALUE);

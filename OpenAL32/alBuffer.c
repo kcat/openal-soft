@@ -446,13 +446,21 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
         alSetError(Context, AL_INVALID_ENUM);
     else
     {
+        ALuint original_align;
+
         WriteLock(&ALBuf->lock);
+
+        original_align = ((ALBuf->OriginalType == UserFmtIMA4) ?
+                          (ChannelsFromUserFmt(ALBuf->OriginalChannels)*36) :
+                          FrameSizeFromUserFmt(ALBuf->OriginalChannels,
+                                               ALBuf->OriginalType));
+
         if(SrcChannels != ALBuf->OriginalChannels || SrcType != ALBuf->OriginalType)
             alSetError(Context, AL_INVALID_ENUM);
         else if(offset > ALBuf->OriginalSize ||
                 length > ALBuf->OriginalSize-offset ||
-                (offset%ALBuf->OriginalAlign) != 0 ||
-                (length%ALBuf->OriginalAlign) != 0)
+                (offset%original_align) != 0 ||
+                (length%original_align) != 0)
             alSetError(Context, AL_INVALID_VALUE);
         else
         {
@@ -464,7 +472,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
                 offset /= 36;
                 offset *= 65;
                 offset *= Bytes;
-                length /= ALBuf->OriginalAlign;
+                length /= original_align;
             }
             else
             {
@@ -2030,7 +2038,6 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
             ALBuf->OriginalChannels = SrcChannels;
             ALBuf->OriginalType     = SrcType;
             ALBuf->OriginalSize     = frames * 36 * OrigChannels;
-            ALBuf->OriginalAlign    = 36 * OrigChannels;
         }
     }
     else
@@ -2064,7 +2071,6 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
             ALBuf->OriginalChannels = SrcChannels;
             ALBuf->OriginalType     = SrcType;
             ALBuf->OriginalSize     = frames * OrigBytes * OrigChannels;
-            ALBuf->OriginalAlign    = OrigBytes * OrigChannels;
         }
     }
 
@@ -2073,7 +2079,6 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         ALBuf->OriginalChannels = DstChannels;
         ALBuf->OriginalType     = DstType;
         ALBuf->OriginalSize     = frames * NewBytes * NewChannels;
-        ALBuf->OriginalAlign    = NewBytes * NewChannels;
     }
     ALBuf->Frequency = freq;
     ALBuf->FmtChannels = DstChannels;

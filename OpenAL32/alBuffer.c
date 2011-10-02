@@ -493,7 +493,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
 
 
 AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
-  ALuint samplerate, ALenum internalformat, ALsizei frames,
+  ALuint samplerate, ALenum internalformat, ALsizei samples,
   ALenum channels, ALenum type, const ALvoid *data)
 {
     ALCcontext *Context;
@@ -507,7 +507,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
     device = Context->Device;
     if((ALBuf=LookupBuffer(device, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
-    else if(frames < 0 || samplerate == 0)
+    else if(samples < 0 || samplerate == 0)
         alSetError(Context, AL_INVALID_VALUE);
     else if(IsValidType(type) == AL_FALSE || IsValidChannels(channels) == AL_FALSE)
         alSetError(Context, AL_INVALID_ENUM);
@@ -516,11 +516,11 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
         err = AL_NO_ERROR;
         if(type == UserFmtIMA4)
         {
-            if((frames%65) == 0) frames /= 65;
+            if((samples%65) == 0) samples /= 65;
             else err = AL_INVALID_VALUE;
         }
         if(err == AL_NO_ERROR)
-            err = LoadData(ALBuf, samplerate, internalformat, frames,
+            err = LoadData(ALBuf, samplerate, internalformat, samples,
                            channels, type, data, AL_FALSE);
         if(err != AL_NO_ERROR)
             alSetError(Context, err);
@@ -530,7 +530,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
 }
 
 AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
-  ALsizei offset, ALsizei frames,
+  ALsizei offset, ALsizei samples,
   ALenum channels, ALenum type, const ALvoid *data)
 {
     ALCcontext *Context;
@@ -543,7 +543,7 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
     device = Context->Device;
     if((ALBuf=LookupBuffer(device, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
-    else if(frames < 0 || offset < 0 || (frames > 0 && data == NULL))
+    else if(samples < 0 || offset < 0 || (samples > 0 && data == NULL))
         alSetError(Context, AL_INVALID_VALUE);
     else if(IsValidType(type) == AL_FALSE)
         alSetError(Context, AL_INVALID_ENUM);
@@ -557,19 +557,19 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
         FrameCount = ALBuf->size / FrameSize;
         if(channels != (ALenum)ALBuf->FmtChannels)
             alSetError(Context, AL_INVALID_ENUM);
-        else if((ALuint)offset > FrameCount || (ALuint)frames > FrameCount-offset)
+        else if((ALuint)offset > FrameCount || (ALuint)samples > FrameCount-offset)
             alSetError(Context, AL_INVALID_VALUE);
-        else if(type == UserFmtIMA4 && (frames%65) != 0)
+        else if(type == UserFmtIMA4 && (samples%65) != 0)
             alSetError(Context, AL_INVALID_VALUE);
         else
         {
             /* offset -> byte offset */
             offset *= FrameSize;
-            /* frames -> IMA4 block count */
-            if(type == UserFmtIMA4) frames /= 65;
+            /* samples -> IMA4 block count */
+            if(type == UserFmtIMA4) samples /= 65;
             ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
                         data, type,
-                        ChannelsFromFmt(ALBuf->FmtChannels), frames);
+                        ChannelsFromFmt(ALBuf->FmtChannels), samples);
         }
         WriteUnlock(&ALBuf->lock);
     }
@@ -578,7 +578,7 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
 }
 
 AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
-  ALsizei offset, ALsizei frames,
+  ALsizei offset, ALsizei samples,
   ALenum channels, ALenum type, ALvoid *data)
 {
     ALCcontext *Context;
@@ -591,7 +591,7 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
     device = Context->Device;
     if((ALBuf=LookupBuffer(device, buffer)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
-    else if(frames < 0 || offset < 0 || (frames > 0 && data == NULL))
+    else if(samples < 0 || offset < 0 || (samples > 0 && data == NULL))
         alSetError(Context, AL_INVALID_VALUE);
     else if(IsValidType(type) == AL_FALSE)
         alSetError(Context, AL_INVALID_ENUM);
@@ -605,19 +605,19 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
         FrameCount = ALBuf->size / FrameSize;
         if(channels != (ALenum)ALBuf->FmtChannels)
             alSetError(Context, AL_INVALID_ENUM);
-        else if((ALuint)offset > FrameCount || (ALuint)frames > FrameCount-offset)
+        else if((ALuint)offset > FrameCount || (ALuint)samples > FrameCount-offset)
             alSetError(Context, AL_INVALID_VALUE);
-        else if(type == UserFmtIMA4 && (frames%65) != 0)
+        else if(type == UserFmtIMA4 && (samples%65) != 0)
             alSetError(Context, AL_INVALID_VALUE);
         else
         {
             /* offset -> byte offset */
             offset *= FrameSize;
-            /* frames -> IMA4 block count */
-            if(type == UserFmtIMA4) frames /= 65;
+            /* samples -> IMA4 block count */
+            if(type == UserFmtIMA4) samples /= 65;
             ConvertData(data, type,
                         &((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
-                        ChannelsFromFmt(ALBuf->FmtChannels), frames);
+                        ChannelsFromFmt(ALBuf->FmtChannels), samples);
         }
         ReadUnlock(&ALBuf->lock);
     }

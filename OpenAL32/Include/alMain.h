@@ -110,13 +110,13 @@ typedef void (AL_APIENTRY*LPALGETBUFFERSAMPLESSOFT)(ALuint,ALsizei,ALsizei,ALenu
 typedef ALboolean (AL_APIENTRY*LPALISBUFFERFORMATSUPPORTEDSOFT)(ALenum);
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
-    ALuint samplerate, ALenum internalformat, ALsizei frames,
+    ALuint samplerate, ALenum internalformat, ALsizei samples,
     ALenum channels, ALenum type, const ALvoid *data);
 AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
-    ALsizei offset, ALsizei frames,
+    ALsizei offset, ALsizei samples,
     ALenum channels, ALenum type, const ALvoid *data);
 AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
-    ALsizei offset, ALsizei frames,
+    ALsizei offset, ALsizei samples,
     ALenum channels, ALenum type, ALvoid *data);
 AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 #endif

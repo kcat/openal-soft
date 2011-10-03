@@ -161,15 +161,15 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
     // coefficients if gain is too low.
     if(gain > 0.0001f)
     {
-        ALdouble scale = gain * (1.0/32767.0);
+        gain *= 1.0f/32767.0f;
         for(i = 0;i < HRIR_LENGTH;i++)
         {
             coeffs[i][0] = lerp(lerp(Hrtf->coeffs[lidx[0]][i], Hrtf->coeffs[lidx[1]][i], mu[0]),
                                 lerp(Hrtf->coeffs[lidx[2]][i], Hrtf->coeffs[lidx[3]][i], mu[1]),
-                                mu[2]) * scale;
+                                mu[2]) * gain;
             coeffs[i][1] = lerp(lerp(Hrtf->coeffs[ridx[0]][i], Hrtf->coeffs[ridx[1]][i], mu[0]),
                                 lerp(Hrtf->coeffs[ridx[2]][i], Hrtf->coeffs[ridx[3]][i], mu[1]),
-                                mu[2]) * scale;
+                                mu[2]) * gain;
         }
     }
     else
@@ -241,7 +241,7 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     // coefficients.
     if(gain > 0.0001f)
     {
-        ALdouble scale = gain * (1.0/32767.0);
+        gain *= 1.0f/32767.0f;
         for(i = 0;i < HRIR_LENGTH;i++)
         {
             left = coeffs[i][0] - (coeffStep[i][0] * counter);
@@ -249,10 +249,10 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 
             coeffs[i][0] = lerp(lerp(Hrtf->coeffs[lidx[0]][i], Hrtf->coeffs[lidx[1]][i], mu[0]),
                                 lerp(Hrtf->coeffs[lidx[2]][i], Hrtf->coeffs[lidx[3]][i], mu[1]),
-                                mu[2]) * scale;
+                                mu[2]) * gain;
             coeffs[i][1] = lerp(lerp(Hrtf->coeffs[ridx[0]][i], Hrtf->coeffs[ridx[1]][i], mu[0]),
                                 lerp(Hrtf->coeffs[ridx[2]][i], Hrtf->coeffs[ridx[3]][i], mu[1]),
-                                mu[2]) * scale;
+                                mu[2]) * gain;
 
             coeffStep[i][0] = step * (coeffs[i][0] - left);
             coeffStep[i][1] = step * (coeffs[i][1] - right);

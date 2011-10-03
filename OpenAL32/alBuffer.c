@@ -550,14 +550,12 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
     else
     {
         ALuint FrameSize;
-        ALsizei FrameCount;
 
         WriteLock(&ALBuf->lock);
         FrameSize = FrameSizeFromFmt(ALBuf->FmtChannels, ALBuf->FmtType);
-        FrameCount = ALBuf->size / FrameSize;
         if(channels != (ALenum)ALBuf->FmtChannels)
             alSetError(Context, AL_INVALID_ENUM);
-        else if(offset > FrameCount || samples > FrameCount-offset)
+        else if(offset > ALBuf->SampleLen || samples > ALBuf->SampleLen-offset)
             alSetError(Context, AL_INVALID_VALUE);
         else if(type == UserFmtIMA4 && (samples%65) != 0)
             alSetError(Context, AL_INVALID_VALUE);
@@ -598,14 +596,12 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
     else
     {
         ALuint FrameSize;
-        ALsizei FrameCount;
 
         ReadLock(&ALBuf->lock);
         FrameSize = FrameSizeFromFmt(ALBuf->FmtChannels, ALBuf->FmtType);
-        FrameCount = ALBuf->size / FrameSize;
         if(channels != (ALenum)ALBuf->FmtChannels)
             alSetError(Context, AL_INVALID_ENUM);
-        else if(offset > FrameCount || samples > FrameCount-offset)
+        else if(offset > ALBuf->SampleLen || samples > ALBuf->SampleLen-offset)
             alSetError(Context, AL_INVALID_VALUE);
         else if(type == UserFmtIMA4 && (samples%65) != 0)
             alSetError(Context, AL_INVALID_VALUE);
@@ -804,20 +800,13 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum eParam, const ALint* pl
             WriteLock(&ALBuf->lock);
             if(ALBuf->ref != 0)
                 alSetError(pContext, AL_INVALID_OPERATION);
-            else if(plValues[0] < 0 || plValues[1] < 0 ||
-                    plValues[0] >= plValues[1] || ALBuf->size == 0)
+            else if(plValues[0] >= plValues[1] || plValues[0] < 0 ||
+                    plValues[1] > ALBuf->SampleLen)
                 alSetError(pContext, AL_INVALID_VALUE);
             else
             {
-                ALint maxlen = ALBuf->size /
-                               FrameSizeFromFmt(ALBuf->FmtChannels, ALBuf->FmtType);
-                if(plValues[0] > maxlen || plValues[1] > maxlen)
-                    alSetError(pContext, AL_INVALID_VALUE);
-                else
-                {
-                    ALBuf->LoopStart = plValues[0];
-                    ALBuf->LoopEnd = plValues[1];
-                }
+                ALBuf->LoopStart = plValues[0];
+                ALBuf->LoopEnd = plValues[1];
             }
             WriteUnlock(&ALBuf->lock);
             break;
@@ -852,10 +841,8 @@ AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pf
         {
         case AL_SEC_LENGTH:
             ReadLock(&pBuffer->lock);
-            if(pBuffer->size != 0)
-                *pflValue = (pBuffer->size /
-                             FrameSizeFromFmt(pBuffer->FmtChannels, pBuffer->FmtType)) /
-                            (ALfloat)pBuffer->Frequency;
+            if(pBuffer->SampleLen != 0)
+                *pflValue = pBuffer->SampleLen / (ALfloat)pBuffer->Frequency;
             else
                 *pflValue = 0.0f;
             ReadUnlock(&pBuffer->lock);
@@ -963,7 +950,10 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plVa
             break;
 
         case AL_SIZE:
-            *plValue = pBuffer->size;
+            ReadLock(&pBuffer->lock);
+            *plValue = pBuffer->SampleLen *
+                       FrameSizeFromFmt(pBuffer->FmtChannels, pBuffer->FmtType);
+            ReadUnlock(&pBuffer->lock);
             break;
 
         case AL_INTERNAL_FORMAT:
@@ -975,13 +965,7 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plVa
             break;
 
         case AL_SAMPLE_LENGTH:
-            ReadLock(&pBuffer->lock);
-            if(pBuffer->size != 0)
-                *plValue = pBuffer->size /
-                           FrameSizeFromFmt(pBuffer->FmtChannels, pBuffer->FmtType);
-            else
-                *plValue = 0;
-            ReadUnlock(&pBuffer->lock);
+            *plValue = pBuffer->SampleLen;
             break;
 
         default:
@@ -2028,7 +2012,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
             return AL_OUT_OF_MEMORY;
         }
         ALBuf->data = temp;
-        ALBuf->size = (ALsizei)newsize;
+        ALBuf->SampleLen = frames*65;
 
         if(data != NULL)
             ConvertData(ALBuf->data, DstType, data, SrcType, NewChannels, frames);
@@ -2061,7 +2045,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
             return AL_OUT_OF_MEMORY;
         }
         ALBuf->data = temp;
-        ALBuf->size = (ALsizei)newsize;
+        ALBuf->SampleLen = frames;
 
         if(data != NULL)
             ConvertData(ALBuf->data, DstType, data, SrcType, NewChannels, frames);
@@ -2086,7 +2070,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALBuf->Format = NewFormat;
 
     ALBuf->LoopStart = 0;
-    ALBuf->LoopEnd = (ALsizei)(newsize / NewChannels / NewBytes);
+    ALBuf->LoopEnd = ALBuf->SampleLen;
 
     WriteUnlock(&ALBuf->lock);
     return AL_NO_ERROR;

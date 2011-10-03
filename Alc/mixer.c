@@ -622,7 +622,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
                 /* Copy what's left to play in the source buffer, and clear the
                  * rest of the temp buffer */
-                DataSize = ALBuffer->size/FrameSize - pos;
+                DataSize = ALBuffer->SampleLen - pos;
                 DataSize = minu(BufferSize, DataSize);
 
                 memcpy(&SrcData[SrcDataSize*FrameSize], &Data[pos*FrameSize], DataSize*FrameSize);
@@ -715,12 +715,12 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
                     if(BufferListIter->buffer)
                     {
-                        if((ALuint)BufferListIter->buffer->size/FrameSize > pos)
+                        if((ALuint)BufferListIter->buffer->SampleLen > pos)
                         {
-                            pos = BufferListIter->buffer->size/FrameSize - pos;
+                            pos = BufferListIter->buffer->SampleLen - pos;
                             break;
                         }
-                        pos -= BufferListIter->buffer->size/FrameSize;
+                        pos -= BufferListIter->buffer->SampleLen;
                     }
                 }
             }
@@ -731,7 +731,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 if((ALBuffer=BufferListIter->buffer) != NULL)
                 {
                     const ALubyte *Data = ALBuffer->data;
-                    ALuint DataSize = ALBuffer->size/FrameSize;
+                    ALuint DataSize = ALBuffer->SampleLen;
 
                     /* Skip the data already played */
                     if(DataSize <= pos)
@@ -785,7 +785,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
             if((ALBuffer=BufferListItem->buffer) != NULL)
             {
-                DataSize = ALBuffer->size / FrameSize;
+                DataSize = ALBuffer->SampleLen;
                 LoopStart = ALBuffer->LoopStart;
                 LoopEnd = ALBuffer->LoopEnd;
                 if(LoopEnd > DataPosInt)

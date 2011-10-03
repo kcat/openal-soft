@@ -48,7 +48,7 @@ const ALsizei ResamplerPrePadding[RESAMPLER_MAX] = {
 
 static ALvoid InitSourceParams(ALsource *Source);
 static ALvoid GetSourceOffset(ALsource *Source, ALenum eName, ALdouble *Offsets, ALdouble updateLen);
-static ALint GetByteOffset(ALsource *Source);
+static ALint GetSampleOffset(ALsource *Source);
 
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
@@ -1866,7 +1866,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         BufferList = Source->queue;
         while(BufferList)
         {
-            if(BufferList->buffer != NULL && BufferList->buffer->size)
+            if(BufferList->buffer != NULL && BufferList->buffer->SampleLen)
                 break;
             BufferList = BufferList->next;
         }
@@ -1960,11 +1960,9 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
 {
     const ALbufferlistitem *BufferList;
     const ALbuffer         *Buffer = NULL;
-    enum UserFmtType OriginalType;
-    ALsizei BufferFreq;
-    ALint   Channels, Bytes;
+    ALuint  BufferFreq = 0;
     ALuint  readPos, writePos;
-    ALuint  TotalBufferDataSize;
+    ALuint  totalBufferLen;
     ALuint  i;
 
     // Find the first non-NULL Buffer in the Queue
@@ -1974,6 +1972,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
         if(BufferList->buffer)
         {
             Buffer = BufferList->buffer;
+            BufferFreq = Buffer->Frequency;
             break;
         }
         BufferList = BufferList->next;
@@ -1986,64 +1985,58 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
         return;
     }
 
-    // Get Current Buffer Size and frequency (in milliseconds)
-    BufferFreq = Buffer->Frequency;
-    OriginalType = Buffer->OriginalType;
-    Channels = ChannelsFromFmt(Buffer->FmtChannels);
-    Bytes = BytesFromFmt(Buffer->FmtType);
-
-    // Get Current BytesPlayed (NOTE : This is the byte offset into the *current* buffer)
-    readPos = Source->position * Channels * Bytes;
-    // Add byte length of any processed buffers in the queue
-    TotalBufferDataSize = 0;
+    // Get Current SamplesPlayed (NOTE : This is the offset into the *current* buffer)
+    readPos = Source->position;
+    // Add length of any processed buffers in the queue
+    totalBufferLen = 0;
     BufferList = Source->queue;
     for(i = 0;BufferList;i++)
     {
         if(BufferList->buffer)
         {
             if(i < Source->BuffersPlayed)
-                readPos += BufferList->buffer->size;
-            TotalBufferDataSize += BufferList->buffer->size;
+                readPos += BufferList->buffer->SampleLen;
+            totalBufferLen += BufferList->buffer->SampleLen;
         }
         BufferList = BufferList->next;
     }
     if(Source->state == AL_PLAYING)
-        writePos = readPos + ((ALuint)(updateLen*BufferFreq) * Channels * Bytes);
+        writePos = readPos + (ALuint)(updateLen*BufferFreq);
     else
         writePos = readPos;
 
     if(Source->bLooping)
     {
-        readPos %= TotalBufferDataSize;
-        writePos %= TotalBufferDataSize;
+        readPos %= totalBufferLen;
+        writePos %= totalBufferLen;
     }
     else
     {
         // Wrap positions back to 0
-        if(readPos >= TotalBufferDataSize)
+        if(readPos >= totalBufferLen)
             readPos = 0;
-        if(writePos >= TotalBufferDataSize)
+        if(writePos >= totalBufferLen)
             writePos = 0;
     }
 
     switch(name)
     {
         case AL_SEC_OFFSET:
-            offset[0] = (ALdouble)readPos / (Channels * Bytes * BufferFreq);
-            offset[1] = (ALdouble)writePos / (Channels * Bytes * BufferFreq);
+            offset[0] = (ALdouble)readPos / Buffer->Frequency;
+            offset[1] = (ALdouble)writePos / Buffer->Frequency;
             break;
         case AL_SAMPLE_OFFSET:
         case AL_SAMPLE_RW_OFFSETS_SOFT:
-            offset[0] = (ALdouble)(readPos / (Channels * Bytes));
-            offset[1] = (ALdouble)(writePos / (Channels * Bytes));
+            offset[0] = (ALdouble)readPos;
+            offset[1] = (ALdouble)writePos;
             break;
         case AL_BYTE_OFFSET:
         case AL_BYTE_RW_OFFSETS_SOFT:
             // Take into account the original format of the Buffer
-            if(OriginalType == UserFmtIMA4)
+            if(Buffer->OriginalType == UserFmtIMA4)
             {
-                ALuint FrameBlockSize = 65 * Bytes * Channels;
-                ALuint BlockSize = 36 * Channels;
+                ALuint BlockSize = 36 * ChannelsFromFmt(Buffer->FmtChannels);
+                ALuint FrameBlockSize = 65;
 
                 // Round down to nearest ADPCM block
                 offset[0] = (ALdouble)(readPos / FrameBlockSize * BlockSize);
@@ -2058,9 +2051,9 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
             }
             else
             {
-                ALuint OrigBytes = BytesFromUserFmt(OriginalType);
-                offset[0] = (ALdouble)(readPos / Bytes * OrigBytes);
-                offset[1] = (ALdouble)(writePos / Bytes * OrigBytes);
+                ALuint FrameSize = FrameSizeFromUserFmt(Buffer->OriginalChannels, Buffer->OriginalType);
+                offset[0] = (ALdouble)(readPos * FrameSize);
+                offset[1] = (ALdouble)(writePos * FrameSize);
             }
             break;
     }
@@ -2077,45 +2070,44 @@ ALboolean ApplyOffset(ALsource *Source)
 {
     const ALbufferlistitem *BufferList;
     const ALbuffer         *Buffer;
-    ALint lBufferSize, lTotalBufferSize;
-    ALint BuffersPlayed;
-    ALint lByteOffset;
+    ALint bufferLen, totalBufferLen;
+    ALint buffersPlayed;
+    ALint offset;
 
     // Get true byte offset
-    lByteOffset = GetByteOffset(Source);
+    offset = GetSampleOffset(Source);
 
     // If the offset is invalid, don't apply it
-    if(lByteOffset == -1)
+    if(offset == -1)
         return AL_FALSE;
 
     // Sort out the queue (pending and processed states)
     BufferList = Source->queue;
-    lTotalBufferSize = 0;
-    BuffersPlayed = 0;
+    totalBufferLen = 0;
+    buffersPlayed = 0;
 
     while(BufferList)
     {
         Buffer = BufferList->buffer;
-        lBufferSize = Buffer ? Buffer->size : 0;
+        bufferLen = Buffer ? Buffer->SampleLen : 0;
 
-        if(lBufferSize <= lByteOffset-lTotalBufferSize)
+        if(bufferLen <= offset-totalBufferLen)
         {
             // Offset is past this buffer so increment BuffersPlayed
-            BuffersPlayed++;
+            buffersPlayed++;
         }
-        else if(lTotalBufferSize <= lByteOffset)
+        else if(totalBufferLen <= offset)
         {
             // Offset is within this buffer
-            Source->BuffersPlayed = BuffersPlayed;
+            Source->BuffersPlayed = buffersPlayed;
 
             // SW Mixer Positions are in Samples
-            Source->position = (lByteOffset - lTotalBufferSize) /
-                                FrameSizeFromFmt(Buffer->FmtChannels, Buffer->FmtType);
+            Source->position = offset - totalBufferLen;
             return AL_TRUE;
         }
 
         // Increment the TotalBufferSize
-        lTotalBufferSize += lBufferSize;
+        totalBufferLen += bufferLen;
 
         // Move on to next buffer in the Queue
         BufferList = BufferList->next;
@@ -2126,17 +2118,17 @@ ALboolean ApplyOffset(ALsource *Source)
 
 
 /*
-    GetByteOffset
+    GetSampleOffset
 
-    Returns the 'true' byte offset into the Source's queue (from the Sample, Byte or Millisecond
-    offset supplied by the application).   This takes into account the fact that the buffer format
-    may have been modifed by AL (e.g 8bit samples are converted to float)
+    Returns the sample offset into the Source's queue (from the Sample, Byte or Millisecond offset
+    supplied by the application). This takes into account the fact that the buffer format may have
+    been modifed by AL
 */
-static ALint GetByteOffset(ALsource *Source)
+static ALint GetSampleOffset(ALsource *Source)
 {
     const ALbuffer *Buffer = NULL;
     const ALbufferlistitem *BufferList;
-    ALint ByteOffset = -1;
+    ALint Offset = -1;
 
     // Find the first non-NULL Buffer in the Queue
     BufferList = Source->queue;
@@ -2161,33 +2153,31 @@ static ALint GetByteOffset(ALsource *Source)
     {
     case AL_BYTE_OFFSET:
         // Take into consideration the original format
-        ByteOffset = Source->lOffset;
+        Offset = Source->lOffset;
         if(Buffer->OriginalType == UserFmtIMA4)
         {
             // Round down to nearest ADPCM block
-            ByteOffset /= 36 * ChannelsFromUserFmt(Buffer->OriginalChannels);
+            Offset /= 36 * ChannelsFromUserFmt(Buffer->OriginalChannels);
             // Multiply by compression rate (65 sample frames per block)
-            ByteOffset *= 65;
+            Offset *= 65;
         }
         else
-            ByteOffset /= FrameSizeFromUserFmt(Buffer->OriginalChannels, Buffer->OriginalType);
-        ByteOffset *= FrameSizeFromFmt(Buffer->FmtChannels, Buffer->FmtType);
+            Offset /= FrameSizeFromUserFmt(Buffer->OriginalChannels, Buffer->OriginalType);
         break;
 
     case AL_SAMPLE_OFFSET:
-        ByteOffset = Source->lOffset * FrameSizeFromFmt(Buffer->FmtChannels, Buffer->FmtType);
+        Offset = Source->lOffset;
         break;
 
     case AL_SEC_OFFSET:
         // Note - lOffset is internally stored as Milliseconds
-        ByteOffset  = (ALint)(Source->lOffset / 1000.0 * Buffer->Frequency);
-        ByteOffset *= FrameSizeFromFmt(Buffer->FmtChannels, Buffer->FmtType);
+        Offset = (ALint)(Source->lOffset / 1000.0 * Buffer->Frequency);
         break;
     }
     // Clear Offset
     Source->lOffset = -1;
 
-    return ByteOffset;
+    return Offset;
 }
 
 

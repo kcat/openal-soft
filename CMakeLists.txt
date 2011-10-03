@@ -182,7 +182,7 @@ IF(WIN32)
 ELSE()
     SET(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
     # Yes GCC, really don't accept visibility modes you don't support
-    SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS} -Werror")
+    SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS} -Wattributes -Werror")
 
     CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"protected\")));
                              int main() {return 0;}" HAVE_GCC_PROTECTED_VISIBILITY)

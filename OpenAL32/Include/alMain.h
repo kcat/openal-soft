@@ -481,7 +481,7 @@ static __inline ALuint NextPowerOf2(ALuint value)
 static __inline ALint fastf2i(ALfloat f)
 {
     ALint i;
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(_WIN64)
     __asm fld f
     __asm fistp i
 #elif defined(__GNUC__)

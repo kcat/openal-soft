@@ -174,19 +174,16 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             }
 
             Channels = ALBuffer->FmtChannels;
-
-            if(ALSource->VirtualChannels && (Device->Flags&DEVICE_USE_HRTF))
-                ALSource->Params.DoMix = SelectHrtfMixer(ALBuffer,
-                       (ALSource->Params.Step==FRACTIONONE) ? POINT_RESAMPLER :
-                                                              Resampler);
-            else
-                ALSource->Params.DoMix = SelectMixer(ALBuffer,
-                       (ALSource->Params.Step==FRACTIONONE) ? POINT_RESAMPLER :
-                                                              Resampler);
             break;
         }
         BufferListItem = BufferListItem->next;
     }
+    if(ALSource->VirtualChannels && (Device->Flags&DEVICE_USE_HRTF))
+        ALSource->Params.DoMix = SelectHrtfMixer((ALSource->Params.Step==FRACTIONONE) ?
+                                                 POINT_RESAMPLER : Resampler);
+    else
+        ALSource->Params.DoMix = SelectMixer((ALSource->Params.Step==FRACTIONONE) ?
+                                             POINT_RESAMPLER : Resampler);
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
@@ -688,18 +685,16 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                     ALSource->Params.Step = 1;
             }
 
-            if((Device->Flags&DEVICE_USE_HRTF))
-                ALSource->Params.DoMix = SelectHrtfMixer(ALBuffer,
-                       (ALSource->Params.Step==FRACTIONONE) ? POINT_RESAMPLER :
-                                                              Resampler);
-            else
-                ALSource->Params.DoMix = SelectMixer(ALBuffer,
-                       (ALSource->Params.Step==FRACTIONONE) ? POINT_RESAMPLER :
-                                                              Resampler);
             break;
         }
         BufferListItem = BufferListItem->next;
     }
+    if((Device->Flags&DEVICE_USE_HRTF))
+        ALSource->Params.DoMix = SelectHrtfMixer((ALSource->Params.Step==FRACTIONONE) ?
+                                                 POINT_RESAMPLER : Resampler);
+    else
+        ALSource->Params.DoMix = SelectMixer((ALSource->Params.Step==FRACTIONONE) ?
+                                             POINT_RESAMPLER : Resampler);
 
     if((Device->Flags&DEVICE_USE_HRTF))
     {

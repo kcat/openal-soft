@@ -435,35 +435,16 @@ DECL_TEMPLATE(ALfloat, cubic32)
 #undef DECL_TEMPLATE
 
 
-#define DECL_TEMPLATE(sampler)                                                \
-static MixerFunc Select_##sampler(enum FmtType FmtType)                       \
-{                                                                             \
-    switch(FmtType)                                                           \
-    {                                                                         \
-    case FmtByte:                                                             \
-    case FmtShort:                                                            \
-    case FmtFloat:                                                            \
-        return Mix_ALfloat_##sampler##32;                                     \
-    }                                                                         \
-    return NULL;                                                              \
-}
-
-DECL_TEMPLATE(point)
-DECL_TEMPLATE(lerp)
-DECL_TEMPLATE(cubic)
-
-#undef DECL_TEMPLATE
-
-MixerFunc SelectMixer(ALbuffer *Buffer, enum Resampler Resampler)
+MixerFunc SelectMixer(enum Resampler Resampler)
 {
     switch(Resampler)
     {
         case POINT_RESAMPLER:
-            return Select_point(Buffer->FmtType);
+            return Mix_ALfloat_point32;
         case LINEAR_RESAMPLER:
-            return Select_lerp(Buffer->FmtType);
+            return Mix_ALfloat_lerp32;
         case CUBIC_RESAMPLER:
-            return Select_cubic(Buffer->FmtType);
+            return Mix_ALfloat_cubic32;
         case RESAMPLER_MIN:
         case RESAMPLER_MAX:
             break;
@@ -471,35 +452,16 @@ MixerFunc SelectMixer(ALbuffer *Buffer, enum Resampler Resampler)
     return NULL;
 }
 
-#define DECL_TEMPLATE(sampler)                                                \
-static MixerFunc Select_Hrtf_##sampler(enum FmtType FmtType)                  \
-{                                                                             \
-    switch(FmtType)                                                           \
-    {                                                                         \
-    case FmtByte:                                                             \
-    case FmtShort:                                                            \
-    case FmtFloat:                                                            \
-        return Mix_Hrtf_ALfloat_##sampler##32;                                \
-    }                                                                         \
-    return NULL;                                                              \
-}
-
-DECL_TEMPLATE(point)
-DECL_TEMPLATE(lerp)
-DECL_TEMPLATE(cubic)
-
-#undef DECL_TEMPLATE
-
-MixerFunc SelectHrtfMixer(ALbuffer *Buffer, enum Resampler Resampler)
+MixerFunc SelectHrtfMixer(enum Resampler Resampler)
 {
     switch(Resampler)
     {
         case POINT_RESAMPLER:
-            return Select_Hrtf_point(Buffer->FmtType);
+            return Mix_Hrtf_ALfloat_point32;
         case LINEAR_RESAMPLER:
-            return Select_Hrtf_lerp(Buffer->FmtType);
+            return Mix_Hrtf_ALfloat_lerp32;
         case CUBIC_RESAMPLER:
-            return Select_Hrtf_cubic(Buffer->FmtType);
+            return Mix_Hrtf_ALfloat_cubic32;
         case RESAMPLER_MIN:
         case RESAMPLER_MAX:
             break;

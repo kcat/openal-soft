@@ -233,8 +233,8 @@ ALint aluCart2LUTpos(ALfloat re, ALfloat im);
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 
-MixerFunc SelectMixer(struct ALbuffer *Buffer, enum Resampler Resampler);
-MixerFunc SelectHrtfMixer(struct ALbuffer *Buffer, enum Resampler Resampler);
+MixerFunc SelectMixer(enum Resampler Resampler);
+MixerFunc SelectHrtfMixer(enum Resampler Resampler);
 
 ALvoid MixSource(struct ALsource *Source, ALCdevice *Device, ALuint SamplesToDo);
 

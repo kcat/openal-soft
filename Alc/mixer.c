@@ -45,22 +45,6 @@ static __inline ALfloat cubic32(const ALfloat *vals, ALint step, ALint frac)
 { return cubic(vals[-step], vals[0], vals[step], vals[step+step],
                frac * (1.0f/FRACTIONONE)); }
 
-static __inline ALfloat point16(const ALshort *vals, ALint step, ALint frac)
-{ return vals[0] * (1.0f/32767.0f); (void)step; (void)frac; }
-static __inline ALfloat lerp16(const ALshort *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0f/FRACTIONONE)) * (1.0f/32767.0f); }
-static __inline ALfloat cubic16(const ALshort *vals, ALint step, ALint frac)
-{ return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0f/FRACTIONONE)) * (1.0f/32767.0f); }
-
-static __inline ALfloat point8(const ALbyte *vals, ALint step, ALint frac)
-{ return vals[0] * (1.0f/127.0f); (void)step; (void)frac; }
-static __inline ALfloat lerp8(const ALbyte *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0f/FRACTIONONE)) * (1.0f/127.0f); }
-static __inline ALfloat cubic8(const ALbyte *vals, ALint step, ALint frac)
-{ return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0f/FRACTIONONE)) * (1.0f/127.0f); }
-
 #ifdef __GNUC__
 #define LIKELY(x) __builtin_expect(!!(x), 1)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
@@ -318,14 +302,6 @@ DECL_TEMPLATE(ALfloat, point32)
 DECL_TEMPLATE(ALfloat, lerp32)
 DECL_TEMPLATE(ALfloat, cubic32)
 
-DECL_TEMPLATE(ALshort, point16)
-DECL_TEMPLATE(ALshort, lerp16)
-DECL_TEMPLATE(ALshort, cubic16)
-
-DECL_TEMPLATE(ALbyte, point8)
-DECL_TEMPLATE(ALbyte, lerp8)
-DECL_TEMPLATE(ALbyte, cubic8)
-
 #undef DECL_TEMPLATE
 
 
@@ -456,14 +432,6 @@ DECL_TEMPLATE(ALfloat, point32)
 DECL_TEMPLATE(ALfloat, lerp32)
 DECL_TEMPLATE(ALfloat, cubic32)
 
-DECL_TEMPLATE(ALshort, point16)
-DECL_TEMPLATE(ALshort, lerp16)
-DECL_TEMPLATE(ALshort, cubic16)
-
-DECL_TEMPLATE(ALbyte, point8)
-DECL_TEMPLATE(ALbyte, lerp8)
-DECL_TEMPLATE(ALbyte, cubic8)
-
 #undef DECL_TEMPLATE
 
 
@@ -473,9 +441,7 @@ static MixerFunc Select_##sampler(enum FmtType FmtType)                       \
     switch(FmtType)                                                           \
     {                                                                         \
     case FmtByte:                                                             \
-        return Mix_ALbyte_##sampler##8;                                       \
     case FmtShort:                                                            \
-        return Mix_ALshort_##sampler##16;                                     \
     case FmtFloat:                                                            \
         return Mix_ALfloat_##sampler##32;                                     \
     }                                                                         \
@@ -511,9 +477,7 @@ static MixerFunc Select_Hrtf_##sampler(enum FmtType FmtType)                  \
     switch(FmtType)                                                           \
     {                                                                         \
     case FmtByte:                                                             \
-        return Mix_Hrtf_ALbyte_##sampler##8;                                  \
     case FmtShort:                                                            \
-        return Mix_Hrtf_ALshort_##sampler##16;                                \
     case FmtFloat:                                                            \
         return Mix_Hrtf_ALfloat_##sampler##32;                                \
     }                                                                         \
@@ -544,6 +508,53 @@ MixerFunc SelectHrtfMixer(ALbuffer *Buffer, enum Resampler Resampler)
 }
 
 
+static __inline ALfloat Sample_ALbyte(ALbyte val)
+{ return val * (1.0f/127.0f); }
+
+static __inline ALfloat Sample_ALshort(ALshort val)
+{ return val * (1.0f/32767.0f); }
+
+static __inline ALfloat Sample_ALfloat(ALfloat val)
+{ return val; }
+
+#define DECL_TEMPLATE(T)                                                      \
+static void Load_##T(ALfloat *dst, const T *src, ALuint samples)              \
+{                                                                             \
+    ALuint i;                                                                 \
+    for(i = 0;i < samples;i++)                                                \
+        dst[i] = Sample_##T(src[i]);                                          \
+}
+
+DECL_TEMPLATE(ALbyte)
+DECL_TEMPLATE(ALshort)
+DECL_TEMPLATE(ALfloat)
+
+#undef DECL_TEMPLATE
+
+static void LoadStack(ALfloat *dst, const ALvoid *src, enum FmtType srctype, ALuint samples)
+{
+    switch(srctype)
+    {
+        case FmtByte:
+            Load_ALbyte(dst, src, samples);
+            break;
+        case FmtShort:
+            Load_ALshort(dst, src, samples);
+            break;
+        case FmtFloat:
+            Load_ALfloat(dst, src, samples);
+            break;
+    }
+}
+
+static void SilenceStack(ALfloat *dst, ALuint samples)
+{
+    ALuint i;
+    for(i = 0;i < samples;i++)
+        dst[i] = 0.0f;
+}
+
+
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
@@ -554,6 +565,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     enum Resampler Resampler;
     ALenum State;
     ALuint OutPos;
+    ALuint NumChannels;
     ALuint FrameSize;
     ALint64 DataSize64;
     ALuint i;
@@ -566,7 +578,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     Looping       = Source->bLooping;
     increment     = Source->Params.Step;
     Resampler     = Source->Resampler;
-    FrameSize     = Source->NumChannels * Source->SampleSize;
+    NumChannels   = Source->NumChannels;
+    FrameSize     = NumChannels * Source->SampleSize;
 
     /* Get current buffer queue item */
     BufferListItem = Source->queue;
@@ -577,8 +590,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     do {
         const ALuint BufferPrePadding = ResamplerPrePadding[Resampler];
         const ALuint BufferPadding = ResamplerPadding[Resampler];
-        ALubyte StackData[STACK_DATA_SIZE];
-        ALubyte *SrcData = StackData;
+        ALfloat StackData[STACK_DATA_SIZE/sizeof(ALfloat)];
+        ALfloat *SrcData = StackData;
         ALuint SrcDataSize = 0;
         ALuint BufferSize;
 
@@ -613,7 +626,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     DataSize = BufferPrePadding - DataPosInt;
                     DataSize = minu(BufferSize, DataSize);
 
-                    memset(&SrcData[SrcDataSize*FrameSize], 0, DataSize*FrameSize);
+                    SilenceStack(&SrcData[SrcDataSize*NumChannels],
+                                 DataSize*NumChannels);
                     SrcDataSize += DataSize;
                     BufferSize -= DataSize;
 
@@ -625,11 +639,13 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 DataSize = ALBuffer->SampleLen - pos;
                 DataSize = minu(BufferSize, DataSize);
 
-                memcpy(&SrcData[SrcDataSize*FrameSize], &Data[pos*FrameSize], DataSize*FrameSize);
+                LoadStack(&SrcData[SrcDataSize*NumChannels], &Data[pos*FrameSize],
+                          ALBuffer->FmtType, DataSize*NumChannels);
                 SrcDataSize += DataSize;
                 BufferSize -= DataSize;
 
-                memset(&SrcData[SrcDataSize*FrameSize], 0, BufferSize*FrameSize);
+                SilenceStack(&SrcData[SrcDataSize*NumChannels],
+                             BufferSize*NumChannels);
                 SrcDataSize += BufferSize;
                 BufferSize -= BufferSize;
             }
@@ -653,7 +669,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     DataSize = BufferPrePadding - DataPosInt;
                     DataSize = minu(BufferSize, DataSize);
 
-                    memset(&SrcData[SrcDataSize*FrameSize], 0, DataSize*FrameSize);
+                    SilenceStack(&SrcData[SrcDataSize*NumChannels], DataSize*NumChannels);
                     SrcDataSize += DataSize;
                     BufferSize -= DataSize;
 
@@ -665,7 +681,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 DataSize = LoopEnd - pos;
                 DataSize = minu(BufferSize, DataSize);
 
-                memcpy(&SrcData[SrcDataSize*FrameSize], &Data[pos*FrameSize], DataSize*FrameSize);
+                LoadStack(&SrcData[SrcDataSize*NumChannels], &Data[pos*FrameSize],
+                          ALBuffer->FmtType, DataSize*NumChannels);
                 SrcDataSize += DataSize;
                 BufferSize -= DataSize;
 
@@ -674,7 +691,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 {
                     DataSize = minu(BufferSize, DataSize);
 
-                    memcpy(&SrcData[SrcDataSize*FrameSize], &Data[LoopStart*FrameSize], DataSize*FrameSize);
+                    LoadStack(&SrcData[SrcDataSize*NumChannels], &Data[LoopStart*FrameSize],
+                              ALBuffer->FmtType, DataSize*NumChannels);
                     SrcDataSize += DataSize;
                     BufferSize -= DataSize;
                 }
@@ -697,7 +715,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     {
                         ALuint DataSize = minu(BufferSize, pos);
 
-                        memset(&SrcData[SrcDataSize*FrameSize], 0, DataSize*FrameSize);
+                        SilenceStack(&SrcData[SrcDataSize*NumChannels], DataSize*NumChannels);
                         SrcDataSize += DataSize;
                         BufferSize -= DataSize;
 
@@ -743,7 +761,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                         pos -= pos;
 
                         DataSize = minu(BufferSize, DataSize);
-                        memcpy(&SrcData[SrcDataSize*FrameSize], Data, DataSize*FrameSize);
+                        LoadStack(&SrcData[SrcDataSize*NumChannels], Data,
+                                  ALBuffer->FmtType, DataSize*NumChannels);
                         SrcDataSize += DataSize;
                         BufferSize -= DataSize;
                     }
@@ -753,7 +772,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     BufferListIter = Source->queue;
                 else if(!BufferListIter)
                 {
-                    memset(&SrcData[SrcDataSize*FrameSize], 0, BufferSize*FrameSize);
+                    SilenceStack(&SrcData[SrcDataSize*NumChannels], BufferSize*NumChannels);
                     SrcDataSize += BufferSize;
                     BufferSize -= BufferSize;
                 }
@@ -770,7 +789,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         BufferSize = (ALuint)((DataSize64+(increment-1)) / increment);
         BufferSize = minu(BufferSize, (SamplesToDo-OutPos));
 
-        SrcData += BufferPrePadding*FrameSize;
+        SrcData += BufferPrePadding*NumChannels;
         Source->Params.DoMix(Source, Device, SrcData, &DataPosInt, &DataPosFrac,
                              OutPos, SamplesToDo, BufferSize);
         OutPos += BufferSize;

@@ -663,7 +663,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         else
         {
             /* Crawl the buffer queue to fill in the temp buffer */
-            ALbufferlistitem *BufferListIter = BufferListItem;
+            ALbufferlistitem *tmpiter = BufferListItem;
             ALuint pos;
 
             if(DataPosInt >= BufferPrePadding)
@@ -673,7 +673,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 pos = BufferPrePadding - DataPosInt;
                 while(pos > 0)
                 {
-                    if(!BufferListIter->prev && !Looping)
+                    if(!tmpiter->prev && !Looping)
                     {
                         ALuint DataSize = minu(BufferSize, pos);
 
@@ -685,30 +685,30 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                         break;
                     }
 
-                    if(BufferListIter->prev)
-                        BufferListIter = BufferListIter->prev;
+                    if(tmpiter->prev)
+                        tmpiter = tmpiter->prev;
                     else
                     {
-                        while(BufferListIter->next)
-                            BufferListIter = BufferListIter->next;
+                        while(tmpiter->next)
+                            tmpiter = tmpiter->next;
                     }
 
-                    if(BufferListIter->buffer)
+                    if(tmpiter->buffer)
                     {
-                        if((ALuint)BufferListIter->buffer->SampleLen > pos)
+                        if((ALuint)tmpiter->buffer->SampleLen > pos)
                         {
-                            pos = BufferListIter->buffer->SampleLen - pos;
+                            pos = tmpiter->buffer->SampleLen - pos;
                             break;
                         }
-                        pos -= BufferListIter->buffer->SampleLen;
+                        pos -= tmpiter->buffer->SampleLen;
                     }
                 }
             }
 
-            while(BufferListIter && BufferSize > 0)
+            while(tmpiter && BufferSize > 0)
             {
                 const ALbuffer *ALBuffer;
-                if((ALBuffer=BufferListIter->buffer) != NULL)
+                if((ALBuffer=tmpiter->buffer) != NULL)
                 {
                     const ALubyte *Data = ALBuffer->data;
                     ALuint DataSize = ALBuffer->SampleLen;
@@ -729,10 +729,10 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                         BufferSize -= DataSize;
                     }
                 }
-                BufferListIter = BufferListIter->next;
-                if(!BufferListIter && Looping)
-                    BufferListIter = Source->queue;
-                else if(!BufferListIter)
+                tmpiter = tmpiter->next;
+                if(!tmpiter && Looping)
+                    tmpiter = Source->queue;
+                else if(!tmpiter)
                 {
                     SilenceStack(&SrcData[SrcDataSize*NumChannels], BufferSize*NumChannels);
                     SrcDataSize += BufferSize;

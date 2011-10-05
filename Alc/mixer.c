@@ -565,8 +565,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         DataSize64 += BufferPadding+BufferPrePadding;
         DataSize64 *= NumChannels;
 
-        BufferSize = (ALuint)((DataSize64 > STACK_DATA_SIZE/sizeof(ALfloat)) ?
-                              STACK_DATA_SIZE/sizeof(ALfloat) : DataSize64);
+        BufferSize  = (ALuint)mini64(DataSize64, STACK_DATA_SIZE/sizeof(ALfloat));
         BufferSize /= NumChannels;
 
         if(Source->lSourceType == AL_STATIC)

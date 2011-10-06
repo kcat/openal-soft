@@ -692,12 +692,10 @@ struct ALCdevice_struct
 
 // Duplicate stereo sources on the side/rear channels
 #define DEVICE_DUPLICATE_STEREO                  (1<<0)
-// Use HRTF filters for mixing sounds
-#define DEVICE_USE_HRTF                          (1<<1)
 // Frequency was requested by the app or config file
-#define DEVICE_FREQUENCY_REQUEST                 (1<<2)
+#define DEVICE_FREQUENCY_REQUEST                 (1<<1)
 // Channel configuration was requested by the config file
-#define DEVICE_CHANNELS_REQUEST                  (1<<3)
+#define DEVICE_CHANNELS_REQUEST                  (1<<2)
 
 // Specifies if the device is currently running
 #define DEVICE_RUNNING                           (1<<31)

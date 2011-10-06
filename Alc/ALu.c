@@ -178,7 +178,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         BufferListItem = BufferListItem->next;
     }
-    if(ALSource->VirtualChannels && (Device->Flags&DEVICE_USE_HRTF))
+    if(ALSource->VirtualChannels && Device->Hrtf)
         ALSource->Params.DoMix = SelectHrtfMixer((ALSource->Params.Step==FRACTIONONE) ?
                                                  POINT_RESAMPLER : Resampler);
     else
@@ -268,7 +268,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         for(c = 0;c < num_channels;c++)
             SrcMatrix[c][chans[c]] += DryGain * ListenerGain;
     }
-    else if((Device->Flags&DEVICE_USE_HRTF))
+    else if(Device->Hrtf)
     {
         for(c = 0;c < num_channels;c++)
         {
@@ -689,14 +689,14 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         BufferListItem = BufferListItem->next;
     }
-    if((Device->Flags&DEVICE_USE_HRTF))
+    if(Device->Hrtf)
         ALSource->Params.DoMix = SelectHrtfMixer((ALSource->Params.Step==FRACTIONONE) ?
                                                  POINT_RESAMPLER : Resampler);
     else
         ALSource->Params.DoMix = SelectMixer((ALSource->Params.Step==FRACTIONONE) ?
                                              POINT_RESAMPLER : Resampler);
 
-    if((Device->Flags&DEVICE_USE_HRTF))
+    if(Device->Hrtf)
     {
         // Use a binaural HRTF algorithm for stereo headphone playback
         ALfloat delta, ev = 0.0f, az = 0.0f;

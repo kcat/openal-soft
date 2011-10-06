@@ -1155,14 +1155,11 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     device->Hrtf = NULL;
-    device->Flags &= ~DEVICE_USE_HRTF;
     if(!device->IsLoopbackDevice && GetConfigValueBool(NULL, "hrtf", AL_FALSE))
-        device->Flags |= DEVICE_USE_HRTF;
-    if((device->Flags&DEVICE_USE_HRTF) && !(device->Hrtf=GetHrtf(device)))
-        device->Flags &= ~DEVICE_USE_HRTF;
-    TRACE("HRTF %s\n", (device->Flags&DEVICE_USE_HRTF)?"enabled":"disabled");
+        device->Hrtf = GetHrtf(device);
+    TRACE("HRTF %s\n", device->Hrtf?"enabled":"disabled");
 
-    if(!(device->Flags&DEVICE_USE_HRTF) && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
+    if(!device->Hrtf && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
     {
         if(!device->Bs2b)
         {

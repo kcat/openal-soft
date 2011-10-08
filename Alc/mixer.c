@@ -312,8 +312,8 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
     const T *RESTRICT data = srcdata;                                         \
-    ALfloat (*DryBuffer)[MAXCHANNELS];                                        \
-    ALfloat *ClickRemoval, *PendingClicks;                                    \
+    ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
+    ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
     ALfloat DrySend[MAXCHANNELS];                                             \
     FILTER *DryFilter;                                                        \
     ALuint pos, frac;                                                         \

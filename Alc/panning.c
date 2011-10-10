@@ -293,10 +293,10 @@ ALvoid aluInitPanning(ALCdevice *Device)
             if(Theta >= SpeakerAngle[s] && Theta < SpeakerAngle[s+1])
             {
                 /* source between speaker s and speaker s+1 */
-                Alpha = F_PI_2 * (Theta-SpeakerAngle[s]) /
-                                 (SpeakerAngle[s+1]-SpeakerAngle[s]);
-                PanningLUT[Speaker2Chan[s]]   = aluCos(Alpha);
-                PanningLUT[Speaker2Chan[s+1]] = aluSin(Alpha);
+                Alpha = (Theta-SpeakerAngle[s]) /
+                        (SpeakerAngle[s+1]-SpeakerAngle[s]);
+                PanningLUT[Speaker2Chan[s]]   = aluSqrt(1.0f-Alpha);
+                PanningLUT[Speaker2Chan[s+1]] = aluSqrt(     Alpha);
                 break;
             }
         }
@@ -305,10 +305,10 @@ ALvoid aluInitPanning(ALCdevice *Device)
             /* source between last and first speaker */
             if(Theta < SpeakerAngle[0])
                 Theta += F_PI*2.0f;
-            Alpha = F_PI_2 * (Theta-SpeakerAngle[s]) /
-                             (F_PI*2.0f + SpeakerAngle[0]-SpeakerAngle[s]);
-            PanningLUT[Speaker2Chan[s]] = aluCos(Alpha);
-            PanningLUT[Speaker2Chan[0]] = aluSin(Alpha);
+            Alpha = (Theta-SpeakerAngle[s]) /
+                    (F_PI*2.0f + SpeakerAngle[0]-SpeakerAngle[s]);
+            PanningLUT[Speaker2Chan[s]] = aluSqrt(1.0f-Alpha);
+            PanningLUT[Speaker2Chan[0]] = aluSqrt(     Alpha);
         }
     }
 }

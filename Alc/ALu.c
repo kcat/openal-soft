@@ -178,7 +178,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         BufferListItem = BufferListItem->next;
     }
-    if(ALSource->VirtualChannels && Device->Hrtf)
+    if(VirtualChannels && Device->Hrtf)
         ALSource->Params.DoMix = SelectHrtfMixer((ALSource->Params.Step==FRACTIONONE) ?
                                                  POINT_RESAMPLER : Resampler);
     else

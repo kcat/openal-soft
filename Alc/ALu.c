@@ -134,9 +134,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALint i, c;
 
     /* Get device properties */
-    DevChans  = ALContext->Device->FmtChans;
-    NumSends  = ALContext->Device->NumAuxSends;
-    Frequency = ALContext->Device->Frequency;
+    DevChans  = Device->FmtChans;
+    NumSends  = Device->NumAuxSends;
+    Frequency = Device->Frequency;
 
     /* Get listener properties */
     ListenerGain = ALContext->Listener.Gain;
@@ -210,7 +210,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         num_channels = 1;
         break;
     case FmtStereo:
-        if(VirtualChannels && (ALContext->Device->Flags&DEVICE_DUPLICATE_STEREO))
+        if(VirtualChannels && (Device->Flags&DEVICE_DUPLICATE_STEREO))
         {
             DryGain *= aluSqrt(2.0f/4.0f);
             for(c = 0;c < 2;c++)
@@ -287,7 +287,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             {
                 /* Get the static HRIR coefficients and delays for this
                  * channel. */
-                GetLerpedHrtfCoeffs(ALContext->Device->Hrtf,
+                GetLerpedHrtfCoeffs(Device->Hrtf,
                                     0.0f, F_PI/180.0f * angles[c],
                                     DryGain*ListenerGain,
                                     ALSource->Params.HrtfCoeffs[c],

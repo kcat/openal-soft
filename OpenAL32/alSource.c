@@ -1871,14 +1871,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             BufferList = BufferList->next;
         }
 
-        /* If there's nothing to play, or device is disconnected, go right to
-         * stopped */
-        if(!BufferList || !Context->Device->Connected)
-        {
-            SetSourceState(Source, Context, AL_STOPPED);
-            return;
-        }
-
         if(Source->state != AL_PLAYING)
         {
             for(j = 0;j < MAXCHANNELS;j++)
@@ -1906,6 +1898,14 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         // Check if an Offset has been set
         if(Source->lOffset != -1)
             ApplyOffset(Source);
+
+        /* If there's nothing to play, or device is disconnected, go right to
+         * stopped */
+        if(!BufferList || !Context->Device->Connected)
+        {
+            SetSourceState(Source, Context, AL_STOPPED);
+            return;
+        }
 
         for(j = 0;j < Context->ActiveSourceCount;j++)
         {

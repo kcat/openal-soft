@@ -486,6 +486,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
 {
     ThreadRequest *req = ptr;
     IMMDeviceEnumerator *Enumerator;
+    ALuint deviceCount = 0;
     MMDevApiData *data;
     ALCdevice *device;
     HRESULT hr;
@@ -515,6 +516,8 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
     IMMDeviceEnumerator_Release(Enumerator);
     Enumerator = NULL;
 
+    CoUninitialize();
+
     req->result = S_OK;
     SetEvent(req->FinishedEvt);
 
@@ -529,7 +532,11 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             device = (ALCdevice*)msg.lParam;
             data = device->ExtraData;
 
-            hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
+            hr = S_OK;
+            if(++deviceCount == 1)
+                hr = CoInitialize(NULL);
+            if(SUCCEEDED(hr))
+                hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
             if(SUCCEEDED(hr))
             {
                 Enumerator = ptr;
@@ -592,6 +599,9 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             IMMDevice_Release(data->mmdev);
             data->mmdev = NULL;
 
+            if(--deviceCount == 0)
+                CoUninitialize();
+
             req->result = S_OK;
             SetEvent(req->FinishedEvt);
             continue;
@@ -603,7 +613,6 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
     }
     TRACE("Message loop finished\n");
 
-    CoUninitialize();
     return 0;
 }
 

@@ -9,6 +9,32 @@
 #include <math.h>
 #ifdef HAVE_FLOAT_H
 #include <float.h>
+/* HACK: Seems cross-compiling with MinGW includes the wrong float.h, which
+ * doesn't define Windows' _controlfp and related macros */
+#if defined(__MINGW32__) && !defined(_RC_CHOP)
+/* Control word masks for unMask */
+#define _MCW_EM         0x0008001F      /* Error masks */
+#define _MCW_IC         0x00040000      /* Infinity */
+#define _MCW_RC         0x00000300      /* Rounding */
+#define _MCW_PC         0x00030000      /* Precision */
+/* Control word values for unNew (use with related unMask above) */
+#define _EM_INVALID     0x00000010
+#define _EM_DENORMAL    0x00080000
+#define _EM_ZERODIVIDE  0x00000008
+#define _EM_OVERFLOW    0x00000004
+#define _EM_UNDERFLOW   0x00000002
+#define _EM_INEXACT     0x00000001
+#define _IC_AFFINE      0x00040000
+#define _IC_PROJECTIVE  0x00000000
+#define _RC_CHOP        0x00000300
+#define _RC_UP          0x00000200
+#define _RC_DOWN        0x00000100
+#define _RC_NEAR        0x00000000
+#define _PC_24          0x00020000
+#define _PC_53          0x00010000
+#define _PC_64          0x00000000
+_CRTIMP unsigned int __cdecl __MINGW_NOTHROW _controlfp (unsigned int unNew, unsigned int unMask);
+#endif
 #endif
 #ifdef HAVE_IEEEFP_H
 #include <ieeefp.h>

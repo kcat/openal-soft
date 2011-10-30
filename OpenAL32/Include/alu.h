@@ -260,6 +260,34 @@ static __inline void RestoreFPUMode(int state)
 }
 
 
+static __inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
+{
+    outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
+    outVector[1] = inVector1[2]*inVector2[0] - inVector1[0]*inVector2[2];
+    outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
+}
+
+static __inline ALfloat aluDotproduct(const ALfloat *inVector1, const ALfloat *inVector2)
+{
+    return inVector1[0]*inVector2[0] + inVector1[1]*inVector2[1] +
+           inVector1[2]*inVector2[2];
+}
+
+static __inline void aluNormalize(ALfloat *inVector)
+{
+    ALfloat length, inverse_length;
+
+    length = aluSqrt(aluDotproduct(inVector, inVector));
+    if(length > 0.0f)
+    {
+        inverse_length = 1.0f/length;
+        inVector[0] *= inverse_length;
+        inVector[1] *= inverse_length;
+        inVector[2] *= inverse_length;
+    }
+}
+
+
 ALvoid aluInitPanning(ALCdevice *Device);
 ALint aluCart2LUTpos(ALfloat re, ALfloat im);
 

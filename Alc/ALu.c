@@ -44,34 +44,6 @@ ALfloat ConeScale = 0.5f;
 ALfloat ZScale = 1.0f;
 
 
-static __inline ALvoid aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
-{
-    outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
-    outVector[1] = inVector1[2]*inVector2[0] - inVector1[0]*inVector2[2];
-    outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
-}
-
-static __inline ALfloat aluDotproduct(const ALfloat *inVector1, const ALfloat *inVector2)
-{
-    return inVector1[0]*inVector2[0] + inVector1[1]*inVector2[1] +
-           inVector1[2]*inVector2[2];
-}
-
-static __inline ALfloat aluNormalize(ALfloat *inVector)
-{
-    ALfloat length, inverse_length;
-
-    length = aluSqrt(aluDotproduct(inVector, inVector));
-    if(length > 0.0f)
-    {
-        inverse_length = 1.0f/length;
-        inVector[0] *= inverse_length;
-        inVector[1] *= inverse_length;
-        inVector[2] *= inverse_length;
-    }
-    return length;
-}
-
 static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[4][4])
 {
     ALfloat temp[4] = {
@@ -456,38 +428,23 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     //1. Translate Listener to origin (convert to head relative)
     if(ALSource->bHeadRelative == AL_FALSE)
     {
-        ALfloat U[3],V[3],N[3];
         ALfloat Matrix[4][4];
-
-        // Build transform matrix
-        N[0] = ALContext->Listener.Forward[0];  // At-vector
-        N[1] = ALContext->Listener.Forward[1];
-        N[2] = ALContext->Listener.Forward[2];
-        V[0] = ALContext->Listener.Up[0];  // Up-vector
-        V[1] = ALContext->Listener.Up[1];
-        V[2] = ALContext->Listener.Up[2];
-        if(aluNormalize(N) > 0.0f && aluNormalize(V) > 0.0f)
+        for(i = 0;i < 4;i++)
         {
-            /* Build and normalize right-vector */
-            aluCrossproduct(N, V, U);
-            if(aluNormalize(U) > 0.0f)
-            {
-                Matrix[0][0]=U[0]; Matrix[0][1]=V[0]; Matrix[0][2]=-N[0]; Matrix[0][3]=0.0f;
-                Matrix[1][0]=U[1]; Matrix[1][1]=V[1]; Matrix[1][2]=-N[1]; Matrix[1][3]=0.0f;
-                Matrix[2][0]=U[2]; Matrix[2][1]=V[2]; Matrix[2][2]=-N[2]; Matrix[2][3]=0.0f;
-                Matrix[3][0]=0.0f; Matrix[3][1]=0.0f; Matrix[3][2]= 0.0f; Matrix[3][3]=1.0f;
-
-                /* Translate position */
-                Position[0] -= ALContext->Listener.Position[0];
-                Position[1] -= ALContext->Listener.Position[1];
-                Position[2] -= ALContext->Listener.Position[2];
-
-                /* Transform source vectors into listener space */
-                aluMatrixVector(Position, 1.0f, Matrix);
-                aluMatrixVector(Direction, 0.0f, Matrix);
-                aluMatrixVector(Velocity, 0.0f, Matrix);
-            }
+            ALint i2;
+            for(i2 = 0;i2 < 4;i2++)
+                Matrix[i][i2] = ALContext->Listener.Matrix[i][i2];
         }
+
+        /* Translate position */
+        Position[0] -= ALContext->Listener.Position[0];
+        Position[1] -= ALContext->Listener.Position[1];
+        Position[2] -= ALContext->Listener.Position[2];
+
+        /* Transform source vectors into listener space */
+        aluMatrixVector(Position, 1.0f, Matrix);
+        aluMatrixVector(Direction, 0.0f, Matrix);
+        aluMatrixVector(Velocity, 0.0f, Matrix);
     }
     else
     {

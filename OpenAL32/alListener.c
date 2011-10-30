@@ -142,14 +142,44 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum eParam, const ALfloat *pflValues)
                    isfinite(pflValues[2]) && isfinite(pflValues[3]) &&
                    isfinite(pflValues[4]) && isfinite(pflValues[5]))
                 {
+                    ALfloat U[3], V[3], N[3];
+
+                    /* AT then UP */
+                    N[0] = pflValues[0];
+                    N[1] = pflValues[1];
+                    N[2] = pflValues[2];
+                    aluNormalize(N);
+                    V[0] = pflValues[3];
+                    V[1] = pflValues[4];
+                    V[2] = pflValues[5];
+                    aluNormalize(V);
+                    /* Build and normalize right-vector */
+                    aluCrossproduct(N, V, U);
+                    aluNormalize(U);
+
                     LockContext(Context);
-                    // AT then UP
                     Context->Listener.Forward[0] = pflValues[0];
                     Context->Listener.Forward[1] = pflValues[1];
                     Context->Listener.Forward[2] = pflValues[2];
                     Context->Listener.Up[0] = pflValues[3];
                     Context->Listener.Up[1] = pflValues[4];
                     Context->Listener.Up[2] = pflValues[5];
+                    Context->Listener.Matrix[0][0] =  U[0];
+                    Context->Listener.Matrix[0][1] =  V[0];
+                    Context->Listener.Matrix[0][2] = -N[0];
+                    Context->Listener.Matrix[0][3] =  0.0f;
+                    Context->Listener.Matrix[1][0] =  U[1];
+                    Context->Listener.Matrix[1][1] =  V[1];
+                    Context->Listener.Matrix[1][2] = -N[1];
+                    Context->Listener.Matrix[1][3] =  0.0f;
+                    Context->Listener.Matrix[2][0] =  U[2];
+                    Context->Listener.Matrix[2][1] =  V[2];
+                    Context->Listener.Matrix[2][2] = -N[2];
+                    Context->Listener.Matrix[2][3] =  0.0f;
+                    Context->Listener.Matrix[3][0] =  0.0f;
+                    Context->Listener.Matrix[3][1] =  0.0f;
+                    Context->Listener.Matrix[3][2] =  0.0f;
+                    Context->Listener.Matrix[3][3] =  1.0f;
                     Context->UpdateSources = AL_TRUE;
                     UnlockContext(Context);
                 }

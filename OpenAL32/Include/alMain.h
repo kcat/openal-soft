@@ -23,21 +23,21 @@
 #define ALC_FORMAT_TYPE_SOFT                     0x1991
 
 /* Sample types */
-#define ALC_BYTE                                 0x1400
-#define ALC_UNSIGNED_BYTE                        0x1401
-#define ALC_SHORT                                0x1402
-#define ALC_UNSIGNED_SHORT                       0x1403
-#define ALC_INT                                  0x1404
-#define ALC_UNSIGNED_INT                         0x1405
-#define ALC_FLOAT                                0x1406
+#define ALC_BYTE_SOFT                            0x1400
+#define ALC_UNSIGNED_BYTE_SOFT                   0x1401
+#define ALC_SHORT_SOFT                           0x1402
+#define ALC_UNSIGNED_SHORT_SOFT                  0x1403
+#define ALC_INT_SOFT                             0x1404
+#define ALC_UNSIGNED_INT_SOFT                    0x1405
+#define ALC_FLOAT_SOFT                           0x1406
 
 /* Channel configurations */
-#define ALC_MONO                                 0x1500
-#define ALC_STEREO                               0x1501
-#define ALC_QUAD                                 0x1503
-#define ALC_5POINT1                              0x1504 /* (WFX order) */
-#define ALC_6POINT1                              0x1505 /* (WFX order) */
-#define ALC_7POINT1                              0x1506 /* (WFX order) */
+#define ALC_MONO_SOFT                            0x1500
+#define ALC_STEREO_SOFT                          0x1501
+#define ALC_QUAD_SOFT                            0x1503
+#define ALC_5POINT1_SOFT                         0x1504 /* (WFX order) */
+#define ALC_6POINT1_SOFT                         0x1505 /* (WFX order) */
+#define ALC_7POINT1_SOFT                         0x1506 /* (WFX order) */
 
 typedef ALCdevice* (ALC_APIENTRY*LPALCLOOPBACKOPENDEVICESOFT)(void);
 typedef ALCboolean (ALC_APIENTRY*LPALCISRENDERFORMATSUPPORTEDSOFT)(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type);
@@ -574,22 +574,22 @@ void alc_loopback_probe(enum DevProbe type);
 
 /* Device formats */
 enum DevFmtType {
-    DevFmtByte   = ALC_BYTE,
-    DevFmtUByte  = ALC_UNSIGNED_BYTE,
-    DevFmtShort  = ALC_SHORT,
-    DevFmtUShort = ALC_UNSIGNED_SHORT,
-    DevFmtFloat  = ALC_FLOAT
+    DevFmtByte   = ALC_BYTE_SOFT,
+    DevFmtUByte  = ALC_UNSIGNED_BYTE_SOFT,
+    DevFmtShort  = ALC_SHORT_SOFT,
+    DevFmtUShort = ALC_UNSIGNED_SHORT_SOFT,
+    DevFmtFloat  = ALC_FLOAT_SOFT
 };
 enum DevFmtChannels {
-    DevFmtMono   = ALC_MONO,
-    DevFmtStereo = ALC_STEREO,
-    DevFmtQuad   = ALC_QUAD,
-    DevFmtX51    = ALC_5POINT1,
-    DevFmtX61    = ALC_6POINT1,
-    DevFmtX71    = ALC_7POINT1,
+    DevFmtMono   = ALC_MONO_SOFT,
+    DevFmtStereo = ALC_STEREO_SOFT,
+    DevFmtQuad   = ALC_QUAD_SOFT,
+    DevFmtX51    = ALC_5POINT1_SOFT,
+    DevFmtX61    = ALC_6POINT1_SOFT,
+    DevFmtX71    = ALC_7POINT1_SOFT,
 
     /* Similar to 5.1, except using the side channels instead of back */
-    DevFmtX51Side = 0x80000000 | ALC_5POINT1
+    DevFmtX51Side = 0x80000000 | ALC_5POINT1_SOFT
 };
 
 ALuint BytesFromDevFmt(enum DevFmtType type);

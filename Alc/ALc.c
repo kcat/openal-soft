@@ -291,21 +291,21 @@ static const ALCenums enumeration[] = {
     { "ALC_FORMAT_TYPE_SOFT",                 ALC_FORMAT_TYPE_SOFT                },
 
     // Buffer Channel Configurations
-    { "ALC_MONO",                             ALC_MONO                            },
-    { "ALC_STEREO",                           ALC_STEREO                          },
-    { "ALC_QUAD",                             ALC_QUAD                            },
-    { "ALC_5POINT1",                          ALC_5POINT1                         },
-    { "ALC_6POINT1",                          ALC_6POINT1                         },
-    { "ALC_7POINT1",                          ALC_7POINT1                         },
+    { "ALC_MONO_SOFT",                        ALC_MONO_SOFT                       },
+    { "ALC_STEREO_SOFT",                      ALC_STEREO_SOFT                     },
+    { "ALC_QUAD_SOFT",                        ALC_QUAD_SOFT                       },
+    { "ALC_5POINT1_SOFT",                     ALC_5POINT1_SOFT                    },
+    { "ALC_6POINT1_SOFT",                     ALC_6POINT1_SOFT                    },
+    { "ALC_7POINT1_SOFT",                     ALC_7POINT1_SOFT                    },
 
     // Buffer Sample Types
-    { "ALC_BYTE",                             ALC_BYTE                            },
-    { "ALC_UNSIGNED_BYTE",                    ALC_UNSIGNED_BYTE                   },
-    { "ALC_SHORT",                            ALC_SHORT                           },
-    { "ALC_UNSIGNED_SHORT",                   ALC_UNSIGNED_SHORT                  },
-    { "ALC_INT",                              ALC_INT                             },
-    { "ALC_UNSIGNED_INT",                     ALC_UNSIGNED_INT                    },
-    { "ALC_FLOAT",                            ALC_FLOAT                           },
+    { "ALC_BYTE_SOFT",                        ALC_BYTE_SOFT                       },
+    { "ALC_UNSIGNED_BYTE_SOFT",               ALC_UNSIGNED_BYTE_SOFT              },
+    { "ALC_SHORT_SOFT",                       ALC_SHORT_SOFT                      },
+    { "ALC_UNSIGNED_SHORT_SOFT",              ALC_UNSIGNED_SHORT_SOFT             },
+    { "ALC_INT_SOFT",                         ALC_INT_SOFT                        },
+    { "ALC_UNSIGNED_INT_SOFT",                ALC_UNSIGNED_INT_SOFT               },
+    { "ALC_FLOAT_SOFT",                       ALC_FLOAT_SOFT                      },
 
     // ALC Error Message
     { "ALC_NO_ERROR",                         ALC_NO_ERROR                        },
@@ -960,13 +960,13 @@ static ALCboolean IsValidALCType(ALCenum type)
 {
     switch(type)
     {
-        case ALC_BYTE:
-        case ALC_UNSIGNED_BYTE:
-        case ALC_SHORT:
-        case ALC_UNSIGNED_SHORT:
-        case ALC_INT:
-        case ALC_UNSIGNED_INT:
-        case ALC_FLOAT:
+        case ALC_BYTE_SOFT:
+        case ALC_UNSIGNED_BYTE_SOFT:
+        case ALC_SHORT_SOFT:
+        case ALC_UNSIGNED_SHORT_SOFT:
+        case ALC_INT_SOFT:
+        case ALC_UNSIGNED_INT_SOFT:
+        case ALC_FLOAT_SOFT:
             return ALC_TRUE;
     }
     return ALC_FALSE;
@@ -976,12 +976,12 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
 {
     switch(channels)
     {
-        case ALC_MONO:
-        case ALC_STEREO:
-        case ALC_QUAD:
-        case ALC_5POINT1:
-        case ALC_6POINT1:
-        case ALC_7POINT1:
+        case ALC_MONO_SOFT:
+        case ALC_STEREO_SOFT:
+        case ALC_QUAD_SOFT:
+        case ALC_5POINT1_SOFT:
+        case ALC_6POINT1_SOFT:
+        case ALC_7POINT1_SOFT:
             return ALC_TRUE;
     }
     return ALC_FALSE;

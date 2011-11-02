@@ -549,7 +549,7 @@ static __inline ALvoid EAXVerbPass(ALverbState *State, ALfloat in, ALfloat *earl
 static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALverbState *State = (ALverbState*)effect;
-    ALuint index;
+    ALuint index, c;
     ALfloat early[4], late[4], out[4];
     const ALfloat *panGain = State->Gain;
 
@@ -565,14 +565,8 @@ static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALflo
         out[3] = (early[3] + late[3]);
 
         // Output the results.
-        SamplesOut[index][FRONT_LEFT]   += panGain[FRONT_LEFT]   * out[0];
-        SamplesOut[index][FRONT_RIGHT]  += panGain[FRONT_RIGHT]  * out[1];
-        SamplesOut[index][FRONT_CENTER] += panGain[FRONT_CENTER] * out[3];
-        SamplesOut[index][SIDE_LEFT]    += panGain[SIDE_LEFT]    * out[0];
-        SamplesOut[index][SIDE_RIGHT]   += panGain[SIDE_RIGHT]   * out[1];
-        SamplesOut[index][BACK_LEFT]    += panGain[BACK_LEFT]    * out[0];
-        SamplesOut[index][BACK_RIGHT]   += panGain[BACK_RIGHT]   * out[1];
-        SamplesOut[index][BACK_CENTER]  += panGain[BACK_CENTER]  * out[2];
+        for(c = 0;c < MAXCHANNELS;c++)
+            SamplesOut[index][c] += panGain[c] * out[c&3];
     }
 }
 
@@ -581,7 +575,7 @@ static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALflo
 static ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
 {
     ALverbState *State = (ALverbState*)effect;
-    ALuint index;
+    ALuint index, c;
     ALfloat early[4], late[4];
 
     for(index = 0;index < SamplesToDo;index++)
@@ -589,33 +583,9 @@ static ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const AL
         // Process reverb for this sample.
         EAXVerbPass(State, SamplesIn[index], early, late);
 
-        // Unfortunately, while the number and configuration of gains for
-        // panning adjust according to MAXCHANNELS, the output from the
-        // reverb engine is not so scalable.
-        SamplesOut[index][FRONT_LEFT] +=
-           (State->Early.PanGain[FRONT_LEFT]*early[0] +
-            State->Late.PanGain[FRONT_LEFT]*late[0]);
-        SamplesOut[index][FRONT_RIGHT] +=
-           (State->Early.PanGain[FRONT_RIGHT]*early[1] +
-            State->Late.PanGain[FRONT_RIGHT]*late[1]);
-        SamplesOut[index][FRONT_CENTER] +=
-           (State->Early.PanGain[FRONT_CENTER]*early[3] +
-            State->Late.PanGain[FRONT_CENTER]*late[3]);
-        SamplesOut[index][SIDE_LEFT] +=
-           (State->Early.PanGain[SIDE_LEFT]*early[0] +
-            State->Late.PanGain[SIDE_LEFT]*late[0]);
-        SamplesOut[index][SIDE_RIGHT] +=
-           (State->Early.PanGain[SIDE_RIGHT]*early[1] +
-            State->Late.PanGain[SIDE_RIGHT]*late[1]);
-        SamplesOut[index][BACK_LEFT] +=
-           (State->Early.PanGain[BACK_LEFT]*early[0] +
-            State->Late.PanGain[BACK_LEFT]*late[0]);
-        SamplesOut[index][BACK_RIGHT] +=
-           (State->Early.PanGain[BACK_RIGHT]*early[1] +
-            State->Late.PanGain[BACK_RIGHT]*late[1]);
-        SamplesOut[index][BACK_CENTER] +=
-           (State->Early.PanGain[BACK_CENTER]*early[2] +
-            State->Late.PanGain[BACK_CENTER]*late[2]);
+        for(c = 0;c < MAXCHANNELS;c++)
+            SamplesOut[index][c] += State->Early.PanGain[c]*early[c&3] +
+                                    State->Late.PanGain[c]*late[c&3];
     }
 }
 

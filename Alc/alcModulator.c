@@ -89,7 +89,7 @@ static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
     const ALuint step = state->step;                                          \
     ALuint index = state->index;                                              \
     ALfloat samp;                                                             \
-    ALuint i;                                                                 \
+    ALuint i, k;                                                              \
                                                                               \
     for(i = 0;i < SamplesToDo;i++)                                            \
     {                                                                         \
@@ -101,14 +101,8 @@ static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
                                                                               \
         samp = hpFilter1P(&state->iirFilter, 0, samp);                        \
                                                                               \
-        SamplesOut[i][FRONT_LEFT]   += state->Gain[FRONT_LEFT]   * samp;      \
-        SamplesOut[i][FRONT_RIGHT]  += state->Gain[FRONT_RIGHT]  * samp;      \
-        SamplesOut[i][FRONT_CENTER] += state->Gain[FRONT_CENTER] * samp;      \
-        SamplesOut[i][SIDE_LEFT]    += state->Gain[SIDE_LEFT]    * samp;      \
-        SamplesOut[i][SIDE_RIGHT]   += state->Gain[SIDE_RIGHT]   * samp;      \
-        SamplesOut[i][BACK_LEFT]    += state->Gain[BACK_LEFT]    * samp;      \
-        SamplesOut[i][BACK_RIGHT]   += state->Gain[BACK_RIGHT]   * samp;      \
-        SamplesOut[i][BACK_CENTER]  += state->Gain[BACK_CENTER]  * samp;      \
+        for(k = 0;k < MAXCHANNELS;k++)                                        \
+            SamplesOut[i][k] += state->Gain[k] * samp;                        \
     }                                                                         \
     state->index = index;                                                     \
 }
@@ -156,7 +150,8 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const 
     a = (2.0f-cw) - aluSqrt(aluPow(2.0f-cw, 2.0f) - 1.0f);
     state->iirFilter.coeff = a;
 
-    gain = Slot->Gain;
+    gain = aluSqrt(1.0f/Device->NumChan);
+    gain *= Slot->Gain;
     for(index = 0;index < MAXCHANNELS;index++)
         state->Gain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)

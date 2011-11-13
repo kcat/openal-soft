@@ -415,9 +415,9 @@ static void alc_init(void);
 static void alc_deinit(void);
 static void alc_deinit_safe(void);
 
-#ifndef AL_LIBTYPE_STATIC
 UIntMap TlsDestructor;
 
+#ifndef AL_LIBTYPE_STATIC
 BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 {
     ALsizei i;

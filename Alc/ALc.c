@@ -1343,6 +1343,8 @@ ALCvoid UnlockDevice(ALCdevice *device)
  */
 static ALvoid InitContext(ALCcontext *pContext)
 {
+    ALint i, j;
+
     //Initialise listener
     pContext->Listener.Gain = 1.0f;
     pContext->Listener.MetersPerUnit = 1.0f;
@@ -1358,6 +1360,11 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->Listener.Up[0] = 0.0f;
     pContext->Listener.Up[1] = 1.0f;
     pContext->Listener.Up[2] = 0.0f;
+    for(i = 0;i < 4;i++)
+    {
+        for(j = 0;j < 4;j++)
+            pContext->Listener.Matrix[i][j] = ((i==j) ? 1.0f : 0.0f);
+    }
 
     //Validate pContext
     pContext->LastError = AL_NO_ERROR;

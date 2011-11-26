@@ -337,12 +337,6 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
     ALsizei pos = 0;
 
     WriteLock(&map->lock);
-    if(map->size == map->limit)
-    {
-        WriteUnlock(&map->lock);
-        return AL_OUT_OF_MEMORY;
-    }
-
     if(map->size > 0)
     {
         ALsizei low = 0;
@@ -362,6 +356,12 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
 
     if(pos == map->size || map->array[pos].key != key)
     {
+        if(map->size == map->limit)
+        {
+            WriteUnlock(&map->lock);
+            return AL_OUT_OF_MEMORY;
+        }
+
         if(map->size == map->maxsize)
         {
             ALvoid *temp = NULL;
@@ -379,10 +379,10 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
             map->maxsize = newsize;
         }
 
-        map->size++;
-        if(pos < map->size-1)
+        if(pos < map->size)
             memmove(&map->array[pos+1], &map->array[pos],
-                    (map->size-1-pos)*sizeof(map->array[0]));
+                    (map->size-pos)*sizeof(map->array[0]));
+        map->size++;
     }
     map->array[pos].key = key;
     map->array[pos].value = value;

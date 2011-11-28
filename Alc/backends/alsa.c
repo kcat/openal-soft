@@ -64,6 +64,7 @@ MAKE_FUNC(snd_pcm_hw_params);
 MAKE_FUNC(snd_pcm_sw_params_malloc);
 MAKE_FUNC(snd_pcm_sw_params_current);
 MAKE_FUNC(snd_pcm_sw_params_set_avail_min);
+MAKE_FUNC(snd_pcm_sw_params_set_stop_threshold);
 MAKE_FUNC(snd_pcm_sw_params);
 MAKE_FUNC(snd_pcm_sw_params_free);
 MAKE_FUNC(snd_pcm_prepare);
@@ -126,6 +127,7 @@ MAKE_FUNC(snd_card_next);
 #define snd_pcm_sw_params_malloc psnd_pcm_sw_params_malloc
 #define snd_pcm_sw_params_current psnd_pcm_sw_params_current
 #define snd_pcm_sw_params_set_avail_min psnd_pcm_sw_params_set_avail_min
+#define snd_pcm_sw_params_set_stop_threshold psnd_pcm_sw_params_set_stop_threshold
 #define snd_pcm_sw_params psnd_pcm_sw_params
 #define snd_pcm_sw_params_free psnd_pcm_sw_params_free
 #define snd_pcm_prepare psnd_pcm_prepare
@@ -206,6 +208,7 @@ static ALCboolean alsa_load(void)
         LOAD_FUNC(snd_pcm_sw_params_malloc);
         LOAD_FUNC(snd_pcm_sw_params_current);
         LOAD_FUNC(snd_pcm_sw_params_set_avail_min);
+        LOAD_FUNC(snd_pcm_sw_params_set_stop_threshold);
         LOAD_FUNC(snd_pcm_sw_params);
         LOAD_FUNC(snd_pcm_sw_params_free);
         LOAD_FUNC(snd_pcm_prepare);
@@ -726,6 +729,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         err = "sw current";
     if(i == 0 && (i=snd_pcm_sw_params_set_avail_min(data->pcmHandle, sp, periodSizeInFrames)) != 0)
         err = "sw set avail min";
+    if(i == 0 && (i=snd_pcm_sw_params_set_stop_threshold(data->pcmHandle, sp, periodSizeInFrames*periods)) != 0)
+        err = "sw set stop threshold";
     if(i == 0 && (i=snd_pcm_sw_params(data->pcmHandle, sp)) != 0)
         err = "sw set params";
     if(i != 0)

@@ -287,7 +287,7 @@ typedef void ALvoid;
 
 
 /** Errors: No Error. */
-#define AL_NO_ERROR                               AL_FALSE
+#define AL_NO_ERROR                               0
 
 /** 
  * Invalid Name paramater passed to AL call.

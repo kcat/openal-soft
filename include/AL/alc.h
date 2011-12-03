@@ -120,7 +120,7 @@ typedef void ALCvoid;
 /**
  * No error
  */
-#define ALC_NO_ERROR                             ALC_FALSE
+#define ALC_NO_ERROR                             0
 
 /**
  * No device

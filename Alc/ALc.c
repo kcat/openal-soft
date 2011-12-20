@@ -1209,6 +1209,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(ALeffectState_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
+                RestoreFPUMode(oldMode);
                 UnlockDevice(device);
                 ALCdevice_StopPlayback(device);
                 device->Flags &= ~DEVICE_RUNNING;

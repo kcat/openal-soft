@@ -583,10 +583,24 @@ static void alc_initconfig(void)
 #endif
     ConfigValueInt(NULL, "rt-prio", &RTPrioLevel);
 
-    if(ConfigValueInt(NULL, "resampler", &n))
+    if(ConfigValueStr(NULL, "resampler", &str))
     {
-        if(n < RESAMPLER_MAX && n > RESAMPLER_MIN)
-            DefaultResampler = n;
+        if(strcasecmp(str, "point") == 0 || strcasecmp(str, "none") == 0)
+            DefaultResampler = POINT_RESAMPLER;
+        else if(strcasecmp(str, "linear") == 0)
+            DefaultResampler = LINEAR_RESAMPLER;
+        else if(strcasecmp(str, "cubic") == 0)
+            DefaultResampler = CUBIC_RESAMPLER;
+        else
+        {
+            char *end;
+
+            n = strtol(str, &end, 0);
+            if(*end == '\0' && n < RESAMPLER_MAX && n > RESAMPLER_MIN)
+                DefaultResampler = n;
+            else
+                WARN("Invalid resampler: %s\n", str);
+        }
     }
 
     if(!TrapALCError)

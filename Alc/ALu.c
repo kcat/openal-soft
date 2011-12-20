@@ -37,6 +37,11 @@
 #include "bs2b.h"
 
 
+struct ChanMap {
+    enum Channel channel;
+    ALfloat angle;
+};
+
 /* Cone scalar */
 ALfloat ConeScale = 0.5f;
 
@@ -58,32 +63,36 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[
 
 ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
-    static const ALfloat angles_Mono[1] = { 0.0f };
-    static const ALfloat angles_Stereo[2] = { -30.0f, 30.0f };
-    static const ALfloat angles_Rear[2] = { -150.0f, 150.0f };
-    static const ALfloat angles_Quad[4] = { -45.0f, 45.0f, -135.0f, 135.0f };
-    static const ALfloat angles_X51[6] = { -30.0f, 30.0f, 0.0f, 0.0f,
-                                           -110.0f, 110.0f };
-    static const ALfloat angles_X61[7] = { -30.0f, 30.0f, 0.0f, 0.0f,
-                                           180.0f, -90.0f, 90.0f };
-    static const ALfloat angles_X71[8] = { -30.0f, 30.0f, 0.0f, 0.0f,
-                                           -110.0f, 110.0f, -90.0f, 90.0f };
-
-    static const enum Channel chans_Mono[1] = { FRONT_CENTER };
-    static const enum Channel chans_Stereo[2] = { FRONT_LEFT, FRONT_RIGHT };
-    static const enum Channel chans_Rear[2] = { BACK_LEFT, BACK_RIGHT };
-    static const enum Channel chans_Quad[4] = { FRONT_LEFT, FRONT_RIGHT,
-                                                BACK_LEFT, BACK_RIGHT };
-    static const enum Channel chans_X51[6] = { FRONT_LEFT, FRONT_RIGHT,
-                                               FRONT_CENTER, LFE,
-                                               BACK_LEFT, BACK_RIGHT };
-    static const enum Channel chans_X61[7] = { FRONT_LEFT, FRONT_RIGHT,
-                                               FRONT_CENTER, LFE, BACK_CENTER,
-                                               SIDE_LEFT, SIDE_RIGHT };
-    static const enum Channel chans_X71[8] = { FRONT_LEFT, FRONT_RIGHT,
-                                               FRONT_CENTER, LFE,
-                                               BACK_LEFT, BACK_RIGHT,
-                                               SIDE_LEFT, SIDE_RIGHT };
+    static const struct ChanMap MonoMap[1] = { { FRONT_CENTER, 0.0f } };
+    static const struct ChanMap StereoMap[2] = { { FRONT_LEFT, -30.0f },
+                                                 { FRONT_RIGHT, 30.0f } };
+    static const struct ChanMap RearMap[2] = { { BACK_LEFT, -150.0f },
+                                               { BACK_RIGHT, 150.0f } };
+    static const struct ChanMap QuadMap[4] = { { FRONT_LEFT, -45.0f },
+                                               { FRONT_RIGHT, 45.0f },
+                                               { BACK_LEFT, -135.0f },
+                                               { BACK_RIGHT, 135.0f } };
+    static const struct ChanMap X51Map[6] = { { FRONT_LEFT, -30.0f },
+                                              { FRONT_RIGHT, 30.0f },
+                                              { FRONT_CENTER, 0.0f },
+                                              { LFE, 0.0f },
+                                              { BACK_LEFT, -110.0f },
+                                              { BACK_RIGHT, 110.0f } };
+    static const struct ChanMap X61Map[7] = { { FRONT_LEFT, -30.0f },
+                                              { FRONT_RIGHT, 30.0f },
+                                              { FRONT_CENTER, 0.0f },
+                                              { LFE, 0.0f },
+                                              { BACK_CENTER, 180.0f },
+                                              { SIDE_LEFT, -90.0f },
+                                              { SIDE_RIGHT, 90.0f } };
+    static const struct ChanMap X71Map[8] = { { FRONT_LEFT, -30.0f },
+                                              { FRONT_RIGHT, 30.0f },
+                                              { FRONT_CENTER, 0.0f },
+                                              { LFE, 0.0f },
+                                              { BACK_LEFT, -110.0f },
+                                              { BACK_RIGHT, 110.0f },
+                                              { SIDE_LEFT, -90.0f },
+                                              { SIDE_RIGHT, 90.0f } };
 
     ALCdevice *Device = ALContext->Device;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
@@ -96,8 +105,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat WetGainHF[MAX_SENDS];
     ALint NumSends, Frequency;
     const ALfloat *SpeakerGain;
-    const ALfloat *angles = NULL;
-    const enum Channel *chans = NULL;
+    const struct ChanMap *chans = NULL;
     enum Resampler Resampler;
     ALint num_channels = 0;
     ALboolean VirtualChannels;
@@ -178,8 +186,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     switch(Channels)
     {
     case FmtMono:
-        angles = angles_Mono;
-        chans = chans_Mono;
+        chans = MonoMap;
         num_channels = 1;
         break;
     case FmtStereo:
@@ -188,8 +195,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             DryGain *= aluSqrt(2.0f/4.0f);
             for(c = 0;c < 2;c++)
             {
-                pos = aluCart2LUTpos(aluCos(F_PI/180.0f * angles_Rear[c]),
-                                     aluSin(F_PI/180.0f * angles_Rear[c]));
+                pos = aluCart2LUTpos(aluCos(F_PI/180.0f * RearMap[c].angle),
+                                     aluSin(F_PI/180.0f * RearMap[c].angle));
                 SpeakerGain = Device->PanningLUT[pos];
 
                 for(i = 0;i < (ALint)Device->NumChan;i++)
@@ -200,38 +207,32 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 }
             }
         }
-        angles = angles_Stereo;
-        chans = chans_Stereo;
+        chans = StereoMap;
         num_channels = 2;
         break;
 
     case FmtRear:
-        angles = angles_Rear;
-        chans = chans_Rear;
+        chans = RearMap;
         num_channels = 2;
         break;
 
     case FmtQuad:
-        angles = angles_Quad;
-        chans = chans_Quad;
+        chans = QuadMap;
         num_channels = 4;
         break;
 
     case FmtX51:
-        angles = angles_X51;
-        chans = chans_X51;
+        chans = X51Map;
         num_channels = 6;
         break;
 
     case FmtX61:
-        angles = angles_X61;
-        chans = chans_X61;
+        chans = X61Map;
         num_channels = 7;
         break;
 
     case FmtX71:
-        angles = angles_X71;
-        chans = chans_X71;
+        chans = X71Map;
         num_channels = 8;
         break;
     }
@@ -239,13 +240,13 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if(VirtualChannels == AL_FALSE)
     {
         for(c = 0;c < num_channels;c++)
-            SrcMatrix[c][chans[c]] += DryGain * ListenerGain;
+            SrcMatrix[c][chans[c].channel] += DryGain * ListenerGain;
     }
     else if(Device->Hrtf)
     {
         for(c = 0;c < num_channels;c++)
         {
-            if(chans[c] == LFE)
+            if(chans[c].channel == LFE)
             {
                 /* Skip LFE */
                 ALSource->Params.HrtfDelay[c][0] = 0;
@@ -261,7 +262,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 /* Get the static HRIR coefficients and delays for this
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
-                                    0.0f, F_PI/180.0f * angles[c],
+                                    0.0f, F_PI/180.0f * chans[c].angle,
                                     DryGain*ListenerGain,
                                     ALSource->Params.HrtfCoeffs[c],
                                     ALSource->Params.HrtfDelay[c]);
@@ -273,13 +274,13 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         for(c = 0;c < num_channels;c++)
         {
-            if(chans[c] == LFE) /* Special-case LFE */
+            if(chans[c].channel == LFE) /* Special-case LFE */
             {
                 SrcMatrix[c][LFE] += DryGain * ListenerGain;
                 continue;
             }
-            pos = aluCart2LUTpos(aluCos(F_PI/180.0f * angles[c]),
-                                 aluSin(F_PI/180.0f * angles[c]));
+            pos = aluCart2LUTpos(aluCos(F_PI/180.0f * chans[c].angle),
+                                 aluSin(F_PI/180.0f * chans[c].angle));
             SpeakerGain = Device->PanningLUT[pos];
 
             for(i = 0;i < (ALint)Device->NumChan;i++)

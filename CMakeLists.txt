@@ -17,6 +17,7 @@ INCLUDE(CheckSymbolExists)
 INCLUDE(CheckCCompilerFlag)
 INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckTypeSize)
+INCLUDE(FindPkgConfig)
 
 
 PROJECT(OpenAL C)
@@ -55,6 +56,8 @@ OPTION(DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 OPTION(WERROR  "Treat compile warnings as errors"      OFF)
 
 OPTION(UTILS  "Build and install utility programs"  ON)
+
+OPTION(EXAMPLES  "Build and install example programs"  ON)
 
 OPTION(ALSOFT_CONFIG "Install alsoft.conf configuration file" OFF)
 
@@ -729,4 +732,21 @@ IF(UTILS)
     )
     MESSAGE(STATUS "Building utility programs")
     MESSAGE(STATUS "")
+ENDIF()
+
+IF(EXAMPLES)
+    PKG_CHECK_MODULES(FFMPEG libavcodec libavformat)
+    IF(FFMPEG_FOUND)
+        ADD_EXECUTABLE(alstream examples/alhelpers.c examples/alffmpeg.c examples/alstream.c)
+        TARGET_LINK_LIBRARIES(alstream ${FFMPEG_LIBRARIES} ${LIBNAME})
+        SET_TARGET_PROPERTIES(alstream PROPERTIES COMPILE_FLAGS "${FFMPEG_CFLAGS}")
+        INSTALL(TARGETS alstream
+                RUNTIME DESTINATION bin
+                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+        )
+
+        MESSAGE(STATUS "Building ffmpeg example programs")
+        MESSAGE(STATUS "")
+    ENDIF()
 ENDIF()

@@ -1463,21 +1463,14 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
         ALCcontext_DecRef(context);
     }
 
+    LockDevice(device);
     tmp_ctx = &device->ContextList;
     while(*tmp_ctx)
     {
-        if(*tmp_ctx == context)
-        {
-            *tmp_ctx = context->next;
+        if(CompExchangePtr((XchgPtr*)tmp_ctx, context, context->next))
             break;
-        }
         tmp_ctx = &(*tmp_ctx)->next;
     }
-
-    LockDevice(device);
-    /* Lock the device to make sure the mixer is not using the contexts in the
-     * list before we go about deleting this one. There should be a more
-     * efficient way of doing this. */
     UnlockDevice(device);
 
     ALCcontext_DecRef(context);

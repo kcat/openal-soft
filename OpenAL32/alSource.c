@@ -583,7 +583,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                             // Increment reference counter for buffer
                             IncrementRef(&buffer->ref);
 
-                            oldlist = ExchangePtr((void**)&Source->queue, BufferListItem);
+                            oldlist = ExchangePtr((XchgPtr*)&Source->queue, BufferListItem);
                             Source->BuffersInQueue = 1;
 
                             ReadLock(&buffer->lock);
@@ -600,7 +600,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                         {
                             // Source is now in UNDETERMINED mode
                             Source->lSourceType = AL_UNDETERMINED;
-                            oldlist = ExchangePtr((void**)&Source->queue, NULL);
+                            oldlist = ExchangePtr((XchgPtr*)&Source->queue, NULL);
                         }
 
                         // Delete all previous elements in the queue
@@ -780,7 +780,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum eParam, ALint lValue1, 
                     /* Release refcount on the previous slot, and add one for
                      * the new slot */
                     if(ALEffectSlot) IncrementRef(&ALEffectSlot->ref);
-                    ALEffectSlot = ExchangePtr((void**)&Source->Send[lValue2].Slot, ALEffectSlot);
+                    ALEffectSlot = ExchangePtr((XchgPtr*)&Source->Send[lValue2].Slot, ALEffectSlot);
                     if(ALEffectSlot) DecrementRef(&ALEffectSlot->ref);
 
                     if(!ALFilter)

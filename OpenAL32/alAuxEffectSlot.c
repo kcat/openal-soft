@@ -570,7 +570,7 @@ static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, AL
             alSetError(Context, AL_OUT_OF_MEMORY);
             return;
         }
-        State = ExchangePtr((void**)&EffectSlot->EffectState, State);
+        State = ExchangePtr((XchgPtr*)&EffectSlot->EffectState, State);
 
         if(!effect)
             memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));

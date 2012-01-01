@@ -1457,7 +1457,7 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
         ALCcontext_DecRef(context);
     }
 
-    if(CompExchangePtr((void**)&GlobalContext, context, NULL))
+    if(CompExchangePtr((XchgPtr*)&GlobalContext, context, NULL))
     {
         WARN("%p released while current\n", context);
         ALCcontext_DecRef(context);
@@ -1648,7 +1648,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     do {
         device->next = DeviceList;
-    } while(!CompExchangePtr((void**)&DeviceList, device->next, device));
+    } while(!CompExchangePtr((XchgPtr*)&DeviceList, device->next, device));
 
     TRACE("Created device %p\n", device);
     return device;
@@ -2309,7 +2309,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
         return ALC_FALSE;
     }
     /* context's reference count is already incremented */
-    context = ExchangePtr((void**)&GlobalContext, context);
+    context = ExchangePtr((XchgPtr*)&GlobalContext, context);
     if(context) ALCcontext_DecRef(context);
 
     if((context=pthread_getspecific(LocalContext)) != NULL)
@@ -2509,7 +2509,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     do {
         device->next = DeviceList;
-    } while(!CompExchangePtr((void**)&DeviceList, device->next, device));
+    } while(!CompExchangePtr((XchgPtr*)&DeviceList, device->next, device));
 
     TRACE("Created device %p\n", device);
     return device;
@@ -2623,7 +2623,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     ALCdevice_OpenPlayback(device, "Loopback");
     do {
         device->next = DeviceList;
-    } while(!CompExchangePtr((void**)&DeviceList, device->next, device));
+    } while(!CompExchangePtr((XchgPtr*)&DeviceList, device->next, device));
 
     TRACE("Created device %p\n", device);
     return device;
@@ -2689,7 +2689,7 @@ static void ReleaseALC(void)
     free(alcCaptureDefaultDeviceSpecifier);
     alcCaptureDefaultDeviceSpecifier = NULL;
 
-    if((dev=ExchangePtr((void**)&DeviceList, NULL)) != NULL)
+    if((dev=ExchangePtr((XchgPtr*)&DeviceList, NULL)) != NULL)
     {
         ALCuint num = 0;
         do {

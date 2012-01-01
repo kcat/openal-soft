@@ -226,6 +226,8 @@ void *GetSymbol(void *handle, const char *name);
 
 #endif
 
+typedef void *volatile XchgPtr;
+
 #if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1))
 typedef ALuint RefCount;
 static __inline RefCount IncrementRef(volatile RefCount *ptr)
@@ -237,7 +239,7 @@ static __inline int ExchangeInt(volatile int *ptr, int newval)
 {
     return __sync_lock_test_and_set(ptr, newval);
 }
-static __inline void *ExchangePtr(void *volatile*ptr, void *newval)
+static __inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 {
     return __sync_lock_test_and_set(ptr, newval);
 }
@@ -245,7 +247,7 @@ static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int new
 {
     return __sync_bool_compare_and_swap(ptr, oldval, newval);
 }
-static __inline ALboolean CompExchangePtr(void *volatile*ptr, void *oldval, void *newval)
+static __inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 {
     return __sync_bool_compare_and_swap(ptr, oldval, newval);
 }
@@ -288,7 +290,7 @@ static __inline ALboolean CompExchangeInt(volatile int *dest, int oldval, int ne
     return ret == oldval;
 }
 
-static __inline void *ExchangePtr(void *volatile*dest, void *newval)
+static __inline void *ExchangePtr(XchgPtr *dest, void *newval)
 {
     void *ret;
     __asm__ __volatile__(
@@ -304,7 +306,7 @@ static __inline void *ExchangePtr(void *volatile*dest, void *newval)
     return ret;
 }
 
-static __inline ALboolean CompExchangePtr(void *volatile*dest, void *oldval, void *newval)
+static __inline ALboolean CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
 {
     void *ret;
     __asm__ __volatile__(
@@ -338,7 +340,7 @@ static __inline int ExchangeInt(volatile int *ptr, int newval)
     } u = { ptr };
     return InterlockedExchange(u.l, newval);
 }
-static __inline void *ExchangePtr(void *volatile*ptr, void *newval)
+static __inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 {
     return InterlockedExchangePointer(ptr, newval);
 }
@@ -350,7 +352,7 @@ static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int new
     } u = { ptr };
     return InterlockedCompareExchange(u.l, newval, oldval) == oldval;
 }
-static __inline ALboolean CompExchangePtr(void *volatile*ptr, void *oldval, void *newval)
+static __inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 {
     return InterlockedCompareExchangePointer(ptr, newval, oldval) == oldval;
 }
@@ -374,7 +376,7 @@ static __inline int ExchangeInt(volatile int *ptr, int newval)
     } while(!OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr));
     return oldval;
 }
-static __inline void *ExchangePtr(void *volatile*ptr, void *newval)
+static __inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 {
     void *oldval;
     do {
@@ -386,7 +388,7 @@ static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int new
 {
     return OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr);
 }
-static __inline ALboolean CompExchangePtr(void *volatile*ptr, void *oldval, void *newval)
+static __inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 {
     return OSAtomicCompareAndSwapPtrBarrier(oldval, newval, ptr);
 }

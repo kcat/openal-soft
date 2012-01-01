@@ -1458,10 +1458,7 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
     }
 
     if(CompExchangePtr((XchgPtr*)&GlobalContext, context, NULL))
-    {
-        WARN("%p released while current\n", context);
         ALCcontext_DecRef(context);
-    }
 
     LockDevice(device);
     tmp_ctx = &device->ContextList;

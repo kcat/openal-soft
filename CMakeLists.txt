@@ -648,6 +648,10 @@ ENDIF()
 # This is always available
 SET(BACKENDS  "${BACKENDS} Null")
 
+IF(EXAMPLES)
+    PKG_CHECK_MODULES(FFMPEG libavcodec libavformat)
+ENDIF()
+
 IF(LIBTYPE STREQUAL "STATIC")
     ADD_DEFINITIONS(-DAL_LIBTYPE_STATIC)
     SET(PKG_CONFIG_CFLAGS -DAL_LIBTYPE_STATIC ${PKG_CONFIG_CFLAGS})
@@ -735,7 +739,6 @@ IF(UTILS)
 ENDIF()
 
 IF(EXAMPLES)
-    PKG_CHECK_MODULES(FFMPEG libavcodec libavformat)
     IF(FFMPEG_FOUND)
         ADD_EXECUTABLE(alstream examples/alhelpers.c examples/alffmpeg.c examples/alstream.c)
         TARGET_LINK_LIBRARIES(alstream ${FFMPEG_LIBRARIES} ${LIBNAME})

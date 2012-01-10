@@ -370,15 +370,15 @@ int getAVAudioInfo(StreamPtr stream, ALuint *rate, ALenum *channels, ALenum *typ
 
     /* Get the sample type for OpenAL given the format detected by ffmpeg. */
     if(stream->CodecCtx->sample_fmt == AV_SAMPLE_FMT_U8)
-        *type = AL_UNSIGNED_BYTE;
+        *type = AL_UNSIGNED_BYTE_SOFT;
     else if(stream->CodecCtx->sample_fmt == AV_SAMPLE_FMT_S16)
-        *type = AL_SHORT;
+        *type = AL_SHORT_SOFT;
     else if(stream->CodecCtx->sample_fmt == AV_SAMPLE_FMT_S32)
-        *type = AL_INT;
+        *type = AL_INT_SOFT;
     else if(stream->CodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT)
-        *type = AL_FLOAT;
+        *type = AL_FLOAT_SOFT;
     else if(stream->CodecCtx->sample_fmt == AV_SAMPLE_FMT_DBL)
-        *type = AL_DOUBLE;
+        *type = AL_DOUBLE_SOFT;
     else
         return 1;
 
@@ -386,22 +386,22 @@ int getAVAudioInfo(StreamPtr stream, ALuint *rate, ALenum *channels, ALenum *typ
      * by ffmpeg. NOTE: some file types may not specify a channel layout. In
      * that case, one must be guessed based on the channel count. */
     if(stream->CodecCtx->channel_layout == AV_CH_LAYOUT_MONO)
-        *channels = AL_MONO;
+        *channels = AL_MONO_SOFT;
     else if(stream->CodecCtx->channel_layout == AV_CH_LAYOUT_STEREO)
-        *channels = AL_STEREO;
+        *channels = AL_STEREO_SOFT;
     else if(stream->CodecCtx->channel_layout == AV_CH_LAYOUT_QUAD)
-        *channels = AL_QUAD;
+        *channels = AL_QUAD_SOFT;
     else if(stream->CodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1)
-        *channels = AL_5POINT1;
+        *channels = AL_5POINT1_SOFT;
     else if(stream->CodecCtx->channel_layout == AV_CH_LAYOUT_7POINT1)
-        *channels = AL_7POINT1;
+        *channels = AL_7POINT1_SOFT;
     else if(stream->CodecCtx->channel_layout == 0)
     {
         /* Unknown channel layout. Try to guess. */
         if(stream->CodecCtx->channels == 1)
-            *channels = AL_MONO;
+            *channels = AL_MONO_SOFT;
         else if(stream->CodecCtx->channels == 2)
-            *channels = AL_STEREO;
+            *channels = AL_STEREO_SOFT;
         else
             return 1;
     }

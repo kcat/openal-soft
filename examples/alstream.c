@@ -38,6 +38,10 @@
 #include "alffmpeg.h"
 
 
+LPALBUFFERSAMPLESSOFT palBufferSamplesSOFT = wrap_BufferSamples;
+LPALISBUFFERFORMATSUPPORTEDSOFT palIsBufferFormatSupportedSOFT = NULL;
+
+
 /* Define the number of buffers and buffer size (in samples) to use. 4 buffers
  * with 8192 samples each gives a nice per-chunk size, and lets the queue last
  * for almost 3/4ths of a second for a 44.1khz stream. */
@@ -140,7 +144,7 @@ static int OpenPlayerFile(StreamPlayer *player, const char *filename)
         goto error;
     }
 
-    player->format = GetFormat(player->channels, player->type);
+    player->format = GetFormat(player->channels, player->type, palIsBufferFormatSupportedSOFT);
     if(player->format == 0)
     {
         fprintf(stderr, "Unsupported format (%s, %s) for %s\n",
@@ -199,8 +203,9 @@ static int StartPlayer(StreamPlayer *player)
         got = readAVAudioData(player->stream, player->data, player->datasize);
         if(got == 0) break;
 
-        alBufferData(player->buffers[i], player->format, player->data, got,
-                     player->rate);
+        palBufferSamplesSOFT(player->buffers[i], player->rate, player->format,
+                             BytesToFrames(got, player->channels, player->type),
+                             player->channels, player->type, player->data);
     }
     if(alGetError() != AL_NO_ERROR)
     {
@@ -247,8 +252,9 @@ static int UpdatePlayer(StreamPlayer *player)
         got = readAVAudioData(player->stream, player->data, player->datasize);
         if(got > 0)
         {
-            alBufferData(bufid, player->format, player->data, got,
-                         player->rate);
+            palBufferSamplesSOFT(bufid, player->rate, player->format,
+                                 BytesToFrames(got, player->channels, player->type),
+                                 player->channels, player->type, player->data);
             alSourceQueueBuffers(player->source, 1, &bufid);
         }
         if(alGetError() != AL_NO_ERROR)
@@ -294,6 +300,15 @@ int main(int argc, char **argv)
 
     if(InitAL() != 0)
         return 1;
+
+    if(alIsExtensionPresent("AL_SOFT_buffer_samples"))
+    {
+        printf("AL_SOFT_buffer_samples supported!\n");
+        palBufferSamplesSOFT = alGetProcAddress("alBufferSamplesSOFT");
+        palIsBufferFormatSupportedSOFT = alGetProcAddress("alIsBufferFormatSupportedSOFT");
+    }
+    else
+        printf("AL_SOFT_buffer_samples not supported\n");
 
     player = NewPlayer();
 

@@ -9,28 +9,28 @@ extern "C" {
 
 /* User formats */
 enum UserFmtType {
-    UserFmtByte   = AL_BYTE,
-    UserFmtUByte  = AL_UNSIGNED_BYTE,
-    UserFmtShort  = AL_SHORT,
-    UserFmtUShort = AL_UNSIGNED_SHORT,
-    UserFmtInt    = AL_INT,
-    UserFmtUInt   = AL_UNSIGNED_INT,
-    UserFmtFloat  = AL_FLOAT,
-    UserFmtDouble = AL_DOUBLE,
-    UserFmtMulaw  = AL_MULAW,
-    UserFmtAlaw   = AL_ALAW,
-    UserFmtIMA4   = AL_IMA4,
-    UserFmtByte3  = AL_BYTE3,
-    UserFmtUByte3 = AL_UNSIGNED_BYTE3,
+    UserFmtByte   = AL_BYTE_SOFT,
+    UserFmtUByte  = AL_UNSIGNED_BYTE_SOFT,
+    UserFmtShort  = AL_SHORT_SOFT,
+    UserFmtUShort = AL_UNSIGNED_SHORT_SOFT,
+    UserFmtInt    = AL_INT_SOFT,
+    UserFmtUInt   = AL_UNSIGNED_INT_SOFT,
+    UserFmtFloat  = AL_FLOAT_SOFT,
+    UserFmtDouble = AL_DOUBLE_SOFT,
+    UserFmtByte3  = AL_BYTE3_SOFT,
+    UserFmtUByte3 = AL_UNSIGNED_BYTE3_SOFT,
+    UserFmtMulaw  = AL_MULAW_SOFT,
+    UserFmtAlaw   = AL_ALAW_SOFT,
+    UserFmtIMA4   = AL_IMA4_SOFT,
 };
 enum UserFmtChannels {
-    UserFmtMono   = AL_MONO,
-    UserFmtStereo = AL_STEREO,
-    UserFmtRear   = AL_REAR,
-    UserFmtQuad   = AL_QUAD,
-    UserFmtX51    = AL_5POINT1, /* (WFX order) */
-    UserFmtX61    = AL_6POINT1, /* (WFX order) */
-    UserFmtX71    = AL_7POINT1  /* (WFX order) */
+    UserFmtMono   = AL_MONO_SOFT,
+    UserFmtStereo = AL_STEREO_SOFT,
+    UserFmtRear   = AL_REAR_SOFT,
+    UserFmtQuad   = AL_QUAD_SOFT,
+    UserFmtX51    = AL_5POINT1_SOFT, /* (WFX order) */
+    UserFmtX61    = AL_6POINT1_SOFT, /* (WFX order) */
+    UserFmtX71    = AL_7POINT1_SOFT, /* (WFX order) */
 };
 
 ALuint BytesFromUserFmt(enum UserFmtType type);

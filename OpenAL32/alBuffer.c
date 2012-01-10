@@ -839,7 +839,7 @@ AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum eParam, ALfloat *pf
     {
         switch(eParam)
         {
-        case AL_SEC_LENGTH:
+        case AL_SEC_LENGTH_SOFT:
             ReadLock(&pBuffer->lock);
             if(pBuffer->SampleLen != 0)
                 *pflValue = pBuffer->SampleLen / (ALfloat)pBuffer->Frequency;
@@ -892,7 +892,7 @@ AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum eParam, ALfloat* pfl
 
     switch(eParam)
     {
-    case AL_SEC_LENGTH:
+    case AL_SEC_LENGTH_SOFT:
         alGetBufferf(buffer, eParam, pflValues);
         return;
     }
@@ -956,15 +956,15 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum eParam, ALint *plVa
             ReadUnlock(&pBuffer->lock);
             break;
 
-        case AL_INTERNAL_FORMAT:
+        case AL_INTERNAL_FORMAT_SOFT:
             *plValue = pBuffer->Format;
             break;
 
-        case AL_BYTE_LENGTH:
+        case AL_BYTE_LENGTH_SOFT:
             *plValue = pBuffer->OriginalSize;
             break;
 
-        case AL_SAMPLE_LENGTH:
+        case AL_SAMPLE_LENGTH_SOFT:
             *plValue = pBuffer->SampleLen;
             break;
 
@@ -1017,9 +1017,9 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum eParam, ALint* plVal
     case AL_BITS:
     case AL_CHANNELS:
     case AL_SIZE:
-    case AL_INTERNAL_FORMAT:
-    case AL_BYTE_LENGTH:
-    case AL_SAMPLE_LENGTH:
+    case AL_INTERNAL_FORMAT_SOFT:
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
         alGetBufferi(buffer, eParam, plValues);
         return;
     }
@@ -2209,36 +2209,36 @@ static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum Fm
         enum FmtChannels channels;
         enum FmtType type;
     } list[] = {
-        { AL_MONO8,   FmtMono, FmtByte  },
-        { AL_MONO16,  FmtMono, FmtShort },
-        { AL_MONO32F, FmtMono, FmtFloat },
+        { AL_MONO8_SOFT,   FmtMono, FmtByte  },
+        { AL_MONO16_SOFT,  FmtMono, FmtShort },
+        { AL_MONO32F_SOFT, FmtMono, FmtFloat },
 
-        { AL_STEREO8,   FmtStereo, FmtByte  },
-        { AL_STEREO16,  FmtStereo, FmtShort },
-        { AL_STEREO32F, FmtStereo, FmtFloat },
+        { AL_STEREO8_SOFT,   FmtStereo, FmtByte  },
+        { AL_STEREO16_SOFT,  FmtStereo, FmtShort },
+        { AL_STEREO32F_SOFT, FmtStereo, FmtFloat },
 
-        { AL_REAR8,   FmtRear, FmtByte  },
-        { AL_REAR16,  FmtRear, FmtShort },
-        { AL_REAR32F, FmtRear, FmtFloat },
+        { AL_REAR8_SOFT,   FmtRear, FmtByte  },
+        { AL_REAR16_SOFT,  FmtRear, FmtShort },
+        { AL_REAR32F_SOFT, FmtRear, FmtFloat },
 
         { AL_FORMAT_QUAD8_LOKI,  FmtQuad, FmtByte  },
         { AL_FORMAT_QUAD16_LOKI, FmtQuad, FmtShort },
 
-        { AL_QUAD8,   FmtQuad, FmtByte  },
-        { AL_QUAD16,  FmtQuad, FmtShort },
-        { AL_QUAD32F, FmtQuad, FmtFloat },
+        { AL_QUAD8_SOFT,   FmtQuad, FmtByte  },
+        { AL_QUAD16_SOFT,  FmtQuad, FmtShort },
+        { AL_QUAD32F_SOFT, FmtQuad, FmtFloat },
 
-        { AL_5POINT1_8,   FmtX51, FmtByte  },
-        { AL_5POINT1_16,  FmtX51, FmtShort },
-        { AL_5POINT1_32F, FmtX51, FmtFloat },
+        { AL_5POINT1_8_SOFT,   FmtX51, FmtByte  },
+        { AL_5POINT1_16_SOFT,  FmtX51, FmtShort },
+        { AL_5POINT1_32F_SOFT, FmtX51, FmtFloat },
 
-        { AL_6POINT1_8,   FmtX61, FmtByte  },
-        { AL_6POINT1_16,  FmtX61, FmtShort },
-        { AL_6POINT1_32F, FmtX61, FmtFloat },
+        { AL_6POINT1_8_SOFT,   FmtX61, FmtByte  },
+        { AL_6POINT1_16_SOFT,  FmtX61, FmtShort },
+        { AL_6POINT1_32F_SOFT, FmtX61, FmtFloat },
 
-        { AL_7POINT1_8,   FmtX71, FmtByte  },
-        { AL_7POINT1_16,  FmtX71, FmtShort },
-        { AL_7POINT1_32F, FmtX71, FmtFloat },
+        { AL_7POINT1_8_SOFT,   FmtX71, FmtByte  },
+        { AL_7POINT1_16_SOFT,  FmtX71, FmtShort },
+        { AL_7POINT1_32F_SOFT, FmtX71, FmtFloat },
     };
     ALuint i;
 
@@ -2260,19 +2260,19 @@ static ALboolean IsValidType(ALenum type)
 {
     switch(type)
     {
-        case AL_BYTE:
-        case AL_UNSIGNED_BYTE:
-        case AL_SHORT:
-        case AL_UNSIGNED_SHORT:
-        case AL_INT:
-        case AL_UNSIGNED_INT:
-        case AL_FLOAT:
-        case AL_DOUBLE:
-        case AL_MULAW:
-        case AL_ALAW:
-        case AL_IMA4:
-        case AL_BYTE3:
-        case AL_UNSIGNED_BYTE3:
+        case AL_BYTE_SOFT:
+        case AL_UNSIGNED_BYTE_SOFT:
+        case AL_SHORT_SOFT:
+        case AL_UNSIGNED_SHORT_SOFT:
+        case AL_INT_SOFT:
+        case AL_UNSIGNED_INT_SOFT:
+        case AL_FLOAT_SOFT:
+        case AL_DOUBLE_SOFT:
+        case AL_BYTE3_SOFT:
+        case AL_UNSIGNED_BYTE3_SOFT:
+        case AL_MULAW_SOFT:
+        case AL_ALAW_SOFT:
+        case AL_IMA4_SOFT:
             return AL_TRUE;
     }
     return AL_FALSE;
@@ -2282,13 +2282,13 @@ static ALboolean IsValidChannels(ALenum channels)
 {
     switch(channels)
     {
-        case AL_MONO:
-        case AL_STEREO:
-        case AL_REAR:
-        case AL_QUAD:
-        case AL_5POINT1:
-        case AL_6POINT1:
-        case AL_7POINT1:
+        case AL_MONO_SOFT:
+        case AL_STEREO_SOFT:
+        case AL_REAR_SOFT:
+        case AL_QUAD_SOFT:
+        case AL_5POINT1_SOFT:
+        case AL_6POINT1_SOFT:
+        case AL_7POINT1_SOFT:
             return AL_TRUE;
     }
     return AL_FALSE;

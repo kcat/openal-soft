@@ -1341,17 +1341,6 @@ static ALCdevice *VerifyDevice(ALCdevice *device)
 }
 
 
-ALCvoid LockDevice(ALCdevice *device)
-{
-    EnterCriticalSection(&device->Mutex);
-}
-
-ALCvoid UnlockDevice(ALCdevice *device)
-{
-    LeaveCriticalSection(&device->Mutex);
-}
-
-
 /* InitContext
  *
  * Initializes context variables
@@ -1524,16 +1513,6 @@ static ALCcontext *VerifyContext(ALCcontext *context)
     return NULL;
 }
 
-
-ALCvoid LockContext(ALCcontext *context)
-{
-    EnterCriticalSection(&context->Device->Mutex);
-}
-
-ALCvoid UnlockContext(ALCcontext *context)
-{
-    LeaveCriticalSection(&context->Device->Mutex);
-}
 
 /* GetContextRef
  *

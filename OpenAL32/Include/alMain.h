@@ -758,10 +758,16 @@ void AppendDeviceList(const ALCchar *name);
 void AppendAllDeviceList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
 
-ALCvoid LockDevice(ALCdevice *device);
-ALCvoid UnlockDevice(ALCdevice *device);
-ALCvoid LockContext(ALCcontext *context);
-ALCvoid UnlockContext(ALCcontext *context);
+static __inline void LockDevice(ALCdevice *device)
+{ EnterCriticalSection(&device->Mutex); }
+static __inline void UnlockDevice(ALCdevice *device)
+{ LeaveCriticalSection(&device->Mutex); }
+
+static __inline void LockContext(ALCcontext *context)
+{ LockDevice(context->Device); }
+static __inline void UnlockContext(ALCcontext *context)
+{ UnlockDevice(context->Device); }
+
 
 ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr);
 ALuint StopThread(ALvoid *thread);

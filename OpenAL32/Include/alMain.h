@@ -62,9 +62,6 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
 #define AL_DOUBLE_SOFT                           0x1407
 #define AL_BYTE3_SOFT                            0x1408
 #define AL_UNSIGNED_BYTE3_SOFT                   0x1409
-#define AL_MULAW_SOFT                            0x1410
-#define AL_ALAW_SOFT                             0x1411
-#define AL_IMA4_SOFT                             0x1412
 
 /* Channel configurations */
 #define AL_MONO_SOFT                             0x1500

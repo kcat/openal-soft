@@ -194,14 +194,13 @@ FilePtr openAVData(const char *name, char *buffer, size_t buffer_len)
     file = (FilePtr)calloc(1, sizeof(*file));
     if(file && (file->FmtCtx=avformat_alloc_context()) != NULL)
     {
-        static const int buflen = 4096;
-
         file->membuf.buffer = buffer;
         file->membuf.length = buffer_len;
         file->membuf.pos = 0;
 
-        file->FmtCtx->pb = avio_alloc_context(av_malloc(buflen), buflen, 1, &file->membuf,
-                                              MemData_read, MemData_write, MemData_seek);
+        file->FmtCtx->pb = avio_alloc_context(NULL, 0, 0, &file->membuf,
+                                              MemData_read, MemData_write,
+                                              MemData_seek);
         if(file->FmtCtx->pb && avformat_open_input(&file->FmtCtx, name, NULL, NULL) == 0)
         {
             if(av_find_stream_info(file->FmtCtx) >= 0)
@@ -231,9 +230,7 @@ FilePtr openAVCustom(const char *name, void *user_data,
     file = (FilePtr)calloc(1, sizeof(*file));
     if(file && (file->FmtCtx=avformat_alloc_context()) != NULL)
     {
-        static const int buflen = 4096;
-
-        file->FmtCtx->pb = avio_alloc_context(av_malloc(buflen), buflen, 1, user_data,
+        file->FmtCtx->pb = avio_alloc_context(NULL, 0, 0, user_data,
                                               read_packet, write_packet, seek);
         if(file->FmtCtx->pb && avformat_open_input(&file->FmtCtx, name, NULL, NULL) == 0)
         {

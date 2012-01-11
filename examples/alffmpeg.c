@@ -94,6 +94,7 @@ static int64_t MemData_seek(void *opaque, int64_t offset, int whence)
 {
     struct MemData *membuf = (struct MemData*)opaque;
 
+    whence &= ~AVSEEK_FORCE;
     switch(whence)
     {
         case SEEK_SET:
@@ -114,6 +115,9 @@ static int64_t MemData_seek(void *opaque, int64_t offset, int whence)
                 return -1;
             membuf->pos = membuf->length + offset;
             break;
+
+        case AVSEEK_SIZE:
+            return membuf->length;
 
         default:
             return -1;

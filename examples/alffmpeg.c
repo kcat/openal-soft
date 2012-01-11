@@ -335,7 +335,7 @@ StreamPtr getAVAudioStream(FilePtr file, int streamnum)
 
             /* Allocate space for the decoded data to be stored in before it
              * gets passed to the app */
-            stream->DecodedData = av_malloc(AVCODEC_MAX_AUDIO_FRAME_SIZE);
+            stream->DecodedData = (char*)av_malloc(AVCODEC_MAX_AUDIO_FRAME_SIZE);
             if(!stream->DecodedData)
             {
                 avcodec_close(stream->CodecCtx);
@@ -599,12 +599,12 @@ void *decodeAVAudioStream(StreamPtr stream, size_t *length)
         ptr = realloc(outbuf, NextPowerOf2(buflen+got));
         if(ptr == NULL)
             break;
-        outbuf = ptr;
+        outbuf = (char*)ptr;
 
         memcpy(&outbuf[buflen], inbuf, got);
         buflen += got;
     }
-    outbuf = realloc(outbuf, buflen);
+    outbuf = (char*)realloc(outbuf, buflen);
 
     *length = buflen;
     return outbuf;

@@ -2205,8 +2205,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALCdevice_IncRef(device);
     InitContext(ALContext);
 
-    ALContext->next = device->ContextList;
-    device->ContextList = ALContext;
+    do {
+        ALContext->next = device->ContextList;
+    } while(!CompExchangePtr((XchgPtr*)&device->ContextList, ALContext->next, ALContext));
     UnlockLists();
 
     ALCdevice_DecRef(device);

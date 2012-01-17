@@ -421,6 +421,8 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
                 break;
         }
 
+retry_open:
+        hr = S_OK;
         OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
         OutputType.Format.nChannels = ChannelsFromDevFmt(device->FmtChans);
         OutputType.Format.wBitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
@@ -439,6 +441,10 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
         else
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+
+        if(pData->DSpbuffer)
+            IDirectSoundBuffer_Release(pData->DSpbuffer);
+        pData->DSpbuffer = NULL;
     }
     else
     {
@@ -469,6 +475,11 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
                                      OutputType.Format.nBlockAlign;
         DSBDescription.lpwfxFormat=&OutputType.Format;
         hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
+        if(FAILED(hr) && device->FmtType == DevFmtFloat)
+        {
+            device->FmtType = DevFmtShort;
+            goto retry_open;
+        }
     }
 
     if(SUCCEEDED(hr))

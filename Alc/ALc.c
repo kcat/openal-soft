@@ -1139,26 +1139,52 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if((device->Flags&DEVICE_RUNNING))
         return ALC_TRUE;
-
-    LockDevice(device);
-    TRACE("Format pre-setup: %s%s, %s, %uhz%s, %u update size x%d\n",
-          DevFmtChannelsString(device->FmtChans),
-          (device->Flags&DEVICE_CHANNELS_REQUEST)?" (requested)":"",
-          DevFmtTypeString(device->FmtType), device->Frequency,
-          (device->Flags&DEVICE_FREQUENCY_REQUEST)?" (requested)":"",
-          device->UpdateSize, device->NumUpdates);
-    if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
+    else
     {
-        UnlockDevice(device);
-        return ALC_FALSE;
+        enum DevFmtChannels schans;
+        enum DevFmtType stype;
+        ALCuint freq;
+
+        LockDevice(device);
+
+        freq = device->Frequency;
+        schans = device->FmtChans;
+        stype = device->FmtType;
+
+        TRACE("Format pre-setup: %s%s, %s, %uhz%s, %u update size x%d\n",
+              DevFmtChannelsString(device->FmtChans),
+              (device->Flags&DEVICE_CHANNELS_REQUEST)?" (requested)":"",
+              DevFmtTypeString(device->FmtType), device->Frequency,
+              (device->Flags&DEVICE_FREQUENCY_REQUEST)?" (requested)":"",
+              device->UpdateSize, device->NumUpdates);
+        if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
+        {
+            UnlockDevice(device);
+            return ALC_FALSE;
+        }
+        device->Flags |= DEVICE_RUNNING;
+
+        if(device->FmtChans != schans)
+        {
+            if((device->Flags&DEVICE_CHANNELS_REQUEST))
+                ERR("Failed to set %s, got %s instead\n",
+                    DevFmtChannelsString(schans),
+                    DevFmtChannelsString(device->FmtChans));
+            device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+        }
+        if(device->Frequency != freq)
+        {
+            if((device->Flags&DEVICE_FREQUENCY_REQUEST))
+                ERR("Failed to set %uhz, got %uhz instead\n",
+                    freq, device->Frequency);
+            device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
+        }
+
+        TRACE("Format post-setup: %s, %s, %uhz, %u update size x%d\n",
+              DevFmtChannelsString(device->FmtChans),
+              DevFmtTypeString(device->FmtType), device->Frequency,
+              device->UpdateSize, device->NumUpdates);
     }
-    device->Flags |= DEVICE_RUNNING;
-    TRACE("Format post-setup: %s%s, %s, %uhz%s, %u update size x%d\n",
-          DevFmtChannelsString(device->FmtChans),
-          (device->Flags&DEVICE_CHANNELS_REQUEST)?" (requested)":"",
-          DevFmtTypeString(device->FmtType), device->Frequency,
-          (device->Flags&DEVICE_FREQUENCY_REQUEST)?" (requested)":"",
-          device->UpdateSize, device->NumUpdates);
 
     aluInitPanning(device);
 

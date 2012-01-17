@@ -353,6 +353,7 @@ static ALCenum WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceName)
             break;
     }
 
+retry_open:
     memset(&wfexFormat, 0, sizeof(WAVEFORMATEX));
     wfexFormat.wFormatTag = ((pDevice->FmtType == DevFmtFloat) ?
                              WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM);
@@ -367,6 +368,11 @@ static ALCenum WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceName)
 
     if((res=waveOutOpen(&pData->hWaveHandle.Out, lDeviceID, &wfexFormat, (DWORD_PTR)&WaveOutProc, (DWORD_PTR)pDevice, CALLBACK_FUNCTION)) != MMSYSERR_NOERROR)
     {
+        if(pDevice->FmtType == DevFmtFloat)
+        {
+            pDevice->FmtType = DevFmtShort;
+            goto retry_open;
+        }
         ERR("waveOutOpen failed: %u\n", res);
         goto failure;
     }

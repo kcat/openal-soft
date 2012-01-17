@@ -33,7 +33,7 @@
 #  AL_FORMAT_51CHN32  (32-bit float 5.1 output)
 #  AL_FORMAT_61CHN32  (32-bit float 6.1 output)
 #  AL_FORMAT_71CHN32  (32-bit float 7.1 output)
-#format = AL_FORMAT_STEREO16
+#format = AL_FORMAT_STEREO32
 
 ## hrtf:
 #  Enables HRTF filters. These filters provide for better sound spatialization

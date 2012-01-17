@@ -2440,7 +2440,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->Flags |= DEVICE_FREQUENCY_REQUEST;
     device->Frequency = maxu(device->Frequency, 8000);
 
-    fmt = "AL_FORMAT_STEREO16";
+    fmt = "AL_FORMAT_STEREO32";
     if(ConfigValueStr(NULL, "format", &fmt))
         device->Flags |= DEVICE_CHANNELS_REQUEST;
     GetFormatFromString(fmt, &device->FmtChans, &device->FmtType);

@@ -31,6 +31,10 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
+#ifndef WAVE_FORMAT_IEEE_FLOAT
+#define WAVE_FORMAT_IEEE_FLOAT  0x0003
+#endif
+
 
 typedef struct {
     // MMSYSTEM Device
@@ -341,16 +345,17 @@ static ALCenum WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceName)
             pDevice->FmtType = DevFmtUByte;
             break;
         case DevFmtUShort:
-        case DevFmtFloat:
             pDevice->FmtType = DevFmtShort;
             break;
         case DevFmtUByte:
         case DevFmtShort:
+        case DevFmtFloat:
             break;
     }
 
     memset(&wfexFormat, 0, sizeof(WAVEFORMATEX));
-    wfexFormat.wFormatTag = WAVE_FORMAT_PCM;
+    wfexFormat.wFormatTag = ((pDevice->FmtType == DevFmtFloat) ?
+                             WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM);
     wfexFormat.nChannels = ChannelsFromDevFmt(pDevice->FmtChans);
     wfexFormat.wBitsPerSample = BytesFromDevFmt(pDevice->FmtType) * 8;
     wfexFormat.nBlockAlign = wfexFormat.wBitsPerSample *
@@ -529,11 +534,13 @@ static ALCenum WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
     pDevice->ExtraData = pData;
 
     if((pDevice->FmtChans != DevFmtMono && pDevice->FmtChans != DevFmtStereo) ||
-       (pDevice->FmtType != DevFmtUByte && pDevice->FmtType != DevFmtShort))
+       (pDevice->FmtType != DevFmtUByte && pDevice->FmtType != DevFmtShort &&
+        pDevice->FmtType != DevFmtFloat))
         goto failure;
 
     memset(&wfexCaptureFormat, 0, sizeof(WAVEFORMATEX));
-    wfexCaptureFormat.wFormatTag = WAVE_FORMAT_PCM;
+    wfexCaptureFormat.wFormatTag = ((pDevice->FmtType == DevFmtFloat) ?
+                                    WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM);
     wfexCaptureFormat.nChannels = ChannelsFromDevFmt(pDevice->FmtChans);
     wfexCaptureFormat.wBitsPerSample = BytesFromDevFmt(pDevice->FmtType) * 8;
     wfexCaptureFormat.nBlockAlign = wfexCaptureFormat.wBitsPerSample *

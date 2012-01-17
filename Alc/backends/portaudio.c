@@ -175,6 +175,9 @@ static ALCenum pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
                                  (float)device->Frequency;
     outParams.hostApiSpecificStreamInfo = NULL;
 
+    outParams.channelCount = ((device->FmtChans == DevFmtMono) ? 1 : 2);
+
+retry_open:
     switch(device->FmtType)
     {
         case DevFmtByte:
@@ -193,14 +196,16 @@ static ALCenum pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
             outParams.sampleFormat = paFloat32;
             break;
     }
-    outParams.channelCount = ((device->FmtChans == DevFmtMono) ? 1 : 2);
-
-    SetDefaultChannelOrder(device);
 
     err = Pa_OpenStream(&data->stream, NULL, &outParams, device->Frequency,
                         device->UpdateSize, paNoFlag, pa_callback, device);
     if(err != paNoError)
     {
+        if(device->FmtType == DevFmtFloat)
+        {
+            device->FmtType = DevFmtShort;
+            goto retry_open;
+        }
         ERR("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
         device->ExtraData = NULL;
         free(data);
@@ -224,6 +229,7 @@ static ALCenum pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         device->Flags &= ~DEVICE_CHANNELS_REQUEST;
         device->FmtChans = ((outParams.channelCount==1) ? DevFmtMono : DevFmtStereo);
     }
+    SetDefaultChannelOrder(device);
 
     return ALC_NO_ERROR;
 }

@@ -689,19 +689,10 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             if((i=snd_pcm_hw_params_set_channels(data->pcmHandle, p, 1)) < 0)
                 err = "set channels";
             else
-            {
-                if((device->Flags&DEVICE_CHANNELS_REQUEST))
-                    ERR("Failed to set %s, got Mono instead\n", DevFmtChannelsString(device->FmtChans));
                 device->FmtChans = DevFmtMono;
-            }
         }
         else
-        {
-            if((device->Flags&DEVICE_CHANNELS_REQUEST))
-                ERR("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(device->FmtChans));
             device->FmtChans = DevFmtStereo;
-        }
-        device->Flags &= ~DEVICE_CHANNELS_REQUEST;
     }
     if(i >= 0 && (i=snd_pcm_hw_params_set_rate_resample(data->pcmHandle, p, 0)) < 0)
     {
@@ -755,14 +746,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 
     snd_pcm_sw_params_free(sp);
 
-    if(device->Frequency != rate)
-    {
-        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            ERR("Failed to set %dhz, got %dhz instead\n", device->Frequency, rate);
-        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
-        device->Frequency = rate;
-    }
-
+    device->Frequency = rate;
     SetDefaultChannelOrder(device);
 
     data->size = snd_pcm_frames_to_bytes(data->pcmHandle, periodSizeInFrames);

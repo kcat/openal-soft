@@ -192,13 +192,7 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    if(device->Frequency != info.play.sample_rate)
-    {
-        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            ERR("Failed to set requested frequency %dhz, got %dhz instead\n", device->Frequency, info.play.sample_rate);
-        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
-        device->Frequency = info.play.sample_rate;
-    }
+    device->Frequency = info.play.sample_rate;
     device->UpdateSize = (info.play.buffer_size/device->NumUpdates) + 1;
 
     data->data_size = device->UpdateSize * frameSize;

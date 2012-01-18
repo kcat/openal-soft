@@ -989,10 +989,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     {
         pa_operation *o;
 
-        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            ERR("Failed to set frequency %dhz, got %dhz instead\n", device->Frequency, data->spec.rate);
-        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
-
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
         data->attr.minreq = (ALuint64)(data->attr.minreq/data->frame_size) *

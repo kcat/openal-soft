@@ -329,94 +329,54 @@ static HRESULT DoReset(ALCdevice *device)
         CoTaskMemFree(wfx);
         wfx = NULL;
 
-        if(device->Frequency != OutputType.Format.nSamplesPerSec)
+        device->Frequency = OutputType.Format.nSamplesPerSec;
+        if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
+            device->FmtChans = DevFmtMono;
+        else if(OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO)
+            device->FmtChans = DevFmtStereo;
+        else if(OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD)
+            device->FmtChans = DevFmtQuad;
+        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
+            device->FmtChans = DevFmtX51;
+        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1SIDE)
+            device->FmtChans = DevFmtX51Side;
+        else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
+            device->FmtChans = DevFmtX61;
+        else if(OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)
+            device->FmtChans = DevFmtX71;
+        else
         {
-            if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-                ERR("Failed to set %dhz, got %ldhz instead\n", device->Frequency, OutputType.Format.nSamplesPerSec);
-            device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
-            device->Frequency = OutputType.Format.nSamplesPerSec;
-        }
-
-        if(!((device->FmtChans == DevFmtMono && OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO) ||
-             (device->FmtChans == DevFmtStereo && OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO) ||
-             (device->FmtChans == DevFmtQuad && OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD) ||
-             (device->FmtChans == DevFmtX51 && OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1) ||
-             (device->FmtChans == DevFmtX51Side && OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1SIDE) ||
-             (device->FmtChans == DevFmtX61 && OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1) ||
-             (device->FmtChans == DevFmtX71 && OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)))
-        {
-            if((device->Flags&DEVICE_CHANNELS_REQUEST))
-                ERR("Failed to set %s, got %d channels (0x%08lx) instead\n", DevFmtChannelsString(device->FmtChans), OutputType.Format.nChannels, OutputType.dwChannelMask);
-            device->Flags &= ~DEVICE_CHANNELS_REQUEST;
-
-            if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
-                device->FmtChans = DevFmtMono;
-            else if(OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO)
-                device->FmtChans = DevFmtStereo;
-            else if(OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD)
-                device->FmtChans = DevFmtQuad;
-            else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
-                device->FmtChans = DevFmtX51;
-            else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1SIDE)
-                device->FmtChans = DevFmtX51Side;
-            else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
-                device->FmtChans = DevFmtX61;
-            else if(OutputType.Format.nChannels == 8 && OutputType.dwChannelMask == X7DOT1)
-                device->FmtChans = DevFmtX71;
-            else
-            {
-                ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
-                device->FmtChans = DevFmtStereo;
-                OutputType.Format.nChannels = 2;
-                OutputType.dwChannelMask = STEREO;
-            }
+            ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
+            device->FmtChans = DevFmtStereo;
+            OutputType.Format.nChannels = 2;
+            OutputType.dwChannelMask = STEREO;
         }
 
         if(IsEqualGUID(&OutputType.SubFormat, &KSDATAFORMAT_SUBTYPE_PCM))
         {
-            if(OutputType.Samples.wValidBitsPerSample == 0)
-                OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
-            if(OutputType.Samples.wValidBitsPerSample != OutputType.Format.wBitsPerSample ||
-               !((device->FmtType == DevFmtUByte && OutputType.Format.wBitsPerSample == 8) ||
-                 (device->FmtType == DevFmtShort && OutputType.Format.wBitsPerSample == 16)))
+            if(OutputType.Format.wBitsPerSample == 8)
+                device->FmtType = DevFmtUByte;
+            else if(OutputType.Format.wBitsPerSample == 16)
+                device->FmtType = DevFmtShort;
+            else
             {
-                ERR("Failed to set %s samples, got %d/%d-bit instead\n", DevFmtTypeString(device->FmtType), OutputType.Samples.wValidBitsPerSample, OutputType.Format.wBitsPerSample);
-                if(OutputType.Format.wBitsPerSample == 8)
-                    device->FmtType = DevFmtUByte;
-                else if(OutputType.Format.wBitsPerSample == 16)
-                    device->FmtType = DevFmtShort;
-                else
-                {
-                    device->FmtType = DevFmtShort;
-                    OutputType.Format.wBitsPerSample = 16;
-                }
-                OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+                device->FmtType = DevFmtShort;
+                OutputType.Format.wBitsPerSample = 16;
             }
         }
         else if(IsEqualGUID(&OutputType.SubFormat, &KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
         {
-            if(OutputType.Samples.wValidBitsPerSample == 0)
-                OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
-            if(OutputType.Samples.wValidBitsPerSample != OutputType.Format.wBitsPerSample ||
-               !((device->FmtType == DevFmtFloat && OutputType.Format.wBitsPerSample == 32)))
-            {
-                ERR("Failed to set %s samples, got %d/%d-bit instead\n", DevFmtTypeString(device->FmtType), OutputType.Samples.wValidBitsPerSample, OutputType.Format.wBitsPerSample);
-                if(OutputType.Format.wBitsPerSample != 32)
-                {
-                    device->FmtType = DevFmtFloat;
-                    OutputType.Format.wBitsPerSample = 32;
-                }
-                OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
-            }
+            device->FmtType = DevFmtFloat;
+            OutputType.Format.wBitsPerSample = 32;
         }
         else
         {
             ERR("Unhandled format sub-type\n");
             device->FmtType = DevFmtShort;
             OutputType.Format.wBitsPerSample = 16;
-            OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
         }
+        OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
     }
 
     SetDefaultWFXChannelOrder(device);

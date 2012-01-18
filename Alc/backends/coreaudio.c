@@ -238,10 +238,6 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
 
     if(device->Frequency != streamFormat.mSampleRate)
     {
-        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            ERR("CoreAudio does not support changing sample rates (wanted %dhz, got %dhz)\n", device->Frequency, streamFormat.mSampleRate);
-        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
-
         device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
                                       streamFormat.mSampleRate /
                                       device->Frequency);
@@ -253,62 +249,25 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     switch(streamFormat.mChannelsPerFrame)
     {
         case 1:
-            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
-               device->FmtChans != DevFmtMono)
-            {
-                ERR("Failed to set %s, got Mono instead\n", DevFmtChannelsString(device->FmtChans));
-                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
-            }
             device->FmtChans = DevFmtMono;
             break;
         case 2:
-            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
-               device->FmtChans != DevFmtStereo)
-            {
-                ERR("Failed to set %s, got Stereo instead\n", DevFmtChannelsString(device->FmtChans));
-                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
-            }
             device->FmtChans = DevFmtStereo;
             break;
         case 4:
-            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
-               device->FmtChans != DevFmtQuad)
-            {
-                ERR("Failed to set %s, got Quad instead\n", DevFmtChannelsString(device->FmtChans));
-                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
-            }
             device->FmtChans = DevFmtQuad;
             break;
         case 6:
-            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
-               device->FmtChans != DevFmtX51)
-            {
-                ERR("Failed to set %s, got 5.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
-                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
-            }
             device->FmtChans = DevFmtX51;
             break;
         case 7:
-            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
-               device->FmtChans != DevFmtX61)
-            {
-                ERR("Failed to set %s, got 6.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
-                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
-            }
             device->FmtChans = DevFmtX61;
             break;
         case 8:
-            if((device->Flags&DEVICE_CHANNELS_REQUEST) &&
-               device->FmtChans != DevFmtX71)
-            {
-                ERR("Failed to set %s, got 7.1 Surround instead\n", DevFmtChannelsString(device->FmtChans));
-                device->Flags &= ~DEVICE_CHANNELS_REQUEST;
-            }
             device->FmtChans = DevFmtX71;
             break;
         default:
             ERR("Unhandled channel count (%d), using Stereo\n", streamFormat.mChannelsPerFrame);
-            device->Flags &= ~DEVICE_CHANNELS_REQUEST;
             device->FmtChans = DevFmtStereo;
             streamFormat.mChannelsPerFrame = 2;
             break;

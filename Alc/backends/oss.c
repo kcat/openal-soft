@@ -262,13 +262,7 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    if(device->Frequency != (ALuint)ossSpeed)
-    {
-        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            ERR("Failed to set %dhz, got %dhz instead\n", device->Frequency, ossSpeed);
-        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
-        device->Frequency = ossSpeed;
-    }
+    device->Frequency = ossSpeed;
     device->UpdateSize = info.fragsize / frameSize;
     device->NumUpdates = info.fragments + 1;
 

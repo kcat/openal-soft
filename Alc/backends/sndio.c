@@ -208,7 +208,6 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
     sio_initpar(&par);
 
     par.rate = device->Frequency;
-
     par.pchan = ((device->FmtChans != DevFmtMono) ? 2 : 1);
 
     switch(device->FmtType)
@@ -222,8 +221,6 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
             par.sig = 0;
             break;
         case DevFmtFloat:
-            device->FmtType = DevFmtShort;
-            /* fall-through */
         case DevFmtShort:
             par.bits = 16;
             par.sig = 1;
@@ -239,32 +236,10 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
     par.appbufsz = device->UpdateSize * (device->NumUpdates-1);
     if(!par.appbufsz) par.appbufsz = device->UpdateSize;
 
-
     if(!sio_setpar(data->sndHandle, &par) || !sio_getpar(data->sndHandle, &par))
     {
         ERR("Failed to set device parameters\n");
         return ALC_FALSE;
-    }
-
-    if(par.rate != device->Frequency)
-    {
-        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            ERR("Failed to set frequency %uhz, got %uhz instead\n", device->Frequency, par.rate);
-        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
-        device->Frequency = par.rate;
-    }
-
-    if(par.pchan != ChannelsFromDevFmt(device->FmtChans))
-    {
-        if(par.pchan != 1 && par.pchan != 2)
-        {
-            ERR("Unhandled channel count: %u\n", par.pchan);
-            return ALC_FALSE;
-        }
-        if((device->Flags&DEVICE_CHANNELS_REQUEST))
-            ERR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans), par.pchan);
-        device->Flags &= ~DEVICE_CHANNELS_REQUEST;
-        device->FmtChans = ((par.pchan==1) ? DevFmtMono : DevFmtStereo);
     }
 
     if(par.bits != par.bps*8)
@@ -272,6 +247,9 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
         ERR("Padded samples not supported (%u of %u bits)\n", par.bits, par.bps*8);
         return ALC_FALSE;
     }
+
+    device->Frequency = par.rate;
+    device->FmtChans = ((par.pchan==1) ? DevFmtMono : DevFmtStereo);
 
     if(par.bits == 8 && par.sig == 1)
         device->FmtType = DevFmtByte;
@@ -287,12 +265,10 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-
     device->UpdateSize = par.round;
     device->NumUpdates = (par.bufsz/par.round) + 1;
 
     SetDefaultChannelOrder(device);
-
 
     if(!sio_start(data->sndHandle))
     {

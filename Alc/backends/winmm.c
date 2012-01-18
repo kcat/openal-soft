@@ -430,13 +430,7 @@ static ALCboolean WinMMResetPlayback(ALCdevice *device)
 
     device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
                                   pData->Frequency / device->Frequency);
-    if(device->Frequency != pData->Frequency)
-    {
-        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            ERR("WinMM does not support changing sample rates (wanted %dhz, got %dhz)\n", device->Frequency, pData->Frequency);
-        device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
-        device->Frequency = pData->Frequency;
-    }
+    device->Frequency = pData->Frequency;
 
     SetDefaultWFXChannelOrder(device);
 

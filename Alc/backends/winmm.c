@@ -42,7 +42,7 @@ typedef struct {
     HANDLE  hWaveThreadEvent;
     HANDLE  hWaveThread;
     DWORD   ulWaveThreadID;
-    LONG    lWaveBuffersCommitted;
+    volatile LONG lWaveBuffersCommitted;
     WAVEHDR WaveBuffer[4];
 
     union {
@@ -162,19 +162,10 @@ static void CALLBACK WaveOutProc(HWAVEOUT hDevice,UINT uMsg,DWORD_PTR dwInstance
 
     // Decrement number of buffers in use
     InterlockedDecrement(&pData->lWaveBuffersCommitted);
-
     if(pData->bWaveShutdown == AL_FALSE)
     {
         // Notify Wave Processor Thread that a Wave Header has returned
         PostThreadMessage(pData->ulWaveThreadID, uMsg, 0, dwParam1);
-    }
-    else
-    {
-        if(pData->lWaveBuffersCommitted == 0)
-        {
-            // Post 'Quit' Message to WaveOut Processor Thread
-            PostThreadMessage(pData->ulWaveThreadID, WM_QUIT, 0, 0);
-        }
     }
 }
 
@@ -198,8 +189,15 @@ static DWORD WINAPI PlaybackThreadProc(LPVOID lpParameter)
 
     while(GetMessage(&msg, NULL, 0, 0))
     {
-        if(msg.message != WOM_DONE || pData->bWaveShutdown)
+        if(msg.message != WOM_DONE)
             continue;
+
+        if(pData->bWaveShutdown)
+        {
+            if(pData->lWaveBuffersCommitted == 0)
+                break;
+            continue;
+        }
 
         pWaveHdr = ((LPWAVEHDR)msg.lParam);
 
@@ -238,19 +236,10 @@ static void CALLBACK WaveInProc(HWAVEIN hDevice,UINT uMsg,DWORD_PTR dwInstance,D
 
     // Decrement number of buffers in use
     InterlockedDecrement(&pData->lWaveBuffersCommitted);
-
     if(pData->bWaveShutdown == AL_FALSE)
     {
         // Notify Wave Processor Thread that a Wave Header has returned
         PostThreadMessage(pData->ulWaveThreadID,uMsg,0,dwParam1);
-    }
-    else
-    {
-        if(pData->lWaveBuffersCommitted == 0)
-        {
-            // Post 'Quit' Message to WaveIn Processor Thread
-            PostThreadMessage(pData->ulWaveThreadID,WM_QUIT,0,0);
-        }
     }
 }
 
@@ -272,8 +261,15 @@ static DWORD WINAPI CaptureThreadProc(LPVOID lpParameter)
 
     while(GetMessage(&msg, NULL, 0, 0))
     {
-        if(msg.message != WIM_DATA || pData->bWaveShutdown)
+        if(msg.message != WIM_DATA)
             continue;
+
+        if(pData->bWaveShutdown)
+        {
+            if(pData->lWaveBuffersCommitted == 0)
+                break;
+            continue;
+        }
 
         pWaveHdr = ((LPWAVEHDR)msg.lParam);
 
@@ -638,9 +634,11 @@ static void WinMMCloseCapture(ALCdevice *pDevice)
     void *buffer = NULL;
     int i;
 
-    // Call waveOutReset to shutdown wave device
+    /* Unintuitively.. call waveInStart to make sure WinMM keeps processing
+     * buffers so the processing thread can drop them and exit when it reaches
+     * 0. */
     pData->bWaveShutdown = AL_TRUE;
-    waveInReset(pData->hWaveHandle.In);
+    waveInStart(pData->hWaveHandle.In);
 
     // Wait for signal that Wave Thread has been destroyed
     WaitForSingleObjectEx(pData->hWaveThreadEvent, 5000, FALSE);

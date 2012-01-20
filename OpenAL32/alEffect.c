@@ -1348,7 +1348,12 @@ ALvoid GetReverbEffect(const char *name, ALeffect *effect)
 {
     int i;
 
-    InitEffectParams(effect, AL_EFFECT_EAXREVERB);
+    if(!DisabledEffects[EAXREVERB])
+        InitEffectParams(effect, AL_EFFECT_EAXREVERB);
+    else if(!DisabledEffects[REVERB])
+        InitEffectParams(effect, AL_EFFECT_REVERB);
+    else
+        InitEffectParams(effect, AL_EFFECT_NULL);
     for(i = 0;reverblist[i].name[0];i++)
     {
         const EFXEAXREVERBPROPERTIES *props;

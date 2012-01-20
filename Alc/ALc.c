@@ -722,8 +722,10 @@ static void alc_initconfig(void)
         } while(next++);
     }
 
-    str = getenv("__ALSOFT_FORCE_REVERB");
+    str = getenv("__ALSOFT_DEFAULT_REVERB");
     if(str && str[0])
+        GetReverbEffect(str, &ForcedEffect);
+    else if(ConfigValueStr(NULL, "default-reverb", &str))
         GetReverbEffect(str, &ForcedEffect);
 }
 

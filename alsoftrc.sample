@@ -150,6 +150,17 @@
 #layout_61CHN  = fl=-30, fr=30, fc=0, sl=-90, sr=90, bc=180
 #layout_71CHN  = fl=-30, fr=30, fc=0, sl=-90, sr=90, bl=-150, br=150
 
+## default-reverb:
+#  A reverb preset that applies by default to all sources on send 0
+#  (applications that set their own slots on send 0 will override this).
+#  Available presets are: Generic, PaddedCell, Room, Bathroom, Livingroom,
+#  Stoneroom, Auditorium, ConcertHall, Cave, Arena, Hangar, CarpettedHallway,
+#  Hallway, StoneCorridor, Alley, Forestm City, Moutains, Quarry, Plain,
+#  ParkingLot, SewerPipe, Underwater, Drugged, Dizzy, Psychotic. Optionally,
+#  the __ALSOFT_DEFAULT_REVERB env var may be set before running the app
+#  instead.
+#default-reverb =
+
 ## trap-alc-error:
 #  Generates a SIGTRAP signal when an ALC device error is generated, on systems
 #  that support it. This helps when debugging, while trying to find the cause

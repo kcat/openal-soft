@@ -1306,3 +1306,9 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
     }
     effect->type = type;
 }
+
+
+ALvoid GetReverbEffect(ALeffect *effect)
+{
+    InitEffectParams(effect, AL_EFFECT_EAXREVERB);
+}

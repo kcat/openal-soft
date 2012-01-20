@@ -32,7 +32,6 @@
 #include "alSource.h"
 
 
-static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
 static ALenum ResizeEffectSlotArray(ALCcontext *Context, ALsizei count);
 static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *val);
 
@@ -512,7 +511,7 @@ static ALenum ResizeEffectSlotArray(ALCcontext *Context, ALsizei count)
     return AL_NO_ERROR;
 }
 
-static ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect)
+ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect)
 {
     ALenum newtype = (effect ? effect->type : AL_EFFECT_NULL);
     ALeffectState *State = NULL;

@@ -35,6 +35,7 @@ typedef struct ALeffectslot
 } ALeffectslot;
 
 
+ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 

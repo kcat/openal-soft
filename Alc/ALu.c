@@ -293,7 +293,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     for(i = 0;i < NumSends;i++)
     {
-        ALSource->Params.Send[i].Slot = ALSource->Send[i].Slot;
+        ALeffectslot *Slot = ALSource->Send[i].Slot;
+
+        if(!Slot && i == 0)
+            Slot = Device->DefaultSlot;
+        ALSource->Params.Send[i].Slot = Slot;
         ALSource->Params.Send[i].WetGain = WetGain[i] * ListenerGain;
     }
 
@@ -392,6 +396,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
 
+        if(!Slot && i == 0)
+            Slot = Device->DefaultSlot;
         if(!Slot || Slot->effect.type == AL_EFFECT_NULL)
         {
             RoomRolloff[i] = 0.0f;
@@ -978,6 +984,24 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
             ctx = ctx->next;
         }
+
+        slot = &device->DefaultSlot;
+        for(c = 0;c < SamplesToDo;c++)
+        {
+            (*slot)->WetBuffer[c] += (*slot)->ClickRemoval[0];
+            (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] * (1.0f/256.0f);
+        }
+        (*slot)->ClickRemoval[0] += (*slot)->PendingClicks[0];
+        (*slot)->PendingClicks[0] = 0.0f;
+
+        if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
+            ALeffectState_Update((*slot)->EffectState, ctx, *slot);
+
+        ALeffectState_Process((*slot)->EffectState, SamplesToDo,
+                              (*slot)->WetBuffer, device->DryBuffer);
+
+        for(i = 0;i < SamplesToDo;i++)
+            (*slot)->WetBuffer[i] = 0.0f;
         UnlockDevice(device);
 
         //Post processing loop

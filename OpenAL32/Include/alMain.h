@@ -598,6 +598,9 @@ struct ALCdevice_struct
     ALfloat ClickRemoval[MAXCHANNELS];
     ALfloat PendingClicks[MAXCHANNELS];
 
+    /* Default effect slot */
+    struct ALeffectslot *DefaultSlot;
+
     // Contexts created on this device
     ALCcontext *volatile ContextList;
 

@@ -399,6 +399,9 @@ static ALCboolean TrapALCError = ALC_FALSE;
 /* One-time configuration init control */
 static pthread_once_t alc_config_once = PTHREAD_ONCE_INIT;
 
+/* Forced effect that applies to sources that don't have an effect on send 0 */
+static ALeffect ForcedEffect;
+
 ///////////////////////////////////////////////////////
 
 
@@ -718,6 +721,10 @@ static void alc_initconfig(void)
             }
         } while(next++);
     }
+
+    str = getenv("__ALSOFT_FORCE_REVERB");
+    if(str && str[0])
+        GetReverbEffect(&ForcedEffect);
 }
 
 
@@ -1295,6 +1302,9 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 static ALCvoid FreeDevice(ALCdevice *device)
 {
     TRACE("%p\n", device);
+
+    ALeffectState_Destroy(device->DefaultSlot->EffectState);
+    device->DefaultSlot->EffectState = NULL;
 
     if(device->BufferMap.size > 0)
     {
@@ -2236,6 +2246,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     } while(!CompExchangePtr((XchgPtr*)&device->ContextList, ALContext->next, ALContext));
     UnlockLists();
 
+    InitializeEffect(ALContext, device->DefaultSlot, &ForcedEffect);
+
     ALCdevice_DecRef(device);
 
     TRACE("Created context %p\n", ALContext);
@@ -2414,6 +2426,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     const ALCchar *fmt;
     ALCdevice *device;
     ALCenum err;
+    ALCint i;
 
     DO_INITCONFIG();
 
@@ -2426,7 +2439,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, "openal soft") == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = NULL;
 
-    device = calloc(1, sizeof(ALCdevice));
+    device = calloc(1, sizeof(ALCdevice)+sizeof(ALeffectslot));
     if(!device)
     {
         alcSetError(NULL, ALC_OUT_OF_MEMORY);
@@ -2490,6 +2503,20 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
+
+    device->DefaultSlot = (ALeffectslot*)(device+1);
+    device->DefaultSlot->EffectState = NoneCreate();
+    device->DefaultSlot->Gain = 1.0;
+    device->DefaultSlot->AuxSendAuto = AL_TRUE;
+    device->DefaultSlot->NeedsUpdate = AL_FALSE;
+    for(i = 0;i < BUFFERSIZE;i++)
+        device->DefaultSlot->WetBuffer[i] = 0.0f;
+    for(i = 0;i < 1;i++)
+    {
+        device->DefaultSlot->ClickRemoval[i] = 0.0f;
+        device->DefaultSlot->PendingClicks[i] = 0.0f;
+    }
+    device->DefaultSlot->ref = 0;
 
     // Find a playback device to open
     LockLists();

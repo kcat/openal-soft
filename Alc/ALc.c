@@ -1302,8 +1302,11 @@ static ALCvoid FreeDevice(ALCdevice *device)
 {
     TRACE("%p\n", device);
 
-    ALeffectState_Destroy(device->DefaultSlot->EffectState);
-    device->DefaultSlot->EffectState = NULL;
+    if(device->DefaultSlot)
+    {
+        ALeffectState_Destroy(device->DefaultSlot->EffectState);
+        device->DefaultSlot->EffectState = NULL;
+    }
 
     if(device->BufferMap.size > 0)
     {

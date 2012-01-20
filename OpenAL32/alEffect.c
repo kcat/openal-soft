@@ -1308,7 +1308,85 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
 }
 
 
-ALvoid GetReverbEffect(ALeffect *effect)
+#include "AL/efx-presets.h"
+
+#define DECL(x) { #x, EFX_REVERB_PRESET_##x }
+static const struct {
+    const char name[32];
+    EFXEAXREVERBPROPERTIES props;
+} reverblist[] = {
+    DECL(GENERIC),
+    DECL(PADDEDCELL),
+    DECL(ROOM),
+    DECL(BATHROOM),
+    DECL(LIVINGROOM),
+    DECL(STONEROOM),
+    DECL(AUDITORIUM),
+    DECL(CONCERTHALL),
+    DECL(CAVE),
+    DECL(ARENA),
+    DECL(HANGAR),
+    DECL(CARPETTEDHALLWAY),
+    DECL(HALLWAY),
+    DECL(STONECORRIDOR),
+    DECL(ALLEY),
+    DECL(FOREST),
+    DECL(CITY),
+    DECL(MOUNTAINS),
+    DECL(QUARRY),
+    DECL(PLAIN),
+    DECL(PARKINGLOT),
+    DECL(SEWERPIPE),
+    DECL(UNDERWATER),
+    DECL(DRUGGED),
+    DECL(DIZZY),
+    DECL(PSYCHOTIC),
+    { "", EFX_REVERB_PRESET_GENERIC }
+};
+
+ALvoid GetReverbEffect(const char *name, ALeffect *effect)
 {
+    int i;
+
     InitEffectParams(effect, AL_EFFECT_EAXREVERB);
+    for(i = 0;reverblist[i].name[0];i++)
+    {
+        const EFXEAXREVERBPROPERTIES *props;
+
+        if(strcasecmp(name, reverblist[i].name) != 0)
+            continue;
+
+        TRACE("Loading reverb '%s'\n", reverblist[i].name);
+        props = &reverblist[i].props;
+        effect->Reverb.Density   = props->flDensity;
+        effect->Reverb.Diffusion = props->flDiffusion;
+        effect->Reverb.Gain   = props->flGain;
+        effect->Reverb.GainHF = props->flGainHF;
+        effect->Reverb.GainLF = props->flGainLF;
+        effect->Reverb.DecayTime    = props->flDecayTime;
+        effect->Reverb.DecayHFRatio = props->flDecayHFRatio;
+        effect->Reverb.DecayLFRatio = props->flDecayLFRatio;
+        effect->Reverb.ReflectionsGain   = props->flReflectionsGain;
+        effect->Reverb.ReflectionsDelay  = props->flReflectionsDelay;
+        effect->Reverb.ReflectionsPan[0] = props->flReflectionsPan[0];
+        effect->Reverb.ReflectionsPan[1] = props->flReflectionsPan[1];
+        effect->Reverb.ReflectionsPan[2] = props->flReflectionsPan[2];
+        effect->Reverb.LateReverbGain   = props->flLateReverbGain;
+        effect->Reverb.LateReverbDelay  = props->flLateReverbDelay;
+        effect->Reverb.LateReverbPan[0] = props->flLateReverbPan[0];
+        effect->Reverb.LateReverbPan[1] = props->flLateReverbPan[1];
+        effect->Reverb.LateReverbPan[2] = props->flLateReverbPan[2];
+        effect->Reverb.EchoTime  = props->flEchoTime;
+        effect->Reverb.EchoDepth = props->flEchoDepth;
+        effect->Reverb.ModulationTime  = props->flModulationTime;
+        effect->Reverb.ModulationDepth = props->flModulationDepth;
+        effect->Reverb.AirAbsorptionGainHF = props->flAirAbsorptionGainHF;
+        effect->Reverb.HFReference = props->flHFReference;
+        effect->Reverb.LFReference = props->flLFReference;
+        effect->Reverb.RoomRolloffFactor = props->flRoomRolloffFactor;
+        effect->Reverb.DecayHFLimit = props->iDecayHFLimit;
+        break;
+    }
+    if(!reverblist[i].name[0])
+        WARN("Reverb preset '%s' not found\n", name);
 }

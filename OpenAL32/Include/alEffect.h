@@ -102,7 +102,7 @@ typedef struct ALeffect
 static __inline ALboolean IsReverbEffect(ALenum type)
 { return type == AL_EFFECT_REVERB || type == AL_EFFECT_EAXREVERB; }
 
-ALvoid GetReverbEffect(ALeffect *effect);
+ALvoid GetReverbEffect(const char *name, ALeffect *effect);
 ALvoid ReleaseALEffects(ALCdevice *device);
 
 #ifdef __cplusplus

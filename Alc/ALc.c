@@ -724,7 +724,7 @@ static void alc_initconfig(void)
 
     str = getenv("__ALSOFT_FORCE_REVERB");
     if(str && str[0])
-        GetReverbEffect(&ForcedEffect);
+        GetReverbEffect(str, &ForcedEffect);
 }
 
 

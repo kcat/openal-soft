@@ -253,13 +253,10 @@ static DWORD WINAPI CaptureThreadProc(LPVOID lpParameter)
     {
         if(msg.message != WIM_DATA)
             continue;
-
+        /* Don't wait for other buffers to finish before quitting. We're
+         * closing so we don't need them. */
         if(pData->bWaveShutdown)
-        {
-            if(pData->lWaveBuffersCommitted == 0)
-                break;
-            continue;
-        }
+            break;
 
         pWaveHdr = ((LPWAVEHDR)msg.lParam);
 
@@ -624,14 +621,14 @@ static void WinMMCloseCapture(ALCdevice *pDevice)
     void *buffer = NULL;
     int i;
 
-    /* Unintuitively.. call waveInStart to make sure WinMM keeps processing
-     * buffers so the processing thread can drop them and exit when it reaches
-     * 0. */
+    /* Tell the processing thread to quit and wait for it to do so. */
     pData->bWaveShutdown = AL_TRUE;
-    waveInStart(pData->hWaveHandle.In);
+    PostThreadMessage(pData->ulWaveThreadID, WM_QUIT, 0, 0);
 
-    // Wait for signal that Wave Thread has been destroyed
     WaitForSingleObjectEx(pData->hWaveThreadEvent, 5000, FALSE);
+
+    /* Make sure capture is stopped and all pending buffers are flushed. */
+    waveInReset(pData->hWaveHandle.In);
 
     CloseHandle(pData->hWaveThread);
     pData->hWaveThread = 0;

@@ -160,13 +160,8 @@ static void CALLBACK WaveOutProc(HWAVEOUT hDevice,UINT uMsg,DWORD_PTR dwInstance
     if(uMsg != WOM_DONE)
         return;
 
-    // Decrement number of buffers in use
     InterlockedDecrement(&pData->lWaveBuffersCommitted);
-    if(pData->bWaveShutdown == AL_FALSE)
-    {
-        // Notify Wave Processor Thread that a Wave Header has returned
-        PostThreadMessage(pData->ulWaveThreadID, uMsg, 0, dwParam1);
-    }
+    PostThreadMessage(pData->ulWaveThreadID, uMsg, 0, dwParam1);
 }
 
 /*
@@ -234,13 +229,8 @@ static void CALLBACK WaveInProc(HWAVEIN hDevice,UINT uMsg,DWORD_PTR dwInstance,D
     if(uMsg != WIM_DATA)
         return;
 
-    // Decrement number of buffers in use
     InterlockedDecrement(&pData->lWaveBuffersCommitted);
-    if(pData->bWaveShutdown == AL_FALSE)
-    {
-        // Notify Wave Processor Thread that a Wave Header has returned
-        PostThreadMessage(pData->ulWaveThreadID,uMsg,0,dwParam1);
-    }
+    PostThreadMessage(pData->ulWaveThreadID,uMsg,0,dwParam1);
 }
 
 /*

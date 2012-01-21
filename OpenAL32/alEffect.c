@@ -55,13 +55,13 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
         for(i = 0;i < n;i++)
         {
             ALeffect *effect = calloc(1, sizeof(ALeffect));
-            if(!effect)
+            if(!effect || InitEffect(effect) != AL_NO_ERROR)
             {
+                free(effect);
                 alSetError(Context, AL_OUT_OF_MEMORY);
                 alDeleteEffects(i, effects);
                 break;
             }
-            InitEffectParams(effect, AL_EFFECT_NULL);
 
             err = NewThunkEntry(&effect->effect);
             if(err == AL_NO_ERROR)
@@ -1172,6 +1172,12 @@ static void null_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
 static void null_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 { (void)effect;(void)param;(void)vals; alSetError(context, AL_INVALID_ENUM); }
 
+
+ALenum InitEffect(ALeffect *effect)
+{
+    InitEffectParams(effect, AL_EFFECT_NULL);
+    return AL_NO_ERROR;
+}
 
 ALvoid ReleaseALEffects(ALCdevice *device)
 {

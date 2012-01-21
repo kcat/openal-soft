@@ -35,9 +35,8 @@ typedef struct ALeffectslot
 } ALeffectslot;
 
 
-ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
+ALenum InitEffectSlot(ALeffectslot *slot);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
-
 
 struct ALeffectState {
     ALvoid (*Destroy)(ALeffectState *State);
@@ -57,6 +56,7 @@ ALeffectState *DedicatedCreate(void);
 #define ALeffectState_Update(a,b,c)     ((a)->Update((a),(b),(c)))
 #define ALeffectState_Process(a,b,c,d)  ((a)->Process((a),(b),(c),(d)))
 
+ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
 
 #ifdef __cplusplus
 }

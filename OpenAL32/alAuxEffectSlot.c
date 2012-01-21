@@ -50,7 +50,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     else
     {
         ALenum err;
-        ALsizei i, j;
+        ALsizei i;
 
         err = ResizeEffectSlotArray(Context, n);
         if(err != AL_NO_ERROR)
@@ -62,7 +62,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         for(i = 0;i < n;i++)
         {
             ALeffectslot *slot = calloc(1, sizeof(ALeffectslot));
-            if(!slot || !(slot->EffectState=NoneCreate()))
+            if(!slot || InitEffectSlot(slot) != AL_NO_ERROR)
             {
                 free(slot);
                 // We must have run out or memory
@@ -70,18 +70,6 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                 alDeleteAuxiliaryEffectSlots(i, effectslots);
                 break;
             }
-
-            slot->Gain = 1.0;
-            slot->AuxSendAuto = AL_TRUE;
-            slot->NeedsUpdate = AL_FALSE;
-            for(j = 0;j < BUFFERSIZE;j++)
-                slot->WetBuffer[j] = 0.0f;
-            for(j = 0;j < 1;j++)
-            {
-                slot->ClickRemoval[j] = 0.0f;
-                slot->PendingClicks[j] = 0.0f;
-            }
-            slot->ref = 0;
 
             LockContext(Context);
             err = ResizeEffectSlotArray(Context, 1);
@@ -598,6 +586,28 @@ ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
     }
 }
 
+
+ALenum InitEffectSlot(ALeffectslot *slot)
+{
+    ALint i;
+
+    if(!(slot->EffectState=NoneCreate()))
+        return AL_OUT_OF_MEMORY;
+
+    slot->Gain = 1.0;
+    slot->AuxSendAuto = AL_TRUE;
+    slot->NeedsUpdate = AL_FALSE;
+    for(i = 0;i < BUFFERSIZE;i++)
+        slot->WetBuffer[i] = 0.0f;
+    for(i = 0;i < 1;i++)
+    {
+        slot->ClickRemoval[i] = 0.0f;
+        slot->PendingClicks[i] = 0.0f;
+    }
+    slot->ref = 0;
+
+    return AL_NO_ERROR;
+}
 
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
 {

@@ -722,6 +722,7 @@ static void alc_initconfig(void)
         } while(next++);
     }
 
+    InitEffect(&ForcedEffect);
     str = getenv("__ALSOFT_DEFAULT_REVERB");
     if(str && str[0])
         GetReverbEffect(str, &ForcedEffect);
@@ -2428,7 +2429,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     const ALCchar *fmt;
     ALCdevice *device;
     ALCenum err;
-    ALCint i;
 
     DO_INITCONFIG();
 
@@ -2507,18 +2507,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
     device->DefaultSlot = (ALeffectslot*)(device+1);
-    device->DefaultSlot->EffectState = NoneCreate();
-    device->DefaultSlot->Gain = 1.0;
-    device->DefaultSlot->AuxSendAuto = AL_TRUE;
-    device->DefaultSlot->NeedsUpdate = AL_FALSE;
-    for(i = 0;i < BUFFERSIZE;i++)
-        device->DefaultSlot->WetBuffer[i] = 0.0f;
-    for(i = 0;i < 1;i++)
-    {
-        device->DefaultSlot->ClickRemoval[i] = 0.0f;
-        device->DefaultSlot->PendingClicks[i] = 0.0f;
-    }
-    device->DefaultSlot->ref = 0;
+    if(InitEffectSlot(device->DefaultSlot) != AL_NO_ERROR)
+        device->DefaultSlot = NULL;
 
     // Find a playback device to open
     LockLists();

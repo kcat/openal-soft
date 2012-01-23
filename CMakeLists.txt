@@ -615,6 +615,18 @@ IF(COREAUDIO)
         SET(EXTRA_LIBS /System/Library/Frameworks/CoreAudio.framework ${EXTRA_LIBS})
         SET(EXTRA_LIBS /System/Library/Frameworks/AudioUnit.framework ${EXTRA_LIBS})
         SET(EXTRA_LIBS /System/Library/Frameworks/ApplicationServices.framework ${EXTRA_LIBS})
+
+        # Some versions of OSX may need the AudioToolbox framework. Add it if
+        # it's found.
+        FIND_LIBRARY(AUDIOTOOLBOX_LIBRARY
+                     NAMES AudioToolbox
+                     PATHS ~/Library/Frameworks
+                           /Library/Frameworks
+                           /System/Library/Frameworks
+                    )
+        IF(AUDIOTOOLBOX_LIBRARY)
+            SET(EXTRA_LIBS ${AUDIOTOOLBOX_LIBRARY} ${EXTRA_LIBS})
+        ENDIF()
     ENDIF()
 ENDIF()
 IF(REQUIRE_COREAUDIO AND NOT HAVE_COREAUDIO)

@@ -251,7 +251,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
         ALfloat *RESTRICT WetPendingClicks;                                   \
         FILTER  *WetFilter;                                                   \
                                                                               \
-        if(!Slot || Slot->effect.type == AL_EFFECT_NULL)                      \
+        if(Slot == NULL)                                                      \
             continue;                                                         \
                                                                               \
         WetBuffer = Slot->WetBuffer;                                          \
@@ -381,7 +381,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
         ALfloat *WetPendingClicks;                                            \
         FILTER  *WetFilter;                                                   \
                                                                               \
-        if(!Slot || Slot->effect.type == AL_EFFECT_NULL)                      \
+        if(Slot == NULL)                                                      \
             continue;                                                         \
                                                                               \
         WetBuffer = Slot->WetBuffer;                                          \

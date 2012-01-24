@@ -1347,8 +1347,9 @@ static const struct {
     DECL(DRUGGED),
     DECL(DIZZY),
     DECL(PSYCHOTIC),
-    { "", EFX_REVERB_PRESET_GENERIC }
 };
+#undef DECL
+static const ALsizei reverblistsize = sizeof(reverblist)/sizeof(reverblist[0]);
 
 ALvoid GetReverbEffect(const char *name, ALeffect *effect)
 {
@@ -1360,7 +1361,7 @@ ALvoid GetReverbEffect(const char *name, ALeffect *effect)
         InitEffectParams(effect, AL_EFFECT_REVERB);
     else
         InitEffectParams(effect, AL_EFFECT_NULL);
-    for(i = 0;reverblist[i].name[0];i++)
+    for(i = 0;i < reverblistsize;i++)
     {
         const EFXEAXREVERBPROPERTIES *props;
 
@@ -1398,6 +1399,6 @@ ALvoid GetReverbEffect(const char *name, ALeffect *effect)
         effect->Reverb.DecayHFLimit = props->iDecayHFLimit;
         break;
     }
-    if(!reverblist[i].name[0])
+    if(i == reverblistsize)
         WARN("Reverb preset '%s' not found\n", name);
 }

@@ -2258,6 +2258,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     UnlockLists();
 
     InitializeEffect(ALContext, device->DefaultSlot, &ForcedEffect);
+    ALContext->LastError = AL_NO_ERROR;
 
     ALCdevice_DecRef(device);
 

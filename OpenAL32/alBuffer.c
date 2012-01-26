@@ -1974,6 +1974,21 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALuint64 newsize;
     ALvoid *temp;
 
+    if(DecomposeFormat(NewFormat, &DstChannels, &DstType) == AL_FALSE ||
+       (long)SrcChannels != (long)DstChannels)
+        return AL_INVALID_ENUM;
+
+    NewChannels = ChannelsFromFmt(DstChannels);
+    NewBytes = BytesFromFmt(DstType);
+
+    newsize = frames;
+    if(SrcType == UserFmtIMA4)
+        newsize *= 65;
+    newsize *= NewBytes;
+    newsize *= NewChannels;
+    if(newsize > INT_MAX)
+        return AL_OUT_OF_MEMORY;
+
     WriteLock(&ALBuf->lock);
     if(ALBuf->ref != 0)
     {
@@ -1981,94 +1996,38 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         return AL_INVALID_OPERATION;
     }
 
-    if(DecomposeFormat(NewFormat, &DstChannels, &DstType) == AL_FALSE ||
-       (long)SrcChannels != (long)DstChannels)
+    temp = realloc(ALBuf->data, (size_t)newsize);
+    if(!temp && newsize)
     {
         WriteUnlock(&ALBuf->lock);
-        return AL_INVALID_ENUM;
+        return AL_OUT_OF_MEMORY;
     }
+    ALBuf->data = temp;
 
-    NewChannels = ChannelsFromFmt(DstChannels);
-    NewBytes = BytesFromFmt(DstType);
+    if(data != NULL)
+        ConvertData(ALBuf->data, DstType, data, SrcType, NewChannels, frames);
 
-    if(SrcType == UserFmtIMA4)
+    if(storesrc)
     {
-        ALuint OrigChannels = ChannelsFromUserFmt(SrcChannels);
-
-        newsize = frames;
-        newsize *= 65;
-        newsize *= NewBytes;
-        newsize *= NewChannels;
-        if(newsize > INT_MAX)
-        {
-            WriteUnlock(&ALBuf->lock);
-            return AL_OUT_OF_MEMORY;
-        }
-
-        temp = realloc(ALBuf->data, (size_t)newsize);
-        if(!temp && newsize)
-        {
-            WriteUnlock(&ALBuf->lock);
-            return AL_OUT_OF_MEMORY;
-        }
-        ALBuf->data = temp;
-        ALBuf->SampleLen = frames*65;
-
-        if(data != NULL)
-            ConvertData(ALBuf->data, DstType, data, SrcType, NewChannels, frames);
-
-        if(storesrc)
-        {
-            ALBuf->OriginalChannels = SrcChannels;
-            ALBuf->OriginalType     = SrcType;
-            ALBuf->OriginalSize     = frames * 36 * OrigChannels;
-        }
+        ALBuf->OriginalChannels = SrcChannels;
+        ALBuf->OriginalType     = SrcType;
+        ALBuf->OriginalSize     = frames * ((SrcType == UserFmtIMA4) ? 36 :
+                                            BytesFromUserFmt(SrcType)) *
+                                           ChannelsFromUserFmt(SrcChannels);
     }
     else
-    {
-        ALuint OrigBytes = BytesFromUserFmt(SrcType);
-        ALuint OrigChannels = ChannelsFromUserFmt(SrcChannels);
-
-        newsize = frames;
-        newsize *= NewBytes;
-        newsize *= NewChannels;
-        if(newsize > INT_MAX)
-        {
-            WriteUnlock(&ALBuf->lock);
-            return AL_OUT_OF_MEMORY;
-        }
-
-        temp = realloc(ALBuf->data, (size_t)newsize);
-        if(!temp && newsize)
-        {
-            WriteUnlock(&ALBuf->lock);
-            return AL_OUT_OF_MEMORY;
-        }
-        ALBuf->data = temp;
-        ALBuf->SampleLen = frames;
-
-        if(data != NULL)
-            ConvertData(ALBuf->data, DstType, data, SrcType, NewChannels, frames);
-
-        if(storesrc)
-        {
-            ALBuf->OriginalChannels = SrcChannels;
-            ALBuf->OriginalType     = SrcType;
-            ALBuf->OriginalSize     = frames * OrigBytes * OrigChannels;
-        }
-    }
-
-    if(!storesrc)
     {
         ALBuf->OriginalChannels = DstChannels;
         ALBuf->OriginalType     = DstType;
         ALBuf->OriginalSize     = frames * NewBytes * NewChannels;
     }
+
     ALBuf->Frequency = freq;
     ALBuf->FmtChannels = DstChannels;
     ALBuf->FmtType = DstType;
     ALBuf->Format = NewFormat;
 
+    ALBuf->SampleLen = frames * ((SrcType == UserFmtIMA4) ? 65 : 1);
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = ALBuf->SampleLen;
 

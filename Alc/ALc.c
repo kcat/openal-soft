@@ -1041,7 +1041,7 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
  * Updates device parameters according to the attribute list (caller is
  * responsible for holding the list lock).
  */
-static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
+static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
     ALCcontext *context;
     enum DevFmtChannels oldChans;
@@ -1083,10 +1083,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 ALCint val = attrList[attrIdx + 1];
                 if(!IsValidALCChannels(val) || !ChannelsFromDevFmt(val))
-                {
-                    alcSetError(device, ALC_INVALID_VALUE);
-                    return ALC_FALSE;
-                }
+                    return ALC_INVALID_VALUE;
                 schans = val;
                 gotFmt |= GotChans;
             }
@@ -1096,10 +1093,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 ALCint val = attrList[attrIdx + 1];
                 if(!IsValidALCType(val) || !BytesFromDevFmt(val))
-                {
-                    alcSetError(device, ALC_INVALID_VALUE);
-                    return ALC_FALSE;
-                }
+                    return ALC_INVALID_VALUE;
                 stype = val;
                 gotFmt |= GotType;
             }
@@ -1110,10 +1104,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 {
                     freq = attrList[attrIdx + 1];
                     if(freq < 8000)
-                    {
-                        alcSetError(device, ALC_INVALID_VALUE);
-                        return ALC_FALSE;
-                    }
+                        return ALC_INVALID_VALUE;
                     gotFmt |= GotFreq;
                 }
                 else
@@ -1143,8 +1134,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(gotFmt != GotAll)
             {
                 WARN("Missing format for loopback device\n");
-                alcSetError(device, ALC_INVALID_VALUE);
-                return ALC_FALSE;
+                return ALC_INVALID_VALUE;
             }
         }
         else
@@ -1167,7 +1157,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     if((device->Flags&DEVICE_RUNNING))
-        return ALC_TRUE;
+        return ALC_NO_ERROR;
 
     LockDevice(device);
 
@@ -1184,7 +1174,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
     {
         UnlockDevice(device);
-        return ALC_FALSE;
+        return ALC_INVALID_DEVICE;
     }
     device->Flags |= DEVICE_RUNNING;
 
@@ -1276,7 +1266,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 UnlockDevice(device);
                 ALCdevice_StopPlayback(device);
                 device->Flags &= ~DEVICE_RUNNING;
-                return ALC_FALSE;
+                return ALC_INVALID_DEVICE;
             }
             slot->NeedsUpdate = AL_FALSE;
             ALeffectState_Update(slot->EffectState, context, slot);
@@ -1307,7 +1297,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     RestoreFPUMode(oldMode);
     UnlockDevice(device);
 
-    return ALC_TRUE;
+    return ALC_NO_ERROR;
 }
 
 /* FreeDevice
@@ -2208,6 +2198,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
     ALCcontext *ALContext;
+    ALCenum err;
 
     LockLists();
     if(!(device=VerifyDevice(device)) || device->IsCaptureDevice || !device->Connected)
@@ -2221,11 +2212,12 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     /* Reset Context Last Error code */
     device->LastError = ALC_NO_ERROR;
 
-    if(UpdateDeviceParams(device, attrList) == ALC_FALSE)
+    if((err=UpdateDeviceParams(device, attrList)) != ALC_NO_ERROR)
     {
         UnlockLists();
-        alcSetError(device, ALC_INVALID_DEVICE);
-        aluHandleDisconnect(device);
+        alcSetError(device, err);
+        if(err == ALC_INVALID_DEVICE)
+            aluHandleDisconnect(device);
         ALCdevice_DecRef(device);
         return NULL;
     }

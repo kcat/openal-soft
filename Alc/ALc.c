@@ -1053,10 +1053,15 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     // Check for attributes
     if(attrList && attrList[0])
     {
+        static const ALCint GotFreq  = 1<<0;
+        static const ALCint GotChans = 1<<1;
+        static const ALCint GotType  = 1<<2;
+        static const ALCint GotAll = GotFreq|GotChans|GotType;
         ALCuint freq, numMono, numStereo, numSends;
         enum DevFmtChannels schans;
         enum DevFmtType stype;
-        ALuint attrIdx;
+        ALCuint attrIdx = 0;
+        ALCint gotFmt = 0;
 
         // If a context is already running on the device, stop playback so the
         // device attributes can be updated
@@ -1071,7 +1076,6 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         numStereo = device->NumStereoSources;
         numSends = device->NumAuxSends;
 
-        attrIdx = 0;
         while(attrList[attrIdx])
         {
             if(attrList[attrIdx] == ALC_FORMAT_CHANNELS_SOFT &&
@@ -1084,6 +1088,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     return ALC_FALSE;
                 }
                 schans = val;
+                gotFmt |= GotChans;
             }
 
             if(attrList[attrIdx] == ALC_FORMAT_TYPE_SOFT &&
@@ -1096,6 +1101,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     return ALC_FALSE;
                 }
                 stype = val;
+                gotFmt |= GotType;
             }
 
             if(attrList[attrIdx] == ALC_FREQUENCY)
@@ -1108,6 +1114,7 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                         alcSetError(device, ALC_INVALID_VALUE);
                         return ALC_FALSE;
                     }
+                    gotFmt |= GotFreq;
                 }
                 else
                 {
@@ -1131,7 +1138,16 @@ static ALCboolean UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             attrIdx += 2;
         }
 
-        if(!device->IsLoopbackDevice)
+        if(device->IsLoopbackDevice)
+        {
+            if(gotFmt != GotAll)
+            {
+                WARN("Missing format for loopback device\n");
+                alcSetError(device, ALC_INVALID_VALUE);
+                return ALC_FALSE;
+            }
+        }
+        else
         {
             ConfigValueUInt(NULL, "frequency", &freq);
             freq = maxu(freq, 8000);

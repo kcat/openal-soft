@@ -989,22 +989,25 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         }
 
         slot = &device->DefaultSlot;
-        for(c = 0;c < SamplesToDo;c++)
+        if(*slot != NULL)
         {
-            (*slot)->WetBuffer[c] += (*slot)->ClickRemoval[0];
-            (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] * (1.0f/256.0f);
+            for(c = 0;c < SamplesToDo;c++)
+            {
+                (*slot)->WetBuffer[c] += (*slot)->ClickRemoval[0];
+                (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] * (1.0f/256.0f);
+            }
+            (*slot)->ClickRemoval[0] += (*slot)->PendingClicks[0];
+            (*slot)->PendingClicks[0] = 0.0f;
+
+            if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
+                ALeffectState_Update((*slot)->EffectState, ctx, *slot);
+
+            ALeffectState_Process((*slot)->EffectState, SamplesToDo,
+                                  (*slot)->WetBuffer, device->DryBuffer);
+
+            for(i = 0;i < SamplesToDo;i++)
+                (*slot)->WetBuffer[i] = 0.0f;
         }
-        (*slot)->ClickRemoval[0] += (*slot)->PendingClicks[0];
-        (*slot)->PendingClicks[0] = 0.0f;
-
-        if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
-            ALeffectState_Update((*slot)->EffectState, ctx, *slot);
-
-        ALeffectState_Process((*slot)->EffectState, SamplesToDo,
-                              (*slot)->WetBuffer, device->DryBuffer);
-
-        for(i = 0;i < SamplesToDo;i++)
-            (*slot)->WetBuffer[i] = 0.0f;
         UnlockDevice(device);
 
         //Post processing loop

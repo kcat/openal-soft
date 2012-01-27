@@ -1050,6 +1050,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     int oldMode;
     ALuint i;
 
+    if(device->IsLoopbackDevice && !(attrList && attrList[0]))
+    {
+        WARN("Missing attributes for loopback device\n");
+        return ALC_INVALID_VALUE;
+    }
+
     // Check for attributes
     if(attrList && attrList[0])
     {

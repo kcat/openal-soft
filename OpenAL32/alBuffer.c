@@ -330,6 +330,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
     enum UserFmtType SrcType;
     ALCcontext *Context;
     ALCdevice *device;
+    ALuint FrameSize;
+    ALenum NewFormat;
     ALbuffer *ALBuf;
     ALenum err;
 
@@ -351,8 +353,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
         case UserFmtUShort:
         case UserFmtInt:
         case UserFmtUInt:
-        case UserFmtFloat: {
-            ALuint FrameSize = FrameSizeFromUserFmt(SrcChannels, SrcType);
+        case UserFmtFloat:
+            FrameSize = FrameSizeFromUserFmt(SrcChannels, SrcType);
             if((size%FrameSize) != 0)
                 err = AL_INVALID_VALUE;
             else
@@ -360,13 +362,13 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                                SrcChannels, SrcType, data, AL_TRUE);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
-        }   break;
+            break;
 
         case UserFmtByte3:
         case UserFmtUByte3:
-        case UserFmtDouble: {
-            ALuint FrameSize = FrameSizeFromUserFmt(SrcChannels, SrcType);
-            ALenum NewFormat = AL_FORMAT_MONO_FLOAT32;
+        case UserFmtDouble:
+            FrameSize = FrameSizeFromUserFmt(SrcChannels, SrcType);
+            NewFormat = AL_FORMAT_MONO_FLOAT32;
             switch(SrcChannels)
             {
                 case UserFmtMono: NewFormat = AL_FORMAT_MONO_FLOAT32; break;
@@ -384,19 +386,12 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                                SrcChannels, SrcType, data, AL_TRUE);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
-        }   break;
+            break;
 
         case UserFmtMulaw:
         case UserFmtAlaw:
-        case UserFmtIMA4: {
-            /* Here is where things vary:
-             * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
-             * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024 bytes per channel
-             */
-            ALuint FrameSize = (SrcType == UserFmtIMA4) ?
-                               (ChannelsFromUserFmt(SrcChannels) * 36) :
-                               FrameSizeFromUserFmt(SrcChannels, SrcType);
-            ALenum NewFormat = AL_FORMAT_MONO16;
+            FrameSize = FrameSizeFromUserFmt(SrcChannels, SrcType);
+            NewFormat = AL_FORMAT_MONO16;
             switch(SrcChannels)
             {
                 case UserFmtMono: NewFormat = AL_FORMAT_MONO16; break;
@@ -411,6 +406,32 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 err = AL_INVALID_VALUE;
             else
                 err = LoadData(ALBuf, freq, NewFormat, size/FrameSize,
+                               SrcChannels, SrcType, data, AL_TRUE);
+            if(err != AL_NO_ERROR)
+                alSetError(Context, err);
+            break;
+
+        case UserFmtIMA4: {
+            /* Here is where things vary:
+             * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
+             * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024 bytes per channel
+             */
+            ALuint FrameSize = ChannelsFromUserFmt(SrcChannels) * 36;
+            ALenum NewFormat = AL_FORMAT_MONO16;
+            switch(SrcChannels)
+            {
+                case UserFmtMono: NewFormat = AL_FORMAT_MONO16; break;
+                case UserFmtStereo: NewFormat = AL_FORMAT_STEREO16; break;
+                case UserFmtRear: NewFormat = AL_FORMAT_REAR16; break;
+                case UserFmtQuad: NewFormat = AL_FORMAT_QUAD16; break;
+                case UserFmtX51: NewFormat = AL_FORMAT_51CHN16; break;
+                case UserFmtX61: NewFormat = AL_FORMAT_61CHN16; break;
+                case UserFmtX71: NewFormat = AL_FORMAT_71CHN16; break;
+            }
+            if((size%FrameSize) != 0)
+                err = AL_INVALID_VALUE;
+            else
+                err = LoadData(ALBuf, freq, NewFormat, size/FrameSize*65,
                                SrcChannels, SrcType, data, AL_TRUE);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
@@ -468,11 +489,12 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const 
             ALuint Bytes = BytesFromFmt(ALBuf->FmtType);
             if(SrcType == UserFmtIMA4)
             {
-                /* offset -> byte offset, length -> block count */
+                /* offset -> byte offset, length -> sample count */
                 offset /= 36;
                 offset *= 65;
                 offset *= Bytes;
                 length /= original_align;
+                length *= 65;
             }
             else
             {
@@ -513,15 +535,8 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
         alSetError(Context, AL_INVALID_ENUM);
     else
     {
-        err = AL_NO_ERROR;
-        if(type == UserFmtIMA4)
-        {
-            if((samples%65) == 0) samples /= 65;
-            else err = AL_INVALID_VALUE;
-        }
-        if(err == AL_NO_ERROR)
-            err = LoadData(ALBuf, samplerate, internalformat, samples,
-                           channels, type, data, AL_FALSE);
+        err = LoadData(ALBuf, samplerate, internalformat, samples,
+                       channels, type, data, AL_FALSE);
         if(err != AL_NO_ERROR)
             alSetError(Context, err);
     }
@@ -557,14 +572,10 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
             alSetError(Context, AL_INVALID_ENUM);
         else if(offset > ALBuf->SampleLen || samples > ALBuf->SampleLen-offset)
             alSetError(Context, AL_INVALID_VALUE);
-        else if(type == UserFmtIMA4 && (samples%65) != 0)
-            alSetError(Context, AL_INVALID_VALUE);
         else
         {
             /* offset -> byte offset */
             offset *= FrameSize;
-            /* samples -> IMA4 block count */
-            if(type == UserFmtIMA4) samples /= 65;
             ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
                         data, type,
                         ChannelsFromFmt(ALBuf->FmtChannels), samples);
@@ -609,8 +620,6 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
         {
             /* offset -> byte offset */
             offset *= FrameSize;
-            /* samples -> IMA4 block count */
-            if(type == UserFmtIMA4) samples /= 65;
             ConvertData(data, type,
                         &((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
                         ChannelsFromFmt(ALBuf->FmtChannels), samples);
@@ -1784,16 +1793,22 @@ DECL_TEMPLATE(ALubyte3, ALubyte3)
 
 #define DECL_TEMPLATE(T)                                                      \
 static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALuint numchans,  \
-                                 ALuint numblocks)                            \
+                                 ALuint len)                                  \
 {                                                                             \
-    ALuint i, j;                                                              \
     ALshort tmp[65*MAXCHANNELS]; /* Max samples an IMA4 frame can be */       \
-    for(i = 0;i < numblocks;i++)                                              \
+    ALuint i, j, k;                                                           \
+                                                                              \
+    i = 0;                                                                    \
+    while(i < len)                                                            \
     {                                                                         \
         DecodeIMA4Block(tmp, src, numchans);                                  \
         src += 36*numchans;                                                   \
-        for(j = 0;j < 65*numchans;j++)                                        \
-            *(dst++) = Conv_##T##_ALshort(tmp[j]);                            \
+                                                                              \
+        for(j = 0;j < 65 && i < len;j++,i++)                                  \
+        {                                                                     \
+            for(k = 0;k < numchans;k++)                                       \
+                *(dst++) = Conv_##T##_ALshort(tmp[j*numchans + k]);           \
+        }                                                                     \
     }                                                                         \
 }
 
@@ -1814,13 +1829,14 @@ DECL_TEMPLATE(ALubyte3)
 
 #define DECL_TEMPLATE(T)                                                      \
 static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALuint numchans,    \
-                               ALuint numblocks)                              \
+                               ALuint len)                                    \
 {                                                                             \
-    ALuint i, j;                                                              \
     ALshort tmp[65*MAXCHANNELS]; /* Max samples an IMA4 frame can be */       \
     ALint sample[MAXCHANNELS] = {0,0,0,0,0,0,0,0};                            \
     ALint index[MAXCHANNELS] = {0,0,0,0,0,0,0,0};                             \
-    for(i = 0;i < numblocks;i++)                                              \
+    ALuint i, j;                                                              \
+                                                                              \
+    for(i = 0;i < len;i += 65)                                                \
     {                                                                         \
         for(j = 0;j < 65*numchans;j++)                                        \
             tmp[j] = Conv_ALshort_##T(*(src++));                              \
@@ -1982,8 +1998,6 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     NewBytes = BytesFromFmt(DstType);
 
     newsize = frames;
-    if(SrcType == UserFmtIMA4)
-        newsize *= 65;
     newsize *= NewBytes;
     newsize *= NewChannels;
     if(newsize > INT_MAX)
@@ -2011,9 +2025,10 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     {
         ALBuf->OriginalChannels = SrcChannels;
         ALBuf->OriginalType     = SrcType;
-        ALBuf->OriginalSize     = frames * ((SrcType == UserFmtIMA4) ? 36 :
-                                            BytesFromUserFmt(SrcType)) *
-                                           ChannelsFromUserFmt(SrcChannels);
+        if(SrcType == UserFmtIMA4)
+            ALBuf->OriginalSize = frames / 65 * 36 * ChannelsFromUserFmt(SrcChannels);
+        else
+            ALBuf->OriginalSize = frames * FrameSizeFromUserFmt(SrcChannels, SrcType);
     }
     else
     {
@@ -2027,7 +2042,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALBuf->FmtType = DstType;
     ALBuf->Format = NewFormat;
 
-    ALBuf->SampleLen = frames * ((SrcType == UserFmtIMA4) ? 65 : 1);
+    ALBuf->SampleLen = frames;
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = ALBuf->SampleLen;
 

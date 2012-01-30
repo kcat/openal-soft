@@ -2263,7 +2263,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     } while(!CompExchangePtr((XchgPtr*)&device->ContextList, ALContext->next, ALContext));
     UnlockLists();
 
-    InitializeEffect(ALContext, device->DefaultSlot, &ForcedEffect);
+    if(device->DefaultSlot)
+        InitializeEffect(ALContext, device->DefaultSlot, &ForcedEffect);
     ALContext->LastError = AL_NO_ERROR;
 
     ALCdevice_DecRef(device);

@@ -171,7 +171,7 @@ FilePtr openAVFile(const char *fname)
     {
         /* After opening, we must search for the stream information because not
          * all formats will have it in stream headers */
-        if(av_find_stream_info(file->FmtCtx) >= 0)
+        if(avformat_find_stream_info(file->FmtCtx, NULL) >= 0)
             return file;
         av_close_input_file(file->FmtCtx);
     }
@@ -203,7 +203,7 @@ FilePtr openAVData(const char *name, char *buffer, size_t buffer_len)
                                               MemData_seek);
         if(file->FmtCtx->pb && avformat_open_input(&file->FmtCtx, name, NULL, NULL) == 0)
         {
-            if(av_find_stream_info(file->FmtCtx) >= 0)
+            if(avformat_find_stream_info(file->FmtCtx, NULL) >= 0)
                 return file;
         }
         av_close_input_file(file->FmtCtx);
@@ -234,7 +234,7 @@ FilePtr openAVCustom(const char *name, void *user_data,
                                               read_packet, write_packet, seek);
         if(file->FmtCtx->pb && avformat_open_input(&file->FmtCtx, name, NULL, NULL) == 0)
         {
-            if(av_find_stream_info(file->FmtCtx) >= 0)
+            if(avformat_find_stream_info(file->FmtCtx, NULL) >= 0)
                 return file;
         }
         av_close_input_file(file->FmtCtx);

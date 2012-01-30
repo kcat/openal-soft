@@ -285,7 +285,7 @@ int getAVFileInfo(FilePtr file, int *numaudiostreams)
     if(!file) return 1;
     for(i = 0;i < file->FmtCtx->nb_streams;i++)
     {
-        if(file->FmtCtx->streams[i]->codec->codec_type == CODEC_TYPE_AUDIO)
+        if(file->FmtCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
             audiocount++;
     }
     *numaudiostreams = audiocount;
@@ -298,7 +298,7 @@ StreamPtr getAVAudioStream(FilePtr file, int streamnum)
     if(!file) return NULL;
     for(i = 0;i < file->FmtCtx->nb_streams;i++)
     {
-        if(file->FmtCtx->streams[i]->codec->codec_type != CODEC_TYPE_AUDIO)
+        if(file->FmtCtx->streams[i]->codec->codec_type != AVMEDIA_TYPE_AUDIO)
             continue;
 
         if(streamnum == 0)
@@ -366,7 +366,7 @@ StreamPtr getAVAudioStream(FilePtr file, int streamnum)
 
 int getAVAudioInfo(StreamPtr stream, ALuint *rate, ALenum *channels, ALenum *type)
 {
-    if(!stream || stream->CodecCtx->codec_type != CODEC_TYPE_AUDIO)
+    if(!stream || stream->CodecCtx->codec_type != AVMEDIA_TYPE_AUDIO)
         return 1;
 
     /* Get the sample type for OpenAL given the format detected by ffmpeg. */
@@ -468,7 +468,7 @@ void *getAVAudioData(StreamPtr stream, size_t *length)
 
     if(length) *length = 0;
 
-    if(!stream || stream->CodecCtx->codec_type != CODEC_TYPE_AUDIO)
+    if(!stream || stream->CodecCtx->codec_type != AVMEDIA_TYPE_AUDIO)
         return NULL;
 
     stream->DecodedDataSize = 0;
@@ -540,7 +540,7 @@ size_t readAVAudioData(StreamPtr stream, void *data, size_t length)
 {
     size_t dec = 0;
 
-    if(!stream || stream->CodecCtx->codec_type != CODEC_TYPE_AUDIO)
+    if(!stream || stream->CodecCtx->codec_type != AVMEDIA_TYPE_AUDIO)
         return 0;
 
     while(dec < length)
@@ -589,7 +589,7 @@ void *decodeAVAudioStream(StreamPtr stream, size_t *length)
     size_t got;
 
     *length = 0;
-    if(!stream || stream->CodecCtx->codec_type != CODEC_TYPE_AUDIO)
+    if(!stream || stream->CodecCtx->codec_type != AVMEDIA_TYPE_AUDIO)
         return NULL;
 
     while((inbuf=getAVAudioData(stream, &got)) != NULL && got > 0)

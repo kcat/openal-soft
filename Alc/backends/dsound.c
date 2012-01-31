@@ -47,12 +47,16 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 
 
-static HMODULE ds_handle;
+static void *ds_handle;
 static HRESULT (WINAPI *pDirectSoundCreate)(LPCGUID pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
 static HRESULT (WINAPI *pDirectSoundEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallback, void *pContext);
+static HRESULT (WINAPI *pDirectSoundCaptureCreate)(LPCGUID pcGuidDevice, IDirectSoundCapture **ppDSC, IUnknown *pUnkOuter);
+static HRESULT (WINAPI *pDirectSoundCaptureEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallback, void *pContext);
 
-#define DirectSoundCreate     pDirectSoundCreate
-#define DirectSoundEnumerateA pDirectSoundEnumerateA
+#define DirectSoundCreate            pDirectSoundCreate
+#define DirectSoundEnumerateA        pDirectSoundEnumerateA
+#define DirectSoundCaptureCreate     pDirectSoundCaptureCreate
+#define DirectSoundCaptureEnumerateA pDirectSoundCaptureEnumerateA
 
 
 typedef struct {
@@ -65,7 +69,16 @@ typedef struct {
 
     volatile int killNow;
     ALvoid *thread;
-} DSoundData;
+} DSoundPlaybackData;
+
+typedef struct {
+    // DirectSound Capture Device
+    IDirectSoundCapture *lpDSC;
+    IDirectSoundCaptureBuffer *DSCbuffer;
+    DWORD dwBufferBytes;
+    DWORD dwCursor;
+    RingBuffer *pRing;
+} DSoundCaptureData;
 
 
 typedef struct {
@@ -74,44 +87,43 @@ typedef struct {
 } DevMap;
 
 static const ALCchar dsDevice[] = "DirectSound Default";
-static DevMap *DeviceList;
-static ALuint NumDevices;
+static DevMap *PlaybackDeviceList;
+static ALuint NumPlaybackDevices;
+static DevMap *CaptureDeviceList;
+static ALuint NumCaptureDevices;
 
 #define MAX_UPDATES 128
 
 static ALCboolean DSoundLoad(void)
 {
-    ALCboolean ok = ALC_TRUE;
     if(!ds_handle)
     {
-        ds_handle = LoadLibraryA("dsound.dll");
+        ds_handle = LoadLib("dsound.dll");
         if(ds_handle == NULL)
         {
             ERR("Failed to load dsound.dll\n");
             return ALC_FALSE;
         }
 
-#define LOAD_FUNC(x) do {                                                     \
-    if((p##x = (void*)GetProcAddress(ds_handle, #x)) == NULL) {               \
-        ERR("Could not load %s from dsound.dll\n", #x);                       \
-        ok = ALC_FALSE;                                                       \
+#define LOAD_FUNC(f) do {                                                     \
+    p##f = GetSymbol(ds_handle, #f);                                          \
+    if(p##f == NULL) {                                                        \
+        CloseLib(ds_handle);                                                  \
+        ds_handle = NULL;                                                     \
+        return ALC_FALSE;                                                     \
     }                                                                         \
 } while(0)
         LOAD_FUNC(DirectSoundCreate);
         LOAD_FUNC(DirectSoundEnumerateA);
+        LOAD_FUNC(DirectSoundCaptureCreate);
+        LOAD_FUNC(DirectSoundCaptureEnumerateA);
 #undef LOAD_FUNC
-
-        if(!ok)
-        {
-            FreeLibrary(ds_handle);
-            ds_handle = NULL;
-        }
     }
-    return ok;
+    return ALC_TRUE;
 }
 
 
-static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
+static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
 {
     char str[1024];
     void *temp;
@@ -132,30 +144,71 @@ static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname,
             snprintf(str, sizeof(str), "%s #%d", desc, count+1);
         count++;
 
-        for(i = 0;i < NumDevices;i++)
+        for(i = 0;i < NumPlaybackDevices;i++)
         {
-            if(strcmp(str, DeviceList[i].name) == 0)
+            if(strcmp(str, PlaybackDeviceList[i].name) == 0)
                 break;
         }
-    } while(i != NumDevices);
+    } while(i != NumPlaybackDevices);
 
-    temp = realloc(DeviceList, sizeof(DevMap) * (NumDevices+1));
+    temp = realloc(PlaybackDeviceList, sizeof(DevMap) * (NumPlaybackDevices+1));
     if(temp)
     {
-        DeviceList = temp;
-        DeviceList[NumDevices].name = strdup(str);
-        DeviceList[NumDevices].guid = *guid;
-        NumDevices++;
+        PlaybackDeviceList = temp;
+        PlaybackDeviceList[NumPlaybackDevices].name = strdup(str);
+        PlaybackDeviceList[NumPlaybackDevices].guid = *guid;
+        NumPlaybackDevices++;
     }
 
     return TRUE;
 }
 
 
-static ALuint DSoundProc(ALvoid *ptr)
+static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
+{
+    char str[1024];
+    void *temp;
+    int count;
+    ALuint i;
+
+    (void)data;
+    (void)drvname;
+
+    if(!guid)
+        return TRUE;
+
+    count = 0;
+    do {
+        if(count == 0)
+            snprintf(str, sizeof(str), "%s", desc);
+        else
+            snprintf(str, sizeof(str), "%s #%d", desc, count+1);
+        count++;
+
+        for(i = 0;i < NumCaptureDevices;i++)
+        {
+            if(strcmp(str, CaptureDeviceList[i].name) == 0)
+                break;
+        }
+    } while(i != NumCaptureDevices);
+
+    temp = realloc(CaptureDeviceList, sizeof(DevMap) * (NumCaptureDevices+1));
+    if(temp)
+    {
+        CaptureDeviceList = temp;
+        CaptureDeviceList[NumCaptureDevices].name = strdup(str);
+        CaptureDeviceList[NumCaptureDevices].guid = *guid;
+        NumCaptureDevices++;
+    }
+
+    return TRUE;
+}
+
+
+static ALuint DSoundPlaybackProc(ALvoid *ptr)
 {
     ALCdevice *pDevice = (ALCdevice*)ptr;
-    DSoundData *pData = (DSoundData*)pDevice->ExtraData;
+    DSoundPlaybackData *pData = (DSoundPlaybackData*)pDevice->ExtraData;
     DSBCAPS DSBCaps;
     DWORD LastCursor = 0;
     DWORD PlayCursor;
@@ -255,7 +308,7 @@ static ALuint DSoundProc(ALvoid *ptr)
 
 static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 {
-    DSoundData *pData = NULL;
+    DSoundPlaybackData *pData = NULL;
     LPGUID guid = NULL;
     HRESULT hr;
 
@@ -265,27 +318,27 @@ static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
     {
         ALuint i;
 
-        if(!DeviceList)
+        if(!PlaybackDeviceList)
         {
-            hr = DirectSoundEnumerateA(DSoundEnumDevices, NULL);
+            hr = DirectSoundEnumerateA(DSoundEnumPlaybackDevices, NULL);
             if(FAILED(hr))
                 ERR("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
         }
 
-        for(i = 0;i < NumDevices;i++)
+        for(i = 0;i < NumPlaybackDevices;i++)
         {
-            if(strcmp(deviceName, DeviceList[i].name) == 0)
+            if(strcmp(deviceName, PlaybackDeviceList[i].name) == 0)
             {
-                guid = &DeviceList[i].guid;
+                guid = &PlaybackDeviceList[i].guid;
                 break;
             }
         }
-        if(i == NumDevices)
+        if(i == NumPlaybackDevices)
             return ALC_INVALID_VALUE;
     }
 
     //Initialise requested device
-    pData = calloc(1, sizeof(DSoundData));
+    pData = calloc(1, sizeof(DSoundPlaybackData));
     if(!pData)
         return ALC_OUT_OF_MEMORY;
 
@@ -317,7 +370,7 @@ static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 
 static void DSoundClosePlayback(ALCdevice *device)
 {
-    DSoundData *pData = device->ExtraData;
+    DSoundPlaybackData *pData = device->ExtraData;
 
     IDirectSound_Release(pData->lpDS);
     CloseHandle(pData->hNotifyEvent);
@@ -327,7 +380,7 @@ static void DSoundClosePlayback(ALCdevice *device)
 
 static ALCboolean DSoundResetPlayback(ALCdevice *device)
 {
-    DSoundData *pData = (DSoundData*)device->ExtraData;
+    DSoundPlaybackData *pData = (DSoundPlaybackData*)device->ExtraData;
     DSBUFFERDESC DSBDescription;
     WAVEFORMATEXTENSIBLE OutputType;
     DWORD speakers;
@@ -505,7 +558,7 @@ retry_open:
     {
         ResetEvent(pData->hNotifyEvent);
         SetDefaultWFXChannelOrder(device);
-        pData->thread = StartThread(DSoundProc, device);
+        pData->thread = StartThread(DSoundPlaybackProc, device);
         if(pData->thread == NULL)
             hr = E_FAIL;
     }
@@ -529,7 +582,7 @@ retry_open:
 
 static void DSoundStopPlayback(ALCdevice *device)
 {
-    DSoundData *pData = device->ExtraData;
+    DSoundPlaybackData *pData = device->ExtraData;
 
     if(!pData->thread)
         return;
@@ -550,17 +603,289 @@ static void DSoundStopPlayback(ALCdevice *device)
 }
 
 
+static ALCenum DSoundOpenCapture(ALCdevice *device, const ALCchar *deviceName)
+{
+    DSoundCaptureData *pData = NULL;
+    WAVEFORMATEXTENSIBLE InputType;
+    DSCBUFFERDESC DSCBDescription;
+    LPGUID guid = NULL;
+    HRESULT hr, hrcom;
+    ALuint samples;
+
+    if(!CaptureDeviceList)
+    {
+        /* Initialize COM to prevent name truncation */
+        hrcom = CoInitialize(NULL);
+        hr = DirectSoundCaptureEnumerateA(DSoundEnumCaptureDevices, NULL);
+        if(FAILED(hr))
+            ERR("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+        if(SUCCEEDED(hrcom))
+            CoUninitialize();
+    }
+
+    if(!deviceName && NumCaptureDevices > 0)
+    {
+        deviceName = CaptureDeviceList[0].name;
+        guid = &CaptureDeviceList[0].guid;
+    }
+    else
+    {
+        ALuint i;
+
+        for(i = 0;i < NumCaptureDevices;i++)
+        {
+            if(strcmp(deviceName, CaptureDeviceList[i].name) == 0)
+            {
+                guid = &CaptureDeviceList[i].guid;
+                break;
+            }
+        }
+        if(i == NumCaptureDevices)
+            return ALC_INVALID_VALUE;
+    }
+
+    //Initialise requested device
+    pData = calloc(1, sizeof(DSoundCaptureData));
+    if(!pData)
+        return ALC_OUT_OF_MEMORY;
+
+    hr = DS_OK;
+
+    //DirectSoundCapture Init code
+    if(SUCCEEDED(hr))
+        hr = DirectSoundCaptureCreate(guid, &pData->lpDSC, NULL);
+    if(SUCCEEDED(hr))
+    {
+        memset(&InputType, 0, sizeof(InputType));
+
+        switch(device->FmtChans)
+        {
+            case DevFmtMono:
+                InputType.dwChannelMask = SPEAKER_FRONT_CENTER;
+                break;
+            case DevFmtStereo:
+                InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                          SPEAKER_FRONT_RIGHT;
+                break;
+            case DevFmtQuad:
+                InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                          SPEAKER_FRONT_RIGHT |
+                                          SPEAKER_BACK_LEFT |
+                                          SPEAKER_BACK_RIGHT;
+                break;
+            case DevFmtX51:
+                InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                          SPEAKER_FRONT_RIGHT |
+                                          SPEAKER_FRONT_CENTER |
+                                          SPEAKER_LOW_FREQUENCY |
+                                          SPEAKER_BACK_LEFT |
+                                          SPEAKER_BACK_RIGHT;
+                break;
+            case DevFmtX51Side:
+                InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                          SPEAKER_FRONT_RIGHT |
+                                          SPEAKER_FRONT_CENTER |
+                                          SPEAKER_LOW_FREQUENCY |
+                                          SPEAKER_SIDE_LEFT |
+                                          SPEAKER_SIDE_RIGHT;
+                break;
+            case DevFmtX61:
+                InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                          SPEAKER_FRONT_RIGHT |
+                                          SPEAKER_FRONT_CENTER |
+                                          SPEAKER_LOW_FREQUENCY |
+                                          SPEAKER_BACK_CENTER |
+                                          SPEAKER_SIDE_LEFT |
+                                          SPEAKER_SIDE_RIGHT;
+                break;
+            case DevFmtX71:
+                InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
+                                          SPEAKER_FRONT_RIGHT |
+                                          SPEAKER_FRONT_CENTER |
+                                          SPEAKER_LOW_FREQUENCY |
+                                          SPEAKER_BACK_LEFT |
+                                          SPEAKER_BACK_RIGHT |
+                                          SPEAKER_SIDE_LEFT |
+                                          SPEAKER_SIDE_RIGHT;
+                break;
+        }
+
+        InputType.Format.wFormatTag = WAVE_FORMAT_PCM;
+        InputType.Format.nChannels = ChannelsFromDevFmt(device->FmtChans);
+        InputType.Format.wBitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
+        InputType.Format.nBlockAlign = InputType.Format.nChannels*InputType.Format.wBitsPerSample/8;
+        InputType.Format.nSamplesPerSec = device->Frequency;
+        InputType.Format.nAvgBytesPerSec = InputType.Format.nSamplesPerSec*InputType.Format.nBlockAlign;
+        InputType.Format.cbSize = 0;
+
+        if(InputType.Format.nChannels > 2 || device->FmtType == DevFmtFloat)
+        {
+            InputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+            InputType.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
+            InputType.Samples.wValidBitsPerSample = InputType.Format.wBitsPerSample;
+            if(device->FmtType == DevFmtFloat)
+                InputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+            else
+                InputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+        }
+
+        samples = device->UpdateSize * device->NumUpdates;
+        samples = maxu(samples, 100 * device->Frequency / 1000);
+
+        memset(&DSCBDescription, 0, sizeof(DSCBUFFERDESC));
+        DSCBDescription.dwSize = sizeof(DSCBUFFERDESC);
+        DSCBDescription.dwFlags = 0;
+        DSCBDescription.dwBufferBytes = samples * InputType.Format.nBlockAlign;
+        DSCBDescription.lpwfxFormat = &InputType.Format;
+
+        hr = IDirectSoundCapture_CreateCaptureBuffer(pData->lpDSC, &DSCBDescription, &pData->DSCbuffer, NULL);
+    }
+    if(SUCCEEDED(hr))
+    {
+         pData->pRing = CreateRingBuffer(InputType.Format.nBlockAlign, device->UpdateSize * device->NumUpdates);
+         if(pData->pRing == NULL)
+             hr = DSERR_OUTOFMEMORY;
+    }
+
+    if(FAILED(hr))
+    {
+        ERR("Device init failed: 0x%08lx\n", hr);
+
+        DestroyRingBuffer(pData->pRing);
+        pData->pRing = NULL;
+        if(pData->DSCbuffer != NULL)
+            IDirectSoundCaptureBuffer_Release(pData->DSCbuffer);
+        pData->DSCbuffer = NULL;
+        if(pData->lpDSC)
+            IDirectSoundCapture_Release(pData->lpDSC);
+        pData->lpDSC = NULL;
+
+        free(pData);
+        return ALC_INVALID_VALUE;
+    }
+
+    pData->dwBufferBytes = DSCBDescription.dwBufferBytes;
+    SetDefaultWFXChannelOrder(device);
+
+    device->szDeviceName = strdup(deviceName);
+    device->ExtraData = pData;
+
+    return ALC_NO_ERROR;
+}
+
+static void DSoundCloseCapture(ALCdevice *device)
+{
+    DSoundCaptureData *pData = device->ExtraData;
+
+    DestroyRingBuffer(pData->pRing);
+    pData->pRing = NULL;
+
+    if(pData->DSCbuffer != NULL)
+    {
+        IDirectSoundCaptureBuffer_Stop(pData->DSCbuffer);
+        IDirectSoundCaptureBuffer_Release(pData->DSCbuffer);
+        pData->DSCbuffer = NULL;
+    }
+
+    IDirectSoundCapture_Release(pData->lpDSC);
+    pData->lpDSC = NULL;
+
+    free(pData);
+    device->ExtraData = NULL;
+}
+
+static void DSoundStartCapture(ALCdevice *device)
+{
+    DSoundCaptureData *pData = device->ExtraData;
+    HRESULT hr;
+
+    hr = IDirectSoundCaptureBuffer_Start(pData->DSCbuffer, DSCBSTART_LOOPING);
+    if(FAILED(hr))
+    {
+        ERR("start failed: 0x%08lx\n", hr);
+        aluHandleDisconnect(device);
+    }
+}
+
+static void DSoundStopCapture(ALCdevice *device)
+{
+    DSoundCaptureData *pData = device->ExtraData;
+    HRESULT hr;
+
+    hr = IDirectSoundCaptureBuffer_Stop(pData->DSCbuffer);
+    if(FAILED(hr))
+    {
+        ERR("stop failed: 0x%08lx\n", hr);
+        aluHandleDisconnect(device);
+    }
+}
+
+static ALCenum DSoundCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
+{
+    DSoundCaptureData *pData = pDevice->ExtraData;
+    ReadRingBuffer(pData->pRing, pBuffer, lSamples);
+    return ALC_NO_ERROR;
+}
+
+static ALCuint DSoundAvailableSamples(ALCdevice *pDevice)
+{
+    DSoundCaptureData *pData = pDevice->ExtraData;
+    DWORD dwRead, dwCursor, dwBufferBytes, dwNumBytes;
+    void *pvAudio1, *pvAudio2;
+    DWORD dwAudioBytes1, dwAudioBytes2;
+    DWORD FrameSize;
+    HRESULT hr;
+
+    if(!pDevice->Connected)
+        goto done;
+
+    FrameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
+    dwBufferBytes = pData->dwBufferBytes;
+    dwCursor = pData->dwCursor;
+
+    hr = IDirectSoundCaptureBuffer_GetCurrentPosition(pData->DSCbuffer, NULL, &dwRead);
+    if(SUCCEEDED(hr))
+    {
+        dwNumBytes = (dwBufferBytes + dwRead - dwCursor) % dwBufferBytes;
+        if(dwNumBytes == 0)
+            goto done;
+        hr = IDirectSoundCaptureBuffer_Lock(pData->DSCbuffer,
+                                            dwCursor, dwNumBytes,
+                                            &pvAudio1, &dwAudioBytes1,
+                                            &pvAudio2, &dwAudioBytes2, 0);
+    }
+    if(SUCCEEDED(hr))
+    {
+        WriteRingBuffer(pData->pRing, pvAudio1, dwAudioBytes1/FrameSize);
+        if(pvAudio2 != NULL)
+            WriteRingBuffer(pData->pRing, pvAudio2, dwAudioBytes2/FrameSize);
+        hr = IDirectSoundCaptureBuffer_Unlock(pData->DSCbuffer,
+                                              pvAudio1, dwAudioBytes1,
+                                              pvAudio2, dwAudioBytes2);
+        pData->dwCursor = (dwCursor + dwAudioBytes1 + dwAudioBytes2) % dwBufferBytes;
+    }
+
+    if(FAILED(hr))
+    {
+        ERR("update failed: 0x%08lx\n", hr);
+        aluHandleDisconnect(pDevice);
+    }
+
+done:
+    return RingBufferSize(pData->pRing);
+}
+
 static const BackendFuncs DSoundFuncs = {
     DSoundOpenPlayback,
     DSoundClosePlayback,
     DSoundResetPlayback,
     DSoundStopPlayback,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL
+    DSoundOpenCapture,
+    DSoundCloseCapture,
+    DSoundStartCapture,
+    DSoundStopCapture,
+    DSoundCaptureSamples,
+    DSoundAvailableSamples
 };
 
 
@@ -576,20 +901,26 @@ void alcDSoundDeinit(void)
 {
     ALuint i;
 
-    for(i = 0;i < NumDevices;++i)
-        free(DeviceList[i].name);
-    free(DeviceList);
-    DeviceList = NULL;
-    NumDevices = 0;
+    for(i = 0;i < NumPlaybackDevices;++i)
+        free(PlaybackDeviceList[i].name);
+    free(PlaybackDeviceList);
+    PlaybackDeviceList = NULL;
+    NumPlaybackDevices = 0;
+
+    for(i = 0;i < NumCaptureDevices;++i)
+        free(CaptureDeviceList[i].name);
+    free(CaptureDeviceList);
+    CaptureDeviceList = NULL;
+    NumCaptureDevices = 0;
 
     if(ds_handle)
-        FreeLibrary(ds_handle);
+        CloseLib(ds_handle);
     ds_handle = NULL;
 }
 
 void alcDSoundProbe(enum DevProbe type)
 {
-    HRESULT hr;
+    HRESULT hr, hrcom;
     ALuint i;
 
     switch(type)
@@ -599,23 +930,41 @@ void alcDSoundProbe(enum DevProbe type)
             break;
 
         case ALL_DEVICE_PROBE:
-            for(i = 0;i < NumDevices;++i)
-                free(DeviceList[i].name);
-            free(DeviceList);
-            DeviceList = NULL;
-            NumDevices = 0;
+            for(i = 0;i < NumPlaybackDevices;++i)
+                free(PlaybackDeviceList[i].name);
+            free(PlaybackDeviceList);
+            PlaybackDeviceList = NULL;
+            NumPlaybackDevices = 0;
 
-            hr = DirectSoundEnumerateA(DSoundEnumDevices, NULL);
+            hr = DirectSoundEnumerateA(DSoundEnumPlaybackDevices, NULL);
             if(FAILED(hr))
-                ERR("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+                ERR("Error enumerating DirectSound playback devices (%#x)!\n", (unsigned int)hr);
             else
             {
-                for(i = 0;i < NumDevices;i++)
-                    AppendAllDeviceList(DeviceList[i].name);
+                for(i = 0;i < NumPlaybackDevices;i++)
+                    AppendAllDeviceList(PlaybackDeviceList[i].name);
             }
             break;
 
         case CAPTURE_DEVICE_PROBE:
+            for(i = 0;i < NumCaptureDevices;++i)
+                free(CaptureDeviceList[i].name);
+            free(CaptureDeviceList);
+            CaptureDeviceList = NULL;
+            NumCaptureDevices = 0;
+
+            /* Initialize COM to prevent name truncation */
+            hrcom = CoInitialize(NULL);
+            hr = DirectSoundCaptureEnumerateA(DSoundEnumCaptureDevices, NULL);
+            if(FAILED(hr))
+                ERR("Error enumerating DirectSound capture devices (%#x)!\n", (unsigned int)hr);
+            else
+            {
+                for(i = 0;i < NumCaptureDevices;i++)
+                    AppendCaptureDeviceList(CaptureDeviceList[i].name);
+            }
+            if(SUCCEEDED(hrcom))
+                CoUninitialize();
             break;
     }
 }

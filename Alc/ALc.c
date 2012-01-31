@@ -1059,10 +1059,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     // Check for attributes
     if(attrList && attrList[0])
     {
-        static const ALCint GotFreq  = 1<<0;
-        static const ALCint GotChans = 1<<1;
-        static const ALCint GotType  = 1<<2;
-        static const ALCint GotAll = GotFreq|GotChans|GotType;
+        enum {
+            GotFreq  = 1<<0,
+            GotChans = 1<<1,
+            GotType  = 1<<2,
+            GotAll   = GotFreq|GotChans|GotType
+        };
         ALCuint freq, numMono, numStereo, numSends;
         enum DevFmtChannels schans;
         enum DevFmtType stype;

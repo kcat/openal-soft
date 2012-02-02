@@ -154,7 +154,7 @@
 #  A reverb preset that applies by default to all sources on send 0
 #  (applications that set their own slots on send 0 will override this).
 #  Available presets are: Generic, PaddedCell, Room, Bathroom, Livingroom,
-#  Stoneroom, Auditorium, ConcertHall, Cave, Arena, Hangar, CarpettedHallway,
+#  Stoneroom, Auditorium, ConcertHall, Cave, Arena, Hangar, CarpetedHallway,
 #  Hallway, StoneCorridor, Alley, Forest, City, Moutains, Quarry, Plain,
 #  ParkingLot, SewerPipe, Underwater, Drugged, Dizzy, Psychotic. Optionally,
 #  the __ALSOFT_DEFAULT_REVERB env var may be set before running the app

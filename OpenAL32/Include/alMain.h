@@ -412,7 +412,7 @@ static __inline ALint fastf2i(ALfloat f)
 #if defined(_MSC_VER) && !defined(_WIN64)
     __asm fld f
     __asm fistp i
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
     __asm__ __volatile__("flds %1\n\t"
                          "fistpl %0\n\t"
                          : "=m" (i)

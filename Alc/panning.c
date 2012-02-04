@@ -185,8 +185,8 @@ ALvoid aluInitPanning(ALCdevice *Device)
             Device->NumChan = 2;
             Speaker2Chan[0] = FRONT_LEFT;
             Speaker2Chan[1] = FRONT_RIGHT;
-            SpeakerAngle[0] = F_PI/180.0f * -90.0f;
-            SpeakerAngle[1] = F_PI/180.0f *  90.0f;
+            SpeakerAngle[0] = F_PI/180.0f * -30.0f;
+            SpeakerAngle[1] = F_PI/180.0f *  30.0f;
             SetSpeakerArrangement("layout_STEREO", SpeakerAngle, Speaker2Chan, Device->NumChan);
             break;
 

@@ -2647,8 +2647,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
     ConfigValueUInt(NULL, "sends", &device->NumAuxSends);
     if(device->NumAuxSends > MAX_SENDS) device->NumAuxSends = MAX_SENDS;
 
-    ConfigValueInt(NULL, "cf_level", &device->Bs2bLevel);
-
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 

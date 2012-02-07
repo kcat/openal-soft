@@ -1068,9 +1068,11 @@ typedef ALubyte ALima4;
 typedef struct {
     ALbyte b[3];
 } ALbyte3;
+extern ALbyte ALbyte3_size_is_not_3[(sizeof(ALbyte3)==sizeof(ALbyte[3]))?1:-1];
 typedef struct {
     ALubyte b[3];
 } ALubyte3;
+extern ALbyte ALubyte3_size_is_not_3[(sizeof(ALubyte3)==sizeof(ALubyte[3]))?1:-1];
 
 static __inline ALshort DecodeMuLaw(ALmulaw val)
 { return muLawDecompressionTable[val]; }

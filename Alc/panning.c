@@ -167,6 +167,7 @@ ALint aluCart2LUTpos(ALfloat re, ALfloat im)
 ALvoid aluInitPanning(ALCdevice *Device)
 {
     ALfloat SpeakerAngle[MAXCHANNELS];
+    const char *layoutname = NULL;
     enum Channel *Speaker2Chan;
     ALfloat Alpha, Theta;
     ALint pos;
@@ -179,6 +180,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             Device->NumChan = 1;
             Speaker2Chan[0] = FRONT_CENTER;
             SpeakerAngle[0] = F_PI/180.0f * 0.0f;
+            layoutname = NULL;
             break;
 
         case DevFmtStereo:
@@ -187,7 +189,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             Speaker2Chan[1] = FRONT_RIGHT;
             SpeakerAngle[0] = F_PI/180.0f * -30.0f;
             SpeakerAngle[1] = F_PI/180.0f *  30.0f;
-            SetSpeakerArrangement("layout_STEREO", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            layoutname = "layout_STEREO";
             break;
 
         case DevFmtQuad:
@@ -200,7 +202,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[1] = F_PI/180.0f *  -45.0f;
             SpeakerAngle[2] = F_PI/180.0f *   45.0f;
             SpeakerAngle[3] = F_PI/180.0f *  135.0f;
-            SetSpeakerArrangement("layout_QUAD", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            layoutname = "layout_QUAD";
             break;
 
         case DevFmtX51:
@@ -215,7 +217,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[2] = F_PI/180.0f *    0.0f;
             SpeakerAngle[3] = F_PI/180.0f *   30.0f;
             SpeakerAngle[4] = F_PI/180.0f *  110.0f;
-            SetSpeakerArrangement("layout_51CHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            layoutname = "layout_51CHN";
             break;
 
         case DevFmtX51Side:
@@ -230,7 +232,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[2] = F_PI/180.0f *   0.0f;
             SpeakerAngle[3] = F_PI/180.0f *  30.0f;
             SpeakerAngle[4] = F_PI/180.0f *  90.0f;
-            SetSpeakerArrangement("layout_51SIDECHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            layoutname = "layout_51SIDECHN";
             break;
 
         case DevFmtX61:
@@ -247,7 +249,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[3] = F_PI/180.0f *  30.0f;
             SpeakerAngle[4] = F_PI/180.0f *  90.0f;
             SpeakerAngle[5] = F_PI/180.0f * 180.0f;
-            SetSpeakerArrangement("layout_61CHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            layoutname = "layout_61CHN";
             break;
 
         case DevFmtX71:
@@ -266,9 +268,11 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[4] = F_PI/180.0f *   30.0f;
             SpeakerAngle[5] = F_PI/180.0f *   90.0f;
             SpeakerAngle[6] = F_PI/180.0f *  150.0f;
-            SetSpeakerArrangement("layout_71CHN", SpeakerAngle, Speaker2Chan, Device->NumChan);
+            layoutname = "layout_71CHN";
             break;
     }
+    if(layoutname && !Device->IsLoopbackDevice)
+        SetSpeakerArrangement(layoutname, SpeakerAngle, Speaker2Chan, Device->NumChan);
 
     for(pos = 0; pos < LUT_NUM; pos++)
     {

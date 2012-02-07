@@ -306,12 +306,12 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
         sprintf(name, "hw:%d", card);
         if((err = snd_ctl_open(&handle, name, 0)) < 0)
         {
-            ERR("control open (%i): %s\n", card, snd_strerror(err));
+            ERR("control open (hw:%d): %s\n", card, snd_strerror(err));
             goto next_card;
         }
         if((err = snd_ctl_card_info(handle, info)) < 0)
         {
-            ERR("control hardware info (%i): %s\n", card, snd_strerror(err));
+            ERR("control hardware info (hw:%d): %s\n", card, snd_strerror(err));
             snd_ctl_close(handle);
             goto next_card;
         }
@@ -332,7 +332,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
             snd_pcm_info_set_stream(pcminfo, stream);
             if((err = snd_ctl_pcm_info(handle, pcminfo)) < 0) {
                 if(err != -ENOENT)
-                    ERR("control digital audio info (%i): %s\n", card, snd_strerror(err));
+                    ERR("control digital audio info (hw:%d): %s\n", card, snd_strerror(err));
                 continue;
             }
 

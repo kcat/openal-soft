@@ -64,35 +64,47 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[
 ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     static const struct ChanMap MonoMap[1] = { { FRONT_CENTER, 0.0f } };
-    static const struct ChanMap StereoMap[2] = { { FRONT_LEFT, -30.0f },
-                                                 { FRONT_RIGHT, 30.0f } };
-    static const struct ChanMap RearMap[2] = { { BACK_LEFT, -150.0f },
-                                               { BACK_RIGHT, 150.0f } };
-    static const struct ChanMap QuadMap[4] = { { FRONT_LEFT, -45.0f },
-                                               { FRONT_RIGHT, 45.0f },
-                                               { BACK_LEFT, -135.0f },
-                                               { BACK_RIGHT, 135.0f } };
-    static const struct ChanMap X51Map[6] = { { FRONT_LEFT, -30.0f },
-                                              { FRONT_RIGHT, 30.0f },
-                                              { FRONT_CENTER, 0.0f },
-                                              { LFE, 0.0f },
-                                              { BACK_LEFT, -110.0f },
-                                              { BACK_RIGHT, 110.0f } };
-    static const struct ChanMap X61Map[7] = { { FRONT_LEFT, -30.0f },
-                                              { FRONT_RIGHT, 30.0f },
-                                              { FRONT_CENTER, 0.0f },
-                                              { LFE, 0.0f },
-                                              { BACK_CENTER, 180.0f },
-                                              { SIDE_LEFT, -90.0f },
-                                              { SIDE_RIGHT, 90.0f } };
-    static const struct ChanMap X71Map[8] = { { FRONT_LEFT, -30.0f },
-                                              { FRONT_RIGHT, 30.0f },
-                                              { FRONT_CENTER, 0.0f },
-                                              { LFE, 0.0f },
-                                              { BACK_LEFT, -110.0f },
-                                              { BACK_RIGHT, 110.0f },
-                                              { SIDE_LEFT, -90.0f },
-                                              { SIDE_RIGHT, 90.0f } };
+    static const struct ChanMap StereoMap[2] = {
+        { FRONT_LEFT, -30.0f * F_PI/180.0f },
+        { FRONT_RIGHT, 30.0f * F_PI/180.0f }
+    };
+    static const struct ChanMap RearMap[2] = {
+        { BACK_LEFT, -150.0f * F_PI/180.0f },
+        { BACK_RIGHT, 150.0f * F_PI/180.0f }
+    };
+    static const struct ChanMap QuadMap[4] = {
+        { FRONT_LEFT, -45.0f * F_PI/180.0f },
+        { FRONT_RIGHT, 45.0f * F_PI/180.0f },
+        { BACK_LEFT, -135.0f * F_PI/180.0f },
+        { BACK_RIGHT, 135.0f * F_PI/180.0f }
+    };
+    static const struct ChanMap X51Map[6] = {
+        { FRONT_LEFT, -30.0f * F_PI/180.0f },
+        { FRONT_RIGHT, 30.0f * F_PI/180.0f },
+        { FRONT_CENTER, 0.0f * F_PI/180.0f },
+        { LFE, 0.0f },
+        { BACK_LEFT, -110.0f * F_PI/180.0f },
+        { BACK_RIGHT, 110.0f * F_PI/180.0f }
+    };
+    static const struct ChanMap X61Map[7] = {
+        { FRONT_LEFT,  -30.0f * F_PI/180.0f },
+        { FRONT_RIGHT,  30.0f * F_PI/180.0f },
+        { FRONT_CENTER,  0.0f * F_PI/180.0f },
+        { LFE, 0.0f },
+        { BACK_CENTER, 180.0f * F_PI/180.0f },
+        { SIDE_LEFT,   -90.0f * F_PI/180.0f },
+        { SIDE_RIGHT,   90.0f * F_PI/180.0f }
+    };
+    static const struct ChanMap X71Map[8] = {
+        { FRONT_LEFT, -30.0f * F_PI/180.0f },
+        { FRONT_RIGHT, 30.0f * F_PI/180.0f },
+        { FRONT_CENTER, 0.0f * F_PI/180.0f },
+        { LFE, 0.0f },
+        { BACK_LEFT,  -110.0f * F_PI/180.0f },
+        { BACK_RIGHT,  110.0f * F_PI/180.0f },
+        { SIDE_LEFT,   -90.0f * F_PI/180.0f },
+        { SIDE_RIGHT,   90.0f * F_PI/180.0f }
+    };
 
     ALCdevice *Device = ALContext->Device;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
@@ -195,8 +207,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             DryGain *= aluSqrt(2.0f/4.0f);
             for(c = 0;c < 2;c++)
             {
-                pos = aluCart2LUTpos(aluCos(F_PI/180.0f * RearMap[c].angle),
-                                     aluSin(F_PI/180.0f * RearMap[c].angle));
+                pos = aluCart2LUTpos(aluCos(RearMap[c].angle),
+                                     aluSin(RearMap[c].angle));
                 SpeakerGain = Device->PanningLUT[pos];
 
                 for(i = 0;i < (ALint)Device->NumChan;i++)
@@ -279,8 +291,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 SrcMatrix[c][LFE] += DryGain * ListenerGain;
                 continue;
             }
-            pos = aluCart2LUTpos(aluCos(F_PI/180.0f * chans[c].angle),
-                                 aluSin(F_PI/180.0f * chans[c].angle));
+            pos = aluCart2LUTpos(aluCos(chans[c].angle), aluSin(chans[c].angle));
             SpeakerGain = Device->PanningLUT[pos];
 
             for(i = 0;i < (ALint)Device->NumChan;i++)

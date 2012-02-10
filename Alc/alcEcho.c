@@ -96,7 +96,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
     ALCdevice *Device = Context->Device;
     ALuint frequency = Device->Frequency;
     ALfloat dirGain, ambientGain;
-    const ALfloat *speakerGain;
+    const ALfloat *ChannelGain;
     ALfloat lrpan, cw, g, gain;
     ALuint i, pos;
 
@@ -124,22 +124,22 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeff
 
     /* First tap panning */
     pos = aluCart2LUTpos(0.0f, ((lrpan>0.0f)?-1.0f:1.0f));
-    speakerGain = Device->PanningLUT[pos];
+    ChannelGain = Device->PanningLUT[pos];
 
     for(i = 0;i < Device->NumChan;i++)
     {
         enum Channel chan = Device->Speaker2Chan[i];
-        state->Gain[0][chan] = lerp(ambientGain, speakerGain[chan], dirGain) * gain;
+        state->Gain[0][chan] = lerp(ambientGain, ChannelGain[chan], dirGain) * gain;
     }
 
     /* Second tap panning */
     pos = aluCart2LUTpos(0.0f, ((lrpan>0.0f)?1.0f:-1.0f));
-    speakerGain = Device->PanningLUT[pos];
+    ChannelGain = Device->PanningLUT[pos];
 
     for(i = 0;i < Device->NumChan;i++)
     {
         enum Channel chan = Device->Speaker2Chan[i];
-        state->Gain[1][chan] = lerp(ambientGain, speakerGain[chan], dirGain) * gain;
+        state->Gain[1][chan] = lerp(ambientGain, ChannelGain[chan], dirGain) * gain;
     }
 }
 

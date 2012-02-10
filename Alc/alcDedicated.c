@@ -54,7 +54,7 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCcontext *Context, const 
 {
     ALdedicatedState *state = (ALdedicatedState*)effect;
     ALCdevice *device = Context->Device;
-    const ALfloat *SpeakerGain;
+    const ALfloat *ChannelGain;
     ALfloat Gain;
     ALint pos;
     ALsizei s;
@@ -66,10 +66,10 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCcontext *Context, const 
     if(Slot->effect.type == AL_EFFECT_DEDICATED_DIALOGUE)
     {
         pos = aluCart2LUTpos(1.0f, 0.0f);
-        SpeakerGain = device->PanningLUT[pos];
+        ChannelGain = device->PanningLUT[pos];
 
         for(s = 0;s < MAXCHANNELS;s++)
-            state->gains[s] = SpeakerGain[s] * Gain;
+            state->gains[s] = ChannelGain[s] * Gain;
     }
     else if(Slot->effect.type == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
         state->gains[LFE] = Gain;

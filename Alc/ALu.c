@@ -116,7 +116,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALint NumSends, Frequency;
-    const ALfloat *SpeakerGain;
+    const ALfloat *ChannelGain;
     const struct ChanMap *chans = NULL;
     enum Resampler Resampler;
     ALint num_channels = 0;
@@ -209,13 +209,13 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             {
                 pos = aluCart2LUTpos(aluCos(RearMap[c].angle),
                                      aluSin(RearMap[c].angle));
-                SpeakerGain = Device->PanningLUT[pos];
+                ChannelGain = Device->PanningLUT[pos];
 
                 for(i = 0;i < (ALint)Device->NumChan;i++)
                 {
                     enum Channel chan = Device->Speaker2Chan[i];
                     SrcMatrix[c][chan] += DryGain * ListenerGain *
-                                          SpeakerGain[chan];
+                                          ChannelGain[chan];
                 }
             }
         }
@@ -292,13 +292,13 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 continue;
             }
             pos = aluCart2LUTpos(aluCos(chans[c].angle), aluSin(chans[c].angle));
-            SpeakerGain = Device->PanningLUT[pos];
+            ChannelGain = Device->PanningLUT[pos];
 
             for(i = 0;i < (ALint)Device->NumChan;i++)
             {
                 enum Channel chan = Device->Speaker2Chan[i];
                 SrcMatrix[c][chan] += DryGain * ListenerGain *
-                                      SpeakerGain[chan];
+                                      ChannelGain[chan];
             }
         }
     }
@@ -740,7 +740,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         // Use energy-preserving panning algorithm for multi-speaker playback
         ALfloat DirGain, AmbientGain;
-        const ALfloat *SpeakerGain;
+        const ALfloat *ChannelGain;
         ALfloat length;
         ALint pos;
 
@@ -754,7 +754,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
 
         pos = aluCart2LUTpos(-Position[2]*ZScale, Position[0]);
-        SpeakerGain = Device->PanningLUT[pos];
+        ChannelGain = Device->PanningLUT[pos];
 
         DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
         // elevation adjustment for directional gain. this sucks, but
@@ -769,7 +769,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         for(i = 0;i < (ALint)Device->NumChan;i++)
         {
             enum Channel chan = Device->Speaker2Chan[i];
-            ALfloat gain = lerp(AmbientGain, SpeakerGain[chan], DirGain);
+            ALfloat gain = lerp(AmbientGain, ChannelGain[chan], DirGain);
             ALSource->Params.DryGains[0][chan] = DryGain * gain;
         }
     }

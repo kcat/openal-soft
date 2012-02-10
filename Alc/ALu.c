@@ -100,10 +100,10 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         { FRONT_RIGHT, 30.0f * F_PI/180.0f },
         { FRONT_CENTER, 0.0f * F_PI/180.0f },
         { LFE, 0.0f },
-        { BACK_LEFT,  -110.0f * F_PI/180.0f },
-        { BACK_RIGHT,  110.0f * F_PI/180.0f },
-        { SIDE_LEFT,   -90.0f * F_PI/180.0f },
-        { SIDE_RIGHT,   90.0f * F_PI/180.0f }
+        { BACK_LEFT, -150.0f * F_PI/180.0f },
+        { BACK_RIGHT, 150.0f * F_PI/180.0f },
+        { SIDE_LEFT,  -90.0f * F_PI/180.0f },
+        { SIDE_RIGHT,  90.0f * F_PI/180.0f }
     };
 
     ALCdevice *Device = ALContext->Device;

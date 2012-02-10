@@ -108,7 +108,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     const struct ChanMap *chans = NULL;
     enum Resampler Resampler;
     ALint num_channels = 0;
-    ALboolean VirtualChannels;
+    ALboolean DirectChannels;
     ALfloat Pitch;
     ALfloat cw;
     ALuint pos;
@@ -128,7 +128,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     MaxVolume       = ALSource->flMaxGain;
     Pitch           = ALSource->flPitch;
     Resampler       = ALSource->Resampler;
-    VirtualChannels = ALSource->VirtualChannels;
+    DirectChannels  = ALSource->DirectChannels;
 
     /* Calculate the stepping value */
     Channels = FmtMono;
@@ -159,7 +159,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         BufferListItem = BufferListItem->next;
     }
-    if(VirtualChannels && Device->Hrtf)
+    if(!DirectChannels && Device->Hrtf)
         ALSource->Params.DoMix = SelectHrtfMixer((ALSource->Params.Step==FRACTIONONE) ?
                                                  POINT_RESAMPLER : Resampler);
     else
@@ -190,7 +190,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         num_channels = 1;
         break;
     case FmtStereo:
-        if(VirtualChannels && (Device->Flags&DEVICE_DUPLICATE_STEREO))
+        if(!DirectChannels && (Device->Flags&DEVICE_DUPLICATE_STEREO))
         {
             DryGain *= aluSqrt(2.0f/4.0f);
             for(c = 0;c < 2;c++)
@@ -237,7 +237,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         break;
     }
 
-    if(VirtualChannels == AL_FALSE)
+    if(DirectChannels != AL_FALSE)
     {
         for(c = 0;c < num_channels;c++)
             SrcMatrix[c][chans[c].channel] += DryGain * ListenerGain;

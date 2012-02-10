@@ -46,7 +46,7 @@ typedef struct ALsource
     volatile ALboolean bHeadRelative;
     volatile ALboolean bLooping;
     volatile enum DistanceModel DistanceModel;
-    volatile ALboolean VirtualChannels;
+    volatile ALboolean DirectChannels;
 
     enum Resampler Resampler;
 

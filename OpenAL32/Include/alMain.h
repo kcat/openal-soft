@@ -49,9 +49,9 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
 #endif
 #endif
 
-#ifndef AL_SOFT_non_virtual_channels
-#define AL_SOFT_non_virtual_channels 1
-#define AL_VIRTUAL_CHANNELS_SOFT                 0x1033
+#ifndef AL_SOFT_direct_channels
+#define AL_SOFT_direct_channels 1
+#define AL_DIRECT_CHANNELS_SOFT                  0x1033
 #endif
 
 #ifndef AL_SOFT_deferred_updates

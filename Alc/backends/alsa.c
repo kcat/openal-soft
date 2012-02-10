@@ -60,6 +60,8 @@ MAKE_FUNC(snd_pcm_hw_params_get_buffer_size);
 MAKE_FUNC(snd_pcm_hw_params_get_period_size);
 MAKE_FUNC(snd_pcm_hw_params_get_access);
 MAKE_FUNC(snd_pcm_hw_params_get_periods);
+MAKE_FUNC(snd_pcm_hw_params_test_format);
+MAKE_FUNC(snd_pcm_hw_params_test_channels);
 MAKE_FUNC(snd_pcm_hw_params);
 MAKE_FUNC(snd_pcm_sw_params_malloc);
 MAKE_FUNC(snd_pcm_sw_params_current);
@@ -124,6 +126,8 @@ MAKE_FUNC(snd_card_next);
 #define snd_pcm_hw_params_get_period_size psnd_pcm_hw_params_get_period_size
 #define snd_pcm_hw_params_get_access psnd_pcm_hw_params_get_access
 #define snd_pcm_hw_params_get_periods psnd_pcm_hw_params_get_periods
+#define snd_pcm_hw_params_test_format psnd_pcm_hw_params_test_format
+#define snd_pcm_hw_params_test_channels psnd_pcm_hw_params_test_channels
 #define snd_pcm_hw_params psnd_pcm_hw_params
 #define snd_pcm_sw_params_malloc psnd_pcm_sw_params_malloc
 #define snd_pcm_sw_params_current psnd_pcm_sw_params_current
@@ -206,6 +210,8 @@ static ALCboolean alsa_load(void)
         LOAD_FUNC(snd_pcm_hw_params_get_period_size);
         LOAD_FUNC(snd_pcm_hw_params_get_access);
         LOAD_FUNC(snd_pcm_hw_params_get_periods);
+        LOAD_FUNC(snd_pcm_hw_params_test_format);
+        LOAD_FUNC(snd_pcm_hw_params_test_channels);
         LOAD_FUNC(snd_pcm_hw_params);
         LOAD_FUNC(snd_pcm_sw_params_malloc);
         LOAD_FUNC(snd_pcm_sw_params_current);
@@ -664,36 +670,57 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             err = "set access";
     }
     /* set format (implicitly sets sample bits) */
-    if(i >= 0 && (i=snd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
+    if(i >= 0 && (i=snd_pcm_hw_params_test_format(data->pcmHandle, p, format)) < 0)
     {
-        device->FmtType = DevFmtFloat;
-        if(format == SND_PCM_FORMAT_FLOAT ||
-           (i=snd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_FLOAT)) < 0)
+        static const struct {
+            snd_pcm_format_t format;
+            enum DevFmtType fmttype;
+        } formatlist[] = {
+            { SND_PCM_FORMAT_FLOAT, DevFmtFloat  },
+            { SND_PCM_FORMAT_S16,   DevFmtShort  },
+            { SND_PCM_FORMAT_U16,   DevFmtUShort },
+            { SND_PCM_FORMAT_S8,    DevFmtByte   },
+            { SND_PCM_FORMAT_U8,    DevFmtUByte  },
+        };
+        size_t k;
+
+        err = "test format";
+        for(k = 0;k < sizeof(formatlist)/sizeof(formatlist[0]);k++)
         {
-            device->FmtType = DevFmtShort;
-            if(format == SND_PCM_FORMAT_S16 ||
-               (i=snd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_S16)) < 0)
+            format = formatlist[k].format;
+            if((i=snd_pcm_hw_params_test_format(data->pcmHandle, p, format)) >= 0)
             {
-                device->FmtType = DevFmtUByte;
-                if(format == SND_PCM_FORMAT_U8 ||
-                   (i=snd_pcm_hw_params_set_format(data->pcmHandle, p, SND_PCM_FORMAT_U8)) < 0)
-                    err = "set format";
+                device->FmtType = formatlist[k].fmttype;
+                break;
             }
         }
     }
+    if(i >= 0 && (i=snd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
+        err = "set format";
     /* set channels (implicitly sets frame bits) */
-    if(i >= 0 && (i=snd_pcm_hw_params_set_channels(data->pcmHandle, p, ChannelsFromDevFmt(device->FmtChans))) < 0)
+    if(i >= 0 && (i=snd_pcm_hw_params_test_channels(data->pcmHandle, p, ChannelsFromDevFmt(device->FmtChans))) < 0)
     {
-        if((i=snd_pcm_hw_params_set_channels(data->pcmHandle, p, 2)) < 0)
+        static const enum DevFmtChannels channellist[] = {
+            DevFmtStereo,
+            DevFmtQuad,
+            DevFmtX51,
+            DevFmtX71,
+            DevFmtMono,
+        };
+        size_t k;
+
+        err = "test channels";
+        for(k = 0;k < sizeof(channellist)/sizeof(channellist[0]);k++)
         {
-            if((i=snd_pcm_hw_params_set_channels(data->pcmHandle, p, 1)) < 0)
-                err = "set channels";
-            else
-                device->FmtChans = DevFmtMono;
+            if((i=snd_pcm_hw_params_test_channels(data->pcmHandle, p, ChannelsFromDevFmt(channellist[k]))) >= 0)
+            {
+                device->FmtChans = channellist[k];
+                break;
+            }
         }
-        else
-            device->FmtChans = DevFmtStereo;
     }
+    if(i >= 0 && (i=snd_pcm_hw_params_set_channels(data->pcmHandle, p, ChannelsFromDevFmt(device->FmtChans))) < 0)
+        err = "set channels";
     if(i >= 0 && (i=snd_pcm_hw_params_set_rate_resample(data->pcmHandle, p, 0)) < 0)
     {
         ERR("Failed to disable ALSA resampler\n");

@@ -273,8 +273,7 @@ typedef struct {
 
 typedef struct {
     ALCchar *name;
-    char *card;
-    int dev;
+    char *device;
 } DevMap;
 
 static DevMap *allDevNameMap;
@@ -293,7 +292,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
     snd_ctl_card_info_t *info;
     snd_pcm_info_t *pcminfo;
     DevMap *DevList;
-    char name[1024];
+    char name[256];
 
     snd_ctl_card_info_malloc(&info);
     snd_pcm_info_malloc(&pcminfo);
@@ -304,8 +303,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
 
     DevList = malloc(sizeof(DevMap) * 1);
     DevList[0].name = strdup("ALSA Default");
-    DevList[0].card = NULL;
-    DevList[0].dev = 0;
+    DevList[0].device = NULL;
     idx = 1;
     while(card >= 0)
     {
@@ -345,15 +343,21 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
             temp = realloc(DevList, sizeof(DevMap) * (idx+1));
             if(temp)
             {
+                char devname[128];
+
                 DevList = temp;
                 cname = snd_ctl_card_info_get_name(info);
                 dname = snd_pcm_info_get_name(pcminfo);
                 cid = snd_ctl_card_info_get_id(info);
+
                 snprintf(name, sizeof(name), "%s, %s (CARD=%s,DEV=%d)",
                          cname, dname, cid, dev);
+                snprintf(devname, sizeof(devname), "%sCARD=%s,DEV=%d",
+                         ((stream==SND_PCM_STREAM_PLAYBACK) ? device_prefix : capture_prefix),
+                         cid, dev);
+
                 DevList[idx].name = strdup(name);
-                DevList[idx].card = strdup(cid);
-                DevList[idx].dev = dev;
+                DevList[idx].device = strdup(devname);
                 idx++;
             }
         }
@@ -549,7 +553,6 @@ static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
     const char *driver = "default";
     alsa_data *data;
-    char str[128];
     int i;
 
     ConfigValueStr("alsa", "device", &driver);
@@ -569,11 +572,7 @@ static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
                strcmp(deviceName, allDevNameMap[idx].name) == 0)
             {
                 if(idx > 0)
-                {
-                    snprintf(str, sizeof(str), "%sCARD=%s,DEV=%d", device_prefix,
-                             allDevNameMap[idx].card, allDevNameMap[idx].dev);
-                    driver = str;
-                }
+                    driver = allDevNameMap[idx].device;
                 break;
             }
         }
@@ -840,7 +839,6 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
     snd_pcm_format_t format;
     ALuint frameSize;
     alsa_data *data;
-    char str[128];
     char *err;
     int i;
 
@@ -861,11 +859,7 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
                strcmp(deviceName, allCaptureDevNameMap[idx].name) == 0)
             {
                 if(idx > 0)
-                {
-                    snprintf(str, sizeof(str), "%sCARD=%s,DEV=%d", capture_prefix,
-                             allCaptureDevNameMap[idx].card, allCaptureDevNameMap[idx].dev);
-                    driver = str;
-                }
+                    driver = allCaptureDevNameMap[idx].device;
                 break;
             }
         }
@@ -1111,19 +1105,13 @@ void alc_alsa_deinit(void)
     ALuint i;
 
     for(i = 0;i < numDevNames;++i)
-    {
-        free(allDevNameMap[i].name);
-        free(allDevNameMap[i].card);
-    }
+        free(allDevNameMap[i].device);
     free(allDevNameMap);
     allDevNameMap = NULL;
     numDevNames = 0;
 
     for(i = 0;i < numCaptureDevNames;++i)
-    {
-        free(allCaptureDevNameMap[i].name);
-        free(allCaptureDevNameMap[i].card);
-    }
+        free(allCaptureDevNameMap[i].device);
     free(allCaptureDevNameMap);
     allCaptureDevNameMap = NULL;
     numCaptureDevNames = 0;
@@ -1147,10 +1135,7 @@ void alc_alsa_probe(enum DevProbe type)
 
         case ALL_DEVICE_PROBE:
             for(i = 0;i < numDevNames;++i)
-            {
-                free(allDevNameMap[i].name);
-                free(allDevNameMap[i].card);
-            }
+                free(allDevNameMap[i].device);
 
             free(allDevNameMap);
             allDevNameMap = probe_devices(SND_PCM_STREAM_PLAYBACK, &numDevNames);
@@ -1161,10 +1146,7 @@ void alc_alsa_probe(enum DevProbe type)
 
         case CAPTURE_DEVICE_PROBE:
             for(i = 0;i < numCaptureDevNames;++i)
-            {
-                free(allCaptureDevNameMap[i].name);
-                free(allCaptureDevNameMap[i].card);
-            }
+                free(allCaptureDevNameMap[i].device);
 
             free(allCaptureDevNameMap);
             allCaptureDevNameMap = probe_devices(SND_PCM_STREAM_CAPTURE, &numCaptureDevNames);

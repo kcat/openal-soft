@@ -210,6 +210,13 @@
 #  device index for the requested device name.
 #device-prefix = plughw:
 
+## device-prefix-*:
+#  Card- and device-specific prefixes may be used to override the device-prefix
+#  option. The option may specify the card id (eg, device-prefix-NVidia), or
+#  the card id and device index (eg, device-prefix-NVidia-0). The card id is
+#  case-sensitive.
+#defice-prefix- =
+
 ## capture:
 #  Sets the device name for the default capture device.
 #capture = default
@@ -219,6 +226,13 @@
 #  will be appended with "CARD=c,DEV=d", where c is the card id and d is the
 #  device number for the requested device name.
 #capture-prefix = plughw:
+
+## capture-prefix-*:
+#  Card- and device-specific prefixes may be used to override the
+#  capture-prefix option. The option may specify the card id (eg,
+#  capture-prefix-NVidia), or the card id and device index (eg,
+#  capture-prefix-NVidia-0). The card id is case-sensitive.
+#capture-prefix- =
 
 ## mmap:
 #  Sets whether to try using mmap mode (helps reduce latencies and CPU

@@ -281,9 +281,12 @@ static ALuint numDevNames;
 static DevMap *allCaptureDevNameMap;
 static ALuint numCaptureDevNames;
 
-static const char *device_prefix;
-static const char *capture_prefix;
 
+static const char *prefix_name(snd_pcm_stream_t stream)
+{
+    assert(stream == SND_PCM_STREAM_PLAYBACK || stream == SND_PCM_STREAM_CAPTURE);
+    return (stream==SND_PCM_STREAM_PLAYBACK) ? "device-prefix" : "capture-prefix";
+}
 
 static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
 {
@@ -292,7 +295,6 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
     snd_ctl_card_info_t *info;
     snd_pcm_info_t *pcminfo;
     DevMap *DevList;
-    char name[256];
 
     snd_ctl_card_info_malloc(&info);
     snd_pcm_info_malloc(&pcminfo);
@@ -307,6 +309,8 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
     idx = 1;
     while(card >= 0)
     {
+        char name[256];
+
         sprintf(name, "hw:%d", card);
         if((err = snd_ctl_open(&handle, name, 0)) < 0)
         {
@@ -343,6 +347,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
             temp = realloc(DevList, sizeof(DevMap) * (idx+1));
             if(temp)
             {
+                const char *prefix = "plughw:";
                 char devname[128];
 
                 DevList = temp;
@@ -350,11 +355,18 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
                 dname = snd_pcm_info_get_name(pcminfo);
                 cid = snd_ctl_card_info_get_id(info);
 
+                snprintf(devname, sizeof(devname), "%s-%s-%d", prefix_name(stream), cid, dev);
+                if(!ConfigValueStr("alsa", devname, &prefix))
+                {
+                    snprintf(devname, sizeof(devname), "%s-%s", prefix_name(stream), cid);
+                    if(!ConfigValueStr("alsa", devname, &prefix))
+                        ConfigValueStr("alsa", prefix_name(stream), &prefix);
+                }
+
                 snprintf(name, sizeof(name), "%s, %s (CARD=%s,DEV=%d)",
                          cname, dname, cid, dev);
                 snprintf(devname, sizeof(devname), "%sCARD=%s,DEV=%d",
-                         ((stream==SND_PCM_STREAM_PLAYBACK) ? device_prefix : capture_prefix),
-                         cid, dev);
+                         prefix, cid, dev);
 
                 DevList[idx].name = strdup(name);
                 DevList[idx].device = strdup(devname);
@@ -1094,8 +1106,6 @@ ALCboolean alc_alsa_init(BackendFuncs *func_list)
 {
     if(!alsa_load())
         return ALC_FALSE;
-    device_prefix = GetConfigValue("alsa", "device-prefix", "plughw:");
-    capture_prefix = GetConfigValue("alsa", "capture-prefix", "plughw:");
     *func_list = alsa_funcs;
     return ALC_TRUE;
 }

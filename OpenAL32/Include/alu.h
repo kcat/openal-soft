@@ -127,13 +127,11 @@ typedef ALvoid (*MixerFunc)(struct ALsource *self, ALCdevice *Device,
                             ALuint BufferSize);
 
 enum Resampler {
-    POINT_RESAMPLER = 0,
-    LINEAR_RESAMPLER,
-    CUBIC_RESAMPLER,
+    PointResampler,
+    LinearResampler,
+    CubicResampler,
 
-    RESAMPLER_MAX,
-    RESAMPLER_MIN = -1,
-    RESAMPLER_DEFAULT = LINEAR_RESAMPLER
+    ResamplerMax,
 };
 
 enum Channel {

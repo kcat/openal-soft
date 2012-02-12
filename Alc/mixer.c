@@ -439,14 +439,13 @@ MixerFunc SelectMixer(enum Resampler Resampler)
 {
     switch(Resampler)
     {
-        case POINT_RESAMPLER:
+        case PointResampler:
             return Mix_ALfloat_point32;
-        case LINEAR_RESAMPLER:
+        case LinearResampler:
             return Mix_ALfloat_lerp32;
-        case CUBIC_RESAMPLER:
+        case CubicResampler:
             return Mix_ALfloat_cubic32;
-        case RESAMPLER_MIN:
-        case RESAMPLER_MAX:
+        case ResamplerMax:
             break;
     }
     return NULL;
@@ -456,14 +455,13 @@ MixerFunc SelectHrtfMixer(enum Resampler Resampler)
 {
     switch(Resampler)
     {
-        case POINT_RESAMPLER:
+        case PointResampler:
             return Mix_Hrtf_ALfloat_point32;
-        case LINEAR_RESAMPLER:
+        case LinearResampler:
             return Mix_Hrtf_ALfloat_lerp32;
-        case CUBIC_RESAMPLER:
+        case CubicResampler:
             return Mix_Hrtf_ALfloat_cubic32;
-        case RESAMPLER_MIN:
-        case RESAMPLER_MAX:
+        case ResamplerMax:
             break;
     }
     return NULL;

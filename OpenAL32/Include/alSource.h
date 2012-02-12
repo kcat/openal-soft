@@ -17,8 +17,8 @@ extern "C" {
 
 extern enum Resampler DefaultResampler;
 
-extern const ALsizei ResamplerPadding[RESAMPLER_MAX];
-extern const ALsizei ResamplerPrePadding[RESAMPLER_MAX];
+extern const ALsizei ResamplerPadding[ResamplerMax];
+extern const ALsizei ResamplerPrePadding[ResamplerMax];
 
 
 typedef struct ALbufferlistitem

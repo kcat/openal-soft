@@ -157,7 +157,9 @@ enum DistanceModel {
     InverseDistance  = AL_INVERSE_DISTANCE,
     LinearDistance   = AL_LINEAR_DISTANCE,
     ExponentDistance = AL_EXPONENT_DISTANCE,
-    DisableDistance  = AL_NONE
+    DisableDistance  = AL_NONE,
+
+    DefaultDistanceModel = InverseDistanceClamped
 };
 
 #define BUFFERSIZE 4096

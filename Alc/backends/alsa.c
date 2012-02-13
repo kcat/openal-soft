@@ -290,28 +290,33 @@ static const char *prefix_name(snd_pcm_stream_t stream)
 
 static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
 {
+    const char *main_prefix = "plughw:";
     snd_ctl_t *handle;
     int card, err, dev, idx;
     snd_ctl_card_info_t *info;
     snd_pcm_info_t *pcminfo;
     DevMap *DevList;
 
+    ConfigValueStr("alsa", prefix_name(stream), &main_prefix);
+
     snd_ctl_card_info_malloc(&info);
     snd_pcm_info_malloc(&pcminfo);
-
-    card = -1;
-    if((err=snd_card_next(&card)) < 0)
-        ERR("Failed to find a card: %s\n", snd_strerror(err));
 
     DevList = malloc(sizeof(DevMap) * 1);
     DevList[0].name = strdup("ALSA Default");
     DevList[0].device = NULL;
     idx = 1;
+
+    card = -1;
+    if((err=snd_card_next(&card)) < 0)
+        ERR("Failed to find a card: %s\n", snd_strerror(err));
     while(card >= 0)
     {
+        const char *card_prefix = main_prefix;
+        const char *cardname, *cardid;
         char name[256];
 
-        sprintf(name, "hw:%d", card);
+        snprintf(name, sizeof(name), "hw:%d", card);
         if((err = snd_ctl_open(&handle, name, 0)) < 0)
         {
             ERR("control open (hw:%d): %s\n", card, snd_strerror(err));
@@ -324,10 +329,16 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
             goto next_card;
         }
 
+        cardname = snd_ctl_card_info_get_name(info);
+        cardid = snd_ctl_card_info_get_id(info);
+
+        snprintf(name, sizeof(name), "%s-%s", prefix_name(stream), cardid);
+        ConfigValueStr("alsa", name, &card_prefix);
+
         dev = -1;
         while(1)
         {
-            const char *cname, *dname, *cid;
+            const char *devname;
             void *temp;
 
             if(snd_ctl_pcm_next_device(handle, &dev) < 0)
@@ -347,29 +358,22 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
             temp = realloc(DevList, sizeof(DevMap) * (idx+1));
             if(temp)
             {
-                const char *prefix = "plughw:";
-                char devname[128];
+                const char *device_prefix = card_prefix;
+                char device[128];
 
                 DevList = temp;
-                cname = snd_ctl_card_info_get_name(info);
-                dname = snd_pcm_info_get_name(pcminfo);
-                cid = snd_ctl_card_info_get_id(info);
+                devname = snd_pcm_info_get_name(pcminfo);
 
-                snprintf(devname, sizeof(devname), "%s-%s-%d", prefix_name(stream), cid, dev);
-                if(!ConfigValueStr("alsa", devname, &prefix))
-                {
-                    snprintf(devname, sizeof(devname), "%s-%s", prefix_name(stream), cid);
-                    if(!ConfigValueStr("alsa", devname, &prefix))
-                        ConfigValueStr("alsa", prefix_name(stream), &prefix);
-                }
+                snprintf(name, sizeof(name), "%s-%s-%d", prefix_name(stream), cardid, dev);
+                ConfigValueStr("alsa", name, &device_prefix);
 
                 snprintf(name, sizeof(name), "%s, %s (CARD=%s,DEV=%d)",
-                         cname, dname, cid, dev);
-                snprintf(devname, sizeof(devname), "%sCARD=%s,DEV=%d",
-                         prefix, cid, dev);
+                         cardname, devname, cardid, dev);
+                snprintf(device, sizeof(device), "%sCARD=%s,DEV=%d",
+                         device_prefix, cardid, dev);
 
                 DevList[idx].name = strdup(name);
-                DevList[idx].device = strdup(devname);
+                DevList[idx].device = strdup(device);
                 idx++;
             }
         }

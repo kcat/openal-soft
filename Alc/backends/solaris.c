@@ -156,6 +156,8 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
             info.play.encoding = AUDIO_ENCODING_LINEAR8;
             break;
         case DevFmtUShort:
+        case DevFmtInt:
+        case DevFmtUInt:
         case DevFmtFloat:
             device->FmtType = DevFmtShort;
             /* fall-through */
@@ -185,7 +187,9 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
          (info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR8 &&
           device->FmtType == DevFmtUByte) ||
          (info.play.precision == 16 && info.play.encoding == AUDIO_ENCODING_LINEAR &&
-          device->FmtType == DevFmtShort)))
+          device->FmtType == DevFmtShort) ||
+         (info.play.precision == 32 && info.play.encoding == AUDIO_ENCODING_LINEAR &&
+          device->FmtType == DevFmtInt)))
     {
         ERR("Could not set %#x sample type, got %d (%#x)\n",
             device->FmtType, info.play.precision, info.play.encoding);

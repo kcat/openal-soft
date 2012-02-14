@@ -206,6 +206,8 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
             ossFormat = AFMT_U8;
             break;
         case DevFmtUShort:
+        case DevFmtInt:
+        case DevFmtUInt:
         case DevFmtFloat:
             device->FmtType = DevFmtShort;
             /* fall-through */
@@ -347,6 +349,8 @@ static ALCenum oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
             ossFormat = AFMT_S16_NE;
             break;
         case DevFmtUShort:
+        case DevFmtInt:
+        case DevFmtUInt:
         case DevFmtFloat:
             free(data);
             ERR("%s capture samples not supported on OSS\n", DevFmtTypeString(device->FmtType));

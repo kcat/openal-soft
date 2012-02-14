@@ -396,8 +396,12 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
         case DevFmtUShort:
             device->FmtType = DevFmtShort;
             break;
+        case DevFmtUInt:
+            device->FmtType = DevFmtInt;
+            break;
         case DevFmtUByte:
         case DevFmtShort:
+        case DevFmtInt:
         case DevFmtFloat:
             break;
     }

@@ -192,6 +192,12 @@ retry_open:
         case DevFmtShort:
             outParams.sampleFormat = paInt16;
             break;
+        case DevFmtUInt:
+            device->FmtType = DevFmtInt;
+            /* fall-through */
+        case DevFmtInt:
+            outParams.sampleFormat = paInt32;
+            break;
         case DevFmtFloat:
             outParams.sampleFormat = paFloat32;
             break;
@@ -316,11 +322,15 @@ static ALCenum pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
         case DevFmtShort:
             inParams.sampleFormat = paInt16;
             break;
+        case DevFmtInt:
+            inParams.sampleFormat = paInt32;
+            break;
         case DevFmtFloat:
             inParams.sampleFormat = paFloat32;
             break;
+        case DevFmtUInt:
         case DevFmtUShort:
-            ERR("Unsigned short samples not supported\n");
+            ERR("%s samples not supported\n", DevFmtTypeString(device->FmtType));
             goto error;
     }
     inParams.channelCount = ChannelsFromDevFmt(device->FmtChans);

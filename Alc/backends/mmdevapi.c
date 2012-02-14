@@ -294,6 +294,14 @@ static HRESULT DoReset(ALCdevice *device)
             OutputType.Samples.wValidBitsPerSample = 16;
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
             break;
+        case DevFmtUInt:
+            device->FmtType = DevFmtInt;
+            /* fall-through */
+        case DevFmtInt:
+            OutputType.Format.wBitsPerSample = 32;
+            OutputType.Samples.wValidBitsPerSample = 32;
+            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+            break;
         case DevFmtFloat:
             OutputType.Format.wBitsPerSample = 32;
             OutputType.Samples.wValidBitsPerSample = 32;
@@ -358,6 +366,8 @@ static HRESULT DoReset(ALCdevice *device)
                 device->FmtType = DevFmtUByte;
             else if(OutputType.Format.wBitsPerSample == 16)
                 device->FmtType = DevFmtShort;
+            else if(OutputType.Format.wBitsPerSample == 32)
+                device->FmtType = DevFmtInt;
             else
             {
                 device->FmtType = DevFmtShort;

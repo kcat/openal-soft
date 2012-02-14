@@ -887,6 +887,8 @@ const ALCchar *DevFmtTypeString(enum DevFmtType type)
     case DevFmtUByte: return "Unsigned Byte";
     case DevFmtShort: return "Signed Short";
     case DevFmtUShort: return "Unsigned Short";
+    case DevFmtInt: return "Signed Int";
+    case DevFmtUInt: return "Unsigned Int";
     case DevFmtFloat: return "Float";
     }
     return "(unknown type)";
@@ -914,6 +916,8 @@ ALuint BytesFromDevFmt(enum DevFmtType type)
     case DevFmtUByte: return sizeof(ALubyte);
     case DevFmtShort: return sizeof(ALshort);
     case DevFmtUShort: return sizeof(ALushort);
+    case DevFmtInt: return sizeof(ALint);
+    case DevFmtUInt: return sizeof(ALuint);
     case DevFmtFloat: return sizeof(ALfloat);
     }
     return 0;

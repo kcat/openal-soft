@@ -657,6 +657,12 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         case DevFmtUShort:
             format = SND_PCM_FORMAT_U16;
             break;
+        case DevFmtInt:
+            format = SND_PCM_FORMAT_S32;
+            break;
+        case DevFmtUInt:
+            format = SND_PCM_FORMAT_U32;
+            break;
         case DevFmtFloat:
             format = SND_PCM_FORMAT_FLOAT;
             break;
@@ -692,6 +698,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             enum DevFmtType fmttype;
         } formatlist[] = {
             { SND_PCM_FORMAT_FLOAT, DevFmtFloat  },
+            { SND_PCM_FORMAT_S32,   DevFmtInt    },
+            { SND_PCM_FORMAT_U32,   DevFmtUInt   },
             { SND_PCM_FORMAT_S16,   DevFmtShort  },
             { SND_PCM_FORMAT_U16,   DevFmtUShort },
             { SND_PCM_FORMAT_S8,    DevFmtByte   },
@@ -907,6 +915,12 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
             break;
         case DevFmtUShort:
             format = SND_PCM_FORMAT_U16;
+            break;
+        case DevFmtInt:
+            format = SND_PCM_FORMAT_S32;
+            break;
+        case DevFmtUInt:
+            format = SND_PCM_FORMAT_U32;
             break;
         case DevFmtFloat:
             format = SND_PCM_FORMAT_FLOAT;

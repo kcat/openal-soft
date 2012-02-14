@@ -296,6 +296,14 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             streamFormat.mBytesPerPacket = 2 * streamFormat.mChannelsPerFrame;
             streamFormat.mBytesPerFrame = 2 * streamFormat.mChannelsPerFrame;
             break;
+        case DevFmtUInt:
+            device->FmtType = DevFmtInt;
+            /* fall-through */
+        case DevFmtInt:
+            streamFormat.mBitsPerChannel = 32;
+            streamFormat.mBytesPerPacket = 2 * streamFormat.mChannelsPerFrame;
+            streamFormat.mBytesPerFrame = 2 * streamFormat.mChannelsPerFrame;
+            break;
     }
     streamFormat.mFormatID = kAudioFormatLinearPCM;
     streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger |
@@ -455,12 +463,17 @@ static ALCenum ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
             requestedFormat.mBitsPerChannel = 16;
             requestedFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
             break;
+        case DevFmtInt:
+            requestedFormat.mBitsPerChannel = 32;
+            requestedFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
+            break;
         case DevFmtFloat:
             requestedFormat.mBitsPerChannel = 32;
             requestedFormat.mFormatFlags = kAudioFormatFlagIsPacked;
             break;
         case DevFmtByte:
         case DevFmtUShort:
+        case DevFmtUInt:
             ERR("%s samples not supported\n", DevFmtTypeString(device->FmtType));
             goto error;
     }

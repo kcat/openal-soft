@@ -229,6 +229,14 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
             par.bits = 16;
             par.sig = 0;
             break;
+        case DevFmtInt:
+            par.bits = 32;
+            par.sig = 1;
+            break;
+        case DevFmtUInt:
+            par.bits = 32;
+            par.sig = 0;
+            break;
     }
     par.le = SIO_LE_NATIVE;
 
@@ -259,6 +267,10 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
         device->FmtType = DevFmtShort;
     else if(par.bits == 16 && par.sig == 0)
         device->FmtType = DevFmtUShort;
+    else if(par.bits == 32 && par.sig == 1)
+        device->FmtType = DevFmtInt;
+    else if(par.bits == 32 && par.sig == 0)
+        device->FmtType = DevFmtUInt;
     else
     {
         ERR("Unhandled sample format: %s %u-bit\n", (par.sig?"signed":"unsigned"), par.bits);

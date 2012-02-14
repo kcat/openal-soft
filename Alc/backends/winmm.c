@@ -327,6 +327,8 @@ static ALCenum WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceName)
         case DevFmtByte:
             pDevice->FmtType = DevFmtUByte;
             break;
+        case DevFmtInt:
+        case DevFmtUInt:
         case DevFmtUShort:
             pDevice->FmtType = DevFmtShort;
             break;
@@ -518,7 +520,7 @@ static ALCenum WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
 
     if((pDevice->FmtChans != DevFmtMono && pDevice->FmtChans != DevFmtStereo) ||
        (pDevice->FmtType != DevFmtUByte && pDevice->FmtType != DevFmtShort &&
-        pDevice->FmtType != DevFmtFloat))
+        pDevice->FmtType != DevFmtInt && pDevice->FmtType != DevFmtFloat))
         goto failure;
 
     memset(&wfexCaptureFormat, 0, sizeof(WAVEFORMATEX));

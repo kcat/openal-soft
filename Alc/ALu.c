@@ -790,18 +790,22 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
 static __inline ALfloat aluF2F(ALfloat val)
 { return val; }
-static __inline ALshort aluF2S(ALfloat val)
+static __inline ALint aluF2I(ALfloat val)
 {
-    if(val > 1.0f) return 32767;
-    if(val < -1.0f) return -32768;
-    return fastf2i(val*32767.0f);
+    if(val > 1.0f) return 2147483647;
+    if(val < -1.0f) return -2147483647-1;
+    return fastf2i(val*2147483647.0);
 }
+static __inline ALuint aluF2UI(ALfloat val)
+{ return aluF2I(val)+2147483648u; }
+static __inline ALshort aluF2S(ALfloat val)
+{ return aluF2I(val)>>16; }
 static __inline ALushort aluF2US(ALfloat val)
 { return aluF2S(val)+32768; }
 static __inline ALbyte aluF2B(ALfloat val)
-{ return aluF2S(val)>>8; }
+{ return aluF2I(val)>>24; }
 static __inline ALubyte aluF2UB(ALfloat val)
-{ return aluF2US(val)>>8; }
+{ return aluF2B(val)+128; }
 
 #define DECL_TEMPLATE(T, N, func)                                             \
 static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
@@ -823,6 +827,18 @@ DECL_TEMPLATE(ALfloat, 4, aluF2F)
 DECL_TEMPLATE(ALfloat, 6, aluF2F)
 DECL_TEMPLATE(ALfloat, 7, aluF2F)
 DECL_TEMPLATE(ALfloat, 8, aluF2F)
+
+DECL_TEMPLATE(ALuint, 1, aluF2UI)
+DECL_TEMPLATE(ALuint, 4, aluF2UI)
+DECL_TEMPLATE(ALuint, 6, aluF2UI)
+DECL_TEMPLATE(ALuint, 7, aluF2UI)
+DECL_TEMPLATE(ALuint, 8, aluF2UI)
+
+DECL_TEMPLATE(ALint, 1, aluF2I)
+DECL_TEMPLATE(ALint, 4, aluF2I)
+DECL_TEMPLATE(ALint, 6, aluF2I)
+DECL_TEMPLATE(ALint, 7, aluF2I)
+DECL_TEMPLATE(ALint, 8, aluF2I)
 
 DECL_TEMPLATE(ALushort, 1, aluF2US)
 DECL_TEMPLATE(ALushort, 4, aluF2US)
@@ -881,6 +897,8 @@ static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
 }
 
 DECL_TEMPLATE(ALfloat, 2, aluF2F)
+DECL_TEMPLATE(ALuint, 2, aluF2UI)
+DECL_TEMPLATE(ALint, 2, aluF2I)
 DECL_TEMPLATE(ALushort, 2, aluF2US)
 DECL_TEMPLATE(ALshort, 2, aluF2S)
 DECL_TEMPLATE(ALubyte, 2, aluF2UB)
@@ -916,6 +934,8 @@ static void Write_##T(ALCdevice *device, T *buffer, ALuint SamplesToDo)       \
 }
 
 DECL_TEMPLATE(ALfloat)
+DECL_TEMPLATE(ALuint)
+DECL_TEMPLATE(ALint)
 DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALshort)
 DECL_TEMPLATE(ALubyte)
@@ -1081,6 +1101,12 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     break;
                 case DevFmtUShort:
                     Write_ALushort(device, buffer, SamplesToDo);
+                    break;
+                case DevFmtInt:
+                    Write_ALint(device, buffer, SamplesToDo);
+                    break;
+                case DevFmtUInt:
+                    Write_ALuint(device, buffer, SamplesToDo);
                     break;
                 case DevFmtFloat:
                     Write_ALfloat(device, buffer, SamplesToDo);

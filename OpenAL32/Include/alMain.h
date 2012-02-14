@@ -507,6 +507,8 @@ enum DevFmtType {
     DevFmtUByte  = ALC_UNSIGNED_BYTE_SOFT,
     DevFmtShort  = ALC_SHORT_SOFT,
     DevFmtUShort = ALC_UNSIGNED_SHORT_SOFT,
+    DevFmtInt    = ALC_INT_SOFT,
+    DevFmtUInt   = ALC_UNSIGNED_INT_SOFT,
     DevFmtFloat  = ALC_FLOAT_SOFT
 };
 enum DevFmtChannels {

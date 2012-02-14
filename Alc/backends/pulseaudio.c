@@ -953,6 +953,12 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         case DevFmtShort:
             data->spec.format = PA_SAMPLE_S16NE;
             break;
+        case DevFmtUInt:
+            device->FmtType = DevFmtInt;
+            /* fall-through */
+        case DevFmtInt:
+            data->spec.format = PA_SAMPLE_S32NE;
+            break;
         case DevFmtFloat:
             data->spec.format = PA_SAMPLE_FLOAT32NE;
             break;
@@ -1150,11 +1156,15 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
         case DevFmtShort:
             data->spec.format = PA_SAMPLE_S16NE;
             break;
+        case DevFmtInt:
+            data->spec.format = PA_SAMPLE_S32NE;
+            break;
         case DevFmtFloat:
             data->spec.format = PA_SAMPLE_FLOAT32NE;
             break;
         case DevFmtByte:
         case DevFmtUShort:
+        case DevFmtUInt:
             ERR("Capture format type %#x capture not supported on PulseAudio\n", device->FmtType);
             pa_threaded_mainloop_unlock(data->loop);
             goto fail;

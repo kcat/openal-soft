@@ -1114,7 +1114,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 if(device->IsLoopbackDevice)
                 {
                     freq = attrList[attrIdx + 1];
-                    if(freq < 8000)
+                    if(freq < MIN_OUTPUT_RATE)
                         return ALC_INVALID_VALUE;
                     gotFmt |= GotFreq;
                 }
@@ -1151,7 +1151,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         else
         {
             ConfigValueUInt(NULL, "frequency", &freq);
-            freq = maxu(freq, 8000);
+            freq = maxu(freq, MIN_OUTPUT_RATE);
         }
         ConfigValueUInt(NULL, "sends", &numSends);
         numSends = minu(MAX_SENDS, numSends);
@@ -2495,8 +2495,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Frequency = DEFAULT_OUTPUT_RATE;
     if(ConfigValueUInt(NULL, "frequency", &device->Frequency))
+    {
         device->Flags |= DEVICE_FREQUENCY_REQUEST;
-    device->Frequency = maxu(device->Frequency, 8000);
+        if(device->Frequency < MIN_OUTPUT_RATE)
+            ERR("%uhz request clamped to %uhz minimum\n", device->Frequency, MIN_OUTPUT_RATE);
+        device->Frequency = maxu(device->Frequency, MIN_OUTPUT_RATE);
+    }
 
     fmt = "AL_FORMAT_STEREO32";
     if(ConfigValueStr(NULL, "format", &fmt))
@@ -2676,7 +2680,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
     else
     {
         if(BytesFromDevFmt(type) > 0 && ChannelsFromDevFmt(channels) > 0 &&
-           freq >= 8000)
+           freq >= MIN_OUTPUT_RATE)
             ret = ALC_TRUE;
     }
     if(device) ALCdevice_DecRef(device);

@@ -1189,19 +1189,15 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
     device->Flags |= DEVICE_RUNNING;
 
-    if(device->FmtChans != oldChans)
+    if(device->FmtChans != oldChans && (device->Flags&DEVICE_CHANNELS_REQUEST))
     {
-        if((device->Flags&DEVICE_CHANNELS_REQUEST))
-            ERR("Failed to set %s, got %s instead\n",
-                DevFmtChannelsString(oldChans),
-                DevFmtChannelsString(device->FmtChans));
+        ERR("Failed to set %s, got %s instead\n", DevFmtChannelsString(oldChans),
+            DevFmtChannelsString(device->FmtChans));
         device->Flags &= ~DEVICE_CHANNELS_REQUEST;
     }
-    if(device->Frequency != oldFreq)
+    if(device->Frequency != oldFreq && (device->Flags&DEVICE_FREQUENCY_REQUEST))
     {
-        if((device->Flags&DEVICE_FREQUENCY_REQUEST))
-            ERR("Failed to set %uhz, got %uhz instead\n",
-                oldFreq, device->Frequency);
+        ERR("Failed to set %uhz, got %uhz instead\n", oldFreq, device->Frequency);
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
     }
 

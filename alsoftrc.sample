@@ -13,27 +13,23 @@
 # possible). Note: options that are left unset may default to app- or system-
 # specified values. These are the current available settings:
 
-## format:
-#  Sets the output format. Can be one of:
-#  AL_FORMAT_MONO8    (8-bit mono)
-#  AL_FORMAT_STEREO8  (8-bit stereo)
-#  AL_FORMAT_QUAD8    (8-bit 4-channel)
-#  AL_FORMAT_51CHN8   (8-bit 5.1 output)
-#  AL_FORMAT_61CHN8   (8-bit 6.1 output)
-#  AL_FORMAT_71CHN8   (8-bit 7.1 output)
-#  AL_FORMAT_MONO16   (16-bit mono)
-#  AL_FORMAT_STEREO16 (16-bit stereo)
-#  AL_FORMAT_QUAD16   (16-bit 4-channel)
-#  AL_FORMAT_51CHN16  (16-bit 5.1 output)
-#  AL_FORMAT_61CHN16  (16-bit 6.1 output)
-#  AL_FORMAT_71CHN16  (16-bit 7.1 output)
-#  AL_FORMAT_MONO32   (32-bit float mono)
-#  AL_FORMAT_STEREO32 (32-bit float stereo)
-#  AL_FORMAT_QUAD32   (32-bit float 4-channel)
-#  AL_FORMAT_51CHN32  (32-bit float 5.1 output)
-#  AL_FORMAT_61CHN32  (32-bit float 6.1 output)
-#  AL_FORMAT_71CHN32  (32-bit float 7.1 output)
-#format = AL_FORMAT_STEREO32
+## channels:
+#  Sets the output channel configuration. If left unspecified, one will try to
+#  be detected from the system, and defaulting to stereo. The available values
+#  are: mono, stereo, quad, surround51, surround61, surround71
+#channels = stereo
+
+## sample-type:
+#  Sets the output sample type. Currently, all mixing is done with 32-bit float
+#  and converted to the output sample type as needed. Available values are:
+#  int8    - signed 8-bit int
+#  uint8   - unsigned 8-bit int
+#  int16   - signed 16-bit int
+#  uint16  - unsigned 16-bit int
+#  int32   - signed 32-bit int
+#  uint32  - unsigned 32-bit int
+#  float32 - 32-bit float
+#sample-type = float32
 
 ## hrtf:
 #  Enables HRTF filters. These filters provide for better sound spatialization

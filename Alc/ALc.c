@@ -2392,51 +2392,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
 }
 
 
-static void GetFormatFromString(const char *str, enum DevFmtChannels *chans, enum DevFmtType *type)
-{
-    static const struct {
-        const char name[32];
-        enum DevFmtChannels channels;
-        enum DevFmtType type;
-    } formats[] = {
-        { "AL_FORMAT_MONO32",   DevFmtMono,   DevFmtFloat },
-        { "AL_FORMAT_STEREO32", DevFmtStereo, DevFmtFloat },
-        { "AL_FORMAT_QUAD32",   DevFmtQuad,   DevFmtFloat },
-        { "AL_FORMAT_51CHN32",  DevFmtX51,    DevFmtFloat },
-        { "AL_FORMAT_61CHN32",  DevFmtX61,    DevFmtFloat },
-        { "AL_FORMAT_71CHN32",  DevFmtX71,    DevFmtFloat },
-
-        { "AL_FORMAT_MONO16",   DevFmtMono,   DevFmtShort },
-        { "AL_FORMAT_STEREO16", DevFmtStereo, DevFmtShort },
-        { "AL_FORMAT_QUAD16",   DevFmtQuad,   DevFmtShort },
-        { "AL_FORMAT_51CHN16",  DevFmtX51,    DevFmtShort },
-        { "AL_FORMAT_61CHN16",  DevFmtX61,    DevFmtShort },
-        { "AL_FORMAT_71CHN16",  DevFmtX71,    DevFmtShort },
-
-        { "AL_FORMAT_MONO8",   DevFmtMono,   DevFmtByte },
-        { "AL_FORMAT_STEREO8", DevFmtStereo, DevFmtByte },
-        { "AL_FORMAT_QUAD8",   DevFmtQuad,   DevFmtByte },
-        { "AL_FORMAT_51CHN8",  DevFmtX51,    DevFmtByte },
-        { "AL_FORMAT_61CHN8",  DevFmtX61,    DevFmtByte },
-        { "AL_FORMAT_71CHN8",  DevFmtX71,    DevFmtByte }
-    };
-    size_t i;
-
-    for(i = 0;i < sizeof(formats)/sizeof(formats[0]);i++)
-    {
-        if(strcasecmp(str, formats[i].name) == 0)
-        {
-            *chans = formats[i].channels;
-            *type = formats[i].type;
-            return;
-        }
-    }
-
-    ERR("Unknown format: \"%s\"\n", str);
-    *chans = DevFmtStereo;
-    *type = DevFmtShort;
-}
-
 /* alcOpenDevice
  *
  * Open the Device specified.
@@ -2490,10 +2445,111 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitUIntMap(&device->FilterMap, ~0);
 
     //Set output format
+    device->FmtChans = DevFmtStereo;
+    device->FmtType = DevFmtFloat;
+    device->Frequency = DEFAULT_OUTPUT_RATE;
     device->NumUpdates = 4;
     device->UpdateSize = 1024;
 
-    device->Frequency = DEFAULT_OUTPUT_RATE;
+    if(ConfigValueStr(NULL, "format", &fmt))
+    {
+        static const struct {
+            const char name[32];
+            enum DevFmtChannels channels;
+            enum DevFmtType type;
+        } formats[] = {
+            { "AL_FORMAT_MONO32",   DevFmtMono,   DevFmtFloat },
+            { "AL_FORMAT_STEREO32", DevFmtStereo, DevFmtFloat },
+            { "AL_FORMAT_QUAD32",   DevFmtQuad,   DevFmtFloat },
+            { "AL_FORMAT_51CHN32",  DevFmtX51,    DevFmtFloat },
+            { "AL_FORMAT_61CHN32",  DevFmtX61,    DevFmtFloat },
+            { "AL_FORMAT_71CHN32",  DevFmtX71,    DevFmtFloat },
+
+            { "AL_FORMAT_MONO16",   DevFmtMono,   DevFmtShort },
+            { "AL_FORMAT_STEREO16", DevFmtStereo, DevFmtShort },
+            { "AL_FORMAT_QUAD16",   DevFmtQuad,   DevFmtShort },
+            { "AL_FORMAT_51CHN16",  DevFmtX51,    DevFmtShort },
+            { "AL_FORMAT_61CHN16",  DevFmtX61,    DevFmtShort },
+            { "AL_FORMAT_71CHN16",  DevFmtX71,    DevFmtShort },
+
+            { "AL_FORMAT_MONO8",   DevFmtMono,   DevFmtByte },
+            { "AL_FORMAT_STEREO8", DevFmtStereo, DevFmtByte },
+            { "AL_FORMAT_QUAD8",   DevFmtQuad,   DevFmtByte },
+            { "AL_FORMAT_51CHN8",  DevFmtX51,    DevFmtByte },
+            { "AL_FORMAT_61CHN8",  DevFmtX61,    DevFmtByte },
+            { "AL_FORMAT_71CHN8",  DevFmtX71,    DevFmtByte }
+        };
+        size_t i;
+
+        for(i = 0;i < sizeof(formats)/sizeof(formats[0]);i++)
+        {
+            if(strcasecmp(fmt, formats[i].name) == 0)
+            {
+                if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
+                    device->FmtChans = formats[i].channels;
+                device->FmtType = formats[i].type;
+                device->Flags |= DEVICE_CHANNELS_REQUEST;
+                break;
+            }
+        }
+        if(i == sizeof(formats)/sizeof(formats[0]))
+            ERR("Unsupported format: %s\n", fmt);
+    }
+    if(ConfigValueStr(NULL, "channels", &fmt))
+    {
+        static const struct {
+            const char name[16];
+            enum DevFmtChannels chans;
+        } chanlist[] = {
+            { "mono",       DevFmtMono   },
+            { "stereo",     DevFmtStereo },
+            { "quad",       DevFmtQuad   },
+            { "surround51", DevFmtX51    },
+            { "surround61", DevFmtX61    },
+            { "surround71", DevFmtX71    },
+        };
+        size_t i;
+
+        for(i = 0;i < sizeof(chanlist)/sizeof(chanlist[0]);i++)
+        {
+            if(strcasecmp(chanlist[i].name, fmt) == 0)
+            {
+                device->FmtChans = chanlist[i].chans;
+                device->Flags |= DEVICE_CHANNELS_REQUEST;
+                break;
+            }
+        }
+        if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
+            ERR("Unsupported channels: %s\n", fmt);
+    }
+    if(ConfigValueStr(NULL, "sample-type", &fmt))
+    {
+        static const struct {
+            const char name[16];
+            enum DevFmtType type;
+        } chanlist[] = {
+            { "int8",    DevFmtByte   },
+            { "uint8",   DevFmtUByte  },
+            { "int16",   DevFmtShort  },
+            { "uint16",  DevFmtUShort },
+            { "int32",   DevFmtInt    },
+            { "uint32",  DevFmtUInt   },
+            { "float32", DevFmtFloat  },
+        };
+        size_t i;
+
+        for(i = 0;i < sizeof(chanlist)/sizeof(chanlist[0]);i++)
+        {
+            if(strcasecmp(chanlist[i].name, fmt) == 0)
+            {
+                device->FmtType = chanlist[i].type;
+                break;
+            }
+        }
+        if(i == sizeof(chanlist)/sizeof(chanlist[0]))
+            ERR("Unsupported sample-type: %s\n", fmt);
+    }
+
     if(ConfigValueUInt(NULL, "frequency", &device->Frequency))
     {
         device->Flags |= DEVICE_FREQUENCY_REQUEST;
@@ -2501,11 +2557,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             ERR("%uhz request clamped to %uhz minimum\n", device->Frequency, MIN_OUTPUT_RATE);
         device->Frequency = maxu(device->Frequency, MIN_OUTPUT_RATE);
     }
-
-    fmt = "AL_FORMAT_STEREO32";
-    if(ConfigValueStr(NULL, "format", &fmt))
-        device->Flags |= DEVICE_CHANNELS_REQUEST;
-    GetFormatFromString(fmt, &device->FmtChans, &device->FmtType);
 
     ConfigValueUInt(NULL, "periods", &device->NumUpdates);
     if(device->NumUpdates < 2) device->NumUpdates = 4;

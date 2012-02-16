@@ -452,16 +452,16 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
     ALuint deviceCount = 0;
     MMDevApiData *data;
     ALCdevice *device;
-    HRESULT hr;
+    HRESULT hr, cohr;
     MSG msg;
 
     TRACE("Starting message thread\n");
 
-    hr = CoInitialize(NULL);
-    if(FAILED(hr))
+    cohr = CoInitialize(NULL);
+    if(FAILED(cohr))
     {
-        WARN("Failed to initialize COM: 0x%08lx\n", hr);
-        req->result = hr;
+        WARN("Failed to initialize COM: 0x%08lx\n", cohr);
+        req->result = cohr;
         SetEvent(req->FinishedEvt);
         return 0;
     }
@@ -495,10 +495,11 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             device = (ALCdevice*)msg.lParam;
             data = device->ExtraData;
 
-            hr = S_OK;
+            cohr = S_OK;
+            hr = E_FAIL;
             if(++deviceCount == 1)
-                hr = CoInitialize(NULL);
-            if(SUCCEEDED(hr))
+                cohr = CoInitialize(NULL);
+            if(SUCCEEDED(cohr))
                 hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
             if(SUCCEEDED(hr))
             {
@@ -517,6 +518,8 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
                 if(data->mmdev)
                     IMMDevice_Release(data->mmdev);
                 data->mmdev = NULL;
+                if(--deviceCount == 0 && SUCCEEDED(cohr))
+                    CoUninitialize();
             }
 
             req->result = hr;

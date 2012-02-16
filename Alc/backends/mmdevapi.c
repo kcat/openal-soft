@@ -223,6 +223,9 @@ static HRESULT DoReset(ALCdevice *device)
     CoTaskMemFree(wfx);
     wfx = NULL;
 
+    buf_time = ((REFERENCE_TIME)device->UpdateSize*device->NumUpdates*10000000 +
+                                device->Frequency-1) / device->Frequency;
+
     if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
         device->Frequency = OutputType.Format.nSamplesPerSec;
     if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
@@ -391,8 +394,6 @@ static HRESULT DoReset(ALCdevice *device)
 
     SetDefaultWFXChannelOrder(device);
 
-    buf_time = ((REFERENCE_TIME)device->UpdateSize*device->NumUpdates*10000000 +
-                                device->Frequency-1) / device->Frequency;
     hr = IAudioClient_Initialize(data->client, AUDCLNT_SHAREMODE_SHARED,
                                  AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
                                  buf_time, 0, &OutputType.Format, NULL);

@@ -1176,10 +1176,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     oldChans = device->FmtChans;
     oldType  = device->FmtType;
 
-    TRACE("Format pre-setup: %s%s, %s, %uhz%s, %u update size x%d\n",
+    TRACE("Format pre-setup: %s%s, %s%s, %uhz%s, %u update size x%d\n",
           DevFmtChannelsString(device->FmtChans),
           (device->Flags&DEVICE_CHANNELS_REQUEST)?" (requested)":"",
-          DevFmtTypeString(device->FmtType), device->Frequency,
+          DevFmtTypeString(device->FmtType),
+          (device->Flags&DEVICE_SAMPLE_TYPE_REQUEST)?" (requested)":"",
+          device->Frequency,
           (device->Flags&DEVICE_FREQUENCY_REQUEST)?" (requested)":"",
           device->UpdateSize, device->NumUpdates);
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
@@ -1194,6 +1196,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ERR("Failed to set %s, got %s instead\n", DevFmtChannelsString(oldChans),
             DevFmtChannelsString(device->FmtChans));
         device->Flags &= ~DEVICE_CHANNELS_REQUEST;
+    }
+    if(device->FmtType != oldType && (device->Flags&DEVICE_SAMPLE_TYPE_REQUEST))
+    {
+        ERR("Failed to set %s, got %s instead\n", DevFmtTypeString(oldType),
+            DevFmtTypeString(device->FmtType));
+        device->Flags &= ~DEVICE_SAMPLE_TYPE_REQUEST;
     }
     if(device->Frequency != oldFreq && (device->Flags&DEVICE_FREQUENCY_REQUEST))
     {
@@ -1644,7 +1652,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->Flags |= DEVICE_FREQUENCY_REQUEST;
     device->Frequency = frequency;
 
-    device->Flags |= DEVICE_CHANNELS_REQUEST;
+    device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_SAMPLE_TYPE_REQUEST;
     if(DecomposeDevFormat(format, &device->FmtChans, &device->FmtType) == AL_FALSE)
     {
         DeleteCriticalSection(&device->Mutex);
@@ -2487,8 +2495,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             {
                 if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
                     device->FmtChans = formats[i].channels;
-                device->FmtType = formats[i].type;
-                device->Flags |= DEVICE_CHANNELS_REQUEST;
+                if(!(device->Flags&DEVICE_SAMPLE_TYPE_REQUEST))
+                    device->FmtType = formats[i].type;
+                device->Flags |= DEVICE_CHANNELS_REQUEST |
+                                 DEVICE_SAMPLE_TYPE_REQUEST;
                 break;
             }
         }
@@ -2519,7 +2529,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
                 break;
             }
         }
-        if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
+        if(i == sizeof(chanlist)/sizeof(chanlist[0]))
             ERR("Unsupported channels: %s\n", fmt);
     }
     if(ConfigValueStr(NULL, "sample-type", &fmt))
@@ -2543,6 +2553,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             if(strcasecmp(chanlist[i].name, fmt) == 0)
             {
                 device->FmtType = chanlist[i].type;
+                device->Flags |= DEVICE_SAMPLE_TYPE_REQUEST;
                 break;
             }
         }

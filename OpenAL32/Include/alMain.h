@@ -630,6 +630,8 @@ struct ALCdevice_struct
 #define DEVICE_FREQUENCY_REQUEST                 (1<<1)
 // Channel configuration was requested by the config file
 #define DEVICE_CHANNELS_REQUEST                  (1<<2)
+// Sample type was requested by the config file
+#define DEVICE_SAMPLE_TYPE_REQUEST               (1<<3)
 
 // Specifies if the device is currently running
 #define DEVICE_RUNNING                           (1<<31)

@@ -1985,6 +1985,9 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
         return;
     }
 
+    if(updateLen > 0.0 && updateLen < 0.015)
+        updateLen = 0.015;
+
     // Get Current SamplesPlayed (NOTE : This is the offset into the *current* buffer)
     readPos = Source->position;
     // Add length of any processed buffers in the queue

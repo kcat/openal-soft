@@ -1245,11 +1245,6 @@ static void EncodeIMA4Block(ALima4 *dst, const ALshort *src, ALint *sample, ALin
     }
 }
 
-static const union {
-    ALuint u;
-    ALubyte b[sizeof(ALuint)];
-} EndianTest = { 1 };
-#define IS_LITTLE_ENDIAN (EndianTest.b[0] == 1)
 
 static __inline ALint DecodeByte3(ALbyte3 val)
 {

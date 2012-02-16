@@ -87,14 +87,9 @@ static ALuint WaveProc(ALvoid *ptr)
     ALuint now, start;
     ALuint64 avail, done;
     size_t fs;
-    union {
-        short s;
-        char b[sizeof(short)];
-    } uSB;
     const ALuint restTime = (ALuint64)pDevice->UpdateSize * 1000 /
                             pDevice->Frequency / 2;
 
-    uSB.s = 1;
     frameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
 
     done = 0;
@@ -122,7 +117,7 @@ static ALuint WaveProc(ALvoid *ptr)
             aluMixData(pDevice, data->buffer, pDevice->UpdateSize);
             done += pDevice->UpdateSize;
 
-            if(uSB.b[0] != 1)
+            if(!IS_LITTLE_ENDIAN)
             {
                 ALuint bytesize = BytesFromDevFmt(pDevice->FmtType);
                 ALubyte *bytes = data->buffer;

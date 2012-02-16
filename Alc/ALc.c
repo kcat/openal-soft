@@ -2658,11 +2658,17 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
  *
  * Open a loopback device, for manual rendering.
  */
-ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(void)
+ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(ALCdevice *device)
 {
-    ALCdevice *device;
-
     DO_INITCONFIG();
+
+    /* Make sure the device, if specified, belongs to us. */
+    if(device && !(device=VerifyDevice(device)))
+    {
+        alcSetError(device, ALC_INVALID_DEVICE);
+        return NULL;
+    }
+    if(device) ALCdevice_DecRef(device);
 
     device = calloc(1, sizeof(ALCdevice));
     if(!device)

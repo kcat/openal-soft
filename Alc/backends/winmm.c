@@ -513,15 +513,38 @@ static ALCenum WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
     if(i == NumCaptureDevices)
         return ALC_INVALID_VALUE;
 
+    switch(pDevice->FmtChans)
+    {
+        case DevFmtMono:
+        case DevFmtStereo:
+            break;
+
+        case DevFmtQuad:
+        case DevFmtX51:
+        case DevFmtX51Side:
+        case DevFmtX61:
+        case DevFmtX71:
+            return ALC_INVALID_ENUM;
+    }
+
+    switch(pDevice->FmtType)
+    {
+        case DevFmtUByte:
+        case DevFmtShort:
+        case DevFmtInt:
+        case DevFmtFloat:
+            break;
+
+        case DevFmtByte:
+        case DevFmtUShort:
+        case DevFmtUInt:
+            return ALC_INVALID_ENUM;
+    }
+
     pData = calloc(1, sizeof(*pData));
     if(!pData)
         return ALC_OUT_OF_MEMORY;
     pDevice->ExtraData = pData;
-
-    if((pDevice->FmtChans != DevFmtMono && pDevice->FmtChans != DevFmtStereo) ||
-       (pDevice->FmtType != DevFmtUByte && pDevice->FmtType != DevFmtShort &&
-        pDevice->FmtType != DevFmtInt && pDevice->FmtType != DevFmtFloat))
-        goto failure;
 
     memset(&wfexCaptureFormat, 0, sizeof(WAVEFORMATEX));
     wfexCaptureFormat.wFormatTag = ((pDevice->FmtType == DevFmtFloat) ?

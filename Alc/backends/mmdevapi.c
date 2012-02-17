@@ -223,7 +223,7 @@ static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALu
         return NULL;
     }
 
-    count = 0;
+    idx = count = 0;
     hr = IMMDeviceCollection_GetCount(coll, &count);
     if(SUCCEEDED(hr) && count > 0)
     {

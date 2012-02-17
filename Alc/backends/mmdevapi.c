@@ -579,7 +579,7 @@ static HRESULT DoReset(ALCdevice *device)
     hr = IAudioClient_GetDevicePeriod(data->client, &min_per, NULL);
     if(SUCCEEDED(hr))
     {
-        min_len = (min_per*device->Frequency + 10000000-1) / 10000000;
+        min_len = (UINT32)((min_per*device->Frequency + 10000000-1) / 10000000);
         hr = IAudioClient_GetBufferSize(data->client, &buffer_len);
     }
     if(FAILED(hr))

@@ -105,7 +105,7 @@ static HRESULT WaitForResponse(ThreadRequest *req)
 static HRESULT get_mmdevice_by_guid(IMMDeviceEnumerator *devenum, EDataFlow flowdir, const GUID *guid, IMMDevice **out)
 {
     IMMDeviceCollection *coll;
-    DWORD count, i;
+    UINT count, i;
     HRESULT hr;
 
     hr = IMMDeviceEnumerator_EnumAudioEndpoints(devenum, flowdir, DEVICE_STATE_ACTIVE, &coll);
@@ -211,10 +211,10 @@ static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALu
     IMMDeviceCollection *coll;
     IMMDevice *defdev = NULL;
     DevMap *devlist;
-    DWORD count;
+    UINT count;
     HRESULT hr;
-    DWORD idx;
-    DWORD i;
+    UINT idx;
+    UINT i;
 
     hr = IMMDeviceEnumerator_EnumAudioEndpoints(devenum, flowdir, DEVICE_STATE_ACTIVE, &coll);
     if(FAILED(hr))

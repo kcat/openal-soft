@@ -109,7 +109,6 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALCdevice *Device = ALContext->Device;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
-    enum DevFmtChannels DevChans;
     enum FmtChannels Channels;
     ALfloat (*SrcMatrix)[MAXCHANNELS];
     ALfloat DryGain, DryGainHF;
@@ -127,7 +126,6 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALint i, c;
 
     /* Get device properties */
-    DevChans  = Device->FmtChans;
     NumSends  = Device->NumAuxSends;
     Frequency = Device->Frequency;
 

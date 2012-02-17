@@ -54,12 +54,10 @@ static ALint GetSampleOffset(ALsource *Source);
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n,ALuint *sources)
 {
     ALCcontext *Context;
-    ALCdevice *Device;
 
     Context = GetContextRef();
     if(!Context) return;
 
-    Device = Context->Device;
     if(n < 0 || IsBadWritePtr((void*)sources, n * sizeof(ALuint)))
         alSetError(Context, AL_INVALID_VALUE);
     else

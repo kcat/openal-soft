@@ -39,12 +39,10 @@ static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *val);
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
     ALCcontext *Context;
-    ALCdevice *Device;
 
     Context = GetContextRef();
     if(!Context) return;
 
-    Device = Context->Device;
     if(n < 0 || IsBadWritePtr((void*)effectslots, n * sizeof(ALuint)))
         alSetError(Context, AL_INVALID_VALUE);
     else

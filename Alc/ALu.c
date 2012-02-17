@@ -794,7 +794,7 @@ static __inline ALint aluF2I(ALfloat val)
 {
     if(val > 1.0f) return 2147483647;
     if(val < -1.0f) return -2147483647-1;
-    return fastf2i(val*2147483647.0);
+    return fastf2i((ALfloat)(val*2147483647.0));
 }
 static __inline ALuint aluF2UI(ALfloat val)
 { return aluF2I(val)+2147483648u; }

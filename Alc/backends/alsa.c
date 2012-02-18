@@ -844,7 +844,7 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
     if(!allCaptureDevNameMap)
         allCaptureDevNameMap = probe_devices(SND_PCM_STREAM_CAPTURE, &numCaptureDevNames);
 
-    if(!deviceName)
+    if(!deviceName && numCaptureDevNames > 0)
         deviceName = allCaptureDevNameMap[0].name;
     else
     {

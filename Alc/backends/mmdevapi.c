@@ -210,9 +210,9 @@ static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALu
 {
     IMMDeviceCollection *coll;
     IMMDevice *defdev = NULL;
-    DevMap *devlist;
-    UINT count;
+    DevMap *devlist = NULL;
     HRESULT hr;
+    UINT count;
     UINT idx;
     UINT i;
 
@@ -337,7 +337,7 @@ static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *
 {
     memset(out, 0, sizeof(*out));
     if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
-        *out = *(WAVEFORMATEXTENSIBLE*)in;
+        *out = *(const WAVEFORMATEXTENSIBLE*)in;
     else if(in->wFormatTag == WAVE_FORMAT_PCM)
     {
         out->Format = *in;
@@ -982,7 +982,7 @@ void alcMMDevApiDeinit(void)
 
 void alcMMDevApiProbe(enum DevProbe type)
 {
-    ThreadRequest req;
+    ThreadRequest req = { NULL, 0 };
     HRESULT hr = E_FAIL;
 
     switch(type)
@@ -1006,11 +1006,12 @@ void alcMMDevApiProbe(enum DevProbe type)
                         AppendAllDeviceList(PlaybackDeviceList[i].name);
                 }
             }
-            if(req.FinishedEvt != NULL)
-                CloseHandle(req.FinishedEvt);
             break;
 
         case CAPTURE_DEVICE_PROBE:
             break;
     }
+    if(req.FinishedEvt != NULL)
+        CloseHandle(req.FinishedEvt);
+    req.FinishedEvt = NULL;
 }

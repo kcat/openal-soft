@@ -690,7 +690,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         if((i=snd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
             err = "set access";
     }
-    /* set format (implicitly sets sample bits) */
+    /* test and set format (implicitly sets sample bits) */
     if(i >= 0 && (i=snd_pcm_hw_params_test_format(data->pcmHandle, p, format)) < 0)
     {
         static const struct {
@@ -720,7 +720,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     }
     if(i >= 0 && (i=snd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
         err = "set format";
-    /* set channels (implicitly sets frame bits) */
+    /* test and set channels (implicitly sets frame bits) */
     if(i >= 0 && (i=snd_pcm_hw_params_test_channels(data->pcmHandle, p, ChannelsFromDevFmt(device->FmtChans))) < 0)
     {
         static const enum DevFmtChannels channellist[] = {
@@ -755,12 +755,13 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     /* set buffer time (implicitly constrains period/buffer parameters) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, p, &bufferLen, NULL)) < 0)
         err = "set buffer time near";
-    /* set period time in frame units (implicitly sets buffer size/bytes/time and period size/bytes) */
+    /* set period time (implicitly sets buffer size/bytes/time and period size/bytes) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_period_time_near(data->pcmHandle, p, &periodLen, NULL)) < 0)
         err = "set period time near";
     /* install and prepare hardware configuration */
     if(i >= 0 && (i=snd_pcm_hw_params(data->pcmHandle, p)) < 0)
         err = "set params";
+    /* retrieve configuration info */
     if(i >= 0 && (i=snd_pcm_hw_params_get_access(p, &access)) < 0)
         err = "get access";
     if(i >= 0 && (i=snd_pcm_hw_params_get_period_size(p, &periodSizeInFrames, NULL)) < 0)

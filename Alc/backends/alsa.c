@@ -637,8 +637,8 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     snd_pcm_format_t format;
     unsigned int periods;
     unsigned int rate;
+    const char *funcerr;
     int allowmmap;
-    char *err;
     int i;
 
 
@@ -674,11 +674,11 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     bufferLen = periodLen * periods;
     rate = device->Frequency;
 
-    err = NULL;
+    funcerr = NULL;
     snd_pcm_hw_params_malloc(&p);
 
     if((i=snd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
-        err = "any";
+        funcerr = "any";
     /* set interleaved access */
     if(i >= 0 && (!allowmmap || (i=snd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_MMAP_INTERLEAVED)) < 0))
     {
@@ -688,7 +688,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             bufferLen = periodLen * periods;
         }
         if((i=snd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
-            err = "set access";
+            funcerr = "set access";
     }
     /* test and set format (implicitly sets sample bits) */
     if(i >= 0 && (i=snd_pcm_hw_params_test_format(data->pcmHandle, p, format)) < 0)
@@ -707,7 +707,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         };
         size_t k;
 
-        err = "test format";
+        funcerr = "test format";
         for(k = 0;k < sizeof(formatlist)/sizeof(formatlist[0]);k++)
         {
             format = formatlist[k].format;
@@ -719,7 +719,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         }
     }
     if(i >= 0 && (i=snd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
-        err = "set format";
+        funcerr = "set format";
     /* test and set channels (implicitly sets frame bits) */
     if(i >= 0 && (i=snd_pcm_hw_params_test_channels(data->pcmHandle, p, ChannelsFromDevFmt(device->FmtChans))) < 0)
     {
@@ -732,7 +732,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         };
         size_t k;
 
-        err = "test channels";
+        funcerr = "test channels";
         for(k = 0;k < sizeof(channellist)/sizeof(channellist[0]);k++)
         {
             if((i=snd_pcm_hw_params_test_channels(data->pcmHandle, p, ChannelsFromDevFmt(channellist[k]))) >= 0)
@@ -743,7 +743,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         }
     }
     if(i >= 0 && (i=snd_pcm_hw_params_set_channels(data->pcmHandle, p, ChannelsFromDevFmt(device->FmtChans))) < 0)
-        err = "set channels";
+        funcerr = "set channels";
     if(i >= 0 && (i=snd_pcm_hw_params_set_rate_resample(data->pcmHandle, p, 0)) < 0)
     {
         ERR("Failed to disable ALSA resampler\n");
@@ -751,46 +751,46 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     }
     /* set rate (implicitly constrains period/buffer parameters) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_rate_near(data->pcmHandle, p, &rate, NULL)) < 0)
-        err = "set rate near";
+        funcerr = "set rate near";
     /* set buffer time (implicitly constrains period/buffer parameters) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, p, &bufferLen, NULL)) < 0)
-        err = "set buffer time near";
+        funcerr = "set buffer time near";
     /* set period time (implicitly sets buffer size/bytes/time and period size/bytes) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_period_time_near(data->pcmHandle, p, &periodLen, NULL)) < 0)
-        err = "set period time near";
+        funcerr = "set period time near";
     /* install and prepare hardware configuration */
     if(i >= 0 && (i=snd_pcm_hw_params(data->pcmHandle, p)) < 0)
-        err = "set params";
+        funcerr = "set params";
     /* retrieve configuration info */
     if(i >= 0 && (i=snd_pcm_hw_params_get_access(p, &access)) < 0)
-        err = "get access";
+        funcerr = "get access";
     if(i >= 0 && (i=snd_pcm_hw_params_get_period_size(p, &periodSizeInFrames, NULL)) < 0)
-        err = "get period size";
+        funcerr = "get period size";
     if(i >= 0 && (i=snd_pcm_hw_params_get_periods(p, &periods, NULL)) < 0)
-        err = "get periods";
+        funcerr = "get periods";
     if(i < 0)
     {
-        ERR("%s failed: %s\n", err, snd_strerror(i));
+        ERR("%s failed: %s\n", funcerr, snd_strerror(i));
         snd_pcm_hw_params_free(p);
         return ALC_FALSE;
     }
 
     snd_pcm_hw_params_free(p);
 
-    err = NULL;
+    funcerr = NULL;
     snd_pcm_sw_params_malloc(&sp);
 
     if((i=snd_pcm_sw_params_current(data->pcmHandle, sp)) != 0)
-        err = "sw current";
+        funcerr = "sw current";
     if(i == 0 && (i=snd_pcm_sw_params_set_avail_min(data->pcmHandle, sp, periodSizeInFrames)) != 0)
-        err = "sw set avail min";
+        funcerr = "sw set avail min";
     if(i == 0 && (i=snd_pcm_sw_params_set_stop_threshold(data->pcmHandle, sp, periodSizeInFrames*periods)) != 0)
-        err = "sw set stop threshold";
+        funcerr = "sw set stop threshold";
     if(i == 0 && (i=snd_pcm_sw_params(data->pcmHandle, sp)) != 0)
-        err = "sw set params";
+        funcerr = "sw set params";
     if(i != 0)
     {
-        ERR("%s failed: %s\n", err, snd_strerror(i));
+        ERR("%s failed: %s\n", funcerr, snd_strerror(i));
         snd_pcm_sw_params_free(sp);
         return ALC_FALSE;
     }
@@ -862,9 +862,9 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
     snd_pcm_uframes_t bufferSizeInFrames;
     snd_pcm_uframes_t periodSizeInFrames;
     snd_pcm_format_t format;
+    const char *funcerr;
     ALuint frameSize;
     alsa_data *data;
-    char *err;
     int i;
 
     ConfigValueStr("alsa", "capture", &driver);
@@ -928,38 +928,38 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
             break;
     }
 
-    err = NULL;
+    funcerr = NULL;
     bufferSizeInFrames = maxu(pDevice->UpdateSize*pDevice->NumUpdates,
                               100*pDevice->Frequency/1000);
     periodSizeInFrames = minu(bufferSizeInFrames, 50*pDevice->Frequency/1000);
     snd_pcm_hw_params_malloc(&p);
 
     if((i=snd_pcm_hw_params_any(data->pcmHandle, p)) < 0)
-        err = "any";
+        funcerr = "any";
     /* set interleaved access */
     if(i >= 0 && (i=snd_pcm_hw_params_set_access(data->pcmHandle, p, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
-        err = "set access";
+        funcerr = "set access";
     /* set format (implicitly sets sample bits) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_format(data->pcmHandle, p, format)) < 0)
-        err = "set format";
+        funcerr = "set format";
     /* set channels (implicitly sets frame bits) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_channels(data->pcmHandle, p, ChannelsFromDevFmt(pDevice->FmtChans))) < 0)
-        err = "set channels";
+        funcerr = "set channels";
     /* set rate (implicitly constrains period/buffer parameters) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_rate(data->pcmHandle, p, pDevice->Frequency, 0)) < 0)
-        err = "set rate near";
+        funcerr = "set rate near";
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, p, &bufferSizeInFrames)) < 0)
-        err = "set buffer size near";
+        funcerr = "set buffer size near";
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
     if(i >= 0 && (i=snd_pcm_hw_params_set_period_size_near(data->pcmHandle, p, &periodSizeInFrames, NULL)) < 0)
-        err = "set period size near";
+        funcerr = "set period size near";
     /* install and prepare hardware configuration */
     if(i >= 0 && (i=snd_pcm_hw_params(data->pcmHandle, p)) < 0)
-        err = "set params";
+        funcerr = "set params";
     if(i < 0)
     {
-        ERR("%s failed: %s\n", err, snd_strerror(i));
+        ERR("%s failed: %s\n", funcerr, snd_strerror(i));
         snd_pcm_hw_params_free(p);
         goto error;
     }

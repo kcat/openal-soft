@@ -970,7 +970,7 @@ static ALboolean DecomposeDevFormat(ALenum format, enum DevFmtChannels *chans,
     };
     ALuint i;
 
-    for(i = 0;i < sizeof(list)/sizeof(list[0]);i++)
+    for(i = 0;i < COUNTOF(list);i++)
     {
         if(list[i].format == format)
         {
@@ -2474,7 +2474,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         };
         size_t i;
 
-        for(i = 0;i < sizeof(chanlist)/sizeof(chanlist[0]);i++)
+        for(i = 0;i < COUNTOF(chanlist);i++)
         {
             if(strcasecmp(chanlist[i].name, fmt) == 0)
             {
@@ -2483,7 +2483,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
                 break;
             }
         }
-        if(i == sizeof(chanlist)/sizeof(chanlist[0]))
+        if(i == COUNTOF(chanlist))
             ERR("Unsupported channels: %s\n", fmt);
     }
     if(ConfigValueStr(NULL, "sample-type", &fmt))
@@ -2502,7 +2502,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         };
         size_t i;
 
-        for(i = 0;i < sizeof(typelist)/sizeof(typelist[0]);i++)
+        for(i = 0;i < COUNTOF(typelist);i++)
         {
             if(strcasecmp(typelist[i].name, fmt) == 0)
             {
@@ -2511,7 +2511,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
                 break;
             }
         }
-        if(i == sizeof(typelist)/sizeof(typelist[0]))
+        if(i == COUNTOF(typelist))
             ERR("Unsupported sample-type: %s\n", fmt);
     }
 #define DEVICE_FORMAT_REQUEST (DEVICE_CHANNELS_REQUEST|DEVICE_SAMPLE_TYPE_REQUEST)
@@ -2547,7 +2547,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         size_t i;
 
         ERR("Option 'format' is deprecated, please use 'channels' and 'sample-type'\n");
-        for(i = 0;i < sizeof(formats)/sizeof(formats[0]);i++)
+        for(i = 0;i < COUNTOF(formats);i++)
         {
             if(strcasecmp(fmt, formats[i].name) == 0)
             {
@@ -2559,7 +2559,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
                 break;
             }
         }
-        if(i == sizeof(formats)/sizeof(formats[0]))
+        if(i == COUNTOF(formats))
             ERR("Unsupported format: %s\n", fmt);
     }
 #undef DEVICE_FORMAT_REQUEST

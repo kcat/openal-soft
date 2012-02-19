@@ -703,7 +703,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         };
         size_t k;
 
-        for(k = 0;k < sizeof(formatlist)/sizeof(formatlist[0]);k++)
+        for(k = 0;k < COUNTOF(formatlist);k++)
         {
             format = formatlist[k].format;
             if(snd_pcm_hw_params_test_format(data->pcmHandle, p, format) >= 0)
@@ -726,7 +726,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         };
         size_t k;
 
-        for(k = 0;k < sizeof(channellist)/sizeof(channellist[0]);k++)
+        for(k = 0;k < COUNTOF(channellist);k++)
         {
             if(snd_pcm_hw_params_test_channels(data->pcmHandle, p, ChannelsFromDevFmt(channellist[k])) >= 0)
             {

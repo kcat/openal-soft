@@ -1449,7 +1449,7 @@ static const struct {
     DECL(SMALLWATERROOM),
 };
 #undef DECL
-static const ALsizei reverblistsize = sizeof(reverblist)/sizeof(reverblist[0]);
+static const ALsizei reverblistsize = COUNTOF(reverblist);
 
 ALvoid GetReverbEffect(const char *name, ALeffect *effect)
 {

@@ -2136,7 +2136,7 @@ static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
     };
     ALuint i;
 
-    for(i = 0;i < sizeof(list)/sizeof(list[0]);i++)
+    for(i = 0;i < COUNTOF(list);i++)
     {
         if(list[i].format == format)
         {
@@ -2213,7 +2213,7 @@ static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum Fm
     };
     ALuint i;
 
-    for(i = 0;i < sizeof(list)/sizeof(list[0]);i++)
+    for(i = 0;i < COUNTOF(list);i++)
     {
         if(list[i].format == format)
         {

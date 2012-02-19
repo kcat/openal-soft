@@ -284,11 +284,9 @@ static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
 
 static ALCboolean pulse_load(void) //{{{
 {
-    ALCboolean ret = ALC_FALSE;
+    ALCboolean ret = ALC_TRUE;
     if(!pa_handle)
     {
-        pa_threaded_mainloop *loop;
-
 #ifdef HAVE_DYNLOAD
 
 #ifdef _WIN32
@@ -305,9 +303,7 @@ static ALCboolean pulse_load(void) //{{{
 #define LOAD_FUNC(x) do {                                                     \
     p##x = GetSymbol(pa_handle, #x);                                          \
     if(!(p##x)) {                                                             \
-        CloseLib(pa_handle);                                                  \
-        pa_handle = NULL;                                                     \
-        return ALC_FALSE;                                                     \
+        ret = ALC_FALSE;                                                      \
     }                                                                         \
 } while(0)
         LOAD_FUNC(pa_context_unref);
@@ -384,27 +380,7 @@ static ALCboolean pulse_load(void) //{{{
         pa_handle = (void*)0xDEADBEEF;
 #endif
 
-        if((loop=pa_threaded_mainloop_new()) &&
-           pa_threaded_mainloop_start(loop) >= 0)
-        {
-            pa_context *context;
-
-            pa_threaded_mainloop_lock(loop);
-            context = connect_context(loop, AL_TRUE);
-            if(context)
-            {
-                ret = ALC_TRUE;
-
-                pa_context_disconnect(context);
-                pa_context_unref(context);
-            }
-            pa_threaded_mainloop_unlock(loop);
-            pa_threaded_mainloop_stop(loop);
-        }
-        if(loop)
-            pa_threaded_mainloop_free(loop);
-
-        if(!ret)
+        if(ret == ALC_FALSE)
         {
 #ifdef HAVE_DYNLOAD
             CloseLib(pa_handle);
@@ -1320,16 +1296,40 @@ static const BackendFuncs pulse_funcs = { //{{{
 
 ALCboolean alc_pulse_init(BackendFuncs *func_list) //{{{
 {
-    if(!pulse_load())
-        return ALC_FALSE;
+    ALCboolean ret = ALC_FALSE;
 
-    *func_list = pulse_funcs;
+    if(pulse_load())
+    {
+        pa_threaded_mainloop *loop;
 
-    pulse_ctx_flags = 0;
-    if(!GetConfigValueBool("pulse", "spawn-server", 0))
-        pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
+        pulse_ctx_flags = 0;
+        if(!GetConfigValueBool("pulse", "spawn-server", 0))
+            pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
 
-    return ALC_TRUE;
+        if((loop=pa_threaded_mainloop_new()) &&
+           pa_threaded_mainloop_start(loop) >= 0)
+        {
+            pa_context *context;
+
+            pa_threaded_mainloop_lock(loop);
+            context = connect_context(loop, AL_TRUE);
+            if(context)
+            {
+                ret = ALC_TRUE;
+
+                pa_context_disconnect(context);
+                pa_context_unref(context);
+            }
+            pa_threaded_mainloop_unlock(loop);
+            pa_threaded_mainloop_stop(loop);
+        }
+        if(loop)
+            pa_threaded_mainloop_free(loop);
+    }
+
+    if(ret != ALC_FALSE)
+        *func_list = pulse_funcs;
+    return ret;
 } //}}}
 
 void alc_pulse_deinit(void) //{{{

@@ -91,9 +91,6 @@ int bs2b_get_srate(struct bs2b *bs2b);
 /* Clear buffer */
 void bs2b_clear(struct bs2b *bs2b);
 
-/* Return 1 if buffer is clear */
-int bs2b_is_clear(struct bs2b *bs2b);
-
 /* Crossfeeds one stereo sample that are pointed by sample.
  * [0] - first channel, [1] - second channel.
  * Returns crossfided samle by sample pointer.

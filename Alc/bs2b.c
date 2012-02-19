@@ -24,6 +24,7 @@
 #include "config.h"
 
 #include <math.h>
+#include <string.h>
 
 #include "bs2b.h"
 
@@ -147,25 +148,8 @@ int bs2b_get_srate(struct bs2b *bs2b)
 
 void bs2b_clear(struct bs2b *bs2b)
 {
-    int loopv = sizeof(bs2b->last_sample);
-
-    while (loopv)
-    {
-        ((char *)&bs2b->last_sample)[--loopv] = 0;
-    }
+    memset(&bs2b->last_sample, 0, sizeof(bs2b->last_sample));
 } /* bs2b_clear */
-
-int bs2b_is_clear(struct bs2b *bs2b)
-{
-    int loopv = sizeof(bs2b->last_sample);
-
-    while (loopv)
-    {
-        if (((char *)&bs2b->last_sample)[--loopv] != 0)
-            return 0;
-    }
-    return 1;
-} /* bs2b_is_clear */
 
 void bs2b_cross_feed(struct bs2b *bs2b, float *sample)
 {

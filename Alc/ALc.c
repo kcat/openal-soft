@@ -2589,9 +2589,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
-    device->DefaultSlot = (ALeffectslot*)(device+1);
-    if(InitEffectSlot(device->DefaultSlot) != AL_NO_ERROR)
-        device->DefaultSlot = NULL;
+    if(ForcedEffect.type != AL_EFFECT_NULL)
+    {
+        device->DefaultSlot = (ALeffectslot*)(device+1);
+        if(InitEffectSlot(device->DefaultSlot) != AL_NO_ERROR)
+            device->DefaultSlot = NULL;
+    }
 
     // Find a playback device to open
     LockLists();

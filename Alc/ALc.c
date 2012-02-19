@@ -616,7 +616,8 @@ static void alc_initconfig(void)
 
     EmulateEAXReverb = GetConfigValueBool("reverb", "emulate-eax", AL_FALSE);
 
-    if(ConfigValueStr(NULL, "drivers", &devs))
+    if(((devs=getenv("ALSOFT_DRIVERS")) && devs[0]) ||
+       ConfigValueStr(NULL, "drivers", &devs))
     {
         int n;
         size_t len;

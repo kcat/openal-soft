@@ -2491,7 +2491,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         static const struct {
             const char name[16];
             enum DevFmtType type;
-        } chanlist[] = {
+        } typelist[] = {
             { "int8",    DevFmtByte   },
             { "uint8",   DevFmtUByte  },
             { "int16",   DevFmtShort  },
@@ -2502,16 +2502,16 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         };
         size_t i;
 
-        for(i = 0;i < sizeof(chanlist)/sizeof(chanlist[0]);i++)
+        for(i = 0;i < sizeof(typelist)/sizeof(typelist[0]);i++)
         {
-            if(strcasecmp(chanlist[i].name, fmt) == 0)
+            if(strcasecmp(typelist[i].name, fmt) == 0)
             {
-                device->FmtType = chanlist[i].type;
+                device->FmtType = typelist[i].type;
                 device->Flags |= DEVICE_SAMPLE_TYPE_REQUEST;
                 break;
             }
         }
-        if(i == sizeof(chanlist)/sizeof(chanlist[0]))
+        if(i == sizeof(typelist)/sizeof(typelist[0]))
             ERR("Unsupported sample-type: %s\n", fmt);
     }
 #define DEVICE_FORMAT_REQUEST (DEVICE_CHANNELS_REQUEST|DEVICE_SAMPLE_TYPE_REQUEST)

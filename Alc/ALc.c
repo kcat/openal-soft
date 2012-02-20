@@ -498,7 +498,7 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         ZScale = -1.0f;
 
-    str = getenv("__ALSOFT_TRAP_ERROR");
+    str = getenv("ALSOFT_TRAP_ERROR");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
     {
         TrapALError  = AL_TRUE;
@@ -506,11 +506,11 @@ static void alc_init(void)
     }
     else
     {
-        str = getenv("__ALSOFT_TRAP_AL_ERROR");
+        str = getenv("ALSOFT_TRAP_AL_ERROR");
         if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
             TrapALError = AL_TRUE;
 
-        str = getenv("__ALSOFT_TRAP_ALC_ERROR");
+        str = getenv("ALSOFT_TRAP_ALC_ERROR");
         if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
             TrapALCError = ALC_TRUE;
     }
@@ -723,7 +723,7 @@ static void alc_initconfig(void)
     }
 
     InitEffect(&ForcedEffect);
-    str = getenv("__ALSOFT_DEFAULT_REVERB");
+    str = getenv("ALSOFT_DEFAULT_REVERB");
     if(str && str[0])
         GetReverbEffect(str, &ForcedEffect);
     else if(ConfigValueStr(NULL, "default-reverb", &str))

@@ -1455,6 +1455,12 @@ ALvoid GetReverbEffect(const char *name, ALeffect *effect)
 {
     int i;
 
+    if(strcasecmp(name, "none") == 0)
+    {
+        InitEffectParams(effect, AL_EFFECT_NULL);
+        return;
+    }
+
     if(!DisabledEffects[EAXREVERB])
         InitEffectParams(effect, AL_EFFECT_EAXREVERB);
     else if(!DisabledEffects[REVERB])

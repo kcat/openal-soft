@@ -5,8 +5,6 @@
 # The system-wide settings can be put in /etc/openal/alsoft.conf and user-
 # specific override settings in ~/.alsoftrc.
 # For Windows, these settings should go into %AppData%\alsoft.ini
-# The environment variable ALSOFT_CONF can be used to specify another config
-# override
 
 # Option and block names are case-insenstive. The supplied values are only
 # hints and may not be honored (though generally it'll try to get as close as
@@ -152,25 +150,19 @@
 #  Available presets are: Generic, PaddedCell, Room, Bathroom, Livingroom,
 #  Stoneroom, Auditorium, ConcertHall, Cave, Arena, Hangar, CarpetedHallway,
 #  Hallway, StoneCorridor, Alley, Forest, City, Moutains, Quarry, Plain,
-#  ParkingLot, SewerPipe, Underwater, Drugged, Dizzy, Psychotic. Optionally,
-#  the __ALSOFT_DEFAULT_REVERB env var may be set before running the app
-#  instead.
+#  ParkingLot, SewerPipe, Underwater, Drugged, Dizzy, Psychotic.
 #default-reverb =
 
 ## trap-alc-error:
 #  Generates a SIGTRAP signal when an ALC device error is generated, on systems
 #  that support it. This helps when debugging, while trying to find the cause
 #  of a device error. On Windows, a breakpoint exception is generated.
-#  Optionally, the __ALSOFT_TRAP_ALC_ERROR env var may be set before running
-#  the app instead.
 #trap-alc-error = false
 
 ## trap-al-error:
 #  Generates a SIGTRAP signal when an AL context error is generated, on systems
 #  that support it. This helps when debugging, while trying to find the cause
 #  of a context error. On Windows, a breakpoint exception is generated.
-#  Optionally, the __ALSOFT_TRAP_AL_ERROR env var may be set before running the
-#  app instead.
 #trap-al-error = false
 
 ##

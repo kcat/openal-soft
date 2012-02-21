@@ -1080,12 +1080,14 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
     if(!allCaptureDevNameMap)
         probe_devices(AL_TRUE);
 
-    if(!device_name)
-        device_name = pulse_device;
-    else if(strcmp(device_name, pulse_device) != 0)
+    if(!device_name && numCaptureDevNames > 0)
+    {
+        device_name = allCaptureDevNameMap[0].name;
+        pulse_name = allCaptureDevNameMap[0].device_name;
+    }
+    else
     {
         ALuint i;
-
         for(i = 0;i < numCaptureDevNames;i++)
         {
             if(strcmp(device_name, allCaptureDevNameMap[i].name) == 0)

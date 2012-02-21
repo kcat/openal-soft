@@ -987,10 +987,6 @@ void alcMMDevApiProbe(enum DevProbe type)
 
     switch(type)
     {
-        case DEVICE_PROBE:
-            AppendDeviceList(mmDevice);
-            break;
-
         case ALL_DEVICE_PROBE:
             req.FinishedEvt = CreateEvent(NULL, FALSE, FALSE, NULL);
             if(req.FinishedEvt == NULL)

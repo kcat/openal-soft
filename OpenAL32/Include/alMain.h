@@ -439,7 +439,6 @@ static __inline ALuint fastf2u(ALfloat f)
 
 
 enum DevProbe {
-    DEVICE_PROBE,
     ALL_DEVICE_PROBE,
     CAPTURE_DEVICE_PROBE
 };
@@ -697,7 +696,6 @@ ALCcontext *GetContextRef(void);
 void ALCcontext_IncRef(ALCcontext *context);
 void ALCcontext_DecRef(ALCcontext *context);
 
-void AppendDeviceList(const ALCchar *name);
 void AppendAllDeviceList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
 

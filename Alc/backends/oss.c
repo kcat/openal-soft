@@ -500,16 +500,6 @@ void alc_oss_probe(enum DevProbe type)
 {
     switch(type)
     {
-        case DEVICE_PROBE:
-        {
-#ifdef HAVE_STAT
-            struct stat buf;
-            if(stat(GetConfigValue("oss", "device", "/dev/dsp"), &buf) == 0)
-#endif
-                AppendDeviceList(oss_device);
-        }
-        break;
-
         case ALL_DEVICE_PROBE:
         {
 #ifdef HAVE_STAT

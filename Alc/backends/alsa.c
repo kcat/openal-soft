@@ -1117,10 +1117,6 @@ void alc_alsa_probe(enum DevProbe type)
 
     switch(type)
     {
-        case DEVICE_PROBE:
-            AppendDeviceList(alsaDevice);
-            break;
-
         case ALL_DEVICE_PROBE:
             for(i = 0;i < numDevNames;++i)
                 free(allDevNameMap[i].device);

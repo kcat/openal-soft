@@ -342,9 +342,6 @@ void alc_wave_probe(enum DevProbe type)
 
     switch(type)
     {
-        case DEVICE_PROBE:
-            AppendDeviceList(waveDevice);
-            break;
         case ALL_DEVICE_PROBE:
             AppendAllDeviceList(waveDevice);
             break;

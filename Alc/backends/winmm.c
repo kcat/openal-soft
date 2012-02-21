@@ -752,12 +752,6 @@ void alcWinMMProbe(enum DevProbe type)
 
     switch(type)
     {
-        case DEVICE_PROBE:
-            ProbePlaybackDevices();
-            if(NumPlaybackDevices > 0)
-                AppendDeviceList(woDefault);
-            break;
-
         case ALL_DEVICE_PROBE:
             ProbePlaybackDevices();
             if(NumPlaybackDevices > 0)

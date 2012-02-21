@@ -1365,33 +1365,10 @@ void alc_pulse_deinit(void) //{{{
 
 void alc_pulse_probe(enum DevProbe type) //{{{
 {
-    pa_threaded_mainloop *loop;
     ALuint i;
 
     switch(type)
     {
-        case DEVICE_PROBE:
-            if((loop=pa_threaded_mainloop_new()) &&
-               pa_threaded_mainloop_start(loop) >= 0)
-            {
-                pa_context *context;
-
-                pa_threaded_mainloop_lock(loop);
-                context = connect_context(loop, AL_FALSE);
-                if(context)
-                {
-                    AppendDeviceList(pulse_device);
-
-                    pa_context_disconnect(context);
-                    pa_context_unref(context);
-                }
-                pa_threaded_mainloop_unlock(loop);
-                pa_threaded_mainloop_stop(loop);
-            }
-            if(loop)
-                pa_threaded_mainloop_free(loop);
-            break;
-
         case ALL_DEVICE_PROBE:
             for(i = 0;i < numDevNames;++i)
             {

@@ -327,14 +327,12 @@ static const ALCchar alcErrOutOfMemory[] = "Out of Memory";
 
 /* Device lists. Sizes only include the first ending null character, not the
  * second */
-static ALCchar *alcDeviceList;
-static size_t alcDeviceListSize;
+static const ALCchar alcDefaultName[] = "OpenAL Soft\0";
 static ALCchar *alcAllDeviceList;
 static size_t alcAllDeviceListSize;
 static ALCchar *alcCaptureDeviceList;
 static size_t alcCaptureDeviceListSize;
 /* Default is always the first in the list */
-static ALCchar *alcDefaultDeviceSpecifier;
 static ALCchar *alcDefaultAllDeviceSpecifier;
 static ALCchar *alcCaptureDefaultDeviceSpecifier;
 
@@ -758,8 +756,6 @@ static void ProbeList(ALCchar **list, size_t *listsize, enum DevProbe type)
     UnlockLists();
 }
 
-static void ProbeDeviceList(void)
-{ ProbeList(&alcDeviceList, &alcDeviceListSize, DEVICE_PROBE); }
 static void ProbeAllDeviceList(void)
 { ProbeList(&alcAllDeviceList, &alcAllDeviceListSize, ALL_DEVICE_PROBE); }
 static void ProbeCaptureDeviceList(void)
@@ -791,7 +787,6 @@ static void AppendList(const ALCchar *name, ALCchar **List, size_t *ListSize)
 void Append##type##List(const ALCchar *name)                                 \
 { AppendList(name, &alc##type##List, &alc##type##ListSize); }
 
-DECL_APPEND_LIST_FUNC(Device)
 DECL_APPEND_LIST_FUNC(AllDevice)
 DECL_APPEND_LIST_FUNC(CaptureDevice)
 
@@ -1626,7 +1621,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return NULL;
     }
 
-    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, "openal soft") == 0 || strcasecmp(deviceName, "openal-soft") == 0))
+    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = NULL;
 
     device = calloc(1, sizeof(ALCdevice));
@@ -1835,15 +1830,12 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_DEVICE_SPECIFIER:
-        if(VerifyDevice(pDevice))
+        if(!VerifyDevice(pDevice))
+            value = alcDefaultName;
+        else
         {
             value = pDevice->szDeviceName;
             ALCdevice_DecRef(pDevice);
-        }
-        else
-        {
-            ProbeDeviceList();
-            value = alcDeviceList;
         }
         break;
 
@@ -1867,18 +1859,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
 
     /* Default devices are always first in the list */
     case ALC_DEFAULT_DEVICE_SPECIFIER:
-        if(!alcDeviceList)
-            ProbeDeviceList();
-
-        pDevice = VerifyDevice(pDevice);
-
-        free(alcDefaultDeviceSpecifier);
-        alcDefaultDeviceSpecifier = strdup(alcDeviceList ? alcDeviceList : "");
-        if(!alcDefaultDeviceSpecifier)
-            alcSetError(pDevice, ALC_OUT_OF_MEMORY);
-
-        value = alcDefaultDeviceSpecifier;
-        if(pDevice) ALCdevice_DecRef(pDevice);
+        value = alcDefaultName;
         break;
 
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
@@ -2419,7 +2400,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         return NULL;
     }
 
-    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, "openal soft") == 0 || strcasecmp(deviceName, "openal-soft") == 0))
+    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = NULL;
 
     device = calloc(1, sizeof(ALCdevice)+sizeof(ALeffectslot));
@@ -2784,15 +2765,11 @@ static void ReleaseALC(void)
 {
     ALCdevice *dev;
 
-    free(alcDeviceList); alcDeviceList = NULL;
-    alcDeviceListSize = 0;
     free(alcAllDeviceList); alcAllDeviceList = NULL;
     alcAllDeviceListSize = 0;
     free(alcCaptureDeviceList); alcCaptureDeviceList = NULL;
     alcCaptureDeviceListSize = 0;
 
-    free(alcDefaultDeviceSpecifier);
-    alcDefaultDeviceSpecifier = NULL;
     free(alcDefaultAllDeviceSpecifier);
     alcDefaultAllDeviceSpecifier = NULL;
     free(alcCaptureDefaultDeviceSpecifier);

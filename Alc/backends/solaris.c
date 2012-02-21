@@ -268,9 +268,6 @@ void alc_solaris_probe(enum DevProbe type)
 
     switch(type)
     {
-        case DEVICE_PROBE:
-            AppendDeviceList(solaris_device);
-            break;
         case ALL_DEVICE_PROBE:
             AppendAllDeviceList(solaris_device);
             break;

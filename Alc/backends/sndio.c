@@ -357,9 +357,6 @@ void alc_sndio_probe(enum DevProbe type)
 {
     switch(type)
     {
-        case DEVICE_PROBE:
-            AppendDeviceList(sndio_device);
-            break;
         case ALL_DEVICE_PROBE:
             AppendAllDeviceList(sndio_device);
             break;

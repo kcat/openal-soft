@@ -152,9 +152,6 @@ void alc_null_probe(enum DevProbe type)
 {
     switch(type)
     {
-        case DEVICE_PROBE:
-            AppendDeviceList(nullDevice);
-            break;
         case ALL_DEVICE_PROBE:
             AppendAllDeviceList(nullDevice);
             break;

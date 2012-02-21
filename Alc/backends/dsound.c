@@ -929,10 +929,6 @@ void alcDSoundProbe(enum DevProbe type)
 
     switch(type)
     {
-        case DEVICE_PROBE:
-            AppendDeviceList(dsDevice);
-            break;
-
         case ALL_DEVICE_PROBE:
             for(i = 0;i < NumPlaybackDevices;++i)
                 free(PlaybackDeviceList[i].name);

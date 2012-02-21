@@ -163,6 +163,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
             }
+            if(ALSource->Params.Step == FRACTIONONE)
+                Resampler = PointResampler;
 
             Channels = ALBuffer->FmtChannels;
             break;
@@ -170,11 +172,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         BufferListItem = BufferListItem->next;
     }
     if(!DirectChannels && Device->Hrtf)
-        ALSource->Params.DoMix = SelectHrtfMixer((ALSource->Params.Step==FRACTIONONE) ?
-                                                 PointResampler : Resampler);
+        ALSource->Params.DoMix = SelectHrtfMixer(Resampler);
     else
-        ALSource->Params.DoMix = SelectMixer((ALSource->Params.Step==FRACTIONONE) ?
-                                             PointResampler : Resampler);
+        ALSource->Params.DoMix = SelectMixer(Resampler);
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
@@ -667,17 +667,17 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
             }
+            if(ALSource->Params.Step == FRACTIONONE)
+                Resampler = PointResampler;
 
             break;
         }
         BufferListItem = BufferListItem->next;
     }
     if(Device->Hrtf)
-        ALSource->Params.DoMix = SelectHrtfMixer((ALSource->Params.Step==FRACTIONONE) ?
-                                                 PointResampler : Resampler);
+        ALSource->Params.DoMix = SelectHrtfMixer(Resampler);
     else
-        ALSource->Params.DoMix = SelectMixer((ALSource->Params.Step==FRACTIONONE) ?
-                                             PointResampler : Resampler);
+        ALSource->Params.DoMix = SelectMixer(Resampler);
 
     if(Device->Hrtf)
     {

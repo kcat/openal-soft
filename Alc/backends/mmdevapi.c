@@ -72,7 +72,6 @@ typedef struct {
     GUID guid;
 } DevMap;
 
-static const ALCchar mmDevice[] = "WASAPI Default";
 static DevMap *PlaybackDeviceList;
 static ALuint NumPlaybackDevices;
 static DevMap *CaptureDeviceList;
@@ -676,10 +675,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             if(SUCCEEDED(hr))
             {
                 Enumerator = ptr;
-                if(IsEqualGUID(&data->guid, &GUID_NULL))
-                    hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(Enumerator, eRender, eMultimedia, &data->mmdev);
-                else
-                    hr = get_mmdevice_by_guid(Enumerator, eRender, &data->guid, &data->mmdev);
+                hr = get_mmdevice_by_guid(Enumerator, eRender, &data->guid, &data->mmdev);
                 IMMDeviceEnumerator_Release(Enumerator);
                 Enumerator = NULL;
             }
@@ -848,21 +844,21 @@ static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName
 
     if(SUCCEEDED(hr))
     {
-        data->guid = GUID_NULL;
+        if(!PlaybackDeviceList)
+        {
+            ThreadRequest req = { data->MsgEvent, 0 };
+            if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, ALL_DEVICE_PROBE))
+                (void)WaitForResponse(&req);
+        }
 
-        if(!deviceName)
-            deviceName = mmDevice;
-        else if(strcmp(deviceName, mmDevice) != 0)
+        if(!deviceName && NumPlaybackDevices > 0)
+        {
+            deviceName = PlaybackDeviceList[0].name;
+            data->guid = PlaybackDeviceList[0].guid;
+        }
+        else
         {
             ALuint i;
-
-            if(!PlaybackDeviceList)
-            {
-                ThreadRequest req = { data->MsgEvent, 0 };
-
-                if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, ALL_DEVICE_PROBE))
-                    (void)WaitForResponse(&req);
-            }
 
             hr = E_FAIL;
             for(i = 0;i < NumPlaybackDevices;i++)

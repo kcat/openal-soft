@@ -749,10 +749,10 @@ static void ProbeList(ALCchar **list, size_t *listsize, enum DevProbe type)
     *list = NULL;
     *listsize = 0;
 
-    if(type == CAPTURE_DEVICE_PROBE)
-        CaptureBackend.Probe(type);
-    else
+    if(type == ALL_DEVICE_PROBE && PlaybackBackend.Probe)
         PlaybackBackend.Probe(type);
+    else if(type == CAPTURE_DEVICE_PROBE && CaptureBackend.Probe)
+        CaptureBackend.Probe(type);
     UnlockLists();
 }
 

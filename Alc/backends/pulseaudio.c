@@ -216,7 +216,6 @@ typedef struct {
 } DevMap;
 
 
-static const ALCchar pulse_device[] = "PulseAudio Default";
 static DevMap *allDevNameMap;
 static ALuint numDevNames;
 static DevMap *allCaptureDevNameMap;
@@ -823,9 +822,12 @@ static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name
     if(!allDevNameMap)
         probe_devices(AL_FALSE);
 
-    if(!device_name)
-        device_name = pulse_device;
-    else if(strcmp(device_name, pulse_device) != 0)
+    if(!device_name && numDevNames > 0)
+    {
+        device_name = allDevNameMap[0].name;
+        pulse_name = allDevNameMap[0].device_name;
+    }
+    else
     {
         ALuint i;
 

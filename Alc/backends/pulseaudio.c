@@ -1141,7 +1141,7 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
         case DevFmtByte:
         case DevFmtUShort:
         case DevFmtUInt:
-            ERR("Capture format type %#x capture not supported on PulseAudio\n", device->FmtType);
+            ERR("%s capture samples not supported\n", DevFmtTypeString(device->FmtType));
             pa_threaded_mainloop_unlock(data->loop);
             goto fail;
     }

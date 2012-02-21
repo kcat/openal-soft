@@ -56,8 +56,6 @@ typedef struct {
 } WinMMData;
 
 
-static const ALCchar woDefault[] = "WaveOut Default";
-
 static ALCchar **PlaybackDeviceList;
 static ALuint  NumPlaybackDevices;
 static ALCchar **CaptureDeviceList;
@@ -286,26 +284,21 @@ static ALCenum WinMMOpenPlayback(ALCdevice *pDevice, const ALCchar *deviceName)
     MMRESULT res;
     ALuint i = 0;
 
-    // Find the Device ID matching the deviceName if valid
-    if(!deviceName || strcmp(deviceName, woDefault) == 0)
-        lDeviceID = WAVE_MAPPER;
-    else
-    {
-        if(!PlaybackDeviceList)
-            ProbePlaybackDevices();
+    if(!PlaybackDeviceList)
+        ProbePlaybackDevices();
 
-        for(i = 0;i < NumPlaybackDevices;i++)
+    // Find the Device ID matching the deviceName if valid
+    for(i = 0;i < NumPlaybackDevices;i++)
+    {
+        if(PlaybackDeviceList[i] &&
+           (!deviceName || strcmp(deviceName, PlaybackDeviceList[i]) == 0))
         {
-            if(PlaybackDeviceList[i] &&
-               strcmp(deviceName, PlaybackDeviceList[i]) == 0)
-            {
-                lDeviceID = i;
-                break;
-            }
+            lDeviceID = i;
+            break;
         }
-        if(i == NumPlaybackDevices)
-            return ALC_INVALID_VALUE;
     }
+    if(i == NumPlaybackDevices)
+        return ALC_INVALID_VALUE;
 
     pData = calloc(1, sizeof(*pData));
     if(!pData)
@@ -371,8 +364,7 @@ retry_open:
 
     pData->Frequency = pDevice->Frequency;
 
-    pDevice->szDeviceName = strdup((lDeviceID==WAVE_MAPPER) ? woDefault :
-                                   PlaybackDeviceList[lDeviceID]);
+    pDevice->szDeviceName = strdup(PlaybackDeviceList[lDeviceID]);
     return ALC_NO_ERROR;
 
 failure:
@@ -487,27 +479,13 @@ static ALCenum WinMMOpenCapture(ALCdevice *pDevice, const ALCchar *deviceName)
         ProbeCaptureDevices();
 
     // Find the Device ID matching the deviceName if valid
-    if(deviceName)
+    for(i = 0;i < NumCaptureDevices;i++)
     {
-        for(i = 0;i < NumCaptureDevices;i++)
+        if(CaptureDeviceList[i] &&
+           (!deviceName || strcmp(deviceName, CaptureDeviceList[i]) == 0))
         {
-            if(CaptureDeviceList[i] &&
-               strcmp(deviceName, CaptureDeviceList[i]) == 0)
-            {
-                lDeviceID = i;
-                break;
-            }
-        }
-    }
-    else
-    {
-        for(i = 0;i < NumCaptureDevices;i++)
-        {
-            if(CaptureDeviceList[i])
-            {
-                lDeviceID = i;
-                break;
-            }
+            lDeviceID = i;
+            break;
         }
     }
     if(i == NumCaptureDevices)
@@ -754,8 +732,6 @@ void alcWinMMProbe(enum DevProbe type)
     {
         case ALL_DEVICE_PROBE:
             ProbePlaybackDevices();
-            if(NumPlaybackDevices > 0)
-                AppendAllDeviceList(woDefault);
             for(i = 0;i < NumPlaybackDevices;i++)
             {
                 if(PlaybackDeviceList[i])

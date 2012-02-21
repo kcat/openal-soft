@@ -86,7 +86,6 @@ typedef struct {
     GUID guid;
 } DevMap;
 
-static const ALCchar dsDevice[] = "DirectSound Default";
 static DevMap *PlaybackDeviceList;
 static ALuint NumPlaybackDevices;
 static DevMap *CaptureDeviceList;
@@ -312,18 +311,21 @@ static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
     LPGUID guid = NULL;
     HRESULT hr;
 
-    if(!deviceName)
-        deviceName = dsDevice;
-    else if(strcmp(deviceName, dsDevice) != 0)
+    if(!PlaybackDeviceList)
+    {
+        hr = DirectSoundEnumerateA(DSoundEnumPlaybackDevices, NULL);
+        if(FAILED(hr))
+            ERR("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+    }
+
+    if(!deviceName && NumPlaybackDevices > 0)
+    {
+        deviceName = PlaybackDeviceList[0].name;
+        guid = &PlaybackDeviceList[0].guid;
+    }
+    else
     {
         ALuint i;
-
-        if(!PlaybackDeviceList)
-        {
-            hr = DirectSoundEnumerateA(DSoundEnumPlaybackDevices, NULL);
-            if(FAILED(hr))
-                ERR("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
-        }
 
         for(i = 0;i < NumPlaybackDevices;i++)
         {

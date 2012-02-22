@@ -623,7 +623,7 @@ static ALuint PulseProc(ALvoid *param)
     pa_threaded_mainloop_lock(data->loop);
     do {
         len = (Device->Connected ? pa_stream_writable_size(data->stream) : 0);
-        len -= len%(Device->UpdateSize*data->frame_size);
+        len -= len%data->attr.minreq;
         if(len == 0)
         {
             pa_threaded_mainloop_wait(data->loop);

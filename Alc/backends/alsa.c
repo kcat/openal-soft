@@ -392,14 +392,6 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
 }
 
 
-static int xrun_recovery(snd_pcm_t *handle, int err)
-{
-    err = snd_pcm_recover(handle, err, 1);
-    if(err < 0)
-        ERR("recover failed: %s\n", snd_strerror(err));
-    return err;
-}
-
 static int verify_state(snd_pcm_t *handle)
 {
     snd_pcm_state_t state = snd_pcm_state(handle);
@@ -407,12 +399,12 @@ static int verify_state(snd_pcm_t *handle)
         return -ENODEV;
     if(state == SND_PCM_STATE_XRUN)
     {
-        int err = xrun_recovery(handle, -EPIPE);
+        int err = snd_pcm_recover(handle, -EPIPE, 1);
         if(err < 0) return err;
     }
     else if(state == SND_PCM_STATE_SUSPENDED)
     {
-        int err = xrun_recovery(handle, -ESTRPIPE);
+        int err = snd_pcm_recover(handle, -ESTRPIPE, 1);
         if(err < 0) return err;
     }
 

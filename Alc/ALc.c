@@ -1049,7 +1049,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     int oldMode;
     ALuint i;
 
-    if(device->IsLoopbackDevice && !(attrList && attrList[0]))
+    if(device->Type == Loopback && !(attrList && attrList[0]))
     {
         WARN("Missing attributes for loopback device\n");
         return ALC_INVALID_VALUE;
@@ -1086,7 +1086,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         while(attrList[attrIdx])
         {
             if(attrList[attrIdx] == ALC_FORMAT_CHANNELS_SOFT &&
-               device->IsLoopbackDevice)
+               device->Type == Loopback)
             {
                 ALCint val = attrList[attrIdx + 1];
                 if(!IsValidALCChannels(val) || !ChannelsFromDevFmt(val))
@@ -1096,7 +1096,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
 
             if(attrList[attrIdx] == ALC_FORMAT_TYPE_SOFT &&
-               device->IsLoopbackDevice)
+               device->Type == Loopback)
             {
                 ALCint val = attrList[attrIdx + 1];
                 if(!IsValidALCType(val) || !BytesFromDevFmt(val))
@@ -1107,7 +1107,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
             if(attrList[attrIdx] == ALC_FREQUENCY)
             {
-                if(device->IsLoopbackDevice)
+                if(device->Type == Loopback)
                 {
                     freq = attrList[attrIdx + 1];
                     if(freq < MIN_OUTPUT_RATE)
@@ -1136,7 +1136,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             attrIdx += 2;
         }
 
-        if(device->IsLoopbackDevice)
+        if(device->Type == Loopback)
         {
             if(gotFmt != GotAll)
             {
@@ -1219,7 +1219,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     device->Hrtf = NULL;
-    if(!device->IsLoopbackDevice && GetConfigValueBool(NULL, "hrtf", AL_FALSE))
+    if(device->Type != Loopback && GetConfigValueBool(NULL, "hrtf", AL_FALSE))
         device->Hrtf = GetHrtf(device);
     TRACE("HRTF %s\n", device->Hrtf?"enabled":"disabled");
 
@@ -1635,8 +1635,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->Funcs = &CaptureBackend.Funcs;
     device->ref = 1;
     device->Connected = ALC_TRUE;
-    device->IsCaptureDevice = AL_TRUE;
-    device->IsLoopbackDevice = AL_FALSE;
+    device->Type = Capture;
     InitializeCriticalSection(&device->Mutex);
 
     InitUIntMap(&device->BufferMap, ~0);
@@ -1688,7 +1687,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
     while(*list && *list != pDevice)
         list = &(*list)->next;
 
-    if(!*list || !(*list)->IsCaptureDevice)
+    if(!*list || (*list)->Type != Capture)
     {
         alcSetError(*list, ALC_INVALID_DEVICE);
         UnlockLists();
@@ -1709,7 +1708,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 
 ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 {
-    if(!(device=VerifyDevice(device)) || !device->IsCaptureDevice)
+    if(!(device=VerifyDevice(device)) || device->Type != Capture)
     {
         alcSetError(device, ALC_INVALID_DEVICE);
         if(device) ALCdevice_DecRef(device);
@@ -1725,7 +1724,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 
 ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 {
-    if(!(device=VerifyDevice(device)) || !device->IsCaptureDevice)
+    if(!(device=VerifyDevice(device)) || device->Type != Capture)
     {
         alcSetError(device, ALC_INVALID_DEVICE);
         if(device) ALCdevice_DecRef(device);
@@ -1742,7 +1741,7 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
     ALCenum err = ALC_INVALID_DEVICE;
-    if((device=VerifyDevice(device)) != NULL && device->IsCaptureDevice)
+    if((device=VerifyDevice(device)) != NULL && device->Type == Capture)
     {
         err = ALC_INVALID_VALUE;
         LockDevice(device);
@@ -1959,7 +1958,7 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                 break;
         }
     }
-    else if(device->IsCaptureDevice)
+    else if(device->Type == Capture)
     {
         switch(param)
         {
@@ -2012,7 +2011,7 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                     data[i++] = ALC_FREQUENCY;
                     data[i++] = device->Frequency;
 
-                    if(!device->IsLoopbackDevice)
+                    if(device->Type != Loopback)
                     {
                         data[i++] = ALC_REFRESH;
                         data[i++] = device->Frequency / device->UpdateSize;
@@ -2047,28 +2046,28 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                 break;
 
             case ALC_REFRESH:
-                if(device->IsLoopbackDevice)
+                if(device->Type == Loopback)
                     alcSetError(device, ALC_INVALID_DEVICE);
                 else
                     *data = device->Frequency / device->UpdateSize;
                 break;
 
             case ALC_SYNC:
-                if(device->IsLoopbackDevice)
+                if(device->Type == Loopback)
                     alcSetError(device, ALC_INVALID_DEVICE);
                 else
                     *data = ALC_FALSE;
                 break;
 
             case ALC_FORMAT_CHANNELS_SOFT:
-                if(!device->IsLoopbackDevice)
+                if(device->Type != Loopback)
                     alcSetError(device, ALC_INVALID_DEVICE);
                 else
                     *data = device->FmtChans;
                 break;
 
             case ALC_FORMAT_TYPE_SOFT:
-                if(!device->IsLoopbackDevice)
+                if(device->Type != Loopback)
                     alcSetError(device, ALC_INVALID_DEVICE);
                 else
                     *data = device->FmtType;
@@ -2198,7 +2197,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALCenum err;
 
     LockLists();
-    if(!(device=VerifyDevice(device)) || device->IsCaptureDevice || !device->Connected)
+    if(!(device=VerifyDevice(device)) || device->Type == Capture || !device->Connected)
     {
         UnlockLists();
         alcSetError(device, ALC_INVALID_DEVICE);
@@ -2414,8 +2413,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Funcs = &PlaybackBackend.Funcs;
     device->ref = 1;
     device->Connected = ALC_TRUE;
-    device->IsCaptureDevice = AL_FALSE;
-    device->IsLoopbackDevice = AL_FALSE;
+    device->Type = Playback;
     InitializeCriticalSection(&device->Mutex);
     device->LastError = ALC_NO_ERROR;
 
@@ -2615,7 +2613,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     while(*list && *list != pDevice)
         list = &(*list)->next;
 
-    if(!*list || (*list)->IsCaptureDevice)
+    if(!*list || (*list)->Type == Capture)
     {
         alcSetError(*list, ALC_INVALID_DEVICE);
         UnlockLists();
@@ -2669,8 +2667,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(ALCdevice *device)
     device->Funcs = &BackendLoopback.Funcs;
     device->ref = 1;
     device->Connected = ALC_TRUE;
-    device->IsCaptureDevice = AL_FALSE;
-    device->IsLoopbackDevice = AL_TRUE;
+    device->Type = Loopback;
     InitializeCriticalSection(&device->Mutex);
     device->LastError = ALC_NO_ERROR;
 
@@ -2727,7 +2724,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
 {
     ALCboolean ret = ALC_FALSE;
 
-    if(!(device=VerifyDevice(device)) || !device->IsLoopbackDevice)
+    if(!(device=VerifyDevice(device)) || device->Type != Loopback)
         alcSetError(device, ALC_INVALID_DEVICE);
     else if(freq <= 0)
         alcSetError(device, ALC_INVALID_VALUE);
@@ -2751,7 +2748,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
  */
 ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    if(!(device=VerifyDevice(device)) || !device->IsLoopbackDevice)
+    if(!(device=VerifyDevice(device)) || device->Type != Loopback)
         alcSetError(device, ALC_INVALID_DEVICE);
     else if(samples < 0 || (samples > 0 && buffer == NULL))
         alcSetError(device, ALC_INVALID_VALUE);

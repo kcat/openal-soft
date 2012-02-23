@@ -271,7 +271,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             layoutname = "layout_71CHN";
             break;
     }
-    if(layoutname && !Device->IsLoopbackDevice)
+    if(layoutname && Device->Type != Loopback)
         SetSpeakerArrangement(layoutname, SpeakerAngle, Speaker2Chan, Device->NumChan);
 
     for(pos = 0; pos < LUT_NUM; pos++)

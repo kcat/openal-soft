@@ -548,13 +548,18 @@ extern const struct EffectList {
 } EffectList[];
 
 
+enum DeviceType {
+    Playback,
+    Capture,
+    Loopback
+};
+
 struct ALCdevice_struct
 {
     volatile RefCount ref;
 
-    ALCboolean   Connected;
-    ALboolean    IsCaptureDevice;
-    ALboolean    IsLoopbackDevice;
+    ALCboolean Connected;
+    enum DeviceType Type;
 
     CRITICAL_SECTION Mutex;
 

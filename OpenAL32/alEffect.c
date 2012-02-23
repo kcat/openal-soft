@@ -1455,9 +1455,10 @@ ALvoid GetReverbEffect(const char *name, ALeffect *effect)
 {
     int i;
 
-    if(strcasecmp(name, "none") == 0)
+    if(strcasecmp(name, "NONE") == 0)
     {
         InitEffectParams(effect, AL_EFFECT_NULL);
+        TRACE("Loading reverb '%s'\n", "NONE");
         return;
     }
 

@@ -616,19 +616,19 @@ static ALuint PulseProc(ALvoid *param)
 {
     ALCdevice *Device = param;
     pulse_data *data = Device->ExtraData;
-    ssize_t len;
+    size_t len;
 
     SetRTPriority();
 
     pa_threaded_mainloop_lock(data->loop);
     do {
-        len = (Device->Connected ? pa_stream_writable_size(data->stream) : 0);
-        len -= len%data->attr.minreq;
-        if(len == 0)
+        len = pa_stream_writable_size(data->stream);
+        if(len < data->attr.minreq)
         {
             pa_threaded_mainloop_wait(data->loop);
             continue;
         }
+        len -= len%data->attr.minreq;
 
         while(len > 0)
         {
@@ -652,7 +652,7 @@ static ALuint PulseProc(ALvoid *param)
             pa_stream_write(data->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
             len -= newlen;
         }
-    } while(Device->Connected && !data->killNow);
+    } while(!data->killNow && Device->Connected);
     pa_threaded_mainloop_unlock(data->loop);
 
     return 0;

@@ -191,8 +191,9 @@ static void add_device(IMMDevice *device, DevMap *devmap)
             WARN("GetValue failed: 0x%08lx\n", hr);
     }
     if(SUCCEEDED(hr))
+        hr = CLSIDFromString(pvguid.pwszVal, &devmap->guid);
+    if(SUCCEEDED(hr))
     {
-        CLSIDFromString(pvguid.pwszVal, &devmap->guid);
         if((len=WideCharToMultiByte(CP_ACP, 0, pvname.pwszVal, -1, NULL, 0, NULL, NULL)) > 0)
         {
             devmap->name = calloc(1, len);

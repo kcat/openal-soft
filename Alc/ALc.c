@@ -1049,14 +1049,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     int oldMode;
     ALuint i;
 
-    if(device->Type == Loopback && !(attrList && attrList[0]))
-    {
-        WARN("Missing attributes for loopback device\n");
-        return ALC_INVALID_VALUE;
-    }
-
     // Check for attributes
-    if(attrList && attrList[0])
+    if(device->Type == Loopback)
     {
         enum {
             GotFreq  = 1<<0,
@@ -1070,23 +1064,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ALCuint attrIdx = 0;
         ALCint gotFmt = 0;
 
-        // If a context is already running on the device, stop playback so the
-        // device attributes can be updated
-        if((device->Flags&DEVICE_RUNNING))
-            ALCdevice_StopPlayback(device);
-        device->Flags &= ~DEVICE_RUNNING;
+        if(!attrList)
+        {
+            WARN("Missing attributes for loopback device\n");
+            return ALC_INVALID_VALUE;
+        }
 
-        freq = device->Frequency;
-        schans = device->FmtChans;
-        stype = device->FmtType;
         numMono = device->NumMonoSources;
         numStereo = device->NumStereoSources;
         numSends = device->NumAuxSends;
 
         while(attrList[attrIdx])
         {
-            if(attrList[attrIdx] == ALC_FORMAT_CHANNELS_SOFT &&
-               device->Type == Loopback)
+            if(attrList[attrIdx] == ALC_FORMAT_CHANNELS_SOFT)
             {
                 ALCint val = attrList[attrIdx + 1];
                 if(!IsValidALCChannels(val) || !ChannelsFromDevFmt(val))
@@ -1095,8 +1085,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 gotFmt |= GotChans;
             }
 
-            if(attrList[attrIdx] == ALC_FORMAT_TYPE_SOFT &&
-               device->Type == Loopback)
+            if(attrList[attrIdx] == ALC_FORMAT_TYPE_SOFT)
             {
                 ALCint val = attrList[attrIdx + 1];
                 if(!IsValidALCType(val) || !BytesFromDevFmt(val))
@@ -1107,18 +1096,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
             if(attrList[attrIdx] == ALC_FREQUENCY)
             {
-                if(device->Type == Loopback)
-                {
-                    freq = attrList[attrIdx + 1];
-                    if(freq < MIN_OUTPUT_RATE)
-                        return ALC_INVALID_VALUE;
-                    gotFmt |= GotFreq;
-                }
-                else
-                {
-                    freq = attrList[attrIdx + 1];
-                    device->Flags |= DEVICE_FREQUENCY_REQUEST;
-                }
+                freq = attrList[attrIdx + 1];
+                if(freq < MIN_OUTPUT_RATE)
+                    return ALC_INVALID_VALUE;
+                gotFmt |= GotFreq;
             }
 
             if(attrList[attrIdx] == ALC_STEREO_SOURCES)
@@ -1136,19 +1117,68 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             attrIdx += 2;
         }
 
-        if(device->Type == Loopback)
+        if(gotFmt != GotAll)
         {
-            if(gotFmt != GotAll)
+            WARN("Missing format for loopback device\n");
+            return ALC_INVALID_VALUE;
+        }
+
+        ConfigValueUInt(NULL, "sends", &numSends);
+        numSends = minu(MAX_SENDS, numSends);
+
+        if((device->Flags&DEVICE_RUNNING))
+            ALCdevice_StopPlayback(device);
+        device->Flags &= ~DEVICE_RUNNING;
+
+        device->Frequency = freq;
+        device->FmtChans = schans;
+        device->FmtType = stype;
+        device->NumMonoSources = numMono;
+        device->NumStereoSources = numStereo;
+        device->NumAuxSends = numSends;
+    }
+    else if(attrList && attrList[0])
+    {
+        ALCuint freq, numMono, numStereo, numSends;
+        ALCuint attrIdx = 0;
+
+        /* If a context is already running on the device, stop playback so the
+         * device attributes can be updated. */
+        if((device->Flags&DEVICE_RUNNING))
+            ALCdevice_StopPlayback(device);
+        device->Flags &= ~DEVICE_RUNNING;
+
+        freq = device->Frequency;
+        numMono = device->NumMonoSources;
+        numStereo = device->NumStereoSources;
+        numSends = device->NumAuxSends;
+
+        while(attrList[attrIdx])
+        {
+            if(attrList[attrIdx] == ALC_FREQUENCY)
             {
-                WARN("Missing format for loopback device\n");
-                return ALC_INVALID_VALUE;
+                freq = attrList[attrIdx + 1];
+                device->Flags |= DEVICE_FREQUENCY_REQUEST;
             }
+
+            if(attrList[attrIdx] == ALC_STEREO_SOURCES)
+            {
+                numStereo = attrList[attrIdx + 1];
+                if(numStereo > device->MaxNoOfSources)
+                    numStereo = device->MaxNoOfSources;
+
+                numMono = device->MaxNoOfSources - numStereo;
+            }
+
+            if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
+                numSends = attrList[attrIdx + 1];
+
+            attrIdx += 2;
         }
-        else
-        {
-            ConfigValueUInt(NULL, "frequency", &freq);
-            freq = maxu(freq, MIN_OUTPUT_RATE);
-        }
+
+        ConfigValueUInt(NULL, "frequency", &freq);
+        freq = maxu(freq, MIN_OUTPUT_RATE);
+
         ConfigValueUInt(NULL, "sends", &numSends);
         numSends = minu(MAX_SENDS, numSends);
 
@@ -1156,8 +1186,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                              device->Frequency;
 
         device->Frequency = freq;
-        device->FmtChans = schans;
-        device->FmtType = stype;
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
         device->NumAuxSends = numSends;

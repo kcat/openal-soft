@@ -302,7 +302,8 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
 
     DevList = malloc(sizeof(DevMap) * 1);
     DevList[0].name = strdup(alsaDevice);
-    DevList[0].device = strdup(GetConfigValue("alsa", (stream==SND_PCM_STREAM_PLAYBACK) ? "device" : "capture", "default"));
+    DevList[0].device = strdup(GetConfigValue("alsa", (stream==SND_PCM_STREAM_PLAYBACK) ?
+                                                      "device" : "capture", "default"));
     idx = 1;
 
     card = -1;
@@ -371,6 +372,7 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
                 snprintf(device, sizeof(device), "%sCARD=%s,DEV=%d",
                          device_prefix, cardid, dev);
 
+                TRACE("Got device \"%s\", \"%s\"\n", name, device);
                 DevList[idx].name = strdup(name);
                 DevList[idx].device = strdup(device);
                 idx++;

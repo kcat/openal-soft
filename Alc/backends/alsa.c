@@ -397,17 +397,29 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
 static int verify_state(snd_pcm_t *handle)
 {
     snd_pcm_state_t state = snd_pcm_state(handle);
-    if(state == SND_PCM_STATE_DISCONNECTED)
-        return -ENODEV;
-    if(state == SND_PCM_STATE_XRUN)
+    int err;
+
+    switch(state)
     {
-        int err = snd_pcm_recover(handle, -EPIPE, 1);
-        if(err < 0) return err;
-    }
-    else if(state == SND_PCM_STATE_SUSPENDED)
-    {
-        int err = snd_pcm_recover(handle, -ESTRPIPE, 1);
-        if(err < 0) return err;
+        case SND_PCM_STATE_OPEN:
+        case SND_PCM_STATE_SETUP:
+        case SND_PCM_STATE_PREPARED:
+        case SND_PCM_STATE_RUNNING:
+        case SND_PCM_STATE_DRAINING:
+        case SND_PCM_STATE_PAUSED:
+            /* All Okay */
+            break;
+
+        case SND_PCM_STATE_XRUN:
+            if((err=snd_pcm_recover(handle, -EPIPE, 1)) < 0)
+                return err;
+            break;
+        case SND_PCM_STATE_SUSPENDED:
+            if((err=snd_pcm_recover(handle, -ESTRPIPE, 1)) < 0)
+                return err;
+            break;
+        case SND_PCM_STATE_DISCONNECTED:
+            return -ENODEV;
     }
 
     return state;

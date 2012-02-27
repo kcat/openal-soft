@@ -191,7 +191,10 @@ static void add_device(IMMDevice *device, DevMap *devmap)
             WARN("GetValue failed: 0x%08lx\n", hr);
     }
     if(SUCCEEDED(hr))
+    {
+        TRACE("Got device \"%ls\", GUID \"%ls\"\n", pvname.pwszVal, pvguid.pwszVal);
         hr = CLSIDFromString(pvguid.pwszVal, &devmap->guid);
+    }
     if(SUCCEEDED(hr))
     {
         if((len=WideCharToMultiByte(CP_ACP, 0, pvname.pwszVal, -1, NULL, 0, NULL, NULL)) > 0)

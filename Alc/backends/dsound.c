@@ -124,7 +124,9 @@ static ALCboolean DSoundLoad(void)
 
 static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
 {
+    LPOLESTR guidstr = NULL;
     char str[1024];
+    HRESULT hr;
     void *temp;
     int count;
     ALuint i;
@@ -150,6 +152,13 @@ static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR 
         }
     } while(i != NumPlaybackDevices);
 
+    hr = StringFromCLSID(guid, &guidstr);
+    if(SUCCEEDED(hr))
+    {
+        TRACE("Got device \"%s\", GUID \"%ls\"\n", str, guidstr);
+        CoTaskMemFree(guidstr);
+    }
+
     temp = realloc(PlaybackDeviceList, sizeof(DevMap) * (NumPlaybackDevices+1));
     if(temp)
     {
@@ -165,7 +174,9 @@ static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR 
 
 static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
 {
+    LPOLESTR guidstr = NULL;
     char str[1024];
+    HRESULT hr;
     void *temp;
     int count;
     ALuint i;
@@ -190,6 +201,13 @@ static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR d
                 break;
         }
     } while(i != NumCaptureDevices);
+
+    hr = StringFromCLSID(guid, &guidstr);
+    if(SUCCEEDED(hr))
+    {
+        TRACE("Got device \"%s\", GUID \"%ls\"\n", str, guidstr);
+        CoTaskMemFree(guidstr);
+    }
 
     temp = realloc(CaptureDeviceList, sizeof(DevMap) * (NumCaptureDevices+1));
     if(temp)

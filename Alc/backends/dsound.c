@@ -650,6 +650,21 @@ static ALCenum DSoundOpenCapture(ALCdevice *device, const ALCchar *deviceName)
             return ALC_INVALID_VALUE;
     }
 
+    switch(device->FmtType)
+    {
+        case DevFmtByte:
+        case DevFmtUShort:
+        case DevFmtUInt:
+            WARN("%s capture samples not supported\n", DevFmtTypeString(device->FmtType));
+            return ALC_INVALID_ENUM;
+
+        case DevFmtUByte:
+        case DevFmtShort:
+        case DevFmtInt:
+        case DevFmtFloat:
+            break;
+    }
+
     //Initialise requested device
     pData = calloc(1, sizeof(DSoundCaptureData));
     if(!pData)

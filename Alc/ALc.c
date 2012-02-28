@@ -2623,7 +2623,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->next = DeviceList;
     } while(!CompExchangePtr((XchgPtr*)&DeviceList, device->next, device));
 
-    TRACE("Created device %p\n", device);
+    TRACE("Created device %p, \"%s\"\n", device, device->szDeviceName);
     return device;
 }
 

@@ -1857,18 +1857,20 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_DEVICE_SPECIFIER:
-        if(!VerifyDevice(pDevice))
-            value = alcDefaultName;
-        else
+        value = alcDefaultName;
+        break;
+
+    case ALC_ALL_DEVICES_SPECIFIER:
+        if(VerifyDevice(pDevice))
         {
             value = pDevice->szDeviceName;
             ALCdevice_DecRef(pDevice);
         }
-        break;
-
-    case ALC_ALL_DEVICES_SPECIFIER:
-        ProbeAllDeviceList();
-        value = alcAllDeviceList;
+        else
+        {
+            ProbeAllDeviceList();
+            value = alcAllDeviceList;
+        }
         break;
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:

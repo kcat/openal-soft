@@ -381,7 +381,11 @@ int getAVAudioInfo(StreamPtr stream, ALuint *rate, ALenum *channels, ALenum *typ
     else if(stream->CodecCtx->sample_fmt == AV_SAMPLE_FMT_DBL)
         *type = AL_DOUBLE_SOFT;
     else
+    {
+        fprintf(stderr, "Unsupported ffmpeg sample format: %s\n",
+                av_get_sample_fmt_name(stream->CodecCtx->sample_fmt));
         return 1;
+    }
 
     /* Get the OpenAL channel configuration using the channel layout detected
      * by ffmpeg. NOTE: some file types may not specify a channel layout. In
@@ -392,7 +396,7 @@ int getAVAudioInfo(StreamPtr stream, ALuint *rate, ALenum *channels, ALenum *typ
         *channels = AL_STEREO_SOFT;
     else if(stream->CodecCtx->channel_layout == AV_CH_LAYOUT_QUAD)
         *channels = AL_QUAD_SOFT;
-    else if(stream->CodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1)
+    else if(stream->CodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1_BACK)
         *channels = AL_5POINT1_SOFT;
     else if(stream->CodecCtx->channel_layout == AV_CH_LAYOUT_7POINT1)
         *channels = AL_7POINT1_SOFT;
@@ -404,10 +408,20 @@ int getAVAudioInfo(StreamPtr stream, ALuint *rate, ALenum *channels, ALenum *typ
         else if(stream->CodecCtx->channels == 2)
             *channels = AL_STEREO_SOFT;
         else
+        {
+            fprintf(stderr, "Unsupported ffmpeg raw channel count: %d\n",
+                    stream->CodecCtx->channels);
             return 1;
+        }
     }
     else
+    {
+        char str[1024];
+        av_get_channel_layout_string(str, sizeof(str), stream->CodecCtx->channels,
+                                     stream->CodecCtx->channel_layout);
+        fprintf(stderr, "Unsupported ffmpeg channel layout: %s\n", str);
         return 1;
+    }
 
     *rate = stream->CodecCtx->sample_rate;
 

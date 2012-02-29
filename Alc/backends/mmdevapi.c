@@ -58,6 +58,7 @@ typedef struct {
     GUID guid;
     IMMDevice *mmdev;
     IAudioClient *client;
+    IAudioRenderClient *render;
     HANDLE hNotifyEvent;
 
     HANDLE MsgEvent;
@@ -268,10 +269,6 @@ static ALuint MMDevApiProc(ALvoid *ptr)
 {
     ALCdevice *device = ptr;
     MMDevApiData *data = device->ExtraData;
-    union {
-        IAudioRenderClient *iface;
-        void *ptr;
-    } render;
     UINT32 update_size, num_updates;
     UINT32 written, len;
     BYTE *buffer;
@@ -281,14 +278,6 @@ static ALuint MMDevApiProc(ALvoid *ptr)
     if(FAILED(hr))
     {
         ERR("CoInitialize(NULL) failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(device);
-        return 0;
-    }
-
-    hr = IAudioClient_GetService(data->client, &IID_IAudioRenderClient, &render.ptr);
-    if(FAILED(hr))
-    {
-        ERR("Failed to get AudioRenderClient service: 0x%08lx\n", hr);
         aluHandleDisconnect(device);
         return 0;
     }
@@ -318,11 +307,11 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         }
         len -= len%update_size;
 
-        hr = IAudioRenderClient_GetBuffer(render.iface, len, &buffer);
+        hr = IAudioRenderClient_GetBuffer(data->render, len, &buffer);
         if(SUCCEEDED(hr))
         {
             aluMixData(device, buffer, len);
-            hr = IAudioRenderClient_ReleaseBuffer(render.iface, len, 0);
+            hr = IAudioRenderClient_ReleaseBuffer(data->render, len, 0);
         }
         if(FAILED(hr))
         {
@@ -331,8 +320,6 @@ static ALuint MMDevApiProc(ALvoid *ptr)
             break;
         }
     }
-
-    IAudioRenderClient_Release(render.iface);
 
     CoUninitialize();
     return 0;
@@ -386,6 +373,7 @@ static HRESULT DoReset(ALCdevice *device)
     REFERENCE_TIME min_per, buf_time;
     UINT32 buffer_len, min_len;
     HRESULT hr;
+    void *ptr;
 
     hr = IAudioClient_GetMixFormat(data->client, &wfx);
     if(FAILED(hr))
@@ -612,9 +600,17 @@ static HRESULT DoReset(ALCdevice *device)
         return hr;
     }
 
-    data->thread = StartThread(MMDevApiProc, device);
+    hr = IAudioClient_GetService(data->client, &IID_IAudioRenderClient, &ptr);
+    if(SUCCEEDED(hr))
+    {
+        data->render = ptr;
+        data->thread = StartThread(MMDevApiProc, device);
+    }
     if(!data->thread)
     {
+        if(data->render)
+            IAudioRenderClient_Release(data->render);
+        data->render = NULL;
         IAudioClient_Stop(data->client);
         ERR("Failed to start thread\n");
         return E_FAIL;
@@ -725,6 +721,8 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
 
                 data->killNow = 0;
 
+                IAudioRenderClient_Release(data->render);
+                data->render = NULL;
                 IAudioClient_Stop(data->client);
             }
 

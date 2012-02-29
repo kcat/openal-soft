@@ -55,6 +55,7 @@ static void *pa_handle;
 #define MAKE_FUNC(x) static typeof(x) * p##x
 MAKE_FUNC(pa_context_unref);
 MAKE_FUNC(pa_sample_spec_valid);
+MAKE_FUNC(pa_frame_size);
 MAKE_FUNC(pa_stream_drop);
 MAKE_FUNC(pa_strerror);
 MAKE_FUNC(pa_context_get_state);
@@ -121,6 +122,7 @@ MAKE_FUNC(pa_stream_begin_write);
 
 #define pa_context_unref ppa_context_unref
 #define pa_sample_spec_valid ppa_sample_spec_valid
+#define pa_frame_size ppa_frame_size
 #define pa_stream_drop ppa_stream_drop
 #define pa_strerror ppa_strerror
 #define pa_context_get_state ppa_context_get_state
@@ -192,8 +194,6 @@ MAKE_FUNC(pa_stream_begin_write);
 
 typedef struct {
     char *device_name;
-
-    ALCuint frame_size;
 
     const void *cap_store;
     size_t cap_len;
@@ -311,6 +311,7 @@ static ALCboolean pulse_load(void) //{{{
         LOAD_FUNC(pa_context_unref);
         LOAD_FUNC(pa_sample_spec_valid);
         LOAD_FUNC(pa_stream_drop);
+        LOAD_FUNC(pa_frame_size);
         LOAD_FUNC(pa_strerror);
         LOAD_FUNC(pa_context_get_state);
         LOAD_FUNC(pa_stream_get_state);
@@ -619,10 +620,12 @@ static ALuint PulseProc(ALvoid *param)
 {
     ALCdevice *Device = param;
     pulse_data *data = Device->ExtraData;
+    size_t frame_size;
     size_t len;
 
     SetRTPriority();
 
+    frame_size = pa_frame_size(&data->spec);
     pa_threaded_mainloop_lock(data->loop);
     do {
         len = pa_stream_writable_size(data->stream);
@@ -649,7 +652,7 @@ static ALuint PulseProc(ALvoid *param)
             }
             pa_threaded_mainloop_unlock(data->loop);
 
-            aluMixData(Device, buf, newlen/data->frame_size);
+            aluMixData(Device, buf, newlen/frame_size);
 
             pa_threaded_mainloop_lock(data->loop);
             pa_stream_write(data->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
@@ -910,12 +913,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
 
-    data->frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
-    data->attr.prebuf = -1;
-    data->attr.fragsize = -1;
-    data->attr.minreq = device->UpdateSize * data->frame_size;
-    data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
-    data->attr.maxlength = -1;
     flags |= PA_STREAM_EARLY_REQUESTS;
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
 
@@ -961,6 +958,12 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     }
     SetDefaultWFXChannelOrder(device);
 
+    data->attr.prebuf = -1;
+    data->attr.fragsize = -1;
+    data->attr.minreq = device->UpdateSize * pa_frame_size(&data->spec);
+    data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
+    data->attr.maxlength = -1;
+
     data->stream = connect_playback_stream(device, flags, &data->attr, &data->spec, &chanmap);
     if(!data->stream)
     {
@@ -973,12 +976,13 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     data->spec = *(pa_stream_get_sample_spec(data->stream));
     if(device->Frequency != data->spec.rate)
     {
+        size_t frame_size = pa_frame_size(&data->spec);
         pa_operation *o;
 
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
-        data->attr.minreq = (ALuint64)(data->attr.minreq/data->frame_size) *
-                            data->spec.rate / device->Frequency * data->frame_size;
+        data->attr.minreq = (ALuint64)(data->attr.minreq/frame_size) *
+                            data->spec.rate / device->Frequency * frame_size;
         data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
 
         o = pa_stream_set_buffer_attr(data->stream, &data->attr,
@@ -999,8 +1003,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     pa_stream_set_underflow_callback(data->stream, stream_signal_callback, device);
 
     data->attr = *(pa_stream_get_buffer_attr(data->stream));
-    device->UpdateSize = data->attr.minreq / data->frame_size;
-    device->NumUpdates = (data->attr.tlength/data->frame_size) / device->UpdateSize;
+    device->UpdateSize = data->attr.minreq / pa_frame_size(&data->spec);
+    device->NumUpdates = data->attr.tlength / data->attr.minreq;
     if(device->NumUpdates <= 1)
     {
         pa_operation *o;
@@ -1111,17 +1115,6 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
     data = device->ExtraData;
     pa_threaded_mainloop_lock(data->loop);
 
-    samples = device->UpdateSize * device->NumUpdates;
-    samples = maxu(samples, 100 * device->Frequency / 1000);
-    data->frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
-
-    data->attr.minreq = -1;
-    data->attr.prebuf = -1;
-    data->attr.maxlength = samples * data->frame_size;
-    data->attr.tlength = -1;
-    data->attr.fragsize = minu(samples, 50*device->Frequency/1000) *
-                          data->frame_size;
-
     data->spec.rate = device->Frequency;
     data->spec.channels = ChannelsFromDevFmt(device->FmtChans);
 
@@ -1160,6 +1153,16 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
         pa_threaded_mainloop_unlock(data->loop);
         goto fail;
     }
+
+    samples = device->UpdateSize * device->NumUpdates;
+    samples = maxu(samples, 100 * device->Frequency / 1000);
+
+    data->attr.minreq = -1;
+    data->attr.prebuf = -1;
+    data->attr.maxlength = samples * pa_frame_size(&data->spec);
+    data->attr.tlength = -1;
+    data->attr.fragsize = minu(samples, 50*device->Frequency/1000) *
+                          pa_frame_size(&data->spec);
 
     data->stream = pa_stream_new(data->context, "Capture Stream", &data->spec, &chanmap);
     if(!data->stream)
@@ -1246,7 +1249,7 @@ static void pulse_stop_capture(ALCdevice *device) //{{{
 static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples) //{{{
 {
     pulse_data *data = device->ExtraData;
-    ALCuint todo = samples * data->frame_size;
+    ALCuint todo = samples * pa_frame_size(&data->spec);
 
     pa_threaded_mainloop_lock(data->loop);
     /* Capture is done in fragment-sized chunks, so we loop until we get all
@@ -1314,7 +1317,7 @@ static ALCuint pulse_available_samples(ALCdevice *device) //{{{
 
     if(data->last_readable < readable)
         data->last_readable = readable;
-    return data->last_readable / data->frame_size;
+    return data->last_readable / pa_frame_size(&data->spec);
 } //}}}
 
 

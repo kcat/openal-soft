@@ -193,10 +193,13 @@ MAKE_FUNC(pa_stream_begin_write);
 typedef struct {
     char *device_name;
 
-    ALCuint samples;
     ALCuint frame_size;
 
-    RingBuffer *ring;
+    const void *cap_store;
+    size_t cap_len;
+    size_t cap_remain;
+
+    ALCuint last_readable;
 
     pa_buffer_attr attr;
     pa_sample_spec spec;
@@ -804,7 +807,6 @@ static void pulse_close(ALCdevice *device) //{{{
     pa_threaded_mainloop_stop(data->loop);
     pa_threaded_mainloop_free(data->loop);
 
-    DestroyRingBuffer(data->ring);
     free(data->device_name);
 
     device->ExtraData = NULL;
@@ -1078,6 +1080,7 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
     pa_stream_flags_t flags = 0;
     pa_stream_state_t state;
     pa_channel_map chanmap;
+    ALuint samples;
 
     if(!allCaptureDevNameMap)
         probe_devices(AL_TRUE);
@@ -1108,21 +1111,15 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
     data = device->ExtraData;
     pa_threaded_mainloop_lock(data->loop);
 
-    data->samples = device->UpdateSize * device->NumUpdates;
+    samples = device->UpdateSize * device->NumUpdates;
+    samples = maxu(samples, 100 * device->Frequency / 1000);
     data->frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
-    data->samples = maxu(data->samples, 100 * device->Frequency / 1000);
-
-    if(!(data->ring = CreateRingBuffer(data->frame_size, data->samples)))
-    {
-        pa_threaded_mainloop_unlock(data->loop);
-        goto fail;
-    }
 
     data->attr.minreq = -1;
     data->attr.prebuf = -1;
-    data->attr.maxlength = data->samples * data->frame_size;
+    data->attr.maxlength = samples * data->frame_size;
     data->attr.tlength = -1;
-    data->attr.fragsize = minu(data->samples, 50*device->Frequency/1000) *
+    data->attr.fragsize = minu(samples, 50*device->Frequency/1000) *
                           data->frame_size;
 
     data->spec.rate = device->Frequency;
@@ -1249,39 +1246,75 @@ static void pulse_stop_capture(ALCdevice *device) //{{{
 static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples) //{{{
 {
     pulse_data *data = device->ExtraData;
-    ReadRingBuffer(data->ring, buffer, samples);
+    ALCuint todo = samples * data->frame_size;
+
+    pa_threaded_mainloop_lock(data->loop);
+    /* Capture is done in fragment-sized chunks, so we loop until we get all
+     * that's available */
+    data->last_readable -= todo;
+    while(todo > 0)
+    {
+        size_t rem = todo;
+
+        if(data->cap_len == 0)
+        {
+            pa_stream_state_t state;
+
+            state = pa_stream_get_state(data->stream);
+            if(!PA_STREAM_IS_GOOD(state))
+            {
+                aluHandleDisconnect(device);
+                break;
+            }
+            if(pa_stream_peek(data->stream, &data->cap_store, &data->cap_len) < 0)
+            {
+                ERR("pa_stream_peek() failed: %s\n",
+                    pa_strerror(pa_context_errno(data->context)));
+                aluHandleDisconnect(device);
+                break;
+            }
+            data->cap_remain = data->cap_len;
+        }
+        if(rem > data->cap_remain)
+            rem = data->cap_remain;
+
+        memcpy(buffer, data->cap_store, rem);
+
+        buffer = (ALbyte*)buffer + rem;
+        todo -= rem;
+
+        data->cap_store = (ALbyte*)data->cap_store + rem;
+        data->cap_remain -= rem;
+        if(data->cap_remain == 0)
+        {
+            pa_stream_drop(data->stream);
+            data->cap_len = 0;
+        }
+    }
+    if(todo > 0)
+        memset(buffer, ((device->FmtType==DevFmtUByte) ? 0x80 : 0), todo);
+    pa_threaded_mainloop_unlock(data->loop);
+
     return ALC_NO_ERROR;
 } //}}}
 
 static ALCuint pulse_available_samples(ALCdevice *device) //{{{
 {
     pulse_data *data = device->ExtraData;
-    size_t samples;
+    size_t readable = data->cap_remain;
 
     pa_threaded_mainloop_lock(data->loop);
-    /* Capture is done in fragment-sized chunks, so we loop until we get all
-     * that's available */
-    samples = (device->Connected ? pa_stream_readable_size(data->stream) : 0);
-    while(samples > 0)
+    if(device->Connected)
     {
-        const void *buf;
-        size_t length;
-
-        if(pa_stream_peek(data->stream, &buf, &length) < 0)
-        {
-            ERR("pa_stream_peek() failed: %s\n",
-                pa_strerror(pa_context_errno(data->context)));
-            break;
-        }
-
-        WriteRingBuffer(data->ring, buf, length/data->frame_size);
-        samples -= length;
-
-        pa_stream_drop(data->stream);
+        ssize_t got = pa_stream_readable_size(data->stream);
+        if(got > 0 && (size_t)got > data->cap_len)
+            readable += got - data->cap_len;
     }
     pa_threaded_mainloop_unlock(data->loop);
 
-    return RingBufferSize(data->ring);
+    if(data->last_readable < readable)
+        data->last_readable = readable;
+    return data->last_readable / data->frame_size;
 } //}}}
 
 

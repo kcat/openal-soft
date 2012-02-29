@@ -272,6 +272,7 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         IAudioRenderClient *iface;
         void *ptr;
     } render;
+    UINT32 update_size, num_updates;
     UINT32 written, len;
     BYTE *buffer;
     HRESULT hr;
@@ -294,6 +295,8 @@ static ALuint MMDevApiProc(ALvoid *ptr)
 
     SetRTPriority();
 
+    update_size = device->UpdateSize;
+    num_updates = device->NumUpdates;
     while(!data->killNow)
     {
         hr = IAudioClient_GetCurrentPadding(data->client, &written);
@@ -304,8 +307,8 @@ static ALuint MMDevApiProc(ALvoid *ptr)
             break;
         }
 
-        len = device->UpdateSize*device->NumUpdates - written;
-        if(len < device->UpdateSize)
+        len = update_size*num_updates - written;
+        if(len < update_size)
         {
             DWORD res;
             res = WaitForSingleObjectEx(data->hNotifyEvent, 2000, FALSE);
@@ -313,7 +316,7 @@ static ALuint MMDevApiProc(ALvoid *ptr)
                 ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
             continue;
         }
-        len -= len%device->UpdateSize;
+        len -= len%update_size;
 
         hr = IAudioRenderClient_GetBuffer(render.iface, len, &buffer);
         if(SUCCEEDED(hr))

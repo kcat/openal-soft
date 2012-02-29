@@ -82,6 +82,7 @@ MAKE_FUNC(snd_pcm_mmap_commit);
 MAKE_FUNC(snd_pcm_readi);
 MAKE_FUNC(snd_pcm_writei);
 MAKE_FUNC(snd_pcm_drain);
+MAKE_FUNC(snd_pcm_drop);
 MAKE_FUNC(snd_pcm_recover);
 MAKE_FUNC(snd_pcm_info_malloc);
 MAKE_FUNC(snd_pcm_info_free);
@@ -148,6 +149,7 @@ MAKE_FUNC(snd_card_next);
 #define snd_pcm_readi psnd_pcm_readi
 #define snd_pcm_writei psnd_pcm_writei
 #define snd_pcm_drain psnd_pcm_drain
+#define snd_pcm_drop psnd_pcm_drop
 #define snd_pcm_recover psnd_pcm_recover
 #define snd_pcm_info_malloc psnd_pcm_info_malloc
 #define snd_pcm_info_free psnd_pcm_info_free
@@ -232,6 +234,7 @@ static ALCboolean alsa_load(void)
         LOAD_FUNC(snd_pcm_readi);
         LOAD_FUNC(snd_pcm_writei);
         LOAD_FUNC(snd_pcm_drain);
+        LOAD_FUNC(snd_pcm_drop);
         LOAD_FUNC(snd_pcm_recover);
         LOAD_FUNC(snd_pcm_info_malloc);
         LOAD_FUNC(snd_pcm_info_free);
@@ -266,6 +269,8 @@ typedef struct {
 
     ALboolean doCapture;
     RingBuffer *ring;
+
+    snd_pcm_sframes_t last_avail;
 
     volatile int killNow;
     ALvoid *thread;
@@ -837,9 +842,9 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
     snd_pcm_hw_params_t *hp;
     snd_pcm_uframes_t bufferSizeInFrames;
     snd_pcm_uframes_t periodSizeInFrames;
+    ALboolean needring = AL_FALSE;
     snd_pcm_format_t format;
     const char *funcerr;
-    ALuint frameSize;
     alsa_data *data;
     int err;
 
@@ -906,7 +911,7 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
     funcerr = NULL;
     bufferSizeInFrames = maxu(pDevice->UpdateSize*pDevice->NumUpdates,
                               100*pDevice->Frequency/1000);
-    periodSizeInFrames = minu(bufferSizeInFrames, 50*pDevice->Frequency/1000);
+    periodSizeInFrames = minu(bufferSizeInFrames, 25*pDevice->Frequency/1000);
 
     snd_pcm_hw_params_malloc(&hp);
 #define CHECK(x) if((funcerr=#x),(err=(x)) < 0) goto error
@@ -920,32 +925,39 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
     /* set rate (implicitly constrains period/buffer parameters) */
     CHECK(snd_pcm_hw_params_set_rate(data->pcmHandle, hp, pDevice->Frequency, 0));
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
-    CHECK(snd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, hp, &bufferSizeInFrames));
+    if(snd_pcm_hw_params_set_buffer_size_min(data->pcmHandle, hp, &bufferSizeInFrames) < 0)
+    {
+        TRACE("Buffer too large, using intermediate ring buffer\n");
+        needring = AL_TRUE;
+        CHECK(snd_pcm_hw_params_set_buffer_size_near(data->pcmHandle, hp, &bufferSizeInFrames));
+    }
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
     CHECK(snd_pcm_hw_params_set_period_size_near(data->pcmHandle, hp, &periodSizeInFrames, NULL));
     /* install and prepare hardware configuration */
     CHECK(snd_pcm_hw_params(data->pcmHandle, hp));
     /* retrieve configuration info */
-    CHECK(snd_pcm_hw_params_get_period_size(hp, &bufferSizeInFrames, NULL));
+    CHECK(snd_pcm_hw_params_get_period_size(hp, &periodSizeInFrames, NULL));
 #undef CHECK
     snd_pcm_hw_params_free(hp);
     hp = NULL;
 
-    frameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
-
-    data->ring = CreateRingBuffer(frameSize, pDevice->UpdateSize*pDevice->NumUpdates);
-    if(!data->ring)
+    if(needring)
     {
-        ERR("ring buffer create failed\n");
-        goto error2;
-    }
+        data->ring = CreateRingBuffer(FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType),
+                                      pDevice->UpdateSize*pDevice->NumUpdates);
+        if(!data->ring)
+        {
+            ERR("ring buffer create failed\n");
+            goto error2;
+        }
 
-    data->size = snd_pcm_frames_to_bytes(data->pcmHandle, bufferSizeInFrames);
-    data->buffer = malloc(data->size);
-    if(!data->buffer)
-    {
-        ERR("buffer malloc failed\n");
-        goto error2;
+        data->size = snd_pcm_frames_to_bytes(data->pcmHandle, periodSizeInFrames);
+        data->buffer = malloc(data->size);
+        if(!data->buffer)
+        {
+            ERR("buffer malloc failed\n");
+            goto error2;
+        }
     }
 
     pDevice->szDeviceName = strdup(deviceName);
@@ -994,26 +1006,88 @@ static void alsa_start_capture(ALCdevice *Device)
         data->doCapture = AL_TRUE;
 }
 
-static void alsa_stop_capture(ALCdevice *Device)
-{
-    alsa_data *data = (alsa_data*)Device->ExtraData;
-    snd_pcm_drain(data->pcmHandle);
-    data->doCapture = AL_FALSE;
-}
-
 static ALCenum alsa_capture_samples(ALCdevice *Device, ALCvoid *Buffer, ALCuint Samples)
 {
     alsa_data *data = (alsa_data*)Device->ExtraData;
-    ReadRingBuffer(data->ring, Buffer, Samples);
+
+    if(data->ring)
+    {
+        ReadRingBuffer(data->ring, Buffer, Samples);
+        return ALC_NO_ERROR;
+    }
+
+    data->last_avail -= Samples;
+    while(Device->Connected && Samples > 0)
+    {
+        snd_pcm_sframes_t amt = 0;
+
+        if(data->size > 0)
+        {
+            /* First get any data stored from the last stop */
+            amt = snd_pcm_bytes_to_frames(data->pcmHandle, data->size);
+            if((snd_pcm_uframes_t)amt > Samples) amt = Samples;
+
+            amt = snd_pcm_frames_to_bytes(data->pcmHandle, amt);
+            memmove(Buffer, data->buffer, amt);
+
+            if(data->size > amt)
+            {
+                memmove(data->buffer, data->buffer+amt, data->size - amt);
+                data->size -= amt;
+            }
+            else
+            {
+                free(data->buffer);
+                data->buffer = NULL;
+                data->size = 0;
+            }
+            amt = snd_pcm_bytes_to_frames(data->pcmHandle, amt);
+        }
+        else if(data->doCapture)
+            amt = snd_pcm_readi(data->pcmHandle, Buffer, Samples);
+        if(amt < 0)
+        {
+            ERR("read error: %s\n", snd_strerror(amt));
+
+            if(amt == -EAGAIN)
+                continue;
+            if((amt=snd_pcm_recover(data->pcmHandle, amt, 1)) >= 0)
+            {
+                if(data->doCapture)
+                    amt = snd_pcm_start(data->pcmHandle);
+                if(amt >= 0)
+                    amt = snd_pcm_avail_update(data->pcmHandle);
+            }
+            if(amt < 0)
+            {
+                ERR("restore error: %s\n", snd_strerror(amt));
+                aluHandleDisconnect(Device);
+                break;
+            }
+            /* If the amount available is less than what's asked, we lost it
+             * during recovery. So just give silence instead. */
+            if((snd_pcm_uframes_t)amt < Samples)
+                break;
+            continue;
+        }
+
+        Buffer = (ALbyte*)Buffer + amt;
+        Samples -= amt;
+    }
+    if(Samples > 0)
+        memset(Buffer, ((Device->FmtType == DevFmtUByte) ? 0x80 : 0),
+               snd_pcm_frames_to_bytes(data->pcmHandle, Samples));
+
     return ALC_NO_ERROR;
 }
 
 static ALCuint alsa_available_samples(ALCdevice *Device)
 {
     alsa_data *data = (alsa_data*)Device->ExtraData;
-    snd_pcm_sframes_t avail;
+    snd_pcm_sframes_t avail = 0;
 
-    avail = (Device->Connected ? snd_pcm_avail_update(data->pcmHandle) : 0);
+    if(Device->Connected && data->doCapture)
+        avail = snd_pcm_avail_update(data->pcmHandle);
     if(avail < 0)
     {
         ERR("avail update failed: %s\n", snd_strerror(avail));
@@ -1031,6 +1105,15 @@ static ALCuint alsa_available_samples(ALCdevice *Device)
             aluHandleDisconnect(Device);
         }
     }
+
+    if(!data->ring)
+    {
+        if(avail < 0) avail = 0;
+        avail += snd_pcm_bytes_to_frames(data->pcmHandle, data->size);
+        if(avail > data->last_avail) data->last_avail = avail;
+        return data->last_avail;
+    }
+
     while(avail > 0)
     {
         snd_pcm_sframes_t amt;
@@ -1067,6 +1150,38 @@ static ALCuint alsa_available_samples(ALCdevice *Device)
     }
 
     return RingBufferSize(data->ring);
+}
+
+static void alsa_stop_capture(ALCdevice *Device)
+{
+    alsa_data *data = (alsa_data*)Device->ExtraData;
+    ALCuint avail;
+    int err;
+
+    /* OpenAL requires access to unread audio after stopping, but ALSA's
+     * snd_pcm_drain is unreliable and snd_pcm_drop drops it. Capture what's
+     * available now so it'll be available later after the drop. */
+    avail = alsa_available_samples(Device);
+    if(!data->ring && avail > 0)
+    {
+        /* The ring buffer implicitly captures when checking availability.
+         * Direct access needs to explicitly capture it into temp storage. */
+        ALsizei size;
+        void *ptr;
+
+        size = snd_pcm_frames_to_bytes(data->pcmHandle, avail);
+        ptr = realloc(data->buffer, size);
+        if(ptr)
+        {
+            data->buffer = ptr;
+            alsa_capture_samples(Device, data->buffer, avail);
+            data->size = size;
+        }
+    }
+    err = snd_pcm_drop(data->pcmHandle);
+    if(err < 0)
+        ERR("drop failed: %s\n", snd_strerror(err));
+    data->doCapture = AL_FALSE;
 }
 
 

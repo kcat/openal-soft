@@ -277,7 +277,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    printf("\n** Info for device \"%s\" **\n", alcGetString(device, ALC_DEVICE_SPECIFIER));
+    if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT") != AL_FALSE)
+        printf("\n** Info for device \"%s\" **\n", alcGetString(device, ALC_ALL_DEVICES_SPECIFIER));
+    else
+        printf("\n** Info for device \"%s\" **\n", alcGetString(device, ALC_DEVICE_SPECIFIER));
     printALCInfo(device);
 
     context = alcCreateContext(device, NULL);

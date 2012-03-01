@@ -39,6 +39,8 @@
 
 static const ALCchar solaris_device[] = "Solaris Default";
 
+static const char *solaris_driver = "/dev/audio";
+
 typedef struct {
     int fd;
     volatile int killNow;
@@ -93,11 +95,7 @@ static ALuint SolarisProc(ALvoid *ptr)
 
 static ALCenum solaris_open_playback(ALCdevice *device, const ALCchar *deviceName)
 {
-    char driver[64];
     solaris_data *data;
-
-    strncpy(driver, GetConfigValue("solaris", "device", "/dev/audio"), sizeof(driver)-1);
-    driver[sizeof(driver)-1] = 0;
 
     if(!deviceName)
         deviceName = solaris_device;
@@ -107,11 +105,11 @@ static ALCenum solaris_open_playback(ALCdevice *device, const ALCchar *deviceNam
     data = (solaris_data*)calloc(1, sizeof(solaris_data));
     data->killNow = 0;
 
-    data->fd = open(driver, O_WRONLY);
+    data->fd = open(solaris_driver, O_WRONLY);
     if(data->fd == -1)
     {
         free(data);
-        ERR("Could not open %s: %s\n", driver, strerror(errno));
+        ERR("Could not open %s: %s\n", solaris_driver, strerror(errno));
         return ALC_INVALID_VALUE;
     }
 
@@ -182,17 +180,13 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    if(!((info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR &&
-          device->FmtType == DevFmtByte) ||
-         (info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR8 &&
-          device->FmtType == DevFmtUByte) ||
-         (info.play.precision == 16 && info.play.encoding == AUDIO_ENCODING_LINEAR &&
-          device->FmtType == DevFmtShort) ||
-         (info.play.precision == 32 && info.play.encoding == AUDIO_ENCODING_LINEAR &&
-          device->FmtType == DevFmtInt)))
+    if(!((info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR8 && device->FmtType == DevFmtUByte) ||
+         (info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR && device->FmtType == DevFmtByte) ||
+         (info.play.precision == 16 && info.play.encoding == AUDIO_ENCODING_LINEAR && device->FmtType == DevFmtShort) ||
+         (info.play.precision == 32 && info.play.encoding == AUDIO_ENCODING_LINEAR && device->FmtType == DevFmtInt)))
     {
-        ERR("Could not set %#x sample type, got %d (%#x)\n",
-            device->FmtType, info.play.precision, info.play.encoding);
+        ERR("Could not set %s samples, got %d (0x%x)\n", DevFmtTypeString(device->FmtType),
+            info.play.precision, info.play.encoding);
         return ALC_FALSE;
     }
 
@@ -250,6 +244,8 @@ static const BackendFuncs solaris_funcs = {
 
 ALCboolean alc_solaris_init(BackendFuncs *func_list)
 {
+    ConfigValueStr("solaris", "device", &solaris_driver);
+
     *func_list = solaris_funcs;
     return ALC_TRUE;
 }
@@ -260,17 +256,18 @@ void alc_solaris_deinit(void)
 
 void alc_solaris_probe(enum DevProbe type)
 {
-#ifdef HAVE_STAT
-    struct stat buf;
-    if(stat(GetConfigValue("solaris", "device", "/dev/audio"), &buf) != 0)
-        return;
-#endif
-
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-            AppendAllDeviceList(solaris_device);
-            break;
+        {
+#ifdef HAVE_STAT
+            struct stat buf;
+            if(stat(solaris_driver, &buf) == 0)
+#endif
+                AppendAllDeviceList(solaris_device);
+        }
+        break;
+
         case CAPTURE_DEVICE_PROBE:
             break;
     }

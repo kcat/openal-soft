@@ -1402,6 +1402,7 @@ ALCboolean alc_pulse_init(BackendFuncs *func_list) //{{{
             context = connect_context(loop, AL_TRUE);
             if(context)
             {
+                *func_list = pulse_funcs;
                 ret = ALC_TRUE;
 
                 pa_context_disconnect(context);
@@ -1414,8 +1415,6 @@ ALCboolean alc_pulse_init(BackendFuncs *func_list) //{{{
             pa_threaded_mainloop_free(loop);
     }
 
-    if(ret != ALC_FALSE)
-        *func_list = pulse_funcs;
     return ret;
 } //}}}
 

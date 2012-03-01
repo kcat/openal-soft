@@ -419,11 +419,14 @@ static void stream_signal_callback(pa_stream *stream, void *pdata) //{{{
 
 static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
 {
-    const pa_buffer_attr *attr;
-    (void)pdata;
+    ALCdevice *device = pdata;
+    pulse_data *data = device->ExtraData;
 
-    attr = pa_stream_get_buffer_attr(stream);
-    WARN("PulseAudio modified buffer length: minreq=%d, tlength=%d\n", attr->minreq, attr->tlength);
+    data->attr = *pa_stream_get_buffer_attr(stream);
+    WARN("PulseAudio modified buffer length: minreq=%d, tlength=%d\n", data->attr.minreq, data->attr.tlength);
+
+    device->UpdateSize = data->attr.minreq / pa_frame_size(&data->spec);
+    device->NumUpdates = data->attr.tlength / data->attr.minreq;
 }//}}}
 
 static void context_state_callback2(pa_context *context, void *pdata) //{{{
@@ -580,65 +583,6 @@ static void source_device_callback(pa_context *context, const pa_source_info *in
 }//}}}
 //}}}
 
-// PulseAudio I/O Callbacks //{{{
-static void stream_write_callback(pa_stream *stream, size_t len, void *pdata) //{{{
-{
-    ALCdevice *Device = pdata;
-    pulse_data *data = Device->ExtraData;
-    (void)stream;
-    (void)len;
-
-    pa_threaded_mainloop_signal(data->loop, 0);
-} //}}}
-//}}}
-
-static ALuint PulseProc(ALvoid *param)
-{
-    ALCdevice *Device = param;
-    pulse_data *data = Device->ExtraData;
-    size_t frame_size;
-    size_t len;
-
-    SetRTPriority();
-
-    frame_size = pa_frame_size(&data->spec);
-    pa_threaded_mainloop_lock(data->loop);
-    do {
-        len = pa_stream_writable_size(data->stream);
-        if(len < data->attr.minreq)
-        {
-            pa_threaded_mainloop_wait(data->loop);
-            continue;
-        }
-        len -= len%data->attr.minreq;
-
-        while(len > 0)
-        {
-            size_t newlen = len;
-            void *buf;
-            pa_free_cb_t free_func = NULL;
-
-#if PA_CHECK_VERSION(0,9,16)
-            if(!pa_stream_begin_write ||
-               pa_stream_begin_write(data->stream, &buf, &newlen) < 0)
-#endif
-            {
-                buf = pa_xmalloc(newlen);
-                free_func = pa_xfree;
-            }
-            pa_threaded_mainloop_unlock(data->loop);
-
-            aluMixData(Device, buf, newlen/frame_size);
-
-            pa_threaded_mainloop_lock(data->loop);
-            pa_stream_write(data->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
-            len -= newlen;
-        }
-    } while(!data->killNow && Device->Connected);
-    pa_threaded_mainloop_unlock(data->loop);
-
-    return 0;
-}
 
 static pa_stream *connect_playback_stream(const char *device_name,
     pa_threaded_mainloop *loop, pa_context *context,
@@ -719,6 +663,7 @@ static pa_stream *connect_record_stream(const char *device_name,
 
     return stream;
 }
+
 
 static void probe_devices(ALboolean capture)
 {
@@ -810,6 +755,65 @@ static void probe_devices(ALboolean capture)
     }
     if(loop)
         pa_threaded_mainloop_free(loop);
+}
+
+
+static void stream_write_callback(pa_stream *stream, size_t len, void *pdata)
+{
+    ALCdevice *Device = pdata;
+    pulse_data *data = Device->ExtraData;
+    (void)stream;
+    (void)len;
+
+    pa_threaded_mainloop_signal(data->loop, 0);
+}
+
+static ALuint PulseProc(ALvoid *param)
+{
+    ALCdevice *Device = param;
+    pulse_data *data = Device->ExtraData;
+    size_t frame_size;
+    size_t len;
+
+    SetRTPriority();
+
+    frame_size = pa_frame_size(&data->spec);
+    pa_threaded_mainloop_lock(data->loop);
+    do {
+        len = pa_stream_writable_size(data->stream);
+        if(len < data->attr.minreq)
+        {
+            pa_threaded_mainloop_wait(data->loop);
+            continue;
+        }
+        len -= len%data->attr.minreq;
+
+        while(len > 0)
+        {
+            size_t newlen = len;
+            void *buf;
+            pa_free_cb_t free_func = NULL;
+
+#if PA_CHECK_VERSION(0,9,16)
+            if(!pa_stream_begin_write ||
+               pa_stream_begin_write(data->stream, &buf, &newlen) < 0)
+#endif
+            {
+                buf = pa_xmalloc(newlen);
+                free_func = pa_xfree;
+            }
+            pa_threaded_mainloop_unlock(data->loop);
+
+            aluMixData(Device, buf, newlen/frame_size);
+
+            pa_threaded_mainloop_lock(data->loop);
+            pa_stream_write(data->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
+            len -= newlen;
+        }
+    } while(!data->killNow && Device->Connected);
+    pa_threaded_mainloop_unlock(data->loop);
+
+    return 0;
 }
 
 

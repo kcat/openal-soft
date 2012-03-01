@@ -579,17 +579,12 @@ static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     alsa_data *data;
     int err;
 
-    if(!allDevNameMap)
-        allDevNameMap = probe_devices(SND_PCM_STREAM_PLAYBACK, &numDevNames);
-
-    if(!deviceName && numDevNames > 0)
-    {
-        deviceName = allDevNameMap[0].name;
-        driver = allDevNameMap[0].device;
-    }
-    else
+    if(deviceName)
     {
         size_t idx;
+
+        if(!allDevNameMap)
+            allDevNameMap = probe_devices(SND_PCM_STREAM_PLAYBACK, &numDevNames);
 
         for(idx = 0;idx < numDevNames;idx++)
         {
@@ -601,6 +596,11 @@ static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         }
         if(idx == numDevNames)
             return ALC_INVALID_VALUE;
+    }
+    else
+    {
+        deviceName = alsaDevice;
+        driver = GetConfigValue("alsa", "device", "default");
     }
 
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
@@ -846,17 +846,12 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
     alsa_data *data;
     int err;
 
-    if(!allCaptureDevNameMap)
-        allCaptureDevNameMap = probe_devices(SND_PCM_STREAM_CAPTURE, &numCaptureDevNames);
-
-    if(!deviceName && numCaptureDevNames > 0)
-    {
-        deviceName = allCaptureDevNameMap[0].name;
-        driver = allCaptureDevNameMap[0].device;
-    }
-    else
+    if(deviceName)
     {
         size_t idx;
+
+        if(!allCaptureDevNameMap)
+            allCaptureDevNameMap = probe_devices(SND_PCM_STREAM_CAPTURE, &numCaptureDevNames);
 
         for(idx = 0;idx < numCaptureDevNames;idx++)
         {
@@ -868,6 +863,11 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
         }
         if(idx == numCaptureDevNames)
             return ALC_INVALID_VALUE;
+    }
+    else
+    {
+        deviceName = alsaDevice;
+        driver = GetConfigValue("alsa", "capture", "default");
     }
 
     data = (alsa_data*)calloc(1, sizeof(alsa_data));

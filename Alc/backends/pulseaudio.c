@@ -888,7 +888,7 @@ static void pulse_close(ALCdevice *device) //{{{
 // OpenAL {{{
 static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name) //{{{
 {
-    char *pulse_name = NULL;
+    const char *pulse_name = NULL;
     pa_sample_spec spec;
     pa_stream *stream;
     pulse_data *data;
@@ -1150,10 +1150,10 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
 
 static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name) //{{{
 {
-    char *pulse_name = NULL;
-    pulse_data *data;
+    const char *pulse_name = NULL;
     pa_stream_flags_t flags = 0;
     pa_channel_map chanmap;
+    pulse_data *data;
     ALuint samples;
 
     if(!allCaptureDevNameMap)

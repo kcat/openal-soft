@@ -751,15 +751,19 @@ static void probe_devices(ALboolean capture)
 
             if(capture == AL_FALSE)
             {
+                pa_stream_flags_t flags;
                 pa_sample_spec spec;
                 pa_stream *stream;
+
+                flags = PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
+                        PA_STREAM_FIX_CHANNELS;
 
                 spec.format = PA_SAMPLE_S16NE;
                 spec.rate = 44100;
                 spec.channels = 2;
 
-                stream = connect_playback_stream(NULL, loop, context, 0, NULL,
-                                                 &spec, NULL);
+                stream = connect_playback_stream(NULL, loop, context, flags,
+                                                 NULL, &spec, NULL);
                 if(stream)
                 {
                     o = pa_context_get_sink_info_by_name(context, pa_stream_get_device_name(stream), sink_device_callback, loop);
@@ -776,15 +780,19 @@ static void probe_devices(ALboolean capture)
             }
             else
             {
+                pa_stream_flags_t flags;
                 pa_sample_spec spec;
                 pa_stream *stream;
+
+                flags = PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
+                        PA_STREAM_FIX_CHANNELS;
 
                 spec.format = PA_SAMPLE_S16NE;
                 spec.rate = 44100;
                 spec.channels = 1;
 
-                stream = connect_record_stream(NULL, loop, context, 0, NULL,
-                                               &spec, NULL);
+                stream = connect_record_stream(NULL, loop, context, flags,
+                                               NULL, &spec, NULL);
                 if(stream)
                 {
                     o = pa_context_get_source_info_by_name(context, pa_stream_get_device_name(stream), source_device_callback, loop);

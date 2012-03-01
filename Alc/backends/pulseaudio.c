@@ -525,6 +525,7 @@ static void sink_device_callback(pa_context *context, const pa_sink_info *info, 
 {
     pa_threaded_mainloop *loop = pdata;
     void *temp;
+    ALuint i;
 
     (void)context;
 
@@ -532,6 +533,12 @@ static void sink_device_callback(pa_context *context, const pa_sink_info *info, 
     {
         pa_threaded_mainloop_signal(loop, 0);
         return;
+    }
+
+    for(i = 0;i < numDevNames;i++)
+    {
+        if(strcmp(info->name, allDevNameMap[i].device_name) == 0)
+            return;
     }
 
     TRACE("Got device \"%s\", \"%s\"\n", info->description, info->name);
@@ -550,6 +557,7 @@ static void source_device_callback(pa_context *context, const pa_source_info *in
 {
     pa_threaded_mainloop *loop = pdata;
     void *temp;
+    ALuint i;
 
     (void)context;
 
@@ -557,6 +565,12 @@ static void source_device_callback(pa_context *context, const pa_source_info *in
     {
         pa_threaded_mainloop_signal(loop, 0);
         return;
+    }
+
+    for(i = 0;i < numCaptureDevNames;i++)
+    {
+        if(strcmp(info->name, allCaptureDevNameMap[i].device_name) == 0)
+            return;
     }
 
     TRACE("Got device \"%s\", \"%s\"\n", info->description, info->name);

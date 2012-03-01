@@ -189,7 +189,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             Speaker2Chan[1] = FRONT_RIGHT;
             SpeakerAngle[0] = F_PI/180.0f * -30.0f;
             SpeakerAngle[1] = F_PI/180.0f *  30.0f;
-            layoutname = "layout_STEREO";
+            layoutname = "layout_stereo";
             break;
 
         case DevFmtQuad:
@@ -202,7 +202,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[1] = F_PI/180.0f *  -45.0f;
             SpeakerAngle[2] = F_PI/180.0f *   45.0f;
             SpeakerAngle[3] = F_PI/180.0f *  135.0f;
-            layoutname = "layout_QUAD";
+            layoutname = "layout_quad";
             break;
 
         case DevFmtX51:
@@ -217,7 +217,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[2] = F_PI/180.0f *    0.0f;
             SpeakerAngle[3] = F_PI/180.0f *   30.0f;
             SpeakerAngle[4] = F_PI/180.0f *  110.0f;
-            layoutname = "layout_51CHN";
+            layoutname = "layout_surround51";
             break;
 
         case DevFmtX51Side:
@@ -232,7 +232,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[2] = F_PI/180.0f *   0.0f;
             SpeakerAngle[3] = F_PI/180.0f *  30.0f;
             SpeakerAngle[4] = F_PI/180.0f *  90.0f;
-            layoutname = "layout_51SIDECHN";
+            layoutname = "layout_side51";
             break;
 
         case DevFmtX61:
@@ -249,7 +249,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[3] = F_PI/180.0f *  30.0f;
             SpeakerAngle[4] = F_PI/180.0f *  90.0f;
             SpeakerAngle[5] = F_PI/180.0f * 180.0f;
-            layoutname = "layout_61CHN";
+            layoutname = "layout_surround61";
             break;
 
         case DevFmtX71:
@@ -268,7 +268,7 @@ ALvoid aluInitPanning(ALCdevice *Device)
             SpeakerAngle[4] = F_PI/180.0f *   30.0f;
             SpeakerAngle[5] = F_PI/180.0f *   90.0f;
             SpeakerAngle[6] = F_PI/180.0f *  150.0f;
-            layoutname = "layout_71CHN";
+            layoutname = "layout_surround71";
             break;
     }
     if(layoutname && Device->Type != Loopback)

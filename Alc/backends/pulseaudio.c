@@ -707,7 +707,30 @@ static void probe_devices(ALboolean capture)
             pa_operation *o;
 
             if(capture == AL_FALSE)
+            {
+                pa_sample_spec spec;
+                pa_stream *stream;
+
+                spec.format = PA_SAMPLE_S16NE;
+                spec.rate = 44100;
+                spec.channels = 2;
+
+                stream = connect_playback_stream(NULL, loop, context, 0, NULL,
+                                                 &spec, NULL);
+                if(stream)
+                {
+                    o = pa_context_get_sink_info_by_name(context, pa_stream_get_device_name(stream), sink_device_callback, loop);
+                    while(pa_operation_get_state(o) == PA_OPERATION_RUNNING)
+                        pa_threaded_mainloop_wait(loop);
+                    pa_operation_unref(o);
+
+                    pa_stream_disconnect(stream);
+                    pa_stream_unref(stream);
+                    stream = NULL;
+                }
+
                 o = pa_context_get_sink_info_list(context, sink_device_callback, loop);
+            }
             else
                 o = pa_context_get_source_info_list(context, source_device_callback, loop);
             while(pa_operation_get_state(o) == PA_OPERATION_RUNNING)

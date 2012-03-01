@@ -1209,13 +1209,19 @@ void alc_alsa_deinit(void)
     ALuint i;
 
     for(i = 0;i < numDevNames;++i)
+    {
+        free(allDevNameMap[i].name);
         free(allDevNameMap[i].device);
+    }
     free(allDevNameMap);
     allDevNameMap = NULL;
     numDevNames = 0;
 
     for(i = 0;i < numCaptureDevNames;++i)
+    {
+        free(allCaptureDevNameMap[i].name);
         free(allCaptureDevNameMap[i].device);
+    }
     free(allCaptureDevNameMap);
     allCaptureDevNameMap = NULL;
     numCaptureDevNames = 0;
@@ -1235,7 +1241,10 @@ void alc_alsa_probe(enum DevProbe type)
     {
         case ALL_DEVICE_PROBE:
             for(i = 0;i < numDevNames;++i)
+            {
+                free(allDevNameMap[i].name);
                 free(allDevNameMap[i].device);
+            }
 
             free(allDevNameMap);
             allDevNameMap = probe_devices(SND_PCM_STREAM_PLAYBACK, &numDevNames);
@@ -1246,7 +1255,10 @@ void alc_alsa_probe(enum DevProbe type)
 
         case CAPTURE_DEVICE_PROBE:
             for(i = 0;i < numCaptureDevNames;++i)
+            {
+                free(allCaptureDevNameMap[i].name);
                 free(allCaptureDevNameMap[i].device);
+            }
 
             free(allCaptureDevNameMap);
             allCaptureDevNameMap = probe_devices(SND_PCM_STREAM_CAPTURE, &numCaptureDevNames);

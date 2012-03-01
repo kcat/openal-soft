@@ -686,6 +686,46 @@ static pa_stream *connect_playback_stream(const char *device_name,
     return stream;
 }
 
+static pa_stream *connect_record_stream(const char *device_name,
+    pa_threaded_mainloop *loop, pa_context *context,
+    pa_stream_flags_t flags, pa_buffer_attr *attr, pa_sample_spec *spec,
+    pa_channel_map *chanmap)
+{
+    pa_stream_state_t state;
+    pa_stream *stream;
+
+    stream = pa_stream_new(context, "Capture Stream", spec, chanmap);
+    if(!stream)
+    {
+        ERR("pa_stream_new() failed: %s\n", pa_strerror(pa_context_errno(context)));
+        return NULL;
+    }
+
+    pa_stream_set_state_callback(stream, stream_state_callback, loop);
+
+    if(pa_stream_connect_record(stream, device_name, attr, flags) < 0)
+    {
+        ERR("Stream did not connect: %s\n", pa_strerror(pa_context_errno(context)));
+        pa_stream_unref(stream);
+        return NULL;
+    }
+
+    while((state=pa_stream_get_state(stream)) != PA_STREAM_READY)
+    {
+        if(!PA_STREAM_IS_GOOD(state))
+        {
+            ERR("Stream did not get ready: %s\n", pa_strerror(pa_context_errno(context)));
+            pa_stream_unref(stream);
+            return NULL;
+        }
+
+        pa_threaded_mainloop_wait(loop);
+    }
+    pa_stream_set_state_callback(stream, NULL, NULL);
+
+    return stream;
+}
+
 static void probe_devices(ALboolean capture)
 {
     pa_threaded_mainloop *loop;
@@ -1087,7 +1127,6 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
     char *pulse_name = NULL;
     pulse_data *data;
     pa_stream_flags_t flags = 0;
-    pa_stream_state_t state;
     pa_channel_map chanmap;
     ALuint samples;
 
@@ -1169,47 +1208,16 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
     data->attr.fragsize = minu(samples, 50*device->Frequency/1000) *
                           pa_frame_size(&data->spec);
 
-    data->stream = pa_stream_new(data->context, "Capture Stream", &data->spec, &chanmap);
+    flags |= PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY;
+    data->stream = connect_record_stream(pulse_name, data->loop, data->context,
+                                         flags, &data->attr, &data->spec,
+                                         &chanmap);
     if(!data->stream)
     {
-        ERR("pa_stream_new() failed: %s\n",
-            pa_strerror(pa_context_errno(data->context)));
-
         pa_threaded_mainloop_unlock(data->loop);
         goto fail;
     }
 
-    pa_stream_set_state_callback(data->stream, stream_state_callback, data->loop);
-
-    flags |= PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY;
-    if(pa_stream_connect_record(data->stream, pulse_name, &data->attr, flags) < 0)
-    {
-        ERR("Stream did not connect: %s\n",
-            pa_strerror(pa_context_errno(data->context)));
-
-        pa_stream_unref(data->stream);
-        data->stream = NULL;
-
-        pa_threaded_mainloop_unlock(data->loop);
-        goto fail;
-    }
-
-    while((state=pa_stream_get_state(data->stream)) != PA_STREAM_READY)
-    {
-        if(!PA_STREAM_IS_GOOD(state))
-        {
-            ERR("Stream did not get ready: %s\n",
-                pa_strerror(pa_context_errno(data->context)));
-
-            pa_stream_unref(data->stream);
-            data->stream = NULL;
-
-            pa_threaded_mainloop_unlock(data->loop);
-            goto fail;
-        }
-
-        pa_threaded_mainloop_wait(data->loop);
-    }
     pa_stream_set_state_callback(data->stream, stream_state_callback2, device);
 
     pa_threaded_mainloop_unlock(data->loop);

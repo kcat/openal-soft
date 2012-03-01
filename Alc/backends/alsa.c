@@ -32,8 +32,8 @@
 static const ALCchar alsaDevice[] = "ALSA Default";
 
 
-static void *alsa_handle;
 #ifdef HAVE_DYNLOAD
+static void *alsa_handle;
 #define MAKE_FUNC(f) static typeof(f) * p##f
 MAKE_FUNC(snd_strerror);
 MAKE_FUNC(snd_pcm_open);
@@ -172,9 +172,9 @@ MAKE_FUNC(snd_card_next);
 
 static ALCboolean alsa_load(void)
 {
+#ifdef HAVE_DYNLOAD
     if(!alsa_handle)
     {
-#ifdef HAVE_DYNLOAD
         alsa_handle = LoadLib("libasound.so.2");
         if(!alsa_handle)
             return ALC_FALSE;
@@ -253,10 +253,8 @@ static ALCboolean alsa_load(void)
         LOAD_FUNC(snd_ctl_card_info_get_id);
         LOAD_FUNC(snd_card_next);
 #undef LOAD_FUNC
-#else
-        alsa_handle = (void*)0xDEADBEEF;
-#endif
     }
+#endif
     return ALC_TRUE;
 }
 

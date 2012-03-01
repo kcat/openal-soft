@@ -33,8 +33,8 @@
 static const ALCchar pa_device[] = "PortAudio Default";
 
 
-static void *pa_handle;
 #ifdef HAVE_DYNLOAD
+static void *pa_handle;
 #define MAKE_FUNC(x) static typeof(x) * p##x
 MAKE_FUNC(Pa_Initialize);
 MAKE_FUNC(Pa_Terminate);
@@ -60,11 +60,11 @@ MAKE_FUNC(Pa_GetStreamInfo);
 
 static ALCboolean pa_load(void)
 {
-    if(!pa_handle)
-    {
-        PaError err;
+    PaError err;
 
 #ifdef HAVE_DYNLOAD
+    if(!pa_handle)
+    {
 #ifdef _WIN32
 # define PALIB "portaudio.dll"
 #elif defined(__APPLE__) && defined(__MACH__)
@@ -98,9 +98,6 @@ static ALCboolean pa_load(void)
         LOAD_FUNC(Pa_GetDefaultOutputDevice);
         LOAD_FUNC(Pa_GetStreamInfo);
 #undef LOAD_FUNC
-#else
-        pa_handle = (void*)0xDEADBEEF;
-#endif
 
         if((err=Pa_Initialize()) != paNoError)
         {
@@ -110,6 +107,13 @@ static ALCboolean pa_load(void)
             return ALC_FALSE;
         }
     }
+#else
+    if((err=Pa_Initialize()) != paNoError)
+    {
+        ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
+        return ALC_FALSE;
+    }
+#endif
     return ALC_TRUE;
 }
 
@@ -424,14 +428,16 @@ ALCboolean alc_pa_init(BackendFuncs *func_list)
 
 void alc_pa_deinit(void)
 {
+#ifdef HAVE_DYNLOAD
     if(pa_handle)
     {
         Pa_Terminate();
-#ifdef HAVE_DYNLOAD
         CloseLib(pa_handle);
-#endif
         pa_handle = NULL;
     }
+#else
+    Pa_Terminate();
+#endif
 }
 
 void alc_pa_probe(enum DevProbe type)

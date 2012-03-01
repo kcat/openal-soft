@@ -33,8 +33,8 @@
 static const ALCchar sndio_device[] = "SndIO Default";
 
 
-static void *sndio_handle;
 #ifdef HAVE_DYNLOAD
+static void *sndio_handle;
 #define MAKE_FUNC(x) static typeof(x) * p##x
 MAKE_FUNC(sio_initpar);
 MAKE_FUNC(sio_open);
@@ -76,9 +76,9 @@ MAKE_FUNC(sio_onvol);
 
 static ALCboolean sndio_load(void)
 {
+#ifdef HAVE_DYNLOAD
     if(!sndio_handle)
     {
-#ifdef HAVE_DYNLOAD
         sndio_handle = LoadLib("libsndio.so");
         if(!sndio_handle)
             return ALC_FALSE;
@@ -109,10 +109,8 @@ static ALCboolean sndio_load(void)
         LOAD_FUNC(sio_setvol);
         LOAD_FUNC(sio_onvol);
 #undef LOAD_FUNC
-#else
-        sndio_handle = (void*)0xDEADBEEF;
-#endif
     }
+#endif
     return ALC_TRUE;
 }
 

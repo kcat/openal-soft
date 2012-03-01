@@ -34,8 +34,8 @@
      (PA_MAJOR == (major) && PA_MINOR == (minor) && PA_MICRO >= (micro)))
 #endif
 
-static void *pa_handle;
 #ifdef HAVE_DYNLOAD
+static void *pa_handle;
 #define MAKE_FUNC(x) static typeof(x) * p##x
 MAKE_FUNC(pa_context_unref);
 MAKE_FUNC(pa_sample_spec_valid);
@@ -273,10 +273,9 @@ static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
 static ALCboolean pulse_load(void) //{{{
 {
     ALCboolean ret = ALC_TRUE;
+#ifdef HAVE_DYNLOAD
     if(!pa_handle)
     {
-#ifdef HAVE_DYNLOAD
-
 #ifdef _WIN32
 #define PALIB "libpulse-0.dll"
 #elif defined(__APPLE__) && defined(__MACH__)
@@ -366,18 +365,13 @@ static ALCboolean pulse_load(void) //{{{
 #endif
 #undef LOAD_OPTIONAL_FUNC
 
-#else /* HAVE_DYNLOAD */
-        pa_handle = (void*)0xDEADBEEF;
-#endif
-
         if(ret == ALC_FALSE)
         {
-#ifdef HAVE_DYNLOAD
             CloseLib(pa_handle);
-#endif
             pa_handle = NULL;
         }
     }
+#endif /* HAVE_DYNLOAD */
     return ret;
 } //}}}
 

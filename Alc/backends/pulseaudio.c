@@ -25,23 +25,7 @@
 
 #include <pulse/pulseaudio.h>
 
-#if PA_API_VERSION == 11
-#define PA_STREAM_ADJUST_LATENCY 0x2000U
-#define PA_STREAM_EARLY_REQUESTS 0x4000U
-static __inline int PA_STREAM_IS_GOOD(pa_stream_state_t x)
-{
-    return (x == PA_STREAM_CREATING || x == PA_STREAM_READY);
-}
-static __inline int PA_CONTEXT_IS_GOOD(pa_context_state_t x)
-{
-    return (x == PA_CONTEXT_CONNECTING || x == PA_CONTEXT_AUTHORIZING ||
-            x == PA_CONTEXT_SETTING_NAME || x == PA_CONTEXT_READY);
-}
-#define PA_STREAM_IS_GOOD PA_STREAM_IS_GOOD
-#define PA_CONTEXT_IS_GOOD PA_CONTEXT_IS_GOOD
-#elif PA_API_VERSION != 12
-#error Invalid PulseAudio API version
-#endif
+#if PA_API_VERSION == 12
 
 #ifndef PA_CHECK_VERSION
 #define PA_CHECK_VERSION(major,minor,micro)                             \
@@ -1448,3 +1432,18 @@ void alc_pulse_probe(enum DevProbe type) //{{{
     }
 } //}}}
 //}}}
+
+#else
+
+#warning "Unsupported API version, backend will be unavailable!"
+
+ALCboolean alc_pulse_init(BackendFuncs *func_list)
+{ return ALC_FALSE; (void)func_list; }
+
+void alc_pulse_deinit(void)
+{ }
+
+void alc_pulse_probe(enum DevProbe type)
+{ (void)type; }
+
+#endif

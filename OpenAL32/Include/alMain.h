@@ -122,6 +122,8 @@ void *LoadLib(const char *name);
 void CloseLib(void *handle);
 void *GetSymbol(void *handle, const char *name);
 
+WCHAR *strdupW(const WCHAR *str);
+
 typedef LONG pthread_once_t;
 #define PTHREAD_ONCE_INIT 0
 void pthread_once(pthread_once_t *once, void (*callback)(void));

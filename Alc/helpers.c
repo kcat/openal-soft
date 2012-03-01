@@ -107,6 +107,22 @@ void *GetSymbol(void *handle, const char *name)
     return ret;
 }
 
+WCHAR *strdupW(const WCHAR *str)
+{
+    const WCHAR *n;
+    WCHAR *ret;
+    size_t len;
+
+    n = str;
+    while(*n) n++;
+    len = n - str;
+
+    ret = calloc(sizeof(WCHAR), len+1);
+    if(ret != NULL)
+        memcpy(ret, str, sizeof(WCHAR)*len);
+    return ret;
+}
+
 #else
 
 void InitializeCriticalSection(CRITICAL_SECTION *cs)

@@ -55,7 +55,8 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 
 
 typedef struct {
-    GUID guid;
+    WCHAR *devid;
+
     IMMDevice *mmdev;
     IAudioClient *client;
     IAudioRenderClient *render;
@@ -70,7 +71,7 @@ typedef struct {
 
 typedef struct {
     ALCchar *name;
-    GUID guid;
+    LPWSTR devid;
 } DevMap;
 
 static DevMap *PlaybackDeviceList;
@@ -102,72 +103,10 @@ static HRESULT WaitForResponse(ThreadRequest *req)
 }
 
 
-static HRESULT get_mmdevice_by_guid(IMMDeviceEnumerator *devenum, EDataFlow flowdir, const GUID *guid, IMMDevice **out)
+static ALCchar *get_device_name(IMMDevice *device)
 {
-    IMMDeviceCollection *coll;
-    UINT count, i;
-    HRESULT hr;
-
-    hr = IMMDeviceEnumerator_EnumAudioEndpoints(devenum, flowdir, DEVICE_STATE_ACTIVE, &coll);
-    if(FAILED(hr))
-    {
-        ERR("Failed to enumerate audio endpoints: 0x%08lx\n", hr);
-        return hr;
-    }
-
-    count = 0;
-    IMMDeviceCollection_GetCount(coll, &count);
-    for(i = 0;i < count;++i)
-    {
-        IMMDevice *device;
-        IPropertyStore *ps;
-        PROPVARIANT pv;
-        GUID devid;
-
-        if(FAILED(IMMDeviceCollection_Item(coll, i, &device)))
-            continue;
-
-        hr = IMMDevice_OpenPropertyStore(device, STGM_READ, &ps);
-        if(FAILED(hr))
-        {
-            WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
-            continue;
-        }
-
-        PropVariantInit(&pv);
-
-        hr = IPropertyStore_GetValue(ps, &PKEY_AudioEndpoint_GUID, &pv);
-        if(FAILED(hr))
-        {
-            PropVariantClear(&pv);
-            IPropertyStore_Release(ps);
-            WARN("GetValue failed: 0x%08lx\n", hr);
-            continue;
-        }
-        CLSIDFromString(pv.pwszVal, &devid);
-
-        PropVariantClear(&pv);
-        IPropertyStore_Release(ps);
-
-        if(IsEqualGUID(&devid, guid))
-        {
-            *out = device;
-            break;
-        }
-
-        IMMDevice_Release(device);
-    }
-    hr = ((i==count) ? E_FAIL : S_OK);
-
-    IMMDeviceCollection_Release(coll);
-    return hr;
-}
-
-
-static void add_device(IMMDevice *device, DevMap *devmap)
-{
+    ALCchar *name = NULL;
     IPropertyStore *ps;
-    PROPVARIANT pvguid;
     PROPVARIANT pvname;
     HRESULT hr;
     int len;
@@ -176,38 +115,41 @@ static void add_device(IMMDevice *device, DevMap *devmap)
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
-        return;
+        return calloc(1, 1);
     }
 
-    PropVariantInit(&pvguid);
     PropVariantInit(&pvname);
 
-    hr = IPropertyStore_GetValue(ps, &PKEY_AudioEndpoint_GUID, &pvguid);
+    hr = IPropertyStore_GetValue(ps, (const PROPERTYKEY*)&DEVPKEY_Device_FriendlyName, &pvname);
     if(FAILED(hr))
+    {
         WARN("GetValue failed: 0x%08lx\n", hr);
+        name = calloc(1, 1);
+    }
     else
-    {
-        hr = IPropertyStore_GetValue(ps, (const PROPERTYKEY*)&DEVPKEY_Device_FriendlyName, &pvname);
-        if(FAILED(hr))
-            WARN("GetValue failed: 0x%08lx\n", hr);
-    }
-    if(SUCCEEDED(hr))
-    {
-        TRACE("Got device \"%ls\", GUID \"%ls\"\n", pvname.pwszVal, pvguid.pwszVal);
-        hr = CLSIDFromString(pvguid.pwszVal, &devmap->guid);
-    }
-    if(SUCCEEDED(hr))
     {
         if((len=WideCharToMultiByte(CP_ACP, 0, pvname.pwszVal, -1, NULL, 0, NULL, NULL)) > 0)
         {
-            devmap->name = calloc(1, len);
-            WideCharToMultiByte(CP_ACP, 0, pvname.pwszVal, -1, devmap->name, len, NULL, NULL);
+            name = calloc(1, len);
+            WideCharToMultiByte(CP_ACP, 0, pvname.pwszVal, -1, name, len, NULL, NULL);
         }
     }
 
     PropVariantClear(&pvname);
-    PropVariantClear(&pvguid);
     IPropertyStore_Release(ps);
+
+    return name;
+}
+
+static void add_device(IMMDevice *device, DevMap *devmap)
+{
+    HRESULT hr;
+    hr = IMMDevice_GetId(device, &devmap->devid);
+    if(SUCCEEDED(hr))
+    {
+        devmap->name = get_device_name(device);
+        TRACE("Got device \"%s\", \"%ls\"\n", devmap->name, devmap->devid);
+    }
 }
 
 static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALuint *numdevs)
@@ -678,14 +620,20 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             if(SUCCEEDED(hr))
             {
                 Enumerator = ptr;
-                hr = get_mmdevice_by_guid(Enumerator, eRender, &data->guid, &data->mmdev);
+                if(!data->devid)
+                    hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(Enumerator, eRender, eMultimedia, &data->mmdev);
+                else
+                    hr = IMMDeviceEnumerator_GetDevice(Enumerator, data->devid, &data->mmdev);
                 IMMDeviceEnumerator_Release(Enumerator);
                 Enumerator = NULL;
             }
             if(SUCCEEDED(hr))
                 hr = IMMDevice_Activate(data->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &ptr);
             if(SUCCEEDED(hr))
+            {
                 data->client = ptr;
+                device->szDeviceName = get_device_name(data->mmdev);
+            }
 
             if(FAILED(hr))
             {
@@ -778,7 +726,10 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
                 }
 
                 for(i = 0;i < *numdevs;i++)
+                {
                     free((*devlist)[i].name);
+                    CoTaskMemFree((*devlist)[i].devid);
+                }
                 free(*devlist);
                 *devlist = NULL;
                 *numdevs = 0;
@@ -849,29 +800,23 @@ static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName
 
     if(SUCCEEDED(hr))
     {
-        if(!PlaybackDeviceList)
-        {
-            ThreadRequest req = { data->MsgEvent, 0 };
-            if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, ALL_DEVICE_PROBE))
-                (void)WaitForResponse(&req);
-        }
-
-        if(!deviceName && NumPlaybackDevices > 0)
-        {
-            deviceName = PlaybackDeviceList[0].name;
-            data->guid = PlaybackDeviceList[0].guid;
-        }
-        else
+        if(deviceName)
         {
             ALuint i;
+
+            if(!PlaybackDeviceList)
+            {
+                ThreadRequest req = { data->MsgEvent, 0 };
+                if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, ALL_DEVICE_PROBE))
+                    (void)WaitForResponse(&req);
+            }
 
             hr = E_FAIL;
             for(i = 0;i < NumPlaybackDevices;i++)
             {
-                if(PlaybackDeviceList[i].name &&
-                   strcmp(deviceName, PlaybackDeviceList[i].name) == 0)
+                if(strcmp(deviceName, PlaybackDeviceList[i].name) == 0)
                 {
-                    data->guid = PlaybackDeviceList[i].guid;
+                    data->devid = strdupW(PlaybackDeviceList[i].devid);
                     hr = S_OK;
                     break;
                 }
@@ -904,7 +849,6 @@ static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName
         return ALC_INVALID_VALUE;
     }
 
-    device->szDeviceName = strdup(deviceName);
     return ALC_NO_ERROR;
 }
 
@@ -921,6 +865,9 @@ static void MMDevApiClosePlayback(ALCdevice *device)
 
     CloseHandle(data->hNotifyEvent);
     data->hNotifyEvent = NULL;
+
+    free(data->devid);
+    data->devid = NULL;
 
     free(data);
     device->ExtraData = NULL;
@@ -972,6 +919,26 @@ ALCboolean alcMMDevApiInit(BackendFuncs *FuncList)
 
 void alcMMDevApiDeinit(void)
 {
+    ALuint i;
+
+    for(i = 0;i < NumPlaybackDevices;i++)
+    {
+        free(PlaybackDeviceList[i].name);
+        CoTaskMemFree(PlaybackDeviceList[i].devid);
+    }
+    free(PlaybackDeviceList);
+    PlaybackDeviceList = NULL;
+    NumPlaybackDevices = 0;
+
+    for(i = 0;i < NumCaptureDevices;i++)
+    {
+        free(CaptureDeviceList[i].name);
+        CoTaskMemFree(CaptureDeviceList[i].devid);
+    }
+    free(CaptureDeviceList);
+    CaptureDeviceList = NULL;
+    NumCaptureDevices = 0;
+
     if(ThreadHdl)
     {
         TRACE("Sending WM_QUIT to Thread %04lx\n", ThreadID);

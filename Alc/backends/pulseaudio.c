@@ -108,6 +108,7 @@ MAKE_FUNC(pa_channel_map_equal);
 MAKE_FUNC(pa_context_get_server_info);
 MAKE_FUNC(pa_context_get_sink_info_by_name);
 MAKE_FUNC(pa_context_get_sink_info_list);
+MAKE_FUNC(pa_context_get_source_info_by_name);
 MAKE_FUNC(pa_context_get_source_info_list);
 MAKE_FUNC(pa_operation_get_state);
 MAKE_FUNC(pa_operation_unref);
@@ -175,6 +176,7 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_context_get_server_info ppa_context_get_server_info
 #define pa_context_get_sink_info_by_name ppa_context_get_sink_info_by_name
 #define pa_context_get_sink_info_list ppa_context_get_sink_info_list
+#define pa_context_get_source_info_by_name ppa_context_get_source_info_by_name
 #define pa_context_get_source_info_list ppa_context_get_source_info_list
 #define pa_operation_get_state ppa_operation_get_state
 #define pa_operation_unref ppa_operation_unref
@@ -363,6 +365,7 @@ static ALCboolean pulse_load(void) //{{{
         LOAD_FUNC(pa_context_get_server_info);
         LOAD_FUNC(pa_context_get_sink_info_by_name);
         LOAD_FUNC(pa_context_get_sink_info_list);
+        LOAD_FUNC(pa_context_get_source_info_by_name);
         LOAD_FUNC(pa_context_get_source_info_list);
         LOAD_FUNC(pa_operation_get_state);
         LOAD_FUNC(pa_operation_unref);
@@ -772,7 +775,30 @@ static void probe_devices(ALboolean capture)
                 o = pa_context_get_sink_info_list(context, sink_device_callback, loop);
             }
             else
+            {
+                pa_sample_spec spec;
+                pa_stream *stream;
+
+                spec.format = PA_SAMPLE_S16NE;
+                spec.rate = 44100;
+                spec.channels = 1;
+
+                stream = connect_record_stream(NULL, loop, context, 0, NULL,
+                                               &spec, NULL);
+                if(stream)
+                {
+                    o = pa_context_get_source_info_by_name(context, pa_stream_get_device_name(stream), source_device_callback, loop);
+                    while(pa_operation_get_state(o) == PA_OPERATION_RUNNING)
+                        pa_threaded_mainloop_wait(loop);
+                    pa_operation_unref(o);
+
+                    pa_stream_disconnect(stream);
+                    pa_stream_unref(stream);
+                    stream = NULL;
+                }
+
                 o = pa_context_get_source_info_list(context, source_device_callback, loop);
+            }
             while(pa_operation_get_state(o) == PA_OPERATION_RUNNING)
                 pa_threaded_mainloop_wait(loop);
             pa_operation_unref(o);

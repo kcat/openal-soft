@@ -889,8 +889,6 @@ static void pulse_close(ALCdevice *device) //{{{
 static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name) //{{{
 {
     const char *pulse_name = NULL;
-    pa_sample_spec spec;
-    pa_stream *stream;
     pulse_data *data;
 
     if(!allDevNameMap)
@@ -921,41 +919,9 @@ static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name
         return ALC_INVALID_VALUE;
 
     data = device->ExtraData;
-
-    pa_threaded_mainloop_lock(data->loop);
-
-    spec.format = PA_SAMPLE_S16NE;
-    spec.rate = 44100;
-    spec.channels = 2;
-
-    stream = connect_playback_stream(pulse_name, data->loop, data->context, 0,
-                                     NULL, &spec, NULL);
-    if(!stream)
-    {
-        pa_threaded_mainloop_unlock(data->loop);
-        goto fail;
-    }
-
-    if(pa_stream_is_suspended(stream))
-    {
-        ERR("Device is suspended\n");
-        pa_stream_disconnect(stream);
-        pa_stream_unref(stream);
-        pa_threaded_mainloop_unlock(data->loop);
-        goto fail;
-    }
-    data->device_name = strdup(pa_stream_get_device_name(stream));
-
-    pa_stream_disconnect(stream);
-    pa_stream_unref(stream);
-
-    pa_threaded_mainloop_unlock(data->loop);
+    data->device_name = strdup(pulse_name);
 
     return ALC_NO_ERROR;
-
-fail:
-    pulse_close(device);
-    return ALC_INVALID_VALUE;
 } //}}}
 
 static void pulse_close_playback(ALCdevice *device) //{{{

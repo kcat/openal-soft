@@ -426,15 +426,6 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     WARN("PulseAudio modified buffer length: minreq=%d, tlength=%d\n", attr->minreq, attr->tlength);
 }//}}}
 
-static void stream_device_callback(pa_stream *stream, void *pdata) //{{{
-{
-    ALCdevice *Device = pdata;
-    pulse_data *data = Device->ExtraData;
-
-    free(data->device_name);
-    data->device_name = strdup(pa_stream_get_device_name(stream));
-}//}}}
-
 static void context_state_callback2(pa_context *context, void *pdata) //{{{
 {
     ALCdevice *Device = pdata;
@@ -756,7 +747,7 @@ static void probe_devices(ALboolean capture)
                 pa_stream *stream;
 
                 flags = PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
-                        PA_STREAM_FIX_CHANNELS;
+                        PA_STREAM_FIX_CHANNELS | PA_STREAM_DONT_MOVE;
 
                 spec.format = PA_SAMPLE_S16NE;
                 spec.rate = 44100;
@@ -785,7 +776,7 @@ static void probe_devices(ALboolean capture)
                 pa_stream *stream;
 
                 flags = PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
-                        PA_STREAM_FIX_CHANNELS;
+                        PA_STREAM_FIX_CHANNELS | PA_STREAM_DONT_MOVE;
 
                 spec.format = PA_SAMPLE_S16NE;
                 spec.rate = 44100;
@@ -958,6 +949,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     flags |= PA_STREAM_EARLY_REQUESTS;
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
+    flags |= PA_STREAM_DONT_MOVE;
 
     switch(device->FmtType)
     {
@@ -1043,7 +1035,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     if(pa_stream_set_buffer_attr_callback)
         pa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
 #endif
-    pa_stream_set_moved_callback(data->stream, stream_device_callback, device);
     pa_stream_set_write_callback(data->stream, stream_write_callback, device);
     pa_stream_set_underflow_callback(data->stream, stream_signal_callback, device);
 
@@ -1074,7 +1065,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         if(pa_stream_set_buffer_attr_callback)
             pa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
 #endif
-        pa_stream_set_moved_callback(data->stream, NULL, NULL);
         pa_stream_set_write_callback(data->stream, NULL, NULL);
         pa_stream_set_underflow_callback(data->stream, NULL, NULL);
         pa_stream_disconnect(data->stream);
@@ -1111,7 +1101,6 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
     if(pa_stream_set_buffer_attr_callback)
         pa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
 #endif
-    pa_stream_set_moved_callback(data->stream, NULL, NULL);
     pa_stream_set_write_callback(data->stream, NULL, NULL);
     pa_stream_set_underflow_callback(data->stream, NULL, NULL);
     pa_stream_disconnect(data->stream);
@@ -1208,6 +1197,7 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
     data->attr.fragsize = minu(samples, 50*device->Frequency/1000) *
                           pa_frame_size(&data->spec);
 
+    flags |= PA_STREAM_DONT_MOVE;
     flags |= PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY;
     data->stream = connect_record_stream(pulse_name, data->loop, data->context,
                                          flags, &data->attr, &data->spec,

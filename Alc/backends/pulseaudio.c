@@ -632,28 +632,26 @@ static ALuint PulseProc(ALvoid *param)
     return 0;
 }
 
-static pa_stream *connect_playback_stream(ALCdevice *device,
+static pa_stream *connect_playback_stream(const char *device_name,
+    pa_threaded_mainloop *loop, pa_context *context,
     pa_stream_flags_t flags, pa_buffer_attr *attr, pa_sample_spec *spec,
     pa_channel_map *chanmap)
 {
-    pulse_data *data = device->ExtraData;
     pa_stream_state_t state;
     pa_stream *stream;
 
-    stream = pa_stream_new(data->context, "Playback Stream", spec, chanmap);
+    stream = pa_stream_new(context, "Playback Stream", spec, chanmap);
     if(!stream)
     {
-        ERR("pa_stream_new() failed: %s\n",
-            pa_strerror(pa_context_errno(data->context)));
+        ERR("pa_stream_new() failed: %s\n", pa_strerror(pa_context_errno(context)));
         return NULL;
     }
 
-    pa_stream_set_state_callback(stream, stream_state_callback, data->loop);
+    pa_stream_set_state_callback(stream, stream_state_callback, loop);
 
-    if(pa_stream_connect_playback(stream, data->device_name, attr, flags, NULL, NULL) < 0)
+    if(pa_stream_connect_playback(stream, device_name, attr, flags, NULL, NULL) < 0)
     {
-        ERR("Stream did not connect: %s\n",
-            pa_strerror(pa_context_errno(data->context)));
+        ERR("Stream did not connect: %s\n", pa_strerror(pa_context_errno(context)));
         pa_stream_unref(stream);
         return NULL;
     }
@@ -662,13 +660,12 @@ static pa_stream *connect_playback_stream(ALCdevice *device,
     {
         if(!PA_STREAM_IS_GOOD(state))
         {
-            ERR("Stream did not get ready: %s\n",
-                pa_strerror(pa_context_errno(data->context)));
+            ERR("Stream did not get ready: %s\n", pa_strerror(pa_context_errno(context)));
             pa_stream_unref(stream);
             return NULL;
         }
 
-        pa_threaded_mainloop_wait(data->loop);
+        pa_threaded_mainloop_wait(loop);
     }
     pa_stream_set_state_callback(stream, NULL, NULL);
 
@@ -790,6 +787,7 @@ static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name
 {
     char *pulse_name = NULL;
     pa_sample_spec spec;
+    pa_stream *stream;
     pulse_data *data;
 
     if(!allDevNameMap)
@@ -827,8 +825,8 @@ static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name
     spec.rate = 44100;
     spec.channels = 2;
 
-    data->device_name = pulse_name;
-    pa_stream *stream = connect_playback_stream(device, 0, NULL, &spec, NULL);
+    stream = connect_playback_stream(pulse_name, data->loop, data->context, 0,
+                                     NULL, &spec, NULL);
     if(!stream)
     {
         pa_threaded_mainloop_unlock(data->loop);
@@ -932,7 +930,9 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
     data->attr.maxlength = -1;
 
-    data->stream = connect_playback_stream(device, flags, &data->attr, &data->spec, &chanmap);
+    data->stream = connect_playback_stream(data->device_name, data->loop,
+                                           data->context, flags, &data->attr,
+                                           &data->spec, &chanmap);
     if(!data->stream)
     {
         pa_threaded_mainloop_unlock(data->loop);

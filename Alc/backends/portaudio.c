@@ -222,8 +222,6 @@ retry_open:
         return ALC_INVALID_VALUE;
     }
 
-    device->szDeviceName = strdup(deviceName);
-
     if((ALuint)outParams.channelCount != ChannelsFromDevFmt(device->FmtChans))
     {
         if(outParams.channelCount != 1 && outParams.channelCount != 2)
@@ -240,6 +238,8 @@ retry_open:
         device->FmtChans = ((outParams.channelCount==1) ? DevFmtMono : DevFmtStereo);
     }
     SetDefaultChannelOrder(device);
+
+    device->szDeviceName = strdup(deviceName);
 
     return ALC_NO_ERROR;
 }

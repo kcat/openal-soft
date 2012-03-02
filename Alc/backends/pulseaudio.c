@@ -338,25 +338,13 @@ static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
         pa_threaded_mainloop_signal(loop, 0);
 }//}}}
 
-static void stream_signal_callback(pa_stream *stream, void *pdata) //{{{
-{
-    ALCdevice *Device = pdata;
-    pulse_data *data = Device->ExtraData;
-    (void)stream;
-
-    pa_threaded_mainloop_signal(data->loop, 0);
-}//}}}
-
 static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
 {
     ALCdevice *device = pdata;
     pulse_data *data = device->ExtraData;
 
     data->attr = *pa_stream_get_buffer_attr(stream);
-    WARN("PulseAudio modified buffer length: minreq=%d, tlength=%d\n", data->attr.minreq, data->attr.tlength);
-
-    device->UpdateSize = data->attr.minreq / pa_frame_size(&data->spec);
-    device->NumUpdates = data->attr.tlength / data->attr.minreq;
+    TRACE("PulseAudio modified buffer length: minreq=%d, tlength=%d\n", data->attr.minreq, data->attr.tlength);
 }//}}}
 
 static void context_state_callback2(pa_context *context, void *pdata) //{{{
@@ -767,35 +755,32 @@ static void probe_devices(ALboolean capture)
 }
 
 
-static void stream_write_callback(pa_stream *stream, size_t len, void *pdata)
-{
-    ALCdevice *Device = pdata;
-    pulse_data *data = Device->ExtraData;
-    (void)stream;
-    (void)len;
-
-    pa_threaded_mainloop_signal(data->loop, 0);
-}
-
 static ALuint PulseProc(ALvoid *param)
 {
     ALCdevice *Device = param;
     pulse_data *data = Device->ExtraData;
+    ALuint buffer_size;
+    ALint update_size;
     size_t frame_size;
-    size_t len;
+    ssize_t len;
 
     SetRTPriority();
 
-    frame_size = pa_frame_size(&data->spec);
     pa_threaded_mainloop_lock(data->loop);
+    frame_size = pa_frame_size(&data->spec);
+    update_size = Device->UpdateSize * frame_size;
+    buffer_size = update_size * Device->NumUpdates;
     do {
-        len = pa_stream_writable_size(data->stream);
-        if(len < data->attr.minreq)
+        len = pa_stream_writable_size(data->stream) - data->attr.tlength +
+              buffer_size;
+        if(len < update_size)
         {
-            pa_threaded_mainloop_wait(data->loop);
+            pa_threaded_mainloop_unlock(data->loop);
+            Sleep(1);
+            pa_threaded_mainloop_lock(data->loop);
             continue;
         }
-        len -= len%data->attr.minreq;
+        len -= len%update_size;
 
         while(len > 0)
         {
@@ -988,7 +973,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
 
-    flags |= PA_STREAM_EARLY_REQUESTS;
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
     flags |= PA_STREAM_DONT_MOVE;
 
@@ -1048,7 +1032,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         pa_threaded_mainloop_unlock(data->loop);
         return ALC_FALSE;
     }
-
     pa_stream_set_state_callback(data->stream, stream_state_callback2, device);
 
     data->spec = *(pa_stream_get_sample_spec(data->stream));
@@ -1075,28 +1058,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     if(pa_stream_set_buffer_attr_callback)
         pa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
 #endif
-    pa_stream_set_write_callback(data->stream, stream_write_callback, device);
-    pa_stream_set_underflow_callback(data->stream, stream_signal_callback, device);
-
     data->attr = *(pa_stream_get_buffer_attr(data->stream));
-    device->UpdateSize = data->attr.minreq / pa_frame_size(&data->spec);
-    device->NumUpdates = data->attr.tlength / data->attr.minreq;
-    if(device->NumUpdates <= 1)
-    {
-        pa_operation *o;
-
-        ERR("PulseAudio returned minreq=%d, tlength=%d; expect lag or break up\n", data->attr.minreq, data->attr.tlength);
-
-        /* Server gave a comparatively large minreq, so modify the tlength. */
-        device->NumUpdates = 2;
-        data->attr.tlength = data->attr.minreq * device->NumUpdates;
-
-        o = pa_stream_set_buffer_attr(data->stream, &data->attr,
-                                      stream_success_callback, device);
-        while(pa_operation_get_state(o) == PA_OPERATION_RUNNING)
-            pa_threaded_mainloop_wait(data->loop);
-        pa_operation_unref(o);
-    }
 
     data->thread = StartThread(PulseProc, device);
     if(!data->thread)
@@ -1105,8 +1067,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         if(pa_stream_set_buffer_attr_callback)
             pa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
 #endif
-        pa_stream_set_write_callback(data->stream, NULL, NULL);
-        pa_stream_set_underflow_callback(data->stream, NULL, NULL);
         pa_stream_disconnect(data->stream);
         pa_stream_unref(data->stream);
         data->stream = NULL;

@@ -212,7 +212,7 @@ static ALuint numCaptureDevNames;
 static pa_context_flags_t pulse_ctx_flags;
 
 
-static ALCboolean pulse_load(void) //{{{
+static ALCboolean pulse_load(void)
 {
     ALCboolean ret = ALC_TRUE;
 #ifdef HAVE_DYNLOAD
@@ -315,9 +315,9 @@ static ALCboolean pulse_load(void) //{{{
     }
 #endif /* HAVE_DYNLOAD */
     return ret;
-} //}}}
+}
 
-// PulseAudio Event Callbacks //{{{
+/* PulseAudio Event Callbacks */
 static void context_state_callback(pa_context *context, void *pdata)
 {
     pa_threaded_mainloop *loop = pdata;
@@ -328,7 +328,7 @@ static void context_state_callback(pa_context *context, void *pdata)
         pa_threaded_mainloop_signal(loop, 0);
 }
 
-static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
+static void stream_state_callback(pa_stream *stream, void *pdata)
 {
     pa_threaded_mainloop *loop = pdata;
     pa_stream_state_t state;
@@ -336,18 +336,18 @@ static void stream_state_callback(pa_stream *stream, void *pdata) //{{{
     state = pa_stream_get_state(stream);
     if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
         pa_threaded_mainloop_signal(loop, 0);
-}//}}}
+}
 
-static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
+static void stream_buffer_attr_callback(pa_stream *stream, void *pdata)
 {
     ALCdevice *device = pdata;
     pulse_data *data = device->ExtraData;
 
     data->attr = *pa_stream_get_buffer_attr(stream);
     TRACE("minreq=%d, tlength=%d, prebuf=%d\n", data->attr.minreq, data->attr.tlength, data->attr.prebuf);
-}//}}}
+}
 
-static void context_state_callback2(pa_context *context, void *pdata) //{{{
+static void context_state_callback2(pa_context *context, void *pdata)
 {
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
@@ -358,9 +358,9 @@ static void context_state_callback2(pa_context *context, void *pdata) //{{{
         aluHandleDisconnect(Device);
     }
     pa_threaded_mainloop_signal(data->loop, 0);
-}//}}}
+}
 
-static void stream_state_callback2(pa_stream *stream, void *pdata) //{{{
+static void stream_state_callback2(pa_stream *stream, void *pdata)
 {
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
@@ -371,9 +371,9 @@ static void stream_state_callback2(pa_stream *stream, void *pdata) //{{{
         aluHandleDisconnect(Device);
     }
     pa_threaded_mainloop_signal(data->loop, 0);
-}//}}}
+}
 
-static void stream_success_callback(pa_stream *stream, int success, void *pdata) //{{{
+static void stream_success_callback(pa_stream *stream, int success, void *pdata)
 {
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
@@ -381,9 +381,9 @@ static void stream_success_callback(pa_stream *stream, int success, void *pdata)
     (void)success;
 
     pa_threaded_mainloop_signal(data->loop, 0);
-}//}}}
+}
 
-static void sink_info_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata) //{{{
+static void sink_info_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
 {
     ALCdevice *device = pdata;
     pulse_data *data = device->ExtraData;
@@ -434,9 +434,9 @@ static void sink_info_callback(pa_context *context, const pa_sink_info *info, in
 
     pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
     ERR("Failed to find format for channel map:\n    %s\n", chanmap_str);
-}//}}}
+}
 
-static void sink_device_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata) //{{{
+static void sink_device_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
 {
     pa_threaded_mainloop *loop = pdata;
     void *temp;
@@ -466,9 +466,9 @@ static void sink_device_callback(pa_context *context, const pa_sink_info *info, 
         allDevNameMap[numDevNames].device_name = strdup(info->name);
         numDevNames++;
     }
-}//}}}
+}
 
-static void source_device_callback(pa_context *context, const pa_source_info *info, int eol, void *pdata) //{{{
+static void source_device_callback(pa_context *context, const pa_source_info *info, int eol, void *pdata)
 {
     pa_threaded_mainloop *loop = pdata;
     void *temp;
@@ -498,7 +498,7 @@ static void source_device_callback(pa_context *context, const pa_source_info *in
         allCaptureDevNameMap[numCaptureDevNames].device_name = strdup(info->name);
         numCaptureDevNames++;
     }
-}//}}}
+}
 
 static void sink_name_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
 {
@@ -531,7 +531,6 @@ static void source_name_callback(pa_context *context, const pa_source_info *info
     free(device->szDeviceName);
     device->szDeviceName = strdup(info->description);
 }
-//}}}
 
 
 static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
@@ -811,7 +810,7 @@ static ALuint PulseProc(ALvoid *param)
 }
 
 
-static ALCboolean pulse_open(ALCdevice *device) //{{{
+static ALCboolean pulse_open(ALCdevice *device)
 {
     pulse_data *data = pa_xmalloc(sizeof(pulse_data));
     memset(data, 0, sizeof(*data));
@@ -851,9 +850,9 @@ out:
     device->ExtraData = NULL;
     pa_xfree(data);
     return ALC_FALSE;
-} //}}}
+}
 
-static void pulse_close(ALCdevice *device) //{{{
+static void pulse_close(ALCdevice *device)
 {
     pulse_data *data = device->ExtraData;
 
@@ -877,11 +876,10 @@ static void pulse_close(ALCdevice *device) //{{{
 
     device->ExtraData = NULL;
     pa_xfree(data);
-} //}}}
-//}}}
+}
 
-// OpenAL {{{
-static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name) //{{{
+/* OpenAL */
+static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name)
 {
     const char *pulse_name = NULL;
     pa_stream_flags_t flags;
@@ -940,14 +938,14 @@ static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name
     pa_threaded_mainloop_unlock(data->loop);
 
     return ALC_NO_ERROR;
-} //}}}
+}
 
-static void pulse_close_playback(ALCdevice *device) //{{{
+static void pulse_close_playback(ALCdevice *device)
 {
     pulse_close(device);
-} //}}}
+}
 
-static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
+static ALCboolean pulse_reset_playback(ALCdevice *device)
 {
     pulse_data *data = device->ExtraData;
     pa_stream_flags_t flags = 0;
@@ -1078,9 +1076,9 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
 
     pa_threaded_mainloop_unlock(data->loop);
     return ALC_TRUE;
-} //}}}
+}
 
-static void pulse_stop_playback(ALCdevice *device) //{{{
+static void pulse_stop_playback(ALCdevice *device)
 {
     pulse_data *data = device->ExtraData;
 
@@ -1109,10 +1107,10 @@ static void pulse_stop_playback(ALCdevice *device) //{{{
     data->stream = NULL;
 
     pa_threaded_mainloop_unlock(data->loop);
-} //}}}
+}
 
 
-static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name) //{{{
+static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
 {
     const char *pulse_name = NULL;
     pa_stream_flags_t flags = 0;
@@ -1220,14 +1218,14 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
 fail:
     pulse_close(device);
     return ALC_INVALID_VALUE;
-} //}}}
+}
 
-static void pulse_close_capture(ALCdevice *device) //{{{
+static void pulse_close_capture(ALCdevice *device)
 {
     pulse_close(device);
-} //}}}
+}
 
-static void pulse_start_capture(ALCdevice *device) //{{{
+static void pulse_start_capture(ALCdevice *device)
 {
     pulse_data *data = device->ExtraData;
     pa_operation *o;
@@ -1238,9 +1236,9 @@ static void pulse_start_capture(ALCdevice *device) //{{{
         pa_threaded_mainloop_wait(data->loop);
     pa_operation_unref(o);
     pa_threaded_mainloop_unlock(data->loop);
-} //}}}
+}
 
-static void pulse_stop_capture(ALCdevice *device) //{{{
+static void pulse_stop_capture(ALCdevice *device)
 {
     pulse_data *data = device->ExtraData;
     pa_operation *o;
@@ -1251,9 +1249,9 @@ static void pulse_stop_capture(ALCdevice *device) //{{{
         pa_threaded_mainloop_wait(data->loop);
     pa_operation_unref(o);
     pa_threaded_mainloop_unlock(data->loop);
-} //}}}
+}
 
-static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples) //{{{
+static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples)
 {
     pulse_data *data = device->ExtraData;
     ALCuint todo = samples * pa_frame_size(&data->spec);
@@ -1306,9 +1304,9 @@ static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint
     pa_threaded_mainloop_unlock(data->loop);
 
     return ALC_NO_ERROR;
-} //}}}
+}
 
-static ALCuint pulse_available_samples(ALCdevice *device) //{{{
+static ALCuint pulse_available_samples(ALCdevice *device)
 {
     pulse_data *data = device->ExtraData;
     size_t readable = data->cap_remain;
@@ -1325,10 +1323,10 @@ static ALCuint pulse_available_samples(ALCdevice *device) //{{{
     if(data->last_readable < readable)
         data->last_readable = readable;
     return data->last_readable / pa_frame_size(&data->spec);
-} //}}}
+}
 
 
-static const BackendFuncs pulse_funcs = { //{{{
+static const BackendFuncs pulse_funcs = {
     pulse_open_playback,
     pulse_close_playback,
     pulse_reset_playback,
@@ -1339,9 +1337,9 @@ static const BackendFuncs pulse_funcs = { //{{{
     pulse_stop_capture,
     pulse_capture_samples,
     pulse_available_samples
-}; //}}}
+};
 
-ALCboolean alc_pulse_init(BackendFuncs *func_list) //{{{
+ALCboolean alc_pulse_init(BackendFuncs *func_list)
 {
     ALCboolean ret = ALC_FALSE;
 
@@ -1376,9 +1374,9 @@ ALCboolean alc_pulse_init(BackendFuncs *func_list) //{{{
     }
 
     return ret;
-} //}}}
+}
 
-void alc_pulse_deinit(void) //{{{
+void alc_pulse_deinit(void)
 {
     ALuint i;
 
@@ -1405,9 +1403,9 @@ void alc_pulse_deinit(void) //{{{
         CloseLib(pa_handle);
     pa_handle = NULL;
 #endif
-} //}}}
+}
 
-void alc_pulse_probe(enum DevProbe type) //{{{
+void alc_pulse_probe(enum DevProbe type)
 {
     ALuint i;
 
@@ -1445,8 +1443,7 @@ void alc_pulse_probe(enum DevProbe type) //{{{
                 AppendCaptureDeviceList(allCaptureDevNameMap[i].name);
             break;
     }
-} //}}}
-//}}}
+}
 
 #else
 

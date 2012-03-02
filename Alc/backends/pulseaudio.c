@@ -1054,13 +1054,12 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     data->spec = *(pa_stream_get_sample_spec(data->stream));
     if(device->Frequency != data->spec.rate)
     {
-        size_t frame_size = pa_frame_size(&data->spec);
         pa_operation *o;
 
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
-        data->attr.minreq = (ALuint64)(data->attr.minreq/frame_size) *
-                            data->spec.rate / device->Frequency * frame_size;
+        data->attr.minreq = (ALuint64)device->UpdateSize * data->spec.rate /
+                            device->Frequency * pa_frame_size(&data->spec);
         data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
 
         o = pa_stream_set_buffer_attr(data->stream, &data->attr,

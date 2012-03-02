@@ -1398,11 +1398,7 @@ void alc_pulse_deinit(void)
     allCaptureDevNameMap = NULL;
     numCaptureDevNames = 0;
 
-#ifdef HAVE_DYNLOAD
-    if(pa_handle)
-        CloseLib(pa_handle);
-    pa_handle = NULL;
-#endif
+    /* PulseAudio doesn't like being CloseLib'd sometimes */
 }
 
 void alc_pulse_probe(enum DevProbe type)

@@ -1051,8 +1051,7 @@ static ALCenum alsa_capture_samples(ALCdevice *Device, ALCvoid *Buffer, ALCuint 
                 continue;
             if((amt=snd_pcm_recover(data->pcmHandle, amt, 1)) >= 0)
             {
-                if(data->doCapture)
-                    amt = snd_pcm_start(data->pcmHandle);
+                amt = snd_pcm_start(data->pcmHandle);
                 if(amt >= 0)
                     amt = snd_pcm_avail_update(data->pcmHandle);
             }

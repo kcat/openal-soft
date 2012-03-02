@@ -2653,15 +2653,15 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     *list = (*list)->next;
     UnlockLists();
 
-    if((ctx=pDevice->ContextList) != NULL)
+    while((ctx=pDevice->ContextList) != NULL)
     {
-        do {
-            WARN("Releasing context %p\n", ctx);
-            ReleaseContext(ctx, pDevice);
-        } while((ctx=pDevice->ContextList) != NULL);
-        ALCdevice_StopPlayback(pDevice);
-        pDevice->Flags &= ~DEVICE_RUNNING;
+        WARN("Releasing context %p\n", ctx);
+        ReleaseContext(ctx, pDevice);
     }
+    if((pDevice->Flags&DEVICE_RUNNING))
+        ALCdevice_StopPlayback(pDevice);
+    pDevice->Flags &= ~DEVICE_RUNNING;
+
     ALCdevice_ClosePlayback(pDevice);
 
     ALCdevice_DecRef(pDevice);

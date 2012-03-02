@@ -344,7 +344,7 @@ static void stream_buffer_attr_callback(pa_stream *stream, void *pdata) //{{{
     pulse_data *data = device->ExtraData;
 
     data->attr = *pa_stream_get_buffer_attr(stream);
-    TRACE("PulseAudio modified buffer length: minreq=%d, tlength=%d\n", data->attr.minreq, data->attr.tlength);
+    TRACE("minreq=%d, tlength=%d, prebuf=%d\n", data->attr.minreq, data->attr.tlength, data->attr.prebuf);
 }//}}}
 
 static void context_state_callback2(pa_context *context, void *pdata) //{{{
@@ -1018,10 +1018,10 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     }
     SetDefaultWFXChannelOrder(device);
 
-    data->attr.prebuf = -1;
     data->attr.fragsize = -1;
     data->attr.minreq = device->UpdateSize * pa_frame_size(&data->spec);
     data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
+    data->attr.prebuf = data->attr.tlength;
     data->attr.maxlength = -1;
 
     data->stream = connect_playback_stream(data->device_name, data->loop,
@@ -1044,6 +1044,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
         data->attr.minreq = (ALuint64)device->UpdateSize * data->spec.rate /
                             device->Frequency * pa_frame_size(&data->spec);
         data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
+        data->attr.prebuf = data->attr.tlength;
 
         o = pa_stream_set_buffer_attr(data->stream, &data->attr,
                                       stream_success_callback, device);
@@ -1058,7 +1059,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device) //{{{
     if(pa_stream_set_buffer_attr_callback)
         pa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
 #endif
-    data->attr = *(pa_stream_get_buffer_attr(data->stream));
+    stream_buffer_attr_callback(data->stream, device);
 
     data->thread = StartThread(PulseProc, device);
     if(!data->thread)

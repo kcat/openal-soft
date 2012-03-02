@@ -1088,7 +1088,6 @@ static void pulse_stop_playback(ALCdevice *device)
     data->killNow = AL_TRUE;
     if(data->thread)
     {
-        pa_threaded_mainloop_signal(data->loop, 0);
         StopThread(data->thread);
         data->thread = NULL;
     }
@@ -1100,8 +1099,6 @@ static void pulse_stop_playback(ALCdevice *device)
     if(pa_stream_set_buffer_attr_callback)
         pa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
 #endif
-    pa_stream_set_write_callback(data->stream, NULL, NULL);
-    pa_stream_set_underflow_callback(data->stream, NULL, NULL);
     pa_stream_disconnect(data->stream);
     pa_stream_unref(data->stream);
     data->stream = NULL;

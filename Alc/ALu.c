@@ -813,10 +813,13 @@ static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
     const enum Channel *ChanMap = device->DevChannels;                        \
     ALuint i, j;                                                              \
                                                                               \
-    for(i = 0;i < SamplesToDo;i++)                                            \
+    for(j = 0;j < N;j++)                                                      \
     {                                                                         \
-        for(j = 0;j < N;j++)                                                  \
-            *(buffer++) = func(DryBuffer[i][ChanMap[j]]);                     \
+        T *RESTRICT out = buffer + j;                                         \
+        enum Channel chan = ChanMap[j];                                       \
+                                                                              \
+        for(i = 0;i < SamplesToDo;i++)                                        \
+            out[i*N] = func(DryBuffer[i][chan]);                              \
     }                                                                         \
 }
 

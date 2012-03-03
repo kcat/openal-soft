@@ -821,86 +821,53 @@ static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
 }
 
 DECL_TEMPLATE(ALfloat, 1, aluF2F)
+DECL_TEMPLATE(ALfloat, 2, aluF2F)
 DECL_TEMPLATE(ALfloat, 4, aluF2F)
 DECL_TEMPLATE(ALfloat, 6, aluF2F)
 DECL_TEMPLATE(ALfloat, 7, aluF2F)
 DECL_TEMPLATE(ALfloat, 8, aluF2F)
 
 DECL_TEMPLATE(ALuint, 1, aluF2UI)
+DECL_TEMPLATE(ALuint, 2, aluF2UI)
 DECL_TEMPLATE(ALuint, 4, aluF2UI)
 DECL_TEMPLATE(ALuint, 6, aluF2UI)
 DECL_TEMPLATE(ALuint, 7, aluF2UI)
 DECL_TEMPLATE(ALuint, 8, aluF2UI)
 
 DECL_TEMPLATE(ALint, 1, aluF2I)
+DECL_TEMPLATE(ALint, 2, aluF2I)
 DECL_TEMPLATE(ALint, 4, aluF2I)
 DECL_TEMPLATE(ALint, 6, aluF2I)
 DECL_TEMPLATE(ALint, 7, aluF2I)
 DECL_TEMPLATE(ALint, 8, aluF2I)
 
 DECL_TEMPLATE(ALushort, 1, aluF2US)
+DECL_TEMPLATE(ALushort, 2, aluF2US)
 DECL_TEMPLATE(ALushort, 4, aluF2US)
 DECL_TEMPLATE(ALushort, 6, aluF2US)
 DECL_TEMPLATE(ALushort, 7, aluF2US)
 DECL_TEMPLATE(ALushort, 8, aluF2US)
 
 DECL_TEMPLATE(ALshort, 1, aluF2S)
+DECL_TEMPLATE(ALshort, 2, aluF2S)
 DECL_TEMPLATE(ALshort, 4, aluF2S)
 DECL_TEMPLATE(ALshort, 6, aluF2S)
 DECL_TEMPLATE(ALshort, 7, aluF2S)
 DECL_TEMPLATE(ALshort, 8, aluF2S)
 
 DECL_TEMPLATE(ALubyte, 1, aluF2UB)
+DECL_TEMPLATE(ALubyte, 2, aluF2UB)
 DECL_TEMPLATE(ALubyte, 4, aluF2UB)
 DECL_TEMPLATE(ALubyte, 6, aluF2UB)
 DECL_TEMPLATE(ALubyte, 7, aluF2UB)
 DECL_TEMPLATE(ALubyte, 8, aluF2UB)
 
 DECL_TEMPLATE(ALbyte, 1, aluF2B)
+DECL_TEMPLATE(ALbyte, 2, aluF2B)
 DECL_TEMPLATE(ALbyte, 4, aluF2B)
 DECL_TEMPLATE(ALbyte, 6, aluF2B)
 DECL_TEMPLATE(ALbyte, 7, aluF2B)
 DECL_TEMPLATE(ALbyte, 8, aluF2B)
-
-#undef DECL_TEMPLATE
-
-#define DECL_TEMPLATE(T, N, func)                                             \
-static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
-                            ALuint SamplesToDo)                               \
-{                                                                             \
-    ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS] = device->DryBuffer;           \
-    const enum Channel *ChanMap = device->DevChannels;                        \
-    ALuint i, j;                                                              \
-                                                                              \
-    if(device->Bs2b)                                                          \
-    {                                                                         \
-        for(i = 0;i < SamplesToDo;i++)                                        \
-        {                                                                     \
-            float samples[2];                                                 \
-            samples[0] = DryBuffer[i][ChanMap[0]];                            \
-            samples[1] = DryBuffer[i][ChanMap[1]];                            \
-            bs2b_cross_feed(device->Bs2b, samples);                           \
-            *(buffer++) = func(samples[0]);                                   \
-            *(buffer++) = func(samples[1]);                                   \
-        }                                                                     \
-    }                                                                         \
-    else                                                                      \
-    {                                                                         \
-        for(i = 0;i < SamplesToDo;i++)                                        \
-        {                                                                     \
-            for(j = 0;j < N;j++)                                              \
-                *(buffer++) = func(DryBuffer[i][ChanMap[j]]);                 \
-        }                                                                     \
-    }                                                                         \
-}
-
-DECL_TEMPLATE(ALfloat, 2, aluF2F)
-DECL_TEMPLATE(ALuint, 2, aluF2UI)
-DECL_TEMPLATE(ALint, 2, aluF2I)
-DECL_TEMPLATE(ALushort, 2, aluF2US)
-DECL_TEMPLATE(ALshort, 2, aluF2S)
-DECL_TEMPLATE(ALubyte, 2, aluF2UB)
-DECL_TEMPLATE(ALbyte, 2, aluF2B)
 
 #undef DECL_TEMPLATE
 
@@ -1065,6 +1032,11 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             {
                 device->ClickRemoval[c] += device->PendingClicks[c];
                 device->PendingClicks[c] = 0.0f;
+            }
+            if(device->Bs2b)
+            {
+                for(i = 0;i < SamplesToDo;i++)
+                    bs2b_cross_feed(device->Bs2b, &device->DryBuffer[i][0]);
             }
         }
         else

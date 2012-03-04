@@ -2583,10 +2583,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
 
     ConfigValueUInt(NULL, "periods", &device->NumUpdates);
-    if(device->NumUpdates < 2) device->NumUpdates = 4;
+    device->NumUpdates = clampu(device->NumUpdates, 2, 16);
 
     ConfigValueUInt(NULL, "period_size", &device->UpdateSize);
-    if(device->UpdateSize == 0) device->UpdateSize = 1024;
+    device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
 
     ConfigValueUInt(NULL, "sources", &device->MaxNoOfSources);
     if(device->MaxNoOfSources == 0) device->MaxNoOfSources = 256;

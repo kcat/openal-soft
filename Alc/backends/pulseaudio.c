@@ -1032,7 +1032,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
     SetDefaultWFXChannelOrder(device);
 
     data->attr.fragsize = -1;
-    data->attr.prebuf = -1;
+    data->attr.prebuf = 0;
     data->attr.minreq = device->UpdateSize * pa_frame_size(&data->spec);
     data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
     data->attr.maxlength = -1;
@@ -1057,6 +1057,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
         data->attr.minreq = (ALuint64)device->UpdateSize * data->spec.rate /
                             device->Frequency * pa_frame_size(&data->spec);
         data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
+        data->attr.prebuf = 0;
 
         o = pa_stream_set_buffer_attr(data->stream, &data->attr,
                                       stream_success_callback, device);

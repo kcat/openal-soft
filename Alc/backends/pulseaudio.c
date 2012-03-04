@@ -61,6 +61,7 @@ MAKE_FUNC(pa_stream_connect_record);
 MAKE_FUNC(pa_stream_connect_playback);
 MAKE_FUNC(pa_stream_readable_size);
 MAKE_FUNC(pa_stream_writable_size);
+MAKE_FUNC(pa_stream_is_corked);
 MAKE_FUNC(pa_stream_cork);
 MAKE_FUNC(pa_stream_is_suspended);
 MAKE_FUNC(pa_stream_get_device_name);
@@ -129,6 +130,7 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_stream_connect_playback ppa_stream_connect_playback
 #define pa_stream_readable_size ppa_stream_readable_size
 #define pa_stream_writable_size ppa_stream_writable_size
+#define pa_stream_is_corked ppa_stream_is_corked
 #define pa_stream_cork ppa_stream_cork
 #define pa_stream_is_suspended ppa_stream_is_suspended
 #define pa_stream_get_device_name ppa_stream_get_device_name
@@ -259,6 +261,7 @@ static ALCboolean pulse_load(void)
         LOAD_FUNC(pa_stream_connect_playback);
         LOAD_FUNC(pa_stream_readable_size);
         LOAD_FUNC(pa_stream_writable_size);
+        LOAD_FUNC(pa_stream_is_corked);
         LOAD_FUNC(pa_stream_cork);
         LOAD_FUNC(pa_stream_is_suspended);
         LOAD_FUNC(pa_stream_get_device_name);
@@ -768,12 +771,22 @@ static ALuint PulseProc(ALvoid *param)
     pa_threaded_mainloop_lock(data->loop);
     frame_size = pa_frame_size(&data->spec);
     update_size = Device->UpdateSize * frame_size;
-    buffer_size = update_size * Device->NumUpdates;
+
+    /* Sanitize buffer metrics, in case we actually have less than what we
+     * asked for. */
+    buffer_size = minu(update_size*Device->NumUpdates, data->attr.tlength);
+    update_size = minu(update_size, buffer_size/2);
     do {
         len = pa_stream_writable_size(data->stream) - data->attr.tlength +
               buffer_size;
         if(len < update_size)
         {
+            if(pa_stream_is_corked(data->stream) == 1)
+            {
+                pa_operation *o;
+                o = pa_stream_cork(data->stream, 0, NULL, NULL);
+                pa_operation_unref(o);
+            }
             pa_threaded_mainloop_unlock(data->loop);
             Sleep(1);
             pa_threaded_mainloop_lock(data->loop);
@@ -972,6 +985,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
         flags |= PA_STREAM_FIX_RATE;
 
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
+    flags |= PA_STREAM_ADJUST_LATENCY;
+    flags |= PA_STREAM_START_CORKED;
     flags |= PA_STREAM_DONT_MOVE;
 
     switch(device->FmtType)
@@ -1017,9 +1032,9 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
     SetDefaultWFXChannelOrder(device);
 
     data->attr.fragsize = -1;
+    data->attr.prebuf = -1;
     data->attr.minreq = device->UpdateSize * pa_frame_size(&data->spec);
     data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
-    data->attr.prebuf = data->attr.tlength;
     data->attr.maxlength = -1;
 
     data->stream = connect_playback_stream(data->device_name, data->loop,
@@ -1042,7 +1057,6 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
         data->attr.minreq = (ALuint64)device->UpdateSize * data->spec.rate /
                             device->Frequency * pa_frame_size(&data->spec);
         data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
-        data->attr.prebuf = data->attr.tlength;
 
         o = pa_stream_set_buffer_attr(data->stream, &data->attr,
                                       stream_success_callback, device);
@@ -1058,6 +1072,11 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
         pa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
 #endif
     stream_buffer_attr_callback(data->stream, device);
+
+    device->NumUpdates = device->UpdateSize*device->NumUpdates /
+                         (data->attr.minreq/pa_frame_size(&data->spec));
+    device->NumUpdates = maxu(device->NumUpdates, 2);
+    device->UpdateSize = data->attr.minreq / pa_frame_size(&data->spec);
 
     data->thread = StartThread(PulseProc, device);
     if(!data->thread)

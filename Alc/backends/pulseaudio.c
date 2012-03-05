@@ -83,7 +83,7 @@ MAKE_FUNC(pa_stream_set_read_callback);
 MAKE_FUNC(pa_stream_set_state_callback);
 MAKE_FUNC(pa_stream_set_moved_callback);
 MAKE_FUNC(pa_stream_set_underflow_callback);
-MAKE_FUNC(pa_stream_new);
+MAKE_FUNC(pa_stream_new_with_proplist);
 MAKE_FUNC(pa_stream_disconnect);
 MAKE_FUNC(pa_threaded_mainloop_lock);
 MAKE_FUNC(pa_channel_map_init_auto);
@@ -97,6 +97,9 @@ MAKE_FUNC(pa_context_get_source_info_by_name);
 MAKE_FUNC(pa_context_get_source_info_list);
 MAKE_FUNC(pa_operation_get_state);
 MAKE_FUNC(pa_operation_unref);
+MAKE_FUNC(pa_proplist_new);
+MAKE_FUNC(pa_proplist_free);
+MAKE_FUNC(pa_proplist_set);
 #if PA_CHECK_VERSION(0,9,15)
 MAKE_FUNC(pa_channel_map_superset);
 MAKE_FUNC(pa_stream_set_buffer_attr_callback);
@@ -152,7 +155,7 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_stream_set_state_callback ppa_stream_set_state_callback
 #define pa_stream_set_moved_callback ppa_stream_set_moved_callback
 #define pa_stream_set_underflow_callback ppa_stream_set_underflow_callback
-#define pa_stream_new ppa_stream_new
+#define pa_stream_new_with_proplist ppa_stream_new_with_proplist
 #define pa_stream_disconnect ppa_stream_disconnect
 #define pa_threaded_mainloop_lock ppa_threaded_mainloop_lock
 #define pa_channel_map_init_auto ppa_channel_map_init_auto
@@ -166,6 +169,9 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_context_get_source_info_list ppa_context_get_source_info_list
 #define pa_operation_get_state ppa_operation_get_state
 #define pa_operation_unref ppa_operation_unref
+#define pa_proplist_new ppa_proplist_new
+#define pa_proplist_free ppa_proplist_free
+#define pa_proplist_set ppa_proplist_set
 #if PA_CHECK_VERSION(0,9,15)
 #define pa_channel_map_superset ppa_channel_map_superset
 #define pa_stream_set_buffer_attr_callback ppa_stream_set_buffer_attr_callback
@@ -212,6 +218,7 @@ static ALuint numDevNames;
 static DevMap *allCaptureDevNameMap;
 static ALuint numCaptureDevNames;
 static pa_context_flags_t pulse_ctx_flags;
+static pa_proplist *prop_filter;
 
 
 static ALCboolean pulse_load(void)
@@ -283,7 +290,7 @@ static ALCboolean pulse_load(void)
         LOAD_FUNC(pa_stream_set_state_callback);
         LOAD_FUNC(pa_stream_set_moved_callback);
         LOAD_FUNC(pa_stream_set_underflow_callback);
-        LOAD_FUNC(pa_stream_new);
+        LOAD_FUNC(pa_stream_new_with_proplist);
         LOAD_FUNC(pa_stream_disconnect);
         LOAD_FUNC(pa_threaded_mainloop_lock);
         LOAD_FUNC(pa_channel_map_init_auto);
@@ -297,6 +304,9 @@ static ALCboolean pulse_load(void)
         LOAD_FUNC(pa_context_get_source_info_list);
         LOAD_FUNC(pa_operation_get_state);
         LOAD_FUNC(pa_operation_unref);
+        LOAD_FUNC(pa_proplist_new);
+        LOAD_FUNC(pa_proplist_free);
+        LOAD_FUNC(pa_proplist_set);
 #undef LOAD_FUNC
 #define LOAD_OPTIONAL_FUNC(x) do {                                            \
     p##x = GetSymbol(pa_handle, #x);                                          \
@@ -591,10 +601,10 @@ static pa_stream *connect_playback_stream(const char *device_name,
     pa_stream_state_t state;
     pa_stream *stream;
 
-    stream = pa_stream_new(context, "Playback Stream", spec, chanmap);
+    stream = pa_stream_new_with_proplist(context, "Playback Stream", spec, chanmap, prop_filter);
     if(!stream)
     {
-        ERR("pa_stream_new() failed: %s\n", pa_strerror(pa_context_errno(context)));
+        ERR("pa_stream_new_with_proplist() failed: %s\n", pa_strerror(pa_context_errno(context)));
         return NULL;
     }
 
@@ -631,10 +641,10 @@ static pa_stream *connect_record_stream(const char *device_name,
     pa_stream_state_t state;
     pa_stream *stream;
 
-    stream = pa_stream_new(context, "Capture Stream", spec, chanmap);
+    stream = pa_stream_new_with_proplist(context, "Capture Stream", spec, chanmap, prop_filter);
     if(!stream)
     {
-        ERR("pa_stream_new() failed: %s\n", pa_strerror(pa_context_errno(context)));
+        ERR("pa_stream_new_with_proplist() failed: %s\n", pa_strerror(pa_context_errno(context)));
         return NULL;
     }
 
@@ -1378,6 +1388,10 @@ ALCboolean alc_pulse_init(BackendFuncs *func_list)
                 *func_list = pulse_funcs;
                 ret = ALC_TRUE;
 
+                prop_filter = pa_proplist_new();
+                pa_proplist_set(prop_filter, PA_PROP_MEDIA_ROLE, NULL, 0);
+                pa_proplist_set(prop_filter, "phonon.streamid", NULL, 0);
+
                 pa_context_disconnect(context);
                 pa_context_unref(context);
             }
@@ -1412,6 +1426,10 @@ void alc_pulse_deinit(void)
     free(allCaptureDevNameMap);
     allCaptureDevNameMap = NULL;
     numCaptureDevNames = 0;
+
+    if(prop_filter)
+        pa_proplist_free(prop_filter);
+    prop_filter = NULL;
 
     /* PulseAudio doesn't like being CloseLib'd sometimes */
 }

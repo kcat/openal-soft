@@ -1726,9 +1726,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
     *list = (*list)->next;
     UnlockLists();
 
-    LockDevice(pDevice);
     ALCdevice_CloseCapture(pDevice);
-    UnlockDevice(pDevice);
 
     ALCdevice_DecRef(pDevice);
 
@@ -1737,32 +1735,34 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
 
 ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 {
+    LockLists();
     if(!(device=VerifyDevice(device)) || device->Type != Capture)
     {
+        UnlockLists();
         alcSetError(device, ALC_INVALID_DEVICE);
         if(device) ALCdevice_DecRef(device);
         return;
     }
-    LockDevice(device);
     if(device->Connected)
         ALCdevice_StartCapture(device);
-    UnlockDevice(device);
+    UnlockLists();
 
     ALCdevice_DecRef(device);
 }
 
 ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 {
+    LockLists();
     if(!(device=VerifyDevice(device)) || device->Type != Capture)
     {
+        UnlockLists();
         alcSetError(device, ALC_INVALID_DEVICE);
         if(device) ALCdevice_DecRef(device);
         return;
     }
-    LockDevice(device);
     if(device->Connected)
         ALCdevice_StopCapture(device);
-    UnlockDevice(device);
+    UnlockLists();
 
     ALCdevice_DecRef(device);
 }
@@ -1770,14 +1770,14 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
     ALCenum err = ALC_INVALID_DEVICE;
+    LockLists();
     if((device=VerifyDevice(device)) != NULL && device->Type == Capture)
     {
         err = ALC_INVALID_VALUE;
-        LockDevice(device);
         if(samples >= 0 && ALCdevice_AvailableSamples(device) >= (ALCuint)samples)
             err = ALCdevice_CaptureSamples(device, buffer, samples);
-        UnlockDevice(device);
     }
+    UnlockLists();
     if(err != ALC_NO_ERROR)
         alcSetError(device, err);
     if(device) ALCdevice_DecRef(device);
@@ -1994,9 +1994,14 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
         switch(param)
         {
             case ALC_CAPTURE_SAMPLES:
-                LockDevice(device);
-                *data = ALCdevice_AvailableSamples(device);
-                UnlockDevice(device);
+                LockLists();
+                /* Re-validate the device since it may have been closed */
+                ALCdevice_DecRef(device);
+                if((device=VerifyDevice(device)) != NULL)
+                    *data = ALCdevice_AvailableSamples(device);
+                else
+                    alcSetError(NULL, ALC_INVALID_DEVICE);
+                UnlockLists();
                 break;
 
             case ALC_CONNECTED:

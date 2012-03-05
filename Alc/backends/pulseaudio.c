@@ -1332,7 +1332,12 @@ static ALCuint pulse_available_samples(ALCdevice *device)
     if(device->Connected)
     {
         ssize_t got = pa_stream_readable_size(data->stream);
-        if(got > 0 && (size_t)got > data->cap_len)
+        if(got < 0)
+        {
+            ERR("pa_stream_readable_size() failed: %s\n", pa_strerror(got));
+            aluHandleDisconnect(device);
+        }
+        else if((size_t)got > data->cap_len)
             readable += got - data->cap_len;
     }
     pa_threaded_mainloop_unlock(data->loop);

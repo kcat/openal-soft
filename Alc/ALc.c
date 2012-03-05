@@ -1073,6 +1073,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         numMono = device->NumMonoSources;
         numStereo = device->NumStereoSources;
         numSends = device->NumAuxSends;
+        schans = device->FmtChans;
+        stype = device->FmtType;
+        freq = device->Frequency;
 
         while(attrList[attrIdx])
         {

@@ -873,6 +873,10 @@ static void pulse_close(ALCdevice *device)
 
     if(data->stream)
     {
+#if PA_CHECK_VERSION(0,9,15)
+        if(pa_stream_set_buffer_attr_callback)
+            pa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
+#endif
         pa_stream_disconnect(data->stream);
         pa_stream_unref(data->stream);
     }
@@ -968,6 +972,10 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
 
     if(data->stream)
     {
+#if PA_CHECK_VERSION(0,9,15)
+        if(pa_stream_set_buffer_attr_callback)
+            pa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
+#endif
         pa_stream_disconnect(data->stream);
         pa_stream_unref(data->stream);
         data->stream = NULL;
@@ -1079,28 +1087,25 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
     device->NumUpdates = maxu(device->NumUpdates, 2);
     device->UpdateSize = data->attr.minreq / pa_frame_size(&data->spec);
 
+    pa_threaded_mainloop_unlock(data->loop);
+    return ALC_TRUE;
+}
+
+static ALCboolean pulse_start_playback(ALCdevice *device)
+{
+    pulse_data *data = device->ExtraData;
+
     data->thread = StartThread(PulseProc, device);
     if(!data->thread)
-    {
-#if PA_CHECK_VERSION(0,9,15)
-        if(pa_stream_set_buffer_attr_callback)
-            pa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
-#endif
-        pa_stream_disconnect(data->stream);
-        pa_stream_unref(data->stream);
-        data->stream = NULL;
-
-        pa_threaded_mainloop_unlock(data->loop);
         return ALC_FALSE;
-    }
 
-    pa_threaded_mainloop_unlock(data->loop);
     return ALC_TRUE;
 }
 
 static void pulse_stop_playback(ALCdevice *device)
 {
     pulse_data *data = device->ExtraData;
+    pa_operation *o;
 
     if(!data->stream)
         return;
@@ -1115,13 +1120,10 @@ static void pulse_stop_playback(ALCdevice *device)
 
     pa_threaded_mainloop_lock(data->loop);
 
-#if PA_CHECK_VERSION(0,9,15)
-    if(pa_stream_set_buffer_attr_callback)
-        pa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
-#endif
-    pa_stream_disconnect(data->stream);
-    pa_stream_unref(data->stream);
-    data->stream = NULL;
+    o = pa_stream_cork(data->stream, 1, stream_success_callback, device);
+    while(pa_operation_get_state(o) == PA_OPERATION_RUNNING)
+        pa_threaded_mainloop_wait(data->loop);
+    pa_operation_unref(o);
 
     pa_threaded_mainloop_unlock(data->loop);
 }
@@ -1352,6 +1354,7 @@ static const BackendFuncs pulse_funcs = {
     pulse_open_playback,
     pulse_close_playback,
     pulse_reset_playback,
+    pulse_start_playback,
     pulse_stop_playback,
     pulse_open_capture,
     pulse_close_capture,

@@ -261,11 +261,18 @@ static ALCboolean pa_reset_playback(ALCdevice *device)
 {
     pa_data *data = (pa_data*)device->ExtraData;
     const PaStreamInfo *streamInfo;
-    PaError err;
 
     streamInfo = Pa_GetStreamInfo(data->stream);
     device->Frequency = streamInfo->sampleRate;
     device->UpdateSize = data->update_size;
+
+    return ALC_TRUE;
+}
+
+static ALCboolean pa_start_playback(ALCdevice *device)
+{
+    pa_data *data = (pa_data*)device->ExtraData;
+    PaError err;
 
     err = Pa_StartStream(data->stream);
     if(err != paNoError)
@@ -409,6 +416,7 @@ static const BackendFuncs pa_funcs = {
     pa_open_playback,
     pa_close_playback,
     pa_reset_playback,
+    pa_start_playback,
     pa_stop_playback,
     pa_open_capture,
     pa_close_capture,

@@ -392,6 +392,16 @@ static void DSoundClosePlayback(ALCdevice *device)
 {
     DSoundPlaybackData *pData = device->ExtraData;
 
+    if(pData->DSnotify)
+        IDirectSoundNotify_Release(pData->DSnotify);
+    pData->DSnotify = NULL;
+    if(pData->DSsbuffer)
+        IDirectSoundBuffer_Release(pData->DSsbuffer);
+    pData->DSsbuffer = NULL;
+    if(pData->DSpbuffer != NULL)
+        IDirectSoundBuffer_Release(pData->DSpbuffer);
+    pData->DSpbuffer = NULL;
+
     IDirectSound_Release(pData->lpDS);
     CloseHandle(pData->hNotifyEvent);
     free(pData);
@@ -407,6 +417,16 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
     HRESULT hr;
 
     memset(&OutputType, 0, sizeof(OutputType));
+
+    if(pData->DSnotify)
+        IDirectSoundNotify_Release(pData->DSnotify);
+    pData->DSnotify = NULL;
+    if(pData->DSsbuffer)
+        IDirectSoundBuffer_Release(pData->DSsbuffer);
+    pData->DSsbuffer = NULL;
+    if(pData->DSpbuffer != NULL)
+        IDirectSoundBuffer_Release(pData->DSpbuffer);
+    pData->DSpbuffer = NULL;
 
     switch(device->FmtType)
     {
@@ -578,15 +598,6 @@ retry_open:
         }
     }
 
-    if(SUCCEEDED(hr))
-    {
-        ResetEvent(pData->hNotifyEvent);
-        SetDefaultWFXChannelOrder(device);
-        pData->thread = StartThread(DSoundPlaybackProc, device);
-        if(pData->thread == NULL)
-            hr = E_FAIL;
-    }
-
     if(FAILED(hr))
     {
         if(pData->DSnotify != NULL)
@@ -600,6 +611,20 @@ retry_open:
         pData->DSpbuffer = NULL;
         return ALC_FALSE;
     }
+
+    ResetEvent(pData->hNotifyEvent);
+    SetDefaultWFXChannelOrder(device);
+
+    return ALC_TRUE;
+}
+
+static ALCboolean DSoundStartPlayback(ALCdevice *device)
+{
+    DSoundPlaybackData *pData = (DSoundPlaybackData*)device->ExtraData;
+
+    pData->thread = StartThread(DSoundPlaybackProc, device);
+    if(pData->thread == NULL)
+        return ALC_FALSE;
 
     return ALC_TRUE;
 }
@@ -616,14 +641,7 @@ static void DSoundStopPlayback(ALCdevice *device)
     pData->thread = NULL;
 
     pData->killNow = 0;
-
-    IDirectSoundNotify_Release(pData->DSnotify);
-    pData->DSnotify = NULL;
-    IDirectSoundBuffer_Release(pData->DSsbuffer);
-    pData->DSsbuffer = NULL;
-    if(pData->DSpbuffer != NULL)
-        IDirectSoundBuffer_Release(pData->DSpbuffer);
-    pData->DSpbuffer = NULL;
+    IDirectSoundBuffer_Stop(pData->DSsbuffer);
 }
 
 
@@ -918,6 +936,7 @@ static const BackendFuncs DSoundFuncs = {
     DSoundOpenPlayback,
     DSoundClosePlayback,
     DSoundResetPlayback,
+    DSoundStartPlayback,
     DSoundStopPlayback,
     DSoundOpenCapture,
     DSoundCloseCapture,

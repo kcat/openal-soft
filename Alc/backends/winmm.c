@@ -397,6 +397,21 @@ static void WinMMClosePlayback(ALCdevice *device)
 static ALCboolean WinMMResetPlayback(ALCdevice *device)
 {
     WinMMData *pData = (WinMMData*)device->ExtraData;
+
+    device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
+                                  pData->Frequency / device->Frequency);
+    device->UpdateSize = device->UpdateSize*device->NumUpdates / 4;
+    device->NumUpdates = 4;
+    device->Frequency = pData->Frequency;
+
+    SetDefaultWFXChannelOrder(device);
+
+    return ALC_TRUE;
+}
+
+static ALCboolean WinMMStartPlayback(ALCdevice *device)
+{
+    WinMMData *pData = (WinMMData*)device->ExtraData;
     ALbyte *BufferData;
     ALint lBufferSize;
     ALuint i;
@@ -404,12 +419,6 @@ static ALCboolean WinMMResetPlayback(ALCdevice *device)
     pData->hWaveThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PlaybackThreadProc, (LPVOID)device, 0, &pData->ulWaveThreadID);
     if(pData->hWaveThread == NULL)
         return ALC_FALSE;
-
-    device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
-                                  pData->Frequency / device->Frequency);
-    device->Frequency = pData->Frequency;
-
-    SetDefaultWFXChannelOrder(device);
 
     pData->lWaveBuffersCommitted = 0;
 
@@ -689,6 +698,7 @@ static const BackendFuncs WinMMFuncs = {
     WinMMOpenPlayback,
     WinMMClosePlayback,
     WinMMResetPlayback,
+    WinMMStartPlayback,
     WinMMStopPlayback,
     WinMMOpenCapture,
     WinMMCloseCapture,

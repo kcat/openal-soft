@@ -40,7 +40,7 @@
 #include "alu.h"
 
 
-#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 static struct BackendInfo BackendList[] = {
 #ifdef HAVE_PULSEAUDIO
     { "pulse", alc_pulse_init, alc_pulse_deinit, alc_pulse_probe, EmptyFuncs },
@@ -1197,8 +1197,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if((device->Flags&DEVICE_RUNNING))
         return ALC_NO_ERROR;
 
-    LockDevice(device);
-
     oldFreq  = device->Frequency;
     oldChans = device->FmtChans;
     oldType  = device->FmtType;
@@ -1211,12 +1209,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           device->Frequency,
           (device->Flags&DEVICE_FREQUENCY_REQUEST)?" (requested)":"",
           device->UpdateSize, device->NumUpdates);
+
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
-    {
-        UnlockDevice(device);
         return ALC_INVALID_DEVICE;
-    }
-    device->Flags |= DEVICE_RUNNING;
 
     if(device->FmtChans != oldChans && (device->Flags&DEVICE_CHANNELS_REQUEST))
     {
@@ -1290,6 +1285,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     TRACE("Stereo duplication %s\n", (device->Flags&DEVICE_DUPLICATE_STEREO)?"enabled":"disabled");
 
     oldMode = SetMixerFPUMode();
+    LockDevice(device);
     context = device->ContextList;
     while(context)
     {
@@ -1304,10 +1300,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(ALeffectState_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
-                RestoreFPUMode(oldMode);
                 UnlockDevice(device);
-                ALCdevice_StopPlayback(device);
-                device->Flags &= ~DEVICE_RUNNING;
+                RestoreFPUMode(oldMode);
                 return ALC_INVALID_DEVICE;
             }
             slot->NeedsUpdate = AL_FALSE;
@@ -1336,8 +1330,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         context = context->next;
     }
-    RestoreFPUMode(oldMode);
     UnlockDevice(device);
+    RestoreFPUMode(oldMode);
+
+    if(ALCdevice_StartPlayback(device) == ALC_FALSE)
+        return ALC_INVALID_DEVICE;
+    device->Flags |= DEVICE_RUNNING;
 
     return ALC_NO_ERROR;
 }

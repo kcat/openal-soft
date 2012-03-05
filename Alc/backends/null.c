@@ -99,9 +99,13 @@ static void null_close_playback(ALCdevice *device)
 
 static ALCboolean null_reset_playback(ALCdevice *device)
 {
-    null_data *data = (null_data*)device->ExtraData;
-
     SetDefaultWFXChannelOrder(device);
+    return ALC_TRUE;
+}
+
+static ALCboolean null_start_playback(ALCdevice *device)
+{
+    null_data *data = (null_data*)device->ExtraData;
 
     data->thread = StartThread(NullProc, device);
     if(data->thread == NULL)
@@ -129,6 +133,7 @@ static const BackendFuncs null_funcs = {
     null_open_playback,
     null_close_playback,
     null_reset_playback,
+    null_start_playback,
     null_stop_playback,
     NULL,
     NULL,

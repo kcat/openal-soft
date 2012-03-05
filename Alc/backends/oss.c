@@ -268,10 +268,17 @@ static ALCboolean oss_reset_playback(ALCdevice *device)
     device->UpdateSize = info.fragsize / frameSize;
     device->NumUpdates = info.fragments + 1;
 
-    data->data_size = device->UpdateSize * frameSize;
-    data->mix_data = calloc(1, data->data_size);
-
     SetDefaultChannelOrder(device);
+
+    return ALC_TRUE;
+}
+
+static ALCboolean oss_start_playback(ALCdevice *device)
+{
+    oss_data *data = (oss_data*)device->ExtraData;
+
+    data->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    data->mix_data = calloc(1, data->data_size);
 
     data->thread = StartThread(OSSProc, device);
     if(data->thread == NULL)
@@ -473,6 +480,7 @@ static const BackendFuncs oss_funcs = {
     oss_open_playback,
     oss_close_playback,
     oss_reset_playback,
+    oss_start_playback,
     oss_stop_playback,
     oss_open_capture,
     oss_close_capture,

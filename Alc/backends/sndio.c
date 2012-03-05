@@ -280,13 +280,20 @@ static ALCboolean sndio_reset_playback(ALCdevice *device)
 
     SetDefaultChannelOrder(device);
 
+    return ALC_TRUE;
+}
+
+static ALCboolean sndio_start_playback(ALCdevice *device)
+{
+    sndio_data *data = device->ExtraData;
+
     if(!sio_start(data->sndHandle))
     {
         ERR("Error starting playback\n");
         return ALC_FALSE;
     }
 
-    data->data_size = device->UpdateSize * par.bps * par.pchan;
+    data->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     data->mix_data = calloc(1, data->data_size);
 
     data->thread = StartThread(sndio_proc, device);
@@ -325,6 +332,7 @@ static const BackendFuncs sndio_funcs = {
     sndio_open_playback,
     sndio_close_playback,
     sndio_reset_playback,
+    sndio_start_playback,
     sndio_stop_playback,
     NULL,
     NULL,

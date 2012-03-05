@@ -193,10 +193,17 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
     device->Frequency = info.play.sample_rate;
     device->UpdateSize = (info.play.buffer_size/device->NumUpdates) + 1;
 
-    data->data_size = device->UpdateSize * frameSize;
-    data->mix_data = calloc(1, data->data_size);
-
     SetDefaultChannelOrder(device);
+
+    return ALC_TRUE;
+}
+
+static ALCboolean solaris_start_playback(ALCdevice *device)
+{
+    solaris_data *data = (solaris_data*)device->ExtraData;
+
+    data->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    data->mix_data = calloc(1, data->data_size);
 
     data->thread = StartThread(SolarisProc, device);
     if(data->thread == NULL)
@@ -233,6 +240,7 @@ static const BackendFuncs solaris_funcs = {
     solaris_open_playback,
     solaris_close_playback,
     solaris_reset_playback,
+    solaris_start_playback,
     solaris_stop_playback,
     NULL,
     NULL,

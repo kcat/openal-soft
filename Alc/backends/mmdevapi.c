@@ -90,9 +90,10 @@ typedef struct {
 
 #define WM_USER_OpenDevice  (WM_USER+0)
 #define WM_USER_ResetDevice (WM_USER+1)
-#define WM_USER_StopDevice  (WM_USER+2)
-#define WM_USER_CloseDevice (WM_USER+3)
-#define WM_USER_Enumerate   (WM_USER+4)
+#define WM_USER_StartDevice (WM_USER+2)
+#define WM_USER_StopDevice  (WM_USER+3)
+#define WM_USER_CloseDevice (WM_USER+4)
+#define WM_USER_Enumerate   (WM_USER+5)
 
 static HRESULT WaitForResponse(ThreadRequest *req)
 {
@@ -315,7 +316,6 @@ static HRESULT DoReset(ALCdevice *device)
     REFERENCE_TIME min_per, buf_time;
     UINT32 buffer_len, min_len;
     HRESULT hr;
-    void *ptr;
 
     hr = IAudioClient_GetMixFormat(data->client, &wfx);
     if(FAILED(hr))
@@ -532,32 +532,6 @@ static HRESULT DoReset(ALCdevice *device)
         ERR("Audio client returned buffer_len < period*2; expect break up\n");
     }
 
-    ResetEvent(data->hNotifyEvent);
-    hr = IAudioClient_SetEventHandle(data->client, data->hNotifyEvent);
-    if(SUCCEEDED(hr))
-        hr = IAudioClient_Start(data->client);
-    if(FAILED(hr))
-    {
-        ERR("Failed to start audio client: 0x%08lx\n", hr);
-        return hr;
-    }
-
-    hr = IAudioClient_GetService(data->client, &IID_IAudioRenderClient, &ptr);
-    if(SUCCEEDED(hr))
-    {
-        data->render = ptr;
-        data->thread = StartThread(MMDevApiProc, device);
-    }
-    if(!data->thread)
-    {
-        if(data->render)
-            IAudioRenderClient_Release(data->render);
-        data->render = NULL;
-        IAudioClient_Stop(data->client);
-        ERR("Failed to start thread\n");
-        return E_FAIL;
-    }
-
     return hr;
 }
 
@@ -653,6 +627,43 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             device = (ALCdevice*)msg.lParam;
 
             req->result = DoReset(device);
+            SetEvent(req->FinishedEvt);
+            continue;
+
+        case WM_USER_StartDevice:
+            req = (ThreadRequest*)msg.wParam;
+            device = (ALCdevice*)msg.lParam;
+            data = device->ExtraData;
+
+            ResetEvent(data->hNotifyEvent);
+            hr = IAudioClient_SetEventHandle(data->client, data->hNotifyEvent);
+            if(FAILED(hr))
+                ERR("Failed to set event handle: 0x%08lx\n", hr);
+            else
+            {
+                hr = IAudioClient_Start(data->client);
+                if(FAILED(hr))
+                    ERR("Failed to start audio client: 0x%08lx\n", hr);
+            }
+
+            if(SUCCEEDED(hr))
+                hr = IAudioClient_GetService(data->client, &IID_IAudioRenderClient, &ptr);
+            if(SUCCEEDED(hr))
+            {
+                data->render = ptr;
+                data->thread = StartThread(MMDevApiProc, device);
+                if(!data->thread)
+                {
+                    if(data->render)
+                        IAudioRenderClient_Release(data->render);
+                    data->render = NULL;
+                    IAudioClient_Stop(data->client);
+                    ERR("Failed to start thread\n");
+                    hr = E_FAIL;
+                }
+            }
+
+            req->result = hr;
             SetEvent(req->FinishedEvt);
             continue;
 
@@ -885,6 +896,18 @@ static ALCboolean MMDevApiResetPlayback(ALCdevice *device)
     return SUCCEEDED(hr) ? ALC_TRUE : ALC_FALSE;
 }
 
+static ALCboolean MMDevApiStartPlayback(ALCdevice *device)
+{
+    MMDevApiData *data = device->ExtraData;
+    ThreadRequest req = { data->MsgEvent, 0 };
+    HRESULT hr = E_FAIL;
+
+    if(PostThreadMessage(ThreadID, WM_USER_StartDevice, (WPARAM)&req, (LPARAM)device))
+        hr = WaitForResponse(&req);
+
+    return SUCCEEDED(hr) ? ALC_TRUE : ALC_FALSE;
+}
+
 static void MMDevApiStopPlayback(ALCdevice *device)
 {
     MMDevApiData *data = device->ExtraData;
@@ -899,6 +922,7 @@ static const BackendFuncs MMDevApiFuncs = {
     MMDevApiOpenPlayback,
     MMDevApiClosePlayback,
     MMDevApiResetPlayback,
+    MMDevApiStartPlayback,
     MMDevApiStopPlayback,
     NULL,
     NULL,

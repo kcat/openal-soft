@@ -258,18 +258,24 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
         ERR("Error writing header: %s\n", strerror(errno));
         return ALC_FALSE;
     }
-
     data->DataStart = ftell(data->f);
 
-    data->size = device->UpdateSize * channels * bits / 8;
+    SetDefaultWFXChannelOrder(device);
+
+    return ALC_TRUE;
+}
+
+static ALCboolean wave_start_playback(ALCdevice *device)
+{
+    wave_data *data = (wave_data*)device->ExtraData;
+
+    data->size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     data->buffer = malloc(data->size);
     if(!data->buffer)
     {
         ERR("Buffer malloc failed\n");
         return ALC_FALSE;
     }
-
-    SetDefaultWFXChannelOrder(device);
 
     data->thread = StartThread(WaveProc, device);
     if(data->thread == NULL)
@@ -316,6 +322,7 @@ static const BackendFuncs wave_funcs = {
     wave_open_playback,
     wave_close_playback,
     wave_reset_playback,
+    wave_start_playback,
     wave_stop_playback,
     NULL,
     NULL,

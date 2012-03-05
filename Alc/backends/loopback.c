@@ -43,6 +43,12 @@ static ALCboolean loopback_reset_playback(ALCdevice *device)
     return ALC_TRUE;
 }
 
+static ALCboolean loopback_start_playback(ALCdevice *device)
+{
+    return ALC_TRUE;
+    (void)device;
+}
+
 static void loopback_stop_playback(ALCdevice *device)
 {
     (void)device;
@@ -52,6 +58,7 @@ static const BackendFuncs loopback_funcs = {
     loopback_open_playback,
     loopback_close_playback,
     loopback_reset_playback,
+    loopback_start_playback,
     loopback_stop_playback,
     NULL,
     NULL,

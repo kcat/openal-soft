@@ -242,6 +242,10 @@ static void opensl_close_playback(ALCdevice *Device)
 {
     osl_data *data = Device->ExtraData;
 
+    if(data->bufferQueueObject != NULL)
+        SLObjectItf_Destroy(data->bufferQueueObject);
+    data->bufferQueueObject = NULL;
+
     SLObjectItf_Destroy(data->outputMix);
     data->outputMix = NULL;
 
@@ -257,16 +261,13 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
 {
     osl_data *data = Device->ExtraData;
     SLDataLocator_AndroidSimpleBufferQueue loc_bufq;
-    SLAndroidSimpleBufferQueueItf bufferQueue;
     SLDataLocator_OutputMix loc_outmix;
     SLDataFormat_PCM format_pcm;
     SLDataSource audioSrc;
     SLDataSink audioSnk;
-    SLPlayItf player;
     SLInterfaceID id;
     SLboolean req;
     SLresult result;
-    ALuint i;
 
 
     Device->UpdateSize = (ALuint64)Device->UpdateSize * 44100 / Device->Frequency;
@@ -303,6 +304,10 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
     audioSnk.pFormat = NULL;
 
 
+    if(data->bufferQueueObject != NULL)
+        SLObjectItf_Destroy(data->bufferQueueObject);
+    data->bufferQueueObject = NULL;
+
     result = SLEngineItf_CreateAudioPlayer(data->engine, &data->bufferQueueObject, &audioSrc, &audioSnk, 1, &id, &req);
     PRINTERR(result, "engine->CreateAudioPlayer");
     if(SL_RESULT_SUCCESS == result)
@@ -310,11 +315,29 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
         result = SLObjectItf_Realize(data->bufferQueueObject, SL_BOOLEAN_FALSE);
         PRINTERR(result, "bufferQueue->Realize");
     }
-    if(SL_RESULT_SUCCESS == result)
+
+    if(SL_RESULT_SUCCESS != result)
     {
-        result = SLObjectItf_GetInterface(data->bufferQueueObject, SL_IID_BUFFERQUEUE, &bufferQueue);
-        PRINTERR(result, "bufferQueue->GetInterface");
+        if(data->bufferQueueObject != NULL)
+            SLObjectItf_Destroy(data->bufferQueueObject);
+        data->bufferQueueObject = NULL;
+
+        return ALC_FALSE;
     }
+
+    return ALC_TRUE;
+}
+
+static ALCboolean opensl_start_playback(ALCdevice *Device)
+{
+    osl_data *data = Device->ExtraData;
+    SLAndroidSimpleBufferQueueItf bufferQueue;
+    SLPlayItf player;
+    SLresult result;
+    ALuint i;
+
+    result = SLObjectItf_GetInterface(data->bufferQueueObject, SL_IID_BUFFERQUEUE, &bufferQueue);
+    PRINTERR(result, "bufferQueue->GetInterface");
     if(SL_RESULT_SUCCESS == result)
     {
         result = (*bufferQueue)->RegisterCallback(bufferQueue, opensl_callback, Device);
@@ -372,10 +395,6 @@ static void opensl_stop_playback(ALCdevice *Device)
 {
     osl_data *data = Device->ExtraData;
 
-    if(data->bufferQueueObject != NULL)
-        SLObjectItf_Destroy(data->bufferQueueObject);
-    data->bufferQueueObject = NULL;
-
     free(data->buffer);
     data->buffer = NULL;
     data->bufferSize = 0;
@@ -386,6 +405,7 @@ static const BackendFuncs opensl_funcs = {
     opensl_open_playback,
     opensl_close_playback,
     opensl_reset_playback,
+    opensl_start_playback,
     opensl_stop_playback,
     NULL,
     NULL,

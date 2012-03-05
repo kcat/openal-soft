@@ -449,6 +449,7 @@ typedef struct {
     ALCenum (*OpenPlayback)(ALCdevice*, const ALCchar*);
     void (*ClosePlayback)(ALCdevice*);
     ALCboolean (*ResetPlayback)(ALCdevice*);
+    ALCboolean (*StartPlayback)(ALCdevice*);
     void (*StopPlayback)(ALCdevice*);
 
     ALCenum (*OpenCapture)(ALCdevice*, const ALCchar*);
@@ -630,6 +631,7 @@ struct ALCdevice_struct
 #define ALCdevice_OpenPlayback(a,b)      ((a)->Funcs->OpenPlayback((a), (b)))
 #define ALCdevice_ClosePlayback(a)       ((a)->Funcs->ClosePlayback((a)))
 #define ALCdevice_ResetPlayback(a)       ((a)->Funcs->ResetPlayback((a)))
+#define ALCdevice_StartPlayback(a)       ((a)->Funcs->StartPlayback((a)))
 #define ALCdevice_StopPlayback(a)        ((a)->Funcs->StopPlayback((a)))
 #define ALCdevice_OpenCapture(a,b)       ((a)->Funcs->OpenCapture((a), (b)))
 #define ALCdevice_CloseCapture(a)        ((a)->Funcs->CloseCapture((a)))

@@ -44,6 +44,7 @@ MAKE_FUNC(snd_pcm_bytes_to_frames);
 MAKE_FUNC(snd_pcm_hw_params_malloc);
 MAKE_FUNC(snd_pcm_hw_params_free);
 MAKE_FUNC(snd_pcm_hw_params_any);
+MAKE_FUNC(snd_pcm_hw_params_current);
 MAKE_FUNC(snd_pcm_hw_params_set_access);
 MAKE_FUNC(snd_pcm_hw_params_set_format);
 MAKE_FUNC(snd_pcm_hw_params_set_channels);
@@ -111,6 +112,7 @@ MAKE_FUNC(snd_card_next);
 #define snd_pcm_hw_params_malloc psnd_pcm_hw_params_malloc
 #define snd_pcm_hw_params_free psnd_pcm_hw_params_free
 #define snd_pcm_hw_params_any psnd_pcm_hw_params_any
+#define snd_pcm_hw_params_current psnd_pcm_hw_params_current
 #define snd_pcm_hw_params_set_access psnd_pcm_hw_params_set_access
 #define snd_pcm_hw_params_set_format psnd_pcm_hw_params_set_format
 #define snd_pcm_hw_params_set_channels psnd_pcm_hw_params_set_channels
@@ -196,6 +198,7 @@ static ALCboolean alsa_load(void)
         LOAD_FUNC(snd_pcm_hw_params_malloc);
         LOAD_FUNC(snd_pcm_hw_params_free);
         LOAD_FUNC(snd_pcm_hw_params_any);
+        LOAD_FUNC(snd_pcm_hw_params_current);
         LOAD_FUNC(snd_pcm_hw_params_set_access);
         LOAD_FUNC(snd_pcm_hw_params_set_format);
         LOAD_FUNC(snd_pcm_hw_params_set_channels);
@@ -647,7 +650,6 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     int allowmmap;
     int err;
 
-
     format = -1;
     switch(device->FmtType)
     {
@@ -770,23 +772,52 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     snd_pcm_sw_params_free(sp);
     sp = NULL;
 
+    /* Increase periods by one, since the temp buffer counts as an extra
+     * period */
+    if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
+        device->NumUpdates = periods+1;
+    else
+        device->NumUpdates = periods;
+    device->UpdateSize = periodSizeInFrames;
     device->Frequency = rate;
+
     SetDefaultChannelOrder(device);
 
-    data->size = snd_pcm_frames_to_bytes(data->pcmHandle, periodSizeInFrames);
+    return ALC_TRUE;
+
+error:
+    ERR("%s failed: %s\n", funcerr, snd_strerror(err));
+    if(hp) snd_pcm_hw_params_free(hp);
+    if(sp) snd_pcm_sw_params_free(sp);
+    return ALC_FALSE;
+}
+
+static ALCboolean alsa_start_playback(ALCdevice *device)
+{
+    alsa_data *data = (alsa_data*)device->ExtraData;
+    snd_pcm_hw_params_t *hp = NULL;
+    snd_pcm_access_t access;
+    const char *funcerr;
+    int err;
+
+    snd_pcm_hw_params_malloc(&hp);
+#define CHECK(x) if((funcerr=#x),(err=(x)) < 0) goto error
+    CHECK(snd_pcm_hw_params_current(data->pcmHandle, hp));
+    /* retrieve configuration info */
+    CHECK(snd_pcm_hw_params_get_access(hp, &access));
+#undef CHECK
+    snd_pcm_hw_params_free(hp);
+    hp = NULL;
+
+    data->size = snd_pcm_frames_to_bytes(data->pcmHandle, device->UpdateSize);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
-        /* Increase periods by one, since the temp buffer counts as an extra
-         * period */
-        periods++;
         data->buffer = malloc(data->size);
         if(!data->buffer)
         {
             ERR("buffer malloc failed\n");
             return ALC_FALSE;
         }
-        device->UpdateSize = periodSizeInFrames;
-        device->NumUpdates = periods;
         data->thread = StartThread(ALSANoMMapProc, device);
     }
     else
@@ -797,8 +828,6 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
             ERR("snd_pcm_prepare(data->pcmHandle) failed: %s\n", snd_strerror(err));
             return ALC_FALSE;
         }
-        device->UpdateSize = periodSizeInFrames;
-        device->NumUpdates = periods;
         data->thread = StartThread(ALSAProc, device);
     }
     if(data->thread == NULL)
@@ -814,7 +843,6 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
 error:
     ERR("%s failed: %s\n", funcerr, snd_strerror(err));
     if(hp) snd_pcm_hw_params_free(hp);
-    if(sp) snd_pcm_sw_params_free(sp);
     return ALC_FALSE;
 }
 
@@ -1186,6 +1214,7 @@ static const BackendFuncs alsa_funcs = {
     alsa_open_playback,
     alsa_close_playback,
     alsa_reset_playback,
+    alsa_start_playback,
     alsa_stop_playback,
     alsa_open_capture,
     alsa_close_capture,

@@ -1744,7 +1744,11 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
         return;
     }
     if(device->Connected)
-        ALCdevice_StartCapture(device);
+    {
+        if(!(device->Flags&DEVICE_RUNNING))
+            ALCdevice_StartCapture(device);
+        device->Flags |= DEVICE_RUNNING;
+    }
     UnlockLists();
 
     ALCdevice_DecRef(device);
@@ -1760,8 +1764,9 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
         if(device) ALCdevice_DecRef(device);
         return;
     }
-    if(device->Connected)
+    if((device->Flags&DEVICE_RUNNING))
         ALCdevice_StopCapture(device);
+    device->Flags &= ~DEVICE_RUNNING;
     UnlockLists();
 
     ALCdevice_DecRef(device);

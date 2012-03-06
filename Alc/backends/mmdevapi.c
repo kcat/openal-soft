@@ -71,7 +71,7 @@ typedef struct {
 
 typedef struct {
     ALCchar *name;
-    LPWSTR devid;
+    WCHAR *devid;
 } DevMap;
 
 static DevMap *PlaybackDeviceList;
@@ -144,12 +144,16 @@ static ALCchar *get_device_name(IMMDevice *device)
 
 static void add_device(IMMDevice *device, DevMap *devmap)
 {
+    LPWSTR devid;
     HRESULT hr;
-    hr = IMMDevice_GetId(device, &devmap->devid);
+
+    hr = IMMDevice_GetId(device, &devid);
     if(SUCCEEDED(hr))
     {
+        devmap->devid = strdupW(devid);
         devmap->name = get_device_name(device);
         TRACE("Got device \"%s\", \"%ls\"\n", devmap->name, devmap->devid);
+        CoTaskMemFree(devid);
     }
 }
 
@@ -739,7 +743,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
                 for(i = 0;i < *numdevs;i++)
                 {
                     free((*devlist)[i].name);
-                    CoTaskMemFree((*devlist)[i].devid);
+                    free((*devlist)[i].devid);
                 }
                 free(*devlist);
                 *devlist = NULL;
@@ -948,7 +952,7 @@ void alcMMDevApiDeinit(void)
     for(i = 0;i < NumPlaybackDevices;i++)
     {
         free(PlaybackDeviceList[i].name);
-        CoTaskMemFree(PlaybackDeviceList[i].devid);
+        free(PlaybackDeviceList[i].devid);
     }
     free(PlaybackDeviceList);
     PlaybackDeviceList = NULL;
@@ -957,7 +961,7 @@ void alcMMDevApiDeinit(void)
     for(i = 0;i < NumCaptureDevices;i++)
     {
         free(CaptureDeviceList[i].name);
-        CoTaskMemFree(CaptureDeviceList[i].devid);
+        free(CaptureDeviceList[i].devid);
     }
     free(CaptureDeviceList);
     CaptureDeviceList = NULL;

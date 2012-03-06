@@ -1388,6 +1388,10 @@ ALCboolean alc_pulse_init(BackendFuncs *func_list)
                 *func_list = pulse_funcs;
                 ret = ALC_TRUE;
 
+                /* Some libraries (Phonon, Qt) set some pulseaudio properties
+                 * through environment variables, which causes all streams in
+                 * the process to inherit them. This attempts to filter those
+                 * properties out by setting them to 0-length data. */
                 prop_filter = pa_proplist_new();
                 pa_proplist_set(prop_filter, PA_PROP_MEDIA_ROLE, NULL, 0);
                 pa_proplist_set(prop_filter, "phonon.streamid", NULL, 0);

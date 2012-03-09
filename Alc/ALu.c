@@ -336,7 +336,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat Velocity[3],ListenerVel[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
-    ALfloat DopplerFactor, DopplerVelocity, SpeedOfSound;
+    ALfloat DopplerFactor, SpeedOfSound;
     ALfloat AirAbsorptionFactor;
     ALfloat RoomAirAbsorption[MAX_SENDS];
     ALbufferlistitem *BufferListItem;
@@ -365,11 +365,10 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         WetGainHF[i] = 1.0f;
 
     //Get context properties
-    DopplerFactor   = ALContext->DopplerFactor * ALSource->DopplerFactor;
-    DopplerVelocity = ALContext->DopplerVelocity;
-    SpeedOfSound    = ALContext->flSpeedOfSound;
-    NumSends        = Device->NumAuxSends;
-    Frequency       = Device->Frequency;
+    DopplerFactor = ALContext->DopplerFactor * ALSource->DopplerFactor;
+    SpeedOfSound  = ALContext->flSpeedOfSound * ALContext->DopplerVelocity;
+    NumSends      = Device->NumAuxSends;
+    Frequency     = Device->Frequency;
 
     //Get listener properties
     ListenerGain   = ALContext->Listener.Gain;
@@ -624,26 +623,14 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     // Calculate Velocity
-    if(DopplerFactor != 0.0f)
+    if(DopplerFactor > 0.0f)
     {
         ALfloat VSS, VLS;
-        ALfloat MaxVelocity = (SpeedOfSound*DopplerVelocity) /
-                              DopplerFactor;
 
-        VSS = aluDotproduct(Velocity, SourceToListener);
-        if(VSS >= MaxVelocity)
-            VSS = (MaxVelocity - 1.0f);
-        else if(VSS <= -MaxVelocity)
-            VSS = -MaxVelocity + 1.0f;
+        VSS = aluDotproduct(Velocity, SourceToListener) * DopplerFactor;
+        VLS = aluDotproduct(ListenerVel, SourceToListener) * DopplerFactor;
 
-        VLS = aluDotproduct(ListenerVel, SourceToListener);
-        if(VLS >= MaxVelocity)
-            VLS = (MaxVelocity - 1.0f);
-        else if(VLS <= -MaxVelocity)
-            VLS = -MaxVelocity + 1.0f;
-
-        Pitch *= ((SpeedOfSound*DopplerVelocity) - (DopplerFactor*VLS)) /
-                 ((SpeedOfSound*DopplerVelocity) - (DopplerFactor*VSS));
+        Pitch *= maxf(SpeedOfSound-VLS, 1.0f) / maxf(SpeedOfSound-VSS, 1.0f);
     }
 
     BufferListItem = ALSource->queue;

@@ -463,6 +463,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         aluMatrixVector(Position, 1.0f, Matrix);
         aluMatrixVector(Direction, 0.0f, Matrix);
         aluMatrixVector(Velocity, 0.0f, Matrix);
+        /* Transform listener vectors into listener space */
+        aluMatrixVector(ListenerVel, 0.0f, Matrix);
     }
     else
     {

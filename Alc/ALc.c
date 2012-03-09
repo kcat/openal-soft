@@ -418,15 +418,17 @@ static void alc_deinit_safe(void);
 UIntMap TlsDestructor;
 
 #ifndef AL_LIBTYPE_STATIC
-BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
+BOOL APIENTRY DllMain(HINSTANCE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 {
     ALsizei i;
-    (void)hModule;
 
     // Perform actions based on the reason for calling.
     switch(ul_reason_for_call)
     {
         case DLL_PROCESS_ATTACH:
+            /* Pin the DLL so we won't get unloaded until the process terminates */
+            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+                               (WCHAR*)hModule, &hModule);
             InitUIntMap(&TlsDestructor, ~0);
             alc_init();
             break;

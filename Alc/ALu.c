@@ -354,11 +354,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALboolean WetGainAuto;
     ALboolean WetGainHFAuto;
     enum Resampler Resampler;
+    ALfloat Matrix[4][4];
     ALfloat Pitch;
     ALuint Frequency;
     ALint NumSends;
     ALfloat cw;
-    ALint i;
+    ALint i, j;
 
     DryGainHF = 1.0f;
     for(i = 0;i < MAX_SENDS;i++)
@@ -443,17 +444,15 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALSource->Params.Send[i].Slot = Slot;
     }
 
+    for(i = 0;i < 4;i++)
+    {
+        for(j = 0;j < 4;j++)
+            Matrix[i][j] = ALContext->Listener.Matrix[i][j];
+    }
+
     //1. Translate Listener to origin (convert to head relative)
     if(ALSource->bHeadRelative == AL_FALSE)
     {
-        ALfloat Matrix[4][4];
-        for(i = 0;i < 4;i++)
-        {
-            ALint i2;
-            for(i2 = 0;i2 < 4;i2++)
-                Matrix[i][i2] = ALContext->Listener.Matrix[i][i2];
-        }
-
         /* Translate position */
         Position[0] -= ALContext->Listener.Position[0];
         Position[1] -= ALContext->Listener.Position[1];
@@ -463,14 +462,17 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         aluMatrixVector(Position, 1.0f, Matrix);
         aluMatrixVector(Direction, 0.0f, Matrix);
         aluMatrixVector(Velocity, 0.0f, Matrix);
-        /* Transform listener vectors into listener space */
+        /* Transform listener velocity into listener space */
         aluMatrixVector(ListenerVel, 0.0f, Matrix);
     }
     else
     {
-        ListenerVel[0] = 0.0f;
-        ListenerVel[1] = 0.0f;
-        ListenerVel[2] = 0.0f;
+        /* Transform listener velocity into listener space */
+        aluMatrixVector(ListenerVel, 0.0f, Matrix);
+        /* Offset the source velocity to be relative of the listener velocity */
+        Velocity[0] += ListenerVel[0];
+        Velocity[1] += ListenerVel[1];
+        Velocity[2] += ListenerVel[2];
     }
 
     SourceToListener[0] = -Position[0];

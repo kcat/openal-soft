@@ -625,14 +625,15 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     // Calculate Velocity
-    if(DopplerFactor > 0.0f)
+    if(DopplerFactor > 0.0f && SpeedOfSound > 0.5f)
     {
         ALfloat VSS, VLS;
 
         VSS = aluDotproduct(Velocity, SourceToListener) * DopplerFactor;
         VLS = aluDotproduct(ListenerVel, SourceToListener) * DopplerFactor;
 
-        Pitch *= maxf(SpeedOfSound-VLS, 1.0f) / maxf(SpeedOfSound-VSS, 1.0f);
+        Pitch *= clampf(SpeedOfSound-VLS, 1.0f, SpeedOfSound*2.0f - 1.0f) /
+                 clampf(SpeedOfSound-VSS, 1.0f, SpeedOfSound*2.0f - 1.0f);
     }
 
     BufferListItem = ALSource->queue;

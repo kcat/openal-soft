@@ -28,21 +28,6 @@
 #include "alMain.h"
 #include "alSource.h"
 
-/* External HRTF file format (LE byte order):
- *
- * ALchar   magic[8] = "MinPHR00";
- * ALuint   sampleRate;
- *
- * ALushort hrirCount; // Required value: 828
- * ALushort hrirSize;  // Required value: 32
- * ALubyte  evCount;   // Required value: 19
- *
- * ALushort evOffset[evCount]; // Required values:
- *   { 0, 1, 13, 37, 73, 118, 174, 234, 306, 378, 450, 522, 594, 654, 710, 755, 791, 815, 827 }
- *
- * ALshort coefficients[hrirCount][hrirSize];
- * ALubyte delays[hrirCount]; // Element values must not exceed 127
- */
 
 static const ALchar magicMarker[8] = "MinPHR00";
 

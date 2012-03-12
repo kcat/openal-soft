@@ -1,0 +1,82 @@
+HRTF Support
+============
+
+Starting with OpenAL Soft 1.14, HRTFs can be used to enable enhanced
+spatialization for both 3D (mono) and multi-channel sources, when used with
+headphones/stereo output. This can be enabled using the 'hrtf' config option.
+
+For multi-channel sources this creates a virtual speaker effect, making it
+sound as if speakers provide a discrete position for each channel around the
+listener. For mono sources this provides much more versatility in the perceived
+placement of sounds, making it seem as though they are coming from all around,
+including above and below the listener, instead of just to the front, back, and
+sides.
+
+The built-in data set is based on the KEMAR HRTF diffuse data provided by MIT,
+which can be found at <http://sound.media.mit.edu/resources/KEMAR.html>. It's
+only available when using 44100hz playback.
+
+
+External HRTF Data Sets
+=======================
+
+OpenAL Soft also provides an option to use user-specified data sets, in
+addition to or in place of the built-in set. This allows users to provide their
+own data sets, which could be better suited for their heads, or to work with
+stereo speakers instead of headphones, or to support more playback sample
+rates, for example.
+
+The file format for the data sets is specified below. It uses little-endian
+byte order. Certain data fields are restricted to specific values (these
+restriction may be lifted in future versions of the lib).
+
+==
+ALchar   magic[8] = "MinPHR00";
+ALuint   sampleRate;
+
+ALushort hrirCount; /* Required value: 828 */
+ALushort hrirSize;  /* Required value: 32 */
+ALubyte  evCount;   /* Required value: 19 */
+
+ALushort evOffset[evCount]; /* Required values:
+  { 0, 1, 13, 37, 73, 118, 174, 234, 306, 378, 450, 522, 594, 654, 710, 755,
+    791, 815, 827 } */
+
+ALshort coefficients[hrirCount][hrirSize];
+ALubyte delays[hrirCount]; /* Element values must not exceed 127 */
+==
+
+The data are described as thus:
+
+The file first starts with the 8-byte marker, "MinPHR00", to identify it as an
+HRTF data set. This is followed by an unsigned 32-bit integer, specifying the
+sample rate the data set is designed for (OpenAL will not use it if the output
+device's playback rate doesn't match).
+
+Afterward, an unsigned 16-bit integer specifies the total number of HRIR sets
+(each HRIR set is a collection of impulse responses forming the coefficients
+for a convolution filter). The next unsigned 16-bit integer specifies how many
+samples are in each HRIR set (the number of coefficients in the set). The
+following unsigned 8-bit integer specifies the number of elevations used by the
+data set.
+
+Following this is an array of unsigned 16-bit integers, one for each elevation
+which specifies the offset to the start of the HRIR sets for each given
+elevation (the number of HRIRs at each elevation is infered by the offset to
+the next elevation, or by the total count for the last elevation).
+
+The actual coefficients follow. Each coefficient is a signed 16-bit sample,
+with each HRIR set being a consecutive number of samples. For each elevation,
+the HRIR sets first start with a "neutral" set (that is, one that is applied
+equally to the left and right outputs). After this, the HRIR sets follow a
+clockwise pattern, with the first half specifying the "occluded" HRIRs (for the
+ears on the opposite side of the sound source) for half of the head, and the
+remaining specify the un-occluded HRIRs (for the ears on the side of the sound
+source) for half of the head. OpenAL Soft will automatically select the HRIR
+sets to use based on the angle to the source from the listener, and swap them
+depending on which side the sound is on.
+
+After the coefficients is an array of unsigned 8-bit delay values, one for each
+HRIR set. This is the delay, in samples, after recieving an input sample before
+before it's added in to the convolution filter that the corresponding HRIR set
+operates on.

@@ -36,6 +36,12 @@
 #  Default is disabled since stereo speaker output quality may suffer.
 #hrtf = false
 
+## hrtf_tables
+#  Specifies a comma-separated list of files containing HRTF data sets. The
+#  listed data sets can be used in place of or in addiiton to the the built-in
+#  set. The format of the files are described in hrtf.txt.
+#hrtf_tables =
+
 ## cf_level:
 #  Sets the crossfeed level for stereo output. Valid values are:
 #  0 - No crossfeed

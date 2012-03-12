@@ -79,7 +79,7 @@ static void CalcAzIndices(ALuint evidx, ALfloat az, ALuint *azidx, ALfloat *azmu
 // values.
 ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3], const ALfloat newdir[3])
 {
-    ALfloat gainChange, angleChange;
+    ALfloat gainChange, angleChange, change;
 
     // Calculate the normalized dB gain change.
     newGain = maxf(newGain, 0.0001f);
@@ -102,7 +102,8 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
 
     // Use the largest of the two changes for the delta factor, and apply a
     // significance shaping function to it.
-    return clampf(angleChange*2.0f, gainChange*2.0f, 1.0f);
+    change = maxf(angleChange, gainChange) * 2.0f;
+    return minf(change, 1.0f);
 }
 
 // Calculates static HRIR coefficients and delays for the given polar

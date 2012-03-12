@@ -50,20 +50,20 @@ The data are described as thus:
 
 The file first starts with the 8-byte marker, "MinPHR00", to identify it as an
 HRTF data set. This is followed by an unsigned 32-bit integer, specifying the
-sample rate the data set is designed for (OpenAL will not use it if the output
-device's playback rate doesn't match).
+sample rate the data set is designed for (OpenAL Soft will not use it if the
+output device's playback rate doesn't match).
 
 Afterward, an unsigned 16-bit integer specifies the total number of HRIR sets
 (each HRIR set is a collection of impulse responses forming the coefficients
 for a convolution filter). The next unsigned 16-bit integer specifies how many
-samples are in each HRIR set (the number of coefficients in the set). The
+samples are in each HRIR set (the number of coefficients in the filter). The
 following unsigned 8-bit integer specifies the number of elevations used by the
 data set.
 
 Following this is an array of unsigned 16-bit integers, one for each elevation
-which specifies the offset to the start of the HRIR sets for each given
-elevation (the number of HRIRs at each elevation is infered by the offset to
-the next elevation, or by the total count for the last elevation).
+which specifies the index offset to the start of the HRIR sets for each given
+elevation (the number of HRIR sets at each elevation is infered by the offset
+to the next elevation, or by the total count for the last elevation).
 
 The actual coefficients follow. Each coefficient is a signed 16-bit sample,
 with each HRIR set being a consecutive number of samples. For each elevation,
@@ -71,7 +71,7 @@ the HRIR sets first start with a "neutral" set (that is, one that is applied
 equally to the left and right outputs). After this, the HRIR sets follow a
 clockwise pattern, with the first half specifying the "occluded" HRIRs (for the
 ears on the opposite side of the sound source) for half of the head, and the
-remaining specify the un-occluded HRIRs (for the ears on the side of the sound
+remaining specify the "unoccluded" HRIRs (for the ears on the side of the sound
 source) for half of the head. OpenAL Soft will automatically select the HRIR
 sets to use based on the angle to the source from the listener, and swap them
 depending on which side the sound is on.

@@ -173,6 +173,17 @@ static ALCenum ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_INVALID_VALUE;
     }
 
+    /* init and start the default audio unit... */
+    err = AudioUnitInitialize(data->audioUnit);
+    if(err != noErr)
+    {
+        ERR("AudioUnitInitialize failed\n");
+        CloseComponent(data->audioUnit);
+        free(data);
+        device->ExtraData = NULL;
+        return ALC_FALSE;
+    }
+
     return ALC_NO_ERROR;
 }
 
@@ -180,6 +191,7 @@ static void ca_close_playback(ALCdevice *device)
 {
     ca_data *data = (ca_data*)device->ExtraData;
 
+    AudioUnitUninitialize(data->audioUnit);
     CloseComponent(data->audioUnit);
 
     free(data);
@@ -194,20 +206,9 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     OSStatus err;
     UInt32 size;
 
-    /* init and start the default audio unit... */
-    err = AudioUnitInitialize(data->audioUnit);
+    err = AudioUnitUninitialize(data->audioUnit);
     if(err != noErr)
-    {
-        ERR("AudioUnitInitialize failed\n");
-        return ALC_FALSE;
-    }
-
-    err = AudioOutputUnitStart(data->audioUnit);
-    if(err != noErr)
-    {
-        ERR("AudioOutputUnitStart failed\n");
-        return ALC_FALSE;
-    }
+        ERR("-- AudioUnitUninitialize failed.\n");
 
     /* retrieve default output unit's properties (output side) */
     size = sizeof(AudioStreamBasicDescription);
@@ -329,6 +330,29 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
+    /* init the default audio unit... */
+    err = AudioUnitInitialize(data->audioUnit);
+    if(err != noErr)
+    {
+        ERR("AudioUnitInitialize failed\n");
+        return ALC_FALSE;
+    }
+
+    return ALC_TRUE;
+}
+
+static ALCboolean ca_start_playback(ALCdevice *device)
+{
+    ca_data *data = (ca_data*)device->ExtraData;
+    OSStatus err;
+
+    err = AudioOutputUnitStart(data->audioUnit);
+    if(err != noErr)
+    {
+        ERR("AudioOutputUnitStart failed\n");
+        return ALC_FALSE;
+    }
+
     return ALC_TRUE;
 }
 
@@ -337,10 +361,9 @@ static void ca_stop_playback(ALCdevice *device)
     ca_data *data = (ca_data*)device->ExtraData;
     OSStatus err;
 
-    AudioOutputUnitStop(data->audioUnit);
-    err = AudioUnitUninitialize(data->audioUnit);
+    err = AudioOutputUnitStop(data->audioUnit);
     if(err != noErr)
-        ERR("-- AudioUnitUninitialize failed.\n");
+        ERR("AudioOutputUnitStop failed\n");
 }
 
 static ALCenum ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
@@ -645,6 +668,7 @@ static const BackendFuncs ca_funcs = {
     ca_open_playback,
     ca_close_playback,
     ca_reset_playback,
+    ca_start_playback,
     ca_stop_playback,
     ca_open_capture,
     ca_close_capture,

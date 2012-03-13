@@ -1332,6 +1332,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         context = context->next;
     }
+    if(device->DefaultSlot)
+    {
+        ALeffectslot *slot = device->DefaultSlot;
+
+        if(ALeffectState_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
+        {
+            UnlockDevice(device);
+            RestoreFPUMode(oldMode);
+            return ALC_INVALID_DEVICE;
+        }
+        slot->NeedsUpdate = AL_FALSE;
+        ALeffectState_Update(slot->EffectState, device, slot);
+    }
     UnlockDevice(device);
     RestoreFPUMode(oldMode);
 
@@ -2296,10 +2309,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     } while(!CompExchangePtr((XchgPtr*)&device->ContextList, ALContext->next, ALContext));
     UnlockLists();
 
-    if(device->DefaultSlot)
-        InitializeEffect(device, device->DefaultSlot, &DefaultEffect);
-    ALContext->LastError = AL_NO_ERROR;
-
     ALCdevice_DecRef(device);
 
     TRACE("Created context %p\n", ALContext);
@@ -2618,8 +2627,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(DefaultEffect.type != AL_EFFECT_NULL)
     {
         device->DefaultSlot = (ALeffectslot*)(device+1);
-        if(InitEffectSlot(device->DefaultSlot) != AL_NO_ERROR)
+        if(InitEffectSlot(device->DefaultSlot) != AL_NO_ERROR ||
+           InitializeEffect(device, device->DefaultSlot, &DefaultEffect) != AL_NO_ERROR)
+        {
             device->DefaultSlot = NULL;
+            ERR("Failed to initialize the default effect\n");
+        }
     }
 
     // Find a playback device to open

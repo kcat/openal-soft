@@ -282,7 +282,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 /* Get the static HRIR coefficients and delays for this
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
-                                    0.0f, F_PI/180.0f * chans[c].angle,
+                                    0.0f, chans[c].angle,
                                     DryGain*ListenerGain,
                                     ALSource->Params.HrtfCoeffs[c],
                                     ALSource->Params.HrtfDelay[c]);

@@ -145,7 +145,7 @@
 #  Channel-specific layouts may be specified to override the layout option. The
 #  same speakers as the layout option are available, and the default settings
 #  are shown below.
-#layout_stereo     = fl=-30, fr=30
+#layout_stereo     = fl=-90, fr=90
 #layout_quad       = fl=-45, fr=45, bl=-135, br=135
 #layout_surround51 = fl=-30, fr=30, fc=0, bl=-110, br=110
 #layout_surround61 = fl=-30, fr=30, fc=0, sl=-90, sr=90, bc=180

@@ -216,8 +216,8 @@ static ALuint MMDevApiProc(ALvoid *ptr)
 {
     ALCdevice *device = ptr;
     MMDevApiData *data = device->ExtraData;
-    UINT32 update_size, num_updates;
-    UINT32 written, len;
+    UINT32 buffer_len, written;
+    ALuint update_size, len;
     BYTE *buffer;
     HRESULT hr;
 
@@ -229,10 +229,18 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         return 0;
     }
 
+    hr = IAudioClient_GetBufferSize(data->client, &buffer_len);
+    if(FAILED(hr))
+    {
+        ERR("Failed to get audio buffer size: 0x%08lx\n", hr);
+        aluHandleDisconnect(device);
+        CoUninitialize();
+        return 0;
+    }
+
     SetRTPriority();
 
     update_size = device->UpdateSize;
-    num_updates = device->NumUpdates;
     while(!data->killNow)
     {
         hr = IAudioClient_GetCurrentPadding(data->client, &written);
@@ -243,7 +251,7 @@ static ALuint MMDevApiProc(ALvoid *ptr)
             break;
         }
 
-        len = update_size*num_updates - written;
+        len = buffer_len - written;
         if(len < update_size)
         {
             DWORD res;

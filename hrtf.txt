@@ -80,3 +80,18 @@ After the coefficients is an array of unsigned 8-bit delay values, one for each
 HRIR set. This is the delay, in samples, after recieving an input sample before
 before it's added in to the convolution filter that the corresponding HRIR set
 operates on.
+
+
+Note that the HRTF data is expected to be minimum-phase reconstructed. The
+time delays are handled by OpenAL Soft according to the specified delay[]
+values, and afterward the samples are fed into the convolution filter using the
+corresponding coefficients. This allows for less processing by using a shorter
+convolution filter, as it skips the first set of coefficients that do little
+more than insert a timed delay, as well as the tailing coefficients that are
+used to equalize the length of all the sets and contribute nothing.
+
+For reference, the built-in data set uses a 32-sample convolution filter while
+even the smallest data set provided by MIT used a 128-sample filter (a 4x
+reduction by applying minimum-phase reconstruction). Theoretically, one could
+further reduce the minimum-phase version down to a 16-sample convolution filter
+with little quality loss.

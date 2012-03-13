@@ -724,10 +724,8 @@ static void alc_initconfig(void)
 
     InitEffect(&DefaultEffect);
     str = getenv("ALSOFT_DEFAULT_REVERB");
-    if(str && str[0])
-        GetReverbEffect(str, &DefaultEffect);
-    else if(ConfigValueStr(NULL, "default-reverb", &str))
-        GetReverbEffect(str, &DefaultEffect);
+    if((str && str[0]) || ConfigValueStr(NULL, "default-reverb", &str))
+        LoadReverbPreset(str, &DefaultEffect);
 }
 
 

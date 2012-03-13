@@ -1451,7 +1451,7 @@ static const struct {
 #undef DECL
 static const ALsizei reverblistsize = COUNTOF(reverblist);
 
-ALvoid GetReverbEffect(const char *name, ALeffect *effect)
+ALvoid LoadReverbPreset(const char *name, ALeffect *effect)
 {
     int i;
 

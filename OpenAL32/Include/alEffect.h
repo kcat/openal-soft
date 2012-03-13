@@ -105,7 +105,7 @@ static __inline ALboolean IsReverbEffect(ALenum type)
 ALenum InitEffect(ALeffect *effect);
 ALvoid ReleaseALEffects(ALCdevice *device);
 
-ALvoid GetReverbEffect(const char *name, ALeffect *effect);
+ALvoid LoadReverbPreset(const char *name, ALeffect *effect);
 
 #ifdef __cplusplus
 }

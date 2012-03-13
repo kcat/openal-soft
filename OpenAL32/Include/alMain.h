@@ -515,7 +515,9 @@ enum DevFmtType {
     DevFmtUShort = ALC_UNSIGNED_SHORT_SOFT,
     DevFmtInt    = ALC_INT_SOFT,
     DevFmtUInt   = ALC_UNSIGNED_INT_SOFT,
-    DevFmtFloat  = ALC_FLOAT_SOFT
+    DevFmtFloat  = ALC_FLOAT_SOFT,
+
+    DevFmtTypeDefault = DevFmtFloat
 };
 enum DevFmtChannels {
     DevFmtMono   = ALC_MONO_SOFT,
@@ -526,7 +528,9 @@ enum DevFmtChannels {
     DevFmtX71    = ALC_7POINT1_SOFT,
 
     /* Similar to 5.1, except using the side channels instead of back */
-    DevFmtX51Side = 0x80000000 | ALC_5POINT1_SOFT
+    DevFmtX51Side = 0x80000000,
+
+    DevFmtChannelsDefault = DevFmtStereo
 };
 
 ALuint BytesFromDevFmt(enum DevFmtType type);

@@ -2485,8 +2485,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitUIntMap(&device->FilterMap, ~0);
 
     //Set output format
-    device->FmtChans = DevFmtStereo;
-    device->FmtType = DevFmtFloat;
+    device->FmtChans = DevFmtChannelsDefault;
+    device->FmtType = DevFmtTypeDefault;
     device->Frequency = DEFAULT_OUTPUT_RATE;
     device->NumUpdates = 4;
     device->UpdateSize = 1024;
@@ -2747,9 +2747,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->NumUpdates = 0;
     device->UpdateSize = 0;
 
-    device->Frequency = 44100;
-    device->FmtChans = DevFmtStereo;
-    device->FmtType = DevFmtShort;
+    device->Frequency = DEFAULT_OUTPUT_RATE;
+    device->FmtChans = DevFmtChannelsDefault;
+    device->FmtType = DevFmtTypeDefault;
 
     ConfigValueUInt(NULL, "sources", &device->MaxNoOfSources);
     if(device->MaxNoOfSources == 0) device->MaxNoOfSources = 256;

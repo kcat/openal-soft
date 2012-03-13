@@ -162,14 +162,12 @@ static ALCenum ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
     }
 
     data = calloc(1, sizeof(*data));
-    device->ExtraData = data;
 
     err = OpenAComponent(comp, &data->audioUnit);
     if(err != noErr)
     {
         ERR("OpenAComponent failed\n");
         free(data);
-        device->ExtraData = NULL;
         return ALC_INVALID_VALUE;
     }
 
@@ -180,10 +178,11 @@ static ALCenum ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
         ERR("AudioUnitInitialize failed\n");
         CloseComponent(data->audioUnit);
         free(data);
-        device->ExtraData = NULL;
-        return ALC_FALSE;
+        return ALC_INVALID_VALUE;
     }
 
+    device->szDeviceName = strdup(deviceName);
+    device->ExtraData = data;
     return ALC_NO_ERROR;
 }
 

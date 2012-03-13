@@ -1307,7 +1307,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 return ALC_INVALID_DEVICE;
             }
             slot->NeedsUpdate = AL_FALSE;
-            ALeffectState_Update(slot->EffectState, context, slot);
+            ALeffectState_Update(slot->EffectState, device, slot);
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
 

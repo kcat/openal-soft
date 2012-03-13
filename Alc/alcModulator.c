@@ -127,10 +127,9 @@ static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     (void)Device;
 }
 
-static ALvoid ModulatorUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
+static ALvoid ModulatorUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALmodulatorState *state = (ALmodulatorState*)effect;
-    ALCdevice *Device = Context->Device;
     ALfloat gain, cw, a = 0.0f;
     ALuint index;
 

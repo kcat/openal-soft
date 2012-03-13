@@ -1081,10 +1081,10 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 
 // This updates the EAX reverb state.  This is called any time the EAX reverb
 // effect is loaded into a slot.
-static ALvoid ReverbUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
+static ALvoid ReverbUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALverbState *State = (ALverbState*)effect;
-    ALuint frequency = Context->Device->Frequency;
+    ALuint frequency = Device->Frequency;
     ALboolean isEAX = AL_FALSE;
     ALfloat cw, x, y, hfRatio;
 
@@ -1154,12 +1154,11 @@ static ALvoid ReverbUpdate(ALeffectState *effect, ALCcontext *Context, const ALe
                        hfRatio, cw, frequency, State);
 
         // Update early and late 3D panning.
-        Update3DPanning(Context->Device, Slot->effect.Reverb.ReflectionsPan,
+        Update3DPanning(Device, Slot->effect.Reverb.ReflectionsPan,
                         Slot->effect.Reverb.LateReverbPan, Slot->Gain, State);
     }
     else
     {
-        ALCdevice *Device = Context->Device;
         ALfloat gain = Slot->Gain;
         ALuint index;
 

@@ -90,10 +90,9 @@ static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     return AL_TRUE;
 }
 
-static ALvoid EchoUpdate(ALeffectState *effect, ALCcontext *Context, const ALeffectslot *Slot)
+static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALechoState *state = (ALechoState*)effect;
-    ALCdevice *Device = Context->Device;
     ALuint frequency = Device->Frequency;
     ALfloat dirGain, ambientGain;
     const ALfloat *ChannelGain;

@@ -617,7 +617,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         while(slot != slot_end)
         {
             if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
-                ALeffectState_Update((*slot)->EffectState, Context, *slot);
+                ALeffectState_Update((*slot)->EffectState, Context->Device, *slot);
             slot++;
         }
 

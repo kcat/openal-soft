@@ -427,10 +427,10 @@ static ALboolean NoneDeviceUpdate(ALeffectState *State, ALCdevice *Device)
     (void)State;
     (void)Device;
 }
-static ALvoid NoneUpdate(ALeffectState *State, ALCcontext *Context, const ALeffectslot *Slot)
+static ALvoid NoneUpdate(ALeffectState *State, ALCdevice *Device, const ALeffectslot *Slot)
 {
     (void)State;
-    (void)Context;
+    (void)Device;
     (void)Slot;
 }
 static ALvoid NoneProcess(ALeffectState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
@@ -566,7 +566,7 @@ ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
          * object was changed, it needs an update before its Process method can
          * be called. */
         EffectSlot->NeedsUpdate = AL_FALSE;
-        ALeffectState_Update(EffectSlot->EffectState, Context, EffectSlot);
+        ALeffectState_Update(EffectSlot->EffectState, Context->Device, EffectSlot);
         UnlockContext(Context);
 
         RestoreFPUMode(oldMode);

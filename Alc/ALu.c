@@ -975,7 +975,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 (*slot)->PendingClicks[0] = 0.0f;
 
                 if(!DeferUpdates && ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
-                    ALeffectState_Update((*slot)->EffectState, ctx, *slot);
+                    ALeffectState_Update((*slot)->EffectState, device, *slot);
 
                 ALeffectState_Process((*slot)->EffectState, SamplesToDo,
                                       (*slot)->WetBuffer, device->DryBuffer);
@@ -1001,7 +1001,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             (*slot)->PendingClicks[0] = 0.0f;
 
             if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
-                ALeffectState_Update((*slot)->EffectState, ctx, *slot);
+                ALeffectState_Update((*slot)->EffectState, device, *slot);
 
             ALeffectState_Process((*slot)->EffectState, SamplesToDo,
                                   (*slot)->WetBuffer, device->DryBuffer);

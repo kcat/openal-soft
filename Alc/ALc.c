@@ -397,7 +397,7 @@ static ALCboolean TrapALCError = ALC_FALSE;
 static pthread_once_t alc_config_once = PTHREAD_ONCE_INIT;
 
 /* Forced effect that applies to sources that don't have an effect on send 0 */
-static ALeffect ForcedEffect;
+static ALeffect DefaultEffect;
 
 ///////////////////////////////////////////////////////
 
@@ -722,12 +722,12 @@ static void alc_initconfig(void)
         } while(next++);
     }
 
-    InitEffect(&ForcedEffect);
+    InitEffect(&DefaultEffect);
     str = getenv("ALSOFT_DEFAULT_REVERB");
     if(str && str[0])
-        GetReverbEffect(str, &ForcedEffect);
+        GetReverbEffect(str, &DefaultEffect);
     else if(ConfigValueStr(NULL, "default-reverb", &str))
-        GetReverbEffect(str, &ForcedEffect);
+        GetReverbEffect(str, &DefaultEffect);
 }
 
 
@@ -2297,7 +2297,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     UnlockLists();
 
     if(device->DefaultSlot)
-        InitializeEffect(ALContext, device->DefaultSlot, &ForcedEffect);
+        InitializeEffect(ALContext, device->DefaultSlot, &DefaultEffect);
     ALContext->LastError = AL_NO_ERROR;
 
     ALCdevice_DecRef(device);
@@ -2615,7 +2615,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
-    if(ForcedEffect.type != AL_EFFECT_NULL)
+    if(DefaultEffect.type != AL_EFFECT_NULL)
     {
         device->DefaultSlot = (ALeffectslot*)(device+1);
         if(InitEffectSlot(device->DefaultSlot) != AL_NO_ERROR)

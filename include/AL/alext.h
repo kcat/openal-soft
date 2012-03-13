@@ -252,6 +252,11 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 #endif
 #endif
 
+#ifndef AL_SOFT_direct_channels
+#define AL_SOFT_direct_channels 1
+#define AL_DIRECT_CHANNELS_SOFT                  0x1033
+#endif
+
 #ifdef __cplusplus
 }
 #endif

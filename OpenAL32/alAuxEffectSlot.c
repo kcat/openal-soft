@@ -550,6 +550,7 @@ ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
 
         if(ALeffectState_DeviceUpdate(State, Context->Device) == AL_FALSE)
         {
+            RestoreFPUMode(oldMode);
             UnlockContext(Context);
             ALeffectState_Destroy(State);
             alSetError(Context, AL_OUT_OF_MEMORY);

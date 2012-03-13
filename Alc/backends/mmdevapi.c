@@ -535,8 +535,9 @@ static HRESULT DoReset(ALCdevice *device)
     device->NumUpdates = buffer_len / device->UpdateSize;
     if(device->NumUpdates <= 1)
     {
-        device->NumUpdates = 1;
         ERR("Audio client returned buffer_len < period*2; expect break up\n");
+        device->NumUpdates = 2;
+        device->UpdateSize = buffer_len / device->NumUpdates;
     }
 
     return hr;

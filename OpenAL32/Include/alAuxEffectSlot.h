@@ -56,7 +56,7 @@ ALeffectState *DedicatedCreate(void);
 #define ALeffectState_Update(a,b,c)     ((a)->Update((a),(b),(c)))
 #define ALeffectState_Process(a,b,c,d)  ((a)->Process((a),(b),(c),(d)))
 
-ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
+ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *effect);
 
 #ifdef __cplusplus
 }

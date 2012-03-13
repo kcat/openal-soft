@@ -181,8 +181,12 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
             if(iValue == 0 ||
                (effect=LookupEffect(Device, iValue)) != NULL)
             {
-                InitializeEffect(Context, EffectSlot, effect);
-                Context->UpdateSources = AL_TRUE;
+                ALenum err;
+                err = InitializeEffect(Device, EffectSlot, effect);
+                if(err != AL_NO_ERROR)
+                    alSetError(Context, err);
+                else
+                    Context->UpdateSources = AL_TRUE;
             }
             else
                 alSetError(Context, AL_INVALID_VALUE);
@@ -497,13 +501,13 @@ static ALenum ResizeEffectSlotArray(ALCcontext *Context, ALsizei count)
     return AL_NO_ERROR;
 }
 
-ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect)
+ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *effect)
 {
     ALenum newtype = (effect ? effect->type : AL_EFFECT_NULL);
     ALeffectState *State = NULL;
     ALenum err = AL_NO_ERROR;
 
-    LockContext(Context);
+    LockDevice(Device);
     if(newtype == AL_EFFECT_NULL && EffectSlot->effect.type != AL_EFFECT_NULL)
     {
         State = NoneCreate();
@@ -538,9 +542,8 @@ ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
 
     if(err != AL_NO_ERROR)
     {
-        UnlockContext(Context);
-        alSetError(Context, err);
-        return;
+        UnlockDevice(Device);
+        return err;
     }
 
     if(State)
@@ -548,13 +551,12 @@ ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
         int oldMode;
         oldMode = SetMixerFPUMode();
 
-        if(ALeffectState_DeviceUpdate(State, Context->Device) == AL_FALSE)
+        if(ALeffectState_DeviceUpdate(State, Device) == AL_FALSE)
         {
             RestoreFPUMode(oldMode);
-            UnlockContext(Context);
+            UnlockDevice(Device);
             ALeffectState_Destroy(State);
-            alSetError(Context, AL_OUT_OF_MEMORY);
-            return;
+            return AL_OUT_OF_MEMORY;
         }
         State = ExchangePtr((XchgPtr*)&EffectSlot->EffectState, State);
 
@@ -566,8 +568,8 @@ ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
          * object was changed, it needs an update before its Process method can
          * be called. */
         EffectSlot->NeedsUpdate = AL_FALSE;
-        ALeffectState_Update(EffectSlot->EffectState, Context->Device, EffectSlot);
-        UnlockContext(Context);
+        ALeffectState_Update(EffectSlot->EffectState, Device, EffectSlot);
+        UnlockDevice(Device);
 
         RestoreFPUMode(oldMode);
 
@@ -580,9 +582,11 @@ ALvoid InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
             memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
         else
             memcpy(&EffectSlot->effect, effect, sizeof(*effect));
-        UnlockContext(Context);
+        UnlockDevice(Device);
         EffectSlot->NeedsUpdate = AL_TRUE;
     }
+
+    return AL_NO_ERROR;
 }
 
 

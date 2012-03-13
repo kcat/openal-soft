@@ -68,14 +68,9 @@ to the next elevation, or by the total count for the last elevation).
 The actual coefficients follow. Each coefficient is a signed 16-bit sample,
 with each HRIR set being a consecutive number of samples. For each elevation,
 the HRIR sets first start with a neutral "in-front" set (that is, one that is
-applied equally to the left and right outputs). After this, the HRIR sets
-follow a clockwise pattern, with the first half specifying the "occluded" HRIRs
-(a half-circle for the ear on the opposite side of the sound source), and the
-second half specify the "unoccluded" HRIRs (a half-circle for the ear on the
-same side as the sound source). OpenAL Soft automatically selects the two HRIR
-sets to use based on the angle to the source from the listener, and swap them
-depending on which side the sound is on to create a complete sphere for both
-the occluded and unoccluded sets.
+applied equally to the left and right outputs). After this, the sets follow a
+clockwise pattern, constructing a full circle for the left ear only. The right
+ear uses the same sets but in reverse (ie, left = angle, right = 360-angle).
 
 After the coefficients is an array of unsigned 8-bit delay values, one for each
 HRIR set. This is the delay, in samples, after recieving an input sample before

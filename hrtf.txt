@@ -46,7 +46,7 @@ ALshort coefficients[hrirCount][hrirSize];
 ALubyte delays[hrirCount]; /* Element values must not exceed 127 */
 ==
 
-The data are described as thus:
+The data is described as thus:
 
 The file first starts with the 8-byte marker, "MinPHR00", to identify it as an
 HRTF data set. This is followed by an unsigned 32-bit integer, specifying the

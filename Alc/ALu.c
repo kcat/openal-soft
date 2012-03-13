@@ -250,7 +250,17 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if(DirectChannels != AL_FALSE)
     {
         for(c = 0;c < num_channels;c++)
-            SrcMatrix[c][chans[c].channel] += DryGain * ListenerGain;
+        {
+            for(i = 0;i < (ALint)Device->NumChan;i++)
+            {
+                enum Channel chan = Device->Speaker2Chan[i];
+                if(chan == chans[c].channel)
+                {
+                    SrcMatrix[c][chan] += DryGain * ListenerGain;
+                    break;
+                }
+            }
+        }
     }
     else if(Device->Hrtf)
     {

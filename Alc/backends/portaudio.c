@@ -170,8 +170,6 @@ static ALCenum pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     data = (pa_data*)calloc(1, sizeof(pa_data));
     data->update_size = device->UpdateSize;
 
-    device->ExtraData = data;
-
     data->params.device = -1;
     if(!ConfigValueInt("port", "device", &data->params.device) ||
        data->params.device < 0)
@@ -182,7 +180,6 @@ static ALCenum pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
 
     data->params.channelCount = ((device->FmtChans == DevFmtMono) ? 1 : 2);
 
-retry_open:
     switch(device->FmtType)
     {
         case DevFmtByte:
@@ -192,13 +189,11 @@ retry_open:
             data->params.sampleFormat = paUInt8;
             break;
         case DevFmtUShort:
-            device->FmtType = DevFmtShort;
             /* fall-through */
         case DevFmtShort:
             data->params.sampleFormat = paInt16;
             break;
         case DevFmtUInt:
-            device->FmtType = DevFmtInt;
             /* fall-through */
         case DevFmtInt:
             data->params.sampleFormat = paInt32;
@@ -208,38 +203,22 @@ retry_open:
             break;
     }
 
+retry_open:
     err = Pa_OpenStream(&data->stream, NULL, &data->params, device->Frequency,
                         device->UpdateSize, paNoFlag, pa_callback, device);
     if(err != paNoError)
     {
-        if(device->FmtType == DevFmtFloat)
+        if(data->params.sampleFormat == paFloat32)
         {
-            device->FmtType = DevFmtShort;
+            data->params.sampleFormat = paInt16;
             goto retry_open;
         }
         ERR("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
-        device->ExtraData = NULL;
         free(data);
         return ALC_INVALID_VALUE;
     }
 
-    if((ALuint)data->params.channelCount != ChannelsFromDevFmt(device->FmtChans))
-    {
-        if(data->params.channelCount != 1 && data->params.channelCount != 2)
-        {
-            ERR("Unhandled channel count: %u\n", data->params.channelCount);
-            Pa_CloseStream(data->stream);
-            device->ExtraData = NULL;
-            free(data);
-            return ALC_INVALID_VALUE;
-        }
-        if((device->Flags&DEVICE_CHANNELS_REQUEST))
-            ERR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans), data->params.channelCount);
-        device->Flags &= ~DEVICE_CHANNELS_REQUEST;
-        device->FmtChans = ((data->params.channelCount==1) ? DevFmtMono : DevFmtStereo);
-    }
-    SetDefaultChannelOrder(device);
-
+    device->ExtraData = data;
     device->szDeviceName = strdup(deviceName);
 
     return ALC_NO_ERROR;
@@ -266,6 +245,33 @@ static ALCboolean pa_reset_playback(ALCdevice *device)
     streamInfo = Pa_GetStreamInfo(data->stream);
     device->Frequency = streamInfo->sampleRate;
     device->UpdateSize = data->update_size;
+
+    if(data->params.sampleFormat == paInt8)
+        device->FmtType = DevFmtByte;
+    else if(data->params.sampleFormat == paUInt8)
+        device->FmtType = DevFmtUByte;
+    else if(data->params.sampleFormat == paInt16)
+        device->FmtType = DevFmtShort;
+    else if(data->params.sampleFormat == paInt32)
+        device->FmtType = DevFmtInt;
+    else if(data->params.sampleFormat == paFloat32)
+        device->FmtType = DevFmtFloat;
+    else
+    {
+        ERR("Unexpected sample format: 0x%lx\n", data->params.sampleFormat);
+        return ALC_FALSE;
+    }
+
+    if(data->params.channelCount == 2)
+        device->FmtChans = DevFmtStereo;
+    else if(data->params.channelCount == 1)
+        device->FmtChans = DevFmtMono;
+    else
+    {
+        ERR("Unexpected channel count: %u\n", data->params.channelCount);
+        return ALC_FALSE;
+    }
+    SetDefaultChannelOrder(device);
 
     return ALC_TRUE;
 }

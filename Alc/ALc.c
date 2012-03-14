@@ -364,7 +364,7 @@ static ALCdevice *volatile DeviceList = NULL;
 // Thread-local current context
 static pthread_key_t LocalContext;
 // Process-wide current context
-static ALCcontext *GlobalContext;
+static ALCcontext *volatile GlobalContext = NULL;
 
 /* Device Error */
 static volatile ALCenum g_eLastNullDeviceError = ALC_NO_ERROR;

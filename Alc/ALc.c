@@ -2622,17 +2622,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
-    if(DefaultEffect.type != AL_EFFECT_NULL)
-    {
-        device->DefaultSlot = (ALeffectslot*)(device+1);
-        if(InitEffectSlot(device->DefaultSlot) != AL_NO_ERROR ||
-           InitializeEffect(device, device->DefaultSlot, &DefaultEffect) != AL_NO_ERROR)
-        {
-            device->DefaultSlot = NULL;
-            ERR("Failed to initialize the default effect\n");
-        }
-    }
-
     // Find a playback device to open
     LockLists();
     if((err=ALCdevice_OpenPlayback(device, deviceName)) != ALC_NO_ERROR)
@@ -2644,6 +2633,22 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         return NULL;
     }
     UnlockLists();
+
+    if(DefaultEffect.type != AL_EFFECT_NULL)
+    {
+        device->DefaultSlot = (ALeffectslot*)(device+1);
+        if(InitEffectSlot(device->DefaultSlot) != AL_NO_ERROR)
+        {
+            device->DefaultSlot = NULL;
+            ERR("Failed to initialize the default effect slot\n");
+        }
+        else if(InitializeEffect(device, device->DefaultSlot, &DefaultEffect) != AL_NO_ERROR)
+        {
+            ALeffectState_Destroy(device->DefaultSlot->EffectState);
+            device->DefaultSlot = NULL;
+            ERR("Failed to initialize the default effect\n");
+        }
+    }
 
     do {
         device->next = DeviceList;

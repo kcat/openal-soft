@@ -257,6 +257,38 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 #define AL_DIRECT_CHANNELS_SOFT                  0x1033
 #endif
 
+#ifndef ALC_SOFT_loopback
+#define ALC_SOFT_loopback 1
+#define ALC_FORMAT_CHANNELS_SOFT                 0x1990
+#define ALC_FORMAT_TYPE_SOFT                     0x1991
+
+/* Sample types */
+#define ALC_BYTE_SOFT                            0x1400
+#define ALC_UNSIGNED_BYTE_SOFT                   0x1401
+#define ALC_SHORT_SOFT                           0x1402
+#define ALC_UNSIGNED_SHORT_SOFT                  0x1403
+#define ALC_INT_SOFT                             0x1404
+#define ALC_UNSIGNED_INT_SOFT                    0x1405
+#define ALC_FLOAT_SOFT                           0x1406
+
+/* Channel configurations */
+#define ALC_MONO_SOFT                            0x1500
+#define ALC_STEREO_SOFT                          0x1501
+#define ALC_QUAD_SOFT                            0x1503
+#define ALC_5POINT1_SOFT                         0x1504
+#define ALC_6POINT1_SOFT                         0x1505
+#define ALC_7POINT1_SOFT                         0x1506
+
+typedef ALCdevice* (ALC_APIENTRY*LPALCLOOPBACKOPENDEVICESOFT)(const ALCchar*);
+typedef ALCboolean (ALC_APIENTRY*LPALCISRENDERFORMATSUPPORTEDSOFT)(ALCdevice*,ALCsizei,ALCenum,ALCenum);
+typedef void (ALC_APIENTRY*LPALCRENDERSAMPLESSOFT)(ALCdevice*,ALCvoid*,ALCsizei);
+#ifdef AL_ALEXT_PROTOTYPES
+ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName);
+ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type);
+ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples);
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

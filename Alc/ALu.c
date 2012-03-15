@@ -350,7 +350,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat AirAbsorptionFactor;
     ALfloat RoomAirAbsorption[MAX_SENDS];
     ALbufferlistitem *BufferListItem;
-    ALfloat Attenuation, EffectiveDist;
+    ALfloat Attenuation;
     ALfloat RoomAttenuation[MAX_SENDS];
     ALfloat MetersPerUnit;
     ALfloat RoomRolloffBase;
@@ -394,17 +394,17 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     MaxVolume      = ALSource->flMaxGain;
     Pitch          = ALSource->flPitch;
     Resampler      = ALSource->Resampler;
-    Position[0]    = ALSource->vPosition[0];
-    Position[1]    = ALSource->vPosition[1];
-    Position[2]    = ALSource->vPosition[2];
+    Position[0]    = ALSource->vPosition[0] * MetersPerUnit;
+    Position[1]    = ALSource->vPosition[1] * MetersPerUnit;
+    Position[2]    = ALSource->vPosition[2] * MetersPerUnit;
     Direction[0]   = ALSource->vOrientation[0];
     Direction[1]   = ALSource->vOrientation[1];
     Direction[2]   = ALSource->vOrientation[2];
     Velocity[0]    = ALSource->vVelocity[0];
     Velocity[1]    = ALSource->vVelocity[1];
     Velocity[2]    = ALSource->vVelocity[2];
-    MinDist        = ALSource->flRefDistance;
-    MaxDist        = ALSource->flMaxDistance;
+    MinDist        = ALSource->flRefDistance * MetersPerUnit;
+    MaxDist        = ALSource->flMaxDistance * MetersPerUnit;
     Rolloff        = ALSource->flRollOffFactor;
     InnerAngle     = ALSource->flInnerAngle * ConeScale;
     OuterAngle     = ALSource->flOuterAngle * ConeScale;
@@ -464,9 +464,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if(ALSource->bHeadRelative == AL_FALSE)
     {
         /* Translate position */
-        Position[0] -= ALContext->Listener.Position[0];
-        Position[1] -= ALContext->Listener.Position[1];
-        Position[2] -= ALContext->Listener.Position[2];
+        Position[0] -= ALContext->Listener.Position[0] * MetersPerUnit;
+        Position[1] -= ALContext->Listener.Position[1] * MetersPerUnit;
+        Position[2] -= ALContext->Listener.Position[2] * MetersPerUnit;
 
         /* Transform source vectors into listener space */
         aluMatrixVector(Position, 1.0f, Matrix);
@@ -552,6 +552,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             break;
 
         case DisableDistance:
+            ClampedDist = MinDist;
             break;
     }
 
@@ -561,31 +562,28 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         WetGain[i] = SourceVolume * RoomAttenuation[i];
 
     // Distance-based air absorption
-    EffectiveDist = 0.0f;
-    if(MinDist > 0.0f && Attenuation < 1.0f)
-        EffectiveDist = (MinDist/Attenuation - MinDist)*MetersPerUnit;
-    if(AirAbsorptionFactor > 0.0f && EffectiveDist > 0.0f)
+    ClampedDist = maxf(ClampedDist-MinDist, 0.0f);
+    if(AirAbsorptionFactor > 0.0f && ClampedDist > 0.0f)
     {
-        DryGainHF *= aluPow(AIRABSORBGAINHF, AirAbsorptionFactor*EffectiveDist);
+        DryGainHF *= aluPow(AIRABSORBGAINHF, AirAbsorptionFactor*ClampedDist);
         for(i = 0;i < NumSends;i++)
             WetGainHF[i] *= aluPow(RoomAirAbsorption[i],
-                                   AirAbsorptionFactor*EffectiveDist);
+                                   AirAbsorptionFactor*ClampedDist);
     }
 
-    if(WetGainAuto)
+    if(WetGainAuto && ClampedDist > 0.0f)
     {
         /* Apply a decay-time transformation to the wet path, based on the
          * attenuation of the dry path.
          *
-         * Using the approximate (effective) source to listener distance, the
-         * initial decay of the reverb effect is calculated and applied to the
-         * wet path.
+         * Using the distance from the minimum (reference) distance property,
+         * the initial decay of the reverb effect is calculated and applied to
+         * the wet path.
          */
         for(i = 0;i < NumSends;i++)
         {
             if(DecayDistance[i] > 0.0f)
-                WetGain[i] *= aluPow(0.001f /* -60dB */,
-                                     EffectiveDist / DecayDistance[i]);
+                WetGain[i] *= aluPow(0.001f/*-60dB*/, ClampedDist/DecayDistance[i]);
         }
     }
 

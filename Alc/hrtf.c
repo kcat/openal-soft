@@ -384,7 +384,7 @@ void InitHrtf(void)
 
         if(!failed)
         {
-            for(i = 0;i < HRIR_COUNT;i++)
+            for(i = 0;i < ELEV_COUNT;i++)
             {
                 ALushort offset;
                 offset  = fgetc(f);

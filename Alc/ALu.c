@@ -571,19 +571,21 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                                    AirAbsorptionFactor*ClampedDist);
     }
 
-    if(WetGainAuto && ClampedDist > 0.0f)
+    if(WetGainAuto)
     {
+        ALfloat ApparentDist = 1.0f/maxf(Attenuation, 0.00001f) - 1.0f;
+
         /* Apply a decay-time transformation to the wet path, based on the
          * attenuation of the dry path.
          *
-         * Using the distance from the minimum (reference) distance property,
-         * the initial decay of the reverb effect is calculated and applied to
-         * the wet path.
+         * Using the apparent distance, based on the distance attenuation, the
+         * initial decay of the reverb effect is calculated and applied to the
+         * wet path.
          */
         for(i = 0;i < NumSends;i++)
         {
             if(DecayDistance[i] > 0.0f)
-                WetGain[i] *= aluPow(0.001f/*-60dB*/, ClampedDist/DecayDistance[i]);
+                WetGain[i] *= aluPow(0.001f/*-60dB*/, ApparentDist/DecayDistance[i]);
         }
     }
 

@@ -394,17 +394,17 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     MaxVolume      = ALSource->flMaxGain;
     Pitch          = ALSource->flPitch;
     Resampler      = ALSource->Resampler;
-    Position[0]    = ALSource->vPosition[0] * MetersPerUnit;
-    Position[1]    = ALSource->vPosition[1] * MetersPerUnit;
-    Position[2]    = ALSource->vPosition[2] * MetersPerUnit;
+    Position[0]    = ALSource->vPosition[0];
+    Position[1]    = ALSource->vPosition[1];
+    Position[2]    = ALSource->vPosition[2];
     Direction[0]   = ALSource->vOrientation[0];
     Direction[1]   = ALSource->vOrientation[1];
     Direction[2]   = ALSource->vOrientation[2];
     Velocity[0]    = ALSource->vVelocity[0];
     Velocity[1]    = ALSource->vVelocity[1];
     Velocity[2]    = ALSource->vVelocity[2];
-    MinDist        = ALSource->flRefDistance * MetersPerUnit;
-    MaxDist        = ALSource->flMaxDistance * MetersPerUnit;
+    MinDist        = ALSource->flRefDistance;
+    MaxDist        = ALSource->flMaxDistance;
     Rolloff        = ALSource->flRollOffFactor;
     InnerAngle     = ALSource->flInnerAngle * ConeScale;
     OuterAngle     = ALSource->flOuterAngle * ConeScale;
@@ -464,9 +464,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if(ALSource->bHeadRelative == AL_FALSE)
     {
         /* Translate position */
-        Position[0] -= ALContext->Listener.Position[0] * MetersPerUnit;
-        Position[1] -= ALContext->Listener.Position[1] * MetersPerUnit;
-        Position[2] -= ALContext->Listener.Position[2] * MetersPerUnit;
+        Position[0] -= ALContext->Listener.Position[0];
+        Position[1] -= ALContext->Listener.Position[1];
+        Position[2] -= ALContext->Listener.Position[2];
 
         /* Transform source vectors into listener space */
         aluMatrixVector(Position, 1.0f, Matrix);
@@ -562,13 +562,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         WetGain[i] = SourceVolume * RoomAttenuation[i];
 
     // Distance-based air absorption
-    ClampedDist = maxf(ClampedDist-MinDist, 0.0f);
-    if(AirAbsorptionFactor > 0.0f && ClampedDist > 0.0f)
+    if(AirAbsorptionFactor > 0.0f && ClampedDist > MinDist)
     {
-        DryGainHF *= aluPow(AIRABSORBGAINHF, AirAbsorptionFactor*ClampedDist);
+        ALfloat meters = maxf(ClampedDist-MinDist, 0.0f) * MetersPerUnit;
+        DryGainHF *= aluPow(AIRABSORBGAINHF, AirAbsorptionFactor*meters);
         for(i = 0;i < NumSends;i++)
-            WetGainHF[i] *= aluPow(RoomAirAbsorption[i],
-                                   AirAbsorptionFactor*ClampedDist);
+            WetGainHF[i] *= aluPow(RoomAirAbsorption[i], AirAbsorptionFactor*meters);
     }
 
     if(WetGainAuto)

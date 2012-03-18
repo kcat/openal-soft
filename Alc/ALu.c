@@ -636,9 +636,15 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     // Calculate Velocity
-    if(DopplerFactor > 0.0f && SpeedOfSound > 0.5f)
+    if(DopplerFactor > 0.0f)
     {
         ALfloat VSS, VLS;
+
+        if(SpeedOfSound < 1.0f)
+        {
+            DopplerFactor *= 1.0f/SpeedOfSound;
+            SpeedOfSound   = 1.0f;
+        }
 
         VSS = aluDotproduct(Velocity, SourceToListener) * DopplerFactor;
         VLS = aluDotproduct(ListenerVel, SourceToListener) * DopplerFactor;

@@ -205,8 +205,12 @@ FilePtr openAVData(const char *name, char *buffer, size_t buffer_len)
         {
             if(avformat_find_stream_info(file->FmtCtx, NULL) >= 0)
                 return file;
+            av_close_input_file(file->FmtCtx);
+            file->FmtCtx = NULL;
         }
-        av_close_input_file(file->FmtCtx);
+        if(file->FmtCtx)
+            avformat_free_context(file->FmtCtx);
+        file->FmtCtx = NULL;
     }
 
     free(file);
@@ -236,8 +240,12 @@ FilePtr openAVCustom(const char *name, void *user_data,
         {
             if(avformat_find_stream_info(file->FmtCtx, NULL) >= 0)
                 return file;
+            av_close_input_file(file->FmtCtx);
+            file->FmtCtx = NULL;
         }
-        av_close_input_file(file->FmtCtx);
+        if(file->FmtCtx)
+            avformat_free_context(file->FmtCtx);
+        file->FmtCtx = NULL;
     }
 
     free(file); 

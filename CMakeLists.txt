@@ -743,7 +743,13 @@ ENDIF()
 IF(UTILS)
     ADD_EXECUTABLE(openal-info utils/openal-info.c)
     TARGET_LINK_LIBRARIES(openal-info ${LIBNAME})
-    INSTALL(TARGETS openal-info
+
+    ADD_EXECUTABLE(makehrtf utils/makehrtf.c)
+    IF(HAVE_LIBM)
+        TARGET_LINK_LIBRARIES(makehrtf m)
+    ENDIF()
+
+    INSTALL(TARGETS openal-info makehrtf
             RUNTIME DESTINATION bin
             LIBRARY DESTINATION "lib${LIB_SUFFIX}"
             ARCHIVE DESTINATION "lib${LIB_SUFFIX}"

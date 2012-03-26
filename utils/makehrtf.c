@@ -8,11 +8,12 @@
  *   http://sound.media.mit.edu/resources/KEMAR.html
  */
 
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+
+#include "AL/al.h"
 
 // The sample rate of the MIT HRIR data sets.
 #define MIT_IR_RATE                  (44100)
@@ -284,16 +285,16 @@ static float CalcLTD (float ev, float az, float rad, float dist) {
 // Read a 16-bit little-endian integer from a file and convert it to a 32-bit
 // floating-point value in the range of -1.0 to 1.0.
 static int ReadInt16LeAsFloat32 (const char * fileName, FILE * fp, float * val) {
-  uint8_t vb [2];
-  uint16_t vw;
+  ALubyte vb [2];
+  ALushort vw;
 
   if (fread (vb, 1, sizeof (vb), fp) != sizeof (vb)) {
      fclose (fp);
      fprintf (stderr, "Error reading from file, '%s'.\n", fileName);
      return (0);
   }
-  vw = (((uint16_t) vb [1]) << 8) | vb [0];
-  (* val) = ((int16_t) vw) / 32768.0f;
+  vw = (((unsigned short) vb [1]) << 8) | vb [0];
+  (* val) = ((short) vw) / 32768.0f;
   return (1);
 }
 
@@ -313,8 +314,8 @@ static int WriteString (const char * val, const char * fileName, FILE * fp) {
 // Write a 32-bit floating-point value in the range of -1.0 to 1.0 to a file
 // as a 16-bit little-endian integer.
 static int WriteFloat32AsInt16Le (float val, const char * fileName, FILE * fp) {
-  int16_t vw;
-  uint8_t vb [2];
+  ALshort vw;
+  ALubyte vb [2];
 
   vw = (short) round (32767.0f * val);
   vb [0] =  vw       & 0x00FF;
@@ -328,8 +329,8 @@ static int WriteFloat32AsInt16Le (float val, const char * fileName, FILE * fp) {
 }
 
 // Write a 32-bit little-endian unsigned integer to a file.
-static int WriteUInt32Le (uint32_t val, const char * fileName, FILE * fp) {
-  uint8_t vb [4];
+static int WriteUInt32Le (ALuint val, const char * fileName, FILE * fp) {
+  ALubyte vb [4];
 
   vb [0] =  val        & 0x000000FF;
   vb [1] = (val >>  8) & 0x000000FF;
@@ -344,8 +345,8 @@ static int WriteUInt32Le (uint32_t val, const char * fileName, FILE * fp) {
 }
 
 // Write a 16-bit little-endian unsigned integer to a file.
-static int WriteUInt16Le (uint16_t val, const char * fileName, FILE * fp) {
-  uint8_t vb [2];
+static int WriteUInt16Le (ALushort val, const char * fileName, FILE * fp) {
+  ALubyte vb [2];
 
   vb [0] =  val        & 0x00FF;
   vb [1] = (val >>  8) & 0x00FF;
@@ -358,7 +359,7 @@ static int WriteUInt16Le (uint16_t val, const char * fileName, FILE * fp) {
 }
 
 // Write an 8-bit unsigned integer to a file.
-static int WriteUInt8 (uint8_t val, const char * fileName, FILE * fp) {
+static int WriteUInt8 (ALubyte val, const char * fileName, FILE * fp) {
   if (fwrite (& val, 1, sizeof (val), fp) != sizeof (val)) {
      fclose (fp);
      fprintf (stderr, "Error writing to file, '%s'.\n", fileName);
@@ -571,16 +572,16 @@ static int SaveMhr (const HrirDataT * hData, const char * fileName) {
   }
   if (! WriteString (MHR_FORMAT, fileName, fp))
      return (0);
-  if (! WriteUInt32Le ((uint32_t) hData -> mIrRate, fileName, fp))
+  if (! WriteUInt32Le ((ALuint) hData -> mIrRate, fileName, fp))
      return (0);
-  if (! WriteUInt16Le ((uint16_t) hData -> mIrCount, fileName, fp))
+  if (! WriteUInt16Le ((ALushort) hData -> mIrCount, fileName, fp))
      return (0);
-  if (! WriteUInt16Le ((uint16_t) hData -> mIrSize, fileName, fp))
+  if (! WriteUInt16Le ((ALushort) hData -> mIrSize, fileName, fp))
      return (0);
-  if (! WriteUInt8 ((uint8_t) hData -> mEvCount, fileName, fp))
+  if (! WriteUInt8 ((ALubyte) hData -> mEvCount, fileName, fp))
      return (0);
   for (e = 0; e < hData -> mEvCount; e ++) {
-      if (! WriteUInt16Le ((uint16_t) hData -> mEvOffset [e], fileName, fp))
+      if (! WriteUInt16Le ((ALushort) hData -> mEvOffset [e], fileName, fp))
          return (0);
   }
   step = hData -> mIrSize;
@@ -595,7 +596,7 @@ static int SaveMhr (const HrirDataT * hData, const char * fileName) {
       i = (int) round (44100.0f * hData -> mHrtds [j]);
       if (i > 127)
          i = 127;
-      if (! WriteUInt8 ((uint8_t) i, fileName, fp))
+      if (! WriteUInt8 ((ALubyte) i, fileName, fp))
          return (0);
   }
   fclose (fp);

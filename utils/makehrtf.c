@@ -19,6 +19,15 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifdef _MSC_VER
+static double round(double val)
+{
+    if(val < 0.0)
+        return ceil(val - 0.5);
+    return floor(val + 0.5);
+}
+#endif
+
 // The sample rate of the MIT HRIR data sets.
 #define MIT_IR_RATE                  (44100)
 

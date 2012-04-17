@@ -2096,6 +2096,7 @@ ALboolean ApplyOffset(ALsource *Source)
 
             // SW Mixer Positions are in Samples
             Source->position = offset - totalBufferLen;
+            Source->position_fraction = 0;
             return AL_TRUE;
         }
 

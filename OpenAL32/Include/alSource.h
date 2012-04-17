@@ -77,8 +77,8 @@ typedef struct ALsource
     volatile ALfloat RoomRolloffFactor;
     volatile ALfloat DopplerFactor;
 
-    ALint lOffset;
-    ALint lOffsetType;
+    ALdouble Offset;
+    ALenum   OffsetType;
 
     // Source Type (Static, Streaming, or Undetermined)
     volatile ALint lSourceType;

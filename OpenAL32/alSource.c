@@ -352,13 +352,9 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum eParam, ALfloat flValu
                 if(flValue >= 0.0f)
                 {
                     LockContext(pContext);
-                    Source->lOffsetType = eParam;
-
-                    // Store Offset (convert Seconds into Milliseconds)
-                    if(eParam == AL_SEC_OFFSET)
-                        Source->lOffset = (ALint)(flValue * 1000.0f);
-                    else
-                        Source->lOffset = (ALint)flValue;
+                    // Store Offset
+                    Source->OffsetType = eParam;
+                    Source->Offset = flValue;
 
                     if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
                        !pContext->DeferUpdates)
@@ -631,13 +627,9 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source,ALenum eParam,ALint lValue)
                 if(lValue >= 0)
                 {
                     LockContext(pContext);
-                    Source->lOffsetType = eParam;
-
-                    // Store Offset (convert Seconds into Milliseconds)
-                    if(eParam == AL_SEC_OFFSET)
-                        Source->lOffset = lValue * 1000;
-                    else
-                        Source->lOffset = lValue;
+                    // Store Offset
+                    Source->OffsetType = eParam;
+                    Source->Offset = lValue;
 
                     if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
                        !pContext->DeferUpdates)
@@ -1831,7 +1823,7 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->state = AL_INITIAL;
     Source->new_state = AL_NONE;
     Source->lSourceType = AL_UNDETERMINED;
-    Source->lOffset = -1;
+    Source->Offset = -1.0;
 
     Source->DirectGain = 1.0f;
     Source->DirectGainHF = 1.0f;
@@ -1894,7 +1886,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->state = AL_PLAYING;
 
         // Check if an Offset has been set
-        if(Source->lOffset != -1)
+        if(Source->Offset >= 0.0)
             ApplyOffset(Source);
 
         /* If there's nothing to play, or device is disconnected, go right to
@@ -1931,7 +1923,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->HrtfMoving = AL_FALSE;
             Source->HrtfCounter = 0;
         }
-        Source->lOffset = -1;
+        Source->Offset = -1.0;
     }
     else if(state == AL_INITIAL)
     {
@@ -1944,7 +1936,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->HrtfMoving = AL_FALSE;
             Source->HrtfCounter = 0;
         }
-        Source->lOffset = -1;
+        Source->Offset = -1.0;
     }
 }
 
@@ -2145,16 +2137,16 @@ static ALint GetSampleOffset(ALsource *Source)
 
     if(!Buffer)
     {
-        Source->lOffset = -1;
+        Source->Offset = -1.0;
         return -1;
     }
 
     // Determine the ByteOffset (and ensure it is block aligned)
-    switch(Source->lOffsetType)
+    switch(Source->OffsetType)
     {
     case AL_BYTE_OFFSET:
         // Take into consideration the original format
-        Offset = Source->lOffset;
+        Offset = (ALint)Source->Offset;
         if(Buffer->OriginalType == UserFmtIMA4)
         {
             // Round down to nearest ADPCM block
@@ -2167,16 +2159,15 @@ static ALint GetSampleOffset(ALsource *Source)
         break;
 
     case AL_SAMPLE_OFFSET:
-        Offset = Source->lOffset;
+        Offset = (ALint)Source->Offset;
         break;
 
     case AL_SEC_OFFSET:
-        // Note - lOffset is internally stored as Milliseconds
-        Offset = (ALint)(Source->lOffset / 1000.0 * Buffer->Frequency);
+        Offset = (ALint)(Source->Offset * Buffer->Frequency);
         break;
     }
     // Clear Offset
-    Source->lOffset = -1;
+    Source->Offset = -1.0;
 
     return Offset;
 }

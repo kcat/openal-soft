@@ -647,7 +647,7 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
             ALenum new_state;
 
             if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
-               Source->lOffset != -1)
+               Source->Offset >= 0.0)
                 ApplyOffset(Source);
 
             new_state = ExchangeInt(&Source->new_state, AL_NONE);

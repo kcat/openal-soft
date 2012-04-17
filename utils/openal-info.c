@@ -125,6 +125,16 @@ static void printALCInfo(ALCdevice *device)
 {
     ALCint major, minor;
 
+    if(device)
+    {
+        const ALCchar *devname = NULL;
+        printf("\n");
+        if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT") != AL_FALSE)
+            devname = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
+        if(checkALCErrors(device) != ALC_NO_ERROR || !devname)
+            devname = alcGetString(device, ALC_DEVICE_SPECIFIER);
+        printf("** Info for device \"%s\" **\n", devname);
+    }
     alcGetIntegerv(device, ALC_MAJOR_VERSION, 1, &major);
     alcGetIntegerv(device, ALC_MINOR_VERSION, 1, &minor);
     if(checkALCErrors(device) == ALC_NO_ERROR)
@@ -276,11 +286,6 @@ int main(int argc, char *argv[])
         printf("\n!!! Failed to open %s !!!\n\n", ((argc>1) ? argv[1] : "default device"));
         return 1;
     }
-
-    if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT") != AL_FALSE)
-        printf("\n** Info for device \"%s\" **\n", alcGetString(device, ALC_ALL_DEVICES_SPECIFIER));
-    else
-        printf("\n** Info for device \"%s\" **\n", alcGetString(device, ALC_DEVICE_SPECIFIER));
     printALCInfo(device);
 
     context = alcCreateContext(device, NULL);

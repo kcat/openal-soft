@@ -411,13 +411,13 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                 alSetError(Context, err);
             break;
 
-        case UserFmtIMA4: {
+        case UserFmtIMA4:
             /* Here is where things vary:
              * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
              * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024 bytes per channel
              */
-            ALuint FrameSize = ChannelsFromUserFmt(SrcChannels) * 36;
-            ALenum NewFormat = AL_FORMAT_MONO16;
+            FrameSize = ChannelsFromUserFmt(SrcChannels) * 36;
+            NewFormat = AL_FORMAT_MONO16;
             switch(SrcChannels)
             {
                 case UserFmtMono: NewFormat = AL_FORMAT_MONO16; break;
@@ -435,7 +435,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer,ALenum format,const ALvoid 
                                SrcChannels, SrcType, data, AL_TRUE);
             if(err != AL_NO_ERROR)
                 alSetError(Context, err);
-        }   break;
+            break;
     }
 
     ALCcontext_DecRef(Context);

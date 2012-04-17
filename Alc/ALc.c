@@ -498,23 +498,6 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         ZScale = -1.0f;
 
-    str = getenv("ALSOFT_TRAP_ERROR");
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-    {
-        TrapALError  = AL_TRUE;
-        TrapALCError = AL_TRUE;
-    }
-    else
-    {
-        str = getenv("ALSOFT_TRAP_AL_ERROR");
-        if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-            TrapALError = AL_TRUE;
-
-        str = getenv("ALSOFT_TRAP_ALC_ERROR");
-        if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-            TrapALCError = ALC_TRUE;
-    }
-
     pthread_key_create(&LocalContext, ReleaseThreadCtx);
     InitializeCriticalSection(&ListLock);
     ThunkInit();
@@ -605,11 +588,24 @@ static void alc_initconfig(void)
         }
     }
 
-    if(!TrapALCError)
-        TrapALCError = GetConfigValueBool(NULL, "trap-alc-error", ALC_FALSE);
+    str = getenv("ALSOFT_TRAP_ERROR");
+    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
+    {
+        TrapALError  = AL_TRUE;
+        TrapALCError = AL_TRUE;
+    }
+    else
+    {
+        str = getenv("ALSOFT_TRAP_AL_ERROR");
+        if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
+            TrapALError = AL_TRUE;
+        TrapALError = GetConfigValueBool(NULL, "trap-al-error", TrapALError);
 
-    if(!TrapALError)
-        TrapALError = GetConfigValueBool(NULL, "trap-al-error", AL_FALSE);
+        str = getenv("ALSOFT_TRAP_ALC_ERROR");
+        if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
+            TrapALCError = ALC_TRUE;
+        TrapALCError = GetConfigValueBool(NULL, "trap-alc-error", TrapALCError);
+    }
 
     if(ConfigValueFloat("reverb", "boost", &valf))
         ReverbBoost *= aluPow(10.0f, valf / 20.0f);

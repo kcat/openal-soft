@@ -25,6 +25,7 @@
 #include "alMain.h"
 #include "alThunk.h"
 
+#define THREAD_STACK_SIZE (1*1024*1024) /* 1MB */
 
 #ifdef _WIN32
 
@@ -54,7 +55,7 @@ ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr)
     inf->func = func;
     inf->ptr = ptr;
 
-    inf->thread = CreateThread(NULL, 0, StarterFunc, inf, 0, &dummy);
+    inf->thread = CreateThread(NULL, THREAD_STACK_SIZE, StarterFunc, inf, 0, &dummy);
     if(!inf->thread)
     {
         free(inf);
@@ -98,16 +99,31 @@ static void *StarterFunc(void *ptr)
 
 ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr)
 {
+    pthread_attr_t attr;
     ThreadInfo *inf = malloc(sizeof(ThreadInfo));
     if(!inf) return NULL;
 
-    inf->func = func;
-    inf->ptr = ptr;
-    if(pthread_create(&inf->thread, NULL, StarterFunc, inf) != 0)
+    if(pthread_attr_init(&attr) != 0)
     {
         free(inf);
         return NULL;
     }
+    if(pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE) != 0)
+    {
+        pthread_attr_destroy(&attr);
+        free(inf);
+        return NULL;
+    }
+
+    inf->func = func;
+    inf->ptr = ptr;
+    if(pthread_create(&inf->thread, &attr, StarterFunc, inf) != 0)
+    {
+        pthread_attr_destroy(&attr);
+        free(inf);
+        return NULL;
+    }
+    pthread_attr_destroy(&attr);
 
     return inf;
 }

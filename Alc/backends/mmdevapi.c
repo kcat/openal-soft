@@ -60,7 +60,7 @@ typedef struct {
     IMMDevice *mmdev;
     IAudioClient *client;
     IAudioRenderClient *render;
-    HANDLE hNotifyEvent;
+    HANDLE NotifyEvent;
 
     HANDLE MsgEvent;
 
@@ -255,7 +255,7 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         if(len < update_size)
         {
             DWORD res;
-            res = WaitForSingleObjectEx(data->hNotifyEvent, 2000, FALSE);
+            res = WaitForSingleObjectEx(data->NotifyEvent, 2000, FALSE);
             if(res != WAIT_OBJECT_0)
                 ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
             continue;
@@ -651,8 +651,8 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             device = (ALCdevice*)msg.lParam;
             data = device->ExtraData;
 
-            ResetEvent(data->hNotifyEvent);
-            hr = IAudioClient_SetEventHandle(data->client, data->hNotifyEvent);
+            ResetEvent(data->NotifyEvent);
+            hr = IAudioClient_SetEventHandle(data->client, data->NotifyEvent);
             if(FAILED(hr))
                 ERR("Failed to set event handle: 0x%08lx\n", hr);
             else
@@ -820,9 +820,9 @@ static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName
     device->ExtraData = data;
 
     hr = S_OK;
-    data->hNotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    data->NotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     data->MsgEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if(data->hNotifyEvent == NULL || data->MsgEvent == NULL)
+    if(data->NotifyEvent == NULL || data->MsgEvent == NULL)
         hr = E_FAIL;
 
     if(SUCCEEDED(hr))
@@ -862,9 +862,9 @@ static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName
 
     if(FAILED(hr))
     {
-        if(data->hNotifyEvent != NULL)
-            CloseHandle(data->hNotifyEvent);
-        data->hNotifyEvent = NULL;
+        if(data->NotifyEvent != NULL)
+            CloseHandle(data->NotifyEvent);
+        data->NotifyEvent = NULL;
         if(data->MsgEvent != NULL)
             CloseHandle(data->MsgEvent);
         data->MsgEvent = NULL;
@@ -890,8 +890,8 @@ static void MMDevApiClosePlayback(ALCdevice *device)
     CloseHandle(data->MsgEvent);
     data->MsgEvent = NULL;
 
-    CloseHandle(data->hNotifyEvent);
-    data->hNotifyEvent = NULL;
+    CloseHandle(data->NotifyEvent);
+    data->NotifyEvent = NULL;
 
     free(data->devid);
     data->devid = NULL;

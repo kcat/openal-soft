@@ -61,11 +61,11 @@ static HRESULT (WINAPI *pDirectSoundCaptureEnumerateA)(LPDSENUMCALLBACKA pDSEnum
 
 typedef struct {
     // DirectSound Playback Device
-    IDirectSound       *lpDS;
+    IDirectSound       *DS;
     IDirectSoundBuffer *DSpbuffer;
     IDirectSoundBuffer *DSsbuffer;
     IDirectSoundNotify *DSnotify;
-    HANDLE             hNotifyEvent;
+    HANDLE             NotifyEvent;
 
     volatile int killNow;
     ALvoid *thread;
@@ -73,11 +73,11 @@ typedef struct {
 
 typedef struct {
     // DirectSound Capture Device
-    IDirectSoundCapture *lpDSC;
+    IDirectSoundCapture *DSC;
     IDirectSoundCaptureBuffer *DSCbuffer;
-    DWORD dwBufferBytes;
-    DWORD dwCursor;
-    RingBuffer *pRing;
+    DWORD BufferBytes;
+    DWORD Cursor;
+    RingBuffer *Ring;
 } DSoundCaptureData;
 
 
@@ -225,7 +225,7 @@ static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR d
 static ALuint DSoundPlaybackProc(ALvoid *ptr)
 {
     ALCdevice *Device = (ALCdevice*)ptr;
-    DSoundPlaybackData *pData = (DSoundPlaybackData*)Device->ExtraData;
+    DSoundPlaybackData *data = (DSoundPlaybackData*)Device->ExtraData;
     DSBCAPS DSBCaps;
     DWORD LastCursor = 0;
     DWORD PlayCursor;
@@ -241,7 +241,7 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
 
     memset(&DSBCaps, 0, sizeof(DSBCaps));
     DSBCaps.dwSize = sizeof(DSBCaps);
-    err = IDirectSoundBuffer_GetCaps(pData->DSsbuffer, &DSBCaps);
+    err = IDirectSoundBuffer_GetCaps(data->DSsbuffer, &DSBCaps);
     if(FAILED(err))
     {
         ERR("Failed to get buffer caps: 0x%lx\n", err);
@@ -252,18 +252,18 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
     FrameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
     FragSize = Device->UpdateSize * FrameSize;
 
-    IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &LastCursor, NULL);
-    while(!pData->killNow)
+    IDirectSoundBuffer_GetCurrentPosition(data->DSsbuffer, &LastCursor, NULL);
+    while(!data->killNow)
     {
         // Get current play cursor
-        IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &PlayCursor, NULL);
+        IDirectSoundBuffer_GetCurrentPosition(data->DSsbuffer, &PlayCursor, NULL);
         avail = (PlayCursor-LastCursor+DSBCaps.dwBufferBytes) % DSBCaps.dwBufferBytes;
 
         if(avail < FragSize)
         {
             if(!Playing)
             {
-                err = IDirectSoundBuffer_Play(pData->DSsbuffer, 0, 0, DSBPLAY_LOOPING);
+                err = IDirectSoundBuffer_Play(data->DSsbuffer, 0, 0, DSBPLAY_LOOPING);
                 if(FAILED(err))
                 {
                     ERR("Failed to play buffer: 0x%lx\n", err);
@@ -273,7 +273,7 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
                 Playing = TRUE;
             }
 
-            avail = WaitForSingleObjectEx(pData->hNotifyEvent, 2000, FALSE);
+            avail = WaitForSingleObjectEx(data->NotifyEvent, 2000, FALSE);
             if(avail != WAIT_OBJECT_0)
                 ERR("WaitForSingleObjectEx error: 0x%lx\n", avail);
             continue;
@@ -283,18 +283,18 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
         // Lock output buffer
         WriteCnt1 = 0;
         WriteCnt2 = 0;
-        err = IDirectSoundBuffer_Lock(pData->DSsbuffer, LastCursor, avail, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
+        err = IDirectSoundBuffer_Lock(data->DSsbuffer, LastCursor, avail, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
 
         // If the buffer is lost, restore it and lock
         if(err == DSERR_BUFFERLOST)
         {
             WARN("Buffer lost, restoring...\n");
-            err = IDirectSoundBuffer_Restore(pData->DSsbuffer);
+            err = IDirectSoundBuffer_Restore(data->DSsbuffer);
             if(SUCCEEDED(err))
             {
                 Playing = FALSE;
                 LastCursor = 0;
-                err = IDirectSoundBuffer_Lock(pData->DSsbuffer, 0, DSBCaps.dwBufferBytes, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
+                err = IDirectSoundBuffer_Lock(data->DSsbuffer, 0, DSBCaps.dwBufferBytes, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
             }
         }
 
@@ -306,7 +306,7 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
             aluMixData(Device, WritePtr2, WriteCnt2/FrameSize);
 
             // Unlock output buffer only when successfully locked
-            IDirectSoundBuffer_Unlock(pData->DSsbuffer, WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
+            IDirectSoundBuffer_Unlock(data->DSsbuffer, WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
         }
         else
         {
@@ -325,7 +325,7 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
 
 static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 {
-    DSoundPlaybackData *pData = NULL;
+    DSoundPlaybackData *data = NULL;
     LPGUID guid = NULL;
     HRESULT hr;
 
@@ -358,59 +358,59 @@ static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
     }
 
     //Initialise requested device
-    pData = calloc(1, sizeof(DSoundPlaybackData));
-    if(!pData)
+    data = calloc(1, sizeof(DSoundPlaybackData));
+    if(!data)
         return ALC_OUT_OF_MEMORY;
 
     hr = DS_OK;
-    pData->hNotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if(pData->hNotifyEvent == NULL)
+    data->NotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if(data->NotifyEvent == NULL)
         hr = E_FAIL;
 
     //DirectSound Init code
     if(SUCCEEDED(hr))
-        hr = DirectSoundCreate(guid, &pData->lpDS, NULL);
+        hr = DirectSoundCreate(guid, &data->DS, NULL);
     if(SUCCEEDED(hr))
-        hr = IDirectSound_SetCooperativeLevel(pData->lpDS, GetForegroundWindow(), DSSCL_PRIORITY);
+        hr = IDirectSound_SetCooperativeLevel(data->DS, GetForegroundWindow(), DSSCL_PRIORITY);
     if(FAILED(hr))
     {
-        if(pData->lpDS)
-            IDirectSound_Release(pData->lpDS);
-        if(pData->hNotifyEvent)
-            CloseHandle(pData->hNotifyEvent);
-        free(pData);
+        if(data->DS)
+            IDirectSound_Release(data->DS);
+        if(data->NotifyEvent)
+            CloseHandle(data->NotifyEvent);
+        free(data);
         ERR("Device init failed: 0x%08lx\n", hr);
         return ALC_INVALID_VALUE;
     }
 
     device->DeviceName = strdup(deviceName);
-    device->ExtraData = pData;
+    device->ExtraData = data;
     return ALC_NO_ERROR;
 }
 
 static void DSoundClosePlayback(ALCdevice *device)
 {
-    DSoundPlaybackData *pData = device->ExtraData;
+    DSoundPlaybackData *data = device->ExtraData;
 
-    if(pData->DSnotify)
-        IDirectSoundNotify_Release(pData->DSnotify);
-    pData->DSnotify = NULL;
-    if(pData->DSsbuffer)
-        IDirectSoundBuffer_Release(pData->DSsbuffer);
-    pData->DSsbuffer = NULL;
-    if(pData->DSpbuffer != NULL)
-        IDirectSoundBuffer_Release(pData->DSpbuffer);
-    pData->DSpbuffer = NULL;
+    if(data->DSnotify)
+        IDirectSoundNotify_Release(data->DSnotify);
+    data->DSnotify = NULL;
+    if(data->DSsbuffer)
+        IDirectSoundBuffer_Release(data->DSsbuffer);
+    data->DSsbuffer = NULL;
+    if(data->DSpbuffer != NULL)
+        IDirectSoundBuffer_Release(data->DSpbuffer);
+    data->DSpbuffer = NULL;
 
-    IDirectSound_Release(pData->lpDS);
-    CloseHandle(pData->hNotifyEvent);
-    free(pData);
+    IDirectSound_Release(data->DS);
+    CloseHandle(data->NotifyEvent);
+    free(data);
     device->ExtraData = NULL;
 }
 
 static ALCboolean DSoundResetPlayback(ALCdevice *device)
 {
-    DSoundPlaybackData *pData = (DSoundPlaybackData*)device->ExtraData;
+    DSoundPlaybackData *data = (DSoundPlaybackData*)device->ExtraData;
     DSBUFFERDESC DSBDescription;
     WAVEFORMATEXTENSIBLE OutputType;
     DWORD speakers;
@@ -418,15 +418,15 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
 
     memset(&OutputType, 0, sizeof(OutputType));
 
-    if(pData->DSnotify)
-        IDirectSoundNotify_Release(pData->DSnotify);
-    pData->DSnotify = NULL;
-    if(pData->DSsbuffer)
-        IDirectSoundBuffer_Release(pData->DSsbuffer);
-    pData->DSsbuffer = NULL;
-    if(pData->DSpbuffer != NULL)
-        IDirectSoundBuffer_Release(pData->DSpbuffer);
-    pData->DSpbuffer = NULL;
+    if(data->DSnotify)
+        IDirectSoundNotify_Release(data->DSnotify);
+    data->DSnotify = NULL;
+    if(data->DSsbuffer)
+        IDirectSoundBuffer_Release(data->DSsbuffer);
+    data->DSsbuffer = NULL;
+    if(data->DSpbuffer != NULL)
+        IDirectSoundBuffer_Release(data->DSpbuffer);
+    data->DSpbuffer = NULL;
 
     switch(device->FmtType)
     {
@@ -446,7 +446,7 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
             break;
     }
 
-    hr = IDirectSound_GetSpeakerConfig(pData->lpDS, &speakers);
+    hr = IDirectSound_GetSpeakerConfig(data->DS, &speakers);
     if(SUCCEEDED(hr))
     {
         if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
@@ -539,9 +539,9 @@ retry_open:
         else
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
-        if(pData->DSpbuffer)
-            IDirectSoundBuffer_Release(pData->DSpbuffer);
-        pData->DSpbuffer = NULL;
+        if(data->DSpbuffer)
+            IDirectSoundBuffer_Release(data->DSpbuffer);
+        data->DSpbuffer = NULL;
     }
     else
     {
@@ -550,10 +550,10 @@ retry_open:
             memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
             DSBDescription.dwSize=sizeof(DSBUFFERDESC);
             DSBDescription.dwFlags=DSBCAPS_PRIMARYBUFFER;
-            hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSpbuffer, NULL);
+            hr = IDirectSound_CreateSoundBuffer(data->DS, &DSBDescription, &data->DSpbuffer, NULL);
         }
         if(SUCCEEDED(hr))
-            hr = IDirectSoundBuffer_SetFormat(pData->DSpbuffer,&OutputType.Format);
+            hr = IDirectSoundBuffer_SetFormat(data->DSpbuffer,&OutputType.Format);
     }
 
     if(SUCCEEDED(hr))
@@ -571,7 +571,7 @@ retry_open:
         DSBDescription.dwBufferBytes=device->UpdateSize * device->NumUpdates *
                                      OutputType.Format.nBlockAlign;
         DSBDescription.lpwfxFormat=&OutputType.Format;
-        hr = IDirectSound_CreateSoundBuffer(pData->lpDS, &DSBDescription, &pData->DSsbuffer, NULL);
+        hr = IDirectSound_CreateSoundBuffer(data->DS, &DSBDescription, &data->DSsbuffer, NULL);
         if(FAILED(hr) && device->FmtType == DevFmtFloat)
         {
             device->FmtType = DevFmtShort;
@@ -581,7 +581,7 @@ retry_open:
 
     if(SUCCEEDED(hr))
     {
-        hr = IDirectSoundBuffer_QueryInterface(pData->DSsbuffer, &IID_IDirectSoundNotify, (LPVOID *)&pData->DSnotify);
+        hr = IDirectSoundBuffer_QueryInterface(data->DSsbuffer, &IID_IDirectSoundNotify, (LPVOID *)&data->DSnotify);
         if(SUCCEEDED(hr))
         {
             DSBPOSITIONNOTIFY notifies[MAX_UPDATES];
@@ -591,28 +591,28 @@ retry_open:
             {
                 notifies[i].dwOffset = i * device->UpdateSize *
                                        OutputType.Format.nBlockAlign;
-                notifies[i].hEventNotify = pData->hNotifyEvent;
+                notifies[i].hEventNotify = data->NotifyEvent;
             }
-            if(IDirectSoundNotify_SetNotificationPositions(pData->DSnotify, device->NumUpdates, notifies) != DS_OK)
+            if(IDirectSoundNotify_SetNotificationPositions(data->DSnotify, device->NumUpdates, notifies) != DS_OK)
                 hr = E_FAIL;
         }
     }
 
     if(FAILED(hr))
     {
-        if(pData->DSnotify != NULL)
-            IDirectSoundNotify_Release(pData->DSnotify);
-        pData->DSnotify = NULL;
-        if(pData->DSsbuffer != NULL)
-            IDirectSoundBuffer_Release(pData->DSsbuffer);
-        pData->DSsbuffer = NULL;
-        if(pData->DSpbuffer != NULL)
-            IDirectSoundBuffer_Release(pData->DSpbuffer);
-        pData->DSpbuffer = NULL;
+        if(data->DSnotify != NULL)
+            IDirectSoundNotify_Release(data->DSnotify);
+        data->DSnotify = NULL;
+        if(data->DSsbuffer != NULL)
+            IDirectSoundBuffer_Release(data->DSsbuffer);
+        data->DSsbuffer = NULL;
+        if(data->DSpbuffer != NULL)
+            IDirectSoundBuffer_Release(data->DSpbuffer);
+        data->DSpbuffer = NULL;
         return ALC_FALSE;
     }
 
-    ResetEvent(pData->hNotifyEvent);
+    ResetEvent(data->NotifyEvent);
     SetDefaultWFXChannelOrder(device);
 
     return ALC_TRUE;
@@ -620,10 +620,10 @@ retry_open:
 
 static ALCboolean DSoundStartPlayback(ALCdevice *device)
 {
-    DSoundPlaybackData *pData = (DSoundPlaybackData*)device->ExtraData;
+    DSoundPlaybackData *data = (DSoundPlaybackData*)device->ExtraData;
 
-    pData->thread = StartThread(DSoundPlaybackProc, device);
-    if(pData->thread == NULL)
+    data->thread = StartThread(DSoundPlaybackProc, device);
+    if(data->thread == NULL)
         return ALC_FALSE;
 
     return ALC_TRUE;
@@ -631,23 +631,23 @@ static ALCboolean DSoundStartPlayback(ALCdevice *device)
 
 static void DSoundStopPlayback(ALCdevice *device)
 {
-    DSoundPlaybackData *pData = device->ExtraData;
+    DSoundPlaybackData *data = device->ExtraData;
 
-    if(!pData->thread)
+    if(!data->thread)
         return;
 
-    pData->killNow = 1;
-    StopThread(pData->thread);
-    pData->thread = NULL;
+    data->killNow = 1;
+    StopThread(data->thread);
+    data->thread = NULL;
 
-    pData->killNow = 0;
-    IDirectSoundBuffer_Stop(pData->DSsbuffer);
+    data->killNow = 0;
+    IDirectSoundBuffer_Stop(data->DSsbuffer);
 }
 
 
 static ALCenum DSoundOpenCapture(ALCdevice *device, const ALCchar *deviceName)
 {
-    DSoundCaptureData *pData = NULL;
+    DSoundCaptureData *data = NULL;
     WAVEFORMATEXTENSIBLE InputType;
     DSCBUFFERDESC DSCBDescription;
     LPGUID guid = NULL;
@@ -702,15 +702,15 @@ static ALCenum DSoundOpenCapture(ALCdevice *device, const ALCchar *deviceName)
     }
 
     //Initialise requested device
-    pData = calloc(1, sizeof(DSoundCaptureData));
-    if(!pData)
+    data = calloc(1, sizeof(DSoundCaptureData));
+    if(!data)
         return ALC_OUT_OF_MEMORY;
 
     hr = DS_OK;
 
     //DirectSoundCapture Init code
     if(SUCCEEDED(hr))
-        hr = DirectSoundCaptureCreate(guid, &pData->lpDSC, NULL);
+        hr = DirectSoundCaptureCreate(guid, &data->DSC, NULL);
     if(SUCCEEDED(hr))
     {
         memset(&InputType, 0, sizeof(InputType));
@@ -795,12 +795,12 @@ static ALCenum DSoundOpenCapture(ALCdevice *device, const ALCchar *deviceName)
         DSCBDescription.dwBufferBytes = samples * InputType.Format.nBlockAlign;
         DSCBDescription.lpwfxFormat = &InputType.Format;
 
-        hr = IDirectSoundCapture_CreateCaptureBuffer(pData->lpDSC, &DSCBDescription, &pData->DSCbuffer, NULL);
+        hr = IDirectSoundCapture_CreateCaptureBuffer(data->DSC, &DSCBDescription, &data->DSCbuffer, NULL);
     }
     if(SUCCEEDED(hr))
     {
-         pData->pRing = CreateRingBuffer(InputType.Format.nBlockAlign, device->UpdateSize * device->NumUpdates);
-         if(pData->pRing == NULL)
+         data->Ring = CreateRingBuffer(InputType.Format.nBlockAlign, device->UpdateSize * device->NumUpdates);
+         if(data->Ring == NULL)
              hr = DSERR_OUTOFMEMORY;
     }
 
@@ -808,55 +808,55 @@ static ALCenum DSoundOpenCapture(ALCdevice *device, const ALCchar *deviceName)
     {
         ERR("Device init failed: 0x%08lx\n", hr);
 
-        DestroyRingBuffer(pData->pRing);
-        pData->pRing = NULL;
-        if(pData->DSCbuffer != NULL)
-            IDirectSoundCaptureBuffer_Release(pData->DSCbuffer);
-        pData->DSCbuffer = NULL;
-        if(pData->lpDSC)
-            IDirectSoundCapture_Release(pData->lpDSC);
-        pData->lpDSC = NULL;
+        DestroyRingBuffer(data->Ring);
+        data->Ring = NULL;
+        if(data->DSCbuffer != NULL)
+            IDirectSoundCaptureBuffer_Release(data->DSCbuffer);
+        data->DSCbuffer = NULL;
+        if(data->DSC)
+            IDirectSoundCapture_Release(data->DSC);
+        data->DSC = NULL;
 
-        free(pData);
+        free(data);
         return ALC_INVALID_VALUE;
     }
 
-    pData->dwBufferBytes = DSCBDescription.dwBufferBytes;
+    data->BufferBytes = DSCBDescription.dwBufferBytes;
     SetDefaultWFXChannelOrder(device);
 
     device->DeviceName = strdup(deviceName);
-    device->ExtraData = pData;
+    device->ExtraData = data;
 
     return ALC_NO_ERROR;
 }
 
 static void DSoundCloseCapture(ALCdevice *device)
 {
-    DSoundCaptureData *pData = device->ExtraData;
+    DSoundCaptureData *data = device->ExtraData;
 
-    DestroyRingBuffer(pData->pRing);
-    pData->pRing = NULL;
+    DestroyRingBuffer(data->Ring);
+    data->Ring = NULL;
 
-    if(pData->DSCbuffer != NULL)
+    if(data->DSCbuffer != NULL)
     {
-        IDirectSoundCaptureBuffer_Stop(pData->DSCbuffer);
-        IDirectSoundCaptureBuffer_Release(pData->DSCbuffer);
-        pData->DSCbuffer = NULL;
+        IDirectSoundCaptureBuffer_Stop(data->DSCbuffer);
+        IDirectSoundCaptureBuffer_Release(data->DSCbuffer);
+        data->DSCbuffer = NULL;
     }
 
-    IDirectSoundCapture_Release(pData->lpDSC);
-    pData->lpDSC = NULL;
+    IDirectSoundCapture_Release(data->DSC);
+    data->DSC = NULL;
 
-    free(pData);
+    free(data);
     device->ExtraData = NULL;
 }
 
 static void DSoundStartCapture(ALCdevice *device)
 {
-    DSoundCaptureData *pData = device->ExtraData;
+    DSoundCaptureData *data = device->ExtraData;
     HRESULT hr;
 
-    hr = IDirectSoundCaptureBuffer_Start(pData->DSCbuffer, DSCBSTART_LOOPING);
+    hr = IDirectSoundCaptureBuffer_Start(data->DSCbuffer, DSCBSTART_LOOPING);
     if(FAILED(hr))
     {
         ERR("start failed: 0x%08lx\n", hr);
@@ -866,10 +866,10 @@ static void DSoundStartCapture(ALCdevice *device)
 
 static void DSoundStopCapture(ALCdevice *device)
 {
-    DSoundCaptureData *pData = device->ExtraData;
+    DSoundCaptureData *data = device->ExtraData;
     HRESULT hr;
 
-    hr = IDirectSoundCaptureBuffer_Stop(pData->DSCbuffer);
+    hr = IDirectSoundCaptureBuffer_Stop(data->DSCbuffer);
     if(FAILED(hr))
     {
         ERR("stop failed: 0x%08lx\n", hr);
@@ -879,17 +879,17 @@ static void DSoundStopCapture(ALCdevice *device)
 
 static ALCenum DSoundCaptureSamples(ALCdevice *Device, ALCvoid *pBuffer, ALCuint lSamples)
 {
-    DSoundCaptureData *pData = Device->ExtraData;
-    ReadRingBuffer(pData->pRing, pBuffer, lSamples);
+    DSoundCaptureData *data = Device->ExtraData;
+    ReadRingBuffer(data->Ring, pBuffer, lSamples);
     return ALC_NO_ERROR;
 }
 
 static ALCuint DSoundAvailableSamples(ALCdevice *Device)
 {
-    DSoundCaptureData *pData = Device->ExtraData;
-    DWORD dwRead, dwCursor, dwBufferBytes, dwNumBytes;
-    void *pvAudio1, *pvAudio2;
-    DWORD dwAudioBytes1, dwAudioBytes2;
+    DSoundCaptureData *data = Device->ExtraData;
+    DWORD ReadCursor, LastCursor, BufferBytes, NumBytes;
+    VOID *ReadPtr1, *ReadPtr2;
+    DWORD ReadCnt1,  ReadCnt2;
     DWORD FrameSize;
     HRESULT hr;
 
@@ -897,29 +897,28 @@ static ALCuint DSoundAvailableSamples(ALCdevice *Device)
         goto done;
 
     FrameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
-    dwBufferBytes = pData->dwBufferBytes;
-    dwCursor = pData->dwCursor;
+    BufferBytes = data->BufferBytes;
+    LastCursor = data->Cursor;
 
-    hr = IDirectSoundCaptureBuffer_GetCurrentPosition(pData->DSCbuffer, NULL, &dwRead);
+    hr = IDirectSoundCaptureBuffer_GetCurrentPosition(data->DSCbuffer, NULL, &ReadCursor);
     if(SUCCEEDED(hr))
     {
-        dwNumBytes = (dwBufferBytes + dwRead - dwCursor) % dwBufferBytes;
-        if(dwNumBytes == 0)
+        NumBytes = (ReadCursor-LastCursor + BufferBytes) % BufferBytes;
+        if(NumBytes == 0)
             goto done;
-        hr = IDirectSoundCaptureBuffer_Lock(pData->DSCbuffer,
-                                            dwCursor, dwNumBytes,
-                                            &pvAudio1, &dwAudioBytes1,
-                                            &pvAudio2, &dwAudioBytes2, 0);
+        hr = IDirectSoundCaptureBuffer_Lock(data->DSCbuffer, LastCursor, NumBytes,
+                                            &ReadPtr1, &ReadCnt1,
+                                            &ReadPtr2, &ReadCnt2, 0);
     }
     if(SUCCEEDED(hr))
     {
-        WriteRingBuffer(pData->pRing, pvAudio1, dwAudioBytes1/FrameSize);
-        if(pvAudio2 != NULL)
-            WriteRingBuffer(pData->pRing, pvAudio2, dwAudioBytes2/FrameSize);
-        hr = IDirectSoundCaptureBuffer_Unlock(pData->DSCbuffer,
-                                              pvAudio1, dwAudioBytes1,
-                                              pvAudio2, dwAudioBytes2);
-        pData->dwCursor = (dwCursor + dwAudioBytes1 + dwAudioBytes2) % dwBufferBytes;
+        WriteRingBuffer(data->Ring, ReadPtr1, ReadCnt1/FrameSize);
+        if(ReadPtr2 != NULL)
+            WriteRingBuffer(data->Ring, ReadPtr2, ReadCnt2/FrameSize);
+        hr = IDirectSoundCaptureBuffer_Unlock(data->DSCbuffer,
+                                              ReadPtr1, ReadCnt1,
+                                              ReadPtr2, ReadCnt2);
+        data->Cursor = (LastCursor+ReadCnt1+ReadCnt2) % BufferBytes;
     }
 
     if(FAILED(hr))
@@ -929,7 +928,7 @@ static ALCuint DSoundAvailableSamples(ALCdevice *Device)
     }
 
 done:
-    return RingBufferSize(pData->pRing);
+    return RingBufferSize(data->Ring);
 }
 
 static const BackendFuncs DSoundFuncs = {

@@ -161,7 +161,7 @@ AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
     return result;
 }
 
-AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint iValue)
+AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint value)
 {
     ALCdevice *Device;
     ALCcontext *Context;
@@ -178,8 +178,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         case AL_EFFECTSLOT_EFFECT: {
             ALeffect *effect = NULL;
 
-            if(iValue == 0 ||
-               (effect=LookupEffect(Device, iValue)) != NULL)
+            if(value == 0 || (effect=LookupEffect(Device, value)) != NULL)
             {
                 ALenum err;
                 err = InitializeEffect(Device, EffectSlot, effect);
@@ -193,9 +192,9 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         }   break;
 
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
-            if(iValue == AL_TRUE || iValue == AL_FALSE)
+            if(value == AL_TRUE || value == AL_FALSE)
             {
-                EffectSlot->AuxSendAuto = iValue;
+                EffectSlot->AuxSendAuto = value;
                 Context->UpdateSources = AL_TRUE;
             }
             else
@@ -213,7 +212,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, const ALint *piValues)
+AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, const ALint *values)
 {
     ALCcontext *Context;
 
@@ -221,7 +220,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
     {
         case AL_EFFECTSLOT_EFFECT:
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
-            alAuxiliaryEffectSloti(effectslot, param, piValues[0]);
+            alAuxiliaryEffectSloti(effectslot, param, values[0]);
             return;
     }
 
@@ -243,7 +242,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat flValue)
+AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat value)
 {
     ALCcontext *Context;
     ALeffectslot *EffectSlot;
@@ -256,9 +255,9 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
         switch(param)
         {
         case AL_EFFECTSLOT_GAIN:
-            if(flValue >= 0.0f && flValue <= 1.0f)
+            if(value >= 0.0f && value <= 1.0f)
             {
-                EffectSlot->Gain = flValue;
+                EffectSlot->Gain = value;
                 EffectSlot->NeedsUpdate = AL_TRUE;
             }
             else
@@ -276,14 +275,14 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, const ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, const ALfloat *values)
 {
     ALCcontext *Context;
 
     switch(param)
     {
         case AL_EFFECTSLOT_GAIN:
-            alAuxiliaryEffectSlotf(effectslot, param, pflValues[0]);
+            alAuxiliaryEffectSlotf(effectslot, param, values[0]);
             return;
     }
 
@@ -305,7 +304,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *piValue)
+AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *value)
 {
     ALCcontext *Context;
     ALeffectslot *EffectSlot;
@@ -318,11 +317,11 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
         switch(param)
         {
         case AL_EFFECTSLOT_EFFECT:
-            *piValue = EffectSlot->effect.id;
+            *value = EffectSlot->effect.id;
             break;
 
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
-            *piValue = EffectSlot->AuxSendAuto;
+            *value = EffectSlot->AuxSendAuto;
             break;
 
         default:
@@ -336,7 +335,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues)
+AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *values)
 {
     ALCcontext *Context;
 
@@ -344,7 +343,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
     {
         case AL_EFFECTSLOT_EFFECT:
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
-            alGetAuxiliaryEffectSloti(effectslot, param, piValues);
+            alGetAuxiliaryEffectSloti(effectslot, param, values);
             return;
     }
 
@@ -366,7 +365,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *pflValue)
+AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *value)
 {
     ALCcontext *Context;
     ALeffectslot *EffectSlot;
@@ -379,7 +378,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum pa
         switch(param)
         {
         case AL_EFFECTSLOT_GAIN:
-            *pflValue = EffectSlot->Gain;
+            *value = EffectSlot->Gain;
             break;
 
         default:
@@ -393,14 +392,14 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum pa
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues)
+AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *values)
 {
     ALCcontext *Context;
 
     switch(param)
     {
         case AL_EFFECTSLOT_GAIN:
-            alGetAuxiliaryEffectSlotf(effectslot, param, pflValues);
+            alGetAuxiliaryEffectSlotf(effectslot, param, values);
             return;
     }
 

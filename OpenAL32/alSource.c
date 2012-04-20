@@ -1145,7 +1145,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value
                         }
                     }
                     *value = ((BufferList && BufferList->buffer) ?
-                              BufferList->buffer->buffer : 0);
+                              BufferList->buffer->id : 0);
                     UnlockContext(Context);
                     break;
 
@@ -1763,7 +1763,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei n, ALuin
         if(BufferList->buffer)
         {
             // Record name of buffer
-            buffers[i] = BufferList->buffer->buffer;
+            buffers[i] = BufferList->buffer->id;
             // Decrement buffer reference counter
             DecrementRef(&BufferList->buffer->ref);
         }

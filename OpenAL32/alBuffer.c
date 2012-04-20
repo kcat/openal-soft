@@ -215,12 +215,12 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
             }
             RWLockInit(&buffer->lock);
 
-            err = NewThunkEntry(&buffer->buffer);
+            err = NewThunkEntry(&buffer->id);
             if(err == AL_NO_ERROR)
-                err = InsertUIntMapEntry(&device->BufferMap, buffer->buffer, buffer);
+                err = InsertUIntMapEntry(&device->BufferMap, buffer->id, buffer);
             if(err != AL_NO_ERROR)
             {
-                FreeThunkEntry(buffer->buffer);
+                FreeThunkEntry(buffer->id);
                 memset(buffer, 0, sizeof(ALbuffer));
                 free(buffer);
 
@@ -229,7 +229,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
                 break;
             }
 
-            buffers[i++] = buffer->buffer;
+            buffers[i++] = buffer->id;
         }
     }
 
@@ -283,7 +283,7 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
         {
             if((ALBuf=RemoveBuffer(device, buffers[i])) == NULL)
                 continue;
-            FreeThunkEntry(ALBuf->buffer);
+            FreeThunkEntry(ALBuf->id);
 
             /* Release the memory used to store audio data */
             free(ALBuf->data);
@@ -2278,7 +2278,7 @@ ALvoid ReleaseALBuffers(ALCdevice *device)
 
         free(temp->data);
 
-        FreeThunkEntry(temp->buffer);
+        FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALbuffer));
         free(temp);
     }

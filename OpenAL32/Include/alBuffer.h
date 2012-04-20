@@ -84,12 +84,13 @@ typedef struct ALbuffer
     ALsizei  LoopStart;
     ALsizei  LoopEnd;
 
-    RefCount ref; // Number of sources using this buffer (deletion can only occur when this is 0)
+    /* Number of times buffer was attached to a source (deletion can only occur when 0) */
+    RefCount ref;
 
     RWLock lock;
 
-    // Index to itself
-    ALuint buffer;
+    /* Self ID */
+    ALuint id;
 } ALbuffer;
 
 ALvoid ReleaseALBuffers(ALCdevice *device);

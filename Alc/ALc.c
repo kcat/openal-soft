@@ -367,7 +367,7 @@ static pthread_key_t LocalContext;
 static ALCcontext *volatile GlobalContext = NULL;
 
 /* Device Error */
-static volatile ALCenum g_eLastNullDeviceError = ALC_NO_ERROR;
+static volatile ALCenum LastNullDeviceError = ALC_NO_ERROR;
 
 // Default context extensions
 static const ALchar alExtList[] =
@@ -1027,7 +1027,7 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
     if(device)
         device->LastError = errorCode;
     else
-        g_eLastNullDeviceError = errorCode;
+        LastNullDeviceError = errorCode;
 }
 
 
@@ -1640,7 +1640,7 @@ ALCcontext *GetContextRef(void)
 
 
 // This should probably move to another c file but for now ...
-ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei SampleSize)
+ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei samples)
 {
     ALCdevice *device = NULL;
     ALCenum err;
@@ -1653,7 +1653,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return NULL;
     }
 
-    if(SampleSize <= 0)
+    if(samples <= 0)
     {
         alcSetError(NULL, ALC_INVALID_VALUE);
         return NULL;
@@ -1694,7 +1694,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return NULL;
     }
 
-    device->UpdateSize = SampleSize;
+    device->UpdateSize = samples;
     device->NumUpdates = 1;
 
     LockLists();
@@ -1716,13 +1716,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     return device;
 }
 
-ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
+ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *Device)
 {
     ALCdevice *volatile*list;
 
     LockLists();
     list = &DeviceList;
-    while(*list && *list != pDevice)
+    while(*list && *list != Device)
         list = &(*list)->next;
 
     if(!*list || (*list)->Type != Capture)
@@ -1735,9 +1735,9 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *pDevice)
     *list = (*list)->next;
     UnlockLists();
 
-    ALCdevice_CloseCapture(pDevice);
+    ALCdevice_CloseCapture(Device);
 
-    ALCdevice_DecRef(pDevice);
+    ALCdevice_DecRef(Device);
 
     return ALC_TRUE;
 }
@@ -1812,7 +1812,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
         ALCdevice_DecRef(device);
     }
     else
-        errorCode = ExchangeInt(&g_eLastNullDeviceError, ALC_NO_ERROR);
+        errorCode = ExchangeInt(&LastNullDeviceError, ALC_NO_ERROR);
 
     return errorCode;
 }
@@ -1839,9 +1839,9 @@ ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *Context)
 
 /* alcGetString
  *
- * Returns information about the Device, and error strings
+ * Returns information about the device, and error strings
  */
-ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum param)
+ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param)
 {
     const ALCchar *value = NULL;
 
@@ -1876,10 +1876,10 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_ALL_DEVICES_SPECIFIER:
-        if(VerifyDevice(pDevice))
+        if(VerifyDevice(Device))
         {
-            value = pDevice->DeviceName;
-            ALCdevice_DecRef(pDevice);
+            value = Device->DeviceName;
+            ALCdevice_DecRef(Device);
         }
         else
         {
@@ -1889,10 +1889,10 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         break;
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
-        if(VerifyDevice(pDevice))
+        if(VerifyDevice(Device))
         {
-            value = pDevice->DeviceName;
-            ALCdevice_DecRef(pDevice);
+            value = Device->DeviceName;
+            ALCdevice_DecRef(Device);
         }
         else
         {
@@ -1910,48 +1910,48 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
         if(!alcAllDeviceList)
             ProbeAllDeviceList();
 
-        pDevice = VerifyDevice(pDevice);
+        Device = VerifyDevice(Device);
 
         free(alcDefaultAllDeviceSpecifier);
         alcDefaultAllDeviceSpecifier = strdup(alcAllDeviceList ?
                                               alcAllDeviceList : "");
         if(!alcDefaultAllDeviceSpecifier)
-            alcSetError(pDevice, ALC_OUT_OF_MEMORY);
+            alcSetError(Device, ALC_OUT_OF_MEMORY);
 
         value = alcDefaultAllDeviceSpecifier;
-        if(pDevice) ALCdevice_DecRef(pDevice);
+        if(Device) ALCdevice_DecRef(Device);
         break;
 
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
         if(!alcCaptureDeviceList)
             ProbeCaptureDeviceList();
 
-        pDevice = VerifyDevice(pDevice);
+        Device = VerifyDevice(Device);
 
         free(alcCaptureDefaultDeviceSpecifier);
         alcCaptureDefaultDeviceSpecifier = strdup(alcCaptureDeviceList ?
                                                   alcCaptureDeviceList : "");
         if(!alcCaptureDefaultDeviceSpecifier)
-            alcSetError(pDevice, ALC_OUT_OF_MEMORY);
+            alcSetError(Device, ALC_OUT_OF_MEMORY);
 
         value = alcCaptureDefaultDeviceSpecifier;
-        if(pDevice) ALCdevice_DecRef(pDevice);
+        if(Device) ALCdevice_DecRef(Device);
         break;
 
     case ALC_EXTENSIONS:
-        if(!VerifyDevice(pDevice))
+        if(!VerifyDevice(Device))
             value = alcNoDeviceExtList;
         else
         {
             value = alcExtensionList;
-            ALCdevice_DecRef(pDevice);
+            ALCdevice_DecRef(Device);
         }
         break;
 
     default:
-        pDevice = VerifyDevice(pDevice);
-        alcSetError(pDevice, ALC_INVALID_ENUM);
-        if(pDevice) ALCdevice_DecRef(pDevice);
+        Device = VerifyDevice(Device);
+        alcSetError(Device, ALC_INVALID_ENUM);
+        if(Device) ALCdevice_DecRef(Device);
         break;
     }
 
@@ -2658,14 +2658,14 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
  *
  * Close the specified Device
  */
-ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
+ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *Device)
 {
     ALCdevice *volatile*list;
     ALCcontext *ctx;
 
     LockLists();
     list = &DeviceList;
-    while(*list && *list != pDevice)
+    while(*list && *list != Device)
         list = &(*list)->next;
 
     if(!*list || (*list)->Type == Capture)
@@ -2678,18 +2678,18 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *pDevice)
     *list = (*list)->next;
     UnlockLists();
 
-    while((ctx=pDevice->ContextList) != NULL)
+    while((ctx=Device->ContextList) != NULL)
     {
         WARN("Releasing context %p\n", ctx);
-        ReleaseContext(ctx, pDevice);
+        ReleaseContext(ctx, Device);
     }
-    if((pDevice->Flags&DEVICE_RUNNING))
-        ALCdevice_StopPlayback(pDevice);
-    pDevice->Flags &= ~DEVICE_RUNNING;
+    if((Device->Flags&DEVICE_RUNNING))
+        ALCdevice_StopPlayback(Device);
+    Device->Flags &= ~DEVICE_RUNNING;
 
-    ALCdevice_ClosePlayback(pDevice);
+    ALCdevice_ClosePlayback(Device);
 
-    ALCdevice_DecRef(pDevice);
+    ALCdevice_DecRef(Device);
 
     return ALC_TRUE;
 }

@@ -53,21 +53,21 @@ typedef struct {
 
 static ALuint SolarisProc(ALvoid *ptr)
 {
-    ALCdevice *pDevice = (ALCdevice*)ptr;
-    solaris_data *data = (solaris_data*)pDevice->ExtraData;
+    ALCdevice *Device = (ALCdevice*)ptr;
+    solaris_data *data = (solaris_data*)Device->ExtraData;
     ALint frameSize;
     int wrote;
 
     SetRTPriority();
 
-    frameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
+    frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 
-    while(!data->killNow && pDevice->Connected)
+    while(!data->killNow && Device->Connected)
     {
         ALint len = data->data_size;
         ALubyte *WritePtr = data->mix_data;
 
-        aluMixData(pDevice, WritePtr, len/frameSize);
+        aluMixData(Device, WritePtr, len/frameSize);
         while(len > 0 && !data->killNow)
         {
             wrote = write(data->fd, WritePtr, len);
@@ -76,7 +76,7 @@ static ALuint SolarisProc(ALvoid *ptr)
                 if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
                 {
                     ERR("write failed: %s\n", strerror(errno));
-                    aluHandleDisconnect(pDevice);
+                    aluHandleDisconnect(Device);
                     break;
                 }
 

@@ -1439,47 +1439,47 @@ static ALCdevice *VerifyDevice(ALCdevice *device)
  *
  * Initializes context variables
  */
-static ALvoid InitContext(ALCcontext *pContext)
+static ALvoid InitContext(ALCcontext *Context)
 {
     ALint i, j;
 
     //Initialise listener
-    pContext->Listener.Gain = 1.0f;
-    pContext->Listener.MetersPerUnit = 1.0f;
-    pContext->Listener.Position[0] = 0.0f;
-    pContext->Listener.Position[1] = 0.0f;
-    pContext->Listener.Position[2] = 0.0f;
-    pContext->Listener.Velocity[0] = 0.0f;
-    pContext->Listener.Velocity[1] = 0.0f;
-    pContext->Listener.Velocity[2] = 0.0f;
-    pContext->Listener.Forward[0] = 0.0f;
-    pContext->Listener.Forward[1] = 0.0f;
-    pContext->Listener.Forward[2] = -1.0f;
-    pContext->Listener.Up[0] = 0.0f;
-    pContext->Listener.Up[1] = 1.0f;
-    pContext->Listener.Up[2] = 0.0f;
+    Context->Listener.Gain = 1.0f;
+    Context->Listener.MetersPerUnit = 1.0f;
+    Context->Listener.Position[0] = 0.0f;
+    Context->Listener.Position[1] = 0.0f;
+    Context->Listener.Position[2] = 0.0f;
+    Context->Listener.Velocity[0] = 0.0f;
+    Context->Listener.Velocity[1] = 0.0f;
+    Context->Listener.Velocity[2] = 0.0f;
+    Context->Listener.Forward[0] = 0.0f;
+    Context->Listener.Forward[1] = 0.0f;
+    Context->Listener.Forward[2] = -1.0f;
+    Context->Listener.Up[0] = 0.0f;
+    Context->Listener.Up[1] = 1.0f;
+    Context->Listener.Up[2] = 0.0f;
     for(i = 0;i < 4;i++)
     {
         for(j = 0;j < 4;j++)
-            pContext->Listener.Matrix[i][j] = ((i==j) ? 1.0f : 0.0f);
+            Context->Listener.Matrix[i][j] = ((i==j) ? 1.0f : 0.0f);
     }
 
-    //Validate pContext
-    pContext->LastError = AL_NO_ERROR;
-    pContext->UpdateSources = AL_FALSE;
-    pContext->ActiveSourceCount = 0;
-    InitUIntMap(&pContext->SourceMap, pContext->Device->MaxNoOfSources);
-    InitUIntMap(&pContext->EffectSlotMap, pContext->Device->AuxiliaryEffectSlotMax);
+    //Validate Context
+    Context->LastError = AL_NO_ERROR;
+    Context->UpdateSources = AL_FALSE;
+    Context->ActiveSourceCount = 0;
+    InitUIntMap(&Context->SourceMap, Context->Device->MaxNoOfSources);
+    InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
 
     //Set globals
-    pContext->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
-    pContext->SourceDistanceModel = AL_FALSE;
-    pContext->DopplerFactor = 1.0f;
-    pContext->DopplerVelocity = 1.0f;
-    pContext->SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
-    pContext->DeferUpdates = AL_FALSE;
+    Context->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
+    Context->SourceDistanceModel = AL_FALSE;
+    Context->DopplerFactor = 1.0f;
+    Context->DopplerVelocity = 1.0f;
+    Context->SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
+    Context->DeferUpdates = AL_FALSE;
 
-    pContext->ExtensionList = alExtList;
+    Context->ExtensionList = alExtList;
 }
 
 

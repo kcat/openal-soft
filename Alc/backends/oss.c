@@ -79,21 +79,21 @@ static int log2i(ALCuint x)
 
 static ALuint OSSProc(ALvoid *ptr)
 {
-    ALCdevice *pDevice = (ALCdevice*)ptr;
-    oss_data *data = (oss_data*)pDevice->ExtraData;
+    ALCdevice *Device = (ALCdevice*)ptr;
+    oss_data *data = (oss_data*)Device->ExtraData;
     ALint frameSize;
     ssize_t wrote;
 
     SetRTPriority();
 
-    frameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
+    frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 
-    while(!data->killNow && pDevice->Connected)
+    while(!data->killNow && Device->Connected)
     {
         ALint len = data->data_size;
         ALubyte *WritePtr = data->mix_data;
 
-        aluMixData(pDevice, WritePtr, len/frameSize);
+        aluMixData(Device, WritePtr, len/frameSize);
         while(len > 0 && !data->killNow)
         {
             wrote = write(data->fd, WritePtr, len);
@@ -102,7 +102,7 @@ static ALuint OSSProc(ALvoid *ptr)
                 if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
                 {
                     ERR("write failed: %s\n", strerror(errno));
-                    aluHandleDisconnect(pDevice);
+                    aluHandleDisconnect(Device);
                     break;
                 }
 
@@ -120,14 +120,14 @@ static ALuint OSSProc(ALvoid *ptr)
 
 static ALuint OSSCaptureProc(ALvoid *ptr)
 {
-    ALCdevice *pDevice = (ALCdevice*)ptr;
-    oss_data *data = (oss_data*)pDevice->ExtraData;
+    ALCdevice *Device = (ALCdevice*)ptr;
+    oss_data *data = (oss_data*)Device->ExtraData;
     int frameSize;
     int amt;
 
     SetRTPriority();
 
-    frameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
+    frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 
     while(!data->killNow)
     {
@@ -135,7 +135,7 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
         if(amt < 0)
         {
             ERR("read failed: %s\n", strerror(errno));
-            aluHandleDisconnect(pDevice);
+            aluHandleDisconnect(Device);
             break;
         }
         if(amt == 0)
@@ -450,28 +450,28 @@ static void oss_close_capture(ALCdevice *device)
     device->ExtraData = NULL;
 }
 
-static void oss_start_capture(ALCdevice *pDevice)
+static void oss_start_capture(ALCdevice *Device)
 {
-    oss_data *data = (oss_data*)pDevice->ExtraData;
+    oss_data *data = (oss_data*)Device->ExtraData;
     data->doCapture = 1;
 }
 
-static void oss_stop_capture(ALCdevice *pDevice)
+static void oss_stop_capture(ALCdevice *Device)
 {
-    oss_data *data = (oss_data*)pDevice->ExtraData;
+    oss_data *data = (oss_data*)Device->ExtraData;
     data->doCapture = 0;
 }
 
-static ALCenum oss_capture_samples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
+static ALCenum oss_capture_samples(ALCdevice *Device, ALCvoid *pBuffer, ALCuint lSamples)
 {
-    oss_data *data = (oss_data*)pDevice->ExtraData;
+    oss_data *data = (oss_data*)Device->ExtraData;
     ReadRingBuffer(data->ring, pBuffer, lSamples);
     return ALC_NO_ERROR;
 }
 
-static ALCuint oss_available_samples(ALCdevice *pDevice)
+static ALCuint oss_available_samples(ALCdevice *Device)
 {
-    oss_data *data = (oss_data*)pDevice->ExtraData;
+    oss_data *data = (oss_data*)Device->ExtraData;
     return RingBufferSize(data->ring);
 }
 

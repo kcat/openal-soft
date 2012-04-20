@@ -224,8 +224,8 @@ static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR d
 
 static ALuint DSoundPlaybackProc(ALvoid *ptr)
 {
-    ALCdevice *pDevice = (ALCdevice*)ptr;
-    DSoundPlaybackData *pData = (DSoundPlaybackData*)pDevice->ExtraData;
+    ALCdevice *Device = (ALCdevice*)ptr;
+    DSoundPlaybackData *pData = (DSoundPlaybackData*)Device->ExtraData;
     DSBCAPS DSBCaps;
     DWORD LastCursor = 0;
     DWORD PlayCursor;
@@ -245,12 +245,12 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
     if(FAILED(err))
     {
         ERR("Failed to get buffer caps: 0x%lx\n", err);
-        aluHandleDisconnect(pDevice);
+        aluHandleDisconnect(Device);
         return 1;
     }
 
-    FrameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
-    FragSize = pDevice->UpdateSize * FrameSize;
+    FrameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
+    FragSize = Device->UpdateSize * FrameSize;
 
     IDirectSoundBuffer_GetCurrentPosition(pData->DSsbuffer, &LastCursor, NULL);
     while(!pData->killNow)
@@ -267,7 +267,7 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
                 if(FAILED(err))
                 {
                     ERR("Failed to play buffer: 0x%lx\n", err);
-                    aluHandleDisconnect(pDevice);
+                    aluHandleDisconnect(Device);
                     return 1;
                 }
                 Playing = TRUE;
@@ -302,8 +302,8 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
         if(SUCCEEDED(err))
         {
             // If we have an active context, mix data directly into output buffer otherwise fill with silence
-            aluMixData(pDevice, WritePtr1, WriteCnt1/FrameSize);
-            aluMixData(pDevice, WritePtr2, WriteCnt2/FrameSize);
+            aluMixData(Device, WritePtr1, WriteCnt1/FrameSize);
+            aluMixData(Device, WritePtr2, WriteCnt2/FrameSize);
 
             // Unlock output buffer only when successfully locked
             IDirectSoundBuffer_Unlock(pData->DSsbuffer, WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
@@ -311,7 +311,7 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
         else
         {
             ERR("Buffer lock error: %#lx\n", err);
-            aluHandleDisconnect(pDevice);
+            aluHandleDisconnect(Device);
             return 1;
         }
 
@@ -877,26 +877,26 @@ static void DSoundStopCapture(ALCdevice *device)
     }
 }
 
-static ALCenum DSoundCaptureSamples(ALCdevice *pDevice, ALCvoid *pBuffer, ALCuint lSamples)
+static ALCenum DSoundCaptureSamples(ALCdevice *Device, ALCvoid *pBuffer, ALCuint lSamples)
 {
-    DSoundCaptureData *pData = pDevice->ExtraData;
+    DSoundCaptureData *pData = Device->ExtraData;
     ReadRingBuffer(pData->pRing, pBuffer, lSamples);
     return ALC_NO_ERROR;
 }
 
-static ALCuint DSoundAvailableSamples(ALCdevice *pDevice)
+static ALCuint DSoundAvailableSamples(ALCdevice *Device)
 {
-    DSoundCaptureData *pData = pDevice->ExtraData;
+    DSoundCaptureData *pData = Device->ExtraData;
     DWORD dwRead, dwCursor, dwBufferBytes, dwNumBytes;
     void *pvAudio1, *pvAudio2;
     DWORD dwAudioBytes1, dwAudioBytes2;
     DWORD FrameSize;
     HRESULT hr;
 
-    if(!pDevice->Connected)
+    if(!Device->Connected)
         goto done;
 
-    FrameSize = FrameSizeFromDevFmt(pDevice->FmtChans, pDevice->FmtType);
+    FrameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
     dwBufferBytes = pData->dwBufferBytes;
     dwCursor = pData->dwCursor;
 
@@ -925,7 +925,7 @@ static ALCuint DSoundAvailableSamples(ALCdevice *pDevice)
     if(FAILED(hr))
     {
         ERR("update failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(pDevice);
+        aluHandleDisconnect(Device);
     }
 
 done:

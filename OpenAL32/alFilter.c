@@ -59,12 +59,12 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
             }
             InitFilterParams(filter, AL_FILTER_NULL);
 
-            err = NewThunkEntry(&filter->filter);
+            err = NewThunkEntry(&filter->id);
             if(err == AL_NO_ERROR)
-                err = InsertUIntMapEntry(&device->FilterMap, filter->filter, filter);
+                err = InsertUIntMapEntry(&device->FilterMap, filter->id, filter);
             if(err != AL_NO_ERROR)
             {
-                FreeThunkEntry(filter->filter);
+                FreeThunkEntry(filter->id);
                 memset(filter, 0, sizeof(ALfilter));
                 free(filter);
 
@@ -73,7 +73,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
                 break;
             }
 
-            filters[i] = filter->filter;
+            filters[i] = filter->id;
         }
     }
 
@@ -114,7 +114,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters)
             // Recheck that the filter is valid, because there could be duplicated names
             if((ALFilter=RemoveFilter(device, filters[i])) == NULL)
                 continue;
-            FreeThunkEntry(ALFilter->filter);
+            FreeThunkEntry(ALFilter->id);
 
             memset(ALFilter, 0, sizeof(ALfilter));
             free(ALFilter);
@@ -448,7 +448,7 @@ ALvoid ReleaseALFilters(ALCdevice *device)
         device->FilterMap.array[i].value = NULL;
 
         // Release filter structure
-        FreeThunkEntry(temp->filter);
+        FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALfilter));
         free(temp);
     }

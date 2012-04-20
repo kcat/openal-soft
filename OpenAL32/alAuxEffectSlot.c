@@ -75,13 +75,13 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                 Context->ActiveEffectSlots[Context->ActiveEffectSlotCount++] = slot;
             UnlockContext(Context);
             if(err == AL_NO_ERROR)
-                err = NewThunkEntry(&slot->effectslot);
+                err = NewThunkEntry(&slot->id);
             if(err == AL_NO_ERROR)
-                err = InsertUIntMapEntry(&Context->EffectSlotMap, slot->effectslot, slot);
+                err = InsertUIntMapEntry(&Context->EffectSlotMap, slot->id, slot);
             if(err != AL_NO_ERROR)
             {
                 RemoveEffectSlotArray(Context, slot);
-                FreeThunkEntry(slot->effectslot);
+                FreeThunkEntry(slot->id);
                 ALeffectState_Destroy(slot->EffectState);
                 free(slot);
 
@@ -90,7 +90,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                 break;
             }
 
-            effectslots[i] = slot->effectslot;
+            effectslots[i] = slot->id;
         }
     }
 
@@ -133,7 +133,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
             // Recheck that the effectslot is valid, because there could be duplicated names
             if((EffectSlot=RemoveEffectSlot(Context, effectslots[i])) == NULL)
                 continue;
-            FreeThunkEntry(EffectSlot->effectslot);
+            FreeThunkEntry(EffectSlot->id);
 
             RemoveEffectSlotArray(Context, EffectSlot);
             ALeffectState_Destroy(EffectSlot->EffectState);
@@ -318,7 +318,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
         switch(param)
         {
         case AL_EFFECTSLOT_EFFECT:
-            *piValue = EffectSlot->effect.effect;
+            *piValue = EffectSlot->effect.id;
             break;
 
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
@@ -623,7 +623,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
         // Release effectslot structure
         ALeffectState_Destroy(temp->EffectState);
 
-        FreeThunkEntry(temp->effectslot);
+        FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALeffectslot));
         free(temp);
     }

@@ -78,12 +78,12 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
             }
             InitSourceParams(source);
 
-            err = NewThunkEntry(&source->source);
+            err = NewThunkEntry(&source->id);
             if(err == AL_NO_ERROR)
-                err = InsertUIntMapEntry(&Context->SourceMap, source->source, source);
+                err = InsertUIntMapEntry(&Context->SourceMap, source->id, source);
             if(err != AL_NO_ERROR)
             {
-                FreeThunkEntry(source->source);
+                FreeThunkEntry(source->id);
                 memset(source, 0, sizeof(ALsource));
                 free(source);
 
@@ -92,7 +92,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
                 break;
             }
 
-            sources[i++] = source->source;
+            sources[i++] = source->id;
         }
     }
 
@@ -133,8 +133,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             // Remove Source from list of Sources
             if((Source=RemoveSource(Context, sources[i])) == NULL)
                 continue;
-
-            FreeThunkEntry(Source->source);
+            FreeThunkEntry(Source->id);
 
             LockContext(Context);
             srclist = Context->ActiveSources;
@@ -2202,7 +2201,7 @@ ALvoid ReleaseALSources(ALCcontext *Context)
         }
 
         // Release source structure
-        FreeThunkEntry(temp->source);
+        FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALsource));
         free(temp);
     }

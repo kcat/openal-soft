@@ -28,8 +28,8 @@ typedef struct ALeffectslot
 
     RefCount ref;
 
-    // Index to itself
-    ALuint effectslot;
+    /* Self ID */
+    ALuint id;
 
     struct ALeffectslot *next;
 } ALeffectslot;

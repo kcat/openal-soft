@@ -63,12 +63,12 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 break;
             }
 
-            err = NewThunkEntry(&effect->effect);
+            err = NewThunkEntry(&effect->id);
             if(err == AL_NO_ERROR)
-                err = InsertUIntMapEntry(&device->EffectMap, effect->effect, effect);
+                err = InsertUIntMapEntry(&device->EffectMap, effect->id, effect);
             if(err != AL_NO_ERROR)
             {
-                FreeThunkEntry(effect->effect);
+                FreeThunkEntry(effect->id);
                 memset(effect, 0, sizeof(ALeffect));
                 free(effect);
 
@@ -77,7 +77,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 break;
             }
 
-            effects[i] = effect->effect;
+            effects[i] = effect->id;
         }
     }
 
@@ -118,7 +118,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
             // Recheck that the effect is valid, because there could be duplicated names
             if((ALEffect=RemoveEffect(device, effects[i])) == NULL)
                 continue;
-            FreeThunkEntry(ALEffect->effect);
+            FreeThunkEntry(ALEffect->id);
 
             memset(ALEffect, 0, sizeof(ALeffect));
             free(ALEffect);
@@ -1188,7 +1188,7 @@ ALvoid ReleaseALEffects(ALCdevice *device)
         device->EffectMap.array[i].value = NULL;
 
         // Release effect structure
-        FreeThunkEntry(temp->effect);
+        FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALeffect));
         free(temp);
     }

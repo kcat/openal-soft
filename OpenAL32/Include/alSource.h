@@ -125,8 +125,8 @@ typedef struct ALsource
 
     ALvoid (*Update)(struct ALsource *self, const ALCcontext *context);
 
-    // Index to itself
-    ALuint source;
+    /* Self ID */
+    ALuint id;
 } ALsource;
 #define ALsource_Update(s,a)                 ((s)->Update(s,a))
 

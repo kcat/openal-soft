@@ -87,8 +87,8 @@ typedef struct ALfilter {
     void (*GetParamf)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val);
     void (*GetParamfv)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals);
 
-    // Index to itself
-    ALuint filter;
+    /* Self ID */
+    ALuint id;
 } ALfilter;
 
 #define ALfilter_SetParami(x, c, p, v)  ((x)->SetParami((x),(c),(p),(v)))

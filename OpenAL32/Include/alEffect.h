@@ -85,8 +85,8 @@ typedef struct ALeffect
     void (*GetParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
     void (*GetParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
 
-    // Index to itself
-    ALuint effect;
+    /* Self ID */
+    ALuint id;
 } ALeffect;
 
 #define ALeffect_SetParami(x, c, p, v)  ((x)->SetParami((x),(c),(p),(v)))

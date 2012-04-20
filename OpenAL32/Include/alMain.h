@@ -539,7 +539,7 @@ struct ALCdevice_struct
     enum DevFmtChannels FmtChans;
     enum DevFmtType     FmtType;
 
-    ALCchar      *szDeviceName;
+    ALCchar      *DeviceName;
 
     volatile ALCenum LastError;
 
@@ -631,7 +631,7 @@ struct ALCcontext_struct
 {
     volatile RefCount ref;
 
-    ALlistener  Listener;
+    ALlistener Listener;
 
     UIntMap SourceMap;
     UIntMap EffectSlotMap;
@@ -645,7 +645,7 @@ struct ALCcontext_struct
 
     volatile ALfloat DopplerFactor;
     volatile ALfloat DopplerVelocity;
-    volatile ALfloat flSpeedOfSound;
+    volatile ALfloat SpeedOfSound;
     volatile ALenum  DeferUpdates;
 
     struct ALsource **ActiveSources;

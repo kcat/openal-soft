@@ -178,7 +178,7 @@ static ALCenum wave_open_playback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_INVALID_VALUE;
     }
 
-    device->szDeviceName = strdup(deviceName);
+    device->DeviceName = strdup(deviceName);
     device->ExtraData = data;
     return ALC_NO_ERROR;
 }

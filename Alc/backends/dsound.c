@@ -383,7 +383,7 @@ static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_INVALID_VALUE;
     }
 
-    device->szDeviceName = strdup(deviceName);
+    device->DeviceName = strdup(deviceName);
     device->ExtraData = pData;
     return ALC_NO_ERROR;
 }
@@ -824,7 +824,7 @@ static ALCenum DSoundOpenCapture(ALCdevice *device, const ALCchar *deviceName)
     pData->dwBufferBytes = DSCBDescription.dwBufferBytes;
     SetDefaultWFXChannelOrder(device);
 
-    device->szDeviceName = strdup(deviceName);
+    device->DeviceName = strdup(deviceName);
     device->ExtraData = pData;
 
     return ALC_NO_ERROR;

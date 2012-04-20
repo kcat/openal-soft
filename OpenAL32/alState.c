@@ -135,7 +135,7 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
             break;
 
         case AL_SPEED_OF_SOUND:
-            if(Context->flSpeedOfSound != 0.0f)
+            if(Context->SpeedOfSound != 0.0f)
                 value = AL_TRUE;
             break;
 
@@ -176,7 +176,7 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
             break;
 
         case AL_SPEED_OF_SOUND:
-            value = (double)Context->flSpeedOfSound;
+            value = (double)Context->SpeedOfSound;
             break;
 
         case AL_DEFERRED_UPDATES_SOFT:
@@ -216,7 +216,7 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
             break;
 
         case AL_SPEED_OF_SOUND:
-            value = Context->flSpeedOfSound;
+            value = Context->SpeedOfSound;
             break;
 
         case AL_DEFERRED_UPDATES_SOFT:
@@ -256,7 +256,7 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
             break;
 
         case AL_SPEED_OF_SOUND:
-            value = (ALint)Context->flSpeedOfSound;
+            value = (ALint)Context->SpeedOfSound;
             break;
 
         case AL_DEFERRED_UPDATES_SOFT:
@@ -526,16 +526,16 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat flSpeedOfSound)
+AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
 {
     ALCcontext *Context;
 
     Context = GetContextRef();
     if(!Context) return;
 
-    if(flSpeedOfSound > 0.0f && isfinite(flSpeedOfSound))
+    if(value > 0.0f && isfinite(value))
     {
-        Context->flSpeedOfSound = flSpeedOfSound;
+        Context->SpeedOfSound = value;
         Context->UpdateSources = AL_TRUE;
     }
     else

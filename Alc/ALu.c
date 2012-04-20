@@ -377,7 +377,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     //Get context properties
     DopplerFactor = ALContext->DopplerFactor * ALSource->DopplerFactor;
-    SpeedOfSound  = ALContext->flSpeedOfSound * ALContext->DopplerVelocity;
+    SpeedOfSound  = ALContext->SpeedOfSound * ALContext->DopplerVelocity;
     NumSends      = Device->NumAuxSends;
     Frequency     = Device->Frequency;
 

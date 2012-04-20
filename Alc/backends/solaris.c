@@ -113,7 +113,7 @@ static ALCenum solaris_open_playback(ALCdevice *device, const ALCchar *deviceNam
         return ALC_INVALID_VALUE;
     }
 
-    device->szDeviceName = strdup(deviceName);
+    device->DeviceName = strdup(deviceName);
     device->ExtraData = data;
     return ALC_NO_ERROR;
 }

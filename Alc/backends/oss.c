@@ -170,7 +170,7 @@ static ALCenum oss_open_playback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_INVALID_VALUE;
     }
 
-    device->szDeviceName = strdup(deviceName);
+    device->DeviceName = strdup(deviceName);
     device->ExtraData = data;
     return ALC_NO_ERROR;
 }
@@ -431,7 +431,7 @@ static ALCenum oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
         return ALC_OUT_OF_MEMORY;
     }
 
-    device->szDeviceName = strdup(deviceName);
+    device->DeviceName = strdup(deviceName);
     return ALC_NO_ERROR;
 }
 

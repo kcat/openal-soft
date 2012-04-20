@@ -525,8 +525,8 @@ static void sink_name_callback(pa_context *context, const pa_sink_info *info, in
         return;
     }
 
-    free(device->szDeviceName);
-    device->szDeviceName = strdup(info->description);
+    free(device->DeviceName);
+    device->DeviceName = strdup(info->description);
 }
 
 static void source_name_callback(pa_context *context, const pa_source_info *info, int eol, void *pdata)
@@ -541,8 +541,8 @@ static void source_name_callback(pa_context *context, const pa_source_info *info
         return;
     }
 
-    free(device->szDeviceName);
-    device->szDeviceName = strdup(info->description);
+    free(device->DeviceName);
+    device->DeviceName = strdup(info->description);
 }
 
 

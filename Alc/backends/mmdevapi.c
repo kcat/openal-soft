@@ -622,7 +622,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             if(SUCCEEDED(hr))
             {
                 data->client = ptr;
-                device->szDeviceName = get_device_name(data->mmdev);
+                device->DeviceName = get_device_name(data->mmdev);
             }
 
             if(FAILED(hr))

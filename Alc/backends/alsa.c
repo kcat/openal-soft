@@ -621,7 +621,7 @@ static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_OUT_OF_MEMORY;
     }
 
-    device->szDeviceName = strdup(deviceName);
+    device->DeviceName = strdup(deviceName);
     device->ExtraData = data;
     return ALC_NO_ERROR;
 }
@@ -986,7 +986,7 @@ static ALCenum alsa_open_capture(ALCdevice *pDevice, const ALCchar *deviceName)
         }
     }
 
-    pDevice->szDeviceName = strdup(deviceName);
+    pDevice->DeviceName = strdup(deviceName);
 
     pDevice->ExtraData = data;
     return ALC_NO_ERROR;

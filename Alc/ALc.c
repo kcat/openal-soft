@@ -1388,8 +1388,8 @@ static ALCvoid FreeDevice(ALCdevice *device)
     free(device->Bs2b);
     device->Bs2b = NULL;
 
-    free(device->szDeviceName);
-    device->szDeviceName = NULL;
+    free(device->DeviceName);
+    device->DeviceName = NULL;
 
     DeleteCriticalSection(&device->Mutex);
 
@@ -1476,7 +1476,7 @@ static ALvoid InitContext(ALCcontext *pContext)
     pContext->SourceDistanceModel = AL_FALSE;
     pContext->DopplerFactor = 1.0f;
     pContext->DopplerVelocity = 1.0f;
-    pContext->flSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
+    pContext->SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
     pContext->DeferUpdates = AL_FALSE;
 
     pContext->ExtensionList = alExtList;
@@ -1680,7 +1680,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
 
-    device->szDeviceName = NULL;
+    device->DeviceName = NULL;
 
     device->Flags |= DEVICE_FREQUENCY_REQUEST;
     device->Frequency = frequency;
@@ -1878,7 +1878,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
     case ALC_ALL_DEVICES_SPECIFIER:
         if(VerifyDevice(pDevice))
         {
-            value = pDevice->szDeviceName;
+            value = pDevice->DeviceName;
             ALCdevice_DecRef(pDevice);
         }
         else
@@ -1891,7 +1891,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *pDevice,ALCenum para
     case ALC_CAPTURE_DEVICE_SPECIFIER:
         if(VerifyDevice(pDevice))
         {
-            value = pDevice->szDeviceName;
+            value = pDevice->DeviceName;
             ALCdevice_DecRef(pDevice);
         }
         else
@@ -2466,7 +2466,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Flags = 0;
     device->Bs2b = NULL;
     device->Bs2bLevel = 0;
-    device->szDeviceName = NULL;
+    device->DeviceName = NULL;
 
     device->ContextList = NULL;
 
@@ -2650,7 +2650,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->next = DeviceList;
     } while(!CompExchangePtr((XchgPtr*)&DeviceList, device->next, device));
 
-    TRACE("Created device %p, \"%s\"\n", device, device->szDeviceName);
+    TRACE("Created device %p, \"%s\"\n", device, device->DeviceName);
     return device;
 }
 
@@ -2730,7 +2730,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->Flags = 0;
     device->Bs2b = NULL;
     device->Bs2bLevel = 0;
-    device->szDeviceName = NULL;
+    device->DeviceName = NULL;
 
     device->ContextList = NULL;
 

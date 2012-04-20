@@ -231,7 +231,7 @@ static ALCenum opensl_open_playback(ALCdevice *Device, const ALCchar *deviceName
         return ALC_INVALID_VALUE;
     }
 
-    Device->szDeviceName = strdup(deviceName);
+    Device->DeviceName = strdup(deviceName);
     Device->ExtraData = data;
 
     return ALC_NO_ERROR;

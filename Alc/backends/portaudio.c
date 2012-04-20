@@ -219,7 +219,7 @@ retry_open:
     }
 
     device->ExtraData = data;
-    device->szDeviceName = strdup(deviceName);
+    device->DeviceName = strdup(deviceName);
 
     return ALC_NO_ERROR;
 }
@@ -361,7 +361,7 @@ static ALCenum pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
         goto error;
     }
 
-    device->szDeviceName = strdup(deviceName);
+    device->DeviceName = strdup(deviceName);
 
     device->ExtraData = data;
     return ALC_NO_ERROR;

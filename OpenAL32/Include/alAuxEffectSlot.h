@@ -30,8 +30,6 @@ typedef struct ALeffectslot
 
     /* Self ID */
     ALuint id;
-
-    struct ALeffectslot *next;
 } ALeffectslot;
 
 

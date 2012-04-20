@@ -30,21 +30,21 @@ typedef struct ALbufferlistitem
 
 typedef struct ALsource
 {
-    volatile ALfloat   flPitch;
-    volatile ALfloat   flGain;
-    volatile ALfloat   flOuterGain;
-    volatile ALfloat   flMinGain;
-    volatile ALfloat   flMaxGain;
-    volatile ALfloat   flInnerAngle;
-    volatile ALfloat   flOuterAngle;
-    volatile ALfloat   flRefDistance;
-    volatile ALfloat   flMaxDistance;
-    volatile ALfloat   flRollOffFactor;
-    volatile ALfloat   vPosition[3];
-    volatile ALfloat   vVelocity[3];
-    volatile ALfloat   vOrientation[3];
-    volatile ALboolean bHeadRelative;
-    volatile ALboolean bLooping;
+    volatile ALfloat   Pitch;
+    volatile ALfloat   Gain;
+    volatile ALfloat   OuterGain;
+    volatile ALfloat   MinGain;
+    volatile ALfloat   MaxGain;
+    volatile ALfloat   InnerAngle;
+    volatile ALfloat   OuterAngle;
+    volatile ALfloat   RefDistance;
+    volatile ALfloat   MaxDistance;
+    volatile ALfloat   RollOffFactor;
+    volatile ALfloat   Position[3];
+    volatile ALfloat   Velocity[3];
+    volatile ALfloat   Orientation[3];
+    volatile ALboolean HeadRelative;
+    volatile ALboolean Looping;
     volatile enum DistanceModel DistanceModel;
     volatile ALboolean DirectChannels;
 
@@ -81,7 +81,7 @@ typedef struct ALsource
     ALenum   OffsetType;
 
     // Source Type (Static, Streaming, or Undetermined)
-    volatile ALint lSourceType;
+    volatile ALint SourceType;
 
     ALuint NumChannels;
     ALuint SampleSize;

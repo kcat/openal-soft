@@ -535,7 +535,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     BuffersPlayed = Source->BuffersPlayed;
     DataPosInt    = Source->position;
     DataPosFrac   = Source->position_fraction;
-    Looping       = Source->bLooping;
+    Looping       = Source->Looping;
     increment     = Source->Params.Step;
     Resampler     = Source->Resampler;
     NumChannels   = Source->NumChannels;
@@ -566,7 +566,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         BufferSize  = (ALuint)mini64(DataSize64, STACK_DATA_SIZE/sizeof(ALfloat));
         BufferSize /= NumChannels;
 
-        if(Source->lSourceType == AL_STATIC)
+        if(Source->SourceType == AL_STATIC)
         {
             const ALbuffer *ALBuffer = Source->queue->buffer;
             const ALubyte *Data = ALBuffer->data;
@@ -770,7 +770,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                     break;
             }
 
-            if(Looping && Source->lSourceType == AL_STATIC)
+            if(Looping && Source->SourceType == AL_STATIC)
             {
                 DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
                 break;

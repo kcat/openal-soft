@@ -133,10 +133,10 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ListenerGain = ALContext->Listener.Gain;
 
     /* Get source properties */
-    SourceVolume    = ALSource->flGain;
-    MinVolume       = ALSource->flMinGain;
-    MaxVolume       = ALSource->flMaxGain;
-    Pitch           = ALSource->flPitch;
+    SourceVolume    = ALSource->Gain;
+    MinVolume       = ALSource->MinGain;
+    MaxVolume       = ALSource->MaxGain;
+    Pitch           = ALSource->Pitch;
     Resampler       = ALSource->Resampler;
     DirectChannels  = ALSource->DirectChannels;
 
@@ -389,25 +389,25 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ListenerVel[2] = ALContext->Listener.Velocity[2];
 
     //Get source properties
-    SourceVolume   = ALSource->flGain;
-    MinVolume      = ALSource->flMinGain;
-    MaxVolume      = ALSource->flMaxGain;
-    Pitch          = ALSource->flPitch;
+    SourceVolume   = ALSource->Gain;
+    MinVolume      = ALSource->MinGain;
+    MaxVolume      = ALSource->MaxGain;
+    Pitch          = ALSource->Pitch;
     Resampler      = ALSource->Resampler;
-    Position[0]    = ALSource->vPosition[0];
-    Position[1]    = ALSource->vPosition[1];
-    Position[2]    = ALSource->vPosition[2];
-    Direction[0]   = ALSource->vOrientation[0];
-    Direction[1]   = ALSource->vOrientation[1];
-    Direction[2]   = ALSource->vOrientation[2];
-    Velocity[0]    = ALSource->vVelocity[0];
-    Velocity[1]    = ALSource->vVelocity[1];
-    Velocity[2]    = ALSource->vVelocity[2];
-    MinDist        = ALSource->flRefDistance;
-    MaxDist        = ALSource->flMaxDistance;
-    Rolloff        = ALSource->flRollOffFactor;
-    InnerAngle     = ALSource->flInnerAngle * ConeScale;
-    OuterAngle     = ALSource->flOuterAngle * ConeScale;
+    Position[0]    = ALSource->Position[0];
+    Position[1]    = ALSource->Position[1];
+    Position[2]    = ALSource->Position[2];
+    Direction[0]   = ALSource->Orientation[0];
+    Direction[1]   = ALSource->Orientation[1];
+    Direction[2]   = ALSource->Orientation[2];
+    Velocity[0]    = ALSource->Velocity[0];
+    Velocity[1]    = ALSource->Velocity[1];
+    Velocity[2]    = ALSource->Velocity[2];
+    MinDist        = ALSource->RefDistance;
+    MaxDist        = ALSource->MaxDistance;
+    Rolloff        = ALSource->RollOffFactor;
+    InnerAngle     = ALSource->InnerAngle * ConeScale;
+    OuterAngle     = ALSource->OuterAngle * ConeScale;
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
     DryGainHFAuto   = ALSource->DryGainHFAuto;
     WetGainAuto     = ALSource->WetGainAuto;
@@ -461,7 +461,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     //1. Translate Listener to origin (convert to head relative)
-    if(ALSource->bHeadRelative == AL_FALSE)
+    if(ALSource->HeadRelative == AL_FALSE)
     {
         /* Translate position */
         Position[0] -= ALContext->Listener.Position[0];
@@ -593,12 +593,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if(Angle >= InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
-        ConeVolume = lerp(1.0f, ALSource->flOuterGain, scale);
+        ConeVolume = lerp(1.0f, ALSource->OuterGain, scale);
         ConeHF = lerp(1.0f, ALSource->OuterGainHF, scale);
     }
     else if(Angle > OuterAngle)
     {
-        ConeVolume = ALSource->flOuterGain;
+        ConeVolume = ALSource->OuterGain;
         ConeHF = ALSource->OuterGainHF;
     }
     else

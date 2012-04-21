@@ -48,7 +48,7 @@ const struct EffectList EffectList[] = {
 
 AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 {
-    ALboolean bIsSupported = AL_FALSE;
+    ALboolean ret = AL_FALSE;
     ALCcontext *Context;
     const char *ptr;
     size_t len;
@@ -67,7 +67,7 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
             if(strncasecmp(ptr, extName, len) == 0 &&
                (ptr[len] == '\0' || isspace(ptr[len])))
             {
-                bIsSupported = AL_TRUE;
+                ret = AL_TRUE;
                 break;
             }
             if((ptr=strchr(ptr, ' ')) != NULL)
@@ -80,7 +80,7 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
     }
 
     ALCcontext_DecRef(Context);
-    return bIsSupported;
+    return ret;
 }
 
 

@@ -21,9 +21,6 @@ extern "C" {
  #define ALC_APIENTRY
 #endif
 
-#if defined(TARGET_OS_MAC) && TARGET_OS_MAC
- #pragma export on
-#endif
 
 /*
  * The ALCAPI, ALCAPIENTRY, and ALC_INVALID macros are deprecated, but are
@@ -268,10 +265,6 @@ typedef ALCboolean     (ALC_APIENTRY *LPALCCAPTURECLOSEDEVICE)( ALCdevice *devic
 typedef void           (ALC_APIENTRY *LPALCCAPTURESTART)( ALCdevice *device );
 typedef void           (ALC_APIENTRY *LPALCCAPTURESTOP)( ALCdevice *device );
 typedef void           (ALC_APIENTRY *LPALCCAPTURESAMPLES)( ALCdevice *device, ALCvoid *buffer, ALCsizei samples );
-
-#if defined(TARGET_OS_MAC) && TARGET_OS_MAC
- #pragma export off
-#endif
 
 #if defined(__cplusplus)
 }

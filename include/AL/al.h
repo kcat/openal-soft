@@ -21,9 +21,6 @@ extern "C" {
  #define AL_APIENTRY
 #endif
 
-#if defined(TARGET_OS_MAC) && TARGET_OS_MAC
- #pragma export on
-#endif
 
 /*
  * The OPENAL, ALAPI, ALAPIENTRY, AL_INVALID, AL_ILLEGAL_ENUM, and
@@ -706,10 +703,6 @@ typedef void           (AL_APIENTRY *LPALDOPPLERFACTOR)( ALfloat value );
 typedef void           (AL_APIENTRY *LPALDOPPLERVELOCITY)( ALfloat value );
 typedef void           (AL_APIENTRY *LPALSPEEDOFSOUND)( ALfloat value );
 typedef void           (AL_APIENTRY *LPALDISTANCEMODEL)( ALenum distanceModel );
-
-#if defined(TARGET_OS_MAC) && TARGET_OS_MAC
- #pragma export off
-#endif
 
 #if defined(__cplusplus)
 }  /* extern "C" */

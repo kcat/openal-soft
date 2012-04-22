@@ -511,7 +511,7 @@ void alc_oss_probe(enum DevProbe type)
         {
 #ifdef HAVE_STAT
             struct stat buf;
-            if(stat(oss_device, &buf) == 0)
+            if(stat(oss_driver, &buf) == 0)
 #endif
                 AppendAllDeviceList(oss_device);
         }

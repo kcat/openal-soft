@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <assert.h>
 
 #ifdef HAVE_FENV_H
 #include <fenv.h>
@@ -759,6 +760,52 @@ extern enum LogLevel LogLevel;
 
 
 extern ALint RTPrioLevel;
+
+/**
+ * Starts a try block. Must not be nested within another try block within the
+ * same function.
+ */
+#define al_try do {                                                           \
+    int _al_err=0;                                                            \
+_al_try_label:                                                                \
+    if(_al_err == 0)
+/**
+ * After a try or another catch block, runs the next block if the given value
+ * was thrown.
+ */
+#define al_catch(val) else if(_al_err == (val))
+/**
+ * After a try or catch block, runs the next block for any value thrown and not
+ * caught.
+ */
+#define al_catchany() else
+/** Marks the end of the final catch (or the try) block. */
+#define al_endtry } while(0)
+
+/**
+ * The given integer value is "thrown" so as to be caught by a catch block.
+ * Must be called in a try block within the same function. The value must not
+ * be 0.
+ */
+#define al_throw(e) do {                                                      \
+    _al_err = (e);                                                            \
+    assert(_al_err != 0);                                                     \
+    goto _al_try_label;                                                       \
+} while(0)
+/** Sets an AL error on the given context, before throwing the error code. */
+#define al_throwerr(ctx, err) do {                                            \
+    alSetError((ctx), (err));                                                 \
+    al_throw((err));                                                          \
+} while(0)
+
+/**
+ * Throws an AL_INVALID_VALUE error with the given ctx if the given condition
+ * is false.
+ */
+#define CHECK_VALUE(ctx, cond) do {                                           \
+    if(!(cond))                                                               \
+        al_throwerr((ctx), AL_INVALID_VALUE);                                 \
+} while(0)
 
 #ifdef __cplusplus
 }

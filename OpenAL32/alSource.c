@@ -47,33 +47,28 @@ const ALsizei ResamplerPrePadding[ResamplerMax] = {
 
 
 static ALvoid InitSourceParams(ALsource *Source);
-static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *Offsets, ALdouble updateLen);
+static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offsets, ALdouble updateLen);
 static ALint GetSampleOffset(ALsource *Source);
 
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 {
     ALCcontext *Context;
+    ALsizei    cur = 0;
 
     Context = GetContextRef();
     if(!Context) return;
 
-    if(n < 0 || IsBadWritePtr((void*)sources, n * sizeof(ALuint)))
-        alSetError(Context, AL_INVALID_VALUE);
-    else
+    al_try
     {
         ALenum err;
-        ALsizei i;
 
-        for(i = 0;i < n;i++)
+        CHECK_VALUE(Context, n >= 0);
+        for(cur = 0;cur < n;cur++)
         {
             ALsource *source = calloc(1, sizeof(ALsource));
             if(!source)
-            {
-                alSetError(Context, AL_OUT_OF_MEMORY);
-                alDeleteSources(i, sources);
-                break;
-            }
+                al_throwerr(Context, AL_OUT_OF_MEMORY);
             InitSourceParams(source);
 
             err = NewThunkEntry(&source->id);
@@ -85,14 +80,18 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
                 memset(source, 0, sizeof(ALsource));
                 free(source);
 
-                alSetError(Context, err);
-                alDeleteSources(i, sources);
-                break;
+                al_throwerr(Context, err);
             }
 
-            sources[i] = source->id;
+            sources[cur] = source->id;
         }
     }
+    al_catchany()
+    {
+        if(cur > 0)
+            alDeleteSources(cur, sources);
+    }
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -101,26 +100,23 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 {
     ALCcontext *Context;
-    ALsource *Source;
-    ALsizei i, j;
-    ALbufferlistitem *BufferList;
 
     Context = GetContextRef();
     if(!Context) return;
 
-    if(n < 0)
-        alSetError(Context, AL_INVALID_VALUE);
-    else
+    al_try
     {
+        ALbufferlistitem *BufferList;
+        ALsource *Source;
+        ALsizei i, j;
+
+        CHECK_VALUE(Context, n >= 0);
+
         /* Check that all Sources are valid */
         for(i = 0;i < n;i++)
         {
             if(LookupSource(Context, sources[i]) == NULL)
-            {
-                alSetError(Context, AL_INVALID_NAME);
-                n = 0;
-                break;
-            }
+                al_throwerr(Context, AL_INVALID_NAME);
         }
 
         for(i = 0;i < n;i++)
@@ -167,6 +163,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             free(Source);
         }
     }
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -196,178 +193,136 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
     Context = GetContextRef();
     if(!Context) return;
 
-    if((Source=LookupSource(Context, source)) != NULL)
+    al_try
     {
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
         switch(param)
         {
             case AL_PITCH:
-                if(value >= 0.0f)
-                {
-                    Source->Pitch = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f);
+
+                Source->Pitch = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_CONE_INNER_ANGLE:
-                if(value >= 0.0f && value <= 360.0f)
-                {
-                    Source->InnerAngle = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f && value <= 360.0f);
+
+                Source->InnerAngle = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_CONE_OUTER_ANGLE:
-                if(value >= 0.0f && value <= 360.0f)
-                {
-                    Source->OuterAngle = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f && value <= 360.0f);
+
+                Source->OuterAngle = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_GAIN:
-                if(value >= 0.0f)
-                {
-                    Source->Gain = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f);
+
+                Source->Gain = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_MAX_DISTANCE:
-                if(value >= 0.0f)
-                {
-                    Source->MaxDistance = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f);
+
+                Source->MaxDistance = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_ROLLOFF_FACTOR:
-                if(value >= 0.0f)
-                {
-                    Source->RollOffFactor = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f);
+
+                Source->RollOffFactor = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_REFERENCE_DISTANCE:
-                if(value >= 0.0f)
-                {
-                    Source->RefDistance = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f);
+
+                Source->RefDistance = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_MIN_GAIN:
-                if(value >= 0.0f && value <= 1.0f)
-                {
-                    Source->MinGain = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f && value <= 1.0f);
+
+                Source->MinGain = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_MAX_GAIN:
-                if(value >= 0.0f && value <= 1.0f)
-                {
-                    Source->MaxGain = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f && value <= 1.0f);
+
+                Source->MaxGain = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_CONE_OUTER_GAIN:
-                if(value >= 0.0f && value <= 1.0f)
-                {
-                    Source->OuterGain = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f && value <= 1.0f);
+
+                Source->OuterGain = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_CONE_OUTER_GAINHF:
-                if(value >= 0.0f && value <= 1.0f)
-                {
-                    Source->OuterGainHF = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f && value <= 1.0f);
+
+                Source->OuterGainHF = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_AIR_ABSORPTION_FACTOR:
-                if(value >= 0.0f && value <= 10.0f)
-                {
-                    Source->AirAbsorptionFactor = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f && value <= 10.0f);
+
+                Source->AirAbsorptionFactor = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_ROOM_ROLLOFF_FACTOR:
-                if(value >= 0.0f && value <= 10.0f)
-                {
-                    Source->RoomRolloffFactor = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f && value <= 10.0f);
+
+                Source->RoomRolloffFactor = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_DOPPLER_FACTOR:
-                if(value >= 0.0f && value <= 1.0f)
-                {
-                    Source->DopplerFactor = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value >= 0.0f && value <= 1.0f);
+
+                Source->DopplerFactor = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_SEC_OFFSET:
             case AL_SAMPLE_OFFSET:
             case AL_BYTE_OFFSET:
-                if(value >= 0.0f)
-                {
-                    LockContext(Context);
-                    Source->OffsetType = param;
-                    Source->Offset = value;
+                CHECK_VALUE(Context, value >= 0.0f);
 
-                    if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
-                       !Context->DeferUpdates)
+                LockContext(Context);
+                Source->OffsetType = param;
+                Source->Offset = value;
+
+                if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
+                   !Context->DeferUpdates)
+                {
+                    if(ApplyOffset(Source) == AL_FALSE)
                     {
-                        if(ApplyOffset(Source) == AL_FALSE)
-                            alSetError(Context, AL_INVALID_VALUE);
+                        UnlockContext(Context);
+                        al_throwerr(Context, AL_INVALID_VALUE);
                     }
-                    UnlockContext(Context);
                 }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                UnlockContext(Context);
                 break;
 
             default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -381,59 +336,50 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
     Context = GetContextRef();
     if(!Context) return;
 
-    if((Source=LookupSource(Context, source)) != NULL)
+    al_try
     {
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
         switch(param)
         {
             case AL_POSITION:
-                if(isfinite(value1) && isfinite(value2) && isfinite(value3))
-                {
-                    LockContext(Context);
-                    Source->Position[0] = value1;
-                    Source->Position[1] = value2;
-                    Source->Position[2] = value3;
-                    UnlockContext(Context);
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, isfinite(value1) && isfinite(value2) && isfinite(value3));
+
+                LockContext(Context);
+                Source->Position[0] = value1;
+                Source->Position[1] = value2;
+                Source->Position[2] = value3;
+                UnlockContext(Context);
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_VELOCITY:
-                if(isfinite(value1) && isfinite(value2) && isfinite(value3))
-                {
-                    LockContext(Context);
-                    Source->Velocity[0] = value1;
-                    Source->Velocity[1] = value2;
-                    Source->Velocity[2] = value3;
-                    UnlockContext(Context);
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, isfinite(value1) && isfinite(value2) && isfinite(value3));
+
+                LockContext(Context);
+                Source->Velocity[0] = value1;
+                Source->Velocity[1] = value2;
+                Source->Velocity[2] = value3;
+                UnlockContext(Context);
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_DIRECTION:
-                if(isfinite(value1) && isfinite(value2) && isfinite(value3))
-                {
-                    LockContext(Context);
-                    Source->Orientation[0] = value1;
-                    Source->Orientation[1] = value2;
-                    Source->Orientation[2] = value3;
-                    UnlockContext(Context);
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, isfinite(value1) && isfinite(value2) && isfinite(value3));
+
+                LockContext(Context);
+                Source->Orientation[0] = value1;
+                Source->Orientation[1] = value2;
+                Source->Orientation[2] = value3;
+                UnlockContext(Context);
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -477,22 +423,19 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
     Context = GetContextRef();
     if(!Context) return;
 
-    if(values)
+    al_try
     {
-        if(LookupSource(Context, source) != NULL)
+        if(LookupSource(Context, source) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, values);
+
+        switch(param)
         {
-            switch(param)
-            {
-                default:
-                    alSetError(Context, AL_INVALID_ENUM);
-                    break;
-            }
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
-        else
-            alSetError(Context, AL_INVALID_NAME);
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -500,10 +443,8 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
 
 AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
 {
-    ALCcontext       *Context;
-    ALsource         *Source;
-    ALfilter         *filter;
-    ALbufferlistitem *BufferListItem;
+    ALCcontext *Context;
+    ALsource   *Source;
 
     switch(param)
     {
@@ -519,204 +460,182 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
     Context = GetContextRef();
     if(!Context) return;
 
-    if((Source=LookupSource(Context, source)) != NULL)
+    al_try
     {
         ALCdevice *device = Context->Device;
+        ALbuffer  *buffer = NULL;
+        ALfilter  *filter = NULL;
+        ALbufferlistitem *oldlist;
 
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
         switch(param)
         {
             case AL_SOURCE_RELATIVE:
-                if(value == AL_FALSE || value == AL_TRUE)
-                {
-                    Source->HeadRelative = (ALboolean)value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value == AL_FALSE || value == AL_TRUE);
+
+                Source->HeadRelative = (ALboolean)value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_LOOPING:
-                if(value == AL_FALSE || value == AL_TRUE)
-                    Source->Looping = (ALboolean)value;
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value == AL_FALSE || value == AL_TRUE);
+
+                Source->Looping = (ALboolean)value;
                 break;
 
             case AL_BUFFER:
+                CHECK_VALUE(Context, value == 0 ||
+                                     (buffer=LookupBuffer(device, value)) != NULL);
+
                 LockContext(Context);
-                if(Source->state == AL_STOPPED || Source->state == AL_INITIAL)
+                if(!(Source->state == AL_STOPPED || Source->state == AL_INITIAL))
                 {
-                    ALbufferlistitem *oldlist;
-                    ALbuffer *buffer = NULL;
+                    UnlockContext(Context);
+                    al_throwerr(Context, AL_INVALID_OPERATION);
+                }
 
-                    if(value == 0 || (buffer=LookupBuffer(device, value)) != NULL)
-                    {
-                        Source->BuffersInQueue = 0;
-                        Source->BuffersPlayed = 0;
+                Source->BuffersInQueue = 0;
+                Source->BuffersPlayed = 0;
 
-                        if(buffer != NULL)
-                        {
-                            /* Source is now Static */
-                            Source->SourceType = AL_STATIC;
+                if(buffer != NULL)
+                {
+                    ALbufferlistitem *BufferListItem;
 
-                            /* Add the selected buffer to a one-item queue */
-                            BufferListItem = malloc(sizeof(ALbufferlistitem));
-                            BufferListItem->buffer = buffer;
-                            BufferListItem->next = NULL;
-                            BufferListItem->prev = NULL;
-                            IncrementRef(&buffer->ref);
+                    /* Source is now Static */
+                    Source->SourceType = AL_STATIC;
 
-                            oldlist = ExchangePtr((XchgPtr*)&Source->queue, BufferListItem);
-                            Source->BuffersInQueue = 1;
+                    /* Add the selected buffer to a one-item queue */
+                    BufferListItem = malloc(sizeof(ALbufferlistitem));
+                    BufferListItem->buffer = buffer;
+                    BufferListItem->next = NULL;
+                    BufferListItem->prev = NULL;
+                    IncrementRef(&buffer->ref);
 
-                            ReadLock(&buffer->lock);
-                            Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
-                            Source->SampleSize  = BytesFromFmt(buffer->FmtType);
-                            ReadUnlock(&buffer->lock);
-                            if(buffer->FmtChannels == FmtMono)
-                                Source->Update = CalcSourceParams;
-                            else
-                                Source->Update = CalcNonAttnSourceParams;
-                            Source->NeedsUpdate = AL_TRUE;
-                        }
-                        else
-                        {
-                            /* Source is now Undetermined */
-                            Source->SourceType = AL_UNDETERMINED;
-                            oldlist = ExchangePtr((XchgPtr*)&Source->queue, NULL);
-                        }
+                    oldlist = ExchangePtr((XchgPtr*)&Source->queue, BufferListItem);
+                    Source->BuffersInQueue = 1;
 
-                        /* Delete all elements in the previous queue */
-                        while(oldlist != NULL)
-                        {
-                            BufferListItem = oldlist;
-                            oldlist = BufferListItem->next;
-
-                            if(BufferListItem->buffer)
-                                DecrementRef(&BufferListItem->buffer->ref);
-                            free(BufferListItem);
-                        }
-                    }
+                    ReadLock(&buffer->lock);
+                    Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
+                    Source->SampleSize  = BytesFromFmt(buffer->FmtType);
+                    ReadUnlock(&buffer->lock);
+                    if(buffer->FmtChannels == FmtMono)
+                        Source->Update = CalcSourceParams;
                     else
-                        alSetError(Context, AL_INVALID_VALUE);
+                        Source->Update = CalcNonAttnSourceParams;
+                    Source->NeedsUpdate = AL_TRUE;
                 }
                 else
-                    alSetError(Context, AL_INVALID_OPERATION);
+                {
+                    /* Source is now Undetermined */
+                    Source->SourceType = AL_UNDETERMINED;
+                    oldlist = ExchangePtr((XchgPtr*)&Source->queue, NULL);
+                }
+
+                /* Delete all elements in the previous queue */
+                while(oldlist != NULL)
+                {
+                    ALbufferlistitem *temp = oldlist;
+                    oldlist = temp->next;
+
+                    if(temp->buffer)
+                        DecrementRef(&temp->buffer->ref);
+                    free(temp);
+                }
                 UnlockContext(Context);
                 break;
 
             case AL_SOURCE_STATE:
                 /* Query only */
-                alSetError(Context, AL_INVALID_OPERATION);
-                break;
+                al_throwerr(Context, AL_INVALID_OPERATION);
 
             case AL_SEC_OFFSET:
             case AL_SAMPLE_OFFSET:
             case AL_BYTE_OFFSET:
-                if(value >= 0)
-                {
-                    LockContext(Context);
-                    Source->OffsetType = param;
-                    Source->Offset = value;
+                CHECK_VALUE(Context, value >= 0);
 
-                    if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
-                       !Context->DeferUpdates)
+                LockContext(Context);
+                Source->OffsetType = param;
+                Source->Offset = value;
+
+                if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
+                   !Context->DeferUpdates)
+                {
+                    if(ApplyOffset(Source) == AL_FALSE)
                     {
-                        if(ApplyOffset(Source) == AL_FALSE)
-                            alSetError(Context, AL_INVALID_VALUE);
+                        UnlockContext(Context);
+                        al_throwerr(Context, AL_INVALID_VALUE);
                     }
-                    UnlockContext(Context);
                 }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                UnlockContext(Context);
                 break;
 
             case AL_DIRECT_FILTER:
-                filter = NULL;
-                if(value == 0 || (filter=LookupFilter(Context->Device, value)) != NULL)
+                CHECK_VALUE(Context, value == 0 ||
+                                     (filter=LookupFilter(device, value)) != NULL);
+
+                LockContext(Context);
+                if(!filter)
                 {
-                    LockContext(Context);
-                    if(!filter)
-                    {
-                        Source->DirectGain = 1.0f;
-                        Source->DirectGainHF = 1.0f;
-                    }
-                    else
-                    {
-                        Source->DirectGain = filter->Gain;
-                        Source->DirectGainHF = filter->GainHF;
-                    }
-                    UnlockContext(Context);
-                    Source->NeedsUpdate = AL_TRUE;
+                    Source->DirectGain = 1.0f;
+                    Source->DirectGainHF = 1.0f;
                 }
                 else
-                    alSetError(Context, AL_INVALID_VALUE);
+                {
+                    Source->DirectGain = filter->Gain;
+                    Source->DirectGainHF = filter->GainHF;
+                }
+                UnlockContext(Context);
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_DIRECT_FILTER_GAINHF_AUTO:
-                if(value == AL_TRUE || value == AL_FALSE)
-                {
-                    Source->DryGainHFAuto = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value == AL_FALSE || value == AL_TRUE);
+
+                Source->DryGainHFAuto = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
-                if(value == AL_TRUE || value == AL_FALSE)
-                {
-                    Source->WetGainAuto = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value == AL_FALSE || value == AL_TRUE);
+
+                Source->WetGainAuto = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
-                if(value == AL_TRUE || value == AL_FALSE)
-                {
-                    Source->WetGainHFAuto = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value == AL_FALSE || value == AL_TRUE);
+
+                Source->WetGainHFAuto = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_DIRECT_CHANNELS_SOFT:
-                if(value == AL_TRUE || value == AL_FALSE)
-                {
-                    Source->DirectChannels = value;
-                    Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value == AL_FALSE || value == AL_TRUE);
+
+                Source->DirectChannels = value;
+                Source->NeedsUpdate = AL_TRUE;
                 break;
 
             case AL_DISTANCE_MODEL:
-                if(value == AL_NONE ||
-                   value == AL_INVERSE_DISTANCE ||
-                   value == AL_INVERSE_DISTANCE_CLAMPED ||
-                   value == AL_LINEAR_DISTANCE ||
-                   value == AL_LINEAR_DISTANCE_CLAMPED ||
-                   value == AL_EXPONENT_DISTANCE ||
-                   value == AL_EXPONENT_DISTANCE_CLAMPED)
-                {
-                    Source->DistanceModel = value;
-                    if(Context->SourceDistanceModel)
-                        Source->NeedsUpdate = AL_TRUE;
-                }
-                else
-                    alSetError(Context, AL_INVALID_VALUE);
+                CHECK_VALUE(Context, value == AL_NONE ||
+                                     value == AL_INVERSE_DISTANCE ||
+                                     value == AL_INVERSE_DISTANCE_CLAMPED ||
+                                     value == AL_LINEAR_DISTANCE ||
+                                     value == AL_LINEAR_DISTANCE_CLAMPED ||
+                                     value == AL_EXPONENT_DISTANCE ||
+                                     value == AL_EXPONENT_DISTANCE_CLAMPED);
+
+                Source->DistanceModel = value;
+                if(Context->SourceDistanceModel)
+                    Source->NeedsUpdate = AL_TRUE;
                 break;
 
             default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -726,8 +645,6 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
 {
     ALCcontext   *Context;
     ALsource     *Source;
-    ALeffectslot *EffectSlot;
-    ALfilter     *Filter;
 
     switch(param)
     {
@@ -741,41 +658,43 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
     Context = GetContextRef();
     if(!Context) return;
 
-    if((Source=LookupSource(Context, source)) != NULL)
+    al_try
     {
         ALCdevice *device = Context->Device;
+        ALeffectslot *slot = NULL;
+        ALfilter *filter = NULL;
 
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
         switch(param)
         {
             case AL_AUXILIARY_SEND_FILTER:
-                EffectSlot = NULL;
-                Filter = NULL;
                 LockContext(Context);
-                if((ALuint)value2 < device->NumAuxSends &&
-                   (value1 == 0 || (EffectSlot=LookupEffectSlot(Context, value1)) != NULL) &&
-                   (value3 == 0 || (Filter=LookupFilter(device, value3)) != NULL))
+                if(!((ALuint)value2 < device->NumAuxSends &&
+                     (value1 == 0 || (slot=LookupEffectSlot(Context, value1)) != NULL) &&
+                     (value3 == 0 || (filter=LookupFilter(device, value3)) != NULL)))
                 {
-                    /* Release refcount on the previous slot, and add one for
-                     * the new slot */
-                    if(EffectSlot) IncrementRef(&EffectSlot->ref);
-                    EffectSlot = ExchangePtr((XchgPtr*)&Source->Send[value2].Slot, EffectSlot);
-                    if(EffectSlot) DecrementRef(&EffectSlot->ref);
+                    UnlockContext(Context);
+                    al_throwerr(Context, AL_INVALID_VALUE);
+                }
 
-                    if(!Filter)
-                    {
-                        /* Disable filter */
-                        Source->Send[value2].WetGain = 1.0f;
-                        Source->Send[value2].WetGainHF = 1.0f;
-                    }
-                    else
-                    {
-                        Source->Send[value2].WetGain = Filter->Gain;
-                        Source->Send[value2].WetGainHF = Filter->GainHF;
-                    }
-                    Source->NeedsUpdate = AL_TRUE;
+                /* Add refcount on the new slot, and release the previous slot */
+                if(slot) IncrementRef(&slot->ref);
+                slot = ExchangePtr((XchgPtr*)&Source->Send[value2].Slot, slot);
+                if(slot) DecrementRef(&slot->ref);
+
+                if(!filter)
+                {
+                    /* Disable filter */
+                    Source->Send[value2].WetGain = 1.0f;
+                    Source->Send[value2].WetGainHF = 1.0f;
                 }
                 else
-                    alSetError(Context, AL_INVALID_VALUE);
+                {
+                    Source->Send[value2].WetGain = filter->Gain;
+                    Source->Send[value2].WetGainHF = filter->GainHF;
+                }
+                Source->NeedsUpdate = AL_TRUE;
                 UnlockContext(Context);
                 break;
 
@@ -784,8 +703,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
                 break;
         }
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -832,22 +750,18 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
     Context = GetContextRef();
     if(!Context) return;
 
-    if(values)
+    al_try
     {
-        if(LookupSource(Context, source) != NULL)
+        if(LookupSource(Context, source) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, values);
+        switch(param)
         {
-            switch(param)
-            {
-                default:
-                    alSetError(Context, AL_INVALID_ENUM);
-                    break;
-            }
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
-        else
-            alSetError(Context, AL_INVALID_NAME);
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -863,89 +777,85 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
     Context = GetContextRef();
     if(!Context) return;
 
-    if(value)
+    al_try
     {
-        if((Source=LookupSource(Context, source)) != NULL)
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, value);
+        switch(param)
         {
-            switch(param)
-            {
-                case AL_PITCH:
-                    *value = Source->Pitch;
-                    break;
+            case AL_PITCH:
+                *value = Source->Pitch;
+                break;
 
-                case AL_GAIN:
-                    *value = Source->Gain;
-                    break;
+            case AL_GAIN:
+                *value = Source->Gain;
+                break;
 
-                case AL_MIN_GAIN:
-                    *value = Source->MinGain;
-                    break;
+            case AL_MIN_GAIN:
+                *value = Source->MinGain;
+                break;
 
-                case AL_MAX_GAIN:
-                    *value = Source->MaxGain;
-                    break;
+            case AL_MAX_GAIN:
+                *value = Source->MaxGain;
+                break;
 
-                case AL_MAX_DISTANCE:
-                    *value = Source->MaxDistance;
-                    break;
+            case AL_MAX_DISTANCE:
+                *value = Source->MaxDistance;
+                break;
 
-                case AL_ROLLOFF_FACTOR:
-                    *value = Source->RollOffFactor;
-                    break;
+            case AL_ROLLOFF_FACTOR:
+                *value = Source->RollOffFactor;
+                break;
 
-                case AL_CONE_OUTER_GAIN:
-                    *value = Source->OuterGain;
-                    break;
+            case AL_CONE_OUTER_GAIN:
+                *value = Source->OuterGain;
+                break;
 
-                case AL_CONE_OUTER_GAINHF:
-                    *value = Source->OuterGainHF;
-                    break;
+            case AL_CONE_OUTER_GAINHF:
+                *value = Source->OuterGainHF;
+                break;
 
-                case AL_SEC_OFFSET:
-                case AL_SAMPLE_OFFSET:
-                case AL_BYTE_OFFSET:
-                    LockContext(Context);
-                    updateLen = (ALdouble)Context->Device->UpdateSize /
-                                Context->Device->Frequency;
-                    GetSourceOffset(Source, param, offsets, updateLen);
-                    UnlockContext(Context);
-                    *value = (ALfloat)offsets[0];
-                    break;
+            case AL_SEC_OFFSET:
+            case AL_SAMPLE_OFFSET:
+            case AL_BYTE_OFFSET:
+                LockContext(Context);
+                updateLen = (ALdouble)Context->Device->UpdateSize /
+                            Context->Device->Frequency;
+                GetSourceOffsets(Source, param, offsets, updateLen);
+                UnlockContext(Context);
+                *value = (ALfloat)offsets[0];
+                break;
 
-                case AL_CONE_INNER_ANGLE:
-                    *value = Source->InnerAngle;
-                    break;
+            case AL_CONE_INNER_ANGLE:
+                *value = Source->InnerAngle;
+                break;
 
-                case AL_CONE_OUTER_ANGLE:
-                    *value = Source->OuterAngle;
-                    break;
+            case AL_CONE_OUTER_ANGLE:
+                *value = Source->OuterAngle;
+                break;
 
-                case AL_REFERENCE_DISTANCE:
-                    *value = Source->RefDistance;
-                    break;
+            case AL_REFERENCE_DISTANCE:
+                *value = Source->RefDistance;
+                break;
 
-                case AL_AIR_ABSORPTION_FACTOR:
-                    *value = Source->AirAbsorptionFactor;
-                    break;
+            case AL_AIR_ABSORPTION_FACTOR:
+                *value = Source->AirAbsorptionFactor;
+                break;
 
-                case AL_ROOM_ROLLOFF_FACTOR:
-                    *value = Source->RoomRolloffFactor;
-                    break;
+            case AL_ROOM_ROLLOFF_FACTOR:
+                *value = Source->RoomRolloffFactor;
+                break;
 
-                case AL_DOPPLER_FACTOR:
-                    *value = Source->DopplerFactor;
-                    break;
+            case AL_DOPPLER_FACTOR:
+                *value = Source->DopplerFactor;
+                break;
 
-                default:
-                    alSetError(Context, AL_INVALID_ENUM);
-                    break;
-            }
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
-        else
-            alSetError(Context, AL_INVALID_NAME);
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -959,46 +869,42 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
     Context = GetContextRef();
     if(!Context) return;
 
-    if(value1 && value2 && value3)
+    al_try
     {
-        if((Source=LookupSource(Context, source)) != NULL)
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, value1 && value2 && value3);
+        switch(param)
         {
-            switch(param)
-            {
-                case AL_POSITION:
-                    LockContext(Context);
-                    *value1 = Source->Position[0];
-                    *value2 = Source->Position[1];
-                    *value3 = Source->Position[2];
-                    UnlockContext(Context);
-                    break;
+            case AL_POSITION:
+                LockContext(Context);
+                *value1 = Source->Position[0];
+                *value2 = Source->Position[1];
+                *value3 = Source->Position[2];
+                UnlockContext(Context);
+                break;
 
-                case AL_VELOCITY:
-                    LockContext(Context);
-                    *value1 = Source->Velocity[0];
-                    *value2 = Source->Velocity[1];
-                    *value3 = Source->Velocity[2];
-                    UnlockContext(Context);
-                    break;
+            case AL_VELOCITY:
+                LockContext(Context);
+                *value1 = Source->Velocity[0];
+                *value2 = Source->Velocity[1];
+                *value3 = Source->Velocity[2];
+                UnlockContext(Context);
+                break;
 
-                case AL_DIRECTION:
-                    LockContext(Context);
-                    *value1 = Source->Orientation[0];
-                    *value2 = Source->Orientation[1];
-                    *value3 = Source->Orientation[2];
-                    UnlockContext(Context);
-                    break;
+            case AL_DIRECTION:
+                LockContext(Context);
+                *value1 = Source->Orientation[0];
+                *value2 = Source->Orientation[1];
+                *value3 = Source->Orientation[2];
+                UnlockContext(Context);
+                break;
 
-                default:
-                    alSetError(Context, AL_INVALID_ENUM);
-                    break;
-            }
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
-        else
-            alSetError(Context, AL_INVALID_NAME);
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -1043,33 +949,29 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
     Context = GetContextRef();
     if(!Context) return;
 
-    if(values)
+    al_try
     {
-        if((Source=LookupSource(Context, source)) != NULL)
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, values);
+        switch(param)
         {
-            switch(param)
-            {
-                case AL_SAMPLE_RW_OFFSETS_SOFT:
-                case AL_BYTE_RW_OFFSETS_SOFT:
-                    LockContext(Context);
-                    updateLen = (ALdouble)Context->Device->UpdateSize /
-                                Context->Device->Frequency;
-                    GetSourceOffset(Source, param, offsets, updateLen);
-                    UnlockContext(Context);
-                    values[0] = (ALfloat)offsets[0];
-                    values[1] = (ALfloat)offsets[1];
-                    break;
+            case AL_SAMPLE_RW_OFFSETS_SOFT:
+            case AL_BYTE_RW_OFFSETS_SOFT:
+                LockContext(Context);
+                updateLen = (ALdouble)Context->Device->UpdateSize /
+                            Context->Device->Frequency;
+                GetSourceOffsets(Source, param, offsets, updateLen);
+                UnlockContext(Context);
+                values[0] = (ALfloat)offsets[0];
+                values[1] = (ALfloat)offsets[1];
+                break;
 
-                default:
-                    alSetError(Context, AL_INVALID_ENUM);
-                    break;
-            }
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
-        else
-            alSetError(Context, AL_INVALID_NAME);
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -1086,127 +988,123 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value
     Context = GetContextRef();
     if(!Context) return;
 
-    if(value)
+    al_try
     {
-        if((Source=LookupSource(Context, source)) != NULL)
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, value);
+        switch(param)
         {
-            switch(param)
-            {
-                case AL_MAX_DISTANCE:
-                    *value = (ALint)Source->MaxDistance;
-                    break;
+            case AL_MAX_DISTANCE:
+                *value = (ALint)Source->MaxDistance;
+                break;
 
-                case AL_ROLLOFF_FACTOR:
-                    *value = (ALint)Source->RollOffFactor;
-                    break;
+            case AL_ROLLOFF_FACTOR:
+                *value = (ALint)Source->RollOffFactor;
+                break;
 
-                case AL_REFERENCE_DISTANCE:
-                    *value = (ALint)Source->RefDistance;
-                    break;
+            case AL_REFERENCE_DISTANCE:
+                *value = (ALint)Source->RefDistance;
+                break;
 
-                case AL_SOURCE_RELATIVE:
-                    *value = Source->HeadRelative;
-                    break;
+            case AL_SOURCE_RELATIVE:
+                *value = Source->HeadRelative;
+                break;
 
-                case AL_CONE_INNER_ANGLE:
-                    *value = (ALint)Source->InnerAngle;
-                    break;
+            case AL_CONE_INNER_ANGLE:
+                *value = (ALint)Source->InnerAngle;
+                break;
 
-                case AL_CONE_OUTER_ANGLE:
-                    *value = (ALint)Source->OuterAngle;
-                    break;
+            case AL_CONE_OUTER_ANGLE:
+                *value = (ALint)Source->OuterAngle;
+                break;
 
-                case AL_LOOPING:
-                    *value = Source->Looping;
-                    break;
+            case AL_LOOPING:
+                *value = Source->Looping;
+                break;
 
-                case AL_BUFFER:
-                    LockContext(Context);
-                    BufferList = Source->queue;
-                    if(Source->SourceType != AL_STATIC)
+            case AL_BUFFER:
+                LockContext(Context);
+                BufferList = Source->queue;
+                if(Source->SourceType != AL_STATIC)
+                {
+                    ALuint i = Source->BuffersPlayed;
+                    while(i > 0)
                     {
-                        ALuint i = Source->BuffersPlayed;
-                        while(i > 0)
-                        {
-                            BufferList = BufferList->next;
-                            i--;
-                        }
+                        BufferList = BufferList->next;
+                        i--;
                     }
-                    *value = ((BufferList && BufferList->buffer) ?
-                              BufferList->buffer->id : 0);
-                    UnlockContext(Context);
-                    break;
+                }
+                *value = ((BufferList && BufferList->buffer) ?
+                          BufferList->buffer->id : 0);
+                UnlockContext(Context);
+                break;
 
-                case AL_SOURCE_STATE:
-                    *value = Source->state;
-                    break;
+            case AL_SOURCE_STATE:
+                *value = Source->state;
+                break;
 
-                case AL_BUFFERS_QUEUED:
-                    *value = Source->BuffersInQueue;
-                    break;
+            case AL_BUFFERS_QUEUED:
+                *value = Source->BuffersInQueue;
+                break;
 
-                case AL_BUFFERS_PROCESSED:
-                    LockContext(Context);
-                    if(Source->Looping || Source->SourceType != AL_STREAMING)
-                    {
-                        /* Buffers on a looping source are in a perpetual state
-                         * of PENDING, so don't report any as PROCESSED */
-                        *value = 0;
-                    }
-                    else
-                        *value = Source->BuffersPlayed;
-                    UnlockContext(Context);
-                    break;
+            case AL_BUFFERS_PROCESSED:
+                LockContext(Context);
+                if(Source->Looping || Source->SourceType != AL_STREAMING)
+                {
+                    /* Buffers on a looping source are in a perpetual state of
+                     * PENDING, so don't report any as PROCESSED */
+                    *value = 0;
+                }
+                else
+                    *value = Source->BuffersPlayed;
+                UnlockContext(Context);
+                break;
 
-                case AL_SOURCE_TYPE:
-                    *value = Source->SourceType;
-                    break;
+            case AL_SOURCE_TYPE:
+                *value = Source->SourceType;
+                break;
 
-                case AL_SEC_OFFSET:
-                case AL_SAMPLE_OFFSET:
-                case AL_BYTE_OFFSET:
-                    LockContext(Context);
-                    updateLen = (ALdouble)Context->Device->UpdateSize /
-                                Context->Device->Frequency;
-                    GetSourceOffset(Source, param, offsets, updateLen);
-                    UnlockContext(Context);
-                    *value = (ALint)offsets[0];
-                    break;
+            case AL_SEC_OFFSET:
+            case AL_SAMPLE_OFFSET:
+            case AL_BYTE_OFFSET:
+                LockContext(Context);
+                updateLen = (ALdouble)Context->Device->UpdateSize /
+                            Context->Device->Frequency;
+                GetSourceOffsets(Source, param, offsets, updateLen);
+                UnlockContext(Context);
+                *value = (ALint)offsets[0];
+                break;
 
-                case AL_DIRECT_FILTER_GAINHF_AUTO:
-                    *value = Source->DryGainHFAuto;
-                    break;
+            case AL_DIRECT_FILTER_GAINHF_AUTO:
+                *value = Source->DryGainHFAuto;
+                break;
 
-                case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
-                    *value = Source->WetGainAuto;
-                    break;
+            case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
+                *value = Source->WetGainAuto;
+                break;
 
-                case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
-                    *value = Source->WetGainHFAuto;
-                    break;
+            case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
+                *value = Source->WetGainHFAuto;
+                break;
 
-                case AL_DOPPLER_FACTOR:
-                    *value = (ALint)Source->DopplerFactor;
-                    break;
+            case AL_DOPPLER_FACTOR:
+                *value = (ALint)Source->DopplerFactor;
+                break;
 
-                case AL_DIRECT_CHANNELS_SOFT:
-                    *value = Source->DirectChannels;
-                    break;
+            case AL_DIRECT_CHANNELS_SOFT:
+                *value = Source->DirectChannels;
+                break;
 
-                case AL_DISTANCE_MODEL:
-                    *value = Source->DistanceModel;
-                    break;
+            case AL_DISTANCE_MODEL:
+                *value = Source->DistanceModel;
+                break;
 
-                default:
-                    alSetError(Context, AL_INVALID_ENUM);
-                    break;
-            }
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
-        else
-            alSetError(Context, AL_INVALID_NAME);
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -1220,46 +1118,42 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
     Context = GetContextRef();
     if(!Context) return;
 
-    if(value1 && value2 && value3)
+    al_try
     {
-        if((Source=LookupSource(Context, source)) != NULL)
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, value1 && value2 && value3);
+        switch(param)
         {
-            switch(param)
-            {
-                case AL_POSITION:
-                    LockContext(Context);
-                    *value1 = (ALint)Source->Position[0];
-                    *value2 = (ALint)Source->Position[1];
-                    *value3 = (ALint)Source->Position[2];
-                    UnlockContext(Context);
-                    break;
+            case AL_POSITION:
+                LockContext(Context);
+                *value1 = (ALint)Source->Position[0];
+                *value2 = (ALint)Source->Position[1];
+                *value3 = (ALint)Source->Position[2];
+                UnlockContext(Context);
+                break;
 
-                case AL_VELOCITY:
-                    LockContext(Context);
-                    *value1 = (ALint)Source->Velocity[0];
-                    *value2 = (ALint)Source->Velocity[1];
-                    *value3 = (ALint)Source->Velocity[2];
-                    UnlockContext(Context);
-                    break;
+            case AL_VELOCITY:
+                LockContext(Context);
+                *value1 = (ALint)Source->Velocity[0];
+                *value2 = (ALint)Source->Velocity[1];
+                *value3 = (ALint)Source->Velocity[2];
+                UnlockContext(Context);
+                break;
 
-                case AL_DIRECTION:
-                    LockContext(Context);
-                    *value1 = (ALint)Source->Orientation[0];
-                    *value2 = (ALint)Source->Orientation[1];
-                    *value3 = (ALint)Source->Orientation[2];
-                    UnlockContext(Context);
-                    break;
+            case AL_DIRECTION:
+                LockContext(Context);
+                *value1 = (ALint)Source->Orientation[0];
+                *value2 = (ALint)Source->Orientation[1];
+                *value3 = (ALint)Source->Orientation[2];
+                UnlockContext(Context);
+                break;
 
-                default:
-                    alSetError(Context, AL_INVALID_ENUM);
-                    break;
-            }
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
-        else
-            alSetError(Context, AL_INVALID_NAME);
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -1309,33 +1203,29 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
     Context = GetContextRef();
     if(!Context) return;
 
-    if(values)
+    al_try
     {
-        if((Source=LookupSource(Context, source)) != NULL)
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, values);
+        switch(param)
         {
-            switch(param)
-            {
-                case AL_SAMPLE_RW_OFFSETS_SOFT:
-                case AL_BYTE_RW_OFFSETS_SOFT:
-                    LockContext(Context);
-                    updateLen = (ALdouble)Context->Device->UpdateSize /
-                                Context->Device->Frequency;
-                    GetSourceOffset(Source, param, offsets, updateLen);
-                    UnlockContext(Context);
-                    values[0] = (ALint)offsets[0];
-                    values[1] = (ALint)offsets[1];
-                    break;
+            case AL_SAMPLE_RW_OFFSETS_SOFT:
+            case AL_BYTE_RW_OFFSETS_SOFT:
+                LockContext(Context);
+                updateLen = (ALdouble)Context->Device->UpdateSize /
+                            Context->Device->Frequency;
+                GetSourceOffsets(Source, param, offsets, updateLen);
+                UnlockContext(Context);
+                values[0] = (ALint)offsets[0];
+                values[1] = (ALint)offsets[1];
+                break;
 
-                default:
-                    alSetError(Context, AL_INVALID_ENUM);
-                    break;
-            }
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
-        else
-            alSetError(Context, AL_INVALID_NAME);
     }
-    else
-        alSetError(Context, AL_INVALID_VALUE);
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -1354,56 +1244,45 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     Context = GetContextRef();
     if(!Context) return;
 
-    if(n < 0)
+    al_try
     {
-        alSetError(Context, AL_INVALID_VALUE);
-        goto done;
-    }
-    if(n > 0 && !sources)
-    {
-        alSetError(Context, AL_INVALID_VALUE);
-        goto done;
-    }
-
-    for(i = 0;i < n;i++)
-    {
-        if(!LookupSource(Context, sources[i]))
+        CHECK_VALUE(Context, n >= 0);
+        for(i = 0;i < n;i++)
         {
-            alSetError(Context, AL_INVALID_NAME);
-            goto done;
-        }
-    }
-
-    LockContext(Context);
-    while(Context->MaxActiveSources-Context->ActiveSourceCount < n)
-    {
-        void *temp = NULL;
-        ALsizei newcount;
-
-        newcount = Context->MaxActiveSources << 1;
-        if(newcount > 0)
-            temp = realloc(Context->ActiveSources,
-                           sizeof(*Context->ActiveSources) * newcount);
-        if(!temp)
-        {
-            UnlockContext(Context);
-            alSetError(Context, AL_OUT_OF_MEMORY);
-            goto done;
+            if(!LookupSource(Context, sources[i]))
+                al_throwerr(Context, AL_INVALID_NAME);
         }
 
-        Context->ActiveSources = temp;
-        Context->MaxActiveSources = newcount;
-    }
+        LockContext(Context);
+        while(Context->MaxActiveSources-Context->ActiveSourceCount < n)
+        {
+            void *temp = NULL;
+            ALsizei newcount;
 
-    for(i = 0;i < n;i++)
-    {
-        Source = LookupSource(Context, sources[i]);
-        if(Context->DeferUpdates) Source->new_state = AL_PLAYING;
-        else SetSourceState(Source, Context, AL_PLAYING);
-    }
-    UnlockContext(Context);
+            newcount = Context->MaxActiveSources << 1;
+            if(newcount > 0)
+                temp = realloc(Context->ActiveSources,
+                               sizeof(*Context->ActiveSources) * newcount);
+            if(!temp)
+            {
+                UnlockContext(Context);
+                al_throwerr(Context, AL_OUT_OF_MEMORY);
+            }
 
-done:
+            Context->ActiveSources = temp;
+            Context->MaxActiveSources = newcount;
+        }
+
+        for(i = 0;i < n;i++)
+        {
+            Source = LookupSource(Context, sources[i]);
+            if(Context->DeferUpdates) Source->new_state = AL_PLAYING;
+            else SetSourceState(Source, Context, AL_PLAYING);
+        }
+        UnlockContext(Context);
+    }
+    al_endtry;
+
     ALCcontext_DecRef(Context);
 }
 
@@ -1420,36 +1299,26 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     Context = GetContextRef();
     if(!Context) return;
 
-    if(n < 0)
+    al_try
     {
-        alSetError(Context, AL_INVALID_VALUE);
-        goto done;
-    }
-    if(n > 0 && !sources)
-    {
-        alSetError(Context, AL_INVALID_VALUE);
-        goto done;
-    }
-
-    for(i = 0;i < n;i++)
-    {
-        if(!LookupSource(Context, sources[i]))
+        CHECK_VALUE(Context, n >= 0);
+        for(i = 0;i < n;i++)
         {
-            alSetError(Context, AL_INVALID_NAME);
-            goto done;
+            if(!LookupSource(Context, sources[i]))
+                al_throwerr(Context, AL_INVALID_NAME);
         }
-    }
 
-    LockContext(Context);
-    for(i = 0;i < n;i++)
-    {
-        Source = LookupSource(Context, sources[i]);
-        if(Context->DeferUpdates) Source->new_state = AL_PAUSED;
-        else SetSourceState(Source, Context, AL_PAUSED);
+        LockContext(Context);
+        for(i = 0;i < n;i++)
+        {
+            Source = LookupSource(Context, sources[i]);
+            if(Context->DeferUpdates) Source->new_state = AL_PAUSED;
+            else SetSourceState(Source, Context, AL_PAUSED);
+        }
+        UnlockContext(Context);
     }
-    UnlockContext(Context);
+    al_endtry;
 
-done:
     ALCcontext_DecRef(Context);
 }
 
@@ -1466,36 +1335,26 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     Context = GetContextRef();
     if(!Context) return;
 
-    if(n < 0)
+    al_try
     {
-        alSetError(Context, AL_INVALID_VALUE);
-        goto done;
-    }
-    if(n > 0 && !sources)
-    {
-        alSetError(Context, AL_INVALID_VALUE);
-        goto done;
-    }
-
-    for(i = 0;i < n;i++)
-    {
-        if(!LookupSource(Context, sources[i]))
+        CHECK_VALUE(Context, n >= 0);
+        for(i = 0;i < n;i++)
         {
-            alSetError(Context, AL_INVALID_NAME);
-            goto done;
+            if(!LookupSource(Context, sources[i]))
+                al_throwerr(Context, AL_INVALID_NAME);
         }
-    }
 
-    LockContext(Context);
-    for(i = 0;i < n;i++)
-    {
-        Source = LookupSource(Context, sources[i]);
-        Source->new_state = AL_NONE;
-        SetSourceState(Source, Context, AL_STOPPED);
+        LockContext(Context);
+        for(i = 0;i < n;i++)
+        {
+            Source = LookupSource(Context, sources[i]);
+            Source->new_state = AL_NONE;
+            SetSourceState(Source, Context, AL_STOPPED);
+        }
+        UnlockContext(Context);
     }
-    UnlockContext(Context);
+    al_endtry;
 
-done:
     ALCcontext_DecRef(Context);
 }
 
@@ -1512,241 +1371,218 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     Context = GetContextRef();
     if(!Context) return;
 
-    if(n < 0)
+    al_try
     {
-        alSetError(Context, AL_INVALID_VALUE);
-        goto done;
-    }
-    if(n > 0 && !sources)
-    {
-        alSetError(Context, AL_INVALID_VALUE);
-        goto done;
-    }
-
-    // Check all the Sources are valid
-    for(i = 0;i < n;i++)
-    {
-        if(!LookupSource(Context, sources[i]))
+        CHECK_VALUE(Context, n >= 0);
+        for(i = 0;i < n;i++)
         {
-            alSetError(Context, AL_INVALID_NAME);
-            goto done;
+            if(!LookupSource(Context, sources[i]))
+                al_throwerr(Context, AL_INVALID_NAME);
         }
-    }
 
-    LockContext(Context);
-    for(i = 0;i < n;i++)
-    {
-        Source = LookupSource(Context, sources[i]);
-        Source->new_state = AL_NONE;
-        SetSourceState(Source, Context, AL_INITIAL);
+        LockContext(Context);
+        for(i = 0;i < n;i++)
+        {
+            Source = LookupSource(Context, sources[i]);
+            Source->new_state = AL_NONE;
+            SetSourceState(Source, Context, AL_INITIAL);
+        }
+        UnlockContext(Context);
     }
-    UnlockContext(Context);
+    al_endtry;
 
-done:
     ALCcontext_DecRef(Context);
 }
 
 
-AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei n, const ALuint *buffers)
+AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const ALuint *buffers)
 {
     ALCcontext *Context;
-    ALCdevice  *Device;
     ALsource   *Source;
     ALsizei    i;
     ALbufferlistitem *BufferListStart = NULL;
     ALbufferlistitem *BufferList;
     ALbuffer *BufferFmt;
 
-    if(n == 0)
+    if(nb == 0)
         return;
 
     Context = GetContextRef();
     if(!Context) return;
 
-    if(n < 0)
+    al_try
     {
-        alSetError(Context, AL_INVALID_VALUE);
-        goto error;
-    }
+        ALCdevice *device = Context->Device;
 
-    if((Source=LookupSource(Context, source)) == NULL)
-    {
-        alSetError(Context, AL_INVALID_NAME);
-        goto error;
-    }
+        CHECK_VALUE(Context, nb >= 0);
 
-    LockContext(Context);
-    if(Source->SourceType == AL_STATIC)
-    {
-        UnlockContext(Context);
-        /* Can't queue on a Static Source */
-        alSetError(Context, AL_INVALID_OPERATION);
-        goto error;
-    }
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
 
-    Device = Context->Device;
-
-    BufferFmt = NULL;
-
-    /* Check for a valid Buffer, for its frequency and format */
-    BufferList = Source->queue;
-    while(BufferList)
-    {
-        if(BufferList->buffer)
-        {
-            BufferFmt = BufferList->buffer;
-            break;
-        }
-        BufferList = BufferList->next;
-    }
-
-    for(i = 0;i < n;i++)
-    {
-        ALbuffer *buffer = NULL;
-        if(buffers[i] && (buffer=LookupBuffer(Device, buffers[i])) == NULL)
+        LockContext(Context);
+        if(Source->SourceType == AL_STATIC)
         {
             UnlockContext(Context);
-            alSetError(Context, AL_INVALID_NAME);
-            goto error;
+            /* Can't queue on a Static Source */
+            al_throwerr(Context, AL_INVALID_OPERATION);
         }
 
-        if(!BufferListStart)
+        BufferFmt = NULL;
+
+        /* Check for a valid Buffer, for its frequency and format */
+        BufferList = Source->queue;
+        while(BufferList)
         {
-            BufferListStart = malloc(sizeof(ALbufferlistitem));
-            BufferListStart->buffer = buffer;
-            BufferListStart->next = NULL;
-            BufferListStart->prev = NULL;
-            BufferList = BufferListStart;
+            if(BufferList->buffer)
+            {
+                BufferFmt = BufferList->buffer;
+                break;
+            }
+            BufferList = BufferList->next;
         }
+
+        for(i = 0;i < nb;i++)
+        {
+            ALbuffer *buffer = NULL;
+            if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
+            {
+                UnlockContext(Context);
+                al_throwerr(Context, AL_INVALID_NAME);
+            }
+
+            if(!BufferListStart)
+            {
+                BufferListStart = malloc(sizeof(ALbufferlistitem));
+                BufferListStart->buffer = buffer;
+                BufferListStart->next = NULL;
+                BufferListStart->prev = NULL;
+                BufferList = BufferListStart;
+            }
+            else
+            {
+                BufferList->next = malloc(sizeof(ALbufferlistitem));
+                BufferList->next->buffer = buffer;
+                BufferList->next->next = NULL;
+                BufferList->next->prev = BufferList;
+                BufferList = BufferList->next;
+            }
+            if(!buffer) continue;
+            IncrementRef(&buffer->ref);
+
+            ReadLock(&buffer->lock);
+            if(BufferFmt == NULL)
+            {
+                BufferFmt = buffer;
+
+                Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
+                Source->SampleSize  = BytesFromFmt(buffer->FmtType);
+                if(buffer->FmtChannels == FmtMono)
+                    Source->Update = CalcSourceParams;
+                else
+                    Source->Update = CalcNonAttnSourceParams;
+
+                Source->NeedsUpdate = AL_TRUE;
+            }
+            else if(BufferFmt->Frequency != buffer->Frequency ||
+                    BufferFmt->OriginalChannels != buffer->OriginalChannels ||
+                    BufferFmt->OriginalType != buffer->OriginalType)
+            {
+                ReadUnlock(&buffer->lock);
+                UnlockContext(Context);
+                al_throwerr(Context, AL_INVALID_OPERATION);
+            }
+            ReadUnlock(&buffer->lock);
+        }
+
+        /* Source is now streaming */
+        Source->SourceType = AL_STREAMING;
+
+        if(Source->queue == NULL)
+            Source->queue = BufferListStart;
         else
         {
-            BufferList->next = malloc(sizeof(ALbufferlistitem));
-            BufferList->next->buffer = buffer;
-            BufferList->next->next = NULL;
-            BufferList->next->prev = BufferList;
-            BufferList = BufferList->next;
-        }
-        if(!buffer) continue;
-        IncrementRef(&buffer->ref);
+            /* Append to the end of the queue */
+            BufferList = Source->queue;
+            while(BufferList->next != NULL)
+                BufferList = BufferList->next;
 
-        ReadLock(&buffer->lock);
-        if(BufferFmt == NULL)
-        {
-            BufferFmt = buffer;
-
-            Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
-            Source->SampleSize  = BytesFromFmt(buffer->FmtType);
-            if(buffer->FmtChannels == FmtMono)
-                Source->Update = CalcSourceParams;
-            else
-                Source->Update = CalcNonAttnSourceParams;
-
-            Source->NeedsUpdate = AL_TRUE;
+            BufferListStart->prev = BufferList;
+            BufferList->next = BufferListStart;
         }
-        else if(BufferFmt->Frequency != buffer->Frequency ||
-                BufferFmt->OriginalChannels != buffer->OriginalChannels ||
-                BufferFmt->OriginalType != buffer->OriginalType)
-        {
-            ReadUnlock(&buffer->lock);
-            UnlockContext(Context);
-            alSetError(Context, AL_INVALID_OPERATION);
-            goto error;
-        }
-        ReadUnlock(&buffer->lock);
+
+        Source->BuffersInQueue += nb;
+
+        UnlockContext(Context);
     }
-
-    /* Source is now streaming */
-    Source->SourceType = AL_STREAMING;
-
-    if(Source->queue == NULL)
-        Source->queue = BufferListStart;
-    else
+    al_catchany()
     {
-        /* Append to the end of the queue */
-        BufferList = Source->queue;
-        while(BufferList->next != NULL)
-            BufferList = BufferList->next;
+        while(BufferListStart)
+        {
+            BufferList = BufferListStart;
+            BufferListStart = BufferList->next;
 
-        BufferListStart->prev = BufferList;
-        BufferList->next = BufferListStart;
+            if(BufferList->buffer)
+                DecrementRef(&BufferList->buffer->ref);
+            free(BufferList);
+        }
     }
+    al_endtry;
 
-    Source->BuffersInQueue += n;
-
-    UnlockContext(Context);
-    ALCcontext_DecRef(Context);
-    return;
-
-error:
-    while(BufferListStart)
-    {
-        BufferList = BufferListStart;
-        BufferListStart = BufferList->next;
-
-        if(BufferList->buffer)
-            DecrementRef(&BufferList->buffer->ref);
-        free(BufferList);
-    }
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei n, ALuint *buffers)
+AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei nb, ALuint *buffers)
 {
     ALCcontext *Context;
     ALsource   *Source;
     ALsizei    i;
     ALbufferlistitem *BufferList;
 
-    if(n == 0)
+    if(nb == 0)
         return;
 
     Context = GetContextRef();
     if(!Context) return;
 
-    if(n < 0)
+    al_try
     {
-        alSetError(Context, AL_INVALID_VALUE);
-        goto done;
-    }
+        CHECK_VALUE(Context, nb >= 0);
 
-    if((Source=LookupSource(Context, source)) == NULL)
-    {
-        alSetError(Context, AL_INVALID_NAME);
-        goto done;
-    }
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
 
-    LockContext(Context);
-    if(Source->Looping || Source->SourceType != AL_STREAMING ||
-       (ALuint)n > Source->BuffersPlayed)
-    {
-        UnlockContext(Context);
-        /* Trying to unqueue pending buffers, or a buffer that wasn't queued. */
-        alSetError(Context, AL_INVALID_VALUE);
-        goto done;
-    }
-
-    for(i = 0;i < n;i++)
-    {
-        BufferList = Source->queue;
-        Source->queue = BufferList->next;
-        Source->BuffersInQueue--;
-        Source->BuffersPlayed--;
-
-        if(BufferList->buffer)
+        LockContext(Context);
+        if(Source->Looping || Source->SourceType != AL_STREAMING ||
+           (ALuint)nb > Source->BuffersPlayed)
         {
-            buffers[i] = BufferList->buffer->id;
-            DecrementRef(&BufferList->buffer->ref);
+            UnlockContext(Context);
+            /* Trying to unqueue pending buffers, or a buffer that wasn't queued. */
+            al_throwerr(Context, AL_INVALID_VALUE);
         }
-        else
-            buffers[i] = 0;
 
-        free(BufferList);
+        for(i = 0;i < nb;i++)
+        {
+            BufferList = Source->queue;
+            Source->queue = BufferList->next;
+            Source->BuffersInQueue--;
+            Source->BuffersPlayed--;
+
+            if(BufferList->buffer)
+            {
+                buffers[i] = BufferList->buffer->id;
+                DecrementRef(&BufferList->buffer->ref);
+            }
+            else
+                buffers[i] = 0;
+
+            free(BufferList);
+        }
+        if(Source->queue)
+            Source->queue->prev = NULL;
+        UnlockContext(Context);
     }
-    if(Source->queue)
-        Source->queue->prev = NULL;
-    UnlockContext(Context);
+    al_endtry;
 
-done:
     ALCcontext_DecRef(Context);
 }
 
@@ -1909,17 +1745,16 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
     }
 }
 
-/* GetSourceOffset
+/* GetSourceOffsets
  *
- * Gets the current playback position of the given Source, in the appropriate
- * format (Bytes, Samples or Seconds). The offsets are relative to the start of
- * the queue (not the start of the current buffer).
+ * Gets the current read and write offsets for the given Source, in the
+ * appropriate format (Bytes, Samples or Seconds). The offsets are relative to
+ * the start of the queue (not the start of the current buffer).
  */
-static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, ALdouble updateLen)
+static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, ALdouble updateLen)
 {
     const ALbufferlistitem *BufferList;
     const ALbuffer         *Buffer = NULL;
-    ALuint BufferFreq = 0;
     ALuint readPos, writePos;
     ALuint totalBufferLen;
     ALuint i;
@@ -1931,7 +1766,6 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
         if(BufferList->buffer)
         {
             Buffer = BufferList->buffer;
-            BufferFreq = Buffer->Frequency;
             break;
         }
         BufferList = BufferList->next;
@@ -1963,7 +1797,7 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
         BufferList = BufferList->next;
     }
     if(Source->state == AL_PLAYING)
-        writePos = readPos + (ALuint)(updateLen*BufferFreq);
+        writePos = readPos + (ALuint)(updateLen*Buffer->Frequency);
     else
         writePos = readPos;
 
@@ -2026,8 +1860,8 @@ static ALvoid GetSourceOffset(ALsource *Source, ALenum name, ALdouble *offset, A
 /* ApplyOffset
  *
  * Apply the stored playback offset to the Source. This function will update
- * the number of buffers "played" given upon the new offset.
-*/
+ * the number of buffers "played" given the stored offset.
+ */
 ALboolean ApplyOffset(ALsource *Source)
 {
     const ALbufferlistitem *BufferList;

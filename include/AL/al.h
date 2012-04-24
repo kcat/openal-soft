@@ -649,7 +649,7 @@ typedef void          (AL_APIENTRY *LPALSPEEDOFSOUND)(ALfloat value);
 typedef void          (AL_APIENTRY *LPALDISTANCEMODEL)(ALenum distanceModel);
 
 #if defined(__cplusplus)
-}  / *extern "C" */
+}  /* extern "C" */
 #endif
 
 #endif /* AL_AL_H */

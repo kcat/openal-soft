@@ -699,8 +699,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
                 break;
 
             default:
-                alSetError(Context, AL_INVALID_ENUM);
-                break;
+                al_throwerr(Context, AL_INVALID_ENUM);
         }
     }
     al_endtry;

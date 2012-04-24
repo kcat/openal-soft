@@ -56,10 +56,10 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
     Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
-    if(!extName)
-        alSetError(Context, AL_INVALID_VALUE);
-    else
+    al_try
     {
+        CHECK_VALUE(Context, extName);
+
         len = strlen(extName);
         ptr = Context->ExtensionList;
         while(ptr && *ptr)
@@ -78,6 +78,7 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
             }
         }
     }
+    al_endtry;
 
     ALCcontext_DecRef(Context);
     return ret;

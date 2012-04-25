@@ -154,7 +154,9 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
     if(!Context) return;
 
     Device = Context->Device;
-    if((ALEffect=LookupEffect(Device, effect)) != NULL)
+    if((ALEffect=LookupEffect(Device, effect)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else
     {
         if(param == AL_EFFECT_TYPE)
         {
@@ -178,8 +180,6 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
             ALeffect_SetParami(ALEffect, Context, param, value);
         }
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
 
     ALCcontext_DecRef(Context);
 }
@@ -190,17 +190,24 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *v
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
+    switch(param)
+    {
+        case AL_EFFECT_TYPE:
+            alEffecti(effect, param, values[0]);
+            return;
+    }
+
     Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
-    if((ALEffect=LookupEffect(Device, effect)) != NULL)
+    if((ALEffect=LookupEffect(Device, effect)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else
     {
         /* Call the appropriate handler */
         ALeffect_SetParamiv(ALEffect, Context, param, values);
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
 
     ALCcontext_DecRef(Context);
 }
@@ -215,13 +222,13 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
     if(!Context) return;
 
     Device = Context->Device;
-    if((ALEffect=LookupEffect(Device, effect)) != NULL)
+    if((ALEffect=LookupEffect(Device, effect)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else
     {
         /* Call the appropriate handler */
         ALeffect_SetParamf(ALEffect, Context, param, value);
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
 
     ALCcontext_DecRef(Context);
 }
@@ -236,13 +243,13 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat 
     if(!Context) return;
 
     Device = Context->Device;
-    if((ALEffect=LookupEffect(Device, effect)) != NULL)
+    if((ALEffect=LookupEffect(Device, effect)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else
     {
         /* Call the appropriate handler */
         ALeffect_SetParamfv(ALEffect, Context, param, values);
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
 
     ALCcontext_DecRef(Context);
 }
@@ -257,20 +264,18 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value
     if(!Context) return;
 
     Device = Context->Device;
-    if((ALEffect=LookupEffect(Device, effect)) != NULL)
+    if((ALEffect=LookupEffect(Device, effect)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else
     {
         if(param == AL_EFFECT_TYPE)
-        {
             *value = ALEffect->type;
-        }
         else
         {
             /* Call the appropriate handler */
-            ALeffect_GetParamiv(ALEffect, Context, param, value);
+            ALeffect_GetParami(ALEffect, Context, param, value);
         }
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
 
     ALCcontext_DecRef(Context);
 }
@@ -281,17 +286,24 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *valu
     ALCdevice  *Device;
     ALeffect   *ALEffect;
 
+    switch(param)
+    {
+        case AL_EFFECT_TYPE:
+            alGetEffecti(effect, param, values);
+            return;
+    }
+
     Context = GetContextRef();
     if(!Context) return;
 
     Device = Context->Device;
-    if((ALEffect=LookupEffect(Device, effect)) != NULL)
+    if((ALEffect=LookupEffect(Device, effect)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else
     {
         /* Call the appropriate handler */
         ALeffect_GetParamiv(ALEffect, Context, param, values);
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
 
     ALCcontext_DecRef(Context);
 }
@@ -306,13 +318,13 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *val
     if(!Context) return;
 
     Device = Context->Device;
-    if((ALEffect=LookupEffect(Device, effect)) != NULL)
+    if((ALEffect=LookupEffect(Device, effect)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else
     {
         /* Call the appropriate handler */
         ALeffect_GetParamf(ALEffect, Context, param, value);
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
 
     ALCcontext_DecRef(Context);
 }
@@ -327,13 +339,13 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *va
     if(!Context) return;
 
     Device = Context->Device;
-    if((ALEffect=LookupEffect(Device, effect)) != NULL)
+    if((ALEffect=LookupEffect(Device, effect)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else
     {
         /* Call the appropriate handler */
         ALeffect_GetParamfv(ALEffect, Context, param, values);
     }
-    else
-        alSetError(Context, AL_INVALID_NAME);
 
     ALCcontext_DecRef(Context);
 }

@@ -40,27 +40,25 @@ static void InitEffectParams(ALeffect *effect, ALenum type);
 AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 {
     ALCcontext *Context;
-    ALsizei i;
+    ALsizei    cur = 0;
 
     Context = GetContextRef();
     if(!Context) return;
 
-    if(n < 0 || IsBadWritePtr((void*)effects, n * sizeof(ALuint)))
-        alSetError(Context, AL_INVALID_VALUE);
-    else
+    al_try
     {
         ALCdevice *device = Context->Device;
         ALenum err;
 
-        for(i = 0;i < n;i++)
+        CHECK_VALUE(Context, n >= 0);
+        for(cur = 0;cur < n;cur++)
         {
             ALeffect *effect = calloc(1, sizeof(ALeffect));
-            if(!effect || InitEffect(effect) != AL_NO_ERROR)
+            err = AL_OUT_OF_MEMORY;
+            if(!effect || (err=InitEffect(effect)) != AL_NO_ERROR)
             {
                 free(effect);
-                alSetError(Context, AL_OUT_OF_MEMORY);
-                alDeleteEffects(i, effects);
-                break;
+                al_throwerr(Context, err);
             }
 
             err = NewThunkEntry(&effect->id);
@@ -72,14 +70,18 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 memset(effect, 0, sizeof(ALeffect));
                 free(effect);
 
-                alSetError(Context, err);
-                alDeleteEffects(i, effects);
-                break;
+                al_throwerr(Context, err);
             }
 
-            effects[i] = effect->id;
+            effects[cur] = effect->id;
         }
     }
+    al_catchany()
+    {
+        if(cur > 0)
+            alDeleteEffects(cur, effects);
+    }
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }
@@ -87,43 +89,33 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
 {
     ALCcontext *Context;
-    ALCdevice *device;
-    ALeffect *ALEffect;
+    ALeffect *Effect;
     ALsizei i;
 
     Context = GetContextRef();
     if(!Context) return;
 
-    device = Context->Device;
-    if(n < 0)
-        alSetError(Context, AL_INVALID_VALUE);
-    else
+    al_try
     {
-        // Check that all effects are valid
+        ALCdevice *device = Context->Device;
+        CHECK_VALUE(Context, n >= 0);
         for(i = 0;i < n;i++)
         {
-            if(!effects[i])
-                continue;
-
-            if(LookupEffect(device, effects[i]) == NULL)
-            {
-                alSetError(Context, AL_INVALID_NAME);
-                n = 0;
-                break;
-            }
+            if(effects[i] && LookupEffect(device, effects[i]) == NULL)
+                al_throwerr(Context, AL_INVALID_NAME);
         }
 
         for(i = 0;i < n;i++)
         {
-            // Recheck that the effect is valid, because there could be duplicated names
-            if((ALEffect=RemoveEffect(device, effects[i])) == NULL)
+            if((Effect=RemoveEffect(device, effects[i])) == NULL)
                 continue;
-            FreeThunkEntry(ALEffect->id);
+            FreeThunkEntry(Effect->id);
 
-            memset(ALEffect, 0, sizeof(ALeffect));
-            free(ALEffect);
+            memset(Effect, 0, sizeof(*Effect));
+            free(Effect);
         }
     }
+    al_endtry;
 
     ALCcontext_DecRef(Context);
 }

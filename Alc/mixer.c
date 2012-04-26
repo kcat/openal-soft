@@ -100,13 +100,12 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
 
 #endif
 
-#define DECL_TEMPLATE(T, sampler)                                             \
-static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
-  const ALvoid *srcdata, ALuint srcfrac, ALuint OutPos, ALuint SamplesToDo,   \
-  ALuint BufferSize)                                                          \
+#define DECL_TEMPLATE(sampler)                                                \
+static void Mix_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,           \
+  const ALfloat *RESTRICT data, ALuint srcfrac, ALuint OutPos,                \
+  ALuint SamplesToDo, ALuint BufferSize)                                      \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
-    const T *RESTRICT data = srcdata;                                         \
     const ALint *RESTRICT DelayStep = Source->Params.HrtfDelayStep;           \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
@@ -296,20 +295,19 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALfloat, point32)
-DECL_TEMPLATE(ALfloat, lerp32)
-DECL_TEMPLATE(ALfloat, cubic32)
+DECL_TEMPLATE(point32)
+DECL_TEMPLATE(lerp32)
+DECL_TEMPLATE(cubic32)
 
 #undef DECL_TEMPLATE
 
 
-#define DECL_TEMPLATE(T, sampler)                                             \
-static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
-  const ALvoid *srcdata, ALuint srcfrac, ALuint OutPos, ALuint SamplesToDo,   \
-  ALuint BufferSize)                                                          \
+#define DECL_TEMPLATE(sampler)                                                \
+static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
+  const ALfloat *RESTRICT data, ALuint srcfrac, ALuint OutPos,                \
+  ALuint SamplesToDo, ALuint BufferSize)                                      \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
-    const T *RESTRICT data = srcdata;                                         \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
     ALfloat DrySend[MAXCHANNELS];                                             \
@@ -424,9 +422,9 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALfloat, point32)
-DECL_TEMPLATE(ALfloat, lerp32)
-DECL_TEMPLATE(ALfloat, cubic32)
+DECL_TEMPLATE(point32)
+DECL_TEMPLATE(lerp32)
+DECL_TEMPLATE(cubic32)
 
 #undef DECL_TEMPLATE
 
@@ -436,11 +434,11 @@ MixerFunc SelectMixer(enum Resampler Resampler)
     switch(Resampler)
     {
         case PointResampler:
-            return Mix_ALfloat_point32;
+            return Mix_point32;
         case LinearResampler:
-            return Mix_ALfloat_lerp32;
+            return Mix_lerp32;
         case CubicResampler:
-            return Mix_ALfloat_cubic32;
+            return Mix_cubic32;
         case ResamplerMax:
             break;
     }
@@ -452,11 +450,11 @@ MixerFunc SelectHrtfMixer(enum Resampler Resampler)
     switch(Resampler)
     {
         case PointResampler:
-            return Mix_Hrtf_ALfloat_point32;
+            return Mix_Hrtf_point32;
         case LinearResampler:
-            return Mix_Hrtf_ALfloat_lerp32;
+            return Mix_Hrtf_lerp32;
         case CubicResampler:
-            return Mix_Hrtf_ALfloat_cubic32;
+            return Mix_Hrtf_cubic32;
         case ResamplerMax:
             break;
     }

@@ -121,7 +121,7 @@ struct ALsource;
 struct ALbuffer;
 
 typedef ALvoid (*MixerFunc)(struct ALsource *self, ALCdevice *Device,
-                            const ALvoid *RESTRICT srcdata, ALuint srcfrac,
+                            const ALfloat *RESTRICT data, ALuint srcfrac,
                             ALuint OutPos, ALuint SamplesToDo,
                             ALuint BufferSize);
 

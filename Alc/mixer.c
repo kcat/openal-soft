@@ -102,8 +102,8 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
 
 #define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
-  const ALvoid *srcdata, ALuint *DataPosInt, ALuint *DataPosFrac,             \
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
+  const ALvoid *srcdata, ALuint srcfrac, ALuint OutPos, ALuint SamplesToDo,   \
+  ALuint BufferSize)                                                          \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
     const T *RESTRICT data = srcdata;                                         \
@@ -126,7 +126,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
     DryFilter = &Source->Params.iirFilter;                                    \
                                                                               \
     pos = 0;                                                                  \
-    frac = *DataPosFrac;                                                      \
+    frac = srcfrac;                                                           \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
@@ -141,7 +141,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
         ALfloat left, right;                                                  \
                                                                               \
         pos = 0;                                                              \
-        frac = *DataPosFrac;                                                  \
+        frac = srcfrac;                                                       \
                                                                               \
         for(c = 0;c < HRIR_LENGTH;c++)                                        \
         {                                                                     \
@@ -263,7 +263,7 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
         for(i = 0;i < NumChannels;i++)                                        \
         {                                                                     \
             pos = 0;                                                          \
-            frac = *DataPosFrac;                                              \
+            frac = srcfrac;                                                   \
                                                                               \
             if(LIKELY(OutPos == 0))                                           \
             {                                                                 \
@@ -294,8 +294,6 @@ static void Mix_Hrtf_##T##_##sampler(ALsource *Source, ALCdevice *Device,     \
             OutPos -= BufferSize;                                             \
         }                                                                     \
     }                                                                         \
-    *DataPosInt += pos;                                                       \
-    *DataPosFrac = frac;                                                      \
 }
 
 DECL_TEMPLATE(ALfloat, point32)
@@ -307,8 +305,8 @@ DECL_TEMPLATE(ALfloat, cubic32)
 
 #define DECL_TEMPLATE(T, sampler)                                             \
 static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
-  const ALvoid *srcdata, ALuint *DataPosInt, ALuint *DataPosFrac,             \
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
+  const ALvoid *srcdata, ALuint srcfrac, ALuint OutPos, ALuint SamplesToDo,   \
+  ALuint BufferSize)                                                          \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
     const T *RESTRICT data = srcdata;                                         \
@@ -330,7 +328,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
     DryFilter = &Source->Params.iirFilter;                                    \
                                                                               \
     pos = 0;                                                                  \
-    frac = *DataPosFrac;                                                      \
+    frac = srcfrac;                                                           \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
@@ -338,7 +336,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
             DrySend[c] = Source->Params.DryGains[i][c];                       \
                                                                               \
         pos = 0;                                                              \
-        frac = *DataPosFrac;                                                  \
+        frac = srcfrac;                                                       \
                                                                               \
         if(OutPos == 0)                                                       \
         {                                                                     \
@@ -393,7 +391,7 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
         for(i = 0;i < NumChannels;i++)                                        \
         {                                                                     \
             pos = 0;                                                          \
-            frac = *DataPosFrac;                                              \
+            frac = srcfrac;                                                   \
                                                                               \
             if(OutPos == 0)                                                   \
             {                                                                 \
@@ -424,8 +422,6 @@ static void Mix_##T##_##sampler(ALsource *Source, ALCdevice *Device,          \
             OutPos -= BufferSize;                                             \
         }                                                                     \
     }                                                                         \
-    *DataPosInt += pos;                                                       \
-    *DataPosFrac = frac;                                                      \
 }
 
 DECL_TEMPLATE(ALfloat, point32)
@@ -749,9 +745,15 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         BufferSize = minu(BufferSize, (SamplesToDo-OutPos));
 
         SrcData += BufferPrePadding*NumChannels;
-        Source->Params.DoMix(Source, Device, SrcData, &DataPosInt, &DataPosFrac,
+        Source->Params.DoMix(Source, Device, SrcData, DataPosFrac,
                              OutPos, SamplesToDo, BufferSize);
-        OutPos += BufferSize;
+        for(i = 0;i < BufferSize;i++)
+        {
+            DataPosFrac += increment;
+            DataPosInt  += DataPosFrac>>FRACTIONBITS;
+            DataPosFrac &= FRACTIONMASK;
+            OutPos++;
+        }
 
         /* Handle looping sources */
         while(1)

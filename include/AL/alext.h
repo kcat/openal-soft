@@ -289,6 +289,11 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
 #endif
 #endif
 
+#ifndef AL_EXT_STEREO_ANGLES
+#define AL_EXT_STEREO_ANGLES 1
+#define AL_STEREO_ANGLES                         0x1030
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -294,7 +294,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         for(c = 0;c < num_channels;c++)
         {
-            if(chans[c].channel == LFE) /* Special-case LFE */
+            /* Special-case LFE */
+            if(chans[c].channel == LFE)
             {
                 SrcMatrix[c][LFE] += DryGain * ListenerGain;
                 continue;
@@ -375,20 +376,25 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     for(i = 0;i < MAX_SENDS;i++)
         WetGainHF[i] = 1.0f;
 
-    //Get context properties
+    /* Get context/device properties */
     DopplerFactor = ALContext->DopplerFactor * ALSource->DopplerFactor;
     SpeedOfSound  = ALContext->SpeedOfSound * ALContext->DopplerVelocity;
     NumSends      = Device->NumAuxSends;
     Frequency     = Device->Frequency;
 
-    //Get listener properties
+    /* Get listener properties */
     ListenerGain   = ALContext->Listener.Gain;
     MetersPerUnit  = ALContext->Listener.MetersPerUnit;
     ListenerVel[0] = ALContext->Listener.Velocity[0];
     ListenerVel[1] = ALContext->Listener.Velocity[1];
     ListenerVel[2] = ALContext->Listener.Velocity[2];
+    for(i = 0;i < 4;i++)
+    {
+        for(j = 0;j < 4;j++)
+            Matrix[i][j] = ALContext->Listener.Matrix[i][j];
+    }
 
-    //Get source properties
+    /* Get source properties */
     SourceVolume   = ALSource->Gain;
     MinVolume      = ALSource->MinGain;
     MaxVolume      = ALSource->MaxGain;
@@ -454,13 +460,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALSource->Params.Send[i].Slot = Slot;
     }
 
-    for(i = 0;i < 4;i++)
-    {
-        for(j = 0;j < 4;j++)
-            Matrix[i][j] = ALContext->Listener.Matrix[i][j];
-    }
-
-    //1. Translate Listener to origin (convert to head relative)
+    /* Transform source to listener space (convert to head relative) */
     if(ALSource->HeadRelative == AL_FALSE)
     {
         /* Translate position */
@@ -468,16 +468,16 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         Position[1] -= ALContext->Listener.Position[1];
         Position[2] -= ALContext->Listener.Position[2];
 
-        /* Transform source vectors into listener space */
+        /* Transform source vectors */
         aluMatrixVector(Position, 1.0f, Matrix);
         aluMatrixVector(Direction, 0.0f, Matrix);
         aluMatrixVector(Velocity, 0.0f, Matrix);
-        /* Transform listener velocity into listener space */
+        /* Transform listener velocity */
         aluMatrixVector(ListenerVel, 0.0f, Matrix);
     }
     else
     {
-        /* Transform listener velocity into listener space */
+        /* Transform listener velocity from world space to listener space */
         aluMatrixVector(ListenerVel, 0.0f, Matrix);
         /* Offset the source velocity to be relative of the listener velocity */
         Velocity[0] += ListenerVel[0];
@@ -491,7 +491,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     aluNormalize(SourceToListener);
     aluNormalize(Direction);
 
-    //2. Calculate distance attenuation
+    /* Calculate distance attenuation */
     Distance = aluSqrt(aluDotproduct(Position, Position));
     ClampedDist = Distance;
 
@@ -505,7 +505,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             ClampedDist = clampf(ClampedDist, MinDist, MaxDist);
             if(MaxDist < MinDist)
                 break;
-            //fall-through
+            /*fall-through*/
         case InverseDistance:
             if(MinDist > 0.0f)
             {
@@ -523,7 +523,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             ClampedDist = clampf(ClampedDist, MinDist, MaxDist);
             if(MaxDist < MinDist)
                 break;
-            //fall-through
+            /*fall-through*/
         case LinearDistance:
             if(MaxDist != MinDist)
             {
@@ -541,7 +541,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             ClampedDist = clampf(ClampedDist, MinDist, MaxDist);
             if(MaxDist < MinDist)
                 break;
-            //fall-through
+            /*fall-through*/
         case ExponentDistance:
             if(ClampedDist > 0.0f && MinDist > 0.0f)
             {
@@ -556,12 +556,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             break;
     }
 
-    // Source Gain + Attenuation
+    /* Source Gain + Attenuation */
     DryGain = SourceVolume * Attenuation;
     for(i = 0;i < NumSends;i++)
         WetGain[i] = SourceVolume * RoomAttenuation[i];
 
-    // Distance-based air absorption
+    /* Distance-based air absorption */
     if(AirAbsorptionFactor > 0.0f && ClampedDist > MinDist)
     {
         ALfloat meters = maxf(ClampedDist-MinDist, 0.0f) * MetersPerUnit;
@@ -590,7 +590,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     /* Calculate directional soundcones */
     Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * (180.0f/F_PI);
-    if(Angle >= InnerAngle && Angle <= OuterAngle)
+    if(Angle > InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
         ConeVolume = lerp(1.0f, ALSource->OuterGain, scale);
@@ -621,12 +621,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             WetGainHF[i] *= ConeHF;
     }
 
-    // Clamp to Min/Max Gain
+    /* Clamp to Min/Max Gain */
     DryGain = clampf(DryGain, MinVolume, MaxVolume);
     for(i = 0;i < NumSends;i++)
         WetGain[i] = clampf(WetGain[i], MinVolume, MaxVolume);
 
-    // Apply filter gains and filters
+    /* Apply gain and frequency filters */
     DryGain   *= ALSource->DirectGain * ListenerGain;
     DryGainHF *= ALSource->DirectGainHF;
     for(i = 0;i < NumSends;i++)
@@ -635,7 +635,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         WetGainHF[i] *= ALSource->Send[i].WetGainHF;
     }
 
-    // Calculate Velocity
+    /* Calculate velocity-based doppler effect */
     if(DopplerFactor > 0.0f)
     {
         ALfloat VSS, VLS;
@@ -659,6 +659,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALbuffer *ALBuffer;
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
+            /* Calculate fixed-point stepping value, based on the pitch, buffer
+             * frequency, and output frequency. */
             ALsizei maxstep = STACK_DATA_SIZE/sizeof(ALfloat) /
                               ALSource->NumChannels;
             maxstep -= ResamplerPadding[Resampler] +
@@ -688,7 +690,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     if(Device->Hrtf)
     {
-        // Use a binaural HRTF algorithm for stereo headphone playback
+        /* Use a binaural HRTF algorithm for stereo headphone playback */
         ALfloat delta, ev = 0.0f, az = 0.0f;
 
         if(Distance > 0.0f)
@@ -698,21 +700,21 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             Position[1] *= invlen;
             Position[2] *= invlen;
 
-            // Calculate elevation and azimuth only when the source is not at
-            // the listener.  This prevents +0 and -0 Z from producing
-            // inconsistent panning.
+            /* Calculate elevation and azimuth only when the source is not at
+             * the listener. This prevents +0 and -0 Z from producing
+             * inconsistent panning. */
             ev = aluAsin(Position[1]);
             az = aluAtan2(Position[0], -Position[2]*ZScale);
         }
 
-        // Check to see if the HRIR is already moving.
+        /* Check to see if the HRIR is already moving. */
         if(ALSource->HrtfMoving)
         {
-            // Calculate the normalized HRTF transition factor (delta).
+            /* Calculate the normalized HRTF transition factor (delta). */
             delta = CalcHrtfDelta(ALSource->Params.HrtfGain, DryGain,
                                   ALSource->Params.HrtfDir, Position);
-            // If the delta is large enough, get the moving HRIR target
-            // coefficients, target delays, steppping values, and counter.
+            /* If the delta is large enough, get the moving HRIR target
+             * coefficients, target delays, steppping values, and counter. */
             if(delta > 0.001f)
             {
                 ALSource->HrtfCounter = GetMovingHrtfCoeffs(Device->Hrtf,
@@ -730,7 +732,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
         else
         {
-            // Get the initial (static) HRIR coefficients and delays.
+            /* Get the initial (static) HRIR coefficients and delays. */
             GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, DryGain,
                                 ALSource->Params.HrtfCoeffs[0],
                                 ALSource->Params.HrtfDelay[0]);
@@ -743,12 +745,14 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
-        // Use energy-preserving panning algorithm for multi-speaker playback
+        /* Use a lookup table for panning multi-speaker playback. */
         ALfloat DirGain, AmbientGain;
         const ALfloat *ChannelGain;
         ALfloat length;
         ALint pos;
 
+        /* Normalize the length based on the source's min distance. Sources
+         * closer than this will not pan as much. */
         length = maxf(Distance, MinDist);
         if(length > 0.0f)
         {
@@ -761,15 +765,14 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         pos = aluCart2LUTpos(-Position[2]*ZScale, Position[0]);
         ChannelGain = Device->PanningLUT[pos];
 
+        /* Adjustment for partial panning. Not the greatest, but simple
+         * enough. */
         DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
-        // elevation adjustment for directional gain. this sucks, but
-        // has low complexity
         AmbientGain = aluSqrt(1.0f/Device->NumChan);
         for(i = 0;i < MAXCHANNELS;i++)
         {
-            ALuint i2;
-            for(i2 = 0;i2 < MAXCHANNELS;i2++)
-                ALSource->Params.DryGains[i][i2] = 0.0f;
+            for(j = 0;j < MAXCHANNELS;j++)
+                ALSource->Params.DryGains[i][j] = 0.0f;
         }
         for(i = 0;i < (ALint)Device->NumChan;i++)
         {
@@ -931,10 +934,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
     while(size > 0)
     {
-        /* Setup variables */
         SamplesToDo = minu(size, BUFFERSIZE);
-
-        /* Clear mixing buffer */
         memset(device->DryBuffer, 0, SamplesToDo*MAXCHANNELS*sizeof(ALfloat));
 
         LockDevice(device);
@@ -947,6 +947,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             if(!DeferUpdates)
                 UpdateSources = ExchangeInt(&ctx->UpdateSources, AL_FALSE);
 
+            /* source processing */
             src = ctx->ActiveSources;
             src_end = src + ctx->ActiveSourceCount;
             while(src != src_end)
@@ -1016,7 +1017,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         }
         UnlockDevice(device);
 
-        //Post processing loop
+        /* Click-removal. Could do better; this only really handles immediate
+         * changes between updates where a predictive sample could be
+         * generated. Delays caused by effects and HRTF aren't caught. */
         if(device->FmtChans == DevFmtMono)
         {
             for(i = 0;i < SamplesToDo;i++)

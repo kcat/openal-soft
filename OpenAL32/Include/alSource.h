@@ -30,6 +30,7 @@ typedef struct ALbufferlistitem
 
 typedef struct ALsource
 {
+    /** Source properties. */
     volatile ALfloat   Pitch;
     volatile ALfloat   Gain;
     volatile ALfloat   OuterGain;
@@ -48,26 +49,6 @@ typedef struct ALsource
     volatile enum DistanceModel DistanceModel;
     volatile ALboolean DirectChannels;
 
-    enum Resampler Resampler;
-
-    volatile ALenum state;
-    ALenum new_state;
-    ALuint position;
-    ALuint position_fraction;
-
-    ALbufferlistitem *queue; // Linked list of buffers in queue
-    ALuint BuffersInQueue;   // Number of buffers in queue
-    ALuint BuffersPlayed;    // Number of buffers played on this loop
-
-    ALfloat DirectGain;
-    ALfloat DirectGainHF;
-
-    struct {
-        struct ALeffectslot *Slot;
-        ALfloat WetGain;
-        ALfloat WetGainHF;
-    } Send[MAX_SENDS];
-
     volatile ALboolean DryGainHFAuto;
     volatile ALboolean WetGainAuto;
     volatile ALboolean WetGainHFAuto;
@@ -77,23 +58,57 @@ typedef struct ALsource
     volatile ALfloat RoomRolloffFactor;
     volatile ALfloat DopplerFactor;
 
+    enum Resampler Resampler;
+
+    /**
+     * Last user-specified offset, and the offset type (bytes, samples, or
+     * seconds).
+     */
     ALdouble Offset;
     ALenum   OffsetType;
 
-    // Source Type (Static, Streaming, or Undetermined)
+    /** Source type (static, streaming, or undetermined) */
     volatile ALint SourceType;
 
+    /** Source state (initial, playing, paused, or stopped) */
+    volatile ALenum state;
+    ALenum new_state;
+
+    /**
+     * Source offset in samples, relative to the currently playing buffer, NOT
+     * the whole queue, and the fractional (fixed-point) offset to the next
+     * sample.
+     */
+    ALuint position;
+    ALuint position_fraction;
+
+    /** Source Buffer Queue info. */
+    ALbufferlistitem *queue;
+    ALuint BuffersInQueue;
+    ALuint BuffersPlayed;
+
+    /** Current buffer sample info. */
     ALuint NumChannels;
     ALuint SampleSize;
 
-    /* HRTF info */
+    /** Direct filter and auxiliary send info. */
+    ALfloat DirectGain;
+    ALfloat DirectGainHF;
+
+    struct {
+        struct ALeffectslot *Slot;
+        ALfloat WetGain;
+        ALfloat WetGainHF;
+    } Send[MAX_SENDS];
+
+    /** HRTF info. */
     ALboolean HrtfMoving;
     ALuint HrtfCounter;
     ALfloat HrtfHistory[MAXCHANNELS][SRC_HISTORY_LENGTH];
     ALfloat HrtfValues[MAXCHANNELS][HRIR_LENGTH][2];
     ALuint HrtfOffset;
 
-    /* Current target parameters used for mixing */
+    /** Current target parameters used for mixing. */
     struct {
         MixerFunc DoMix;
 
@@ -108,7 +123,7 @@ typedef struct ALsource
 
         /* A mixing matrix. First subscript is the channel number of the input
          * data (regardless of channel configuration) and the second is the
-         * channel target (eg. FRONT_LEFT) */
+         * channel target (eg. FRONT_LEFT). */
         ALfloat DryGains[MAXCHANNELS][MAXCHANNELS];
 
         FILTER iirFilter;
@@ -121,11 +136,13 @@ typedef struct ALsource
             ALfloat history[MAXCHANNELS];
         } Send[MAX_SENDS];
     } Params;
+    /** Source needs to update its mixing parameters. */
     volatile ALenum NeedsUpdate;
 
+    /** Method to update mixing parameters. */
     ALvoid (*Update)(struct ALsource *self, const ALCcontext *context);
 
-    /* Self ID */
+    /** Self ID */
     ALuint id;
 } ALsource;
 #define ALsource_Update(s,a)                 ((s)->Update(s,a))

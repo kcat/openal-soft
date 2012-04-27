@@ -183,11 +183,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     for(i = 0;i < NumSends;i++)
     {
         WetGain[i]  = clampf(SourceVolume, MinVolume, MaxVolume);
-        WetGain[i] *= ALSource->Send[i].WetGain;
-        WetGainHF[i] = ALSource->Send[i].WetGainHF;
+        WetGain[i] *= ALSource->Send[i].Gain;
+        WetGainHF[i] = ALSource->Send[i].GainHF;
     }
 
-    SrcMatrix = ALSource->Params.DryGains;
+    SrcMatrix = ALSource->Params.Direct.Gains;
     for(i = 0;i < MAXCHANNELS;i++)
     {
         for(c = 0;c < MAXCHANNELS;c++)
@@ -269,12 +269,12 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             if(chans[c].channel == LFE)
             {
                 /* Skip LFE */
-                ALSource->Params.HrtfDelay[c][0] = 0;
-                ALSource->Params.HrtfDelay[c][1] = 0;
+                ALSource->Params.Hrtf.Delay[c][0] = 0;
+                ALSource->Params.Hrtf.Delay[c][1] = 0;
                 for(i = 0;i < HRIR_LENGTH;i++)
                 {
-                    ALSource->Params.HrtfCoeffs[c][i][0] = 0.0f;
-                    ALSource->Params.HrtfCoeffs[c][i][1] = 0.0f;
+                    ALSource->Params.Hrtf.Coeffs[c][i][0] = 0.0f;
+                    ALSource->Params.Hrtf.Coeffs[c][i][1] = 0.0f;
                 }
             }
             else
@@ -284,11 +284,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 GetLerpedHrtfCoeffs(Device->Hrtf,
                                     0.0f, chans[c].angle,
                                     DryGain*ListenerGain,
-                                    ALSource->Params.HrtfCoeffs[c],
-                                    ALSource->Params.HrtfDelay[c]);
+                                    ALSource->Params.Hrtf.Coeffs[c],
+                                    ALSource->Params.Hrtf.Delay[c]);
             }
-            ALSource->HrtfCounter = 0;
         }
+        ALSource->Hrtf.Counter = 0;
     }
     else
     {
@@ -320,7 +320,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         if(Slot && Slot->effect.type == AL_EFFECT_NULL)
             Slot = NULL;
         ALSource->Params.Send[i].Slot = Slot;
-        ALSource->Params.Send[i].WetGain = WetGain[i] * ListenerGain;
+        ALSource->Params.Send[i].Gain = WetGain[i] * ListenerGain;
     }
 
     /* Update filter coefficients. Calculations based on the I3DL2
@@ -330,7 +330,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     /* We use two chained one-pole filters, so we need to take the
      * square root of the squared gain, which is the same as the base
      * gain. */
-    ALSource->Params.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
+    ALSource->Params.Direct.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
     for(i = 0;i < NumSends;i++)
     {
         /* We use a one-pole filter, so we need to take the squared gain */
@@ -631,8 +631,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     DryGainHF *= ALSource->DirectGainHF;
     for(i = 0;i < NumSends;i++)
     {
-        WetGain[i]   *= ALSource->Send[i].WetGain * ListenerGain;
-        WetGainHF[i] *= ALSource->Send[i].WetGainHF;
+        WetGain[i]   *= ALSource->Send[i].Gain * ListenerGain;
+        WetGainHF[i] *= ALSource->Send[i].GainHF;
     }
 
     /* Calculate velocity-based doppler effect */
@@ -708,39 +708,39 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
 
         /* Check to see if the HRIR is already moving. */
-        if(ALSource->HrtfMoving)
+        if(ALSource->Hrtf.Moving)
         {
             /* Calculate the normalized HRTF transition factor (delta). */
-            delta = CalcHrtfDelta(ALSource->Params.HrtfGain, DryGain,
-                                  ALSource->Params.HrtfDir, Position);
+            delta = CalcHrtfDelta(ALSource->Params.Hrtf.Gain, DryGain,
+                                  ALSource->Params.Hrtf.Dir, Position);
             /* If the delta is large enough, get the moving HRIR target
              * coefficients, target delays, steppping values, and counter. */
             if(delta > 0.001f)
             {
-                ALSource->HrtfCounter = GetMovingHrtfCoeffs(Device->Hrtf,
-                                          ev, az, DryGain, delta,
-                                          ALSource->HrtfCounter,
-                                          ALSource->Params.HrtfCoeffs[0],
-                                          ALSource->Params.HrtfDelay[0],
-                                          ALSource->Params.HrtfCoeffStep,
-                                          ALSource->Params.HrtfDelayStep);
-                ALSource->Params.HrtfGain = DryGain;
-                ALSource->Params.HrtfDir[0] = Position[0];
-                ALSource->Params.HrtfDir[1] = Position[1];
-                ALSource->Params.HrtfDir[2] = Position[2];
+                ALSource->Hrtf.Counter = GetMovingHrtfCoeffs(Device->Hrtf,
+                                           ev, az, DryGain, delta,
+                                           ALSource->Hrtf.Counter,
+                                           ALSource->Params.Hrtf.Coeffs[0],
+                                           ALSource->Params.Hrtf.Delay[0],
+                                           ALSource->Params.Hrtf.CoeffStep,
+                                           ALSource->Params.Hrtf.DelayStep);
+                ALSource->Params.Hrtf.Gain = DryGain;
+                ALSource->Params.Hrtf.Dir[0] = Position[0];
+                ALSource->Params.Hrtf.Dir[1] = Position[1];
+                ALSource->Params.Hrtf.Dir[2] = Position[2];
             }
         }
         else
         {
             /* Get the initial (static) HRIR coefficients and delays. */
             GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, DryGain,
-                                ALSource->Params.HrtfCoeffs[0],
-                                ALSource->Params.HrtfDelay[0]);
-            ALSource->HrtfCounter = 0;
-            ALSource->Params.HrtfGain = DryGain;
-            ALSource->Params.HrtfDir[0] = Position[0];
-            ALSource->Params.HrtfDir[1] = Position[1];
-            ALSource->Params.HrtfDir[2] = Position[2];
+                                ALSource->Params.Hrtf.Coeffs[0],
+                                ALSource->Params.Hrtf.Delay[0]);
+            ALSource->Hrtf.Counter = 0;
+            ALSource->Params.Hrtf.Gain = DryGain;
+            ALSource->Params.Hrtf.Dir[0] = Position[0];
+            ALSource->Params.Hrtf.Dir[1] = Position[1];
+            ALSource->Params.Hrtf.Dir[2] = Position[2];
         }
     }
     else
@@ -772,22 +772,22 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         for(i = 0;i < MAXCHANNELS;i++)
         {
             for(j = 0;j < MAXCHANNELS;j++)
-                ALSource->Params.DryGains[i][j] = 0.0f;
+                ALSource->Params.Direct.Gains[i][j] = 0.0f;
         }
         for(i = 0;i < (ALint)Device->NumChan;i++)
         {
             enum Channel chan = Device->Speaker2Chan[i];
             ALfloat gain = lerp(AmbientGain, ChannelGain[chan], DirGain);
-            ALSource->Params.DryGains[0][chan] = DryGain * gain;
+            ALSource->Params.Direct.Gains[0][chan] = DryGain * gain;
         }
     }
     for(i = 0;i < NumSends;i++)
-        ALSource->Params.Send[i].WetGain = WetGain[i];
+        ALSource->Params.Send[i].Gain = WetGain[i];
 
     /* Update filter coefficients. */
     cw = aluCos(F_PI*2.0f * LOWPASSFREQREF / Frequency);
 
-    ALSource->Params.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
+    ALSource->Params.Direct.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
     for(i = 0;i < NumSends;i++)
     {
         ALfloat a = lpCoeffCalc(WetGainHF[i]*WetGainHF[i], cw);

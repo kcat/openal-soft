@@ -686,13 +686,13 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
                 if(!filter)
                 {
                     /* Disable filter */
-                    Source->Send[value2].WetGain = 1.0f;
-                    Source->Send[value2].WetGainHF = 1.0f;
+                    Source->Send[value2].Gain = 1.0f;
+                    Source->Send[value2].GainHF = 1.0f;
                 }
                 else
                 {
-                    Source->Send[value2].WetGain = filter->Gain;
-                    Source->Send[value2].WetGainHF = filter->GainHF;
+                    Source->Send[value2].Gain = filter->Gain;
+                    Source->Send[value2].GainHF = filter->GainHF;
                 }
                 Source->NeedsUpdate = AL_TRUE;
                 UnlockContext(Context);
@@ -1633,14 +1633,14 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->DirectGainHF = 1.0f;
     for(i = 0;i < MAX_SENDS;i++)
     {
-        Source->Send[i].WetGain = 1.0f;
-        Source->Send[i].WetGainHF = 1.0f;
+        Source->Send[i].Gain = 1.0f;
+        Source->Send[i].GainHF = 1.0f;
     }
 
     Source->NeedsUpdate = AL_TRUE;
 
-    Source->HrtfMoving = AL_FALSE;
-    Source->HrtfCounter = 0;
+    Source->Hrtf.Moving = AL_FALSE;
+    Source->Hrtf.Counter = 0;
 }
 
 
@@ -1670,11 +1670,11 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             for(j = 0;j < MAXCHANNELS;j++)
             {
                 for(k = 0;k < SRC_HISTORY_LENGTH;k++)
-                    Source->HrtfHistory[j][k] = 0.0f;
+                    Source->Hrtf.History[j][k] = 0.0f;
                 for(k = 0;k < HRIR_LENGTH;k++)
                 {
-                    Source->HrtfValues[j][k][0] = 0.0f;
-                    Source->HrtfValues[j][k][1] = 0.0f;
+                    Source->Hrtf.Values[j][k][0] = 0.0f;
+                    Source->Hrtf.Values[j][k][1] = 0.0f;
                 }
             }
         }
@@ -1714,8 +1714,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(Source->state == AL_PLAYING)
         {
             Source->state = AL_PAUSED;
-            Source->HrtfMoving = AL_FALSE;
-            Source->HrtfCounter = 0;
+            Source->Hrtf.Moving = AL_FALSE;
+            Source->Hrtf.Counter = 0;
         }
     }
     else if(state == AL_STOPPED)
@@ -1724,8 +1724,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         {
             Source->state = AL_STOPPED;
             Source->BuffersPlayed = Source->BuffersInQueue;
-            Source->HrtfMoving = AL_FALSE;
-            Source->HrtfCounter = 0;
+            Source->Hrtf.Moving = AL_FALSE;
+            Source->Hrtf.Counter = 0;
         }
         Source->Offset = -1.0;
     }
@@ -1737,8 +1737,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->position = 0;
             Source->position_fraction = 0;
             Source->BuffersPlayed = 0;
-            Source->HrtfMoving = AL_FALSE;
-            Source->HrtfCounter = 0;
+            Source->Hrtf.Moving = AL_FALSE;
+            Source->Hrtf.Counter = 0;
         }
         Source->Offset = -1.0;
     }

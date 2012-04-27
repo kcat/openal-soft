@@ -28,6 +28,23 @@ typedef struct ALbufferlistitem
     struct ALbufferlistitem *prev;
 } ALbufferlistitem;
 
+typedef struct HrtfParams {
+    ALfloat Gain;
+    ALfloat Dir[3];
+    ALfloat Coeffs[MAXCHANNELS][HRIR_LENGTH][2];
+    ALuint Delay[MAXCHANNELS][2];
+    ALfloat CoeffStep[HRIR_LENGTH][2];
+    ALint DelayStep[2];
+} HrtfParams;
+
+typedef struct HrtfState {
+    ALboolean Moving;
+    ALuint Counter;
+    ALfloat History[MAXCHANNELS][SRC_HISTORY_LENGTH];
+    ALfloat Values[MAXCHANNELS][HRIR_LENGTH][2];
+    ALuint Offset;
+} HrtfState;
+
 typedef struct ALsource
 {
     /** Source properties. */
@@ -97,16 +114,12 @@ typedef struct ALsource
 
     struct {
         struct ALeffectslot *Slot;
-        ALfloat WetGain;
-        ALfloat WetGainHF;
+        ALfloat Gain;
+        ALfloat GainHF;
     } Send[MAX_SENDS];
 
     /** HRTF info. */
-    ALboolean HrtfMoving;
-    ALuint HrtfCounter;
-    ALfloat HrtfHistory[MAXCHANNELS][SRC_HISTORY_LENGTH];
-    ALfloat HrtfValues[MAXCHANNELS][HRIR_LENGTH][2];
-    ALuint HrtfOffset;
+    HrtfState Hrtf;
 
     /** Current target parameters used for mixing. */
     struct {
@@ -114,24 +127,21 @@ typedef struct ALsource
 
         ALint Step;
 
-        ALfloat HrtfGain;
-        ALfloat HrtfDir[3];
-        ALfloat HrtfCoeffs[MAXCHANNELS][HRIR_LENGTH][2];
-        ALuint HrtfDelay[MAXCHANNELS][2];
-        ALfloat HrtfCoeffStep[HRIR_LENGTH][2];
-        ALint HrtfDelayStep[2];
+        HrtfParams Hrtf;
 
-        /* A mixing matrix. First subscript is the channel number of the input
-         * data (regardless of channel configuration) and the second is the
-         * channel target (eg. FRONT_LEFT). */
-        ALfloat DryGains[MAXCHANNELS][MAXCHANNELS];
+        struct {
+            /* A mixing matrix. First subscript is the channel number of the
+             * input data (regardless of channel configuration) and the second
+             * is the channel target (eg. FRONT_LEFT). */
+            ALfloat Gains[MAXCHANNELS][MAXCHANNELS];
 
-        FILTER iirFilter;
-        ALfloat history[MAXCHANNELS*2];
+            FILTER iirFilter;
+            ALfloat history[MAXCHANNELS*2];
+        } Direct;
 
         struct {
             struct ALeffectslot *Slot;
-            ALfloat WetGain;
+            ALfloat Gain;
             FILTER iirFilter;
             ALfloat history[MAXCHANNELS];
         } Send[MAX_SENDS];

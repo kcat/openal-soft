@@ -106,10 +106,10 @@ static void Mix_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,           \
   ALuint SamplesToDo, ALuint BufferSize)                                      \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
-    const ALint *RESTRICT DelayStep = Source->Params.HrtfDelayStep;           \
+    const ALint *RESTRICT DelayStep = Source->Params.Hrtf.DelayStep;          \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
-    ALfloat (*RESTRICT CoeffStep)[2] = Source->Params.HrtfCoeffStep;          \
+    ALfloat (*RESTRICT CoeffStep)[2] = Source->Params.Hrtf.CoeffStep;         \
     ALuint pos, frac;                                                         \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
@@ -122,19 +122,19 @@ static void Mix_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,           \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
-    DryFilter = &Source->Params.iirFilter;                                    \
+    DryFilter = &Source->Params.Direct.iirFilter;                             \
                                                                               \
     pos = 0;                                                                  \
     frac = srcfrac;                                                           \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
-        ALfloat (*RESTRICT TargetCoeffs)[2] = Source->Params.HrtfCoeffs[i];   \
-        ALuint *RESTRICT TargetDelay = Source->Params.HrtfDelay[i];           \
-        ALfloat *RESTRICT History = Source->HrtfHistory[i];                   \
-        ALfloat (*RESTRICT Values)[2] = Source->HrtfValues[i];                \
-        ALint Counter = maxu(Source->HrtfCounter, OutPos) - OutPos;           \
-        ALuint Offset = Source->HrtfOffset + OutPos;                          \
+        ALfloat (*RESTRICT TargetCoeffs)[2] = Source->Params.Hrtf.Coeffs[i];  \
+        ALuint *RESTRICT TargetDelay = Source->Params.Hrtf.Delay[i];          \
+        ALfloat *RESTRICT History = Source->Hrtf.History[i];                  \
+        ALfloat (*RESTRICT Values)[2] = Source->Hrtf.Values[i];               \
+        ALint Counter = maxu(Source->Hrtf.Counter, OutPos) - OutPos;          \
+        ALuint Offset = Source->Hrtf.Offset + OutPos;                         \
         ALfloat Coeffs[HRIR_LENGTH][2];                                       \
         ALuint Delay[2];                                                      \
         ALfloat left, right;                                                  \
@@ -257,7 +257,7 @@ static void Mix_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,           \
         WetClickRemoval = Slot->ClickRemoval;                                 \
         WetPendingClicks = Slot->PendingClicks;                               \
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
-        WetSend = Source->Params.Send[out].WetGain;                           \
+        WetSend = Source->Params.Send[out].Gain;                              \
                                                                               \
         for(i = 0;i < NumChannels;i++)                                        \
         {                                                                     \
@@ -323,7 +323,7 @@ static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
-    DryFilter = &Source->Params.iirFilter;                                    \
+    DryFilter = &Source->Params.Direct.iirFilter;                             \
                                                                               \
     pos = 0;                                                                  \
     frac = srcfrac;                                                           \
@@ -331,7 +331,7 @@ static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
         for(c = 0;c < MAXCHANNELS;c++)                                        \
-            DrySend[c] = Source->Params.DryGains[i][c];                       \
+            DrySend[c] = Source->Params.Direct.Gains[i][c];                   \
                                                                               \
         pos = 0;                                                              \
         frac = srcfrac;                                                       \
@@ -384,7 +384,7 @@ static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
         WetClickRemoval = Slot->ClickRemoval;                                 \
         WetPendingClicks = Slot->PendingClicks;                               \
         WetFilter = &Source->Params.Send[out].iirFilter;                      \
-        WetSend = Source->Params.Send[out].WetGain;                           \
+        WetSend = Source->Params.Send[out].Gain;                              \
                                                                               \
         for(i = 0;i < NumChannels;i++)                                        \
         {                                                                     \
@@ -808,15 +808,15 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     Source->BuffersPlayed     = BuffersPlayed;
     Source->position          = DataPosInt;
     Source->position_fraction = DataPosFrac;
-    Source->HrtfOffset       += OutPos;
+    Source->Hrtf.Offset      += OutPos;
     if(State == AL_PLAYING)
     {
-        Source->HrtfCounter = maxu(Source->HrtfCounter, OutPos) - OutPos;
-        Source->HrtfMoving  = AL_TRUE;
+        Source->Hrtf.Counter = maxu(Source->Hrtf.Counter, OutPos) - OutPos;
+        Source->Hrtf.Moving  = AL_TRUE;
     }
     else
     {
-        Source->HrtfCounter = 0;
-        Source->HrtfMoving  = AL_FALSE;
+        Source->Hrtf.Counter = 0;
+        Source->Hrtf.Moving  = AL_FALSE;
     }
 }

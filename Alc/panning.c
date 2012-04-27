@@ -166,14 +166,15 @@ ALint aluCart2LUTpos(ALfloat re, ALfloat im)
 
 ALvoid aluInitPanning(ALCdevice *Device)
 {
-    ALfloat SpeakerAngle[MAXCHANNELS];
     const char *layoutname = NULL;
     enum Channel *Speaker2Chan;
+    ALfloat *SpeakerAngle;
     ALfloat Alpha, Theta;
     ALint pos;
     ALuint s;
 
     Speaker2Chan = Device->Speaker2Chan;
+    SpeakerAngle = Device->SpeakerAngle;
     switch(Device->FmtChans)
     {
         case DevFmtMono:

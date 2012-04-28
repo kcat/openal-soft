@@ -53,9 +53,7 @@ static ALboolean DedicatedDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const ALeffectslot *Slot)
 {
     ALdedicatedState *state = (ALdedicatedState*)effect;
-    const ALfloat *ChannelGain;
     ALfloat Gain;
-    ALint pos;
     ALsizei s;
 
     Gain = Slot->Gain * Slot->effect.Dedicated.Gain;
@@ -63,13 +61,7 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const AL
         state->gains[s] = 0.0f;
 
     if(Slot->effect.type == AL_EFFECT_DEDICATED_DIALOGUE)
-    {
-        pos = aluCart2LUTpos(0.0f, 1.0f);
-        ChannelGain = device->PanningLUT[pos];
-
-        for(s = 0;s < MAXCHANNELS;s++)
-            state->gains[s] = ChannelGain[s] * Gain;
-    }
+        ComputeAngleGains(device, aluAtan2(0.0f, 1.0f), 0.0f, Gain, state->gains);
     else if(Slot->effect.type == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
         state->gains[LFE] = Gain;
 }

@@ -94,10 +94,9 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffec
 {
     ALechoState *state = (ALechoState*)effect;
     ALuint frequency = Device->Frequency;
-    ALfloat dirGain, ambientGain;
-    const ALfloat *ChannelGain;
     ALfloat lrpan, cw, g, gain;
-    ALuint i, pos;
+    ALfloat dirGain;
+    ALuint i;
 
     state->Tap[0].delay = fastf2u(Slot->effect.Echo.Delay * frequency) + 1;
     state->Tap[1].delay = fastf2u(Slot->effect.Echo.LRDelay * frequency);
@@ -118,28 +117,13 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffec
         state->Gain[1][i] = 0.0f;
     }
 
-    ambientGain = aluSqrt(1.0f/Device->NumChan);
     dirGain = aluFabs(lrpan);
 
     /* First tap panning */
-    pos = aluCart2LUTpos(((lrpan>0.0f)?-1.0f:1.0f), 0.0f);
-    ChannelGain = Device->PanningLUT[pos];
-
-    for(i = 0;i < Device->NumChan;i++)
-    {
-        enum Channel chan = Device->Speaker2Chan[i];
-        state->Gain[0][chan] = lerp(ambientGain, ChannelGain[chan], dirGain) * gain;
-    }
+    ComputeAngleGains(Device, aluAtan2(-lrpan, 0.0f), (1.0f-dirGain)*F_PI, gain, state->Gain[0]);
 
     /* Second tap panning */
-    pos = aluCart2LUTpos(((lrpan>0.0f)?1.0f:-1.0f), 0.0f);
-    ChannelGain = Device->PanningLUT[pos];
-
-    for(i = 0;i < Device->NumChan;i++)
-    {
-        enum Channel chan = Device->Speaker2Chan[i];
-        state->Gain[1][chan] = lerp(ambientGain, ChannelGain[chan], dirGain) * gain;
-    }
+    ComputeAngleGains(Device, aluAtan2(+lrpan, 0.0f), (1.0f-dirGain)*F_PI, gain, state->Gain[1]);
 }
 
 static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])

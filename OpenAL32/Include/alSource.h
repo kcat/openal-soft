@@ -28,6 +28,14 @@ typedef struct ALbufferlistitem
     struct ALbufferlistitem *prev;
 } ALbufferlistitem;
 
+typedef struct HrtfState {
+    ALboolean Moving;
+    ALuint Counter;
+    ALfloat History[MAXCHANNELS][SRC_HISTORY_LENGTH];
+    ALfloat Values[MAXCHANNELS][HRIR_LENGTH][2];
+    ALuint Offset;
+} HrtfState;
+
 typedef struct HrtfParams {
     ALfloat Gain;
     ALfloat Dir[3];
@@ -37,13 +45,27 @@ typedef struct HrtfParams {
     ALint DelayStep[2];
 } HrtfParams;
 
-typedef struct HrtfState {
-    ALboolean Moving;
-    ALuint Counter;
-    ALfloat History[MAXCHANNELS][SRC_HISTORY_LENGTH];
-    ALfloat Values[MAXCHANNELS][HRIR_LENGTH][2];
-    ALuint Offset;
-} HrtfState;
+typedef struct DirectParams {
+    /* A mixing matrix. First subscript is the channel number of the input data
+     * (regardless of channel configuration) and the second is the channel
+     * target (eg. FRONT_LEFT). */
+    ALfloat Gains[MAXCHANNELS][MAXCHANNELS];
+
+    /* A low-pass filter, using 2 chained one-pole filters. */
+    FILTER iirFilter;
+    ALfloat history[MAXCHANNELS*2];
+} DirectParams;
+
+typedef struct SendParams {
+    /* Gain control, which applies to all input channels to a single (mono)
+     * output buffer. */
+    ALfloat Gain;
+
+    /* A low-pass filter, using a one-pole filter. */
+    FILTER iirFilter;
+    ALfloat history[MAXCHANNELS];
+} SendParams;
+
 
 typedef struct ALsource
 {
@@ -130,22 +152,10 @@ typedef struct ALsource
 
         HrtfParams Hrtf;
 
-        struct {
-            /* A mixing matrix. First subscript is the channel number of the
-             * input data (regardless of channel configuration) and the second
-             * is the channel target (eg. FRONT_LEFT). */
-            ALfloat Gains[MAXCHANNELS][MAXCHANNELS];
+        DirectParams Direct;
 
-            FILTER iirFilter;
-            ALfloat history[MAXCHANNELS*2];
-        } Direct;
-
-        struct {
-            struct ALeffectslot *Slot;
-            ALfloat Gain;
-            FILTER iirFilter;
-            ALfloat history[MAXCHANNELS];
-        } Send[MAX_SENDS];
+        struct ALeffectslot *Slot[MAX_SENDS];
+        SendParams Send[MAX_SENDS];
     } Params;
     /** Source needs to update its mixing parameters. */
     volatile ALenum NeedsUpdate;

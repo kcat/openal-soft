@@ -336,7 +336,7 @@ static void MixSend_##sampler(ALsource *Source, ALuint sendidx,               \
                                                                               \
     increment = Source->Params.Step;                                          \
                                                                               \
-    Slot = Source->Params.Send[sendidx].Slot;                                 \
+    Slot = Source->Params.Slot[sendidx];                                      \
     WetBuffer = Slot->WetBuffer;                                              \
     WetClickRemoval = Slot->ClickRemoval;                                     \
     WetPendingClicks = Slot->PendingClicks;                                   \
@@ -719,7 +719,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                               OutPos, SamplesToDo, BufferSize);
         for(i = 0;i < Device->NumAuxSends;i++)
         {
-            if(!Source->Params.Send[i].Slot)
+            if(!Source->Params.Slot[i])
                 continue;
             Source->Params.WetMix(Source, i, SrcData, DataPosFrac,
                                   OutPos, SamplesToDo, BufferSize);

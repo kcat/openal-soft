@@ -164,6 +164,167 @@ ALint aluCart2LUTpos(ALfloat im, ALfloat re)
     return pos%LUT_NUM;
 }
 
+/**
+ * ComputeAngleGains
+ *
+ * Sets channel gains based on a given source's angle and its half-width. The
+ * angle and hwidth parameters are in radians.
+ */
+ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat *gains)
+{
+    const enum Channel *Speaker2Chan = device->Speaker2Chan;
+    const ALfloat *SpeakerAngle = device->SpeakerAngle;
+    ALfloat tmpgains[MAXCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    ALboolean inverted = AL_FALSE;
+    ALfloat langle, rangle;
+    ALfloat a;
+    ALuint i;
+
+    /* Some easy special-cases first... */
+    if(device->NumChan == 1 || hwidth >= F_PI)
+    {
+        /* Full coverage for all speakers. */
+        for(i = 0;i < device->NumChan;i++)
+        {
+            enum Channel chan = Speaker2Chan[i];
+            gains[chan] = ingain;
+        }
+        return;
+    }
+    if(hwidth <= 0.0f)
+    {
+        /* Infinitismally small sound point. */
+        for(i = 0;i < device->NumChan-1;i++)
+        {
+            if(angle >= SpeakerAngle[i] && angle < SpeakerAngle[i+1])
+            {
+                /* Sound is between speaker i and i+1 */
+                a =             (angle-SpeakerAngle[i]) /
+                    (SpeakerAngle[i+1]-SpeakerAngle[i]);
+                gains[Speaker2Chan[i]]   = aluSqrt(1.0f-a) * ingain;
+                gains[Speaker2Chan[i+1]] = aluSqrt(     a) * ingain;
+                return;
+            }
+        }
+        /* Sound is between last and first speakers */
+        if(angle < SpeakerAngle[0])
+            angle += F_PI*2.0f;
+        a =                       (angle-SpeakerAngle[i]) /
+            (F_PI*2.0f + SpeakerAngle[0]-SpeakerAngle[i]);
+        gains[Speaker2Chan[i]] = aluSqrt(1.0f-a) * ingain;
+        gains[Speaker2Chan[0]] = aluSqrt(     a) * ingain;
+        return;
+    }
+
+    langle = angle - hwidth;
+    rangle = angle + hwidth;
+    if(langle < -F_PI)
+        langle += F_PI*2.0f;
+    if(rangle > F_PI)
+        rangle -= F_PI*2.0f;
+
+    if(langle > rangle)
+    {
+        /* langle and rangle are swapped to keep the langle<rangle assumption
+         * true, which keeps the following calculations sane. This inverts the
+         * results, so speakers within the original field end up as 0 and
+         * outside end up as 1. A fixup is done afterward to make sure the
+         * results are as expected. */
+        ALfloat tmp = rangle;
+        rangle = langle;
+        langle = tmp;
+        inverted = AL_TRUE;
+    }
+
+    /* First speaker */
+    i = 0;
+    {
+        ALuint last = device->NumChan-1;
+
+        if(SpeakerAngle[i] >= langle && SpeakerAngle[i] <= rangle)
+            tmpgains[Speaker2Chan[i]] = 1.0f;
+        else if(SpeakerAngle[i] < langle && SpeakerAngle[i+1] > langle)
+        {
+            a =            (langle-SpeakerAngle[i]) /
+                (SpeakerAngle[i+1]-SpeakerAngle[i]);
+            tmpgains[Speaker2Chan[i]] = 1.0f - a;
+        }
+        else if(SpeakerAngle[i] > rangle)
+        {
+            a =          (F_PI*2.0f + rangle-SpeakerAngle[last]) /
+                (F_PI*2.0f + SpeakerAngle[i]-SpeakerAngle[last]);
+            tmpgains[Speaker2Chan[i]] = a;
+        }
+        else if(rangle > SpeakerAngle[last])
+        {
+            a =                      (rangle-SpeakerAngle[last]) /
+                (F_PI*2.0f + SpeakerAngle[i]-SpeakerAngle[last]);
+            tmpgains[Speaker2Chan[i]] = a;
+        }
+    }
+
+    for(i = 1;i < device->NumChan-1;i++)
+    {
+        if(SpeakerAngle[i] >= langle && SpeakerAngle[i] <= rangle)
+            tmpgains[Speaker2Chan[i]] = 1.0f;
+        else if(SpeakerAngle[i] < langle && SpeakerAngle[i+1] > langle)
+        {
+            a =            (langle-SpeakerAngle[i]) /
+                (SpeakerAngle[i+1]-SpeakerAngle[i]);
+            tmpgains[Speaker2Chan[i]] = 1.0f - a;
+        }
+        else if(SpeakerAngle[i] > rangle && SpeakerAngle[i-1] < rangle)
+        {
+            a =          (rangle-SpeakerAngle[i-1]) /
+                (SpeakerAngle[i]-SpeakerAngle[i-1]);
+            tmpgains[Speaker2Chan[i]] = a;
+        }
+    }
+
+    /* Last speaker */
+    i = device->NumChan-1;
+    {
+        if(SpeakerAngle[i] >= langle && SpeakerAngle[i] <= rangle)
+            tmpgains[Speaker2Chan[i]] = 1.0f;
+        else if(SpeakerAngle[i] > rangle && SpeakerAngle[i-1] < rangle)
+        {
+            a =          (rangle-SpeakerAngle[i-1]) /
+                (SpeakerAngle[i]-SpeakerAngle[i-1]);
+            tmpgains[Speaker2Chan[i]] = a;
+        }
+        else if(SpeakerAngle[i] < langle)
+        {
+            ALfloat nextangle = SpeakerAngle[0] + F_PI*2.0f;
+            a =    (langle-SpeakerAngle[i]) /
+                (nextangle-SpeakerAngle[i]);
+            tmpgains[Speaker2Chan[i]] = 1.0f - a;
+        }
+        else if(SpeakerAngle[0] > langle)
+        {
+            a =          (langle-SpeakerAngle[i] - F_PI*2.0f) /
+                (SpeakerAngle[0]-SpeakerAngle[i] - F_PI*2.0f);
+            tmpgains[Speaker2Chan[i]] = 1.0f - a;
+        }
+    }
+
+    if(inverted)
+    {
+        for(i = 0;i < device->NumChan;i++)
+        {
+            enum Channel chan = device->Speaker2Chan[i];
+            gains[chan] = aluSqrt(1.0f - tmpgains[chan]) * ingain;
+        }
+    }
+    else
+    {
+        for(i = 0;i < device->NumChan;i++)
+        {
+            enum Channel chan = device->Speaker2Chan[i];
+            gains[chan] = aluSqrt(tmpgains[chan]) * ingain;
+        }
+    }
+}
+
 ALvoid aluInitPanning(ALCdevice *Device)
 {
     const char *layoutname = NULL;

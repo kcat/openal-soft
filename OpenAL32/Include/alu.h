@@ -298,6 +298,8 @@ static __inline void aluNormalize(ALfloat *inVector)
 ALvoid aluInitPanning(ALCdevice *Device);
 ALint aluCart2LUTpos(ALfloat im, ALfloat re);
 
+ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat *gains);
+
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 

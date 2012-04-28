@@ -1016,20 +1016,17 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
                             ReflectionsPan[2] };
     ALfloat latePan[3] = { LateReverbPan[0], LateReverbPan[1],
                            LateReverbPan[2] };
-    const ALfloat *ChannelGain;
     ALfloat ambientGain;
     ALfloat dirGain;
     ALfloat length;
     ALuint index;
-    ALint pos;
 
     Gain *= ReverbBoost;
 
-    // Attenuate non-directional reverb according to the number of channels
-    ambientGain = aluSqrt(2.0f/Device->NumChan);
+    /* Attenuate reverb according to its coverage (dirGain=0 will give
+     * Gain*ambientGain, and dirGain=1 will give Gain). */
+    ambientGain = minf(aluSqrt(2.0f/Device->NumChan), 1.0f);
 
-    // Calculate the 3D-panning gains for the early reflections and late
-    // reverb.
     length = earlyPan[0]*earlyPan[0] + earlyPan[1]*earlyPan[1] + earlyPan[2]*earlyPan[2];
     if(length > 1.0f)
     {
@@ -1047,36 +1044,17 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         latePan[2] *= length;
     }
 
-    /* This code applies directional reverb just like the mixer applies
-     * directional sources.  It diffuses the sound toward all speakers as the
-     * magnitude of the panning vector drops, which is only a rough
-     * approximation of the expansion of sound across the speakers from the
-     * panning direction.
-     */
-    pos = aluCart2LUTpos(earlyPan[0], earlyPan[2]);
-    ChannelGain = Device->PanningLUT[pos];
-    dirGain = aluSqrt((earlyPan[0] * earlyPan[0]) + (earlyPan[2] * earlyPan[2]));
-
+    dirGain = aluSqrt(earlyPan[0]*earlyPan[0] + earlyPan[2]*earlyPan[2]);
     for(index = 0;index < MAXCHANNELS;index++)
-        State->Early.PanGain[index] = 0.0f;
-    for(index = 0;index < Device->NumChan;index++)
-    {
-        enum Channel chan = Device->Speaker2Chan[index];
-        State->Early.PanGain[chan] = lerp(ambientGain, ChannelGain[chan], dirGain) * Gain;
-    }
+         State->Early.PanGain[index] = 0.0f;
+    ComputeAngleGains(Device, aluAtan2(earlyPan[0], earlyPan[2]), (1.0f-dirGain)*F_PI,
+                      lerp(ambientGain, 1.0f, dirGain) * Gain, State->Early.PanGain);
 
-
-    pos = aluCart2LUTpos(latePan[0], latePan[2]);
-    ChannelGain = Device->PanningLUT[pos];
-    dirGain = aluSqrt((latePan[0] * latePan[0]) + (latePan[2] * latePan[2]));
-
+    dirGain = aluSqrt(latePan[0]*latePan[0] + latePan[2]*latePan[2]);
     for(index = 0;index < MAXCHANNELS;index++)
          State->Late.PanGain[index] = 0.0f;
-    for(index = 0;index < Device->NumChan;index++)
-    {
-        enum Channel chan = Device->Speaker2Chan[index];
-        State->Late.PanGain[chan] = lerp(ambientGain, ChannelGain[chan], dirGain) * Gain;
-    }
+    ComputeAngleGains(Device, aluAtan2(latePan[0], latePan[2]), (1.0f-dirGain)*F_PI,
+                      lerp(ambientGain, 1.0f, dirGain) * Gain, State->Late.PanGain);
 }
 
 // This updates the EAX reverb state.  This is called any time the EAX reverb

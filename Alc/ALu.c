@@ -744,40 +744,36 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
-        /* Use a lookup table for panning multi-speaker playback. */
-        ALfloat DirGain, AmbientGain;
-        const ALfloat *ChannelGain;
-        ALfloat length;
-        ALint pos;
+        ALfloat (*Matrix)[MAXCHANNELS] = ALSource->Params.Direct.Gains;
+        ALfloat DirGain = 0.0f;
+        ALfloat AmbientGain;
 
-        /* Normalize the length based on the source's min distance. Sources
-         * closer than this will not pan as much. */
-        length = maxf(Distance, MinDist);
-        if(length > 0.0f)
-        {
-            ALfloat invlen = 1.0f/length;
-            Position[0] *= invlen;
-            Position[1] *= invlen;
-            Position[2] *= invlen;
-        }
-
-        pos = aluCart2LUTpos(Position[0], -Position[2]*ZScale);
-        ChannelGain = Device->PanningLUT[pos];
-
-        /* Adjustment for partial panning. Not the greatest, but simple
-         * enough. */
-        DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
-        AmbientGain = aluSqrt(1.0f/Device->NumChan);
         for(i = 0;i < MAXCHANNELS;i++)
         {
             for(j = 0;j < MAXCHANNELS;j++)
-                ALSource->Params.Direct.Gains[i][j] = 0.0f;
+                Matrix[i][j] = 0.0f;
         }
+
+        /* Normalize the length, and compute panned gains. */
+        if(Distance > 0.0f)
+        {
+            ALfloat invlen = 1.0f/Distance;
+            Position[0] *= invlen;
+            Position[1] *= invlen;
+            Position[2] *= invlen;
+
+            DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
+            ComputeAngleGains(Device, aluAtan2(Position[0], -Position[2]*ZScale), 0.0f,
+                              DryGain*DirGain, Matrix[0]);
+        }
+
+        /* Adjustment for vertical offsets. Not the greatest, but simple
+         * enough. */
+        AmbientGain = DryGain * aluSqrt(1.0f/Device->NumChan) * (1.0f-DirGain);
         for(i = 0;i < (ALint)Device->NumChan;i++)
         {
             enum Channel chan = Device->Speaker2Chan[i];
-            ALfloat gain = lerp(AmbientGain, ChannelGain[chan], DirGain);
-            ALSource->Params.Direct.Gains[0][chan] = DryGain * gain;
+            Matrix[0][chan] = maxf(Matrix[0][chan], AmbientGain);
         }
     }
     for(i = 0;i < NumSends;i++)

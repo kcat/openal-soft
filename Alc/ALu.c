@@ -270,12 +270,12 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             if(chans[c].channel == LFE)
             {
                 /* Skip LFE */
-                ALSource->Params.Hrtf.Delay[c][0] = 0;
-                ALSource->Params.Hrtf.Delay[c][1] = 0;
+                ALSource->Params.Direct.Hrtf.Delay[c][0] = 0;
+                ALSource->Params.Direct.Hrtf.Delay[c][1] = 0;
                 for(i = 0;i < HRIR_LENGTH;i++)
                 {
-                    ALSource->Params.Hrtf.Coeffs[c][i][0] = 0.0f;
-                    ALSource->Params.Hrtf.Coeffs[c][i][1] = 0.0f;
+                    ALSource->Params.Direct.Hrtf.Coeffs[c][i][0] = 0.0f;
+                    ALSource->Params.Direct.Hrtf.Coeffs[c][i][1] = 0.0f;
                 }
             }
             else
@@ -285,8 +285,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 GetLerpedHrtfCoeffs(Device->Hrtf,
                                     0.0f, chans[c].angle,
                                     DryGain*ListenerGain,
-                                    ALSource->Params.Hrtf.Coeffs[c],
-                                    ALSource->Params.Hrtf.Delay[c]);
+                                    ALSource->Params.Direct.Hrtf.Coeffs[c],
+                                    ALSource->Params.Direct.Hrtf.Delay[c]);
             }
         }
         ALSource->Hrtf.Counter = 0;
@@ -713,8 +713,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         if(ALSource->Hrtf.Moving)
         {
             /* Calculate the normalized HRTF transition factor (delta). */
-            delta = CalcHrtfDelta(ALSource->Params.Hrtf.Gain, DryGain,
-                                  ALSource->Params.Hrtf.Dir, Position);
+            delta = CalcHrtfDelta(ALSource->Params.Direct.Hrtf.Gain, DryGain,
+                                  ALSource->Params.Direct.Hrtf.Dir, Position);
             /* If the delta is large enough, get the moving HRIR target
              * coefficients, target delays, steppping values, and counter. */
             if(delta > 0.001f)
@@ -722,27 +722,27 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Hrtf.Counter = GetMovingHrtfCoeffs(Device->Hrtf,
                                            ev, az, DryGain, delta,
                                            ALSource->Hrtf.Counter,
-                                           ALSource->Params.Hrtf.Coeffs[0],
-                                           ALSource->Params.Hrtf.Delay[0],
-                                           ALSource->Params.Hrtf.CoeffStep,
-                                           ALSource->Params.Hrtf.DelayStep);
-                ALSource->Params.Hrtf.Gain = DryGain;
-                ALSource->Params.Hrtf.Dir[0] = Position[0];
-                ALSource->Params.Hrtf.Dir[1] = Position[1];
-                ALSource->Params.Hrtf.Dir[2] = Position[2];
+                                           ALSource->Params.Direct.Hrtf.Coeffs[0],
+                                           ALSource->Params.Direct.Hrtf.Delay[0],
+                                           ALSource->Params.Direct.Hrtf.CoeffStep,
+                                           ALSource->Params.Direct.Hrtf.DelayStep);
+                ALSource->Params.Direct.Hrtf.Gain = DryGain;
+                ALSource->Params.Direct.Hrtf.Dir[0] = Position[0];
+                ALSource->Params.Direct.Hrtf.Dir[1] = Position[1];
+                ALSource->Params.Direct.Hrtf.Dir[2] = Position[2];
             }
         }
         else
         {
             /* Get the initial (static) HRIR coefficients and delays. */
             GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, DryGain,
-                                ALSource->Params.Hrtf.Coeffs[0],
-                                ALSource->Params.Hrtf.Delay[0]);
+                                ALSource->Params.Direct.Hrtf.Coeffs[0],
+                                ALSource->Params.Direct.Hrtf.Delay[0]);
             ALSource->Hrtf.Counter = 0;
-            ALSource->Params.Hrtf.Gain = DryGain;
-            ALSource->Params.Hrtf.Dir[0] = Position[0];
-            ALSource->Params.Hrtf.Dir[1] = Position[1];
-            ALSource->Params.Hrtf.Dir[2] = Position[2];
+            ALSource->Params.Direct.Hrtf.Gain = DryGain;
+            ALSource->Params.Direct.Hrtf.Dir[0] = Position[0];
+            ALSource->Params.Direct.Hrtf.Dir[1] = Position[1];
+            ALSource->Params.Direct.Hrtf.Dir[2] = Position[2];
         }
     }
     else

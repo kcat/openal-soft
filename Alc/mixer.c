@@ -106,10 +106,10 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
   ALuint SamplesToDo, ALuint BufferSize)                                      \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
-    const ALint *RESTRICT DelayStep = Source->Params.Hrtf.DelayStep;          \
+    const ALint *RESTRICT DelayStep = Source->Params.Direct.Hrtf.DelayStep;   \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
-    ALfloat (*RESTRICT CoeffStep)[2] = Source->Params.Hrtf.CoeffStep;         \
+    ALfloat (*RESTRICT CoeffStep)[2] = Source->Params.Direct.Hrtf.CoeffStep;  \
     ALuint pos, frac;                                                         \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
@@ -126,8 +126,8 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
-        ALfloat (*RESTRICT TargetCoeffs)[2] = Source->Params.Hrtf.Coeffs[i];  \
-        ALuint *RESTRICT TargetDelay = Source->Params.Hrtf.Delay[i];          \
+        ALfloat (*RESTRICT TargetCoeffs)[2] = Source->Params.Direct.Hrtf.Coeffs[i];\
+        ALuint *RESTRICT TargetDelay = Source->Params.Direct.Hrtf.Delay[i];   \
         ALfloat *RESTRICT History = Source->Hrtf.History[i];                  \
         ALfloat (*RESTRICT Values)[2] = Source->Hrtf.Values[i];               \
         ALint Counter = maxu(Source->Hrtf.Counter, OutPos) - OutPos;          \

@@ -46,9 +46,11 @@ typedef struct HrtfParams {
 } HrtfParams;
 
 typedef struct DirectParams {
+    HrtfParams Hrtf;
+
     /* A mixing matrix. First subscript is the channel number of the input data
      * (regardless of channel configuration) and the second is the channel
-     * target (eg. FRONT_LEFT). */
+     * target (eg. FRONT_LEFT). Not used with HRTF. */
     ALfloat Gains[MAXCHANNELS][MAXCHANNELS];
 
     /* A low-pass filter, using 2 chained one-pole filters. */
@@ -149,8 +151,6 @@ typedef struct ALsource
         WetMixerFunc WetMix;
 
         ALint Step;
-
-        HrtfParams Hrtf;
 
         DirectParams Direct;
 

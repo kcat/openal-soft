@@ -172,9 +172,10 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         BufferListItem = BufferListItem->next;
     }
     if(!DirectChannels && Device->Hrtf)
-        ALSource->Params.DoMix = SelectHrtfMixer(Resampler);
+        ALSource->Params.DryMix = SelectHrtfMixer(Resampler);
     else
-        ALSource->Params.DoMix = SelectMixer(Resampler);
+        ALSource->Params.DryMix = SelectDirectMixer(Resampler);
+    ALSource->Params.WetMix = SelectSendMixer(Resampler);
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
@@ -684,9 +685,10 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         BufferListItem = BufferListItem->next;
     }
     if(Device->Hrtf)
-        ALSource->Params.DoMix = SelectHrtfMixer(Resampler);
+        ALSource->Params.DryMix = SelectHrtfMixer(Resampler);
     else
-        ALSource->Params.DoMix = SelectMixer(Resampler);
+        ALSource->Params.DryMix = SelectDirectMixer(Resampler);
+    ALSource->Params.WetMix = SelectSendMixer(Resampler);
 
     if(Device->Hrtf)
     {

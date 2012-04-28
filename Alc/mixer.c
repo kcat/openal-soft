@@ -101,7 +101,7 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
 #endif
 
 #define DECL_TEMPLATE(sampler)                                                \
-static void Mix_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,           \
+static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
   const ALfloat *RESTRICT data, ALuint srcfrac, ALuint OutPos,                \
   ALuint SamplesToDo, ALuint BufferSize)                                      \
 {                                                                             \
@@ -114,8 +114,8 @@ static void Mix_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,           \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
     ALuint increment;                                                         \
-    ALuint i, out, c;                                                         \
     ALfloat value;                                                            \
+    ALuint i,  c;                                                             \
                                                                               \
     increment = Source->Params.Step;                                          \
                                                                               \
@@ -123,9 +123,6 @@ static void Mix_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,           \
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.Direct.iirFilter;                             \
-                                                                              \
-    pos = 0;                                                                  \
-    frac = srcfrac;                                                           \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
@@ -240,59 +237,6 @@ static void Mix_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,           \
         }                                                                     \
         OutPos -= BufferSize;                                                 \
     }                                                                         \
-                                                                              \
-    for(out = 0;out < Device->NumAuxSends;out++)                              \
-    {                                                                         \
-        ALeffectslot *Slot = Source->Params.Send[out].Slot;                   \
-        ALfloat  WetSend;                                                     \
-        ALfloat *RESTRICT WetBuffer;                                          \
-        ALfloat *RESTRICT WetClickRemoval;                                    \
-        ALfloat *RESTRICT WetPendingClicks;                                   \
-        FILTER  *WetFilter;                                                   \
-                                                                              \
-        if(Slot == NULL)                                                      \
-            continue;                                                         \
-                                                                              \
-        WetBuffer = Slot->WetBuffer;                                          \
-        WetClickRemoval = Slot->ClickRemoval;                                 \
-        WetPendingClicks = Slot->PendingClicks;                               \
-        WetFilter = &Source->Params.Send[out].iirFilter;                      \
-        WetSend = Source->Params.Send[out].Gain;                              \
-                                                                              \
-        for(i = 0;i < NumChannels;i++)                                        \
-        {                                                                     \
-            pos = 0;                                                          \
-            frac = srcfrac;                                                   \
-                                                                              \
-            if(LIKELY(OutPos == 0))                                           \
-            {                                                                 \
-                value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
-                value = lpFilter1PC(WetFilter, i, value);                     \
-                                                                              \
-                WetClickRemoval[0] -= value * WetSend;                        \
-            }                                                                 \
-            for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)             \
-            {                                                                 \
-                value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
-                value = lpFilter1P(WetFilter, i, value);                      \
-                                                                              \
-                WetBuffer[OutPos] += value * WetSend;                         \
-                                                                              \
-                frac += increment;                                            \
-                pos  += frac>>FRACTIONBITS;                                   \
-                frac &= FRACTIONMASK;                                         \
-                OutPos++;                                                     \
-            }                                                                 \
-            if(LIKELY(OutPos == SamplesToDo))                                 \
-            {                                                                 \
-                value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
-                value = lpFilter1PC(WetFilter, i, value);                     \
-                                                                              \
-                WetPendingClicks[0] += value * WetSend;                       \
-            }                                                                 \
-            OutPos -= BufferSize;                                             \
-        }                                                                     \
-    }                                                                         \
 }
 
 DECL_TEMPLATE(point32)
@@ -303,7 +247,7 @@ DECL_TEMPLATE(cubic32)
 
 
 #define DECL_TEMPLATE(sampler)                                                \
-static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
+static void MixDirect_##sampler(ALsource *Source, ALCdevice *Device,          \
   const ALfloat *RESTRICT data, ALuint srcfrac, ALuint OutPos,                \
   ALuint SamplesToDo, ALuint BufferSize)                                      \
 {                                                                             \
@@ -315,8 +259,8 @@ static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
     ALuint pos, frac;                                                         \
     ALuint BufferIdx;                                                         \
     ALuint increment;                                                         \
-    ALuint i, out, c;                                                         \
     ALfloat value;                                                            \
+    ALuint i,  c;                                                             \
                                                                               \
     increment = Source->Params.Step;                                          \
                                                                               \
@@ -324,9 +268,6 @@ static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
     DryFilter = &Source->Params.Direct.iirFilter;                             \
-                                                                              \
-    pos = 0;                                                                  \
-    frac = srcfrac;                                                           \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
@@ -367,58 +308,73 @@ static void Mix_##sampler(ALsource *Source, ALCdevice *Device,                \
         }                                                                     \
         OutPos -= BufferSize;                                                 \
     }                                                                         \
+}
+
+DECL_TEMPLATE(point32)
+DECL_TEMPLATE(lerp32)
+DECL_TEMPLATE(cubic32)
+
+#undef DECL_TEMPLATE
+
+#define DECL_TEMPLATE(sampler)                                                \
+static void MixSend_##sampler(ALsource *Source, ALuint sendidx,               \
+  const ALfloat *RESTRICT data, ALuint srcfrac, ALuint OutPos,                \
+  ALuint SamplesToDo, ALuint BufferSize)                                      \
+{                                                                             \
+    const ALuint NumChannels = Source->NumChannels;                           \
+    ALeffectslot *Slot;                                                       \
+    ALfloat  WetSend;                                                         \
+    ALfloat *WetBuffer;                                                       \
+    ALfloat *WetClickRemoval;                                                 \
+    ALfloat *WetPendingClicks;                                                \
+    FILTER  *WetFilter;                                                       \
+    ALuint pos, frac;                                                         \
+    ALuint BufferIdx;                                                         \
+    ALuint increment;                                                         \
+    ALfloat value;                                                            \
+    ALuint i;                                                                 \
                                                                               \
-    for(out = 0;out < Device->NumAuxSends;out++)                              \
+    increment = Source->Params.Step;                                          \
+                                                                              \
+    Slot = Source->Params.Send[sendidx].Slot;                                 \
+    WetBuffer = Slot->WetBuffer;                                              \
+    WetClickRemoval = Slot->ClickRemoval;                                     \
+    WetPendingClicks = Slot->PendingClicks;                                   \
+    WetFilter = &Source->Params.Send[sendidx].iirFilter;                      \
+    WetSend = Source->Params.Send[sendidx].Gain;                              \
+                                                                              \
+    for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
-        ALeffectslot *Slot = Source->Params.Send[out].Slot;                   \
-        ALfloat  WetSend;                                                     \
-        ALfloat *WetBuffer;                                                   \
-        ALfloat *WetClickRemoval;                                             \
-        ALfloat *WetPendingClicks;                                            \
-        FILTER  *WetFilter;                                                   \
+        pos = 0;                                                              \
+        frac = srcfrac;                                                       \
                                                                               \
-        if(Slot == NULL)                                                      \
-            continue;                                                         \
-                                                                              \
-        WetBuffer = Slot->WetBuffer;                                          \
-        WetClickRemoval = Slot->ClickRemoval;                                 \
-        WetPendingClicks = Slot->PendingClicks;                               \
-        WetFilter = &Source->Params.Send[out].iirFilter;                      \
-        WetSend = Source->Params.Send[out].Gain;                              \
-                                                                              \
-        for(i = 0;i < NumChannels;i++)                                        \
+        if(OutPos == 0)                                                       \
         {                                                                     \
-            pos = 0;                                                          \
-            frac = srcfrac;                                                   \
+            value = sampler(data + pos*NumChannels + i, NumChannels,frac);    \
                                                                               \
-            if(OutPos == 0)                                                   \
-            {                                                                 \
-                value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
-                                                                              \
-                value = lpFilter1PC(WetFilter, i, value);                     \
-                WetClickRemoval[0] -= value * WetSend;                        \
-            }                                                                 \
-            for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)             \
-            {                                                                 \
-                value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
-                                                                              \
-                value = lpFilter1P(WetFilter, i, value);                      \
-                WetBuffer[OutPos] += value * WetSend;                         \
-                                                                              \
-                frac += increment;                                            \
-                pos  += frac>>FRACTIONBITS;                                   \
-                frac &= FRACTIONMASK;                                         \
-                OutPos++;                                                     \
-            }                                                                 \
-            if(OutPos == SamplesToDo)                                         \
-            {                                                                 \
-                value = sampler(data + pos*NumChannels + i, NumChannels,frac);\
-                                                                              \
-                value = lpFilter1PC(WetFilter, i, value);                     \
-                WetPendingClicks[0] += value * WetSend;                       \
-            }                                                                 \
-            OutPos -= BufferSize;                                             \
+            value = lpFilter1PC(WetFilter, i, value);                         \
+            WetClickRemoval[0] -= value * WetSend;                            \
         }                                                                     \
+        for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
+        {                                                                     \
+            value = sampler(data + pos*NumChannels + i, NumChannels,frac);    \
+                                                                              \
+            value = lpFilter1P(WetFilter, i, value);                          \
+            WetBuffer[OutPos] += value * WetSend;                             \
+                                                                              \
+            frac += increment;                                                \
+            pos  += frac>>FRACTIONBITS;                                       \
+            frac &= FRACTIONMASK;                                             \
+            OutPos++;                                                         \
+        }                                                                     \
+        if(OutPos == SamplesToDo)                                             \
+        {                                                                     \
+            value = sampler(data + pos*NumChannels + i, NumChannels,frac);    \
+                                                                              \
+            value = lpFilter1PC(WetFilter, i, value);                         \
+            WetPendingClicks[0] += value * WetSend;                           \
+        }                                                                     \
+        OutPos -= BufferSize;                                                 \
     }                                                                         \
 }
 
@@ -429,32 +385,48 @@ DECL_TEMPLATE(cubic32)
 #undef DECL_TEMPLATE
 
 
-MixerFunc SelectMixer(enum Resampler Resampler)
+DryMixerFunc SelectDirectMixer(enum Resampler Resampler)
 {
     switch(Resampler)
     {
         case PointResampler:
-            return Mix_point32;
+            return MixDirect_point32;
         case LinearResampler:
-            return Mix_lerp32;
+            return MixDirect_lerp32;
         case CubicResampler:
-            return Mix_cubic32;
+            return MixDirect_cubic32;
         case ResamplerMax:
             break;
     }
     return NULL;
 }
 
-MixerFunc SelectHrtfMixer(enum Resampler Resampler)
+DryMixerFunc SelectHrtfMixer(enum Resampler Resampler)
 {
     switch(Resampler)
     {
         case PointResampler:
-            return Mix_Hrtf_point32;
+            return MixDirect_Hrtf_point32;
         case LinearResampler:
-            return Mix_Hrtf_lerp32;
+            return MixDirect_Hrtf_lerp32;
         case CubicResampler:
-            return Mix_Hrtf_cubic32;
+            return MixDirect_Hrtf_cubic32;
+        case ResamplerMax:
+            break;
+    }
+    return NULL;
+}
+
+WetMixerFunc SelectSendMixer(enum Resampler Resampler)
+{
+    switch(Resampler)
+    {
+        case PointResampler:
+            return MixSend_point32;
+        case LinearResampler:
+            return MixSend_lerp32;
+        case CubicResampler:
+            return MixSend_cubic32;
         case ResamplerMax:
             break;
     }
@@ -743,8 +715,15 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         BufferSize = minu(BufferSize, (SamplesToDo-OutPos));
 
         SrcData += BufferPrePadding*NumChannels;
-        Source->Params.DoMix(Source, Device, SrcData, DataPosFrac,
-                             OutPos, SamplesToDo, BufferSize);
+        Source->Params.DryMix(Source, Device, SrcData, DataPosFrac,
+                              OutPos, SamplesToDo, BufferSize);
+        for(i = 0;i < Device->NumAuxSends;i++)
+        {
+            if(!Source->Params.Send[i].Slot)
+                continue;
+            Source->Params.WetMix(Source, i, SrcData, DataPosFrac,
+                                  OutPos, SamplesToDo, BufferSize);
+        }
         for(i = 0;i < BufferSize;i++)
         {
             DataPosFrac += increment;

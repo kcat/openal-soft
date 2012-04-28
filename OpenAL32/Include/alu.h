@@ -120,10 +120,14 @@ extern "C" {
 struct ALsource;
 struct ALbuffer;
 
-typedef ALvoid (*MixerFunc)(struct ALsource *self, ALCdevice *Device,
-                            const ALfloat *RESTRICT data, ALuint srcfrac,
-                            ALuint OutPos, ALuint SamplesToDo,
-                            ALuint BufferSize);
+typedef ALvoid (*DryMixerFunc)(struct ALsource *self, ALCdevice *Device,
+                               const ALfloat *RESTRICT data, ALuint srcfrac,
+                               ALuint OutPos, ALuint SamplesToDo,
+                               ALuint BufferSize);
+typedef ALvoid (*WetMixerFunc)(struct ALsource *self, ALuint sendidx,
+                               const ALfloat *RESTRICT data, ALuint srcfrac,
+                               ALuint OutPos, ALuint SamplesToDo,
+                               ALuint BufferSize);
 
 enum Resampler {
     PointResampler,
@@ -293,8 +297,9 @@ ALint aluCart2LUTpos(ALfloat re, ALfloat im);
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 
-MixerFunc SelectMixer(enum Resampler Resampler);
-MixerFunc SelectHrtfMixer(enum Resampler Resampler);
+DryMixerFunc SelectDirectMixer(enum Resampler Resampler);
+DryMixerFunc SelectHrtfMixer(enum Resampler Resampler);
+WetMixerFunc SelectSendMixer(enum Resampler Resampler);
 
 ALvoid MixSource(struct ALsource *Source, ALCdevice *Device, ALuint SamplesToDo);
 

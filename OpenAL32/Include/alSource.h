@@ -123,7 +123,8 @@ typedef struct ALsource
 
     /** Current target parameters used for mixing. */
     struct {
-        MixerFunc DoMix;
+        DryMixerFunc DryMix;
+        WetMixerFunc WetMix;
 
         ALint Step;
 

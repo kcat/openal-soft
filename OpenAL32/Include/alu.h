@@ -296,7 +296,7 @@ static __inline void aluNormalize(ALfloat *inVector)
 
 
 ALvoid aluInitPanning(ALCdevice *Device);
-ALint aluCart2LUTpos(ALfloat re, ALfloat im);
+ALint aluCart2LUTpos(ALfloat im, ALfloat re);
 
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);

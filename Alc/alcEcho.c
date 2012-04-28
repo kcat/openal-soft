@@ -122,7 +122,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffec
     dirGain = aluFabs(lrpan);
 
     /* First tap panning */
-    pos = aluCart2LUTpos(0.0f, ((lrpan>0.0f)?-1.0f:1.0f));
+    pos = aluCart2LUTpos(((lrpan>0.0f)?-1.0f:1.0f), 0.0f);
     ChannelGain = Device->PanningLUT[pos];
 
     for(i = 0;i < Device->NumChan;i++)
@@ -132,7 +132,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffec
     }
 
     /* Second tap panning */
-    pos = aluCart2LUTpos(0.0f, ((lrpan>0.0f)?1.0f:-1.0f));
+    pos = aluCart2LUTpos(((lrpan>0.0f)?1.0f:-1.0f), 0.0f);
     ChannelGain = Device->PanningLUT[pos];
 
     for(i = 0;i < Device->NumChan;i++)

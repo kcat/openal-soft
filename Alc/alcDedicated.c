@@ -64,7 +64,7 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const AL
 
     if(Slot->effect.type == AL_EFFECT_DEDICATED_DIALOGUE)
     {
-        pos = aluCart2LUTpos(1.0f, 0.0f);
+        pos = aluCart2LUTpos(0.0f, 1.0f);
         ChannelGain = device->PanningLUT[pos];
 
         for(s = 0;s < MAXCHANNELS;s++)

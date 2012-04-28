@@ -1053,7 +1053,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
      * approximation of the expansion of sound across the speakers from the
      * panning direction.
      */
-    pos = aluCart2LUTpos(earlyPan[2], earlyPan[0]);
+    pos = aluCart2LUTpos(earlyPan[0], earlyPan[2]);
     ChannelGain = Device->PanningLUT[pos];
     dirGain = aluSqrt((earlyPan[0] * earlyPan[0]) + (earlyPan[2] * earlyPan[2]));
 
@@ -1066,7 +1066,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     }
 
 
-    pos = aluCart2LUTpos(latePan[2], latePan[0]);
+    pos = aluCart2LUTpos(latePan[0], latePan[2]);
     ChannelGain = Device->PanningLUT[pos];
     dirGain = aluSqrt((latePan[0] * latePan[0]) + (latePan[2] * latePan[2]));
 

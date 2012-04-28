@@ -206,8 +206,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             DryGain *= aluSqrt(2.0f/4.0f);
             for(c = 0;c < 2;c++)
             {
-                pos = aluCart2LUTpos(aluCos(RearMap[c].angle),
-                                     aluSin(RearMap[c].angle));
+                pos = aluCart2LUTpos(aluSin(RearMap[c].angle),
+                                     aluCos(RearMap[c].angle));
                 ChannelGain = Device->PanningLUT[pos];
 
                 for(i = 0;i < (ALint)Device->NumChan;i++)
@@ -299,7 +299,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 SrcMatrix[c][LFE] += DryGain;
                 continue;
             }
-            pos = aluCart2LUTpos(aluCos(chans[c].angle), aluSin(chans[c].angle));
+            pos = aluCart2LUTpos(aluSin(chans[c].angle), aluCos(chans[c].angle));
             ChannelGain = Device->PanningLUT[pos];
 
             for(i = 0;i < (ALint)Device->NumChan;i++)
@@ -761,7 +761,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             Position[2] *= invlen;
         }
 
-        pos = aluCart2LUTpos(-Position[2]*ZScale, Position[0]);
+        pos = aluCart2LUTpos(Position[0], -Position[2]*ZScale);
         ChannelGain = Device->PanningLUT[pos];
 
         /* Adjustment for partial panning. Not the greatest, but simple

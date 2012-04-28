@@ -179,12 +179,12 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
-    DryGain *= ALSource->DirectGain;
+    DryGain *= ALSource->DirectGain * ListenerGain;
     DryGainHF = ALSource->DirectGainHF;
     for(i = 0;i < NumSends;i++)
     {
         WetGain[i]  = clampf(SourceVolume, MinVolume, MaxVolume);
-        WetGain[i] *= ALSource->Send[i].Gain;
+        WetGain[i] *= ALSource->Send[i].Gain * ListenerGain;
         WetGainHF[i] = ALSource->Send[i].GainHF;
     }
 
@@ -213,8 +213,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 for(i = 0;i < (ALint)Device->NumChan;i++)
                 {
                     enum Channel chan = Device->Speaker2Chan[i];
-                    SrcMatrix[c][chan] += DryGain * ListenerGain *
-                                          ChannelGain[chan];
+                    SrcMatrix[c][chan] += DryGain * ChannelGain[chan];
                 }
             }
         }
@@ -257,7 +256,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 enum Channel chan = Device->Speaker2Chan[i];
                 if(chan == chans[c].channel)
                 {
-                    SrcMatrix[c][chan] += DryGain * ListenerGain;
+                    SrcMatrix[c][chan] += DryGain;
                     break;
                 }
             }
@@ -283,8 +282,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 /* Get the static HRIR coefficients and delays for this
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
-                                    0.0f, chans[c].angle,
-                                    DryGain*ListenerGain,
+                                    0.0f, chans[c].angle,  DryGain,
                                     ALSource->Params.Direct.Hrtf.Coeffs[c],
                                     ALSource->Params.Direct.Hrtf.Delay[c]);
             }
@@ -298,7 +296,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             /* Special-case LFE */
             if(chans[c].channel == LFE)
             {
-                SrcMatrix[c][LFE] += DryGain * ListenerGain;
+                SrcMatrix[c][LFE] += DryGain;
                 continue;
             }
             pos = aluCart2LUTpos(aluCos(chans[c].angle), aluSin(chans[c].angle));
@@ -307,8 +305,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             for(i = 0;i < (ALint)Device->NumChan;i++)
             {
                 enum Channel chan = Device->Speaker2Chan[i];
-                SrcMatrix[c][chan] += DryGain * ListenerGain *
-                                      ChannelGain[chan];
+                SrcMatrix[c][chan] += DryGain * ChannelGain[chan];
             }
         }
     }
@@ -321,7 +318,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         if(Slot && Slot->effect.type == AL_EFFECT_NULL)
             Slot = NULL;
         ALSource->Params.Slot[i] = Slot;
-        ALSource->Params.Send[i].Gain = WetGain[i] * ListenerGain;
+        ALSource->Params.Send[i].Gain = WetGain[i];
     }
 
     /* Update filter coefficients. Calculations based on the I3DL2

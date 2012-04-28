@@ -102,14 +102,14 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
 
 #define DECL_TEMPLATE(sampler)                                                \
 static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
-  const ALfloat *RESTRICT data, ALuint srcfrac, ALuint OutPos,                \
-  ALuint SamplesToDo, ALuint BufferSize)                                      \
+  DirectParams *params, const ALfloat *RESTRICT data, ALuint srcfrac,         \
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
-    const ALint *RESTRICT DelayStep = Source->Params.Direct.Hrtf.DelayStep;   \
+    const ALint *RESTRICT DelayStep = params->Hrtf.DelayStep;                 \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
-    ALfloat (*RESTRICT CoeffStep)[2] = Source->Params.Direct.Hrtf.CoeffStep;  \
+    ALfloat (*RESTRICT CoeffStep)[2] = params->Hrtf.CoeffStep;                \
     ALuint pos, frac;                                                         \
     FILTER *DryFilter;                                                        \
     ALuint BufferIdx;                                                         \
@@ -122,12 +122,12 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
-    DryFilter = &Source->Params.Direct.iirFilter;                             \
+    DryFilter = &params->iirFilter;                                           \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
-        ALfloat (*RESTRICT TargetCoeffs)[2] = Source->Params.Direct.Hrtf.Coeffs[i];\
-        ALuint *RESTRICT TargetDelay = Source->Params.Direct.Hrtf.Delay[i];   \
+        ALfloat (*RESTRICT TargetCoeffs)[2] = params->Hrtf.Coeffs[i];         \
+        ALuint *RESTRICT TargetDelay = params->Hrtf.Delay[i];                 \
         ALfloat *RESTRICT History = Source->Hrtf.History[i];                  \
         ALfloat (*RESTRICT Values)[2] = Source->Hrtf.Values[i];               \
         ALint Counter = maxu(Source->Hrtf.Counter, OutPos) - OutPos;          \
@@ -248,8 +248,8 @@ DECL_TEMPLATE(cubic32)
 
 #define DECL_TEMPLATE(sampler)                                                \
 static void MixDirect_##sampler(ALsource *Source, ALCdevice *Device,          \
-  const ALfloat *RESTRICT data, ALuint srcfrac, ALuint OutPos,                \
-  ALuint SamplesToDo, ALuint BufferSize)                                      \
+  DirectParams *params, const ALfloat *RESTRICT data, ALuint srcfrac,         \
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
     ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
@@ -267,12 +267,12 @@ static void MixDirect_##sampler(ALsource *Source, ALCdevice *Device,          \
     DryBuffer = Device->DryBuffer;                                            \
     ClickRemoval = Device->ClickRemoval;                                      \
     PendingClicks = Device->PendingClicks;                                    \
-    DryFilter = &Source->Params.Direct.iirFilter;                             \
+    DryFilter = &params->iirFilter;                                           \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
         for(c = 0;c < MAXCHANNELS;c++)                                        \
-            DrySend[c] = Source->Params.Direct.Gains[i][c];                   \
+            DrySend[c] = params->Gains[i][c];                                 \
                                                                               \
         pos = 0;                                                              \
         frac = srcfrac;                                                       \
@@ -318,8 +318,8 @@ DECL_TEMPLATE(cubic32)
 
 #define DECL_TEMPLATE(sampler)                                                \
 static void MixSend_##sampler(ALsource *Source, ALuint sendidx,               \
-  const ALfloat *RESTRICT data, ALuint srcfrac, ALuint OutPos,                \
-  ALuint SamplesToDo, ALuint BufferSize)                                      \
+  SendParams *params, const ALfloat *RESTRICT data, ALuint srcfrac,           \
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
     ALeffectslot *Slot;                                                       \
@@ -340,8 +340,8 @@ static void MixSend_##sampler(ALsource *Source, ALuint sendidx,               \
     WetBuffer = Slot->WetBuffer;                                              \
     WetClickRemoval = Slot->ClickRemoval;                                     \
     WetPendingClicks = Slot->PendingClicks;                                   \
-    WetFilter = &Source->Params.Send[sendidx].iirFilter;                      \
-    WetSend = Source->Params.Send[sendidx].Gain;                              \
+    WetFilter = &params->iirFilter;                                           \
+    WetSend = params->Gain;                                                   \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
@@ -715,13 +715,15 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         BufferSize = minu(BufferSize, (SamplesToDo-OutPos));
 
         SrcData += BufferPrePadding*NumChannels;
-        Source->Params.DryMix(Source, Device, SrcData, DataPosFrac,
+        Source->Params.DryMix(Source, Device, &Source->Params.Direct,
+                              SrcData, DataPosFrac,
                               OutPos, SamplesToDo, BufferSize);
         for(i = 0;i < Device->NumAuxSends;i++)
         {
             if(!Source->Params.Slot[i])
                 continue;
-            Source->Params.WetMix(Source, i, SrcData, DataPosFrac,
+            Source->Params.WetMix(Source, i, &Source->Params.Send[i],
+                                  SrcData, DataPosFrac,
                                   OutPos, SamplesToDo, BufferSize);
         }
         for(i = 0;i < BufferSize;i++)

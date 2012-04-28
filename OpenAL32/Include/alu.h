@@ -119,12 +119,16 @@ extern "C" {
 
 struct ALsource;
 struct ALbuffer;
+struct DirectParams;
+struct SendParams;
 
 typedef ALvoid (*DryMixerFunc)(struct ALsource *self, ALCdevice *Device,
+                               struct DirectParams *params,
                                const ALfloat *RESTRICT data, ALuint srcfrac,
                                ALuint OutPos, ALuint SamplesToDo,
                                ALuint BufferSize);
 typedef ALvoid (*WetMixerFunc)(struct ALsource *self, ALuint sendidx,
+                               struct SendParams *params,
                                const ALfloat *RESTRICT data, ALuint srcfrac,
                                ALuint OutPos, ALuint SamplesToDo,
                                ALuint BufferSize);

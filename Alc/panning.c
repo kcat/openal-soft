@@ -197,7 +197,7 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
     }
     if(hwidth <= 0.0f)
     {
-        /* Infinitismally small sound point. */
+        /* Infinitely small sound point. */
         for(i = 0;i < device->NumChan-1;i++)
         {
             if(angle >= SpeakerAngle[i] && angle < SpeakerAngle[i+1])
@@ -220,20 +220,11 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
         return;
     }
 
-    if(aluFabs(angle)+hwidth <= F_PI)
-    {
-        /* Good, the coverage area ins fully inside -pi...+pi. */
-        langle = angle-hwidth;
-        rangle = angle+hwidth;
-    }
-    else
+    if(aluFabs(angle)+hwidth > F_PI)
     {
         /* The coverage area would go outside of -pi...+pi. Instead, rotate the
-         * speaker angles so it was be as if angle=0, and keep them wrapped
+         * speaker angles so it would be as if angle=0, and keep them wrapped
          * within -pi...+pi. */
-        langle = -hwidth;
-        rangle = +hwidth;
-
         for(i = 0;i < device->NumChan;i++)
         {
             SpeakerAngle[i] -= angle;
@@ -242,6 +233,7 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
             else if(SpeakerAngle[i] < -F_PI)
                 SpeakerAngle[i] += F_PI*2.0f;
         }
+        angle = 0.0f;
 
         /* The speaker angles are expected to be in ascending order. There
          * should be a better way to resort the lists... */
@@ -271,6 +263,8 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
             }
         }
     }
+    langle = angle - hwidth;
+    rangle = angle + hwidth;
 
     /* First speaker */
     i = 0;

@@ -200,23 +200,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         chans = MonoMap;
         num_channels = 1;
         break;
-    case FmtStereo:
-        if(!DirectChannels && (Device->Flags&DEVICE_DUPLICATE_STEREO))
-        {
-            DryGain *= aluSqrt(2.0f/4.0f);
-            for(c = 0;c < 2;c++)
-            {
-                pos = aluCart2LUTpos(aluSin(RearMap[c].angle),
-                                     aluCos(RearMap[c].angle));
-                ChannelGain = Device->PanningLUT[pos];
 
-                for(i = 0;i < (ALint)Device->NumChan;i++)
-                {
-                    enum Channel chan = Device->Speaker2Chan[i];
-                    SrcMatrix[c][chan] += DryGain * ChannelGain[chan];
-                }
-            }
-        }
+    case FmtStereo:
         chans = StereoMap;
         num_channels = 2;
         break;

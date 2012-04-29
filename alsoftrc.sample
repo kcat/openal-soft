@@ -93,16 +93,6 @@
 #  systems with apps that try to play more sounds than the CPU can handle.
 #sources = 256
 
-## stereodup:
-#  Sets whether to duplicate stereo sounds behind the listener. This provides a
-#  "fuller" playback quality for surround sound output modes, although each
-#  individual speaker will have a slight reduction in volume to compensate for
-#  the extra output speakers. True, yes, on, and non-0 values will duplicate
-#  stereo sources. 0 and anything else will cause stereo sounds to only play in
-#  front. This only has an effect when a suitable output format is used (ie.
-#  those that contain side and/or rear speakers).
-#stereodup = true
-
 ## drivers:
 #  Sets the backend driver list order, comma-seperated. Unknown backends and
 #  duplicated names are ignored. Unlisted backends won't be considered for use

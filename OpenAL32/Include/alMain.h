@@ -609,8 +609,6 @@ struct ALCdevice_struct
 #define ALCdevice_CaptureSamples(a,b,c)  ((a)->Funcs->CaptureSamples((a), (b), (c)))
 #define ALCdevice_AvailableSamples(a)    ((a)->Funcs->AvailableSamples((a)))
 
-// Duplicate stereo sources on the side/rear channels
-#define DEVICE_DUPLICATE_STEREO                  (1<<0)
 // Frequency was requested by the app or config file
 #define DEVICE_FREQUENCY_REQUEST                 (1<<1)
 // Channel configuration was requested by the config file

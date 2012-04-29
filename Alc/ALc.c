@@ -1562,23 +1562,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         TRACE("BS2B disabled\n");
     }
 
-    device->Flags &= ~DEVICE_DUPLICATE_STEREO;
-    switch(device->FmtChans)
-    {
-        case DevFmtMono:
-        case DevFmtStereo:
-            break;
-        case DevFmtQuad:
-        case DevFmtX51:
-        case DevFmtX51Side:
-        case DevFmtX61:
-        case DevFmtX71:
-            if(GetConfigValueBool(NULL, "stereodup", AL_TRUE))
-                device->Flags |= DEVICE_DUPLICATE_STEREO;
-            break;
-    }
-    TRACE("Stereo duplication %s\n", (device->Flags&DEVICE_DUPLICATE_STEREO)?"enabled":"disabled");
-
     oldMode = SetMixerFPUMode();
     LockDevice(device);
     context = device->ContextList;

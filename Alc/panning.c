@@ -139,30 +139,6 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHAN
     }
 }
 
-static ALfloat aluLUTpos2Angle(ALint pos)
-{
-    if(pos < QUADRANT_NUM)
-        return aluAtan((ALfloat)pos / (ALfloat)(QUADRANT_NUM - pos));
-    if(pos < 2 * QUADRANT_NUM)
-        return F_PI_2 + aluAtan((ALfloat)(pos - QUADRANT_NUM) / (ALfloat)(2 * QUADRANT_NUM - pos));
-    if(pos < 3 * QUADRANT_NUM)
-        return aluAtan((ALfloat)(pos - 2 * QUADRANT_NUM) / (ALfloat)(3 * QUADRANT_NUM - pos)) - F_PI;
-    return aluAtan((ALfloat)(pos - 3 * QUADRANT_NUM) / (ALfloat)(4 * QUADRANT_NUM - pos)) - F_PI_2;
-}
-
-ALint aluCart2LUTpos(ALfloat im, ALfloat re)
-{
-    ALint pos = 0;
-    ALfloat denom = aluFabs(im) + aluFabs(re);
-    if(denom > 0.0f)
-        pos = (ALint)(QUADRANT_NUM*aluFabs(im) / denom + 0.5);
-
-    if(re < 0.0f)
-        pos = 2 * QUADRANT_NUM - pos;
-    if(im < 0.0f)
-        pos = LUT_NUM - pos;
-    return pos%LUT_NUM;
-}
 
 /**
  * ComputeAngleGains
@@ -357,14 +333,12 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
     }
 }
 
+
 ALvoid aluInitPanning(ALCdevice *Device)
 {
     const char *layoutname = NULL;
     enum Channel *Speaker2Chan;
     ALfloat *SpeakerAngle;
-    ALfloat Alpha, Theta;
-    ALint pos;
-    ALuint s;
 
     Speaker2Chan = Device->Speaker2Chan;
     SpeakerAngle = Device->SpeakerAngle;
@@ -467,46 +441,4 @@ ALvoid aluInitPanning(ALCdevice *Device)
     }
     if(layoutname && Device->Type != Loopback)
         SetSpeakerArrangement(layoutname, SpeakerAngle, Speaker2Chan, Device->NumChan);
-
-    for(pos = 0; pos < LUT_NUM; pos++)
-    {
-        ALfloat *PanningLUT = Device->PanningLUT[pos];
-
-        /* clear all values */
-        for(s = 0; s < MAXCHANNELS; s++)
-            PanningLUT[s] = 0.0f;
-
-        if(Device->NumChan == 1)
-        {
-            PanningLUT[Speaker2Chan[0]] = 1.0f;
-            continue;
-        }
-
-        /* source angle */
-        Theta = aluLUTpos2Angle(pos);
-
-        /* set panning values */
-        for(s = 0; s < Device->NumChan - 1; s++)
-        {
-            if(Theta >= SpeakerAngle[s] && Theta < SpeakerAngle[s+1])
-            {
-                /* source between speaker s and speaker s+1 */
-                Alpha = (Theta-SpeakerAngle[s]) /
-                        (SpeakerAngle[s+1]-SpeakerAngle[s]);
-                PanningLUT[Speaker2Chan[s]]   = aluSqrt(1.0f-Alpha);
-                PanningLUT[Speaker2Chan[s+1]] = aluSqrt(     Alpha);
-                break;
-            }
-        }
-        if(s == Device->NumChan - 1)
-        {
-            /* source between last and first speaker */
-            if(Theta < SpeakerAngle[0])
-                Theta += F_PI*2.0f;
-            Alpha = (Theta-SpeakerAngle[s]) /
-                    (F_PI*2.0f + SpeakerAngle[0]-SpeakerAngle[s]);
-            PanningLUT[Speaker2Chan[s]] = aluSqrt(1.0f-Alpha);
-            PanningLUT[Speaker2Chan[0]] = aluSqrt(     Alpha);
-        }
-    }
 }

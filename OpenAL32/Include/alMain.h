@@ -579,7 +579,6 @@ struct ALCdevice_struct
 
     enum Channel Speaker2Chan[MAXCHANNELS];
     ALfloat SpeakerAngle[MAXCHANNELS];
-    ALfloat PanningLUT[LUT_NUM][MAXCHANNELS];
     ALuint  NumChan;
 
     ALfloat ClickRemoval[MAXCHANNELS];

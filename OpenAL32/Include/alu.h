@@ -110,9 +110,6 @@ _CRTIMP unsigned int __cdecl __MINGW_NOTHROW _controlfp (unsigned int unNew, uns
 #define aluFloor(x) ((ALfloat)floor((double)(x)))
 #endif
 
-#define QUADRANT_NUM  128
-#define LUT_NUM       (4 * QUADRANT_NUM)
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -296,7 +293,6 @@ static __inline void aluNormalize(ALfloat *inVector)
 
 
 ALvoid aluInitPanning(ALCdevice *Device);
-ALint aluCart2LUTpos(ALfloat im, ALfloat re);
 
 ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat *gains);
 

@@ -115,14 +115,12 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALint NumSends, Frequency;
-    const ALfloat *ChannelGain;
     const struct ChanMap *chans = NULL;
     enum Resampler Resampler;
     ALint num_channels = 0;
     ALboolean DirectChannels;
     ALfloat Pitch;
     ALfloat cw;
-    ALuint pos;
     ALint i, c;
 
     /* Get device properties */
@@ -281,17 +279,11 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             /* Special-case LFE */
             if(chans[c].channel == LFE)
             {
-                SrcMatrix[c][LFE] += DryGain;
+                SrcMatrix[c][chans[c].channel] = DryGain;
                 continue;
             }
-            pos = aluCart2LUTpos(aluSin(chans[c].angle), aluCos(chans[c].angle));
-            ChannelGain = Device->PanningLUT[pos];
-
-            for(i = 0;i < (ALint)Device->NumChan;i++)
-            {
-                enum Channel chan = Device->Speaker2Chan[i];
-                SrcMatrix[c][chan] += DryGain * ChannelGain[chan];
-            }
+            ComputeAngleGains(Device, chans[c].angle, 0.0f, DryGain,
+                              SrcMatrix[c]);
         }
     }
     for(i = 0;i < NumSends;i++)

@@ -350,16 +350,16 @@ static void MixSend_##sampler(ALsource *Source, ALuint sendidx,               \
                                                                               \
         if(OutPos == 0)                                                       \
         {                                                                     \
-            value = sampler(data + pos*NumChannels + i, NumChannels,frac);    \
+            value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
                                                                               \
-            value = lpFilter1PC(WetFilter, i, value);                         \
+            value = lpFilter2PC(WetFilter, i, value);                         \
             WetClickRemoval[0] -= value * WetSend;                            \
         }                                                                     \
         for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
         {                                                                     \
-            value = sampler(data + pos*NumChannels + i, NumChannels,frac);    \
+            value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
                                                                               \
-            value = lpFilter1P(WetFilter, i, value);                          \
+            value = lpFilter2P(WetFilter, i, value);                          \
             WetBuffer[OutPos] += value * WetSend;                             \
                                                                               \
             frac += increment;                                                \
@@ -369,9 +369,9 @@ static void MixSend_##sampler(ALsource *Source, ALuint sendidx,               \
         }                                                                     \
         if(OutPos == SamplesToDo)                                             \
         {                                                                     \
-            value = sampler(data + pos*NumChannels + i, NumChannels,frac);    \
+            value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
                                                                               \
-            value = lpFilter1PC(WetFilter, i, value);                         \
+            value = lpFilter2PC(WetFilter, i, value);                         \
             WetPendingClicks[0] += value * WetSend;                           \
         }                                                                     \
         OutPos -= BufferSize;                                                 \

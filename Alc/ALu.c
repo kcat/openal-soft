@@ -308,8 +308,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALSource->Params.Direct.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
     for(i = 0;i < NumSends;i++)
     {
-        /* We use a one-pole filter, so we need to take the squared gain */
-        ALfloat a = lpCoeffCalc(WetGainHF[i]*WetGainHF[i], cw);
+        ALfloat a = lpCoeffCalc(WetGainHF[i], cw);
         ALSource->Params.Send[i].iirFilter.coeff = a;
     }
 }
@@ -762,7 +761,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALSource->Params.Direct.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
     for(i = 0;i < NumSends;i++)
     {
-        ALfloat a = lpCoeffCalc(WetGainHF[i]*WetGainHF[i], cw);
+        ALfloat a = lpCoeffCalc(WetGainHF[i], cw);
         ALSource->Params.Send[i].iirFilter.coeff = a;
     }
 }

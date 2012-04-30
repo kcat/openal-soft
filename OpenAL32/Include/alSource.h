@@ -63,9 +63,9 @@ typedef struct SendParams {
      * output buffer. */
     ALfloat Gain;
 
-    /* A low-pass filter, using a one-pole filter. */
+    /* A low-pass filter, using 2 chained one-pole filters. */
     FILTER iirFilter;
-    ALfloat history[MAXCHANNELS];
+    ALfloat history[MAXCHANNELS*2];
 } SendParams;
 
 

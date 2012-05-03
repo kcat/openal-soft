@@ -231,7 +231,7 @@ static __inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat 
 
 static __inline int SetMixerFPUMode(void)
 {
-#if defined(_FPU_GETCW) && defined(_FPU_SETCW)
+#if defined(_FPU_GETCW) && defined(_FPU_SETCW) && (defined(__i386__) || defined(__x86_64__))
     fpu_control_t fpuState, newState;
     _FPU_GETCW(fpuState);
     newState = fpuState&~(_FPU_EXTENDED|_FPU_DOUBLE|_FPU_SINGLE |
@@ -253,7 +253,7 @@ static __inline int SetMixerFPUMode(void)
 
 static __inline void RestoreFPUMode(int state)
 {
-#if defined(_FPU_GETCW) && defined(_FPU_SETCW)
+#if defined(_FPU_GETCW) && defined(_FPU_SETCW) && (defined(__i386__) || defined(__x86_64__))
     fpu_control_t fpuState = state;
     _FPU_SETCW(fpuState);
 #elif defined(HAVE__CONTROLFP)

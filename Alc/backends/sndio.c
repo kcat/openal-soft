@@ -79,7 +79,7 @@ static ALCboolean sndio_load(void)
 #ifdef HAVE_DYNLOAD
     if(!sndio_handle)
     {
-        sndio_handle = LoadLib("libsndio.so");
+        sndio_handle = LoadLib("libsndio.so.2");
         if(!sndio_handle)
             return ALC_FALSE;
 

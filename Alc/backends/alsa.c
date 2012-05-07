@@ -57,6 +57,8 @@ MAKE_FUNC(snd_pcm_hw_params_set_period_time_near);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_near);
 MAKE_FUNC(snd_pcm_hw_params_set_period_size_near);
 MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_min);
+MAKE_FUNC(snd_pcm_hw_params_get_buffer_time_min);
+MAKE_FUNC(snd_pcm_hw_params_get_buffer_time_max);
 MAKE_FUNC(snd_pcm_hw_params_get_buffer_size);
 MAKE_FUNC(snd_pcm_hw_params_get_period_size);
 MAKE_FUNC(snd_pcm_hw_params_get_access);
@@ -125,6 +127,8 @@ MAKE_FUNC(snd_card_next);
 #define snd_pcm_hw_params_set_buffer_size_near psnd_pcm_hw_params_set_buffer_size_near
 #define snd_pcm_hw_params_set_period_size_near psnd_pcm_hw_params_set_period_size_near
 #define snd_pcm_hw_params_set_buffer_size_min psnd_pcm_hw_params_set_buffer_size_min
+#define snd_pcm_hw_params_get_buffer_time_min psnd_pcm_hw_params_get_buffer_time_min
+#define snd_pcm_hw_params_get_buffer_time_max psnd_pcm_hw_params_get_buffer_time_max
 #define snd_pcm_hw_params_get_buffer_size psnd_pcm_hw_params_get_buffer_size
 #define snd_pcm_hw_params_get_period_size psnd_pcm_hw_params_get_period_size
 #define snd_pcm_hw_params_get_access psnd_pcm_hw_params_get_access
@@ -211,6 +215,8 @@ static ALCboolean alsa_load(void)
         LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_near);
         LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_min);
         LOAD_FUNC(snd_pcm_hw_params_set_period_size_near);
+        LOAD_FUNC(snd_pcm_hw_params_get_buffer_time_min);
+        LOAD_FUNC(snd_pcm_hw_params_get_buffer_time_max);
         LOAD_FUNC(snd_pcm_hw_params_get_buffer_size);
         LOAD_FUNC(snd_pcm_hw_params_get_period_size);
         LOAD_FUNC(snd_pcm_hw_params_get_access);
@@ -750,7 +756,18 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         ERR("Failed to disable ALSA resampler\n");
     CHECK(snd_pcm_hw_params_set_rate_near(data->pcmHandle, hp, &rate, NULL));
     /* set buffer time (implicitly constrains period/buffer parameters) */
-    CHECK(snd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, hp, &bufferLen, NULL));
+    if(snd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, hp, &bufferLen, NULL) < 0)
+    {
+        unsigned int mintime, maxtime;
+        CHECK(snd_pcm_hw_params_get_buffer_time_min(hp, &mintime, NULL));
+        CHECK(snd_pcm_hw_params_get_buffer_time_max(hp, &maxtime, NULL));
+
+        TRACE("Failed to set %uus buffer time, detected range: %u -> %u\n", bufferLen, mintime, maxtime);
+        bufferLen = clampu(bufferLen, mintime, maxtime);
+        periodLen = minu(periodLen, bufferLen/2);
+
+        CHECK(snd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, hp, &bufferLen, NULL));
+    }
     /* set period time (implicitly sets buffer size/bytes/time and period size/bytes) */
     CHECK(snd_pcm_hw_params_set_period_time_near(data->pcmHandle, hp, &periodLen, NULL));
     /* install and prepare hardware configuration */

@@ -1311,7 +1311,7 @@ void alc_alsa_probe(enum DevProbe type)
             allDevNameMap = probe_devices(SND_PCM_STREAM_PLAYBACK, &numDevNames);
 
             for(i = 0;i < numDevNames;++i)
-                AppendAllDeviceList(allDevNameMap[i].name);
+                AppendAllDevicesList(allDevNameMap[i].name);
             break;
 
         case CAPTURE_DEVICE_PROBE:

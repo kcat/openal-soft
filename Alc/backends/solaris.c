@@ -272,7 +272,7 @@ void alc_solaris_probe(enum DevProbe type)
             struct stat buf;
             if(stat(solaris_driver, &buf) == 0)
 #endif
-                AppendAllDeviceList(solaris_device);
+                AppendAllDevicesList(solaris_device);
         }
         break;
 

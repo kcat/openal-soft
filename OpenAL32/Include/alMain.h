@@ -671,7 +671,7 @@ ALCcontext *GetContextRef(void);
 void ALCcontext_IncRef(ALCcontext *context);
 void ALCcontext_DecRef(ALCcontext *context);
 
-void AppendAllDeviceList(const ALCchar *name);
+void AppendAllDevicesList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
 
 static __inline void LockDevice(ALCdevice *device)

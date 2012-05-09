@@ -588,14 +588,14 @@ static const ALCchar alcErrOutOfMemory[] = "Out of Memory";
 
 /* Enumerated device names */
 static const ALCchar alcDefaultName[] = "OpenAL Soft\0";
-static ALCchar *alcAllDeviceList;
+static ALCchar *alcAllDevicesList;
 static ALCchar *alcCaptureDeviceList;
 /* Sizes only include the first ending null character, not the second */
-static size_t alcAllDeviceListSize;
+static size_t alcAllDevicesListSize;
 static size_t alcCaptureDeviceListSize;
 
 /* Default is always the first in the list */
-static ALCchar *alcDefaultAllDeviceSpecifier;
+static ALCchar *alcDefaultAllDevicesSpecifier;
 static ALCchar *alcCaptureDefaultDeviceSpecifier;
 
 /* Default context extensions */
@@ -964,13 +964,13 @@ static void alc_cleanup(void)
 {
     ALCdevice *dev;
 
-    free(alcAllDeviceList); alcAllDeviceList = NULL;
-    alcAllDeviceListSize = 0;
+    free(alcAllDevicesList); alcAllDevicesList = NULL;
+    alcAllDevicesListSize = 0;
     free(alcCaptureDeviceList); alcCaptureDeviceList = NULL;
     alcCaptureDeviceListSize = 0;
 
-    free(alcDefaultAllDeviceSpecifier);
-    alcDefaultAllDeviceSpecifier = NULL;
+    free(alcDefaultAllDevicesSpecifier);
+    alcDefaultAllDevicesSpecifier = NULL;
     free(alcCaptureDefaultDeviceSpecifier);
     alcCaptureDefaultDeviceSpecifier = NULL;
 
@@ -1036,8 +1036,8 @@ static void ProbeList(ALCchar **list, size_t *listsize, enum DevProbe type)
     UnlockLists();
 }
 
-static void ProbeAllDeviceList(void)
-{ ProbeList(&alcAllDeviceList, &alcAllDeviceListSize, ALL_DEVICE_PROBE); }
+static void ProbeAllDevicesList(void)
+{ ProbeList(&alcAllDevicesList, &alcAllDevicesListSize, ALL_DEVICE_PROBE); }
 static void ProbeCaptureDeviceList(void)
 { ProbeList(&alcCaptureDeviceList, &alcCaptureDeviceListSize, CAPTURE_DEVICE_PROBE); }
 
@@ -1067,7 +1067,7 @@ static void AppendList(const ALCchar *name, ALCchar **List, size_t *ListSize)
 void Append##type##List(const ALCchar *name)                                 \
 { AppendList(name, &alc##type##List, &alc##type##ListSize); }
 
-DECL_APPEND_LIST_FUNC(AllDevice)
+DECL_APPEND_LIST_FUNC(AllDevices)
 DECL_APPEND_LIST_FUNC(CaptureDevice)
 
 #undef DECL_APPEND_LIST_FUNC
@@ -2004,8 +2004,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         }
         else
         {
-            ProbeAllDeviceList();
-            value = alcAllDeviceList;
+            ProbeAllDevicesList();
+            value = alcAllDevicesList;
         }
         break;
 
@@ -2028,18 +2028,18 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         break;
 
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
-        if(!alcAllDeviceList)
-            ProbeAllDeviceList();
+        if(!alcAllDevicesList)
+            ProbeAllDevicesList();
 
         Device = VerifyDevice(Device);
 
-        free(alcDefaultAllDeviceSpecifier);
-        alcDefaultAllDeviceSpecifier = strdup(alcAllDeviceList ?
-                                              alcAllDeviceList : "");
-        if(!alcDefaultAllDeviceSpecifier)
+        free(alcDefaultAllDevicesSpecifier);
+        alcDefaultAllDevicesSpecifier = strdup(alcAllDevicesList ?
+                                               alcAllDevicesList : "");
+        if(!alcDefaultAllDevicesSpecifier)
             alcSetError(Device, ALC_OUT_OF_MEMORY);
 
-        value = alcDefaultAllDeviceSpecifier;
+        value = alcDefaultAllDevicesSpecifier;
         if(Device) ALCdevice_DecRef(Device);
         break;
 

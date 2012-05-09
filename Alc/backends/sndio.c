@@ -364,7 +364,7 @@ void alc_sndio_probe(enum DevProbe type)
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-            AppendAllDeviceList(sndio_device);
+            AppendAllDevicesList(sndio_device);
             break;
         case CAPTURE_DEVICE_PROBE:
             break;

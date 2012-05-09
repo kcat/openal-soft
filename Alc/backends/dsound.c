@@ -995,7 +995,7 @@ void alcDSoundProbe(enum DevProbe type)
             else
             {
                 for(i = 0;i < NumPlaybackDevices;i++)
-                    AppendAllDeviceList(PlaybackDeviceList[i].name);
+                    AppendAllDevicesList(PlaybackDeviceList[i].name);
             }
             break;
 

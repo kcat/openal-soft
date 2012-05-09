@@ -513,7 +513,7 @@ void alc_oss_probe(enum DevProbe type)
             struct stat buf;
             if(stat(oss_driver, &buf) == 0)
 #endif
-                AppendAllDeviceList(oss_device);
+                AppendAllDevicesList(oss_device);
         }
         break;
 

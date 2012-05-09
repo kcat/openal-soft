@@ -1007,7 +1007,7 @@ void alcMMDevApiProbe(enum DevProbe type)
                 for(i = 0;i < NumPlaybackDevices;i++)
                 {
                     if(PlaybackDeviceList[i].name)
-                        AppendAllDeviceList(PlaybackDeviceList[i].name);
+                        AppendAllDevicesList(PlaybackDeviceList[i].name);
                 }
             }
             break;

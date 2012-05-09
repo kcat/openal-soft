@@ -431,7 +431,7 @@ void alc_opensl_probe(enum DevProbe type)
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-            AppendAllDeviceList(opensl_device);
+            AppendAllDevicesList(opensl_device);
             break;
         case CAPTURE_DEVICE_PROBE:
             break;

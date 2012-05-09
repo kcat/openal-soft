@@ -756,7 +756,7 @@ void alcWinMMProbe(enum DevProbe type)
             for(i = 0;i < NumPlaybackDevices;i++)
             {
                 if(PlaybackDeviceList[i])
-                    AppendAllDeviceList(PlaybackDeviceList[i]);
+                    AppendAllDevicesList(PlaybackDeviceList[i]);
             }
             break;
 

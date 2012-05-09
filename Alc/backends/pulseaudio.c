@@ -1457,7 +1457,7 @@ void alc_pulse_probe(enum DevProbe type)
             probe_devices(AL_FALSE);
 
             for(i = 0;i < numDevNames;i++)
-                AppendAllDeviceList(allDevNameMap[i].name);
+                AppendAllDevicesList(allDevNameMap[i].name);
             break;
 
         case CAPTURE_DEVICE_PROBE:

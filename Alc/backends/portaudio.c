@@ -460,7 +460,7 @@ void alc_pa_probe(enum DevProbe type)
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-            AppendAllDeviceList(pa_device);
+            AppendAllDevicesList(pa_device);
             break;
         case CAPTURE_DEVICE_PROBE:
             AppendCaptureDeviceList(pa_device);

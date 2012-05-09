@@ -1,1 +1,5 @@
 build
+winbuild
+include/sndio.h
+include/sys
+openal-soft.kdev4

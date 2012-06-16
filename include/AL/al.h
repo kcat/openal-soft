@@ -269,7 +269,7 @@ typedef void ALvoid;
  *
  * The distance in units that no attenuation occurs.
  *
- * At 0.0, no distance attenuation ever occurs.
+ * At 0.0, no distance attenuation ever occurs on non-linear attenuation models.
  */
 #define AL_REFERENCE_DISTANCE                    0x1020
 
@@ -304,7 +304,7 @@ typedef void ALvoid;
  *
  * The distance above which the source is not attenuated any further with a
  * clamped distance model, or where attenuation reaches 0.0 gain for linear
- * distance models.
+ * distance models with a default rolloff factor.
  */
 #define AL_MAX_DISTANCE                          0x1023
 
@@ -325,7 +325,8 @@ typedef void ALvoid;
  * A Source is Streaming if one or more Buffers have been attached using
  * alSourceQueueBuffers.
  *
- * A Source is Undetermined when it has the NULL buffer attached.
+ * A Source is Undetermined when it has the NULL buffer attached using
+ * AL_BUFFER.
  */
 #define AL_SOURCE_TYPE                           0x1027
 

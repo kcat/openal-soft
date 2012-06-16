@@ -117,6 +117,14 @@ typedef void ALCvoid;
 #define ALC_OUT_OF_MEMORY                        0xA005
 
 
+/** Runtime ALC version. */
+#define ALC_MAJOR_VERSION                        0x1000
+#define ALC_MINOR_VERSION                        0x1001
+
+/** Context attribute list properties. */
+#define ALC_ATTRIBUTES_SIZE                      0x1002
+#define ALC_ALL_ATTRIBUTES                       0x1003
+
 /** String for the default device specifier. */
 #define ALC_DEFAULT_DEVICE_SPECIFIER             0x1004
 /**
@@ -128,14 +136,6 @@ typedef void ALCvoid;
 #define ALC_DEVICE_SPECIFIER                     0x1005
 /** String for space-separated list of ALC extensions. */
 #define ALC_EXTENSIONS                           0x1006
-
-/** Runtime ALC version. */
-#define ALC_MAJOR_VERSION                        0x1000
-#define ALC_MINOR_VERSION                        0x1001
-
-/** Context attribute list properties. */
-#define ALC_ATTRIBUTES_SIZE                      0x1002
-#define ALC_ALL_ATTRIBUTES                       0x1003
 
 
 /** Capture extension */

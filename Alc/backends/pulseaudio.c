@@ -1398,7 +1398,7 @@ ALCboolean alc_pulse_init(BackendFuncs *func_list)
         pa_threaded_mainloop *loop;
 
         pulse_ctx_flags = 0;
-        if(!GetConfigValueBool("pulse", "spawn-server", 0))
+        if(!GetConfigValueBool("pulse", "spawn-server", 1))
             pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
 
         if((loop=pa_threaded_mainloop_new()) &&

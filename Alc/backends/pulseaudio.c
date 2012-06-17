@@ -546,6 +546,19 @@ static void source_name_callback(pa_context *context, const pa_source_info *info
 }
 
 
+static void stream_moved_callback(pa_stream *stream, void *pdata)
+{
+    ALCdevice *device = pdata;
+    pulse_data *data = device->ExtraData;
+    (void)stream;
+
+    free(data->device_name);
+    data->device_name = strdup(pa_stream_get_device_name(data->stream));
+
+    TRACE("Stream moved to %s\n", data->device_name);
+}
+
+
 static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
 {
     const char *name = "OpenAL Soft";
@@ -887,6 +900,7 @@ static void pulse_close(ALCdevice *device)
 
     if(data->stream)
     {
+        pa_stream_set_moved_callback(data->stream, NULL, NULL);
 #if PA_CHECK_VERSION(0,9,15)
         if(pa_stream_set_buffer_attr_callback)
             pa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
@@ -944,7 +958,9 @@ static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name
     pa_threaded_mainloop_lock(data->loop);
 
     flags = PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
-            PA_STREAM_FIX_CHANNELS | PA_STREAM_DONT_MOVE;
+            PA_STREAM_FIX_CHANNELS;
+    if(!GetConfigValueBool("pulse", "allow-moves", 0))
+        flags |= PA_STREAM_DONT_MOVE;
 
     spec.format = PA_SAMPLE_S16NE;
     spec.rate = 44100;
@@ -963,6 +979,8 @@ static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name
     o = pa_context_get_sink_info_by_name(data->context, data->device_name,
                                          sink_name_callback, device);
     WAIT_FOR_OPERATION(o, data->loop);
+
+    pa_stream_set_moved_callback(data->stream, stream_moved_callback, device);
 
     pa_threaded_mainloop_unlock(data->loop);
 
@@ -984,6 +1002,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
 
     if(data->stream)
     {
+        pa_stream_set_moved_callback(data->stream, NULL, NULL);
 #if PA_CHECK_VERSION(0,9,15)
         if(pa_stream_set_buffer_attr_callback)
             pa_stream_set_buffer_attr_callback(data->stream, NULL, NULL);
@@ -1005,7 +1024,8 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
     flags |= PA_STREAM_ADJUST_LATENCY;
     flags |= PA_STREAM_START_CORKED;
-    flags |= PA_STREAM_DONT_MOVE;
+    if(!GetConfigValueBool("pulse", "allow-moves", 0))
+        flags |= PA_STREAM_DONT_MOVE;
 
     switch(device->FmtType)
     {
@@ -1084,6 +1104,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
         device->Frequency = data->spec.rate;
     }
 
+    pa_stream_set_moved_callback(data->stream, stream_moved_callback, device);
 #if PA_CHECK_VERSION(0,9,15)
     if(pa_stream_set_buffer_attr_callback)
         pa_stream_set_buffer_attr_callback(data->stream, stream_buffer_attr_callback, device);
@@ -1218,8 +1239,10 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
     data->attr.fragsize = minu(samples, 50*device->Frequency/1000) *
                           pa_frame_size(&data->spec);
 
-    flags |= PA_STREAM_DONT_MOVE;
     flags |= PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY;
+    if(!GetConfigValueBool("pulse", "allow-moves", 0))
+        flags |= PA_STREAM_DONT_MOVE;
+
     data->stream = connect_record_stream(pulse_name, data->loop, data->context,
                                          flags, &data->attr, &data->spec,
                                          &chanmap);
@@ -1234,6 +1257,8 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
     o = pa_context_get_source_info_by_name(data->context, data->device_name,
                                            source_name_callback, device);
     WAIT_FOR_OPERATION(o, data->loop);
+
+    pa_stream_set_moved_callback(data->stream, stream_moved_callback, device);
 
     pa_threaded_mainloop_unlock(data->loop);
     return ALC_NO_ERROR;

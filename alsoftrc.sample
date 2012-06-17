@@ -291,6 +291,12 @@
 #  still prevent autospawning even if this is set to true.
 #spawn-server = false
 
+## allow-moves:
+#  Allows PulseAudio to move active streams to different devices. Note that the
+#  device specifier seen by applications will not be updated when this occurs,
+#  and neither will the AL device configuration (sample rate, format, etc).
+#allow-moves = false
+
 ##
 ## Wave File Writer stuff
 ##

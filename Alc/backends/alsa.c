@@ -763,29 +763,10 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     CHECK(snd_pcm_hw_params_set_rate_near(data->pcmHandle, hp, &rate, NULL));
     /* set buffer time (implicitly constrains period/buffer parameters) */
     if(snd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, hp, &bufferLen, NULL) < 0)
-    {
-        unsigned int mintime, maxtime;
-        CHECK(snd_pcm_hw_params_get_buffer_time_min(hp, &mintime, NULL));
-        CHECK(snd_pcm_hw_params_get_buffer_time_max(hp, &maxtime, NULL));
-
-        TRACE("Failed to set %uus buffer time, detected range: %u -> %u\n", bufferLen, mintime, maxtime);
-        bufferLen = clampu(bufferLen, mintime, maxtime);
-        periodLen = minu(periodLen, bufferLen/2);
-
-        CHECK(snd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, hp, &bufferLen, NULL));
-    }
+        ERR("snd_pcm_hw_params_set_buffer_time_near failed: %s\n", snd_strerror(err));
     /* set period time (implicitly sets buffer size/bytes/time and period size/bytes) */
     if(snd_pcm_hw_params_set_period_time_near(data->pcmHandle, hp, &periodLen, NULL) < 0)
-    {
-        unsigned int mintime, maxtime;
-        CHECK(snd_pcm_hw_params_get_period_time_min(hp, &mintime, NULL));
-        CHECK(snd_pcm_hw_params_get_period_time_max(hp, &maxtime, NULL));
-
-        TRACE("Failed to set %uus period time, detected range: %u -> %u\n", periodLen, mintime, maxtime);
-        periodLen = clampu(periodLen, mintime, maxtime);
-
-        CHECK(snd_pcm_hw_params_set_period_time_near(data->pcmHandle, hp, &periodLen, NULL));
-    }
+        ERR("snd_pcm_hw_params_set_period_time_near failed: %s\n", snd_strerror(err));
     /* install and prepare hardware configuration */
     CHECK(snd_pcm_hw_params(data->pcmHandle, hp));
     /* retrieve configuration info */

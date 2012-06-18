@@ -358,8 +358,7 @@ IF(NOT HAVE_WINDOWS_H)
     # Some systems need pthread_np.h to get recursive mutexes
     CHECK_INCLUDE_FILES("pthread.h;pthread_np.h" HAVE_PTHREAD_NP_H)
 
-    # _GNU_SOURCE is needed on some systems for extra attributes, and
-    # _REENTRANT is needed for libc thread-safety
+    # _GNU_SOURCE is needed on some systems for extra attributes
     ADD_DEFINITIONS(-D_GNU_SOURCE=1)
     CHECK_LIBRARY_EXISTS(pthread pthread_create "" HAVE_LIBPTHREAD)
     IF(HAVE_LIBPTHREAD)

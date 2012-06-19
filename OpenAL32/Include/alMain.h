@@ -100,9 +100,6 @@ static __inline int sched_yield(void)
 #include <unistd.h>
 #include <assert.h>
 #include <pthread.h>
-#ifdef HAVE_PTHREAD_NP_H
-#include <pthread_np.h>
-#endif
 #include <sys/time.h>
 #include <time.h>
 #include <errno.h>

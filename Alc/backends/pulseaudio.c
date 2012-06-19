@@ -687,14 +687,15 @@ static pa_stream *connect_record_stream(const char *device_name,
 }
 
 
-#define WAIT_FOR_OPERATION(x, l) do {                                         \
-    pa_threaded_mainloop *_l = (l);                                           \
-    pa_operation *_o = (x);                                                   \
-    if(!_o) break;                                                            \
-    while(pa_operation_get_state(_o) == PA_OPERATION_RUNNING)                 \
-        pa_threaded_mainloop_wait(_l);                                        \
-    pa_operation_unref(_o);                                                   \
-} while(0)
+static void wait_for_operation(pa_operation *op, pa_threaded_mainloop *loop)
+{
+    if(op)
+    {
+        while(pa_operation_get_state(op) == PA_OPERATION_RUNNING)
+            pa_threaded_mainloop_wait(loop);
+        pa_operation_unref(op);
+    }
+}
 
 
 static void probe_devices(ALboolean capture)
@@ -735,7 +736,7 @@ static void probe_devices(ALboolean capture)
                 if(stream)
                 {
                     o = pa_context_get_sink_info_by_name(context, pa_stream_get_device_name(stream), sink_device_callback, loop);
-                    WAIT_FOR_OPERATION(o, loop);
+                    wait_for_operation(o, loop);
 
                     pa_stream_disconnect(stream);
                     pa_stream_unref(stream);
@@ -762,7 +763,7 @@ static void probe_devices(ALboolean capture)
                 if(stream)
                 {
                     o = pa_context_get_source_info_by_name(context, pa_stream_get_device_name(stream), source_device_callback, loop);
-                    WAIT_FOR_OPERATION(o, loop);
+                    wait_for_operation(o, loop);
 
                     pa_stream_disconnect(stream);
                     pa_stream_unref(stream);
@@ -771,7 +772,7 @@ static void probe_devices(ALboolean capture)
 
                 o = pa_context_get_source_info_list(context, source_device_callback, loop);
             }
-            WAIT_FOR_OPERATION(o, loop);
+            wait_for_operation(o, loop);
 
             pa_context_disconnect(context);
             pa_context_unref(context);
@@ -978,7 +979,7 @@ static ALCenum pulse_open_playback(ALCdevice *device, const ALCchar *device_name
     data->device_name = strdup(pa_stream_get_device_name(data->stream));
     o = pa_context_get_sink_info_by_name(data->context, data->device_name,
                                          sink_name_callback, device);
-    WAIT_FOR_OPERATION(o, data->loop);
+    wait_for_operation(o, data->loop);
 
     pa_stream_set_moved_callback(data->stream, stream_moved_callback, device);
 
@@ -1016,7 +1017,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
     {
         pa_operation *o;
         o = pa_context_get_sink_info_by_name(data->context, data->device_name, sink_info_callback, device);
-        WAIT_FOR_OPERATION(o, data->loop);
+        wait_for_operation(o, data->loop);
     }
     if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
@@ -1099,7 +1100,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
 
         o = pa_stream_set_buffer_attr(data->stream, &data->attr,
                                       stream_success_callback, device);
-        WAIT_FOR_OPERATION(o, data->loop);
+        wait_for_operation(o, data->loop);
 
         device->Frequency = data->spec.rate;
     }
@@ -1150,7 +1151,7 @@ static void pulse_stop_playback(ALCdevice *device)
     pa_threaded_mainloop_lock(data->loop);
 
     o = pa_stream_cork(data->stream, 1, stream_success_callback, device);
-    WAIT_FOR_OPERATION(o, data->loop);
+    wait_for_operation(o, data->loop);
 
     pa_threaded_mainloop_unlock(data->loop);
 }
@@ -1256,7 +1257,7 @@ static ALCenum pulse_open_capture(ALCdevice *device, const ALCchar *device_name)
     data->device_name = strdup(pa_stream_get_device_name(data->stream));
     o = pa_context_get_source_info_by_name(data->context, data->device_name,
                                            source_name_callback, device);
-    WAIT_FOR_OPERATION(o, data->loop);
+    wait_for_operation(o, data->loop);
 
     pa_stream_set_moved_callback(data->stream, stream_moved_callback, device);
 
@@ -1280,7 +1281,7 @@ static void pulse_start_capture(ALCdevice *device)
 
     pa_threaded_mainloop_lock(data->loop);
     o = pa_stream_cork(data->stream, 0, stream_success_callback, device);
-    WAIT_FOR_OPERATION(o, data->loop);
+    wait_for_operation(o, data->loop);
     pa_threaded_mainloop_unlock(data->loop);
 }
 
@@ -1291,7 +1292,7 @@ static void pulse_stop_capture(ALCdevice *device)
 
     pa_threaded_mainloop_lock(data->loop);
     o = pa_stream_cork(data->stream, 1, stream_success_callback, device);
-    WAIT_FOR_OPERATION(o, data->loop);
+    wait_for_operation(o, data->loop);
     pa_threaded_mainloop_unlock(data->loop);
 }
 

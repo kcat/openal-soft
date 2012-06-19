@@ -2316,19 +2316,20 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
 {
     ALCvoid *ptr = NULL;
 
-    device = VerifyDevice(device);
-
     if(!funcName)
+    {
+        device = VerifyDevice(device);
         alcSetError(device, ALC_INVALID_VALUE);
+        if(device) ALCdevice_DecRef(device);
+    }
     else
     {
         ALsizei i = 0;
-        while(alcFunctions[i].funcName && strcmp(alcFunctions[i].funcName,funcName) != 0)
+        while(alcFunctions[i].funcName && strcmp(alcFunctions[i].funcName, funcName) != 0)
             i++;
         ptr = alcFunctions[i].address;
     }
-    if(device)
-        ALCdevice_DecRef(device);
+
     return ptr;
 }
 

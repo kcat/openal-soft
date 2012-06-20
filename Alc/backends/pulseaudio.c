@@ -21,6 +21,7 @@
 
 #include "config.h"
 
+#include <string.h>
 #include "alMain.h"
 
 #include <pulse/pulseaudio.h>

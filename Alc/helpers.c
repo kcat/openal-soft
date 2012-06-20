@@ -21,6 +21,9 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <time.h>
+#include <errno.h>
+#include <stdarg.h>
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
@@ -122,6 +125,12 @@ WCHAR *strdupW(const WCHAR *str)
 }
 
 #else
+
+#include <pthread.h>
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>
+#endif
+#include <sched.h>
 
 void InitializeCriticalSection(CRITICAL_SECTION *cs)
 {

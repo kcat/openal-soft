@@ -281,15 +281,13 @@ static __inline ALfloat aluDotproduct(const ALfloat *inVector1, const ALfloat *i
 
 static __inline void aluNormalize(ALfloat *inVector)
 {
-    ALfloat length, inverse_length;
-
-    length = aluSqrt(aluDotproduct(inVector, inVector));
-    if(length > 0.0f)
+    ALfloat lengthsqr = aluDotproduct(inVector, inVector);
+    if(lengthsqr > 0.0f)
     {
-        inverse_length = 1.0f/length;
-        inVector[0] *= inverse_length;
-        inVector[1] *= inverse_length;
-        inVector[2] *= inverse_length;
+        ALfloat inv_length = 1.0f/aluSqrt(lengthsqr);
+        inVector[0] *= inv_length;
+        inVector[1] *= inv_length;
+        inVector[2] *= inv_length;
     }
 }
 

@@ -33,7 +33,7 @@ typedef struct ALdedicatedState {
     // Must be first in all effects!
     ALeffectState state;
 
-    ALfloat gains[MAXCHANNELS];
+    ALfloat gains[MaxChannels];
 } ALdedicatedState;
 
 
@@ -57,7 +57,7 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const AL
     ALsizei s;
 
     Gain = Slot->Gain * Slot->effect.Dedicated.Gain;
-    for(s = 0;s < MAXCHANNELS;s++)
+    for(s = 0;s < MaxChannels;s++)
         state->gains[s] = 0.0f;
 
     if(Slot->effect.type == AL_EFFECT_DEDICATED_DIALOGUE)
@@ -66,7 +66,7 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const AL
         state->gains[LFE] = Gain;
 }
 
-static ALvoid DedicatedProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
+static ALvoid DedicatedProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MaxChannels])
 {
     ALdedicatedState *state = (ALdedicatedState*)effect;
     const ALfloat *gains = state->gains;
@@ -77,7 +77,7 @@ static ALvoid DedicatedProcess(ALeffectState *effect, ALuint SamplesToDo, const 
         ALfloat sample;
 
         sample = SamplesIn[i];
-        for(s = 0;s < MAXCHANNELS;s++)
+        for(s = 0;s < MaxChannels;s++)
             SamplesOut[i][s] = sample * gains[s];
     }
 }
@@ -96,7 +96,7 @@ ALeffectState *DedicatedCreate(void)
     state->state.Update = DedicatedUpdate;
     state->state.Process = DedicatedProcess;
 
-    for(s = 0;s < MAXCHANNELS;s++)
+    for(s = 0;s < MaxChannels;s++)
         state->gains[s] = 0.0f;
 
     return &state->state;

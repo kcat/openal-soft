@@ -85,7 +85,7 @@ typedef struct ALverbState {
 
         // The gain for each output channel based on 3D panning (only for the
         // EAX path).
-        ALfloat   PanGain[MAXCHANNELS];
+        ALfloat   PanGain[MaxChannels];
     } Early;
 
     // Decorrelator delay line.
@@ -124,7 +124,7 @@ typedef struct ALverbState {
 
         // The gain for each output channel based on 3D panning (only for the
         // EAX path).
-        ALfloat   PanGain[MAXCHANNELS];
+        ALfloat   PanGain[MaxChannels];
     } Late;
 
     struct {
@@ -546,7 +546,7 @@ static __inline ALvoid EAXVerbPass(ALverbState *State, ALfloat in, ALfloat *earl
 
 // This processes the reverb state, given the input samples and an output
 // buffer.
-static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
+static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MaxChannels])
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint index, c;
@@ -565,14 +565,14 @@ static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALflo
         out[3] = (early[3] + late[3]);
 
         // Output the results.
-        for(c = 0;c < MAXCHANNELS;c++)
+        for(c = 0;c < MaxChannels;c++)
             SamplesOut[index][c] += panGain[c] * out[c&3];
     }
 }
 
 // This processes the EAX reverb state, given the input samples and an output
 // buffer.
-static ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
+static ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MaxChannels])
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint index, c;
@@ -583,7 +583,7 @@ static ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const AL
         // Process reverb for this sample.
         EAXVerbPass(State, SamplesIn[index], early, late);
 
-        for(c = 0;c < MAXCHANNELS;c++)
+        for(c = 0;c < MaxChannels;c++)
             SamplesOut[index][c] += State->Early.PanGain[c]*early[c&3] +
                                     State->Late.PanGain[c]*late[c&3];
     }
@@ -1045,13 +1045,13 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     }
 
     dirGain = aluSqrt(earlyPan[0]*earlyPan[0] + earlyPan[2]*earlyPan[2]);
-    for(index = 0;index < MAXCHANNELS;index++)
+    for(index = 0;index < MaxChannels;index++)
          State->Early.PanGain[index] = 0.0f;
     ComputeAngleGains(Device, aluAtan2(earlyPan[0], earlyPan[2]), (1.0f-dirGain)*F_PI,
                       lerp(ambientGain, 1.0f, dirGain) * Gain, State->Early.PanGain);
 
     dirGain = aluSqrt(latePan[0]*latePan[0] + latePan[2]*latePan[2]);
-    for(index = 0;index < MAXCHANNELS;index++)
+    for(index = 0;index < MaxChannels;index++)
          State->Late.PanGain[index] = 0.0f;
     ComputeAngleGains(Device, aluAtan2(latePan[0], latePan[2]), (1.0f-dirGain)*F_PI,
                       lerp(ambientGain, 1.0f, dirGain) * Gain, State->Late.PanGain);
@@ -1142,7 +1142,7 @@ static ALvoid ReverbUpdate(ALeffectState *effect, ALCdevice *Device, const ALeff
 
         /* Update channel gains */
         gain *= aluSqrt(2.0f/Device->NumChan) * ReverbBoost;
-        for(index = 0;index < MAXCHANNELS;index++)
+        for(index = 0;index < MaxChannels;index++)
              State->Gain[index] = 0.0f;
         for(index = 0;index < Device->NumChan;index++)
         {
@@ -1236,7 +1236,7 @@ ALeffectState *ReverbCreate(void)
         State->Late.LpSample[index] = 0.0f;
     }
 
-    for(index = 0;index < MAXCHANNELS;index++)
+    for(index = 0;index < MaxChannels;index++)
     {
         State->Early.PanGain[index] = 0.0f;
         State->Late.PanGain[index] = 0.0f;

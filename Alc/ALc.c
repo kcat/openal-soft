@@ -1225,46 +1225,46 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
     switch(device->FmtChans)
     {
-    case DevFmtMono: device->DevChannels[0] = FRONT_CENTER; break;
+    case DevFmtMono: device->DevChannels[0] = FrontCenter; break;
 
-    case DevFmtStereo: device->DevChannels[0] = FRONT_LEFT;
-                       device->DevChannels[1] = FRONT_RIGHT; break;
+    case DevFmtStereo: device->DevChannels[0] = FrontLeft;
+                       device->DevChannels[1] = FrontRight; break;
 
-    case DevFmtQuad: device->DevChannels[0] = FRONT_LEFT;
-                     device->DevChannels[1] = FRONT_RIGHT;
-                     device->DevChannels[2] = BACK_LEFT;
-                     device->DevChannels[3] = BACK_RIGHT; break;
+    case DevFmtQuad: device->DevChannels[0] = FrontLeft;
+                     device->DevChannels[1] = FrontRight;
+                     device->DevChannels[2] = BackLeft;
+                     device->DevChannels[3] = BackRight; break;
 
-    case DevFmtX51: device->DevChannels[0] = FRONT_LEFT;
-                    device->DevChannels[1] = FRONT_RIGHT;
-                    device->DevChannels[2] = FRONT_CENTER;
+    case DevFmtX51: device->DevChannels[0] = FrontLeft;
+                    device->DevChannels[1] = FrontRight;
+                    device->DevChannels[2] = FrontCenter;
                     device->DevChannels[3] = LFE;
-                    device->DevChannels[4] = BACK_LEFT;
-                    device->DevChannels[5] = BACK_RIGHT; break;
+                    device->DevChannels[4] = BackLeft;
+                    device->DevChannels[5] = BackRight; break;
 
-    case DevFmtX51Side: device->DevChannels[0] = FRONT_LEFT;
-                        device->DevChannels[1] = FRONT_RIGHT;
-                        device->DevChannels[2] = FRONT_CENTER;
+    case DevFmtX51Side: device->DevChannels[0] = FrontLeft;
+                        device->DevChannels[1] = FrontRight;
+                        device->DevChannels[2] = FrontCenter;
                         device->DevChannels[3] = LFE;
-                        device->DevChannels[4] = SIDE_LEFT;
-                        device->DevChannels[5] = SIDE_RIGHT; break;
+                        device->DevChannels[4] = SideLeft;
+                        device->DevChannels[5] = SideRight; break;
 
-    case DevFmtX61: device->DevChannels[0] = FRONT_LEFT;
-                    device->DevChannels[1] = FRONT_RIGHT;
-                    device->DevChannels[2] = FRONT_CENTER;
+    case DevFmtX61: device->DevChannels[0] = FrontLeft;
+                    device->DevChannels[1] = FrontRight;
+                    device->DevChannels[2] = FrontCenter;
                     device->DevChannels[3] = LFE;
-                    device->DevChannels[4] = BACK_CENTER;
-                    device->DevChannels[5] = SIDE_LEFT;
-                    device->DevChannels[6] = SIDE_RIGHT; break;
+                    device->DevChannels[4] = BackCenter;
+                    device->DevChannels[5] = SideLeft;
+                    device->DevChannels[6] = SideRight; break;
 
-    case DevFmtX71: device->DevChannels[0] = FRONT_LEFT;
-                    device->DevChannels[1] = FRONT_RIGHT;
-                    device->DevChannels[2] = FRONT_CENTER;
+    case DevFmtX71: device->DevChannels[0] = FrontLeft;
+                    device->DevChannels[1] = FrontRight;
+                    device->DevChannels[2] = FrontCenter;
                     device->DevChannels[3] = LFE;
-                    device->DevChannels[4] = BACK_LEFT;
-                    device->DevChannels[5] = BACK_RIGHT;
-                    device->DevChannels[6] = SIDE_LEFT;
-                    device->DevChannels[7] = SIDE_RIGHT; break;
+                    device->DevChannels[4] = BackLeft;
+                    device->DevChannels[5] = BackRight;
+                    device->DevChannels[6] = SideLeft;
+                    device->DevChannels[7] = SideRight; break;
     }
 }
 
@@ -1276,22 +1276,22 @@ void SetDefaultChannelOrder(ALCdevice *device)
 {
     switch(device->FmtChans)
     {
-    case DevFmtX51: device->DevChannels[0] = FRONT_LEFT;
-                    device->DevChannels[1] = FRONT_RIGHT;
-                    device->DevChannels[2] = BACK_LEFT;
-                    device->DevChannels[3] = BACK_RIGHT;
-                    device->DevChannels[4] = FRONT_CENTER;
+    case DevFmtX51: device->DevChannels[0] = FrontLeft;
+                    device->DevChannels[1] = FrontRight;
+                    device->DevChannels[2] = BackLeft;
+                    device->DevChannels[3] = BackRight;
+                    device->DevChannels[4] = FrontCenter;
                     device->DevChannels[5] = LFE;
                     return;
 
-    case DevFmtX71: device->DevChannels[0] = FRONT_LEFT;
-                    device->DevChannels[1] = FRONT_RIGHT;
-                    device->DevChannels[2] = BACK_LEFT;
-                    device->DevChannels[3] = BACK_RIGHT;
-                    device->DevChannels[4] = FRONT_CENTER;
+    case DevFmtX71: device->DevChannels[0] = FrontLeft;
+                    device->DevChannels[1] = FrontRight;
+                    device->DevChannels[2] = BackLeft;
+                    device->DevChannels[3] = BackRight;
+                    device->DevChannels[4] = FrontCenter;
                     device->DevChannels[5] = LFE;
-                    device->DevChannels[6] = SIDE_LEFT;
-                    device->DevChannels[7] = SIDE_RIGHT;
+                    device->DevChannels[6] = SideLeft;
+                    device->DevChannels[7] = SideRight;
                     return;
 
     /* Same as WFX order */
@@ -1533,7 +1533,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     aluInitPanning(device);
 
-    for(i = 0;i < MAXCHANNELS;i++)
+    for(i = 0;i < MaxChannels;i++)
     {
         device->ClickRemoval[i] = 0.0f;
         device->PendingClicks[i] = 0.0f;

@@ -63,54 +63,54 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[
 
 ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
-    static const struct ChanMap MonoMap[1] = { { FRONT_CENTER, 0.0f } };
+    static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f } };
     static const struct ChanMap StereoMap[2] = {
-        { FRONT_LEFT, -30.0f * F_PI/180.0f },
-        { FRONT_RIGHT, 30.0f * F_PI/180.0f }
+        { FrontLeft, -30.0f * F_PI/180.0f },
+        { FrontRight, 30.0f * F_PI/180.0f }
     };
     static const struct ChanMap RearMap[2] = {
-        { BACK_LEFT, -150.0f * F_PI/180.0f },
-        { BACK_RIGHT, 150.0f * F_PI/180.0f }
+        { BackLeft, -150.0f * F_PI/180.0f },
+        { BackRight, 150.0f * F_PI/180.0f }
     };
     static const struct ChanMap QuadMap[4] = {
-        { FRONT_LEFT, -45.0f * F_PI/180.0f },
-        { FRONT_RIGHT, 45.0f * F_PI/180.0f },
-        { BACK_LEFT, -135.0f * F_PI/180.0f },
-        { BACK_RIGHT, 135.0f * F_PI/180.0f }
+        { FrontLeft, -45.0f * F_PI/180.0f },
+        { FrontRight, 45.0f * F_PI/180.0f },
+        { BackLeft, -135.0f * F_PI/180.0f },
+        { BackRight, 135.0f * F_PI/180.0f }
     };
     static const struct ChanMap X51Map[6] = {
-        { FRONT_LEFT, -30.0f * F_PI/180.0f },
-        { FRONT_RIGHT, 30.0f * F_PI/180.0f },
-        { FRONT_CENTER, 0.0f * F_PI/180.0f },
+        { FrontLeft, -30.0f * F_PI/180.0f },
+        { FrontRight, 30.0f * F_PI/180.0f },
+        { FrontCenter, 0.0f * F_PI/180.0f },
         { LFE, 0.0f },
-        { BACK_LEFT, -110.0f * F_PI/180.0f },
-        { BACK_RIGHT, 110.0f * F_PI/180.0f }
+        { BackLeft, -110.0f * F_PI/180.0f },
+        { BackRight, 110.0f * F_PI/180.0f }
     };
     static const struct ChanMap X61Map[7] = {
-        { FRONT_LEFT,  -30.0f * F_PI/180.0f },
-        { FRONT_RIGHT,  30.0f * F_PI/180.0f },
-        { FRONT_CENTER,  0.0f * F_PI/180.0f },
+        { FrontLeft,  -30.0f * F_PI/180.0f },
+        { FrontRight,  30.0f * F_PI/180.0f },
+        { FrontCenter,  0.0f * F_PI/180.0f },
         { LFE, 0.0f },
-        { BACK_CENTER, 180.0f * F_PI/180.0f },
-        { SIDE_LEFT,   -90.0f * F_PI/180.0f },
-        { SIDE_RIGHT,   90.0f * F_PI/180.0f }
+        { BackCenter, 180.0f * F_PI/180.0f },
+        { SideLeft,   -90.0f * F_PI/180.0f },
+        { SideRight,   90.0f * F_PI/180.0f }
     };
     static const struct ChanMap X71Map[8] = {
-        { FRONT_LEFT, -30.0f * F_PI/180.0f },
-        { FRONT_RIGHT, 30.0f * F_PI/180.0f },
-        { FRONT_CENTER, 0.0f * F_PI/180.0f },
+        { FrontLeft, -30.0f * F_PI/180.0f },
+        { FrontRight, 30.0f * F_PI/180.0f },
+        { FrontCenter, 0.0f * F_PI/180.0f },
         { LFE, 0.0f },
-        { BACK_LEFT, -150.0f * F_PI/180.0f },
-        { BACK_RIGHT, 150.0f * F_PI/180.0f },
-        { SIDE_LEFT,  -90.0f * F_PI/180.0f },
-        { SIDE_RIGHT,  90.0f * F_PI/180.0f }
+        { BackLeft, -150.0f * F_PI/180.0f },
+        { BackRight, 150.0f * F_PI/180.0f },
+        { SideLeft,  -90.0f * F_PI/180.0f },
+        { SideRight,  90.0f * F_PI/180.0f }
     };
 
     ALCdevice *Device = ALContext->Device;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
     enum FmtChannels Channels;
-    ALfloat (*SrcMatrix)[MAXCHANNELS];
+    ALfloat (*SrcMatrix)[MaxChannels];
     ALfloat DryGain, DryGainHF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
@@ -187,9 +187,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     SrcMatrix = ALSource->Params.Direct.Gains;
-    for(i = 0;i < MAXCHANNELS;i++)
+    for(i = 0;i < MaxChannels;i++)
     {
-        for(c = 0;c < MAXCHANNELS;c++)
+        for(c = 0;c < MaxChannels;c++)
             SrcMatrix[i][c] = 0.0f;
     }
     switch(Channels)
@@ -721,13 +721,13 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
-        ALfloat (*Matrix)[MAXCHANNELS] = ALSource->Params.Direct.Gains;
+        ALfloat (*Matrix)[MaxChannels] = ALSource->Params.Direct.Gains;
         ALfloat DirGain = 0.0f;
         ALfloat AmbientGain;
 
-        for(i = 0;i < MAXCHANNELS;i++)
+        for(i = 0;i < MaxChannels;i++)
         {
-            for(j = 0;j < MAXCHANNELS;j++)
+            for(j = 0;j < MaxChannels;j++)
                 Matrix[i][j] = 0.0f;
         }
 
@@ -791,7 +791,7 @@ static __inline ALubyte aluF2UB(ALfloat val)
 static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
                             ALuint SamplesToDo)                               \
 {                                                                             \
-    ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS] = device->DryBuffer;           \
+    ALfloat (*RESTRICT DryBuffer)[MaxChannels] = device->DryBuffer;           \
     const enum Channel *ChanMap = device->DevChannels;                        \
     ALuint i, j;                                                              \
                                                                               \
@@ -907,7 +907,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     while(size > 0)
     {
         SamplesToDo = minu(size, BUFFERSIZE);
-        memset(device->DryBuffer, 0, SamplesToDo*MAXCHANNELS*sizeof(ALfloat));
+        memset(device->DryBuffer, 0, SamplesToDo*MaxChannels*sizeof(ALfloat));
 
         LockDevice(device);
         ctx = device->ContextList;
@@ -996,15 +996,15 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             for(i = 0;i < SamplesToDo;i++)
             {
-                device->DryBuffer[i][FRONT_CENTER] += device->ClickRemoval[FRONT_CENTER];
-                device->ClickRemoval[FRONT_CENTER] -= device->ClickRemoval[FRONT_CENTER] * (1.0f/256.0f);
+                device->DryBuffer[i][FrontCenter] += device->ClickRemoval[FrontCenter];
+                device->ClickRemoval[FrontCenter] -= device->ClickRemoval[FrontCenter] * (1.0f/256.0f);
             }
-            device->ClickRemoval[FRONT_CENTER] += device->PendingClicks[FRONT_CENTER];
-            device->PendingClicks[FRONT_CENTER] = 0.0f;
+            device->ClickRemoval[FrontCenter] += device->PendingClicks[FrontCenter];
+            device->PendingClicks[FrontCenter] = 0.0f;
         }
         else if(device->FmtChans == DevFmtStereo)
         {
-            /* Assumes the first two channels are FRONT_LEFT and FRONT_RIGHT */
+            /* Assumes the first two channels are FrontLeft and FrontRight */
             for(i = 0;i < SamplesToDo;i++)
             {
                 for(c = 0;c < 2;c++)
@@ -1028,13 +1028,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             for(i = 0;i < SamplesToDo;i++)
             {
-                for(c = 0;c < MAXCHANNELS;c++)
+                for(c = 0;c < MaxChannels;c++)
                 {
                     device->DryBuffer[i][c] += device->ClickRemoval[c];
                     device->ClickRemoval[c] -= device->ClickRemoval[c] * (1.0f/256.0f);
                 }
             }
-            for(c = 0;c < MAXCHANNELS;c++)
+            for(c = 0;c < MaxChannels;c++)
             {
                 device->ClickRemoval[c] += device->PendingClicks[c];
                 device->PendingClicks[c] = 0.0f;

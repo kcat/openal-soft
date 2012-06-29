@@ -43,7 +43,7 @@ typedef struct ALmodulatorState {
     ALuint index;
     ALuint step;
 
-    ALfloat Gain[MAXCHANNELS];
+    ALfloat Gain[MaxChannels];
 
     FILTER iirFilter;
     ALfloat history[1];
@@ -84,7 +84,7 @@ static __inline ALfloat hpFilter1P(FILTER *iir, ALuint offset, ALfloat input)
 
 #define DECL_TEMPLATE(func)                                                   \
 static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
-  const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])               \
+  const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MaxChannels])               \
 {                                                                             \
     const ALuint step = state->step;                                          \
     ALuint index = state->index;                                              \
@@ -101,7 +101,7 @@ static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
                                                                               \
         samp = hpFilter1P(&state->iirFilter, 0, samp);                        \
                                                                               \
-        for(k = 0;k < MAXCHANNELS;k++)                                        \
+        for(k = 0;k < MaxChannels;k++)                                        \
             SamplesOut[i][k] += state->Gain[k] * samp;                        \
     }                                                                         \
     state->index = index;                                                     \
@@ -151,7 +151,7 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCdevice *Device, const AL
 
     gain = aluSqrt(1.0f/Device->NumChan);
     gain *= Slot->Gain;
-    for(index = 0;index < MAXCHANNELS;index++)
+    for(index = 0;index < MaxChannels;index++)
         state->Gain[index] = 0.0f;
     for(index = 0;index < Device->NumChan;index++)
     {
@@ -160,7 +160,7 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCdevice *Device, const AL
     }
 }
 
-static ALvoid ModulatorProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MAXCHANNELS])
+static ALvoid ModulatorProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MaxChannels])
 {
     ALmodulatorState *state = (ALmodulatorState*)effect;
 

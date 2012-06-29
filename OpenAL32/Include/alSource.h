@@ -31,17 +31,17 @@ typedef struct ALbufferlistitem
 typedef struct HrtfState {
     ALboolean Moving;
     ALuint Counter;
-    ALfloat History[MAXCHANNELS][SRC_HISTORY_LENGTH];
-    ALfloat Values[MAXCHANNELS][HRIR_LENGTH][2];
+    ALfloat History[MaxChannels][SRC_HISTORY_LENGTH];
+    ALfloat Values[MaxChannels][HRIR_LENGTH][2];
     ALuint Offset;
 } HrtfState;
 
 typedef struct HrtfParams {
     ALfloat Gain;
     ALfloat Dir[3];
-    ALfloat Coeffs[MAXCHANNELS][HRIR_LENGTH][2];
-    ALuint Delay[MAXCHANNELS][2];
-    ALfloat CoeffStep[HRIR_LENGTH][2];
+    ALfloat Coeffs[MaxChannels][HRIR_LENGTH][2];
+    ALuint Delay[MaxChannels][2];
+    ALfloat CoeffStep[MaxChannels][2];
     ALint DelayStep[2];
 } HrtfParams;
 
@@ -50,12 +50,12 @@ typedef struct DirectParams {
 
     /* A mixing matrix. First subscript is the channel number of the input data
      * (regardless of channel configuration) and the second is the channel
-     * target (eg. FRONT_LEFT). Not used with HRTF. */
-    ALfloat Gains[MAXCHANNELS][MAXCHANNELS];
+     * target (eg. FrontLeft). Not used with HRTF. */
+    ALfloat Gains[MaxChannels][MaxChannels];
 
     /* A low-pass filter, using 2 chained one-pole filters. */
     FILTER iirFilter;
-    ALfloat history[MAXCHANNELS*2];
+    ALfloat history[MaxChannels*2];
 } DirectParams;
 
 typedef struct SendParams {
@@ -65,7 +65,7 @@ typedef struct SendParams {
 
     /* A low-pass filter, using 2 chained one-pole filters. */
     FILTER iirFilter;
-    ALfloat history[MAXCHANNELS*2];
+    ALfloat history[MaxChannels*2];
 } SendParams;
 
 

@@ -107,7 +107,7 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
     const ALint *RESTRICT DelayStep = params->Hrtf.DelayStep;                 \
-    ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
+    ALfloat (*RESTRICT DryBuffer)[MaxChannels];                               \
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
     ALfloat (*RESTRICT CoeffStep)[2] = params->Hrtf.CoeffStep;                \
     ALuint pos, frac;                                                         \
@@ -157,10 +157,10 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
             left = History[(Offset-(Delay[0]>>16))&SRC_HISTORY_MASK];         \
             right = History[(Offset-(Delay[1]>>16))&SRC_HISTORY_MASK];        \
                                                                               \
-            ClickRemoval[FRONT_LEFT]  -= Values[(Offset+1)&HRIR_MASK][0] +    \
-                                         Coeffs[0][0] * left;                 \
-            ClickRemoval[FRONT_RIGHT] -= Values[(Offset+1)&HRIR_MASK][1] +    \
-                                         Coeffs[0][1] * right;                \
+            ClickRemoval[FrontLeft]  -= Values[(Offset+1)&HRIR_MASK][0] +     \
+                                        Coeffs[0][0] * left;                  \
+            ClickRemoval[FrontRight] -= Values[(Offset+1)&HRIR_MASK][1] +     \
+                                        Coeffs[0][1] * right;                 \
         }                                                                     \
         for(BufferIdx = 0;BufferIdx < BufferSize && Counter > 0;BufferIdx++)  \
         {                                                                     \
@@ -187,8 +187,8 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
                 Coeffs[c][1] += CoeffStep[c][1];                              \
             }                                                                 \
                                                                               \
-            DryBuffer[OutPos][FRONT_LEFT]  += Values[Offset&HRIR_MASK][0];    \
-            DryBuffer[OutPos][FRONT_RIGHT] += Values[Offset&HRIR_MASK][1];    \
+            DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];     \
+            DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];     \
                                                                               \
             frac += increment;                                                \
             pos  += frac>>FRACTIONBITS;                                       \
@@ -213,8 +213,8 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
             Offset++;                                                         \
                                                                               \
             ApplyCoeffs(Offset, Values, Coeffs, left, right);                 \
-            DryBuffer[OutPos][FRONT_LEFT]  += Values[Offset&HRIR_MASK][0];    \
-            DryBuffer[OutPos][FRONT_RIGHT] += Values[Offset&HRIR_MASK][1];    \
+            DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];     \
+            DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];     \
                                                                               \
             frac += increment;                                                \
             pos  += frac>>FRACTIONBITS;                                       \
@@ -230,10 +230,10 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
             left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];               \
             right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];              \
                                                                               \
-            PendingClicks[FRONT_LEFT]  += Values[(Offset+1)&HRIR_MASK][0] +   \
-                                          Coeffs[0][0] * left;                \
-            PendingClicks[FRONT_RIGHT] += Values[(Offset+1)&HRIR_MASK][1] +   \
-                                          Coeffs[0][1] * right;               \
+            PendingClicks[FrontLeft]  += Values[(Offset+1)&HRIR_MASK][0] +    \
+                                         Coeffs[0][0] * left;                 \
+            PendingClicks[FrontRight] += Values[(Offset+1)&HRIR_MASK][1] +    \
+                                         Coeffs[0][1] * right;                \
         }                                                                     \
         OutPos -= BufferSize;                                                 \
     }                                                                         \
@@ -252,9 +252,9 @@ static void MixDirect_##sampler(ALsource *Source, ALCdevice *Device,          \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
-    ALfloat (*RESTRICT DryBuffer)[MAXCHANNELS];                               \
+    ALfloat (*RESTRICT DryBuffer)[MaxChannels];                               \
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;                  \
-    ALfloat DrySend[MAXCHANNELS];                                             \
+    ALfloat DrySend[MaxChannels];                                             \
     FILTER *DryFilter;                                                        \
     ALuint pos, frac;                                                         \
     ALuint BufferIdx;                                                         \
@@ -271,7 +271,7 @@ static void MixDirect_##sampler(ALsource *Source, ALCdevice *Device,          \
                                                                               \
     for(i = 0;i < NumChannels;i++)                                            \
     {                                                                         \
-        for(c = 0;c < MAXCHANNELS;c++)                                        \
+        for(c = 0;c < MaxChannels;c++)                                        \
             DrySend[c] = params->Gains[i][c];                                 \
                                                                               \
         pos = 0;                                                              \
@@ -282,7 +282,7 @@ static void MixDirect_##sampler(ALsource *Source, ALCdevice *Device,          \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
                                                                               \
             value = lpFilter2PC(DryFilter, i, value);                         \
-            for(c = 0;c < MAXCHANNELS;c++)                                    \
+            for(c = 0;c < MaxChannels;c++)                                    \
                 ClickRemoval[c] -= value*DrySend[c];                          \
         }                                                                     \
         for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)                 \
@@ -290,7 +290,7 @@ static void MixDirect_##sampler(ALsource *Source, ALCdevice *Device,          \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
                                                                               \
             value = lpFilter2P(DryFilter, i, value);                          \
-            for(c = 0;c < MAXCHANNELS;c++)                                    \
+            for(c = 0;c < MaxChannels;c++)                                    \
                 DryBuffer[OutPos][c] += value*DrySend[c];                     \
                                                                               \
             frac += increment;                                                \
@@ -303,7 +303,7 @@ static void MixDirect_##sampler(ALsource *Source, ALCdevice *Device,          \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \
                                                                               \
             value = lpFilter2PC(DryFilter, i, value);                         \
-            for(c = 0;c < MAXCHANNELS;c++)                                    \
+            for(c = 0;c < MaxChannels;c++)                                    \
                 PendingClicks[c] += value*DrySend[c];                         \
         }                                                                     \
         OutPos -= BufferSize;                                                 \

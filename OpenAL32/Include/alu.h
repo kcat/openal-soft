@@ -139,17 +139,17 @@ enum Resampler {
 };
 
 enum Channel {
-    FRONT_LEFT = 0,
-    FRONT_RIGHT,
-    FRONT_CENTER,
+    FrontLeft = 0,
+    FrontRight,
+    FrontCenter,
     LFE,
-    BACK_LEFT,
-    BACK_RIGHT,
-    BACK_CENTER,
-    SIDE_LEFT,
-    SIDE_RIGHT,
+    BackLeft,
+    BackRight,
+    BackCenter,
+    SideLeft,
+    SideRight,
 
-    MAXCHANNELS
+    MaxChannels
 };
 
 enum DistanceModel {

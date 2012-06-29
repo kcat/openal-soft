@@ -31,8 +31,8 @@
 #include "AL/alc.h"
 #include "alu.h"
 
-static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHANNELS],
-                                  enum Channel Speaker2Chan[MAXCHANNELS], ALint chans)
+static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MaxChannels],
+                                  enum Channel Speaker2Chan[MaxChannels], ALint chans)
 {
     char *confkey, *next;
     char *layout_str;
@@ -71,21 +71,21 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHAN
         *(++end) = 0;
 
         if(strcmp(confkey, "fl") == 0 || strcmp(confkey, "front-left") == 0)
-            val = FRONT_LEFT;
+            val = FrontLeft;
         else if(strcmp(confkey, "fr") == 0 || strcmp(confkey, "front-right") == 0)
-            val = FRONT_RIGHT;
+            val = FrontRight;
         else if(strcmp(confkey, "fc") == 0 || strcmp(confkey, "front-center") == 0)
-            val = FRONT_CENTER;
+            val = FrontCenter;
         else if(strcmp(confkey, "bl") == 0 || strcmp(confkey, "back-left") == 0)
-            val = BACK_LEFT;
+            val = BackLeft;
         else if(strcmp(confkey, "br") == 0 || strcmp(confkey, "back-right") == 0)
-            val = BACK_RIGHT;
+            val = BackRight;
         else if(strcmp(confkey, "bc") == 0 || strcmp(confkey, "back-center") == 0)
-            val = BACK_CENTER;
+            val = BackCenter;
         else if(strcmp(confkey, "sl") == 0 || strcmp(confkey, "side-left") == 0)
-            val = SIDE_LEFT;
+            val = SideLeft;
         else if(strcmp(confkey, "sr") == 0 || strcmp(confkey, "side-right") == 0)
-            val = SIDE_RIGHT;
+            val = SideRight;
         else
         {
             ERR("Unknown speaker for %s: \"%s\"\n", name, confkey);
@@ -148,9 +148,9 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MAXCHAN
  */
 ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat *gains)
 {
-    ALfloat tmpgains[MAXCHANNELS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-    enum Channel Speaker2Chan[MAXCHANNELS];
-    ALfloat SpeakerAngle[MAXCHANNELS];
+    ALfloat tmpgains[MaxChannels] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    enum Channel Speaker2Chan[MaxChannels];
+    ALfloat SpeakerAngle[MaxChannels];
     ALfloat langle, rangle;
     ALfloat a;
     ALuint i;
@@ -346,15 +346,15 @@ ALvoid aluInitPanning(ALCdevice *Device)
     {
         case DevFmtMono:
             Device->NumChan = 1;
-            Speaker2Chan[0] = FRONT_CENTER;
+            Speaker2Chan[0] = FrontCenter;
             SpeakerAngle[0] = F_PI/180.0f * 0.0f;
             layoutname = NULL;
             break;
 
         case DevFmtStereo:
             Device->NumChan = 2;
-            Speaker2Chan[0] = FRONT_LEFT;
-            Speaker2Chan[1] = FRONT_RIGHT;
+            Speaker2Chan[0] = FrontLeft;
+            Speaker2Chan[1] = FrontRight;
             SpeakerAngle[0] = F_PI/180.0f * -90.0f;
             SpeakerAngle[1] = F_PI/180.0f *  90.0f;
             layoutname = "layout_stereo";
@@ -362,10 +362,10 @@ ALvoid aluInitPanning(ALCdevice *Device)
 
         case DevFmtQuad:
             Device->NumChan = 4;
-            Speaker2Chan[0] = BACK_LEFT;
-            Speaker2Chan[1] = FRONT_LEFT;
-            Speaker2Chan[2] = FRONT_RIGHT;
-            Speaker2Chan[3] = BACK_RIGHT;
+            Speaker2Chan[0] = BackLeft;
+            Speaker2Chan[1] = FrontLeft;
+            Speaker2Chan[2] = FrontRight;
+            Speaker2Chan[3] = BackRight;
             SpeakerAngle[0] = F_PI/180.0f * -135.0f;
             SpeakerAngle[1] = F_PI/180.0f *  -45.0f;
             SpeakerAngle[2] = F_PI/180.0f *   45.0f;
@@ -375,11 +375,11 @@ ALvoid aluInitPanning(ALCdevice *Device)
 
         case DevFmtX51:
             Device->NumChan = 5;
-            Speaker2Chan[0] = BACK_LEFT;
-            Speaker2Chan[1] = FRONT_LEFT;
-            Speaker2Chan[2] = FRONT_CENTER;
-            Speaker2Chan[3] = FRONT_RIGHT;
-            Speaker2Chan[4] = BACK_RIGHT;
+            Speaker2Chan[0] = BackLeft;
+            Speaker2Chan[1] = FrontLeft;
+            Speaker2Chan[2] = FrontCenter;
+            Speaker2Chan[3] = FrontRight;
+            Speaker2Chan[4] = BackRight;
             SpeakerAngle[0] = F_PI/180.0f * -110.0f;
             SpeakerAngle[1] = F_PI/180.0f *  -30.0f;
             SpeakerAngle[2] = F_PI/180.0f *    0.0f;
@@ -390,11 +390,11 @@ ALvoid aluInitPanning(ALCdevice *Device)
 
         case DevFmtX51Side:
             Device->NumChan = 5;
-            Speaker2Chan[0] = SIDE_LEFT;
-            Speaker2Chan[1] = FRONT_LEFT;
-            Speaker2Chan[2] = FRONT_CENTER;
-            Speaker2Chan[3] = FRONT_RIGHT;
-            Speaker2Chan[4] = SIDE_RIGHT;
+            Speaker2Chan[0] = SideLeft;
+            Speaker2Chan[1] = FrontLeft;
+            Speaker2Chan[2] = FrontCenter;
+            Speaker2Chan[3] = FrontRight;
+            Speaker2Chan[4] = SideRight;
             SpeakerAngle[0] = F_PI/180.0f * -90.0f;
             SpeakerAngle[1] = F_PI/180.0f * -30.0f;
             SpeakerAngle[2] = F_PI/180.0f *   0.0f;
@@ -405,12 +405,12 @@ ALvoid aluInitPanning(ALCdevice *Device)
 
         case DevFmtX61:
             Device->NumChan = 6;
-            Speaker2Chan[0] = SIDE_LEFT;
-            Speaker2Chan[1] = FRONT_LEFT;
-            Speaker2Chan[2] = FRONT_CENTER;
-            Speaker2Chan[3] = FRONT_RIGHT;
-            Speaker2Chan[4] = SIDE_RIGHT;
-            Speaker2Chan[5] = BACK_CENTER;
+            Speaker2Chan[0] = SideLeft;
+            Speaker2Chan[1] = FrontLeft;
+            Speaker2Chan[2] = FrontCenter;
+            Speaker2Chan[3] = FrontRight;
+            Speaker2Chan[4] = SideRight;
+            Speaker2Chan[5] = BackCenter;
             SpeakerAngle[0] = F_PI/180.0f * -90.0f;
             SpeakerAngle[1] = F_PI/180.0f * -30.0f;
             SpeakerAngle[2] = F_PI/180.0f *   0.0f;
@@ -422,13 +422,13 @@ ALvoid aluInitPanning(ALCdevice *Device)
 
         case DevFmtX71:
             Device->NumChan = 7;
-            Speaker2Chan[0] = BACK_LEFT;
-            Speaker2Chan[1] = SIDE_LEFT;
-            Speaker2Chan[2] = FRONT_LEFT;
-            Speaker2Chan[3] = FRONT_CENTER;
-            Speaker2Chan[4] = FRONT_RIGHT;
-            Speaker2Chan[5] = SIDE_RIGHT;
-            Speaker2Chan[6] = BACK_RIGHT;
+            Speaker2Chan[0] = BackLeft;
+            Speaker2Chan[1] = SideLeft;
+            Speaker2Chan[2] = FrontLeft;
+            Speaker2Chan[3] = FrontCenter;
+            Speaker2Chan[4] = FrontRight;
+            Speaker2Chan[5] = SideRight;
+            Speaker2Chan[6] = BackRight;
             SpeakerAngle[0] = F_PI/180.0f * -150.0f;
             SpeakerAngle[1] = F_PI/180.0f *  -90.0f;
             SpeakerAngle[2] = F_PI/180.0f *  -30.0f;

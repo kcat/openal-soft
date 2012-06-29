@@ -1088,8 +1088,8 @@ static ALalaw EncodeALaw(ALshort val)
 
 static void DecodeIMA4Block(ALshort *dst, const ALima4 *src, ALint numchans)
 {
-    ALint sample[MAXCHANNELS], index[MAXCHANNELS];
-    ALuint code[MAXCHANNELS];
+    ALint sample[MaxChannels], index[MaxChannels];
+    ALuint code[MaxChannels];
     ALsizei j,k,c;
 
     for(c = 0;c < numchans;c++)
@@ -1750,7 +1750,7 @@ DECL_TEMPLATE(ALubyte3, ALubyte3)
 static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALuint numchans,  \
                                  ALuint len)                                  \
 {                                                                             \
-    ALshort tmp[65*MAXCHANNELS]; /* Max samples an IMA4 frame can be */       \
+    ALshort tmp[65*MaxChannels]; /* Max samples an IMA4 frame can be */       \
     ALuint i, j, k;                                                           \
                                                                               \
     i = 0;                                                                    \
@@ -1786,9 +1786,9 @@ DECL_TEMPLATE(ALubyte3)
 static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALuint numchans,    \
                                ALuint len)                                    \
 {                                                                             \
-    ALshort tmp[65*MAXCHANNELS]; /* Max samples an IMA4 frame can be */       \
-    ALint sample[MAXCHANNELS] = {0,0,0,0,0,0,0,0};                            \
-    ALint index[MAXCHANNELS] = {0,0,0,0,0,0,0,0};                             \
+    ALshort tmp[65*MaxChannels]; /* Max samples an IMA4 frame can be */       \
+    ALint sample[MaxChannels] = {0,0,0,0,0,0,0,0};                            \
+    ALint index[MaxChannels] = {0,0,0,0,0,0,0,0};                             \
     ALuint i, j;                                                              \
                                                                               \
     for(i = 0;i < len;i += 65)                                                \

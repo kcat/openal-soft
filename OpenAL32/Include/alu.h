@@ -44,70 +44,59 @@ _CRTIMP unsigned int __cdecl __MINGW_NOTHROW _controlfp (unsigned int unNew, uns
 #define F_PI    (3.14159265358979323846f)  /* pi */
 #define F_PI_2  (1.57079632679489661923f)  /* pi/2 */
 
-#ifdef HAVE_POWF
-#define aluPow(x,y) (powf((x),(y)))
-#else
-#define aluPow(x,y) ((ALfloat)pow((double)(x),(double)(y)))
+#ifndef HAVE_POWF
+static __inline float powf(float x, float y)
+{ return (float)pow(x, y); }
 #endif
 
-#ifdef HAVE_SQRTF
-#define aluSqrt(x) (sqrtf((x)))
-#else
-#define aluSqrt(x) ((ALfloat)sqrt((double)(x)))
+#ifndef HAVE_SQRTF
+static __inline float sqrtf(float x)
+{ (float)sqrt(x); }
 #endif
 
-#ifdef HAVE_COSF
-#define aluCos(x) (cosf((x)))
-#else
-#define aluCos(x) ((ALfloat)cos((double)(x)))
+#ifndef HAVE_COSF
+static __inline float cosf(float x)
+{ (float)cos(x); }
 #endif
 
-#ifdef HAVE_SINF
-#define aluSin(x) (sinf((x)))
-#else
-#define aluSin(x) ((ALfloat)sin((double)(x)))
+#ifndef HAVE_SINF
+static __inline float sinf(float x)
+{ (float)sin(x); }
 #endif
 
-#ifdef HAVE_ACOSF
-#define aluAcos(x) (acosf((x)))
-#else
-#define aluAcos(x) ((ALfloat)acos((double)(x)))
+#ifndef HAVE_ACOSF
+static __inline float acosf(float x)
+{ (float)acos(x); }
 #endif
 
-#ifdef HAVE_ASINF
-#define aluAsin(x) (asinf((x)))
-#else
-#define aluAsin(x) ((ALfloat)asin((double)(x)))
+#ifndef HAVE_ASINF
+static __inline float asinf(float x)
+{ (float)asin(x); }
 #endif
 
-#ifdef HAVE_ATANF
-#define aluAtan(x) (atanf((x)))
-#else
-#define aluAtan(x) ((ALfloat)atan((double)(x)))
+#ifndef HAVE_ATANF
+static __inline float atanf(float x)
+{ (float)atan(x); }
 #endif
 
-#ifdef HAVE_ATAN2F
-#define aluAtan2(x,y) (atan2f((x),(y)))
-#else
-#define aluAtan2(x,y) ((ALfloat)atan2((double)(x),(double)(y)))
+#ifndef HAVE_ATAN2F
+static __inline float atan2f(float x, float y)
+{ (float)atan2(x, y); }
 #endif
 
-#ifdef HAVE_FABSF
-#define aluFabs(x) (fabsf((x)))
-#else
-#define aluFabs(x) ((ALfloat)fabs((double)(x)))
+#ifndef HAVE_FABSF
+static __inline float fabsf(float x)
+{ (float)fabs(x); }
 #endif
 
-#ifdef HAVE_LOG10F
-#define aluLog10(x) (log10f((x)))
-#else
-#define aluLog10(x) ((ALfloat)log10((double)(x)))
+#ifndef HAVE_LOG10F
+static __inline float log10f(float x)
+{ (float)log10(x); }
 #endif
 
-#ifdef HAVE_FLOORF
-#define aluFloor(x) (floorf((x)))
-#else
-#define aluFloor(x) ((ALfloat)floor((double)(x)))
+#ifndef HAVE_FLOORF
+static __inline float floorf(float x)
+{ (float)floor(x); }
 #endif
 
 #ifdef __cplusplus
@@ -284,7 +273,7 @@ static __inline void aluNormalize(ALfloat *inVector)
     ALfloat lengthsqr = aluDotproduct(inVector, inVector);
     if(lengthsqr > 0.0f)
     {
-        ALfloat inv_length = 1.0f/aluSqrt(lengthsqr);
+        ALfloat inv_length = 1.0f/sqrtf(lengthsqr);
         inVector[0] *= inv_length;
         inVector[1] *= inv_length;
         inVector[2] *= inv_length;

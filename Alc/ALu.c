@@ -300,7 +300,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     /* Update filter coefficients. Calculations based on the I3DL2
      * spec. */
-    cw = aluCos(F_PI*2.0f * LOWPASSFREQREF / Frequency);
+    cw = cosf(F_PI*2.0f * LOWPASSFREQREF / Frequency);
 
     /* We use two chained one-pole filters, so we need to take the
      * square root of the squared gain, which is the same as the base
@@ -466,7 +466,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     aluNormalize(Direction);
 
     /* Calculate distance attenuation */
-    Distance = aluSqrt(aluDotproduct(Position, Position));
+    Distance = sqrtf(aluDotproduct(Position, Position));
     ClampedDist = Distance;
 
     Attenuation = 1.0f;
@@ -519,9 +519,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         case ExponentDistance:
             if(ClampedDist > 0.0f && MinDist > 0.0f)
             {
-                Attenuation = aluPow(ClampedDist/MinDist, -Rolloff);
+                Attenuation = powf(ClampedDist/MinDist, -Rolloff);
                 for(i = 0;i < NumSends;i++)
-                    RoomAttenuation[i] = aluPow(ClampedDist/MinDist, -RoomRolloff[i]);
+                    RoomAttenuation[i] = powf(ClampedDist/MinDist, -RoomRolloff[i]);
             }
             break;
 
@@ -539,9 +539,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if(AirAbsorptionFactor > 0.0f && ClampedDist > MinDist)
     {
         ALfloat meters = maxf(ClampedDist-MinDist, 0.0f) * MetersPerUnit;
-        DryGainHF *= aluPow(AIRABSORBGAINHF, AirAbsorptionFactor*meters);
+        DryGainHF *= powf(AIRABSORBGAINHF, AirAbsorptionFactor*meters);
         for(i = 0;i < NumSends;i++)
-            WetGainHF[i] *= aluPow(RoomAirAbsorption[i], AirAbsorptionFactor*meters);
+            WetGainHF[i] *= powf(RoomAirAbsorption[i], AirAbsorptionFactor*meters);
     }
 
     if(WetGainAuto)
@@ -558,12 +558,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         for(i = 0;i < NumSends;i++)
         {
             if(DecayDistance[i] > 0.0f)
-                WetGain[i] *= aluPow(0.001f/*-60dB*/, ApparentDist/DecayDistance[i]);
+                WetGain[i] *= powf(0.001f/*-60dB*/, ApparentDist/DecayDistance[i]);
         }
     }
 
     /* Calculate directional soundcones */
-    Angle = aluAcos(aluDotproduct(Direction,SourceToListener)) * (180.0f/F_PI);
+    Angle = acosf(aluDotproduct(Direction,SourceToListener)) * (180.0f/F_PI);
     if(Angle > InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
@@ -679,8 +679,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
              * the listener. This prevents +0 and -0 Z from producing
              * inconsistent panning. Also, clamp Y in case FP precision errors
              * cause it to land outside of -1..+1. */
-            ev = aluAsin(clampf(Position[1], -1.0f, 1.0f));
-            az = aluAtan2(Position[0], -Position[2]*ZScale);
+            ev = asinf(clampf(Position[1], -1.0f, 1.0f));
+            az = atan2f(Position[0], -Position[2]*ZScale);
         }
 
         /* Check to see if the HRIR is already moving. */
@@ -739,14 +739,14 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             Position[1] *= invlen;
             Position[2] *= invlen;
 
-            DirGain = aluSqrt(Position[0]*Position[0] + Position[2]*Position[2]);
-            ComputeAngleGains(Device, aluAtan2(Position[0], -Position[2]*ZScale), 0.0f,
+            DirGain = sqrtf(Position[0]*Position[0] + Position[2]*Position[2]);
+            ComputeAngleGains(Device, atan2f(Position[0], -Position[2]*ZScale), 0.0f,
                               DryGain*DirGain, Matrix[0]);
         }
 
         /* Adjustment for vertical offsets. Not the greatest, but simple
          * enough. */
-        AmbientGain = DryGain * aluSqrt(1.0f/Device->NumChan) * (1.0f-DirGain);
+        AmbientGain = DryGain * sqrtf(1.0f/Device->NumChan) * (1.0f-DirGain);
         for(i = 0;i < (ALint)Device->NumChan;i++)
         {
             enum Channel chan = Device->Speaker2Chan[i];
@@ -757,7 +757,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALSource->Params.Send[i].Gain = WetGain[i];
 
     /* Update filter coefficients. */
-    cw = aluCos(F_PI*2.0f * LOWPASSFREQREF / Frequency);
+    cw = cosf(F_PI*2.0f * LOWPASSFREQREF / Frequency);
 
     ALSource->Params.Direct.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
     for(i = 0;i < NumSends;i++)

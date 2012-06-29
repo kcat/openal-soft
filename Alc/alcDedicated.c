@@ -61,7 +61,7 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const AL
         state->gains[s] = 0.0f;
 
     if(Slot->effect.type == AL_EFFECT_DEDICATED_DIALOGUE)
-        ComputeAngleGains(device, aluAtan2(0.0f, 1.0f), 0.0f, Gain, state->gains);
+        ComputeAngleGains(device, atan2f(0.0f, 1.0f), 0.0f, Gain, state->gains);
     else if(Slot->effect.type == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
         state->gains[LFE] = Gain;
 }

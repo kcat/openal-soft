@@ -55,7 +55,7 @@ typedef struct ALmodulatorState {
 
 static __inline ALfloat Sin(ALuint index)
 {
-    return aluSin(index * (F_PI*2.0f / WAVEFORM_FRACONE));
+    return sinf(index * (F_PI*2.0f / WAVEFORM_FRACONE));
 }
 
 static __inline ALfloat Saw(ALuint index)
@@ -144,12 +144,12 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCdevice *Device, const AL
                           Device->Frequency);
     if(state->step == 0) state->step = 1;
 
-    cw = aluCos(F_PI*2.0f * Slot->effect.Modulator.HighPassCutoff /
-                            Device->Frequency);
-    a = (2.0f-cw) - aluSqrt(aluPow(2.0f-cw, 2.0f) - 1.0f);
+    cw = cosf(F_PI*2.0f * Slot->effect.Modulator.HighPassCutoff /
+                          Device->Frequency);
+    a = (2.0f-cw) - sqrtf(powf(2.0f-cw, 2.0f) - 1.0f);
     state->iirFilter.coeff = a;
 
-    gain = aluSqrt(1.0f/Device->NumChan);
+    gain = sqrtf(1.0f/Device->NumChan);
     gain *= Slot->Gain;
     for(index = 0;index < MaxChannels;index++)
         state->Gain[index] = 0.0f;

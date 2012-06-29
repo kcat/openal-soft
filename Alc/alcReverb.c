@@ -261,7 +261,7 @@ static __inline ALfloat EAXModulation(ALverbState *State, ALfloat in)
     // Calculate the sinus rythm (dependent on modulation time and the
     // sampling rate).  The center of the sinus is moved to reduce the delay
     // of the effect when the time or depth are low.
-    sinus = 1.0f - aluCos(F_PI*2.0f * State->Mod.Index / State->Mod.Range);
+    sinus = 1.0f - cosf(F_PI*2.0f * State->Mod.Index / State->Mod.Range);
 
     // The depth determines the range over which to read the input samples
     // from, so it must be filtered to reduce the distortion caused by even
@@ -720,8 +720,8 @@ static ALboolean ReverbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     // is calculated given the current sample rate.  This ensures that the
     // resulting filter response over time is consistent across all sample
     // rates.
-    State->Mod.Coeff = aluPow(MODULATION_FILTER_COEFF,
-                              MODULATION_FILTER_CONST / frequency);
+    State->Mod.Coeff = powf(MODULATION_FILTER_COEFF,
+                            MODULATION_FILTER_CONST / frequency);
 
     // The early reflection and late all-pass filter line lengths are static,
     // so their offsets only need to be calculated once.
@@ -744,21 +744,21 @@ static ALboolean ReverbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 // until the decay reaches -60 dB.
 static __inline ALfloat CalcDecayCoeff(ALfloat length, ALfloat decayTime)
 {
-    return aluPow(0.001f/*-60 dB*/, length/decayTime);
+    return powf(0.001f/*-60 dB*/, length/decayTime);
 }
 
 // Calculate a decay length from a coefficient and the time until the decay
 // reaches -60 dB.
 static __inline ALfloat CalcDecayLength(ALfloat coeff, ALfloat decayTime)
 {
-    return aluLog10(coeff) * decayTime / aluLog10(0.001f)/*-60 dB*/;
+    return log10f(coeff) * decayTime / log10f(0.001f)/*-60 dB*/;
 }
 
 // Calculate the high frequency parameter for the I3DL2 coefficient
 // calculation.
 static __inline ALfloat CalcI3DL2HFreq(ALfloat hfRef, ALuint frequency)
 {
-    return aluCos(F_PI*2.0f * hfRef / frequency);
+    return cosf(F_PI*2.0f * hfRef / frequency);
 }
 
 // Calculate an attenuation to be applied to the input of any echo models to
@@ -778,7 +778,7 @@ static __inline ALfloat CalcDensityGain(ALfloat a)
      * calculated by inverting the square root of this approximation,
      * yielding:  1 / sqrt(1 / (1 - a^2)), simplified to: sqrt(1 - a^2).
      */
-    return aluSqrt(1.0f - (a * a));
+    return sqrtf(1.0f - (a * a));
 }
 
 // Calculate the mixing matrix coefficients given a diffusion factor.
@@ -787,13 +787,13 @@ static __inline ALvoid CalcMatrixCoeffs(ALfloat diffusion, ALfloat *x, ALfloat *
     ALfloat n, t;
 
     // The matrix is of order 4, so n is sqrt (4 - 1).
-    n = aluSqrt(3.0f);
-    t = diffusion * aluAtan(n);
+    n = sqrtf(3.0f);
+    t = diffusion * atanf(n);
 
     // Calculate the first mixing matrix coefficient.
-    *x = aluCos(t);
+    *x = cosf(t);
     // Calculate the second mixing matrix coefficient.
-    *y = aluSin(t) / n;
+    *y = sinf(t) / n;
 }
 
 // Calculate the limited HF ratio for use with the late reverb low-pass
@@ -913,7 +913,7 @@ static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALverbState 
      */
     for(index = 0;index < 3;index++)
     {
-        length = (DECO_FRACTION * aluPow(DECO_MULTIPLIER, (ALfloat)index)) *
+        length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)index)) *
                  LATE_LINE_LENGTH[0] * (1.0f + (density * LATE_LINE_MULTIPLIER));
         State->DecoTap[index] = fastf2u(length * frequency);
     }
@@ -947,7 +947,7 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
                                                              decayTime));
 
     // Calculate the all-pass feed-back and feed-forward coefficient.
-    State->Late.ApFeedCoeff = 0.5f * aluPow(diffusion, 2.0f);
+    State->Late.ApFeedCoeff = 0.5f * powf(diffusion, 2.0f);
 
     for(index = 0;index < 4;index++)
     {
@@ -991,7 +991,7 @@ static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoT
     State->Echo.DensityGain = CalcDensityGain(State->Echo.Coeff);
 
     // Calculate the echo all-pass feed coefficient.
-    State->Echo.ApFeedCoeff = 0.5f * aluPow(diffusion, 2.0f);
+    State->Echo.ApFeedCoeff = 0.5f * powf(diffusion, 2.0f);
 
     // Calculate the echo all-pass attenuation coefficient.
     State->Echo.ApCoeff = CalcDecayCoeff(ECHO_ALLPASS_LENGTH, decayTime);
@@ -1025,12 +1025,12 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 
     /* Attenuate reverb according to its coverage (dirGain=0 will give
      * Gain*ambientGain, and dirGain=1 will give Gain). */
-    ambientGain = minf(aluSqrt(2.0f/Device->NumChan), 1.0f);
+    ambientGain = minf(sqrtf(2.0f/Device->NumChan), 1.0f);
 
     length = earlyPan[0]*earlyPan[0] + earlyPan[1]*earlyPan[1] + earlyPan[2]*earlyPan[2];
     if(length > 1.0f)
     {
-        length = 1.0f / aluSqrt(length);
+        length = 1.0f / sqrtf(length);
         earlyPan[0] *= length;
         earlyPan[1] *= length;
         earlyPan[2] *= length;
@@ -1038,22 +1038,22 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     length = latePan[0]*latePan[0] + latePan[1]*latePan[1] + latePan[2]*latePan[2];
     if(length > 1.0f)
     {
-        length = 1.0f / aluSqrt(length);
+        length = 1.0f / sqrtf(length);
         latePan[0] *= length;
         latePan[1] *= length;
         latePan[2] *= length;
     }
 
-    dirGain = aluSqrt(earlyPan[0]*earlyPan[0] + earlyPan[2]*earlyPan[2]);
+    dirGain = sqrtf(earlyPan[0]*earlyPan[0] + earlyPan[2]*earlyPan[2]);
     for(index = 0;index < MaxChannels;index++)
          State->Early.PanGain[index] = 0.0f;
-    ComputeAngleGains(Device, aluAtan2(earlyPan[0], earlyPan[2]), (1.0f-dirGain)*F_PI,
+    ComputeAngleGains(Device, atan2f(earlyPan[0], earlyPan[2]), (1.0f-dirGain)*F_PI,
                       lerp(ambientGain, 1.0f, dirGain) * Gain, State->Early.PanGain);
 
-    dirGain = aluSqrt(latePan[0]*latePan[0] + latePan[2]*latePan[2]);
+    dirGain = sqrtf(latePan[0]*latePan[0] + latePan[2]*latePan[2]);
     for(index = 0;index < MaxChannels;index++)
          State->Late.PanGain[index] = 0.0f;
-    ComputeAngleGains(Device, aluAtan2(latePan[0], latePan[2]), (1.0f-dirGain)*F_PI,
+    ComputeAngleGains(Device, atan2f(latePan[0], latePan[2]), (1.0f-dirGain)*F_PI,
                       lerp(ambientGain, 1.0f, dirGain) * Gain, State->Late.PanGain);
 }
 
@@ -1141,7 +1141,7 @@ static ALvoid ReverbUpdate(ALeffectState *effect, ALCdevice *Device, const ALeff
         ALuint index;
 
         /* Update channel gains */
-        gain *= aluSqrt(2.0f/Device->NumChan) * ReverbBoost;
+        gain *= sqrtf(2.0f/Device->NumChan) * ReverbBoost;
         for(index = 0;index < MaxChannels;index++)
              State->Gain[index] = 0.0f;
         for(index = 0;index < Device->NumChan;index++)

@@ -106,7 +106,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffec
 
     state->FeedGain = Slot->effect.Echo.Feedback;
 
-    cw = aluCos(F_PI*2.0f * LOWPASSFREQREF / frequency);
+    cw = cosf(F_PI*2.0f * LOWPASSFREQREF / frequency);
     g = 1.0f - Slot->effect.Echo.Damping;
     state->iirFilter.coeff = lpCoeffCalc(g, cw);
 
@@ -117,13 +117,13 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffec
         state->Gain[1][i] = 0.0f;
     }
 
-    dirGain = aluFabs(lrpan);
+    dirGain = fabsf(lrpan);
 
     /* First tap panning */
-    ComputeAngleGains(Device, aluAtan2(-lrpan, 0.0f), (1.0f-dirGain)*F_PI, gain, state->Gain[0]);
+    ComputeAngleGains(Device, atan2f(-lrpan, 0.0f), (1.0f-dirGain)*F_PI, gain, state->Gain[0]);
 
     /* Second tap panning */
-    ComputeAngleGains(Device, aluAtan2(+lrpan, 0.0f), (1.0f-dirGain)*F_PI, gain, state->Gain[1]);
+    ComputeAngleGains(Device, atan2f(+lrpan, 0.0f), (1.0f-dirGain)*F_PI, gain, state->Gain[1]);
 }
 
 static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MaxChannels])

@@ -839,7 +839,7 @@ static void alc_initconfig(void)
     }
 
     if(ConfigValueFloat("reverb", "boost", &valf))
-        ReverbBoost *= aluPow(10.0f, valf / 20.0f);
+        ReverbBoost *= powf(10.0f, valf / 20.0f);
 
     EmulateEAXReverb = GetConfigValueBool("reverb", "emulate-eax", AL_FALSE);
 

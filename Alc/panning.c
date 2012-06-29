@@ -181,8 +181,8 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
                 /* Sound is between speakers i and i+1 */
                 a =             (angle-SpeakerAngle[i]) /
                     (SpeakerAngle[i+1]-SpeakerAngle[i]);
-                gains[Speaker2Chan[i]]   = aluSqrt(1.0f-a) * ingain;
-                gains[Speaker2Chan[i+1]] = aluSqrt(     a) * ingain;
+                gains[Speaker2Chan[i]]   = sqrtf(1.0f-a) * ingain;
+                gains[Speaker2Chan[i+1]] = sqrtf(     a) * ingain;
                 return;
             }
         }
@@ -191,12 +191,12 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
             angle += F_PI*2.0f;
         a =                       (angle-SpeakerAngle[i]) /
             (F_PI*2.0f + SpeakerAngle[0]-SpeakerAngle[i]);
-        gains[Speaker2Chan[i]] = aluSqrt(1.0f-a) * ingain;
-        gains[Speaker2Chan[0]] = aluSqrt(     a) * ingain;
+        gains[Speaker2Chan[i]] = sqrtf(1.0f-a) * ingain;
+        gains[Speaker2Chan[0]] = sqrtf(     a) * ingain;
         return;
     }
 
-    if(aluFabs(angle)+hwidth > F_PI)
+    if(fabsf(angle)+hwidth > F_PI)
     {
         /* The coverage area would go outside of -pi...+pi. Instead, rotate the
          * speaker angles so it would be as if angle=0, and keep them wrapped
@@ -329,7 +329,7 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
     for(i = 0;i < device->NumChan;i++)
     {
         enum Channel chan = device->Speaker2Chan[i];
-        gains[chan] = aluSqrt(tmpgains[chan]) * ingain;
+        gains[chan] = sqrtf(tmpgains[chan]) * ingain;
     }
 }
 

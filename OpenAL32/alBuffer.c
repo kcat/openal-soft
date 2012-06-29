@@ -719,7 +719,7 @@ AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value)
 }
 
 
-AL_API void AL_APIENTRY alBuffer3i( ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3)
+AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3)
 {
     ALCcontext *Context;
 
@@ -964,7 +964,7 @@ AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1
         switch(param)
         {
         default:
-;           al_throwerr(Context, AL_INVALID_ENUM);
+            al_throwerr(Context, AL_INVALID_ENUM);
         }
     }
     al_endtry;

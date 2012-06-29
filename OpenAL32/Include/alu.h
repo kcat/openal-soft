@@ -245,7 +245,9 @@ static __inline int SetMixerFPUMode(void)
     (void)_controlfp(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC);
 #elif defined(HAVE_FESETROUND)
     fpuState = fegetround();
+#ifdef FE_TOWARDZERO
     fesetround(FE_TOWARDZERO);
+#endif
 #endif
 #endif
     return fpuState;

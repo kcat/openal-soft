@@ -41,7 +41,7 @@ typedef struct HrtfParams {
     ALfloat Dir[3];
     ALfloat Coeffs[MaxChannels][HRIR_LENGTH][2];
     ALuint Delay[MaxChannels][2];
-    ALfloat CoeffStep[MaxChannels][2];
+    ALfloat CoeffStep[HRIR_LENGTH][2];
     ALint DelayStep[2];
 } HrtfParams;
 

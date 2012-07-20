@@ -145,8 +145,8 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
             Coeffs[c][1] = TargetCoeffs[c][1] - (CoeffStep[c][1]*Counter);    \
         }                                                                     \
                                                                               \
-        Delay[0] = TargetDelay[0] - (DelayStep[0]*Counter) + 32768;           \
-        Delay[1] = TargetDelay[1] - (DelayStep[1]*Counter) + 32768;           \
+        Delay[0] = TargetDelay[0] - (DelayStep[0]*Counter);                   \
+        Delay[1] = TargetDelay[1] - (DelayStep[1]*Counter);                   \
                                                                               \
         if(LIKELY(OutPos == 0))                                               \
         {                                                                     \
@@ -154,8 +154,12 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
             value = lpFilter2PC(DryFilter, i, value);                         \
                                                                               \
             History[Offset&SRC_HISTORY_MASK] = value;                         \
-            left = History[(Offset-(Delay[0]>>16))&SRC_HISTORY_MASK];         \
-            right = History[(Offset-(Delay[1]>>16))&SRC_HISTORY_MASK];        \
+            left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],   \
+                         History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK], \
+                         (Delay[0]&HRTFDELAY_MASK)/(ALfloat)HRTFDELAY_FRACONE);           \
+            right = lerp(History[(Offset-(Delay[1]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],   \
+                         History[(Offset-(Delay[1]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK], \
+                         (Delay[1]&HRTFDELAY_MASK)/(ALfloat)HRTFDELAY_FRACONE);           \
                                                                               \
             ClickRemoval[FrontLeft]  -= Values[(Offset+1)&HRIR_MASK][0] +     \
                                         Coeffs[0][0] * left;                  \
@@ -168,8 +172,12 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
             value = lpFilter2P(DryFilter, i, value);                          \
                                                                               \
             History[Offset&SRC_HISTORY_MASK] = value;                         \
-            left = History[(Offset-(Delay[0]>>16))&SRC_HISTORY_MASK];         \
-            right = History[(Offset-(Delay[1]>>16))&SRC_HISTORY_MASK];        \
+            left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],   \
+                         History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK], \
+                         (Delay[0]&HRTFDELAY_MASK)/(ALfloat)HRTFDELAY_FRACONE);           \
+            right = lerp(History[(Offset-(Delay[1]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],   \
+                         History[(Offset-(Delay[1]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK], \
+                         (Delay[1]&HRTFDELAY_MASK)/(ALfloat)HRTFDELAY_FRACONE);           \
                                                                               \
             Delay[0] += DelayStep[0];                                         \
             Delay[1] += DelayStep[1];                                         \
@@ -197,8 +205,8 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
             Counter--;                                                        \
         }                                                                     \
                                                                               \
-        Delay[0] >>= 16;                                                      \
-        Delay[1] >>= 16;                                                      \
+        Delay[0] >>= HRTFDELAY_BITS;                                          \
+        Delay[1] >>= HRTFDELAY_BITS;                                          \
         for(;BufferIdx < BufferSize;BufferIdx++)                              \
         {                                                                     \
             value = sampler(data + pos*NumChannels + i, NumChannels, frac);   \

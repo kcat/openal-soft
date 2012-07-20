@@ -713,6 +713,9 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 #define HRIR_BITS        (5)
 #define HRIR_LENGTH      (1<<HRIR_BITS)
 #define HRIR_MASK        (HRIR_LENGTH-1)
+#define HRTFDELAY_BITS    (20)
+#define HRTFDELAY_FRACONE (1<<HRTFDELAY_BITS)
+#define HRTFDELAY_MASK    (HRTFDELAY_FRACONE-1)
 void InitHrtf(void);
 void FreeHrtf(void);
 const struct Hrtf *GetHrtf(ALCdevice *device);

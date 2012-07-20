@@ -170,10 +170,10 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
     // Calculate the HRIR delays using linear interpolation.
     delays[0] = fastf2u(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
                              lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),
-                             mu[2]) * 65536.0f);
+                             mu[2]) + 0.5f) << HRTFDELAY_BITS;
     delays[1] = fastf2u(lerp(lerp(Hrtf->delays[ridx[0]], Hrtf->delays[ridx[1]], mu[0]),
                              lerp(Hrtf->delays[ridx[2]], Hrtf->delays[ridx[3]], mu[1]),
-                             mu[2]) * 65536.0f);
+                             mu[2]) + 0.5f) << HRTFDELAY_BITS;
 }
 
 // Calculates the moving HRIR target coefficients, target delays, and
@@ -267,10 +267,10 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 
     delays[0] = fastf2u(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
                              lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),
-                             mu[2]) * 65536.0f);
+                             mu[2]) + 0.5f) << HRTFDELAY_BITS;
     delays[1] = fastf2u(lerp(lerp(Hrtf->delays[ridx[0]], Hrtf->delays[ridx[1]], mu[0]),
                              lerp(Hrtf->delays[ridx[2]], Hrtf->delays[ridx[3]], mu[1]),
-                             mu[2]) * 65536.0f);
+                             mu[2]) + 0.5f) << HRTFDELAY_BITS;
 
     delayStep[0] = fastf2i(step * (delays[0] - left));
     delayStep[1] = fastf2i(step * (delays[1] - right));

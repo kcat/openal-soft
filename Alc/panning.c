@@ -201,43 +201,49 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
         /* The coverage area would go outside of -pi...+pi. Instead, rotate the
          * speaker angles so it would be as if angle=0, and keep them wrapped
          * within -pi...+pi. */
-        for(i = 0;i < device->NumChan;i++)
+        if(angle > 0.0f)
         {
-            SpeakerAngle[i] -= angle;
-            if(SpeakerAngle[i] > F_PI)
-                SpeakerAngle[i] -= F_PI*2.0f;
-            else if(SpeakerAngle[i] < -F_PI)
-                SpeakerAngle[i] += F_PI*2.0f;
+            ALuint done = 0;
+            ALuint i = 0;
+            while(i < device->NumChan && device->SpeakerAngle[i]-angle < -F_PI)
+                i++;
+            for(done = 0;i < device->NumChan;done++)
+            {
+                SpeakerAngle[done] = device->SpeakerAngle[i]-angle;
+                Speaker2Chan[done] = device->Speaker2Chan[i];
+                i++;
+            }
+            for(i = 0;done < device->NumChan;i++)
+            {
+                SpeakerAngle[done] = device->SpeakerAngle[i]-angle + F_PI*2.0f;
+                Speaker2Chan[done] = device->Speaker2Chan[i];
+                done++;
+            }
+        }
+        else
+        {
+            /* NOTE: '< device->NumChan' on the iterators is correct here since
+             * we need to handle index 0. Because the iterators are unsigned,
+             * they'll underflow and wrap to become 0xFFFFFFFF, which will
+             * break as expected. */
+            ALuint done = device->NumChan-1;
+            ALuint i = device->NumChan-1;
+            while(i < device->NumChan && device->SpeakerAngle[i]-angle > F_PI)
+                i--;
+            for(done = device->NumChan-1;i < device->NumChan;done--)
+            {
+                SpeakerAngle[done] = device->SpeakerAngle[i]-angle;
+                Speaker2Chan[done] = device->Speaker2Chan[i];
+                i--;
+            }
+            for(i = device->NumChan-1;done < device->NumChan;i--)
+            {
+                SpeakerAngle[done] = device->SpeakerAngle[i]-angle - F_PI*2.0f;
+                Speaker2Chan[done] = device->Speaker2Chan[i];
+                done--;
+            }
         }
         angle = 0.0f;
-
-        /* The speaker angles are expected to be in ascending order. There
-         * should be a better way to resort the lists... */
-        for(i = 0;i < device->NumChan-1;i++)
-        {
-            ALuint min = i;
-            ALuint j;
-
-            for(j = i+1;j < device->NumChan;j++)
-            {
-                if(SpeakerAngle[j] < SpeakerAngle[min])
-                    min = j;
-            }
-
-            if(min != i)
-            {
-                ALfloat tmpf;
-                enum Channel tmpc;
-
-                tmpf = SpeakerAngle[i];
-                SpeakerAngle[i] = SpeakerAngle[min];
-                SpeakerAngle[min] = tmpf;
-
-                tmpc = Speaker2Chan[i];
-                Speaker2Chan[i] = Speaker2Chan[min];
-                Speaker2Chan[min] = tmpc;
-            }
-        }
     }
     langle = angle - hwidth;
     rangle = angle + hwidth;

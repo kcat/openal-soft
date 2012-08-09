@@ -612,6 +612,9 @@ struct ALCdevice_struct
 // Sample type was requested by the config file
 #define DEVICE_SAMPLE_TYPE_REQUEST               (1<<3)
 
+// Stereo sources cover 120-degree angles around +/-90
+#define DEVICE_WIDE_STEREO                       (1<<16)
+
 // Specifies if the device is currently running
 #define DEVICE_RUNNING                           (1<<31)
 

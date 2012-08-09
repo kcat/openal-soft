@@ -68,6 +68,10 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         { FrontLeft, -30.0f * F_PI/180.0f },
         { FrontRight, 30.0f * F_PI/180.0f }
     };
+    static const struct ChanMap StereoWideMap[2] = {
+        { FrontLeft, -90.0f * F_PI/180.0f },
+        { FrontRight, 90.0f * F_PI/180.0f }
+    };
     static const struct ChanMap RearMap[2] = {
         { BackLeft, -150.0f * F_PI/180.0f },
         { BackRight, 150.0f * F_PI/180.0f }
@@ -119,6 +123,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     enum Resampler Resampler;
     ALint num_channels = 0;
     ALboolean DirectChannels;
+    ALfloat hwidth = 0.0f;
     ALfloat Pitch;
     ALfloat cw;
     ALint i, c;
@@ -200,7 +205,13 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         break;
 
     case FmtStereo:
-        chans = StereoMap;
+        if(!(Device->Flags&DEVICE_WIDE_STEREO))
+            chans = StereoMap;
+        else
+        {
+            chans = StereoWideMap;
+            hwidth = 60.0f * F_PI/180.0f;
+        }
         num_channels = 2;
         break;
 
@@ -274,6 +285,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
+        DryGain *= lerp(1.0f, 1.0f/sqrtf(Device->NumChan), hwidth/(F_PI*2.0f));
         for(c = 0;c < num_channels;c++)
         {
             /* Special-case LFE */
@@ -282,7 +294,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 SrcMatrix[c][chans[c].channel] = DryGain;
                 continue;
             }
-            ComputeAngleGains(Device, chans[c].angle, 0.0f, DryGain,
+            ComputeAngleGains(Device, chans[c].angle, hwidth, DryGain,
                               SrcMatrix[c]);
         }
     }

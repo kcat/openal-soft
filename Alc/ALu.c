@@ -43,7 +43,7 @@ struct ChanMap {
 };
 
 /* Cone scalar */
-ALfloat ConeScale = 0.5f;
+ALfloat ConeScale = 1.0f;
 
 /* Localized Z scalar for mono sources */
 ALfloat ZScale = 1.0f;
@@ -398,8 +398,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     MinDist        = ALSource->RefDistance;
     MaxDist        = ALSource->MaxDistance;
     Rolloff        = ALSource->RollOffFactor;
-    InnerAngle     = ALSource->InnerAngle * ConeScale;
-    OuterAngle     = ALSource->OuterAngle * ConeScale;
+    InnerAngle     = ALSource->InnerAngle;
+    OuterAngle     = ALSource->OuterAngle;
     AirAbsorptionFactor = ALSource->AirAbsorptionFactor;
     DryGainHFAuto   = ALSource->DryGainHFAuto;
     WetGainAuto     = ALSource->WetGainAuto;
@@ -575,7 +575,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     /* Calculate directional soundcones */
-    Angle = acosf(aluDotproduct(Direction,SourceToListener)) * (180.0f/F_PI);
+    Angle = acosf(aluDotproduct(Direction,SourceToListener)) * ConeScale * (360.0f/F_PI);
     if(Angle > InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);

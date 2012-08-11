@@ -755,11 +755,11 @@ static void alc_init(void)
 
     str = getenv("__ALSOFT_HALF_ANGLE_CONES");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-        ConeScale = 1.0f;
+        ConeScale *= 0.5f;
 
     str = getenv("__ALSOFT_REVERSE_Z");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-        ZScale = -1.0f;
+        ZScale *= -1.0f;
 
     pthread_key_create(&LocalContext, ReleaseThreadCtx);
     InitializeCriticalSection(&ListLock);

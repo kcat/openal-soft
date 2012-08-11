@@ -113,8 +113,8 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
 void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
 {
     ALuint evidx[2], azidx[2];
-    ALfloat mu[3];
     ALuint lidx[4], ridx[4];
+    ALfloat mu[3], blend[4];
     ALuint i;
 
     // Claculate elevation indices and interpolation factor.
@@ -142,6 +142,12 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
     ridx[2] = evOffset[evidx[1]] + ((azCount[evidx[1]]-azidx[0]) % azCount[evidx[1]]);
     ridx[3] = evOffset[evidx[1]] + ((azCount[evidx[1]]-azidx[1]) % azCount[evidx[1]]);
 
+    /* Calculate 4 blending weights for 2D bilinear interpolation */
+    blend[0] = (1.0f-mu[0]) * (1.0f-mu[2]);
+    blend[1] = (     mu[0]) * (1.0f-mu[2]);
+    blend[2] = (1.0f-mu[1]) * (     mu[2]);
+    blend[3] = (     mu[1]) * (     mu[2]);
+
     // Calculate the normalized and attenuated HRIR coefficients using linear
     // interpolation when there is enough gain to warrant it.  Zero the
     // coefficients if gain is too low.
@@ -150,12 +156,14 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
         gain *= 1.0f/32767.0f;
         for(i = 0;i < HRIR_LENGTH;i++)
         {
-            coeffs[i][0] = lerp(lerp(Hrtf->coeffs[lidx[0]][i], Hrtf->coeffs[lidx[1]][i], mu[0]),
-                                lerp(Hrtf->coeffs[lidx[2]][i], Hrtf->coeffs[lidx[3]][i], mu[1]),
-                                mu[2]) * gain;
-            coeffs[i][1] = lerp(lerp(Hrtf->coeffs[ridx[0]][i], Hrtf->coeffs[ridx[1]][i], mu[0]),
-                                lerp(Hrtf->coeffs[ridx[2]][i], Hrtf->coeffs[ridx[3]][i], mu[1]),
-                                mu[2]) * gain;
+            coeffs[i][0] = (Hrtf->coeffs[lidx[0]][i]*blend[0] +
+                            Hrtf->coeffs[lidx[1]][i]*blend[1] +
+                            Hrtf->coeffs[lidx[2]][i]*blend[2] +
+                            Hrtf->coeffs[lidx[3]][i]*blend[3]) * gain;
+            coeffs[i][1] = (Hrtf->coeffs[ridx[0]][i]*blend[0] +
+                            Hrtf->coeffs[ridx[1]][i]*blend[1] +
+                            Hrtf->coeffs[ridx[2]][i]*blend[2] +
+                            Hrtf->coeffs[ridx[3]][i]*blend[3]) * gain;
         }
     }
     else
@@ -168,12 +176,12 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
     }
 
     // Calculate the HRIR delays using linear interpolation.
-    delays[0] = fastf2u(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
-                             lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),
-                             mu[2]) + 0.5f) << HRTFDELAY_BITS;
-    delays[1] = fastf2u(lerp(lerp(Hrtf->delays[ridx[0]], Hrtf->delays[ridx[1]], mu[0]),
-                             lerp(Hrtf->delays[ridx[2]], Hrtf->delays[ridx[3]], mu[1]),
-                             mu[2]) + 0.5f) << HRTFDELAY_BITS;
+    delays[0] = fastf2u(Hrtf->delays[lidx[0]]*blend[0] + Hrtf->delays[lidx[1]]*blend[1] +
+                        Hrtf->delays[lidx[2]]*blend[2] + Hrtf->delays[lidx[3]]*blend[3] +
+                        0.5f) << HRTFDELAY_BITS;
+    delays[1] = fastf2u(Hrtf->delays[ridx[0]]*blend[0] + Hrtf->delays[ridx[1]]*blend[1] +
+                        Hrtf->delays[ridx[2]]*blend[2] + Hrtf->delays[ridx[3]]*blend[3] +
+                        0.5f) << HRTFDELAY_BITS;
 }
 
 // Calculates the moving HRIR target coefficients, target delays, and
@@ -186,8 +194,8 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 {
     ALuint evidx[2], azidx[2];
     ALuint lidx[4], ridx[4];
+    ALfloat mu[3], blend[4];
     ALfloat left, right;
-    ALfloat mu[3];
     ALfloat step;
     ALuint i;
 
@@ -220,6 +228,12 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     delta = maxf(floorf(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);
     step = 1.0f / delta;
 
+    /* Calculate 4 blending weights for 2D bilinear interpolation */
+    blend[0] = (1.0f-mu[0]) * (1.0f-mu[2]);
+    blend[1] = (     mu[0]) * (1.0f-mu[2]);
+    blend[2] = (1.0f-mu[1]) * (     mu[2]);
+    blend[3] = (     mu[1]) * (     mu[2]);
+
     // Calculate the normalized and attenuated target HRIR coefficients using
     // linear interpolation when there is enough gain to warrant it.  Zero
     // the target coefficients if gain is too low.  Then calculate the
@@ -233,12 +247,14 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
             left = coeffs[i][0] - (coeffStep[i][0] * counter);
             right = coeffs[i][1] - (coeffStep[i][1] * counter);
 
-            coeffs[i][0] = lerp(lerp(Hrtf->coeffs[lidx[0]][i], Hrtf->coeffs[lidx[1]][i], mu[0]),
-                                lerp(Hrtf->coeffs[lidx[2]][i], Hrtf->coeffs[lidx[3]][i], mu[1]),
-                                mu[2]) * gain;
-            coeffs[i][1] = lerp(lerp(Hrtf->coeffs[ridx[0]][i], Hrtf->coeffs[ridx[1]][i], mu[0]),
-                                lerp(Hrtf->coeffs[ridx[2]][i], Hrtf->coeffs[ridx[3]][i], mu[1]),
-                                mu[2]) * gain;
+            coeffs[i][0] = (Hrtf->coeffs[lidx[0]][i]*blend[0] +
+                            Hrtf->coeffs[lidx[1]][i]*blend[1] +
+                            Hrtf->coeffs[lidx[2]][i]*blend[2] +
+                            Hrtf->coeffs[lidx[3]][i]*blend[3]) * gain;
+            coeffs[i][1] = (Hrtf->coeffs[ridx[0]][i]*blend[0] +
+                            Hrtf->coeffs[ridx[1]][i]*blend[1] +
+                            Hrtf->coeffs[ridx[2]][i]*blend[2] +
+                            Hrtf->coeffs[ridx[3]][i]*blend[3]) * gain;
 
             coeffStep[i][0] = step * (coeffs[i][0] - left);
             coeffStep[i][1] = step * (coeffs[i][1] - right);
@@ -265,12 +281,12 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     left = (ALfloat)(delays[0] - (delayStep[0] * counter));
     right = (ALfloat)(delays[1] - (delayStep[1] * counter));
 
-    delays[0] = fastf2u(lerp(lerp(Hrtf->delays[lidx[0]], Hrtf->delays[lidx[1]], mu[0]),
-                             lerp(Hrtf->delays[lidx[2]], Hrtf->delays[lidx[3]], mu[1]),
-                             mu[2]) + 0.5f) << HRTFDELAY_BITS;
-    delays[1] = fastf2u(lerp(lerp(Hrtf->delays[ridx[0]], Hrtf->delays[ridx[1]], mu[0]),
-                             lerp(Hrtf->delays[ridx[2]], Hrtf->delays[ridx[3]], mu[1]),
-                             mu[2]) + 0.5f) << HRTFDELAY_BITS;
+    delays[0] = fastf2u(Hrtf->delays[lidx[0]]*blend[0] + Hrtf->delays[lidx[1]]*blend[1] +
+                        Hrtf->delays[lidx[2]]*blend[2] + Hrtf->delays[lidx[3]]*blend[3] +
+                        0.5f) << HRTFDELAY_BITS;
+    delays[1] = fastf2u(Hrtf->delays[ridx[0]]*blend[0] + Hrtf->delays[ridx[1]]*blend[1] +
+                        Hrtf->delays[ridx[2]]*blend[2] + Hrtf->delays[ridx[3]]*blend[3] +
+                        0.5f) << HRTFDELAY_BITS;
 
     delayStep[0] = fastf2i(step * (delays[0] - left));
     delayStep[1] = fastf2i(step * (delays[1] - right));

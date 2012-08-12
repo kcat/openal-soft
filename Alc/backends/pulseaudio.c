@@ -837,11 +837,9 @@ static ALuint PulseProc(ALvoid *param)
                 buf = pa_xmalloc(newlen);
                 free_func = pa_xfree;
             }
-            pa_threaded_mainloop_unlock(data->loop);
 
             aluMixData(Device, buf, newlen/frame_size);
 
-            pa_threaded_mainloop_lock(data->loop);
             pa_stream_write(data->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
             len -= newlen;
         }

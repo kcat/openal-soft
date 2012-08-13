@@ -769,6 +769,7 @@ static void alc_init(void)
 static void alc_initconfig(void)
 {
     const char *devs, *str;
+    ALuint capfilter;
     float valf;
     int i, n;
 
@@ -790,7 +791,36 @@ static void alc_initconfig(void)
 
     ReadALConfig();
 
-    FillCPUCaps();
+    capfilter = CPU_CAP_ALL;
+    if(ConfigValueStr(NULL, "disable-cpu-exts", &str))
+    {
+        if(strcasecmp(str, "all") == 0)
+            capfilter = 0;
+        else
+        {
+            size_t len;
+            const char *next = str;
+
+            i = 0;
+            do {
+                str = next;
+                next = strchr(str, ',');
+
+                while(isspace(str[0]))
+                    str++;
+                if(!str[0] || str[0] == ',')
+                    continue;
+
+                len = (next ? ((size_t)(next-str)) : strlen(str));
+                if(strncasecmp(str, "neon", len) == 0)
+                    capfilter &= ~CPU_CAP_NEON;
+                else
+                    WARN("Invalid CPU extension \"%s\"\n", str);
+            } while(next++);
+        }
+    }
+    FillCPUCaps(capfilter);
+
     InitHrtf();
 
 #ifdef _WIN32

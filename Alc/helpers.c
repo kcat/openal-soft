@@ -63,8 +63,10 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 ALuint CPUCapFlags = 0;
 
 
-void FillCPUCaps(void)
+void FillCPUCaps(ALuint capfilter)
 {
+    ALuint caps = 0;
+
 #if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 /* FIXME: We really should get this for all available CPUs in case different
  * CPUs have different caps (is that possible on one machine?). */
@@ -90,11 +92,11 @@ void FillCPUCaps(void)
         {
 #ifdef bit_MMX
             if((cpuinf[0].regs[3]&bit_MMX))
-                CPUCapFlags |= CPU_CAP_MMX;
+                caps |= CPU_CAP_MMX;
 #endif
 #ifdef bit_SSE
             if((cpuinf[0].regs[3]&bit_SSE))
-                CPUCapFlags |= CPU_CAP_SSE;
+                caps |= CPU_CAP_SSE;
 #endif
         }
     }
@@ -102,13 +104,14 @@ void FillCPUCaps(void)
 #endif
 #ifdef HAVE_ARM_NEON_H
     /* Assume Neon support if compiled with it */
-    CPUCapFlags |= CPU_CAP_NEON;
+    caps |= CPU_CAP_NEON;
 #endif
 
-    TRACE("Got caps:%s%s%s%s\n", ((CPUCapFlags&CPU_CAP_MMX)?" MMX":""),
-                                 ((CPUCapFlags&CPU_CAP_SSE)?" SSE":""),
-                                 ((CPUCapFlags&CPU_CAP_NEON)?" Neon":""),
-                                 ((!CPUCapFlags)?" (none)":""));
+    TRACE("Got caps:%s%s%s%s\n", ((caps&CPU_CAP_MMX)?((capfilter&CPU_CAP_MMX)?" MMX":" (MMX)"):""),
+                                 ((caps&CPU_CAP_SSE)?((capfilter&CPU_CAP_SSE)?" SSE":" (SSE)"):""),
+                                 ((caps&CPU_CAP_NEON)?((capfilter&CPU_CAP_NEON)?" Neon":" (Neon)"):""),
+                                 ((!caps)?" (none)":""));
+    CPUCapFlags = caps & capfilter;
 }
 
 

@@ -762,6 +762,17 @@ extern enum LogLevel LogLevel;
 
 extern ALint RTPrioLevel;
 
+
+extern ALuint CPUCapFlags;
+enum {
+    CPU_CAP_MMX    = 1<<0,
+    CPU_CAP_SSE    = 1<<1,
+    CPU_CAP_NEON   = 1<<3,
+};
+
+void FillCPUCaps(void);
+
+
 /**
  * Starts a try block. Must not be nested within another try block within the
  * same function.

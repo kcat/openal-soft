@@ -226,6 +226,7 @@ IF(NOT HAVE_GUIDDEF_H)
     CHECK_INCLUDE_FILE(initguid.h HAVE_INITGUID_H)
 ENDIF()
 CHECK_INCLUDE_FILE(arm_neon.h HAVE_ARM_NEON_H)
+CHECK_INCLUDE_FILE(cpuid.h HAVE_CPUID_H)
 
 # Some systems need libm for some of the following math functions to work
 CHECK_LIBRARY_EXISTS(m pow "" HAVE_LIBM)

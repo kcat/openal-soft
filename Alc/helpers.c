@@ -27,6 +27,9 @@
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
+#ifdef HAVE_CPUID_H
+#include <cpuid.h>
+#endif
 
 #if defined(HAVE_GUIDDEF_H) || defined(HAVE_INITGUID_H)
 #define INITGUID
@@ -56,6 +59,58 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 #endif
 
 #include "alMain.h"
+
+ALuint CPUCapFlags = 0;
+
+
+void FillCPUCaps(void)
+{
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+/* FIXME: We really should get this for all available CPUs in case different
+ * CPUs have different caps (is that possible on one machine?). */
+#ifdef HAVE_CPUID_H
+    union {
+        unsigned int regs[4];
+        char str[sizeof(unsigned int[4])];
+    } cpuinf[3];
+
+    if(!__get_cpuid(0, &cpuinf[0].regs[0], &cpuinf[0].regs[1], &cpuinf[0].regs[2], &cpuinf[0].regs[3]))
+        ERR("Failed to get CPUID\n");
+    else
+    {
+        TRACE("Vendor ID: \"%.4s%.4s%.4s\"\n", cpuinf[0].str+4, cpuinf[0].str+12, cpuinf[0].str+8);
+        if(__get_cpuid(0x80000002, &cpuinf[0].regs[0], &cpuinf[0].regs[1], &cpuinf[0].regs[2], &cpuinf[0].regs[3]) &&
+           __get_cpuid(0x80000003, &cpuinf[1].regs[0], &cpuinf[1].regs[1], &cpuinf[1].regs[2], &cpuinf[1].regs[3]) &&
+           __get_cpuid(0x80000004, &cpuinf[2].regs[0], &cpuinf[2].regs[1], &cpuinf[2].regs[2], &cpuinf[2].regs[3]))
+            TRACE("Name: \"%.16s%.16s%.16s\"\n", cpuinf[0].str, cpuinf[1].str, cpuinf[2].str);
+
+        if(!__get_cpuid(1, &cpuinf[0].regs[0], &cpuinf[0].regs[1], &cpuinf[0].regs[2], &cpuinf[0].regs[3]))
+            ERR("Failed to get CPU features\n");
+        else
+        {
+#ifdef bit_MMX
+            if((cpuinf[0].regs[3]&bit_MMX))
+                CPUCapFlags |= CPU_CAP_MMX;
+#endif
+#ifdef bit_SSE
+            if((cpuinf[0].regs[3]&bit_SSE))
+                CPUCapFlags |= CPU_CAP_SSE;
+#endif
+        }
+    }
+#endif
+#endif
+#ifdef HAVE_ARM_NEON_H
+    /* Assume Neon support if compiled with it */
+    CPUCapFlags |= CPU_CAP_NEON;
+#endif
+
+    TRACE("Got caps:%s%s%s%s\n", ((CPUCapFlags&CPU_CAP_MMX)?" MMX":""),
+                                 ((CPUCapFlags&CPU_CAP_SSE)?" SSE":""),
+                                 ((CPUCapFlags&CPU_CAP_NEON)?" Neon":""),
+                                 ((!CPUCapFlags)?" (none)":""));
+}
+
 
 #ifdef _WIN32
 void pthread_once(pthread_once_t *once, void (*callback)(void))

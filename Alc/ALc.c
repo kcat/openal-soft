@@ -790,6 +790,7 @@ static void alc_initconfig(void)
 
     ReadALConfig();
 
+    FillCPUCaps();
     InitHrtf();
 
 #ifdef _WIN32

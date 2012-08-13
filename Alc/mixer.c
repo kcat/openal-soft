@@ -25,6 +25,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#ifdef HAVE_ARM_NEON_H
+#include <arm_neon.h>
+#endif
 
 #include "alMain.h"
 #include "AL/al.h"
@@ -53,41 +56,9 @@ static __inline ALfloat cubic32(const ALfloat *vals, ALint step, ALint frac)
 #define UNLIKELY(x) (x)
 #endif
 
-#if defined(__ARM_NEON__) && defined(HAVE_ARM_NEON_H)
-#include <arm_neon.h>
-
-static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
-                                 ALfloat (*RESTRICT Coeffs)[2],
-                                 ALfloat left, ALfloat right)
-{
-    ALuint c;
-    float32x4_t leftright4;
-    {
-        float32x2_t leftright2 = vdup_n_f32(0.0);
-        leftright2 = vset_lane_f32(left, leftright2, 0);
-        leftright2 = vset_lane_f32(right, leftright2, 1);
-        leftright4 = vcombine_f32(leftright2, leftright2);
-    }
-    for(c = 0;c < HRIR_LENGTH;c += 2)
-    {
-        const ALuint o0 = (Offset+c)&HRIR_MASK;
-        const ALuint o1 = (o0+1)&HRIR_MASK;
-        float32x4_t vals = vcombine_f32(vld1_f32((float32_t*)&Values[o0][0]),
-                                        vld1_f32((float32_t*)&Values[o1][0]));
-        float32x4_t coefs = vld1q_f32((float32_t*)&Coeffs[c][0]);
-
-        vals = vmlaq_f32(vals, coefs, leftright4);
-
-        vst1_f32((float32_t*)&Values[o0][0], vget_low_f32(vals));
-        vst1_f32((float32_t*)&Values[o1][0], vget_high_f32(vals));
-    }
-}
-
-#else
-
-static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
-                                 ALfloat (*RESTRICT Coeffs)[2],
-                                 ALfloat left, ALfloat right)
+static __inline void ApplyCoeffsC(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                  ALfloat (*RESTRICT Coeffs)[2],
+                                  ALfloat left, ALfloat right)
 {
     ALuint c;
     for(c = 0;c < HRIR_LENGTH;c++)
@@ -98,11 +69,10 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
     }
 }
 
-#endif
-
-#define DECL_TEMPLATE(sampler)                                                \
-static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
-  DirectParams *params, const ALfloat *RESTRICT data, ALuint srcfrac,         \
+#define DECL_TEMPLATE(sampler,acc)                                            \
+static void MixDirect_Hrtf_##sampler##_##acc(                                 \
+  ALsource *Source, ALCdevice *Device, DirectParams *params,                  \
+  const ALfloat *RESTRICT data, ALuint srcfrac,                               \
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)                       \
 {                                                                             \
     const ALuint NumChannels = Source->NumChannels;                           \
@@ -220,7 +190,7 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
             Values[Offset&HRIR_MASK][1] = 0.0f;                               \
             Offset++;                                                         \
                                                                               \
-            ApplyCoeffs(Offset, Values, Coeffs, left, right);                 \
+            ApplyCoeffs##acc(Offset, Values, Coeffs, left, right);            \
             DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];     \
             DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];     \
                                                                               \
@@ -247,9 +217,44 @@ static void MixDirect_Hrtf_##sampler(ALsource *Source, ALCdevice *Device,     \
     }                                                                         \
 }
 
-DECL_TEMPLATE(point32)
-DECL_TEMPLATE(lerp32)
-DECL_TEMPLATE(cubic32)
+DECL_TEMPLATE(point32, C)
+DECL_TEMPLATE(lerp32, C)
+DECL_TEMPLATE(cubic32, C)
+
+#ifdef HAVE_ARM_NEON_H
+
+static __inline void ApplyCoeffsNeon(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                     ALfloat (*RESTRICT Coeffs)[2],
+                                     ALfloat left, ALfloat right)
+{
+    ALuint c;
+    float32x4_t leftright4;
+    {
+        float32x2_t leftright2 = vdup_n_f32(0.0);
+        leftright2 = vset_lane_f32(left, leftright2, 0);
+        leftright2 = vset_lane_f32(right, leftright2, 1);
+        leftright4 = vcombine_f32(leftright2, leftright2);
+    }
+    for(c = 0;c < HRIR_LENGTH;c += 2)
+    {
+        const ALuint o0 = (Offset+c)&HRIR_MASK;
+        const ALuint o1 = (o0+1)&HRIR_MASK;
+        float32x4_t vals = vcombine_f32(vld1_f32((float32_t*)&Values[o0][0]),
+                                        vld1_f32((float32_t*)&Values[o1][0]));
+        float32x4_t coefs = vld1q_f32((float32_t*)&Coeffs[c][0]);
+
+        vals = vmlaq_f32(vals, coefs, leftright4);
+
+        vst1_f32((float32_t*)&Values[o0][0], vget_low_f32(vals));
+        vst1_f32((float32_t*)&Values[o1][0], vget_high_f32(vals));
+    }
+}
+
+DECL_TEMPLATE(point32, Neon)
+DECL_TEMPLATE(lerp32, Neon)
+DECL_TEMPLATE(cubic32, Neon)
+
+#endif
 
 #undef DECL_TEMPLATE
 
@@ -414,11 +419,23 @@ DryMixerFunc SelectHrtfMixer(enum Resampler Resampler)
     switch(Resampler)
     {
         case PointResampler:
-            return MixDirect_Hrtf_point32;
+#ifdef HAVE_ARM_NEON_H
+            if((CPUCapFlags&CPU_CAP_NEON))
+                return MixDirect_Hrtf_point32_Neon;
+#endif
+            return MixDirect_Hrtf_point32_C;
         case LinearResampler:
-            return MixDirect_Hrtf_lerp32;
+#ifdef HAVE_ARM_NEON_H
+            if((CPUCapFlags&CPU_CAP_NEON))
+                return MixDirect_Hrtf_lerp32_Neon;
+#endif
+            return MixDirect_Hrtf_lerp32_C;
         case CubicResampler:
-            return MixDirect_Hrtf_cubic32;
+#ifdef HAVE_ARM_NEON_H
+            if((CPUCapFlags&CPU_CAP_NEON))
+                return MixDirect_Hrtf_cubic32_Neon;
+#endif
+            return MixDirect_Hrtf_cubic32_C;
         case ResamplerMax:
             break;
     }

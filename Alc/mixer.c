@@ -25,6 +25,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#ifdef HAVE_XMMINTRIN_H
+#include <xmmintrin.h>
+#endif
 #ifdef HAVE_ARM_NEON_H
 #include <arm_neon.h>
 #endif
@@ -220,6 +223,39 @@ static void MixDirect_Hrtf_##sampler##_##acc(                                 \
 DECL_TEMPLATE(point32, C)
 DECL_TEMPLATE(lerp32, C)
 DECL_TEMPLATE(cubic32, C)
+
+#ifdef HAVE_XMMINTRIN_H
+
+static __inline void ApplyCoeffsSSE(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                    ALfloat (*RESTRICT Coeffs)[2],
+                                    ALfloat left, ALfloat right)
+{
+    const __m128 lrlr = { left, right, left, right };
+    ALuint c;
+    for(c = 0;c < HRIR_LENGTH;c += 2)
+    {
+        const ALuint o0 = (Offset++)&HRIR_MASK;
+        const ALuint o1 = (Offset++)&HRIR_MASK;
+        __m128 vals = { 0.0f, 0.0f, 0.0f, 0.0f };
+        __m128 coeffs = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+        vals = _mm_loadl_pi(vals, (__m64*)&Values[o0][0]);
+        vals = _mm_loadh_pi(vals, (__m64*)&Values[o1][0]);
+        coeffs = _mm_loadl_pi(coeffs, (__m64*)&Coeffs[c  ][0]);
+        coeffs = _mm_loadh_pi(coeffs, (__m64*)&Coeffs[c+1][0]);
+
+        vals = _mm_add_ps(vals, _mm_mul_ps(coeffs, lrlr));
+
+        _mm_storel_pi((__m64*)&Values[o0][0], vals);
+        _mm_storeh_pi((__m64*)&Values[o1][0], vals);
+    }
+}
+
+DECL_TEMPLATE(point32, SSE)
+DECL_TEMPLATE(lerp32, SSE)
+DECL_TEMPLATE(cubic32, SSE)
+
+#endif
 
 #ifdef HAVE_ARM_NEON_H
 
@@ -419,18 +455,30 @@ DryMixerFunc SelectHrtfMixer(enum Resampler Resampler)
     switch(Resampler)
     {
         case PointResampler:
+#ifdef HAVE_XMMINTRIN_H
+            if((CPUCapFlags&CPU_CAP_SSE))
+                return MixDirect_Hrtf_point32_SSE;
+#endif
 #ifdef HAVE_ARM_NEON_H
             if((CPUCapFlags&CPU_CAP_NEON))
                 return MixDirect_Hrtf_point32_Neon;
 #endif
             return MixDirect_Hrtf_point32_C;
         case LinearResampler:
+#ifdef HAVE_XMMINTRIN_H
+            if((CPUCapFlags&CPU_CAP_SSE))
+                return MixDirect_Hrtf_lerp32_SSE;
+#endif
 #ifdef HAVE_ARM_NEON_H
             if((CPUCapFlags&CPU_CAP_NEON))
                 return MixDirect_Hrtf_lerp32_Neon;
 #endif
             return MixDirect_Hrtf_lerp32_C;
         case CubicResampler:
+#ifdef HAVE_XMMINTRIN_H
+            if((CPUCapFlags&CPU_CAP_SSE))
+                return MixDirect_Hrtf_cubic32_SSE;
+#endif
 #ifdef HAVE_ARM_NEON_H
             if((CPUCapFlags&CPU_CAP_NEON))
                 return MixDirect_Hrtf_cubic32_Neon;

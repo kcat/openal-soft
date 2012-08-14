@@ -812,7 +812,9 @@ static void alc_initconfig(void)
                     continue;
 
                 len = (next ? ((size_t)(next-str)) : strlen(str));
-                if(strncasecmp(str, "neon", len) == 0)
+                if(strncasecmp(str, "sse", len) == 0)
+                    capfilter &= ~CPU_CAP_SSE;
+                else if(strncasecmp(str, "neon", len) == 0)
                     capfilter &= ~CPU_CAP_NEON;
                 else
                     WARN("Invalid CPU extension \"%s\"\n", str);

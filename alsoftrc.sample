@@ -14,8 +14,8 @@
 ## disable-cpu-exts:
 #  Disables use of the listed CPU extensions. Certain methods may utilize CPU
 #  extensions when detected, and this option is useful for preventing those
-#  extensions from being used. The available extensions are: neon. Specifying
-#  'all' disables use of all extensions.
+#  extensions from being used. The available extensions are: sse, neon.
+#  Specifying 'all' disables use of all extensions.
 #disable-cpu-exts =
 
 ## channels:

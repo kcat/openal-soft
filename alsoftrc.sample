@@ -215,7 +215,7 @@
 #  option. The option may specify the card id (eg, device-prefix-NVidia), or
 #  the card id and device index (eg, device-prefix-NVidia-0). The card id is
 #  case-sensitive.
-#defice-prefix- =
+#device-prefix- =
 
 ## capture:
 #  Sets the device name for the default capture device.

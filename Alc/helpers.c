@@ -90,10 +90,6 @@ void FillCPUCaps(ALuint capfilter)
             ERR("Failed to get CPU features\n");
         else
         {
-#ifdef bit_MMX
-            if((cpuinf[0].regs[3]&bit_MMX))
-                caps |= CPU_CAP_MMX;
-#endif
 #ifdef bit_SSE
             if((cpuinf[0].regs[3]&bit_SSE))
                 caps |= CPU_CAP_SSE;
@@ -107,10 +103,9 @@ void FillCPUCaps(ALuint capfilter)
     caps |= CPU_CAP_NEON;
 #endif
 
-    TRACE("Got caps:%s%s%s%s\n", ((caps&CPU_CAP_MMX)?((capfilter&CPU_CAP_MMX)?" MMX":" (MMX)"):""),
-                                 ((caps&CPU_CAP_SSE)?((capfilter&CPU_CAP_SSE)?" SSE":" (SSE)"):""),
-                                 ((caps&CPU_CAP_NEON)?((capfilter&CPU_CAP_NEON)?" Neon":" (Neon)"):""),
-                                 ((!caps)?" (none)":""));
+    TRACE("Got caps:%s%s%s\n", ((caps&CPU_CAP_SSE)?((capfilter&CPU_CAP_SSE)?" SSE":" (SSE)"):""),
+                               ((caps&CPU_CAP_NEON)?((capfilter&CPU_CAP_NEON)?" Neon":" (Neon)"):""),
+                               ((!caps)?" -none-":""));
     CPUCapFlags = caps & capfilter;
 }
 

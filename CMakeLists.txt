@@ -85,6 +85,7 @@ SET(LIB_MINOR_VERSION "14")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}")
 
 SET(EXPORT_DECL "")
+SET(ALIGN_DECL "")
 
 
 CHECK_TYPE_SIZE("long" SIZEOF_LONG)
@@ -173,6 +174,7 @@ ENDIF()
 # Set visibility/export options if available
 IF(WIN32)
     SET(EXPORT_DECL "__declspec(dllexport)")
+    SET(ALIGN_DECL "__declspec(aligned((x)))")
 
     OPTION(WINE "Enable use of Wine headers when compiling" OFF)
     IF(WINE)
@@ -216,6 +218,12 @@ ELSE()
                 ADD_DEFINITIONS(-fvisibility=hidden)
             ENDIF()
         ENDIF()
+    ENDIF()
+
+    CHECK_C_SOURCE_COMPILES("int foo __attribute__((aligned(16)));
+                             int main() {return 0;}" HAVE_ATTRIBUTE_ALIGNED)
+    IF(HAVE_ATTRIBUTE_ALIGNED)
+        SET(ALIGN_DECL "__attribute__((aligned((x))))")
     ENDIF()
 
     SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")

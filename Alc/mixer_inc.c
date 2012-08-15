@@ -53,7 +53,7 @@ void MERGE4(MixDirect_Hrtf_,SAMPLER,_,SUFFIX)(
         ALfloat (*RESTRICT Values)[2] = Source->Hrtf.Values[i];
         ALint Counter = maxu(Source->Hrtf.Counter, OutPos) - OutPos;
         ALuint Offset = Source->Hrtf.Offset + OutPos;
-        ALfloat Coeffs[HRIR_LENGTH][2];
+        ALfloat Coeffs[HRIR_LENGTH][2] ALIGN(16);
         ALuint Delay[2];
         ALfloat left, right;
 

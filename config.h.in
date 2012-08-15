@@ -5,6 +5,8 @@
 /* Define to the library version */
 #define ALSOFT_VERSION "${LIB_VERSION}"
 
+#define ALIGN(x) ${ALIGN_DECL}
+
 /* Define if we have SSE CPU extensions */
 #cmakedefine HAVE_SSE
 

@@ -30,17 +30,6 @@ static __inline ALfloat lpFilter2P(FILTER *iir, ALuint offset, ALfloat input)
 
     return output;
 }
-static __inline ALfloat lpFilter1P(FILTER *iir, ALuint offset, ALfloat input)
-{
-    ALfloat *history = &iir->history[offset];
-    ALfloat a = iir->coeff;
-    ALfloat output = input;
-
-    output = output + (history[0]-output)*a;
-    history[0] = output;
-
-    return output;
-}
 
 static __inline ALfloat lpFilter2PC(const FILTER *iir, ALuint offset, ALfloat input)
 {
@@ -50,16 +39,6 @@ static __inline ALfloat lpFilter2PC(const FILTER *iir, ALuint offset, ALfloat in
 
     output = output + (history[0]-output)*a;
     output = output + (history[1]-output)*a;
-
-    return output;
-}
-static __inline ALfloat lpFilter1PC(FILTER *iir, ALuint offset, ALfloat input)
-{
-    const ALfloat *history = &iir->history[offset];
-    ALfloat a = iir->coeff;
-    ALfloat output = input;
-
-    output = output + (history[0]-output)*a;
 
     return output;
 }

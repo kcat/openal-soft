@@ -31,17 +31,17 @@ typedef struct ALbufferlistitem
 typedef struct HrtfState {
     ALboolean Moving;
     ALuint Counter;
-    ALfloat History[MaxChannels][SRC_HISTORY_LENGTH];
-    ALfloat Values[MaxChannels][HRIR_LENGTH][2];
+    ALfloat History[MaxChannels][SRC_HISTORY_LENGTH] ALIGN(16);
+    ALfloat Values[MaxChannels][HRIR_LENGTH][2] ALIGN(16);
     ALuint Offset;
 } HrtfState;
 
 typedef struct HrtfParams {
     ALfloat Gain;
     ALfloat Dir[3];
-    ALfloat Coeffs[MaxChannels][HRIR_LENGTH][2];
+    ALfloat Coeffs[MaxChannels][HRIR_LENGTH][2] ALIGN(16);
+    ALfloat CoeffStep[HRIR_LENGTH][2] ALIGN(16);
     ALuint Delay[MaxChannels][2];
-    ALfloat CoeffStep[HRIR_LENGTH][2];
     ALint DelayStep[2];
 } HrtfParams;
 

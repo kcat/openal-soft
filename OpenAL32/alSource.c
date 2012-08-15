@@ -66,7 +66,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
         CHECK_VALUE(Context, n >= 0);
         for(cur = 0;cur < n;cur++)
         {
-            ALsource *source = calloc(1, sizeof(ALsource));
+            ALsource *source = al_calloc(16, sizeof(ALsource));
             if(!source)
                 al_throwerr(Context, AL_OUT_OF_MEMORY);
             InitSourceParams(source);
@@ -78,7 +78,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
             {
                 FreeThunkEntry(source->id);
                 memset(source, 0, sizeof(ALsource));
-                free(source);
+                al_free(source);
 
                 al_throwerr(Context, err);
             }
@@ -160,7 +160,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             }
 
             memset(Source, 0, sizeof(*Source));
-            free(Source);
+            al_free(Source);
         }
     }
     al_endtry;
@@ -1998,6 +1998,6 @@ ALvoid ReleaseALSources(ALCcontext *Context)
 
         FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(*temp));
-        free(temp);
+        al_free(temp);
     }
 }

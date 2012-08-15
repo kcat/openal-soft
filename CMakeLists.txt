@@ -217,6 +217,7 @@ ENDIF()
 CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(printf, 1, 2)));
                          int main() {return 0;}" HAVE_GCC_FORMAT)
 
+CHECK_INCLUDE_FILE(cpuid.h HAVE_CPUID_H)
 CHECK_INCLUDE_FILE(fenv.h HAVE_FENV_H)
 CHECK_INCLUDE_FILE(fpu_control.h HAVE_FPU_CONTROL_H)
 CHECK_INCLUDE_FILE(float.h HAVE_FLOAT_H)
@@ -225,9 +226,6 @@ CHECK_INCLUDE_FILE(guiddef.h HAVE_GUIDDEF_H)
 IF(NOT HAVE_GUIDDEF_H)
     CHECK_INCLUDE_FILE(initguid.h HAVE_INITGUID_H)
 ENDIF()
-CHECK_INCLUDE_FILE(xmmintrin.h HAVE_XMMINTRIN_H)
-CHECK_INCLUDE_FILE(arm_neon.h HAVE_ARM_NEON_H)
-CHECK_INCLUDE_FILE(cpuid.h HAVE_CPUID_H)
 
 # Some systems need libm for some of the following math functions to work
 CHECK_LIBRARY_EXISTS(m pow "" HAVE_LIBM)
@@ -423,9 +421,31 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcThread.c
               Alc/bs2b.c
               Alc/helpers.c
+              Alc/panning.c
               Alc/hrtf.c
               Alc/mixer.c
-              Alc/panning.c
+              Alc/mixer_c.c
+)
+
+
+SET(CPU_EXTS "Default")
+
+# Check for SSE support
+CHECK_INCLUDE_FILE(xmmintrin.h HAVE_XMMINTRIN_H)
+IF(HAVE_XMMINTRIN_H)
+    SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer_sse.c)
+    SET(CPU_EXTS "${CPU_EXTS}, SSE")
+ENDIF()
+
+# Check for ARM Neon support
+CHECK_INCLUDE_FILE(arm_neon.h HAVE_ARM_NEON_H)
+IF(HAVE_ARM_NEON_H)
+    SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer_neon.c)
+    SET(CPU_EXTS "${CPU_EXTS}, Neon")
+ENDIF()
+
+
+SET(ALC_OBJS  ${ALC_OBJS}
               # Default backends, always available
               Alc/backends/loopback.c
               Alc/backends/null.c
@@ -722,6 +742,9 @@ INSTALL(FILES "${OpenAL_BINARY_DIR}/openal.pc"
 MESSAGE(STATUS "")
 MESSAGE(STATUS "Building OpenAL with support for the following backends:")
 MESSAGE(STATUS "    ${BACKENDS}")
+MESSAGE(STATUS "")
+MESSAGE(STATUS "Building with support for CPU extensions:")
+MESSAGE(STATUS "    ${CPU_EXTS}")
 MESSAGE(STATUS "")
 
 IF(WIN32)

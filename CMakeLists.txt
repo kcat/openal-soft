@@ -221,6 +221,12 @@ ELSE()
     SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
 ENDIF()
 
+SET(SSE_SWITCH "")
+CHECK_C_COMPILER_FLAG(-msse HAVE_MSSE_SWITCH)
+IF(HAVE_MSSE_SWITCH)
+    SET(SSE_SWITCH "-msse")
+ENDIF()
+
 CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(printf, 1, 2)));
                          int main() {return 0;}" HAVE_GCC_FORMAT)
 
@@ -441,10 +447,14 @@ SET(HAVE_NEON 0)
 
 # Check for SSE support
 IF(SSE)
-    CHECK_INCLUDE_FILE(xmmintrin.h HAVE_XMMINTRIN_H)
+    CHECK_INCLUDE_FILE(xmmintrin.h HAVE_XMMINTRIN_H "${SSE_SWITCH}")
     IF(HAVE_XMMINTRIN_H)
         SET(HAVE_SSE 1)
         SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer_sse.c)
+        IF(SSE_SWITCH)
+            SET_SOURCE_FILES_PROPERTIES(Alc/mixer_sse.c PROPERTIES
+                                        COMPILE_FLAGS "${SSE_SWITCH}")
+        ENDIF()
         SET(CPU_EXTS "${CPU_EXTS}, SSE")
     ENDIF()
 ENDIF()

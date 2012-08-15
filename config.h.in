@@ -5,6 +5,12 @@
 /* Define to the library version */
 #define ALSOFT_VERSION "${LIB_VERSION}"
 
+/* Define if we have SSE CPU extensions */
+#cmakedefine HAVE_SSE
+
+/* Define if we have ARM Neon CPU extensions */
+#cmakedefine HAVE_NEON
+
 /* Define if we have the ALSA backend */
 #cmakedefine HAVE_ALSA
 

@@ -41,7 +41,7 @@
 
 DryMixerFunc SelectDirectMixer(enum Resampler Resampler)
 {
-#ifdef HAVE_XMMINTRIN_H
+#ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
     {
         switch(Resampler)
@@ -57,7 +57,7 @@ DryMixerFunc SelectDirectMixer(enum Resampler Resampler)
         }
     }
 #endif
-#ifdef HAVE_ARM_NEON_H
+#ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
     {
         switch(Resampler)
@@ -90,7 +90,7 @@ DryMixerFunc SelectDirectMixer(enum Resampler Resampler)
 
 DryMixerFunc SelectHrtfMixer(enum Resampler Resampler)
 {
-#ifdef HAVE_XMMINTRIN_H
+#ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
     {
         switch(Resampler)
@@ -106,7 +106,7 @@ DryMixerFunc SelectHrtfMixer(enum Resampler Resampler)
         }
     }
 #endif
-#ifdef HAVE_ARM_NEON_H
+#ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
     {
         switch(Resampler)
@@ -139,7 +139,7 @@ DryMixerFunc SelectHrtfMixer(enum Resampler Resampler)
 
 WetMixerFunc SelectSendMixer(enum Resampler Resampler)
 {
-#ifdef HAVE_XMMINTRIN_H
+#ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
     {
         switch(Resampler)
@@ -155,7 +155,7 @@ WetMixerFunc SelectSendMixer(enum Resampler Resampler)
         }
     }
 #endif
-#ifdef HAVE_ARM_NEON_H
+#ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
     {
         switch(Resampler)

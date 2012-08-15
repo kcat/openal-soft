@@ -791,7 +791,13 @@ static void alc_initconfig(void)
 
     ReadALConfig();
 
-    capfilter = CPU_CAP_ALL;
+    capfilter = 0;
+#ifdef HAVE_SSE
+    capfilter |= CPU_CAP_SSE;
+#endif
+#ifdef HAVE_NEON
+    capfilter |= CPU_CAP_NEON;
+#endif
     if(ConfigValueStr(NULL, "disable-cpu-exts", &str))
     {
         if(strcasecmp(str, "all") == 0)

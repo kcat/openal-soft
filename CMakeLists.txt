@@ -26,6 +26,13 @@ PROJECT(OpenAL C)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 
+OPTION(SSE  "Check for SSE CPU extensions"      ON)
+OPTION(NEON "Check for ARM Neon CPU extensions" ON)
+
+OPTION(REQUIRE_SSE  "Require SSE CPU extensions"      OFF)
+OPTION(REQUIRE_NEON "Require ARM Neon CPU extensions" OFF)
+
+
 OPTION(ALSA    "Check for ALSA backend"                ON)
 OPTION(OSS     "Check for OSS backend"                 ON)
 OPTION(SOLARIS "Check for Solaris backend"             ON)
@@ -429,19 +436,33 @@ SET(ALC_OBJS  Alc/ALc.c
 
 
 SET(CPU_EXTS "Default")
+SET(HAVE_SSE  0)
+SET(HAVE_NEON 0)
 
 # Check for SSE support
-CHECK_INCLUDE_FILE(xmmintrin.h HAVE_XMMINTRIN_H)
-IF(HAVE_XMMINTRIN_H)
-    SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer_sse.c)
-    SET(CPU_EXTS "${CPU_EXTS}, SSE")
+IF(SSE)
+    CHECK_INCLUDE_FILE(xmmintrin.h HAVE_XMMINTRIN_H)
+    IF(HAVE_XMMINTRIN_H)
+        SET(HAVE_SSE 1)
+        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer_sse.c)
+        SET(CPU_EXTS "${CPU_EXTS}, SSE")
+    ENDIF()
+ENDIF()
+IF(REQUIRE_SSE AND NOT HAVE_SSE)
+    MESSAGE(FATAL_ERROR "Failed to enabled required SSE CPU extensions")
 ENDIF()
 
 # Check for ARM Neon support
-CHECK_INCLUDE_FILE(arm_neon.h HAVE_ARM_NEON_H)
-IF(HAVE_ARM_NEON_H)
-    SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer_neon.c)
-    SET(CPU_EXTS "${CPU_EXTS}, Neon")
+IF(NEON)
+    CHECK_INCLUDE_FILE(arm_neon.h HAVE_ARM_NEON_H)
+    IF(HAVE_ARM_NEON_H)
+        SET(HAVE_NEON 1)
+        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer_neon.c)
+        SET(CPU_EXTS "${CPU_EXTS}, Neon")
+    ENDIF()
+ENDIF()
+IF(REQUIRE_NEON AND NOT HAVE_NEON)
+    MESSAGE(FATAL_ERROR "Failed to enabled required ARM Neon CPU extensions")
 ENDIF()
 
 

@@ -107,15 +107,7 @@ void MERGE4(MixDirect_Hrtf_,SAMPLER,_,SUFFIX)(
             Values[Offset&HRIR_MASK][1] = 0.0f;
             Offset++;
 
-            for(c = 0;c < HRIR_LENGTH;c++)
-            {
-                const ALuint off = (Offset+c)&HRIR_MASK;
-                Values[off][0] += Coeffs[c][0] * left;
-                Values[off][1] += Coeffs[c][1] * right;
-                Coeffs[c][0] += CoeffStep[c][0];
-                Coeffs[c][1] += CoeffStep[c][1];
-            }
-
+            ApplyCoeffsStep(Offset, Values, Coeffs, CoeffStep, left, right);
             DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];
             DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];
 

@@ -98,7 +98,7 @@ void FillCPUCaps(ALuint capfilter)
     }
 #endif
 #endif
-#ifdef HAVE_ARM_NEON_H
+#ifdef HAVE_NEON
     /* Assume Neon support if compiled with it */
     caps |= CPU_CAP_NEON;
 #endif

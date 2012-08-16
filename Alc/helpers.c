@@ -135,7 +135,7 @@ void *al_malloc(size_t alignment, size_t size)
     {
         *(ret++) = 0x00;
         while(((ALintptrEXT)ret&(alignment-1)) != 0)
-            *(ret++) = 0xAA;
+            *(ret++) = 0x55;
     }
     return ret;
 #endif
@@ -158,10 +158,9 @@ void al_free(void *ptr)
         char *finder = ptr;
         do {
             --finder;
-        } while(*finder == 0xAA);
+        } while(*finder == 0x55);
         free(finder);
     }
-    return ret;
 #endif
 }
 

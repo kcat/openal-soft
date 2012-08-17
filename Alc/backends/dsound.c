@@ -934,6 +934,14 @@ done:
     return RingBufferSize(data->Ring);
 }
 
+
+static ALint64 DSoundGetLatency(ALCdevice *device)
+{
+    (void)device;
+    return 0;
+}
+
+
 static const BackendFuncs DSoundFuncs = {
     DSoundOpenPlayback,
     DSoundClosePlayback,
@@ -945,7 +953,8 @@ static const BackendFuncs DSoundFuncs = {
     DSoundStartCapture,
     DSoundStopCapture,
     DSoundCaptureSamples,
-    DSoundAvailableSamples
+    DSoundAvailableSamples,
+    DSoundGetLatency
 };
 
 

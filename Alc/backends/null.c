@@ -129,6 +129,14 @@ static void null_stop_playback(ALCdevice *device)
 }
 
 
+static ALint64 null_get_latency(ALCdevice *device)
+{
+    /* FIXME: Time until next update + "safe" offset */
+    (void)device;
+    return 0;
+}
+
+
 static const BackendFuncs null_funcs = {
     null_open_playback,
     null_close_playback,
@@ -140,7 +148,8 @@ static const BackendFuncs null_funcs = {
     NULL,
     NULL,
     NULL,
-    NULL
+    NULL,
+    null_get_latency
 };
 
 ALCboolean alc_null_init(BackendFuncs *func_list)

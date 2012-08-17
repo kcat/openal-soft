@@ -66,6 +66,7 @@ MAKE_FUNC(pa_stream_is_corked);
 MAKE_FUNC(pa_stream_cork);
 MAKE_FUNC(pa_stream_is_suspended);
 MAKE_FUNC(pa_stream_get_device_name);
+MAKE_FUNC(pa_stream_get_latency);
 MAKE_FUNC(pa_path_get_filename);
 MAKE_FUNC(pa_get_binary_name);
 MAKE_FUNC(pa_threaded_mainloop_free);
@@ -138,6 +139,7 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_stream_cork ppa_stream_cork
 #define pa_stream_is_suspended ppa_stream_is_suspended
 #define pa_stream_get_device_name ppa_stream_get_device_name
+#define pa_stream_get_latency ppa_stream_get_latency
 #define pa_path_get_filename ppa_path_get_filename
 #define pa_get_binary_name ppa_get_binary_name
 #define pa_threaded_mainloop_free ppa_threaded_mainloop_free
@@ -273,6 +275,7 @@ static ALCboolean pulse_load(void)
         LOAD_FUNC(pa_stream_cork);
         LOAD_FUNC(pa_stream_is_suspended);
         LOAD_FUNC(pa_stream_get_device_name);
+        LOAD_FUNC(pa_stream_get_latency);
         LOAD_FUNC(pa_path_get_filename);
         LOAD_FUNC(pa_get_binary_name);
         LOAD_FUNC(pa_threaded_mainloop_free);
@@ -1375,6 +1378,23 @@ static ALCuint pulse_available_samples(ALCdevice *device)
 }
 
 
+static ALint64 pulse_get_latency(ALCdevice *device)
+{
+    pulse_data *data = device->ExtraData;
+    pa_usec_t latency = 0;
+    int neg;
+
+    if(pa_stream_get_latency(data->stream, &latency, &neg) == 0)
+    {
+        if(neg)
+            latency = 0;
+        return (ALint64)minu64(latency, (((ALuint64)0x7fffffff << 32)|0xffffffff)/1000) * 1000;
+    }
+    ERR("Failed to get stream latency!\n");
+    return 0;
+}
+
+
 static const BackendFuncs pulse_funcs = {
     pulse_open_playback,
     pulse_close_playback,
@@ -1386,7 +1406,8 @@ static const BackendFuncs pulse_funcs = {
     pulse_start_capture,
     pulse_stop_capture,
     pulse_capture_samples,
-    pulse_available_samples
+    pulse_available_samples,
+    pulse_get_latency
 };
 
 ALCboolean alc_pulse_init(BackendFuncs *func_list)

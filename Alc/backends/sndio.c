@@ -252,6 +252,13 @@ static void sndio_stop_playback(ALCdevice *device)
 }
 
 
+static ALint64 sndio_get_latency(ALCdevice *device)
+{
+    (void)device;
+    return 0;
+}
+
+
 static const BackendFuncs sndio_funcs = {
     sndio_open_playback,
     sndio_close_playback,
@@ -263,7 +270,8 @@ static const BackendFuncs sndio_funcs = {
     NULL,
     NULL,
     NULL,
-    NULL
+    NULL,
+    sndio_get_latency
 };
 
 ALCboolean alc_sndio_init(BackendFuncs *func_list)

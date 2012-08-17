@@ -201,6 +201,13 @@ static __inline ALint64 maxi64(ALint64 a, ALint64 b)
 static __inline ALint64 clampi64(ALint64 val, ALint64 min, ALint64 max)
 { return mini64(max, maxi64(min, val)); }
 
+static __inline ALuint64 minu64(ALuint64 a, ALuint64 b)
+{ return ((a > b) ? b : a); }
+static __inline ALuint64 maxu64(ALuint64 a, ALuint64 b)
+{ return ((a > b) ? a : b); }
+static __inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
+{ return minu64(max, maxu64(min, val)); }
+
 
 static __inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {

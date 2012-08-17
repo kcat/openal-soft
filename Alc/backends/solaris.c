@@ -236,6 +236,13 @@ static void solaris_stop_playback(ALCdevice *device)
 }
 
 
+static ALint64 solaris_get_latency(ALCdevice *device)
+{
+    (void)device;
+    return 0;
+}
+
+
 static const BackendFuncs solaris_funcs = {
     solaris_open_playback,
     solaris_close_playback,
@@ -247,7 +254,8 @@ static const BackendFuncs solaris_funcs = {
     NULL,
     NULL,
     NULL,
-    NULL
+    NULL,
+    solaris_get_latency
 };
 
 ALCboolean alc_solaris_init(BackendFuncs *func_list)

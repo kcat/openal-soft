@@ -937,6 +937,13 @@ static void MMDevApiStopPlayback(ALCdevice *device)
 }
 
 
+static ALint64 MMDevApiGetLatency(ALCdevice *device)
+{
+    (void)device;
+    return 0;
+}
+
+
 static const BackendFuncs MMDevApiFuncs = {
     MMDevApiOpenPlayback,
     MMDevApiClosePlayback,
@@ -948,7 +955,8 @@ static const BackendFuncs MMDevApiFuncs = {
     NULL,
     NULL,
     NULL,
-    NULL
+    NULL,
+    MMDevApiGetLatency
 };
 
 

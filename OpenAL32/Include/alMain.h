@@ -419,6 +419,8 @@ typedef struct {
     void (*StopCapture)(ALCdevice*);
     ALCenum (*CaptureSamples)(ALCdevice*, void*, ALCuint);
     ALCuint (*AvailableSamples)(ALCdevice*);
+
+    ALint64 (*GetLatency)(ALCdevice*);
 } BackendFuncs;
 
 struct BackendInfo {
@@ -604,6 +606,7 @@ struct ALCdevice_struct
 #define ALCdevice_StopCapture(a)         ((a)->Funcs->StopCapture((a)))
 #define ALCdevice_CaptureSamples(a,b,c)  ((a)->Funcs->CaptureSamples((a), (b), (c)))
 #define ALCdevice_AvailableSamples(a)    ((a)->Funcs->AvailableSamples((a)))
+#define ALCdevice_GetLatency(a)          ((a)->Funcs->GetLatency((a)))
 
 // Frequency was requested by the app or config file
 #define DEVICE_FREQUENCY_REQUEST                 (1<<1)

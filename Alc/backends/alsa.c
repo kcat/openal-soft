@@ -79,6 +79,7 @@ MAKE_FUNC(snd_pcm_start);
 MAKE_FUNC(snd_pcm_resume);
 MAKE_FUNC(snd_pcm_reset);
 MAKE_FUNC(snd_pcm_wait);
+MAKE_FUNC(snd_pcm_delay);
 MAKE_FUNC(snd_pcm_state);
 MAKE_FUNC(snd_pcm_avail_update);
 MAKE_FUNC(snd_pcm_areas_silence);
@@ -151,6 +152,7 @@ MAKE_FUNC(snd_card_next);
 #define snd_pcm_resume psnd_pcm_resume
 #define snd_pcm_reset psnd_pcm_reset
 #define snd_pcm_wait psnd_pcm_wait
+#define snd_pcm_delay psnd_pcm_delay
 #define snd_pcm_state psnd_pcm_state
 #define snd_pcm_avail_update psnd_pcm_avail_update
 #define snd_pcm_areas_silence psnd_pcm_areas_silence
@@ -241,6 +243,7 @@ static ALCboolean alsa_load(void)
         LOAD_FUNC(snd_pcm_resume);
         LOAD_FUNC(snd_pcm_reset);
         LOAD_FUNC(snd_pcm_wait);
+        LOAD_FUNC(snd_pcm_delay);
         LOAD_FUNC(snd_pcm_state);
         LOAD_FUNC(snd_pcm_avail_update);
         LOAD_FUNC(snd_pcm_areas_silence);
@@ -1224,6 +1227,21 @@ static void alsa_stop_capture(ALCdevice *Device)
 }
 
 
+static ALint64 alsa_get_latency(ALCdevice *device)
+{
+    alsa_data *data = (alsa_data*)device->ExtraData;
+    snd_pcm_sframes_t delay = 0;
+    int err;
+
+    if((err=snd_pcm_delay(data->pcmHandle, &delay)) < 0)
+    {
+        ERR("Failed to get latency!\n");
+        return 0;
+    }
+    return maxi64((ALint64)delay*1000000000/device->Frequency, 0);
+}
+
+
 static const BackendFuncs alsa_funcs = {
     alsa_open_playback,
     alsa_close_playback,
@@ -1235,7 +1253,8 @@ static const BackendFuncs alsa_funcs = {
     alsa_start_capture,
     alsa_stop_capture,
     alsa_capture_samples,
-    alsa_available_samples
+    alsa_available_samples,
+    alsa_get_latency
 };
 
 ALCboolean alc_alsa_init(BackendFuncs *func_list)

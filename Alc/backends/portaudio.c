@@ -419,6 +419,13 @@ static ALCuint pa_available_samples(ALCdevice *device)
 }
 
 
+static ALint64 pa_get_latency(ALCdevice *device)
+{
+    (void)device;
+    return 0;
+}
+
+
 static const BackendFuncs pa_funcs = {
     pa_open_playback,
     pa_close_playback,
@@ -430,7 +437,8 @@ static const BackendFuncs pa_funcs = {
     pa_start_capture,
     pa_stop_capture,
     pa_capture_samples,
-    pa_available_samples
+    pa_available_samples,
+    pa_get_latency
 };
 
 ALCboolean alc_pa_init(BackendFuncs *func_list)

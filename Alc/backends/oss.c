@@ -476,6 +476,13 @@ static ALCuint oss_available_samples(ALCdevice *Device)
 }
 
 
+static ALint64 oss_get_latency(ALCdevice *device)
+{
+    (void)device;
+    return 0;
+}
+
+
 static const BackendFuncs oss_funcs = {
     oss_open_playback,
     oss_close_playback,
@@ -487,7 +494,8 @@ static const BackendFuncs oss_funcs = {
     oss_start_capture,
     oss_stop_capture,
     oss_capture_samples,
-    oss_available_samples
+    oss_available_samples,
+    oss_get_latency
 };
 
 ALCboolean alc_oss_init(BackendFuncs *func_list)

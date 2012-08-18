@@ -18,6 +18,19 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+/* Define int64_t and uint64_t types */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#include <inttypes.h>
+#elif defined(_WIN32) && defined(__GNUC__)
+#include <stdint.h>
+#elif defined(_WIN32)
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+#else
+/* Fallback if nothing above works */
+#include <inttypes.h>
+#endif
+
 #ifndef AL_SOFT_deferred_updates
 #define AL_SOFT_deferred_updates 1
 #define AL_DEFERRED_UPDATES_SOFT                 0xC002
@@ -26,6 +39,19 @@ typedef ALvoid (AL_APIENTRY*LPALPROCESSUPDATESSOFT)(void);
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void);
 AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void);
+#endif
+#endif
+
+#ifndef AL_SOFT_source_latency
+#define AL_SOFT_source_latency 1
+#define AL_SAMPLE_OFFSET_LATENCY_SOFT            0x1200
+typedef int64_t ALint64SOFT;
+typedef uint64_t ALuint64SOFT;
+typedef void (AL_APIENTRY*LPALGETSOURCEI64SOFT)(ALuint,ALenum,ALint64SOFT*);
+typedef void (AL_APIENTRY*LPALGETSOURCEI64VSOFT)(ALuint,ALenum,ALint64SOFT*);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT *values);
+AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64SOFT *values);
 #endif
 #endif
 

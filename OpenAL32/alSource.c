@@ -47,6 +47,7 @@ const ALsizei ResamplerPrePadding[ResamplerMax] = {
 
 
 static ALvoid InitSourceParams(ALsource *Source);
+static ALint64 GetSourceOffset(ALsource *Source);
 static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offsets, ALdouble updateLen);
 static ALint GetSampleOffset(ALsource *Source);
 
@@ -1230,6 +1231,62 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
 }
 
 
+AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64 *values)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    al_try
+    {
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, values);
+        switch(param)
+        {
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
+        }
+    }
+    al_endtry;
+
+    ALCcontext_DecRef(Context);
+}
+
+AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64 *values)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    al_try
+    {
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, values);
+        switch(param)
+        {
+            case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+                LockContext(Context);
+                values[0] = GetSourceOffset(Source);
+                values[1] = ALCdevice_GetLatency(Context->Device);
+                UnlockContext(Context);
+                break;
+
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
+        }
+    }
+    al_endtry;
+
+    ALCcontext_DecRef(Context);
+}
+
+
 AL_API ALvoid AL_APIENTRY alSourcePlay(ALuint source)
 {
     alSourcePlayv(1, &source);
@@ -1742,6 +1799,36 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         }
         Source->Offset = -1.0;
     }
+}
+
+/* GetSourceOffset
+ *
+ * Gets the current read offset for the given Source, in 32.32 fixed-point
+ * samples. The offset is relative to the start of the queue (not the start of
+ * the current buffer).
+ */
+static ALint64 GetSourceOffset(ALsource *Source)
+{
+    const ALbufferlistitem *BufferList;
+    ALuint64 readPos;
+    ALuint i;
+
+    if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
+        return 0;
+
+    /* NOTE: This is the offset into the *current* buffer, so add the length of
+     * any played buffers */
+    readPos  = (ALuint64)Source->position << 32;
+    readPos |= (ALuint64)Source->position_fraction << (32-FRACTIONBITS);
+    BufferList = Source->queue;
+    for(i = 0;i < Source->BuffersPlayed && BufferList;i++)
+    {
+        if(BufferList->buffer)
+            readPos += (ALuint64)BufferList->buffer->SampleLen << 32;
+        BufferList = BufferList->next;
+    }
+
+    return (ALint64)minu64(readPos, ((ALuint64)0x7fffffff<<32)|0xffffffff);
 }
 
 /* GetSourceOffsets

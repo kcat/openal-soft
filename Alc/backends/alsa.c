@@ -538,11 +538,15 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
 {
     ALCdevice *Device = (ALCdevice*)ptr;
     alsa_data *data = (alsa_data*)Device->ExtraData;
+    snd_pcm_uframes_t update_size, num_updates;
     snd_pcm_sframes_t avail;
     char *WritePtr;
+    int err;
 
     SetRTPriority();
 
+    update_size = Device->UpdateSize;
+    num_updates = Device->NumUpdates;
     while(!data->killNow)
     {
         int state = verify_state(data->pcmHandle);
@@ -553,8 +557,38 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
             break;
         }
 
+        avail = snd_pcm_avail_update(data->pcmHandle);
+        if(avail < 0)
+        {
+            ERR("available update failed: %s\n", snd_strerror(avail));
+            continue;
+        }
+
+        if((snd_pcm_uframes_t)avail > update_size*num_updates)
+        {
+            WARN("available samples exceeds the buffer size\n");
+            snd_pcm_reset(data->pcmHandle);
+            continue;
+        }
+
+        if((snd_pcm_uframes_t)avail < update_size)
+        {
+            if(state != SND_PCM_STATE_RUNNING)
+            {
+                err = snd_pcm_start(data->pcmHandle);
+                if(err < 0)
+                {
+                    ERR("start failed: %s\n", snd_strerror(err));
+                    continue;
+                }
+            }
+            if(snd_pcm_wait(data->pcmHandle, 1000) == 0)
+                ERR("Wait timeout... buffer size too low?\n");
+            continue;
+        }
+
         WritePtr = data->buffer;
-        avail = data->size / snd_pcm_frames_to_bytes(data->pcmHandle, 1);
+        avail = snd_pcm_bytes_to_frames(data->pcmHandle, data->size);
         aluMixData(Device, WritePtr, avail);
 
         while(avail > 0)
@@ -624,11 +658,6 @@ static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     data = (alsa_data*)calloc(1, sizeof(alsa_data));
 
     err = snd_pcm_open(&data->pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-    if(err >= 0)
-    {
-        err = snd_pcm_nonblock(data->pcmHandle, 0);
-        if(err < 0) snd_pcm_close(data->pcmHandle);
-    }
     if(err < 0)
     {
         free(data);
@@ -703,11 +732,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     /* set interleaved access */
     if(!allowmmap || snd_pcm_hw_params_set_access(data->pcmHandle, hp, SND_PCM_ACCESS_MMAP_INTERLEAVED) < 0)
     {
-        if(periods > 2)
-        {
-            periods--;
-            bufferLen = periodLen * periods;
-        }
+        /* No mmap */
         CHECK(snd_pcm_hw_params_set_access(data->pcmHandle, hp, SND_PCM_ACCESS_RW_INTERLEAVED));
     }
     /* test and set format (implicitly sets sample bits) */
@@ -789,12 +814,7 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
     snd_pcm_sw_params_free(sp);
     sp = NULL;
 
-    /* Increase periods by one, since the temp buffer counts as an extra
-     * period */
-    if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
-        device->NumUpdates = periods+1;
-    else
-        device->NumUpdates = periods;
+    device->NumUpdates = periods;
     device->UpdateSize = periodSizeInFrames;
     device->Frequency = rate;
 

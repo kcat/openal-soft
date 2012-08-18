@@ -446,6 +446,9 @@ typedef struct {
     ALCenum (*CaptureSamples)(ALCdevice*, void*, ALCuint);
     ALCuint (*AvailableSamples)(ALCdevice*);
 
+    void (*Lock)(ALCdevice*);
+    void (*Unlock)(ALCdevice*);
+
     ALint64 (*GetLatency)(ALCdevice*);
 } BackendFuncs;
 
@@ -632,6 +635,8 @@ struct ALCdevice_struct
 #define ALCdevice_StopCapture(a)         ((a)->Funcs->StopCapture((a)))
 #define ALCdevice_CaptureSamples(a,b,c)  ((a)->Funcs->CaptureSamples((a), (b), (c)))
 #define ALCdevice_AvailableSamples(a)    ((a)->Funcs->AvailableSamples((a)))
+#define ALCdevice_Lock(a)                ((a)->Funcs->Lock((a)))
+#define ALCdevice_Unlock(a)              ((a)->Funcs->Unlock((a)))
 #define ALCdevice_GetLatency(a)          ((a)->Funcs->GetLatency((a)))
 
 // Frequency was requested by the app or config file
@@ -703,15 +708,13 @@ void ALCcontext_DecRef(ALCcontext *context);
 void AppendAllDevicesList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
 
-static __inline void LockDevice(ALCdevice *device)
-{ EnterCriticalSection(&device->Mutex); }
-static __inline void UnlockDevice(ALCdevice *device)
-{ LeaveCriticalSection(&device->Mutex); }
+void ALCdevice_LockDefault(ALCdevice *device);
+void ALCdevice_UnlockDefault(ALCdevice *device);
 
 static __inline void LockContext(ALCcontext *context)
-{ LockDevice(context->Device); }
+{ ALCdevice_Lock(context->Device); }
 static __inline void UnlockContext(ALCcontext *context)
-{ UnlockDevice(context->Device); }
+{ ALCdevice_Unlock(context->Device); }
 
 
 void *al_malloc(size_t alignment, size_t size);

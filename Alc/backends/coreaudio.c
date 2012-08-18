@@ -682,6 +682,8 @@ static const BackendFuncs ca_funcs = {
     ca_stop_capture,
     ca_capture_samples,
     ca_available_samples,
+    ALCdevice_LockDefault,
+    ALCdevice_UnlockDefault,
     ca_get_latency
 };
 

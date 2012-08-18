@@ -438,6 +438,8 @@ static const BackendFuncs pa_funcs = {
     pa_stop_capture,
     pa_capture_samples,
     pa_available_samples,
+    ALCdevice_LockDefault,
+    ALCdevice_UnlockDefault,
     pa_get_latency
 };
 

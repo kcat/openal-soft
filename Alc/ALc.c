@@ -43,7 +43,7 @@
 /************************************************
  * Backends
  ************************************************/
-#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 static struct BackendInfo BackendList[] = {
 #ifdef HAVE_PULSEAUDIO
     { "pulse", alc_pulse_init, alc_pulse_deinit, alc_pulse_probe, EmptyFuncs },
@@ -1259,6 +1259,15 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
  * Miscellaneous ALC helpers
  ************************************************/
 
+void ALCdevice_LockDefault(ALCdevice *device)
+{
+    EnterCriticalSection(&device->Mutex);
+}
+void ALCdevice_UnlockDefault(ALCdevice *device)
+{
+    LeaveCriticalSection(&device->Mutex);
+}
+
 /* SetDefaultWFXChannelOrder
  *
  * Sets the default channel order used by WaveFormatEx.
@@ -1609,7 +1618,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Flags |= DEVICE_WIDE_STEREO;
 
     oldMode = SetMixerFPUMode();
-    LockDevice(device);
+    ALCdevice_Lock(device);
     context = device->ContextList;
     while(context)
     {
@@ -1624,7 +1633,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(ALeffectState_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
-                UnlockDevice(device);
+                ALCdevice_Unlock(device);
                 RestoreFPUMode(oldMode);
                 return ALC_INVALID_DEVICE;
             }
@@ -1660,14 +1669,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(ALeffectState_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
         {
-            UnlockDevice(device);
+            ALCdevice_Unlock(device);
             RestoreFPUMode(oldMode);
             return ALC_INVALID_DEVICE;
         }
         slot->NeedsUpdate = AL_FALSE;
         ALeffectState_Update(slot->EffectState, device, slot);
     }
-    UnlockDevice(device);
+    ALCdevice_Unlock(device);
     RestoreFPUMode(oldMode);
 
     if(ALCdevice_StartPlayback(device) == ALC_FALSE)
@@ -1876,7 +1885,7 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
     if(CompExchangePtr((XchgPtr*)&GlobalContext, context, NULL))
         ALCcontext_DecRef(context);
 
-    LockDevice(device);
+    ALCdevice_Lock(device);
     tmp_ctx = &device->ContextList;
     while(*tmp_ctx)
     {
@@ -1884,7 +1893,7 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
             break;
         tmp_ctx = &(*tmp_ctx)->next;
     }
-    UnlockDevice(device);
+    ALCdevice_Unlock(device);
 
     ALCcontext_DecRef(context);
 }

@@ -487,7 +487,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
     ALeffectState *State = NULL;
     ALenum err = AL_NO_ERROR;
 
-    LockDevice(Device);
+    ALCdevice_Lock(Device);
     if(newtype == AL_EFFECT_NULL && EffectSlot->effect.type != AL_EFFECT_NULL)
     {
         State = NoneCreate();
@@ -522,7 +522,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 
     if(err != AL_NO_ERROR)
     {
-        UnlockDevice(Device);
+        ALCdevice_Unlock(Device);
         return err;
     }
 
@@ -534,7 +534,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         if(ALeffectState_DeviceUpdate(State, Device) == AL_FALSE)
         {
             RestoreFPUMode(oldMode);
-            UnlockDevice(Device);
+            ALCdevice_Unlock(Device);
             ALeffectState_Destroy(State);
             return AL_OUT_OF_MEMORY;
         }
@@ -549,7 +549,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
          * be called. */
         EffectSlot->NeedsUpdate = AL_FALSE;
         ALeffectState_Update(EffectSlot->EffectState, Device, EffectSlot);
-        UnlockDevice(Device);
+        ALCdevice_Unlock(Device);
 
         RestoreFPUMode(oldMode);
 
@@ -562,7 +562,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
             memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
         else
             memcpy(&EffectSlot->effect, effect, sizeof(*effect));
-        UnlockDevice(Device);
+        ALCdevice_Unlock(Device);
         EffectSlot->NeedsUpdate = AL_TRUE;
     }
 

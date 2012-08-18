@@ -1407,6 +1407,8 @@ static const BackendFuncs pulse_funcs = {
     pulse_stop_capture,
     pulse_capture_samples,
     pulse_available_samples,
+    ALCdevice_LockDefault,
+    ALCdevice_UnlockDefault,
     pulse_get_latency
 };
 

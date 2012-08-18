@@ -1254,6 +1254,8 @@ static const BackendFuncs alsa_funcs = {
     alsa_stop_capture,
     alsa_capture_samples,
     alsa_available_samples,
+    ALCdevice_LockDefault,
+    ALCdevice_UnlockDefault,
     alsa_get_latency
 };
 

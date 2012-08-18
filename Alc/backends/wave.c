@@ -342,6 +342,8 @@ static const BackendFuncs wave_funcs = {
     NULL,
     NULL,
     NULL,
+    ALCdevice_LockDefault,
+    ALCdevice_UnlockDefault,
     wave_get_latency
 };
 

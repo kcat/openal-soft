@@ -921,7 +921,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         SamplesToDo = minu(size, BUFFERSIZE);
         memset(device->DryBuffer, 0, SamplesToDo*MaxChannels*sizeof(ALfloat));
 
-        LockDevice(device);
+        ALCdevice_Lock(device);
         ctx = device->ContextList;
         while(ctx)
         {
@@ -999,7 +999,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             for(i = 0;i < SamplesToDo;i++)
                 (*slot)->WetBuffer[i] = 0.0f;
         }
-        UnlockDevice(device);
+        ALCdevice_Unlock(device);
 
         /* Click-removal. Could do better; this only really handles immediate
          * changes between updates where a predictive sample could be
@@ -1092,7 +1092,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
 {
     ALCcontext *Context;
 
-    LockDevice(device);
+    ALCdevice_Lock(device);
     device->Connected = ALC_FALSE;
 
     Context = device->ContextList;
@@ -1117,5 +1117,5 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
 
         Context = Context->next;
     }
-    UnlockDevice(device);
+    ALCdevice_Unlock(device);
 }

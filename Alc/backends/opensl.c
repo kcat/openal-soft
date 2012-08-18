@@ -420,6 +420,8 @@ static const BackendFuncs opensl_funcs = {
     NULL,
     NULL,
     NULL,
+    ALCdevice_LockDefault,
+    ALCdevice_UnlockDefault,
     opensl_get_latency
 };
 

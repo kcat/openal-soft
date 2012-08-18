@@ -74,6 +74,8 @@ static const BackendFuncs loopback_funcs = {
     NULL,
     NULL,
     NULL,
+    ALCdevice_LockDefault,
+    ALCdevice_UnlockDefault,
     loopback_get_latency
 };
 

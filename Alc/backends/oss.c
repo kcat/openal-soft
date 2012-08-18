@@ -495,6 +495,8 @@ static const BackendFuncs oss_funcs = {
     oss_stop_capture,
     oss_capture_samples,
     oss_available_samples,
+    ALCdevice_LockDefault,
+    ALCdevice_UnlockDefault,
     oss_get_latency
 };
 

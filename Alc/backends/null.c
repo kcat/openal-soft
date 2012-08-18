@@ -149,6 +149,8 @@ static const BackendFuncs null_funcs = {
     NULL,
     NULL,
     NULL,
+    ALCdevice_LockDefault,
+    ALCdevice_UnlockDefault,
     null_get_latency
 };
 

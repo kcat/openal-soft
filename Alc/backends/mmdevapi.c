@@ -956,6 +956,8 @@ static const BackendFuncs MMDevApiFuncs = {
     NULL,
     NULL,
     NULL,
+    ALCdevice_LockDefault,
+    ALCdevice_UnlockDefault,
     MMDevApiGetLatency
 };
 

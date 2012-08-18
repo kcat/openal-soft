@@ -1686,6 +1686,11 @@ static ALCvoid FreeDevice(ALCdevice *device)
 {
     TRACE("%p\n", device);
 
+    if(device->Type != Capture)
+        ALCdevice_ClosePlayback(device);
+    else
+        ALCdevice_CloseCapture(device);
+
     if(device->DefaultSlot)
     {
         ALeffectState_Destroy(device->DefaultSlot->EffectState);
@@ -2856,8 +2861,6 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *Device)
         ALCdevice_StopPlayback(Device);
     Device->Flags &= ~DEVICE_RUNNING;
 
-    ALCdevice_ClosePlayback(Device);
-
     ALCdevice_DecRef(Device);
 
     return ALC_TRUE;
@@ -2961,8 +2964,6 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *Device)
 
     *list = (*list)->next;
     UnlockLists();
-
-    ALCdevice_CloseCapture(Device);
 
     ALCdevice_DecRef(Device);
 

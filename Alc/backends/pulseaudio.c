@@ -826,6 +826,7 @@ static ALuint PulseProc(ALvoid *param)
         }
         len -= len%update_size;
 
+        ALCdevice_Lock(Device);
         while(len > 0)
         {
             size_t newlen = len;
@@ -846,6 +847,7 @@ static ALuint PulseProc(ALvoid *param)
             pa_stream_write(data->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
             len -= newlen;
         }
+        ALCdevice_Unlock(Device);
     } while(!data->killNow && Device->Connected);
     pa_threaded_mainloop_unlock(data->loop);
 

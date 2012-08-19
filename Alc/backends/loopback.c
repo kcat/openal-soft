@@ -55,13 +55,6 @@ static void loopback_stop_playback(ALCdevice *device)
 }
 
 
-static ALint64 loopback_get_latency(ALCdevice *device)
-{
-    (void)device;
-    return 0;
-}
-
-
 static const BackendFuncs loopback_funcs = {
     loopback_open_playback,
     loopback_close_playback,
@@ -76,7 +69,7 @@ static const BackendFuncs loopback_funcs = {
     NULL,
     ALCdevice_LockDefault,
     ALCdevice_UnlockDefault,
-    loopback_get_latency
+    ALCdevice_GetLatencyDefault
 };
 
 ALCboolean alc_loopback_init(BackendFuncs *func_list)

@@ -322,14 +322,6 @@ static void wave_stop_playback(ALCdevice *device)
 }
 
 
-static ALint64 wave_get_latency(ALCdevice *device)
-{
-    /* FIXME: time until next update + "safe" offset */
-    (void)device;
-    return 0;
-}
-
-
 static const BackendFuncs wave_funcs = {
     wave_open_playback,
     wave_close_playback,
@@ -344,7 +336,7 @@ static const BackendFuncs wave_funcs = {
     NULL,
     ALCdevice_LockDefault,
     ALCdevice_UnlockDefault,
-    wave_get_latency
+    ALCdevice_GetLatencyDefault
 };
 
 ALCboolean alc_wave_init(BackendFuncs *func_list)

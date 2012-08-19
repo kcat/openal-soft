@@ -663,13 +663,6 @@ static ALCuint ca_available_samples(ALCdevice *device)
 }
 
 
-static ALint64 ca_get_latency(ALCdevice *device)
-{
-    (void)device;
-    return 0;
-}
-
-
 static const BackendFuncs ca_funcs = {
     ca_open_playback,
     ca_close_playback,
@@ -684,7 +677,7 @@ static const BackendFuncs ca_funcs = {
     ca_available_samples,
     ALCdevice_LockDefault,
     ALCdevice_UnlockDefault,
-    ca_get_latency
+    ALCdevice_GetLatencyDefault
 };
 
 ALCboolean alc_ca_init(BackendFuncs *func_list)

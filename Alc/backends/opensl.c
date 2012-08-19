@@ -401,13 +401,6 @@ static void opensl_stop_playback(ALCdevice *Device)
 }
 
 
-static ALint64 opensl_get_latency(ALCdevice *device)
-{
-    (void)device;
-    return 0;
-}
-
-
 static const BackendFuncs opensl_funcs = {
     opensl_open_playback,
     opensl_close_playback,
@@ -422,7 +415,7 @@ static const BackendFuncs opensl_funcs = {
     NULL,
     ALCdevice_LockDefault,
     ALCdevice_UnlockDefault,
-    opensl_get_latency
+    ALCdevice_GetLatencyDefault
 };
 
 

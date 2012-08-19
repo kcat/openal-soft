@@ -705,13 +705,6 @@ static ALCuint WinMMAvailableSamples(ALCdevice *Device)
 }
 
 
-static ALint64 WinMMGetLatency(ALCdevice *device)
-{
-    (void)device;
-    return 0;
-}
-
-
 static const BackendFuncs WinMMFuncs = {
     WinMMOpenPlayback,
     WinMMClosePlayback,
@@ -726,7 +719,7 @@ static const BackendFuncs WinMMFuncs = {
     WinMMAvailableSamples,
     ALCdevice_LockDefault,
     ALCdevice_UnlockDefault,
-    WinMMGetLatency
+    ALCdevice_GetLatencyDefault
 };
 
 ALCboolean alcWinMMInit(BackendFuncs *FuncList)

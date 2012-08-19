@@ -1267,6 +1267,11 @@ void ALCdevice_UnlockDefault(ALCdevice *device)
 {
     LeaveCriticalSection(&device->Mutex);
 }
+ALint64 ALCdevice_GetLatencyDefault(ALCdevice *device)
+{
+    (void)device;
+    return 0;
+}
 
 /* SetDefaultWFXChannelOrder
  *

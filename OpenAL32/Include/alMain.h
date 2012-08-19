@@ -710,6 +710,7 @@ void AppendCaptureDeviceList(const ALCchar *name);
 
 void ALCdevice_LockDefault(ALCdevice *device);
 void ALCdevice_UnlockDefault(ALCdevice *device);
+ALint64 ALCdevice_GetLatencyDefault(ALCdevice *device);
 
 static __inline void LockContext(ALCcontext *context)
 { ALCdevice_Lock(context->Device); }

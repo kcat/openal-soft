@@ -935,13 +935,6 @@ done:
 }
 
 
-static ALint64 DSoundGetLatency(ALCdevice *device)
-{
-    (void)device;
-    return 0;
-}
-
-
 static const BackendFuncs DSoundFuncs = {
     DSoundOpenPlayback,
     DSoundClosePlayback,
@@ -956,7 +949,7 @@ static const BackendFuncs DSoundFuncs = {
     DSoundAvailableSamples,
     ALCdevice_LockDefault,
     ALCdevice_UnlockDefault,
-    DSoundGetLatency
+    ALCdevice_GetLatencyDefault
 };
 
 

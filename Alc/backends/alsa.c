@@ -505,6 +505,7 @@ static ALuint ALSAProc(ALvoid *ptr)
         avail -= avail%update_size;
 
         // it is possible that contiguous areas are smaller, thus we use a loop
+        ALCdevice_Lock(Device);
         while(avail > 0)
         {
             frames = avail;
@@ -529,6 +530,7 @@ static ALuint ALSAProc(ALvoid *ptr)
 
             avail -= frames;
         }
+        ALCdevice_Unlock(Device);
     }
 
     return 0;
@@ -587,6 +589,7 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
             continue;
         }
 
+        ALCdevice_Lock(Device);
         WritePtr = data->buffer;
         avail = snd_pcm_bytes_to_frames(data->pcmHandle, data->size);
         aluMixData(Device, WritePtr, avail);
@@ -620,6 +623,7 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
                     break;
             }
         }
+        ALCdevice_Unlock(Device);
     }
 
     return 0;

@@ -1390,7 +1390,7 @@ static ALint64 pulse_get_latency(ALCdevice *device)
     {
         if(neg)
             latency = 0;
-        return (ALint64)minu64(latency, (((ALuint64)0x7fffffff << 32)|0xffffffff)/1000) * 1000;
+        return (ALint64)minu64(latency, MAKEU64(0x7fffffff,0xffffffff)/1000) * 1000;
     }
     ERR("Failed to get stream latency!\n");
     return 0;

@@ -74,6 +74,8 @@ typedef unsigned long long ALuint64;
 typedef ptrdiff_t ALintptrEXT;
 typedef ptrdiff_t ALsizeiptrEXT;
 
+#define MAKEU64(x,y) (((ALuint64)(x)<<32)|(ALuint64)(y))
+
 #ifdef HAVE_GCC_FORMAT
 #define PRINTF_STYLE(x, y) __attribute__((format(printf, (x), (y))))
 #else

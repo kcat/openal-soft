@@ -255,6 +255,9 @@ static const ALCfunction alcFunctions[] = {
     DECL(alDeferUpdatesSOFT),
     DECL(alProcessUpdatesSOFT),
 
+    DECL(alGetSourcedSOFT),
+    DECL(alGetSource3dSOFT),
+    DECL(alGetSourcedvSOFT),
     DECL(alGetSourcei64SOFT),
     DECL(alGetSource3i64SOFT),
     DECL(alGetSourcei64vSOFT),

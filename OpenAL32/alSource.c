@@ -1211,6 +1211,142 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
 }
 
 
+AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *value)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+    ALenum     err;
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    al_try
+    {
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, value);
+        switch(param)
+        {
+            case AL_PITCH:
+            case AL_GAIN:
+            case AL_MIN_GAIN:
+            case AL_MAX_GAIN:
+            case AL_MAX_DISTANCE:
+            case AL_ROLLOFF_FACTOR:
+            case AL_CONE_OUTER_GAIN:
+            case AL_CONE_OUTER_GAINHF:
+            case AL_SEC_OFFSET:
+            case AL_SAMPLE_OFFSET:
+            case AL_BYTE_OFFSET:
+            case AL_CONE_INNER_ANGLE:
+            case AL_CONE_OUTER_ANGLE:
+            case AL_REFERENCE_DISTANCE:
+            case AL_AIR_ABSORPTION_FACTOR:
+            case AL_ROOM_ROLLOFF_FACTOR:
+            case AL_DOPPLER_FACTOR:
+                if((err=GetSourcedv(Source, Context, param, value)) != AL_NO_ERROR)
+                    al_throwerr(Context, err);
+                break;
+
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
+        }
+    }
+    al_endtry;
+
+    ALCcontext_DecRef(Context);
+}
+
+AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+    ALdouble   dvals[3];
+    ALenum     err;
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    al_try
+    {
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, value1 && value2 && value3);
+        switch(param)
+        {
+            case AL_POSITION:
+            case AL_VELOCITY:
+            case AL_DIRECTION:
+                if((err=GetSourcedv(Source, Context, param, dvals)) != AL_NO_ERROR)
+                    al_throwerr(Context, err);
+                *value1 = dvals[0];
+                *value2 = dvals[1];
+                *value3 = dvals[2];
+                break;
+
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
+        }
+    }
+    al_endtry;
+
+    ALCcontext_DecRef(Context);
+}
+
+AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble *values)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+    ALenum     err;
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    al_try
+    {
+        if((Source=LookupSource(Context, source)) == NULL)
+            al_throwerr(Context, AL_INVALID_NAME);
+        CHECK_VALUE(Context, values);
+        switch(param)
+        {
+            case AL_PITCH:
+            case AL_GAIN:
+            case AL_MIN_GAIN:
+            case AL_MAX_GAIN:
+            case AL_MAX_DISTANCE:
+            case AL_ROLLOFF_FACTOR:
+            case AL_DOPPLER_FACTOR:
+            case AL_CONE_OUTER_GAIN:
+            case AL_SEC_OFFSET:
+            case AL_SAMPLE_OFFSET:
+            case AL_BYTE_OFFSET:
+            case AL_CONE_INNER_ANGLE:
+            case AL_CONE_OUTER_ANGLE:
+            case AL_REFERENCE_DISTANCE:
+            case AL_CONE_OUTER_GAINHF:
+            case AL_AIR_ABSORPTION_FACTOR:
+            case AL_ROOM_ROLLOFF_FACTOR:
+
+            case AL_SAMPLE_RW_OFFSETS_SOFT:
+            case AL_BYTE_RW_OFFSETS_SOFT:
+
+            case AL_POSITION:
+            case AL_VELOCITY:
+            case AL_DIRECTION:
+                if((err=GetSourcedv(Source, Context, param, values)) != AL_NO_ERROR)
+                    al_throwerr(Context, err);
+                break;
+
+            default:
+                al_throwerr(Context, AL_INVALID_ENUM);
+        }
+    }
+    al_endtry;
+
+    ALCcontext_DecRef(Context);
+}
+
+
 AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value)
 {
     ALCcontext *Context;

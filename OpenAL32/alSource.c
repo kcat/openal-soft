@@ -23,9 +23,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
-#include "alMain.h"
+
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "alMain.h"
 #include "alError.h"
 #include "alSource.h"
 #include "alBuffer.h"
@@ -1231,7 +1232,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
 }
 
 
-AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64 *values)
+AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT *values)
 {
     ALCcontext *Context;
     ALsource   *Source;
@@ -1255,7 +1256,7 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64 
     ALCcontext_DecRef(Context);
 }
 
-AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64 *values)
+AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64SOFT *values)
 {
     ALCcontext *Context;
     ALsource   *Source;

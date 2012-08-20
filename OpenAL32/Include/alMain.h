@@ -45,6 +45,7 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void);
 #ifndef AL_SOFT_source_latency
 #define AL_SOFT_source_latency 1
 #define AL_SAMPLE_OFFSET_LATENCY_SOFT            0x1200
+#define AL_SEC_OFFSET_LATENCY_SOFT               0x1201
 typedef int64_t ALint64SOFT;
 typedef uint64_t ALuint64SOFT;
 typedef void (AL_APIENTRY*LPALGETSOURCEDSOFT)(ALuint,ALenum,ALdouble*);

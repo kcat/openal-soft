@@ -49,6 +49,7 @@ const ALsizei ResamplerPrePadding[ResamplerMax] = {
 
 static ALvoid InitSourceParams(ALsource *Source);
 static ALint64 GetSourceOffset(ALsource *Source);
+static ALdouble GetSourceSecOffset(ALsource *Source);
 static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offsets, ALdouble updateLen);
 static ALint GetSampleOffset(ALsource *Source);
 
@@ -106,6 +107,14 @@ static ALenum GetSourcedv(ALsource *Source, ALCcontext *Context, ALenum name, AL
             updateLen = (ALdouble)Context->Device->UpdateSize /
                         Context->Device->Frequency;
             GetSourceOffsets(Source, name, values, updateLen);
+            UnlockContext(Context);
+            break;
+
+        case AL_SEC_OFFSET_LATENCY_SOFT:
+            LockContext(Context);
+            values[0] = GetSourceSecOffset(Source);
+            values[1] = (ALdouble)ALCdevice_GetLatency(Context->Device) /
+                        1000000000.0;
             UnlockContext(Context);
             break;
 
@@ -1329,6 +1338,7 @@ AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble 
 
             case AL_SAMPLE_RW_OFFSETS_SOFT:
             case AL_BYTE_RW_OFFSETS_SOFT:
+            case AL_SEC_OFFSET_LATENCY_SOFT:
 
             case AL_POSITION:
             case AL_VELOCITY:
@@ -2181,6 +2191,47 @@ static ALint64 GetSourceOffset(ALsource *Source)
     }
 
     return (ALint64)minu64(readPos, MAKEU64(0x7fffffff,0xffffffff));
+}
+
+/* GetSourceSecOffset
+ *
+ * Gets the current read offset for the given Source, in seconds. The offset is
+ * relative to the start of the queue (not the start of the current buffer).
+ */
+static ALdouble GetSourceSecOffset(ALsource *Source)
+{
+    const ALbufferlistitem *BufferList;
+    const ALbuffer *Buffer = NULL;
+    ALuint64 readPos;
+    ALuint i;
+
+    BufferList = Source->queue;
+    while(BufferList)
+    {
+        if(BufferList->buffer)
+        {
+            Buffer = BufferList->buffer;
+            break;
+        }
+        BufferList = BufferList->next;
+    }
+
+    if((Source->state != AL_PLAYING && Source->state != AL_PAUSED) || !Buffer)
+        return 0.0;
+
+    /* NOTE: This is the offset into the *current* buffer, so add the length of
+     * any played buffers */
+    readPos  = (ALuint64)Source->position << FRACTIONBITS;
+    readPos |= (ALuint64)Source->position_fraction;
+    BufferList = Source->queue;
+    for(i = 0;i < Source->BuffersPlayed && BufferList;i++)
+    {
+        if(BufferList->buffer)
+            readPos += (ALuint64)BufferList->buffer->SampleLen << FRACTIONBITS;
+        BufferList = BufferList->next;
+    }
+
+    return (ALdouble)readPos / (ALdouble)FRACTIONONE / (ALdouble)Buffer->Frequency;
 }
 
 /* GetSourceOffsets

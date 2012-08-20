@@ -1618,6 +1618,8 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
             case AL_DIRECT_CHANNELS_SOFT:
             case AL_DISTANCE_MODEL:
 
+            case AL_SAMPLE_RW_OFFSETS_SOFT:
+            case AL_BYTE_RW_OFFSETS_SOFT:
             case AL_SAMPLE_OFFSET_LATENCY_SOFT:
 
             case AL_POSITION:

@@ -1358,7 +1358,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
 }
 
 
-AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT *values)
+AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT *value)
 {
     ALCcontext *Context;
     ALsource   *Source;
@@ -1371,7 +1371,7 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
     {
         if((Source=LookupSource(Context, source)) == NULL)
             al_throwerr(Context, AL_INVALID_NAME);
-        CHECK_VALUE(Context, values);
+        CHECK_VALUE(Context, value);
         switch(param)
         {
             case AL_MAX_DISTANCE:
@@ -1395,7 +1395,7 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
             case AL_DOPPLER_FACTOR:
             case AL_DIRECT_CHANNELS_SOFT:
             case AL_DISTANCE_MODEL:
-                if((err=GetSourcei64v(Source, Context, param, values)) != AL_NO_ERROR)
+                if((err=GetSourcei64v(Source, Context, param, value)) != AL_NO_ERROR)
                     al_throwerr(Context, err);
                 break;
 

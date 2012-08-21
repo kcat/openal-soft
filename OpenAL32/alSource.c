@@ -48,16 +48,16 @@ const ALsizei ResamplerPrePadding[ResamplerMax] = {
 
 
 static ALvoid InitSourceParams(ALsource *Source);
-static ALint64 GetSourceOffset(ALsource *Source);
-static ALdouble GetSourceSecOffset(ALsource *Source);
-static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offsets, ALdouble updateLen);
+static ALint64 GetSourceOffset(const ALsource *Source);
+static ALdouble GetSourceSecOffset(const ALsource *Source);
+static ALvoid GetSourceOffsets(const ALsource *Source, ALenum name, ALdouble *offsets, ALdouble updateLen);
 static ALint GetSampleOffset(ALsource *Source);
 
-static ALenum GetSourcedv(ALsource *Source, ALCcontext *Context, ALenum name, ALdouble *values);
-static ALenum GetSourceiv(ALsource *Source, ALCcontext *Context, ALenum name, ALint *values);
-static ALenum GetSourcei64v(ALsource *Source, ALCcontext *Context, ALenum name, ALint64 *values);
+static ALenum GetSourcedv(const ALsource *Source, ALCcontext *Context, ALenum name, ALdouble *values);
+static ALenum GetSourceiv(const ALsource *Source, ALCcontext *Context, ALenum name, ALint *values);
+static ALenum GetSourcei64v(const ALsource *Source, ALCcontext *Context, ALenum name, ALint64 *values);
 
-static ALenum GetSourcedv(ALsource *Source, ALCcontext *Context, ALenum name, ALdouble *values)
+static ALenum GetSourcedv(const ALsource *Source, ALCcontext *Context, ALenum name, ALdouble *values)
 {
     ALdouble offsets[2];
     ALdouble updateLen;
@@ -166,7 +166,7 @@ static ALenum GetSourcedv(ALsource *Source, ALCcontext *Context, ALenum name, AL
     return AL_NO_ERROR;
 }
 
-static ALenum GetSourceiv(ALsource *Source, ALCcontext *Context, ALenum name, ALint *values)
+static ALenum GetSourceiv(const ALsource *Source, ALCcontext *Context, ALenum name, ALint *values)
 {
     ALbufferlistitem *BufferList;
     ALdouble dvals[3];
@@ -283,7 +283,7 @@ static ALenum GetSourceiv(ALsource *Source, ALCcontext *Context, ALenum name, AL
     return AL_NO_ERROR;
 }
 
-static ALenum GetSourcei64v(ALsource *Source, ALCcontext *Context, ALenum name, ALint64 *values)
+static ALenum GetSourcei64v(const ALsource *Source, ALCcontext *Context, ALenum name, ALint64 *values)
 {
     ALdouble dvals[3];
     ALint    ivals[3];
@@ -2169,7 +2169,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
  * samples. The offset is relative to the start of the queue (not the start of
  * the current buffer).
  */
-static ALint64 GetSourceOffset(ALsource *Source)
+static ALint64 GetSourceOffset(const ALsource *Source)
 {
     const ALbufferlistitem *BufferList;
     ALuint64 readPos;
@@ -2198,7 +2198,7 @@ static ALint64 GetSourceOffset(ALsource *Source)
  * Gets the current read offset for the given Source, in seconds. The offset is
  * relative to the start of the queue (not the start of the current buffer).
  */
-static ALdouble GetSourceSecOffset(ALsource *Source)
+static ALdouble GetSourceSecOffset(const ALsource *Source)
 {
     const ALbufferlistitem *BufferList;
     const ALbuffer *Buffer = NULL;
@@ -2240,7 +2240,7 @@ static ALdouble GetSourceSecOffset(ALsource *Source)
  * appropriate format (Bytes, Samples or Seconds). The offsets are relative to
  * the start of the queue (not the start of the current buffer).
  */
-static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, ALdouble updateLen)
+static ALvoid GetSourceOffsets(const ALsource *Source, ALenum name, ALdouble *offset, ALdouble updateLen)
 {
     const ALbufferlistitem *BufferList;
     const ALbuffer         *Buffer = NULL;

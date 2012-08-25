@@ -150,8 +150,10 @@ void *al_calloc(size_t alignment, size_t size)
 
 void al_free(void *ptr)
 {
-#if defined(HAVE_ALIGNED_ALLOC) || defined(HAVE_POSIX_MEMALIGN) ||  defined(HAVE__ALIGNED_MALLOC)
+#if defined(HAVE_ALIGNED_ALLOC) || defined(HAVE_POSIX_MEMALIGN)
     free(ptr);
+#elif defined(HAVE__ALIGNED_MALLOC)
+    _aligned_free(ptr);
 #else
     if(ptr != NULL)
     {

@@ -1259,7 +1259,7 @@ static ALint64 alsa_get_latency(ALCdevice *device)
 
     if((err=snd_pcm_delay(data->pcmHandle, &delay)) < 0)
     {
-        ERR("Failed to get latency!\n");
+        ERR("Failed to get pcm delay: %s\n", snd_strerror(err));
         return 0;
     }
     return maxi64((ALint64)delay*1000000000/device->Frequency, 0);

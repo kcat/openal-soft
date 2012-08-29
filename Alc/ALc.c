@@ -1744,7 +1744,7 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     DeleteCriticalSection(&device->Mutex);
 
-    free(device);
+    al_free(device);
 }
 
 
@@ -2640,7 +2640,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = NULL;
 
-    device = calloc(1, sizeof(ALCdevice)+sizeof(ALeffectslot));
+    device = al_calloc(16, sizeof(ALCdevice)+sizeof(ALeffectslot));
     if(!device)
     {
         alcSetError(NULL, ALC_OUT_OF_MEMORY);
@@ -2816,7 +2816,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     {
         UnlockLists();
         DeleteCriticalSection(&device->Mutex);
-        free(device);
+        al_free(device);
         alcSetError(NULL, err);
         return NULL;
     }
@@ -2910,7 +2910,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = NULL;
 
-    device = calloc(1, sizeof(ALCdevice));
+    device = al_calloc(16, sizeof(ALCdevice));
     if(!device)
     {
         alcSetError(NULL, ALC_OUT_OF_MEMORY);
@@ -2937,7 +2937,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     if(DecomposeDevFormat(format, &device->FmtChans, &device->FmtType) == AL_FALSE)
     {
         DeleteCriticalSection(&device->Mutex);
-        free(device);
+        al_free(device);
         alcSetError(NULL, ALC_INVALID_ENUM);
         return NULL;
     }
@@ -2950,7 +2950,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     {
         UnlockLists();
         DeleteCriticalSection(&device->Mutex);
-        free(device);
+        al_free(device);
         alcSetError(NULL, err);
         return NULL;
     }
@@ -3065,7 +3065,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         return NULL;
     }
 
-    device = calloc(1, sizeof(ALCdevice));
+    device = al_calloc(16, sizeof(ALCdevice));
     if(!device)
     {
         alcSetError(NULL, ALC_OUT_OF_MEMORY);

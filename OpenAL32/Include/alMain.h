@@ -611,17 +611,17 @@ struct ALCdevice_struct
     // Device flags
     ALuint       Flags;
 
-    // Dry path buffer mix
-    ALfloat DryBuffer[BUFFERSIZE][MaxChannels];
-
     enum Channel DevChannels[MaxChannels];
 
     enum Channel Speaker2Chan[MaxChannels];
     ALfloat SpeakerAngle[MaxChannels];
     ALuint  NumChan;
 
-    ALfloat ClickRemoval[MaxChannels];
-    ALfloat PendingClicks[MaxChannels];
+    // Dry path buffer mix
+    ALIGN(16) ALfloat DryBuffer[BUFFERSIZE][MaxChannels];
+
+    ALIGN(16) ALfloat ClickRemoval[MaxChannels];
+    ALIGN(16) ALfloat PendingClicks[MaxChannels];
 
     /* Default effect slot */
     struct ALeffectslot *DefaultSlot;

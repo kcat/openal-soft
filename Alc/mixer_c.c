@@ -45,13 +45,13 @@ static __inline void ApplyValue(ALfloat *RESTRICT Output, ALfloat value, const A
 
 
 #define SUFFIX C
-#define SAMPLER point32
+#define Sampler point32
 #include "mixer_inc.c"
-#undef SAMPLER
-#define SAMPLER lerp32
+#undef Sampler
+#define Sampler lerp32
 #include "mixer_inc.c"
-#undef SAMPLER
-#define SAMPLER cubic32
+#undef Sampler
+#define Sampler cubic32
 #include "mixer_inc.c"
-#undef SAMPLER
+#undef Sampler
 #undef SUFFIX

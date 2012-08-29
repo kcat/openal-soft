@@ -35,6 +35,15 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
     }
 }
 
+
+static __inline void ApplyValue(ALfloat *RESTRICT Output, ALfloat value, const ALfloat *DrySend)
+{
+    ALuint c;
+    for(c = 0;c < MaxChannels;c++)
+        Output[c] += value*DrySend[c];
+}
+
+
 #define SUFFIX C
 #define SAMPLER point32
 #include "mixer_inc.c"

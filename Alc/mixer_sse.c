@@ -61,6 +61,21 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
     }
 }
 
+
+static __inline void ApplyValue(ALfloat *RESTRICT Output, ALfloat value, const ALfloat *DrySend)
+{
+    const __m128 val4 = _mm_set1_ps(value);
+    ALuint c;
+    for(c = 0;c < MaxChannels;c += 4)
+    {
+        const __m128 gains = _mm_load_ps(&DrySend[c]);
+        __m128 out = _mm_load_ps(&Output[c]);
+        out = _mm_add_ps(out, _mm_mul_ps(val4, gains));
+        _mm_store_ps(&Output[c], out);
+    }
+}
+
+
 #define SUFFIX SSE
 #define SAMPLER point32
 #include "mixer_inc.c"

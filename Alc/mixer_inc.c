@@ -21,6 +21,17 @@
 #define MERGE4(a,b,c,d) REAL_MERGE4(a,b,c,d)
 
 
+static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                     ALfloat (*RESTRICT Coeffs)[2],
+                                     ALfloat (*RESTRICT CoeffStep)[2],
+                                     ALfloat left, ALfloat right);
+static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                 ALfloat (*RESTRICT Coeffs)[2],
+                                 ALfloat left, ALfloat right);
+static __inline void ApplyValue(ALfloat *RESTRICT Output, ALfloat value,
+                                const ALfloat *DrySend);
+
+
 void MERGE4(MixDirect_Hrtf_,SAMPLER,_,SUFFIX)(
   ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcfrac,
@@ -169,7 +180,7 @@ void MERGE4(MixDirect_,SAMPLER,_,SUFFIX)(
     const ALuint NumChannels = Source->NumChannels;
     ALfloat (*RESTRICT DryBuffer)[MaxChannels];
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
-    ALfloat DrySend[MaxChannels];
+    ALIGN(16) ALfloat DrySend[MaxChannels];
     FILTER *DryFilter;
     ALuint pos, frac;
     ALuint BufferIdx;
@@ -197,16 +208,14 @@ void MERGE4(MixDirect_,SAMPLER,_,SUFFIX)(
             value = SAMPLER(data + pos*NumChannels + i, NumChannels, frac);
 
             value = lpFilter2PC(DryFilter, i, value);
-            for(c = 0;c < MaxChannels;c++)
-                ClickRemoval[c] -= value*DrySend[c];
+            ApplyValue(ClickRemoval, -value, DrySend);
         }
         for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)
         {
             value = SAMPLER(data + pos*NumChannels + i, NumChannels, frac);
 
             value = lpFilter2P(DryFilter, i, value);
-            for(c = 0;c < MaxChannels;c++)
-                DryBuffer[OutPos][c] += value*DrySend[c];
+            ApplyValue(DryBuffer[OutPos], value, DrySend);
 
             frac += increment;
             pos  += frac>>FRACTIONBITS;
@@ -218,8 +227,7 @@ void MERGE4(MixDirect_,SAMPLER,_,SUFFIX)(
             value = SAMPLER(data + pos*NumChannels + i, NumChannels, frac);
 
             value = lpFilter2PC(DryFilter, i, value);
-            for(c = 0;c < MaxChannels;c++)
-                PendingClicks[c] += value*DrySend[c];
+            ApplyValue(PendingClicks, value, DrySend);
         }
         OutPos -= BufferSize;
     }

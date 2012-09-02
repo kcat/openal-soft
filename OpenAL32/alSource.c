@@ -188,7 +188,7 @@ static ALenum SetSourcefv(ALsource *Source, ALCcontext *Context, ALenum name, co
                 if(ApplyOffset(Source) == AL_FALSE)
                 {
                     UnlockContext(Context);
-                    return AL_INVALID_VALUE;
+                    RETERR(AL_INVALID_VALUE);
                 }
             }
             UnlockContext(Context);

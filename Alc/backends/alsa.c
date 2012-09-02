@@ -672,7 +672,7 @@ static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_OUT_OF_MEMORY;
     }
 
-    // Free alsa's global config tree. Otherwise valgrind reports a ton of leaks.
+    /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
 
     device->DeviceName = strdup(deviceName);
@@ -954,6 +954,9 @@ static ALCenum alsa_open_capture(ALCdevice *Device, const ALCchar *deviceName)
         free(data);
         return ALC_INVALID_VALUE;
     }
+
+    /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
+    snd_config_update_free_global();
 
     format = -1;
     switch(Device->FmtType)

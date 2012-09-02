@@ -106,6 +106,7 @@ MAKE_FUNC(snd_ctl_card_info);
 MAKE_FUNC(snd_ctl_card_info_get_name);
 MAKE_FUNC(snd_ctl_card_info_get_id);
 MAKE_FUNC(snd_card_next);
+MAKE_FUNC(snd_config_update_free_global);
 #undef MAKE_FUNC
 
 #define snd_strerror psnd_strerror
@@ -179,6 +180,7 @@ MAKE_FUNC(snd_card_next);
 #define snd_ctl_card_info_get_name psnd_ctl_card_info_get_name
 #define snd_ctl_card_info_get_id psnd_ctl_card_info_get_id
 #define snd_card_next psnd_card_next
+#define snd_config_update_free_global psnd_config_update_free_global
 #endif
 
 
@@ -270,6 +272,7 @@ static ALCboolean alsa_load(void)
         LOAD_FUNC(snd_ctl_card_info_get_name);
         LOAD_FUNC(snd_ctl_card_info_get_id);
         LOAD_FUNC(snd_card_next);
+        LOAD_FUNC(snd_config_update_free_global);
 #undef LOAD_FUNC
     }
 #endif
@@ -668,6 +671,9 @@ static ALCenum alsa_open_playback(ALCdevice *device, const ALCchar *deviceName)
         ERR("Could not open playback device '%s': %s\n", driver, snd_strerror(err));
         return ALC_OUT_OF_MEMORY;
     }
+
+    // Free alsa's global config tree. Otherwise valgrind reports a ton of leaks.
+    snd_config_update_free_global();
 
     device->DeviceName = strdup(deviceName);
     device->ExtraData = data;

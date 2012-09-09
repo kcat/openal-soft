@@ -424,6 +424,11 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         BufferSize = (ALuint)((DataSize64+(increment-1)) / increment);
         BufferSize = minu(BufferSize, (SamplesToDo-OutPos));
 
+        /* Some mixers like having a multiple of 4, so try to give that unless
+         * this is the last update. */
+        if(OutPos+BufferSize < SamplesToDo)
+            BufferSize &= ~3;
+
         SrcData += BufferPrePadding*NumChannels;
         for(i = 0;i < NumChannels;i++)
         {

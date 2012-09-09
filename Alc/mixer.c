@@ -226,7 +226,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     do {
         const ALuint BufferPrePadding = ResamplerPrePadding[Resampler];
         const ALuint BufferPadding = ResamplerPadding[Resampler];
-        ALfloat StackData[STACK_DATA_SIZE/sizeof(ALfloat)];
+        ALfloat StackData[BUFFERSIZE];
         ALfloat *SrcData = StackData;
         ALuint SrcDataSize = 0;
         ALuint BufferSize;
@@ -239,7 +239,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         DataSize64 += BufferPadding+BufferPrePadding;
         DataSize64 *= NumChannels;
 
-        BufferSize  = (ALuint)mini64(DataSize64, STACK_DATA_SIZE/sizeof(ALfloat));
+        BufferSize  = (ALuint)mini64(DataSize64, BUFFERSIZE);
         BufferSize /= NumChannels;
 
         if(Source->SourceType == AL_STATIC)

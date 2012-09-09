@@ -154,24 +154,24 @@ enum DistanceModel {
     DefaultDistanceModel = InverseDistanceClamped
 };
 
-#define BUFFERSIZE 4096
 
-#define FRACTIONBITS (14)
-#define FRACTIONONE  (1<<FRACTIONBITS)
-#define FRACTIONMASK (FRACTIONONE-1)
-
-/* Size for temporary stack storage of buffer data. Must be a multiple of the
- * size of ALfloat, ie, 4. Larger values need more stack, while smaller values
- * may need more iterations. The value needs to be a sensible size, however, as
- * it constrains the max stepping value used for mixing.
+/* Size for temporary storage of buffer data, in ALfloats. Larger values need
+ * more stack, while smaller values may need more iterations. The value needs
+ * to be a sensible size, however, as it constrains the max stepping value used
+ * for mixing, as well as the maximum number of samples per mixing iteration.
  * The mixer requires being able to do two samplings per mixing loop. A 16KB
  * buffer can hold 512 sample frames for a 7.1 float buffer. With the cubic
  * resampler (which requires 3 padding sample frames), this limits the maximum
  * step to about 508. This means that buffer_freq*source_pitch cannot exceed
- * device_freq*508 for an 8-channel 32-bit buffer. */
-#ifndef STACK_DATA_SIZE
-#define STACK_DATA_SIZE  16384
+ * device_freq*508 for an 8-channel 32-bit buffer.
+ */
+#ifndef BUFFERSIZE
+#define BUFFERSIZE 4096
 #endif
+
+#define FRACTIONBITS (14)
+#define FRACTIONONE  (1<<FRACTIONBITS)
+#define FRACTIONMASK (FRACTIONONE-1)
 
 
 static __inline ALfloat minf(ALfloat a, ALfloat b)

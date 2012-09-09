@@ -65,20 +65,6 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
 }
 
 
-static __inline void ApplyValue(ALfloat *RESTRICT Output, ALfloat value, const ALfloat *DrySend)
-{
-    const __m128 val4 = _mm_set1_ps(value);
-    ALuint c;
-    for(c = 0;c < MaxChannels;c += 4)
-    {
-        const __m128 gains = _mm_load_ps(&DrySend[c]);
-        __m128 out = _mm_load_ps(&Output[c]);
-        out = _mm_add_ps(out, _mm_mul_ps(val4, gains));
-        _mm_store_ps(&Output[c], out);
-    }
-}
-
-
 void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
@@ -86,9 +72,9 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
     ALfloat (*RESTRICT DryBuffer)[MaxChannels];
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
     ALIGN(16) ALfloat DrySend[MaxChannels];
+    ALIGN(16) ALfloat value[4];
     FILTER *DryFilter;
     ALuint pos;
-    ALfloat value;
     ALuint c;
     (void)Source;
 
@@ -103,19 +89,54 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
     pos = 0;
     if(OutPos == 0)
     {
-        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
-        ApplyValue(ClickRemoval, -value, DrySend);
+        value[0] = lpFilter2PC(DryFilter, srcchan, data[pos]);
+        for(c = 0;c < MaxChannels;c++)
+            ClickRemoval[c] -= value[0]*DrySend[c];
     }
-    for(pos = 0;pos < BufferSize;pos++)
+    for(pos = 0;pos < BufferSize-3;pos += 4)
     {
-        value = lpFilter2P(DryFilter, srcchan, data[pos]);
-        ApplyValue(DryBuffer[OutPos], value, DrySend);
+        __m128 val4;
+
+        value[0] = lpFilter2P(DryFilter, srcchan, data[pos  ]);
+        value[1] = lpFilter2P(DryFilter, srcchan, data[pos+1]);
+        value[2] = lpFilter2P(DryFilter, srcchan, data[pos+2]);
+        value[3] = lpFilter2P(DryFilter, srcchan, data[pos+3]);
+        val4 = _mm_load_ps(value);
+
+        for(c = 0;c < MaxChannels;c++)
+        {
+            const __m128 gain = _mm_set1_ps(DrySend[c]);
+            __m128 dry4;
+
+            value[0] = DryBuffer[OutPos  ][c];
+            value[1] = DryBuffer[OutPos+1][c];
+            value[2] = DryBuffer[OutPos+2][c];
+            value[3] = DryBuffer[OutPos+3][c];
+            dry4 = _mm_load_ps(value);
+
+            dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain));
+
+            _mm_store_ps(value, dry4);
+            DryBuffer[OutPos  ][c] = value[0];
+            DryBuffer[OutPos+1][c] = value[1];
+            DryBuffer[OutPos+2][c] = value[2];
+            DryBuffer[OutPos+3][c] = value[3];
+        }
+
+        OutPos += 4;
+    }
+    for(;pos < BufferSize;pos++)
+    {
+        value[0] = lpFilter2P(DryFilter, srcchan, data[pos]);
+        for(c = 0;c < MaxChannels;c++)
+            DryBuffer[OutPos][c] += value[0]*DrySend[c];
         OutPos++;
     }
     if(OutPos == SamplesToDo)
     {
-        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
-        ApplyValue(PendingClicks, value, DrySend);
+        value[0] = lpFilter2PC(DryFilter, srcchan, data[pos]);
+        for(c = 0;c < MaxChannels;c++)
+            PendingClicks[c] += value[0]*DrySend[c];
     }
 }
 #define NO_MIXDIRECT

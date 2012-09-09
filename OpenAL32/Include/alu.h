@@ -128,17 +128,16 @@ enum Resampler {
 
 enum Channel {
     FrontLeft = 0,
-    FrontRight,  /* 1 */
-    FrontCenter, /* 2 */
-    LFE,         /* 3 */
-    BackLeft,    /* 4 */
-    BackRight,   /* 5 */
-    BackCenter,  /* 6 */
-    SideLeft,    /* 7 */
-    SideRight,   /* 8 */
+    FrontRight,
+    FrontCenter,
+    LFE,
+    BackLeft,
+    BackRight,
+    BackCenter,
+    SideLeft,
+    SideRight,
 
-    /* Must be a multiple of 4 */
-    MaxChannels = 12,
+    MaxChannels,
 };
 
 enum DistanceModel {

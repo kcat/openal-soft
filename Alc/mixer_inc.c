@@ -30,10 +30,9 @@ static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2
 static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                  ALfloat (*RESTRICT Coeffs)[2],
                                  ALfloat left, ALfloat right);
-static __inline void ApplyValue(ALfloat *RESTRICT Output, ALfloat value,
-                                const ALfloat *DrySend);
 
 
+#ifndef NO_MIXDIRECT_HRTF
 void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
@@ -149,8 +148,9 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
                                      Coeffs[0][1] * right;
     }
 }
+#endif
 
-
+#ifndef NO_MIXDIRECT
 void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
@@ -176,22 +176,26 @@ void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
     if(OutPos == 0)
     {
         value = lpFilter2PC(DryFilter, srcchan, data[pos]);
-        ApplyValue(ClickRemoval, -value, DrySend);
+        for(c = 0;c < MaxChannels;c++)
+            ClickRemoval[c] -= value*DrySend[c];
     }
     for(pos = 0;pos < BufferSize;pos++)
     {
         value = lpFilter2P(DryFilter, srcchan, data[pos]);
-        ApplyValue(DryBuffer[OutPos], value, DrySend);
+        for(c = 0;c < MaxChannels;c++)
+            DryBuffer[OutPos][c] += value*DrySend[c];
         OutPos++;
     }
     if(OutPos == SamplesToDo)
     {
         value = lpFilter2PC(DryFilter, srcchan, data[pos]);
-        ApplyValue(PendingClicks, value, DrySend);
+        for(c = 0;c < MaxChannels;c++)
+            PendingClicks[c] += value*DrySend[c];
     }
 }
+#endif
 
-
+#ifndef NO_MIXSEND
 void MixSend(SendParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
@@ -229,6 +233,8 @@ void MixSend(SendParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
         WetPendingClicks[0] += value * WetSend;
     }
 }
+#endif
+
 
 #undef MixSend
 #undef MixDirect

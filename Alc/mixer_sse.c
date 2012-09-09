@@ -9,6 +9,9 @@
 #include "alMain.h"
 #include "alu.h"
 
+#include "alSource.h"
+#include "mixer_defs.h"
+
 
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                      ALfloat (*RESTRICT Coeffs)[2],
@@ -74,6 +77,48 @@ static __inline void ApplyValue(ALfloat *RESTRICT Output, ALfloat value, const A
         _mm_store_ps(&Output[c], out);
     }
 }
+
+
+void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
+  const ALfloat *RESTRICT data, ALuint srcchan,
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+{
+    ALfloat (*RESTRICT DryBuffer)[MaxChannels];
+    ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
+    ALIGN(16) ALfloat DrySend[MaxChannels];
+    FILTER *DryFilter;
+    ALuint pos;
+    ALfloat value;
+    ALuint c;
+    (void)Source;
+
+    DryBuffer = Device->DryBuffer;
+    ClickRemoval = Device->ClickRemoval;
+    PendingClicks = Device->PendingClicks;
+    DryFilter = &params->iirFilter;
+
+    for(c = 0;c < MaxChannels;c++)
+        DrySend[c] = params->Gains[srcchan][c];
+
+    pos = 0;
+    if(OutPos == 0)
+    {
+        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
+        ApplyValue(ClickRemoval, -value, DrySend);
+    }
+    for(pos = 0;pos < BufferSize;pos++)
+    {
+        value = lpFilter2P(DryFilter, srcchan, data[pos]);
+        ApplyValue(DryBuffer[OutPos], value, DrySend);
+        OutPos++;
+    }
+    if(OutPos == SamplesToDo)
+    {
+        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
+        ApplyValue(PendingClicks, value, DrySend);
+    }
+}
+#define NO_MIXDIRECT
 
 
 #define SUFFIX SSE

@@ -166,8 +166,6 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
             }
-            if(ALSource->Params.Step == FRACTIONONE)
-                Resampler = PointResampler;
 
             Channels = ALBuffer->FmtChannels;
             break;
@@ -662,8 +660,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
             }
-            if(ALSource->Params.Step == FRACTIONONE)
-                Resampler = PointResampler;
 
             break;
         }

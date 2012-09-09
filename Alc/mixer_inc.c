@@ -192,8 +192,7 @@ void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
 }
 
 
-void MixSend(ALsource *Source, ALuint sendidx, SendParams *params,
-  const ALfloat *RESTRICT data, ALuint srcchan,
+void MixSend(SendParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALeffectslot *Slot;
@@ -205,7 +204,7 @@ void MixSend(ALsource *Source, ALuint sendidx, SendParams *params,
     ALuint pos;
     ALfloat value;
 
-    Slot = Source->Params.Slot[sendidx];
+    Slot = params->Slot;
     WetBuffer = Slot->WetBuffer;
     WetClickRemoval = Slot->ClickRemoval;
     WetPendingClicks = Slot->PendingClicks;

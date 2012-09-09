@@ -437,11 +437,10 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                                   BufferSize);
             for(j = 0;j < Device->NumAuxSends;j++)
             {
-                if(!Source->Params.Slot[j])
+                if(!Source->Params.Send[j].Slot)
                     continue;
-                Source->Params.WetMix(Source, j, &Source->Params.Send[j],
-                                      ResampledData, i, OutPos, SamplesToDo,
-                                      BufferSize);
+                Source->Params.WetMix(&Source->Params.Send[j], ResampledData, i,
+                                      OutPos, SamplesToDo, BufferSize);
             }
         }
         for(i = 0;i < BufferSize;i++)

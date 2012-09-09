@@ -303,7 +303,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             Slot = Device->DefaultSlot;
         if(Slot && Slot->effect.type == AL_EFFECT_NULL)
             Slot = NULL;
-        ALSource->Params.Slot[i] = Slot;
+        ALSource->Params.Send[i].Slot = Slot;
         ALSource->Params.Send[i].Gain = WetGain[i];
     }
 
@@ -440,7 +440,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             RoomAirAbsorption[i] = AIRABSORBGAINHF;
         }
 
-        ALSource->Params.Slot[i] = Slot;
+        ALSource->Params.Send[i].Slot = Slot;
     }
 
     /* Transform source to listener space (convert to head relative) */

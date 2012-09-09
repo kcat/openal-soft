@@ -59,6 +59,8 @@ typedef struct DirectParams {
 } DirectParams;
 
 typedef struct SendParams {
+    struct ALeffectslot *Slot;
+
     /* Gain control, which applies to all input channels to a single (mono)
      * output buffer. */
     ALfloat Gain;
@@ -154,7 +156,6 @@ typedef struct ALsource
 
         DirectParams Direct;
 
-        struct ALeffectslot *Slot[MAX_SENDS];
         SendParams Send[MAX_SENDS];
     } Params;
     /** Source needs to update its mixing parameters. */

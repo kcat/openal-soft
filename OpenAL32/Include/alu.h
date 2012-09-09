@@ -113,8 +113,7 @@ typedef ALvoid (*DryMixerFunc)(struct ALsource *self, ALCdevice *Device,
                                const ALfloat *RESTRICT data, ALuint srcchan,
                                ALuint OutPos, ALuint SamplesToDo,
                                ALuint BufferSize);
-typedef ALvoid (*WetMixerFunc)(struct ALsource *self, ALuint sendidx,
-                               struct SendParams *params,
+typedef ALvoid (*WetMixerFunc)(struct SendParams *params,
                                const ALfloat *RESTRICT data, ALuint srcchan,
                                ALuint OutPos, ALuint SamplesToDo,
                                ALuint BufferSize);

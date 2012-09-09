@@ -39,151 +39,46 @@
 #include "mixer_defs.h"
 
 
-DryMixerFunc SelectDirectMixer(enum Resampler Resampler)
+DryMixerFunc SelectDirectMixer(void)
 {
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-    {
-        switch(Resampler)
-        {
-            case PointResampler:
-                return MixDirect_point32_SSE;
-            case LinearResampler:
-                return MixDirect_lerp32_SSE;
-            case CubicResampler:
-                return MixDirect_cubic32_SSE;
-            case ResamplerMax:
-                break;
-        }
-    }
+        return MixDirect_SSE;
 #endif
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-    {
-        switch(Resampler)
-        {
-            case PointResampler:
-                return MixDirect_point32_Neon;
-            case LinearResampler:
-                return MixDirect_lerp32_Neon;
-            case CubicResampler:
-                return MixDirect_cubic32_Neon;
-            case ResamplerMax:
-                break;
-        }
-    }
+        return MixDirect_Neon;
 #endif
 
-    switch(Resampler)
-    {
-        case PointResampler:
-            return MixDirect_point32_C;
-        case LinearResampler:
-            return MixDirect_lerp32_C;
-        case CubicResampler:
-            return MixDirect_cubic32_C;
-        case ResamplerMax:
-            break;
-    }
-    return NULL;
+    return MixDirect_C;
 }
 
-DryMixerFunc SelectHrtfMixer(enum Resampler Resampler)
+DryMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-    {
-        switch(Resampler)
-        {
-            case PointResampler:
-                return MixDirect_Hrtf_point32_SSE;
-            case LinearResampler:
-                return MixDirect_Hrtf_lerp32_SSE;
-            case CubicResampler:
-                return MixDirect_Hrtf_cubic32_SSE;
-            case ResamplerMax:
-                break;
-        }
-    }
+        return MixDirect_Hrtf_SSE;
 #endif
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-    {
-        switch(Resampler)
-        {
-            case PointResampler:
-                return MixDirect_Hrtf_point32_Neon;
-            case LinearResampler:
-                return MixDirect_Hrtf_lerp32_Neon;
-            case CubicResampler:
-                return MixDirect_Hrtf_cubic32_Neon;
-            case ResamplerMax:
-                break;
-        }
-    }
+        return MixDirect_Hrtf_Neon;
 #endif
 
-    switch(Resampler)
-    {
-        case PointResampler:
-            return MixDirect_Hrtf_point32_C;
-        case LinearResampler:
-            return MixDirect_Hrtf_lerp32_C;
-        case CubicResampler:
-            return MixDirect_Hrtf_cubic32_C;
-        case ResamplerMax:
-            break;
-    }
-    return NULL;
+    return MixDirect_Hrtf_C;
 }
 
-WetMixerFunc SelectSendMixer(enum Resampler Resampler)
+WetMixerFunc SelectSendMixer(void)
 {
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-    {
-        switch(Resampler)
-        {
-            case PointResampler:
-                return MixSend_point32_SSE;
-            case LinearResampler:
-                return MixSend_lerp32_SSE;
-            case CubicResampler:
-                return MixSend_cubic32_SSE;
-            case ResamplerMax:
-                break;
-        }
-    }
+        return MixSend_SSE;
 #endif
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-    {
-        switch(Resampler)
-        {
-            case PointResampler:
-                return MixSend_point32_Neon;
-            case LinearResampler:
-                return MixSend_lerp32_Neon;
-            case CubicResampler:
-                return MixSend_cubic32_Neon;
-            case ResamplerMax:
-                break;
-        }
-    }
+        return MixSend_Neon;
 #endif
 
-    switch(Resampler)
-    {
-        case PointResampler:
-            return MixSend_point32_C;
-        case LinearResampler:
-            return MixSend_lerp32_C;
-        case CubicResampler:
-            return MixSend_cubic32_C;
-        case ResamplerMax:
-            break;
-    }
-    return NULL;
+    return MixSend_C;
 }
 
 
@@ -234,6 +129,68 @@ static void SilenceStack(ALfloat *dst, ALuint samples)
 }
 
 
+static __inline ALfloat point32(const ALfloat *vals, ALint step, ALint frac)
+{ return vals[0]; (void)step; (void)frac; }
+static __inline ALfloat lerp32(const ALfloat *vals, ALint step, ALint frac)
+{ return lerp(vals[0], vals[step], frac * (1.0f/FRACTIONONE)); }
+static __inline ALfloat cubic32(const ALfloat *vals, ALint step, ALint frac)
+{ return cubic(vals[-step], vals[0], vals[step], vals[step+step],
+               frac * (1.0f/FRACTIONONE)); }
+
+#define DECL_TEMPLATE(Sampler)                                                \
+static void Resample_##Sampler(const ALfloat *data, ALuint frac,              \
+  ALuint increment, ALuint NumChannels, ALfloat *RESTRICT OutBuffer,          \
+  ALuint BufferSize)                                                          \
+{                                                                             \
+    ALuint pos = 0;                                                           \
+    ALfloat value;                                                            \
+    ALuint i;                                                                 \
+                                                                              \
+    for(i = 0;i < BufferSize+1;i++)                                           \
+    {                                                                         \
+        value = Sampler(data + pos*NumChannels, NumChannels, frac);           \
+        OutBuffer[i] = value;                                                 \
+                                                                              \
+        frac += increment;                                                    \
+        pos  += frac>>FRACTIONBITS;                                           \
+        frac &= FRACTIONMASK;                                                 \
+    }                                                                         \
+}
+
+DECL_TEMPLATE(point32)
+DECL_TEMPLATE(lerp32)
+DECL_TEMPLATE(cubic32)
+
+#undef DECL_TEMPLATE
+
+static void Resample(enum Resampler Resampler, const ALfloat *data, ALuint frac,
+                     ALuint increment, ALuint NumChannels,
+                     ALfloat *RESTRICT OutBuffer, ALuint BufferSize)
+{
+    if(increment == FRACTIONONE)
+        goto do_point;
+    switch(Resampler)
+    {
+        case PointResampler:
+        do_point:
+            Resample_point32(data, frac, increment, NumChannels,
+                             OutBuffer, BufferSize);
+            break;
+        case LinearResampler:
+            Resample_lerp32(data, frac, increment, NumChannels,
+                            OutBuffer, BufferSize);
+            break;
+        case CubicResampler:
+            Resample_cubic32(data, frac, increment, NumChannels,
+                             OutBuffer, BufferSize);
+            break;
+        case ResamplerMax:
+            /* Shouldn't happen */
+            break;
+    }
+}
+
+
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
@@ -247,7 +204,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     ALuint NumChannels;
     ALuint FrameSize;
     ALint64 DataSize64;
-    ALuint i;
+    ALuint i, j;
 
     /* Get source info */
     State         = Source->state;
@@ -468,16 +425,24 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         BufferSize = minu(BufferSize, (SamplesToDo-OutPos));
 
         SrcData += BufferPrePadding*NumChannels;
-        Source->Params.DryMix(Source, Device, &Source->Params.Direct,
-                              SrcData, DataPosFrac,
-                              OutPos, SamplesToDo, BufferSize);
-        for(i = 0;i < Device->NumAuxSends;i++)
+        for(i = 0;i < NumChannels;i++)
         {
-            if(!Source->Params.Slot[i])
-                continue;
-            Source->Params.WetMix(Source, i, &Source->Params.Send[i],
-                                  SrcData, DataPosFrac,
-                                  OutPos, SamplesToDo, BufferSize);
+            ALfloat ResampledData[BUFFERSIZE];
+
+            Resample(Resampler, SrcData+i, DataPosFrac, increment,
+                     NumChannels, ResampledData, BufferSize);
+
+            Source->Params.DryMix(Source, Device, &Source->Params.Direct,
+                                  ResampledData, i, OutPos, SamplesToDo,
+                                  BufferSize);
+            for(j = 0;j < Device->NumAuxSends;j++)
+            {
+                if(!Source->Params.Slot[j])
+                    continue;
+                Source->Params.WetMix(Source, j, &Source->Params.Send[j],
+                                      ResampledData, i, OutPos, SamplesToDo,
+                                      BufferSize);
+            }
         }
         for(i = 0;i < BufferSize;i++)
         {

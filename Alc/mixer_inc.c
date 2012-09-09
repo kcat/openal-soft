@@ -17,12 +17,11 @@
 
 #define REAL_MERGE2(a,b) a##b
 #define MERGE2(a,b) REAL_MERGE2(a,b)
-#define REAL_MERGE4(a,b,c,d) a##b##c##d
-#define MERGE4(a,b,c,d) REAL_MERGE4(a,b,c,d)
 
-#define MixDirect_Hrtf MERGE4(MixDirect_Hrtf_,Sampler,_,SUFFIX)
-#define MixDirect MERGE4(MixDirect_,Sampler,_,SUFFIX)
-#define MixSend MERGE4(MixSend_,Sampler,_,SUFFIX)
+#define MixDirect_Hrtf MERGE2(MixDirect_Hrtf_,SUFFIX)
+#define MixDirect MERGE2(MixDirect_,SUFFIX)
+#define MixSend MERGE2(MixSend_,SUFFIX)
+
 
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                      ALfloat (*RESTRICT Coeffs)[2],
@@ -33,226 +32,178 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                  ALfloat left, ALfloat right);
 static __inline void ApplyValue(ALfloat *RESTRICT Output, ALfloat value,
                                 const ALfloat *DrySend);
-static __inline ALfloat Sampler(const ALfloat *vals, ALint step, ALint frac);
+
 
 void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
-  const ALfloat *RESTRICT data, ALuint srcfrac,
+  const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    const ALuint NumChannels = Source->NumChannels;
     const ALint *RESTRICT DelayStep = params->Hrtf.DelayStep;
     ALfloat (*RESTRICT DryBuffer)[MaxChannels];
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
     ALfloat (*RESTRICT CoeffStep)[2] = params->Hrtf.CoeffStep;
-    ALuint pos, frac;
+    ALfloat (*RESTRICT TargetCoeffs)[2] = params->Hrtf.Coeffs[srcchan];
+    ALuint *RESTRICT TargetDelay = params->Hrtf.Delay[srcchan];
+    ALfloat *RESTRICT History = Source->Hrtf.History[srcchan];
+    ALfloat (*RESTRICT Values)[2] = Source->Hrtf.Values[srcchan];
+    ALint Counter = maxu(Source->Hrtf.Counter, OutPos) - OutPos;
+    ALuint Offset = Source->Hrtf.Offset + OutPos;
+    ALIGN(16) ALfloat Coeffs[HRIR_LENGTH][2];
+    ALuint Delay[2];
+    ALfloat left, right;
     FILTER *DryFilter;
-    ALuint BufferIdx;
-    ALuint increment;
     ALfloat value;
-    ALuint i,  c;
-
-    increment = Source->Params.Step;
+    ALuint pos;
+    ALuint c;
 
     DryBuffer = Device->DryBuffer;
     ClickRemoval = Device->ClickRemoval;
     PendingClicks = Device->PendingClicks;
     DryFilter = &params->iirFilter;
 
-    for(i = 0;i < NumChannels;i++)
+    pos = 0;
+    for(c = 0;c < HRIR_LENGTH;c++)
     {
-        ALfloat (*RESTRICT TargetCoeffs)[2] = params->Hrtf.Coeffs[i];
-        ALuint *RESTRICT TargetDelay = params->Hrtf.Delay[i];
-        ALfloat *RESTRICT History = Source->Hrtf.History[i];
-        ALfloat (*RESTRICT Values)[2] = Source->Hrtf.Values[i];
-        ALint Counter = maxu(Source->Hrtf.Counter, OutPos) - OutPos;
-        ALuint Offset = Source->Hrtf.Offset + OutPos;
-        ALIGN(16) ALfloat Coeffs[HRIR_LENGTH][2];
-        ALuint Delay[2];
-        ALfloat left, right;
+        Coeffs[c][0] = TargetCoeffs[c][0] - (CoeffStep[c][0]*Counter);
+        Coeffs[c][1] = TargetCoeffs[c][1] - (CoeffStep[c][1]*Counter);
+    }
 
-        pos = 0;
-        frac = srcfrac;
+    Delay[0] = TargetDelay[0] - (DelayStep[0]*Counter);
+    Delay[1] = TargetDelay[1] - (DelayStep[1]*Counter);
 
-        for(c = 0;c < HRIR_LENGTH;c++)
-        {
-            Coeffs[c][0] = TargetCoeffs[c][0] - (CoeffStep[c][0]*Counter);
-            Coeffs[c][1] = TargetCoeffs[c][1] - (CoeffStep[c][1]*Counter);
-        }
+    if(LIKELY(OutPos == 0))
+    {
+        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
 
-        Delay[0] = TargetDelay[0] - (DelayStep[0]*Counter);
-        Delay[1] = TargetDelay[1] - (DelayStep[1]*Counter);
+        History[Offset&SRC_HISTORY_MASK] = value;
+        left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
+                     History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
+                     (Delay[0]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
+        right = lerp(History[(Offset-(Delay[1]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
+                     History[(Offset-(Delay[1]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
+                     (Delay[1]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
 
-        if(LIKELY(OutPos == 0))
-        {
-            value = Sampler(data + pos*NumChannels + i, NumChannels, frac);
-            value = lpFilter2PC(DryFilter, i, value);
+        ClickRemoval[FrontLeft]  -= Values[(Offset+1)&HRIR_MASK][0] +
+                                    Coeffs[0][0] * left;
+        ClickRemoval[FrontRight] -= Values[(Offset+1)&HRIR_MASK][1] +
+                                    Coeffs[0][1] * right;
+    }
+    for(pos = 0;pos < BufferSize && Counter > 0;pos++)
+    {
+        value = lpFilter2P(DryFilter, srcchan, data[pos]);
 
-            History[Offset&SRC_HISTORY_MASK] = value;
-            left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
-                         History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
-                         (Delay[0]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
-            right = lerp(History[(Offset-(Delay[1]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
-                         History[(Offset-(Delay[1]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
-                         (Delay[1]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
+        History[Offset&SRC_HISTORY_MASK] = value;
+        left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
+                     History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
+                     (Delay[0]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
+        right = lerp(History[(Offset-(Delay[1]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
+                     History[(Offset-(Delay[1]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
+                     (Delay[1]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
 
-            ClickRemoval[FrontLeft]  -= Values[(Offset+1)&HRIR_MASK][0] +
-                                        Coeffs[0][0] * left;
-            ClickRemoval[FrontRight] -= Values[(Offset+1)&HRIR_MASK][1] +
-                                        Coeffs[0][1] * right;
-        }
-        for(BufferIdx = 0;BufferIdx < BufferSize && Counter > 0;BufferIdx++)
-        {
-            value = Sampler(data + pos*NumChannels + i, NumChannels, frac);
-            value = lpFilter2P(DryFilter, i, value);
+        Delay[0] += DelayStep[0];
+        Delay[1] += DelayStep[1];
 
-            History[Offset&SRC_HISTORY_MASK] = value;
-            left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
-                         History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
-                         (Delay[0]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
-            right = lerp(History[(Offset-(Delay[1]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
-                         History[(Offset-(Delay[1]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
-                         (Delay[1]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
+        Values[Offset&HRIR_MASK][0] = 0.0f;
+        Values[Offset&HRIR_MASK][1] = 0.0f;
+        Offset++;
 
-            Delay[0] += DelayStep[0];
-            Delay[1] += DelayStep[1];
+        ApplyCoeffsStep(Offset, Values, Coeffs, CoeffStep, left, right);
+        DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];
+        DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];
 
-            Values[Offset&HRIR_MASK][0] = 0.0f;
-            Values[Offset&HRIR_MASK][1] = 0.0f;
-            Offset++;
+        OutPos++;
+        Counter--;
+    }
 
-            ApplyCoeffsStep(Offset, Values, Coeffs, CoeffStep, left, right);
-            DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];
-            DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];
+    Delay[0] >>= HRTFDELAY_BITS;
+    Delay[1] >>= HRTFDELAY_BITS;
+    for(;pos < BufferSize;pos++)
+    {
+        value = lpFilter2P(DryFilter, srcchan, data[pos]);
 
-            frac += increment;
-            pos  += frac>>FRACTIONBITS;
-            frac &= FRACTIONMASK;
-            OutPos++;
-            Counter--;
-        }
+        History[Offset&SRC_HISTORY_MASK] = value;
+        left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];
+        right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];
 
-        Delay[0] >>= HRTFDELAY_BITS;
-        Delay[1] >>= HRTFDELAY_BITS;
-        for(;BufferIdx < BufferSize;BufferIdx++)
-        {
-            value = Sampler(data + pos*NumChannels + i, NumChannels, frac);
-            value = lpFilter2P(DryFilter, i, value);
+        Values[Offset&HRIR_MASK][0] = 0.0f;
+        Values[Offset&HRIR_MASK][1] = 0.0f;
+        Offset++;
 
-            History[Offset&SRC_HISTORY_MASK] = value;
-            left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];
-            right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];
+        ApplyCoeffs(Offset, Values, Coeffs, left, right);
+        DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];
+        DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];
 
-            Values[Offset&HRIR_MASK][0] = 0.0f;
-            Values[Offset&HRIR_MASK][1] = 0.0f;
-            Offset++;
+        OutPos++;
+    }
+    if(LIKELY(OutPos == SamplesToDo))
+    {
+        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
 
-            ApplyCoeffs(Offset, Values, Coeffs, left, right);
-            DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];
-            DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];
+        History[Offset&SRC_HISTORY_MASK] = value;
+        left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];
+        right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];
 
-            frac += increment;
-            pos  += frac>>FRACTIONBITS;
-            frac &= FRACTIONMASK;
-            OutPos++;
-        }
-        if(LIKELY(OutPos == SamplesToDo))
-        {
-            value = Sampler(data + pos*NumChannels + i, NumChannels, frac);
-            value = lpFilter2PC(DryFilter, i, value);
-
-            History[Offset&SRC_HISTORY_MASK] = value;
-            left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];
-            right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];
-
-            PendingClicks[FrontLeft]  += Values[(Offset+1)&HRIR_MASK][0] +
-                                         Coeffs[0][0] * left;
-            PendingClicks[FrontRight] += Values[(Offset+1)&HRIR_MASK][1] +
-                                         Coeffs[0][1] * right;
-        }
-        OutPos -= BufferSize;
+        PendingClicks[FrontLeft]  += Values[(Offset+1)&HRIR_MASK][0] +
+                                     Coeffs[0][0] * left;
+        PendingClicks[FrontRight] += Values[(Offset+1)&HRIR_MASK][1] +
+                                     Coeffs[0][1] * right;
     }
 }
 
 
 void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
-  const ALfloat *RESTRICT data, ALuint srcfrac,
+  const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    const ALuint NumChannels = Source->NumChannels;
     ALfloat (*RESTRICT DryBuffer)[MaxChannels];
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
     ALIGN(16) ALfloat DrySend[MaxChannels];
     FILTER *DryFilter;
-    ALuint pos, frac;
-    ALuint BufferIdx;
-    ALuint increment;
+    ALuint pos;
     ALfloat value;
-    ALuint i,  c;
-
-    increment = Source->Params.Step;
+    ALuint c;
+    (void)Source;
 
     DryBuffer = Device->DryBuffer;
     ClickRemoval = Device->ClickRemoval;
     PendingClicks = Device->PendingClicks;
     DryFilter = &params->iirFilter;
 
-    for(i = 0;i < NumChannels;i++)
+    for(c = 0;c < MaxChannels;c++)
+        DrySend[c] = params->Gains[srcchan][c];
+
+    pos = 0;
+    if(OutPos == 0)
     {
-        for(c = 0;c < MaxChannels;c++)
-            DrySend[c] = params->Gains[i][c];
-
-        pos = 0;
-        frac = srcfrac;
-
-        if(OutPos == 0)
-        {
-            value = Sampler(data + pos*NumChannels + i, NumChannels, frac);
-
-            value = lpFilter2PC(DryFilter, i, value);
-            ApplyValue(ClickRemoval, -value, DrySend);
-        }
-        for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)
-        {
-            value = Sampler(data + pos*NumChannels + i, NumChannels, frac);
-
-            value = lpFilter2P(DryFilter, i, value);
-            ApplyValue(DryBuffer[OutPos], value, DrySend);
-
-            frac += increment;
-            pos  += frac>>FRACTIONBITS;
-            frac &= FRACTIONMASK;
-            OutPos++;
-        }
-        if(OutPos == SamplesToDo)
-        {
-            value = Sampler(data + pos*NumChannels + i, NumChannels, frac);
-
-            value = lpFilter2PC(DryFilter, i, value);
-            ApplyValue(PendingClicks, value, DrySend);
-        }
-        OutPos -= BufferSize;
+        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
+        ApplyValue(ClickRemoval, -value, DrySend);
+    }
+    for(pos = 0;pos < BufferSize;pos++)
+    {
+        value = lpFilter2P(DryFilter, srcchan, data[pos]);
+        ApplyValue(DryBuffer[OutPos], value, DrySend);
+        OutPos++;
+    }
+    if(OutPos == SamplesToDo)
+    {
+        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
+        ApplyValue(PendingClicks, value, DrySend);
     }
 }
 
 
 void MixSend(ALsource *Source, ALuint sendidx, SendParams *params,
-  const ALfloat *RESTRICT data, ALuint srcfrac,
+  const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    const ALuint NumChannels = Source->NumChannels;
     ALeffectslot *Slot;
     ALfloat  WetSend;
     ALfloat *WetBuffer;
     ALfloat *WetClickRemoval;
     ALfloat *WetPendingClicks;
     FILTER  *WetFilter;
-    ALuint pos, frac;
-    ALuint BufferIdx;
-    ALuint increment;
+    ALuint pos;
     ALfloat value;
-    ALuint i;
-
-    increment = Source->Params.Step;
 
     Slot = Source->Params.Slot[sendidx];
     WetBuffer = Slot->WetBuffer;
@@ -261,38 +212,22 @@ void MixSend(ALsource *Source, ALuint sendidx, SendParams *params,
     WetFilter = &params->iirFilter;
     WetSend = params->Gain;
 
-    for(i = 0;i < NumChannels;i++)
+    pos = 0;
+    if(OutPos == 0)
     {
-        pos = 0;
-        frac = srcfrac;
-
-        if(OutPos == 0)
-        {
-            value = Sampler(data + pos*NumChannels + i, NumChannels, frac);
-
-            value = lpFilter2PC(WetFilter, i, value);
-            WetClickRemoval[0] -= value * WetSend;
-        }
-        for(BufferIdx = 0;BufferIdx < BufferSize;BufferIdx++)
-        {
-            value = Sampler(data + pos*NumChannels + i, NumChannels, frac);
-
-            value = lpFilter2P(WetFilter, i, value);
-            WetBuffer[OutPos] += value * WetSend;
-
-            frac += increment;
-            pos  += frac>>FRACTIONBITS;
-            frac &= FRACTIONMASK;
-            OutPos++;
-        }
-        if(OutPos == SamplesToDo)
-        {
-            value = Sampler(data + pos*NumChannels + i, NumChannels, frac);
-
-            value = lpFilter2PC(WetFilter, i, value);
-            WetPendingClicks[0] += value * WetSend;
-        }
-        OutPos -= BufferSize;
+        value = lpFilter2PC(WetFilter, srcchan, data[pos]);
+        WetClickRemoval[0] -= value * WetSend;
+    }
+    for(pos = 0;pos < BufferSize;pos++)
+    {
+        value = lpFilter2P(WetFilter, srcchan, data[pos]);
+        WetBuffer[OutPos] += value * WetSend;
+        OutPos++;
+    }
+    if(OutPos == SamplesToDo)
+    {
+        value = lpFilter2PC(WetFilter, srcchan, data[pos]);
+        WetPendingClicks[0] += value * WetSend;
     }
 }
 
@@ -300,8 +235,6 @@ void MixSend(ALsource *Source, ALuint sendidx, SendParams *params,
 #undef MixDirect
 #undef MixDirect_Hrtf
 
-#undef MERGE4
-#undef REAL_MERGE4
 #undef MERGE2
 #undef REAL_MERGE2
 

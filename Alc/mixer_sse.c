@@ -77,13 +77,5 @@ static __inline void ApplyValue(ALfloat *RESTRICT Output, ALfloat value, const A
 
 
 #define SUFFIX SSE
-#define Sampler point32
 #include "mixer_inc.c"
-#undef Sampler
-#define Sampler lerp32
-#include "mixer_inc.c"
-#undef Sampler
-#define Sampler cubic32
-#include "mixer_inc.c"
-#undef Sampler
 #undef SUFFIX

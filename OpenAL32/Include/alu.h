@@ -110,12 +110,12 @@ struct SendParams;
 
 typedef ALvoid (*DryMixerFunc)(struct ALsource *self, ALCdevice *Device,
                                struct DirectParams *params,
-                               const ALfloat *RESTRICT data, ALuint srcfrac,
+                               const ALfloat *RESTRICT data, ALuint srcchan,
                                ALuint OutPos, ALuint SamplesToDo,
                                ALuint BufferSize);
 typedef ALvoid (*WetMixerFunc)(struct ALsource *self, ALuint sendidx,
                                struct SendParams *params,
-                               const ALfloat *RESTRICT data, ALuint srcfrac,
+                               const ALfloat *RESTRICT data, ALuint srcchan,
                                ALuint OutPos, ALuint SamplesToDo,
                                ALuint BufferSize);
 
@@ -296,9 +296,9 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 
-DryMixerFunc SelectDirectMixer(enum Resampler Resampler);
-DryMixerFunc SelectHrtfMixer(enum Resampler Resampler);
-WetMixerFunc SelectSendMixer(enum Resampler Resampler);
+DryMixerFunc SelectDirectMixer(void);
+DryMixerFunc SelectHrtfMixer(void);
+WetMixerFunc SelectSendMixer(void);
 
 ALvoid MixSource(struct ALsource *Source, ALCdevice *Device, ALuint SamplesToDo);
 

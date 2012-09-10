@@ -51,52 +51,52 @@ static __inline float powf(float x, float y)
 
 #ifndef HAVE_SQRTF
 static __inline float sqrtf(float x)
-{ (float)sqrt(x); }
+{ return (float)sqrt(x); }
 #endif
 
 #ifndef HAVE_COSF
 static __inline float cosf(float x)
-{ (float)cos(x); }
+{ return (float)cos(x); }
 #endif
 
 #ifndef HAVE_SINF
 static __inline float sinf(float x)
-{ (float)sin(x); }
+{ return (float)sin(x); }
 #endif
 
 #ifndef HAVE_ACOSF
 static __inline float acosf(float x)
-{ (float)acos(x); }
+{ return (float)acos(x); }
 #endif
 
 #ifndef HAVE_ASINF
 static __inline float asinf(float x)
-{ (float)asin(x); }
+{ return (float)asin(x); }
 #endif
 
 #ifndef HAVE_ATANF
 static __inline float atanf(float x)
-{ (float)atan(x); }
+{ return (float)atan(x); }
 #endif
 
 #ifndef HAVE_ATAN2F
 static __inline float atan2f(float x, float y)
-{ (float)atan2(x, y); }
+{ return (float)atan2(x, y); }
 #endif
 
 #ifndef HAVE_FABSF
 static __inline float fabsf(float x)
-{ (float)fabs(x); }
+{ return (float)fabs(x); }
 #endif
 
 #ifndef HAVE_LOG10F
 static __inline float log10f(float x)
-{ (float)log10(x); }
+{ return (float)log10(x); }
 #endif
 
 #ifndef HAVE_FLOORF
 static __inline float floorf(float x)
-{ (float)floor(x); }
+{ return (float)floor(x); }
 #endif
 
 #ifdef __cplusplus

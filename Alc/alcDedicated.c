@@ -66,19 +66,16 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const AL
         state->gains[LFE] = Gain;
 }
 
-static ALvoid DedicatedProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MaxChannels])
+static ALvoid DedicatedProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE])
 {
     ALdedicatedState *state = (ALdedicatedState*)effect;
     const ALfloat *gains = state->gains;
-    ALuint i, s;
+    ALuint i, c;
 
-    for(i = 0;i < SamplesToDo;i++)
+    for(c = 0;c < MaxChannels;c++)
     {
-        ALfloat sample;
-
-        sample = SamplesIn[i];
-        for(s = 0;s < MaxChannels;s++)
-            SamplesOut[i][s] = sample * gains[s];
+        for(i = 0;i < SamplesToDo;i++)
+            SamplesOut[c][i] = SamplesIn[i] * gains[c];
     }
 }
 

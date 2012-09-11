@@ -618,7 +618,7 @@ struct ALCdevice_struct
     ALuint  NumChan;
 
     // Dry path buffer mix
-    ALIGN(16) ALfloat DryBuffer[BUFFERSIZE][MaxChannels];
+    ALIGN(16) ALfloat DryBuffer[MaxChannels][BUFFERSIZE];
 
     ALIGN(16) ALfloat ClickRemoval[MaxChannels];
     ALIGN(16) ALfloat PendingClicks[MaxChannels];

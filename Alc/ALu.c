@@ -797,7 +797,7 @@ static __inline ALubyte aluF2UB(ALfloat val)
 static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
                             ALuint SamplesToDo)                               \
 {                                                                             \
-    ALfloat (*RESTRICT DryBuffer)[MaxChannels] = device->DryBuffer;           \
+    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
     const enum Channel *ChanMap = device->DevChannels;                        \
     ALuint i, j;                                                              \
                                                                               \
@@ -807,7 +807,7 @@ static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
         enum Channel chan = ChanMap[j];                                       \
                                                                               \
         for(i = 0;i < SamplesToDo;i++)                                        \
-            out[i*N] = func(DryBuffer[i][chan]);                              \
+            out[i*N] = func(DryBuffer[chan][i]);                              \
     }                                                                         \
 }
 
@@ -913,7 +913,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     while(size > 0)
     {
         SamplesToDo = minu(size, BUFFERSIZE);
-        memset(device->DryBuffer, 0, SamplesToDo*MaxChannels*sizeof(ALfloat));
+        for(c = 0;c < MaxChannels;c++)
+            memset(device->DryBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
         ALCdevice_Lock(device);
         ctx = device->ContextList;
@@ -1002,7 +1003,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             for(i = 0;i < SamplesToDo;i++)
             {
-                device->DryBuffer[i][FrontCenter] += device->ClickRemoval[FrontCenter];
+                device->DryBuffer[FrontCenter][i] += device->ClickRemoval[FrontCenter];
                 device->ClickRemoval[FrontCenter] -= device->ClickRemoval[FrontCenter] * (1.0f/256.0f);
             }
             device->ClickRemoval[FrontCenter] += device->PendingClicks[FrontCenter];
@@ -1011,38 +1012,41 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         else if(device->FmtChans == DevFmtStereo)
         {
             /* Assumes the first two channels are FrontLeft and FrontRight */
-            for(i = 0;i < SamplesToDo;i++)
-            {
-                for(c = 0;c < 2;c++)
-                {
-                    device->DryBuffer[i][c] += device->ClickRemoval[c];
-                    device->ClickRemoval[c] -= device->ClickRemoval[c] * (1.0f/256.0f);
-                }
-            }
             for(c = 0;c < 2;c++)
             {
-                device->ClickRemoval[c] += device->PendingClicks[c];
+                ALfloat offset = device->ClickRemoval[c];
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    device->DryBuffer[c][i] += offset;
+                    offset -= offset * (1.0f/256.0f);
+                }
+                device->ClickRemoval[c] = offset + device->PendingClicks[c];
                 device->PendingClicks[c] = 0.0f;
             }
             if(device->Bs2b)
             {
+                float samples[2];
                 for(i = 0;i < SamplesToDo;i++)
-                    bs2b_cross_feed(device->Bs2b, &device->DryBuffer[i][0]);
+                {
+                    samples[0] = device->DryBuffer[FrontLeft][i];
+                    samples[1] = device->DryBuffer[FrontRight][i];
+                    bs2b_cross_feed(device->Bs2b, samples);
+                    device->DryBuffer[FrontLeft][i] = samples[0];
+                    device->DryBuffer[FrontRight][i] = samples[1];
+                }
             }
         }
         else
         {
-            for(i = 0;i < SamplesToDo;i++)
-            {
-                for(c = 0;c < MaxChannels;c++)
-                {
-                    device->DryBuffer[i][c] += device->ClickRemoval[c];
-                    device->ClickRemoval[c] -= device->ClickRemoval[c] * (1.0f/256.0f);
-                }
-            }
             for(c = 0;c < MaxChannels;c++)
             {
-                device->ClickRemoval[c] += device->PendingClicks[c];
+                ALfloat offset = device->ClickRemoval[c];
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    device->DryBuffer[c][i] += offset;
+                    offset -= offset * (1.0f/256.0f);
+                }
+                device->ClickRemoval[c] = offset + device->PendingClicks[c];
                 device->PendingClicks[c] = 0.0f;
             }
         }

@@ -41,7 +41,7 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
 {
     const ALint *RESTRICT DelayStep = params->Hrtf.DelayStep;
     const ALuint IrSize = GetHrtfIrSize(Device->Hrtf);
-    ALfloat (*RESTRICT DryBuffer)[MaxChannels];
+    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE];
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
     ALfloat (*RESTRICT CoeffStep)[2] = params->Hrtf.CoeffStep;
     ALfloat (*RESTRICT TargetCoeffs)[2] = params->Hrtf.Coeffs[srcchan];
@@ -103,8 +103,8 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
         Offset++;
 
         ApplyCoeffsStep(Offset, Values, IrSize, Coeffs, CoeffStep, left, right);
-        DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];
-        DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];
+        DryBuffer[FrontLeft][OutPos]  += Values[Offset&HRIR_MASK][0];
+        DryBuffer[FrontRight][OutPos] += Values[Offset&HRIR_MASK][1];
 
         OutPos++;
         Counter--;
@@ -123,8 +123,8 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
         Offset++;
 
         ApplyCoeffs(Offset, Values, IrSize, Coeffs, left, right);
-        DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];
-        DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];
+        DryBuffer[FrontLeft][OutPos]  += Values[Offset&HRIR_MASK][0];
+        DryBuffer[FrontRight][OutPos] += Values[Offset&HRIR_MASK][1];
 
         OutPos++;
     }
@@ -147,7 +147,7 @@ void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALfloat (*RESTRICT DryBuffer)[MaxChannels];
+    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE];
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
     ALIGN(16) ALfloat DrySend[MaxChannels];
     ALuint pos;
@@ -167,13 +167,12 @@ void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
         for(c = 0;c < MaxChannels;c++)
             ClickRemoval[c] -= data[pos]*DrySend[c];
     }
-    for(pos = 0;pos < BufferSize;pos++)
+    for(c = 0;c < MaxChannels;c++)
     {
-        for(c = 0;c < MaxChannels;c++)
-            DryBuffer[OutPos][c] += data[pos]*DrySend[c];
-        OutPos++;
+        for(pos = 0;pos < BufferSize;pos++)
+            DryBuffer[c][OutPos+pos] += data[pos]*DrySend[c];
     }
-    if(OutPos == SamplesToDo)
+    if(OutPos+pos == SamplesToDo)
     {
         for(c = 0;c < MaxChannels;c++)
             PendingClicks[c] += data[pos]*DrySend[c];

@@ -132,10 +132,9 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALfloat (*RESTRICT DryBuffer)[MaxChannels];
+    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE];
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
     ALfloat DrySend[MaxChannels];
-    ALIGN(16) ALfloat value[4];
     ALuint pos;
     ALuint c;
     (void)Source;
@@ -153,38 +152,28 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
         for(c = 0;c < MaxChannels;c++)
             ClickRemoval[c] -= data[pos]*DrySend[c];
     }
-    for(pos = 0;pos < BufferSize-3;pos += 4)
+    for(c = 0;c < MaxChannels;c++)
     {
-        const __m128 val4 = _mm_load_ps(&data[pos]);
+        const __m128 gain = _mm_set1_ps(DrySend[c]);
+        for(pos = 0;pos < BufferSize-3;pos += 4)
+        {
+            const __m128 val4 = _mm_load_ps(&data[pos]);
+            __m128 dry4 = _mm_load_ps(&DryBuffer[c][OutPos+pos]);
+            dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain));
+            _mm_store_ps(&DryBuffer[c][OutPos+pos], dry4);
+        }
+    }
+    if(pos < BufferSize)
+    {
+        ALuint oldpos = pos;
         for(c = 0;c < MaxChannels;c++)
         {
-            const __m128 gain = _mm_set1_ps(DrySend[c]);
-            __m128 dry4;
-
-            value[0] = DryBuffer[OutPos  ][c];
-            value[1] = DryBuffer[OutPos+1][c];
-            value[2] = DryBuffer[OutPos+2][c];
-            value[3] = DryBuffer[OutPos+3][c];
-            dry4 = _mm_load_ps(value);
-
-            dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain));
-
-            _mm_store_ps(value, dry4);
-            DryBuffer[OutPos  ][c] = value[0];
-            DryBuffer[OutPos+1][c] = value[1];
-            DryBuffer[OutPos+2][c] = value[2];
-            DryBuffer[OutPos+3][c] = value[3];
+            pos = oldpos;
+            for(;pos < BufferSize;pos++)
+                DryBuffer[c][OutPos+pos] += data[pos]*DrySend[c];
         }
-
-        OutPos += 4;
     }
-    for(;pos < BufferSize;pos++)
-    {
-        for(c = 0;c < MaxChannels;c++)
-            DryBuffer[OutPos][c] += data[pos]*DrySend[c];
-        OutPos++;
-    }
-    if(OutPos == SamplesToDo)
+    if(OutPos+pos == SamplesToDo)
     {
         for(c = 0;c < MaxChannels;c++)
             PendingClicks[c] += data[pos]*DrySend[c];

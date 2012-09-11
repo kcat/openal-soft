@@ -126,7 +126,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffec
     ComputeAngleGains(Device, atan2f(+lrpan, 0.0f), (1.0f-dirGain)*F_PI, gain, state->Gain[1]);
 }
 
-static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[MaxChannels])
+static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE])
 {
     ALechoState *state = (ALechoState*)effect;
     const ALuint mask = state->BufferLength-1;
@@ -141,12 +141,12 @@ static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALflo
         /* First tap */
         smp = state->SampleBuffer[(offset-tap1) & mask];
         for(k = 0;k < MaxChannels;k++)
-            SamplesOut[i][k] += smp * state->Gain[0][k];
+            SamplesOut[k][i] += smp * state->Gain[0][k];
 
         /* Second tap */
         smp = state->SampleBuffer[(offset-tap2) & mask];
         for(k = 0;k < MaxChannels;k++)
-            SamplesOut[i][k] += smp * state->Gain[1][k];
+            SamplesOut[k][i] += smp * state->Gain[1][k];
 
         // Apply damping and feedback gain to the second tap, and mix in the
         // new sample

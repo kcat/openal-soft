@@ -1624,6 +1624,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(device->Type != Loopback && !device->Hrtf && GetConfigValueBool(NULL, "wide-stereo", AL_FALSE))
         device->Flags |= DEVICE_WIDE_STEREO;
 
+    if(!device->Hrtf && (device->UpdateSize&3))
+    {
+        if((CPUCapFlags&CPU_CAP_SSE))
+            WARN("SSE performance is degraded with a non-multiple of 4 update size (%u)\n", device->UpdateSize);
+    }
+
     oldMode = SetMixerFPUMode();
     ALCdevice_Lock(device);
     context = device->ContextList;

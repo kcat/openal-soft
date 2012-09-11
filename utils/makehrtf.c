@@ -1820,7 +1820,7 @@ static int StoreTable (const HrirDataT * hData, const char * filename) {
   n = hData -> mIrPoints;
   snprintf (text, 128, "};\n\n"
                        "/* HRIR Coefficients */\n"
-                       "static const ALshort defaultCoeffs[%u] =\n{\n", end);
+                       "static const ALshort defaultCoeffs[%u] =\n{\n", hData -> mIrCount * n);
   if (! WriteAscii (text, fp, filename))
      return (0);
   srand (0x31DF840C);

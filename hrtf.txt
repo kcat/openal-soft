@@ -12,9 +12,9 @@ placement of sounds, making it seem as though they are coming from all around,
 including above and below the listener, instead of just to the front, back, and
 sides.
 
-The built-in data set is based on the KEMAR HRTF diffuse data provided by MIT,
-which can be found at <http://sound.media.mit.edu/resources/KEMAR.html>. It's
-only available when using 44100hz playback.
+The built-in data set is based on the KEMAR HRTF data provided by MIT, which
+can be found at <http://sound.media.mit.edu/resources/KEMAR.html>. It's only
+available when using 44100hz playback.
 
 
 External HRTF Data Sets
@@ -26,68 +26,48 @@ own data sets, which could be better suited for their heads, or to work with
 stereo speakers instead of headphones, or to support more playback sample
 rates, for example.
 
-The file format for the data sets is specified below. It uses little-endian
-byte order. Certain data fields are restricted to specific values (these
-restriction may be lifted in future versions of the lib).
+The file format is specified below. It uses little-endian byte order.
 
 ==
-ALchar   magic[8] = "MinPHR00";
+ALchar   magic[8] = "MinPHR01";
 ALuint   sampleRate;
 
-ALushort hrirCount; /* Required value: 828 */
-ALushort hrirSize;  /* Required value: 32 */
-ALubyte  evCount;   /* Required value: 19 */
+ALushort hrirSize;  /* Can be 8 to 128. */
+ALubyte  evCount;   /* Can be 5 to 128. */
 
-ALushort evOffset[evCount]; /* Required values:
-  { 0, 1, 13, 37, 73, 118, 174, 234, 306, 378, 450, 522, 594, 654, 710, 755,
-    791, 815, 827 } */
+ALushort azCount[evCount]; /* Each can be 1 to 128. */
 
 ALshort coefficients[hrirCount][hrirSize];
-ALubyte delays[hrirCount]; /* Element values must not exceed 127 */
+ALubyte delays[hrirCount]; /* Each can be 0 to 63. */
 ==
 
 The data is described as thus:
 
-The file first starts with the 8-byte marker, "MinPHR00", to identify it as an
+The file first starts with the 8-byte marker, "MinPHR01", to identify it as an
 HRTF data set. This is followed by an unsigned 32-bit integer, specifying the
 sample rate the data set is designed for (OpenAL Soft will not use it if the
 output device's playback rate doesn't match).
 
-Afterward, an unsigned 16-bit integer specifies the total number of HRIR sets
-(each HRIR set is a collection of impulse responses forming the coefficients
-for a convolution filter). The next unsigned 16-bit integer specifies how many
-samples are in each HRIR set (the number of coefficients in the filter). The
-following unsigned 8-bit integer specifies the number of elevations used by the
-data set. The elevations start at the bottom, and increment upwards.
+Afterward, an unsigned 16-bit integer specifies how many sample points (or
+finite impulse response filter coefficients) make up each HRIR.
 
-Following this is an array of unsigned 16-bit integers, one for each elevation
-which specifies the index offset to the start of the HRIR sets for each given
-elevation (the number of HRIR sets at each elevation is infered by the offset
-to the next elevation, or by the total count for the last elevation).
+The following unsigned 8-bit integer specifies the number of elevations used
+by the data set. The elevations start at the bottom (-90 degrees), and
+increment upwards.  Following this is an array of unsigned 16-bit integers, one
+for each elevation which specifies the number of azimuths (and thus HRIRs) that
+make up each elevation.  Azimuths start clockwise from the front, constructing
+a full circle for the left ear only. The right ear uses the same HRIRs but in
+reverse (ie, left = angle, right = 360-angle).
 
 The actual coefficients follow. Each coefficient is a signed 16-bit sample,
-with each HRIR set being a consecutive number of samples. For each elevation,
-the HRIR sets first start with a neutral "in-front" set (that is, one that is
-applied equally to the left and right outputs). After this, the sets follow a
-clockwise pattern, constructing a full circle for the left ear only. The right
-ear uses the same sets but in reverse (ie, left = angle, right = 360-angle).
-
-After the coefficients is an array of unsigned 8-bit delay values, one for each
-HRIR set. This is the delay, in samples, after recieving an input sample before
-before it's added in to the convolution filter that the corresponding HRIR set
-operates on and gets heard.
-
-
-Note that the HRTF data is expected to be minimum-phase reconstructed. The
-time delays are handled by OpenAL Soft according to the specified delay[]
-values, and afterward the samples are fed into the convolution filter using the
-corresponding coefficients. This allows for less processing by using a shorter
-convolution filter, as it skips the first coefficients that do little more than
-cause a timed delay, as well as the tailing coefficients that are used to
-equalize the length of all the sets and contribute nothing.
-
-For reference, the built-in data set uses a 32-sample convolution filter while
+with each HRIR being a consecutive number of sample points.  The HRIRs must be
+minimum-phase.  This allows the use of a smaller filter length, reducing
+computation.  For reference, the built-in data set uses a 32-point filter while
 even the smallest data set provided by MIT used a 128-sample filter (a 4x
 reduction by applying minimum-phase reconstruction). Theoretically, one could
-further reduce the minimum-phase version down to a 16-sample convolution filter
-with little quality loss.
+further reduce the minimum-phase version down to a 16-point filter with only a
+small reduction in quality.
+
+After the coefficients is an array of unsigned 8-bit delay values, one for
+each HRIR. This is the propagation delay (in samples) a signal must wait before
+being convolved with the corresponding minimum-phase HRIR filter.

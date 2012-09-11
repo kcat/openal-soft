@@ -24,10 +24,12 @@
 
 
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                     const ALuint irSize,
                                      ALfloat (*RESTRICT Coeffs)[2],
                                      ALfloat (*RESTRICT CoeffStep)[2],
                                      ALfloat left, ALfloat right);
 static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                 const ALuint irSize,
                                  ALfloat (*RESTRICT Coeffs)[2],
                                  ALfloat left, ALfloat right);
 
@@ -38,6 +40,7 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     const ALint *RESTRICT DelayStep = params->Hrtf.DelayStep;
+    const ALuint IrSize = GetHrtfIrSize(Device->Hrtf);
     ALfloat (*RESTRICT DryBuffer)[MaxChannels];
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
     ALfloat (*RESTRICT CoeffStep)[2] = params->Hrtf.CoeffStep;
@@ -61,7 +64,7 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
     DryFilter = &params->iirFilter;
 
     pos = 0;
-    for(c = 0;c < HRIR_LENGTH;c++)
+    for(c = 0;c < IrSize;c++)
     {
         Coeffs[c][0] = TargetCoeffs[c][0] - (CoeffStep[c][0]*Counter);
         Coeffs[c][1] = TargetCoeffs[c][1] - (CoeffStep[c][1]*Counter);
@@ -102,11 +105,11 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
         Delay[0] += DelayStep[0];
         Delay[1] += DelayStep[1];
 
-        Values[Offset&HRIR_MASK][0] = 0.0f;
-        Values[Offset&HRIR_MASK][1] = 0.0f;
+        Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
+        Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
         Offset++;
 
-        ApplyCoeffsStep(Offset, Values, Coeffs, CoeffStep, left, right);
+        ApplyCoeffsStep(Offset, Values, IrSize, Coeffs, CoeffStep, left, right);
         DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];
         DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];
 
@@ -124,11 +127,11 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
         left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];
         right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];
 
-        Values[Offset&HRIR_MASK][0] = 0.0f;
-        Values[Offset&HRIR_MASK][1] = 0.0f;
+        Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
+        Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
         Offset++;
 
-        ApplyCoeffs(Offset, Values, Coeffs, left, right);
+        ApplyCoeffs(Offset, Values, IrSize, Coeffs, left, right);
         DryBuffer[OutPos][FrontLeft]  += Values[Offset&HRIR_MASK][0];
         DryBuffer[OutPos][FrontRight] += Values[Offset&HRIR_MASK][1];
 

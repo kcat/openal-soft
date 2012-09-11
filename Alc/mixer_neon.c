@@ -11,12 +11,13 @@
 
 
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                     const ALuint IrSize,
                                      ALfloat (*RESTRICT Coeffs)[2],
                                      ALfloat (*RESTRICT CoeffStep)[2],
                                      ALfloat left, ALfloat right)
 {
     ALuint c;
-    for(c = 0;c < HRIR_LENGTH;c++)
+    for(c = 0;c < IrSize;c++)
     {
         const ALuint off = (Offset+c)&HRIR_MASK;
         Values[off][0] += Coeffs[c][0] * left;
@@ -27,6 +28,7 @@ static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2
 }
 
 static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                 const ALuint IrSize,
                                  ALfloat (*RESTRICT Coeffs)[2],
                                  ALfloat left, ALfloat right)
 {
@@ -38,7 +40,7 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
         leftright2 = vset_lane_f32(right, leftright2, 1);
         leftright4 = vcombine_f32(leftright2, leftright2);
     }
-    for(c = 0;c < HRIR_LENGTH;c += 2)
+    for(c = 0;c < IrSize;c += 2)
     {
         const ALuint o0 = (Offset+c)&HRIR_MASK;
         const ALuint o1 = (o0+1)&HRIR_MASK;

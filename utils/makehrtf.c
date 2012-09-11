@@ -1,571 +1,1734 @@
-/**
+/*
  * HRTF utility for producing and demonstrating the process of creating an
  * OpenAL Soft compatible HRIR data set.
  *
- * It can currently make use of the 44.1 KHz diffuse and compact KEMAR HRIRs
- * provided by MIT at:
+ * Copyright (C) 2011-2012  Christopher Fitzgerald
  *
- *   http://sound.media.mit.edu/resources/KEMAR.html
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Or visit:  http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+ *
+ * --------------------------------------------------------------------------
+ *
+ * A big thanks goes out to all those whose work done in the field of
+ * binaural sound synthesis using measured HRTFs makes this utility and the
+ * OpenAL Soft implementation possible.
+ *
+ * The algorithm for diffuse-field equalization was adapted from the work
+ * done by Rio Emmanuel and Larcher Veronique of IRCAM and Bill Gardner of
+ * MIT Media Laboratory.  It operates as follows:
+ *
+ *  1.  Take the FFT of each HRIR and only keep the magnitude responses.
+ *  2.  Calculate the diffuse-field power-average of all HRIRs weighted by
+ *      their contribution to the total surface area covered by their
+ *      measurement.
+ *  3.  Take the diffuse-field average and limit its magnitude range.
+ *  4.  Equalize the responses by using the inverse of the diffuse-field
+ *      average.
+ *  5.  Reconstruct the minimum-phase responses.
+ *  5.  Zero the DC component.
+ *  6.  IFFT the result and truncate to the desired-length minimum-phase FIR.
+ *
+ * The spherical head algorithm for calculating propagation delay was adapted
+ * from the paper:
+ *
+ *  Modeling Interaural Time Difference Assuming a Spherical Head
+ *  Joel David Miller
+ *  Music 150, Musical Acoustics, Stanford University
+ *  December 2, 2001
+ *
  */
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <stdarg.h>
 #include <string.h>
+#include <ctype.h>
+#include <math.h>
 
+// Needed for 64-bit unsigned integer.
+#include "config.h"
+
+// Rely (if naively) on OpenAL's header for the types used for serialization.
 #include "AL/al.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-#ifdef _MSC_VER
-static double round(double val)
-{
-    if(val < 0.0)
-        return ceil(val - 0.5);
-    return floor(val + 0.5);
-}
-#endif
+// The epsilon used to maintain signal stability.
+#define EPSILON                      (1e-15)
 
-// The sample rate of the MIT HRIR data sets.
-#define MIT_IR_RATE                  (44100)
+// Constants for accessing the token reader's ring buffer.
+#define TR_RING_BITS                 (16)
+#define TR_RING_SIZE                 (1 << TR_RING_BITS)
+#define TR_RING_MASK                 (TR_RING_SIZE - 1)
 
-// The total number of used impulse responses from the MIT HRIR data sets.
-#define MIT_IR_COUNT                 (828)
+// The token reader's load interval in bytes.
+#define TR_LOAD_SIZE                 (TR_RING_SIZE >> 2)
 
-// The size (in samples) of each HRIR in the MIT data sets.
-#define MIT_IR_SIZE                  (128)
+// The maximum identifier length used when processing the data set
+// definition.
+#define MAX_IDENT_LEN                (16)
 
-// The total number of elevations given a step of 10 degrees.
-#define MIT_EV_COUNT                 (19)
+// The maximum path length used when processing filenames.
+#define MAX_PATH_LEN                 (256)
 
-// The first elevation that the MIT data sets have HRIRs for.
-#define MIT_EV_START                 (5)
+// The limits for the sample 'rate' metric in the data set definition.
+#define MIN_RATE                     (32000)
+#define MAX_RATE                     (96000)
 
-// The head radius (in meters) used by the MIT data sets.
-#define MIT_RADIUS                   (0.09f)
+// The limits for the HRIR 'points' metric in the data set definition.
+#define MIN_POINTS                   (16)
+#define MAX_POINTS                   (8192)
 
-// The source to listener distance (in meters) used by the MIT data sets.
-#define MIT_DISTANCE                 (1.4f)
+// The limits to the number of 'azimuths' listed in the data set definition.
+#define MIN_EV_COUNT                 (5)
+#define MAX_EV_COUNT                 (128)
 
-// The resulting size (in samples) of a mininum-phase reconstructed HRIR.
-#define MIN_IR_SIZE                  (32)
+// The limits for each of the 'azimuths' listed in the data set definition.
+#define MIN_AZ_COUNT                 (1)
+#define MAX_AZ_COUNT                 (128)
 
-// The size (in samples) of the real cepstrum used in reconstruction.  This
-// needs to be large enough to reduce inaccuracy.
-#define CEP_SIZE                     (8192)
+// The limits for the listener's head 'radius' in the data set definition.
+#define MIN_RADIUS                   (0.05)
+#define MAX_RADIUS                   (0.15)
+
+// The limits for the 'distance' from source to listener in the definition
+// file.
+#define MIN_DISTANCE                 (0.5)
+#define MAX_DISTANCE                 (2.5)
+
+// The maximum number of channels that can be addressed for a WAVE file
+// source listed in the data set definition.
+#define MAX_WAVE_CHANNELS            (65535)
+
+// The limits to the byte size for a binary source listed in the definition
+// file.
+#define MIN_BIN_SIZE                 (2)
+#define MAX_BIN_SIZE                 (4)
+
+// The minimum number of significant bits for binary sources listed in the
+// data set definition.  The maximum is calculated from the byte size.
+#define MIN_BIN_BITS                 (16)
+
+// The limits to the number of significant bits for an ASCII source listed in
+// the data set definition.
+#define MIN_ASCII_BITS               (16)
+#define MAX_ASCII_BITS               (32)
+
+// The limits to the FFT window size override on the command line.
+#define MIN_FFTSIZE                  (512)
+#define MAX_FFTSIZE                  (16384)
+
+// The limits to the equalization range limit on the command line.
+#define MIN_LIMIT                    (2.0)
+#define MAX_LIMIT                    (120.0)
+
+// The limits to the truncation window size on the command line.
+#define MIN_TRUNCSIZE                (8)
+#define MAX_TRUNCSIZE                (128)
+
+// The truncation window size must be a multiple of the below value to allow
+// for vectorized convolution.
+#define MOD_TRUNCSIZE                (8)
+
+// The defaults for the command line options.
+#define DEFAULT_EQUALIZE             (1)
+#define DEFAULT_SURFACE              (1)
+#define DEFAULT_LIMIT                (24.0)
+#define DEFAULT_TRUNCSIZE            (32)
+
+// The four-character-codes for RIFF/RIFX WAVE file chunks.
+#define FOURCC_RIFF                  (0x46464952) // 'RIFF'
+#define FOURCC_RIFX                  (0x58464952) // 'RIFX'
+#define FOURCC_WAVE                  (0x45564157) // 'WAVE'
+#define FOURCC_FMT                   (0x20746D66) // 'fmt '
+#define FOURCC_DATA                  (0x61746164) // 'data'
+#define FOURCC_LIST                  (0x5453494C) // 'LIST'
+#define FOURCC_WAVL                  (0x6C766177) // 'wavl'
+#define FOURCC_SLNT                  (0x746E6C73) // 'slnt'
+
+// The supported wave formats.
+#define WAVE_FORMAT_PCM              (0x0001)
+#define WAVE_FORMAT_IEEE_FLOAT       (0x0003)
+#define WAVE_FORMAT_EXTENSIBLE       (0xFFFE)
+
+// The maximum propagation delay value supported by OpenAL Soft.
+#define MAX_HRTD                     (63.0)
 
 // The OpenAL Soft HRTF format marker.  It stands for minimum-phase head
-// response protocol 00.
-#define MHR_FORMAT                   ("MinPHR00")
+// response protocol 01.
+#define MHR_FORMAT                   ("MinPHR01")
 
-typedef struct ComplexT              ComplexT;
-typedef struct HrirDataT             HrirDataT;
-
-// A complex number type.
-struct ComplexT {
-  float                              mVec [2];
+// Byte order for the serialization routines.
+enum ByteOrderT {
+  BO_NONE   = 0,
+  BO_LITTLE    ,
+  BO_BIG
 };
 
-// The HRIR data definition.  This can be used to add support for new HRIR
-// sources in the future.
+// Source format for the references listed in the data set definition.
+enum SourceFormatT {
+  SF_NONE   = 0,
+  SF_WAVE      ,  // RIFF/RIFX WAVE file.
+  SF_BIN_LE    ,  // Little-endian binary file.
+  SF_BIN_BE    ,  // Big-endian binary file.
+  SF_ASCII        // ASCII text file.
+};
+
+// Element types for the references listed in the data set definition.
+enum ElementTypeT {
+  ET_NONE = 0,
+  ET_INT     ,    // Integer elements.
+  ET_FP           // Floating-point elements.
+};
+
+// Desired output format from the command line.
+enum OutputFormatT {
+  OF_NONE  = 0,
+  OF_MHR      ,   // OpenAL Soft MHR data set file.
+  OF_TABLE        // OpenAL Soft built-in table file (used when compiling).
+};
+
+// Unsigned integer type.
+typedef unsigned int                 uint;
+
+// Serialization types.  The trailing digit indicates the number of bytes.
+typedef ALubyte                      uint1;
+
+typedef ALint                        int4;
+typedef ALuint                       uint4;
+
+#if defined (HAVE_STDINT_H)
+#include <stdint.h>
+
+typedef uint64_t                     uint8;
+#elif defined (HAVE___INT64)
+typedef unsigned __int64             uint8;
+#elif (SIZEOF_LONG == 8)
+typedef unsigned long                uint8;
+#elif (SIZEOF_LONG_LONG == 8)
+typedef unsigned long long           uint8;
+#endif
+
+typedef enum ByteOrderT              ByteOrderT;
+typedef enum SourceFormatT           SourceFormatT;
+typedef enum ElementTypeT            ElementTypeT;
+typedef enum OutputFormatT           OutputFormatT;
+
+typedef struct TokenReaderT          TokenReaderT;
+typedef struct SourceRefT            SourceRefT;
+typedef struct HrirDataT             HrirDataT;
+
+// Token reader state for parsing the data set definition.
+struct TokenReaderT {
+  FILE                             * mFile;
+  const char                       * mName;
+  uint                               mLine,
+                                     mColumn;
+  char                               mRing [TR_RING_SIZE];
+  size_t                             mIn,
+                                     mOut;
+};
+
+// Source reference state used when loading sources.
+struct SourceRefT {
+  SourceFormatT                      mFormat;
+  ElementTypeT                       mType;
+  uint                               mSize;
+  int                                mBits;
+  uint                               mChannel,
+                                     mSkip,
+                                     mOffset;
+  char                               mPath [MAX_PATH_LEN + 1];
+};
+
+// The HRIR metrics and data set used when loading, processing, and storing
+// the resulting HRTF.
 struct HrirDataT {
-  int                                mIrRate,
-                                     mIrCount,
-                                     mIrSize,
-                                     mEvCount,
-                                     mEvStart;
-  const int                        * mEvOffset,
-                                   * mAzCount;
-  float                              mRadius,
+  uint                               mIrRate,
+                                     mIrCount;
+  size_t                             mIrSize,
+                                     mIrPoints,
+                                     mFftSize;
+  uint                               mEvCount,
+                                     mEvStart,
+                                     mAzCount [MAX_EV_COUNT],
+                                     mEvOffset [MAX_EV_COUNT];
+  double                             mRadius,
                                      mDistance,
                                    * mHrirs,
                                    * mHrtds,
                                      mMaxHrtd;
 };
 
-// The linear index of the first HRIR for each elevation of the MIT data set.
-static const int                     MIT_EV_OFFSET [MIT_EV_COUNT] = {
-  0, 1, 13, 37, 73, 118, 174, 234, 306, 378, 450, 522, 594, 654, 710, 755, 791, 815, 827
-},
+/* Token reader routines for parsing text files.  Whitespace is not
+ * significant.  It can process tokens as identifiers, numbers (integer and
+ * floating-point), strings, and operators.  Strings must be encapsulated by
+ * double-quotes and cannot span multiple lines.
+ */
 
-// The count of distinct azimuth steps for each elevation in the MIT data
-// set.
-                                     MIT_AZ_COUNT [MIT_EV_COUNT] = {
-  1, 12, 24, 36, 45, 56, 60, 72, 72, 72, 72, 72, 60, 56, 45, 36, 24, 12, 1
-};
+// Setup the reader on the given file.  The filename can be NULL if no error
+// output is desired.
+static void TrSetup (FILE * fp, const char * filename, TokenReaderT * tr) {
+  const char * name = NULL;
+  char ch;
 
-// Performs a forward Fast Fourier Transform.
-static void FftProc (int n, const ComplexT * fftIn, ComplexT * fftOut) {
-  int m2, rk, k, m;
-  float a, b;
-  int i;
-  float wx, wy;
-  int j, km2;
-  float tx, ty, wyd;
-
-  // Data copy and bit-reversal ordering.
-  m2 = (n >> 1);
-  rk = 0;
-  for (k = 0; k < n; k ++) {
-      fftOut [rk] . mVec [0] = fftIn [k] . mVec [0];
-      fftOut [rk] . mVec [1] = fftIn [k] . mVec [1];
-      if (k < (n - 1)) {
-         m = m2;
-         while (rk >= m) {
-           rk -= m;
-           m >>= 1;
-         }
-         rk += m;
-      }
+  tr -> mFile = fp;
+  name = filename;
+  // If a filename was given, store a pointer to the base name.
+  if (filename != NULL) {
+     while ((ch = (* filename)) != '\0') {
+       if ((ch == '/') || (ch == '\\'))
+          name = filename + 1;
+       filename ++;
+     }
   }
-  // Perform the FFT.
-  m2 = 1;
-  for (m = 2; m <= n; m <<= 1) {
-      a = sin (M_PI / m);
-      a = 2.0f * a * a;
-      b = sin (2.0f * M_PI / m);
-      for (i = 0; i < n; i += m) {
-          wx = 1.0f;
-          wy = 0.0f;
-          for (k = i, j = 0; j < m2; k ++, j ++) {
-              km2 = k + m2;
-              tx = (wx * fftOut [km2] . mVec [0]) - (wy * fftOut [km2] . mVec [1]);
-              ty = (wx * fftOut [km2] . mVec [1]) + (wy * fftOut [km2] . mVec [0]);
-              fftOut [km2] . mVec [0] = fftOut [k] . mVec [0] - tx;
-              fftOut [km2] . mVec [1] = fftOut [k] . mVec [1] - ty;
-              fftOut [k] . mVec [0] += tx;
-              fftOut [k] . mVec [1] += ty;
-              wyd = (a * wy) - (b * wx);
-              wx -= (a * wx) + (b * wy);
-              wy -= wyd;
-          }
-      }
-      m2 = m;
+  tr -> mName = name;
+  tr -> mLine = 1;
+  tr -> mColumn = 1;
+  tr -> mIn = 0;
+  tr -> mOut = 0;
+}
+
+// Prime the reader's ring buffer, and return a result indicating that there
+// is text to process.
+static int TrLoad (TokenReaderT * tr) {
+  size_t toLoad, in, count;
+
+  toLoad = TR_RING_SIZE - (tr -> mIn - tr -> mOut);
+  if ((toLoad >= TR_LOAD_SIZE) && (! feof (tr -> mFile))) {
+     // Load TR_LOAD_SIZE (or less if at the end of the file) per read.
+     toLoad = TR_LOAD_SIZE;
+     in = tr -> mIn & TR_RING_MASK;
+     count = TR_RING_SIZE - in;
+     if (count < toLoad) {
+        tr -> mIn += fread (& tr -> mRing [in], 1, count, tr -> mFile);
+        tr -> mIn += fread (& tr -> mRing [0], 1, toLoad - count, tr -> mFile);
+     } else {
+        tr -> mIn += fread (& tr -> mRing [in], 1, toLoad, tr -> mFile);
+     }
+     if (tr -> mOut >= TR_RING_SIZE) {
+        tr -> mOut -= TR_RING_SIZE;
+        tr -> mIn -= TR_RING_SIZE;
+     }
+  }
+  if (tr -> mIn > tr -> mOut)
+     return (1);
+  return (0);
+}
+
+// Error display routine.  Only displays when the base name is not NULL.
+static void TrErrorVA (const TokenReaderT * tr, uint line, uint column, const char * format, va_list argPtr) {
+  if (tr -> mName != NULL) {
+     fprintf (stderr, "Error (%s:%d:%d):  ", tr -> mName, line, column);
+     vfprintf (stderr, format, argPtr);
   }
 }
 
-// Performs an inverse Fast Fourier Transform.
-static void FftInvProc (int n, const ComplexT * fftIn, ComplexT * fftOut) {
-  int m2, rk, k, m;
-  float a, b;
-  int i;
-  float wx, wy;
-  int j, km2;
-  float tx, ty, wyd, invn;
+// Used to display an error at a saved line/column.
+static void TrErrorAt (const TokenReaderT * tr, uint line, uint column, const char * format, ...) {
+  va_list argPtr;
 
-  // Data copy and bit-reversal ordering.
-  m2 = (n >> 1);
-  rk = 0;
-  for (k = 0; k < n; k ++) {
-      fftOut [rk] . mVec [0] = fftIn [k] . mVec [0];
-      fftOut [rk] . mVec [1] = fftIn [k] . mVec [1];
-      if (k < (n - 1)) {
-         m = m2;
-         while (rk >= m) {
-           rk -= m;
-           m >>= 1;
-         }
-         rk += m;
-      }
-  }
-  // Perform the IFFT.
-  m2 = 1;
-  for (m = 2; m <= n; m <<= 1) {
-      a = sin (M_PI / m);
-      a = 2.0f * a * a;
-      b = -sin (2.0f * M_PI / m);
-      for (i = 0; i < n; i += m) {
-          wx = 1.0f;
-          wy = 0.0f;
-          for (k = i, j = 0; j < m2; k ++, j ++) {
-              km2 = k + m2;
-              tx = (wx * fftOut [km2] . mVec [0]) - (wy * fftOut [km2] . mVec [1]);
-              ty = (wx * fftOut [km2] . mVec [1]) + (wy * fftOut [km2] . mVec [0]);
-              fftOut [km2] . mVec [0] = fftOut [k] . mVec [0] - tx;
-              fftOut [km2] . mVec [1] = fftOut [k] . mVec [1] - ty;
-              fftOut [k] . mVec [0] += tx;
-              fftOut [k] . mVec [1] += ty;
-              wyd = (a * wy) - (b * wx);
-              wx -= (a * wx) + (b * wy);
-              wy -= wyd;
-          }
-      }
-      m2 = m;
-  }
-  // Normalize the samples.
-  invn = 1.0f / n;
-  for (i = 0; i < n; i ++) {
-      fftOut [i] . mVec [0] *= invn;
-      fftOut [i] . mVec [1] *= invn;
+  va_start (argPtr, format);
+  TrErrorVA (tr, line, column, format, argPtr);
+  va_end (argPtr);
+}
+
+// Used to display an error at the current line/column.
+static void TrError (const TokenReaderT * tr, const char * format, ...) {
+  va_list argPtr;
+
+  va_start (argPtr, format);
+  TrErrorVA (tr, tr -> mLine, tr -> mColumn, format, argPtr);
+  va_end (argPtr);
+}
+
+// Skips to the next line.
+static void TrSkipLine (TokenReaderT * tr) {
+  char ch;
+
+  while (TrLoad (tr)) {
+    ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+    tr -> mOut ++;
+    if (ch == '\n') {
+       tr -> mLine ++;
+       tr -> mColumn = 1;
+       break;
+    }
+    tr -> mColumn ++;
   }
 }
 
-// Complex absolute value.
-static void ComplexAbs (const ComplexT * in, ComplexT * out) {
-  out -> mVec [0] = sqrt ((in -> mVec [0] * in -> mVec [0]) + (in -> mVec [1] * in -> mVec [1]));
-  out -> mVec [1] = 0.0f;
-}
+// Skips to the next token.
+static int TrSkipWhitespace (TokenReaderT * tr) {
+  char ch;
 
-// Complex logarithm.
-static void ComplexLog (const ComplexT * in, ComplexT * out) {
-  float r, t;
-
-  r = sqrt ((in -> mVec [0] * in -> mVec [0]) + (in -> mVec [1] * in -> mVec [1]));
-  t = atan2 (in -> mVec [1], in -> mVec [0]);
-  if (t < 0.0f)
-     t += 2.0f * M_PI;
-  out -> mVec [0] = log (r);
-  out -> mVec [1] = t;
-}
-
-// Complex exponent.
-static void ComplexExp (const ComplexT * in, ComplexT * out) {
-  float e;
-
-  e = exp (in -> mVec [0]);
-  out -> mVec [0] = e * cos (in -> mVec [1]);
-  out -> mVec [1] = e * sin (in -> mVec [1]);
-}
-
-// Calculates the real cepstrum of a given impulse response.  It currently
-// uses a fixed cepstrum size.  To make this more robust, it should be
-// rewritten to handle a variable size cepstrum.
-static void RealCepstrum (int irSize, const float * ir, float cep [CEP_SIZE]) {
-  ComplexT in [CEP_SIZE], out [CEP_SIZE];
-  int index;
-
-  for (index = 0; index < irSize; index ++) {
-      in [index] . mVec [0] = ir [index];
-      in [index] . mVec [1] = 0.0f;
+  while (TrLoad (tr)) {
+    ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+    if (isspace (ch)) {
+       tr -> mOut ++;
+       if (ch == '\n') {
+          tr -> mLine ++;
+          tr -> mColumn = 1;
+       } else {
+          tr -> mColumn ++;
+       }
+    } else if (ch == '#') {
+       TrSkipLine (tr);
+    } else {
+       return (1);
+    }
   }
-  for (; index < CEP_SIZE; index ++) {
-      in [index] . mVec [0] = 0.0f;
-      in [index] . mVec [1] = 0.0f;
-  }
-  FftProc (CEP_SIZE, in, out);
-  for (index = 0; index < CEP_SIZE; index ++) {
-      ComplexAbs (& out [index], & out [index]);
-      if (out [index] . mVec [0] < 0.000001f)
-         out [index] . mVec [0] = 0.000001f;
-      ComplexLog (& out [index], & in [index]);
-  }
-  FftInvProc (CEP_SIZE, in, out);
-  for (index = 0; index < CEP_SIZE; index ++)
-      cep [index] = out [index] . mVec [0];
+  return (0);
 }
 
-// Reconstructs the minimum-phase impulse response for a given real cepstrum.
-// Like the above function, this should eventually be modified to handle a
-// variable size cepstrum.
-static void MinimumPhase (const float cep [CEP_SIZE], int irSize, float * mpIr) {
-  ComplexT in [CEP_SIZE], out [CEP_SIZE];
-  int index;
-
-  in [0] . mVec [0] = cep [0];
-  for (index = 1; index < (CEP_SIZE / 2); index ++)
-      in [index] . mVec [0] = 2.0f * cep [index];
-  if ((CEP_SIZE % 2) != 1) {
-     in [index] . mVec [0] = cep [index];
-     index ++;
-  }
-  for (; index < CEP_SIZE; index ++)
-      in [index] . mVec [0] = 0.0f;
-  for (index = 0; index < CEP_SIZE; index ++)
-      in [index] . mVec [1] = 0.0f;
-  FftProc (CEP_SIZE, in, out);
-  for (index = 0; index < CEP_SIZE; index ++)
-      ComplexExp (& out [index], & in [index]);
-  FftInvProc (CEP_SIZE, in, out);
-  for (index = 0; index < irSize; index ++)
-      mpIr [index] = out [index] . mVec [0];
+// Get the line and/or column of the next token (or the end of input).
+static void TrIndication (TokenReaderT * tr, uint * line, uint * column) {
+  TrSkipWhitespace (tr);
+  if (line != NULL)
+     (* line) = tr -> mLine;
+  if (column != NULL)
+     (* column) = tr -> mColumn;
 }
 
-// Calculate the left-ear time delay using a spherical head model.
-static float CalcLTD (float ev, float az, float rad, float dist) {
-  float azp, dlp, l, al;
+// Checks to see if a token is the given operator.  It does not display any
+// errors and will not proceed to the next token.
+static int TrIsOperator (TokenReaderT * tr, const char * op) {
+  size_t out, len;
+  char ch;
 
-  azp = asin (cos (ev) * sin (az));
-  dlp = sqrt ((dist * dist) + (rad * rad) + (2.0f * dist * rad * sin (azp)));
-  l = sqrt ((dist * dist) - (rad * rad));
-  al = (0.5f * M_PI) + azp;
-  if (dlp > l)
-     dlp = l + (rad * (al - acos (rad / dist)));
-  return (dlp / 343.3f);
-}
-
-// Read a 16-bit little-endian integer from a file and convert it to a 32-bit
-// floating-point value in the range of -1.0 to 1.0.
-static int ReadInt16LeAsFloat32 (const char * fileName, FILE * fp, float * val) {
-  ALubyte vb [2];
-  ALushort vw;
-
-  if (fread (vb, 1, sizeof (vb), fp) != sizeof (vb)) {
-     fclose (fp);
-     fprintf (stderr, "Error reading from file, '%s'.\n", fileName);
+  if (! TrSkipWhitespace (tr))
      return (0);
+  out = tr -> mOut;
+  len = 0;
+  while ((op [len] != '\0') && (out < tr -> mIn)) {
+    ch = tr -> mRing [out & TR_RING_MASK];
+    if (ch != op [len])
+       break;
+    len ++;
+    out ++;
   }
-  vw = (((unsigned short) vb [1]) << 8) | vb [0];
-  (* val) = ((short) vw) / 32768.0f;
-  return (1);
+  if (op [len] == '\0')
+     return (1);
+  return (0);
 }
 
-// Write a string to a file.
-static int WriteString (const char * val, const char * fileName, FILE * fp) {
+/* The TrRead*() routines obtain the value of a matching token type.  They
+ * display type, form, and boundary errors and will proceed to the next
+ * token.
+ */
+
+// Reads and validates an identifier token.
+static int TrReadIdent (TokenReaderT * tr, const size_t maxLen, char * ident) {
+  uint col;
   size_t len;
+  char ch;
 
-  len = strlen (val);
-  if (fwrite (val, 1, len, fp) != len) {
-     fclose (fp);
-     fprintf (stderr, "Error writing to file, '%s'.\n", fileName);
-     return (0);
-  }
-  return (1);
-}
-
-// Write a 32-bit floating-point value in the range of -1.0 to 1.0 to a file
-// as a 16-bit little-endian integer.
-static int WriteFloat32AsInt16Le (float val, const char * fileName, FILE * fp) {
-  ALshort vw;
-  ALubyte vb [2];
-
-  vw = (short) round (32767.0f * val);
-  vb [0] =  vw       & 0x00FF;
-  vb [1] = (vw >> 8) & 0x00FF;
-  if (fwrite (vb, 1, sizeof (vb), fp) != sizeof (vb)) {
-     fclose (fp);
-     fprintf (stderr, "Error writing to file, '%s'.\n", fileName);
-     return (0);
-  }
-  return (1);
-}
-
-// Write a 32-bit little-endian unsigned integer to a file.
-static int WriteUInt32Le (ALuint val, const char * fileName, FILE * fp) {
-  ALubyte vb [4];
-
-  vb [0] =  val        & 0x000000FF;
-  vb [1] = (val >>  8) & 0x000000FF;
-  vb [2] = (val >> 16) & 0x000000FF;
-  vb [3] = (val >> 24) & 0x000000FF;
-  if (fwrite (vb, 1, sizeof (vb), fp) != sizeof (vb)) {
-     fclose (fp);
-     fprintf (stderr, "Error writing to file, '%s'.\n", fileName);
-     return (0);
-  }
-  return (1);
-}
-
-// Write a 16-bit little-endian unsigned integer to a file.
-static int WriteUInt16Le (ALushort val, const char * fileName, FILE * fp) {
-  ALubyte vb [2];
-
-  vb [0] =  val        & 0x00FF;
-  vb [1] = (val >>  8) & 0x00FF;
-  if (fwrite (vb, 1, sizeof (vb), fp) != sizeof (vb)) {
-     fclose (fp);
-     fprintf (stderr, "Error writing to file, '%s'.\n", fileName);
-     return (0);
-  }
-  return (1);
-}
-
-// Write an 8-bit unsigned integer to a file.
-static int WriteUInt8 (ALubyte val, const char * fileName, FILE * fp) {
-  if (fwrite (& val, 1, sizeof (val), fp) != sizeof (val)) {
-     fclose (fp);
-     fprintf (stderr, "Error writing to file, '%s'.\n", fileName);
-     return (0);
-  }
-  return (1);
-}
-
-// Load the MIT HRIRs.  This loads the entire diffuse or compact set starting
-// counter-clockwise up at the bottom elevation and clockwise at the forward
-// azimuth.
-static int LoadMitHrirs (const char * baseName, HrirDataT * hData) {
-  const int EV_ANGLE [MIT_EV_COUNT] = {
-    -90, -80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90
-  };
-  int e, a;
-  char fileName [1024];
-  FILE * fp = NULL;
-  int j0, j1, i;
-  float s;
-
-  for (e = MIT_EV_START; e < MIT_EV_COUNT; e ++) {
-      for (a = 0; a < MIT_AZ_COUNT [e]; a ++) {
-          // The data packs the first 180 degrees in the left channel, and
-          // the last 180 degrees in the right channel.
-          if (round ((360.0f / MIT_AZ_COUNT [e]) * a) > 180.0f)
+  col = tr -> mColumn;
+  if (TrSkipWhitespace (tr)) {
+     col = tr -> mColumn;
+     ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+     if ((ch == '_') || isalpha (ch)) {
+        len = 0;
+        do {
+          if (len < maxLen)
+             ident [len] = ch;
+          len ++;
+          tr -> mOut ++;
+          if (! TrLoad (tr))
              break;
-          // Determine which file to open.
-          snprintf (fileName, 1023, "%s%d/H%de%03da.wav", baseName, EV_ANGLE [e], EV_ANGLE [e], (int) round ((360.0f / MIT_AZ_COUNT [e]) * a));
-          if ((fp = fopen (fileName, "rb")) == NULL) {
-             fprintf (stderr, "Could not open file, '%s'.\n", fileName);
+          ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+        } while ((ch == '_') || isdigit (ch) || isalpha (ch));
+        tr -> mColumn += len;
+        if (len > maxLen) {
+           TrErrorAt (tr, tr -> mLine, col, "Identifier is too long.\n");
+           return (0);
+        }
+        ident [len] = '\0';
+        return (1);
+     }
+  }
+  TrErrorAt (tr, tr -> mLine, col, "Expected an identifier.\n");
+  return (0);
+}
+
+// Reads and validates (including bounds) an integer token.
+static int TrReadInt (TokenReaderT * tr, const int loBound, const int hiBound, int * value) {
+  uint col, digis;
+  size_t len;
+  char ch, temp [64 + 1];
+
+  col = tr -> mColumn;
+  if (TrSkipWhitespace (tr)) {
+     col = tr -> mColumn;
+     len = 0;
+     ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+     if ((ch == '+') || (ch == '-')) {
+        temp [len] = ch;
+        len ++;
+        tr -> mOut ++;
+     }
+     digis = 0;
+     while (TrLoad (tr)) {
+       ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+       if (! isdigit (ch))
+          break;
+       if (len < 64)
+          temp [len] = ch;
+       len ++;
+       digis ++;
+       tr -> mOut ++;
+     }
+     tr -> mColumn += len;
+     if ((digis > 0) && (ch != '.') && (! isalpha (ch))) {
+        if (len > 64) {
+           TrErrorAt (tr, tr -> mLine, col, "Integer is too long.");
+           return (0);
+        }
+        temp [len] = '\0';
+        (* value) = strtol (temp, NULL, 10);
+        if (((* value) < loBound) || ((* value) > hiBound)) {
+           TrErrorAt (tr, tr -> mLine, col, "Expected a value from %d to %d.\n", loBound, hiBound);
+           return (0);
+        }
+        return (1);
+     }
+  }
+  TrErrorAt (tr, tr -> mLine, col, "Expected an integer.\n");
+  return (0);
+}
+
+// Reads and validates (including bounds) a float token.
+static int TrReadFloat (TokenReaderT * tr, const double loBound, const double hiBound, double * value) {
+  uint col, digis;
+  size_t len;
+  char ch, temp [64 + 1];
+
+  col = tr -> mColumn;
+  if (TrSkipWhitespace (tr)) {
+     col = tr -> mColumn;
+     len = 0;
+     ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+     if ((ch == '+') || (ch == '-')) {
+        temp [len] = ch;
+        len ++;
+        tr -> mOut ++;
+     }
+     digis = 0;
+     while (TrLoad (tr)) {
+       ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+       if (! isdigit (ch))
+          break;
+       if (len < 64)
+          temp [len] = ch;
+       len ++;
+       digis ++;
+       tr -> mOut ++;
+     }
+     if (ch == '.') {
+        if (len < 64)
+           temp [len] = ch;
+        len ++;
+        tr -> mOut ++;
+     }
+     while (TrLoad (tr)) {
+       ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+       if (! isdigit (ch))
+          break;
+       if (len < 64)
+          temp [len] = ch;
+       len ++;
+       digis ++;
+       tr -> mOut ++;
+     }
+     if (digis > 0) {
+        if ((ch == 'E') || (ch == 'e')) {
+           if (len < 64)
+              temp [len] = ch;
+           len ++;
+           digis = 0;
+           tr -> mOut ++;
+           if ((ch == '+') || (ch == '-')) {
+              if (len < 64)
+                 temp [len] = ch;
+              len ++;
+              tr -> mOut ++;
+           }
+           while (TrLoad (tr)) {
+             ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+             if (! isdigit (ch))
+                break;
+             if (len < 64)
+                temp [len] = ch;
+             len ++;
+             digis ++;
+             tr -> mOut ++;
+           }
+        }
+        tr -> mColumn += len;
+        if ((digis > 0) && (ch != '.') && (! isalpha (ch))) {
+           if (len > 64) {
+              TrErrorAt (tr, tr -> mLine, col, "Float is too long.");
+              return (0);
+           }
+           temp [len] = '\0';
+           (* value) = strtod (temp, NULL);
+           if (((* value) < loBound) || ((* value) > hiBound)) {
+              TrErrorAt (tr, tr -> mLine, col, "Expected a value from %f to %f.\n", loBound, hiBound);
+              return (0);
+           }
+           return (1);
+        }
+     } else {
+        tr -> mColumn += len;
+     }
+  }
+  TrErrorAt (tr, tr -> mLine, col, "Expected a float.\n");
+  return (0);
+}
+
+// Reads and validates a string token.
+static int TrReadString (TokenReaderT * tr, const size_t maxLen, char * text) {
+  uint col;
+  size_t len;
+  char ch;
+
+  col = tr -> mColumn;
+  if (TrSkipWhitespace (tr)) {
+     col = tr -> mColumn;
+     ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+     if (ch == '\"') {
+        tr -> mOut ++;
+        len = 0;
+        while (TrLoad (tr)) {
+          ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+          tr -> mOut ++;
+          if (ch == '\"')
+             break;
+          if (ch == '\n') {
+             TrErrorAt (tr, tr -> mLine, col, "Unterminated string at end of line.\n");
              return (0);
           }
-          // Assuming they have not changed format, skip the .WAV header.
-          fseek (fp, 44, SEEK_SET);
-          // Map the left and right channels to their appropriate azimuth
-          // offsets.
-          j0 = (MIT_EV_OFFSET [e] + a) * MIT_IR_SIZE;
-          j1 = (MIT_EV_OFFSET [e] + ((MIT_AZ_COUNT [e] - a) % MIT_AZ_COUNT [e])) * MIT_IR_SIZE;
-          // Read in the data, converting it to floating-point.
-          for (i = 0; i < MIT_IR_SIZE; i ++) {
-              if (! ReadInt16LeAsFloat32 (fileName, fp, & s))
-                 return (0);
-              hData -> mHrirs [j0 + i] = s;
-              if (! ReadInt16LeAsFloat32 (fileName, fp, & s))
-                 return (0);
-              hData -> mHrirs [j1 + i] = s;
+          if (len < maxLen)
+             text [len] = ch;
+          len ++;
+        }
+        if (ch != '\"') {
+           tr -> mColumn += 1 + len;
+           TrErrorAt (tr, tr -> mLine, col, "Unterminated string at end of input.\n");
+           return (0);
+        }
+        tr -> mColumn += 2 + len;
+        if (len > maxLen) {
+           TrErrorAt (tr, tr -> mLine, col, "String is too long.\n");
+           return (0);
+        }
+        text [len] = '\0';
+        return (1);
+     }
+  }
+  TrErrorAt (tr, tr -> mLine, col, "Expected a string.\n");
+  return (0);
+}
+
+// Reads and validates the given operator.
+static int TrReadOperator (TokenReaderT * tr, const char * op) {
+  uint col;
+  size_t len;
+  char ch;
+
+  col = tr -> mColumn;
+  if (TrSkipWhitespace (tr)) {
+     col = tr -> mColumn;
+     len = 0;
+     while ((op [len] != '\0') && TrLoad (tr)) {
+       ch = tr -> mRing [tr -> mOut & TR_RING_MASK];
+       if (ch != op [len])
+          break;
+       len ++;
+       tr -> mOut ++;
+     }
+     tr -> mColumn += len;
+     if (op [len] == '\0')
+        return (1);
+  }
+  TrErrorAt (tr, tr -> mLine, col, "Expected '%s' operator.\n", op);
+  return (0);
+}
+
+/* Performs a string substitution.  Any case-insensitive occurrences of the
+ * pattern string are replaced with the replacement string.  The result is
+ * truncated if necessary.
+ */
+static int StrSubst (const char * in, const char * pat, const char * rep, const size_t maxLen, char * out) {
+  size_t inLen, patLen, repLen;
+  size_t si, di;
+  int truncated;
+
+  inLen = strlen (in);
+  patLen = strlen (pat);
+  repLen = strlen (rep);
+  si = 0;
+  di = 0;
+  truncated = 0;
+  while ((si < inLen) && (di < maxLen)) {
+    if (patLen <= (inLen - si)) {
+       if (strncasecmp (& in [si], pat, patLen) == 0) {
+          if (repLen > (maxLen - di)) {
+             repLen = maxLen - di;
+             truncated = 1;
           }
-          fclose (fp);
+          strncpy (& out [di], rep, repLen);
+          si += patLen;
+          di += repLen;
+       }
+    }
+    out [di] = in [si];
+    si ++;
+    di ++;
+  }
+  if (si < inLen)
+     truncated = 1;
+  out [di] = '\0';
+  return (! truncated);
+}
+
+// Provide missing math routines for MSVC.
+#ifdef _MSC_VER
+static double round (double val) {
+  if (val < 0.0)
+     return (ceil (val - 0.5));
+  return (floor (val + 0.5));
+}
+
+static double fmin (double a, double b) {
+  return ((a < b) ? a : b);
+}
+
+static double fmax (double a, double b) {
+  return ((a > b) ? a : b);
+}
+#endif
+
+// Simple clamp routine.
+static double Clamp (const double val, const double lower, const double upper) {
+  return (fmin (fmax (val, lower), upper));
+}
+
+// Performs linear interpolation.
+static double Lerp (const double a, const double b, const double f) {
+  return (a + (f * (b - a)));
+}
+
+// Performs a high-passed triangular probability density function dither from
+// a double to an integer.  It assumes the input sample is already scaled.
+static int HpTpdfDither (const double in, int * hpHist) {
+  const double PRNG_SCALE = 1.0 / RAND_MAX;
+  int prn;
+  double out;
+
+  prn = rand ();
+  out = round (in + (PRNG_SCALE * (prn - (* hpHist))));
+  (* hpHist) = prn;
+  return ((int) out);
+}
+
+// Allocates an array of doubles.
+static double * CreateArray (const size_t n) {
+  double * a = NULL;
+
+  a = (double *) calloc (n, sizeof (double));
+  if (a == NULL) {
+     fprintf (stderr, "Error:  Out of memory.\n");
+     exit (-1);
+  }
+  return (a);
+}
+
+// Frees an array of doubles.
+static void DestroyArray (const double * a) {
+  free ((void *) a);
+}
+
+// Complex number routines.  All outputs must be non-NULL.
+
+// Magnitude/absolute value.
+static double ComplexAbs (const double r, const double i) {
+  return (sqrt ((r * r) + (i * i)));
+}
+
+// Multiply.
+static void ComplexMul (const double aR, const double aI, const double bR, const double bI, double * outR, double * outI) {
+  (* outR) = (aR * bR) - (aI * bI);
+  (* outI) = (aI * bR) + (aR * bI);
+}
+
+// Base-e exponent.
+static void ComplexExp (const double inR, const double inI, double * outR, double * outI) {
+  double e;
+
+  e = exp (inR);
+  (* outR) = e * cos (inI);
+  (* outI) = e * sin (inI);
+}
+
+/* Fast Fourier transform routines.  The number of points must be a power of
+ * two.  In-place operation is possible only if both the real and imaginary
+ * parts are in-place together.
+ */
+
+// Performs bit-reversal ordering.
+static void FftArrange (const size_t n, const double * inR, const double * inI, double * outR, double * outI) {
+  size_t rk, k, m;
+  double tempR, tempI;
+
+  if ((inR == outR) && (inI == outI)) {
+     // Handle in-place arrangement.
+     rk = 0;
+     for (k = 0; k < n; k ++) {
+         if (rk > k) {
+            tempR = inR [rk];
+            tempI = inI [rk];
+            outR [rk] = inR [k];
+            outI [rk] = inI [k];
+            outR [k] = tempR;
+            outI [k] = tempI;
+         }
+         m = n;
+         while (rk & (m >>= 1))
+           rk &= ~m;
+         rk |= m;
+     }
+  } else {
+     // Handle copy arrangement.
+     rk = 0;
+     for (k = 0; k < n; k ++) {
+         outR [rk] = inR [k];
+         outI [rk] = inI [k];
+         m = n;
+         while (rk & (m >>= 1))
+           rk &= ~m;
+         rk |= m;
+     }
+  }
+}
+
+// Performs the summation.
+static void FftSummation (const size_t n, const double s, double * re, double * im) {
+  double pi;
+  size_t m, m2;
+  double vR, vI, wR, wI;
+  size_t i, k, mk;
+  double tR, tI;
+
+  pi = s * M_PI;
+  for (m = 1, m2 = 2; m < n; m <<= 1, m2 <<= 1) {
+      // v = Complex (-2.0 * sin (0.5 * pi / m) * sin (0.5 * pi / m), -sin (pi / m))
+      vR = sin (0.5 * pi / m);
+      vR = -2.0 * vR * vR;
+      vI = -sin (pi / m);
+      // w = Complex (1.0, 0.0)
+      wR = 1.0;
+      wI = 0.0;
+      for (i = 0; i < m; i ++) {
+          for (k = i; k < n; k += m2) {
+              mk = k + m;
+              // t = ComplexMul (w, out [km2])
+              tR = (wR * re [mk]) - (wI * im [mk]);
+              tI = (wR * im [mk]) + (wI * re [mk]);
+              // out [mk] = ComplexSub (out [k], t)
+              re [mk] = re [k] - tR;
+              im [mk] = im [k] - tI;
+              // out [k] = ComplexAdd (out [k], t)
+              re [k] += tR;
+              im [k] += tI;
+          }
+          // t = ComplexMul (v, w)
+          tR = (vR * wR) - (vI * wI);
+          tI = (vR * wI) + (vI * wR);
+          // w = ComplexAdd (w, t)
+          wR += tR;
+          wI += tI;
+      }
+  }
+}
+
+// Performs a forward FFT.
+static void FftForward (const size_t n, const double * inR, const double * inI, double * outR, double * outI) {
+  FftArrange (n, inR, inI, outR, outI);
+  FftSummation (n, 1.0, outR, outI);
+}
+
+// Performs an inverse FFT.
+static void FftInverse (const size_t n, const double * inR, const double * inI, double * outR, double * outI) {
+  double f;
+  size_t i;
+
+  FftArrange (n, inR, inI, outR, outI);
+  FftSummation (n, -1.0, outR, outI);
+  f = 1.0 / n;
+  for (i = 0; i < n; i ++) {
+      outR [i] *= f;
+      outI [i] *= f;
+  }
+}
+
+/* Calculate the complex helical sequence (or discrete-time analytical
+ * signal) of the given input using the Hilbert transform.  Given the
+ * negative natural logarithm of a signal's magnitude response, the imaginary
+ * components can be used as the angles for minimum-phase reconstruction.
+ */
+static void Hilbert (const size_t n, const double * in, double * outR, double * outI) {
+  size_t i;
+
+  if (in == outR) {
+     // Handle in-place operation.
+     for (i = 0; i < n; i ++)
+         outI [i] = 0.0;
+  } else {
+     // Handle copy operation.
+     for (i = 0; i < n; i ++) {
+         outR [i] = in [i];
+         outI [i] = 0.0;
+     }
+  }
+  FftForward (n, outR, outI, outR, outI);
+  /* Currently the Fourier routines operate only on point counts that are
+   * powers of two.  If that changes and n is odd, the following conditional
+   * should be:  i < (n + 1) / 2.
+   */
+  for (i = 1; i < (n / 2); i ++) {
+      outR [i] *= 2.0;
+      outI [i] *= 2.0;
+  }
+  // If n is odd, the following increment should be skipped.
+  i ++;
+  for (; i < n; i ++) {
+      outR [i] = 0.0;
+      outI [i] = 0.0;
+  }
+  FftInverse (n, outR, outI, outR, outI);
+}
+
+/* Calculate the magnitude response of the given input.  This is used in
+ * place of phase decomposition, since the phase residuals are discarded for
+ * minimum phase reconstruction.  The mirrored half of the response is also
+ * discarded.
+ */
+static void MagnitudeResponse (const size_t n, const double * inR, const double * inI, double * out) {
+  const size_t m = 1 + (n / 2);
+  size_t i;
+
+  for (i = 0; i < m; i ++)
+      out [i] = fmax (ComplexAbs (inR [i], inI [i]), EPSILON);
+}
+
+/* Apply a range limit (in dB) to the given magnitude response.  This is used
+ * to adjust the effects of the diffuse-field average on the equalization
+ * process.
+ */
+static void LimitMagnitudeResponse (const size_t n, const double limit, const double * in, double * out) {
+  const size_t m = 1 + (n / 2);
+  double halfLim;
+  size_t i, lower, upper;
+  double ave;
+
+  halfLim = limit / 2.0;
+  // Convert the response to dB.
+  for (i = 0; i < m; i ++)
+      out [i] = 20.0 * log10 (in [i]);
+  // Use six octaves to calculate the average magnitude of the signal.
+  lower = ((size_t) ceil (n / pow (2.0, 8.0))) - 1;
+  upper = ((size_t) floor (n / pow (2.0, 2.0))) - 1;
+  ave = 0.0;
+  for (i = lower; i <= upper; i ++)
+      ave += out [i];
+  ave /= upper - lower + 1;
+  // Keep the response within range of the average magnitude.
+  for (i = 0; i < m; i ++)
+      out [i] = Clamp (out [i], ave - halfLim, ave + halfLim);
+  // Convert the response back to linear magnitude.
+  for (i = 0; i < m; i ++)
+      out [i] = pow (10.0, out [i] / 20.0);
+}
+
+/* Reconstructs the minimum-phase component for the given magnitude response
+ * of a signal.  This is equivalent to phase recomposition, sans the missing
+ * residuals (which were discarded).  The mirrored half of the response is
+ * reconstructed.
+ */
+static void MinimumPhase (const size_t n, const double * in, double * outR, double * outI) {
+  const size_t m = 1 + (n / 2);
+  double * mags = NULL;
+  size_t i;
+  double aR, aI;
+
+  mags = CreateArray (n);
+  for (i = 0; i < m; i ++) {
+      mags [i] = fmax (in [i], EPSILON);
+      outR [i] = -log (mags [i]);
+  }
+  for (; i < n; i ++) {
+      mags [i] = mags [n - i];
+      outR [i] = outR [n - i];
+  }
+  Hilbert (n, outR, outR, outI);
+  // Remove any DC offset the filter has.
+  outR [0] = 0.0;
+  outI [0] = 0.0;
+  for (i = 1; i < n; i ++) {
+      ComplexExp (0.0, outI [i], & aR, & aI);
+      ComplexMul (mags [i], 0.0, aR, aI, & outR [i], & outI [i]);
+  }
+  DestroyArray (mags);
+}
+
+// Read a binary value of the specified byte order and byte size from a file,
+// storing it as a 32-bit unsigned integer.
+static int ReadBin4 (FILE * fp, const char * filename, const ByteOrderT order, const uint bytes, uint4 * out) {
+  uint1 in [4];
+  uint4 accum;
+  uint i;
+
+  if (fread (in, 1, bytes, fp) != bytes) {
+     fprintf (stderr, "Error:  Bad read from file '%s'.\n", filename);
+     return (0);
+  }
+  accum = 0;
+  switch (order) {
+    case BO_LITTLE :
+      for (i = 0; i < bytes; i ++)
+          accum = (accum << 8) | in [bytes - i - 1];
+    break;
+    case BO_BIG :
+      for (i = 0; i < bytes; i ++)
+          accum = (accum << 8) | in [i];
+    break;
+    default :
+    break;
+  }
+  (* out) = accum;
+  return (1);
+}
+
+// Read a binary value of the specified byte order from a file, storing it as
+// a 64-bit unsigned integer.
+static int ReadBin8 (FILE * fp, const char * filename, const ByteOrderT order, uint8 * out) {
+  uint1 in [8];
+  uint8 accum;
+  uint i;
+
+  if (fread (in, 1, 8, fp) != 8) {
+     fprintf (stderr, "Error:  Bad read from file '%s'.\n", filename);
+     return (0);
+  }
+  accum = 0ULL;
+  switch (order) {
+    case BO_LITTLE :
+      for (i = 0; i < 8; i ++)
+          accum = (accum << 8) | in [8 - i - 1];
+    break;
+    case BO_BIG :
+      for (i = 0; i < 8; i ++)
+          accum = (accum << 8) | in [i];
+    break;
+    default :
+    break;
+  }
+  (* out) = accum;
+  return (1);
+}
+
+// Write an ASCII string to a file.
+static int WriteAscii (const char * out, FILE * fp, const char * filename) {
+  size_t len;
+
+  len = strlen (out);
+  if (fwrite (out, 1, len, fp) != len) {
+     fclose (fp);
+     fprintf (stderr, "Error:  Bad write to file '%s'.\n", filename);
+     return (0);
+  }
+  return (1);
+}
+
+// Write a binary value of the given byte order and byte size to a file,
+// loading it from a 32-bit unsigned integer.
+static int WriteBin4 (const ByteOrderT order, const uint bytes, const uint4 in, FILE * fp, const char * filename) {
+  uint1 out [4];
+  uint i;
+
+  switch (order) {
+    case BO_LITTLE :
+      for (i = 0; i < bytes; i ++)
+          out [i] = (in >> (i * 8)) & 0x000000FF;
+    break;
+    case BO_BIG :
+      for (i = 0; i < bytes; i ++)
+          out [bytes - i - 1] = (in >> (i * 8)) & 0x000000FF;
+    break;
+    default :
+    break;
+  }
+  if (fwrite (out, 1, bytes, fp) != bytes) {
+     fprintf (stderr, "Error:  Bad write to file '%s'.\n", filename);
+     return (0);
+  }
+  return (1);
+}
+
+/* Read a binary value of the specified type, byte order, and byte size from
+ * a file, converting it to a double.  For integer types, the significant
+ * bits are used to normalize the result.  The sign of bits determines
+ * whether they are padded toward the MSB (negative) or LSB (positive).
+ * Floating-point types are not normalized.
+ */
+static int ReadBinAsDouble (FILE * fp, const char * filename, const ByteOrderT order, const ElementTypeT type, const uint bytes, const int bits, double * out) {
+  union {
+    uint4 ui;
+    int4 i;
+    float f;
+  } v4;
+  union {
+    uint8 ui;
+    double f;
+  } v8;
+
+  (* out) = 0.0;
+  if (bytes > 4) {
+     if (! ReadBin8 (fp, filename, order, & v8 . ui))
+        return (0);
+     if (type == ET_FP)
+        (* out) = v8 . f;
+  } else {
+     if (! ReadBin4 (fp, filename, order, bytes, & v4 . ui))
+        return (0);
+     if (type == ET_FP) {
+        (* out) = (double) v4 . f;
+     } else {
+        if (bits > 0)
+           v4 . ui >>= (8 * bytes) - bits;
+        else
+           v4 . ui &= (0xFFFFFFFF >> (32 + bits));
+        if (v4 . ui & (1 << (abs (bits) - 1)))
+           v4 . ui |= (0xFFFFFFFF << abs (bits));
+        (* out) = v4 . i / ((double) (1 << (abs (bits) - 1)));
+     }
+  }
+  return (1);
+}
+
+/* Read an ascii value of the specified type from a file, converting it to a
+ * double.  For integer types, the significant bits are used to normalize the
+ * result.  The sign of the bits should always be positive.  This also skips
+ * up to one separator character before the element itself.
+ */
+static int ReadAsciiAsDouble (TokenReaderT * tr, const char * filename, const ElementTypeT type, const uint bits, double * out) {
+  int v;
+
+  if (TrIsOperator (tr, ","))
+     TrReadOperator (tr, ",");
+  else if (TrIsOperator (tr, ":"))
+     TrReadOperator (tr, ":");
+  else if (TrIsOperator (tr, ";"))
+     TrReadOperator (tr, ";");
+  else if (TrIsOperator (tr, "|"))
+     TrReadOperator (tr, "|");
+  if (type == ET_FP) {
+     if (! TrReadFloat (tr, -1.0 / 0.0, 1.0 / 0.0, out)) {
+        fprintf (stderr, "Error:  Bad read from file '%s'.\n", filename);
+        return (0);
+     }
+  } else {
+     if (! TrReadInt (tr, -(1 << (bits - 1)), (1 << (bits - 1)) - 1, & v)) {
+        fprintf (stderr, "Error:  Bad read from file '%s'.\n", filename);
+        return (0);
+     }
+     (* out) = v / ((double) ((1 << (bits - 1)) - 1));
+  }
+  return (1);
+}
+
+// Read the RIFF/RIFX WAVE format chunk from a file, validating it against
+// the source parameters and data set metrics.
+static int ReadWaveFormat (FILE * fp, const ByteOrderT order, const uint hrirRate, SourceRefT * src) {
+  uint4 fourCC, chunkSize;
+  uint4 format, channels, rate, dummy, block, size, bits;
+
+  chunkSize = 0;
+  do {
+    if (chunkSize > 0)
+       fseek (fp, chunkSize, SEEK_CUR);
+    if ((! ReadBin4 (fp, src -> mPath, BO_LITTLE, 4, & fourCC)) ||
+        (! ReadBin4 (fp, src -> mPath, order, 4, & chunkSize)))
+       return (0);
+  } while (fourCC != FOURCC_FMT);
+  if ((! ReadBin4 (fp, src -> mPath, order, 2, & format)) ||
+      (! ReadBin4 (fp, src -> mPath, order, 2, & channels)) ||
+      (! ReadBin4 (fp, src -> mPath, order, 4, & rate)) ||
+      (! ReadBin4 (fp, src -> mPath, order, 4, & dummy)) ||
+      (! ReadBin4 (fp, src -> mPath, order, 2, & block)))
+     return (0);
+  block /= channels;
+  if (chunkSize > 14) {
+     if (! ReadBin4 (fp, src -> mPath, order, 2, & size))
+        return (0);
+     size /= 8;
+     if (block > size)
+        size = block;
+  } else {
+     size = block;
+  }
+  if (format == WAVE_FORMAT_EXTENSIBLE) {
+     fseek (fp, 2, SEEK_CUR);
+     if (! ReadBin4 (fp, src -> mPath, order, 2, & bits))
+        return (0);
+     if (bits == 0)
+        bits = 8 * size;
+     fseek (fp, 4, SEEK_CUR);
+     if (! ReadBin4 (fp, src -> mPath, order, 2, & format))
+        return (0);
+     fseek (fp, chunkSize - 26, SEEK_CUR);
+  } else {
+     bits = 8 * size;
+     if (chunkSize > 14)
+        fseek (fp, chunkSize - 16, SEEK_CUR);
+     else
+        fseek (fp, chunkSize - 14, SEEK_CUR);
+  }
+  if ((format != WAVE_FORMAT_PCM) && (format != WAVE_FORMAT_IEEE_FLOAT)) {
+     fprintf (stderr, "Error:  Unsupported WAVE format in file '%s'.\n", src -> mPath);
+     return (0);
+  }
+  if (src -> mChannel >= channels) {
+     fprintf (stderr, "Error:  Missing source channel in WAVE file '%s'.\n", src -> mPath);
+     return (0);
+  }
+  if (rate != hrirRate) {
+     fprintf (stderr, "Error:  Mismatched source sample rate in WAVE file '%s'.\n", src -> mPath);
+     return (0);
+  }
+  if (format == WAVE_FORMAT_PCM) {
+     if ((size < 2) || (size > 4)) {
+        fprintf (stderr, "Error:  Unsupported sample size in WAVE file '%s'.\n", src -> mPath);
+        return (0);
+     }
+     if ((bits < 16) || (bits > (8 * size))) {
+        fprintf (stderr, "Error:  Bad significant bits in WAVE file '%s'.\n", src -> mPath);
+        return (0);
+     }
+     src -> mType = ET_INT;
+  } else {
+     if ((size != 4) && (size != 8)) {
+        fprintf (stderr, "Error:  Unsupported sample size in WAVE file '%s'.\n", src -> mPath);
+        return (0);
+     }
+     src -> mType = ET_FP;
+  }
+  src -> mSize = size;
+  src -> mBits = (int) bits;
+  src -> mSkip = channels;
+  return (1);
+}
+
+// Read a RIFF/RIFX WAVE data chunk, converting all elements to doubles.
+static int ReadWaveData (FILE * fp, const SourceRefT * src, const ByteOrderT order, const size_t n, double * hrir) {
+  int pre, post, skip;
+  size_t i;
+
+  pre = (int) (src -> mSize * src -> mChannel);
+  post = (int) (src -> mSize * (src -> mSkip - src -> mChannel - 1));
+  skip = 0;
+  for (i = 0; i < n; i ++) {
+      skip += pre;
+      if (skip > 0)
+         fseek (fp, skip, SEEK_CUR);
+      if (! ReadBinAsDouble (fp, src -> mPath, order, src -> mType, src -> mSize, src -> mBits, & hrir [i]))
+         return (0);
+      skip = post;
+  }
+  if (skip > 0)
+     fseek (fp, skip, SEEK_CUR);
+  return (1);
+}
+
+// Read the RIFF/RIFX WAVE list or data chunk, converting all elements to
+// doubles.
+static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT order, const size_t n, double * hrir) {
+  uint4 fourCC, chunkSize, listSize;
+  size_t block, skip, count, offset, i;
+  double lastSample;
+
+  for (;;) {
+      if ((! ReadBin4 (fp, src -> mPath, BO_LITTLE, 4, & fourCC)) ||
+          (! ReadBin4 (fp, src -> mPath, order, 4, & chunkSize)))
+         return (0);
+      if (fourCC == FOURCC_DATA) {
+         block = src -> mSize * src -> mSkip;
+         count = chunkSize / block;
+         if (count < (src -> mOffset + n)) {
+            fprintf (stderr, "Error:  Bad read from file '%s'.\n", src -> mPath);
+            return (0);
+         }
+         fseek (fp, src -> mOffset * block, SEEK_CUR);
+         if (! ReadWaveData (fp, src, order, n, & hrir [0]))
+            return (0);
+         return (1);
+      } else if (fourCC == FOURCC_LIST) {
+         if (! ReadBin4 (fp, src -> mPath, BO_LITTLE, 4, & fourCC))
+            return (0);
+         chunkSize -= 4;
+         if (fourCC == FOURCC_WAVL)
+            break;
+      }
+      if (chunkSize > 0)
+         fseek (fp, chunkSize, SEEK_CUR);
+  }
+  listSize = chunkSize;
+  block = src -> mSize * src -> mSkip;
+  skip = src -> mOffset;
+  offset = 0;
+  lastSample = 0.0;
+  while ((offset < n) && (listSize > 8)) {
+    if ((! ReadBin4 (fp, src -> mPath, BO_LITTLE, 4, & fourCC)) ||
+        (! ReadBin4 (fp, src -> mPath, order, 4, & chunkSize)))
+       return (0);
+    listSize -= 8 + chunkSize;
+    if (fourCC == FOURCC_DATA) {
+       count = chunkSize / block;
+       if (count > skip) {
+          fseek (fp, skip * block, SEEK_CUR);
+          chunkSize -= skip * block;
+          count -= skip;
+          skip = 0;
+          if (count > (n - offset))
+             count = n - offset;
+          if (! ReadWaveData (fp, src, order, count, & hrir [offset]))
+             return (0);
+          chunkSize -= count * block;
+          offset += count;
+          lastSample = hrir [offset - 1];
+       } else {
+          skip -= count;
+          count = 0;
+       }
+    } else if (fourCC == FOURCC_SLNT) {
+       if (! ReadBin4 (fp, src -> mPath, order, 4, & count))
+          return (0);
+       chunkSize -= 4;
+       if (count > skip) {
+          count -= skip;
+          skip = 0;
+          if (count > (n - offset))
+             count = n - offset;
+          for (i = 0; i < count; i ++)
+              hrir [offset + i] = lastSample;
+          offset += count;
+       } else {
+          skip -= count;
+          count = 0;
+       }
+    }
+    if (chunkSize > 0)
+       fseek (fp, chunkSize, SEEK_CUR);
+  }
+  if (offset < n) {
+     fprintf (stderr, "Error:  Bad read from file '%s'.\n", src -> mPath);
+     return (0);
+  }
+  return (1);
+}
+
+// Load a source HRIR from a RIFF/RIFX WAVE file.
+static int LoadWaveSource (FILE * fp, SourceRefT * src, const uint hrirRate, const size_t n, double * hrir) {
+  uint4 fourCC, dummy;
+  ByteOrderT order;
+
+  if ((! ReadBin4 (fp, src -> mPath, BO_LITTLE, 4, & fourCC)) ||
+      (! ReadBin4 (fp, src -> mPath, BO_LITTLE, 4, & dummy)))
+     return (0);
+  if (fourCC == FOURCC_RIFF) {
+     order = BO_LITTLE;
+  } else if (fourCC == FOURCC_RIFX) {
+     order = BO_BIG;
+  } else {
+     fprintf (stderr, "Error:  No RIFF/RIFX chunk in file '%s'.\n", src -> mPath);
+     return (0);
+  }
+  if (! ReadBin4 (fp, src -> mPath, BO_LITTLE, 4, & fourCC))
+     return (0);
+  if (fourCC != FOURCC_WAVE) {
+     fprintf (stderr, "Error:  Not a RIFF/RIFX WAVE file '%s'.\n", src -> mPath);
+     return (0);
+  }
+  if (! ReadWaveFormat (fp, order, hrirRate, src))
+     return (0);
+  if (! ReadWaveList (fp, src, order, n, hrir))
+     return (0);
+  return (1);
+}
+
+// Load a source HRIR from a binary file.
+static int LoadBinarySource (FILE * fp, const SourceRefT * src, const ByteOrderT order, const size_t n, double * hrir) {
+  size_t i;
+
+  fseek (fp, src -> mOffset, SEEK_SET);
+  for (i = 0; i < n; i ++) {
+      if (! ReadBinAsDouble (fp, src -> mPath, order, src -> mType, src -> mSize, src -> mBits, & hrir [i]))
+         return (0);
+      if (src -> mSkip > 0)
+         fseek (fp, src -> mSkip, SEEK_CUR);
+  }
+  return (1);
+}
+
+// Load a source HRIR from an ASCII text file containing a list of elements
+// separated by whitespace or common list operators (',', ';', ':', '|').
+static int LoadAsciiSource (FILE * fp, const SourceRefT * src, const size_t n, double * hrir) {
+  TokenReaderT tr;
+  size_t i, j;
+  double dummy;
+
+  TrSetup (fp, NULL, & tr);
+  for (i = 0; i < src -> mOffset; i ++) {
+      if (! ReadAsciiAsDouble (& tr, src -> mPath, src -> mType, src -> mBits, & dummy))
+         return (0);
+  }
+  for (i = 0; i < n; i ++) {
+      if (! ReadAsciiAsDouble (& tr, src -> mPath, src -> mType, src -> mBits, & hrir [i]))
+         return (0);
+      for (j = 0; j < src -> mSkip; j ++) {
+          if (! ReadAsciiAsDouble (& tr, src -> mPath, src -> mType, src -> mBits, & dummy))
+             return (0);
       }
   }
   return (1);
 }
 
-// Performs the minimum phase reconstruction for a given HRIR data set.  The
-// cepstrum size should be made configureable at some point in the future.
-static void ReconstructHrirs (int minIrSize, HrirDataT * hData) {
-  int start, end, step, j;
-  float cep [CEP_SIZE];
+// Load a source HRIR from a supported file type.
+static int LoadSource (SourceRefT * src, const uint hrirRate, const size_t n, double * hrir) {
+  FILE * fp = NULL;
+  int result;
 
-  start = hData -> mEvOffset [hData -> mEvStart];
-  end = hData -> mIrCount;
-  step = hData -> mIrSize;
-  for (j = start; j < end; j ++) {
-      RealCepstrum (step, & hData -> mHrirs [j * step], cep);
-      MinimumPhase (cep, minIrSize, & hData -> mHrirs [j * minIrSize]);
+  if (src -> mFormat == SF_ASCII)
+     fp = fopen (src -> mPath, "r");
+  else
+     fp = fopen (src -> mPath, "rb");
+  if (fp == NULL) {
+     fprintf (stderr, "Error:  Could not open source file '%s'.\n", src -> mPath);
+     return (0);
   }
-  hData -> mIrSize = minIrSize;
+  if (src -> mFormat == SF_WAVE)
+     result = LoadWaveSource (fp, src, hrirRate, n, hrir);
+  else if (src -> mFormat == SF_BIN_LE)
+     result = LoadBinarySource (fp, src, BO_LITTLE, n, hrir);
+  else if (src -> mFormat == SF_BIN_BE)
+     result = LoadBinarySource (fp, src, BO_BIG, n, hrir);
+  else
+     result = LoadAsciiSource (fp, src, n, hrir);
+  fclose (fp);
+  return (result);
 }
 
-// Renormalize the entire HRIR data set, and attenutate it slightly.
-static void RenormalizeHrirs (const HrirDataT * hData) {
-  int step, start, end;
-  float norm;
-  int j, i;
+// Calculate the magnitude response of an HRIR and average it with any
+// existing responses for its elevation and azimuth.
+static void AverageHrirMagnitude (const double * hrir, const double f, const uint ei, const uint ai, const HrirDataT * hData) {
+  double * re = NULL, * im = NULL;
+  size_t n, m, i, j;
+
+  n = hData -> mFftSize;
+  re = CreateArray (n);
+  im = CreateArray (n);
+  for (i = 0; i < hData -> mIrPoints; i ++) {
+      re [i] = hrir [i];
+      im [i] = 0.0;
+  }
+  for (; i < n; i ++) {
+      re [i] = 0.0;
+      im [i] = 0.0;
+  }
+  FftForward (n, re, im, re, im);
+  MagnitudeResponse (n, re, im, re);
+  m = 1 + (n / 2);
+  j = (hData -> mEvOffset [ei] + ai) * hData -> mIrSize;
+  for (i = 0; i < m; i ++)
+      hData -> mHrirs [j + i] = Lerp (hData -> mHrirs [j + i], re [i], f);
+  DestroyArray (im);
+  DestroyArray (re);
+}
+
+/* Calculate the contribution of each HRIR to the diffuse-field average based
+ * on the area of its surface patch.  All patches are centered at the HRIR
+ * coordinates on the unit sphere and are measured by solid angle.
+ */
+static void CalculateDfWeights (const HrirDataT * hData, double * weights) {
+  uint ei;
+  double evs, sum, ev, up_ev, down_ev, solidAngle;
+
+  evs = 90.0 / (hData -> mEvCount - 1);
+  sum = 0.0;
+  for (ei = hData -> mEvStart; ei < hData -> mEvCount; ei ++) {
+      // For each elevation, calculate the upper and lower limits of the
+      // patch band.
+      ev = -90.0 + (ei * 2.0 * evs);
+      if (ei < (hData -> mEvCount - 1))
+         up_ev = (ev + evs) * M_PI / 180.0;
+      else
+         up_ev = M_PI / 2.0;
+      if (ei > 0)
+         down_ev = (ev - evs) * M_PI / 180.0;
+      else
+         down_ev = -M_PI / 2.0;
+      // Calculate the area of the patch band.
+      solidAngle = 2.0 * M_PI * (sin (up_ev) - sin (down_ev));
+      // Each weight is the area of one patch.
+      weights [ei] = solidAngle / hData -> mAzCount [ei];
+      // Sum the total surface area covered by the HRIRs.
+      sum += solidAngle;
+  }
+  // Normalize the weights given the total surface coverage.
+  for (ei = hData -> mEvStart; ei < hData -> mEvCount; ei ++)
+      weights [ei] /= sum;
+}
+
+/* Calculate the diffuse-field average from the given magnitude responses of
+ * the HRIR set.  Weighting can be applied to compensate for the varying
+ * surface area covered by each HRIR.  The final average can then be limited
+ * by the specified magnitude range (in positive dB; 0.0 to skip).
+ */
+static void CalculateDiffuseFieldAverage (const HrirDataT * hData, const int weighted, const double limit, double * dfa) {
+  double * weights = NULL;
+  uint ei, ai;
+  size_t count, step, start, end, m, j, i;
+  double weight;
+
+  weights = CreateArray (hData -> mEvCount);
+  if (weighted) {
+     // Use coverage weighting to calculate the average.
+     CalculateDfWeights (hData, weights);
+  } else {
+     // If coverage weighting is not used, the weights still need to be
+     // averaged by the number of HRIRs.
+     count = 0;
+     for (ei = hData -> mEvStart; ei < hData -> mEvCount; ei ++)
+         count += hData -> mAzCount [ei];
+     for (ei = hData -> mEvStart; ei < hData -> mEvCount; ei ++)
+         weights [ei] = 1.0 / count;
+  }
+  ei = hData -> mEvStart;
+  ai = 0;
+  step = hData -> mIrSize;
+  start = hData -> mEvOffset [ei] * step;
+  end = hData -> mIrCount * step;
+  m = 1 + (hData -> mFftSize / 2);
+  for (i = 0; i < m; i ++)
+      dfa [i] = 0.0;
+  for (j = start; j < end; j += step) {
+      // Get the weight for this HRIR's contribution.
+      weight = weights [ei];
+      // Add this HRIR's weighted power average to the total.
+      for (i = 0; i < m; i ++)
+          dfa [i] += weight * hData -> mHrirs [j + i] * hData -> mHrirs [j + i];
+      // Determine the next weight to use.
+      ai ++;
+      if (ai >= hData -> mAzCount [ei]) {
+         ei ++;
+         ai = 0;
+      }
+  }
+  // Finish the average calculation and keep it from being too small.
+  for (i = 0; i < m; i ++)
+      dfa [i] = fmax (sqrt (dfa [i]), EPSILON);
+  // Apply a limit to the magnitude range of the diffuse-field average if
+  // desired.
+  if (limit > 0.0)
+     LimitMagnitudeResponse (hData -> mFftSize, limit, dfa, dfa);
+  DestroyArray (weights);
+}
+
+// Perform diffuse-field equalization on the magnitude responses of the HRIR
+// set using the given average response.
+static void DiffuseFieldEqualize (const double * dfa, const HrirDataT * hData) {
+  size_t step, start, end, m, j, i;
 
   step = hData -> mIrSize;
   start = hData -> mEvOffset [hData -> mEvStart] * step;
   end = hData -> mIrCount * step;
-  norm = 0.0f;
+  m = 1 + (hData -> mFftSize / 2);
   for (j = start; j < end; j += step) {
-      for (i = 0; i < step; i ++) {
-          if (fabs (hData -> mHrirs [j + i]) > norm)
-             norm = fabs (hData -> mHrirs [j + i]);
-      }
-  }
-  if (norm > 0.000001f)
-     norm = 1.0f / norm;
-  norm *= 0.95f;
-  for (j = start; j < end; j += step) {
-      for (i = 0; i < step; i ++)
-          hData -> mHrirs [j + i] *= norm;
+      for (i = 0; i < m; i ++)
+          hData -> mHrirs [j + i] /= dfa [i];
   }
 }
 
-// Given an elevation offset and azimuth, calculates two offsets for
-// addressing the HRIRs buffer and their interpolation factor.
-static void CalcAzIndices (const HrirDataT * hData, int oi, float az, int * j0, int * j1, float * jf) {
-  int ai;
+// Perform minimum-phase reconstruction using the magnitude responses of the
+// HRIR set.
+static void ReconstructHrirs (const HrirDataT * hData) {
+  double * re = NULL, * im = NULL;
+  size_t step, start, end, n, j, i;
 
-  az = fmod ((2.0f * M_PI) + az, 2.0f * M_PI) * hData -> mAzCount [oi] / (2.0f * M_PI);
-  ai = (int) az;
-  az -= ai;
-  (* j0) = hData -> mEvOffset [oi] + ai;
-  (* j1) = hData -> mEvOffset [oi] + ((ai + 1) % hData -> mAzCount [oi]);
-  (* jf) = az;
+  step = hData -> mIrSize;
+  start = hData -> mEvOffset [hData -> mEvStart] * step;
+  end = hData -> mIrCount * step;
+  n = hData -> mFftSize;
+  re = CreateArray (n);
+  im = CreateArray (n);
+  for (j = start; j < end; j += step) {
+      MinimumPhase (n, & hData -> mHrirs [j], re, im);
+      FftInverse (n, re, im, re, im);
+      for (i = 0; i < hData -> mIrPoints; i ++)
+          hData -> mHrirs [j + i] = re [i];
+  }
+  DestroyArray (im);
+  DestroyArray (re);
 }
 
-// Perform a linear interpolation.
-static float Lerp (float a, float b, float f) {
-  return (a + (f * (b - a)));
+/* Given an elevation index and an azimuth, calculate the indices of the two
+ * HRIRs that bound the coordinate along with a factor for calculating the
+ * continous HRIR using interpolation.
+ */
+static void CalcAzIndices (const HrirDataT * hData, const uint ei, const double az, uint * j0, uint * j1, double * jf) {
+  double af;
+  uint ai;
+
+  af = ((2.0 * M_PI) + az) * hData -> mAzCount [ei] / (2.0 * M_PI);
+  ai = ((uint) af) % hData -> mAzCount [ei];
+  af -= floor (af);
+  (* j0) = hData -> mEvOffset [ei] + ai;
+  (* j1) = hData -> mEvOffset [ei] + ((ai + 1) % hData -> mAzCount [ei]);
+  (* jf) = af;
 }
 
-// Attempt to synthesize any missing HRIRs at the bottom elevations.  Right
-// now this just blends the lowest elevation HRIRs together and applies some
-// attenuates and high frequency damping.  It's not a realistic model to use,
-// but it is simple.
+/* Attempt to synthesize any missing HRIRs at the bottom elevations.  Right
+ * now this just blends the lowest elevation HRIRs together and applies some
+ * attenuation and high frequency damping.  It is a simple, if inaccurate
+ * model.
+ */
 static void SynthesizeHrirs (HrirDataT * hData) {
-  int step, oi, i, a, j, e;
-  float of;
-  int j0, j1;
-  float jf;
-  float lp [4], s0, s1;
+  uint oi, a, e;
+  size_t step, n, i, j;
+  double of;
+  size_t j0, j1;
+  double jf;
+  double lp [4], s0, s1;
 
   if (hData -> mEvStart <= 0)
      return;
   step = hData -> mIrSize;
   oi = hData -> mEvStart;
-  for (i = 0; i < step; i ++)
-      hData -> mHrirs [i] = 0.0f;
+  n = hData -> mIrPoints;
+  for (i = 0; i < n; i ++)
+      hData -> mHrirs [i] = 0.0;
   for (a = 0; a < hData -> mAzCount [oi]; a ++) {
       j = (hData -> mEvOffset [oi] + a) * step;
-      for (i = 0; i < step; i ++)
+      for (i = 0; i < n; i ++)
           hData -> mHrirs [i] += hData -> mHrirs [j + i] / hData -> mAzCount [oi];
   }
   for (e = 1; e < hData -> mEvStart; e ++) {
-      of = ((float) e) / hData -> mEvStart;
+      of = ((double) e) / hData -> mEvStart;
       for (a = 0; a < hData -> mAzCount [e]; a ++) {
           j = (hData -> mEvOffset [e] + a) * step;
-          CalcAzIndices (hData, oi, a * 2.0f * M_PI / hData -> mAzCount [e], & j0, & j1, & jf);
+          CalcAzIndices (hData, oi, a * 2.0 * M_PI / hData -> mAzCount [e], & j0, & j1, & jf);
           j0 *= step;
           j1 *= step;
-          lp [0] = 0.0f;
-          lp [1] = 0.0f;
-          lp [2] = 0.0f;
-          lp [3] = 0.0f;
-          for (i = 0; i < step; i ++) {
+          lp [0] = 0.0;
+          lp [1] = 0.0;
+          lp [2] = 0.0;
+          lp [3] = 0.0;
+          for (i = 0; i < n; i ++) {
               s0 = hData -> mHrirs [i];
               s1 = Lerp (hData -> mHrirs [j0 + i], hData -> mHrirs [j1 + i], jf);
               s0 = Lerp (s0, s1, of);
-              lp [0] = Lerp (s0, lp [0], 0.15f - (0.15f * of));
-              lp [1] = Lerp (lp [0], lp [1], 0.15f - (0.15f * of));
-              lp [2] = Lerp (lp [1], lp [2], 0.15f - (0.15f * of));
-              lp [3] = Lerp (lp [2], lp [3], 0.15f - (0.15f * of));
+              lp [0] = Lerp (s0, lp [0], 0.15 - (0.15 * of));
+              lp [1] = Lerp (lp [0], lp [1], 0.15 - (0.15 * of));
+              lp [2] = Lerp (lp [1], lp [2], 0.15 - (0.15 * of));
+              lp [3] = Lerp (lp [2], lp [3], 0.15 - (0.15 * of));
               hData -> mHrirs [j + i] = lp [3];
           }
       }
   }
-  lp [0] = 0.0f;
-  lp [1] = 0.0f;
-  lp [2] = 0.0f;
-  lp [3] = 0.0f;
-  for (i = 0; i < step; i ++) {
+  lp [0] = 0.0;
+  lp [1] = 0.0;
+  lp [2] = 0.0;
+  lp [3] = 0.0;
+  for (i = 0; i < n; i ++) {
       s0 = hData -> mHrirs [i];
-      lp [0] = Lerp (s0, lp [0], 0.15f);
-      lp [1] = Lerp (lp [0], lp [1], 0.15f);
-      lp [2] = Lerp (lp [1], lp [2], 0.15f);
-      lp [3] = Lerp (lp [2], lp [3], 0.15f);
+      lp [0] = Lerp (s0, lp [0], 0.15);
+      lp [1] = Lerp (lp [0], lp [1], 0.15);
+      lp [2] = Lerp (lp [1], lp [2], 0.15);
+      lp [3] = Lerp (lp [2], lp [3], 0.15);
       hData -> mHrirs [i] = lp [3];
   }
   hData -> mEvStart = 0;
 }
 
+// The following routines assume a full set of HRIRs for all elevations.
+
+// Normalize the HRIR set and slightly attenuate the result.
+static void NormalizeHrirs (const HrirDataT * hData) {
+  size_t step, end, n, j, i;
+  double maxLevel;
+
+  step = hData -> mIrSize;
+  end = hData -> mIrCount * step;
+  n = hData -> mIrPoints;
+  maxLevel = 0.0;
+  for (j = 0; j < end; j += step) {
+      for (i = 0; i < n; i ++)
+          maxLevel = fmax (fabs (hData -> mHrirs [j + i]), maxLevel);
+  }
+  maxLevel = 1.01 * maxLevel;
+  for (j = 0; j < end; j += step) {
+      for (i = 0; i < n; i ++)
+          hData -> mHrirs [j + i] /= maxLevel;
+  }
+}
+
+// Calculate the left-ear time delay using a spherical head model.
+static double CalcLTD (const double ev, const double az, const double rad, const double dist) {
+  double azp, dlp, l, al;
+
+  azp = asin (cos (ev) * sin (az));
+  dlp = sqrt ((dist * dist) + (rad * rad) + (2.0 * dist * rad * sin (azp)));
+  l = sqrt ((dist * dist) - (rad * rad));
+  al = (0.5 * M_PI) + azp;
+  if (dlp > l)
+     dlp = l + (rad * (al - acos (rad / dist)));
+  return (dlp / 343.3);
+}
+
 // Calculate the effective head-related time delays for the each HRIR, now
 // that they are minimum-phase.
 static void CalculateHrtds (HrirDataT * hData) {
-  float minHrtd, maxHrtd;
-  int e, a, j;
-  float t;
+  double minHrtd, maxHrtd;
+  uint e, a, j;
+  double t;
 
-  minHrtd = 1000.0f;
-  maxHrtd = -1000.0f;
+  minHrtd = 1000.0;
+  maxHrtd = -1000.0;
   for (e = 0; e < hData -> mEvCount; e ++) {
       for (a = 0; a < hData -> mAzCount [e]; a ++) {
           j = hData -> mEvOffset [e] + a;
-          t = CalcLTD ((-90.0f + (e * 180.0f / (hData -> mEvCount - 1))) * M_PI / 180.0f,
-                       (a * 360.0f / hData -> mAzCount [e]) * M_PI / 180.0f,
+          t = CalcLTD ((-90.0 + (e * 180.0 / (hData -> mEvCount - 1))) * M_PI / 180.0,
+                       (a * 360.0 / hData -> mAzCount [e]) * M_PI / 180.0,
                        hData -> mRadius, hData -> mDistance);
           hData -> mHrtds [j] = t;
-          if (t > maxHrtd)
-             maxHrtd = t;
-          if (t < minHrtd)
-             minHrtd = t;
+          maxHrtd = fmax (t, maxHrtd);
+          minHrtd = fmin (t, minHrtd);
       }
   }
   maxHrtd -= minHrtd;
@@ -574,180 +1737,668 @@ static void CalculateHrtds (HrirDataT * hData) {
   hData -> mMaxHrtd = maxHrtd;
 }
 
-// Save the OpenAL Soft HRTF data set.
-static int SaveMhr (const HrirDataT * hData, const char * fileName) {
+// Store the OpenAL Soft HRTF data set.
+static int StoreMhr (const HrirDataT * hData, const char * filename) {
   FILE * fp = NULL;
-  int e, step, end, j, i;
+  uint e;
+  size_t step, end, n, j, i;
+  int hpHist, v;
 
-  if ((fp = fopen (fileName, "wb")) == NULL) {
-     fprintf (stderr, "Could not create file, '%s'.\n", fileName);
+  if ((fp = fopen (filename, "wb")) == NULL) {
+     fprintf (stderr, "Error:  Could not open MHR file '%s'.\n", filename);
      return (0);
   }
-  if (! WriteString (MHR_FORMAT, fileName, fp))
+  if (! WriteAscii (MHR_FORMAT, fp, filename))
      return (0);
-  if (! WriteUInt32Le ((ALuint) hData -> mIrRate, fileName, fp))
+  if (! WriteBin4 (BO_LITTLE, 4, (uint4) hData -> mIrRate, fp, filename))
      return (0);
-  if (! WriteUInt16Le ((ALushort) hData -> mIrCount, fileName, fp))
+  if (! WriteBin4 (BO_LITTLE, 1, (uint4) hData -> mIrPoints, fp, filename))
      return (0);
-  if (! WriteUInt16Le ((ALushort) hData -> mIrSize, fileName, fp))
-     return (0);
-  if (! WriteUInt8 ((ALubyte) hData -> mEvCount, fileName, fp))
+  if (! WriteBin4 (BO_LITTLE, 1, (uint4) hData -> mEvCount, fp, filename))
      return (0);
   for (e = 0; e < hData -> mEvCount; e ++) {
-      if (! WriteUInt16Le ((ALushort) hData -> mEvOffset [e], fileName, fp))
+      if (! WriteBin4 (BO_LITTLE, 1, (uint4) hData -> mAzCount [e], fp, filename))
          return (0);
   }
   step = hData -> mIrSize;
   end = hData -> mIrCount * step;
+  n = hData -> mIrPoints;
+  srand (0x31DF840C);
   for (j = 0; j < end; j += step) {
-      for (i = 0; i < step; i ++) {
-          if (! WriteFloat32AsInt16Le (hData -> mHrirs [j + i], fileName, fp))
+      hpHist = 0;
+      for (i = 0; i < n; i ++) {
+          v = HpTpdfDither (32767.0 * hData -> mHrirs [j + i], & hpHist);
+          if (! WriteBin4 (BO_LITTLE, 2, (uint4) v, fp, filename))
              return (0);
       }
   }
   for (j = 0; j < hData -> mIrCount; j ++) {
-      i = (int) round (44100.0f * hData -> mHrtds [j]);
-      if (i > 127)
-         i = 127;
-      if (! WriteUInt8 ((ALubyte) i, fileName, fp))
+//      v = (int) fmin (round (44100.0 * hData -> mHrtds [j]), MAX_HRTD);
+v = fmin (hData -> mHrtds [j], MAX_HRTD);
+      if (! WriteBin4 (BO_LITTLE, 1, (uint4) v, fp, filename))
          return (0);
   }
   fclose (fp);
   return (1);
 }
 
-// Save the OpenAL Soft built-in table.
-static int SaveTab (const HrirDataT * hData, const char * fileName) {
+// Store the OpenAL Soft built-in table.
+static int StoreTable (const HrirDataT * hData, const char * filename) {
   FILE * fp = NULL;
-  int step, end, j, i;
-  char text [16];
+  size_t step, end, n, j, i;
+  int hpHist, v;
+  char text [128 + 1];
 
-  if ((fp = fopen (fileName, "wb")) == NULL) {
-     fprintf (stderr, "Could not create file, '%s'.\n", fileName);
+  if ((fp = fopen (filename, "wb")) == NULL) {
+     fprintf (stderr, "Error:  Could not open table file '%s'.\n", filename);
      return (0);
   }
-  if (! WriteString ("/* This data is Copyright 1994 by the MIT Media Laboratory. It is provided free\n"
-                     " * with no restrictions on use, provided the authors are cited when the data is\n"
-                     " * used in any research or commercial application. */\n"
-                     "/* Bill Gardner <billg@media.mit.edu> and Keith Martin <kdm@media.mit.edu> */\n"
-                     "\n"
-                     "    /* HRIR Coefficients */\n"
-                     "    {\n", fileName, fp))
+  snprintf (text, 128, "/* Elevation metrics */\n"
+                       "static const ALubyte defaultAzCount[%u] = { ", hData -> mEvCount);
+  if (! WriteAscii (text, fp, filename))
      return (0);
+  for (i = 0; i < hData -> mEvCount; i ++) {
+      snprintf (text, 128, "%u, ", hData -> mAzCount [i]);
+      if (! WriteAscii (text, fp, filename))
+         return (0);
+  }
+  snprintf (text, 128, "};\n"
+                       "static const ALushort defaultEvOffset[%u] = { ", hData -> mEvCount);
+  if (! WriteAscii (text, fp, filename))
+     return (0);
+  for (i = 0; i < hData -> mEvCount; i ++) {
+      snprintf (text, 128, "%u, ", hData -> mEvOffset [i]);
+      if (! WriteAscii (text, fp, filename))
+         return (0);
+  }
   step = hData -> mIrSize;
   end = hData -> mIrCount * step;
+  n = hData -> mIrPoints;
+  snprintf (text, 128, "};\n\n"
+                       "/* HRIR Coefficients */\n"
+                       "static const ALshort defaultCoeffs[%u] =\n{\n", end);
+  if (! WriteAscii (text, fp, filename))
+     return (0);
+  srand (0x31DF840C);
   for (j = 0; j < end; j += step) {
-      if (! WriteString ("        { ", fileName, fp))
+      if (! WriteAscii ("    ", fp, filename))
          return (0);
-      for (i = 0; i < step; i ++) {
-          snprintf (text, 15, "%+d, ", (int) round (32767.0f * hData -> mHrirs [j + i]));
-          if (! WriteString (text, fileName, fp))
+      hpHist = 0;
+      for (i = 0; i < n; i ++) {
+          v = HpTpdfDither (32767.0 * hData -> mHrirs [j + i], & hpHist);
+          snprintf (text, 128, "%+d, ", v);
+          if (! WriteAscii (text, fp, filename))
              return (0);
       }
-      if (! WriteString ("},\n", fileName, fp))
+      if (! WriteAscii ("\n", fp, filename))
          return (0);
   }
-  if (! WriteString ("    },\n"
-                     "\n"
-                     "    /* HRIR Delays */\n"
-                     "    { ", fileName, fp))
+  snprintf (text, 128, "};\n\n"
+                       "/* HRIR Delays */\n"
+                       "static const ALubyte defaultDelays[%d] =\n{\n"
+                       "    ", hData -> mIrCount);
+  if (! WriteAscii (text, fp, filename))
      return (0);
   for (j = 0; j < hData -> mIrCount; j ++) {
-      snprintf (text, 15, "%d, ", (int) round (44100.0f * hData -> mHrtds [j]));
-      if (! WriteString (text, fileName, fp))
+      v = (int) fmin (round (44100.0 * hData -> mHrtds [j]), MAX_HRTD);
+      snprintf (text, 128, "%d, ", v);
+      if (! WriteAscii (text, fp, filename))
          return (0);
   }
-  if (! WriteString ("}\n", fileName, fp))
+  if (! WriteAscii ("\n};\n\n"
+                    "/* Default HRTF Definition */\n", fp, filename))
+     return (0);
+  snprintf (text, 128, "static const struct Hrtf DefaultHrtf = {\n"
+                       "    %u, %u, %u, defaultAzCount, defaultEvOffset,\n",
+                       hData -> mIrRate, hData -> mIrPoints, hData -> mEvCount);
+  if (! WriteAscii (text, fp, filename))
+     return (0);
+  if (! WriteAscii ("    defaultCoeffs, defaultDelays, NULL\n"
+                    "};\n", fp, filename))
      return (0);
   fclose (fp);
   return (1);
 }
 
-// Loads and processes an MIT data set.  At present, the HRIR and HRTD data
-// is loaded and processed in a static buffer.  That should change to using
-// heap allocated memory in the future.  A cleanup function will then be
-// required.
-static int MakeMit(const char *baseInName, HrirDataT *hData)
-{
-    static float hrirs[MIT_IR_COUNT * MIT_IR_SIZE];
-    static float hrtds[MIT_IR_COUNT];
+// Process the data set definition to read and validate the data set metrics.
+static int ProcessMetrics (TokenReaderT * tr, const size_t fftSize, const size_t truncSize, HrirDataT * hData) {
+  char ident [MAX_IDENT_LEN + 1];
+  uint line, col;
+  int intVal;
+  size_t points;
+  double fpVal;
+  int hasRate = 0, hasPoints = 0, hasAzimuths = 0;
+  int hasRadius = 0, hasDistance = 0;
 
-    hData->mIrRate = MIT_IR_RATE;
-    hData->mIrCount = MIT_IR_COUNT;
-    hData->mIrSize = MIT_IR_SIZE;
-    hData->mEvCount = MIT_EV_COUNT;
-    hData->mEvStart = MIT_EV_START;
-    hData->mEvOffset = MIT_EV_OFFSET;
-    hData->mAzCount = MIT_AZ_COUNT;
-    hData->mRadius = MIT_RADIUS;
-    hData->mDistance = MIT_DISTANCE;
-    hData->mHrirs = hrirs;
-    hData->mHrtds = hrtds;
-    fprintf(stderr, "Loading base HRIR data...\n");
-    if(!LoadMitHrirs(baseInName, hData))
-        return 0;
-    fprintf(stderr, "Performing minimum phase reconstruction and truncation...\n");
-    ReconstructHrirs(MIN_IR_SIZE, hData);
-    fprintf(stderr, "Renormalizing minimum phase HRIR data...\n");
-    RenormalizeHrirs(hData);
-    fprintf(stderr, "Synthesizing missing elevations...\n");
-    SynthesizeHrirs(hData);
-    fprintf(stderr, "Calculating impulse delays...\n");
-    CalculateHrtds(hData);
-    return 1;
+  while (! (hasRate && hasPoints && hasAzimuths && hasRadius && hasDistance)) {
+    TrIndication (tr, & line, & col);
+    if (! TrReadIdent (tr, MAX_IDENT_LEN, ident))
+       return (0);
+    if (strcasecmp (ident, "rate") == 0) {
+       if (hasRate) {
+          TrErrorAt (tr, line, col, "Redefinition of 'rate'.\n");
+          return (0);
+       }
+       if (! TrReadOperator (tr, "="))
+          return (0);
+       if (! TrReadInt (tr, MIN_RATE, MAX_RATE, & intVal))
+          return (0);
+       hData -> mIrRate = intVal;
+       hasRate = 1;
+    } else if (strcasecmp (ident, "points") == 0) {
+       if (hasPoints) {
+          TrErrorAt (tr, line, col, "Redefinition of 'points'.\n");
+          return (0);
+       }
+       if (! TrReadOperator (tr, "="))
+          return (0);
+       TrIndication (tr, & line, & col);
+       if (! TrReadInt (tr, MIN_POINTS, MAX_POINTS, & intVal))
+          return (0);
+       points = (size_t) intVal;
+       if ((fftSize > 0) && (points > fftSize)) {
+          TrErrorAt (tr, line, col, "Value exceeds the overriden FFT size.\n");
+          return (0);
+       }
+       if (points < truncSize) {
+          TrErrorAt (tr, line, col, "Value is below the truncation size.\n");
+          return (0);
+       }
+       hData -> mIrPoints = points;
+       hData -> mFftSize = fftSize;
+       if (fftSize <= 0) {
+          points = 1;
+          while (points < (4 * hData -> mIrPoints))
+            points <<= 1;
+          hData -> mFftSize = points;
+          hData -> mIrSize = 1 + (points / 2);
+       } else {
+          hData -> mFftSize = fftSize;
+          hData -> mIrSize = 1 + (fftSize / 2);
+          if (points > hData -> mIrSize)
+             hData -> mIrSize = points;
+       }
+       hasPoints = 1;
+    } else if (strcasecmp (ident, "azimuths") == 0) {
+       if (hasAzimuths) {
+          TrErrorAt (tr, line, col, "Redefinition of 'azimuths'.\n");
+          return (0);
+       }
+       if (! TrReadOperator (tr, "="))
+          return (0);
+       hData -> mIrCount = 0;
+       hData -> mEvCount = 0;
+       hData -> mEvOffset [0] = 0;
+       for (;;) {
+           if (! TrReadInt (tr, MIN_AZ_COUNT, MAX_AZ_COUNT, & intVal))
+              return (0);
+           hData -> mAzCount [hData -> mEvCount] = intVal;
+           hData -> mIrCount += intVal;
+           hData -> mEvCount ++;
+           if (! TrIsOperator (tr, ","))
+              break;
+           if (hData -> mEvCount >= MAX_EV_COUNT) {
+              TrError (tr, "Exceeded the maximum of %d elevations.\n", MAX_EV_COUNT);
+              return (0);
+           }
+           hData -> mEvOffset [hData -> mEvCount] = hData -> mEvOffset [hData -> mEvCount - 1] + intVal;
+           TrReadOperator (tr, ",");
+       }
+       if (hData -> mEvCount < MIN_EV_COUNT) {
+          TrErrorAt (tr, line, col, "Did not reach the minimum of %d azimuth counts.\n", MIN_EV_COUNT);
+          return (0);
+       }
+       hasAzimuths = 1;
+    } else if (strcasecmp (ident, "radius") == 0) {
+       if (hasRadius) {
+          TrErrorAt (tr, line, col, "Redefinition of 'radius'.\n");
+          return (0);
+       }
+       if (! TrReadOperator (tr, "="))
+          return (0);
+       if (! TrReadFloat (tr, MIN_RADIUS, MAX_RADIUS, & fpVal))
+          return (0);
+       hData -> mRadius = fpVal;
+       hasRadius = 1;
+    } else if (strcasecmp (ident, "distance") == 0) {
+       if (hasDistance) {
+          TrErrorAt (tr, line, col, "Redefinition of 'distance'.\n");
+          return (0);
+       }
+       if (! TrReadOperator (tr, "="))
+          return (0);
+       if (! TrReadFloat (tr, MIN_DISTANCE, MAX_DISTANCE, & fpVal))
+          return (0);
+       hData -> mDistance = fpVal;
+       hasDistance = 1;
+    } else {
+       TrErrorAt (tr, line, col, "Expected a metric name.\n");
+       return (0);
+    }
+    TrSkipWhitespace (tr);
+  }
+  return (1);
 }
 
-// Simple dispatch.  Provided a command, the path to the MIT set of choice,
-// and an optional output filename, this will produce an OpenAL Soft
-// compatible HRTF set in the chosen format.
-int main(int argc, char *argv[])
-{
-    char baseName[1024];
-    const char *outName = NULL;
-    HrirDataT hData;
+// Parse an index pair from the data set definition.
+static int ReadIndexPair (TokenReaderT * tr, const HrirDataT * hData, uint * ei, uint * ai) {
+  int intVal;
 
-    if(argc < 3 || strcmp(argv [1], "-h") == 0 || strcmp (argv [1], "--help") == 0)
-    {
-        fprintf(stderr, "Usage:  %s <command> <path of MIT set> [ <output file> ]\n\n", argv[0]);
-        fprintf(stderr, "Commands:\n");
-        fprintf(stderr, " -m, --make-mhr   Makes an OpenAL Soft compatible HRTF data set.\n");
-        fprintf(stderr, "                  Defaults output to:  ./oal_soft_hrtf_44100.mhr\n");
-        fprintf(stderr, " -t, --make-tab   Makes the built-in table used when compiling OpenAL Soft.\n");
-        fprintf(stderr, "                  Defaults output to:  ./hrtf_tables.inc\n");
-        fprintf(stderr, " -h, --help       Displays this help information.\n");
-        return 0;
-    }
-
-    snprintf(baseName, sizeof(baseName), "%s/elev", argv[2]);
-    if(strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--make-mhr") == 0)
-    {
-        if(argc > 3)
-            outName = argv[3];
-        else
-            outName = "./oal_soft_hrtf_44100.mhr";
-        if(!MakeMit(baseName, &hData))
-            return -1;
-        fprintf(stderr, "Creating data set file...\n");
-        if(!SaveMhr(&hData, outName))
-            return -1;
-    }
-    else if(strcmp(argv[1], "-t") == 0 || strcmp(argv[1], "--make-tab") == 0)
-    {
-        if(argc > 3)
-            outName = argv[3];
-        else
-            outName = "./hrtf_tables.inc";
-        if(!MakeMit(baseName, &hData))
-            return -1;
-        fprintf(stderr, "Creating table file...\n");
-        if(!SaveTab(&hData, outName))
-            return -1;
-    }
-    else
-    {
-        fprintf(stderr, "Invalid command '%s'\n", argv[1]);
-        return -1;
-    }
-    fprintf(stderr, "Done.\n");
-    return 0;
+  if (! TrReadInt (tr, 0, hData -> mEvCount, & intVal))
+     return (0);
+  (* ei) = (uint) intVal;
+  if (! TrReadOperator (tr, ","))
+     return (0);
+  if (! TrReadInt (tr, 0, hData -> mAzCount [(* ei)], & intVal))
+     return (0);
+  (* ai) = (uint) intVal;
+  return (1);
 }
+
+// Match the source format from a given identifier.
+static SourceFormatT MatchSourceFormat (const char * ident) {
+  if (strcasecmp (ident, "wave") == 0)
+     return (SF_WAVE);
+  else if (strcasecmp (ident, "bin_le") == 0)
+     return (SF_BIN_LE);
+  else if (strcasecmp (ident, "bin_be") == 0)
+     return (SF_BIN_BE);
+  else if (strcasecmp (ident, "ascii") == 0)
+     return (SF_ASCII);
+  return (SF_NONE);
+}
+
+// Match the source element type from a given identifier.
+static ElementTypeT MatchElementType (const char * ident) {
+  if (strcasecmp (ident, "int") == 0)
+     return (ET_INT);
+  else if (strcasecmp (ident, "fp") == 0)
+     return (ET_FP);
+  return (ET_NONE);
+}
+
+// Parse and validate a source reference from the data set definition.
+static int ReadSourceRef (TokenReaderT * tr, SourceRefT * src) {
+  uint line, col;
+  char ident [MAX_IDENT_LEN + 1];
+  int intVal;
+
+  TrIndication (tr, & line, & col);
+  if (! TrReadIdent (tr, MAX_IDENT_LEN, ident))
+     return (0);
+  src -> mFormat = MatchSourceFormat (ident);
+  if (src -> mFormat == SF_NONE) {
+     TrErrorAt (tr, line, col, "Expected a source format.\n");
+     return (0);
+  }
+  if (! TrReadOperator (tr, "("))
+     return (0);
+  if (src -> mFormat == SF_WAVE) {
+     if (! TrReadInt (tr, 0, MAX_WAVE_CHANNELS, & intVal))
+        return (0);
+     src -> mType = ET_NONE;
+     src -> mSize = 0;
+     src -> mBits = 0;
+     src -> mChannel = (uint) intVal;
+     src -> mSkip = 0;
+  } else {
+     TrIndication (tr, & line, & col);
+     if (! TrReadIdent (tr, MAX_IDENT_LEN, ident))
+        return (0);
+     src -> mType = MatchElementType (ident);
+     if (src -> mType == ET_NONE) {
+        TrErrorAt (tr, line, col, "Expected a source element type.\n");
+        return (0);
+     }
+     if ((src -> mFormat == SF_BIN_LE) || (src -> mFormat == SF_BIN_BE)) {
+        if (! TrReadOperator (tr, ","))
+           return (0);
+        if (src -> mType == ET_INT) {
+           if (! TrReadInt (tr, MIN_BIN_SIZE, MAX_BIN_SIZE, & intVal))
+              return (0);
+           src -> mSize = intVal;
+           if (TrIsOperator (tr, ",")) {
+              TrReadOperator (tr, ",");
+              TrIndication (tr, & line, & col);
+              if (! TrReadInt (tr, 0x80000000, 0x7FFFFFFF, & intVal))
+                 return (0);
+              if ((abs (intVal) < MIN_BIN_BITS) || (abs (intVal) > (8 * src -> mSize))) {
+                 TrErrorAt (tr, line, col, "Expected a value of (+/-) %d to %d.\n", MIN_BIN_BITS, 8 * src -> mSize);
+                 return (0);
+              }
+              src -> mBits = intVal;
+           } else {
+              src -> mBits = 8 * src -> mSize;
+           }
+        } else {
+           TrIndication (tr, & line, & col);
+           if (! TrReadInt (tr, 0x80000000, 0x7FFFFFFF, & intVal))
+              return (0);
+           if ((intVal != 4) && (intVal != 8)) {
+              TrErrorAt (tr, line, col, "Expected a value of 4 or 8.\n");
+              return (0);
+           }
+           src -> mSize = (uint) intVal;
+           src -> mBits = 0;
+        }
+     } else if ((src -> mFormat == SF_ASCII) && (src -> mType == ET_INT)) {
+        if (! TrReadOperator (tr, ","))
+           return (0);
+        if (! TrReadInt (tr, MIN_ASCII_BITS, MAX_ASCII_BITS, & intVal))
+           return (0);
+        src -> mSize = 0;
+        src -> mBits = intVal;
+     } else {
+        src -> mSize = 0;
+        src -> mBits = 0;
+     }
+     if (TrIsOperator (tr, ";")) {
+        TrReadOperator (tr, ";");
+        if (! TrReadInt (tr, 0, 0x7FFFFFFF, & intVal))
+           return (0);
+        src -> mSkip = (uint) intVal;
+     } else {
+        src -> mSkip = 0;
+     }
+  }
+  if (! TrReadOperator (tr, ")"))
+     return (0);
+  if (TrIsOperator (tr, "@")) {
+     TrReadOperator (tr, "@");
+     if (! TrReadInt (tr, 0, 0x7FFFFFFF, & intVal))
+        return (0);
+     src -> mOffset = (uint) intVal;
+  } else {
+     src -> mOffset = 0;
+  }
+  if (! TrReadOperator (tr, ":"))
+     return (0);
+  if (! TrReadString (tr, MAX_PATH_LEN, src -> mPath))
+     return (0);
+  return (1);
+}
+
+// Process the list of sources in the data set definition.
+static int ProcessSources (TokenReaderT * tr, HrirDataT * hData) {
+  uint * setCount = NULL, * setFlag = NULL;
+  double * hrir = NULL;
+  uint line, col, ei, ai;
+  SourceRefT src;
+  double factor;
+
+  setCount = (uint *) calloc (hData -> mEvCount, sizeof (uint));
+  setFlag = (uint *) calloc (hData -> mIrCount, sizeof (uint));
+  hrir = CreateArray (hData -> mIrPoints);
+  while (TrIsOperator (tr, "[")) {
+    TrIndication (tr, & line, & col);
+    TrReadOperator (tr, "[");
+    if (ReadIndexPair (tr, hData, & ei, & ai)) {
+       if (TrReadOperator (tr, "]")) {
+          if (! setFlag [hData -> mEvOffset [ei] + ai]) {
+             if (TrReadOperator (tr, "=")) {
+                factor = 1.0;
+                for (;;) {
+                    if (ReadSourceRef (tr, & src)) {
+                       if (LoadSource (& src, hData -> mIrRate, hData -> mIrPoints, hrir)) {
+                          AverageHrirMagnitude (hrir, 1.0 / factor, ei, ai, hData);
+                          factor += 1.0;
+                          if (! TrIsOperator (tr, "+"))
+                             break;
+                          TrReadOperator (tr, "+");
+                          continue;
+                       }
+                    }
+                    DestroyArray (hrir);
+                    free (setFlag);
+                    free (setCount);
+                    return (0);
+                }
+                setFlag [hData -> mEvOffset [ei] + ai] = 1;
+                setCount [ei] ++;
+                continue;
+             }
+          } else {
+             TrErrorAt (tr, line, col, "Redefinition of source.\n");
+          }
+       }
+    }
+    DestroyArray (hrir);
+    free (setFlag);
+    free (setCount);
+    return (0);
+  }
+  ei = 0;
+  while ((ei < hData -> mEvCount) && (setCount [ei] < 1))
+    ei ++;
+  if (ei < hData -> mEvCount) {
+     hData -> mEvStart = ei;
+     while ((ei < hData -> mEvCount) && (setCount [ei] == hData -> mAzCount [ei]))
+       ei ++;
+     if (ei >= hData -> mEvCount) {
+        if (! TrLoad (tr)) {
+           DestroyArray (hrir);
+           free (setFlag);
+           free (setCount);
+           return (1);
+        } else {
+           TrError (tr, "Errant data at end of source list.\n");
+        }
+     } else {
+        TrError (tr, "Missing sources for elevation index %d.\n", ei);
+     }
+  } else {
+     TrError (tr, "Missing source references.\n");
+  }
+  DestroyArray (hrir);
+  free (setFlag);
+  free (setCount);
+  return (0);
+}
+
+/* Parse the data set definition and process the source data, storing the
+ * resulting data set as desired.  If the input name is NULL it will read
+ * from standard input.
+ */
+static int ProcessDefinition (const char * inName, const size_t fftSize, const int equalize, const int surface, const double limit, const size_t truncSize, const OutputFormatT outFormat, const char * outName) {
+  FILE * fp = NULL;
+  TokenReaderT tr;
+  HrirDataT hData;
+  double * dfa = NULL;
+  char rateStr [8 + 1], expName [MAX_PATH_LEN];
+
+  hData.mIrRate   = 0;
+  hData.mIrPoints = 0;
+  hData.mFftSize  = 0;
+  hData.mIrSize   = 0;
+  hData.mIrCount  = 0;
+  hData.mEvCount  = 0;
+  hData.mRadius   = 0;
+  hData.mDistance = 0;
+
+  fprintf (stdout, "Reading HRIR definition...\n");
+  if (inName != NULL) {
+     fp = fopen (inName, "r");
+     if (fp == NULL) {
+        fprintf (stderr, "Error:  Could not open definition file '%s'\n", inName);
+        return (0);
+     }
+     TrSetup (fp, inName, & tr);
+  } else {
+     fp = stdin;
+     TrSetup (fp, "<stdin>", & tr);
+  }
+  if (! ProcessMetrics (& tr, fftSize, truncSize, & hData)) {
+     if (inName != NULL)
+        fclose (fp);
+     return (0);
+  }
+  hData . mHrirs = CreateArray (hData . mIrCount * hData . mIrSize);
+  hData . mHrtds = CreateArray (hData . mIrCount);
+  if (! ProcessSources (& tr, & hData)) {
+     DestroyArray (hData . mHrtds);
+     DestroyArray (hData . mHrirs);
+     if (inName != NULL)
+        fclose (fp);
+     return (0);
+  }
+  if (inName != NULL)
+     fclose (fp);
+  if (equalize) {
+     dfa = CreateArray (1 + (hData . mFftSize / 2));
+     fprintf (stdout, "Calculating diffuse-field average...\n");
+     CalculateDiffuseFieldAverage (& hData, surface, limit, dfa);
+     fprintf (stdout, "Performing diffuse-field equalization...\n");
+     DiffuseFieldEqualize (dfa, & hData);
+     DestroyArray (dfa);
+  }
+  fprintf (stdout, "Performing minimum phase reconstruction...\n");
+  ReconstructHrirs (& hData);
+  fprintf (stdout, "Truncating minimum-phase HRIRs...\n");
+  hData . mIrPoints = truncSize;
+  fprintf (stdout, "Synthesizing missing elevations...\n");
+  SynthesizeHrirs (& hData);
+  fprintf (stdout, "Normalizing final HRIRs...\n");
+  NormalizeHrirs (& hData);
+  fprintf (stdout, "Calculating impulse delays...\n");
+  CalculateHrtds (& hData);
+  snprintf (rateStr, 8, "%u", hData . mIrRate);
+  StrSubst (outName, "%r", rateStr, MAX_PATH_LEN, expName);
+  switch (outFormat) {
+    case OF_MHR :
+      fprintf (stdout, "Creating MHR data set file...\n");
+      if (! StoreMhr (& hData, expName))
+         return (0);
+    break;
+    case OF_TABLE :
+      fprintf (stderr, "Creating OpenAL Soft table file...\n");
+      if (! StoreTable (& hData, expName))
+         return (0);
+    break;
+    default :
+    break;
+  }
+  DestroyArray (hData . mHrtds);
+  DestroyArray (hData . mHrirs);
+  return (1);
+}
+
+// Standard command line dispatch.
+int main (const int argc, const char * argv []) {
+  const char * inName = NULL, * outName = NULL;
+  OutputFormatT outFormat;
+  int argi;
+  size_t fftSize;
+  int equalize, surface;
+  double limit;
+  size_t truncSize;
+  char * end = NULL;
+
+  if (argc < 2) {
+     fprintf (stderr, "Error:  No command specified.  See '%s -h' for help.\n", argv [0]);
+     return (-1);
+  }
+  if ((strcmp (argv [1], "--help") == 0) || (strcmp (argv [1], "-h") == 0)) {
+     fprintf (stdout, "HRTF Processing and Composition Utility\n\n");
+     fprintf (stdout, "Usage:  %s <command> [<option>...]\n\n", argv [0]);
+     fprintf (stdout, "Commands:\n");
+     fprintf (stdout, " -m, --make-mhr  Makes an OpenAL Soft compatible HRTF data set.\n");
+     fprintf (stdout, "                 Defaults output to: ./oalsoft_hrtf_%%r.mhr\n");
+     fprintf (stdout, " -t, --make-tab  Makes the built-in table used when compiling OpenAL Soft.\n");
+     fprintf (stdout, "                 Defaults output to: ./hrtf_tables.inc\n");
+     fprintf (stdout, " -h, --help      Displays this help information.\n\n");
+     fprintf (stdout, "Options:\n");
+     fprintf (stdout, " -f=<points>     Override the FFT window size (defaults to the first power-\n");
+     fprintf (stdout, "                 of-two that fits four times the number of HRIR points).\n");
+     fprintf (stdout, " -e={on|off}     Toggle diffuse-field equalization (default: %s).\n", (DEFAULT_EQUALIZE ? "on" : "off"));
+     fprintf (stdout, " -s={on|off}     Toggle surface-weighted diffuse-field average (default: %s).\n", (DEFAULT_SURFACE ? "on" : "off"));
+     fprintf (stdout, " -l={<dB>|none}  Specify a limit to the magnitude range of the diffuse-field\n");
+     fprintf (stdout, "                 average (default: %.2f).\n", DEFAULT_LIMIT);
+     fprintf (stdout, " -w=<points>     Specify the size of the truncation window that's applied\n");
+     fprintf (stdout, "                 after minimum-phase reconstruction (default: %d).\n", DEFAULT_TRUNCSIZE);
+     fprintf (stdout, " -i=<filename>   Specify an HRIR definition file to use (defaults to stdin).\n");
+     fprintf (stdout, " -o=<filename>   Specify an output file.  Overrides command-selected default.\n");
+     fprintf (stdout, "                 Use of '%%r' will be substituted with the data set sample rate.\n");
+     return (0);
+  }
+  if ((strcmp (argv [1], "--make-mhr") == 0) || (strcmp (argv [1], "-m") == 0)) {
+     if (argc > 3)
+        outName = argv [3];
+     else
+        outName = "./oalsoft_hrtf_%r.mhr";
+     outFormat = OF_MHR;
+  } else if ((strcmp (argv [1], "--make-tab") == 0) || (strcmp (argv [1], "-t") == 0)) {
+     if (argc > 3)
+        outName = argv [3];
+     else
+        outName = "./hrtf_tables.inc";
+     outFormat = OF_TABLE;
+  } else {
+     fprintf (stderr, "Error:  Invalid command '%s'.\n", argv [1]);
+     return (-1);
+  }
+  argi = 2;
+  fftSize = 0;
+  equalize = DEFAULT_EQUALIZE;
+  surface = DEFAULT_SURFACE;
+  limit = DEFAULT_LIMIT;
+  truncSize = DEFAULT_TRUNCSIZE;
+  while (argi < argc) {
+    if (strncmp (argv [argi], "-f=", 3) == 0) {
+       fftSize = strtoul (& argv [argi] [3], & end, 10);
+       if ((end [0] != '\0') || (fftSize & (fftSize - 1)) || (fftSize < MIN_FFTSIZE) || (fftSize > MAX_FFTSIZE)) {
+          fprintf (stderr, "Error:  Expected a power-of-two value from %d to %d for '-f'.\n", MIN_FFTSIZE, MAX_FFTSIZE);
+          return (-1);
+       }
+    } else if (strncmp (argv [argi], "-e=", 3) == 0) {
+       if (strcmp (& argv [argi] [3], "on") == 0) {
+          equalize = 1;
+       } else if (strcmp (& argv [argi] [3], "off") == 0) {
+          equalize = 0;
+       } else {
+          fprintf (stderr, "Error:  Expected 'on' or 'off' for '-e'.\n");
+          return (-1);
+       }
+    } else if (strncmp (argv [argi], "-s=", 3) == 0) {
+       if (strcmp (& argv [argi] [3], "on") == 0) {
+          surface = 1;
+       } else if (strcmp (& argv [argi] [3], "off") == 0) {
+          surface = 0;
+       } else {
+          fprintf (stderr, "Error:  Expected 'on' or 'off' for '-s'.\n");
+          return (-1);
+       }
+    } else if (strncmp (argv [argi], "-l=", 3) == 0) {
+       if (strcmp (& argv [argi] [3], "none") == 0) {
+          limit = 0.0;
+       } else {
+          limit = strtod (& argv [argi] [3], & end);
+          if ((end [0] != '\0') || (limit < MIN_LIMIT) || (limit > MAX_LIMIT)) {
+             fprintf (stderr, "Error:  Expected 'none' or a value from %.2f to %.2f for '-l'.\n", MIN_LIMIT, MAX_LIMIT);
+             return (-1);
+          }
+       }
+    } else if (strncmp (argv [argi], "-w=", 3) == 0) {
+       truncSize = strtoul (& argv [argi] [3], & end, 10);
+       if ((end [0] != '\0') || (truncSize < MIN_TRUNCSIZE) || (truncSize > MAX_TRUNCSIZE) || (truncSize % MOD_TRUNCSIZE)) {
+          fprintf (stderr, "Error:  Expected a value from %d to %d in multiples of %d for '-w'.\n", MIN_TRUNCSIZE, MAX_TRUNCSIZE, MOD_TRUNCSIZE);
+          return (-1);
+       }
+    } else if (strncmp (argv [argi], "-i=", 3) == 0) {
+       inName = & argv [argi] [3];
+    } else if (strncmp (argv [argi], "-o=", 3) == 0) {
+       outName = & argv [argi] [3];
+    } else {
+       fprintf (stderr, "Error:  Invalid option '%s'.\n", argv [argi]);
+       return (-1);
+    }
+    argi ++;
+  }
+  if (! ProcessDefinition (inName, fftSize, equalize, surface, limit, truncSize, outFormat, outName))
+     return (-1);
+  fprintf (stdout, "Operation completed.\n");
+  return (0);
+}
+
+
+
+

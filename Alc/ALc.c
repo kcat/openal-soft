@@ -836,8 +836,6 @@ static void alc_initconfig(void)
     }
     FillCPUCaps(capfilter);
 
-    InitHrtf();
-
 #ifdef _WIN32
     RTPrioLevel = 1;
 #else
@@ -1034,7 +1032,7 @@ static void alc_deinit_safe(void)
 {
     alc_cleanup();
 
-    FreeHrtf();
+    FreeHrtfs();
     FreeALConfig();
 
     ThunkExit();

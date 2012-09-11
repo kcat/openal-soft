@@ -14,53 +14,116 @@
 
 
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                     const ALuint IrSize,
                                      ALfloat (*RESTRICT Coeffs)[2],
                                      ALfloat (*RESTRICT CoeffStep)[2],
                                      ALfloat left, ALfloat right)
 {
     const __m128 lrlr = { left, right, left, right };
+    __m128 coeffs, deltas, imp0, imp1;
     __m128 vals = _mm_setzero_ps();
-    __m128 coeffs, coeffstep;
-    ALuint c;
-    for(c = 0;c < HRIR_LENGTH;c += 2)
+    ALuint i;
+
+    if((Offset&1))
     {
-        const ALuint o0 = (Offset++)&HRIR_MASK;
-        const ALuint o1 = (Offset++)&HRIR_MASK;
+        const ALuint o0 = Offset&HRIR_MASK;
+        const ALuint o1 = (Offset+IrSize-1)&HRIR_MASK;
 
-        coeffs = _mm_load_ps(&Coeffs[c][0]);
+        coeffs = _mm_load_ps(&Coeffs[0][0]);
+        deltas = _mm_load_ps(&CoeffStep[0][0]);
         vals = _mm_loadl_pi(vals, (__m64*)&Values[o0][0]);
-        vals = _mm_loadh_pi(vals, (__m64*)&Values[o1][0]);
-
-        vals = _mm_add_ps(vals, _mm_mul_ps(coeffs, lrlr));
+        imp0 = _mm_mul_ps(lrlr, coeffs);
+        coeffs = _mm_add_ps(coeffs, deltas);
+        vals = _mm_add_ps(imp0, vals);
+        _mm_store_ps(&Coeffs[0][0], coeffs);
         _mm_storel_pi((__m64*)&Values[o0][0], vals);
-        _mm_storeh_pi((__m64*)&Values[o1][0], vals);
+        for(i = 1;i < IrSize-1;i += 2)
+        {
+            const ALuint o2 = (Offset+i)&HRIR_MASK;
 
-        coeffstep = _mm_load_ps(&CoeffStep[c][0]);
-        coeffs = _mm_add_ps(coeffs, coeffstep);
-        _mm_store_ps(&Coeffs[c][0], coeffs);
+            coeffs = _mm_load_ps(&Coeffs[i+1][0]);
+            deltas = _mm_load_ps(&CoeffStep[i+1][0]);
+            vals = _mm_load_ps(&Values[o2][0]);
+            imp1 = _mm_mul_ps(lrlr, coeffs);
+            coeffs = _mm_add_ps(coeffs, deltas);
+            imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
+            vals = _mm_add_ps(imp0, vals);
+            _mm_store_ps(&Coeffs[i+1][0], coeffs);
+            _mm_store_ps(&Values[o2][0], vals);
+            imp0 = imp1;
+        }
+        vals = _mm_loadl_pi(vals, (__m64*)&Values[o1][0]);
+        imp0 = _mm_movehl_ps(imp0, imp0);
+        vals = _mm_add_ps(imp0, vals);
+        _mm_storel_pi((__m64*)&Values[o1][0], vals);
+    }
+    else
+    {
+        for(i = 0;i < IrSize;i += 2)
+        {
+            const ALuint o = (Offset + i)&HRIR_MASK;
+
+            coeffs = _mm_load_ps(&Coeffs[i][0]);
+            deltas = _mm_load_ps(&CoeffStep[i][0]);
+            vals = _mm_load_ps(&Values[o][0]);
+            imp0 = _mm_mul_ps(lrlr, coeffs);
+            coeffs = _mm_add_ps(coeffs, deltas);
+            vals = _mm_add_ps(imp0, vals);
+            _mm_store_ps(&Coeffs[i][0], coeffs);
+            _mm_store_ps(&Values[o][0], vals);
+        }
     }
 }
 
 static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+                                 const ALuint IrSize,
                                  ALfloat (*RESTRICT Coeffs)[2],
                                  ALfloat left, ALfloat right)
 {
     const __m128 lrlr = { left, right, left, right };
     __m128 vals = _mm_setzero_ps();
     __m128 coeffs;
-    ALuint c;
-    for(c = 0;c < HRIR_LENGTH;c += 2)
+    ALuint i;
+
+    if((Offset&1))
     {
-        const ALuint o0 = (Offset++)&HRIR_MASK;
-        const ALuint o1 = (Offset++)&HRIR_MASK;
+        const ALuint o0 = Offset&HRIR_MASK;
+        const ALuint o1 = (Offset+IrSize-1)&HRIR_MASK;
+        __m128 imp0, imp1;
 
-        coeffs = _mm_load_ps(&Coeffs[c][0]);
+        coeffs = _mm_load_ps(&Coeffs[0][0]);
         vals = _mm_loadl_pi(vals, (__m64*)&Values[o0][0]);
-        vals = _mm_loadh_pi(vals, (__m64*)&Values[o1][0]);
-
-        vals = _mm_add_ps(vals, _mm_mul_ps(coeffs, lrlr));
+        imp0 = _mm_mul_ps(lrlr, coeffs);
+        vals = _mm_add_ps(imp0, vals);
         _mm_storel_pi((__m64*)&Values[o0][0], vals);
-        _mm_storeh_pi((__m64*)&Values[o1][0], vals);
+        for(i = 1;i < IrSize-1;i += 2)
+        {
+            const ALuint o2 = (Offset+i)&HRIR_MASK;
+
+            coeffs = _mm_load_ps(&Coeffs[i+1][0]);
+            vals = _mm_load_ps(&Values[o2][0]);
+            imp1 = _mm_mul_ps(lrlr, coeffs);
+            imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
+            vals = _mm_add_ps(imp0, vals);
+            _mm_store_ps(&Values[o2][0], vals);
+            imp0 = imp1;
+        }
+        vals = _mm_loadl_pi(vals, (__m64*)&Values[o1][0]);
+        imp0 = _mm_movehl_ps(imp0, imp0);
+        vals = _mm_add_ps(imp0, vals);
+        _mm_storel_pi((__m64*)&Values[o1][0], vals);
+    }
+    else
+    {
+        for(i = 0;i < IrSize;i += 2)
+        {
+            const ALuint o = (Offset + i)&HRIR_MASK;
+
+            coeffs = _mm_load_ps(&Coeffs[i][0]);
+            vals = _mm_load_ps(&Values[o][0]);
+            vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
+            _mm_store_ps(&Values[o][0], vals);
+        }
     }
 }
 

@@ -1774,7 +1774,7 @@ static int StoreMhr (const HrirDataT * hData, const char * filename) {
   }
   for (j = 0; j < hData -> mIrCount; j ++) {
 //      v = (int) fmin (round (44100.0 * hData -> mHrtds [j]), MAX_HRTD);
-v = fmin (hData -> mHrtds [j], MAX_HRTD);
+      v = (int) fmin (hData -> mHrtds [j], MAX_HRTD);
       if (! WriteBin4 (BO_LITTLE, 1, (uint4) v, fp, filename))
          return (0);
   }
@@ -2062,7 +2062,7 @@ static int ReadSourceRef (TokenReaderT * tr, SourceRefT * src) {
               TrIndication (tr, & line, & col);
               if (! TrReadInt (tr, 0x80000000, 0x7FFFFFFF, & intVal))
                  return (0);
-              if ((abs (intVal) < MIN_BIN_BITS) || (abs (intVal) > (8 * src -> mSize))) {
+              if ((abs (intVal) < MIN_BIN_BITS) || ((uint)abs(intVal) > (8 * src -> mSize))) {
                  TrErrorAt (tr, line, col, "Expected a value of (+/-) %d to %d.\n", MIN_BIN_BITS, 8 * src -> mSize);
                  return (0);
               }

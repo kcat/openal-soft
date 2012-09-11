@@ -51,6 +51,9 @@
  *
  */
 
+/* Needed for 64-bit unsigned integer. */
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -58,14 +61,15 @@
 #include <ctype.h>
 #include <math.h>
 
-// Needed for 64-bit unsigned integer.
-#include "config.h"
-
 // Rely (if naively) on OpenAL's header for the types used for serialization.
 #include "AL/al.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
+#endif
+
+#ifndef HUGE_VAL
+#define HUGE_VAL (1.0/0.0)
 #endif
 
 // The epsilon used to maintain signal stability.
@@ -1149,7 +1153,7 @@ static int ReadAsciiAsDouble (TokenReaderT * tr, const char * filename, const El
   else if (TrIsOperator (tr, "|"))
      TrReadOperator (tr, "|");
   if (type == ET_FP) {
-     if (! TrReadFloat (tr, -1.0 / 0.0, 1.0 / 0.0, out)) {
+     if (! TrReadFloat (tr, -HUGE_VAL, HUGE_VAL, out)) {
         fprintf (stderr, "Error:  Bad read from file '%s'.\n", filename);
         return (0);
      }

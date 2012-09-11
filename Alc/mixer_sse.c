@@ -134,9 +134,8 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
 {
     ALfloat (*RESTRICT DryBuffer)[MaxChannels];
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
-    ALIGN(16) ALfloat DrySend[MaxChannels];
+    ALfloat DrySend[MaxChannels];
     ALIGN(16) ALfloat value[4];
-    FILTER *DryFilter;
     ALuint pos;
     ALuint c;
     (void)Source;
@@ -144,7 +143,6 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
     DryBuffer = Device->DryBuffer;
     ClickRemoval = Device->ClickRemoval;
     PendingClicks = Device->PendingClicks;
-    DryFilter = &params->iirFilter;
 
     for(c = 0;c < MaxChannels;c++)
         DrySend[c] = params->Gains[srcchan][c];
@@ -152,20 +150,12 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
     pos = 0;
     if(OutPos == 0)
     {
-        value[0] = lpFilter2PC(DryFilter, srcchan, data[pos]);
         for(c = 0;c < MaxChannels;c++)
-            ClickRemoval[c] -= value[0]*DrySend[c];
+            ClickRemoval[c] -= data[pos]*DrySend[c];
     }
     for(pos = 0;pos < BufferSize-3;pos += 4)
     {
-        __m128 val4;
-
-        value[0] = lpFilter2P(DryFilter, srcchan, data[pos  ]);
-        value[1] = lpFilter2P(DryFilter, srcchan, data[pos+1]);
-        value[2] = lpFilter2P(DryFilter, srcchan, data[pos+2]);
-        value[3] = lpFilter2P(DryFilter, srcchan, data[pos+3]);
-        val4 = _mm_load_ps(value);
-
+        const __m128 val4 = _mm_load_ps(&data[pos]);
         for(c = 0;c < MaxChannels;c++)
         {
             const __m128 gain = _mm_set1_ps(DrySend[c]);
@@ -190,16 +180,14 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
     }
     for(;pos < BufferSize;pos++)
     {
-        value[0] = lpFilter2P(DryFilter, srcchan, data[pos]);
         for(c = 0;c < MaxChannels;c++)
-            DryBuffer[OutPos][c] += value[0]*DrySend[c];
+            DryBuffer[OutPos][c] += data[pos]*DrySend[c];
         OutPos++;
     }
     if(OutPos == SamplesToDo)
     {
-        value[0] = lpFilter2PC(DryFilter, srcchan, data[pos]);
         for(c = 0;c < MaxChannels;c++)
-            PendingClicks[c] += value[0]*DrySend[c];
+            PendingClicks[c] += data[pos]*DrySend[c];
     }
 }
 #define NO_MIXDIRECT

@@ -191,6 +191,16 @@ static void Resample(enum Resampler Resampler, const ALfloat *data, ALuint frac,
 }
 
 
+static void Filter2P(FILTER *filter, ALuint chan, ALfloat *RESTRICT dst,
+                     const ALfloat *RESTRICT src, ALuint numsamples)
+{
+    ALuint i;
+    for(i = 0;i < numsamples;i++)
+        dst[i] = lpFilter2P(filter, chan, src[i]);
+    dst[i] = lpFilter2PC(filter, chan, src[i]);
+}
+
+
 ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
@@ -432,20 +442,29 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         SrcData += BufferPrePadding*NumChannels;
         for(i = 0;i < NumChannels;i++)
         {
+            DirectParams *directparms = &Source->Params.Direct;
+            ALIGN(16) ALfloat FilteredData[BUFFERSIZE];
             ALfloat ResampledData[BUFFERSIZE];
 
             Resample(Resampler, SrcData+i, DataPosFrac, increment,
                      NumChannels, ResampledData, BufferSize);
 
-            Source->Params.DryMix(Source, Device, &Source->Params.Direct,
-                                  ResampledData, i, OutPos, SamplesToDo,
+            Filter2P(&directparms->iirFilter, i, FilteredData, ResampledData,
+                     BufferSize);
+            Source->Params.DryMix(Source, Device, directparms,
+                                  FilteredData, i, OutPos, SamplesToDo,
                                   BufferSize);
+
             for(j = 0;j < Device->NumAuxSends;j++)
             {
-                if(!Source->Params.Send[j].Slot)
+                SendParams *sendparms = &Source->Params.Send[j];
+                if(!sendparms->Slot)
                     continue;
-                Source->Params.WetMix(&Source->Params.Send[j], ResampledData, i,
-                                      OutPos, SamplesToDo, BufferSize);
+
+                Filter2P(&sendparms->iirFilter, i, FilteredData, ResampledData,
+                         BufferSize);
+                Source->Params.WetMix(sendparms, FilteredData, OutPos,
+                                      SamplesToDo, BufferSize);
             }
         }
         for(i = 0;i < BufferSize;i++)

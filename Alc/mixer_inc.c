@@ -53,15 +53,12 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
     ALIGN(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALuint Delay[2];
     ALfloat left, right;
-    FILTER *DryFilter;
-    ALfloat value;
     ALuint pos;
     ALuint c;
 
     DryBuffer = Device->DryBuffer;
     ClickRemoval = Device->ClickRemoval;
     PendingClicks = Device->PendingClicks;
-    DryFilter = &params->iirFilter;
 
     pos = 0;
     for(c = 0;c < IrSize;c++)
@@ -75,9 +72,7 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
 
     if(LIKELY(OutPos == 0))
     {
-        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
-
-        History[Offset&SRC_HISTORY_MASK] = value;
+        History[Offset&SRC_HISTORY_MASK] = data[pos];
         left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
                      History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
                      (Delay[0]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
@@ -92,9 +87,7 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
     }
     for(pos = 0;pos < BufferSize && Counter > 0;pos++)
     {
-        value = lpFilter2P(DryFilter, srcchan, data[pos]);
-
-        History[Offset&SRC_HISTORY_MASK] = value;
+        History[Offset&SRC_HISTORY_MASK] = data[pos];
         left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
                      History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
                      (Delay[0]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
@@ -121,9 +114,7 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
     Delay[1] >>= HRTFDELAY_BITS;
     for(;pos < BufferSize;pos++)
     {
-        value = lpFilter2P(DryFilter, srcchan, data[pos]);
-
-        History[Offset&SRC_HISTORY_MASK] = value;
+        History[Offset&SRC_HISTORY_MASK] = data[pos];
         left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];
         right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];
 
@@ -139,9 +130,7 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
     }
     if(LIKELY(OutPos == SamplesToDo))
     {
-        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
-
-        History[Offset&SRC_HISTORY_MASK] = value;
+        History[Offset&SRC_HISTORY_MASK] = data[pos];
         left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];
         right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];
 
@@ -161,16 +150,13 @@ void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
     ALfloat (*RESTRICT DryBuffer)[MaxChannels];
     ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
     ALIGN(16) ALfloat DrySend[MaxChannels];
-    FILTER *DryFilter;
     ALuint pos;
-    ALfloat value;
     ALuint c;
     (void)Source;
 
     DryBuffer = Device->DryBuffer;
     ClickRemoval = Device->ClickRemoval;
     PendingClicks = Device->PendingClicks;
-    DryFilter = &params->iirFilter;
 
     for(c = 0;c < MaxChannels;c++)
         DrySend[c] = params->Gains[srcchan][c];
@@ -178,28 +164,25 @@ void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
     pos = 0;
     if(OutPos == 0)
     {
-        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
         for(c = 0;c < MaxChannels;c++)
-            ClickRemoval[c] -= value*DrySend[c];
+            ClickRemoval[c] -= data[pos]*DrySend[c];
     }
     for(pos = 0;pos < BufferSize;pos++)
     {
-        value = lpFilter2P(DryFilter, srcchan, data[pos]);
         for(c = 0;c < MaxChannels;c++)
-            DryBuffer[OutPos][c] += value*DrySend[c];
+            DryBuffer[OutPos][c] += data[pos]*DrySend[c];
         OutPos++;
     }
     if(OutPos == SamplesToDo)
     {
-        value = lpFilter2PC(DryFilter, srcchan, data[pos]);
         for(c = 0;c < MaxChannels;c++)
-            PendingClicks[c] += value*DrySend[c];
+            PendingClicks[c] += data[pos]*DrySend[c];
     }
 }
 #endif
 
 #ifndef NO_MIXSEND
-void MixSend(SendParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
+void MixSend(SendParams *params, const ALfloat *RESTRICT data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALeffectslot *Slot;
@@ -207,33 +190,27 @@ void MixSend(SendParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
     ALfloat *WetBuffer;
     ALfloat *WetClickRemoval;
     ALfloat *WetPendingClicks;
-    FILTER  *WetFilter;
     ALuint pos;
-    ALfloat value;
 
     Slot = params->Slot;
     WetBuffer = Slot->WetBuffer;
     WetClickRemoval = Slot->ClickRemoval;
     WetPendingClicks = Slot->PendingClicks;
-    WetFilter = &params->iirFilter;
     WetSend = params->Gain;
 
     pos = 0;
     if(OutPos == 0)
     {
-        value = lpFilter2PC(WetFilter, srcchan, data[pos]);
-        WetClickRemoval[0] -= value * WetSend;
+        WetClickRemoval[0] -= data[pos] * WetSend;
     }
     for(pos = 0;pos < BufferSize;pos++)
     {
-        value = lpFilter2P(WetFilter, srcchan, data[pos]);
-        WetBuffer[OutPos] += value * WetSend;
+        WetBuffer[OutPos] += data[pos] * WetSend;
         OutPos++;
     }
     if(OutPos == SamplesToDo)
     {
-        value = lpFilter2PC(WetFilter, srcchan, data[pos]);
-        WetPendingClicks[0] += value * WetSend;
+        WetPendingClicks[0] += data[pos] * WetSend;
     }
 }
 #endif

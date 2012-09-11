@@ -793,111 +793,35 @@ static __inline ALbyte aluF2B(ALfloat val)
 static __inline ALubyte aluF2UB(ALfloat val)
 { return aluF2B(val)+128; }
 
-#define DECL_TEMPLATE(T, N, func)                                             \
-static void Write_##T##_##N(ALCdevice *device, T *RESTRICT buffer,            \
-                            ALuint SamplesToDo)                               \
+#define DECL_TEMPLATE(T, func)                                                \
+static void Write_##T(ALCdevice *device, T *RESTRICT buffer,                  \
+                      ALuint SamplesToDo)                                     \
 {                                                                             \
     ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
+    ALuint numchans = ChannelsFromDevFmt(device->FmtChans);                   \
     const enum Channel *ChanMap = device->DevChannels;                        \
     ALuint i, j;                                                              \
                                                                               \
-    for(j = 0;j < N;j++)                                                      \
+    for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
         T *RESTRICT out = buffer + j;                                         \
         enum Channel chan = ChanMap[j];                                       \
                                                                               \
         for(i = 0;i < SamplesToDo;i++)                                        \
-            out[i*N] = func(DryBuffer[chan][i]);                              \
+            out[i*numchans] = func(DryBuffer[chan][i]);                       \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALfloat, 1, aluF2F)
-DECL_TEMPLATE(ALfloat, 2, aluF2F)
-DECL_TEMPLATE(ALfloat, 4, aluF2F)
-DECL_TEMPLATE(ALfloat, 6, aluF2F)
-DECL_TEMPLATE(ALfloat, 7, aluF2F)
-DECL_TEMPLATE(ALfloat, 8, aluF2F)
-
-DECL_TEMPLATE(ALuint, 1, aluF2UI)
-DECL_TEMPLATE(ALuint, 2, aluF2UI)
-DECL_TEMPLATE(ALuint, 4, aluF2UI)
-DECL_TEMPLATE(ALuint, 6, aluF2UI)
-DECL_TEMPLATE(ALuint, 7, aluF2UI)
-DECL_TEMPLATE(ALuint, 8, aluF2UI)
-
-DECL_TEMPLATE(ALint, 1, aluF2I)
-DECL_TEMPLATE(ALint, 2, aluF2I)
-DECL_TEMPLATE(ALint, 4, aluF2I)
-DECL_TEMPLATE(ALint, 6, aluF2I)
-DECL_TEMPLATE(ALint, 7, aluF2I)
-DECL_TEMPLATE(ALint, 8, aluF2I)
-
-DECL_TEMPLATE(ALushort, 1, aluF2US)
-DECL_TEMPLATE(ALushort, 2, aluF2US)
-DECL_TEMPLATE(ALushort, 4, aluF2US)
-DECL_TEMPLATE(ALushort, 6, aluF2US)
-DECL_TEMPLATE(ALushort, 7, aluF2US)
-DECL_TEMPLATE(ALushort, 8, aluF2US)
-
-DECL_TEMPLATE(ALshort, 1, aluF2S)
-DECL_TEMPLATE(ALshort, 2, aluF2S)
-DECL_TEMPLATE(ALshort, 4, aluF2S)
-DECL_TEMPLATE(ALshort, 6, aluF2S)
-DECL_TEMPLATE(ALshort, 7, aluF2S)
-DECL_TEMPLATE(ALshort, 8, aluF2S)
-
-DECL_TEMPLATE(ALubyte, 1, aluF2UB)
-DECL_TEMPLATE(ALubyte, 2, aluF2UB)
-DECL_TEMPLATE(ALubyte, 4, aluF2UB)
-DECL_TEMPLATE(ALubyte, 6, aluF2UB)
-DECL_TEMPLATE(ALubyte, 7, aluF2UB)
-DECL_TEMPLATE(ALubyte, 8, aluF2UB)
-
-DECL_TEMPLATE(ALbyte, 1, aluF2B)
-DECL_TEMPLATE(ALbyte, 2, aluF2B)
-DECL_TEMPLATE(ALbyte, 4, aluF2B)
-DECL_TEMPLATE(ALbyte, 6, aluF2B)
-DECL_TEMPLATE(ALbyte, 7, aluF2B)
-DECL_TEMPLATE(ALbyte, 8, aluF2B)
+DECL_TEMPLATE(ALfloat, aluF2F)
+DECL_TEMPLATE(ALuint, aluF2UI)
+DECL_TEMPLATE(ALint, aluF2I)
+DECL_TEMPLATE(ALushort, aluF2US)
+DECL_TEMPLATE(ALshort, aluF2S)
+DECL_TEMPLATE(ALubyte, aluF2UB)
+DECL_TEMPLATE(ALbyte, aluF2B)
 
 #undef DECL_TEMPLATE
 
-#define DECL_TEMPLATE(T)                                                      \
-static void Write_##T(ALCdevice *device, T *buffer, ALuint SamplesToDo)       \
-{                                                                             \
-    switch(device->FmtChans)                                                  \
-    {                                                                         \
-        case DevFmtMono:                                                      \
-            Write_##T##_1(device, buffer, SamplesToDo);                       \
-            break;                                                            \
-        case DevFmtStereo:                                                    \
-            Write_##T##_2(device, buffer, SamplesToDo);                       \
-            break;                                                            \
-        case DevFmtQuad:                                                      \
-            Write_##T##_4(device, buffer, SamplesToDo);                       \
-            break;                                                            \
-        case DevFmtX51:                                                       \
-        case DevFmtX51Side:                                                   \
-            Write_##T##_6(device, buffer, SamplesToDo);                       \
-            break;                                                            \
-        case DevFmtX61:                                                       \
-            Write_##T##_7(device, buffer, SamplesToDo);                       \
-            break;                                                            \
-        case DevFmtX71:                                                       \
-            Write_##T##_8(device, buffer, SamplesToDo);                       \
-            break;                                                            \
-    }                                                                         \
-}
-
-DECL_TEMPLATE(ALfloat)
-DECL_TEMPLATE(ALuint)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALshort)
-DECL_TEMPLATE(ALubyte)
-DECL_TEMPLATE(ALbyte)
-
-#undef DECL_TEMPLATE
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {

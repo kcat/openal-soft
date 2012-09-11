@@ -19,7 +19,7 @@
  */
 
 #ifdef _WIN32
-#ifdef __MINGW64__
+#ifdef __MINGW32__
 #define _WIN32_IE 0x501
 #else
 #define _WIN32_IE 0x400

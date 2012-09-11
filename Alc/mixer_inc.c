@@ -39,10 +39,11 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    const ALint *RESTRICT DelayStep = params->Hrtf.DelayStep;
+    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = Device->DryBuffer;
+    ALfloat *RESTRICT ClickRemoval = Device->ClickRemoval;
+    ALfloat *RESTRICT PendingClicks = Device->PendingClicks;
     const ALuint IrSize = GetHrtfIrSize(Device->Hrtf);
-    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE];
-    ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
+    const ALint *RESTRICT DelayStep = params->Hrtf.DelayStep;
     ALfloat (*RESTRICT CoeffStep)[2] = params->Hrtf.CoeffStep;
     ALfloat (*RESTRICT TargetCoeffs)[2] = params->Hrtf.Coeffs[srcchan];
     ALuint *RESTRICT TargetDelay = params->Hrtf.Delay[srcchan];
@@ -55,10 +56,6 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
     ALfloat left, right;
     ALuint pos;
     ALuint c;
-
-    DryBuffer = Device->DryBuffer;
-    ClickRemoval = Device->ClickRemoval;
-    PendingClicks = Device->PendingClicks;
 
     pos = 0;
     for(c = 0;c < IrSize;c++)
@@ -147,16 +144,13 @@ void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE];
-    ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
-    ALIGN(16) ALfloat DrySend[MaxChannels];
+    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = Device->DryBuffer;
+    ALfloat *RESTRICT ClickRemoval = Device->ClickRemoval;
+    ALfloat *RESTRICT PendingClicks = Device->PendingClicks;
+    ALfloat DrySend[MaxChannels];
     ALuint pos;
     ALuint c;
     (void)Source;
-
-    DryBuffer = Device->DryBuffer;
-    ClickRemoval = Device->ClickRemoval;
-    PendingClicks = Device->PendingClicks;
 
     for(c = 0;c < MaxChannels;c++)
         DrySend[c] = params->Gains[srcchan][c];
@@ -184,18 +178,12 @@ void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
 void MixSend(SendParams *params, const ALfloat *RESTRICT data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALeffectslot *Slot;
-    ALfloat  WetSend;
-    ALfloat *WetBuffer;
-    ALfloat *WetClickRemoval;
-    ALfloat *WetPendingClicks;
+    ALeffectslot *Slot = params->Slot;
+    ALfloat *WetBuffer = Slot->WetBuffer;
+    ALfloat *WetClickRemoval = Slot->ClickRemoval;
+    ALfloat *WetPendingClicks = Slot->PendingClicks;
+    ALfloat  WetSend = params->Gain;
     ALuint pos;
-
-    Slot = params->Slot;
-    WetBuffer = Slot->WetBuffer;
-    WetClickRemoval = Slot->ClickRemoval;
-    WetPendingClicks = Slot->PendingClicks;
-    WetSend = params->Gain;
 
     pos = 0;
     if(OutPos == 0)

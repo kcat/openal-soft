@@ -132,16 +132,13 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE];
-    ALfloat *RESTRICT ClickRemoval, *RESTRICT PendingClicks;
+    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = Device->DryBuffer;
+    ALfloat *RESTRICT ClickRemoval = Device->ClickRemoval;
+    ALfloat *RESTRICT PendingClicks = Device->PendingClicks;
     ALfloat DrySend[MaxChannels];
     ALuint pos;
     ALuint c;
     (void)Source;
-
-    DryBuffer = Device->DryBuffer;
-    ClickRemoval = Device->ClickRemoval;
-    PendingClicks = Device->PendingClicks;
 
     for(c = 0;c < MaxChannels;c++)
         DrySend[c] = params->Gains[srcchan][c];

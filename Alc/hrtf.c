@@ -345,23 +345,23 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 static struct Hrtf *LoadHrtf(ALuint deviceRate)
 {
     const char *fnamelist = NULL;
-    char rateStr[16 + 1];
-    ALsizei rateLen;
 
-    rateLen = minu(snprintf(rateStr, 16, "%u", deviceRate), 16);
-    ConfigValueStr(NULL, "hrtf_tables", &fnamelist);
+    if(!ConfigValueStr(NULL, "hrtf_tables", &fnamelist))
+        return NULL;
     while(*fnamelist != '\0')
     {
         const ALubyte maxDelay = SRC_HISTORY_LENGTH-1;
         struct Hrtf *Hrtf = NULL;
         ALboolean failed;
-        ALchar magic[9];
-        ALsizei i, j;
-        ALuint rate = 0, irCount;
-        ALubyte irSize = 0, evCount = 0, *azCount, *delays;
-        ALushort *evOffset;
-        ALshort *coeffs;
+        ALuint rate = 0, irCount = 0;
+        ALubyte irSize = 0, evCount = 0;
+        ALubyte *azCount = NULL;
+        ALushort *evOffset = NULL;
+        ALshort *coeffs = NULL;
+        ALubyte *delays = NULL;
         char fname[256 + 1];
+        ALchar magic[9];
+        ALuint i, j;
         FILE *f;
 
         while(isspace(*fnamelist) || *fnamelist == ',')
@@ -369,30 +369,40 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
         i = 0;
         while(*fnamelist != '\0' && *fnamelist != ',')
         {
-            if(i < 256)
+            const char *next = strpbrk(fnamelist, "%,");
+            while(fnamelist != next && *fnamelist && i < sizeof(fname))
+                fname[i++] = *(fnamelist++);
+
+            if(!next || *next == ',')
+                break;
+
+            /* *next == '%' */
+            next++;
+            if(*next == 'r')
             {
-                if(*fnamelist == '%' && *(fnamelist+1) == 'r')
-                {
-                    strncpy(&fname[i], rateStr, minu(rateLen, 256-i));
-                    i += minu(rateLen, 256-i);
-                    fnamelist++;
-                }
-                else
-                {
-                    fname[i] = *fnamelist;
-                    i++;
-                }
+                int wrote = snprintf(&fname[i], sizeof(fname)-i, "%u", deviceRate);
+                i += minu(wrote, sizeof(fname)-i);
+                next++;
             }
-            fnamelist++;
+            else if(*next == '%')
+            {
+                if(i < sizeof(fname))
+                    fname[i++] = '%';
+                next++;
+            }
+            else
+                ERR("Invalid marker '%%%c'\n", *next);
         }
-        while(isspace(fname[i-1]))
+        i = minu(i, sizeof(fname)-1);
+        fname[i] = '\0';
+        while(i > 0 && isspace(fname[i-1]))
             i--;
         fname[i] = '\0';
 
         if(fname[0] == '\0')
             continue;
 
-        TRACE("Loading %s\n", fname);
+        TRACE("Loading %s...\n", fname);
         f = fopen(fname, "rb");
         if(f == NULL)
         {
@@ -401,10 +411,6 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
         }
 
         failed = AL_FALSE;
-        azCount = NULL;
-        evOffset = NULL;
-        coeffs = NULL;
-        delays = NULL;
         if(fread(magic, 1, sizeof(magicMarker), f) != sizeof(magicMarker))
         {
             ERR("Failed to read magic marker\n");
@@ -494,9 +500,9 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
 
         if(!failed)
         {
-            for(i = 0;i < (ALsizei)(irCount*irSize);i+=irSize)
+            for(i = 0;i < irCount*irSize;i+=irSize)
             {
-                for(j = 0;j < (ALsizei)irSize;j++)
+                for(j = 0;j < irSize;j++)
                 {
                     ALshort coeff;
                     coeff  = fgetc(f);
@@ -504,7 +510,7 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
                     coeffs[i+j] = coeff;
                 }
             }
-            for(i = 0;i < (ALsizei)irCount;i++)
+            for(i = 0;i < irCount;i++)
             {
                 delays[i] = fgetc(f);
                 if(delays[i] > maxDelay)

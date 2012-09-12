@@ -32,11 +32,12 @@ The file format is specified below. It uses little-endian byte order.
 ALchar   magic[8] = "MinPHR01";
 ALuint   sampleRate;
 
-ALushort hrirSize;  /* Can be 8 to 128. */
-ALubyte  evCount;   /* Can be 5 to 128. */
+ALubyte hrirSize;  /* Can be 8 to 128 in steps of 8. */
+ALubyte evCount;   /* Can be 5 to 128. */
 
-ALushort azCount[evCount]; /* Each can be 1 to 128. */
+ALubyte azCount[evCount]; /* Each can be 1 to 128. */
 
+/* NOTE: hrirCount is the sum of all azCounts */
 ALshort coefficients[hrirCount][hrirSize];
 ALubyte delays[hrirCount]; /* Each can be 0 to 63. */
 ==
@@ -48,12 +49,12 @@ HRTF data set. This is followed by an unsigned 32-bit integer, specifying the
 sample rate the data set is designed for (OpenAL Soft will not use it if the
 output device's playback rate doesn't match).
 
-Afterward, an unsigned 16-bit integer specifies how many sample points (or
+Afterward, an unsigned 8-bit integer specifies how many sample points (or
 finite impulse response filter coefficients) make up each HRIR.
 
 The following unsigned 8-bit integer specifies the number of elevations used
 by the data set. The elevations start at the bottom (-90 degrees), and
-increment upwards.  Following this is an array of unsigned 16-bit integers, one
+increment upwards.  Following this is an array of unsigned 8-bit integers, one
 for each elevation which specifies the number of azimuths (and thus HRIRs) that
 make up each elevation.  Azimuths start clockwise from the front, constructing
 a full circle for the left ear only. The right ear uses the same HRIRs but in

@@ -29,6 +29,12 @@
 #include "alSource.h"
 #include "alu.h"
 
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
+
 /* Current data set limits defined by the makehrtf utility. */
 #define MIN_IR_SIZE                  (8)
 #define MAX_IR_SIZE                  (128)
@@ -359,7 +365,7 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
         ALushort *evOffset = NULL;
         ALshort *coeffs = NULL;
         ALubyte *delays = NULL;
-        char fname[256 + 1];
+        char fname[PATH_MAX];
         ALchar magic[9];
         ALuint i, j;
         FILE *f;

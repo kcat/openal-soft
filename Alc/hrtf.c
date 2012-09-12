@@ -59,7 +59,8 @@ struct Hrtf {
     struct Hrtf *next;
 };
 
-static const ALchar magicMarker[8] = "MinPHR01";
+static const ALchar magicMarker00[8] = "MinPHR00";
+static const ALchar magicMarker01[8] = "MinPHR01";
 
 /* Define the default HRTF:
  *  ALubyte  defaultAzCount  [DefaultHrtf.evCount]
@@ -348,6 +349,318 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     return fastf2u(delta);
 }
 
+
+static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
+{
+    const ALubyte maxDelay = SRC_HISTORY_LENGTH-1;
+    struct Hrtf *Hrtf = NULL;
+    ALboolean failed = AL_FALSE;
+    ALuint rate = 0, irCount = 0;
+    ALushort irSize = 0, evCount = 0;
+    ALubyte *azCount = NULL;
+    ALushort *evOffset = NULL;
+    ALshort *coeffs = NULL;
+    ALubyte *delays = NULL;
+    ALuint i, j;
+
+    rate  = fgetc(f);
+    rate |= fgetc(f)<<8;
+    rate |= fgetc(f)<<16;
+    rate |= fgetc(f)<<24;
+
+    irCount  = fgetc(f);
+    irCount |= fgetc(f)<<8;
+
+    irSize  = fgetc(f);
+    irSize |= fgetc(f)<<8;
+
+    evCount = fgetc(f);
+
+    if(rate != deviceRate)
+    {
+        ERR("HRIR rate does not match device rate: rate=%d (%d)\n",
+            rate, deviceRate);
+        failed = AL_TRUE;
+    }
+    if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
+    {
+        ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
+            irSize, MIN_IR_SIZE, MAX_IR_SIZE, MOD_IR_SIZE);
+        failed = AL_TRUE;
+    }
+    if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
+    {
+        ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
+            evCount, MIN_EV_COUNT, MAX_EV_COUNT);
+        failed = AL_TRUE;
+    }
+
+    if(failed)
+        return NULL;
+
+    azCount = malloc(sizeof(azCount[0])*evCount);
+    evOffset = malloc(sizeof(evOffset[0])*evCount);
+    if(azCount == NULL || evOffset == NULL)
+    {
+        ERR("Out of memory.\n");
+        failed = AL_TRUE;
+    }
+
+    if(!failed)
+    {
+        evOffset[0]  = fgetc(f);
+        evOffset[0] |= fgetc(f)<<8;
+        for(i = 1;i < evCount;i++)
+        {
+            evOffset[i]  = fgetc(f);
+            evOffset[i] |= fgetc(f)<<8;
+            if(evOffset[i] <= evOffset[i-1])
+            {
+                ERR("Invalid evOffset: evOffset[%d]=%d (last=%d)\n",
+                    i, evOffset[i], evOffset[i-1]);
+                failed = AL_TRUE;
+            }
+
+            azCount[i-1] = evOffset[i] - evOffset[i-1];
+            if(azCount[i-1] < MIN_AZ_COUNT || azCount[i-1] > MAX_AZ_COUNT)
+            {
+                ERR("Unsupported azimuth count: azCount[%d]=%d (%d to %d)\n",
+                    i-1, azCount[i-1], MIN_AZ_COUNT, MAX_AZ_COUNT);
+                failed = AL_TRUE;
+            }
+        }
+        if(irCount <= evOffset[i-1])
+        {
+            ERR("Invalid evOffset: evOffset[%d]=%d (irCount=%d)\n",
+                i-1, evOffset[i-1], irCount);
+            failed = AL_TRUE;
+        }
+
+        azCount[i-1] = irCount - evOffset[i-1];
+        if(azCount[i-1] < MIN_AZ_COUNT || azCount[i-1] > MAX_AZ_COUNT)
+        {
+            ERR("Unsupported azimuth count: azCount[%d]=%d (%d to %d)\n",
+                i-1, azCount[i-1], MIN_AZ_COUNT, MAX_AZ_COUNT);
+            failed = AL_TRUE;
+        }
+    }
+
+    if(!failed)
+    {
+        coeffs = malloc(sizeof(coeffs[0])*irSize*irCount);
+        delays = malloc(sizeof(delays[0])*irCount);
+        if(coeffs == NULL || delays == NULL)
+        {
+            ERR("Out of memory.\n");
+            failed = AL_TRUE;
+        }
+    }
+
+    if(!failed)
+    {
+        for(i = 0;i < irCount*irSize;i+=irSize)
+        {
+            for(j = 0;j < irSize;j++)
+            {
+                ALshort coeff;
+                coeff  = fgetc(f);
+                coeff |= fgetc(f)<<8;
+                coeffs[i+j] = coeff;
+            }
+        }
+        for(i = 0;i < irCount;i++)
+        {
+            delays[i] = fgetc(f);
+            if(delays[i] > maxDelay)
+            {
+                ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i], maxDelay);
+                failed = AL_TRUE;
+            }
+        }
+
+        if(feof(f))
+        {
+            ERR("Premature end of data\n");
+            failed = AL_TRUE;
+        }
+    }
+
+    if(!failed)
+    {
+        Hrtf = malloc(sizeof(struct Hrtf));
+        if(Hrtf == NULL)
+        {
+            ERR("Out of memory.\n");
+            failed = AL_TRUE;
+        }
+    }
+
+    if(!failed)
+    {
+        Hrtf->sampleRate = rate;
+        Hrtf->irSize = irSize;
+        Hrtf->evCount = evCount;
+        Hrtf->azCount = azCount;
+        Hrtf->evOffset = evOffset;
+        Hrtf->coeffs = coeffs;
+        Hrtf->delays = delays;
+        Hrtf->next = NULL;
+        return Hrtf;
+    }
+
+    free(azCount);
+    free(evOffset);
+    free(coeffs);
+    free(delays);
+    return NULL;
+}
+
+
+static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
+{
+    const ALubyte maxDelay = SRC_HISTORY_LENGTH-1;
+    struct Hrtf *Hrtf = NULL;
+    ALboolean failed = AL_FALSE;
+    ALuint rate = 0, irCount = 0;
+    ALubyte irSize = 0, evCount = 0;
+    ALubyte *azCount = NULL;
+    ALushort *evOffset = NULL;
+    ALshort *coeffs = NULL;
+    ALubyte *delays = NULL;
+    ALuint i, j;
+
+    rate  = fgetc(f);
+    rate |= fgetc(f)<<8;
+    rate |= fgetc(f)<<16;
+    rate |= fgetc(f)<<24;
+
+    irSize = fgetc(f);
+
+    evCount = fgetc(f);
+
+    if(rate != deviceRate)
+    {
+        ERR("HRIR rate does not match device rate: rate=%d (%d)\n",
+                rate, deviceRate);
+        failed = AL_TRUE;
+    }
+    if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
+    {
+        ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
+            irSize, MIN_IR_SIZE, MAX_IR_SIZE, MOD_IR_SIZE);
+        failed = AL_TRUE;
+    }
+    if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
+    {
+        ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
+            evCount, MIN_EV_COUNT, MAX_EV_COUNT);
+        failed = AL_TRUE;
+    }
+
+    if(failed)
+        return NULL;
+
+    azCount = malloc(sizeof(azCount[0])*evCount);
+    evOffset = malloc(sizeof(evOffset[0])*evCount);
+    if(azCount == NULL || evOffset == NULL)
+    {
+        ERR("Out of memory.\n");
+        failed = AL_TRUE;
+    }
+
+    if(!failed)
+    {
+        for(i = 0;i < evCount;i++)
+        {
+            azCount[i] = fgetc(f);
+            if(azCount[i] < MIN_AZ_COUNT || azCount[i] > MAX_AZ_COUNT)
+            {
+                ERR("Unsupported azimuth count: azCount[%d]=%d (%d to %d)\n",
+                    i, azCount[i], MIN_AZ_COUNT, MAX_AZ_COUNT);
+                failed = AL_TRUE;
+            }
+        }
+    }
+
+    if(!failed)
+    {
+        evOffset[0] = 0;
+        irCount = azCount[0];
+        for(i = 1;i < evCount;i++)
+        {
+            evOffset[i] = evOffset[i-1] + azCount[i-1];
+            irCount += azCount[i];
+        }
+
+        coeffs = malloc(sizeof(coeffs[0])*irSize*irCount);
+        delays = malloc(sizeof(delays[0])*irCount);
+        if(coeffs == NULL || delays == NULL)
+        {
+            ERR("Out of memory.\n");
+            failed = AL_TRUE;
+        }
+    }
+
+    if(!failed)
+    {
+        for(i = 0;i < irCount*irSize;i+=irSize)
+        {
+            for(j = 0;j < irSize;j++)
+            {
+                ALshort coeff;
+                coeff  = fgetc(f);
+                coeff |= fgetc(f)<<8;
+                coeffs[i+j] = coeff;
+            }
+        }
+        for(i = 0;i < irCount;i++)
+        {
+            delays[i] = fgetc(f);
+            if(delays[i] > maxDelay)
+            {
+                ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i], maxDelay);
+                failed = AL_TRUE;
+            }
+        }
+
+        if(feof(f))
+        {
+            ERR("Premature end of data\n");
+            failed = AL_TRUE;
+        }
+    }
+
+    if(!failed)
+    {
+        Hrtf = malloc(sizeof(struct Hrtf));
+        if(Hrtf == NULL)
+        {
+            ERR("Out of memory.\n");
+            failed = AL_TRUE;
+        }
+    }
+
+    if(!failed)
+    {
+        Hrtf->sampleRate = rate;
+        Hrtf->irSize = irSize;
+        Hrtf->evCount = evCount;
+        Hrtf->azCount = azCount;
+        Hrtf->evOffset = evOffset;
+        Hrtf->coeffs = coeffs;
+        Hrtf->delays = delays;
+        Hrtf->next = NULL;
+        return Hrtf;
+    }
+
+    free(azCount);
+    free(evOffset);
+    free(coeffs);
+    free(delays);
+    return NULL;
+}
+
+
 static struct Hrtf *LoadHrtf(ALuint deviceRate)
 {
     const char *fnamelist = NULL;
@@ -356,18 +669,10 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
         return NULL;
     while(*fnamelist != '\0')
     {
-        const ALubyte maxDelay = SRC_HISTORY_LENGTH-1;
         struct Hrtf *Hrtf = NULL;
-        ALboolean failed;
-        ALuint rate = 0, irCount = 0;
-        ALubyte irSize = 0, evCount = 0;
-        ALubyte *azCount = NULL;
-        ALushort *evOffset = NULL;
-        ALshort *coeffs = NULL;
-        ALubyte *delays = NULL;
         char fname[PATH_MAX];
-        ALchar magic[9];
-        ALuint i, j;
+        ALchar magic[8];
+        ALuint i;
         FILE *f;
 
         while(isspace(*fnamelist) || *fnamelist == ',')
@@ -417,160 +722,39 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
             continue;
         }
 
-        failed = AL_FALSE;
-        if(fread(magic, 1, sizeof(magicMarker), f) != sizeof(magicMarker))
-        {
+        if(fread(magic, 1, sizeof(magic), f) != sizeof(magic))
             ERR("Failed to read magic marker\n");
-            failed = AL_TRUE;
-        }
-        else if(memcmp(magic, magicMarker, sizeof(magicMarker)) != 0)
+        else
         {
-            magic[8] = 0;
-            ERR("Invalid magic marker: \"%s\"\n", magic);
-            failed = AL_TRUE;
-        }
-
-        if(!failed)
-        {
-            rate  = fgetc(f);
-            rate |= fgetc(f)<<8;
-            rate |= fgetc(f)<<16;
-            rate |= fgetc(f)<<24;
-
-            irSize = fgetc(f);
-
-            evCount = fgetc(f);
-
-            if(rate != deviceRate)
+            if(memcmp(magic, magicMarker00, sizeof(magicMarker00)) == 0)
             {
-                ERR("HRIR rate does not match device rate: rate=%d (%d)\n",
-                     rate, deviceRate);
-                failed = AL_TRUE;
+                TRACE("Detected data set format v0\n");
+                Hrtf = LoadHrtf00(f, deviceRate);
             }
-            if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
+            else if(memcmp(magic, magicMarker01, sizeof(magicMarker01)) == 0)
             {
-                ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
-                    irSize, MIN_IR_SIZE, MAX_IR_SIZE, MOD_IR_SIZE);
-                failed = AL_TRUE;
+                TRACE("Detected data set format v1\n");
+                Hrtf = LoadHrtf01(f, deviceRate);
             }
-            if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
-            {
-                ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
-                    evCount, MIN_EV_COUNT, MAX_EV_COUNT);
-                failed = AL_TRUE;
-            }
-        }
-
-        if(!failed)
-        {
-            azCount = malloc(sizeof(azCount[0])*evCount);
-            evOffset = malloc(sizeof(evOffset[0])*evCount);
-            if(azCount == NULL || evOffset == NULL)
-            {
-                ERR("Out of memory.\n");
-                failed = AL_TRUE;
-            }
-        }
-
-        if(!failed)
-        {
-            for(i = 0;i < evCount;i++)
-            {
-                azCount[i] = fgetc(f);
-                if(azCount[i] < MIN_AZ_COUNT || azCount[i] > MAX_AZ_COUNT)
-                {
-                    ERR("Unsupported azimuth count: azCount[%d]=%d (%d to %d)\n",
-                        i, azCount[i], MIN_AZ_COUNT, MAX_AZ_COUNT);
-                    failed = AL_TRUE;
-                }
-            }
-        }
-
-        if(!failed)
-        {
-            evOffset[0] = 0;
-            irCount = azCount[0];
-            for(i = 1;i < evCount;i++)
-            {
-                evOffset[i] = evOffset[i-1] + azCount[i-1];
-                irCount += azCount[i];
-            }
-
-            coeffs = malloc(sizeof(coeffs[0])*irSize*irCount);
-            delays = malloc(sizeof(delays[0])*irCount);
-            if(coeffs == NULL || delays == NULL)
-            {
-                ERR("Out of memory.\n");
-                failed = AL_TRUE;
-            }
-        }
-
-        if(!failed)
-        {
-            for(i = 0;i < irCount*irSize;i+=irSize)
-            {
-                for(j = 0;j < irSize;j++)
-                {
-                    ALshort coeff;
-                    coeff  = fgetc(f);
-                    coeff |= fgetc(f)<<8;
-                    coeffs[i+j] = coeff;
-                }
-            }
-            for(i = 0;i < irCount;i++)
-            {
-                delays[i] = fgetc(f);
-                if(delays[i] > maxDelay)
-                {
-                    ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i], maxDelay);
-                    failed = AL_TRUE;
-                }
-            }
-
-            if(feof(f))
-            {
-                ERR("Premature end of data\n");
-                failed = AL_TRUE;
-            }
+            else
+                ERR("Invalid magic marker: \"%.8s\"\n", magic);
         }
 
         fclose(f);
         f = NULL;
 
-        if(!failed)
+        if(Hrtf)
         {
-            Hrtf = malloc(sizeof(struct Hrtf));
-            if(Hrtf == NULL)
-            {
-                ERR("Out of memory.\n");
-                failed = AL_TRUE;
-            }
-        }
-
-        if(!failed)
-        {
-            Hrtf->sampleRate = rate;
-            Hrtf->irSize = irSize;
-            Hrtf->evCount = evCount;
-            Hrtf->azCount = azCount;
-            Hrtf->evOffset = evOffset;
-            Hrtf->coeffs = coeffs;
-            Hrtf->delays = delays;
             Hrtf->next = LoadedHrtfs;
             LoadedHrtfs = Hrtf;
             TRACE("Loaded HRTF support for format: %s %uhz\n",
                   DevFmtChannelsString(DevFmtStereo), Hrtf->sampleRate);
             return Hrtf;
         }
-        else
-        {
-            free(azCount);
-            free(evOffset);
-            free(coeffs);
-            free(delays);
-            ERR("Failed to load %s\n", fname);
-        }
+
+        ERR("Failed to load %s\n", fname);
     }
+
     return NULL;
 }
 

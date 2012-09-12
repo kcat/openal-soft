@@ -1777,8 +1777,7 @@ static int StoreMhr (const HrirDataT * hData, const char * filename) {
       }
   }
   for (j = 0; j < hData -> mIrCount; j ++) {
-//      v = (int) fmin (round (44100.0 * hData -> mHrtds [j]), MAX_HRTD);
-      v = (int) fmin (hData -> mHrtds [j], MAX_HRTD);
+      v = (int) fmin (round (hData -> mIrRate * hData -> mHrtds [j]), MAX_HRTD);
       if (! WriteBin4 (BO_LITTLE, 1, (uint4) v, fp, filename))
          return (0);
   }
@@ -1844,7 +1843,7 @@ static int StoreTable (const HrirDataT * hData, const char * filename) {
   if (! WriteAscii (text, fp, filename))
      return (0);
   for (j = 0; j < hData -> mIrCount; j ++) {
-      v = (int) fmin (round (44100.0 * hData -> mHrtds [j]), MAX_HRTD);
+      v = (int) fmin (round (hData -> mIrRate * hData -> mHrtds [j]), MAX_HRTD);
       snprintf (text, 128, "%d, ", v);
       if (! WriteAscii (text, fp, filename))
          return (0);

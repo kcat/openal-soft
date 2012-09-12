@@ -398,6 +398,7 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
             }
             else
                 ERR("Invalid marker '%%%c'\n", *next);
+            fnamelist = next;
         }
         i = minu(i, sizeof(fname)-1);
         fname[i] = '\0';

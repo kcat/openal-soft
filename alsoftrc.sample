@@ -46,7 +46,13 @@
 ## hrtf_tables
 #  Specifies a comma-separated list of files containing HRTF data sets. The
 #  listed data sets can be used in place of or in addiiton to the the built-in
-#  set. The format of the files are described in hrtf.txt.
+#  set. The format of the files are described in hrtf.txt. The filenames may
+#  contain these markers, which will be replaced as needed:
+#  %r - Device sampling rate
+#  %% - Percent sign (%)
+#  So if this is set to "kemar-%r-diffuse.mhr", it will try to open
+#  "kemar-44100-diffuse.mhr" if the device is using 44100hz output, or
+#  "kemar-48000-diffuse.mhr" if the device is using 48000hz output, etc.
 #hrtf_tables =
 
 ## cf_level:

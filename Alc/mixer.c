@@ -36,51 +36,6 @@
 #include "alu.h"
 #include "bs2b.h"
 
-#include "mixer_defs.h"
-
-
-DryMixerFunc SelectDirectMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixDirect_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixDirect_Neon;
-#endif
-
-    return MixDirect_C;
-}
-
-DryMixerFunc SelectHrtfMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixDirect_Hrtf_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixDirect_Hrtf_Neon;
-#endif
-
-    return MixDirect_Hrtf_C;
-}
-
-WetMixerFunc SelectSendMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixSend_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixSend_Neon;
-#endif
-
-    return MixSend_C;
-}
-
 
 static __inline ALfloat Sample_ALbyte(ALbyte val)
 { return val * (1.0f/127.0f); }

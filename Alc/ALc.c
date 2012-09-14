@@ -1627,7 +1627,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(!device->Hrtf && (device->UpdateSize&3))
     {
         if((CPUCapFlags&CPU_CAP_SSE))
-            WARN("SSE performance is degraded with a non-multiple of 4 update size (%u)\n", device->UpdateSize);
+            WARN("SSE performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
     }
 
     oldMode = SetMixerFPUMode();

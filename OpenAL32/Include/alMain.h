@@ -755,6 +755,7 @@ struct ALCcontext_struct
 #define RemoveSource(m, k) ((struct ALsource*)RemoveUIntMapKey(&(m)->SourceMap, (k)))
 #define RemoveEffectSlot(m, k) ((struct ALeffectslot*)RemoveUIntMapKey(&(m)->EffectSlotMap, (k)))
 
+
 ALCcontext *GetContextRef(void);
 
 void ALCcontext_IncRef(ALCcontext *context);

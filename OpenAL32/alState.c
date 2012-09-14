@@ -27,7 +27,7 @@
 #include "alError.h"
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
-#include "alState.h"
+
 
 static const ALchar alVendor[] = "OpenAL Community";
 static const ALchar alVersion[] = "1.1 ALSOFT "ALSOFT_VERSION;

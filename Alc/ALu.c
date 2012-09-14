@@ -51,6 +51,27 @@ ALfloat ConeScale = 1.0f;
 ALfloat ZScale = 1.0f;
 
 
+static ResamplerFunc SelectResampler(enum Resampler Resampler, ALuint increment)
+{
+    if(increment == FRACTIONONE)
+        return Resample_point32_C;
+    switch(Resampler)
+    {
+        case PointResampler:
+            return Resample_point32_C;
+        case LinearResampler:
+            return Resample_lerp32_C;
+        case CubicResampler:
+            return Resample_cubic32_C;
+        case ResamplerMax:
+            /* Shouldn't happen */
+            break;
+    }
+
+    return NULL;
+}
+
+
 static DryMixerFunc SelectDirectMixer(void)
 {
 #ifdef HAVE_SSE
@@ -210,6 +231,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
             }
+            ALSource->Params.Resample = SelectResampler(Resampler, ALSource->Params.Step);
 
             Channels = ALBuffer->FmtChannels;
             break;
@@ -703,6 +725,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 if(ALSource->Params.Step == 0)
                     ALSource->Params.Step = 1;
             }
+            ALSource->Params.Resample = SelectResampler(Resampler, ALSource->Params.Step);
 
             break;
         }

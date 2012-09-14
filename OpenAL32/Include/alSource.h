@@ -149,6 +149,7 @@ typedef struct ALsource
 
     /** Current target parameters used for mixing. */
     struct {
+        ResamplerFunc Resample;
         DryMixerFunc DryMix;
         WetMixerFunc WetMix;
 

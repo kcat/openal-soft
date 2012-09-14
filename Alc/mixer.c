@@ -84,68 +84,6 @@ static void SilenceStack(ALfloat *dst, ALuint samples)
 }
 
 
-static __inline ALfloat point32(const ALfloat *vals, ALint step, ALint frac)
-{ return vals[0]; (void)step; (void)frac; }
-static __inline ALfloat lerp32(const ALfloat *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0f/FRACTIONONE)); }
-static __inline ALfloat cubic32(const ALfloat *vals, ALint step, ALint frac)
-{ return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0f/FRACTIONONE)); }
-
-#define DECL_TEMPLATE(Sampler)                                                \
-static void Resample_##Sampler(const ALfloat *data, ALuint frac,              \
-  ALuint increment, ALuint NumChannels, ALfloat *RESTRICT OutBuffer,          \
-  ALuint BufferSize)                                                          \
-{                                                                             \
-    ALuint pos = 0;                                                           \
-    ALfloat value;                                                            \
-    ALuint i;                                                                 \
-                                                                              \
-    for(i = 0;i < BufferSize+1;i++)                                           \
-    {                                                                         \
-        value = Sampler(data + pos*NumChannels, NumChannels, frac);           \
-        OutBuffer[i] = value;                                                 \
-                                                                              \
-        frac += increment;                                                    \
-        pos  += frac>>FRACTIONBITS;                                           \
-        frac &= FRACTIONMASK;                                                 \
-    }                                                                         \
-}
-
-DECL_TEMPLATE(point32)
-DECL_TEMPLATE(lerp32)
-DECL_TEMPLATE(cubic32)
-
-#undef DECL_TEMPLATE
-
-static void Resample(enum Resampler Resampler, const ALfloat *data, ALuint frac,
-                     ALuint increment, ALuint NumChannels,
-                     ALfloat *RESTRICT OutBuffer, ALuint BufferSize)
-{
-    if(increment == FRACTIONONE)
-        goto do_point;
-    switch(Resampler)
-    {
-        case PointResampler:
-        do_point:
-            Resample_point32(data, frac, increment, NumChannels,
-                             OutBuffer, BufferSize);
-            break;
-        case LinearResampler:
-            Resample_lerp32(data, frac, increment, NumChannels,
-                            OutBuffer, BufferSize);
-            break;
-        case CubicResampler:
-            Resample_cubic32(data, frac, increment, NumChannels,
-                             OutBuffer, BufferSize);
-            break;
-        case ResamplerMax:
-            /* Shouldn't happen */
-            break;
-    }
-}
-
-
 static void Filter2P(FILTER *filter, ALuint chan, ALfloat *RESTRICT dst,
                      const ALfloat *RESTRICT src, ALuint numsamples)
 {
@@ -401,11 +339,12 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             ALIGN(16) ALfloat FilteredData[BUFFERSIZE];
             ALfloat ResampledData[BUFFERSIZE];
 
-            Resample(Resampler, SrcData+i, DataPosFrac, increment,
-                     NumChannels, ResampledData, BufferSize);
+            Source->Params.Resample(SrcData+i, DataPosFrac, increment,
+                                    NumChannels, ResampledData, BufferSize);
 
             Filter2P(&directparms->iirFilter, i, FilteredData, ResampledData,
                      BufferSize);
+
             Source->Params.DryMix(Source, Device, directparms,
                                   FilteredData, i, OutPos, SamplesToDo,
                                   BufferSize);

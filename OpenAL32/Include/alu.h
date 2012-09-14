@@ -80,6 +80,10 @@ struct ALbuffer;
 struct DirectParams;
 struct SendParams;
 
+typedef void (*ResamplerFunc)(const ALfloat *src, ALuint frac,
+                              ALuint increment, ALuint NumChannels,
+                              ALfloat *RESTRICT dst, ALuint dstlen);
+
 typedef ALvoid (*DryMixerFunc)(struct ALsource *self, ALCdevice *Device,
                                struct DirectParams *params,
                                const ALfloat *RESTRICT data, ALuint srcchan,

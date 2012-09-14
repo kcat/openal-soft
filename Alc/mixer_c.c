@@ -6,6 +6,41 @@
 #include "alu.h"
 
 
+static __inline ALfloat point32(const ALfloat *vals, ALint step, ALint frac)
+{ return vals[0]; (void)step; (void)frac; }
+static __inline ALfloat lerp32(const ALfloat *vals, ALint step, ALint frac)
+{ return lerp(vals[0], vals[step], frac * (1.0f/FRACTIONONE)); }
+static __inline ALfloat cubic32(const ALfloat *vals, ALint step, ALint frac)
+{ return cubic(vals[-step], vals[0], vals[step], vals[step+step],
+               frac * (1.0f/FRACTIONONE)); }
+
+#define DECL_TEMPLATE(Sampler)                                                \
+void Resample_##Sampler##_C(const ALfloat *data, ALuint frac,                 \
+  ALuint increment, ALuint NumChannels, ALfloat *RESTRICT OutBuffer,          \
+  ALuint BufferSize)                                                          \
+{                                                                             \
+    ALuint pos = 0;                                                           \
+    ALfloat value;                                                            \
+    ALuint i;                                                                 \
+                                                                              \
+    for(i = 0;i < BufferSize+1;i++)                                           \
+    {                                                                         \
+        value = Sampler(data + pos*NumChannels, NumChannels, frac);           \
+        OutBuffer[i] = value;                                                 \
+                                                                              \
+        frac += increment;                                                    \
+        pos  += frac>>FRACTIONBITS;                                           \
+        frac &= FRACTIONMASK;                                                 \
+    }                                                                         \
+}
+
+DECL_TEMPLATE(point32)
+DECL_TEMPLATE(lerp32)
+DECL_TEMPLATE(cubic32)
+
+#undef DECL_TEMPLATE
+
+
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                      const ALuint IrSize,
                                      ALfloat (*RESTRICT Coeffs)[2],

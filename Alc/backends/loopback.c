@@ -21,9 +21,9 @@
 #include "config.h"
 
 #include <stdlib.h>
+
 #include "alMain.h"
-#include "AL/al.h"
-#include "AL/alc.h"
+#include "alu.h"
 
 
 static ALCenum loopback_open_playback(ALCdevice *device, const ALCchar *deviceName)

@@ -26,8 +26,7 @@
 #include <limits.h>
 
 #include "alMain.h"
-#include "AL/al.h"
-#include "AL/alc.h"
+#include "alu.h"
 #include "alError.h"
 #include "alBuffer.h"
 #include "alThunk.h"

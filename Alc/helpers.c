@@ -30,6 +30,12 @@
 #ifdef HAVE_CPUID_H
 #include <cpuid.h>
 #endif
+#ifdef HAVE_FLOAT_H
+#include <float.h>
+#endif
+#ifdef HAVE_IEEEFP_H
+#include <ieeefp.h>
+#endif
 
 #if defined(HAVE_GUIDDEF_H) || defined(HAVE_INITGUID_H)
 #define INITGUID

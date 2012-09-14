@@ -22,9 +22,9 @@
 #include "config.h"
 
 #include <stdlib.h>
+
 #include "alMain.h"
-#include "AL/al.h"
-#include "AL/alc.h"
+#include "alu.h"
 
 
 #include <SLES/OpenSLES.h>

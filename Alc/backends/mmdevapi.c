@@ -39,8 +39,7 @@
 #endif
 
 #include "alMain.h"
-#include "AL/al.h"
-#include "AL/alc.h"
+#include "alu.h"
 
 
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);

@@ -30,9 +30,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <math.h>
+
 #include "alMain.h"
-#include "AL/al.h"
-#include "AL/alc.h"
+#include "alu.h"
 
 #include <sys/audioio.h>
 

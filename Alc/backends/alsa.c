@@ -25,6 +25,7 @@
 #include <memory.h>
 
 #include "alMain.h"
+#include "alu.h"
 
 #include <alsa/asoundlib.h>
 

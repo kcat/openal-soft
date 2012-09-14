@@ -28,8 +28,7 @@
 #include <mmsystem.h>
 
 #include "alMain.h"
-#include "AL/al.h"
-#include "AL/alc.h"
+#include "alu.h"
 
 #ifndef WAVE_FORMAT_IEEE_FLOAT
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003

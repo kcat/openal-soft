@@ -25,8 +25,7 @@
 #include <string.h>
 
 #include "alMain.h"
-#include "AL/al.h"
-#include "AL/alc.h"
+#include "alu.h"
 
 #include <CoreServices/CoreServices.h>
 #include <unistd.h>

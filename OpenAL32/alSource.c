@@ -508,6 +508,18 @@ static ALenum GetSourcedv(const ALsource *Source, ALCcontext *Context, ALenum na
             *values = offsets[0];
             break;
 
+        case AL_CONE_OUTER_GAINHF:
+            *values = Source->OuterGainHF;
+            break;
+
+        case AL_AIR_ABSORPTION_FACTOR:
+            *values = Source->AirAbsorptionFactor;
+            break;
+
+        case AL_ROOM_ROLLOFF_FACTOR:
+            *values = Source->RoomRolloffFactor;
+            break;
+
         case AL_DOPPLER_FACTOR:
             *values = Source->DopplerFactor;
             break;

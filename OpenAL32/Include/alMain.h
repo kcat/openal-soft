@@ -382,17 +382,11 @@ static __inline void UnlockUIntMapWrite(UIntMap *map)
 extern "C" {
 #endif
 
-
-#define DEFAULT_OUTPUT_RATE        (44100)
-#define MIN_OUTPUT_RATE            (8000)
-
-#define SPEEDOFSOUNDMETRESPERSEC   (343.3f)
-#define AIRABSORBGAINHF            (0.99426f) /* -0.05dB */
-
-#define LOWPASSFREQREF             (5000)
-
-
 struct Hrtf;
+
+
+#define DEFAULT_OUTPUT_RATE  (44100)
+#define MIN_OUTPUT_RATE      (8000)
 
 
 // Find the next power-of-2 for non-power-of-2 numbers.

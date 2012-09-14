@@ -91,6 +91,9 @@ typedef ALvoid (*WetMixerFunc)(struct SendParams *params,
                                ALuint BufferSize);
 
 
+#define SPEEDOFSOUNDMETRESPERSEC  (343.3f)
+#define AIRABSORBGAINHF           (0.99426f) /* -0.05dB */
+
 #define FRACTIONBITS (14)
 #define FRACTIONONE  (1<<FRACTIONBITS)
 #define FRACTIONMASK (FRACTIONONE-1)

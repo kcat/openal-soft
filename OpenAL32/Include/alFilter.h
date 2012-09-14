@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+#define LOWPASSFREQREF  (5000)
+
 typedef struct {
     ALfloat coeff;
 #ifndef _MSC_VER

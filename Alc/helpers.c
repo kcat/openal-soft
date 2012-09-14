@@ -166,6 +166,46 @@ void al_free(void *ptr)
 #endif
 }
 
+
+int SetMixerFPUMode(void)
+{
+#if defined(_FPU_GETCW) && defined(_FPU_SETCW) && (defined(__i386__) || defined(__x86_64__))
+    fpu_control_t fpuState, newState;
+    _FPU_GETCW(fpuState);
+    newState = fpuState&~(_FPU_EXTENDED|_FPU_DOUBLE|_FPU_SINGLE |
+                          _FPU_RC_NEAREST|_FPU_RC_DOWN|_FPU_RC_UP|_FPU_RC_ZERO);
+    newState |= _FPU_SINGLE | _FPU_RC_ZERO;
+    if((CPUCapFlags&CPU_CAP_SSE))
+        newState |= 0x8000; /* flush-to-zero */
+    _FPU_SETCW(newState);
+#else
+    int fpuState;
+#if defined(HAVE__CONTROLFP)
+    fpuState = _controlfp(0, 0);
+    (void)_controlfp(_RC_CHOP|_DN_FLUSH|_PC_24, _MCW_RC|_MCW_DN|_MCW_PC);
+#elif defined(HAVE_FESETROUND)
+    fpuState = fegetround();
+#ifdef FE_TOWARDZERO
+    fesetround(FE_TOWARDZERO);
+#endif
+#endif
+#endif
+    return fpuState;
+}
+
+void RestoreFPUMode(int state)
+{
+#if defined(_FPU_GETCW) && defined(_FPU_SETCW) && (defined(__i386__) || defined(__x86_64__))
+    fpu_control_t fpuState = state;
+    _FPU_SETCW(fpuState);
+#elif defined(HAVE__CONTROLFP)
+    _controlfp(state, _MCW_RC|_MCW_DN|_MCW_PC);
+#elif defined(HAVE_FESETROUND)
+    fesetround(state);
+#endif
+}
+
+
 #ifdef _WIN32
 void pthread_once(pthread_once_t *once, void (*callback)(void))
 {

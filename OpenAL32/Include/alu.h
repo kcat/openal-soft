@@ -198,43 +198,6 @@ static __inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat 
 }
 
 
-static __inline int SetMixerFPUMode(void)
-{
-#if defined(_FPU_GETCW) && defined(_FPU_SETCW) && (defined(__i386__) || defined(__x86_64__))
-    fpu_control_t fpuState, newState;
-    _FPU_GETCW(fpuState);
-    newState = fpuState&~(_FPU_EXTENDED|_FPU_DOUBLE|_FPU_SINGLE |
-                          _FPU_RC_NEAREST|_FPU_RC_DOWN|_FPU_RC_UP|_FPU_RC_ZERO);
-    newState |= _FPU_SINGLE | _FPU_RC_ZERO;
-    _FPU_SETCW(newState);
-#else
-    int fpuState;
-#if defined(HAVE__CONTROLFP)
-    fpuState = _controlfp(0, 0);
-    (void)_controlfp(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC);
-#elif defined(HAVE_FESETROUND)
-    fpuState = fegetround();
-#ifdef FE_TOWARDZERO
-    fesetround(FE_TOWARDZERO);
-#endif
-#endif
-#endif
-    return fpuState;
-}
-
-static __inline void RestoreFPUMode(int state)
-{
-#if defined(_FPU_GETCW) && defined(_FPU_SETCW) && (defined(__i386__) || defined(__x86_64__))
-    fpu_control_t fpuState = state;
-    _FPU_SETCW(fpuState);
-#elif defined(HAVE__CONTROLFP)
-    _controlfp(state, _MCW_RC|_MCW_PC);
-#elif defined(HAVE_FESETROUND)
-    fesetround(state);
-#endif
-}
-
-
 static __inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
 {
     outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];

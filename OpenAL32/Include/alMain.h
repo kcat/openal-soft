@@ -733,6 +733,9 @@ void *al_malloc(size_t alignment, size_t size);
 void *al_calloc(size_t alignment, size_t size);
 void al_free(void *ptr);
 
+int SetMixerFPUMode(void);
+void RestoreFPUMode(int state);
+
 ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr);
 ALuint StopThread(ALvoid *thread);
 

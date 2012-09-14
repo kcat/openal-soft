@@ -24,13 +24,12 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "AL/al.h"
-#include "AL/alc.h"
 #include "alMain.h"
+#include "alu.h"
 #include "alAuxEffectSlot.h"
 #include "alEffect.h"
+#include "alFilter.h"
 #include "alError.h"
-#include "alu.h"
 
 typedef struct DelayLine
 {

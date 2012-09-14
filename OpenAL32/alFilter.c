@@ -22,9 +22,8 @@
 
 #include <stdlib.h>
 
-#include "AL/al.h"
-#include "AL/alc.h"
 #include "alMain.h"
+#include "alu.h"
 #include "alFilter.h"
 #include "alThunk.h"
 #include "alError.h"

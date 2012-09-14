@@ -3,9 +3,9 @@
 
 #define MAX_SENDS                 4
 
-#include "alFilter.h"
+#include "alMain.h"
 #include "alu.h"
-#include "AL/al.h"
+#include "alFilter.h"
 
 #ifdef __cplusplus
 extern "C" {

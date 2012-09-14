@@ -1,8 +1,7 @@
 #ifndef _AL_FILTER_H_
 #define _AL_FILTER_H_
 
-#include "AL/al.h"
-#include "alu.h"
+#include "alMain.h"
 
 #ifdef __cplusplus
 extern "C" {

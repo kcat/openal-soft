@@ -1,9 +1,7 @@
 #ifndef _ALU_H_
 #define _ALU_H_
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/alext.h"
+#include "alMain.h"
 
 #include <limits.h>
 #include <math.h>
@@ -91,14 +89,6 @@ typedef ALvoid (*WetMixerFunc)(struct SendParams *params,
                                const ALfloat *RESTRICT data,
                                ALuint OutPos, ALuint SamplesToDo,
                                ALuint BufferSize);
-
-enum Resampler {
-    PointResampler,
-    LinearResampler,
-    CubicResampler,
-
-    ResamplerMax,
-};
 
 
 #define FRACTIONBITS (14)

@@ -1,7 +1,7 @@
 #ifndef _AL_EFFECT_H_
 #define _AL_EFFECT_H_
 
-#include "AL/al.h"
+#include "alMain.h"
 
 #ifdef __cplusplus
 extern "C" {

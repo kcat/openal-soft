@@ -1,15 +1,20 @@
 #ifndef _AL_AUXEFFECTSLOT_H_
 #define _AL_AUXEFFECTSLOT_H_
 
-#include "AL/al.h"
+#include "alMain.h"
 #include "alEffect.h"
-#include "alFilter.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct ALeffectState ALeffectState;
+typedef struct ALeffectState {
+    ALvoid (*Destroy)(struct ALeffectState *State);
+    ALboolean (*DeviceUpdate)(struct ALeffectState *State, ALCdevice *Device);
+    ALvoid (*Update)(struct ALeffectState *State, ALCdevice *Device, const struct ALeffectslot *Slot);
+    ALvoid (*Process)(struct ALeffectState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE]);
+} ALeffectState;
+
 
 typedef struct ALeffectslot
 {
@@ -35,13 +40,6 @@ typedef struct ALeffectslot
 
 ALenum InitEffectSlot(ALeffectslot *slot);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
-
-struct ALeffectState {
-    ALvoid (*Destroy)(ALeffectState *State);
-    ALboolean (*DeviceUpdate)(ALeffectState *State, ALCdevice *Device);
-    ALvoid (*Update)(ALeffectState *State, ALCdevice *Device, const ALeffectslot *Slot);
-    ALvoid (*Process)(ALeffectState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE]);
-};
 
 ALeffectState *NoneCreate(void);
 ALeffectState *ReverbCreate(void);

@@ -514,6 +514,26 @@ void alc_loopback_deinit(void);
 void alc_loopback_probe(enum DevProbe type);
 
 
+enum DistanceModel {
+    InverseDistanceClamped  = AL_INVERSE_DISTANCE_CLAMPED,
+    LinearDistanceClamped   = AL_LINEAR_DISTANCE_CLAMPED,
+    ExponentDistanceClamped = AL_EXPONENT_DISTANCE_CLAMPED,
+    InverseDistance  = AL_INVERSE_DISTANCE,
+    LinearDistance   = AL_LINEAR_DISTANCE,
+    ExponentDistance = AL_EXPONENT_DISTANCE,
+    DisableDistance  = AL_NONE,
+
+    DefaultDistanceModel = InverseDistanceClamped
+};
+
+enum Resampler {
+    PointResampler,
+    LinearResampler,
+    CubicResampler,
+
+    ResamplerMax,
+};
+
 enum Channel {
     FrontLeft = 0,
     FrontRight,
@@ -527,6 +547,7 @@ enum Channel {
 
     MaxChannels,
 };
+
 
 /* Device formats */
 enum DevFmtType {
@@ -698,19 +719,6 @@ struct ALCdevice_struct
 #define RemoveBuffer(m, k) ((struct ALbuffer*)RemoveUIntMapKey(&(m)->BufferMap, (k)))
 #define RemoveEffect(m, k) ((struct ALeffect*)RemoveUIntMapKey(&(m)->EffectMap, (k)))
 #define RemoveFilter(m, k) ((struct ALfilter*)RemoveUIntMapKey(&(m)->FilterMap, (k)))
-
-
-enum DistanceModel {
-    InverseDistanceClamped  = AL_INVERSE_DISTANCE_CLAMPED,
-    LinearDistanceClamped   = AL_LINEAR_DISTANCE_CLAMPED,
-    ExponentDistanceClamped = AL_EXPONENT_DISTANCE_CLAMPED,
-    InverseDistance  = AL_INVERSE_DISTANCE,
-    LinearDistance   = AL_LINEAR_DISTANCE,
-    ExponentDistance = AL_EXPONENT_DISTANCE,
-    DisableDistance  = AL_NONE,
-
-    DefaultDistanceModel = InverseDistanceClamped
-};
 
 
 struct ALCcontext_struct

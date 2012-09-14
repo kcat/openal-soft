@@ -337,7 +337,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         {
             DirectParams *directparms = &Source->Params.Direct;
             ALIGN(16) ALfloat FilteredData[BUFFERSIZE];
-            ALfloat ResampledData[BUFFERSIZE];
+            ALIGN(16) ALfloat ResampledData[BUFFERSIZE];
 
             Source->Params.Resample(SrcData+i, DataPosFrac, increment,
                                     NumChannels, ResampledData, BufferSize);

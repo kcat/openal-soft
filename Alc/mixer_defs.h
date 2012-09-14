@@ -15,6 +15,9 @@ void Resample_point32_C(const ALfloat *src, ALuint frac, ALuint increment, ALuin
 void Resample_lerp32_C(const ALfloat *src, ALuint frac, ALuint increment, ALuint NumChannels, ALfloat *RESTRICT dst, ALuint dstlen);
 void Resample_cubic32_C(const ALfloat *src, ALuint frac, ALuint increment, ALuint NumChannels, ALfloat *RESTRICT dst, ALuint dstlen);
 
+/* SSE resamplers */
+void Resample_lerp32_SSE(const ALfloat *src, ALuint frac, ALuint increment, ALuint NumChannels, ALfloat *RESTRICT dst, ALuint dstlen);
+
 
 /* C mixers */
 void MixDirect_Hrtf_C(struct ALsource*,ALCdevice*,struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);

@@ -12,6 +12,53 @@
 #include "alSource.h"
 #include "mixer_defs.h"
 
+static __inline ALfloat lerp32(const ALfloat *vals, ALint step, ALuint frac)
+{ return lerp(vals[0], vals[step], frac * (1.0f/FRACTIONONE)); }
+
+void Resample_lerp32_SSE(const ALfloat *data, ALuint frac,
+  ALuint increment, ALuint NumChannels, ALfloat *RESTRICT OutBuffer,
+  ALuint BufferSize)
+{
+    ALIGN(16) float value[3][4];
+    ALuint pos = 0;
+    ALuint i, j;
+
+    for(i = 0;i < BufferSize+1-3;i+=4)
+    {
+        __m128 x, y, a;
+        for(j = 0;j < 4;j++)
+        {
+            value[0][j] = data[(pos  )*NumChannels];
+            value[1][j] = data[(pos+1)*NumChannels];
+            value[2][j] = frac * (1.0f/FRACTIONONE);
+
+            frac += increment;
+            pos  += frac>>FRACTIONBITS;
+            frac &= FRACTIONMASK;
+        }
+
+        x = _mm_load_ps(value[0]);
+        y = _mm_load_ps(value[1]);
+        y = _mm_sub_ps(y, x);
+
+        a = _mm_load_ps(value[2]);
+        y = _mm_mul_ps(y, a);
+
+        x = _mm_add_ps(x, y);
+
+        _mm_store_ps(&OutBuffer[i], x);
+    }
+    for(;i < BufferSize+1;i++)
+    {
+        OutBuffer[i] = lerp32(data + pos*NumChannels, NumChannels, frac);
+
+        frac += increment;
+        pos  += frac>>FRACTIONBITS;
+        frac &= FRACTIONMASK;
+    }
+}
+
+
 
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                      const ALuint IrSize,

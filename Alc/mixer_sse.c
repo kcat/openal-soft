@@ -58,6 +58,92 @@ void Resample_lerp32_SSE(const ALfloat *data, ALuint frac,
     }
 }
 
+void Resample_cubic32_SSE(const ALfloat *data, ALuint frac,
+  ALuint increment, ALuint NumChannels, ALfloat *RESTRICT OutBuffer,
+  ALuint BufferSize)
+{
+    /* Cubic interpolation mainly consists of a matrix4 * vector4 operation,
+     * followed by scalars being applied to the resulting elements before all
+     * four are added together for the final sample. */
+    static const __m128 matrix[4] = {
+        { -0.5,  1.0f, -0.5f,  0.0f },
+        {  1.5, -2.5f,  0.0f,  1.0f },
+        { -1.5,  2.0f,  0.5f,  0.0f },
+        {  0.5, -0.5f,  0.0f,  0.0f },
+    };
+    ALIGN(16) float value[4];
+    ALuint pos = 0;
+    ALuint i, j;
+
+    for(i = 0;i < BufferSize+1-3;i+=4)
+    {
+        __m128 result, final[4];
+
+        for(j = 0;j < 4;j++)
+        {
+            __m128 val4, s;
+            ALfloat mu;
+
+            val4 = _mm_set_ps(data[(pos-1)*NumChannels],
+                              data[(pos  )*NumChannels],
+                              data[(pos+1)*NumChannels],
+                              data[(pos+2)*NumChannels]);
+            mu = frac * (1.0f/FRACTIONONE);
+            s = _mm_set_ps(1.0f, mu, mu*mu, mu*mu*mu);
+
+            /* result = matrix * val4 */
+            result =                    _mm_mul_ps(val4, matrix[0]) ;
+            result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[1]));
+            result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[2]));
+            result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[3]));
+
+            /* final[j] = result * { mu^0, mu^1, mu^2, mu^3 } */
+            final[j] = _mm_mul_ps(result, s);
+
+            frac += increment;
+            pos  += frac>>FRACTIONBITS;
+            frac &= FRACTIONMASK;
+        }
+        /* Transpose the final "matrix" so adding the rows will give the four
+         * samples. TODO: Is this faster than doing..
+         * _mm_store_ps(value, result);
+         * OutBuffer[i] = value[0] + value[1] + value[2] + value[3];
+         * ..for each sample?
+         */
+        _MM_TRANSPOSE4_PS(final[0], final[1], final[2], final[3]);
+        result = _mm_add_ps(_mm_add_ps(final[0], final[1]),
+                            _mm_add_ps(final[2], final[3]));
+
+        _mm_store_ps(&OutBuffer[i], result);
+    }
+    for(;i < BufferSize+1;i++)
+    {
+        __m128 val4, s, result;
+        ALfloat mu;
+
+        val4 = _mm_set_ps(data[(pos-1)*NumChannels],
+                          data[(pos  )*NumChannels],
+                          data[(pos+1)*NumChannels],
+                          data[(pos+2)*NumChannels]);
+        mu = frac * (1.0f/FRACTIONONE);
+        s = _mm_set_ps(1.0f, mu, mu*mu, mu*mu*mu);
+
+        /* result = matrix * val4 */
+        result =                    _mm_mul_ps(val4, matrix[0]) ;
+        result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[1]));
+        result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[2]));
+        result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[3]));
+
+        /* value = result * { mu^0, mu^1, mu^2, mu^3 } */
+        _mm_store_ps(value, _mm_mul_ps(result, s));
+
+        OutBuffer[i] = value[0] + value[1] + value[2] + value[3];
+
+        frac += increment;
+        pos  += frac>>FRACTIONBITS;
+        frac &= FRACTIONMASK;
+    }
+}
 
 
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],

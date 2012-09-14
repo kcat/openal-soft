@@ -66,13 +66,17 @@ static ResamplerFunc SelectResampler(enum Resampler Resampler, ALuint increment)
 #endif
             return Resample_lerp32_C;
         case CubicResampler:
+#ifdef HAVE_SSE
+            if((CPUCapFlags&CPU_CAP_SSE))
+                return Resample_cubic32_SSE;
+#endif
             return Resample_cubic32_C;
         case ResamplerMax:
             /* Shouldn't happen */
             break;
     }
 
-    return NULL;
+    return Resample_point32_C;
 }
 
 

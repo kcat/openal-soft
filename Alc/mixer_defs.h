@@ -17,6 +17,7 @@ void Resample_cubic32_C(const ALfloat *src, ALuint frac, ALuint increment, ALuin
 
 /* SSE resamplers */
 void Resample_lerp32_SSE(const ALfloat *src, ALuint frac, ALuint increment, ALuint NumChannels, ALfloat *RESTRICT dst, ALuint dstlen);
+void Resample_cubic32_SSE(const ALfloat *src, ALuint frac, ALuint increment, ALuint NumChannels, ALfloat *RESTRICT dst, ALuint dstlen);
 
 
 /* C mixers */

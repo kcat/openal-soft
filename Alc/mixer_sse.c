@@ -261,6 +261,10 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
     }
 }
 
+#define SUFFIX SSE
+#include "mixer_inc.c"
+#undef SUFFIX
+
 
 void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
@@ -310,7 +314,7 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
             PendingClicks[c] += data[pos]*DrySend[c];
     }
 }
-#define NO_MIXDIRECT
+
 
 void MixSend_SSE(SendParams *params, const ALfloat *RESTRICT data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
@@ -338,9 +342,3 @@ void MixSend_SSE(SendParams *params, const ALfloat *RESTRICT data,
     if(OutPos == SamplesToDo)
         WetPendingClicks[0] += data[pos] * WetGain;
 }
-#define NO_MIXSEND
-
-
-#define SUFFIX SSE
-#include "mixer_inc.c"
-#undef SUFFIX

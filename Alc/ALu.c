@@ -80,20 +80,6 @@ static ResamplerFunc SelectResampler(enum Resampler Resampler, ALuint increment)
 }
 
 
-static DryMixerFunc SelectDirectMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixDirect_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixDirect_Neon;
-#endif
-
-    return MixDirect_C;
-}
-
 static DryMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_SSE
@@ -108,15 +94,21 @@ static DryMixerFunc SelectHrtfMixer(void)
     return MixDirect_Hrtf_C;
 }
 
+static DryMixerFunc SelectDirectMixer(void)
+{
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return MixDirect_SSE;
+#endif
+
+    return MixDirect_C;
+}
+
 static WetMixerFunc SelectSendMixer(void)
 {
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
         return MixSend_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixSend_Neon;
 #endif
 
     return MixSend_C;

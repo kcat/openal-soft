@@ -1,9 +1,9 @@
 #include "config.h"
 
-#include "AL/al.h"
-#include "AL/alc.h"
 #include "alMain.h"
 #include "alu.h"
+#include "alSource.h"
+#include "alAuxEffectSlot.h"
 
 
 static __inline ALfloat point32(const ALfloat *vals, ALint step, ALint frac)
@@ -72,7 +72,67 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
     }
 }
 
-
 #define SUFFIX C
 #include "mixer_inc.c"
 #undef SUFFIX
+
+
+void MixDirect_C(ALsource *Source, ALCdevice *Device, DirectParams *params,
+  const ALfloat *RESTRICT data, ALuint srcchan,
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+{
+    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = Device->DryBuffer;
+    ALfloat *RESTRICT ClickRemoval = Device->ClickRemoval;
+    ALfloat *RESTRICT PendingClicks = Device->PendingClicks;
+    ALfloat DrySend[MaxChannels];
+    ALuint pos;
+    ALuint c;
+    (void)Source;
+
+    for(c = 0;c < MaxChannels;c++)
+        DrySend[c] = params->Gains[srcchan][c];
+
+    pos = 0;
+    if(OutPos == 0)
+    {
+        for(c = 0;c < MaxChannels;c++)
+            ClickRemoval[c] -= data[pos]*DrySend[c];
+    }
+    for(c = 0;c < MaxChannels;c++)
+    {
+        for(pos = 0;pos < BufferSize;pos++)
+            DryBuffer[c][OutPos+pos] += data[pos]*DrySend[c];
+    }
+    if(OutPos+pos == SamplesToDo)
+    {
+        for(c = 0;c < MaxChannels;c++)
+            PendingClicks[c] += data[pos]*DrySend[c];
+    }
+}
+
+
+void MixSend_C(SendParams *params, const ALfloat *RESTRICT data,
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+{
+    ALeffectslot *Slot = params->Slot;
+    ALfloat *WetBuffer = Slot->WetBuffer;
+    ALfloat *WetClickRemoval = Slot->ClickRemoval;
+    ALfloat *WetPendingClicks = Slot->PendingClicks;
+    ALfloat  WetSend = params->Gain;
+    ALuint pos;
+
+    pos = 0;
+    if(OutPos == 0)
+    {
+        WetClickRemoval[0] -= data[pos] * WetSend;
+    }
+    for(pos = 0;pos < BufferSize;pos++)
+    {
+        WetBuffer[OutPos] += data[pos] * WetSend;
+        OutPos++;
+    }
+    if(OutPos == SamplesToDo)
+    {
+        WetPendingClicks[0] += data[pos] * WetSend;
+    }
+}

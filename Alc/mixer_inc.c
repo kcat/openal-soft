@@ -1,10 +1,7 @@
 #include "config.h"
 
-#include "AL/alc.h"
-#include "AL/al.h"
 #include "alMain.h"
 #include "alSource.h"
-#include "alAuxEffectSlot.h"
 #include "mixer_defs.h"
 
 #ifdef __GNUC__
@@ -19,8 +16,6 @@
 #define MERGE2(a,b) REAL_MERGE2(a,b)
 
 #define MixDirect_Hrtf MERGE2(MixDirect_Hrtf_,SUFFIX)
-#define MixDirect MERGE2(MixDirect_,SUFFIX)
-#define MixSend MERGE2(MixSend_,SUFFIX)
 
 
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
@@ -34,7 +29,6 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                  ALfloat left, ALfloat right);
 
 
-#ifndef NO_MIXDIRECT_HRTF
 void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
@@ -137,74 +131,8 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
                                      Coeffs[0][1] * right;
     }
 }
-#endif
-
-#ifndef NO_MIXDIRECT
-void MixDirect(ALsource *Source, ALCdevice *Device, DirectParams *params,
-  const ALfloat *RESTRICT data, ALuint srcchan,
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
-{
-    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = Device->DryBuffer;
-    ALfloat *RESTRICT ClickRemoval = Device->ClickRemoval;
-    ALfloat *RESTRICT PendingClicks = Device->PendingClicks;
-    ALfloat DrySend[MaxChannels];
-    ALuint pos;
-    ALuint c;
-    (void)Source;
-
-    for(c = 0;c < MaxChannels;c++)
-        DrySend[c] = params->Gains[srcchan][c];
-
-    pos = 0;
-    if(OutPos == 0)
-    {
-        for(c = 0;c < MaxChannels;c++)
-            ClickRemoval[c] -= data[pos]*DrySend[c];
-    }
-    for(c = 0;c < MaxChannels;c++)
-    {
-        for(pos = 0;pos < BufferSize;pos++)
-            DryBuffer[c][OutPos+pos] += data[pos]*DrySend[c];
-    }
-    if(OutPos+pos == SamplesToDo)
-    {
-        for(c = 0;c < MaxChannels;c++)
-            PendingClicks[c] += data[pos]*DrySend[c];
-    }
-}
-#endif
-
-#ifndef NO_MIXSEND
-void MixSend(SendParams *params, const ALfloat *RESTRICT data,
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
-{
-    ALeffectslot *Slot = params->Slot;
-    ALfloat *WetBuffer = Slot->WetBuffer;
-    ALfloat *WetClickRemoval = Slot->ClickRemoval;
-    ALfloat *WetPendingClicks = Slot->PendingClicks;
-    ALfloat  WetSend = params->Gain;
-    ALuint pos;
-
-    pos = 0;
-    if(OutPos == 0)
-    {
-        WetClickRemoval[0] -= data[pos] * WetSend;
-    }
-    for(pos = 0;pos < BufferSize;pos++)
-    {
-        WetBuffer[OutPos] += data[pos] * WetSend;
-        OutPos++;
-    }
-    if(OutPos == SamplesToDo)
-    {
-        WetPendingClicks[0] += data[pos] * WetSend;
-    }
-}
-#endif
 
 
-#undef MixSend
-#undef MixDirect
 #undef MixDirect_Hrtf
 
 #undef MERGE2

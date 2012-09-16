@@ -1399,7 +1399,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     enum DevFmtChannels oldChans;
     enum DevFmtType oldType;
     ALCuint oldFreq;
-    int oldMode;
+    FPUCtl oldMode;
     ALuint i;
 
     // Check for attributes
@@ -1630,7 +1630,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             WARN("SSE performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
     }
 
-    oldMode = SetMixerFPUMode();
+    SetMixerFPUMode(&oldMode);
     ALCdevice_Lock(device);
     context = device->ContextList;
     while(context)
@@ -1647,7 +1647,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
                 ALCdevice_Unlock(device);
-                RestoreFPUMode(oldMode);
+                RestoreFPUMode(&oldMode);
                 return ALC_INVALID_DEVICE;
             }
             slot->NeedsUpdate = AL_FALSE;
@@ -1683,14 +1683,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(ALeffectState_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
         {
             ALCdevice_Unlock(device);
-            RestoreFPUMode(oldMode);
+            RestoreFPUMode(&oldMode);
             return ALC_INVALID_DEVICE;
         }
         slot->NeedsUpdate = AL_FALSE;
         ALeffectState_Update(slot->EffectState, device, slot);
     }
     ALCdevice_Unlock(device);
-    RestoreFPUMode(oldMode);
+    RestoreFPUMode(&oldMode);
 
     if(ALCdevice_StartPlayback(device) == ALC_FALSE)
         return ALC_INVALID_DEVICE;

@@ -597,9 +597,9 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         ALboolean UpdateSources;
         ALsource **src, **src_end;
         ALeffectslot **slot, **slot_end;
-        int fpuState;
+        FPUCtl oldMode;
 
-        fpuState = SetMixerFPUMode();
+        SetMixerFPUMode(&oldMode);
 
         LockContext(Context);
         Context->DeferUpdates = AL_TRUE;
@@ -634,7 +634,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         }
 
         UnlockContext(Context);
-        RestoreFPUMode(fpuState);
+        RestoreFPUMode(&oldMode);
     }
 
     ALCcontext_DecRef(Context);

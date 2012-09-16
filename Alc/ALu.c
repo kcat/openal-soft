@@ -905,10 +905,10 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     ALeffectslot **slot, **slot_end;
     ALsource **src, **src_end;
     ALCcontext *ctx;
-    int fpuState;
+    FPUCtl oldMode;
     ALuint i, c;
 
-    fpuState = SetMixerFPUMode();
+    SetMixerFPUMode(&oldMode);
 
     while(size > 0)
     {
@@ -1082,7 +1082,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         size -= SamplesToDo;
     }
 
-    RestoreFPUMode(fpuState);
+    RestoreFPUMode(&oldMode);
 }
 
 

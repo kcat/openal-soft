@@ -528,12 +528,12 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 
     if(State)
     {
-        int oldMode;
-        oldMode = SetMixerFPUMode();
+        FPUCtl oldMode;
+        SetMixerFPUMode(&oldMode);
 
         if(ALeffectState_DeviceUpdate(State, Device) == AL_FALSE)
         {
-            RestoreFPUMode(oldMode);
+            RestoreFPUMode(&oldMode);
             ALCdevice_Unlock(Device);
             ALeffectState_Destroy(State);
             return AL_OUT_OF_MEMORY;
@@ -551,7 +551,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         ALeffectState_Update(EffectSlot->EffectState, Device, EffectSlot);
         ALCdevice_Unlock(Device);
 
-        RestoreFPUMode(oldMode);
+        RestoreFPUMode(&oldMode);
 
         ALeffectState_Destroy(State);
         State = NULL;

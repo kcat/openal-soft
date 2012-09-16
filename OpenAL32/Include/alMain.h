@@ -780,6 +780,9 @@ void al_free(void *ptr);
 
 typedef struct {
     int state;
+#ifdef HAVE_SSE
+    int sse_state;
+#endif
 } FPUCtl;
 void SetMixerFPUMode(FPUCtl *ctl);
 void RestoreFPUMode(const FPUCtl *ctl);

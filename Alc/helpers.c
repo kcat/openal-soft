@@ -175,23 +175,36 @@ void al_free(void *ptr)
 
 void SetMixerFPUMode(FPUCtl *ctl)
 {
-#if defined(_FPU_GETCW) && defined(_FPU_SETCW) && (defined(__i386__) || defined(__x86_64__))
-    fpu_control_t fpuState, newState;
-    _FPU_GETCW(fpuState);
+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+    unsigned short fpuState;
+    __asm__ __volatile__("fnstcw %0" : "=m" (*&fpuState));
     ctl->state = fpuState;
-    newState = fpuState&~(_FPU_EXTENDED|_FPU_DOUBLE|_FPU_SINGLE |
-                          _FPU_RC_NEAREST|_FPU_RC_DOWN|_FPU_RC_UP|_FPU_RC_ZERO);
-    newState |= _FPU_SINGLE | _FPU_RC_ZERO;
+    fpuState &= ~0x300; /* clear precision to single */
+    fpuState |=  0xC00; /* set round-to-zero */
+    __asm__ __volatile__("fldcw %0" : : "m" (*&fpuState));
+#ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        newState |= 0x8000; /* flush-to-zero */
-    _FPU_SETCW(newState);
+    {
+        int sseState;
+        __asm__ __volatile__("stmxcsr %0" : "=m" (*&sseState));
+        ctl->sse_state = sseState;
+        sseState &= ~0x300;  /* clear precision to single */
+        sseState |=  0xC00;  /* set round-to-zero */
+        sseState |=  0x8000; /* set flush-to-zero */
+        __asm__ __volatile__("ldmxcsr %0" : : "m" (*&sseState));
+    }
+#endif
 #elif defined(HAVE___CONTROL87_2)
     int mode;
-    __control87_2(0, 0, &ctl->state, NULL);
-    __control87_2(_RC_CHOP|_DN_FLUSH|_PC_24, _MCW_RC|_MCW_DN|_MCW_PC, &mode, NULL);
+    __control87_2(0, 0, &ctl->state, &ctl->sse_state);
+    __control87_2(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC, &mode, NULL);
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        __control87_2(_RC_CHOP|_PC_24|_DN_FLUSH, _MCW_RC|_MCW_PC|_MCW_DN, NULL, &mode);
+#endif
 #elif defined(HAVE__CONTROLFP)
     ctl->state = _controlfp(0, 0);
-    (void)_controlfp(_RC_CHOP|_DN_FLUSH|_PC_24, _MCW_RC|_MCW_DN|_MCW_PC);
+    (void)_controlfp(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC);
 #elif defined(HAVE_FESETROUND)
     ctl->state = fegetround();
 #ifdef FE_TOWARDZERO
@@ -202,14 +215,22 @@ void SetMixerFPUMode(FPUCtl *ctl)
 
 void RestoreFPUMode(const FPUCtl *ctl)
 {
-#if defined(_FPU_GETCW) && defined(_FPU_SETCW) && (defined(__i386__) || defined(__x86_64__))
-    fpu_control_t fpuState = ctl->state;
-    _FPU_SETCW(fpuState);
+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+    unsigned short fpuState = ctl->state;
+    __asm__ __volatile__("fldcw %0" : : "m" (*&fpuState));
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        __asm__ __volatile__("ldmxcsr %0" : : "m" (*&ctl->sse_state));
+#endif
 #elif defined(HAVE___CONTROL87_2)
     int mode;
-    __control87_2(ctl->state, _MCW_RC|_MCW_DN|_MCW_PC, &mode, NULL);
+    __control87_2(ctl->state, _MCW_RC|_MCW_PC, &mode, NULL);
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        __control87_2(ctl->sse_state, _MCW_DN, NULL, &mode);
+#endif
 #elif defined(HAVE__CONTROLFP)
-    _controlfp(ctl->state, _MCW_RC|_MCW_DN|_MCW_PC);
+    _controlfp(ctl->state, _MCW_RC|_MCW_PC);
 #elif defined(HAVE_FESETROUND)
     fesetround(ctl->state);
 #endif

@@ -10,6 +10,7 @@
 #include "alu.h"
 
 #include "alSource.h"
+#include "alAuxEffectSlot.h"
 #include "mixer_defs.h"
 
 static __inline ALfloat lerp32(const ALfloat *vals, ALint step, ALuint frac)
@@ -310,6 +311,34 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
     }
 }
 #define NO_MIXDIRECT
+
+void MixSend_SSE(SendParams *params, const ALfloat *RESTRICT data,
+  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+{
+    ALeffectslot *Slot = params->Slot;
+    ALfloat *RESTRICT WetBuffer = Slot->WetBuffer;
+    ALfloat *RESTRICT WetClickRemoval = Slot->ClickRemoval;
+    ALfloat *RESTRICT WetPendingClicks = Slot->PendingClicks;
+    const ALfloat WetGain = params->Gain;
+    const __m128 gain = _mm_set1_ps(WetGain);
+    ALuint pos;
+
+    pos = 0;
+    if(OutPos == 0)
+        WetClickRemoval[0] -= data[pos] * WetGain;
+    for(pos = 0;pos < BufferSize-3;pos+=4)
+    {
+        const __m128 val4 = _mm_load_ps(&data[pos]);
+        __m128 wet4 = _mm_load_ps(&WetBuffer[OutPos+pos]);
+        wet4 = _mm_add_ps(wet4, _mm_mul_ps(val4, gain));
+        _mm_store_ps(&WetBuffer[OutPos+pos], wet4);
+    }
+    for(;pos < BufferSize;pos++)
+        WetBuffer[OutPos+pos] += data[pos] * WetGain;
+    if(OutPos == SamplesToDo)
+        WetPendingClicks[0] += data[pos] * WetGain;
+}
+#define NO_MIXSEND
 
 
 #define SUFFIX SSE

@@ -185,6 +185,10 @@ void SetMixerFPUMode(FPUCtl *ctl)
     if((CPUCapFlags&CPU_CAP_SSE))
         newState |= 0x8000; /* flush-to-zero */
     _FPU_SETCW(newState);
+#elif defined(HAVE___CONTROL87_2)
+    int mode;
+    __control87_2(0, 0, &ctl->state, NULL);
+    __control87_2(_RC_CHOP|_DN_FLUSH|_PC_24, _MCW_RC|_MCW_DN|_MCW_PC, &mode, NULL);
 #elif defined(HAVE__CONTROLFP)
     ctl->state = _controlfp(0, 0);
     (void)_controlfp(_RC_CHOP|_DN_FLUSH|_PC_24, _MCW_RC|_MCW_DN|_MCW_PC);
@@ -201,6 +205,9 @@ void RestoreFPUMode(const FPUCtl *ctl)
 #if defined(_FPU_GETCW) && defined(_FPU_SETCW) && (defined(__i386__) || defined(__x86_64__))
     fpu_control_t fpuState = ctl->state;
     _FPU_SETCW(fpuState);
+#elif defined(HAVE___CONTROL87_2)
+    int mode;
+    __control87_2(ctl->state, _MCW_RC|_MCW_DN|_MCW_PC, &mode, NULL);
 #elif defined(HAVE__CONTROLFP)
     _controlfp(ctl->state, _MCW_RC|_MCW_DN|_MCW_PC);
 #elif defined(HAVE_FESETROUND)

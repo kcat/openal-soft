@@ -993,12 +993,15 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
          * generated. Delays caused by effects and HRTF aren't caught. */
         if(device->FmtChans == DevFmtMono)
         {
-            for(i = 0;i < SamplesToDo;i++)
+            ALfloat offset = device->ClickRemoval[FrontCenter];
+            if(offset < (1.0f/32768.0f))
+                offset = 0.0f;
+            else for(i = 0;i < SamplesToDo;i++)
             {
-                device->DryBuffer[FrontCenter][i] += device->ClickRemoval[FrontCenter];
-                device->ClickRemoval[FrontCenter] -= device->ClickRemoval[FrontCenter] * (1.0f/256.0f);
+                device->DryBuffer[FrontCenter][i] += offset;
+                offset -= offset * (1.0f/256.0f);
             }
-            device->ClickRemoval[FrontCenter] += device->PendingClicks[FrontCenter];
+            device->ClickRemoval[FrontCenter] = offset + device->PendingClicks[FrontCenter];
             device->PendingClicks[FrontCenter] = 0.0f;
         }
         else if(device->FmtChans == DevFmtStereo)
@@ -1007,7 +1010,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             for(c = 0;c < 2;c++)
             {
                 ALfloat offset = device->ClickRemoval[c];
-                for(i = 0;i < SamplesToDo;i++)
+                if(offset < (1.0f/32768.0f))
+                    offset = 0.0f;
+                else for(i = 0;i < SamplesToDo;i++)
                 {
                     device->DryBuffer[c][i] += offset;
                     offset -= offset * (1.0f/256.0f);
@@ -1033,7 +1038,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             for(c = 0;c < MaxChannels;c++)
             {
                 ALfloat offset = device->ClickRemoval[c];
-                for(i = 0;i < SamplesToDo;i++)
+                if(offset < (1.0f/32768.0f))
+                    offset = 0.0f;
+                else for(i = 0;i < SamplesToDo;i++)
                 {
                     device->DryBuffer[c][i] += offset;
                     offset -= offset * (1.0f/256.0f);

@@ -115,9 +115,9 @@ void MixSend_C(SendParams *params, const ALfloat *RESTRICT data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALeffectslot *Slot = params->Slot;
-    ALfloat *WetBuffer = Slot->WetBuffer;
-    ALfloat *WetClickRemoval = Slot->ClickRemoval;
-    ALfloat *WetPendingClicks = Slot->PendingClicks;
+    ALfloat (*RESTRICT WetBuffer)[BUFFERSIZE] = Slot->WetBuffer;
+    ALfloat *RESTRICT WetClickRemoval = Slot->ClickRemoval;
+    ALfloat *RESTRICT WetPendingClicks = Slot->PendingClicks;
     ALfloat  WetSend = params->Gain;
     ALuint pos;
 
@@ -128,7 +128,7 @@ void MixSend_C(SendParams *params, const ALfloat *RESTRICT data,
     }
     for(pos = 0;pos < BufferSize;pos++)
     {
-        WetBuffer[OutPos] += data[pos] * WetSend;
+        WetBuffer[0][OutPos] += data[pos] * WetSend;
         OutPos++;
     }
     if(OutPos == SamplesToDo)

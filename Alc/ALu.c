@@ -943,9 +943,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             slot_end = slot + ctx->ActiveEffectSlotCount;
             while(slot != slot_end)
             {
-                for(c = 0;c < SamplesToDo;c++)
+                for(i = 0;i < SamplesToDo;i++)
                 {
-                    (*slot)->WetBuffer[c] += (*slot)->ClickRemoval[0];
+                    (*slot)->WetBuffer[0][i] += (*slot)->ClickRemoval[0];
                     (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] * (1.0f/256.0f);
                 }
                 (*slot)->ClickRemoval[0] += (*slot)->PendingClicks[0];
@@ -955,10 +955,10 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     ALeffectState_Update((*slot)->EffectState, device, *slot);
 
                 ALeffectState_Process((*slot)->EffectState, SamplesToDo,
-                                      (*slot)->WetBuffer, device->DryBuffer);
+                                      (*slot)->WetBuffer[0], device->DryBuffer);
 
                 for(i = 0;i < SamplesToDo;i++)
-                    (*slot)->WetBuffer[i] = 0.0f;
+                    (*slot)->WetBuffer[0][i] = 0.0f;
 
                 slot++;
             }
@@ -969,9 +969,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         slot = &device->DefaultSlot;
         if(*slot != NULL)
         {
-            for(c = 0;c < SamplesToDo;c++)
+            for(i = 0;i < SamplesToDo;i++)
             {
-                (*slot)->WetBuffer[c] += (*slot)->ClickRemoval[0];
+                (*slot)->WetBuffer[0][i] += (*slot)->ClickRemoval[0];
                 (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] * (1.0f/256.0f);
             }
             (*slot)->ClickRemoval[0] += (*slot)->PendingClicks[0];
@@ -981,10 +981,10 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 ALeffectState_Update((*slot)->EffectState, device, *slot);
 
             ALeffectState_Process((*slot)->EffectState, SamplesToDo,
-                                  (*slot)->WetBuffer, device->DryBuffer);
+                                  (*slot)->WetBuffer[0], device->DryBuffer);
 
             for(i = 0;i < SamplesToDo;i++)
-                (*slot)->WetBuffer[i] = 0.0f;
+                (*slot)->WetBuffer[0][i] = 0.0f;
         }
         ALCdevice_Unlock(device);
 

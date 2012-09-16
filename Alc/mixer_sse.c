@@ -320,7 +320,7 @@ void MixSend_SSE(SendParams *params, const ALfloat *RESTRICT data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALeffectslot *Slot = params->Slot;
-    ALfloat *RESTRICT WetBuffer = Slot->WetBuffer;
+    ALfloat (*RESTRICT WetBuffer)[BUFFERSIZE] = Slot->WetBuffer;
     ALfloat *RESTRICT WetClickRemoval = Slot->ClickRemoval;
     ALfloat *RESTRICT WetPendingClicks = Slot->PendingClicks;
     const ALfloat WetGain = params->Gain;
@@ -333,12 +333,12 @@ void MixSend_SSE(SendParams *params, const ALfloat *RESTRICT data,
     for(pos = 0;pos < BufferSize-3;pos+=4)
     {
         const __m128 val4 = _mm_load_ps(&data[pos]);
-        __m128 wet4 = _mm_load_ps(&WetBuffer[OutPos+pos]);
+        __m128 wet4 = _mm_load_ps(&WetBuffer[0][OutPos+pos]);
         wet4 = _mm_add_ps(wet4, _mm_mul_ps(val4, gain));
-        _mm_store_ps(&WetBuffer[OutPos+pos], wet4);
+        _mm_store_ps(&WetBuffer[0][OutPos+pos], wet4);
     }
     for(;pos < BufferSize;pos++)
-        WetBuffer[OutPos+pos] += data[pos] * WetGain;
+        WetBuffer[0][OutPos+pos] += data[pos] * WetGain;
     if(OutPos+pos == SamplesToDo)
         WetPendingClicks[0] += data[pos] * WetGain;
 }

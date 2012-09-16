@@ -572,7 +572,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 
 ALenum InitEffectSlot(ALeffectslot *slot)
 {
-    ALint i;
+    ALint i, c;
 
     if(!(slot->EffectState=NoneCreate()))
         return AL_OUT_OF_MEMORY;
@@ -580,12 +580,12 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     slot->Gain = 1.0;
     slot->AuxSendAuto = AL_TRUE;
     slot->NeedsUpdate = AL_FALSE;
-    for(i = 0;i < BUFFERSIZE;i++)
-        slot->WetBuffer[i] = 0.0f;
-    for(i = 0;i < 1;i++)
+    for(c = 0;c < 1;c++)
     {
-        slot->ClickRemoval[i] = 0.0f;
-        slot->PendingClicks[i] = 0.0f;
+        for(i = 0;i < BUFFERSIZE;i++)
+            slot->WetBuffer[c][i] = 0.0f;
+        slot->ClickRemoval[c] = 0.0f;
+        slot->PendingClicks[c] = 0.0f;
     }
     slot->ref = 0;
 

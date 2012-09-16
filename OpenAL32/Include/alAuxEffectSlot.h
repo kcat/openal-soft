@@ -26,7 +26,7 @@ typedef struct ALeffectslot
     volatile ALenum NeedsUpdate;
     ALeffectState *EffectState;
 
-    ALIGN(16) ALfloat WetBuffer[BUFFERSIZE];
+    ALIGN(16) ALfloat WetBuffer[1][BUFFERSIZE];
 
     ALfloat ClickRemoval[1];
     ALfloat PendingClicks[1];

@@ -339,6 +339,6 @@ void MixSend_SSE(SendParams *params, const ALfloat *RESTRICT data,
     }
     for(;pos < BufferSize;pos++)
         WetBuffer[OutPos+pos] += data[pos] * WetGain;
-    if(OutPos == SamplesToDo)
+    if(OutPos+pos == SamplesToDo)
         WetPendingClicks[0] += data[pos] * WetGain;
 }

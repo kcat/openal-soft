@@ -227,7 +227,7 @@ void RestoreFPUMode(const FPUCtl *ctl)
     __control87_2(ctl->state, _MCW_RC|_MCW_PC, &mode, NULL);
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        __control87_2(ctl->sse_state, _MCW_DN, NULL, &mode);
+        __control87_2(ctl->sse_state, _MCW_RC|_MCW_PC|_MCW_DN, NULL, &mode);
 #endif
 #elif defined(HAVE__CONTROLFP)
     _controlfp(ctl->state, _MCW_RC|_MCW_PC);

@@ -943,12 +943,15 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             slot_end = slot + ctx->ActiveEffectSlotCount;
             while(slot != slot_end)
             {
-                for(i = 0;i < SamplesToDo;i++)
+                ALfloat offset = (*slot)->ClickRemoval[0];
+                if(offset < (1.0f/32768.0f))
+                    offset = 0.0f;
+                else for(i = 0;i < SamplesToDo;i++)
                 {
-                    (*slot)->WetBuffer[0][i] += (*slot)->ClickRemoval[0];
-                    (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] * (1.0f/256.0f);
+                    (*slot)->WetBuffer[0][i] += offset;
+                    offset -= offset * (1.0f/256.0f);
                 }
-                (*slot)->ClickRemoval[0] += (*slot)->PendingClicks[0];
+                (*slot)->ClickRemoval[0] = offset + (*slot)->PendingClicks[0];
                 (*slot)->PendingClicks[0] = 0.0f;
 
                 if(!DeferUpdates && ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
@@ -969,12 +972,15 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         slot = &device->DefaultSlot;
         if(*slot != NULL)
         {
-            for(i = 0;i < SamplesToDo;i++)
+            ALfloat offset = (*slot)->ClickRemoval[0];
+            if(offset < (1.0f/32768.0f))
+                offset = 0.0f;
+            else for(i = 0;i < SamplesToDo;i++)
             {
-                (*slot)->WetBuffer[0][i] += (*slot)->ClickRemoval[0];
-                (*slot)->ClickRemoval[0] -= (*slot)->ClickRemoval[0] * (1.0f/256.0f);
+                (*slot)->WetBuffer[0][i] += offset;
+                offset -= offset * (1.0f/256.0f);
             }
-            (*slot)->ClickRemoval[0] += (*slot)->PendingClicks[0];
+            (*slot)->ClickRemoval[0] = offset + (*slot)->PendingClicks[0];
             (*slot)->PendingClicks[0] = 0.0f;
 
             if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))

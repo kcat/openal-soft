@@ -136,7 +136,7 @@
 /* Define if we have guiddef.h */
 #cmakedefine HAVE_GUIDDEF_H
 
-/* Define if we have guiddef.h */
+/* Define if we have initguid.h */
 #cmakedefine HAVE_INITGUID_H
 
 /* Define if we have ieeefp.h */

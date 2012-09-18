@@ -10,10 +10,6 @@
 #include <fenv.h>
 #endif
 
-#ifdef HAVE_FPU_CONTROL_H
-#include <fpu_control.h>
-#endif
-
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"

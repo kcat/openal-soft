@@ -194,9 +194,8 @@ void SetMixerFPUMode(FPUCtl *ctl)
         int sseState;
         __asm__ __volatile__("stmxcsr %0" : "=m" (*&sseState));
         ctl->sse_state = sseState;
-        sseState &= ~0x300;  /* clear precision to single */
-        sseState |=  0xC00;  /* set round-to-zero */
-        sseState |=  0x8000; /* set flush-to-zero */
+        sseState |= 0x0C00; /* set round-to-zero */
+        sseState |= 0x8000; /* set flush-to-zero */
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&sseState));
     }
 #endif
@@ -206,7 +205,7 @@ void SetMixerFPUMode(FPUCtl *ctl)
     __control87_2(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC, &mode, NULL);
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        __control87_2(_RC_CHOP|_PC_24|_DN_FLUSH, _MCW_RC|_MCW_PC|_MCW_DN, NULL, &mode);
+        __control87_2(_RC_CHOP|_DN_FLUSH, _MCW_RC|_MCW_DN, NULL, &mode);
 #endif
 #elif defined(HAVE__CONTROLFP)
     ctl->state = _controlfp(0, 0);
@@ -233,7 +232,7 @@ void RestoreFPUMode(const FPUCtl *ctl)
     __control87_2(ctl->state, _MCW_RC|_MCW_PC, &mode, NULL);
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        __control87_2(ctl->sse_state, _MCW_RC|_MCW_PC|_MCW_DN, NULL, &mode);
+        __control87_2(ctl->sse_state, _MCW_RC|_MCW_DN, NULL, &mode);
 #endif
 #elif defined(HAVE__CONTROLFP)
     _controlfp(ctl->state, _MCW_RC|_MCW_PC);

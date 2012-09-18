@@ -173,6 +173,12 @@ void al_free(void *ptr)
 }
 
 
+#if (defined(HAVE___CONTROL87_2) || defined(HAVE__CONTROLFP)) && (defined(__x86_64__) || defined(_M_X64))
+/* Win64 doesn't allow us to set the precision control. */
+#undef _MCW_PC
+#define _MCW_PC 0
+#endif
+
 void SetMixerFPUMode(FPUCtl *ctl)
 {
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))

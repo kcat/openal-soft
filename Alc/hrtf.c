@@ -723,7 +723,7 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
         }
 
         if(fread(magic, 1, sizeof(magic), f) != sizeof(magic))
-            ERR("Failed to read magic marker\n");
+            ERR("Failed to read header from %s\n", fname);
         else
         {
             if(memcmp(magic, magicMarker00, sizeof(magicMarker00)) == 0)
@@ -737,7 +737,7 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
                 Hrtf = LoadHrtf01(f, deviceRate);
             }
             else
-                ERR("Invalid magic marker: \"%.8s\"\n", magic);
+                ERR("Invalid header in %s: \"%.8s\"\n", fname, magic);
         }
 
         fclose(f);

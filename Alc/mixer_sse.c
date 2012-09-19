@@ -60,84 +60,43 @@ void Resample_lerp32_SSE(const ALfloat *data, ALuint frac,
 }
 
 void Resample_cubic32_SSE(const ALfloat *data, ALuint frac,
-  ALuint increment, ALuint NumChannels, ALfloat *RESTRICT OutBuffer,
+  ALuint increment, ALuint channels, ALfloat *RESTRICT OutBuffer,
   ALuint BufferSize)
 {
     /* Cubic interpolation mainly consists of a matrix4 * vector4 operation,
      * followed by scalars being applied to the resulting elements before all
      * four are added together for the final sample. */
     static const __m128 matrix[4] = {
-        { -0.5,  1.0f, -0.5f,  0.0f },
-        {  1.5, -2.5f,  0.0f,  1.0f },
-        { -1.5,  2.0f,  0.5f,  0.0f },
-        {  0.5, -0.5f,  0.0f,  0.0f },
+        { -0.5f,  1.0f, -0.5f,  0.0f },
+        {  1.5f, -2.5f,  0.0f,  1.0f },
+        { -1.5f,  2.0f,  0.5f,  0.0f },
+        {  0.5f, -0.5f,  0.0f,  0.0f },
     };
     ALIGN(16) float value[4];
     ALuint pos = 0;
-    ALuint i, j;
+    ALuint i;
 
-    for(i = 0;i < BufferSize+1-3;i+=4)
+    for(i = 0;i < BufferSize+1;i++)
     {
-        __m128 result, final[4];
-
-        for(j = 0;j < 4;j++)
-        {
-            __m128 val4, s;
-            ALfloat mu;
-
-            val4 = _mm_set_ps(data[(pos-1)*NumChannels],
-                              data[(pos  )*NumChannels],
-                              data[(pos+1)*NumChannels],
-                              data[(pos+2)*NumChannels]);
-            mu = frac * (1.0f/FRACTIONONE);
-            s = _mm_set_ps(1.0f, mu, mu*mu, mu*mu*mu);
-
-            /* result = matrix * val4 */
-            result =                    _mm_mul_ps(val4, matrix[0]) ;
-            result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[1]));
-            result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[2]));
-            result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[3]));
-
-            /* final[j] = result * { mu^0, mu^1, mu^2, mu^3 } */
-            final[j] = _mm_mul_ps(result, s);
-
-            frac += increment;
-            pos  += frac>>FRACTIONBITS;
-            frac &= FRACTIONMASK;
-        }
-        /* Transpose the final "matrix" so adding the rows will give the four
-         * samples. TODO: Is this faster than doing..
-         * _mm_store_ps(value, result);
-         * OutBuffer[i] = value[0] + value[1] + value[2] + value[3];
-         * ..for each sample?
-         */
-        _MM_TRANSPOSE4_PS(final[0], final[1], final[2], final[3]);
-        result = _mm_add_ps(_mm_add_ps(final[0], final[1]),
-                            _mm_add_ps(final[2], final[3]));
-
-        _mm_store_ps(&OutBuffer[i], result);
-    }
-    for(;i < BufferSize+1;i++)
-    {
-        __m128 val4, s, result;
+        __m128 res1, res2;
         ALfloat mu;
 
-        val4 = _mm_set_ps(data[(pos-1)*NumChannels],
-                          data[(pos  )*NumChannels],
-                          data[(pos+1)*NumChannels],
-                          data[(pos+2)*NumChannels]);
+        /* matrix * { samples } */
+        res1 = _mm_add_ps(_mm_mul_ps(_mm_set1_ps(data[(pos-1)*channels]), matrix[0]),
+                          _mm_mul_ps(_mm_set1_ps(data[(pos  )*channels]), matrix[1]));
+        res2 = _mm_add_ps(_mm_mul_ps(_mm_set1_ps(data[(pos+1)*channels]), matrix[2]),
+                          _mm_mul_ps(_mm_set1_ps(data[(pos+2)*channels]), matrix[3]));
+        res1 = _mm_add_ps(res1, res2);
+
+        /* res1 * { mu^3, mu^2, mu^1, mu^0 } */
         mu = frac * (1.0f/FRACTIONONE);
-        s = _mm_set_ps(1.0f, mu, mu*mu, mu*mu*mu);
+        value[0] = mu*mu*mu;
+        value[1] = mu*mu;
+        value[2] = mu;
+        value[3] = 1.0f;
+        res1 = _mm_mul_ps(res1, _mm_load_ps(value));
 
-        /* result = matrix * val4 */
-        result =                    _mm_mul_ps(val4, matrix[0]) ;
-        result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[1]));
-        result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[2]));
-        result = _mm_add_ps(result, _mm_mul_ps(val4, matrix[3]));
-
-        /* value = result * { mu^0, mu^1, mu^2, mu^3 } */
-        _mm_store_ps(value, _mm_mul_ps(result, s));
-
+        _mm_store_ps(value, res1);
         OutBuffer[i] = value[0] + value[1] + value[2] + value[3];
 
         frac += increment;

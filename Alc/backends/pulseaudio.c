@@ -1100,9 +1100,12 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
         data->attr.minreq = (ALuint64)device->UpdateSize * data->spec.rate /
-                            device->Frequency * pa_frame_size(&data->spec);
+                            device->Frequency;
+        if((CPUCapFlags&CPU_CAP_SSE))
+            data->attr.minreq = (data->attr.minreq+3)&~3;
+        data->attr.minreq *= pa_frame_size(&data->spec);
         data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
-        data->attr.prebuf = 0;
+        data->attr.prebuf  = 0;
 
         o = pa_stream_set_buffer_attr(data->stream, &data->attr,
                                       stream_success_callback, device);

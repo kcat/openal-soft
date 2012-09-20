@@ -1540,6 +1540,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         device->UpdateSize = (ALuint64)device->UpdateSize * freq /
                              device->Frequency;
+        /* SSE does best with the update size being a multiple of 4 */
+        if((CPUCapFlags&CPU_CAP_SSE))
+            device->UpdateSize = (device->UpdateSize+3)&~3;
 
         device->Frequency = freq;
         device->NumMonoSources = numMono;
@@ -2799,6 +2802,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     ConfigValueUInt(NULL, "period_size", &device->UpdateSize);
     device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
+    if((CPUCapFlags&CPU_CAP_SSE))
+        device->UpdateSize = (device->UpdateSize+3)&~3;
 
     ConfigValueUInt(NULL, "sources", &device->MaxNoOfSources);
     if(device->MaxNoOfSources == 0) device->MaxNoOfSources = 256;

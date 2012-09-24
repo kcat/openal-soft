@@ -100,9 +100,13 @@ void MixDirect_C(ALsource *Source, ALCdevice *Device, DirectParams *params,
     }
     for(c = 0;c < MaxChannels;c++)
     {
+        if(DrySend[c] < 0.00001f)
+            continue;
+
         for(pos = 0;pos < BufferSize;pos++)
             DryBuffer[c][OutPos+pos] += data[pos]*DrySend[c];
     }
+    pos = BufferSize;
     if(OutPos+pos == SamplesToDo)
     {
         for(c = 0;c < MaxChannels;c++)

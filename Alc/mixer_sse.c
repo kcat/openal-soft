@@ -156,7 +156,12 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
     }
     for(c = 0;c < MaxChannels;c++)
     {
-        const __m128 gain = _mm_set1_ps(DrySend[c]);
+        __m128 gain;
+
+        if(DrySend[c] < 0.00001f)
+            continue;
+
+        gain = _mm_set1_ps(DrySend[c]);
         for(pos = 0;pos < BufferSize-3;pos += 4)
         {
             const __m128 val4 = _mm_load_ps(&data[pos]);
@@ -165,15 +170,20 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
             _mm_store_ps(&DryBuffer[c][OutPos+pos], dry4);
         }
     }
+    pos = BufferSize&~3;
     if(pos < BufferSize)
     {
         ALuint oldpos = pos;
         for(c = 0;c < MaxChannels;c++)
         {
+            if(DrySend[c] < 0.00001f)
+                continue;
+
             pos = oldpos;
             for(;pos < BufferSize;pos++)
                 DryBuffer[c][OutPos+pos] += data[pos]*DrySend[c];
         }
+        pos = BufferSize;
     }
     if(OutPos+pos == SamplesToDo)
     {

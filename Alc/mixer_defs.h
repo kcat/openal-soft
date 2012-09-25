@@ -4,7 +4,6 @@
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "alMain.h"
-#include "alu.h"
 
 struct ALsource;
 struct DirectParams;

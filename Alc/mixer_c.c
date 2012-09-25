@@ -84,33 +84,23 @@ void MixDirect_C(ALsource *Source, ALCdevice *Device, DirectParams *params,
     ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = Device->DryBuffer;
     ALfloat *RESTRICT ClickRemoval = Device->ClickRemoval;
     ALfloat *RESTRICT PendingClicks = Device->PendingClicks;
-    ALfloat DrySend[MaxChannels];
+    ALfloat DrySend;
     ALuint pos;
     ALuint c;
     (void)Source;
 
     for(c = 0;c < MaxChannels;c++)
-        DrySend[c] = params->Gains[srcchan][c];
-
-    pos = 0;
-    if(OutPos == 0)
     {
-        for(c = 0;c < MaxChannels;c++)
-            ClickRemoval[c] -= data[pos]*DrySend[c];
-    }
-    for(c = 0;c < MaxChannels;c++)
-    {
-        if(DrySend[c] < 0.00001f)
+        DrySend = params->Gains[srcchan][c];
+        if(DrySend < 0.00001f)
             continue;
 
+        if(OutPos == 0)
+            ClickRemoval[c] -= data[0]*DrySend;
         for(pos = 0;pos < BufferSize;pos++)
-            DryBuffer[c][OutPos+pos] += data[pos]*DrySend[c];
-    }
-    pos = BufferSize;
-    if(OutPos+pos == SamplesToDo)
-    {
-        for(c = 0;c < MaxChannels;c++)
-            PendingClicks[c] += data[pos]*DrySend[c];
+            DryBuffer[c][OutPos+pos] += data[pos]*DrySend;
+        if(OutPos+pos == SamplesToDo)
+            PendingClicks[c] += data[pos]*DrySend;
     }
 }
 
@@ -125,18 +115,10 @@ void MixSend_C(SendParams *params, const ALfloat *RESTRICT data,
     ALfloat  WetSend = params->Gain;
     ALuint pos;
 
-    pos = 0;
     if(OutPos == 0)
-    {
-        WetClickRemoval[0] -= data[pos] * WetSend;
-    }
+        WetClickRemoval[0] -= data[0] * WetSend;
     for(pos = 0;pos < BufferSize;pos++)
-    {
-        WetBuffer[0][OutPos] += data[pos] * WetSend;
-        OutPos++;
-    }
-    if(OutPos == SamplesToDo)
-    {
+        WetBuffer[0][OutPos+pos] += data[pos] * WetSend;
+    if(OutPos+pos == SamplesToDo)
         WetPendingClicks[0] += data[pos] * WetSend;
-    }
 }

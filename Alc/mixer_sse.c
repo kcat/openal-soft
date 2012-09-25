@@ -140,28 +140,23 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
     ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = Device->DryBuffer;
     ALfloat *RESTRICT ClickRemoval = Device->ClickRemoval;
     ALfloat *RESTRICT PendingClicks = Device->PendingClicks;
-    ALfloat DrySend[MaxChannels];
+    ALfloat DrySend;
     ALuint pos;
     ALuint c;
     (void)Source;
 
     for(c = 0;c < MaxChannels;c++)
-        DrySend[c] = params->Gains[srcchan][c];
-
-    pos = 0;
-    if(OutPos == 0)
-    {
-        for(c = 0;c < MaxChannels;c++)
-            ClickRemoval[c] -= data[pos]*DrySend[c];
-    }
-    for(c = 0;c < MaxChannels;c++)
     {
         __m128 gain;
 
-        if(DrySend[c] < 0.00001f)
+        DrySend = params->Gains[srcchan][c];
+        if(DrySend < 0.00001f)
             continue;
 
-        gain = _mm_set1_ps(DrySend[c]);
+        if(OutPos == 0)
+            ClickRemoval[c] -= data[0]*DrySend;
+
+        gain = _mm_set1_ps(DrySend);
         for(pos = 0;pos < BufferSize-3;pos += 4)
         {
             const __m128 val4 = _mm_load_ps(&data[pos]);
@@ -169,26 +164,11 @@ void MixDirect_SSE(ALsource *Source, ALCdevice *Device, DirectParams *params,
             dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain));
             _mm_store_ps(&DryBuffer[c][OutPos+pos], dry4);
         }
-    }
-    pos = BufferSize&~3;
-    if(pos < BufferSize)
-    {
-        ALuint oldpos = pos;
-        for(c = 0;c < MaxChannels;c++)
-        {
-            if(DrySend[c] < 0.00001f)
-                continue;
+        for(;pos < BufferSize;pos++)
+            DryBuffer[c][OutPos+pos] += data[pos]*DrySend;
 
-            pos = oldpos;
-            for(;pos < BufferSize;pos++)
-                DryBuffer[c][OutPos+pos] += data[pos]*DrySend[c];
-        }
-        pos = BufferSize;
-    }
-    if(OutPos+pos == SamplesToDo)
-    {
-        for(c = 0;c < MaxChannels;c++)
-            PendingClicks[c] += data[pos]*DrySend[c];
+        if(OutPos+pos == SamplesToDo)
+            PendingClicks[c] += data[pos]*DrySend;
     }
 }
 
@@ -201,12 +181,16 @@ void MixSend_SSE(SendParams *params, const ALfloat *RESTRICT data,
     ALfloat *RESTRICT WetClickRemoval = Slot->ClickRemoval;
     ALfloat *RESTRICT WetPendingClicks = Slot->PendingClicks;
     const ALfloat WetGain = params->Gain;
-    const __m128 gain = _mm_set1_ps(WetGain);
+    __m128 gain;
     ALuint pos;
 
-    pos = 0;
+    if(WetGain < 0.00001f)
+        return;
+
     if(OutPos == 0)
-        WetClickRemoval[0] -= data[pos] * WetGain;
+        WetClickRemoval[0] -= data[0] * WetGain;
+
+    gain = _mm_set1_ps(WetGain);
     for(pos = 0;pos < BufferSize-3;pos+=4)
     {
         const __m128 val4 = _mm_load_ps(&data[pos]);
@@ -216,6 +200,7 @@ void MixSend_SSE(SendParams *params, const ALfloat *RESTRICT data,
     }
     for(;pos < BufferSize;pos++)
         WetBuffer[0][OutPos+pos] += data[pos] * WetGain;
+
     if(OutPos+pos == SamplesToDo)
         WetPendingClicks[0] += data[pos] * WetGain;
 }

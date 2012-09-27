@@ -6,11 +6,11 @@
 #include "alAuxEffectSlot.h"
 
 
-static __inline ALfloat point32(const ALfloat *vals, ALint frac)
+static __inline ALfloat point32(const ALfloat *vals, ALuint frac)
 { return vals[0]; (void)frac; }
-static __inline ALfloat lerp32(const ALfloat *vals, ALint frac)
+static __inline ALfloat lerp32(const ALfloat *vals, ALuint frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-static __inline ALfloat cubic32(const ALfloat *vals, ALint frac)
+static __inline ALfloat cubic32(const ALfloat *vals, ALuint frac)
 { return cubic(vals[-1], vals[0], vals[1], vals[2], frac * (1.0f/FRACTIONONE)); }
 
 #define DECL_TEMPLATE(Sampler)                                                \

@@ -2647,7 +2647,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = NULL;
 
-    device = al_calloc(16, sizeof(ALCdevice)+sizeof(ALeffectslot));
+    device = al_calloc(16, sizeof(ALCdevice)+15+sizeof(ALeffectslot));
     if(!device)
     {
         alcSetError(NULL, ALC_OUT_OF_MEMORY);
@@ -2833,7 +2833,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     if(DefaultEffect.type != AL_EFFECT_NULL)
     {
-        device->DefaultSlot = (ALeffectslot*)(device+1);
+        device->DefaultSlot = (ALeffectslot*)((ALintptrEXT)(device+1)&~15);
         if(InitEffectSlot(device->DefaultSlot) != AL_NO_ERROR)
         {
             device->DefaultSlot = NULL;

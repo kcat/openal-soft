@@ -51,11 +51,11 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         CHECK_VALUE(Context, n >= 0);
         for(cur = 0;cur < n;cur++)
         {
-            ALeffectslot *slot = calloc(1, sizeof(ALeffectslot));
+            ALeffectslot *slot = al_calloc(16, sizeof(ALeffectslot));
             err = AL_OUT_OF_MEMORY;
             if(!slot || (err=InitEffectSlot(slot)) != AL_NO_ERROR)
             {
-                free(slot);
+                al_free(slot);
                 al_throwerr(Context, err);
                 break;
             }
@@ -67,7 +67,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             {
                 FreeThunkEntry(slot->id);
                 ALeffectState_Destroy(slot->EffectState);
-                free(slot);
+                al_free(slot);
 
                 al_throwerr(Context, err);
             }
@@ -119,7 +119,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
             ALeffectState_Destroy(slot->EffectState);
 
             memset(slot, 0, sizeof(*slot));
-            free(slot);
+            al_free(slot);
         }
     }
     al_endtry;
@@ -604,6 +604,6 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
 
         FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALeffectslot));
-        free(temp);
+        al_free(temp);
     }
 }

@@ -593,11 +593,11 @@ enum DeviceType {
  * more stack, while smaller values may need more iterations. The value needs
  * to be a sensible size, however, as it constrains the max stepping value used
  * for mixing, as well as the maximum number of samples per mixing iteration.
- * The mixer requires being able to do two samplings per mixing loop. A 16KB
- * buffer can hold 512 sample frames for a 7.1 float buffer. With the cubic
- * resampler (which requires 3 padding sample frames), this limits the maximum
- * step to about 508. This means that buffer_freq*source_pitch cannot exceed
- * device_freq*508 for an 8-channel 32-bit buffer.
+ *
+ * The mixer requires being able to do two samplings per mixing loop. With the
+ * cubic resampler (which requires 3 padding samples), this limits a 4096
+ * buffer size to about 4092. This means that buffer_freq*source_pitch cannot
+ * exceed device_freq*4092 for a 32-bit buffer.
  */
 #ifndef BUFFERSIZE
 #define BUFFERSIZE 4096

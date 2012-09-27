@@ -6,27 +6,23 @@
 #include "alAuxEffectSlot.h"
 
 
-static __inline ALfloat point32(const ALfloat *vals, ALint step, ALint frac)
-{ return vals[0]; (void)step; (void)frac; }
-static __inline ALfloat lerp32(const ALfloat *vals, ALint step, ALint frac)
-{ return lerp(vals[0], vals[step], frac * (1.0f/FRACTIONONE)); }
-static __inline ALfloat cubic32(const ALfloat *vals, ALint step, ALint frac)
-{ return cubic(vals[-step], vals[0], vals[step], vals[step+step],
-               frac * (1.0f/FRACTIONONE)); }
+static __inline ALfloat point32(const ALfloat *vals, ALint frac)
+{ return vals[0]; (void)frac; }
+static __inline ALfloat lerp32(const ALfloat *vals, ALint frac)
+{ return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
+static __inline ALfloat cubic32(const ALfloat *vals, ALint frac)
+{ return cubic(vals[-1], vals[0], vals[1], vals[2], frac * (1.0f/FRACTIONONE)); }
 
 #define DECL_TEMPLATE(Sampler)                                                \
 void Resample_##Sampler##_C(const ALfloat *data, ALuint frac,                 \
-  ALuint increment, ALuint NumChannels, ALfloat *RESTRICT OutBuffer,          \
-  ALuint BufferSize)                                                          \
+  ALuint increment, ALfloat *RESTRICT OutBuffer, ALuint BufferSize)           \
 {                                                                             \
     ALuint pos = 0;                                                           \
-    ALfloat value;                                                            \
     ALuint i;                                                                 \
                                                                               \
     for(i = 0;i < BufferSize+1;i++)                                           \
     {                                                                         \
-        value = Sampler(data + pos*NumChannels, NumChannels, frac);           \
-        OutBuffer[i] = value;                                                 \
+        OutBuffer[i] = Sampler(data + pos, frac);                             \
                                                                               \
         frac += increment;                                                    \
         pos  += frac>>FRACTIONBITS;                                           \

@@ -323,7 +323,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
             /* Now resample, then filter and mix to the appropriate outputs. */
             Source->Params.Resample(&SrcData[BufferPrePadding], DataPosFrac,
-                                    increment, 1, ResampledData, DstBufferSize);
+                                    increment, ResampledData, DstBufferSize);
 
             {
                 DirectParams *directparms = &Source->Params.Direct;

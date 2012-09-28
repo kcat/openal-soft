@@ -67,6 +67,9 @@
 /* Define if we have the stat function */
 #cmakedefine HAVE_STAT
 
+/* Define if we have the lrintf function */
+#cmakedefine HAVE_LRINTF
+
 /* Define if we have the powf function */
 #cmakedefine HAVE_POWF
 

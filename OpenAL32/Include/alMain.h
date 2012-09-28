@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <math.h>
 
 #ifdef HAVE_FENV_H
 #include <fenv.h>
@@ -406,19 +407,15 @@ static __inline ALuint NextPowerOf2(ALuint value)
  * mode. */
 static __inline ALint fastf2i(ALfloat f)
 {
+#ifdef HAVE_LRINTF
+    return lrintf(f);
+#elif defined(_MSC_VER) && defined(_M_IX86)
     ALint i;
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm fld f
     __asm fistp i
-#elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
-    __asm__ __volatile__("flds %1\n\t"
-                         "fistpl %0\n\t"
-                         : "=m" (i)
-                         : "m" (f));
 #else
-    i = (ALint)f;
+    return (ALint)f;
 #endif
-    return i;
 }
 
 /* Fast float-to-uint conversion. Assumes the FPU is already in round-to-zero

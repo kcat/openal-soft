@@ -595,12 +595,12 @@ enum DeviceType {
  * for mixing, as well as the maximum number of samples per mixing iteration.
  *
  * The mixer requires being able to do two samplings per mixing loop. With the
- * cubic resampler (which requires 3 padding samples), this limits a 4096
- * buffer size to about 4092. This means that buffer_freq*source_pitch cannot
- * exceed device_freq*4092 for a 32-bit buffer.
+ * cubic resampler (which requires 3 padding samples), this limits a 2048
+ * buffer size to about 2044. This means that buffer_freq*source_pitch cannot
+ * exceed device_freq*2044 for a 32-bit buffer.
  */
 #ifndef BUFFERSIZE
-#define BUFFERSIZE 4096
+#define BUFFERSIZE 2048
 #endif
 
 

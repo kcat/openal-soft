@@ -473,9 +473,9 @@ static __inline ALvoid EAXEcho(ALverbState *State, ALfloat in, ALfloat *late)
 
 // Perform the non-EAX reverb pass on a given input sample, resulting in
 // four-channel output.
-static __inline ALvoid VerbPass(ALverbState *State, ALfloat in, ALfloat *early, ALfloat *late)
+static __inline ALvoid VerbPass(ALverbState *State, ALfloat in, ALfloat *out)
 {
-    ALfloat feed, taps[4];
+    ALfloat feed, late[4], taps[4];
 
     // Low-pass filter the incoming sample.
     in = lpFilter2P(&State->LpFilter, 0, in);
@@ -485,7 +485,7 @@ static __inline ALvoid VerbPass(ALverbState *State, ALfloat in, ALfloat *early, 
 
     // Calculate the early reflection from the first delay tap.
     in = DelayLineOut(&State->Delay, State->Offset - State->DelayTap[0]);
-    EarlyReflection(State, in, early);
+    EarlyReflection(State, in, out);
 
     // Feed the decorrelator from the energy-attenuated output of the second
     // delay tap.
@@ -499,6 +499,12 @@ static __inline ALvoid VerbPass(ALverbState *State, ALfloat in, ALfloat *early, 
     taps[2] = DelayLineOut(&State->Decorrelator, State->Offset - State->DecoTap[1]);
     taps[3] = DelayLineOut(&State->Decorrelator, State->Offset - State->DecoTap[2]);
     LateReverb(State, taps, late);
+
+    // Mix early reflections and late reverb.
+    out[0] += late[0];
+    out[1] += late[1];
+    out[2] += late[2];
+    out[3] += late[3];
 
     // Step all delays forward one sample.
     State->Offset++;
@@ -549,19 +555,13 @@ static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALflo
 {
     ALverbState *State = (ALverbState*)effect;
     ALuint index, c;
-    ALfloat early[4], late[4], out[4];
+    ALfloat out[4];
     const ALfloat *panGain = State->Gain;
 
     for(index = 0;index < SamplesToDo;index++)
     {
         // Process reverb for this sample.
-        VerbPass(State, SamplesIn[index], early, late);
-
-        // Mix early reflections and late reverb.
-        out[0] = (early[0] + late[0]);
-        out[1] = (early[1] + late[1]);
-        out[2] = (early[2] + late[2]);
-        out[3] = (early[3] + late[3]);
+        VerbPass(State, SamplesIn[index], out);
 
         // Output the results.
         for(c = 0;c < MaxChannels;c++)

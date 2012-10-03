@@ -1106,6 +1106,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
             device->UpdateSize = (device->UpdateSize+3)&~3;
         data->attr.minreq  = device->UpdateSize * pa_frame_size(&data->spec);
         data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
+        data->attr.maxlength = -1;
         data->attr.prebuf  = 0;
 
         o = pa_stream_set_buffer_attr(data->stream, &data->attr,

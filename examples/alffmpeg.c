@@ -173,7 +173,7 @@ FilePtr openAVFile(const char *fname)
          * all formats will have it in stream headers */
         if(avformat_find_stream_info(file->FmtCtx, NULL) >= 0)
             return file;
-        av_close_input_file(file->FmtCtx);
+        avformat_close_input(&file->FmtCtx);
     }
 
     free(file);
@@ -205,8 +205,7 @@ FilePtr openAVData(const char *name, char *buffer, size_t buffer_len)
         {
             if(avformat_find_stream_info(file->FmtCtx, NULL) >= 0)
                 return file;
-            av_close_input_file(file->FmtCtx);
-            file->FmtCtx = NULL;
+            avformat_close_input(&file->FmtCtx);
         }
         if(file->FmtCtx)
             avformat_free_context(file->FmtCtx);
@@ -240,8 +239,7 @@ FilePtr openAVCustom(const char *name, void *user_data,
         {
             if(avformat_find_stream_info(file->FmtCtx, NULL) >= 0)
                 return file;
-            av_close_input_file(file->FmtCtx);
-            file->FmtCtx = NULL;
+            avformat_close_input(&file->FmtCtx);
         }
         if(file->FmtCtx)
             avformat_free_context(file->FmtCtx);
@@ -280,7 +278,7 @@ void closeAVFile(FilePtr file)
     }
     free(file->Streams);
 
-    av_close_input_file(file->FmtCtx);
+    avformat_close_input(&file->FmtCtx);
     free(file);
 }
 
@@ -335,7 +333,7 @@ StreamPtr getAVAudioStream(FilePtr file, int streamnum)
 
             /* Try to find the codec for the given codec ID, and open it */
             codec = avcodec_find_decoder(stream->CodecCtx->codec_id);
-            if(!codec || avcodec_open(stream->CodecCtx, codec) < 0)
+            if(!codec || avcodec_open2(stream->CodecCtx, codec, NULL) < 0)
             {
                 free(stream);
                 return NULL;

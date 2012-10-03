@@ -724,7 +724,7 @@ SET(BACKENDS  "${BACKENDS} Null")
 
 IF(EXAMPLES)
     # Might be able to use earlier versions, but these definitely work
-    PKG_CHECK_MODULES(FFMPEG libavcodec>=52.123.0 libavformat>=52.111.0 libavutil>=51.9.1)
+    PKG_CHECK_MODULES(FFMPEG libavcodec>=53.61.100 libavformat>=53.32.100 libavutil>=51.35.100)
 ENDIF()
 
 IF(LIBTYPE STREQUAL "STATIC")

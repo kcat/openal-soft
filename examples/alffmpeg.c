@@ -98,20 +98,20 @@ static int64_t MemData_seek(void *opaque, int64_t offset, int whence)
     switch(whence)
     {
         case SEEK_SET:
-            if(offset < 0 || offset > membuf->length)
+            if(offset < 0 || (uint64_t)offset > membuf->length)
                 return -1;
             membuf->pos = offset;
             break;
 
         case SEEK_CUR:
-            if((offset >= 0 && offset > membuf->length-membuf->pos) ||
-               (offset < 0 && offset < -membuf->pos))
+            if((offset >= 0 && (uint64_t)offset > membuf->length-membuf->pos) ||
+               (offset < 0 && (uint64_t)(-offset) > membuf->pos))
                 return -1;
             membuf->pos += offset;
             break;
 
         case SEEK_END:
-            if(offset > 0 || offset < -membuf->length)
+            if(offset > 0 || (uint64_t)(-offset) > membuf->length)
                 return -1;
             membuf->pos = membuf->length + offset;
             break;

@@ -138,8 +138,10 @@ struct MyStream {
 
     struct PacketList *Packets;
 
-    char *DecodedData;
-    size_t DecodedDataSize;
+    AVFrame *Frame;
+
+    const uint8_t *FrameData;
+    size_t FrameDataSize;
 
     FilePtr parent;
 };
@@ -251,6 +253,21 @@ FilePtr openAVCustom(const char *name, void *user_data,
 }
 
 
+void clearAVAudioData(StreamPtr stream)
+{
+    while(stream->Packets)
+    {
+        struct PacketList *self;
+
+        self = stream->Packets;
+        stream->Packets = self->next;
+
+        av_free_packet(&self->pkt);
+        av_free(self);
+    }
+}
+
+
 void closeAVFile(FilePtr file)
 {
     size_t i;
@@ -273,7 +290,7 @@ void closeAVFile(FilePtr file)
         }
 
         avcodec_close(stream->CodecCtx);
-        av_free(stream->DecodedData);
+        av_free(stream->Frame);
         free(stream);
     }
     free(file->Streams);
@@ -341,13 +358,15 @@ StreamPtr getAVAudioStream(FilePtr file, int streamnum)
 
             /* Allocate space for the decoded data to be stored in before it
              * gets passed to the app */
-            stream->DecodedData = (char*)av_malloc(AVCODEC_MAX_AUDIO_FRAME_SIZE);
-            if(!stream->DecodedData)
+            stream->Frame = avcodec_alloc_frame();
+            if(!stream->Frame)
             {
                 avcodec_close(stream->CodecCtx);
                 free(stream);
                 return NULL;
             }
+            stream->FrameData = NULL;
+            stream->FrameDataSize = 0;
 
             /* Append the new stream object to the stream list. The original
              * pointer will remain valid if realloc fails, so we need to use
@@ -357,7 +376,7 @@ StreamPtr getAVAudioStream(FilePtr file, int streamnum)
             if(!temp)
             {
                 avcodec_close(stream->CodecCtx);
-                av_free(stream->DecodedData);
+                av_free(stream->Frame);
                 free(stream);
                 return NULL;
             }
@@ -481,9 +500,9 @@ next_packet:
     return 0;
 }
 
-void *getAVAudioData(StreamPtr stream, size_t *length)
+uint8_t *getAVAudioData(StreamPtr stream, size_t *length)
 {
-    int size;
+    int got_frame;
     int len;
 
     if(length) *length = 0;
@@ -491,25 +510,18 @@ void *getAVAudioData(StreamPtr stream, size_t *length)
     if(!stream || stream->CodecCtx->codec_type != AVMEDIA_TYPE_AUDIO)
         return NULL;
 
-    stream->DecodedDataSize = 0;
-
 next_packet:
     if(!stream->Packets && !getNextPacket(stream->parent, stream->StreamIdx))
         return NULL;
 
     /* Decode some data, and check for errors */
-    size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
-    while((len=avcodec_decode_audio3(stream->CodecCtx,
-                                     (int16_t*)stream->DecodedData, &size,
-                                     &stream->Packets->pkt)) == 0)
+    avcodec_get_frame_defaults(stream->Frame);
+    while((len=avcodec_decode_audio4(stream->CodecCtx, stream->Frame,
+                                     &got_frame, &stream->Packets->pkt)) < 0)
     {
         struct PacketList *self;
 
-        if(size > 0)
-            break;
-
-        /* Packet went unread and no data was given? Drop it and try the next,
-         * I guess... */
+        /* Error? Drop it and try the next, I guess... */
         self = stream->Packets;
         stream->Packets = self->next;
 
@@ -518,12 +530,7 @@ next_packet:
 
         if(!stream->Packets)
             goto next_packet;
-
-        size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
     }
-
-    if(len < 0)
-        return NULL;
 
     if(len < stream->Packets->pkt.size)
     {
@@ -546,14 +553,15 @@ next_packet:
         av_free(self);
     }
 
-    if(size == 0)
+    if(!got_frame || stream->Frame->nb_samples == 0)
         goto next_packet;
 
     /* Set the output buffer size */
-    stream->DecodedDataSize = size;
-    if(length) *length = stream->DecodedDataSize;
+    *length = av_samples_get_buffer_size(NULL, stream->CodecCtx->channels,
+                                               stream->Frame->nb_samples,
+                                               stream->CodecCtx->sample_fmt, 1);
 
-    return stream->DecodedData;
+    return stream->Frame->data[0];
 }
 
 size_t readAVAudioData(StreamPtr stream, void *data, size_t length)
@@ -566,34 +574,33 @@ size_t readAVAudioData(StreamPtr stream, void *data, size_t length)
     while(dec < length)
     {
         /* If there's no decoded data, find some */
-        if(stream->DecodedDataSize == 0)
+        if(stream->FrameDataSize == 0)
         {
-            if(getAVAudioData(stream, NULL) == NULL)
+            stream->FrameData = getAVAudioData(stream, &stream->FrameDataSize);
+            if(!stream->FrameData)
                 break;
         }
 
-        if(stream->DecodedDataSize > 0)
+        if(stream->FrameDataSize > 0)
         {
             /* Get the amount of bytes remaining to be written, and clamp to
              * the amount of decoded data we have */
             size_t rem = length-dec;
-            if(rem > stream->DecodedDataSize)
-                rem = stream->DecodedDataSize;
+            if(rem > stream->FrameDataSize)
+                rem = stream->FrameDataSize;
 
             /* Copy the data to the app's buffer and increment */
             if(data != NULL)
             {
-                memcpy(data, stream->DecodedData, rem);
+                memcpy(data, stream->FrameData, rem);
                 data = (char*)data + rem;
             }
             dec += rem;
 
             /* If there's any decoded data left, move it to the front of the
              * buffer for next time */
-            if(rem < stream->DecodedDataSize)
-                memmove(stream->DecodedData, &stream->DecodedData[rem],
-                        stream->DecodedDataSize - rem);
-            stream->DecodedDataSize -= rem;
+            stream->FrameData += rem;
+            stream->FrameDataSize -= rem;
         }
     }
 

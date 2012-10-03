@@ -44,7 +44,7 @@ int getAVAudioInfo(StreamPtr stream, ALuint *rate, ALenum *channels, ALenum *typ
  * from a previously-decoded packet is dropped. The size (in bytes) of the
  * returned data buffer is stored in 'length', and the returned pointer is only
  * valid until the next call to getAVAudioData or readAVAudioData. */
-void *getAVAudioData(StreamPtr stream, size_t *length);
+uint8_t *getAVAudioData(StreamPtr stream, size_t *length);
 
 /* The "meat" function. Decodes audio and writes, at most, length bytes into
  * the provided data buffer. Will only return less for end-of-stream or error

@@ -854,8 +854,8 @@ static __inline ALubyte aluF2UB(ALfloat val)
 { return aluF2B(val)+128; }
 
 #define DECL_TEMPLATE(T, func)                                                \
-static void Write_##T(ALCdevice *device, T *RESTRICT buffer,                  \
-                      ALuint SamplesToDo)                                     \
+static int Write_##T(ALCdevice *device, T *RESTRICT buffer,                   \
+                     ALuint SamplesToDo)                                      \
 {                                                                             \
     ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
     ALuint numchans = ChannelsFromDevFmt(device->FmtChans);                   \
@@ -870,6 +870,7 @@ static void Write_##T(ALCdevice *device, T *RESTRICT buffer,                  \
         for(i = 0;i < SamplesToDo;i++)                                        \
             out[i*numchans] = func(DryBuffer[chan][i]);                       \
     }                                                                         \
+    return SamplesToDo*numchans*sizeof(T);                                    \
 }
 
 DECL_TEMPLATE(ALfloat, aluF2F)
@@ -1050,30 +1051,33 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
         if(buffer)
         {
+            int bytes = 0;
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    Write_ALbyte(device, buffer, SamplesToDo);
+                    bytes = Write_ALbyte(device, buffer, SamplesToDo);
                     break;
                 case DevFmtUByte:
-                    Write_ALubyte(device, buffer, SamplesToDo);
+                    bytes = Write_ALubyte(device, buffer, SamplesToDo);
                     break;
                 case DevFmtShort:
-                    Write_ALshort(device, buffer, SamplesToDo);
+                    bytes = Write_ALshort(device, buffer, SamplesToDo);
                     break;
                 case DevFmtUShort:
-                    Write_ALushort(device, buffer, SamplesToDo);
+                    bytes = Write_ALushort(device, buffer, SamplesToDo);
                     break;
                 case DevFmtInt:
-                    Write_ALint(device, buffer, SamplesToDo);
+                    bytes = Write_ALint(device, buffer, SamplesToDo);
                     break;
                 case DevFmtUInt:
-                    Write_ALuint(device, buffer, SamplesToDo);
+                    bytes = Write_ALuint(device, buffer, SamplesToDo);
                     break;
                 case DevFmtFloat:
-                    Write_ALfloat(device, buffer, SamplesToDo);
+                    bytes = Write_ALfloat(device, buffer, SamplesToDo);
                     break;
             }
+
+            buffer += bytes;
         }
 
         size -= SamplesToDo;

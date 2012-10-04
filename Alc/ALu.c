@@ -1077,7 +1077,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     break;
             }
 
-            buffer += bytes;
+            buffer = (ALubyte*)buffer + bytes;
         }
 
         size -= SamplesToDo;

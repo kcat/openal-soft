@@ -157,9 +157,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
         for(chan = 0;chan < NumChannels;chan++)
         {
-            /* +1 for the predictive sample. */
-            ALIGN(16) ALfloat SrcData[BUFFERSIZE+1];
-            ALIGN(16) ALfloat ResampledData[BUFFERSIZE+1];
+            ALfloat *SrcData = Device->SampleData1;
+            ALfloat *ResampledData = Device->SampleData2;
             ALuint SrcDataSize = 0;
 
             if(Source->SourceType == AL_STATIC)

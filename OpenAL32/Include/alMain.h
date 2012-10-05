@@ -587,7 +587,7 @@ enum DeviceType {
 
 
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need
- * more stack, while smaller values may need more iterations. The value needs
+ * more memory, while smaller values may need more iterations. The value needs
  * to be a sensible size, however, as it constrains the max stepping value used
  * for mixing, as well as the maximum number of samples per mixing iteration.
  *
@@ -653,6 +653,10 @@ struct ALCdevice_struct
     enum Channel Speaker2Chan[MaxChannels];
     ALfloat SpeakerAngle[MaxChannels];
     ALuint  NumChan;
+
+    /* Temp storage used for mixing. +1 for the predictive sample. */
+    ALIGN(16) ALfloat SampleData1[BUFFERSIZE+1];
+    ALIGN(16) ALfloat SampleData2[BUFFERSIZE+1];
 
     // Dry path buffer mix
     ALIGN(16) ALfloat DryBuffer[MaxChannels][BUFFERSIZE];

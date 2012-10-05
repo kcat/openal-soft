@@ -116,7 +116,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     DataPosFrac   = Source->position_fraction;
     Looping       = Source->Looping;
     increment     = Source->Params.Step;
-    Resampler     = Source->Resampler;
+    Resampler     = (increment==FRACTIONONE) ? PointResampler : Source->Resampler;
     NumChannels   = Source->NumChannels;
     SampleSize    = Source->SampleSize;
 

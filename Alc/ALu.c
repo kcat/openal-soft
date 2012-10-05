@@ -54,7 +54,7 @@ ALfloat ZScale = 1.0f;
 static ResamplerFunc SelectResampler(enum Resampler Resampler, ALuint increment)
 {
     if(increment == FRACTIONONE)
-        return Resample_point32_C;
+        return Resample_copy32_C;
     switch(Resampler)
     {
         case PointResampler:

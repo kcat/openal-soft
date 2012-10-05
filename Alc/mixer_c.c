@@ -1,5 +1,7 @@
 #include "config.h"
 
+#include <assert.h>
+
 #include "alMain.h"
 #include "alu.h"
 #include "alSource.h"
@@ -12,6 +14,14 @@ static __inline ALfloat lerp32(const ALfloat *vals, ALuint frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
 static __inline ALfloat cubic32(const ALfloat *vals, ALuint frac)
 { return cubic(vals[-1], vals[0], vals[1], vals[2], frac * (1.0f/FRACTIONONE)); }
+
+void Resample_copy32_C(const ALfloat *data, ALuint frac,
+  ALuint increment, ALfloat *RESTRICT OutBuffer, ALuint BufferSize)
+{
+    (void)frac;
+    assert(increment==FRACTIONONE);
+    memcpy(OutBuffer, data, (BufferSize+1)*sizeof(ALfloat));
+}
 
 #define DECL_TEMPLATE(Sampler)                                                \
 void Resample_##Sampler##_C(const ALfloat *data, ALuint frac,                 \

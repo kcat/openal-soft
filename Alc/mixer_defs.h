@@ -10,6 +10,7 @@ struct DirectParams;
 struct SendParams;
 
 /* C resamplers */
+void Resample_copy32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *RESTRICT dst, ALuint dstlen);
 void Resample_point32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *RESTRICT dst, ALuint dstlen);
 void Resample_lerp32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *RESTRICT dst, ALuint dstlen);
 void Resample_cubic32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *RESTRICT dst, ALuint dstlen);

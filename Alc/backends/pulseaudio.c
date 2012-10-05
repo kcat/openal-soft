@@ -1100,12 +1100,10 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
 
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
-        device->UpdateSize = (ALuint64)device->UpdateSize * data->spec.rate /
-                             device->Frequency;
-        if((CPUCapFlags&CPU_CAP_SSE))
-            device->UpdateSize = (device->UpdateSize+3)&~3;
+        device->NumUpdates = (ALuint)((ALdouble)device->NumUpdates / device->Frequency *
+                                      data->spec.rate + 0.5);
         data->attr.minreq  = device->UpdateSize * pa_frame_size(&data->spec);
-        data->attr.tlength = data->attr.minreq * maxu(device->NumUpdates, 2);
+        data->attr.tlength = data->attr.minreq * clampu(device->NumUpdates, 2, 16);
         data->attr.maxlength = -1;
         data->attr.prebuf  = 0;
 
@@ -1124,8 +1122,10 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
     stream_buffer_attr_callback(data->stream, device);
 
     len = data->attr.minreq / pa_frame_size(&data->spec);
-    device->NumUpdates = (device->UpdateSize*device->NumUpdates + len/2) / len;
-    device->NumUpdates = maxu(device->NumUpdates, 2);
+    if((CPUCapFlags&CPU_CAP_SSE))
+        len = (len+3)&~3;
+    device->NumUpdates = (ALuint)((ALdouble)device->NumUpdates/len*device->UpdateSize + 0.5);
+    device->NumUpdates = clampu(device->NumUpdates, 2, 16);
     device->UpdateSize = len;
 
     pa_threaded_mainloop_unlock(data->loop);

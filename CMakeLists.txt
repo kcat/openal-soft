@@ -191,6 +191,8 @@ IF(WIN32)
             MESSAGE(STATUS "Could not find Wine header files" )
         ENDIF()
     ENDIF()
+
+    CHECK_INCLUDE_FILE(intrin.h HAVE_INTRIN_H)
 ELSE()
     SET(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
     # Yes GCC, really don't accept visibility modes you don't support
@@ -277,6 +279,9 @@ ENDIF()
 IF(HAVE_FLOAT_H)
     CHECK_SYMBOL_EXISTS(_controlfp float.h HAVE__CONTROLFP)
     CHECK_SYMBOL_EXISTS(__control87_2 float.h HAVE___CONTROL87_2)
+ENDIF()
+IF(HAVE_INTRIN_H)
+    CHECK_SYMBOL_EXISTS(__cpuid intrin.h HAVE___CPUID)
 ENDIF()
 
 CHECK_FUNCTION_EXISTS(strtof HAVE_STRTOF)

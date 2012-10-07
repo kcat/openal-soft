@@ -100,6 +100,9 @@
 /* Define if we have the floorf function */
 #cmakedefine HAVE_FLOORF
 
+/* Define if we have the __cpuid function */
+#cmakedefine HAVE___CPUID
+
 /* Define if we have the strtof function */
 #cmakedefine HAVE_STRTOF
 
@@ -144,6 +147,9 @@
 
 /* Define if we have initguid.h */
 #cmakedefine HAVE_INITGUID_H
+
+/* Define if we have intrin.h */
+#cmakedefine HAVE_INTRIN_H
 
 /* Define if we have ieeefp.h */
 #cmakedefine HAVE_IEEEFP_H

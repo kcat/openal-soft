@@ -54,6 +54,9 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
+#ifdef HAVE_INTRIN_H
+#include <intrin.h>
+#endif
 #ifdef HAVE_CPUID_H
 #include <cpuid.h>
 #endif
@@ -108,6 +111,36 @@ void FillCPUCaps(ALuint capfilter)
                 caps |= CPU_CAP_SSE;
 #endif
         }
+    }
+#elif defined(HAVE___CPUID)
+    union {
+        int regs[4];
+        char str[sizeof(int[4])];
+    } cpuinf[3];
+    unsigned int maxfunc = 0;
+    unsigned int maxextfunc = 0;
+
+    (__cpuid)(cpuinf[0].regs, 0);
+    maxfunc = cpuinf[0].regs[0];
+
+    (__cpuid)(cpuinf[0].regs, 0x80000000);
+    maxextfunc = cpuinf[0].regs[0];
+    TRACE("Detected max CPUID function: 0x%x (ext. 0x%x)\n", maxfunc, maxextfunc);
+
+    TRACE("Vendor ID: \"%.4s%.4s%.4s\"\n", cpuinf[0].str+4, cpuinf[0].str+12, cpuinf[0].str+8);
+    if(maxextfunc >= 0x80000004)
+    {
+        (__cpuid)(cpuinf[0].regs, 0x80000002);
+        (__cpuid)(cpuinf[1].regs, 0x80000003);
+        (__cpuid)(cpuinf[2].regs, 0x80000004);
+        TRACE("Name: \"%.16s%.16s%.16s\"\n", cpuinf[0].str, cpuinf[1].str, cpuinf[2].str);
+    }
+
+    if(maxfunc >= 1)
+    {
+        (__cpuid)(cpuinf[0].regs, 1);
+        if((cpuinf[0].regs[3]&(1<<25)))
+            caps |= CPU_CAP_SSE;
     }
 #endif
 #endif

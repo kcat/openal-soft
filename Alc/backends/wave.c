@@ -23,6 +23,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
 
 #include "alMain.h"
 #include "alu.h"

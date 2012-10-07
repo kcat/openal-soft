@@ -21,6 +21,9 @@
 #include "config.h"
 
 #include <stdlib.h>
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
 
 #include "alMain.h"
 #include "alu.h"

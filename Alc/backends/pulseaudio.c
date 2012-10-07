@@ -828,7 +828,6 @@ static ALuint PulseProc(ALvoid *param)
         }
         len -= len%update_size;
 
-        ALCdevice_Lock(Device);
         while(len > 0)
         {
             size_t newlen = len;
@@ -849,7 +848,6 @@ static ALuint PulseProc(ALvoid *param)
             pa_stream_write(data->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
             len -= newlen;
         }
-        ALCdevice_Unlock(Device);
     } while(!data->killNow && Device->Connected);
     pa_threaded_mainloop_unlock(data->loop);
 
@@ -1312,7 +1310,6 @@ static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint
     pulse_data *data = device->ExtraData;
     ALCuint todo = samples * pa_frame_size(&data->spec);
 
-    pa_threaded_mainloop_lock(data->loop);
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available */
     data->last_readable -= todo;
@@ -1357,7 +1354,6 @@ static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint
     }
     if(todo > 0)
         memset(buffer, ((device->FmtType==DevFmtUByte) ? 0x80 : 0), todo);
-    pa_threaded_mainloop_unlock(data->loop);
 
     return ALC_NO_ERROR;
 }
@@ -1367,7 +1363,6 @@ static ALCuint pulse_available_samples(ALCdevice *device)
     pulse_data *data = device->ExtraData;
     size_t readable = data->cap_remain;
 
-    pa_threaded_mainloop_lock(data->loop);
     if(device->Connected)
     {
         ssize_t got = pa_stream_readable_size(data->stream);
@@ -1379,11 +1374,23 @@ static ALCuint pulse_available_samples(ALCdevice *device)
         else if((size_t)got > data->cap_len)
             readable += got - data->cap_len;
     }
-    pa_threaded_mainloop_unlock(data->loop);
 
     if(data->last_readable < readable)
         data->last_readable = readable;
     return data->last_readable / pa_frame_size(&data->spec);
+}
+
+
+static void pulse_lock(ALCdevice *device)
+{
+    pulse_data *data = device->ExtraData;
+    pa_threaded_mainloop_lock(data->loop);
+}
+
+static void pulse_unlock(ALCdevice *device)
+{
+    pulse_data *data = device->ExtraData;
+    pa_threaded_mainloop_unlock(data->loop);
 }
 
 
@@ -1416,8 +1423,8 @@ static const BackendFuncs pulse_funcs = {
     pulse_stop_capture,
     pulse_capture_samples,
     pulse_available_samples,
-    ALCdevice_LockDefault,
-    ALCdevice_UnlockDefault,
+    pulse_lock,
+    pulse_unlock,
     pulse_get_latency
 };
 

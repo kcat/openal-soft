@@ -2205,14 +2205,9 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
         switch(param)
         {
             case ALC_CAPTURE_SAMPLES:
-                LockLists();
-                /* Re-validate the device since it may have been closed */
-                ALCdevice_DecRef(device);
-                if((device=VerifyDevice(device)) != NULL)
-                    *data = ALCdevice_AvailableSamples(device);
-                else
-                    alcSetError(NULL, ALC_INVALID_DEVICE);
-                UnlockLists();
+                ALCdevice_Lock(device);
+                *data = ALCdevice_AvailableSamples(device);
+                ALCdevice_Unlock(device);
                 break;
 
             case ALC_CONNECTED:
@@ -2820,16 +2815,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
     // Find a playback device to open
-    LockLists();
     if((err=ALCdevice_OpenPlayback(device, deviceName)) != ALC_NO_ERROR)
     {
-        UnlockLists();
         DeleteCriticalSection(&device->Mutex);
         al_free(device);
         alcSetError(NULL, err);
         return NULL;
     }
-    UnlockLists();
 
     if(DefaultEffect.type != AL_EFFECT_NULL)
     {
@@ -2954,16 +2946,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->UpdateSize = samples;
     device->NumUpdates = 1;
 
-    LockLists();
     if((err=ALCdevice_OpenCapture(device, deviceName)) != ALC_NO_ERROR)
     {
-        UnlockLists();
         DeleteCriticalSection(&device->Mutex);
         al_free(device);
         alcSetError(NULL, err);
         return NULL;
     }
-    UnlockLists();
 
     do {
         device->next = DeviceList;
@@ -2999,56 +2988,55 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *Device)
 
 ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 {
-    LockLists();
     if(!(device=VerifyDevice(device)) || device->Type != Capture)
-    {
-        UnlockLists();
         alcSetError(device, ALC_INVALID_DEVICE);
-        if(device) ALCdevice_DecRef(device);
-        return;
-    }
-    if(device->Connected)
+    else
     {
-        if(!(device->Flags&DEVICE_RUNNING))
-            ALCdevice_StartCapture(device);
-        device->Flags |= DEVICE_RUNNING;
+        ALCdevice_Lock(device);
+        if(device->Connected)
+        {
+            if(!(device->Flags&DEVICE_RUNNING))
+                ALCdevice_StartCapture(device);
+            device->Flags |= DEVICE_RUNNING;
+        }
+        ALCdevice_Unlock(device);
     }
-    UnlockLists();
 
-    ALCdevice_DecRef(device);
+    if(device) ALCdevice_DecRef(device);
 }
 
 ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 {
-    LockLists();
     if(!(device=VerifyDevice(device)) || device->Type != Capture)
-    {
-        UnlockLists();
         alcSetError(device, ALC_INVALID_DEVICE);
-        if(device) ALCdevice_DecRef(device);
-        return;
+    else
+    {
+        ALCdevice_Lock(device);
+        if((device->Flags&DEVICE_RUNNING))
+            ALCdevice_StopCapture(device);
+        device->Flags &= ~DEVICE_RUNNING;
+        ALCdevice_Unlock(device);
     }
-    if((device->Flags&DEVICE_RUNNING))
-        ALCdevice_StopCapture(device);
-    device->Flags &= ~DEVICE_RUNNING;
-    UnlockLists();
 
-    ALCdevice_DecRef(device);
+    if(device) ALCdevice_DecRef(device);
 }
 
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    ALCenum err = ALC_INVALID_DEVICE;
-    LockLists();
-    if((device=VerifyDevice(device)) != NULL && device->Type == Capture)
+    if(!(device=VerifyDevice(device)) && device->Type != Capture)
+        alcSetError(device, ALC_INVALID_DEVICE);
+    else
     {
-        err = ALC_INVALID_VALUE;
+        ALCenum err = ALC_INVALID_VALUE;
+
+        ALCdevice_Lock(device);
         if(samples >= 0 && ALCdevice_AvailableSamples(device) >= (ALCuint)samples)
             err = ALCdevice_CaptureSamples(device, buffer, samples);
+        ALCdevice_Unlock(device);
+
+        if(err != ALC_NO_ERROR)
+            alcSetError(device, err);
     }
-    UnlockLists();
-    if(err != ALC_NO_ERROR)
-        alcSetError(device, err);
     if(device) ALCdevice_DecRef(device);
 }
 

@@ -1557,7 +1557,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     oldChans = device->FmtChans;
     oldType  = device->FmtType;
 
-    TRACE("Format pre-setup: %s%s, %s%s, %uhz%s, %u update size x%d\n",
+    TRACE("Pre-reset: %s%s, %s%s, %uhz%s, %u update size x%d\n",
           DevFmtChannelsString(device->FmtChans),
           (device->Flags&DEVICE_CHANNELS_REQUEST)?" (requested)":"",
           DevFmtTypeString(device->FmtType),
@@ -1587,7 +1587,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
     }
 
-    TRACE("Format post-setup: %s, %s, %uhz, %u update size x%d\n",
+    TRACE("Post-reset: %s, %s, %uhz, %u update size x%d\n",
           DevFmtChannelsString(device->FmtChans),
           DevFmtTypeString(device->FmtType), device->Frequency,
           device->UpdateSize, device->NumUpdates);

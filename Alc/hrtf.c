@@ -356,7 +356,8 @@ static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
     struct Hrtf *Hrtf = NULL;
     ALboolean failed = AL_FALSE;
     ALuint rate = 0, irCount = 0;
-    ALushort irSize = 0, evCount = 0;
+    ALushort irSize = 0;
+    ALubyte evCount = 0;
     ALubyte *azCount = NULL;
     ALushort *evOffset = NULL;
     ALshort *coeffs = NULL;

@@ -826,8 +826,8 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
 void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
 ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep);
 
-void al_print(const char *func, const char *fmt, ...) PRINTF_STYLE(2,3);
-#define AL_PRINT(...) al_print(__FUNCTION__, __VA_ARGS__)
+void al_print(const char *type, const char *func, const char *fmt, ...) PRINTF_STYLE(3,4);
+#define AL_PRINT(T, ...) al_print((T), __FUNCTION__, __VA_ARGS__)
 
 extern FILE *LogFile;
 enum LogLevel {
@@ -841,22 +841,22 @@ extern enum LogLevel LogLevel;
 
 #define TRACEREF(...) do {                                                    \
     if(LogLevel >= LogRef)                                                    \
-        AL_PRINT(__VA_ARGS__);                                                \
+        AL_PRINT("(--)", __VA_ARGS__);                                        \
 } while(0)
 
 #define TRACE(...) do {                                                       \
     if(LogLevel >= LogTrace)                                                  \
-        AL_PRINT(__VA_ARGS__);                                                \
+        AL_PRINT("(II)", __VA_ARGS__);                                        \
 } while(0)
 
 #define WARN(...) do {                                                        \
     if(LogLevel >= LogWarning)                                                \
-        AL_PRINT(__VA_ARGS__);                                                \
+        AL_PRINT("(WW)", __VA_ARGS__);                                        \
 } while(0)
 
 #define ERR(...) do {                                                         \
     if(LogLevel >= LogError)                                                  \
-        AL_PRINT(__VA_ARGS__);                                                \
+        AL_PRINT("(EE)", __VA_ARGS__);                                        \
 } while(0)
 
 

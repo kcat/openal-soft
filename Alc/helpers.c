@@ -433,13 +433,13 @@ void *GetSymbol(void *handle, const char *name)
 #endif
 
 
-void al_print(const char *func, const char *fmt, ...)
+void al_print(const char *type, const char *func, const char *fmt, ...)
 {
     char str[256];
     int i;
 
-    i = snprintf(str, sizeof(str), "AL lib: %s: ", func);
-    if(i < (int)sizeof(str) && i > 0)
+    i = snprintf(str, sizeof(str), "AL lib: %s %s: ", type, func);
+    if(i > 0 && (unsigned int)i < sizeof(str))
     {
         va_list ap;
         va_start(ap, fmt);

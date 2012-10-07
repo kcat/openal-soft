@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 
 #include "AL/al.h"
 #include "AL/alc.h"

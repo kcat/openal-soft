@@ -109,6 +109,16 @@ void FillCPUCaps(ALuint capfilter)
 #endif
         }
     }
+#elif defined(HAVE_WINDOWS_H)
+    BOOL (WINAPI*IsProcessorFeaturePresent)(DWORD ProcessorFeature);
+    IsProcessorFeaturePresent = GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
+    if(!IsProcessorFeaturePresent)
+        ERR("IsProcessorFeaturePresent not available; CPU caps not detected\n");
+    else
+    {
+        if(IsProcessorFeaturePresent(6/*PF_XMMI_INSTRUCTIONS_AVAILABLE*/))
+            caps |= CPU_CAP_SSE;
+    }
 #endif
 #endif
 #ifdef HAVE_NEON

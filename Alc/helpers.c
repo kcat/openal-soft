@@ -20,23 +20,6 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-#include <time.h>
-#include <errno.h>
-#include <stdarg.h>
-#ifdef HAVE_DLFCN_H
-#include <dlfcn.h>
-#endif
-#ifdef HAVE_CPUID_H
-#include <cpuid.h>
-#endif
-#ifdef HAVE_FLOAT_H
-#include <float.h>
-#endif
-#ifdef HAVE_IEEEFP_H
-#include <ieeefp.h>
-#endif
-
 #if defined(HAVE_GUIDDEF_H) || defined(HAVE_INITGUID_H)
 #define INITGUID
 #include <windows.h>
@@ -62,6 +45,23 @@ DEFINE_GUID(IID_IAudioRenderClient,   0xf294acfc, 0x3146, 0x4483, 0xa7,0xbf, 0xa
 DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,0x20, 0x67,0xd1,0x46,0xa8,0x50,0xe0, 14);
 #endif
 
+#endif
+
+#include <stdlib.h>
+#include <time.h>
+#include <errno.h>
+#include <stdarg.h>
+#ifdef HAVE_DLFCN_H
+#include <dlfcn.h>
+#endif
+#ifdef HAVE_CPUID_H
+#include <cpuid.h>
+#endif
+#ifdef HAVE_FLOAT_H
+#include <float.h>
+#endif
+#ifdef HAVE_IEEEFP_H
+#include <ieeefp.h>
 #endif
 
 #include "alMain.h"

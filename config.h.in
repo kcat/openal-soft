@@ -61,9 +61,6 @@
 /* Define if we have the Wave Writer backend */
 #cmakedefine HAVE_WAVE
 
-/* Define if we have dlfcn.h */
-#cmakedefine HAVE_DLFCN_H
-
 /* Define if we have the stat function */
 #cmakedefine HAVE_STAT
 
@@ -106,9 +103,6 @@
 /* Define if we have the strtof function */
 #cmakedefine HAVE_STRTOF
 
-/* Define if we have stdint.h */
-#cmakedefine HAVE_STDINT_H
-
 /* Define if we have the __int64 type */
 #cmakedefine HAVE___INT64
 
@@ -123,6 +117,15 @@
 
 /* Define if we have GCC's format attribute */
 #cmakedefine HAVE_GCC_FORMAT
+
+/* Define if we have stdint.h */
+#cmakedefine HAVE_STDINT_H
+
+/* Define if we have windows.h */
+#cmakedefine HAVE_WINDOWS_H
+
+/* Define if we have dlfcn.h */
+#cmakedefine HAVE_DLFCN_H
 
 /* Define if we have pthread_np.h */
 #cmakedefine HAVE_PTHREAD_NP_H

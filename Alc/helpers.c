@@ -110,13 +110,14 @@ void FillCPUCaps(ALuint capfilter)
         }
     }
 #elif defined(HAVE_WINDOWS_H)
+    HMODULE k32 = GetModuleHandleA("kernel32.dll");
     BOOL (WINAPI*IsProcessorFeaturePresent)(DWORD ProcessorFeature);
-    IsProcessorFeaturePresent = GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsProcessorFeaturePresent");
+    IsProcessorFeaturePresent = (BOOL(WINAPI*)(DWORD))GetProcAddress(k32, "IsProcessorFeaturePresent");
     if(!IsProcessorFeaturePresent)
         ERR("IsProcessorFeaturePresent not available; CPU caps not detected\n");
     else
     {
-        if(IsProcessorFeaturePresent(6/*PF_XMMI_INSTRUCTIONS_AVAILABLE*/))
+        if(IsProcessorFeaturePresent(PF_XMMI_INSTRUCTIONS_AVAILABLE))
             caps |= CPU_CAP_SSE;
     }
 #endif

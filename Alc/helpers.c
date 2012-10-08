@@ -73,10 +73,10 @@ void FillCPUCaps(ALuint capfilter)
 {
     ALuint caps = 0;
 
-#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 /* FIXME: We really should get this for all available CPUs in case different
  * CPUs have different caps (is that possible on one machine?). */
-#ifdef HAVE_CPUID_H
+#if defined(HAVE_CPUID_H) && (defined(__i386__) || defined(__x86_64__) || \
+                              defined(_M_IX86) || defined(_M_X64))
     union {
         unsigned int regs[4];
         char str[sizeof(unsigned int[4])];
@@ -120,7 +120,6 @@ void FillCPUCaps(ALuint capfilter)
         if(IsProcessorFeaturePresent(PF_XMMI_INSTRUCTIONS_AVAILABLE))
             caps |= CPU_CAP_SSE;
     }
-#endif
 #endif
 #ifdef HAVE_NEON
     /* Assume Neon support if compiled with it */

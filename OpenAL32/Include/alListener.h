@@ -7,8 +7,7 @@
 extern "C" {
 #endif
 
-typedef struct ALlistener_struct
-{
+typedef struct ALlistener {
     volatile ALfloat Position[3];
     volatile ALfloat Velocity[3];
     volatile ALfloat Forward[3];

@@ -366,7 +366,6 @@ static __inline void LockUIntMapWrite(UIntMap *map)
 static __inline void UnlockUIntMapWrite(UIntMap *map)
 { WriteUnlock(&map->lock); }
 
-#include "alListener.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -709,7 +708,7 @@ struct ALCcontext_struct
 {
     volatile RefCount ref;
 
-    ALlistener *Listener;
+    struct ALlistener *Listener;
 
     UIntMap SourceMap;
     UIntMap EffectSlotMap;

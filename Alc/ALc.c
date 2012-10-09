@@ -29,8 +29,7 @@
 
 #include "alMain.h"
 #include "alSource.h"
-#include "AL/al.h"
-#include "AL/alc.h"
+#include "alListener.h"
 #include "alThunk.h"
 #include "alSource.h"
 #include "alBuffer.h"

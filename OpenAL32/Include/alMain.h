@@ -88,14 +88,6 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #define PRINTF_STYLE(x, y)
 #endif
 
-#if defined(HAVE_RESTRICT)
-#define RESTRICT restrict
-#elif defined(HAVE___RESTRICT)
-#define RESTRICT __restrict
-#else
-#define RESTRICT
-#endif
-
 
 static const union {
     ALuint u;

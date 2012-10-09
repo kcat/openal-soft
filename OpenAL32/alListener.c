@@ -129,7 +129,6 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
 
     al_try
     {
-        ALfloat U[3], V[3], N[3];
         CHECK_VALUE(Context, values);
         switch(param)
         {
@@ -138,42 +137,14 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
                                      isfinite(values[2]) && isfinite(values[3]) &&
                                      isfinite(values[4]) && isfinite(values[5]));
 
-                /* AT then UP */
-                N[0] = values[0];
-                N[1] = values[1];
-                N[2] = values[2];
-                aluNormalize(N);
-                V[0] = values[3];
-                V[1] = values[4];
-                V[2] = values[5];
-                aluNormalize(V);
-                /* Build and normalize right-vector */
-                aluCrossproduct(N, V, U);
-                aluNormalize(U);
-
                 LockContext(Context);
+                /* AT then UP */
                 Context->Listener->Forward[0] = values[0];
                 Context->Listener->Forward[1] = values[1];
                 Context->Listener->Forward[2] = values[2];
                 Context->Listener->Up[0] = values[3];
                 Context->Listener->Up[1] = values[4];
                 Context->Listener->Up[2] = values[5];
-                Context->Listener->Matrix[0][0] =  U[0];
-                Context->Listener->Matrix[0][1] =  V[0];
-                Context->Listener->Matrix[0][2] = -N[0];
-                Context->Listener->Matrix[0][3] =  0.0f;
-                Context->Listener->Matrix[1][0] =  U[1];
-                Context->Listener->Matrix[1][1] =  V[1];
-                Context->Listener->Matrix[1][2] = -N[1];
-                Context->Listener->Matrix[1][3] =  0.0f;
-                Context->Listener->Matrix[2][0] =  U[2];
-                Context->Listener->Matrix[2][1] =  V[2];
-                Context->Listener->Matrix[2][2] = -N[2];
-                Context->Listener->Matrix[2][3] =  0.0f;
-                Context->Listener->Matrix[3][0] =  0.0f;
-                Context->Listener->Matrix[3][1] =  0.0f;
-                Context->Listener->Matrix[3][2] =  0.0f;
-                Context->Listener->Matrix[3][3] =  1.0f;
                 Context->UpdateSources = AL_TRUE;
                 UnlockContext(Context);
                 break;

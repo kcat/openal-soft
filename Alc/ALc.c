@@ -1818,7 +1818,7 @@ static ALvoid InitContext(ALCcontext *Context)
     for(i = 0;i < 4;i++)
     {
         for(j = 0;j < 4;j++)
-            Context->Listener->Matrix[i][j] = ((i==j) ? 1.0f : 0.0f);
+            Context->Listener->Params.Matrix[i][j] = ((i==j) ? 1.0f : 0.0f);
     }
 
     //Validate Context

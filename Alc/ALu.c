@@ -27,8 +27,6 @@
 #include <assert.h>
 
 #include "alMain.h"
-#include "AL/al.h"
-#include "AL/alc.h"
 #include "alSource.h"
 #include "alBuffer.h"
 #include "alListener.h"
@@ -433,7 +431,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     for(i = 0;i < 4;i++)
     {
         for(j = 0;j < 4;j++)
-            Matrix[i][j] = ALContext->Listener->Matrix[i][j];
+            Matrix[i][j] = ALContext->Listener->Params.Matrix[i][j];
     }
 
     /* Get source properties */
@@ -910,6 +908,41 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
             if(!DeferUpdates)
                 UpdateSources = ExchangeInt(&ctx->UpdateSources, AL_FALSE);
+
+            if(UpdateSources)
+            {
+                ALlistener *listener = ctx->Listener;
+                ALfloat N[3], V[3], U[3];
+                /* AT then UP */
+                N[0] = listener->Forward[0];
+                N[1] = listener->Forward[1];
+                N[2] = listener->Forward[2];
+                aluNormalize(N);
+                V[0] = listener->Up[0];
+                V[1] = listener->Up[1];
+                V[2] = listener->Up[1];
+                aluNormalize(V);
+                /* Build and normalize right-vector */
+                aluCrossproduct(N, V, U);
+                aluNormalize(U);
+
+                listener->Params.Matrix[0][0] =  U[0];
+                listener->Params.Matrix[0][1] =  V[0];
+                listener->Params.Matrix[0][2] = -N[0];
+                listener->Params.Matrix[0][3] =  0.0f;
+                listener->Params.Matrix[1][0] =  U[1];
+                listener->Params.Matrix[1][1] =  V[1];
+                listener->Params.Matrix[1][2] = -N[1];
+                listener->Params.Matrix[1][3] =  0.0f;
+                listener->Params.Matrix[2][0] =  U[2];
+                listener->Params.Matrix[2][1] =  V[2];
+                listener->Params.Matrix[2][2] = -N[2];
+                listener->Params.Matrix[2][3] =  0.0f;
+                listener->Params.Matrix[3][0] =  0.0f;
+                listener->Params.Matrix[3][1] =  0.0f;
+                listener->Params.Matrix[3][2] =  0.0f;
+                listener->Params.Matrix[3][3] =  1.0f;
+            }
 
             /* source processing */
             src = ctx->ActiveSources;

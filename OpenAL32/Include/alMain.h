@@ -709,7 +709,7 @@ struct ALCcontext_struct
 {
     volatile RefCount ref;
 
-    ALlistener Listener;
+    ALlistener *Listener;
 
     UIntMap SourceMap;
     UIntMap EffectSlotMap;

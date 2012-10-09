@@ -40,14 +40,14 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
             case AL_GAIN:
                 CHECK_VALUE(Context, value >= 0.0f && isfinite(value));
 
-                Context->Listener.Gain = value;
+                Context->Listener->Gain = value;
                 Context->UpdateSources = AL_TRUE;
                 break;
 
             case AL_METERS_PER_UNIT:
                 CHECK_VALUE(Context, value >= 0.0f && isfinite(value));
 
-                Context->Listener.MetersPerUnit = value;
+                Context->Listener->MetersPerUnit = value;
                 Context->UpdateSources = AL_TRUE;
                 break;
 
@@ -76,9 +76,9 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
                 CHECK_VALUE(Context, isfinite(value1) && isfinite(value2) && isfinite(value3));
 
                 LockContext(Context);
-                Context->Listener.Position[0] = value1;
-                Context->Listener.Position[1] = value2;
-                Context->Listener.Position[2] = value3;
+                Context->Listener->Position[0] = value1;
+                Context->Listener->Position[1] = value2;
+                Context->Listener->Position[2] = value3;
                 Context->UpdateSources = AL_TRUE;
                 UnlockContext(Context);
                 break;
@@ -87,9 +87,9 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
                 CHECK_VALUE(Context, isfinite(value1) && isfinite(value2) && isfinite(value3));
 
                 LockContext(Context);
-                Context->Listener.Velocity[0] = value1;
-                Context->Listener.Velocity[1] = value2;
-                Context->Listener.Velocity[2] = value3;
+                Context->Listener->Velocity[0] = value1;
+                Context->Listener->Velocity[1] = value2;
+                Context->Listener->Velocity[2] = value3;
                 Context->UpdateSources = AL_TRUE;
                 UnlockContext(Context);
                 break;
@@ -152,28 +152,28 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
                 aluNormalize(U);
 
                 LockContext(Context);
-                Context->Listener.Forward[0] = values[0];
-                Context->Listener.Forward[1] = values[1];
-                Context->Listener.Forward[2] = values[2];
-                Context->Listener.Up[0] = values[3];
-                Context->Listener.Up[1] = values[4];
-                Context->Listener.Up[2] = values[5];
-                Context->Listener.Matrix[0][0] =  U[0];
-                Context->Listener.Matrix[0][1] =  V[0];
-                Context->Listener.Matrix[0][2] = -N[0];
-                Context->Listener.Matrix[0][3] =  0.0f;
-                Context->Listener.Matrix[1][0] =  U[1];
-                Context->Listener.Matrix[1][1] =  V[1];
-                Context->Listener.Matrix[1][2] = -N[1];
-                Context->Listener.Matrix[1][3] =  0.0f;
-                Context->Listener.Matrix[2][0] =  U[2];
-                Context->Listener.Matrix[2][1] =  V[2];
-                Context->Listener.Matrix[2][2] = -N[2];
-                Context->Listener.Matrix[2][3] =  0.0f;
-                Context->Listener.Matrix[3][0] =  0.0f;
-                Context->Listener.Matrix[3][1] =  0.0f;
-                Context->Listener.Matrix[3][2] =  0.0f;
-                Context->Listener.Matrix[3][3] =  1.0f;
+                Context->Listener->Forward[0] = values[0];
+                Context->Listener->Forward[1] = values[1];
+                Context->Listener->Forward[2] = values[2];
+                Context->Listener->Up[0] = values[3];
+                Context->Listener->Up[1] = values[4];
+                Context->Listener->Up[2] = values[5];
+                Context->Listener->Matrix[0][0] =  U[0];
+                Context->Listener->Matrix[0][1] =  V[0];
+                Context->Listener->Matrix[0][2] = -N[0];
+                Context->Listener->Matrix[0][3] =  0.0f;
+                Context->Listener->Matrix[1][0] =  U[1];
+                Context->Listener->Matrix[1][1] =  V[1];
+                Context->Listener->Matrix[1][2] = -N[1];
+                Context->Listener->Matrix[1][3] =  0.0f;
+                Context->Listener->Matrix[2][0] =  U[2];
+                Context->Listener->Matrix[2][1] =  V[2];
+                Context->Listener->Matrix[2][2] = -N[2];
+                Context->Listener->Matrix[2][3] =  0.0f;
+                Context->Listener->Matrix[3][0] =  0.0f;
+                Context->Listener->Matrix[3][1] =  0.0f;
+                Context->Listener->Matrix[3][2] =  0.0f;
+                Context->Listener->Matrix[3][3] =  1.0f;
                 Context->UpdateSources = AL_TRUE;
                 UnlockContext(Context);
                 break;
@@ -297,11 +297,11 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
         switch(param)
         {
             case AL_GAIN:
-                *value = Context->Listener.Gain;
+                *value = Context->Listener->Gain;
                 break;
 
             case AL_METERS_PER_UNIT:
-                *value = Context->Listener.MetersPerUnit;
+                *value = Context->Listener->MetersPerUnit;
                 break;
 
             default:
@@ -328,17 +328,17 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
         {
             case AL_POSITION:
                 LockContext(Context);
-                *value1 = Context->Listener.Position[0];
-                *value2 = Context->Listener.Position[1];
-                *value3 = Context->Listener.Position[2];
+                *value1 = Context->Listener->Position[0];
+                *value2 = Context->Listener->Position[1];
+                *value3 = Context->Listener->Position[2];
                 UnlockContext(Context);
                 break;
 
             case AL_VELOCITY:
                 LockContext(Context);
-                *value1 = Context->Listener.Velocity[0];
-                *value2 = Context->Listener.Velocity[1];
-                *value3 = Context->Listener.Velocity[2];
+                *value1 = Context->Listener->Velocity[0];
+                *value2 = Context->Listener->Velocity[1];
+                *value3 = Context->Listener->Velocity[2];
                 UnlockContext(Context);
                 break;
 
@@ -380,12 +380,12 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
             case AL_ORIENTATION:
                 LockContext(Context);
                 // AT then UP
-                values[0] = Context->Listener.Forward[0];
-                values[1] = Context->Listener.Forward[1];
-                values[2] = Context->Listener.Forward[2];
-                values[3] = Context->Listener.Up[0];
-                values[4] = Context->Listener.Up[1];
-                values[5] = Context->Listener.Up[2];
+                values[0] = Context->Listener->Forward[0];
+                values[1] = Context->Listener->Forward[1];
+                values[2] = Context->Listener->Forward[2];
+                values[3] = Context->Listener->Up[0];
+                values[4] = Context->Listener->Up[1];
+                values[5] = Context->Listener->Up[2];
                 UnlockContext(Context);
                 break;
 
@@ -435,17 +435,17 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
         {
             case AL_POSITION:
                 LockContext(Context);
-                *value1 = (ALint)Context->Listener.Position[0];
-                *value2 = (ALint)Context->Listener.Position[1];
-                *value3 = (ALint)Context->Listener.Position[2];
+                *value1 = (ALint)Context->Listener->Position[0];
+                *value2 = (ALint)Context->Listener->Position[1];
+                *value3 = (ALint)Context->Listener->Position[2];
                 UnlockContext(Context);
                 break;
 
             case AL_VELOCITY:
                 LockContext(Context);
-                *value1 = (ALint)Context->Listener.Velocity[0];
-                *value2 = (ALint)Context->Listener.Velocity[1];
-                *value3 = (ALint)Context->Listener.Velocity[2];
+                *value1 = (ALint)Context->Listener->Velocity[0];
+                *value2 = (ALint)Context->Listener->Velocity[1];
+                *value3 = (ALint)Context->Listener->Velocity[2];
                 UnlockContext(Context);
                 break;
 
@@ -482,12 +482,12 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
             case AL_ORIENTATION:
                 LockContext(Context);
                 // AT then UP
-                values[0] = (ALint)Context->Listener.Forward[0];
-                values[1] = (ALint)Context->Listener.Forward[1];
-                values[2] = (ALint)Context->Listener.Forward[2];
-                values[3] = (ALint)Context->Listener.Up[0];
-                values[4] = (ALint)Context->Listener.Up[1];
-                values[5] = (ALint)Context->Listener.Up[2];
+                values[0] = (ALint)Context->Listener->Forward[0];
+                values[1] = (ALint)Context->Listener->Forward[1];
+                values[2] = (ALint)Context->Listener->Forward[2];
+                values[3] = (ALint)Context->Listener->Up[0];
+                values[4] = (ALint)Context->Listener->Up[1];
+                values[5] = (ALint)Context->Listener->Up[2];
                 UnlockContext(Context);
                 break;
 

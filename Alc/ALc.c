@@ -1802,24 +1802,24 @@ static ALvoid InitContext(ALCcontext *Context)
     ALint i, j;
 
     //Initialise listener
-    Context->Listener.Gain = 1.0f;
-    Context->Listener.MetersPerUnit = 1.0f;
-    Context->Listener.Position[0] = 0.0f;
-    Context->Listener.Position[1] = 0.0f;
-    Context->Listener.Position[2] = 0.0f;
-    Context->Listener.Velocity[0] = 0.0f;
-    Context->Listener.Velocity[1] = 0.0f;
-    Context->Listener.Velocity[2] = 0.0f;
-    Context->Listener.Forward[0] = 0.0f;
-    Context->Listener.Forward[1] = 0.0f;
-    Context->Listener.Forward[2] = -1.0f;
-    Context->Listener.Up[0] = 0.0f;
-    Context->Listener.Up[1] = 1.0f;
-    Context->Listener.Up[2] = 0.0f;
+    Context->Listener->Gain = 1.0f;
+    Context->Listener->MetersPerUnit = 1.0f;
+    Context->Listener->Position[0] = 0.0f;
+    Context->Listener->Position[1] = 0.0f;
+    Context->Listener->Position[2] = 0.0f;
+    Context->Listener->Velocity[0] = 0.0f;
+    Context->Listener->Velocity[1] = 0.0f;
+    Context->Listener->Velocity[2] = 0.0f;
+    Context->Listener->Forward[0] = 0.0f;
+    Context->Listener->Forward[1] = 0.0f;
+    Context->Listener->Forward[2] = -1.0f;
+    Context->Listener->Up[0] = 0.0f;
+    Context->Listener->Up[1] = 1.0f;
+    Context->Listener->Up[2] = 0.0f;
     for(i = 0;i < 4;i++)
     {
         for(j = 0;j < 4;j++)
-            Context->Listener.Matrix[i][j] = ((i==j) ? 1.0f : 0.0f);
+            Context->Listener->Matrix[i][j] = ((i==j) ? 1.0f : 0.0f);
     }
 
     //Validate Context
@@ -2461,10 +2461,11 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
-    ALContext = calloc(1, sizeof(ALCcontext));
+    ALContext = calloc(1, sizeof(ALCcontext)+15+sizeof(ALlistener));
     if(ALContext)
     {
         ALContext->ref = 1;
+        ALContext->Listener = (ALlistener*)(((ALintptrEXT)(ALContext+1)+15)&~15);
 
         ALContext->MaxActiveSources = 256;
         ALContext->ActiveSources = malloc(sizeof(ALContext->ActiveSources[0]) *

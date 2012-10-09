@@ -191,7 +191,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     Frequency = Device->Frequency;
 
     /* Get listener properties */
-    ListenerGain = ALContext->Listener.Gain;
+    ListenerGain = ALContext->Listener->Gain;
 
     /* Get source properties */
     SourceVolume    = ALSource->Gain;
@@ -425,15 +425,15 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     Frequency     = Device->Frequency;
 
     /* Get listener properties */
-    ListenerGain   = ALContext->Listener.Gain;
-    MetersPerUnit  = ALContext->Listener.MetersPerUnit;
-    ListenerVel[0] = ALContext->Listener.Velocity[0];
-    ListenerVel[1] = ALContext->Listener.Velocity[1];
-    ListenerVel[2] = ALContext->Listener.Velocity[2];
+    ListenerGain   = ALContext->Listener->Gain;
+    MetersPerUnit  = ALContext->Listener->MetersPerUnit;
+    ListenerVel[0] = ALContext->Listener->Velocity[0];
+    ListenerVel[1] = ALContext->Listener->Velocity[1];
+    ListenerVel[2] = ALContext->Listener->Velocity[2];
     for(i = 0;i < 4;i++)
     {
         for(j = 0;j < 4;j++)
-            Matrix[i][j] = ALContext->Listener.Matrix[i][j];
+            Matrix[i][j] = ALContext->Listener->Matrix[i][j];
     }
 
     /* Get source properties */
@@ -506,9 +506,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     if(ALSource->HeadRelative == AL_FALSE)
     {
         /* Translate position */
-        Position[0] -= ALContext->Listener.Position[0];
-        Position[1] -= ALContext->Listener.Position[1];
-        Position[2] -= ALContext->Listener.Position[2];
+        Position[0] -= ALContext->Listener->Position[0];
+        Position[1] -= ALContext->Listener->Position[1];
+        Position[2] -= ALContext->Listener->Position[2];
 
         /* Transform source vectors */
         aluMatrixVector(Position, 1.0f, Matrix);

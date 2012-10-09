@@ -412,10 +412,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     Source->position_fraction = DataPosFrac;
     Source->Hrtf.Offset      += OutPos;
     if(State == AL_PLAYING)
-    {
         Source->Hrtf.Counter = maxu(Source->Hrtf.Counter, OutPos) - OutPos;
-        Source->Hrtf.Moving  = AL_TRUE;
-    }
     else
     {
         Source->Hrtf.Counter = 0;

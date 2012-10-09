@@ -777,6 +777,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                                 ALSource->Params.Direct.Hrtf.Coeffs[0],
                                 ALSource->Params.Direct.Hrtf.Delay[0]);
             ALSource->Hrtf.Counter = 0;
+            ALSource->Hrtf.Moving  = AL_TRUE;
             ALSource->Params.Direct.Hrtf.Gain = DryGain;
             ALSource->Params.Direct.Hrtf.Dir[0] = Position[0];
             ALSource->Params.Direct.Hrtf.Dir[1] = Position[1];

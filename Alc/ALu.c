@@ -207,7 +207,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALbuffer *ALBuffer;
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
-            ALsizei maxstep = BUFFERSIZE / ALSource->NumChannels;
+            ALsizei maxstep = BUFFERSIZE;
             maxstep -= ResamplerPadding[Resampler] +
                        ResamplerPrePadding[Resampler] + 1;
             maxstep = mini(maxstep, INT_MAX>>FRACTIONBITS);
@@ -701,7 +701,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         {
             /* Calculate fixed-point stepping value, based on the pitch, buffer
              * frequency, and output frequency. */
-            ALsizei maxstep = BUFFERSIZE / ALSource->NumChannels;
+            ALsizei maxstep = BUFFERSIZE;
             maxstep -= ResamplerPadding[Resampler] +
                        ResamplerPrePadding[Resampler] + 1;
             maxstep = mini(maxstep, INT_MAX>>FRACTIONBITS);

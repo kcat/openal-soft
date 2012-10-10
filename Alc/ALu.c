@@ -339,7 +339,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
-        DryGain *= lerp(1.0f, 1.0f/sqrtf(Device->NumChan), hwidth/(F_PI*2.0f));
+        DryGain *= lerp(1.0f, 1.0f/sqrtf(Device->NumChan), hwidth/F_PI);
         for(c = 0;c < num_channels;c++)
         {
             /* Special-case LFE */

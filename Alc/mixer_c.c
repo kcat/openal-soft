@@ -121,6 +121,9 @@ void MixSend_C(SendParams *params, const ALfloat *RESTRICT data,
     ALfloat  WetSend = params->Gain;
     ALuint pos;
 
+    if(WetSend < 0.00001f)
+        return;
+
     if(OutPos == 0)
         WetClickRemoval[0] -= data[0] * WetSend;
     for(pos = 0;pos < BufferSize;pos++)

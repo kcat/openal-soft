@@ -17,6 +17,7 @@ typedef struct ALlistener {
 
     struct {
         ALfloat Matrix[4][4];
+        ALfloat Velocity[3];
     } Params;
 } ALlistener;
 

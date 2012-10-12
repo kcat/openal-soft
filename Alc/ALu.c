@@ -158,6 +158,11 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     Listener->Params.Matrix[3][0] = -P[0];
     Listener->Params.Matrix[3][1] = -P[1];
     Listener->Params.Matrix[3][2] = -P[2];
+
+    Listener->Params.Velocity[0] = Listener->Velocity[0];
+    Listener->Params.Velocity[1] = Listener->Velocity[1];
+    Listener->Params.Velocity[2] = Listener->Velocity[2];
+    aluMatrixVector(Listener->Params.Velocity, 0.0f, Listener->Params.Matrix);
 }
 
 ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
@@ -425,9 +430,8 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
+    ALfloat Velocity[3],Direction[3],Position[3],SourceToListener[3];
     ALfloat InnerAngle,OuterAngle,Angle,Distance,ClampedDist;
-    ALfloat Direction[3],Position[3],SourceToListener[3];
-    ALfloat Velocity[3],ListenerVel[3];
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
     ALfloat DopplerFactor, SpeedOfSound;
@@ -465,11 +469,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     Frequency     = Device->Frequency;
 
     /* Get listener properties */
-    ListenerGain   = ALContext->Listener->Gain;
-    MetersPerUnit  = ALContext->Listener->MetersPerUnit;
-    ListenerVel[0] = ALContext->Listener->Velocity[0];
-    ListenerVel[1] = ALContext->Listener->Velocity[1];
-    ListenerVel[2] = ALContext->Listener->Velocity[2];
+    ListenerGain  = ALContext->Listener->Gain;
+    MetersPerUnit = ALContext->Listener->MetersPerUnit;
 
     /* Get source properties */
     SourceVolume   = ALSource->Gain;
@@ -545,14 +546,10 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         aluMatrixVector(Position, 1.0f, Matrix);
         aluMatrixVector(Direction, 0.0f, Matrix);
         aluMatrixVector(Velocity, 0.0f, Matrix);
-        /* Transform listener velocity */
-        aluMatrixVector(ListenerVel, 0.0f, Matrix);
     }
     else
     {
-        ALfloat (*RESTRICT Matrix)[4] = ALContext->Listener->Params.Matrix;
-        /* Transform listener velocity from world space to listener space */
-        aluMatrixVector(ListenerVel, 0.0f, Matrix);
+        const ALfloat *ListenerVel = ALContext->Listener->Params.Velocity;
         /* Offset the source velocity to be relative of the listener velocity */
         Velocity[0] += ListenerVel[0];
         Velocity[1] += ListenerVel[1];
@@ -712,6 +709,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     /* Calculate velocity-based doppler effect */
     if(DopplerFactor > 0.0f)
     {
+        const ALfloat *ListenerVel = ALContext->Listener->Params.Velocity;
         ALfloat VSS, VLS;
 
         if(SpeedOfSound < 1.0f)

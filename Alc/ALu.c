@@ -117,6 +117,49 @@ static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[
 }
 
 
+static ALvoid CalcListenerParams(ALlistener *Listener)
+{
+    ALfloat N[3], V[3], U[3], P[3];
+
+    /* AT then UP */
+    N[0] = Listener->Forward[0];
+    N[1] = Listener->Forward[1];
+    N[2] = Listener->Forward[2];
+    aluNormalize(N);
+    V[0] = Listener->Up[0];
+    V[1] = Listener->Up[1];
+    V[2] = Listener->Up[1];
+    aluNormalize(V);
+    /* Build and normalize right-vector */
+    aluCrossproduct(N, V, U);
+    aluNormalize(U);
+
+    Listener->Params.Matrix[0][0] =  U[0];
+    Listener->Params.Matrix[0][1] =  V[0];
+    Listener->Params.Matrix[0][2] = -N[0];
+    Listener->Params.Matrix[0][3] =  0.0f;
+    Listener->Params.Matrix[1][0] =  U[1];
+    Listener->Params.Matrix[1][1] =  V[1];
+    Listener->Params.Matrix[1][2] = -N[1];
+    Listener->Params.Matrix[1][3] =  0.0f;
+    Listener->Params.Matrix[2][0] =  U[2];
+    Listener->Params.Matrix[2][1] =  V[2];
+    Listener->Params.Matrix[2][2] = -N[2];
+    Listener->Params.Matrix[2][3] =  0.0f;
+    Listener->Params.Matrix[3][0] =  0.0f;
+    Listener->Params.Matrix[3][1] =  0.0f;
+    Listener->Params.Matrix[3][2] =  0.0f;
+    Listener->Params.Matrix[3][3] =  1.0f;
+
+    P[0] = Listener->Position[0];
+    P[1] = Listener->Position[1];
+    P[2] = Listener->Position[2];
+    aluMatrixVector(P, 1.0f, Listener->Params.Matrix);
+    Listener->Params.Matrix[3][0] = -P[0];
+    Listener->Params.Matrix[3][1] = -P[1];
+    Listener->Params.Matrix[3][2] = -P[2];
+}
+
 ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f } };
@@ -503,11 +546,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     /* Transform source to listener space (convert to head relative) */
     if(ALSource->HeadRelative == AL_FALSE)
     {
-        /* Translate position */
-        Position[0] -= ALContext->Listener->Position[0];
-        Position[1] -= ALContext->Listener->Position[1];
-        Position[2] -= ALContext->Listener->Position[2];
-
         /* Transform source vectors */
         aluMatrixVector(Position, 1.0f, Matrix);
         aluMatrixVector(Direction, 0.0f, Matrix);
@@ -911,39 +949,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 UpdateSources = ExchangeInt(&ctx->UpdateSources, AL_FALSE);
 
             if(UpdateSources)
-            {
-                ALlistener *listener = ctx->Listener;
-                ALfloat N[3], V[3], U[3];
-                /* AT then UP */
-                N[0] = listener->Forward[0];
-                N[1] = listener->Forward[1];
-                N[2] = listener->Forward[2];
-                aluNormalize(N);
-                V[0] = listener->Up[0];
-                V[1] = listener->Up[1];
-                V[2] = listener->Up[1];
-                aluNormalize(V);
-                /* Build and normalize right-vector */
-                aluCrossproduct(N, V, U);
-                aluNormalize(U);
-
-                listener->Params.Matrix[0][0] =  U[0];
-                listener->Params.Matrix[0][1] =  V[0];
-                listener->Params.Matrix[0][2] = -N[0];
-                listener->Params.Matrix[0][3] =  0.0f;
-                listener->Params.Matrix[1][0] =  U[1];
-                listener->Params.Matrix[1][1] =  V[1];
-                listener->Params.Matrix[1][2] = -N[1];
-                listener->Params.Matrix[1][3] =  0.0f;
-                listener->Params.Matrix[2][0] =  U[2];
-                listener->Params.Matrix[2][1] =  V[2];
-                listener->Params.Matrix[2][2] = -N[2];
-                listener->Params.Matrix[2][3] =  0.0f;
-                listener->Params.Matrix[3][0] =  0.0f;
-                listener->Params.Matrix[3][1] =  0.0f;
-                listener->Params.Matrix[3][2] =  0.0f;
-                listener->Params.Matrix[3][3] =  1.0f;
-            }
+                CalcListenerParams(ctx->Listener);
 
             /* source processing */
             src = ctx->ActiveSources;

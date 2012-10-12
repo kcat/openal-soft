@@ -105,7 +105,7 @@ static WetMixerFunc SelectSendMixer(void)
 }
 
 
-static __inline ALvoid aluMatrixVector(ALfloat *vector,ALfloat w,ALfloat matrix[4][4])
+static __inline ALvoid aluMatrixVector(ALfloat *vector, ALfloat w, ALfloat (*RESTRICT matrix)[4])
 {
     ALfloat temp[4] = {
         vector[0], vector[1], vector[2], w
@@ -448,7 +448,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALboolean WetGainAuto;
     ALboolean WetGainHFAuto;
     enum Resampler Resampler;
-    ALfloat Matrix[4][4];
     ALfloat Pitch;
     ALuint Frequency;
     ALint NumSends;
@@ -471,11 +470,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ListenerVel[0] = ALContext->Listener->Velocity[0];
     ListenerVel[1] = ALContext->Listener->Velocity[1];
     ListenerVel[2] = ALContext->Listener->Velocity[2];
-    for(i = 0;i < 4;i++)
-    {
-        for(j = 0;j < 4;j++)
-            Matrix[i][j] = ALContext->Listener->Params.Matrix[i][j];
-    }
 
     /* Get source properties */
     SourceVolume   = ALSource->Gain;
@@ -546,6 +540,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     /* Transform source to listener space (convert to head relative) */
     if(ALSource->HeadRelative == AL_FALSE)
     {
+        ALfloat (*RESTRICT Matrix)[4] = ALContext->Listener->Params.Matrix;
         /* Transform source vectors */
         aluMatrixVector(Position, 1.0f, Matrix);
         aluMatrixVector(Direction, 0.0f, Matrix);
@@ -555,6 +550,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
     else
     {
+        ALfloat (*RESTRICT Matrix)[4] = ALContext->Listener->Params.Matrix;
         /* Transform listener velocity from world space to listener space */
         aluMatrixVector(ListenerVel, 0.0f, Matrix);
         /* Offset the source velocity to be relative of the listener velocity */

@@ -1820,6 +1820,8 @@ static ALvoid InitContext(ALCcontext *Context)
         for(j = 0;j < 4;j++)
             Context->Listener->Params.Matrix[i][j] = ((i==j) ? 1.0f : 0.0f);
     }
+    for(i = 0;i < 3;i++)
+        Context->Listener->Params.Velocity[i] = 0.0f;
 
     //Validate Context
     Context->LastError = AL_NO_ERROR;

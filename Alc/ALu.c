@@ -732,7 +732,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         /* Use a binaural HRTF algorithm for stereo headphone playback */
         ALfloat delta, ev = 0.0f, az = 0.0f;
 
-        if(Distance > 0.0f)
+        if(Distance > FLT_EPSILON)
         {
             ALfloat invlen = 1.0f/Distance;
             Position[0] *= invlen;
@@ -797,7 +797,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
 
         /* Normalize the length, and compute panned gains. */
-        if(Distance > 0.0f)
+        if(Distance > FLT_EPSILON)
         {
             ALfloat invlen = 1.0f/Distance;
             Position[0] *= invlen;

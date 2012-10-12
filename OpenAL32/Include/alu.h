@@ -16,6 +16,11 @@
 #define F_PI    (3.14159265358979323846f)  /* pi */
 #define F_PI_2  (1.57079632679489661923f)  /* pi/2 */
 
+#ifndef FLT_EPSILON
+#define FLT_EPSILON (1.19209290e-07f)
+#endif
+
+
 #ifndef HAVE_POWF
 static __inline float powf(float x, float y)
 { return (float)pow(x, y); }

@@ -393,18 +393,16 @@ struct Hrtf;
 // Find the next power-of-2 for non-power-of-2 numbers.
 static __inline ALuint NextPowerOf2(ALuint value)
 {
-    ALuint powerOf2 = 1;
-
-    if(value)
+    if(value > 0)
     {
         value--;
-        while(value)
-        {
-            value >>= 1;
-            powerOf2 <<= 1;
-        }
+        value |= value>>1;
+        value |= value>>2;
+        value |= value>>4;
+        value |= value>>8;
+        value |= value>>16;
     }
-    return powerOf2;
+    return value+1;
 }
 
 /* Fast float-to-int conversion. Assumes the FPU is already in round-to-zero

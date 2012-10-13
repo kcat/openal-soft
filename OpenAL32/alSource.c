@@ -953,7 +953,6 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
     ALCcontext_DecRef(Context);
 }
 
-
 AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
 {
     ALCcontext *Context;
@@ -982,7 +981,6 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
 
     ALCcontext_DecRef(Context);
 }
-
 
 AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat *values)
 {
@@ -1019,6 +1017,128 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
         case AL_VELOCITY:
         case AL_DIRECTION:
             SetSourcefv(Source, Context, param, values);
+            break;
+
+        default:
+            alSetError(Context, AL_INVALID_ENUM);
+    }
+
+    ALCcontext_DecRef(Context);
+}
+
+
+AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble value)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+    ALfloat    fval;
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    if((Source=LookupSource(Context, source)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else switch(param)
+    {
+        case AL_PITCH:
+        case AL_CONE_INNER_ANGLE:
+        case AL_CONE_OUTER_ANGLE:
+        case AL_GAIN:
+        case AL_MAX_DISTANCE:
+        case AL_ROLLOFF_FACTOR:
+        case AL_REFERENCE_DISTANCE:
+        case AL_MIN_GAIN:
+        case AL_MAX_GAIN:
+        case AL_CONE_OUTER_GAIN:
+        case AL_CONE_OUTER_GAINHF:
+        case AL_AIR_ABSORPTION_FACTOR:
+        case AL_ROOM_ROLLOFF_FACTOR:
+        case AL_DOPPLER_FACTOR:
+        case AL_SEC_OFFSET:
+        case AL_SAMPLE_OFFSET:
+        case AL_BYTE_OFFSET:
+            fval = value;
+            SetSourcefv(Source, Context, param, &fval);
+            break;
+
+        default:
+            alSetError(Context, AL_INVALID_ENUM);
+    }
+
+    ALCcontext_DecRef(Context);
+}
+
+AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+    ALfloat    fvals[3];
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    if((Source=LookupSource(Context, source)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else switch(param)
+    {
+        case AL_POSITION:
+        case AL_VELOCITY:
+        case AL_DIRECTION:
+            fvals[0] = value1;
+            fvals[1] = value2;
+            fvals[2] = value3;
+            SetSourcefv(Source, Context, param, fvals);
+            break;
+
+        default:
+            alSetError(Context, AL_INVALID_ENUM);
+    }
+
+    ALCcontext_DecRef(Context);
+}
+
+AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdouble *values)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+    ALfloat    fvals[3];
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    if((Source=LookupSource(Context, source)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else if(!values)
+        alSetError(Context, AL_INVALID_VALUE);
+    else switch(param)
+    {
+        case AL_PITCH:
+        case AL_CONE_INNER_ANGLE:
+        case AL_CONE_OUTER_ANGLE:
+        case AL_GAIN:
+        case AL_MAX_DISTANCE:
+        case AL_ROLLOFF_FACTOR:
+        case AL_REFERENCE_DISTANCE:
+        case AL_MIN_GAIN:
+        case AL_MAX_GAIN:
+        case AL_CONE_OUTER_GAIN:
+        case AL_CONE_OUTER_GAINHF:
+        case AL_SEC_OFFSET:
+        case AL_SAMPLE_OFFSET:
+        case AL_BYTE_OFFSET:
+        case AL_AIR_ABSORPTION_FACTOR:
+        case AL_ROOM_ROLLOFF_FACTOR:
+            fvals[0] = values[0];
+            SetSourcefv(Source, Context, param, fvals);
+            break;
+
+        case AL_POSITION:
+        case AL_VELOCITY:
+        case AL_DIRECTION:
+            fvals[0] = values[0];
+            fvals[1] = values[1];
+            fvals[2] = values[2];
+            SetSourcefv(Source, Context, param, fvals);
             break;
 
         default:
@@ -1069,7 +1189,6 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
     ALCcontext_DecRef(Context);
 }
 
-
 AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3)
 {
     ALCcontext *Context;
@@ -1099,7 +1218,6 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
 
     ALCcontext_DecRef(Context);
 }
-
 
 AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *values)
 {
@@ -1139,6 +1257,133 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
         case AL_DIRECTION:
         case AL_AUXILIARY_SEND_FILTER:
             SetSourceiv(Source, Context, param, values);
+            break;
+
+        default:
+            alSetError(Context, AL_INVALID_ENUM);
+    }
+
+    ALCcontext_DecRef(Context);
+}
+
+
+AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT value)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+    ALint      ival;
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    if((Source=LookupSource(Context, source)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else switch(param)
+    {
+        case AL_MAX_DISTANCE:
+        case AL_ROLLOFF_FACTOR:
+        case AL_CONE_INNER_ANGLE:
+        case AL_CONE_OUTER_ANGLE:
+        case AL_REFERENCE_DISTANCE:
+        case AL_SOURCE_RELATIVE:
+        case AL_LOOPING:
+        case AL_BUFFER:
+        case AL_SOURCE_STATE:
+        case AL_SEC_OFFSET:
+        case AL_SAMPLE_OFFSET:
+        case AL_BYTE_OFFSET:
+        case AL_DIRECT_FILTER:
+        case AL_DIRECT_FILTER_GAINHF_AUTO:
+        case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
+        case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
+        case AL_DIRECT_CHANNELS_SOFT:
+        case AL_DISTANCE_MODEL:
+            ival = value;
+            SetSourceiv(Source, Context, param, &ival);
+            break;
+
+        default:
+            alSetError(Context, AL_INVALID_ENUM);
+    }
+
+    ALCcontext_DecRef(Context);
+}
+
+AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+    ALint      ivals[3];
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    if((Source=LookupSource(Context, source)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else switch(param)
+    {
+        case AL_POSITION:
+        case AL_VELOCITY:
+        case AL_DIRECTION:
+        case AL_AUXILIARY_SEND_FILTER:
+            ivals[0] = value1;
+            ivals[1] = value2;
+            ivals[2] = value3;
+            SetSourceiv(Source, Context, param, ivals);
+            break;
+
+        default:
+            alSetError(Context, AL_INVALID_ENUM);
+    }
+
+    ALCcontext_DecRef(Context);
+}
+
+AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALint64SOFT *values)
+{
+    ALCcontext *Context;
+    ALsource   *Source;
+    ALint      ivals[3];
+
+    Context = GetContextRef();
+    if(!Context) return;
+
+    if((Source=LookupSource(Context, source)) == NULL)
+        alSetError(Context, AL_INVALID_NAME);
+    else if(!values)
+        alSetError(Context, AL_INVALID_VALUE);
+    else switch(param)
+    {
+        case AL_SOURCE_RELATIVE:
+        case AL_CONE_INNER_ANGLE:
+        case AL_CONE_OUTER_ANGLE:
+        case AL_LOOPING:
+        case AL_BUFFER:
+        case AL_SOURCE_STATE:
+        case AL_SEC_OFFSET:
+        case AL_SAMPLE_OFFSET:
+        case AL_BYTE_OFFSET:
+        case AL_MAX_DISTANCE:
+        case AL_ROLLOFF_FACTOR:
+        case AL_REFERENCE_DISTANCE:
+        case AL_DIRECT_FILTER:
+        case AL_DIRECT_FILTER_GAINHF_AUTO:
+        case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
+        case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
+        case AL_DISTANCE_MODEL:
+        case AL_DIRECT_CHANNELS_SOFT:
+            ivals[0] = values[0];
+            SetSourceiv(Source, Context, param, ivals);
+            break;
+
+        case AL_POSITION:
+        case AL_VELOCITY:
+        case AL_DIRECTION:
+        case AL_AUXILIARY_SEND_FILTER:
+            ivals[0] = values[0];
+            ivals[1] = values[1];
+            ivals[2] = values[2];
+            SetSourceiv(Source, Context, param, ivals);
             break;
 
         default:

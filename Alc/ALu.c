@@ -128,7 +128,7 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     aluNormalize(N);
     V[0] = Listener->Up[0];
     V[1] = Listener->Up[1];
-    V[2] = Listener->Up[1];
+    V[2] = Listener->Up[2];
     aluNormalize(V);
     /* Build and normalize right-vector */
     aluCrossproduct(N, V, U);

@@ -352,7 +352,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 enum Channel chan = Device->Speaker2Chan[i];
                 if(chan == chans[c].channel)
                 {
-                    SrcMatrix[c][chan] += DryGain;
+                    SrcMatrix[c][chan] = DryGain;
                     break;
                 }
             }

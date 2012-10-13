@@ -1831,7 +1831,7 @@ static ALvoid InitContext(ALCcontext *Context)
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
 
     //Set globals
-    Context->DistanceModel = AL_INVERSE_DISTANCE_CLAMPED;
+    Context->DistanceModel = DefaultDistanceModel;
     Context->SourceDistanceModel = AL_FALSE;
     Context->DopplerFactor = 1.0f;
     Context->DopplerVelocity = 1.0f;

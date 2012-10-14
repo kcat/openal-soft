@@ -833,7 +833,9 @@ ENDIF()
 
 IF(EXAMPLES)
     IF(FFMPEG_FOUND)
-        ADD_EXECUTABLE(alstream examples/alhelpers.c examples/alffmpeg.c examples/alstream.c)
+        ADD_EXECUTABLE(alstream examples/common/alhelpers.c
+                                examples/common/alffmpeg.c
+                                examples/alstream.c)
         TARGET_LINK_LIBRARIES(alstream ${FFMPEG_LIBRARIES} ${LIBNAME})
         SET_TARGET_PROPERTIES(alstream PROPERTIES COMPILE_FLAGS "${FFMPEG_CFLAGS}")
         INSTALL(TARGETS alstream

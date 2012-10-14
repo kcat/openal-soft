@@ -34,8 +34,8 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "alhelpers.h"
-#include "alffmpeg.h"
+#include "common/alhelpers.h"
+#include "common/alffmpeg.h"
 
 
 LPALBUFFERSAMPLESSOFT palBufferSamplesSOFT = wrap_BufferSamples;

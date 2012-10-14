@@ -33,9 +33,9 @@ void MixDirect_Hrtf(ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = Device->DryBuffer;
-    ALfloat *RESTRICT ClickRemoval = Device->ClickRemoval;
-    ALfloat *RESTRICT PendingClicks = Device->PendingClicks;
+    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = params->OutBuffer;
+    ALfloat *RESTRICT ClickRemoval = params->ClickRemoval;
+    ALfloat *RESTRICT PendingClicks = params->PendingClicks;
     const ALuint IrSize = params->Hrtf.IrSize;
     const ALint *RESTRICT DelayStep = params->Hrtf.DelayStep;
     ALfloat (*RESTRICT CoeffStep)[2] = params->Hrtf.CoeffStep;
@@ -50,6 +50,7 @@ void MixDirect_Hrtf(ALCdevice *Device, DirectParams *params,
     ALfloat left, right;
     ALuint pos;
     ALuint c;
+    (void)Device;
 
     pos = 0;
     for(c = 0;c < IrSize;c++)

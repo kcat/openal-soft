@@ -403,6 +403,10 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                               SrcMatrix[c]);
         }
     }
+
+    ALSource->Params.Direct.OutBuffer = Device->DryBuffer;
+    ALSource->Params.Direct.ClickRemoval = Device->ClickRemoval;
+    ALSource->Params.Direct.PendingClicks = Device->PendingClicks;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
@@ -432,7 +436,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
 ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
-    const ALCdevice *Device = ALContext->Device;
+    ALCdevice *Device = ALContext->Device;
     ALfloat Velocity[3],Direction[3],Position[3],SourceToListener[3];
     ALfloat InnerAngle,OuterAngle,Angle,Distance,ClampedDist;
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
@@ -500,6 +504,10 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     WetGainAuto     = ALSource->WetGainAuto;
     WetGainHFAuto   = ALSource->WetGainHFAuto;
     RoomRolloffBase = ALSource->RoomRolloffFactor;
+
+    ALSource->Params.Direct.OutBuffer = Device->DryBuffer;
+    ALSource->Params.Direct.ClickRemoval = Device->ClickRemoval;
+    ALSource->Params.Direct.PendingClicks = Device->PendingClicks;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;

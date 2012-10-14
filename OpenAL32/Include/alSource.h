@@ -47,6 +47,10 @@ typedef struct HrtfParams {
 } HrtfParams;
 
 typedef struct DirectParams {
+    ALfloat (*OutBuffer)[BUFFERSIZE];
+    ALfloat *ClickRemoval;
+    ALfloat *PendingClicks;
+
     HrtfParams Hrtf;
     HrtfState *hrtfState;
 

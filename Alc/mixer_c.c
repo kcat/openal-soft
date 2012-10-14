@@ -87,12 +87,13 @@ void MixDirect_C(ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = Device->DryBuffer;
-    ALfloat *RESTRICT ClickRemoval = Device->ClickRemoval;
-    ALfloat *RESTRICT PendingClicks = Device->PendingClicks;
+    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = params->OutBuffer;
+    ALfloat *RESTRICT ClickRemoval = params->ClickRemoval;
+    ALfloat *RESTRICT PendingClicks = params->PendingClicks;
     ALfloat DrySend;
     ALuint pos;
     ALuint c;
+    (void)Device;
 
     for(c = 0;c < MaxChannels;c++)
     {

@@ -43,10 +43,12 @@ typedef struct HrtfParams {
     ALIGN(16) ALfloat CoeffStep[HRIR_LENGTH][2];
     ALuint Delay[MaxChannels][2];
     ALint DelayStep[2];
+    ALuint IrSize;
 } HrtfParams;
 
 typedef struct DirectParams {
     HrtfParams Hrtf;
+    HrtfState *hrtfState;
 
     /* A mixing matrix. First subscript is the channel number of the input data
      * (regardless of channel configuration) and the second is the channel

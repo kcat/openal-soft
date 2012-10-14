@@ -36,20 +36,21 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
     ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = Device->DryBuffer;
     ALfloat *RESTRICT ClickRemoval = Device->ClickRemoval;
     ALfloat *RESTRICT PendingClicks = Device->PendingClicks;
-    const ALuint IrSize = GetHrtfIrSize(Device->Hrtf);
+    const ALuint IrSize = params->Hrtf.IrSize;
     const ALint *RESTRICT DelayStep = params->Hrtf.DelayStep;
     ALfloat (*RESTRICT CoeffStep)[2] = params->Hrtf.CoeffStep;
     ALfloat (*RESTRICT TargetCoeffs)[2] = params->Hrtf.Coeffs[srcchan];
     ALuint *RESTRICT TargetDelay = params->Hrtf.Delay[srcchan];
-    ALfloat *RESTRICT History = Source->Hrtf.History[srcchan];
-    ALfloat (*RESTRICT Values)[2] = Source->Hrtf.Values[srcchan];
-    ALint Counter = maxu(Source->Hrtf.Counter, OutPos) - OutPos;
-    ALuint Offset = Source->Hrtf.Offset + OutPos;
+    ALfloat *RESTRICT History = params->hrtfState->History[srcchan];
+    ALfloat (*RESTRICT Values)[2] = params->hrtfState->Values[srcchan];
+    ALint Counter = maxu(params->hrtfState->Counter, OutPos) - OutPos;
+    ALuint Offset = params->hrtfState->Offset + OutPos;
     ALIGN(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALuint Delay[2];
     ALfloat left, right;
     ALuint pos;
     ALuint c;
+    (void)Source;
 
     pos = 0;
     for(c = 0;c < IrSize;c++)

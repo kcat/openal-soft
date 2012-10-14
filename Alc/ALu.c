@@ -384,6 +384,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             }
         }
         ALSource->Hrtf.Counter = 0;
+        ALSource->Params.Direct.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
+
+        ALSource->Params.Direct.hrtfState = &ALSource->Hrtf;
     }
     else
     {
@@ -815,6 +818,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             ALSource->Params.Direct.Hrtf.Dir[1] = Position[1];
             ALSource->Params.Direct.Hrtf.Dir[2] = Position[2];
         }
+        ALSource->Params.Direct.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
+
+        ALSource->Params.Direct.hrtfState = &ALSource->Hrtf;
     }
     else
     {

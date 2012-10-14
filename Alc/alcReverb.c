@@ -156,6 +156,10 @@ typedef struct ALverbState {
     // The gain for each output channel (non-EAX path only; aliased from
     // Late.PanGain)
     ALfloat *Gain;
+
+    /* Temporary storage used when processing, before deinterlacing. */
+    ALfloat ReverbSamples[BUFFERSIZE][4];
+    ALfloat EarlySamples[BUFFERSIZE][4];
 } ALverbState;
 
 /* This is a user config option for modifying the overall output of the reverb
@@ -554,18 +558,21 @@ static __inline ALvoid EAXVerbPass(ALverbState *State, ALfloat in, ALfloat *REST
 static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALverbState *State = (ALverbState*)effect;
+    ALfloat (*RESTRICT out)[4] = State->ReverbSamples;
     ALuint index, c;
-    ALfloat out[4];
-    const ALfloat *panGain = State->Gain;
 
+    /* Process reverb for these samples. */
     for(index = 0;index < SamplesToDo;index++)
-    {
-        // Process reverb for this sample.
-        VerbPass(State, SamplesIn[index], out);
+        VerbPass(State, SamplesIn[index], out[index]);
 
-        // Output the results.
-        for(c = 0;c < MaxChannels;c++)
-            SamplesOut[c][index] += panGain[c] * out[c&3];
+    for(c = 0;c < MaxChannels;c++)
+    {
+        ALfloat gain = State->Gain[c];
+        if(gain > 0.00001f)
+        {
+            for(index = 0;index < SamplesToDo;index++)
+                SamplesOut[c][index] += gain * out[index][c&3];
+        }
     }
 }
 
@@ -574,17 +581,29 @@ static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALflo
 static ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALverbState *State = (ALverbState*)effect;
+    ALfloat (*RESTRICT early)[4] = State->EarlySamples;
+    ALfloat (*RESTRICT late)[4] = State->ReverbSamples;
     ALuint index, c;
-    ALfloat early[4], late[4];
 
+    /* Process reverb for these samples. */
     for(index = 0;index < SamplesToDo;index++)
-    {
-        // Process reverb for this sample.
-        EAXVerbPass(State, SamplesIn[index], early, late);
+        EAXVerbPass(State, SamplesIn[index], early[index], late[index]);
 
-        for(c = 0;c < MaxChannels;c++)
-            SamplesOut[c][index] += State->Early.PanGain[c]*early[c&3] +
-                                    State->Late.PanGain[c]*late[c&3];
+    for(c = 0;c < MaxChannels;c++)
+    {
+        ALfloat earlyGain = State->Early.PanGain[c];
+        ALfloat lateGain = State->Late.PanGain[c];
+
+        if(earlyGain > 0.00001f)
+        {
+            for(index = 0;index < SamplesToDo;index++)
+                SamplesOut[c][index] += earlyGain*early[index][c&3];
+        }
+        if(lateGain > 0.00001f)
+        {
+            for(index = 0;index < SamplesToDo;index++)
+                SamplesOut[c][index] += lateGain*late[index][c&3];
+        }
     }
 }
 

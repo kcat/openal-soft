@@ -29,7 +29,7 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                  ALfloat left, ALfloat right);
 
 
-void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
+void MixDirect_Hrtf(ALCdevice *Device, DirectParams *params,
   const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
@@ -50,7 +50,6 @@ void MixDirect_Hrtf(ALsource *Source, ALCdevice *Device, DirectParams *params,
     ALfloat left, right;
     ALuint pos;
     ALuint c;
-    (void)Source;
 
     pos = 0;
     for(c = 0;c < IrSize;c++)

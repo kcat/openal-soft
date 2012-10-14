@@ -1271,7 +1271,6 @@ AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SO
 {
     ALCcontext *Context;
     ALsource   *Source;
-    ALint      ival;
 
     Context = GetContextRef();
     if(!Context) return;
@@ -1287,19 +1286,33 @@ AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SO
         case AL_REFERENCE_DISTANCE:
         case AL_SOURCE_RELATIVE:
         case AL_LOOPING:
-        case AL_BUFFER:
         case AL_SOURCE_STATE:
         case AL_SEC_OFFSET:
         case AL_SAMPLE_OFFSET:
         case AL_BYTE_OFFSET:
-        case AL_DIRECT_FILTER:
         case AL_DIRECT_FILTER_GAINHF_AUTO:
         case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
         case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
         case AL_DIRECT_CHANNELS_SOFT:
         case AL_DISTANCE_MODEL:
-            ival = value;
-            SetSourceiv(Source, Context, param, &ival);
+            if(!(value <= INT_MAX && value >= INT_MIN))
+                alSetError(Context, AL_INVALID_VALUE);
+            else
+            {
+                ALint ival = value;
+                SetSourceiv(Source, Context, param, &ival);
+            }
+            break;
+
+        case AL_BUFFER:
+        case AL_DIRECT_FILTER:
+            if(!(value <= UINT_MAX && value >= 0))
+                alSetError(Context, AL_INVALID_VALUE);
+            else
+            {
+                ALint ival = value;
+                SetSourceiv(Source, Context, param, &ival);
+            }
             break;
 
         default:
@@ -1313,7 +1326,6 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
 {
     ALCcontext *Context;
     ALsource   *Source;
-    ALint      ivals[3];
 
     Context = GetContextRef();
     if(!Context) return;
@@ -1325,11 +1337,27 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
+            if(!(value1 <= INT_MAX && value1 >= INT_MIN &&
+                 value2 <= INT_MAX && value2 >= INT_MIN &&
+                 value3 <= INT_MAX && value3 >= INT_MIN))
+                alSetError(Context, AL_INVALID_VALUE);
+            else
+            {
+                ALint ivals[3] = { value1, value2, value3 };
+                SetSourceiv(Source, Context, param, ivals);
+            }
+            break;
+
         case AL_AUXILIARY_SEND_FILTER:
-            ivals[0] = value1;
-            ivals[1] = value2;
-            ivals[2] = value3;
-            SetSourceiv(Source, Context, param, ivals);
+            if(!(value1 <= UINT_MAX && value1 >= 0 &&
+                 value2 <= UINT_MAX && value2 >= 0 &&
+                 value3 <= UINT_MAX && value3 >= 0))
+                alSetError(Context, AL_INVALID_VALUE);
+            else
+            {
+                ALint ivals[3] = { value1, value2, value3 };
+                SetSourceiv(Source, Context, param, ivals);
+            }
             break;
 
         default:
@@ -1343,7 +1371,6 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
 {
     ALCcontext *Context;
     ALsource   *Source;
-    ALint      ivals[3];
 
     Context = GetContextRef();
     if(!Context) return;
@@ -1358,7 +1385,6 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
         case AL_CONE_INNER_ANGLE:
         case AL_CONE_OUTER_ANGLE:
         case AL_LOOPING:
-        case AL_BUFFER:
         case AL_SOURCE_STATE:
         case AL_SEC_OFFSET:
         case AL_SAMPLE_OFFSET:
@@ -1366,24 +1392,55 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
         case AL_MAX_DISTANCE:
         case AL_ROLLOFF_FACTOR:
         case AL_REFERENCE_DISTANCE:
-        case AL_DIRECT_FILTER:
         case AL_DIRECT_FILTER_GAINHF_AUTO:
         case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
         case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
         case AL_DISTANCE_MODEL:
         case AL_DIRECT_CHANNELS_SOFT:
-            ivals[0] = values[0];
-            SetSourceiv(Source, Context, param, ivals);
+            if(!(values[0] <= INT_MAX && values[0] >= INT_MIN))
+                alSetError(Context, AL_INVALID_VALUE);
+            else
+            {
+                ALint ival = values[0];
+                SetSourceiv(Source, Context, param, &ival);
+            }
+            break;
+
+        case AL_BUFFER:
+        case AL_DIRECT_FILTER:
+            if(!(values[0] <= UINT_MAX && values[0] >= 0))
+                alSetError(Context, AL_INVALID_VALUE);
+            else
+            {
+                ALint ival = values[0];
+                SetSourceiv(Source, Context, param, &ival);
+            }
             break;
 
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
+            if(!(values[0] <= INT_MAX && values[0] >= INT_MIN &&
+                 values[1] <= INT_MAX && values[1] >= INT_MIN &&
+                 values[2] <= INT_MAX && values[2] >= INT_MIN))
+                alSetError(Context, AL_INVALID_VALUE);
+            else
+            {
+                ALint ivals[3] = { values[0], values[1], values[2] };
+                SetSourceiv(Source, Context, param, ivals);
+            }
+            break;
+
         case AL_AUXILIARY_SEND_FILTER:
-            ivals[0] = values[0];
-            ivals[1] = values[1];
-            ivals[2] = values[2];
-            SetSourceiv(Source, Context, param, ivals);
+            if(!(values[0] <= UINT_MAX && values[0] >= 0 &&
+                 values[1] <= UINT_MAX && values[1] >= 0 &&
+                 values[2] <= UINT_MAX && values[2] >= 0))
+                alSetError(Context, AL_INVALID_VALUE);
+            else
+            {
+                ALint ivals[3] = { values[0], values[1], values[2] };
+                SetSourceiv(Source, Context, param, ivals);
+            }
             break;
 
         default:

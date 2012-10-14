@@ -88,7 +88,7 @@ struct SendParams;
 typedef void (*ResamplerFunc)(const ALfloat *src, ALuint frac, ALuint increment,
                               ALfloat *RESTRICT dst, ALuint dstlen);
 
-typedef ALvoid (*DryMixerFunc)(ALCdevice *Device, struct DirectParams *params,
+typedef ALvoid (*DryMixerFunc)(struct DirectParams *params,
                                const ALfloat *RESTRICT data, ALuint srcchan,
                                ALuint OutPos, ALuint SamplesToDo,
                                ALuint BufferSize);

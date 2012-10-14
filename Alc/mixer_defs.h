@@ -16,16 +16,16 @@ void Resample_cubic32_C(const ALfloat *src, ALuint frac, ALuint increment, ALflo
 
 
 /* C mixers */
-void MixDirect_Hrtf_C(ALCdevice*,struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);
-void MixDirect_C(ALCdevice*,struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);
+void MixDirect_Hrtf_C(struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);
+void MixDirect_C(struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);
 void MixSend_C(struct SendParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint);
 
 /* SSE mixers */
-void MixDirect_Hrtf_SSE(ALCdevice*,struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);
-void MixDirect_SSE(ALCdevice*,struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);
+void MixDirect_Hrtf_SSE(struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);
+void MixDirect_SSE(struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);
 void MixSend_SSE(struct SendParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint);
 
 /* Neon mixers */
-void MixDirect_Hrtf_Neon(ALCdevice*,struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);
+void MixDirect_Hrtf_Neon(struct DirectParams*,const ALfloat*RESTRICT,ALuint,ALuint,ALuint,ALuint);
 
 #endif /* MIXER_DEFS_H */

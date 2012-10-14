@@ -330,8 +330,8 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 
                 Filter2P(&directparms->iirFilter, chan, SrcData, ResampledData,
                          DstBufferSize);
-                Source->Params.DryMix(Device, directparms, SrcData, chan,
-                                      OutPos, SamplesToDo, DstBufferSize);
+                Source->Params.DryMix(directparms, SrcData, chan, OutPos,
+                                      SamplesToDo, DstBufferSize);
             }
 
             for(j = 0;j < Device->NumAuxSends;j++)

@@ -126,7 +126,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffec
     ComputeAngleGains(Device, atan2f(+lrpan, 0.0f), (1.0f-dirGain)*F_PI, gain, state->Gain[1]);
 }
 
-static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE])
+static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALechoState *state = (ALechoState*)effect;
     const ALuint mask = state->BufferLength-1;

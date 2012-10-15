@@ -17,7 +17,7 @@
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                      const ALuint IrSize,
                                      ALfloat (*RESTRICT Coeffs)[2],
-                                     ALfloat (*RESTRICT CoeffStep)[2],
+                                     const ALfloat (*RESTRICT CoeffStep)[2],
                                      ALfloat left, ALfloat right)
 {
     const __m128 lrlr = { left, right, left, right };
@@ -133,7 +133,7 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_SSE(DirectParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
+void MixDirect_SSE(const DirectParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = params->OutBuffer;
@@ -171,7 +171,7 @@ void MixDirect_SSE(DirectParams *params, const ALfloat *RESTRICT data, ALuint sr
 }
 
 
-void MixSend_SSE(SendParams *params, const ALfloat *RESTRICT data,
+void MixSend_SSE(const SendParams *params, const ALfloat *RESTRICT data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALeffectslot *Slot = params->Slot;

@@ -50,7 +50,7 @@ DECL_TEMPLATE(cubic32)
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                      const ALuint IrSize,
                                      ALfloat (*RESTRICT Coeffs)[2],
-                                     ALfloat (*RESTRICT CoeffStep)[2],
+                                     const ALfloat (*RESTRICT CoeffStep)[2],
                                      ALfloat left, ALfloat right)
 {
     ALuint c;
@@ -83,7 +83,7 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_C(DirectParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
+void MixDirect_C(const DirectParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = params->OutBuffer;
@@ -109,7 +109,7 @@ void MixDirect_C(DirectParams *params, const ALfloat *RESTRICT data, ALuint srcc
 }
 
 
-void MixSend_C(SendParams *params, const ALfloat *RESTRICT data,
+void MixSend_C(const SendParams *params, const ALfloat *RESTRICT data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALeffectslot *Slot = params->Slot;

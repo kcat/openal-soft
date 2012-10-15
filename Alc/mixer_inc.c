@@ -21,7 +21,7 @@
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                      const ALuint irSize,
                                      ALfloat (*RESTRICT Coeffs)[2],
-                                     ALfloat (*RESTRICT CoeffStep)[2],
+                                     const ALfloat (*RESTRICT CoeffStep)[2],
                                      ALfloat left, ALfloat right);
 static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                  const ALuint irSize,
@@ -29,7 +29,7 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                  ALfloat left, ALfloat right);
 
 
-void MixDirect_Hrtf(DirectParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
+void MixDirect_Hrtf(const DirectParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = params->OutBuffer;
@@ -37,9 +37,9 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *RESTRICT data, ALuint s
     ALfloat *RESTRICT PendingClicks = params->PendingClicks;
     const ALuint IrSize = params->Hrtf.IrSize;
     const ALint *RESTRICT DelayStep = params->Hrtf.DelayStep;
-    ALfloat (*RESTRICT CoeffStep)[2] = params->Hrtf.CoeffStep;
-    ALfloat (*RESTRICT TargetCoeffs)[2] = params->Hrtf.Coeffs[srcchan];
-    ALuint *RESTRICT TargetDelay = params->Hrtf.Delay[srcchan];
+    const ALfloat (*RESTRICT CoeffStep)[2] = params->Hrtf.CoeffStep;
+    const ALfloat (*RESTRICT TargetCoeffs)[2] = params->Hrtf.Coeffs[srcchan];
+    const ALuint *RESTRICT TargetDelay = params->Hrtf.Delay[srcchan];
     ALfloat *RESTRICT History = params->hrtfState->History[srcchan];
     ALfloat (*RESTRICT Values)[2] = params->hrtfState->Values[srcchan];
     ALint Counter = maxu(params->hrtfState->Counter, OutPos) - OutPos;

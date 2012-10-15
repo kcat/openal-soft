@@ -13,7 +13,7 @@
 static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
                                      const ALuint IrSize,
                                      ALfloat (*RESTRICT Coeffs)[2],
-                                     ALfloat (*RESTRICT CoeffStep)[2],
+                                     const ALfloat (*RESTRICT CoeffStep)[2],
                                      ALfloat left, ALfloat right)
 {
     ALuint c;

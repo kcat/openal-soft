@@ -51,8 +51,10 @@ typedef struct DirectParams {
     ALfloat *ClickRemoval;
     ALfloat *PendingClicks;
 
-    HrtfParams Hrtf;
-    HrtfState *hrtfState;
+    struct {
+        HrtfParams Params;
+        HrtfState *State;
+    } Hrtf;
 
     /* A mixing matrix. First subscript is the channel number of the input data
      * (regardless of channel configuration) and the second is the channel

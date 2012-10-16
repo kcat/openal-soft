@@ -1563,13 +1563,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     oldChans = device->FmtChans;
     oldType  = device->FmtType;
 
-    TRACE("Pre-reset: %s%s, %s%s, %uhz%s, %u update size x%d\n",
+    TRACE("Pre-reset: %s%s, %s%s, %s%uhz, %u update size x%d\n",
+          (device->Flags&DEVICE_CHANNELS_REQUEST)?"*":"",
           DevFmtChannelsString(device->FmtChans),
-          (device->Flags&DEVICE_CHANNELS_REQUEST)?" (requested)":"",
+          (device->Flags&DEVICE_SAMPLE_TYPE_REQUEST)?"*":"",
           DevFmtTypeString(device->FmtType),
-          (device->Flags&DEVICE_SAMPLE_TYPE_REQUEST)?" (requested)":"",
+          (device->Flags&DEVICE_FREQUENCY_REQUEST)?"*":"",
           device->Frequency,
-          (device->Flags&DEVICE_FREQUENCY_REQUEST)?" (requested)":"",
           device->UpdateSize, device->NumUpdates);
 
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)

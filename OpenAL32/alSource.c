@@ -557,6 +557,10 @@ static ALenum GetSourcedv(const ALsource *Source, ALCcontext *Context, ALenum na
 
     switch(name)
     {
+        case AL_PITCH:
+            *values = Source->Pitch;
+            break;
+
         case AL_MAX_DISTANCE:
             *values = Source->MaxDistance;
             break;
@@ -575,6 +579,18 @@ static ALenum GetSourcedv(const ALsource *Source, ALCcontext *Context, ALenum na
 
         case AL_CONE_OUTER_ANGLE:
             *values = Source->OuterAngle;
+            break;
+
+        case AL_MIN_GAIN:
+            *values = Source->MinGain;
+            break;
+
+        case AL_MAX_GAIN:
+            *values = Source->MaxGain;
+            break;
+
+        case AL_CONE_OUTER_GAIN:
+            *values = Source->OuterGain;
             break;
 
         case AL_SEC_OFFSET:

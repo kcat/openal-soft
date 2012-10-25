@@ -71,39 +71,6 @@
 /* Define if we have the lrintf function */
 #cmakedefine HAVE_LRINTF
 
-/* Define if we have the powf function */
-#cmakedefine HAVE_POWF
-
-/* Define if we have the sqrtf function */
-#cmakedefine HAVE_SQRTF
-
-/* Define if we have the cosf function */
-#cmakedefine HAVE_COSF
-
-/* Define if we have the sinf function */
-#cmakedefine HAVE_SINF
-
-/* Define if we have the acosf function */
-#cmakedefine HAVE_ACOSF
-
-/* Define if we have the asinf function */
-#cmakedefine HAVE_ASINF
-
-/* Define if we have the atanf function */
-#cmakedefine HAVE_ATANF
-
-/* Define if we have the atan2f function */
-#cmakedefine HAVE_ATAN2F
-
-/* Define if we have the fabsf function */
-#cmakedefine HAVE_FABSF
-
-/* Define if we have the log10f function */
-#cmakedefine HAVE_LOG10F
-
-/* Define if we have the floorf function */
-#cmakedefine HAVE_FLOORF
-
 /* Define if we have the strtof function */
 #cmakedefine HAVE_STRTOF
 

@@ -12,7 +12,7 @@ typedef struct ALeffectState {
     ALvoid (*Destroy)(struct ALeffectState *State);
     ALboolean (*DeviceUpdate)(struct ALeffectState *State, ALCdevice *Device);
     ALvoid (*Update)(struct ALeffectState *State, ALCdevice *Device, const struct ALeffectslot *Slot);
-    ALvoid (*Process)(struct ALeffectState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE]);
+    ALvoid (*Process)(struct ALeffectState *State, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE]);
 } ALeffectState;
 
 

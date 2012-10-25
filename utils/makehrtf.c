@@ -1273,8 +1273,8 @@ static int ReadWaveData (FILE * fp, const SourceRefT * src, const ByteOrderT ord
 // Read the RIFF/RIFX WAVE list or data chunk, converting all elements to
 // doubles.
 static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT order, const size_t n, double * hrir) {
-  uint4 fourCC, chunkSize, listSize;
-  size_t block, skip, count, offset, i;
+  uint4 fourCC, chunkSize, listSize, count;
+  size_t block, skip, offset, i;
   double lastSample;
 
   for (;;) {
@@ -1605,7 +1605,8 @@ static void ReconstructHrirs (const HrirDataT * hData) {
  * HRIRs that bound the coordinate along with a factor for calculating the
  * continous HRIR using interpolation.
  */
-static void CalcAzIndices (const HrirDataT * hData, const uint ei, const double az, uint * j0, uint * j1, double * jf) {
+static void CalcAzIndices(const HrirDataT *hData, const uint ei, const double az, size_t *j0, size_t *j1, double *jf)
+{
   double af;
   uint ai;
 
@@ -1819,7 +1820,7 @@ static int StoreTable (const HrirDataT * hData, const char * filename) {
   n = hData -> mIrPoints;
   snprintf (text, 128, "};\n\n"
                        "/* HRIR Coefficients */\n"
-                       "static const ALshort defaultCoeffs[%u] =\n{\n", hData -> mIrCount * n);
+                       "static const ALshort defaultCoeffs[%zu] =\n{\n", hData -> mIrCount * n);
   if (! WriteAscii (text, fp, filename))
      return (0);
   srand (0x31DF840C);
@@ -1852,7 +1853,7 @@ static int StoreTable (const HrirDataT * hData, const char * filename) {
                     "/* Default HRTF Definition */\n", fp, filename))
      return (0);
   snprintf (text, 128, "static const struct Hrtf DefaultHrtf = {\n"
-                       "    %u, %u, %u, defaultAzCount, defaultEvOffset,\n",
+                       "    %u, %zu, %u, defaultAzCount, defaultEvOffset,\n",
                        hData -> mIrRate, hData -> mIrPoints, hData -> mEvCount);
   if (! WriteAscii (text, fp, filename))
      return (0);

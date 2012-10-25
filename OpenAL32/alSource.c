@@ -487,7 +487,7 @@ static ALenum SetSourcei64v(ALsource *Source, ALCcontext *Context, ALenum name, 
         case AL_DISTANCE_MODEL:
             CHECKVAL(*values <= INT_MAX && *values >= INT_MIN);
 
-            ivals[0] = *values;
+            ivals[0] = (ALint)*values;
             if((err=SetSourceiv(Source, Context, name, ivals)))
                 return err;
             break;
@@ -1153,7 +1153,7 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
         case AL_SEC_OFFSET:
         case AL_SAMPLE_OFFSET:
         case AL_BYTE_OFFSET:
-            fval = value;
+            fval = (ALfloat)value;
             SetSourcefv(Source, Context, param, &fval);
             break;
 
@@ -1180,9 +1180,9 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
-            fvals[0] = value1;
-            fvals[1] = value2;
-            fvals[2] = value3;
+            fvals[0] = (ALfloat)value1;
+            fvals[1] = (ALfloat)value2;
+            fvals[2] = (ALfloat)value3;
             SetSourcefv(Source, Context, param, fvals);
             break;
 
@@ -1224,16 +1224,16 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
         case AL_BYTE_OFFSET:
         case AL_AIR_ABSORPTION_FACTOR:
         case AL_ROOM_ROLLOFF_FACTOR:
-            fvals[0] = values[0];
+            fvals[0] = (ALfloat)values[0];
             SetSourcefv(Source, Context, param, fvals);
             break;
 
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
-            fvals[0] = values[0];
-            fvals[1] = values[1];
-            fvals[2] = values[2];
+            fvals[0] = (ALfloat)values[0];
+            fvals[1] = (ALfloat)values[1];
+            fvals[2] = (ALfloat)values[2];
             SetSourcefv(Source, Context, param, fvals);
             break;
 

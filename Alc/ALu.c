@@ -105,6 +105,31 @@ static WetMixerFunc SelectSendMixer(void)
 }
 
 
+static __inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
+{
+    outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
+    outVector[1] = inVector1[2]*inVector2[0] - inVector1[0]*inVector2[2];
+    outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
+}
+
+static __inline ALfloat aluDotproduct(const ALfloat *inVector1, const ALfloat *inVector2)
+{
+    return inVector1[0]*inVector2[0] + inVector1[1]*inVector2[1] +
+           inVector1[2]*inVector2[2];
+}
+
+static __inline void aluNormalize(ALfloat *inVector)
+{
+    ALfloat lengthsqr = aluDotproduct(inVector, inVector);
+    if(lengthsqr > 0.0f)
+    {
+        ALfloat inv_length = 1.0f/sqrtf(lengthsqr);
+        inVector[0] *= inv_length;
+        inVector[1] *= inv_length;
+        inVector[2] *= inv_length;
+    }
+}
+
 static __inline ALvoid aluMatrixVector(ALfloat *vector, ALfloat w, ALfloat (*RESTRICT matrix)[4])
 {
     ALfloat temp[4] = {

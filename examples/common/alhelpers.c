@@ -37,72 +37,58 @@
 #include "alhelpers.h"
 
 
-const char *ChannelsName(ALenum chans)
+/* InitAL opens the default device and sets up a context using default
+ * attributes, making the program ready to call OpenAL functions. */
+int InitAL(void)
 {
-    switch(chans)
+    ALCdevice *device;
+    ALCcontext *ctx;
+
+    /* Open and initialize a device with default settings */
+    device = alcOpenDevice(NULL);
+    if(!device)
     {
-    case AL_MONO_SOFT: return "Mono";
-    case AL_STEREO_SOFT: return "Stereo";
-    case AL_REAR_SOFT: return "Rear";
-    case AL_QUAD_SOFT: return "Quadraphonic";
-    case AL_5POINT1_SOFT: return "5.1 Surround";
-    case AL_6POINT1_SOFT: return "6.1 Surround";
-    case AL_7POINT1_SOFT: return "7.1 Surround";
+        fprintf(stderr, "Could not open a device!\n");
+        return 1;
     }
-    return "Unknown Channels";
+
+    ctx = alcCreateContext(device, NULL);
+    if(ctx == NULL || alcMakeContextCurrent(ctx) == ALC_FALSE)
+    {
+        if(ctx != NULL)
+            alcDestroyContext(ctx);
+        alcCloseDevice(device);
+        fprintf(stderr, "Could not set a context!\n");
+        return 1;
+    }
+
+    return 0;
 }
 
-const char *TypeName(ALenum type)
+/* CloseAL closes the device belonging to the current context, and destroys the
+ * context. */
+void CloseAL(void)
 {
-    switch(type)
-    {
-    case AL_BYTE_SOFT: return "S8";
-    case AL_UNSIGNED_BYTE_SOFT: return "U8";
-    case AL_SHORT_SOFT: return "S16";
-    case AL_UNSIGNED_SHORT_SOFT: return "U16";
-    case AL_INT_SOFT: return "S32";
-    case AL_UNSIGNED_INT_SOFT: return "U32";
-    case AL_FLOAT_SOFT: return "Float32";
-    case AL_DOUBLE_SOFT: return "Float64";
-    }
-    return "Unknown Type";
-}
+    ALCdevice *device;
+    ALCcontext *ctx;
 
+    ctx = alcGetCurrentContext();
+    if(ctx == NULL)
+        return;
 
-ALsizei FramesToBytes(ALsizei size, ALenum channels, ALenum type)
-{
-    switch(channels)
-    {
-    case AL_MONO_SOFT:    size *= 1; break;
-    case AL_STEREO_SOFT:  size *= 2; break;
-    case AL_REAR_SOFT:    size *= 2; break;
-    case AL_QUAD_SOFT:    size *= 4; break;
-    case AL_5POINT1_SOFT: size *= 6; break;
-    case AL_6POINT1_SOFT: size *= 7; break;
-    case AL_7POINT1_SOFT: size *= 8; break;
-    }
+    device = alcGetContextsDevice(ctx);
 
-    switch(type)
-    {
-    case AL_BYTE_SOFT:           size *= sizeof(ALbyte); break;
-    case AL_UNSIGNED_BYTE_SOFT:  size *= sizeof(ALubyte); break;
-    case AL_SHORT_SOFT:          size *= sizeof(ALshort); break;
-    case AL_UNSIGNED_SHORT_SOFT: size *= sizeof(ALushort); break;
-    case AL_INT_SOFT:            size *= sizeof(ALint); break;
-    case AL_UNSIGNED_INT_SOFT:   size *= sizeof(ALuint); break;
-    case AL_FLOAT_SOFT:          size *= sizeof(ALfloat); break;
-    case AL_DOUBLE_SOFT:         size *= sizeof(ALdouble); break;
-    }
-
-    return size;
-}
-
-ALsizei BytesToFrames(ALsizei size, ALenum channels, ALenum type)
-{
-    return size / FramesToBytes(1, channels, type);
+    alcMakeContextCurrent(NULL);
+    alcDestroyContext(ctx);
+    alcCloseDevice(device);
 }
 
 
+/* GetFormat retrieves a compatible buffer format given the channel config and
+ * sample type. If an alIsBufferFormatSupportedSOFT-compatible function is
+ * provided, it will be called to find the closest-matching format from
+ * AL_SOFT_buffer_samples. Returns AL_NONE (0) if no supported format can be
+ * found. */
 ALenum GetFormat(ALenum channels, ALenum type, LPALISBUFFERFORMATSUPPORTEDSOFT palIsBufferFormatSupportedSOFT)
 {
     ALenum format = AL_NONE;
@@ -274,46 +260,67 @@ void AL_APIENTRY wrap_BufferSamples(ALuint buffer, ALuint samplerate,
 }
 
 
-int InitAL(void)
+const char *ChannelsName(ALenum chans)
 {
-    ALCdevice *device;
-    ALCcontext *ctx;
-
-    /* Open and initialize a device with default settings */
-    device = alcOpenDevice(NULL);
-    if(!device)
+    switch(chans)
     {
-        fprintf(stderr, "Could not open a device!\n");
-        return 1;
+    case AL_MONO_SOFT: return "Mono";
+    case AL_STEREO_SOFT: return "Stereo";
+    case AL_REAR_SOFT: return "Rear";
+    case AL_QUAD_SOFT: return "Quadraphonic";
+    case AL_5POINT1_SOFT: return "5.1 Surround";
+    case AL_6POINT1_SOFT: return "6.1 Surround";
+    case AL_7POINT1_SOFT: return "7.1 Surround";
     }
-
-    ctx = alcCreateContext(device, NULL);
-    if(ctx == NULL || alcMakeContextCurrent(ctx) == ALC_FALSE)
-    {
-        if(ctx != NULL)
-            alcDestroyContext(ctx);
-        alcCloseDevice(device);
-        fprintf(stderr, "Could not set a context!\n");
-        return 1;
-    }
-
-    return 0;
+    return "Unknown Channels";
 }
 
-void CloseAL(void)
+const char *TypeName(ALenum type)
 {
-    ALCdevice *device;
-    ALCcontext *ctx;
+    switch(type)
+    {
+    case AL_BYTE_SOFT: return "S8";
+    case AL_UNSIGNED_BYTE_SOFT: return "U8";
+    case AL_SHORT_SOFT: return "S16";
+    case AL_UNSIGNED_SHORT_SOFT: return "U16";
+    case AL_INT_SOFT: return "S32";
+    case AL_UNSIGNED_INT_SOFT: return "U32";
+    case AL_FLOAT_SOFT: return "Float32";
+    case AL_DOUBLE_SOFT: return "Float64";
+    }
+    return "Unknown Type";
+}
 
-    /* Close the device belonging to the current context, and destroy the
-     * context. */
-    ctx = alcGetCurrentContext();
-    if(ctx == NULL)
-        return;
 
-    device = alcGetContextsDevice(ctx);
+ALsizei FramesToBytes(ALsizei size, ALenum channels, ALenum type)
+{
+    switch(channels)
+    {
+    case AL_MONO_SOFT:    size *= 1; break;
+    case AL_STEREO_SOFT:  size *= 2; break;
+    case AL_REAR_SOFT:    size *= 2; break;
+    case AL_QUAD_SOFT:    size *= 4; break;
+    case AL_5POINT1_SOFT: size *= 6; break;
+    case AL_6POINT1_SOFT: size *= 7; break;
+    case AL_7POINT1_SOFT: size *= 8; break;
+    }
 
-    alcMakeContextCurrent(NULL);
-    alcDestroyContext(ctx);
-    alcCloseDevice(device);
+    switch(type)
+    {
+    case AL_BYTE_SOFT:           size *= sizeof(ALbyte); break;
+    case AL_UNSIGNED_BYTE_SOFT:  size *= sizeof(ALubyte); break;
+    case AL_SHORT_SOFT:          size *= sizeof(ALshort); break;
+    case AL_UNSIGNED_SHORT_SOFT: size *= sizeof(ALushort); break;
+    case AL_INT_SOFT:            size *= sizeof(ALint); break;
+    case AL_UNSIGNED_INT_SOFT:   size *= sizeof(ALuint); break;
+    case AL_FLOAT_SOFT:          size *= sizeof(ALfloat); break;
+    case AL_DOUBLE_SOFT:         size *= sizeof(ALdouble); break;
+    }
+
+    return size;
+}
+
+ALsizei BytesToFrames(ALsizei size, ALenum channels, ALenum type)
+{
+    return size / FramesToBytes(1, channels, type);
 }

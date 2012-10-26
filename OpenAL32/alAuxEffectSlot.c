@@ -405,7 +405,7 @@ static ALvoid NoneUpdate(ALeffectState *State, ALCdevice *Device, const ALeffect
     (void)Device;
     (void)Slot;
 }
-static ALvoid NoneProcess(ALeffectState *State, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE])
+static ALvoid NoneProcess(ALeffectState *State, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     (void)State;
     (void)SamplesToDo;

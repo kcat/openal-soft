@@ -827,7 +827,14 @@ IF(EXAMPLES)
                                 examples/alstream.c)
         TARGET_LINK_LIBRARIES(alstream ${FFMPEG_LIBRARIES} ${LIBNAME})
         SET_TARGET_PROPERTIES(alstream PROPERTIES COMPILE_FLAGS "${FFMPEG_CFLAGS}")
-        INSTALL(TARGETS alstream
+
+        ADD_EXECUTABLE(alreverb examples/common/alhelpers.c
+                                examples/common/alffmpeg.c
+                                examples/alreverb.c)
+        TARGET_LINK_LIBRARIES(alreverb ${FFMPEG_LIBRARIES} ${LIBNAME})
+        SET_TARGET_PROPERTIES(alreverb PROPERTIES COMPILE_FLAGS "${FFMPEG_CFLAGS}")
+
+        INSTALL(TARGETS alstream alreverb
                 RUNTIME DESTINATION bin
                 LIBRARY DESTINATION "lib${LIB_SUFFIX}"
                 ARCHIVE DESTINATION "lib${LIB_SUFFIX}"

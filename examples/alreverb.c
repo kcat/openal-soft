@@ -223,7 +223,6 @@ static ALuint LoadSound(const char *filename)
 
 int main(int argc, char **argv)
 {
-    ALCdevice *device = NULL;
     EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
     ALuint source, buffer, effect, slot;
     ALenum state;
@@ -239,10 +238,9 @@ int main(int argc, char **argv)
     if(InitAL() != 0)
         return 1;
 
-    device = alcGetContextsDevice(alcGetCurrentContext());
-    if(!alcIsExtensionPresent(device, "ALC_EXT_EFX"))
+    if(!alcIsExtensionPresent(alcGetContextsDevice(alcGetCurrentContext()), "ALC_EXT_EFX"))
     {
-        fprintf(stderr, "Error: EFX not supported on device \"%s\"\n", alcGetString(device, ALC_DEVICE_SPECIFIER));
+        fprintf(stderr, "Error: EFX not supported\n");
         CloseAL();
         return 1;
     }

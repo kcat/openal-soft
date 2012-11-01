@@ -62,6 +62,7 @@ int InitAL(void)
         return 1;
     }
 
+    printf("Opened \"%s\"\n", alcGetString(device, ALC_DEVICE_SPECIFIER));
     return 0;
 }
 

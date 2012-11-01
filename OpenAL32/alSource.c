@@ -229,7 +229,6 @@ static ALenum SetSourcefv(ALsource *Source, ALCcontext *Context, ALenum name, co
             Source->NeedsUpdate = AL_TRUE;
             break;
 
-
         default:
             RETERR(AL_INVALID_ENUM);
     }
@@ -1237,6 +1236,10 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
             SetSourcefv(Source, Context, param, fvals);
             break;
 
+        case AL_SEC_OFFSET_LATENCY_SOFT:
+            alSetError(Context, AL_INVALID_OPERATION);
+            break;
+
         default:
             alSetError(Context, AL_INVALID_ENUM);
     }
@@ -1471,6 +1474,10 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
         case AL_DIRECTION:
         case AL_AUXILIARY_SEND_FILTER:
             SetSourcei64v(Source, Context, param, values);
+            break;
+
+        case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+            alSetError(Context, AL_INVALID_OPERATION);
             break;
 
         default:

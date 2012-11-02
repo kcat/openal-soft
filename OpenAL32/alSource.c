@@ -196,6 +196,11 @@ static ALenum SetSourcefv(ALsource *Source, ALCcontext *Context, ALenum name, co
             break;
 
 
+        case AL_SEC_OFFSET_LATENCY_SOFT:
+            /* Query only */
+            RETERR(AL_INVALID_OPERATION);
+
+
         case AL_POSITION:
             CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]));
 
@@ -473,6 +478,11 @@ static ALenum SetSourcei64v(ALsource *Source, ALCcontext *Context, ALenum name, 
 
     switch(name)
     {
+        case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+            /* Query only */
+            RETERR(AL_INVALID_OPERATION);
+
+
         /* 1x int */
         case AL_SOURCE_RELATIVE:
         case AL_LOOPING:
@@ -1227,6 +1237,12 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
             SetSourcefv(Source, Context, param, fvals);
             break;
 
+        case AL_SEC_OFFSET_LATENCY_SOFT:
+            fvals[0] = (ALfloat)values[0];
+            fvals[1] = (ALfloat)values[1];
+            SetSourcefv(Source, Context, param, fvals);
+            break;
+
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
@@ -1234,10 +1250,6 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
             fvals[1] = (ALfloat)values[1];
             fvals[2] = (ALfloat)values[2];
             SetSourcefv(Source, Context, param, fvals);
-            break;
-
-        case AL_SEC_OFFSET_LATENCY_SOFT:
-            alSetError(Context, AL_INVALID_OPERATION);
             break;
 
         default:
@@ -1469,15 +1481,13 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
         case AL_BUFFER:
         case AL_DIRECT_FILTER:
 
+        case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
         case AL_AUXILIARY_SEND_FILTER:
             SetSourcei64v(Source, Context, param, values);
-            break;
-
-        case AL_SAMPLE_OFFSET_LATENCY_SOFT:
-            alSetError(Context, AL_INVALID_OPERATION);
             break;
 
         default:

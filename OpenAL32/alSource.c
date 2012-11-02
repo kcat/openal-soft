@@ -791,7 +791,7 @@ static ALenum GetSourceiv(const ALsource *Source, ALCcontext *Context, ALenum na
             if((err=GetSourcedv(Source, Context, name, dvals)) != AL_NO_ERROR)
                 return err;
             values[0] = (ALint)dvals[0];
-            values[1] = (ALint)dvals[0];
+            values[1] = (ALint)dvals[1];
             break;
 
         case AL_POSITION:
@@ -845,7 +845,7 @@ static ALenum GetSourcei64v(const ALsource *Source, ALCcontext *Context, ALenum 
             if((err=GetSourcedv(Source, Context, name, dvals)) != AL_NO_ERROR)
                 return err;
             values[0] = (ALint64)dvals[0];
-            values[1] = (ALint64)dvals[0];
+            values[1] = (ALint64)dvals[1];
             break;
 
         case AL_POSITION:

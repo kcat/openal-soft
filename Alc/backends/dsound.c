@@ -547,7 +547,7 @@ retry_open:
     }
     else
     {
-        if(SUCCEEDED(hr))
+        if(SUCCEEDED(hr) && !data->DSpbuffer)
         {
             memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
             DSBDescription.dwSize=sizeof(DSBUFFERDESC);

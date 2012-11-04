@@ -66,6 +66,8 @@ typedef struct {
 
     HANDLE MsgEvent;
 
+    volatile UINT32 Padding;
+
     volatile int killNow;
     ALvoid *thread;
 } MMDevApiData;
@@ -252,6 +254,7 @@ static ALuint MMDevApiProc(ALvoid *ptr)
             aluHandleDisconnect(device);
             break;
         }
+        data->Padding = written;
 
         len = buffer_len - written;
         if(len < update_size)
@@ -267,7 +270,10 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         hr = IAudioRenderClient_GetBuffer(data->render, len, &buffer);
         if(SUCCEEDED(hr))
         {
+            ALCdevice_Lock(device);
             aluMixData(device, buffer, len);
+            data->Padding = written + len;
+            ALCdevice_Unlock(device);
             hr = IAudioRenderClient_ReleaseBuffer(data->render, len, 0);
         }
         if(FAILED(hr))
@@ -277,6 +283,7 @@ static ALuint MMDevApiProc(ALvoid *ptr)
             break;
         }
     }
+    data->Padding = 0;
 
     CoUninitialize();
     return 0;
@@ -936,6 +943,14 @@ static void MMDevApiStopPlayback(ALCdevice *device)
 }
 
 
+static ALint64 MMDevApiGetLatency(ALCdevice *device)
+{
+    MMDevApiData *data = device->ExtraData;
+
+    return (ALint64)data->Padding * 1000000000 / device->Frequency;
+}
+
+
 static const BackendFuncs MMDevApiFuncs = {
     MMDevApiOpenPlayback,
     MMDevApiClosePlayback,
@@ -950,7 +965,7 @@ static const BackendFuncs MMDevApiFuncs = {
     NULL,
     ALCdevice_LockDefault,
     ALCdevice_UnlockDefault,
-    ALCdevice_GetLatencyDefault
+    MMDevApiGetLatency
 };
 
 

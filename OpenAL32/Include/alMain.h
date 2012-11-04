@@ -603,7 +603,7 @@ struct ALCdevice_struct
     // Device flags
     ALuint       Flags;
 
-    enum Channel DevChannels[MaxChannels];
+    ALuint ChannelOffsets[MaxChannels];
 
     enum Channel Speaker2Chan[MaxChannels];
     ALfloat SpeakerAngle[MaxChannels];
@@ -658,6 +658,10 @@ struct ALCdevice_struct
 
 // Specifies if the device is currently running
 #define DEVICE_RUNNING                           (1<<31)
+
+/* Invalid channel offset */
+#define INVALID_OFFSET                           (~0u)
+
 
 #define LookupBuffer(m, k) ((struct ALbuffer*)LookupUIntMapKey(&(m)->BufferMap, (k)))
 #define LookupEffect(m, k) ((struct ALeffect*)LookupUIntMapKey(&(m)->EffectMap, (k)))

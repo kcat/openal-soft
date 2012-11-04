@@ -1287,48 +1287,54 @@ ALint64 ALCdevice_GetLatencyDefault(ALCdevice *device)
  */
 void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
+    ALuint i;
+
+    for(i = 0;i < MaxChannels;i++)
+        device->ChannelOffsets[i] = INVALID_OFFSET;
+
     switch(device->FmtChans)
     {
-    case DevFmtMono: device->DevChannels[0] = FrontCenter; break;
-
-    case DevFmtStereo: device->DevChannels[0] = FrontLeft;
-                       device->DevChannels[1] = FrontRight; break;
-
-    case DevFmtQuad: device->DevChannels[0] = FrontLeft;
-                     device->DevChannels[1] = FrontRight;
-                     device->DevChannels[2] = BackLeft;
-                     device->DevChannels[3] = BackRight; break;
-
-    case DevFmtX51: device->DevChannels[0] = FrontLeft;
-                    device->DevChannels[1] = FrontRight;
-                    device->DevChannels[2] = FrontCenter;
-                    device->DevChannels[3] = LFE;
-                    device->DevChannels[4] = BackLeft;
-                    device->DevChannels[5] = BackRight; break;
-
-    case DevFmtX51Side: device->DevChannels[0] = FrontLeft;
-                        device->DevChannels[1] = FrontRight;
-                        device->DevChannels[2] = FrontCenter;
-                        device->DevChannels[3] = LFE;
-                        device->DevChannels[4] = SideLeft;
-                        device->DevChannels[5] = SideRight; break;
-
-    case DevFmtX61: device->DevChannels[0] = FrontLeft;
-                    device->DevChannels[1] = FrontRight;
-                    device->DevChannels[2] = FrontCenter;
-                    device->DevChannels[3] = LFE;
-                    device->DevChannels[4] = BackCenter;
-                    device->DevChannels[5] = SideLeft;
-                    device->DevChannels[6] = SideRight; break;
-
-    case DevFmtX71: device->DevChannels[0] = FrontLeft;
-                    device->DevChannels[1] = FrontRight;
-                    device->DevChannels[2] = FrontCenter;
-                    device->DevChannels[3] = LFE;
-                    device->DevChannels[4] = BackLeft;
-                    device->DevChannels[5] = BackRight;
-                    device->DevChannels[6] = SideLeft;
-                    device->DevChannels[7] = SideRight; break;
+    case DevFmtMono: device->ChannelOffsets[FrontCenter] = 0;
+                     break;
+    case DevFmtStereo: device->ChannelOffsets[FrontLeft]  = 0;
+                       device->ChannelOffsets[FrontRight] = 1;
+                       break;
+    case DevFmtQuad: device->ChannelOffsets[FrontLeft]  = 0;
+                     device->ChannelOffsets[FrontRight] = 1;
+                     device->ChannelOffsets[BackLeft]   = 2;
+                     device->ChannelOffsets[BackRight]  = 3;
+                     break;
+    case DevFmtX51: device->ChannelOffsets[FrontLeft]   = 0;
+                    device->ChannelOffsets[FrontRight]  = 1;
+                    device->ChannelOffsets[FrontCenter] = 2;
+                    device->ChannelOffsets[LFE]         = 3;
+                    device->ChannelOffsets[BackLeft]    = 4;
+                    device->ChannelOffsets[BackRight]   = 5;
+                    break;
+    case DevFmtX51Side: device->ChannelOffsets[FrontLeft]   = 0;
+                        device->ChannelOffsets[FrontRight]  = 1;
+                        device->ChannelOffsets[FrontCenter] = 2;
+                        device->ChannelOffsets[LFE]         = 3;
+                        device->ChannelOffsets[SideLeft]    = 4;
+                        device->ChannelOffsets[SideRight]   = 5;
+                        break;
+    case DevFmtX61: device->ChannelOffsets[FrontLeft]   = 0;
+                    device->ChannelOffsets[FrontRight]  = 1;
+                    device->ChannelOffsets[FrontCenter] = 2;
+                    device->ChannelOffsets[LFE]         = 3;
+                    device->ChannelOffsets[BackCenter]  = 4;
+                    device->ChannelOffsets[SideLeft]    = 5;
+                    device->ChannelOffsets[SideRight]   = 6;
+                    break;
+    case DevFmtX71: device->ChannelOffsets[FrontLeft]   = 0;
+                    device->ChannelOffsets[FrontRight]  = 1;
+                    device->ChannelOffsets[FrontCenter] = 2;
+                    device->ChannelOffsets[LFE]         = 3;
+                    device->ChannelOffsets[BackLeft]    = 4;
+                    device->ChannelOffsets[BackRight]   = 5;
+                    device->ChannelOffsets[SideLeft]    = 6;
+                    device->ChannelOffsets[SideRight]   = 7;
+                    break;
     }
 }
 
@@ -1338,24 +1344,28 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
  */
 void SetDefaultChannelOrder(ALCdevice *device)
 {
+    ALuint i;
+
+    for(i = 0;i < MaxChannels;i++)
+        device->ChannelOffsets[i] = INVALID_OFFSET;
+
     switch(device->FmtChans)
     {
-    case DevFmtX51: device->DevChannels[0] = FrontLeft;
-                    device->DevChannels[1] = FrontRight;
-                    device->DevChannels[2] = BackLeft;
-                    device->DevChannels[3] = BackRight;
-                    device->DevChannels[4] = FrontCenter;
-                    device->DevChannels[5] = LFE;
+    case DevFmtX51: device->ChannelOffsets[FrontLeft]   = 0;
+                    device->ChannelOffsets[FrontRight]  = 1;
+                    device->ChannelOffsets[BackLeft]    = 2;
+                    device->ChannelOffsets[BackRight]   = 3;
+                    device->ChannelOffsets[FrontCenter] = 4;
+                    device->ChannelOffsets[LFE]         = 5;
                     return;
-
-    case DevFmtX71: device->DevChannels[0] = FrontLeft;
-                    device->DevChannels[1] = FrontRight;
-                    device->DevChannels[2] = BackLeft;
-                    device->DevChannels[3] = BackRight;
-                    device->DevChannels[4] = FrontCenter;
-                    device->DevChannels[5] = LFE;
-                    device->DevChannels[6] = SideLeft;
-                    device->DevChannels[7] = SideRight;
+    case DevFmtX71: device->ChannelOffsets[FrontLeft]   = 0;
+                    device->ChannelOffsets[FrontRight]  = 1;
+                    device->ChannelOffsets[BackLeft]    = 2;
+                    device->ChannelOffsets[BackRight]   = 3;
+                    device->ChannelOffsets[FrontCenter] = 4;
+                    device->ChannelOffsets[LFE]         = 5;
+                    device->ChannelOffsets[SideLeft]    = 6;
+                    device->ChannelOffsets[SideRight]   = 7;
                     return;
 
     /* Same as WFX order */

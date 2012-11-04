@@ -931,16 +931,19 @@ static int Write_##T(ALCdevice *device, T *RESTRICT buffer,                   \
 {                                                                             \
     ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
     ALuint numchans = ChannelsFromDevFmt(device->FmtChans);                   \
-    const enum Channel *ChanMap = device->DevChannels;                        \
+    const ALuint *offsets = device->ChannelOffsets;                           \
     ALuint i, j;                                                              \
                                                                               \
-    for(j = 0;j < numchans;j++)                                               \
+    for(j = 0;j < MaxChannels;j++)                                            \
     {                                                                         \
-        T *RESTRICT out = buffer + j;                                         \
-        enum Channel chan = ChanMap[j];                                       \
+        T *RESTRICT out;                                                      \
                                                                               \
+        if(offsets[j] == INVALID_OFFSET)                                      \
+            continue;                                                         \
+                                                                              \
+        out = buffer + offsets[j];                                            \
         for(i = 0;i < SamplesToDo;i++)                                        \
-            out[i*numchans] = func(DryBuffer[chan][i]);                       \
+            out[i*numchans] = func(DryBuffer[j][i]);                          \
     }                                                                         \
     return SamplesToDo*numchans*sizeof(T);                                    \
 }

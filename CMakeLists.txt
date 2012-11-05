@@ -795,8 +795,7 @@ ENDIF()
 # Install alsoft.conf configuration file
 IF(ALSOFT_CONFIG)
     INSTALL(FILES alsoftrc.sample
-            DESTINATION /etc/openal
-            RENAME alsoft.conf
+            DESTINATION share/openal
     )
     MESSAGE(STATUS "Installing sample alsoft.conf")
     MESSAGE(STATUS "")

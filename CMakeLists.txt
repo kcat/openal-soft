@@ -66,7 +66,7 @@ OPTION(UTILS  "Build and install utility programs"  ON)
 
 OPTION(EXAMPLES  "Build and install example programs"  ON)
 
-OPTION(ALSOFT_CONFIG "Install alsoft.conf configuration file" OFF)
+OPTION(ALSOFT_CONFIG "Install alsoft.conf configuration file" ON)
 
 
 IF(WIN32)
@@ -797,7 +797,7 @@ IF(ALSOFT_CONFIG)
     INSTALL(FILES alsoftrc.sample
             DESTINATION share/openal
     )
-    MESSAGE(STATUS "Installing sample alsoft.conf")
+    MESSAGE(STATUS "Installing sample configuration")
     MESSAGE(STATUS "")
 ENDIF()
 

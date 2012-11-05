@@ -318,9 +318,10 @@ int main(int argc, char **argv)
         if(!OpenPlayerFile(player, argv[i]))
             continue;
 
-        fprintf(stderr, "Playing %s (%s, %s, %dhz)\n", argv[i],
-                TypeName(player->type), ChannelsName(player->channels),
-                player->rate);
+        printf("Playing %s (%s, %s, %dhz)\n", argv[i],
+               TypeName(player->type), ChannelsName(player->channels),
+               player->rate);
+        fflush(stdout);
 
         if(!StartPlayer(player))
         {
@@ -334,7 +335,7 @@ int main(int argc, char **argv)
         /* All done with this file. Close it and go to the next */
         ClosePlayerFile(player);
     }
-    fprintf(stderr, "Done.\n");
+    printf("Done.\n");
 
     /* All files done. Delete the player, and close OpenAL */
     DeletePlayer(player);

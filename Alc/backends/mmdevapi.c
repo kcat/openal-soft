@@ -233,18 +233,10 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         return 0;
     }
 
-    hr = IAudioClient_GetBufferSize(data->client, &buffer_len);
-    if(FAILED(hr))
-    {
-        ERR("Failed to get audio buffer size: 0x%08lx\n", hr);
-        aluHandleDisconnect(device);
-        CoUninitialize();
-        return 0;
-    }
-
     SetRTPriority();
 
     update_size = device->UpdateSize;
+    buffer_len = update_size * device->NumUpdates;
     while(!data->killNow)
     {
         hr = IAudioClient_GetCurrentPadding(data->client, &written);

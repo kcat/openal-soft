@@ -45,7 +45,7 @@ static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum Fm
  */
 
 /* IMA ADPCM Stepsize table */
-static const long IMAStep_size[89] = {
+static const int IMAStep_size[89] = {
        7,    8,    9,   10,   11,   12,   13,   14,   16,   17,   19,
       21,   23,   25,   28,   31,   34,   37,   41,   45,   50,   55,
       60,   66,   73,   80,   88,   97,  107,  118,  130,  143,  157,
@@ -58,13 +58,13 @@ static const long IMAStep_size[89] = {
 };
 
 /* IMA4 ADPCM Codeword decode table */
-static const long IMA4Codeword[16] = {
+static const int IMA4Codeword[16] = {
     1, 3, 5, 7, 9, 11, 13, 15,
    -1,-3,-5,-7,-9,-11,-13,-15,
 };
 
 /* IMA4 ADPCM Step index adjust decode table */
-static const long IMA4Index_adjust[16] = {
+static const int IMA4Index_adjust[16] = {
    -1,-1,-1,-1, 2, 4, 6, 8,
    -1,-1,-1,-1, 2, 4, 6, 8
 };

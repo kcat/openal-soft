@@ -313,8 +313,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
             case UserFmtUByte:
             case UserFmtShort:
             case UserFmtUShort:
-            case UserFmtInt:
-            case UserFmtUInt:
             case UserFmtFloat:
                 FrameSize = FrameSizeFromUserFmt(SrcChannels, SrcType);
                 CHECK_VALUE(Context, (size%FrameSize) == 0);
@@ -325,6 +323,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                     al_throwerr(Context, err);
                 break;
 
+            case UserFmtInt:
+            case UserFmtUInt:
             case UserFmtByte3:
             case UserFmtUByte3:
             case UserFmtDouble:

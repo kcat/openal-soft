@@ -210,11 +210,14 @@ void SetMixerFPUMode(FPUCtl *ctl)
 #endif
 #elif defined(HAVE___CONTROL87_2)
     int mode;
-    __control87_2(0, 0, &ctl->state, &ctl->sse_state);
+    __control87_2(0, 0, &ctl->state, NULL);
     __control87_2(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC, &mode, NULL);
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
+    {
+        __control87_2(0, 0, NULL, &ctl->sse_state);
         __control87_2(_RC_CHOP|_DN_FLUSH, _MCW_RC|_MCW_DN, NULL, &mode);
+    }
 #endif
 #elif defined(HAVE__CONTROLFP)
     ctl->state = _controlfp(0, 0);

@@ -368,6 +368,7 @@ static __inline ALint fastf2i(ALfloat f)
     ALint i;
     __asm fld f
     __asm fistp i
+    return i;
 #else
     return (ALint)f;
 #endif

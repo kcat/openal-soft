@@ -49,6 +49,13 @@
  *  Music 150, Musical Acoustics, Stanford University
  *  December 2, 2001
  *
+ * The formulae for calculating the Kaiser window metrics are from the
+ * the textbook:
+ *
+ *  Discrete-Time Signal Processing
+ *  Alan V. Oppenheim and Ronald W. Schafer
+ *  Prentice-Hall Signal Processing Series
+ *  1999
  */
 
 /* Needed for 64-bit unsigned integer. */
@@ -65,11 +72,11 @@
 #include "AL/al.h"
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+#define M_PI                         (3.14159265358979323846)
 #endif
 
 #ifndef HUGE_VAL
-#define HUGE_VAL (1.0/0.0)
+#define HUGE_VAL                     (1.0 / 0.0)
 #endif
 
 // The epsilon used to maintain signal stability.
@@ -90,7 +97,8 @@
 // The maximum path length used when processing filenames.
 #define MAX_PATH_LEN                 (256)
 
-// The limits for the sample 'rate' metric in the data set definition.
+// The limits for the sample 'rate' metric in the data set definition and for
+// resampling.
 #define MIN_RATE                     (32000)
 #define MAX_RATE                     (96000)
 
@@ -236,6 +244,7 @@ typedef enum OutputFormatT           OutputFormatT;
 typedef struct TokenReaderT          TokenReaderT;
 typedef struct SourceRefT            SourceRefT;
 typedef struct HrirDataT             HrirDataT;
+typedef struct ResamplerT            ResamplerT;
 
 // Token reader state for parsing the data set definition.
 struct TokenReaderT {
@@ -264,11 +273,11 @@ struct SourceRefT {
 // the resulting HRTF.
 struct HrirDataT {
   uint                               mIrRate,
-                                     mIrCount;
-  size_t                             mIrSize,
+                                     mIrCount,
+                                     mIrSize,
                                      mIrPoints,
-                                     mFftSize;
-  uint                               mEvCount,
+                                     mFftSize,
+                                     mEvCount,
                                      mEvStart,
                                      mAzCount [MAX_EV_COUNT],
                                      mEvOffset [MAX_EV_COUNT];
@@ -277,6 +286,15 @@ struct HrirDataT {
                                    * mHrirs,
                                    * mHrtds,
                                      mMaxHrtd;
+};
+
+// The resampler metrics and FIR filter.
+struct ResamplerT {
+  uint                               mP,
+                                     mQ,
+                                     mM,
+                                     mL;
+  double                           * mF;
 };
 
 /* Token reader routines for parsing text files.  Whitespace is not
@@ -338,7 +356,7 @@ static int TrLoad (TokenReaderT * tr) {
 // Error display routine.  Only displays when the base name is not NULL.
 static void TrErrorVA (const TokenReaderT * tr, uint line, uint column, const char * format, va_list argPtr) {
   if (tr -> mName != NULL) {
-     fprintf (stderr, "Error (%s:%d:%d):  ", tr -> mName, line, column);
+     fprintf (stderr, "Error (%s:%u:%u):  ", tr -> mName, line, column);
      vfprintf (stderr, format, argPtr);
   }
 }
@@ -437,9 +455,8 @@ static int TrIsOperator (TokenReaderT * tr, const char * op) {
  */
 
 // Reads and validates an identifier token.
-static int TrReadIdent (TokenReaderT * tr, const size_t maxLen, char * ident) {
-  uint col;
-  size_t len;
+static int TrReadIdent (TokenReaderT * tr, const uint maxLen, char * ident) {
+  uint col, len;
   char ch;
 
   col = tr -> mColumn;
@@ -472,8 +489,7 @@ static int TrReadIdent (TokenReaderT * tr, const size_t maxLen, char * ident) {
 
 // Reads and validates (including bounds) an integer token.
 static int TrReadInt (TokenReaderT * tr, const int loBound, const int hiBound, int * value) {
-  uint col, digis;
-  size_t len;
+  uint col, digis, len;
   char ch, temp [64 + 1];
 
   col = tr -> mColumn;
@@ -518,8 +534,7 @@ static int TrReadInt (TokenReaderT * tr, const int loBound, const int hiBound, i
 
 // Reads and validates (including bounds) a float token.
 static int TrReadFloat (TokenReaderT * tr, const double loBound, const double hiBound, double * value) {
-  uint col, digis;
-  size_t len;
+  uint col, digis, len;
   char ch, temp [64 + 1];
 
   col = tr -> mColumn;
@@ -606,9 +621,8 @@ static int TrReadFloat (TokenReaderT * tr, const double loBound, const double hi
 }
 
 // Reads and validates a string token.
-static int TrReadString (TokenReaderT * tr, const size_t maxLen, char * text) {
-  uint col;
-  size_t len;
+static int TrReadString (TokenReaderT * tr, const uint maxLen, char * text) {
+  uint col, len;
   char ch;
 
   col = tr -> mColumn;
@@ -651,8 +665,7 @@ static int TrReadString (TokenReaderT * tr, const size_t maxLen, char * text) {
 
 // Reads and validates the given operator.
 static int TrReadOperator (TokenReaderT * tr, const char * op) {
-  uint col;
-  size_t len;
+  uint col, len;
   char ch;
 
   col = tr -> mColumn;
@@ -741,7 +754,7 @@ static double Lerp (const double a, const double b, const double f) {
 // Performs a high-passed triangular probability density function dither from
 // a double to an integer.  It assumes the input sample is already scaled.
 static int HpTpdfDither (const double in, int * hpHist) {
-  const double PRNG_SCALE = 1.0 / RAND_MAX;
+  const double PRNG_SCALE = 1.0 / (RAND_MAX + 1.0);
   int prn;
   double out;
 
@@ -796,8 +809,8 @@ static void ComplexExp (const double inR, const double inI, double * outR, doubl
  */
 
 // Performs bit-reversal ordering.
-static void FftArrange (const size_t n, const double * inR, const double * inI, double * outR, double * outI) {
-  size_t rk, k, m;
+static void FftArrange (const uint n, const double * inR, const double * inI, double * outR, double * outI) {
+  uint rk, k, m;
   double tempR, tempI;
 
   if ((inR == outR) && (inI == outI)) {
@@ -832,11 +845,11 @@ static void FftArrange (const size_t n, const double * inR, const double * inI, 
 }
 
 // Performs the summation.
-static void FftSummation (const size_t n, const double s, double * re, double * im) {
+static void FftSummation (const uint n, const double s, double * re, double * im) {
   double pi;
-  size_t m, m2;
+  uint m, m2;
   double vR, vI, wR, wI;
-  size_t i, k, mk;
+  uint i, k, mk;
   double tR, tI;
 
   pi = s * M_PI;
@@ -872,15 +885,15 @@ static void FftSummation (const size_t n, const double s, double * re, double * 
 }
 
 // Performs a forward FFT.
-static void FftForward (const size_t n, const double * inR, const double * inI, double * outR, double * outI) {
+static void FftForward (const uint n, const double * inR, const double * inI, double * outR, double * outI) {
   FftArrange (n, inR, inI, outR, outI);
   FftSummation (n, 1.0, outR, outI);
 }
 
 // Performs an inverse FFT.
-static void FftInverse (const size_t n, const double * inR, const double * inI, double * outR, double * outI) {
+static void FftInverse (const uint n, const double * inR, const double * inI, double * outR, double * outI) {
   double f;
-  size_t i;
+  uint i;
 
   FftArrange (n, inR, inI, outR, outI);
   FftSummation (n, -1.0, outR, outI);
@@ -896,8 +909,8 @@ static void FftInverse (const size_t n, const double * inR, const double * inI, 
  * negative natural logarithm of a signal's magnitude response, the imaginary
  * components can be used as the angles for minimum-phase reconstruction.
  */
-static void Hilbert (const size_t n, const double * in, double * outR, double * outI) {
-  size_t i;
+static void Hilbert (const uint n, const double * in, double * outR, double * outI) {
+  uint i;
 
   if (in == outR) {
      // Handle in-place operation.
@@ -933,9 +946,9 @@ static void Hilbert (const size_t n, const double * in, double * outR, double * 
  * minimum phase reconstruction.  The mirrored half of the response is also
  * discarded.
  */
-static void MagnitudeResponse (const size_t n, const double * inR, const double * inI, double * out) {
-  const size_t m = 1 + (n / 2);
-  size_t i;
+static void MagnitudeResponse (const uint n, const double * inR, const double * inI, double * out) {
+  const uint m = 1 + (n / 2);
+  uint i;
 
   for (i = 0; i < m; i ++)
       out [i] = fmax (ComplexAbs (inR [i], inI [i]), EPSILON);
@@ -945,10 +958,10 @@ static void MagnitudeResponse (const size_t n, const double * inR, const double 
  * to adjust the effects of the diffuse-field average on the equalization
  * process.
  */
-static void LimitMagnitudeResponse (const size_t n, const double limit, const double * in, double * out) {
-  const size_t m = 1 + (n / 2);
+static void LimitMagnitudeResponse (const uint n, const double limit, const double * in, double * out) {
+  const uint m = 1 + (n / 2);
   double halfLim;
-  size_t i, lower, upper;
+  uint i, lower, upper;
   double ave;
 
   halfLim = limit / 2.0;
@@ -956,8 +969,8 @@ static void LimitMagnitudeResponse (const size_t n, const double limit, const do
   for (i = 0; i < m; i ++)
       out [i] = 20.0 * log10 (in [i]);
   // Use six octaves to calculate the average magnitude of the signal.
-  lower = ((size_t) ceil (n / pow (2.0, 8.0))) - 1;
-  upper = ((size_t) floor (n / pow (2.0, 2.0))) - 1;
+  lower = ((uint) ceil (n / pow (2.0, 8.0))) - 1;
+  upper = ((uint) floor (n / pow (2.0, 2.0))) - 1;
   ave = 0.0;
   for (i = lower; i <= upper; i ++)
       ave += out [i];
@@ -975,10 +988,10 @@ static void LimitMagnitudeResponse (const size_t n, const double limit, const do
  * residuals (which were discarded).  The mirrored half of the response is
  * reconstructed.
  */
-static void MinimumPhase (const size_t n, const double * in, double * outR, double * outI) {
-  const size_t m = 1 + (n / 2);
+static void MinimumPhase (const uint n, const double * in, double * outR, double * outI) {
+  const uint m = 1 + (n / 2);
   double * mags = NULL;
-  size_t i;
+  uint i;
   double aR, aI;
 
   mags = CreateArray (n);
@@ -999,6 +1012,228 @@ static void MinimumPhase (const size_t n, const double * in, double * outR, doub
       ComplexMul (mags [i], 0.0, aR, aI, & outR [i], & outI [i]);
   }
   DestroyArray (mags);
+}
+
+/* This is the normalized cardinal sine (sinc) function.
+ *
+ *   sinc(x) = { 0,                   x = 0
+ *             { sin(pi x) / (pi x),  otherwise.
+ */
+static double Sinc (const double x) {
+  if (fabs (x) < EPSILON)
+     return (1.0);
+  return (sin (M_PI * x) / (M_PI * x));
+}
+
+/* The zero-order modified Bessel function of the first kind, used for the
+ * Kaiser window.
+ *
+ *   I_0(x) = sum_{k=0}^inf (1 / k!)^2 (x / 2)^(2 k)
+ *          = sum_{k=0}^inf ((x / 2)^k / k!)^2
+ */
+static double BesselI_0 (const double x) {
+  double term, sum, x2, y, last_sum;
+  int k;
+
+  // Start at k=1 since k=0 is trivial.
+  term = 1.0;
+  sum = 1.0;
+  x2 = x / 2.0;
+  k = 1;
+  // Let the integration converge until the term of the sum is no longer
+  // significant.
+  do {
+    y = x2 / k;
+    k ++;
+    last_sum = sum;
+    term *= y * y;
+    sum += term;
+  } while (sum != last_sum);
+  return (sum);
+}
+
+/* Calculate a Kaiser window from the given beta value and a normalized k
+ * [-1, 1].
+ *
+ *   w(k) = { I_0(B sqrt(1 - k^2)) / I_0(B),  -1 <= k <= 1
+ *          { 0,                              elsewhere.
+ *
+ * Where k can be calculated as:
+ *
+ *   k = i / l,         where -l <= i <= l.
+ *
+ * or:
+ *
+ *   k = 2 i / M - 1,   where 0 <= i <= M.
+ */
+static double Kaiser (const double b, const double k) {
+  double k2;
+
+  k2 = Clamp (k, -1.0, 1.0);
+  if ((k < -1.0) || (k > 1.0))
+     return (0.0);
+  k2 *= k2;
+  return (BesselI_0 (b * sqrt (1.0 - k2)) / BesselI_0 (b));
+}
+
+// Calculates the greatest common divisor of a and b.
+static uint Gcd (const uint a, const uint b) {
+  uint x, y, z;
+
+  x = a;
+  y = b;
+  while (y > 0) {
+    z = y;
+    y = x % y;
+    x = z;
+  }
+  return (x);
+}
+
+/* Calculates the size (order) of the Kaiser window.  Rejection is in dB and
+ * the transition width is normalized frequency (0.5 is nyquist).
+ *
+ *   M = { ceil((r - 7.95) / (2.285 2 pi f_t)),  r > 21
+ *       { ceil(5.79 / 2 pi f_t),                r <= 21.
+ *
+ */
+static uint CalcKaiserOrder (const double rejection, const double transition) {
+  double w_t;
+
+  w_t = 2.0 * M_PI * transition;
+  if (rejection > 21.0)
+     return ((uint) ceil ((rejection - 7.95) / (2.285 * w_t)));
+  return ((uint) ceil (5.79 / w_t));
+}
+
+// Calculates the beta value of the Kaiser window.  Rejection is in dB.
+static double CalcKaiserBeta (const double rejection) {
+  if (rejection > 50.0)
+     return (0.1102 * (rejection - 8.7));
+  else if (rejection >= 21.0)
+     return ((0.5842 * pow (rejection - 21.0, 0.4)) +
+             (0.07886 * (rejection - 21.0)));
+  else
+     return (0.0);
+}
+
+/* Calculates a point on the Kaiser-windowed sinc filter for the given half-
+ * width, beta, gain, and cutoff.  The point is specified in non-normalized
+ * samples, from 0 to M, where M = (2 l + 1).
+ *
+ *   w(k) 2 p f_t sinc(2 f_t x)
+ *
+ *   x    -- centered sample index (i - l)
+ *   k    -- normalized and centered window index (x / l)
+ *   w(k) -- window function (Kaiser)
+ *   p    -- gain compensation factor when sampling
+ *   f_t  -- normalized center frequency (or cutoff; 0.5 is nyquist)
+ */
+static double SincFilter (const int l, const double b, const double gain, const double cutoff, const int i) {
+  return (Kaiser (b, ((double) (i - l)) / l) * 2.0 * gain * cutoff * Sinc (2.0 * cutoff * (i - l)));
+}
+
+/* This is a polyphase sinc-filtered resampler.
+ *
+ *              Upsample                      Downsample
+ *
+ *              p/q = 3/2                     p/q = 3/5
+ *
+ *          M-+-+-+->                     M-+-+-+->
+ *         -------------------+          ---------------------+
+ *   p  s * f f f f|f|        |    p  s * f f f f f           |
+ *   |  0 *   0 0 0|0|0       |    |  0 *   0 0 0 0|0|        |
+ *   v  0 *     0 0|0|0 0     |    v  0 *     0 0 0|0|0       |
+ *      s *       f|f|f f f   |       s *       f f|f|f f     |
+ *      0 *        |0|0 0 0 0 |       0 *         0|0|0 0 0   |
+ *         --------+=+--------+       0 *          |0|0 0 0 0 |
+ *          d . d .|d|. d . d            ----------+=+--------+
+ *                                        d . . . .|d|. . . .
+ *          q->
+ *                                        q-+-+-+->
+ *
+ *   P_f(i,j) = q i mod p + pj
+ *   P_s(i,j) = floor(q i / p) - j
+ *   d[i=0..N-1] = sum_{j=0}^{floor((M - 1) / p)} {
+ *                   { f[P_f(i,j)] s[P_s(i,j)],  P_f(i,j) < M
+ *                   { 0,                        P_f(i,j) >= M. }
+ */
+
+// Calculate the resampling metrics and build the Kaiser-windowed sinc filter
+// that's used to cut frequencies above the destination nyquist.
+static void ResamplerSetup (ResamplerT * rs, const uint srcRate, const uint dstRate) {
+  uint gcd, l;
+  double cutoff, width, beta;
+  int i;
+
+  gcd = Gcd (srcRate, dstRate);
+  rs -> mP = dstRate / gcd;
+  rs -> mQ = srcRate / gcd;
+  /* The cutoff is adjusted by half the transition width, so the transition
+   * ends before the nyquist (0.5).  Both are scaled by the downsampling
+   * factor.
+   */
+  if (rs -> mP > rs -> mQ) {
+     cutoff = 0.45 / rs -> mP;
+     width = 0.1 / rs -> mP;
+  } else {
+     cutoff = 0.45 / rs -> mQ;
+     width = 0.1 / rs -> mQ;
+  }
+  // A rejection of -180 dB is used for the stop band.
+  l = CalcKaiserOrder (180.0, width) / 2;
+  beta = CalcKaiserBeta (180.0);
+  rs -> mM = (2 * l) + 1;
+  rs -> mL = l;
+  rs -> mF = CreateArray (rs -> mM);
+  for (i = 0; i < ((int) rs -> mM); i ++)
+      rs -> mF [i] = SincFilter ((int) l, beta, rs -> mP, cutoff, i);
+}
+
+// Clean up after the resampler.
+static void ResamplerClear (ResamplerT * rs) {
+  DestroyArray (rs -> mF);
+  rs -> mF = NULL;
+}
+
+// Perform the upsample-filter-downsample resampling operation using a
+// polyphase filter implementation.
+static void ResamplerRun (ResamplerT * rs, const uint inN, const double * in, const uint outN, double * out) {
+  const uint p = rs -> mP, q = rs -> mQ, m = rs -> mM, l = rs -> mL;
+  const double * f = rs -> mF;
+  double * work = NULL;
+  uint i;
+  double r;
+  uint j_f, j_s;
+
+  // Handle in-place operation.
+  if (in == out)
+     work = CreateArray (outN);
+  else
+     work = out;
+  // Resample the input.
+  for (i = 0; i < outN; i ++) {
+      r = 0.0;
+      // Input starts at l to compensate for the filter delay.  This will
+      // drop any build-up from the first half of the filter.
+      j_f = (l + (q * i)) % p;
+      j_s = (l + (q * i)) / p;
+      while (j_f < m) {
+        // Only take input when 0 <= j_s < inN.  This single unsigned
+        // comparison catches both cases.
+        if (j_s < inN)
+           r += f [j_f] * in [j_s];
+        j_f += p;
+        j_s --;
+      }
+      work [i] = r;
+  }
+  // Clean up after in-place operation.
+  if (in == out) {
+     for (i = 0; i < outN; i ++)
+         out [i] = work [i];
+     DestroyArray (work);
+  }
 }
 
 // Read a binary value of the specified byte order and byte size from a file,
@@ -1125,10 +1360,10 @@ static int ReadBinAsDouble (FILE * fp, const char * filename, const ByteOrderT o
         (* out) = (double) v4 . f;
      } else {
         if (bits > 0)
-           v4 . ui >>= (8 * bytes) - bits;
+           v4 . ui >>= (8 * bytes) - ((uint) bits);
         else
            v4 . ui &= (0xFFFFFFFF >> (32 + bits));
-        if (v4 . ui & (1 << (abs (bits) - 1)))
+        if (v4 . ui & ((uint) (1 << (abs (bits) - 1))))
            v4 . ui |= (0xFFFFFFFF << abs (bits));
         (* out) = v4 . i / ((double) (1 << (abs (bits) - 1)));
      }
@@ -1176,7 +1411,7 @@ static int ReadWaveFormat (FILE * fp, const ByteOrderT order, const uint hrirRat
   chunkSize = 0;
   do {
     if (chunkSize > 0)
-       fseek (fp, chunkSize, SEEK_CUR);
+       fseek (fp, (long) chunkSize, SEEK_CUR);
     if ((! ReadBin4 (fp, src -> mPath, BO_LITTLE, 4, & fourCC)) ||
         (! ReadBin4 (fp, src -> mPath, order, 4, & chunkSize)))
        return (0);
@@ -1206,13 +1441,13 @@ static int ReadWaveFormat (FILE * fp, const ByteOrderT order, const uint hrirRat
      fseek (fp, 4, SEEK_CUR);
      if (! ReadBin4 (fp, src -> mPath, order, 2, & format))
         return (0);
-     fseek (fp, chunkSize - 26, SEEK_CUR);
+     fseek (fp, (long) (chunkSize - 26), SEEK_CUR);
   } else {
      bits = 8 * size;
      if (chunkSize > 14)
-        fseek (fp, chunkSize - 16, SEEK_CUR);
+        fseek (fp, (long) (chunkSize - 16), SEEK_CUR);
      else
-        fseek (fp, chunkSize - 14, SEEK_CUR);
+        fseek (fp, (long) (chunkSize - 14), SEEK_CUR);
   }
   if ((format != WAVE_FORMAT_PCM) && (format != WAVE_FORMAT_IEEE_FLOAT)) {
      fprintf (stderr, "Error:  Unsupported WAVE format in file '%s'.\n", src -> mPath);
@@ -1250,9 +1485,9 @@ static int ReadWaveFormat (FILE * fp, const ByteOrderT order, const uint hrirRat
 }
 
 // Read a RIFF/RIFX WAVE data chunk, converting all elements to doubles.
-static int ReadWaveData (FILE * fp, const SourceRefT * src, const ByteOrderT order, const size_t n, double * hrir) {
+static int ReadWaveData (FILE * fp, const SourceRefT * src, const ByteOrderT order, const uint n, double * hrir) {
   int pre, post, skip;
-  size_t i;
+  uint i;
 
   pre = (int) (src -> mSize * src -> mChannel);
   post = (int) (src -> mSize * (src -> mSkip - src -> mChannel - 1));
@@ -1272,9 +1507,9 @@ static int ReadWaveData (FILE * fp, const SourceRefT * src, const ByteOrderT ord
 
 // Read the RIFF/RIFX WAVE list or data chunk, converting all elements to
 // doubles.
-static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT order, const size_t n, double * hrir) {
+static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT order, const uint n, double * hrir) {
   uint4 fourCC, chunkSize, listSize, count;
-  size_t block, skip, offset, i;
+  uint block, skip, offset, i;
   double lastSample;
 
   for (;;) {
@@ -1288,7 +1523,7 @@ static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT ord
             fprintf (stderr, "Error:  Bad read from file '%s'.\n", src -> mPath);
             return (0);
          }
-         fseek (fp, src -> mOffset * block, SEEK_CUR);
+         fseek (fp, (long) (src -> mOffset * block), SEEK_CUR);
          if (! ReadWaveData (fp, src, order, n, & hrir [0]))
             return (0);
          return (1);
@@ -1300,7 +1535,7 @@ static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT ord
             break;
       }
       if (chunkSize > 0)
-         fseek (fp, chunkSize, SEEK_CUR);
+         fseek (fp, (long) chunkSize, SEEK_CUR);
   }
   listSize = chunkSize;
   block = src -> mSize * src -> mSkip;
@@ -1315,7 +1550,7 @@ static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT ord
     if (fourCC == FOURCC_DATA) {
        count = chunkSize / block;
        if (count > skip) {
-          fseek (fp, skip * block, SEEK_CUR);
+          fseek (fp, (long) (skip * block), SEEK_CUR);
           chunkSize -= skip * block;
           count -= skip;
           skip = 0;
@@ -1348,7 +1583,7 @@ static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT ord
        }
     }
     if (chunkSize > 0)
-       fseek (fp, chunkSize, SEEK_CUR);
+       fseek (fp, (long) chunkSize, SEEK_CUR);
   }
   if (offset < n) {
      fprintf (stderr, "Error:  Bad read from file '%s'.\n", src -> mPath);
@@ -1358,7 +1593,7 @@ static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT ord
 }
 
 // Load a source HRIR from a RIFF/RIFX WAVE file.
-static int LoadWaveSource (FILE * fp, SourceRefT * src, const uint hrirRate, const size_t n, double * hrir) {
+static int LoadWaveSource (FILE * fp, SourceRefT * src, const uint hrirRate, const uint n, double * hrir) {
   uint4 fourCC, dummy;
   ByteOrderT order;
 
@@ -1387,36 +1622,36 @@ static int LoadWaveSource (FILE * fp, SourceRefT * src, const uint hrirRate, con
 }
 
 // Load a source HRIR from a binary file.
-static int LoadBinarySource (FILE * fp, const SourceRefT * src, const ByteOrderT order, const size_t n, double * hrir) {
-  size_t i;
+static int LoadBinarySource (FILE * fp, const SourceRefT * src, const ByteOrderT order, const uint n, double * hrir) {
+  uint i;
 
-  fseek (fp, src -> mOffset, SEEK_SET);
+  fseek (fp, (long) src -> mOffset, SEEK_SET);
   for (i = 0; i < n; i ++) {
       if (! ReadBinAsDouble (fp, src -> mPath, order, src -> mType, src -> mSize, src -> mBits, & hrir [i]))
          return (0);
       if (src -> mSkip > 0)
-         fseek (fp, src -> mSkip, SEEK_CUR);
+         fseek (fp, (long) src -> mSkip, SEEK_CUR);
   }
   return (1);
 }
 
 // Load a source HRIR from an ASCII text file containing a list of elements
 // separated by whitespace or common list operators (',', ';', ':', '|').
-static int LoadAsciiSource (FILE * fp, const SourceRefT * src, const size_t n, double * hrir) {
+static int LoadAsciiSource (FILE * fp, const SourceRefT * src, const uint n, double * hrir) {
   TokenReaderT tr;
-  size_t i, j;
+  uint i, j;
   double dummy;
 
   TrSetup (fp, NULL, & tr);
   for (i = 0; i < src -> mOffset; i ++) {
-      if (! ReadAsciiAsDouble (& tr, src -> mPath, src -> mType, src -> mBits, & dummy))
+      if (! ReadAsciiAsDouble (& tr, src -> mPath, src -> mType, (uint) src -> mBits, & dummy))
          return (0);
   }
   for (i = 0; i < n; i ++) {
-      if (! ReadAsciiAsDouble (& tr, src -> mPath, src -> mType, src -> mBits, & hrir [i]))
+      if (! ReadAsciiAsDouble (& tr, src -> mPath, src -> mType, (uint) src -> mBits, & hrir [i]))
          return (0);
       for (j = 0; j < src -> mSkip; j ++) {
-          if (! ReadAsciiAsDouble (& tr, src -> mPath, src -> mType, src -> mBits, & dummy))
+          if (! ReadAsciiAsDouble (& tr, src -> mPath, src -> mType, (uint) src -> mBits, & dummy))
              return (0);
       }
   }
@@ -1424,7 +1659,7 @@ static int LoadAsciiSource (FILE * fp, const SourceRefT * src, const size_t n, d
 }
 
 // Load a source HRIR from a supported file type.
-static int LoadSource (SourceRefT * src, const uint hrirRate, const size_t n, double * hrir) {
+static int LoadSource (SourceRefT * src, const uint hrirRate, const uint n, double * hrir) {
   FILE * fp = NULL;
   int result;
 
@@ -1452,7 +1687,7 @@ static int LoadSource (SourceRefT * src, const uint hrirRate, const size_t n, do
 // existing responses for its elevation and azimuth.
 static void AverageHrirMagnitude (const double * hrir, const double f, const uint ei, const uint ai, const HrirDataT * hData) {
   double * re = NULL, * im = NULL;
-  size_t n, m, i, j;
+  uint n, m, i, j;
 
   n = hData -> mFftSize;
   re = CreateArray (n);
@@ -1516,8 +1751,7 @@ static void CalculateDfWeights (const HrirDataT * hData, double * weights) {
  */
 static void CalculateDiffuseFieldAverage (const HrirDataT * hData, const int weighted, const double limit, double * dfa) {
   double * weights = NULL;
-  uint ei, ai;
-  size_t count, step, start, end, m, j, i;
+  uint ei, ai, count, step, start, end, m, j, i;
   double weight;
 
   weights = CreateArray (hData -> mEvCount);
@@ -1567,7 +1801,7 @@ static void CalculateDiffuseFieldAverage (const HrirDataT * hData, const int wei
 // Perform diffuse-field equalization on the magnitude responses of the HRIR
 // set using the given average response.
 static void DiffuseFieldEqualize (const double * dfa, const HrirDataT * hData) {
-  size_t step, start, end, m, j, i;
+  uint step, start, end, m, j, i;
 
   step = hData -> mIrSize;
   start = hData -> mEvOffset [hData -> mEvStart] * step;
@@ -1583,7 +1817,7 @@ static void DiffuseFieldEqualize (const double * dfa, const HrirDataT * hData) {
 // HRIR set.
 static void ReconstructHrirs (const HrirDataT * hData) {
   double * re = NULL, * im = NULL;
-  size_t step, start, end, n, j, i;
+  uint step, start, end, n, j, i;
 
   step = hData -> mIrSize;
   start = hData -> mEvOffset [hData -> mEvStart] * step;
@@ -1601,12 +1835,27 @@ static void ReconstructHrirs (const HrirDataT * hData) {
   DestroyArray (re);
 }
 
+// Resamples the HRIRs for use at the given sampling rate.
+static void ResampleHrirs (const uint rate, HrirDataT * hData) {
+  ResamplerT rs;
+  uint n, step, start, end, j;
+
+  ResamplerSetup (& rs, hData -> mIrRate, rate);
+  n = hData -> mIrPoints;
+  step = hData -> mIrSize;
+  start = hData -> mEvOffset [hData -> mEvStart] * step;
+  end = hData -> mIrCount * step;
+  for (j = start; j < end; j += step)
+      ResamplerRun (& rs, n, & hData -> mHrirs [j], n, & hData -> mHrirs [j]);
+  ResamplerClear (& rs);
+  hData -> mIrRate = rate;
+}
+
 /* Given an elevation index and an azimuth, calculate the indices of the two
  * HRIRs that bound the coordinate along with a factor for calculating the
  * continous HRIR using interpolation.
  */
-static void CalcAzIndices(const HrirDataT *hData, const uint ei, const double az, size_t *j0, size_t *j1, double *jf)
-{
+static void CalcAzIndices (const HrirDataT * hData, const uint ei, const double az, uint * j0, uint * j1, double * jf) {
   double af;
   uint ai;
 
@@ -1624,10 +1873,9 @@ static void CalcAzIndices(const HrirDataT *hData, const uint ei, const double az
  * model.
  */
 static void SynthesizeHrirs (HrirDataT * hData) {
-  uint oi, a, e;
-  size_t step, n, i, j;
-  double of;
-  size_t j0, j1;
+  uint oi, a, e, step, n, i, j;
+  double of, b;
+  uint j0, j1;
   double jf;
   double lp [4], s0, s1;
 
@@ -1645,6 +1893,7 @@ static void SynthesizeHrirs (HrirDataT * hData) {
   }
   for (e = 1; e < hData -> mEvStart; e ++) {
       of = ((double) e) / hData -> mEvStart;
+      b = (1.0 - of) * (3.5e-6 * hData -> mIrRate);
       for (a = 0; a < hData -> mAzCount [e]; a ++) {
           j = (hData -> mEvOffset [e] + a) * step;
           CalcAzIndices (hData, oi, a * 2.0 * M_PI / hData -> mAzCount [e], & j0, & j1, & jf);
@@ -1658,24 +1907,25 @@ static void SynthesizeHrirs (HrirDataT * hData) {
               s0 = hData -> mHrirs [i];
               s1 = Lerp (hData -> mHrirs [j0 + i], hData -> mHrirs [j1 + i], jf);
               s0 = Lerp (s0, s1, of);
-              lp [0] = Lerp (s0, lp [0], 0.15 - (0.15 * of));
-              lp [1] = Lerp (lp [0], lp [1], 0.15 - (0.15 * of));
-              lp [2] = Lerp (lp [1], lp [2], 0.15 - (0.15 * of));
-              lp [3] = Lerp (lp [2], lp [3], 0.15 - (0.15 * of));
+              lp [0] = Lerp (s0, lp [0], b);
+              lp [1] = Lerp (lp [0], lp [1], b);
+              lp [2] = Lerp (lp [1], lp [2], b);
+              lp [3] = Lerp (lp [2], lp [3], b);
               hData -> mHrirs [j + i] = lp [3];
           }
       }
   }
+  b = 3.5e-6 * hData -> mIrRate;
   lp [0] = 0.0;
   lp [1] = 0.0;
   lp [2] = 0.0;
   lp [3] = 0.0;
   for (i = 0; i < n; i ++) {
       s0 = hData -> mHrirs [i];
-      lp [0] = Lerp (s0, lp [0], 0.15);
-      lp [1] = Lerp (lp [0], lp [1], 0.15);
-      lp [2] = Lerp (lp [1], lp [2], 0.15);
-      lp [3] = Lerp (lp [2], lp [3], 0.15);
+      lp [0] = Lerp (s0, lp [0], b);
+      lp [1] = Lerp (lp [0], lp [1], b);
+      lp [2] = Lerp (lp [1], lp [2], b);
+      lp [3] = Lerp (lp [2], lp [3], b);
       hData -> mHrirs [i] = lp [3];
   }
   hData -> mEvStart = 0;
@@ -1685,7 +1935,7 @@ static void SynthesizeHrirs (HrirDataT * hData) {
 
 // Normalize the HRIR set and slightly attenuate the result.
 static void NormalizeHrirs (const HrirDataT * hData) {
-  size_t step, end, n, j, i;
+  uint step, end, n, j, i;
   double maxLevel;
 
   step = hData -> mIrSize;
@@ -1745,8 +1995,7 @@ static void CalculateHrtds (HrirDataT * hData) {
 // Store the OpenAL Soft HRTF data set.
 static int StoreMhr (const HrirDataT * hData, const char * filename) {
   FILE * fp = NULL;
-  uint e;
-  size_t step, end, n, j, i;
+  uint e, step, end, n, j, i;
   int hpHist, v;
 
   if ((fp = fopen (filename, "wb")) == NULL) {
@@ -1789,7 +2038,7 @@ static int StoreMhr (const HrirDataT * hData, const char * filename) {
 // Store the OpenAL Soft built-in table.
 static int StoreTable (const HrirDataT * hData, const char * filename) {
   FILE * fp = NULL;
-  size_t step, end, n, j, i;
+  uint step, end, n, j, i;
   int hpHist, v;
   char text [128 + 1];
 
@@ -1820,17 +2069,17 @@ static int StoreTable (const HrirDataT * hData, const char * filename) {
   n = hData -> mIrPoints;
   snprintf (text, 128, "};\n\n"
                        "/* HRIR Coefficients */\n"
-                       "static const ALshort defaultCoeffs[%zu] =\n{\n", hData -> mIrCount * n);
+                       "static const ALshort defaultCoeffs[%u] =\n{\n", hData -> mIrCount * n);
   if (! WriteAscii (text, fp, filename))
      return (0);
   srand (0x31DF840C);
   for (j = 0; j < end; j += step) {
-      if (! WriteAscii ("    ", fp, filename))
+      if (! WriteAscii ("   ", fp, filename))
          return (0);
       hpHist = 0;
       for (i = 0; i < n; i ++) {
           v = HpTpdfDither (32767.0 * hData -> mHrirs [j + i], & hpHist);
-          snprintf (text, 128, "%+d, ", v);
+          snprintf (text, 128, " %+d,", v);
           if (! WriteAscii (text, fp, filename))
              return (0);
       }
@@ -1839,13 +2088,13 @@ static int StoreTable (const HrirDataT * hData, const char * filename) {
   }
   snprintf (text, 128, "};\n\n"
                        "/* HRIR Delays */\n"
-                       "static const ALubyte defaultDelays[%d] =\n{\n"
-                       "    ", hData -> mIrCount);
+                       "static const ALubyte defaultDelays[%u] =\n{\n"
+                       "   ", hData -> mIrCount);
   if (! WriteAscii (text, fp, filename))
      return (0);
   for (j = 0; j < hData -> mIrCount; j ++) {
       v = (int) fmin (round (hData -> mIrRate * hData -> mHrtds [j]), MAX_HRTD);
-      snprintf (text, 128, "%d, ", v);
+      snprintf (text, 128, " %d,", v);
       if (! WriteAscii (text, fp, filename))
          return (0);
   }
@@ -1853,7 +2102,7 @@ static int StoreTable (const HrirDataT * hData, const char * filename) {
                     "/* Default HRTF Definition */\n", fp, filename))
      return (0);
   snprintf (text, 128, "static const struct Hrtf DefaultHrtf = {\n"
-                       "    %u, %zu, %u, defaultAzCount, defaultEvOffset,\n",
+                       "    %u, %u, %u, defaultAzCount, defaultEvOffset,\n",
                        hData -> mIrRate, hData -> mIrPoints, hData -> mEvCount);
   if (! WriteAscii (text, fp, filename))
      return (0);
@@ -1865,11 +2114,11 @@ static int StoreTable (const HrirDataT * hData, const char * filename) {
 }
 
 // Process the data set definition to read and validate the data set metrics.
-static int ProcessMetrics (TokenReaderT * tr, const size_t fftSize, const size_t truncSize, HrirDataT * hData) {
+static int ProcessMetrics (TokenReaderT * tr, const uint fftSize, const uint truncSize, HrirDataT * hData) {
   char ident [MAX_IDENT_LEN + 1];
   uint line, col;
   int intVal;
-  size_t points;
+  uint points;
   double fpVal;
   int hasRate = 0, hasPoints = 0, hasAzimuths = 0;
   int hasRadius = 0, hasDistance = 0;
@@ -1887,7 +2136,7 @@ static int ProcessMetrics (TokenReaderT * tr, const size_t fftSize, const size_t
           return (0);
        if (! TrReadInt (tr, MIN_RATE, MAX_RATE, & intVal))
           return (0);
-       hData -> mIrRate = intVal;
+       hData -> mIrRate = (uint) intVal;
        hasRate = 1;
     } else if (strcasecmp (ident, "points") == 0) {
        if (hasPoints) {
@@ -1899,7 +2148,7 @@ static int ProcessMetrics (TokenReaderT * tr, const size_t fftSize, const size_t
        TrIndication (tr, & line, & col);
        if (! TrReadInt (tr, MIN_POINTS, MAX_POINTS, & intVal))
           return (0);
-       points = (size_t) intVal;
+       points = (uint) intVal;
        if ((fftSize > 0) && (points > fftSize)) {
           TrErrorAt (tr, line, col, "Value exceeds the overriden FFT size.\n");
           return (0);
@@ -1936,8 +2185,8 @@ static int ProcessMetrics (TokenReaderT * tr, const size_t fftSize, const size_t
        for (;;) {
            if (! TrReadInt (tr, MIN_AZ_COUNT, MAX_AZ_COUNT, & intVal))
               return (0);
-           hData -> mAzCount [hData -> mEvCount] = intVal;
-           hData -> mIrCount += intVal;
+           hData -> mAzCount [hData -> mEvCount] = (uint) intVal;
+           hData -> mIrCount += (uint) intVal;
            hData -> mEvCount ++;
            if (! TrIsOperator (tr, ","))
               break;
@@ -1945,7 +2194,7 @@ static int ProcessMetrics (TokenReaderT * tr, const size_t fftSize, const size_t
               TrError (tr, "Exceeded the maximum of %d elevations.\n", MAX_EV_COUNT);
               return (0);
            }
-           hData -> mEvOffset [hData -> mEvCount] = hData -> mEvOffset [hData -> mEvCount - 1] + intVal;
+           hData -> mEvOffset [hData -> mEvCount] = hData -> mEvOffset [hData -> mEvCount - 1] + ((uint) intVal);
            TrReadOperator (tr, ",");
        }
        if (hData -> mEvCount < MIN_EV_COUNT) {
@@ -1988,12 +2237,12 @@ static int ProcessMetrics (TokenReaderT * tr, const size_t fftSize, const size_t
 static int ReadIndexPair (TokenReaderT * tr, const HrirDataT * hData, uint * ei, uint * ai) {
   int intVal;
 
-  if (! TrReadInt (tr, 0, hData -> mEvCount, & intVal))
+  if (! TrReadInt (tr, 0, (int) hData -> mEvCount, & intVal))
      return (0);
   (* ei) = (uint) intVal;
   if (! TrReadOperator (tr, ","))
      return (0);
-  if (! TrReadInt (tr, 0, hData -> mAzCount [(* ei)], & intVal))
+  if (! TrReadInt (tr, 0, (int) hData -> mAzCount [(* ei)], & intVal))
      return (0);
   (* ai) = (uint) intVal;
   return (1);
@@ -2060,23 +2309,23 @@ static int ReadSourceRef (TokenReaderT * tr, SourceRefT * src) {
         if (src -> mType == ET_INT) {
            if (! TrReadInt (tr, MIN_BIN_SIZE, MAX_BIN_SIZE, & intVal))
               return (0);
-           src -> mSize = intVal;
+           src -> mSize = (uint) intVal;
            if (TrIsOperator (tr, ",")) {
               TrReadOperator (tr, ",");
               TrIndication (tr, & line, & col);
-              if (! TrReadInt (tr, 0x80000000, 0x7FFFFFFF, & intVal))
+              if (! TrReadInt (tr, -2147483647 - 1, 2147483647, & intVal))
                  return (0);
-              if ((abs (intVal) < MIN_BIN_BITS) || ((uint)abs(intVal) > (8 * src -> mSize))) {
+              if ((abs (intVal) < MIN_BIN_BITS) || (((uint) abs (intVal)) > (8 * src -> mSize))) {
                  TrErrorAt (tr, line, col, "Expected a value of (+/-) %d to %d.\n", MIN_BIN_BITS, 8 * src -> mSize);
                  return (0);
               }
               src -> mBits = intVal;
            } else {
-              src -> mBits = 8 * src -> mSize;
+              src -> mBits = (int) (8 * src -> mSize);
            }
         } else {
            TrIndication (tr, & line, & col);
-           if (! TrReadInt (tr, 0x80000000, 0x7FFFFFFF, & intVal))
+           if (! TrReadInt (tr, -2147483647 - 1, 2147483647, & intVal))
               return (0);
            if ((intVal != 4) && (intVal != 8)) {
               TrErrorAt (tr, line, col, "Expected a value of 4 or 8.\n");
@@ -2203,22 +2452,21 @@ static int ProcessSources (TokenReaderT * tr, HrirDataT * hData) {
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-static int ProcessDefinition (const char * inName, const size_t fftSize, const int equalize, const int surface, const double limit, const size_t truncSize, const OutputFormatT outFormat, const char * outName) {
+static int ProcessDefinition (const char * inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const OutputFormatT outFormat, const char * outName) {
   FILE * fp = NULL;
   TokenReaderT tr;
   HrirDataT hData;
   double * dfa = NULL;
   char rateStr [8 + 1], expName [MAX_PATH_LEN];
 
-  hData.mIrRate   = 0;
-  hData.mIrPoints = 0;
-  hData.mFftSize  = 0;
-  hData.mIrSize   = 0;
-  hData.mIrCount  = 0;
-  hData.mEvCount  = 0;
-  hData.mRadius   = 0;
-  hData.mDistance = 0;
-
+  hData . mIrRate = 0;
+  hData . mIrPoints = 0;
+  hData . mFftSize = 0;
+  hData . mIrSize = 0;
+  hData . mIrCount = 0;
+  hData . mEvCount = 0;
+  hData . mRadius = 0;
+  hData . mDistance = 0;
   fprintf (stdout, "Reading HRIR definition...\n");
   if (inName != NULL) {
      fp = fopen (inName, "r");
@@ -2257,6 +2505,10 @@ static int ProcessDefinition (const char * inName, const size_t fftSize, const i
   }
   fprintf (stdout, "Performing minimum phase reconstruction...\n");
   ReconstructHrirs (& hData);
+  if ((outRate != 0) && (outRate != hData . mIrRate)) {
+     fprintf (stdout, "Resampling HRIRs...\n");
+     ResampleHrirs (outRate, & hData);
+  }
   fprintf (stdout, "Truncating minimum-phase HRIRs...\n");
   hData . mIrPoints = truncSize;
   fprintf (stdout, "Synthesizing missing elevations...\n");
@@ -2291,10 +2543,10 @@ int main (const int argc, const char * argv []) {
   const char * inName = NULL, * outName = NULL;
   OutputFormatT outFormat;
   int argi;
-  size_t fftSize;
+  uint outRate, fftSize;
   int equalize, surface;
   double limit;
-  size_t truncSize;
+  uint truncSize;
   char * end = NULL;
 
   if (argc < 2) {
@@ -2311,6 +2563,8 @@ int main (const int argc, const char * argv []) {
      fprintf (stdout, "                 Defaults output to: ./hrtf_tables.inc\n");
      fprintf (stdout, " -h, --help      Displays this help information.\n\n");
      fprintf (stdout, "Options:\n");
+     fprintf (stdout, " -r=<rate>       Change the data set sample rate to the specified value and\n");
+     fprintf (stdout, "                 resample the HRIRs accordingly.\n");
      fprintf (stdout, " -f=<points>     Override the FFT window size (defaults to the first power-\n");
      fprintf (stdout, "                 of-two that fits four times the number of HRIR points).\n");
      fprintf (stdout, " -e={on|off}     Toggle diffuse-field equalization (default: %s).\n", (DEFAULT_EQUALIZE ? "on" : "off"));
@@ -2318,7 +2572,7 @@ int main (const int argc, const char * argv []) {
      fprintf (stdout, " -l={<dB>|none}  Specify a limit to the magnitude range of the diffuse-field\n");
      fprintf (stdout, "                 average (default: %.2f).\n", DEFAULT_LIMIT);
      fprintf (stdout, " -w=<points>     Specify the size of the truncation window that's applied\n");
-     fprintf (stdout, "                 after minimum-phase reconstruction (default: %d).\n", DEFAULT_TRUNCSIZE);
+     fprintf (stdout, "                 after minimum-phase reconstruction (default: %u).\n", DEFAULT_TRUNCSIZE);
      fprintf (stdout, " -i=<filename>   Specify an HRIR definition file to use (defaults to stdin).\n");
      fprintf (stdout, " -o=<filename>   Specify an output file.  Overrides command-selected default.\n");
      fprintf (stdout, "                 Use of '%%r' will be substituted with the data set sample rate.\n");
@@ -2341,16 +2595,23 @@ int main (const int argc, const char * argv []) {
      return (-1);
   }
   argi = 2;
+  outRate = 0;
   fftSize = 0;
   equalize = DEFAULT_EQUALIZE;
   surface = DEFAULT_SURFACE;
   limit = DEFAULT_LIMIT;
   truncSize = DEFAULT_TRUNCSIZE;
   while (argi < argc) {
-    if (strncmp (argv [argi], "-f=", 3) == 0) {
+    if (strncmp (argv [argi], "-r=", 3) == 0) {
+       outRate = strtoul (& argv [argi] [3], & end, 10);
+       if ((end [0] != '\0') || (outRate < MIN_RATE) || (outRate > MAX_RATE)) {
+          fprintf (stderr, "Error:  Expected a value from %u to %u for '-r'.\n", MIN_RATE, MAX_RATE);
+          return (-1);
+       }
+    } else if (strncmp (argv [argi], "-f=", 3) == 0) {
        fftSize = strtoul (& argv [argi] [3], & end, 10);
        if ((end [0] != '\0') || (fftSize & (fftSize - 1)) || (fftSize < MIN_FFTSIZE) || (fftSize > MAX_FFTSIZE)) {
-          fprintf (stderr, "Error:  Expected a power-of-two value from %d to %d for '-f'.\n", MIN_FFTSIZE, MAX_FFTSIZE);
+          fprintf (stderr, "Error:  Expected a power-of-two value from %u to %u for '-f'.\n", MIN_FFTSIZE, MAX_FFTSIZE);
           return (-1);
        }
     } else if (strncmp (argv [argi], "-e=", 3) == 0) {
@@ -2384,7 +2645,7 @@ int main (const int argc, const char * argv []) {
     } else if (strncmp (argv [argi], "-w=", 3) == 0) {
        truncSize = strtoul (& argv [argi] [3], & end, 10);
        if ((end [0] != '\0') || (truncSize < MIN_TRUNCSIZE) || (truncSize > MAX_TRUNCSIZE) || (truncSize % MOD_TRUNCSIZE)) {
-          fprintf (stderr, "Error:  Expected a value from %d to %d in multiples of %d for '-w'.\n", MIN_TRUNCSIZE, MAX_TRUNCSIZE, MOD_TRUNCSIZE);
+          fprintf (stderr, "Error:  Expected a value from %u to %u in multiples of %u for '-w'.\n", MIN_TRUNCSIZE, MAX_TRUNCSIZE, MOD_TRUNCSIZE);
           return (-1);
        }
     } else if (strncmp (argv [argi], "-i=", 3) == 0) {
@@ -2397,7 +2658,7 @@ int main (const int argc, const char * argv []) {
     }
     argi ++;
   }
-  if (! ProcessDefinition (inName, fftSize, equalize, surface, limit, truncSize, outFormat, outName))
+  if (! ProcessDefinition (inName, outRate, fftSize, equalize, surface, limit, truncSize, outFormat, outName))
      return (-1);
   fprintf (stdout, "Operation completed.\n");
   return (0);

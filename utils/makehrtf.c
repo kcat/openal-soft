@@ -1016,7 +1016,7 @@ static void MinimumPhase (const uint n, const double * in, double * outR, double
 
 /* This is the normalized cardinal sine (sinc) function.
  *
- *   sinc(x) = { 0,                   x = 0
+ *   sinc(x) = { 1,                   x = 0
  *             { sin(pi x) / (pi x),  otherwise.
  */
 static double Sinc (const double x) {

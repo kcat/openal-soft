@@ -1288,10 +1288,8 @@ static void pulse_start_capture(ALCdevice *device)
     pulse_data *data = device->ExtraData;
     pa_operation *o;
 
-    pa_threaded_mainloop_lock(data->loop);
     o = pa_stream_cork(data->stream, 0, stream_success_callback, device);
     wait_for_operation(o, data->loop);
-    pa_threaded_mainloop_unlock(data->loop);
 }
 
 static void pulse_stop_capture(ALCdevice *device)
@@ -1299,10 +1297,8 @@ static void pulse_stop_capture(ALCdevice *device)
     pulse_data *data = device->ExtraData;
     pa_operation *o;
 
-    pa_threaded_mainloop_lock(data->loop);
     o = pa_stream_cork(data->stream, 1, stream_success_callback, device);
     wait_for_operation(o, data->loop);
-    pa_threaded_mainloop_unlock(data->loop);
 }
 
 static ALCenum pulse_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples)

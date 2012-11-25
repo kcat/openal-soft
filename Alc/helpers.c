@@ -20,11 +20,13 @@
 
 #include "config.h"
 
-#include <malloc.h>
 #include <stdlib.h>
 #include <time.h>
 #include <errno.h>
 #include <stdarg.h>
+#ifdef HAVE__ALIGNED_MALLOC
+#include <malloc.h>
+#endif
 
 #if defined(HAVE_GUIDDEF_H) || defined(HAVE_INITGUID_H)
 #define INITGUID

@@ -24,7 +24,7 @@
 #include <time.h>
 #include <errno.h>
 #include <stdarg.h>
-#ifdef HAVE__ALIGNED_MALLOC
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
 

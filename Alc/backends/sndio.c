@@ -73,7 +73,9 @@ static ALuint sndio_proc(ALvoid *ptr)
             if(wrote == 0)
             {
                 ERR("sio_write failed\n");
+                ALCdevice_Lock(device);
                 aluHandleDisconnect(device);
+                ALCdevice_Unlock(device);
                 break;
             }
 

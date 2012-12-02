@@ -113,6 +113,7 @@ ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALCo
 ALvoid MixSource(struct ALsource *Source, ALCdevice *Device, ALuint SamplesToDo);
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);
+/* Caller must lock the device. */
 ALvoid aluHandleDisconnect(ALCdevice *device);
 
 extern ALfloat ConeScale;

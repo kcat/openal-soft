@@ -2474,7 +2474,11 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         UnlockLists();
         alcSetError(device, err);
         if(err == ALC_INVALID_DEVICE)
+        {
+            ALCdevice_Lock(device);
             aluHandleDisconnect(device);
+            ALCdevice_Unlock(device);
+        }
         ALCdevice_DecRef(device);
         return NULL;
     }

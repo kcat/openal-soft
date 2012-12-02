@@ -229,7 +229,9 @@ static ALuint MMDevApiProc(ALvoid *ptr)
     if(FAILED(hr))
     {
         ERR("CoInitialize(NULL) failed: 0x%08lx\n", hr);
+        ALCdevice_Lock(device);
         aluHandleDisconnect(device);
+        ALCdevice_Unlock(device);
         return 0;
     }
 
@@ -243,7 +245,9 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         if(FAILED(hr))
         {
             ERR("Failed to get padding: 0x%08lx\n", hr);
+            ALCdevice_Lock(device);
             aluHandleDisconnect(device);
+            ALCdevice_Unlock(device);
             break;
         }
         data->Padding = written;
@@ -271,7 +275,9 @@ static ALuint MMDevApiProc(ALvoid *ptr)
         if(FAILED(hr))
         {
             ERR("Failed to buffer data: 0x%08lx\n", hr);
+            ALCdevice_Lock(device);
             aluHandleDisconnect(device);
+            ALCdevice_Unlock(device);
             break;
         }
     }

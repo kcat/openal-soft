@@ -76,7 +76,9 @@ static ALuint SolarisProc(ALvoid *ptr)
                 if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
                 {
                     ERR("write failed: %s\n", strerror(errno));
+                    ALCdevice_Lock(Device);
                     aluHandleDisconnect(Device);
+                    ALCdevice_Unlock(Device);
                     break;
                 }
 

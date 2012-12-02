@@ -472,7 +472,9 @@ static ALuint ALSAProc(ALvoid *ptr)
         if(state < 0)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
+            ALCdevice_Lock(Device);
             aluHandleDisconnect(Device);
+            ALCdevice_Unlock(Device);
             break;
         }
 
@@ -559,7 +561,9 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
         if(state < 0)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
+            ALCdevice_Lock(Device);
             aluHandleDisconnect(Device);
+            ALCdevice_Unlock(Device);
             break;
         }
 

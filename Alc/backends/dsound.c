@@ -244,7 +244,9 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
     if(FAILED(err))
     {
         ERR("Failed to get buffer caps: 0x%lx\n", err);
+        ALCdevice_Lock(Device);
         aluHandleDisconnect(Device);
+        ALCdevice_Unlock(Device);
         return 1;
     }
 
@@ -266,7 +268,9 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
                 if(FAILED(err))
                 {
                     ERR("Failed to play buffer: 0x%lx\n", err);
+                    ALCdevice_Lock(Device);
                     aluHandleDisconnect(Device);
+                    ALCdevice_Unlock(Device);
                     return 1;
                 }
                 Playing = TRUE;
@@ -310,7 +314,9 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
         else
         {
             ERR("Buffer lock error: %#lx\n", err);
+            ALCdevice_Lock(Device);
             aluHandleDisconnect(Device);
+            ALCdevice_Unlock(Device);
             return 1;
         }
 

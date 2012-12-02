@@ -102,7 +102,9 @@ static ALuint OSSProc(ALvoid *ptr)
                 if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
                 {
                     ERR("write failed: %s\n", strerror(errno));
+                    ALCdevice_Lock(Device);
                     aluHandleDisconnect(Device);
+                    ALCdevice_Unlock(Device);
                     break;
                 }
 
@@ -135,7 +137,9 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
         if(amt < 0)
         {
             ERR("read failed: %s\n", strerror(errno));
+            ALCdevice_Lock(Device);
             aluHandleDisconnect(Device);
+            ALCdevice_Unlock(Device);
             break;
         }
         if(amt == 0)

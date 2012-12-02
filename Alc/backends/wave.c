@@ -151,7 +151,9 @@ static ALuint WaveProc(ALvoid *ptr)
             if(ferror(data->f))
             {
                 ERR("Error writing to file\n");
+                ALCdevice_Lock(Device);
                 aluHandleDisconnect(Device);
+                ALCdevice_Unlock(Device);
                 break;
             }
         }

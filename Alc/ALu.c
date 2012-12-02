@@ -1169,7 +1169,6 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
 {
     ALCcontext *Context;
 
-    ALCdevice_Lock(device);
     device->Connected = ALC_FALSE;
 
     Context = device->ContextList;
@@ -1194,5 +1193,4 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
 
         Context = Context->next;
     }
-    ALCdevice_Unlock(device);
 }

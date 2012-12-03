@@ -276,38 +276,41 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
     /* use channel count and sample rate from the default output unit's current
      * parameters, but reset everything else */
     streamFormat.mFramesPerPacket = 1;
+    streamFormat.mFormatFlags = 0;
     switch(device->FmtType)
     {
         case DevFmtUByte:
             device->FmtType = DevFmtByte;
             /* fall-through */
         case DevFmtByte:
+            streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 8;
-            streamFormat.mBytesPerPacket = streamFormat.mChannelsPerFrame;
-            streamFormat.mBytesPerFrame = streamFormat.mChannelsPerFrame;
             break;
         case DevFmtUShort:
-        case DevFmtFloat:
             device->FmtType = DevFmtShort;
             /* fall-through */
         case DevFmtShort:
+            streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 16;
-            streamFormat.mBytesPerPacket = 2 * streamFormat.mChannelsPerFrame;
-            streamFormat.mBytesPerFrame = 2 * streamFormat.mChannelsPerFrame;
             break;
         case DevFmtUInt:
             device->FmtType = DevFmtInt;
             /* fall-through */
         case DevFmtInt:
+            streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 32;
-            streamFormat.mBytesPerPacket = 4 * streamFormat.mChannelsPerFrame;
-            streamFormat.mBytesPerFrame = 4 * streamFormat.mChannelsPerFrame;
+            break;
+        case DevFmtFloat:
+            streamFormat.mFormatFlags = kLinearPCMFormatFlagIsFloat;
+            streamFormat.mBitsPerChannel = 32;
             break;
     }
+    streamFormat.mBytesPerFrame = streamFormat.mChannelsPerFrame *
+                                  streamFormat.mBitsPerChannel / 8;
+    streamFormat.mBytesPerPacket = streamFormat.mBytesPerFrame;
     streamFormat.mFormatID = kAudioFormatLinearPCM;
-    streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger |
-                                kAudioFormatFlagsNativeEndian |
-                                kLinearPCMFormatFlagIsPacked;
+    streamFormat.mFormatFlags |= kAudioFormatFlagsNativeEndian |
+                                 kLinearPCMFormatFlagIsPacked;
 
     err = AudioUnitSetProperty(data->audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, sizeof(AudioStreamBasicDescription));
     if(err != noErr)

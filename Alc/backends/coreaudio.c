@@ -300,8 +300,8 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
             /* fall-through */
         case DevFmtInt:
             streamFormat.mBitsPerChannel = 32;
-            streamFormat.mBytesPerPacket = 2 * streamFormat.mChannelsPerFrame;
-            streamFormat.mBytesPerFrame = 2 * streamFormat.mChannelsPerFrame;
+            streamFormat.mBytesPerPacket = 4 * streamFormat.mChannelsPerFrame;
+            streamFormat.mBytesPerFrame = 4 * streamFormat.mChannelsPerFrame;
             break;
     }
     streamFormat.mFormatID = kAudioFormatLinearPCM;

@@ -333,7 +333,15 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     case FmtStereo:
         if(!(Device->Flags&DEVICE_WIDE_STEREO))
-            chans = StereoMap;
+        {
+            /* HACK: Place the stereo channels at +/-90 degrees when using non-
+             * HRTF stereo output. This helps reduce the "monoization" caused
+             * by them panning towards the center. */
+            if(Device->FmtChans == DevFmtStereo && !Device->Hrtf)
+                chans = StereoWideMap;
+            else
+                chans = StereoMap;
+        }
         else
         {
             chans = StereoWideMap;

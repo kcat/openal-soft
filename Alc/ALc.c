@@ -802,6 +802,13 @@ static void alc_initconfig(void)
         else ERR("Failed to open log file '%s'\n", str);
     }
 
+    {
+        char buf[1024] = "";
+        int len = snprintf(buf, sizeof(buf), "%s", BackendList[0].name);
+        for(i = 1;BackendList[i].name;i++)
+            len += snprintf(buf+len, sizeof(buf)-len, ", %s", BackendList[i].name);
+        TRACE("Supported backends: %s\n", buf);
+    }
     ReadALConfig();
 
     capfilter = 0;

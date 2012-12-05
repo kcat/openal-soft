@@ -80,7 +80,6 @@ typedef enum SrcFloatProp {
     sfvBuffersQueued = AL_BUFFERS_QUEUED,
     sfvBuffersProcessed = AL_BUFFERS_PROCESSED,
     sfvSourceType = AL_SOURCE_TYPE,
-    sfvDistanceModel = AL_DISTANCE_MODEL,
 
     /* ALC_EXT_EFX */
     sfvConeOuterGainHF = AL_CONE_OUTER_GAINHF,
@@ -90,15 +89,18 @@ typedef enum SrcFloatProp {
     sfvAuxSendFilterGainAuto = AL_AUXILIARY_SEND_FILTER_GAIN_AUTO,
     sfvAuxSendFilterGainHFAuto = AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO,
 
+    /* AL_SOFT_direct_channels */
+    sfvDirectChannelsSOFT = AL_DIRECT_CHANNELS_SOFT,
+
+    /* AL_EXT_source_distance_model */
+    sfvDistanceModel = AL_DISTANCE_MODEL,
+
     /* AL_SOFT_buffer_sub_data / AL_SOFT_buffer_samples */
     sfvSampleRWOffsetsSOFT = AL_SAMPLE_RW_OFFSETS_SOFT,
     sfvByteRWOffsetsSOFT = AL_BYTE_RW_OFFSETS_SOFT,
 
     /* AL_SOFT_source_latency */
     sfvSecOffsetLatencySOFT = AL_SEC_OFFSET_LATENCY_SOFT,
-
-    /* AL_SOFT_direct_channels */
-    sfvDirectChannelsSOFT = AL_DIRECT_CHANNELS_SOFT,
 } SrcFloatProp;
 
 typedef enum SrcIntProp {

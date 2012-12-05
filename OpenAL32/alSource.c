@@ -235,6 +235,7 @@ static ALenum SetSourcefv(ALsource *Source, ALCcontext *Context, ALenum name, co
             break;
 
         default:
+            ERR("Unexpected param: 0x%04x\n", name);
             RETERR(AL_INVALID_ENUM);
     }
 
@@ -464,6 +465,7 @@ static ALenum SetSourceiv(ALsource *Source, ALCcontext *Context, ALenum name, co
             break;
 
         default:
+            ERR("Unexpected param: 0x%04x\n", name);
             RETERR(AL_INVALID_ENUM);
     }
 
@@ -548,6 +550,7 @@ static ALenum SetSourcei64v(ALsource *Source, ALCcontext *Context, ALenum name, 
             break;
 
         default:
+            ERR("Unexpected param: 0x%04x\n", name);
             RETERR(AL_INVALID_ENUM);
     }
 
@@ -692,6 +695,7 @@ static ALenum GetSourcedv(const ALsource *Source, ALCcontext *Context, ALenum na
             break;
 
         default:
+            ERR("Unexpected param: 0x%04x\n", name);
             RETERR(AL_INVALID_ENUM);
     }
 
@@ -809,6 +813,7 @@ static ALenum GetSourceiv(const ALsource *Source, ALCcontext *Context, ALenum na
             break;
 
         default:
+            ERR("Unexpected param: 0x%04x\n", name);
             RETERR(AL_INVALID_ENUM);
     }
 
@@ -880,6 +885,7 @@ static ALenum GetSourcei64v(const ALsource *Source, ALCcontext *Context, ALenum 
             break;
 
         default:
+            ERR("Unexpected param: 0x%04x\n", name);
             RETERR(AL_INVALID_ENUM);
     }
 

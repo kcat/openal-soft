@@ -566,6 +566,10 @@ static ALenum GetSourcedv(const ALsource *Source, ALCcontext *Context, ALenum na
 
     switch(name)
     {
+        case AL_GAIN:
+            *values = Source->Gain;
+            break;
+
         case AL_PITCH:
             *values = Source->Pitch;
             break;

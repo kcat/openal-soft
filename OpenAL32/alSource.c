@@ -662,7 +662,6 @@ static ALenum SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp prop
 
         case siSampleRWOffsetsSOFT:
         case siByteRWOffsetsSOFT:
-        case siSampleOffsetLatencySOFT:
             /* Query only */
             RETERR(AL_INVALID_OPERATION);
 
@@ -775,6 +774,10 @@ static ALenum SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp prop
             fvals[1] = (ALfloat)values[1];
             fvals[2] = (ALfloat)values[2];
             return SetSourcefv(Source, Context, (int)prop, fvals);
+
+        case siSampleOffsetLatencySOFT:
+            /* i64 only */
+            break;
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);

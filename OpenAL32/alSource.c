@@ -1177,7 +1177,6 @@ static ALenum GetSourcei64v(const ALsource *Source, ALCcontext *Context, SrcIntP
 
         case AL_SOURCE_RELATIVE:
         case AL_LOOPING:
-        case AL_BUFFER:
         case AL_SOURCE_STATE:
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
@@ -1187,10 +1186,23 @@ static ALenum GetSourcei64v(const ALsource *Source, ALCcontext *Context, SrcIntP
         case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
         case AL_DIRECT_CHANNELS_SOFT:
         case AL_DISTANCE_MODEL:
-        case siDirectFilter:
-        case siAuxSendFilter:
             if((err=GetSourceiv(Source, Context, (int)prop, ivals)) == AL_NO_ERROR)
                 *values = ivals[0];
+            return err;
+
+        case siBuffer:
+        case siDirectFilter:
+            if((err=GetSourceiv(Source, Context, (int)prop, ivals)) == AL_NO_ERROR)
+                *values = ((ALuint*)ivals)[0];
+            return err;
+
+        case siAuxSendFilter:
+            if((err=GetSourceiv(Source, Context, (int)prop, ivals)) == AL_NO_ERROR)
+            {
+                values[0] = ((ALuint*)ivals)[0];
+                values[1] = ((ALuint*)ivals)[1];
+                values[2] = ((ALuint*)ivals)[2];
+            }
             return err;
     }
 

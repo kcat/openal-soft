@@ -155,7 +155,7 @@ void MixDirect_SSE(const DirectParams *params, const ALfloat *RESTRICT data, ALu
             ClickRemoval[c] -= data[0]*DrySend;
 
         gain = _mm_set1_ps(DrySend);
-        for(pos = 0;pos < BufferSize-3;pos += 4)
+        for(pos = 0;BufferSize-pos > 3;pos += 4)
         {
             const __m128 val4 = _mm_load_ps(&data[pos]);
             __m128 dry4 = _mm_load_ps(&DryBuffer[c][OutPos+pos]);
@@ -189,7 +189,7 @@ void MixSend_SSE(const SendParams *params, const ALfloat *RESTRICT data,
         WetClickRemoval[0] -= data[0] * WetGain;
 
     gain = _mm_set1_ps(WetGain);
-    for(pos = 0;pos < BufferSize-3;pos+=4)
+    for(pos = 0;BufferSize-pos > 3;pos += 4)
     {
         const __m128 val4 = _mm_load_ps(&data[pos]);
         __m128 wet4 = _mm_load_ps(&WetBuffer[0][OutPos+pos]);

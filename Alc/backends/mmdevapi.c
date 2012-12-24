@@ -92,12 +92,14 @@ typedef struct {
     HRESULT result;
 } ThreadRequest;
 
+#define WM_USER_First       (WM_USER+0)
 #define WM_USER_OpenDevice  (WM_USER+0)
 #define WM_USER_ResetDevice (WM_USER+1)
 #define WM_USER_StartDevice (WM_USER+2)
 #define WM_USER_StopDevice  (WM_USER+3)
 #define WM_USER_CloseDevice (WM_USER+4)
 #define WM_USER_Enumerate   (WM_USER+5)
+#define WM_USER_Last        (WM_USER+5)
 
 static HRESULT WaitForResponse(ThreadRequest *req)
 {
@@ -599,7 +601,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
     SetEvent(req->FinishedEvt);
 
     TRACE("Starting message loop\n");
-    while(GetMessage(&msg, NULL, 0, 0))
+    while(GetMessage(&msg, NULL, WM_USER_First, WM_USER_Last))
     {
         TRACE("Got message %u\n", msg.message);
         switch(msg.message)

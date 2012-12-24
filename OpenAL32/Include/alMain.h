@@ -681,7 +681,7 @@ struct ALCcontext_struct
     UIntMap SourceMap;
     UIntMap EffectSlotMap;
 
-    ALenum LastError;
+    volatile ALenum LastError;
 
     volatile ALenum UpdateSources;
 

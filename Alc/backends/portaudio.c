@@ -381,6 +381,9 @@ static void pa_close_capture(ALCdevice *device)
     if(err != paNoError)
         ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
 
+    DestroyRingBuffer(data->ring);
+    data->ring = NULL;
+
     free(data);
     device->ExtraData = NULL;
 }

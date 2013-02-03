@@ -315,10 +315,19 @@ int main(int argc, char **argv)
     /* Play each file listed on the command line */
     for(i = 1;i < argc;i++)
     {
+        const char *namepart;
+
         if(!OpenPlayerFile(player, argv[i]))
             continue;
 
-        printf("Playing %s (%s, %s, %dhz)\n", argv[i],
+        /* Get the name portion, without the path, for display. */
+        namepart = strrchr(argv[i], '/');
+        if(namepart || (namepart=strrchr(argv[i], '\\')))
+            namepart++;
+        else
+            namepart = argv[i];
+
+        printf("Playing: %s (%s, %s, %dhz)\n", namepart,
                TypeName(player->type), ChannelsName(player->channels),
                player->rate);
         fflush(stdout);

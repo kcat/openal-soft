@@ -1002,6 +1002,7 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
     pulse_data *data = device->ExtraData;
     pa_stream_flags_t flags = 0;
     pa_channel_map chanmap;
+    const char *mapname;
     ALuint len;
 
     pa_threaded_mainloop_lock(data->loop);
@@ -1067,9 +1068,34 @@ static ALCboolean pulse_reset_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    if(!pa_channel_map_init_auto(&chanmap, data->spec.channels, PA_CHANNEL_MAP_WAVEEX))
+    mapname = "(invalid)";
+    switch(device->FmtChans)
     {
-        ERR("Couldn't build map for channel count (%d)!\n", data->spec.channels);
+        case DevFmtMono:
+            mapname = "mono";
+            break;
+        case DevFmtStereo:
+            mapname = "front-left,front-right";
+            break;
+        case DevFmtQuad:
+            mapname = "front-left,front-right,rear-left,rear-right";
+            break;
+        case DevFmtX51:
+            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right";
+            break;
+        case DevFmtX51Side:
+            mapname = "front-left,front-right,front-center,lfe,side-left,side-right";
+            break;
+        case DevFmtX61:
+            mapname = "front-left,front-right,front-center,lfe,rear-center,side-left,side-right";
+            break;
+        case DevFmtX71:
+            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right";
+            break;
+    }
+    if(!pa_channel_map_parse(&chanmap, mapname))
+    {
+        ERR("Failed to build channel map for %s\n", DevFmtChannelsString(device->FmtChans));
         pa_threaded_mainloop_unlock(data->loop);
         return ALC_FALSE;
     }

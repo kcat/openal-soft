@@ -182,3 +182,98 @@ ALeffectState *EchoCreate(void)
 
     return &state->state;
 }
+
+void echo_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+void echo_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+{
+    echo_SetParami(effect, context, param, vals[0]);
+}
+void echo_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+{
+    switch(param)
+    {
+        case AL_ECHO_DELAY:
+            if(val >= AL_ECHO_MIN_DELAY && val <= AL_ECHO_MAX_DELAY)
+                effect->Echo.Delay = val;
+            else
+                alSetError(context, AL_INVALID_VALUE);
+            break;
+
+        case AL_ECHO_LRDELAY:
+            if(val >= AL_ECHO_MIN_LRDELAY && val <= AL_ECHO_MAX_LRDELAY)
+                effect->Echo.LRDelay = val;
+            else
+                alSetError(context, AL_INVALID_VALUE);
+            break;
+
+        case AL_ECHO_DAMPING:
+            if(val >= AL_ECHO_MIN_DAMPING && val <= AL_ECHO_MAX_DAMPING)
+                effect->Echo.Damping = val;
+            else
+                alSetError(context, AL_INVALID_VALUE);
+            break;
+
+        case AL_ECHO_FEEDBACK:
+            if(val >= AL_ECHO_MIN_FEEDBACK && val <= AL_ECHO_MAX_FEEDBACK)
+                effect->Echo.Feedback = val;
+            else
+                alSetError(context, AL_INVALID_VALUE);
+            break;
+
+        case AL_ECHO_SPREAD:
+            if(val >= AL_ECHO_MIN_SPREAD && val <= AL_ECHO_MAX_SPREAD)
+                effect->Echo.Spread = val;
+            else
+                alSetError(context, AL_INVALID_VALUE);
+            break;
+
+        default:
+            alSetError(context, AL_INVALID_ENUM);
+            break;
+    }
+}
+void echo_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+{
+    echo_SetParamf(effect, context, param, vals[0]);
+}
+
+void echo_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+void echo_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+{
+    echo_GetParami(effect, context, param, vals);
+}
+void echo_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+{
+    switch(param)
+    {
+        case AL_ECHO_DELAY:
+            *val = effect->Echo.Delay;
+            break;
+
+        case AL_ECHO_LRDELAY:
+            *val = effect->Echo.LRDelay;
+            break;
+
+        case AL_ECHO_DAMPING:
+            *val = effect->Echo.Damping;
+            break;
+
+        case AL_ECHO_FEEDBACK:
+            *val = effect->Echo.Feedback;
+            break;
+
+        case AL_ECHO_SPREAD:
+            *val = effect->Echo.Spread;
+            break;
+
+        default:
+            alSetError(context, AL_INVALID_ENUM);
+            break;
+    }
+}
+void echo_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+{
+    echo_GetParamf(effect, context, param, vals);
+}

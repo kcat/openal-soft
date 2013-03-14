@@ -428,6 +428,24 @@ ALeffectState *NoneCreate(void)
     return state;
 }
 
+void null_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+void null_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+{ (void)effect;(void)param;(void)vals; alSetError(context, AL_INVALID_ENUM); }
+void null_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+void null_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ (void)effect;(void)param;(void)vals; alSetError(context, AL_INVALID_ENUM); }
+
+void null_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+void null_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+{ (void)effect;(void)param;(void)vals; alSetError(context, AL_INVALID_ENUM); }
+void null_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+void null_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+{ (void)effect;(void)param;(void)vals; alSetError(context, AL_INVALID_ENUM); }
+
 
 static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *slot)
 {

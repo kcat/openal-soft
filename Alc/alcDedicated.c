@@ -98,3 +98,54 @@ ALeffectState *DedicatedCreate(void)
 
     return &state->state;
 }
+
+void ded_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+void ded_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+{
+    ded_SetParami(effect, context, param, vals[0]);
+}
+void ded_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+{
+    switch(param)
+    {
+        case AL_DEDICATED_GAIN:
+            if(val >= 0.0f && isfinite(val))
+                effect->Dedicated.Gain = val;
+            else
+                alSetError(context, AL_INVALID_VALUE);
+            break;
+
+        default:
+            alSetError(context, AL_INVALID_ENUM);
+            break;
+    }
+}
+void ded_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+{
+    ded_SetParamf(effect, context, param, vals[0]);
+}
+
+void ded_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+void ded_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+{
+    ded_GetParami(effect, context, param, vals);
+}
+void ded_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+{
+    switch(param)
+    {
+        case AL_DEDICATED_GAIN:
+            *val = effect->Dedicated.Gain;
+            break;
+
+        default:
+            alSetError(context, AL_INVALID_ENUM);
+            break;
+    }
+}
+void ded_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+{
+    ded_GetParamf(effect, context, param, vals);
+}

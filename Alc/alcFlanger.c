@@ -58,18 +58,14 @@ static ALvoid FlangerDestroy(ALeffectState *effect)
 {
     ALflangerState *state = (ALflangerState*)effect;
 
-    if (state)
+    if(state)
     {
-        if (state->SampleBufferLeft != NULL)
-        {
-            free(state->SampleBufferLeft);
-            state->SampleBufferLeft = NULL;
-        }
-        if (state->SampleBufferRight != NULL)
-        {
-            free(state->SampleBufferRight);
-            state->SampleBufferRight = NULL;
-        }
+        free(state->SampleBufferLeft);
+        state->SampleBufferLeft = NULL;
+
+        free(state->SampleBufferRight);
+        state->SampleBufferRight = NULL;
+
         free(state);
     }
 }

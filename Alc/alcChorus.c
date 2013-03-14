@@ -58,18 +58,14 @@ static ALvoid ChorusDestroy(ALeffectState *effect)
 {
     ALchorusState *state = (ALchorusState*)effect;
 
-    if (state)
+    if(state)
     {
-        if (state->SampleBufferLeft != NULL)
-        {
-            free(state->SampleBufferLeft);
-            state->SampleBufferLeft = NULL;
-        }
-        if (state->SampleBufferRight != NULL)
-        {
-            free(state->SampleBufferRight);
-            state->SampleBufferRight = NULL;
-        }
+        free(state->SampleBufferLeft);
+        state->SampleBufferLeft = NULL;
+
+        free(state->SampleBufferRight);
+        state->SampleBufferRight = NULL;
+
         free(state);
     }
 }

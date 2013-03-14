@@ -118,7 +118,7 @@ void *GetSymbol(void *handle, const char *name);
 
 typedef void *volatile XchgPtr;
 
-#if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1))
+#if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) && !defined(__QNXNTO__)
 typedef ALuint RefCount;
 static __inline RefCount IncrementRef(volatile RefCount *ptr)
 { return __sync_add_and_fetch(ptr, 1); }
@@ -449,6 +449,9 @@ void alc_ca_probe(enum DevProbe type);
 ALCboolean alc_opensl_init(BackendFuncs *func_list);
 void alc_opensl_deinit(void);
 void alc_opensl_probe(enum DevProbe type);
+ALCboolean alc_qsa_init(BackendFuncs *func_list);
+void alc_qsa_deinit(void);
+void alc_qsa_probe(enum DevProbe type);
 ALCboolean alc_null_init(BackendFuncs *func_list);
 void alc_null_deinit(void);
 void alc_null_probe(enum DevProbe type);

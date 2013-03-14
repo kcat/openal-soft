@@ -46,6 +46,8 @@ ALeffectState *ReverbCreate(void);
 ALeffectState *EchoCreate(void);
 ALeffectState *ModulatorCreate(void);
 ALeffectState *DedicatedCreate(void);
+ALeffectState *ChorusCreate(void);
+ALeffectState *FlangerCreate(void);
 
 #define ALeffectState_Destroy(a)        ((a)->Destroy((a)))
 #define ALeffectState_DeviceUpdate(a,b) ((a)->DeviceUpdate((a),(b)))

@@ -13,6 +13,8 @@ enum {
     ECHO,
     MODULATOR,
     DEDICATED,
+    CHORUS,
+    FLANGER,
 
     MAX_EFFECTS
 };
@@ -75,6 +77,24 @@ typedef struct ALeffect
         ALfloat Gain;
     } Dedicated;
 
+    struct {
+        ALint Waveform;
+        ALint Phase;
+        ALfloat Rate;
+        ALfloat Depth;
+        ALfloat Feedback;
+        ALfloat Delay;
+    } Chorus;
+
+    struct {
+        ALint Waveform;
+        ALint Phase;
+        ALfloat Rate;
+        ALfloat Depth;
+        ALfloat Feedback;
+        ALfloat Delay;
+    } Flanger;
+
     void (*SetParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
     void (*SetParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
     void (*SetParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
@@ -120,6 +140,15 @@ void reverb_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALin
 void reverb_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
 void reverb_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
 
+void chorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
+void chorus_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
+void chorus_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
+void chorus_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
+void chorus_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
+void chorus_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
+void chorus_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
+void chorus_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
+
 void echo_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
 void echo_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
 void echo_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
@@ -128,6 +157,15 @@ void echo_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *
 void echo_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
 void echo_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
 void echo_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
+
+void flanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
+void flanger_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
+void flanger_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
+void flanger_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
+void flanger_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
+void flanger_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
+void flanger_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
+void flanger_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
 
 void mod_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
 void mod_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);

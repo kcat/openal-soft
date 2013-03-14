@@ -537,6 +537,16 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
             if(!State) err = AL_OUT_OF_MEMORY;
         }
     }
+    else if(newtype == AL_EFFECT_CHORUS && EffectSlot->effect.type != AL_EFFECT_CHORUS)
+    {
+        State = ChorusCreate();
+        if(!State) err = AL_OUT_OF_MEMORY;
+    }
+    else if(newtype == AL_EFFECT_FLANGER && EffectSlot->effect.type != AL_EFFECT_FLANGER)
+    {
+        State = FlangerCreate();
+        if(!State) err = AL_OUT_OF_MEMORY;
+    }
 
     if(err != AL_NO_ERROR)
     {

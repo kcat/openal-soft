@@ -470,6 +470,40 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->GetParamf  = ded_GetParamf;
         effect->GetParamfv = ded_GetParamfv;
         break;
+    case AL_EFFECT_CHORUS:
+        effect->Chorus.Waveform = AL_CHORUS_DEFAULT_WAVEFORM;
+        effect->Chorus.Phase = AL_CHORUS_DEFAULT_PHASE;
+        effect->Chorus.Rate = AL_CHORUS_MAX_RATE;
+        effect->Chorus.Depth = AL_CHORUS_DEFAULT_DEPTH;
+        effect->Chorus.Feedback = AL_CHORUS_DEFAULT_FEEDBACK;
+        effect->Chorus.Delay = AL_CHORUS_DEFAULT_DELAY;
+
+        effect->SetParami  = chorus_SetParami;
+        effect->SetParamiv = chorus_SetParamiv;
+        effect->SetParamf  = chorus_SetParamf;
+        effect->SetParamfv = chorus_SetParamfv;
+        effect->GetParami  = chorus_GetParami;
+        effect->GetParamiv = chorus_GetParamiv;
+        effect->GetParamf  = chorus_GetParamf;
+        effect->GetParamfv = chorus_GetParamfv;
+        break;
+    case AL_EFFECT_FLANGER:
+        effect->Flanger.Waveform = AL_FLANGER_DEFAULT_WAVEFORM;
+        effect->Flanger.Phase = AL_FLANGER_DEFAULT_PHASE;
+        effect->Flanger.Rate = AL_FLANGER_MAX_RATE;
+        effect->Flanger.Depth = AL_FLANGER_DEFAULT_DEPTH;
+        effect->Flanger.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
+        effect->Flanger.Delay = AL_FLANGER_DEFAULT_DELAY;
+
+        effect->SetParami  = flanger_SetParami;
+        effect->SetParamiv = flanger_SetParamiv;
+        effect->SetParamf  = flanger_SetParamf;
+        effect->SetParamfv = flanger_SetParamfv;
+        effect->GetParami  = flanger_GetParami;
+        effect->GetParamiv = flanger_GetParamiv;
+        effect->GetParamf  = flanger_GetParamf;
+        effect->GetParamfv = flanger_GetParamfv;
+        break;
     default:
         effect->SetParami  = null_SetParami;
         effect->SetParamiv = null_SetParamiv;

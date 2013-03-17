@@ -916,9 +916,9 @@ static __inline ALfloat aluF2F(ALfloat val)
 { return val; }
 static __inline ALint aluF2I(ALfloat val)
 {
-    /* Clamp the value between -1 and +1. This handles that without branching. */
-    val = val+1.0f - fabsf(val-1.0f);
-    val = (val-2.0f + fabsf(val+2.0f)) * 0.25f;
+    /* Clamp the value between -1 and +1. This handles that with only a single branch. */
+    if(fabsf(val) > 1.0f)
+        val = (0.0f < val) - (val < 0.0f);
     /* Convert to a signed integer, between -2147483647 and +2147483647. */
     return fastf2i((ALfloat)(val*2147483647.0));
 }

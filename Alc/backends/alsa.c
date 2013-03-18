@@ -805,10 +805,10 @@ static ALCboolean alsa_reset_playback(ALCdevice *device)
         ERR("Failed to disable ALSA resampler\n");
     CHECK(snd_pcm_hw_params_set_rate_near(data->pcmHandle, hp, &rate, NULL));
     /* set buffer time (implicitly constrains period/buffer parameters) */
-    if(snd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, hp, &bufferLen, NULL) < 0)
+    if((err=snd_pcm_hw_params_set_buffer_time_near(data->pcmHandle, hp, &bufferLen, NULL)) < 0)
         ERR("snd_pcm_hw_params_set_buffer_time_near failed: %s\n", snd_strerror(err));
     /* set period time (implicitly sets buffer size/bytes/time and period size/bytes) */
-    if(snd_pcm_hw_params_set_period_time_near(data->pcmHandle, hp, &periodLen, NULL) < 0)
+    if((err=snd_pcm_hw_params_set_period_time_near(data->pcmHandle, hp, &periodLen, NULL)) < 0)
         ERR("snd_pcm_hw_params_set_period_time_near failed: %s\n", snd_strerror(err));
     /* install and prepare hardware configuration */
     CHECK(snd_pcm_hw_params(data->pcmHandle, hp));

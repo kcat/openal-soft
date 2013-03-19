@@ -654,11 +654,10 @@ static const struct {
     DECL(SMALLWATERROOM),
 };
 #undef DECL
-static const ALsizei reverblistsize = COUNTOF(reverblist);
 
 ALvoid LoadReverbPreset(const char *name, ALeffect *effect)
 {
-    int i;
+    size_t i;
 
     if(strcasecmp(name, "NONE") == 0)
     {
@@ -673,7 +672,7 @@ ALvoid LoadReverbPreset(const char *name, ALeffect *effect)
         InitEffectParams(effect, AL_EFFECT_REVERB);
     else
         InitEffectParams(effect, AL_EFFECT_NULL);
-    for(i = 0;i < reverblistsize;i++)
+    for(i = 0;i < COUNTOF(reverblist);i++)
     {
         const EFXEAXREVERBPROPERTIES *props;
 
@@ -709,8 +708,8 @@ ALvoid LoadReverbPreset(const char *name, ALeffect *effect)
         effect->Reverb.LFReference = props->flLFReference;
         effect->Reverb.RoomRolloffFactor = props->flRoomRolloffFactor;
         effect->Reverb.DecayHFLimit = props->iDecayHFLimit;
-        break;
+        return;
     }
-    if(i == reverblistsize)
-        WARN("Reverb preset '%s' not found\n", name);
+
+    WARN("Reverb preset '%s' not found\n", name);
 }

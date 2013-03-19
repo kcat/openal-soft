@@ -35,6 +35,8 @@
 static ALenum AddEffectSlotArray(ALCcontext *Context, ALsizei count, const ALuint *slots);
 static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *slot);
 
+static ALeffectState *CreateStateByType(ALenum type);
+
 
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
@@ -499,79 +501,63 @@ static ALenum AddEffectSlotArray(ALCcontext *Context, ALsizei count, const ALuin
     return AL_NO_ERROR;
 }
 
+
+static ALeffectState *CreateStateByType(ALenum type)
+{
+    switch(type)
+    {
+        case AL_EFFECT_NULL:
+            return NoneCreate();
+        case AL_EFFECT_EAXREVERB:
+        case AL_EFFECT_REVERB:
+            return ReverbCreate();
+        case AL_EFFECT_CHORUS:
+            return ChorusCreate();
+        case AL_EFFECT_ECHO:
+            return EchoCreate();
+        case AL_EFFECT_FLANGER:
+            return FlangerCreate();
+        case AL_EFFECT_RING_MODULATOR:
+            return ModulatorCreate();
+        case AL_EFFECT_DEDICATED_DIALOGUE:
+        case AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT:
+            return DedicatedCreate();
+    }
+
+    ERR("Unexpected effect type: 0x%04x\n", type);
+    return NULL;
+}
+
 ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *effect)
 {
     ALenum newtype = (effect ? effect->type : AL_EFFECT_NULL);
-    ALeffectState *State = NULL;
-    ALenum err = AL_NO_ERROR;
 
-    ALCdevice_Lock(Device);
-    if(newtype == AL_EFFECT_NULL && EffectSlot->effect.type != AL_EFFECT_NULL)
+    if(newtype != EffectSlot->effect.type)
     {
-        State = NoneCreate();
-        if(!State) err = AL_OUT_OF_MEMORY;
-    }
-    else if(newtype == AL_EFFECT_EAXREVERB || newtype == AL_EFFECT_REVERB)
-    {
-        if(EffectSlot->effect.type != AL_EFFECT_EAXREVERB && EffectSlot->effect.type != AL_EFFECT_REVERB)
-        {
-            State = ReverbCreate();
-            if(!State) err = AL_OUT_OF_MEMORY;
-        }
-    }
-    else if(newtype == AL_EFFECT_ECHO && EffectSlot->effect.type != AL_EFFECT_ECHO)
-    {
-        State = EchoCreate();
-        if(!State) err = AL_OUT_OF_MEMORY;
-    }
-    else if(newtype == AL_EFFECT_RING_MODULATOR && EffectSlot->effect.type != AL_EFFECT_RING_MODULATOR)
-    {
-        State = ModulatorCreate();
-        if(!State) err = AL_OUT_OF_MEMORY;
-    }
-    else if(newtype == AL_EFFECT_DEDICATED_DIALOGUE || newtype == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
-    {
-        if(EffectSlot->effect.type != AL_EFFECT_DEDICATED_DIALOGUE && EffectSlot->effect.type != AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
-        {
-            State = DedicatedCreate();
-            if(!State) err = AL_OUT_OF_MEMORY;
-        }
-    }
-    else if(newtype == AL_EFFECT_CHORUS && EffectSlot->effect.type != AL_EFFECT_CHORUS)
-    {
-        State = ChorusCreate();
-        if(!State) err = AL_OUT_OF_MEMORY;
-    }
-    else if(newtype == AL_EFFECT_FLANGER && EffectSlot->effect.type != AL_EFFECT_FLANGER)
-    {
-        State = FlangerCreate();
-        if(!State) err = AL_OUT_OF_MEMORY;
-    }
-
-    if(err != AL_NO_ERROR)
-    {
-        ALCdevice_Unlock(Device);
-        return err;
-    }
-
-    if(State)
-    {
+        ALeffectState *State;
         FPUCtl oldMode;
+
+        State = CreateStateByType(newtype);
+        if(!State)
+            return AL_OUT_OF_MEMORY;
+
         SetMixerFPUMode(&oldMode);
 
+        ALCdevice_Lock(Device);
         if(ALeffectState_DeviceUpdate(State, Device) == AL_FALSE)
         {
-            RestoreFPUMode(&oldMode);
             ALCdevice_Unlock(Device);
+            RestoreFPUMode(&oldMode);
             ALeffectState_Destroy(State);
             return AL_OUT_OF_MEMORY;
         }
-        State = ExchangePtr((XchgPtr*)&EffectSlot->EffectState, State);
 
+        State = ExchangePtr((XchgPtr*)&EffectSlot->EffectState, State);
         if(!effect)
             memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
         else
             memcpy(&EffectSlot->effect, effect, sizeof(*effect));
+
         /* FIXME: This should be done asynchronously, but since the EffectState
          * object was changed, it needs an update before its Process method can
          * be called. */
@@ -586,6 +572,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
     }
     else
     {
+        ALCdevice_Lock(Device);
         if(!effect)
             memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
         else

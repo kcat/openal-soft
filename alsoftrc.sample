@@ -202,6 +202,24 @@
 #emulate-eax = false
 
 ##
+## PulseAudio backend stuff
+##
+[pulse]
+
+## spawn-server:
+#  Attempts to autospawn a PulseAudio server whenever needed (initializing the
+#  backend, enumerating devices, etc). Setting autospawn to false in Pulse's
+#  client.conf will still prevent autospawning even if this is set to true.
+#spawn-server = true
+
+## allow-moves:
+#  Allows PulseAudio to move active streams to different devices. Note that the
+#  device specifier (seen by applications) will not be updated when this
+#  occurs, and neither will the AL device configuration (sample rate, format,
+#  etc).
+#allow-moves = false
+
+##
 ## ALSA backend stuff
 ##
 [alsa]
@@ -270,6 +288,19 @@
 #device = /dev/audio
 
 ##
+## QSA backend stuff
+##
+[qsa]
+
+## device:
+#  Sets the device name for the default playback device.
+#device = default
+
+## capture:
+#  Sets the device name for the default capture device.
+#capture = default
+
+##
 ## MMDevApi backend stuff
 ##
 [mmdevapi]
@@ -298,23 +329,6 @@
 #  Sets the device index for capture. Negative values will use the default as
 #  given by PortAudio itself.
 #capture = -1
-
-##
-## PulseAudio backend stuff
-##
-[pulse]
-
-## spawn-server:
-#  Attempts to spawn a PulseAudio server when requesting to open a PulseAudio
-#  device. Setting autospawn to false in PulseAudio's client.conf will still
-#  prevent autospawning even if this is set to true.
-#spawn-server = true
-
-## allow-moves:
-#  Allows PulseAudio to move active streams to different devices. Note that the
-#  device specifier seen by applications will not be updated when this occurs,
-#  and neither will the AL device configuration (sample rate, format, etc).
-#allow-moves = false
 
 ##
 ## Wave File Writer stuff

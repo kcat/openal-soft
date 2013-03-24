@@ -59,6 +59,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
             if(!effect || (err=InitEffect(effect)) != AL_NO_ERROR)
             {
                 free(effect);
+                alDeleteEffects(cur, effects);
                 al_throwerr(Context, err);
             }
 
@@ -71,16 +72,12 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
                 memset(effect, 0, sizeof(ALeffect));
                 free(effect);
 
+                alDeleteEffects(cur, effects);
                 al_throwerr(Context, err);
             }
 
             effects[cur] = effect->id;
         }
-    }
-    al_catchany()
-    {
-        if(cur > 0)
-            alDeleteEffects(cur, effects);
     }
     al_endtry;
 

@@ -436,7 +436,7 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname, ALint *values)
 
 AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
 {
-    const ALchar *value;
+    const ALchar *value = NULL;
     ALCcontext *Context;
 
     Context = GetContextRef();
@@ -489,10 +489,6 @@ AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
             default:
                 al_throwerr(Context, AL_INVALID_ENUM);
         }
-    }
-    al_catchany()
-    {
-        value = NULL;
     }
     al_endtry;
 

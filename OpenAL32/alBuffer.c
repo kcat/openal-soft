@@ -198,7 +198,10 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
         {
             ALbuffer *buffer = calloc(1, sizeof(ALbuffer));
             if(!buffer)
+            {
+                alDeleteBuffers(cur, buffers);
                 al_throwerr(Context, AL_OUT_OF_MEMORY);
+            }
             RWLockInit(&buffer->lock);
 
             err = NewThunkEntry(&buffer->id);
@@ -210,16 +213,12 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
                 memset(buffer, 0, sizeof(ALbuffer));
                 free(buffer);
 
+                alDeleteBuffers(cur, buffers);
                 al_throwerr(Context, err);
             }
 
             buffers[cur] = buffer->id;
         }
-    }
-    al_catchany()
-    {
-        if(cur > 0)
-            alDeleteBuffers(cur, buffers);
     }
     al_endtry;
 

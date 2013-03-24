@@ -50,7 +50,10 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
         {
             ALfilter *filter = calloc(1, sizeof(ALfilter));
             if(!filter)
+            {
+                alDeleteFilters(cur, filters);
                 al_throwerr(Context, AL_OUT_OF_MEMORY);
+            }
             InitFilterParams(filter, AL_FILTER_NULL);
 
             err = NewThunkEntry(&filter->id);
@@ -62,16 +65,12 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
                 memset(filter, 0, sizeof(ALfilter));
                 free(filter);
 
+                alDeleteFilters(cur, filters);
                 al_throwerr(Context, err);
             }
 
             filters[cur] = filter->id;
         }
-    }
-    al_catchany()
-    {
-        if(cur > 0)
-            alDeleteFilters(cur, filters);
     }
     al_endtry;
 

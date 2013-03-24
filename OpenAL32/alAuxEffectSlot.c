@@ -58,6 +58,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             if(!slot || (err=InitEffectSlot(slot)) != AL_NO_ERROR)
             {
                 al_free(slot);
+                alDeleteAuxiliaryEffectSlots(cur, effectslots);
                 al_throwerr(Context, err);
                 break;
             }
@@ -71,6 +72,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
                 ALeffectState_Destroy(slot->EffectState);
                 al_free(slot);
 
+                alDeleteAuxiliaryEffectSlots(cur, effectslots);
                 al_throwerr(Context, err);
             }
 
@@ -78,12 +80,10 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         }
         err = AddEffectSlotArray(Context, n, effectslots);
         if(err != AL_NO_ERROR)
-            al_throwerr(Context, err);
-    }
-    al_catchany()
-    {
-        if(cur > 0)
+        {
             alDeleteAuxiliaryEffectSlots(cur, effectslots);
+            al_throwerr(Context, err);
+        }
     }
     al_endtry;
 

@@ -1230,7 +1230,10 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
         {
             ALsource *source = al_calloc(16, sizeof(ALsource));
             if(!source)
+            {
+                alDeleteSources(cur, sources);
                 al_throwerr(Context, AL_OUT_OF_MEMORY);
+            }
             InitSourceParams(source);
 
             err = NewThunkEntry(&source->id);
@@ -1242,16 +1245,12 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
                 memset(source, 0, sizeof(ALsource));
                 al_free(source);
 
+                alDeleteSources(cur, sources);
                 al_throwerr(Context, err);
             }
 
             sources[cur] = source->id;
         }
-    }
-    al_catchany()
-    {
-        if(cur > 0)
-            alDeleteSources(cur, sources);
     }
     al_endtry;
 
@@ -2169,24 +2168,23 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const 
             BufferListStart->prev = BufferList;
             BufferList->next = BufferListStart;
         }
+        BufferListStart = NULL;
 
         Source->BuffersInQueue += nb;
 
         UnlockContext(Context);
     }
-    al_catchany()
-    {
-        while(BufferListStart)
-        {
-            BufferList = BufferListStart;
-            BufferListStart = BufferList->next;
-
-            if(BufferList->buffer)
-                DecrementRef(&BufferList->buffer->ref);
-            free(BufferList);
-        }
-    }
     al_endtry;
+
+    while(BufferListStart)
+    {
+        BufferList = BufferListStart;
+        BufferListStart = BufferList->next;
+
+        if(BufferList->buffer)
+            DecrementRef(&BufferList->buffer->ref);
+        free(BufferList);
+    }
 
     ALCcontext_DecRef(Context);
 }

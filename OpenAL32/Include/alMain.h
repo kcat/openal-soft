@@ -838,37 +838,24 @@ void FillCPUCaps(ALuint capfilter);
  * Starts a try block. Must not be nested within another try block within the
  * same function.
  */
-#define al_try do {                                                           \
-    int _al_err=0;                                                            \
-_al_try_label:                                                                \
-    if(_al_err == 0)
-/**
- * After a try or another catch block, runs the next block if the given value
- * was thrown.
- */
-#define al_catch(val) else if(_al_err == (val))
-/**
- * After a try or catch block, runs the next block for any value thrown and not
- * caught.
- */
-#define al_catchany() else
-/** Marks the end of the final catch (or the try) block. */
-#define al_endtry } while(0)
+#define al_try do {                                                            \
+    int _al_in_try_block = 1;
+/** Marks the end of the try block. */
+#define al_endtry _al_endtry_label:                                            \
+    (void)_al_in_try_block;                                                    \
+} while(0)
 
 /**
- * The given integer value is "thrown" so as to be caught by a catch block.
- * Must be called in a try block within the same function. The value must not
- * be 0.
+ * The try block is terminated, and execution jumps to al_endtry.
  */
-#define al_throw(e) do {                                                      \
-    _al_err = (e);                                                            \
-    assert(_al_err != 0);                                                     \
-    goto _al_try_label;                                                       \
+#define al_throw do {                                                         \
+    _al_in_try_block = 0;                                                     \
+    goto _al_endtry_label;                                                    \
 } while(0)
-/** Sets an AL error on the given context, before throwing the error code. */
+/** Sets an AL error on the given context, before throwing. */
 #define al_throwerr(ctx, err) do {                                            \
     alSetError((ctx), (err));                                                 \
-    al_throw((err));                                                          \
+    al_throw;                                                                 \
 } while(0)
 
 /**

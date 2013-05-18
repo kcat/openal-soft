@@ -49,23 +49,23 @@ typedef struct ALmodulatorState {
     ALfloat history[1];
 } ALmodulatorState;
 
-#define WAVEFORM_FRACBITS  16
+#define WAVEFORM_FRACBITS  24
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
 #define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
 
 static __inline ALfloat Sin(ALuint index)
 {
-    return sinf(index * (F_PI*2.0f / WAVEFORM_FRACONE));
+    return sinf(index * (F_PI*2.0f / WAVEFORM_FRACONE) - F_PI)*0.5f + 0.5f;
 }
 
 static __inline ALfloat Saw(ALuint index)
 {
-    return index*(2.0f/WAVEFORM_FRACONE) - 1.0f;
+    return (ALfloat)index / WAVEFORM_FRACONE;
 }
 
 static __inline ALfloat Square(ALuint index)
 {
-    return ((index>>(WAVEFORM_FRACBITS-1))&1)*2.0f - 1.0f;
+    return (ALfloat)((index >> (WAVEFORM_FRACBITS - 1)) & 1);
 }
 
 
@@ -95,12 +95,11 @@ static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
     for(i = 0;i < SamplesToDo;i++)                                            \
     {                                                                         \
         samp = SamplesIn[i];                                                  \
+        samp = hpFilter1P(&state->iirFilter, 0, samp);                        \
                                                                               \
         index += step;                                                        \
         index &= WAVEFORM_FRACMASK;                                           \
         samp *= func(index);                                                  \
-                                                                              \
-        samp = hpFilter1P(&state->iirFilter, 0, samp);                        \
                                                                               \
         for(k = 0;k < MaxChannels;k++)                                        \
             SamplesOut[k][i] += state->Gain[k] * samp;                        \

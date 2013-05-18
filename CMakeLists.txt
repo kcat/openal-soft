@@ -456,7 +456,9 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcChorus.c
               Alc/alcConfig.c
               Alc/alcDedicated.c
+              Alc/alcDistortion.c
               Alc/alcEcho.c
+              Alc/alcEqualizer.c
               Alc/alcFlanger.c
               Alc/alcModulator.c
               Alc/alcReverb.c

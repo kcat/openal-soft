@@ -430,7 +430,7 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
     case AL_EFFECT_CHORUS:
         effect->Chorus.Waveform = AL_CHORUS_DEFAULT_WAVEFORM;
         effect->Chorus.Phase = AL_CHORUS_DEFAULT_PHASE;
-        effect->Chorus.Rate = AL_CHORUS_MAX_RATE;
+        effect->Chorus.Rate = AL_CHORUS_DEFAULT_RATE;
         effect->Chorus.Depth = AL_CHORUS_DEFAULT_DEPTH;
         effect->Chorus.Feedback = AL_CHORUS_DEFAULT_FEEDBACK;
         effect->Chorus.Delay = AL_CHORUS_DEFAULT_DELAY;
@@ -442,6 +442,21 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->GetParamiv = chorus_GetParamiv;
         effect->GetParamf  = chorus_GetParamf;
         effect->GetParamfv = chorus_GetParamfv;
+        break;
+    case AL_EFFECT_DISTORTION:
+        effect->Distortion.Edge = AL_DISTORTION_DEFAULT_EDGE;
+        effect->Distortion.Gain = AL_DISTORTION_DEFAULT_GAIN;
+        effect->Distortion.LowpassCutoff = AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF;
+        effect->Distortion.EQCenter = AL_DISTORTION_DEFAULT_EQCENTER;
+        effect->Distortion.EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH;
+        effect->SetParami  = distortion_SetParami;
+        effect->SetParamiv = distortion_SetParamiv;
+        effect->SetParamf  = distortion_SetParamf;
+        effect->SetParamfv = distortion_SetParamfv;
+        effect->GetParami  = distortion_GetParami;
+        effect->GetParamiv = distortion_GetParamiv;
+        effect->GetParamf  = distortion_GetParamf;
+        effect->GetParamfv = distortion_GetParamfv;
         break;
     case AL_EFFECT_ECHO:
         effect->Echo.Delay    = AL_ECHO_DEFAULT_DELAY;
@@ -458,10 +473,30 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->GetParamf  = echo_GetParamf;
         effect->GetParamfv = echo_GetParamfv;
         break;
+    case AL_EFFECT_EQUALIZER:
+        effect->Equalizer.LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF;
+        effect->Equalizer.LowGain = AL_EQUALIZER_DEFAULT_LOW_GAIN;
+        effect->Equalizer.Mid1Center = AL_EQUALIZER_DEFAULT_MID1_CENTER;
+        effect->Equalizer.Mid1Gain = AL_EQUALIZER_DEFAULT_MID1_GAIN;
+        effect->Equalizer.Mid1Width = AL_EQUALIZER_DEFAULT_MID1_WIDTH;
+        effect->Equalizer.Mid2Center = AL_EQUALIZER_DEFAULT_MID2_CENTER;
+        effect->Equalizer.Mid2Gain = AL_EQUALIZER_DEFAULT_MID2_GAIN;
+        effect->Equalizer.Mid2Width = AL_EQUALIZER_DEFAULT_MID2_WIDTH;
+        effect->Equalizer.HighCutoff = AL_EQUALIZER_DEFAULT_HIGH_CUTOFF;
+        effect->Equalizer.HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN;
+        effect->SetParami  = equalizer_SetParami;
+        effect->SetParamiv = equalizer_SetParamiv;
+        effect->SetParamf  = equalizer_SetParamf;
+        effect->SetParamfv = equalizer_SetParamfv;
+        effect->GetParami  = equalizer_GetParami;
+        effect->GetParamiv = equalizer_GetParamiv;
+        effect->GetParamf  = equalizer_GetParamf;
+        effect->GetParamfv = equalizer_GetParamfv;
+        break;
     case AL_EFFECT_FLANGER:
         effect->Flanger.Waveform = AL_FLANGER_DEFAULT_WAVEFORM;
         effect->Flanger.Phase = AL_FLANGER_DEFAULT_PHASE;
-        effect->Flanger.Rate = AL_FLANGER_MAX_RATE;
+        effect->Flanger.Rate = AL_FLANGER_DEFAULT_RATE;
         effect->Flanger.Depth = AL_FLANGER_DEFAULT_DEPTH;
         effect->Flanger.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
         effect->Flanger.Delay = AL_FLANGER_DEFAULT_DELAY;

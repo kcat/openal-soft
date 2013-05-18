@@ -513,8 +513,12 @@ static ALeffectState *CreateStateByType(ALenum type)
             return ReverbCreate();
         case AL_EFFECT_CHORUS:
             return ChorusCreate();
+        case AL_EFFECT_DISTORTION:
+            return DistortionCreate();
         case AL_EFFECT_ECHO:
             return EchoCreate();
+        case AL_EFFECT_EQUALIZER:
+            return EqualizerCreate();
         case AL_EFFECT_FLANGER:
             return FlangerCreate();
         case AL_EFFECT_RING_MODULATOR:

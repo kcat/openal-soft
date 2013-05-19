@@ -878,6 +878,9 @@ static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName
             CloseHandle(data->MsgEvent);
         data->MsgEvent = NULL;
 
+        free(data->devid);
+        data->devid = NULL;
+
         free(data);
         device->ExtraData = NULL;
 

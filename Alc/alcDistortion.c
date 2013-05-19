@@ -58,7 +58,7 @@ typedef struct ALdistortionState {
     ALEQFilter lowpass;
     ALfloat frequency;
     ALfloat attenuation;
-    ALfloat edge;
+    ALfloat edge_coeff;
 
     /* Oversample data */
     ALfloat oversample_buffer[BUFFERSIZE][4];
@@ -89,6 +89,7 @@ static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const A
     ALfloat alpha;
     ALfloat bandwidth;
     ALfloat cutoff;
+    ALfloat edge;
 
     for(it = 0; it < Device->NumChan; it++)
     {
@@ -100,7 +101,8 @@ static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const A
     state->attenuation = Slot->effect.Distortion.Gain;
 
     /* Store waveshaper edge settings */
-    state->edge = Slot->effect.Distortion.Edge;
+    edge = sinf(Slot->effect.Distortion.Edge * (F_PI/2.0f));
+    state->edge_coeff = 2.0f * edge / (1.0f-edge);
 
     /* Lowpass filter */
     cutoff = Slot->effect.Distortion.LowpassCutoff;
@@ -136,7 +138,6 @@ static ALvoid DistortionProcess(ALeffectState *effect, ALuint SamplesToDo, const
     ALfloat tempsmp;
     ALuint it;
     ALuint kt;
-    ALuint st;
 
     /* Perform 4x oversampling to avoid aliasing.   */
     /* Oversampling greatly improves distortion     */
@@ -177,18 +178,15 @@ static ALvoid DistortionProcess(ALeffectState *effect, ALuint SamplesToDo, const
     for(it = 0; it < SamplesToDo * 4; it++)
     {
         ALfloat smp = oversample_buffer[it];
-        ALfloat edge = sinf(state->edge * (F_PI / 2.0f));
+        ALfloat fc = state->edge_coeff;
 
         /* Second step, do distortion using waveshaper function  */
         /* to emulate signal processing during tube overdriving. */
         /* Three steps of waveshaping are intended to modify     */
         /* waveform without boost/clipping/attenuation process.  */
-        for(st = 0; st < 3; st++)
-        {
-            smp = (1.0f + 2.0f * edge / (1.0f - edge)) * smp / (1.0f + 2.0f * edge / (1.0f - edge) * fabsf(smp));
-            if((st & 0x00000001) == 0x00000001)
-                smp *= -1.0f;
-        }
+        smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
+        smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp)) * -1.0f;
+        smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
 
         /* Third step, do bandpass filtering of distorted signal */
         tempsmp = state->bandpass.b[0] / state->bandpass.a[0] * smp +
@@ -205,7 +203,7 @@ static ALvoid DistortionProcess(ALeffectState *effect, ALuint SamplesToDo, const
 
         /* Fourth step, final, do attenuation and perform decimation, */
         /* store only one sample out of 4.                            */
-        if(!(it & 0x00000003))
+        if(!(it&3))
         {
             smp *= state->attenuation;
             for(kt = 0; kt < MaxChannels; kt++)

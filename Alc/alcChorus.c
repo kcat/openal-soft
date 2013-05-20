@@ -169,6 +169,39 @@ static ALvoid ChorusUpdate(ALeffectState *effect, ALCdevice *Device, const ALeff
     }
 }
 
+static __inline void CalcTriangleDelays(ALint *delay_left, ALint *delay_right, ALint offset, const ALchorusState *state)
+{
+    ALfloat lfo_value;
+
+    lfo_value = 2.0f - fabsf(2.0f - fmodf(state->lfo_coeff*offset*4.0f, 4.0f));
+    lfo_value *= state->depth * state->delay;
+    lfo_value += state->delay;
+    *delay_left = (ALint)(lfo_value * state->frequency);
+
+    lfo_value = 2.0f - fabsf(2.0f - fmodf(state->lfo_coeff *
+                                          (offset+state->lfo_disp)*4.0f,
+                                          4.0f));
+    lfo_value *= state->depth * state->delay;
+    lfo_value += state->delay;
+    *delay_right = (ALint)(lfo_value * state->frequency);
+}
+
+static __inline void CalcSinusoidDelays(ALint *delay_left, ALint *delay_right, ALint offset, const ALchorusState *state)
+{
+    ALfloat lfo_value;
+
+    lfo_value = 1.0f + sinf(fmodf(state->lfo_coeff*offset, 2.0f*F_PI));
+    lfo_value *= state->depth * state->delay;
+    lfo_value += state->delay;
+    *delay_left = (ALint)(lfo_value * state->frequency);
+
+    lfo_value = 1.0f + sinf(fmodf(state->lfo_coeff*(offset+state->lfo_disp),
+                                  2.0f*F_PI));
+    lfo_value *= state->depth * state->delay;
+    lfo_value += state->delay;
+    *delay_right = (ALint)(lfo_value * state->frequency);
+}
+
 static ALvoid ChorusProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALchorusState *state = GET_PARENT_TYPE(ALchorusState, ALeffectState, effect);
@@ -176,75 +209,49 @@ static ALvoid ChorusProcess(ALeffectState *effect, ALuint SamplesToDo, const ALf
     ALuint it;
     ALuint kt;
     ALint offset;
-    ALfloat lfo_value_left = 0.0f;
-    ALfloat lfo_value_right = 0.0f;
     ALint delay_left = 0;
     ALint delay_right = 0;
     ALfloat smp;
 
-    offset=state->offset;
+    offset = state->offset;
 
-    switch (state->waveform)
+    switch(state->waveform)
     {
         case AL_CHORUS_WAVEFORM_TRIANGLE:
              for (it = 0; it < SamplesToDo; it++, offset++)
              {
-                 lfo_value_left = 2.0f - fabsf(2.0f - fmodf(state->lfo_coeff *
-                                  offset * 4.0f, 4.0f));
-                 lfo_value_left *= state->depth * state->delay;
-                 lfo_value_left += state->delay;
-                 delay_left = (ALint)(lfo_value_left * state->frequency);
-                 lfo_value_right = 2.0f - fabsf(2.0f - fmodf(state->lfo_coeff *
-                                   (offset + state->lfo_disp) * 4.0f, 4.0f));
-                 lfo_value_right *= state->depth * state->delay;
-                 lfo_value_right += state->delay;
-                 delay_right = (ALint)(lfo_value_right * state->frequency);
+                 CalcTriangleDelays(&delay_left, &delay_right, offset, state);
 
                  smp = state->SampleBufferLeft[(offset-delay_left) & mask];
-                 for (kt = 0; kt < MaxChannels; kt++)
-                 {
+                 for(kt = 0;kt < MaxChannels;kt++)
                      SamplesOut[kt][it] += smp * state->Gain[0][kt];
-                 }
                  state->SampleBufferLeft[offset & mask] = (smp + SamplesIn[it]) * state->feedback;
+
                  smp = state->SampleBufferRight[(offset-delay_right) & mask];
-                 for (kt = 0; kt < MaxChannels; kt++)
-                 {
+                 for(kt = 0;kt < MaxChannels;kt++)
                      SamplesOut[kt][it] += smp * state->Gain[1][kt];
-                 }
                  state->SampleBufferRight[offset & mask] = (smp + SamplesIn[it]) * state->feedback;
              }
              break;
         case AL_CHORUS_WAVEFORM_SINUSOID:
              for (it = 0; it < SamplesToDo; it++, offset++)
              {
-                 lfo_value_left = 1.0f + sinf(fmodf(state->lfo_coeff *
-                                  offset, 2 * F_PI));
-                 lfo_value_left *= state->depth * state->delay;
-                 lfo_value_left += state->delay;
-                 delay_left = (ALint)(lfo_value_left * state->frequency);
-                 lfo_value_right = 1.0f + sinf(fmodf(state->lfo_coeff *
-                                   (offset + state->lfo_disp), 2 * F_PI));
-                 lfo_value_right *= state->depth * state->delay;
-                 lfo_value_right += state->delay;
-                 delay_right = (ALint)(lfo_value_right * state->frequency);
+                 CalcSinusoidDelays(&delay_left, &delay_right, offset, state);
 
                  smp = state->SampleBufferLeft[(offset-delay_left) & mask];
-                 for (kt = 0; kt < MaxChannels; kt++)
-                 {
+                 for(kt = 0;kt < MaxChannels;kt++)
                      SamplesOut[kt][it] += smp * state->Gain[0][kt];
-                 }
                  state->SampleBufferLeft[offset & mask] = (smp + SamplesIn[it]) * state->feedback;
+
                  smp = state->SampleBufferRight[(offset-delay_right) & mask];
-                 for (kt = 0; kt < MaxChannels; kt++)
-                 {
+                 for(kt = 0;kt < MaxChannels;kt++)
                      SamplesOut[kt][it] += smp * state->Gain[1][kt];
-                 }
                  state->SampleBufferRight[offset & mask] = (smp + SamplesIn[it]) * state->feedback;
              }
              break;
     }
 
-    state->offset=offset;
+    state->offset = offset;
 }
 
 ALeffectState *ChorusCreate(void)

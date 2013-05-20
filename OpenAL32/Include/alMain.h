@@ -96,8 +96,6 @@ static __inline int sched_yield(void)
 #include <time.h>
 #include <errno.h>
 
-#define IsBadWritePtr(a,b) ((a) == NULL && (b) != 0)
-
 typedef pthread_mutex_t CRITICAL_SECTION;
 void InitializeCriticalSection(CRITICAL_SECTION *cs);
 void DeleteCriticalSection(CRITICAL_SECTION *cs);

@@ -58,9 +58,6 @@ typedef struct ALdistortionState {
     ALfloat frequency;
     ALfloat attenuation;
     ALfloat edge_coeff;
-
-    /* Oversample data */
-    ALfloat oversample_buffer[BUFFERSIZE][4];
 } ALdistortionState;
 
 static ALvoid DistortionDestroy(ALeffectState *effect)
@@ -134,81 +131,103 @@ static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const A
 static ALvoid DistortionProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALdistortionState *state = GET_PARENT_TYPE(ALdistortionState, ALeffectState, effect);
-    float *RESTRICT oversample_buffer = &state->oversample_buffer[0][0];
+    const ALfloat fc = state->edge_coeff;
+    float oversample_buffer[64][4];
     ALfloat tempsmp;
+    ALuint base;
     ALuint it;
+    ALuint ot;
     ALuint kt;
 
-    /* Perform 4x oversampling to avoid aliasing.   */
-    /* Oversampling greatly improves distortion     */
-    /* quality and allows to implement lowpass and  */
-    /* bandpass filters using high frequencies, at  */
-    /* which classic IIR filters became unstable.   */
-
-    /* Fill oversample buffer using zero stuffing */
-    for(it = 0; it < SamplesToDo; it++)
+    for(base = 0;base < SamplesToDo;)
     {
-        oversample_buffer[it*4 + 0] = SamplesIn[it];
-        oversample_buffer[it*4 + 1] = 0.0f;
-        oversample_buffer[it*4 + 2] = 0.0f;
-        oversample_buffer[it*4 + 3] = 0.0f;
-    }
+        ALfloat temps[64];
+        ALuint td = minu(SamplesToDo-base, 64);
 
-    /* First step, do lowpass filtering of original signal,  */
-    /* additionally perform buffer interpolation and lowpass */
-    /* cutoff for oversampling (which is fortunately first   */
-    /* step of distortion). So combine three operations into */
-    /* the one.                                              */
-    for(it = 0; it < SamplesToDo * 4; it++)
-    {
-        tempsmp = state->lowpass.b[0] / state->lowpass.a[0] * oversample_buffer[it] +
-                  state->lowpass.b[1] / state->lowpass.a[0] * state->lowpass.x[0] +
-                  state->lowpass.b[2] / state->lowpass.a[0] * state->lowpass.x[1] -
-                  state->lowpass.a[1] / state->lowpass.a[0] * state->lowpass.y[0] -
-                  state->lowpass.a[2] / state->lowpass.a[0] * state->lowpass.y[1];
+        /* Perform 4x oversampling to avoid aliasing.   */
+        /* Oversampling greatly improves distortion     */
+        /* quality and allows to implement lowpass and  */
+        /* bandpass filters using high frequencies, at  */
+        /* which classic IIR filters became unstable.   */
 
-        state->lowpass.x[1] = state->lowpass.x[0];
-        state->lowpass.x[0] = oversample_buffer[it];
-        state->lowpass.y[1] = state->lowpass.y[0];
-        state->lowpass.y[0] = tempsmp;
-        /* Restore signal power by multiplying sample by amount of oversampling */
-        oversample_buffer[it] = tempsmp * 4.0f;
-    }
-
-    for(it = 0; it < SamplesToDo * 4; it++)
-    {
-        ALfloat smp = oversample_buffer[it];
-        ALfloat fc = state->edge_coeff;
-
-        /* Second step, do distortion using waveshaper function  */
-        /* to emulate signal processing during tube overdriving. */
-        /* Three steps of waveshaping are intended to modify     */
-        /* waveform without boost/clipping/attenuation process.  */
-        smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
-        smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp)) * -1.0f;
-        smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
-
-        /* Third step, do bandpass filtering of distorted signal */
-        tempsmp = state->bandpass.b[0] / state->bandpass.a[0] * smp +
-                  state->bandpass.b[1] / state->bandpass.a[0] * state->bandpass.x[0] +
-                  state->bandpass.b[2] / state->bandpass.a[0] * state->bandpass.x[1] -
-                  state->bandpass.a[1] / state->bandpass.a[0] * state->bandpass.y[0] -
-                  state->bandpass.a[2] / state->bandpass.a[0] * state->bandpass.y[1];
-
-        state->bandpass.x[1] = state->bandpass.x[0];
-        state->bandpass.x[0] = smp;
-        state->bandpass.y[1] = state->bandpass.y[0];
-        state->bandpass.y[0] = tempsmp;
-        smp = tempsmp;
-
-        /* Fourth step, final, do attenuation and perform decimation, */
-        /* store only one sample out of 4.                            */
-        if(!(it&3))
+        /* Fill oversample buffer using zero stuffing */
+        for(it = 0;it < td;it++)
         {
-            smp *= state->attenuation;
-            for(kt = 0; kt < MaxChannels; kt++)
-                SamplesOut[kt][it>>2] += state->Gain[kt] * smp;
+            oversample_buffer[it][0] = SamplesIn[it+base];
+            oversample_buffer[it][1] = 0.0f;
+            oversample_buffer[it][2] = 0.0f;
+            oversample_buffer[it][3] = 0.0f;
         }
+
+        /* First step, do lowpass filtering of original signal,  */
+        /* additionally perform buffer interpolation and lowpass */
+        /* cutoff for oversampling (which is fortunately first   */
+        /* step of distortion). So combine three operations into */
+        /* the one.                                              */
+        for(it = 0;it < td;it++)
+        {
+            for(ot = 0;ot < 4;ot++)
+            {
+                tempsmp = state->lowpass.b[0] / state->lowpass.a[0] * oversample_buffer[it][ot] +
+                          state->lowpass.b[1] / state->lowpass.a[0] * state->lowpass.x[0] +
+                          state->lowpass.b[2] / state->lowpass.a[0] * state->lowpass.x[1] -
+                          state->lowpass.a[1] / state->lowpass.a[0] * state->lowpass.y[0] -
+                          state->lowpass.a[2] / state->lowpass.a[0] * state->lowpass.y[1];
+
+                state->lowpass.x[1] = state->lowpass.x[0];
+                state->lowpass.x[0] = oversample_buffer[it][ot];
+                state->lowpass.y[1] = state->lowpass.y[0];
+                state->lowpass.y[0] = tempsmp;
+                /* Restore signal power by multiplying sample by amount of oversampling */
+                oversample_buffer[it][ot] = tempsmp * 4.0f;
+            }
+        }
+
+        for(it = 0;it < td;it++)
+        {
+            /* Second step, do distortion using waveshaper function  */
+            /* to emulate signal processing during tube overdriving. */
+            /* Three steps of waveshaping are intended to modify     */
+            /* waveform without boost/clipping/attenuation process.  */
+            for(ot = 0;ot < 4;ot++)
+            {
+                ALfloat smp = oversample_buffer[it][ot];
+
+                smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
+                smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp)) * -1.0f;
+                smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
+
+                /* Third step, do bandpass filtering of distorted signal */
+                tempsmp = state->bandpass.b[0] / state->bandpass.a[0] * smp +
+                          state->bandpass.b[1] / state->bandpass.a[0] * state->bandpass.x[0] +
+                          state->bandpass.b[2] / state->bandpass.a[0] * state->bandpass.x[1] -
+                          state->bandpass.a[1] / state->bandpass.a[0] * state->bandpass.y[0] -
+                          state->bandpass.a[2] / state->bandpass.a[0] * state->bandpass.y[1];
+
+                state->bandpass.x[1] = state->bandpass.x[0];
+                state->bandpass.x[0] = smp;
+                state->bandpass.y[1] = state->bandpass.y[0];
+                state->bandpass.y[0] = tempsmp;
+
+                oversample_buffer[it][ot] = tempsmp;
+            }
+
+            /* Fourth step, final, do attenuation and perform decimation, */
+            /* store only one sample out of 4.                            */
+            temps[it] = oversample_buffer[it][0] * state->attenuation;
+        }
+
+        for(kt = 0;kt < MaxChannels;kt++)
+        {
+            ALfloat gain = state->Gain[kt];
+            if(!(gain > 0.00001f))
+                continue;
+
+            for(it = 0;it < td;it++)
+                SamplesOut[kt][base+it] += gain * temps[it];
+        }
+
+        base += td;
     }
 }
 

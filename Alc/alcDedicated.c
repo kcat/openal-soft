@@ -73,6 +73,9 @@ static ALvoid DedicatedProcess(ALeffectState *effect, ALuint SamplesToDo, const 
 
     for(c = 0;c < MaxChannels;c++)
     {
+        if(!(gains[c] > 0.00001f))
+            continue;
+
         for(i = 0;i < SamplesToDo;i++)
             SamplesOut[c][i] = SamplesIn[i] * gains[c];
     }

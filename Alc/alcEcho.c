@@ -133,25 +133,47 @@ static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALflo
     const ALuint tap2 = state->Tap[1].delay;
     ALuint offset = state->Offset;
     ALfloat smp;
+    ALuint base;
     ALuint i, k;
 
-    for(i = 0;i < SamplesToDo;i++,offset++)
+    for(base = 0;base < SamplesToDo;)
     {
-        /* First tap */
-        smp = state->SampleBuffer[(offset-tap1) & mask];
-        for(k = 0;k < MaxChannels;k++)
-            SamplesOut[k][i] += smp * state->Gain[0][k];
+        ALfloat temps[64][2];
+        ALuint td = minu(SamplesToDo-base, 64);
 
-        /* Second tap */
-        smp = state->SampleBuffer[(offset-tap2) & mask];
-        for(k = 0;k < MaxChannels;k++)
-            SamplesOut[k][i] += smp * state->Gain[1][k];
+        for(i = 0;i < td;i++)
+        {
+            /* First tap */
+            temps[i][0] = state->SampleBuffer[(offset-tap1) & mask];
+            /* Second tap */
+            temps[i][1] = state->SampleBuffer[(offset-tap2) & mask];
 
-        // Apply damping and feedback gain to the second tap, and mix in the
-        // new sample
-        smp = lpFilter2P(&state->iirFilter, 0, smp+SamplesIn[i]);
-        state->SampleBuffer[offset&mask] = smp * state->FeedGain;
+            // Apply damping and feedback gain to the second tap, and mix in the
+            // new sample
+            smp = lpFilter2P(&state->iirFilter, 0, temps[i][1]+SamplesIn[i]);
+            state->SampleBuffer[offset&mask] = smp * state->FeedGain;
+        }
+
+        for(k = 0;k < MaxChannels;k++)
+        {
+            ALfloat gain = state->Gain[0][k];
+            if(gain > 0.00001f)
+            {
+                for(i = 0;i < td;i++)
+                    SamplesOut[k][i+base] += temps[i][0] * gain;
+            }
+
+            gain = state->Gain[1][k];
+            if(gain > 0.00001f)
+            {
+                for(i = 0;i < td;i++)
+                    SamplesOut[k][i+base] += temps[i][1] * gain;
+            }
+        }
+
+        base += td;
     }
+
     state->Offset = offset;
 }
 

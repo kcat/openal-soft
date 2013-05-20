@@ -162,20 +162,24 @@ static ALvoid EqualizerUpdate(ALeffectState *effect, ALCdevice *Device, const AL
         switch(state->bandfilter[it].type)
         {
             case LOW_SHELF:
-                 alpha = sinf(w0) / 2.0f *
-                     sqrtf((gain + 1.0f / gain) * (1.0f / 0.75f - 1.0f) + 2.0f);
+                 alpha = sinf(w0) / 2.0f * sqrtf((gain + 1.0f / gain) *
+                                                 (1.0f / 0.75f - 1.0f) + 2.0f);
                  state->bandfilter[it].b[0] = gain * ((gain + 1.0f) -
-                     (gain - 1.0f) * cosf(w0) + 2.0f * sqrtf(gain) * alpha);
+                                                      (gain - 1.0f) * cosf(w0) +
+                                                      2.0f * sqrtf(gain) * alpha);
                  state->bandfilter[it].b[1] = 2.0f * gain * ((gain - 1.0f) -
-                     (gain + 1.0f) * cosf(w0));
+                                                             (gain + 1.0f) * cosf(w0));
                  state->bandfilter[it].b[2] = gain * ((gain + 1.0f) -
-                     (gain - 1.0f) * cosf(w0) - 2.0f * sqrtf(gain) * alpha);
-                 state->bandfilter[it].a[0] = (gain + 1.0f) + (gain - 1.0f) *
-                     cosf(w0) + 2.0f * sqrtf(gain) * alpha;
+                                                      (gain - 1.0f) * cosf(w0) -
+                                                      2.0f * sqrtf(gain) * alpha);
+                 state->bandfilter[it].a[0] = (gain + 1.0f) +
+                                              (gain - 1.0f) * cosf(w0) +
+                                              2.0f * sqrtf(gain) * alpha;
                  state->bandfilter[it].a[1] = -2.0f * ((gain - 1.0f) +
-                     (gain + 1.0f) * cosf(w0));
-                 state->bandfilter[it].a[2] = (gain + 1.0f) + (gain - 1.0f) *
-                     cosf(w0) - 2.0f * sqrtf(gain) * alpha;
+                                              (gain + 1.0f) * cosf(w0));
+                 state->bandfilter[it].a[2] = (gain + 1.0f) +
+                                              (gain - 1.0f) * cosf(w0) -
+                                              2.0f * sqrtf(gain) * alpha;
                  break;
             case HIGH_SHELF:
                  alpha = sinf(w0) / 2.0f * sqrtf((gain + 1.0f / gain) *
@@ -214,32 +218,52 @@ static ALvoid EqualizerUpdate(ALeffectState *effect, ALCdevice *Device, const AL
 static ALvoid EqualizerProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALequalizerState *state = GET_PARENT_TYPE(ALequalizerState, ALeffectState, effect);
+    ALuint base;
     ALuint it;
     ALuint kt;
     ALuint ft;
 
-    for (it = 0; it < SamplesToDo; it++)
+    for(base = 0;base < SamplesToDo;)
     {
-        ALfloat tempsmp;
-        ALfloat smp = SamplesIn[it];
+        ALfloat temps[64];
+        ALuint td = minu(SamplesToDo-base, 64);
 
-        for(ft = 0;ft < 4;ft++)
+        for(it = 0;it < td;it++)
         {
-            tempsmp = state->bandfilter[ft].b[0] / state->bandfilter[ft].a[0] * smp +
-                      state->bandfilter[ft].b[1] / state->bandfilter[ft].a[0] * state->bandfilter[ft].x[0] +
-                      state->bandfilter[ft].b[2] / state->bandfilter[ft].a[0] * state->bandfilter[ft].x[1] -
-                      state->bandfilter[ft].a[1] / state->bandfilter[ft].a[0] * state->bandfilter[ft].y[0] -
-                      state->bandfilter[ft].a[2] / state->bandfilter[ft].a[0] * state->bandfilter[ft].y[1];
+            ALfloat smp = SamplesIn[base+it];
+            ALfloat tempsmp;
 
-            state->bandfilter[ft].x[1] = state->bandfilter[ft].x[0];
-            state->bandfilter[ft].x[0] = smp;
-            state->bandfilter[ft].y[1] = state->bandfilter[ft].y[0];
-            state->bandfilter[ft].y[0] = tempsmp;
-            smp = tempsmp;
+            for(ft = 0;ft < 4;ft++)
+            {
+                ALEQFilter *filter = &state->bandfilter[ft];
+
+                tempsmp = filter->b[0] / filter->a[0] * smp +
+                          filter->b[1] / filter->a[0] * filter->x[0] +
+                          filter->b[2] / filter->a[0] * filter->x[1] -
+                          filter->a[1] / filter->a[0] * filter->y[0] -
+                          filter->a[2] / filter->a[0] * filter->y[1];
+
+                filter->x[1] = filter->x[0];
+                filter->x[0] = smp;
+                filter->y[1] = filter->y[0];
+                filter->y[0] = tempsmp;
+                smp = tempsmp;
+            }
+
+            temps[it] = smp;
         }
 
         for(kt = 0;kt < MaxChannels;kt++)
-            SamplesOut[kt][it] += state->Gain[kt] * smp;
+        {
+            ALfloat gain = state->Gain[kt];
+            if(!(gain > 0.00001f))
+                continue;
+
+            for(it = 0;it < td;it++)
+                SamplesOut[kt][base+it] += gain * temps[it];
+        }
+
+        base += td;
     }
 }
 

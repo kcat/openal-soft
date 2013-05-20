@@ -88,20 +88,36 @@ static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
 {                                                                             \
     const ALuint step = state->step;                                          \
     ALuint index = state->index;                                              \
-    ALfloat samp;                                                             \
-    ALuint i, k;                                                              \
+    ALuint base;                                                              \
                                                                               \
-    for(i = 0;i < SamplesToDo;i++)                                            \
+    for(base = 0;base < SamplesToDo;)                                         \
     {                                                                         \
-        samp = SamplesIn[i];                                                  \
-        samp = hpFilter1P(&state->iirFilter, 0, samp);                        \
+        ALfloat temps[64];                                                    \
+        ALuint td = minu(SamplesToDo-base, 64);                               \
+        ALuint i, k;                                                          \
                                                                               \
-        index += step;                                                        \
-        index &= WAVEFORM_FRACMASK;                                           \
-        samp *= func(index);                                                  \
+        for(i = 0;i < td;i++)                                                 \
+        {                                                                     \
+            ALfloat samp;                                                     \
+            samp = SamplesIn[base+i];                                         \
+            samp = hpFilter1P(&state->iirFilter, 0, samp);                    \
+                                                                              \
+            index += step;                                                    \
+            index &= WAVEFORM_FRACMASK;                                       \
+            temps[i] = samp * func(index);                                    \
+        }                                                                     \
                                                                               \
         for(k = 0;k < MaxChannels;k++)                                        \
-            SamplesOut[k][i] += state->Gain[k] * samp;                        \
+        {                                                                     \
+            ALfloat gain = state->Gain[k];                                    \
+            if(!(gain > 0.00001f))                                            \
+                continue;                                                     \
+                                                                              \
+            for(i = 0;i < td;i++)                                             \
+                SamplesOut[k][base+i] += gain * temps[i];                     \
+        }                                                                     \
+                                                                              \
+        base += td;                                                           \
     }                                                                         \
     state->index = index;                                                     \
 }

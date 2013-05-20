@@ -118,6 +118,8 @@ static ALvoid EqualizerUpdate(ALeffectState *effect, ALCdevice *Device, const AL
     ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
     ALuint it;
 
+    for(it = 0;it < MaxChannels;it++)
+        state->Gain[it] = 0.0f;
     for(it = 0; it < Device->NumChan; it++)
     {
         enum Channel chan = Device->Speaker2Chan[it];

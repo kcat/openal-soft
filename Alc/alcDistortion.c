@@ -91,7 +91,9 @@ static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const A
     ALfloat cutoff;
     ALfloat edge;
 
-    for(it = 0; it < Device->NumChan; it++)
+    for(it = 0;it < MaxChannels;it++)
+        state->Gain[it] = 0.0f;
+    for(it = 0;it < Device->NumChan;it++)
     {
         enum Channel chan = Device->Speaker2Chan[it];
         state->Gain[chan] = gain;

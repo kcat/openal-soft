@@ -47,8 +47,7 @@ typedef struct ALEQFilter {
 } ALEQFilter;
 
 typedef struct ALdistortionState {
-    /* Must be first in all effects! */
-    ALeffectState state;
+    DERIVE_FROM_TYPE(ALeffectState);
 
     /* Effect gains for each channel */
     ALfloat Gain[MaxChannels];
@@ -66,14 +65,13 @@ typedef struct ALdistortionState {
 
 static ALvoid DistortionDestroy(ALeffectState *effect)
 {
-    ALdistortionState *state = (ALdistortionState*)effect;
-
+    ALdistortionState *state = GET_PARENT_TYPE(ALdistortionState, ALeffectState, effect);
     free(state);
 }
 
 static ALboolean DistortionDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
-    ALdistortionState *state = (ALdistortionState*)effect;
+    ALdistortionState *state = GET_PARENT_TYPE(ALdistortionState, ALeffectState, effect);
 
     state->frequency = (ALfloat)Device->Frequency;
 
@@ -82,7 +80,7 @@ static ALboolean DistortionDeviceUpdate(ALeffectState *effect, ALCdevice *Device
 
 static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALdistortionState *state = (ALdistortionState*)effect;
+    ALdistortionState *state = GET_PARENT_TYPE(ALdistortionState, ALeffectState, effect);
     ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
     ALuint it;
     ALfloat w0;
@@ -135,7 +133,7 @@ static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const A
 
 static ALvoid DistortionProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALdistortionState *state = (ALdistortionState*)effect;
+    ALdistortionState *state = GET_PARENT_TYPE(ALdistortionState, ALeffectState, effect);
     float *RESTRICT oversample_buffer = &state->oversample_buffer[0][0];
     ALfloat tempsmp;
     ALuint it;
@@ -222,10 +220,10 @@ ALeffectState *DistortionCreate(void)
     if(!state)
         return NULL;
 
-    state->state.Destroy = DistortionDestroy;
-    state->state.DeviceUpdate = DistortionDeviceUpdate;
-    state->state.Update = DistortionUpdate;
-    state->state.Process = DistortionProcess;
+    GET_DERIVED_TYPE(ALeffectState, state)->Destroy = DistortionDestroy;
+    GET_DERIVED_TYPE(ALeffectState, state)->DeviceUpdate = DistortionDeviceUpdate;
+    GET_DERIVED_TYPE(ALeffectState, state)->Update = DistortionUpdate;
+    GET_DERIVED_TYPE(ALeffectState, state)->Process = DistortionProcess;
 
     state->bandpass.type = BANDPASS;
     state->lowpass.type = LOWPASS;
@@ -237,7 +235,7 @@ ALeffectState *DistortionCreate(void)
     state->lowpass.y[0] = 0.0f;
     state->lowpass.y[1] = 0.0f;
 
-    return &state->state;
+    return GET_DERIVED_TYPE(ALeffectState, state);
 }
 
 void distortion_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)

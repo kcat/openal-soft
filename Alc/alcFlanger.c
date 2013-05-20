@@ -31,8 +31,7 @@
 
 
 typedef struct ALflangerState {
-    // Must be first in all effects!
-    ALeffectState state;
+    DERIVE_FROM_TYPE(ALeffectState);
 
     ALfloat *SampleBufferLeft;
     ALfloat *SampleBufferRight;
@@ -56,8 +55,7 @@ typedef struct ALflangerState {
 
 static ALvoid FlangerDestroy(ALeffectState *effect)
 {
-    ALflangerState *state = (ALflangerState*)effect;
-
+    ALflangerState *state = GET_PARENT_TYPE(ALflangerState, ALeffectState, effect);
     if(state)
     {
         free(state->SampleBufferLeft);
@@ -72,7 +70,7 @@ static ALvoid FlangerDestroy(ALeffectState *effect)
 
 static ALboolean FlangerDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
-    ALflangerState *state = (ALflangerState*)effect;
+    ALflangerState *state = GET_PARENT_TYPE(ALflangerState, ALeffectState, effect);
     ALuint maxlen;
     ALuint it;
 
@@ -113,7 +111,7 @@ static ALboolean FlangerDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
 static ALvoid FlangerUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALflangerState *state = (ALflangerState*)effect;
+    ALflangerState *state = GET_PARENT_TYPE(ALflangerState, ALeffectState, effect);
     ALuint it;
 
     for (it = 0; it < MaxChannels; it++)
@@ -173,7 +171,7 @@ static ALvoid FlangerUpdate(ALeffectState *effect, ALCdevice *Device, const ALef
 
 static ALvoid FlangerProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALflangerState *state = (ALflangerState*)effect;
+    ALflangerState *state = GET_PARENT_TYPE(ALflangerState, ALeffectState, effect);
     const ALuint mask = state->BufferLength-1;
     ALuint it;
     ALuint kt;
@@ -257,17 +255,17 @@ ALeffectState *FlangerCreate(void)
     if(!state)
         return NULL;
 
-    state->state.Destroy = FlangerDestroy;
-    state->state.DeviceUpdate = FlangerDeviceUpdate;
-    state->state.Update = FlangerUpdate;
-    state->state.Process = FlangerProcess;
+    GET_DERIVED_TYPE(ALeffectState, state)->Destroy = FlangerDestroy;
+    GET_DERIVED_TYPE(ALeffectState, state)->DeviceUpdate = FlangerDeviceUpdate;
+    GET_DERIVED_TYPE(ALeffectState, state)->Update = FlangerUpdate;
+    GET_DERIVED_TYPE(ALeffectState, state)->Process = FlangerProcess;
 
     state->BufferLength = 0;
     state->SampleBufferLeft = NULL;
     state->SampleBufferRight = NULL;
     state->offset = 0;
 
-    return &state->state;
+    return GET_DERIVED_TYPE(ALeffectState, state);
 }
 
 void flanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)

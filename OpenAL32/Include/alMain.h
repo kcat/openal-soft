@@ -62,6 +62,10 @@ static const union {
 
 #define COUNTOF(x) (sizeof((x))/sizeof((x)[0]))
 
+#define DERIVE_FROM_TYPE(t)         t t##_parent
+#define GET_DERIVED_TYPE(t, o)      (&(o)->t##_parent)
+#define GET_PARENT_TYPE(t1, t2, o)  ((t1*)((char*)(o) - offsetof(t1, t2##_parent)))
+
 #ifdef _WIN32
 
 #define WIN32_LEAN_AND_MEAN

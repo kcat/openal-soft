@@ -31,8 +31,7 @@
 
 
 typedef struct ALmodulatorState {
-    // Must be first in all effects!
-    ALeffectState state;
+    DERIVE_FROM_TYPE(ALeffectState);
 
     enum {
         SINUSOID,
@@ -116,7 +115,7 @@ DECL_TEMPLATE(Square)
 
 static ALvoid ModulatorDestroy(ALeffectState *effect)
 {
-    ALmodulatorState *state = (ALmodulatorState*)effect;
+    ALmodulatorState *state = GET_PARENT_TYPE(ALmodulatorState, ALeffectState, effect);
     free(state);
 }
 
@@ -129,7 +128,7 @@ static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
 static ALvoid ModulatorUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALmodulatorState *state = (ALmodulatorState*)effect;
+    ALmodulatorState *state = GET_PARENT_TYPE(ALmodulatorState, ALeffectState, effect);
     ALfloat gain, cw, a = 0.0f;
     ALuint index;
 
@@ -162,7 +161,7 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCdevice *Device, const AL
 
 static ALvoid ModulatorProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALmodulatorState *state = (ALmodulatorState*)effect;
+    ALmodulatorState *state = GET_PARENT_TYPE(ALmodulatorState, ALeffectState, effect);
 
     switch(state->Waveform)
     {
@@ -188,10 +187,10 @@ ALeffectState *ModulatorCreate(void)
     if(!state)
         return NULL;
 
-    state->state.Destroy = ModulatorDestroy;
-    state->state.DeviceUpdate = ModulatorDeviceUpdate;
-    state->state.Update = ModulatorUpdate;
-    state->state.Process = ModulatorProcess;
+    GET_DERIVED_TYPE(ALeffectState, state)->Destroy = ModulatorDestroy;
+    GET_DERIVED_TYPE(ALeffectState, state)->DeviceUpdate = ModulatorDeviceUpdate;
+    GET_DERIVED_TYPE(ALeffectState, state)->Update = ModulatorUpdate;
+    GET_DERIVED_TYPE(ALeffectState, state)->Process = ModulatorProcess;
 
     state->index = 0;
     state->step = 1;
@@ -199,7 +198,7 @@ ALeffectState *ModulatorCreate(void)
     state->iirFilter.coeff = 0.0f;
     state->iirFilter.history[0] = 0.0f;
 
-    return &state->state;
+    return GET_DERIVED_TYPE(ALeffectState, state);
 }
 
 void mod_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)

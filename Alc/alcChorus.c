@@ -31,8 +31,7 @@
 
 
 typedef struct ALchorusState {
-    // Must be first in all effects!
-    ALeffectState state;
+    DERIVE_FROM_TYPE(ALeffectState);
 
     ALfloat *SampleBufferLeft;
     ALfloat *SampleBufferRight;
@@ -56,8 +55,7 @@ typedef struct ALchorusState {
 
 static ALvoid ChorusDestroy(ALeffectState *effect)
 {
-    ALchorusState *state = (ALchorusState*)effect;
-
+    ALchorusState *state = GET_PARENT_TYPE(ALchorusState, ALeffectState, effect);
     if(state)
     {
         free(state->SampleBufferLeft);
@@ -72,7 +70,7 @@ static ALvoid ChorusDestroy(ALeffectState *effect)
 
 static ALboolean ChorusDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
-    ALchorusState *state = (ALchorusState*)effect;
+    ALchorusState *state = GET_PARENT_TYPE(ALchorusState, ALeffectState, effect);
     ALuint maxlen;
     ALuint it;
 
@@ -113,7 +111,7 @@ static ALboolean ChorusDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
 static ALvoid ChorusUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALchorusState *state = (ALchorusState*)effect;
+    ALchorusState *state = GET_PARENT_TYPE(ALchorusState, ALeffectState, effect);
     ALuint it;
 
     for (it = 0; it < MaxChannels; it++)
@@ -173,7 +171,7 @@ static ALvoid ChorusUpdate(ALeffectState *effect, ALCdevice *Device, const ALeff
 
 static ALvoid ChorusProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALchorusState *state = (ALchorusState*)effect;
+    ALchorusState *state = GET_PARENT_TYPE(ALchorusState, ALeffectState, effect);
     const ALuint mask = state->BufferLength-1;
     ALuint it;
     ALuint kt;
@@ -257,17 +255,17 @@ ALeffectState *ChorusCreate(void)
     if(!state)
         return NULL;
 
-    state->state.Destroy = ChorusDestroy;
-    state->state.DeviceUpdate = ChorusDeviceUpdate;
-    state->state.Update = ChorusUpdate;
-    state->state.Process = ChorusProcess;
+    GET_DERIVED_TYPE(ALeffectState, state)->Destroy = ChorusDestroy;
+    GET_DERIVED_TYPE(ALeffectState, state)->DeviceUpdate = ChorusDeviceUpdate;
+    GET_DERIVED_TYPE(ALeffectState, state)->Update = ChorusUpdate;
+    GET_DERIVED_TYPE(ALeffectState, state)->Process = ChorusProcess;
 
     state->BufferLength = 0;
     state->SampleBufferLeft = NULL;
     state->SampleBufferRight = NULL;
     state->offset = 0;
 
-    return &state->state;
+    return GET_DERIVED_TYPE(ALeffectState, state);
 }
 
 void chorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)

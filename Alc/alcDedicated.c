@@ -30,8 +30,7 @@
 
 
 typedef struct ALdedicatedState {
-    // Must be first in all effects!
-    ALeffectState state;
+    DERIVE_FROM_TYPE(ALeffectState);
 
     ALfloat gains[MaxChannels];
 } ALdedicatedState;
@@ -39,7 +38,7 @@ typedef struct ALdedicatedState {
 
 static ALvoid DedicatedDestroy(ALeffectState *effect)
 {
-    ALdedicatedState *state = (ALdedicatedState*)effect;
+    ALdedicatedState *state = GET_PARENT_TYPE(ALdedicatedState, ALeffectState, effect);
     free(state);
 }
 
@@ -52,7 +51,7 @@ static ALboolean DedicatedDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
 static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const ALeffectslot *Slot)
 {
-    ALdedicatedState *state = (ALdedicatedState*)effect;
+    ALdedicatedState *state = GET_PARENT_TYPE(ALdedicatedState, ALeffectState, effect);
     ALfloat Gain;
     ALsizei s;
 
@@ -68,7 +67,7 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const AL
 
 static ALvoid DedicatedProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALdedicatedState *state = (ALdedicatedState*)effect;
+    ALdedicatedState *state = GET_PARENT_TYPE(ALdedicatedState, ALeffectState, effect);
     const ALfloat *gains = state->gains;
     ALuint i, c;
 
@@ -88,15 +87,15 @@ ALeffectState *DedicatedCreate(void)
     if(!state)
         return NULL;
 
-    state->state.Destroy = DedicatedDestroy;
-    state->state.DeviceUpdate = DedicatedDeviceUpdate;
-    state->state.Update = DedicatedUpdate;
-    state->state.Process = DedicatedProcess;
+    GET_DERIVED_TYPE(ALeffectState, state)->Destroy = DedicatedDestroy;
+    GET_DERIVED_TYPE(ALeffectState, state)->DeviceUpdate = DedicatedDeviceUpdate;
+    GET_DERIVED_TYPE(ALeffectState, state)->Update = DedicatedUpdate;
+    GET_DERIVED_TYPE(ALeffectState, state)->Process = DedicatedProcess;
 
     for(s = 0;s < MaxChannels;s++)
         state->gains[s] = 0.0f;
 
-    return &state->state;
+    return GET_DERIVED_TYPE(ALeffectState, state);
 }
 
 void ded_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)

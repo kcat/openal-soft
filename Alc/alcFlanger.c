@@ -153,7 +153,7 @@ static ALvoid FlangerUpdate(ALeffectState *effect, ALCdevice *Device, const ALef
     }
 }
 
-static __inline void CalcTriangleDelays(ALint *delay_left, ALint *delay_right, ALint offset, const ALflangerState *state)
+static __inline void Triangle(ALint *delay_left, ALint *delay_right, ALint offset, const ALflangerState *state)
 {
     ALfloat lfo_value;
 
@@ -170,7 +170,7 @@ static __inline void CalcTriangleDelays(ALint *delay_left, ALint *delay_right, A
     *delay_right = (ALint)(lfo_value * state->frequency);
 }
 
-static __inline void CalcSinusoidDelays(ALint *delay_left, ALint *delay_right, ALint offset, const ALflangerState *state)
+static __inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALint offset, const ALflangerState *state)
 {
     ALfloat lfo_value;
 
@@ -186,56 +186,73 @@ static __inline void CalcSinusoidDelays(ALint *delay_left, ALint *delay_right, A
     *delay_right = (ALint)(lfo_value * state->frequency);
 }
 
+#define DECL_TEMPLATE(func)                                                    \
+static void Process##func(ALflangerState *state, ALuint SamplesToDo,           \
+                          const ALfloat *RESTRICT SamplesIn,                   \
+                          ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])          \
+{                                                                              \
+    const ALint mask = state->BufferLength-1;                                  \
+    ALint offset = state->offset;                                              \
+    ALuint it, kt;                                                             \
+    ALuint base;                                                               \
+                                                                               \
+    for(base = 0;base < SamplesToDo;)                                          \
+    {                                                                          \
+        ALfloat temps[64][2];                                                  \
+        ALuint td = minu(SamplesToDo-base, 64);                                \
+                                                                               \
+        for(it = 0;it < td;it++,offset++)                                      \
+        {                                                                      \
+            ALint delay_left, delay_right;                                     \
+            (func)(&delay_left, &delay_right, offset, state);                  \
+                                                                               \
+            temps[it][0] = state->SampleBufferLeft[(offset-delay_left)&mask];  \
+            state->SampleBufferLeft[offset&mask] = (temps[it][0] +             \
+                                                    SamplesIn[it+base]) *      \
+                                                   state->feedback;            \
+                                                                               \
+            temps[it][1] = state->SampleBufferRight[(offset-delay_right)&mask];\
+            state->SampleBufferRight[offset&mask] = (temps[it][1] +            \
+                                                     SamplesIn[it+base]) *     \
+                                                    state->feedback;           \
+        }                                                                      \
+                                                                               \
+        for(kt = 0;kt < MaxChannels;kt++)                                      \
+        {                                                                      \
+            ALfloat gain = state->Gain[0][kt];                                 \
+            if(gain > 0.00001f)                                                \
+            {                                                                  \
+                for(it = 0;it < td;it++)                                       \
+                    SamplesOut[kt][it+base] += temps[it][0] * gain;            \
+            }                                                                  \
+                                                                               \
+            gain = state->Gain[1][kt];                                         \
+            if(gain > 0.00001f)                                                \
+            {                                                                  \
+                for(it = 0;it < td;it++)                                       \
+                    SamplesOut[kt][it+base] += temps[it][1] * gain;            \
+            }                                                                  \
+        }                                                                      \
+                                                                               \
+        base += td;                                                            \
+    }                                                                          \
+                                                                               \
+    state->offset = offset;                                                    \
+}
+
+DECL_TEMPLATE(Triangle)
+DECL_TEMPLATE(Sinusoid)
+
+#undef DECL_TEMPLATE
+
 static ALvoid FlangerProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALflangerState *state = GET_PARENT_TYPE(ALflangerState, ALeffectState, effect);
-    const ALuint mask = state->BufferLength-1;
-    ALuint it;
-    ALuint kt;
-    ALint offset;
-    ALint delay_left = 0;
-    ALint delay_right = 0;
-    ALfloat smp;
 
-    offset = state->offset;
-
-    switch(state->waveform)
-    {
-        case AL_FLANGER_WAVEFORM_TRIANGLE:
-             for(it = 0;it < SamplesToDo;it++,offset++)
-             {
-                 CalcTriangleDelays(&delay_left, &delay_right, offset, state);
-
-                 smp = state->SampleBufferLeft[(offset-delay_left) & mask];
-                 for(kt = 0;kt < MaxChannels;kt++)
-                     SamplesOut[kt][it] += smp * state->Gain[0][kt];
-                 state->SampleBufferLeft[offset & mask] = (smp + SamplesIn[it]) * state->feedback;
-
-                 smp = state->SampleBufferRight[(offset-delay_right) & mask];
-                 for(kt = 0;kt < MaxChannels;kt++)
-                     SamplesOut[kt][it] += smp * state->Gain[1][kt];
-                 state->SampleBufferRight[offset & mask] = (smp + SamplesIn[it]) * state->feedback;
-             }
-             break;
-        case AL_FLANGER_WAVEFORM_SINUSOID:
-             for(it = 0;it < SamplesToDo;it++,offset++)
-             {
-                 CalcSinusoidDelays(&delay_left, &delay_right, offset, state);
-
-                 smp = state->SampleBufferLeft[(offset-delay_left) & mask];
-                 for(kt = 0;kt < MaxChannels;kt++)
-                     SamplesOut[kt][it] += smp * state->Gain[0][kt];
-                 state->SampleBufferLeft[offset & mask] = (smp + SamplesIn[it]) * state->feedback;
-
-                 smp = state->SampleBufferRight[(offset-delay_right) & mask];
-                 for(kt = 0;kt < MaxChannels;kt++)
-                     SamplesOut[kt][it] += smp * state->Gain[1][kt];
-                 state->SampleBufferRight[offset & mask] = (smp + SamplesIn[it]) * state->feedback;
-             }
-             break;
-    }
-
-    state->offset = offset;
+    if(state->waveform == AL_FLANGER_WAVEFORM_TRIANGLE)
+        ProcessTriangle(state, SamplesToDo, SamplesIn, SamplesOut);
+    else if(state->waveform == AL_FLANGER_WAVEFORM_SINUSOID)
+        ProcessSinusoid(state, SamplesToDo, SamplesIn, SamplesOut);
 }
 
 ALeffectState *FlangerCreate(void)

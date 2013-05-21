@@ -393,41 +393,43 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
 }
 
 
-static ALvoid NoneDestroy(ALeffectState *State)
-{ free(State); }
-static ALboolean NoneDeviceUpdate(ALeffectState *State, ALCdevice *Device)
+typedef struct ALnoneState {
+    DERIVE_FROM_TYPE(ALeffectState);
+} ALnoneState;
+
+static ALvoid ALnoneState_Destroy(ALeffectState *state)
+{ free(state); }
+static ALboolean ALnoneState_DeviceUpdate(ALeffectState *state, ALCdevice *device)
 {
     return AL_TRUE;
-    (void)State;
-    (void)Device;
+    (void)state;
+    (void)device;
 }
-static ALvoid NoneUpdate(ALeffectState *State, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALnoneState_Update(ALeffectState *state, ALCdevice *device, const ALeffectslot *slot)
 {
-    (void)State;
-    (void)Device;
-    (void)Slot;
+    (void)state;
+    (void)device;
+    (void)slot;
 }
-static ALvoid NoneProcess(ALeffectState *State, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALnoneState_Process(ALeffectState *state, ALuint samplesToDo, const ALfloat *RESTRICT samplesIn, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE])
 {
-    (void)State;
-    (void)SamplesToDo;
-    (void)SamplesIn;
-    (void)SamplesOut;
+    (void)state;
+    (void)samplesToDo;
+    (void)samplesIn;
+    (void)samplesOut;
 }
+
+DEFINE_ALEFFECTSTATE_VTABLE(ALnoneState);
+
 ALeffectState *NoneCreate(void)
 {
-    ALeffectState *state;
+    ALnoneState *state;
 
     state = calloc(1, sizeof(*state));
-    if(!state)
-        return NULL;
+    if(!state) return NULL;
+    SET_VTABLE2(ALnoneState, ALeffectState, state);
 
-    state->Destroy = NoneDestroy;
-    state->DeviceUpdate = NoneDeviceUpdate;
-    state->Update = NoneUpdate;
-    state->Process = NoneProcess;
-
-    return state;
+    return STATIC_CAST(ALeffectState, state);
 }
 
 void null_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)

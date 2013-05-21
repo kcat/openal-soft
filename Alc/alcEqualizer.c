@@ -95,13 +95,13 @@ typedef struct ALequalizerState {
     ALfloat frequency;
 } ALequalizerState;
 
-static ALvoid EqualizerDestroy(ALeffectState *effect)
+static ALvoid ALequalizerState_Destroy(ALeffectState *effect)
 {
     ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
     free(state);
 }
 
-static ALboolean EqualizerDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALequalizerState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
 
@@ -110,7 +110,7 @@ static ALboolean EqualizerDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     return AL_TRUE;
 }
 
-static ALvoid EqualizerUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALequalizerState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
     ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
@@ -215,7 +215,7 @@ static ALvoid EqualizerUpdate(ALeffectState *effect, ALCdevice *Device, const AL
     }
 }
 
-static ALvoid EqualizerProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALequalizerState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
     ALuint base;
@@ -267,19 +267,16 @@ static ALvoid EqualizerProcess(ALeffectState *effect, ALuint SamplesToDo, const 
     }
 }
 
+DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
+
 ALeffectState *EqualizerCreate(void)
 {
     ALequalizerState *state;
     int it;
 
     state = malloc(sizeof(*state));
-    if(!state)
-        return NULL;
-
-    STATIC_CAST(ALeffectState, state)->Destroy = EqualizerDestroy;
-    STATIC_CAST(ALeffectState, state)->DeviceUpdate = EqualizerDeviceUpdate;
-    STATIC_CAST(ALeffectState, state)->Update = EqualizerUpdate;
-    STATIC_CAST(ALeffectState, state)->Process = EqualizerProcess;
+    if(!state) return NULL;
+    SET_VTABLE2(ALequalizerState, ALeffectState, state);
 
     state->bandfilter[0].type = LOW_SHELF;
     state->bandfilter[1].type = PEAKING;

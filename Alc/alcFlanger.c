@@ -50,7 +50,7 @@ typedef struct ALflangerState {
     ALfloat feedback;
 } ALflangerState;
 
-static ALvoid FlangerDestroy(ALeffectState *effect)
+static ALvoid ALflangerState_Destroy(ALeffectState *effect)
 {
     ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
 
@@ -63,7 +63,7 @@ static ALvoid FlangerDestroy(ALeffectState *effect)
     free(state);
 }
 
-static ALboolean FlangerDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALflangerState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
     ALuint maxlen;
@@ -96,7 +96,7 @@ static ALboolean FlangerDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     return AL_TRUE;
 }
 
-static ALvoid FlangerUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALflangerState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
     ALfloat frequency = Device->Frequency;
@@ -234,7 +234,7 @@ DECL_TEMPLATE(Sinusoid)
 
 #undef DECL_TEMPLATE
 
-static ALvoid FlangerProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALflangerState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
 
@@ -244,18 +244,15 @@ static ALvoid FlangerProcess(ALeffectState *effect, ALuint SamplesToDo, const AL
         ProcessSinusoid(state, SamplesToDo, SamplesIn, SamplesOut);
 }
 
+DEFINE_ALEFFECTSTATE_VTABLE(ALflangerState);
+
 ALeffectState *FlangerCreate(void)
 {
     ALflangerState *state;
 
     state = malloc(sizeof(*state));
-    if(!state)
-        return NULL;
-
-    STATIC_CAST(ALeffectState, state)->Destroy = FlangerDestroy;
-    STATIC_CAST(ALeffectState, state)->DeviceUpdate = FlangerDeviceUpdate;
-    STATIC_CAST(ALeffectState, state)->Update = FlangerUpdate;
-    STATIC_CAST(ALeffectState, state)->Process = FlangerProcess;
+    if(!state) return NULL;
+    SET_VTABLE2(ALflangerState, ALeffectState, state);
 
     state->BufferLength = 0;
     state->SampleBufferLeft = NULL;

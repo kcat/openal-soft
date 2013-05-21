@@ -36,20 +36,20 @@ typedef struct ALdedicatedState {
 } ALdedicatedState;
 
 
-static ALvoid DedicatedDestroy(ALeffectState *effect)
+static ALvoid ALdedicatedState_Destroy(ALeffectState *effect)
 {
     ALdedicatedState *state = STATIC_UPCAST(ALdedicatedState, ALeffectState, effect);
     free(state);
 }
 
-static ALboolean DedicatedDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALdedicatedState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     (void)effect;
     (void)Device;
     return AL_TRUE;
 }
 
-static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const ALeffectslot *Slot)
+static ALvoid ALdedicatedState_Update(ALeffectState *effect, ALCdevice *device, const ALeffectslot *Slot)
 {
     ALdedicatedState *state = STATIC_UPCAST(ALdedicatedState, ALeffectState, effect);
     ALfloat Gain;
@@ -65,7 +65,7 @@ static ALvoid DedicatedUpdate(ALeffectState *effect, ALCdevice *device, const AL
         state->gains[LFE] = Gain;
 }
 
-static ALvoid DedicatedProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALdedicatedState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALdedicatedState *state = STATIC_UPCAST(ALdedicatedState, ALeffectState, effect);
     const ALfloat *gains = state->gains;
@@ -81,19 +81,16 @@ static ALvoid DedicatedProcess(ALeffectState *effect, ALuint SamplesToDo, const 
     }
 }
 
+DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
+
 ALeffectState *DedicatedCreate(void)
 {
     ALdedicatedState *state;
     ALsizei s;
 
     state = malloc(sizeof(*state));
-    if(!state)
-        return NULL;
-
-    STATIC_CAST(ALeffectState, state)->Destroy = DedicatedDestroy;
-    STATIC_CAST(ALeffectState, state)->DeviceUpdate = DedicatedDeviceUpdate;
-    STATIC_CAST(ALeffectState, state)->Update = DedicatedUpdate;
-    STATIC_CAST(ALeffectState, state)->Process = DedicatedProcess;
+    if(!state) return NULL;
+    SET_VTABLE2(ALdedicatedState, ALeffectState, state);
 
     for(s = 0;s < MaxChannels;s++)
         state->gains[s] = 0.0f;

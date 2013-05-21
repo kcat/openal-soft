@@ -39,8 +39,10 @@ typedef struct DelayLine
     ALfloat *Line;
 } DelayLine;
 
-typedef struct ALverbState {
+typedef struct ALreverbState {
     DERIVE_FROM_TYPE(ALeffectState);
+
+    ALboolean IsEax;
 
     // All delay lines are allocated as a single buffer to reduce memory
     // fragmentation and management code.
@@ -159,7 +161,7 @@ typedef struct ALverbState {
     /* Temporary storage used when processing, before deinterlacing. */
     ALfloat ReverbSamples[BUFFERSIZE][4];
     ALfloat EarlySamples[BUFFERSIZE][4];
-} ALverbState;
+} ALreverbState;
 
 /* This is a user config option for modifying the overall output of the reverb
  * effect.
@@ -254,7 +256,7 @@ static __inline ALfloat AllpassInOut(DelayLine *Delay, ALuint outOffset, ALuint 
 
 // Given an input sample, this function produces modulation for the late
 // reverb.
-static __inline ALfloat EAXModulation(ALverbState *State, ALfloat in)
+static __inline ALfloat EAXModulation(ALreverbState *State, ALfloat in)
 {
     ALfloat sinus, frac;
     ALuint offset;
@@ -291,7 +293,7 @@ static __inline ALfloat EAXModulation(ALverbState *State, ALfloat in)
 }
 
 // Delay line output routine for early reflections.
-static __inline ALfloat EarlyDelayLineOut(ALverbState *State, ALuint index)
+static __inline ALfloat EarlyDelayLineOut(ALreverbState *State, ALuint index)
 {
     return AttenuatedDelayLineOut(&State->Early.Delay[index],
                                   State->Offset - State->Early.Offset[index],
@@ -300,7 +302,7 @@ static __inline ALfloat EarlyDelayLineOut(ALverbState *State, ALuint index)
 
 // Given an input sample, this function produces four-channel output for the
 // early reflections.
-static __inline ALvoid EarlyReflection(ALverbState *State, ALfloat in, ALfloat *RESTRICT out)
+static __inline ALvoid EarlyReflection(ALreverbState *State, ALfloat in, ALfloat *RESTRICT out)
 {
     ALfloat d[4], v, f[4];
 
@@ -345,7 +347,7 @@ static __inline ALvoid EarlyReflection(ALverbState *State, ALfloat in, ALfloat *
 }
 
 // All-pass input/output routine for late reverb.
-static __inline ALfloat LateAllPassInOut(ALverbState *State, ALuint index, ALfloat in)
+static __inline ALfloat LateAllPassInOut(ALreverbState *State, ALuint index, ALfloat in)
 {
     return AllpassInOut(&State->Late.ApDelay[index],
                         State->Offset - State->Late.ApOffset[index],
@@ -354,7 +356,7 @@ static __inline ALfloat LateAllPassInOut(ALverbState *State, ALuint index, ALflo
 }
 
 // Delay line output routine for late reverb.
-static __inline ALfloat LateDelayLineOut(ALverbState *State, ALuint index)
+static __inline ALfloat LateDelayLineOut(ALreverbState *State, ALuint index)
 {
     return AttenuatedDelayLineOut(&State->Late.Delay[index],
                                   State->Offset - State->Late.Offset[index],
@@ -362,7 +364,7 @@ static __inline ALfloat LateDelayLineOut(ALverbState *State, ALuint index)
 }
 
 // Low-pass filter input/output routine for late reverb.
-static __inline ALfloat LateLowPassInOut(ALverbState *State, ALuint index, ALfloat in)
+static __inline ALfloat LateLowPassInOut(ALreverbState *State, ALuint index, ALfloat in)
 {
     in = lerp(in, State->Late.LpSample[index], State->Late.LpCoeff[index]);
     State->Late.LpSample[index] = in;
@@ -371,7 +373,7 @@ static __inline ALfloat LateLowPassInOut(ALverbState *State, ALuint index, ALflo
 
 // Given four decorrelated input samples, this function produces four-channel
 // output for the late reverb.
-static __inline ALvoid LateReverb(ALverbState *State, const ALfloat *RESTRICT in, ALfloat *RESTRICT out)
+static __inline ALvoid LateReverb(ALreverbState *State, const ALfloat *RESTRICT in, ALfloat *RESTRICT out)
 {
     ALfloat d[4], f[4];
 
@@ -442,7 +444,7 @@ static __inline ALvoid LateReverb(ALverbState *State, const ALfloat *RESTRICT in
 
 // Given an input sample, this function mixes echo into the four-channel late
 // reverb.
-static __inline ALvoid EAXEcho(ALverbState *State, ALfloat in, ALfloat *RESTRICT late)
+static __inline ALvoid EAXEcho(ALreverbState *State, ALfloat in, ALfloat *RESTRICT late)
 {
     ALfloat out, feed;
 
@@ -476,7 +478,7 @@ static __inline ALvoid EAXEcho(ALverbState *State, ALfloat in, ALfloat *RESTRICT
 
 // Perform the non-EAX reverb pass on a given input sample, resulting in
 // four-channel output.
-static __inline ALvoid VerbPass(ALverbState *State, ALfloat in, ALfloat *RESTRICT out)
+static __inline ALvoid VerbPass(ALreverbState *State, ALfloat in, ALfloat *RESTRICT out)
 {
     ALfloat feed, late[4], taps[4];
 
@@ -515,7 +517,7 @@ static __inline ALvoid VerbPass(ALverbState *State, ALfloat in, ALfloat *RESTRIC
 
 // Perform the EAX reverb pass on a given input sample, resulting in four-
 // channel output.
-static __inline ALvoid EAXVerbPass(ALverbState *State, ALfloat in, ALfloat *RESTRICT early, ALfloat *RESTRICT late)
+static __inline ALvoid EAXVerbPass(ALreverbState *State, ALfloat in, ALfloat *RESTRICT early, ALfloat *RESTRICT late)
 {
     ALfloat feed, taps[4];
 
@@ -552,11 +554,10 @@ static __inline ALvoid EAXVerbPass(ALverbState *State, ALfloat in, ALfloat *REST
     State->Offset++;
 }
 
-// This processes the reverb state, given the input samples and an output
-// buffer.
-static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+// This processes the standard reverb state, given the input samples and an
+// output buffer.
+static ALvoid ALreverbState_ProcessStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
     ALfloat (*RESTRICT out)[4] = State->ReverbSamples;
     ALuint index, c;
 
@@ -577,9 +578,8 @@ static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALflo
 
 // This processes the EAX reverb state, given the input samples and an output
 // buffer.
-static ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALreverbState_ProcessEax(ALreverbState *State, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
     ALfloat (*RESTRICT early)[4] = State->EarlySamples;
     ALfloat (*RESTRICT late)[4] = State->ReverbSamples;
     ALuint index, c;
@@ -606,6 +606,14 @@ static ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const AL
     }
 }
 
+static ALvoid ALreverbState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+{
+    ALreverbState *State = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
+    if(State->IsEax)
+        ALreverbState_ProcessEax(State, SamplesToDo, SamplesIn, SamplesOut);
+    else
+        ALreverbState_ProcessStandard(State, SamplesToDo, SamplesIn, SamplesOut);
+}
 
 // Given the allocated sample buffer, this function updates each delay line
 // offset.
@@ -633,7 +641,7 @@ static ALuint CalcLineLength(ALfloat length, ALintptrEXT offset, ALuint frequenc
  * for all lines given the sample rate (frequency).  If an allocation failure
  * occurs, it returns AL_FALSE.
  */
-static ALboolean AllocLines(ALuint frequency, ALverbState *State)
+static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
 {
     ALuint totalSamples, index;
     ALfloat length;
@@ -724,9 +732,9 @@ static ALboolean AllocLines(ALuint frequency, ALverbState *State)
 // This updates the device-dependant EAX reverb state.  This is called on
 // initialization and any time the device parameters (eg. playback frequency,
 // format) have been changed.
-static ALboolean ReverbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALreverbState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
-    ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
+    ALreverbState *State = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
     ALuint frequency = Device->Frequency, index;
 
     // Allocate the delay lines.
@@ -861,7 +869,7 @@ static __inline ALfloat CalcDampingCoeff(ALfloat hfRatio, ALfloat length, ALfloa
 // Update the EAX modulation index, range, and depth.  Keep in mind that this
 // kind of vibrato is additive and not multiplicative as one may expect.  The
 // downswing will sound stronger than the upswing.
-static ALvoid UpdateModulator(ALfloat modTime, ALfloat modDepth, ALuint frequency, ALverbState *State)
+static ALvoid UpdateModulator(ALfloat modTime, ALfloat modDepth, ALuint frequency, ALreverbState *State)
 {
     ALuint range;
 
@@ -891,7 +899,7 @@ static ALvoid UpdateModulator(ALfloat modTime, ALfloat modDepth, ALuint frequenc
 }
 
 // Update the offsets for the initial effect delay line.
-static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALuint frequency, ALverbState *State)
+static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALuint frequency, ALreverbState *State)
 {
     // Calculate the initial delay taps.
     State->DelayTap[0] = fastf2u(earlyDelay * frequency);
@@ -899,7 +907,7 @@ static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALuint freq
 }
 
 // Update the early reflections gain and line coefficients.
-static ALvoid UpdateEarlyLines(ALfloat reverbGain, ALfloat earlyGain, ALfloat lateDelay, ALverbState *State)
+static ALvoid UpdateEarlyLines(ALfloat reverbGain, ALfloat earlyGain, ALfloat lateDelay, ALreverbState *State)
 {
     ALuint index;
 
@@ -916,7 +924,7 @@ static ALvoid UpdateEarlyLines(ALfloat reverbGain, ALfloat earlyGain, ALfloat la
 }
 
 // Update the offsets for the decorrelator line.
-static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALverbState *State)
+static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALreverbState *State)
 {
     ALuint index;
     ALfloat length;
@@ -937,7 +945,7 @@ static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALverbState 
 }
 
 // Update the late reverb gains, line lengths, and line coefficients.
-static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix, ALfloat density, ALfloat decayTime, ALfloat diffusion, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALverbState *State)
+static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix, ALfloat density, ALfloat decayTime, ALfloat diffusion, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
 {
     ALfloat length;
     ALuint index;
@@ -995,7 +1003,7 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
 
 // Update the echo gain, line offset, line coefficients, and mixing
 // coefficients.
-static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoTime, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALverbState *State)
+static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoTime, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
 {
     // Update the offset and coefficient for the echo delay line.
     State->Echo.Offset = fastf2u(echoTime * frequency);
@@ -1027,7 +1035,7 @@ static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoT
 }
 
 // Update the early and late 3D panning gains.
-static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALverbState *State)
+static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALreverbState *State)
 {
     ALfloat earlyPan[3] = { ReflectionsPan[0], ReflectionsPan[1],
                             ReflectionsPan[2] };
@@ -1076,31 +1084,26 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 
 // This updates the EAX reverb state.  This is called any time the EAX reverb
 // effect is loaded into a slot.
-static ALvoid ReverbUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALreverbState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
+    ALreverbState *State = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
     ALuint frequency = Device->Frequency;
-    ALboolean isEAX = AL_FALSE;
     ALfloat cw, x, y, hfRatio;
 
     if(Slot->effect.type == AL_EFFECT_EAXREVERB && !EmulateEAXReverb)
-    {
-        STATIC_CAST(ALeffectState, State)->Process = EAXVerbProcess;
-        isEAX = AL_TRUE;
-    }
+        State->IsEax = AL_TRUE;
     else if(Slot->effect.type == AL_EFFECT_REVERB || EmulateEAXReverb)
-    {
-        STATIC_CAST(ALeffectState, State)->Process = VerbProcess;
-        isEAX = AL_FALSE;
-    }
+        State->IsEax = AL_FALSE;
 
     // Calculate the master low-pass filter (from the master effect HF gain).
-    if(isEAX) cw = CalcI3DL2HFreq(Slot->effect.Reverb.HFReference, frequency);
-    else cw = CalcI3DL2HFreq(LOWPASSFREQREF, frequency);
+    if(State->IsEax)
+        cw = CalcI3DL2HFreq(Slot->effect.Reverb.HFReference, frequency);
+    else
+        cw = CalcI3DL2HFreq(LOWPASSFREQREF, frequency);
     // This is done with 2 chained 1-pole filters, so no need to square g.
     State->LpFilter.coeff = lpCoeffCalc(Slot->effect.Reverb.GainHF, cw);
 
-    if(isEAX)
+    if(State->IsEax)
     {
         // Update the modulator line.
         UpdateModulator(Slot->effect.Reverb.ModulationTime,
@@ -1140,7 +1143,7 @@ static ALvoid ReverbUpdate(ALeffectState *effect, ALCdevice *Device, const ALeff
                     x, Slot->effect.Reverb.Density, Slot->effect.Reverb.DecayTime,
                     Slot->effect.Reverb.Diffusion, hfRatio, cw, frequency, State);
 
-    if(isEAX)
+    if(State->IsEax)
     {
         // Update the echo line.
         UpdateEchoLine(Slot->effect.Reverb.Gain, Slot->effect.Reverb.LateReverbGain,
@@ -1171,9 +1174,9 @@ static ALvoid ReverbUpdate(ALeffectState *effect, ALCdevice *Device, const ALeff
 
 // This destroys the reverb state.  It should be called only when the effect
 // slot has a different (or no) effect loaded over the reverb effect.
-static ALvoid ReverbDestroy(ALeffectState *effect)
+static ALvoid ALreverbState_Destroy(ALeffectState *effect)
 {
-    ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
+    ALreverbState *State = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
 
     free(State->SampleBuffer);
     State->SampleBuffer = NULL;
@@ -1181,21 +1184,18 @@ static ALvoid ReverbDestroy(ALeffectState *effect)
     free(State);
 }
 
+DEFINE_ALEFFECTSTATE_VTABLE(ALreverbState);
+
 // This creates the reverb state.  It should be called only when the reverb
 // effect is loaded into a slot that doesn't already have a reverb effect.
 ALeffectState *ReverbCreate(void)
 {
-    ALverbState *State = NULL;
+    ALreverbState *State = NULL;
     ALuint index;
 
-    State = malloc(sizeof(ALverbState));
-    if(!State)
-        return NULL;
-
-    STATIC_CAST(ALeffectState, State)->Destroy = ReverbDestroy;
-    STATIC_CAST(ALeffectState, State)->DeviceUpdate = ReverbDeviceUpdate;
-    STATIC_CAST(ALeffectState, State)->Update = ReverbUpdate;
-    STATIC_CAST(ALeffectState, State)->Process = VerbProcess;
+    State = malloc(sizeof(ALreverbState));
+    if(!State) return NULL;
+    SET_VTABLE2(ALreverbState, ALeffectState, State);
 
     State->TotalSamples = 0;
     State->SampleBuffer = NULL;

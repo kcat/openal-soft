@@ -51,7 +51,7 @@ typedef struct ALechoState {
     ALfloat history[2];
 } ALechoState;
 
-static ALvoid EchoDestroy(ALeffectState *effect)
+static ALvoid ALechoState_Destroy(ALeffectState *effect)
 {
     ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
 
@@ -61,7 +61,7 @@ static ALvoid EchoDestroy(ALeffectState *effect)
     free(state);
 }
 
-static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALechoState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
     ALuint maxlen, i;
@@ -88,7 +88,7 @@ static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     return AL_TRUE;
 }
 
-static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALechoState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
     ALuint frequency = Device->Frequency;
@@ -124,7 +124,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffec
     ComputeAngleGains(Device, atan2f(+lrpan, 0.0f), (1.0f-dirGain)*F_PI, gain, state->Gain[1]);
 }
 
-static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALechoState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
     const ALuint mask = state->BufferLength-1;
@@ -176,18 +176,15 @@ static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALflo
     state->Offset = offset;
 }
 
+DEFINE_ALEFFECTSTATE_VTABLE(ALechoState);
+
 ALeffectState *EchoCreate(void)
 {
     ALechoState *state;
 
     state = malloc(sizeof(*state));
-    if(!state)
-        return NULL;
-
-    STATIC_CAST(ALeffectState, state)->Destroy = EchoDestroy;
-    STATIC_CAST(ALeffectState, state)->DeviceUpdate = EchoDeviceUpdate;
-    STATIC_CAST(ALeffectState, state)->Update = EchoUpdate;
-    STATIC_CAST(ALeffectState, state)->Process = EchoProcess;
+    if(!state) return NULL;
+    SET_VTABLE2(ALechoState, ALeffectState, state);
 
     state->BufferLength = 0;
     state->SampleBuffer = NULL;

@@ -50,7 +50,7 @@ typedef struct ALchorusState {
     ALfloat feedback;
 } ALchorusState;
 
-static ALvoid ChorusDestroy(ALeffectState *effect)
+static ALvoid ALchorusState_Destroy(ALeffectState *effect)
 {
     ALchorusState *state = STATIC_UPCAST(ALchorusState, ALeffectState, effect);
 
@@ -63,7 +63,7 @@ static ALvoid ChorusDestroy(ALeffectState *effect)
     free(state);
 }
 
-static ALboolean ChorusDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALchorusState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     ALchorusState *state = STATIC_UPCAST(ALchorusState, ALeffectState, effect);
     ALuint maxlen;
@@ -96,7 +96,7 @@ static ALboolean ChorusDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
     return AL_TRUE;
 }
 
-static ALvoid ChorusUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALchorusState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALchorusState *state = STATIC_UPCAST(ALchorusState, ALeffectState, effect);
     ALfloat frequency = Device->Frequency;
@@ -234,7 +234,7 @@ DECL_TEMPLATE(Sinusoid)
 
 #undef DECL_TEMPLATE
 
-static ALvoid ChorusProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALchorusState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALchorusState *state = STATIC_UPCAST(ALchorusState, ALeffectState, effect);
 
@@ -244,18 +244,15 @@ static ALvoid ChorusProcess(ALeffectState *effect, ALuint SamplesToDo, const ALf
         ProcessSinusoid(state, SamplesToDo, SamplesIn, SamplesOut);
 }
 
+DEFINE_ALEFFECTSTATE_VTABLE(ALchorusState);
+
 ALeffectState *ChorusCreate(void)
 {
     ALchorusState *state;
 
     state = malloc(sizeof(*state));
-    if(!state)
-        return NULL;
-
-    STATIC_CAST(ALeffectState, state)->Destroy = ChorusDestroy;
-    STATIC_CAST(ALeffectState, state)->DeviceUpdate = ChorusDeviceUpdate;
-    STATIC_CAST(ALeffectState, state)->Update = ChorusUpdate;
-    STATIC_CAST(ALeffectState, state)->Process = ChorusProcess;
+    if(!state) return NULL;
+    SET_VTABLE2(ALchorusState, ALeffectState, state);
 
     state->BufferLength = 0;
     state->SampleBufferLeft = NULL;

@@ -59,20 +59,20 @@ typedef struct ALdistortionState {
     ALfloat edge_coeff;
 } ALdistortionState;
 
-static ALvoid DistortionDestroy(ALeffectState *effect)
+static ALvoid ALdistortionState_Destroy(ALeffectState *effect)
 {
     ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
     free(state);
 }
 
-static ALboolean DistortionDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALdistortionState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     return AL_TRUE;
     (void)effect;
     (void)Device;
 }
 
-static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALdistortionState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
     ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
@@ -126,7 +126,7 @@ static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const A
     state->bandpass.a[2] = 1.0f - alpha;
 }
 
-static ALvoid DistortionProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALdistortionState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
     const ALfloat fc = state->edge_coeff;
@@ -229,18 +229,15 @@ static ALvoid DistortionProcess(ALeffectState *effect, ALuint SamplesToDo, const
     }
 }
 
+DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
+
 ALeffectState *DistortionCreate(void)
 {
     ALdistortionState *state;
 
     state = malloc(sizeof(*state));
-    if(!state)
-        return NULL;
-
-    STATIC_CAST(ALeffectState, state)->Destroy = DistortionDestroy;
-    STATIC_CAST(ALeffectState, state)->DeviceUpdate = DistortionDeviceUpdate;
-    STATIC_CAST(ALeffectState, state)->Update = DistortionUpdate;
-    STATIC_CAST(ALeffectState, state)->Process = DistortionProcess;
+    if(!state) return NULL;
+    SET_VTABLE2(ALdistortionState, ALeffectState, state);
 
     state->bandpass.type = BANDPASS;
     state->lowpass.type = LOWPASS;

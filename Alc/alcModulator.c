@@ -129,20 +129,20 @@ DECL_TEMPLATE(Square)
 #undef DECL_TEMPLATE
 
 
-static ALvoid ModulatorDestroy(ALeffectState *effect)
+static ALvoid ALmodulatorState_Destroy(ALeffectState *effect)
 {
     ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
     free(state);
 }
 
-static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALmodulatorState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
     return AL_TRUE;
     (void)effect;
     (void)Device;
 }
 
-static ALvoid ModulatorUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALmodulatorState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
     ALfloat gain, cw, a = 0.0f;
@@ -175,7 +175,7 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCdevice *Device, const AL
     }
 }
 
-static ALvoid ModulatorProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALmodulatorState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
     ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
 
@@ -195,18 +195,15 @@ static ALvoid ModulatorProcess(ALeffectState *effect, ALuint SamplesToDo, const 
     }
 }
 
+DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
+
 ALeffectState *ModulatorCreate(void)
 {
     ALmodulatorState *state;
 
     state = malloc(sizeof(*state));
-    if(!state)
-        return NULL;
-
-    STATIC_CAST(ALeffectState, state)->Destroy = ModulatorDestroy;
-    STATIC_CAST(ALeffectState, state)->DeviceUpdate = ModulatorDeviceUpdate;
-    STATIC_CAST(ALeffectState, state)->Update = ModulatorUpdate;
-    STATIC_CAST(ALeffectState, state)->Process = ModulatorProcess;
+    if(!state) return NULL;
+    SET_VTABLE2(ALmodulatorState, ALeffectState, state);
 
     state->index = 0;
     state->step = 1;

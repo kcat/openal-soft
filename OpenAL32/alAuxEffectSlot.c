@@ -74,8 +74,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             if(err != AL_NO_ERROR)
             {
                 FreeThunkEntry(slot->id);
-                ALeffectStateFactory_destroy(ALeffectState_getCreator(slot->EffectState),
-                                             slot->EffectState);
+                DELETE(slot->EffectState);
                 al_free(slot);
 
                 alDeleteAuxiliaryEffectSlots(cur, effectslots);
@@ -124,8 +123,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
             FreeThunkEntry(slot->id);
 
             RemoveEffectSlotArray(Context, slot);
-            ALeffectStateFactory_destroy(ALeffectState_getCreator(slot->EffectState),
-                                         slot->EffectState);
+            DELETE(slot->EffectState);
 
             memset(slot, 0, sizeof(*slot));
             al_free(slot);
@@ -598,7 +596,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         {
             ALCdevice_Unlock(Device);
             RestoreFPUMode(&oldMode);
-            ALeffectStateFactory_destroy(ALeffectState_getCreator(State), State);
+            DELETE(State);
             return AL_OUT_OF_MEMORY;
         }
 
@@ -617,7 +615,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 
         RestoreFPUMode(&oldMode);
 
-        ALeffectStateFactory_destroy(ALeffectState_getCreator(State), State);
+        DELETE(State);
         State = NULL;
     }
     else
@@ -667,8 +665,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
         ALeffectslot *temp = Context->EffectSlotMap.array[pos].value;
         Context->EffectSlotMap.array[pos].value = NULL;
 
-        ALeffectStateFactory_destroy(ALeffectState_getCreator(temp->EffectState),
-                                     temp->EffectState);
+        DELETE(temp->EffectState);
 
         FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALeffectslot));

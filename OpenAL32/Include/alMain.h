@@ -70,6 +70,9 @@ static const union {
 #define SET_VTABLE1(T1, obj)     ((obj)->vtbl = &(T1##_vtable))
 #define SET_VTABLE2(T1, T2, obj) SET_VTABLE1(T1##_##T2, STATIC_CAST(T2, (obj)))
 
+#define NEW(T)      (T##Factory_getFactory()->create())
+#define DELETE(obj) ((obj)->vtbl->getCreator()->vtbl->destroy((obj)))
+
 
 #ifdef _WIN32
 

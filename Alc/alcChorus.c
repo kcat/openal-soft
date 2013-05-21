@@ -57,7 +57,7 @@ typedef struct ALchorusState {
     ALfloat feedback;
 } ALchorusState;
 
-static ALvoid ALchorusState_Destroy(ALchorusState *state)
+static ALvoid ALchorusState_Destruct(ALchorusState *state)
 {
     free(state->SampleBufferLeft);
     state->SampleBufferLeft = NULL;
@@ -270,7 +270,7 @@ static ALeffectState *ALchorusStateFactory_create(void)
 static ALvoid ALchorusStateFactory_destroy(ALeffectState *effect)
 {
     ALchorusState *state = STATIC_UPCAST(ALchorusState, ALeffectState, effect);
-    ALchorusState_Destroy(state);
+    ALchorusState_Destruct(state);
     free(state);
 }
 

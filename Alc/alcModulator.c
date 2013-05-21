@@ -135,7 +135,7 @@ DECL_TEMPLATE(Square)
 #undef DECL_TEMPLATE
 
 
-static ALvoid ALmodulatorState_Destroy(ALmodulatorState *state)
+static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state)
 {
     (void)state;
 }
@@ -225,7 +225,7 @@ static ALeffectState *ALmodulatorStateFactory_create(void)
 static ALvoid ALmodulatorStateFactory_destroy(ALeffectState *effect)
 {
     ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
-    ALmodulatorState_Destroy(state);
+    ALmodulatorState_Destruct(state);
     free(state);
 }
 

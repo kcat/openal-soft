@@ -43,7 +43,7 @@ typedef struct ALdedicatedState {
 } ALdedicatedState;
 
 
-static ALvoid ALdedicatedState_Destroy(ALdedicatedState *state)
+static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state)
 {
     (void)state;
 }
@@ -111,7 +111,7 @@ ALeffectState *ALdedicatedStateFactory_create(void)
 static ALvoid ALdedicatedStateFactory_destroy(ALeffectState *effect)
 {
     ALdedicatedState *state = STATIC_UPCAST(ALdedicatedState, ALeffectState, effect);
-    ALdedicatedState_Destroy(state);
+    ALdedicatedState_Destruct(state);
     free(state);
 }
 

@@ -67,7 +67,7 @@ typedef struct ALdistortionState {
     ALfloat edge_coeff;
 } ALdistortionState;
 
-static ALvoid ALdistortionState_Destroy(ALdistortionState *state)
+static ALvoid ALdistortionState_Destruct(ALdistortionState *state)
 {
     (void)state;
 }
@@ -266,7 +266,7 @@ static ALeffectState *ALdistortionStateFactory_create(void)
 static ALvoid ALdistortionStateFactory_destroy(ALeffectState *effect)
 {
     ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
-    ALdistortionState_Destroy(state);
+    ALdistortionState_Destruct(state);
     free(state);
 }
 

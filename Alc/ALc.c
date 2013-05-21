@@ -1777,8 +1777,9 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     if(device->DefaultSlot)
     {
-        ALeffectState_Destroy(device->DefaultSlot->EffectState);
-        device->DefaultSlot->EffectState = NULL;
+        ALeffectState *state = device->DefaultSlot->EffectState;
+        device->DefaultSlot = NULL;
+        ALeffectStateFactory_destroy(ALeffectState_getCreator(state), state);
     }
 
     if(device->BufferMap.size > 0)
@@ -2899,8 +2900,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         }
         else if(InitializeEffect(device, device->DefaultSlot, &DefaultEffect) != AL_NO_ERROR)
         {
-            ALeffectState_Destroy(device->DefaultSlot->EffectState);
+            ALeffectState *state = device->DefaultSlot->EffectState;
             device->DefaultSlot = NULL;
+            ALeffectStateFactory_destroy(ALeffectState_getCreator(state), state);
             ERR("Failed to initialize the default effect\n");
         }
     }

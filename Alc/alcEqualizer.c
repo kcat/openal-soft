@@ -102,7 +102,7 @@ typedef struct ALequalizerState {
     ALEQFilter bandfilter[4];
 } ALequalizerState;
 
-static ALvoid ALequalizerState_Destroy(ALequalizerState *state)
+static ALvoid ALequalizerState_Destruct(ALequalizerState *state)
 {
     (void)state;
 }
@@ -308,7 +308,7 @@ ALeffectState *ALequalizerStateFactory_create(void)
 static ALvoid ALequalizerStateFactory_destroy(ALeffectState *effect)
 {
     ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
-    ALequalizerState_Destroy(state);
+    ALequalizerState_Destruct(state);
     free(state);
 }
 

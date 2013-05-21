@@ -57,7 +57,7 @@ typedef struct ALflangerState {
     ALfloat feedback;
 } ALflangerState;
 
-static ALvoid ALflangerState_Destroy(ALflangerState *state)
+static ALvoid ALflangerState_Destruct(ALflangerState *state)
 {
     free(state->SampleBufferLeft);
     state->SampleBufferLeft = NULL;
@@ -270,7 +270,7 @@ ALeffectState *ALflangerStateFactory_create(void)
 static ALvoid ALflangerStateFactory_destroy(ALeffectState *effect)
 {
     ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
-    ALflangerState_Destroy(state);
+    ALflangerState_Destruct(state);
     free(state);
 }
 

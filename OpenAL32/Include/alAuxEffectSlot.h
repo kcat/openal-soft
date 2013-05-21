@@ -14,7 +14,7 @@ typedef struct ALeffectState ALeffectState;
 typedef struct ALeffectslot ALeffectslot;
 
 struct ALeffectStateVtable {
-    ALvoid (*const Destroy)(ALeffectState *state);
+    ALvoid (*const Destruct)(ALeffectState *state);
     ALboolean (*const DeviceUpdate)(ALeffectState *state, ALCdevice *device);
     ALvoid (*const Update)(ALeffectState *state, ALCdevice *device, const ALeffectslot *slot);
     ALvoid (*const Process)(ALeffectState *state, ALuint samplesToDo, const ALfloat *RESTRICT samplesIn, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE]);
@@ -25,15 +25,15 @@ struct ALeffectState {
     const struct ALeffectStateVtable *vtbl;
 };
 
-#define ALeffectState_Destroy(a)        ((a)->vtbl->Destroy((a)))
+#define ALeffectState_Destruct(a)       ((a)->vtbl->Destruct((a)))
 #define ALeffectState_DeviceUpdate(a,b) ((a)->vtbl->DeviceUpdate((a),(b)))
 #define ALeffectState_Update(a,b,c)     ((a)->vtbl->Update((a),(b),(c)))
 #define ALeffectState_Process(a,b,c,d)  ((a)->vtbl->Process((a),(b),(c),(d)))
 #define ALeffectState_getCreator(a)     ((a)->vtbl->getCreator())
 
 #define DEFINE_ALEFFECTSTATE_VTABLE(T)                                        \
-static ALvoid T##_ALeffectState_Destroy(ALeffectState *state)                 \
-{ T##_Destroy(STATIC_UPCAST(T, ALeffectState, state)); }                      \
+static ALvoid T##_ALeffectState_Destruct(ALeffectState *state)                \
+{ T##_Destruct(STATIC_UPCAST(T, ALeffectState, state)); }                     \
 static ALboolean T##_ALeffectState_DeviceUpdate(ALeffectState *state, ALCdevice *device) \
 { return T##_DeviceUpdate(STATIC_UPCAST(T, ALeffectState, state), device); }             \
 static ALvoid T##_ALeffectState_Update(ALeffectState *state, ALCdevice *device, const ALeffectslot *slot) \
@@ -44,7 +44,7 @@ static ALeffectStateFactory* T##_ALeffectState_getCreator(void)               \
 { return T##_getCreator(); }                                                  \
                                                                               \
 static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
-    T##_ALeffectState_Destroy,                                                \
+    T##_ALeffectState_Destruct,                                               \
     T##_ALeffectState_DeviceUpdate,                                           \
     T##_ALeffectState_Update,                                                 \
     T##_ALeffectState_Process,                                                \

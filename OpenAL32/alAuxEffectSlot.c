@@ -411,7 +411,7 @@ typedef struct ALnoneState {
     DERIVE_FROM_TYPE(ALeffectState);
 } ALnoneState;
 
-static ALvoid ALnoneState_Destroy(ALnoneState *state)
+static ALvoid ALnoneState_Destruct(ALnoneState *state)
 {
     (void)state;
 }
@@ -456,7 +456,7 @@ ALeffectState *ALnoneStateFactory_create(void)
 static ALvoid ALnoneStateFactory_destroy(ALeffectState *effect)
 {
     ALnoneState *state = STATIC_UPCAST(ALnoneState, ALeffectState, effect);
-    ALnoneState_Destroy(state);
+    ALnoneState_Destruct(state);
     free(state);
 }
 

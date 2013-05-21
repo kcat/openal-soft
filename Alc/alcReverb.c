@@ -1178,7 +1178,7 @@ static ALvoid ALreverbState_Update(ALreverbState *State, ALCdevice *Device, cons
 
 // This destroys the reverb state.  It should be called only when the effect
 // slot has a different (or no) effect loaded over the reverb effect.
-static ALvoid ALreverbState_Destroy(ALreverbState *State)
+static ALvoid ALreverbState_Destruct(ALreverbState *State)
 {
     free(State->SampleBuffer);
     State->SampleBuffer = NULL;
@@ -1287,7 +1287,7 @@ static ALeffectState *ALreverbStateFactory_create(void)
 static ALvoid ALreverbStateFactory_destroy(ALeffectState *effect)
 {
     ALreverbState *state = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
-    ALreverbState_Destroy(state);
+    ALreverbState_Destruct(state);
     free(state);
 }
 

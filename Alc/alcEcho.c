@@ -57,7 +57,7 @@ typedef struct ALechoState {
     FILTER iirFilter;
 } ALechoState;
 
-static ALvoid ALechoState_Destroy(ALechoState *state)
+static ALvoid ALechoState_Destruct(ALechoState *state)
 {
     free(state->SampleBuffer);
     state->SampleBuffer = NULL;
@@ -208,7 +208,7 @@ ALeffectState *ALechoStateFactory_create(void)
 static ALvoid ALechoStateFactory_destroy(ALeffectState *effect)
 {
     ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
-    ALechoState_Destroy(state);
+    ALechoState_Destruct(state);
     free(state);
 }
 

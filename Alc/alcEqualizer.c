@@ -92,7 +92,6 @@ typedef struct ALequalizerState {
 
     /* Effect parameters */
     ALEQFilter bandfilter[4];
-    ALfloat frequency;
 } ALequalizerState;
 
 static ALvoid ALequalizerState_Destroy(ALequalizerState *state)
@@ -100,22 +99,24 @@ static ALvoid ALequalizerState_Destroy(ALequalizerState *state)
     free(state);
 }
 
-static ALboolean ALequalizerState_DeviceUpdate(ALequalizerState *state, ALCdevice *Device)
+static ALboolean ALequalizerState_DeviceUpdate(ALequalizerState *state, ALCdevice *device)
 {
-    state->frequency = (ALfloat)Device->Frequency;
     return AL_TRUE;
+    (void)state;
+    (void)device;
 }
 
-static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *device, const ALeffectslot *slot)
 {
-    ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
+    ALfloat frequency = (ALfloat)device->Frequency;
+    ALfloat gain = sqrtf(1.0f / device->NumChan) * slot->Gain;
     ALuint it;
 
     for(it = 0;it < MaxChannels;it++)
         state->Gain[it] = 0.0f;
-    for(it = 0; it < Device->NumChan; it++)
+    for(it = 0; it < device->NumChan; it++)
     {
-        enum Channel chan = Device->Speaker2Chan[it];
+        enum Channel chan = device->Speaker2Chan[it];
         state->Gain[chan] = gain;
     }
 
@@ -132,26 +133,26 @@ static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *Device
         switch (it)
         {
             case 0: /* Low Shelf */
-                 gain = powf(10.0f, (20.0f * log10f(Slot->effect.Equalizer.LowGain)) / 40.0f);
-                 filter_frequency = Slot->effect.Equalizer.LowCutoff;
+                 gain = powf(10.0f, (20.0f * log10f(slot->effect.Equalizer.LowGain)) / 40.0f);
+                 filter_frequency = slot->effect.Equalizer.LowCutoff;
                  break;
             case 1: /* Peaking */
-                 gain = powf(10.0f, (20.0f * log10f(Slot->effect.Equalizer.Mid1Gain)) / 40.0f);
-                 filter_frequency = Slot->effect.Equalizer.Mid1Center;
-                 bandwidth = Slot->effect.Equalizer.Mid1Width;
+                 gain = powf(10.0f, (20.0f * log10f(slot->effect.Equalizer.Mid1Gain)) / 40.0f);
+                 filter_frequency = slot->effect.Equalizer.Mid1Center;
+                 bandwidth = slot->effect.Equalizer.Mid1Width;
                  break;
             case 2: /* Peaking */
-                 gain = powf(10.0f, (20.0f * log10f(Slot->effect.Equalizer.Mid2Gain)) / 40.0f);
-                 filter_frequency = Slot->effect.Equalizer.Mid2Center;
-                 bandwidth = Slot->effect.Equalizer.Mid2Width;
+                 gain = powf(10.0f, (20.0f * log10f(slot->effect.Equalizer.Mid2Gain)) / 40.0f);
+                 filter_frequency = slot->effect.Equalizer.Mid2Center;
+                 bandwidth = slot->effect.Equalizer.Mid2Width;
                  break;
             case 3: /* High Shelf */
-                 gain = powf(10.0f, (20.0f * log10f(Slot->effect.Equalizer.HighGain)) / 40.0f);
-                 filter_frequency = Slot->effect.Equalizer.HighCutoff;
+                 gain = powf(10.0f, (20.0f * log10f(slot->effect.Equalizer.HighGain)) / 40.0f);
+                 filter_frequency = slot->effect.Equalizer.HighCutoff;
                  break;
         }
 
-        w0 = 2.0f * F_PI * filter_frequency / state->frequency;
+        w0 = 2.0f*F_PI * filter_frequency / frequency;
 
         /* Calculate filter coefficients depending on filter type */
         switch(state->bandfilter[it].type)

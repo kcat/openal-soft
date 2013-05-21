@@ -53,16 +53,14 @@ typedef struct ALflangerState {
 static ALvoid FlangerDestroy(ALeffectState *effect)
 {
     ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
-    if(state)
-    {
-        free(state->SampleBufferLeft);
-        state->SampleBufferLeft = NULL;
 
-        free(state->SampleBufferRight);
-        state->SampleBufferRight = NULL;
+    free(state->SampleBufferLeft);
+    state->SampleBufferLeft = NULL;
 
-        free(state);
-    }
+    free(state->SampleBufferRight);
+    state->SampleBufferRight = NULL;
+
+    free(state);
 }
 
 static ALboolean FlangerDeviceUpdate(ALeffectState *effect, ALCdevice *Device)

@@ -53,16 +53,14 @@ typedef struct ALchorusState {
 static ALvoid ChorusDestroy(ALeffectState *effect)
 {
     ALchorusState *state = STATIC_UPCAST(ALchorusState, ALeffectState, effect);
-    if(state)
-    {
-        free(state->SampleBufferLeft);
-        state->SampleBufferLeft = NULL;
 
-        free(state->SampleBufferRight);
-        state->SampleBufferRight = NULL;
+    free(state->SampleBufferLeft);
+    state->SampleBufferLeft = NULL;
 
-        free(state);
-    }
+    free(state->SampleBufferRight);
+    state->SampleBufferRight = NULL;
+
+    free(state);
 }
 
 static ALboolean ChorusDeviceUpdate(ALeffectState *effect, ALCdevice *Device)

@@ -54,12 +54,11 @@ typedef struct ALechoState {
 static ALvoid EchoDestroy(ALeffectState *effect)
 {
     ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
-    if(state)
-    {
-        free(state->SampleBuffer);
-        state->SampleBuffer = NULL;
-        free(state);
-    }
+
+    free(state->SampleBuffer);
+    state->SampleBuffer = NULL;
+
+    free(state);
 }
 
 static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)

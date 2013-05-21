@@ -1174,12 +1174,11 @@ static ALvoid ReverbUpdate(ALeffectState *effect, ALCdevice *Device, const ALeff
 static ALvoid ReverbDestroy(ALeffectState *effect)
 {
     ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
-    if(State)
-    {
-        free(State->SampleBuffer);
-        State->SampleBuffer = NULL;
-        free(State);
-    }
+
+    free(State->SampleBuffer);
+    State->SampleBuffer = NULL;
+
+    free(State);
 }
 
 // This creates the reverb state.  It should be called only when the reverb

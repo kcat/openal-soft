@@ -556,7 +556,7 @@ static __inline ALvoid EAXVerbPass(ALverbState *State, ALfloat in, ALfloat *REST
 // buffer.
 static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALverbState *State = GET_PARENT_TYPE(ALverbState, ALeffectState, effect);
+    ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
     ALfloat (*RESTRICT out)[4] = State->ReverbSamples;
     ALuint index, c;
 
@@ -579,7 +579,7 @@ static ALvoid VerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALflo
 // buffer.
 static ALvoid EAXVerbProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALverbState *State = GET_PARENT_TYPE(ALverbState, ALeffectState, effect);
+    ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
     ALfloat (*RESTRICT early)[4] = State->EarlySamples;
     ALfloat (*RESTRICT late)[4] = State->ReverbSamples;
     ALuint index, c;
@@ -726,7 +726,7 @@ static ALboolean AllocLines(ALuint frequency, ALverbState *State)
 // format) have been changed.
 static ALboolean ReverbDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
-    ALverbState *State = GET_PARENT_TYPE(ALverbState, ALeffectState, effect);
+    ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
     ALuint frequency = Device->Frequency, index;
 
     // Allocate the delay lines.
@@ -1078,19 +1078,19 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 // effect is loaded into a slot.
 static ALvoid ReverbUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALverbState *State = GET_PARENT_TYPE(ALverbState, ALeffectState, effect);
+    ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
     ALuint frequency = Device->Frequency;
     ALboolean isEAX = AL_FALSE;
     ALfloat cw, x, y, hfRatio;
 
     if(Slot->effect.type == AL_EFFECT_EAXREVERB && !EmulateEAXReverb)
     {
-        GET_DERIVED_TYPE(ALeffectState, State)->Process = EAXVerbProcess;
+        STATIC_CAST(ALeffectState, State)->Process = EAXVerbProcess;
         isEAX = AL_TRUE;
     }
     else if(Slot->effect.type == AL_EFFECT_REVERB || EmulateEAXReverb)
     {
-        GET_DERIVED_TYPE(ALeffectState, State)->Process = VerbProcess;
+        STATIC_CAST(ALeffectState, State)->Process = VerbProcess;
         isEAX = AL_FALSE;
     }
 
@@ -1173,7 +1173,7 @@ static ALvoid ReverbUpdate(ALeffectState *effect, ALCdevice *Device, const ALeff
 // slot has a different (or no) effect loaded over the reverb effect.
 static ALvoid ReverbDestroy(ALeffectState *effect)
 {
-    ALverbState *State = GET_PARENT_TYPE(ALverbState, ALeffectState, effect);
+    ALverbState *State = STATIC_UPCAST(ALverbState, ALeffectState, effect);
     if(State)
     {
         free(State->SampleBuffer);
@@ -1193,10 +1193,10 @@ ALeffectState *ReverbCreate(void)
     if(!State)
         return NULL;
 
-    GET_DERIVED_TYPE(ALeffectState, State)->Destroy = ReverbDestroy;
-    GET_DERIVED_TYPE(ALeffectState, State)->DeviceUpdate = ReverbDeviceUpdate;
-    GET_DERIVED_TYPE(ALeffectState, State)->Update = ReverbUpdate;
-    GET_DERIVED_TYPE(ALeffectState, State)->Process = VerbProcess;
+    STATIC_CAST(ALeffectState, State)->Destroy = ReverbDestroy;
+    STATIC_CAST(ALeffectState, State)->DeviceUpdate = ReverbDeviceUpdate;
+    STATIC_CAST(ALeffectState, State)->Update = ReverbUpdate;
+    STATIC_CAST(ALeffectState, State)->Process = VerbProcess;
 
     State->TotalSamples = 0;
     State->SampleBuffer = NULL;
@@ -1278,7 +1278,7 @@ ALeffectState *ReverbCreate(void)
 
     State->Gain = State->Late.PanGain;
 
-    return GET_DERIVED_TYPE(ALeffectState, State);
+    return STATIC_CAST(ALeffectState, State);
 }
 
 void eaxreverb_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)

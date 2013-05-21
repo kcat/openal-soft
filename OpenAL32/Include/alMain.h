@@ -62,9 +62,9 @@ static const union {
 
 #define COUNTOF(x) (sizeof((x))/sizeof((x)[0]))
 
-#define DERIVE_FROM_TYPE(t)         t t##_parent
-#define GET_DERIVED_TYPE(t, o)      (&(o)->t##_parent)
-#define GET_PARENT_TYPE(t1, t2, o)  ((t1*)((char*)(o) - offsetof(t1, t2##_parent)))
+#define DERIVE_FROM_TYPE(t)          t t##_parent
+#define STATIC_CAST(to, obj)         (&(obj)->to##_parent)
+#define STATIC_UPCAST(to, from, obj) ((to*)((char*)(obj) - offsetof(to, from##_parent)))
 
 #ifdef _WIN32
 

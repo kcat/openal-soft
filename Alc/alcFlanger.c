@@ -52,7 +52,7 @@ typedef struct ALflangerState {
 
 static ALvoid FlangerDestroy(ALeffectState *effect)
 {
-    ALflangerState *state = GET_PARENT_TYPE(ALflangerState, ALeffectState, effect);
+    ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
     if(state)
     {
         free(state->SampleBufferLeft);
@@ -67,7 +67,7 @@ static ALvoid FlangerDestroy(ALeffectState *effect)
 
 static ALboolean FlangerDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
-    ALflangerState *state = GET_PARENT_TYPE(ALflangerState, ALeffectState, effect);
+    ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
     ALuint maxlen;
     ALuint it;
 
@@ -100,7 +100,7 @@ static ALboolean FlangerDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
 static ALvoid FlangerUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALflangerState *state = GET_PARENT_TYPE(ALflangerState, ALeffectState, effect);
+    ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
     ALfloat frequency = Device->Frequency;
     ALfloat rate;
     ALint phase;
@@ -238,7 +238,7 @@ DECL_TEMPLATE(Sinusoid)
 
 static ALvoid FlangerProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALflangerState *state = GET_PARENT_TYPE(ALflangerState, ALeffectState, effect);
+    ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
 
     if(state->waveform == AL_FLANGER_WAVEFORM_TRIANGLE)
         ProcessTriangle(state, SamplesToDo, SamplesIn, SamplesOut);
@@ -254,17 +254,17 @@ ALeffectState *FlangerCreate(void)
     if(!state)
         return NULL;
 
-    GET_DERIVED_TYPE(ALeffectState, state)->Destroy = FlangerDestroy;
-    GET_DERIVED_TYPE(ALeffectState, state)->DeviceUpdate = FlangerDeviceUpdate;
-    GET_DERIVED_TYPE(ALeffectState, state)->Update = FlangerUpdate;
-    GET_DERIVED_TYPE(ALeffectState, state)->Process = FlangerProcess;
+    STATIC_CAST(ALeffectState, state)->Destroy = FlangerDestroy;
+    STATIC_CAST(ALeffectState, state)->DeviceUpdate = FlangerDeviceUpdate;
+    STATIC_CAST(ALeffectState, state)->Update = FlangerUpdate;
+    STATIC_CAST(ALeffectState, state)->Process = FlangerProcess;
 
     state->BufferLength = 0;
     state->SampleBufferLeft = NULL;
     state->SampleBufferRight = NULL;
     state->offset = 0;
 
-    return GET_DERIVED_TYPE(ALeffectState, state);
+    return STATIC_CAST(ALeffectState, state);
 }
 
 void flanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)

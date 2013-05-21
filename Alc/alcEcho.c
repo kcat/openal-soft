@@ -53,7 +53,7 @@ typedef struct ALechoState {
 
 static ALvoid EchoDestroy(ALeffectState *effect)
 {
-    ALechoState *state = GET_PARENT_TYPE(ALechoState, ALeffectState, effect);
+    ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
     if(state)
     {
         free(state->SampleBuffer);
@@ -64,7 +64,7 @@ static ALvoid EchoDestroy(ALeffectState *effect)
 
 static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
-    ALechoState *state = GET_PARENT_TYPE(ALechoState, ALeffectState, effect);
+    ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
     ALuint maxlen, i;
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
@@ -91,7 +91,7 @@ static ALboolean EchoDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
 static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALechoState *state = GET_PARENT_TYPE(ALechoState, ALeffectState, effect);
+    ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
     ALuint frequency = Device->Frequency;
     ALfloat lrpan, cw, g, gain;
     ALfloat dirGain;
@@ -127,7 +127,7 @@ static ALvoid EchoUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffec
 
 static ALvoid EchoProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALechoState *state = GET_PARENT_TYPE(ALechoState, ALeffectState, effect);
+    ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
     const ALuint mask = state->BufferLength-1;
     const ALuint tap1 = state->Tap[0].delay;
     const ALuint tap2 = state->Tap[1].delay;
@@ -185,10 +185,10 @@ ALeffectState *EchoCreate(void)
     if(!state)
         return NULL;
 
-    GET_DERIVED_TYPE(ALeffectState, state)->Destroy = EchoDestroy;
-    GET_DERIVED_TYPE(ALeffectState, state)->DeviceUpdate = EchoDeviceUpdate;
-    GET_DERIVED_TYPE(ALeffectState, state)->Update = EchoUpdate;
-    GET_DERIVED_TYPE(ALeffectState, state)->Process = EchoProcess;
+    STATIC_CAST(ALeffectState, state)->Destroy = EchoDestroy;
+    STATIC_CAST(ALeffectState, state)->DeviceUpdate = EchoDeviceUpdate;
+    STATIC_CAST(ALeffectState, state)->Update = EchoUpdate;
+    STATIC_CAST(ALeffectState, state)->Process = EchoProcess;
 
     state->BufferLength = 0;
     state->SampleBuffer = NULL;
@@ -201,7 +201,7 @@ ALeffectState *EchoCreate(void)
     state->iirFilter.history[0] = 0.0f;
     state->iirFilter.history[1] = 0.0f;
 
-    return GET_DERIVED_TYPE(ALeffectState, state);
+    return STATIC_CAST(ALeffectState, state);
 }
 
 void echo_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)

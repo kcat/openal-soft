@@ -131,7 +131,7 @@ DECL_TEMPLATE(Square)
 
 static ALvoid ModulatorDestroy(ALeffectState *effect)
 {
-    ALmodulatorState *state = GET_PARENT_TYPE(ALmodulatorState, ALeffectState, effect);
+    ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
     free(state);
 }
 
@@ -144,7 +144,7 @@ static ALboolean ModulatorDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 
 static ALvoid ModulatorUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALmodulatorState *state = GET_PARENT_TYPE(ALmodulatorState, ALeffectState, effect);
+    ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
     ALfloat gain, cw, a = 0.0f;
     ALuint index;
 
@@ -177,7 +177,7 @@ static ALvoid ModulatorUpdate(ALeffectState *effect, ALCdevice *Device, const AL
 
 static ALvoid ModulatorProcess(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALmodulatorState *state = GET_PARENT_TYPE(ALmodulatorState, ALeffectState, effect);
+    ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
 
     switch(state->Waveform)
     {
@@ -203,10 +203,10 @@ ALeffectState *ModulatorCreate(void)
     if(!state)
         return NULL;
 
-    GET_DERIVED_TYPE(ALeffectState, state)->Destroy = ModulatorDestroy;
-    GET_DERIVED_TYPE(ALeffectState, state)->DeviceUpdate = ModulatorDeviceUpdate;
-    GET_DERIVED_TYPE(ALeffectState, state)->Update = ModulatorUpdate;
-    GET_DERIVED_TYPE(ALeffectState, state)->Process = ModulatorProcess;
+    STATIC_CAST(ALeffectState, state)->Destroy = ModulatorDestroy;
+    STATIC_CAST(ALeffectState, state)->DeviceUpdate = ModulatorDeviceUpdate;
+    STATIC_CAST(ALeffectState, state)->Update = ModulatorUpdate;
+    STATIC_CAST(ALeffectState, state)->Process = ModulatorProcess;
 
     state->index = 0;
     state->step = 1;
@@ -214,7 +214,7 @@ ALeffectState *ModulatorCreate(void)
     state->iirFilter.coeff = 0.0f;
     state->iirFilter.history[0] = 0.0f;
 
-    return GET_DERIVED_TYPE(ALeffectState, state);
+    return STATIC_CAST(ALeffectState, state);
 }
 
 void mod_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)

@@ -254,6 +254,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALboolean DirectChannels;
     ALfloat hwidth = 0.0f;
     ALfloat Pitch;
+    ALfloat coeff;
     ALfloat cw;
     ALint i, c;
 
@@ -459,11 +460,14 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     /* We use two chained one-pole filters, so we need to take the
      * square root of the squared gain, which is the same as the base
      * gain. */
-    ALSource->Params.Direct.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
+    coeff = lpCoeffCalc(DryGainHF, cw);
+    for(c = 0;c < num_channels;c++)
+        ALSource->Params.Direct.Filter[c].coeff = lpCoeffCalc(DryGainHF, cw);
     for(i = 0;i < NumSends;i++)
     {
-        ALfloat a = lpCoeffCalc(WetGainHF[i], cw);
-        ALSource->Params.Send[i].iirFilter.coeff = a;
+        coeff = lpCoeffCalc(WetGainHF[i], cw);
+        for(c = 0;c < num_channels;c++)
+            ALSource->Params.Send[i].Filter[c].coeff = coeff;
     }
 }
 
@@ -903,11 +907,11 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     /* Update filter coefficients. */
     cw = cosf(F_PI*2.0f * LOWPASSFREQREF / Frequency);
 
-    ALSource->Params.Direct.iirFilter.coeff = lpCoeffCalc(DryGainHF, cw);
+    ALSource->Params.Direct.Filter[0].coeff = lpCoeffCalc(DryGainHF, cw);
     for(i = 0;i < NumSends;i++)
     {
         ALfloat a = lpCoeffCalc(WetGainHF[i], cw);
-        ALSource->Params.Send[i].iirFilter.coeff = a;
+        ALSource->Params.Send[i].Filter[0].coeff = a;
     }
 }
 

@@ -51,7 +51,6 @@ typedef struct ALreverbState {
 
     // Master effect low-pass filter (2 chained 1-pole filters).
     FILTER    LpFilter;
-    ALfloat   LpHistory[2];
 
     struct {
         // Modulator delay line.
@@ -483,7 +482,7 @@ static __inline ALvoid VerbPass(ALreverbState *State, ALfloat in, ALfloat *RESTR
     ALfloat feed, late[4], taps[4];
 
     // Low-pass filter the incoming sample.
-    in = lpFilter2P(&State->LpFilter, 0, in);
+    in = lpFilter2P(&State->LpFilter, in);
 
     // Feed the initial delay line.
     DelayLineIn(&State->Delay, State->Offset, in);
@@ -522,7 +521,7 @@ static __inline ALvoid EAXVerbPass(ALreverbState *State, ALfloat in, ALfloat *RE
     ALfloat feed, taps[4];
 
     // Low-pass filter the incoming sample.
-    in = lpFilter2P(&State->LpFilter, 0, in);
+    in = lpFilter2P(&State->LpFilter, in);
 
     // Perform any modulation on the input.
     in = EAXModulation(State, in);

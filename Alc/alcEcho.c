@@ -48,7 +48,6 @@ typedef struct ALechoState {
     ALfloat FeedGain;
 
     FILTER iirFilter;
-    ALfloat history[2];
 } ALechoState;
 
 static ALvoid ALechoState_Destroy(ALechoState *state)
@@ -144,7 +143,7 @@ static ALvoid ALechoState_Process(ALechoState *state, ALuint SamplesToDo, const 
 
             // Apply damping and feedback gain to the second tap, and mix in the
             // new sample
-            smp = lpFilter2P(&state->iirFilter, 0, temps[i][1]+SamplesIn[i]);
+            smp = lpFilter2P(&state->iirFilter, temps[i][1]+SamplesIn[i]);
             state->SampleBuffer[offset&mask] = smp * state->FeedGain;
         }
 

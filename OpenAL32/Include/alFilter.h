@@ -11,16 +11,12 @@ extern "C" {
 
 typedef struct {
     ALfloat coeff;
-#ifndef _MSC_VER
-    ALfloat history[0];
-#else
-    ALfloat history[1];
-#endif
+    ALfloat history[2];
 } FILTER;
 
-static __inline ALfloat lpFilter2P(FILTER *iir, ALuint offset, ALfloat input)
+static __inline ALfloat lpFilter2P(FILTER *iir, ALfloat input)
 {
-    ALfloat *history = &iir->history[offset*2];
+    ALfloat *history = iir->history;
     ALfloat a = iir->coeff;
     ALfloat output = input;
 
@@ -32,9 +28,9 @@ static __inline ALfloat lpFilter2P(FILTER *iir, ALuint offset, ALfloat input)
     return output;
 }
 
-static __inline ALfloat lpFilter2PC(const FILTER *iir, ALuint offset, ALfloat input)
+static __inline ALfloat lpFilter2PC(const FILTER *iir, ALfloat input)
 {
-    const ALfloat *history = &iir->history[offset*2];
+    const ALfloat *history = iir->history;
     ALfloat a = iir->coeff;
     ALfloat output = input;
 

@@ -62,8 +62,7 @@ typedef struct DirectParams {
     ALfloat Gains[MaxChannels][MaxChannels];
 
     /* A low-pass filter, using 2 chained one-pole filters. */
-    FILTER iirFilter;
-    ALfloat history[MaxChannels*2];
+    FILTER Filter[MaxChannels];
 } DirectParams;
 
 typedef struct SendParams {
@@ -74,8 +73,7 @@ typedef struct SendParams {
     ALfloat Gain;
 
     /* A low-pass filter, using 2 chained one-pole filters. */
-    FILTER iirFilter;
-    ALfloat history[MaxChannels*2];
+    FILTER Filter[MaxChannels];
 } SendParams;
 
 

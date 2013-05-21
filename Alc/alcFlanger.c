@@ -45,8 +45,6 @@ typedef struct ALflangerState {
 
     /* effect parameters */
     ALint waveform;
-    ALint phase;
-    ALfloat rate;
     ALfloat depth;
     ALfloat feedback;
     ALfloat delay;
@@ -106,6 +104,8 @@ static ALboolean FlangerDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 static ALvoid FlangerUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALflangerState *state = GET_PARENT_TYPE(ALflangerState, ALeffectState, effect);
+    ALfloat rate;
+    ALint phase;
     ALuint it;
 
     for(it = 0;it < MaxChannels;it++)
@@ -115,8 +115,6 @@ static ALvoid FlangerUpdate(ALeffectState *effect, ALCdevice *Device, const ALef
     }
 
     state->waveform = Slot->effect.Flanger.Waveform;
-    state->phase = Slot->effect.Flanger.Phase;
-    state->rate = Slot->effect.Flanger.Rate;
     state->depth = Slot->effect.Flanger.Depth;
     state->feedback = Slot->effect.Flanger.Feedback;
     state->delay = Slot->effect.Flanger.Delay;
@@ -126,31 +124,31 @@ static ALvoid FlangerUpdate(ALeffectState *effect, ALCdevice *Device, const ALef
     ComputeAngleGains(Device, atan2f(-1.0f, 0.0f), 0.0f, Slot->Gain, state->Gain[0]);
     ComputeAngleGains(Device, atan2f(+1.0f, 0.0f), 0.0f, Slot->Gain, state->Gain[1]);
 
+    phase = Slot->effect.Flanger.Phase;
+    rate = Slot->effect.Flanger.Rate;
+
     /* Calculate LFO coefficient */
     switch(state->waveform)
     {
         case AL_FLANGER_WAVEFORM_TRIANGLE:
-             if(state->rate == 0.0f)
+             if(rate == 0.0f)
                  state->lfo_coeff = 0.0f;
              else
-                 state->lfo_coeff = 1.0f / (state->frequency / state->rate);
+                 state->lfo_coeff = 1.0f / (state->frequency / rate);
              break;
         case AL_FLANGER_WAVEFORM_SINUSOID:
-             if (state->rate == 0.0f)
+             if(rate == 0.0f)
                  state->lfo_coeff = 0.0f;
              else
-                 state->lfo_coeff = F_PI * 2.0f / (state->frequency / state->rate);
+                 state->lfo_coeff = F_PI * 2.0f / (state->frequency / rate);
              break;
     }
 
     /* Calculate lfo phase displacement */
-    if(state->phase == 0 || state->rate == 0.0f)
+    if(phase == 0 || rate == 0.0f)
         state->lfo_disp = 0;
     else
-    {
-        state->lfo_disp = (ALint)(state->frequency / state->rate /
-                                  (360.0f / (ALfloat)state->phase));
-    }
+        state->lfo_disp = fastf2i(state->frequency / rate / (360.0f/phase));
 }
 
 static __inline void Triangle(ALint *delay_left, ALint *delay_right, ALint offset, const ALflangerState *state)
@@ -160,14 +158,14 @@ static __inline void Triangle(ALint *delay_left, ALint *delay_right, ALint offse
     lfo_value = 2.0f - fabsf(2.0f - fmodf(state->lfo_coeff * offset * 4.0f, 4.0f));
     lfo_value *= state->depth * state->delay;
     lfo_value += state->delay;
-    *delay_left = (ALint)(lfo_value * state->frequency);
+    *delay_left = fastf2i(lfo_value * state->frequency);
 
     lfo_value = 2.0f - fabsf(2.0f - fmodf(state->lfo_coeff *
                                           (offset+state->lfo_disp) * 4.0f,
                                           4.0f));
     lfo_value *= state->depth * state->delay;
     lfo_value += state->delay;
-    *delay_right = (ALint)(lfo_value * state->frequency);
+    *delay_right = fastf2i(lfo_value * state->frequency);
 }
 
 static __inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALint offset, const ALflangerState *state)
@@ -177,13 +175,13 @@ static __inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALint offse
     lfo_value = 1.0f + sinf(fmodf(state->lfo_coeff * offset, 2.0f*F_PI));
     lfo_value *= state->depth * state->delay;
     lfo_value += state->delay;
-    *delay_left = (ALint)(lfo_value * state->frequency);
+    *delay_left = fastf2i(lfo_value * state->frequency);
 
     lfo_value = 1.0f + sinf(fmodf(state->lfo_coeff * (offset+state->lfo_disp),
                                   2.0f*F_PI));
     lfo_value *= state->depth * state->delay;
     lfo_value += state->delay;
-    *delay_right = (ALint)(lfo_value * state->frequency);
+    *delay_right = fastf2i(lfo_value * state->frequency);
 }
 
 #define DECL_TEMPLATE(func)                                                    \

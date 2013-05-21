@@ -12,10 +12,10 @@ typedef struct ALeffectState ALeffectState;
 typedef struct ALeffectslot ALeffectslot;
 
 struct ALeffectStateVtable {
-    ALvoid (*const Destroy)(ALeffectState *State);
-    ALboolean (*const DeviceUpdate)(ALeffectState *State, ALCdevice *Device);
-    ALvoid (*const Update)(ALeffectState *State, ALCdevice *Device, const ALeffectslot *Slot);
-    ALvoid (*const Process)(ALeffectState *State, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE]);
+    ALvoid (*const Destroy)(ALeffectState *state);
+    ALboolean (*const DeviceUpdate)(ALeffectState *state, ALCdevice *device);
+    ALvoid (*const Update)(ALeffectState *state, ALCdevice *device, const ALeffectslot *slot);
+    ALvoid (*const Process)(ALeffectState *state, ALuint samplesToDo, const ALfloat *RESTRICT samplesIn, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE]);
 };
 
 struct ALeffectState {
@@ -23,11 +23,20 @@ struct ALeffectState {
 };
 
 #define DEFINE_ALEFFECTSTATE_VTABLE(T)                                        \
+static ALvoid T##_ALeffectState_Destroy(ALeffectState *state)                 \
+{ T##_Destroy(STATIC_UPCAST(T, ALeffectState, state)); }                      \
+static ALboolean T##_ALeffectState_DeviceUpdate(ALeffectState *state, ALCdevice *device) \
+{ return T##_DeviceUpdate(STATIC_UPCAST(T, ALeffectState, state), device); }             \
+static ALvoid T##_ALeffectState_Update(ALeffectState *state, ALCdevice *device, const ALeffectslot *slot) \
+{ T##_Update(STATIC_UPCAST(T, ALeffectState, state), device, slot); }                                     \
+static ALvoid T##_ALeffectState_Process(ALeffectState *state, ALuint samplesToDo, const ALfloat *RESTRICT samplesIn, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE]) \
+{ T##_Process(STATIC_UPCAST(T, ALeffectState, state), samplesToDo, samplesIn, samplesOut); }                                                                     \
+                                                                              \
 static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
-    T##_Destroy,                                                              \
-    T##_DeviceUpdate,                                                         \
-    T##_Update,                                                               \
-    T##_Process                                                               \
+    T##_ALeffectState_Destroy,                                                \
+    T##_ALeffectState_DeviceUpdate,                                           \
+    T##_ALeffectState_Update,                                                 \
+    T##_ALeffectState_Process                                                 \
 }
 
 #define SET_VTABLE1(T1, obj)  ((obj)->vtbl = &(T1##_vtable))

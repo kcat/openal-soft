@@ -51,19 +51,16 @@ typedef struct ALechoState {
     ALfloat history[2];
 } ALechoState;
 
-static ALvoid ALechoState_Destroy(ALeffectState *effect)
+static ALvoid ALechoState_Destroy(ALechoState *state)
 {
-    ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
-
     free(state->SampleBuffer);
     state->SampleBuffer = NULL;
 
     free(state);
 }
 
-static ALboolean ALechoState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALechoState_DeviceUpdate(ALechoState *state, ALCdevice *Device)
 {
-    ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
     ALuint maxlen, i;
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
@@ -88,9 +85,8 @@ static ALboolean ALechoState_DeviceUpdate(ALeffectState *effect, ALCdevice *Devi
     return AL_TRUE;
 }
 
-static ALvoid ALechoState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALechoState_Update(ALechoState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
     ALuint frequency = Device->Frequency;
     ALfloat lrpan, cw, g, gain;
     ALfloat dirGain;
@@ -124,9 +120,8 @@ static ALvoid ALechoState_Update(ALeffectState *effect, ALCdevice *Device, const
     ComputeAngleGains(Device, atan2f(+lrpan, 0.0f), (1.0f-dirGain)*F_PI, gain, state->Gain[1]);
 }
 
-static ALvoid ALechoState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALechoState_Process(ALechoState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
     const ALuint mask = state->BufferLength-1;
     const ALuint tap1 = state->Tap[0].delay;
     const ALuint tap2 = state->Tap[1].delay;

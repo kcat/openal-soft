@@ -129,22 +129,20 @@ DECL_TEMPLATE(Square)
 #undef DECL_TEMPLATE
 
 
-static ALvoid ALmodulatorState_Destroy(ALeffectState *effect)
+static ALvoid ALmodulatorState_Destroy(ALmodulatorState *state)
 {
-    ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
     free(state);
 }
 
-static ALboolean ALmodulatorState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALmodulatorState_DeviceUpdate(ALmodulatorState *state, ALCdevice *Device)
 {
     return AL_TRUE;
-    (void)effect;
+    (void)state;
     (void)Device;
 }
 
-static ALvoid ALmodulatorState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALmodulatorState_Update(ALmodulatorState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
     ALfloat gain, cw, a = 0.0f;
     ALuint index;
 
@@ -175,10 +173,8 @@ static ALvoid ALmodulatorState_Update(ALeffectState *effect, ALCdevice *Device, 
     }
 }
 
-static ALvoid ALmodulatorState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALmodulatorState_Process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
-
     switch(state->Waveform)
     {
         case SINUSOID:

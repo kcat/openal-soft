@@ -59,22 +59,20 @@ typedef struct ALdistortionState {
     ALfloat edge_coeff;
 } ALdistortionState;
 
-static ALvoid ALdistortionState_Destroy(ALeffectState *effect)
+static ALvoid ALdistortionState_Destroy(ALdistortionState *state)
 {
-    ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
     free(state);
 }
 
-static ALboolean ALdistortionState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALdistortionState_DeviceUpdate(ALdistortionState *state, ALCdevice *Device)
 {
     return AL_TRUE;
-    (void)effect;
+    (void)state;
     (void)Device;
 }
 
-static ALvoid ALdistortionState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALdistortionState_Update(ALdistortionState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
     ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
     ALfloat frequency = (ALfloat)Device->Frequency;
     ALuint it;
@@ -126,9 +124,8 @@ static ALvoid ALdistortionState_Update(ALeffectState *effect, ALCdevice *Device,
     state->bandpass.a[2] = 1.0f - alpha;
 }
 
-static ALvoid ALdistortionState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALdistortionState_Process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
     const ALfloat fc = state->edge_coeff;
     float oversample_buffer[64][4];
     ALfloat tempsmp;

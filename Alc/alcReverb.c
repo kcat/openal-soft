@@ -606,9 +606,8 @@ static ALvoid ALreverbState_ProcessEax(ALreverbState *State, ALuint SamplesToDo,
     }
 }
 
-static ALvoid ALreverbState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALreverbState_Process(ALreverbState *State, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALreverbState *State = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
     if(State->IsEax)
         ALreverbState_ProcessEax(State, SamplesToDo, SamplesIn, SamplesOut);
     else
@@ -732,9 +731,8 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
 // This updates the device-dependant EAX reverb state.  This is called on
 // initialization and any time the device parameters (eg. playback frequency,
 // format) have been changed.
-static ALboolean ALreverbState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALreverbState_DeviceUpdate(ALreverbState *State, ALCdevice *Device)
 {
-    ALreverbState *State = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
     ALuint frequency = Device->Frequency, index;
 
     // Allocate the delay lines.
@@ -1084,9 +1082,8 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 
 // This updates the EAX reverb state.  This is called any time the EAX reverb
 // effect is loaded into a slot.
-static ALvoid ALreverbState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALreverbState_Update(ALreverbState *State, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALreverbState *State = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
     ALuint frequency = Device->Frequency;
     ALfloat cw, x, y, hfRatio;
 
@@ -1174,10 +1171,8 @@ static ALvoid ALreverbState_Update(ALeffectState *effect, ALCdevice *Device, con
 
 // This destroys the reverb state.  It should be called only when the effect
 // slot has a different (or no) effect loaded over the reverb effect.
-static ALvoid ALreverbState_Destroy(ALeffectState *effect)
+static ALvoid ALreverbState_Destroy(ALreverbState *State)
 {
-    ALreverbState *State = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
-
     free(State->SampleBuffer);
     State->SampleBuffer = NULL;
 
@@ -1190,7 +1185,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALreverbState);
 // effect is loaded into a slot that doesn't already have a reverb effect.
 ALeffectState *ReverbCreate(void)
 {
-    ALreverbState *State = NULL;
+    ALreverbState *State;
     ALuint index;
 
     State = malloc(sizeof(ALreverbState));

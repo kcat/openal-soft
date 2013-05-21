@@ -50,10 +50,8 @@ typedef struct ALflangerState {
     ALfloat feedback;
 } ALflangerState;
 
-static ALvoid ALflangerState_Destroy(ALeffectState *effect)
+static ALvoid ALflangerState_Destroy(ALflangerState *state)
 {
-    ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
-
     free(state->SampleBufferLeft);
     state->SampleBufferLeft = NULL;
 
@@ -63,9 +61,8 @@ static ALvoid ALflangerState_Destroy(ALeffectState *effect)
     free(state);
 }
 
-static ALboolean ALflangerState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALflangerState_DeviceUpdate(ALflangerState *state, ALCdevice *Device)
 {
-    ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
     ALuint maxlen;
     ALuint it;
 
@@ -96,9 +93,8 @@ static ALboolean ALflangerState_DeviceUpdate(ALeffectState *effect, ALCdevice *D
     return AL_TRUE;
 }
 
-static ALvoid ALflangerState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALflangerState_Update(ALflangerState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
     ALfloat frequency = Device->Frequency;
     ALfloat rate;
     ALint phase;
@@ -234,10 +230,8 @@ DECL_TEMPLATE(Sinusoid)
 
 #undef DECL_TEMPLATE
 
-static ALvoid ALflangerState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALflangerState_Process(ALflangerState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
-
     if(state->waveform == AL_FLANGER_WAVEFORM_TRIANGLE)
         ProcessTriangle(state, SamplesToDo, SamplesIn, SamplesOut);
     else if(state->waveform == AL_FLANGER_WAVEFORM_SINUSOID)

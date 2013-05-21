@@ -95,24 +95,19 @@ typedef struct ALequalizerState {
     ALfloat frequency;
 } ALequalizerState;
 
-static ALvoid ALequalizerState_Destroy(ALeffectState *effect)
+static ALvoid ALequalizerState_Destroy(ALequalizerState *state)
 {
-    ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
     free(state);
 }
 
-static ALboolean ALequalizerState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALequalizerState_DeviceUpdate(ALequalizerState *state, ALCdevice *Device)
 {
-    ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
-
     state->frequency = (ALfloat)Device->Frequency;
-
     return AL_TRUE;
 }
 
-static ALvoid ALequalizerState_Update(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
     ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
     ALuint it;
 
@@ -215,9 +210,8 @@ static ALvoid ALequalizerState_Update(ALeffectState *effect, ALCdevice *Device, 
     }
 }
 
-static ALvoid ALequalizerState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALequalizerState_Process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
     ALuint base;
     ALuint it;
     ALuint kt;

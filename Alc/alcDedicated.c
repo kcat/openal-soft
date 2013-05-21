@@ -36,22 +36,20 @@ typedef struct ALdedicatedState {
 } ALdedicatedState;
 
 
-static ALvoid ALdedicatedState_Destroy(ALeffectState *effect)
+static ALvoid ALdedicatedState_Destroy(ALdedicatedState *state)
 {
-    ALdedicatedState *state = STATIC_UPCAST(ALdedicatedState, ALeffectState, effect);
     free(state);
 }
 
-static ALboolean ALdedicatedState_DeviceUpdate(ALeffectState *effect, ALCdevice *Device)
+static ALboolean ALdedicatedState_DeviceUpdate(ALdedicatedState *state, ALCdevice *Device)
 {
-    (void)effect;
-    (void)Device;
     return AL_TRUE;
+    (void)state;
+    (void)Device;
 }
 
-static ALvoid ALdedicatedState_Update(ALeffectState *effect, ALCdevice *device, const ALeffectslot *Slot)
+static ALvoid ALdedicatedState_Update(ALdedicatedState *state, ALCdevice *device, const ALeffectslot *Slot)
 {
-    ALdedicatedState *state = STATIC_UPCAST(ALdedicatedState, ALeffectState, effect);
     ALfloat Gain;
     ALsizei s;
 
@@ -65,9 +63,8 @@ static ALvoid ALdedicatedState_Update(ALeffectState *effect, ALCdevice *device, 
         state->gains[LFE] = Gain;
 }
 
-static ALvoid ALdedicatedState_Process(ALeffectState *effect, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALdedicatedState_Process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
 {
-    ALdedicatedState *state = STATIC_UPCAST(ALdedicatedState, ALeffectState, effect);
     const ALfloat *gains = state->gains;
     ALuint i, c;
 

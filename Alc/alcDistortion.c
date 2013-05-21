@@ -55,7 +55,6 @@ typedef struct ALdistortionState {
     /* Effect parameters */
     ALEQFilter bandpass;
     ALEQFilter lowpass;
-    ALfloat frequency;
     ALfloat attenuation;
     ALfloat edge_coeff;
 } ALdistortionState;
@@ -68,17 +67,16 @@ static ALvoid DistortionDestroy(ALeffectState *effect)
 
 static ALboolean DistortionDeviceUpdate(ALeffectState *effect, ALCdevice *Device)
 {
-    ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
-
-    state->frequency = (ALfloat)Device->Frequency;
-
     return AL_TRUE;
+    (void)effect;
+    (void)Device;
 }
 
 static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
     ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
+    ALfloat frequency = (ALfloat)Device->Frequency;
     ALuint it;
     ALfloat w0;
     ALfloat alpha;
@@ -105,7 +103,7 @@ static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const A
     cutoff = Slot->effect.Distortion.LowpassCutoff;
     /* Bandwidth value is constant in octaves */
     bandwidth = (cutoff / 2.0f) / (cutoff * 0.67f);
-    w0 = 2.0f * F_PI * cutoff / (state->frequency * 4.0f);
+    w0 = 2.0f*F_PI * cutoff / (frequency*4.0f);
     alpha = sinf(w0) * sinhf(logf(2.0f) / 2.0f * bandwidth * w0 / sinf(w0));
     state->lowpass.b[0] = (1.0f - cosf(w0)) / 2.0f;
     state->lowpass.b[1] = 1.0f - cosf(w0);
@@ -118,7 +116,7 @@ static ALvoid DistortionUpdate(ALeffectState *effect, ALCdevice *Device, const A
     cutoff = Slot->effect.Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves */
     bandwidth = Slot->effect.Distortion.EQBandwidth / (cutoff * 0.67f);
-    w0 = 2.0f * F_PI * cutoff / (state->frequency * 4.0f);
+    w0 = 2.0f*F_PI * cutoff / (frequency*4.0f);
     alpha = sinf(w0) * sinhf(logf(2.0f) / 2.0f * bandwidth * w0 / sinf(w0));
     state->bandpass.b[0] = alpha;
     state->bandpass.b[1] = 0;

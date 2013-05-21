@@ -30,6 +30,13 @@
 #include "alu.h"
 
 
+typedef struct ALchorusStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALchorusStateFactory;
+
+static ALchorusStateFactory ChorusFactory;
+
+
 typedef struct ALchorusState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -57,8 +64,6 @@ static ALvoid ALchorusState_Destroy(ALchorusState *state)
 
     free(state->SampleBufferRight);
     state->SampleBufferRight = NULL;
-
-    free(state);
 }
 
 static ALboolean ALchorusState_DeviceUpdate(ALchorusState *state, ALCdevice *Device)
@@ -238,9 +243,15 @@ static ALvoid ALchorusState_Process(ALchorusState *state, ALuint SamplesToDo, co
         ProcessSinusoid(state, SamplesToDo, SamplesIn, SamplesOut);
 }
 
+static ALeffectStateFactory *ALchorusState_getCreator(void)
+{
+    return STATIC_CAST(ALeffectStateFactory, &ChorusFactory);
+}
+
 DEFINE_ALEFFECTSTATE_VTABLE(ALchorusState);
 
-ALeffectState *ChorusCreate(void)
+
+static ALeffectState *ALchorusStateFactory_create(void)
 {
     ALchorusState *state;
 
@@ -255,6 +266,29 @@ ALeffectState *ChorusCreate(void)
 
     return STATIC_CAST(ALeffectState, state);
 }
+
+static ALvoid ALchorusStateFactory_destroy(ALeffectState *effect)
+{
+    ALchorusState *state = STATIC_UPCAST(ALchorusState, ALeffectState, effect);
+    ALchorusState_Destroy(state);
+    free(state);
+}
+
+DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALchorusStateFactory);
+
+
+static void init_chorus_factory(void)
+{
+    SET_VTABLE2(ALchorusStateFactory, ALeffectStateFactory, &ChorusFactory);
+}
+
+ALeffectStateFactory *ALchorusStateFactory_getFactory(void)
+{
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, init_chorus_factory);
+    return STATIC_CAST(ALeffectStateFactory, &ChorusFactory);
+}
+
 
 void chorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {

@@ -1038,6 +1038,8 @@ static void alc_initconfig(void)
         } while(next++);
     }
 
+    InitEffectFactoryMap();
+
     InitEffect(&DefaultEffect);
     str = getenv("ALSOFT_DEFAULT_REVERB");
     if((str && str[0]) || ConfigValueStr(NULL, "default-reverb", &str))
@@ -1071,6 +1073,8 @@ static void alc_cleanup(void)
         } while((dev=dev->next) != NULL);
         ERR("%u device%s not closed\n", num, (num>1)?"s":"");
     }
+
+    DeinitEffectFactoryMap();
 }
 
 static void alc_deinit_safe(void)

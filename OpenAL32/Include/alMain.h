@@ -62,9 +62,14 @@ static const union {
 
 #define COUNTOF(x) (sizeof((x))/sizeof((x)[0]))
 
+
 #define DERIVE_FROM_TYPE(t)          t t##_parent
 #define STATIC_CAST(to, obj)         (&(obj)->to##_parent)
 #define STATIC_UPCAST(to, from, obj) ((to*)((char*)(obj) - offsetof(to, from##_parent)))
+
+#define SET_VTABLE1(T1, obj)     ((obj)->vtbl = &(T1##_vtable))
+#define SET_VTABLE2(T1, T2, obj) SET_VTABLE1(T1##_##T2, STATIC_CAST(T2, (obj)))
+
 
 #ifdef _WIN32
 

@@ -29,6 +29,14 @@
 #include "alError.h"
 #include "alu.h"
 
+
+typedef struct ALequalizerStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALequalizerStateFactory;
+
+static ALequalizerStateFactory EqualizerFactory;
+
+
 /*  The document  "Effects Extension Guide.pdf"  says that low and high  *
  *  frequencies are cutoff frequencies. This is not fully correct, they  *
  *  are corner frequencies for low and high shelf filters. If they were  *
@@ -96,7 +104,7 @@ typedef struct ALequalizerState {
 
 static ALvoid ALequalizerState_Destroy(ALequalizerState *state)
 {
-    free(state);
+    (void)state;
 }
 
 static ALboolean ALequalizerState_DeviceUpdate(ALequalizerState *state, ALCdevice *device)
@@ -262,9 +270,15 @@ static ALvoid ALequalizerState_Process(ALequalizerState *state, ALuint SamplesTo
     }
 }
 
+static ALeffectStateFactory *ALequalizerState_getCreator(void)
+{
+    return STATIC_CAST(ALeffectStateFactory, &EqualizerFactory);
+}
+
 DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
 
-ALeffectState *EqualizerCreate(void)
+
+ALeffectState *ALequalizerStateFactory_create(void)
 {
     ALequalizerState *state;
     int it;
@@ -290,6 +304,29 @@ ALeffectState *EqualizerCreate(void)
 
     return STATIC_CAST(ALeffectState, state);
 }
+
+static ALvoid ALequalizerStateFactory_destroy(ALeffectState *effect)
+{
+    ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
+    ALequalizerState_Destroy(state);
+    free(state);
+}
+
+DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALequalizerStateFactory);
+
+
+static void init_equalizer_factory(void)
+{
+    SET_VTABLE2(ALequalizerStateFactory, ALeffectStateFactory, &EqualizerFactory);
+}
+
+ALeffectStateFactory *ALequalizerStateFactory_getFactory(void)
+{
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, init_equalizer_factory);
+    return STATIC_CAST(ALeffectStateFactory, &EqualizerFactory);
+}
+
 
 void equalizer_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {

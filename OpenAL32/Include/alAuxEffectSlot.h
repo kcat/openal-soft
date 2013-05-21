@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+typedef struct ALeffectStateFactory ALeffectStateFactory;
+
 typedef struct ALeffectState ALeffectState;
 typedef struct ALeffectslot ALeffectslot;
 
@@ -16,11 +18,18 @@ struct ALeffectStateVtable {
     ALboolean (*const DeviceUpdate)(ALeffectState *state, ALCdevice *device);
     ALvoid (*const Update)(ALeffectState *state, ALCdevice *device, const ALeffectslot *slot);
     ALvoid (*const Process)(ALeffectState *state, ALuint samplesToDo, const ALfloat *RESTRICT samplesIn, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE]);
+    ALeffectStateFactory *(*const getCreator)(void);
 };
 
 struct ALeffectState {
     const struct ALeffectStateVtable *vtbl;
 };
+
+#define ALeffectState_Destroy(a)        ((a)->vtbl->Destroy((a)))
+#define ALeffectState_DeviceUpdate(a,b) ((a)->vtbl->DeviceUpdate((a),(b)))
+#define ALeffectState_Update(a,b,c)     ((a)->vtbl->Update((a),(b),(c)))
+#define ALeffectState_Process(a,b,c,d)  ((a)->vtbl->Process((a),(b),(c),(d)))
+#define ALeffectState_getCreator(a)     ((a)->vtbl->getCreator())
 
 #define DEFINE_ALEFFECTSTATE_VTABLE(T)                                        \
 static ALvoid T##_ALeffectState_Destroy(ALeffectState *state)                 \
@@ -31,16 +40,40 @@ static ALvoid T##_ALeffectState_Update(ALeffectState *state, ALCdevice *device, 
 { T##_Update(STATIC_UPCAST(T, ALeffectState, state), device, slot); }                                     \
 static ALvoid T##_ALeffectState_Process(ALeffectState *state, ALuint samplesToDo, const ALfloat *RESTRICT samplesIn, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE]) \
 { T##_Process(STATIC_UPCAST(T, ALeffectState, state), samplesToDo, samplesIn, samplesOut); }                                                                     \
+static ALeffectStateFactory* T##_ALeffectState_getCreator(void)               \
+{ return T##_getCreator(); }                                                  \
                                                                               \
 static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
     T##_ALeffectState_Destroy,                                                \
     T##_ALeffectState_DeviceUpdate,                                           \
     T##_ALeffectState_Update,                                                 \
-    T##_ALeffectState_Process                                                 \
+    T##_ALeffectState_Process,                                                \
+    T##_ALeffectState_getCreator,                                             \
 }
 
-#define SET_VTABLE1(T1, obj)     ((obj)->vtbl = &(T1##_vtable))
-#define SET_VTABLE2(T1, T2, obj) SET_VTABLE1(T1##_##T2, STATIC_CAST(T2, (obj)))
+
+struct ALeffectStateFactoryVtable {
+    ALeffectState *(*const create)(void);
+    ALvoid (*const destroy)(ALeffectState *state);
+};
+
+struct ALeffectStateFactory {
+    const struct ALeffectStateFactoryVtable *vtbl;
+};
+
+#define ALeffectStateFactory_create(p)    ((p)->vtbl->create())
+#define ALeffectStateFactory_destroy(p,a) ((p)->vtbl->destroy((a)))
+
+#define DEFINE_ALEFFECTSTATEFACTORY_VTABLE(T)                                 \
+static ALeffectState* T##_ALeffectStateFactory_create(void)                   \
+{ return T##_create(); }                                                      \
+static ALvoid T##_ALeffectStateFactory_destroy(ALeffectState *state)          \
+{ T##_destroy(state); }                                                       \
+                                                                              \
+static const struct ALeffectStateFactoryVtable T##_ALeffectStateFactory_vtable = { \
+    T##_ALeffectStateFactory_create,                                          \
+    T##_ALeffectStateFactory_destroy                                          \
+}
 
 
 struct ALeffectslot
@@ -68,22 +101,22 @@ struct ALeffectslot
 ALenum InitEffectSlot(ALeffectslot *slot);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
-ALeffectState *NoneCreate(void);
-ALeffectState *ReverbCreate(void);
-ALeffectState *EchoCreate(void);
-ALeffectState *ModulatorCreate(void);
-ALeffectState *DedicatedCreate(void);
-ALeffectState *ChorusCreate(void);
-ALeffectState *FlangerCreate(void);
-ALeffectState *EqualizerCreate(void);
-ALeffectState *DistortionCreate(void);
 
-#define ALeffectState_Destroy(a)        ((a)->vtbl->Destroy((a)))
-#define ALeffectState_DeviceUpdate(a,b) ((a)->vtbl->DeviceUpdate((a),(b)))
-#define ALeffectState_Update(a,b,c)     ((a)->vtbl->Update((a),(b),(c)))
-#define ALeffectState_Process(a,b,c,d)  ((a)->vtbl->Process((a),(b),(c),(d)))
+ALeffectStateFactory *ALreverbStateFactory_getFactory(void);
+ALeffectStateFactory *ALchorusStateFactory_getFactory(void);
+ALeffectStateFactory *ALdistortionStateFactory_getFactory(void);
+ALeffectStateFactory *ALechoStateFactory_getFactory(void);
+ALeffectStateFactory *ALequalizerStateFactory_getFactory(void);
+ALeffectStateFactory *ALflangerStateFactory_getFactory(void);
+ALeffectStateFactory *ALmodulatorStateFactory_getFactory(void);
+
+ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void);
+
 
 ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *effect);
+
+void InitEffectFactoryMap(void);
+void DeinitEffectFactoryMap(void);
 
 #ifdef __cplusplus
 }

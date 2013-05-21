@@ -31,6 +31,14 @@
 #include "alFilter.h"
 #include "alError.h"
 
+
+typedef struct ALreverbStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALreverbStateFactory;
+
+static ALreverbStateFactory ReverbFactory;
+
+
 typedef struct DelayLine
 {
     // The delay lines use sample lengths that are powers of 2 to allow the
@@ -1174,105 +1182,130 @@ static ALvoid ALreverbState_Destroy(ALreverbState *State)
 {
     free(State->SampleBuffer);
     State->SampleBuffer = NULL;
+}
 
-    free(State);
+static ALeffectStateFactory *ALreverbState_getCreator(void)
+{
+    return STATIC_CAST(ALeffectStateFactory, &ReverbFactory);
 }
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALreverbState);
 
-// This creates the reverb state.  It should be called only when the reverb
-// effect is loaded into a slot that doesn't already have a reverb effect.
-ALeffectState *ReverbCreate(void)
+
+static ALeffectState *ALreverbStateFactory_create(void)
 {
-    ALreverbState *State;
+    ALreverbState *state;
     ALuint index;
 
-    State = malloc(sizeof(ALreverbState));
-    if(!State) return NULL;
-    SET_VTABLE2(ALreverbState, ALeffectState, State);
+    state = malloc(sizeof(ALreverbState));
+    if(!state) return NULL;
+    SET_VTABLE2(ALreverbState, ALeffectState, state);
 
-    State->TotalSamples = 0;
-    State->SampleBuffer = NULL;
+    state->TotalSamples = 0;
+    state->SampleBuffer = NULL;
 
-    State->LpFilter.coeff = 0.0f;
-    State->LpFilter.history[0] = 0.0f;
-    State->LpFilter.history[1] = 0.0f;
+    state->LpFilter.coeff = 0.0f;
+    state->LpFilter.history[0] = 0.0f;
+    state->LpFilter.history[1] = 0.0f;
 
-    State->Mod.Delay.Mask = 0;
-    State->Mod.Delay.Line = NULL;
-    State->Mod.Index = 0;
-    State->Mod.Range = 1;
-    State->Mod.Depth = 0.0f;
-    State->Mod.Coeff = 0.0f;
-    State->Mod.Filter = 0.0f;
+    state->Mod.Delay.Mask = 0;
+    state->Mod.Delay.Line = NULL;
+    state->Mod.Index = 0;
+    state->Mod.Range = 1;
+    state->Mod.Depth = 0.0f;
+    state->Mod.Coeff = 0.0f;
+    state->Mod.Filter = 0.0f;
 
-    State->Delay.Mask = 0;
-    State->Delay.Line = NULL;
-    State->DelayTap[0] = 0;
-    State->DelayTap[1] = 0;
+    state->Delay.Mask = 0;
+    state->Delay.Line = NULL;
+    state->DelayTap[0] = 0;
+    state->DelayTap[1] = 0;
 
-    State->Early.Gain = 0.0f;
+    state->Early.Gain = 0.0f;
     for(index = 0;index < 4;index++)
     {
-        State->Early.Coeff[index] = 0.0f;
-        State->Early.Delay[index].Mask = 0;
-        State->Early.Delay[index].Line = NULL;
-        State->Early.Offset[index] = 0;
+        state->Early.Coeff[index] = 0.0f;
+        state->Early.Delay[index].Mask = 0;
+        state->Early.Delay[index].Line = NULL;
+        state->Early.Offset[index] = 0;
     }
 
-    State->Decorrelator.Mask = 0;
-    State->Decorrelator.Line = NULL;
-    State->DecoTap[0] = 0;
-    State->DecoTap[1] = 0;
-    State->DecoTap[2] = 0;
+    state->Decorrelator.Mask = 0;
+    state->Decorrelator.Line = NULL;
+    state->DecoTap[0] = 0;
+    state->DecoTap[1] = 0;
+    state->DecoTap[2] = 0;
 
-    State->Late.Gain = 0.0f;
-    State->Late.DensityGain = 0.0f;
-    State->Late.ApFeedCoeff = 0.0f;
-    State->Late.MixCoeff = 0.0f;
+    state->Late.Gain = 0.0f;
+    state->Late.DensityGain = 0.0f;
+    state->Late.ApFeedCoeff = 0.0f;
+    state->Late.MixCoeff = 0.0f;
     for(index = 0;index < 4;index++)
     {
-        State->Late.ApCoeff[index] = 0.0f;
-        State->Late.ApDelay[index].Mask = 0;
-        State->Late.ApDelay[index].Line = NULL;
-        State->Late.ApOffset[index] = 0;
+        state->Late.ApCoeff[index] = 0.0f;
+        state->Late.ApDelay[index].Mask = 0;
+        state->Late.ApDelay[index].Line = NULL;
+        state->Late.ApOffset[index] = 0;
 
-        State->Late.Coeff[index] = 0.0f;
-        State->Late.Delay[index].Mask = 0;
-        State->Late.Delay[index].Line = NULL;
-        State->Late.Offset[index] = 0;
+        state->Late.Coeff[index] = 0.0f;
+        state->Late.Delay[index].Mask = 0;
+        state->Late.Delay[index].Line = NULL;
+        state->Late.Offset[index] = 0;
 
-        State->Late.LpCoeff[index] = 0.0f;
-        State->Late.LpSample[index] = 0.0f;
+        state->Late.LpCoeff[index] = 0.0f;
+        state->Late.LpSample[index] = 0.0f;
     }
 
     for(index = 0;index < MaxChannels;index++)
     {
-        State->Early.PanGain[index] = 0.0f;
-        State->Late.PanGain[index] = 0.0f;
+        state->Early.PanGain[index] = 0.0f;
+        state->Late.PanGain[index] = 0.0f;
     }
 
-    State->Echo.DensityGain = 0.0f;
-    State->Echo.Delay.Mask = 0;
-    State->Echo.Delay.Line = NULL;
-    State->Echo.ApDelay.Mask = 0;
-    State->Echo.ApDelay.Line = NULL;
-    State->Echo.Coeff = 0.0f;
-    State->Echo.ApFeedCoeff = 0.0f;
-    State->Echo.ApCoeff = 0.0f;
-    State->Echo.Offset = 0;
-    State->Echo.ApOffset = 0;
-    State->Echo.LpCoeff = 0.0f;
-    State->Echo.LpSample = 0.0f;
-    State->Echo.MixCoeff[0] = 0.0f;
-    State->Echo.MixCoeff[1] = 0.0f;
+    state->Echo.DensityGain = 0.0f;
+    state->Echo.Delay.Mask = 0;
+    state->Echo.Delay.Line = NULL;
+    state->Echo.ApDelay.Mask = 0;
+    state->Echo.ApDelay.Line = NULL;
+    state->Echo.Coeff = 0.0f;
+    state->Echo.ApFeedCoeff = 0.0f;
+    state->Echo.ApCoeff = 0.0f;
+    state->Echo.Offset = 0;
+    state->Echo.ApOffset = 0;
+    state->Echo.LpCoeff = 0.0f;
+    state->Echo.LpSample = 0.0f;
+    state->Echo.MixCoeff[0] = 0.0f;
+    state->Echo.MixCoeff[1] = 0.0f;
 
-    State->Offset = 0;
+    state->Offset = 0;
 
-    State->Gain = State->Late.PanGain;
+    state->Gain = state->Late.PanGain;
 
-    return STATIC_CAST(ALeffectState, State);
+    return STATIC_CAST(ALeffectState, state);
 }
+
+static ALvoid ALreverbStateFactory_destroy(ALeffectState *effect)
+{
+    ALreverbState *state = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
+    ALreverbState_Destroy(state);
+    free(state);
+}
+
+DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALreverbStateFactory);
+
+
+static void init_reverb_factory(void)
+{
+    SET_VTABLE2(ALreverbStateFactory, ALeffectStateFactory, &ReverbFactory);
+}
+
+ALeffectStateFactory *ALreverbStateFactory_getFactory(void)
+{
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, init_reverb_factory);
+    return STATIC_CAST(ALeffectStateFactory, &ReverbFactory);
+}
+
 
 void eaxreverb_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {

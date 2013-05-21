@@ -29,6 +29,13 @@
 #include "alu.h"
 
 
+typedef struct ALdedicatedStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALdedicatedStateFactory;
+
+static ALdedicatedStateFactory DedicatedFactory;
+
+
 typedef struct ALdedicatedState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -38,7 +45,7 @@ typedef struct ALdedicatedState {
 
 static ALvoid ALdedicatedState_Destroy(ALdedicatedState *state)
 {
-    free(state);
+    (void)state;
 }
 
 static ALboolean ALdedicatedState_DeviceUpdate(ALdedicatedState *state, ALCdevice *Device)
@@ -78,9 +85,15 @@ static ALvoid ALdedicatedState_Process(ALdedicatedState *state, ALuint SamplesTo
     }
 }
 
+static ALeffectStateFactory *ALdedicatedState_getCreator(void)
+{
+    return STATIC_CAST(ALeffectStateFactory, &DedicatedFactory);
+}
+
 DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
 
-ALeffectState *DedicatedCreate(void)
+
+ALeffectState *ALdedicatedStateFactory_create(void)
 {
     ALdedicatedState *state;
     ALsizei s;
@@ -94,6 +107,29 @@ ALeffectState *DedicatedCreate(void)
 
     return STATIC_CAST(ALeffectState, state);
 }
+
+static ALvoid ALdedicatedStateFactory_destroy(ALeffectState *effect)
+{
+    ALdedicatedState *state = STATIC_UPCAST(ALdedicatedState, ALeffectState, effect);
+    ALdedicatedState_Destroy(state);
+    free(state);
+}
+
+DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALdedicatedStateFactory);
+
+
+static void init_dedicated_factory(void)
+{
+    SET_VTABLE2(ALdedicatedStateFactory, ALeffectStateFactory, &DedicatedFactory);
+}
+
+ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void)
+{
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, init_dedicated_factory);
+    return STATIC_CAST(ALeffectStateFactory, &DedicatedFactory);
+}
+
 
 void ded_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 { (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }

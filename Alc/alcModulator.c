@@ -30,6 +30,13 @@
 #include "alu.h"
 
 
+typedef struct ALmodulatorStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALmodulatorStateFactory;
+
+static ALmodulatorStateFactory ModulatorFactory;
+
+
 typedef struct ALmodulatorState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -130,7 +137,7 @@ DECL_TEMPLATE(Square)
 
 static ALvoid ALmodulatorState_Destroy(ALmodulatorState *state)
 {
-    free(state);
+    (void)state;
 }
 
 static ALboolean ALmodulatorState_DeviceUpdate(ALmodulatorState *state, ALCdevice *Device)
@@ -190,9 +197,15 @@ static ALvoid ALmodulatorState_Process(ALmodulatorState *state, ALuint SamplesTo
     }
 }
 
+static ALeffectStateFactory *ALmodulatorState_getCreator(void)
+{
+    return STATIC_CAST(ALeffectStateFactory, &ModulatorFactory);
+}
+
 DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
 
-ALeffectState *ModulatorCreate(void)
+
+static ALeffectState *ALmodulatorStateFactory_create(void)
 {
     ALmodulatorState *state;
 
@@ -208,6 +221,29 @@ ALeffectState *ModulatorCreate(void)
 
     return STATIC_CAST(ALeffectState, state);
 }
+
+static ALvoid ALmodulatorStateFactory_destroy(ALeffectState *effect)
+{
+    ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
+    ALmodulatorState_Destroy(state);
+    free(state);
+}
+
+DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALmodulatorStateFactory);
+
+
+static void init_modulator_factory(void)
+{
+    SET_VTABLE2(ALmodulatorStateFactory, ALeffectStateFactory, &ModulatorFactory);
+}
+
+ALeffectStateFactory *ALmodulatorStateFactory_getFactory(void)
+{
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, init_modulator_factory);
+    return STATIC_CAST(ALeffectStateFactory, &ModulatorFactory);
+}
+
 
 void mod_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {

@@ -35,7 +35,12 @@
 static ALenum AddEffectSlotArray(ALCcontext *Context, ALsizei count, const ALuint *slots);
 static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *slot);
 
-static ALeffectState *CreateStateByType(ALenum type);
+
+static UIntMap EffectStateFactoryMap;
+static __inline ALeffectStateFactory *getFactoryByType(ALenum type)
+{
+    return LookupUIntMapKey(&EffectStateFactoryMap, type);
+}
 
 
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
@@ -69,7 +74,8 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             if(err != AL_NO_ERROR)
             {
                 FreeThunkEntry(slot->id);
-                ALeffectState_Destroy(slot->EffectState);
+                ALeffectStateFactory_destroy(ALeffectState_getCreator(slot->EffectState),
+                                             slot->EffectState);
                 al_free(slot);
 
                 alDeleteAuxiliaryEffectSlots(cur, effectslots);
@@ -118,7 +124,8 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
             FreeThunkEntry(slot->id);
 
             RemoveEffectSlotArray(Context, slot);
-            ALeffectState_Destroy(slot->EffectState);
+            ALeffectStateFactory_destroy(ALeffectState_getCreator(slot->EffectState),
+                                         slot->EffectState);
 
             memset(slot, 0, sizeof(*slot));
             al_free(slot);
@@ -393,12 +400,21 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
 }
 
 
+typedef struct ALnoneStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALnoneStateFactory;
+
+static ALnoneStateFactory NoneFactory;
+
+
 typedef struct ALnoneState {
     DERIVE_FROM_TYPE(ALeffectState);
 } ALnoneState;
 
 static ALvoid ALnoneState_Destroy(ALnoneState *state)
-{ free(state); }
+{
+    (void)state;
+}
 static ALboolean ALnoneState_DeviceUpdate(ALnoneState *state, ALCdevice *device)
 {
     return AL_TRUE;
@@ -418,10 +434,15 @@ static ALvoid ALnoneState_Process(ALnoneState *state, ALuint samplesToDo, const 
     (void)samplesIn;
     (void)samplesOut;
 }
+static ALeffectStateFactory *ALnoneState_getCreator(void)
+{
+    return STATIC_CAST(ALeffectStateFactory, &NoneFactory);
+}
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALnoneState);
 
-ALeffectState *NoneCreate(void)
+
+ALeffectState *ALnoneStateFactory_create(void)
 {
     ALnoneState *state;
 
@@ -431,6 +452,29 @@ ALeffectState *NoneCreate(void)
 
     return STATIC_CAST(ALeffectState, state);
 }
+
+static ALvoid ALnoneStateFactory_destroy(ALeffectState *effect)
+{
+    ALnoneState *state = STATIC_UPCAST(ALnoneState, ALeffectState, effect);
+    ALnoneState_Destroy(state);
+    free(state);
+}
+
+DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALnoneStateFactory);
+
+
+static void init_none_factory(void)
+{
+    SET_VTABLE2(ALnoneStateFactory, ALeffectStateFactory, &NoneFactory);
+}
+
+ALeffectStateFactory *ALnoneStateFactory_getFactory(void)
+{
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, init_none_factory);
+    return STATIC_CAST(ALeffectStateFactory, &NoneFactory);
+}
+
 
 void null_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 { (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
@@ -504,46 +548,46 @@ static ALenum AddEffectSlotArray(ALCcontext *Context, ALsizei count, const ALuin
 }
 
 
-static ALeffectState *CreateStateByType(ALenum type)
+void InitEffectFactoryMap(void)
 {
-    switch(type)
-    {
-        case AL_EFFECT_NULL:
-            return NoneCreate();
-        case AL_EFFECT_EAXREVERB:
-        case AL_EFFECT_REVERB:
-            return ReverbCreate();
-        case AL_EFFECT_CHORUS:
-            return ChorusCreate();
-        case AL_EFFECT_DISTORTION:
-            return DistortionCreate();
-        case AL_EFFECT_ECHO:
-            return EchoCreate();
-        case AL_EFFECT_EQUALIZER:
-            return EqualizerCreate();
-        case AL_EFFECT_FLANGER:
-            return FlangerCreate();
-        case AL_EFFECT_RING_MODULATOR:
-            return ModulatorCreate();
-        case AL_EFFECT_DEDICATED_DIALOGUE:
-        case AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT:
-            return DedicatedCreate();
-    }
+    InitUIntMap(&EffectStateFactoryMap, ~0);
 
-    ERR("Unexpected effect type: 0x%04x\n", type);
-    return NULL;
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_NULL, ALnoneStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_EAXREVERB, ALreverbStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_REVERB, ALreverbStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_CHORUS, ALchorusStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_DISTORTION, ALdistortionStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_ECHO, ALechoStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_EQUALIZER, ALequalizerStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_FLANGER, ALflangerStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_RING_MODULATOR, ALmodulatorStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_DEDICATED_DIALOGUE, ALdedicatedStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, ALdedicatedStateFactory_getFactory());
 }
+
+void DeinitEffectFactoryMap(void)
+{
+    ResetUIntMap(&EffectStateFactoryMap);
+}
+
 
 ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *effect)
 {
     ALenum newtype = (effect ? effect->type : AL_EFFECT_NULL);
+    ALeffectStateFactory *factory;
 
     if(newtype != EffectSlot->effect.type)
     {
         ALeffectState *State;
         FPUCtl oldMode;
 
-        State = CreateStateByType(newtype);
+        factory = getFactoryByType(newtype);
+        if(!factory)
+        {
+            ERR("Failed to find factory for effect type 0x%04x\n", newtype);
+            return AL_INVALID_ENUM;
+        }
+        State = ALeffectStateFactory_create(factory);
         if(!State)
             return AL_OUT_OF_MEMORY;
 
@@ -554,7 +598,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         {
             ALCdevice_Unlock(Device);
             RestoreFPUMode(&oldMode);
-            ALeffectState_Destroy(State);
+            ALeffectStateFactory_destroy(ALeffectState_getCreator(State), State);
             return AL_OUT_OF_MEMORY;
         }
 
@@ -573,7 +617,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 
         RestoreFPUMode(&oldMode);
 
-        ALeffectState_Destroy(State);
+        ALeffectStateFactory_destroy(ALeffectState_getCreator(State), State);
         State = NULL;
     }
     else
@@ -593,9 +637,11 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 
 ALenum InitEffectSlot(ALeffectslot *slot)
 {
+    ALeffectStateFactory *factory;
     ALint i, c;
 
-    if(!(slot->EffectState=NoneCreate()))
+    factory = getFactoryByType(AL_EFFECT_NULL);
+    if(!(slot->EffectState=ALeffectStateFactory_create(factory)))
         return AL_OUT_OF_MEMORY;
 
     slot->Gain = 1.0;
@@ -621,7 +667,8 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
         ALeffectslot *temp = Context->EffectSlotMap.array[pos].value;
         Context->EffectSlotMap.array[pos].value = NULL;
 
-        ALeffectState_Destroy(temp->EffectState);
+        ALeffectStateFactory_destroy(ALeffectState_getCreator(temp->EffectState),
+                                     temp->EffectState);
 
         FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALeffectslot));

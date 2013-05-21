@@ -29,6 +29,14 @@
 #include "alError.h"
 #include "alu.h"
 
+
+typedef struct ALdistortionStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALdistortionStateFactory;
+
+static ALdistortionStateFactory DistortionFactory;
+
+
 /* Filters implementation is based on the "Cookbook formulae for audio   *
  * EQ biquad filter coefficients" by Robert Bristow-Johnson              *
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt                   */
@@ -61,14 +69,14 @@ typedef struct ALdistortionState {
 
 static ALvoid ALdistortionState_Destroy(ALdistortionState *state)
 {
-    free(state);
+    (void)state;
 }
 
-static ALboolean ALdistortionState_DeviceUpdate(ALdistortionState *state, ALCdevice *Device)
+static ALboolean ALdistortionState_DeviceUpdate(ALdistortionState *state, ALCdevice *device)
 {
     return AL_TRUE;
     (void)state;
-    (void)Device;
+    (void)device;
 }
 
 static ALvoid ALdistortionState_Update(ALdistortionState *state, ALCdevice *Device, const ALeffectslot *Slot)
@@ -226,9 +234,15 @@ static ALvoid ALdistortionState_Process(ALdistortionState *state, ALuint Samples
     }
 }
 
+static ALeffectStateFactory *ALdistortionState_getCreator(void)
+{
+    return STATIC_CAST(ALeffectStateFactory, &DistortionFactory);
+}
+
 DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
 
-ALeffectState *DistortionCreate(void)
+
+static ALeffectState *ALdistortionStateFactory_create(void)
 {
     ALdistortionState *state;
 
@@ -248,6 +262,29 @@ ALeffectState *DistortionCreate(void)
 
     return STATIC_CAST(ALeffectState, state);
 }
+
+static ALvoid ALdistortionStateFactory_destroy(ALeffectState *effect)
+{
+    ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
+    ALdistortionState_Destroy(state);
+    free(state);
+}
+
+DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALdistortionStateFactory);
+
+
+static void init_distortion_factory(void)
+{
+    SET_VTABLE2(ALdistortionStateFactory, ALeffectStateFactory, &DistortionFactory);
+}
+
+ALeffectStateFactory *ALdistortionStateFactory_getFactory(void)
+{
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, init_distortion_factory);
+    return STATIC_CAST(ALeffectStateFactory, &DistortionFactory);
+}
+
 
 void distortion_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {

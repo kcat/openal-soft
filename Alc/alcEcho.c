@@ -30,6 +30,13 @@
 #include "alu.h"
 
 
+typedef struct ALechoStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALechoStateFactory;
+
+static ALechoStateFactory EchoFactory;
+
+
 typedef struct ALechoState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -54,8 +61,6 @@ static ALvoid ALechoState_Destroy(ALechoState *state)
 {
     free(state->SampleBuffer);
     state->SampleBuffer = NULL;
-
-    free(state);
 }
 
 static ALboolean ALechoState_DeviceUpdate(ALechoState *state, ALCdevice *Device)
@@ -170,9 +175,15 @@ static ALvoid ALechoState_Process(ALechoState *state, ALuint SamplesToDo, const 
     state->Offset = offset;
 }
 
+static ALeffectStateFactory *ALechoState_getCreator(void)
+{
+    return STATIC_CAST(ALeffectStateFactory, &EchoFactory);
+}
+
 DEFINE_ALEFFECTSTATE_VTABLE(ALechoState);
 
-ALeffectState *EchoCreate(void)
+
+ALeffectState *ALechoStateFactory_create(void)
 {
     ALechoState *state;
 
@@ -193,6 +204,29 @@ ALeffectState *EchoCreate(void)
 
     return STATIC_CAST(ALeffectState, state);
 }
+
+static ALvoid ALechoStateFactory_destroy(ALeffectState *effect)
+{
+    ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
+    ALechoState_Destroy(state);
+    free(state);
+}
+
+DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALechoStateFactory);
+
+
+static void init_echo_factory(void)
+{
+    SET_VTABLE2(ALechoStateFactory, ALeffectStateFactory, &EchoFactory);
+}
+
+ALeffectStateFactory *ALechoStateFactory_getFactory(void)
+{
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, init_echo_factory);
+    return STATIC_CAST(ALeffectStateFactory, &EchoFactory);
+}
+
 
 void echo_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 { (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }

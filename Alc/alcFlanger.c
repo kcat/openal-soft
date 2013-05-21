@@ -30,6 +30,13 @@
 #include "alu.h"
 
 
+typedef struct ALflangerStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALflangerStateFactory;
+
+static ALflangerStateFactory FlangerFactory;
+
+
 typedef struct ALflangerState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -57,8 +64,6 @@ static ALvoid ALflangerState_Destroy(ALflangerState *state)
 
     free(state->SampleBufferRight);
     state->SampleBufferRight = NULL;
-
-    free(state);
 }
 
 static ALboolean ALflangerState_DeviceUpdate(ALflangerState *state, ALCdevice *Device)
@@ -238,9 +243,15 @@ static ALvoid ALflangerState_Process(ALflangerState *state, ALuint SamplesToDo, 
         ProcessSinusoid(state, SamplesToDo, SamplesIn, SamplesOut);
 }
 
+static ALeffectStateFactory *ALflangerState_getCreator(void)
+{
+    return STATIC_CAST(ALeffectStateFactory, &FlangerFactory);
+}
+
 DEFINE_ALEFFECTSTATE_VTABLE(ALflangerState);
 
-ALeffectState *FlangerCreate(void)
+
+ALeffectState *ALflangerStateFactory_create(void)
 {
     ALflangerState *state;
 
@@ -255,6 +266,29 @@ ALeffectState *FlangerCreate(void)
 
     return STATIC_CAST(ALeffectState, state);
 }
+
+static ALvoid ALflangerStateFactory_destroy(ALeffectState *effect)
+{
+    ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
+    ALflangerState_Destroy(state);
+    free(state);
+}
+
+DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALflangerStateFactory);
+
+
+static void init_flanger_factory(void)
+{
+    SET_VTABLE2(ALflangerStateFactory, ALeffectStateFactory, &FlangerFactory);
+}
+
+ALeffectStateFactory *ALflangerStateFactory_getFactory(void)
+{
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, init_flanger_factory);
+    return STATIC_CAST(ALeffectStateFactory, &FlangerFactory);
+}
+
 
 void flanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {

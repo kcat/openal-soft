@@ -39,11 +39,8 @@ static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
     T##_ALeffectState_Process                                                 \
 }
 
-#define SET_VTABLE1(T1, obj)  ((obj)->vtbl = &(T1##_vtable))
-#define SET_VTABLE2(T1, T2, obj) do {                                         \
-    STATIC_CAST(T2, (obj))->vtbl = &(T1##_##T2##_vtable);                     \
-    /*SET_VTABLE1(T1, obj);*/                                                 \
-} while(0)
+#define SET_VTABLE1(T1, obj)     ((obj)->vtbl = &(T1##_vtable))
+#define SET_VTABLE2(T1, T2, obj) SET_VTABLE1(T1##_##T2, STATIC_CAST(T2, (obj)))
 
 
 struct ALeffectslot

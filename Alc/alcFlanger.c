@@ -100,7 +100,7 @@ static ALboolean ALflangerState_DeviceUpdate(ALflangerState *state, ALCdevice *D
 
 static ALvoid ALflangerState_Update(ALflangerState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALfloat frequency = Device->Frequency;
+    ALfloat frequency = (ALfloat)Device->Frequency;
     ALfloat rate;
     ALint phase;
     ALuint it;

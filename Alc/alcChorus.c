@@ -100,7 +100,7 @@ static ALboolean ALchorusState_DeviceUpdate(ALchorusState *state, ALCdevice *Dev
 
 static ALvoid ALchorusState_Update(ALchorusState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALfloat frequency = Device->Frequency;
+    ALfloat frequency = (ALfloat)Device->Frequency;
     ALfloat rate;
     ALint phase;
     ALuint it;

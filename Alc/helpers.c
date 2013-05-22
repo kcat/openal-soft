@@ -449,20 +449,13 @@ void *GetSymbol(void *handle, const char *name)
 
 void al_print(const char *type, const char *func, const char *fmt, ...)
 {
-    char str[256];
-    int i;
+    va_list ap;
 
-    i = snprintf(str, sizeof(str), "AL lib: %s %s: ", type, func);
-    if(i > 0 && (unsigned int)i < sizeof(str))
-    {
-        va_list ap;
-        va_start(ap, fmt);
-        vsnprintf(str+i, sizeof(str)-i, fmt, ap);
-        va_end(ap);
-    }
-    str[sizeof(str)-1] = 0;
+    va_start(ap, fmt);
+    fprintf(LogFile, "AL lib: %s %s: ", type, func);
+    vfprintf(LogFile, fmt, ap);
+    va_end(ap);
 
-    fprintf(LogFile, "%s", str);
     fflush(LogFile);
 }
 

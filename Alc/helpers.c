@@ -205,7 +205,7 @@ void SetMixerFPUMode(FPUCtl *ctl)
         int sseState;
         __asm__ __volatile__("stmxcsr %0" : "=m" (*&sseState));
         ctl->sse_state = sseState;
-        sseState |= 0x0C00; /* set round-to-zero */
+        sseState |= 0x6000; /* set round-to-zero */
         sseState |= 0x8000; /* set flush-to-zero */
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&sseState));
     }

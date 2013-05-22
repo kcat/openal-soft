@@ -178,8 +178,8 @@ static __inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALint offse
 
 #define DECL_TEMPLATE(func)                                                    \
 static void Process##func(ALchorusState *state, ALuint SamplesToDo,            \
-                          const ALfloat *RESTRICT SamplesIn,                   \
-                          ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])          \
+                          const ALfloat *restrict SamplesIn,                   \
+                          ALfloat (*restrict SamplesOut)[BUFFERSIZE])          \
 {                                                                              \
     const ALint mask = state->BufferLength-1;                                  \
     ALint offset = state->offset;                                              \
@@ -235,7 +235,7 @@ DECL_TEMPLATE(Sinusoid)
 
 #undef DECL_TEMPLATE
 
-static ALvoid ALchorusState_Process(ALchorusState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALchorusState_Process(ALchorusState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     if(state->waveform == AL_CHORUS_WAVEFORM_TRIANGLE)
         ProcessTriangle(state, SamplesToDo, SamplesIn, SamplesOut);

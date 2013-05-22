@@ -95,7 +95,6 @@ SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
 
 SET(EXPORT_DECL "")
 SET(ALIGN_DECL "")
-SET(RESTRICT_DECL "")
 
 
 CHECK_TYPE_SIZE("long" SIZEOF_LONG)
@@ -104,13 +103,13 @@ CHECK_TYPE_SIZE("long long" SIZEOF_LONG_LONG)
 
 CHECK_C_SOURCE_COMPILES("int *restrict foo;
                          int main() {return 0;}" HAVE_RESTRICT)
-IF(HAVE_RESTRICT)
-    SET(RESTRICT_DECL "restrict")
-ELSE()
+IF(NOT HAVE_RESTRICT)
     CHECK_C_SOURCE_COMPILES("int *__restrict foo;
                              int main() {return 0;}" HAVE___RESTRICT)
     IF(HAVE___RESTRICT)
-        SET(RESTRICT_DECL "__restrict")
+        ADD_DEFINITIONS(-Drestrict=__restrict)
+    ELSE()
+        ADD_DEFINITIONS(-Drestrict=)
     ENDIF()
 ENDIF()
 

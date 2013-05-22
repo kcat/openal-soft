@@ -309,7 +309,7 @@ static __inline ALfloat EarlyDelayLineOut(ALreverbState *State, ALuint index)
 
 // Given an input sample, this function produces four-channel output for the
 // early reflections.
-static __inline ALvoid EarlyReflection(ALreverbState *State, ALfloat in, ALfloat *RESTRICT out)
+static __inline ALvoid EarlyReflection(ALreverbState *State, ALfloat in, ALfloat *restrict out)
 {
     ALfloat d[4], v, f[4];
 
@@ -380,7 +380,7 @@ static __inline ALfloat LateLowPassInOut(ALreverbState *State, ALuint index, ALf
 
 // Given four decorrelated input samples, this function produces four-channel
 // output for the late reverb.
-static __inline ALvoid LateReverb(ALreverbState *State, const ALfloat *RESTRICT in, ALfloat *RESTRICT out)
+static __inline ALvoid LateReverb(ALreverbState *State, const ALfloat *restrict in, ALfloat *restrict out)
 {
     ALfloat d[4], f[4];
 
@@ -451,7 +451,7 @@ static __inline ALvoid LateReverb(ALreverbState *State, const ALfloat *RESTRICT 
 
 // Given an input sample, this function mixes echo into the four-channel late
 // reverb.
-static __inline ALvoid EAXEcho(ALreverbState *State, ALfloat in, ALfloat *RESTRICT late)
+static __inline ALvoid EAXEcho(ALreverbState *State, ALfloat in, ALfloat *restrict late)
 {
     ALfloat out, feed;
 
@@ -485,7 +485,7 @@ static __inline ALvoid EAXEcho(ALreverbState *State, ALfloat in, ALfloat *RESTRI
 
 // Perform the non-EAX reverb pass on a given input sample, resulting in
 // four-channel output.
-static __inline ALvoid VerbPass(ALreverbState *State, ALfloat in, ALfloat *RESTRICT out)
+static __inline ALvoid VerbPass(ALreverbState *State, ALfloat in, ALfloat *restrict out)
 {
     ALfloat feed, late[4], taps[4];
 
@@ -524,7 +524,7 @@ static __inline ALvoid VerbPass(ALreverbState *State, ALfloat in, ALfloat *RESTR
 
 // Perform the EAX reverb pass on a given input sample, resulting in four-
 // channel output.
-static __inline ALvoid EAXVerbPass(ALreverbState *State, ALfloat in, ALfloat *RESTRICT early, ALfloat *RESTRICT late)
+static __inline ALvoid EAXVerbPass(ALreverbState *State, ALfloat in, ALfloat *restrict early, ALfloat *restrict late)
 {
     ALfloat feed, taps[4];
 
@@ -563,9 +563,9 @@ static __inline ALvoid EAXVerbPass(ALreverbState *State, ALfloat in, ALfloat *RE
 
 // This processes the standard reverb state, given the input samples and an
 // output buffer.
-static ALvoid ALreverbState_ProcessStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALreverbState_ProcessStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
-    ALfloat (*RESTRICT out)[4] = State->ReverbSamples;
+    ALfloat (*restrict out)[4] = State->ReverbSamples;
     ALuint index, c;
 
     /* Process reverb for these samples. */
@@ -585,10 +585,10 @@ static ALvoid ALreverbState_ProcessStandard(ALreverbState *State, ALuint Samples
 
 // This processes the EAX reverb state, given the input samples and an output
 // buffer.
-static ALvoid ALreverbState_ProcessEax(ALreverbState *State, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALreverbState_ProcessEax(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
-    ALfloat (*RESTRICT early)[4] = State->EarlySamples;
-    ALfloat (*RESTRICT late)[4] = State->ReverbSamples;
+    ALfloat (*restrict early)[4] = State->EarlySamples;
+    ALfloat (*restrict late)[4] = State->ReverbSamples;
     ALuint index, c;
 
     /* Process reverb for these samples. */
@@ -613,7 +613,7 @@ static ALvoid ALreverbState_ProcessEax(ALreverbState *State, ALuint SamplesToDo,
     }
 }
 
-static ALvoid ALreverbState_Process(ALreverbState *State, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALreverbState_Process(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     if(State->IsEax)
         ALreverbState_ProcessEax(State, SamplesToDo, SamplesIn, SamplesOut);

@@ -89,8 +89,8 @@ static __inline ALfloat hpFilter1P(FILTER *iir, ALfloat input)
 
 #define DECL_TEMPLATE(func)                                                   \
 static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
-  const ALfloat *RESTRICT SamplesIn,                                          \
-  ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])                                 \
+  const ALfloat *restrict SamplesIn,                                          \
+  ALfloat (*restrict SamplesOut)[BUFFERSIZE])                                 \
 {                                                                             \
     const ALuint step = state->step;                                          \
     ALuint index = state->index;                                              \
@@ -179,7 +179,7 @@ static ALvoid ALmodulatorState_Update(ALmodulatorState *state, ALCdevice *Device
     }
 }
 
-static ALvoid ALmodulatorState_Process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALmodulatorState_Process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     switch(state->Waveform)
     {

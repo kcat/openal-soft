@@ -14,10 +14,10 @@
 #include "mixer_defs.h"
 
 
-static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
                                      const ALuint IrSize,
-                                     ALfloat (*RESTRICT Coeffs)[2],
-                                     const ALfloat (*RESTRICT CoeffStep)[2],
+                                     ALfloat (*restrict Coeffs)[2],
+                                     const ALfloat (*restrict CoeffStep)[2],
                                      ALfloat left, ALfloat right)
 {
     const __m128 lrlr = { left, right, left, right };
@@ -76,9 +76,9 @@ static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2
     }
 }
 
-static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
                                  const ALuint IrSize,
-                                 ALfloat (*RESTRICT Coeffs)[2],
+                                 ALfloat (*restrict Coeffs)[2],
                                  ALfloat left, ALfloat right)
 {
     const __m128 lrlr = { left, right, left, right };
@@ -133,12 +133,12 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_SSE(const DirectParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
+void MixDirect_SSE(const DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = params->OutBuffer;
-    ALfloat *RESTRICT ClickRemoval = params->ClickRemoval;
-    ALfloat *RESTRICT PendingClicks = params->PendingClicks;
+    ALfloat (*restrict DryBuffer)[BUFFERSIZE] = params->OutBuffer;
+    ALfloat *restrict ClickRemoval = params->ClickRemoval;
+    ALfloat *restrict PendingClicks = params->PendingClicks;
     ALfloat DrySend;
     ALuint pos;
     ALuint c;
@@ -171,13 +171,13 @@ void MixDirect_SSE(const DirectParams *params, const ALfloat *RESTRICT data, ALu
 }
 
 
-void MixSend_SSE(const SendParams *params, const ALfloat *RESTRICT data,
+void MixSend_SSE(const SendParams *params, const ALfloat *restrict data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALeffectslot *Slot = params->Slot;
-    ALfloat (*RESTRICT WetBuffer)[BUFFERSIZE] = Slot->WetBuffer;
-    ALfloat *RESTRICT WetClickRemoval = Slot->ClickRemoval;
-    ALfloat *RESTRICT WetPendingClicks = Slot->PendingClicks;
+    ALfloat (*restrict WetBuffer)[BUFFERSIZE] = Slot->WetBuffer;
+    ALfloat *restrict WetClickRemoval = Slot->ClickRemoval;
+    ALfloat *restrict WetPendingClicks = Slot->PendingClicks;
     const ALfloat WetGain = params->Gain;
     __m128 gain;
     ALuint pos;

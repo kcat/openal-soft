@@ -11,9 +11,6 @@
 #define align(x) aligned(x)
 #endif
 
-/* Define to the appropriate 'restrict' keyword */
-#define RESTRICT ${RESTRICT_DECL}
-
 /* Define if we have the C11 aligned_alloc function */
 #cmakedefine HAVE_ALIGNED_ALLOC
 

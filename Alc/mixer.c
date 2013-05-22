@@ -84,7 +84,7 @@ static void SilenceData(ALfloat *dst, ALuint samples)
 }
 
 
-static void Filter2P(FILTER *filter, ALfloat *RESTRICT dst, const ALfloat *RESTRICT src,
+static void Filter2P(FILTER *filter, ALfloat *restrict dst, const ALfloat *restrict src,
                      ALuint numsamples)
 {
     ALuint i;

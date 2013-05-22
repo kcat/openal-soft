@@ -425,7 +425,7 @@ static ALvoid ALnoneState_Update(ALnoneState *state, ALCdevice *device, const AL
     (void)device;
     (void)slot;
 }
-static ALvoid ALnoneState_Process(ALnoneState *state, ALuint samplesToDo, const ALfloat *RESTRICT samplesIn, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE])
+static ALvoid ALnoneState_Process(ALnoneState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE])
 {
     (void)state;
     (void)samplesToDo;

@@ -132,7 +132,7 @@ static ALvoid ALdistortionState_Update(ALdistortionState *state, ALCdevice *Devi
     state->bandpass.a[2] = 1.0f - alpha;
 }
 
-static ALvoid ALdistortionState_Process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALdistortionState_Process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     const ALfloat fc = state->edge_coeff;
     float oversample_buffer[64][4];

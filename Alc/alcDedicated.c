@@ -70,7 +70,7 @@ static ALvoid ALdedicatedState_Update(ALdedicatedState *state, ALCdevice *device
         state->gains[LFE] = Gain;
 }
 
-static ALvoid ALdedicatedState_Process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALdedicatedState_Process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     const ALfloat *gains = state->gains;
     ALuint i, c;

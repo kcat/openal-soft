@@ -219,7 +219,7 @@ static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *device
     }
 }
 
-static ALvoid ALequalizerState_Process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat *RESTRICT SamplesIn, ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE])
+static ALvoid ALequalizerState_Process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     ALuint base;
     ALuint it;

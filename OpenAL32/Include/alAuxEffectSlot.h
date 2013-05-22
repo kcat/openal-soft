@@ -17,7 +17,7 @@ struct ALeffectStateVtable {
     ALvoid (*const Destruct)(ALeffectState *state);
     ALboolean (*const DeviceUpdate)(ALeffectState *state, ALCdevice *device);
     ALvoid (*const Update)(ALeffectState *state, ALCdevice *device, const ALeffectslot *slot);
-    ALvoid (*const Process)(ALeffectState *state, ALuint samplesToDo, const ALfloat *RESTRICT samplesIn, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE]);
+    ALvoid (*const Process)(ALeffectState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE]);
     ALeffectStateFactory *(*const getCreator)(void);
 };
 
@@ -38,7 +38,7 @@ static ALboolean T##_ALeffectState_DeviceUpdate(ALeffectState *state, ALCdevice 
 { return T##_DeviceUpdate(STATIC_UPCAST(T, ALeffectState, state), device); }             \
 static ALvoid T##_ALeffectState_Update(ALeffectState *state, ALCdevice *device, const ALeffectslot *slot) \
 { T##_Update(STATIC_UPCAST(T, ALeffectState, state), device, slot); }                                     \
-static ALvoid T##_ALeffectState_Process(ALeffectState *state, ALuint samplesToDo, const ALfloat *RESTRICT samplesIn, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE]) \
+static ALvoid T##_ALeffectState_Process(ALeffectState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE]) \
 { T##_Process(STATIC_UPCAST(T, ALeffectState, state), samplesToDo, samplesIn, samplesOut); }                                                                     \
 static ALeffectStateFactory* T##_ALeffectState_getCreator(void)               \
 { return T##_getCreator(); }                                                  \

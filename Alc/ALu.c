@@ -130,7 +130,7 @@ static __inline void aluNormalize(ALfloat *inVector)
     }
 }
 
-static __inline ALvoid aluMatrixVector(ALfloat *vector, ALfloat w, ALfloat (*RESTRICT matrix)[4])
+static __inline ALvoid aluMatrixVector(ALfloat *vector, ALfloat w, ALfloat (*restrict matrix)[4])
 {
     ALfloat temp[4] = {
         vector[0], vector[1], vector[2], w
@@ -589,7 +589,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     /* Transform source to listener space (convert to head relative) */
     if(ALSource->HeadRelative == AL_FALSE)
     {
-        ALfloat (*RESTRICT Matrix)[4] = ALContext->Listener->Params.Matrix;
+        ALfloat (*restrict Matrix)[4] = ALContext->Listener->Params.Matrix;
         /* Transform source vectors */
         aluMatrixVector(Position, 1.0f, Matrix);
         aluMatrixVector(Direction, 0.0f, Matrix);
@@ -941,17 +941,17 @@ static __inline ALubyte aluF2UB(ALfloat val)
 { return aluF2B(val)+128; }
 
 #define DECL_TEMPLATE(T, func)                                                \
-static int Write_##T(ALCdevice *device, T *RESTRICT buffer,                   \
+static int Write_##T(ALCdevice *device, T *restrict buffer,                   \
                      ALuint SamplesToDo)                                      \
 {                                                                             \
-    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
+    ALfloat (*restrict DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
     ALuint numchans = ChannelsFromDevFmt(device->FmtChans);                   \
     const ALuint *offsets = device->ChannelOffsets;                           \
     ALuint i, j;                                                              \
                                                                               \
     for(j = 0;j < MaxChannels;j++)                                            \
     {                                                                         \
-        T *RESTRICT out;                                                      \
+        T *restrict out;                                                      \
                                                                               \
         if(offsets[j] == INVALID_OFFSET)                                      \
             continue;                                                         \

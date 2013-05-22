@@ -16,7 +16,7 @@ static __inline ALfloat cubic32(const ALfloat *vals, ALuint frac)
 { return cubic(vals[-1], vals[0], vals[1], vals[2], frac * (1.0f/FRACTIONONE)); }
 
 void Resample_copy32_C(const ALfloat *data, ALuint frac,
-  ALuint increment, ALfloat *RESTRICT OutBuffer, ALuint BufferSize)
+  ALuint increment, ALfloat *restrict OutBuffer, ALuint BufferSize)
 {
     (void)frac;
     assert(increment==FRACTIONONE);
@@ -25,7 +25,7 @@ void Resample_copy32_C(const ALfloat *data, ALuint frac,
 
 #define DECL_TEMPLATE(Sampler)                                                \
 void Resample_##Sampler##_C(const ALfloat *data, ALuint frac,                 \
-  ALuint increment, ALfloat *RESTRICT OutBuffer, ALuint BufferSize)           \
+  ALuint increment, ALfloat *restrict OutBuffer, ALuint BufferSize)           \
 {                                                                             \
     ALuint pos = 0;                                                           \
     ALuint i;                                                                 \
@@ -47,10 +47,10 @@ DECL_TEMPLATE(cubic32)
 #undef DECL_TEMPLATE
 
 
-static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
                                      const ALuint IrSize,
-                                     ALfloat (*RESTRICT Coeffs)[2],
-                                     const ALfloat (*RESTRICT CoeffStep)[2],
+                                     ALfloat (*restrict Coeffs)[2],
+                                     const ALfloat (*restrict CoeffStep)[2],
                                      ALfloat left, ALfloat right)
 {
     ALuint c;
@@ -64,9 +64,9 @@ static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*RESTRICT Values)[2
     }
 }
 
-static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
+static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
                                  const ALuint IrSize,
-                                 ALfloat (*RESTRICT Coeffs)[2],
+                                 ALfloat (*restrict Coeffs)[2],
                                  ALfloat left, ALfloat right)
 {
     ALuint c;
@@ -83,12 +83,12 @@ static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*RESTRICT Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_C(const DirectParams *params, const ALfloat *RESTRICT data, ALuint srcchan,
+void MixDirect_C(const DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALfloat (*RESTRICT DryBuffer)[BUFFERSIZE] = params->OutBuffer;
-    ALfloat *RESTRICT ClickRemoval = params->ClickRemoval;
-    ALfloat *RESTRICT PendingClicks = params->PendingClicks;
+    ALfloat (*restrict DryBuffer)[BUFFERSIZE] = params->OutBuffer;
+    ALfloat *restrict ClickRemoval = params->ClickRemoval;
+    ALfloat *restrict PendingClicks = params->PendingClicks;
     ALfloat DrySend;
     ALuint pos;
     ALuint c;
@@ -109,13 +109,13 @@ void MixDirect_C(const DirectParams *params, const ALfloat *RESTRICT data, ALuin
 }
 
 
-void MixSend_C(const SendParams *params, const ALfloat *RESTRICT data,
+void MixSend_C(const SendParams *params, const ALfloat *restrict data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALeffectslot *Slot = params->Slot;
-    ALfloat (*RESTRICT WetBuffer)[BUFFERSIZE] = Slot->WetBuffer;
-    ALfloat *RESTRICT WetClickRemoval = Slot->ClickRemoval;
-    ALfloat *RESTRICT WetPendingClicks = Slot->PendingClicks;
+    ALfloat (*restrict WetBuffer)[BUFFERSIZE] = Slot->WetBuffer;
+    ALfloat *restrict WetClickRemoval = Slot->ClickRemoval;
+    ALfloat *restrict WetPendingClicks = Slot->PendingClicks;
     ALfloat  WetSend = params->Gain;
     ALuint pos;
 

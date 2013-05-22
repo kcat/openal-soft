@@ -36,11 +36,18 @@
 #include "alu.h"
 
 #ifndef DSSPEAKER_5POINT1
-#define DSSPEAKER_5POINT1       6
+#   define DSSPEAKER_5POINT1          0x00000006
 #endif
 #ifndef DSSPEAKER_7POINT1
-#define DSSPEAKER_7POINT1       7
+#   define DSSPEAKER_7POINT1          0x00000007
 #endif
+#ifndef DSSPEAKER_7POINT1_SURROUND
+#   define DSSPEAKER_7POINT1_SURROUND 0x00000008
+#endif
+#ifndef DSSPEAKER_5POINT1_SURROUND
+#   define DSSPEAKER_5POINT1_SURROUND 0x00000009
+#endif
+
 
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
@@ -466,9 +473,9 @@ static ALCboolean DSoundResetPlayback(ALCdevice *device)
                 device->FmtChans = DevFmtStereo;
             else if(speakers == DSSPEAKER_QUAD)
                 device->FmtChans = DevFmtQuad;
-            else if(speakers == DSSPEAKER_5POINT1)
+            else if(speakers == DSSPEAKER_5POINT1 || speakers == DSSPEAKER_5POINT1_SURROUND)
                 device->FmtChans = DevFmtX51;
-            else if(speakers == DSSPEAKER_7POINT1)
+            else if(speakers == DSSPEAKER_7POINT1 || speakers == DSSPEAKER_7POINT1_SURROUND)
                 device->FmtChans = DevFmtX71;
             else
                 ERR("Unknown system speaker config: 0x%lx\n", speakers);

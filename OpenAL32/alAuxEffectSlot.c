@@ -74,7 +74,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             if(err != AL_NO_ERROR)
             {
                 FreeThunkEntry(slot->id);
-                DELETE(slot->EffectState);
+                DELETE_OBJ(slot->EffectState);
                 al_free(slot);
 
                 alDeleteAuxiliaryEffectSlots(cur, effectslots);
@@ -123,7 +123,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
             FreeThunkEntry(slot->id);
 
             RemoveEffectSlotArray(Context, slot);
-            DELETE(slot->EffectState);
+            DELETE_OBJ(slot->EffectState);
 
             memset(slot, 0, sizeof(*slot));
             al_free(slot);
@@ -596,7 +596,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         {
             ALCdevice_Unlock(Device);
             RestoreFPUMode(&oldMode);
-            DELETE(State);
+            DELETE_OBJ(State);
             return AL_OUT_OF_MEMORY;
         }
 
@@ -615,7 +615,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 
         RestoreFPUMode(&oldMode);
 
-        DELETE(State);
+        DELETE_OBJ(State);
         State = NULL;
     }
     else
@@ -665,7 +665,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
         ALeffectslot *temp = Context->EffectSlotMap.array[pos].value;
         Context->EffectSlotMap.array[pos].value = NULL;
 
-        DELETE(temp->EffectState);
+        DELETE_OBJ(temp->EffectState);
 
         FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALeffectslot));

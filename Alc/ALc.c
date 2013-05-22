@@ -1779,7 +1779,7 @@ static ALCvoid FreeDevice(ALCdevice *device)
     {
         ALeffectState *state = device->DefaultSlot->EffectState;
         device->DefaultSlot = NULL;
-        DELETE(state);
+        DELETE_OBJ(state);
     }
 
     if(device->BufferMap.size > 0)
@@ -2902,7 +2902,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         {
             ALeffectState *state = device->DefaultSlot->EffectState;
             device->DefaultSlot = NULL;
-            DELETE(state);
+            DELETE_OBJ(state);
             ERR("Failed to initialize the default effect\n");
         }
     }

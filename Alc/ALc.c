@@ -845,7 +845,7 @@ static void alc_initconfig(void)
 
     capfilter = 0;
 #ifdef HAVE_SSE
-    capfilter |= CPU_CAP_SSE;
+    capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2;
 #endif
 #ifdef HAVE_NEON
     capfilter |= CPU_CAP_NEON;
@@ -872,6 +872,8 @@ static void alc_initconfig(void)
                 len = (next ? ((size_t)(next-str)) : strlen(str));
                 if(strncasecmp(str, "sse", len) == 0)
                     capfilter &= ~CPU_CAP_SSE;
+                else if(strncasecmp(str, "sse2", len) == 0)
+                    capfilter &= ~CPU_CAP_SSE2;
                 else if(strncasecmp(str, "neon", len) == 0)
                     capfilter &= ~CPU_CAP_NEON;
                 else

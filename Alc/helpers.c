@@ -106,7 +106,11 @@ void FillCPUCaps(ALuint capfilter)
         {
 #ifdef bit_SSE
             if((cpuinf[0].regs[3]&bit_SSE))
+            {
                 caps |= CPU_CAP_SSE;
+                if((cpuinf[0].regs[3]&bit_SSE2))
+                    caps |= CPU_CAP_SSE2;
+            }
 #endif
         }
     }
@@ -119,7 +123,11 @@ void FillCPUCaps(ALuint capfilter)
     else
     {
         if(IsProcessorFeaturePresent(PF_XMMI_INSTRUCTIONS_AVAILABLE))
+        {
             caps |= CPU_CAP_SSE;
+            if(IsProcessorFeaturePresent(PF_XMMI64_INSTRUCTIONS_AVAILABLE))
+                caps |= CPU_CAP_SSE2;
+        }
     }
 #endif
 #ifdef HAVE_NEON
@@ -127,9 +135,10 @@ void FillCPUCaps(ALuint capfilter)
     caps |= CPU_CAP_NEON;
 #endif
 
-    TRACE("Got caps:%s%s%s\n", ((caps&CPU_CAP_SSE)?((capfilter&CPU_CAP_SSE)?" SSE":" (SSE)"):""),
-                               ((caps&CPU_CAP_NEON)?((capfilter&CPU_CAP_NEON)?" Neon":" (Neon)"):""),
-                               ((!caps)?" -none-":""));
+    TRACE("Got caps:%s%s%s%s\n", ((caps&CPU_CAP_SSE)?((capfilter&CPU_CAP_SSE)?" SSE":" (SSE)"):""),
+                                 ((caps&CPU_CAP_SSE)?((capfilter&CPU_CAP_SSE2)?" SSE2":" (SSE2)"):""),
+                                 ((caps&CPU_CAP_NEON)?((capfilter&CPU_CAP_NEON)?" Neon":" (Neon)"):""),
+                                 ((!caps)?" -none-":""));
     CPUCapFlags = caps & capfilter;
 }
 
@@ -207,6 +216,8 @@ void SetMixerFPUMode(FPUCtl *ctl)
         ctl->sse_state = sseState;
         sseState |= 0x6000; /* set round-to-zero */
         sseState |= 0x8000; /* set flush-to-zero */
+        if((CPUCapFlags&CPU_CAP_SSE2))
+            sseState |= 0x0040; /* set denormals-are-zero */
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&sseState));
     }
 #endif

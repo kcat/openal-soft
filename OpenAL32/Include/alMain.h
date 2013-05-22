@@ -837,7 +837,8 @@ extern ALint RTPrioLevel;
 extern ALuint CPUCapFlags;
 enum {
     CPU_CAP_SSE    = 1<<0,
-    CPU_CAP_NEON   = 1<<1,
+    CPU_CAP_SSE2   = 1<<1,
+    CPU_CAP_NEON   = 1<<2,
 };
 
 void FillCPUCaps(ALuint capfilter);

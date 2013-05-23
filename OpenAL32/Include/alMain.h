@@ -748,7 +748,11 @@ void *al_calloc(size_t alignment, size_t size);
 void al_free(void *ptr);
 
 typedef struct {
+#ifdef HAVE_FENV_H
+    DERIVE_FROM_TYPE(fenv_t);
+#else
     int state;
+#endif
 #ifdef HAVE_SSE
     int sse_state;
 #endif

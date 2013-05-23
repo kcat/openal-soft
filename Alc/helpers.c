@@ -201,8 +201,8 @@ void al_free(void *ptr)
 
 void SetMixerFPUMode(FPUCtl *ctl)
 {
-#if defined(HAVE_FESETROUND)
-    ctl->state = fegetround();
+#ifdef HAVE_FENV_H
+    fegetenv(STATIC_CAST(fenv_t, ctl));
 #if defined(__GNUC__) && defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
         __asm__ __volatile__("stmxcsr %0" : "=m" (*&ctl->sse_state));
@@ -245,8 +245,8 @@ void SetMixerFPUMode(FPUCtl *ctl)
 
 void RestoreFPUMode(const FPUCtl *ctl)
 {
-#if defined(HAVE_FESETROUND)
-    fesetround(ctl->state);
+#ifdef HAVE_FENV_H
+    fesetenv(STATIC_CAST(fenv_t, ctl));
 #if defined(__GNUC__) && defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&ctl->sse_state));

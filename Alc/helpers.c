@@ -201,19 +201,20 @@ void al_free(void *ptr)
 
 void SetMixerFPUMode(FPUCtl *ctl)
 {
-#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
-    unsigned short fpuState;
-    __asm__ __volatile__("fnstcw %0" : "=m" (*&fpuState));
-    ctl->state = fpuState;
-    fpuState &= ~0x300; /* clear precision to single */
-    fpuState |=  0xC00; /* set round-to-zero */
-    __asm__ __volatile__("fldcw %0" : : "m" (*&fpuState));
-#ifdef HAVE_SSE
+#if defined(HAVE_FESETROUND)
+    ctl->state = fegetround();
+#if defined(__GNUC__) && defined(HAVE_SSE)
+    if((CPUCapFlags&CPU_CAP_SSE))
+        __asm__ __volatile__("stmxcsr %0" : "=m" (*&ctl->sse_state));
+#endif
+
+#ifdef FE_TOWARDZERO
+    fesetround(FE_TOWARDZERO);
+#endif
+#if defined(__GNUC__) && defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
     {
-        int sseState;
-        __asm__ __volatile__("stmxcsr %0" : "=m" (*&sseState));
-        ctl->sse_state = sseState;
+        int sseState = ctl->sse_state;
         sseState |= 0x6000; /* set round-to-zero */
         sseState |= 0x8000; /* set flush-to-zero */
         if((CPUCapFlags&CPU_CAP_SSE2))
@@ -221,7 +222,9 @@ void SetMixerFPUMode(FPUCtl *ctl)
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&sseState));
     }
 #endif
+
 #elif defined(HAVE___CONTROL87_2)
+
     int mode;
     __control87_2(0, 0, &ctl->state, NULL);
     __control87_2(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC, &mode, NULL);
@@ -232,37 +235,35 @@ void SetMixerFPUMode(FPUCtl *ctl)
         __control87_2(_RC_CHOP|_DN_FLUSH, _MCW_RC|_MCW_DN, NULL, &mode);
     }
 #endif
+
 #elif defined(HAVE__CONTROLFP)
+
     ctl->state = _controlfp(0, 0);
     (void)_controlfp(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC);
-#elif defined(HAVE_FESETROUND)
-    ctl->state = fegetround();
-#ifdef FE_TOWARDZERO
-    fesetround(FE_TOWARDZERO);
-#endif
 #endif
 }
 
 void RestoreFPUMode(const FPUCtl *ctl)
 {
-#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
-    unsigned short fpuState = ctl->state;
-    __asm__ __volatile__("fldcw %0" : : "m" (*&fpuState));
-#ifdef HAVE_SSE
+#if defined(HAVE_FESETROUND)
+    fesetround(ctl->state);
+#if defined(__GNUC__) && defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&ctl->sse_state));
 #endif
+
 #elif defined(HAVE___CONTROL87_2)
+
     int mode;
     __control87_2(ctl->state, _MCW_RC|_MCW_PC, &mode, NULL);
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
         __control87_2(ctl->sse_state, _MCW_RC|_MCW_DN, NULL, &mode);
 #endif
+
 #elif defined(HAVE__CONTROLFP)
+
     _controlfp(ctl->state, _MCW_RC|_MCW_PC);
-#elif defined(HAVE_FESETROUND)
-    fesetround(ctl->state);
 #endif
 }
 

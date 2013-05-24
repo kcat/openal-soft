@@ -113,7 +113,7 @@ IF(NOT HAVE_RESTRICT)
     IF(HAVE___RESTRICT)
         ADD_DEFINITIONS(-Drestrict=__restrict)
     ELSE()
-        ADD_DEFINITIONS(-Drestrict=)
+        ADD_DEFINITIONS("-Drestrict=")
     ENDIF()
 ENDIF()
 

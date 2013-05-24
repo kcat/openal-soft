@@ -448,7 +448,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcEqualizer.c
               Alc/alcFlanger.c
               Alc/alcModulator.c
-              Alc/alcReverb.c
+              Alc/effects/reverb.c
               Alc/alcRing.c
               Alc/alcThread.c
               Alc/bs2b.c

@@ -439,22 +439,22 @@ SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
 )
 SET(ALC_OBJS  Alc/ALc.c
               Alc/ALu.c
-              Alc/effects/null.c
-              Alc/alcChorus.c
               Alc/alcConfig.c
-              Alc/alcDedicated.c
-              Alc/alcDistortion.c
-              Alc/alcEcho.c
-              Alc/alcEqualizer.c
-              Alc/alcFlanger.c
-              Alc/alcModulator.c
-              Alc/effects/reverb.c
               Alc/alcRing.c
               Alc/alcThread.c
               Alc/bs2b.c
+              Alc/effects/chorus.c
+              Alc/effects/dedicated.c
+              Alc/effects/distortion.c
+              Alc/effects/echo.c
+              Alc/effects/equalizer.c
+              Alc/effects/flanger.c
+              Alc/effects/modulator.c
+              Alc/effects/null.c
+              Alc/effects/reverb.c
               Alc/helpers.c
-              Alc/panning.c
               Alc/hrtf.c
+              Alc/panning.c
               Alc/mixer.c
               Alc/mixer_c.c
 )

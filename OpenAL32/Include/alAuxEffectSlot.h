@@ -102,6 +102,7 @@ ALenum InitEffectSlot(ALeffectslot *slot);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 
+ALeffectStateFactory *ALnullStateFactory_getFactory(void);
 ALeffectStateFactory *ALreverbStateFactory_getFactory(void);
 ALeffectStateFactory *ALchorusStateFactory_getFactory(void);
 ALeffectStateFactory *ALdistortionStateFactory_getFactory(void);

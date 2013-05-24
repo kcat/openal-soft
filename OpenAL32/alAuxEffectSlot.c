@@ -398,101 +398,6 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
 }
 
 
-typedef struct ALnoneStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALnoneStateFactory;
-
-static ALnoneStateFactory NoneFactory;
-
-
-typedef struct ALnoneState {
-    DERIVE_FROM_TYPE(ALeffectState);
-} ALnoneState;
-
-static ALvoid ALnoneState_Destruct(ALnoneState *state)
-{
-    (void)state;
-}
-static ALboolean ALnoneState_DeviceUpdate(ALnoneState *state, ALCdevice *device)
-{
-    return AL_TRUE;
-    (void)state;
-    (void)device;
-}
-static ALvoid ALnoneState_Update(ALnoneState *state, ALCdevice *device, const ALeffectslot *slot)
-{
-    (void)state;
-    (void)device;
-    (void)slot;
-}
-static ALvoid ALnoneState_Process(ALnoneState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE])
-{
-    (void)state;
-    (void)samplesToDo;
-    (void)samplesIn;
-    (void)samplesOut;
-}
-static ALeffectStateFactory *ALnoneState_getCreator(void)
-{
-    return STATIC_CAST(ALeffectStateFactory, &NoneFactory);
-}
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALnoneState);
-
-
-ALeffectState *ALnoneStateFactory_create(void)
-{
-    ALnoneState *state;
-
-    state = calloc(1, sizeof(*state));
-    if(!state) return NULL;
-    SET_VTABLE2(ALnoneState, ALeffectState, state);
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-static ALvoid ALnoneStateFactory_destroy(ALeffectState *effect)
-{
-    ALnoneState *state = STATIC_UPCAST(ALnoneState, ALeffectState, effect);
-    ALnoneState_Destruct(state);
-    free(state);
-}
-
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALnoneStateFactory);
-
-
-static void init_none_factory(void)
-{
-    SET_VTABLE2(ALnoneStateFactory, ALeffectStateFactory, &NoneFactory);
-}
-
-ALeffectStateFactory *ALnoneStateFactory_getFactory(void)
-{
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    pthread_once(&once, init_none_factory);
-    return STATIC_CAST(ALeffectStateFactory, &NoneFactory);
-}
-
-
-void null_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
-void null_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{ (void)effect;(void)param;(void)vals; alSetError(context, AL_INVALID_ENUM); }
-void null_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
-{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
-void null_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ (void)effect;(void)param;(void)vals; alSetError(context, AL_INVALID_ENUM); }
-
-void null_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
-{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
-void null_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{ (void)effect;(void)param;(void)vals; alSetError(context, AL_INVALID_ENUM); }
-void null_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
-{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
-void null_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ (void)effect;(void)param;(void)vals; alSetError(context, AL_INVALID_ENUM); }
-
-
 static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *slot)
 {
     ALeffectslot **slotlist, **slotlistend;
@@ -550,7 +455,7 @@ void InitEffectFactoryMap(void)
 {
     InitUIntMap(&EffectStateFactoryMap, ~0);
 
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_NULL, ALnoneStateFactory_getFactory());
+    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_NULL, ALnullStateFactory_getFactory());
     InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_EAXREVERB, ALreverbStateFactory_getFactory());
     InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_REVERB, ALreverbStateFactory_getFactory());
     InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_CHORUS, ALchorusStateFactory_getFactory());

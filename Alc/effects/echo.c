@@ -228,13 +228,13 @@ ALeffectStateFactory *ALechoStateFactory_getFactory(void)
 }
 
 
-void echo_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALecho_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 { (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
-void echo_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALecho_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    echo_SetParami(effect, context, param, vals[0]);
+    ALecho_SetParami(effect, context, param, vals[0]);
 }
-void echo_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALecho_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -278,18 +278,18 @@ void echo_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat
             break;
     }
 }
-void echo_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALecho_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    echo_SetParamf(effect, context, param, vals[0]);
+    ALecho_SetParamf(effect, context, param, vals[0]);
 }
 
-void echo_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALecho_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 { (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
-void echo_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALecho_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    echo_GetParami(effect, context, param, vals);
+    ALecho_GetParami(effect, context, param, vals);
 }
-void echo_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALecho_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -318,7 +318,9 @@ void echo_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat
             break;
     }
 }
-void echo_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALecho_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    echo_GetParamf(effect, context, param, vals);
+    ALecho_GetParamf(effect, context, param, vals);
 }
+
+DEFINE_ALEFFECT_VTABLE(ALecho);

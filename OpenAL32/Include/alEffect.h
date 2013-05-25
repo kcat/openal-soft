@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+typedef struct ALeffect ALeffect;
+
 enum {
     EAXREVERB = 0,
     REVERB,
@@ -25,7 +27,39 @@ extern ALboolean DisabledEffects[MAX_EFFECTS];
 extern ALfloat ReverbBoost;
 extern ALboolean EmulateEAXReverb;
 
-typedef struct ALeffect
+struct ALeffectVtable {
+    void (*const SetParami)(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
+    void (*const SetParamiv)(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
+    void (*const SetParamf)(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
+    void (*const SetParamfv)(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
+
+    void (*const GetParami)(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
+    void (*const GetParamiv)(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
+    void (*const GetParamf)(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
+    void (*const GetParamfv)(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
+};
+
+#define DEFINE_ALEFFECT_VTABLE(T)           \
+const struct ALeffectVtable T##_vtable = {  \
+    T##_SetParami, T##_SetParamiv,          \
+    T##_SetParamf, T##_SetParamfv,          \
+    T##_GetParami, T##_GetParamiv,          \
+    T##_GetParamf, T##_GetParamfv,          \
+}
+
+extern const struct ALeffectVtable ALeaxreverb_vtable;
+extern const struct ALeffectVtable ALreverb_vtable;
+extern const struct ALeffectVtable ALchorus_vtable;
+extern const struct ALeffectVtable ALdistortion_vtable;
+extern const struct ALeffectVtable ALecho_vtable;
+extern const struct ALeffectVtable ALequalizer_vtable;
+extern const struct ALeffectVtable ALflanger_vtable;
+extern const struct ALeffectVtable ALmodulator_vtable;
+extern const struct ALeffectVtable ALnull_vtable;
+extern const struct ALeffectVtable ALdedicated_vtable;
+
+
+struct ALeffect
 {
     // Effect type (AL_EFFECT_NULL, ...)
     ALenum type;
@@ -119,122 +153,24 @@ typedef struct ALeffect
         ALfloat EQBandwidth;
     } Distortion;
 
-    void (*SetParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-    void (*SetParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-    void (*SetParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-    void (*SetParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-
-    void (*GetParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-    void (*GetParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-    void (*GetParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*GetParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
+    const struct ALeffectVtable *vtbl;
 
     /* Self ID */
     ALuint id;
-} ALeffect;
+};
 
-#define ALeffect_SetParami(x, c, p, v)  ((x)->SetParami((x),(c),(p),(v)))
-#define ALeffect_SetParamiv(x, c, p, v) ((x)->SetParamiv((x),(c),(p),(v)))
-#define ALeffect_SetParamf(x, c, p, v)  ((x)->SetParamf((x),(c),(p),(v)))
-#define ALeffect_SetParamfv(x, c, p, v) ((x)->SetParamfv((x),(c),(p),(v)))
+#define ALeffect_SetParami(x, c, p, v)  ((x)->vtbl->SetParami((x),(c),(p),(v)))
+#define ALeffect_SetParamiv(x, c, p, v) ((x)->vtbl->SetParamiv((x),(c),(p),(v)))
+#define ALeffect_SetParamf(x, c, p, v)  ((x)->vtbl->SetParamf((x),(c),(p),(v)))
+#define ALeffect_SetParamfv(x, c, p, v) ((x)->vtbl->SetParamfv((x),(c),(p),(v)))
 
-#define ALeffect_GetParami(x, c, p, v)  ((x)->GetParami((x),(c),(p),(v)))
-#define ALeffect_GetParamiv(x, c, p, v) ((x)->GetParamiv((x),(c),(p),(v)))
-#define ALeffect_GetParamf(x, c, p, v)  ((x)->GetParamf((x),(c),(p),(v)))
-#define ALeffect_GetParamfv(x, c, p, v) ((x)->GetParamfv((x),(c),(p),(v)))
+#define ALeffect_GetParami(x, c, p, v)  ((x)->vtbl->GetParami((x),(c),(p),(v)))
+#define ALeffect_GetParamiv(x, c, p, v) ((x)->vtbl->GetParamiv((x),(c),(p),(v)))
+#define ALeffect_GetParamf(x, c, p, v)  ((x)->vtbl->GetParamf((x),(c),(p),(v)))
+#define ALeffect_GetParamfv(x, c, p, v) ((x)->vtbl->GetParamfv((x),(c),(p),(v)))
 
 static __inline ALboolean IsReverbEffect(ALenum type)
 { return type == AL_EFFECT_REVERB || type == AL_EFFECT_EAXREVERB; }
-
-void eaxreverb_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-void eaxreverb_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-void eaxreverb_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-void eaxreverb_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-void eaxreverb_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-void eaxreverb_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-void eaxreverb_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-void eaxreverb_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
-
-void reverb_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-void reverb_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-void reverb_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-void reverb_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-void reverb_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-void reverb_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-void reverb_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-void reverb_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
-
-void chorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-void chorus_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-void chorus_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-void chorus_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-void chorus_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-void chorus_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-void chorus_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-void chorus_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
-
-void distortion_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-void distortion_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-void distortion_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-void distortion_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-void distortion_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-void distortion_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-void distortion_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-void distortion_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
-
-void echo_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-void echo_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-void echo_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-void echo_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-void echo_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-void echo_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-void echo_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-void echo_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
-
-void equalizer_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-void equalizer_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-void equalizer_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-void equalizer_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-void equalizer_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-void equalizer_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-void equalizer_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-void equalizer_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
-
-void flanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-void flanger_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-void flanger_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-void flanger_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-void flanger_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-void flanger_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-void flanger_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-void flanger_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
-
-void mod_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-void mod_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-void mod_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-void mod_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-void mod_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-void mod_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-void mod_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-void mod_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
-
-void ded_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-void ded_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-void ded_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-void ded_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-void ded_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-void ded_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-void ded_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-void ded_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
-
-void null_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-void null_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-void null_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-void null_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-void null_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-void null_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-void null_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-void null_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
 
 ALenum InitEffect(ALeffect *effect);
 ALvoid ReleaseALEffects(ALCdevice *device);

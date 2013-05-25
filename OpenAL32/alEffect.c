@@ -395,14 +395,7 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Reverb.LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE;
         effect->Reverb.RoomRolloffFactor = AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR;
         effect->Reverb.DecayHFLimit = AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT;
-        effect->SetParami  = eaxreverb_SetParami;
-        effect->SetParamiv = eaxreverb_SetParamiv;
-        effect->SetParamf  = eaxreverb_SetParamf;
-        effect->SetParamfv = eaxreverb_SetParamfv;
-        effect->GetParami  = eaxreverb_GetParami;
-        effect->GetParamiv = eaxreverb_GetParamiv;
-        effect->GetParamf  = eaxreverb_GetParamf;
-        effect->GetParamfv = eaxreverb_GetParamfv;
+        effect->vtbl = &ALeaxreverb_vtable;
         break;
     case AL_EFFECT_REVERB:
         effect->Reverb.Density   = AL_REVERB_DEFAULT_DENSITY;
@@ -418,14 +411,7 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Reverb.AirAbsorptionGainHF = AL_REVERB_DEFAULT_AIR_ABSORPTION_GAINHF;
         effect->Reverb.RoomRolloffFactor = AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR;
         effect->Reverb.DecayHFLimit = AL_REVERB_DEFAULT_DECAY_HFLIMIT;
-        effect->SetParami  = reverb_SetParami;
-        effect->SetParamiv = reverb_SetParamiv;
-        effect->SetParamf  = reverb_SetParamf;
-        effect->SetParamfv = reverb_SetParamfv;
-        effect->GetParami  = reverb_GetParami;
-        effect->GetParamiv = reverb_GetParamiv;
-        effect->GetParamf  = reverb_GetParamf;
-        effect->GetParamfv = reverb_GetParamfv;
+        effect->vtbl = &ALreverb_vtable;
         break;
     case AL_EFFECT_CHORUS:
         effect->Chorus.Waveform = AL_CHORUS_DEFAULT_WAVEFORM;
@@ -434,14 +420,7 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Chorus.Depth = AL_CHORUS_DEFAULT_DEPTH;
         effect->Chorus.Feedback = AL_CHORUS_DEFAULT_FEEDBACK;
         effect->Chorus.Delay = AL_CHORUS_DEFAULT_DELAY;
-        effect->SetParami  = chorus_SetParami;
-        effect->SetParamiv = chorus_SetParamiv;
-        effect->SetParamf  = chorus_SetParamf;
-        effect->SetParamfv = chorus_SetParamfv;
-        effect->GetParami  = chorus_GetParami;
-        effect->GetParamiv = chorus_GetParamiv;
-        effect->GetParamf  = chorus_GetParamf;
-        effect->GetParamfv = chorus_GetParamfv;
+        effect->vtbl = &ALchorus_vtable;
         break;
     case AL_EFFECT_DISTORTION:
         effect->Distortion.Edge = AL_DISTORTION_DEFAULT_EDGE;
@@ -449,14 +428,7 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Distortion.LowpassCutoff = AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF;
         effect->Distortion.EQCenter = AL_DISTORTION_DEFAULT_EQCENTER;
         effect->Distortion.EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH;
-        effect->SetParami  = distortion_SetParami;
-        effect->SetParamiv = distortion_SetParamiv;
-        effect->SetParamf  = distortion_SetParamf;
-        effect->SetParamfv = distortion_SetParamfv;
-        effect->GetParami  = distortion_GetParami;
-        effect->GetParamiv = distortion_GetParamiv;
-        effect->GetParamf  = distortion_GetParamf;
-        effect->GetParamfv = distortion_GetParamfv;
+        effect->vtbl = &ALdistortion_vtable;
         break;
     case AL_EFFECT_ECHO:
         effect->Echo.Delay    = AL_ECHO_DEFAULT_DELAY;
@@ -464,14 +436,7 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Echo.Damping  = AL_ECHO_DEFAULT_DAMPING;
         effect->Echo.Feedback = AL_ECHO_DEFAULT_FEEDBACK;
         effect->Echo.Spread   = AL_ECHO_DEFAULT_SPREAD;
-        effect->SetParami  = echo_SetParami;
-        effect->SetParamiv = echo_SetParamiv;
-        effect->SetParamf  = echo_SetParamf;
-        effect->SetParamfv = echo_SetParamfv;
-        effect->GetParami  = echo_GetParami;
-        effect->GetParamiv = echo_GetParamiv;
-        effect->GetParamf  = echo_GetParamf;
-        effect->GetParamfv = echo_GetParamfv;
+        effect->vtbl = &ALecho_vtable;
         break;
     case AL_EFFECT_EQUALIZER:
         effect->Equalizer.LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF;
@@ -484,14 +449,7 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Equalizer.Mid2Width = AL_EQUALIZER_DEFAULT_MID2_WIDTH;
         effect->Equalizer.HighCutoff = AL_EQUALIZER_DEFAULT_HIGH_CUTOFF;
         effect->Equalizer.HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN;
-        effect->SetParami  = equalizer_SetParami;
-        effect->SetParamiv = equalizer_SetParamiv;
-        effect->SetParamf  = equalizer_SetParamf;
-        effect->SetParamfv = equalizer_SetParamfv;
-        effect->GetParami  = equalizer_GetParami;
-        effect->GetParamiv = equalizer_GetParamiv;
-        effect->GetParamf  = equalizer_GetParamf;
-        effect->GetParamfv = equalizer_GetParamfv;
+        effect->vtbl = &ALequalizer_vtable;
         break;
     case AL_EFFECT_FLANGER:
         effect->Flanger.Waveform = AL_FLANGER_DEFAULT_WAVEFORM;
@@ -500,49 +458,21 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Flanger.Depth = AL_FLANGER_DEFAULT_DEPTH;
         effect->Flanger.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
         effect->Flanger.Delay = AL_FLANGER_DEFAULT_DELAY;
-        effect->SetParami  = flanger_SetParami;
-        effect->SetParamiv = flanger_SetParamiv;
-        effect->SetParamf  = flanger_SetParamf;
-        effect->SetParamfv = flanger_SetParamfv;
-        effect->GetParami  = flanger_GetParami;
-        effect->GetParamiv = flanger_GetParamiv;
-        effect->GetParamf  = flanger_GetParamf;
-        effect->GetParamfv = flanger_GetParamfv;
+        effect->vtbl = &ALflanger_vtable;
         break;
     case AL_EFFECT_RING_MODULATOR:
         effect->Modulator.Frequency      = AL_RING_MODULATOR_DEFAULT_FREQUENCY;
         effect->Modulator.HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF;
         effect->Modulator.Waveform       = AL_RING_MODULATOR_DEFAULT_WAVEFORM;
-        effect->SetParami  = mod_SetParami;
-        effect->SetParamiv = mod_SetParamiv;
-        effect->SetParamf  = mod_SetParamf;
-        effect->SetParamfv = mod_SetParamfv;
-        effect->GetParami  = mod_GetParami;
-        effect->GetParamiv = mod_GetParamiv;
-        effect->GetParamf  = mod_GetParamf;
-        effect->GetParamfv = mod_GetParamfv;
+        effect->vtbl = &ALmodulator_vtable;
         break;
     case AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT:
     case AL_EFFECT_DEDICATED_DIALOGUE:
         effect->Dedicated.Gain = 1.0f;
-        effect->SetParami  = ded_SetParami;
-        effect->SetParamiv = ded_SetParamiv;
-        effect->SetParamf  = ded_SetParamf;
-        effect->SetParamfv = ded_SetParamfv;
-        effect->GetParami  = ded_GetParami;
-        effect->GetParamiv = ded_GetParamiv;
-        effect->GetParamf  = ded_GetParamf;
-        effect->GetParamfv = ded_GetParamfv;
+        effect->vtbl = &ALdedicated_vtable;
         break;
     default:
-        effect->SetParami  = null_SetParami;
-        effect->SetParamiv = null_SetParamiv;
-        effect->SetParamf  = null_SetParamf;
-        effect->SetParamfv = null_SetParamfv;
-        effect->GetParami  = null_GetParami;
-        effect->GetParamiv = null_GetParamiv;
-        effect->GetParamf  = null_GetParamf;
-        effect->GetParamfv = null_GetParamfv;
+        effect->vtbl = &ALnull_vtable;
         break;
     }
     effect->type = type;

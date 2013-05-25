@@ -328,7 +328,7 @@ ALeffectStateFactory *ALequalizerStateFactory_getFactory(void)
 }
 
 
-void equalizer_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALequalizer_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     effect=effect;
     val=val;
@@ -340,11 +340,11 @@ void equalizer_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, AL
             break;
     }
 }
-void equalizer_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALequalizer_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    equalizer_SetParami(effect, context, param, vals[0]);
+    ALequalizer_SetParami(effect, context, param, vals[0]);
 }
-void equalizer_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALequalizer_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -423,12 +423,12 @@ void equalizer_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             break;
     }
 }
-void equalizer_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALequalizer_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    equalizer_SetParamf(effect, context, param, vals[0]);
+    ALequalizer_SetParamf(effect, context, param, vals[0]);
 }
 
-void equalizer_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALequalizer_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     effect=effect;
     val=val;
@@ -440,11 +440,11 @@ void equalizer_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, AL
             break;
     }
 }
-void equalizer_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALequalizer_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    equalizer_GetParami(effect, context, param, vals);
+    ALequalizer_GetParami(effect, context, param, vals);
 }
-void equalizer_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALequalizer_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -493,7 +493,9 @@ void equalizer_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             break;
     }
 }
-void equalizer_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALequalizer_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    equalizer_GetParamf(effect, context, param, vals);
+    ALequalizer_GetParamf(effect, context, param, vals);
 }
+
+DEFINE_ALEFFECT_VTABLE(ALequalizer);

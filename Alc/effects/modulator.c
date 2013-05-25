@@ -245,7 +245,7 @@ ALeffectStateFactory *ALmodulatorStateFactory_getFactory(void)
 }
 
 
-void mod_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALmodulator_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -268,17 +268,17 @@ void mod_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat 
             break;
     }
 }
-void mod_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALmodulator_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    mod_SetParamf(effect, context, param, vals[0]);
+    ALmodulator_SetParamf(effect, context, param, vals[0]);
 }
-void mod_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALmodulator_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
         case AL_RING_MODULATOR_FREQUENCY:
         case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            mod_SetParamf(effect, context, param, (ALfloat)val);
+            ALmodulator_SetParamf(effect, context, param, (ALfloat)val);
             break;
 
         case AL_RING_MODULATOR_WAVEFORM:
@@ -293,12 +293,12 @@ void mod_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint va
             break;
     }
 }
-void mod_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALmodulator_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    mod_SetParami(effect, context, param, vals[0]);
+    ALmodulator_SetParami(effect, context, param, vals[0]);
 }
 
-void mod_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALmodulator_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -317,11 +317,11 @@ void mod_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *v
             break;
     }
 }
-void mod_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALmodulator_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    mod_GetParami(effect, context, param, vals);
+    ALmodulator_GetParami(effect, context, param, vals);
 }
-void mod_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALmodulator_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -337,7 +337,9 @@ void mod_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat 
             break;
     }
 }
-void mod_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALmodulator_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    mod_GetParamf(effect, context, param, vals);
+    ALmodulator_GetParamf(effect, context, param, vals);
 }
+
+DEFINE_ALEFFECT_VTABLE(ALmodulator);

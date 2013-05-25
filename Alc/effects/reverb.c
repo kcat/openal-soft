@@ -1307,7 +1307,7 @@ ALeffectStateFactory *ALreverbStateFactory_getFactory(void)
 }
 
 
-void eaxreverb_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALeaxreverb_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
@@ -1323,11 +1323,11 @@ void eaxreverb_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, AL
             break;
     }
 }
-void eaxreverb_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALeaxreverb_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    eaxreverb_SetParami(effect, context, param, vals[0]);
+    ALeaxreverb_SetParami(effect, context, param, vals[0]);
 }
-void eaxreverb_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALeaxreverb_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -1476,7 +1476,7 @@ void eaxreverb_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             break;
     }
 }
-void eaxreverb_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALeaxreverb_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
     switch(param)
     {
@@ -1506,12 +1506,12 @@ void eaxreverb_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, c
             break;
 
         default:
-            eaxreverb_SetParamf(effect, context, param, vals[0]);
+            ALeaxreverb_SetParamf(effect, context, param, vals[0]);
             break;
     }
 }
 
-void eaxreverb_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALeaxreverb_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -1524,11 +1524,11 @@ void eaxreverb_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, AL
             break;
     }
 }
-void eaxreverb_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALeaxreverb_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    eaxreverb_GetParami(effect, context, param, vals);
+    ALeaxreverb_GetParami(effect, context, param, vals);
 }
-void eaxreverb_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALeaxreverb_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -1617,7 +1617,7 @@ void eaxreverb_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             break;
     }
 }
-void eaxreverb_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALeaxreverb_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     switch(param)
     {
@@ -1637,13 +1637,14 @@ void eaxreverb_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, A
             break;
 
         default:
-            eaxreverb_GetParamf(effect, context, param, vals);
+            ALeaxreverb_GetParamf(effect, context, param, vals);
             break;
     }
 }
 
+DEFINE_ALEFFECT_VTABLE(ALeaxreverb);
 
-void reverb_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALreverb_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
@@ -1659,11 +1660,11 @@ void reverb_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint
             break;
     }
 }
-void reverb_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALreverb_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    reverb_SetParami(effect, context, param, vals[0]);
+    ALreverb_SetParami(effect, context, param, vals[0]);
 }
-void reverb_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALreverb_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -1756,12 +1757,12 @@ void reverb_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
             break;
     }
 }
-void reverb_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALreverb_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    reverb_SetParamf(effect, context, param, vals[0]);
+    ALreverb_SetParamf(effect, context, param, vals[0]);
 }
 
-void reverb_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALreverb_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -1774,11 +1775,11 @@ void reverb_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint
             break;
     }
 }
-void reverb_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALreverb_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    reverb_GetParami(effect, context, param, vals);
+    ALreverb_GetParami(effect, context, param, vals);
 }
-void reverb_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALreverb_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -1835,7 +1836,9 @@ void reverb_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
             break;
     }
 }
-void reverb_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALreverb_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    reverb_GetParamf(effect, context, param, vals);
+    ALreverb_GetParamf(effect, context, param, vals);
 }
+
+DEFINE_ALEFFECT_VTABLE(ALreverb);

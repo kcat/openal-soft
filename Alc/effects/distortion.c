@@ -286,7 +286,7 @@ ALeffectStateFactory *ALdistortionStateFactory_getFactory(void)
 }
 
 
-void distortion_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALdistortion_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     effect=effect;
     val=val;
@@ -298,11 +298,11 @@ void distortion_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, A
             break;
     }
 }
-void distortion_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALdistortion_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    distortion_SetParami(effect, context, param, vals[0]);
+    ALdistortion_SetParami(effect, context, param, vals[0]);
 }
-void distortion_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALdistortion_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -346,12 +346,12 @@ void distortion_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, A
             break;
     }
 }
-void distortion_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALdistortion_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    distortion_SetParamf(effect, context, param, vals[0]);
+    ALdistortion_SetParamf(effect, context, param, vals[0]);
 }
 
-void distortion_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALdistortion_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     effect=effect;
     val=val;
@@ -363,11 +363,11 @@ void distortion_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, A
             break;
     }
 }
-void distortion_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALdistortion_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    distortion_GetParami(effect, context, param, vals);
+    ALdistortion_GetParami(effect, context, param, vals);
 }
-void distortion_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALdistortion_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -396,7 +396,9 @@ void distortion_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, A
             break;
     }
 }
-void distortion_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALdistortion_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    distortion_GetParamf(effect, context, param, vals);
+    ALdistortion_GetParamf(effect, context, param, vals);
 }
+
+DEFINE_ALEFFECT_VTABLE(ALdistortion);

@@ -290,7 +290,7 @@ ALeffectStateFactory *ALflangerStateFactory_getFactory(void)
 }
 
 
-void flanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALflanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
@@ -313,11 +313,11 @@ void flanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALin
             break;
     }
 }
-void flanger_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALflanger_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    flanger_SetParami(effect, context, param, vals[0]);
+    ALflanger_SetParami(effect, context, param, vals[0]);
 }
-void flanger_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALflanger_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -354,12 +354,12 @@ void flanger_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfl
             break;
     }
 }
-void flanger_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALflanger_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    flanger_SetParamf(effect, context, param, vals[0]);
+    ALflanger_SetParamf(effect, context, param, vals[0]);
 }
 
-void flanger_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALflanger_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -376,11 +376,11 @@ void flanger_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALin
             break;
     }
 }
-void flanger_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALflanger_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    flanger_GetParami(effect, context, param, vals);
+    ALflanger_GetParami(effect, context, param, vals);
 }
-void flanger_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALflanger_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -405,7 +405,9 @@ void flanger_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfl
             break;
     }
 }
-void flanger_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALflanger_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    flanger_GetParamf(effect, context, param, vals);
+    ALflanger_GetParamf(effect, context, param, vals);
 }
+
+DEFINE_ALEFFECT_VTABLE(ALflanger);

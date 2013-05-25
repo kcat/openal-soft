@@ -290,7 +290,7 @@ ALeffectStateFactory *ALchorusStateFactory_getFactory(void)
 }
 
 
-void chorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALchorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
@@ -313,11 +313,11 @@ void chorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint
             break;
     }
 }
-void chorus_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALchorus_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    chorus_SetParami(effect, context, param, vals[0]);
+    ALchorus_SetParami(effect, context, param, vals[0]);
 }
-void chorus_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALchorus_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -354,12 +354,12 @@ void chorus_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
             break;
     }
 }
-void chorus_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALchorus_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    chorus_SetParamf(effect, context, param, vals[0]);
+    ALchorus_SetParamf(effect, context, param, vals[0]);
 }
 
-void chorus_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALchorus_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -376,11 +376,11 @@ void chorus_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint
             break;
     }
 }
-void chorus_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALchorus_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    chorus_GetParami(effect, context, param, vals);
+    ALchorus_GetParami(effect, context, param, vals);
 }
-void chorus_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALchorus_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -405,7 +405,9 @@ void chorus_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
             break;
     }
 }
-void chorus_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALchorus_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    chorus_GetParamf(effect, context, param, vals);
+    ALchorus_GetParamf(effect, context, param, vals);
 }
+
+DEFINE_ALEFFECT_VTABLE(ALchorus);

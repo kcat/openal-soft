@@ -131,13 +131,13 @@ ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void)
 }
 
 
-void ded_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALdedicated_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 { (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
-void ded_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALdedicated_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    ded_SetParami(effect, context, param, vals[0]);
+    ALdedicated_SetParami(effect, context, param, vals[0]);
 }
-void ded_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALdedicated_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -153,18 +153,18 @@ void ded_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat 
             break;
     }
 }
-void ded_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALdedicated_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    ded_SetParamf(effect, context, param, vals[0]);
+    ALdedicated_SetParamf(effect, context, param, vals[0]);
 }
 
-void ded_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALdedicated_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 { (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
-void ded_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALdedicated_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    ded_GetParami(effect, context, param, vals);
+    ALdedicated_GetParami(effect, context, param, vals);
 }
-void ded_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALdedicated_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -177,7 +177,9 @@ void ded_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat 
             break;
     }
 }
-void ded_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALdedicated_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    ded_GetParamf(effect, context, param, vals);
+    ALdedicated_GetParamf(effect, context, param, vals);
 }
+
+DEFINE_ALEFFECT_VTABLE(ALdedicated);

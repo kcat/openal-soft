@@ -4,6 +4,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
 
 IF(COMMAND CMAKE_POLICY)
   CMAKE_POLICY(SET CMP0003 NEW)
+  CMAKE_POLICY(SET CMP0005 NEW)
 ENDIF(COMMAND CMAKE_POLICY)
 
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -408,8 +409,8 @@ ENDIF()
 CHECK_INCLUDE_FILE(stdint.h HAVE_STDINT_H)
 IF(NOT HAVE_STDINT_H)
     IF(HAVE_WINDOWS_H)
-        CHECK_C_SOURCE_COMPILES("\#define _WIN32_WINNT 0x0501
-                                 \#include <windows.h>
+        CHECK_C_SOURCE_COMPILES("#define _WIN32_WINNT 0x0501
+                                 #include <windows.h>
                                  __int64 foo;
                                  int main() {return 0;}" HAVE___INT64)
     ENDIF()

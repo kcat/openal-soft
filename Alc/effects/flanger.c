@@ -289,22 +289,19 @@ void ALflanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, AL
     switch(param)
     {
         case AL_FLANGER_WAVEFORM:
-            if(val >= AL_FLANGER_MIN_WAVEFORM && val <= AL_FLANGER_MAX_WAVEFORM)
-                props->Flanger.Waveform = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_FLANGER_MIN_WAVEFORM && val <= AL_FLANGER_MAX_WAVEFORM))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Flanger.Waveform = val;
             break;
 
         case AL_FLANGER_PHASE:
-            if(val >= AL_FLANGER_MIN_PHASE && val <= AL_FLANGER_MAX_PHASE)
-                props->Flanger.Phase = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_FLANGER_MIN_PHASE && val <= AL_FLANGER_MAX_PHASE))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Flanger.Phase = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALflanger_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
@@ -317,36 +314,31 @@ void ALflanger_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
     switch(param)
     {
         case AL_FLANGER_RATE:
-            if(val >= AL_FLANGER_MIN_RATE && val <= AL_FLANGER_MAX_RATE)
-                props->Flanger.Rate = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_FLANGER_MIN_RATE && val <= AL_FLANGER_MAX_RATE))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Flanger.Rate = val;
             break;
 
         case AL_FLANGER_DEPTH:
-            if(val >= AL_FLANGER_MIN_DEPTH && val <= AL_FLANGER_MAX_DEPTH)
-                props->Flanger.Depth = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_FLANGER_MIN_DEPTH && val <= AL_FLANGER_MAX_DEPTH))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Flanger.Depth = val;
             break;
 
         case AL_FLANGER_FEEDBACK:
-            if(val >= AL_FLANGER_MIN_FEEDBACK && val <= AL_FLANGER_MAX_FEEDBACK)
-                props->Flanger.Feedback = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_FLANGER_MIN_FEEDBACK && val <= AL_FLANGER_MAX_FEEDBACK))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Flanger.Feedback = val;
             break;
 
         case AL_FLANGER_DELAY:
-            if(val >= AL_FLANGER_MIN_DELAY && val <= AL_FLANGER_MAX_DELAY)
-                props->Flanger.Delay = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_FLANGER_MIN_DELAY && val <= AL_FLANGER_MAX_DELAY))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Flanger.Delay = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALflanger_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -368,8 +360,7 @@ void ALflanger_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, AL
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALflanger_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
@@ -398,8 +389,7 @@ void ALflanger_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALflanger_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)

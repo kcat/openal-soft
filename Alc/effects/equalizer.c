@@ -322,17 +322,7 @@ ALeffectStateFactory *ALequalizerStateFactory_getFactory(void)
 
 
 void ALequalizer_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{
-    ALeffectProps *props = &effect->Props;
-    switch(param)
-    {
-        default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
-    }
-    (void)props;
-    (void)val;
-}
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
 void ALequalizer_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     ALequalizer_SetParami(effect, context, param, vals[0]);
@@ -343,78 +333,67 @@ void ALequalizer_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
     switch(param)
     {
         case AL_EQUALIZER_LOW_GAIN:
-            if(val >= AL_EQUALIZER_MIN_LOW_GAIN && val <= AL_EQUALIZER_MAX_LOW_GAIN)
-                props->Equalizer.LowGain = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_EQUALIZER_MIN_LOW_GAIN && val <= AL_EQUALIZER_MAX_LOW_GAIN))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Equalizer.LowGain = val;
             break;
 
         case AL_EQUALIZER_LOW_CUTOFF:
-            if(val >= AL_EQUALIZER_MIN_LOW_CUTOFF && val <= AL_EQUALIZER_MAX_LOW_CUTOFF)
-                props->Equalizer.LowCutoff = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_EQUALIZER_MIN_LOW_CUTOFF && val <= AL_EQUALIZER_MAX_LOW_CUTOFF))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Equalizer.LowCutoff = val;
             break;
 
         case AL_EQUALIZER_MID1_GAIN:
-            if(val >= AL_EQUALIZER_MIN_MID1_GAIN && val <= AL_EQUALIZER_MAX_MID1_GAIN)
-                props->Equalizer.Mid1Gain = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_EQUALIZER_MIN_MID1_GAIN && val <= AL_EQUALIZER_MAX_MID1_GAIN))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Equalizer.Mid1Gain = val;
             break;
 
         case AL_EQUALIZER_MID1_CENTER:
-            if(val >= AL_EQUALIZER_MIN_MID1_CENTER && val <= AL_EQUALIZER_MAX_MID1_CENTER)
-                props->Equalizer.Mid1Center = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_EQUALIZER_MIN_MID1_CENTER && val <= AL_EQUALIZER_MAX_MID1_CENTER))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Equalizer.Mid1Center = val;
             break;
 
         case AL_EQUALIZER_MID1_WIDTH:
-            if(val >= AL_EQUALIZER_MIN_MID1_WIDTH && val <= AL_EQUALIZER_MAX_MID1_WIDTH)
-                props->Equalizer.Mid1Width = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_EQUALIZER_MIN_MID1_WIDTH && val <= AL_EQUALIZER_MAX_MID1_WIDTH))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Equalizer.Mid1Width = val;
             break;
 
         case AL_EQUALIZER_MID2_GAIN:
-            if(val >= AL_EQUALIZER_MIN_MID2_GAIN && val <= AL_EQUALIZER_MAX_MID2_GAIN)
-                props->Equalizer.Mid2Gain = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_EQUALIZER_MIN_MID2_GAIN && val <= AL_EQUALIZER_MAX_MID2_GAIN))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Equalizer.Mid2Gain = val;
             break;
 
         case AL_EQUALIZER_MID2_CENTER:
-            if(val >= AL_EQUALIZER_MIN_MID2_CENTER && val <= AL_EQUALIZER_MAX_MID2_CENTER)
-                props->Equalizer.Mid2Center = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_EQUALIZER_MIN_MID2_CENTER && val <= AL_EQUALIZER_MAX_MID2_CENTER))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Equalizer.Mid2Center = val;
             break;
 
         case AL_EQUALIZER_MID2_WIDTH:
-            if(val >= AL_EQUALIZER_MIN_MID2_WIDTH && val <= AL_EQUALIZER_MAX_MID2_WIDTH)
-                props->Equalizer.Mid2Width = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_EQUALIZER_MIN_MID2_WIDTH && val <= AL_EQUALIZER_MAX_MID2_WIDTH))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Equalizer.Mid2Width = val;
             break;
 
         case AL_EQUALIZER_HIGH_GAIN:
-            if(val >= AL_EQUALIZER_MIN_HIGH_GAIN && val <= AL_EQUALIZER_MAX_HIGH_GAIN)
-                props->Equalizer.HighGain = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_EQUALIZER_MIN_HIGH_GAIN && val <= AL_EQUALIZER_MAX_HIGH_GAIN))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Equalizer.HighGain = val;
             break;
 
         case AL_EQUALIZER_HIGH_CUTOFF:
-            if(val >= AL_EQUALIZER_MIN_HIGH_CUTOFF && val <= AL_EQUALIZER_MAX_HIGH_CUTOFF)
-                props->Equalizer.HighCutoff = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_EQUALIZER_MIN_HIGH_CUTOFF && val <= AL_EQUALIZER_MAX_HIGH_CUTOFF))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Equalizer.HighCutoff = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALequalizer_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -423,17 +402,7 @@ void ALequalizer_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param,
 }
 
 void ALequalizer_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
-{
-    ALeffectProps *props = &effect->Props;
-    switch(param)
-    {
-        default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
-    }
-    (void)props;
-    (void)val;
-}
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
 void ALequalizer_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALequalizer_GetParami(effect, context, param, vals);
@@ -484,8 +453,7 @@ void ALequalizer_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALequalizer_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)

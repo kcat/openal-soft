@@ -222,7 +222,7 @@ ALeffectStateFactory *ALechoStateFactory_getFactory(void)
 
 
 void ALecho_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
 void ALecho_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     ALecho_SetParami(effect, context, param, vals[0]);
@@ -233,43 +233,37 @@ void ALecho_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
     switch(param)
     {
         case AL_ECHO_DELAY:
-            if(val >= AL_ECHO_MIN_DELAY && val <= AL_ECHO_MAX_DELAY)
-                props->Echo.Delay = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_ECHO_MIN_DELAY && val <= AL_ECHO_MAX_DELAY))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Echo.Delay = val;
             break;
 
         case AL_ECHO_LRDELAY:
-            if(val >= AL_ECHO_MIN_LRDELAY && val <= AL_ECHO_MAX_LRDELAY)
-                props->Echo.LRDelay = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_ECHO_MIN_LRDELAY && val <= AL_ECHO_MAX_LRDELAY))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Echo.LRDelay = val;
             break;
 
         case AL_ECHO_DAMPING:
-            if(val >= AL_ECHO_MIN_DAMPING && val <= AL_ECHO_MAX_DAMPING)
-                props->Echo.Damping = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_ECHO_MIN_DAMPING && val <= AL_ECHO_MAX_DAMPING))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Echo.Damping = val;
             break;
 
         case AL_ECHO_FEEDBACK:
-            if(val >= AL_ECHO_MIN_FEEDBACK && val <= AL_ECHO_MAX_FEEDBACK)
-                props->Echo.Feedback = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_ECHO_MIN_FEEDBACK && val <= AL_ECHO_MAX_FEEDBACK))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Echo.Feedback = val;
             break;
 
         case AL_ECHO_SPREAD:
-            if(val >= AL_ECHO_MIN_SPREAD && val <= AL_ECHO_MAX_SPREAD)
-                props->Echo.Spread = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_ECHO_MIN_SPREAD && val <= AL_ECHO_MAX_SPREAD))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Echo.Spread = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALecho_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -278,7 +272,7 @@ void ALecho_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, cons
 }
 
 void ALecho_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
-{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
 void ALecho_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALecho_GetParami(effect, context, param, vals);
@@ -309,8 +303,7 @@ void ALecho_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALecho_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)

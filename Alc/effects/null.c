@@ -102,84 +102,84 @@ ALeffectStateFactory *ALnullStateFactory_getFactory(void)
 
 void ALnull_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
+    (void)effect;
+    (void)val;
     switch(param)
     {
         default:
-            alSetError(context, AL_INVALID_ENUM);
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
-    (void)effect;
-    (void)val;
 }
 void ALnull_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
+    (void)effect;
+    (void)vals;
     switch(param)
     {
         default:
-            alSetError(context, AL_INVALID_ENUM);
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
-    (void)effect;
-    (void)vals;
 }
 void ALnull_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
+    (void)effect;
+    (void)val;
     switch(param)
     {
         default:
-            alSetError(context, AL_INVALID_ENUM);
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
-    (void)effect;
-    (void)val;
 }
 void ALnull_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
+    (void)effect;
+    (void)vals;
     switch(param)
     {
         default:
-            alSetError(context, AL_INVALID_ENUM);
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
-    (void)effect;
-    (void)vals;
 }
 
 void ALnull_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
+    (void)effect;
+    (void)val;
     switch(param)
     {
         default:
-            alSetError(context, AL_INVALID_ENUM);
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
-    (void)effect;
-    (void)val;
 }
 void ALnull_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
+    (void)effect;
+    (void)vals;
     switch(param)
     {
         default:
-            alSetError(context, AL_INVALID_ENUM);
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
-    (void)effect;
-    (void)vals;
 }
 void ALnull_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
+    (void)effect;
+    (void)val;
     switch(param)
     {
         default:
-            alSetError(context, AL_INVALID_ENUM);
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
-    (void)effect;
-    (void)val;
 }
 void ALnull_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
+    (void)effect;
+    (void)vals;
     switch(param)
     {
         default:
-            alSetError(context, AL_INVALID_ENUM);
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
-    (void)effect;
-    (void)vals;
 }
 
 DEFINE_ALEFFECT_VTABLE(ALnull);

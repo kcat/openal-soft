@@ -301,8 +301,7 @@ void ALchorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALi
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALchorus_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
@@ -391,7 +390,6 @@ void ALchorus_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALf
 
         default:
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
-            break;
     }
 }
 void ALchorus_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)

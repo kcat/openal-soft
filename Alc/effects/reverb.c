@@ -561,8 +561,6 @@ static __inline ALvoid EAXVerbPass(ALreverbState *State, ALfloat in, ALfloat *re
     State->Offset++;
 }
 
-// This processes the standard reverb state, given the input samples and an
-// output buffer.
 static ALvoid ALreverbState_ProcessStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     ALfloat (*restrict out)[4] = State->ReverbSamples;
@@ -583,8 +581,6 @@ static ALvoid ALreverbState_ProcessStandard(ALreverbState *State, ALuint Samples
     }
 }
 
-// This processes the EAX reverb state, given the input samples and an output
-// buffer.
 static ALvoid ALreverbState_ProcessEax(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     ALfloat (*restrict early)[4] = State->EarlySamples;
@@ -735,9 +731,6 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
     return AL_TRUE;
 }
 
-// This updates the device-dependant EAX reverb state.  This is called on
-// initialization and any time the device parameters (eg. playback frequency,
-// format) have been changed.
 static ALboolean ALreverbState_DeviceUpdate(ALreverbState *State, ALCdevice *Device)
 {
     ALuint frequency = Device->Frequency, index;
@@ -1087,8 +1080,6 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
                       lerp(ambientGain, 1.0f, dirGain) * Gain, State->Late.PanGain);
 }
 
-// This updates the EAX reverb state.  This is called any time the EAX reverb
-// effect is loaded into a slot.
 static ALvoid ALreverbState_Update(ALreverbState *State, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALuint frequency = Device->Frequency;
@@ -1176,8 +1167,7 @@ static ALvoid ALreverbState_Update(ALreverbState *State, ALCdevice *Device, cons
     }
 }
 
-// This destroys the reverb state.  It should be called only when the effect
-// slot has a different (or no) effect loaded over the reverb effect.
+
 static ALvoid ALreverbState_Destruct(ALreverbState *State)
 {
     free(State->SampleBuffer);

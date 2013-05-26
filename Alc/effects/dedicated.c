@@ -125,7 +125,7 @@ ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void)
 
 
 void ALdedicated_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
 void ALdedicated_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     ALdedicated_SetParami(effect, context, param, vals[0]);
@@ -136,15 +136,13 @@ void ALdedicated_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
     switch(param)
     {
         case AL_DEDICATED_GAIN:
-            if(val >= 0.0f && isfinite(val))
-                props->Dedicated.Gain = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= 0.0f && isfinite(val)))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Dedicated.Gain = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALdedicated_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -153,7 +151,7 @@ void ALdedicated_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param,
 }
 
 void ALdedicated_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
-{ (void)effect;(void)param;(void)val; alSetError(context, AL_INVALID_ENUM); }
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
 void ALdedicated_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALdedicated_GetParami(effect, context, param, vals);
@@ -168,8 +166,7 @@ void ALdedicated_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALdedicated_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)

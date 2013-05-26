@@ -280,17 +280,7 @@ ALeffectStateFactory *ALdistortionStateFactory_getFactory(void)
 
 
 void ALdistortion_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{
-    const ALeffectProps *props = &effect->Props;
-    switch(param)
-    {
-        default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
-    }
-    (void)props;
-    (void)val;
-}
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
 void ALdistortion_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     ALdistortion_SetParami(effect, context, param, vals[0]);
@@ -301,43 +291,37 @@ void ALdistortion_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param,
     switch(param)
     {
         case AL_DISTORTION_EDGE:
-            if(val >= AL_DISTORTION_MIN_EDGE && val <= AL_DISTORTION_MAX_EDGE)
-                props->Distortion.Edge = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_DISTORTION_MIN_EDGE && val <= AL_DISTORTION_MAX_EDGE))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Distortion.Edge = val;
             break;
 
         case AL_DISTORTION_GAIN:
-            if(val >= AL_DISTORTION_MIN_GAIN && val <= AL_DISTORTION_MAX_GAIN)
-                props->Distortion.Gain = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_DISTORTION_MIN_GAIN && val <= AL_DISTORTION_MAX_GAIN))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Distortion.Gain = val;
             break;
 
         case AL_DISTORTION_LOWPASS_CUTOFF:
-            if(val >= AL_DISTORTION_MIN_LOWPASS_CUTOFF && val <= AL_DISTORTION_MAX_LOWPASS_CUTOFF)
-                props->Distortion.LowpassCutoff = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_DISTORTION_MIN_LOWPASS_CUTOFF && val <= AL_DISTORTION_MAX_LOWPASS_CUTOFF))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Distortion.LowpassCutoff = val;
             break;
 
         case AL_DISTORTION_EQCENTER:
-            if(val >= AL_DISTORTION_MIN_EQCENTER && val <= AL_DISTORTION_MAX_EQCENTER)
-                props->Distortion.EQCenter = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_DISTORTION_MIN_EQCENTER && val <= AL_DISTORTION_MAX_EQCENTER))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Distortion.EQCenter = val;
             break;
 
         case AL_DISTORTION_EQBANDWIDTH:
-            if(val >= AL_DISTORTION_MIN_EQBANDWIDTH && val <= AL_DISTORTION_MAX_EQBANDWIDTH)
-                props->Distortion.EQBandwidth = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_DISTORTION_MIN_EQBANDWIDTH && val <= AL_DISTORTION_MAX_EQBANDWIDTH))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Distortion.EQBandwidth = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALdistortion_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -346,17 +330,7 @@ void ALdistortion_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param
 }
 
 void ALdistortion_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
-{
-    const ALeffectProps *props = &effect->Props;
-    switch(param)
-    {
-        default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
-    }
-    (void)props;
-    (void)val;
-}
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
 void ALdistortion_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALdistortion_GetParami(effect, context, param, vals);
@@ -387,8 +361,7 @@ void ALdistortion_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param,
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALdistortion_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)

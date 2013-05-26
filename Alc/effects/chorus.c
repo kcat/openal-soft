@@ -289,17 +289,15 @@ void ALchorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALi
     switch(param)
     {
         case AL_CHORUS_WAVEFORM:
-            if(val >= AL_CHORUS_MIN_WAVEFORM && val <= AL_CHORUS_MAX_WAVEFORM)
-                props->Chorus.Waveform = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_CHORUS_MIN_WAVEFORM && val <= AL_CHORUS_MAX_WAVEFORM))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Waveform = val;
             break;
 
         case AL_CHORUS_PHASE:
-            if(val >= AL_CHORUS_MIN_PHASE && val <= AL_CHORUS_MAX_PHASE)
-                props->Chorus.Phase = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_CHORUS_MIN_PHASE && val <= AL_CHORUS_MAX_PHASE))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Phase = val;
             break;
 
         default:
@@ -317,36 +315,31 @@ void ALchorus_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALf
     switch(param)
     {
         case AL_CHORUS_RATE:
-            if(val >= AL_CHORUS_MIN_RATE && val <= AL_CHORUS_MAX_RATE)
-                props->Chorus.Rate = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_CHORUS_MIN_RATE && val <= AL_CHORUS_MAX_RATE))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Rate = val;
             break;
 
         case AL_CHORUS_DEPTH:
-            if(val >= AL_CHORUS_MIN_DEPTH && val <= AL_CHORUS_MAX_DEPTH)
-                props->Chorus.Depth = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_CHORUS_MIN_DEPTH && val <= AL_CHORUS_MAX_DEPTH))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Depth = val;
             break;
 
         case AL_CHORUS_FEEDBACK:
-            if(val >= AL_CHORUS_MIN_FEEDBACK && val <= AL_CHORUS_MAX_FEEDBACK)
-                props->Chorus.Feedback = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_CHORUS_MIN_FEEDBACK && val <= AL_CHORUS_MAX_FEEDBACK))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Feedback = val;
             break;
 
         case AL_CHORUS_DELAY:
-            if(val >= AL_CHORUS_MIN_DELAY && val <= AL_CHORUS_MAX_DELAY)
-                props->Chorus.Delay = val;
-            else
-                alSetError(context, AL_INVALID_VALUE);
+            if(!(val >= AL_CHORUS_MIN_DELAY && val <= AL_CHORUS_MAX_DELAY))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Delay = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALchorus_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -368,8 +361,7 @@ void ALchorus_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALi
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
-            break;
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
 void ALchorus_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
@@ -398,7 +390,7 @@ void ALchorus_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALf
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM);
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
             break;
     }
 }

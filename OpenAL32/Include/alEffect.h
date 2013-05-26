@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-typedef struct ALeffect ALeffect;
+struct ALeffect;
 
 enum {
     EAXREVERB = 0,
@@ -28,15 +28,15 @@ extern ALfloat ReverbBoost;
 extern ALboolean EmulateEAXReverb;
 
 struct ALeffectVtable {
-    void (*const SetParami)(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-    void (*const SetParamiv)(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-    void (*const SetParamf)(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-    void (*const SetParamfv)(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
+    void (*const SetParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
+    void (*const SetParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
+    void (*const SetParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
+    void (*const SetParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
 
-    void (*const GetParami)(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-    void (*const GetParamiv)(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-    void (*const GetParamf)(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*const GetParamfv)(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
+    void (*const GetParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
+    void (*const GetParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
+    void (*const GetParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
+    void (*const GetParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
 };
 
 #define DEFINE_ALEFFECT_VTABLE(T)           \
@@ -150,8 +150,7 @@ typedef union ALeffectProps {
     } Distortion;
 } ALeffectProps;
 
-struct ALeffect
-{
+typedef struct ALeffect {
     // Effect type (AL_EFFECT_NULL, ...)
     ALenum type;
 
@@ -161,7 +160,7 @@ struct ALeffect
 
     /* Self ID */
     ALuint id;
-};
+} ALeffect;
 
 #define ALeffect_SetParami(x, c, p, v)  ((x)->vtbl->SetParami((x),(c),(p),(v)))
 #define ALeffect_SetParamiv(x, c, p, v) ((x)->vtbl->SetParamiv((x),(c),(p),(v)))

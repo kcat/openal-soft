@@ -111,17 +111,17 @@ static ALvoid ALflangerState_Update(ALflangerState *state, ALCdevice *Device, co
         state->Gain[1][it] = 0.0f;
     }
 
-    state->waveform = Slot->effect.Flanger.Waveform;
-    state->depth = Slot->effect.Flanger.Depth;
-    state->feedback = Slot->effect.Flanger.Feedback;
-    state->delay = fastf2i(Slot->effect.Flanger.Delay * frequency);
+    state->waveform = Slot->EffectProps.Flanger.Waveform;
+    state->depth = Slot->EffectProps.Flanger.Depth;
+    state->feedback = Slot->EffectProps.Flanger.Feedback;
+    state->delay = fastf2i(Slot->EffectProps.Flanger.Delay * frequency);
 
     /* Gains for left and right sides */
     ComputeAngleGains(Device, atan2f(-1.0f, 0.0f), 0.0f, Slot->Gain, state->Gain[0]);
     ComputeAngleGains(Device, atan2f(+1.0f, 0.0f), 0.0f, Slot->Gain, state->Gain[1]);
 
-    phase = Slot->effect.Flanger.Phase;
-    rate = Slot->effect.Flanger.Rate;
+    phase = Slot->EffectProps.Flanger.Phase;
+    rate = Slot->EffectProps.Flanger.Rate;
 
     /* Calculate LFO coefficient */
     switch(state->waveform)
@@ -285,18 +285,19 @@ ALeffectStateFactory *ALflangerStateFactory_getFactory(void)
 
 void ALflanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FLANGER_WAVEFORM:
             if(val >= AL_FLANGER_MIN_WAVEFORM && val <= AL_FLANGER_MAX_WAVEFORM)
-                effect->Flanger.Waveform = val;
+                props->Flanger.Waveform = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_FLANGER_PHASE:
             if(val >= AL_FLANGER_MIN_PHASE && val <= AL_FLANGER_MAX_PHASE)
-                effect->Flanger.Phase = val;
+                props->Flanger.Phase = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
@@ -312,32 +313,33 @@ void ALflanger_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, c
 }
 void ALflanger_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FLANGER_RATE:
             if(val >= AL_FLANGER_MIN_RATE && val <= AL_FLANGER_MAX_RATE)
-                effect->Flanger.Rate = val;
+                props->Flanger.Rate = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_FLANGER_DEPTH:
             if(val >= AL_FLANGER_MIN_DEPTH && val <= AL_FLANGER_MAX_DEPTH)
-                effect->Flanger.Depth = val;
+                props->Flanger.Depth = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_FLANGER_FEEDBACK:
             if(val >= AL_FLANGER_MIN_FEEDBACK && val <= AL_FLANGER_MAX_FEEDBACK)
-                effect->Flanger.Feedback = val;
+                props->Flanger.Feedback = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_FLANGER_DELAY:
             if(val >= AL_FLANGER_MIN_DELAY && val <= AL_FLANGER_MAX_DELAY)
-                effect->Flanger.Delay = val;
+                props->Flanger.Delay = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
@@ -354,14 +356,15 @@ void ALflanger_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, c
 
 void ALflanger_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FLANGER_WAVEFORM:
-            *val = effect->Flanger.Waveform;
+            *val = props->Flanger.Waveform;
             break;
 
         case AL_FLANGER_PHASE:
-            *val = effect->Flanger.Phase;
+            *val = props->Flanger.Phase;
             break;
 
         default:
@@ -375,22 +378,23 @@ void ALflanger_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, A
 }
 void ALflanger_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FLANGER_RATE:
-            *val = effect->Flanger.Rate;
+            *val = props->Flanger.Rate;
             break;
 
         case AL_FLANGER_DEPTH:
-            *val = effect->Flanger.Depth;
+            *val = props->Flanger.Depth;
             break;
 
         case AL_FLANGER_FEEDBACK:
-            *val = effect->Flanger.Feedback;
+            *val = props->Flanger.Feedback;
             break;
 
         case AL_FLANGER_DELAY:
-            *val = effect->Flanger.Delay;
+            *val = props->Flanger.Delay;
             break;
 
         default:

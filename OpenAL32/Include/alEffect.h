@@ -59,11 +59,7 @@ extern const struct ALeffectVtable ALnull_vtable;
 extern const struct ALeffectVtable ALdedicated_vtable;
 
 
-struct ALeffect
-{
-    // Effect type (AL_EFFECT_NULL, ...)
-    ALenum type;
-
+typedef union ALeffectProps {
     struct {
         // Shared Reverb Properties
         ALfloat Density;
@@ -152,6 +148,14 @@ struct ALeffect
         ALfloat EQCenter;
         ALfloat EQBandwidth;
     } Distortion;
+} ALeffectProps;
+
+struct ALeffect
+{
+    // Effect type (AL_EFFECT_NULL, ...)
+    ALenum type;
+
+    ALeffectProps Props;
 
     const struct ALeffectVtable *vtbl;
 

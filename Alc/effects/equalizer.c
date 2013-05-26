@@ -141,22 +141,22 @@ static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *device
         switch (it)
         {
             case 0: /* Low Shelf */
-                 gain = powf(10.0f, (20.0f * log10f(slot->effect.Equalizer.LowGain)) / 40.0f);
-                 filter_frequency = slot->effect.Equalizer.LowCutoff;
+                 gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.LowGain)) / 40.0f);
+                 filter_frequency = slot->EffectProps.Equalizer.LowCutoff;
                  break;
             case 1: /* Peaking */
-                 gain = powf(10.0f, (20.0f * log10f(slot->effect.Equalizer.Mid1Gain)) / 40.0f);
-                 filter_frequency = slot->effect.Equalizer.Mid1Center;
-                 bandwidth = slot->effect.Equalizer.Mid1Width;
+                 gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.Mid1Gain)) / 40.0f);
+                 filter_frequency = slot->EffectProps.Equalizer.Mid1Center;
+                 bandwidth = slot->EffectProps.Equalizer.Mid1Width;
                  break;
             case 2: /* Peaking */
-                 gain = powf(10.0f, (20.0f * log10f(slot->effect.Equalizer.Mid2Gain)) / 40.0f);
-                 filter_frequency = slot->effect.Equalizer.Mid2Center;
-                 bandwidth = slot->effect.Equalizer.Mid2Width;
+                 gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.Mid2Gain)) / 40.0f);
+                 filter_frequency = slot->EffectProps.Equalizer.Mid2Center;
+                 bandwidth = slot->EffectProps.Equalizer.Mid2Width;
                  break;
             case 3: /* High Shelf */
-                 gain = powf(10.0f, (20.0f * log10f(slot->effect.Equalizer.HighGain)) / 40.0f);
-                 filter_frequency = slot->effect.Equalizer.HighCutoff;
+                 gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.HighGain)) / 40.0f);
+                 filter_frequency = slot->EffectProps.Equalizer.HighCutoff;
                  break;
         }
 
@@ -323,15 +323,15 @@ ALeffectStateFactory *ALequalizerStateFactory_getFactory(void)
 
 void ALequalizer_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
-    effect=effect;
-    val=val;
-
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         default:
             alSetError(context, AL_INVALID_ENUM);
             break;
     }
+    (void)props;
+    (void)val;
 }
 void ALequalizer_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
@@ -339,74 +339,75 @@ void ALequalizer_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param,
 }
 void ALequalizer_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_EQUALIZER_LOW_GAIN:
             if(val >= AL_EQUALIZER_MIN_LOW_GAIN && val <= AL_EQUALIZER_MAX_LOW_GAIN)
-                effect->Equalizer.LowGain = val;
+                props->Equalizer.LowGain = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_EQUALIZER_LOW_CUTOFF:
             if(val >= AL_EQUALIZER_MIN_LOW_CUTOFF && val <= AL_EQUALIZER_MAX_LOW_CUTOFF)
-                effect->Equalizer.LowCutoff = val;
+                props->Equalizer.LowCutoff = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_EQUALIZER_MID1_GAIN:
             if(val >= AL_EQUALIZER_MIN_MID1_GAIN && val <= AL_EQUALIZER_MAX_MID1_GAIN)
-                effect->Equalizer.Mid1Gain = val;
+                props->Equalizer.Mid1Gain = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_EQUALIZER_MID1_CENTER:
             if(val >= AL_EQUALIZER_MIN_MID1_CENTER && val <= AL_EQUALIZER_MAX_MID1_CENTER)
-                effect->Equalizer.Mid1Center = val;
+                props->Equalizer.Mid1Center = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_EQUALIZER_MID1_WIDTH:
             if(val >= AL_EQUALIZER_MIN_MID1_WIDTH && val <= AL_EQUALIZER_MAX_MID1_WIDTH)
-                effect->Equalizer.Mid1Width = val;
+                props->Equalizer.Mid1Width = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_EQUALIZER_MID2_GAIN:
             if(val >= AL_EQUALIZER_MIN_MID2_GAIN && val <= AL_EQUALIZER_MAX_MID2_GAIN)
-                effect->Equalizer.Mid2Gain = val;
+                props->Equalizer.Mid2Gain = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_EQUALIZER_MID2_CENTER:
             if(val >= AL_EQUALIZER_MIN_MID2_CENTER && val <= AL_EQUALIZER_MAX_MID2_CENTER)
-                effect->Equalizer.Mid2Center = val;
+                props->Equalizer.Mid2Center = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_EQUALIZER_MID2_WIDTH:
             if(val >= AL_EQUALIZER_MIN_MID2_WIDTH && val <= AL_EQUALIZER_MAX_MID2_WIDTH)
-                effect->Equalizer.Mid2Width = val;
+                props->Equalizer.Mid2Width = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_EQUALIZER_HIGH_GAIN:
             if(val >= AL_EQUALIZER_MIN_HIGH_GAIN && val <= AL_EQUALIZER_MAX_HIGH_GAIN)
-                effect->Equalizer.HighGain = val;
+                props->Equalizer.HighGain = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_EQUALIZER_HIGH_CUTOFF:
             if(val >= AL_EQUALIZER_MIN_HIGH_CUTOFF && val <= AL_EQUALIZER_MAX_HIGH_CUTOFF)
-                effect->Equalizer.HighCutoff = val;
+                props->Equalizer.HighCutoff = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
@@ -423,15 +424,15 @@ void ALequalizer_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param,
 
 void ALequalizer_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
-    effect=effect;
-    val=val;
-
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         default:
             alSetError(context, AL_INVALID_ENUM);
             break;
     }
+    (void)props;
+    (void)val;
 }
 void ALequalizer_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
@@ -439,46 +440,47 @@ void ALequalizer_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param,
 }
 void ALequalizer_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_EQUALIZER_LOW_GAIN:
-            *val = effect->Equalizer.LowGain;
+            *val = props->Equalizer.LowGain;
             break;
 
         case AL_EQUALIZER_LOW_CUTOFF:
-            *val = effect->Equalizer.LowCutoff;
+            *val = props->Equalizer.LowCutoff;
             break;
 
         case AL_EQUALIZER_MID1_GAIN:
-            *val = effect->Equalizer.Mid1Gain;
+            *val = props->Equalizer.Mid1Gain;
             break;
 
         case AL_EQUALIZER_MID1_CENTER:
-            *val = effect->Equalizer.Mid1Center;
+            *val = props->Equalizer.Mid1Center;
             break;
 
         case AL_EQUALIZER_MID1_WIDTH:
-            *val = effect->Equalizer.Mid1Width;
+            *val = props->Equalizer.Mid1Width;
             break;
 
         case AL_EQUALIZER_MID2_GAIN:
-            *val = effect->Equalizer.Mid2Gain;
+            *val = props->Equalizer.Mid2Gain;
             break;
 
         case AL_EQUALIZER_MID2_CENTER:
-            *val = effect->Equalizer.Mid2Center;
+            *val = props->Equalizer.Mid2Center;
             break;
 
         case AL_EQUALIZER_MID2_WIDTH:
-            *val = effect->Equalizer.Mid2Width;
+            *val = props->Equalizer.Mid2Width;
             break;
 
         case AL_EQUALIZER_HIGH_GAIN:
-            *val = effect->Equalizer.HighGain;
+            *val = props->Equalizer.HighGain;
             break;
 
         case AL_EQUALIZER_HIGH_CUTOFF:
-            *val = effect->Equalizer.HighCutoff;
+            *val = props->Equalizer.HighCutoff;
             break;
 
         default:

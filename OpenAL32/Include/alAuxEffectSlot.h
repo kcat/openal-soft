@@ -73,7 +73,8 @@ static const struct ALeffectStateFactoryVtable T##_ALeffectStateFactory_vtable =
 
 struct ALeffectslot
 {
-    ALeffect effect;
+    ALenum EffectType;
+    ALeffectProps EffectProps;
 
     volatile ALfloat   Gain;
     volatile ALboolean AuxSendAuto;

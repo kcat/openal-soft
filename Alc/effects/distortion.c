@@ -99,14 +99,14 @@ static ALvoid ALdistortionState_Update(ALdistortionState *state, ALCdevice *Devi
     }
 
     /* Store distorted signal attenuation settings */
-    state->attenuation = Slot->effect.Distortion.Gain;
+    state->attenuation = Slot->EffectProps.Distortion.Gain;
 
     /* Store waveshaper edge settings */
-    edge = sinf(Slot->effect.Distortion.Edge * (F_PI/2.0f));
+    edge = sinf(Slot->EffectProps.Distortion.Edge * (F_PI/2.0f));
     state->edge_coeff = 2.0f * edge / (1.0f-edge);
 
     /* Lowpass filter */
-    cutoff = Slot->effect.Distortion.LowpassCutoff;
+    cutoff = Slot->EffectProps.Distortion.LowpassCutoff;
     /* Bandwidth value is constant in octaves */
     bandwidth = (cutoff / 2.0f) / (cutoff * 0.67f);
     w0 = 2.0f*F_PI * cutoff / (frequency*4.0f);
@@ -119,9 +119,9 @@ static ALvoid ALdistortionState_Update(ALdistortionState *state, ALCdevice *Devi
     state->lowpass.a[2] = 1.0f - alpha;
 
     /* Bandpass filter */
-    cutoff = Slot->effect.Distortion.EQCenter;
+    cutoff = Slot->EffectProps.Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves */
-    bandwidth = Slot->effect.Distortion.EQBandwidth / (cutoff * 0.67f);
+    bandwidth = Slot->EffectProps.Distortion.EQBandwidth / (cutoff * 0.67f);
     w0 = 2.0f*F_PI * cutoff / (frequency*4.0f);
     alpha = sinf(w0) * sinhf(logf(2.0f) / 2.0f * bandwidth * w0 / sinf(w0));
     state->bandpass.b[0] = alpha;
@@ -281,15 +281,15 @@ ALeffectStateFactory *ALdistortionStateFactory_getFactory(void)
 
 void ALdistortion_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
-    effect=effect;
-    val=val;
-
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         default:
             alSetError(context, AL_INVALID_ENUM);
             break;
     }
+    (void)props;
+    (void)val;
 }
 void ALdistortion_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
@@ -297,39 +297,40 @@ void ALdistortion_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param
 }
 void ALdistortion_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_DISTORTION_EDGE:
             if(val >= AL_DISTORTION_MIN_EDGE && val <= AL_DISTORTION_MAX_EDGE)
-                effect->Distortion.Edge = val;
+                props->Distortion.Edge = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_DISTORTION_GAIN:
             if(val >= AL_DISTORTION_MIN_GAIN && val <= AL_DISTORTION_MAX_GAIN)
-                effect->Distortion.Gain = val;
+                props->Distortion.Gain = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_DISTORTION_LOWPASS_CUTOFF:
             if(val >= AL_DISTORTION_MIN_LOWPASS_CUTOFF && val <= AL_DISTORTION_MAX_LOWPASS_CUTOFF)
-                effect->Distortion.LowpassCutoff = val;
+                props->Distortion.LowpassCutoff = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_DISTORTION_EQCENTER:
             if(val >= AL_DISTORTION_MIN_EQCENTER && val <= AL_DISTORTION_MAX_EQCENTER)
-                effect->Distortion.EQCenter = val;
+                props->Distortion.EQCenter = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_DISTORTION_EQBANDWIDTH:
             if(val >= AL_DISTORTION_MIN_EQBANDWIDTH && val <= AL_DISTORTION_MAX_EQBANDWIDTH)
-                effect->Distortion.EQBandwidth = val;
+                props->Distortion.EQBandwidth = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
@@ -346,15 +347,15 @@ void ALdistortion_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param
 
 void ALdistortion_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
-    effect=effect;
-    val=val;
-
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         default:
             alSetError(context, AL_INVALID_ENUM);
             break;
     }
+    (void)props;
+    (void)val;
 }
 void ALdistortion_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
@@ -362,26 +363,27 @@ void ALdistortion_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param
 }
 void ALdistortion_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_DISTORTION_EDGE:
-            *val = effect->Distortion.Edge;
+            *val = props->Distortion.Edge;
             break;
 
         case AL_DISTORTION_GAIN:
-            *val = effect->Distortion.Gain;
+            *val = props->Distortion.Gain;
             break;
 
         case AL_DISTORTION_LOWPASS_CUTOFF:
-            *val = effect->Distortion.LowpassCutoff;
+            *val = props->Distortion.LowpassCutoff;
             break;
 
         case AL_DISTORTION_EQCENTER:
-            *val = effect->Distortion.EQCenter;
+            *val = props->Distortion.EQCenter;
             break;
 
         case AL_DISTORTION_EQBANDWIDTH:
-            *val = effect->Distortion.EQBandwidth;
+            *val = props->Distortion.EQBandwidth;
             break;
 
         default:

@@ -294,10 +294,6 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
             al_throwerr(Context, AL_INVALID_NAME);
         switch(param)
         {
-        case AL_EFFECTSLOT_EFFECT:
-            *value = Slot->effect.id;
-            break;
-
         case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
             *value = Slot->AuxSendAuto;
             break;
@@ -479,7 +475,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
     ALenum newtype = (effect ? effect->type : AL_EFFECT_NULL);
     ALeffectStateFactory *factory;
 
-    if(newtype != EffectSlot->effect.type)
+    if(newtype != EffectSlot->EffectType)
     {
         ALeffectState *State;
         FPUCtl oldMode;
@@ -507,9 +503,15 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 
         State = ExchangePtr((XchgPtr*)&EffectSlot->EffectState, State);
         if(!effect)
-            memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
+        {
+            memset(&EffectSlot->EffectProps, 0, sizeof(EffectSlot->EffectProps));
+            EffectSlot->EffectType = AL_EFFECT_NULL;
+        }
         else
-            memcpy(&EffectSlot->effect, effect, sizeof(*effect));
+        {
+            memcpy(&EffectSlot->EffectProps, &effect->Props, sizeof(effect->Props));
+            EffectSlot->EffectType = effect->type;
+        }
 
         /* FIXME: This should be done asynchronously, but since the EffectState
          * object was changed, it needs an update before its Process method can
@@ -525,13 +527,13 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
     }
     else
     {
-        ALCdevice_Lock(Device);
-        if(!effect)
-            memset(&EffectSlot->effect, 0, sizeof(EffectSlot->effect));
-        else
-            memcpy(&EffectSlot->effect, effect, sizeof(*effect));
-        ALCdevice_Unlock(Device);
-        EffectSlot->NeedsUpdate = AL_TRUE;
+        if(effect)
+        {
+            ALCdevice_Lock(Device);
+            memcpy(&EffectSlot->EffectProps, &effect->Props, sizeof(effect->Props));
+            ALCdevice_Unlock(Device);
+            EffectSlot->NeedsUpdate = AL_TRUE;
+        }
     }
 
     return AL_NO_ERROR;
@@ -542,6 +544,8 @@ ALenum InitEffectSlot(ALeffectslot *slot)
 {
     ALeffectStateFactory *factory;
     ALint i, c;
+
+    slot->EffectType = AL_EFFECT_NULL;
 
     factory = getFactoryByType(AL_EFFECT_NULL);
     if(!(slot->EffectState=ALeffectStateFactory_create(factory)))

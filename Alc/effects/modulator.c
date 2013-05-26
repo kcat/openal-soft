@@ -152,18 +152,18 @@ static ALvoid ALmodulatorState_Update(ALmodulatorState *state, ALCdevice *Device
     ALfloat gain, cw, a = 0.0f;
     ALuint index;
 
-    if(Slot->effect.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
+    if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
         state->Waveform = SINUSOID;
-    else if(Slot->effect.Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
+    else if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
         state->Waveform = SAWTOOTH;
-    else if(Slot->effect.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)
+    else if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)
         state->Waveform = SQUARE;
 
-    state->step = fastf2u(Slot->effect.Modulator.Frequency*WAVEFORM_FRACONE /
+    state->step = fastf2u(Slot->EffectProps.Modulator.Frequency*WAVEFORM_FRACONE /
                           Device->Frequency);
     if(state->step == 0) state->step = 1;
 
-    cw = cosf(F_PI*2.0f * Slot->effect.Modulator.HighPassCutoff /
+    cw = cosf(F_PI*2.0f * Slot->EffectProps.Modulator.HighPassCutoff /
                           Device->Frequency);
     a = (2.0f-cw) - sqrtf(powf(2.0f-cw, 2.0f) - 1.0f);
     state->iirFilter.coeff = a;
@@ -240,18 +240,19 @@ ALeffectStateFactory *ALmodulatorStateFactory_getFactory(void)
 
 void ALmodulator_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_RING_MODULATOR_FREQUENCY:
             if(val >= AL_RING_MODULATOR_MIN_FREQUENCY && val <= AL_RING_MODULATOR_MAX_FREQUENCY)
-                effect->Modulator.Frequency = val;
+                props->Modulator.Frequency = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
             if(val >= AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF && val <= AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF)
-                effect->Modulator.HighPassCutoff = val;
+                props->Modulator.HighPassCutoff = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
@@ -267,6 +268,7 @@ void ALmodulator_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param,
 }
 void ALmodulator_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_RING_MODULATOR_FREQUENCY:
@@ -276,7 +278,7 @@ void ALmodulator_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, 
 
         case AL_RING_MODULATOR_WAVEFORM:
             if(val >= AL_RING_MODULATOR_MIN_WAVEFORM && val <= AL_RING_MODULATOR_MAX_WAVEFORM)
-                effect->Modulator.Waveform = val;
+                props->Modulator.Waveform = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
@@ -293,16 +295,17 @@ void ALmodulator_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param,
 
 void ALmodulator_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_RING_MODULATOR_FREQUENCY:
-            *val = (ALint)effect->Modulator.Frequency;
+            *val = (ALint)props->Modulator.Frequency;
             break;
         case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            *val = (ALint)effect->Modulator.HighPassCutoff;
+            *val = (ALint)props->Modulator.HighPassCutoff;
             break;
         case AL_RING_MODULATOR_WAVEFORM:
-            *val = effect->Modulator.Waveform;
+            *val = props->Modulator.Waveform;
             break;
 
         default:
@@ -316,13 +319,14 @@ void ALmodulator_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param,
 }
 void ALmodulator_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_RING_MODULATOR_FREQUENCY:
-            *val = effect->Modulator.Frequency;
+            *val = props->Modulator.Frequency;
             break;
         case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            *val = effect->Modulator.HighPassCutoff;
+            *val = props->Modulator.HighPassCutoff;
             break;
 
         default:

@@ -60,13 +60,13 @@ static ALvoid ALdedicatedState_Update(ALdedicatedState *state, ALCdevice *device
     ALfloat Gain;
     ALsizei s;
 
-    Gain = Slot->Gain * Slot->effect.Dedicated.Gain;
+    Gain = Slot->Gain * Slot->EffectProps.Dedicated.Gain;
     for(s = 0;s < MaxChannels;s++)
         state->gains[s] = 0.0f;
 
-    if(Slot->effect.type == AL_EFFECT_DEDICATED_DIALOGUE)
+    if(Slot->EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
         ComputeAngleGains(device, atan2f(0.0f, 1.0f), 0.0f, Gain, state->gains);
-    else if(Slot->effect.type == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
+    else if(Slot->EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
         state->gains[LFE] = Gain;
 }
 
@@ -132,11 +132,12 @@ void ALdedicated_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param,
 }
 void ALdedicated_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_DEDICATED_GAIN:
             if(val >= 0.0f && isfinite(val))
-                effect->Dedicated.Gain = val;
+                props->Dedicated.Gain = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
@@ -159,10 +160,11 @@ void ALdedicated_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param,
 }
 void ALdedicated_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_DEDICATED_GAIN:
-            *val = effect->Dedicated.Gain;
+            *val = props->Dedicated.Gain;
             break;
 
         default:

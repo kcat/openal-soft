@@ -111,17 +111,17 @@ static ALvoid ALchorusState_Update(ALchorusState *state, ALCdevice *Device, cons
         state->Gain[1][it] = 0.0f;
     }
 
-    state->waveform = Slot->effect.Chorus.Waveform;
-    state->depth = Slot->effect.Chorus.Depth;
-    state->feedback = Slot->effect.Chorus.Feedback;
-    state->delay = fastf2i(Slot->effect.Chorus.Delay * frequency);
+    state->waveform = Slot->EffectProps.Chorus.Waveform;
+    state->depth = Slot->EffectProps.Chorus.Depth;
+    state->feedback = Slot->EffectProps.Chorus.Feedback;
+    state->delay = fastf2i(Slot->EffectProps.Chorus.Delay * frequency);
 
     /* Gains for left and right sides */
     ComputeAngleGains(Device, atan2f(-1.0f, 0.0f), 0.0f, Slot->Gain, state->Gain[0]);
     ComputeAngleGains(Device, atan2f(+1.0f, 0.0f), 0.0f, Slot->Gain, state->Gain[1]);
 
-    phase = Slot->effect.Chorus.Phase;
-    rate = Slot->effect.Chorus.Rate;
+    phase = Slot->EffectProps.Chorus.Phase;
+    rate = Slot->EffectProps.Chorus.Rate;
 
     /* Calculate LFO coefficient */
     switch (state->waveform)
@@ -285,18 +285,19 @@ ALeffectStateFactory *ALchorusStateFactory_getFactory(void)
 
 void ALchorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_CHORUS_WAVEFORM:
             if(val >= AL_CHORUS_MIN_WAVEFORM && val <= AL_CHORUS_MAX_WAVEFORM)
-                effect->Chorus.Waveform = val;
+                props->Chorus.Waveform = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_CHORUS_PHASE:
             if(val >= AL_CHORUS_MIN_PHASE && val <= AL_CHORUS_MAX_PHASE)
-                effect->Chorus.Phase = val;
+                props->Chorus.Phase = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
@@ -312,32 +313,33 @@ void ALchorus_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, co
 }
 void ALchorus_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_CHORUS_RATE:
             if(val >= AL_CHORUS_MIN_RATE && val <= AL_CHORUS_MAX_RATE)
-                effect->Chorus.Rate = val;
+                props->Chorus.Rate = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_CHORUS_DEPTH:
             if(val >= AL_CHORUS_MIN_DEPTH && val <= AL_CHORUS_MAX_DEPTH)
-                effect->Chorus.Depth = val;
+                props->Chorus.Depth = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_CHORUS_FEEDBACK:
             if(val >= AL_CHORUS_MIN_FEEDBACK && val <= AL_CHORUS_MAX_FEEDBACK)
-                effect->Chorus.Feedback = val;
+                props->Chorus.Feedback = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_CHORUS_DELAY:
             if(val >= AL_CHORUS_MIN_DELAY && val <= AL_CHORUS_MAX_DELAY)
-                effect->Chorus.Delay = val;
+                props->Chorus.Delay = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
@@ -354,14 +356,15 @@ void ALchorus_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, co
 
 void ALchorus_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_CHORUS_WAVEFORM:
-            *val = effect->Chorus.Waveform;
+            *val = props->Chorus.Waveform;
             break;
 
         case AL_CHORUS_PHASE:
-            *val = effect->Chorus.Phase;
+            *val = props->Chorus.Phase;
             break;
 
         default:
@@ -375,22 +378,23 @@ void ALchorus_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, AL
 }
 void ALchorus_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_CHORUS_RATE:
-            *val = effect->Chorus.Rate;
+            *val = props->Chorus.Rate;
             break;
 
         case AL_CHORUS_DEPTH:
-            *val = effect->Chorus.Depth;
+            *val = props->Chorus.Depth;
             break;
 
         case AL_CHORUS_FEEDBACK:
-            *val = effect->Chorus.Feedback;
+            *val = props->Chorus.Feedback;
             break;
 
         case AL_CHORUS_DELAY:
-            *val = effect->Chorus.Delay;
+            *val = props->Chorus.Delay;
             break;
 
         default:

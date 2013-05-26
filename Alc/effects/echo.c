@@ -96,16 +96,16 @@ static ALvoid ALechoState_Update(ALechoState *state, ALCdevice *Device, const AL
     ALfloat dirGain;
     ALuint i;
 
-    state->Tap[0].delay = fastf2u(Slot->effect.Echo.Delay * frequency) + 1;
-    state->Tap[1].delay = fastf2u(Slot->effect.Echo.LRDelay * frequency);
+    state->Tap[0].delay = fastf2u(Slot->EffectProps.Echo.Delay * frequency) + 1;
+    state->Tap[1].delay = fastf2u(Slot->EffectProps.Echo.LRDelay * frequency);
     state->Tap[1].delay += state->Tap[0].delay;
 
-    lrpan = Slot->effect.Echo.Spread;
+    lrpan = Slot->EffectProps.Echo.Spread;
 
-    state->FeedGain = Slot->effect.Echo.Feedback;
+    state->FeedGain = Slot->EffectProps.Echo.Feedback;
 
     cw = cosf(F_PI*2.0f * LOWPASSFREQREF / frequency);
-    g = 1.0f - Slot->effect.Echo.Damping;
+    g = 1.0f - Slot->EffectProps.Echo.Damping;
     state->iirFilter.coeff = lpCoeffCalc(g, cw);
 
     gain = Slot->Gain;
@@ -229,39 +229,40 @@ void ALecho_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, cons
 }
 void ALecho_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
+    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_ECHO_DELAY:
             if(val >= AL_ECHO_MIN_DELAY && val <= AL_ECHO_MAX_DELAY)
-                effect->Echo.Delay = val;
+                props->Echo.Delay = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_ECHO_LRDELAY:
             if(val >= AL_ECHO_MIN_LRDELAY && val <= AL_ECHO_MAX_LRDELAY)
-                effect->Echo.LRDelay = val;
+                props->Echo.LRDelay = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_ECHO_DAMPING:
             if(val >= AL_ECHO_MIN_DAMPING && val <= AL_ECHO_MAX_DAMPING)
-                effect->Echo.Damping = val;
+                props->Echo.Damping = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_ECHO_FEEDBACK:
             if(val >= AL_ECHO_MIN_FEEDBACK && val <= AL_ECHO_MAX_FEEDBACK)
-                effect->Echo.Feedback = val;
+                props->Echo.Feedback = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
 
         case AL_ECHO_SPREAD:
             if(val >= AL_ECHO_MIN_SPREAD && val <= AL_ECHO_MAX_SPREAD)
-                effect->Echo.Spread = val;
+                props->Echo.Spread = val;
             else
                 alSetError(context, AL_INVALID_VALUE);
             break;
@@ -284,26 +285,27 @@ void ALecho_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALin
 }
 void ALecho_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_ECHO_DELAY:
-            *val = effect->Echo.Delay;
+            *val = props->Echo.Delay;
             break;
 
         case AL_ECHO_LRDELAY:
-            *val = effect->Echo.LRDelay;
+            *val = props->Echo.LRDelay;
             break;
 
         case AL_ECHO_DAMPING:
-            *val = effect->Echo.Damping;
+            *val = props->Echo.Damping;
             break;
 
         case AL_ECHO_FEEDBACK:
-            *val = effect->Echo.Feedback;
+            *val = props->Echo.Feedback;
             break;
 
         case AL_ECHO_SPREAD:
-            *val = effect->Echo.Spread;
+            *val = props->Echo.Spread;
             break;
 
         default:

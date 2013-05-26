@@ -447,7 +447,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
         if(!Slot && i == 0)
             Slot = Device->DefaultSlot;
-        if(Slot && Slot->effect.type == AL_EFFECT_NULL)
+        if(Slot && Slot->EffectType == AL_EFFECT_NULL)
             Slot = NULL;
         ALSource->Params.Send[i].Slot = Slot;
         ALSource->Params.Send[i].Gain = WetGain[i];
@@ -551,7 +551,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
         if(!Slot && i == 0)
             Slot = Device->DefaultSlot;
-        if(!Slot || Slot->effect.type == AL_EFFECT_NULL)
+        if(!Slot || Slot->EffectType == AL_EFFECT_NULL)
         {
             Slot = NULL;
             RoomRolloff[i] = 0.0f;
@@ -561,12 +561,12 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         else if(Slot->AuxSendAuto)
         {
             RoomRolloff[i] = RoomRolloffBase;
-            if(IsReverbEffect(Slot->effect.type))
+            if(IsReverbEffect(Slot->EffectType))
             {
-                RoomRolloff[i] += Slot->effect.Reverb.RoomRolloffFactor;
-                DecayDistance[i] = Slot->effect.Reverb.DecayTime *
+                RoomRolloff[i] += Slot->EffectProps.Reverb.RoomRolloffFactor;
+                DecayDistance[i] = Slot->EffectProps.Reverb.DecayTime *
                                    SPEEDOFSOUNDMETRESPERSEC;
-                RoomAirAbsorption[i] = Slot->effect.Reverb.AirAbsorptionGainHF;
+                RoomAirAbsorption[i] = Slot->EffectProps.Reverb.AirAbsorptionGainHF;
             }
             else
             {

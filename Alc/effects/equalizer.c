@@ -270,9 +270,9 @@ static ALvoid ALequalizerState_Process(ALequalizerState *state, ALuint SamplesTo
     }
 }
 
-static ALeffectStateFactory *ALequalizerState_getCreator(void)
+static void ALequalizerState_Delete(ALequalizerState *state)
 {
-    return STATIC_CAST(ALeffectStateFactory, &EqualizerFactory);
+    free(state);
 }
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
@@ -303,13 +303,6 @@ ALeffectState *ALequalizerStateFactory_create(void)
     }
 
     return STATIC_CAST(ALeffectState, state);
-}
-
-static ALvoid ALequalizerStateFactory_destroy(ALeffectState *effect)
-{
-    ALequalizerState *state = STATIC_UPCAST(ALequalizerState, ALeffectState, effect);
-    ALequalizerState_Destruct(state);
-    free(state);
 }
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALequalizerStateFactory);

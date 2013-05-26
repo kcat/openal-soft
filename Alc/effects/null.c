@@ -60,12 +60,10 @@ static ALvoid ALnullState_Process(ALnullState *state, ALuint samplesToDo, const 
     (void)samplesOut;
 }
 
-/* This returns the ALeffectStateFactory that creates these ALeffectState
- * object types.
- */
-static ALeffectStateFactory *ALnullState_getCreator(void)
+/* This frees the memory used by the object, after it has been destructed. */
+static void ALnullState_Delete(ALnullState *state)
 {
-    return STATIC_CAST(ALeffectStateFactory, &NullFactory);
+    free(state);
 }
 
 /* Define the forwards and the ALeffectState vtable for this type. */
@@ -83,14 +81,6 @@ ALeffectState *ALnullStateFactory_create(void)
     SET_VTABLE2(ALnullState, ALeffectState, state);
 
     return STATIC_CAST(ALeffectState, state);
-}
-
-/* Destroys (destructs and frees) the ALeffectState. */
-static ALvoid ALnullStateFactory_destroy(ALeffectState *effect)
-{
-    ALnullState *state = STATIC_UPCAST(ALnullState, ALeffectState, effect);
-    ALnullState_Destruct(state);
-    free(state);
 }
 
 /* Define the ALeffectStateFactory vtable for this type. */

@@ -234,9 +234,9 @@ static ALvoid ALdistortionState_Process(ALdistortionState *state, ALuint Samples
     }
 }
 
-static ALeffectStateFactory *ALdistortionState_getCreator(void)
+static void ALdistortionState_Delete(ALdistortionState *state)
 {
-    return STATIC_CAST(ALeffectStateFactory, &DistortionFactory);
+    free(state);
 }
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
@@ -261,13 +261,6 @@ static ALeffectState *ALdistortionStateFactory_create(void)
     state->lowpass.y[1] = 0.0f;
 
     return STATIC_CAST(ALeffectState, state);
-}
-
-static ALvoid ALdistortionStateFactory_destroy(ALeffectState *effect)
-{
-    ALdistortionState *state = STATIC_UPCAST(ALdistortionState, ALeffectState, effect);
-    ALdistortionState_Destruct(state);
-    free(state);
 }
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALdistortionStateFactory);

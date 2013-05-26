@@ -85,9 +85,9 @@ static ALvoid ALdedicatedState_Process(ALdedicatedState *state, ALuint SamplesTo
     }
 }
 
-static ALeffectStateFactory *ALdedicatedState_getCreator(void)
+static void ALdedicatedState_Delete(ALdedicatedState *state)
 {
-    return STATIC_CAST(ALeffectStateFactory, &DedicatedFactory);
+    free(state);
 }
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
@@ -106,13 +106,6 @@ ALeffectState *ALdedicatedStateFactory_create(void)
         state->gains[s] = 0.0f;
 
     return STATIC_CAST(ALeffectState, state);
-}
-
-static ALvoid ALdedicatedStateFactory_destroy(ALeffectState *effect)
-{
-    ALdedicatedState *state = STATIC_UPCAST(ALdedicatedState, ALeffectState, effect);
-    ALdedicatedState_Destruct(state);
-    free(state);
 }
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALdedicatedStateFactory);

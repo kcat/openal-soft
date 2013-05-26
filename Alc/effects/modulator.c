@@ -197,9 +197,9 @@ static ALvoid ALmodulatorState_Process(ALmodulatorState *state, ALuint SamplesTo
     }
 }
 
-static ALeffectStateFactory *ALmodulatorState_getCreator(void)
+static void ALmodulatorState_Delete(ALmodulatorState *state)
 {
-    return STATIC_CAST(ALeffectStateFactory, &ModulatorFactory);
+    free(state);
 }
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
@@ -220,13 +220,6 @@ static ALeffectState *ALmodulatorStateFactory_create(void)
     state->iirFilter.history[0] = 0.0f;
 
     return STATIC_CAST(ALeffectState, state);
-}
-
-static ALvoid ALmodulatorStateFactory_destroy(ALeffectState *effect)
-{
-    ALmodulatorState *state = STATIC_UPCAST(ALmodulatorState, ALeffectState, effect);
-    ALmodulatorState_Destruct(state);
-    free(state);
 }
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALmodulatorStateFactory);

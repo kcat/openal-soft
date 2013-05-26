@@ -18,7 +18,8 @@ struct ALeffectStateVtable {
     ALboolean (*const DeviceUpdate)(ALeffectState *state, ALCdevice *device);
     ALvoid (*const Update)(ALeffectState *state, ALCdevice *device, const ALeffectslot *slot);
     ALvoid (*const Process)(ALeffectState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE]);
-    ALeffectStateFactory *(*const getCreator)(void);
+
+    void (*const Delete)(ALeffectState *state);
 };
 
 struct ALeffectState {
@@ -29,7 +30,6 @@ struct ALeffectState {
 #define ALeffectState_DeviceUpdate(a,b) ((a)->vtbl->DeviceUpdate((a),(b)))
 #define ALeffectState_Update(a,b,c)     ((a)->vtbl->Update((a),(b),(c)))
 #define ALeffectState_Process(a,b,c,d)  ((a)->vtbl->Process((a),(b),(c),(d)))
-#define ALeffectState_getCreator(a)     ((a)->vtbl->getCreator())
 
 #define DEFINE_ALEFFECTSTATE_VTABLE(T)                                        \
 static ALvoid T##_ALeffectState_Destruct(ALeffectState *state)                \
@@ -40,21 +40,20 @@ static ALvoid T##_ALeffectState_Update(ALeffectState *state, ALCdevice *device, 
 { T##_Update(STATIC_UPCAST(T, ALeffectState, state), device, slot); }                                     \
 static ALvoid T##_ALeffectState_Process(ALeffectState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE]) \
 { T##_Process(STATIC_UPCAST(T, ALeffectState, state), samplesToDo, samplesIn, samplesOut); }                                                                     \
-static ALeffectStateFactory* T##_ALeffectState_getCreator(void)               \
-{ return T##_getCreator(); }                                                  \
+static ALvoid T##_ALeffectState_Delete(ALeffectState *state)                  \
+{ T##_Delete(STATIC_UPCAST(T, ALeffectState, state)); }                       \
                                                                               \
 static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
     T##_ALeffectState_Destruct,                                               \
     T##_ALeffectState_DeviceUpdate,                                           \
     T##_ALeffectState_Update,                                                 \
     T##_ALeffectState_Process,                                                \
-    T##_ALeffectState_getCreator,                                             \
+    T##_ALeffectState_Delete,                                                 \
 }
 
 
 struct ALeffectStateFactoryVtable {
     ALeffectState *(*const create)(void);
-    ALvoid (*const destroy)(ALeffectState *state);
 };
 
 struct ALeffectStateFactory {
@@ -62,17 +61,13 @@ struct ALeffectStateFactory {
 };
 
 #define ALeffectStateFactory_create(p)    ((p)->vtbl->create())
-#define ALeffectStateFactory_destroy(p,a) ((p)->vtbl->destroy((a)))
 
 #define DEFINE_ALEFFECTSTATEFACTORY_VTABLE(T)                                 \
 static ALeffectState* T##_ALeffectStateFactory_create(void)                   \
 { return T##_create(); }                                                      \
-static ALvoid T##_ALeffectStateFactory_destroy(ALeffectState *state)          \
-{ T##_destroy(state); }                                                       \
                                                                               \
 static const struct ALeffectStateFactoryVtable T##_ALeffectStateFactory_vtable = { \
     T##_ALeffectStateFactory_create,                                          \
-    T##_ALeffectStateFactory_destroy                                          \
 }
 
 

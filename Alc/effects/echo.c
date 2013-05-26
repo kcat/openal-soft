@@ -175,9 +175,9 @@ static ALvoid ALechoState_Process(ALechoState *state, ALuint SamplesToDo, const 
     state->Offset = offset;
 }
 
-static ALeffectStateFactory *ALechoState_getCreator(void)
+static void ALechoState_Delete(ALechoState *state)
 {
-    return STATIC_CAST(ALeffectStateFactory, &EchoFactory);
+    free(state);
 }
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALechoState);
@@ -203,13 +203,6 @@ ALeffectState *ALechoStateFactory_create(void)
     state->iirFilter.history[1] = 0.0f;
 
     return STATIC_CAST(ALeffectState, state);
-}
-
-static ALvoid ALechoStateFactory_destroy(ALeffectState *effect)
-{
-    ALechoState *state = STATIC_UPCAST(ALechoState, ALeffectState, effect);
-    ALechoState_Destruct(state);
-    free(state);
 }
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALechoStateFactory);

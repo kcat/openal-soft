@@ -243,9 +243,9 @@ static ALvoid ALflangerState_Process(ALflangerState *state, ALuint SamplesToDo, 
         ProcessSinusoid(state, SamplesToDo, SamplesIn, SamplesOut);
 }
 
-static ALeffectStateFactory *ALflangerState_getCreator(void)
+static void ALflangerState_Delete(ALflangerState *state)
 {
-    return STATIC_CAST(ALeffectStateFactory, &FlangerFactory);
+    free(state);
 }
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALflangerState);
@@ -265,13 +265,6 @@ ALeffectState *ALflangerStateFactory_create(void)
     state->offset = 0;
 
     return STATIC_CAST(ALeffectState, state);
-}
-
-static ALvoid ALflangerStateFactory_destroy(ALeffectState *effect)
-{
-    ALflangerState *state = STATIC_UPCAST(ALflangerState, ALeffectState, effect);
-    ALflangerState_Destruct(state);
-    free(state);
 }
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALflangerStateFactory);

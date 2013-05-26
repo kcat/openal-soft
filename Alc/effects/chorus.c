@@ -243,9 +243,9 @@ static ALvoid ALchorusState_Process(ALchorusState *state, ALuint SamplesToDo, co
         ProcessSinusoid(state, SamplesToDo, SamplesIn, SamplesOut);
 }
 
-static ALeffectStateFactory *ALchorusState_getCreator(void)
+static void ALchorusState_Delete(ALchorusState *state)
 {
-    return STATIC_CAST(ALeffectStateFactory, &ChorusFactory);
+    free(state);
 }
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALchorusState);
@@ -265,13 +265,6 @@ static ALeffectState *ALchorusStateFactory_create(void)
     state->offset = 0;
 
     return STATIC_CAST(ALeffectState, state);
-}
-
-static ALvoid ALchorusStateFactory_destroy(ALeffectState *effect)
-{
-    ALchorusState *state = STATIC_UPCAST(ALchorusState, ALeffectState, effect);
-    ALchorusState_Destruct(state);
-    free(state);
 }
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALchorusStateFactory);

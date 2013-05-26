@@ -1174,9 +1174,9 @@ static ALvoid ALreverbState_Destruct(ALreverbState *State)
     State->SampleBuffer = NULL;
 }
 
-static ALeffectStateFactory *ALreverbState_getCreator(void)
+static void ALreverbState_Delete(ALreverbState *state)
 {
-    return STATIC_CAST(ALeffectStateFactory, &ReverbFactory);
+    free(state);
 }
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALreverbState);
@@ -1272,13 +1272,6 @@ static ALeffectState *ALreverbStateFactory_create(void)
     state->Gain = state->Late.PanGain;
 
     return STATIC_CAST(ALeffectState, state);
-}
-
-static ALvoid ALreverbStateFactory_destroy(ALeffectState *effect)
-{
-    ALreverbState *state = STATIC_UPCAST(ALreverbState, ALeffectState, effect);
-    ALreverbState_Destruct(state);
-    free(state);
 }
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALreverbStateFactory);

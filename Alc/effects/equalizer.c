@@ -240,23 +240,23 @@ static ALvoid ALequalizerState_Process(ALequalizerState *state, ALuint SamplesTo
         for(it = 0;it < td;it++)
         {
             ALfloat smp = SamplesIn[base+it];
-            ALfloat tempsmp;
 
             for(ft = 0;ft < 4;ft++)
             {
                 ALEQFilter *filter = &state->bandfilter[ft];
+                ALfloat outsmp;
 
-                tempsmp = filter->b[0] * smp +
-                          filter->b[1] * filter->x[0] +
-                          filter->b[2] * filter->x[1] -
-                          filter->a[1] * filter->y[0] -
-                          filter->a[2] * filter->y[1];
+                outsmp = filter->b[0] * smp +
+                         filter->b[1] * filter->x[0] +
+                         filter->b[2] * filter->x[1] -
+                         filter->a[1] * filter->y[0] -
+                         filter->a[2] * filter->y[1];
 
                 filter->x[1] = filter->x[0];
                 filter->x[0] = smp;
                 filter->y[1] = filter->y[0];
-                filter->y[0] = tempsmp;
-                smp = tempsmp;
+                filter->y[0] = outsmp;
+                smp = outsmp;
             }
 
             temps[it] = smp;

@@ -486,7 +486,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
             ERR("Failed to find factory for effect type 0x%04x\n", newtype);
             return AL_INVALID_ENUM;
         }
-        State = ALeffectStateFactory_create(factory);
+        State = VCALL_NOARGS(factory,create);
         if(!State)
             return AL_OUT_OF_MEMORY;
 
@@ -548,7 +548,7 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     slot->EffectType = AL_EFFECT_NULL;
 
     factory = getFactoryByType(AL_EFFECT_NULL);
-    if(!(slot->EffectState=ALeffectStateFactory_create(factory)))
+    if(!(slot->EffectState=VCALL_NOARGS(factory,create)))
         return AL_OUT_OF_MEMORY;
 
     slot->Gain = 1.0;

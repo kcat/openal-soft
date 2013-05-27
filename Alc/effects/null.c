@@ -71,9 +71,10 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALnullState);
 
 
 /* Creates ALeffectState objects of the appropriate type. */
-ALeffectState *ALnullStateFactory_create(void)
+ALeffectState *ALnullStateFactory_create(ALnullStateFactory *factory)
 {
     ALnullState *state;
+    (void)factory;
 
     state = calloc(1, sizeof(*state));
     if(!state) return NULL;

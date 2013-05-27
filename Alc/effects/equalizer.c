@@ -284,10 +284,11 @@ static void ALequalizerState_Delete(ALequalizerState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
 
 
-ALeffectState *ALequalizerStateFactory_create(void)
+ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *factory)
 {
     ALequalizerState *state;
     int it;
+    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;

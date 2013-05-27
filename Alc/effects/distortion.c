@@ -242,9 +242,10 @@ static void ALdistortionState_Delete(ALdistortionState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
 
 
-static ALeffectState *ALdistortionStateFactory_create(void)
+static ALeffectState *ALdistortionStateFactory_create(ALdistortionStateFactory *factory)
 {
     ALdistortionState *state;
+    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;

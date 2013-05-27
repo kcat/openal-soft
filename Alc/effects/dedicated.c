@@ -93,10 +93,11 @@ static void ALdedicatedState_Delete(ALdedicatedState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
 
 
-ALeffectState *ALdedicatedStateFactory_create(void)
+ALeffectState *ALdedicatedStateFactory_create(ALdedicatedStateFactory *factory)
 {
     ALdedicatedState *state;
     ALsizei s;
+    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;

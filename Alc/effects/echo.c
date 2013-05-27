@@ -183,9 +183,10 @@ static void ALechoState_Delete(ALechoState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALechoState);
 
 
-ALeffectState *ALechoStateFactory_create(void)
+ALeffectState *ALechoStateFactory_create(ALechoStateFactory *factory)
 {
     ALechoState *state;
+    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;

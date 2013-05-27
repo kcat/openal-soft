@@ -205,9 +205,10 @@ static void ALmodulatorState_Delete(ALmodulatorState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
 
 
-static ALeffectState *ALmodulatorStateFactory_create(void)
+static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *factory)
 {
     ALmodulatorState *state;
+    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;

@@ -251,9 +251,10 @@ static void ALchorusState_Delete(ALchorusState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALchorusState);
 
 
-static ALeffectState *ALchorusStateFactory_create(void)
+static ALeffectState *ALchorusStateFactory_create(ALchorusStateFactory *factory)
 {
     ALchorusState *state;
+    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;

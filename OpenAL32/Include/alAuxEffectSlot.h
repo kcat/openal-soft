@@ -48,18 +48,16 @@ static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
 
 
 struct ALeffectStateFactoryVtable {
-    ALeffectState *(*const create)(void);
+    ALeffectState *(*const create)(ALeffectStateFactory *factory);
 };
 
 struct ALeffectStateFactory {
     const struct ALeffectStateFactoryVtable *vtbl;
 };
 
-#define ALeffectStateFactory_create(p)    ((p)->vtbl->create())
-
 #define DEFINE_ALEFFECTSTATEFACTORY_VTABLE(T)                                 \
-static ALeffectState* T##_ALeffectStateFactory_create(void)                   \
-{ return T##_create(); }                                                      \
+static ALeffectState* T##_ALeffectStateFactory_create(ALeffectStateFactory *factory) \
+{ return T##_create(STATIC_UPCAST(T, ALeffectStateFactory, factory)); }              \
                                                                               \
 static const struct ALeffectStateFactoryVtable T##_ALeffectStateFactory_vtable = { \
     T##_ALeffectStateFactory_create,                                          \

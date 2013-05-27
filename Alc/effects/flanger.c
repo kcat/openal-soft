@@ -251,9 +251,10 @@ static void ALflangerState_Delete(ALflangerState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALflangerState);
 
 
-ALeffectState *ALflangerStateFactory_create(void)
+ALeffectState *ALflangerStateFactory_create(ALflangerStateFactory *factory)
 {
     ALflangerState *state;
+    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;

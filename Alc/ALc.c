@@ -1707,7 +1707,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
 
-            if(ALeffectState_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
+            if(VCALL(slot->EffectState,DeviceUpdate,(device)) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
                 ALCdevice_Unlock(device);
@@ -1715,7 +1715,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 return ALC_INVALID_DEVICE;
             }
             slot->NeedsUpdate = AL_FALSE;
-            ALeffectState_Update(slot->EffectState, device, slot);
+            VCALL(slot->EffectState,Update,(device, slot));
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
 
@@ -1744,14 +1744,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         ALeffectslot *slot = device->DefaultSlot;
 
-        if(ALeffectState_DeviceUpdate(slot->EffectState, device) == AL_FALSE)
+        if(VCALL(slot->EffectState,DeviceUpdate,(device)) == AL_FALSE)
         {
             ALCdevice_Unlock(device);
             RestoreFPUMode(&oldMode);
             return ALC_INVALID_DEVICE;
         }
         slot->NeedsUpdate = AL_FALSE;
-        ALeffectState_Update(slot->EffectState, device, slot);
+        VCALL(slot->EffectState,Update,(device, slot));
     }
     ALCdevice_Unlock(device);
     RestoreFPUMode(&oldMode);

@@ -162,16 +162,6 @@ typedef struct ALeffect {
     ALuint id;
 } ALeffect;
 
-#define ALeffect_SetParami(x, c, p, v)  ((x)->vtbl->SetParami((x),(c),(p),(v)))
-#define ALeffect_SetParamiv(x, c, p, v) ((x)->vtbl->SetParamiv((x),(c),(p),(v)))
-#define ALeffect_SetParamf(x, c, p, v)  ((x)->vtbl->SetParamf((x),(c),(p),(v)))
-#define ALeffect_SetParamfv(x, c, p, v) ((x)->vtbl->SetParamfv((x),(c),(p),(v)))
-
-#define ALeffect_GetParami(x, c, p, v)  ((x)->vtbl->GetParami((x),(c),(p),(v)))
-#define ALeffect_GetParamiv(x, c, p, v) ((x)->vtbl->GetParamiv((x),(c),(p),(v)))
-#define ALeffect_GetParamf(x, c, p, v)  ((x)->vtbl->GetParamf((x),(c),(p),(v)))
-#define ALeffect_GetParamfv(x, c, p, v) ((x)->vtbl->GetParamfv((x),(c),(p),(v)))
-
 static __inline ALboolean IsReverbEffect(ALenum type)
 { return type == AL_EFFECT_REVERB || type == AL_EFFECT_EAXREVERB; }
 

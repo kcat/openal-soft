@@ -70,9 +70,17 @@ static const union {
 #define SET_VTABLE1(T1, obj)     ((obj)->vtbl = &(T1##_vtable))
 #define SET_VTABLE2(T1, T2, obj) SET_VTABLE1(T1##_##T2, STATIC_CAST(T2, (obj)))
 
+/* Helper to extract an argument list for VCALL. Not used directly. */
+#define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__
+
+/* Call a "virtual" method on an object, with arguments. */
+#define VCALL(obj, func, args)   (((obj)->vtbl->func)((obj), EXTRACT_VCALL_ARGS args))
+/* Call a "virtual" method on an object, with no arguments. */
+#define VCALL_NOARGS(obj, func) (((obj)->vtbl->func)((obj)))
+
 #define DELETE_OBJ(obj) do {                                                  \
-    (obj)->vtbl->Destruct((obj));                                             \
-    (obj)->vtbl->Delete((obj));                                               \
+    VCALL_NOARGS((obj),Destruct);                                             \
+    VCALL_NOARGS((obj),Delete);                                               \
 } while(0)
 
 

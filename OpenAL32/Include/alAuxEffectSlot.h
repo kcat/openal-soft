@@ -26,11 +26,6 @@ struct ALeffectState {
     const struct ALeffectStateVtable *vtbl;
 };
 
-#define ALeffectState_Destruct(a)       ((a)->vtbl->Destruct((a)))
-#define ALeffectState_DeviceUpdate(a,b) ((a)->vtbl->DeviceUpdate((a),(b)))
-#define ALeffectState_Update(a,b,c)     ((a)->vtbl->Update((a),(b),(c)))
-#define ALeffectState_Process(a,b,c,d)  ((a)->vtbl->Process((a),(b),(c),(d)))
-
 #define DEFINE_ALEFFECTSTATE_VTABLE(T)                                        \
 static ALvoid T##_ALeffectState_Destruct(ALeffectState *state)                \
 { T##_Destruct(STATIC_UPCAST(T, ALeffectState, state)); }                     \

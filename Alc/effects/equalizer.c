@@ -216,6 +216,12 @@ static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *device
                  state->bandfilter[it].a[2] =  1.0f - alpha / gain;
                  break;
         }
+        state->bandfilter[it].b[0] /= state->bandfilter[it].a[0];
+        state->bandfilter[it].b[1] /= state->bandfilter[it].a[0];
+        state->bandfilter[it].b[2] /= state->bandfilter[it].a[0];
+        state->bandfilter[it].a[0] /= state->bandfilter[it].a[0];
+        state->bandfilter[it].a[1] /= state->bandfilter[it].a[0];
+        state->bandfilter[it].a[2] /= state->bandfilter[it].a[0];
     }
 }
 
@@ -240,11 +246,11 @@ static ALvoid ALequalizerState_Process(ALequalizerState *state, ALuint SamplesTo
             {
                 ALEQFilter *filter = &state->bandfilter[ft];
 
-                tempsmp = filter->b[0] / filter->a[0] * smp +
-                          filter->b[1] / filter->a[0] * filter->x[0] +
-                          filter->b[2] / filter->a[0] * filter->x[1] -
-                          filter->a[1] / filter->a[0] * filter->y[0] -
-                          filter->a[2] / filter->a[0] * filter->y[1];
+                tempsmp = filter->b[0] * smp +
+                          filter->b[1] * filter->x[0] +
+                          filter->b[2] * filter->x[1] -
+                          filter->a[1] * filter->y[0] -
+                          filter->a[2] * filter->y[1];
 
                 filter->x[1] = filter->x[0];
                 filter->x[0] = smp;

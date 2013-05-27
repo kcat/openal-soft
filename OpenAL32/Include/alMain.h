@@ -74,13 +74,16 @@ static const union {
 #define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__
 
 /* Call a "virtual" method on an object, with arguments. */
-#define VCALL(obj, func, args)   (((obj)->vtbl->func)((obj), EXTRACT_VCALL_ARGS args))
+#define VCALL(obj, func, args)  ((obj)->vtbl->func((obj), EXTRACT_VCALL_ARGS args))
 /* Call a "virtual" method on an object, with no arguments. */
-#define VCALL_NOARGS(obj, func) (((obj)->vtbl->func)((obj)))
+#define VCALL_NOARGS(obj, func) ((obj)->vtbl->func((obj)))
 
 #define DELETE_OBJ(obj) do {                                                  \
-    VCALL_NOARGS((obj),Destruct);                                             \
-    VCALL_NOARGS((obj),Delete);                                               \
+    if((obj) != NULL)                                                         \
+    {                                                                         \
+        VCALL_NOARGS((obj),Destruct);                                         \
+        VCALL_NOARGS((obj),Delete);                                           \
+    }                                                                         \
 } while(0)
 
 

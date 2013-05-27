@@ -46,6 +46,49 @@ static __inline ALfloat lpFilter2PC(const FILTER *iir, ALfloat input)
 ALfloat lpCoeffCalc(ALfloat g, ALfloat cw);
 
 
+typedef enum ALfilterType {
+    ALfilterType_HighShelf,
+    ALfilterType_LowShelf,
+    ALfilterType_Peaking,
+} ALfilterType;
+
+typedef struct ALfilterState {
+    ALfloat x[2]; /* History of two last input samples  */
+    ALfloat y[2]; /* History of two last output samples */
+    ALfloat a[3]; /* Transfer function coefficients "a" */
+    ALfloat b[3]; /* Transfer function coefficients "b" */
+} ALfilterState;
+
+void ALfilterState_clear(ALfilterState *filter);
+void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_scale, ALfloat bandwidth);
+
+static __inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample)
+{
+    ALfloat outsmp;
+
+    outsmp = filter->b[0] * sample +
+             filter->b[1] * filter->x[0] +
+             filter->b[2] * filter->x[1] -
+             filter->a[1] * filter->y[0] -
+             filter->a[2] * filter->y[1];
+    filter->x[1] = filter->x[0];
+    filter->x[0] = sample;
+    filter->y[1] = filter->y[0];
+    filter->y[0] = outsmp;
+
+    return outsmp;
+}
+
+static __inline ALfloat ALfilterState_processSingleC(const ALfilterState *filter, ALfloat sample)
+{
+    return filter->b[0] * sample +
+           filter->b[1] * filter->x[0] +
+           filter->b[2] * filter->x[1] -
+           filter->a[1] * filter->y[0] -
+           filter->a[2] * filter->y[1];
+}
+
+
 typedef struct ALfilter {
     // Filter type (AL_FILTER_NULL, ...)
     ALenum type;

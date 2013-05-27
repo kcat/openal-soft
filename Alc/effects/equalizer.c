@@ -78,20 +78,6 @@ static ALequalizerStateFactory EqualizerFactory;
  * filter coefficients" by Robert Bristow-Johnson                        *
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt                   */
 
-typedef enum ALEQFilterType {
-    LOW_SHELF,
-    HIGH_SHELF,
-    PEAKING
-} ALEQFilterType;
-
-typedef struct ALEQFilter {
-    ALEQFilterType type;
-    ALfloat x[2]; /* History of two last input samples  */
-    ALfloat y[2]; /* History of two last output samples */
-    ALfloat a[3]; /* Transfer function coefficients "a" */
-    ALfloat b[3]; /* Transfer function coefficients "b" */
-} ALEQFilter;
-
 typedef struct ALequalizerState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -99,7 +85,7 @@ typedef struct ALequalizerState {
     ALfloat Gain[MaxChannels];
 
     /* Effect parameters */
-    ALEQFilter bandfilter[4];
+    ALfilterState filter[4];
 } ALequalizerState;
 
 static ALvoid ALequalizerState_Destruct(ALequalizerState *state)
@@ -131,11 +117,10 @@ static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *device
     /* Calculate coefficients for the each type of filter */
     for(it = 0; it < 4; it++)
     {
-        ALfloat gain;
+        ALfilterType type = ALfilterType_Peaking;
         ALfloat filter_frequency;
         ALfloat bandwidth = 0.0f;
-        ALfloat w0;
-        ALfloat alpha = 0.0f;
+        ALfloat gain;
 
         /* convert linear gains to filter gains */
         switch (it)
@@ -143,85 +128,28 @@ static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *device
             case 0: /* Low Shelf */
                  gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.LowGain)) / 40.0f);
                  filter_frequency = slot->EffectProps.Equalizer.LowCutoff;
+                 type = ALfilterType_LowShelf;
                  break;
             case 1: /* Peaking */
                  gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.Mid1Gain)) / 40.0f);
                  filter_frequency = slot->EffectProps.Equalizer.Mid1Center;
                  bandwidth = slot->EffectProps.Equalizer.Mid1Width;
+                 type = ALfilterType_Peaking;
                  break;
             case 2: /* Peaking */
                  gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.Mid2Gain)) / 40.0f);
                  filter_frequency = slot->EffectProps.Equalizer.Mid2Center;
                  bandwidth = slot->EffectProps.Equalizer.Mid2Width;
+                 type = ALfilterType_Peaking;
                  break;
             case 3: /* High Shelf */
                  gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.HighGain)) / 40.0f);
                  filter_frequency = slot->EffectProps.Equalizer.HighCutoff;
+                 type = ALfilterType_HighShelf;
                  break;
         }
 
-        w0 = 2.0f*F_PI * filter_frequency / frequency;
-
-        /* Calculate filter coefficients depending on filter type */
-        switch(state->bandfilter[it].type)
-        {
-            case LOW_SHELF:
-                 alpha = sinf(w0) / 2.0f * sqrtf((gain + 1.0f / gain) *
-                                                 (1.0f / 0.75f - 1.0f) + 2.0f);
-                 state->bandfilter[it].b[0] = gain * ((gain + 1.0f) -
-                                                      (gain - 1.0f) * cosf(w0) +
-                                                      2.0f * sqrtf(gain) * alpha);
-                 state->bandfilter[it].b[1] = 2.0f * gain * ((gain - 1.0f) -
-                                                             (gain + 1.0f) * cosf(w0));
-                 state->bandfilter[it].b[2] = gain * ((gain + 1.0f) -
-                                                      (gain - 1.0f) * cosf(w0) -
-                                                      2.0f * sqrtf(gain) * alpha);
-                 state->bandfilter[it].a[0] = (gain + 1.0f) +
-                                              (gain - 1.0f) * cosf(w0) +
-                                              2.0f * sqrtf(gain) * alpha;
-                 state->bandfilter[it].a[1] = -2.0f * ((gain - 1.0f) +
-                                              (gain + 1.0f) * cosf(w0));
-                 state->bandfilter[it].a[2] = (gain + 1.0f) +
-                                              (gain - 1.0f) * cosf(w0) -
-                                              2.0f * sqrtf(gain) * alpha;
-                 break;
-            case HIGH_SHELF:
-                 alpha = sinf(w0) / 2.0f * sqrtf((gain + 1.0f / gain) *
-                                                 (1.0f / 0.75f - 1.0f) + 2.0f);
-                 state->bandfilter[it].b[0] = gain * ((gain + 1.0f) +
-                                                      (gain - 1.0f) * cosf(w0) +
-                                                      2.0f * sqrtf(gain) * alpha);
-                 state->bandfilter[it].b[1] = -2.0f * gain * ((gain - 1.0f) +
-                                                              (gain + 1.0f) *
-                                                              cosf(w0));
-                 state->bandfilter[it].b[2] = gain * ((gain + 1.0f) +
-                                                      (gain - 1.0f) * cosf(w0) -
-                                                      2.0f * sqrtf(gain) * alpha);
-                 state->bandfilter[it].a[0] = (gain + 1.0f) -
-                                              (gain - 1.0f) * cosf(w0) +
-                                              2.0f * sqrtf(gain) * alpha;
-                 state->bandfilter[it].a[1] = 2.0f * ((gain - 1.0f) -
-                                                      (gain + 1.0f) * cosf(w0));
-                 state->bandfilter[it].a[2] = (gain + 1.0f) -
-                                              (gain - 1.0f) * cosf(w0) -
-                                              2.0f * sqrtf(gain) * alpha;
-                 break;
-            case PEAKING:
-                 alpha = sinf(w0) * sinhf(logf(2.0f) / 2.0f * bandwidth * w0 / sinf(w0));
-                 state->bandfilter[it].b[0] =  1.0f + alpha * gain;
-                 state->bandfilter[it].b[1] = -2.0f * cosf(w0);
-                 state->bandfilter[it].b[2] =  1.0f - alpha * gain;
-                 state->bandfilter[it].a[0] =  1.0f + alpha / gain;
-                 state->bandfilter[it].a[1] = -2.0f * cosf(w0);
-                 state->bandfilter[it].a[2] =  1.0f - alpha / gain;
-                 break;
-        }
-        state->bandfilter[it].b[0] /= state->bandfilter[it].a[0];
-        state->bandfilter[it].b[1] /= state->bandfilter[it].a[0];
-        state->bandfilter[it].b[2] /= state->bandfilter[it].a[0];
-        state->bandfilter[it].a[0] /= state->bandfilter[it].a[0];
-        state->bandfilter[it].a[1] /= state->bandfilter[it].a[0];
-        state->bandfilter[it].a[2] /= state->bandfilter[it].a[0];
+        ALfilterState_setParams(&state->filter[it], type, gain, filter_frequency/frequency, bandwidth);
     }
 }
 
@@ -242,22 +170,7 @@ static ALvoid ALequalizerState_Process(ALequalizerState *state, ALuint SamplesTo
             ALfloat smp = SamplesIn[base+it];
 
             for(ft = 0;ft < 4;ft++)
-            {
-                ALEQFilter *filter = &state->bandfilter[ft];
-                ALfloat outsmp;
-
-                outsmp = filter->b[0] * smp +
-                         filter->b[1] * filter->x[0] +
-                         filter->b[2] * filter->x[1] -
-                         filter->a[1] * filter->y[0] -
-                         filter->a[2] * filter->y[1];
-
-                filter->x[1] = filter->x[0];
-                filter->x[0] = smp;
-                filter->y[1] = filter->y[0];
-                filter->y[0] = outsmp;
-                smp = outsmp;
-            }
+                smp = ALfilterState_processSingle(&state->filter[ft], smp);
 
             temps[it] = smp;
         }
@@ -294,20 +207,10 @@ ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *factory)
     if(!state) return NULL;
     SET_VTABLE2(ALequalizerState, ALeffectState, state);
 
-    state->bandfilter[0].type = LOW_SHELF;
-    state->bandfilter[1].type = PEAKING;
-    state->bandfilter[2].type = PEAKING;
-    state->bandfilter[3].type = HIGH_SHELF;
-
     /* Initialize sample history only on filter creation to avoid */
     /* sound clicks if filter settings were changed in runtime.   */
     for(it = 0; it < 4; it++)
-    {
-        state->bandfilter[it].x[0] = 0.0f;
-        state->bandfilter[it].x[1] = 0.0f;
-        state->bandfilter[it].y[0] = 0.0f;
-        state->bandfilter[it].y[1] = 0.0f;
-    }
+        ALfilterState_clear(&state->filter[it]);
 
     return STATIC_CAST(ALeffectState, state);
 }

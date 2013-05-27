@@ -325,6 +325,84 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *va
 }
 
 
+void ALfilterState_clear(ALfilterState *filter)
+{
+    filter->x[0] = 0.0f;
+    filter->x[1] = 0.0f;
+    filter->y[0] = 0.0f;
+    filter->y[1] = 0.0f;
+}
+
+void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_scale, ALfloat bandwidth)
+{
+    ALfloat alpha;
+    ALfloat w0;
+
+    w0 = 2.0f*F_PI * freq_scale;
+
+    /* Calculate filter coefficients depending on filter type */
+    switch(type)
+    {
+        case ALfilterType_HighShelf:
+            alpha = sinf(w0) / 2.0f * sqrtf((gain + 1.0f/gain) *
+                                            (1.0f/0.75f - 1.0f) + 2.0f);
+            filter->b[0] = gain * ((gain + 1.0f) +
+                                   (gain - 1.0f) * cosf(w0) +
+                                   2.0f * sqrtf(gain) * alpha);
+            filter->b[1] = -2.0f * gain * ((gain - 1.0f) +
+                                           (gain + 1.0f) * cosf(w0));
+            filter->b[2] = gain * ((gain + 1.0f) +
+                                   (gain - 1.0f) * cosf(w0) -
+                                   2.0f * sqrtf(gain) * alpha);
+            filter->a[0] = (gain + 1.0f) -
+                           (gain - 1.0f) * cosf(w0) +
+                           2.0f * sqrtf(gain) * alpha;
+            filter->a[1] = 2.0f * ((gain - 1.0f) -
+                           (gain + 1.0f) * cosf(w0));
+            filter->a[2] = (gain + 1.0f) -
+                           (gain - 1.0f) * cosf(w0) -
+                           2.0f * sqrtf(gain) * alpha;
+            break;
+        case ALfilterType_LowShelf:
+            alpha = sinf(w0) / 2.0f * sqrtf((gain + 1.0f / gain) *
+                                            (1.0f / 0.75f - 1.0f) + 2.0f);
+            filter->b[0] = gain * ((gain + 1.0f) -
+                                   (gain - 1.0f) * cosf(w0) +
+                                   2.0f * sqrtf(gain) * alpha);
+            filter->b[1] = 2.0f * gain * ((gain - 1.0f) -
+                                          (gain + 1.0f) * cosf(w0));
+            filter->b[2] = gain * ((gain + 1.0f) -
+                                   (gain - 1.0f) * cosf(w0) -
+                                   2.0f * sqrtf(gain) * alpha);
+            filter->a[0] = (gain + 1.0f) +
+                           (gain - 1.0f) * cosf(w0) +
+                           2.0f * sqrtf(gain) * alpha;
+            filter->a[1] = -2.0f * ((gain - 1.0f) +
+                           (gain + 1.0f) * cosf(w0));
+            filter->a[2] = (gain + 1.0f) +
+                           (gain - 1.0f) * cosf(w0) -
+                           2.0f * sqrtf(gain) * alpha;
+            break;
+        case ALfilterType_Peaking:
+            alpha = sinf(w0) * sinhf(logf(2.0f) / 2.0f * bandwidth * w0 / sinf(w0));
+            filter->b[0] =  1.0f + alpha * gain;
+            filter->b[1] = -2.0f * cosf(w0);
+            filter->b[2] =  1.0f - alpha * gain;
+            filter->a[0] =  1.0f + alpha / gain;
+            filter->a[1] = -2.0f * cosf(w0);
+            filter->a[2] =  1.0f - alpha / gain;
+            break;
+    }
+
+    filter->b[0] /= filter->a[0];
+    filter->b[1] /= filter->a[0];
+    filter->b[2] /= filter->a[0];
+    filter->a[0] /= filter->a[0];
+    filter->a[1] /= filter->a[0];
+    filter->a[2] /= filter->a[0];
+}
+
+
 ALfloat lpCoeffCalc(ALfloat g, ALfloat cw)
 {
     ALfloat a = 0.0f;

@@ -54,7 +54,7 @@ typedef struct ALechoState {
 
     ALfloat FeedGain;
 
-    FILTER iirFilter;
+    ALfilterState Filter;
 } ALechoState;
 
 static ALvoid ALechoState_Destruct(ALechoState *state)
@@ -92,7 +92,7 @@ static ALboolean ALechoState_DeviceUpdate(ALechoState *state, ALCdevice *Device)
 static ALvoid ALechoState_Update(ALechoState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALuint frequency = Device->Frequency;
-    ALfloat lrpan, cw, g, gain;
+    ALfloat lrpan, gain;
     ALfloat dirGain;
     ALuint i;
 
@@ -104,9 +104,9 @@ static ALvoid ALechoState_Update(ALechoState *state, ALCdevice *Device, const AL
 
     state->FeedGain = Slot->EffectProps.Echo.Feedback;
 
-    cw = cosf(F_PI*2.0f * LOWPASSFREQREF / frequency);
-    g = 1.0f - Slot->EffectProps.Echo.Damping;
-    state->iirFilter.coeff = lpCoeffCalc(g, cw);
+    ALfilterState_setParams(&state->Filter, ALfilterType_LowPass,
+                            1.0f - Slot->EffectProps.Echo.Damping,
+                            (ALfloat)LOWPASSFREQREF/frequency, 0.0f);
 
     gain = Slot->Gain;
     for(i = 0;i < MaxChannels;i++)
@@ -148,7 +148,7 @@ static ALvoid ALechoState_Process(ALechoState *state, ALuint SamplesToDo, const 
 
             // Apply damping and feedback gain to the second tap, and mix in the
             // new sample
-            smp = lpFilter2P(&state->iirFilter, temps[i][1]+SamplesIn[i]);
+            smp = ALfilterState_processSingle(&state->Filter, temps[i][1]+SamplesIn[i]);
             state->SampleBuffer[offset&mask] = smp * state->FeedGain;
         }
 
@@ -199,9 +199,7 @@ ALeffectState *ALechoStateFactory_create(ALechoStateFactory *factory)
     state->Tap[1].delay = 0;
     state->Offset = 0;
 
-    state->iirFilter.coeff = 0.0f;
-    state->iirFilter.history[0] = 0.0f;
-    state->iirFilter.history[1] = 0.0f;
+    ALfilterState_clear(&state->Filter);
 
     return STATIC_CAST(ALeffectState, state);
 }

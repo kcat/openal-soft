@@ -57,8 +57,8 @@ typedef struct ALreverbState {
     ALfloat  *SampleBuffer;
     ALuint    TotalSamples;
 
-    // Master effect low-pass filter (2 chained 1-pole filters).
-    FILTER    LpFilter;
+    // Master effect low-pass filter
+    ALfilterState LpFilter;
 
     struct {
         // Modulator delay line.
@@ -490,7 +490,7 @@ static __inline ALvoid VerbPass(ALreverbState *State, ALfloat in, ALfloat *restr
     ALfloat feed, late[4], taps[4];
 
     // Low-pass filter the incoming sample.
-    in = lpFilter2P(&State->LpFilter, in);
+    in = ALfilterState_processSingle(&State->LpFilter, in);
 
     // Feed the initial delay line.
     DelayLineIn(&State->Delay, State->Offset, in);
@@ -529,7 +529,7 @@ static __inline ALvoid EAXVerbPass(ALreverbState *State, ALfloat in, ALfloat *re
     ALfloat feed, taps[4];
 
     // Low-pass filter the incoming sample.
-    in = lpFilter2P(&State->LpFilter, in);
+    in = ALfilterState_processSingle(&State->LpFilter, in);
 
     // Perform any modulation on the input.
     in = EAXModulation(State, in);
@@ -1083,7 +1083,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 static ALvoid ALreverbState_Update(ALreverbState *State, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALuint frequency = Device->Frequency;
-    ALfloat cw, x, y, hfRatio;
+    ALfloat freq_scale, cw, x, y, hfRatio;
 
     if(Slot->EffectType == AL_EFFECT_EAXREVERB && !EmulateEAXReverb)
         State->IsEax = AL_TRUE;
@@ -1092,11 +1092,12 @@ static ALvoid ALreverbState_Update(ALreverbState *State, ALCdevice *Device, cons
 
     // Calculate the master low-pass filter (from the master effect HF gain).
     if(State->IsEax)
-        cw = CalcI3DL2HFreq(Slot->EffectProps.Reverb.HFReference, frequency);
+        freq_scale = Slot->EffectProps.Reverb.HFReference / frequency;
     else
-        cw = CalcI3DL2HFreq(LOWPASSFREQREF, frequency);
-    // This is done with 2 chained 1-pole filters, so no need to square g.
-    State->LpFilter.coeff = lpCoeffCalc(Slot->EffectProps.Reverb.GainHF, cw);
+        freq_scale = (ALfloat)LOWPASSFREQREF / frequency;
+    ALfilterState_setParams(&State->LpFilter, ALfilterType_LowPass,
+                            Slot->EffectProps.Reverb.GainHF,
+                            freq_scale, 0.0f);
 
     if(State->IsEax)
     {
@@ -1133,6 +1134,7 @@ static ALvoid ALreverbState_Update(ALreverbState *State, ALCdevice *Device, cons
                                      Slot->EffectProps.Reverb.AirAbsorptionGainHF,
                                      Slot->EffectProps.Reverb.DecayTime);
 
+    cw = cosf(F_PI*2.0f * freq_scale);
     // Update the late lines.
     UpdateLateLines(Slot->EffectProps.Reverb.Gain, Slot->EffectProps.Reverb.LateReverbGain,
                     x, Slot->EffectProps.Reverb.Density, Slot->EffectProps.Reverb.DecayTime,
@@ -1195,9 +1197,7 @@ static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory *factory)
     state->TotalSamples = 0;
     state->SampleBuffer = NULL;
 
-    state->LpFilter.coeff = 0.0f;
-    state->LpFilter.history[0] = 0.0f;
-    state->LpFilter.history[1] = 0.0f;
+    ALfilterState_clear(&state->LpFilter);
 
     state->Mod.Delay.Mask = 0;
     state->Mod.Delay.Line = NULL;

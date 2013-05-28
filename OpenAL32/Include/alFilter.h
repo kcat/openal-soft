@@ -9,25 +9,6 @@ extern "C" {
 
 #define LOWPASSFREQREF  (5000)
 
-typedef struct {
-    ALfloat coeff;
-    ALfloat history[2];
-} FILTER;
-
-static __inline ALfloat lpFilter2P(FILTER *iir, ALfloat input)
-{
-    ALfloat *history = iir->history;
-    ALfloat a = iir->coeff;
-    ALfloat output = input;
-
-    output = output + (history[0]-output)*a;
-    history[0] = output;
-    output = output + (history[1]-output)*a;
-    history[1] = output;
-
-    return output;
-}
-
 /* Calculates the low-pass filter coefficient given the pre-scaled gain and
  * cos(w) value. Note that g should be pre-scaled (sqr(gain) for one-pole,
  * sqrt(gain) for four-pole, etc) */

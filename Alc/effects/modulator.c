@@ -37,6 +37,11 @@ typedef struct ALmodulatorStateFactory {
 static ALmodulatorStateFactory ModulatorFactory;
 
 
+typedef struct {
+    ALfloat coeff;
+    ALfloat history[2];
+} FILTER;
+
 typedef struct ALmodulatorState {
     DERIVE_FROM_TYPE(ALeffectState);
 

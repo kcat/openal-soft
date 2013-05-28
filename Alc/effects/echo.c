@@ -104,7 +104,7 @@ static ALvoid ALechoState_Update(ALechoState *state, ALCdevice *Device, const AL
 
     state->FeedGain = Slot->EffectProps.Echo.Feedback;
 
-    ALfilterState_setParams(&state->Filter, ALfilterType_LowPass,
+    ALfilterState_setParams(&state->Filter, ALfilterType_HighShelf,
                             1.0f - Slot->EffectProps.Echo.Damping,
                             (ALfloat)LOWPASSFREQREF/frequency, 0.0f);
 

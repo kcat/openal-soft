@@ -455,7 +455,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALfloat gain = maxf(0.001f, sqrtf(DryGainHF));
         for(c = 0;c < num_channels;c++)
             ALfilterState_setParams(&ALSource->Params.Direct.Filter[c],
-                                    ALfilterType_LowPass, gain,
+                                    ALfilterType_HighShelf, gain,
                                     (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
     }
     for(i = 0;i < NumSends;i++)
@@ -463,7 +463,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALfloat gain = maxf(0.001f, sqrtf(WetGainHF[i]));
         for(c = 0;c < num_channels;c++)
             ALfilterState_setParams(&ALSource->Params.Send[i].Filter[c],
-                                    ALfilterType_LowPass, gain,
+                                    ALfilterType_HighShelf, gain,
                                     (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
     }
 }
@@ -904,14 +904,14 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         ALfloat gain = maxf(0.001f, sqrtf(DryGainHF));
         ALfilterState_setParams(&ALSource->Params.Direct.Filter[0],
-                                ALfilterType_LowPass, gain,
+                                ALfilterType_HighShelf, gain,
                                 (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
     }
     for(i = 0;i < NumSends;i++)
     {
         ALfloat gain = maxf(0.001f, sqrtf(WetGainHF[i]));
         ALfilterState_setParams(&ALSource->Params.Send[i].Filter[0],
-                                ALfilterType_LowPass, gain,
+                                ALfilterType_HighShelf, gain,
                                 (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
     }
 }

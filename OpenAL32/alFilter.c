@@ -343,17 +343,6 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
     /* Calculate filter coefficients depending on filter type */
     switch(type)
     {
-        case ALfilterType_LowPass:
-            alpha = sinf(w0) / 2.0f * sqrtf((gain + 1.0f/gain) *
-                                            (1.0f/0.75f - 1.0f) + 2.0f);
-            filter->b[0] = (1.0f - cosf(w0)) * 0.5f;
-            filter->b[1] =  1.0f - cosf(w0);
-            filter->b[2] = (1.0f - cosf(w0)) * 0.5f;
-            filter->a[0] =  1.0f + alpha;
-            filter->a[1] = -2.0f*cosf(w0);
-            filter->a[2] =  1.0f - alpha;
-            break;
-
         case ALfilterType_HighShelf:
             alpha = sinf(w0) / 2.0f * sqrtf((gain + 1.0f/gain) *
                                             (1.0f/0.75f - 1.0f) + 2.0f);

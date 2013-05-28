@@ -394,12 +394,12 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
             break;
     }
 
-    filter->b[0] /= filter->a[0];
-    filter->b[1] /= filter->a[0];
     filter->b[2] /= filter->a[0];
-    filter->a[0] /= filter->a[0];
-    filter->a[1] /= filter->a[0];
+    filter->b[1] /= filter->a[0];
+    filter->b[0] /= filter->a[0];
     filter->a[2] /= filter->a[0];
+    filter->a[1] /= filter->a[0];
+    filter->a[0] /= filter->a[0];
 }
 
 

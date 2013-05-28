@@ -254,8 +254,6 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALboolean DirectChannels;
     ALfloat hwidth = 0.0f;
     ALfloat Pitch;
-    ALfloat coeff;
-    ALfloat cw;
     ALint i, c;
 
     /* Get device properties */
@@ -453,21 +451,20 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALSource->Params.Send[i].Gain = WetGain[i];
     }
 
-    /* Update filter coefficients. Calculations based on the I3DL2
-     * spec. */
-    cw = cosf(F_PI*2.0f * LOWPASSFREQREF / Frequency);
-
-    /* We use two chained one-pole filters, so we need to take the
-     * square root of the squared gain, which is the same as the base
-     * gain. */
-    coeff = lpCoeffCalc(DryGainHF, cw);
-    for(c = 0;c < num_channels;c++)
-        ALSource->Params.Direct.Filter[c].coeff = lpCoeffCalc(DryGainHF, cw);
+    {
+        ALfloat gain = maxf(0.001f, DryGainHF);
+        for(c = 0;c < num_channels;c++)
+            ALfilterState_setParams(&ALSource->Params.Direct.Filter[c],
+                                    ALfilterType_LowPass, gain,
+                                    (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
+    }
     for(i = 0;i < NumSends;i++)
     {
-        coeff = lpCoeffCalc(WetGainHF[i], cw);
+        ALfloat gain = maxf(0.001f, WetGainHF[i]);
         for(c = 0;c < num_channels;c++)
-            ALSource->Params.Send[i].Filter[c].coeff = coeff;
+            ALfilterState_setParams(&ALSource->Params.Send[i].Filter[c],
+                                    ALfilterType_LowPass, gain,
+                                    (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
     }
 }
 
@@ -499,7 +496,6 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat Pitch;
     ALuint Frequency;
     ALint NumSends;
-    ALfloat cw;
     ALint i, j;
 
     DryGainHF = 1.0f;
@@ -904,15 +900,14 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     for(i = 0;i < NumSends;i++)
         ALSource->Params.Send[i].Gain = WetGain[i];
 
-    /* Update filter coefficients. */
-    cw = cosf(F_PI*2.0f * LOWPASSFREQREF / Frequency);
 
-    ALSource->Params.Direct.Filter[0].coeff = lpCoeffCalc(DryGainHF, cw);
+    ALfilterState_setParams(&ALSource->Params.Direct.Filter[0],
+                            ALfilterType_LowPass, maxf(0.001f, DryGainHF),
+                            (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
     for(i = 0;i < NumSends;i++)
-    {
-        ALfloat a = lpCoeffCalc(WetGainHF[i], cw);
-        ALSource->Params.Send[i].Filter[0].coeff = a;
-    }
+        ALfilterState_setParams(&ALSource->Params.Send[i].Filter[0],
+                                ALfilterType_LowPass, maxf(0.001f, WetGainHF[i]),
+                                (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
 }
 
 

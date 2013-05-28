@@ -47,6 +47,8 @@ ALfloat lpCoeffCalc(ALfloat g, ALfloat cw);
 
 
 typedef enum ALfilterType {
+    ALfilterType_LowPass,
+
     ALfilterType_HighShelf,
     ALfilterType_LowShelf,
     ALfilterType_Peaking,

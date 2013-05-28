@@ -84,13 +84,13 @@ static void SilenceData(ALfloat *dst, ALuint samples)
 }
 
 
-static void Filter2P(FILTER *filter, ALfloat *restrict dst, const ALfloat *restrict src,
+static void DoFilter(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src,
                      ALuint numsamples)
 {
     ALuint i;
     for(i = 0;i < numsamples;i++)
-        dst[i] = lpFilter2P(filter, src[i]);
-    dst[i] = lpFilter2PC(filter, src[i]);
+        dst[i] = ALfilterState_processSingle(filter, src[i]);
+    dst[i] = ALfilterState_processSingleC(filter, src[i]);
 }
 
 
@@ -328,7 +328,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             {
                 DirectParams *directparms = &Source->Params.Direct;
 
-                Filter2P(&directparms->Filter[chan], SrcData, ResampledData,
+                DoFilter(&directparms->Filter[chan], SrcData, ResampledData,
                          DstBufferSize);
                 Source->Params.DryMix(directparms, SrcData, chan, OutPos,
                                       SamplesToDo, DstBufferSize);
@@ -340,7 +340,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 if(!sendparms->Slot)
                     continue;
 
-                Filter2P(&sendparms->Filter[chan], SrcData, ResampledData,
+                DoFilter(&sendparms->Filter[chan], SrcData, ResampledData,
                          DstBufferSize);
                 Source->Params.WetMix(sendparms, SrcData, OutPos,
                                       SamplesToDo, DstBufferSize);

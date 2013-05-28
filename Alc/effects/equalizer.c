@@ -123,27 +123,27 @@ static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *device
         ALfloat gain;
 
         /* convert linear gains to filter gains */
-        switch (it)
+        switch(it)
         {
             case 0: /* Low Shelf */
-                 gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.LowGain)) / 40.0f);
+                 gain = sqrtf(slot->EffectProps.Equalizer.LowGain);
                  filter_frequency = slot->EffectProps.Equalizer.LowCutoff;
                  type = ALfilterType_LowShelf;
                  break;
             case 1: /* Peaking */
-                 gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.Mid1Gain)) / 40.0f);
+                 gain = sqrtf(slot->EffectProps.Equalizer.Mid1Gain);
                  filter_frequency = slot->EffectProps.Equalizer.Mid1Center;
                  bandwidth = slot->EffectProps.Equalizer.Mid1Width;
                  type = ALfilterType_Peaking;
                  break;
             case 2: /* Peaking */
-                 gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.Mid2Gain)) / 40.0f);
+                 gain = sqrtf(slot->EffectProps.Equalizer.Mid2Gain);
                  filter_frequency = slot->EffectProps.Equalizer.Mid2Center;
                  bandwidth = slot->EffectProps.Equalizer.Mid2Width;
                  type = ALfilterType_Peaking;
                  break;
             case 3: /* High Shelf */
-                 gain = powf(10.0f, (20.0f * log10f(slot->EffectProps.Equalizer.HighGain)) / 40.0f);
+                 gain = sqrtf(slot->EffectProps.Equalizer.HighGain);
                  filter_frequency = slot->EffectProps.Equalizer.HighCutoff;
                  type = ALfilterType_HighShelf;
                  break;

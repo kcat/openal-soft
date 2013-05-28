@@ -37,11 +37,6 @@ typedef struct ALmodulatorStateFactory {
 static ALmodulatorStateFactory ModulatorFactory;
 
 
-typedef struct {
-    ALfloat coeff;
-    ALfloat history[2];
-} FILTER;
-
 typedef struct ALmodulatorState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -56,7 +51,7 @@ typedef struct ALmodulatorState {
 
     ALfloat Gain[MaxChannels];
 
-    FILTER iirFilter;
+    ALfilterState Filter;
 } ALmodulatorState;
 
 #define WAVEFORM_FRACBITS  24
@@ -78,20 +73,6 @@ static __inline ALfloat Square(ALuint index)
     return (ALfloat)((index >> (WAVEFORM_FRACBITS - 1)) & 1);
 }
 
-
-static __inline ALfloat hpFilter1P(FILTER *iir, ALfloat input)
-{
-    ALfloat *history = iir->history;
-    ALfloat a = iir->coeff;
-    ALfloat output = input;
-
-    output = output + (history[0]-output)*a;
-    history[0] = output;
-
-    return input - output;
-}
-
-
 #define DECL_TEMPLATE(func)                                                   \
 static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
   const ALfloat *restrict SamplesIn,                                          \
@@ -111,7 +92,7 @@ static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
         {                                                                     \
             ALfloat samp;                                                     \
             samp = SamplesIn[base+i];                                         \
-            samp = hpFilter1P(&state->iirFilter, samp);                       \
+            samp = ALfilterState_processSingle(&state->Filter, samp);         \
                                                                               \
             index += step;                                                    \
             index &= WAVEFORM_FRACMASK;                                       \
@@ -154,7 +135,7 @@ static ALboolean ALmodulatorState_DeviceUpdate(ALmodulatorState *state, ALCdevic
 
 static ALvoid ALmodulatorState_Update(ALmodulatorState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALfloat gain, cw, a = 0.0f;
+    ALfloat gain, cw, a;
     ALuint index;
 
     if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
@@ -168,10 +149,17 @@ static ALvoid ALmodulatorState_Update(ALmodulatorState *state, ALCdevice *Device
                           Device->Frequency);
     if(state->step == 0) state->step = 1;
 
+    /* Custom filter coeffs, which match the old version instead of a low-shelf. */
     cw = cosf(F_PI*2.0f * Slot->EffectProps.Modulator.HighPassCutoff /
                           Device->Frequency);
     a = (2.0f-cw) - sqrtf(powf(2.0f-cw, 2.0f) - 1.0f);
-    state->iirFilter.coeff = a;
+
+    state->Filter.b[0] = a;
+    state->Filter.b[1] = -a;
+    state->Filter.b[2] = 0.0f;
+    state->Filter.a[0] = 1.0f;
+    state->Filter.a[1] = -a;
+    state->Filter.a[2] = 0.0f;
 
     gain = sqrtf(1.0f/Device->NumChan);
     gain *= Slot->Gain;
@@ -222,8 +210,7 @@ static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *fa
     state->index = 0;
     state->step = 1;
 
-    state->iirFilter.coeff = 0.0f;
-    state->iirFilter.history[0] = 0.0f;
+    ALfilterState_clear(&state->Filter);
 
     return STATIC_CAST(ALeffectState, state);
 }

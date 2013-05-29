@@ -37,13 +37,13 @@
 #include "bs2b.h"
 
 
-static __inline ALfloat Sample_ALbyte(ALbyte val)
+static inline ALfloat Sample_ALbyte(ALbyte val)
 { return val * (1.0f/127.0f); }
 
-static __inline ALfloat Sample_ALshort(ALshort val)
+static inline ALfloat Sample_ALshort(ALshort val)
 { return val * (1.0f/32767.0f); }
 
-static __inline ALfloat Sample_ALfloat(ALfloat val)
+static inline ALfloat Sample_ALfloat(ALfloat val)
 { return val; }
 
 #define DECL_TEMPLATE(T)                                                      \

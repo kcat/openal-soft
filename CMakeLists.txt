@@ -118,6 +118,18 @@ IF(NOT HAVE_RESTRICT)
     ENDIF()
 ENDIF()
 
+CHECK_C_SOURCE_COMPILES("inline void foo(void) { }
+                         int main() {return 0;}" HAVE_INLINE)
+IF(NOT HAVE_INLINE)
+    CHECK_C_SOURCE_COMPILES("__inline void foo(void) { }
+                             int main() {return 0;}" HAVE___INLINE)
+    IF(NOT HAVE___INLINE)
+        MESSAGE(FATAL_ERROR "No inline keyword found, please report!")
+    ENDIF()
+
+    ADD_DEFINITIONS(-Dinline=__inline)
+ENDIF()
+
 
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES(OpenAL32/Include include "${OpenAL_BINARY_DIR}")

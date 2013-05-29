@@ -147,7 +147,7 @@ static ALvoid ALchorusState_Update(ALchorusState *state, ALCdevice *Device, cons
         state->lfo_disp = fastf2i(frequency / rate / (360.0f/phase));
 }
 
-static __inline void Triangle(ALint *delay_left, ALint *delay_right, ALint offset, const ALchorusState *state)
+static inline void Triangle(ALint *delay_left, ALint *delay_right, ALint offset, const ALchorusState *state)
 {
     ALfloat lfo_value;
 
@@ -162,7 +162,7 @@ static __inline void Triangle(ALint *delay_left, ALint *delay_right, ALint offse
     *delay_right = fastf2i(lfo_value) + state->delay;
 }
 
-static __inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALint offset, const ALchorusState *state)
+static inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALint offset, const ALchorusState *state)
 {
     ALfloat lfo_value;
 

@@ -58,17 +58,17 @@ typedef struct ALmodulatorState {
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
 #define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
 
-static __inline ALfloat Sin(ALuint index)
+static inline ALfloat Sin(ALuint index)
 {
     return sinf(index * (F_PI*2.0f / WAVEFORM_FRACONE) - F_PI)*0.5f + 0.5f;
 }
 
-static __inline ALfloat Saw(ALuint index)
+static inline ALfloat Saw(ALuint index)
 {
     return (ALfloat)index / WAVEFORM_FRACONE;
 }
 
-static __inline ALfloat Square(ALuint index)
+static inline ALfloat Square(ALuint index)
 {
     return (ALfloat)((index >> (WAVEFORM_FRACBITS - 1)) & 1);
 }

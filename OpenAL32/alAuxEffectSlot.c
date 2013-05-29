@@ -37,7 +37,7 @@ static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *slot);
 
 
 static UIntMap EffectStateFactoryMap;
-static __inline ALeffectStateFactory *getFactoryByType(ALenum type)
+static inline ALeffectStateFactory *getFactoryByType(ALenum type)
 {
     ALeffectStateFactory* (*getFactory)(void) = LookupUIntMapKey(&EffectStateFactoryMap, type);
     if(getFactory != NULL)

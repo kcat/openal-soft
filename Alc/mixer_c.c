@@ -8,11 +8,11 @@
 #include "alAuxEffectSlot.h"
 
 
-static __inline ALfloat point32(const ALfloat *vals, ALuint frac)
+static inline ALfloat point32(const ALfloat *vals, ALuint frac)
 { return vals[0]; (void)frac; }
-static __inline ALfloat lerp32(const ALfloat *vals, ALuint frac)
+static inline ALfloat lerp32(const ALfloat *vals, ALuint frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-static __inline ALfloat cubic32(const ALfloat *vals, ALuint frac)
+static inline ALfloat cubic32(const ALfloat *vals, ALuint frac)
 { return cubic(vals[-1], vals[0], vals[1], vals[2], frac * (1.0f/FRACTIONONE)); }
 
 void Resample_copy32_C(const ALfloat *data, ALuint frac,
@@ -47,11 +47,11 @@ DECL_TEMPLATE(cubic32)
 #undef DECL_TEMPLATE
 
 
-static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
-                                     const ALuint IrSize,
-                                     ALfloat (*restrict Coeffs)[2],
-                                     const ALfloat (*restrict CoeffStep)[2],
-                                     ALfloat left, ALfloat right)
+static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
+                                   const ALuint IrSize,
+                                   ALfloat (*restrict Coeffs)[2],
+                                   const ALfloat (*restrict CoeffStep)[2],
+                                   ALfloat left, ALfloat right)
 {
     ALuint c;
     for(c = 0;c < IrSize;c++)
@@ -64,10 +64,10 @@ static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2
     }
 }
 
-static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
-                                 const ALuint IrSize,
-                                 ALfloat (*restrict Coeffs)[2],
-                                 ALfloat left, ALfloat right)
+static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
+                               const ALuint IrSize,
+                               ALfloat (*restrict Coeffs)[2],
+                               ALfloat left, ALfloat right)
 {
     ALuint c;
     for(c = 0;c < IrSize;c++)

@@ -230,24 +230,24 @@ static const ALfloat LATE_LINE_MULTIPLIER = 4.0f;
 
 
 // Basic delay line input/output routines.
-static __inline ALfloat DelayLineOut(DelayLine *Delay, ALuint offset)
+static inline ALfloat DelayLineOut(DelayLine *Delay, ALuint offset)
 {
     return Delay->Line[offset&Delay->Mask];
 }
 
-static __inline ALvoid DelayLineIn(DelayLine *Delay, ALuint offset, ALfloat in)
+static inline ALvoid DelayLineIn(DelayLine *Delay, ALuint offset, ALfloat in)
 {
     Delay->Line[offset&Delay->Mask] = in;
 }
 
 // Attenuated delay line output routine.
-static __inline ALfloat AttenuatedDelayLineOut(DelayLine *Delay, ALuint offset, ALfloat coeff)
+static inline ALfloat AttenuatedDelayLineOut(DelayLine *Delay, ALuint offset, ALfloat coeff)
 {
     return coeff * Delay->Line[offset&Delay->Mask];
 }
 
 // Basic attenuated all-pass input/output routine.
-static __inline ALfloat AllpassInOut(DelayLine *Delay, ALuint outOffset, ALuint inOffset, ALfloat in, ALfloat feedCoeff, ALfloat coeff)
+static inline ALfloat AllpassInOut(DelayLine *Delay, ALuint outOffset, ALuint inOffset, ALfloat in, ALfloat feedCoeff, ALfloat coeff)
 {
     ALfloat out, feed;
 
@@ -263,7 +263,7 @@ static __inline ALfloat AllpassInOut(DelayLine *Delay, ALuint outOffset, ALuint 
 
 // Given an input sample, this function produces modulation for the late
 // reverb.
-static __inline ALfloat EAXModulation(ALreverbState *State, ALfloat in)
+static inline ALfloat EAXModulation(ALreverbState *State, ALfloat in)
 {
     ALfloat sinus, frac;
     ALuint offset;
@@ -300,7 +300,7 @@ static __inline ALfloat EAXModulation(ALreverbState *State, ALfloat in)
 }
 
 // Delay line output routine for early reflections.
-static __inline ALfloat EarlyDelayLineOut(ALreverbState *State, ALuint index)
+static inline ALfloat EarlyDelayLineOut(ALreverbState *State, ALuint index)
 {
     return AttenuatedDelayLineOut(&State->Early.Delay[index],
                                   State->Offset - State->Early.Offset[index],
@@ -309,7 +309,7 @@ static __inline ALfloat EarlyDelayLineOut(ALreverbState *State, ALuint index)
 
 // Given an input sample, this function produces four-channel output for the
 // early reflections.
-static __inline ALvoid EarlyReflection(ALreverbState *State, ALfloat in, ALfloat *restrict out)
+static inline ALvoid EarlyReflection(ALreverbState *State, ALfloat in, ALfloat *restrict out)
 {
     ALfloat d[4], v, f[4];
 
@@ -354,7 +354,7 @@ static __inline ALvoid EarlyReflection(ALreverbState *State, ALfloat in, ALfloat
 }
 
 // All-pass input/output routine for late reverb.
-static __inline ALfloat LateAllPassInOut(ALreverbState *State, ALuint index, ALfloat in)
+static inline ALfloat LateAllPassInOut(ALreverbState *State, ALuint index, ALfloat in)
 {
     return AllpassInOut(&State->Late.ApDelay[index],
                         State->Offset - State->Late.ApOffset[index],
@@ -363,7 +363,7 @@ static __inline ALfloat LateAllPassInOut(ALreverbState *State, ALuint index, ALf
 }
 
 // Delay line output routine for late reverb.
-static __inline ALfloat LateDelayLineOut(ALreverbState *State, ALuint index)
+static inline ALfloat LateDelayLineOut(ALreverbState *State, ALuint index)
 {
     return AttenuatedDelayLineOut(&State->Late.Delay[index],
                                   State->Offset - State->Late.Offset[index],
@@ -371,7 +371,7 @@ static __inline ALfloat LateDelayLineOut(ALreverbState *State, ALuint index)
 }
 
 // Low-pass filter input/output routine for late reverb.
-static __inline ALfloat LateLowPassInOut(ALreverbState *State, ALuint index, ALfloat in)
+static inline ALfloat LateLowPassInOut(ALreverbState *State, ALuint index, ALfloat in)
 {
     in = lerp(in, State->Late.LpSample[index], State->Late.LpCoeff[index]);
     State->Late.LpSample[index] = in;
@@ -380,7 +380,7 @@ static __inline ALfloat LateLowPassInOut(ALreverbState *State, ALuint index, ALf
 
 // Given four decorrelated input samples, this function produces four-channel
 // output for the late reverb.
-static __inline ALvoid LateReverb(ALreverbState *State, const ALfloat *restrict in, ALfloat *restrict out)
+static inline ALvoid LateReverb(ALreverbState *State, const ALfloat *restrict in, ALfloat *restrict out)
 {
     ALfloat d[4], f[4];
 
@@ -451,7 +451,7 @@ static __inline ALvoid LateReverb(ALreverbState *State, const ALfloat *restrict 
 
 // Given an input sample, this function mixes echo into the four-channel late
 // reverb.
-static __inline ALvoid EAXEcho(ALreverbState *State, ALfloat in, ALfloat *restrict late)
+static inline ALvoid EAXEcho(ALreverbState *State, ALfloat in, ALfloat *restrict late)
 {
     ALfloat out, feed;
 
@@ -485,7 +485,7 @@ static __inline ALvoid EAXEcho(ALreverbState *State, ALfloat in, ALfloat *restri
 
 // Perform the non-EAX reverb pass on a given input sample, resulting in
 // four-channel output.
-static __inline ALvoid VerbPass(ALreverbState *State, ALfloat in, ALfloat *restrict out)
+static inline ALvoid VerbPass(ALreverbState *State, ALfloat in, ALfloat *restrict out)
 {
     ALfloat feed, late[4], taps[4];
 
@@ -524,7 +524,7 @@ static __inline ALvoid VerbPass(ALreverbState *State, ALfloat in, ALfloat *restr
 
 // Perform the EAX reverb pass on a given input sample, resulting in four-
 // channel output.
-static __inline ALvoid EAXVerbPass(ALreverbState *State, ALfloat in, ALfloat *restrict early, ALfloat *restrict late)
+static inline ALvoid EAXVerbPass(ALreverbState *State, ALfloat in, ALfloat *restrict early, ALfloat *restrict late)
 {
     ALfloat feed, taps[4];
 
@@ -619,7 +619,7 @@ static ALvoid ALreverbState_Process(ALreverbState *State, ALuint SamplesToDo, co
 
 // Given the allocated sample buffer, this function updates each delay line
 // offset.
-static __inline ALvoid RealizeLineOffset(ALfloat *sampleBuffer, DelayLine *Delay)
+static inline ALvoid RealizeLineOffset(ALfloat *sampleBuffer, DelayLine *Delay)
 {
     Delay->Line = &sampleBuffer[(ALintptrEXT)Delay->Line];
 }
@@ -765,28 +765,28 @@ static ALboolean ALreverbState_DeviceUpdate(ALreverbState *State, ALCdevice *Dev
 
 // Calculate a decay coefficient given the length of each cycle and the time
 // until the decay reaches -60 dB.
-static __inline ALfloat CalcDecayCoeff(ALfloat length, ALfloat decayTime)
+static inline ALfloat CalcDecayCoeff(ALfloat length, ALfloat decayTime)
 {
     return powf(0.001f/*-60 dB*/, length/decayTime);
 }
 
 // Calculate a decay length from a coefficient and the time until the decay
 // reaches -60 dB.
-static __inline ALfloat CalcDecayLength(ALfloat coeff, ALfloat decayTime)
+static inline ALfloat CalcDecayLength(ALfloat coeff, ALfloat decayTime)
 {
     return log10f(coeff) * decayTime / log10f(0.001f)/*-60 dB*/;
 }
 
 // Calculate the high frequency parameter for the I3DL2 coefficient
 // calculation.
-static __inline ALfloat CalcI3DL2HFreq(ALfloat hfRef, ALuint frequency)
+static inline ALfloat CalcI3DL2HFreq(ALfloat hfRef, ALuint frequency)
 {
     return cosf(F_PI*2.0f * hfRef / frequency);
 }
 
 // Calculate an attenuation to be applied to the input of any echo models to
 // compensate for modal density and decay time.
-static __inline ALfloat CalcDensityGain(ALfloat a)
+static inline ALfloat CalcDensityGain(ALfloat a)
 {
     /* The energy of a signal can be obtained by finding the area under the
      * squared signal.  This takes the form of Sum(x_n^2), where x is the
@@ -805,7 +805,7 @@ static __inline ALfloat CalcDensityGain(ALfloat a)
 }
 
 // Calculate the mixing matrix coefficients given a diffusion factor.
-static __inline ALvoid CalcMatrixCoeffs(ALfloat diffusion, ALfloat *x, ALfloat *y)
+static inline ALvoid CalcMatrixCoeffs(ALfloat diffusion, ALfloat *x, ALfloat *y)
 {
     ALfloat n, t;
 
@@ -840,7 +840,7 @@ static ALfloat CalcLimitedHfRatio(ALfloat hfRatio, ALfloat airAbsorptionGainHF, 
 
 // Calculate the coefficient for a HF (and eventually LF) decay damping
 // filter.
-static __inline ALfloat CalcDampingCoeff(ALfloat hfRatio, ALfloat length, ALfloat decayTime, ALfloat decayCoeff, ALfloat cw)
+static inline ALfloat CalcDampingCoeff(ALfloat hfRatio, ALfloat length, ALfloat decayTime, ALfloat decayCoeff, ALfloat cw)
 {
     ALfloat coeff, g;
 

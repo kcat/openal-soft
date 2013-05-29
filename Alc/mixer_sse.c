@@ -14,11 +14,11 @@
 #include "mixer_defs.h"
 
 
-static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
-                                     const ALuint IrSize,
-                                     ALfloat (*restrict Coeffs)[2],
-                                     const ALfloat (*restrict CoeffStep)[2],
-                                     ALfloat left, ALfloat right)
+static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
+                                   const ALuint IrSize,
+                                   ALfloat (*restrict Coeffs)[2],
+                                   const ALfloat (*restrict CoeffStep)[2],
+                                   ALfloat left, ALfloat right)
 {
     const __m128 lrlr = { left, right, left, right };
     __m128 coeffs, deltas, imp0, imp1;
@@ -76,10 +76,10 @@ static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2
     }
 }
 
-static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
-                                 const ALuint IrSize,
-                                 ALfloat (*restrict Coeffs)[2],
-                                 ALfloat left, ALfloat right)
+static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
+                               const ALuint IrSize,
+                               ALfloat (*restrict Coeffs)[2],
+                               ALfloat left, ALfloat right)
 {
     const __m128 lrlr = { left, right, left, right };
     __m128 vals = _mm_setzero_ps();

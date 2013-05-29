@@ -105,20 +105,20 @@ static WetMixerFunc SelectSendMixer(void)
 }
 
 
-static __inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
+static inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
 {
     outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
     outVector[1] = inVector1[2]*inVector2[0] - inVector1[0]*inVector2[2];
     outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
 }
 
-static __inline ALfloat aluDotproduct(const ALfloat *inVector1, const ALfloat *inVector2)
+static inline ALfloat aluDotproduct(const ALfloat *inVector1, const ALfloat *inVector2)
 {
     return inVector1[0]*inVector2[0] + inVector1[1]*inVector2[1] +
            inVector1[2]*inVector2[2];
 }
 
-static __inline void aluNormalize(ALfloat *inVector)
+static inline void aluNormalize(ALfloat *inVector)
 {
     ALfloat lengthsqr = aluDotproduct(inVector, inVector);
     if(lengthsqr > 0.0f)
@@ -130,7 +130,7 @@ static __inline void aluNormalize(ALfloat *inVector)
     }
 }
 
-static __inline ALvoid aluMatrixVector(ALfloat *vector, ALfloat w, ALfloat (*restrict matrix)[4])
+static inline ALvoid aluMatrixVector(ALfloat *vector, ALfloat w, ALfloat (*restrict matrix)[4])
 {
     ALfloat temp[4] = {
         vector[0], vector[1], vector[2], w
@@ -917,7 +917,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 }
 
 
-static __inline ALint aluF2I25(ALfloat val)
+static inline ALint aluF2I25(ALfloat val)
 {
     /* Clamp the value between -1 and +1. This handles that with only a single branch. */
     if(fabsf(val) > 1.0f)
@@ -926,19 +926,19 @@ static __inline ALint aluF2I25(ALfloat val)
     return fastf2i(val*16777215.0f);
 }
 
-static __inline ALfloat aluF2F(ALfloat val)
+static inline ALfloat aluF2F(ALfloat val)
 { return val; }
-static __inline ALint aluF2I(ALfloat val)
+static inline ALint aluF2I(ALfloat val)
 { return aluF2I25(val)<<7; }
-static __inline ALuint aluF2UI(ALfloat val)
+static inline ALuint aluF2UI(ALfloat val)
 { return aluF2I(val)+2147483648u; }
-static __inline ALshort aluF2S(ALfloat val)
+static inline ALshort aluF2S(ALfloat val)
 { return aluF2I25(val)>>9; }
-static __inline ALushort aluF2US(ALfloat val)
+static inline ALushort aluF2US(ALfloat val)
 { return aluF2S(val)+32768; }
-static __inline ALbyte aluF2B(ALfloat val)
+static inline ALbyte aluF2B(ALfloat val)
 { return aluF2I25(val)>>17; }
-static __inline ALubyte aluF2UB(ALfloat val)
+static inline ALubyte aluF2UB(ALfloat val)
 { return aluF2B(val)+128; }
 
 #define DECL_TEMPLATE(T, func)                                                \

@@ -109,7 +109,7 @@ typedef LONG pthread_once_t;
 #define PTHREAD_ONCE_INIT 0
 void pthread_once(pthread_once_t *once, void (*callback)(void));
 
-static __inline int sched_yield(void)
+static inline int sched_yield(void)
 { SwitchToThread(); return 0; }
 
 #else
@@ -143,31 +143,31 @@ typedef void *volatile XchgPtr;
 
 #if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) && !defined(__QNXNTO__)
 typedef ALuint RefCount;
-static __inline RefCount IncrementRef(volatile RefCount *ptr)
+static inline RefCount IncrementRef(volatile RefCount *ptr)
 { return __sync_add_and_fetch(ptr, 1); }
-static __inline RefCount DecrementRef(volatile RefCount *ptr)
+static inline RefCount DecrementRef(volatile RefCount *ptr)
 { return __sync_sub_and_fetch(ptr, 1); }
 
-static __inline int ExchangeInt(volatile int *ptr, int newval)
+static inline int ExchangeInt(volatile int *ptr, int newval)
 {
     return __sync_lock_test_and_set(ptr, newval);
 }
-static __inline void *ExchangePtr(XchgPtr *ptr, void *newval)
+static inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 {
     return __sync_lock_test_and_set(ptr, newval);
 }
-static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
+static inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
 {
     return __sync_bool_compare_and_swap(ptr, oldval, newval);
 }
-static __inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
+static inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 {
     return __sync_bool_compare_and_swap(ptr, oldval, newval);
 }
 
 #elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
-static __inline int xaddl(volatile int *dest, int incr)
+static inline int xaddl(volatile int *dest, int incr)
 {
     int ret;
     __asm__ __volatile__("lock; xaddl %0,(%1)"
@@ -178,12 +178,12 @@ static __inline int xaddl(volatile int *dest, int incr)
 }
 
 typedef int RefCount;
-static __inline RefCount IncrementRef(volatile RefCount *ptr)
+static inline RefCount IncrementRef(volatile RefCount *ptr)
 { return xaddl(ptr, 1)+1; }
-static __inline RefCount DecrementRef(volatile RefCount *ptr)
+static inline RefCount DecrementRef(volatile RefCount *ptr)
 { return xaddl(ptr, -1)-1; }
 
-static __inline int ExchangeInt(volatile int *dest, int newval)
+static inline int ExchangeInt(volatile int *dest, int newval)
 {
     int ret;
     __asm__ __volatile__("lock; xchgl %0,(%1)"
@@ -193,7 +193,7 @@ static __inline int ExchangeInt(volatile int *dest, int newval)
     return ret;
 }
 
-static __inline ALboolean CompExchangeInt(volatile int *dest, int oldval, int newval)
+static inline ALboolean CompExchangeInt(volatile int *dest, int oldval, int newval)
 {
     int ret;
     __asm__ __volatile__("lock; cmpxchgl %2,(%1)"
@@ -203,7 +203,7 @@ static __inline ALboolean CompExchangeInt(volatile int *dest, int oldval, int ne
     return ret == oldval;
 }
 
-static __inline void *ExchangePtr(XchgPtr *dest, void *newval)
+static inline void *ExchangePtr(XchgPtr *dest, void *newval)
 {
     void *ret;
     __asm__ __volatile__(
@@ -219,7 +219,7 @@ static __inline void *ExchangePtr(XchgPtr *dest, void *newval)
     return ret;
 }
 
-static __inline ALboolean CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
+static inline ALboolean CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
 {
     void *ret;
     __asm__ __volatile__(
@@ -238,14 +238,14 @@ static __inline ALboolean CompExchangePtr(XchgPtr *dest, void *oldval, void *new
 #elif defined(_WIN32)
 
 typedef LONG RefCount;
-static __inline RefCount IncrementRef(volatile RefCount *ptr)
+static inline RefCount IncrementRef(volatile RefCount *ptr)
 { return InterlockedIncrement(ptr); }
-static __inline RefCount DecrementRef(volatile RefCount *ptr)
+static inline RefCount DecrementRef(volatile RefCount *ptr)
 { return InterlockedDecrement(ptr); }
 
 extern ALbyte LONG_size_does_not_match_int[(sizeof(LONG)==sizeof(int))?1:-1];
 
-static __inline int ExchangeInt(volatile int *ptr, int newval)
+static inline int ExchangeInt(volatile int *ptr, int newval)
 {
     union {
         volatile int *i;
@@ -253,11 +253,11 @@ static __inline int ExchangeInt(volatile int *ptr, int newval)
     } u = { ptr };
     return InterlockedExchange(u.l, newval);
 }
-static __inline void *ExchangePtr(XchgPtr *ptr, void *newval)
+static inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 {
     return InterlockedExchangePointer(ptr, newval);
 }
-static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
+static inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
 {
     union {
         volatile int *i;
@@ -265,7 +265,7 @@ static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int new
     } u = { ptr };
     return InterlockedCompareExchange(u.l, newval, oldval) == oldval;
 }
-static __inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
+static inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 {
     return InterlockedCompareExchangePointer(ptr, newval, oldval) == oldval;
 }
@@ -275,12 +275,12 @@ static __inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newv
 #include <libkern/OSAtomic.h>
 
 typedef int32_t RefCount;
-static __inline RefCount IncrementRef(volatile RefCount *ptr)
+static inline RefCount IncrementRef(volatile RefCount *ptr)
 { return OSAtomicIncrement32Barrier(ptr); }
-static __inline RefCount DecrementRef(volatile RefCount *ptr)
+static inline RefCount DecrementRef(volatile RefCount *ptr)
 { return OSAtomicDecrement32Barrier(ptr); }
 
-static __inline int ExchangeInt(volatile int *ptr, int newval)
+static inline int ExchangeInt(volatile int *ptr, int newval)
 {
     /* Really? No regular old atomic swap? */
     int oldval;
@@ -289,7 +289,7 @@ static __inline int ExchangeInt(volatile int *ptr, int newval)
     } while(!OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr));
     return oldval;
 }
-static __inline void *ExchangePtr(XchgPtr *ptr, void *newval)
+static inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 {
     void *oldval;
     do {
@@ -297,11 +297,11 @@ static __inline void *ExchangePtr(XchgPtr *ptr, void *newval)
     } while(!OSAtomicCompareAndSwapPtrBarrier(oldval, newval, ptr));
     return oldval;
 }
-static __inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
+static inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
 {
     return OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr);
 }
-static __inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
+static inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 {
     return OSAtomicCompareAndSwapPtrBarrier(oldval, newval, ptr);
 }
@@ -345,13 +345,13 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
 ALvoid *RemoveUIntMapKey(UIntMap *map, ALuint key);
 ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
 
-static __inline void LockUIntMapRead(UIntMap *map)
+static inline void LockUIntMapRead(UIntMap *map)
 { ReadLock(&map->lock); }
-static __inline void UnlockUIntMapRead(UIntMap *map)
+static inline void UnlockUIntMapRead(UIntMap *map)
 { ReadUnlock(&map->lock); }
-static __inline void LockUIntMapWrite(UIntMap *map)
+static inline void LockUIntMapWrite(UIntMap *map)
 { WriteLock(&map->lock); }
-static __inline void UnlockUIntMapWrite(UIntMap *map)
+static inline void UnlockUIntMapWrite(UIntMap *map)
 { WriteUnlock(&map->lock); }
 
 
@@ -367,7 +367,7 @@ struct Hrtf;
 
 
 // Find the next power-of-2 for non-power-of-2 numbers.
-static __inline ALuint NextPowerOf2(ALuint value)
+static inline ALuint NextPowerOf2(ALuint value)
 {
     if(value > 0)
     {
@@ -383,7 +383,7 @@ static __inline ALuint NextPowerOf2(ALuint value)
 
 /* Fast float-to-int conversion. Assumes the FPU is already in round-to-zero
  * mode. */
-static __inline ALint fastf2i(ALfloat f)
+static inline ALint fastf2i(ALfloat f)
 {
 #ifdef HAVE_LRINTF
     return lrintf(f);
@@ -399,7 +399,7 @@ static __inline ALint fastf2i(ALfloat f)
 
 /* Fast float-to-uint conversion. Assumes the FPU is already in round-to-zero
  * mode. */
-static __inline ALuint fastf2u(ALfloat f)
+static inline ALuint fastf2u(ALfloat f)
 { return fastf2i(f); }
 
 
@@ -546,7 +546,7 @@ enum DevFmtChannels {
 
 ALuint BytesFromDevFmt(enum DevFmtType type);
 ALuint ChannelsFromDevFmt(enum DevFmtChannels chans);
-static __inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans,
+static inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans,
                                            enum DevFmtType type)
 {
     return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
@@ -751,9 +751,9 @@ void ALCdevice_LockDefault(ALCdevice *device);
 void ALCdevice_UnlockDefault(ALCdevice *device);
 ALint64 ALCdevice_GetLatencyDefault(ALCdevice *device);
 
-static __inline void LockContext(ALCcontext *context)
+static inline void LockContext(ALCcontext *context)
 { ALCdevice_Lock(context->Device); }
-static __inline void UnlockContext(ALCcontext *context)
+static inline void UnlockContext(ALCcontext *context)
 { ALCdevice_Unlock(context->Device); }
 
 

@@ -10,11 +10,11 @@
 #include "alu.h"
 
 
-static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
-                                     const ALuint IrSize,
-                                     ALfloat (*restrict Coeffs)[2],
-                                     const ALfloat (*restrict CoeffStep)[2],
-                                     ALfloat left, ALfloat right)
+static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
+                                   const ALuint IrSize,
+                                   ALfloat (*restrict Coeffs)[2],
+                                   const ALfloat (*restrict CoeffStep)[2],
+                                   ALfloat left, ALfloat right)
 {
     ALuint c;
     for(c = 0;c < IrSize;c++)
@@ -27,10 +27,10 @@ static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2
     }
 }
 
-static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
-                                 const ALuint IrSize,
-                                 ALfloat (*restrict Coeffs)[2],
-                                 ALfloat left, ALfloat right)
+static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
+                               const ALuint IrSize,
+                               ALfloat (*restrict Coeffs)[2],
+                               ALfloat left, ALfloat right)
 {
     ALuint c;
     float32x4_t leftright4;

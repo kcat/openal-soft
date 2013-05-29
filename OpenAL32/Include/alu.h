@@ -51,47 +51,47 @@ typedef ALvoid (*WetMixerFunc)(const struct SendParams *params,
 #define FRACTIONMASK (FRACTIONONE-1)
 
 
-static __inline ALfloat minf(ALfloat a, ALfloat b)
+static inline ALfloat minf(ALfloat a, ALfloat b)
 { return ((a > b) ? b : a); }
-static __inline ALfloat maxf(ALfloat a, ALfloat b)
+static inline ALfloat maxf(ALfloat a, ALfloat b)
 { return ((a > b) ? a : b); }
-static __inline ALfloat clampf(ALfloat val, ALfloat min, ALfloat max)
+static inline ALfloat clampf(ALfloat val, ALfloat min, ALfloat max)
 { return minf(max, maxf(min, val)); }
 
-static __inline ALuint minu(ALuint a, ALuint b)
+static inline ALuint minu(ALuint a, ALuint b)
 { return ((a > b) ? b : a); }
-static __inline ALuint maxu(ALuint a, ALuint b)
+static inline ALuint maxu(ALuint a, ALuint b)
 { return ((a > b) ? a : b); }
-static __inline ALuint clampu(ALuint val, ALuint min, ALuint max)
+static inline ALuint clampu(ALuint val, ALuint min, ALuint max)
 { return minu(max, maxu(min, val)); }
 
-static __inline ALint mini(ALint a, ALint b)
+static inline ALint mini(ALint a, ALint b)
 { return ((a > b) ? b : a); }
-static __inline ALint maxi(ALint a, ALint b)
+static inline ALint maxi(ALint a, ALint b)
 { return ((a > b) ? a : b); }
-static __inline ALint clampi(ALint val, ALint min, ALint max)
+static inline ALint clampi(ALint val, ALint min, ALint max)
 { return mini(max, maxi(min, val)); }
 
-static __inline ALint64 mini64(ALint64 a, ALint64 b)
+static inline ALint64 mini64(ALint64 a, ALint64 b)
 { return ((a > b) ? b : a); }
-static __inline ALint64 maxi64(ALint64 a, ALint64 b)
+static inline ALint64 maxi64(ALint64 a, ALint64 b)
 { return ((a > b) ? a : b); }
-static __inline ALint64 clampi64(ALint64 val, ALint64 min, ALint64 max)
+static inline ALint64 clampi64(ALint64 val, ALint64 min, ALint64 max)
 { return mini64(max, maxi64(min, val)); }
 
-static __inline ALuint64 minu64(ALuint64 a, ALuint64 b)
+static inline ALuint64 minu64(ALuint64 a, ALuint64 b)
 { return ((a > b) ? b : a); }
-static __inline ALuint64 maxu64(ALuint64 a, ALuint64 b)
+static inline ALuint64 maxu64(ALuint64 a, ALuint64 b)
 { return ((a > b) ? a : b); }
-static __inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
+static inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
 { return minu64(max, maxu64(min, val)); }
 
 
-static __inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
+static inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {
     return val1 + (val2-val1)*mu;
 }
-static __inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat mu)
+static inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat mu)
 {
     ALfloat mu2 = mu*mu;
     ALfloat a0 = -0.5f*val0 +  1.5f*val1 + -1.5f*val2 +  0.5f*val3;

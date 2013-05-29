@@ -18,15 +18,15 @@
 #define MixDirect_Hrtf MERGE2(MixDirect_Hrtf_,SUFFIX)
 
 
-static __inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
-                                     const ALuint irSize,
-                                     ALfloat (*restrict Coeffs)[2],
-                                     const ALfloat (*restrict CoeffStep)[2],
-                                     ALfloat left, ALfloat right);
-static __inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
-                                 const ALuint irSize,
-                                 ALfloat (*restrict Coeffs)[2],
-                                 ALfloat left, ALfloat right);
+static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
+                                   const ALuint irSize,
+                                   ALfloat (*restrict Coeffs)[2],
+                                   const ALfloat (*restrict CoeffStep)[2],
+                                   ALfloat left, ALfloat right);
+static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
+                               const ALuint irSize,
+                               ALfloat (*restrict Coeffs)[2],
+                               ALfloat left, ALfloat right);
 
 
 void MixDirect_Hrtf(const DirectParams *params, const ALfloat *restrict data, ALuint srcchan,

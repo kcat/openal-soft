@@ -1030,7 +1030,7 @@ typedef struct {
 } ALubyte3;
 extern ALbyte ALubyte3_size_is_not_3[(sizeof(ALubyte3)==sizeof(ALubyte[3]))?1:-1];
 
-static __inline ALshort DecodeMuLaw(ALmulaw val)
+static inline ALshort DecodeMuLaw(ALmulaw val)
 { return muLawDecompressionTable[val]; }
 
 static ALmulaw EncodeMuLaw(ALshort val)
@@ -1055,7 +1055,7 @@ static ALmulaw EncodeMuLaw(ALshort val)
     return ~(sign | (exp<<4) | mant);
 }
 
-static __inline ALshort DecodeALaw(ALalaw val)
+static inline ALshort DecodeALaw(ALalaw val)
 { return aLawDecompressionTable[val]; }
 
 static ALalaw EncodeALaw(ALshort val)
@@ -1202,14 +1202,14 @@ static void EncodeIMA4Block(ALima4 *dst, const ALshort *src, ALint *sample, ALin
 }
 
 
-static __inline ALint DecodeByte3(ALbyte3 val)
+static inline ALint DecodeByte3(ALbyte3 val)
 {
     if(IS_LITTLE_ENDIAN)
         return (val.b[2]<<16) | (((ALubyte)val.b[1])<<8) | ((ALubyte)val.b[0]);
     return (val.b[0]<<16) | (((ALubyte)val.b[1])<<8) | ((ALubyte)val.b[2]);
 }
 
-static __inline ALbyte3 EncodeByte3(ALint val)
+static inline ALbyte3 EncodeByte3(ALint val)
 {
     if(IS_LITTLE_ENDIAN)
     {
@@ -1223,14 +1223,14 @@ static __inline ALbyte3 EncodeByte3(ALint val)
     }
 }
 
-static __inline ALint DecodeUByte3(ALubyte3 val)
+static inline ALint DecodeUByte3(ALubyte3 val)
 {
     if(IS_LITTLE_ENDIAN)
         return (val.b[2]<<16) | (val.b[1]<<8) | (val.b[0]);
     return (val.b[0]<<16) | (val.b[1]<<8) | val.b[2];
 }
 
-static __inline ALubyte3 EncodeUByte3(ALint val)
+static inline ALubyte3 EncodeUByte3(ALint val)
 {
     if(IS_LITTLE_ENDIAN)
     {
@@ -1245,256 +1245,256 @@ static __inline ALubyte3 EncodeUByte3(ALint val)
 }
 
 
-static __inline ALbyte Conv_ALbyte_ALbyte(ALbyte val)
+static inline ALbyte Conv_ALbyte_ALbyte(ALbyte val)
 { return val; }
-static __inline ALbyte Conv_ALbyte_ALubyte(ALubyte val)
+static inline ALbyte Conv_ALbyte_ALubyte(ALubyte val)
 { return val-128; }
-static __inline ALbyte Conv_ALbyte_ALshort(ALshort val)
+static inline ALbyte Conv_ALbyte_ALshort(ALshort val)
 { return val>>8; }
-static __inline ALbyte Conv_ALbyte_ALushort(ALushort val)
+static inline ALbyte Conv_ALbyte_ALushort(ALushort val)
 { return (val>>8)-128; }
-static __inline ALbyte Conv_ALbyte_ALint(ALint val)
+static inline ALbyte Conv_ALbyte_ALint(ALint val)
 { return val>>24; }
-static __inline ALbyte Conv_ALbyte_ALuint(ALuint val)
+static inline ALbyte Conv_ALbyte_ALuint(ALuint val)
 { return (val>>24)-128; }
-static __inline ALbyte Conv_ALbyte_ALfloat(ALfloat val)
+static inline ALbyte Conv_ALbyte_ALfloat(ALfloat val)
 {
     if(val > 1.0f) return 127;
     if(val < -1.0f) return -128;
     return (ALint)(val * 127.0f);
 }
-static __inline ALbyte Conv_ALbyte_ALdouble(ALdouble val)
+static inline ALbyte Conv_ALbyte_ALdouble(ALdouble val)
 {
     if(val > 1.0) return 127;
     if(val < -1.0) return -128;
     return (ALint)(val * 127.0);
 }
-static __inline ALbyte Conv_ALbyte_ALmulaw(ALmulaw val)
+static inline ALbyte Conv_ALbyte_ALmulaw(ALmulaw val)
 { return Conv_ALbyte_ALshort(DecodeMuLaw(val)); }
-static __inline ALbyte Conv_ALbyte_ALalaw(ALalaw val)
+static inline ALbyte Conv_ALbyte_ALalaw(ALalaw val)
 { return Conv_ALbyte_ALshort(DecodeALaw(val)); }
-static __inline ALbyte Conv_ALbyte_ALbyte3(ALbyte3 val)
+static inline ALbyte Conv_ALbyte_ALbyte3(ALbyte3 val)
 { return DecodeByte3(val)>>16; }
-static __inline ALbyte Conv_ALbyte_ALubyte3(ALubyte3 val)
+static inline ALbyte Conv_ALbyte_ALubyte3(ALubyte3 val)
 { return (DecodeUByte3(val)>>16)-128; }
 
-static __inline ALubyte Conv_ALubyte_ALbyte(ALbyte val)
+static inline ALubyte Conv_ALubyte_ALbyte(ALbyte val)
 { return val+128; }
-static __inline ALubyte Conv_ALubyte_ALubyte(ALubyte val)
+static inline ALubyte Conv_ALubyte_ALubyte(ALubyte val)
 { return val; }
-static __inline ALubyte Conv_ALubyte_ALshort(ALshort val)
+static inline ALubyte Conv_ALubyte_ALshort(ALshort val)
 { return (val>>8)+128; }
-static __inline ALubyte Conv_ALubyte_ALushort(ALushort val)
+static inline ALubyte Conv_ALubyte_ALushort(ALushort val)
 { return val>>8; }
-static __inline ALubyte Conv_ALubyte_ALint(ALint val)
+static inline ALubyte Conv_ALubyte_ALint(ALint val)
 { return (val>>24)+128; }
-static __inline ALubyte Conv_ALubyte_ALuint(ALuint val)
+static inline ALubyte Conv_ALubyte_ALuint(ALuint val)
 { return val>>24; }
-static __inline ALubyte Conv_ALubyte_ALfloat(ALfloat val)
+static inline ALubyte Conv_ALubyte_ALfloat(ALfloat val)
 {
     if(val > 1.0f) return 255;
     if(val < -1.0f) return 0;
     return (ALint)(val * 127.0f) + 128;
 }
-static __inline ALubyte Conv_ALubyte_ALdouble(ALdouble val)
+static inline ALubyte Conv_ALubyte_ALdouble(ALdouble val)
 {
     if(val > 1.0) return 255;
     if(val < -1.0) return 0;
     return (ALint)(val * 127.0) + 128;
 }
-static __inline ALubyte Conv_ALubyte_ALmulaw(ALmulaw val)
+static inline ALubyte Conv_ALubyte_ALmulaw(ALmulaw val)
 { return Conv_ALubyte_ALshort(DecodeMuLaw(val)); }
-static __inline ALubyte Conv_ALubyte_ALalaw(ALalaw val)
+static inline ALubyte Conv_ALubyte_ALalaw(ALalaw val)
 { return Conv_ALubyte_ALshort(DecodeALaw(val)); }
-static __inline ALubyte Conv_ALubyte_ALbyte3(ALbyte3 val)
+static inline ALubyte Conv_ALubyte_ALbyte3(ALbyte3 val)
 { return (DecodeByte3(val)>>16)+128; }
-static __inline ALubyte Conv_ALubyte_ALubyte3(ALubyte3 val)
+static inline ALubyte Conv_ALubyte_ALubyte3(ALubyte3 val)
 { return DecodeUByte3(val)>>16; }
 
-static __inline ALshort Conv_ALshort_ALbyte(ALbyte val)
+static inline ALshort Conv_ALshort_ALbyte(ALbyte val)
 { return val<<8; }
-static __inline ALshort Conv_ALshort_ALubyte(ALubyte val)
+static inline ALshort Conv_ALshort_ALubyte(ALubyte val)
 { return (val-128)<<8; }
-static __inline ALshort Conv_ALshort_ALshort(ALshort val)
+static inline ALshort Conv_ALshort_ALshort(ALshort val)
 { return val; }
-static __inline ALshort Conv_ALshort_ALushort(ALushort val)
+static inline ALshort Conv_ALshort_ALushort(ALushort val)
 { return val-32768; }
-static __inline ALshort Conv_ALshort_ALint(ALint val)
+static inline ALshort Conv_ALshort_ALint(ALint val)
 { return val>>16; }
-static __inline ALshort Conv_ALshort_ALuint(ALuint val)
+static inline ALshort Conv_ALshort_ALuint(ALuint val)
 { return (val>>16)-32768; }
-static __inline ALshort Conv_ALshort_ALfloat(ALfloat val)
+static inline ALshort Conv_ALshort_ALfloat(ALfloat val)
 {
     if(val > 1.0f) return 32767;
     if(val < -1.0f) return -32768;
     return (ALint)(val * 32767.0f);
 }
-static __inline ALshort Conv_ALshort_ALdouble(ALdouble val)
+static inline ALshort Conv_ALshort_ALdouble(ALdouble val)
 {
     if(val > 1.0) return 32767;
     if(val < -1.0) return -32768;
     return (ALint)(val * 32767.0);
 }
-static __inline ALshort Conv_ALshort_ALmulaw(ALmulaw val)
+static inline ALshort Conv_ALshort_ALmulaw(ALmulaw val)
 { return Conv_ALshort_ALshort(DecodeMuLaw(val)); }
-static __inline ALshort Conv_ALshort_ALalaw(ALalaw val)
+static inline ALshort Conv_ALshort_ALalaw(ALalaw val)
 { return Conv_ALshort_ALshort(DecodeALaw(val)); }
-static __inline ALshort Conv_ALshort_ALbyte3(ALbyte3 val)
+static inline ALshort Conv_ALshort_ALbyte3(ALbyte3 val)
 { return DecodeByte3(val)>>8; }
-static __inline ALshort Conv_ALshort_ALubyte3(ALubyte3 val)
+static inline ALshort Conv_ALshort_ALubyte3(ALubyte3 val)
 { return (DecodeUByte3(val)>>8)-32768; }
 
-static __inline ALushort Conv_ALushort_ALbyte(ALbyte val)
+static inline ALushort Conv_ALushort_ALbyte(ALbyte val)
 { return (val+128)<<8; }
-static __inline ALushort Conv_ALushort_ALubyte(ALubyte val)
+static inline ALushort Conv_ALushort_ALubyte(ALubyte val)
 { return val<<8; }
-static __inline ALushort Conv_ALushort_ALshort(ALshort val)
+static inline ALushort Conv_ALushort_ALshort(ALshort val)
 { return val+32768; }
-static __inline ALushort Conv_ALushort_ALushort(ALushort val)
+static inline ALushort Conv_ALushort_ALushort(ALushort val)
 { return val; }
-static __inline ALushort Conv_ALushort_ALint(ALint val)
+static inline ALushort Conv_ALushort_ALint(ALint val)
 { return (val>>16)+32768; }
-static __inline ALushort Conv_ALushort_ALuint(ALuint val)
+static inline ALushort Conv_ALushort_ALuint(ALuint val)
 { return val>>16; }
-static __inline ALushort Conv_ALushort_ALfloat(ALfloat val)
+static inline ALushort Conv_ALushort_ALfloat(ALfloat val)
 {
     if(val > 1.0f) return 65535;
     if(val < -1.0f) return 0;
     return (ALint)(val * 32767.0f) + 32768;
 }
-static __inline ALushort Conv_ALushort_ALdouble(ALdouble val)
+static inline ALushort Conv_ALushort_ALdouble(ALdouble val)
 {
     if(val > 1.0) return 65535;
     if(val < -1.0) return 0;
     return (ALint)(val * 32767.0) + 32768;
 }
-static __inline ALushort Conv_ALushort_ALmulaw(ALmulaw val)
+static inline ALushort Conv_ALushort_ALmulaw(ALmulaw val)
 { return Conv_ALushort_ALshort(DecodeMuLaw(val)); }
-static __inline ALushort Conv_ALushort_ALalaw(ALalaw val)
+static inline ALushort Conv_ALushort_ALalaw(ALalaw val)
 { return Conv_ALushort_ALshort(DecodeALaw(val)); }
-static __inline ALushort Conv_ALushort_ALbyte3(ALbyte3 val)
+static inline ALushort Conv_ALushort_ALbyte3(ALbyte3 val)
 { return (DecodeByte3(val)>>8)+32768; }
-static __inline ALushort Conv_ALushort_ALubyte3(ALubyte3 val)
+static inline ALushort Conv_ALushort_ALubyte3(ALubyte3 val)
 { return DecodeUByte3(val)>>8; }
 
-static __inline ALint Conv_ALint_ALbyte(ALbyte val)
+static inline ALint Conv_ALint_ALbyte(ALbyte val)
 { return val<<24; }
-static __inline ALint Conv_ALint_ALubyte(ALubyte val)
+static inline ALint Conv_ALint_ALubyte(ALubyte val)
 { return (val-128)<<24; }
-static __inline ALint Conv_ALint_ALshort(ALshort val)
+static inline ALint Conv_ALint_ALshort(ALshort val)
 { return val<<16; }
-static __inline ALint Conv_ALint_ALushort(ALushort val)
+static inline ALint Conv_ALint_ALushort(ALushort val)
 { return (val-32768)<<16; }
-static __inline ALint Conv_ALint_ALint(ALint val)
+static inline ALint Conv_ALint_ALint(ALint val)
 { return val; }
-static __inline ALint Conv_ALint_ALuint(ALuint val)
+static inline ALint Conv_ALint_ALuint(ALuint val)
 { return val-2147483648u; }
-static __inline ALint Conv_ALint_ALfloat(ALfloat val)
+static inline ALint Conv_ALint_ALfloat(ALfloat val)
 {
     if(val > 1.0f) return 2147483647;
     if(val < -1.0f) return -2147483647-1;
     return (ALint)(val*16777215.0f) << 7;
 }
-static __inline ALint Conv_ALint_ALdouble(ALdouble val)
+static inline ALint Conv_ALint_ALdouble(ALdouble val)
 {
     if(val > 1.0) return 2147483647;
     if(val < -1.0) return -2147483647-1;
     return (ALint)(val * 2147483647.0);
 }
-static __inline ALint Conv_ALint_ALmulaw(ALmulaw val)
+static inline ALint Conv_ALint_ALmulaw(ALmulaw val)
 { return Conv_ALint_ALshort(DecodeMuLaw(val)); }
-static __inline ALint Conv_ALint_ALalaw(ALalaw val)
+static inline ALint Conv_ALint_ALalaw(ALalaw val)
 { return Conv_ALint_ALshort(DecodeALaw(val)); }
-static __inline ALint Conv_ALint_ALbyte3(ALbyte3 val)
+static inline ALint Conv_ALint_ALbyte3(ALbyte3 val)
 { return DecodeByte3(val)<<8; }
-static __inline ALint Conv_ALint_ALubyte3(ALubyte3 val)
+static inline ALint Conv_ALint_ALubyte3(ALubyte3 val)
 { return (DecodeUByte3(val)-8388608)<<8; }
 
-static __inline ALuint Conv_ALuint_ALbyte(ALbyte val)
+static inline ALuint Conv_ALuint_ALbyte(ALbyte val)
 { return (val+128)<<24; }
-static __inline ALuint Conv_ALuint_ALubyte(ALubyte val)
+static inline ALuint Conv_ALuint_ALubyte(ALubyte val)
 { return val<<24; }
-static __inline ALuint Conv_ALuint_ALshort(ALshort val)
+static inline ALuint Conv_ALuint_ALshort(ALshort val)
 { return (val+32768)<<16; }
-static __inline ALuint Conv_ALuint_ALushort(ALushort val)
+static inline ALuint Conv_ALuint_ALushort(ALushort val)
 { return val<<16; }
-static __inline ALuint Conv_ALuint_ALint(ALint val)
+static inline ALuint Conv_ALuint_ALint(ALint val)
 { return val+2147483648u; }
-static __inline ALuint Conv_ALuint_ALuint(ALuint val)
+static inline ALuint Conv_ALuint_ALuint(ALuint val)
 { return val; }
-static __inline ALuint Conv_ALuint_ALfloat(ALfloat val)
+static inline ALuint Conv_ALuint_ALfloat(ALfloat val)
 {
     if(val > 1.0f) return 4294967295u;
     if(val < -1.0f) return 0;
     return ((ALint)(val*16777215.0f)<<7) + 2147483648u;
 }
-static __inline ALuint Conv_ALuint_ALdouble(ALdouble val)
+static inline ALuint Conv_ALuint_ALdouble(ALdouble val)
 {
     if(val > 1.0) return 4294967295u;
     if(val < -1.0) return 0;
     return (ALint)(val * 2147483647.0) + 2147483648u;
 }
-static __inline ALuint Conv_ALuint_ALmulaw(ALmulaw val)
+static inline ALuint Conv_ALuint_ALmulaw(ALmulaw val)
 { return Conv_ALuint_ALshort(DecodeMuLaw(val)); }
-static __inline ALuint Conv_ALuint_ALalaw(ALalaw val)
+static inline ALuint Conv_ALuint_ALalaw(ALalaw val)
 { return Conv_ALuint_ALshort(DecodeALaw(val)); }
-static __inline ALuint Conv_ALuint_ALbyte3(ALbyte3 val)
+static inline ALuint Conv_ALuint_ALbyte3(ALbyte3 val)
 { return (DecodeByte3(val)+8388608)<<8; }
-static __inline ALuint Conv_ALuint_ALubyte3(ALubyte3 val)
+static inline ALuint Conv_ALuint_ALubyte3(ALubyte3 val)
 { return DecodeUByte3(val)<<8; }
 
-static __inline ALfloat Conv_ALfloat_ALbyte(ALbyte val)
+static inline ALfloat Conv_ALfloat_ALbyte(ALbyte val)
 { return val * (1.0f/127.0f); }
-static __inline ALfloat Conv_ALfloat_ALubyte(ALubyte val)
+static inline ALfloat Conv_ALfloat_ALubyte(ALubyte val)
 { return (val-128) * (1.0f/127.0f); }
-static __inline ALfloat Conv_ALfloat_ALshort(ALshort val)
+static inline ALfloat Conv_ALfloat_ALshort(ALshort val)
 { return val * (1.0f/32767.0f); }
-static __inline ALfloat Conv_ALfloat_ALushort(ALushort val)
+static inline ALfloat Conv_ALfloat_ALushort(ALushort val)
 { return (val-32768) * (1.0f/32767.0f); }
-static __inline ALfloat Conv_ALfloat_ALint(ALint val)
+static inline ALfloat Conv_ALfloat_ALint(ALint val)
 { return (ALfloat)(val * (1.0/2147483647.0)); }
-static __inline ALfloat Conv_ALfloat_ALuint(ALuint val)
+static inline ALfloat Conv_ALfloat_ALuint(ALuint val)
 { return (ALfloat)((ALint)(val-2147483648u) * (1.0/2147483647.0)); }
-static __inline ALfloat Conv_ALfloat_ALfloat(ALfloat val)
+static inline ALfloat Conv_ALfloat_ALfloat(ALfloat val)
 { return (val==val) ? val : 0.0f; }
-static __inline ALfloat Conv_ALfloat_ALdouble(ALdouble val)
+static inline ALfloat Conv_ALfloat_ALdouble(ALdouble val)
 { return (val==val) ? (ALfloat)val : 0.0f; }
-static __inline ALfloat Conv_ALfloat_ALmulaw(ALmulaw val)
+static inline ALfloat Conv_ALfloat_ALmulaw(ALmulaw val)
 { return Conv_ALfloat_ALshort(DecodeMuLaw(val)); }
-static __inline ALfloat Conv_ALfloat_ALalaw(ALalaw val)
+static inline ALfloat Conv_ALfloat_ALalaw(ALalaw val)
 { return Conv_ALfloat_ALshort(DecodeALaw(val)); }
-static __inline ALfloat Conv_ALfloat_ALbyte3(ALbyte3 val)
+static inline ALfloat Conv_ALfloat_ALbyte3(ALbyte3 val)
 { return (ALfloat)(DecodeByte3(val) * (1.0/8388607.0)); }
-static __inline ALfloat Conv_ALfloat_ALubyte3(ALubyte3 val)
+static inline ALfloat Conv_ALfloat_ALubyte3(ALubyte3 val)
 { return (ALfloat)((DecodeUByte3(val)-8388608) * (1.0/8388607.0)); }
 
-static __inline ALdouble Conv_ALdouble_ALbyte(ALbyte val)
+static inline ALdouble Conv_ALdouble_ALbyte(ALbyte val)
 { return val * (1.0/127.0); }
-static __inline ALdouble Conv_ALdouble_ALubyte(ALubyte val)
+static inline ALdouble Conv_ALdouble_ALubyte(ALubyte val)
 { return (val-128) * (1.0/127.0); }
-static __inline ALdouble Conv_ALdouble_ALshort(ALshort val)
+static inline ALdouble Conv_ALdouble_ALshort(ALshort val)
 { return val * (1.0/32767.0); }
-static __inline ALdouble Conv_ALdouble_ALushort(ALushort val)
+static inline ALdouble Conv_ALdouble_ALushort(ALushort val)
 { return (val-32768) * (1.0/32767.0); }
-static __inline ALdouble Conv_ALdouble_ALint(ALint val)
+static inline ALdouble Conv_ALdouble_ALint(ALint val)
 { return val * (1.0/2147483647.0); }
-static __inline ALdouble Conv_ALdouble_ALuint(ALuint val)
+static inline ALdouble Conv_ALdouble_ALuint(ALuint val)
 { return (ALint)(val-2147483648u) * (1.0/2147483647.0); }
-static __inline ALdouble Conv_ALdouble_ALfloat(ALfloat val)
+static inline ALdouble Conv_ALdouble_ALfloat(ALfloat val)
 { return (val==val) ? val : 0.0f; }
-static __inline ALdouble Conv_ALdouble_ALdouble(ALdouble val)
+static inline ALdouble Conv_ALdouble_ALdouble(ALdouble val)
 { return (val==val) ? val : 0.0; }
-static __inline ALdouble Conv_ALdouble_ALmulaw(ALmulaw val)
+static inline ALdouble Conv_ALdouble_ALmulaw(ALmulaw val)
 { return Conv_ALdouble_ALshort(DecodeMuLaw(val)); }
-static __inline ALdouble Conv_ALdouble_ALalaw(ALalaw val)
+static inline ALdouble Conv_ALdouble_ALalaw(ALalaw val)
 { return Conv_ALdouble_ALshort(DecodeALaw(val)); }
-static __inline ALdouble Conv_ALdouble_ALbyte3(ALbyte3 val)
+static inline ALdouble Conv_ALdouble_ALbyte3(ALbyte3 val)
 { return DecodeByte3(val) * (1.0/8388607.0); }
-static __inline ALdouble Conv_ALdouble_ALubyte3(ALubyte3 val)
+static inline ALdouble Conv_ALdouble_ALubyte3(ALubyte3 val)
 { return (DecodeUByte3(val)-8388608) * (1.0/8388607.0); }
 
 #define DECL_TEMPLATE(T)                                                      \
-static __inline ALmulaw Conv_ALmulaw_##T(T val)                               \
+static inline ALmulaw Conv_ALmulaw_##T(T val)                                 \
 { return EncodeMuLaw(Conv_ALshort_##T(val)); }
 
 DECL_TEMPLATE(ALbyte)
@@ -1505,7 +1505,7 @@ DECL_TEMPLATE(ALint)
 DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
-static __inline ALmulaw Conv_ALmulaw_ALmulaw(ALmulaw val)
+static inline ALmulaw Conv_ALmulaw_ALmulaw(ALmulaw val)
 { return val; }
 DECL_TEMPLATE(ALalaw)
 DECL_TEMPLATE(ALbyte3)
@@ -1514,7 +1514,7 @@ DECL_TEMPLATE(ALubyte3)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
-static __inline ALalaw Conv_ALalaw_##T(T val)                                 \
+static inline ALalaw Conv_ALalaw_##T(T val)                                   \
 { return EncodeALaw(Conv_ALshort_##T(val)); }
 
 DECL_TEMPLATE(ALbyte)
@@ -1526,7 +1526,7 @@ DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
-static __inline ALalaw Conv_ALalaw_ALalaw(ALalaw val)
+static inline ALalaw Conv_ALalaw_ALalaw(ALalaw val)
 { return val; }
 DECL_TEMPLATE(ALbyte3)
 DECL_TEMPLATE(ALubyte3)
@@ -1534,7 +1534,7 @@ DECL_TEMPLATE(ALubyte3)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
-static __inline ALbyte3 Conv_ALbyte3_##T(T val)                               \
+static inline ALbyte3 Conv_ALbyte3_##T(T val)                                 \
 { return EncodeByte3(Conv_ALint_##T(val)>>8); }
 
 DECL_TEMPLATE(ALbyte)
@@ -1547,14 +1547,14 @@ DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
 DECL_TEMPLATE(ALalaw)
-static __inline ALbyte3 Conv_ALbyte3_ALbyte3(ALbyte3 val)
+static inline ALbyte3 Conv_ALbyte3_ALbyte3(ALbyte3 val)
 { return val; }
 DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
-static __inline ALubyte3 Conv_ALubyte3_##T(T val)                             \
+static inline ALubyte3 Conv_ALubyte3_##T(T val)                               \
 { return EncodeUByte3(Conv_ALuint_##T(val)>>8); }
 
 DECL_TEMPLATE(ALbyte)
@@ -1568,7 +1568,7 @@ DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
 DECL_TEMPLATE(ALalaw)
 DECL_TEMPLATE(ALbyte3)
-static __inline ALubyte3 Conv_ALubyte3_ALubyte3(ALubyte3 val)
+static inline ALubyte3 Conv_ALubyte3_ALubyte3(ALubyte3 val)
 { return val; }
 
 #undef DECL_TEMPLATE

@@ -72,14 +72,14 @@ static ALvoid ALdistortionState_Destruct(ALdistortionState *state)
     (void)state;
 }
 
-static ALboolean ALdistortionState_DeviceUpdate(ALdistortionState *state, ALCdevice *device)
+static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *state, ALCdevice *device)
 {
     return AL_TRUE;
     (void)state;
     (void)device;
 }
 
-static ALvoid ALdistortionState_Update(ALdistortionState *state, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
     ALfloat frequency = (ALfloat)Device->Frequency;
@@ -132,7 +132,7 @@ static ALvoid ALdistortionState_Update(ALdistortionState *state, ALCdevice *Devi
     state->bandpass.a[2] = 1.0f - alpha;
 }
 
-static ALvoid ALdistortionState_Process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     const ALfloat fc = state->edge_coeff;
     float oversample_buffer[64][4];
@@ -280,13 +280,13 @@ ALeffectStateFactory *ALdistortionStateFactory_getFactory(void)
 }
 
 
-void ALdistortion_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALdistortion_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
-void ALdistortion_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALdistortion_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    ALdistortion_SetParami(effect, context, param, vals[0]);
+    ALdistortion_setParami(effect, context, param, vals[0]);
 }
-void ALdistortion_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALdistortion_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -325,18 +325,18 @@ void ALdistortion_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param,
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALdistortion_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALdistortion_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    ALdistortion_SetParamf(effect, context, param, vals[0]);
+    ALdistortion_setParamf(effect, context, param, vals[0]);
 }
 
-void ALdistortion_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALdistortion_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
-void ALdistortion_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALdistortion_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    ALdistortion_GetParami(effect, context, param, vals);
+    ALdistortion_getParami(effect, context, param, vals);
 }
-void ALdistortion_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALdistortion_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -365,9 +365,9 @@ void ALdistortion_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param,
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALdistortion_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALdistortion_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    ALdistortion_GetParamf(effect, context, param, vals);
+    ALdistortion_getParamf(effect, context, param, vals);
 }
 
 DEFINE_ALEFFECT_VTABLE(ALdistortion);

@@ -496,7 +496,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         SetMixerFPUMode(&oldMode);
 
         ALCdevice_Lock(Device);
-        if(VCALL(State,DeviceUpdate,(Device)) == AL_FALSE)
+        if(VCALL(State,deviceUpdate,(Device)) == AL_FALSE)
         {
             ALCdevice_Unlock(Device);
             RestoreFPUMode(&oldMode);
@@ -520,7 +520,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
          * object was changed, it needs an update before its Process method can
          * be called. */
         EffectSlot->NeedsUpdate = AL_FALSE;
-        VCALL(EffectSlot->EffectState,Update,(Device, EffectSlot));
+        VCALL(EffectSlot->EffectState,update,(Device, EffectSlot));
         ALCdevice_Unlock(Device);
 
         RestoreFPUMode(&oldMode);

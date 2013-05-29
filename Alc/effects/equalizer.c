@@ -93,14 +93,14 @@ static ALvoid ALequalizerState_Destruct(ALequalizerState *state)
     (void)state;
 }
 
-static ALboolean ALequalizerState_DeviceUpdate(ALequalizerState *state, ALCdevice *device)
+static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevice *device)
 {
     return AL_TRUE;
     (void)state;
     (void)device;
 }
 
-static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *device, const ALeffectslot *slot)
+static ALvoid ALequalizerState_update(ALequalizerState *state, ALCdevice *device, const ALeffectslot *slot)
 {
     ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat gain = sqrtf(1.0f / device->NumChan) * slot->Gain;
@@ -153,7 +153,7 @@ static ALvoid ALequalizerState_Update(ALequalizerState *state, ALCdevice *device
     }
 }
 
-static ALvoid ALequalizerState_Process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     ALuint base;
     ALuint it;
@@ -231,13 +231,13 @@ ALeffectStateFactory *ALequalizerStateFactory_getFactory(void)
 }
 
 
-void ALequalizer_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALequalizer_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
-void ALequalizer_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALequalizer_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    ALequalizer_SetParami(effect, context, param, vals[0]);
+    ALequalizer_setParami(effect, context, param, vals[0]);
 }
-void ALequalizer_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALequalizer_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -306,18 +306,18 @@ void ALequalizer_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALequalizer_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALequalizer_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    ALequalizer_SetParamf(effect, context, param, vals[0]);
+    ALequalizer_setParamf(effect, context, param, vals[0]);
 }
 
-void ALequalizer_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALequalizer_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
-void ALequalizer_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALequalizer_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    ALequalizer_GetParami(effect, context, param, vals);
+    ALequalizer_getParami(effect, context, param, vals);
 }
-void ALequalizer_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALequalizer_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -366,9 +366,9 @@ void ALequalizer_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALequalizer_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALequalizer_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    ALequalizer_GetParamf(effect, context, param, vals);
+    ALequalizer_getParamf(effect, context, param, vals);
 }
 
 DEFINE_ALEFFECT_VTABLE(ALequalizer);

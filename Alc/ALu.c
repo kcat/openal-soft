@@ -1042,9 +1042,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 (*slot)->PendingClicks[0] = 0.0f;
 
                 if(!DeferUpdates && ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
-                    VCALL((*slot)->EffectState,Update,(device, *slot));
+                    VCALL((*slot)->EffectState,update,(device, *slot));
 
-                VCALL((*slot)->EffectState,Process,(SamplesToDo, (*slot)->WetBuffer[0],
+                VCALL((*slot)->EffectState,process,(SamplesToDo, (*slot)->WetBuffer[0],
                                                     device->DryBuffer));
 
                 for(i = 0;i < SamplesToDo;i++)
@@ -1071,9 +1071,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             (*slot)->PendingClicks[0] = 0.0f;
 
             if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
-                VCALL((*slot)->EffectState,Update,(device, *slot));
+                VCALL((*slot)->EffectState,update,(device, *slot));
 
-            VCALL((*slot)->EffectState,Process,(SamplesToDo, (*slot)->WetBuffer[0],
+            VCALL((*slot)->EffectState,process,(SamplesToDo, (*slot)->WetBuffer[0],
                                                 device->DryBuffer));
 
             for(i = 0;i < SamplesToDo;i++)

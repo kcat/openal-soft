@@ -28,23 +28,23 @@ extern ALfloat ReverbBoost;
 extern ALboolean EmulateEAXReverb;
 
 struct ALeffectVtable {
-    void (*const SetParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-    void (*const SetParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-    void (*const SetParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-    void (*const SetParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
+    void (*const setParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
+    void (*const setParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
+    void (*const setParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
+    void (*const setParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
 
-    void (*const GetParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-    void (*const GetParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-    void (*const GetParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*const GetParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
+    void (*const getParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
+    void (*const getParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
+    void (*const getParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
+    void (*const getParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
 };
 
 #define DEFINE_ALEFFECT_VTABLE(T)           \
 const struct ALeffectVtable T##_vtable = {  \
-    T##_SetParami, T##_SetParamiv,          \
-    T##_SetParamf, T##_SetParamfv,          \
-    T##_GetParami, T##_GetParamiv,          \
-    T##_GetParamf, T##_GetParamfv,          \
+    T##_setParami, T##_setParamiv,          \
+    T##_setParamf, T##_setParamfv,          \
+    T##_getParami, T##_getParamiv,          \
+    T##_getParamf, T##_getParamfv,          \
 }
 
 extern const struct ALeffectVtable ALeaxreverb_vtable;

@@ -66,7 +66,7 @@ static ALvoid ALchorusState_Destruct(ALchorusState *state)
     state->SampleBufferRight = NULL;
 }
 
-static ALboolean ALchorusState_DeviceUpdate(ALchorusState *state, ALCdevice *Device)
+static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Device)
 {
     ALuint maxlen;
     ALuint it;
@@ -98,7 +98,7 @@ static ALboolean ALchorusState_DeviceUpdate(ALchorusState *state, ALCdevice *Dev
     return AL_TRUE;
 }
 
-static ALvoid ALchorusState_Update(ALchorusState *state, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALchorusState_update(ALchorusState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALfloat frequency = (ALfloat)Device->Frequency;
     ALfloat rate;
@@ -235,7 +235,7 @@ DECL_TEMPLATE(Sinusoid)
 
 #undef DECL_TEMPLATE
 
-static ALvoid ALchorusState_Process(ALchorusState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALchorusState_process(ALchorusState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     if(state->waveform == AL_CHORUS_WAVEFORM_TRIANGLE)
         ProcessTriangle(state, SamplesToDo, SamplesIn, SamplesOut);
@@ -284,7 +284,7 @@ ALeffectStateFactory *ALchorusStateFactory_getFactory(void)
 }
 
 
-void ALchorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALchorus_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -305,11 +305,11 @@ void ALchorus_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALi
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALchorus_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALchorus_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    ALchorus_SetParami(effect, context, param, vals[0]);
+    ALchorus_setParami(effect, context, param, vals[0]);
 }
-void ALchorus_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALchorus_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -342,12 +342,12 @@ void ALchorus_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALf
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALchorus_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALchorus_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    ALchorus_SetParamf(effect, context, param, vals[0]);
+    ALchorus_setParamf(effect, context, param, vals[0]);
 }
 
-void ALchorus_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALchorus_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -364,11 +364,11 @@ void ALchorus_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALi
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALchorus_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALchorus_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    ALchorus_GetParami(effect, context, param, vals);
+    ALchorus_getParami(effect, context, param, vals);
 }
-void ALchorus_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALchorus_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -393,9 +393,9 @@ void ALchorus_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALf
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALchorus_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALchorus_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    ALchorus_GetParamf(effect, context, param, vals);
+    ALchorus_getParamf(effect, context, param, vals);
 }
 
 DEFINE_ALEFFECT_VTABLE(ALchorus);

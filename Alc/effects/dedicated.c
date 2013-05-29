@@ -48,14 +48,14 @@ static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state)
     (void)state;
 }
 
-static ALboolean ALdedicatedState_DeviceUpdate(ALdedicatedState *state, ALCdevice *Device)
+static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *state, ALCdevice *Device)
 {
     return AL_TRUE;
     (void)state;
     (void)Device;
 }
 
-static ALvoid ALdedicatedState_Update(ALdedicatedState *state, ALCdevice *device, const ALeffectslot *Slot)
+static ALvoid ALdedicatedState_update(ALdedicatedState *state, ALCdevice *device, const ALeffectslot *Slot)
 {
     ALfloat Gain;
     ALsizei s;
@@ -70,7 +70,7 @@ static ALvoid ALdedicatedState_Update(ALdedicatedState *state, ALCdevice *device
         state->gains[LFE] = Gain;
 }
 
-static ALvoid ALdedicatedState_Process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     const ALfloat *gains = state->gains;
     ALuint i, c;
@@ -125,13 +125,13 @@ ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void)
 }
 
 
-void ALdedicated_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALdedicated_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
-void ALdedicated_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALdedicated_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    ALdedicated_SetParami(effect, context, param, vals[0]);
+    ALdedicated_setParami(effect, context, param, vals[0]);
 }
-void ALdedicated_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALdedicated_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -146,18 +146,18 @@ void ALdedicated_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALdedicated_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALdedicated_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    ALdedicated_SetParamf(effect, context, param, vals[0]);
+    ALdedicated_setParamf(effect, context, param, vals[0]);
 }
 
-void ALdedicated_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALdedicated_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
-void ALdedicated_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALdedicated_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    ALdedicated_GetParami(effect, context, param, vals);
+    ALdedicated_getParami(effect, context, param, vals);
 }
-void ALdedicated_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALdedicated_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -170,9 +170,9 @@ void ALdedicated_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALdedicated_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALdedicated_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    ALdedicated_GetParamf(effect, context, param, vals);
+    ALdedicated_getParamf(effect, context, param, vals);
 }
 
 DEFINE_ALEFFECT_VTABLE(ALdedicated);

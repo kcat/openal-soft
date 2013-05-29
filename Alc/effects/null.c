@@ -31,7 +31,7 @@ static ALvoid ALnullState_Destruct(ALnullState *state)
  * initialization and any time the device parameters (eg. playback frequency,
  * format) have been changed.
  */
-static ALboolean ALnullState_DeviceUpdate(ALnullState *state, ALCdevice *device)
+static ALboolean ALnullState_deviceUpdate(ALnullState *state, ALCdevice *device)
 {
     return AL_TRUE;
     (void)state;
@@ -41,7 +41,7 @@ static ALboolean ALnullState_DeviceUpdate(ALnullState *state, ALCdevice *device)
 /* This updates the effect state. This is called any time the effect is
  * (re)loaded into a slot.
  */
-static ALvoid ALnullState_Update(ALnullState *state, ALCdevice *device, const ALeffectslot *slot)
+static ALvoid ALnullState_update(ALnullState *state, ALCdevice *device, const ALeffectslot *slot)
 {
     (void)state;
     (void)device;
@@ -52,7 +52,7 @@ static ALvoid ALnullState_Update(ALnullState *state, ALCdevice *device, const AL
  * input to the output buffer. The result should be added to the output buffer,
  * not replace it.
  */
-static ALvoid ALnullState_Process(ALnullState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE])
+static ALvoid ALnullState_process(ALnullState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE])
 {
     (void)state;
     (void)samplesToDo;
@@ -101,7 +101,7 @@ ALeffectStateFactory *ALnullStateFactory_getFactory(void)
 }
 
 
-void ALnull_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALnull_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     (void)effect;
     (void)val;
@@ -111,7 +111,7 @@ void ALnull_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALnull_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     (void)effect;
     (void)vals;
@@ -121,7 +121,7 @@ void ALnull_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, cons
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALnull_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     (void)effect;
     (void)val;
@@ -131,7 +131,7 @@ void ALnull_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALnull_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
     (void)effect;
     (void)vals;
@@ -142,7 +142,7 @@ void ALnull_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, cons
     }
 }
 
-void ALnull_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALnull_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     (void)effect;
     (void)val;
@@ -152,7 +152,7 @@ void ALnull_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALnull_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     (void)effect;
     (void)vals;
@@ -162,7 +162,7 @@ void ALnull_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALin
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALnull_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     (void)effect;
     (void)val;
@@ -172,7 +172,7 @@ void ALnull_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALnull_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     (void)effect;
     (void)vals;

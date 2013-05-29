@@ -66,7 +66,7 @@ static ALvoid ALflangerState_Destruct(ALflangerState *state)
     state->SampleBufferRight = NULL;
 }
 
-static ALboolean ALflangerState_DeviceUpdate(ALflangerState *state, ALCdevice *Device)
+static ALboolean ALflangerState_deviceUpdate(ALflangerState *state, ALCdevice *Device)
 {
     ALuint maxlen;
     ALuint it;
@@ -98,7 +98,7 @@ static ALboolean ALflangerState_DeviceUpdate(ALflangerState *state, ALCdevice *D
     return AL_TRUE;
 }
 
-static ALvoid ALflangerState_Update(ALflangerState *state, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALflangerState_update(ALflangerState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALfloat frequency = (ALfloat)Device->Frequency;
     ALfloat rate;
@@ -235,7 +235,7 @@ DECL_TEMPLATE(Sinusoid)
 
 #undef DECL_TEMPLATE
 
-static ALvoid ALflangerState_Process(ALflangerState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALflangerState_process(ALflangerState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     if(state->waveform == AL_FLANGER_WAVEFORM_TRIANGLE)
         ProcessTriangle(state, SamplesToDo, SamplesIn, SamplesOut);
@@ -284,7 +284,7 @@ ALeffectStateFactory *ALflangerStateFactory_getFactory(void)
 }
 
 
-void ALflanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALflanger_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -305,11 +305,11 @@ void ALflanger_SetParami(ALeffect *effect, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALflanger_SetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALflanger_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
-    ALflanger_SetParami(effect, context, param, vals[0]);
+    ALflanger_setParami(effect, context, param, vals[0]);
 }
-void ALflanger_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALflanger_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -342,12 +342,12 @@ void ALflanger_SetParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALflanger_SetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALflanger_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
-    ALflanger_SetParamf(effect, context, param, vals[0]);
+    ALflanger_setParamf(effect, context, param, vals[0]);
 }
 
-void ALflanger_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALflanger_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -364,11 +364,11 @@ void ALflanger_GetParami(ALeffect *effect, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALflanger_GetParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALflanger_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
-    ALflanger_GetParami(effect, context, param, vals);
+    ALflanger_getParami(effect, context, param, vals);
 }
-void ALflanger_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALflanger_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -393,9 +393,9 @@ void ALflanger_GetParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALflanger_GetParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALflanger_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
-    ALflanger_GetParamf(effect, context, param, vals);
+    ALflanger_getParamf(effect, context, param, vals);
 }
 
 DEFINE_ALEFFECT_VTABLE(ALflanger);

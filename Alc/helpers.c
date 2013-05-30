@@ -136,7 +136,7 @@ void FillCPUCaps(ALuint capfilter)
 #endif
 
     TRACE("Got caps:%s%s%s%s\n", ((caps&CPU_CAP_SSE)?((capfilter&CPU_CAP_SSE)?" SSE":" (SSE)"):""),
-                                 ((caps&CPU_CAP_SSE)?((capfilter&CPU_CAP_SSE2)?" SSE2":" (SSE2)"):""),
+                                 ((caps&CPU_CAP_SSE2)?((capfilter&CPU_CAP_SSE2)?" SSE2":" (SSE2)"):""),
                                  ((caps&CPU_CAP_NEON)?((capfilter&CPU_CAP_NEON)?" Neon":" (Neon)"):""),
                                  ((!caps)?" -none-":""));
     CPUCapFlags = caps & capfilter;

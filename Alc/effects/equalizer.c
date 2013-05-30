@@ -115,42 +115,25 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, ALCdevice *device
     }
 
     /* Calculate coefficients for the each type of filter */
-    for(it = 0; it < 4; it++)
-    {
-        ALfilterType type = ALfilterType_Peaking;
-        ALfloat filter_frequency;
-        ALfloat bandwidth = 0.0f;
-        ALfloat gain;
+    ALfilterState_setParams(&state->filter[0], ALfilterType_LowShelf,
+                            sqrtf(slot->EffectProps.Equalizer.LowGain),
+                            slot->EffectProps.Equalizer.LowCutoff/frequency,
+                            0.0f);
 
-        /* convert linear gains to filter gains */
-        switch(it)
-        {
-            case 0: /* Low Shelf */
-                 gain = sqrtf(slot->EffectProps.Equalizer.LowGain);
-                 filter_frequency = slot->EffectProps.Equalizer.LowCutoff;
-                 type = ALfilterType_LowShelf;
-                 break;
-            case 1: /* Peaking */
-                 gain = sqrtf(slot->EffectProps.Equalizer.Mid1Gain);
-                 filter_frequency = slot->EffectProps.Equalizer.Mid1Center;
-                 bandwidth = slot->EffectProps.Equalizer.Mid1Width;
-                 type = ALfilterType_Peaking;
-                 break;
-            case 2: /* Peaking */
-                 gain = sqrtf(slot->EffectProps.Equalizer.Mid2Gain);
-                 filter_frequency = slot->EffectProps.Equalizer.Mid2Center;
-                 bandwidth = slot->EffectProps.Equalizer.Mid2Width;
-                 type = ALfilterType_Peaking;
-                 break;
-            case 3: /* High Shelf */
-                 gain = sqrtf(slot->EffectProps.Equalizer.HighGain);
-                 filter_frequency = slot->EffectProps.Equalizer.HighCutoff;
-                 type = ALfilterType_HighShelf;
-                 break;
-        }
+    ALfilterState_setParams(&state->filter[1], ALfilterType_Peaking,
+                            sqrtf(slot->EffectProps.Equalizer.Mid1Gain),
+                            slot->EffectProps.Equalizer.Mid1Center/frequency,
+                            slot->EffectProps.Equalizer.Mid1Width);
 
-        ALfilterState_setParams(&state->filter[it], type, gain, filter_frequency/frequency, bandwidth);
-    }
+    ALfilterState_setParams(&state->filter[2], ALfilterType_Peaking,
+                            sqrtf(slot->EffectProps.Equalizer.Mid2Gain),
+                            slot->EffectProps.Equalizer.Mid2Center/frequency,
+                            slot->EffectProps.Equalizer.Mid2Width);
+
+    ALfilterState_setParams(&state->filter[3], ALfilterType_HighShelf,
+                            sqrtf(slot->EffectProps.Equalizer.HighGain),
+                            slot->EffectProps.Equalizer.HighCutoff/frequency,
+                            0.0f);
 }
 
 static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])

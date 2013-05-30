@@ -38,8 +38,8 @@
 #include "common/alffmpeg.h"
 
 
-LPALBUFFERSAMPLESSOFT alBufferSamplesSOFT = wrap_BufferSamples;
-LPALISBUFFERFORMATSUPPORTEDSOFT alIsBufferFormatSupportedSOFT = NULL;
+static LPALBUFFERSAMPLESSOFT alBufferSamplesSOFT = wrap_BufferSamples;
+static LPALISBUFFERFORMATSUPPORTEDSOFT alIsBufferFormatSupportedSOFT;
 
 
 /* Define the number of buffers and buffer size (in samples) to use. 4 buffers

@@ -43,34 +43,34 @@
 #include "common/alffmpeg.h"
 
 
-LPALBUFFERSAMPLESSOFT alBufferSamplesSOFT = wrap_BufferSamples;
-LPALISBUFFERFORMATSUPPORTEDSOFT alIsBufferFormatSupportedSOFT;
+static LPALBUFFERSAMPLESSOFT alBufferSamplesSOFT = wrap_BufferSamples;
+static LPALISBUFFERFORMATSUPPORTEDSOFT alIsBufferFormatSupportedSOFT;
 
 /* Effect object functions */
-LPALGENEFFECTS alGenEffects;
-LPALDELETEEFFECTS alDeleteEffects;
-LPALISEFFECT alIsEffect;
-LPALEFFECTI alEffecti;
-LPALEFFECTIV alEffectiv;
-LPALEFFECTF alEffectf;
-LPALEFFECTFV alEffectfv;
-LPALGETEFFECTI alGetEffecti;
-LPALGETEFFECTIV alGetEffectiv;
-LPALGETEFFECTF alGetEffectf;
-LPALGETEFFECTFV alGetEffectfv;
+static LPALGENEFFECTS alGenEffects;
+static LPALDELETEEFFECTS alDeleteEffects;
+static LPALISEFFECT alIsEffect;
+static LPALEFFECTI alEffecti;
+static LPALEFFECTIV alEffectiv;
+static LPALEFFECTF alEffectf;
+static LPALEFFECTFV alEffectfv;
+static LPALGETEFFECTI alGetEffecti;
+static LPALGETEFFECTIV alGetEffectiv;
+static LPALGETEFFECTF alGetEffectf;
+static LPALGETEFFECTFV alGetEffectfv;
 
 /* Auxiliary Effect Slot object functions */
-LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
-LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
-LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
-LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
-LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
-LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
-LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
-LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
-LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
-LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
-LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
+static LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
+static LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
+static LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
+static LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
+static LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
+static LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
+static LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
+static LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
+static LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
+static LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
+static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
 
 
 /* LoadEffect loads the given reverb properties into a new OpenAL effect

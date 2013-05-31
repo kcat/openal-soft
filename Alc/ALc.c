@@ -687,7 +687,7 @@ static const ALCchar alcNoDeviceExtList[] =
 static const ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
     "ALC_EXT_DEDICATED ALC_EXT_disconnect ALC_EXT_EFX "
-    "ALC_EXT_thread_local_context ALC_SOFT_loopback";
+    "ALC_EXT_thread_local_context ALC_SOFTX_HRTF ALC_SOFT_loopback";
 static const ALCint alcMajorVersion = 1;
 static const ALCint alcMinorVersion = 1;
 
@@ -2304,11 +2304,11 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
                 break;
 
             case ALC_ATTRIBUTES_SIZE:
-                *data = 13;
+                *data = 15;
                 break;
 
             case ALC_ALL_ATTRIBUTES:
-                if(size < 13)
+                if(size < 15)
                     alcSetError(device, ALC_INVALID_VALUE);
                 else
                 {
@@ -2342,6 +2342,9 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
 
                     data[i++] = ALC_MAX_AUXILIARY_SENDS;
                     data[i++] = device->NumAuxSends;
+
+                    data[i++] = ALC_HRTF_SOFT;
+                    data[i++] = (device->Hrtf ? ALC_TRUE : ALC_FALSE);
 
                     data[i++] = 0;
                 }
@@ -2393,6 +2396,10 @@ ALC_API ALCvoid ALC_APIENTRY alcGetIntegerv(ALCdevice *device,ALCenum param,ALsi
 
             case ALC_CONNECTED:
                 *data = device->Connected;
+                break;
+
+            case ALC_HRTF_SOFT:
+                *data = (device->Hrtf ? ALC_TRUE : ALC_FALSE);
                 break;
 
             default:

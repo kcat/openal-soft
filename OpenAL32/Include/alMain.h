@@ -26,6 +26,11 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void);
 #endif
 #endif
 
+#ifndef ALC_SOFT_HRTF
+#define ALC_SOFT_HRTF 1
+#define ALC_HRTF_SOFT                            0x1992
+#endif
+
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>

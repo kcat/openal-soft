@@ -348,6 +348,11 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
 #endif
 #endif
 
+#ifndef ALC_EXT_DEFAULT_FILTER_ORDER
+#define ALC_EXT_DEFAULT_FILTER_ORDER 1
+#define ALC_DEFAULT_FILTER_ORDER                 0x1100
+#endif
+
 #ifdef __cplusplus
 }
 #endif

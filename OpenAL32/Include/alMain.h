@@ -684,6 +684,8 @@ struct ALCdevice_struct
 #define DEVICE_CHANNELS_REQUEST                  (1<<2)
 // Sample type was requested by the config file
 #define DEVICE_SAMPLE_TYPE_REQUEST               (1<<3)
+// HRTF was requested by the app
+#define DEVICE_HRTF_REQUEST                      (1<<4)
 
 // Stereo sources cover 120-degree angles around +/-90
 #define DEVICE_WIDE_STEREO                       (1<<16)
@@ -814,8 +816,9 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 #define HRTFDELAY_FRACONE (1<<HRTFDELAY_BITS)
 #define HRTFDELAY_MASK    (HRTFDELAY_FRACONE-1)
 const struct Hrtf *GetHrtf(ALCdevice *device);
+void FindHrtfFormat(const ALCdevice *device, enum DevFmtChannels *chans, ALCuint *srate);
 void FreeHrtfs(void);
-ALuint GetHrtfIrSize (const struct Hrtf *Hrtf);
+ALuint GetHrtfIrSize(const struct Hrtf *Hrtf);
 ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3], const ALfloat newdir[3]);
 void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
 ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep);

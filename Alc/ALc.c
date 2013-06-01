@@ -1531,6 +1531,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
                 numSends = attrList[attrIdx + 1];
 
+            if(attrList[attrIdx] == ALC_HRTF_SOFT)
+            {
+                if(attrList[attrIdx + 1] != ALC_FALSE)
+                    device->Flags |= DEVICE_HRTF_REQUEST;
+                else
+                    device->Flags &= ~DEVICE_HRTF_REQUEST;
+            }
+
             attrIdx += 2;
         }
 
@@ -1590,6 +1598,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
                 numSends = attrList[attrIdx + 1];
 
+            if(attrList[attrIdx] == ALC_HRTF_SOFT)
+            {
+                if(attrList[attrIdx + 1] != ALC_FALSE)
+                    device->Flags |= DEVICE_HRTF_REQUEST;
+                else
+                    device->Flags &= ~DEVICE_HRTF_REQUEST;
+            }
+
             attrIdx += 2;
         }
 
@@ -1627,6 +1643,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           device->Frequency,
           device->UpdateSize, device->NumUpdates);
 
+    if((device->Flags&DEVICE_HRTF_REQUEST))
+    {
+        enum DevFmtChannels chans;
+        ALCuint freq;
+
+        FindHrtfFormat(device, &chans, &freq);
+        device->Frequency = freq;
+        device->FmtChans = chans;
+        device->Flags |= DEVICE_CHANNELS_REQUEST |
+                         DEVICE_FREQUENCY_REQUEST;
+    }
+
     if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
         return ALC_INVALID_DEVICE;
 
@@ -1662,8 +1690,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     device->Hrtf = NULL;
-    if(device->Type != Loopback && GetConfigValueBool(NULL, "hrtf", AL_FALSE))
+    if(device->Type != Loopback && ConfigValueExists(NULL, "hrtf"))
+    {
+        if(GetConfigValueBool(NULL, "hrtf", AL_FALSE))
+            device->Flags |= DEVICE_HRTF_REQUEST;
+        else
+            device->Flags &= ~DEVICE_HRTF_REQUEST;
+    }
+    if((device->Flags&DEVICE_HRTF_REQUEST))
+    {
         device->Hrtf = GetHrtf(device);
+        if(!device->Hrtf)
+            device->Flags &= ~DEVICE_HRTF_REQUEST;
+    }
     TRACE("HRTF %s\n", device->Hrtf?"enabled":"disabled");
 
     if(!device->Hrtf && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)

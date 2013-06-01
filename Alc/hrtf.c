@@ -783,6 +783,30 @@ const struct Hrtf *GetHrtf(ALCdevice *device)
     return NULL;
 }
 
+void FindHrtfFormat(const ALCdevice *device, enum DevFmtChannels *chans, ALCuint *srate)
+{
+    const struct Hrtf *hrtf = &DefaultHrtf;
+
+    if(device->Frequency != DefaultHrtf.sampleRate)
+    {
+        hrtf = LoadedHrtfs;
+        while(hrtf != NULL)
+        {
+            if(device->Frequency == hrtf->sampleRate)
+                break;
+            hrtf = hrtf->next;
+        }
+
+        if(hrtf == NULL)
+            hrtf = LoadHrtf(device->Frequency);
+        if(hrtf == NULL)
+            hrtf = &DefaultHrtf;
+    }
+
+    *chans = DevFmtStereo;
+    *srate = hrtf->sampleRate;
+}
+
 void FreeHrtfs(void)
 {
     struct Hrtf *Hrtf = NULL;

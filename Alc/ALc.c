@@ -3139,7 +3139,7 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    if(!(device=VerifyDevice(device)) && device->Type != Capture)
+    if(!(device=VerifyDevice(device)) || device->Type != Capture)
         alcSetError(device, ALC_INVALID_DEVICE);
     else
     {

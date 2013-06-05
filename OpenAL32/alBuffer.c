@@ -455,7 +455,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
             offset = offset/OldBytes * Bytes;
             length = length/OldBytes/Channels;
         }
-        ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+        ConvertData((char*)ALBuf->data+offset, (enum UserFmtType)ALBuf->FmtType,
                     data, SrcType, Channels, length);
         WriteUnlock(&ALBuf->lock);
     }
@@ -531,7 +531,7 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
 
         /* offset -> byte offset */
         offset *= FrameSize;
-        ConvertData(&((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+        ConvertData((char*)ALBuf->data+offset, (enum UserFmtType)ALBuf->FmtType,
                     data, type, ChannelsFromFmt(ALBuf->FmtChannels), samples);
         WriteUnlock(&ALBuf->lock);
     }
@@ -581,7 +581,8 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
 
         /* offset -> byte offset */
         offset *= FrameSize;
-        ConvertData(data, type, &((ALubyte*)ALBuf->data)[offset], ALBuf->FmtType,
+        ConvertData(data, type,
+                    (char*)ALBuf->data+offset, (enum UserFmtType)ALBuf->FmtType,
                     ChannelsFromFmt(ALBuf->FmtChannels), samples);
         ReadUnlock(&ALBuf->lock);
     }
@@ -1972,7 +1973,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALBuf->data = temp;
 
     if(data != NULL)
-        ConvertData(ALBuf->data, DstType, data, SrcType, NewChannels, frames);
+        ConvertData(ALBuf->data, (enum UserFmtType)DstType, data, SrcType, NewChannels, frames);
 
     if(storesrc)
     {
@@ -1985,8 +1986,8 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     }
     else
     {
-        ALBuf->OriginalChannels = DstChannels;
-        ALBuf->OriginalType     = DstType;
+        ALBuf->OriginalChannels = (enum UserFmtChannels)DstChannels;
+        ALBuf->OriginalType     = (enum UserFmtType)DstType;
         ALBuf->OriginalSize     = frames * NewBytes * NewChannels;
     }
 

@@ -859,7 +859,6 @@ static void alc_initconfig(void)
             size_t len;
             const char *next = str;
 
-            i = 0;
             do {
                 str = next;
                 next = strchr(str, ',');

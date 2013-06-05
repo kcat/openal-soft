@@ -855,7 +855,14 @@ static inline ALfloat CalcDampingCoeff(ALfloat hfRatio, ALfloat length, ALfloat 
 
         // Damping is done with a 1-pole filter, so g needs to be squared.
         g *= g;
-        coeff = lpCoeffCalc(g, cw);
+        if(g < 0.9999f) /* 1-epsilon */
+        {
+            /* Be careful with gains < 0.001, as that causes the coefficient
+             * head towards 1, which will flatten the signal. */
+            g = maxf(g, 0.001f);
+            coeff = (1 - g*cw - sqrtf(2*g*(1-cw) - g*g*(1 - cw*cw))) /
+                    (1 - g);
+        }
 
         // Very low decay times will produce minimal output, so apply an
         // upper bound to the coefficient.

@@ -534,13 +534,13 @@ static ALenum SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp pr
         case sfAuxSendFilterGainHFAuto:
         case sfDirectChannelsSOFT:
             ival = (ALint)values[0];
-            return SetSourceiv(Source, Context, prop, &ival);
+            return SetSourceiv(Source, Context, (SrcIntProp)prop, &ival);
 
         case sfBuffer:
         case sfBuffersQueued:
         case sfBuffersProcessed:
             ival = (ALint)((ALuint)values[0]);
-            return SetSourceiv(Source, Context, prop, &ival);
+            return SetSourceiv(Source, Context, (SrcIntProp)prop, &ival);
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);

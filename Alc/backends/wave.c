@@ -146,7 +146,7 @@ static ALuint WaveProc(ALvoid *ptr)
             {
                 fs = fwrite(data->buffer, frameSize, Device->UpdateSize,
                             data->f);
-                fs = fs;
+                (void)fs;
             }
             if(ferror(data->f))
             {
@@ -257,7 +257,7 @@ static ALCboolean wave_reset_playback(ALCdevice *device)
     fwrite32le(channel_masks[channels], data->f);
     // 16 byte GUID, sub-type format
     val = fwrite(((bits==32) ? SUBTYPE_FLOAT : SUBTYPE_PCM), 1, 16, data->f);
-    val = val;
+    (void)val;
 
     fprintf(data->f, "data");
     fwrite32le(0xFFFFFFFF, data->f); // 'data' header len; filled in at close

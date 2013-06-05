@@ -9,12 +9,6 @@ extern "C" {
 
 #define LOWPASSFREQREF  (5000)
 
-/* Calculates the low-pass filter coefficient given the pre-scaled gain and
- * cos(w) value. Note that g should be pre-scaled (sqr(gain) for one-pole,
- * sqrt(gain) for four-pole, etc) */
-ALfloat lpCoeffCalc(ALfloat g, ALfloat cw);
-
-
 typedef enum ALfilterType {
     ALfilterType_HighShelf,
     ALfilterType_LowShelf,

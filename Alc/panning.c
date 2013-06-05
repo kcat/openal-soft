@@ -161,7 +161,7 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
         SpeakerAngle[i] = device->SpeakerAngle[i];
 
     /* Some easy special-cases first... */
-    if(device->NumChan == 1 || hwidth >= F_PI)
+    if(device->NumChan <= 1 || hwidth >= F_PI)
     {
         /* Full coverage for all speakers. */
         for(i = 0;i < device->NumChan;i++)
@@ -203,7 +203,7 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
          * within -pi...+pi. */
         if(angle > 0.0f)
         {
-            ALuint done = 0;
+            ALuint done;
             ALuint i = 0;
             while(i < device->NumChan && device->SpeakerAngle[i]-angle < -F_PI)
                 i++;
@@ -226,7 +226,7 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
              * we need to handle index 0. Because the iterators are unsigned,
              * they'll underflow and wrap to become 0xFFFFFFFF, which will
              * break as expected. */
-            ALuint done = device->NumChan-1;
+            ALuint done;
             ALuint i = device->NumChan-1;
             while(i < device->NumChan && device->SpeakerAngle[i]-angle > F_PI)
                 i--;

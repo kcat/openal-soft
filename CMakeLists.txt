@@ -766,6 +766,11 @@ SET(BACKENDS  "${BACKENDS} Null")
 IF(ALSOFT_EXAMPLES)
     # Might be able to use earlier versions, but these definitely work
     PKG_CHECK_MODULES(FFMPEG libavcodec>=53.61.100 libavformat>=53.32.100 libavutil>=51.35.100)
+
+    FIND_PACKAGE(SDL)
+    IF(SDL_FOUND)
+        FIND_PACKAGE(SDL_sound)
+    ENDIF()
 ENDIF()
 
 IF(LIBTYPE STREQUAL "STATIC")
@@ -864,13 +869,24 @@ IF(ALSOFT_UTILS)
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)
-    IF(FFMPEG_FOUND)
+    IF(SDL_FOUND AND SDL_SOUND_FOUND)
         ADD_EXECUTABLE(alstream examples/common/alhelpers.c
-                                examples/common/alffmpeg.c
+                                examples/common/sdl_sound.c
                                 examples/alstream.c)
-        TARGET_LINK_LIBRARIES(alstream ${FFMPEG_LIBRARIES} ${LIBNAME})
-        SET_TARGET_PROPERTIES(alstream PROPERTIES COMPILE_FLAGS "${FFMPEG_CFLAGS}")
+        TARGET_LINK_LIBRARIES(alstream ${SDL_SOUND_LIBRARIES} ${LIBNAME})
+        SET_TARGET_PROPERTIES(alstream PROPERTIES INCLUDE_DIRECTORIES "${SDL_SOUND_INCLUDE_DIR}")
 
+        INSTALL(TARGETS alstream
+                RUNTIME DESTINATION bin
+                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+        )
+
+        MESSAGE(STATUS "Building SDL_sound example programs")
+        MESSAGE(STATUS "")
+    ENDIF()
+
+    IF(FFMPEG_FOUND)
         ADD_EXECUTABLE(alreverb examples/common/alhelpers.c
                                 examples/common/alffmpeg.c
                                 examples/alreverb.c)
@@ -883,7 +899,7 @@ IF(ALSOFT_EXAMPLES)
         TARGET_LINK_LIBRARIES(allatency ${FFMPEG_LIBRARIES} ${LIBNAME})
         SET_TARGET_PROPERTIES(allatency PROPERTIES COMPILE_FLAGS "${FFMPEG_CFLAGS}")
 
-        INSTALL(TARGETS alstream alreverb allatency
+        INSTALL(TARGETS alreverb allatency
                 RUNTIME DESTINATION bin
                 LIBRARY DESTINATION "lib${LIB_SUFFIX}"
                 ARCHIVE DESTINATION "lib${LIB_SUFFIX}"

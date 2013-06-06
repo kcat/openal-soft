@@ -9,6 +9,10 @@
 #include <windows.h>
 #endif
 
+#include "AL/alc.h"
+#include "AL/al.h"
+#include "AL/alext.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

@@ -35,32 +35,26 @@
 #include "AL/alext.h"
 
 #include "common/alhelpers.h"
-#include "common/alffmpeg.h"
+#include "common/sdl_sound.h"
 
 
 static LPALBUFFERSAMPLESSOFT alBufferSamplesSOFT = wrap_BufferSamples;
 static LPALISBUFFERFORMATSUPPORTEDSOFT alIsBufferFormatSupportedSOFT;
 
 
-/* Define the number of buffers and buffer size (in samples) to use. 4 buffers
- * with 8192 samples each gives a nice per-chunk size, and lets the queue last
- * for almost 3/4ths of a second for a 44.1khz stream. */
+/* Define the number of buffers and buffer size (in milliseconds) to use. 4
+ * buffers with 200ms each gives a nice per-chunk size, and lets the queue last
+ * for almost one second. */
 #define NUM_BUFFERS 4
-#define BUFFER_SIZE 8192
+#define BUFFER_TIME_MS 200
 
 typedef struct StreamPlayer {
     /* These are the buffers and source to play out through OpenAL with */
     ALuint buffers[NUM_BUFFERS];
     ALuint source;
 
-    /* Handles for the audio stream */
+    /* Handle for the audio file */
     FilePtr file;
-    StreamPtr stream;
-
-    /* A temporary data buffer for readAVAudioData to write to and pass to
-     * OpenAL with */
-    ALbyte *data;
-    ALsizei datasize;
 
     /* The format of the output stream */
     ALenum format;
@@ -128,17 +122,15 @@ static int OpenPlayerFile(StreamPlayer *player, const char *filename)
     ClosePlayerFile(player);
 
     /* Open the file and get the first stream from it */
-    player->file = openAVFile(filename);
-    player->stream = getAVAudioStream(player->file, 0);
-    if(!player->stream)
+    player->file = openAudioFile(filename, BUFFER_TIME_MS);
+    if(!player->file)
     {
         fprintf(stderr, "Could not open audio in %s\n", filename);
         goto error;
     }
 
     /* Get the stream format, and figure out the OpenAL format */
-    if(getAVAudioInfo(player->stream, &player->rate, &player->channels,
-                      &player->type) != 0)
+    if(getAudioInfo(player->file, &player->rate, &player->channels, &player->type) != 0)
     {
         fprintf(stderr, "Error getting audio info for %s\n", filename);
         goto error;
@@ -153,23 +145,11 @@ static int OpenPlayerFile(StreamPlayer *player, const char *filename)
         goto error;
     }
 
-    /* Allocate enough space for the temp buffer, given the format */
-    player->datasize = FramesToBytes(BUFFER_SIZE, player->channels,
-                                     player->type);
-    player->data = malloc(player->datasize);
-    if(player->data == NULL)
-    {
-        fprintf(stderr, "Error allocating %d bytes\n", player->datasize);
-        goto error;
-    }
-
     return 1;
 
 error:
-    closeAVFile(player->file);
+    closeAudioFile(player->file);
     player->file = NULL;
-    player->stream = NULL;
-    player->datasize = 0;
 
     return 0;
 }
@@ -177,20 +157,15 @@ error:
 /* Closes the audio file stream */
 static void ClosePlayerFile(StreamPlayer *player)
 {
-    closeAVFile(player->file);
+    closeAudioFile(player->file);
     player->file = NULL;
-    player->stream = NULL;
-
-    free(player->data);
-    player->data = NULL;
-    player->datasize = 0;
 }
 
 
 /* Prebuffers some audio from the file, and starts playing the source */
 static int StartPlayer(StreamPlayer *player)
 {
-    size_t i, got;
+    size_t i;
 
     /* Rewind the source position and clear the buffer queue */
     alSourceRewind(player->source);
@@ -199,13 +174,16 @@ static int StartPlayer(StreamPlayer *player)
     /* Fill the buffer queue */
     for(i = 0;i < NUM_BUFFERS;i++)
     {
+        uint8_t *data;
+        size_t got;
+
         /* Get some data to give it to the buffer */
-        got = readAVAudioData(player->stream, player->data, player->datasize);
-        if(got == 0) break;
+        data = getAudioData(player->file, &got);
+        if(!data) break;
 
         alBufferSamplesSOFT(player->buffers[i], player->rate, player->format,
                             BytesToFrames(got, player->channels, player->type),
-                            player->channels, player->type, player->data);
+                            player->channels, player->type, data);
     }
     if(alGetError() != AL_NO_ERROR)
     {
@@ -242,6 +220,7 @@ static int UpdatePlayer(StreamPlayer *player)
     while(processed > 0)
     {
         ALuint bufid;
+        uint8_t *data;
         size_t got;
 
         alSourceUnqueueBuffers(player->source, 1, &bufid);
@@ -249,12 +228,12 @@ static int UpdatePlayer(StreamPlayer *player)
 
         /* Read the next chunk of data, refill the buffer, and queue it
          * back on the source */
-        got = readAVAudioData(player->stream, player->data, player->datasize);
-        if(got > 0)
+        data = getAudioData(player->file, &got);
+        if(data != NULL)
         {
             alBufferSamplesSOFT(bufid, player->rate, player->format,
                                 BytesToFrames(got, player->channels, player->type),
-                                player->channels, player->type, player->data);
+                                player->channels, player->type, data);
             alSourceQueueBuffers(player->source, 1, &bufid);
         }
         if(alGetError() != AL_NO_ERROR)

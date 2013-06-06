@@ -37,23 +37,6 @@ typedef struct ALdistortionStateFactory {
 static ALdistortionStateFactory DistortionFactory;
 
 
-/* Filters implementation is based on the "Cookbook formulae for audio   *
- * EQ biquad filter coefficients" by Robert Bristow-Johnson              *
- * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt                   */
-
-typedef enum ALEQFilterType {
-    LOWPASS,
-    BANDPASS,
-} ALEQFilterType;
-
-typedef struct ALEQFilter {
-    ALEQFilterType type;
-    ALfloat x[2]; /* History of two last input samples  */
-    ALfloat y[2]; /* History of two last output samples */
-    ALfloat a[3]; /* Transfer function coefficients "a" */
-    ALfloat b[3]; /* Transfer function coefficients "b" */
-} ALEQFilter;
-
 typedef struct ALdistortionState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -61,8 +44,8 @@ typedef struct ALdistortionState {
     ALfloat Gain[MaxChannels];
 
     /* Effect parameters */
-    ALEQFilter bandpass;
-    ALEQFilter lowpass;
+    ALfilterState lowpass;
+    ALfilterState bandpass;
     ALfloat attenuation;
     ALfloat edge_coeff;
 } ALdistortionState;
@@ -84,8 +67,6 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Devi
     ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
     ALfloat frequency = (ALfloat)Device->Frequency;
     ALuint it;
-    ALfloat w0;
-    ALfloat alpha;
     ALfloat bandwidth;
     ALfloat cutoff;
     ALfloat edge;
@@ -109,34 +90,21 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Devi
     cutoff = Slot->EffectProps.Distortion.LowpassCutoff;
     /* Bandwidth value is constant in octaves */
     bandwidth = (cutoff / 2.0f) / (cutoff * 0.67f);
-    w0 = 2.0f*F_PI * cutoff / (frequency*4.0f);
-    alpha = sinf(w0) * sinhf(logf(2.0f) / 2.0f * bandwidth * w0 / sinf(w0));
-    state->lowpass.b[0] = (1.0f - cosf(w0)) / 2.0f;
-    state->lowpass.b[1] = 1.0f - cosf(w0);
-    state->lowpass.b[2] = (1.0f - cosf(w0)) / 2.0f;
-    state->lowpass.a[0] = 1.0f + alpha;
-    state->lowpass.a[1] = -2.0f * cosf(w0);
-    state->lowpass.a[2] = 1.0f - alpha;
+    ALfilterState_setParams(&state->lowpass, ALfilterType_LowPass, 1.0f,
+                            cutoff / (frequency*4.0f), bandwidth);
 
     /* Bandpass filter */
     cutoff = Slot->EffectProps.Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves */
     bandwidth = Slot->EffectProps.Distortion.EQBandwidth / (cutoff * 0.67f);
-    w0 = 2.0f*F_PI * cutoff / (frequency*4.0f);
-    alpha = sinf(w0) * sinhf(logf(2.0f) / 2.0f * bandwidth * w0 / sinf(w0));
-    state->bandpass.b[0] = alpha;
-    state->bandpass.b[1] = 0;
-    state->bandpass.b[2] = -alpha;
-    state->bandpass.a[0] = 1.0f + alpha;
-    state->bandpass.a[1] = -2.0f * cosf(w0);
-    state->bandpass.a[2] = 1.0f - alpha;
+    ALfilterState_setParams(&state->bandpass, ALfilterType_BandPass, 1.0f,
+                            cutoff / (frequency*4.0f), bandwidth);
 }
 
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
     const ALfloat fc = state->edge_coeff;
     float oversample_buffer[64][4];
-    ALfloat tempsmp;
     ALuint base;
     ALuint it;
     ALuint ot;
@@ -171,18 +139,11 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
         {
             for(ot = 0;ot < 4;ot++)
             {
-                tempsmp = state->lowpass.b[0] / state->lowpass.a[0] * oversample_buffer[it][ot] +
-                          state->lowpass.b[1] / state->lowpass.a[0] * state->lowpass.x[0] +
-                          state->lowpass.b[2] / state->lowpass.a[0] * state->lowpass.x[1] -
-                          state->lowpass.a[1] / state->lowpass.a[0] * state->lowpass.y[0] -
-                          state->lowpass.a[2] / state->lowpass.a[0] * state->lowpass.y[1];
+                ALfloat smp;
+                smp = ALfilterState_processSingle(&state->lowpass, oversample_buffer[it][ot]);
 
-                state->lowpass.x[1] = state->lowpass.x[0];
-                state->lowpass.x[0] = oversample_buffer[it][ot];
-                state->lowpass.y[1] = state->lowpass.y[0];
-                state->lowpass.y[0] = tempsmp;
                 /* Restore signal power by multiplying sample by amount of oversampling */
-                oversample_buffer[it][ot] = tempsmp * 4.0f;
+                oversample_buffer[it][ot] = smp * 4.0f;
             }
         }
 
@@ -201,18 +162,8 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
                 smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
 
                 /* Third step, do bandpass filtering of distorted signal */
-                tempsmp = state->bandpass.b[0] / state->bandpass.a[0] * smp +
-                          state->bandpass.b[1] / state->bandpass.a[0] * state->bandpass.x[0] +
-                          state->bandpass.b[2] / state->bandpass.a[0] * state->bandpass.x[1] -
-                          state->bandpass.a[1] / state->bandpass.a[0] * state->bandpass.y[0] -
-                          state->bandpass.a[2] / state->bandpass.a[0] * state->bandpass.y[1];
-
-                state->bandpass.x[1] = state->bandpass.x[0];
-                state->bandpass.x[0] = smp;
-                state->bandpass.y[1] = state->bandpass.y[0];
-                state->bandpass.y[0] = tempsmp;
-
-                oversample_buffer[it][ot] = tempsmp;
+                smp = ALfilterState_processSingle(&state->bandpass, smp);
+                oversample_buffer[it][ot] = smp;
             }
 
             /* Fourth step, final, do attenuation and perform decimation, */
@@ -251,15 +202,8 @@ static ALeffectState *ALdistortionStateFactory_create(ALdistortionStateFactory *
     if(!state) return NULL;
     SET_VTABLE2(ALdistortionState, ALeffectState, state);
 
-    state->bandpass.type = BANDPASS;
-    state->lowpass.type = LOWPASS;
-
-    /* Initialize sample history only on filter creation to avoid */
-    /* sound clicks if filter settings were changed in runtime.   */
-    state->bandpass.x[0] = 0.0f;
-    state->bandpass.x[1] = 0.0f;
-    state->lowpass.y[0] = 0.0f;
-    state->lowpass.y[1] = 0.0f;
+    ALfilterState_clear(&state->lowpass);
+    ALfilterState_clear(&state->bandpass);
 
     return STATIC_CAST(ALeffectState, state);
 }

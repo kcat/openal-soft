@@ -9,10 +9,18 @@ extern "C" {
 
 #define LOWPASSFREQREF  (5000)
 
+
+/* Filters implementation is based on the "Cookbook formulae for audio   *
+ * EQ biquad filter coefficients" by Robert Bristow-Johnson              *
+ * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt                   */
+
 typedef enum ALfilterType {
     ALfilterType_HighShelf,
     ALfilterType_LowShelf,
     ALfilterType_Peaking,
+
+    ALfilterType_LowPass,
+    ALfilterType_BandPass,
 } ALfilterType;
 
 typedef struct ALfilterState {

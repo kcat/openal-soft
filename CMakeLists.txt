@@ -866,22 +866,20 @@ ENDIF()
 
 IF(ALSOFT_EXAMPLES)
     IF(SDL_FOUND AND SDL_SOUND_FOUND)
-        ADD_EXECUTABLE(alstream examples/common/alhelpers.c
-                                examples/common/sdl_sound.c
-                                examples/alstream.c)
-        TARGET_LINK_LIBRARIES(alstream ${SDL_SOUND_LIBRARIES} ${LIBNAME})
+        ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c
+                                     examples/common/sdl_sound.c)
+        SET_TARGET_PROPERTIES(ex-common PROPERTIES INCLUDE_DIRECTORIES "${SDL_SOUND_INCLUDE_DIR}")
+
+        ADD_EXECUTABLE(alstream examples/alstream.c)
+        TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${LIBNAME})
         SET_TARGET_PROPERTIES(alstream PROPERTIES INCLUDE_DIRECTORIES "${SDL_SOUND_INCLUDE_DIR}")
 
-        ADD_EXECUTABLE(alreverb examples/common/alhelpers.c
-                                examples/common/sdl_sound.c
-                                examples/alreverb.c)
-        TARGET_LINK_LIBRARIES(alreverb ${SDL_SOUND_LIBRARIES} ${LIBNAME})
+        ADD_EXECUTABLE(alreverb examples/alreverb.c)
+        TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${LIBNAME})
         SET_TARGET_PROPERTIES(alreverb PROPERTIES INCLUDE_DIRECTORIES "${SDL_SOUND_INCLUDE_DIR}")
 
-        ADD_EXECUTABLE(allatency examples/common/alhelpers.c
-                                examples/common/sdl_sound.c
-                                 examples/allatency.c)
-        TARGET_LINK_LIBRARIES(allatency ${SDL_SOUND_LIBRARIES} ${LIBNAME})
+        ADD_EXECUTABLE(allatency examples/allatency.c)
+        TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${LIBNAME})
         SET_TARGET_PROPERTIES(allatency PROPERTIES INCLUDE_DIRECTORIES "${SDL_SOUND_INCLUDE_DIR}")
 
         INSTALL(TARGETS alstream alreverb allatency

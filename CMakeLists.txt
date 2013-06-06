@@ -18,7 +18,6 @@ INCLUDE(CheckSymbolExists)
 INCLUDE(CheckCCompilerFlag)
 INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckTypeSize)
-INCLUDE(FindPkgConfig)
 
 
 PROJECT(OpenAL C)
@@ -764,9 +763,6 @@ ENDIF()
 SET(BACKENDS  "${BACKENDS} Null")
 
 IF(ALSOFT_EXAMPLES)
-    # Might be able to use earlier versions, but these definitely work
-    PKG_CHECK_MODULES(FFMPEG libavcodec>=53.61.100 libavformat>=53.32.100 libavutil>=51.35.100)
-
     FIND_PACKAGE(SDL)
     IF(SDL_FOUND)
         FIND_PACKAGE(SDL_sound)
@@ -876,36 +872,25 @@ IF(ALSOFT_EXAMPLES)
         TARGET_LINK_LIBRARIES(alstream ${SDL_SOUND_LIBRARIES} ${LIBNAME})
         SET_TARGET_PROPERTIES(alstream PROPERTIES INCLUDE_DIRECTORIES "${SDL_SOUND_INCLUDE_DIR}")
 
-        INSTALL(TARGETS alstream
-                RUNTIME DESTINATION bin
-                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-        )
-
-        MESSAGE(STATUS "Building SDL_sound example programs")
-        MESSAGE(STATUS "")
-    ENDIF()
-
-    IF(FFMPEG_FOUND)
         ADD_EXECUTABLE(alreverb examples/common/alhelpers.c
-                                examples/common/alffmpeg.c
+                                examples/common/sdl_sound.c
                                 examples/alreverb.c)
-        TARGET_LINK_LIBRARIES(alreverb ${FFMPEG_LIBRARIES} ${LIBNAME})
-        SET_TARGET_PROPERTIES(alreverb PROPERTIES COMPILE_FLAGS "${FFMPEG_CFLAGS}")
+        TARGET_LINK_LIBRARIES(alreverb ${SDL_SOUND_LIBRARIES} ${LIBNAME})
+        SET_TARGET_PROPERTIES(alreverb PROPERTIES INCLUDE_DIRECTORIES "${SDL_SOUND_INCLUDE_DIR}")
 
         ADD_EXECUTABLE(allatency examples/common/alhelpers.c
-                                 examples/common/alffmpeg.c
+                                examples/common/sdl_sound.c
                                  examples/allatency.c)
-        TARGET_LINK_LIBRARIES(allatency ${FFMPEG_LIBRARIES} ${LIBNAME})
-        SET_TARGET_PROPERTIES(allatency PROPERTIES COMPILE_FLAGS "${FFMPEG_CFLAGS}")
+        TARGET_LINK_LIBRARIES(allatency ${SDL_SOUND_LIBRARIES} ${LIBNAME})
+        SET_TARGET_PROPERTIES(allatency PROPERTIES INCLUDE_DIRECTORIES "${SDL_SOUND_INCLUDE_DIR}")
 
-        INSTALL(TARGETS alreverb allatency
+        INSTALL(TARGETS alstream alreverb allatency
                 RUNTIME DESTINATION bin
                 LIBRARY DESTINATION "lib${LIB_SUFFIX}"
                 ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
         )
 
-        MESSAGE(STATUS "Building ffmpeg example programs")
+        MESSAGE(STATUS "Building example programs")
         MESSAGE(STATUS "")
     ENDIF()
 ENDIF()

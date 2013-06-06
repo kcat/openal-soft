@@ -26,20 +26,13 @@
 
 #include <stdio.h>
 #include <assert.h>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
-#include <unistd.h>
-#define Sleep(x) usleep((x)*1000)
-#endif
 
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "common/alhelpers.h"
-#include "common/alffmpeg.h"
+#include "common/sdl_sound.h"
 
 
 static LPALBUFFERSAMPLESSOFT alBufferSamplesSOFT = wrap_BufferSamples;
@@ -66,24 +59,22 @@ static ALuint LoadSound(const char *filename)
     ALuint rate, buffer;
     size_t datalen;
     void *data;
-    FilePtr audiofile;
-    StreamPtr sound;
+    FilePtr sound;
 
-    /* Open the file and get the first stream from it */
-    audiofile = openAVFile(filename);
-    sound = getAVAudioStream(audiofile, 0);
+    /* Open the audio file */
+    sound = openAudioFile(filename, 1000);
     if(!sound)
     {
         fprintf(stderr, "Could not open audio in %s\n", filename);
-        closeAVFile(audiofile);
+        closeAudioFile(sound);
         return 0;
     }
 
     /* Get the sound format, and figure out the OpenAL format */
-    if(getAVAudioInfo(sound, &rate, &channels, &type) != 0)
+    if(getAudioInfo(sound, &rate, &channels, &type) != 0)
     {
         fprintf(stderr, "Error getting audio info for %s\n", filename);
-        closeAVFile(audiofile);
+        closeAudioFile(sound);
         return 0;
     }
 
@@ -92,16 +83,16 @@ static ALuint LoadSound(const char *filename)
     {
         fprintf(stderr, "Unsupported format (%s, %s) for %s\n",
                 ChannelsName(channels), TypeName(type), filename);
-        closeAVFile(audiofile);
+        closeAudioFile(sound);
         return 0;
     }
 
     /* Decode the whole audio stream to a buffer. */
-    data = decodeAVAudioStream(sound, &datalen);
+    data = decodeAudioStream(sound, &datalen);
     if(!data)
     {
         fprintf(stderr, "Failed to read audio from %s\n", filename);
-        closeAVFile(audiofile);
+        closeAudioFile(sound);
         return 0;
     }
 
@@ -112,7 +103,7 @@ static ALuint LoadSound(const char *filename)
     alBufferSamplesSOFT(buffer, rate, format, BytesToFrames(datalen, channels, type),
                         channels, type, data);
     free(data);
-    closeAVFile(audiofile);
+    closeAudioFile(sound);
 
     /* Check if an error occured, and clean up if so. */
     err = alGetError();

@@ -104,14 +104,12 @@ void FillCPUCaps(ALuint capfilter)
         if(maxfunc >= 1 &&
            __get_cpuid(1, &cpuinf[0].regs[0], &cpuinf[0].regs[1], &cpuinf[0].regs[2], &cpuinf[0].regs[3]))
         {
-#ifdef bit_SSE
-            if((cpuinf[0].regs[3]&bit_SSE))
+            if((cpuinf[0].regs[3]&(1<<25)))
             {
                 caps |= CPU_CAP_SSE;
-                if((cpuinf[0].regs[3]&bit_SSE2))
+                if((cpuinf[0].regs[3]&(1<<26)))
                     caps |= CPU_CAP_SSE2;
             }
-#endif
         }
     }
 #elif defined(HAVE_WINDOWS_H)

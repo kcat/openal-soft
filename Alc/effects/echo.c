@@ -78,8 +78,7 @@ static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
         void *temp;
 
         temp = realloc(state->SampleBuffer, maxlen * sizeof(ALfloat));
-        if(!temp)
-            return AL_FALSE;
+        if(!temp) return AL_FALSE;
         state->SampleBuffer = temp;
         state->BufferLength = maxlen;
     }
@@ -148,8 +147,9 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
 
             // Apply damping and feedback gain to the second tap, and mix in the
             // new sample
-            smp = ALfilterState_processSingle(&state->Filter, temps[i][1]+SamplesIn[i]);
+            smp = ALfilterState_processSingle(&state->Filter, temps[i][1]+SamplesIn[i+base]);
             state->SampleBuffer[offset&mask] = smp * state->FeedGain;
+            offset++;
         }
 
         for(k = 0;k < MaxChannels;k++)

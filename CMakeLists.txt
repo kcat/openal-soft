@@ -882,7 +882,12 @@ IF(ALSOFT_EXAMPLES)
         TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${LIBNAME})
         SET_TARGET_PROPERTIES(allatency PROPERTIES INCLUDE_DIRECTORIES "${SDL_SOUND_INCLUDE_DIR}")
 
-        INSTALL(TARGETS alstream alreverb allatency
+        ADD_EXECUTABLE(alloopback examples/alloopback.c)
+        TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL_LIBRARIES} ${LIBNAME})
+        SET_TARGET_PROPERTIES(alloopback PROPERTIES INCLUDE_DIRECTORIES "${SDL_INCLUDE_DIR}"
+                                                    INCLUDE_DIRECTORIES "${SDL_SOUND_INCLUDE_DIR}")
+
+        INSTALL(TARGETS alstream alreverb allatency alloopback
                 RUNTIME DESTINATION bin
                 LIBRARY DESTINATION "lib${LIB_SUFFIX}"
                 ARCHIVE DESTINATION "lib${LIB_SUFFIX}"

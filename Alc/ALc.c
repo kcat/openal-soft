@@ -861,19 +861,21 @@ static void alc_initconfig(void)
 
             do {
                 str = next;
-                next = strchr(str, ',');
-
                 while(isspace(str[0]))
                     str++;
+                next = strchr(str, ',');
+
                 if(!str[0] || str[0] == ',')
                     continue;
 
                 len = (next ? ((size_t)(next-str)) : strlen(str));
-                if(strncasecmp(str, "sse", len) == 0)
+                while(len > 0 && isspace(str[len-1]))
+                    len--;
+                if(len == 3 && strncasecmp(str, "sse", len) == 0)
                     capfilter &= ~CPU_CAP_SSE;
-                else if(strncasecmp(str, "sse2", len) == 0)
+                else if(len == 4 && strncasecmp(str, "sse2", len) == 0)
                     capfilter &= ~CPU_CAP_SSE2;
-                else if(strncasecmp(str, "neon", len) == 0)
+                else if(len == 4 && strncasecmp(str, "neon", len) == 0)
                     capfilter &= ~CPU_CAP_NEON;
                 else
                     WARN("Invalid CPU extension \"%s\"\n", str);
@@ -944,6 +946,8 @@ static void alc_initconfig(void)
         i = 0;
         do {
             devs = next;
+            while(isspace(devs[0]))
+                devs++;
             next = strchr(devs, ',');
 
             delitem = (devs[0] == '-');
@@ -957,6 +961,8 @@ static void alc_initconfig(void)
             endlist = 1;
 
             len = (next ? ((size_t)(next-devs)) : strlen(devs));
+            while(len > 0 && isspace(devs[len-1]))
+                len--;
             for(n = i;BackendList[n].Init;n++)
             {
                 if(len == strlen(BackendList[n].name) &&

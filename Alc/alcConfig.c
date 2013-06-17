@@ -187,6 +187,8 @@ void ReadALConfig(void)
     {
         size_t p = strlen(buffer);
         snprintf(buffer+p, sizeof(buffer)-p, "\\alsoft.ini");
+
+        TRACE("Loading config %s...\n", buffer);
         f = fopen(buffer, "rt");
         if(f)
         {
@@ -195,7 +197,10 @@ void ReadALConfig(void)
         }
     }
 #else
-    f = fopen("/etc/openal/alsoft.conf", "r");
+    str = "/etc/openal/alsoft.conf";
+
+    TRACE("Loading config %s...\n", str);
+    f = fopen(str, "r");
     if(f)
     {
         LoadConfigFromFile(f);
@@ -204,6 +209,8 @@ void ReadALConfig(void)
     if((str=getenv("HOME")) != NULL && *str)
     {
         snprintf(buffer, sizeof(buffer), "%s/.alsoftrc", str);
+
+        TRACE("Loading config %s...\n", buffer);
         f = fopen(buffer, "r");
         if(f)
         {
@@ -214,6 +221,7 @@ void ReadALConfig(void)
 #endif
     if((str=getenv("ALSOFT_CONF")) != NULL && *str)
     {
+        TRACE("Loading config %s...\n", str);
         f = fopen(str, "r");
         if(f)
         {

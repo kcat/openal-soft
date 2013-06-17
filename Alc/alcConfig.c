@@ -45,13 +45,11 @@ typedef struct ConfigEntry {
 } ConfigEntry;
 
 typedef struct ConfigBlock {
-    char *name;
     ConfigEntry *entries;
     unsigned int entryCount;
 } ConfigBlock;
 
-static ConfigBlock *cfgBlocks;
-static unsigned int cfgCount;
+static ConfigBlock cfgBlock;
 
 static char buffer[1024];
 
@@ -73,7 +71,7 @@ static char *rstrip(char *line)
 
 static void LoadConfigFromFile(FILE *f)
 {
-    ConfigBlock *curBlock = cfgBlocks;
+    char curSection[128] = "";
     ConfigEntry *ent;
 
     while(fgets(buffer, sizeof(buffer), f))
@@ -95,10 +93,8 @@ static void LoadConfigFromFile(FILE *f)
 
         if(line[0] == '[')
         {
-            ConfigBlock *nextBlock;
             char *section = line+1;
             char *endsection;
-            unsigned int i;
 
             endsection = strchr(section, ']');
             if(!endsection || section == endsection || endsection[1] != 0)
@@ -108,36 +104,14 @@ static void LoadConfigFromFile(FILE *f)
             }
             *endsection = 0;
 
-            nextBlock = NULL;
-            for(i = 0;i < cfgCount;i++)
+            if(strcasecmp(section, "general") == 0)
+                curSection[0] = 0;
+            else
             {
-                if(strcasecmp(cfgBlocks[i].name, section) == 0)
-                {
-                    nextBlock = cfgBlocks+i;
-                    TRACE("found block '%s'\n", nextBlock->name);
-                    break;
-                }
+                strncpy(curSection, section, sizeof(curSection)-1);
+                curSection[sizeof(curSection)-1] = 0;
             }
 
-            if(!nextBlock)
-            {
-                nextBlock = realloc(cfgBlocks, (cfgCount+1)*sizeof(ConfigBlock));
-                if(!nextBlock)
-                {
-                     ERR("config parse error: error reallocating config blocks\n");
-                     continue;
-                }
-                cfgBlocks = nextBlock;
-                nextBlock = cfgBlocks+cfgCount;
-                cfgCount++;
-
-                nextBlock->name = strdup(section);
-                nextBlock->entries = NULL;
-                nextBlock->entryCount = 0;
-
-                TRACE("found new block '%s'\n", nextBlock->name);
-            }
-            curBlock = nextBlock;
             continue;
         }
 
@@ -162,27 +136,35 @@ static void LoadConfigFromFile(FILE *f)
          }
          rstrip(key);
 
+         if(curSection[0] != 0)
+         {
+             size_t len = strlen(curSection);
+             memmove(&key[len+1], key, sizeof(key)-1-len);
+             key[len] = '/';
+             memcpy(key, curSection, len);
+         }
+
         /* Check if we already have this option set */
-        ent = curBlock->entries;
-        while((unsigned int)(ent-curBlock->entries) < curBlock->entryCount)
+        ent = cfgBlock.entries;
+        while((unsigned int)(ent-cfgBlock.entries) < cfgBlock.entryCount)
         {
             if(strcasecmp(ent->key, key) == 0)
                 break;
             ent++;
         }
 
-        if((unsigned int)(ent-curBlock->entries) >= curBlock->entryCount)
+        if((unsigned int)(ent-cfgBlock.entries) >= cfgBlock.entryCount)
         {
             /* Allocate a new option entry */
-            ent = realloc(curBlock->entries, (curBlock->entryCount+1)*sizeof(ConfigEntry));
+            ent = realloc(cfgBlock.entries, (cfgBlock.entryCount+1)*sizeof(ConfigEntry));
             if(!ent)
             {
                  ERR("config parse error: error reallocating config entries\n");
                  continue;
             }
-            curBlock->entries = ent;
-            ent = curBlock->entries + curBlock->entryCount;
-            curBlock->entryCount++;
+            cfgBlock.entries = ent;
+            ent = cfgBlock.entries + cfgBlock.entryCount;
+            cfgBlock.entryCount++;
 
             ent->key = strdup(key);
             ent->value = NULL;
@@ -199,10 +181,6 @@ void ReadALConfig(void)
 {
     const char *str;
     FILE *f;
-
-    cfgBlocks = calloc(1, sizeof(ConfigBlock));
-    cfgBlocks->name = strdup("general");
-    cfgCount = 1;
 
 #ifdef _WIN32
     if(SHGetSpecialFolderPathA(NULL, buffer, CSIDL_APPDATA, FALSE) != FALSE)
@@ -249,51 +227,42 @@ void FreeALConfig(void)
 {
     unsigned int i;
 
-    for(i = 0;i < cfgCount;i++)
+    for(i = 0;i < cfgBlock.entryCount;i++)
     {
-        unsigned int j;
-        for(j = 0;j < cfgBlocks[i].entryCount;j++)
-        {
-           free(cfgBlocks[i].entries[j].key);
-           free(cfgBlocks[i].entries[j].value);
-        }
-        free(cfgBlocks[i].entries);
-        free(cfgBlocks[i].name);
+        free(cfgBlock.entries[i].key);
+        free(cfgBlock.entries[i].value);
     }
-    free(cfgBlocks);
-    cfgBlocks = NULL;
-    cfgCount = 0;
+    free(cfgBlock.entries);
 }
 
 const char *GetConfigValue(const char *blockName, const char *keyName, const char *def)
 {
-    unsigned int i, j;
+    unsigned int i;
+    char key[256];
 
     if(!keyName)
         return def;
 
-    if(!blockName)
-        blockName = "general";
-
-    for(i = 0;i < cfgCount;i++)
+    if(blockName && strcasecmp(blockName, "general") != 0)
+        snprintf(key, sizeof(key), "%s/%s", blockName, keyName);
+    else
     {
-        if(strcasecmp(cfgBlocks[i].name, blockName) != 0)
-            continue;
+        strncpy(key, keyName, sizeof(key)-1);
+        key[sizeof(key)-1] = 0;
+    }
 
-        for(j = 0;j < cfgBlocks[i].entryCount;j++)
+    for(i = 0;i < cfgBlock.entryCount;i++)
+    {
+        if(strcasecmp(cfgBlock.entries[i].key, key) == 0)
         {
-            if(strcasecmp(cfgBlocks[i].entries[j].key, keyName) == 0)
-            {
-                TRACE("Found %s:%s = \"%s\"\n", blockName, keyName,
-                      cfgBlocks[i].entries[j].value);
-                if(cfgBlocks[i].entries[j].value[0])
-                    return cfgBlocks[i].entries[j].value;
-                return def;
-            }
+            TRACE("Found %s = \"%s\"\n", key, cfgBlock.entries[i].value);
+            if(cfgBlock.entries[i].value[0])
+                return cfgBlock.entries[i].value;
+            return def;
         }
     }
 
-    TRACE("Key %s:%s not found\n", blockName, keyName);
+    TRACE("Key %s not found\n", key);
     return def;
 }
 

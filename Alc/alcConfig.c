@@ -206,6 +206,41 @@ void ReadALConfig(void)
         LoadConfigFromFile(f);
         fclose(f);
     }
+
+    if(!(str=getenv("XDG_CONFIG_DIRS")) || str[0] == 0)
+        str = "/etc/xdg";
+    strncpy(buffer, str, sizeof(buffer)-1);
+    buffer[sizeof(buffer)-1] = 0;
+    /* Go through the list in reverse, since "the order of base directories
+     * denotes their importance; the first directory listed is the most
+     * important". Ergo, we need to load the settings from the later dirs
+     * first so that the settings in the earlier dirs override them.
+     */
+    while(1)
+    {
+        char *next = strrchr(buffer, ':');
+        if(next) *(next++) = 0;
+        else next = buffer;
+
+        if(next[0] != '/')
+            continue;
+        {
+            size_t len = strlen(next);
+            strncpy(next+len, "/alsoft.conf", buffer+sizeof(buffer)-next-len);
+            buffer[sizeof(buffer)-1] = 0;
+        }
+
+        TRACE("Loading config %s...\n", next);
+        f = fopen(next, "r");
+        if(f)
+        {
+            LoadConfigFromFile(f);
+            fclose(f);
+        }
+        if(next == buffer)
+            break;
+    }
+
     if((str=getenv("HOME")) != NULL && *str)
     {
         snprintf(buffer, sizeof(buffer), "%s/.alsoftrc", str);
@@ -218,7 +253,27 @@ void ReadALConfig(void)
             fclose(f);
         }
     }
+
+    if((str=getenv("XDG_CONFIG_HOME")) != NULL && str[0] != 0)
+        snprintf(buffer, sizeof(buffer), "%s/%s", str, "alsoft.conf");
+    else
+    {
+        buffer[0] = 0;
+        if((str=getenv("HOME")) != NULL && str[0] != 0)
+            snprintf(buffer, sizeof(buffer), "%s/.config/%s", str, "alsoft.conf");
+    }
+    if(buffer[0] != 0)
+    {
+        TRACE("Loading config %s...\n", buffer);
+        f = fopen(buffer, "r");
+        if(f)
+        {
+            LoadConfigFromFile(f);
+            fclose(f);
+        }
+    }
 #endif
+
     if((str=getenv("ALSOFT_CONF")) != NULL && *str)
     {
         TRACE("Loading config %s...\n", str);

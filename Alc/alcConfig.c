@@ -55,6 +55,22 @@ static unsigned int cfgCount;
 
 static char buffer[1024];
 
+static char *lstrip(char *line)
+{
+    while(isspace(line[0]))
+        line++;
+    return line;
+}
+
+static char *rstrip(char *line)
+{
+    size_t len = strlen(line);
+    while(len > 0 && isspace(line[len-1]))
+        len--;
+    line[len] = 0;
+    return line;
+}
+
 static void LoadConfigFromFile(FILE *f)
 {
     ConfigBlock *curBlock = cfgBlocks;
@@ -62,45 +78,40 @@ static void LoadConfigFromFile(FILE *f)
 
     while(fgets(buffer, sizeof(buffer), f))
     {
-        int i = 0;
+        char *line, *comment;
+        char key[256] = "";
+        char value[256] = "";
 
-        while(isspace(buffer[i]))
-            i++;
-        if(!buffer[i] || buffer[i] == '#')
+        comment = strchr(buffer, '#');
+        if(comment)
+        {
+            *(comment++) = 0;
+            comment = rstrip(lstrip(comment));
+        }
+
+        line = rstrip(lstrip(buffer));
+        if(!line[0])
             continue;
 
-        memmove(buffer, buffer+i, strlen(buffer+i)+1);
-
-        if(buffer[0] == '[')
+        if(line[0] == '[')
         {
             ConfigBlock *nextBlock;
+            char *section = line+1;
+            char *endsection;
             unsigned int i;
 
-            i = 1;
-            while(buffer[i] && buffer[i] != ']')
-                i++;
-
-            if(!buffer[i])
+            endsection = strchr(section, ']');
+            if(!endsection || section == endsection || endsection[1] != 0)
             {
-                 ERR("config parse error: bad line \"%s\"\n", buffer);
+                 ERR("config parse error: bad line \"%s\"\n", line);
                  continue;
             }
-            buffer[i] = 0;
-
-            do {
-                i++;
-                if(buffer[i] && !isspace(buffer[i]))
-                {
-                    if(buffer[i] != '#')
-                        WARN("config warning: extra data after block: \"%s\"\n", buffer+i);
-                    break;
-                }
-            } while(buffer[i]);
+            *endsection = 0;
 
             nextBlock = NULL;
             for(i = 0;i < cfgCount;i++)
             {
-                if(strcasecmp(cfgBlocks[i].name, buffer+1) == 0)
+                if(strcasecmp(cfgBlocks[i].name, section) == 0)
                 {
                     nextBlock = cfgBlocks+i;
                     TRACE("found block '%s'\n", nextBlock->name);
@@ -120,7 +131,7 @@ static void LoadConfigFromFile(FILE *f)
                 nextBlock = cfgBlocks+cfgCount;
                 cfgCount++;
 
-                nextBlock->name = strdup(buffer+1);
+                nextBlock->name = strdup(section);
                 nextBlock->entries = NULL;
                 nextBlock->entryCount = 0;
 
@@ -130,41 +141,32 @@ static void LoadConfigFromFile(FILE *f)
             continue;
         }
 
-        /* Look for the option name */
-        i = 0;
-        while(buffer[i] && buffer[i] != '#' && buffer[i] != '=' &&
-              !isspace(buffer[i]))
-            i++;
-
-        if(!buffer[i] || buffer[i] == '#' || i == 0)
+        if(sscanf(line, "%255[^=] = \"%255[^\"]\"", key, value) == 2 ||
+           sscanf(line, "%255[^=] = '%255[^\']'", key, value) == 2 ||
+           sscanf(line, "%255[^=] = %255[^\n]", key, value) == 2)
         {
-            ERR("config parse error: malformed option line: \"%s\"\n", buffer);
-            continue;
-        }
-
-        /* Seperate the option */
-        if(buffer[i] != '=')
-        {
-            buffer[i++] = 0;
-
-            while(isspace(buffer[i]))
-                i++;
-            if(buffer[i] != '=')
-            {
-                ERR("config parse error: option without a value: \"%s\"\n", buffer);
-                continue;
-            }
-        }
-        /* Find the start of the value */
-        buffer[i++] = 0;
-        while(isspace(buffer[i]))
-            i++;
+            /* sscanf doesn't handle '' or "" as empty values, so clip it
+             * manually. */
+            if(strcmp(value, "\"\"") == 0 || strcmp(value, "''") == 0)
+                value[0] = 0;
+         }
+         else if(sscanf(line, "%255[^=] %255[=]", key, value) == 2)
+         {
+             /* Special case for 'key =' */
+             value[0] = 0;
+         }
+         else
+         {
+             ERR("config parse error: malformed option line: \"%s\"\n\n", line);
+             continue;
+         }
+         rstrip(key);
 
         /* Check if we already have this option set */
         ent = curBlock->entries;
         while((unsigned int)(ent-curBlock->entries) < curBlock->entryCount)
         {
-            if(strcasecmp(ent->key, buffer) == 0)
+            if(strcasecmp(ent->key, key) == 0)
                 break;
             ent++;
         }
@@ -182,24 +184,12 @@ static void LoadConfigFromFile(FILE *f)
             ent = curBlock->entries + curBlock->entryCount;
             curBlock->entryCount++;
 
-            ent->key = strdup(buffer);
+            ent->key = strdup(key);
             ent->value = NULL;
         }
 
-        /* Look for the end of the line (Null term, new-line, or #-symbol) and
-           eat up the trailing whitespace */
-        memmove(buffer, buffer+i, strlen(buffer+i)+1);
-
-        i = 0;
-        while(buffer[i] && buffer[i] != '#' && buffer[i] != '\n')
-            i++;
-        do {
-            i--;
-        } while(i >= 0 && isspace(buffer[i]));
-        buffer[++i] = 0;
-
         free(ent->value);
-        ent->value = strdup(buffer);
+        ent->value = strdup(value);
 
         TRACE("found '%s' = '%s'\n", ent->key, ent->value);
     }

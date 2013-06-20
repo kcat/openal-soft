@@ -223,19 +223,20 @@ void ReadALConfig(void)
         else next = buffer;
 
         if(next[0] != '/')
-            continue;
+            WARN("Ignoring XDG config dir: %s\n", next);
+        else
         {
             size_t len = strlen(next);
             strncpy(next+len, "/alsoft.conf", buffer+sizeof(buffer)-next-len);
             buffer[sizeof(buffer)-1] = 0;
-        }
 
-        TRACE("Loading config %s...\n", next);
-        f = fopen(next, "r");
-        if(f)
-        {
-            LoadConfigFromFile(f);
-            fclose(f);
+            TRACE("Loading config %s...\n", next);
+            f = fopen(next, "r");
+            if(f)
+            {
+                LoadConfigFromFile(f);
+                fclose(f);
+            }
         }
         if(next == buffer)
             break;

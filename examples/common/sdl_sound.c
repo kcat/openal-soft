@@ -105,9 +105,9 @@ int getAudioInfo(FilePtr file, ALuint *rate, ALenum *channels, ALenum *type)
         *type = AL_UNSIGNED_BYTE_SOFT;
     else if(file->actual.format == AUDIO_S8)
         *type = AL_BYTE_SOFT;
-    else if(file->actual.format == AUDIO_U16SYS)
+    else if(file->actual.format == AUDIO_U16LSB || file->actual.format == AUDIO_U16MSB)
         *type = AL_UNSIGNED_SHORT_SOFT;
-    else if(file->actual.format == AUDIO_S16SYS)
+    else if(file->actual.format == AUDIO_S16LSB || file->actual.format == AUDIO_S16MSB)
         *type = AL_SHORT_SOFT;
     else
     {
@@ -126,6 +126,21 @@ uint8_t *getAudioData(FilePtr file, size_t *length)
     *length = Sound_Decode(file);
     if(*length == 0)
         return NULL;
+    if((file->actual.format == AUDIO_U16LSB && AUDIO_U16LSB != AUDIO_U16SYS) ||
+       (file->actual.format == AUDIO_U16MSB && AUDIO_U16MSB != AUDIO_U16SYS) ||
+       (file->actual.format == AUDIO_S16LSB && AUDIO_S16LSB != AUDIO_S16SYS) ||
+       (file->actual.format == AUDIO_S16MSB && AUDIO_S16MSB != AUDIO_S16SYS))
+    {
+        /* Swap bytes if the decoded endianness doesn't match the system. */
+        char *buffer = file->buffer;
+        size_t i;
+        for(i = 0;i < *length;i+=2)
+        {
+            char b = buffer[i];
+            buffer[i] = buffer[i+1];
+            buffer[i+1] = b;
+        }
+    }
     return file->buffer;
 }
 

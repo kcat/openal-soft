@@ -13,9 +13,6 @@
 
 /* Define any available alignment declaration */
 #define ALIGN(x) ${ALIGN_DECL}
-#ifdef __MINGW32__
-#define align(x) aligned(x)
-#endif
 
 /* Define if we have the C11 aligned_alloc function */
 #cmakedefine HAVE_ALIGNED_ALLOC

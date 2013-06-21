@@ -206,7 +206,11 @@ ENDIF()
 # Set visibility/export options if available
 IF(WIN32)
     SET(EXPORT_DECL "__declspec(dllexport)")
-    SET(ALIGN_DECL "__declspec(align(x))")
+    IF(NOT MINGW)
+        SET(ALIGN_DECL "__declspec(align(x))")
+    ELSE()
+        SET(ALIGN_DECL "__declspec(aligned(x))")
+    ENDIF()
 
     OPTION(WINE "Enable use of Wine headers when compiling" OFF)
     IF(WINE)

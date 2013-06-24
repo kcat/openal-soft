@@ -866,32 +866,7 @@ IF(ALSOFT_UTILS)
     )
     MESSAGE(STATUS "Building utility programs")
 
-    find_package(Qt4)
-    if(QT_FOUND)
-        include(${QT_USE_FILE})
-        include_directories(${QT_QTCORE_INCLUDE_DIR} ${QT_QTGUI_INCLUDE_DIR}
-                            ${QT_QTCORE_INCLUDE_DIR} ${QT_QTGUI_INCLUDE_DIR})
-
-        set(alsoft-config_SRCS  utils/alsoft-config/main.cpp
-                                utils/alsoft-config/mainwindow.cpp
-            )
-
-        set(alsoft-config_UIS  utils/alsoft-config/mainwindow.ui)
-        QT4_WRAP_UI(UIS ${alsoft-config_UIS})
-
-        set(alsoft-config_MOCS  utils/alsoft-config/mainwindow.h)
-        QT4_WRAP_CPP(MOCS ${alsoft-config_MOCS})
-
-        add_executable(alsoft-config ${alsoft-config_SRCS} ${UIS} ${RSCS} ${TRS} ${MOCS})
-        target_link_libraries(alsoft-config  ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
-
-        INSTALL(TARGETS alsoft-config
-                RUNTIME DESTINATION bin
-                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-        )
-        message(STATUS "Building configuration program")
-    endif()
+    add_subdirectory(utils/alsoft-config)
 
     MESSAGE(STATUS "")
 ENDIF()

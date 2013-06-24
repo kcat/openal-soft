@@ -2,8 +2,9 @@ project(alsoft-config)
 
 include_directories("${alsoft-config_BINARY_DIR}")
 
+# Need Qt 4.8.0 or newer for the iconset theme attribute to work
 find_package(Qt4 COMPONENTS QtCore QtGui)
-if(QT_QTGUI_LIBRARY AND QT_QTCORE_LIBRARY)
+if(QT4_FOUND AND ("${QT_VERSION_MAJOR}" GREATER "4" OR ("${QT_VERSION_MAJOR}" EQUAL "4" AND "${QT_VERSION_MINOR}" GREATER "7")))
     include(${QT_USE_FILE})
 
     include_directories(${QT_QTCORE_INCLUDE_DIR} ${QT_QTGUI_INCLUDE_DIR})

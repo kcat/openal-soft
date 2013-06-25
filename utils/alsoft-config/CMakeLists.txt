@@ -25,5 +25,4 @@ if(QT4_FOUND)
             LIBRARY DESTINATION "lib${LIB_SUFFIX}"
             ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
     )
-    message(STATUS "Building configuration program")
 endif()

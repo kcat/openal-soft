@@ -766,6 +766,9 @@ ENDIF()
 # This is always available
 SET(BACKENDS  "${BACKENDS} Null")
 
+IF(ALSOFT_UTILS)
+    add_subdirectory(utils/alsoft-config)
+ENDIF()
 IF(ALSOFT_EXAMPLES)
     FIND_PACKAGE(SDL)
     IF(SDL_FOUND)
@@ -864,10 +867,11 @@ IF(ALSOFT_UTILS)
             LIBRARY DESTINATION "lib${LIB_SUFFIX}"
             ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
     )
+
     MESSAGE(STATUS "Building utility programs")
-
-    add_subdirectory(utils/alsoft-config)
-
+    IF(TARGET ../../alsoft-config)
+        MESSAGE(STATUS "Building configuration program")
+    ENDIF()
     MESSAGE(STATUS "")
 ENDIF()
 

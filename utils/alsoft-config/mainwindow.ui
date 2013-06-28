@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>564</width>
-    <height>473</height>
+    <height>454</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1330,15 +1330,6 @@ added by the ALC_EXT_DEDICATED extension.</string>
    </widget>
    <addaction name="menuFile"/>
   </widget>
-  <widget class="QToolBar" name="mainToolBar">
-   <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
-  </widget>
-  <widget class="QStatusBar" name="statusBar"/>
   <action name="actionQuit">
    <property name="icon">
     <iconset theme="application-exit"/>

@@ -199,12 +199,18 @@ void MainWindow::loadConfig(const QString &fname)
     int periodsize = settings.value("period_size").toInt();
     ui->periodSizeEdit->clear();
     if(periodsize >= 64)
+    {
         ui->periodSizeEdit->insert(QString::number(periodsize));
+        updatePeriodSizeSlider();
+    }
 
     int periodcount = settings.value("periods").toInt();
     ui->periodCountEdit->clear();
     if(periodcount >= 2)
+    {
         ui->periodCountEdit->insert(QString::number(periodcount));
+        updatePeriodCountSlider();
+    }
 
     QStringList disabledCpuExts = settings.value("disable-cpu-exts").toStringList();
     if(disabledCpuExts.size() == 1)

@@ -96,6 +96,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->hrtfAddButton, SIGNAL(clicked()), this, SLOT(addHrtfFile()));
     connect(ui->hrtfRemoveButton, SIGNAL(clicked()), this, SLOT(removeHrtfFile()));
+    connect(ui->hrtfFileList, SIGNAL(itemSelectionChanged()), this, SLOT(updateHrtfRemoveButton()));
 
     ui->enabledBackendList->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->enabledBackendList, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(showEnabledBackendMenu(QPoint)));
@@ -238,6 +239,7 @@ void MainWindow::loadConfig(const QString &fname)
                    hrtf_tables.begin(), std::mem_fun_ref(&QString::trimmed));
     ui->hrtfFileList->clear();
     ui->hrtfFileList->addItems(hrtf_tables);
+    updateHrtfRemoveButton();
 
     ui->enabledBackendList->clear();
     ui->disabledBackendList->clear();
@@ -493,6 +495,11 @@ void MainWindow::removeHrtfFile()
     QList<QListWidgetItem*> selected = ui->hrtfFileList->selectedItems();
     foreach(QListWidgetItem *item, selected)
         delete item;
+}
+
+void MainWindow::updateHrtfRemoveButton()
+{
+    ui->hrtfRemoveButton->setEnabled(ui->hrtfFileList->selectedItems().size() != 0);
 }
 
 void MainWindow::showEnabledBackendMenu(QPoint pt)

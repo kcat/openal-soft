@@ -30,6 +30,8 @@ private slots:
     void addHrtfFile();
     void removeHrtfFile();
 
+    void updateHrtfRemoveButton();
+
     void showEnabledBackendMenu(QPoint pt);
     void showDisabledBackendMenu(QPoint pt);
 

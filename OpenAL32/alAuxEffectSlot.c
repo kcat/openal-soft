@@ -546,7 +546,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 ALenum InitEffectSlot(ALeffectslot *slot)
 {
     ALeffectStateFactory *factory;
-    ALint i, c;
+    ALuint i, c;
 
     slot->EffectType = AL_EFFECT_NULL;
 

@@ -577,15 +577,8 @@ enum DeviceType {
  * more memory, while smaller values may need more iterations. The value needs
  * to be a sensible size, however, as it constrains the max stepping value used
  * for mixing, as well as the maximum number of samples per mixing iteration.
- *
- * The mixer requires being able to do two samplings per mixing loop. With the
- * cubic resampler (which requires 3 padding samples), this limits a 2048
- * buffer size to about 2044. This means that buffer_freq*source_pitch cannot
- * exceed device_freq*2044 for a 32-bit buffer.
  */
-#ifndef BUFFERSIZE
-#define BUFFERSIZE 2048
-#endif
+#define BUFFERSIZE (2048u)
 
 
 struct ALCdevice_struct

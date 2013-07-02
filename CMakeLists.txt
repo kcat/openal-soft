@@ -875,7 +875,7 @@ IF(ALSOFT_UTILS)
     )
 
     MESSAGE(STATUS "Building utility programs")
-    IF(TARGET ../../alsoft-config)
+    IF(TARGET alsoft-config)
         MESSAGE(STATUS "Building configuration program")
     ENDIF()
     MESSAGE(STATUS "")

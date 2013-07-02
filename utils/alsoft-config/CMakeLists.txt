@@ -17,10 +17,11 @@ if(QT4_FOUND)
     set(alsoft-config_MOCS  mainwindow.h)
     QT4_WRAP_CPP(MOCS ${alsoft-config_MOCS})
 
-    add_executable(../../alsoft-config ${alsoft-config_SRCS} ${UIS} ${RSCS} ${TRS} ${MOCS})
-    target_link_libraries(../../alsoft-config ${QT_LIBRARIES})
+    add_executable(alsoft-config ${alsoft-config_SRCS} ${UIS} ${RSCS} ${TRS} ${MOCS})
+    target_link_libraries(alsoft-config ${QT_LIBRARIES})
+    set_target_properties(alsoft-config PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${OpenAL_BINARY_DIR})
 
-    install(TARGETS ../../alsoft-config
+    install(TARGETS alsoft-config
             RUNTIME DESTINATION bin
             LIBRARY DESTINATION "lib${LIB_SUFFIX}"
             ARCHIVE DESTINATION "lib${LIB_SUFFIX}"

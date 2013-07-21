@@ -777,13 +777,6 @@ static inline ALfloat CalcDecayLength(ALfloat coeff, ALfloat decayTime)
     return log10f(coeff) * decayTime / log10f(0.001f)/*-60 dB*/;
 }
 
-// Calculate the high frequency parameter for the I3DL2 coefficient
-// calculation.
-static inline ALfloat CalcI3DL2HFreq(ALfloat hfRef, ALuint frequency)
-{
-    return cosf(F_PI*2.0f * hfRef / frequency);
-}
-
 // Calculate an attenuation to be applied to the input of any echo models to
 // compensate for modal density and decay time.
 static inline ALfloat CalcDensityGain(ALfloat a)

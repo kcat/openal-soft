@@ -57,6 +57,7 @@ enum FmtChannels {
     FmtX61    = UserFmtX61,
     FmtX71    = UserFmtX71,
 };
+#define MAX_INPUT_CHANNELS  (8)
 
 ALuint BytesFromFmt(enum FmtType type);
 ALuint ChannelsFromFmt(enum FmtChannels chans);

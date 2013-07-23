@@ -6,6 +6,7 @@
 #include "alMain.h"
 #include "alu.h"
 #include "alFilter.h"
+#include "alBuffer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,17 +32,17 @@ typedef struct ALbufferlistitem
 typedef struct HrtfState {
     ALboolean Moving;
     ALuint Counter;
-    ALIGN(16) ALfloat History[MaxChannels][SRC_HISTORY_LENGTH];
-    ALIGN(16) ALfloat Values[MaxChannels][HRIR_LENGTH][2];
+    ALIGN(16) ALfloat History[MAX_INPUT_CHANNELS][SRC_HISTORY_LENGTH];
+    ALIGN(16) ALfloat Values[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
     ALuint Offset;
 } HrtfState;
 
 typedef struct HrtfParams {
     ALfloat Gain;
     ALfloat Dir[3];
-    ALIGN(16) ALfloat Coeffs[MaxChannels][HRIR_LENGTH][2];
+    ALIGN(16) ALfloat Coeffs[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
     ALIGN(16) ALfloat CoeffStep[HRIR_LENGTH][2];
-    ALuint Delay[MaxChannels][2];
+    ALuint Delay[MAX_INPUT_CHANNELS][2];
     ALint DelayStep[2];
     ALuint IrSize;
 } HrtfParams;
@@ -59,9 +60,9 @@ typedef struct DirectParams {
     /* A mixing matrix. First subscript is the channel number of the input data
      * (regardless of channel configuration) and the second is the channel
      * target (eg. FrontLeft). Not used with HRTF. */
-    ALfloat Gains[MaxChannels][MaxChannels];
+    ALfloat Gains[MAX_INPUT_CHANNELS][MaxChannels];
 
-    ALfilterState Filter[MaxChannels];
+    ALfilterState Filter[MAX_INPUT_CHANNELS];
 } DirectParams;
 
 typedef struct SendParams {
@@ -71,7 +72,7 @@ typedef struct SendParams {
      * output buffer. */
     ALfloat Gain;
 
-    ALfilterState Filter[MaxChannels];
+    ALfilterState Filter[MAX_INPUT_CHANNELS];
 } SendParams;
 
 

@@ -96,7 +96,7 @@ void MixDirect_C(const DirectParams *params, const ALfloat *restrict data, ALuin
     for(c = 0;c < MaxChannels;c++)
     {
         DrySend = params->Gains[srcchan][c];
-        if(DrySend < 0.00001f)
+        if(!(DrySend > 0.00001f))
             continue;
 
         if(OutPos == 0)
@@ -119,7 +119,7 @@ void MixSend_C(const SendParams *params, const ALfloat *restrict data,
     ALfloat  WetSend = params->Gain;
     ALuint pos;
 
-    if(WetSend < 0.00001f)
+    if(!(WetSend > 0.00001f))
         return;
 
     if(OutPos == 0)

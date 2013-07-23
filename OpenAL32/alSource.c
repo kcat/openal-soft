@@ -2326,7 +2326,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 
         if(Source->state != AL_PLAYING)
         {
-            for(j = 0;j < MaxChannels;j++)
+            for(j = 0;j < MAX_INPUT_CHANNELS;j++)
             {
                 for(k = 0;k < SRC_HISTORY_LENGTH;k++)
                     Source->Hrtf.History[j][k] = 0.0f;

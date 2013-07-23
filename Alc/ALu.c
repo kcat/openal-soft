@@ -313,7 +313,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     SrcMatrix = ALSource->Params.Direct.Gains;
-    for(i = 0;i < MaxChannels;i++)
+    for(i = 0;i < MAX_INPUT_CHANNELS;i++)
     {
         for(c = 0;c < MaxChannels;c++)
             SrcMatrix[i][c] = 0.0f;
@@ -859,7 +859,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         ALfloat DirGain = 0.0f;
         ALfloat AmbientGain;
 
-        for(i = 0;i < MaxChannels;i++)
+        for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
             for(j = 0;j < MaxChannels;j++)
                 Matrix[i][j] = 0.0f;

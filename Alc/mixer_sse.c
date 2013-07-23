@@ -155,7 +155,7 @@ void MixDirect_SSE(const DirectParams *params, const ALfloat *restrict data, ALu
         __m128 gain;
 
         DrySend = params->Gains[srcchan][c];
-        if(DrySend < 0.00001f)
+        if(!(DrySend > 0.00001f))
             continue;
 
         if(OutPos == 0)
@@ -189,7 +189,7 @@ void MixSend_SSE(const SendParams *params, const ALfloat *restrict data,
     __m128 gain;
     ALuint pos;
 
-    if(WetGain < 0.00001f)
+    if(!(WetGain > 0.00001f))
         return;
 
     if(OutPos == 0)

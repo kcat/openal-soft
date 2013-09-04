@@ -84,6 +84,7 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Devi
 
     /* Store waveshaper edge settings */
     edge = sinf(Slot->EffectProps.Distortion.Edge * (F_PI/2.0f));
+    edge = minf(edge, 0.99f);
     state->edge_coeff = 2.0f * edge / (1.0f-edge);
 
     /* Lowpass filter */

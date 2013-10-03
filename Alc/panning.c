@@ -140,13 +140,7 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MaxChan
 }
 
 
-/**
- * ComputeAngleGains
- *
- * Sets channel gains based on a given source's angle and its half-width. The
- * angle and hwidth parameters are in radians.
- */
-ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat *gains)
+void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat gains[MaxChannels])
 {
     ALfloat tmpgains[MaxChannels] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
     enum Channel Speaker2Chan[MaxChannels];
@@ -164,6 +158,8 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
     if(device->NumChan <= 1 || hwidth >= F_PI)
     {
         /* Full coverage for all speakers. */
+        for(i = 0;i < MaxChannels;i++)
+            gains[i] = 0.0f;
         for(i = 0;i < device->NumChan;i++)
         {
             enum Channel chan = Speaker2Chan[i];
@@ -174,6 +170,8 @@ ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth,
     if(hwidth <= 0.0f)
     {
         /* Infinitely small sound point. */
+        for(i = 0;i < MaxChannels;i++)
+            gains[i] = 0.0f;
         for(i = 0;i < device->NumChan-1;i++)
         {
             if(angle >= SpeakerAngle[i] && angle < SpeakerAngle[i+1])

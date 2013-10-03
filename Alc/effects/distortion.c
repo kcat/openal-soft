@@ -64,20 +64,11 @@ static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *state, ALCdev
 
 static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
     ALfloat frequency = (ALfloat)Device->Frequency;
-    ALuint it;
     ALfloat bandwidth;
     ALfloat cutoff;
     ALfloat edge;
-
-    for(it = 0;it < MaxChannels;it++)
-        state->Gain[it] = 0.0f;
-    for(it = 0;it < Device->NumChan;it++)
-    {
-        enum Channel chan = Device->Speaker2Chan[it];
-        state->Gain[chan] = gain;
-    }
+    ALfloat gain;
 
     /* Store distorted signal attenuation settings */
     state->attenuation = Slot->EffectProps.Distortion.Gain;
@@ -100,6 +91,9 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Devi
     bandwidth = Slot->EffectProps.Distortion.EQBandwidth / (cutoff * 0.67f);
     ALfilterState_setParams(&state->bandpass, ALfilterType_BandPass, 1.0f,
                             cutoff / (frequency*4.0f), bandwidth);
+
+    gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
+    SetGains(Device, gain, state->Gain);
 }
 
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])

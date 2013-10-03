@@ -1044,7 +1044,6 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     ALfloat ambientGain;
     ALfloat dirGain;
     ALfloat length;
-    ALuint index;
 
     Gain *= ReverbBoost;
 
@@ -1070,14 +1069,10 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     }
 
     dirGain = sqrtf(earlyPan[0]*earlyPan[0] + earlyPan[2]*earlyPan[2]);
-    for(index = 0;index < MaxChannels;index++)
-         State->Early.PanGain[index] = 0.0f;
     ComputeAngleGains(Device, atan2f(earlyPan[0], earlyPan[2]), (1.0f-dirGain)*F_PI,
                       lerp(ambientGain, 1.0f, dirGain) * Gain, State->Early.PanGain);
 
     dirGain = sqrtf(latePan[0]*latePan[0] + latePan[2]*latePan[2]);
-    for(index = 0;index < MaxChannels;index++)
-         State->Late.PanGain[index] = 0.0f;
     ComputeAngleGains(Device, atan2f(latePan[0], latePan[2]), (1.0f-dirGain)*F_PI,
                       lerp(ambientGain, 1.0f, dirGain) * Gain, State->Late.PanGain);
 }
@@ -1168,18 +1163,9 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
     }
     else
     {
-        ALfloat gain = Slot->Gain;
-        ALuint index;
-
         /* Update channel gains */
-        gain *= sqrtf(2.0f/Device->NumChan) * ReverbBoost;
-        for(index = 0;index < MaxChannels;index++)
-             State->Gain[index] = 0.0f;
-        for(index = 0;index < Device->NumChan;index++)
-        {
-            enum Channel chan = Device->Speaker2Chan[index];
-            State->Gain[chan] = gain;
-        }
+        ALfloat gain = sqrtf(2.0f/Device->NumChan) * ReverbBoost * Slot->Gain;
+        SetGains(Device, gain, State->Gain);
     }
 }
 

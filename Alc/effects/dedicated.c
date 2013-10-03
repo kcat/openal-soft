@@ -61,13 +61,14 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, ALCdevice *device
     ALsizei s;
 
     Gain = Slot->Gain * Slot->EffectProps.Dedicated.Gain;
-    for(s = 0;s < MaxChannels;s++)
-        state->gains[s] = 0.0f;
-
     if(Slot->EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
         ComputeAngleGains(device, atan2f(0.0f, 1.0f), 0.0f, Gain, state->gains);
     else if(Slot->EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
+    {
+        for(s = 0;s < MaxChannels;s++)
+            state->gains[s] = 0.0f;
         state->gains[LFE] = Gain;
+    }
 }
 
 static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])

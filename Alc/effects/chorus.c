@@ -103,13 +103,6 @@ static ALvoid ALchorusState_update(ALchorusState *state, ALCdevice *Device, cons
     ALfloat frequency = (ALfloat)Device->Frequency;
     ALfloat rate;
     ALint phase;
-    ALuint it;
-
-    for (it = 0; it < MaxChannels; it++)
-    {
-        state->Gain[0][it] = 0.0f;
-        state->Gain[1][it] = 0.0f;
-    }
 
     state->waveform = Slot->EffectProps.Chorus.Waveform;
     state->depth = Slot->EffectProps.Chorus.Depth;

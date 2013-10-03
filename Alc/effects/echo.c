@@ -93,7 +93,6 @@ static ALvoid ALechoState_update(ALechoState *state, ALCdevice *Device, const AL
     ALuint frequency = Device->Frequency;
     ALfloat lrpan, gain;
     ALfloat dirGain;
-    ALuint i;
 
     state->Tap[0].delay = fastf2u(Slot->EffectProps.Echo.Delay * frequency) + 1;
     state->Tap[1].delay = fastf2u(Slot->EffectProps.Echo.LRDelay * frequency);
@@ -108,12 +107,6 @@ static ALvoid ALechoState_update(ALechoState *state, ALCdevice *Device, const AL
                             (ALfloat)LOWPASSFREQREF/frequency, 0.0f);
 
     gain = Slot->Gain;
-    for(i = 0;i < MaxChannels;i++)
-    {
-        state->Gain[0][i] = 0.0f;
-        state->Gain[1][i] = 0.0f;
-    }
-
     dirGain = fabsf(lrpan);
 
     /* First tap panning */

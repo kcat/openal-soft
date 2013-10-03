@@ -80,16 +80,12 @@ static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *d
 
 static ALvoid ALautowahState_update(ALautowahState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALuint i;
-    ALfloat gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
-
-    /* computing high-pass cutoff and bandwidth */
     const ALfloat cutoff = LOWPASSFREQREF / (Device->Frequency * 4.0f);
     const ALfloat bandwidth = (cutoff / 2.0f) / (cutoff * 0.67f);
+    ALfloat gain;
 
     /* computing high-pass filter coefficients */
-    ALfilterState_setParams(&state->high_pass,
-                            ALfilterType_HighPass, 1.0f,
+    ALfilterState_setParams(&state->high_pass, ALfilterType_HighPass, 1.0f,
                             cutoff, bandwidth);
 
     state->AttackTime = Slot->EffectProps.Autowah.AttackTime;
@@ -102,13 +98,8 @@ static ALvoid ALautowahState_update(ALautowahState *state, ALCdevice *Device, co
 
     ALfilterState_clear(&state->low_pass);
 
-    for(i = 0;i < MaxChannels;i++)
-        state->Gain[i] = 0.0f;
-    for(i = 0;i < Device->NumChan;i++)
-    {
-        enum Channel chan = Device->Speaker2Chan[i];
-        state->Gain[chan] = gain;
-    }
+    gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
+    SetGains(Device, gain, state->Gain);
 }
 
 static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE])

@@ -103,13 +103,6 @@ static ALvoid ALflangerState_update(ALflangerState *state, ALCdevice *Device, co
     ALfloat frequency = (ALfloat)Device->Frequency;
     ALfloat rate;
     ALint phase;
-    ALuint it;
-
-    for(it = 0;it < MaxChannels;it++)
-    {
-        state->Gain[0][it] = 0.0f;
-        state->Gain[1][it] = 0.0f;
-    }
 
     state->waveform = Slot->EffectProps.Flanger.Waveform;
     state->depth = Slot->EffectProps.Flanger.Depth;

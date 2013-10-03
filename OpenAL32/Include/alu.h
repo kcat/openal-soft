@@ -105,7 +105,24 @@ static inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat va
 
 ALvoid aluInitPanning(ALCdevice *Device);
 
-ALvoid ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat *gains);
+/**
+ * ComputeAngleGains
+ *
+ * Sets channel gains based on a given source's angle and its half-width. The
+ * angle and hwidth parameters are in radians.
+ */
+void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat gains[MaxChannels]);
+
+/**
+ * SetGains
+ *
+ * Helper to set the appropriate channels to the specified gain.
+ */
+static inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels])
+{
+    ComputeAngleGains(device, 0.0f, F_PI, ingain, gains);
+}
+
 
 ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);

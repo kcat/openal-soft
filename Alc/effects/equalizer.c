@@ -104,15 +104,8 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, ALCdevice *device
 {
     ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat gain = sqrtf(1.0f / device->NumChan) * slot->Gain;
-    ALuint it;
 
-    for(it = 0;it < MaxChannels;it++)
-        state->Gain[it] = 0.0f;
-    for(it = 0; it < device->NumChan; it++)
-    {
-        enum Channel chan = device->Speaker2Chan[it];
-        state->Gain[chan] = gain;
-    }
+    SetGains(device, gain, state->Gain);
 
     /* Calculate coefficients for the each type of filter */
     ALfilterState_setParams(&state->filter[0], ALfilterType_LowShelf,

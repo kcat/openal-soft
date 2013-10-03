@@ -413,6 +413,13 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Props.Reverb.DecayHFLimit = AL_REVERB_DEFAULT_DECAY_HFLIMIT;
         effect->vtbl = &ALreverb_vtable;
         break;
+    case AL_EFFECT_AUTOWAH:
+        effect->Props.Autowah.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;
+        effect->Props.Autowah.PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN;
+        effect->Props.Autowah.ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME;
+        effect->Props.Autowah.Resonance = AL_AUTOWAH_DEFAULT_RESONANCE;
+        effect->vtbl = &ALautowah_vtable;
+        break;
     case AL_EFFECT_CHORUS:
         effect->Props.Chorus.Waveform = AL_CHORUS_DEFAULT_WAVEFORM;
         effect->Props.Chorus.Phase = AL_CHORUS_DEFAULT_PHASE;

@@ -12,13 +12,14 @@ struct ALeffect;
 enum {
     EAXREVERB = 0,
     REVERB,
+    AUTOWAH,
+    CHORUS,
+    DISTORTION,
     ECHO,
+    EQUALIZER,
+    FLANGER,
     MODULATOR,
     DEDICATED,
-    CHORUS,
-    FLANGER,
-    EQUALIZER,
-    DISTORTION,
 
     MAX_EFFECTS
 };
@@ -49,6 +50,7 @@ const struct ALeffectVtable T##_vtable = {  \
 
 extern const struct ALeffectVtable ALeaxreverb_vtable;
 extern const struct ALeffectVtable ALreverb_vtable;
+extern const struct ALeffectVtable ALautowah_vtable;
 extern const struct ALeffectVtable ALchorus_vtable;
 extern const struct ALeffectVtable ALdistortion_vtable;
 extern const struct ALeffectVtable ALecho_vtable;
@@ -88,6 +90,13 @@ typedef union ALeffectProps {
         ALfloat HFReference;
         ALfloat LFReference;
     } Reverb;
+
+    struct {
+        ALfloat AttackTime;
+        ALfloat ReleaseTime;
+        ALfloat PeakGain;
+        ALfloat Resonance;
+    } Autowah;
 
     struct {
         ALfloat Delay;

@@ -20,6 +20,7 @@ typedef enum ALfilterType {
     ALfilterType_Peaking,
 
     ALfilterType_LowPass,
+    ALfilterType_HighPass,
     ALfilterType_BandPass,
 } ALfilterType;
 

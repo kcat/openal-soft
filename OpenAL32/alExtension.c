@@ -40,6 +40,7 @@ const struct EffectList EffectList[] = {
     { "reverb",     REVERB,     "AL_EFFECT_REVERB",         AL_EFFECT_REVERB },
     { "autowah",    AUTOWAH,    "AL_EFFECT_AUTOWAH",        AL_EFFECT_AUTOWAH },
     { "chorus",     CHORUS,     "AL_EFFECT_CHORUS",         AL_EFFECT_CHORUS },
+    { "compressor", COMPRESSOR, "AL_EFFECT_COMPRESSOR",     AL_EFFECT_COMPRESSOR },
     { "distortion", DISTORTION, "AL_EFFECT_DISTORTION",     AL_EFFECT_DISTORTION },
     { "echo",       ECHO,       "AL_EFFECT_ECHO",           AL_EFFECT_ECHO },
     { "equalizer",  EQUALIZER,  "AL_EFFECT_EQUALIZER",      AL_EFFECT_EQUALIZER },

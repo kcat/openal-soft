@@ -98,6 +98,7 @@ ALeffectStateFactory *ALnullStateFactory_getFactory(void);
 ALeffectStateFactory *ALreverbStateFactory_getFactory(void);
 ALeffectStateFactory *ALautowahStateFactory_getFactory(void);
 ALeffectStateFactory *ALchorusStateFactory_getFactory(void);
+ALeffectStateFactory *ALcompressorStateFactory_getFactory(void);
 ALeffectStateFactory *ALdistortionStateFactory_getFactory(void);
 ALeffectStateFactory *ALechoStateFactory_getFactory(void);
 ALeffectStateFactory *ALequalizerStateFactory_getFactory(void);

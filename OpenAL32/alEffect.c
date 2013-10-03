@@ -429,6 +429,10 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Props.Chorus.Delay = AL_CHORUS_DEFAULT_DELAY;
         effect->vtbl = &ALchorus_vtable;
         break;
+    case AL_EFFECT_COMPRESSOR:
+        effect->Props.Compressor.OnOff = AL_COMPRESSOR_DEFAULT_ONOFF;
+        effect->vtbl = &ALcompressor_vtable;
+        break;
     case AL_EFFECT_DISTORTION:
         effect->Props.Distortion.Edge = AL_DISTORTION_DEFAULT_EDGE;
         effect->Props.Distortion.Gain = AL_DISTORTION_DEFAULT_GAIN;

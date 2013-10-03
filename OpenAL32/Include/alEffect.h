@@ -14,6 +14,7 @@ enum {
     REVERB,
     AUTOWAH,
     CHORUS,
+    COMPRESSOR,
     DISTORTION,
     ECHO,
     EQUALIZER,
@@ -52,6 +53,7 @@ extern const struct ALeffectVtable ALeaxreverb_vtable;
 extern const struct ALeffectVtable ALreverb_vtable;
 extern const struct ALeffectVtable ALautowah_vtable;
 extern const struct ALeffectVtable ALchorus_vtable;
+extern const struct ALeffectVtable ALcompressor_vtable;
 extern const struct ALeffectVtable ALdistortion_vtable;
 extern const struct ALeffectVtable ALecho_vtable;
 extern const struct ALeffectVtable ALequalizer_vtable;
@@ -99,26 +101,6 @@ typedef union ALeffectProps {
     } Autowah;
 
     struct {
-        ALfloat Delay;
-        ALfloat LRDelay;
-
-        ALfloat Damping;
-        ALfloat Feedback;
-
-        ALfloat Spread;
-    } Echo;
-
-    struct {
-        ALfloat Frequency;
-        ALfloat HighPassCutoff;
-        ALint Waveform;
-    } Modulator;
-
-    struct {
-        ALfloat Gain;
-    } Dedicated;
-
-    struct {
         ALint Waveform;
         ALint Phase;
         ALfloat Rate;
@@ -128,13 +110,26 @@ typedef union ALeffectProps {
     } Chorus;
 
     struct {
-        ALint Waveform;
-        ALint Phase;
-        ALfloat Rate;
-        ALfloat Depth;
-        ALfloat Feedback;
+        ALboolean OnOff;
+    } Compressor;
+
+    struct {
+        ALfloat Edge;
+        ALfloat Gain;
+        ALfloat LowpassCutoff;
+        ALfloat EQCenter;
+        ALfloat EQBandwidth;
+    } Distortion;
+
+    struct {
         ALfloat Delay;
-    } Flanger;
+        ALfloat LRDelay;
+
+        ALfloat Damping;
+        ALfloat Feedback;
+
+        ALfloat Spread;
+    } Echo;
 
     struct {
         ALfloat Delay;
@@ -151,12 +146,23 @@ typedef union ALeffectProps {
     } Equalizer;
 
     struct {
-        ALfloat Edge;
+        ALint Waveform;
+        ALint Phase;
+        ALfloat Rate;
+        ALfloat Depth;
+        ALfloat Feedback;
+        ALfloat Delay;
+    } Flanger;
+
+    struct {
+        ALfloat Frequency;
+        ALfloat HighPassCutoff;
+        ALint Waveform;
+    } Modulator;
+
+    struct {
         ALfloat Gain;
-        ALfloat LowpassCutoff;
-        ALfloat EQCenter;
-        ALfloat EQBandwidth;
-    } Distortion;
+    } Dedicated;
 } ALeffectProps;
 
 typedef struct ALeffect {

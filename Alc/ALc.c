@@ -525,8 +525,8 @@ static const ALCenums enumeration[] = {
     DECL(AL_EFFECT_PITCH_SHIFTER),
 #endif
     DECL(AL_EFFECT_RING_MODULATOR),
-#if 0
     DECL(AL_EFFECT_AUTOWAH),
+#if 0
     DECL(AL_EFFECT_COMPRESSOR),
 #endif
     DECL(AL_EFFECT_EQUALIZER),

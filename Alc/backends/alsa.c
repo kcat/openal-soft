@@ -35,7 +35,7 @@ static const ALCchar alsaDevice[] = "ALSA Default";
 
 #ifdef HAVE_DYNLOAD
 static void *alsa_handle;
-#define MAKE_FUNC(f) static typeof(f) * p##f
+#define MAKE_FUNC(f) static __typeof(f) * p##f
 MAKE_FUNC(snd_strerror);
 MAKE_FUNC(snd_pcm_open);
 MAKE_FUNC(snd_pcm_close);

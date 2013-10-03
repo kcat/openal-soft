@@ -100,10 +100,17 @@ CHECK_TYPE_SIZE("long" SIZEOF_LONG)
 CHECK_TYPE_SIZE("long long" SIZEOF_LONG_LONG)
 
 
+CHECK_C_COMPILER_FLAG(-std=c99 HAVE_STD_C99)
+IF(HAVE_STD_C99)
+    SET(CMAKE_C_FLAGS "-std=c99 ${CMAKE_C_FLAGS}")
+ENDIF()
+
+# TODO: Once we truly require C99, these restrict and inline checks should go
+# away. Currently they're needed to maintain MSVC compatibility.
 CHECK_C_SOURCE_COMPILES("int *restrict foo;
                          int main() {return 0;}" HAVE_RESTRICT)
 IF(NOT HAVE_RESTRICT)
-    # Slightly convoluted way to do this, because MSVC may barf is restrict is
+    # Slightly convoluted way to do this, because MSVC may barf if restrict is
     # defined to __restrict.
     CHECK_C_SOURCE_COMPILES("#define restrict __restrict
                              #include <stdlib.h>

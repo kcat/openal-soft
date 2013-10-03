@@ -39,7 +39,7 @@
 
 #ifdef HAVE_DYNLOAD
 static void *pa_handle;
-#define MAKE_FUNC(x) static typeof(x) * p##x
+#define MAKE_FUNC(x) static __typeof(x) * p##x
 MAKE_FUNC(pa_context_unref);
 MAKE_FUNC(pa_sample_spec_valid);
 MAKE_FUNC(pa_frame_size);

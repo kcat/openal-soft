@@ -35,7 +35,7 @@ static const ALCchar pa_device[] = "PortAudio Default";
 
 #ifdef HAVE_DYNLOAD
 static void *pa_handle;
-#define MAKE_FUNC(x) static typeof(x) * p##x
+#define MAKE_FUNC(x) static __typeof(x) * p##x
 MAKE_FUNC(Pa_Initialize);
 MAKE_FUNC(Pa_Terminate);
 MAKE_FUNC(Pa_GetErrorText);

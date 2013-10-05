@@ -353,6 +353,17 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
 #define ALC_DEFAULT_FILTER_ORDER                 0x1100
 #endif
 
+#ifndef AL_SOFT_deferred_updates
+#define AL_SOFT_deferred_updates 1
+#define AL_DEFERRED_UPDATES_SOFT                 0xC002
+typedef ALvoid (AL_APIENTRY*LPALDEFERUPDATESSOFT)(void);
+typedef ALvoid (AL_APIENTRY*LPALPROCESSUPDATESSOFT)(void);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void);
+AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void);
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

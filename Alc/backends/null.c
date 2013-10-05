@@ -43,8 +43,6 @@ static ALuint NullProc(ALvoid *ptr)
     null_data *data = (null_data*)Device->ExtraData;
     ALuint now, start;
     ALuint64 avail, done;
-    const ALuint restTime = (ALuint64)Device->UpdateSize * 1000 /
-                            Device->Frequency / 2;
 
     done = 0;
     start = timeGetTime();
@@ -62,15 +60,16 @@ static ALuint NullProc(ALvoid *ptr)
         }
         if(avail-done < Device->UpdateSize)
         {
+            ALuint restTime = (Device->UpdateSize - (avail-done)) * 1000 /
+                              Device->Frequency;
             Sleep(restTime);
             continue;
         }
 
-        while(avail-done >= Device->UpdateSize)
-        {
+        do {
             aluMixData(Device, NULL, Device->UpdateSize);
             done += Device->UpdateSize;
-        }
+        } while(avail-done >= Device->UpdateSize);
     }
 
     return 0;

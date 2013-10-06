@@ -337,7 +337,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             for(j = 0;j < Device->NumAuxSends;j++)
             {
                 SendParams *sendparms = &Source->Params.Send[j];
-                if(!sendparms->Slot)
+                if(!sendparms->OutBuffer)
                     continue;
 
                 DoFilter(&sendparms->LpFilter[chan], SrcData, ResampledData,

@@ -66,7 +66,9 @@ typedef struct DirectParams {
 } DirectParams;
 
 typedef struct SendParams {
-    struct ALeffectslot *Slot;
+    ALfloat (*OutBuffer)[BUFFERSIZE];
+    ALfloat *ClickRemoval;
+    ALfloat *PendingClicks;
 
     /* Gain control, which applies to all input channels to a single (mono)
      * output buffer. */

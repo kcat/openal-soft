@@ -437,12 +437,20 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
-
         if(!Slot && i == 0)
             Slot = Device->DefaultSlot;
-        if(Slot && Slot->EffectType == AL_EFFECT_NULL)
-            Slot = NULL;
-        ALSource->Params.Send[i].Slot = Slot;
+        if(!Slot || Slot->EffectType == AL_EFFECT_NULL)
+        {
+            ALSource->Params.Send[i].OutBuffer = NULL;
+            ALSource->Params.Send[i].ClickRemoval = NULL;
+            ALSource->Params.Send[i].PendingClicks = NULL;
+        }
+        else
+        {
+            ALSource->Params.Send[i].OutBuffer = Slot->WetBuffer;
+            ALSource->Params.Send[i].ClickRemoval = Slot->ClickRemoval;
+            ALSource->Params.Send[i].PendingClicks = Slot->PendingClicks;
+        }
         ALSource->Params.Send[i].Gain = WetGain[i];
     }
 
@@ -574,7 +582,18 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             RoomAirAbsorption[i] = AIRABSORBGAINHF;
         }
 
-        ALSource->Params.Send[i].Slot = Slot;
+        if(!Slot || Slot->EffectType == AL_EFFECT_NULL)
+        {
+            ALSource->Params.Send[i].OutBuffer = NULL;
+            ALSource->Params.Send[i].ClickRemoval = NULL;
+            ALSource->Params.Send[i].PendingClicks = NULL;
+        }
+        else
+        {
+            ALSource->Params.Send[i].OutBuffer = Slot->WetBuffer;
+            ALSource->Params.Send[i].ClickRemoval = Slot->ClickRemoval;
+            ALSource->Params.Send[i].PendingClicks = Slot->PendingClicks;
+        }
     }
 
     /* Transform source to listener space (convert to head relative) */

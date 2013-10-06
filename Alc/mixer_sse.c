@@ -143,17 +143,16 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 void MixDirect_SSE(const DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALfloat (*restrict DryBuffer)[BUFFERSIZE] = params->OutBuffer;
+    ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
     ALfloat *restrict ClickRemoval = params->ClickRemoval;
     ALfloat *restrict PendingClicks = params->PendingClicks;
     ALfloat DrySend;
+    __m128 gain;
     ALuint pos;
     ALuint c;
 
     for(c = 0;c < MaxChannels;c++)
     {
-        __m128 gain;
-
         DrySend = params->Gains[srcchan][c];
         if(!(DrySend > 0.00001f))
             continue;
@@ -165,12 +164,12 @@ void MixDirect_SSE(const DirectParams *params, const ALfloat *restrict data, ALu
         for(pos = 0;BufferSize-pos > 3;pos += 4)
         {
             const __m128 val4 = _mm_load_ps(&data[pos]);
-            __m128 dry4 = _mm_load_ps(&DryBuffer[c][OutPos+pos]);
+            __m128 dry4 = _mm_load_ps(&OutBuffer[c][OutPos+pos]);
             dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain));
-            _mm_store_ps(&DryBuffer[c][OutPos+pos], dry4);
+            _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
         }
         for(;pos < BufferSize;pos++)
-            DryBuffer[c][OutPos+pos] += data[pos]*DrySend;
+            OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
 
         if(OutPos+pos == SamplesToDo)
             PendingClicks[c] += data[pos]*DrySend;
@@ -181,31 +180,31 @@ void MixDirect_SSE(const DirectParams *params, const ALfloat *restrict data, ALu
 void MixSend_SSE(const SendParams *params, const ALfloat *restrict data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
-    ALeffectslot *Slot = params->Slot;
-    ALfloat (*restrict WetBuffer)[BUFFERSIZE] = Slot->WetBuffer;
-    ALfloat *restrict WetClickRemoval = Slot->ClickRemoval;
-    ALfloat *restrict WetPendingClicks = Slot->PendingClicks;
-    const ALfloat WetGain = params->Gain;
+    ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
+    ALfloat *restrict ClickRemoval = params->ClickRemoval;
+    ALfloat *restrict PendingClicks = params->PendingClicks;
+    ALfloat WetGain;
     __m128 gain;
     ALuint pos;
 
+    WetGain = params->Gain;
     if(!(WetGain > 0.00001f))
         return;
 
     if(OutPos == 0)
-        WetClickRemoval[0] -= data[0] * WetGain;
+        ClickRemoval[0] -= data[0] * WetGain;
 
     gain = _mm_set1_ps(WetGain);
     for(pos = 0;BufferSize-pos > 3;pos += 4)
     {
         const __m128 val4 = _mm_load_ps(&data[pos]);
-        __m128 wet4 = _mm_load_ps(&WetBuffer[0][OutPos+pos]);
+        __m128 wet4 = _mm_load_ps(&OutBuffer[0][OutPos+pos]);
         wet4 = _mm_add_ps(wet4, _mm_mul_ps(val4, gain));
-        _mm_store_ps(&WetBuffer[0][OutPos+pos], wet4);
+        _mm_store_ps(&OutBuffer[0][OutPos+pos], wet4);
     }
     for(;pos < BufferSize;pos++)
-        WetBuffer[0][OutPos+pos] += data[pos] * WetGain;
+        OutBuffer[0][OutPos+pos] += data[pos] * WetGain;
 
     if(OutPos+pos == SamplesToDo)
-        WetPendingClicks[0] += data[pos] * WetGain;
+        PendingClicks[0] += data[pos] * WetGain;
 }

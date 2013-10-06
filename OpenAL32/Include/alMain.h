@@ -21,6 +21,13 @@
 #endif
 
 
+#ifdef IN_IDE_PARSER
+/* KDevelop's parser doesn't recognize the C99-standard restrict keyword, but
+ * recent versions (at least 4.5.1) do recognize GCC's __restrict. */
+#define restrict __restrict
+#endif
+
+
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
 typedef int64_t ALint64;

@@ -62,7 +62,7 @@ typedef struct DirectParams {
      * target (eg. FrontLeft). Not used with HRTF. */
     ALfloat Gains[MAX_INPUT_CHANNELS][MaxChannels];
 
-    ALfilterState Filter[MAX_INPUT_CHANNELS];
+    ALfilterState LpFilter[MAX_INPUT_CHANNELS];
 } DirectParams;
 
 typedef struct SendParams {
@@ -72,7 +72,7 @@ typedef struct SendParams {
      * output buffer. */
     ALfloat Gain;
 
-    ALfilterState Filter[MAX_INPUT_CHANNELS];
+    ALfilterState LpFilter[MAX_INPUT_CHANNELS];
 } SendParams;
 
 

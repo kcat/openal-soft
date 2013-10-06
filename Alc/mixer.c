@@ -328,7 +328,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             {
                 DirectParams *directparms = &Source->Params.Direct;
 
-                DoFilter(&directparms->Filter[chan], SrcData, ResampledData,
+                DoFilter(&directparms->LpFilter[chan], SrcData, ResampledData,
                          DstBufferSize);
                 Source->Params.DryMix(directparms, SrcData, chan, OutPos,
                                       SamplesToDo, DstBufferSize);
@@ -340,7 +340,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
                 if(!sendparms->Slot)
                     continue;
 
-                DoFilter(&sendparms->Filter[chan], SrcData, ResampledData,
+                DoFilter(&sendparms->LpFilter[chan], SrcData, ResampledData,
                          DstBufferSize);
                 Source->Params.WetMix(sendparms, SrcData, OutPos,
                                       SamplesToDo, DstBufferSize);

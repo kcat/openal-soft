@@ -2430,7 +2430,7 @@ static ALint64 GetSourceOffset(const ALsource *Source)
         BufferList = BufferList->next;
     }
 
-    return (ALint64)minu64(readPos, MAKEU64(0x7fffffff,0xffffffff));
+    return (ALint64)minu64(readPos, U64(0x7fffffffffffffff));
 }
 
 /* GetSourceSecOffset

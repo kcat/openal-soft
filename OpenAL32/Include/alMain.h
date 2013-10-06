@@ -46,7 +46,17 @@ typedef unsigned long long ALuint64;
 typedef ptrdiff_t ALintptrEXT;
 typedef ptrdiff_t ALsizeiptrEXT;
 
-#define MAKEU64(x,y) (((ALuint64)(x)<<32)|(ALuint64)(y))
+#ifndef U64
+#if !defined(_MSC_VER)
+#if SIZEOF_LONG_LONG == 8
+#define U64(x) ((ALuint64)(x##ull))
+#elif SIZEOF_LONG == 8
+#define U64(x) ((ALuint64)(x##ul))
+#endif
+#else
+#define U64(x) ((ALuint64)(x##ui64))
+#endif
+#endif
 
 #ifdef HAVE_GCC_FORMAT
 #define PRINTF_STYLE(x, y) __attribute__((format(printf, (x), (y))))

@@ -148,14 +148,14 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
         for(k = 0;k < MaxChannels;k++)
         {
             ALfloat gain = state->Gain[0][k];
-            if(gain > 0.00001f)
+            if(gain > GAIN_SILENCE_THRESHOLD)
             {
                 for(i = 0;i < td;i++)
                     SamplesOut[k][i+base] += temps[i][0] * gain;
             }
 
             gain = state->Gain[1][k];
-            if(gain > 0.00001f)
+            if(gain > GAIN_SILENCE_THRESHOLD)
             {
                 for(i = 0;i < td;i++)
                     SamplesOut[k][i+base] += temps[i][1] * gain;

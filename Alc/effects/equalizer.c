@@ -154,7 +154,7 @@ static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesTo
         for(kt = 0;kt < MaxChannels;kt++)
         {
             ALfloat gain = state->Gain[kt];
-            if(!(gain > 0.00001f))
+            if(!(gain > GAIN_SILENCE_THRESHOLD))
                 continue;
 
             for(it = 0;it < td;it++)

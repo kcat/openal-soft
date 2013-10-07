@@ -203,14 +203,14 @@ static void Process##func(ALchorusState *state, ALuint SamplesToDo,            \
         for(kt = 0;kt < MaxChannels;kt++)                                      \
         {                                                                      \
             ALfloat gain = state->Gain[0][kt];                                 \
-            if(gain > 0.00001f)                                                \
+            if(gain > GAIN_SILENCE_THRESHOLD)                                  \
             {                                                                  \
                 for(it = 0;it < td;it++)                                       \
                     SamplesOut[kt][it+base] += temps[it][0] * gain;            \
             }                                                                  \
                                                                                \
             gain = state->Gain[1][kt];                                         \
-            if(gain > 0.00001f)                                                \
+            if(gain > GAIN_SILENCE_THRESHOLD)                                  \
             {                                                                  \
                 for(it = 0;it < td;it++)                                       \
                     SamplesOut[kt][it+base] += temps[it][1] * gain;            \

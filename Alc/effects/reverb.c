@@ -575,11 +575,11 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
     for(c = 0;c < MaxChannels;c++)
     {
         ALfloat gain = State->Gain[c];
-        if(gain > 0.00001f)
-        {
-            for(index = 0;index < SamplesToDo;index++)
-                SamplesOut[c][index] += gain * out[index][c&3];
-        }
+        if(!(gain > GAIN_SILENCE_THRESHOLD))
+            continue;
+
+        for(index = 0;index < SamplesToDo;index++)
+            SamplesOut[c][index] += gain * out[index][c&3];
     }
 }
 
@@ -595,15 +595,16 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
 
     for(c = 0;c < MaxChannels;c++)
     {
-        ALfloat earlyGain = State->Early.PanGain[c];
-        ALfloat lateGain = State->Late.PanGain[c];
+        ALfloat earlyGain, lateGain;
 
-        if(earlyGain > 0.00001f)
+        earlyGain = State->Early.PanGain[c];
+        if(earlyGain > GAIN_SILENCE_THRESHOLD)
         {
             for(index = 0;index < SamplesToDo;index++)
                 SamplesOut[c][index] += earlyGain*early[index][c&3];
         }
-        if(lateGain > 0.00001f)
+        lateGain = State->Late.PanGain[c];
+        if(lateGain > GAIN_SILENCE_THRESHOLD)
         {
             for(index = 0;index < SamplesToDo;index++)
                 SamplesOut[c][index] += lateGain*late[index][c&3];

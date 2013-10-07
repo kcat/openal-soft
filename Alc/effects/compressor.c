@@ -117,7 +117,7 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint Samples
         for(kt = 0;kt < MaxChannels;kt++)
         {
             ALfloat gain = state->Gain[kt] * envgain * 2.0f;
-            if(!(gain > 0.00001f))
+            if(!(gain > GAIN_SILENCE_THRESHOLD))
                 continue;
 
             for(it = 0;it < td;it++)

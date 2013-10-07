@@ -102,7 +102,7 @@ static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
         for(k = 0;k < MaxChannels;k++)                                        \
         {                                                                     \
             ALfloat gain = state->Gain[k];                                    \
-            if(!(gain > 0.00001f))                                            \
+            if(!(gain > GAIN_SILENCE_THRESHOLD))                              \
                 continue;                                                     \
                                                                               \
             for(i = 0;i < td;i++)                                             \

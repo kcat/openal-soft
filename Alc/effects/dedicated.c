@@ -78,7 +78,7 @@ static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesTo
 
     for(c = 0;c < MaxChannels;c++)
     {
-        if(!(gains[c] > 0.00001f))
+        if(!(gains[c] > GAIN_SILENCE_THRESHOLD))
             continue;
 
         for(i = 0;i < SamplesToDo;i++)

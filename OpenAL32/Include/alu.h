@@ -43,6 +43,8 @@ typedef ALvoid (*WetMixerFunc)(const struct SendParams *params,
                                ALuint BufferSize);
 
 
+#define GAIN_SILENCE_THRESHOLD  (0.00001f)
+
 #define SPEEDOFSOUNDMETRESPERSEC  (343.3f)
 #define AIRABSORBGAINHF           (0.99426f) /* -0.05dB */
 

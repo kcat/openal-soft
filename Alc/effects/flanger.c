@@ -339,7 +339,7 @@ void ALflanger_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, c
     ALflanger_setParamf(effect, context, param, vals[0]);
 }
 
-void ALflanger_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALflanger_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -356,11 +356,11 @@ void ALflanger_getParami(ALeffect *effect, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALflanger_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALflanger_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALflanger_getParami(effect, context, param, vals);
 }
-void ALflanger_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALflanger_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -385,7 +385,7 @@ void ALflanger_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALflanger_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALflanger_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     ALflanger_getParamf(effect, context, param, vals);
 }

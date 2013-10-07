@@ -148,13 +148,13 @@ void ALdedicated_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param,
     ALdedicated_setParamf(effect, context, param, vals[0]);
 }
 
-void ALdedicated_getParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+void ALdedicated_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-void ALdedicated_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALdedicated_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALdedicated_getParami(effect, context, param, vals);
 }
-void ALdedicated_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALdedicated_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -167,7 +167,7 @@ void ALdedicated_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALdedicated_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALdedicated_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     ALdedicated_getParamf(effect, context, param, vals);
 }

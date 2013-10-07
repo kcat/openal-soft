@@ -173,21 +173,18 @@ void ALcompressor_setParami(ALeffect *effect, ALCcontext *context, ALenum param,
         SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-
 void ALcompressor_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     ALcompressor_setParami(effect, context, param, vals[0]);
 }
-
 void ALcompressor_setParamf(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALfloat UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-
 void ALcompressor_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
     ALcompressor_setParamf(effect, context, param, vals[0]);
 }
 
-void ALcompressor_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALcompressor_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 { 
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -199,14 +196,13 @@ void ALcompressor_getParami(ALeffect *effect, ALCcontext *context, ALenum param,
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALcompressor_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALcompressor_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALcompressor_getParami(effect, context, param, vals);
 }
-void ALcompressor_getParamf(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(val))
+void ALcompressor_getParamf(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-
-void ALcompressor_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALcompressor_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     ALcompressor_getParamf(effect, context, param, vals);
 }

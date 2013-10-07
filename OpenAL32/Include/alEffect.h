@@ -35,10 +35,10 @@ struct ALeffectVtable {
     void (*const setParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
     void (*const setParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
 
-    void (*const getParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-    void (*const getParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-    void (*const getParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*const getParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
+    void (*const getParami)(const struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
+    void (*const getParamiv)(const struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
+    void (*const getParamf)(const struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
+    void (*const getParamfv)(const struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
 };
 
 #define DEFINE_ALEFFECT_VTABLE(T)           \

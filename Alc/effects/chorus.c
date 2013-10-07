@@ -339,7 +339,7 @@ void ALchorus_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, co
     ALchorus_setParamf(effect, context, param, vals[0]);
 }
 
-void ALchorus_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALchorus_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -356,11 +356,11 @@ void ALchorus_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALi
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALchorus_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALchorus_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALchorus_getParami(effect, context, param, vals);
 }
-void ALchorus_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALchorus_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -385,7 +385,7 @@ void ALchorus_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALf
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALchorus_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALchorus_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     ALchorus_getParamf(effect, context, param, vals);
 }

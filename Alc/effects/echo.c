@@ -262,13 +262,13 @@ void ALecho_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, cons
     ALecho_setParamf(effect, context, param, vals[0]);
 }
 
-void ALecho_getParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+void ALecho_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-void ALecho_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALecho_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALecho_getParami(effect, context, param, vals);
 }
-void ALecho_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALecho_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -297,7 +297,7 @@ void ALecho_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALecho_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALecho_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     ALecho_getParamf(effect, context, param, vals);
 }

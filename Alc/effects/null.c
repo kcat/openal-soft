@@ -126,7 +126,7 @@ void ALnull_setParamfv(ALeffect* UNUSED(effect), ALCcontext *context, ALenum par
     }
 }
 
-void ALnull_getParami(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALint* UNUSED(val))
+void ALnull_getParami(const ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALint* UNUSED(val))
 {
     switch(param)
     {
@@ -134,7 +134,7 @@ void ALnull_getParami(ALeffect* UNUSED(effect), ALCcontext *context, ALenum para
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_getParamiv(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALint* UNUSED(vals))
+void ALnull_getParamiv(const ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALint* UNUSED(vals))
 {
     switch(param)
     {
@@ -142,7 +142,7 @@ void ALnull_getParamiv(ALeffect* UNUSED(effect), ALCcontext *context, ALenum par
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_getParamf(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALfloat* UNUSED(val))
+void ALnull_getParamf(const ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALfloat* UNUSED(val))
 {
     switch(param)
     {
@@ -150,7 +150,7 @@ void ALnull_getParamf(ALeffect* UNUSED(effect), ALCcontext *context, ALenum para
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_getParamfv(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALfloat* UNUSED(vals))
+void ALnull_getParamfv(const ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALfloat* UNUSED(vals))
 {
     switch(param)
     {

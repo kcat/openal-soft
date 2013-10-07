@@ -269,7 +269,7 @@ void ALmodulator_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param,
     ALmodulator_setParami(effect, context, param, vals[0]);
 }
 
-void ALmodulator_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALmodulator_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -288,13 +288,13 @@ void ALmodulator_getParami(ALeffect *effect, ALCcontext *context, ALenum param, 
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALmodulator_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALmodulator_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALmodulator_getParami(effect, context, param, vals);
 }
-void ALmodulator_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALmodulator_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
-    ALeffectProps *props = &effect->Props;
+    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_RING_MODULATOR_FREQUENCY:
@@ -308,7 +308,7 @@ void ALmodulator_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALmodulator_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALmodulator_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     ALmodulator_getParamf(effect, context, param, vals);
 }

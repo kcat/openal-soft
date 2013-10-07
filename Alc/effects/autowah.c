@@ -200,7 +200,6 @@ void ALautowah_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, c
 {
     ALautowah_setParami(effect, context, param, vals[0]);
 }
-
 void ALautowah_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
@@ -234,19 +233,18 @@ void ALautowah_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-
 void ALautowah_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
     ALautowah_setParamf(effect, context, param, vals[0]);
 }
 
-void ALautowah_getParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+void ALautowah_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-void ALautowah_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALautowah_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALautowah_getParami(effect, context, param, vals);
 }
-void ALautowah_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALautowah_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -271,8 +269,7 @@ void ALautowah_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-
-void ALautowah_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALautowah_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     ALautowah_getParamf(effect, context, param, vals);
 }

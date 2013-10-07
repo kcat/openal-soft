@@ -25,6 +25,11 @@
 /* KDevelop's parser doesn't recognize the C99-standard restrict keyword, but
  * recent versions (at least 4.5.1) do recognize GCC's __restrict. */
 #define restrict __restrict
+/* KDevelop won't see the ALIGN macro from config.h when viewing files that
+ * don't include it directly (e.g. headers). */
+#ifndef ALIGN
+#define ALIGN(x)
+#endif
 #endif
 
 

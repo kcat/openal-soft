@@ -9,15 +9,10 @@
 #include "alError.h"
 
 
-typedef struct ALnullStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALnullStateFactory;
-
 typedef struct ALnullState {
     DERIVE_FROM_TYPE(ALeffectState);
 } ALnullState;
 
-static ALnullStateFactory NullFactory;
 
 /* This destructs (not free!) the effect state. It's called only when the
  * effect slot is no longer used.
@@ -63,6 +58,10 @@ static void ALnullState_Delete(ALnullState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALnullState);
 
 
+typedef struct ALnullStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALnullStateFactory;
+
 /* Creates ALeffectState objects of the appropriate type. */
 ALeffectState *ALnullStateFactory_create(ALnullStateFactory *UNUSED(factory))
 {
@@ -79,16 +78,10 @@ ALeffectState *ALnullStateFactory_create(ALnullStateFactory *UNUSED(factory))
 /* Define the ALeffectStateFactory vtable for this type. */
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALnullStateFactory);
 
-
-static void init_none_factory(void)
-{
-    SET_VTABLE2(ALnullStateFactory, ALeffectStateFactory, &NullFactory);
-}
-
 ALeffectStateFactory *ALnullStateFactory_getFactory(void)
 {
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    pthread_once(&once, init_none_factory);
+    static ALnullStateFactory NullFactory = { { GET_VTABLE2(ALnullStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &NullFactory);
 }
 

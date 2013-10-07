@@ -93,8 +93,11 @@ static const union {
 #define STATIC_CAST(to, obj)         (&(obj)->to##_parent)
 #define STATIC_UPCAST(to, from, obj) ((to*)((char*)(obj) - offsetof(to, from##_parent)))
 
-#define SET_VTABLE1(T1, obj)     ((obj)->vtbl = &(T1##_vtable))
-#define SET_VTABLE2(T1, T2, obj) SET_VTABLE1(T1##_##T2, STATIC_CAST(T2, (obj)))
+#define GET_VTABLE1(T1)     (&(T1##_vtable))
+#define GET_VTABLE2(T1, T2) (&(T1##_##T2##_vtable))
+
+#define SET_VTABLE1(T1, obj)     ((obj)->vtbl = GET_VTABLE1(T1))
+#define SET_VTABLE2(T1, T2, obj) (STATIC_CAST(T2, obj)->vtbl = GET_VTABLE2(T1, T2))
 
 /* Helper to extract an argument list for VCALL. Not used directly. */
 #define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__

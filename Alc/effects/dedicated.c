@@ -29,13 +29,6 @@
 #include "alu.h"
 
 
-typedef struct ALdedicatedStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALdedicatedStateFactory;
-
-static ALdedicatedStateFactory DedicatedFactory;
-
-
 typedef struct ALdedicatedState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -91,6 +84,10 @@ static void ALdedicatedState_Delete(ALdedicatedState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
 
 
+typedef struct ALdedicatedStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALdedicatedStateFactory;
+
 ALeffectState *ALdedicatedStateFactory_create(ALdedicatedStateFactory *UNUSED(factory))
 {
     ALdedicatedState *state;
@@ -109,15 +106,10 @@ ALeffectState *ALdedicatedStateFactory_create(ALdedicatedStateFactory *UNUSED(fa
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALdedicatedStateFactory);
 
 
-static void init_dedicated_factory(void)
-{
-    SET_VTABLE2(ALdedicatedStateFactory, ALeffectStateFactory, &DedicatedFactory);
-}
-
 ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void)
 {
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    pthread_once(&once, init_dedicated_factory);
+    static ALdedicatedStateFactory DedicatedFactory = { { GET_VTABLE2(ALdedicatedStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &DedicatedFactory);
 }
 

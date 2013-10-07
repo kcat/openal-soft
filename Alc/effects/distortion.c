@@ -30,13 +30,6 @@
 #include "alu.h"
 
 
-typedef struct ALdistortionStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALdistortionStateFactory;
-
-static ALdistortionStateFactory DistortionFactory;
-
-
 typedef struct ALdistortionState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -185,6 +178,10 @@ static void ALdistortionState_Delete(ALdistortionState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
 
 
+typedef struct ALdistortionStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALdistortionStateFactory;
+
 static ALeffectState *ALdistortionStateFactory_create(ALdistortionStateFactory *UNUSED(factory))
 {
     ALdistortionState *state;
@@ -202,15 +199,10 @@ static ALeffectState *ALdistortionStateFactory_create(ALdistortionStateFactory *
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALdistortionStateFactory);
 
 
-static void init_distortion_factory(void)
-{
-    SET_VTABLE2(ALdistortionStateFactory, ALeffectStateFactory, &DistortionFactory);
-}
-
 ALeffectStateFactory *ALdistortionStateFactory_getFactory(void)
 {
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    pthread_once(&once, init_distortion_factory);
+    static ALdistortionStateFactory DistortionFactory = { { GET_VTABLE2(ALdistortionStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &DistortionFactory);
 }
 

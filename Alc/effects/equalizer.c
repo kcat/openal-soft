@@ -30,13 +30,6 @@
 #include "alu.h"
 
 
-typedef struct ALequalizerStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALequalizerStateFactory;
-
-static ALequalizerStateFactory EqualizerFactory;
-
-
 /*  The document  "Effects Extension Guide.pdf"  says that low and high  *
  *  frequencies are cutoff frequencies. This is not fully correct, they  *
  *  are corner frequencies for low and high shelf filters. If they were  *
@@ -170,6 +163,10 @@ static void ALequalizerState_Delete(ALequalizerState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
 
 
+typedef struct ALequalizerStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALequalizerStateFactory;
+
 ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *UNUSED(factory))
 {
     ALequalizerState *state;
@@ -189,16 +186,10 @@ ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *UNUSED(fa
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALequalizerStateFactory);
 
-
-static void init_equalizer_factory(void)
-{
-    SET_VTABLE2(ALequalizerStateFactory, ALeffectStateFactory, &EqualizerFactory);
-}
-
 ALeffectStateFactory *ALequalizerStateFactory_getFactory(void)
 {
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    pthread_once(&once, init_equalizer_factory);
+    static ALequalizerStateFactory EqualizerFactory = { { GET_VTABLE2(ALequalizerStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &EqualizerFactory);
 }
 

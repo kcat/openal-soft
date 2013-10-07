@@ -26,12 +26,6 @@
 #include "alAuxEffectSlot.h"
 #include "alu.h"
 
-typedef struct ALcompressorStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALcompressorStateFactory;
-
-static ALcompressorStateFactory CompressorFactory;
-
 
 typedef struct ALcompressorState {
     DERIVE_FROM_TYPE(ALeffectState);
@@ -138,6 +132,10 @@ static void ALcompressorState_Delete(ALcompressorState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALcompressorState);
 
 
+typedef struct ALcompressorStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALcompressorStateFactory;
+
 static ALeffectState *ALcompressorStateFactory_create(ALcompressorStateFactory *UNUSED(factory))
 {
     ALcompressorState *state;
@@ -153,7 +151,8 @@ DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALcompressorStateFactory);
 
 ALeffectStateFactory *ALcompressorStateFactory_getFactory(void)
 {
-    SET_VTABLE2(ALcompressorStateFactory, ALeffectStateFactory, &CompressorFactory);
+    static ALcompressorStateFactory CompressorFactory = { { GET_VTABLE2(ALcompressorStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &CompressorFactory);
 }
 

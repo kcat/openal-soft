@@ -30,13 +30,6 @@
 #include "alu.h"
 
 
-typedef struct ALchorusStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALchorusStateFactory;
-
-static ALchorusStateFactory ChorusFactory;
-
-
 typedef struct ALchorusState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -244,6 +237,10 @@ static void ALchorusState_Delete(ALchorusState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALchorusState);
 
 
+typedef struct ALchorusStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALchorusStateFactory;
+
 static ALeffectState *ALchorusStateFactory_create(ALchorusStateFactory *UNUSED(factory))
 {
     ALchorusState *state;
@@ -263,15 +260,10 @@ static ALeffectState *ALchorusStateFactory_create(ALchorusStateFactory *UNUSED(f
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALchorusStateFactory);
 
 
-static void init_chorus_factory(void)
-{
-    SET_VTABLE2(ALchorusStateFactory, ALeffectStateFactory, &ChorusFactory);
-}
-
 ALeffectStateFactory *ALchorusStateFactory_getFactory(void)
 {
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    pthread_once(&once, init_chorus_factory);
+    static ALchorusStateFactory ChorusFactory = { { GET_VTABLE2(ALchorusStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &ChorusFactory);
 }
 

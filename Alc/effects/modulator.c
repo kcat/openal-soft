@@ -30,13 +30,6 @@
 #include "alu.h"
 
 
-typedef struct ALmodulatorStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALmodulatorStateFactory;
-
-static ALmodulatorStateFactory ModulatorFactory;
-
-
 typedef struct ALmodulatorState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -187,6 +180,10 @@ static void ALmodulatorState_Delete(ALmodulatorState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
 
 
+typedef struct ALmodulatorStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALmodulatorStateFactory;
+
 static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *UNUSED(factory))
 {
     ALmodulatorState *state;
@@ -205,16 +202,10 @@ static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *UN
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALmodulatorStateFactory);
 
-
-static void init_modulator_factory(void)
-{
-    SET_VTABLE2(ALmodulatorStateFactory, ALeffectStateFactory, &ModulatorFactory);
-}
-
 ALeffectStateFactory *ALmodulatorStateFactory_getFactory(void)
 {
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    pthread_once(&once, init_modulator_factory);
+    static ALmodulatorStateFactory ModulatorFactory = { { GET_VTABLE2(ALmodulatorStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &ModulatorFactory);
 }
 

@@ -30,13 +30,6 @@
 #include "alu.h"
 
 
-typedef struct ALechoStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALechoStateFactory;
-
-static ALechoStateFactory EchoFactory;
-
-
 typedef struct ALechoState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -176,6 +169,10 @@ static void ALechoState_Delete(ALechoState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALechoState);
 
 
+typedef struct ALechoStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALechoStateFactory;
+
 ALeffectState *ALechoStateFactory_create(ALechoStateFactory *UNUSED(factory))
 {
     ALechoState *state;
@@ -198,16 +195,10 @@ ALeffectState *ALechoStateFactory_create(ALechoStateFactory *UNUSED(factory))
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALechoStateFactory);
 
-
-static void init_echo_factory(void)
-{
-    SET_VTABLE2(ALechoStateFactory, ALeffectStateFactory, &EchoFactory);
-}
-
 ALeffectStateFactory *ALechoStateFactory_getFactory(void)
 {
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    pthread_once(&once, init_echo_factory);
+    static ALechoStateFactory EchoFactory = { { GET_VTABLE2(ALechoStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &EchoFactory);
 }
 

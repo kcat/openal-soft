@@ -35,13 +35,6 @@
 #define OCTAVE 2.0f
 
 
-typedef struct ALautowahStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALautowahStateFactory;
-
-static ALautowahStateFactory AutowahFactory;
-
-
 /* We use a lfo with a custom low-pass filter to generate autowah
  * effect and a high-pass filter to avoid distortion and aliasing.
  * By adding the two filters up, we obtain a dynamic bandpass filter.
@@ -171,6 +164,10 @@ static void ALautowahState_Delete(ALautowahState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALautowahState);
 
 
+typedef struct ALautowahStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALautowahStateFactory;
+
 static ALeffectState *ALautowahStateFactory_create(ALautowahStateFactory *UNUSED(factory))
 {
     ALautowahState *state;
@@ -189,7 +186,8 @@ DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALautowahStateFactory);
 
 ALeffectStateFactory *ALautowahStateFactory_getFactory(void)
 {
-    SET_VTABLE2(ALautowahStateFactory, ALeffectStateFactory, &AutowahFactory);
+    static ALautowahStateFactory AutowahFactory = { { GET_VTABLE2(ALautowahStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &AutowahFactory);
 }
 

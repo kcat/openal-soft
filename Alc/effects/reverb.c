@@ -32,13 +32,6 @@
 #include "alError.h"
 
 
-typedef struct ALreverbStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALreverbStateFactory;
-
-static ALreverbStateFactory ReverbFactory;
-
-
 typedef struct DelayLine
 {
     // The delay lines use sample lengths that are powers of 2 to allow the
@@ -1185,6 +1178,10 @@ static void ALreverbState_Delete(ALreverbState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALreverbState);
 
 
+typedef struct ALreverbStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALreverbStateFactory;
+
 static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(factory))
 {
     ALreverbState *state;
@@ -1278,16 +1275,10 @@ static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(f
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALreverbStateFactory);
 
-
-static void init_reverb_factory(void)
-{
-    SET_VTABLE2(ALreverbStateFactory, ALeffectStateFactory, &ReverbFactory);
-}
-
 ALeffectStateFactory *ALreverbStateFactory_getFactory(void)
 {
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    pthread_once(&once, init_reverb_factory);
+    static ALreverbStateFactory ReverbFactory = { { GET_VTABLE2(ALreverbStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &ReverbFactory);
 }
 

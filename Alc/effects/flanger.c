@@ -30,13 +30,6 @@
 #include "alu.h"
 
 
-typedef struct ALflangerStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALflangerStateFactory;
-
-static ALflangerStateFactory FlangerFactory;
-
-
 typedef struct ALflangerState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -244,6 +237,10 @@ static void ALflangerState_Delete(ALflangerState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALflangerState);
 
 
+typedef struct ALflangerStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALflangerStateFactory;
+
 ALeffectState *ALflangerStateFactory_create(ALflangerStateFactory *UNUSED(factory))
 {
     ALflangerState *state;
@@ -262,16 +259,10 @@ ALeffectState *ALflangerStateFactory_create(ALflangerStateFactory *UNUSED(factor
 
 DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALflangerStateFactory);
 
-
-static void init_flanger_factory(void)
-{
-    SET_VTABLE2(ALflangerStateFactory, ALeffectStateFactory, &FlangerFactory);
-}
-
 ALeffectStateFactory *ALflangerStateFactory_getFactory(void)
 {
-    static pthread_once_t once = PTHREAD_ONCE_INIT;
-    pthread_once(&once, init_flanger_factory);
+    static ALflangerStateFactory FlangerFactory = { { GET_VTABLE2(ALflangerStateFactory, ALeffectStateFactory) } };
+
     return STATIC_CAST(ALeffectStateFactory, &FlangerFactory);
 }
 

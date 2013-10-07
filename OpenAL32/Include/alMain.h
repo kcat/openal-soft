@@ -889,7 +889,7 @@ void FillCPUCaps(ALuint capfilter);
     return;                                                                    \
 } while(0)
 
-#define SET_ERROR_AND_RETURN_VAL(ctx, err, val) do {                           \
+#define SET_ERROR_AND_RETURN_VALUE(ctx, err, val) do {                         \
     alSetError((ctx), (err));                                                  \
     return (val);                                                              \
 } while(0)

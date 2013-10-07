@@ -47,9 +47,8 @@ typedef struct ALcompressorState {
     ALfloat Release;
 } ALcompressorState;
 
-static ALvoid ALcompressorState_Destruct(ALcompressorState *state)
+static ALvoid ALcompressorState_Destruct(ALcompressorState *UNUSED(state))
 {
-    (void)state;
 }
 
 static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdevice *device)
@@ -139,10 +138,9 @@ static void ALcompressorState_Delete(ALcompressorState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALcompressorState);
 
 
-static ALeffectState *ALcompressorStateFactory_create(ALcompressorStateFactory *factory)
+static ALeffectState *ALcompressorStateFactory_create(ALcompressorStateFactory *UNUSED(factory))
 {
     ALcompressorState *state;
-    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;
@@ -181,8 +179,8 @@ void ALcompressor_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param
     ALcompressor_setParami(effect, context, param, vals[0]);
 }
 
-void ALcompressor_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
-{SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val;}
+void ALcompressor_setParamf(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALfloat UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 
 void ALcompressor_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
@@ -205,8 +203,8 @@ void ALcompressor_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param
 {
     ALcompressor_getParami(effect, context, param, vals);
 }
-void ALcompressor_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
-{SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val;}
+void ALcompressor_getParamf(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 
 void ALcompressor_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
 {

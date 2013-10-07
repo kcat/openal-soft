@@ -88,16 +88,13 @@ typedef struct ALequalizerState {
     ALfilterState filter[4];
 } ALequalizerState;
 
-static ALvoid ALequalizerState_Destruct(ALequalizerState *state)
+static ALvoid ALequalizerState_Destruct(ALequalizerState *UNUSED(state))
 {
-    (void)state;
 }
 
-static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevice *device)
+static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *UNUSED(state), ALCdevice *UNUSED(device))
 {
     return AL_TRUE;
-    (void)state;
-    (void)device;
 }
 
 static ALvoid ALequalizerState_update(ALequalizerState *state, ALCdevice *device, const ALeffectslot *slot)
@@ -173,11 +170,10 @@ static void ALequalizerState_Delete(ALequalizerState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
 
 
-ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *factory)
+ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *UNUSED(factory))
 {
     ALequalizerState *state;
     int it;
-    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;
@@ -207,8 +203,8 @@ ALeffectStateFactory *ALequalizerStateFactory_getFactory(void)
 }
 
 
-void ALequalizer_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
+void ALequalizer_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 void ALequalizer_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     ALequalizer_setParami(effect, context, param, vals[0]);
@@ -287,8 +283,8 @@ void ALequalizer_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param,
     ALequalizer_setParamf(effect, context, param, vals[0]);
 }
 
-void ALequalizer_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
+void ALequalizer_getParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 void ALequalizer_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALequalizer_getParami(effect, context, param, vals);

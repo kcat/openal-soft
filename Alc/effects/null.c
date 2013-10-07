@@ -22,41 +22,34 @@ static ALnullStateFactory NullFactory;
 /* This destructs (not free!) the effect state. It's called only when the
  * effect slot is no longer used.
  */
-static ALvoid ALnullState_Destruct(ALnullState *state)
+static ALvoid ALnullState_Destruct(ALnullState* UNUSED(state))
 {
-    (void)state;
 }
 
 /* This updates the device-dependant effect state. This is called on
  * initialization and any time the device parameters (eg. playback frequency,
  * format) have been changed.
  */
-static ALboolean ALnullState_deviceUpdate(ALnullState *state, ALCdevice *device)
+static ALboolean ALnullState_deviceUpdate(ALnullState* UNUSED(state), ALCdevice* UNUSED(device))
 {
     return AL_TRUE;
-    (void)state;
-    (void)device;
 }
 
 /* This updates the effect state. This is called any time the effect is
  * (re)loaded into a slot.
  */
-static ALvoid ALnullState_update(ALnullState *state, ALCdevice *device, const ALeffectslot *slot)
+static ALvoid ALnullState_update(ALnullState* UNUSED(state), ALCdevice* UNUSED(device), const ALeffectslot* UNUSED(slot))
 {
-    (void)state;
-    (void)device;
-    (void)slot;
 }
 
 /* This processes the effect state, for the given number of samples from the
  * input to the output buffer. The result should be added to the output buffer,
  * not replace it.
  */
-static ALvoid ALnullState_process(ALnullState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE])
+static ALvoid ALnullState_process(ALnullState* UNUSED(state), ALuint UNUSED(samplesToDo), const ALfloat *restrict UNUSED(samplesIn), ALfloat (*restrict samplesOut)[BUFFERSIZE])
 {
-    (void)state;
-    (void)samplesToDo;
-    (void)samplesIn;
+    /* NOTE: Couldn't use the UNUSED macro on samplesOut due to the way GCC's
+     * __attribute__ declaration interacts with the parenthesis. */
     (void)samplesOut;
 }
 
@@ -71,10 +64,9 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALnullState);
 
 
 /* Creates ALeffectState objects of the appropriate type. */
-ALeffectState *ALnullStateFactory_create(ALnullStateFactory *factory)
+ALeffectState *ALnullStateFactory_create(ALnullStateFactory *UNUSED(factory))
 {
     ALnullState *state;
-    (void)factory;
 
     state = calloc(1, sizeof(*state));
     if(!state) return NULL;
@@ -101,40 +93,32 @@ ALeffectStateFactory *ALnullStateFactory_getFactory(void)
 }
 
 
-void ALnull_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void ALnull_setParami(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
 {
-    (void)effect;
-    (void)val;
     switch(param)
     {
         default:
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+void ALnull_setParamiv(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, const ALint* UNUSED(vals))
 {
-    (void)effect;
-    (void)vals;
     switch(param)
     {
         default:
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALnull_setParamf(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALfloat UNUSED(val))
 {
-    (void)effect;
-    (void)val;
     switch(param)
     {
         default:
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALnull_setParamfv(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, const ALfloat* UNUSED(vals))
 {
-    (void)effect;
-    (void)vals;
     switch(param)
     {
         default:
@@ -142,40 +126,32 @@ void ALnull_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, cons
     }
 }
 
-void ALnull_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALnull_getParami(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALint* UNUSED(val))
 {
-    (void)effect;
-    (void)val;
     switch(param)
     {
         default:
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+void ALnull_getParamiv(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALint* UNUSED(vals))
 {
-    (void)effect;
-    (void)vals;
     switch(param)
     {
         default:
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_getParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALnull_getParamf(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALfloat* UNUSED(val))
 {
-    (void)effect;
-    (void)val;
     switch(param)
     {
         default:
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-void ALnull_getParamfv(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALnull_getParamfv(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALfloat* UNUSED(vals))
 {
-    (void)effect;
-    (void)vals;
     switch(param)
     {
         default:

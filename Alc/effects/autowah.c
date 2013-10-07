@@ -66,16 +66,13 @@ typedef struct ALautowahState {
     ALfilterState high_pass;
 } ALautowahState;
 
-static ALvoid ALautowahState_Destruct(ALautowahState *state)
+static ALvoid ALautowahState_Destruct(ALautowahState *UNUSED(state))
 {
-    (void)state;
 }
 
-static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *device)
+static ALboolean ALautowahState_deviceUpdate(ALautowahState *UNUSED(state), ALCdevice *UNUSED(device))
 {
     return AL_TRUE;
-    (void)state;
-    (void)device;
 }
 
 static ALvoid ALautowahState_update(ALautowahState *state, ALCdevice *Device, const ALeffectslot *Slot)
@@ -174,10 +171,9 @@ static void ALautowahState_Delete(ALautowahState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALautowahState);
 
 
-static ALeffectState *ALautowahStateFactory_create(ALautowahStateFactory *factory)
+static ALeffectState *ALautowahStateFactory_create(ALautowahStateFactory *UNUSED(factory))
 {
     ALautowahState *state;
-    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;
@@ -198,8 +194,8 @@ ALeffectStateFactory *ALautowahStateFactory_getFactory(void)
 }
 
 
-void ALautowah_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
+void ALautowah_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 void ALautowah_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     ALautowah_setParami(effect, context, param, vals[0]);
@@ -244,8 +240,8 @@ void ALautowah_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, c
     ALautowah_setParamf(effect, context, param, vals[0]);
 }
 
-void ALautowah_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
+void ALautowah_getParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 void ALautowah_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALautowah_getParami(effect, context, param, vals);

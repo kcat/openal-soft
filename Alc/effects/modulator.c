@@ -121,16 +121,13 @@ DECL_TEMPLATE(Square)
 #undef DECL_TEMPLATE
 
 
-static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state)
+static ALvoid ALmodulatorState_Destruct(ALmodulatorState *UNUSED(state))
 {
-    (void)state;
 }
 
-static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *state, ALCdevice *Device)
+static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *UNUSED(state), ALCdevice *UNUSED(device))
 {
     return AL_TRUE;
-    (void)state;
-    (void)Device;
 }
 
 static ALvoid ALmodulatorState_update(ALmodulatorState *state, ALCdevice *Device, const ALeffectslot *Slot)
@@ -190,10 +187,9 @@ static void ALmodulatorState_Delete(ALmodulatorState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
 
 
-static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *factory)
+static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *UNUSED(factory))
 {
     ALmodulatorState *state;
-    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;

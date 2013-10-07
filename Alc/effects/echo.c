@@ -176,10 +176,9 @@ static void ALechoState_Delete(ALechoState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALechoState);
 
 
-ALeffectState *ALechoStateFactory_create(ALechoStateFactory *factory)
+ALeffectState *ALechoStateFactory_create(ALechoStateFactory *UNUSED(factory))
 {
     ALechoState *state;
-    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;
@@ -213,8 +212,8 @@ ALeffectStateFactory *ALechoStateFactory_getFactory(void)
 }
 
 
-void ALecho_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
+void ALecho_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 void ALecho_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     ALecho_setParami(effect, context, param, vals[0]);
@@ -263,8 +262,8 @@ void ALecho_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, cons
     ALecho_setParamf(effect, context, param, vals[0]);
 }
 
-void ALecho_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
+void ALecho_getParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 void ALecho_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALecho_getParami(effect, context, param, vals);

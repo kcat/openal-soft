@@ -50,16 +50,13 @@ typedef struct ALdistortionState {
     ALfloat edge_coeff;
 } ALdistortionState;
 
-static ALvoid ALdistortionState_Destruct(ALdistortionState *state)
+static ALvoid ALdistortionState_Destruct(ALdistortionState *UNUSED(state))
 {
-    (void)state;
 }
 
-static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *state, ALCdevice *device)
+static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *UNUSED(state), ALCdevice *UNUSED(device))
 {
     return AL_TRUE;
-    (void)state;
-    (void)device;
 }
 
 static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Device, const ALeffectslot *Slot)
@@ -188,10 +185,9 @@ static void ALdistortionState_Delete(ALdistortionState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
 
 
-static ALeffectState *ALdistortionStateFactory_create(ALdistortionStateFactory *factory)
+static ALeffectState *ALdistortionStateFactory_create(ALdistortionStateFactory *UNUSED(factory))
 {
     ALdistortionState *state;
-    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;
@@ -219,8 +215,8 @@ ALeffectStateFactory *ALdistortionStateFactory_getFactory(void)
 }
 
 
-void ALdistortion_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
+void ALdistortion_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 void ALdistortion_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     ALdistortion_setParami(effect, context, param, vals[0]);
@@ -269,8 +265,8 @@ void ALdistortion_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param
     ALdistortion_setParamf(effect, context, param, vals[0]);
 }
 
-void ALdistortion_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
+void ALdistortion_getParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 void ALdistortion_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALdistortion_getParami(effect, context, param, vals);

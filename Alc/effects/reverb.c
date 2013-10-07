@@ -1185,11 +1185,10 @@ static void ALreverbState_Delete(ALreverbState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALreverbState);
 
 
-static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory *factory)
+static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(factory))
 {
     ALreverbState *state;
     ALuint index;
-    (void)factory;
 
     state = malloc(sizeof(ALreverbState));
     if(!state) return NULL;

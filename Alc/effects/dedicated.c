@@ -43,16 +43,13 @@ typedef struct ALdedicatedState {
 } ALdedicatedState;
 
 
-static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state)
+static ALvoid ALdedicatedState_Destruct(ALdedicatedState *UNUSED(state))
 {
-    (void)state;
 }
 
-static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *state, ALCdevice *Device)
+static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *UNUSED(state), ALCdevice *UNUSED(device))
 {
     return AL_TRUE;
-    (void)state;
-    (void)Device;
 }
 
 static ALvoid ALdedicatedState_update(ALdedicatedState *state, ALCdevice *device, const ALeffectslot *Slot)
@@ -94,11 +91,10 @@ static void ALdedicatedState_Delete(ALdedicatedState *state)
 DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
 
 
-ALeffectState *ALdedicatedStateFactory_create(ALdedicatedStateFactory *factory)
+ALeffectState *ALdedicatedStateFactory_create(ALdedicatedStateFactory *UNUSED(factory))
 {
     ALdedicatedState *state;
     ALsizei s;
-    (void)factory;
 
     state = malloc(sizeof(*state));
     if(!state) return NULL;
@@ -126,8 +122,8 @@ ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void)
 }
 
 
-void ALdedicated_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
+void ALdedicated_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 void ALdedicated_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 {
     ALdedicated_setParami(effect, context, param, vals[0]);
@@ -152,8 +148,8 @@ void ALdedicated_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param,
     ALdedicated_setParamf(effect, context, param, vals[0]);
 }
 
-void ALdedicated_getParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)effect;(void)param;(void)val; }
+void ALdedicated_getParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 void ALdedicated_getParamiv(ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 {
     ALdedicated_getParami(effect, context, param, vals);

@@ -1215,134 +1215,127 @@ static ALenum GetSourcei64v(const ALsource *Source, ALCcontext *Context, SrcIntP
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 {
-    ALCcontext *Context;
-    ALsizei    cur = 0;
+    ALCcontext *context;
+    ALsizei cur = 0;
+    ALenum err;
 
-    Context = GetContextRef();
-    if(!Context) return;
+    context = GetContextRef();
+    if(!context) return;
 
-    al_try
+    if(!(n >= 0))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    for(cur = 0;cur < n;cur++)
     {
-        ALenum err;
-
-        CHECK_VALUE(Context, n >= 0);
-        for(cur = 0;cur < n;cur++)
+        ALsource *source = al_calloc(16, sizeof(ALsource));
+        if(!source)
         {
-            ALsource *source = al_calloc(16, sizeof(ALsource));
-            if(!source)
-            {
-                alDeleteSources(cur, sources);
-                al_throwerr(Context, AL_OUT_OF_MEMORY);
-            }
-            InitSourceParams(source);
-
-            err = NewThunkEntry(&source->id);
-            if(err == AL_NO_ERROR)
-                err = InsertUIntMapEntry(&Context->SourceMap, source->id, source);
-            if(err != AL_NO_ERROR)
-            {
-                FreeThunkEntry(source->id);
-                memset(source, 0, sizeof(ALsource));
-                al_free(source);
-
-                alDeleteSources(cur, sources);
-                al_throwerr(Context, err);
-            }
-
-            sources[cur] = source->id;
+            alDeleteSources(cur, sources);
+            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
         }
-    }
-    al_endtry;
+        InitSourceParams(source);
 
-    ALCcontext_DecRef(Context);
+        err = NewThunkEntry(&source->id);
+        if(err == AL_NO_ERROR)
+            err = InsertUIntMapEntry(&context->SourceMap, source->id, source);
+        if(err != AL_NO_ERROR)
+        {
+            FreeThunkEntry(source->id);
+            memset(source, 0, sizeof(ALsource));
+            al_free(source);
+
+            alDeleteSources(cur, sources);
+            SET_ERROR_AND_GOTO(context, err, done);
+        }
+
+        sources[cur] = source->id;
+    }
+
+done:
+    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 {
-    ALCcontext *Context;
+    ALCcontext *context;
+    ALbufferlistitem *BufferList;
+    ALsource *Source;
+    ALsizei i, j;
 
-    Context = GetContextRef();
-    if(!Context) return;
+    context = GetContextRef();
+    if(!context) return;
 
-    al_try
+    if(!(n >= 0))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    /* Check that all Sources are valid */
+    for(i = 0;i < n;i++)
     {
-        ALbufferlistitem *BufferList;
-        ALsource *Source;
-        ALsizei i, j;
-
-        CHECK_VALUE(Context, n >= 0);
-
-        /* Check that all Sources are valid */
-        for(i = 0;i < n;i++)
-        {
-            if(LookupSource(Context, sources[i]) == NULL)
-                al_throwerr(Context, AL_INVALID_NAME);
-        }
-
-        for(i = 0;i < n;i++)
-        {
-            ALsource **srclist, **srclistend;
-
-            if((Source=RemoveSource(Context, sources[i])) == NULL)
-                continue;
-            FreeThunkEntry(Source->id);
-
-            LockContext(Context);
-            srclist = Context->ActiveSources;
-            srclistend = srclist + Context->ActiveSourceCount;
-            while(srclist != srclistend)
-            {
-                if(*srclist == Source)
-                {
-                    Context->ActiveSourceCount--;
-                    *srclist = *(--srclistend);
-                    break;
-                }
-                srclist++;
-            }
-            UnlockContext(Context);
-
-            while(Source->queue != NULL)
-            {
-                BufferList = Source->queue;
-                Source->queue = BufferList->next;
-
-                if(BufferList->buffer != NULL)
-                    DecrementRef(&BufferList->buffer->ref);
-                free(BufferList);
-            }
-
-            for(j = 0;j < MAX_SENDS;++j)
-            {
-                if(Source->Send[j].Slot)
-                    DecrementRef(&Source->Send[j].Slot->ref);
-                Source->Send[j].Slot = NULL;
-            }
-
-            memset(Source, 0, sizeof(*Source));
-            al_free(Source);
-        }
+        if(LookupSource(context, sources[i]) == NULL)
+            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
-    al_endtry;
+    for(i = 0;i < n;i++)
+    {
+        ALsource **srclist, **srclistend;
 
-    ALCcontext_DecRef(Context);
+        if((Source=RemoveSource(context, sources[i])) == NULL)
+            continue;
+        FreeThunkEntry(Source->id);
+
+        LockContext(context);
+        srclist = context->ActiveSources;
+        srclistend = srclist + context->ActiveSourceCount;
+        while(srclist != srclistend)
+        {
+            if(*srclist == Source)
+            {
+                context->ActiveSourceCount--;
+                *srclist = *(--srclistend);
+                break;
+            }
+            srclist++;
+        }
+        UnlockContext(context);
+
+        while(Source->queue != NULL)
+        {
+            BufferList = Source->queue;
+            Source->queue = BufferList->next;
+
+            if(BufferList->buffer != NULL)
+                DecrementRef(&BufferList->buffer->ref);
+            free(BufferList);
+        }
+
+        for(j = 0;j < MAX_SENDS;++j)
+        {
+            if(Source->Send[j].Slot)
+                DecrementRef(&Source->Send[j].Slot->ref);
+            Source->Send[j].Slot = NULL;
+        }
+
+        memset(Source, 0, sizeof(*Source));
+        al_free(Source);
+    }
+
+done:
+    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
 {
-    ALCcontext *Context;
-    ALboolean  result;
+    ALCcontext *context;
+    ALboolean ret;
 
-    Context = GetContextRef();
-    if(!Context) return AL_FALSE;
+    context = GetContextRef();
+    if(!context) return AL_FALSE;
 
-    result = (LookupSource(Context, source) ? AL_TRUE : AL_FALSE);
+    ret = (LookupSource(context, source) ? AL_TRUE : AL_FALSE);
 
-    ALCcontext_DecRef(Context);
+    ALCcontext_DecRef(context);
 
-    return result;
+    return ret;
 }
 
 
@@ -1896,53 +1889,51 @@ AL_API ALvoid AL_APIENTRY alSourcePlay(ALuint source)
 }
 AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
-    ALsizei    i;
+    ALCcontext *context;
+    ALsource *source;
+    ALsizei i;
 
-    Context = GetContextRef();
-    if(!Context) return;
+    context = GetContextRef();
+    if(!context) return;
 
-    al_try
+    if(!(n >= 0))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    for(i = 0;i < n;i++)
     {
-        CHECK_VALUE(Context, n >= 0);
-        for(i = 0;i < n;i++)
-        {
-            if(!LookupSource(Context, sources[i]))
-                al_throwerr(Context, AL_INVALID_NAME);
-        }
-
-        LockContext(Context);
-        while(Context->MaxActiveSources-Context->ActiveSourceCount < n)
-        {
-            void *temp = NULL;
-            ALsizei newcount;
-
-            newcount = Context->MaxActiveSources << 1;
-            if(newcount > 0)
-                temp = realloc(Context->ActiveSources,
-                               sizeof(*Context->ActiveSources) * newcount);
-            if(!temp)
-            {
-                UnlockContext(Context);
-                al_throwerr(Context, AL_OUT_OF_MEMORY);
-            }
-
-            Context->ActiveSources = temp;
-            Context->MaxActiveSources = newcount;
-        }
-
-        for(i = 0;i < n;i++)
-        {
-            Source = LookupSource(Context, sources[i]);
-            if(Context->DeferUpdates) Source->new_state = AL_PLAYING;
-            else SetSourceState(Source, Context, AL_PLAYING);
-        }
-        UnlockContext(Context);
+        if(!LookupSource(context, sources[i]))
+            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
-    al_endtry;
 
-    ALCcontext_DecRef(Context);
+    LockContext(context);
+    while(n > context->MaxActiveSources-context->ActiveSourceCount)
+    {
+        void *temp = NULL;
+        ALsizei newcount;
+
+        newcount = context->MaxActiveSources << 1;
+        if(newcount > 0)
+            temp = realloc(context->ActiveSources,
+                           sizeof(*context->ActiveSources) * newcount);
+        if(!temp)
+        {
+            UnlockContext(context);
+            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
+        }
+
+        context->ActiveSources = temp;
+        context->MaxActiveSources = newcount;
+    }
+
+    for(i = 0;i < n;i++)
+    {
+        source = LookupSource(context, sources[i]);
+        if(context->DeferUpdates) source->new_state = AL_PLAYING;
+        else SetSourceState(source, context, AL_PLAYING);
+    }
+    UnlockContext(context);
+
+done:
+    ALCcontext_DecRef(context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
@@ -1951,34 +1942,32 @@ AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
 }
 AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
-    ALsizei    i;
+    ALCcontext *context;
+    ALsource *source;
+    ALsizei i;
 
-    Context = GetContextRef();
-    if(!Context) return;
+    context = GetContextRef();
+    if(!context) return;
 
-    al_try
+    if(!(n >= 0))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    for(i = 0;i < n;i++)
     {
-        CHECK_VALUE(Context, n >= 0);
-        for(i = 0;i < n;i++)
-        {
-            if(!LookupSource(Context, sources[i]))
-                al_throwerr(Context, AL_INVALID_NAME);
-        }
-
-        LockContext(Context);
-        for(i = 0;i < n;i++)
-        {
-            Source = LookupSource(Context, sources[i]);
-            if(Context->DeferUpdates) Source->new_state = AL_PAUSED;
-            else SetSourceState(Source, Context, AL_PAUSED);
-        }
-        UnlockContext(Context);
+        if(!LookupSource(context, sources[i]))
+            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
-    al_endtry;
 
-    ALCcontext_DecRef(Context);
+    LockContext(context);
+    for(i = 0;i < n;i++)
+    {
+        source = LookupSource(context, sources[i]);
+        if(context->DeferUpdates) source->new_state = AL_PAUSED;
+        else SetSourceState(source, context, AL_PAUSED);
+    }
+    UnlockContext(context);
+
+done:
+    ALCcontext_DecRef(context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
@@ -1987,34 +1976,32 @@ AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
 }
 AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
-    ALsizei    i;
+    ALCcontext *context;
+    ALsource *source;
+    ALsizei i;
 
-    Context = GetContextRef();
-    if(!Context) return;
+    context = GetContextRef();
+    if(!context) return;
 
-    al_try
+    if(!(n >= 0))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    for(i = 0;i < n;i++)
     {
-        CHECK_VALUE(Context, n >= 0);
-        for(i = 0;i < n;i++)
-        {
-            if(!LookupSource(Context, sources[i]))
-                al_throwerr(Context, AL_INVALID_NAME);
-        }
-
-        LockContext(Context);
-        for(i = 0;i < n;i++)
-        {
-            Source = LookupSource(Context, sources[i]);
-            Source->new_state = AL_NONE;
-            SetSourceState(Source, Context, AL_STOPPED);
-        }
-        UnlockContext(Context);
+        if(!LookupSource(context, sources[i]))
+            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
-    al_endtry;
 
-    ALCcontext_DecRef(Context);
+    LockContext(context);
+    for(i = 0;i < n;i++)
+    {
+        source = LookupSource(context, sources[i]);
+        source->new_state = AL_NONE;
+        SetSourceState(source, context, AL_STOPPED);
+    }
+    UnlockContext(context);
+
+done:
+    ALCcontext_DecRef(context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
@@ -2023,159 +2010,153 @@ AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
 }
 AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
-    ALsizei    i;
+    ALCcontext *context;
+    ALsource *source;
+    ALsizei i;
 
-    Context = GetContextRef();
-    if(!Context) return;
+    context = GetContextRef();
+    if(!context) return;
 
-    al_try
+    if(!(n >= 0))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    for(i = 0;i < n;i++)
     {
-        CHECK_VALUE(Context, n >= 0);
-        for(i = 0;i < n;i++)
-        {
-            if(!LookupSource(Context, sources[i]))
-                al_throwerr(Context, AL_INVALID_NAME);
-        }
-
-        LockContext(Context);
-        for(i = 0;i < n;i++)
-        {
-            Source = LookupSource(Context, sources[i]);
-            Source->new_state = AL_NONE;
-            SetSourceState(Source, Context, AL_INITIAL);
-        }
-        UnlockContext(Context);
+        if(!LookupSource(context, sources[i]))
+            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
-    al_endtry;
 
-    ALCcontext_DecRef(Context);
+    LockContext(context);
+    for(i = 0;i < n;i++)
+    {
+        source = LookupSource(context, sources[i]);
+        source->new_state = AL_NONE;
+        SetSourceState(source, context, AL_INITIAL);
+    }
+    UnlockContext(context);
+
+done:
+    ALCcontext_DecRef(context);
 }
 
 
-AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const ALuint *buffers)
+AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALuint *buffers)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
-    ALsizei    i;
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsource *source;
+    ALsizei i;
     ALbufferlistitem *BufferListStart = NULL;
     ALbufferlistitem *BufferList;
-    ALbuffer *BufferFmt;
+    ALbuffer *BufferFmt = NULL;
 
     if(nb == 0)
         return;
 
-    Context = GetContextRef();
-    if(!Context) return;
+    context = GetContextRef();
+    if(!context) return;
 
-    al_try
+    device = context->Device;
+
+    if(!(nb >= 0))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if((source=LookupSource(context, src)) == NULL)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+
+    LockContext(context);
+    if(source->SourceType == AL_STATIC)
     {
-        ALCdevice *device = Context->Device;
+        UnlockContext(context);
+        /* Can't queue on a Static Source */
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    }
 
-        CHECK_VALUE(Context, nb >= 0);
-
-        if((Source=LookupSource(Context, source)) == NULL)
-            al_throwerr(Context, AL_INVALID_NAME);
-
-        LockContext(Context);
-        if(Source->SourceType == AL_STATIC)
+    /* Check for a valid Buffer, for its frequency and format */
+    BufferList = source->queue;
+    while(BufferList)
+    {
+        if(BufferList->buffer)
         {
-            UnlockContext(Context);
-            /* Can't queue on a Static Source */
-            al_throwerr(Context, AL_INVALID_OPERATION);
+            BufferFmt = BufferList->buffer;
+            break;
+        }
+        BufferList = BufferList->next;
+    }
+
+    for(i = 0;i < nb;i++)
+    {
+        ALbuffer *buffer = NULL;
+        if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
+        {
+            UnlockContext(context);
+            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
         }
 
-        BufferFmt = NULL;
-
-        /* Check for a valid Buffer, for its frequency and format */
-        BufferList = Source->queue;
-        while(BufferList)
+        if(!BufferListStart)
         {
-            if(BufferList->buffer)
-            {
-                BufferFmt = BufferList->buffer;
-                break;
-            }
-            BufferList = BufferList->next;
+            BufferListStart = malloc(sizeof(ALbufferlistitem));
+            BufferListStart->buffer = buffer;
+            BufferListStart->next = NULL;
+            BufferListStart->prev = NULL;
+            BufferList = BufferListStart;
         }
-
-        for(i = 0;i < nb;i++)
-        {
-            ALbuffer *buffer = NULL;
-            if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
-            {
-                UnlockContext(Context);
-                al_throwerr(Context, AL_INVALID_NAME);
-            }
-
-            if(!BufferListStart)
-            {
-                BufferListStart = malloc(sizeof(ALbufferlistitem));
-                BufferListStart->buffer = buffer;
-                BufferListStart->next = NULL;
-                BufferListStart->prev = NULL;
-                BufferList = BufferListStart;
-            }
-            else
-            {
-                BufferList->next = malloc(sizeof(ALbufferlistitem));
-                BufferList->next->buffer = buffer;
-                BufferList->next->next = NULL;
-                BufferList->next->prev = BufferList;
-                BufferList = BufferList->next;
-            }
-            if(!buffer) continue;
-            IncrementRef(&buffer->ref);
-
-            ReadLock(&buffer->lock);
-            if(BufferFmt == NULL)
-            {
-                BufferFmt = buffer;
-
-                Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
-                Source->SampleSize  = BytesFromFmt(buffer->FmtType);
-                if(buffer->FmtChannels == FmtMono)
-                    Source->Update = CalcSourceParams;
-                else
-                    Source->Update = CalcNonAttnSourceParams;
-
-                Source->NeedsUpdate = AL_TRUE;
-            }
-            else if(BufferFmt->Frequency != buffer->Frequency ||
-                    BufferFmt->OriginalChannels != buffer->OriginalChannels ||
-                    BufferFmt->OriginalType != buffer->OriginalType)
-            {
-                ReadUnlock(&buffer->lock);
-                UnlockContext(Context);
-                al_throwerr(Context, AL_INVALID_OPERATION);
-            }
-            ReadUnlock(&buffer->lock);
-        }
-
-        /* Source is now streaming */
-        Source->SourceType = AL_STREAMING;
-
-        if(Source->queue == NULL)
-            Source->queue = BufferListStart;
         else
         {
-            /* Append to the end of the queue */
-            BufferList = Source->queue;
-            while(BufferList->next != NULL)
-                BufferList = BufferList->next;
-
-            BufferListStart->prev = BufferList;
-            BufferList->next = BufferListStart;
+            BufferList->next = malloc(sizeof(ALbufferlistitem));
+            BufferList->next->buffer = buffer;
+            BufferList->next->next = NULL;
+            BufferList->next->prev = BufferList;
+            BufferList = BufferList->next;
         }
-        BufferListStart = NULL;
+        if(!buffer) continue;
+        IncrementRef(&buffer->ref);
 
-        Source->BuffersInQueue += nb;
+        ReadLock(&buffer->lock);
+        if(BufferFmt == NULL)
+        {
+            BufferFmt = buffer;
 
-        UnlockContext(Context);
+            source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
+            source->SampleSize  = BytesFromFmt(buffer->FmtType);
+            if(buffer->FmtChannels == FmtMono)
+                source->Update = CalcSourceParams;
+            else
+                source->Update = CalcNonAttnSourceParams;
+
+            source->NeedsUpdate = AL_TRUE;
+        }
+        else if(BufferFmt->Frequency != buffer->Frequency ||
+                BufferFmt->OriginalChannels != buffer->OriginalChannels ||
+                BufferFmt->OriginalType != buffer->OriginalType)
+        {
+            ReadUnlock(&buffer->lock);
+            UnlockContext(context);
+            SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+        }
+        ReadUnlock(&buffer->lock);
     }
-    al_endtry;
 
+    /* Source is now streaming */
+    source->SourceType = AL_STREAMING;
+
+    if(source->queue == NULL)
+        source->queue = BufferListStart;
+    else
+    {
+        /* Append to the end of the queue */
+        BufferList = source->queue;
+        while(BufferList->next != NULL)
+            BufferList = BufferList->next;
+
+        BufferListStart->prev = BufferList;
+        BufferList->next = BufferListStart;
+    }
+    BufferListStart = NULL;
+
+    source->BuffersInQueue += nb;
+
+    UnlockContext(context);
+
+done:
     while(BufferListStart)
     {
         BufferList = BufferListStart;
@@ -2186,62 +2167,60 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const 
         free(BufferList);
     }
 
-    ALCcontext_DecRef(Context);
+    ALCcontext_DecRef(context);
 }
 
-AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei nb, ALuint *buffers)
+AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint *buffers)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
-    ALsizei    i;
+    ALCcontext *context;
+    ALsource *source;
+    ALsizei i;
     ALbufferlistitem *BufferList;
 
     if(nb == 0)
         return;
 
-    Context = GetContextRef();
-    if(!Context) return;
+    context = GetContextRef();
+    if(!context) return;
 
-    al_try
+    if(!(nb >= 0))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    if((source=LookupSource(context, src)) == NULL)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+
+    LockContext(context);
+    if(source->Looping || source->SourceType != AL_STREAMING ||
+       (ALuint)nb > source->BuffersPlayed)
     {
-        CHECK_VALUE(Context, nb >= 0);
-
-        if((Source=LookupSource(Context, source)) == NULL)
-            al_throwerr(Context, AL_INVALID_NAME);
-
-        LockContext(Context);
-        if(Source->Looping || Source->SourceType != AL_STREAMING ||
-           (ALuint)nb > Source->BuffersPlayed)
-        {
-            UnlockContext(Context);
-            /* Trying to unqueue pending buffers, or a buffer that wasn't queued. */
-            al_throwerr(Context, AL_INVALID_VALUE);
-        }
-
-        for(i = 0;i < nb;i++)
-        {
-            BufferList = Source->queue;
-            Source->queue = BufferList->next;
-            Source->BuffersInQueue--;
-            Source->BuffersPlayed--;
-
-            if(BufferList->buffer)
-            {
-                buffers[i] = BufferList->buffer->id;
-                DecrementRef(&BufferList->buffer->ref);
-            }
-            else
-                buffers[i] = 0;
-
-            free(BufferList);
-        }
-        if(Source->queue)
-            Source->queue->prev = NULL;
-        UnlockContext(Context);
+        UnlockContext(context);
+        /* Trying to unqueue pending buffers, or a buffer that wasn't queued. */
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     }
-    al_endtry;
 
-    ALCcontext_DecRef(Context);
+    for(i = 0;i < nb;i++)
+    {
+        BufferList = source->queue;
+        source->queue = BufferList->next;
+        source->BuffersInQueue--;
+        source->BuffersPlayed--;
+
+        if(BufferList->buffer)
+        {
+            buffers[i] = BufferList->buffer->id;
+            DecrementRef(&BufferList->buffer->ref);
+        }
+        else
+            buffers[i] = 0;
+
+        free(BufferList);
+    }
+    if(source->queue)
+        source->queue->prev = NULL;
+    UnlockContext(context);
+
+done:
+    ALCcontext_DecRef(context);
 }
 
 

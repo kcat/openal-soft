@@ -8,23 +8,21 @@
 extern "C" {
 #endif
 
-typedef struct ALeffectStateFactory ALeffectStateFactory;
+struct ALeffectStateVtable;
+struct ALeffectslot;
 
-typedef struct ALeffectState ALeffectState;
-typedef struct ALeffectslot ALeffectslot;
+typedef struct ALeffectState {
+    const struct ALeffectStateVtable *vtbl;
+} ALeffectState;
 
 struct ALeffectStateVtable {
     ALvoid (*const Destruct)(ALeffectState *state);
 
     ALboolean (*const deviceUpdate)(ALeffectState *state, ALCdevice *device);
-    ALvoid (*const update)(ALeffectState *state, ALCdevice *device, const ALeffectslot *slot);
+    ALvoid (*const update)(ALeffectState *state, ALCdevice *device, const struct ALeffectslot *slot);
     ALvoid (*const process)(ALeffectState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE]);
 
-    void (*const Delete)(ALeffectState *state);
-};
-
-struct ALeffectState {
-    const struct ALeffectStateVtable *vtbl;
+    void (*const Delete)(struct ALeffectState *state);
 };
 
 #define DEFINE_ALEFFECTSTATE_VTABLE(T)                                        \
@@ -50,12 +48,14 @@ static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
 }
 
 
+struct ALeffectStateFactoryVtable;
+
+typedef struct ALeffectStateFactory {
+    const struct ALeffectStateFactoryVtable *vtbl;
+} ALeffectStateFactory;
+
 struct ALeffectStateFactoryVtable {
     ALeffectState *(*const create)(ALeffectStateFactory *factory);
-};
-
-struct ALeffectStateFactory {
-    const struct ALeffectStateFactoryVtable *vtbl;
 };
 
 #define DEFINE_ALEFFECTSTATEFACTORY_VTABLE(T)                                 \
@@ -67,8 +67,7 @@ static const struct ALeffectStateFactoryVtable T##_ALeffectStateFactory_vtable =
 }
 
 
-struct ALeffectslot
-{
+typedef struct ALeffectslot {
     ALenum EffectType;
     ALeffectProps EffectProps;
 
@@ -87,7 +86,7 @@ struct ALeffectslot
 
     /* Self ID */
     ALuint id;
-};
+} ALeffectslot;
 
 
 ALenum InitEffectSlot(ALeffectslot *slot);

@@ -22,8 +22,7 @@ extern const ALsizei ResamplerPadding[ResamplerMax];
 extern const ALsizei ResamplerPrePadding[ResamplerMax];
 
 
-typedef struct ALbufferlistitem
-{
+typedef struct ALbufferlistitem {
     struct ALbuffer         *buffer;
     struct ALbufferlistitem *next;
     struct ALbufferlistitem *prev;

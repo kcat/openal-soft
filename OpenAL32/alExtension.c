@@ -55,38 +55,36 @@ const struct EffectList EffectList[] = {
 AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 {
     ALboolean ret = AL_FALSE;
-    ALCcontext *Context;
+    ALCcontext *context;
     const char *ptr;
     size_t len;
 
-    Context = GetContextRef();
-    if(!Context) return AL_FALSE;
+    context = GetContextRef();
+    if(!context) return AL_FALSE;
 
-    al_try
+    if(!(extName))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    len = strlen(extName);
+    ptr = context->ExtensionList;
+    while(ptr && *ptr)
     {
-        CHECK_VALUE(Context, extName);
-
-        len = strlen(extName);
-        ptr = Context->ExtensionList;
-        while(ptr && *ptr)
+        if(strncasecmp(ptr, extName, len) == 0 &&
+           (ptr[len] == '\0' || isspace(ptr[len])))
         {
-            if(strncasecmp(ptr, extName, len) == 0 &&
-               (ptr[len] == '\0' || isspace(ptr[len])))
-            {
-                ret = AL_TRUE;
-                break;
-            }
-            if((ptr=strchr(ptr, ' ')) != NULL)
-            {
-                do {
-                    ++ptr;
-                } while(isspace(*ptr));
-            }
+            ret = AL_TRUE;
+            break;
+        }
+        if((ptr=strchr(ptr, ' ')) != NULL)
+        {
+            do {
+                ++ptr;
+            } while(isspace(*ptr));
         }
     }
-    al_endtry;
 
-    ALCcontext_DecRef(Context);
+done:
+    ALCcontext_DecRef(context);
     return ret;
 }
 

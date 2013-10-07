@@ -911,38 +911,6 @@ void FillCPUCaps(ALuint capfilter);
     goto lbl;                                                                  \
 } while(0)
 
-/**
- * Starts a try block. Must not be nested within another try block within the
- * same function.
- */
-#define al_try do {                                                            \
-    int _al_in_try_block = 1;
-/** Marks the end of the try block. */
-#define al_endtry _al_endtry_label:                                            \
-    (void)_al_in_try_block;                                                    \
-} while(0)
-
-/**
- * The try block is terminated, and execution jumps to al_endtry.
- */
-#define al_throw do {                                                         \
-    _al_in_try_block = 0;                                                     \
-    goto _al_endtry_label;                                                    \
-} while(0)
-/** Sets an AL error on the given context, before throwing. */
-#define al_throwerr(ctx, err) do {                                            \
-    alSetError((ctx), (err));                                                 \
-    al_throw;                                                                 \
-} while(0)
-
-/**
- * Throws an AL_INVALID_VALUE error with the given ctx if the given condition
- * is false.
- */
-#define CHECK_VALUE(ctx, cond) do {                                           \
-    if(!(cond))                                                               \
-        al_throwerr((ctx), AL_INVALID_VALUE);                                 \
-} while(0)
 
 #ifdef __cplusplus
 }

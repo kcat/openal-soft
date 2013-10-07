@@ -40,82 +40,79 @@ static void InitEffectParams(ALeffect *effect, ALenum type);
 
 AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 {
-    ALCcontext *Context;
-    ALsizei    cur = 0;
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsizei cur;
 
-    Context = GetContextRef();
-    if(!Context) return;
+    context = GetContextRef();
+    if(!context) return;
 
-    al_try
+    if(!(n >= 0))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    device = context->Device;
+    for(cur = 0;cur < n;cur++)
     {
-        ALCdevice *device = Context->Device;
-        ALenum err;
-
-        CHECK_VALUE(Context, n >= 0);
-        for(cur = 0;cur < n;cur++)
+        ALeffect *effect = calloc(1, sizeof(ALeffect));
+        ALenum err = AL_OUT_OF_MEMORY;
+        if(!effect || (err=InitEffect(effect)) != AL_NO_ERROR)
         {
-            ALeffect *effect = calloc(1, sizeof(ALeffect));
-            err = AL_OUT_OF_MEMORY;
-            if(!effect || (err=InitEffect(effect)) != AL_NO_ERROR)
-            {
-                free(effect);
-                alDeleteEffects(cur, effects);
-                al_throwerr(Context, err);
-            }
-
-            err = NewThunkEntry(&effect->id);
-            if(err == AL_NO_ERROR)
-                err = InsertUIntMapEntry(&device->EffectMap, effect->id, effect);
-            if(err != AL_NO_ERROR)
-            {
-                FreeThunkEntry(effect->id);
-                memset(effect, 0, sizeof(ALeffect));
-                free(effect);
-
-                alDeleteEffects(cur, effects);
-                al_throwerr(Context, err);
-            }
-
-            effects[cur] = effect->id;
+            free(effect);
+            alDeleteEffects(cur, effects);
+            SET_ERROR_AND_GOTO(context, err, done);
         }
-    }
-    al_endtry;
 
-    ALCcontext_DecRef(Context);
+        err = NewThunkEntry(&effect->id);
+        if(err == AL_NO_ERROR)
+            err = InsertUIntMapEntry(&device->EffectMap, effect->id, effect);
+        if(err != AL_NO_ERROR)
+        {
+            FreeThunkEntry(effect->id);
+            memset(effect, 0, sizeof(ALeffect));
+            free(effect);
+
+            alDeleteEffects(cur, effects);
+            SET_ERROR_AND_GOTO(context, err, done);
+        }
+
+        effects[cur] = effect->id;
+    }
+
+done:
+    ALCcontext_DecRef(context);
 }
 
 AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
 {
-    ALCcontext *Context;
-    ALeffect *Effect;
+    ALCdevice *device;
+    ALCcontext *context;
+    ALeffect *effect;
     ALsizei i;
 
-    Context = GetContextRef();
-    if(!Context) return;
+    context = GetContextRef();
+    if(!context) return;
 
-    al_try
+    if(!(n >= 0))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    device = context->Device;
+    for(i = 0;i < n;i++)
     {
-        ALCdevice *device = Context->Device;
-        CHECK_VALUE(Context, n >= 0);
-        for(i = 0;i < n;i++)
-        {
-            if(effects[i] && LookupEffect(device, effects[i]) == NULL)
-                al_throwerr(Context, AL_INVALID_NAME);
-        }
-
-        for(i = 0;i < n;i++)
-        {
-            if((Effect=RemoveEffect(device, effects[i])) == NULL)
-                continue;
-            FreeThunkEntry(Effect->id);
-
-            memset(Effect, 0, sizeof(*Effect));
-            free(Effect);
-        }
+        if(effects[i] && LookupEffect(device, effects[i]) == NULL)
+            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
-    al_endtry;
+    for(i = 0;i < n;i++)
+    {
+        if((effect=RemoveEffect(device, effects[i])) == NULL)
+            continue;
+        FreeThunkEntry(effect->id);
 
-    ALCcontext_DecRef(Context);
+        memset(effect, 0, sizeof(*effect));
+        free(effect);
+    }
+
+done:
+    ALCcontext_DecRef(context);
 }
 
 AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)

@@ -711,12 +711,19 @@ struct ALCdevice_struct
 #define INVALID_OFFSET                           (~0u)
 
 
-#define LookupBuffer(m, k) ((struct ALbuffer*)LookupUIntMapKey(&(m)->BufferMap, (k)))
-#define LookupEffect(m, k) ((struct ALeffect*)LookupUIntMapKey(&(m)->EffectMap, (k)))
-#define LookupFilter(m, k) ((struct ALfilter*)LookupUIntMapKey(&(m)->FilterMap, (k)))
-#define RemoveBuffer(m, k) ((struct ALbuffer*)RemoveUIntMapKey(&(m)->BufferMap, (k)))
-#define RemoveEffect(m, k) ((struct ALeffect*)RemoveUIntMapKey(&(m)->EffectMap, (k)))
-#define RemoveFilter(m, k) ((struct ALfilter*)RemoveUIntMapKey(&(m)->FilterMap, (k)))
+static inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
+{ return (struct ALbuffer*)LookupUIntMapKey(&device->BufferMap, id); }
+static inline struct ALeffect *LookupEffect(ALCdevice *device, ALuint id)
+{ return (struct ALeffect*)LookupUIntMapKey(&device->EffectMap, id); }
+static inline struct ALfilter *LookupFilter(ALCdevice *device, ALuint id)
+{ return (struct ALfilter*)LookupUIntMapKey(&device->FilterMap, id); }
+
+static inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id)
+{ return (struct ALbuffer*)RemoveUIntMapKey(&device->BufferMap, id); }
+static inline struct ALeffect *RemoveEffect(ALCdevice *device, ALuint id)
+{ return (struct ALeffect*)RemoveUIntMapKey(&device->EffectMap, id); }
+static inline struct ALfilter *RemoveFilter(ALCdevice *device, ALuint id)
+{ return (struct ALfilter*)RemoveUIntMapKey(&device->FilterMap, id); }
 
 
 struct ALCcontext_struct
@@ -754,10 +761,15 @@ struct ALCcontext_struct
     ALCcontext *volatile next;
 };
 
-#define LookupSource(m, k) ((struct ALsource*)LookupUIntMapKey(&(m)->SourceMap, (k)))
-#define LookupEffectSlot(m, k) ((struct ALeffectslot*)LookupUIntMapKey(&(m)->EffectSlotMap, (k)))
-#define RemoveSource(m, k) ((struct ALsource*)RemoveUIntMapKey(&(m)->SourceMap, (k)))
-#define RemoveEffectSlot(m, k) ((struct ALeffectslot*)RemoveUIntMapKey(&(m)->EffectSlotMap, (k)))
+static inline struct ALsource *LookupSource(ALCcontext *context, ALuint id)
+{ return (struct ALsource*)LookupUIntMapKey(&context->SourceMap, id); }
+static inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
+{ return (struct ALeffectslot*)LookupUIntMapKey(&context->EffectSlotMap, id); }
+
+static inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id)
+{ return (struct ALsource*)RemoveUIntMapKey(&context->SourceMap, id); }
+static inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id)
+{ return (struct ALeffectslot*)RemoveUIntMapKey(&context->EffectSlotMap, id); }
 
 
 ALCcontext *GetContextRef(void);

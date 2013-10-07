@@ -127,30 +127,22 @@ typedef struct {
 } pa_data;
 
 
-static int pa_callback(const void *inputBuffer, void *outputBuffer,
-                       unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
-                       const PaStreamCallbackFlags statusFlags, void *userData)
+static int pa_callback(const void *UNUSED(inputBuffer), void *outputBuffer,
+                       unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
+                       const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
 {
     ALCdevice *device = (ALCdevice*)userData;
-
-    (void)inputBuffer;
-    (void)timeInfo;
-    (void)statusFlags;
 
     aluMixData(device, outputBuffer, framesPerBuffer);
     return 0;
 }
 
-static int pa_capture_cb(const void *inputBuffer, void *outputBuffer,
-                         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
-                         const PaStreamCallbackFlags statusFlags, void *userData)
+static int pa_capture_cb(const void *inputBuffer, void *UNUSED(outputBuffer),
+                         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
+                         const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
 {
     ALCdevice *device = (ALCdevice*)userData;
     pa_data *data = (pa_data*)device->ExtraData;
-
-    (void)outputBuffer;
-    (void)timeInfo;
-    (void)statusFlags;
 
     WriteRingBuffer(data->ring, inputBuffer, framesPerBuffer);
     return 0;

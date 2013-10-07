@@ -128,7 +128,7 @@ static ALCboolean DSoundLoad(void)
 }
 
 
-static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
+static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR UNUSED(drvname), LPVOID UNUSED(data))
 {
     LPOLESTR guidstr = NULL;
     char str[1024];
@@ -136,9 +136,6 @@ static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR 
     void *temp;
     int count;
     ALuint i;
-
-    (void)data;
-    (void)drvname;
 
     if(!guid)
         return TRUE;
@@ -178,7 +175,7 @@ static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR 
 }
 
 
-static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR drvname, LPVOID data)
+static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR UNUSED(drvname), LPVOID UNUSED(data))
 {
     LPOLESTR guidstr = NULL;
     char str[1024];
@@ -186,9 +183,6 @@ static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR d
     void *temp;
     int count;
     ALuint i;
-
-    (void)data;
-    (void)drvname;
 
     if(!guid)
         return TRUE;

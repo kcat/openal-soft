@@ -146,13 +146,10 @@ static void ProbeCaptureDevices(void)
     Posts a message to 'PlaybackThreadProc' everytime a WaveOut Buffer is completed and
     returns to the application (for more data)
 */
-static void CALLBACK WaveOutProc(HWAVEOUT device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2)
+static void CALLBACK WaveOutProc(HWAVEOUT UNUSED(device), UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR UNUSED(param2))
 {
     ALCdevice *Device = (ALCdevice*)instance;
     WinMMData *data = Device->ExtraData;
-
-    (void)device;
-    (void)param2;
 
     if(msg != WOM_DONE)
         return;
@@ -213,13 +210,10 @@ static DWORD WINAPI PlaybackThreadProc(LPVOID param)
     Posts a message to 'CaptureThreadProc' everytime a WaveIn Buffer is completed and
     returns to the application (with more data)
 */
-static void CALLBACK WaveInProc(HWAVEIN device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2)
+static void CALLBACK WaveInProc(HWAVEIN UNUSED(device), UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR UNUSED(param2))
 {
     ALCdevice *Device = (ALCdevice*)instance;
     WinMMData *data = Device->ExtraData;
-
-    (void)device;
-    (void)param2;
 
     if(msg != WIM_DATA)
         return;

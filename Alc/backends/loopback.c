@@ -32,9 +32,8 @@ static ALCenum loopback_open_playback(ALCdevice *device, const ALCchar *deviceNa
     return ALC_NO_ERROR;
 }
 
-static void loopback_close_playback(ALCdevice *device)
+static void loopback_close_playback(ALCdevice *UNUSED(device))
 {
-    (void)device;
 }
 
 static ALCboolean loopback_reset_playback(ALCdevice *device)
@@ -43,15 +42,13 @@ static ALCboolean loopback_reset_playback(ALCdevice *device)
     return ALC_TRUE;
 }
 
-static ALCboolean loopback_start_playback(ALCdevice *device)
+static ALCboolean loopback_start_playback(ALCdevice *UNUSED(device))
 {
     return ALC_TRUE;
-    (void)device;
 }
 
-static void loopback_stop_playback(ALCdevice *device)
+static void loopback_stop_playback(ALCdevice *UNUSED(device))
 {
-    (void)device;
 }
 
 
@@ -82,7 +79,6 @@ void alc_loopback_deinit(void)
 {
 }
 
-void alc_loopback_probe(enum DevProbe type)
+void alc_loopback_probe(enum DevProbe UNUSED(type))
 {
-    (void)type;
 }

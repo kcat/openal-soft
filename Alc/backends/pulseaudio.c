@@ -392,17 +392,15 @@ static void stream_state_callback2(pa_stream *stream, void *pdata)
     pa_threaded_mainloop_signal(data->loop, 0);
 }
 
-static void stream_success_callback(pa_stream *stream, int success, void *pdata)
+static void stream_success_callback(pa_stream *UNUSED(stream), int UNUSED(success), void *pdata)
 {
     ALCdevice *Device = pdata;
     pulse_data *data = Device->ExtraData;
-    (void)stream;
-    (void)success;
 
     pa_threaded_mainloop_signal(data->loop, 0);
 }
 
-static void sink_info_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
+static void sink_info_callback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
 {
     ALCdevice *device = pdata;
     pulse_data *data = device->ExtraData;
@@ -425,7 +423,6 @@ static void sink_info_callback(pa_context *context, const pa_sink_info *info, in
         { NULL, 0 }
     };
     int i;
-    (void)context;
 
     if(eol)
     {
@@ -455,13 +452,11 @@ static void sink_info_callback(pa_context *context, const pa_sink_info *info, in
     ERR("Failed to find format for channel map:\n    %s\n", chanmap_str);
 }
 
-static void sink_device_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
+static void sink_device_callback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
 {
     pa_threaded_mainloop *loop = pdata;
     void *temp;
     ALuint i;
-
-    (void)context;
 
     if(eol)
     {
@@ -487,13 +482,11 @@ static void sink_device_callback(pa_context *context, const pa_sink_info *info, 
     }
 }
 
-static void source_device_callback(pa_context *context, const pa_source_info *info, int eol, void *pdata)
+static void source_device_callback(pa_context *UNUSED(context), const pa_source_info *info, int eol, void *pdata)
 {
     pa_threaded_mainloop *loop = pdata;
     void *temp;
     ALuint i;
-
-    (void)context;
 
     if(eol)
     {
@@ -519,11 +512,10 @@ static void source_device_callback(pa_context *context, const pa_source_info *in
     }
 }
 
-static void sink_name_callback(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
+static void sink_name_callback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
 {
     ALCdevice *device = pdata;
     pulse_data *data = device->ExtraData;
-    (void)context;
 
     if(eol)
     {
@@ -535,11 +527,10 @@ static void sink_name_callback(pa_context *context, const pa_sink_info *info, in
     device->DeviceName = strdup(info->description);
 }
 
-static void source_name_callback(pa_context *context, const pa_source_info *info, int eol, void *pdata)
+static void source_name_callback(pa_context *UNUSED(context), const pa_source_info *info, int eol, void *pdata)
 {
     ALCdevice *device = pdata;
     pulse_data *data = device->ExtraData;
-    (void)context;
 
     if(eol)
     {
@@ -556,10 +547,9 @@ static void stream_moved_callback(pa_stream *stream, void *pdata)
 {
     ALCdevice *device = pdata;
     pulse_data *data = device->ExtraData;
-    (void)stream;
 
     free(data->device_name);
-    data->device_name = strdup(pa_stream_get_device_name(data->stream));
+    data->device_name = strdup(pa_stream_get_device_name(stream));
 
     TRACE("Stream moved to %s\n", data->device_name);
 }
@@ -1568,13 +1558,13 @@ void alc_pulse_probe(enum DevProbe type)
 
 #warning "Unsupported API version, backend will be unavailable!"
 
-ALCboolean alc_pulse_init(BackendFuncs *func_list)
-{ return ALC_FALSE; (void)func_list; }
+ALCboolean alc_pulse_init(BackendFuncs *UNUSED(func_list))
+{ return ALC_FALSE; }
 
 void alc_pulse_deinit(void)
 { }
 
-void alc_pulse_probe(enum DevProbe type)
-{ (void)type; }
+void alc_pulse_probe(enum DevProbe UNUSED(type))
+{ }
 
 #endif

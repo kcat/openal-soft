@@ -602,12 +602,10 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format)
 }
 
 
-AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat value)
+AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat UNUSED(value))
 {
     ALCdevice *device;
     ALCcontext *context;
-
-    (void)value;
 
     context = GetContextRef();
     if(!context) return;
@@ -627,14 +625,10 @@ done:
 }
 
 
-AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
+AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param, ALfloat UNUSED(value1), ALfloat UNUSED(value2), ALfloat UNUSED(value3))
 {
     ALCdevice *device;
     ALCcontext *context;
-
-    (void)value1;
-    (void)value2;
-    (void)value3;
 
     context = GetContextRef();
     if(!context) return;
@@ -679,12 +673,10 @@ done:
 }
 
 
-AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value)
+AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint UNUSED(value))
 {
     ALCdevice *device;
     ALCcontext *context;
-
-    (void)value;
 
     context = GetContextRef();
     if(!context) return;
@@ -704,14 +696,10 @@ done:
 }
 
 
-AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3)
+AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param, ALint UNUSED(value1), ALint UNUSED(value2), ALint UNUSED(value3))
 {
     ALCdevice *device;
     ALCcontext *context;
-
-    (void)value1;
-    (void)value2;
-    (void)value3;
 
     context = GetContextRef();
     if(!context) return;

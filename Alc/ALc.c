@@ -1330,9 +1330,8 @@ void ALCdevice_UnlockDefault(ALCdevice *device)
 {
     LeaveCriticalSection(&device->Mutex);
 }
-ALint64 ALCdevice_GetLatencyDefault(ALCdevice *device)
+ALint64 ALCdevice_GetLatencyDefault(ALCdevice *UNUSED(device))
 {
-    (void)device;
     return 0;
 }
 
@@ -2132,18 +2131,16 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
  *
  * Not functional
  */
-ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *Context)
+ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *UNUSED(context))
 {
-    (void)Context;
 }
 
 /* alcProcessContext
  *
  * Not functional
  */
-ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *Context)
+ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *UNUSED(context))
 {
-    (void)Context;
 }
 
 

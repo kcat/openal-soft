@@ -159,11 +159,9 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
 }
 
 
-AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint value)
+AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
 {
     ALCcontext *Context;
-
-    (void)value;
 
     Context = GetContextRef();
     if(!Context) return;

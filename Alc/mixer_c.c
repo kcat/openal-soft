@@ -8,17 +8,16 @@
 #include "alAuxEffectSlot.h"
 
 
-static inline ALfloat point32(const ALfloat *vals, ALuint frac)
-{ return vals[0]; (void)frac; }
+static inline ALfloat point32(const ALfloat *vals, ALuint UNUSED(frac))
+{ return vals[0]; }
 static inline ALfloat lerp32(const ALfloat *vals, ALuint frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
 static inline ALfloat cubic32(const ALfloat *vals, ALuint frac)
 { return cubic(vals[-1], vals[0], vals[1], vals[2], frac * (1.0f/FRACTIONONE)); }
 
-void Resample_copy32_C(const ALfloat *data, ALuint frac,
+void Resample_copy32_C(const ALfloat *data, ALuint UNUSED(frac),
   ALuint increment, ALfloat *restrict OutBuffer, ALuint BufferSize)
 {
-    (void)frac;
     assert(increment==FRACTIONONE);
     memcpy(OutBuffer, data, (BufferSize+1)*sizeof(ALfloat));
 }

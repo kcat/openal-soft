@@ -434,10 +434,10 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
 }
 
 
-static void lp_SetParami(ALfilter *filter, ALCcontext *context, ALenum param, ALint val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)val; }
-static void lp_SetParamiv(ALfilter *filter, ALCcontext *context, ALenum param, const ALint *vals)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)vals; }
+static void lp_SetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void lp_SetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 static void lp_SetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
@@ -463,10 +463,10 @@ static void lp_SetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, c
     lp_SetParamf(filter, context, param, vals[0]);
 }
 
-static void lp_GetParami(ALfilter *filter, ALCcontext *context, ALenum param, ALint *val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)val; }
-static void lp_GetParamiv(ALfilter *filter, ALCcontext *context, ALenum param, ALint *vals)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)vals; }
+static void lp_GetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void lp_GetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 static void lp_GetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
@@ -489,23 +489,23 @@ static void lp_GetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, A
 }
 
 
-static void null_SetParami(ALfilter *filter, ALCcontext *context, ALenum param, ALint val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)val; }
-static void null_SetParamiv(ALfilter *filter, ALCcontext *context, ALenum param, const ALint *vals)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)vals; }
-static void null_SetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)val; }
-static void null_SetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)vals; }
+static void null_SetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void null_SetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void null_SetParamf(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALfloat UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void null_SetParamfv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALfloat *UNUSED(vals))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 
-static void null_GetParami(ALfilter *filter, ALCcontext *context, ALenum param, ALint *val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)val; }
-static void null_GetParamiv(ALfilter *filter, ALCcontext *context, ALenum param, ALint *vals)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)vals; }
-static void null_GetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)val; }
-static void null_GetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); (void)filter;(void)param;(void)vals; }
+static void null_GetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void null_GetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void null_GetParamf(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void null_GetParamfv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(vals))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 
 
 ALvoid ReleaseALFilters(ALCdevice *device)

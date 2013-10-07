@@ -52,14 +52,24 @@ typedef ptrdiff_t ALintptrEXT;
 typedef ptrdiff_t ALsizeiptrEXT;
 
 #ifndef U64
-#if !defined(_MSC_VER)
-#if SIZEOF_LONG_LONG == 8
+#if defined(_MSC_VER)
+#define U64(x) ((ALuint64)(x##ui64))
+#elif SIZEOF_LONG_LONG == 8
 #define U64(x) ((ALuint64)(x##ull))
 #elif SIZEOF_LONG == 8
 #define U64(x) ((ALuint64)(x##ul))
 #endif
+#endif
+
+#ifndef UNUSED
+#if defined(__cplusplus)
+#define UNUSED(x)
+#elif defined(__GNUC__)
+#define UNUSED(x) UNUSED_##x __attribute__((unused))
+#elif defined(__LCLINT__)
+#define UNUSED(x) /*@unused@*/ x
 #else
-#define U64(x) ((ALuint64)(x##ui64))
+#define UNUSED(x) x
 #endif
 #endif
 

@@ -13,12 +13,15 @@
 #endif
 
 
-#define F_PI    (3.14159265358979323846f)  /* pi */
-#define F_PI_2  (1.57079632679489661923f)  /* pi/2 */
+#define F_PI    (3.14159265358979323846f)
+#define F_PI_2  (1.57079632679489661923f)
 
 #ifndef FLT_EPSILON
 #define FLT_EPSILON (1.19209290e-07f)
 #endif
+
+#define DEG2RAD(x)  ((ALfloat)(x) * (F_PI/180.0f))
+#define RAD2DEG(x)  ((ALfloat)(x) * (180.0f/F_PI))
 
 
 #ifdef __cplusplus

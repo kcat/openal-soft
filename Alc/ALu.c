@@ -194,49 +194,49 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 {
     static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f } };
     static const struct ChanMap StereoMap[2] = {
-        { FrontLeft, -30.0f * F_PI/180.0f },
-        { FrontRight, 30.0f * F_PI/180.0f }
+        { FrontLeft,  DEG2RAD(-30.0f) },
+        { FrontRight, DEG2RAD( 30.0f) }
     };
     static const struct ChanMap StereoWideMap[2] = {
-        { FrontLeft, -90.0f * F_PI/180.0f },
-        { FrontRight, 90.0f * F_PI/180.0f }
+        { FrontLeft,  DEG2RAD(-90.0f) },
+        { FrontRight, DEG2RAD( 90.0f) }
     };
     static const struct ChanMap RearMap[2] = {
-        { BackLeft, -150.0f * F_PI/180.0f },
-        { BackRight, 150.0f * F_PI/180.0f }
+        { BackLeft,  DEG2RAD(-150.0f) },
+        { BackRight, DEG2RAD( 150.0f) }
     };
     static const struct ChanMap QuadMap[4] = {
-        { FrontLeft, -45.0f * F_PI/180.0f },
-        { FrontRight, 45.0f * F_PI/180.0f },
-        { BackLeft, -135.0f * F_PI/180.0f },
-        { BackRight, 135.0f * F_PI/180.0f }
+        { FrontLeft,  DEG2RAD( -45.0f) },
+        { FrontRight, DEG2RAD(  45.0f) },
+        { BackLeft,   DEG2RAD(-135.0f) },
+        { BackRight,  DEG2RAD( 135.0f) }
     };
     static const struct ChanMap X51Map[6] = {
-        { FrontLeft, -30.0f * F_PI/180.0f },
-        { FrontRight, 30.0f * F_PI/180.0f },
-        { FrontCenter, 0.0f * F_PI/180.0f },
+        { FrontLeft,   DEG2RAD( -30.0f) },
+        { FrontRight,  DEG2RAD(  30.0f) },
+        { FrontCenter, DEG2RAD(   0.0f) },
         { LFE, 0.0f },
-        { BackLeft, -110.0f * F_PI/180.0f },
-        { BackRight, 110.0f * F_PI/180.0f }
+        { BackLeft,    DEG2RAD(-110.0f) },
+        { BackRight,   DEG2RAD( 110.0f) }
     };
     static const struct ChanMap X61Map[7] = {
-        { FrontLeft,  -30.0f * F_PI/180.0f },
-        { FrontRight,  30.0f * F_PI/180.0f },
-        { FrontCenter,  0.0f * F_PI/180.0f },
+        { FrontLeft,    DEG2RAD(-30.0f) },
+        { FrontRight,   DEG2RAD( 30.0f) },
+        { FrontCenter,  DEG2RAD(  0.0f) },
         { LFE, 0.0f },
-        { BackCenter, 180.0f * F_PI/180.0f },
-        { SideLeft,   -90.0f * F_PI/180.0f },
-        { SideRight,   90.0f * F_PI/180.0f }
+        { BackCenter,   DEG2RAD(180.0f) },
+        { SideLeft,     DEG2RAD(-90.0f) },
+        { SideRight,    DEG2RAD( 90.0f) }
     };
     static const struct ChanMap X71Map[8] = {
-        { FrontLeft, -30.0f * F_PI/180.0f },
-        { FrontRight, 30.0f * F_PI/180.0f },
-        { FrontCenter, 0.0f * F_PI/180.0f },
+        { FrontLeft,   DEG2RAD( -30.0f) },
+        { FrontRight,  DEG2RAD(  30.0f) },
+        { FrontCenter, DEG2RAD(   0.0f) },
         { LFE, 0.0f },
-        { BackLeft, -150.0f * F_PI/180.0f },
-        { BackRight, 150.0f * F_PI/180.0f },
-        { SideLeft,  -90.0f * F_PI/180.0f },
-        { SideRight,  90.0f * F_PI/180.0f }
+        { BackLeft,    DEG2RAD(-150.0f) },
+        { BackRight,   DEG2RAD( 150.0f) },
+        { SideLeft,    DEG2RAD( -90.0f) },
+        { SideRight,   DEG2RAD(  90.0f) }
     };
 
     ALCdevice *Device = ALContext->Device;
@@ -339,7 +339,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         else
         {
             chans = StereoWideMap;
-            hwidth = 60.0f * F_PI/180.0f;
+            hwidth = DEG2RAD(60.0f);
         }
         num_channels = 2;
         break;
@@ -718,7 +718,7 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     }
 
     /* Calculate directional soundcones */
-    Angle = acosf(aluDotproduct(Direction,SourceToListener)) * ConeScale * (360.0f/F_PI);
+    Angle = RAD2DEG(acosf(aluDotproduct(Direction,SourceToListener)) * ConeScale) * 2.0f;
     if(Angle > InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);

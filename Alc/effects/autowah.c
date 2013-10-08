@@ -111,7 +111,7 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
             if((state->lfo++) % 30 == 0)
             {
                 /* Using custom low-pass filter coefficients, to handle the resonance and peak-gain properties. */
-                frequency = (1.0f + cosf(state->lfo * (1.0f / lerp(1.0f, 4.0f, state->AttackTime * state->ReleaseTime)) * 2.0f * F_PI / state->Frequency)) / OCTAVE;
+                frequency = (1.0f + cosf(state->lfo * (1.0f / lerp(1.0f, 4.0f, state->AttackTime * state->ReleaseTime)) * F_2PI / state->Frequency)) / OCTAVE;
                 frequency = expf((frequency - 1.0f) * 6.0f);
 
                 /* computing cutoff frequency and peak gain */

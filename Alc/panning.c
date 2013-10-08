@@ -186,9 +186,9 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
         }
         /* Sound is between last and first speakers */
         if(angle < SpeakerAngle[0])
-            angle += F_PI*2.0f;
-        a =                       (angle-SpeakerAngle[i]) /
-            (F_PI*2.0f + SpeakerAngle[0]-SpeakerAngle[i]);
+            angle += F_2PI;
+        a =                   (angle-SpeakerAngle[i]) /
+            (F_2PI + SpeakerAngle[0]-SpeakerAngle[i]);
         gains[Speaker2Chan[i]] = sqrtf(1.0f-a) * ingain;
         gains[Speaker2Chan[0]] = sqrtf(     a) * ingain;
         return;
@@ -213,7 +213,7 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
             }
             for(i = 0;done < device->NumChan;i++)
             {
-                SpeakerAngle[done] = device->SpeakerAngle[i]-angle + F_PI*2.0f;
+                SpeakerAngle[done] = device->SpeakerAngle[i]-angle + F_2PI;
                 Speaker2Chan[done] = device->Speaker2Chan[i];
                 done++;
             }
@@ -236,7 +236,7 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
             }
             for(i = device->NumChan-1;done < device->NumChan;i--)
             {
-                SpeakerAngle[done] = device->SpeakerAngle[i]-angle - F_PI*2.0f;
+                SpeakerAngle[done] = device->SpeakerAngle[i]-angle - F_2PI;
                 Speaker2Chan[done] = device->Speaker2Chan[i];
                 done--;
             }
@@ -266,14 +266,14 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
         }
         if(SpeakerAngle[i] > rangle)
         {
-            a =          (F_PI*2.0f + rangle-SpeakerAngle[last]) /
-                (F_PI*2.0f + SpeakerAngle[i]-SpeakerAngle[last]);
+            a =          (F_2PI + rangle-SpeakerAngle[last]) /
+                (F_2PI + SpeakerAngle[i]-SpeakerAngle[last]);
             tmpgains[chan] = lerp(tmpgains[chan], 1.0f, a);
         }
         else if(SpeakerAngle[last] < rangle)
         {
-            a =                      (rangle-SpeakerAngle[last]) /
-                (F_PI*2.0f + SpeakerAngle[i]-SpeakerAngle[last]);
+            a =                  (rangle-SpeakerAngle[last]) /
+                (F_2PI + SpeakerAngle[i]-SpeakerAngle[last]);
             tmpgains[chan] = lerp(tmpgains[chan], 1.0f, a);
         }
     } while(0);
@@ -318,14 +318,14 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
         }
         if(SpeakerAngle[i] < langle)
         {
-            a =                      (langle-SpeakerAngle[i]) /
-                (F_PI*2.0f + SpeakerAngle[0]-SpeakerAngle[i]);
+            a =                  (langle-SpeakerAngle[i]) /
+                (F_2PI + SpeakerAngle[0]-SpeakerAngle[i]);
             tmpgains[chan] = lerp(tmpgains[chan], 1.0f, 1.0f-a);
         }
         else if(SpeakerAngle[0] > langle)
         {
-            a =          (F_PI*2.0f + langle-SpeakerAngle[i]) /
-                (F_PI*2.0f + SpeakerAngle[0]-SpeakerAngle[i]);
+            a =          (F_2PI + langle-SpeakerAngle[i]) /
+                (F_2PI + SpeakerAngle[0]-SpeakerAngle[i]);
             tmpgains[chan] = lerp(tmpgains[chan], 1.0f, 1.0f-a);
         }
     } while(0);

@@ -122,7 +122,7 @@ static ALvoid ALchorusState_update(ALchorusState *state, ALCdevice *Device, cons
              if(rate == 0.0f)
                  state->lfo_coeff = 0.0f;
              else
-                 state->lfo_coeff = F_PI*2.0f / (frequency / rate);
+                 state->lfo_coeff = F_2PI / (frequency / rate);
              break;
     }
 
@@ -152,12 +152,11 @@ static inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALint offset,
 {
     ALfloat lfo_value;
 
-    lfo_value = 1.0f + sinf(fmodf(state->lfo_coeff*offset, 2.0f*F_PI));
+    lfo_value = 1.0f + sinf(fmodf(state->lfo_coeff*offset, F_2PI));
     lfo_value *= state->depth * state->delay;
     *delay_left = fastf2i(lfo_value) + state->delay;
 
-    lfo_value = 1.0f + sinf(fmodf(state->lfo_coeff*(offset+state->lfo_disp),
-                                  2.0f*F_PI));
+    lfo_value = 1.0f + sinf(fmodf(state->lfo_coeff*(offset+state->lfo_disp), F_2PI));
     lfo_value *= state->depth * state->delay;
     *delay_right = fastf2i(lfo_value) + state->delay;
 }

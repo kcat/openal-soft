@@ -92,7 +92,7 @@ static void CalcEvIndices(const struct Hrtf *Hrtf, ALfloat ev, ALuint *evidx, AL
  */
 static void CalcAzIndices(const struct Hrtf *Hrtf, ALuint evidx, ALfloat az, ALuint *azidx, ALfloat *azmu)
 {
-    az = (F_PI*2.0f + az) * Hrtf->azCount[evidx] / (F_PI*2.0f);
+    az = (F_2PI + az) * Hrtf->azCount[evidx] / (F_2PI);
     azidx[0] = fastf2u(az) % Hrtf->azCount[evidx];
     azidx[1] = (azidx[0] + 1) % Hrtf->azCount[evidx];
     *azmu = az - floorf(az);

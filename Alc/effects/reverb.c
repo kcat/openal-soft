@@ -266,7 +266,7 @@ static inline ALfloat EAXModulation(ALreverbState *State, ALfloat in)
     // Calculate the sinus rythm (dependent on modulation time and the
     // sampling rate).  The center of the sinus is moved to reduce the delay
     // of the effect when the time or depth are low.
-    sinus = 1.0f - cosf(F_PI*2.0f * State->Mod.Index / State->Mod.Range);
+    sinus = 1.0f - cosf(F_2PI * State->Mod.Index / State->Mod.Range);
 
     // The depth determines the range over which to read the input samples
     // from, so it must be filtered to reduce the distortion caused by even
@@ -1137,7 +1137,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
                                      Slot->EffectProps.Reverb.AirAbsorptionGainHF,
                                      Slot->EffectProps.Reverb.DecayTime);
 
-    cw = cosf(F_PI*2.0f * hfscale);
+    cw = cosf(F_2PI * hfscale);
     // Update the late lines.
     UpdateLateLines(Slot->EffectProps.Reverb.Gain, Slot->EffectProps.Reverb.LateReverbGain,
                     x, Slot->EffectProps.Reverb.Density, Slot->EffectProps.Reverb.DecayTime,

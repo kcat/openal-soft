@@ -64,7 +64,7 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Devi
     state->attenuation = Slot->EffectProps.Distortion.Gain;
 
     /* Store waveshaper edge settings */
-    edge = sinf(Slot->EffectProps.Distortion.Edge * (F_PI/2.0f));
+    edge = sinf(Slot->EffectProps.Distortion.Edge * (F_PI_2));
     edge = minf(edge, 0.99f);
     state->edge_coeff = 2.0f * edge / (1.0f-edge);
 

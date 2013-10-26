@@ -139,3 +139,9 @@
 
 /* Define if we have pthread_setschedparam() */
 #cmakedefine HAVE_PTHREAD_SETSCHEDPARAM
+
+/* Define if we have pthread_setname_np() */
+#cmakedefine HAVE_PTHREAD_SETNAME_NP
+
+/* Define if we have pthread_set_name_np() */
+#cmakedefine HAVE_PTHREAD_SET_NAME_NP

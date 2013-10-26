@@ -813,6 +813,8 @@ void RestoreFPUMode(const FPUCtl *ctl);
 ALvoid *StartThread(ALuint (*func)(ALvoid*), ALvoid *ptr);
 ALuint StopThread(ALvoid *thread);
 
+void SetThreadName(const char *name);
+
 typedef struct RingBuffer RingBuffer;
 RingBuffer *CreateRingBuffer(ALsizei frame_size, ALsizei length);
 void DestroyRingBuffer(RingBuffer *ring);

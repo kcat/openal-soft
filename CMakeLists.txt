@@ -921,7 +921,7 @@ IF(ALSOFT_EXAMPLES)
         SET_PROPERTY(TARGET allatency APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(alloopback examples/alloopback.c)
-        TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL_LIBRARIES} ${LIBNAME})
+        TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL_LIBRARY} ${LIBNAME})
         SET_PROPERTY(TARGET alloopback APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_INCLUDE_DIR}
                                                                            ${SDL_SOUND_INCLUDE_DIR})
 

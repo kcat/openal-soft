@@ -131,7 +131,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
         const ALuint BufferPadding = ResamplerPadding[Resampler];
         ALuint SrcBufferSize, DstBufferSize;
 
-        /* Figure out how many buffer bytes will be needed */
+        /* Figure out how many buffer samples will be needed */
         DataSize64  = SamplesToDo-OutPos+1;
         DataSize64 *= increment;
         DataSize64 += DataPosFrac+FRACTIONMASK;

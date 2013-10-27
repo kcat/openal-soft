@@ -70,7 +70,8 @@ OPTION(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
 OPTION(ALSOFT_WERROR  "Treat compile warnings as errors"      OFF)
 
-OPTION(ALSOFT_UTILS  "Build and install utility programs"  ON)
+OPTION(ALSOFT_UTILS          "Build and install utility programs"         ON)
+OPTION(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
 OPTION(ALSOFT_EXAMPLES  "Build and install example programs"  ON)
 
@@ -795,7 +796,7 @@ ENDIF()
 # This is always available
 SET(BACKENDS  "${BACKENDS} Null")
 
-IF(ALSOFT_UTILS)
+IF(ALSOFT_UTILS AND NOT ALSOFT_NO_CONFIG_UTIL)
     add_subdirectory(utils/alsoft-config)
 ENDIF()
 IF(ALSOFT_EXAMPLES)

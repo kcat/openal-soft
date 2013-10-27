@@ -110,10 +110,8 @@ static struct BackendInfo CaptureBackend;
 /* Wrapper to use an old-style backend with the new interface. */
 typedef struct BackendWrapper {
     DERIVE_FROM_TYPE(ALCbackend);
-
-    ALCdevice *mDevice;
 } BackendWrapper;
-#define BACKENDWRAPPER_INITIALIZER { { GET_VTABLE2(ALCbackend, BackendWrapper) }, NULL }
+#define BACKENDWRAPPER_INITIALIZER { { GET_VTABLE2(ALCbackend, BackendWrapper) } }
 
 static void BackendWrapper_Destruct(BackendWrapper* UNUSED(self))
 {
@@ -121,37 +119,37 @@ static void BackendWrapper_Destruct(BackendWrapper* UNUSED(self))
 
 static ALCenum BackendWrapper_open(BackendWrapper *self, const ALCchar *name)
 {
-    ALCdevice *device = self->mDevice;
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->OpenPlayback(device, name);
 }
 
 static void BackendWrapper_close(BackendWrapper *self)
 {
-    ALCdevice *device = self->mDevice;
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     device->Funcs->ClosePlayback(device);
 }
 
 static ALCboolean BackendWrapper_reset(BackendWrapper *self)
 {
-    ALCdevice *device = self->mDevice;
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->ResetPlayback(device);
 }
 
 static ALCboolean BackendWrapper_start(BackendWrapper *self)
 {
-    ALCdevice *device = self->mDevice;
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->StartPlayback(device);
 }
 
 static void BackendWrapper_stop(BackendWrapper *self)
 {
-    ALCdevice *device = self->mDevice;
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     device->Funcs->StopPlayback(device);
 }
 
 static ALint64 BackendWrapper_getLatency(BackendWrapper *self)
 {
-    ALCdevice *device = self->mDevice;
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->GetLatency(device);
 }
 
@@ -171,7 +169,7 @@ ALCbackend *create_backend_wrapper(ALCdevice *device)
     if(!backend) return NULL;
     SET_VTABLE2(BackendWrapper, ALCbackend, backend);
 
-    backend->mDevice = device;
+    STATIC_CAST(ALCbackend, backend)->mDevice = device;
 
     return STATIC_CAST(ALCbackend, backend);
 }

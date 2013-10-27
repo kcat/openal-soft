@@ -44,6 +44,9 @@ static ALuint NullProc(ALvoid *ptr)
     ALuint now, start;
     ALuint64 avail, done;
 
+    SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
+
     done = 0;
     start = timeGetTime();
     while(!data->killNow && Device->Connected)
@@ -55,7 +58,7 @@ static ALuint NullProc(ALvoid *ptr)
         {
             /* Timer wrapped (50 days???). Add the remainder of the cycle to
              * the available count and reset the number of samples done */
-            avail += ((ALuint64)1<<32)*Device->Frequency/1000 - done;
+            avail += (U64(1)<<32)*Device->Frequency/1000 - done;
             done = 0;
         }
         if(avail-done < Device->UpdateSize)

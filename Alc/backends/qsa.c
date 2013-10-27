@@ -196,6 +196,7 @@ static ALuint qsa_proc_playback(ALvoid* ptr)
     struct timeval timeout;
 
     SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
 
     /* Increase default 10 priority to 11 to avoid jerky sound */
     SchedGet(0, 0, &param);

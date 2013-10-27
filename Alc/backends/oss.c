@@ -85,6 +85,7 @@ static ALuint OSSProc(ALvoid *ptr)
     ssize_t wrote;
 
     SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
 
     frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 
@@ -128,6 +129,7 @@ static ALuint OSSCaptureProc(ALvoid *ptr)
     int amt;
 
     SetRTPriority();
+    SetThreadName("alsoft-record");
 
     frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 

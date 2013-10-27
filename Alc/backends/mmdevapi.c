@@ -238,6 +238,7 @@ static ALuint MMDevApiProc(ALvoid *ptr)
     }
 
     SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
 
     update_size = device->UpdateSize;
     buffer_len = update_size * device->NumUpdates;

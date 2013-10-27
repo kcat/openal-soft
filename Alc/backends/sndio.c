@@ -58,6 +58,7 @@ static ALuint sndio_proc(ALvoid *ptr)
     size_t wrote;
 
     SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
 
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
 

@@ -238,6 +238,7 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
     HRESULT err;
 
     SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
 
     memset(&DSBCaps, 0, sizeof(DSBCaps));
     DSBCaps.dwSize = sizeof(DSBCaps);

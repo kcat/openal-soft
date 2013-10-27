@@ -93,6 +93,8 @@ static ALuint WaveProc(ALvoid *ptr)
     const ALuint restTime = (ALuint64)Device->UpdateSize * 1000 /
                             Device->Frequency / 2;
 
+    SetThreadName(MIXER_THREAD_NAME);
+
     frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 
     done = 0;

@@ -59,6 +59,7 @@ static ALuint SolarisProc(ALvoid *ptr)
     int wrote;
 
     SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
 
     frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 

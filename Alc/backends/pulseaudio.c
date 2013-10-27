@@ -791,6 +791,7 @@ static ALuint PulseProc(ALvoid *param)
     ssize_t len;
 
     SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
 
     pa_threaded_mainloop_lock(data->loop);
     frame_size = pa_frame_size(&data->spec);

@@ -175,6 +175,7 @@ static DWORD WINAPI PlaybackThreadProc(LPVOID param)
     FrameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 
     SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
 
     while(GetMessage(&msg, NULL, 0, 0))
     {
@@ -237,6 +238,7 @@ static DWORD WINAPI CaptureThreadProc(LPVOID param)
     MSG msg;
 
     FrameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
+    SetThreadName("alsoft-record");
 
     while(GetMessage(&msg, NULL, 0, 0))
     {

@@ -714,6 +714,11 @@ struct ALCdevice_struct
 #define INVALID_OFFSET                           (~0u)
 
 
+/* Must be less than 15 characters (16 including terminating null) for
+ * compatibility with pthread_setname_np limitations. */
+#define MIXER_THREAD_NAME "alsoft-mixer"
+
+
 static inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 { return (struct ALbuffer*)LookupUIntMapKey(&device->BufferMap, id); }
 static inline struct ALeffect *LookupEffect(ALCdevice *device, ALuint id)

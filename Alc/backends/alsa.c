@@ -463,6 +463,7 @@ static ALuint ALSAProc(ALvoid *ptr)
     int err;
 
     SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
 
     update_size = Device->UpdateSize;
     num_updates = Device->NumUpdates;
@@ -552,6 +553,7 @@ static ALuint ALSANoMMapProc(ALvoid *ptr)
     int err;
 
     SetRTPriority();
+    SetThreadName(MIXER_THREAD_NAME);
 
     update_size = Device->UpdateSize;
     num_updates = Device->NumUpdates;

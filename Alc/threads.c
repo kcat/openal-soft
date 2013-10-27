@@ -84,6 +84,33 @@ ALuint StopThread(althread_t thread)
     return (ALuint)ret;
 }
 
+
+void SetThreadName(const char *name)
+{
+#if defined(_MSC_VER)
+#define MS_VC_EXCEPTION 0x406D1388
+    struct {
+        DWORD dwType;     // Must be 0x1000.
+        LPCSTR szName;    // Pointer to name (in user addr space).
+        DWORD dwThreadID; // Thread ID (-1=caller thread).
+        DWORD dwFlags;    // Reserved for future use, must be zero.
+    } info;
+    info.dwType = 0x1000;
+    info.szName = name;
+    info.dwThreadID = -1;
+    info.dwFlags = 0;
+
+    __try {
+        RaiseException(MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(DWORD), (DWORD*)&info);
+    }
+    __except(EXCEPTION_CONTINUE_EXECUTION) {
+    }
+#undef MS_VC_EXCEPTION
+#else
+    TRACE("Can't set thread %04lx name to \"%s\"\n", GetCurrentThreadId(), name);
+#endif
+}
+
 #else
 
 #include <pthread.h>
@@ -147,6 +174,23 @@ ALuint StopThread(althread_t thread)
     free(thread);
 
     return ret;
+}
+
+
+void SetThreadName(const char *name)
+{
+#if defined(HAVE_PTHREAD_SETNAME_NP)
+#if defined(__GNUC__)
+    if(pthread_setname_np(pthread_self(), name) != 0)
+#elif defined(__APPLE__)
+    if(pthread_setname_np(name) != 0)
+#endif
+        WARN("Failed to set thread name to \"%s\": %s\n", name, strerror(errno));
+#elif defined(HAVE_PTHREAD_SET_NAME_NP)
+    pthread_set_name_np(pthread_self(), name);
+#else
+    TRACE("Can't set thread name to \"%s\"\n", name);
+#endif
 }
 
 #endif

@@ -489,7 +489,6 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/ALu.c
               Alc/alcConfig.c
               Alc/alcRing.c
-              Alc/alcThread.c
               Alc/bs2b.c
               Alc/effects/autowah.c
               Alc/effects/chorus.c
@@ -505,6 +504,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/helpers.c
               Alc/hrtf.c
               Alc/panning.c
+              Alc/threads.c
               Alc/mixer.c
               Alc/mixer_c.c
 )

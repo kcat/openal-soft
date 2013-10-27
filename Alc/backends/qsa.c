@@ -31,20 +31,22 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "threads.h"
+
 
 typedef struct
 {
     snd_pcm_t* pcmHandle;
     int audio_fd;
 
+    snd_pcm_channel_setup_t  csetup;
+    snd_pcm_channel_params_t cparams;
+
     ALvoid* buffer;
     ALsizei size;
 
     volatile int killNow;
-    ALvoid* thread;
-
-    snd_pcm_channel_setup_t  csetup;
-    snd_pcm_channel_params_t cparams;
+    althread_t thread;
 } qsa_data;
 
 typedef struct
@@ -619,13 +621,10 @@ static ALCboolean qsa_reset_playback(ALCdevice* device)
 
 static ALCboolean qsa_start_playback(ALCdevice* device)
 {
-    qsa_data* data=(qsa_data*)device->ExtraData;
+    qsa_data *data = (qsa_data*)device->ExtraData;
 
-    data->thread=StartThread(qsa_proc_playback, device);
-    if (data->thread==NULL)
-    {
+    if(!StartThread(&data->thread, qsa_proc_playback, device))
         return ALC_FALSE;
-    }
 
     return ALC_TRUE;
 }

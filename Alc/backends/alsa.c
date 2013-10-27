@@ -26,6 +26,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "threads.h"
 
 #include <alsa/asoundlib.h>
 
@@ -293,7 +294,7 @@ typedef struct {
     snd_pcm_sframes_t last_avail;
 
     volatile int killNow;
-    ALvoid *thread;
+    althread_t thread;
 } alsa_data;
 
 typedef struct {
@@ -849,6 +850,7 @@ error:
 static ALCboolean alsa_start_playback(ALCdevice *device)
 {
     alsa_data *data = (alsa_data*)device->ExtraData;
+    ALuint (*thread_func)(ALvoid*) = NULL;
     snd_pcm_hw_params_t *hp = NULL;
     snd_pcm_access_t access;
     const char *funcerr;
@@ -872,7 +874,7 @@ static ALCboolean alsa_start_playback(ALCdevice *device)
             ERR("buffer malloc failed\n");
             return ALC_FALSE;
         }
-        data->thread = StartThread(ALSANoMMapProc, device);
+        thread_func = ALSANoMMapProc;
     }
     else
     {
@@ -882,9 +884,9 @@ static ALCboolean alsa_start_playback(ALCdevice *device)
             ERR("snd_pcm_prepare(data->pcmHandle) failed: %s\n", snd_strerror(err));
             return ALC_FALSE;
         }
-        data->thread = StartThread(ALSAProc, device);
+        thread_func = ALSAProc;
     }
-    if(data->thread == NULL)
+    if(!StartThread(&data->thread, thread_func, device))
     {
         ERR("Could not create playback thread\n");
         free(data->buffer);

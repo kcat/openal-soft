@@ -34,6 +34,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "threads.h"
 
 #ifndef DSSPEAKER_5POINT1
 #   define DSSPEAKER_5POINT1          0x00000006
@@ -74,7 +75,7 @@ typedef struct {
     HANDLE             NotifyEvent;
 
     volatile int killNow;
-    ALvoid *thread;
+    althread_t thread;
 } DSoundPlaybackData;
 
 typedef struct {
@@ -632,8 +633,7 @@ static ALCboolean DSoundStartPlayback(ALCdevice *device)
 {
     DSoundPlaybackData *data = (DSoundPlaybackData*)device->ExtraData;
 
-    data->thread = StartThread(DSoundPlaybackProc, device);
-    if(data->thread == NULL)
+    if(!StartThread(&data->thread, DSoundPlaybackProc, device))
         return ALC_FALSE;
 
     return ALC_TRUE;

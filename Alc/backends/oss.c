@@ -33,6 +33,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "threads.h"
 
 #include <sys/soundcard.h>
 
@@ -54,14 +55,15 @@ static const char *oss_capture = "/dev/dsp";
 
 typedef struct {
     int fd;
-    volatile int killNow;
-    ALvoid *thread;
 
     ALubyte *mix_data;
     int data_size;
 
     RingBuffer *ring;
     int doCapture;
+
+    volatile int killNow;
+    althread_t thread;
 } oss_data;
 
 
@@ -286,8 +288,7 @@ static ALCboolean oss_start_playback(ALCdevice *device)
     data->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     data->mix_data = calloc(1, data->data_size);
 
-    data->thread = StartThread(OSSProc, device);
-    if(data->thread == NULL)
+    if(!StartThread(&data->thread, OSSProc, device))
     {
         free(data->mix_data);
         data->mix_data = NULL;
@@ -428,8 +429,7 @@ static ALCenum oss_open_capture(ALCdevice *device, const ALCchar *deviceName)
     data->mix_data = calloc(1, data->data_size);
 
     device->ExtraData = data;
-    data->thread = StartThread(OSSCaptureProc, device);
-    if(data->thread == NULL)
+    if(!StartThread(&data->thread, OSSCaptureProc, device))
     {
         device->ExtraData = NULL;
         free(data->mix_data);

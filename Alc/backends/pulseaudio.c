@@ -25,6 +25,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "threads.h"
 
 #include <pulse/pulseaudio.h>
 
@@ -205,11 +206,11 @@ typedef struct {
 
     pa_threaded_mainloop *loop;
 
-    ALvoid *thread;
-    volatile ALboolean killNow;
-
     pa_stream *stream;
     pa_context *context;
+
+    volatile ALboolean killNow;
+    althread_t thread;
 } pulse_data;
 
 typedef struct {
@@ -1151,8 +1152,7 @@ static ALCboolean pulse_start_playback(ALCdevice *device)
 {
     pulse_data *data = device->ExtraData;
 
-    data->thread = StartThread(PulseProc, device);
-    if(!data->thread)
+    if(!StartThread(&data->thread, PulseProc, device))
         return ALC_FALSE;
 
     return ALC_TRUE;

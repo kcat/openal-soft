@@ -29,6 +29,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "threads.h"
 
 
 typedef struct {
@@ -39,7 +40,7 @@ typedef struct {
     ALuint size;
 
     volatile int killNow;
-    ALvoid *thread;
+    althread_t thread;
 } wave_data;
 
 
@@ -288,8 +289,7 @@ static ALCboolean wave_start_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    data->thread = StartThread(WaveProc, device);
-    if(data->thread == NULL)
+    if(!StartThread(&data->thread, WaveProc, device))
     {
         free(data->buffer);
         data->buffer = NULL;

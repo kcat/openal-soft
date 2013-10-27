@@ -40,6 +40,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "threads.h"
 
 
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
@@ -69,7 +70,7 @@ typedef struct {
     volatile UINT32 Padding;
 
     volatile int killNow;
-    ALvoid *thread;
+    althread_t thread;
 } MMDevApiData;
 
 
@@ -677,8 +678,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             if(SUCCEEDED(hr))
             {
                 data->render = ptr;
-                data->thread = StartThread(MMDevApiProc, device);
-                if(!data->thread)
+                if(!StartThread(&data->thread, MMDevApiProc, device))
                 {
                     if(data->render)
                         IAudioRenderClient_Release(data->render);

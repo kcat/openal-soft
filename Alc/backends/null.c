@@ -27,11 +27,12 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "threads.h"
 
 
 typedef struct {
     volatile int killNow;
-    ALvoid *thread;
+    althread_t thread;
 } null_data;
 
 
@@ -112,8 +113,7 @@ static ALCboolean null_start_playback(ALCdevice *device)
 {
     null_data *data = (null_data*)device->ExtraData;
 
-    data->thread = StartThread(NullProc, device);
-    if(data->thread == NULL)
+    if(!StartThread(&data->thread, NullProc, device))
         return ALC_FALSE;
 
     return ALC_TRUE;

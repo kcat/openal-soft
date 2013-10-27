@@ -38,10 +38,20 @@
 #include "bs2b.h"
 #include "alu.h"
 
+#include "backends/base.h"
+
 
 /************************************************
  * Backends
  ************************************************/
+struct BackendInfo {
+    const char *name;
+    ALCboolean (*Init)(BackendFuncs*);
+    void (*Deinit)(void);
+    void (*Probe)(enum DevProbe);
+    BackendFuncs Funcs;
+};
+
 #define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 static struct BackendInfo BackendList[] = {
 #ifdef HAVE_PULSEAUDIO
@@ -95,6 +105,77 @@ static struct BackendInfo BackendLoopback = {
 
 static struct BackendInfo PlaybackBackend;
 static struct BackendInfo CaptureBackend;
+
+
+/* Wrapper to use an old-style backend with the new interface. */
+typedef struct BackendWrapper {
+    DERIVE_FROM_TYPE(ALCbackend);
+
+    ALCdevice *mDevice;
+} BackendWrapper;
+#define BACKENDWRAPPER_INITIALIZER { { GET_VTABLE2(ALCbackend, BackendWrapper) }, NULL }
+
+static void BackendWrapper_Destruct(BackendWrapper* UNUSED(self))
+{
+}
+
+static ALCenum BackendWrapper_open(BackendWrapper *self, const ALCchar *name)
+{
+    ALCdevice *device = self->mDevice;
+    return device->Funcs->OpenPlayback(device, name);
+}
+
+static void BackendWrapper_close(BackendWrapper *self)
+{
+    ALCdevice *device = self->mDevice;
+    device->Funcs->ClosePlayback(device);
+}
+
+static ALCboolean BackendWrapper_reset(BackendWrapper *self)
+{
+    ALCdevice *device = self->mDevice;
+    return device->Funcs->ResetPlayback(device);
+}
+
+static ALCboolean BackendWrapper_start(BackendWrapper *self)
+{
+    ALCdevice *device = self->mDevice;
+    return device->Funcs->StartPlayback(device);
+}
+
+static void BackendWrapper_stop(BackendWrapper *self)
+{
+    ALCdevice *device = self->mDevice;
+    device->Funcs->StopPlayback(device);
+}
+
+static ALint64 BackendWrapper_getLatency(BackendWrapper *self)
+{
+    ALCdevice *device = self->mDevice;
+    return device->Funcs->GetLatency(device);
+}
+
+static void BackendWrapper_Delete(BackendWrapper *self)
+{
+    free(self);
+}
+
+DEFINE_ALCBACKEND_VTABLE(BackendWrapper);
+
+
+ALCbackend *create_backend_wrapper(ALCdevice *device)
+{
+    BackendWrapper *backend;
+
+    backend = malloc(sizeof(*backend));
+    if(!backend) return NULL;
+    SET_VTABLE2(BackendWrapper, ALCbackend, backend);
+
+    backend->mDevice = device;
+
+    return STATIC_CAST(ALCbackend, backend);
+}
+
 
 /************************************************
  * Functions, enums, and errors
@@ -1335,6 +1416,11 @@ ALint64 ALCdevice_GetLatencyDefault(ALCdevice *UNUSED(device))
     return 0;
 }
 
+ALint64 alcGetLatency(ALCdevice *device)
+{
+    return VCALL0(device->Backend,getLatency,());
+}
+
 /* SetDefaultWFXChannelOrder
  *
  * Sets the default channel order used by WaveFormatEx.
@@ -1561,7 +1647,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         numSends = minu(MAX_SENDS, numSends);
 
         if((device->Flags&DEVICE_RUNNING))
-            ALCdevice_StopPlayback(device);
+            VCALL0(device->Backend,stop,());
         device->Flags &= ~DEVICE_RUNNING;
 
         device->Frequency = freq;
@@ -1579,7 +1665,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         /* If a context is already running on the device, stop playback so the
          * device attributes can be updated. */
         if((device->Flags&DEVICE_RUNNING))
-            ALCdevice_StopPlayback(device);
+            VCALL0(device->Backend,close,());
         device->Flags &= ~DEVICE_RUNNING;
 
         freq = device->Frequency;
@@ -1664,7 +1750,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                          DEVICE_FREQUENCY_REQUEST;
     }
 
-    if(ALCdevice_ResetPlayback(device) == ALC_FALSE)
+    if(VCALL0(device->Backend,reset,()) == ALC_FALSE)
         return ALC_INVALID_DEVICE;
 
     if(device->FmtChans != oldChans && (device->Flags&DEVICE_CHANNELS_REQUEST))
@@ -1804,7 +1890,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALCdevice_Unlock(device);
     RestoreFPUMode(&oldMode);
 
-    if(ALCdevice_StartPlayback(device) == ALC_FALSE)
+    if(VCALL0(device->Backend,start,()) == ALC_FALSE)
         return ALC_INVALID_DEVICE;
     device->Flags |= DEVICE_RUNNING;
 
@@ -1821,7 +1907,7 @@ static ALCvoid FreeDevice(ALCdevice *device)
     TRACE("%p\n", device);
 
     if(device->Type != Capture)
-        ALCdevice_ClosePlayback(device);
+        VCALL0(device->Backend,close,());
     else
         ALCdevice_CloseCapture(device);
 
@@ -2596,7 +2682,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         if(!device->ContextList)
         {
-            ALCdevice_StopPlayback(device);
+            VCALL0(device->Backend,stop,());
             device->Flags &= ~DEVICE_RUNNING;
         }
         UnlockLists();
@@ -2640,7 +2726,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         ReleaseContext(context, Device);
         if(!Device->ContextList)
         {
-            ALCdevice_StopPlayback(Device);
+            VCALL0(Device->Backend,stop,());
             Device->Flags &= ~DEVICE_RUNNING;
         }
     }
@@ -2801,6 +2887,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumUpdates = 4;
     device->UpdateSize = 1024;
 
+    device->Backend = create_backend_wrapper(device);
+
     if(ConfigValueStr(NULL, "channels", &fmt))
     {
         static const struct {
@@ -2937,7 +3025,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
     // Find a playback device to open
-    if((err=ALCdevice_OpenPlayback(device, deviceName)) != ALC_NO_ERROR)
+    if((err=VCALL(device->Backend,open,(deviceName))) != ALC_NO_ERROR)
     {
         DeleteCriticalSection(&device->Mutex);
         al_free(device);
@@ -3000,7 +3088,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *Device)
         ReleaseContext(ctx, Device);
     }
     if((Device->Flags&DEVICE_RUNNING))
-        ALCdevice_StopPlayback(Device);
+        VCALL0(Device->Backend,stop,());
     Device->Flags &= ~DEVICE_RUNNING;
 
     ALCdevice_DecRef(Device);
@@ -3215,6 +3303,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
 
+    device->Backend = create_backend_wrapper(device);
+
     //Set output format
     device->NumUpdates = 0;
     device->UpdateSize = 0;
@@ -3236,7 +3326,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
     // Open the "backend"
-    ALCdevice_OpenPlayback(device, "Loopback");
+    VCALL(device->Backend,open,("Loopback"));
     do {
         device->next = DeviceList;
     } while(!CompExchangePtr((XchgPtr*)&DeviceList, device->next, device));

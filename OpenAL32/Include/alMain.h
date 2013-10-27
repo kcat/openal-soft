@@ -105,6 +105,7 @@ static const union {
 /* Call a "virtual" method on an object, with arguments. */
 #define VCALL(obj, func, args)  ((obj)->vtbl->func((obj), EXTRACT_VCALL_ARGS args))
 /* Call a "virtual" method on an object, with no arguments. */
+#define VCALL0(obj, func, args) ((obj)->vtbl->func((obj)))
 #define VCALL_NOARGS(obj, func) ((obj)->vtbl->func((obj)))
 
 #define DELETE_OBJ(obj) do {                                                  \
@@ -457,14 +458,6 @@ typedef struct {
     ALint64 (*GetLatency)(ALCdevice*);
 } BackendFuncs;
 
-struct BackendInfo {
-    const char *name;
-    ALCboolean (*Init)(BackendFuncs*);
-    void (*Deinit)(void);
-    void (*Probe)(enum DevProbe);
-    BackendFuncs Funcs;
-};
-
 ALCboolean alc_alsa_init(BackendFuncs *func_list);
 void alc_alsa_deinit(void);
 void alc_alsa_probe(enum DevProbe type);
@@ -510,6 +503,8 @@ void alc_null_probe(enum DevProbe type);
 ALCboolean alc_loopback_init(BackendFuncs *func_list);
 void alc_loopback_deinit(void);
 void alc_loopback_probe(enum DevProbe type);
+
+struct ALCbackend;
 
 
 enum DistanceModel {
@@ -674,17 +669,14 @@ struct ALCdevice_struct
     // Contexts created on this device
     ALCcontext *volatile ContextList;
 
+    struct ALCbackend *Backend;
+
     BackendFuncs *Funcs;
     void         *ExtraData; // For the backend's use
 
     ALCdevice *volatile next;
 };
 
-#define ALCdevice_OpenPlayback(a,b)      ((a)->Funcs->OpenPlayback((a), (b)))
-#define ALCdevice_ClosePlayback(a)       ((a)->Funcs->ClosePlayback((a)))
-#define ALCdevice_ResetPlayback(a)       ((a)->Funcs->ResetPlayback((a)))
-#define ALCdevice_StartPlayback(a)       ((a)->Funcs->StartPlayback((a)))
-#define ALCdevice_StopPlayback(a)        ((a)->Funcs->StopPlayback((a)))
 #define ALCdevice_OpenCapture(a,b)       ((a)->Funcs->OpenCapture((a), (b)))
 #define ALCdevice_CloseCapture(a)        ((a)->Funcs->CloseCapture((a)))
 #define ALCdevice_StartCapture(a)        ((a)->Funcs->StartCapture((a)))
@@ -693,7 +685,6 @@ struct ALCdevice_struct
 #define ALCdevice_AvailableSamples(a)    ((a)->Funcs->AvailableSamples((a)))
 #define ALCdevice_Lock(a)                ((a)->Funcs->Lock((a)))
 #define ALCdevice_Unlock(a)              ((a)->Funcs->Unlock((a)))
-#define ALCdevice_GetLatency(a)          ((a)->Funcs->GetLatency((a)))
 
 // Frequency was requested by the app or config file
 #define DEVICE_FREQUENCY_REQUEST                 (1<<1)
@@ -717,6 +708,9 @@ struct ALCdevice_struct
 /* Must be less than 15 characters (16 including terminating null) for
  * compatibility with pthread_setname_np limitations. */
 #define MIXER_THREAD_NAME "alsoft-mixer"
+
+
+ALint64 alcGetLatency(ALCdevice *device);
 
 
 static inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)

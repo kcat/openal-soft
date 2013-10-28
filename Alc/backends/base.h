@@ -87,7 +87,8 @@ static const struct ALCbackendVtable T##_ALCbackend_vtable = {                \
 
 
 typedef enum ALCbackend_Type {
-    ALCbackend_Playback
+    ALCbackend_Playback,
+    ALCbackend_Capture
 } ALCbackend_Type;
 
 
@@ -131,6 +132,6 @@ static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
 
 ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
 
-ALCbackend *create_backend_wrapper(ALCdevice *device);
+ALCbackend *create_backend_wrapper(ALCdevice *device, ALCbackend_Type type);
 
 #endif /* AL_BACKENDS_BASE_H */

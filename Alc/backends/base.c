@@ -36,97 +36,198 @@ void ALCbackend_unlock(ALCbackend *self)
 }
 
 
-/* Wrapper to use an old-style backend with the new interface. */
-typedef struct BackendWrapper {
+/* Wrappers to use an old-style backend with the new interface. */
+typedef struct PlaybackWrapper {
     DERIVE_FROM_TYPE(ALCbackend);
-} BackendWrapper;
-#define BACKENDWRAPPER_INITIALIZER { { GET_VTABLE2(ALCbackend, BackendWrapper) } }
+} PlaybackWrapper;
+#define PLAYBACKWRAPPER_INITIALIZER { { GET_VTABLE2(ALCbackend, PlaybackWrapper) } }
 
-static void BackendWrapper_Construct(BackendWrapper *self, ALCdevice *device)
+static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
 }
 
-static void BackendWrapper_Destruct(BackendWrapper *self)
+static void PlaybackWrapper_Destruct(PlaybackWrapper *self)
 {
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
-static ALCenum BackendWrapper_open(BackendWrapper *self, const ALCchar *name)
+static ALCenum PlaybackWrapper_open(PlaybackWrapper *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->OpenPlayback(device, name);
 }
 
-static void BackendWrapper_close(BackendWrapper *self)
+static void PlaybackWrapper_close(PlaybackWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     device->Funcs->ClosePlayback(device);
 }
 
-static ALCboolean BackendWrapper_reset(BackendWrapper *self)
+static ALCboolean PlaybackWrapper_reset(PlaybackWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->ResetPlayback(device);
 }
 
-static ALCboolean BackendWrapper_start(BackendWrapper *self)
+static ALCboolean PlaybackWrapper_start(PlaybackWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->StartPlayback(device);
 }
 
-static void BackendWrapper_stop(BackendWrapper *self)
+static void PlaybackWrapper_stop(PlaybackWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     device->Funcs->StopPlayback(device);
 }
 
-ALCenum BackendWrapper_captureSamples(BackendWrapper* UNUSED(self), void* UNUSED(buffer), ALCuint UNUSED(samples))
+ALCenum PlaybackWrapper_captureSamples(PlaybackWrapper* UNUSED(self), void* UNUSED(buffer), ALCuint UNUSED(samples))
 {
     return ALC_INVALID_VALUE;
 }
 
-ALCuint BackendWrapper_availableSamples(BackendWrapper* UNUSED(self))
+ALCuint PlaybackWrapper_availableSamples(PlaybackWrapper* UNUSED(self))
 {
     return 0;
 }
 
-static ALint64 BackendWrapper_getLatency(BackendWrapper *self)
+static ALint64 PlaybackWrapper_getLatency(PlaybackWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->GetLatency(device);
 }
 
-static void BackendWrapper_lock(BackendWrapper *self)
+static void PlaybackWrapper_lock(PlaybackWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->Lock(device);
 }
 
-static void BackendWrapper_unlock(BackendWrapper *self)
+static void PlaybackWrapper_unlock(PlaybackWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->Unlock(device);
 }
 
-static void BackendWrapper_Delete(BackendWrapper *self)
+static void PlaybackWrapper_Delete(PlaybackWrapper *self)
 {
     free(self);
 }
 
-DEFINE_ALCBACKEND_VTABLE(BackendWrapper);
+DEFINE_ALCBACKEND_VTABLE(PlaybackWrapper);
 
 
-ALCbackend *create_backend_wrapper(ALCdevice *device)
+typedef struct CaptureWrapper {
+    DERIVE_FROM_TYPE(ALCbackend);
+} CaptureWrapper;
+#define CAPTUREWRAPPER_INITIALIZER { { GET_VTABLE2(ALCbackend, PlaybackWrapper) } }
+
+static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device)
 {
-    BackendWrapper *backend;
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+}
 
-    backend = malloc(sizeof(*backend));
-    if(!backend) return NULL;
-    SET_VTABLE2(BackendWrapper, ALCbackend, backend);
+static void CaptureWrapper_Destruct(CaptureWrapper *self)
+{
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+}
 
-    BackendWrapper_Construct(backend, device);
+static ALCenum CaptureWrapper_open(CaptureWrapper *self, const ALCchar *name)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    return device->Funcs->OpenCapture(device, name);
+}
 
-    return STATIC_CAST(ALCbackend, backend);
+static void CaptureWrapper_close(CaptureWrapper *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    device->Funcs->CloseCapture(device);
+}
+
+static ALCboolean CaptureWrapper_reset(CaptureWrapper* UNUSED(self))
+{
+    return ALC_FALSE;
+}
+
+static ALCboolean CaptureWrapper_start(CaptureWrapper *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    device->Funcs->StartCapture(device);
+    return ALC_TRUE;
+}
+
+static void CaptureWrapper_stop(CaptureWrapper *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    device->Funcs->StopCapture(device);
+}
+
+ALCenum CaptureWrapper_captureSamples(CaptureWrapper *self, void *buffer, ALCuint samples)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    return device->Funcs->CaptureSamples(device, buffer, samples);
+}
+
+ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    return device->Funcs->AvailableSamples(device);
+}
+
+static ALint64 CaptureWrapper_getLatency(CaptureWrapper *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    return device->Funcs->GetLatency(device);
+}
+
+static void CaptureWrapper_lock(CaptureWrapper *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    return device->Funcs->Lock(device);
+}
+
+static void CaptureWrapper_unlock(CaptureWrapper *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    return device->Funcs->Unlock(device);
+}
+
+static void CaptureWrapper_Delete(CaptureWrapper *self)
+{
+    free(self);
+}
+
+DEFINE_ALCBACKEND_VTABLE(CaptureWrapper);
+
+
+ALCbackend *create_backend_wrapper(ALCdevice *device, ALCbackend_Type type)
+{
+    if(type == ALCbackend_Playback)
+    {
+        PlaybackWrapper *backend;
+
+        backend = malloc(sizeof(*backend));
+        if(!backend) return NULL;
+        SET_VTABLE2(PlaybackWrapper, ALCbackend, backend);
+
+        PlaybackWrapper_Construct(backend, device);
+
+        return STATIC_CAST(ALCbackend, backend);
+    }
+
+    if(type == ALCbackend_Capture)
+    {
+        CaptureWrapper *backend;
+
+        backend = malloc(sizeof(*backend));
+        if(!backend) return NULL;
+        SET_VTABLE2(CaptureWrapper, ALCbackend, backend);
+
+        CaptureWrapper_Construct(backend, device);
+
+        return STATIC_CAST(ALCbackend, backend);
+    }
+
+    return NULL;
 }

@@ -407,13 +407,6 @@ struct ALCdevice_struct
     ALCdevice *volatile next;
 };
 
-#define ALCdevice_OpenCapture(a,b)       ((a)->Funcs->OpenCapture((a), (b)))
-#define ALCdevice_CloseCapture(a)        ((a)->Funcs->CloseCapture((a)))
-#define ALCdevice_StartCapture(a)        ((a)->Funcs->StartCapture((a)))
-#define ALCdevice_StopCapture(a)         ((a)->Funcs->StopCapture((a)))
-#define ALCdevice_CaptureSamples(a,b,c)  ((a)->Funcs->CaptureSamples((a), (b), (c)))
-#define ALCdevice_AvailableSamples(a)    ((a)->Funcs->AvailableSamples((a)))
-
 // Frequency was requested by the app or config file
 #define DEVICE_FREQUENCY_REQUEST                 (1<<1)
 // Channel configuration was requested by the config file

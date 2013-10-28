@@ -35,6 +35,7 @@
 #include "alMain.h"
 #include "alu.h"
 #include "threads.h"
+#include "compat.h"
 
 #ifndef DSSPEAKER_5POINT1
 #   define DSSPEAKER_5POINT1          0x00000006

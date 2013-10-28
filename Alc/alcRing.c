@@ -24,6 +24,7 @@
 #include <stdlib.h>
 
 #include "alMain.h"
+#include "compat.h"
 
 
 struct RingBuffer {

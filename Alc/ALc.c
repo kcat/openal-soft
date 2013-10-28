@@ -114,8 +114,14 @@ typedef struct BackendWrapper {
 } BackendWrapper;
 #define BACKENDWRAPPER_INITIALIZER { { GET_VTABLE2(ALCbackend, BackendWrapper) } }
 
-static void BackendWrapper_Destruct(BackendWrapper* UNUSED(self))
+static void BackendWrapper_Construct(BackendWrapper *self, ALCdevice *device)
 {
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+}
+
+static void BackendWrapper_Destruct(BackendWrapper *self)
+{
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 static ALCenum BackendWrapper_open(BackendWrapper *self, const ALCchar *name)
@@ -182,7 +188,7 @@ ALCbackend *create_backend_wrapper(ALCdevice *device)
     if(!backend) return NULL;
     SET_VTABLE2(BackendWrapper, ALCbackend, backend);
 
-    STATIC_CAST(ALCbackend, backend)->mDevice = device;
+    BackendWrapper_Construct(backend, device);
 
     return STATIC_CAST(ALCbackend, backend);
 }
@@ -1466,11 +1472,11 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
 
 void ALCdevice_LockDefault(ALCdevice *device)
 {
-    EnterCriticalSection(&device->Mutex);
+    ALCbackend_lock(device->Backend);
 }
 void ALCdevice_UnlockDefault(ALCdevice *device)
 {
-    LeaveCriticalSection(&device->Mutex);
+    ALCbackend_unlock(device->Backend);
 }
 ALint64 ALCdevice_GetLatencyDefault(ALCdevice *UNUSED(device))
 {
@@ -1504,6 +1510,18 @@ void UnlockContext(ALCcontext *context)
 }
 
 
+/* These should go to a seaparate source. */
+void ALCbackend_Construct(ALCbackend *self, ALCdevice *device)
+{
+    self->mDevice = device;
+    InitializeCriticalSection(&self->mMutex);
+}
+
+void ALCbackend_Destruct(ALCbackend *self)
+{
+    DeleteCriticalSection(&self->mMutex);
+}
+
 ALint64 ALCbackend_getLatency(ALCbackend* UNUSED(self))
 {
     return 0;
@@ -1511,12 +1529,12 @@ ALint64 ALCbackend_getLatency(ALCbackend* UNUSED(self))
 
 void ALCbackend_lock(ALCbackend *self)
 {
-    ALCdevice_LockDefault(self->mDevice);
+    EnterCriticalSection(&self->mMutex);
 }
 
 void ALCbackend_unlock(ALCbackend *self)
 {
-    ALCdevice_UnlockDefault(self->mDevice);
+    LeaveCriticalSection(&self->mMutex);
 }
 
 
@@ -2045,8 +2063,6 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     free(device->DeviceName);
     device->DeviceName = NULL;
-
-    DeleteCriticalSection(&device->Mutex);
 
     al_free(device);
 }
@@ -2963,7 +2979,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->ref = 1;
     device->Connected = ALC_TRUE;
     device->Type = Playback;
-    InitializeCriticalSection(&device->Mutex);
     device->LastError = ALC_NO_ERROR;
 
     device->Flags = 0;
@@ -2997,7 +3012,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
     if(!device->Backend)
     {
-        DeleteCriticalSection(&device->Mutex);
         al_free(device);
         alcSetError(NULL, ALC_OUT_OF_MEMORY);
         return NULL;
@@ -3143,7 +3157,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if((err=VCALL(device->Backend,open)(deviceName)) != ALC_NO_ERROR)
     {
         DELETE_OBJ(device->Backend);
-        DeleteCriticalSection(&device->Mutex);
         al_free(device);
         alcSetError(NULL, err);
         return NULL;
@@ -3250,7 +3263,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->ref = 1;
     device->Connected = ALC_TRUE;
     device->Type = Capture;
-    InitializeCriticalSection(&device->Mutex);
 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
@@ -3258,13 +3270,20 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     device->DeviceName = NULL;
 
+    device->Backend = create_backend_wrapper(device);
+    if(!device->Backend)
+    {
+        al_free(device);
+        alcSetError(NULL, ALC_OUT_OF_MEMORY);
+        return NULL;
+    }
+
     device->Flags |= DEVICE_FREQUENCY_REQUEST;
     device->Frequency = frequency;
 
     device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_SAMPLE_TYPE_REQUEST;
     if(DecomposeDevFormat(format, &device->FmtChans, &device->FmtType) == AL_FALSE)
     {
-        DeleteCriticalSection(&device->Mutex);
         al_free(device);
         alcSetError(NULL, ALC_INVALID_ENUM);
         return NULL;
@@ -3275,7 +3294,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     if((err=ALCdevice_OpenCapture(device, deviceName)) != ALC_NO_ERROR)
     {
-        DeleteCriticalSection(&device->Mutex);
         al_free(device);
         alcSetError(NULL, err);
         return NULL;
@@ -3401,7 +3419,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->ref = 1;
     device->Connected = ALC_TRUE;
     device->Type = Loopback;
-    InitializeCriticalSection(&device->Mutex);
     device->LastError = ALC_NO_ERROR;
 
     device->Flags = 0;
@@ -3420,6 +3437,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitUIntMap(&device->FilterMap, ~0);
 
     device->Backend = create_backend_wrapper(device);
+    if(!device->Backend)
+    {
+        al_free(device);
+        alcSetError(NULL, ALC_OUT_OF_MEMORY);
+        return NULL;
+    }
 
     //Set output format
     device->NumUpdates = 0;

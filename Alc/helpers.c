@@ -344,6 +344,8 @@ WCHAR *strdupW(const WCHAR *str)
 #include <pthread_np.h>
 #endif
 #include <sched.h>
+#include <time.h>
+#include <sys/time.h>
 
 void InitializeCriticalSection(CRITICAL_SECTION *cs)
 {

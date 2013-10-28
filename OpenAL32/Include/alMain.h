@@ -15,8 +15,6 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "compat.h"
-
 #ifndef ALC_SOFT_HRTF
 #define ALC_SOFT_HRTF 1
 #define ALC_HRTF_SOFT                            0x1992
@@ -553,8 +551,6 @@ struct ALCdevice_struct
 
     ALCboolean Connected;
     enum DeviceType Type;
-
-    CRITICAL_SECTION Mutex;
 
     ALuint       Frequency;
     ALuint       UpdateSize;

@@ -27,6 +27,7 @@
 #include "alMain.h"
 #include "alu.h"
 #include "threads.h"
+#include "compat.h"
 
 #include <alsa/asoundlib.h>
 

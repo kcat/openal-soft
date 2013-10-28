@@ -28,6 +28,7 @@
 #include "alMain.h"
 #include "alu.h"
 #include "threads.h"
+#include "compat.h"
 
 #include "backends/base.h"
 
@@ -85,8 +86,14 @@ static ALuint ALCnullBackend_mixerProc(ALvoid *ptr)
 }
 
 
-static void ALCnullBackend_Destruct(ALCnullBackend* UNUSED(self))
+static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
 {
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+}
+
+static void ALCnullBackend_Destruct(ALCnullBackend *self)
+{
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
@@ -197,7 +204,7 @@ ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UNUSED(se
     if(!backend) return NULL;
     SET_VTABLE2(ALCnullBackend, ALCbackend, backend);
 
-    STATIC_CAST(ALCbackend, backend)->mDevice = device;
+    ALCnullBackend_Construct(backend, device);
 
     return STATIC_CAST(ALCbackend, backend);
 }

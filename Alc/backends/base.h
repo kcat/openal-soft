@@ -2,6 +2,7 @@
 #define AL_BACKENDS_BASE_H
 
 #include "alMain.h"
+#include "compat.h"
 
 
 struct ALCbackendVtable;
@@ -10,8 +11,12 @@ typedef struct ALCbackend {
     const struct ALCbackendVtable *vtbl;
 
     ALCdevice *mDevice;
+
+    CRITICAL_SECTION mMutex;
 } ALCbackend;
 
+void ALCbackend_Construct(ALCbackend *self, ALCdevice *device);
+void ALCbackend_Destruct(ALCbackend *self);
 ALint64 ALCbackend_getLatency(ALCbackend *self);
 void ALCbackend_lock(ALCbackend *self);
 void ALCbackend_unlock(ALCbackend *self);

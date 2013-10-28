@@ -41,6 +41,7 @@
 #include "alMain.h"
 #include "alu.h"
 #include "threads.h"
+#include "compat.h"
 
 
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);

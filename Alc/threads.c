@@ -23,6 +23,7 @@
 #include "threads.h"
 
 #include <stdlib.h>
+#include <errno.h>
 
 #include "alMain.h"
 #include "alThunk.h"

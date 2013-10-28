@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
+#include <errno.h>
 #ifdef HAVE_WINDOWS_H
 #include <windows.h>
 #endif

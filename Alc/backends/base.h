@@ -12,6 +12,7 @@ typedef struct ALCbackend {
     ALCdevice *mDevice;
 } ALCbackend;
 
+ALint64 ALCbackend_getLatency(ALCbackend *self);
 void ALCbackend_lock(ALCbackend *self);
 void ALCbackend_unlock(ALCbackend *self);
 

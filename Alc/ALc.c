@@ -1453,6 +1453,11 @@ void UnlockContext(ALCcontext *context)
 }
 
 
+ALint64 ALCbackend_getLatency(ALCbackend* UNUSED(self))
+{
+    return 0;
+}
+
 void ALCbackend_lock(ALCbackend *self)
 {
     ALCdevice_LockDefault(self->mDevice);
@@ -1953,6 +1958,8 @@ static ALCvoid FreeDevice(ALCdevice *device)
         VCALL0(device->Backend,close,());
     else
         ALCdevice_CloseCapture(device);
+    DELETE_OBJ(device->Backend);
+    device->Backend = NULL;
 
     if(device->DefaultSlot)
     {

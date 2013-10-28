@@ -31,6 +31,9 @@ struct ALCbackendVtable {
     ALCboolean (*start)(ALCbackend*);
     void (*stop)(ALCbackend*);
 
+    ALCenum (*captureSamples)(ALCbackend*, void*, ALCuint);
+    ALCuint (*availableSamples)(ALCbackend*);
+
     ALint64 (*getLatency)(ALCbackend*);
 
     void (*lock)(ALCbackend*);
@@ -52,6 +55,10 @@ static ALCboolean T##_ALCbackend_start(ALCbackend *obj)                       \
 { return T##_start(STATIC_UPCAST(T, ALCbackend, obj)); }                      \
 static void T##_ALCbackend_stop(ALCbackend *obj)                              \
 { T##_stop(STATIC_UPCAST(T, ALCbackend, obj)); }                              \
+static ALCenum T##_ALCbackend_captureSamples(ALCbackend *obj, void *a, ALCuint b) \
+{ return T##_captureSamples(STATIC_UPCAST(T, ALCbackend, obj), a, b); }           \
+static ALCuint T##_ALCbackend_availableSamples(ALCbackend *obj)               \
+{ return T##_availableSamples(STATIC_UPCAST(T, ALCbackend, obj)); }           \
 static ALint64 T##_ALCbackend_getLatency(ALCbackend *obj)                     \
 { return T##_getLatency(STATIC_UPCAST(T, ALCbackend, obj)); }                 \
 static void T##_ALCbackend_lock(ALCbackend *obj)                              \
@@ -69,6 +76,8 @@ static const struct ALCbackendVtable T##_ALCbackend_vtable = {                \
     T##_ALCbackend_reset,                                                     \
     T##_ALCbackend_start,                                                     \
     T##_ALCbackend_stop,                                                      \
+    T##_ALCbackend_captureSamples,                                            \
+    T##_ALCbackend_availableSamples,                                          \
     T##_ALCbackend_getLatency,                                                \
     T##_ALCbackend_lock,                                                      \
     T##_ALCbackend_unlock,                                                    \

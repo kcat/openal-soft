@@ -82,6 +82,16 @@ static void BackendWrapper_stop(BackendWrapper *self)
     device->Funcs->StopPlayback(device);
 }
 
+ALCenum BackendWrapper_captureSamples(BackendWrapper* UNUSED(self), void* UNUSED(buffer), ALCuint UNUSED(samples))
+{
+    return ALC_INVALID_VALUE;
+}
+
+ALCuint BackendWrapper_availableSamples(BackendWrapper* UNUSED(self))
+{
+    return 0;
+}
+
 static ALint64 BackendWrapper_getLatency(BackendWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;

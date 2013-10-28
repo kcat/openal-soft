@@ -140,6 +140,16 @@ static void ALCnullBackend_stop(ALCnullBackend *self)
     self->killNow = 0;
 }
 
+ALCenum ALCnullBackend_captureSamples(ALCnullBackend* UNUSED(self), void* UNUSED(buffer), ALCuint UNUSED(samples))
+{
+    return ALC_INVALID_VALUE;
+}
+
+ALCuint ALCnullBackend_availableSamples(ALCnullBackend* UNUSED(self))
+{
+    return 0;
+}
+
 static ALint64 ALCnullBackend_getLatency(ALCnullBackend *self)
 {
     return ALCbackend_getLatency(STATIC_CAST(ALCbackend, self));

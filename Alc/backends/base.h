@@ -12,6 +12,9 @@ typedef struct ALCbackend {
     ALCdevice *mDevice;
 } ALCbackend;
 
+void ALCbackend_lock(ALCbackend *self);
+void ALCbackend_unlock(ALCbackend *self);
+
 struct ALCbackendVtable {
     void (*const Destruct)(ALCbackend *state);
 
@@ -23,6 +26,9 @@ struct ALCbackendVtable {
     void (*stop)(ALCbackend*);
 
     ALint64 (*getLatency)(ALCbackend*);
+
+    void (*lock)(ALCbackend*);
+    void (*unlock)(ALCbackend*);
 
     void (*const Delete)(ALCbackend *state);
 };
@@ -42,6 +48,10 @@ static void T##_ALCbackend_stop(ALCbackend *obj)                              \
 { T##_stop(STATIC_UPCAST(T, ALCbackend, obj)); }                              \
 static ALint64 T##_ALCbackend_getLatency(ALCbackend *obj)                     \
 { return T##_getLatency(STATIC_UPCAST(T, ALCbackend, obj)); }                 \
+static void T##_ALCbackend_lock(ALCbackend *obj)                              \
+{ T##_lock(STATIC_UPCAST(T, ALCbackend, obj)); }                              \
+static void T##_ALCbackend_unlock(ALCbackend *obj)                            \
+{ T##_unlock(STATIC_UPCAST(T, ALCbackend, obj)); }                            \
 static void T##_ALCbackend_Delete(ALCbackend *obj)                            \
 { T##_Delete(STATIC_UPCAST(T, ALCbackend, obj)); }                            \
                                                                               \
@@ -54,6 +64,8 @@ static const struct ALCbackendVtable T##_ALCbackend_vtable = {                \
     T##_ALCbackend_start,                                                     \
     T##_ALCbackend_stop,                                                      \
     T##_ALCbackend_getLatency,                                                \
+    T##_ALCbackend_lock,                                                      \
+    T##_ALCbackend_unlock,                                                    \
                                                                               \
     T##_ALCbackend_Delete,                                                    \
 }

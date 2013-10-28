@@ -683,8 +683,6 @@ struct ALCdevice_struct
 #define ALCdevice_StopCapture(a)         ((a)->Funcs->StopCapture((a)))
 #define ALCdevice_CaptureSamples(a,b,c)  ((a)->Funcs->CaptureSamples((a), (b), (c)))
 #define ALCdevice_AvailableSamples(a)    ((a)->Funcs->AvailableSamples((a)))
-#define ALCdevice_Lock(a)                ((a)->Funcs->Lock((a)))
-#define ALCdevice_Unlock(a)              ((a)->Funcs->Unlock((a)))
 
 // Frequency was requested by the app or config file
 #define DEVICE_FREQUENCY_REQUEST                 (1<<1)
@@ -786,15 +784,16 @@ void ALCdevice_LockDefault(ALCdevice *device);
 void ALCdevice_UnlockDefault(ALCdevice *device);
 ALint64 ALCdevice_GetLatencyDefault(ALCdevice *device);
 
-static inline void LockContext(ALCcontext *context)
-{ ALCdevice_Lock(context->Device); }
-static inline void UnlockContext(ALCcontext *context)
-{ ALCdevice_Unlock(context->Device); }
+void ALCdevice_Lock(ALCdevice *device);
+void ALCdevice_Unlock(ALCdevice *device);
+void LockContext(ALCcontext *context);
+void UnlockContext(ALCcontext *context);
 
 
 void *al_malloc(size_t alignment, size_t size);
 void *al_calloc(size_t alignment, size_t size);
 void al_free(void *ptr);
+
 
 typedef struct {
 #ifdef HAVE_FENV_H

@@ -153,6 +153,18 @@ static ALint64 BackendWrapper_getLatency(BackendWrapper *self)
     return device->Funcs->GetLatency(device);
 }
 
+static void BackendWrapper_lock(BackendWrapper *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    return device->Funcs->Lock(device);
+}
+
+static void BackendWrapper_unlock(BackendWrapper *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    return device->Funcs->Unlock(device);
+}
+
 static void BackendWrapper_Delete(BackendWrapper *self)
 {
     free(self);
@@ -1414,10 +1426,43 @@ ALint64 ALCdevice_GetLatencyDefault(ALCdevice *UNUSED(device))
     return 0;
 }
 
+
 ALint64 alcGetLatency(ALCdevice *device)
 {
     return VCALL0(device->Backend,getLatency,());
 }
+
+void ALCdevice_Lock(ALCdevice *device)
+{
+    return VCALL0(device->Backend,lock,());
+}
+
+void ALCdevice_Unlock(ALCdevice *device)
+{
+    return VCALL0(device->Backend,unlock,());
+}
+
+void LockContext(ALCcontext *context)
+{
+    VCALL0(context->Device->Backend,lock,());
+}
+
+void UnlockContext(ALCcontext *context)
+{
+    VCALL0(context->Device->Backend,unlock,());
+}
+
+
+void ALCbackend_lock(ALCbackend *self)
+{
+    ALCdevice_LockDefault(self->mDevice);
+}
+
+void ALCbackend_unlock(ALCbackend *self)
+{
+    ALCdevice_UnlockDefault(self->mDevice);
+}
+
 
 /* SetDefaultWFXChannelOrder
  *

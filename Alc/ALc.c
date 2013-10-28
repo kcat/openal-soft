@@ -1104,20 +1104,20 @@ static void alc_initconfig(void)
         if(BackendList[i].getFactory)
         {
             ALCbackendFactory *factory = BackendList[i].getFactory();
-            if(!VCALL0(factory,init,()))
+            if(!VCALL0(factory,init)())
             {
                 WARN("Failed to initialize backend \"%s\"\n", BackendList[i].name);
                 continue;
             }
 
             TRACE("Initialized backend \"%s\"\n", BackendList[i].name);
-            if(!PlaybackBackend.name && VCALL(factory,support,(ALCbackend_Playback)))
+            if(!PlaybackBackend.name && VCALL(factory,support)(ALCbackend_Playback))
             {
                 PlaybackBackend = BackendList[i];
                 TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
             }
 #if 0
-            if(!CaptureBackend.name && VCALL(factory,support,(ALCbackend_Capture)))
+            if(!CaptureBackend.name && VCALL(factory,support)(ALCbackend_Capture))
             {
                 CaptureBackend = BackendList[i];
                 TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
@@ -1239,7 +1239,7 @@ static void alc_deinit(void)
         else
         {
             ALCbackendFactory *factory = BackendList[i].getFactory();
-            VCALL0(factory,deinit,());
+            VCALL0(factory,deinit)();
         }
     }
     BackendLoopback.Deinit();
@@ -1267,7 +1267,7 @@ static void ProbeList(ALCchar **list, size_t *listsize, enum DevProbe type)
         else
         {
             ALCbackendFactory *factory = PlaybackBackend.getFactory();
-            VCALL(factory,probe,(type));
+            VCALL(factory,probe)(type);
         }
     }
     else if(type == CAPTURE_DEVICE_PROBE && (CaptureBackend.Probe || CaptureBackend.getFactory))
@@ -1277,7 +1277,7 @@ static void ProbeList(ALCchar **list, size_t *listsize, enum DevProbe type)
         else
         {
             ALCbackendFactory *factory = CaptureBackend.getFactory();
-            VCALL(factory,probe,(type));
+            VCALL(factory,probe)(type);
         }
     }
     UnlockLists();
@@ -1480,27 +1480,27 @@ ALint64 ALCdevice_GetLatencyDefault(ALCdevice *UNUSED(device))
 
 ALint64 alcGetLatency(ALCdevice *device)
 {
-    return VCALL0(device->Backend,getLatency,());
+    return VCALL0(device->Backend,getLatency)();
 }
 
 void ALCdevice_Lock(ALCdevice *device)
 {
-    return VCALL0(device->Backend,lock,());
+    VCALL0(device->Backend,lock)();
 }
 
 void ALCdevice_Unlock(ALCdevice *device)
 {
-    return VCALL0(device->Backend,unlock,());
+    VCALL0(device->Backend,unlock)();
 }
 
 void LockContext(ALCcontext *context)
 {
-    VCALL0(context->Device->Backend,lock,());
+    ALCdevice_Lock(context->Device);
 }
 
 void UnlockContext(ALCcontext *context)
 {
-    VCALL0(context->Device->Backend,unlock,());
+    ALCdevice_Unlock(context->Device);
 }
 
 
@@ -1746,7 +1746,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         numSends = minu(MAX_SENDS, numSends);
 
         if((device->Flags&DEVICE_RUNNING))
-            VCALL0(device->Backend,stop,());
+            VCALL0(device->Backend,stop)();
         device->Flags &= ~DEVICE_RUNNING;
 
         device->Frequency = freq;
@@ -1764,7 +1764,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         /* If a context is already running on the device, stop playback so the
          * device attributes can be updated. */
         if((device->Flags&DEVICE_RUNNING))
-            VCALL0(device->Backend,close,());
+            VCALL0(device->Backend,close)();
         device->Flags &= ~DEVICE_RUNNING;
 
         freq = device->Frequency;
@@ -1849,7 +1849,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                          DEVICE_FREQUENCY_REQUEST;
     }
 
-    if(VCALL0(device->Backend,reset,()) == ALC_FALSE)
+    if(VCALL0(device->Backend,reset)() == ALC_FALSE)
         return ALC_INVALID_DEVICE;
 
     if(device->FmtChans != oldChans && (device->Flags&DEVICE_CHANNELS_REQUEST))
@@ -1940,7 +1940,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
 
-            if(VCALL(slot->EffectState,deviceUpdate,(device)) == AL_FALSE)
+            if(VCALL(slot->EffectState,deviceUpdate)(device) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
                 ALCdevice_Unlock(device);
@@ -1948,7 +1948,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 return ALC_INVALID_DEVICE;
             }
             slot->NeedsUpdate = AL_FALSE;
-            VCALL(slot->EffectState,update,(device, slot));
+            VCALL(slot->EffectState,update)(device, slot);
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
 
@@ -1977,19 +1977,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         ALeffectslot *slot = device->DefaultSlot;
 
-        if(VCALL(slot->EffectState,deviceUpdate,(device)) == AL_FALSE)
+        if(VCALL(slot->EffectState,deviceUpdate)(device) == AL_FALSE)
         {
             ALCdevice_Unlock(device);
             RestoreFPUMode(&oldMode);
             return ALC_INVALID_DEVICE;
         }
         slot->NeedsUpdate = AL_FALSE;
-        VCALL(slot->EffectState,update,(device, slot));
+        VCALL(slot->EffectState,update)(device, slot);
     }
     ALCdevice_Unlock(device);
     RestoreFPUMode(&oldMode);
 
-    if(VCALL0(device->Backend,start,()) == ALC_FALSE)
+    if(VCALL0(device->Backend,start)() == ALC_FALSE)
         return ALC_INVALID_DEVICE;
     device->Flags |= DEVICE_RUNNING;
 
@@ -2006,7 +2006,7 @@ static ALCvoid FreeDevice(ALCdevice *device)
     TRACE("%p\n", device);
 
     if(device->Type != Capture)
-        VCALL0(device->Backend,close,());
+        VCALL0(device->Backend,close)();
     else
         ALCdevice_CloseCapture(device);
     DELETE_OBJ(device->Backend);
@@ -2783,7 +2783,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         if(!device->ContextList)
         {
-            VCALL0(device->Backend,stop,());
+            VCALL0(device->Backend,stop)();
             device->Flags &= ~DEVICE_RUNNING;
         }
         UnlockLists();
@@ -2827,7 +2827,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         ReleaseContext(context, Device);
         if(!Device->ContextList)
         {
-            VCALL0(Device->Backend,stop,());
+            VCALL0(Device->Backend,stop)();
             Device->Flags &= ~DEVICE_RUNNING;
         }
     }
@@ -2993,7 +2993,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     else
     {
         ALCbackendFactory *factory = PlaybackBackend.getFactory();
-        device->Backend = VCALL(factory,createBackend,(device));
+        device->Backend = VCALL(factory,createBackend)(device);
     }
     if(!device->Backend)
     {
@@ -3140,7 +3140,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
     // Find a playback device to open
-    if((err=VCALL(device->Backend,open,(deviceName))) != ALC_NO_ERROR)
+    if((err=VCALL(device->Backend,open)(deviceName)) != ALC_NO_ERROR)
     {
         DELETE_OBJ(device->Backend);
         DeleteCriticalSection(&device->Mutex);
@@ -3204,7 +3204,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *Device)
         ReleaseContext(ctx, Device);
     }
     if((Device->Flags&DEVICE_RUNNING))
-        VCALL0(Device->Backend,stop,());
+        VCALL0(Device->Backend,stop)();
     Device->Flags &= ~DEVICE_RUNNING;
 
     ALCdevice_DecRef(Device);
@@ -3442,7 +3442,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
     // Open the "backend"
-    VCALL(device->Backend,open,("Loopback"));
+    VCALL(device->Backend,open)("Loopback");
     do {
         device->next = DeviceList;
     } while(!CompExchangePtr((XchgPtr*)&DeviceList, device->next, device));

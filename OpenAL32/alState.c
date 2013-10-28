@@ -582,7 +582,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         while(slot != slot_end)
         {
             if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
-                VCALL((*slot)->EffectState,update,(context->Device, *slot));
+                VCALL((*slot)->EffectState,update)(context->Device, *slot);
             slot++;
         }
 

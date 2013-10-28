@@ -164,7 +164,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
         else
         {
             /* Call the appropriate handler */
-            VCALL(ALEffect,setParami,(Context, param, value));
+            VCALL(ALEffect,setParami)(Context, param, value);
         }
     }
 
@@ -193,7 +193,7 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *v
     else
     {
         /* Call the appropriate handler */
-        VCALL(ALEffect,setParamiv,(Context, param, values));
+        VCALL(ALEffect,setParamiv)(Context, param, values);
     }
 
     ALCcontext_DecRef(Context);
@@ -214,7 +214,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
     else
     {
         /* Call the appropriate handler */
-        VCALL(ALEffect,setParamf,(Context, param, value));
+        VCALL(ALEffect,setParamf)(Context, param, value);
     }
 
     ALCcontext_DecRef(Context);
@@ -235,7 +235,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat 
     else
     {
         /* Call the appropriate handler */
-        VCALL(ALEffect,setParamfv,(Context, param, values));
+        VCALL(ALEffect,setParamfv)(Context, param, values);
     }
 
     ALCcontext_DecRef(Context);
@@ -260,7 +260,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value
         else
         {
             /* Call the appropriate handler */
-            VCALL(ALEffect,getParami,(Context, param, value));
+            VCALL(ALEffect,getParami)(Context, param, value);
         }
     }
 
@@ -289,7 +289,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *valu
     else
     {
         /* Call the appropriate handler */
-        VCALL(ALEffect,getParamiv,(Context, param, values));
+        VCALL(ALEffect,getParamiv)(Context, param, values);
     }
 
     ALCcontext_DecRef(Context);
@@ -310,7 +310,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *val
     else
     {
         /* Call the appropriate handler */
-        VCALL(ALEffect,getParamf,(Context, param, value));
+        VCALL(ALEffect,getParamf)(Context, param, value);
     }
 
     ALCcontext_DecRef(Context);
@@ -331,7 +331,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *va
     else
     {
         /* Call the appropriate handler */
-        VCALL(ALEffect,getParamfv,(Context, param, values));
+        VCALL(ALEffect,getParamfv)(Context, param, values);
     }
 
     ALCcontext_DecRef(Context);

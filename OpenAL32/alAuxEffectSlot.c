@@ -466,14 +466,14 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
             ERR("Failed to find factory for effect type 0x%04x\n", newtype);
             return AL_INVALID_ENUM;
         }
-        State = VCALL_NOARGS(factory,create);
+        State = VCALL0(factory,create)();
         if(!State)
             return AL_OUT_OF_MEMORY;
 
         SetMixerFPUMode(&oldMode);
 
         ALCdevice_Lock(Device);
-        if(VCALL(State,deviceUpdate,(Device)) == AL_FALSE)
+        if(VCALL(State,deviceUpdate)(Device) == AL_FALSE)
         {
             ALCdevice_Unlock(Device);
             RestoreFPUMode(&oldMode);
@@ -497,7 +497,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
          * object was changed, it needs an update before its Process method can
          * be called. */
         EffectSlot->NeedsUpdate = AL_FALSE;
-        VCALL(EffectSlot->EffectState,update,(Device, EffectSlot));
+        VCALL(EffectSlot->EffectState,update)(Device, EffectSlot);
         ALCdevice_Unlock(Device);
 
         RestoreFPUMode(&oldMode);
@@ -528,7 +528,7 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     slot->EffectType = AL_EFFECT_NULL;
 
     factory = getFactoryByType(AL_EFFECT_NULL);
-    if(!(slot->EffectState=VCALL_NOARGS(factory,create)))
+    if(!(slot->EffectState=VCALL0(factory,create)()))
         return AL_OUT_OF_MEMORY;
 
     slot->Gain = 1.0;

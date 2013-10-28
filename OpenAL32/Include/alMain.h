@@ -99,20 +99,20 @@ static const union {
 #define SET_VTABLE1(T1, obj)     ((obj)->vtbl = GET_VTABLE1(T1))
 #define SET_VTABLE2(T1, T2, obj) (STATIC_CAST(T2, obj)->vtbl = GET_VTABLE2(T1, T2))
 
+
 /* Helper to extract an argument list for VCALL. Not used directly. */
-#define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__
+#define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__))
 
 /* Call a "virtual" method on an object, with arguments. */
-#define VCALL(obj, func, args)  ((obj)->vtbl->func((obj), EXTRACT_VCALL_ARGS args))
+#define VCALL(obj, func)  ((obj)->vtbl->func((obj), EXTRACT_VCALL_ARGS
 /* Call a "virtual" method on an object, with no arguments. */
-#define VCALL0(obj, func, args) ((obj)->vtbl->func((obj)))
-#define VCALL_NOARGS(obj, func) ((obj)->vtbl->func((obj)))
+#define VCALL0(obj, func) ((obj)->vtbl->func((obj) EXTRACT_VCALL_ARGS
 
 #define DELETE_OBJ(obj) do {                                                  \
     if((obj) != NULL)                                                         \
     {                                                                         \
-        VCALL_NOARGS((obj),Destruct);                                         \
-        VCALL_NOARGS((obj),Delete);                                           \
+        VCALL0((obj),Destruct)();                                             \
+        VCALL0((obj),Delete)();                                               \
     }                                                                         \
 } while(0)
 

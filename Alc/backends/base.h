@@ -72,4 +72,47 @@ static const struct ALCbackendVtable T##_ALCbackend_vtable = {                \
 }
 
 
+typedef enum ALCbackend_Type {
+    ALCbackend_Playback
+} ALCbackend_Type;
+
+
+struct ALCbackendFactoryVtable;
+
+typedef struct ALCbackendFactory {
+    const struct ALCbackendFactoryVtable *vtbl;
+} ALCbackendFactory;
+
+struct ALCbackendFactoryVtable {
+    ALCboolean (*const init)(ALCbackendFactory *self);
+    void (*const deinit)(ALCbackendFactory *self);
+
+    ALCboolean (*const support)(ALCbackendFactory *self, ALCbackend_Type type);
+
+    void (*const probe)(ALCbackendFactory *self, enum DevProbe type);
+
+    ALCbackend* (*const createBackend)(ALCbackendFactory *self, ALCdevice *device);
+};
+
+#define DEFINE_ALCBACKENDFACTORY_VTABLE(T)                                    \
+static ALCboolean T##_ALCbackendFactory_init(ALCbackendFactory *obj)          \
+{ return T##_init(STATIC_UPCAST(T, ALCbackendFactory, obj)); }                \
+static void T##_ALCbackendFactory_deinit(ALCbackendFactory *obj)              \
+{ T##_deinit(STATIC_UPCAST(T, ALCbackendFactory, obj)); }                     \
+static ALCboolean T##_ALCbackendFactory_support(ALCbackendFactory *obj, ALCbackend_Type a) \
+{ return T##_support(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                       \
+static void T##_ALCbackendFactory_probe(ALCbackendFactory *obj, enum DevProbe a) \
+{ T##_probe(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                      \
+static ALCbackend* T##_ALCbackendFactory_createBackend(ALCbackendFactory *obj, ALCdevice *a) \
+{ return T##_createBackend(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                   \
+                                                                              \
+static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
+    T##_ALCbackendFactory_init,                                               \
+    T##_ALCbackendFactory_deinit,                                             \
+    T##_ALCbackendFactory_support,                                            \
+    T##_ALCbackendFactory_probe,                                              \
+    T##_ALCbackendFactory_createBackend,                                      \
+}
+
+
 #endif /* AL_BACKENDS_BASE_H */

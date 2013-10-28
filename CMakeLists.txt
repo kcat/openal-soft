@@ -546,6 +546,7 @@ ENDIF()
 
 
 SET(ALC_OBJS  ${ALC_OBJS}
+              Alc/backends/base.c
               # Default backends, always available
               Alc/backends/loopback.c
               Alc/backends/null.c

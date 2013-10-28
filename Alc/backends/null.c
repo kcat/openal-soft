@@ -29,19 +29,24 @@
 #include "alu.h"
 #include "threads.h"
 
+#include "backends/base.h"
 
-typedef struct {
+
+typedef struct ALCnullBackend {
+    DERIVE_FROM_TYPE(ALCbackend);
+
     volatile int killNow;
     althread_t thread;
-} null_data;
+} ALCnullBackend;
+#define ALCNULLBACKEND_INITIALIZER { { GET_VTABLE2(ALCbackend, ALCnullBackend) } }
 
 
 static const ALCchar nullDevice[] = "No Output";
 
-static ALuint NullProc(ALvoid *ptr)
+static ALuint ALCnullBackend_mixerProc(ALvoid *ptr)
 {
-    ALCdevice *Device = (ALCdevice*)ptr;
-    null_data *data = (null_data*)Device->ExtraData;
+    ALCnullBackend *self = (ALCnullBackend*)ptr;
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     ALuint now, start;
     ALuint64 avail, done;
 
@@ -50,118 +55,129 @@ static ALuint NullProc(ALvoid *ptr)
 
     done = 0;
     start = timeGetTime();
-    while(!data->killNow && Device->Connected)
+    while(!self->killNow && device->Connected)
     {
         now = timeGetTime();
 
-        avail = (ALuint64)(now-start) * Device->Frequency / 1000;
+        avail = (ALuint64)(now-start) * device->Frequency / 1000;
         if(avail < done)
         {
             /* Timer wrapped (50 days???). Add the remainder of the cycle to
              * the available count and reset the number of samples done */
-            avail += (U64(1)<<32)*Device->Frequency/1000 - done;
+            avail += (U64(1)<<32)*device->Frequency/1000 - done;
             done = 0;
         }
-        if(avail-done < Device->UpdateSize)
+        if(avail-done < device->UpdateSize)
         {
-            ALuint restTime = (Device->UpdateSize - (avail-done)) * 1000 /
-                              Device->Frequency;
+            ALuint restTime = (device->UpdateSize - (avail-done)) * 1000 /
+                              device->Frequency;
             Sleep(restTime);
             continue;
         }
 
         do {
-            aluMixData(Device, NULL, Device->UpdateSize);
-            done += Device->UpdateSize;
-        } while(avail-done >= Device->UpdateSize);
+            aluMixData(device, NULL, device->UpdateSize);
+            done += device->UpdateSize;
+        } while(avail-done >= device->UpdateSize);
     }
 
     return 0;
 }
 
-static ALCenum null_open_playback(ALCdevice *device, const ALCchar *deviceName)
-{
-    null_data *data;
 
-    if(!deviceName)
-        deviceName = nullDevice;
-    else if(strcmp(deviceName, nullDevice) != 0)
+static void ALCnullBackend_Destruct(ALCnullBackend* UNUSED(self))
+{
+}
+
+static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
+{
+    ALCdevice *device;
+
+    if(!name)
+        name = nullDevice;
+    else if(strcmp(name, nullDevice) != 0)
         return ALC_INVALID_VALUE;
 
-    data = (null_data*)calloc(1, sizeof(*data));
+    device = STATIC_CAST(ALCbackend, self)->mDevice;
+    device->DeviceName = strdup(name);
 
-    device->DeviceName = strdup(deviceName);
-    device->ExtraData = data;
     return ALC_NO_ERROR;
 }
 
-static void null_close_playback(ALCdevice *device)
+static void ALCnullBackend_close(ALCnullBackend* UNUSED(self))
 {
-    null_data *data = (null_data*)device->ExtraData;
-
-    free(data);
-    device->ExtraData = NULL;
 }
 
-static ALCboolean null_reset_playback(ALCdevice *device)
+static ALCboolean ALCnullBackend_reset(ALCnullBackend *self)
 {
-    SetDefaultWFXChannelOrder(device);
+    SetDefaultWFXChannelOrder(STATIC_CAST(ALCbackend, self)->mDevice);
     return ALC_TRUE;
 }
 
-static ALCboolean null_start_playback(ALCdevice *device)
+static ALCboolean ALCnullBackend_start(ALCnullBackend *self)
 {
-    null_data *data = (null_data*)device->ExtraData;
-
-    if(!StartThread(&data->thread, NullProc, device))
+    if(!StartThread(&self->thread, ALCnullBackend_mixerProc, self))
         return ALC_FALSE;
-
     return ALC_TRUE;
 }
 
-static void null_stop_playback(ALCdevice *device)
+static void ALCnullBackend_stop(ALCnullBackend *self)
 {
-    null_data *data = (null_data*)device->ExtraData;
-
-    if(!data->thread)
+    if(!self->thread)
         return;
 
-    data->killNow = 1;
-    StopThread(data->thread);
-    data->thread = NULL;
+    self->killNow = 1;
+    StopThread(self->thread);
+    self->thread = NULL;
 
-    data->killNow = 0;
+    self->killNow = 0;
 }
 
-
-static const BackendFuncs null_funcs = {
-    null_open_playback,
-    null_close_playback,
-    null_reset_playback,
-    null_start_playback,
-    null_stop_playback,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    ALCdevice_LockDefault,
-    ALCdevice_UnlockDefault,
-    ALCdevice_GetLatencyDefault
-};
-
-ALCboolean alc_null_init(BackendFuncs *func_list)
+static ALint64 ALCnullBackend_getLatency(ALCnullBackend *self)
 {
-    *func_list = null_funcs;
+    return ALCbackend_getLatency(STATIC_CAST(ALCbackend, self));
+}
+
+static void ALCnullBackend_lock(ALCnullBackend *self)
+{
+    ALCbackend_lock(STATIC_CAST(ALCbackend, self));
+}
+
+static void ALCnullBackend_unlock(ALCnullBackend *self)
+{
+    ALCbackend_unlock(STATIC_CAST(ALCbackend, self));
+}
+
+static void ALCnullBackend_Delete(ALCnullBackend *self)
+{
+    free(self);
+}
+
+DEFINE_ALCBACKEND_VTABLE(ALCnullBackend);
+
+
+typedef struct ALCnullBackendFactory {
+    DERIVE_FROM_TYPE(ALCbackendFactory);
+} ALCnullBackendFactory;
+#define ALCNULLBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCnullBackendFactory, ALCbackendFactory) } }
+
+ALCboolean ALCnullBackendFactory_init(ALCnullBackendFactory* UNUSED(self))
+{
     return ALC_TRUE;
 }
 
-void alc_null_deinit(void)
+void ALCnullBackendFactory_deinit(ALCnullBackendFactory* UNUSED(self))
 {
 }
 
-void alc_null_probe(enum DevProbe type)
+ALCboolean ALCnullBackendFactory_support(ALCnullBackendFactory* UNUSED(self), ALCbackend_Type type)
+{
+    if(type == ALCbackend_Playback)
+        return ALC_TRUE;
+    return ALC_FALSE;
+}
+
+void ALCnullBackendFactory_probe(ALCnullBackendFactory* UNUSED(self), enum DevProbe type)
 {
     switch(type)
     {
@@ -171,4 +187,26 @@ void alc_null_probe(enum DevProbe type)
         case CAPTURE_DEVICE_PROBE:
             break;
     }
+}
+
+ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UNUSED(self), ALCdevice *device)
+{
+    ALCnullBackend *backend;
+
+    backend = calloc(1, sizeof(*backend));
+    if(!backend) return NULL;
+    SET_VTABLE2(ALCnullBackend, ALCbackend, backend);
+
+    STATIC_CAST(ALCbackend, backend)->mDevice = device;
+
+    return STATIC_CAST(ALCbackend, backend);
+}
+
+DEFINE_ALCBACKENDFACTORY_VTABLE(ALCnullBackendFactory);
+
+
+ALCbackendFactory *ALCnullBackendFactory_getFactory(void)
+{
+    static ALCnullBackendFactory factory = ALCNULLBACKENDFACTORY_INITIALIZER;
+    return STATIC_CAST(ALCbackendFactory, &factory);
 }

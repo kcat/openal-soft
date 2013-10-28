@@ -115,4 +115,6 @@ static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
 }
 
 
+ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
+
 #endif /* AL_BACKENDS_BASE_H */

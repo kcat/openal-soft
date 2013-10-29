@@ -22,7 +22,7 @@ void ALCbackend_lock(ALCbackend *self);
 void ALCbackend_unlock(ALCbackend *self);
 
 struct ALCbackendVtable {
-    void (*const Destruct)(ALCbackend *state);
+    void (*const Destruct)(ALCbackend*);
 
     ALCenum (*const open)(ALCbackend*, const ALCchar*);
     void (*const close)(ALCbackend*);
@@ -39,7 +39,7 @@ struct ALCbackendVtable {
     void (*lock)(ALCbackend*);
     void (*unlock)(ALCbackend*);
 
-    void (*const Delete)(ALCbackend *state);
+    void (*const Delete)(ALCbackend*);
 };
 
 #define DEFINE_ALCBACKEND_VTABLE(T)                                           \

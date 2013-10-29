@@ -451,10 +451,12 @@ typedef struct ALCplaybackAlsa {
     volatile int killNow;
     althread_t thread;
 } ALCplaybackAlsa;
+DECLARE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
 
 static ALuint ALCplaybackAlsa_mixerProc(ALvoid *ptr);
 static ALuint ALCplaybackAlsa_mixerNoMMapProc(ALvoid *ptr);
 
+static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, Destruct)
 static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name);
 static void ALCplaybackAlsa_close(ALCplaybackAlsa *self);
 static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self);
@@ -462,8 +464,15 @@ static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self);
 static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self);
 static ALCenum ALCplaybackAlsa_captureSamples(ALCplaybackAlsa *self, ALCvoid *buffer, ALCuint samples);
 static ALCuint ALCplaybackAlsa_availableSamples(ALCplaybackAlsa *self);
-static void ALCplaybackAlsa_lock(ALCplaybackAlsa *self);
-static void ALCplaybackAlsa_unlock(ALCplaybackAlsa *self);
+static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, unlock)
+
+
+static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
+{
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(ALCplaybackAlsa, ALCbackend, self);
+}
 
 
 static ALuint ALCplaybackAlsa_mixerProc(ALvoid *ptr)
@@ -947,22 +956,6 @@ static ALint64 ALCplaybackAlsa_getLatency(ALCplaybackAlsa *self)
     return maxi64((ALint64)delay*1000000000/device->Frequency, 0);
 }
 
-static void ALCplaybackAlsa_lock(ALCplaybackAlsa *self)
-{ ALCbackend_lock(STATIC_CAST(ALCbackend, self)); }
-
-static void ALCplaybackAlsa_unlock(ALCplaybackAlsa *self)
-{ ALCbackend_unlock(STATIC_CAST(ALCbackend, self)); }
-
-
-static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
-{
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
-}
-
-static void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
-{
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
-}
 
 static void ALCplaybackAlsa_Delete(ALCplaybackAlsa *self)
 {
@@ -985,7 +978,9 @@ typedef struct ALCcaptureAlsa {
 
     snd_pcm_sframes_t last_avail;
 } ALCcaptureAlsa;
+DECLARE_ALCBACKEND_VTABLE(ALCcaptureAlsa);
 
+static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, Destruct)
 static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name);
 static void ALCcaptureAlsa_close(ALCcaptureAlsa *self);
 static ALCboolean ALCcaptureAlsa_reset(ALCcaptureAlsa *self);
@@ -993,8 +988,16 @@ static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self);
 static void ALCcaptureAlsa_stop(ALCcaptureAlsa *self);
 static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples);
 static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self);
-static void ALCcaptureAlsa_lock(ALCcaptureAlsa *self);
-static void ALCcaptureAlsa_unlock(ALCcaptureAlsa *self);
+static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, unlock)
+
+
+static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
+{
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(ALCcaptureAlsa, ALCbackend, self);
+}
+
 
 static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 {
@@ -1356,23 +1359,6 @@ static ALint64 ALCcaptureAlsa_getLatency(ALCcaptureAlsa *self)
     return maxi64((ALint64)delay*1000000000/device->Frequency, 0);
 }
 
-static void ALCcaptureAlsa_lock(ALCcaptureAlsa *self)
-{ ALCbackend_lock(STATIC_CAST(ALCbackend, self)); }
-
-static void ALCcaptureAlsa_unlock(ALCcaptureAlsa *self)
-{ ALCbackend_unlock(STATIC_CAST(ALCbackend, self)); }
-
-
-static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
-{
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
-}
-
-static void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self)
-{
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
-}
-
 static void ALCcaptureAlsa_Delete(ALCcaptureAlsa *self)
 {
     free(self);
@@ -1474,7 +1460,6 @@ ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UNUSED(se
 
         backend = calloc(1, sizeof(*backend));
         if(!backend) return NULL;
-        SET_VTABLE2(ALCplaybackAlsa, ALCbackend, backend);
 
         ALCplaybackAlsa_Construct(backend, device);
 
@@ -1486,7 +1471,6 @@ ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UNUSED(se
 
         backend = calloc(1, sizeof(*backend));
         if(!backend) return NULL;
-        SET_VTABLE2(ALCcaptureAlsa, ALCbackend, backend);
 
         ALCcaptureAlsa_Construct(backend, device);
 

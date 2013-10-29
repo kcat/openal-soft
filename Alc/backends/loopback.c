@@ -33,7 +33,10 @@ typedef struct ALCloopback {
 } ALCloopback;
 DECLARE_ALCBACKEND_VTABLE(ALCloopback);
 
-#define ALCNULLBACKEND_INITIALIZER { { GET_VTABLE2(ALCbackend, ALCloopback) } }
+static DECLARE_FORWARD(ALCloopback, ALCbackend, void, Destruct)
+static DECLARE_FORWARD(ALCloopback, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCloopback, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCloopback, ALCbackend, void, unlock)
 
 
 static void ALCloopback_Construct(ALCloopback *self, ALCdevice *device)
@@ -42,10 +45,6 @@ static void ALCloopback_Construct(ALCloopback *self, ALCdevice *device)
     SET_VTABLE2(ALCloopback, ALCbackend, self);
 }
 
-static void ALCloopback_Destruct(ALCloopback *self)
-{
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
-}
 
 static ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name)
 {
@@ -84,14 +83,6 @@ ALCuint ALCloopback_availableSamples(ALCloopback* UNUSED(self))
     return 0;
 }
 
-static ALint64 ALCloopback_getLatency(ALCloopback *self)
-{ return ALCbackend_getLatency(STATIC_CAST(ALCbackend, self)); }
-
-static void ALCloopback_lock(ALCloopback *self)
-{ ALCbackend_lock(STATIC_CAST(ALCbackend, self)); }
-
-static void ALCloopback_unlock(ALCloopback *self)
-{ ALCbackend_unlock(STATIC_CAST(ALCbackend, self)); }
 
 static void ALCloopback_Delete(ALCloopback *self)
 {

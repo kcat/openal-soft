@@ -39,10 +39,22 @@ typedef struct ALCnullBackend {
     volatile int killNow;
     althread_t thread;
 } ALCnullBackend;
-#define ALCNULLBACKEND_INITIALIZER { { GET_VTABLE2(ALCbackend, ALCnullBackend) } }
+DECLARE_ALCBACKEND_VTABLE(ALCnullBackend);
 
+static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, Destruct)
+static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, unlock)
 
 static const ALCchar nullDevice[] = "No Output";
+
+
+static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
+{
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(ALCnullBackend, ALCbackend, self);
+}
+
 
 static ALuint ALCnullBackend_mixerProc(ALvoid *ptr)
 {
@@ -85,16 +97,6 @@ static ALuint ALCnullBackend_mixerProc(ALvoid *ptr)
     return 0;
 }
 
-
-static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
-{
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
-}
-
-static void ALCnullBackend_Destruct(ALCnullBackend *self)
-{
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
-}
 
 static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
 {
@@ -150,20 +152,6 @@ ALCuint ALCnullBackend_availableSamples(ALCnullBackend* UNUSED(self))
     return 0;
 }
 
-static ALint64 ALCnullBackend_getLatency(ALCnullBackend *self)
-{
-    return ALCbackend_getLatency(STATIC_CAST(ALCbackend, self));
-}
-
-static void ALCnullBackend_lock(ALCnullBackend *self)
-{
-    ALCbackend_lock(STATIC_CAST(ALCbackend, self));
-}
-
-static void ALCnullBackend_unlock(ALCnullBackend *self)
-{
-    ALCbackend_unlock(STATIC_CAST(ALCbackend, self));
-}
 
 static void ALCnullBackend_Delete(ALCnullBackend *self)
 {
@@ -214,7 +202,6 @@ ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UNUSED(se
 
     backend = calloc(1, sizeof(*backend));
     if(!backend) return NULL;
-    SET_VTABLE2(ALCnullBackend, ALCbackend, backend);
 
     ALCnullBackend_Construct(backend, device);
 

@@ -102,6 +102,9 @@ static const union {
 #define SET_VTABLE1(T1, obj)     ((obj)->vtbl = GET_VTABLE1(T1))
 #define SET_VTABLE2(T1, T2, obj) (STATIC_CAST(T2, obj)->vtbl = GET_VTABLE2(T1, T2))
 
+#define DECLARE_FORWARD(T1, T2, rettype, func)                                \
+rettype T1##_##func(T1 *obj)                                                  \
+{ return T2##_##func(STATIC_CAST(T2, obj)); }
 
 /* Helper to extract an argument list for VCALL. Not used directly. */
 #define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__))

@@ -196,9 +196,6 @@ typedef struct {
     ALint64 (*GetLatency)(ALCdevice*);
 } BackendFuncs;
 
-ALCboolean alc_alsa_init(BackendFuncs *func_list);
-void alc_alsa_deinit(void);
-void alc_alsa_probe(enum DevProbe type);
 ALCboolean alc_oss_init(BackendFuncs *func_list);
 void alc_oss_deinit(void);
 void alc_oss_probe(enum DevProbe type);
@@ -223,9 +220,6 @@ void alc_pa_probe(enum DevProbe type);
 ALCboolean alc_wave_init(BackendFuncs *func_list);
 void alc_wave_deinit(void);
 void alc_wave_probe(enum DevProbe type);
-ALCboolean alc_pulse_init(BackendFuncs *func_list);
-void alc_pulse_deinit(void);
-void alc_pulse_probe(enum DevProbe type);
 ALCboolean alc_ca_init(BackendFuncs *func_list);
 void alc_ca_deinit(void);
 void alc_ca_probe(enum DevProbe type);

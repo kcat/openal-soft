@@ -26,6 +26,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "compat.h"
 
 #include <portaudio.h>
 

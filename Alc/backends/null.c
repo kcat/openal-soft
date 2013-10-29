@@ -206,9 +206,11 @@ void ALCnullBackendFactory_probe(ALCnullBackendFactory* UNUSED(self), enum DevPr
     }
 }
 
-ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UNUSED(self), ALCdevice *device)
+ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
 {
     ALCnullBackend *backend;
+
+    assert(type == ALCbackend_Playback);
 
     backend = calloc(1, sizeof(*backend));
     if(!backend) return NULL;

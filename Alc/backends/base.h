@@ -106,7 +106,7 @@ struct ALCbackendFactoryVtable {
 
     void (*const probe)(ALCbackendFactory *self, enum DevProbe type);
 
-    ALCbackend* (*const createBackend)(ALCbackendFactory *self, ALCdevice *device);
+    ALCbackend* (*const createBackend)(ALCbackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 };
 
 #define DEFINE_ALCBACKENDFACTORY_VTABLE(T)                                    \
@@ -118,8 +118,8 @@ static ALCboolean T##_ALCbackendFactory_querySupport(ALCbackendFactory *obj, ALC
 { return T##_querySupport(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                       \
 static void T##_ALCbackendFactory_probe(ALCbackendFactory *obj, enum DevProbe a) \
 { T##_probe(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                      \
-static ALCbackend* T##_ALCbackendFactory_createBackend(ALCbackendFactory *obj, ALCdevice *a) \
-{ return T##_createBackend(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                   \
+static ALCbackend* T##_ALCbackendFactory_createBackend(ALCbackendFactory *obj, ALCdevice *a, ALCbackend_Type b) \
+{ return T##_createBackend(STATIC_UPCAST(T, ALCbackendFactory, obj), a, b); }                                   \
                                                                               \
 static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
     T##_ALCbackendFactory_init,                                               \

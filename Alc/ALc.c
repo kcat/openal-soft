@@ -2890,7 +2890,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     else
     {
         ALCbackendFactory *factory = PlaybackBackend.getFactory();
-        device->Backend = VCALL(factory,createBackend)(device);
+        device->Backend = VCALL(factory,createBackend)(device, ALCbackend_Playback);
     }
     if(!device->Backend)
     {
@@ -3152,7 +3152,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     device->DeviceName = NULL;
 
-    device->Backend = create_backend_wrapper(device, ALCbackend_Capture);
+    if(!CaptureBackend.getFactory)
+        device->Backend = create_backend_wrapper(device, ALCbackend_Capture);
+    else
+    {
+        ALCbackendFactory *factory = CaptureBackend.getFactory();
+        device->Backend = VCALL(factory,createBackend)(device, ALCbackend_Capture);
+    }
     if(!device->Backend)
     {
         al_free(device);

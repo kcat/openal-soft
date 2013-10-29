@@ -1466,17 +1466,34 @@ void ALCalsaBackendFactory_probe(ALCalsaBackendFactory* UNUSED(self), enum DevPr
     }
 }
 
-ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UNUSED(self), ALCdevice *device)
+ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
 {
-    ALCplaybackAlsa *backend;
+    if(type == ALCbackend_Playback)
+    {
+        ALCplaybackAlsa *backend;
 
-    backend = calloc(1, sizeof(*backend));
-    if(!backend) return NULL;
-    SET_VTABLE2(ALCplaybackAlsa, ALCbackend, backend);
+        backend = calloc(1, sizeof(*backend));
+        if(!backend) return NULL;
+        SET_VTABLE2(ALCplaybackAlsa, ALCbackend, backend);
 
-    ALCplaybackAlsa_Construct(backend, device);
+        ALCplaybackAlsa_Construct(backend, device);
 
-    return STATIC_CAST(ALCbackend, backend);
+        return STATIC_CAST(ALCbackend, backend);
+    }
+    if(type == ALCbackend_Capture)
+    {
+        ALCcaptureAlsa *backend;
+
+        backend = calloc(1, sizeof(*backend));
+        if(!backend) return NULL;
+        SET_VTABLE2(ALCcaptureAlsa, ALCbackend, backend);
+
+        ALCcaptureAlsa_Construct(backend, device);
+
+        return STATIC_CAST(ALCbackend, backend);
+    }
+
+    return NULL;
 }
 
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCalsaBackendFactory);

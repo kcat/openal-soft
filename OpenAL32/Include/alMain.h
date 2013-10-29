@@ -232,9 +232,6 @@ void alc_opensl_probe(enum DevProbe type);
 ALCboolean alc_qsa_init(BackendFuncs *func_list);
 void alc_qsa_deinit(void);
 void alc_qsa_probe(enum DevProbe type);
-ALCboolean alc_loopback_init(BackendFuncs *func_list);
-void alc_loopback_deinit(void);
-void alc_loopback_probe(enum DevProbe type);
 
 struct ALCbackend;
 

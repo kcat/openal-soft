@@ -42,6 +42,9 @@ struct ALCbackendVtable {
     void (*const Delete)(ALCbackend*);
 };
 
+#define DECLARE_ALCBACKEND_VTABLE(T)                                          \
+static const struct ALCbackendVtable T##_ALCbackend_vtable
+
 #define DEFINE_ALCBACKEND_VTABLE(T)                                           \
 static void T##_ALCbackend_Destruct(ALCbackend *obj)                          \
 { T##_Destruct(STATIC_UPCAST(T, ALCbackend, obj)); }                          \
@@ -68,7 +71,7 @@ static void T##_ALCbackend_unlock(ALCbackend *obj)                            \
 static void T##_ALCbackend_Delete(ALCbackend *obj)                            \
 { T##_Delete(STATIC_UPCAST(T, ALCbackend, obj)); }                            \
                                                                               \
-static const struct ALCbackendVtable T##_ALCbackend_vtable = {                \
+DECLARE_ALCBACKEND_VTABLE(T) = {                                              \
     T##_ALCbackend_Destruct,                                                  \
                                                                               \
     T##_ALCbackend_open,                                                      \
@@ -132,6 +135,7 @@ static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
 
 ALCbackendFactory *ALCalsaBackendFactory_getFactory(void);
 ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
+ALCbackendFactory *ALCloopbackFactory_getFactory(void);
 
 ALCbackend *create_backend_wrapper(ALCdevice *device, ALCbackend_Type type);
 

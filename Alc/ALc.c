@@ -99,9 +99,6 @@ static struct BackendInfo BackendList[] = {
 
     { NULL, NULL, NULL, NULL, NULL, EmptyFuncs }
 };
-static struct BackendInfo BackendLoopback = {
-    "loopback", NULL, alc_loopback_init, alc_loopback_deinit, alc_loopback_probe, EmptyFuncs
-};
 #undef EmptyFuncs
 
 static struct BackendInfo PlaybackBackend;
@@ -1063,7 +1060,10 @@ static void alc_initconfig(void)
             TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
         }
     }
-    BackendLoopback.Init(&BackendLoopback.Funcs);
+    {
+        ALCbackendFactory *factory = ALCloopbackFactory_getFactory();
+        VCALL0(factory,init)();
+    }
 
     if(ConfigValueStr(NULL, "excludefx", &str))
     {
@@ -1161,7 +1161,10 @@ static void alc_deinit(void)
             VCALL0(factory,deinit)();
         }
     }
-    BackendLoopback.Deinit();
+    {
+        ALCbackendFactory *factory = ALCloopbackFactory_getFactory();
+        VCALL0(factory,deinit)();
+    }
 
     alc_deinit_safe();
 }
@@ -3284,6 +3287,7 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
  */
 ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName)
 {
+    ALCbackendFactory *factory;
     ALCdevice *device;
 
     DO_INITCONFIG();
@@ -3303,7 +3307,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     }
 
     //Validate device
-    device->Funcs = &BackendLoopback.Funcs;
     device->ref = 1;
     device->Connected = ALC_TRUE;
     device->Type = Loopback;
@@ -3324,7 +3327,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
 
-    device->Backend = create_backend_wrapper(device, ALCbackend_Playback);
+    factory = ALCloopbackFactory_getFactory();
+    device->Backend = VCALL(factory,createBackend)(device, ALCbackend_Playback);
     if(!device->Backend)
     {
         al_free(device);

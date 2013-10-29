@@ -25,60 +25,126 @@
 #include "alMain.h"
 #include "alu.h"
 
+#include "backends/base.h"
 
-static ALCenum loopback_open_playback(ALCdevice *device, const ALCchar *deviceName)
+
+typedef struct ALCloopback {
+    DERIVE_FROM_TYPE(ALCbackend);
+} ALCloopback;
+DECLARE_ALCBACKEND_VTABLE(ALCloopback);
+
+#define ALCNULLBACKEND_INITIALIZER { { GET_VTABLE2(ALCbackend, ALCloopback) } }
+
+
+static void ALCloopback_Construct(ALCloopback *self, ALCdevice *device)
 {
-    device->DeviceName = strdup(deviceName);
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(ALCloopback, ALCbackend, self);
+}
+
+static void ALCloopback_Destruct(ALCloopback *self)
+{
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+}
+
+static ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+
+    device->DeviceName = strdup(name);
     return ALC_NO_ERROR;
 }
 
-static void loopback_close_playback(ALCdevice *UNUSED(device))
+static void ALCloopback_close(ALCloopback* UNUSED(self))
 {
 }
 
-static ALCboolean loopback_reset_playback(ALCdevice *device)
+static ALCboolean ALCloopback_reset(ALCloopback *self)
 {
-    SetDefaultWFXChannelOrder(device);
+    SetDefaultWFXChannelOrder(STATIC_CAST(ALCbackend, self)->mDevice);
     return ALC_TRUE;
 }
 
-static ALCboolean loopback_start_playback(ALCdevice *UNUSED(device))
+static ALCboolean ALCloopback_start(ALCloopback* UNUSED(self))
 {
     return ALC_TRUE;
 }
 
-static void loopback_stop_playback(ALCdevice *UNUSED(device))
+static void ALCloopback_stop(ALCloopback* UNUSED(self))
 {
 }
 
-
-static const BackendFuncs loopback_funcs = {
-    loopback_open_playback,
-    loopback_close_playback,
-    loopback_reset_playback,
-    loopback_start_playback,
-    loopback_stop_playback,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    ALCdevice_LockDefault,
-    ALCdevice_UnlockDefault,
-    ALCdevice_GetLatencyDefault
-};
-
-ALCboolean alc_loopback_init(BackendFuncs *func_list)
+ALCenum ALCloopback_captureSamples(ALCloopback* UNUSED(self), void* UNUSED(buffer), ALCuint UNUSED(samples))
 {
-    *func_list = loopback_funcs;
+    return ALC_INVALID_VALUE;
+}
+
+ALCuint ALCloopback_availableSamples(ALCloopback* UNUSED(self))
+{
+    return 0;
+}
+
+static ALint64 ALCloopback_getLatency(ALCloopback *self)
+{ return ALCbackend_getLatency(STATIC_CAST(ALCbackend, self)); }
+
+static void ALCloopback_lock(ALCloopback *self)
+{ ALCbackend_lock(STATIC_CAST(ALCbackend, self)); }
+
+static void ALCloopback_unlock(ALCloopback *self)
+{ ALCbackend_unlock(STATIC_CAST(ALCbackend, self)); }
+
+static void ALCloopback_Delete(ALCloopback *self)
+{
+    free(self);
+}
+
+DEFINE_ALCBACKEND_VTABLE(ALCloopback);
+
+
+typedef struct ALCloopbackFactory {
+    DERIVE_FROM_TYPE(ALCbackendFactory);
+} ALCloopbackFactory;
+#define ALCNULLBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCloopbackFactory, ALCbackendFactory) } }
+
+ALCboolean ALCloopbackFactory_init(ALCloopbackFactory* UNUSED(self))
+{
     return ALC_TRUE;
 }
 
-void alc_loopback_deinit(void)
+void ALCloopbackFactory_deinit(ALCloopbackFactory* UNUSED(self))
 {
 }
 
-void alc_loopback_probe(enum DevProbe UNUSED(type))
+ALCboolean ALCloopbackFactory_querySupport(ALCloopbackFactory* UNUSED(self), ALCbackend_Type type)
 {
+    if(type == ALCbackend_Playback)
+        return ALC_TRUE;
+    return ALC_FALSE;
+}
+
+void ALCloopbackFactory_probe(ALCloopbackFactory* UNUSED(self), enum DevProbe UNUSED(type))
+{
+}
+
+ALCbackend* ALCloopbackFactory_createBackend(ALCloopbackFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+{
+    ALCloopback *backend;
+
+    assert(type == ALCbackend_Playback);
+
+    backend = calloc(1, sizeof(*backend));
+    if(!backend) return NULL;
+
+    ALCloopback_Construct(backend, device);
+
+    return STATIC_CAST(ALCbackend, backend);
+}
+
+DEFINE_ALCBACKENDFACTORY_VTABLE(ALCloopbackFactory);
+
+
+ALCbackendFactory *ALCloopbackFactory_getFactory(void)
+{
+    static ALCloopbackFactory factory = ALCNULLBACKENDFACTORY_INITIALIZER;
+    return STATIC_CAST(ALCbackendFactory, &factory);
 }

@@ -101,13 +101,13 @@ static ALint64 PlaybackWrapper_getLatency(PlaybackWrapper *self)
 static void PlaybackWrapper_lock(PlaybackWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    return device->Funcs->Lock(device);
+    device->Funcs->Lock(device);
 }
 
 static void PlaybackWrapper_unlock(PlaybackWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    return device->Funcs->Unlock(device);
+    device->Funcs->Unlock(device);
 }
 
 static void PlaybackWrapper_Delete(PlaybackWrapper *self)
@@ -184,13 +184,13 @@ static ALint64 CaptureWrapper_getLatency(CaptureWrapper *self)
 static void CaptureWrapper_lock(CaptureWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    return device->Funcs->Lock(device);
+    device->Funcs->Lock(device);
 }
 
 static void CaptureWrapper_unlock(CaptureWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    return device->Funcs->Unlock(device);
+    device->Funcs->Unlock(device);
 }
 
 static void CaptureWrapper_Delete(CaptureWrapper *self)

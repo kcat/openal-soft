@@ -456,14 +456,15 @@ DECLARE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
 static ALuint ALCplaybackAlsa_mixerProc(ALvoid *ptr);
 static ALuint ALCplaybackAlsa_mixerNoMMapProc(ALvoid *ptr);
 
+static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, Destruct)
 static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name);
 static void ALCplaybackAlsa_close(ALCplaybackAlsa *self);
 static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self);
 static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self);
 static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self);
-static ALCenum ALCplaybackAlsa_captureSamples(ALCplaybackAlsa *self, ALCvoid *buffer, ALCuint samples);
-static ALCuint ALCplaybackAlsa_availableSamples(ALCplaybackAlsa *self);
+static DECLARE_FORWARD2(ALCplaybackAlsa, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, ALCuint, availableSamples)
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, unlock)
 
@@ -932,16 +933,6 @@ static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self)
     self->buffer = NULL;
 }
 
-static ALCenum ALCplaybackAlsa_captureSamples(ALCplaybackAlsa* UNUSED(self), ALCvoid* UNUSED(buffer), ALCuint UNUSED(samples))
-{
-    return ALC_INVALID_DEVICE;
-}
-
-static ALCuint ALCplaybackAlsa_availableSamples(ALCplaybackAlsa* UNUSED(self))
-{
-    return 0;
-}
-
 static ALint64 ALCplaybackAlsa_getLatency(ALCplaybackAlsa *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
@@ -980,10 +971,11 @@ typedef struct ALCcaptureAlsa {
 } ALCcaptureAlsa;
 DECLARE_ALCBACKEND_VTABLE(ALCcaptureAlsa);
 
+static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, Destruct)
 static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name);
 static void ALCcaptureAlsa_close(ALCcaptureAlsa *self);
-static ALCboolean ALCcaptureAlsa_reset(ALCcaptureAlsa *self);
+static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, ALCboolean, reset)
 static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self);
 static void ALCcaptureAlsa_stop(ALCcaptureAlsa *self);
 static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples);
@@ -1148,11 +1140,6 @@ static void ALCcaptureAlsa_close(ALCcaptureAlsa *self)
 
     free(self->buffer);
     self->buffer = NULL;
-}
-
-static ALCboolean ALCcaptureAlsa_reset(ALCcaptureAlsa* UNUSED(self))
-{
-    return ALC_FALSE;
 }
 
 static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self)

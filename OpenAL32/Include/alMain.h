@@ -106,6 +106,10 @@ static const union {
 rettype T1##_##func(T1 *obj)                                                  \
 { return T2##_##func(STATIC_CAST(T2, obj)); }
 
+#define DECLARE_FORWARD2(T1, T2, rettype, func, argtype1, argtype2)           \
+rettype T1##_##func(T1 *obj, argtype1 a, argtype2 b)                          \
+{ return T2##_##func(STATIC_CAST(T2, obj), a, b); }
+
 /* Helper to extract an argument list for VCALL. Not used directly. */
 #define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__))
 

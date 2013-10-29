@@ -41,7 +41,17 @@ typedef struct ALCnullBackend {
 } ALCnullBackend;
 DECLARE_ALCBACKEND_VTABLE(ALCnullBackend);
 
+static ALuint ALCnullBackend_mixerProc(ALvoid *ptr);
+
+static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, Destruct)
+static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name);
+static void ALCnullBackend_close(ALCnullBackend *self);
+static ALCboolean ALCnullBackend_reset(ALCnullBackend *self);
+static ALCboolean ALCnullBackend_start(ALCnullBackend *self);
+static void ALCnullBackend_stop(ALCnullBackend *self);
+static DECLARE_FORWARD2(ALCnullBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALCuint, availableSamples)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALint64, getLatency)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, unlock)
@@ -140,16 +150,6 @@ static void ALCnullBackend_stop(ALCnullBackend *self)
     self->thread = NULL;
 
     self->killNow = 0;
-}
-
-ALCenum ALCnullBackend_captureSamples(ALCnullBackend* UNUSED(self), void* UNUSED(buffer), ALCuint UNUSED(samples))
-{
-    return ALC_INVALID_VALUE;
-}
-
-ALCuint ALCnullBackend_availableSamples(ALCnullBackend* UNUSED(self))
-{
-    return 0;
 }
 
 

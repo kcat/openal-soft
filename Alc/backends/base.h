@@ -17,6 +17,9 @@ typedef struct ALCbackend {
 
 void ALCbackend_Construct(ALCbackend *self, ALCdevice *device);
 void ALCbackend_Destruct(ALCbackend *self);
+ALCboolean ALCbackend_reset(ALCbackend *self);
+ALCenum ALCbackend_captureSamples(ALCbackend *self, void *buffer, ALCuint samples);
+ALCuint ALCbackend_availableSamples(ALCbackend *self);
 ALint64 ALCbackend_getLatency(ALCbackend *self);
 void ALCbackend_lock(ALCbackend *self);
 void ALCbackend_unlock(ALCbackend *self);

@@ -20,6 +20,21 @@ void ALCbackend_Destruct(ALCbackend *self)
     DeleteCriticalSection(&self->mMutex);
 }
 
+ALCboolean ALCbackend_reset(ALCbackend* UNUSED(self))
+{
+    return ALC_FALSE;
+}
+
+ALCenum ALCbackend_captureSamples(ALCbackend* UNUSED(self), void* UNUSED(buffer), ALCuint UNUSED(samples))
+{
+    return ALC_INVALID_DEVICE;
+}
+
+ALCuint ALCbackend_availableSamples(ALCbackend* UNUSED(self))
+{
+    return 0;
+}
+
 ALint64 ALCbackend_getLatency(ALCbackend* UNUSED(self))
 {
     return 0;

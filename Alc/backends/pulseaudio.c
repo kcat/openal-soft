@@ -508,8 +508,8 @@ static void ALCpulsePlayback_close(ALCpulsePlayback *self);
 static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self);
 static ALCboolean ALCpulsePlayback_start(ALCpulsePlayback *self);
 static void ALCpulsePlayback_stop(ALCpulsePlayback *self);
-static ALCenum ALCpulsePlayback_captureSamples(ALCpulsePlayback *self, ALCvoid *buffer, ALCuint samples);
-static ALCuint ALCpulsePlayback_availableSamples(ALCpulsePlayback *self);
+static DECLARE_FORWARD2(ALCpulsePlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
+static DECLARE_FORWARD(ALCpulsePlayback, ALCbackend, ALCuint, availableSamples)
 static void ALCpulsePlayback_lock(ALCpulsePlayback *self);
 static void ALCpulsePlayback_unlock(ALCpulsePlayback *self);
 
@@ -1083,17 +1083,6 @@ static void ALCpulsePlayback_stop(ALCpulsePlayback *self)
 }
 
 
-static ALCenum ALCpulsePlayback_captureSamples(ALCpulsePlayback* UNUSED(self), ALCvoid* UNUSED(buffer), ALCuint UNUSED(samples))
-{
-    return ALC_INVALID_DEVICE;
-}
-
-static ALCuint ALCpulsePlayback_availableSamples(ALCpulsePlayback* UNUSED(self))
-{
-    return 0;
-}
-
-
 static void ALCpulsePlayback_lock(ALCpulsePlayback *self)
 {
     pa_threaded_mainloop_lock(self->loop);
@@ -1166,7 +1155,7 @@ static void ALCpulseCapture_Construct(ALCpulseCapture *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCpulseCapture, ALCbackend, void, Destruct)
 static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name);
 static void ALCpulseCapture_close(ALCpulseCapture *self);
-static ALCboolean ALCpulseCapture_reset(ALCpulseCapture *self);
+static DECLARE_FORWARD(ALCpulseCapture, ALCbackend, ALCboolean, reset)
 static ALCboolean ALCpulseCapture_start(ALCpulseCapture *self);
 static void ALCpulseCapture_stop(ALCpulseCapture *self);
 static ALCenum ALCpulseCapture_captureSamples(ALCpulseCapture *self, ALCvoid *buffer, ALCuint samples);
@@ -1479,11 +1468,6 @@ static void ALCpulseCapture_close(ALCpulseCapture *self)
 
     free(self->device_name);
     self->device_name = NULL;
-}
-
-static ALCboolean ALCpulseCapture_reset(ALCpulseCapture* UNUSED(self))
-{
-    return ALC_FALSE;
 }
 
 static ALCboolean ALCpulseCapture_start(ALCpulseCapture *self)

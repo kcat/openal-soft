@@ -232,22 +232,6 @@ IF(WIN32)
     ELSE()
         SET(ALIGN_DECL "__declspec(aligned(x))")
     ENDIF()
-
-    OPTION(WINE "Enable use of Wine headers when compiling" OFF)
-    IF(WINE)
-        FIND_PATH(WINE_INCLUDE_DIR library.h
-                  PATHS
-                  /usr/include/wine
-                  /usr/local/include/wine
-                  CMAKE_FIND_ROOT_PATH_BOTH)
-        IF(WINE_INCLUDE_DIR)
-            MESSAGE(STATUS "Found Wine header files - ${WINE_INCLUDE_DIR}" )
-            INCLUDE_DIRECTORIES("${WINE_INCLUDE_DIR}/windows")
-            SET(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} "${WINE_INCLUDE_DIR}/windows")
-        ELSE()
-            MESSAGE(STATUS "Could not find Wine header files" )
-        ENDIF()
-    ENDIF()
 ELSE()
     SET(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
     # Yes GCC, really don't accept visibility modes you don't support

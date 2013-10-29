@@ -130,6 +130,7 @@ static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
 }
 
 
+ALCbackendFactory *ALCalsaBackendFactory_getFactory(void);
 ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
 
 ALCbackend *create_backend_wrapper(ALCdevice *device, ALCbackend_Type type);

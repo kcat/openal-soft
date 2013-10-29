@@ -59,7 +59,7 @@ static struct BackendInfo BackendList[] = {
     { "pulse", NULL, alc_pulse_init, alc_pulse_deinit, alc_pulse_probe, EmptyFuncs },
 #endif
 #ifdef HAVE_ALSA
-    { "alsa", NULL, alc_alsa_init, alc_alsa_deinit, alc_alsa_probe, EmptyFuncs },
+    { "alsa", ALCalsaBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #endif
 #ifdef HAVE_COREAUDIO
     { "core", NULL, alc_ca_init, alc_ca_deinit, alc_ca_probe, EmptyFuncs },

@@ -14,11 +14,6 @@ int pthread_key_delete(pthread_key_t key);
 void *pthread_getspecific(pthread_key_t key);
 int pthread_setspecific(pthread_key_t key, void *val);
 
-#define HAVE_DYNLOAD 1
-void *LoadLib(const char *name);
-void CloseLib(void *handle);
-void *GetSymbol(void *handle, const char *name);
-
 WCHAR *strdupW(const WCHAR *str);
 
 typedef LONG pthread_once_t;
@@ -27,6 +22,8 @@ void pthread_once(pthread_once_t *once, void (*callback)(void));
 
 static inline int sched_yield(void)
 { SwitchToThread(); return 0; }
+
+#define HAVE_DYNLOAD 1
 
 #else
 
@@ -43,11 +40,14 @@ void Sleep(ALuint t);
 
 #if defined(HAVE_DLFCN_H)
 #define HAVE_DYNLOAD 1
+#endif
+
+#endif
+
+#ifdef HAVE_DYNLOAD
 void *LoadLib(const char *name);
 void CloseLib(void *handle);
 void *GetSymbol(void *handle, const char *name);
-#endif
-
 #endif
 
 #endif /* AL_COMPAT_H */

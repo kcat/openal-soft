@@ -1031,12 +1031,12 @@ static void alc_initconfig(void)
             }
 
             TRACE("Initialized backend \"%s\"\n", BackendList[i].name);
-            if(!PlaybackBackend.name && VCALL(factory,support)(ALCbackend_Playback))
+            if(!PlaybackBackend.name && VCALL(factory,querySupport)(ALCbackend_Playback))
             {
                 PlaybackBackend = BackendList[i];
                 TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
             }
-            if(!CaptureBackend.name && VCALL(factory,support)(ALCbackend_Capture))
+            if(!CaptureBackend.name && VCALL(factory,querySupport)(ALCbackend_Capture))
             {
                 CaptureBackend = BackendList[i];
                 TRACE("Added \"%s\" for capture\n", CaptureBackend.name);

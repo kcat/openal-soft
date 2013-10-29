@@ -102,7 +102,7 @@ struct ALCbackendFactoryVtable {
     ALCboolean (*const init)(ALCbackendFactory *self);
     void (*const deinit)(ALCbackendFactory *self);
 
-    ALCboolean (*const support)(ALCbackendFactory *self, ALCbackend_Type type);
+    ALCboolean (*const querySupport)(ALCbackendFactory *self, ALCbackend_Type type);
 
     void (*const probe)(ALCbackendFactory *self, enum DevProbe type);
 
@@ -114,8 +114,8 @@ static ALCboolean T##_ALCbackendFactory_init(ALCbackendFactory *obj)          \
 { return T##_init(STATIC_UPCAST(T, ALCbackendFactory, obj)); }                \
 static void T##_ALCbackendFactory_deinit(ALCbackendFactory *obj)              \
 { T##_deinit(STATIC_UPCAST(T, ALCbackendFactory, obj)); }                     \
-static ALCboolean T##_ALCbackendFactory_support(ALCbackendFactory *obj, ALCbackend_Type a) \
-{ return T##_support(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                       \
+static ALCboolean T##_ALCbackendFactory_querySupport(ALCbackendFactory *obj, ALCbackend_Type a) \
+{ return T##_querySupport(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                       \
 static void T##_ALCbackendFactory_probe(ALCbackendFactory *obj, enum DevProbe a) \
 { T##_probe(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                      \
 static ALCbackend* T##_ALCbackendFactory_createBackend(ALCbackendFactory *obj, ALCdevice *a) \
@@ -124,7 +124,7 @@ static ALCbackend* T##_ALCbackendFactory_createBackend(ALCbackendFactory *obj, A
 static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
     T##_ALCbackendFactory_init,                                               \
     T##_ALCbackendFactory_deinit,                                             \
-    T##_ALCbackendFactory_support,                                            \
+    T##_ALCbackendFactory_querySupport,                                       \
     T##_ALCbackendFactory_probe,                                              \
     T##_ALCbackendFactory_createBackend,                                      \
 }

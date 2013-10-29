@@ -187,7 +187,7 @@ void ALCnullBackendFactory_deinit(ALCnullBackendFactory* UNUSED(self))
 {
 }
 
-ALCboolean ALCnullBackendFactory_support(ALCnullBackendFactory* UNUSED(self), ALCbackend_Type type)
+ALCboolean ALCnullBackendFactory_querySupport(ALCnullBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
         return ALC_TRUE;

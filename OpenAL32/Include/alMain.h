@@ -57,10 +57,10 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #ifndef U64
 #if defined(_MSC_VER)
 #define U64(x) ((ALuint64)(x##ui64))
-#elif SIZEOF_LONG_LONG == 8
-#define U64(x) ((ALuint64)(x##ull))
 #elif SIZEOF_LONG == 8
 #define U64(x) ((ALuint64)(x##ul))
+#elif SIZEOF_LONG_LONG == 8
+#define U64(x) ((ALuint64)(x##ull))
 #endif
 #endif
 

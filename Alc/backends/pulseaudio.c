@@ -306,6 +306,10 @@ static ALCboolean pulse_load(void)
 static pa_context_flags_t pulse_ctx_flags;
 static pa_proplist *prop_filter;
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 /* PulseAudio Event Callbacks */
 static void context_state_callback(pa_context *context, void *pdata)
 {
@@ -463,10 +467,6 @@ static ALuint numDevNames;
 static DevMap *allCaptureDevNameMap;
 static ALuint numCaptureDevNames;
 
-
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
 
 typedef struct ALCpulsePlayback {
     DERIVE_FROM_TYPE(ALCbackend);

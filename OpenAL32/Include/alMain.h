@@ -96,11 +96,6 @@ static const union {
 #define STATIC_CAST(to, obj)         (&(obj)->to##_parent)
 #define STATIC_UPCAST(to, from, obj) ((to*)((char*)(obj) - offsetof(to, from##_parent)))
 
-#define GET_VTABLE1(T1)     (&(T1##_vtable))
-#define GET_VTABLE2(T1, T2) (&(T1##_##T2##_vtable))
-
-#define SET_VTABLE1(T1, obj)     ((obj)->vtbl = GET_VTABLE1(T1))
-#define SET_VTABLE2(T1, T2, obj) (STATIC_CAST(T2, obj)->vtbl = GET_VTABLE2(T1, T2))
 
 #define DECLARE_FORWARD(T1, T2, rettype, func)                                \
 rettype T1##_##func(T1 *obj)                                                  \
@@ -109,6 +104,30 @@ rettype T1##_##func(T1 *obj)                                                  \
 #define DECLARE_FORWARD2(T1, T2, rettype, func, argtype1, argtype2)           \
 rettype T1##_##func(T1 *obj, argtype1 a, argtype2 b)                          \
 { return T2##_##func(STATIC_CAST(T2, obj), a, b); }
+
+
+#define GET_VTABLE1(T1)     (&(T1##_vtable))
+#define GET_VTABLE2(T1, T2) (&(T1##_##T2##_vtable))
+
+#define SET_VTABLE1(T1, obj)     ((obj)->vtbl = GET_VTABLE1(T1))
+#define SET_VTABLE2(T1, T2, obj) (STATIC_CAST(T2, obj)->vtbl = GET_VTABLE2(T1, T2))
+
+#define DECLARE_THUNK(T1, T2, rettype, func)                                  \
+static rettype T1##_##T2##_##func(T2 *obj)                                    \
+{ return T1##_##func(STATIC_UPCAST(T1, T2, obj)); }
+
+#define DECLARE_THUNK1(T1, T2, rettype, func, argtype1)                       \
+static rettype T1##_##T2##_##func(T2 *obj, argtype1 a)                        \
+{ return T1##_##func(STATIC_UPCAST(T1, T2, obj), a); }
+
+#define DECLARE_THUNK2(T1, T2, rettype, func, argtype1, argtype2)             \
+static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b)            \
+{ return T1##_##func(STATIC_UPCAST(T1, T2, obj), a, b); }
+
+#define DECLARE_THUNK3(T1, T2, rettype, func, argtype1, argtype2, argtype3)   \
+static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b, argtype3 c) \
+{ return T1##_##func(STATIC_UPCAST(T1, T2, obj), a, b, c); }
+
 
 /* Helper to extract an argument list for VCALL. Not used directly. */
 #define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__))

@@ -49,30 +49,18 @@ struct ALCbackendVtable {
 static const struct ALCbackendVtable T##_ALCbackend_vtable
 
 #define DEFINE_ALCBACKEND_VTABLE(T)                                           \
-static void T##_ALCbackend_Destruct(ALCbackend *obj)                          \
-{ T##_Destruct(STATIC_UPCAST(T, ALCbackend, obj)); }                          \
-static ALCenum T##_ALCbackend_open(ALCbackend *obj, const ALCchar *p1)        \
-{ return T##_open(STATIC_UPCAST(T, ALCbackend, obj), p1); }                   \
-static void T##_ALCbackend_close(ALCbackend *obj)                             \
-{ T##_close(STATIC_UPCAST(T, ALCbackend, obj)); }                             \
-static ALCboolean T##_ALCbackend_reset(ALCbackend *obj)                       \
-{ return T##_reset(STATIC_UPCAST(T, ALCbackend, obj)); }                      \
-static ALCboolean T##_ALCbackend_start(ALCbackend *obj)                       \
-{ return T##_start(STATIC_UPCAST(T, ALCbackend, obj)); }                      \
-static void T##_ALCbackend_stop(ALCbackend *obj)                              \
-{ T##_stop(STATIC_UPCAST(T, ALCbackend, obj)); }                              \
-static ALCenum T##_ALCbackend_captureSamples(ALCbackend *obj, void *a, ALCuint b) \
-{ return T##_captureSamples(STATIC_UPCAST(T, ALCbackend, obj), a, b); }           \
-static ALCuint T##_ALCbackend_availableSamples(ALCbackend *obj)               \
-{ return T##_availableSamples(STATIC_UPCAST(T, ALCbackend, obj)); }           \
-static ALint64 T##_ALCbackend_getLatency(ALCbackend *obj)                     \
-{ return T##_getLatency(STATIC_UPCAST(T, ALCbackend, obj)); }                 \
-static void T##_ALCbackend_lock(ALCbackend *obj)                              \
-{ T##_lock(STATIC_UPCAST(T, ALCbackend, obj)); }                              \
-static void T##_ALCbackend_unlock(ALCbackend *obj)                            \
-{ T##_unlock(STATIC_UPCAST(T, ALCbackend, obj)); }                            \
-static void T##_ALCbackend_Delete(ALCbackend *obj)                            \
-{ T##_Delete(STATIC_UPCAST(T, ALCbackend, obj)); }                            \
+DECLARE_THUNK(T, ALCbackend, void, Destruct)                                  \
+DECLARE_THUNK1(T, ALCbackend, ALCenum, open, const ALCchar*)                  \
+DECLARE_THUNK(T, ALCbackend, void, close)                                     \
+DECLARE_THUNK(T, ALCbackend, ALCboolean, reset)                               \
+DECLARE_THUNK(T, ALCbackend, ALCboolean, start)                               \
+DECLARE_THUNK(T, ALCbackend, void, stop)                                      \
+DECLARE_THUNK2(T, ALCbackend, ALCenum, captureSamples, void*, ALCuint)        \
+DECLARE_THUNK(T, ALCbackend, ALCuint, availableSamples)                       \
+DECLARE_THUNK(T, ALCbackend, ALint64, getLatency)                             \
+DECLARE_THUNK(T, ALCbackend, void, lock)                                      \
+DECLARE_THUNK(T, ALCbackend, void, unlock)                                    \
+DECLARE_THUNK(T, ALCbackend, void, Delete)                                    \
                                                                               \
 DECLARE_ALCBACKEND_VTABLE(T) = {                                              \
     T##_ALCbackend_Destruct,                                                  \
@@ -116,16 +104,11 @@ struct ALCbackendFactoryVtable {
 };
 
 #define DEFINE_ALCBACKENDFACTORY_VTABLE(T)                                    \
-static ALCboolean T##_ALCbackendFactory_init(ALCbackendFactory *obj)          \
-{ return T##_init(STATIC_UPCAST(T, ALCbackendFactory, obj)); }                \
-static void T##_ALCbackendFactory_deinit(ALCbackendFactory *obj)              \
-{ T##_deinit(STATIC_UPCAST(T, ALCbackendFactory, obj)); }                     \
-static ALCboolean T##_ALCbackendFactory_querySupport(ALCbackendFactory *obj, ALCbackend_Type a) \
-{ return T##_querySupport(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                       \
-static void T##_ALCbackendFactory_probe(ALCbackendFactory *obj, enum DevProbe a) \
-{ T##_probe(STATIC_UPCAST(T, ALCbackendFactory, obj), a); }                      \
-static ALCbackend* T##_ALCbackendFactory_createBackend(ALCbackendFactory *obj, ALCdevice *a, ALCbackend_Type b) \
-{ return T##_createBackend(STATIC_UPCAST(T, ALCbackendFactory, obj), a, b); }                                   \
+DECLARE_THUNK(T, ALCbackendFactory, ALCboolean, init)                         \
+DECLARE_THUNK(T, ALCbackendFactory, void, deinit)                             \
+DECLARE_THUNK1(T, ALCbackendFactory, ALCboolean, querySupport, ALCbackend_Type) \
+DECLARE_THUNK1(T, ALCbackendFactory, void, probe, enum DevProbe)              \
+DECLARE_THUNK2(T, ALCbackendFactory, ALCbackend*, createBackend, ALCdevice*, ALCbackend_Type) \
                                                                               \
 static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
     T##_ALCbackendFactory_init,                                               \

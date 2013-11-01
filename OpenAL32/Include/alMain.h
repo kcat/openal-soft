@@ -36,20 +36,8 @@
 #endif
 
 
-#if defined(HAVE_STDINT_H)
-#include <stdint.h>
-typedef int64_t ALint64;
-typedef uint64_t ALuint64;
-#elif defined(HAVE___INT64)
-typedef __int64 ALint64;
-typedef unsigned __int64 ALuint64;
-#elif (SIZEOF_LONG == 8)
-typedef long ALint64;
-typedef unsigned long ALuint64;
-#elif (SIZEOF_LONG_LONG == 8)
-typedef long long ALint64;
-typedef unsigned long long ALuint64;
-#endif
+typedef ALint64SOFT ALint64;
+typedef ALuint64SOFT ALuint64;
 
 typedef ptrdiff_t ALintptrEXT;
 typedef ptrdiff_t ALsizeiptrEXT;

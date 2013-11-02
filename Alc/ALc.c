@@ -1415,16 +1415,6 @@ void ALCdevice_Unlock(ALCdevice *device)
     VCALL0(device->Backend,unlock)();
 }
 
-void LockContext(ALCcontext *context)
-{
-    ALCdevice_Lock(context->Device);
-}
-
-void UnlockContext(ALCcontext *context)
-{
-    ALCdevice_Unlock(context->Device);
-}
-
 
 /* SetDefaultWFXChannelOrder
  *

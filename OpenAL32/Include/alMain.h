@@ -512,8 +512,11 @@ void ALCdevice_Lock(ALCdevice *device);
 void ALCdevice_Unlock(ALCdevice *device);
 ALint64 ALCdevice_GetLatency(ALCdevice *device);
 
-void LockContext(ALCcontext *context);
-void UnlockContext(ALCcontext *context);
+static inline void LockContext(ALCcontext *context)
+{ ALCdevice_Lock(context->Device); }
+
+static inline void UnlockContext(ALCcontext *context)
+{ ALCdevice_Unlock(context->Device); }
 
 
 void *al_malloc(size_t alignment, size_t size);

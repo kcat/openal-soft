@@ -947,7 +947,7 @@ static ALboolean GetSourcedv(const ALsource *Source, ALCcontext *Context, SrcFlo
         case AL_SEC_OFFSET_LATENCY_SOFT:
             LockContext(Context);
             values[0] = GetSourceSecOffset(Source);
-            values[1] = (ALdouble)alcGetLatency(Context->Device) /
+            values[1] = (ALdouble)ALCdevice_GetLatency(Context->Device) /
                         1000000000.0;
             UnlockContext(Context);
             return AL_TRUE;
@@ -1133,7 +1133,7 @@ static ALboolean GetSourcei64v(const ALsource *Source, ALCcontext *Context, SrcI
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
             LockContext(Context);
             values[0] = GetSourceOffset(Source);
-            values[1] = alcGetLatency(Context->Device);
+            values[1] = ALCdevice_GetLatency(Context->Device);
             UnlockContext(Context);
             return AL_TRUE;
 

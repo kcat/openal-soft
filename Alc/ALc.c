@@ -1400,7 +1400,7 @@ ALint64 ALCdevice_GetLatencyDefault(ALCdevice *UNUSED(device))
 }
 
 
-ALint64 alcGetLatency(ALCdevice *device)
+ALint64 ALCdevice_GetLatency(ALCdevice *device)
 {
     return VCALL0(device->Backend,getLatency)();
 }

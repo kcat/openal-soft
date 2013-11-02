@@ -307,8 +307,7 @@ enum DevFmtChannels {
 
 ALuint BytesFromDevFmt(enum DevFmtType type);
 ALuint ChannelsFromDevFmt(enum DevFmtChannels chans);
-static inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans,
-                                           enum DevFmtType type)
+static inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type)
 {
     return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
 }
@@ -436,9 +435,6 @@ struct ALCdevice_struct
 #define MIXER_THREAD_NAME "alsoft-mixer"
 
 
-ALint64 alcGetLatency(ALCdevice *device);
-
-
 static inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 { return (struct ALbuffer*)LookupUIntMapKey(&device->BufferMap, id); }
 static inline struct ALeffect *LookupEffect(ALCdevice *device, ALuint id)
@@ -514,6 +510,8 @@ ALint64 ALCdevice_GetLatencyDefault(ALCdevice *device);
 
 void ALCdevice_Lock(ALCdevice *device);
 void ALCdevice_Unlock(ALCdevice *device);
+ALint64 ALCdevice_GetLatency(ALCdevice *device);
+
 void LockContext(ALCcontext *context);
 void UnlockContext(ALCcontext *context);
 

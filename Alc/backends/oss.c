@@ -553,11 +553,11 @@ typedef struct ALCossBackendFactory {
 
 ALCbackendFactory *ALCossBackendFactory_getFactory(void);
 
-ALCboolean ALCossBackendFactory_init(ALCossBackendFactory *self);
-DECLARE_FORWARD(ALCossBackendFactory, ALCbackendFactory, void, deinit)
-ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory *self, ALCbackend_Type type);
-void ALCossBackendFactory_probe(ALCossBackendFactory *self, enum DevProbe type);
-ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
+static ALCboolean ALCossBackendFactory_init(ALCossBackendFactory *self);
+static DECLARE_FORWARD(ALCossBackendFactory, ALCbackendFactory, void, deinit)
+static ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory *self, ALCbackend_Type type);
+static void ALCossBackendFactory_probe(ALCossBackendFactory *self, enum DevProbe type);
+static ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCossBackendFactory);
 
 

@@ -1360,14 +1360,14 @@ typedef struct ALCalsaBackendFactory {
 } ALCalsaBackendFactory;
 #define ALCALSABACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCalsaBackendFactory, ALCbackendFactory) } }
 
-ALCboolean ALCalsaBackendFactory_init(ALCalsaBackendFactory* UNUSED(self))
+static ALCboolean ALCalsaBackendFactory_init(ALCalsaBackendFactory* UNUSED(self))
 {
     if(!alsa_load())
         return ALC_FALSE;
     return ALC_TRUE;
 }
 
-void ALCalsaBackendFactory_deinit(ALCalsaBackendFactory* UNUSED(self))
+static void ALCalsaBackendFactory_deinit(ALCalsaBackendFactory* UNUSED(self))
 {
     ALuint i;
 
@@ -1396,14 +1396,14 @@ void ALCalsaBackendFactory_deinit(ALCalsaBackendFactory* UNUSED(self))
 #endif
 }
 
-ALCboolean ALCalsaBackendFactory_querySupport(ALCalsaBackendFactory* UNUSED(self), ALCbackend_Type type)
+static ALCboolean ALCalsaBackendFactory_querySupport(ALCalsaBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback || type == ALCbackend_Capture)
         return ALC_TRUE;
     return ALC_FALSE;
 }
 
-void ALCalsaBackendFactory_probe(ALCalsaBackendFactory* UNUSED(self), enum DevProbe type)
+static void ALCalsaBackendFactory_probe(ALCalsaBackendFactory* UNUSED(self), enum DevProbe type)
 {
     ALuint i;
 
@@ -1439,7 +1439,7 @@ void ALCalsaBackendFactory_probe(ALCalsaBackendFactory* UNUSED(self), enum DevPr
     }
 }
 
-ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+static ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {

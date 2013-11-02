@@ -1602,7 +1602,7 @@ typedef struct ALCpulseBackendFactory {
 } ALCpulseBackendFactory;
 #define ALCPULSEBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCpulseBackendFactory, ALCbackendFactory) } }
 
-ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(self))
+static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(self))
 {
     ALCboolean ret = ALC_FALSE;
 
@@ -1646,7 +1646,7 @@ ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(self))
     return ret;
 }
 
-void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory* UNUSED(self))
+static void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory* UNUSED(self))
 {
     ALuint i;
 
@@ -1675,14 +1675,14 @@ void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory* UNUSED(self))
     /* PulseAudio doesn't like being CloseLib'd sometimes */
 }
 
-ALCboolean ALCpulseBackendFactory_querySupport(ALCpulseBackendFactory* UNUSED(self), ALCbackend_Type type)
+static ALCboolean ALCpulseBackendFactory_querySupport(ALCpulseBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback || type == ALCbackend_Capture)
         return ALC_TRUE;
     return ALC_FALSE;
 }
 
-void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), enum DevProbe type)
+static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), enum DevProbe type)
 {
     ALuint i;
 
@@ -1722,7 +1722,7 @@ void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), enum Dev
     }
 }
 
-ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
@@ -1762,25 +1762,25 @@ typedef struct ALCpulseBackendFactory {
 } ALCpulseBackendFactory;
 #define ALCPULSEBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCpulseBackendFactory, ALCbackendFactory) } }
 
-ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(self))
+static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(self))
 {
     return ALC_FALSE;
 }
 
-void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory* UNUSED(self))
+static void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory* UNUSED(self))
 {
 }
 
-ALCboolean ALCpulseBackendFactory_querySupport(ALCpulseBackendFactory* UNUSED(self), ALCbackend_Type UNUSED(type))
+static ALCboolean ALCpulseBackendFactory_querySupport(ALCpulseBackendFactory* UNUSED(self), ALCbackend_Type UNUSED(type))
 {
     return ALC_FALSE;
 }
 
-void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), enum DevProbe UNUSED(type))
+static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), enum DevProbe UNUSED(type))
 {
 }
 
-ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* UNUSED(self), ALCdevice* UNUSED(device), ALCbackend_Type UNUSED(type))
+static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* UNUSED(self), ALCdevice* UNUSED(device), ALCbackend_Type UNUSED(type))
 {
     return NULL;
 }

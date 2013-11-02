@@ -166,23 +166,36 @@ typedef struct ALCnullBackendFactory {
 } ALCnullBackendFactory;
 #define ALCNULLBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCnullBackendFactory, ALCbackendFactory) } }
 
-ALCboolean ALCnullBackendFactory_init(ALCnullBackendFactory* UNUSED(self))
+ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
+
+static ALCboolean ALCnullBackendFactory_init(ALCnullBackendFactory *self);
+static DECLARE_FORWARD(ALCnullBackendFactory, ALCbackendFactory, void, deinit)
+static ALCboolean ALCnullBackendFactory_querySupport(ALCnullBackendFactory *self, ALCbackend_Type type);
+static void ALCnullBackendFactory_probe(ALCnullBackendFactory *self, enum DevProbe type);
+static ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
+DEFINE_ALCBACKENDFACTORY_VTABLE(ALCnullBackendFactory);
+
+
+ALCbackendFactory *ALCnullBackendFactory_getFactory(void)
+{
+    static ALCnullBackendFactory factory = ALCNULLBACKENDFACTORY_INITIALIZER;
+    return STATIC_CAST(ALCbackendFactory, &factory);
+}
+
+
+static ALCboolean ALCnullBackendFactory_init(ALCnullBackendFactory* UNUSED(self))
 {
     return ALC_TRUE;
 }
 
-void ALCnullBackendFactory_deinit(ALCnullBackendFactory* UNUSED(self))
-{
-}
-
-ALCboolean ALCnullBackendFactory_querySupport(ALCnullBackendFactory* UNUSED(self), ALCbackend_Type type)
+static ALCboolean ALCnullBackendFactory_querySupport(ALCnullBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
         return ALC_TRUE;
     return ALC_FALSE;
 }
 
-void ALCnullBackendFactory_probe(ALCnullBackendFactory* UNUSED(self), enum DevProbe type)
+static void ALCnullBackendFactory_probe(ALCnullBackendFactory* UNUSED(self), enum DevProbe type)
 {
     switch(type)
     {
@@ -194,7 +207,7 @@ void ALCnullBackendFactory_probe(ALCnullBackendFactory* UNUSED(self), enum DevPr
     }
 }
 
-ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+static ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
 {
     ALCnullBackend *backend;
 
@@ -206,13 +219,4 @@ ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UNUSED(se
     ALCnullBackend_Construct(backend, device);
 
     return STATIC_CAST(ALCbackend, backend);
-}
-
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCnullBackendFactory);
-
-
-ALCbackendFactory *ALCnullBackendFactory_getFactory(void)
-{
-    static ALCnullBackendFactory factory = ALCNULLBACKENDFACTORY_INITIALIZER;
-    return STATIC_CAST(ALCbackendFactory, &factory);
 }

@@ -30,17 +30,17 @@ struct ALCbackendVtable {
     ALCenum (*const open)(ALCbackend*, const ALCchar*);
     void (*const close)(ALCbackend*);
 
-    ALCboolean (*reset)(ALCbackend*);
-    ALCboolean (*start)(ALCbackend*);
-    void (*stop)(ALCbackend*);
+    ALCboolean (*const reset)(ALCbackend*);
+    ALCboolean (*const start)(ALCbackend*);
+    void (*const stop)(ALCbackend*);
 
-    ALCenum (*captureSamples)(ALCbackend*, void*, ALCuint);
-    ALCuint (*availableSamples)(ALCbackend*);
+    ALCenum (*const captureSamples)(ALCbackend*, void*, ALCuint);
+    ALCuint (*const availableSamples)(ALCbackend*);
 
-    ALint64 (*getLatency)(ALCbackend*);
+    ALint64 (*const getLatency)(ALCbackend*);
 
-    void (*lock)(ALCbackend*);
-    void (*unlock)(ALCbackend*);
+    void (*const lock)(ALCbackend*);
+    void (*const unlock)(ALCbackend*);
 
     void (*const Delete)(ALCbackend*);
 };

@@ -65,7 +65,7 @@ static struct BackendInfo BackendList[] = {
     { "core", NULL, alc_ca_init, alc_ca_deinit, alc_ca_probe, EmptyFuncs },
 #endif
 #ifdef HAVE_OSS
-    { "oss", NULL, alc_oss_init, alc_oss_deinit, alc_oss_probe, EmptyFuncs },
+    { "oss", ALCossBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #endif
 #ifdef HAVE_SOLARIS
     { "solaris", NULL, alc_solaris_init, alc_solaris_deinit, alc_solaris_probe, EmptyFuncs },

@@ -51,6 +51,12 @@ void ALCbackend_unlock(ALCbackend *self)
 }
 
 
+/* Base ALCbackendFactory method implementations. */
+void ALCbackendFactory_deinit(ALCbackendFactory* UNUSED(self))
+{
+}
+
+
 /* Wrappers to use an old-style backend with the new interface. */
 typedef struct PlaybackWrapper {
     DERIVE_FROM_TYPE(ALCbackend);

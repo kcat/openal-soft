@@ -92,6 +92,8 @@ typedef struct ALCbackendFactory {
     const struct ALCbackendFactoryVtable *vtbl;
 } ALCbackendFactory;
 
+void ALCbackendFactory_deinit(ALCbackendFactory *self);
+
 struct ALCbackendFactoryVtable {
     ALCboolean (*const init)(ALCbackendFactory *self);
     void (*const deinit)(ALCbackendFactory *self);
@@ -119,8 +121,9 @@ static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
 }
 
 
-ALCbackendFactory *ALCalsaBackendFactory_getFactory(void);
 ALCbackendFactory *ALCpulseBackendFactory_getFactory(void);
+ALCbackendFactory *ALCalsaBackendFactory_getFactory(void);
+ALCbackendFactory *ALCossBackendFactory_getFactory(void);
 ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
 ALCbackendFactory *ALCloopbackFactory_getFactory(void);
 

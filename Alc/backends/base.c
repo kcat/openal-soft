@@ -55,11 +55,12 @@ void ALCbackend_unlock(ALCbackend *self)
 typedef struct PlaybackWrapper {
     DERIVE_FROM_TYPE(ALCbackend);
 } PlaybackWrapper;
-#define PLAYBACKWRAPPER_INITIALIZER { { GET_VTABLE2(ALCbackend, PlaybackWrapper) } }
+DECLARE_ALCBACKEND_VTABLE(PlaybackWrapper);
 
 static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(PlaybackWrapper, ALCbackend, self);
 }
 
 static void PlaybackWrapper_Destruct(PlaybackWrapper *self)
@@ -136,11 +137,12 @@ DEFINE_ALCBACKEND_VTABLE(PlaybackWrapper);
 typedef struct CaptureWrapper {
     DERIVE_FROM_TYPE(ALCbackend);
 } CaptureWrapper;
-#define CAPTUREWRAPPER_INITIALIZER { { GET_VTABLE2(ALCbackend, PlaybackWrapper) } }
+DECLARE_ALCBACKEND_VTABLE(CaptureWrapper);
 
 static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(CaptureWrapper, ALCbackend, self);
 }
 
 static void CaptureWrapper_Destruct(CaptureWrapper *self)
@@ -224,7 +226,6 @@ ALCbackend *create_backend_wrapper(ALCdevice *device, ALCbackend_Type type)
 
         backend = malloc(sizeof(*backend));
         if(!backend) return NULL;
-        SET_VTABLE2(PlaybackWrapper, ALCbackend, backend);
 
         PlaybackWrapper_Construct(backend, device);
 
@@ -237,7 +238,6 @@ ALCbackend *create_backend_wrapper(ALCdevice *device, ALCbackend_Type type)
 
         backend = malloc(sizeof(*backend));
         if(!backend) return NULL;
-        SET_VTABLE2(CaptureWrapper, ALCbackend, backend);
 
         CaptureWrapper_Construct(backend, device);
 

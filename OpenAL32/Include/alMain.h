@@ -121,15 +121,15 @@ static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b, argtype3 c) \
 #define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__))
 
 /* Call a "virtual" method on an object, with arguments. */
-#define VCALL(obj, func)  ((obj)->vtbl->func((obj), EXTRACT_VCALL_ARGS
+#define V(obj, func)  ((obj)->vtbl->func((obj), EXTRACT_VCALL_ARGS
 /* Call a "virtual" method on an object, with no arguments. */
-#define VCALL0(obj, func) ((obj)->vtbl->func((obj) EXTRACT_VCALL_ARGS
+#define V0(obj, func) ((obj)->vtbl->func((obj) EXTRACT_VCALL_ARGS
 
 #define DELETE_OBJ(obj) do {                                                  \
     if((obj) != NULL)                                                         \
     {                                                                         \
-        VCALL0((obj),Destruct)();                                             \
-        VCALL0((obj),Delete)();                                               \
+        V0((obj),Destruct)();                                                 \
+        V0((obj),Delete)();                                                   \
     }                                                                         \
 } while(0)
 

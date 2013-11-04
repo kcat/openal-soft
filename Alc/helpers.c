@@ -69,7 +69,23 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 #endif
 
 #include "alMain.h"
+#include "atomic.h"
+#include "uintmap.h"
 #include "compat.h"
+
+
+extern inline RefCount IncrementRef(volatile RefCount *ptr);
+extern inline RefCount DecrementRef(volatile RefCount *ptr);
+extern inline int ExchangeInt(volatile int *ptr, int newval);
+extern inline void *ExchangePtr(XchgPtr *ptr, void *newval);
+extern inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval);
+extern inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval);
+
+extern inline void LockUIntMapRead(UIntMap *map);
+extern inline void UnlockUIntMapRead(UIntMap *map);
+extern inline void LockUIntMapWrite(UIntMap *map);
+extern inline void UnlockUIntMapWrite(UIntMap *map);
+
 
 ALuint CPUCapFlags = 0;
 

@@ -34,7 +34,7 @@ typedef struct ALfilterState {
 void ALfilterState_clear(ALfilterState *filter);
 void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_scale, ALfloat bandwidth);
 
-static inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample)
+inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample)
 {
     ALfloat outsmp;
 
@@ -51,7 +51,7 @@ static inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat
     return outsmp;
 }
 
-static inline ALfloat ALfilterState_processSingleC(const ALfilterState *filter, ALfloat sample)
+inline ALfloat ALfilterState_processSingleC(const ALfilterState *filter, ALfloat sample)
 {
     return filter->b[0] * sample +
            filter->b[1] * filter->x[0] +

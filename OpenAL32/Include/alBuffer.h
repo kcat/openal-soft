@@ -35,8 +35,7 @@ enum UserFmtChannels {
 
 ALuint BytesFromUserFmt(enum UserFmtType type);
 ALuint ChannelsFromUserFmt(enum UserFmtChannels chans);
-static inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans,
-                                          enum UserFmtType type)
+inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type)
 {
     return ChannelsFromUserFmt(chans) * BytesFromUserFmt(type);
 }
@@ -61,7 +60,7 @@ enum FmtChannels {
 
 ALuint BytesFromFmt(enum FmtType type);
 ALuint ChannelsFromFmt(enum FmtChannels chans);
-static inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)
+inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)
 {
     return ChannelsFromFmt(chans) * BytesFromFmt(type);
 }

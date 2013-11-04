@@ -34,6 +34,7 @@
 
 ALboolean DisabledEffects[MAX_EFFECTS];
 
+extern inline ALboolean IsReverbEffect(ALenum type);
 
 static void InitEffectParams(ALeffect *effect, ALenum type);
 

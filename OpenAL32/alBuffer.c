@@ -32,6 +32,9 @@
 #include "alThunk.h"
 
 
+extern inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
+extern inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
+
 static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data, ALboolean storesrc);
 static void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei numchans, ALsizei len);
 static ALboolean IsValidType(ALenum type);

@@ -29,6 +29,9 @@
 #include "alError.h"
 
 
+extern inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample);
+extern inline ALfloat ALfilterState_processSingleC(const ALfilterState *filter, ALfloat sample);
+
 static void InitFilterParams(ALfilter *filter, ALenum type);
 
 

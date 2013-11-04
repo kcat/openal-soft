@@ -2850,7 +2850,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
 
     //Validate device
-    device->Funcs = &PlaybackBackend.Funcs;
     device->ref = 1;
     device->Connected = ALC_TRUE;
     device->Type = Playback;
@@ -2879,7 +2878,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->UpdateSize = 1024;
 
     if(!PlaybackBackend.getFactory)
+    {
+        device->Funcs = &PlaybackBackend.Funcs;
         device->Backend = create_backend_wrapper(device, ALCbackend_Playback);
+    }
     else
     {
         ALCbackendFactory *factory = PlaybackBackend.getFactory();
@@ -3134,7 +3136,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     }
 
     //Validate device
-    device->Funcs = &CaptureBackend.Funcs;
     device->ref = 1;
     device->Connected = ALC_TRUE;
     device->Type = Capture;
@@ -3146,7 +3147,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->DeviceName = NULL;
 
     if(!CaptureBackend.getFactory)
+    {
+        device->Funcs = &CaptureBackend.Funcs;
         device->Backend = create_backend_wrapper(device, ALCbackend_Capture);
+    }
     else
     {
         ALCbackendFactory *factory = CaptureBackend.getFactory();

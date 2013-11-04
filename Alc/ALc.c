@@ -3318,7 +3318,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitUIntMap(&device->FilterMap, ~0);
 
     factory = ALCloopbackFactory_getFactory();
-    device->Backend = V(factory,createBackend)(device, ALCbackend_Playback);
+    device->Backend = V(factory,createBackend)(device, ALCbackend_Loopback);
     if(!device->Backend)
     {
         al_free(device);

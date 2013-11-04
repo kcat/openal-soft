@@ -82,7 +82,8 @@ DECLARE_ALCBACKEND_VTABLE(T) = {                                              \
 
 typedef enum ALCbackend_Type {
     ALCbackend_Playback,
-    ALCbackend_Capture
+    ALCbackend_Capture,
+    ALCbackend_Loopback
 } ALCbackend_Type;
 
 

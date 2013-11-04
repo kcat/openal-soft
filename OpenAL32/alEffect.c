@@ -34,6 +34,8 @@
 
 ALboolean DisabledEffects[MAX_EFFECTS];
 
+extern inline struct ALeffect *LookupEffect(ALCdevice *device, ALuint id);
+extern inline struct ALeffect *RemoveEffect(ALCdevice *device, ALuint id);
 extern inline ALboolean IsReverbEffect(ALenum type);
 
 static void InitEffectParams(ALeffect *effect, ALenum type);

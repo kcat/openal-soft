@@ -1274,6 +1274,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     return "(unknown channels)";
 }
 
+extern inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type);
 ALuint BytesFromDevFmt(enum DevFmtType type)
 {
     switch(type)
@@ -1414,6 +1415,9 @@ void ALCdevice_Unlock(ALCdevice *device)
 {
     V0(device->Backend,unlock)();
 }
+
+extern inline void LockContext(ALCcontext *context);
+extern inline void UnlockContext(ALCcontext *context);
 
 
 /* SetDefaultWFXChannelOrder

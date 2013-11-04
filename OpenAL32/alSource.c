@@ -47,6 +47,9 @@ const ALsizei ResamplerPrePadding[ResamplerMax] = {
 };
 
 
+extern inline struct ALsource *LookupSource(ALCcontext *context, ALuint id);
+extern inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id);
+
 static ALvoid InitSourceParams(ALsource *Source);
 static ALint64 GetSourceOffset(const ALsource *Source);
 static ALdouble GetSourceSecOffset(const ALsource *Source);

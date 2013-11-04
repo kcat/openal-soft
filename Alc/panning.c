@@ -31,6 +31,8 @@
 #include "AL/alc.h"
 #include "alu.h"
 
+extern inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels]);
+
 static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MaxChannels],
                                   enum Channel Speaker2Chan[MaxChannels], ALint chans)
 {

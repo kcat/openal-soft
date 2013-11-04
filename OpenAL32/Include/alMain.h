@@ -145,8 +145,8 @@ struct Hrtf;
 #define MIN_OUTPUT_RATE      (8000)
 
 
-// Find the next power-of-2 for non-power-of-2 numbers.
-static inline ALuint NextPowerOf2(ALuint value)
+/* Find the next power-of-2 for non-power-of-2 numbers. */
+inline ALuint NextPowerOf2(ALuint value)
 {
     if(value > 0)
     {
@@ -162,7 +162,7 @@ static inline ALuint NextPowerOf2(ALuint value)
 
 /* Fast float-to-int conversion. Assumes the FPU is already in round-to-zero
  * mode. */
-static inline ALint fastf2i(ALfloat f)
+inline ALint fastf2i(ALfloat f)
 {
 #ifdef HAVE_LRINTF
     return lrintf(f);
@@ -178,7 +178,7 @@ static inline ALint fastf2i(ALfloat f)
 
 /* Fast float-to-uint conversion. Assumes the FPU is already in round-to-zero
  * mode. */
-static inline ALuint fastf2u(ALfloat f)
+inline ALuint fastf2u(ALfloat f)
 { return fastf2i(f); }
 
 
@@ -304,7 +304,7 @@ enum DevFmtChannels {
 
 ALuint BytesFromDevFmt(enum DevFmtType type);
 ALuint ChannelsFromDevFmt(enum DevFmtChannels chans);
-static inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type)
+inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type)
 {
     return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
 }
@@ -432,18 +432,18 @@ struct ALCdevice_struct
 #define MIXER_THREAD_NAME "alsoft-mixer"
 
 
-static inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
+inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 { return (struct ALbuffer*)LookupUIntMapKey(&device->BufferMap, id); }
-static inline struct ALeffect *LookupEffect(ALCdevice *device, ALuint id)
+inline struct ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 { return (struct ALeffect*)LookupUIntMapKey(&device->EffectMap, id); }
-static inline struct ALfilter *LookupFilter(ALCdevice *device, ALuint id)
+inline struct ALfilter *LookupFilter(ALCdevice *device, ALuint id)
 { return (struct ALfilter*)LookupUIntMapKey(&device->FilterMap, id); }
 
-static inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id)
+inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id)
 { return (struct ALbuffer*)RemoveUIntMapKey(&device->BufferMap, id); }
-static inline struct ALeffect *RemoveEffect(ALCdevice *device, ALuint id)
+inline struct ALeffect *RemoveEffect(ALCdevice *device, ALuint id)
 { return (struct ALeffect*)RemoveUIntMapKey(&device->EffectMap, id); }
-static inline struct ALfilter *RemoveFilter(ALCdevice *device, ALuint id)
+inline struct ALfilter *RemoveFilter(ALCdevice *device, ALuint id)
 { return (struct ALfilter*)RemoveUIntMapKey(&device->FilterMap, id); }
 
 
@@ -482,14 +482,14 @@ struct ALCcontext_struct
     ALCcontext *volatile next;
 };
 
-static inline struct ALsource *LookupSource(ALCcontext *context, ALuint id)
+inline struct ALsource *LookupSource(ALCcontext *context, ALuint id)
 { return (struct ALsource*)LookupUIntMapKey(&context->SourceMap, id); }
-static inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
+inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
 { return (struct ALeffectslot*)LookupUIntMapKey(&context->EffectSlotMap, id); }
 
-static inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id)
+inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id)
 { return (struct ALsource*)RemoveUIntMapKey(&context->SourceMap, id); }
-static inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id)
+inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id)
 { return (struct ALeffectslot*)RemoveUIntMapKey(&context->EffectSlotMap, id); }
 
 
@@ -509,10 +509,10 @@ void ALCdevice_Lock(ALCdevice *device);
 void ALCdevice_Unlock(ALCdevice *device);
 ALint64 ALCdevice_GetLatency(ALCdevice *device);
 
-static inline void LockContext(ALCcontext *context)
+inline void LockContext(ALCcontext *context)
 { ALCdevice_Lock(context->Device); }
 
-static inline void UnlockContext(ALCcontext *context)
+inline void UnlockContext(ALCcontext *context)
 { ALCdevice_Unlock(context->Device); }
 
 

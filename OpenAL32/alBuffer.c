@@ -32,6 +32,8 @@
 #include "alThunk.h"
 
 
+extern inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id);
+extern inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id);
 extern inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
 extern inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
 

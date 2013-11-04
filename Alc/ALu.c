@@ -48,6 +48,28 @@ ALfloat ConeScale = 1.0f;
 /* Localized Z scalar for mono sources */
 ALfloat ZScale = 1.0f;
 
+extern inline ALfloat minf(ALfloat a, ALfloat b);
+extern inline ALfloat maxf(ALfloat a, ALfloat b);
+extern inline ALfloat clampf(ALfloat val, ALfloat min, ALfloat max);
+
+extern inline ALuint minu(ALuint a, ALuint b);
+extern inline ALuint maxu(ALuint a, ALuint b);
+extern inline ALuint clampu(ALuint val, ALuint min, ALuint max);
+
+extern inline ALint mini(ALint a, ALint b);
+extern inline ALint maxi(ALint a, ALint b);
+extern inline ALint clampi(ALint val, ALint min, ALint max);
+
+extern inline ALint64 mini64(ALint64 a, ALint64 b);
+extern inline ALint64 maxi64(ALint64 a, ALint64 b);
+extern inline ALint64 clampi64(ALint64 val, ALint64 min, ALint64 max);
+
+extern inline ALuint64 minu64(ALuint64 a, ALuint64 b);
+extern inline ALuint64 maxu64(ALuint64 a, ALuint64 b);
+extern inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max);
+
+extern inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu);
+extern inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat mu);
 
 static ResamplerFunc SelectResampler(enum Resampler Resampler, ALuint increment)
 {

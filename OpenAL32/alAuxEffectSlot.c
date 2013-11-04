@@ -32,6 +32,9 @@
 #include "alSource.h"
 
 
+extern inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id);
+extern inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id);
+
 static ALenum AddEffectSlotArray(ALCcontext *Context, ALsizei count, const ALuint *slots);
 static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *slot);
 

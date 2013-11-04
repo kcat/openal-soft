@@ -86,6 +86,10 @@ extern inline void UnlockUIntMapRead(UIntMap *map);
 extern inline void LockUIntMapWrite(UIntMap *map);
 extern inline void UnlockUIntMapWrite(UIntMap *map);
 
+extern inline ALuint NextPowerOf2(ALuint value);
+extern inline ALint fastf2i(ALfloat f);
+extern inline ALuint fastf2u(ALfloat f);
+
 
 ALuint CPUCapFlags = 0;
 

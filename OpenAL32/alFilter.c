@@ -29,6 +29,8 @@
 #include "alError.h"
 
 
+extern inline struct ALfilter *LookupFilter(ALCdevice *device, ALuint id);
+extern inline struct ALfilter *RemoveFilter(ALCdevice *device, ALuint id);
 extern inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample);
 extern inline ALfloat ALfilterState_processSingleC(const ALfilterState *filter, ALfloat sample);
 

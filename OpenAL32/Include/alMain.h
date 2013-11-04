@@ -432,21 +432,6 @@ struct ALCdevice_struct
 #define MIXER_THREAD_NAME "alsoft-mixer"
 
 
-inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
-{ return (struct ALbuffer*)LookupUIntMapKey(&device->BufferMap, id); }
-inline struct ALeffect *LookupEffect(ALCdevice *device, ALuint id)
-{ return (struct ALeffect*)LookupUIntMapKey(&device->EffectMap, id); }
-inline struct ALfilter *LookupFilter(ALCdevice *device, ALuint id)
-{ return (struct ALfilter*)LookupUIntMapKey(&device->FilterMap, id); }
-
-inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id)
-{ return (struct ALbuffer*)RemoveUIntMapKey(&device->BufferMap, id); }
-inline struct ALeffect *RemoveEffect(ALCdevice *device, ALuint id)
-{ return (struct ALeffect*)RemoveUIntMapKey(&device->EffectMap, id); }
-inline struct ALfilter *RemoveFilter(ALCdevice *device, ALuint id)
-{ return (struct ALfilter*)RemoveUIntMapKey(&device->FilterMap, id); }
-
-
 struct ALCcontext_struct
 {
     volatile RefCount ref;
@@ -481,17 +466,6 @@ struct ALCcontext_struct
 
     ALCcontext *volatile next;
 };
-
-inline struct ALsource *LookupSource(ALCcontext *context, ALuint id)
-{ return (struct ALsource*)LookupUIntMapKey(&context->SourceMap, id); }
-inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
-{ return (struct ALeffectslot*)LookupUIntMapKey(&context->EffectSlotMap, id); }
-
-inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id)
-{ return (struct ALsource*)RemoveUIntMapKey(&context->SourceMap, id); }
-inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id)
-{ return (struct ALeffectslot*)RemoveUIntMapKey(&context->EffectSlotMap, id); }
-
 
 ALCcontext *GetContextRef(void);
 

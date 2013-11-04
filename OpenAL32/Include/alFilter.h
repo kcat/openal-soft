@@ -92,6 +92,11 @@ typedef struct ALfilter {
 #define ALfilter_GetParamf(x, c, p, v)  ((x)->GetParamf((x),(c),(p),(v)))
 #define ALfilter_GetParamfv(x, c, p, v) ((x)->GetParamfv((x),(c),(p),(v)))
 
+inline struct ALfilter *LookupFilter(ALCdevice *device, ALuint id)
+{ return (struct ALfilter*)LookupUIntMapKey(&device->FilterMap, id); }
+inline struct ALfilter *RemoveFilter(ALCdevice *device, ALuint id)
+{ return (struct ALfilter*)RemoveUIntMapKey(&device->FilterMap, id); }
+
 ALvoid ReleaseALFilters(ALCdevice *device);
 
 #ifdef __cplusplus

@@ -92,6 +92,11 @@ typedef struct ALbuffer {
     ALuint id;
 } ALbuffer;
 
+inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
+{ return (struct ALbuffer*)LookupUIntMapKey(&device->BufferMap, id); }
+inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id)
+{ return (struct ALbuffer*)RemoveUIntMapKey(&device->BufferMap, id); }
+
 ALvoid ReleaseALBuffers(ALCdevice *device);
 
 #ifdef __cplusplus

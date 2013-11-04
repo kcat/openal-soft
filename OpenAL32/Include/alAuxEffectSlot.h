@@ -86,6 +86,10 @@ typedef struct ALeffectslot {
     ALuint id;
 } ALeffectslot;
 
+inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
+{ return (struct ALeffectslot*)LookupUIntMapKey(&context->EffectSlotMap, id); }
+inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id)
+{ return (struct ALeffectslot*)RemoveUIntMapKey(&context->EffectSlotMap, id); }
 
 ALenum InitEffectSlot(ALeffectslot *slot);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);

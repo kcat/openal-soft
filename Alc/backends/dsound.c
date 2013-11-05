@@ -955,8 +955,6 @@ static const BackendFuncs DSoundFuncs = {
     DSoundStopCapture,
     DSoundCaptureSamples,
     DSoundAvailableSamples,
-    ALCdevice_LockDefault,
-    ALCdevice_UnlockDefault,
     ALCdevice_GetLatencyDefault
 };
 

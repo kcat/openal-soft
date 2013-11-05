@@ -713,8 +713,6 @@ static const BackendFuncs WinMMFuncs = {
     WinMMStopCapture,
     WinMMCaptureSamples,
     WinMMAvailableSamples,
-    ALCdevice_LockDefault,
-    ALCdevice_UnlockDefault,
     ALCdevice_GetLatencyDefault
 };
 

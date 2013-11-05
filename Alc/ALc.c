@@ -53,7 +53,7 @@ struct BackendInfo {
     BackendFuncs Funcs;
 };
 
-#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 static struct BackendInfo BackendList[] = {
 #ifdef HAVE_PULSEAUDIO
     { "pulse", ALCpulseBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
@@ -1386,20 +1386,13 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
 /************************************************
  * Miscellaneous ALC helpers
  ************************************************/
+extern inline void LockContext(ALCcontext *context);
+extern inline void UnlockContext(ALCcontext *context);
 
-void ALCdevice_LockDefault(ALCdevice *device)
-{
-    ALCbackend_lock(device->Backend);
-}
-void ALCdevice_UnlockDefault(ALCdevice *device)
-{
-    ALCbackend_unlock(device->Backend);
-}
 ALint64 ALCdevice_GetLatencyDefault(ALCdevice *UNUSED(device))
 {
     return 0;
 }
-
 
 ALint64 ALCdevice_GetLatency(ALCdevice *device)
 {
@@ -1415,9 +1408,6 @@ void ALCdevice_Unlock(ALCdevice *device)
 {
     V0(device->Backend,unlock)();
 }
-
-extern inline void LockContext(ALCcontext *context);
-extern inline void UnlockContext(ALCcontext *context);
 
 
 /* SetDefaultWFXChannelOrder

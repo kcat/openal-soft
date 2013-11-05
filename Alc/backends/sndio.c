@@ -267,8 +267,6 @@ static const BackendFuncs sndio_funcs = {
     NULL,
     NULL,
     NULL,
-    ALCdevice_LockDefault,
-    ALCdevice_UnlockDefault,
     ALCdevice_GetLatencyDefault
 };
 

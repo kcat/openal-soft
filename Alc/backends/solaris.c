@@ -253,8 +253,6 @@ static const BackendFuncs solaris_funcs = {
     NULL,
     NULL,
     NULL,
-    ALCdevice_LockDefault,
-    ALCdevice_UnlockDefault,
     ALCdevice_GetLatencyDefault
 };
 

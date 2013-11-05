@@ -1109,8 +1109,6 @@ BackendFuncs qsa_funcs=
     qsa_stop_capture,
     qsa_capture_samples,
     qsa_available_samples,
-    ALCdevice_LockDefault,
-    ALCdevice_UnlockDefault,
     qsa_get_latency,
 };
 

@@ -72,8 +72,8 @@ static void PlaybackWrapper_stop(PlaybackWrapper *self);
 static DECLARE_FORWARD2(PlaybackWrapper, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
 static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, ALCuint, availableSamples)
 static ALint64 PlaybackWrapper_getLatency(PlaybackWrapper *self);
-static void PlaybackWrapper_lock(PlaybackWrapper *self);
-static void PlaybackWrapper_unlock(PlaybackWrapper *self);
+static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, void, lock)
+static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, void, unlock)
 static void PlaybackWrapper_Delete(PlaybackWrapper *self);
 DEFINE_ALCBACKEND_VTABLE(PlaybackWrapper);
 
@@ -119,18 +119,6 @@ static ALint64 PlaybackWrapper_getLatency(PlaybackWrapper *self)
     return device->Funcs->GetLatency(device);
 }
 
-static void PlaybackWrapper_lock(PlaybackWrapper *self)
-{
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    device->Funcs->Lock(device);
-}
-
-static void PlaybackWrapper_unlock(PlaybackWrapper *self)
-{
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    device->Funcs->Unlock(device);
-}
-
 static void PlaybackWrapper_Delete(PlaybackWrapper *self)
 {
     free(self);
@@ -151,8 +139,8 @@ static void CaptureWrapper_stop(CaptureWrapper *self);
 ALCenum CaptureWrapper_captureSamples(CaptureWrapper *self, void *buffer, ALCuint samples);
 ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self);
 static ALint64 CaptureWrapper_getLatency(CaptureWrapper *self);
-static void CaptureWrapper_lock(CaptureWrapper *self);
-static void CaptureWrapper_unlock(CaptureWrapper *self);
+static DECLARE_FORWARD(CaptureWrapper, ALCbackend, void, lock)
+static DECLARE_FORWARD(CaptureWrapper, ALCbackend, void, unlock)
 static void CaptureWrapper_Delete(CaptureWrapper *self);
 DEFINE_ALCBACKEND_VTABLE(CaptureWrapper);
 
@@ -204,18 +192,6 @@ static ALint64 CaptureWrapper_getLatency(CaptureWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->GetLatency(device);
-}
-
-static void CaptureWrapper_lock(CaptureWrapper *self)
-{
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    device->Funcs->Lock(device);
-}
-
-static void CaptureWrapper_unlock(CaptureWrapper *self)
-{
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    device->Funcs->Unlock(device);
 }
 
 static void CaptureWrapper_Delete(CaptureWrapper *self)

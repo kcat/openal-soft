@@ -201,9 +201,6 @@ typedef struct {
     ALCenum (*CaptureSamples)(ALCdevice*, void*, ALCuint);
     ALCuint (*AvailableSamples)(ALCdevice*);
 
-    void (*Lock)(ALCdevice*);
-    void (*Unlock)(ALCdevice*);
-
     ALint64 (*GetLatency)(ALCdevice*);
 } BackendFuncs;
 
@@ -475,8 +472,6 @@ void ALCcontext_DecRef(ALCcontext *context);
 void AppendAllDevicesList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
 
-void ALCdevice_LockDefault(ALCdevice *device);
-void ALCdevice_UnlockDefault(ALCdevice *device);
 ALint64 ALCdevice_GetLatencyDefault(ALCdevice *device);
 
 void ALCdevice_Lock(ALCdevice *device);

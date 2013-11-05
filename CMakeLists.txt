@@ -288,6 +288,7 @@ CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(pri
                          int main() {return 0;}" HAVE_GCC_FORMAT)
 
 CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
+CHECK_INCLUDE_FILE(strings.h HAVE_STRINGS_H)
 CHECK_INCLUDE_FILE(cpuid.h HAVE_CPUID_H)
 CHECK_INCLUDE_FILE(fenv.h HAVE_FENV_H)
 CHECK_INCLUDE_FILE(float.h HAVE_FLOAT_H)

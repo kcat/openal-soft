@@ -113,6 +113,9 @@
 /* Define if we have malloc.h */
 #cmakedefine HAVE_MALLOC_H
 
+/* Define if we have strings.h */
+#cmakedefine HAVE_STRINGS_H
+
 /* Define if we have cpuid.h */
 #cmakedefine HAVE_CPUID_H
 

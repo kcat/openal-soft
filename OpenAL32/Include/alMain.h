@@ -7,6 +7,10 @@
 #include <assert.h>
 #include <math.h>
 
+#ifdef HAVE_STRINGS_H
+#include <strings.h>
+#endif
+
 #ifdef HAVE_FENV_H
 #include <fenv.h>
 #endif

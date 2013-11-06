@@ -387,6 +387,10 @@ ENDIF()
 # Check if we have Windows headers
 CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H -D_WIN32_WINNT=0x0501)
 IF(NOT HAVE_WINDOWS_H)
+    # _GNU_SOURCE is needed on some systems for extra features
+    ADD_DEFINITIONS(-D_GNU_SOURCE=1)
+    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_GNU_SOURCE=1")
+
     CHECK_FUNCTION_EXISTS(gettimeofday HAVE_GETTIMEOFDAY)
     IF(NOT HAVE_GETTIMEOFDAY)
         MESSAGE(FATAL_ERROR "No timing function found!")
@@ -411,10 +415,6 @@ IF(NOT HAVE_WINDOWS_H)
         SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -pthread")
         SET(EXTRA_LIBS ${EXTRA_LIBS} -pthread)
     ENDIF()
-
-    # _GNU_SOURCE is needed on some systems for extra attributes
-    ADD_DEFINITIONS(-D_GNU_SOURCE=1)
-    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_GNU_SOURCE=1")
 
     CHECK_LIBRARY_EXISTS(pthread pthread_create "" HAVE_LIBPTHREAD)
     IF(HAVE_LIBPTHREAD)

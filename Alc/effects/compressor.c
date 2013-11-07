@@ -35,10 +35,9 @@ typedef struct ALcompressorState {
 
     /* Effect parameters */
     ALboolean Enabled;
-    ALfloat Envelope;
-    ALfloat EnvGain;
-    ALfloat Attack;
-    ALfloat Release;
+    ALfloat AttackRate;
+    ALfloat ReleaseRate;
+    ALfloat GainCtrl;
 } ALcompressorState;
 
 static ALvoid ALcompressorState_Destruct(ALcompressorState *UNUSED(state))
@@ -47,10 +46,11 @@ static ALvoid ALcompressorState_Destruct(ALcompressorState *UNUSED(state))
 
 static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdevice *device)
 {
-    state->Attack = expf(-1.0f / (device->Frequency * 0.0001f));
-    state->Release = expf(-1.0f / (device->Frequency * 0.3f));
-    state->Envelope = 0.0f;
-    state->EnvGain = 1.0f;
+    const ALfloat attackTime = device->Frequency * 0.2f; /* 200ms Attack */
+    const ALfloat releaseTime = device->Frequency * 0.4f; /* 400ms Release */
+
+    state->AttackRate = 1.0 / attackTime;
+    state->ReleaseRate = 1.0 / releaseTime;
 
     return AL_TRUE;
 }
@@ -60,9 +60,6 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, ALCdevice *Devi
     ALfloat gain;
 
     state->Enabled = Slot->EffectProps.Compressor.OnOff;
-    /* FIXME: Could maybe use the compressor's attack/release to move the gain to 1? */
-    if(!state->Enabled)
-        state->EnvGain = 1.0f;
 
     gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
     SetGains(Device, gain, state->Gain);
@@ -70,46 +67,61 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, ALCdevice *Devi
 
 static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE])
 {
-    ALfloat env = state->Envelope;
-    ALfloat envgain = state->EnvGain;
-    ALfloat tattack = state->Attack;
-    ALfloat trelease = state->Release;
     ALuint it, kt;
     ALuint base;
-    ALfloat theta;
-    ALfloat rms;
 
     for(base = 0;base < SamplesToDo;)
     {
         ALfloat temps[64];
         ALuint td = minu(SamplesToDo-base, 64);
-        ALfloat summ = 0.0f;
-
-        for(it = 0;it < td;it++)
-        {
-            ALfloat smp = SamplesIn[it+base] * 0.5f;
-            summ += smp * smp;
-            temps[it] = smp;
-        }
 
         if(state->Enabled)
         {
-            const ALfloat threshold = 0.5f;
-            const ALfloat slope = 0.5f;
+            ALfloat output, smp, amplitude;
+            ALfloat gain = state->GainCtrl;
 
-            /* computing rms and envelope */
-            rms = sqrtf(summ / td);
-            theta = ((rms > env) ? tattack : trelease);
-            env = (1.0f - theta)*rms + theta*env;
+            for(it = 0;it < td;it++)
+            {
+                smp = SamplesIn[it+base];
 
-            /* applying a hard-knee rms based compressor */
-            if(env > threshold)
-                envgain = envgain - (env - threshold) * slope;
+                amplitude = fabs(smp);
+                if(amplitude > gain)
+                    gain = minf(gain+state->AttackRate, amplitude);
+                else if(amplitude < gain)
+                    gain = maxf(gain-state->ReleaseRate, amplitude);
+                output = 1.0 / clampf(gain, 0.5f, 2.0f);
+
+                temps[it] = smp * output;
+            }
+
+            state->GainCtrl = gain;
         }
+        else
+        {
+            ALfloat output, smp, amplitude;
+            ALfloat gain = state->GainCtrl;
+
+            for(it = 0;it < td;it++)
+            {
+                smp = SamplesIn[it+base];
+
+                amplitude = 1.0f;
+                if(amplitude > gain)
+                    gain = minf(gain+state->AttackRate, amplitude);
+                else if(amplitude < gain)
+                    gain = maxf(gain-state->ReleaseRate, amplitude);
+                output = 1.0f / clampf(gain, 0.5f, 2.0f);
+
+                temps[it] = smp * output;
+            }
+
+            state->GainCtrl = gain;
+        }
+
 
         for(kt = 0;kt < MaxChannels;kt++)
         {
-            ALfloat gain = state->Gain[kt] * envgain * 2.0f;
+            ALfloat gain = state->Gain[kt];
             if(!(gain > GAIN_SILENCE_THRESHOLD))
                 continue;
 
@@ -119,9 +131,6 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint Samples
 
         base += td;
     }
-
-    state->Envelope = env;
-    state->EnvGain = envgain;
 }
 
 static void ALcompressorState_Delete(ALcompressorState *state)
@@ -143,6 +152,11 @@ static ALeffectState *ALcompressorStateFactory_create(ALcompressorStateFactory *
     state = malloc(sizeof(*state));
     if(!state) return NULL;
     SET_VTABLE2(ALcompressorState, ALeffectState, state);
+
+    state->Enabled = AL_TRUE;
+    state->AttackRate = 0.0f;
+    state->ReleaseRate = 0.0f;
+    state->GainCtrl = 1.0f;
 
     return STATIC_CAST(ALeffectState, state);
 }

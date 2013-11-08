@@ -161,58 +161,31 @@ static inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALint offset,
     *delay_right = fastf2i(lfo_value) + state->delay;
 }
 
-#define DECL_TEMPLATE(func)                                                    \
-static void Process##func(ALflangerState *state, ALuint SamplesToDo,           \
-                          const ALfloat *restrict SamplesIn,                   \
-                          ALfloat (*restrict SamplesOut)[BUFFERSIZE])          \
-{                                                                              \
-    const ALint mask = state->BufferLength-1;                                  \
-    ALint offset = state->offset;                                              \
-    ALuint it, kt;                                                             \
-    ALuint base;                                                               \
-                                                                               \
-    for(base = 0;base < SamplesToDo;)                                          \
-    {                                                                          \
-        ALfloat temps[64][2];                                                  \
-        ALuint td = minu(SamplesToDo-base, 64);                                \
-                                                                               \
-        for(it = 0;it < td;it++,offset++)                                      \
-        {                                                                      \
-            ALint delay_left, delay_right;                                     \
-            (func)(&delay_left, &delay_right, offset, state);                  \
-                                                                               \
-            temps[it][0] = state->SampleBufferLeft[(offset-delay_left)&mask];  \
-            state->SampleBufferLeft[offset&mask] = (temps[it][0] +             \
-                                                    SamplesIn[it+base]) *      \
-                                                   state->feedback;            \
-                                                                               \
-            temps[it][1] = state->SampleBufferRight[(offset-delay_right)&mask];\
-            state->SampleBufferRight[offset&mask] = (temps[it][1] +            \
-                                                     SamplesIn[it+base]) *     \
-                                                    state->feedback;           \
-        }                                                                      \
-                                                                               \
-        for(kt = 0;kt < MaxChannels;kt++)                                      \
-        {                                                                      \
-            ALfloat gain = state->Gain[0][kt];                                 \
-            if(gain > GAIN_SILENCE_THRESHOLD)                                  \
-            {                                                                  \
-                for(it = 0;it < td;it++)                                       \
-                    SamplesOut[kt][it+base] += temps[it][0] * gain;            \
-            }                                                                  \
-                                                                               \
-            gain = state->Gain[1][kt];                                         \
-            if(gain > GAIN_SILENCE_THRESHOLD)                                  \
-            {                                                                  \
-                for(it = 0;it < td;it++)                                       \
-                    SamplesOut[kt][it+base] += temps[it][1] * gain;            \
-            }                                                                  \
-        }                                                                      \
-                                                                               \
-        base += td;                                                            \
-    }                                                                          \
-                                                                               \
-    state->offset = offset;                                                    \
+#define DECL_TEMPLATE(Func)                                                   \
+static void Process##Func(ALflangerState *state, const ALuint SamplesToDo,    \
+  const ALfloat *restrict SamplesIn, ALfloat (*restrict out)[2])              \
+{                                                                             \
+    const ALuint bufmask = state->BufferLength-1;                             \
+    ALfloat *restrict leftbuf = state->SampleBufferLeft;                      \
+    ALfloat *restrict rightbuf = state->SampleBufferRight;                    \
+    ALuint offset = state->offset;                                            \
+    const ALfloat feedback = state->feedback;                                 \
+    ALuint it;                                                                \
+                                                                              \
+    for(it = 0;it < SamplesToDo;it++)                                         \
+    {                                                                         \
+        ALint delay_left, delay_right;                                        \
+        Func(&delay_left, &delay_right, offset, state);                       \
+                                                                              \
+        out[it][0] = leftbuf[(offset-delay_left)&bufmask];                    \
+        leftbuf[offset&bufmask] = (out[it][0]+SamplesIn[it]) * feedback;      \
+                                                                              \
+        out[it][1] = rightbuf[(offset-delay_right)&bufmask];                  \
+        rightbuf[offset&bufmask] = (out[it][1]+SamplesIn[it]) * feedback;     \
+                                                                              \
+        offset++;                                                             \
+    }                                                                         \
+    state->offset = offset;                                                   \
 }
 
 DECL_TEMPLATE(Triangle)
@@ -222,10 +195,38 @@ DECL_TEMPLATE(Sinusoid)
 
 static ALvoid ALflangerState_process(ALflangerState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
 {
-    if(state->waveform == AL_FLANGER_WAVEFORM_TRIANGLE)
-        ProcessTriangle(state, SamplesToDo, SamplesIn, SamplesOut);
-    else if(state->waveform == AL_FLANGER_WAVEFORM_SINUSOID)
-        ProcessSinusoid(state, SamplesToDo, SamplesIn, SamplesOut);
+    ALuint it, kt;
+    ALuint base;
+
+    for(base = 0;base < SamplesToDo;)
+    {
+        ALfloat temps[64][2];
+        ALuint td = minu(SamplesToDo-base, 64);
+
+        if(state->waveform == AL_FLANGER_WAVEFORM_TRIANGLE)
+            ProcessTriangle(state, td, SamplesIn+base, temps);
+        else if(state->waveform == AL_FLANGER_WAVEFORM_SINUSOID)
+            ProcessSinusoid(state, td, SamplesIn+base, temps);
+
+        for(kt = 0;kt < MaxChannels;kt++)
+        {
+            ALfloat gain = state->Gain[0][kt];
+            if(gain > GAIN_SILENCE_THRESHOLD)
+            {
+                for(it = 0;it < td;it++)
+                    SamplesOut[kt][it+base] += temps[it][0] * gain;
+            }
+
+            gain = state->Gain[1][kt];
+            if(gain > GAIN_SILENCE_THRESHOLD)
+            {
+                for(it = 0;it < td;it++)
+                    SamplesOut[kt][it+base] += temps[it][1] * gain;
+            }
+        }
+
+        base += td;
+    }
 }
 
 static void ALflangerState_Delete(ALflangerState *state)

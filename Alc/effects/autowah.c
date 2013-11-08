@@ -28,16 +28,11 @@
 #include "alAuxEffectSlot.h"
 
 
-/* You can tweak the octave of this dynamic filter just changing next macro
- * guitar - (default) 2.0f
- * bass   - 4.0f
- */
-#define OCTAVE 2.0f
-
-
-/* We use a lfo with a custom low-pass filter to generate autowah
- * effect and a high-pass filter to avoid distortion and aliasing.
- * By adding the two filters up, we obtain a dynamic bandpass filter.
+/* Auto-wah is simply a low-pass filter with a cutoff frequency that shifts up
+ * or down depending on the input signal, and a resonant peak at the cutoff.
+ *
+ * Currently, we assume a cutoff frequency range of 500hz (no amplitude) to
+ * 3khz (peak gain). Peak gain is assumed to be in normalized scale.
  */
 
 typedef struct ALautowahState {
@@ -47,49 +42,42 @@ typedef struct ALautowahState {
     ALfloat Gain[MaxChannels];
 
     /* Effect parameters */
-    ALfloat AttackTime;
-    ALfloat ReleaseTime;
+    ALfloat AttackRate;
+    ALfloat ReleaseRate;
     ALfloat Resonance;
     ALfloat PeakGain;
-    ALuint Frequency;
+    ALfloat GainCtrl;
+    ALfloat Frequency;
 
     /* Samples processing */
-    ALuint lfo;
-    ALfilterState low_pass;
-    ALfilterState high_pass;
+    ALfilterState LowPass;
 } ALautowahState;
 
 static ALvoid ALautowahState_Destruct(ALautowahState *UNUSED(state))
 {
 }
 
-static ALboolean ALautowahState_deviceUpdate(ALautowahState *UNUSED(state), ALCdevice *UNUSED(device))
+static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *device)
 {
+    state->Frequency = device->Frequency;
     return AL_TRUE;
 }
 
-static ALvoid ALautowahState_update(ALautowahState *state, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALautowahState_update(ALautowahState *state, ALCdevice *device, const ALeffectslot *slot)
 {
-    const ALfloat cutoff = LOWPASSFREQREF / (Device->Frequency * 4.0f);
-    const ALfloat bandwidth = (cutoff / 2.0f) / (cutoff * 0.67f);
+    ALfloat attackTime, releaseTime;
     ALfloat gain;
 
-    /* computing high-pass filter coefficients */
-    ALfilterState_setParams(&state->high_pass, ALfilterType_HighPass, 1.0f,
-                            cutoff, bandwidth);
+    attackTime = slot->EffectProps.Autowah.AttackTime * state->Frequency;
+    releaseTime = slot->EffectProps.Autowah.ReleaseTime * state->Frequency;
 
-    state->AttackTime = Slot->EffectProps.Autowah.AttackTime;
-    state->ReleaseTime = Slot->EffectProps.Autowah.ReleaseTime;
-    state->Frequency = Device->Frequency;
-    state->PeakGain = Slot->EffectProps.Autowah.PeakGain;
-    state->Resonance = Slot->EffectProps.Autowah.Resonance;
+    state->AttackRate = 1.0f / attackTime;
+    state->ReleaseRate = 1.0f / releaseTime;
+    state->PeakGain = slot->EffectProps.Autowah.PeakGain;
+    state->Resonance = slot->EffectProps.Autowah.Resonance;
 
-    state->lfo = 0;
-
-    ALfilterState_clear(&state->low_pass);
-
-    gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
-    SetGains(Device, gain, state->Gain);
+    gain = sqrtf(1.0f / device->NumChan) * slot->Gain;
+    SetGains(device, gain, state->Gain);
 }
 
 static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE])
@@ -101,46 +89,53 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
     {
         ALfloat temps[64];
         ALuint td = minu(SamplesToDo-base, 64);
+        ALfloat gain = state->GainCtrl;
 
         for(it = 0;it < td;it++)
         {
             ALfloat smp = SamplesIn[it+base];
-            ALfloat frequency, omega, alpha, peak;
+            ALfloat alpha, w0;
+            ALfloat amplitude;
+            ALfloat cutoff;
 
-            /* lfo for low-pass shaking */
-            if((state->lfo++) % 30 == 0)
-            {
-                /* Using custom low-pass filter coefficients, to handle the resonance and peak-gain properties. */
-                frequency = (1.0f + cosf(state->lfo * (1.0f / lerp(1.0f, 4.0f, state->AttackTime * state->ReleaseTime)) * F_2PI / state->Frequency)) / OCTAVE;
-                frequency = expf((frequency - 1.0f) * 6.0f);
+            /* Similar to compressor, we get the current amplitude of the
+             * incoming signal, and attack or release to reach it. */
+            amplitude = fabs(smp);
+            if(amplitude > gain)
+                gain = minf(gain+state->AttackRate, amplitude);
+            else if(amplitude < gain)
+                gain = maxf(gain-state->ReleaseRate, amplitude);
+            gain = maxf(gain, GAIN_SILENCE_THRESHOLD);
 
-                /* computing cutoff frequency and peak gain */
-                omega = F_PI * frequency;
-                alpha = sinf(omega) / (16.0f * (state->Resonance / AL_AUTOWAH_MAX_RESONANCE));
-                peak = lerp(1.0f, 10.0f, state->PeakGain / AL_AUTOWAH_MAX_PEAK_GAIN);
+            /* FIXME: What range does the filter cover? */
+            cutoff = lerp(500.0f, 3000.0f, minf(gain / state->PeakGain, 1.0f));
 
-                /* computing low-pass filter coefficients */
-                state->low_pass.b[0] = (1.0f - cosf(omega)) / 2.0f;
-                state->low_pass.b[1] =  1.0f - cosf(omega);
-                state->low_pass.b[2] = (1.0f - cosf(omega)) / 2.0f;
-                state->low_pass.a[0] =  1.0f + alpha / peak;
-                state->low_pass.a[1] = -2.0f * cosf(omega);
-                state->low_pass.a[2] =  1.0f - alpha / peak;
+            /* The code below is like calling ALfilterState_setParams with
+             * ALfilterType_LowPass. However, instead of passing a bandwidth,
+             * we use the resonance property for Q. This also inlines the call.
+             */
+            w0 = F_2PI * cutoff / state->Frequency;
 
-                state->low_pass.b[2] /= state->low_pass.a[0];
-                state->low_pass.b[1] /= state->low_pass.a[0];
-                state->low_pass.b[0] /= state->low_pass.a[0];
-                state->low_pass.a[2] /= state->low_pass.a[0];
-                state->low_pass.a[1] /= state->low_pass.a[0];
-                state->low_pass.a[0] /= state->low_pass.a[0];
-            }
+            /* FIXME: Resonance controls the resonant peak, or Q. How? Not sure
+             * that Q = resonance*0.1. */
+            alpha = sinf(w0) / (2.0f * state->Resonance*0.1f);
+            state->LowPass.b[0] = (1.0f - cosf(w0)) / 2.0f;
+            state->LowPass.b[1] =  1.0f - cosf(w0);
+            state->LowPass.b[2] = (1.0f - cosf(w0)) / 2.0f;
+            state->LowPass.a[0] =  1.0f + alpha;
+            state->LowPass.a[1] = -2.0f * cosf(w0);
+            state->LowPass.a[2] =  1.0f - alpha;
 
-            /* do high-pass filter */
-            smp = ALfilterState_processSingle(&state->high_pass, smp);
+            state->LowPass.b[2] /= state->LowPass.a[0];
+            state->LowPass.b[1] /= state->LowPass.a[0];
+            state->LowPass.b[0] /= state->LowPass.a[0];
+            state->LowPass.a[2] /= state->LowPass.a[0];
+            state->LowPass.a[1] /= state->LowPass.a[0];
+            state->LowPass.a[0] /= state->LowPass.a[0];
 
-            /* do low-pass filter */
-            temps[it] = ALfilterState_processSingle(&state->low_pass, smp);
+            temps[it] = ALfilterState_processSingle(&state->LowPass, smp);
         }
+        state->GainCtrl = gain;
 
         for(kt = 0;kt < MaxChannels;kt++)
         {
@@ -176,8 +171,13 @@ static ALeffectState *ALautowahStateFactory_create(ALautowahStateFactory *UNUSED
     if(!state) return NULL;
     SET_VTABLE2(ALautowahState, ALeffectState, state);
 
-    ALfilterState_clear(&state->low_pass);
-    ALfilterState_clear(&state->high_pass);
+    state->AttackRate = 0.0f;
+    state->ReleaseRate = 0.0f;
+    state->Resonance = 0.0f;
+    state->PeakGain = 1.0f;
+    state->GainCtrl = 1.0f;
+
+    ALfilterState_clear(&state->LowPass);
 
     return STATIC_CAST(ALeffectState, state);
 }

@@ -38,7 +38,7 @@ typedef struct ALflangerState {
     ALuint BufferLength;
     ALuint offset;
     ALuint lfo_range;
-    ALfloat lfo_coeff;
+    ALfloat lfo_scale;
     ALint lfo_disp;
 
     /* Gains for left and right sides */
@@ -111,7 +111,7 @@ static ALvoid ALflangerState_update(ALflangerState *state, ALCdevice *Device, co
     rate = Slot->EffectProps.Flanger.Rate;
     if(!(rate > 0.0f))
     {
-        state->lfo_coeff = 0.0f;
+        state->lfo_scale = 0.0f;
         state->lfo_range = 1;
         state->lfo_disp = 0;
     }
@@ -122,10 +122,10 @@ static ALvoid ALflangerState_update(ALflangerState *state, ALCdevice *Device, co
         switch(state->waveform)
         {
             case AL_FLANGER_WAVEFORM_TRIANGLE:
-                state->lfo_coeff = 1.0f / state->lfo_range;
+                state->lfo_scale = 4.0f / state->lfo_range;
                 break;
             case AL_FLANGER_WAVEFORM_SINUSOID:
-                state->lfo_coeff = F_2PI / state->lfo_range;
+                state->lfo_scale = F_2PI / state->lfo_range;
                 break;
         }
 
@@ -138,12 +138,12 @@ static inline void Triangle(ALint *delay_left, ALint *delay_right, ALuint offset
 {
     ALfloat lfo_value;
 
-    lfo_value = 2.0f - fabsf(2.0f - state->lfo_coeff*(offset%state->lfo_range)*4.0f);
+    lfo_value = 2.0f - fabsf(2.0f - state->lfo_scale*(offset%state->lfo_range));
     lfo_value *= state->depth * state->delay;
     *delay_left = fastf2i(lfo_value) + state->delay;
 
     offset += state->lfo_disp;
-    lfo_value = 2.0f - fabsf(2.0f - state->lfo_coeff*(offset%state->lfo_range)*4.0f);
+    lfo_value = 2.0f - fabsf(2.0f - state->lfo_scale*(offset%state->lfo_range));
     lfo_value *= state->depth * state->delay;
     *delay_right = fastf2i(lfo_value) + state->delay;
 }
@@ -152,12 +152,12 @@ static inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALuint offset
 {
     ALfloat lfo_value;
 
-    lfo_value = 1.0f + sinf(state->lfo_coeff*(offset%state->lfo_range));
+    lfo_value = 1.0f + sinf(state->lfo_scale*(offset%state->lfo_range));
     lfo_value *= state->depth * state->delay;
     *delay_left = fastf2i(lfo_value) + state->delay;
 
     offset += state->lfo_disp;
-    lfo_value = 1.0f + sinf(state->lfo_coeff*(offset%state->lfo_range));
+    lfo_value = 1.0f + sinf(state->lfo_scale*(offset%state->lfo_range));
     lfo_value *= state->depth * state->delay;
     *delay_right = fastf2i(lfo_value) + state->delay;
 }

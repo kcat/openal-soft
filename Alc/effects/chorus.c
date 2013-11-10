@@ -33,8 +33,7 @@
 typedef struct ALchorusState {
     DERIVE_FROM_TYPE(ALeffectState);
 
-    ALfloat *SampleBufferLeft;
-    ALfloat *SampleBufferRight;
+    ALfloat *SampleBuffer[2];
     ALuint BufferLength;
     ALuint offset;
     ALuint lfo_range;
@@ -53,11 +52,9 @@ typedef struct ALchorusState {
 
 static ALvoid ALchorusState_Destruct(ALchorusState *state)
 {
-    free(state->SampleBufferLeft);
-    state->SampleBufferLeft = NULL;
-
-    free(state->SampleBufferRight);
-    state->SampleBufferRight = NULL;
+    free(state->SampleBuffer[0]);
+    state->SampleBuffer[0] = NULL;
+    state->SampleBuffer[1] = NULL;
 }
 
 static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Device)
@@ -72,21 +69,18 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
     {
         void *temp;
 
-        temp = realloc(state->SampleBufferLeft, maxlen * sizeof(ALfloat));
+        temp = realloc(state->SampleBuffer[0], maxlen * sizeof(ALfloat) * 2);
         if(!temp) return AL_FALSE;
-        state->SampleBufferLeft = temp;
-
-        temp = realloc(state->SampleBufferRight, maxlen * sizeof(ALfloat));
-        if(!temp) return AL_FALSE;
-        state->SampleBufferRight = temp;
+        state->SampleBuffer[0] = temp;
+        state->SampleBuffer[1] = state->SampleBuffer[0] + maxlen;
 
         state->BufferLength = maxlen;
     }
 
     for(it = 0;it < state->BufferLength;it++)
     {
-        state->SampleBufferLeft[it] = 0.0f;
-        state->SampleBufferRight[it] = 0.0f;
+        state->SampleBuffer[0][it] = 0.0f;
+        state->SampleBuffer[1][it] = 0.0f;
     }
 
     return AL_TRUE;
@@ -167,8 +161,8 @@ static void Process##Func(ALchorusState *state, const ALuint SamplesToDo,     \
   const ALfloat *restrict SamplesIn, ALfloat (*restrict out)[2])              \
 {                                                                             \
     const ALuint bufmask = state->BufferLength-1;                             \
-    ALfloat *restrict leftbuf = state->SampleBufferLeft;                      \
-    ALfloat *restrict rightbuf = state->SampleBufferRight;                    \
+    ALfloat *restrict leftbuf = state->SampleBuffer[0];                       \
+    ALfloat *restrict rightbuf = state->SampleBuffer[1];                      \
     ALuint offset = state->offset;                                            \
     const ALfloat feedback = state->feedback;                                 \
     ALuint it;                                                                \
@@ -251,8 +245,8 @@ static ALeffectState *ALchorusStateFactory_create(ALchorusStateFactory *UNUSED(f
     SET_VTABLE2(ALchorusState, ALeffectState, state);
 
     state->BufferLength = 0;
-    state->SampleBufferLeft = NULL;
-    state->SampleBufferRight = NULL;
+    state->SampleBuffer[0] = NULL;
+    state->SampleBuffer[1] = NULL;
     state->offset = 0;
     state->lfo_range = 1;
 

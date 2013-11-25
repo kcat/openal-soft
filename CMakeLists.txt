@@ -113,36 +113,57 @@ IF(HAVE_STD_C99)
     SET(CMAKE_C_FLAGS "-std=c99 ${CMAKE_C_FLAGS}")
 ENDIF()
 
-# TODO: Once we truly require C99, these restrict and inline checks should go
-# away. Currently they're needed to maintain MSVC compatibility.
-CHECK_C_SOURCE_COMPILES("int *restrict foo;
-                         int main() {return 0;}" HAVE_RESTRICT)
-IF(NOT HAVE_RESTRICT)
-    # Slightly convoluted way to do this, because MSVC may barf if restrict is
-    # defined to __restrict.
-    CHECK_C_SOURCE_COMPILES("#define restrict __restrict
-                             #include <stdlib.h>
-                             int *restrict foo;
-                             int main() {return 0;}" HAVE___RESTRICT)
-    IF(HAVE___RESTRICT)
-        ADD_DEFINITIONS(-Drestrict=__restrict)
-    ELSE()
-        ADD_DEFINITIONS("-Drestrict=")
+# MSVC may need workarounds for C99 restrict and inline
+IF(MSVC)
+    # TODO: Once we truly require C99, these restrict and inline checks should go
+    # away.
+    CHECK_C_SOURCE_COMPILES("int *restrict foo;
+                             int main() {return 0;}" HAVE_RESTRICT)
+    IF(NOT HAVE_RESTRICT)
+        # Slightly convoluted way to do this, because MSVC may barf if restrict is
+        # defined to __restrict.
+        CHECK_C_SOURCE_COMPILES("#define restrict __restrict
+                                 #include <stdlib.h>
+                                 int *restrict foo;
+                                 int main() {return 0;}" HAVE___RESTRICT)
+        IF(HAVE___RESTRICT)
+            ADD_DEFINITIONS(-Drestrict=__restrict)
+            SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Drestrict=__restrict")
+        ELSE()
+            ADD_DEFINITIONS("-Drestrict=")
+            SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Drestrict=")
+        ENDIF()
+    ENDIF()
+
+    CHECK_C_SOURCE_COMPILES("inline void foo(void) { }
+                             int main() {return 0;}" HAVE_INLINE)
+    IF(NOT HAVE_INLINE)
+        CHECK_C_SOURCE_COMPILES("__inline void foo(void) { }
+                                 int main() {return 0;}" HAVE___INLINE)
+        IF(NOT HAVE___INLINE)
+            MESSAGE(FATAL_ERROR "No inline keyword found, please report!")
+        ENDIF()
+
+        ADD_DEFINITIONS(-Dinline=__inline)
+        SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Dinline=__inline")
     ENDIF()
 ENDIF()
 
-CHECK_C_SOURCE_COMPILES("inline void foo(void) { }
-                         int main() {return 0;}" HAVE_INLINE)
-IF(NOT HAVE_INLINE)
-    CHECK_C_SOURCE_COMPILES("__inline void foo(void) { }
-                             int main() {return 0;}" HAVE___INLINE)
-    IF(NOT HAVE___INLINE)
-        MESSAGE(FATAL_ERROR "No inline keyword found, please report!")
+# Make sure we have C99-style inline semantics with GCC (4.3 or newer).
+IF(CMAKE_COMPILER_IS_GNUCC)
+    SET(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+    # Force no inlining for the next test.
+    SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS} -fno-inline")
+
+    CHECK_C_SOURCE_COMPILES("extern inline int foo() { return 0; }
+                             int main() {return foo();}" INLINE_IS_C99)
+    IF(NOT INLINE_IS_C99)
+        MESSAGE(FATAL_ERROR "Your compiler does not seem to have C99 inline semantics!
+                             Please update your compiler for better C99 compliance.")
     ENDIF()
 
-    ADD_DEFINITIONS(-Dinline=__inline)
+    SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
 ENDIF()
-
 
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES("${OpenAL_SOURCE_DIR}/include" "${OpenAL_BINARY_DIR}")

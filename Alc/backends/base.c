@@ -136,8 +136,8 @@ static void CaptureWrapper_close(CaptureWrapper *self);
 static DECLARE_FORWARD(CaptureWrapper, ALCbackend, ALCboolean, reset)
 static ALCboolean CaptureWrapper_start(CaptureWrapper *self);
 static void CaptureWrapper_stop(CaptureWrapper *self);
-ALCenum CaptureWrapper_captureSamples(CaptureWrapper *self, void *buffer, ALCuint samples);
-ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self);
+static ALCenum CaptureWrapper_captureSamples(CaptureWrapper *self, void *buffer, ALCuint samples);
+static ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self);
 static ALint64 CaptureWrapper_getLatency(CaptureWrapper *self);
 static DECLARE_FORWARD(CaptureWrapper, ALCbackend, void, lock)
 static DECLARE_FORWARD(CaptureWrapper, ALCbackend, void, unlock)
@@ -176,13 +176,13 @@ static void CaptureWrapper_stop(CaptureWrapper *self)
     device->Funcs->StopCapture(device);
 }
 
-ALCenum CaptureWrapper_captureSamples(CaptureWrapper *self, void *buffer, ALCuint samples)
+static ALCenum CaptureWrapper_captureSamples(CaptureWrapper *self, void *buffer, ALCuint samples)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->CaptureSamples(device, buffer, samples);
 }
 
-ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self)
+static ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     return device->Funcs->AvailableSamples(device);

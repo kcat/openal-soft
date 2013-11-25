@@ -38,80 +38,83 @@ static const ALCchar alsaDevice[] = "ALSA Default";
 
 
 #ifdef HAVE_DYNLOAD
+#define ALSA_FUNCS(MAGIC)                                                     \
+    MAGIC(snd_strerror);                                                      \
+    MAGIC(snd_pcm_open);                                                      \
+    MAGIC(snd_pcm_close);                                                     \
+    MAGIC(snd_pcm_nonblock);                                                  \
+    MAGIC(snd_pcm_frames_to_bytes);                                           \
+    MAGIC(snd_pcm_bytes_to_frames);                                           \
+    MAGIC(snd_pcm_hw_params_malloc);                                          \
+    MAGIC(snd_pcm_hw_params_free);                                            \
+    MAGIC(snd_pcm_hw_params_any);                                             \
+    MAGIC(snd_pcm_hw_params_current);                                         \
+    MAGIC(snd_pcm_hw_params_set_access);                                      \
+    MAGIC(snd_pcm_hw_params_set_format);                                      \
+    MAGIC(snd_pcm_hw_params_set_channels);                                    \
+    MAGIC(snd_pcm_hw_params_set_periods_near);                                \
+    MAGIC(snd_pcm_hw_params_set_rate_near);                                   \
+    MAGIC(snd_pcm_hw_params_set_rate);                                        \
+    MAGIC(snd_pcm_hw_params_set_rate_resample);                               \
+    MAGIC(snd_pcm_hw_params_set_buffer_time_near);                            \
+    MAGIC(snd_pcm_hw_params_set_period_time_near);                            \
+    MAGIC(snd_pcm_hw_params_set_buffer_size_near);                            \
+    MAGIC(snd_pcm_hw_params_set_period_size_near);                            \
+    MAGIC(snd_pcm_hw_params_set_buffer_size_min);                             \
+    MAGIC(snd_pcm_hw_params_get_buffer_time_min);                             \
+    MAGIC(snd_pcm_hw_params_get_buffer_time_max);                             \
+    MAGIC(snd_pcm_hw_params_get_period_time_min);                             \
+    MAGIC(snd_pcm_hw_params_get_period_time_max);                             \
+    MAGIC(snd_pcm_hw_params_get_buffer_size);                                 \
+    MAGIC(snd_pcm_hw_params_get_period_size);                                 \
+    MAGIC(snd_pcm_hw_params_get_access);                                      \
+    MAGIC(snd_pcm_hw_params_get_periods);                                     \
+    MAGIC(snd_pcm_hw_params_test_format);                                     \
+    MAGIC(snd_pcm_hw_params_test_channels);                                   \
+    MAGIC(snd_pcm_hw_params);                                                 \
+    MAGIC(snd_pcm_sw_params_malloc);                                          \
+    MAGIC(snd_pcm_sw_params_current);                                         \
+    MAGIC(snd_pcm_sw_params_set_avail_min);                                   \
+    MAGIC(snd_pcm_sw_params_set_stop_threshold);                              \
+    MAGIC(snd_pcm_sw_params);                                                 \
+    MAGIC(snd_pcm_sw_params_free);                                            \
+    MAGIC(snd_pcm_prepare);                                                   \
+    MAGIC(snd_pcm_start);                                                     \
+    MAGIC(snd_pcm_resume);                                                    \
+    MAGIC(snd_pcm_reset);                                                     \
+    MAGIC(snd_pcm_wait);                                                      \
+    MAGIC(snd_pcm_delay);                                                     \
+    MAGIC(snd_pcm_state);                                                     \
+    MAGIC(snd_pcm_avail_update);                                              \
+    MAGIC(snd_pcm_areas_silence);                                             \
+    MAGIC(snd_pcm_mmap_begin);                                                \
+    MAGIC(snd_pcm_mmap_commit);                                               \
+    MAGIC(snd_pcm_readi);                                                     \
+    MAGIC(snd_pcm_writei);                                                    \
+    MAGIC(snd_pcm_drain);                                                     \
+    MAGIC(snd_pcm_drop);                                                      \
+    MAGIC(snd_pcm_recover);                                                   \
+    MAGIC(snd_pcm_info_malloc);                                               \
+    MAGIC(snd_pcm_info_free);                                                 \
+    MAGIC(snd_pcm_info_set_device);                                           \
+    MAGIC(snd_pcm_info_set_subdevice);                                        \
+    MAGIC(snd_pcm_info_set_stream);                                           \
+    MAGIC(snd_pcm_info_get_name);                                             \
+    MAGIC(snd_ctl_pcm_next_device);                                           \
+    MAGIC(snd_ctl_pcm_info);                                                  \
+    MAGIC(snd_ctl_open);                                                      \
+    MAGIC(snd_ctl_close);                                                     \
+    MAGIC(snd_ctl_card_info_malloc);                                          \
+    MAGIC(snd_ctl_card_info_free);                                            \
+    MAGIC(snd_ctl_card_info);                                                 \
+    MAGIC(snd_ctl_card_info_get_name);                                        \
+    MAGIC(snd_ctl_card_info_get_id);                                          \
+    MAGIC(snd_card_next);                                                     \
+    MAGIC(snd_config_update_free_global)
+
 static void *alsa_handle;
 #define MAKE_FUNC(f) static __typeof(f) * p##f
-MAKE_FUNC(snd_strerror);
-MAKE_FUNC(snd_pcm_open);
-MAKE_FUNC(snd_pcm_close);
-MAKE_FUNC(snd_pcm_nonblock);
-MAKE_FUNC(snd_pcm_frames_to_bytes);
-MAKE_FUNC(snd_pcm_bytes_to_frames);
-MAKE_FUNC(snd_pcm_hw_params_malloc);
-MAKE_FUNC(snd_pcm_hw_params_free);
-MAKE_FUNC(snd_pcm_hw_params_any);
-MAKE_FUNC(snd_pcm_hw_params_current);
-MAKE_FUNC(snd_pcm_hw_params_set_access);
-MAKE_FUNC(snd_pcm_hw_params_set_format);
-MAKE_FUNC(snd_pcm_hw_params_set_channels);
-MAKE_FUNC(snd_pcm_hw_params_set_periods_near);
-MAKE_FUNC(snd_pcm_hw_params_set_rate_near);
-MAKE_FUNC(snd_pcm_hw_params_set_rate);
-MAKE_FUNC(snd_pcm_hw_params_set_rate_resample);
-MAKE_FUNC(snd_pcm_hw_params_set_buffer_time_near);
-MAKE_FUNC(snd_pcm_hw_params_set_period_time_near);
-MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_near);
-MAKE_FUNC(snd_pcm_hw_params_set_period_size_near);
-MAKE_FUNC(snd_pcm_hw_params_set_buffer_size_min);
-MAKE_FUNC(snd_pcm_hw_params_get_buffer_time_min);
-MAKE_FUNC(snd_pcm_hw_params_get_buffer_time_max);
-MAKE_FUNC(snd_pcm_hw_params_get_period_time_min);
-MAKE_FUNC(snd_pcm_hw_params_get_period_time_max);
-MAKE_FUNC(snd_pcm_hw_params_get_buffer_size);
-MAKE_FUNC(snd_pcm_hw_params_get_period_size);
-MAKE_FUNC(snd_pcm_hw_params_get_access);
-MAKE_FUNC(snd_pcm_hw_params_get_periods);
-MAKE_FUNC(snd_pcm_hw_params_test_format);
-MAKE_FUNC(snd_pcm_hw_params_test_channels);
-MAKE_FUNC(snd_pcm_hw_params);
-MAKE_FUNC(snd_pcm_sw_params_malloc);
-MAKE_FUNC(snd_pcm_sw_params_current);
-MAKE_FUNC(snd_pcm_sw_params_set_avail_min);
-MAKE_FUNC(snd_pcm_sw_params_set_stop_threshold);
-MAKE_FUNC(snd_pcm_sw_params);
-MAKE_FUNC(snd_pcm_sw_params_free);
-MAKE_FUNC(snd_pcm_prepare);
-MAKE_FUNC(snd_pcm_start);
-MAKE_FUNC(snd_pcm_resume);
-MAKE_FUNC(snd_pcm_reset);
-MAKE_FUNC(snd_pcm_wait);
-MAKE_FUNC(snd_pcm_delay);
-MAKE_FUNC(snd_pcm_state);
-MAKE_FUNC(snd_pcm_avail_update);
-MAKE_FUNC(snd_pcm_areas_silence);
-MAKE_FUNC(snd_pcm_mmap_begin);
-MAKE_FUNC(snd_pcm_mmap_commit);
-MAKE_FUNC(snd_pcm_readi);
-MAKE_FUNC(snd_pcm_writei);
-MAKE_FUNC(snd_pcm_drain);
-MAKE_FUNC(snd_pcm_drop);
-MAKE_FUNC(snd_pcm_recover);
-MAKE_FUNC(snd_pcm_info_malloc);
-MAKE_FUNC(snd_pcm_info_free);
-MAKE_FUNC(snd_pcm_info_set_device);
-MAKE_FUNC(snd_pcm_info_set_subdevice);
-MAKE_FUNC(snd_pcm_info_set_stream);
-MAKE_FUNC(snd_pcm_info_get_name);
-MAKE_FUNC(snd_ctl_pcm_next_device);
-MAKE_FUNC(snd_ctl_pcm_info);
-MAKE_FUNC(snd_ctl_open);
-MAKE_FUNC(snd_ctl_close);
-MAKE_FUNC(snd_ctl_card_info_malloc);
-MAKE_FUNC(snd_ctl_card_info_free);
-MAKE_FUNC(snd_ctl_card_info);
-MAKE_FUNC(snd_ctl_card_info_get_name);
-MAKE_FUNC(snd_ctl_card_info_get_id);
-MAKE_FUNC(snd_card_next);
-MAKE_FUNC(snd_config_update_free_global);
+ALSA_FUNCS(MAKE_FUNC);
 #undef MAKE_FUNC
 
 #define snd_strerror psnd_strerror
@@ -191,6 +194,8 @@ MAKE_FUNC(snd_config_update_free_global);
 
 static ALCboolean alsa_load(void)
 {
+    ALCboolean error = ALC_FALSE;
+
 #ifdef HAVE_DYNLOAD
     if(!alsa_handle)
     {
@@ -198,90 +203,26 @@ static ALCboolean alsa_load(void)
         if(!alsa_handle)
             return ALC_FALSE;
 
+        error = ALC_FALSE;
 #define LOAD_FUNC(f) do {                                                     \
     p##f = GetSymbol(alsa_handle, #f);                                        \
     if(p##f == NULL) {                                                        \
-        CloseLib(alsa_handle);                                                \
-        alsa_handle = NULL;                                                   \
-        return ALC_FALSE;                                                     \
+        error = ALC_TRUE;                                                     \
     }                                                                         \
 } while(0)
-        LOAD_FUNC(snd_strerror);
-        LOAD_FUNC(snd_pcm_open);
-        LOAD_FUNC(snd_pcm_close);
-        LOAD_FUNC(snd_pcm_nonblock);
-        LOAD_FUNC(snd_pcm_frames_to_bytes);
-        LOAD_FUNC(snd_pcm_bytes_to_frames);
-        LOAD_FUNC(snd_pcm_hw_params_malloc);
-        LOAD_FUNC(snd_pcm_hw_params_free);
-        LOAD_FUNC(snd_pcm_hw_params_any);
-        LOAD_FUNC(snd_pcm_hw_params_current);
-        LOAD_FUNC(snd_pcm_hw_params_set_access);
-        LOAD_FUNC(snd_pcm_hw_params_set_format);
-        LOAD_FUNC(snd_pcm_hw_params_set_channels);
-        LOAD_FUNC(snd_pcm_hw_params_set_periods_near);
-        LOAD_FUNC(snd_pcm_hw_params_set_rate_near);
-        LOAD_FUNC(snd_pcm_hw_params_set_rate);
-        LOAD_FUNC(snd_pcm_hw_params_set_rate_resample);
-        LOAD_FUNC(snd_pcm_hw_params_set_buffer_time_near);
-        LOAD_FUNC(snd_pcm_hw_params_set_period_time_near);
-        LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_near);
-        LOAD_FUNC(snd_pcm_hw_params_set_buffer_size_min);
-        LOAD_FUNC(snd_pcm_hw_params_set_period_size_near);
-        LOAD_FUNC(snd_pcm_hw_params_get_buffer_time_min);
-        LOAD_FUNC(snd_pcm_hw_params_get_buffer_time_max);
-        LOAD_FUNC(snd_pcm_hw_params_get_period_time_min);
-        LOAD_FUNC(snd_pcm_hw_params_get_period_time_max);
-        LOAD_FUNC(snd_pcm_hw_params_get_buffer_size);
-        LOAD_FUNC(snd_pcm_hw_params_get_period_size);
-        LOAD_FUNC(snd_pcm_hw_params_get_access);
-        LOAD_FUNC(snd_pcm_hw_params_get_periods);
-        LOAD_FUNC(snd_pcm_hw_params_test_format);
-        LOAD_FUNC(snd_pcm_hw_params_test_channels);
-        LOAD_FUNC(snd_pcm_hw_params);
-        LOAD_FUNC(snd_pcm_sw_params_malloc);
-        LOAD_FUNC(snd_pcm_sw_params_current);
-        LOAD_FUNC(snd_pcm_sw_params_set_avail_min);
-        LOAD_FUNC(snd_pcm_sw_params_set_stop_threshold);
-        LOAD_FUNC(snd_pcm_sw_params);
-        LOAD_FUNC(snd_pcm_sw_params_free);
-        LOAD_FUNC(snd_pcm_prepare);
-        LOAD_FUNC(snd_pcm_start);
-        LOAD_FUNC(snd_pcm_resume);
-        LOAD_FUNC(snd_pcm_reset);
-        LOAD_FUNC(snd_pcm_wait);
-        LOAD_FUNC(snd_pcm_delay);
-        LOAD_FUNC(snd_pcm_state);
-        LOAD_FUNC(snd_pcm_avail_update);
-        LOAD_FUNC(snd_pcm_areas_silence);
-        LOAD_FUNC(snd_pcm_mmap_begin);
-        LOAD_FUNC(snd_pcm_mmap_commit);
-        LOAD_FUNC(snd_pcm_readi);
-        LOAD_FUNC(snd_pcm_writei);
-        LOAD_FUNC(snd_pcm_drain);
-        LOAD_FUNC(snd_pcm_drop);
-        LOAD_FUNC(snd_pcm_recover);
-        LOAD_FUNC(snd_pcm_info_malloc);
-        LOAD_FUNC(snd_pcm_info_free);
-        LOAD_FUNC(snd_pcm_info_set_device);
-        LOAD_FUNC(snd_pcm_info_set_subdevice);
-        LOAD_FUNC(snd_pcm_info_set_stream);
-        LOAD_FUNC(snd_pcm_info_get_name);
-        LOAD_FUNC(snd_ctl_pcm_next_device);
-        LOAD_FUNC(snd_ctl_pcm_info);
-        LOAD_FUNC(snd_ctl_open);
-        LOAD_FUNC(snd_ctl_close);
-        LOAD_FUNC(snd_ctl_card_info_malloc);
-        LOAD_FUNC(snd_ctl_card_info_free);
-        LOAD_FUNC(snd_ctl_card_info);
-        LOAD_FUNC(snd_ctl_card_info_get_name);
-        LOAD_FUNC(snd_ctl_card_info_get_id);
-        LOAD_FUNC(snd_card_next);
-        LOAD_FUNC(snd_config_update_free_global);
+        ALSA_FUNCS(LOAD_FUNC);
 #undef LOAD_FUNC
+
+        if(error)
+        {
+            CloseLib(alsa_handle);
+            alsa_handle = NULL;
+            return ALC_FALSE;
+        }
     }
 #endif
-    return ALC_TRUE;
+
+    return !error;
 }
 
 

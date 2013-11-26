@@ -224,7 +224,7 @@ static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR U
 }
 
 
-static ALuint DSoundPlaybackProc(ALvoid *ptr)
+FORCE_ALIGN static ALuint DSoundPlaybackProc(ALvoid *ptr)
 {
     ALCdevice *Device = (ALCdevice*)ptr;
     DSoundPlaybackData *data = (DSoundPlaybackData*)Device->ExtraData;

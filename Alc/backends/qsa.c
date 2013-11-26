@@ -177,15 +177,8 @@ static DevMap* deviceList(int type, ALuint* count)
     return dev_list;
 }
 
-/* force_align_arg_pointer is required for proper function arguments */
-/* aligning, when SSE mixer is used. QNX has a bug in pthread_create */
-/* function regarding thread stack alignment, it uses 64 bit align   */
-/* instead of 128 bit, like main thread.                             */
-#if defined(__GNUC__) && (_NTO_VERSION <= 650) && \
-    defined(__i386__) && defined(HAVE_SSE)
-__attribute__((force_align_arg_pointer))
-#endif /* __GNUC__ && QNX version < 6.5.0 on x86 platform with SSE support */
-static ALuint qsa_proc_playback(ALvoid* ptr)
+
+FORCE_ALIGN static ALuint qsa_proc_playback(ALvoid* ptr)
 {
     ALCdevice* device=(ALCdevice*)ptr;
     qsa_data* data=(qsa_data*)device->ExtraData;

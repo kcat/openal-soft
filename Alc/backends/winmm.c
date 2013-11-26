@@ -165,7 +165,7 @@ static void CALLBACK WaveOutProc(HWAVEOUT UNUSED(device), UINT msg, DWORD_PTR in
     Used by "MMSYSTEM" Device.  Called when a WaveOut buffer has used up its
     audio data.
 */
-static DWORD WINAPI PlaybackThreadProc(LPVOID param)
+FORCE_ALIGN static DWORD WINAPI PlaybackThreadProc(LPVOID param)
 {
     ALCdevice *Device = (ALCdevice*)param;
     WinMMData *data = Device->ExtraData;

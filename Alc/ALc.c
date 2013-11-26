@@ -3383,7 +3383,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
  * Renders some samples into a buffer, using the format last set by the
  * attributes given to alcCreateContext.
  */
-ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
+FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
     if(!(device=VerifyDevice(device)) || device->Type != Loopback)
         alcSetError(device, ALC_INVALID_DEVICE);

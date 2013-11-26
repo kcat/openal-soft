@@ -220,7 +220,7 @@ static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALu
 }
 
 
-static ALuint MMDevApiProc(ALvoid *ptr)
+FORCE_ALIGN static ALuint MMDevApiProc(ALvoid *ptr)
 {
     ALCdevice *device = ptr;
     MMDevApiData *data = device->ExtraData;

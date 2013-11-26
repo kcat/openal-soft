@@ -74,6 +74,16 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #define PRINTF_STYLE(x, y)
 #endif
 
+#if defined(__GNUC__) && defined(__i386__)
+/* force_align_arg_pointer is required for proper function arguments aligning
+ * when SSE code is used. Some systems (Windows, QNX) do not guarantee our
+ * thread functions will be properly aligned on the stack, even though GCC may
+ * generate code with the assumption that it is. */
+#define FORCE_ALIGN __attribute__((force_align_arg_pointer))
+#else
+#define FORCE_ALIGN
+#endif
+
 
 static const union {
     ALuint u;

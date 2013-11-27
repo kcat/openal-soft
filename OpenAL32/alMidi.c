@@ -5,7 +5,104 @@
 #include <string.h>
 #include <limits.h>
 
+#include "alMidi.h"
+#include "alMain.h"
+#include "alError.h"
 #include "evtqueue.h"
+#include "rwlock.h"
+#include "alu.h"
+
+
+/* Microsecond resolution */
+#define TICKS_PER_SECOND (1000000)
+
+static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device);
+static void MidiSynth_Destruct(MidiSynth *self);
+static inline void MidiSynth_setState(MidiSynth *self, ALenum state);
+static inline ALuint MidiSynth_getTime(const MidiSynth *self);
+static inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self);
+static void MidiSynth_update(MidiSynth *self, ALCdevice *device);
+static void MidiSynth_updateSpeed(MidiSynth *self);
+static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event, ALsizei param1, ALsizei param2);
+
+
+static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
+{
+    InitEvtQueue(&self->EventQueue);
+
+    self->LastEvtTime = 0;
+    self->NextEvtTime = UINT64_MAX;
+    self->SamplesSinceLast = 0.0;
+    self->SamplesToNext = 0.0;
+
+    self->State = AL_INITIAL;
+
+    self->FontName = NULL;
+
+    self->SampleRate = device->Frequency;
+    self->SamplesPerTick = (ALdouble)self->SampleRate / TICKS_PER_SECOND;
+    MidiSynth_updateSpeed(self);
+}
+
+static void MidiSynth_Destruct(MidiSynth *self)
+{
+    free(self->FontName);
+    self->FontName = NULL;
+
+    ResetEvtQueue(&self->EventQueue);
+}
+
+static inline void MidiSynth_setState(MidiSynth *self, ALenum state)
+{
+    ExchangeInt(&self->State, state);
+}
+
+static inline ALuint MidiSynth_getTime(const MidiSynth *self)
+{
+    ALuint time = self->LastEvtTime + (self->SamplesSinceLast/self->SamplesPerTick);
+    return clampu(time, self->LastEvtTime, self->NextEvtTime);
+}
+
+static inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self)
+{
+    if(self->EventQueue.pos == self->EventQueue.size)
+        return UINT64_MAX;
+    return self->EventQueue.events[self->EventQueue.pos].time;
+}
+
+static void MidiSynth_update(MidiSynth *self, ALCdevice *device)
+{
+    self->SampleRate = device->Frequency;
+    MidiSynth_updateSpeed(self);
+}
+
+static void MidiSynth_updateSpeed(MidiSynth *self)
+{
+    ALdouble sampletickrate = (ALdouble)self->SampleRate / TICKS_PER_SECOND;
+
+    self->SamplesSinceLast = self->SamplesSinceLast * sampletickrate / self->SamplesPerTick;
+    self->SamplesToNext = self->SamplesToNext * sampletickrate / self->SamplesPerTick;
+    self->SamplesPerTick = sampletickrate;
+}
+
+static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event, ALsizei param1, ALsizei param2)
+{
+    MidiEvent entry = { time, event, { param1, param2 } };
+    ALenum err;
+
+    err = InsertEvtQueue(&self->EventQueue, &entry);
+    if(err != AL_NO_ERROR) return err;
+
+    if(entry.time < self->NextEvtTime)
+    {
+        self->NextEvtTime = entry.time;
+
+        self->SamplesToNext  = (self->NextEvtTime - self->LastEvtTime) * self->SamplesPerTick;
+        self->SamplesToNext -= self->SamplesSinceLast;
+    }
+
+    return AL_NO_ERROR;
+}
 
 
 void InitEvtQueue(EvtQueue *queue)

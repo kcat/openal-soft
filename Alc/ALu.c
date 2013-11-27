@@ -52,6 +52,10 @@ extern inline ALfloat minf(ALfloat a, ALfloat b);
 extern inline ALfloat maxf(ALfloat a, ALfloat b);
 extern inline ALfloat clampf(ALfloat val, ALfloat min, ALfloat max);
 
+extern inline ALdouble mind(ALdouble a, ALdouble b);
+extern inline ALdouble maxd(ALdouble a, ALdouble b);
+extern inline ALdouble clampd(ALdouble val, ALdouble min, ALdouble max);
+
 extern inline ALuint minu(ALuint a, ALuint b);
 extern inline ALuint maxu(ALuint a, ALuint b);
 extern inline ALuint clampu(ALuint val, ALuint min, ALuint max);

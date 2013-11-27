@@ -64,6 +64,13 @@ inline ALfloat maxf(ALfloat a, ALfloat b)
 inline ALfloat clampf(ALfloat val, ALfloat min, ALfloat max)
 { return minf(max, maxf(min, val)); }
 
+inline ALdouble mind(ALdouble a, ALdouble b)
+{ return ((a > b) ? b : a); }
+inline ALdouble maxd(ALdouble a, ALdouble b)
+{ return ((a > b) ? a : b); }
+inline ALdouble clampd(ALdouble val, ALdouble min, ALdouble max)
+{ return mind(max, maxd(min, val)); }
+
 inline ALuint minu(ALuint a, ALuint b)
 { return ((a > b) ? b : a); }
 inline ALuint maxu(ALuint a, ALuint b)

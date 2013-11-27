@@ -103,6 +103,10 @@ static const union {
 rettype T1##_##func(T1 *obj)                                                  \
 { return T2##_##func(STATIC_CAST(T2, obj)); }
 
+#define DECLARE_FORWARD1(T1, T2, rettype, func, argtype1)                     \
+rettype T1##_##func(T1 *obj, argtype1 a)                                      \
+{ return T2##_##func(STATIC_CAST(T2, obj), a); }
+
 #define DECLARE_FORWARD2(T1, T2, rettype, func, argtype1, argtype2)           \
 rettype T1##_##func(T1 *obj, argtype1 a, argtype2 b)                          \
 { return T2##_##func(STATIC_CAST(T2, obj), a, b); }
@@ -624,6 +628,11 @@ void FillCPUCaps(ALuint capfilter);
     alSetError((ctx), (err));                                                  \
     goto lbl;                                                                  \
 } while(0)
+
+
+/* Small hack to use a pointer-to-array type as a normal argument type.
+ * Shouldn't be used directly. */
+typedef ALfloat ALfloatBUFFERSIZE[BUFFERSIZE];
 
 
 #ifdef __cplusplus

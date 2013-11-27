@@ -3,8 +3,10 @@
 
 #include "AL/al.h"
 
+#include "alMain.h"
+
 typedef struct MidiEvent {
-    ALuint time;
+    ALuint64 time;
     ALuint event;
     ALuint param[2];
 } MidiEvent;
@@ -20,4 +22,4 @@ void InitEvtQueue(EvtQueue *queue);
 void ResetEvtQueue(EvtQueue *queue);
 ALenum InsertEvtQueue(EvtQueue *queue, const MidiEvent *evt);
 
-#endif /* AL_EXTQUEUE_H */
+#endif /* AL_EVTQUEUE_H */

@@ -56,6 +56,10 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #endif
 #endif
 
+#ifndef UINT64_MAX
+#define UINT64_MAX U64(18446744073709551615)
+#endif
+
 #ifndef UNUSED
 #if defined(__cplusplus)
 #define UNUSED(x)

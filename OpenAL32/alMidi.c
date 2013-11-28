@@ -51,9 +51,7 @@ static void MidiSynth_Destruct(MidiSynth *self)
 
 static inline void MidiSynth_setState(MidiSynth *self, ALenum state)
 {
-    WriteLock(&self->Lock);
     ExchangeInt(&self->State, state);
-    WriteUnlock(&self->Lock);
 }
 
 ALuint64 MidiSynth_getTime(const MidiSynth *self)
@@ -199,7 +197,6 @@ static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
 
 static void FSynth_setState(FSynth *self, ALenum state)
 {
-    WriteLock(&STATIC_CAST(MidiSynth, self)->Lock);
     if(state == AL_PLAYING)
     {
         if(self->FontID == FLUID_FAILED)
@@ -215,8 +212,7 @@ static void FSynth_setState(FSynth *self, ALenum state)
             }
         }
     }
-    ExchangeInt(&STATIC_CAST(MidiSynth, self)->State, state);
-    WriteUnlock(&STATIC_CAST(MidiSynth, self)->Lock);
+    MidiSynth_setState(STATIC_CAST(MidiSynth, self), state);
 }
 
 static void FSynth_update(FSynth *self, ALCdevice *device)
@@ -518,28 +514,32 @@ done:
 
 AL_API void AL_APIENTRY alMidiPlaySOFT(void)
 {
-    ALCdevice *device;
     ALCcontext *context;
+    MidiSynth *synth;
 
     context = GetContextRef();
     if(!context) return;
 
-    device = context->Device;
-    V(device->Synth,setState)(AL_PLAYING);
+    synth = context->Device->Synth;
+    WriteLock(&synth->Lock);
+    V(synth,setState)(AL_PLAYING);
+    WriteUnlock(&synth->Lock);
 
     ALCcontext_DecRef(context);
 }
 
 AL_API void AL_APIENTRY alMidiPauseSOFT(void)
 {
-    ALCdevice *device;
     ALCcontext *context;
+    MidiSynth *synth;
 
     context = GetContextRef();
     if(!context) return;
 
-    device = context->Device;
-    V(device->Synth,setState)(AL_PAUSED);
+    synth = context->Device->Synth;
+    WriteLock(&synth->Lock);
+    V(synth,setState)(AL_PAUSED);
+    WriteUnlock(&synth->Lock);
 
     ALCcontext_DecRef(context);
 }

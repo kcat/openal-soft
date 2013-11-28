@@ -19,7 +19,7 @@
 static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device);
 static void MidiSynth_Destruct(MidiSynth *self);
 static inline void MidiSynth_setState(MidiSynth *self, ALenum state);
-static inline ALuint MidiSynth_getTime(const MidiSynth *self);
+ALuint64 MidiSynth_getTime(const MidiSynth *self);
 static inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self);
 static void MidiSynth_update(MidiSynth *self, ALCdevice *device);
 static void MidiSynth_updateSpeed(MidiSynth *self);
@@ -37,8 +37,6 @@ static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
 
     self->State = AL_INITIAL;
 
-    self->FontName = NULL;
-
     self->SampleRate = device->Frequency;
     self->SamplesPerTick = (ALdouble)self->SampleRate / TICKS_PER_SECOND;
     MidiSynth_updateSpeed(self);
@@ -46,9 +44,6 @@ static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
 
 static void MidiSynth_Destruct(MidiSynth *self)
 {
-    free(self->FontName);
-    self->FontName = NULL;
-
     ResetEvtQueue(&self->EventQueue);
 }
 
@@ -57,9 +52,9 @@ static inline void MidiSynth_setState(MidiSynth *self, ALenum state)
     ExchangeInt(&self->State, state);
 }
 
-static inline ALuint MidiSynth_getTime(const MidiSynth *self)
+ALuint64 MidiSynth_getTime(const MidiSynth *self)
 {
-    ALuint time = self->LastEvtTime + (self->SamplesSinceLast/self->SamplesPerTick);
+    ALuint64 time = self->LastEvtTime + (self->SamplesSinceLast/self->SamplesPerTick);
     return clampu(time, self->LastEvtTime, self->NextEvtTime);
 }
 

@@ -23,10 +23,10 @@ typedef struct MidiSynth {
 
     volatile ALenum State;
 
-    char *FontName;
-
     const struct MidiSynthVtable *vtbl;
 } MidiSynth;
+
+ALuint64 MidiSynth_getTime(const MidiSynth *self);
 
 
 struct MidiSynthVtable {

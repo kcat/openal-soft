@@ -30,6 +30,7 @@
 #include "alMain.h"
 #include "alSource.h"
 #include "alListener.h"
+#include "alMidi.h"
 #include "alThunk.h"
 #include "alSource.h"
 #include "alBuffer.h"
@@ -1773,6 +1774,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->PendingClicks[i] = 0.0f;
     }
 
+    V(device->Synth,update)(device);
+
     device->Hrtf = NULL;
     if(device->Type != Loopback && ConfigValueExists(NULL, "hrtf"))
     {
@@ -1898,6 +1901,9 @@ static ALCvoid FreeDevice(ALCdevice *device)
     V0(device->Backend,close)();
     DELETE_OBJ(device->Backend);
     device->Backend = NULL;
+
+    DELETE_OBJ(device->Synth);
+    device->Synth = NULL;
 
     if(device->DefaultSlot)
     {
@@ -3024,9 +3030,19 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
+    device->Synth = SynthCreate(device);
+    if(!device->Synth)
+    {
+        DELETE_OBJ(device->Backend);
+        al_free(device);
+        alcSetError(NULL, ALC_OUT_OF_MEMORY);
+        return NULL;
+    }
+
     // Find a playback device to open
     if((err=V(device->Backend,open)(deviceName)) != ALC_NO_ERROR)
     {
+        DELETE_OBJ(device->Synth);
         DELETE_OBJ(device->Backend);
         al_free(device);
         alcSetError(NULL, err);
@@ -3343,6 +3359,15 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
+
+    device->Synth = SynthCreate(device);
+    if(!device->Synth)
+    {
+        DELETE_OBJ(device->Backend);
+        al_free(device);
+        alcSetError(NULL, ALC_OUT_OF_MEMORY);
+        return NULL;
+    }
 
     // Open the "backend"
     V(device->Backend,open)("Loopback");

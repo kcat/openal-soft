@@ -31,6 +31,7 @@
 #include "alBuffer.h"
 #include "alListener.h"
 #include "alAuxEffectSlot.h"
+#include "alMidi.h"
 #include "alu.h"
 #include "bs2b.h"
 
@@ -1028,6 +1029,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             memset(device->DryBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
         ALCdevice_Lock(device);
+        V(device->Synth,process)(SamplesToDo, device->DryBuffer);
+
         ctx = device->ContextList;
         while(ctx)
         {

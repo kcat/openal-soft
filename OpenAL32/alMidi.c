@@ -196,6 +196,67 @@ MidiSynth *SynthCreate(ALCdevice *device)
 }
 
 
+AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALenum err;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    if(!(event == AL_NOTEOFF_SOFT || event == AL_NOTEON_SOFT ||
+         event == AL_AFTERTOUCH_SOFT || event == AL_CONTROLLERCHANGE_SOFT ||
+         event == AL_PROGRAMCHANGE_SOFT || event == AL_CHANNELPRESSURE_SOFT ||
+         event == AL_PITCHBEND_SOFT))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    if(!(channel >= 0 && channel <= 15))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(!(param1 >= 0 && param1 <= 127))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(!(param2 >= 0 && param2 <= 127))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    device = context->Device;
+    ALCdevice_Lock(device);
+    err = MidiSynth_insertEvent(device->Synth, time, event|channel, param1, param2);
+    ALCdevice_Unlock(device);
+    if(err != AL_NO_ERROR)
+        alSetError(context, err);
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alMidiPlaySOFT(void)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    V(device->Synth,setState)(AL_PLAYING);
+
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alMidiPauseSOFT(void)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    V(device->Synth,setState)(AL_PAUSED);
+
+    ALCcontext_DecRef(context);
+}
+
+
 void InitEvtQueue(EvtQueue *queue)
 {
     queue->events = NULL;

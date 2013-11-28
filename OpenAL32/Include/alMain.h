@@ -27,6 +27,30 @@
 #define ALC_HRTF_SOFT                            0x1992
 #endif
 
+#ifndef ALC_SOFT_midi_interface
+#define ALC_SOFT_midi_interface 1
+#define AL_MIDI_CLOCK_SOFT                       0x9999
+#define AL_NOTEOFF_SOFT                          0x0080
+#define AL_NOTEON_SOFT                           0x0090
+#define AL_AFTERTOUCH_SOFT                       0x00A0
+#define AL_CONTROLLERCHANGE_SOFT                 0x00B0
+#define AL_PROGRAMCHANGE_SOFT                    0x00C0
+#define AL_CHANNELPRESSURE_SOFT                  0x00D0
+#define AL_PITCHBEND_SOFT                        0x00E0
+typedef void (AL_APIENTRY*LPALMIDIEVENTSOFT)(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
+typedef void (AL_APIENTRY*LPALMIDIPLAYSOFT)(void);
+typedef void (AL_APIENTRY*LPALMIDIPAUSESOFT)(void);
+typedef ALint64SOFT (AL_APIENTRY*LPALGETINTEGER64SOFT)(ALenum pname);
+typedef void (AL_APIENTRY*LPALGETINTEGER64VSOFT)(ALenum pname, ALint64SOFT *values);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
+AL_API void AL_APIENTRY alMidiPlaySOFT(void);
+AL_API void AL_APIENTRY alMidiPauseSOFT(void);
+AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname);
+AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values);
+#endif
+#endif
+
 
 #ifdef IN_IDE_PARSER
 /* KDevelop's parser doesn't recognize the C99-standard restrict keyword, but

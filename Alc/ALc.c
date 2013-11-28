@@ -280,6 +280,12 @@ static const ALCfunction alcFunctions[] = {
     DECL(alGetSource3i64SOFT),
     DECL(alGetSourcei64vSOFT),
 
+    DECL(alMidiEventSOFT),
+    DECL(alMidiPlaySOFT),
+    DECL(alMidiPauseSOFT),
+    DECL(alGetInteger64SOFT),
+    DECL(alGetInteger64vSOFT),
+
     { NULL, NULL }
 };
 #undef DECL
@@ -702,7 +708,8 @@ static const ALCchar alcNoDeviceExtList[] =
 static const ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
     "ALC_EXT_DEDICATED ALC_EXT_disconnect ALC_EXT_EFX "
-    "ALC_EXT_thread_local_context ALC_SOFTX_HRTF ALC_SOFT_loopback";
+    "ALC_EXT_thread_local_context ALC_SOFTX_HRTF ALC_SOFT_loopback "
+    "ALC_SOFTX_midi_interface";
 static const ALCint alcMajorVersion = 1;
 static const ALCint alcMinorVersion = 1;
 

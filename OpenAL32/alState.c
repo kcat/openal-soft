@@ -23,10 +23,12 @@
 #include <stdlib.h>
 #include "alMain.h"
 #include "AL/alc.h"
+#include "AL/al.h"
 #include "AL/alext.h"
 #include "alError.h"
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
+#include "alMidi.h"
 
 
 static const ALchar alVendor[] = "OpenAL Community";
@@ -273,6 +275,54 @@ done:
     return value;
 }
 
+AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
+{
+    ALCcontext *context;
+    ALCdevice *device;
+    ALint64SOFT value = 0;
+
+    context = GetContextRef();
+    if(!context) return 0;
+
+    switch(pname)
+    {
+    case AL_DOPPLER_FACTOR:
+        value = (ALint64SOFT)context->DopplerFactor;
+        break;
+
+    case AL_DOPPLER_VELOCITY:
+        value = (ALint64SOFT)context->DopplerVelocity;
+        break;
+
+    case AL_DISTANCE_MODEL:
+        value = (ALint64SOFT)context->DistanceModel;
+        break;
+
+    case AL_SPEED_OF_SOUND:
+        value = (ALint64SOFT)context->SpeedOfSound;
+        break;
+
+    case AL_DEFERRED_UPDATES_SOFT:
+        value = (ALint64SOFT)context->DeferUpdates;
+        break;
+
+    case AL_MIDI_CLOCK_SOFT:
+        device = context->Device;
+        ALCdevice_Lock(device);
+        value = MidiSynth_getTime(device->Synth);
+        ALCdevice_Unlock(device);
+        break;
+
+    default:
+        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+
+    return value;
+}
+
 AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname, ALboolean *values)
 {
     ALCcontext *context;
@@ -386,6 +436,40 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname, ALint *values)
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
                 values[0] = alGetInteger(pname);
+                return;
+        }
+    }
+
+    context = GetContextRef();
+    if(!context) return;
+
+    if(!(values))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    switch(pname)
+    {
+    default:
+        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
+{
+    ALCcontext *context;
+
+    if(values)
+    {
+        switch(pname)
+        {
+            case AL_DOPPLER_FACTOR:
+            case AL_DOPPLER_VELOCITY:
+            case AL_DISTANCE_MODEL:
+            case AL_SPEED_OF_SOUND:
+            case AL_DEFERRED_UPDATES_SOFT:
+            case AL_MIDI_CLOCK_SOFT:
+                values[0] = alGetInteger64SOFT(pname);
                 return;
         }
     }

@@ -190,6 +190,14 @@ static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
 {
     int fontid;
 
+    if(!filename || !filename[0])
+        filename = GetConfigValue("midi", "soundfont", "");
+    if(!filename[0])
+    {
+        ERR("No default soundfont found!\n");
+        return AL_INVALID_VALUE;
+    }
+
     fontid = fluid_synth_sfload(self->Synth, filename, 1);
     if(fontid == FLUID_FAILED)
     {
@@ -206,21 +214,9 @@ static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
 
 static void FSynth_setState(FSynth *self, ALenum state)
 {
-    if(state == AL_PLAYING)
-    {
-        if(self->FontID == FLUID_FAILED)
-        {
-            const char *filename = GetConfigValue("midi", "soundfont", "");
-            if(!filename[0])
-                ERR("No default soundfont found!\n");
-            else
-            {
-                self->FontID = fluid_synth_sfload(self->Synth, filename, 1);
-                if(self->FontID == FLUID_FAILED)
-                    ERR("Failed to load soundfont '%s'\n", filename);
-            }
-        }
-    }
+    if(state == AL_PLAYING && self->FontID == FLUID_FAILED)
+        FSynth_loadSoundfont(self, NULL);
+
     MidiSynth_setState(STATIC_CAST(MidiSynth, self), state);
 }
 

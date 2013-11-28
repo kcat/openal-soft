@@ -41,6 +41,7 @@ typedef void (AL_APIENTRY*LPALMIDISOUNDFONTSOFT)(const char *filename);
 typedef void (AL_APIENTRY*LPALMIDIEVENTSOFT)(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
 typedef void (AL_APIENTRY*LPALMIDIPLAYSOFT)(void);
 typedef void (AL_APIENTRY*LPALMIDIPAUSESOFT)(void);
+typedef void (AL_APIENTRY*LPALMIDISTOPSOFT)(void);
 typedef ALint64SOFT (AL_APIENTRY*LPALGETINTEGER64SOFT)(ALenum pname);
 typedef void (AL_APIENTRY*LPALGETINTEGER64VSOFT)(ALenum pname, ALint64SOFT *values);
 #ifdef AL_ALEXT_PROTOTYPES
@@ -48,6 +49,7 @@ AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename);
 AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
 AL_API void AL_APIENTRY alMidiPlaySOFT(void);
 AL_API void AL_APIENTRY alMidiPauseSOFT(void);
+AL_API void AL_APIENTRY alMidiStopSOFT(void);
 AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname);
 AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values);
 #endif

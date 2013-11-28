@@ -40,6 +40,7 @@ struct MidiSynthVtable {
 
     ALenum (*const loadSoundfont)(MidiSynth *self, const char *filename);
     void (*const setState)(MidiSynth *self, ALenum state);
+    void (*const reset)(MidiSynth *self);
     void (*const update)(MidiSynth *self, ALCdevice *device);
     void (*const process)(MidiSynth *self, ALuint samples, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
 
@@ -50,6 +51,7 @@ struct MidiSynthVtable {
 DECLARE_THUNK(T, MidiSynth, void, Destruct)                                   \
 DECLARE_THUNK1(T, MidiSynth, ALenum, loadSoundfont, const char*)              \
 DECLARE_THUNK1(T, MidiSynth, void, setState, ALenum)                          \
+DECLARE_THUNK(T, MidiSynth, void, reset)                                      \
 DECLARE_THUNK1(T, MidiSynth, void, update, ALCdevice*)                        \
 DECLARE_THUNK2(T, MidiSynth, void, process, ALuint, ALfloatBUFFERSIZE*restrict) \
 DECLARE_THUNK(T, MidiSynth, void, Delete)                                     \
@@ -59,6 +61,7 @@ static const struct MidiSynthVtable T##_MidiSynth_vtable = {                  \
                                                                               \
     T##_MidiSynth_loadSoundfont,                                              \
     T##_MidiSynth_setState,                                                   \
+    T##_MidiSynth_reset,                                                      \
     T##_MidiSynth_update,                                                     \
     T##_MidiSynth_process,                                                    \
                                                                               \

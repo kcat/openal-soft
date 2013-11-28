@@ -120,6 +120,7 @@ typedef struct FSynth {
 static void FSynth_Construct(FSynth *self, ALCdevice *device);
 static void FSynth_Destruct(FSynth *self);
 static ALboolean FSynth_init(FSynth *self, ALCdevice *device);
+static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename);
 static void FSynth_setState(FSynth *self, ALenum state);
 static void FSynth_update(FSynth *self, ALCdevice *device);
 static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
@@ -181,6 +182,35 @@ static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
     return AL_TRUE;
 }
 
+static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
+{
+    ALenum state;
+    int fontid;
+
+    WriteLock(&self->Lock);
+    state = STATIC_CAST(MidiSynth, self)->State;
+    if(state == AL_PLAYING || state == AL_PAUSED)
+    {
+        WriteUnlock(&self->Lock);
+        return AL_INVALID_OPERATION;
+    }
+
+    fontid = fluid_synth_sfload(self->Synth, filename, 1);
+    if(fontid == FLUID_FAILED)
+    {
+        WriteUnlock(&self->Lock);
+        ERR("Failed to load soundfont '%s'\n", filename);
+        return AL_INVALID_VALUE;
+    }
+
+    if(self->FontID != FLUID_FAILED)
+        fluid_synth_sfunload(self->Synth, self->FontID, 1);
+    self->FontID = fontid;
+    WriteUnlock(&self->Lock);
+
+    return AL_NO_ERROR;
+}
+
 static void FSynth_setState(FSynth *self, ALenum state)
 {
     WriteLock(&self->Lock);
@@ -188,14 +218,15 @@ static void FSynth_setState(FSynth *self, ALenum state)
     {
         if(self->FontID == FLUID_FAILED)
         {
-            int fontid = FLUID_FAILED;
-            const char *fname = getenv("FLUID_SOUNDFONT");
-            if(fname && fname[0])
-                fontid = fluid_synth_sfload(self->Synth, fname, 1);
-            if(fontid != FLUID_FAILED)
-                self->FontID = fontid;
+            const char *filename = getenv("FLUID_SOUNDFONT");
+            if(!filename || !filename[0])
+                ERR("No default soundfont found!\n");
             else
-                ERR("Failed to load soundfont '%s'\n", fname?fname:"(nil)");
+            {
+                self->FontID = fluid_synth_sfload(self->Synth, filename, 1);
+                if(self->FontID == FLUID_FAILED)
+                    ERR("Failed to load soundfont '%s'\n", filename);
+            }
         }
     }
     MidiSynth_setState(STATIC_CAST(MidiSynth, self), state);
@@ -322,6 +353,7 @@ typedef struct DSynth {
 
 static void DSynth_Construct(DSynth *self, ALCdevice *device);
 static DECLARE_FORWARD(DSynth, MidiSynth, void, Destruct)
+static ALenum DSynth_loadSoundfont(DSynth *self, const char *filename);
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, setState, ALenum)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, update, ALCdevice*)
 static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
@@ -333,6 +365,12 @@ static void DSynth_Construct(DSynth *self, ALCdevice *device)
 {
     MidiSynth_Construct(STATIC_CAST(MidiSynth, self), device);
     SET_VTABLE2(DSynth, MidiSynth, self);
+}
+
+
+static ALenum DSynth_loadSoundfont(DSynth* UNUSED(self), const char* UNUSED(filename))
+{
+    return AL_NO_ERROR;
 }
 
 
@@ -427,6 +465,28 @@ MidiSynth *SynthCreate(ALCdevice *device)
     return NULL;
 }
 
+
+AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALenum err;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(filename && filename[0]))
+        alSetError(context, AL_INVALID_VALUE);
+    else
+    {
+        err = V(device->Synth,loadSoundfont)(filename);
+        if(err != AL_NO_ERROR)
+            alSetError(context, err);
+    }
+
+    ALCcontext_DecRef(context);
+}
 
 AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2)
 {

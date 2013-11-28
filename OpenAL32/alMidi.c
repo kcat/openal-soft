@@ -105,6 +105,102 @@ static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event
 }
 
 
+typedef struct DSynth {
+    DERIVE_FROM_TYPE(MidiSynth);
+} DSynth;
+
+static void DSynth_Construct(DSynth *self, ALCdevice *device);
+static DECLARE_FORWARD(DSynth, MidiSynth, void, Destruct)
+static DECLARE_FORWARD1(DSynth, MidiSynth, void, setState, ALenum)
+static DECLARE_FORWARD1(DSynth, MidiSynth, void, update, ALCdevice*)
+static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
+static void DSynth_Delete(DSynth *self);
+DEFINE_MIDISYNTH_VTABLE(DSynth);
+
+
+static void DSynth_Construct(DSynth *self, ALCdevice *device)
+{
+    MidiSynth_Construct(STATIC_CAST(MidiSynth, self), device);
+    SET_VTABLE2(DSynth, MidiSynth, self);
+}
+
+
+static void DSynth_processQueue(DSynth *self, ALuint64 time)
+{
+    EvtQueue *queue = &STATIC_CAST(MidiSynth, self)->EventQueue;
+
+    while(queue->pos < queue->size && queue->events[queue->pos].time <= time)
+        queue->pos++;
+
+    if(queue->pos == queue->size)
+    {
+        queue->pos = 0;
+        queue->size = 0;
+    }
+}
+
+static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloatBUFFERSIZE*restrict UNUSED(DryBuffer))
+{
+    MidiSynth *synth = STATIC_CAST(MidiSynth, self);
+    ALuint total = 0;
+
+    if(synth->State == AL_INITIAL)
+        return;
+    if(synth->State == AL_PAUSED)
+        return;
+
+    while(total < SamplesToDo)
+    {
+        if(synth->SamplesToNext >= 1.0)
+        {
+            ALuint todo = minu(SamplesToDo - total, fastf2u(synth->SamplesToNext));
+
+            total += todo;
+            synth->SamplesSinceLast += todo;
+            synth->SamplesToNext -= todo;
+        }
+        else
+        {
+            ALuint64 time = synth->NextEvtTime;
+            if(time == UINT64_MAX)
+            {
+                synth->SamplesSinceLast += SamplesToDo-total;
+                break;
+            }
+
+            synth->SamplesSinceLast -= (time - synth->LastEvtTime) * synth->SamplesPerTick;
+            synth->SamplesSinceLast = maxd(synth->SamplesSinceLast, 0.0);
+            synth->LastEvtTime = time;
+            DSynth_processQueue(self, time);
+
+            synth->NextEvtTime = MidiSynth_getNextEvtTime(synth);
+            if(synth->NextEvtTime != UINT64_MAX)
+                synth->SamplesToNext += (synth->NextEvtTime - synth->LastEvtTime) * synth->SamplesPerTick;
+        }
+    }
+}
+
+
+static void DSynth_Delete(DSynth *self)
+{
+    free(self);
+}
+
+
+MidiSynth *SynthCreate(ALCdevice *device)
+{
+    DSynth *synth = calloc(1, sizeof(*synth));
+    if(!synth)
+    {
+        ERR("Failed to allocate DSynth\n");
+        return NULL;
+    }
+    DSynth_Construct(synth, device);
+
+    return STATIC_CAST(MidiSynth, synth);
+}
+
+
 void InitEvtQueue(EvtQueue *queue)
 {
     queue->events = NULL;

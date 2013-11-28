@@ -387,6 +387,9 @@ struct ALCdevice_struct
     // Map of Filters for this device
     UIntMap FilterMap;
 
+    /* MIDI synth engine */
+    struct MidiSynth *Synth;
+
     /* HRTF filter tables */
     const struct Hrtf *Hrtf;
 

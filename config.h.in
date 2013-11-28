@@ -29,6 +29,9 @@
 /* Define if we have ARM Neon CPU extensions */
 #cmakedefine HAVE_NEON
 
+/* Define if we have FluidSynth support */
+#cmakedefine HAVE_FLUIDSYNTH
+
 /* Define if we have the ALSA backend */
 #cmakedefine HAVE_ALSA
 

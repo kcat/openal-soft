@@ -100,6 +100,222 @@ static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event
 }
 
 
+#ifdef HAVE_FLUIDSYNTH
+
+#include <fluidsynth.h>
+
+typedef struct FSynth {
+    DERIVE_FROM_TYPE(MidiSynth);
+
+    /* NOTE: This rwlock is for setting the soundfont. The EventQueue and
+     * related must use the device lock as they're used in the mixer thread.
+     */
+    RWLock Lock;
+
+    fluid_settings_t *Settings;
+    fluid_synth_t *Synth;
+    int FontID;
+} FSynth;
+
+static void FSynth_Construct(FSynth *self, ALCdevice *device);
+static void FSynth_Destruct(FSynth *self);
+static ALboolean FSynth_init(FSynth *self, ALCdevice *device);
+static void FSynth_setState(FSynth *self, ALenum state);
+static void FSynth_update(FSynth *self, ALCdevice *device);
+static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
+static void FSynth_Delete(FSynth *self);
+DEFINE_MIDISYNTH_VTABLE(FSynth);
+
+
+static void FSynth_Construct(FSynth *self, ALCdevice *device)
+{
+    MidiSynth_Construct(STATIC_CAST(MidiSynth, self), device);
+    SET_VTABLE2(FSynth, MidiSynth, self);
+
+    RWLockInit(&self->Lock);
+
+    self->Settings = NULL;
+    self->Synth = NULL;
+    self->FontID = FLUID_FAILED;
+}
+
+static void FSynth_Destruct(FSynth *self)
+{
+    if(self->FontID != FLUID_FAILED)
+        fluid_synth_sfunload(self->Synth, self->FontID, 0);
+    self->FontID = FLUID_FAILED;
+
+    if(self->Synth != NULL)
+        delete_fluid_synth(self->Synth);
+    self->Synth = NULL;
+
+    if(self->Settings != NULL)
+        delete_fluid_settings(self->Settings);
+    self->Settings = NULL;
+
+    MidiSynth_Destruct(STATIC_CAST(MidiSynth, self));
+}
+
+static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
+{
+    self->Settings = new_fluid_settings();
+    if(!self->Settings)
+    {
+        ERR("Failed to create FluidSettings\n");
+        return AL_FALSE;
+    }
+
+    fluid_settings_setint(self->Settings, "synth.reverb.active", 1);
+    fluid_settings_setint(self->Settings, "synth.chorus.active", 1);
+    fluid_settings_setint(self->Settings, "synth.polyphony", 256);
+    fluid_settings_setstr(self->Settings, "synth.midi-bank-select", "mma");
+    fluid_settings_setnum(self->Settings, "synth.sample-rate", device->Frequency);
+
+    self->Synth = new_fluid_synth(self->Settings);
+    if(!self->Synth)
+    {
+        ERR("Failed to create FluidSynth\n");
+        return AL_FALSE;
+    }
+
+    return AL_TRUE;
+}
+
+static void FSynth_setState(FSynth *self, ALenum state)
+{
+    WriteLock(&self->Lock);
+    if(state == AL_PLAYING)
+    {
+        if(self->FontID == FLUID_FAILED)
+        {
+            int fontid = FLUID_FAILED;
+            const char *fname = getenv("FLUID_SOUNDFONT");
+            if(fname && fname[0])
+                fontid = fluid_synth_sfload(self->Synth, fname, 1);
+            if(fontid != FLUID_FAILED)
+                self->FontID = fontid;
+            else
+                ERR("Failed to load soundfont '%s'\n", fname?fname:"(nil)");
+        }
+    }
+    MidiSynth_setState(STATIC_CAST(MidiSynth, self), state);
+    WriteUnlock(&self->Lock);
+}
+
+static void FSynth_update(FSynth *self, ALCdevice *device)
+{
+    fluid_settings_setnum(self->Settings, "synth.sample-rate", device->Frequency);
+    fluid_synth_set_sample_rate(self->Synth, device->Frequency);
+    MidiSynth_update(STATIC_CAST(MidiSynth, self), device);
+}
+
+
+static void FSynth_processQueue(FSynth *self, ALuint64 time)
+{
+    EvtQueue *queue = &STATIC_CAST(MidiSynth, self)->EventQueue;
+
+    while(queue->pos < queue->size && queue->events[queue->pos].time <= time)
+    {
+        const MidiEvent *evt = &queue->events[queue->pos];
+
+        switch((evt->event&0xF0))
+        {
+            case AL_NOTEOFF_SOFT:
+                fluid_synth_noteoff(self->Synth, (evt->event&0x0F), evt->param[0]);
+                break;
+            case AL_NOTEON_SOFT:
+                fluid_synth_noteon(self->Synth, (evt->event&0x0F), evt->param[0], evt->param[1]);
+                break;
+            case AL_AFTERTOUCH_SOFT:
+                break;
+
+            case AL_CONTROLLERCHANGE_SOFT:
+                fluid_synth_cc(self->Synth, (evt->event&0x0F), evt->param[0], evt->param[1]);
+                break;
+            case AL_PROGRAMCHANGE_SOFT:
+                fluid_synth_program_change(self->Synth, (evt->event&0x0F), evt->param[0]);
+                break;
+
+            case AL_CHANNELPRESSURE_SOFT:
+                fluid_synth_channel_pressure(self->Synth, (evt->event&0x0F), evt->param[0]);
+                break;
+
+            case AL_PITCHBEND_SOFT:
+                fluid_synth_pitch_bend(self->Synth, (evt->event&0x0F), (evt->param[0]&0x7F) |
+                                                                       ((evt->param[1]&0x7F)<<7));
+                break;
+        }
+
+        queue->pos++;
+    }
+
+    if(queue->pos == queue->size)
+    {
+        queue->pos = 0;
+        queue->size = 0;
+    }
+}
+
+static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE])
+{
+    MidiSynth *synth = STATIC_CAST(MidiSynth, self);
+    ALuint total = 0;
+
+    if(synth->State != AL_PLAYING)
+    {
+        if(synth->State == AL_PAUSED)
+            fluid_synth_write_float(self->Synth, SamplesToDo, DryBuffer[FrontLeft], 0, 1,
+                                                              DryBuffer[FrontRight], 0, 1);
+        return;
+    }
+
+    while(total < SamplesToDo)
+    {
+        if(synth->SamplesToNext >= 1.0)
+        {
+            ALuint todo = minu(SamplesToDo - total, fastf2u(synth->SamplesToNext));
+
+            fluid_synth_write_float(self->Synth, todo,
+                                    &DryBuffer[FrontLeft][total], 0, 1,
+                                    &DryBuffer[FrontRight][total], 0, 1);
+            total += todo;
+            synth->SamplesSinceLast += todo;
+            synth->SamplesToNext -= todo;
+        }
+        else
+        {
+            ALuint64 time = synth->NextEvtTime;
+            if(time == UINT64_MAX)
+            {
+                synth->SamplesSinceLast += SamplesToDo-total;
+                fluid_synth_write_float(self->Synth, SamplesToDo-total,
+                                        &DryBuffer[FrontLeft][total], 0, 1,
+                                        &DryBuffer[FrontRight][total], 0, 1);
+                break;
+            }
+
+            synth->SamplesSinceLast -= (time - synth->LastEvtTime) * synth->SamplesPerTick;
+            synth->SamplesSinceLast = maxd(synth->SamplesSinceLast, 0.0);
+            synth->LastEvtTime = time;
+            FSynth_processQueue(self, time);
+
+            synth->NextEvtTime = MidiSynth_getNextEvtTime(synth);
+            if(synth->NextEvtTime != UINT64_MAX)
+                synth->SamplesToNext += (synth->NextEvtTime - synth->LastEvtTime) * synth->SamplesPerTick;
+        }
+    }
+}
+
+
+static void FSynth_Delete(FSynth *self)
+{
+    free(self);
+}
+
+
+#endif /* HAVE_FLUIDSYNTH */
+
+
 typedef struct DSynth {
     DERIVE_FROM_TYPE(MidiSynth);
 } DSynth;
@@ -184,15 +400,31 @@ static void DSynth_Delete(DSynth *self)
 
 MidiSynth *SynthCreate(ALCdevice *device)
 {
-    DSynth *synth = calloc(1, sizeof(*synth));
-    if(!synth)
-    {
-        ERR("Failed to allocate DSynth\n");
-        return NULL;
-    }
-    DSynth_Construct(synth, device);
+    FSynth *fsynth;
+    DSynth *dsynth;
 
-    return STATIC_CAST(MidiSynth, synth);
+    fsynth = calloc(1, sizeof(*fsynth));
+    if(!fsynth)
+        ERR("Failed to allocate FSynth\n");
+    else
+    {
+        FSynth_Construct(fsynth, device);
+        if(FSynth_init(fsynth, device))
+            return STATIC_CAST(MidiSynth, fsynth);
+        DELETE_OBJ(STATIC_CAST(MidiSynth, fsynth));
+        fsynth = NULL;
+    }
+
+    dsynth = calloc(1, sizeof(*dsynth));
+    if(!dsynth)
+        ERR("Failed to allocate DSynth\n");
+    else
+    {
+        DSynth_Construct(dsynth, device);
+        return STATIC_CAST(MidiSynth, dsynth);
+    }
+
+    return NULL;
 }
 
 

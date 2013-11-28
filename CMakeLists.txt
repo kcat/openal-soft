@@ -53,6 +53,8 @@ OPTION(ALSOFT_BACKEND_COREAUDIO  "Check for CoreAudio backend"        ON)
 OPTION(ALSOFT_BACKEND_OPENSL     "Check for OpenSL backend"           ON)
 OPTION(ALSOFT_BACKEND_WAVE "Enable Wave Writer backend"               ON)
 
+OPTION(ALSOFT_MIDI_FLUIDSYNTH "Check for FluidSynth MIDI"             ON)
+
 OPTION(ALSOFT_REQUIRE_ALSA       "Require ALSA backend"               OFF)
 OPTION(ALSOFT_REQUIRE_OSS        "Require OSS backend"                OFF)
 OPTION(ALSOFT_REQUIRE_SOLARIS    "Require Solaris backend"            OFF)
@@ -65,6 +67,8 @@ OPTION(ALSOFT_REQUIRE_PORTAUDIO  "Require PortAudio backend"          OFF)
 OPTION(ALSOFT_REQUIRE_PULSEAUDIO "Require PulseAudio backend"         OFF)
 OPTION(ALSOFT_REQUIRE_COREAUDIO  "Require CoreAudio backend"          OFF)
 OPTION(ALSOFT_REQUIRE_OPENSL     "Require OpenSL backend"             OFF)
+
+OPTION(ALSOFT_REQUIRE_FLUIDSYNTH "Require FluidSynth MIDI"            OFF)
 
 OPTION(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
@@ -553,6 +557,23 @@ IF(ALSOFT_REQUIRE_NEON AND NOT HAVE_NEON)
 ENDIF()
 
 
+SET(HAVE_MIDI_SYNTH  0)
+# Check for FluidSynth support
+IF(ALSOFT_MIDI_FLUIDSYNTH)
+    FIND_PACKAGE(FluidSynth)
+    IF(FLUIDSYNTH_FOUND)
+        SET(HAVE_FLUIDSYNTH 1)
+        IF(CMAKE_VERSION VERSION_LESS "2.8.8")
+            INCLUDE_DIRECTORIES(${FLUIDSYNTH_INCLUDE_DIR})
+        ENDIF()
+        SET(EXTRA_LIBS ${FLUIDSYNTH_LIBRARIES} ${EXTRA_LIBS})
+    ENDIF()
+ENDIF()
+IF(ALSOFT_REQUIRE_FLUIDSYNTH AND NOT HAVE_FLUIDSYNTH)
+    MESSAGE(FATAL_ERROR "Failed to enabled required FluidSynth support")
+ENDIF()
+
+
 SET(ALC_OBJS  ${ALC_OBJS}
               Alc/backends/base.c
               # Default backends, always available
@@ -847,6 +868,9 @@ IF(WIN32 AND ALSOFT_NO_UID_DEFS)
     SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS AL_NO_UID_DEFS)
 ENDIF()
 SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY INCLUDE_DIRECTORIES "${OpenAL_SOURCE_DIR}/OpenAL32/Include" "${OpenAL_SOURCE_DIR}/Alc")
+IF(FLUIDSYNTH_FOUND)
+    SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY INCLUDE_DIRECTORIES ${FLUIDSYNTH_INCLUDE_DIR})
+ENDIF()
 SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES VERSION ${LIB_VERSION}
                                             SOVERSION ${LIB_MAJOR_VERSION})
 IF(WIN32 AND NOT LIBTYPE STREQUAL "STATIC")
@@ -880,6 +904,10 @@ MESSAGE(STATUS "")
 MESSAGE(STATUS "Building with support for CPU extensions:")
 MESSAGE(STATUS "    ${CPU_EXTS}")
 MESSAGE(STATUS "")
+IF(HAVE_FLUIDSYNTH)
+    MESSAGE(STATUS "FluidSynth support for ALC_SOFT_midi_interface enabled")
+    MESSAGE(STATUS "")
+ENDIF()
 
 IF(WIN32)
     IF(NOT HAVE_DSOUND)

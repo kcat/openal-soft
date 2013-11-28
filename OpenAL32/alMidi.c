@@ -425,28 +425,30 @@ static void DSynth_Delete(DSynth *self)
 
 MidiSynth *SynthCreate(ALCdevice *device)
 {
-    FSynth *fsynth;
-    DSynth *dsynth;
-
-    fsynth = calloc(1, sizeof(*fsynth));
-    if(!fsynth)
-        ERR("Failed to allocate FSynth\n");
-    else
+#ifdef HAVE_FLUIDSYNTH
     {
-        FSynth_Construct(fsynth, device);
-        if(FSynth_init(fsynth, device))
-            return STATIC_CAST(MidiSynth, fsynth);
-        DELETE_OBJ(STATIC_CAST(MidiSynth, fsynth));
-        fsynth = NULL;
+        FSynth *synth = calloc(1, sizeof(*synth));
+        if(!synth)
+            ERR("Failed to allocate FSynth\n");
+        else
+        {
+            FSynth_Construct(synth, device);
+            if(FSynth_init(synth, device))
+                return STATIC_CAST(MidiSynth, synth);
+            DELETE_OBJ(STATIC_CAST(MidiSynth, synth));
+        }
     }
+#endif
 
-    dsynth = calloc(1, sizeof(*dsynth));
-    if(!dsynth)
-        ERR("Failed to allocate DSynth\n");
-    else
     {
-        DSynth_Construct(dsynth, device);
-        return STATIC_CAST(MidiSynth, dsynth);
+        DSynth *synth = calloc(1, sizeof(*synth));
+        if(!synth)
+            ERR("Failed to allocate DSynth\n");
+        else
+        {
+            DSynth_Construct(synth, device);
+            return STATIC_CAST(MidiSynth, synth);
+        }
     }
 
     return NULL;

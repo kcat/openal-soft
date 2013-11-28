@@ -30,12 +30,14 @@ static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
 {
     InitEvtQueue(&self->EventQueue);
 
+    RWLockInit(&self->Lock);
+
+    self->State = AL_INITIAL;
+
     self->LastEvtTime = 0;
     self->NextEvtTime = UINT64_MAX;
     self->SamplesSinceLast = 0.0;
     self->SamplesToNext = 0.0;
-
-    self->State = AL_INITIAL;
 
     self->SampleRate = device->Frequency;
     self->SamplesPerTick = (ALdouble)self->SampleRate / TICKS_PER_SECOND;
@@ -49,7 +51,9 @@ static void MidiSynth_Destruct(MidiSynth *self)
 
 static inline void MidiSynth_setState(MidiSynth *self, ALenum state)
 {
+    WriteLock(&self->Lock);
     ExchangeInt(&self->State, state);
+    WriteUnlock(&self->Lock);
 }
 
 ALuint64 MidiSynth_getTime(const MidiSynth *self)
@@ -107,11 +111,6 @@ static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event
 typedef struct FSynth {
     DERIVE_FROM_TYPE(MidiSynth);
 
-    /* NOTE: This rwlock is for setting the soundfont. The EventQueue and
-     * related must use the device lock as they're used in the mixer thread.
-     */
-    RWLock Lock;
-
     fluid_settings_t *Settings;
     fluid_synth_t *Synth;
     int FontID;
@@ -132,8 +131,6 @@ static void FSynth_Construct(FSynth *self, ALCdevice *device)
 {
     MidiSynth_Construct(STATIC_CAST(MidiSynth, self), device);
     SET_VTABLE2(FSynth, MidiSynth, self);
-
-    RWLockInit(&self->Lock);
 
     self->Settings = NULL;
     self->Synth = NULL;
@@ -184,21 +181,11 @@ static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
 
 static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
 {
-    ALenum state;
     int fontid;
-
-    WriteLock(&self->Lock);
-    state = STATIC_CAST(MidiSynth, self)->State;
-    if(state == AL_PLAYING || state == AL_PAUSED)
-    {
-        WriteUnlock(&self->Lock);
-        return AL_INVALID_OPERATION;
-    }
 
     fontid = fluid_synth_sfload(self->Synth, filename, 1);
     if(fontid == FLUID_FAILED)
     {
-        WriteUnlock(&self->Lock);
         ERR("Failed to load soundfont '%s'\n", filename);
         return AL_INVALID_VALUE;
     }
@@ -206,14 +193,13 @@ static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
     if(self->FontID != FLUID_FAILED)
         fluid_synth_sfunload(self->Synth, self->FontID, 1);
     self->FontID = fontid;
-    WriteUnlock(&self->Lock);
 
     return AL_NO_ERROR;
 }
 
 static void FSynth_setState(FSynth *self, ALenum state)
 {
-    WriteLock(&self->Lock);
+    WriteLock(&STATIC_CAST(MidiSynth, self)->Lock);
     if(state == AL_PLAYING)
     {
         if(self->FontID == FLUID_FAILED)
@@ -229,8 +215,8 @@ static void FSynth_setState(FSynth *self, ALenum state)
             }
         }
     }
-    MidiSynth_setState(STATIC_CAST(MidiSynth, self), state);
-    WriteUnlock(&self->Lock);
+    ExchangeInt(&STATIC_CAST(MidiSynth, self)->State, state);
+    WriteUnlock(&STATIC_CAST(MidiSynth, self)->Lock);
 }
 
 static void FSynth_update(FSynth *self, ALCdevice *device)
@@ -290,11 +276,12 @@ static void FSynth_processQueue(FSynth *self, ALuint64 time)
 static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE])
 {
     MidiSynth *synth = STATIC_CAST(MidiSynth, self);
+    ALenum state = synth->State;
     ALuint total = 0;
 
-    if(synth->State != AL_PLAYING)
+    if(state != AL_PLAYING)
     {
-        if(synth->State == AL_PAUSED)
+        if(state == AL_PAUSED)
             fluid_synth_write_float(self->Synth, SamplesToDo, DryBuffer[FrontLeft], 0, 1,
                                                               DryBuffer[FrontRight], 0, 1);
         return;
@@ -468,21 +455,28 @@ MidiSynth *SynthCreate(ALCdevice *device)
 
 AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename)
 {
-    ALCdevice *device;
     ALCcontext *context;
     ALenum err;
 
     context = GetContextRef();
     if(!context) return;
 
-    device = context->Device;
     if(!(filename && filename[0]))
         alSetError(context, AL_INVALID_VALUE);
     else
     {
-        err = V(device->Synth,loadSoundfont)(filename);
-        if(err != AL_NO_ERROR)
-            alSetError(context, err);
+        ALCdevice *device = context->Device;
+        MidiSynth *synth = device->Synth;
+        WriteLock(&synth->Lock);
+        if(synth->State == AL_PLAYING || synth->State == AL_PAUSED)
+            alSetError(context, AL_INVALID_OPERATION);
+        else
+        {
+            err = V(synth,loadSoundfont)(filename);
+            if(err != AL_NO_ERROR)
+                alSetError(context, err);
+        }
+        WriteUnlock(&synth->Lock);
     }
 
     ALCcontext_DecRef(context);

@@ -21,6 +21,12 @@ typedef struct MidiSynth {
     ALuint SampleRate;
     ALdouble SamplesPerTick;
 
+    /* NOTE: This rwlock is for the state and soundfont. The EventQueue and
+     * related must instead use the device lock as they're used in the mixer
+     * thread.
+     */
+    RWLock Lock;
+
     volatile ALenum State;
 
     const struct MidiSynthVtable *vtbl;

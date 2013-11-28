@@ -18,7 +18,6 @@ typedef struct MidiSynth {
     ALdouble SamplesSinceLast;
     ALdouble SamplesToNext;
 
-    ALuint SampleRate;
     ALdouble SamplesPerTick;
 
     /* NOTE: This rwlock is for the state and soundfont. The EventQueue and

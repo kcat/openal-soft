@@ -22,8 +22,8 @@ static inline void MidiSynth_setState(MidiSynth *self, ALenum state);
 static inline void MidiSynth_reset(MidiSynth *self);
 ALuint64 MidiSynth_getTime(const MidiSynth *self);
 static inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self);
-static void MidiSynth_update(MidiSynth *self, ALCdevice *device);
-static void MidiSynth_updateSpeed(MidiSynth *self);
+static inline void MidiSynth_update(MidiSynth *self, ALCdevice *device);
+static void MidiSynth_setSampleRate(MidiSynth *self, ALdouble srate);
 static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event, ALsizei param1, ALsizei param2);
 
 
@@ -40,9 +40,7 @@ static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
     self->SamplesSinceLast = 0.0;
     self->SamplesToNext = 0.0;
 
-    self->SampleRate = device->Frequency;
-    self->SamplesPerTick = (ALdouble)self->SampleRate / TICKS_PER_SECOND;
-    MidiSynth_updateSpeed(self);
+    self->SamplesPerTick = (ALdouble)device->Frequency / TICKS_PER_SECOND;
 }
 
 static void MidiSynth_Destruct(MidiSynth *self)
@@ -78,15 +76,14 @@ static inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self)
     return self->EventQueue.events[self->EventQueue.pos].time;
 }
 
-static void MidiSynth_update(MidiSynth *self, ALCdevice *device)
+static inline void MidiSynth_update(MidiSynth *self, ALCdevice *device)
 {
-    self->SampleRate = device->Frequency;
-    MidiSynth_updateSpeed(self);
+    MidiSynth_setSampleRate(self, device->Frequency);
 }
 
-static void MidiSynth_updateSpeed(MidiSynth *self)
+static void MidiSynth_setSampleRate(MidiSynth *self, ALdouble srate)
 {
-    ALdouble sampletickrate = (ALdouble)self->SampleRate / TICKS_PER_SECOND;
+    ALdouble sampletickrate = srate / TICKS_PER_SECOND;
 
     self->SamplesSinceLast = self->SamplesSinceLast * sampletickrate / self->SamplesPerTick;
     self->SamplesToNext = self->SamplesToNext * sampletickrate / self->SamplesPerTick;

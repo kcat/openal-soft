@@ -184,6 +184,16 @@
 #trap-al-error = false
 
 ##
+## MIDI interface stuff (EXPERIMENTAL)
+##
+[midi]
+
+## soundfont:
+#  A default soundfont (sf2 format). Used when an app uses the MIDI interface
+#  without specifying its own soundfont.
+#soundfont =
+
+##
 ## Reverb effect stuff (includes EAX reverb)
 ##
 [reverb]

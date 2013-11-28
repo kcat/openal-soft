@@ -204,8 +204,8 @@ static void FSynth_setState(FSynth *self, ALenum state)
     {
         if(self->FontID == FLUID_FAILED)
         {
-            const char *filename = getenv("FLUID_SOUNDFONT");
-            if(!filename || !filename[0])
+            const char *filename = GetConfigValue("midi", "soundfont", "");
+            if(!filename[0])
                 ERR("No default soundfont found!\n");
             else
             {

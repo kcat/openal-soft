@@ -173,7 +173,6 @@ static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
     fluid_settings_setint(self->Settings, "synth.reverb.active", 1);
     fluid_settings_setint(self->Settings, "synth.chorus.active", 1);
     fluid_settings_setint(self->Settings, "synth.polyphony", 256);
-    fluid_settings_setstr(self->Settings, "synth.midi-bank-select", "mma");
     fluid_settings_setnum(self->Settings, "synth.sample-rate", device->Frequency);
 
     self->Synth = new_fluid_synth(self->Settings);

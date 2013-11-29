@@ -8,7 +8,13 @@
 typedef struct MidiEvent {
     ALuint64 time;
     ALuint event;
-    ALuint param[2];
+    union {
+        ALuint val[2];
+        struct {
+            ALvoid *data;
+            ALsizei size;
+        } sysex;
+    } param;
 } MidiEvent;
 
 typedef struct EvtQueue {

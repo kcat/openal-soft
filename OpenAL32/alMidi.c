@@ -16,6 +16,9 @@
 /* Microsecond resolution */
 #define TICKS_PER_SECOND (1000000)
 
+#define SYSEX_EVENT  (0xF0)
+
+
 static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device);
 static void MidiSynth_Destruct(MidiSynth *self);
 static inline void MidiSynth_setState(MidiSynth *self, ALenum state);
@@ -92,8 +95,13 @@ static void MidiSynth_setSampleRate(MidiSynth *self, ALdouble srate)
 
 static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event, ALsizei param1, ALsizei param2)
 {
-    MidiEvent entry = { time, event, { param1, param2 } };
+    MidiEvent entry;
     ALenum err;
+
+    entry.time = time;
+    entry.event = event;
+    entry.param.val[0] = param1;
+    entry.param.val[1] = param2;
 
     err = InsertEvtQueue(&self->EventQueue, &entry);
     if(err != AL_NO_ERROR) return err;
@@ -249,41 +257,37 @@ static void FSynth_processQueue(FSynth *self, ALuint64 time)
     {
         const MidiEvent *evt = &queue->events[queue->pos];
 
-        switch((evt->event&0xF0))
+        if(evt->event == SYSEX_EVENT)
+            fluid_synth_sysex(self->Synth, evt->param.sysex.data, evt->param.sysex.size, NULL, NULL, NULL, 0);
+        else switch((evt->event&0xF0))
         {
             case AL_NOTEOFF_SOFT:
-                fluid_synth_noteoff(self->Synth, (evt->event&0x0F), evt->param[0]);
+                fluid_synth_noteoff(self->Synth, (evt->event&0x0F), evt->param.val[0]);
                 break;
             case AL_NOTEON_SOFT:
-                fluid_synth_noteon(self->Synth, (evt->event&0x0F), evt->param[0], evt->param[1]);
+                fluid_synth_noteon(self->Synth, (evt->event&0x0F), evt->param.val[0], evt->param.val[1]);
                 break;
             case AL_AFTERTOUCH_SOFT:
                 break;
 
             case AL_CONTROLLERCHANGE_SOFT:
-                fluid_synth_cc(self->Synth, (evt->event&0x0F), evt->param[0], evt->param[1]);
+                fluid_synth_cc(self->Synth, (evt->event&0x0F), evt->param.val[0], evt->param.val[1]);
                 break;
             case AL_PROGRAMCHANGE_SOFT:
-                fluid_synth_program_change(self->Synth, (evt->event&0x0F), evt->param[0]);
+                fluid_synth_program_change(self->Synth, (evt->event&0x0F), evt->param.val[0]);
                 break;
 
             case AL_CHANNELPRESSURE_SOFT:
-                fluid_synth_channel_pressure(self->Synth, (evt->event&0x0F), evt->param[0]);
+                fluid_synth_channel_pressure(self->Synth, (evt->event&0x0F), evt->param.val[0]);
                 break;
 
             case AL_PITCHBEND_SOFT:
-                fluid_synth_pitch_bend(self->Synth, (evt->event&0x0F), (evt->param[0]&0x7F) |
-                                                                       ((evt->param[1]&0x7F)<<7));
+                fluid_synth_pitch_bend(self->Synth, (evt->event&0x0F), (evt->param.val[0]&0x7F) |
+                                                                       ((evt->param.val[1]&0x7F)<<7));
                 break;
         }
 
         queue->pos++;
-    }
-
-    if(queue->pos == queue->size)
-    {
-        queue->pos = 0;
-        queue->size = 0;
     }
 }
 
@@ -382,12 +386,6 @@ static void DSynth_processQueue(DSynth *self, ALuint64 time)
 
     while(queue->pos < queue->size && queue->events[queue->pos].time <= time)
         queue->pos++;
-
-    if(queue->pos == queue->size)
-    {
-        queue->pos = 0;
-        queue->size = 0;
-    }
 }
 
 static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloatBUFFERSIZE*restrict UNUSED(DryBuffer))
@@ -597,6 +595,16 @@ void InitEvtQueue(EvtQueue *queue)
 
 void ResetEvtQueue(EvtQueue *queue)
 {
+    ALsizei i;
+    for(i = 0;i < queue->size;i++)
+    {
+        if(queue->events[i].event == SYSEX_EVENT)
+        {
+            free(queue->events[i].param.sysex.data);
+            queue->events[i].param.sysex.data = NULL;
+        }
+    }
+
     free(queue->events);
     queue->events = NULL;
     queue->maxsize = 0;
@@ -614,6 +622,14 @@ ALenum InsertEvtQueue(EvtQueue *queue, const MidiEvent *evt)
         {
             /* Queue has some stale entries, remove them to make space for more
              * events. */
+            for(pos = 0;pos < queue->pos;pos++)
+            {
+                if(queue->events[pos].event == SYSEX_EVENT)
+                {
+                    free(queue->events[pos].param.sysex.data);
+                    queue->events[pos].param.sysex.data = NULL;
+                }
+            }
             memmove(&queue->events[0], &queue->events[queue->pos],
                     (queue->size-queue->pos)*sizeof(queue->events[0]));
             queue->size -= queue->pos;

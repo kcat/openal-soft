@@ -39,6 +39,7 @@
 #define AL_PITCHBEND_SOFT                        0x00E0
 typedef void (AL_APIENTRY*LPALMIDISOUNDFONTSOFT)(const char *filename);
 typedef void (AL_APIENTRY*LPALMIDIEVENTSOFT)(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
+typedef void (AL_APIENTRY*LPALMIDISYSEXSOFT)(ALuint64SOFT time, const ALbyte *data, ALsizei size);
 typedef void (AL_APIENTRY*LPALMIDIPLAYSOFT)(void);
 typedef void (AL_APIENTRY*LPALMIDIPAUSESOFT)(void);
 typedef void (AL_APIENTRY*LPALMIDISTOPSOFT)(void);
@@ -47,6 +48,7 @@ typedef void (AL_APIENTRY*LPALGETINTEGER64VSOFT)(ALenum pname, ALint64SOFT *valu
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename);
 AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
+AL_API void AL_APIENTRY alMidiSysExSOFT(ALuint64SOFT time, const ALbyte *data, ALsizei size);
 AL_API void AL_APIENTRY alMidiPlaySOFT(void);
 AL_API void AL_APIENTRY alMidiPauseSOFT(void);
 AL_API void AL_APIENTRY alMidiStopSOFT(void);

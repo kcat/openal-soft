@@ -93,6 +93,7 @@ static void MidiSynth_setSampleRate(MidiSynth *self, ALdouble srate)
     self->SamplesPerTick = sampletickrate;
 }
 
+
 static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event, ALsizei param1, ALsizei param2)
 {
     MidiEvent entry;
@@ -102,6 +103,33 @@ static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event
     entry.event = event;
     entry.param.val[0] = param1;
     entry.param.val[1] = param2;
+
+    err = InsertEvtQueue(&self->EventQueue, &entry);
+    if(err != AL_NO_ERROR) return err;
+
+    if(entry.time < self->NextEvtTime)
+    {
+        self->NextEvtTime = entry.time;
+
+        self->SamplesToNext  = (self->NextEvtTime - self->LastEvtTime) * self->SamplesPerTick;
+        self->SamplesToNext -= self->SamplesSinceLast;
+    }
+
+    return AL_NO_ERROR;
+}
+
+static ALenum MidiSynth_insertSysExEvent(MidiSynth *self, ALuint64 time, const ALbyte *data, ALsizei size)
+{
+    MidiEvent entry;
+    ALenum err;
+
+    entry.time = time;
+    entry.event = SYSEX_EVENT;
+    entry.param.sysex.size = size;
+    entry.param.sysex.data = malloc(size);
+    if(!entry.param.sysex.data)
+        return AL_OUT_OF_MEMORY;
+    memcpy(entry.param.sysex.data, data, size);
 
     err = InsertEvtQueue(&self->EventQueue, &entry);
     if(err != AL_NO_ERROR) return err;
@@ -521,6 +549,35 @@ AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei
     device = context->Device;
     ALCdevice_Lock(device);
     err = MidiSynth_insertEvent(device->Synth, time, event|channel, param1, param2);
+    ALCdevice_Unlock(device);
+    if(err != AL_NO_ERROR)
+        alSetError(context, err);
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alMidiSysExSOFT(ALuint64SOFT time, const ALbyte *data, ALsizei size)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALenum err;
+    ALsizei i;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    if(!data || size < 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    for(i = 0;i < size;i++)
+    {
+        if((data[i]&0x80))
+            SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    }
+
+    device = context->Device;
+    ALCdevice_Lock(device);
+    err = MidiSynth_insertSysExEvent(device->Synth, time, data, size);
     ALCdevice_Unlock(device);
     if(err != AL_NO_ERROR)
         alSetError(context, err);

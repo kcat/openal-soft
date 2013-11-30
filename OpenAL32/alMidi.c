@@ -156,6 +156,8 @@ typedef struct FSynth {
     fluid_settings_t *Settings;
     fluid_synth_t *Synth;
     int FontID;
+
+    ALboolean ForceGM2BankSelect;
 } FSynth;
 
 static void FSynth_Construct(FSynth *self, ALCdevice *device);
@@ -178,6 +180,7 @@ static void FSynth_Construct(FSynth *self, ALCdevice *device)
     self->Settings = NULL;
     self->Synth = NULL;
     self->FontID = FLUID_FAILED;
+    self->ForceGM2BankSelect = AL_FALSE;
 }
 
 static void FSynth_Destruct(FSynth *self)
@@ -286,7 +289,20 @@ static void FSynth_processQueue(FSynth *self, ALuint64 time)
         const MidiEvent *evt = &queue->events[queue->pos];
 
         if(evt->event == SYSEX_EVENT)
-            fluid_synth_sysex(self->Synth, evt->param.sysex.data, evt->param.sysex.size, NULL, NULL, NULL, 0);
+        {
+            static const ALbyte gm2_on[] = { 0x7E, 0x7F, 0x09, 0x03 };
+            static const ALbyte gm2_off[] = { 0x7E, 0x7F, 0x09, 0x02 };
+            int handled = 0;
+
+            fluid_synth_sysex(self->Synth, evt->param.sysex.data, evt->param.sysex.size, NULL, NULL, &handled, 0);
+            if(!handled && evt->param.sysex.size >= (ALsizei)sizeof(gm2_on))
+            {
+                if(memcmp(evt->param.sysex.data, gm2_on, sizeof(gm2_on)) == 0)
+                    self->ForceGM2BankSelect = AL_TRUE;
+                else if(memcmp(evt->param.sysex.data, gm2_off, sizeof(gm2_off)) == 0)
+                    self->ForceGM2BankSelect = AL_FALSE;
+            }
+        }
         else switch((evt->event&0xF0))
         {
             case AL_NOTEOFF_SOFT:
@@ -299,6 +315,23 @@ static void FSynth_processQueue(FSynth *self, ALuint64 time)
                 break;
 
             case AL_CONTROLLERCHANGE_SOFT:
+                if(self->ForceGM2BankSelect)
+                {
+                    int chan = (evt->event&0x0F);
+                    if(evt->param.val[0] == 0)
+                    {
+                        if(evt->param.val[1] == 120 && (chan == 9 || chan == 10))
+                            fluid_synth_set_channel_type(self->Synth, chan, CHANNEL_TYPE_DRUM);
+                        else if(evt->param.val[1] == 121)
+                            fluid_synth_set_channel_type(self->Synth, chan, CHANNEL_TYPE_MELODIC);
+                        break;
+                    }
+                    if(evt->param.val[0] == 32)
+                    {
+                        fluid_synth_bank_select(self->Synth, chan, evt->param.val[1]);
+                        break;
+                    }
+                }
                 fluid_synth_cc(self->Synth, (evt->event&0x0F), evt->param.val[0], evt->param.val[1]);
                 break;
             case AL_PROGRAMCHANGE_SOFT:

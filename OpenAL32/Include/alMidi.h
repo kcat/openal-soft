@@ -26,11 +26,13 @@ typedef struct MidiSynth {
      */
     RWLock Lock;
 
+    volatile ALfloat Gain;
     volatile ALenum State;
 
     const struct MidiSynthVtable *vtbl;
 } MidiSynth;
 
+ALfloat MidiSynth_getGain(const MidiSynth *self);
 ALuint64 MidiSynth_getTime(const MidiSynth *self);
 
 
@@ -40,7 +42,9 @@ struct MidiSynthVtable {
     ALboolean (*const isSoundfont)(MidiSynth *self, const char *filename);
     ALenum (*const loadSoundfont)(MidiSynth *self, const char *filename);
 
+    void (*const setGain)(MidiSynth *self, ALfloat gain);
     void (*const setState)(MidiSynth *self, ALenum state);
+
     void (*const reset)(MidiSynth *self);
 
     void (*const update)(MidiSynth *self, ALCdevice *device);
@@ -53,6 +57,7 @@ struct MidiSynthVtable {
 DECLARE_THUNK(T, MidiSynth, void, Destruct)                                   \
 DECLARE_THUNK1(T, MidiSynth, ALboolean, isSoundfont, const char*)             \
 DECLARE_THUNK1(T, MidiSynth, ALenum, loadSoundfont, const char*)              \
+DECLARE_THUNK1(T, MidiSynth, void, setGain, ALfloat)                          \
 DECLARE_THUNK1(T, MidiSynth, void, setState, ALenum)                          \
 DECLARE_THUNK(T, MidiSynth, void, reset)                                      \
 DECLARE_THUNK1(T, MidiSynth, void, update, ALCdevice*)                        \
@@ -64,6 +69,7 @@ static const struct MidiSynthVtable T##_MidiSynth_vtable = {                  \
                                                                               \
     T##_MidiSynth_isSoundfont,                                                \
     T##_MidiSynth_loadSoundfont,                                              \
+    T##_MidiSynth_setGain,                                                    \
     T##_MidiSynth_setState,                                                   \
     T##_MidiSynth_reset,                                                      \
     T##_MidiSynth_update,                                                     \

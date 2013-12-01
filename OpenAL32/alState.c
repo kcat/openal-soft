@@ -157,6 +157,7 @@ done:
 
 AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
 {
+    ALCdevice *device;
     ALCcontext *context;
     ALdouble value = 0.0;
 
@@ -185,6 +186,10 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
         value = (ALdouble)context->DeferUpdates;
         break;
 
+    case AL_MIDI_GAIN_SOFT:
+        device = context->Device;
+        value = (ALdouble)MidiSynth_getGain(device->Synth);
+
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
@@ -197,6 +202,7 @@ done:
 
 AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
 {
+    ALCdevice *device;
     ALCcontext *context;
     ALfloat value = 0.0f;
 
@@ -224,6 +230,10 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
     case AL_DEFERRED_UPDATES_SOFT:
         value = (ALfloat)context->DeferUpdates;
         break;
+
+    case AL_MIDI_GAIN_SOFT:
+        device = context->Device;
+        value = MidiSynth_getGain(device->Synth);
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
@@ -369,6 +379,7 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname, ALdouble *values)
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
+            case AL_MIDI_GAIN_SOFT:
                 values[0] = alGetDouble(pname);
                 return;
         }
@@ -402,6 +413,7 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname, ALfloat *values)
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
+            case AL_MIDI_GAIN_SOFT:
                 values[0] = alGetFloat(pname);
                 return;
         }

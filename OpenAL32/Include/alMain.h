@@ -30,6 +30,7 @@
 #ifndef ALC_SOFT_midi_interface
 #define ALC_SOFT_midi_interface 1
 #define AL_MIDI_CLOCK_SOFT                       0x9999
+#define AL_MIDI_GAIN_SOFT                        0x9998
 #define AL_NOTEOFF_SOFT                          0x0080
 #define AL_NOTEON_SOFT                           0x0090
 #define AL_AFTERTOUCH_SOFT                       0x00A0
@@ -44,6 +45,7 @@ typedef void (AL_APIENTRY*LPALMIDISYSEXSOFT)(ALuint64SOFT time, const ALbyte *da
 typedef void (AL_APIENTRY*LPALMIDIPLAYSOFT)(void);
 typedef void (AL_APIENTRY*LPALMIDIPAUSESOFT)(void);
 typedef void (AL_APIENTRY*LPALMIDISTOPSOFT)(void);
+typedef void (AL_APIENTRY*LPALMIDIGAINSOFT)(ALfloat value);
 typedef ALint64SOFT (AL_APIENTRY*LPALGETINTEGER64SOFT)(ALenum pname);
 typedef void (AL_APIENTRY*LPALGETINTEGER64VSOFT)(ALenum pname, ALint64SOFT *values);
 #ifdef AL_ALEXT_PROTOTYPES
@@ -54,6 +56,7 @@ AL_API void AL_APIENTRY alMidiSysExSOFT(ALuint64SOFT time, const ALbyte *data, A
 AL_API void AL_APIENTRY alMidiPlaySOFT(void);
 AL_API void AL_APIENTRY alMidiPauseSOFT(void);
 AL_API void AL_APIENTRY alMidiStopSOFT(void);
+AL_API void AL_APIENTRY alMidiGainSOFT(ALfloat value);
 AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname);
 AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values);
 #endif

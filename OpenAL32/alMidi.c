@@ -37,6 +37,7 @@ static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
 
     RWLockInit(&self->Lock);
 
+    self->Gain = 1.0f;
     self->State = AL_INITIAL;
 
     self->LastEvtTime = 0;
@@ -50,6 +51,16 @@ static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
 static void MidiSynth_Destruct(MidiSynth *self)
 {
     ResetEvtQueue(&self->EventQueue);
+}
+
+static inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain)
+{
+    self->Gain = gain;
+}
+
+ALfloat MidiSynth_getGain(const MidiSynth *self)
+{
+    return self->Gain;
 }
 
 static inline void MidiSynth_setState(MidiSynth *self, ALenum state)
@@ -166,6 +177,7 @@ static void FSynth_Destruct(FSynth *self);
 static ALboolean FSynth_init(FSynth *self, ALCdevice *device);
 static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename);
 static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename);
+static void FSynth_setGain(FSynth *self, ALfloat gain);
 static void FSynth_setState(FSynth *self, ALenum state);
 static void FSynth_reset(FSynth *self);
 static void FSynth_update(FSynth *self, ALCdevice *device);
@@ -266,6 +278,15 @@ static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
     self->FontID = fontid;
 
     return AL_NO_ERROR;
+}
+
+
+static void FSynth_setGain(FSynth *self, ALfloat gain)
+{
+    /* Add an additional 0.2 (-14dB) to the gain, to help keep the mix from clipping. */
+    fluid_settings_setnum(self->Settings, "synth.gain", 0.2 * gain);
+    fluid_synth_set_gain(self->Synth, 0.2f * gain);
+    MidiSynth_setGain(STATIC_CAST(MidiSynth, self), gain);
 }
 
 
@@ -440,6 +461,7 @@ static void DSynth_Construct(DSynth *self, ALCdevice *device);
 static DECLARE_FORWARD(DSynth, MidiSynth, void, Destruct)
 static ALboolean DSynth_isSoundfont(DSynth *self, const char *filename);
 static ALenum DSynth_loadSoundfont(DSynth *self, const char *filename);
+static DECLARE_FORWARD1(DSynth, MidiSynth, void, setGain, ALfloat)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, setState, ALenum)
 static DECLARE_FORWARD(DSynth, MidiSynth, void, reset)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, update, ALCdevice*)
@@ -740,6 +762,25 @@ AL_API void AL_APIENTRY alMidiStopSOFT(void)
     ALCdevice_Unlock(device);
     WriteUnlock(&synth->Lock);
 
+    ALCcontext_DecRef(context);
+}
+
+
+AL_API void AL_APIENTRY alMidiGainSOFT(ALfloat value)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    if(!(value >= 0.0f && isfinite(value)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    device = context->Device;
+    V(device->Synth,setGain)(value);
+
+done:
     ALCcontext_DecRef(context);
 }
 

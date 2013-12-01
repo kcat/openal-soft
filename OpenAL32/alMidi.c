@@ -289,7 +289,7 @@ static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
 
 static void FSynth_setGain(FSynth *self, ALfloat gain)
 {
-    /* Add an additional 0.2 (-14dB) to the gain, to help keep the mix from clipping. */
+    /* Scale gain by an additional 0.2 (-14dB), to help keep the mix from clipping. */
     fluid_settings_setnum(self->Settings, "synth.gain", 0.2 * gain);
     fluid_synth_set_gain(self->Synth, 0.2f * gain);
     MidiSynth_setGain(STATIC_CAST(MidiSynth, self), gain);

@@ -22,6 +22,8 @@
 
 static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device);
 static void MidiSynth_Destruct(MidiSynth *self);
+static inline const char *MidiSynth_getFontName(const MidiSynth *self, const char *filename);
+static inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain);
 static inline void MidiSynth_setState(MidiSynth *self, ALenum state);
 static inline void MidiSynth_reset(MidiSynth *self);
 ALuint64 MidiSynth_getTime(const MidiSynth *self);
@@ -51,6 +53,18 @@ static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
 static void MidiSynth_Destruct(MidiSynth *self)
 {
     ResetEvtQueue(&self->EventQueue);
+}
+
+static inline const char *MidiSynth_getFontName(const MidiSynth* UNUSED(self), const char *filename)
+{
+    if(!filename || !filename[0])
+        filename = getenv("ALSOFT_SOUNDFONT");
+    if(!filename || !filename[0])
+        filename = GetConfigValue("midi", "soundfont", "");
+    if(!filename[0])
+        WARN("No default soundfont found\n");
+
+    return filename;
 }
 
 static inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain)
@@ -239,15 +253,11 @@ static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
 }
 
 
-static ALboolean FSynth_isSoundfont(FSynth* UNUSED(self), const char *filename)
+static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename)
 {
-    if(!filename || !filename[0])
-        filename = GetConfigValue("midi", "soundfont", "");
+    filename = MidiSynth_getFontName(STATIC_CAST(MidiSynth, self), filename);
     if(!filename[0])
-    {
-        WARN("No default soundfont found\n");
         return AL_FALSE;
-    }
 
     if(!fluid_is_soundfont(filename))
         return AL_FALSE;
@@ -258,13 +268,9 @@ static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
 {
     int fontid;
 
-    if(!filename || !filename[0])
-        filename = GetConfigValue("midi", "soundfont", "");
+    filename = MidiSynth_getFontName(STATIC_CAST(MidiSynth, self), filename);
     if(!filename[0])
-    {
-        ERR("No default soundfont found!\n");
         return AL_INVALID_VALUE;
-    }
 
     fontid = fluid_synth_sfload(self->Synth, filename, 1);
     if(fontid == FLUID_FAILED)
@@ -477,18 +483,14 @@ static void DSynth_Construct(DSynth *self, ALCdevice *device)
 }
 
 
-static ALboolean DSynth_isSoundfont(DSynth* UNUSED(self), const char *filename)
+static ALboolean DSynth_isSoundfont(DSynth *self, const char *filename)
 {
     char buf[12];
     FILE *f;
 
-    if(!filename || !filename[0])
-        filename = GetConfigValue("midi", "soundfont", "");
+    filename = MidiSynth_getFontName(STATIC_CAST(MidiSynth, self), filename);
     if(!filename[0])
-    {
-        WARN("No default soundfont found\n");
         return AL_FALSE;
-    }
 
     f = fopen(filename, "rb");
     if(!f) return AL_FALSE;

@@ -530,41 +530,29 @@ static void DSynth_processQueue(DSynth *self, ALuint64 time)
 static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloatBUFFERSIZE*restrict UNUSED(DryBuffer))
 {
     MidiSynth *synth = STATIC_CAST(MidiSynth, self);
-    ALuint total = 0;
 
-    if(synth->State == AL_INITIAL)
-        return;
-    if(synth->State == AL_PAUSED)
+    if(synth->State != AL_PLAYING)
         return;
 
-    while(total < SamplesToDo)
+    synth->SamplesSinceLast += SamplesToDo;
+    synth->SamplesToNext -= SamplesToDo;
+    while(synth->SamplesToNext < 1.0f)
     {
-        if(synth->SamplesToNext >= 1.0)
+        ALuint64 time = synth->NextEvtTime;
+        if(time == UINT64_MAX)
         {
-            ALuint todo = minu(SamplesToDo - total, fastf2u(synth->SamplesToNext));
-
-            total += todo;
-            synth->SamplesSinceLast += todo;
-            synth->SamplesToNext -= todo;
+            synth->SamplesToNext = 0.0;
+            break;
         }
-        else
-        {
-            ALuint64 time = synth->NextEvtTime;
-            if(time == UINT64_MAX)
-            {
-                synth->SamplesSinceLast += SamplesToDo-total;
-                break;
-            }
 
-            synth->SamplesSinceLast -= (time - synth->LastEvtTime) * synth->SamplesPerTick;
-            synth->SamplesSinceLast = maxd(synth->SamplesSinceLast, 0.0);
-            synth->LastEvtTime = time;
-            DSynth_processQueue(self, time);
+        synth->SamplesSinceLast -= (time - synth->LastEvtTime) * synth->SamplesPerTick;
+        synth->SamplesSinceLast  = maxd(synth->SamplesSinceLast, 0.0);
+        synth->LastEvtTime = time;
+        DSynth_processQueue(self, time);
 
-            synth->NextEvtTime = MidiSynth_getNextEvtTime(synth);
-            if(synth->NextEvtTime != UINT64_MAX)
-                synth->SamplesToNext += (synth->NextEvtTime - synth->LastEvtTime) * synth->SamplesPerTick;
-        }
+        synth->NextEvtTime = MidiSynth_getNextEvtTime(synth);
+        if(synth->NextEvtTime != UINT64_MAX)
+            synth->SamplesToNext += (synth->NextEvtTime - synth->LastEvtTime) * synth->SamplesPerTick;
     }
 }
 

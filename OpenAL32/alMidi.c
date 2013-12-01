@@ -1,6 +1,7 @@
 
 #include "config.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -163,6 +164,7 @@ typedef struct FSynth {
 static void FSynth_Construct(FSynth *self, ALCdevice *device);
 static void FSynth_Destruct(FSynth *self);
 static ALboolean FSynth_init(FSynth *self, ALCdevice *device);
+static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename);
 static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename);
 static void FSynth_setState(FSynth *self, ALenum state);
 static void FSynth_reset(FSynth *self);
@@ -224,6 +226,22 @@ static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
     return AL_TRUE;
 }
 
+
+static ALboolean FSynth_isSoundfont(FSynth* UNUSED(self), const char *filename)
+{
+    if(!filename || !filename[0])
+        filename = GetConfigValue("midi", "soundfont", "");
+    if(!filename[0])
+    {
+        WARN("No default soundfont found\n");
+        return AL_FALSE;
+    }
+
+    if(!fluid_is_soundfont(filename))
+        return AL_FALSE;
+    return AL_TRUE;
+}
+
 static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
 {
     int fontid;
@@ -249,6 +267,7 @@ static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
 
     return AL_NO_ERROR;
 }
+
 
 static void FSynth_setState(FSynth *self, ALenum state)
 {
@@ -419,6 +438,7 @@ typedef struct DSynth {
 
 static void DSynth_Construct(DSynth *self, ALCdevice *device);
 static DECLARE_FORWARD(DSynth, MidiSynth, void, Destruct)
+static ALboolean DSynth_isSoundfont(DSynth *self, const char *filename);
 static ALenum DSynth_loadSoundfont(DSynth *self, const char *filename);
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, setState, ALenum)
 static DECLARE_FORWARD(DSynth, MidiSynth, void, reset)
@@ -435,8 +455,42 @@ static void DSynth_Construct(DSynth *self, ALCdevice *device)
 }
 
 
-static ALenum DSynth_loadSoundfont(DSynth* UNUSED(self), const char* UNUSED(filename))
+static ALboolean DSynth_isSoundfont(DSynth* UNUSED(self), const char *filename)
 {
+    char buf[12];
+    FILE *f;
+
+    if(!filename || !filename[0])
+        filename = GetConfigValue("midi", "soundfont", "");
+    if(!filename[0])
+    {
+        WARN("No default soundfont found\n");
+        return AL_FALSE;
+    }
+
+    f = fopen(filename, "rb");
+    if(!f) return AL_FALSE;
+
+    if(fread(buf, 1, sizeof(buf), f) != sizeof(buf))
+    {
+        fclose(f);
+        return AL_FALSE;
+    }
+
+    if(memcmp(buf, "RIFF", 4) != 0 || memcmp(buf+8, "sfbk", 4) != 0)
+    {
+        fclose(f);
+        return AL_FALSE;
+    }
+
+    fclose(f);
+    return AL_TRUE;
+}
+
+static ALenum DSynth_loadSoundfont(DSynth *self, const char *filename)
+{
+    if(!DSynth_isSoundfont(self, filename))
+        return AL_INVALID_VALUE;
     return AL_NO_ERROR;
 }
 
@@ -529,31 +583,46 @@ MidiSynth *SynthCreate(ALCdevice *device)
 }
 
 
+AL_API ALboolean AL_APIENTRY alIsSoundfontSOFT(const char *filename)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALboolean ret;
+
+    context = GetContextRef();
+    if(!context) return AL_FALSE;
+
+    device = context->Device;
+    ret = V(device->Synth,isSoundfont)(filename);
+
+    ALCcontext_DecRef(context);
+
+    return ret;
+}
+
 AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename)
 {
+    ALCdevice *device;
     ALCcontext *context;
+    MidiSynth *synth;
     ALenum err;
 
     context = GetContextRef();
     if(!context) return;
 
-    if(!(filename && filename[0]))
-        alSetError(context, AL_INVALID_VALUE);
+    device = context->Device;
+    synth = device->Synth;
+
+    WriteLock(&synth->Lock);
+    if(synth->State == AL_PLAYING || synth->State == AL_PAUSED)
+        alSetError(context, AL_INVALID_OPERATION);
     else
     {
-        ALCdevice *device = context->Device;
-        MidiSynth *synth = device->Synth;
-        WriteLock(&synth->Lock);
-        if(synth->State == AL_PLAYING || synth->State == AL_PAUSED)
-            alSetError(context, AL_INVALID_OPERATION);
-        else
-        {
-            err = V(synth,loadSoundfont)(filename);
-            if(err != AL_NO_ERROR)
-                alSetError(context, err);
-        }
-        WriteUnlock(&synth->Lock);
+        err = V(synth,loadSoundfont)(filename);
+        if(err != AL_NO_ERROR)
+            alSetError(context, err);
     }
+    WriteUnlock(&synth->Lock);
 
     ALCcontext_DecRef(context);
 }

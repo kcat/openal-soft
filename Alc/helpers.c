@@ -291,18 +291,20 @@ void RestoreFPUMode(const FPUCtl *ctl)
 
 
 #ifdef _WIN32
-void pthread_once(pthread_once_t *once, void (*callback)(void))
+extern inline int alsched_yield(void);
+
+void althread_once(althread_once_t *once, void (*callback)(void))
 {
     LONG ret;
     while((ret=InterlockedExchange(once, 1)) == 1)
-        sched_yield();
+        alsched_yield();
     if(ret == 0)
         callback();
     InterlockedExchange(once, 2);
 }
 
 
-int pthread_key_create(pthread_key_t *key, void (*callback)(void*))
+int althread_key_create(althread_key_t *key, void (*callback)(void*))
 {
     *key = TlsAlloc();
     if(callback)
@@ -310,17 +312,17 @@ int pthread_key_create(pthread_key_t *key, void (*callback)(void*))
     return 0;
 }
 
-int pthread_key_delete(pthread_key_t key)
+int althread_key_delete(althread_key_t key)
 {
     InsertUIntMapEntry(&TlsDestructor, key, NULL);
     TlsFree(key);
     return 0;
 }
 
-void *pthread_getspecific(pthread_key_t key)
+void *althread_getspecific(althread_key_t key)
 { return TlsGetValue(key); }
 
-int pthread_setspecific(pthread_key_t key, void *val)
+int althread_setspecific(althread_key_t key, void *val)
 {
     TlsSetValue(key, val);
     return 0;
@@ -524,7 +526,7 @@ void SetRTPriority(void)
 static void Lock(volatile ALenum *l)
 {
     while(ExchangeInt(l, AL_TRUE) == AL_TRUE)
-        sched_yield();
+        alsched_yield();
 }
 
 static void Unlock(volatile ALenum *l)

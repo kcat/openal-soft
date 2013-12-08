@@ -158,7 +158,11 @@ static ALenum MidiSynth_insertSysExEvent(MidiSynth *self, ALuint64 time, const A
     memcpy(entry.param.sysex.data, data, size);
 
     err = InsertEvtQueue(&self->EventQueue, &entry);
-    if(err != AL_NO_ERROR) return err;
+    if(err != AL_NO_ERROR)
+    {
+        free(entry.param.sysex.data);
+        return err;
+    }
 
     if(entry.time < self->NextEvtTime)
     {
@@ -256,8 +260,7 @@ static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
 static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename)
 {
     filename = MidiSynth_getFontName(STATIC_CAST(MidiSynth, self), filename);
-    if(!filename[0])
-        return AL_FALSE;
+    if(!filename[0]) return AL_FALSE;
 
     if(!fluid_is_soundfont(filename))
         return AL_FALSE;
@@ -269,8 +272,7 @@ static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
     int fontid;
 
     filename = MidiSynth_getFontName(STATIC_CAST(MidiSynth, self), filename);
-    if(!filename[0])
-        return AL_INVALID_VALUE;
+    if(!filename[0]) return AL_INVALID_VALUE;
 
     fontid = fluid_synth_sfload(self->Synth, filename, 1);
     if(fontid == FLUID_FAILED)

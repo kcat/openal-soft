@@ -49,8 +49,8 @@ static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdev
     const ALfloat attackTime = device->Frequency * 0.2f; /* 200ms Attack */
     const ALfloat releaseTime = device->Frequency * 0.4f; /* 400ms Release */
 
-    state->AttackRate = 1.0 / attackTime;
-    state->ReleaseRate = 1.0 / releaseTime;
+    state->AttackRate = 1.0f / attackTime;
+    state->ReleaseRate = 1.0f / releaseTime;
 
     return AL_TRUE;
 }

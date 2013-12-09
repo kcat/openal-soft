@@ -1603,7 +1603,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
     else
     {
         ALdouble dval;
-        if(GetSourcedv(Source, Context, param, &dval) == AL_NO_ERROR)
+        if(GetSourcedv(Source, Context, param, &dval))
             *value = (ALfloat)dval;
     }
 
@@ -1628,7 +1628,7 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
     else
     {
         ALdouble dvals[3];
-        if(GetSourcedv(Source, Context, param, dvals) == AL_NO_ERROR)
+        if(GetSourcedv(Source, Context, param, dvals))
         {
             *value1 = (ALfloat)dvals[0];
             *value2 = (ALfloat)dvals[1];
@@ -1658,7 +1658,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
     else
     {
         ALdouble dvals[3];
-        if(GetSourcedv(Source, Context, param, dvals) == AL_NO_ERROR)
+        if(GetSourcedv(Source, Context, param, dvals))
         {
             ALint i;
             for(i = 0;i < count;i++)
@@ -1707,7 +1707,7 @@ AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble 
     else
     {
         ALdouble dvals[3];
-        if(GetSourcedv(Source, Context, param, dvals) == AL_NO_ERROR)
+        if(GetSourcedv(Source, Context, param, dvals))
         {
             *value1 = dvals[0];
             *value2 = dvals[1];
@@ -1777,7 +1777,7 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
     else
     {
         ALint ivals[3];
-        if(GetSourceiv(Source, Context, param, ivals) == AL_NO_ERROR)
+        if(GetSourceiv(Source, Context, param, ivals))
         {
             *value1 = ivals[0];
             *value2 = ivals[1];
@@ -1847,7 +1847,7 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
     else
     {
         ALint64 i64vals[3];
-        if(GetSourcei64v(Source, Context, param, i64vals) == AL_NO_ERROR)
+        if(GetSourcei64v(Source, Context, param, i64vals))
         {
             *value1 = i64vals[0];
             *value2 = i64vals[1];

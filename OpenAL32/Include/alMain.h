@@ -45,6 +45,7 @@ typedef void (AL_APIENTRY*LPALMIDISYSEXSOFT)(ALuint64SOFT time, const ALbyte *da
 typedef void (AL_APIENTRY*LPALMIDIPLAYSOFT)(void);
 typedef void (AL_APIENTRY*LPALMIDIPAUSESOFT)(void);
 typedef void (AL_APIENTRY*LPALMIDISTOPSOFT)(void);
+typedef void (AL_APIENTRY*LPALMIDIRESETSOFT)(void);
 typedef void (AL_APIENTRY*LPALMIDIGAINSOFT)(ALfloat value);
 typedef ALint64SOFT (AL_APIENTRY*LPALGETINTEGER64SOFT)(ALenum pname);
 typedef void (AL_APIENTRY*LPALGETINTEGER64VSOFT)(ALenum pname, ALint64SOFT *values);
@@ -56,6 +57,7 @@ AL_API void AL_APIENTRY alMidiSysExSOFT(ALuint64SOFT time, const ALbyte *data, A
 AL_API void AL_APIENTRY alMidiPlaySOFT(void);
 AL_API void AL_APIENTRY alMidiPauseSOFT(void);
 AL_API void AL_APIENTRY alMidiStopSOFT(void);
+AL_API void AL_APIENTRY alMidiResetSOFT(void);
 AL_API void AL_APIENTRY alMidiGainSOFT(ALfloat value);
 AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname);
 AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values);

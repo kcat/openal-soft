@@ -345,13 +345,8 @@ static void FSynth_stop(FSynth *self)
 
 static void FSynth_reset(FSynth *self)
 {
-    ALsizei chan;
-    /* All sounds off + reset all controllers */
-    for(chan = 0;chan < 16;chan++)
-    {
-        fluid_synth_cc(self->Synth, chan, 120, 0);
-        fluid_synth_cc(self->Synth, chan, 121, 0);
-    }
+    /* Reset to power-up status. */
+    fluid_synth_system_reset(self->Synth);
 
     MidiSynth_reset(STATIC_CAST(MidiSynth, self));
 }
@@ -789,6 +784,29 @@ AL_API void AL_APIENTRY alMidiStopSOFT(void)
 
     ALCdevice_Lock(device);
     V0(synth,stop)();
+    ALCdevice_Unlock(device);
+    WriteUnlock(&synth->Lock);
+
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alMidiResetSOFT(void)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    MidiSynth *synth;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    synth = device->Synth;
+
+    WriteLock(&synth->Lock);
+    V(synth,setState)(AL_INITIAL);
+
+    ALCdevice_Lock(device);
+    V0(synth,reset)();
     ALCdevice_Unlock(device);
     WriteUnlock(&synth->Lock);
 

@@ -25,6 +25,7 @@ static void MidiSynth_Destruct(MidiSynth *self);
 static inline const char *MidiSynth_getFontName(const MidiSynth *self, const char *filename);
 static inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain);
 static inline void MidiSynth_setState(MidiSynth *self, ALenum state);
+static inline void MidiSynth_stop(MidiSynth *self);
 static inline void MidiSynth_reset(MidiSynth *self);
 ALuint64 MidiSynth_getTime(const MidiSynth *self);
 static inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self);
@@ -82,7 +83,7 @@ static inline void MidiSynth_setState(MidiSynth *self, ALenum state)
     ExchangeInt(&self->State, state);
 }
 
-static inline void MidiSynth_reset(MidiSynth *self)
+static inline void MidiSynth_stop(MidiSynth *self)
 {
     ResetEvtQueue(&self->EventQueue);
 
@@ -90,6 +91,11 @@ static inline void MidiSynth_reset(MidiSynth *self)
     self->NextEvtTime = UINT64_MAX;
     self->SamplesSinceLast = 0.0;
     self->SamplesToNext = 0.0;
+}
+
+static inline void MidiSynth_reset(MidiSynth *self)
+{
+    MidiSynth_stop(self);
 }
 
 ALuint64 MidiSynth_getTime(const MidiSynth *self)
@@ -197,8 +203,10 @@ static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename);
 static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename);
 static void FSynth_setGain(FSynth *self, ALfloat gain);
 static void FSynth_setState(FSynth *self, ALenum state);
+static void FSynth_stop(FSynth *self);
 static void FSynth_reset(FSynth *self);
 static void FSynth_update(FSynth *self, ALCdevice *device);
+static void FSynth_processQueue(FSynth *self, ALuint64 time);
 static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
 static void FSynth_Delete(FSynth *self);
 DEFINE_MIDISYNTH_VTABLE(FSynth);
@@ -306,12 +314,41 @@ static void FSynth_setState(FSynth *self, ALenum state)
     MidiSynth_setState(STATIC_CAST(MidiSynth, self), state);
 }
 
+static void FSynth_stop(FSynth *self)
+{
+    MidiSynth *synth = STATIC_CAST(MidiSynth, self);
+    ALsizei chan;
+
+    /* Make sure all pending events are processed. */
+    while(!(synth->SamplesToNext >= 1.0))
+    {
+        ALuint64 time = synth->NextEvtTime;
+        if(time == UINT64_MAX)
+            break;
+
+        synth->SamplesSinceLast -= (time - synth->LastEvtTime) * synth->SamplesPerTick;
+        synth->SamplesSinceLast = maxd(synth->SamplesSinceLast, 0.0);
+        synth->LastEvtTime = time;
+        FSynth_processQueue(self, time);
+
+        synth->NextEvtTime = MidiSynth_getNextEvtTime(synth);
+        if(synth->NextEvtTime != UINT64_MAX)
+            synth->SamplesToNext += (synth->NextEvtTime - synth->LastEvtTime) * synth->SamplesPerTick;
+    }
+
+    /* All notes off */
+    for(chan = 0;chan < 16;chan++)
+        fluid_synth_cc(self->Synth, chan, 123, 0);
+
+    MidiSynth_stop(STATIC_CAST(MidiSynth, self));
+}
+
 static void FSynth_reset(FSynth *self)
 {
     ALsizei chan;
+    /* All sounds off + reset all controllers */
     for(chan = 0;chan < 16;chan++)
     {
-        /* All sounds off + reset all controllers */
         fluid_synth_cc(self->Synth, chan, 120, 0);
         fluid_synth_cc(self->Synth, chan, 121, 0);
     }
@@ -471,6 +508,7 @@ static ALboolean DSynth_isSoundfont(DSynth *self, const char *filename);
 static ALenum DSynth_loadSoundfont(DSynth *self, const char *filename);
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, setGain, ALfloat)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, setState, ALenum)
+static DECLARE_FORWARD(DSynth, MidiSynth, void, stop)
 static DECLARE_FORWARD(DSynth, MidiSynth, void, reset)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, update, ALCdevice*)
 static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
@@ -750,7 +788,7 @@ AL_API void AL_APIENTRY alMidiStopSOFT(void)
     V(synth,setState)(AL_STOPPED);
 
     ALCdevice_Lock(device);
-    V0(synth,reset)();
+    V0(synth,stop)();
     ALCdevice_Unlock(device);
     WriteUnlock(&synth->Lock);
 

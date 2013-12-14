@@ -249,8 +249,6 @@ static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
         return AL_FALSE;
     }
 
-    fluid_settings_setint(self->Settings, "synth.reverb.active", 1);
-    fluid_settings_setint(self->Settings, "synth.chorus.active", 1);
     fluid_settings_setint(self->Settings, "synth.polyphony", 256);
     fluid_settings_setnum(self->Settings, "synth.sample-rate", device->Frequency);
 

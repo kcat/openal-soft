@@ -442,11 +442,12 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
     ALenum state = synth->State;
     ALuint total = 0;
 
+    if(state == AL_INITIAL)
+        return;
     if(state != AL_PLAYING)
     {
-        if(state == AL_PAUSED)
-            fluid_synth_write_float(self->Synth, SamplesToDo, DryBuffer[FrontLeft], 0, 1,
-                                                              DryBuffer[FrontRight], 0, 1);
+        fluid_synth_write_float(self->Synth, SamplesToDo, DryBuffer[FrontLeft], 0, 1,
+                                                          DryBuffer[FrontRight], 0, 1);
         return;
     }
 

@@ -17,7 +17,13 @@
 /* Microsecond resolution */
 #define TICKS_PER_SECOND (1000000)
 
+/* MIDI events */
 #define SYSEX_EVENT  (0xF0)
+
+/* MIDI controllers */
+#define CTRL_BANKSELECT_MSB  (0)
+#define CTRL_BANKSELECT_LSB  (32)
+#define CTRL_ALLNOTESOFF     (123)
 
 
 static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device);
@@ -336,7 +342,7 @@ static void FSynth_stop(FSynth *self)
 
     /* All notes off */
     for(chan = 0;chan < 16;chan++)
-        fluid_synth_cc(self->Synth, chan, 123, 0);
+        fluid_synth_cc(self->Synth, chan, CTRL_ALLNOTESOFF, 0);
 
     MidiSynth_stop(STATIC_CAST(MidiSynth, self));
 }
@@ -396,7 +402,7 @@ static void FSynth_processQueue(FSynth *self, ALuint64 time)
                 if(self->ForceGM2BankSelect)
                 {
                     int chan = (evt->event&0x0F);
-                    if(evt->param.val[0] == 0)
+                    if(evt->param.val[0] == CTRL_BANKSELECT_MSB)
                     {
                         if(evt->param.val[1] == 120 && (chan == 9 || chan == 10))
                             fluid_synth_set_channel_type(self->Synth, chan, CHANNEL_TYPE_DRUM);
@@ -404,7 +410,7 @@ static void FSynth_processQueue(FSynth *self, ALuint64 time)
                             fluid_synth_set_channel_type(self->Synth, chan, CHANNEL_TYPE_MELODIC);
                         break;
                     }
-                    if(evt->param.val[0] == 32)
+                    if(evt->param.val[0] == CTRL_BANKSELECT_LSB)
                     {
                         fluid_synth_bank_select(self->Synth, chan, evt->param.val[1]);
                         break;

@@ -26,21 +26,7 @@
 #define CTRL_ALLNOTESOFF     (123)
 
 
-static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device);
-static void MidiSynth_Destruct(MidiSynth *self);
-static inline const char *MidiSynth_getFontName(const MidiSynth *self, const char *filename);
-static inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain);
-static inline void MidiSynth_setState(MidiSynth *self, ALenum state);
-static inline void MidiSynth_stop(MidiSynth *self);
-static inline void MidiSynth_reset(MidiSynth *self);
-ALuint64 MidiSynth_getTime(const MidiSynth *self);
-static inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self);
-static inline void MidiSynth_update(MidiSynth *self, ALCdevice *device);
-static void MidiSynth_setSampleRate(MidiSynth *self, ALdouble srate);
-static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event, ALsizei param1, ALsizei param2);
-
-
-static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
+void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
 {
     InitEvtQueue(&self->EventQueue);
 
@@ -57,12 +43,12 @@ static void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
     self->SamplesPerTick = (ALdouble)device->Frequency / TICKS_PER_SECOND;
 }
 
-static void MidiSynth_Destruct(MidiSynth *self)
+void MidiSynth_Destruct(MidiSynth *self)
 {
     ResetEvtQueue(&self->EventQueue);
 }
 
-static inline const char *MidiSynth_getFontName(const MidiSynth* UNUSED(self), const char *filename)
+const char *MidiSynth_getFontName(const MidiSynth* UNUSED(self), const char *filename)
 {
     if(!filename || !filename[0])
         filename = getenv("ALSOFT_SOUNDFONT");
@@ -74,22 +60,11 @@ static inline const char *MidiSynth_getFontName(const MidiSynth* UNUSED(self), c
     return filename;
 }
 
-static inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain)
-{
-    self->Gain = gain;
-}
+extern inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain);
+extern inline ALfloat MidiSynth_getGain(const MidiSynth *self);
+extern inline void MidiSynth_setState(MidiSynth *self, ALenum state);
 
-ALfloat MidiSynth_getGain(const MidiSynth *self)
-{
-    return self->Gain;
-}
-
-static inline void MidiSynth_setState(MidiSynth *self, ALenum state)
-{
-    ExchangeInt(&self->State, state);
-}
-
-static inline void MidiSynth_stop(MidiSynth *self)
+void MidiSynth_stop(MidiSynth *self)
 {
     ResetEvtQueue(&self->EventQueue);
 
@@ -99,10 +74,7 @@ static inline void MidiSynth_stop(MidiSynth *self)
     self->SamplesToNext = 0.0;
 }
 
-static inline void MidiSynth_reset(MidiSynth *self)
-{
-    MidiSynth_stop(self);
-}
+extern inline void MidiSynth_reset(MidiSynth *self);
 
 ALuint64 MidiSynth_getTime(const MidiSynth *self)
 {
@@ -110,19 +82,9 @@ ALuint64 MidiSynth_getTime(const MidiSynth *self)
     return clampu(time, self->LastEvtTime, self->NextEvtTime);
 }
 
-static inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self)
-{
-    if(self->EventQueue.pos == self->EventQueue.size)
-        return UINT64_MAX;
-    return self->EventQueue.events[self->EventQueue.pos].time;
-}
+extern inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self);
 
-static inline void MidiSynth_update(MidiSynth *self, ALCdevice *device)
-{
-    MidiSynth_setSampleRate(self, device->Frequency);
-}
-
-static void MidiSynth_setSampleRate(MidiSynth *self, ALdouble srate)
+void MidiSynth_setSampleRate(MidiSynth *self, ALdouble srate)
 {
     ALdouble sampletickrate = srate / TICKS_PER_SECOND;
 
@@ -131,8 +93,9 @@ static void MidiSynth_setSampleRate(MidiSynth *self, ALdouble srate)
     self->SamplesPerTick = sampletickrate;
 }
 
+extern inline void MidiSynth_update(MidiSynth *self, ALCdevice *device);
 
-static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event, ALsizei param1, ALsizei param2)
+ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event, ALsizei param1, ALsizei param2)
 {
     MidiEvent entry;
     ALenum err;
@@ -156,7 +119,7 @@ static ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event
     return AL_NO_ERROR;
 }
 
-static ALenum MidiSynth_insertSysExEvent(MidiSynth *self, ALuint64 time, const ALbyte *data, ALsizei size)
+ALenum MidiSynth_insertSysExEvent(MidiSynth *self, ALuint64 time, const ALbyte *data, ALsizei size)
 {
     MidiEvent entry;
     ALenum err;

@@ -2,7 +2,7 @@
  * HRTF utility for producing and demonstrating the process of creating an
  * OpenAL Soft compatible HRIR data set.
  *
- * Copyright (C) 2011-2012  Christopher Fitzgerald
+ * Copyright (C) 2011-2013  Christopher Fitzgerald
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -162,6 +162,7 @@
 #define DEFAULT_SURFACE              (1)
 #define DEFAULT_LIMIT                (24.0)
 #define DEFAULT_TRUNCSIZE            (32)
+#define DEFAULT_HEAD_MODEL           (HM_DATASET)
 
 // The four-character-codes for RIFF/RIFX WAVE file chunks.
 #define FOURCC_RIFF                  (0x46464952) // 'RIFF'
@@ -208,6 +209,13 @@ enum ElementTypeT {
   ET_FP           // Floating-point elements.
 };
 
+// Head model used for calculating the impulse delays.
+enum HeadModelT {
+  HM_NONE    = 0,
+  HM_DATASET    , // Measure the onset from the dataset.
+  HM_SPHERE       // Calculate the onset using a spherical head model.
+};
+
 // Desired output format from the command line.
 enum OutputFormatT {
   OF_NONE  = 0,
@@ -239,6 +247,7 @@ typedef unsigned long long           uint8;
 typedef enum ByteOrderT              ByteOrderT;
 typedef enum SourceFormatT           SourceFormatT;
 typedef enum ElementTypeT            ElementTypeT;
+typedef enum HeadModelT              HeadModelT;
 typedef enum OutputFormatT           OutputFormatT;
 
 typedef struct TokenReaderT          TokenReaderT;
@@ -1683,6 +1692,25 @@ static int LoadSource (SourceRefT * src, const uint hrirRate, const uint n, doub
   return (result);
 }
 
+// Calculate the onset time of an HRIR and average it with any existing
+// timing for its elevation and azimuth.
+static void AverageHrirOnset (const double * hrir, const double f, const uint ei, const uint ai, const HrirDataT * hData) {
+  double mag;
+  uint n, i, j;
+
+  mag = 0.0;
+  n = hData -> mIrPoints;
+  for (i = 0; i < n; i ++)
+      mag = fmax (fabs (hrir [i]), mag);
+  mag *= 0.15;
+  for (i = 0; i < n; i ++) {
+      if (fabs (hrir [i]) >= mag)
+         break;
+  }
+  j = hData -> mEvOffset [ei] + ai;
+  hData -> mHrtds [j] = Lerp (hData -> mHrtds [j], ((double) i) / hData -> mIrRate, f);
+}
+
 // Calculate the magnitude response of an HRIR and average it with any
 // existing responses for its elevation and azimuth.
 static void AverageHrirMagnitude (const double * hrir, const double f, const uint ei, const uint ai, const HrirDataT * hData) {
@@ -1867,6 +1895,26 @@ static void CalcAzIndices (const HrirDataT * hData, const uint ei, const double 
   (* jf) = af;
 }
 
+// Synthesize any missing onset timings at the bottom elevations.  This just
+// blends between slightly exaggerated known onsets.  Not an accurate model.
+static void SynthesizeOnsets (HrirDataT * hData) {
+  uint oi, e, a, j0, j1;
+  double t, of, jf;
+
+  oi = hData -> mEvStart;
+  t = 0.0;
+  for (a = 0; a < hData -> mAzCount [oi]; a ++)
+      t += hData -> mHrtds [hData -> mEvOffset [oi] + a];
+  hData -> mHrtds [0] = 1.32e-4 + (t / hData -> mAzCount [oi]);
+  for (e = 1; e < hData -> mEvStart; e ++) {
+      of = ((double) e) / hData -> mEvStart;
+      for (a = 0; a < hData -> mAzCount [e]; a ++) {
+          CalcAzIndices (hData, oi, a * 2.0 * M_PI / hData -> mAzCount [e], & j0, & j1, & jf);
+          hData -> mHrtds [hData -> mEvOffset [e] + a] = Lerp (hData -> mHrtds [0], Lerp (hData -> mHrtds [j0], hData -> mHrtds [j1], jf), of);
+      }
+  }
+}
+
 /* Attempt to synthesize any missing HRIRs at the bottom elevations.  Right
  * now this just blends the lowest elevation HRIRs together and applies some
  * attenuation and high frequency damping.  It is a simple, if inaccurate
@@ -1966,9 +2014,9 @@ static double CalcLTD (const double ev, const double az, const double rad, const
   return (dlp / 343.3);
 }
 
-// Calculate the effective head-related time delays for the each HRIR, now
-// that they are minimum-phase.
-static void CalculateHrtds (HrirDataT * hData) {
+// Calculate the effective head-related time delays for each minimum-phase
+// HRIR.
+static void CalculateHrtds (const HeadModelT model, HrirDataT * hData) {
   double minHrtd, maxHrtd;
   uint e, a, j;
   double t;
@@ -1978,10 +2026,14 @@ static void CalculateHrtds (HrirDataT * hData) {
   for (e = 0; e < hData -> mEvCount; e ++) {
       for (a = 0; a < hData -> mAzCount [e]; a ++) {
           j = hData -> mEvOffset [e] + a;
-          t = CalcLTD ((-90.0 + (e * 180.0 / (hData -> mEvCount - 1))) * M_PI / 180.0,
-                       (a * 360.0 / hData -> mAzCount [e]) * M_PI / 180.0,
-                       hData -> mRadius, hData -> mDistance);
-          hData -> mHrtds [j] = t;
+          if (model == HM_DATASET) {
+             t = hData -> mHrtds [j];
+          } else {
+             t = CalcLTD ((-90.0 + (e * 180.0 / (hData -> mEvCount - 1))) * M_PI / 180.0,
+                          (a * 360.0 / hData -> mAzCount [e]) * M_PI / 180.0,
+                          hData -> mRadius, hData -> mDistance);
+             hData -> mHrtds [j] = t;
+          }
           maxHrtd = fmax (t, maxHrtd);
           minHrtd = fmin (t, minHrtd);
       }
@@ -2372,7 +2424,7 @@ static int ReadSourceRef (TokenReaderT * tr, SourceRefT * src) {
 }
 
 // Process the list of sources in the data set definition.
-static int ProcessSources (TokenReaderT * tr, HrirDataT * hData) {
+static int ProcessSources (const HeadModelT model, TokenReaderT * tr, HrirDataT * hData) {
   uint * setCount = NULL, * setFlag = NULL;
   double * hrir = NULL;
   uint line, col, ei, ai;
@@ -2393,6 +2445,8 @@ static int ProcessSources (TokenReaderT * tr, HrirDataT * hData) {
                 for (;;) {
                     if (ReadSourceRef (tr, & src)) {
                        if (LoadSource (& src, hData -> mIrRate, hData -> mIrPoints, hrir)) {
+                          if (model == HM_DATASET)
+                             AverageHrirOnset (hrir, 1.0 / factor, ei, ai, hData);
                           AverageHrirMagnitude (hrir, 1.0 / factor, ei, ai, hData);
                           factor += 1.0;
                           if (! TrIsOperator (tr, "+"))
@@ -2452,7 +2506,7 @@ static int ProcessSources (TokenReaderT * tr, HrirDataT * hData) {
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-static int ProcessDefinition (const char * inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const OutputFormatT outFormat, const char * outName) {
+static int ProcessDefinition (const char * inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const OutputFormatT outFormat, const char * outName) {
   FILE * fp = NULL;
   TokenReaderT tr;
   HrirDataT hData;
@@ -2486,7 +2540,7 @@ static int ProcessDefinition (const char * inName, const uint outRate, const uin
   }
   hData . mHrirs = CreateArray (hData . mIrCount * hData . mIrSize);
   hData . mHrtds = CreateArray (hData . mIrCount);
-  if (! ProcessSources (& tr, & hData)) {
+  if (! ProcessSources (model, & tr, & hData)) {
      DestroyArray (hData . mHrtds);
      DestroyArray (hData . mHrirs);
      if (inName != NULL)
@@ -2512,11 +2566,13 @@ static int ProcessDefinition (const char * inName, const uint outRate, const uin
   fprintf (stdout, "Truncating minimum-phase HRIRs...\n");
   hData . mIrPoints = truncSize;
   fprintf (stdout, "Synthesizing missing elevations...\n");
+  if (model == HM_DATASET)
+     SynthesizeOnsets (& hData);
   SynthesizeHrirs (& hData);
   fprintf (stdout, "Normalizing final HRIRs...\n");
   NormalizeHrirs (& hData);
   fprintf (stdout, "Calculating impulse delays...\n");
-  CalculateHrtds (& hData);
+  CalculateHrtds (model, & hData);
   snprintf (rateStr, 8, "%u", hData . mIrRate);
   StrSubst (outName, "%r", rateStr, MAX_PATH_LEN, expName);
   switch (outFormat) {
@@ -2547,6 +2603,7 @@ int main (const int argc, const char * argv []) {
   int equalize, surface;
   double limit;
   uint truncSize;
+  HeadModelT model;
   char * end = NULL;
 
   if (argc < 2) {
@@ -2573,6 +2630,8 @@ int main (const int argc, const char * argv []) {
      fprintf (stdout, "                 average (default: %.2f).\n", DEFAULT_LIMIT);
      fprintf (stdout, " -w=<points>     Specify the size of the truncation window that's applied\n");
      fprintf (stdout, "                 after minimum-phase reconstruction (default: %u).\n", DEFAULT_TRUNCSIZE);
+     fprintf (stdout, " -d={dataset|    Specify the model used for calculating the head-delay timing\n");
+     fprintf (stdout, "     sphere}     values (default: %s).\n", ((DEFAULT_HEAD_MODEL == HM_DATASET) ? "dataset" : "sphere"));
      fprintf (stdout, " -i=<filename>   Specify an HRIR definition file to use (defaults to stdin).\n");
      fprintf (stdout, " -o=<filename>   Specify an output file.  Overrides command-selected default.\n");
      fprintf (stdout, "                 Use of '%%r' will be substituted with the data set sample rate.\n");
@@ -2601,6 +2660,7 @@ int main (const int argc, const char * argv []) {
   surface = DEFAULT_SURFACE;
   limit = DEFAULT_LIMIT;
   truncSize = DEFAULT_TRUNCSIZE;
+  model = DEFAULT_HEAD_MODEL;
   while (argi < argc) {
     if (strncmp (argv [argi], "-r=", 3) == 0) {
        outRate = strtoul (& argv [argi] [3], & end, 10);
@@ -2648,6 +2708,15 @@ int main (const int argc, const char * argv []) {
           fprintf (stderr, "Error:  Expected a value from %u to %u in multiples of %u for '-w'.\n", MIN_TRUNCSIZE, MAX_TRUNCSIZE, MOD_TRUNCSIZE);
           return (-1);
        }
+    } else if (strncmp (argv [argi], "-d=", 3) == 0) {
+       if (strcmp (& argv [argi] [3], "dataset") == 0) {
+          model = HM_DATASET;
+       } else if (strcmp (& argv [argi] [3], "sphere") == 0) {
+          model = HM_SPHERE;
+       } else {
+          fprintf (stderr, "Error:  Expected 'dataset' or 'sphere' for '-d'.\n");
+          return (-1);
+       }
     } else if (strncmp (argv [argi], "-i=", 3) == 0) {
        inName = & argv [argi] [3];
     } else if (strncmp (argv [argi], "-o=", 3) == 0) {
@@ -2658,7 +2727,7 @@ int main (const int argc, const char * argv []) {
     }
     argi ++;
   }
-  if (! ProcessDefinition (inName, outRate, fftSize, equalize, surface, limit, truncSize, outFormat, outName))
+  if (! ProcessDefinition (inName, outRate, fftSize, equalize, surface, limit, truncSize, model, outFormat, outName))
      return (-1);
   fprintf (stdout, "Operation completed.\n");
   return (0);

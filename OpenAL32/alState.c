@@ -28,7 +28,8 @@
 #include "alError.h"
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
-#include "alMidi.h"
+
+#include "midi/base.h"
 
 
 static const ALchar alVendor[] = "OpenAL Community";

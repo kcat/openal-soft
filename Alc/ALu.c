@@ -31,11 +31,12 @@
 #include "alBuffer.h"
 #include "alListener.h"
 #include "alAuxEffectSlot.h"
-#include "alMidi.h"
 #include "alu.h"
 #include "bs2b.h"
 
 #include "mixer_defs.h"
+
+#include "midi/base.h"
 
 
 struct ChanMap {

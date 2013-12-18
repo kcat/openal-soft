@@ -30,7 +30,6 @@
 #include "alMain.h"
 #include "alSource.h"
 #include "alListener.h"
-#include "alMidi.h"
 #include "alThunk.h"
 #include "alSource.h"
 #include "alBuffer.h"
@@ -40,6 +39,7 @@
 #include "alu.h"
 
 #include "backends/base.h"
+#include "midi/base.h"
 
 
 /************************************************

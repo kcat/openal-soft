@@ -10,12 +10,13 @@
 
 #include <fluidsynth.h>
 
-#include "alMidi.h"
 #include "alMain.h"
 #include "alError.h"
 #include "evtqueue.h"
 #include "rwlock.h"
 #include "alu.h"
+
+#include "midi/base.h"
 
 
 /* MIDI events */

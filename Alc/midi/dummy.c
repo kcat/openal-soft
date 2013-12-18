@@ -6,13 +6,13 @@
 #include <string.h>
 #include <limits.h>
 
-#include "alMidi.h"
 #include "alMain.h"
 #include "alError.h"
 #include "evtqueue.h"
 #include "rwlock.h"
 #include "alu.h"
 
+#include "midi/base.h"
 
 typedef struct DSynth {
     DERIVE_FROM_TYPE(MidiSynth);

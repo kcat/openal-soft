@@ -557,7 +557,12 @@ IF(ALSOFT_REQUIRE_NEON AND NOT HAVE_NEON)
 ENDIF()
 
 
-SET(HAVE_MIDI_SYNTH  0)
+SET(ALC_OBJS  ${ALC_OBJS}
+              Alc/midi/fluidsynth.c
+)
+
+SET(HAVE_FLUIDSYNTH  0)
+
 # Check for FluidSynth support
 IF(ALSOFT_MIDI_FLUIDSYNTH)
     FIND_PACKAGE(FluidSynth)

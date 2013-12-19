@@ -92,6 +92,14 @@ void ALsfpreset_Construct(ALsfpreset *self);
 void ALsfpreset_Destruct(ALsfpreset *self);
 
 
+inline struct ALsfpreset *LookupPreset(ALCdevice *device, ALuint id)
+{ return (struct ALsfpreset*)LookupUIntMapKey(&device->PresetMap, id); }
+inline struct ALsfpreset *RemovePreset(ALCdevice *device, ALuint id)
+{ return (struct ALsfpreset*)RemoveUIntMapKey(&device->PresetMap, id); }
+
+void ReleaseALPresets(ALCdevice *device);
+
+
 typedef struct ALsoundfont {
     volatile RefCount ref;
 

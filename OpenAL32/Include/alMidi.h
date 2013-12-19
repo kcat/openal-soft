@@ -117,6 +117,8 @@ typedef struct ALsoundfont {
     ALshort *Samples;
     ALint NumSamples;
 
+    volatile ALenum Mapped;
+
     ALuint id;
 } ALsoundfont;
 

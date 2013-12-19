@@ -429,6 +429,8 @@ void ALsoundfont_Construct(ALsoundfont *self)
     self->Samples = NULL;
     self->NumSamples = 0;
 
+    self->Mapped = AL_FALSE;
+
     self->id = 0;
 }
 

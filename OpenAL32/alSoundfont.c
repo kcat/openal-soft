@@ -83,7 +83,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSoundfontsSOFT(ALsizei n, const ALuint *ids)
         /* Check for valid soundfont ID */
         if((sfont=LookupSfont(device, ids[i])) == NULL)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-        if(sfont->ref != 0)
+        if(sfont->Mapped != AL_FALSE || sfont->ref != 0)
             SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     }
 
@@ -117,6 +117,85 @@ AL_API ALboolean AL_APIENTRY alIsSoundfontSOFT(ALuint id)
     ALCcontext_DecRef(context);
 
     return ret;
+}
+
+AL_API ALvoid AL_APIENTRY alSoundfontSamplesSOFT(ALuint sfid, ALenum type, ALsizei count, const ALvoid *samples)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsoundfont *sfont;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sfont=LookupSfont(device, sfid)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(type != AL_SHORT_SOFT)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(count <= 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    // TODO: Lock and check ref count
+    {
+        void *temp = realloc(sfont->Samples, count * sizeof(ALshort));
+        if(!temp)
+            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
+        sfont->Samples = temp;
+        sfont->NumSamples = count;
+        if(samples)
+            memcpy(sfont->Samples, samples, count * sizeof(ALshort));
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API ALvoid* AL_APIENTRY alSoundfontMapSamplesSOFT(ALuint sfid, ALsizei offset, ALsizei length)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsoundfont *sfont;
+    ALvoid *ptr = NULL;
+
+    context = GetContextRef();
+    if(!context) return NULL;
+
+    device = context->Device;
+    if(!(sfont=LookupSfont(device, sfid)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(offset < 0 || (ALuint)offset > sfont->NumSamples*sizeof(ALshort))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(length <= 0 || (ALuint)length > (sfont->NumSamples*sizeof(ALshort) - offset))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(ExchangeInt(&sfont->Mapped, AL_TRUE) == AL_TRUE)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+
+    ptr = (ALbyte*)sfont->Samples + offset;
+
+done:
+    ALCcontext_DecRef(context);
+
+    return ptr;
+}
+
+AL_API ALvoid AL_APIENTRY alSoundfontUnmapSamplesSOFT(ALuint sfid)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsoundfont *sfont;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sfont=LookupSfont(device, sfid)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(ExchangeInt(&sfont->Mapped, AL_FALSE) == AL_FALSE)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+
+done:
+    ALCcontext_DecRef(context);
 }
 
 

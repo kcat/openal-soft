@@ -106,8 +106,8 @@ typedef struct ALsoundfont {
     ALsfpreset **Presets;
     ALsizei NumPresets;
 
-    ALshort *SampleData;
-    ALint SampleDataLen;
+    ALshort *Samples;
+    ALint NumSamples;
 
     ALuint id;
 } ALsoundfont;

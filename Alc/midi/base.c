@@ -426,8 +426,8 @@ void ALsoundfont_Construct(ALsoundfont *self)
     self->Presets = NULL;
     self->NumPresets = 0;
 
-    self->SampleData = NULL;
-    self->SampleDataLen = 0;
+    self->Samples = NULL;
+    self->NumSamples = 0;
 
     self->id = 0;
 }
@@ -447,7 +447,7 @@ void ALsoundfont_Destruct(ALsoundfont *self)
     self->Presets = NULL;
     self->NumPresets = 0;
 
-    free(self->SampleData);
-    self->SampleData = NULL;
-    self->SampleDataLen = 0;
+    free(self->Samples);
+    self->Samples = NULL;
+    self->NumSamples = 0;
 }

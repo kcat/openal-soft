@@ -44,6 +44,9 @@ typedef ALboolean (AL_APIENTRY*LPALISSOUNDFONTSOFT)(ALuint id);
 typedef void (AL_APIENTRY*LPALGENPRESETSSOFT)(ALsizei n, ALuint *ids);
 typedef void (AL_APIENTRY*LPALDELETEPRESETSSOFT)(ALsizei n, const ALuint *ids);
 typedef ALboolean (AL_APIENTRY*LPALISPRESETSOFT)(ALuint id);
+typedef void (AL_APIENTRY*LPALGENINSTRUMENTSSOFT)(ALsizei n, ALuint *ids);
+typedef void (AL_APIENTRY*LPALDELETEINSTRUMENTSSOFT)(ALsizei n, const ALuint *ids);
+typedef ALboolean (AL_APIENTRY*LPALISINSTRUMENTSOFT)(ALuint id);
 typedef void (AL_APIENTRY*LPALMIDISOUNDFONTSOFT)(const char *filename);
 typedef void (AL_APIENTRY*LPALMIDIEVENTSOFT)(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
 typedef void (AL_APIENTRY*LPALMIDISYSEXSOFT)(ALuint64SOFT time, const ALbyte *data, ALsizei size);
@@ -61,6 +64,9 @@ AL_API ALboolean AL_APIENTRY alIsSoundfontSOFT(ALuint id);
 AL_API void AL_APIENTRY alGenPresetsSOFT(ALsizei n, ALuint *ids);
 AL_API void AL_APIENTRY alDeletePresetsSOFT(ALsizei n, const ALuint *ids);
 AL_API ALboolean AL_APIENTRY alIsPresetSOFT(ALuint id);
+AL_API void AL_APIENTRY alGenInstrumentsSOFT(ALsizei n, ALuint *ids);
+AL_API void AL_APIENTRY alDeleteInstrumentsSOFT(ALsizei n, const ALuint *ids);
+AL_API ALboolean AL_APIENTRY alIsInstrumentSOFT(ALuint id);
 AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename);
 AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
 AL_API void AL_APIENTRY alMidiSysExSOFT(ALuint64SOFT time, const ALbyte *data, ALsizei size);
@@ -439,6 +445,9 @@ struct ALCdevice_struct
 
     // Map of Presets for this device
     UIntMap PresetMap;
+
+    // Map of Instruments for this device
+    UIntMap InstrumentMap;
 
     /* MIDI synth engine */
     struct MidiSynth *Synth;

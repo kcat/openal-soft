@@ -76,6 +76,14 @@ void ALsfinstrument_Construct(ALsfinstrument *self);
 void ALsfinstrument_Destruct(ALsfinstrument *self);
 
 
+inline struct ALsfinstrument *LookupInstrument(ALCdevice *device, ALuint id)
+{ return (struct ALsfinstrument*)LookupUIntMapKey(&device->InstrumentMap, id); }
+inline struct ALsfinstrument *RemoveInstrument(ALCdevice *device, ALuint id)
+{ return (struct ALsfinstrument*)RemoveUIntMapKey(&device->InstrumentMap, id); }
+
+void ReleaseALInstruments(ALCdevice *device);
+
+
 typedef struct ALsfpreset {
     volatile RefCount ref;
 

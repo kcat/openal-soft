@@ -38,6 +38,8 @@
 #define AL_PROGRAMCHANGE_SOFT                    0x00C0
 #define AL_CHANNELPRESSURE_SOFT                  0x00D0
 #define AL_PITCHBEND_SOFT                        0x00E0
+typedef void (AL_APIENTRY*LPALGENSOUNDFONTSSOFT)(ALsizei n, ALuint *ids);
+typedef void (AL_APIENTRY*LPALDELETESOUNDFONTSSOFT)(ALsizei n, const ALuint *ids);
 typedef ALboolean (AL_APIENTRY*LPALISSOUNDFONTSOFT)(const char *filename);
 typedef void (AL_APIENTRY*LPALMIDISOUNDFONTSOFT)(const char *filename);
 typedef void (AL_APIENTRY*LPALMIDIEVENTSOFT)(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
@@ -50,6 +52,8 @@ typedef void (AL_APIENTRY*LPALMIDIGAINSOFT)(ALfloat value);
 typedef ALint64SOFT (AL_APIENTRY*LPALGETINTEGER64SOFT)(ALenum pname);
 typedef void (AL_APIENTRY*LPALGETINTEGER64VSOFT)(ALenum pname, ALint64SOFT *values);
 #ifdef AL_ALEXT_PROTOTYPES
+AL_API void AL_APIENTRY alGenSoundfontsSOFT(ALsizei n, ALuint *ids);
+AL_API void AL_APIENTRY alDeleteSoundfontsSOFT(ALsizei n, const ALuint *ids);
 AL_API ALboolean AL_APIENTRY alIsSoundfontSOFT(const char *filename);
 AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename);
 AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
@@ -423,6 +427,9 @@ struct ALCdevice_struct
 
     // Map of Filters for this device
     UIntMap FilterMap;
+
+    // Map of Soundfonts for this device
+    UIntMap SfontMap;
 
     /* MIDI synth engine */
     struct MidiSynth *Synth;

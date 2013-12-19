@@ -1,14 +1,11 @@
 
 #include "config.h"
 
-#ifdef HAVE_FLUIDSYNTH
-
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 
-#include <fluidsynth.h>
+#include "midi/base.h"
 
 #include "alMain.h"
 #include "alError.h"
@@ -16,7 +13,9 @@
 #include "rwlock.h"
 #include "alu.h"
 
-#include "midi/base.h"
+#ifdef HAVE_FLUIDSYNTH
+
+#include <fluidsynth.h>
 
 
 /* MIDI events */

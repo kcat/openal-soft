@@ -35,7 +35,7 @@ AL_API void AL_APIENTRY alGenPresetsSOFT(ALsizei n, ALuint *ids)
         ALsfpreset *preset = calloc(1, sizeof(ALsfpreset));
         if(!preset)
         {
-            alDeleteSoundfontsSOFT(cur, ids);
+            alDeletePresetsSOFT(cur, ids);
             SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
         }
         ALsfpreset_Construct(preset);
@@ -50,7 +50,7 @@ AL_API void AL_APIENTRY alGenPresetsSOFT(ALsizei n, ALuint *ids)
             memset(preset, 0, sizeof(*preset));
             free(preset);
 
-            alDeleteSoundfontsSOFT(cur, ids);
+            alDeletePresetsSOFT(cur, ids);
             SET_ERROR_AND_GOTO(context, err, done);
         }
 

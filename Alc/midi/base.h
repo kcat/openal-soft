@@ -1,5 +1,5 @@
-#ifndef ALMIDI_H
-#define ALMIDI_H
+#ifndef AL_MIDI_BASE_H
+#define AL_MIDI_BASE_H
 
 #include "alMain.h"
 #include "atomic.h"
@@ -110,4 +110,4 @@ MidiSynth *SynthCreate(ALCdevice *device);
 }
 #endif
 
-#endif /* ALMIDI_H */
+#endif /* AL_MIDI_BASE_H */

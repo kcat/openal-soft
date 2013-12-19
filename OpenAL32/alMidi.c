@@ -115,23 +115,22 @@ done:
     ALCcontext_DecRef(context);
 }
 
-
-AL_API ALboolean AL_APIENTRY alIsSoundfontSOFT(const char *filename)
+AL_API ALboolean AL_APIENTRY alIsSoundfontSOFT(ALuint id)
 {
-    ALCdevice *device;
     ALCcontext *context;
     ALboolean ret;
 
     context = GetContextRef();
     if(!context) return AL_FALSE;
 
-    device = context->Device;
-    ret = V(device->Synth,isSoundfont)(filename);
+    ret = ((!id || LookupSfont(context->Device, id)) ?
+           AL_TRUE : AL_FALSE);
 
     ALCcontext_DecRef(context);
 
     return ret;
 }
+
 
 AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename)
 {

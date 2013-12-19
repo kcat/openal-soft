@@ -112,6 +112,7 @@ inline struct ALsoundfont *LookupSfont(ALCdevice *device, ALuint id)
 inline struct ALsoundfont *RemoveSfont(ALCdevice *device, ALuint id)
 { return (struct ALsoundfont*)RemoveUIntMapKey(&device->SfontMap, id); }
 
+void ReleaseALSoundfonts(ALCdevice *device);
 
 #ifdef __cplusplus
 }

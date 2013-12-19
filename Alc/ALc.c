@@ -35,6 +35,7 @@
 #include "alBuffer.h"
 #include "alAuxEffectSlot.h"
 #include "alError.h"
+#include "alMidi.h"
 #include "bs2b.h"
 #include "alu.h"
 
@@ -1948,6 +1949,13 @@ static ALCvoid FreeDevice(ALCdevice *device)
     }
     ResetUIntMap(&device->FilterMap);
 
+    if(device->SfontMap.size > 0)
+    {
+        WARN("(%p) Deleting %d Soundfont(s)\n", device, device->SfontMap.size);
+        ReleaseALSoundfonts(device);
+    }
+    ResetUIntMap(&device->SfontMap);
+
     free(device->Bs2b);
     device->Bs2b = NULL;
 
@@ -2884,6 +2892,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
+    InitUIntMap(&device->SfontMap, ~0);
 
     //Set output format
     device->FmtChans = DevFmtChannelsDefault;
@@ -3168,6 +3177,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
+    InitUIntMap(&device->SfontMap, ~0);
 
     device->DeviceName = NULL;
 
@@ -3345,6 +3355,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
+    InitUIntMap(&device->SfontMap, ~0);
 
     factory = ALCloopbackFactory_getFactory();
     device->Backend = V(factory,createBackend)(device, ALCbackend_Loopback);

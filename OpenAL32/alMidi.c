@@ -316,3 +316,24 @@ AL_API void AL_APIENTRY alMidiGainSOFT(ALfloat value)
 done:
     ALCcontext_DecRef(context);
 }
+
+
+/* ReleaseALSoundfonts
+ *
+ * Called to destroy any soundfonts that still exist on the device
+ */
+void ReleaseALSoundfonts(ALCdevice *device)
+{
+    ALsizei i;
+    for(i = 0;i < device->SfontMap.size;i++)
+    {
+        ALsoundfont *temp = device->SfontMap.array[i].value;
+        device->SfontMap.array[i].value = NULL;
+
+        FreeThunkEntry(temp->id);
+        ALsoundfont_Destruct(temp);
+
+        memset(temp, 0, sizeof(*temp));
+        free(temp);
+    }
+}

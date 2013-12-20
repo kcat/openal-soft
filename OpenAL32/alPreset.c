@@ -45,7 +45,6 @@ AL_API void AL_APIENTRY alGenPresetsSOFT(ALsizei n, ALuint *ids)
             err = InsertUIntMapEntry(&device->PresetMap, preset->id, preset);
         if(err != AL_NO_ERROR)
         {
-            FreeThunkEntry(preset->id);
             ALsfpreset_Destruct(preset);
             memset(preset, 0, sizeof(*preset));
             free(preset);
@@ -91,7 +90,6 @@ AL_API ALvoid AL_APIENTRY alDeletePresetsSOFT(ALsizei n, const ALuint *ids)
     {
         if((preset=RemovePreset(device, ids[i])) == NULL)
             continue;
-        FreeThunkEntry(preset->id);
 
         ALsfpreset_Destruct(preset);
 
@@ -132,7 +130,6 @@ void ReleaseALPresets(ALCdevice *device)
         ALsfpreset *temp = device->PresetMap.array[i].value;
         device->PresetMap.array[i].value = NULL;
 
-        FreeThunkEntry(temp->id);
         ALsfpreset_Destruct(temp);
 
         memset(temp, 0, sizeof(*temp));

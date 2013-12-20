@@ -45,7 +45,6 @@ AL_API void AL_APIENTRY alGenSoundfontsSOFT(ALsizei n, ALuint *ids)
             err = InsertUIntMapEntry(&device->SfontMap, sfont->id, sfont);
         if(err != AL_NO_ERROR)
         {
-            FreeThunkEntry(sfont->id);
             ALsoundfont_Destruct(sfont);
             memset(sfont, 0, sizeof(ALsoundfont));
             free(sfont);
@@ -91,7 +90,6 @@ AL_API ALvoid AL_APIENTRY alDeleteSoundfontsSOFT(ALsizei n, const ALuint *ids)
     {
         if((sfont=RemoveSfont(device, ids[i])) == NULL)
             continue;
-        FreeThunkEntry(sfont->id);
 
         ALsoundfont_Destruct(sfont);
 
@@ -222,7 +220,6 @@ void ReleaseALSoundfonts(ALCdevice *device)
         ALsoundfont *temp = device->SfontMap.array[i].value;
         device->SfontMap.array[i].value = NULL;
 
-        FreeThunkEntry(temp->id);
         ALsoundfont_Destruct(temp);
 
         memset(temp, 0, sizeof(*temp));

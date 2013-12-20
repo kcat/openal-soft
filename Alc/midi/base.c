@@ -11,6 +11,7 @@
 #include "alMidi.h"
 #include "alMain.h"
 #include "alError.h"
+#include "alThunk.h"
 #include "evtqueue.h"
 #include "rwlock.h"
 #include "alu.h"
@@ -377,6 +378,7 @@ void ALsfinstrument_Destruct(ALsfinstrument *self)
 {
     ALsizei i;
 
+    FreeThunkEntry(self->id);
     self->id = 0;
 
     for(i = 0;i < self->NumZones;i++)
@@ -405,6 +407,7 @@ void ALsfpreset_Destruct(ALsfpreset *self)
 {
     ALsizei i;
 
+    FreeThunkEntry(self->id);
     self->id = 0;
 
     for(i = 0;i < self->NumZones;i++)
@@ -439,6 +442,7 @@ void ALsoundfont_Destruct(ALsoundfont *self)
 {
     ALsizei i;
 
+    FreeThunkEntry(self->id);
     self->id = 0;
 
     for(i = 0;i < self->NumPresets;i++)

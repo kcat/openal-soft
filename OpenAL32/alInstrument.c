@@ -45,7 +45,6 @@ AL_API void AL_APIENTRY alGenInstrumentsSOFT(ALsizei n, ALuint *ids)
             err = InsertUIntMapEntry(&device->InstrumentMap, inst->id, inst);
         if(err != AL_NO_ERROR)
         {
-            FreeThunkEntry(inst->id);
             ALsfinstrument_Destruct(inst);
             memset(inst, 0, sizeof(*inst));
             free(inst);
@@ -91,7 +90,6 @@ AL_API ALvoid AL_APIENTRY alDeleteInstrumentsSOFT(ALsizei n, const ALuint *ids)
     {
         if((inst=RemoveInstrument(device, ids[i])) == NULL)
             continue;
-        FreeThunkEntry(inst->id);
 
         ALsfinstrument_Destruct(inst);
 
@@ -132,7 +130,6 @@ void ReleaseALInstruments(ALCdevice *device)
         ALsfinstrument *temp = device->InstrumentMap.array[i].value;
         device->InstrumentMap.array[i].value = NULL;
 
-        FreeThunkEntry(temp->id);
         ALsfinstrument_Destruct(temp);
 
         memset(temp, 0, sizeof(*temp));

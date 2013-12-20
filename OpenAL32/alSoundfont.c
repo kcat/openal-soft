@@ -124,6 +124,7 @@ AL_API ALvoid AL_APIENTRY alSoundfontSamplesSOFT(ALuint sfid, ALenum type, ALsiz
     ALCdevice *device;
     ALCcontext *context;
     ALsoundfont *sfont;
+    void *ptr;
 
     context = GetContextRef();
     if(!context) return;
@@ -136,16 +137,21 @@ AL_API ALvoid AL_APIENTRY alSoundfontSamplesSOFT(ALuint sfid, ALenum type, ALsiz
     if(count <= 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-    // TODO: Lock and check ref count
+    WriteLock(&sfont->Lock);
+    if(sfont->ref != 0)
+        alSetError(context, AL_INVALID_OPERATION);
+    else if(sfont->Mapped)
+        alSetError(context, AL_INVALID_OPERATION);
+    else if(!(ptr=realloc(sfont->Samples, count * sizeof(ALshort))))
+        alSetError(context, AL_OUT_OF_MEMORY);
+    else
     {
-        void *temp = realloc(sfont->Samples, count * sizeof(ALshort));
-        if(!temp)
-            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
-        sfont->Samples = temp;
+        sfont->Samples = ptr;
         sfont->NumSamples = count;
-        if(samples)
+        if(samples != NULL)
             memcpy(sfont->Samples, samples, count * sizeof(ALshort));
     }
+    WriteUnlock(&sfont->Lock);
 
 done:
     ALCcontext_DecRef(context);
@@ -168,10 +174,15 @@ AL_API ALvoid* AL_APIENTRY alSoundfontMapSamplesSOFT(ALuint sfid, ALsizei offset
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     if(length <= 0 || (ALuint)length > (sfont->NumSamples*sizeof(ALshort) - offset))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    if(ExchangeInt(&sfont->Mapped, AL_TRUE) == AL_TRUE)
-        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
 
-    ptr = (ALbyte*)sfont->Samples + offset;
+    ReadLock(&sfont->Lock);
+    if(sfont->ref != 0)
+        alSetError(context, AL_INVALID_OPERATION);
+    else if(ExchangeInt(&sfont->Mapped, AL_TRUE) == AL_TRUE)
+        alSetError(context, AL_INVALID_OPERATION);
+    else
+        ptr = (ALbyte*)sfont->Samples + offset;
+    ReadUnlock(&sfont->Lock);
 
 done:
     ALCcontext_DecRef(context);

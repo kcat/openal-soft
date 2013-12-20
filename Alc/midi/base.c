@@ -429,6 +429,7 @@ void ALsoundfont_Construct(ALsoundfont *self)
     self->Samples = NULL;
     self->NumSamples = 0;
 
+    RWLockInit(&self->Lock);
     self->Mapped = AL_FALSE;
 
     self->id = 0;

@@ -108,7 +108,7 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
             gain = maxf(gain, GAIN_SILENCE_THRESHOLD);
 
             /* FIXME: What range does the filter cover? */
-            cutoff = lerp(500.0f, 3000.0f, minf(gain / state->PeakGain, 1.0f));
+            cutoff = lerp(1000.0f, (ALfloat)LOWPASSFREQREF, minf(gain/state->PeakGain, 1.0f));
 
             /* The code below is like calling ALfilterState_setParams with
              * ALfilterType_LowPass. However, instead of passing a bandwidth,

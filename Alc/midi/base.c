@@ -297,6 +297,34 @@ ALenum ALsfzone_addGenerator(ALsfzone *self, ALenum generator, ALint value)
         self->GeneratorsMax = newmax;
     }
 
+    /* Make sure key range generator is first in the list. */
+    if(generator == 43/*key range*/ && self->NumGenerators > 0)
+    {
+        memmove(&self->Generators[1], &self->Generators[0], self->NumGenerators);
+        self->Generators[0].Generator = generator;
+        self->Generators[0].Value = value;
+        self->NumGenerators++;
+
+        return AL_NO_ERROR;
+    }
+
+    /* Make sure velocity range generator is second only to key range. */
+    if(generator == 44/*vel range*/ && self->NumGenerators > 0)
+    {
+        ALsizei base = 0;
+        if(self->Generators[0].Generator == 43/*key range*/)
+            base = 1;
+        if(self->NumGenerators > base)
+        {
+            memmove(&self->Generators[base+1], &self->Generators[base], self->NumGenerators-base);
+            self->Generators[base].Generator = generator;
+            self->Generators[base].Value = value;
+            self->NumGenerators++;
+
+            return AL_NO_ERROR;
+        }
+    }
+
     self->Generators[self->NumGenerators].Generator = generator;
     self->Generators[self->NumGenerators].Value = value;
     self->NumGenerators++;

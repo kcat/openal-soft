@@ -87,8 +87,8 @@ void ReleaseALInstruments(ALCdevice *device);
 typedef struct ALsfpreset {
     volatile RefCount ref;
 
-    ALint Program;
-    ALint Bank;
+    ALint Preset; /* a.k.a. MIDI program number */
+    ALint Bank; /* MIDI bank 0...127, or percussion (bank 128) */
 
     ALsfzone *Zones;
     ALsizei NumZones;

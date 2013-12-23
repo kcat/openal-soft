@@ -425,6 +425,9 @@ void ALsfpreset_Construct(ALsfpreset *self)
 {
     self->ref = 0;
 
+    self->Preset = 0;
+    self->Bank = 0;
+
     self->Zones = NULL;
     self->NumZones = 0;
 

@@ -117,6 +117,106 @@ AL_API ALboolean AL_APIENTRY alIsPresetSOFT(ALuint id)
     return ret;
 }
 
+AL_API void AL_APIENTRY alPresetiSOFT(ALuint id, ALenum param, ALint value)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsfpreset *preset;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if((preset=LookupPreset(device, id)) == NULL)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(preset->ref != 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    switch(param)
+    {
+        case AL_MIDI_PRESET_SOFT:
+            if(!(value >= 0 && value <= 127))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            preset->Preset = value;
+            break;
+
+        case AL_MIDI_BANK_SOFT:
+            if(!(value >= 0 && value <= 128))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            preset->Bank = value;
+            break;
+
+        default:
+            SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alPresetivSOFT(ALuint id, ALenum param, const ALint *values)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsfpreset *preset;
+
+    switch(param)
+    {
+        case AL_MIDI_PRESET_SOFT:
+        case AL_MIDI_BANK_SOFT:
+            alPresetiSOFT(id, param, values[0]);
+            return;
+    }
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if((preset=LookupPreset(device, id)) == NULL)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(preset->ref != 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    switch(param)
+    {
+        default:
+            SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alGetPresetivSOFT(ALuint id, ALenum param, ALint *values)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsfpreset *preset;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if((preset=LookupPreset(device, id)) == NULL)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(preset->ref != 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    switch(param)
+    {
+        case AL_MIDI_PRESET_SOFT:
+            values[0] = preset->Preset;
+            break;
+
+        case AL_MIDI_BANK_SOFT:
+            values[0] = preset->Bank;
+            break;
+
+        default:
+            SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
 
 /* ReleaseALPresets
  *

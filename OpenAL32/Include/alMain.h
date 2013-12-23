@@ -31,6 +31,8 @@
 #define ALC_SOFT_midi_interface 1
 #define AL_MIDI_CLOCK_SOFT                       0x9999
 #define AL_MIDI_GAIN_SOFT                        0x9998
+#define AL_MIDI_PRESET_SOFT                      0x9997
+#define AL_MIDI_BANK_SOFT                        0x9996
 #define AL_NOTEOFF_SOFT                          0x0080
 #define AL_NOTEON_SOFT                           0x0090
 #define AL_AFTERTOUCH_SOFT                       0x00A0
@@ -47,6 +49,9 @@ typedef void (AL_APIENTRY*LPALSOUNDFONTUNMAPSAMPLESSOFT)(ALuint sfid);
 typedef void (AL_APIENTRY*LPALGENPRESETSSOFT)(ALsizei n, ALuint *ids);
 typedef void (AL_APIENTRY*LPALDELETEPRESETSSOFT)(ALsizei n, const ALuint *ids);
 typedef ALboolean (AL_APIENTRY*LPALISPRESETSOFT)(ALuint id);
+typedef void (AL_APIENTRY*LPALPRESETISOFT)(ALuint id, ALenum param, ALint value);
+typedef void (AL_APIENTRY*LPALPRESETIVSOFT)(ALuint id, ALenum param, const ALint *values);
+typedef void (AL_APIENTRY*LPALGETPRESETIVSOFT)(ALuint id, ALenum param, ALint *values);
 typedef void (AL_APIENTRY*LPALGENINSTRUMENTSSOFT)(ALsizei n, ALuint *ids);
 typedef void (AL_APIENTRY*LPALDELETEINSTRUMENTSSOFT)(ALsizei n, const ALuint *ids);
 typedef ALboolean (AL_APIENTRY*LPALISINSTRUMENTSOFT)(ALuint id);
@@ -71,6 +76,10 @@ AL_API ALvoid AL_APIENTRY alSoundfontUnmapSamplesSOFT(ALuint sfid);
 AL_API void AL_APIENTRY alGenPresetsSOFT(ALsizei n, ALuint *ids);
 AL_API void AL_APIENTRY alDeletePresetsSOFT(ALsizei n, const ALuint *ids);
 AL_API ALboolean AL_APIENTRY alIsPresetSOFT(ALuint id);
+AL_API void AL_APIENTRY alPresetiSOFT(ALuint id, ALenum param, ALint value);
+AL_API void AL_APIENTRY alPresetivSOFT(ALuint id, ALenum param, const ALint *values);
+AL_API void AL_APIENTRY alGetPresetivSOFT(ALuint id, ALenum param, ALint *values);
+
 AL_API void AL_APIENTRY alGenInstrumentsSOFT(ALsizei n, ALuint *ids);
 AL_API void AL_APIENTRY alDeleteInstrumentsSOFT(ALsizei n, const ALuint *ids);
 AL_API ALboolean AL_APIENTRY alIsInstrumentSOFT(ALuint id);

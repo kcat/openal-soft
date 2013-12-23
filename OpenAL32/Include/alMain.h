@@ -33,6 +33,8 @@
 #define AL_MIDI_GAIN_SOFT                        0x9998
 #define AL_MIDI_PRESET_SOFT                      0x9997
 #define AL_MIDI_BANK_SOFT                        0x9996
+#define AL_PRESETS_SIZE_SOFT                     0x9995
+#define AL_PRESETS_SOFT                          0x9994
 #define AL_NOTEOFF_SOFT                          0x0080
 #define AL_NOTEON_SOFT                           0x0090
 #define AL_AFTERTOUCH_SOFT                       0x00A0
@@ -46,6 +48,8 @@ typedef ALboolean (AL_APIENTRY*LPALISSOUNDFONTSOFT)(ALuint id);
 typedef void (AL_APIENTRY*LPALSOUNDFONTSAMPLESSOFT)(ALuint sfid, ALenum type, ALsizei count, const ALvoid *samples);
 typedef ALvoid* (AL_APIENTRY*LPALSOUNDFONTMAPSAMPLESSOFT)(ALuint sfid, ALsizei offset, ALsizei length);
 typedef void (AL_APIENTRY*LPALSOUNDFONTUNMAPSAMPLESSOFT)(ALuint sfid);
+typedef void (AL_APIENTRY*LPALGETSOUNDFONTIVSOFT)(ALuint id, ALenum param, ALint *values);
+typedef void (AL_APIENTRY*LPALSOUNDFONTPRESETSSOFT)(ALuint id, ALsizei count, const ALuint *pids);
 typedef void (AL_APIENTRY*LPALGENPRESETSSOFT)(ALsizei n, ALuint *ids);
 typedef void (AL_APIENTRY*LPALDELETEPRESETSSOFT)(ALsizei n, const ALuint *ids);
 typedef ALboolean (AL_APIENTRY*LPALISPRESETSOFT)(ALuint id);
@@ -69,9 +73,11 @@ typedef void (AL_APIENTRY*LPALGETINTEGER64VSOFT)(ALenum pname, ALint64SOFT *valu
 AL_API void AL_APIENTRY alGenSoundfontsSOFT(ALsizei n, ALuint *ids);
 AL_API void AL_APIENTRY alDeleteSoundfontsSOFT(ALsizei n, const ALuint *ids);
 AL_API ALboolean AL_APIENTRY alIsSoundfontSOFT(ALuint id);
-AL_API ALvoid AL_APIENTRY alSoundfontSamplesSOFT(ALuint sfid, ALenum type, ALsizei count, const ALvoid *samples);
+AL_API void AL_APIENTRY alSoundfontSamplesSOFT(ALuint sfid, ALenum type, ALsizei count, const ALvoid *samples);
 AL_API ALvoid* AL_APIENTRY alSoundfontMapSamplesSOFT(ALuint sfid, ALsizei offset, ALsizei length);
-AL_API ALvoid AL_APIENTRY alSoundfontUnmapSamplesSOFT(ALuint sfid);
+AL_API void AL_APIENTRY alSoundfontUnmapSamplesSOFT(ALuint sfid);
+AL_API void AL_APIENTRY alGetSoundfontivSOFT(ALuint id, ALenum param, ALint *values);
+AL_API void AL_APIENTRY alSoundfontPresetsSOFT(ALuint id, ALsizei count, const ALuint *pids);
 
 AL_API void AL_APIENTRY alGenPresetsSOFT(ALsizei n, ALuint *ids);
 AL_API void AL_APIENTRY alDeletePresetsSOFT(ALsizei n, const ALuint *ids);

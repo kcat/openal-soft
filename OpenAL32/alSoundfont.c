@@ -207,6 +207,99 @@ done:
     ALCcontext_DecRef(context);
 }
 
+AL_API void AL_APIENTRY alGetSoundfontivSOFT(ALuint id, ALenum param, ALint *values)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsoundfont *sfont;
+    ALsizei i;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sfont=LookupSfont(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    switch(param)
+    {
+        case AL_PRESETS_SIZE_SOFT:
+            values[0] = sfont->NumPresets;
+            break;
+
+        case AL_PRESETS_SOFT:
+            for(i = 0;i < sfont->NumPresets;i++)
+                values[i] = sfont->Presets[i]->id;
+            break;
+
+        default:
+            SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alSoundfontPresetsSOFT(ALuint id, ALsizei count, const ALuint *pids)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsoundfont *sfont;
+    ALsfpreset **presets;
+    ALsizei i;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sfont=LookupSfont(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(count < 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    WriteLock(&sfont->Lock);
+    if(sfont->ref != 0)
+    {
+        WriteUnlock(&sfont->Lock);
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    }
+
+    if(count == 0)
+        presets = NULL;
+    else
+    {
+        presets = calloc(count, sizeof(presets[0]));
+        if(!presets)
+        {
+            WriteUnlock(&sfont->Lock);
+            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
+        }
+
+        for(i = 0;i < count;i++)
+        {
+            if(!(presets[i]=LookupPreset(device, pids[i])))
+            {
+                WriteUnlock(&sfont->Lock);
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            }
+        }
+    }
+
+    for(i = 0;i < count;i++)
+        IncrementRef(&presets[i]->ref);
+
+    presets = ExchangePtr((XchgPtr*)&sfont->Presets, presets);
+    count = ExchangeInt(&sfont->NumPresets, count);
+
+    for(i = 0;i < count;i++)
+        DecrementRef(&presets[i]->ref);
+    free(presets);
+
+    WriteUnlock(&sfont->Lock);
+
+done:
+    ALCcontext_DecRef(context);
+}
+
 
 /* ReleaseALSoundfonts
  *

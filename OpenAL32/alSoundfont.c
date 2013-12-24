@@ -289,12 +289,11 @@ AL_API void AL_APIENTRY alSoundfontPresetsSOFT(ALuint id, ALsizei count, const A
 
     presets = ExchangePtr((XchgPtr*)&sfont->Presets, presets);
     count = ExchangeInt(&sfont->NumPresets, count);
+    WriteUnlock(&sfont->Lock);
 
     for(i = 0;i < count;i++)
         DecrementRef(&presets[i]->ref);
     free(presets);
-
-    WriteUnlock(&sfont->Lock);
 
 done:
     ALCcontext_DecRef(context);

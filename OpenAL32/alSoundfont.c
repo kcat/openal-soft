@@ -231,6 +231,14 @@ AL_API void AL_APIENTRY alGetSoundfontivSOFT(ALuint id, ALenum param, ALint *val
                 values[i] = sfont->Presets[i]->id;
             break;
 
+        case AL_SAMPLE_LENGTH_SOFT:
+            values[0] = sfont->NumSamples;
+            break;
+
+        case AL_FORMAT_TYPE_SOFT:
+            values[0] = AL_SHORT_SOFT;
+            break;
+
         default:
             SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }

@@ -35,6 +35,7 @@
 #define AL_MIDI_BANK_SOFT                        0x9996
 #define AL_PRESETS_SIZE_SOFT                     0x9995
 #define AL_PRESETS_SOFT                          0x9994
+#define AL_FORMAT_TYPE_SOFT                      0x1991
 #define AL_NOTEOFF_SOFT                          0x0080
 #define AL_NOTEON_SOFT                           0x0090
 #define AL_AFTERTOUCH_SOFT                       0x00A0

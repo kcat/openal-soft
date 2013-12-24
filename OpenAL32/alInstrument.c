@@ -109,8 +109,7 @@ AL_API ALboolean AL_APIENTRY alIsInstrumentSOFT(ALuint id)
     context = GetContextRef();
     if(!context) return AL_FALSE;
 
-    ret = ((!id || LookupInstrument(context->Device, id)) ?
-           AL_TRUE : AL_FALSE);
+    ret = LookupInstrument(context->Device, id) ? AL_TRUE : AL_FALSE;
 
     ALCcontext_DecRef(context);
 

@@ -76,9 +76,6 @@ AL_API ALvoid AL_APIENTRY alDeletePresetsSOFT(ALsizei n, const ALuint *ids)
     device = context->Device;
     for(i = 0;i < n;i++)
     {
-        if(!ids[i])
-            continue;
-
         /* Check for valid ID */
         if((preset=LookupPreset(device, ids[i])) == NULL)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);

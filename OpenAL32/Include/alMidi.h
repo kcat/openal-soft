@@ -113,6 +113,8 @@ typedef struct ALfontsound {
 
 void ALfontsound_Construct(ALfontsound *self);
 void ALfontsound_Destruct(ALfontsound *self);
+ALenum ALfontsound_addGenerator(ALfontsound *self, ALenum generator, ALint value);
+ALenum ALfontsound_addModulator(ALfontsound *self, ALenum sourceop, ALenum destop, ALint amount, ALenum amtsourceop, ALenum transop);
 
 
 inline struct ALfontsound *LookupFontsound(ALCdevice *device, ALuint id)

@@ -467,6 +467,77 @@ void ALfontsound_Destruct(ALfontsound *self)
     self->id = 0;
 }
 
+ALenum ALfontsound_addGenerator(ALfontsound *self, ALenum generator, ALint value)
+{
+    ALsizei i;
+    for(i = 0;i < self->NumGenerators;i++)
+    {
+        if(self->Generators[i].Generator == generator)
+        {
+            self->Generators[i].Value = value;
+            return AL_NO_ERROR;
+        }
+    }
+
+    if(self->NumGenerators == self->GeneratorsMax)
+    {
+        ALsizei newmax = 0;
+        ALvoid *temp = NULL;
+
+        newmax = (self->GeneratorsMax ? self->GeneratorsMax<<1 : 1);
+        if(newmax > self->GeneratorsMax)
+            temp = realloc(self->Generators, newmax * sizeof(ALsfgenerator));
+        if(!temp) return AL_OUT_OF_MEMORY;
+
+        self->Generators = temp;
+        self->GeneratorsMax = newmax;
+    }
+
+    self->Generators[self->NumGenerators].Generator = generator;
+    self->Generators[self->NumGenerators].Value = value;
+    self->NumGenerators++;
+
+    return AL_NO_ERROR;
+}
+
+ALenum ALfontsound_addModulator(ALfontsound *self, ALenum sourceop, ALenum destop, ALint amount, ALenum amtsourceop, ALenum transop)
+{
+    ALsizei i;
+    for(i = 0;i < self->NumModulators;i++)
+    {
+        if(self->Modulators[i].SourceOp == sourceop && self->Modulators[i].DestOp == destop &&
+           self->Modulators[i].AmountSourceOp == amtsourceop &&
+           self->Modulators[i].TransformOp == transop)
+        {
+            self->Modulators[i].Amount = amount;
+            return AL_NO_ERROR;
+        }
+    }
+
+    if(self->NumModulators == self->ModulatorsMax)
+    {
+        ALsizei newmax = 0;
+        ALvoid *temp = NULL;
+
+        newmax = (self->ModulatorsMax ? self->ModulatorsMax<<1 : 1);
+        if(newmax > self->ModulatorsMax)
+            temp = realloc(self->Modulators, newmax * sizeof(ALsfmodulator));
+        if(!temp) return AL_OUT_OF_MEMORY;
+
+        self->Modulators = temp;
+        self->ModulatorsMax = newmax;
+    }
+
+    self->Modulators[self->NumModulators].SourceOp = sourceop;
+    self->Modulators[self->NumModulators].DestOp = destop;
+    self->Modulators[self->NumModulators].Amount = amount;
+    self->Modulators[self->NumModulators].AmountSourceOp = amtsourceop;
+    self->Modulators[self->NumModulators].TransformOp = transop;
+    self->NumModulators++;
+
+    return AL_NO_ERROR;
+}
+
 
 void ALsfpreset_Construct(ALsfpreset *self)
 {

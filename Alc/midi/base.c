@@ -243,184 +243,6 @@ ALenum MidiSynth_insertSysExEvent(MidiSynth *self, ALuint64 time, const ALbyte *
 }
 
 
-void ALsfzone_Construct(ALsfzone *self)
-{
-    self->Generators = NULL;
-    self->NumGenerators = 0;
-    self->GeneratorsMax = 0;
-
-    self->Modulators = NULL;
-    self->NumModulators = 0;
-    self->ModulatorsMax = 0;
-
-    self->Object = NULL;
-}
-
-void ALsfzone_Destruct(ALsfzone *self)
-{
-    self->Object = NULL;
-
-    free(self->Modulators);
-    self->Modulators = NULL;
-    self->NumModulators = 0;
-    self->ModulatorsMax = 0;
-
-    free(self->Generators);
-    self->Generators = NULL;
-    self->NumGenerators = 0;
-    self->GeneratorsMax = 0;
-}
-
-ALenum ALsfzone_addGenerator(ALsfzone *self, ALenum generator, ALint value)
-{
-    ALsizei i;
-    for(i = 0;i < self->NumGenerators;i++)
-    {
-        if(self->Generators[i].Generator == generator)
-        {
-            self->Generators[i].Value = value;
-            return AL_NO_ERROR;
-        }
-    }
-
-    if(self->NumGenerators == self->GeneratorsMax)
-    {
-        ALsizei newmax = 0;
-        ALvoid *temp = NULL;
-
-        newmax = (self->GeneratorsMax ? self->GeneratorsMax<<1 : 1);
-        if(newmax > self->GeneratorsMax)
-            temp = realloc(self->Generators, newmax * sizeof(ALsfgenerator));
-        if(!temp) return AL_OUT_OF_MEMORY;
-
-        self->Generators = temp;
-        self->GeneratorsMax = newmax;
-    }
-
-    /* Make sure key range generator is first in the list. */
-    if(generator == 43/*key range*/ && self->NumGenerators > 0)
-    {
-        memmove(&self->Generators[1], &self->Generators[0], self->NumGenerators);
-        self->Generators[0].Generator = generator;
-        self->Generators[0].Value = value;
-        self->NumGenerators++;
-
-        return AL_NO_ERROR;
-    }
-
-    /* Make sure velocity range generator is second only to key range. */
-    if(generator == 44/*vel range*/ && self->NumGenerators > 0)
-    {
-        ALsizei base = 0;
-        if(self->Generators[0].Generator == 43/*key range*/)
-            base = 1;
-        if(self->NumGenerators > base)
-        {
-            memmove(&self->Generators[base+1], &self->Generators[base], self->NumGenerators-base);
-            self->Generators[base].Generator = generator;
-            self->Generators[base].Value = value;
-            self->NumGenerators++;
-
-            return AL_NO_ERROR;
-        }
-    }
-
-    self->Generators[self->NumGenerators].Generator = generator;
-    self->Generators[self->NumGenerators].Value = value;
-    self->NumGenerators++;
-
-    return AL_NO_ERROR;
-}
-
-ALenum ALsfzone_addModulator(ALsfzone *self, ALenum sourceop, ALenum destop, ALint amount, ALenum amtsourceop, ALenum transop)
-{
-    ALsizei i;
-    for(i = 0;i < self->NumModulators;i++)
-    {
-        if(self->Modulators[i].SourceOp == sourceop && self->Modulators[i].DestOp == destop &&
-           self->Modulators[i].AmountSourceOp == amtsourceop &&
-           self->Modulators[i].TransformOp == transop)
-        {
-            self->Modulators[i].Amount = amount;
-            return AL_NO_ERROR;
-        }
-    }
-
-    if(self->NumModulators == self->ModulatorsMax)
-    {
-        ALsizei newmax = 0;
-        ALvoid *temp = NULL;
-
-        newmax = (self->ModulatorsMax ? self->ModulatorsMax<<1 : 1);
-        if(newmax > self->ModulatorsMax)
-            temp = realloc(self->Modulators, newmax * sizeof(ALsfmodulator));
-        if(!temp) return AL_OUT_OF_MEMORY;
-
-        self->Modulators = temp;
-        self->ModulatorsMax = newmax;
-    }
-
-    self->Modulators[self->NumModulators].SourceOp = sourceop;
-    self->Modulators[self->NumModulators].DestOp = destop;
-    self->Modulators[self->NumModulators].Amount = amount;
-    self->Modulators[self->NumModulators].AmountSourceOp = amtsourceop;
-    self->Modulators[self->NumModulators].TransformOp = transop;
-    self->NumModulators++;
-
-    return AL_NO_ERROR;
-}
-
-/* Stores a new object pointer in the zone. Returns the old object pointer. */
-ALvoid *ALsfzone_setRefObject(ALsfzone *self, ALvoid *object)
-{
-    ALvoid *oldobj = self->Object;
-    self->Object = object;
-    return oldobj;
-}
-
-
-void ALsfsample_Construct(ALsfsample *self)
-{
-    self->ref = 0;
-
-    self->id = 0;
-}
-
-void ALsfsample_Destruct(ALsfsample *self)
-{
-    self->id = 0;
-}
-
-
-void ALsfinstrument_Construct(ALsfinstrument *self)
-{
-    self->ref = 0;
-
-    self->Zones = NULL;
-    self->NumZones = 0;
-
-    self->id = 0;
-}
-
-void ALsfinstrument_Destruct(ALsfinstrument *self)
-{
-    ALsizei i;
-
-    FreeThunkEntry(self->id);
-    self->id = 0;
-
-    for(i = 0;i < self->NumZones;i++)
-    {
-        if(self->Zones[i].Object)
-            DecrementRef(&((ALsfsample*)self->Zones[i].Object)->ref);
-        ALsfzone_Destruct(&self->Zones[i]);
-    }
-    free(self->Zones);
-    self->Zones = NULL;
-    self->NumZones = 0;
-}
-
-
 void ALfontsound_Construct(ALfontsound *self)
 {
     self->ref = 0;
@@ -546,28 +368,15 @@ void ALsfpreset_Construct(ALsfpreset *self)
     self->Preset = 0;
     self->Bank = 0;
 
-    self->Zones = NULL;
-    self->NumZones = 0;
 
     self->id = 0;
 }
 
 void ALsfpreset_Destruct(ALsfpreset *self)
 {
-    ALsizei i;
-
     FreeThunkEntry(self->id);
     self->id = 0;
 
-    for(i = 0;i < self->NumZones;i++)
-    {
-        if(self->Zones[i].Object)
-            DecrementRef(&((ALsfinstrument*)self->Zones[i].Object)->ref);
-        ALsfzone_Destruct(&self->Zones[i]);
-    }
-    free(self->Zones);
-    self->Zones = NULL;
-    self->NumZones = 0;
 }
 
 

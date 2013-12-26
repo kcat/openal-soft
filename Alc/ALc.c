@@ -295,9 +295,6 @@ static const ALCfunction alcFunctions[] = {
     DECL(alPresetiSOFT),
     DECL(alPresetivSOFT),
     DECL(alGetPresetivSOFT),
-    DECL(alGenInstrumentsSOFT),
-    DECL(alDeleteInstrumentsSOFT),
-    DECL(alIsInstrumentSOFT),
     DECL(alGenFontsoundsSOFT),
     DECL(alDeleteFontsoundsSOFT),
     DECL(alIsFontsoundSOFT),
@@ -1980,13 +1977,6 @@ static ALCvoid FreeDevice(ALCdevice *device)
     }
     ResetUIntMap(&device->PresetMap);
 
-    if(device->InstrumentMap.size > 0)
-    {
-        WARN("(%p) Deleting %d Instrument(s)\n", device, device->InstrumentMap.size);
-        ReleaseALInstruments(device);
-    }
-    ResetUIntMap(&device->InstrumentMap);
-
     if(device->FontsoundMap.size > 0)
     {
         WARN("(%p) Deleting %d Fontsound(s)\n", device, device->FontsoundMap.size);
@@ -2932,7 +2922,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitUIntMap(&device->FilterMap, ~0);
     InitUIntMap(&device->SfontMap, ~0);
     InitUIntMap(&device->PresetMap, ~0);
-    InitUIntMap(&device->InstrumentMap, ~0);
     InitUIntMap(&device->FontsoundMap, ~0);
 
     //Set output format
@@ -3220,7 +3209,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     InitUIntMap(&device->FilterMap, ~0);
     InitUIntMap(&device->SfontMap, ~0);
     InitUIntMap(&device->PresetMap, ~0);
-    InitUIntMap(&device->InstrumentMap, ~0);
     InitUIntMap(&device->FontsoundMap, ~0);
 
     device->DeviceName = NULL;
@@ -3401,7 +3389,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitUIntMap(&device->FilterMap, ~0);
     InitUIntMap(&device->SfontMap, ~0);
     InitUIntMap(&device->PresetMap, ~0);
-    InitUIntMap(&device->InstrumentMap, ~0);
     InitUIntMap(&device->FontsoundMap, ~0);
 
     factory = ALCloopbackFactory_getFactory();

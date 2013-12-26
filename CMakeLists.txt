@@ -492,7 +492,6 @@ SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
                  OpenAL32/alExtension.c
                  OpenAL32/alFilter.c
                  OpenAL32/alFontsound.c
-                 OpenAL32/alInstrument.c
                  OpenAL32/alListener.c
                  OpenAL32/alMidi.c
                  OpenAL32/alPreset.c

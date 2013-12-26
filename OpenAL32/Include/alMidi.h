@@ -69,6 +69,8 @@ typedef struct ALsfpreset {
     ALint Preset; /* a.k.a. MIDI program number */
     ALint Bank; /* MIDI bank 0...127, or percussion (bank 128) */
 
+    ALfontsound **Sounds;
+    ALsizei NumSounds;
 
     ALuint id;
 } ALsfpreset;

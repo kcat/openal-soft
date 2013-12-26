@@ -186,6 +186,7 @@ AL_API void AL_APIENTRY alGetPresetivSOFT(ALuint id, ALenum param, ALint *values
     ALCdevice *device;
     ALCcontext *context;
     ALsfpreset *preset;
+    ALsizei i;
 
     context = GetContextRef();
     if(!context) return;
@@ -205,9 +206,70 @@ AL_API void AL_APIENTRY alGetPresetivSOFT(ALuint id, ALenum param, ALint *values
             values[0] = preset->Bank;
             break;
 
+        case AL_FONTSOUNDS_SIZE_SOFT:
+            values[0] = preset->NumSounds;
+            break;
+
+        case AL_FONTSOUNDS_SOFT:
+            for(i = 0;i < preset->NumSounds;i++)
+                values[i] = preset->Sounds[i]->id;
+            break;
+
         default:
             SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alPresetFontsoundsSOFT(ALuint id, ALsizei count, const ALuint *fsids)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsfpreset *preset;
+    ALfontsound **sounds;
+    ALsizei i;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(preset=LookupPreset(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(count < 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    if(preset->ref != 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+
+    if(count == 0)
+        sounds = NULL;
+    else
+    {
+        sounds = calloc(count, sizeof(sounds[0]));
+        if(!sounds)
+            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
+
+        for(i = 0;i < count;i++)
+        {
+            if(!(sounds[i]=LookupFontsound(device, fsids[i])))
+            {
+                free(sounds);
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            }
+        }
+    }
+
+    for(i = 0;i < count;i++)
+        IncrementRef(&sounds[i]->ref);
+
+    sounds = ExchangePtr((XchgPtr*)&preset->Sounds, sounds);
+    count = ExchangeInt(&preset->NumSounds, count);
+
+    for(i = 0;i < count;i++)
+        DecrementRef(&sounds[i]->ref);
+    free(sounds);
 
 done:
     ALCcontext_DecRef(context);

@@ -421,6 +421,53 @@ void ALsfinstrument_Destruct(ALsfinstrument *self)
 }
 
 
+void ALfontsound_Construct(ALfontsound *self)
+{
+    self->ref = 0;
+
+    self->MinKey = 0;
+    self->MaxKey = 127;
+    self->MinVelocity = 0;
+    self->MaxVelocity = 127;
+
+    self->Generators = NULL;
+    self->NumGenerators = 0;
+    self->GeneratorsMax = 0;
+
+    self->Modulators = NULL;
+    self->NumModulators = 0;
+    self->ModulatorsMax = 0;
+
+    self->Start = 0;
+    self->End = 0;
+    self->LoopStart = 0;
+    self->LoopEnd = 0;
+    self->SampleRate = 0;
+    self->PitchKey = 0;
+    self->PitchCorrection = 0;
+    self->SampleLink = 0;
+    self->SampleType = AL_NONE;
+
+    self->id = 0;
+}
+
+void ALfontsound_Destruct(ALfontsound *self)
+{
+    free(self->Modulators);
+    self->Modulators = NULL;
+    self->NumModulators = 0;
+    self->ModulatorsMax = 0;
+
+    free(self->Generators);
+    self->Generators = NULL;
+    self->NumGenerators = 0;
+    self->GeneratorsMax = 0;
+
+    FreeThunkEntry(self->id);
+    self->id = 0;
+}
+
+
 void ALsfpreset_Construct(ALsfpreset *self)
 {
     self->ref = 0;

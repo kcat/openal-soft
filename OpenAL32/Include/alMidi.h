@@ -84,6 +84,45 @@ inline struct ALsfinstrument *RemoveInstrument(ALCdevice *device, ALuint id)
 void ReleaseALInstruments(ALCdevice *device);
 
 
+typedef struct ALfontsound {
+    volatile RefCount ref;
+
+    ALint MinKey, MaxKey;
+    ALint MinVelocity, MaxVelocity;
+
+    ALsfgenerator *Generators;
+    ALsizei NumGenerators;
+    ALsizei GeneratorsMax;
+
+    ALsfmodulator *Modulators;
+    ALsizei NumModulators;
+    ALsizei ModulatorsMax;
+
+    ALuint Start;
+    ALuint End;
+    ALuint LoopStart;
+    ALuint LoopEnd;
+    ALuint SampleRate;
+    ALubyte PitchKey;
+    ALbyte PitchCorrection;
+    ALint SampleLink;
+    ALenum SampleType;
+
+    ALuint id;
+} ALfontsound;
+
+void ALfontsound_Construct(ALfontsound *self);
+void ALfontsound_Destruct(ALfontsound *self);
+
+
+inline struct ALfontsound *LookupFontsound(ALCdevice *device, ALuint id)
+{ return (struct ALfontsound*)LookupUIntMapKey(&device->FontsoundMap, id); }
+inline struct ALfontsound *RemoveFontsound(ALCdevice *device, ALuint id)
+{ return (struct ALfontsound*)RemoveUIntMapKey(&device->FontsoundMap, id); }
+
+void ReleaseALFontsounds(ALCdevice *device);
+
+
 typedef struct ALsfpreset {
     volatile RefCount ref;
 

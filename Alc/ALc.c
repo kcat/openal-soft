@@ -298,6 +298,9 @@ static const ALCfunction alcFunctions[] = {
     DECL(alGenInstrumentsSOFT),
     DECL(alDeleteInstrumentsSOFT),
     DECL(alIsInstrumentSOFT),
+    DECL(alGenFontsoundsSOFT),
+    DECL(alDeleteFontsoundsSOFT),
+    DECL(alIsFontsoundSOFT),
     DECL(alMidiSoundfontSOFT),
     DECL(alMidiEventSOFT),
     DECL(alMidiSysExSOFT),
@@ -1984,6 +1987,13 @@ static ALCvoid FreeDevice(ALCdevice *device)
     }
     ResetUIntMap(&device->InstrumentMap);
 
+    if(device->FontsoundMap.size > 0)
+    {
+        WARN("(%p) Deleting %d Fontsound(s)\n", device, device->FontsoundMap.size);
+        ReleaseALFontsounds(device);
+    }
+    ResetUIntMap(&device->FontsoundMap);
+
     free(device->Bs2b);
     device->Bs2b = NULL;
 
@@ -2923,6 +2933,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitUIntMap(&device->SfontMap, ~0);
     InitUIntMap(&device->PresetMap, ~0);
     InitUIntMap(&device->InstrumentMap, ~0);
+    InitUIntMap(&device->FontsoundMap, ~0);
 
     //Set output format
     device->FmtChans = DevFmtChannelsDefault;
@@ -3210,6 +3221,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     InitUIntMap(&device->SfontMap, ~0);
     InitUIntMap(&device->PresetMap, ~0);
     InitUIntMap(&device->InstrumentMap, ~0);
+    InitUIntMap(&device->FontsoundMap, ~0);
 
     device->DeviceName = NULL;
 
@@ -3390,6 +3402,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitUIntMap(&device->SfontMap, ~0);
     InitUIntMap(&device->PresetMap, ~0);
     InitUIntMap(&device->InstrumentMap, ~0);
+    InitUIntMap(&device->FontsoundMap, ~0);
 
     factory = ALCloopbackFactory_getFactory();
     device->Backend = V(factory,createBackend)(device, ALCbackend_Loopback);

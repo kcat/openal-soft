@@ -113,6 +113,132 @@ AL_API ALboolean AL_APIENTRY alIsFontsoundSOFT(ALuint id)
     return ret;
 }
 
+AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint UNUSED(value))
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALfontsound *sound;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sound=LookupFontsound(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(sound->ref != 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    switch(param)
+    {
+        default:
+            SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alFontsound2iSOFT(ALuint id, ALenum param, ALint value1, ALint value2)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALfontsound *sound;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sound=LookupFontsound(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(sound->ref != 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    switch(param)
+    {
+        case AL_KEY_RANGE_SOFT:
+            if(!(value1 >= 0 && value1 <= 127 && value2 >= 0 && value2 <= 127))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->MinKey = value1;
+            sound->MaxKey = value2;
+            break;
+
+        case AL_VELOCITY_RANGE_SOFT:
+            if(!(value1 >= 0 && value1 <= 127 && value2 >= 0 && value2 <= 127))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->MinVelocity = value1;
+            sound->MaxVelocity = value2;
+            break;
+
+        default:
+            SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *values)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALfontsound *sound;
+
+    switch(param)
+    {
+        case AL_KEY_RANGE_SOFT:
+        case AL_VELOCITY_RANGE_SOFT:
+            alFontsound2iSOFT(id, param, values[0], values[1]);
+            return;
+    }
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sound=LookupFontsound(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(sound->ref != 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    switch(param)
+    {
+        default:
+            SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *values)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    const ALfontsound *sound;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sound=LookupFontsound(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    switch(param)
+    {
+        case AL_KEY_RANGE_SOFT:
+            values[0] = sound->MinKey;
+            values[1] = sound->MaxKey;
+            break;
+
+        case AL_VELOCITY_RANGE_SOFT:
+            values[0] = sound->MinVelocity;
+            values[1] = sound->MaxVelocity;
+            break;
+
+        default:
+            SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
 
 /* ReleaseALFontsounds
  *

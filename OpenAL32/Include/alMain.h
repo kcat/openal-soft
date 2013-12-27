@@ -37,6 +37,8 @@
 #define AL_PRESETS_SOFT                          0x9994
 #define AL_FONTSOUNDS_SIZE_SOFT                  0x9993
 #define AL_FONTSOUNDS_SOFT                       0x9992
+#define AL_KEY_RANGE_SOFT                        0x002B
+#define AL_VELOCITY_RANGE_SOFT                   0x002C
 #define AL_FORMAT_TYPE_SOFT                      0x1991
 #define AL_NOTEOFF_SOFT                          0x0080
 #define AL_NOTEON_SOFT                           0x0090
@@ -63,6 +65,10 @@ typedef void (AL_APIENTRY*LPALGETPRESETIVSOFT)(ALuint id, ALenum param, ALint *v
 typedef void (AL_APIENTRY*LPALGENFONTSOUNDSSOFT)(ALsizei n, ALuint *ids);
 typedef void (AL_APIENTRY*LPALDELETEFONTSOUNDSSOFT)(ALsizei n, const ALuint *ids);
 typedef ALboolean (AL_APIENTRY*LPALISFONTSOUNDSOFT)(ALuint id);
+typedef void (AL_APIENTRY*LPALFONTSOUNDISOFT)(ALuint id, ALenum param, ALint value);
+typedef void (AL_APIENTRY*LPALFONTSOUND2ISOFT)(ALuint id, ALenum param, ALint value1, ALint value2);
+typedef void (AL_APIENTRY*LPALFONTSOUNDIVSOFT)(ALuint id, ALenum param, const ALint *values);
+typedef void (AL_APIENTRY*LPALGETFONTSOUNDIVSOFT)(ALuint id, ALenum param, ALint *values);
 typedef void (AL_APIENTRY*LPALMIDISOUNDFONTSOFT)(const char *filename);
 typedef void (AL_APIENTRY*LPALMIDIEVENTSOFT)(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
 typedef void (AL_APIENTRY*LPALMIDISYSEXSOFT)(ALuint64SOFT time, const ALbyte *data, ALsizei size);
@@ -94,6 +100,10 @@ AL_API void AL_APIENTRY alPresetFontsoundsSOFT(ALuint id, ALsizei count, const A
 AL_API void AL_APIENTRY alGenFontsoundsSOFT(ALsizei n, ALuint *ids);
 AL_API void AL_APIENTRY alDeleteFontsoundsSOFT(ALsizei n, const ALuint *ids);
 AL_API ALboolean AL_APIENTRY alIsFontsoundSOFT(ALuint id);
+AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value);
+AL_API void AL_APIENTRY alFontsound2iSOFT(ALuint id, ALenum param, ALint value1, ALint value2);
+AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *values);
+AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *values);
 
 AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename);
 AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);

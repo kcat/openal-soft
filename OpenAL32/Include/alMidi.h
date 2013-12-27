@@ -8,11 +8,6 @@
 extern "C" {
 #endif
 
-typedef struct ALsfgenerator {
-    ALenum Generator;
-    ALint Value;
-} ALsfgenerator;
-
 typedef struct ALsfmodulator {
     ALenum SourceOp;
     ALenum DestOp;
@@ -28,14 +23,6 @@ typedef struct ALfontsound {
     ALint MinKey, MaxKey;
     ALint MinVelocity, MaxVelocity;
 
-    ALsfgenerator *Generators;
-    ALsizei NumGenerators;
-    ALsizei GeneratorsMax;
-
-    ALsfmodulator *Modulators;
-    ALsizei NumModulators;
-    ALsizei ModulatorsMax;
-
     ALuint Start;
     ALuint End;
     ALuint LoopStart;
@@ -43,8 +30,12 @@ typedef struct ALfontsound {
     ALuint SampleRate;
     ALubyte PitchKey;
     ALbyte PitchCorrection;
-    ALint SampleLink;
     ALenum SampleType;
+    struct ALfontsound *Link;
+
+    ALsfmodulator *Modulators;
+    ALsizei NumModulators;
+    ALsizei ModulatorsMax;
 
     ALuint id;
 } ALfontsound;

@@ -252,14 +252,6 @@ void ALfontsound_Construct(ALfontsound *self)
     self->MinVelocity = 0;
     self->MaxVelocity = 127;
 
-    self->Generators = NULL;
-    self->NumGenerators = 0;
-    self->GeneratorsMax = 0;
-
-    self->Modulators = NULL;
-    self->NumModulators = 0;
-    self->ModulatorsMax = 0;
-
     self->Start = 0;
     self->End = 0;
     self->LoopStart = 0;
@@ -267,59 +259,29 @@ void ALfontsound_Construct(ALfontsound *self)
     self->SampleRate = 0;
     self->PitchKey = 0;
     self->PitchCorrection = 0;
-    self->SampleLink = 0;
     self->SampleType = AL_NONE;
+    self->Link = NULL;
+
+    self->Modulators = NULL;
+    self->NumModulators = 0;
+    self->ModulatorsMax = 0;
 
     self->id = 0;
 }
 
 void ALfontsound_Destruct(ALfontsound *self)
 {
+    FreeThunkEntry(self->id);
+    self->id = 0;
+
+    if(self->Link)
+        DecrementRef(&self->Link->ref);
+    self->Link = NULL;
+
     free(self->Modulators);
     self->Modulators = NULL;
     self->NumModulators = 0;
     self->ModulatorsMax = 0;
-
-    free(self->Generators);
-    self->Generators = NULL;
-    self->NumGenerators = 0;
-    self->GeneratorsMax = 0;
-
-    FreeThunkEntry(self->id);
-    self->id = 0;
-}
-
-ALenum ALfontsound_addGenerator(ALfontsound *self, ALenum generator, ALint value)
-{
-    ALsizei i;
-    for(i = 0;i < self->NumGenerators;i++)
-    {
-        if(self->Generators[i].Generator == generator)
-        {
-            self->Generators[i].Value = value;
-            return AL_NO_ERROR;
-        }
-    }
-
-    if(self->NumGenerators == self->GeneratorsMax)
-    {
-        ALsizei newmax = 0;
-        ALvoid *temp = NULL;
-
-        newmax = (self->GeneratorsMax ? self->GeneratorsMax<<1 : 1);
-        if(newmax > self->GeneratorsMax)
-            temp = realloc(self->Generators, newmax * sizeof(ALsfgenerator));
-        if(!temp) return AL_OUT_OF_MEMORY;
-
-        self->Generators = temp;
-        self->GeneratorsMax = newmax;
-    }
-
-    self->Generators[self->NumGenerators].Generator = generator;
-    self->Generators[self->NumGenerators].Value = value;
-    self->NumGenerators++;
-
-    return AL_NO_ERROR;
 }
 
 ALenum ALfontsound_addModulator(ALfontsound *self, ALenum sourceop, ALenum destop, ALint amount, ALenum amtsourceop, ALenum transop)

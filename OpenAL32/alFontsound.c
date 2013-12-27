@@ -165,7 +165,7 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
             break;
 
         case AL_SAMPLE_TYPE_SOFT:
-            if(!(value == 1))
+            if(!(value >= 1 && value <= 4))
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
             sound->SampleType = value;
             break;

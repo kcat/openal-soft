@@ -9,6 +9,7 @@
 
 #include "alMain.h"
 #include "alError.h"
+#include "alMidi.h"
 #include "evtqueue.h"
 #include "rwlock.h"
 #include "alu.h"
@@ -27,8 +28,251 @@
 #define CTRL_ALLNOTESOFF     (123)
 
 
+typedef struct FSample {
+    DERIVE_FROM_TYPE(fluid_sample_t);
+
+    ALfontsound *Sound;
+
+    fluid_mod_t *Mods;
+    ALsizei NumMods;
+} FSample;
+
+static void FSample_Construct(FSample *self, ALfontsound *sound, ALsoundfont *sfont)
+{
+    fluid_sample_t *sample = STATIC_CAST(fluid_sample_t, self);
+    memset(sample->name, 0, sizeof(sample->name));
+    sample->start = sound->Start;
+    sample->end = sound->End;
+    sample->loopstart = sound->LoopStart;
+    sample->loopend = sound->LoopEnd;
+    sample->samplerate = sound->SampleRate;
+    sample->origpitch = sound->PitchKey;
+    sample->pitchadj = sound->PitchCorrection;
+    sample->sampletype = sound->SampleType;
+    sample->valid = 1;
+    sample->data = sfont->Samples;
+
+    sample->amplitude_that_reaches_noise_floor_is_valid = 0;
+    sample->amplitude_that_reaches_noise_floor = 0.0;
+
+    sample->refcount = 0;
+
+    sample->notify = NULL;
+
+    sample->userdata = self;
+
+    self->Sound = sound;
+
+    self->Mods = NULL;
+    self->NumMods = 0;
+}
+
+static void FSample_Destruct(FSample *self)
+{
+    free(self->Mods);
+    self->Mods = NULL;
+    self->NumMods = 0;
+}
+
+
+typedef struct FPreset {
+    DERIVE_FROM_TYPE(fluid_preset_t);
+
+    char Name[16];
+
+    int Preset;
+    int Bank;
+
+    FSample *Samples;
+    ALsizei NumSamples;
+} FPreset;
+
+static char* FPreset_getName(fluid_preset_t *preset);
+static int FPreset_getPreset(fluid_preset_t *preset);
+static int FPreset_getBank(fluid_preset_t *preset);
+static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int channel, int key, int velocity);
+
+static void FPreset_Construct(FPreset *self, ALsfpreset *preset, fluid_sfont_t *parent, ALsoundfont *sfont)
+{
+    STATIC_CAST(fluid_preset_t, self)->data = self;
+    STATIC_CAST(fluid_preset_t, self)->sfont = parent;
+    STATIC_CAST(fluid_preset_t, self)->free = NULL;
+    STATIC_CAST(fluid_preset_t, self)->get_name = FPreset_getName;
+    STATIC_CAST(fluid_preset_t, self)->get_banknum = FPreset_getBank;
+    STATIC_CAST(fluid_preset_t, self)->get_num = FPreset_getPreset;
+    STATIC_CAST(fluid_preset_t, self)->noteon = FPreset_noteOn;
+    STATIC_CAST(fluid_preset_t, self)->notify = NULL;
+
+    memset(self->Name, 0, sizeof(self->Name));
+    self->Preset = preset->Preset;
+    self->Bank = preset->Bank;
+
+    self->NumSamples = 0;
+    self->Samples = calloc(1, preset->NumSounds * sizeof(self->Samples[0]));
+    if(self->Samples)
+    {
+        ALsizei i;
+        self->NumSamples = preset->NumSounds;
+        for(i = 0;i < self->NumSamples;i++)
+            FSample_Construct(&self->Samples[i], preset->Sounds[i], sfont);
+    }
+}
+
+static void FPreset_Destruct(FPreset *self)
+{
+    ALsizei i;
+
+    for(i = 0;i < self->NumSamples;i++)
+        FSample_Destruct(&self->Samples[i]);
+    free(self->Samples);
+    self->Samples = NULL;
+    self->NumSamples = 0;
+}
+
+static char* FPreset_getName(fluid_preset_t *preset)
+{
+    return ((FPreset*)preset->data)->Name;
+}
+
+static int FPreset_getPreset(fluid_preset_t *preset)
+{
+    return ((FPreset*)preset->data)->Preset;
+}
+
+static int FPreset_getBank(fluid_preset_t *preset)
+{
+    return ((FPreset*)preset->data)->Bank;
+}
+
+static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int channel, int key, int vel)
+{
+    FPreset *self = ((FPreset*)preset->data);
+    ALsizei i;
+
+    for(i = 0;i < self->NumSamples;i++)
+    {
+        FSample *sample = &self->Samples[i];
+        ALfontsound *sound = sample->Sound;
+        fluid_voice_t *voice;
+        ALsizei m;
+
+        if(!(key >= sound->MinKey && key <= sound->MaxKey && vel >= sound->MinVelocity && vel <= sound->MaxVelocity))
+            continue;
+
+        voice = fluid_synth_alloc_voice(synth, STATIC_CAST(fluid_sample_t, sample), channel, key, vel);
+        if(voice == NULL)
+            return FLUID_FAILED;
+
+        //fluid_voice_gen_set(voice, );
+        for(m = 0;m < sample->NumMods;m++)
+            fluid_voice_add_mod(voice, &sample->Mods[m], FLUID_VOICE_OVERWRITE);
+
+        fluid_synth_start_voice(synth, voice);
+    }
+
+    return FLUID_OK;
+}
+
+
+typedef struct FSfont {
+    DERIVE_FROM_TYPE(fluid_sfont_t);
+
+    char Name[16];
+
+    FPreset *Presets;
+    ALsizei NumPresets;
+
+    ALsizei CurrentPos;
+} FSfont;
+
+static int FSfont_free(fluid_sfont_t *sfont);
+static char* FSfont_getName(fluid_sfont_t *sfont);
+static fluid_preset_t* FSfont_getPreset(fluid_sfont_t *sfont, unsigned int bank, unsigned int prenum);
+static void FSfont_iterStart(fluid_sfont_t *sfont);
+static int FSfont_iterNext(fluid_sfont_t *sfont, fluid_preset_t *preset);
+
+static void FSfont_Construct(FSfont *self, ALsoundfont *sfont)
+{
+    STATIC_CAST(fluid_sfont_t, self)->data = self;
+    STATIC_CAST(fluid_sfont_t, self)->id = FLUID_FAILED;
+    STATIC_CAST(fluid_sfont_t, self)->free = FSfont_free;
+    STATIC_CAST(fluid_sfont_t, self)->get_name = FSfont_getName;
+    STATIC_CAST(fluid_sfont_t, self)->get_preset = FSfont_getPreset;
+    STATIC_CAST(fluid_sfont_t, self)->iteration_start = FSfont_iterStart;
+    STATIC_CAST(fluid_sfont_t, self)->iteration_next = FSfont_iterNext;
+
+    memset(self->Name, 0, sizeof(self->Name));
+    self->CurrentPos = 0;
+    self->NumPresets = 0;
+    self->Presets = calloc(1, sfont->NumPresets * sizeof(self->Presets[0]));
+    if(self->Presets)
+    {
+        ALsizei i;
+        self->NumPresets = sfont->NumPresets;
+        for(i = 0;i < self->NumPresets;i++)
+            FPreset_Construct(&self->Presets[i], sfont->Presets[i], STATIC_CAST(fluid_sfont_t, self), sfont);
+    }
+}
+
+static void FSfont_Destruct(FSfont *self)
+{
+    ALsizei i;
+
+    for(i = 0;i < self->NumPresets;i++)
+        FPreset_Destruct(&self->Presets[i]);
+    free(self->Presets);
+    self->Presets = NULL;
+    self->NumPresets = 0;
+    self->CurrentPos = 0;
+}
+
+static int FSfont_free(fluid_sfont_t *sfont)
+{
+    FSfont *self = STATIC_UPCAST(FSfont, fluid_sfont_t, sfont);
+    FSfont_Destruct(self);
+    free(self);
+    return 0;
+}
+
+static char* FSfont_getName(fluid_sfont_t *sfont)
+{
+    return STATIC_UPCAST(FSfont, fluid_sfont_t, sfont)->Name;
+}
+
+static fluid_preset_t *FSfont_getPreset(fluid_sfont_t *sfont, unsigned int bank, unsigned int prenum)
+{
+    FSfont *self = STATIC_UPCAST(FSfont, fluid_sfont_t, sfont);
+    ALsizei i;
+
+    for(i = 0;i < self->NumPresets;i++)
+    {
+        FPreset *preset = &self->Presets[i];
+        if(preset->Bank == (int)bank && preset->Preset == (int)prenum)
+            return STATIC_CAST(fluid_preset_t, preset);
+    }
+
+    return NULL;
+}
+
+static void FSfont_iterStart(fluid_sfont_t *sfont)
+{
+    STATIC_UPCAST(FSfont, fluid_sfont_t, sfont)->CurrentPos = 0;
+}
+
+static int FSfont_iterNext(fluid_sfont_t *sfont, fluid_preset_t *preset)
+{
+    FSfont *self = STATIC_UPCAST(FSfont, fluid_sfont_t, sfont);
+    if(self->CurrentPos >= self->NumPresets)
+        return 0;
+    *preset = *STATIC_CAST(fluid_preset_t, &self->Presets[self->CurrentPos++]);
+    preset->free = NULL;
+    return 1;
+}
+
+
 typedef struct FSynth {
     DERIVE_FROM_TYPE(MidiSynth);
+    DERIVE_FROM_TYPE(fluid_sfloader_t);
 
     fluid_settings_t *Settings;
     fluid_synth_t *Synth;
@@ -42,7 +286,7 @@ static void FSynth_Destruct(FSynth *self);
 static ALboolean FSynth_init(FSynth *self, ALCdevice *device);
 static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename);
 static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename);
-static DECLARE_FORWARD3(FSynth, MidiSynth, ALenum, selectSoundfonts, ALCdevice*, ALsizei, const ALuint*)
+static ALenum FSynth_selectSoundfonts(FSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids);
 static void FSynth_setGain(FSynth *self, ALfloat gain);
 static void FSynth_setState(FSynth *self, ALenum state);
 static void FSynth_stop(FSynth *self);
@@ -53,11 +297,17 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
 static void FSynth_Delete(FSynth *self);
 DEFINE_MIDISYNTH_VTABLE(FSynth);
 
+static fluid_sfont_t *FSynth_loadSfont(fluid_sfloader_t *loader, const char *filename);
+
 
 static void FSynth_Construct(FSynth *self, ALCdevice *device)
 {
     MidiSynth_Construct(STATIC_CAST(MidiSynth, self), device);
     SET_VTABLE2(FSynth, MidiSynth, self);
+
+    STATIC_CAST(fluid_sfloader_t, self)->data = self;
+    STATIC_CAST(fluid_sfloader_t, self)->free = NULL;
+    STATIC_CAST(fluid_sfloader_t, self)->load = FSynth_loadSfont;
 
     self->Settings = NULL;
     self->Synth = NULL;
@@ -101,9 +351,32 @@ static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
         return AL_FALSE;
     }
 
+    fluid_synth_add_sfloader(self->Synth, STATIC_CAST(fluid_sfloader_t, self));
+
     return AL_TRUE;
 }
 
+
+static fluid_sfont_t *FSynth_loadSfont(fluid_sfloader_t *loader, const char *filename)
+{
+    FSynth *self = STATIC_UPCAST(FSynth, fluid_sfloader_t, loader);
+    FSfont *sfont;
+    int idx;
+
+    if(!filename || sscanf(filename, "_al_internal %d", &idx) != 1)
+        return NULL;
+    if(idx >= STATIC_CAST(MidiSynth, self)->NumSoundfonts)
+    {
+        ERR("Received invalid soundfont index %d (max: %d)\n", idx, STATIC_CAST(MidiSynth, self)->NumSoundfonts);
+        return NULL;
+    }
+
+    sfont = calloc(1, sizeof(sfont[0]));
+    if(!sfont) return NULL;
+
+    FSfont_Construct(sfont, STATIC_CAST(MidiSynth, self)->Soundfonts[idx]);
+    return STATIC_CAST(fluid_sfont_t, sfont);
+}
 
 static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename)
 {
@@ -136,6 +409,31 @@ static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
     return AL_NO_ERROR;
 }
 
+static ALenum FSynth_selectSoundfonts(FSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids)
+{
+    int fontid = FLUID_FAILED;
+    ALenum ret;
+
+    ret = MidiSynth_selectSoundfonts(STATIC_CAST(MidiSynth, self), device, count, ids);
+    if(ret != AL_NO_ERROR) return ret;
+
+    if(STATIC_CAST(MidiSynth, self)->NumSoundfonts > 0)
+    {
+        char name[16];
+        snprintf(name, sizeof(name), "_al_internal %d", 0);
+
+        fontid = fluid_synth_sfload(self->Synth, name, 1);
+        if(fontid == FLUID_FAILED)
+            ERR("Failed to load selected soundfont\n");
+    }
+
+    if(self->FontID != FLUID_FAILED)
+        fluid_synth_sfunload(self->Synth, self->FontID, 1);
+    self->FontID = fontid;
+
+    return ret;
+}
+
 
 static void FSynth_setGain(FSynth *self, ALfloat gain)
 {
@@ -148,9 +446,6 @@ static void FSynth_setGain(FSynth *self, ALfloat gain)
 
 static void FSynth_setState(FSynth *self, ALenum state)
 {
-    if(state == AL_PLAYING && self->FontID == FLUID_FAILED)
-        FSynth_loadSoundfont(self, NULL);
-
     MidiSynth_setState(STATIC_CAST(MidiSynth, self), state);
 }
 

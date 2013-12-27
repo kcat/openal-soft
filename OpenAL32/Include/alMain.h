@@ -37,6 +37,15 @@
 #define AL_PRESETS_SOFT                          0x9994
 #define AL_FONTSOUNDS_SIZE_SOFT                  0x9993
 #define AL_FONTSOUNDS_SOFT                       0x9992
+#define AL_SAMPLE_START_SOFT                     0x2000
+#define AL_SAMPLE_END_SOFT                       0x2001
+#define AL_SAMPLE_LOOP_START_SOFT                0x2002
+#define AL_SAMPLE_LOOP_END_SOFT                  0x2003
+#define AL_SAMPLE_RATE_SOFT                      0x2004
+#define AL_BASE_KEY_SOFT                         0x2005
+#define AL_KEY_CORRECTION_SOFT                   0x2006
+#define AL_SAMPLE_TYPE_SOFT                      0x2007
+#define AL_FONTSOUND_LINK_SOFT                   0x2008
 #define AL_KEY_RANGE_SOFT                        0x002B
 #define AL_VELOCITY_RANGE_SOFT                   0x002C
 #define AL_FORMAT_TYPE_SOFT                      0x1991

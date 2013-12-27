@@ -113,11 +113,12 @@ AL_API ALboolean AL_APIENTRY alIsFontsoundSOFT(ALuint id)
     return ret;
 }
 
-AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint UNUSED(value))
+AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
 {
     ALCdevice *device;
     ALCcontext *context;
     ALfontsound *sound;
+    ALfontsound *link;
 
     context = GetContextRef();
     if(!context) return;
@@ -129,6 +130,60 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint UNUSED(v
         SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     switch(param)
     {
+        case AL_SAMPLE_START_SOFT:
+            sound->Start = value;
+            break;
+
+        case AL_SAMPLE_END_SOFT:
+            sound->End = value;
+            break;
+
+        case AL_SAMPLE_LOOP_START_SOFT:
+            sound->LoopStart = value;
+            break;
+
+        case AL_SAMPLE_LOOP_END_SOFT:
+            sound->LoopEnd = value;
+            break;
+
+        case AL_SAMPLE_RATE_SOFT:
+            if(!(value > 0))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->SampleRate = value;
+            break;
+
+        case AL_BASE_KEY_SOFT:
+            if(!((value >= 0 && value <= 127) || value == 255))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->PitchKey = value;
+            break;
+
+        case AL_KEY_CORRECTION_SOFT:
+            if(!(value > -100 && value < 100))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->PitchCorrection = value;
+            break;
+
+        case AL_SAMPLE_TYPE_SOFT:
+            if(!(value == 1))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->SampleType = value;
+            break;
+
+        case AL_FONTSOUND_LINK_SOFT:
+            if(!value)
+                link = NULL;
+            else
+            {
+                link = LookupFontsound(device, value);
+                if(!link)
+                    SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            }
+            if(link) IncrementRef(&link->ref);
+            link = ExchangePtr((XchgPtr*)&sound->Link, link);
+            if(link) DecrementRef(&link->ref);
+            break;
+
         default:
             SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
@@ -187,6 +242,18 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
         case AL_VELOCITY_RANGE_SOFT:
             alFontsound2iSOFT(id, param, values[0], values[1]);
             return;
+
+        case AL_SAMPLE_START_SOFT:
+        case AL_SAMPLE_END_SOFT:
+        case AL_SAMPLE_LOOP_START_SOFT:
+        case AL_SAMPLE_LOOP_END_SOFT:
+        case AL_SAMPLE_RATE_SOFT:
+        case AL_BASE_KEY_SOFT:
+        case AL_KEY_CORRECTION_SOFT:
+        case AL_SAMPLE_TYPE_SOFT:
+        case AL_FONTSOUND_LINK_SOFT:
+            alFontsoundiSOFT(id, param, values[0]);
+            return;
     }
 
     context = GetContextRef();
@@ -229,6 +296,42 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
         case AL_VELOCITY_RANGE_SOFT:
             values[0] = sound->MinVelocity;
             values[1] = sound->MaxVelocity;
+            break;
+
+        case AL_SAMPLE_START_SOFT:
+            values[0] = sound->Start;
+            break;
+
+        case AL_SAMPLE_END_SOFT:
+            values[0] = sound->End;
+            break;
+
+        case AL_SAMPLE_LOOP_START_SOFT:
+            values[0] = sound->LoopStart;
+            break;
+
+        case AL_SAMPLE_LOOP_END_SOFT:
+            values[0] = sound->LoopEnd;
+            break;
+
+        case AL_SAMPLE_RATE_SOFT:
+            values[0] = sound->SampleRate;
+            break;
+
+        case AL_BASE_KEY_SOFT:
+            values[0] = sound->PitchKey;
+            break;
+
+        case AL_KEY_CORRECTION_SOFT:
+            values[0] = sound->PitchCorrection;
+            break;
+
+        case AL_SAMPLE_TYPE_SOFT:
+            values[0] = sound->SampleType;
+            break;
+
+        case AL_FONTSOUND_LINK_SOFT:
+            values[0] = (sound->Link ? sound->Link->id : 0);
             break;
 
         default:

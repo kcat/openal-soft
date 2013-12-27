@@ -276,7 +276,8 @@ typedef struct FSynth {
 
     fluid_settings_t *Settings;
     fluid_synth_t *Synth;
-    int FontID;
+    int *FontIDs;
+    ALsizei NumFontIDs;
 
     ALboolean ForceGM2BankSelect;
 } FSynth;
@@ -311,15 +312,20 @@ static void FSynth_Construct(FSynth *self, ALCdevice *device)
 
     self->Settings = NULL;
     self->Synth = NULL;
-    self->FontID = FLUID_FAILED;
+    self->FontIDs = NULL;
+    self->NumFontIDs = 0;
     self->ForceGM2BankSelect = AL_FALSE;
 }
 
 static void FSynth_Destruct(FSynth *self)
 {
-    if(self->FontID != FLUID_FAILED)
-        fluid_synth_sfunload(self->Synth, self->FontID, 0);
-    self->FontID = FLUID_FAILED;
+    ALsizei i;
+
+    for(i = 0;i < self->NumFontIDs;i++)
+        fluid_synth_sfunload(self->Synth, self->FontIDs[i], 0);
+    free(self->FontIDs);
+    self->FontIDs = NULL;
+    self->NumFontIDs = 0;
 
     if(self->Synth != NULL)
         delete_fluid_synth(self->Synth);
@@ -390,46 +396,69 @@ static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename)
 
 static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
 {
-    int fontid;
+    int *fontid;
+    ALsizei count;
+    ALsizei i;
 
     filename = MidiSynth_getFontName(STATIC_CAST(MidiSynth, self), filename);
     if(!filename[0]) return AL_INVALID_VALUE;
 
-    fontid = fluid_synth_sfload(self->Synth, filename, 1);
-    if(fontid == FLUID_FAILED)
+    fontid = malloc(sizeof(fontid[0]));
+    if(!fontid) return AL_OUT_OF_MEMORY;
+
+    fontid[0] = fluid_synth_sfload(self->Synth, filename, 1);
+    if(fontid[0] == FLUID_FAILED)
     {
         ERR("Failed to load soundfont '%s'\n", filename);
+        free(fontid);
         return AL_INVALID_VALUE;
     }
 
-    if(self->FontID != FLUID_FAILED)
-        fluid_synth_sfunload(self->Synth, self->FontID, 1);
-    self->FontID = fontid;
+    fontid = ExchangePtr((XchgPtr*)&self->FontIDs, fontid);
+    count = ExchangeInt(&self->NumFontIDs, 1);
+
+    for(i = 0;i < count;i++)
+        fluid_synth_sfunload(self->Synth, fontid[i], 1);
+    free(fontid);
 
     return AL_NO_ERROR;
 }
 
 static ALenum FSynth_selectSoundfonts(FSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids)
 {
-    int fontid = FLUID_FAILED;
+    int *fontid;
     ALenum ret;
+    ALsizei i;
 
     ret = MidiSynth_selectSoundfonts(STATIC_CAST(MidiSynth, self), device, count, ids);
     if(ret != AL_NO_ERROR) return ret;
 
-    if(STATIC_CAST(MidiSynth, self)->NumSoundfonts > 0)
+    fontid = malloc(count * sizeof(fontid[0]));
+    if(fontid)
     {
-        char name[16];
-        snprintf(name, sizeof(name), "_al_internal %d", 0);
+        for(i = 0;i < STATIC_CAST(MidiSynth, self)->NumSoundfonts;i++)
+        {
+            char name[16];
+            snprintf(name, sizeof(name), "_al_internal %d", i);
 
-        fontid = fluid_synth_sfload(self->Synth, name, 1);
-        if(fontid == FLUID_FAILED)
-            ERR("Failed to load selected soundfont\n");
+            fontid[i] = fluid_synth_sfload(self->Synth, name, 1);
+            if(fontid[i] == FLUID_FAILED)
+                ERR("Failed to load selected soundfont %d\n", i);
+        }
+
+        fontid = ExchangePtr((XchgPtr*)&self->FontIDs, fontid);
+        count = ExchangeInt(&self->NumFontIDs, count);
+    }
+    else
+    {
+        ERR("Failed to allocate space for %d font IDs!\n", count);
+        fontid = ExchangePtr((XchgPtr*)&self->FontIDs, NULL);
+        count = ExchangeInt(&self->NumFontIDs, 0);
     }
 
-    if(self->FontID != FLUID_FAILED)
-        fluid_synth_sfunload(self->Synth, self->FontID, 1);
-    self->FontID = fontid;
+    for(i = 0;i < count;i++)
+        fluid_synth_sfunload(self->Synth, fontid[i], 1);
+    free(fontid);
 
     return ret;
 }

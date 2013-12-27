@@ -33,10 +33,12 @@
 #define AL_MIDI_GAIN_SOFT                        0x9998
 #define AL_MIDI_PRESET_SOFT                      0x9997
 #define AL_MIDI_BANK_SOFT                        0x9996
-#define AL_PRESETS_SIZE_SOFT                     0x9995
-#define AL_PRESETS_SOFT                          0x9994
-#define AL_FONTSOUNDS_SIZE_SOFT                  0x9993
-#define AL_FONTSOUNDS_SOFT                       0x9992
+#define AL_SOUNDFONTS_SIZE_SOFT                  0x9995
+#define AL_SOUNDFONTS_SOFT                       0x9994
+#define AL_PRESETS_SIZE_SOFT                     0x9993
+#define AL_PRESETS_SOFT                          0x9992
+#define AL_FONTSOUNDS_SIZE_SOFT                  0x9991
+#define AL_FONTSOUNDS_SOFT                       0x9990
 #define AL_SAMPLE_START_SOFT                     0x2000
 #define AL_SAMPLE_END_SOFT                       0x2001
 #define AL_SAMPLE_LOOP_START_SOFT                0x2002
@@ -79,6 +81,7 @@ typedef void (AL_APIENTRY*LPALFONTSOUND2ISOFT)(ALuint id, ALenum param, ALint va
 typedef void (AL_APIENTRY*LPALFONTSOUNDIVSOFT)(ALuint id, ALenum param, const ALint *values);
 typedef void (AL_APIENTRY*LPALGETFONTSOUNDIVSOFT)(ALuint id, ALenum param, ALint *values);
 typedef void (AL_APIENTRY*LPALMIDISOUNDFONTSOFT)(const char *filename);
+typedef void (AL_APIENTRY*LPALMIDISOUNDFONTSSOFT)(ALsizei count, const ALuint *ids);
 typedef void (AL_APIENTRY*LPALMIDIEVENTSOFT)(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
 typedef void (AL_APIENTRY*LPALMIDISYSEXSOFT)(ALuint64SOFT time, const ALbyte *data, ALsizei size);
 typedef void (AL_APIENTRY*LPALMIDIPLAYSOFT)(void);
@@ -115,6 +118,7 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
 AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *values);
 
 AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename);
+AL_API void AL_APIENTRY alMidiSoundfontsSOFT(ALsizei count, const ALuint *ids);
 AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
 AL_API void AL_APIENTRY alMidiSysExSOFT(ALuint64SOFT time, const ALbyte *data, ALsizei size);
 AL_API void AL_APIENTRY alMidiPlaySOFT(void);
@@ -214,6 +218,10 @@ rettype T1##_##func(T1 *obj, argtype1 a)                                      \
 #define DECLARE_FORWARD2(T1, T2, rettype, func, argtype1, argtype2)           \
 rettype T1##_##func(T1 *obj, argtype1 a, argtype2 b)                          \
 { return T2##_##func(STATIC_CAST(T2, obj), a, b); }
+
+#define DECLARE_FORWARD3(T1, T2, rettype, func, argtype1, argtype2, argtype3) \
+rettype T1##_##func(T1 *obj, argtype1 a, argtype2 b, argtype3 c)              \
+{ return T2##_##func(STATIC_CAST(T2, obj), a, b, c); }
 
 
 #define GET_VTABLE1(T1)     (&(T1##_vtable))

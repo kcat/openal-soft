@@ -304,6 +304,7 @@ static const ALCfunction alcFunctions[] = {
     DECL(alFontsoundivSOFT),
     DECL(alGetFontsoundivSOFT),
     DECL(alMidiSoundfontSOFT),
+    DECL(alMidiSoundfontsSOFT),
     DECL(alMidiEventSOFT),
     DECL(alMidiSysExSOFT),
     DECL(alMidiPlaySOFT),

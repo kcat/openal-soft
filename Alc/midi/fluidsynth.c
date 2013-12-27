@@ -42,6 +42,7 @@ static void FSynth_Destruct(FSynth *self);
 static ALboolean FSynth_init(FSynth *self, ALCdevice *device);
 static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename);
 static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename);
+static DECLARE_FORWARD3(FSynth, MidiSynth, ALenum, selectSoundfonts, ALCdevice*, ALsizei, const ALuint*)
 static void FSynth_setGain(FSynth *self, ALfloat gain);
 static void FSynth_setState(FSynth *self, ALenum state);
 static void FSynth_stop(FSynth *self);

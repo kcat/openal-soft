@@ -124,6 +124,9 @@ void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
 
     RWLockInit(&self->Lock);
 
+    self->Soundfonts = NULL;
+    self->NumSoundfonts = 0;
+
     self->Gain = 1.0f;
     self->State = AL_INITIAL;
 
@@ -137,6 +140,14 @@ void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
 
 void MidiSynth_Destruct(MidiSynth *self)
 {
+    ALsizei i;
+
+    for(i = 0;i < self->NumSoundfonts;i++)
+        DecrementRef(&self->Soundfonts[i]->ref);
+    free(self->Soundfonts);
+    self->Soundfonts = NULL;
+    self->NumSoundfonts = 0;
+
     ResetEvtQueue(&self->EventQueue);
 }
 
@@ -150,6 +161,38 @@ const char *MidiSynth_getFontName(const MidiSynth* UNUSED(self), const char *fil
         WARN("No default soundfont found\n");
 
     return filename;
+}
+
+ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids)
+{
+    ALsoundfont **sfonts;
+    ALsizei i;
+
+    if(self->State != AL_INITIAL && self->State != AL_STOPPED)
+        return AL_INVALID_OPERATION;
+
+    sfonts = calloc(1, count * sizeof(sfonts[0]));
+    if(!sfonts) return AL_OUT_OF_MEMORY;
+
+    for(i = 0;i < count;i++)
+    {
+        if(!(sfonts[i]=LookupSfont(device, ids[i])))
+        {
+            free(sfonts);
+            return AL_INVALID_VALUE;
+        }
+    }
+
+    for(i = 0;i < count;i++)
+        IncrementRef(&sfonts[i]->ref);
+    sfonts = ExchangePtr((XchgPtr*)&self->Soundfonts, sfonts);
+    count = ExchangeInt(&self->NumSoundfonts, count);
+
+    for(i = 0;i < count;i++)
+        DecrementRef(&sfonts[i]->ref);
+    free(sfonts);
+
+    return AL_NO_ERROR;
 }
 
 extern inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain);

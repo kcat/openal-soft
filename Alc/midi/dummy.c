@@ -22,6 +22,7 @@ static void DSynth_Construct(DSynth *self, ALCdevice *device);
 static DECLARE_FORWARD(DSynth, MidiSynth, void, Destruct)
 static ALboolean DSynth_isSoundfont(DSynth *self, const char *filename);
 static ALenum DSynth_loadSoundfont(DSynth *self, const char *filename);
+static DECLARE_FORWARD3(DSynth, MidiSynth, ALenum, selectSoundfonts, ALCdevice*, ALsizei, const ALuint*)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, setGain, ALfloat)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, setState, ALenum)
 static DECLARE_FORWARD(DSynth, MidiSynth, void, stop)

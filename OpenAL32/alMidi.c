@@ -52,6 +52,38 @@ AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename)
     ALCcontext_DecRef(context);
 }
 
+AL_API void AL_APIENTRY alMidiSoundfontsSOFT(ALsizei count, const ALuint *ids)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    MidiSynth *synth;
+    ALenum err;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    if(count < 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    device = context->Device;
+    synth = device->Synth;
+
+    WriteLock(&synth->Lock);
+    if(synth->State == AL_PLAYING || synth->State == AL_PAUSED)
+        alSetError(context, AL_INVALID_OPERATION);
+    else
+    {
+        err = V(synth,selectSoundfonts)(device, count, ids);
+        if(err != AL_NO_ERROR)
+            alSetError(context, err);
+    }
+    WriteUnlock(&synth->Lock);
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+
 AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2)
 {
     ALCdevice *device;

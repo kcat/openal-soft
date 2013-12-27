@@ -27,6 +27,9 @@ typedef struct MidiSynth {
      */
     RWLock Lock;
 
+    struct ALsoundfont **Soundfonts;
+    ALsizei NumSoundfonts;
+
     volatile ALfloat Gain;
     volatile ALenum State;
 
@@ -36,6 +39,7 @@ typedef struct MidiSynth {
 void MidiSynth_Construct(MidiSynth *self, ALCdevice *device);
 void MidiSynth_Destruct(MidiSynth *self);
 const char *MidiSynth_getFontName(const MidiSynth *self, const char *filename);
+ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids);
 inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain) { self->Gain = gain; }
 inline ALfloat MidiSynth_getGain(const MidiSynth *self) { return self->Gain; }
 inline void MidiSynth_setState(MidiSynth *self, ALenum state) { ExchangeInt(&self->State, state); }
@@ -60,6 +64,7 @@ struct MidiSynthVtable {
 
     ALboolean (*const isSoundfont)(MidiSynth *self, const char *filename);
     ALenum (*const loadSoundfont)(MidiSynth *self, const char *filename);
+    ALenum (*const selectSoundfonts)(MidiSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids);
 
     void (*const setGain)(MidiSynth *self, ALfloat gain);
     void (*const setState)(MidiSynth *self, ALenum state);
@@ -77,6 +82,7 @@ struct MidiSynthVtable {
 DECLARE_THUNK(T, MidiSynth, void, Destruct)                                   \
 DECLARE_THUNK1(T, MidiSynth, ALboolean, isSoundfont, const char*)             \
 DECLARE_THUNK1(T, MidiSynth, ALenum, loadSoundfont, const char*)              \
+DECLARE_THUNK3(T, MidiSynth, ALenum, selectSoundfonts, ALCdevice*, ALsizei, const ALuint*) \
 DECLARE_THUNK1(T, MidiSynth, void, setGain, ALfloat)                          \
 DECLARE_THUNK1(T, MidiSynth, void, setState, ALenum)                          \
 DECLARE_THUNK(T, MidiSynth, void, stop)                                       \
@@ -90,6 +96,7 @@ static const struct MidiSynthVtable T##_MidiSynth_vtable = {                  \
                                                                               \
     T##_MidiSynth_isSoundfont,                                                \
     T##_MidiSynth_loadSoundfont,                                              \
+    T##_MidiSynth_selectSoundfonts,                                           \
     T##_MidiSynth_setGain,                                                    \
     T##_MidiSynth_setState,                                                   \
     T##_MidiSynth_stop,                                                       \

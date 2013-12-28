@@ -1001,6 +1001,7 @@ static void processInstrument(InstrumentHeader *inst, IDList *sounds, const Soun
 
 ALboolean loadSf2(Reader *stream, ALuint sfid)
 {
+    ALuint version = 0;
     Soundfont sfont;
     RiffHdr riff;
     RiffHdr list;
@@ -1024,11 +1025,36 @@ ALboolean loadSf2(Reader *stream, ALuint sfid)
         ERROR_GOTO(error, "Invalid Format, expected LIST (INFO) got '%c%c%c%c'\n", FOURCCARGS(list.mCode));
     if(list.mList != FOURCC('I','N','F','O'))
         ERROR_GOTO(error, "Invalid Format, expected INFO got '%c%c%c%c'\n", FOURCCARGS(list.mList));
-    /* FIXME: Check and load info chunks */
-    skip(stream, list.mSize);
+    while(list.mSize > 0 && !READERR(stream))
+    {
+        RiffHdr info;
+
+        RiffHdr_read(&info, stream);
+        list.mSize -= 8;
+        if(info.mCode == FOURCC('i','f','i','l'))
+        {
+            if(info.mSize != 4)
+                ERR("Invalid ifil chunk size: %d\n", info.mSize);
+            else
+            {
+                ALushort major = read_le16(stream);
+                ALushort minor = read_le16(stream);
+
+                info.mSize -= 4;
+                list.mSize -= 4;
+
+                version = (major<<16) | minor;
+            }
+        }
+        list.mSize -= info.mSize;
+        skip(stream, info.mSize);
+    }
 
     if(READERR(stream) != 0)
         ERROR_GOTO(error, "Error reading INFO chunk\n");
+    if(version>>16 != 2)
+        ERROR_GOTO(error, "Unsupported format version: %d.%02d\n", version>>16, version&0xffff);
+    TRACE("Loading SF2 format version: %d.%02d\n", version>>16, version&0xffff);
 
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('L','I','S','T'))

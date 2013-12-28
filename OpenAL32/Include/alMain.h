@@ -91,6 +91,7 @@ typedef void (AL_APIENTRY*LPALMIDIRESETSOFT)(void);
 typedef void (AL_APIENTRY*LPALMIDIGAINSOFT)(ALfloat value);
 typedef ALint64SOFT (AL_APIENTRY*LPALGETINTEGER64SOFT)(ALenum pname);
 typedef void (AL_APIENTRY*LPALGETINTEGER64VSOFT)(ALenum pname, ALint64SOFT *values);
+typedef void (AL_APIENTRY*LPALLOADSOUNDFONTSOFT)(ALuint id, size_t(*cb)(ALvoid*,size_t,ALvoid*), ALvoid *user);
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alGenSoundfontsSOFT(ALsizei n, ALuint *ids);
 AL_API void AL_APIENTRY alDeleteSoundfontsSOFT(ALsizei n, const ALuint *ids);
@@ -128,6 +129,7 @@ AL_API void AL_APIENTRY alMidiResetSOFT(void);
 AL_API void AL_APIENTRY alMidiGainSOFT(ALfloat value);
 AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname);
 AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values);
+AL_API void AL_APIENTRY alLoadSoundfontSOFT(ALuint id, size_t(*cb)(ALvoid*,size_t,ALvoid*), ALvoid *user);
 #endif
 #endif
 

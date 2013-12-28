@@ -314,6 +314,7 @@ static const ALCfunction alcFunctions[] = {
     DECL(alMidiGainSOFT),
     DECL(alGetInteger64SOFT),
     DECL(alGetInteger64vSOFT),
+    DECL(alLoadSoundfontSOFT),
 
     { NULL, NULL }
 };

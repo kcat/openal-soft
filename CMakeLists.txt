@@ -562,6 +562,7 @@ ENDIF()
 
 SET(ALC_OBJS  ${ALC_OBJS}
               Alc/midi/base.c
+              Alc/midi/sf2load.c
               Alc/midi/dummy.c
               Alc/midi/fluidsynth.c
 )

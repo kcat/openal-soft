@@ -83,6 +83,16 @@ done:
     ALCcontext_DecRef(context);
 }
 
+AL_API void AL_APIENTRY alLoadSoundfontSOFT(ALuint id, size_t(*cb)(ALvoid*,size_t,ALvoid*), ALvoid *user)
+{
+    Reader reader;
+    reader.cb = cb;
+    reader.ptr = user;
+    reader.error = 0;
+    loadSf2(&reader, id);
+}
+
+
 
 AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2)
 {

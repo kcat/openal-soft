@@ -9,6 +9,18 @@
 extern "C" {
 #endif
 
+typedef size_t (*ReaderCb)(void *ptr, size_t size, void *stream);
+typedef struct Reader {
+    ReaderCb cb;
+    void *ptr;
+    int error;
+} Reader;
+#define READ(x_, buf_, len_) ((x_)->cb((buf_), (len_), (x_)->ptr))
+#define READERR(x_)          ((x_)->error)
+
+ALboolean loadSf2(Reader *stream, ALuint sfid);
+
+
 struct MidiSynthVtable;
 
 typedef struct MidiSynth {

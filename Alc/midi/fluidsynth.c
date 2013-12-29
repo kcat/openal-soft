@@ -399,7 +399,7 @@ static fluid_sfont_t *FSynth_loadSfont(fluid_sfloader_t *loader, const char *fil
 
     if(!filename || sscanf(filename, "_al_internal %d", &idx) != 1)
         return NULL;
-    if(idx >= STATIC_CAST(MidiSynth, self)->NumSoundfonts)
+    if(idx < 0 || idx >= STATIC_CAST(MidiSynth, self)->NumSoundfonts)
     {
         ERR("Received invalid soundfont index %d (max: %d)\n", idx, STATIC_CAST(MidiSynth, self)->NumSoundfonts);
         return NULL;

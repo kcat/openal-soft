@@ -50,6 +50,9 @@
 #define AL_FONTSOUND_LINK_SOFT                   0x2008
 #define AL_KEY_RANGE_SOFT                        0x002B
 #define AL_VELOCITY_RANGE_SOFT                   0x002C
+#define AL_LOOP_MODE_SOFT                        0x0036
+#define AL_LOOP_CONTINUOUS_SOFT                  0x0001
+#define AL_LOOP_UNTIL_RELEASE_SOFT               0x0003
 #define AL_FORMAT_TYPE_SOFT                      0x1991
 #define AL_NOTEOFF_SOFT                          0x0080
 #define AL_NOTEON_SOFT                           0x0090

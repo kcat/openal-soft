@@ -828,7 +828,7 @@ static void fillZone(ALuint id, const GenModList *zone)
         0, /* 51 - corseTune */
         0, /* 52 - fineTune */
         0, /* 53 -  */
-        0, /* 54 - sampleModes */
+        AL_LOOP_MODE_SOFT, /* 54 - sampleModes */
         0, /* 55 -  */
         0, /* 56 - scaleTuning */
         0, /* 57 - exclusiveClass */
@@ -872,9 +872,12 @@ static void fillZone(ALuint id, const GenModList *zone)
                     param = Gen2Param[gen->mGenerator];
                 if(param)
                 {
-                    if(param == AL_BASE_KEY_SOFT && gen->mAmount == 0xffff)
+                    ALint value = (ALshort)gen->mAmount;
+                    if(param == AL_BASE_KEY_SOFT && value == -1)
                         break;
-                    alFontsoundiSOFT(id, param, (ALshort)gen->mAmount);
+                    if(param == AL_LOOP_MODE_SOFT && value == 2)
+                        value = 0;
+                    alFontsoundiSOFT(id, param, value);
                 }
                 else if(gen->mGenerator < 256)
                 {

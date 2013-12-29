@@ -28,6 +28,7 @@ typedef struct ALfontsound {
     ALuint LoopStart;
     ALuint LoopEnd;
     ALuint SampleRate;
+    ALenum LoopMode;
     ALubyte PitchKey;
     ALbyte PitchCorrection;
     ALenum SampleType;

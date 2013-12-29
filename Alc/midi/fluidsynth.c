@@ -163,7 +163,7 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         if(voice == NULL)
             return FLUID_FAILED;
 
-        //fluid_voice_gen_set(voice, );
+        fluid_voice_gen_set(voice, 54, sound->LoopMode);
         for(m = 0;m < sample->NumMods;m++)
             fluid_voice_add_mod(voice, &sample->Mods[m], FLUID_VOICE_OVERWRITE);
 

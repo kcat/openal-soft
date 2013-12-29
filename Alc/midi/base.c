@@ -300,6 +300,7 @@ void ALfontsound_Construct(ALfontsound *self)
     self->LoopStart = 0;
     self->LoopEnd = 0;
     self->SampleRate = 0;
+    self->LoopMode = AL_NONE;
     self->PitchKey = 0;
     self->PitchCorrection = 0;
     self->SampleType = AL_NONE;

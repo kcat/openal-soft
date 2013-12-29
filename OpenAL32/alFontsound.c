@@ -152,6 +152,13 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
             sound->SampleRate = value;
             break;
 
+        case AL_LOOP_MODE_SOFT:
+            if(!(value == AL_NONE || value == AL_LOOP_CONTINUOUS_SOFT ||
+                 value == AL_LOOP_UNTIL_RELEASE_SOFT))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->LoopMode = value;
+            break;
+
         case AL_BASE_KEY_SOFT:
             if(!((value >= 0 && value <= 127) || value == 255))
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
@@ -248,6 +255,7 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
         case AL_SAMPLE_LOOP_START_SOFT:
         case AL_SAMPLE_LOOP_END_SOFT:
         case AL_SAMPLE_RATE_SOFT:
+        case AL_LOOP_MODE_SOFT:
         case AL_BASE_KEY_SOFT:
         case AL_KEY_CORRECTION_SOFT:
         case AL_SAMPLE_TYPE_SOFT:
@@ -316,6 +324,10 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
 
         case AL_SAMPLE_RATE_SOFT:
             values[0] = sound->SampleRate;
+            break;
+
+        case AL_LOOP_MODE_SOFT:
+            values[0] = sound->LoopMode;
             break;
 
         case AL_BASE_KEY_SOFT:

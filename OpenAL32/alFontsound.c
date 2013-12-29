@@ -160,6 +160,10 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
             sound->ModEnvToFilterCutoff = value;
             break;
 
+        case AL_MOD_LFO_TO_VOLUME_SOFT:
+            sound->ModLfoToVolume = value;
+            break;
+
         case AL_CHORUS_SEND_SOFT:
             if(!(value >= 0 && value <= 1000))
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
@@ -174,6 +178,20 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
 
         case AL_PAN_SOFT:
             sound->Pan = value;
+            break;
+
+        case AL_MOD_LFO_DELAY_SOFT:
+            sound->ModLfo.Delay = value;
+            break;
+        case AL_MOD_LFO_FREQUENCY_SOFT:
+            sound->ModLfo.Frequency = value;
+            break;
+
+        case AL_VIBRATO_LFO_DELAY_SOFT:
+            sound->VibratoLfo.Delay = value;
+            break;
+        case AL_VIBRATO_LFO_FREQUENCY_SOFT:
+            sound->VibratoLfo.Frequency = value;
             break;
 
         case AL_MOD_ENV_DELAYTIME_SOFT:
@@ -248,6 +266,10 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
 
         case AL_TUNING_SCALE_SOFT:
             sound->TuningScale = value;
+            break;
+
+        case AL_EXCLUSIVE_CLASS_SOFT:
+            sound->ExclusiveClass = value;
             break;
 
         case AL_SAMPLE_START_SOFT:
@@ -370,9 +392,14 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
         case AL_FILTER_RESONANCE_SOFT:
         case AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT:
         case AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT:
+        case AL_MOD_LFO_TO_VOLUME_SOFT:
         case AL_CHORUS_SEND_SOFT:
         case AL_REVERB_SEND_SOFT:
         case AL_PAN_SOFT:
+        case AL_MOD_LFO_DELAY_SOFT:
+        case AL_MOD_LFO_FREQUENCY_SOFT:
+        case AL_VIBRATO_LFO_DELAY_SOFT:
+        case AL_VIBRATO_LFO_FREQUENCY_SOFT:
         case AL_MOD_ENV_DELAYTIME_SOFT:
         case AL_MOD_ENV_ATTACKTIME_SOFT:
         case AL_MOD_ENV_HOLDTIME_SOFT:
@@ -394,6 +421,7 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
         case AL_TUNING_FINE_SOFT:
         case AL_LOOP_MODE_SOFT:
         case AL_TUNING_SCALE_SOFT:
+        case AL_EXCLUSIVE_CLASS_SOFT:
         case AL_SAMPLE_START_SOFT:
         case AL_SAMPLE_END_SOFT:
         case AL_SAMPLE_LOOP_START_SOFT:
@@ -467,6 +495,10 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
             values[0] = sound->ModEnvToFilterCutoff;
             break;
 
+        case AL_MOD_LFO_TO_VOLUME_SOFT:
+            values[0] = sound->ModLfoToVolume;
+            break;
+
         case AL_CHORUS_SEND_SOFT:
             values[0] = sound->ChorusSend;
             break;
@@ -477,6 +509,20 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
 
         case AL_PAN_SOFT:
             values[0] = sound->Pan;
+            break;
+
+        case AL_MOD_LFO_DELAY_SOFT:
+            values[0] = sound->ModLfo.Delay;
+            break;
+        case AL_MOD_LFO_FREQUENCY_SOFT:
+            values[0] = sound->ModLfo.Frequency;
+            break;
+
+        case AL_VIBRATO_LFO_DELAY_SOFT:
+            values[0] = sound->VibratoLfo.Delay;
+            break;
+        case AL_VIBRATO_LFO_FREQUENCY_SOFT:
+            values[0] = sound->VibratoLfo.Frequency;
             break;
 
         case AL_MOD_ENV_DELAYTIME_SOFT:
@@ -556,6 +602,10 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
 
         case AL_TUNING_SCALE_SOFT:
             values[0] = sound->TuningScale;
+            break;
+
+        case AL_EXCLUSIVE_CLASS_SOFT:
+            values[0] = sound->ExclusiveClass;
             break;
 
         case AL_SAMPLE_START_SOFT:

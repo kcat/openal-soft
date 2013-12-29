@@ -55,9 +55,14 @@
 #define AL_FILTER_RESONANCE_SOFT                 0x0009
 #define AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT         0x000A
 #define AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT         0x000B
+#define AL_MOD_LFO_TO_VOLUME_SOFT                0x000D
 #define AL_CHORUS_SEND_SOFT                      0x000F
 #define AL_REVERB_SEND_SOFT                      0x0010
 #define AL_PAN_SOFT                              0x0011
+#define AL_MOD_LFO_DELAY_SOFT                    0x0015
+#define AL_MOD_LFO_FREQUENCY_SOFT                0x0016
+#define AL_VIBRATO_LFO_DELAY_SOFT                0x0017
+#define AL_VIBRATO_LFO_FREQUENCY_SOFT            0x0018
 #define AL_MOD_ENV_DELAYTIME_SOFT                0x0019
 #define AL_MOD_ENV_ATTACKTIME_SOFT               0x001A
 #define AL_MOD_ENV_HOLDTIME_SOFT                 0x001B
@@ -81,6 +86,7 @@
 #define AL_TUNING_FINE_SOFT                      0x0034
 #define AL_LOOP_MODE_SOFT                        0x0036
 #define AL_TUNING_SCALE_SOFT                     0x0038
+#define AL_EXCLUSIVE_CLASS_SOFT                  0x0039
 #define AL_LOOP_CONTINUOUS_SOFT                  0x0001
 #define AL_LOOP_UNTIL_RELEASE_SOFT               0x0003
 #define AL_FORMAT_TYPE_SOFT                      0x1991

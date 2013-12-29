@@ -807,7 +807,7 @@ static void fillZone(ALuint id, const GenModList *zone)
         AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT, /* 10 - modLfoToFilterFc */
         AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT, /* 11 - modEnvToFilterFc */
         0, /* 12 - endAddrCoarseOffset */
-        0, /* 13 - modLfoToVolume */
+        AL_MOD_LFO_TO_VOLUME_SOFT, /* 13 - modLfoToVolume */
         0, /* 14 -  */
         AL_CHORUS_SEND_SOFT, /* 15 - chorusEffectsSend */
         AL_REVERB_SEND_SOFT, /* 16 - reverbEffectsSend */
@@ -815,10 +815,10 @@ static void fillZone(ALuint id, const GenModList *zone)
         0, /* 18 -  */
         0, /* 19 -  */
         0, /* 20 -  */
-        0, /* 21 - delayModLFO */
-        0, /* 22 - freqModLFO */
-        0, /* 23 - delayVibLFO */
-        0, /* 24 - freqVibLFO */
+        AL_MOD_LFO_DELAY_SOFT, /* 21 - delayModLFO */
+        AL_MOD_LFO_FREQUENCY_SOFT, /* 22 - freqModLFO */
+        AL_VIBRATO_LFO_DELAY_SOFT, /* 23 - delayVibLFO */
+        AL_VIBRATO_LFO_FREQUENCY_SOFT, /* 24 - freqVibLFO */
         AL_MOD_ENV_DELAYTIME_SOFT, /* 25 - delayModEnv */
         AL_MOD_ENV_ATTACKTIME_SOFT, /* 26 - attackModEnv */
         AL_MOD_ENV_HOLDTIME_SOFT, /* 27 - holdModEnv */
@@ -851,7 +851,7 @@ static void fillZone(ALuint id, const GenModList *zone)
         AL_LOOP_MODE_SOFT, /* 54 - sampleModes */
         0, /* 55 -  */
         AL_TUNING_SCALE_SOFT, /* 56 - scaleTuning */
-        0, /* 57 - exclusiveClass */
+        AL_EXCLUSIVE_CLASS_SOFT, /* 57 - exclusiveClass */
         AL_BASE_KEY_SOFT, /* 58 - overridingRootKey */
         0, /* 59 -  */
     };

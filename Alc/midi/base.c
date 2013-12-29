@@ -303,11 +303,18 @@ void ALfontsound_Construct(ALfontsound *self)
     self->FilterQ = 0;
     self->ModLfoToFilterCutoff = 0;
     self->ModEnvToFilterCutoff = 0;
-
-    self->Pan = 0;
+    self->ModLfoToVolume = 0;
 
     self->ChorusSend = 0;
     self->ReverbSend = 0;
+
+    self->Pan = 0;
+
+    self->ModLfo.Delay = 0;
+    self->ModLfo.Frequency = 0;
+
+    self->VibratoLfo.Delay = 0;
+    self->VibratoLfo.Frequency = 0;
 
     self->ModEnv.DelayTime = -12000;
     self->ModEnv.AttackTime = -12000;
@@ -335,6 +342,8 @@ void ALfontsound_Construct(ALfontsound *self)
     self->LoopMode = AL_NONE;
 
     self->TuningScale = 100;
+
+    self->ExclusiveClass = 0;
 
     self->Start = 0;
     self->End = 0;

@@ -31,11 +31,21 @@ typedef struct ALfontsound {
     ALint FilterQ;
     ALint ModLfoToFilterCutoff;
     ALint ModEnvToFilterCutoff;
+    ALint ModLfoToVolume;
 
     ALint ChorusSend;
     ALint ReverbSend;
 
     ALint Pan;
+
+    struct {
+        ALint Delay;
+        ALint Frequency;
+    } ModLfo;
+    struct {
+        ALint Delay;
+        ALint Frequency;
+    } VibratoLfo;
 
     struct {
         ALint DelayTime;
@@ -66,6 +76,8 @@ typedef struct ALfontsound {
     ALenum LoopMode;
 
     ALint TuningScale;
+
+    ALint ExclusiveClass;
 
     ALuint Start;
     ALuint End;

@@ -170,9 +170,14 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_gen_set(voice,  9, sound->FilterQ);
         fluid_voice_gen_set(voice, 10, sound->ModLfoToFilterCutoff);
         fluid_voice_gen_set(voice, 11, sound->ModEnvToFilterCutoff);
+        fluid_voice_gen_set(voice, 13, sound->ModLfoToVolume);
         fluid_voice_gen_set(voice, 15, sound->ChorusSend);
         fluid_voice_gen_set(voice, 16, sound->ReverbSend);
         fluid_voice_gen_set(voice, 17, sound->Pan);
+        fluid_voice_gen_set(voice, 21, sound->ModLfo.Delay);
+        fluid_voice_gen_set(voice, 22, sound->ModLfo.Frequency);
+        fluid_voice_gen_set(voice, 23, sound->VibratoLfo.Delay);
+        fluid_voice_gen_set(voice, 24, sound->VibratoLfo.Frequency);
         fluid_voice_gen_set(voice, 25, sound->ModEnv.DelayTime);
         fluid_voice_gen_set(voice, 26, sound->ModEnv.AttackTime);
         fluid_voice_gen_set(voice, 27, sound->ModEnv.HoldTime);
@@ -194,6 +199,7 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_gen_set(voice, 52, sound->FineTuning);
         fluid_voice_gen_set(voice, 54, sound->LoopMode);
         fluid_voice_gen_set(voice, 56, sound->TuningScale);
+        fluid_voice_gen_set(voice, 57, sound->ExclusiveClass);
         for(m = 0;m < sample->NumMods;m++)
             fluid_voice_add_mod(voice, &sample->Mods[m], FLUID_VOICE_OVERWRITE);
 

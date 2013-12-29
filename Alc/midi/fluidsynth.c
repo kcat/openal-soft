@@ -129,6 +129,18 @@ static void FPreset_Destruct(FPreset *self)
     self->NumSamples = 0;
 }
 
+static ALboolean FPreset_canDelete(FPreset *self)
+{
+    ALsizei i;
+
+    for(i = 0;i < self->NumSamples;i++)
+    {
+        if(fluid_sample_refcount(STATIC_CAST(fluid_sample_t, &self->Samples[i])) != 0)
+            return AL_FALSE;
+    }
+    return AL_TRUE;
+}
+
 static char* FPreset_getName(fluid_preset_t *preset)
 {
     return ((FPreset*)preset->data)->Name;
@@ -265,6 +277,14 @@ static void FSfont_Destruct(FSfont *self)
 static int FSfont_free(fluid_sfont_t *sfont)
 {
     FSfont *self = STATIC_UPCAST(FSfont, fluid_sfont_t, sfont);
+    ALsizei i;
+
+    for(i = 0;i < self->NumPresets;i++)
+    {
+        if(!FPreset_canDelete(&self->Presets[i]))
+            return 1;
+    }
+
     FSfont_Destruct(self);
     free(self);
     return 0;

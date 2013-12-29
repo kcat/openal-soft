@@ -55,6 +55,7 @@
 #define AL_FILTER_RESONANCE_SOFT                 0x0009
 #define AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT         0x000A
 #define AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT         0x000B
+#define AL_PAN_SOFT                              0x0011
 #define AL_MOD_ENV_DELAYTIME_SOFT                0x0019
 #define AL_MOD_ENV_ATTACKTIME_SOFT               0x001A
 #define AL_MOD_ENV_HOLDTIME_SOFT                 0x001B
@@ -73,6 +74,7 @@
 #define AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT      0x0028
 #define AL_KEY_RANGE_SOFT                        0x002B
 #define AL_VELOCITY_RANGE_SOFT                   0x002C
+#define AL_ATTENUATION_SOFT                      0x0030
 #define AL_TUNING_COARSE_SOFT                    0x0033
 #define AL_TUNING_FINE_SOFT                      0x0034
 #define AL_LOOP_MODE_SOFT                        0x0036

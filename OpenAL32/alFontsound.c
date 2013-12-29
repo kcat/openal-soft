@@ -160,6 +160,10 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
             sound->ModEnvToFilterCutoff = value;
             break;
 
+        case AL_PAN_SOFT:
+            sound->Pan = value;
+            break;
+
         case AL_MOD_ENV_DELAYTIME_SOFT:
             sound->ModEnv.DelayTime = value;
             break;
@@ -208,6 +212,12 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
             break;
         case AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT:
             sound->VolEnv.KeyToDecayTime = value;
+            break;
+
+        case AL_ATTENUATION_SOFT:
+            if(!(value >= 0))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->Attenuation = value;
             break;
 
         case AL_TUNING_COARSE_SOFT:
@@ -348,6 +358,7 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
         case AL_FILTER_RESONANCE_SOFT:
         case AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT:
         case AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT:
+        case AL_PAN_SOFT:
         case AL_MOD_ENV_DELAYTIME_SOFT:
         case AL_MOD_ENV_ATTACKTIME_SOFT:
         case AL_MOD_ENV_HOLDTIME_SOFT:
@@ -364,6 +375,7 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
         case AL_VOLUME_ENV_RELEASETIME_SOFT:
         case AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT:
         case AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT:
+        case AL_ATTENUATION_SOFT:
         case AL_TUNING_COARSE_SOFT:
         case AL_TUNING_FINE_SOFT:
         case AL_LOOP_MODE_SOFT:
@@ -441,6 +453,10 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
             values[0] = sound->ModEnvToFilterCutoff;
             break;
 
+        case AL_PAN_SOFT:
+            values[0] = sound->Pan;
+            break;
+
         case AL_MOD_ENV_DELAYTIME_SOFT:
             values[0] = sound->ModEnv.DelayTime;
             break;
@@ -499,6 +515,10 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
         case AL_VELOCITY_RANGE_SOFT:
             values[0] = sound->MinVelocity;
             values[1] = sound->MaxVelocity;
+            break;
+
+        case AL_ATTENUATION_SOFT:
+            values[0] = sound->Attenuation;
             break;
 
         case AL_TUNING_COARSE_SOFT:

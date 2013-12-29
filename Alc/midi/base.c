@@ -304,6 +304,8 @@ void ALfontsound_Construct(ALfontsound *self)
     self->ModLfoToFilterCutoff = 0;
     self->ModEnvToFilterCutoff = 0;
 
+    self->Pan = 0;
+
     self->ModEnv.DelayTime = -12000;
     self->ModEnv.AttackTime = -12000;
     self->ModEnv.HoldTime = -12000;
@@ -321,6 +323,8 @@ void ALfontsound_Construct(ALfontsound *self)
     self->VolEnv.ReleaseTime = -12000;
     self->VolEnv.KeyToHoldTime = 0;
     self->VolEnv.KeyToDecayTime = 0;
+
+    self->Attenuation = 0;
 
     self->CoarseTuning = 0;
     self->FineTuning = 0;

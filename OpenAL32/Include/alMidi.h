@@ -32,6 +32,8 @@ typedef struct ALfontsound {
     ALint ModLfoToFilterCutoff;
     ALint ModEnvToFilterCutoff;
 
+    ALint Pan;
+
     struct {
         ALint DelayTime;
         ALint AttackTime;
@@ -52,6 +54,8 @@ typedef struct ALfontsound {
         ALint KeyToHoldTime;
         ALint KeyToDecayTime;
     } VolEnv;
+
+    ALint Attenuation;
 
     ALint CoarseTuning;
     ALint FineTuning;

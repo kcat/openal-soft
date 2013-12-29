@@ -170,6 +170,7 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_gen_set(voice,  9, sound->FilterQ);
         fluid_voice_gen_set(voice, 10, sound->ModLfoToFilterCutoff);
         fluid_voice_gen_set(voice, 11, sound->ModEnvToFilterCutoff);
+        fluid_voice_gen_set(voice, 17, sound->Pan);
         fluid_voice_gen_set(voice, 25, sound->ModEnv.DelayTime);
         fluid_voice_gen_set(voice, 26, sound->ModEnv.AttackTime);
         fluid_voice_gen_set(voice, 27, sound->ModEnv.HoldTime);
@@ -186,6 +187,7 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_gen_set(voice, 38, sound->VolEnv.ReleaseTime);
         fluid_voice_gen_set(voice, 39, sound->VolEnv.KeyToHoldTime);
         fluid_voice_gen_set(voice, 40, sound->VolEnv.KeyToDecayTime);
+        fluid_voice_gen_set(voice, 48, sound->Attenuation);
         fluid_voice_gen_set(voice, 51, sound->CoarseTuning);
         fluid_voice_gen_set(voice, 52, sound->FineTuning);
         fluid_voice_gen_set(voice, 54, sound->LoopMode);

@@ -811,7 +811,7 @@ static void fillZone(ALuint id, const GenModList *zone)
         0, /* 14 -  */
         0, /* 15 - chorusEffectsSend */
         0, /* 16 - reverbEffectsSend */
-        0, /* 17 - pan */
+        AL_PAN_SOFT, /* 17 - pan */
         0, /* 18 -  */
         0, /* 19 -  */
         0, /* 20 -  */
@@ -842,7 +842,7 @@ static void fillZone(ALuint id, const GenModList *zone)
         0, /* 45 - startloopAddrCoarseOffset */
         0, /* 46 - keynum */
         0, /* 47 - velocity */
-        0, /* 48 - initialAttenuation */
+        AL_ATTENUATION_SOFT, /* 48 - initialAttenuation */
         0, /* 49 -  */
         0, /* 50 - endloopAddrCoarseOffset */
         AL_TUNING_COARSE_SOFT, /* 51 - corseTune */
@@ -895,10 +895,13 @@ static void fillZone(ALuint id, const GenModList *zone)
                     ALint value = (ALshort)gen->mAmount;
                     if(param == AL_BASE_KEY_SOFT && value == -1)
                         break;
-                    if(param == AL_FILTER_RESONANCE_SOFT && value < 0)
-                        value = 0;
-                    else if(param == AL_LOOP_MODE_SOFT && value == 2)
-                        value = 0;
+                    if(param == AL_FILTER_RESONANCE_SOFT || param == AL_ATTENUATION_SOFT)
+                        value = maxi(0, value);
+                    else if(param == AL_LOOP_MODE_SOFT)
+                    {
+                        if(!(value == 0 || value == 1 || value == 3))
+                            value = 0;
+                    }
                     alFontsoundiSOFT(id, param, value);
                 }
                 else if(gen->mGenerator < 256)

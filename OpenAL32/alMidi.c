@@ -25,34 +25,12 @@ MidiSynth *SynthCreate(ALCdevice *device)
 }
 
 
-AL_API void AL_APIENTRY alMidiSoundfontSOFT(const char *filename)
+AL_API void AL_APIENTRY alMidiSoundfontSOFT(ALuint id)
 {
-    ALCdevice *device;
-    ALCcontext *context;
-    MidiSynth *synth;
-    ALenum err;
-
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-    synth = device->Synth;
-
-    WriteLock(&synth->Lock);
-    if(synth->State == AL_PLAYING || synth->State == AL_PAUSED)
-        alSetError(context, AL_INVALID_OPERATION);
-    else
-    {
-        err = V(synth,loadSoundfont)(filename);
-        if(err != AL_NO_ERROR)
-            alSetError(context, err);
-    }
-    WriteUnlock(&synth->Lock);
-
-    ALCcontext_DecRef(context);
+    alMidiSoundfontvSOFT(1, &id);
 }
 
-AL_API void AL_APIENTRY alMidiSoundfontsSOFT(ALsizei count, const ALuint *ids)
+AL_API void AL_APIENTRY alMidiSoundfontvSOFT(ALsizei count, const ALuint *ids)
 {
     ALCdevice *device;
     ALCcontext *context;

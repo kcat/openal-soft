@@ -491,7 +491,7 @@ static void GenModList_insertMod(GenModList *self, const Modulator *mod)
             temp = realloc(self->mods, newsize * sizeof(self->mods[0]));
         if(!temp)
         {
-            ERR("Failed to increase generator storage to %d elements (from %d)\n",
+            ERR("Failed to increase modulator storage to %d elements (from %d)\n",
                 newsize, self->mods_max);
             return;
         }
@@ -527,7 +527,7 @@ static void GenModList_accumMod(GenModList *self, const Modulator *mod)
             temp = realloc(self->mods, newsize * sizeof(self->mods[0]));
         if(!temp)
         {
-            ERR("Failed to increase generator storage to %d elements (from %d)\n",
+            ERR("Failed to increase modulator storage to %d elements (from %d)\n",
                 newsize, self->mods_max);
             return;
         }

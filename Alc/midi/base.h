@@ -74,8 +74,6 @@ ALenum MidiSynth_insertSysExEvent(MidiSynth *self, ALuint64 time, const ALbyte *
 struct MidiSynthVtable {
     void (*const Destruct)(MidiSynth *self);
 
-    ALboolean (*const isSoundfont)(MidiSynth *self, const char *filename);
-    ALenum (*const loadSoundfont)(MidiSynth *self, const char *filename);
     ALenum (*const selectSoundfonts)(MidiSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids);
 
     void (*const setGain)(MidiSynth *self, ALfloat gain);
@@ -92,8 +90,6 @@ struct MidiSynthVtable {
 
 #define DEFINE_MIDISYNTH_VTABLE(T)                                            \
 DECLARE_THUNK(T, MidiSynth, void, Destruct)                                   \
-DECLARE_THUNK1(T, MidiSynth, ALboolean, isSoundfont, const char*)             \
-DECLARE_THUNK1(T, MidiSynth, ALenum, loadSoundfont, const char*)              \
 DECLARE_THUNK3(T, MidiSynth, ALenum, selectSoundfonts, ALCdevice*, ALsizei, const ALuint*) \
 DECLARE_THUNK1(T, MidiSynth, void, setGain, ALfloat)                          \
 DECLARE_THUNK1(T, MidiSynth, void, setState, ALenum)                          \
@@ -106,8 +102,6 @@ DECLARE_THUNK(T, MidiSynth, void, Delete)                                     \
 static const struct MidiSynthVtable T##_MidiSynth_vtable = {                  \
     T##_MidiSynth_Destruct,                                                   \
                                                                               \
-    T##_MidiSynth_isSoundfont,                                                \
-    T##_MidiSynth_loadSoundfont,                                              \
     T##_MidiSynth_selectSoundfonts,                                           \
     T##_MidiSynth_setGain,                                                    \
     T##_MidiSynth_setState,                                                   \

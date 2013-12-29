@@ -341,8 +341,6 @@ typedef struct FSynth {
 static void FSynth_Construct(FSynth *self, ALCdevice *device);
 static void FSynth_Destruct(FSynth *self);
 static ALboolean FSynth_init(FSynth *self, ALCdevice *device);
-static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename);
-static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename);
 static ALenum FSynth_selectSoundfonts(FSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids);
 static void FSynth_setGain(FSynth *self, ALfloat gain);
 static void FSynth_setState(FSynth *self, ALenum state);
@@ -438,46 +436,6 @@ static fluid_sfont_t *FSynth_loadSfont(fluid_sfloader_t *loader, const char *fil
 
     FSfont_Construct(sfont, STATIC_CAST(MidiSynth, self)->Soundfonts[idx]);
     return STATIC_CAST(fluid_sfont_t, sfont);
-}
-
-static ALboolean FSynth_isSoundfont(FSynth *self, const char *filename)
-{
-    filename = MidiSynth_getFontName(STATIC_CAST(MidiSynth, self), filename);
-    if(!filename[0]) return AL_FALSE;
-
-    if(!fluid_is_soundfont(filename))
-        return AL_FALSE;
-    return AL_TRUE;
-}
-
-static ALenum FSynth_loadSoundfont(FSynth *self, const char *filename)
-{
-    int *fontid;
-    ALsizei count;
-    ALsizei i;
-
-    filename = MidiSynth_getFontName(STATIC_CAST(MidiSynth, self), filename);
-    if(!filename[0]) return AL_INVALID_VALUE;
-
-    fontid = malloc(sizeof(fontid[0]));
-    if(!fontid) return AL_OUT_OF_MEMORY;
-
-    fontid[0] = fluid_synth_sfload(self->Synth, filename, 1);
-    if(fontid[0] == FLUID_FAILED)
-    {
-        ERR("Failed to load soundfont '%s'\n", filename);
-        free(fontid);
-        return AL_INVALID_VALUE;
-    }
-
-    fontid = ExchangePtr((XchgPtr*)&self->FontIDs, fontid);
-    count = ExchangeInt(&self->NumFontIDs, 1);
-
-    for(i = 0;i < count;i++)
-        fluid_synth_sfunload(self->Synth, fontid[i], 1);
-    free(fontid);
-
-    return AL_NO_ERROR;
 }
 
 static ALenum FSynth_selectSoundfonts(FSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids)

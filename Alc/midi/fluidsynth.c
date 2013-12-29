@@ -163,6 +163,14 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         if(voice == NULL)
             return FLUID_FAILED;
 
+        fluid_voice_gen_set(voice, 33, sound->VolEnv.DelayTime);
+        fluid_voice_gen_set(voice, 34, sound->VolEnv.AttackTime);
+        fluid_voice_gen_set(voice, 35, sound->VolEnv.HoldTime);
+        fluid_voice_gen_set(voice, 36, sound->VolEnv.DecayTime);
+        fluid_voice_gen_set(voice, 37, sound->VolEnv.SustainVol);
+        fluid_voice_gen_set(voice, 38, sound->VolEnv.ReleaseTime);
+        fluid_voice_gen_set(voice, 39, sound->VolEnv.KeyToHoldTime);
+        fluid_voice_gen_set(voice, 40, sound->VolEnv.KeyToDecayTime);
         fluid_voice_gen_set(voice, 54, sound->LoopMode);
         for(m = 0;m < sample->NumMods;m++)
             fluid_voice_add_mod(voice, &sample->Mods[m], FLUID_VOICE_OVERWRITE);

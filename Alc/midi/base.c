@@ -295,6 +295,15 @@ void ALfontsound_Construct(ALfontsound *self)
     self->MinVelocity = 0;
     self->MaxVelocity = 127;
 
+    self->VolEnv.DelayTime = -12000;
+    self->VolEnv.AttackTime = -12000;
+    self->VolEnv.HoldTime = -12000;
+    self->VolEnv.DecayTime = -12000;
+    self->VolEnv.SustainVol = 0;
+    self->VolEnv.ReleaseTime = -12000;
+    self->VolEnv.KeyToHoldTime = 0;
+    self->VolEnv.KeyToDecayTime = 0;
+
     self->Start = 0;
     self->End = 0;
     self->LoopStart = 0;

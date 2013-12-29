@@ -827,14 +827,14 @@ static void fillZone(ALuint id, const GenModList *zone)
         0, /* 30 - releaseModEnv */
         0, /* 31 - keynumToModEnvHold */
         0, /* 32 - keynumToModEnvDecay */
-        0, /* 33 - delayVolEnv */
-        0, /* 34 - attackVolEnv */
-        0, /* 35 - holdVolEnv */
-        0, /* 36 - decayVolEnv */
-        0, /* 37 - sustainVolEnv */
-        0, /* 38 - releaseVolEnv */
-        0, /* 39 - keynumToVolEnvHold */
-        0, /* 40 - keynumToVolEnvDecay */
+        AL_VOLUME_ENV_DELAYTIME_SOFT, /* 33 - delayVolEnv */
+        AL_VOLUME_ENV_ATTACKTIME_SOFT, /* 34 - attackVolEnv */
+        AL_VOLUME_ENV_HOLDTIME_SOFT, /* 35 - holdVolEnv */
+        AL_VOLUME_ENV_DECAYTIME_SOFT, /* 36 - decayVolEnv */
+        AL_VOLUME_ENV_SUSTAINVOLUME_SOFT, /* 37 - sustainVolEnv */
+        AL_VOLUME_ENV_RELEASETIME_SOFT, /* 38 - releaseVolEnv */
+        AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT, /* 39 - keynumToVolEnvHold */
+        AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT, /* 40 - keynumToVolEnvDecay */
         0, /* 41 -  */
         0, /* 42 -  */
         AL_KEY_RANGE_SOFT, /* 43 - keyRange */

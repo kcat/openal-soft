@@ -23,6 +23,17 @@ typedef struct ALfontsound {
     ALint MinKey, MaxKey;
     ALint MinVelocity, MaxVelocity;
 
+    struct {
+        ALint DelayTime;
+        ALint AttackTime;
+        ALint HoldTime;
+        ALint DecayTime;
+        ALint SustainVol;
+        ALint ReleaseTime;
+        ALint KeyToHoldTime;
+        ALint KeyToDecayTime;
+    } VolEnv;
+
     ALuint Start;
     ALuint End;
     ALuint LoopStart;

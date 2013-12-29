@@ -48,6 +48,14 @@
 #define AL_KEY_CORRECTION_SOFT                   0x2006
 #define AL_SAMPLE_TYPE_SOFT                      0x2007
 #define AL_FONTSOUND_LINK_SOFT                   0x2008
+#define AL_VOLUME_ENV_DELAYTIME_SOFT             0x0021
+#define AL_VOLUME_ENV_ATTACKTIME_SOFT            0x0022
+#define AL_VOLUME_ENV_HOLDTIME_SOFT              0x0023
+#define AL_VOLUME_ENV_DECAYTIME_SOFT             0x0024
+#define AL_VOLUME_ENV_SUSTAINVOLUME_SOFT         0x0025
+#define AL_VOLUME_ENV_RELEASETIME_SOFT           0x0026
+#define AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT       0x0027
+#define AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT      0x0028
 #define AL_KEY_RANGE_SOFT                        0x002B
 #define AL_VELOCITY_RANGE_SOFT                   0x002C
 #define AL_LOOP_MODE_SOFT                        0x0036

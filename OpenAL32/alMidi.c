@@ -51,9 +51,7 @@ AL_API void AL_APIENTRY alMidiSoundfontvSOFT(ALsizei count, const ALuint *ids)
         alSetError(context, AL_INVALID_OPERATION);
     else
     {
-        ALCdevice_Lock(device);
         err = V(synth,selectSoundfonts)(device, count, ids);
-        ALCdevice_Unlock(device);
         if(err != AL_NO_ERROR)
             alSetError(context, err);
     }

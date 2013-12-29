@@ -48,6 +48,9 @@
 #define AL_KEY_CORRECTION_SOFT                   0x2006
 #define AL_SAMPLE_TYPE_SOFT                      0x2007
 #define AL_FONTSOUND_LINK_SOFT                   0x2008
+#define AL_MOD_LFO_TO_PITCH_SOFT                 0x0005
+#define AL_VIBRATO_LFO_TO_PITCH_SOFT             0x0006
+#define AL_MOD_ENV_TO_PITCH_SOFT                 0x0007
 #define AL_VOLUME_ENV_DELAYTIME_SOFT             0x0021
 #define AL_VOLUME_ENV_ATTACKTIME_SOFT            0x0022
 #define AL_VOLUME_ENV_HOLDTIME_SOFT              0x0023

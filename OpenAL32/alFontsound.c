@@ -130,6 +130,18 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
         SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     switch(param)
     {
+        case AL_MOD_LFO_TO_PITCH_SOFT:
+            sound->ModLfoToPitch = value;
+            break;
+
+        case AL_VIBRATO_LFO_TO_PITCH_SOFT:
+            sound->VibratoLfoToPitch = value;
+            break;
+
+        case AL_MOD_ENV_TO_PITCH_SOFT:
+            sound->ModEnvToPitch = value;
+            break;
+
         case AL_VOLUME_ENV_DELAYTIME_SOFT:
             sound->VolEnv.DelayTime = value;
             break;
@@ -282,6 +294,9 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
             alFontsound2iSOFT(id, param, values[0], values[1]);
             return;
 
+        case AL_MOD_LFO_TO_PITCH_SOFT:
+        case AL_VIBRATO_LFO_TO_PITCH_SOFT:
+        case AL_MOD_ENV_TO_PITCH_SOFT:
         case AL_VOLUME_ENV_DELAYTIME_SOFT:
         case AL_VOLUME_ENV_ATTACKTIME_SOFT:
         case AL_VOLUME_ENV_HOLDTIME_SOFT:
@@ -336,6 +351,18 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     switch(param)
     {
+        case AL_MOD_LFO_TO_PITCH_SOFT:
+            values[0] = sound->ModLfoToPitch;
+            break;
+
+        case AL_VIBRATO_LFO_TO_PITCH_SOFT:
+            values[0] = sound->VibratoLfoToPitch;
+            break;
+
+        case AL_MOD_ENV_TO_PITCH_SOFT:
+            values[0] = sound->ModEnvToPitch;
+            break;
+
         case AL_VOLUME_ENV_DELAYTIME_SOFT:
             values[0] = sound->VolEnv.DelayTime;
             break;

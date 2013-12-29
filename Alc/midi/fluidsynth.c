@@ -163,6 +163,9 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         if(voice == NULL)
             return FLUID_FAILED;
 
+        fluid_voice_gen_set(voice,  5, sound->ModLfoToPitch);
+        fluid_voice_gen_set(voice,  6, sound->VibratoLfoToPitch);
+        fluid_voice_gen_set(voice,  7, sound->ModEnvToPitch);
         fluid_voice_gen_set(voice, 33, sound->VolEnv.DelayTime);
         fluid_voice_gen_set(voice, 34, sound->VolEnv.AttackTime);
         fluid_voice_gen_set(voice, 35, sound->VolEnv.HoldTime);

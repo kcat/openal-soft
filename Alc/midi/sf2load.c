@@ -799,9 +799,9 @@ static void fillZone(ALuint id, const GenModList *zone)
         0, /* 2 - startloopAddrOffset */
         0, /* 3 - endloopAddrOffset */
         0, /* 4 - startAddrCoarseOffset */
-        0, /* 5 - modLfoToPitch */
-        0, /* 6 - vibLfoToPitch */
-        0, /* 7 - modEnvToPitch */
+        AL_MOD_LFO_TO_PITCH_SOFT, /* 5 - modLfoToPitch */
+        AL_VIBRATO_LFO_TO_PITCH_SOFT, /* 6 - vibLfoToPitch */
+        AL_MOD_ENV_TO_PITCH_SOFT, /* 7 - modEnvToPitch */
         0, /* 8 - initialFilterFc */
         0, /* 9 - initialFilterQ */
         0, /* 10 - modLfoToFilterFc */

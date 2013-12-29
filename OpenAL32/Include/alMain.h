@@ -51,6 +51,14 @@
 #define AL_MOD_LFO_TO_PITCH_SOFT                 0x0005
 #define AL_VIBRATO_LFO_TO_PITCH_SOFT             0x0006
 #define AL_MOD_ENV_TO_PITCH_SOFT                 0x0007
+#define AL_MOD_ENV_DELAYTIME_SOFT                0x0019
+#define AL_MOD_ENV_ATTACKTIME_SOFT               0x001A
+#define AL_MOD_ENV_HOLDTIME_SOFT                 0x001B
+#define AL_MOD_ENV_DECAYTIME_SOFT                0x001C
+#define AL_MOD_ENV_SUSTAINVOLUME_SOFT            0x001D
+#define AL_MOD_ENV_RELEASETIME_SOFT              0x002E
+#define AL_MOD_ENV_KEY_TO_HOLDTIME_SOFT          0x001F
+#define AL_MOD_ENV_KEY_TO_DECAYTIME_SOFT         0x0020
 #define AL_VOLUME_ENV_DELAYTIME_SOFT             0x0021
 #define AL_VOLUME_ENV_ATTACKTIME_SOFT            0x0022
 #define AL_VOLUME_ENV_HOLDTIME_SOFT              0x0023

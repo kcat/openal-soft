@@ -142,34 +142,52 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
             sound->ModEnvToPitch = value;
             break;
 
+        case AL_MOD_ENV_DELAYTIME_SOFT:
+            sound->ModEnv.DelayTime = value;
+            break;
+        case AL_MOD_ENV_ATTACKTIME_SOFT:
+            sound->ModEnv.AttackTime = value;
+            break;
+        case AL_MOD_ENV_HOLDTIME_SOFT:
+            sound->ModEnv.HoldTime = value;
+            break;
+        case AL_MOD_ENV_DECAYTIME_SOFT:
+            sound->ModEnv.DecayTime = value;
+            break;
+        case AL_MOD_ENV_SUSTAINVOLUME_SOFT:
+            sound->ModEnv.SustainVol = value;
+            break;
+        case AL_MOD_ENV_RELEASETIME_SOFT:
+            sound->ModEnv.ReleaseTime = value;
+            break;
+        case AL_MOD_ENV_KEY_TO_HOLDTIME_SOFT:
+            sound->ModEnv.KeyToHoldTime = value;
+            break;
+        case AL_MOD_ENV_KEY_TO_DECAYTIME_SOFT:
+            sound->ModEnv.KeyToDecayTime = value;
+            break;
+
         case AL_VOLUME_ENV_DELAYTIME_SOFT:
             sound->VolEnv.DelayTime = value;
             break;
-
         case AL_VOLUME_ENV_ATTACKTIME_SOFT:
             sound->VolEnv.AttackTime = value;
             break;
-
         case AL_VOLUME_ENV_HOLDTIME_SOFT:
             sound->VolEnv.HoldTime = value;
             break;
-
         case AL_VOLUME_ENV_DECAYTIME_SOFT:
             sound->VolEnv.DecayTime = value;
             break;
-
         case AL_VOLUME_ENV_SUSTAINVOLUME_SOFT:
             sound->VolEnv.SustainVol = value;
             break;
-
         case AL_VOLUME_ENV_RELEASETIME_SOFT:
             sound->VolEnv.ReleaseTime = value;
             break;
-
         case AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT:
             sound->VolEnv.KeyToHoldTime = value;
             break;
-
         case AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT:
             sound->VolEnv.KeyToDecayTime = value;
             break;
@@ -297,6 +315,14 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
         case AL_MOD_LFO_TO_PITCH_SOFT:
         case AL_VIBRATO_LFO_TO_PITCH_SOFT:
         case AL_MOD_ENV_TO_PITCH_SOFT:
+        case AL_MOD_ENV_DELAYTIME_SOFT:
+        case AL_MOD_ENV_ATTACKTIME_SOFT:
+        case AL_MOD_ENV_HOLDTIME_SOFT:
+        case AL_MOD_ENV_DECAYTIME_SOFT:
+        case AL_MOD_ENV_SUSTAINVOLUME_SOFT:
+        case AL_MOD_ENV_RELEASETIME_SOFT:
+        case AL_MOD_ENV_KEY_TO_HOLDTIME_SOFT:
+        case AL_MOD_ENV_KEY_TO_DECAYTIME_SOFT:
         case AL_VOLUME_ENV_DELAYTIME_SOFT:
         case AL_VOLUME_ENV_ATTACKTIME_SOFT:
         case AL_VOLUME_ENV_HOLDTIME_SOFT:
@@ -363,34 +389,52 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
             values[0] = sound->ModEnvToPitch;
             break;
 
+        case AL_MOD_ENV_DELAYTIME_SOFT:
+            values[0] = sound->ModEnv.DelayTime;
+            break;
+        case AL_MOD_ENV_ATTACKTIME_SOFT:
+            values[0] = sound->ModEnv.AttackTime;
+            break;
+        case AL_MOD_ENV_HOLDTIME_SOFT:
+            values[0] = sound->ModEnv.HoldTime;
+            break;
+        case AL_MOD_ENV_DECAYTIME_SOFT:
+            values[0] = sound->ModEnv.DecayTime;
+            break;
+        case AL_MOD_ENV_SUSTAINVOLUME_SOFT:
+            values[0] = sound->ModEnv.SustainVol;
+            break;
+        case AL_MOD_ENV_RELEASETIME_SOFT:
+            values[0] = sound->ModEnv.ReleaseTime;
+            break;
+        case AL_MOD_ENV_KEY_TO_HOLDTIME_SOFT:
+            values[0] = sound->ModEnv.KeyToHoldTime;
+            break;
+        case AL_MOD_ENV_KEY_TO_DECAYTIME_SOFT:
+            values[0] = sound->ModEnv.KeyToDecayTime;
+            break;
+
         case AL_VOLUME_ENV_DELAYTIME_SOFT:
             values[0] = sound->VolEnv.DelayTime;
             break;
-
         case AL_VOLUME_ENV_ATTACKTIME_SOFT:
             values[0] = sound->VolEnv.AttackTime;
             break;
-
         case AL_VOLUME_ENV_HOLDTIME_SOFT:
             values[0] = sound->VolEnv.HoldTime;
             break;
-
         case AL_VOLUME_ENV_DECAYTIME_SOFT:
             values[0] = sound->VolEnv.DecayTime;
             break;
-
         case AL_VOLUME_ENV_SUSTAINVOLUME_SOFT:
             values[0] = sound->VolEnv.SustainVol;
             break;
-
         case AL_VOLUME_ENV_RELEASETIME_SOFT:
             values[0] = sound->VolEnv.ReleaseTime;
             break;
-
         case AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT:
             values[0] = sound->VolEnv.KeyToHoldTime;
             break;
-
         case AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT:
             values[0] = sound->VolEnv.KeyToDecayTime;
             break;

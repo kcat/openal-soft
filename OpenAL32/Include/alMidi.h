@@ -36,6 +36,16 @@ typedef struct ALfontsound {
         ALint ReleaseTime;
         ALint KeyToHoldTime;
         ALint KeyToDecayTime;
+    } ModEnv;
+    struct {
+        ALint DelayTime;
+        ALint AttackTime;
+        ALint HoldTime;
+        ALint DecayTime;
+        ALint SustainVol;
+        ALint ReleaseTime;
+        ALint KeyToHoldTime;
+        ALint KeyToDecayTime;
     } VolEnv;
 
     ALuint Start;

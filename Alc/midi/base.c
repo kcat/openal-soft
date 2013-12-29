@@ -299,6 +299,15 @@ void ALfontsound_Construct(ALfontsound *self)
     self->VibratoLfoToPitch = 0;
     self->ModEnvToPitch = 0;
 
+    self->ModEnv.DelayTime = -12000;
+    self->ModEnv.AttackTime = -12000;
+    self->ModEnv.HoldTime = -12000;
+    self->ModEnv.DecayTime = -12000;
+    self->ModEnv.SustainVol = 0;
+    self->ModEnv.ReleaseTime = -12000;
+    self->ModEnv.KeyToHoldTime = 0;
+    self->ModEnv.KeyToDecayTime = 0;
+
     self->VolEnv.DelayTime = -12000;
     self->VolEnv.AttackTime = -12000;
     self->VolEnv.HoldTime = -12000;

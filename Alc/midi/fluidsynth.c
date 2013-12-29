@@ -166,6 +166,10 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_gen_set(voice,  5, sound->ModLfoToPitch);
         fluid_voice_gen_set(voice,  6, sound->VibratoLfoToPitch);
         fluid_voice_gen_set(voice,  7, sound->ModEnvToPitch);
+        fluid_voice_gen_set(voice,  8, sound->FilterCutoff);
+        fluid_voice_gen_set(voice,  9, sound->FilterQ);
+        fluid_voice_gen_set(voice, 10, sound->ModLfoToFilterCutoff);
+        fluid_voice_gen_set(voice, 11, sound->ModEnvToFilterCutoff);
         fluid_voice_gen_set(voice, 25, sound->ModEnv.DelayTime);
         fluid_voice_gen_set(voice, 26, sound->ModEnv.AttackTime);
         fluid_voice_gen_set(voice, 27, sound->ModEnv.HoldTime);

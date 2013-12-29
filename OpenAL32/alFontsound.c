@@ -142,6 +142,24 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
             sound->ModEnvToPitch = value;
             break;
 
+        case AL_FILTER_CUTOFF_SOFT:
+            sound->FilterCutoff = value;
+            break;
+
+        case AL_FILTER_RESONANCE_SOFT:
+            if(!(value >= 0))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->FilterQ = value;
+            break;
+
+        case AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT:
+            sound->ModLfoToFilterCutoff = value;
+            break;
+
+        case AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT:
+            sound->ModEnvToFilterCutoff = value;
+            break;
+
         case AL_MOD_ENV_DELAYTIME_SOFT:
             sound->ModEnv.DelayTime = value;
             break;
@@ -315,6 +333,10 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
         case AL_MOD_LFO_TO_PITCH_SOFT:
         case AL_VIBRATO_LFO_TO_PITCH_SOFT:
         case AL_MOD_ENV_TO_PITCH_SOFT:
+        case AL_FILTER_CUTOFF_SOFT:
+        case AL_FILTER_RESONANCE_SOFT:
+        case AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT:
+        case AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT:
         case AL_MOD_ENV_DELAYTIME_SOFT:
         case AL_MOD_ENV_ATTACKTIME_SOFT:
         case AL_MOD_ENV_HOLDTIME_SOFT:
@@ -387,6 +409,22 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
 
         case AL_MOD_ENV_TO_PITCH_SOFT:
             values[0] = sound->ModEnvToPitch;
+            break;
+
+        case AL_FILTER_CUTOFF_SOFT:
+            values[0] = sound->FilterCutoff;
+            break;
+
+        case AL_FILTER_RESONANCE_SOFT:
+            values[0] = sound->FilterQ;
+            break;
+
+        case AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT:
+            values[0] = sound->ModLfoToFilterCutoff;
+            break;
+
+        case AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT:
+            values[0] = sound->ModEnvToFilterCutoff;
             break;
 
         case AL_MOD_ENV_DELAYTIME_SOFT:

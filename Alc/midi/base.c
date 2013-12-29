@@ -299,6 +299,11 @@ void ALfontsound_Construct(ALfontsound *self)
     self->VibratoLfoToPitch = 0;
     self->ModEnvToPitch = 0;
 
+    self->FilterCutoff = 13500;
+    self->FilterQ = 0;
+    self->ModLfoToFilterCutoff = 0;
+    self->ModEnvToFilterCutoff = 0;
+
     self->ModEnv.DelayTime = -12000;
     self->ModEnv.AttackTime = -12000;
     self->ModEnv.HoldTime = -12000;

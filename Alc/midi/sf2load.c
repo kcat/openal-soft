@@ -802,10 +802,10 @@ static void fillZone(ALuint id, const GenModList *zone)
         AL_MOD_LFO_TO_PITCH_SOFT, /* 5 - modLfoToPitch */
         AL_VIBRATO_LFO_TO_PITCH_SOFT, /* 6 - vibLfoToPitch */
         AL_MOD_ENV_TO_PITCH_SOFT, /* 7 - modEnvToPitch */
-        0, /* 8 - initialFilterFc */
-        0, /* 9 - initialFilterQ */
-        0, /* 10 - modLfoToFilterFc */
-        0, /* 11 - modEnvToFilterFc */
+        AL_FILTER_CUTOFF_SOFT, /* 8 - initialFilterFc */
+        AL_FILTER_RESONANCE_SOFT, /* 9 - initialFilterQ */
+        AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT, /* 10 - modLfoToFilterFc */
+        AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT, /* 11 - modEnvToFilterFc */
         0, /* 12 - endAddrCoarseOffset */
         0, /* 13 - modLfoToVolume */
         0, /* 14 -  */
@@ -895,7 +895,9 @@ static void fillZone(ALuint id, const GenModList *zone)
                     ALint value = (ALshort)gen->mAmount;
                     if(param == AL_BASE_KEY_SOFT && value == -1)
                         break;
-                    if(param == AL_LOOP_MODE_SOFT && value == 2)
+                    if(param == AL_FILTER_RESONANCE_SOFT && value < 0)
+                        value = 0;
+                    else if(param == AL_LOOP_MODE_SOFT && value == 2)
                         value = 0;
                     alFontsoundiSOFT(id, param, value);
                 }

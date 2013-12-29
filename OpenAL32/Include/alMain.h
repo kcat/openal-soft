@@ -51,6 +51,10 @@
 #define AL_MOD_LFO_TO_PITCH_SOFT                 0x0005
 #define AL_VIBRATO_LFO_TO_PITCH_SOFT             0x0006
 #define AL_MOD_ENV_TO_PITCH_SOFT                 0x0007
+#define AL_FILTER_CUTOFF_SOFT                    0x0008
+#define AL_FILTER_RESONANCE_SOFT                 0x0009
+#define AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT         0x000A
+#define AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT         0x000B
 #define AL_MOD_ENV_DELAYTIME_SOFT                0x0019
 #define AL_MOD_ENV_ATTACKTIME_SOFT               0x001A
 #define AL_MOD_ENV_HOLDTIME_SOFT                 0x001B

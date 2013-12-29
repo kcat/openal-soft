@@ -27,6 +27,11 @@ typedef struct ALfontsound {
     ALint VibratoLfoToPitch;
     ALint ModEnvToPitch;
 
+    ALint FilterCutoff;
+    ALint FilterQ;
+    ALint ModLfoToFilterCutoff;
+    ALint ModEnvToFilterCutoff;
+
     struct {
         ALint DelayTime;
         ALint AttackTime;

@@ -160,6 +160,18 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
             sound->ModEnvToFilterCutoff = value;
             break;
 
+        case AL_CHORUS_SEND_SOFT:
+            if(!(value >= 0 && value <= 1000))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->ChorusSend = value;
+            break;
+
+        case AL_REVERB_SEND_SOFT:
+            if(!(value >= 0 && value <= 1000))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->ReverbSend = value;
+            break;
+
         case AL_PAN_SOFT:
             sound->Pan = value;
             break;
@@ -358,6 +370,8 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
         case AL_FILTER_RESONANCE_SOFT:
         case AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT:
         case AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT:
+        case AL_CHORUS_SEND_SOFT:
+        case AL_REVERB_SEND_SOFT:
         case AL_PAN_SOFT:
         case AL_MOD_ENV_DELAYTIME_SOFT:
         case AL_MOD_ENV_ATTACKTIME_SOFT:
@@ -451,6 +465,14 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
 
         case AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT:
             values[0] = sound->ModEnvToFilterCutoff;
+            break;
+
+        case AL_CHORUS_SEND_SOFT:
+            values[0] = sound->ChorusSend;
+            break;
+
+        case AL_REVERB_SEND_SOFT:
+            values[0] = sound->ReverbSend;
             break;
 
         case AL_PAN_SOFT:

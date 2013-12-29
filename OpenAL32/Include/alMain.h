@@ -55,6 +55,8 @@
 #define AL_FILTER_RESONANCE_SOFT                 0x0009
 #define AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT         0x000A
 #define AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT         0x000B
+#define AL_CHORUS_SEND_SOFT                      0x000F
+#define AL_REVERB_SEND_SOFT                      0x0010
 #define AL_PAN_SOFT                              0x0011
 #define AL_MOD_ENV_DELAYTIME_SOFT                0x0019
 #define AL_MOD_ENV_ATTACKTIME_SOFT               0x001A

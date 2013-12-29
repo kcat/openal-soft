@@ -809,8 +809,8 @@ static void fillZone(ALuint id, const GenModList *zone)
         0, /* 12 - endAddrCoarseOffset */
         0, /* 13 - modLfoToVolume */
         0, /* 14 -  */
-        0, /* 15 - chorusEffectsSend */
-        0, /* 16 - reverbEffectsSend */
+        AL_CHORUS_SEND_SOFT, /* 15 - chorusEffectsSend */
+        AL_REVERB_SEND_SOFT, /* 16 - reverbEffectsSend */
         AL_PAN_SOFT, /* 17 - pan */
         0, /* 18 -  */
         0, /* 19 -  */
@@ -897,6 +897,8 @@ static void fillZone(ALuint id, const GenModList *zone)
                         break;
                     if(param == AL_FILTER_RESONANCE_SOFT || param == AL_ATTENUATION_SOFT)
                         value = maxi(0, value);
+                    else if(param == AL_CHORUS_SEND_SOFT || param == AL_REVERB_SEND_SOFT)
+                        value = clampi(value, 0, 1000);
                     else if(param == AL_LOOP_MODE_SOFT)
                     {
                         if(!(value == 0 || value == 1 || value == 3))

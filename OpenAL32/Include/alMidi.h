@@ -32,6 +32,9 @@ typedef struct ALfontsound {
     ALint ModLfoToFilterCutoff;
     ALint ModEnvToFilterCutoff;
 
+    ALint ChorusSend;
+    ALint ReverbSend;
+
     ALint Pan;
 
     struct {

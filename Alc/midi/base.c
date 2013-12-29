@@ -306,6 +306,9 @@ void ALfontsound_Construct(ALfontsound *self)
 
     self->Pan = 0;
 
+    self->ChorusSend = 0;
+    self->ReverbSend = 0;
+
     self->ModEnv.DelayTime = -12000;
     self->ModEnv.AttackTime = -12000;
     self->ModEnv.HoldTime = -12000;

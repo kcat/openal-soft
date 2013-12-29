@@ -537,6 +537,26 @@ static void GenModList_accumMod(GenModList *self, const Modulator *mod)
     }
 
     self->mods[self->mods_size] = *mod;
+    if(mod->mSrcOp == 0x0502 && mod->mDstOp == 48 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)
+        self->mods[self->mods_size].mAmount += 960;
+    else if(mod->mSrcOp == 0x0102 && mod->mDstOp == 8 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)
+        self->mods[self->mods_size].mAmount += -2400;
+    else if(mod->mSrcOp == 0x000D && mod->mDstOp == 6 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)
+        self->mods[self->mods_size].mAmount += 50;
+    else if(mod->mSrcOp == 0x0081 && mod->mDstOp == 6 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)
+        self->mods[self->mods_size].mAmount += 50;
+    else if(mod->mSrcOp == 0x0582 && mod->mDstOp == 48 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)
+        self->mods[self->mods_size].mAmount += 960;
+    else if(mod->mSrcOp == 0x028A && mod->mDstOp == 17 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)
+        self->mods[self->mods_size].mAmount += 1000;
+    else if(mod->mSrcOp == 0x058B && mod->mDstOp == 48 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)
+        self->mods[self->mods_size].mAmount += 960;
+    else if(mod->mSrcOp == 0x00DB && mod->mDstOp == 16 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)
+        self->mods[self->mods_size].mAmount += 200;
+    else if(mod->mSrcOp == 0x00DD && mod->mDstOp == 15 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)
+        self->mods[self->mods_size].mAmount += 200;
+    /*else if(mod->mSrcOp == 0x020E && mod->mDstOp == ?initialpitch? && mod->mAmtSrcOp == 0x0010 && mod->mTransOp == 0)
+        self->mods[self->mods_size].mAmount += 12700;*/
     self->mods_size++;
 }
 

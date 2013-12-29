@@ -210,6 +210,24 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
             sound->VolEnv.KeyToDecayTime = value;
             break;
 
+        case AL_TUNING_COARSE_SOFT:
+            sound->CoarseTuning = value;
+            break;
+        case AL_TUNING_FINE_SOFT:
+            sound->FineTuning = value;
+            break;
+
+        case AL_LOOP_MODE_SOFT:
+            if(!(value == AL_NONE || value == AL_LOOP_CONTINUOUS_SOFT ||
+                 value == AL_LOOP_UNTIL_RELEASE_SOFT))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            sound->LoopMode = value;
+            break;
+
+        case AL_TUNING_SCALE_SOFT:
+            sound->TuningScale = value;
+            break;
+
         case AL_SAMPLE_START_SOFT:
             sound->Start = value;
             break;
@@ -230,13 +248,6 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
             if(!(value > 0))
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
             sound->SampleRate = value;
-            break;
-
-        case AL_LOOP_MODE_SOFT:
-            if(!(value == AL_NONE || value == AL_LOOP_CONTINUOUS_SOFT ||
-                 value == AL_LOOP_UNTIL_RELEASE_SOFT))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            sound->LoopMode = value;
             break;
 
         case AL_BASE_KEY_SOFT:
@@ -353,12 +364,15 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
         case AL_VOLUME_ENV_RELEASETIME_SOFT:
         case AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT:
         case AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT:
+        case AL_TUNING_COARSE_SOFT:
+        case AL_TUNING_FINE_SOFT:
+        case AL_LOOP_MODE_SOFT:
+        case AL_TUNING_SCALE_SOFT:
         case AL_SAMPLE_START_SOFT:
         case AL_SAMPLE_END_SOFT:
         case AL_SAMPLE_LOOP_START_SOFT:
         case AL_SAMPLE_LOOP_END_SOFT:
         case AL_SAMPLE_RATE_SOFT:
-        case AL_LOOP_MODE_SOFT:
         case AL_BASE_KEY_SOFT:
         case AL_KEY_CORRECTION_SOFT:
         case AL_SAMPLE_TYPE_SOFT:
@@ -487,6 +501,21 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
             values[1] = sound->MaxVelocity;
             break;
 
+        case AL_TUNING_COARSE_SOFT:
+            values[0] = sound->CoarseTuning;
+            break;
+        case AL_TUNING_FINE_SOFT:
+            values[0] = sound->FineTuning;
+            break;
+
+        case AL_LOOP_MODE_SOFT:
+            values[0] = sound->LoopMode;
+            break;
+
+        case AL_TUNING_SCALE_SOFT:
+            values[0] = sound->TuningScale;
+            break;
+
         case AL_SAMPLE_START_SOFT:
             values[0] = sound->Start;
             break;
@@ -505,10 +534,6 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
 
         case AL_SAMPLE_RATE_SOFT:
             values[0] = sound->SampleRate;
-            break;
-
-        case AL_LOOP_MODE_SOFT:
-            values[0] = sound->LoopMode;
             break;
 
         case AL_BASE_KEY_SOFT:

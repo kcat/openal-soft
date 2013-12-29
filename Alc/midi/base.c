@@ -322,12 +322,18 @@ void ALfontsound_Construct(ALfontsound *self)
     self->VolEnv.KeyToHoldTime = 0;
     self->VolEnv.KeyToDecayTime = 0;
 
+    self->CoarseTuning = 0;
+    self->FineTuning = 0;
+
+    self->LoopMode = AL_NONE;
+
+    self->TuningScale = 100;
+
     self->Start = 0;
     self->End = 0;
     self->LoopStart = 0;
     self->LoopEnd = 0;
     self->SampleRate = 0;
-    self->LoopMode = AL_NONE;
     self->PitchKey = 0;
     self->PitchCorrection = 0;
     self->SampleType = AL_NONE;

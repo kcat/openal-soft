@@ -845,12 +845,12 @@ static void fillZone(ALuint id, const GenModList *zone)
         0, /* 48 - initialAttenuation */
         0, /* 49 -  */
         0, /* 50 - endloopAddrCoarseOffset */
-        0, /* 51 - corseTune */
-        0, /* 52 - fineTune */
+        AL_TUNING_COARSE_SOFT, /* 51 - corseTune */
+        AL_TUNING_FINE_SOFT, /* 52 - fineTune */
         0, /* 53 -  */
         AL_LOOP_MODE_SOFT, /* 54 - sampleModes */
         0, /* 55 -  */
-        0, /* 56 - scaleTuning */
+        AL_TUNING_SCALE_SOFT, /* 56 - scaleTuning */
         0, /* 57 - exclusiveClass */
         AL_BASE_KEY_SOFT, /* 58 - overridingRootKey */
         0, /* 59 -  */

@@ -73,7 +73,10 @@
 #define AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT      0x0028
 #define AL_KEY_RANGE_SOFT                        0x002B
 #define AL_VELOCITY_RANGE_SOFT                   0x002C
+#define AL_TUNING_COARSE_SOFT                    0x0033
+#define AL_TUNING_FINE_SOFT                      0x0034
 #define AL_LOOP_MODE_SOFT                        0x0036
+#define AL_TUNING_SCALE_SOFT                     0x0038
 #define AL_LOOP_CONTINUOUS_SOFT                  0x0001
 #define AL_LOOP_UNTIL_RELEASE_SOFT               0x0003
 #define AL_FORMAT_TYPE_SOFT                      0x1991

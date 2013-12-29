@@ -53,12 +53,18 @@ typedef struct ALfontsound {
         ALint KeyToDecayTime;
     } VolEnv;
 
+    ALint CoarseTuning;
+    ALint FineTuning;
+
+    ALenum LoopMode;
+
+    ALint TuningScale;
+
     ALuint Start;
     ALuint End;
     ALuint LoopStart;
     ALuint LoopEnd;
     ALuint SampleRate;
-    ALenum LoopMode;
     ALubyte PitchKey;
     ALbyte PitchCorrection;
     ALenum SampleType;

@@ -186,7 +186,10 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_gen_set(voice, 38, sound->VolEnv.ReleaseTime);
         fluid_voice_gen_set(voice, 39, sound->VolEnv.KeyToHoldTime);
         fluid_voice_gen_set(voice, 40, sound->VolEnv.KeyToDecayTime);
+        fluid_voice_gen_set(voice, 51, sound->CoarseTuning);
+        fluid_voice_gen_set(voice, 52, sound->FineTuning);
         fluid_voice_gen_set(voice, 54, sound->LoopMode);
+        fluid_voice_gen_set(voice, 56, sound->TuningScale);
         for(m = 0;m < sample->NumMods;m++)
             fluid_voice_add_mod(voice, &sample->Mods[m], FLUID_VOICE_OVERWRITE);
 

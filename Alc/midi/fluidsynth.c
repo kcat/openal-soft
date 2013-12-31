@@ -447,6 +447,11 @@ static ALenum FSynth_selectSoundfonts(FSynth *self, ALCdevice *device, ALsizei c
     ret = MidiSynth_selectSoundfonts(STATIC_CAST(MidiSynth, self), device, count, ids);
     if(ret != AL_NO_ERROR) return ret;
 
+    ALCdevice_Lock(device);
+    for(i = 0;i < 16;i++)
+        fluid_synth_all_sounds_off(self->Synth, i);
+    ALCdevice_Unlock(device);
+
     fontid = malloc(count * sizeof(fontid[0]));
     if(fontid)
     {

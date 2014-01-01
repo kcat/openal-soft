@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "AL/al.h"
+#include "alMain.h"
+#include "alMidi.h"
+#include "alError.h"
 #include "alu.h"
 
 #include "midi/base.h"
@@ -1029,7 +1031,7 @@ static void processInstrument(InstrumentHeader *inst, IDList *sounds, const Soun
     GenModList_Destruct(&gzone);
 }
 
-ALboolean loadSf2(Reader *stream, ALuint sfid)
+ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 {
     ALuint version = 0;
     Soundfont sfont;
@@ -1092,7 +1094,7 @@ ALboolean loadSf2(Reader *stream, ALuint sfid)
     if(list.mList != FOURCC('s','d','t','a'))
         ERROR_GOTO(error, "Invalid Format, expected sdta got '%c%c%c%c'\n", FOURCCARGS(list.mList));
     {
-        ALubyte *ptr;
+        ALbyte *ptr;
         RiffHdr smpl;
 
         RiffHdr_read(&smpl, stream);
@@ -1103,29 +1105,27 @@ ALboolean loadSf2(Reader *stream, ALuint sfid)
         if(smpl.mSize > list.mSize)
             ERROR_GOTO(error, "Invalid Format, sample chunk size mismatch\n");
 
-        alSoundfontSamplesSOFT(sfid, AL_SHORT_SOFT, smpl.mSize/2, NULL);
+        if(!(ptr=realloc(soundfont->Samples, smpl.mSize)))
+            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, error);
+        soundfont->Samples = (ALshort*)ptr;
+        soundfont->NumSamples = smpl.mSize/2;
 
-        ptr = alSoundfontMapSamplesSOFT(sfid, 0, smpl.mSize);
-        if(ptr)
+        if(IS_LITTLE_ENDIAN)
+            READ(stream, ptr, smpl.mSize);
+        else
         {
-            if(IS_LITTLE_ENDIAN)
-                READ(stream, ptr, smpl.mSize);
-            else
+            while(smpl.mSize > 0)
             {
-                while(smpl.mSize > 0)
-                {
-                    ALubyte buf[4096];
-                    ALuint todo = minu(smpl.mSize, sizeof(buf));
-                    ALuint i;
+                ALbyte buf[4096];
+                ALuint todo = minu(smpl.mSize, sizeof(buf));
+                ALuint i;
 
-                    READ(stream, buf, todo);
-                    for(i = 0;i < todo;i++)
-                        ptr[i] = buf[i^1];
-                }
+                READ(stream, buf, todo);
+                for(i = 0;i < todo;i++)
+                    ptr[i] = buf[i^1];
             }
-            alSoundfontUnmapSamplesSOFT(sfid);
-            list.mSize -= smpl.mSize;
         }
+        list.mSize -= smpl.mSize;
 
         skip(stream, list.mSize);
     }
@@ -1322,7 +1322,37 @@ ALboolean loadSf2(Reader *stream, ALuint sfid)
         GenModList_Destruct(&gzone);
         IDList_Destruct(&fsids);
     }
-    alSoundfontPresetsSOFT(sfid, pids.ids_size, pids.ids);
+    {
+        ALsizei count = pids.ids_size;
+        ALsfpreset **presets;
+
+        if(count == 0)
+            presets = NULL;
+        else
+        {
+            ALCdevice *device = context->Device;
+
+            presets = calloc(count, sizeof(presets[0]));
+            if(!presets)
+                SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, error);
+
+            for(i = 0;i < count;i++)
+            {
+                if(!(presets[i]=LookupPreset(device, pids.ids[i])))
+                    SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, error);
+            }
+        }
+
+        for(i = 0;i < count;i++)
+            IncrementRef(&presets[i]->ref);
+
+        presets = ExchangePtr((XchgPtr*)&soundfont->Presets, presets);
+        count = ExchangeInt(&soundfont->NumPresets, count);
+
+        for(i = 0;i < count;i++)
+            DecrementRef(&presets[i]->ref);
+        free(presets);
+    }
 
     IDList_Destruct(&pids);
     Soundfont_Destruct(&sfont);

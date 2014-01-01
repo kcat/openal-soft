@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+struct ALsoundfont;
+
 typedef size_t (*ReaderCb)(void *ptr, size_t size, void *stream);
 typedef struct Reader {
     ReaderCb cb;
@@ -18,7 +20,7 @@ typedef struct Reader {
 #define READ(x_, buf_, len_) ((x_)->cb((buf_), (len_), (x_)->ptr))
 #define READERR(x_)          ((x_)->error)
 
-ALboolean loadSf2(Reader *stream, ALuint sfid);
+ALboolean loadSf2(Reader *stream, struct ALsoundfont *sfont, ALCcontext *context);
 
 
 struct MidiSynthVtable;

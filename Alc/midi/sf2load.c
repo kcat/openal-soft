@@ -1322,35 +1322,25 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
         GenModList_Destruct(&gzone);
         IDList_Destruct(&fsids);
     }
+    if(pids.ids_size > 0)
     {
-        ALsizei count = pids.ids_size;
-        ALsfpreset **presets;
+        ALsfpreset **presets = NULL;
+        ALCdevice *device = context->Device;
 
-        if(count == 0)
-            presets = NULL;
-        else
+        presets = calloc(pids.ids_size, sizeof(presets[0]));
+        if(!presets)
+            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, error);
+
+        for(i = 0;i < pids.ids_size;i++)
         {
-            ALCdevice *device = context->Device;
-
-            presets = calloc(count, sizeof(presets[0]));
-            if(!presets)
-                SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, error);
-
-            for(i = 0;i < count;i++)
-            {
-                if(!(presets[i]=LookupPreset(device, pids.ids[i])))
-                    SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, error);
-            }
+            if(!(presets[i]=LookupPreset(device, pids.ids[i])))
+                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, error);
         }
 
-        for(i = 0;i < count;i++)
+        for(i = 0;i < pids.ids_size;i++)
             IncrementRef(&presets[i]->ref);
-
         presets = ExchangePtr((XchgPtr*)&soundfont->Presets, presets);
-        count = ExchangeInt(&soundfont->NumPresets, count);
 
-        for(i = 0;i < count;i++)
-            DecrementRef(&presets[i]->ref);
         free(presets);
     }
 

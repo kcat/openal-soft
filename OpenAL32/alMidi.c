@@ -86,6 +86,11 @@ AL_API void AL_APIENTRY alLoadSoundfontSOFT(ALuint id, size_t(*cb)(ALvoid*,size_
         WriteUnlock(&sfont->Lock);
         SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     }
+    if(sfont->NumPresets > 0)
+    {
+        WriteUnlock(&sfont->Lock);
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    }
 
     reader.cb = cb;
     reader.ptr = user;

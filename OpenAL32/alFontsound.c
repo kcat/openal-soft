@@ -15,13 +15,14 @@
 extern inline struct ALfontsound *LookupFontsound(ALCdevice *device, ALuint id);
 extern inline struct ALfontsound *RemoveFontsound(ALCdevice *device, ALuint id);
 
+static void ALfontsound_Construct(ALfontsound *self);
+static void ALfontsound_Destruct(ALfontsound *self);
+
 
 AL_API void AL_APIENTRY alGenFontsoundsSOFT(ALsizei n, ALuint *ids)
 {
-    ALCdevice *device;
     ALCcontext *context;
     ALsizei cur = 0;
-    ALenum err;
 
     context = GetContextRef();
     if(!context) return;
@@ -29,31 +30,16 @@ AL_API void AL_APIENTRY alGenFontsoundsSOFT(ALsizei n, ALuint *ids)
     if(!(n >= 0))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-    device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
-        ALfontsound *inst = calloc(1, sizeof(ALfontsound));
-        if(!inst)
+        ALfontsound *sound = NewFontsound(context);
+        if(!sound)
         {
             alDeleteFontsoundsSOFT(cur, ids);
-            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
-        }
-        ALfontsound_Construct(inst);
-
-        err = NewThunkEntry(&inst->id);
-        if(err == AL_NO_ERROR)
-            err = InsertUIntMapEntry(&device->FontsoundMap, inst->id, inst);
-        if(err != AL_NO_ERROR)
-        {
-            ALfontsound_Destruct(inst);
-            memset(inst, 0, sizeof(*inst));
-            free(inst);
-
-            alDeleteFontsoundsSOFT(cur, ids);
-            SET_ERROR_AND_GOTO(context, err, done);
+            break;
         }
 
-        ids[cur] = inst->id;
+        ids[cur] = sound->id;
     }
 
 done:
@@ -650,6 +636,125 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
 
 done:
     ALCcontext_DecRef(context);
+}
+
+
+ALfontsound *NewFontsound(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+    ALfontsound *sound;
+    ALenum  err;
+
+    sound = calloc(1, sizeof(*sound));
+    if(!sound)
+        SET_ERROR_AND_RETURN_VALUE(context, AL_OUT_OF_MEMORY, NULL);
+    ALfontsound_Construct(sound);
+
+    err = NewThunkEntry(&sound->id);
+    if(err == AL_NO_ERROR)
+        err = InsertUIntMapEntry(&device->FontsoundMap, sound->id, sound);
+    if(err != AL_NO_ERROR)
+    {
+        ALfontsound_Destruct(sound);
+        memset(sound, 0, sizeof(*sound));
+        free(sound);
+
+        SET_ERROR_AND_RETURN_VALUE(context, err, NULL);
+    }
+
+    return sound;
+}
+
+
+static void ALfontsound_Construct(ALfontsound *self)
+{
+    self->ref = 0;
+
+    self->MinKey = 0;
+    self->MaxKey = 127;
+    self->MinVelocity = 0;
+    self->MaxVelocity = 127;
+
+    self->ModLfoToPitch = 0;
+    self->VibratoLfoToPitch = 0;
+    self->ModEnvToPitch = 0;
+
+    self->FilterCutoff = 13500;
+    self->FilterQ = 0;
+    self->ModLfoToFilterCutoff = 0;
+    self->ModEnvToFilterCutoff = 0;
+    self->ModLfoToVolume = 0;
+
+    self->ChorusSend = 0;
+    self->ReverbSend = 0;
+
+    self->Pan = 0;
+
+    self->ModLfo.Delay = 0;
+    self->ModLfo.Frequency = 0;
+
+    self->VibratoLfo.Delay = 0;
+    self->VibratoLfo.Frequency = 0;
+
+    self->ModEnv.DelayTime = -12000;
+    self->ModEnv.AttackTime = -12000;
+    self->ModEnv.HoldTime = -12000;
+    self->ModEnv.DecayTime = -12000;
+    self->ModEnv.SustainVol = 0;
+    self->ModEnv.ReleaseTime = -12000;
+    self->ModEnv.KeyToHoldTime = 0;
+    self->ModEnv.KeyToDecayTime = 0;
+
+    self->VolEnv.DelayTime = -12000;
+    self->VolEnv.AttackTime = -12000;
+    self->VolEnv.HoldTime = -12000;
+    self->VolEnv.DecayTime = -12000;
+    self->VolEnv.SustainVol = 0;
+    self->VolEnv.ReleaseTime = -12000;
+    self->VolEnv.KeyToHoldTime = 0;
+    self->VolEnv.KeyToDecayTime = 0;
+
+    self->Attenuation = 0;
+
+    self->CoarseTuning = 0;
+    self->FineTuning = 0;
+
+    self->LoopMode = AL_NONE;
+
+    self->TuningScale = 100;
+
+    self->ExclusiveClass = 0;
+
+    self->Start = 0;
+    self->End = 0;
+    self->LoopStart = 0;
+    self->LoopEnd = 0;
+    self->SampleRate = 0;
+    self->PitchKey = 0;
+    self->PitchCorrection = 0;
+    self->SampleType = AL_NONE;
+    self->Link = NULL;
+
+    self->Modulators = NULL;
+    self->NumModulators = 0;
+    self->ModulatorsMax = 0;
+
+    self->id = 0;
+}
+
+static void ALfontsound_Destruct(ALfontsound *self)
+{
+    FreeThunkEntry(self->id);
+    self->id = 0;
+
+    if(self->Link)
+        DecrementRef(&self->Link->ref);
+    self->Link = NULL;
+
+    free(self->Modulators);
+    self->Modulators = NULL;
+    self->NumModulators = 0;
+    self->ModulatorsMax = 0;
 }
 
 

@@ -562,74 +562,6 @@ static void GenModList_accumMod(GenModList *self, const Modulator *mod)
     self->mods_size++;
 }
 
-static ALint getGenValue(GenModList *self, ALint gen)
-{
-    const Generator *i = self->gens;
-    const Generator *end = i + self->gens_size;
-    for(;i != end;i++)
-    {
-        if(i->mGenerator == gen)
-            return i->mAmount;
-    }
-
-    return (gen < 60) ? DefaultGenValue[gen] : 0;
-}
-
-
-typedef struct IFlist {
-    ALuint *ids;
-    ALsizei ids_size;
-    ALsizei ids_max;
-} IDList;
-
-static void IDList_Construct(IDList *self)
-{
-    self->ids = NULL;
-    self->ids_size = 0;
-    self->ids_max = 0;
-}
-
-static void IDList_Destruct(IDList *self)
-{
-    free(self->ids);
-    self->ids = NULL;
-    self->ids_size = 0;
-    self->ids_max = 0;
-}
-
-static void IDList_reserve(IDList *self, ALsizei reserve)
-{
-    if(reserve > self->ids_max)
-    {
-        ALvoid *temp = NULL;
-
-        reserve = NextPowerOf2(reserve);
-        if(reserve > self->ids_max)
-            temp = realloc(self->ids, reserve * sizeof(self->ids[0]));
-        if(!temp)
-        {
-            ERR("Failed to reserve %d IDs\n", reserve);
-            return;
-        }
-
-        self->ids = temp;
-        self->ids_max = reserve;
-    }
-}
-
-static void IDList_add(IDList *self, ALuint id)
-{
-    if(self->ids_size == self->ids_max)
-        IDList_reserve(self, self->ids_max+1);
-
-    if(self->ids_max > self->ids_size)
-    {
-        self->ids[self->ids_size] = id;
-        self->ids_size++;
-    }
-}
-
-
 
 #define ERROR_GOTO(lbl_, ...)  do {                                           \
     ERR(__VA_ARGS__);                                                         \
@@ -793,7 +725,7 @@ static ALboolean ensureZoneSanity(const GenModList *zone, int splidx)
     return AL_TRUE;
 }
 
-static void fillZone(ALuint id, const GenModList *zone)
+static void fillZone(ALfontsound *sound, const GenModList *zone)
 {
     static const ALenum Gen2Param[60] = {
         0, /* 0 - startAddrOffset */
@@ -868,66 +800,73 @@ static void fillZone(ALuint id, const GenModList *zone)
     gen_end = gen + zone->gens_size;
     for(;gen != gen_end;gen++)
     {
-        ALenum param = 0;
-        switch(gen->mGenerator)
+        ALint value = (ALshort)gen->mAmount;
+        if(gen->mGenerator == 0)
+            sound->Start += value;
+        else if(gen->mGenerator == 1)
+            sound->End += value;
+        else if(gen->mGenerator == 2)
+            sound->LoopStart += value;
+        else if(gen->mGenerator == 3)
+            sound->LoopEnd += value;
+        else if(gen->mGenerator == 4)
+            sound->Start += value<<15;
+        else if(gen->mGenerator == 12)
+            sound->End += value<<15;
+        else if(gen->mGenerator == 45)
+            sound->LoopStart += value<<15;
+        else if(gen->mGenerator == 50)
+            sound->LoopEnd += value<<15;
+        else if(gen->mGenerator == 43)
         {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-            case 12:
-            case 45:
-            case 50:
-                /* Handled later with the sample header */
-                break;
-
-            case 43:
-            case 44:
+            sound->MinKey = mini((value&0xff), 127);
+            sound->MaxKey = mini(((value>>8)&0xff), 127);
+        }
+        else if(gen->mGenerator == 44)
+        {
+            sound->MinVelocity = mini((value&0xff), 127);
+            sound->MaxVelocity = mini(((value>>8)&0xff), 127);
+        }
+        else
+        {
+            ALenum param = 0;
+            if(gen->mGenerator < 60)
                 param = Gen2Param[gen->mGenerator];
-                if(param)
-                    alFontsound2iSOFT(id, param, gen->mAmount&0xff, gen->mAmount>>8);
-                break;
-
-            default:
-                if(gen->mGenerator < 60)
-                    param = Gen2Param[gen->mGenerator];
-                if(param)
+            if(param)
+            {
+                if(param == AL_BASE_KEY_SOFT && value == -1)
+                    break;
+                if(param == AL_FILTER_RESONANCE_SOFT || param == AL_ATTENUATION_SOFT)
+                    value = maxi(0, value);
+                else if(param == AL_CHORUS_SEND_SOFT || param == AL_REVERB_SEND_SOFT)
+                    value = clampi(value, 0, 1000);
+                else if(param == AL_LOOP_MODE_SOFT)
                 {
-                    ALint value = (ALshort)gen->mAmount;
-                    if(param == AL_BASE_KEY_SOFT && value == -1)
-                        break;
-                    if(param == AL_FILTER_RESONANCE_SOFT || param == AL_ATTENUATION_SOFT)
-                        value = maxi(0, value);
-                    else if(param == AL_CHORUS_SEND_SOFT || param == AL_REVERB_SEND_SOFT)
-                        value = clampi(value, 0, 1000);
-                    else if(param == AL_LOOP_MODE_SOFT)
-                    {
-                        if(!(value == 0 || value == 1 || value == 3))
-                            value = 0;
-                    }
-                    alFontsoundiSOFT(id, param, value);
+                    if(!(value == 0 || value == 1 || value == 3))
+                        value = 0;
                 }
-                else if(gen->mGenerator < 256)
+                alFontsoundiSOFT(sound->id, param, value);
+            }
+            else if(gen->mGenerator < 256)
+            {
+                static ALboolean warned[256];
+                if(!warned[gen->mGenerator])
                 {
-                    static ALboolean warned[256];
-                    if(!warned[gen->mGenerator])
-                    {
-                        warned[gen->mGenerator] = AL_TRUE;
-                        ERR("Unhandled generator %d\n", gen->mGenerator);
-                    }
+                    warned[gen->mGenerator] = AL_TRUE;
+                    ERR("Unhandled generator %d\n", gen->mGenerator);
                 }
-                break;
+            }
         }
     }
 }
 
-static void processInstrument(InstrumentHeader *inst, IDList *sounds, const Soundfont *sfont, const GenModList *pzone)
+static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCcontext *context, InstrumentHeader *inst, const Soundfont *sfont, const GenModList *pzone)
 {
     const Generator *gen, *gen_end;
     const Modulator *mod, *mod_end;
     const Zone *zone, *zone_end;
     GenModList gzone;
+    ALvoid *temp;
 
     if((inst+1)->mZoneIdx == inst->mZoneIdx)
         ERR("Instrument with no zones!");
@@ -963,6 +902,14 @@ static void processInstrument(InstrumentHeader *inst, IDList *sounds, const Soun
         }
     }
 
+    temp = realloc(*sounds, (zone_end-zone + *sounds_size)*sizeof((*sounds)[0]));
+    if(!temp)
+    {
+        ERR("Failed reallocating fontsound storage to %ld elements (from %d)\n",
+            (zone_end-zone + *sounds_size), *sounds_size);
+        return;
+    }
+    *sounds = temp;
     for(;zone != zone_end;zone++)
     {
         GenModList lzone = GenModList_clone(&gzone);
@@ -978,7 +925,6 @@ static void processInstrument(InstrumentHeader *inst, IDList *sounds, const Soun
             if(gen->mGenerator == 53)
             {
                 const SampleHeader *samp;
-                ALuint id;
 
                 if(gen->mAmount >= sfont->shdr_size-1)
                 {
@@ -1001,25 +947,18 @@ static void processInstrument(InstrumentHeader *inst, IDList *sounds, const Soun
                 if(!ensureZoneSanity(&lzone, samp-sfont->shdr))
                     break;
 
-                id = 0;
-                alGenFontsoundsSOFT(1, &id);
-                IDList_add(sounds, id);
+                (*sounds)[*sounds_size] = NewFontsound(context);
+                (*sounds)[*sounds_size]->Start = samp->mStart;
+                (*sounds)[*sounds_size]->End = samp->mEnd;
+                (*sounds)[*sounds_size]->LoopStart = samp->mStartloop;
+                (*sounds)[*sounds_size]->LoopEnd = samp->mEndloop;
+                (*sounds)[*sounds_size]->SampleRate = samp->mSampleRate;
+                (*sounds)[*sounds_size]->PitchKey = samp->mOriginalKey;
+                (*sounds)[*sounds_size]->PitchCorrection = samp->mCorrection;
+                (*sounds)[*sounds_size]->LoopMode = (samp->mSampleType&0x7ffff);
+                fillZone((*sounds)[*sounds_size], &lzone);
+                (*sounds_size)++;
 
-                alFontsoundiSOFT(id, AL_SAMPLE_START_SOFT, samp->mStart +
-                                    (getGenValue(&lzone, 0) + (getGenValue(&lzone, 4)<<15)));
-                alFontsoundiSOFT(id, AL_SAMPLE_END_SOFT, samp->mEnd +
-                                    (getGenValue(&lzone, 1) + (getGenValue(&lzone, 12)<<15)));
-                alFontsoundiSOFT(id, AL_SAMPLE_LOOP_START_SOFT, samp->mStartloop +
-                                    (getGenValue(&lzone, 2) + (getGenValue(&lzone, 45)<<15)));
-                alFontsoundiSOFT(id, AL_SAMPLE_LOOP_END_SOFT, samp->mEndloop +
-                                    (getGenValue(&lzone, 3) + (getGenValue(&lzone, 50)<<15)));
-                alFontsoundiSOFT(id, AL_SAMPLE_RATE_SOFT, samp->mSampleRate);
-                alFontsoundiSOFT(id, AL_BASE_KEY_SOFT, samp->mOriginalKey);
-                alFontsoundiSOFT(id, AL_KEY_CORRECTION_SOFT, samp->mCorrection);
-                alFontsoundiSOFT(id, AL_SAMPLE_TYPE_SOFT, samp->mSampleType&0x7ffff);
-                alFontsoundiSOFT(id, AL_FONTSOUND_LINK_SOFT, 0);
-
-                fillZone(id, &lzone);
                 break;
             }
             GenModList_insertGen(&lzone, gen, AL_FALSE);
@@ -1250,7 +1189,6 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
         ALfontsound **sounds = NULL;
         ALsizei sounds_size = 0;
         GenModList gzone;
-        IDList fsids;
 
         if(sfont.phdr[i+1].mZoneIdx == sfont.phdr[i].mZoneIdx)
             continue;
@@ -1290,8 +1228,6 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
             }
         }
 
-        IDList_Construct(&fsids);
-        IDList_reserve(&fsids, zone_end-zone);
         for(;zone != zone_end;zone++)
         {
             GenModList lzone = GenModList_clone(&gzone);
@@ -1311,38 +1247,29 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                         ERR("Generator %ld has invalid instrument ID generator (%d of %d)\n",
                             (long)(gen-sfont.pgen), gen->mAmount, sfont.inst_size-1);
                     else
-                        processInstrument(&sfont.inst[gen->mAmount], &fsids, &sfont, &lzone);
+                        processInstrument(&sounds, &sounds_size, context,
+                                          &sfont.inst[gen->mAmount], &sfont, &lzone);
                     break;
                 }
                 GenModList_insertGen(&lzone, gen, AL_TRUE);
             }
             GenModList_Destruct(&lzone);
         }
-        if(fsids.ids_size > 0)
+
+        if(sounds_size > 0)
         {
-            sounds = calloc(fsids.ids_size, sizeof(sounds[0]));
-            if(sounds)
-            {
-                ALCdevice *device = context->Device;
-                ALsizei j;
+            ALsizei j;
 
-                for(j = 0;j < fsids.ids_size;j++)
-                {
-                    sounds[j] = LookupFontsound(device, fsids.ids[j]);
-                    IncrementRef(&sounds[j]->ref);
-                }
-                sounds_size = fsids.ids_size;
-            }
+            for(j = 0;j < sounds_size;j++)
+                IncrementRef(&sounds[j]->ref);
+            sounds = ExchangePtr((XchgPtr*)&presets[presets_size]->Sounds, sounds);
+            ExchangeInt(&presets[presets_size]->NumSounds, sounds_size);
         }
-
-        sounds = ExchangePtr((XchgPtr*)&presets[presets_size]->Sounds, sounds);
-        ExchangeInt(&presets[presets_size]->NumSounds, sounds_size);
         presets_size++;
 
         free(sounds);
 
         GenModList_Destruct(&gzone);
-        IDList_Destruct(&fsids);
     }
 
     for(i = 0;i < presets_size;i++)

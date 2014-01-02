@@ -1340,6 +1340,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
         for(i = 0;i < pids.ids_size;i++)
             IncrementRef(&presets[i]->ref);
         presets = ExchangePtr((XchgPtr*)&soundfont->Presets, presets);
+        ExchangeInt(&soundfont->NumPresets, pids.ids_size);
 
         free(presets);
     }

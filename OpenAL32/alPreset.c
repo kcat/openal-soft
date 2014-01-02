@@ -15,13 +15,14 @@
 extern inline struct ALsfpreset *LookupPreset(ALCdevice *device, ALuint id);
 extern inline struct ALsfpreset *RemovePreset(ALCdevice *device, ALuint id);
 
+static void ALsfpreset_Construct(ALsfpreset *self);
+static void ALsfpreset_Destruct(ALsfpreset *self);
+
 
 AL_API void AL_APIENTRY alGenPresetsSOFT(ALsizei n, ALuint *ids)
 {
-    ALCdevice *device;
     ALCcontext *context;
     ALsizei cur = 0;
-    ALenum err;
 
     context = GetContextRef();
     if(!context) return;
@@ -29,28 +30,13 @@ AL_API void AL_APIENTRY alGenPresetsSOFT(ALsizei n, ALuint *ids)
     if(!(n >= 0))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-    device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
-        ALsfpreset *preset = calloc(1, sizeof(ALsfpreset));
+        ALsfpreset *preset = NewPreset(context);
         if(!preset)
         {
             alDeletePresetsSOFT(cur, ids);
-            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
-        }
-        ALsfpreset_Construct(preset);
-
-        err = NewThunkEntry(&preset->id);
-        if(err == AL_NO_ERROR)
-            err = InsertUIntMapEntry(&device->PresetMap, preset->id, preset);
-        if(err != AL_NO_ERROR)
-        {
-            ALsfpreset_Destruct(preset);
-            memset(preset, 0, sizeof(*preset));
-            free(preset);
-
-            alDeletePresetsSOFT(cur, ids);
-            SET_ERROR_AND_GOTO(context, err, done);
+            break;
         }
 
         ids[cur] = preset->id;
@@ -85,13 +71,9 @@ AL_API ALvoid AL_APIENTRY alDeletePresetsSOFT(ALsizei n, const ALuint *ids)
 
     for(i = 0;i < n;i++)
     {
-        if((preset=RemovePreset(device, ids[i])) == NULL)
+        if((preset=LookupPreset(device, ids[i])) == NULL)
             continue;
-
-        ALsfpreset_Destruct(preset);
-
-        memset(preset, 0, sizeof(*preset));
-        free(preset);
+        DeletePreset(preset, device);
     }
 
 done:
@@ -273,6 +255,70 @@ AL_API void AL_APIENTRY alPresetFontsoundsSOFT(ALuint id, ALsizei count, const A
 
 done:
     ALCcontext_DecRef(context);
+}
+
+
+ALsfpreset *NewPreset(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+    ALsfpreset *preset;
+    ALenum err;
+
+    preset = calloc(1, sizeof(*preset));
+    if(!preset)
+        SET_ERROR_AND_RETURN_VALUE(context, AL_OUT_OF_MEMORY, NULL);
+    ALsfpreset_Construct(preset);
+
+    err = NewThunkEntry(&preset->id);
+    if(err == AL_NO_ERROR)
+        err = InsertUIntMapEntry(&device->PresetMap, preset->id, preset);
+    if(err != AL_NO_ERROR)
+    {
+        ALsfpreset_Destruct(preset);
+        memset(preset, 0, sizeof(*preset));
+        free(preset);
+
+        SET_ERROR_AND_RETURN_VALUE(context, err, NULL);
+    }
+
+    return preset;
+}
+
+void DeletePreset(ALsfpreset *preset, ALCdevice *device)
+{
+    RemovePreset(device, preset->id);
+
+    ALsfpreset_Destruct(preset);
+    memset(preset, 0, sizeof(*preset));
+    free(preset);
+}
+
+
+static void ALsfpreset_Construct(ALsfpreset *self)
+{
+    self->ref = 0;
+
+    self->Preset = 0;
+    self->Bank = 0;
+
+    self->Sounds = NULL;
+    self->NumSounds = 0;
+
+    self->id = 0;
+}
+
+static void ALsfpreset_Destruct(ALsfpreset *self)
+{
+    ALsizei i;
+
+    FreeThunkEntry(self->id);
+    self->id = 0;
+
+    for(i = 0;i < self->NumSounds;i++)
+        DecrementRef(&self->Sounds[i]->ref);
+    free(self->Sounds);
+    self->Sounds = NULL;
+    self->NumSounds = 0;
 }
 
 

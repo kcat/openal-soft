@@ -122,9 +122,8 @@ typedef struct ALsfpreset {
     ALuint id;
 } ALsfpreset;
 
-void ALsfpreset_Construct(ALsfpreset *self);
-void ALsfpreset_Destruct(ALsfpreset *self);
-
+ALsfpreset *NewPreset(ALCcontext *context);
+void DeletePreset(ALsfpreset *preset, ALCdevice *device);
 
 inline struct ALsfpreset *LookupPreset(ALCdevice *device, ALuint id)
 { return (struct ALsfpreset*)LookupUIntMapKey(&device->PresetMap, id); }

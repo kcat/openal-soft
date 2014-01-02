@@ -416,34 +416,6 @@ ALenum ALfontsound_addModulator(ALfontsound *self, ALenum sourceop, ALenum desto
 }
 
 
-void ALsfpreset_Construct(ALsfpreset *self)
-{
-    self->ref = 0;
-
-    self->Preset = 0;
-    self->Bank = 0;
-
-    self->Sounds = NULL;
-    self->NumSounds = 0;
-
-    self->id = 0;
-}
-
-void ALsfpreset_Destruct(ALsfpreset *self)
-{
-    ALsizei i;
-
-    FreeThunkEntry(self->id);
-    self->id = 0;
-
-    for(i = 0;i < self->NumSounds;i++)
-        DecrementRef(&self->Sounds[i]->ref);
-    free(self->Sounds);
-    self->Sounds = NULL;
-    self->NumSounds = 0;
-}
-
-
 void ALsoundfont_Construct(ALsoundfont *self)
 {
     self->ref = 0;

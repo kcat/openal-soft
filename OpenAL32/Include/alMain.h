@@ -779,22 +779,6 @@ enum {
 void FillCPUCaps(ALuint capfilter);
 
 
-#define SET_ERROR_AND_RETURN(ctx, err) do {                                    \
-    alSetError((ctx), (err));                                                  \
-    return;                                                                    \
-} while(0)
-
-#define SET_ERROR_AND_RETURN_VALUE(ctx, err, val) do {                         \
-    alSetError((ctx), (err));                                                  \
-    return (val);                                                              \
-} while(0)
-
-#define SET_ERROR_AND_GOTO(ctx, err, lbl) do {                                 \
-    alSetError((ctx), (err));                                                  \
-    goto lbl;                                                                  \
-} while(0)
-
-
 /* Small hack to use a pointer-to-array type as a normal argument type.
  * Shouldn't be used directly. */
 typedef ALfloat ALfloatBUFFERSIZE[BUFFERSIZE];

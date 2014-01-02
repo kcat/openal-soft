@@ -1033,15 +1033,15 @@ static void processInstrument(InstrumentHeader *inst, IDList *sounds, const Soun
 
 ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 {
+    ALsfpreset **presets = NULL;
+    ALsizei presets_size = 0;
     ALuint version = 0;
     Soundfont sfont;
     RiffHdr riff;
     RiffHdr list;
-    IDList pids;
     ALsizei i;
 
     Soundfont_Construct(&sfont);
-    IDList_Construct(&pids);
 
     RiffHdr_read(&riff, stream);
     if(riff.mCode != FOURCC('R','I','F','F'))
@@ -1238,25 +1238,26 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     if(!ensureFontSanity(&sfont))
         goto error;
 
-    IDList_reserve(&pids, sfont.phdr_size-1);
+    presets = calloc(1, (sfont.phdr_size-1)*sizeof(presets[0]));
+    if(!presets)
+        ERROR_GOTO(error, "Error allocating presets\n");
+
     for(i = 0;i < sfont.phdr_size-1;i++)
     {
         const Generator *gen, *gen_end;
         const Modulator *mod, *mod_end;
         const Zone *zone, *zone_end;
+        ALfontsound **sounds = NULL;
+        ALsizei sounds_size = 0;
         GenModList gzone;
         IDList fsids;
-        ALuint pid;
 
         if(sfont.phdr[i+1].mZoneIdx == sfont.phdr[i].mZoneIdx)
             continue;
 
-        pid = 0;
-        alGenPresetsSOFT(1, &pid);
-        IDList_add(&pids, pid);
-
-        alPresetiSOFT(pid, AL_MIDI_PRESET_SOFT, sfont.phdr[i].mPreset);
-        alPresetiSOFT(pid, AL_MIDI_BANK_SOFT, sfont.phdr[i].mBank);
+        presets[presets_size] = NewPreset(context);
+        presets[presets_size]->Preset = sfont.phdr[i].mPreset;
+        presets[presets_size]->Bank = sfont.phdr[i].mBank;
 
         GenModList_Construct(&gzone);
         zone = sfont.pbag + sfont.phdr[i].mZoneIdx;
@@ -1317,43 +1318,53 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
             }
             GenModList_Destruct(&lzone);
         }
-        alPresetFontsoundsSOFT(pid, fsids.ids_size, fsids.ids);
+        if(fsids.ids_size > 0)
+        {
+            sounds = calloc(fsids.ids_size, sizeof(sounds[0]));
+            if(sounds)
+            {
+                ALCdevice *device = context->Device;
+                ALsizei j;
+
+                for(j = 0;j < fsids.ids_size;j++)
+                {
+                    sounds[j] = LookupFontsound(device, fsids.ids[j]);
+                    IncrementRef(&sounds[j]->ref);
+                }
+                sounds_size = fsids.ids_size;
+            }
+        }
+
+        sounds = ExchangePtr((XchgPtr*)&presets[presets_size]->Sounds, sounds);
+        ExchangeInt(&presets[presets_size]->NumSounds, sounds_size);
+        presets_size++;
+
+        free(sounds);
 
         GenModList_Destruct(&gzone);
         IDList_Destruct(&fsids);
     }
-    if(pids.ids_size > 0)
-    {
-        ALsfpreset **presets = NULL;
-        ALCdevice *device = context->Device;
 
-        presets = calloc(pids.ids_size, sizeof(presets[0]));
-        if(!presets)
-            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, error);
+    for(i = 0;i < presets_size;i++)
+        IncrementRef(&presets[i]->ref);
+    presets = ExchangePtr((XchgPtr*)&soundfont->Presets, presets);
+    ExchangeInt(&soundfont->NumPresets, presets_size);
 
-        for(i = 0;i < pids.ids_size;i++)
-        {
-            if(!(presets[i]=LookupPreset(device, pids.ids[i])))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, error);
-        }
+    free(presets);
 
-        for(i = 0;i < pids.ids_size;i++)
-            IncrementRef(&presets[i]->ref);
-        presets = ExchangePtr((XchgPtr*)&soundfont->Presets, presets);
-        ExchangeInt(&soundfont->NumPresets, pids.ids_size);
-
-        free(presets);
-    }
-
-    IDList_Destruct(&pids);
     Soundfont_Destruct(&sfont);
 
     return AL_TRUE;
 
 error:
-    alDeletePresetsSOFT(pids.ids_size, pids.ids);
+    if(presets)
+    {
+        ALCdevice *device = context->Device;
+        for(i = 0;i < presets_size;i++)
+            DeletePreset(presets[i], device);
+        free(presets);
+    }
 
-    IDList_Destruct(&pids);
     Soundfont_Destruct(&sfont);
 
     return AL_FALSE;

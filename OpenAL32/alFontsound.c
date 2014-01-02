@@ -735,15 +735,15 @@ static void ALfontsound_Construct(ALfontsound *self)
     self->SampleType = AL_NONE;
     self->Link = NULL;
 
-    self->Modulators = NULL;
-    self->NumModulators = 0;
-    self->ModulatorsMax = 0;
+    InitUIntMap(&self->ModulatorMap, ~0);
 
     self->id = 0;
 }
 
 static void ALfontsound_Destruct(ALfontsound *self)
 {
+    ALsizei i;
+
     FreeThunkEntry(self->id);
     self->id = 0;
 
@@ -751,10 +751,12 @@ static void ALfontsound_Destruct(ALfontsound *self)
         DecrementRef(&self->Link->ref);
     self->Link = NULL;
 
-    free(self->Modulators);
-    self->Modulators = NULL;
-    self->NumModulators = 0;
-    self->ModulatorsMax = 0;
+    for(i = 0;i < self->ModulatorMap.size;i++)
+    {
+        free(self->ModulatorMap.array[i].value);
+        self->ModulatorMap.array[i].value = NULL;
+    }
+    ResetUIntMap(&self->ModulatorMap);
 }
 
 

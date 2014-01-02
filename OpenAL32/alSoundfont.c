@@ -308,6 +308,48 @@ done:
 }
 
 
+AL_API void AL_APIENTRY alLoadSoundfontSOFT(ALuint id, size_t(*cb)(ALvoid*,size_t,ALvoid*), ALvoid *user)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsoundfont *sfont;
+    Reader reader;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sfont=LookupSfont(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+
+    WriteLock(&sfont->Lock);
+    if(sfont->ref != 0)
+    {
+        WriteUnlock(&sfont->Lock);
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    }
+    if(sfont->Mapped)
+    {
+        WriteUnlock(&sfont->Lock);
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    }
+    if(sfont->NumPresets > 0)
+    {
+        WriteUnlock(&sfont->Lock);
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    }
+
+    reader.cb = cb;
+    reader.ptr = user;
+    reader.error = 0;
+    loadSf2(&reader, sfont, context);
+    WriteUnlock(&sfont->Lock);
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+
 /* ReleaseALSoundfonts
  *
  * Called to destroy any soundfonts that still exist on the device

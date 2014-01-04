@@ -688,7 +688,7 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
     return AL_TRUE;
 }
 
-static ALboolean ensureZoneSanity(const GenModList *zone, int instidx, int zoneidx, int splidx)
+static ALboolean checkZone(const GenModList *zone, const PresetHeader *preset, const InstrumentHeader *inst, const SampleHeader *samp)
 {
     ALsizei i;
 
@@ -699,12 +699,12 @@ static ALboolean ensureZoneSanity(const GenModList *zone, int instidx, int zonei
             int high = zone->gens[i].mAmount>>8;
             int low = zone->gens[i].mAmount&0xff;
 
-            if(!(low >= 0 && low <= 127 && low >= 0 && low <= 127 && high >= low))
+            if(!(low >= 0 && high <= 127 && high >= low))
             {
-                TRACE("Instrument %d zone %d sample %d, invalid %s range: %d...%d\n",
-                      instidx, zoneidx, splidx,
+                TRACE("Preset \"%s\", inst \"%s\", sample \"%s\": invalid %s range %d...%d\n",
+                      preset->mName, inst->mName, samp->mName,
                       (zone->gens[i].mGenerator == 43) ? "key" :
-                      (zone->gens[i].mGenerator == 44) ? "vel" : "(unk)",
+                      (zone->gens[i].mGenerator == 44) ? "velocity" : "(unknown)",
                       low, high);
                 return AL_FALSE;
             }
@@ -849,7 +849,7 @@ static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *
     }
 }
 
-static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCcontext *context, InstrumentHeader *inst, const Soundfont *sfont, const GenModList *pzone)
+static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCcontext *context, InstrumentHeader *inst, const PresetHeader *preset, const Soundfont *sfont, const GenModList *pzone)
 {
     const Generator *gen, *gen_end;
     const Modulator *mod, *mod_end;
@@ -933,7 +933,7 @@ static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCco
                 for(;mod != mod_end;mod++)
                     GenModList_accumMod(&lzone, mod);
 
-                if(!ensureZoneSanity(&lzone, inst-sfont->inst, zone-sfont->ibag, samp-sfont->shdr))
+                if(!checkZone(&lzone, preset, inst, samp))
                     break;
 
                 (*sounds)[*sounds_size] = NewFontsound(context);
@@ -1236,7 +1236,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                             (long)(gen-sfont.pgen), gen->mAmount, sfont.inst_size-1);
                     else
                         processInstrument(&sounds, &sounds_size, context,
-                                          &sfont.inst[gen->mAmount], &sfont, &lzone);
+                                          &sfont.inst[gen->mAmount], &sfont.phdr[i], &sfont, &lzone);
                     break;
                 }
                 GenModList_insertGen(&lzone, gen, AL_TRUE);

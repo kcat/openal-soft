@@ -117,7 +117,7 @@ AL_API ALboolean AL_APIENTRY alIsSoundfontSOFT(ALuint id)
     return ret;
 }
 
-AL_API ALvoid AL_APIENTRY alSoundfontSamplesSOFT(ALuint sfid, ALenum type, ALsizei count, const ALvoid *samples)
+AL_API ALvoid AL_APIENTRY alSoundfontSamplesSOFT(ALuint id, ALenum type, ALsizei count, const ALvoid *samples)
 {
     ALCdevice *device;
     ALCcontext *context;
@@ -128,7 +128,9 @@ AL_API ALvoid AL_APIENTRY alSoundfontSamplesSOFT(ALuint sfid, ALenum type, ALsiz
     if(!context) return;
 
     device = context->Device;
-    if(!(sfont=LookupSfont(device, sfid)))
+    if(id == 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    if(!(sfont=LookupSfont(device, id)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     if(type != AL_SHORT_SOFT)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
@@ -155,7 +157,7 @@ done:
     ALCcontext_DecRef(context);
 }
 
-AL_API ALvoid* AL_APIENTRY alSoundfontMapSamplesSOFT(ALuint sfid, ALsizei offset, ALsizei length)
+AL_API ALvoid* AL_APIENTRY alSoundfontMapSamplesSOFT(ALuint id, ALsizei offset, ALsizei length)
 {
     ALCdevice *device;
     ALCcontext *context;
@@ -166,7 +168,9 @@ AL_API ALvoid* AL_APIENTRY alSoundfontMapSamplesSOFT(ALuint sfid, ALsizei offset
     if(!context) return NULL;
 
     device = context->Device;
-    if(!(sfont=LookupSfont(device, sfid)))
+    if(id == 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    if(!(sfont=LookupSfont(device, id)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     if(offset < 0 || (ALuint)offset > sfont->NumSamples*sizeof(ALshort))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
@@ -188,7 +192,7 @@ done:
     return ptr;
 }
 
-AL_API ALvoid AL_APIENTRY alSoundfontUnmapSamplesSOFT(ALuint sfid)
+AL_API ALvoid AL_APIENTRY alSoundfontUnmapSamplesSOFT(ALuint id)
 {
     ALCdevice *device;
     ALCcontext *context;
@@ -198,7 +202,9 @@ AL_API ALvoid AL_APIENTRY alSoundfontUnmapSamplesSOFT(ALuint sfid)
     if(!context) return;
 
     device = context->Device;
-    if(!(sfont=LookupSfont(device, sfid)))
+    if(id == 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    if(!(sfont=LookupSfont(device, id)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     if(ExchangeInt(&sfont->Mapped, AL_FALSE) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
@@ -218,7 +224,9 @@ AL_API void AL_APIENTRY alGetSoundfontivSOFT(ALuint id, ALenum param, ALint *val
     if(!context) return;
 
     device = context->Device;
-    if(!(sfont=LookupSfont(device, id)))
+    if(id == 0)
+        sfont = MidiSynth_getDefSoundfont(context);
+    else if(!(sfont=LookupSfont(device, id)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     switch(param)
     {
@@ -259,6 +267,8 @@ AL_API void AL_APIENTRY alSoundfontPresetsSOFT(ALuint id, ALsizei count, const A
     if(!context) return;
 
     device = context->Device;
+    if(id == 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     if(!(sfont=LookupSfont(device, id)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     if(count < 0)
@@ -319,6 +329,8 @@ AL_API void AL_APIENTRY alLoadSoundfontSOFT(ALuint id, size_t(*cb)(ALvoid*,size_
     if(!context) return;
 
     device = context->Device;
+    if(id == 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     if(!(sfont=LookupSfont(device, id)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
 

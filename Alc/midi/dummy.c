@@ -20,7 +20,7 @@ typedef struct DSynth {
 
 static void DSynth_Construct(DSynth *self, ALCdevice *device);
 static DECLARE_FORWARD(DSynth, MidiSynth, void, Destruct)
-static DECLARE_FORWARD3(DSynth, MidiSynth, ALenum, selectSoundfonts, ALCdevice*, ALsizei, const ALuint*)
+static DECLARE_FORWARD3(DSynth, MidiSynth, ALenum, selectSoundfonts, ALCcontext*, ALsizei, const ALuint*)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, setGain, ALfloat)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, setState, ALenum)
 static DECLARE_FORWARD(DSynth, MidiSynth, void, stop)

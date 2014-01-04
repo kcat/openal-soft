@@ -341,7 +341,7 @@ typedef struct FSynth {
 static void FSynth_Construct(FSynth *self, ALCdevice *device);
 static void FSynth_Destruct(FSynth *self);
 static ALboolean FSynth_init(FSynth *self, ALCdevice *device);
-static ALenum FSynth_selectSoundfonts(FSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids);
+static ALenum FSynth_selectSoundfonts(FSynth *self, ALCcontext *context, ALsizei count, const ALuint *ids);
 static void FSynth_setGain(FSynth *self, ALfloat gain);
 static void FSynth_setState(FSynth *self, ALenum state);
 static void FSynth_stop(FSynth *self);
@@ -438,19 +438,19 @@ static fluid_sfont_t *FSynth_loadSfont(fluid_sfloader_t *loader, const char *fil
     return STATIC_CAST(fluid_sfont_t, sfont);
 }
 
-static ALenum FSynth_selectSoundfonts(FSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids)
+static ALenum FSynth_selectSoundfonts(FSynth *self, ALCcontext *context, ALsizei count, const ALuint *ids)
 {
     int *fontid;
     ALenum ret;
     ALsizei i;
 
-    ret = MidiSynth_selectSoundfonts(STATIC_CAST(MidiSynth, self), device, count, ids);
+    ret = MidiSynth_selectSoundfonts(STATIC_CAST(MidiSynth, self), context, count, ids);
     if(ret != AL_NO_ERROR) return ret;
 
-    ALCdevice_Lock(device);
+    ALCdevice_Lock(context->Device);
     for(i = 0;i < 16;i++)
         fluid_synth_all_sounds_off(self->Synth, i);
-    ALCdevice_Unlock(device);
+    ALCdevice_Unlock(context->Device);
 
     fontid = malloc(count * sizeof(fontid[0]));
     if(fontid)

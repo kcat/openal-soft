@@ -24,6 +24,9 @@
 #define SYSEX_EVENT  (0xF0)
 
 
+static size_t read_file(ALvoid *buf, size_t bytes, ALvoid *ptr);
+
+
 void InitEvtQueue(EvtQueue *queue)
 {
     queue->events = NULL;
@@ -151,8 +154,43 @@ void MidiSynth_Destruct(MidiSynth *self)
     ResetEvtQueue(&self->EventQueue);
 }
 
-ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids)
+ALsoundfont *MidiSynth_getDefSoundfont(ALCcontext *context)
 {
+    ALCdevice *device = context->Device;
+    const char *fname;
+
+    if(device->DefaultSfont)
+        return device->DefaultSfont;
+
+    device->DefaultSfont = calloc(1, sizeof(device->DefaultSfont[0]));
+    ALsoundfont_Construct(device->DefaultSfont);
+
+    fname = getenv("ALSOFT_SOUNDFONT");
+    if((fname && fname[0]) || ConfigValueStr("midi", "soundfont", &fname))
+    {
+        FILE *f;
+
+        f = fopen(fname, "rb");
+        if(f == NULL)
+            ERR("Failed to open default soundfont %s\n", fname);
+        else
+        {
+            Reader reader;
+            reader.cb = read_file;
+            reader.ptr = f;
+            reader.error = 0;
+            TRACE("Loading default soundfont %s\n", fname);
+            loadSf2(&reader, device->DefaultSfont, context);
+            fclose(f);
+        }
+    }
+
+    return device->DefaultSfont;
+}
+
+ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCcontext *context, ALsizei count, const ALuint *ids)
+{
+    ALCdevice *device = context->Device;
     ALsoundfont **sfonts;
     ALsizei i;
 
@@ -164,7 +202,9 @@ ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCdevice *device, ALsizei co
 
     for(i = 0;i < count;i++)
     {
-        if(!(sfonts[i]=LookupSfont(device, ids[i])))
+        if(ids[i] == 0)
+            sfonts[i] = MidiSynth_getDefSoundfont(context);
+        else if(!(sfonts[i]=LookupSfont(device, ids[i])))
         {
             free(sfonts);
             return AL_INVALID_VALUE;
@@ -271,4 +311,10 @@ ALenum MidiSynth_insertSysExEvent(MidiSynth *self, ALuint64 time, const ALbyte *
     }
 
     return AL_NO_ERROR;
+}
+
+
+static size_t read_file(ALvoid *buf, size_t bytes, ALvoid *ptr)
+{
+    return fread(buf, 1, bytes, (FILE*)ptr);
 }

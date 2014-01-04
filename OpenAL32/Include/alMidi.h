@@ -94,6 +94,8 @@ typedef struct ALfontsound {
     ALuint id;
 } ALfontsound;
 
+void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, ALint value);
+
 ALfontsound *NewFontsound(ALCcontext *context);
 
 inline struct ALfontsound *LookupFontsound(ALCdevice *device, ALuint id)

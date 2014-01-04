@@ -17,6 +17,7 @@ extern inline struct ALfontsound *RemoveFontsound(ALCdevice *device, ALuint id);
 
 static void ALfontsound_Construct(ALfontsound *self);
 static void ALfontsound_Destruct(ALfontsound *self);
+void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, ALint value);
 
 
 AL_API void AL_APIENTRY alGenFontsoundsSOFT(ALsizei n, ALuint *ids)
@@ -104,7 +105,6 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
     ALCdevice *device;
     ALCcontext *context;
     ALfontsound *sound;
-    ALfontsound *link;
 
     context = GetContextRef();
     if(!context) return;
@@ -114,207 +114,8 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     if(sound->ref != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
-    switch(param)
-    {
-        case AL_MOD_LFO_TO_PITCH_SOFT:
-            sound->ModLfoToPitch = value;
-            break;
 
-        case AL_VIBRATO_LFO_TO_PITCH_SOFT:
-            sound->VibratoLfoToPitch = value;
-            break;
-
-        case AL_MOD_ENV_TO_PITCH_SOFT:
-            sound->ModEnvToPitch = value;
-            break;
-
-        case AL_FILTER_CUTOFF_SOFT:
-            sound->FilterCutoff = value;
-            break;
-
-        case AL_FILTER_RESONANCE_SOFT:
-            if(!(value >= 0))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            sound->FilterQ = value;
-            break;
-
-        case AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT:
-            sound->ModLfoToFilterCutoff = value;
-            break;
-
-        case AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT:
-            sound->ModEnvToFilterCutoff = value;
-            break;
-
-        case AL_MOD_LFO_TO_VOLUME_SOFT:
-            sound->ModLfoToVolume = value;
-            break;
-
-        case AL_CHORUS_SEND_SOFT:
-            if(!(value >= 0 && value <= 1000))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            sound->ChorusSend = value;
-            break;
-
-        case AL_REVERB_SEND_SOFT:
-            if(!(value >= 0 && value <= 1000))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            sound->ReverbSend = value;
-            break;
-
-        case AL_PAN_SOFT:
-            sound->Pan = value;
-            break;
-
-        case AL_MOD_LFO_DELAY_SOFT:
-            sound->ModLfo.Delay = value;
-            break;
-        case AL_MOD_LFO_FREQUENCY_SOFT:
-            sound->ModLfo.Frequency = value;
-            break;
-
-        case AL_VIBRATO_LFO_DELAY_SOFT:
-            sound->VibratoLfo.Delay = value;
-            break;
-        case AL_VIBRATO_LFO_FREQUENCY_SOFT:
-            sound->VibratoLfo.Frequency = value;
-            break;
-
-        case AL_MOD_ENV_DELAYTIME_SOFT:
-            sound->ModEnv.DelayTime = value;
-            break;
-        case AL_MOD_ENV_ATTACKTIME_SOFT:
-            sound->ModEnv.AttackTime = value;
-            break;
-        case AL_MOD_ENV_HOLDTIME_SOFT:
-            sound->ModEnv.HoldTime = value;
-            break;
-        case AL_MOD_ENV_DECAYTIME_SOFT:
-            sound->ModEnv.DecayTime = value;
-            break;
-        case AL_MOD_ENV_SUSTAINVOLUME_SOFT:
-            sound->ModEnv.SustainVol = value;
-            break;
-        case AL_MOD_ENV_RELEASETIME_SOFT:
-            sound->ModEnv.ReleaseTime = value;
-            break;
-        case AL_MOD_ENV_KEY_TO_HOLDTIME_SOFT:
-            sound->ModEnv.KeyToHoldTime = value;
-            break;
-        case AL_MOD_ENV_KEY_TO_DECAYTIME_SOFT:
-            sound->ModEnv.KeyToDecayTime = value;
-            break;
-
-        case AL_VOLUME_ENV_DELAYTIME_SOFT:
-            sound->VolEnv.DelayTime = value;
-            break;
-        case AL_VOLUME_ENV_ATTACKTIME_SOFT:
-            sound->VolEnv.AttackTime = value;
-            break;
-        case AL_VOLUME_ENV_HOLDTIME_SOFT:
-            sound->VolEnv.HoldTime = value;
-            break;
-        case AL_VOLUME_ENV_DECAYTIME_SOFT:
-            sound->VolEnv.DecayTime = value;
-            break;
-        case AL_VOLUME_ENV_SUSTAINVOLUME_SOFT:
-            sound->VolEnv.SustainVol = value;
-            break;
-        case AL_VOLUME_ENV_RELEASETIME_SOFT:
-            sound->VolEnv.ReleaseTime = value;
-            break;
-        case AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT:
-            sound->VolEnv.KeyToHoldTime = value;
-            break;
-        case AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT:
-            sound->VolEnv.KeyToDecayTime = value;
-            break;
-
-        case AL_ATTENUATION_SOFT:
-            if(!(value >= 0))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            sound->Attenuation = value;
-            break;
-
-        case AL_TUNING_COARSE_SOFT:
-            sound->CoarseTuning = value;
-            break;
-        case AL_TUNING_FINE_SOFT:
-            sound->FineTuning = value;
-            break;
-
-        case AL_LOOP_MODE_SOFT:
-            if(!(value == AL_NONE || value == AL_LOOP_CONTINUOUS_SOFT ||
-                 value == AL_LOOP_UNTIL_RELEASE_SOFT))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            sound->LoopMode = value;
-            break;
-
-        case AL_TUNING_SCALE_SOFT:
-            sound->TuningScale = value;
-            break;
-
-        case AL_EXCLUSIVE_CLASS_SOFT:
-            sound->ExclusiveClass = value;
-            break;
-
-        case AL_SAMPLE_START_SOFT:
-            sound->Start = value;
-            break;
-
-        case AL_SAMPLE_END_SOFT:
-            sound->End = value;
-            break;
-
-        case AL_SAMPLE_LOOP_START_SOFT:
-            sound->LoopStart = value;
-            break;
-
-        case AL_SAMPLE_LOOP_END_SOFT:
-            sound->LoopEnd = value;
-            break;
-
-        case AL_SAMPLE_RATE_SOFT:
-            if(!(value > 0))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            sound->SampleRate = value;
-            break;
-
-        case AL_BASE_KEY_SOFT:
-            if(!((value >= 0 && value <= 127) || value == 255))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            sound->PitchKey = value;
-            break;
-
-        case AL_KEY_CORRECTION_SOFT:
-            if(!(value > -100 && value < 100))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            sound->PitchCorrection = value;
-            break;
-
-        case AL_SAMPLE_TYPE_SOFT:
-            if(!(value >= 1 && value <= 4))
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            sound->SampleType = value;
-            break;
-
-        case AL_FONTSOUND_LINK_SOFT:
-            if(!value)
-                link = NULL;
-            else
-            {
-                link = LookupFontsound(device, value);
-                if(!link)
-                    SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-            }
-            if(link) IncrementRef(&link->ref);
-            link = ExchangePtr((XchgPtr*)&sound->Link, link);
-            if(link) DecrementRef(&link->ref);
-            break;
-
-        default:
-            SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
-    }
+    ALfontsound_setPropi(sound, context, param, value);
 
 done:
     ALCcontext_DecRef(context);
@@ -757,6 +558,212 @@ static void ALfontsound_Destruct(ALfontsound *self)
         self->ModulatorMap.array[i].value = NULL;
     }
     ResetUIntMap(&self->ModulatorMap);
+}
+
+void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, ALint value)
+{
+    ALfontsound *link;
+
+    switch(param)
+    {
+        case AL_MOD_LFO_TO_PITCH_SOFT:
+            self->ModLfoToPitch = value;
+            break;
+
+        case AL_VIBRATO_LFO_TO_PITCH_SOFT:
+            self->VibratoLfoToPitch = value;
+            break;
+
+        case AL_MOD_ENV_TO_PITCH_SOFT:
+            self->ModEnvToPitch = value;
+            break;
+
+        case AL_FILTER_CUTOFF_SOFT:
+            self->FilterCutoff = value;
+            break;
+
+        case AL_FILTER_RESONANCE_SOFT:
+            if(!(value >= 0))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            self->FilterQ = value;
+            break;
+
+        case AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT:
+            self->ModLfoToFilterCutoff = value;
+            break;
+
+        case AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT:
+            self->ModEnvToFilterCutoff = value;
+            break;
+
+        case AL_MOD_LFO_TO_VOLUME_SOFT:
+            self->ModLfoToVolume = value;
+            break;
+
+        case AL_CHORUS_SEND_SOFT:
+            if(!(value >= 0 && value <= 1000))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            self->ChorusSend = value;
+            break;
+        case AL_REVERB_SEND_SOFT:
+            if(!(value >= 0 && value <= 1000))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            self->ReverbSend = value;
+            break;
+
+        case AL_PAN_SOFT:
+            self->Pan = value;
+            break;
+
+        case AL_MOD_LFO_DELAY_SOFT:
+            self->ModLfo.Delay = value;
+            break;
+        case AL_MOD_LFO_FREQUENCY_SOFT:
+            self->ModLfo.Frequency = value;
+            break;
+
+        case AL_VIBRATO_LFO_DELAY_SOFT:
+            self->VibratoLfo.Delay = value;
+            break;
+        case AL_VIBRATO_LFO_FREQUENCY_SOFT:
+            self->VibratoLfo.Frequency = value;
+            break;
+
+        case AL_MOD_ENV_DELAYTIME_SOFT:
+            self->ModEnv.DelayTime = value;
+            break;
+        case AL_MOD_ENV_ATTACKTIME_SOFT:
+            self->ModEnv.AttackTime = value;
+            break;
+        case AL_MOD_ENV_HOLDTIME_SOFT:
+            self->ModEnv.HoldTime = value;
+            break;
+        case AL_MOD_ENV_DECAYTIME_SOFT:
+            self->ModEnv.DecayTime = value;
+            break;
+        case AL_MOD_ENV_SUSTAINVOLUME_SOFT:
+            self->ModEnv.SustainVol = value;
+            break;
+        case AL_MOD_ENV_RELEASETIME_SOFT:
+            self->ModEnv.ReleaseTime = value;
+            break;
+        case AL_MOD_ENV_KEY_TO_HOLDTIME_SOFT:
+            self->ModEnv.KeyToHoldTime = value;
+            break;
+        case AL_MOD_ENV_KEY_TO_DECAYTIME_SOFT:
+            self->ModEnv.KeyToDecayTime = value;
+            break;
+
+        case AL_VOLUME_ENV_DELAYTIME_SOFT:
+            self->VolEnv.DelayTime = value;
+            break;
+        case AL_VOLUME_ENV_ATTACKTIME_SOFT:
+            self->VolEnv.AttackTime = value;
+            break;
+        case AL_VOLUME_ENV_HOLDTIME_SOFT:
+            self->VolEnv.HoldTime = value;
+            break;
+        case AL_VOLUME_ENV_DECAYTIME_SOFT:
+            self->VolEnv.DecayTime = value;
+            break;
+        case AL_VOLUME_ENV_SUSTAINVOLUME_SOFT:
+            self->VolEnv.SustainVol = value;
+            break;
+        case AL_VOLUME_ENV_RELEASETIME_SOFT:
+            self->VolEnv.ReleaseTime = value;
+            break;
+        case AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT:
+            self->VolEnv.KeyToHoldTime = value;
+            break;
+        case AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT:
+            self->VolEnv.KeyToDecayTime = value;
+            break;
+
+        case AL_ATTENUATION_SOFT:
+            if(!(value >= 0))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            self->Attenuation = value;
+            break;
+
+        case AL_TUNING_COARSE_SOFT:
+            self->CoarseTuning = value;
+            break;
+        case AL_TUNING_FINE_SOFT:
+            self->FineTuning = value;
+            break;
+
+        case AL_LOOP_MODE_SOFT:
+            if(!(value == AL_NONE || value == AL_LOOP_CONTINUOUS_SOFT ||
+                 value == AL_LOOP_UNTIL_RELEASE_SOFT))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            self->LoopMode = value;
+            break;
+
+        case AL_TUNING_SCALE_SOFT:
+            self->TuningScale = value;
+            break;
+
+        case AL_EXCLUSIVE_CLASS_SOFT:
+            self->ExclusiveClass = value;
+            break;
+
+        case AL_SAMPLE_START_SOFT:
+            self->Start = value;
+            break;
+
+        case AL_SAMPLE_END_SOFT:
+            self->End = value;
+            break;
+
+        case AL_SAMPLE_LOOP_START_SOFT:
+            self->LoopStart = value;
+            break;
+
+        case AL_SAMPLE_LOOP_END_SOFT:
+            self->LoopEnd = value;
+            break;
+
+        case AL_SAMPLE_RATE_SOFT:
+            if(!(value > 0))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            self->SampleRate = value;
+            break;
+
+        case AL_BASE_KEY_SOFT:
+            if(!((value >= 0 && value <= 127) || value == 255))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            self->PitchKey = value;
+            break;
+
+        case AL_KEY_CORRECTION_SOFT:
+            if(!(value >= -99 && value <= 99))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            self->PitchCorrection = value;
+            break;
+
+        case AL_SAMPLE_TYPE_SOFT:
+            if(!(value >= 1 && value <= 4))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            self->SampleType = value;
+            break;
+
+        case AL_FONTSOUND_LINK_SOFT:
+            if(!value)
+                link = NULL;
+            else
+            {
+                link = LookupFontsound(context->Device, value);
+                if(!link)
+                    SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            }
+            if(link) IncrementRef(&link->ref);
+            link = ExchangePtr((XchgPtr*)&self->Link, link);
+            if(link) DecrementRef(&link->ref);
+            break;
+
+        default:
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+    }
 }
 
 

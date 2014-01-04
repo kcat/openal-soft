@@ -713,7 +713,7 @@ static ALboolean ensureZoneSanity(const GenModList *zone, int splidx)
     return AL_TRUE;
 }
 
-static void fillZone(ALfontsound *sound, const GenModList *zone)
+static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *zone)
 {
     static const ALenum Gen2Param[60] = {
         0, /* 0 - startAddrOffset */
@@ -833,7 +833,7 @@ static void fillZone(ALfontsound *sound, const GenModList *zone)
                     if(!(value == 0 || value == 1 || value == 3))
                         value = 0;
                 }
-                alFontsoundiSOFT(sound->id, param, value);
+                ALfontsound_setPropi(sound, context, param, value);
             }
             else if(gen->mGenerator < 256)
             {
@@ -944,7 +944,7 @@ static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCco
                 (*sounds)[*sounds_size]->PitchKey = samp->mOriginalKey;
                 (*sounds)[*sounds_size]->PitchCorrection = samp->mCorrection;
                 (*sounds)[*sounds_size]->LoopMode = (samp->mSampleType&0x7ffff);
-                fillZone((*sounds)[*sounds_size], &lzone);
+                fillZone((*sounds)[*sounds_size], context, &lzone);
                 (*sounds_size)++;
 
                 break;

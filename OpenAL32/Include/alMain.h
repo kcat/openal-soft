@@ -545,6 +545,9 @@ struct ALCdevice_struct
     // Map of Fontsounds for this device
     UIntMap FontsoundMap;
 
+    /* Default soundfont (accessible as ID 0) */
+    struct ALsoundfont *DefaultSfont;
+
     /* MIDI synth engine */
     struct MidiSynth *Synth;
 

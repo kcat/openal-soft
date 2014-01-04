@@ -16,7 +16,7 @@ extern inline struct ALfontsound *LookupFontsound(ALCdevice *device, ALuint id);
 extern inline struct ALfontsound *RemoveFontsound(ALCdevice *device, ALuint id);
 
 static void ALfontsound_Construct(ALfontsound *self);
-static void ALfontsound_Destruct(ALfontsound *self);
+void ALfontsound_Destruct(ALfontsound *self);
 void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, ALint value);
 
 
@@ -541,7 +541,7 @@ static void ALfontsound_Construct(ALfontsound *self)
     self->id = 0;
 }
 
-static void ALfontsound_Destruct(ALfontsound *self)
+void ALfontsound_Destruct(ALfontsound *self)
 {
     ALsizei i;
 

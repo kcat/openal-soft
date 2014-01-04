@@ -94,6 +94,7 @@ typedef struct ALfontsound {
     ALuint id;
 } ALfontsound;
 
+void ALfontsound_Destruct(ALfontsound *self);
 void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, ALint value);
 
 ALfontsound *NewFontsound(ALCcontext *context);

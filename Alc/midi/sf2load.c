@@ -688,7 +688,7 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
     return AL_TRUE;
 }
 
-static ALboolean ensureZoneSanity(const GenModList *zone, int splidx)
+static ALboolean ensureZoneSanity(const GenModList *zone, int instidx, int zoneidx, int splidx)
 {
     ALsizei i;
 
@@ -701,9 +701,10 @@ static ALboolean ensureZoneSanity(const GenModList *zone, int splidx)
 
             if(!(low >= 0 && low <= 127 && low >= 0 && low <= 127 && high >= low))
             {
-                TRACE("Skipping sample %d with invalid %s range: %d...%d\n", splidx,
+                TRACE("Instrument %d zone %d sample %d, invalid %s range: %d...%d\n",
+                      instidx, zoneidx, splidx,
                       (zone->gens[i].mGenerator == 43) ? "key" :
-                      (zone->gens[i].mGenerator == 44) ? "velocity" : "(unknown)",
+                      (zone->gens[i].mGenerator == 44) ? "vel" : "(unk)",
                       low, high);
                 return AL_FALSE;
             }
@@ -932,7 +933,7 @@ static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCco
                 for(;mod != mod_end;mod++)
                     GenModList_accumMod(&lzone, mod);
 
-                if(!ensureZoneSanity(&lzone, samp-sfont->shdr))
+                if(!ensureZoneSanity(&lzone, inst-sfont->inst, zone-sfont->ibag, samp-sfont->shdr))
                     break;
 
                 (*sounds)[*sounds_size] = NewFontsound(context);

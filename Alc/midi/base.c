@@ -172,14 +172,14 @@ ALsoundfont *MidiSynth_getDefSoundfont(ALCcontext *context)
 
         f = fopen(fname, "rb");
         if(f == NULL)
-            ERR("Failed to open default soundfont %s\n", fname);
+            ERR("Failed to open %s\n", fname);
         else
         {
             Reader reader;
             reader.cb = read_file;
             reader.ptr = f;
             reader.error = 0;
-            TRACE("Loading default soundfont %s\n", fname);
+            TRACE("Loading %s\n", fname);
             loadSf2(&reader, device->DefaultSfont, context);
             fclose(f);
         }

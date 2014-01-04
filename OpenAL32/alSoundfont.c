@@ -76,11 +76,13 @@ AL_API ALvoid AL_APIENTRY alDeleteSoundfontsSOFT(ALsizei n, const ALuint *ids)
     device = context->Device;
     for(i = 0;i < n;i++)
     {
-        if(!ids[i])
-            continue;
-
         /* Check for valid soundfont ID */
-        if((sfont=LookupSfont(device, ids[i])) == NULL)
+        if(ids[i] == 0)
+        {
+            if(!(sfont=device->DefaultSfont))
+                continue;
+        }
+        else if((sfont=LookupSfont(device, ids[i])) == NULL)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
         if(sfont->Mapped != AL_FALSE || sfont->ref != 0)
             SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
@@ -88,7 +90,17 @@ AL_API ALvoid AL_APIENTRY alDeleteSoundfontsSOFT(ALsizei n, const ALuint *ids)
 
     for(i = 0;i < n;i++)
     {
-        if((sfont=RemoveSfont(device, ids[i])) == NULL)
+        if(ids[i] == 0)
+        {
+            MidiSynth *synth = device->Synth;
+            WriteLock(&synth->Lock);
+            if(device->DefaultSfont != NULL)
+                MidiSynth_deleteSoundfont(device, device->DefaultSfont);
+            device->DefaultSfont = NULL;
+            WriteUnlock(&synth->Lock);
+            continue;
+        }
+        else if((sfont=RemoveSfont(device, ids[i])) == NULL)
             continue;
 
         ALsoundfont_Destruct(sfont);

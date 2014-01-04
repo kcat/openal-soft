@@ -188,6 +188,55 @@ ALsoundfont *MidiSynth_getDefSoundfont(ALCcontext *context)
     return device->DefaultSfont;
 }
 
+void MidiSynth_deleteSoundfont(ALCdevice *device, ALsoundfont *sfont)
+{
+    ALsfpreset **presets;
+    ALsizei num_presets;
+    ALsizei i;
+
+    presets = ExchangePtr((XchgPtr*)&sfont->Presets, NULL);
+    num_presets = ExchangeInt(&sfont->NumPresets, 0);
+
+    for(i = 0;i < num_presets;i++)
+    {
+        ALsfpreset *preset = presets[i];
+        ALfontsound **sounds;
+        ALsizei num_sounds;
+        ALboolean deleting;
+        ALsizei j;
+
+        sounds = ExchangePtr((XchgPtr*)&preset->Sounds, NULL);
+        num_sounds = ExchangeInt(&preset->NumSounds, 0);
+        DeletePreset(preset, device);
+        preset = NULL;
+
+        for(j = 0;j < num_sounds;j++)
+            DecrementRef(&sounds[j]->ref);
+        /* Some fontsounds may not be immediately deletable because they're
+         * linked to another fontsound. When those fontsounds are deleted
+         * they should become deletable, so use a loop until all fontsounds
+         * are deleted. */
+        do {
+            deleting = AL_FALSE;
+            for(j = 0;j < num_sounds;j++)
+            {
+                if(sounds[j] && sounds[j]->ref == 0)
+                {
+                    deleting = AL_TRUE;
+                    RemoveFontsound(device, sounds[j]->id);
+                    ALfontsound_Destruct(sounds[j]);
+                    free(sounds[j]);
+                    sounds[j] = NULL;
+                }
+            }
+        } while(deleting);
+        free(sounds);
+    }
+
+    ALsoundfont_Destruct(sfont);
+    free(sfont);
+}
+
 ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCcontext *context, ALsizei count, const ALuint *ids)
 {
     ALCdevice *device = context->Device;

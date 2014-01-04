@@ -1185,10 +1185,6 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
         if(sfont.phdr[i+1].mZoneIdx == sfont.phdr[i].mZoneIdx)
             continue;
 
-        presets[presets_size] = NewPreset(context);
-        presets[presets_size]->Preset = sfont.phdr[i].mPreset;
-        presets[presets_size]->Bank = sfont.phdr[i].mBank;
-
         GenModList_Construct(&gzone);
         zone = sfont.pbag + sfont.phdr[i].mZoneIdx;
         zone_end = sfont.pbag + sfont.phdr[i+1].mZoneIdx;
@@ -1252,13 +1248,16 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
         {
             ALsizei j;
 
+            presets[presets_size] = NewPreset(context);
+            presets[presets_size]->Preset = sfont.phdr[i].mPreset;
+            presets[presets_size]->Bank = sfont.phdr[i].mBank;
+
             for(j = 0;j < sounds_size;j++)
                 IncrementRef(&sounds[j]->ref);
             sounds = ExchangePtr((XchgPtr*)&presets[presets_size]->Sounds, sounds);
             ExchangeInt(&presets[presets_size]->NumSounds, sounds_size);
+            presets_size++;
         }
-        presets_size++;
-
         free(sounds);
 
         GenModList_Destruct(&gzone);

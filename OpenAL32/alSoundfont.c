@@ -350,6 +350,44 @@ done:
 }
 
 
+void ALsoundfont_Construct(ALsoundfont *self)
+{
+    self->ref = 0;
+
+    self->Presets = NULL;
+    self->NumPresets = 0;
+
+    self->Samples = NULL;
+    self->NumSamples = 0;
+
+    RWLockInit(&self->Lock);
+    self->Mapped = AL_FALSE;
+
+    self->id = 0;
+}
+
+void ALsoundfont_Destruct(ALsoundfont *self)
+{
+    ALsizei i;
+
+    FreeThunkEntry(self->id);
+    self->id = 0;
+
+    for(i = 0;i < self->NumPresets;i++)
+    {
+        DecrementRef(&self->Presets[i]->ref);
+        self->Presets[i] = NULL;
+    }
+    free(self->Presets);
+    self->Presets = NULL;
+    self->NumPresets = 0;
+
+    free(self->Samples);
+    self->Samples = NULL;
+    self->NumSamples = 0;
+}
+
+
 /* ReleaseALSoundfonts
  *
  * Called to destroy any soundfonts that still exist on the device

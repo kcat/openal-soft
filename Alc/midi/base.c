@@ -151,18 +151,6 @@ void MidiSynth_Destruct(MidiSynth *self)
     ResetEvtQueue(&self->EventQueue);
 }
 
-const char *MidiSynth_getFontName(const MidiSynth* UNUSED(self), const char *filename)
-{
-    if(!filename || !filename[0])
-        filename = getenv("ALSOFT_SOUNDFONT");
-    if(!filename || !filename[0])
-        filename = GetConfigValue("midi", "soundfont", "");
-    if(!filename[0])
-        WARN("No default soundfont found\n");
-
-    return filename;
-}
-
 ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCdevice *device, ALsizei count, const ALuint *ids)
 {
     ALsoundfont **sfonts;

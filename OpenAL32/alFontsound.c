@@ -138,14 +138,14 @@ AL_API void AL_APIENTRY alFontsound2iSOFT(ALuint id, ALenum param, ALint value1,
     switch(param)
     {
         case AL_KEY_RANGE_SOFT:
-            if(!(value1 >= 0 && value1 <= 127 && value2 >= 0 && value2 <= 127))
+            if(!(value1 >= 0 && value1 <= 127 && value2 >= 0 && value2 <= 127 && value2 >= value1))
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
             sound->MinKey = value1;
             sound->MaxKey = value2;
             break;
 
         case AL_VELOCITY_RANGE_SOFT:
-            if(!(value1 >= 0 && value1 <= 127 && value2 >= 0 && value2 <= 127))
+            if(!(value1 >= 0 && value1 <= 127 && value2 >= 0 && value2 <= 127 && value2 >= value1))
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
             sound->MinVelocity = value1;
             sound->MaxVelocity = value2;

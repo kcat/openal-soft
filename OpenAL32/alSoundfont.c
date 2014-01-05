@@ -1,6 +1,7 @@
 
 #include "config.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,6 +15,12 @@
 
 extern inline struct ALsoundfont *LookupSfont(ALCdevice *device, ALuint id);
 extern inline struct ALsoundfont *RemoveSfont(ALCdevice *device, ALuint id);
+
+void ALsoundfont_Construct(ALsoundfont *self);
+void ALsoundfont_Destruct(ALsoundfont *self);
+void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device);
+ALsoundfont *ALsoundfont_getDefSoundfont(ALCcontext *context);
+static size_t ALsoundfont_read(ALvoid *buf, size_t bytes, ALvoid *ptr);
 
 
 AL_API void AL_APIENTRY alGenSoundfontsSOFT(ALsizei n, ALuint *ids)
@@ -95,7 +102,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSoundfontsSOFT(ALsizei n, const ALuint *ids)
             MidiSynth *synth = device->Synth;
             WriteLock(&synth->Lock);
             if(device->DefaultSfont != NULL)
-                MidiSynth_deleteSoundfont(device, device->DefaultSfont);
+                ALsoundfont_deleteSoundfont(device->DefaultSfont, device);
             device->DefaultSfont = NULL;
             WriteUnlock(&synth->Lock);
             continue;
@@ -237,7 +244,7 @@ AL_API void AL_APIENTRY alGetSoundfontivSOFT(ALuint id, ALenum param, ALint *val
 
     device = context->Device;
     if(id == 0)
-        sfont = MidiSynth_getDefSoundfont(context);
+        sfont = ALsoundfont_getDefSoundfont(context);
     else if(!(sfont=LookupSfont(device, id)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     switch(param)
@@ -409,6 +416,95 @@ void ALsoundfont_Destruct(ALsoundfont *self)
     free(self->Samples);
     self->Samples = NULL;
     self->NumSamples = 0;
+}
+
+ALsoundfont *ALsoundfont_getDefSoundfont(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+    const char *fname;
+
+    if(device->DefaultSfont)
+        return device->DefaultSfont;
+
+    device->DefaultSfont = calloc(1, sizeof(device->DefaultSfont[0]));
+    ALsoundfont_Construct(device->DefaultSfont);
+
+    fname = getenv("ALSOFT_SOUNDFONT");
+    if((fname && fname[0]) || ConfigValueStr("midi", "soundfont", &fname))
+    {
+        FILE *f;
+
+        f = fopen(fname, "rb");
+        if(f == NULL)
+            ERR("Failed to open %s\n", fname);
+        else
+        {
+            Reader reader;
+            reader.cb = ALsoundfont_read;
+            reader.ptr = f;
+            reader.error = 0;
+            TRACE("Loading %s\n", fname);
+            loadSf2(&reader, device->DefaultSfont, context);
+            fclose(f);
+        }
+    }
+
+    return device->DefaultSfont;
+}
+
+void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device)
+{
+    ALsfpreset **presets;
+    ALsizei num_presets;
+    ALsizei i;
+
+    presets = ExchangePtr((XchgPtr*)&self->Presets, NULL);
+    num_presets = ExchangeInt(&self->NumPresets, 0);
+
+    for(i = 0;i < num_presets;i++)
+    {
+        ALsfpreset *preset = presets[i];
+        ALfontsound **sounds;
+        ALsizei num_sounds;
+        ALboolean deleting;
+        ALsizei j;
+
+        sounds = ExchangePtr((XchgPtr*)&preset->Sounds, NULL);
+        num_sounds = ExchangeInt(&preset->NumSounds, 0);
+        DeletePreset(preset, device);
+        preset = NULL;
+
+        for(j = 0;j < num_sounds;j++)
+            DecrementRef(&sounds[j]->ref);
+        /* Some fontsounds may not be immediately deletable because they're
+         * linked to another fontsound. When those fontsounds are deleted
+         * they should become deletable, so use a loop until all fontsounds
+         * are deleted. */
+        do {
+            deleting = AL_FALSE;
+            for(j = 0;j < num_sounds;j++)
+            {
+                if(sounds[j] && sounds[j]->ref == 0)
+                {
+                    deleting = AL_TRUE;
+                    RemoveFontsound(device, sounds[j]->id);
+                    ALfontsound_Destruct(sounds[j]);
+                    free(sounds[j]);
+                    sounds[j] = NULL;
+                }
+            }
+        } while(deleting);
+        free(sounds);
+    }
+
+    ALsoundfont_Destruct(self);
+    free(self);
+}
+
+
+static size_t ALsoundfont_read(ALvoid *buf, size_t bytes, ALvoid *ptr)
+{
+    return fread(buf, 1, bytes, (FILE*)ptr);
 }
 
 

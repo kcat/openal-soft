@@ -152,6 +152,8 @@ typedef struct ALsoundfont {
 
 void ALsoundfont_Construct(ALsoundfont *self);
 void ALsoundfont_Destruct(ALsoundfont *self);
+ALsoundfont *ALsoundfont_getDefSoundfont(ALCcontext *context);
+void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device);
 
 inline struct ALsoundfont *LookupSfont(ALCdevice *device, ALuint id)
 { return (struct ALsoundfont*)LookupUIntMapKey(&device->SfontMap, id); }

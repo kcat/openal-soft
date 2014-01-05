@@ -1950,7 +1950,7 @@ static ALCvoid FreeDevice(ALCdevice *device)
     }
 
     if(device->DefaultSfont)
-        MidiSynth_deleteSoundfont(device, device->DefaultSfont);
+        ALsoundfont_deleteSoundfont(device->DefaultSfont, device);
     device->DefaultSfont = NULL;
 
     if(device->BufferMap.size > 0)

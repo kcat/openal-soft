@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -22,9 +21,6 @@
 
 /* MIDI events */
 #define SYSEX_EVENT  (0xF0)
-
-
-static size_t read_file(ALvoid *buf, size_t bytes, ALvoid *ptr);
 
 
 void InitEvtQueue(EvtQueue *queue)
@@ -154,88 +150,6 @@ void MidiSynth_Destruct(MidiSynth *self)
     ResetEvtQueue(&self->EventQueue);
 }
 
-ALsoundfont *MidiSynth_getDefSoundfont(ALCcontext *context)
-{
-    ALCdevice *device = context->Device;
-    const char *fname;
-
-    if(device->DefaultSfont)
-        return device->DefaultSfont;
-
-    device->DefaultSfont = calloc(1, sizeof(device->DefaultSfont[0]));
-    ALsoundfont_Construct(device->DefaultSfont);
-
-    fname = getenv("ALSOFT_SOUNDFONT");
-    if((fname && fname[0]) || ConfigValueStr("midi", "soundfont", &fname))
-    {
-        FILE *f;
-
-        f = fopen(fname, "rb");
-        if(f == NULL)
-            ERR("Failed to open %s\n", fname);
-        else
-        {
-            Reader reader;
-            reader.cb = read_file;
-            reader.ptr = f;
-            reader.error = 0;
-            TRACE("Loading %s\n", fname);
-            loadSf2(&reader, device->DefaultSfont, context);
-            fclose(f);
-        }
-    }
-
-    return device->DefaultSfont;
-}
-
-void MidiSynth_deleteSoundfont(ALCdevice *device, ALsoundfont *sfont)
-{
-    ALsfpreset **presets;
-    ALsizei num_presets;
-    ALsizei i;
-
-    presets = ExchangePtr((XchgPtr*)&sfont->Presets, NULL);
-    num_presets = ExchangeInt(&sfont->NumPresets, 0);
-
-    for(i = 0;i < num_presets;i++)
-    {
-        ALsfpreset *preset = presets[i];
-        ALfontsound **sounds;
-        ALsizei num_sounds;
-        ALboolean deleting;
-        ALsizei j;
-
-        sounds = ExchangePtr((XchgPtr*)&preset->Sounds, NULL);
-        num_sounds = ExchangeInt(&preset->NumSounds, 0);
-        DeletePreset(preset, device);
-        preset = NULL;
-
-        for(j = 0;j < num_sounds;j++)
-            DecrementRef(&sounds[j]->ref);
-        /* Some fontsounds may not be immediately deletable because they're
-         * linked to another fontsound. When those fontsounds are deleted
-         * they should become deletable, so use a loop until all fontsounds
-         * are deleted. */
-        do {
-            deleting = AL_FALSE;
-            for(j = 0;j < num_sounds;j++)
-            {
-                if(sounds[j] && sounds[j]->ref == 0)
-                {
-                    deleting = AL_TRUE;
-                    RemoveFontsound(device, sounds[j]->id);
-                    ALfontsound_Destruct(sounds[j]);
-                    free(sounds[j]);
-                    sounds[j] = NULL;
-                }
-            }
-        } while(deleting);
-        free(sounds);
-    }
-
-    ALsoundfont_Destruct(sfont);
-    free(sfont);
-}
 
 ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCcontext *context, ALsizei count, const ALuint *ids)
 {
@@ -252,7 +166,7 @@ ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCcontext *context, ALsizei 
     for(i = 0;i < count;i++)
     {
         if(ids[i] == 0)
-            sfonts[i] = MidiSynth_getDefSoundfont(context);
+            sfonts[i] = ALsoundfont_getDefSoundfont(context);
         else if(!(sfonts[i]=LookupSfont(device, ids[i])))
         {
             free(sfonts);
@@ -360,10 +274,4 @@ ALenum MidiSynth_insertSysExEvent(MidiSynth *self, ALuint64 time, const ALbyte *
     }
 
     return AL_NO_ERROR;
-}
-
-
-static size_t read_file(ALvoid *buf, size_t bytes, ALvoid *ptr)
-{
-    return fread(buf, 1, bytes, (FILE*)ptr);
 }

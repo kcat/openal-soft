@@ -52,8 +52,6 @@ typedef struct MidiSynth {
 
 void MidiSynth_Construct(MidiSynth *self, ALCdevice *device);
 void MidiSynth_Destruct(MidiSynth *self);
-struct ALsoundfont *MidiSynth_getDefSoundfont(ALCcontext *context);
-void MidiSynth_deleteSoundfont(ALCdevice *device, struct ALsoundfont *sfont);
 ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCcontext *context, ALsizei count, const ALuint *ids);
 inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain) { self->Gain = gain; }
 inline ALfloat MidiSynth_getGain(const MidiSynth *self) { return self->Gain; }

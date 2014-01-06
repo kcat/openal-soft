@@ -9,11 +9,14 @@ extern "C" {
 #endif
 
 typedef struct ALsfmodulator {
-    ALenum SourceOp;
-    ALenum DestOp;
+    struct {
+        ALenum Input;
+        ALenum Type;
+        ALenum Form;
+    } Source[2];
     ALint Amount;
-    ALenum AmountSourceOp;
     ALenum TransformOp;
+    ALenum Dest;
 } ALsfmodulator;
 
 
@@ -96,6 +99,7 @@ typedef struct ALfontsound {
 
 void ALfontsound_Destruct(ALfontsound *self);
 void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, ALint value);
+void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei stage, ALenum param, ALint value);
 
 ALfontsound *NewFontsound(ALCcontext *context);
 

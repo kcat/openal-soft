@@ -18,6 +18,9 @@ extern inline struct ALfontsound *RemoveFontsound(ALCdevice *device, ALuint id);
 static void ALfontsound_Construct(ALfontsound *self);
 void ALfontsound_Destruct(ALfontsound *self);
 void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, ALint value);
+static ALsfmodulator *ALfontsound_getModStage(ALfontsound *self, ALsizei stage);
+void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei stage, ALenum param, ALint value);
+static void ALfontsound_getModStagei(ALfontsound *self, ALCcontext *context, ALsizei stage, ALenum param, ALint *values);
 
 
 AL_API void AL_APIENTRY alGenFontsoundsSOFT(ALsizei n, ALuint *ids)
@@ -439,6 +442,42 @@ done:
     ALCcontext_DecRef(context);
 }
 
+AL_API void AL_APIENTRY alFontsoundModulatoriSOFT(ALuint id, ALsizei stage, ALenum param, ALint value)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALfontsound *sound;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sound=LookupFontsound(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    ALfontsound_setModStagei(sound, context, stage, param, value);
+
+done:
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alGetFontsoundModulatorivSOFT(ALuint id, ALsizei stage, ALenum param, ALint *values)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALfontsound *sound;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(!(sound=LookupFontsound(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    ALfontsound_getModStagei(sound, context, stage, param, values);
+
+done:
+    ALCcontext_DecRef(context);
+}
+
 
 ALfontsound *NewFontsound(ALCcontext *context)
 {
@@ -759,6 +798,152 @@ void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, 
             if(link) IncrementRef(&link->ref);
             link = ExchangePtr((XchgPtr*)&self->Link, link);
             if(link) DecrementRef(&link->ref);
+            break;
+
+        default:
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+    }
+}
+
+static ALsfmodulator *ALfontsound_getModStage(ALfontsound *self, ALsizei stage)
+{
+    ALsfmodulator *ret = LookupModulator(self, stage);
+    if(!ret)
+    {
+        static const ALsfmodulator moddef = {
+            { { AL_ONE_SOFT, AL_UNORM_SOFT, AL_LINEAR_SOFT },
+              { AL_ONE_SOFT, AL_UNORM_SOFT, AL_LINEAR_SOFT }
+            },
+            0,
+            AL_LINEAR_SOFT,
+            AL_NONE
+        };
+        ret = malloc(sizeof(*ret));
+        InsertUIntMapEntry(&self->ModulatorMap, stage, ret);
+        *ret = moddef;
+    }
+    return ret;
+}
+
+void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei stage, ALenum param, ALint value)
+{
+    ALint srcidx = 0;
+
+    if(self->ref != 0)
+        SET_ERROR_AND_RETURN(context, AL_INVALID_OPERATION);
+    switch(param)
+    {
+        case AL_SOURCE1_INPUT_SOFT:
+            srcidx++;
+            /* fall-through */
+        case AL_SOURCE0_INPUT_SOFT:
+            if(!(value == AL_ONE_SOFT || value == AL_NOTEON_VELOCITY_SOFT ||
+                 value == AL_NOTEON_KEY_SOFT || value == AL_AFTERTOUCH_SOFT ||
+                 value == AL_CHANNELPRESSURE_SOFT || value == AL_PITCHBEND_SOFT ||
+                 value == AL_PITCHBEND_SENSITIVITY_SOFT ||
+                 (value > 0 && value < 120 && !(value == 6 || (value >= 32 && value <= 63) ||
+                                                (value >= 98 && value <= 101))
+                 )
+              ))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            ALfontsound_getModStage(self, stage)->Source[srcidx].Input = value;
+            break;
+
+        case AL_SOURCE1_TYPE_SOFT:
+            srcidx++;
+            /* fall-through */
+        case AL_SOURCE0_TYPE_SOFT:
+            if(!(value == AL_UNORM_SOFT || value == AL_SNORM_SOFT ||
+                 value == AL_UNORM_REV_SOFT || value == AL_SNORM_REV_SOFT))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            ALfontsound_getModStage(self, stage)->Source[srcidx].Type = value;
+            break;
+
+        case AL_SOURCE1_FORM_SOFT:
+            srcidx++;
+            /* fall-through */
+        case AL_SOURCE0_FORM_SOFT:
+            if(!(value == AL_LINEAR_SOFT || value == AL_CONVEX_SOFT ||
+                 value == AL_CONCAVE_SOFT || value == AL_SWITCH_SOFT))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            ALfontsound_getModStage(self, stage)->Source[srcidx].Form = value;
+            break;
+
+        case AL_AMOUNT_SOFT:
+            ALfontsound_getModStage(self, stage)->Amount = value;
+            break;
+
+        case AL_TRANSFORM_OP_SOFT:
+            if(!(value == AL_LINEAR_SOFT || value == AL_ABSOLUTE_SOFT))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            ALfontsound_getModStage(self, stage)->TransformOp = value;
+            break;
+
+        case AL_DESTINATION_SOFT:
+            if(!(value == AL_MOD_LFO_TO_PITCH_SOFT || value == AL_VIBRATO_LFO_TO_PITCH_SOFT ||
+                 value == AL_MOD_ENV_TO_PITCH_SOFT || value == AL_FILTER_CUTOFF_SOFT ||
+                 value == AL_FILTER_RESONANCE_SOFT || value == AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT ||
+                 value == AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT || value == AL_MOD_LFO_TO_VOLUME_SOFT ||
+                 value == AL_CHORUS_SEND_SOFT || value == AL_REVERB_SEND_SOFT || value == AL_PAN_SOFT ||
+                 value == AL_MOD_LFO_DELAY_SOFT || value == AL_MOD_LFO_FREQUENCY_SOFT ||
+                 value == AL_VIBRATO_LFO_DELAY_SOFT || value == AL_VIBRATO_LFO_FREQUENCY_SOFT ||
+                 value == AL_MOD_ENV_DELAYTIME_SOFT || value == AL_MOD_ENV_ATTACKTIME_SOFT ||
+                 value == AL_MOD_ENV_HOLDTIME_SOFT || value == AL_MOD_ENV_DECAYTIME_SOFT ||
+                 value == AL_MOD_ENV_SUSTAINVOLUME_SOFT || value == AL_MOD_ENV_RELEASETIME_SOFT ||
+                 value == AL_MOD_ENV_KEY_TO_HOLDTIME_SOFT || value == AL_MOD_ENV_KEY_TO_DECAYTIME_SOFT ||
+                 value == AL_VOLUME_ENV_DELAYTIME_SOFT || value == AL_VOLUME_ENV_ATTACKTIME_SOFT ||
+                 value == AL_VOLUME_ENV_HOLDTIME_SOFT || value == AL_VOLUME_ENV_DECAYTIME_SOFT ||
+                 value == AL_VOLUME_ENV_SUSTAINVOLUME_SOFT || value == AL_VOLUME_ENV_RELEASETIME_SOFT ||
+                 value == AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT || value == AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT ||
+                 value == AL_ATTENUATION_SOFT || value == AL_TUNING_COARSE_SOFT ||
+                 value == AL_TUNING_FINE_SOFT || value == AL_TUNING_SCALE_SOFT))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            ALfontsound_getModStage(self, stage)->Dest = value;
+            break;
+
+        default:
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+    }
+}
+
+static void ALfontsound_getModStagei(ALfontsound *self, ALCcontext *context, ALsizei stage, ALenum param, ALint *values)
+{
+    ALsfmodulator *mod = LookupModulator(self, stage);
+    ALint srcidx = 0;
+
+    switch(param)
+    {
+        case AL_SOURCE1_INPUT_SOFT:
+            srcidx++;
+            /* fall-through */
+        case AL_SOURCE0_INPUT_SOFT:
+            values[0] = mod ? mod->Source[srcidx].Input : AL_ONE_SOFT;
+            break;
+
+        case AL_SOURCE1_TYPE_SOFT:
+            srcidx++;
+            /* fall-through */
+        case AL_SOURCE0_TYPE_SOFT:
+            values[0] = mod ? mod->Source[srcidx].Type : AL_UNORM_SOFT;
+            break;
+
+        case AL_SOURCE1_FORM_SOFT:
+            srcidx++;
+            /* fall-through */
+        case AL_SOURCE0_FORM_SOFT:
+            values[0] = mod ? mod->Source[srcidx].Form : AL_LINEAR_SOFT;
+            break;
+
+        case AL_AMOUNT_SOFT:
+            values[0] = mod ? mod->Amount : 0;
+            break;
+
+        case AL_TRANSFORM_OP_SOFT:
+            values[0] = mod ? mod->TransformOp : AL_LINEAR_SOFT;
+            break;
+
+        case AL_DESTINATION_SOFT:
+            values[0] = mod ? mod->Dest : AL_NONE;
             break;
 
         default:

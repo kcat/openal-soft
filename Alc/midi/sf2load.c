@@ -714,6 +714,27 @@ static ALboolean checkZone(const GenModList *zone, const PresetHeader *preset, c
     return AL_TRUE;
 }
 
+static ALenum getModSrcInput(int type)
+{
+    if(type == 0) return AL_ONE_SOFT;
+    if(type == 2) return AL_NOTEON_VELOCITY_SOFT;
+    if(type == 3) return AL_NOTEON_KEY_SOFT;
+    if(type == 10) return AL_AFTERTOUCH_SOFT;
+    if(type == 13) return AL_CHANNELPRESSURE_SOFT;
+    if(type == 14) return AL_PITCHBEND_SOFT;
+    if(type == 16) return AL_PITCHBEND_SENSITIVITY_SOFT;
+    if((type&0x80))
+    {
+        type ^= 0x80;
+        if(type > 0 && type < 120 && !(type == 6 || (type >= 32 && type <= 63) ||
+                                       (type >= 98 && type <= 101)))
+            return type;
+        type ^= 0x80;
+    }
+    ERR("Unhandled modulator source input: 0x%02x\n", type);
+    return AL_NONE;
+}
+
 static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *zone)
 {
     static const ALenum Gen2Param[60] = {
@@ -782,7 +803,37 @@ static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *
 
     if(zone->mods)
     {
-        /* FIXME: Handle modulators */
+        ALsizei i;
+        for(i = 0;i < zone->mods_size;i++)
+        {
+            ALenum src0in = getModSrcInput(zone->mods[i].mSrcOp&0xFF);
+            ALenum src0form = (zone->mods[i].mSrcOp&0xFC00);
+            ALenum src1in = getModSrcInput(zone->mods[i].mAmtSrcOp&0xFF);
+            ALenum src1form = (zone->mods[i].mAmtSrcOp&0xFC00);
+            ALenum trans = zone->mods[i].mTransOp;
+            ALenum dst = (zone->mods[i].mDstOp < 60) ? Gen2Param[zone->mods[i].mDstOp] : 0;
+            if(!dst)
+                ERR("Unhandled modulator destination: %d\n", zone->mods[i].mDstOp);
+            if((src0form&0xF000))
+                ERR("Unhandled modulator source form: 0x%04x\n", src0form);
+            if((src1form&0xF000))
+                ERR("Unhandled modulator source form: 0x%04x\n", src1form);
+            if(!(trans == 0 || trans == 2))
+                ERR("Unhandled modulator transform: %d\n", trans);
+            if(src0in && !(src0form&0xF000) && src1in && !(src1form&0xF000) &&
+               (trans == 0 || trans == 2) && dst)
+            {
+                ALfontsound_setModStagei(sound, context, i, AL_SOURCE0_INPUT_SOFT, src0in);
+                ALfontsound_setModStagei(sound, context, i, AL_SOURCE0_TYPE_SOFT, (zone->mods[i].mSrcOp&0x300));
+                ALfontsound_setModStagei(sound, context, i, AL_SOURCE0_FORM_SOFT, src0form);
+                ALfontsound_setModStagei(sound, context, i, AL_SOURCE1_INPUT_SOFT, src1in);
+                ALfontsound_setModStagei(sound, context, i, AL_SOURCE1_TYPE_SOFT, (zone->mods[i].mAmtSrcOp&0x300));
+                ALfontsound_setModStagei(sound, context, i, AL_SOURCE1_FORM_SOFT, src1form);
+                ALfontsound_setModStagei(sound, context, i, AL_AMOUNT_SOFT, zone->mods[i].mAmount);
+                ALfontsound_setModStagei(sound, context, i, AL_TRANSFORM_OP_SOFT, trans);
+                ALfontsound_setModStagei(sound, context, i, AL_DESTINATION_SOFT, dst);
+            }
+        }
     }
 
     gen = zone->gens;

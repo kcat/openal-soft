@@ -39,6 +39,43 @@
 #define AL_PRESETS_SOFT                          0x9992
 #define AL_FONTSOUNDS_SIZE_SOFT                  0x9991
 #define AL_FONTSOUNDS_SOFT                       0x9990
+
+#define AL_SOURCE0_INPUT_SOFT                    0x998F
+#define AL_SOURCE0_TYPE_SOFT                     0x998E
+#define AL_SOURCE0_FORM_SOFT                     0x998D
+#define AL_SOURCE1_INPUT_SOFT                    0x998C
+#define AL_SOURCE1_TYPE_SOFT                     0x998B
+#define AL_SOURCE1_FORM_SOFT                     0x998A
+#define AL_AMOUNT_SOFT                           0x9989
+#define AL_TRANSFORM_OP_SOFT                     0x9988
+#define AL_DESTINATION_SOFT                      0x9987
+
+/* Sounce Input */
+#define AL_ONE_SOFT                              0x0080
+#define AL_NOTEON_VELOCITY_SOFT                  0x0082
+#define AL_NOTEON_KEY_SOFT                       0x0083
+/* aftertouch */
+/* channelpressure */
+/* pitchbend */
+#define AL_PITCHBEND_SENSITIVITY_SOFT            0x0090
+/* 0...127 CC */
+
+/* Source Type */
+#define AL_UNORM_SOFT                            0x0000
+#define AL_SNORM_SOFT                            0x0100
+#define AL_UNORM_REV_SOFT                        0x0200
+#define AL_SNORM_REV_SOFT                        0x0300
+
+/* Source Form */
+#define AL_LINEAR_SOFT                           0x0000
+#define AL_CONCAVE_SOFT                          0x0400
+#define AL_CONVEX_SOFT                           0x0800
+#define AL_SWITCH_SOFT                           0x0C00
+
+/* Transform op */
+/* linear */
+#define AL_ABSOLUTE_SOFT                         0x0002
+
 #define AL_SAMPLE_START_SOFT                     0x2000
 #define AL_SAMPLE_END_SOFT                       0x2001
 #define AL_SAMPLE_LOOP_START_SOFT                0x2002
@@ -119,6 +156,8 @@ typedef void (AL_APIENTRY*LPALFONTSOUNDISOFT)(ALuint id, ALenum param, ALint val
 typedef void (AL_APIENTRY*LPALFONTSOUND2ISOFT)(ALuint id, ALenum param, ALint value1, ALint value2);
 typedef void (AL_APIENTRY*LPALFONTSOUNDIVSOFT)(ALuint id, ALenum param, const ALint *values);
 typedef void (AL_APIENTRY*LPALGETFONTSOUNDIVSOFT)(ALuint id, ALenum param, ALint *values);
+typedef void (AL_APIENTRY*LPALFONTSOUNDMOFULATORISOFT)(ALuint id, ALsizei stage, ALenum param, ALint value);
+typedef void (AL_APIENTRY*LPALGETFONTSOUNDMODULATORIVSOFT)(ALuint id, ALsizei stage, ALenum param, ALint *values);
 typedef void (AL_APIENTRY*LPALMIDISOUNDFONTSOFT)(ALuint id);
 typedef void (AL_APIENTRY*LPALMIDISOUNDFONTVSOFT)(ALsizei count, const ALuint *ids);
 typedef void (AL_APIENTRY*LPALMIDIEVENTSOFT)(ALuint64SOFT time, ALenum event, ALsizei channel, ALsizei param1, ALsizei param2);
@@ -156,6 +195,8 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value);
 AL_API void AL_APIENTRY alFontsound2iSOFT(ALuint id, ALenum param, ALint value1, ALint value2);
 AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *values);
 AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *values);
+AL_API void AL_APIENTRY alFontsoundModulatoriSOFT(ALuint id, ALsizei stage, ALenum param, ALint value);
+AL_API void AL_APIENTRY alGetFontsoundModulatorivSOFT(ALuint id, ALsizei stage, ALenum param, ALint *values);
 
 AL_API void AL_APIENTRY alMidiSoundfontSOFT(ALuint id);
 AL_API void AL_APIENTRY alMidiSoundfontvSOFT(ALsizei count, const ALuint *ids);

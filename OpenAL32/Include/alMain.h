@@ -62,8 +62,8 @@
 
 /* Source Type */
 #define AL_UNORM_SOFT                            0x0000
-#define AL_SNORM_SOFT                            0x0100
-#define AL_UNORM_REV_SOFT                        0x0200
+#define AL_UNORM_REV_SOFT                        0x0100
+#define AL_SNORM_SOFT                            0x0200
 #define AL_SNORM_REV_SOFT                        0x0300
 
 /* Source Form */

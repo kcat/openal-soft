@@ -28,6 +28,87 @@
 #define CTRL_ALLNOTESOFF     (123)
 
 
+static int getGenInput(ALenum input)
+{
+    switch(input)
+    {
+        case AL_ONE_SOFT: return FLUID_MOD_NONE;
+        case AL_NOTEON_VELOCITY_SOFT: return FLUID_MOD_VELOCITY;
+        case AL_NOTEON_KEY_SOFT: return FLUID_MOD_KEY;
+        case AL_AFTERTOUCH_SOFT: return FLUID_MOD_KEYPRESSURE;
+        case AL_CHANNELPRESSURE_SOFT: return FLUID_MOD_CHANNELPRESSURE;
+        case AL_PITCHBEND_SOFT: return FLUID_MOD_PITCHWHEEL;
+        case AL_PITCHBEND_SENSITIVITY_SOFT: return FLUID_MOD_PITCHWHEELSENS;
+    }
+    return input&0x7F;
+}
+
+static int getGenFlags(ALenum input, ALenum type, ALenum form)
+{
+    int ret = 0;
+
+    switch(type)
+    {
+        case AL_UNORM_SOFT: ret |= FLUID_MOD_UNIPOLAR | FLUID_MOD_POSITIVE; break;
+        case AL_UNORM_REV_SOFT: ret |= FLUID_MOD_UNIPOLAR | FLUID_MOD_NEGATIVE; break;
+        case AL_SNORM_SOFT: ret |= FLUID_MOD_BIPOLAR | FLUID_MOD_POSITIVE; break;
+        case AL_SNORM_REV_SOFT: ret |= FLUID_MOD_BIPOLAR | FLUID_MOD_NEGATIVE; break;
+    }
+    switch(form)
+    {
+        case AL_LINEAR_SOFT: ret |= FLUID_MOD_LINEAR; break;
+        case AL_CONCAVE_SOFT: ret |= FLUID_MOD_CONCAVE; break;
+        case AL_CONVEX_SOFT: ret |= FLUID_MOD_CONVEX; break;
+        case AL_SWITCH_SOFT: ret |= FLUID_MOD_SWITCH; break;
+    }
+    /* Source input values less than 128 correspond to a MIDI continuous
+     * controller. Otherwise, it's a general controller. */
+    if(input < 128) ret |= FLUID_MOD_CC;
+    else ret |= FLUID_MOD_GC;
+
+    return ret;
+}
+
+static int getSf2Gen(ALenum gen)
+{
+    if(gen == AL_MOD_LFO_TO_PITCH_SOFT) return 5;
+    if(gen == AL_VIBRATO_LFO_TO_PITCH_SOFT) return 6;
+    if(gen == AL_MOD_ENV_TO_PITCH_SOFT) return 7;
+    if(gen == AL_FILTER_CUTOFF_SOFT) return 8;
+    if(gen == AL_FILTER_RESONANCE_SOFT) return 9;
+    if(gen == AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT) return 10;
+    if(gen == AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT) return 11;
+    if(gen == AL_MOD_LFO_TO_VOLUME_SOFT) return 13;
+    if(gen == AL_CHORUS_SEND_SOFT) return 15;
+    if(gen == AL_REVERB_SEND_SOFT) return 16;
+    if(gen == AL_PAN_SOFT) return 17;
+    if(gen == AL_MOD_LFO_DELAY_SOFT) return 21;
+    if(gen == AL_MOD_LFO_FREQUENCY_SOFT) return 22;
+    if(gen == AL_VIBRATO_LFO_DELAY_SOFT) return 23;
+    if(gen == AL_VIBRATO_LFO_FREQUENCY_SOFT) return 24;
+    if(gen == AL_MOD_ENV_DELAYTIME_SOFT) return 25;
+    if(gen == AL_MOD_ENV_ATTACKTIME_SOFT) return 26;
+    if(gen == AL_MOD_ENV_HOLDTIME_SOFT) return 27;
+    if(gen == AL_MOD_ENV_DECAYTIME_SOFT) return 28;
+    if(gen == AL_MOD_ENV_SUSTAINVOLUME_SOFT) return 29;
+    if(gen == AL_MOD_ENV_RELEASETIME_SOFT) return 30;
+    if(gen == AL_MOD_ENV_KEY_TO_HOLDTIME_SOFT) return 31;
+    if(gen == AL_MOD_ENV_KEY_TO_DECAYTIME_SOFT) return 32;
+    if(gen == AL_VOLUME_ENV_DELAYTIME_SOFT) return 33;
+    if(gen == AL_VOLUME_ENV_ATTACKTIME_SOFT) return 34;
+    if(gen == AL_VOLUME_ENV_HOLDTIME_SOFT) return 35;
+    if(gen == AL_VOLUME_ENV_DECAYTIME_SOFT) return 36;
+    if(gen == AL_VOLUME_ENV_SUSTAINVOLUME_SOFT) return 37;
+    if(gen == AL_VOLUME_ENV_RELEASETIME_SOFT) return 38;
+    if(gen == AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT) return 39;
+    if(gen == AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT) return 40;
+    if(gen == AL_ATTENUATION_SOFT) return 48;
+    if(gen == AL_TUNING_COARSE_SOFT) return 51;
+    if(gen == AL_TUNING_FINE_SOFT) return 52;
+    if(gen == AL_TUNING_SCALE_SOFT) return 56;
+    return 0;
+}
+
 typedef struct FSample {
     DERIVE_FROM_TYPE(fluid_sample_t);
 
@@ -63,8 +144,27 @@ static void FSample_Construct(FSample *self, ALfontsound *sound, ALsoundfont *sf
 
     self->Sound = sound;
 
-    self->Mods = NULL;
     self->NumMods = 0;
+    self->Mods = calloc(sound->ModulatorMap.size, sizeof(self->Mods[0]));
+    if(self->Mods)
+    {
+        ALsizei i;
+
+        self->NumMods = sound->ModulatorMap.size;
+        for(i = 0;i < self->NumMods;i++)
+        {
+            ALsfmodulator *mod = sound->ModulatorMap.array[i].value;
+            fluid_mod_set_source1(&self->Mods[i], getGenInput(mod->Source[0].Input),
+                                  getGenFlags(mod->Source[0].Input, mod->Source[0].Type,
+                                              mod->Source[0].Form));
+            fluid_mod_set_source2(&self->Mods[i], getGenInput(mod->Source[1].Input),
+                                  getGenFlags(mod->Source[1].Input, mod->Source[1].Type,
+                                              mod->Source[1].Form));
+            fluid_mod_set_amount(&self->Mods[i], mod->Amount);
+            fluid_mod_set_dest(&self->Mods[i], getSf2Gen(mod->Dest));
+            self->Mods[i].next = NULL;
+        }
+    }
 }
 
 static void FSample_Destruct(FSample *self)

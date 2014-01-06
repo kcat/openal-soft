@@ -875,7 +875,7 @@ static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *
             if(param)
             {
                 if(param == AL_BASE_KEY_SOFT && value == -1)
-                    break;
+                    continue;
                 if(param == AL_FILTER_RESONANCE_SOFT || param == AL_ATTENUATION_SOFT)
                     value = maxi(0, value);
                 else if(param == AL_CHORUS_SEND_SOFT || param == AL_REVERB_SEND_SOFT)

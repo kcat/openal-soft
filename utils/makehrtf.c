@@ -733,8 +733,8 @@ static int StrSubst (const char * in, const char * pat, const char * rep, const 
   return (! truncated);
 }
 
-// Provide missing math routines for MSVC.
-#ifdef _MSC_VER
+// Provide missing math routines for MSVC versions < 1800 (Visual Studio 2013).
+#if defined(_MSC_VER) && _MSC_VER < 1800
 static double round (double val) {
   if (val < 0.0)
      return (ceil (val - 0.5));

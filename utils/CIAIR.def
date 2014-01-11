@@ -1,7 +1,7 @@
 # This is a makehrtf HRIR definition file.  It is used to define the layout
 # and source data to be processed into an OpenAL Soft compatible HRTF.
 #
-# This definition is used to transform the left ear HRIRs from a dataset
+# This definition is used to transform the left ear HRIRs from a data set
 # used in several papers and articles by Fumitada Itakura, Kazuya Takeda,
 # Mikio Ikeda, Shoji Kajita, and Takanori Nishino.
 #

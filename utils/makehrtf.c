@@ -2,7 +2,7 @@
  * HRTF utility for producing and demonstrating the process of creating an
  * OpenAL Soft compatible HRIR data set.
  *
- * Copyright (C) 2011-2013  Christopher Fitzgerald
+ * Copyright (C) 2011-2014  Christopher Fitzgerald
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@
  *  1999
  */
 
-/* Needed for 64-bit unsigned integer. */
+// Needed for 64-bit unsigned integer.
 #include "config.h"
 
 #include <stdio.h>
@@ -153,6 +153,10 @@
 #define MIN_TRUNCSIZE                (8)
 #define MAX_TRUNCSIZE                (128)
 
+// The limits to the custom head radius on the command line.
+#define MIN_CUSTOM_RADIUS            (0.05)
+#define MAX_CUSTOM_RADIUS            (0.15)
+
 // The truncation window size must be a multiple of the below value to allow
 // for vectorized convolution.
 #define MOD_TRUNCSIZE                (8)
@@ -163,6 +167,7 @@
 #define DEFAULT_LIMIT                (24.0)
 #define DEFAULT_TRUNCSIZE            (32)
 #define DEFAULT_HEAD_MODEL           (HM_DATASET)
+#define DEFAULT_CUSTOM_RADIUS        (0.0)
 
 // The four-character-codes for RIFF/RIFX WAVE file chunks.
 #define FOURCC_RIFF                  (0x46464952) // 'RIFF'
@@ -2016,7 +2021,7 @@ static double CalcLTD (const double ev, const double az, const double rad, const
 
 // Calculate the effective head-related time delays for each minimum-phase
 // HRIR.
-static void CalculateHrtds (const HeadModelT model, HrirDataT * hData) {
+static void CalculateHrtds (const HeadModelT model, const double radius, HrirDataT * hData) {
   double minHrtd, maxHrtd;
   uint e, a, j;
   double t;
@@ -2027,13 +2032,13 @@ static void CalculateHrtds (const HeadModelT model, HrirDataT * hData) {
       for (a = 0; a < hData -> mAzCount [e]; a ++) {
           j = hData -> mEvOffset [e] + a;
           if (model == HM_DATASET) {
-             t = hData -> mHrtds [j];
+             t = hData -> mHrtds [j] * radius / hData -> mRadius;
           } else {
              t = CalcLTD ((-90.0 + (e * 180.0 / (hData -> mEvCount - 1))) * M_PI / 180.0,
                           (a * 360.0 / hData -> mAzCount [e]) * M_PI / 180.0,
-                          hData -> mRadius, hData -> mDistance);
-             hData -> mHrtds [j] = t;
+                          radius, hData -> mDistance);
           }
+          hData -> mHrtds [j] = t;
           maxHrtd = fmax (t, maxHrtd);
           minHrtd = fmin (t, minHrtd);
       }
@@ -2506,7 +2511,7 @@ static int ProcessSources (const HeadModelT model, TokenReaderT * tr, HrirDataT 
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-static int ProcessDefinition (const char * inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const OutputFormatT outFormat, const char * outName) {
+static int ProcessDefinition (const char * inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const OutputFormatT outFormat, const char * outName) {
   FILE * fp = NULL;
   TokenReaderT tr;
   HrirDataT hData;
@@ -2572,7 +2577,7 @@ static int ProcessDefinition (const char * inName, const uint outRate, const uin
   fprintf (stdout, "Normalizing final HRIRs...\n");
   NormalizeHrirs (& hData);
   fprintf (stdout, "Calculating impulse delays...\n");
-  CalculateHrtds (model, & hData);
+  CalculateHrtds (model, (radius > DEFAULT_CUSTOM_RADIUS) ? radius : hData . mRadius, & hData);
   snprintf (rateStr, 8, "%u", hData . mIrRate);
   StrSubst (outName, "%r", rateStr, MAX_PATH_LEN, expName);
   switch (outFormat) {
@@ -2604,6 +2609,7 @@ int main (const int argc, const char * argv []) {
   double limit;
   uint truncSize;
   HeadModelT model;
+  double radius;
   char * end = NULL;
 
   if (argc < 2) {
@@ -2632,6 +2638,7 @@ int main (const int argc, const char * argv []) {
      fprintf (stdout, "                 after minimum-phase reconstruction (default: %u).\n", DEFAULT_TRUNCSIZE);
      fprintf (stdout, " -d={dataset|    Specify the model used for calculating the head-delay timing\n");
      fprintf (stdout, "     sphere}     values (default: %s).\n", ((DEFAULT_HEAD_MODEL == HM_DATASET) ? "dataset" : "sphere"));
+     fprintf (stdout, " -c=<size>       Use a customized head radius measured ear-to-ear in meters.\n");
      fprintf (stdout, " -i=<filename>   Specify an HRIR definition file to use (defaults to stdin).\n");
      fprintf (stdout, " -o=<filename>   Specify an output file.  Overrides command-selected default.\n");
      fprintf (stdout, "                 Use of '%%r' will be substituted with the data set sample rate.\n");
@@ -2661,6 +2668,7 @@ int main (const int argc, const char * argv []) {
   limit = DEFAULT_LIMIT;
   truncSize = DEFAULT_TRUNCSIZE;
   model = DEFAULT_HEAD_MODEL;
+  radius = DEFAULT_CUSTOM_RADIUS;
   while (argi < argc) {
     if (strncmp (argv [argi], "-r=", 3) == 0) {
        outRate = strtoul (& argv [argi] [3], & end, 10);
@@ -2717,6 +2725,12 @@ int main (const int argc, const char * argv []) {
           fprintf (stderr, "Error:  Expected 'dataset' or 'sphere' for '-d'.\n");
           return (-1);
        }
+    } else if (strncmp (argv [argi], "-c=", 3) == 0) {
+       radius = strtod (& argv [argi] [3], & end);
+       if ((end [0] != '\0') || (radius < MIN_CUSTOM_RADIUS) || (radius > MAX_CUSTOM_RADIUS)) {
+          fprintf (stderr, "Error:  Expected a value from %.2f to %.2f for '-c'.\n", MIN_CUSTOM_RADIUS, MAX_CUSTOM_RADIUS);
+          return (-1);
+       }
     } else if (strncmp (argv [argi], "-i=", 3) == 0) {
        inName = & argv [argi] [3];
     } else if (strncmp (argv [argi], "-o=", 3) == 0) {
@@ -2727,7 +2741,7 @@ int main (const int argc, const char * argv []) {
     }
     argi ++;
   }
-  if (! ProcessDefinition (inName, outRate, fftSize, equalize, surface, limit, truncSize, model, outFormat, outName))
+  if (! ProcessDefinition (inName, outRate, fftSize, equalize, surface, limit, truncSize, model, radius, outFormat, outName))
      return (-1);
   fprintf (stdout, "Operation completed.\n");
   return (0);

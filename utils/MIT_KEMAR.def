@@ -5,17 +5,17 @@
 # of KEMAR HRIRs provided by Bill Gardner <billg@media.mit.edu> and Keith
 # Martin <kdm@media.mit.edu> of MIT Media Laboratory.
 #
-# The data (full.tar.Z or full.zip) is available from:
+# The data (full.zip) is available from:
 #
 #  http://sound.media.mit.edu/resources/KEMAR.html
 #
-# It is copyright 1994 by MIT Media Laboratory, and provided free of charge
+# It is copyrighted 1994 by MIT Media Laboratory, and provided free of charge
 # with no restrictions on use so long as the authors (above) are cited.
 #
 # This definition is used to generate the internal HRTF table used by OpenAL
 # Soft.
 
-# The following are the dataset metrics.  They must always be specified at
+# The following are the data set metrics.  They must always be specified at
 # start of a definition file, but their order is not important.
 
 # Sampling rate of the HRIR data (in hertz).
@@ -28,17 +28,21 @@ rate     = 44100
 points   = 512
 
 # A list of the number of azimuths measured for each elevation.  There must
-# be at least 5 elevations covering the 180 degrees for the dataset to be
+# be at least 5 elevations covering the 180 degrees for the data set to be
 # viable.
 azimuths = 1, 12, 24, 36, 45, 56, 60, 72, 72, 72, 72, 72, 60, 56, 45, 36, 24, 12, 1
 
-# The approximate radius (measured ear-to-ear) of the listener's head (in
-# meters).  This does not have to match the dataset, since makehrtf uses a
-# spherical model to reconstruct the propagation delay.
+# The radius of the listener's head (measured ear-to-ear in meters).  The
+# makehrtf utility uses this value to rescale measured propagation delays
+# when a custom head radius is specified on the command line.  It is also
+# used as the default radius when the spherical model is used to calculate an
+# approximate set of delays.  This should match the data set as close as
+# possible for accurate rescaling when using the measured delays (the
+# default).  At the moment, radius rescaling does not adjust HRIR coupling.
 radius   = 0.09
 
 # The distance between the source and the listener (in meters).  This does
-# have to match the dataset, but it's effect is minimal at the moment due to
+# have to match the data set, but it's effect is minimal at the moment due to
 # the coupled nature of OpenAL Soft's HRTF model.
 distance = 1.4
 

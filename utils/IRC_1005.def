@@ -2,9 +2,9 @@
 # and source data to be processed into an OpenAL Soft compatible HRTF.
 #
 # This definition is used to transform an average of the left and right ear
-# HRIRs from any raw dataset from the IRCAM/AKG Listen HRTF database.
+# HRIRs from any raw data set from the IRCAM/AKG Listen HRTF database.
 #
-# The datasets are available free of charge from:
+# The data sets are available free of charge from:
 #
 #  http://recherche.ircam.fr/equipes/salles/listen/index.html
 #
@@ -32,7 +32,7 @@ distance = 1.95
 # The IRCAM source azimuth is counter-clockwise, so it needs to be flipped.
 # Left and right ear HRIRs (from the respective WAVE channels) are averaged.
 
-# Repalce all occurrences of IRC_#### for the desired subject (1005 was used
+# Replace all occurrences of IRC_#### for the desired subject (1005 was used
 # in this demonstration).
 
 [  3,  0 ] = wave (0) : "./IRC/RAW/WAV/IRC_1005_R/IRC_1005_R_R0195_T000_P315.wav"

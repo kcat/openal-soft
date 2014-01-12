@@ -30,6 +30,7 @@
 #ifndef ALC_SOFT_midi_interface
 #define ALC_SOFT_midi_interface 1
 #define AL_MIDI_CLOCK_SOFT                       0x9999
+#define AL_MIDI_STATE_SOFT                       0x9986
 #define AL_MIDI_GAIN_SOFT                        0x9998
 #define AL_MIDI_PRESET_SOFT                      0x9997
 #define AL_MIDI_BANK_SOFT                        0x9996

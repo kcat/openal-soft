@@ -56,6 +56,7 @@ ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCcontext *context, ALsizei 
 inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain) { self->Gain = gain; }
 inline ALfloat MidiSynth_getGain(const MidiSynth *self) { return self->Gain; }
 inline void MidiSynth_setState(MidiSynth *self, ALenum state) { ExchangeInt(&self->State, state); }
+inline ALenum MidiSynth_getState(const MidiSynth *self) { return self->State; }
 void MidiSynth_stop(MidiSynth *self);
 inline void MidiSynth_reset(MidiSynth *self) { MidiSynth_stop(self); }
 ALuint64 MidiSynth_getTime(const MidiSynth *self);

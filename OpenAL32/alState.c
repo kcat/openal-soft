@@ -191,6 +191,12 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
     case AL_MIDI_GAIN_SOFT:
         device = context->Device;
         value = (ALdouble)MidiSynth_getGain(device->Synth);
+        break;
+
+    case AL_MIDI_STATE_SOFT:
+        device = context->Device;
+        value = (ALdouble)MidiSynth_getState(device->Synth);
+        break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
@@ -236,6 +242,12 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
     case AL_MIDI_GAIN_SOFT:
         device = context->Device;
         value = MidiSynth_getGain(device->Synth);
+        break;
+
+    case AL_MIDI_STATE_SOFT:
+        device = context->Device;
+        value = (ALfloat)MidiSynth_getState(device->Synth);
+        break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
@@ -283,6 +295,11 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
         device = context->Device;
         synth = device->Synth;
         value = synth->NumSoundfonts;
+        break;
+
+    case AL_MIDI_STATE_SOFT:
+        device = context->Device;
+        value = MidiSynth_getState(device->Synth);
         break;
 
     default:
@@ -338,6 +355,11 @@ AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
         device = context->Device;
         synth = device->Synth;
         value = (ALint64SOFT)synth->NumSoundfonts;
+        break;
+
+    case AL_MIDI_STATE_SOFT:
+        device = context->Device;
+        value = (ALint64SOFT)MidiSynth_getState(device->Synth);
         break;
 
     default:
@@ -397,6 +419,7 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname, ALdouble *values)
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
             case AL_MIDI_GAIN_SOFT:
+            case AL_MIDI_STATE_SOFT:
                 values[0] = alGetDouble(pname);
                 return;
         }
@@ -431,6 +454,7 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname, ALfloat *values)
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
             case AL_MIDI_GAIN_SOFT:
+            case AL_MIDI_STATE_SOFT:
                 values[0] = alGetFloat(pname);
                 return;
         }
@@ -468,6 +492,7 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname, ALint *values)
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
             case AL_SOUNDFONTS_SIZE_SOFT:
+            case AL_MIDI_STATE_SOFT:
                 values[0] = alGetInteger(pname);
                 return;
         }
@@ -516,6 +541,7 @@ AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
             case AL_DEFERRED_UPDATES_SOFT:
             case AL_MIDI_CLOCK_SOFT:
             case AL_SOUNDFONTS_SIZE_SOFT:
+            case AL_MIDI_STATE_SOFT:
                 values[0] = alGetInteger64SOFT(pname);
                 return;
         }

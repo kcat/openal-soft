@@ -189,6 +189,7 @@ ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCcontext *context, ALsizei 
 extern inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain);
 extern inline ALfloat MidiSynth_getGain(const MidiSynth *self);
 extern inline void MidiSynth_setState(MidiSynth *self, ALenum state);
+extern inline ALenum MidiSynth_getState(const MidiSynth *self);
 
 void MidiSynth_stop(MidiSynth *self)
 {

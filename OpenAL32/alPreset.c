@@ -176,8 +176,6 @@ AL_API void AL_APIENTRY alGetPresetivSOFT(ALuint id, ALenum param, ALint *values
     device = context->Device;
     if((preset=LookupPreset(device, id)) == NULL)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-    if(preset->ref != 0)
-        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     switch(param)
     {
         case AL_MIDI_PRESET_SOFT:

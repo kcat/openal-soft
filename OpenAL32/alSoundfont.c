@@ -176,6 +176,41 @@ done:
     ALCcontext_DecRef(context);
 }
 
+AL_API void AL_APIENTRY alGetSoundfontSamplesSOFT(ALuint id, ALsizei offset, ALsizei count, ALenum type, ALvoid *samples)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALsoundfont *sfont;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    if(id == 0)
+        sfont = ALsoundfont_getDefSoundfont(context);
+    else if(!(sfont=LookupSfont(device, id)))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(type != AL_SHORT_SOFT)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(offset < 0 || count <= 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
+    ReadLock(&sfont->Lock);
+    if(offset >= sfont->NumSamples || count > (sfont->NumSamples-offset))
+        alSetError(context, AL_INVALID_VALUE);
+    else if(sfont->Mapped)
+        alSetError(context, AL_INVALID_OPERATION);
+    else
+    {
+        /* TODO: Allow conversion. */
+        memcpy(samples, sfont->Samples + offset*sizeof(ALshort), count * sizeof(ALshort));
+    }
+    ReadUnlock(&sfont->Lock);
+
+done:
+    ALCcontext_DecRef(context);
+}
+
 AL_API ALvoid* AL_APIENTRY alSoundfontMapSamplesSOFT(ALuint id, ALsizei offset, ALsizei length)
 {
     ALCdevice *device;

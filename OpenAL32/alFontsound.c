@@ -819,8 +819,8 @@ static ALsfmodulator *ALfontsound_getModStage(ALfontsound *self, ALsizei stage)
             AL_NONE
         };
         ret = malloc(sizeof(*ret));
-        InsertUIntMapEntry(&self->ModulatorMap, stage, ret);
         *ret = moddef;
+        InsertUIntMapEntry(&self->ModulatorMap, stage, ret);
     }
     return ret;
 }
@@ -853,8 +853,8 @@ void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei st
             srcidx++;
             /* fall-through */
         case AL_SOURCE0_TYPE_SOFT:
-            if(!(value == AL_UNORM_SOFT || value == AL_SNORM_SOFT ||
-                 value == AL_UNORM_REV_SOFT || value == AL_SNORM_REV_SOFT))
+            if(!(value == AL_UNORM_SOFT || value == AL_UNORM_REV_SOFT ||
+                 value == AL_SNORM_SOFT || value == AL_SNORM_REV_SOFT))
                 SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
             ALfontsound_getModStage(self, stage)->Source[srcidx].Type = value;
             break;
@@ -863,8 +863,8 @@ void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei st
             srcidx++;
             /* fall-through */
         case AL_SOURCE0_FORM_SOFT:
-            if(!(value == AL_LINEAR_SOFT || value == AL_CONVEX_SOFT ||
-                 value == AL_CONCAVE_SOFT || value == AL_SWITCH_SOFT))
+            if(!(value == AL_LINEAR_SOFT || value == AL_CONCAVE_SOFT ||
+                 value == AL_CONVEX_SOFT || value == AL_SWITCH_SOFT))
                 SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
             ALfontsound_getModStage(self, stage)->Source[srcidx].Form = value;
             break;

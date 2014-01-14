@@ -69,43 +69,47 @@ static int getGenFlags(ALenum input, ALenum type, ALenum form)
     return ret;
 }
 
-static int getSf2Gen(ALenum gen)
+static enum fluid_gen_type getSf2Gen(ALenum gen)
 {
-    if(gen == AL_MOD_LFO_TO_PITCH_SOFT) return 5;
-    if(gen == AL_VIBRATO_LFO_TO_PITCH_SOFT) return 6;
-    if(gen == AL_MOD_ENV_TO_PITCH_SOFT) return 7;
-    if(gen == AL_FILTER_CUTOFF_SOFT) return 8;
-    if(gen == AL_FILTER_RESONANCE_SOFT) return 9;
-    if(gen == AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT) return 10;
-    if(gen == AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT) return 11;
-    if(gen == AL_MOD_LFO_TO_VOLUME_SOFT) return 13;
-    if(gen == AL_CHORUS_SEND_SOFT) return 15;
-    if(gen == AL_REVERB_SEND_SOFT) return 16;
-    if(gen == AL_PAN_SOFT) return 17;
-    if(gen == AL_MOD_LFO_DELAY_SOFT) return 21;
-    if(gen == AL_MOD_LFO_FREQUENCY_SOFT) return 22;
-    if(gen == AL_VIBRATO_LFO_DELAY_SOFT) return 23;
-    if(gen == AL_VIBRATO_LFO_FREQUENCY_SOFT) return 24;
-    if(gen == AL_MOD_ENV_DELAYTIME_SOFT) return 25;
-    if(gen == AL_MOD_ENV_ATTACKTIME_SOFT) return 26;
-    if(gen == AL_MOD_ENV_HOLDTIME_SOFT) return 27;
-    if(gen == AL_MOD_ENV_DECAYTIME_SOFT) return 28;
-    if(gen == AL_MOD_ENV_SUSTAINVOLUME_SOFT) return 29;
-    if(gen == AL_MOD_ENV_RELEASETIME_SOFT) return 30;
-    if(gen == AL_MOD_ENV_KEY_TO_HOLDTIME_SOFT) return 31;
-    if(gen == AL_MOD_ENV_KEY_TO_DECAYTIME_SOFT) return 32;
-    if(gen == AL_VOLUME_ENV_DELAYTIME_SOFT) return 33;
-    if(gen == AL_VOLUME_ENV_ATTACKTIME_SOFT) return 34;
-    if(gen == AL_VOLUME_ENV_HOLDTIME_SOFT) return 35;
-    if(gen == AL_VOLUME_ENV_DECAYTIME_SOFT) return 36;
-    if(gen == AL_VOLUME_ENV_SUSTAINVOLUME_SOFT) return 37;
-    if(gen == AL_VOLUME_ENV_RELEASETIME_SOFT) return 38;
-    if(gen == AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT) return 39;
-    if(gen == AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT) return 40;
-    if(gen == AL_ATTENUATION_SOFT) return 48;
-    if(gen == AL_TUNING_COARSE_SOFT) return 51;
-    if(gen == AL_TUNING_FINE_SOFT) return 52;
-    if(gen == AL_TUNING_SCALE_SOFT) return 56;
+    switch(gen)
+    {
+        case AL_MOD_LFO_TO_PITCH_SOFT: return GEN_MODLFOTOPITCH;
+        case AL_VIBRATO_LFO_TO_PITCH_SOFT: return GEN_VIBLFOTOPITCH;
+        case AL_MOD_ENV_TO_PITCH_SOFT: return GEN_MODENVTOPITCH;
+        case AL_FILTER_CUTOFF_SOFT: return GEN_FILTERFC;
+        case AL_FILTER_RESONANCE_SOFT: return GEN_FILTERQ;
+        case AL_MOD_LFO_TO_FILTER_CUTOFF_SOFT: return GEN_MODLFOTOFILTERFC;
+        case AL_MOD_ENV_TO_FILTER_CUTOFF_SOFT: return GEN_MODENVTOFILTERFC;
+        case AL_MOD_LFO_TO_VOLUME_SOFT: return GEN_MODLFOTOVOL;
+        case AL_CHORUS_SEND_SOFT: return GEN_CHORUSSEND;
+        case AL_REVERB_SEND_SOFT: return GEN_REVERBSEND;
+        case AL_PAN_SOFT: return GEN_PAN;
+        case AL_MOD_LFO_DELAY_SOFT: return GEN_MODLFODELAY;
+        case AL_MOD_LFO_FREQUENCY_SOFT: return GEN_MODLFOFREQ;
+        case AL_VIBRATO_LFO_DELAY_SOFT: return GEN_VIBLFODELAY;
+        case AL_VIBRATO_LFO_FREQUENCY_SOFT: return GEN_VIBLFOFREQ;
+        case AL_MOD_ENV_DELAYTIME_SOFT: return GEN_MODENVDELAY;
+        case AL_MOD_ENV_ATTACKTIME_SOFT: return GEN_MODENVATTACK;
+        case AL_MOD_ENV_HOLDTIME_SOFT: return GEN_MODENVHOLD;
+        case AL_MOD_ENV_DECAYTIME_SOFT: return GEN_MODENVDECAY;
+        case AL_MOD_ENV_SUSTAINVOLUME_SOFT: return GEN_MODENVSUSTAIN;
+        case AL_MOD_ENV_RELEASETIME_SOFT: return GEN_MODENVRELEASE;
+        case AL_MOD_ENV_KEY_TO_HOLDTIME_SOFT: return GEN_KEYTOMODENVHOLD;
+        case AL_MOD_ENV_KEY_TO_DECAYTIME_SOFT: return GEN_KEYTOMODENVDECAY;
+        case AL_VOLUME_ENV_DELAYTIME_SOFT: return GEN_VOLENVDELAY;
+        case AL_VOLUME_ENV_ATTACKTIME_SOFT: return GEN_VOLENVATTACK;
+        case AL_VOLUME_ENV_HOLDTIME_SOFT: return GEN_VOLENVHOLD;
+        case AL_VOLUME_ENV_DECAYTIME_SOFT: return GEN_VOLENVDECAY;
+        case AL_VOLUME_ENV_SUSTAINVOLUME_SOFT: return GEN_VOLENVSUSTAIN;
+        case AL_VOLUME_ENV_RELEASETIME_SOFT: return GEN_VOLENVRELEASE;
+        case AL_VOLUME_ENV_KEY_TO_HOLDTIME_SOFT: return GEN_KEYTOVOLENVHOLD;
+        case AL_VOLUME_ENV_KEY_TO_DECAYTIME_SOFT: return GEN_KEYTOVOLENVDECAY;
+        case AL_ATTENUATION_SOFT: return GEN_ATTENUATION;
+        case AL_TUNING_COARSE_SOFT: return GEN_COARSETUNE;
+        case AL_TUNING_FINE_SOFT: return GEN_FINETUNE;
+        case AL_TUNING_SCALE_SOFT: return GEN_SCALETUNE;
+    }
+    ERR("Unhandled generator: 0x%04x\n", gen);
     return 0;
 }
 
@@ -275,43 +279,43 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         if(voice == NULL)
             return FLUID_FAILED;
 
-        fluid_voice_gen_set(voice,  5, sound->ModLfoToPitch);
-        fluid_voice_gen_set(voice,  6, sound->VibratoLfoToPitch);
-        fluid_voice_gen_set(voice,  7, sound->ModEnvToPitch);
-        fluid_voice_gen_set(voice,  8, sound->FilterCutoff);
-        fluid_voice_gen_set(voice,  9, sound->FilterQ);
-        fluid_voice_gen_set(voice, 10, sound->ModLfoToFilterCutoff);
-        fluid_voice_gen_set(voice, 11, sound->ModEnvToFilterCutoff);
-        fluid_voice_gen_set(voice, 13, sound->ModLfoToVolume);
-        fluid_voice_gen_set(voice, 15, sound->ChorusSend);
-        fluid_voice_gen_set(voice, 16, sound->ReverbSend);
-        fluid_voice_gen_set(voice, 17, sound->Pan);
-        fluid_voice_gen_set(voice, 21, sound->ModLfo.Delay);
-        fluid_voice_gen_set(voice, 22, sound->ModLfo.Frequency);
-        fluid_voice_gen_set(voice, 23, sound->VibratoLfo.Delay);
-        fluid_voice_gen_set(voice, 24, sound->VibratoLfo.Frequency);
-        fluid_voice_gen_set(voice, 25, sound->ModEnv.DelayTime);
-        fluid_voice_gen_set(voice, 26, sound->ModEnv.AttackTime);
-        fluid_voice_gen_set(voice, 27, sound->ModEnv.HoldTime);
-        fluid_voice_gen_set(voice, 28, sound->ModEnv.DecayTime);
-        fluid_voice_gen_set(voice, 29, sound->ModEnv.SustainVol);
-        fluid_voice_gen_set(voice, 30, sound->ModEnv.ReleaseTime);
-        fluid_voice_gen_set(voice, 31, sound->ModEnv.KeyToHoldTime);
-        fluid_voice_gen_set(voice, 32, sound->ModEnv.KeyToDecayTime);
-        fluid_voice_gen_set(voice, 33, sound->VolEnv.DelayTime);
-        fluid_voice_gen_set(voice, 34, sound->VolEnv.AttackTime);
-        fluid_voice_gen_set(voice, 35, sound->VolEnv.HoldTime);
-        fluid_voice_gen_set(voice, 36, sound->VolEnv.DecayTime);
-        fluid_voice_gen_set(voice, 37, sound->VolEnv.SustainVol);
-        fluid_voice_gen_set(voice, 38, sound->VolEnv.ReleaseTime);
-        fluid_voice_gen_set(voice, 39, sound->VolEnv.KeyToHoldTime);
-        fluid_voice_gen_set(voice, 40, sound->VolEnv.KeyToDecayTime);
-        fluid_voice_gen_set(voice, 48, sound->Attenuation);
-        fluid_voice_gen_set(voice, 51, sound->CoarseTuning);
-        fluid_voice_gen_set(voice, 52, sound->FineTuning);
-        fluid_voice_gen_set(voice, 54, sound->LoopMode);
-        fluid_voice_gen_set(voice, 56, sound->TuningScale);
-        fluid_voice_gen_set(voice, 57, sound->ExclusiveClass);
+        fluid_voice_gen_set(voice, GEN_MODLFOTOPITCH, sound->ModLfoToPitch);
+        fluid_voice_gen_set(voice, GEN_VIBLFOTOPITCH, sound->VibratoLfoToPitch);
+        fluid_voice_gen_set(voice, GEN_MODENVTOPITCH, sound->ModEnvToPitch);
+        fluid_voice_gen_set(voice, GEN_FILTERFC, sound->FilterCutoff);
+        fluid_voice_gen_set(voice, GEN_FILTERQ, sound->FilterQ);
+        fluid_voice_gen_set(voice, GEN_MODLFOTOFILTERFC, sound->ModLfoToFilterCutoff);
+        fluid_voice_gen_set(voice, GEN_MODENVTOFILTERFC, sound->ModEnvToFilterCutoff);
+        fluid_voice_gen_set(voice, GEN_MODLFOTOVOL, sound->ModLfoToVolume);
+        fluid_voice_gen_set(voice, GEN_CHORUSSEND, sound->ChorusSend);
+        fluid_voice_gen_set(voice, GEN_REVERBSEND, sound->ReverbSend);
+        fluid_voice_gen_set(voice, GEN_PAN, sound->Pan);
+        fluid_voice_gen_set(voice, GEN_MODLFODELAY, sound->ModLfo.Delay);
+        fluid_voice_gen_set(voice, GEN_MODLFOFREQ, sound->ModLfo.Frequency);
+        fluid_voice_gen_set(voice, GEN_VIBLFODELAY, sound->VibratoLfo.Delay);
+        fluid_voice_gen_set(voice, GEN_VIBLFOFREQ, sound->VibratoLfo.Frequency);
+        fluid_voice_gen_set(voice, GEN_MODENVDELAY, sound->ModEnv.DelayTime);
+        fluid_voice_gen_set(voice, GEN_MODENVATTACK, sound->ModEnv.AttackTime);
+        fluid_voice_gen_set(voice, GEN_MODENVHOLD, sound->ModEnv.HoldTime);
+        fluid_voice_gen_set(voice, GEN_MODENVDECAY, sound->ModEnv.DecayTime);
+        fluid_voice_gen_set(voice, GEN_MODENVSUSTAIN, sound->ModEnv.SustainVol);
+        fluid_voice_gen_set(voice, GEN_MODENVRELEASE, sound->ModEnv.ReleaseTime);
+        fluid_voice_gen_set(voice, GEN_KEYTOMODENVHOLD, sound->ModEnv.KeyToHoldTime);
+        fluid_voice_gen_set(voice, GEN_KEYTOMODENVDECAY, sound->ModEnv.KeyToDecayTime);
+        fluid_voice_gen_set(voice, GEN_VOLENVDELAY, sound->VolEnv.DelayTime);
+        fluid_voice_gen_set(voice, GEN_VOLENVATTACK, sound->VolEnv.AttackTime);
+        fluid_voice_gen_set(voice, GEN_VOLENVHOLD, sound->VolEnv.HoldTime);
+        fluid_voice_gen_set(voice, GEN_VOLENVDECAY, sound->VolEnv.DecayTime);
+        fluid_voice_gen_set(voice, GEN_VOLENVSUSTAIN, sound->VolEnv.SustainVol);
+        fluid_voice_gen_set(voice, GEN_VOLENVRELEASE, sound->VolEnv.ReleaseTime);
+        fluid_voice_gen_set(voice, GEN_KEYTOVOLENVHOLD, sound->VolEnv.KeyToHoldTime);
+        fluid_voice_gen_set(voice, GEN_KEYTOVOLENVDECAY, sound->VolEnv.KeyToDecayTime);
+        fluid_voice_gen_set(voice, GEN_ATTENUATION, sound->Attenuation);
+        fluid_voice_gen_set(voice, GEN_COARSETUNE, sound->CoarseTuning);
+        fluid_voice_gen_set(voice, GEN_FINETUNE, sound->FineTuning);
+        fluid_voice_gen_set(voice, GEN_SAMPLEMODE, sound->LoopMode);
+        fluid_voice_gen_set(voice, GEN_SCALETUNE, sound->TuningScale);
+        fluid_voice_gen_set(voice, GEN_EXCLUSIVECLASS, sound->ExclusiveClass);
         for(m = 0;m < sample->NumMods;m++)
             fluid_voice_add_mod(voice, &sample->Mods[m], FLUID_VOICE_OVERWRITE);
 

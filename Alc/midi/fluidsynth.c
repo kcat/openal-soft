@@ -564,7 +564,7 @@ static ALenum FSynth_selectSoundfonts(FSynth *self, ALCcontext *context, ALsizei
             char name[16];
             snprintf(name, sizeof(name), "_al_internal %d", i);
 
-            fontid[i] = fluid_synth_sfload(self->Synth, name, 1);
+            fontid[i] = fluid_synth_sfload(self->Synth, name, 0);
             if(fontid[i] == FLUID_FAILED)
                 ERR("Failed to load selected soundfont %d\n", i);
         }
@@ -580,7 +580,7 @@ static ALenum FSynth_selectSoundfonts(FSynth *self, ALCcontext *context, ALsizei
     }
 
     for(i = 0;i < count;i++)
-        fluid_synth_sfunload(self->Synth, fontid[i], 1);
+        fluid_synth_sfunload(self->Synth, fontid[i], 0);
     free(fontid);
 
     return ret;

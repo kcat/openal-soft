@@ -206,7 +206,7 @@ extern inline void MidiSynth_reset(MidiSynth *self);
 ALuint64 MidiSynth_getTime(const MidiSynth *self)
 {
     ALuint64 time = self->LastEvtTime + (self->SamplesSinceLast/self->SamplesPerTick);
-    return clampu(time, self->LastEvtTime, self->NextEvtTime);
+    return clampu64(time, self->LastEvtTime, self->NextEvtTime);
 }
 
 extern inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self);

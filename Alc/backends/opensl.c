@@ -401,6 +401,16 @@ static ALCboolean opensl_start_playback(ALCdevice *Device)
 static void opensl_stop_playback(ALCdevice *Device)
 {
     osl_data *data = Device->ExtraData;
+    SLPlayItf player;
+    SLresult result;
+
+    result = SLObjectItf_GetInterface(data->bufferQueueObject, SL_IID_PLAY, &player);
+    PRINTERR(result, "bufferQueue->GetInterface");
+    if(SL_RESULT_SUCCESS == result)
+    {
+        result = SLPlayItf_SetPlayState(player, SL_PLAYSTATE_STOPPED);
+        PRINTERR(result, "player->SetPlayState");
+    }
 
     free(data->buffer);
     data->buffer = NULL;

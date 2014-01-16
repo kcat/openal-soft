@@ -1925,9 +1925,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALCdevice_Unlock(device);
     RestoreFPUMode(&oldMode);
 
-    if(V0(device->Backend,start)() == ALC_FALSE)
-        return ALC_INVALID_DEVICE;
-    device->Flags |= DEVICE_RUNNING;
+    if(!(device->Flags&DEVICE_PAUSED))
+    {
+        if(V0(device->Backend,start)() == ALC_FALSE)
+            return ALC_INVALID_DEVICE;
+        device->Flags |= DEVICE_RUNNING;
+    }
 
     return ALC_NO_ERROR;
 }
@@ -3515,6 +3518,7 @@ ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device)
         if((device->Flags&DEVICE_RUNNING))
             V0(device->Backend,stop)();
         device->Flags &= ~DEVICE_RUNNING;
+        device->Flags |= DEVICE_PAUSED;
         UnlockLists();
     }
     if(device) ALCdevice_DecRef(device);
@@ -3531,10 +3535,13 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
     else
     {
         LockLists();
-        if(device->ContextList)
+        if((device->Flags&DEVICE_PAUSED))
         {
             if(V0(device->Backend,start)() != ALC_FALSE)
+            {
                 device->Flags |= DEVICE_RUNNING;
+                device->Flags &= ~DEVICE_PAUSED;
+            }
             else
             {
                 alcSetError(device, ALC_INVALID_DEVICE);

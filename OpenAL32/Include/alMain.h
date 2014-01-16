@@ -657,6 +657,9 @@ struct ALCdevice_struct
 // Stereo sources cover 120-degree angles around +/-90
 #define DEVICE_WIDE_STEREO                       (1<<16)
 
+// Specifies if the DSP is paused at user request
+#define DEVICE_PAUSED                            (1<<30)
+
 // Specifies if the device is currently running
 #define DEVICE_RUNNING                           (1<<31)
 

@@ -1698,7 +1698,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         /* If a context is already running on the device, stop playback so the
          * device attributes can be updated. */
         if((device->Flags&DEVICE_RUNNING))
-            V0(device->Backend,close)();
+            V0(device->Backend,stop)();
         device->Flags &= ~DEVICE_RUNNING;
 
         freq = device->Frequency;

@@ -124,6 +124,17 @@ static int getSf2LoopMode(ALenum mode)
     return 0;
 }
 
+static int getSampleType(ALenum type)
+{
+    switch(type)
+    {
+        case AL_MONO_SOFT: return FLUID_SAMPLETYPE_MONO;
+        case AL_RIGHT_SOFT: return FLUID_SAMPLETYPE_RIGHT;
+        case AL_LEFT_SOFT: return FLUID_SAMPLETYPE_LEFT;
+    }
+    return FLUID_SAMPLETYPE_MONO;
+}
+
 typedef struct FSample {
     DERIVE_FROM_TYPE(fluid_sample_t);
 
@@ -144,7 +155,7 @@ static void FSample_Construct(FSample *self, ALfontsound *sound, ALsoundfont *sf
     sample->samplerate = sound->SampleRate;
     sample->origpitch = sound->PitchKey;
     sample->pitchadj = sound->PitchCorrection;
-    sample->sampletype = sound->SampleType;
+    sample->sampletype = getSampleType(sound->SampleType);
     sample->valid = 1;
     sample->data = sfont->Samples;
 

@@ -572,7 +572,7 @@ static void ALfontsound_Construct(ALfontsound *self)
     self->SampleRate = 0;
     self->PitchKey = 0;
     self->PitchCorrection = 0;
-    self->SampleType = AL_NONE;
+    self->SampleType = AL_MONO_SOFT;
     self->Link = NULL;
 
     InitUIntMap(&self->ModulatorMap, ~0);
@@ -781,7 +781,7 @@ void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, 
             break;
 
         case AL_SAMPLE_TYPE_SOFT:
-            if(!(value >= 1 && value <= 4))
+            if(!(value == AL_MONO_SOFT || value == AL_RIGHT_SOFT || value == AL_LEFT_SOFT))
                 SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
             self->SampleType = value;
             break;

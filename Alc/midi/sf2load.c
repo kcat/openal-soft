@@ -763,6 +763,14 @@ static ALenum getModTransOp(int op)
     return AL_INVALID;
 }
 
+static ALenum getLoopMode(int mode)
+{
+    if(mode == 0) return AL_NONE;
+    if(mode == 1) return AL_LOOP_CONTINUOUS_SOFT;
+    if(mode == 3) return AL_LOOP_UNTIL_RELEASE_SOFT;
+    ERR("Unhandled loop mode: %d\n", mode);
+    return AL_NONE;
+}
 
 static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *zone)
 {
@@ -909,10 +917,7 @@ static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *
                 else if(param == AL_CHORUS_SEND_SOFT || param == AL_REVERB_SEND_SOFT)
                     value = clampi(value, 0, 1000);
                 else if(param == AL_LOOP_MODE_SOFT)
-                {
-                    if(!(value == 0 || value == 1 || value == 3))
-                        value = 0;
-                }
+                    value = getLoopMode(value);
                 ALfontsound_setPropi(sound, context, param, value);
             }
             else if(gen->mGenerator < 256)
@@ -1016,14 +1021,15 @@ static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCco
                     break;
 
                 (*sounds)[*sounds_size] = NewFontsound(context);
-                (*sounds)[*sounds_size]->Start = samp->mStart;
-                (*sounds)[*sounds_size]->End = samp->mEnd;
-                (*sounds)[*sounds_size]->LoopStart = samp->mStartloop;
-                (*sounds)[*sounds_size]->LoopEnd = samp->mEndloop;
-                (*sounds)[*sounds_size]->SampleRate = samp->mSampleRate;
-                (*sounds)[*sounds_size]->PitchKey = samp->mOriginalKey;
-                (*sounds)[*sounds_size]->PitchCorrection = samp->mCorrection;
-                (*sounds)[*sounds_size]->LoopMode = (samp->mSampleType&0x7ffff);
+                ALfontsound_setPropi((*sounds)[*sounds_size], context, AL_SAMPLE_START_SOFT, samp->mStart);
+                ALfontsound_setPropi((*sounds)[*sounds_size], context, AL_SAMPLE_END_SOFT, samp->mEnd);
+                ALfontsound_setPropi((*sounds)[*sounds_size], context, AL_SAMPLE_LOOP_START_SOFT, samp->mStartloop);
+                ALfontsound_setPropi((*sounds)[*sounds_size], context, AL_SAMPLE_LOOP_END_SOFT, samp->mEndloop);
+                ALfontsound_setPropi((*sounds)[*sounds_size], context, AL_SAMPLE_RATE_SOFT, samp->mSampleRate);
+                ALfontsound_setPropi((*sounds)[*sounds_size], context, AL_BASE_KEY_SOFT, samp->mOriginalKey);
+                ALfontsound_setPropi((*sounds)[*sounds_size], context, AL_KEY_CORRECTION_SOFT, samp->mCorrection);
+                if(samp->mSampleType == 1 || samp->mSampleType == 2 || samp->mSampleType == 4)
+                    ALfontsound_setPropi((*sounds)[*sounds_size], context, AL_SAMPLE_TYPE_SOFT, samp->mSampleType);
                 fillZone((*sounds)[*sounds_size], context, &lzone);
                 (*sounds_size)++;
 

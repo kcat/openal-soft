@@ -113,6 +113,17 @@ static enum fluid_gen_type getSf2Gen(ALenum gen)
     return 0;
 }
 
+static int getSf2LoopMode(ALenum mode)
+{
+    switch(mode)
+    {
+        case AL_NONE: return 0;
+        case AL_LOOP_CONTINUOUS_SOFT: return 1;
+        case AL_LOOP_UNTIL_RELEASE_SOFT: return 3;
+    }
+    return 0;
+}
+
 typedef struct FSample {
     DERIVE_FROM_TYPE(fluid_sample_t);
 
@@ -313,7 +324,7 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_gen_set(voice, GEN_ATTENUATION, sound->Attenuation);
         fluid_voice_gen_set(voice, GEN_COARSETUNE, sound->CoarseTuning);
         fluid_voice_gen_set(voice, GEN_FINETUNE, sound->FineTuning);
-        fluid_voice_gen_set(voice, GEN_SAMPLEMODE, sound->LoopMode);
+        fluid_voice_gen_set(voice, GEN_SAMPLEMODE, getSf2LoopMode(sound->LoopMode));
         fluid_voice_gen_set(voice, GEN_SCALETUNE, sound->TuningScale);
         fluid_voice_gen_set(voice, GEN_EXCLUSIVECLASS, sound->ExclusiveClass);
         for(m = 0;m < sample->NumMods;m++)

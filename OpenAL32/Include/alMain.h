@@ -216,6 +216,16 @@ AL_API void AL_APIENTRY alLoadSoundfontSOFT(ALuint id, size_t(*cb)(ALvoid*,size_
 #endif
 #endif
 
+#ifndef ALC_SOFT_pause_device
+#define ALC_SOFT_pause_device 1
+typedef void (ALC_APIENTRY*LPALCDEVICEPAUSESOFT)(ALCdevice *device);
+typedef void (ALC_APIENTRY*LPALCDEVICERESUMESOFT)(ALCdevice *device);
+#ifdef AL_ALEXT_PROTOTYPES
+ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device);
+ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device);
+#endif
+#endif
+
 
 #ifdef IN_IDE_PARSER
 /* KDevelop's parser doesn't recognize the C99-standard restrict keyword, but

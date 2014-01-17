@@ -556,7 +556,7 @@ static void GenModList_accumMod(GenModList *self, const Modulator *mod)
     goto lbl_;                                                                \
 } while(0)
 
-static ALboolean ensureFontSanity(const Soundfont *sfont)
+static ALboolean ensureFontSanity(const Soundfont *sfont, ALboolean has_irom)
 {
     ALsizei i;
 
@@ -684,6 +684,17 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
              sfont->ibag[i].mModIdx, sfont->imod_size);
         return AL_FALSE;
     }
+
+
+    for(i = 0;i < sfont->shdr_size-1;i++)
+    {
+        if((sfont->shdr[i].mSampleType&0x8000) && !has_irom)
+        {
+            WARN("Sample header %d has ROM sample type without an irom sub-chunk\n", i);
+            return AL_FALSE;
+        }
+    }
+
 
     return AL_TRUE;
 }
@@ -1072,6 +1083,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 {
     ALsfpreset **presets = NULL;
     ALsizei presets_size = 0;
+    ALchar *irom = NULL;
     ALuint version = 0;
     ALuint ltype;
     Soundfont sfont;
@@ -1111,10 +1123,23 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                 ALushort major = read_le16(stream);
                 ALushort minor = read_le16(stream);
 
-                info.mSize -= 4;
                 list.mSize -= 4;
+                info.mSize -= 4;
 
                 version = (major<<16) | minor;
+            }
+        }
+        else if(info.mCode == FOURCC('i','r','o','m'))
+        {
+            if(info.mSize == 0 || (info.mSize&1))
+                ERR("Invalid irom size: %d\n", info.mSize);
+            else
+            {
+                irom = calloc(1, info.mSize+1);
+                READ(stream, irom, info.mSize);
+
+                list.mSize -= info.mSize;
+                info.mSize -= info.mSize;
             }
         }
         list.mSize -= info.mSize;
@@ -1275,7 +1300,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     if(READERR(stream) != 0)
         ERROR_GOTO(error, "Error reading pdta chunk\n");
 
-    if(!ensureFontSanity(&sfont))
+    if(!ensureFontSanity(&sfont, irom!=NULL))
         goto error;
 
     presets = calloc(1, (sfont.phdr_size-1)*sizeof(presets[0]));
@@ -1378,6 +1403,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     ExchangeInt(&soundfont->NumPresets, presets_size);
 
     free(presets);
+    free(irom);
 
     Soundfont_Destruct(&sfont);
 
@@ -1391,6 +1417,7 @@ error:
             DeletePreset(presets[i], device);
         free(presets);
     }
+    free(irom);
 
     Soundfont_Destruct(&sfont);
 

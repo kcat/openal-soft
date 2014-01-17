@@ -462,6 +462,7 @@ typedef struct FSynth {
     ALsizei NumFontIDs;
 
     ALboolean ForceGM2BankSelect;
+    ALfloat GainScale;
 } FSynth;
 
 static void FSynth_Construct(FSynth *self, ALCdevice *device);
@@ -495,6 +496,7 @@ static void FSynth_Construct(FSynth *self, ALCdevice *device)
     self->FontIDs = NULL;
     self->NumFontIDs = 0;
     self->ForceGM2BankSelect = AL_FALSE;
+    self->GainScale = 0.2f;
 }
 
 static void FSynth_Destruct(FSynth *self)
@@ -520,6 +522,18 @@ static void FSynth_Destruct(FSynth *self)
 
 static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
 {
+    ALfloat vol;
+
+    if(ConfigValueFloat("midi", "volume", &vol))
+    {
+        if(!(vol <= 0.0f))
+        {
+            ERR("MIDI volume %f clamped to 0\n", vol);
+            vol = 0.0f;
+        }
+        self->GainScale = powf(10.0f, vol / 20.0f);
+    }
+
     self->Settings = new_fluid_settings();
     if(!self->Settings)
     {
@@ -528,6 +542,7 @@ static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
     }
 
     fluid_settings_setint(self->Settings, "synth.polyphony", 256);
+    fluid_settings_setnum(self->Settings, "synth.gain", self->GainScale);
     fluid_settings_setnum(self->Settings, "synth.sample-rate", device->Frequency);
 
     self->Synth = new_fluid_synth(self->Settings);
@@ -611,9 +626,8 @@ static ALenum FSynth_selectSoundfonts(FSynth *self, ALCcontext *context, ALsizei
 
 static void FSynth_setGain(FSynth *self, ALfloat gain)
 {
-    /* Scale gain by an additional 0.2 (-14dB), to help keep the mix from clipping. */
-    fluid_settings_setnum(self->Settings, "synth.gain", 0.2 * gain);
-    fluid_synth_set_gain(self->Synth, 0.2f * gain);
+    fluid_settings_setnum(self->Settings, "synth.gain", self->GainScale * gain);
+    fluid_synth_set_gain(self->Synth, self->GainScale * gain);
     MidiSynth_setGain(STATIC_CAST(MidiSynth, self), gain);
 }
 

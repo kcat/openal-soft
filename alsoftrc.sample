@@ -184,14 +184,21 @@
 #trap-al-error = false
 
 ##
-## MIDI interface stuff (EXPERIMENTAL)
+## MIDI stuff (EXPERIMENTAL)
 ##
 [midi]
 
 ## soundfont:
 #  A default soundfont (sf2 format). Used when an app requests the system
-#  default, or uses the MIDI interface without specifying its own soundfont.
+#  default.
 #soundfont =
+
+## volume:
+#  Additional attenuation applied to MIDI output, expressed in decibels. This
+#  is used to help keep the mix from clipping, and so must be 0 or less. The
+#  value is logarithmic, so -6 will be about half amplitude, and -12 about
+#  1/4th. The default is roughly -13.9794 (0.2, or 1/5th).
+#volume =
 
 ##
 ## Reverb effect stuff (includes EAX reverb)

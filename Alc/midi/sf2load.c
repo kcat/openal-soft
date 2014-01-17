@@ -1043,7 +1043,7 @@ static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCco
 
                 if(gen->mAmount >= sfont->shdr_size-1)
                 {
-                    ERR("Generator %ld has invalid sample ID generator (%d of %d)\n",
+                    ERR("Generator %ld has invalid sample ID (%d of %d)\n",
                         (long)(gen-sfont->igen), gen->mAmount, sfont->shdr_size-1);
                     break;
                 }
@@ -1373,7 +1373,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                 if(gen->mGenerator == 41)
                 {
                     if(gen->mAmount >= sfont.inst_size-1)
-                        ERR("Generator %ld has invalid instrument ID generator (%d of %d)\n",
+                        ERR("Generator %ld has invalid instrument ID (%d of %d)\n",
                             (long)(gen-sfont.pgen), gen->mAmount, sfont.inst_size-1);
                     else
                         processInstrument(&sounds, &sounds_size, context,

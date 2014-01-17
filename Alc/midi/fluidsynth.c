@@ -320,7 +320,7 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_gen_set(voice, GEN_MODENVATTACK, sound->ModEnv.AttackTime);
         fluid_voice_gen_set(voice, GEN_MODENVHOLD, sound->ModEnv.HoldTime);
         fluid_voice_gen_set(voice, GEN_MODENVDECAY, sound->ModEnv.DecayTime);
-        fluid_voice_gen_set(voice, GEN_MODENVSUSTAIN, sound->ModEnv.SustainVol);
+        fluid_voice_gen_set(voice, GEN_MODENVSUSTAIN, sound->ModEnv.SustainAttn);
         fluid_voice_gen_set(voice, GEN_MODENVRELEASE, sound->ModEnv.ReleaseTime);
         fluid_voice_gen_set(voice, GEN_KEYTOMODENVHOLD, sound->ModEnv.KeyToHoldTime);
         fluid_voice_gen_set(voice, GEN_KEYTOMODENVDECAY, sound->ModEnv.KeyToDecayTime);
@@ -328,7 +328,7 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_gen_set(voice, GEN_VOLENVATTACK, sound->VolEnv.AttackTime);
         fluid_voice_gen_set(voice, GEN_VOLENVHOLD, sound->VolEnv.HoldTime);
         fluid_voice_gen_set(voice, GEN_VOLENVDECAY, sound->VolEnv.DecayTime);
-        fluid_voice_gen_set(voice, GEN_VOLENVSUSTAIN, sound->VolEnv.SustainVol);
+        fluid_voice_gen_set(voice, GEN_VOLENVSUSTAIN, sound->VolEnv.SustainAttn);
         fluid_voice_gen_set(voice, GEN_VOLENVRELEASE, sound->VolEnv.ReleaseTime);
         fluid_voice_gen_set(voice, GEN_KEYTOVOLENVHOLD, sound->VolEnv.KeyToHoldTime);
         fluid_voice_gen_set(voice, GEN_KEYTOVOLENVDECAY, sound->VolEnv.KeyToDecayTime);

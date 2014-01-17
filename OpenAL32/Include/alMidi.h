@@ -19,6 +19,17 @@ typedef struct ALsfmodulator {
     ALenum Dest;
 } ALsfmodulator;
 
+typedef struct ALenvelope {
+    ALint DelayTime;
+    ALint AttackTime;
+    ALint HoldTime;
+    ALint DecayTime;
+    ALint SustainAttn;
+    ALint ReleaseTime;
+    ALint KeyToHoldTime;
+    ALint KeyToDecayTime;
+} ALenvelope;
+
 
 typedef struct ALfontsound {
     volatile RefCount ref;
@@ -50,26 +61,8 @@ typedef struct ALfontsound {
         ALint Frequency;
     } VibratoLfo;
 
-    struct {
-        ALint DelayTime;
-        ALint AttackTime;
-        ALint HoldTime;
-        ALint DecayTime;
-        ALint SustainVol;
-        ALint ReleaseTime;
-        ALint KeyToHoldTime;
-        ALint KeyToDecayTime;
-    } ModEnv;
-    struct {
-        ALint DelayTime;
-        ALint AttackTime;
-        ALint HoldTime;
-        ALint DecayTime;
-        ALint SustainVol;
-        ALint ReleaseTime;
-        ALint KeyToHoldTime;
-        ALint KeyToDecayTime;
-    } VolEnv;
+    ALenvelope ModEnv;
+    ALenvelope VolEnv;
 
     ALint Attenuation;
 

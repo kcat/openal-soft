@@ -328,7 +328,7 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
             values[0] = sound->ModEnv.DecayTime;
             break;
         case AL_MOD_ENV_SUSTAINVOLUME_SOFT:
-            values[0] = sound->ModEnv.SustainVol;
+            values[0] = sound->ModEnv.SustainAttn;
             break;
         case AL_MOD_ENV_RELEASETIME_SOFT:
             values[0] = sound->ModEnv.ReleaseTime;
@@ -353,7 +353,7 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
             values[0] = sound->VolEnv.DecayTime;
             break;
         case AL_VOLUME_ENV_SUSTAINVOLUME_SOFT:
-            values[0] = sound->VolEnv.SustainVol;
+            values[0] = sound->VolEnv.SustainAttn;
             break;
         case AL_VOLUME_ENV_RELEASETIME_SOFT:
             values[0] = sound->VolEnv.ReleaseTime;
@@ -540,7 +540,7 @@ static void ALfontsound_Construct(ALfontsound *self)
     self->ModEnv.AttackTime = -12000;
     self->ModEnv.HoldTime = -12000;
     self->ModEnv.DecayTime = -12000;
-    self->ModEnv.SustainVol = 0;
+    self->ModEnv.SustainAttn = 0;
     self->ModEnv.ReleaseTime = -12000;
     self->ModEnv.KeyToHoldTime = 0;
     self->ModEnv.KeyToDecayTime = 0;
@@ -549,7 +549,7 @@ static void ALfontsound_Construct(ALfontsound *self)
     self->VolEnv.AttackTime = -12000;
     self->VolEnv.HoldTime = -12000;
     self->VolEnv.DecayTime = -12000;
-    self->VolEnv.SustainVol = 0;
+    self->VolEnv.SustainAttn = 0;
     self->VolEnv.ReleaseTime = -12000;
     self->VolEnv.KeyToHoldTime = 0;
     self->VolEnv.KeyToDecayTime = 0;
@@ -681,7 +681,7 @@ void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, 
             self->ModEnv.DecayTime = value;
             break;
         case AL_MOD_ENV_SUSTAINVOLUME_SOFT:
-            self->ModEnv.SustainVol = value;
+            self->ModEnv.SustainAttn = value;
             break;
         case AL_MOD_ENV_RELEASETIME_SOFT:
             self->ModEnv.ReleaseTime = value;
@@ -706,7 +706,7 @@ void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, 
             self->VolEnv.DecayTime = value;
             break;
         case AL_VOLUME_ENV_SUSTAINVOLUME_SOFT:
-            self->VolEnv.SustainVol = value;
+            self->VolEnv.SustainAttn = value;
             break;
         case AL_VOLUME_ENV_RELEASETIME_SOFT:
             self->VolEnv.ReleaseTime = value;

@@ -1215,8 +1215,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('p','h','d','r'))
         ERROR_GOTO(error, "Invalid Format, expected phdr got '%c%c%c%c'\n", FOURCCARGS(list.mCode));
-    if((list.mSize%38) != 0)
-        ERROR_GOTO(error, "Invalid Format, bad phdr size\n");
+    if((list.mSize%38) != 0 || list.mSize == 0)
+        ERROR_GOTO(error, "Invalid Format, bad phdr size: %u\n", list.mSize);
     sfont.phdr_size = list.mSize/38;
     sfont.phdr = calloc(sfont.phdr_size, sizeof(sfont.phdr[0]));
     for(i = 0;i < sfont.phdr_size;i++)
@@ -1225,8 +1225,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('p','b','a','g'))
         ERROR_GOTO(error, "Invalid Format, expected pbag got '%c%c%c%c'\n", FOURCCARGS(list.mCode));
-    if((list.mSize%4) != 0)
-        ERROR_GOTO(error, "Invalid Format, bad pbag size\n");
+    if((list.mSize%4) != 0 || list.mSize == 0)
+        ERROR_GOTO(error, "Invalid Format, bad pbag size: %u\n", list.mSize);
     sfont.pbag_size = list.mSize/4;
     sfont.pbag = calloc(sfont.pbag_size, sizeof(sfont.pbag[0]));
     for(i = 0;i < sfont.pbag_size;i++)
@@ -1235,8 +1235,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('p','m','o','d'))
         ERROR_GOTO(error, "Invalid Format, expected pmod got '%c%c%c%c'\n", FOURCCARGS(list.mCode));
-    if((list.mSize%10) != 0)
-        ERROR_GOTO(error, "Invalid Format, bad pmod size\n");
+    if((list.mSize%10) != 0 || list.mSize == 0)
+        ERROR_GOTO(error, "Invalid Format, bad pmod size: %u\n", list.mSize);
     sfont.pmod_size = list.mSize/10;
     sfont.pmod = calloc(sfont.pmod_size, sizeof(sfont.pmod[0]));
     for(i = 0;i < sfont.pmod_size;i++)
@@ -1245,8 +1245,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('p','g','e','n'))
         ERROR_GOTO(error, "Invalid Format, expected pgen got '%c%c%c%c'\n", FOURCCARGS(list.mCode));
-    if((list.mSize%4) != 0)
-        ERROR_GOTO(error, "Invalid Format, bad pgen size\n");
+    if((list.mSize%4) != 0 || list.mSize == 0)
+        ERROR_GOTO(error, "Invalid Format, bad pgen size: %u\n", list.mSize);
     sfont.pgen_size = list.mSize/4;
     sfont.pgen = calloc(sfont.pgen_size, sizeof(sfont.pgen[0]));
     for(i = 0;i < sfont.pgen_size;i++)
@@ -1256,8 +1256,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('i','n','s','t'))
         ERROR_GOTO(error, "Invalid Format, expected inst got '%c%c%c%c'\n", FOURCCARGS(list.mCode));
-    if((list.mSize%22) != 0)
-        ERROR_GOTO(error, "Invalid Format, bad inst size\n");
+    if((list.mSize%22) != 0 || list.mSize == 0)
+        ERROR_GOTO(error, "Invalid Format, bad inst size: %u\n", list.mSize);
     sfont.inst_size = list.mSize/22;
     sfont.inst = calloc(sfont.inst_size, sizeof(sfont.inst[0]));
     for(i = 0;i < sfont.inst_size;i++)
@@ -1266,8 +1266,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('i','b','a','g'))
         ERROR_GOTO(error, "Invalid Format, expected ibag got '%c%c%c%c'\n", FOURCCARGS(list.mCode));
-    if((list.mSize%4) != 0)
-        ERROR_GOTO(error, "Invalid Format, bad ibag size\n");
+    if((list.mSize%4) != 0 || list.mSize == 0)
+        ERROR_GOTO(error, "Invalid Format, bad ibag size: %u\n", list.mSize);
     sfont.ibag_size = list.mSize/4;
     sfont.ibag = calloc(sfont.ibag_size, sizeof(sfont.ibag[0]));
     for(i = 0;i < sfont.ibag_size;i++)
@@ -1276,8 +1276,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('i','m','o','d'))
         ERROR_GOTO(error, "Invalid Format, expected imod got '%c%c%c%c'\n", FOURCCARGS(list.mCode));
-    if((list.mSize%10) != 0)
-        ERROR_GOTO(error, "Invalid Format, bad imod size\n");
+    if((list.mSize%10) != 0 || list.mSize == 0)
+        ERROR_GOTO(error, "Invalid Format, bad imod size: %u\n", list.mSize);
     sfont.imod_size = list.mSize/10;
     sfont.imod = calloc(sfont.imod_size, sizeof(sfont.imod[0]));
     for(i = 0;i < sfont.imod_size;i++)
@@ -1286,8 +1286,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('i','g','e','n'))
         ERROR_GOTO(error, "Invalid Format, expected igen got '%c%c%c%c'\n", FOURCCARGS(list.mCode));
-    if((list.mSize%4) != 0)
-        ERROR_GOTO(error, "Invalid Format, bad igen size\n");
+    if((list.mSize%4) != 0 || list.mSize == 0)
+        ERROR_GOTO(error, "Invalid Format, bad igen size: %u\n", list.mSize);
     sfont.igen_size = list.mSize/4;
     sfont.igen = calloc(sfont.igen_size, sizeof(sfont.igen[0]));
     for(i = 0;i < sfont.igen_size;i++)
@@ -1297,8 +1297,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('s','h','d','r'))
         ERROR_GOTO(error, "Invalid Format, expected shdr got '%c%c%c%c'\n", FOURCCARGS(list.mCode));
-    if((list.mSize%46) != 0)
-        ERROR_GOTO(error, "Invalid Format, bad shdr size\n");
+    if((list.mSize%46) != 0 || list.mSize == 0)
+        ERROR_GOTO(error, "Invalid Format, bad shdr size: %u\n", list.mSize);
     sfont.shdr_size = list.mSize/46;
     sfont.shdr = calloc(sfont.shdr_size, sizeof(sfont.shdr[0]));
     for(i = 0;i < sfont.shdr_size;i++)

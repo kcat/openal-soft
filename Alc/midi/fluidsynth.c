@@ -35,7 +35,7 @@ static int getGenInput(ALenum input)
         case AL_ONE_SOFT: return FLUID_MOD_NONE;
         case AL_NOTEON_VELOCITY_SOFT: return FLUID_MOD_VELOCITY;
         case AL_NOTEON_KEY_SOFT: return FLUID_MOD_KEY;
-        case AL_AFTERTOUCH_SOFT: return FLUID_MOD_KEYPRESSURE;
+        case AL_KEYPRESSURE_SOFT: return FLUID_MOD_KEYPRESSURE;
         case AL_CHANNELPRESSURE_SOFT: return FLUID_MOD_CHANNELPRESSURE;
         case AL_PITCHBEND_SOFT: return FLUID_MOD_PITCHWHEEL;
         case AL_PITCHBEND_SENSITIVITY_SOFT: return FLUID_MOD_PITCHWHEELSENS;
@@ -714,7 +714,7 @@ static void FSynth_processQueue(FSynth *self, ALuint64 time)
             case AL_NOTEON_SOFT:
                 fluid_synth_noteon(self->Synth, (evt->event&0x0F), evt->param.val[0], evt->param.val[1]);
                 break;
-            case AL_AFTERTOUCH_SOFT:
+            case AL_KEYPRESSURE_SOFT:
                 break;
 
             case AL_CONTROLLERCHANGE_SOFT:

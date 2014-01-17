@@ -55,11 +55,11 @@
 #define AL_ONE_SOFT                              0x0080
 #define AL_NOTEON_VELOCITY_SOFT                  0x0082
 #define AL_NOTEON_KEY_SOFT                       0x0083
-/* aftertouch */
-/* channelpressure */
-/* pitchbend */
+/* AL_KEYPRESSURE_SOFT */
+/* AL_CHANNELPRESSURE_SOFT */
+/* AL_PITCHBEND_SOFT */
 #define AL_PITCHBEND_SENSITIVITY_SOFT            0x0090
-/* 0...127 CC */
+/* CC 0...127 */
 
 /* Source Type */
 #define AL_UNORM_SOFT                            0x0000
@@ -74,7 +74,7 @@
 #define AL_SWITCH_SOFT                           0x0C00
 
 /* Transform op */
-/* linear */
+/* AL_LINEAR_SOFT */
 #define AL_ABSOLUTE_SOFT                         0x0002
 
 #define AL_SAMPLE_START_SOFT                     0x2000
@@ -132,7 +132,7 @@
 #define AL_FORMAT_TYPE_SOFT                      0x1991
 #define AL_NOTEOFF_SOFT                          0x0080
 #define AL_NOTEON_SOFT                           0x0090
-#define AL_AFTERTOUCH_SOFT                       0x00A0
+#define AL_KEYPRESSURE_SOFT                      0x00A0
 #define AL_CONTROLLERCHANGE_SOFT                 0x00B0
 #define AL_PROGRAMCHANGE_SOFT                    0x00C0
 #define AL_CHANNELPRESSURE_SOFT                  0x00D0

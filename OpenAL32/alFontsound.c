@@ -838,7 +838,7 @@ void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei st
             /* fall-through */
         case AL_SOURCE0_INPUT_SOFT:
             if(!(value == AL_ONE_SOFT || value == AL_NOTEON_VELOCITY_SOFT ||
-                 value == AL_NOTEON_KEY_SOFT || value == AL_AFTERTOUCH_SOFT ||
+                 value == AL_NOTEON_KEY_SOFT || value == AL_KEYPRESSURE_SOFT ||
                  value == AL_CHANNELPRESSURE_SOFT || value == AL_PITCHBEND_SOFT ||
                  value == AL_PITCHBEND_SENSITIVITY_SOFT ||
                  (value > 0 && value < 120 && !(value == 6 || (value >= 32 && value <= 63) ||

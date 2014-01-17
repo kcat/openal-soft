@@ -719,7 +719,7 @@ static ALenum getModSrcInput(int input)
     if(input == 0) return AL_ONE_SOFT;
     if(input == 2) return AL_NOTEON_VELOCITY_SOFT;
     if(input == 3) return AL_NOTEON_KEY_SOFT;
-    if(input == 10) return AL_AFTERTOUCH_SOFT;
+    if(input == 10) return AL_KEYPRESSURE_SOFT;
     if(input == 13) return AL_CHANNELPRESSURE_SOFT;
     if(input == 14) return AL_PITCHBEND_SOFT;
     if(input == 16) return AL_PITCHBEND_SENSITIVITY_SOFT;

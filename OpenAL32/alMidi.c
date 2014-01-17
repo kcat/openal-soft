@@ -72,7 +72,7 @@ AL_API void AL_APIENTRY alMidiEventSOFT(ALuint64SOFT time, ALenum event, ALsizei
     if(!context) return;
 
     if(!(event == AL_NOTEOFF_SOFT || event == AL_NOTEON_SOFT ||
-         event == AL_AFTERTOUCH_SOFT || event == AL_CONTROLLERCHANGE_SOFT ||
+         event == AL_KEYPRESSURE_SOFT || event == AL_CONTROLLERCHANGE_SOFT ||
          event == AL_PROGRAMCHANGE_SOFT || event == AL_CHANNELPRESSURE_SOFT ||
          event == AL_PITCHBEND_SOFT))
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);

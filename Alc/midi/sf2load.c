@@ -216,6 +216,9 @@ static void SampleHeader_read(SampleHeader *self, Reader *stream)
 
 
 typedef struct Soundfont {
+    ALuint ifil;
+    ALchar *irom;
+
     PresetHeader *phdr;
     ALsizei phdr_size;
 
@@ -242,6 +245,9 @@ typedef struct Soundfont {
 
 static void Soundfont_Construct(Soundfont *self)
 {
+    self->ifil = 0;
+    self->irom = NULL;
+
     self->phdr = NULL;
     self->phdr_size = 0;
 
@@ -268,6 +274,9 @@ static void Soundfont_Construct(Soundfont *self)
 
 static void Soundfont_Destruct(Soundfont *self)
 {
+    free(self->irom);
+    self->irom = NULL;
+
     free(self->phdr);
     self->phdr = NULL;
     self->phdr_size = 0;
@@ -556,7 +565,7 @@ static void GenModList_accumMod(GenModList *self, const Modulator *mod)
     goto lbl_;                                                                \
 } while(0)
 
-static ALboolean ensureFontSanity(const Soundfont *sfont, ALboolean has_irom)
+static ALboolean ensureFontSanity(const Soundfont *sfont)
 {
     ALsizei i;
 
@@ -688,7 +697,7 @@ static ALboolean ensureFontSanity(const Soundfont *sfont, ALboolean has_irom)
 
     for(i = 0;i < sfont->shdr_size-1;i++)
     {
-        if((sfont->shdr[i].mSampleType&0x8000) && !has_irom)
+        if((sfont->shdr[i].mSampleType&0x8000) && sfont->irom == NULL)
         {
             WARN("Sample header %d has ROM sample type without an irom sub-chunk\n", i);
             return AL_FALSE;
@@ -1083,8 +1092,6 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 {
     ALsfpreset **presets = NULL;
     ALsizei presets_size = 0;
-    ALchar *irom = NULL;
-    ALuint version = 0;
     ALuint ltype;
     Soundfont sfont;
     RiffHdr riff;
@@ -1126,7 +1133,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                 list.mSize -= 4;
                 info.mSize -= 4;
 
-                version = (major<<16) | minor;
+                sfont.ifil = (major<<16) | minor;
             }
         }
         else if(info.mCode == FOURCC('i','r','o','m'))
@@ -1135,8 +1142,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                 ERR("Invalid irom size: %d\n", info.mSize);
             else
             {
-                irom = calloc(1, info.mSize+1);
-                READ(stream, irom, info.mSize);
+                sfont.irom = calloc(1, info.mSize+1);
+                READ(stream, sfont.irom, info.mSize);
 
                 list.mSize -= info.mSize;
                 info.mSize -= info.mSize;
@@ -1148,9 +1155,9 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 
     if(READERR(stream) != 0)
         ERROR_GOTO(error, "Error reading INFO chunk\n");
-    if(version>>16 != 2)
-        ERROR_GOTO(error, "Unsupported format version: %d.%02d\n", version>>16, version&0xffff);
-    TRACE("Loading SF2 format version: %d.%02d\n", version>>16, version&0xffff);
+    if(sfont.ifil>>16 != 2)
+        ERROR_GOTO(error, "Unsupported format version: %d.%02d\n", sfont.ifil>>16, sfont.ifil&0xffff);
+    TRACE("Loading SF2 format version: %d.%02d\n", sfont.ifil>>16, sfont.ifil&0xffff);
 
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('L','I','S','T'))
@@ -1300,7 +1307,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     if(READERR(stream) != 0)
         ERROR_GOTO(error, "Error reading pdta chunk\n");
 
-    if(!ensureFontSanity(&sfont, irom!=NULL))
+    if(!ensureFontSanity(&sfont))
         goto error;
 
     presets = calloc(1, (sfont.phdr_size-1)*sizeof(presets[0]));
@@ -1403,7 +1410,6 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     ExchangeInt(&soundfont->NumPresets, presets_size);
 
     free(presets);
-    free(irom);
 
     Soundfont_Destruct(&sfont);
 
@@ -1417,7 +1423,6 @@ error:
             DeletePreset(presets[i], device);
         free(presets);
     }
-    free(irom);
 
     Soundfont_Destruct(&sfont);
 

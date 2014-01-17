@@ -924,8 +924,15 @@ static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *
                 param = Gen2Param[gen->mGenerator];
             if(param)
             {
-                if(param == AL_BASE_KEY_SOFT && value == -1)
-                    continue;
+                if(param == AL_BASE_KEY_SOFT)
+                {
+                    if(!(value >= 0 && value <= 127))
+                    {
+                        if(value != -1)
+                            WARN("Invalid overridingRootKey generator value %d\n", value);
+                        continue;
+                    }
+                }
                 if(param == AL_FILTER_RESONANCE_SOFT || param == AL_ATTENUATION_SOFT)
                     value = maxi(0, value);
                 else if(param == AL_CHORUS_SEND_SOFT || param == AL_REVERB_SEND_SOFT)
@@ -1045,7 +1052,7 @@ static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCco
                 ALfontsound_setPropi(sound, context, AL_SAMPLE_LOOP_START_SOFT, samp->mStartloop);
                 ALfontsound_setPropi(sound, context, AL_SAMPLE_LOOP_END_SOFT, samp->mEndloop);
                 ALfontsound_setPropi(sound, context, AL_SAMPLE_RATE_SOFT, samp->mSampleRate);
-                ALfontsound_setPropi(sound, context, AL_BASE_KEY_SOFT, samp->mOriginalKey);
+                ALfontsound_setPropi(sound, context, AL_BASE_KEY_SOFT, (samp->mOriginalKey <= 127) ? samp->mOriginalKey : 60);
                 ALfontsound_setPropi(sound, context, AL_KEY_CORRECTION_SOFT, samp->mCorrection);
                 ALfontsound_setPropi(sound, context, AL_SAMPLE_TYPE_SOFT, getSampleType(samp->mSampleType&0x7fff));
                 fillZone(sound, context, &lzone);

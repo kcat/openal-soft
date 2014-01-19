@@ -61,6 +61,9 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 #ifdef HAVE_CPUID_H
 #include <cpuid.h>
 #endif
+#ifdef HAVE_SYS_SYSCONF_H
+#include <sys/sysconf.h>
+#endif
 #ifdef HAVE_FLOAT_H
 #include <float.h>
 #endif

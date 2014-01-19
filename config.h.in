@@ -122,6 +122,9 @@
 /* Define if we have cpuid.h */
 #cmakedefine HAVE_CPUID_H
 
+/* Define if we have sys/sysconf.h */
+#cmakedefine HAVE_SYS_SYSCONF_H
+
 /* Define if we have guiddef.h */
 #cmakedefine HAVE_GUIDDEF_H
 

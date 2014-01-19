@@ -1133,6 +1133,10 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                 list.mSize -= 4;
                 info.mSize -= 4;
 
+                if(major != 2)
+                    ERROR_GOTO(error, "Unsupported SF2 format version: %d.%02d\n", major, minor);
+                TRACE("SF2 format version: %d.%02d\n", major, minor);
+
                 sfont.ifil = (major<<16) | minor;
             }
         }
@@ -1142,11 +1146,14 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                 ERR("Invalid irom size: %d\n", info.mSize);
             else
             {
+                free(sfont.irom);
                 sfont.irom = calloc(1, info.mSize+1);
                 READ(stream, sfont.irom, info.mSize);
 
                 list.mSize -= info.mSize;
                 info.mSize -= info.mSize;
+
+                TRACE("SF2 ROM ID: %s\n", sfont.irom);
             }
         }
         list.mSize -= info.mSize;
@@ -1155,9 +1162,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 
     if(READERR(stream) != 0)
         ERROR_GOTO(error, "Error reading INFO chunk\n");
-    if(sfont.ifil>>16 != 2)
-        ERROR_GOTO(error, "Unsupported format version: %d.%02d\n", sfont.ifil>>16, sfont.ifil&0xffff);
-    TRACE("Loading SF2 format version: %d.%02d\n", sfont.ifil>>16, sfont.ifil&0xffff);
+    if(sfont.ifil == 0)
+        ERROR_GOTO(error, "Missing ifil sub-chunk\n");
 
     RiffHdr_read(&list, stream);
     if(list.mCode != FOURCC('L','I','S','T'))

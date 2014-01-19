@@ -83,6 +83,10 @@ typedef struct SLDataLocator_AndroidSimpleBufferQueue {
 
 #define SLPlayItf_SetPlayState(a,b) ((*(a))->SetPlayState((a),(b)))
 
+/* Should start using these generic callers instead of the name-specific ones above. */
+#define VCALL(obj, func)  ((*(obj))->func((obj), EXTRACT_VCALL_ARGS
+#define VCALL0(obj, func)  ((*(obj))->func((obj) EXTRACT_VCALL_ARGS
+
 
 typedef struct {
     /* engine interfaces */
@@ -409,14 +413,23 @@ static void opensl_stop_playback(ALCdevice *Device)
 {
     osl_data *data = Device->ExtraData;
     SLPlayItf player;
+    SLAndroidSimpleBufferQueueItf bufferQueue;
     SLresult result;
 
-    result = SLObjectItf_GetInterface(data->bufferQueueObject, SL_IID_PLAY, &player);
+    result = VCALL(data->bufferQueueObject,GetInterface)(SL_IID_PLAY, &player);
     PRINTERR(result, "bufferQueue->GetInterface");
     if(SL_RESULT_SUCCESS == result)
     {
-        result = SLPlayItf_SetPlayState(player, SL_PLAYSTATE_STOPPED);
+        result = VCALL(player,SetPlayState)(SL_PLAYSTATE_STOPPED);
         PRINTERR(result, "player->SetPlayState");
+    }
+
+    result = VCALL(data->bufferQueueObject,GetInterface)(SL_IID_BUFFERQUEUE, &bufferQueue);
+    PRINTERR(result, "bufferQueue->GetInterface");
+    if(SL_RESULT_SUCCESS == result)
+    {
+        result = VCALL(bufferQueue,Clear)(bufferQueue);
+        PRINTERR(result, "bufferQueue->Clear");
     }
 
     free(data->buffer);

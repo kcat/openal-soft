@@ -428,7 +428,7 @@ static void opensl_stop_playback(ALCdevice *Device)
     PRINTERR(result, "bufferQueue->GetInterface");
     if(SL_RESULT_SUCCESS == result)
     {
-        result = VCALL(bufferQueue,Clear)(bufferQueue);
+        result = VCALL0(bufferQueue,Clear)();
         PRINTERR(result, "bufferQueue->Clear");
     }
 

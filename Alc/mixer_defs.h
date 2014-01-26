@@ -27,5 +27,7 @@ void MixSend_SSE(const struct SendParams*,const ALfloat*restrict,ALuint,ALuint,A
 
 /* Neon mixers */
 void MixDirect_Hrtf_Neon(const struct DirectParams*,const ALfloat*restrict,ALuint,ALuint,ALuint,ALuint);
+void MixDirect_Neon(const struct DirectParams*,const ALfloat*restrict,ALuint,ALuint,ALuint,ALuint);
+void MixSend_Neon(const struct SendParams*,const ALfloat*restrict,ALuint,ALuint,ALuint);
 
 #endif /* MIXER_DEFS_H */

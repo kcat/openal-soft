@@ -1745,8 +1745,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         device->UpdateSize = (ALuint64)device->UpdateSize * freq /
                              device->Frequency;
-        /* SSE does best with the update size being a multiple of 4 */
-        if((CPUCapFlags&CPU_CAP_SSE))
+        /* SSE and Neon do best with the update size being a multiple of 4 */
+        if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
             device->UpdateSize = (device->UpdateSize+3)&~3;
 
         device->Frequency = freq;
@@ -1861,6 +1861,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         if((CPUCapFlags&CPU_CAP_SSE))
             WARN("SSE performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
+        if((CPUCapFlags&CPU_CAP_NEON))
+            WARN("NEON performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
     }
 
     SetMixerFPUMode(&oldMode);

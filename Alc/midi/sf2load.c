@@ -1192,15 +1192,18 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
             READ(stream, ptr, smpl.mSize);
         else
         {
-            while(smpl.mSize > 0)
+            ALuint total = 0;
+            while(total < smpl.mSize)
             {
                 ALbyte buf[4096];
-                ALuint todo = minu(smpl.mSize, sizeof(buf));
+                ALuint todo = minu(smpl.mSize-total, sizeof(buf));
                 ALuint i;
 
                 READ(stream, buf, todo);
                 for(i = 0;i < todo;i++)
                     ptr[i] = buf[i^1];
+
+                total += todo;
             }
         }
         list.mSize -= smpl.mSize;

@@ -1201,7 +1201,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 
                 READ(stream, buf, todo);
                 for(i = 0;i < todo;i++)
-                    ptr[i] = buf[i^1];
+                    ptr[total+i] = buf[i^1];
 
                 total += todo;
             }

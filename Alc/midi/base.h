@@ -23,17 +23,17 @@ typedef struct Reader {
 ALboolean loadSf2(Reader *stream, struct ALsoundfont *sfont, ALCcontext *context);
 
 
+#define MIDI_CLOCK_RES  U64(1000000000)
+
+
 struct MidiSynthVtable;
 
 typedef struct MidiSynth {
     EvtQueue EventQueue;
 
-    ALuint64 LastEvtTime;
-    ALuint64 NextEvtTime;
-    ALdouble SamplesSinceLast;
-    ALdouble SamplesToNext;
-
-    ALdouble SamplesPerTick;
+    ALuint64 ClockBase;
+    ALuint SamplesDone;
+    ALuint SampleRate;
 
     /* NOTE: This rwlock is for the state and soundfont. The EventQueue and
      * related must instead use the device lock as they're used in the mixer
@@ -59,14 +59,15 @@ inline void MidiSynth_setState(MidiSynth *self, ALenum state) { ExchangeInt(&sel
 inline ALenum MidiSynth_getState(const MidiSynth *self) { return self->State; }
 void MidiSynth_stop(MidiSynth *self);
 inline void MidiSynth_reset(MidiSynth *self) { MidiSynth_stop(self); }
-ALuint64 MidiSynth_getTime(const MidiSynth *self);
+inline ALuint64 MidiSynth_getTime(const MidiSynth *self)
+{ return self->ClockBase + (self->SamplesDone*MIDI_CLOCK_RES/self->SampleRate); }
 inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self)
 {
     if(self->EventQueue.pos == self->EventQueue.size)
         return UINT64_MAX;
     return self->EventQueue.events[self->EventQueue.pos].time;
 }
-void MidiSynth_setSampleRate(MidiSynth *self, ALdouble srate);
+void MidiSynth_setSampleRate(MidiSynth *self, ALuint srate);
 inline void MidiSynth_update(MidiSynth *self, ALCdevice *device)
 { MidiSynth_setSampleRate(self, device->Frequency); }
 ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event, ALsizei param1, ALsizei param2);

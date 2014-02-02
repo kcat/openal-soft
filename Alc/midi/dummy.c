@@ -49,30 +49,17 @@ static void DSynth_processQueue(DSynth *self, ALuint64 time)
 static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloatBUFFERSIZE*restrict UNUSED(DryBuffer))
 {
     MidiSynth *synth = STATIC_CAST(MidiSynth, self);
+    ALuint64 curtime;
 
     if(synth->State != AL_PLAYING)
         return;
 
-    synth->SamplesSinceLast += SamplesToDo;
-    synth->SamplesToNext -= SamplesToDo;
-    while(synth->SamplesToNext < 1.0f)
-    {
-        ALuint64 time = synth->NextEvtTime;
-        if(time == UINT64_MAX)
-        {
-            synth->SamplesToNext = 0.0;
-            break;
-        }
+    synth->SamplesDone += SamplesToDo;
+    synth->ClockBase += (synth->SamplesDone/synth->SampleRate) * MIDI_CLOCK_RES;
+    synth->SamplesDone %= synth->SampleRate;
 
-        synth->SamplesSinceLast -= (time - synth->LastEvtTime) * synth->SamplesPerTick;
-        synth->SamplesSinceLast  = maxd(synth->SamplesSinceLast, 0.0);
-        synth->LastEvtTime = time;
-        DSynth_processQueue(self, time);
-
-        synth->NextEvtTime = MidiSynth_getNextEvtTime(synth);
-        if(synth->NextEvtTime != UINT64_MAX)
-            synth->SamplesToNext += (synth->NextEvtTime - synth->LastEvtTime) * synth->SamplesPerTick;
-    }
+    curtime = MidiSynth_getTime(synth);
+    DSynth_processQueue(self, maxi64(curtime-1, 0));
 }
 
 

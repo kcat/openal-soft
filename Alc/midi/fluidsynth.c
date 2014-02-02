@@ -640,24 +640,12 @@ static void FSynth_setState(FSynth *self, ALenum state)
 static void FSynth_stop(FSynth *self)
 {
     MidiSynth *synth = STATIC_CAST(MidiSynth, self);
+    ALuint64 curtime;
     ALsizei chan;
 
     /* Make sure all pending events are processed. */
-    while(!(synth->SamplesToNext >= 1.0))
-    {
-        ALuint64 time = synth->NextEvtTime;
-        if(time == UINT64_MAX)
-            break;
-
-        synth->SamplesSinceLast -= (time - synth->LastEvtTime) * synth->SamplesPerTick;
-        synth->SamplesSinceLast = maxd(synth->SamplesSinceLast, 0.0);
-        synth->LastEvtTime = time;
-        FSynth_processQueue(self, time);
-
-        synth->NextEvtTime = MidiSynth_getNextEvtTime(synth);
-        if(synth->NextEvtTime != UINT64_MAX)
-            synth->SamplesToNext += (synth->NextEvtTime - synth->LastEvtTime) * synth->SamplesPerTick;
-    }
+    curtime = MidiSynth_getTime(synth);
+    FSynth_processQueue(self, curtime);
 
     /* All notes off */
     for(chan = 0;chan < 16;chan++)
@@ -759,6 +747,7 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
 {
     MidiSynth *synth = STATIC_CAST(MidiSynth, self);
     ALenum state = synth->State;
+    ALuint64 curtime;
     ALuint total = 0;
 
     if(state == AL_INITIAL)
@@ -770,41 +759,42 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
         return;
     }
 
+    curtime = MidiSynth_getTime(synth);
     while(total < SamplesToDo)
     {
-        if(synth->SamplesToNext >= 1.0)
-        {
-            ALuint todo = minu(SamplesToDo - total, fastf2u(synth->SamplesToNext));
+        ALuint64 time, diff;
+        ALint tonext;
 
-            fluid_synth_write_float(self->Synth, todo,
-                                    &DryBuffer[FrontLeft][total], 0, 1,
-                                    &DryBuffer[FrontRight][total], 0, 1);
-            total += todo;
-            synth->SamplesSinceLast += todo;
-            synth->SamplesToNext -= todo;
+        time = MidiSynth_getNextEvtTime(synth);
+        diff = maxu64(time, curtime) - curtime;
+        if(diff >= MIDI_CLOCK_RES || time == UINT64_MAX)
+        {
+            /* If there's no pending event, or if it's more than 1 second
+             * away, do as many samples as we can. */
+            tonext = INT_MAX;
         }
         else
         {
-            ALuint64 time = synth->NextEvtTime;
-            if(time == UINT64_MAX)
-            {
-                synth->SamplesSinceLast += SamplesToDo-total;
-                fluid_synth_write_float(self->Synth, SamplesToDo-total,
-                                        &DryBuffer[FrontLeft][total], 0, 1,
-                                        &DryBuffer[FrontRight][total], 0, 1);
-                break;
-            }
-
-            synth->SamplesSinceLast -= (time - synth->LastEvtTime) * synth->SamplesPerTick;
-            synth->SamplesSinceLast = maxd(synth->SamplesSinceLast, 0.0);
-            synth->LastEvtTime = time;
-            FSynth_processQueue(self, time);
-
-            synth->NextEvtTime = MidiSynth_getNextEvtTime(synth);
-            if(synth->NextEvtTime != UINT64_MAX)
-                synth->SamplesToNext += (synth->NextEvtTime - synth->LastEvtTime) * synth->SamplesPerTick;
+            /* Figure out how many samples until the next event. */
+            tonext  = (ALint)(((diff * synth->SampleRate)+(MIDI_CLOCK_RES-1)) / MIDI_CLOCK_RES);
+            tonext -= total;
         }
+
+        if(tonext > 0)
+        {
+            ALuint todo = mini(tonext, SamplesToDo-total);
+            fluid_synth_write_float(self->Synth, todo, DryBuffer[FrontLeft], total, 1,
+                                                       DryBuffer[FrontRight], total, 1);
+            total += todo;
+            tonext -= todo;
+        }
+        if(total < SamplesToDo && tonext == 0)
+            FSynth_processQueue(self, time);
     }
+
+    synth->SamplesDone += SamplesToDo;
+    synth->ClockBase += (synth->SamplesDone/synth->SampleRate) * MIDI_CLOCK_RES;
+    synth->SamplesDone %= synth->SampleRate;
 }
 
 

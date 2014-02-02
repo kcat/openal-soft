@@ -16,9 +16,6 @@
 #include "alu.h"
 
 
-/* Nanosecond resolution */
-#define TICKS_PER_SECOND (1000000000)
-
 /* MIDI events */
 #define SYSEX_EVENT  (0xF0)
 
@@ -129,12 +126,9 @@ void MidiSynth_Construct(MidiSynth *self, ALCdevice *device)
     self->Gain = 1.0f;
     self->State = AL_INITIAL;
 
-    self->LastEvtTime = 0;
-    self->NextEvtTime = UINT64_MAX;
-    self->SamplesSinceLast = 0.0;
-    self->SamplesToNext = 0.0;
-
-    self->SamplesPerTick = (ALdouble)device->Frequency / TICKS_PER_SECOND;
+    self->ClockBase = 0;
+    self->SamplesDone = 0;
+    self->SampleRate = device->Frequency;
 }
 
 void MidiSynth_Destruct(MidiSynth *self)
@@ -195,29 +189,22 @@ void MidiSynth_stop(MidiSynth *self)
 {
     ResetEvtQueue(&self->EventQueue);
 
-    self->LastEvtTime = 0;
-    self->NextEvtTime = UINT64_MAX;
-    self->SamplesSinceLast = 0.0;
-    self->SamplesToNext = 0.0;
+    self->ClockBase = 0;
+    self->SamplesDone = 0;
 }
 
 extern inline void MidiSynth_reset(MidiSynth *self);
-
-ALuint64 MidiSynth_getTime(const MidiSynth *self)
-{
-    ALuint64 time = self->LastEvtTime + (self->SamplesSinceLast/self->SamplesPerTick);
-    return clampu64(time, self->LastEvtTime, self->NextEvtTime);
-}
-
+extern inline ALuint64 MidiSynth_getTime(const MidiSynth *self);
 extern inline ALuint64 MidiSynth_getNextEvtTime(const MidiSynth *self);
 
-void MidiSynth_setSampleRate(MidiSynth *self, ALdouble srate)
+void MidiSynth_setSampleRate(MidiSynth *self, ALuint srate)
 {
-    ALdouble sampletickrate = srate / TICKS_PER_SECOND;
-
-    self->SamplesSinceLast = self->SamplesSinceLast * sampletickrate / self->SamplesPerTick;
-    self->SamplesToNext = self->SamplesToNext * sampletickrate / self->SamplesPerTick;
-    self->SamplesPerTick = sampletickrate;
+    if(self->SampleRate != srate)
+    {
+        self->ClockBase += self->SamplesDone * MIDI_CLOCK_RES / self->SampleRate;
+        self->SamplesDone = 0;
+        self->SampleRate = srate;
+    }
 }
 
 extern inline void MidiSynth_update(MidiSynth *self, ALCdevice *device);
@@ -225,25 +212,11 @@ extern inline void MidiSynth_update(MidiSynth *self, ALCdevice *device);
 ALenum MidiSynth_insertEvent(MidiSynth *self, ALuint64 time, ALuint event, ALsizei param1, ALsizei param2)
 {
     MidiEvent entry;
-    ALenum err;
-
     entry.time = time;
     entry.event = event;
     entry.param.val[0] = param1;
     entry.param.val[1] = param2;
-
-    err = InsertEvtQueue(&self->EventQueue, &entry);
-    if(err != AL_NO_ERROR) return err;
-
-    if(entry.time < self->NextEvtTime)
-    {
-        self->NextEvtTime = entry.time;
-
-        self->SamplesToNext  = (self->NextEvtTime - self->LastEvtTime) * self->SamplesPerTick;
-        self->SamplesToNext -= self->SamplesSinceLast;
-    }
-
-    return AL_NO_ERROR;
+    return InsertEvtQueue(&self->EventQueue, &entry);
 }
 
 ALenum MidiSynth_insertSysExEvent(MidiSynth *self, ALuint64 time, const ALbyte *data, ALsizei size)
@@ -261,18 +234,6 @@ ALenum MidiSynth_insertSysExEvent(MidiSynth *self, ALuint64 time, const ALbyte *
 
     err = InsertEvtQueue(&self->EventQueue, &entry);
     if(err != AL_NO_ERROR)
-    {
         free(entry.param.sysex.data);
-        return err;
-    }
-
-    if(entry.time < self->NextEvtTime)
-    {
-        self->NextEvtTime = entry.time;
-
-        self->SamplesToNext  = (self->NextEvtTime - self->LastEvtTime) * self->SamplesPerTick;
-        self->SamplesToNext -= self->SamplesSinceLast;
-    }
-
-    return AL_NO_ERROR;
+    return err;
 }

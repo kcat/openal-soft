@@ -1577,6 +1577,18 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 }
 
 
+/* UpdateClockBase
+ *
+ * Updates the device's base clock time with however many samples have been
+ * done. This is used so frequency changes on the device don't cause the time
+ * to jump forward or back.
+ */
+static inline void UpdateClockBase(ALCdevice *device)
+{
+    device->ClockBase += device->SamplesDone * DEVICE_CLOCK_RES / device->Frequency;
+    device->SamplesDone = 0;
+}
+
 /* UpdateDeviceParams
  *
  * Updates device parameters according to the attribute list (caller is
@@ -1683,6 +1695,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             V0(device->Backend,stop)();
         device->Flags &= ~DEVICE_RUNNING;
 
+        if(freq != device->Frequency)
+            UpdateClockBase(device);
         device->Frequency = freq;
         device->FmtChans = schans;
         device->FmtType = stype;
@@ -1749,6 +1763,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
             device->UpdateSize = (device->UpdateSize+3)&~3;
 
+        if(freq != device->Frequency)
+            UpdateClockBase(device);
         device->Frequency = freq;
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
@@ -1757,6 +1773,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if((device->Flags&DEVICE_RUNNING))
         return ALC_NO_ERROR;
+
+    UpdateClockBase(device);
 
     oldFreq  = device->Frequency;
     oldChans = device->FmtChans;
@@ -2935,6 +2953,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->ContextList = NULL;
 
+    device->ClockBase = 0;
+    device->SamplesDone = 0;
+
     device->MaxNoOfSources = 256;
     device->AuxiliaryEffectSlotMax = 4;
     device->NumAuxSends = MAX_SENDS;
@@ -3401,6 +3422,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->DeviceName = NULL;
 
     device->ContextList = NULL;
+
+    device->ClockBase = 0;
+    device->SamplesDone = 0;
 
     device->MaxNoOfSources = 256;
     device->AuxiliaryEffectSlotMax = 4;

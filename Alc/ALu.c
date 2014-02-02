@@ -1126,6 +1126,14 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             for(i = 0;i < SamplesToDo;i++)
                 (*slot)->WetBuffer[0][i] = 0.0f;
         }
+
+        /* Increment the clock time. Every second's worth of samples is
+         * converted and added to clock base so that large sample counts don't
+         * overflow during conversion. This also guarantees an exact, stable
+         * conversion. */
+        device->SamplesDone += SamplesToDo;
+        device->ClockBase += (device->SamplesDone/device->Frequency) * DEVICE_CLOCK_RES;
+        device->SamplesDone %= device->Frequency;
         ALCdevice_Unlock(device);
 
         /* Click-removal. Could do better; this only really handles immediate

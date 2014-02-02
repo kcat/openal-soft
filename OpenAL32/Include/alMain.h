@@ -623,6 +623,9 @@ struct ALCdevice_struct
     ALfloat SpeakerAngle[MaxChannels];
     ALuint  NumChan;
 
+    ALuint64 ClockBase;
+    ALuint SamplesDone;
+
     /* Temp storage used for mixing. +1 for the predictive sample. */
     ALIGN(16) ALfloat SampleData1[BUFFERSIZE+1];
     ALIGN(16) ALfloat SampleData2[BUFFERSIZE+1];
@@ -667,6 +670,10 @@ struct ALCdevice_struct
 
 /* Invalid channel offset */
 #define INVALID_OFFSET                           (~0u)
+
+
+/* Nanosecond resolution for the device clock time. */
+#define DEVICE_CLOCK_RES  U64(1000000000)
 
 
 /* Must be less than 15 characters (16 including terminating null) for

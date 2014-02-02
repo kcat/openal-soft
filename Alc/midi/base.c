@@ -16,8 +16,8 @@
 #include "alu.h"
 
 
-/* Microsecond resolution */
-#define TICKS_PER_SECOND (1000000)
+/* Nanosecond resolution */
+#define TICKS_PER_SECOND (1000000000)
 
 /* MIDI events */
 #define SYSEX_EVENT  (0xF0)

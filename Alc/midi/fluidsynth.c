@@ -776,7 +776,7 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
         else
         {
             /* Figure out how many samples until the next event. */
-            tonext  = (ALint)(((diff * synth->SampleRate)+(MIDI_CLOCK_RES-1)) / MIDI_CLOCK_RES);
+            tonext  = (ALint)((diff*synth->SampleRate + (MIDI_CLOCK_RES-1)) / MIDI_CLOCK_RES);
             tonext -= total;
         }
 

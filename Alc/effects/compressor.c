@@ -84,12 +84,12 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint Samples
             {
                 smp = SamplesIn[it+base];
 
-                amplitude = fabs(smp);
+                amplitude = fabsf(smp);
                 if(amplitude > gain)
                     gain = minf(gain+state->AttackRate, amplitude);
                 else if(amplitude < gain)
                     gain = maxf(gain-state->ReleaseRate, amplitude);
-                output = 1.0 / clampf(gain, 0.5f, 2.0f);
+                output = 1.0f / clampf(gain, 0.5f, 2.0f);
 
                 temps[it] = smp * output;
             }

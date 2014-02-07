@@ -59,7 +59,7 @@ static ALvoid ALautowahState_Destruct(ALautowahState *UNUSED(state))
 
 static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *device)
 {
-    state->Frequency = device->Frequency;
+    state->Frequency = (ALfloat)device->Frequency;
     return AL_TRUE;
 }
 
@@ -100,7 +100,7 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
 
             /* Similar to compressor, we get the current amplitude of the
              * incoming signal, and attack or release to reach it. */
-            amplitude = fabs(smp);
+            amplitude = fabsf(smp);
             if(amplitude > gain)
                 gain = minf(gain+state->AttackRate, amplitude);
             else if(amplitude < gain)

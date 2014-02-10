@@ -600,6 +600,12 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
 
     CoUninitialize();
 
+    /* HACK: Force Windows to create a message queue for this thread before
+     * returning success, otherwise PostThreadMessage may fail if it gets
+     * called before GetMessage.
+     */
+    PeekMessage(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
+
     TRACE("Message thread initialization complete\n");
     req->result = S_OK;
     SetEvent(req->FinishedEvt);

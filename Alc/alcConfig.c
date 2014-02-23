@@ -123,26 +123,26 @@ static void LoadConfigFromFile(FILE *f)
              * manually. */
             if(strcmp(value, "\"\"") == 0 || strcmp(value, "''") == 0)
                 value[0] = 0;
-         }
-         else if(sscanf(line, "%255[^=] %255[=]", key, value) == 2)
-         {
-             /* Special case for 'key =' */
-             value[0] = 0;
-         }
-         else
-         {
-             ERR("config parse error: malformed option line: \"%s\"\n\n", line);
-             continue;
-         }
-         rstrip(key);
+        }
+        else if(sscanf(line, "%255[^=] %255[=]", key, value) == 2)
+        {
+            /* Special case for 'key =' */
+            value[0] = 0;
+        }
+        else
+        {
+            ERR("config parse error: malformed option line: \"%s\"\n\n", line);
+            continue;
+        }
+        rstrip(key);
 
-         if(curSection[0] != 0)
-         {
-             size_t len = strlen(curSection);
-             memmove(&key[len+1], key, sizeof(key)-1-len);
-             key[len] = '/';
-             memcpy(key, curSection, len);
-         }
+        if(curSection[0] != 0)
+        {
+            size_t len = strlen(curSection);
+            memmove(&key[len+1], key, sizeof(key)-1-len);
+            key[len] = '/';
+            memcpy(key, curSection, len);
+        }
 
         /* Check if we already have this option set */
         ent = cfgBlock.entries;

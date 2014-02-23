@@ -32,11 +32,20 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <limits.h>
 
 #include "alMain.h"
 
 #ifdef _WIN32_IE
 #include <shlobj.h>
+#endif
+
+#ifndef PATH_MAX
+#ifdef MAX_PATH
+#define PATH_MAX MAX_PATH
+#else
+#define PATH_MAX 4096
+#endif
 #endif
 
 typedef struct ConfigEntry {
@@ -48,10 +57,8 @@ typedef struct ConfigBlock {
     ConfigEntry *entries;
     unsigned int entryCount;
 } ConfigBlock;
-
 static ConfigBlock cfgBlock;
 
-static char buffer[1024];
 
 static char *lstrip(char *line)
 {
@@ -69,12 +76,50 @@ static char *rstrip(char *line)
     return line;
 }
 
+static int readline(FILE *f, char **output, size_t *maxlen)
+{
+    size_t len = 0;
+    int c;
+
+    while((c=fgetc(f)) != EOF && (c == '\r' || c == '\n'))
+        ;
+    if(c == EOF)
+        return 0;
+
+    do {
+        if(len+1 >= *maxlen)
+        {
+            void *temp = NULL;
+            size_t newmax;
+
+            newmax = (*maxlen ? (*maxlen)<<1 : 32);
+            if(newmax > *maxlen)
+                temp = realloc(*output, newmax);
+            if(!temp)
+            {
+                ERR("Failed to realloc %lu bytes from %lu!\n", newmax, *maxlen);
+                return 0;
+            }
+
+            *output = temp;
+            *maxlen = newmax;
+        }
+        (*output)[len++] = c;
+        (*output)[len] = '\0';
+    } while((c=fgetc(f)) != EOF && c != '\r' && c != '\n');
+
+    return 1;
+}
+
+
 static void LoadConfigFromFile(FILE *f)
 {
     char curSection[128] = "";
+    char *buffer = NULL;
+    size_t maxlen = 0;
     ConfigEntry *ent;
 
-    while(fgets(buffer, sizeof(buffer), f))
+    while(readline(f, &buffer, &maxlen))
     {
         char *line, *comment;
         char key[256] = "";
@@ -175,10 +220,13 @@ static void LoadConfigFromFile(FILE *f)
 
         TRACE("found '%s' = '%s'\n", ent->key, ent->value);
     }
+
+    free(buffer);
 }
 
 void ReadALConfig(void)
 {
+    char buffer[PATH_MAX];
     const char *str;
     FILE *f;
 

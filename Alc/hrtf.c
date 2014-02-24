@@ -18,10 +18,23 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
+#ifdef _WIN32
+#ifdef __MINGW32__
+#define _WIN32_IE 0x501
+#else
+#define _WIN32_IE 0x400
+#endif
+#endif
+
 #include "config.h"
 
 #include <stdlib.h>
 #include <ctype.h>
+#include <limits.h>
+
+#ifdef _WIN32_IE
+#include <shlobj.h>
+#endif
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -31,7 +44,11 @@
 
 
 #ifndef PATH_MAX
+#ifdef MAX_PATH
+#define PATH_MAX MAX_PATH
+#else
 #define PATH_MAX 4096
+#endif
 #endif
 
 
@@ -661,6 +678,114 @@ static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
     return NULL;
 }
 
+static FILE *OpenDataFile(const char *fname, const char *subdir)
+{
+    char buffer[PATH_MAX] = "";
+    FILE *f;
+
+#ifdef _WIN32
+    /* If the path is absolute, open it directly. */
+    if(fname[0] != '\0' && fname[1] == ':' && (fname[2] == '\\' || fname[2] == '/'))
+    {
+        if((f=fopen(fname, "rb")) != NULL)
+        {
+            TRACE("Opened %s\n", fname);
+            return f;
+        }
+        WARN("Could not open %s\n", fname);
+    }
+    else
+    {
+        static const int ids[2] = { CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
+        int i;
+
+        for(i = 0;i < 2;i++)
+        {
+            size_t len;
+
+            if(SHGetSpecialFolderPathA(NULL, buffer, ids[i], FALSE) == FALSE)
+                continue;
+
+            len = strlen(buffer);
+            if(len > 0 && (buffer[len-1] == '\\' || buffer[len-1] == '/'))
+                buffer[--len] = '\0';
+            snprintf(buffer+len, sizeof(buffer)-len, "/%s/%s", subdir, fname);
+            len = strlen(buffer);
+            while(len > 0)
+            {
+                --len;
+                if(buffer[len] == '/')
+                    buffer[len] = '\\';
+            }
+
+            if((f=fopen(buffer, "rb")) != NULL)
+            {
+                TRACE("Opened %s\n", buffer);
+                return f;
+            }
+            WARN("Could not open %s\n", buffer);
+        }
+    }
+#else
+    const char *str, *next;
+
+    if(fname[0] == '/')
+    {
+        if((f=fopen(fname, "rb")) != NULL)
+        {
+            TRACE("Opened %s\n", fname);
+            return f;
+        }
+        WARN("Could not open %s\n", fname);
+    }
+    if((str=getenv("XDG_DATA_HOME")) != NULL && str[0] != '\0')
+        snprintf(buffer, sizeof(buffer), "%s/%s/%s", str, subdir, fname);
+    else if((str=getenv("HOME")) != NULL && str[0] != '\0')
+        snprintf(buffer, sizeof(buffer), "%s/.local/share/%s/%s", str, subdir, fname);
+    if(buffer[0])
+    {
+        if((f=fopen(buffer, "rb")) != NULL)
+        {
+            TRACE("Opened %s\n", buffer);
+            return f;
+        }
+        WARN("Could not open %s\n", buffer);
+    }
+
+    if((str=getenv("XDG_DATA_DIRS")) == NULL || str[0] == '\0')
+        str = " /usr/local/share/:/usr/share/";
+
+    next = str;
+    while((str=next) != NULL && str[0] != '\0')
+    {
+        size_t len;
+        next = strchr(str, ':');
+
+        if(!next)
+            len = strlen(str);
+        else
+        {
+            len = next - str;
+            next++;
+        }
+
+        if(len > sizeof(buffer)-1)
+            len = sizeof(buffer)-1;
+        strncpy(buffer, str, len);
+        buffer[len] = '\0';
+        snprintf(buffer+len, sizeof(buffer)-len, "/%s/%s", subdir, fname);
+
+        if((f=fopen(buffer, "rb")) != NULL)
+        {
+            TRACE("Opened %s\n", buffer);
+            return f;
+        }
+        WARN("Could not open %s\n", buffer);
+    }
+#endif
+
+    return NULL;
+}
 
 static struct Hrtf *LoadHrtf(ALuint deviceRate)
 {
@@ -716,7 +841,7 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
             continue;
 
         TRACE("Loading %s...\n", fname);
-        f = fopen(fname, "rb");
+        f = OpenDataFile(fname, "openal/hrtf");
         if(f == NULL)
         {
             ERR("Could not open %s\n", fname);

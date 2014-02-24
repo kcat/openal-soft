@@ -50,9 +50,13 @@
 #  contain these markers, which will be replaced as needed:
 #  %r - Device sampling rate
 #  %% - Percent sign (%)
-#  So if this is set to "kemar-%r-diffuse.mhr", it will try to open
-#  "kemar-44100-diffuse.mhr" if the device is using 44100hz output, or
-#  "kemar-48000-diffuse.mhr" if the device is using 48000hz output, etc.
+#  The listed files are relative to system-dependant data directories. On
+#  Windows this is:
+#  %AppData%\openal\hrtf
+#  And on other systems, it's (in order):
+#  $XDG_DATA_HOME/openal/hrtf  (defaults to $HOME/.local/share/openal/hrtf)
+#  $XDG_DATA_DIRS/openal/hrtf  (defaults to /usr/local/share/openal/hrtf and
+#                               /usr/share/openal/hrtf)
 #hrtf_tables =
 
 ## cf_level:

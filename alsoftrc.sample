@@ -57,7 +57,7 @@
 #  $XDG_DATA_HOME/openal/hrtf  (defaults to $HOME/.local/share/openal/hrtf)
 #  $XDG_DATA_DIRS/openal/hrtf  (defaults to /usr/local/share/openal/hrtf and
 #                               /usr/share/openal/hrtf)
-#hrtf_tables =
+#hrtf_tables = default-%r.mhr
 
 ## cf_level:
 #  Sets the crossfeed level for stereo output. Valid values are:

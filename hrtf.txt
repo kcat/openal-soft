@@ -12,16 +12,16 @@ placement of sounds, making it seem as though they are coming from all around,
 including above and below the listener, instead of just to the front, back, and
 sides.
 
-The built-in data set is based on the KEMAR HRTF data provided by MIT, which
-can be found at <http://sound.media.mit.edu/resources/KEMAR.html>. It's only
+The default data set is based on the KEMAR HRTF data provided by MIT, which can
+be found at <http://sound.media.mit.edu/resources/KEMAR.html>. It's only
 available when using 44100hz playback.
 
 
-External HRTF Data Sets
-=======================
+Custom HRTF Data Sets
+=====================
 
 OpenAL Soft also provides an option to use user-specified data sets, in
-addition to or in place of the built-in set. This allows users to provide their
+addition to or in place of the default set. This allows users to provide their
 own data sets, which could be better suited for their heads, or to work with
 stereo speakers instead of headphones, or to support more playback sample
 rates, for example.

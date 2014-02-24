@@ -80,6 +80,7 @@ OPTION(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 OPTION(ALSOFT_EXAMPLES  "Build and install example programs"  ON)
 
 OPTION(ALSOFT_CONFIG "Install alsoft.conf sample configuration file" ON)
+OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
 
 
 IF(WIN32)
@@ -935,6 +936,15 @@ IF(ALSOFT_CONFIG)
             DESTINATION share/openal
     )
     MESSAGE(STATUS "Installing sample configuration")
+    MESSAGE(STATUS "")
+ENDIF()
+
+# Install HRTF definitions
+IF(ALSOFT_HRTF_DEFS)
+    INSTALL(FILES hrtf/default-44100.mhr
+            DESTINATION share/openal/hrtf
+    )
+    MESSAGE(STATUS "Installing HRTF definitions")
     MESSAGE(STATUS "")
 ENDIF()
 

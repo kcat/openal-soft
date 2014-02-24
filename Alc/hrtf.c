@@ -79,16 +79,6 @@ struct Hrtf {
 static const ALchar magicMarker00[8] = "MinPHR00";
 static const ALchar magicMarker01[8] = "MinPHR01";
 
-/* Define the default HRTF:
- *  ALubyte  defaultAzCount  [DefaultHrtf.evCount]
- *  ALushort defaultEvOffset [DefaultHrtf.evCount]
- *  ALshort  defaultCoeffs   [DefaultHrtf.irCount * defaultHrtf.irSize]
- *  ALubyte  defaultDelays   [DefaultHrtf.irCount]
- *
- *  struct Hrtf DefaultHrtf
- */
-#include "hrtf_tables.inc"
-
 static struct Hrtf *LoadedHrtfs = NULL;
 
 /* Calculate the elevation indices given the polar elevation in radians.
@@ -789,10 +779,9 @@ static FILE *OpenDataFile(const char *fname, const char *subdir)
 
 static struct Hrtf *LoadHrtf(ALuint deviceRate)
 {
-    const char *fnamelist = NULL;
+    const char *fnamelist = "default-%r.mhr";
 
-    if(!ConfigValueStr(NULL, "hrtf_tables", &fnamelist))
-        return NULL;
+    ConfigValueStr(NULL, "hrtf_tables", &fnamelist);
     while(*fnamelist != '\0')
     {
         struct Hrtf *Hrtf = NULL;
@@ -899,9 +888,6 @@ const struct Hrtf *GetHrtf(ALCdevice *device)
         Hrtf = LoadHrtf(device->Frequency);
         if(Hrtf != NULL)
             return Hrtf;
-
-        if(device->Frequency == DefaultHrtf.sampleRate)
-            return &DefaultHrtf;
     }
     ERR("Incompatible format: %s %uhz\n",
         DevFmtChannelsString(device->FmtChans), device->Frequency);
@@ -910,22 +896,18 @@ const struct Hrtf *GetHrtf(ALCdevice *device)
 
 ALCboolean FindHrtfFormat(const ALCdevice *device, enum DevFmtChannels *chans, ALCuint *srate)
 {
-    const struct Hrtf *hrtf = &DefaultHrtf;
-
-    if(device->Frequency != DefaultHrtf.sampleRate)
+    const struct Hrtf *hrtf = LoadedHrtfs;
+    while(hrtf != NULL)
     {
-        hrtf = LoadedHrtfs;
-        while(hrtf != NULL)
-        {
-            if(device->Frequency == hrtf->sampleRate)
-                break;
-            hrtf = hrtf->next;
-        }
+        if(device->Frequency == hrtf->sampleRate)
+            break;
+        hrtf = hrtf->next;
+    }
 
-        if(hrtf == NULL)
-            hrtf = LoadHrtf(device->Frequency);
-        if(hrtf == NULL)
-            hrtf = &DefaultHrtf;
+    if(hrtf == NULL)
+    {
+        hrtf = LoadHrtf(device->Frequency);
+        if(hrtf == NULL) return ALC_FALSE;
     }
 
     *chans = DevFmtStereo;

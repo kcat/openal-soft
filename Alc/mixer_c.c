@@ -46,13 +46,18 @@ DECL_TEMPLATE(cubic32)
 #undef DECL_TEMPLATE
 
 
-static inline void ApplyCoeffsStep(const ALuint IrSize,
+static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
+                                   const ALuint IrSize,
                                    ALfloat (*restrict Coeffs)[2],
-                                   const ALfloat (*restrict CoeffStep)[2])
+                                   const ALfloat (*restrict CoeffStep)[2],
+                                   ALfloat left, ALfloat right)
 {
     ALuint c;
     for(c = 0;c < IrSize;c++)
     {
+        const ALuint off = (Offset+c)&HRIR_MASK;
+        Values[off][0] += Coeffs[c][0] * left;
+        Values[off][1] += Coeffs[c][1] * right;
         Coeffs[c][0] += CoeffStep[c][0];
         Coeffs[c][1] += CoeffStep[c][1];
     }

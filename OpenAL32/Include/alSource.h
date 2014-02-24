@@ -7,6 +7,7 @@
 #include "alu.h"
 #include "alFilter.h"
 #include "alBuffer.h"
+#include "hrtf.h"
 
 #ifdef __cplusplus
 extern "C" {

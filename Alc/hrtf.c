@@ -41,6 +41,7 @@
 #include "alMain.h"
 #include "alSource.h"
 #include "alu.h"
+#include "hrtf.h"
 
 
 #ifndef PATH_MAX

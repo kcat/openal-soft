@@ -2,6 +2,7 @@
 
 #include "alMain.h"
 #include "alSource.h"
+#include "hrtf.h"
 #include "mixer_defs.h"
 
 #ifdef __GNUC__

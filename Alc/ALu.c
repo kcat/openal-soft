@@ -33,6 +33,7 @@
 #include "alAuxEffectSlot.h"
 #include "alu.h"
 #include "bs2b.h"
+#include "hrtf.h"
 
 #include "mixer_defs.h"
 

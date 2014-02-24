@@ -1791,6 +1791,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           device->Frequency,
           device->UpdateSize, device->NumUpdates);
 
+    if(device->Type != Loopback)
+    {
+        int nohrtf = !(device->Flags&DEVICE_HRTF_REQUEST);
+        if(GetConfigValueBool(NULL, "hrtf", !nohrtf))
+            device->Flags |= DEVICE_HRTF_REQUEST;
+        else
+            device->Flags &= ~DEVICE_HRTF_REQUEST;
+    }
     if((device->Flags&DEVICE_HRTF_REQUEST))
     {
         enum DevFmtChannels chans;
@@ -1840,14 +1848,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     V(device->Synth,update)(device);
 
     device->Hrtf = NULL;
-    if(device->Type != Loopback)
-    {
-        int nohrtf = !(device->Flags&DEVICE_HRTF_REQUEST);
-        if(GetConfigValueBool(NULL, "hrtf", !nohrtf))
-            device->Flags |= DEVICE_HRTF_REQUEST;
-        else
-            device->Flags &= ~DEVICE_HRTF_REQUEST;
-    }
     if((device->Flags&DEVICE_HRTF_REQUEST))
     {
         device->Hrtf = GetHrtf(device);

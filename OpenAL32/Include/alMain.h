@@ -799,7 +799,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 #define HRTFDELAY_FRACONE (1<<HRTFDELAY_BITS)
 #define HRTFDELAY_MASK    (HRTFDELAY_FRACONE-1)
 const struct Hrtf *GetHrtf(ALCdevice *device);
-void FindHrtfFormat(const ALCdevice *device, enum DevFmtChannels *chans, ALCuint *srate);
+ALCboolean FindHrtfFormat(const ALCdevice *device, enum DevFmtChannels *chans, ALCuint *srate);
 void FreeHrtfs(void);
 ALuint GetHrtfIrSize(const struct Hrtf *Hrtf);
 ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3], const ALfloat newdir[3]);

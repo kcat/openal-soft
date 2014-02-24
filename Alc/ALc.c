@@ -1803,12 +1803,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         enum DevFmtChannels chans;
         ALCuint freq;
-
-        FindHrtfFormat(device, &chans, &freq);
-        device->Frequency = freq;
-        device->FmtChans = chans;
-        device->Flags |= DEVICE_CHANNELS_REQUEST |
-                         DEVICE_FREQUENCY_REQUEST;
+        if(FindHrtfFormat(device, &chans, &freq))
+        {
+            device->Frequency = freq;
+            device->FmtChans = chans;
+            device->Flags |= DEVICE_CHANNELS_REQUEST |
+                             DEVICE_FREQUENCY_REQUEST;
+        }
     }
 
     if(V0(device->Backend,reset)() == ALC_FALSE)

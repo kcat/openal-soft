@@ -908,7 +908,7 @@ const struct Hrtf *GetHrtf(ALCdevice *device)
     return NULL;
 }
 
-void FindHrtfFormat(const ALCdevice *device, enum DevFmtChannels *chans, ALCuint *srate)
+ALCboolean FindHrtfFormat(const ALCdevice *device, enum DevFmtChannels *chans, ALCuint *srate)
 {
     const struct Hrtf *hrtf = &DefaultHrtf;
 
@@ -930,6 +930,7 @@ void FindHrtfFormat(const ALCdevice *device, enum DevFmtChannels *chans, ALCuint
 
     *chans = DevFmtStereo;
     *srate = hrtf->sampleRate;
+    return ALC_TRUE;
 }
 
 void FreeHrtfs(void)

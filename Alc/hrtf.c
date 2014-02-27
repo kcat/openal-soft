@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <ctype.h>
+#include <limits.h>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -29,6 +30,15 @@
 #include "alSource.h"
 #include "alu.h"
 #include "hrtf.h"
+
+
+#ifndef PATH_MAX
+#ifdef MAX_PATH
+#define PATH_MAX MAX_PATH
+#else
+#define PATH_MAX 4096
+#endif
+#endif
 
 
 /* Current data set limits defined by the makehrtf utility. */

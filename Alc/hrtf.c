@@ -798,41 +798,12 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
         next = fnamelist;
         while(*(fnamelist=next) != '\0' && *fnamelist != ',')
         {
-            next = strpbrk(fnamelist, "%,$");
+            next = strpbrk(fnamelist, "%,");
             while(fnamelist != next && *fnamelist && i < sizeof(fname))
                 fname[i++] = *(fnamelist++);
 
             if(!next || *next == ',')
                 break;
-
-            if(*next == '$')
-            {
-                next++;
-                if(*next == '$')
-                {
-                    /* '$$' becomes a single '$'. */
-                    if(i < sizeof(fname))
-                        fname[i++] = '$';
-                    next++;
-                }
-                else
-                {
-                    const char *str;
-                    char envname[1024];
-                    size_t k = 0;
-
-                    while((isalnum(*next) || *next == '_') && k < sizeof(envname)-1)
-                        envname[k++] = *(next++);
-                    envname[k++] = '\0';
-
-                    if((str=getenv(envname)) != NULL)
-                    {
-                        int wrote = snprintf(&fname[i], sizeof(fname)-i, "%s", str);
-                        i += minu(wrote, sizeof(fname)-i);
-                    }
-                }
-                continue;
-            }
 
             /* *next == '%' */
             next++;

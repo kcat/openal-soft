@@ -112,6 +112,81 @@ static int readline(FILE *f, char **output, size_t *maxlen)
 }
 
 
+static char *expdup(const char *str)
+{
+    char *output = NULL;
+    size_t maxlen = 0;
+    size_t len = 0;
+
+    while(*str != '\0')
+    {
+        const char *addstr;
+        size_t addstrlen;
+        size_t i;
+
+        if(str[0] != '$')
+        {
+            const char *next = strchr(str, '$');
+            addstr = str;
+            addstrlen = next ? (size_t)(next-str) : strlen(str);
+
+            str += addstrlen;
+        }
+        else
+        {
+            str++;
+            if(*str == '$')
+            {
+                const char *next = strchr(str+1, '$');
+                addstr = str;
+                addstrlen = next ? (size_t)(next-str) : strlen(str);
+
+                str += addstrlen;
+            }
+            else
+            {
+                char envname[1024];
+                size_t k = 0;
+
+                while((isalnum(*str) || *str == '_') && k < sizeof(envname)-1)
+                    envname[k++] = *(str++);
+                envname[k++] = '\0';
+
+                if((addstr=getenv(envname)) == NULL)
+                    continue;
+                addstrlen = strlen(addstr);
+            }
+        }
+        if(addstrlen == 0)
+            continue;
+
+        if(addstrlen >= maxlen-len)
+        {
+            void *temp = NULL;
+            size_t newmax;
+
+            newmax = NextPowerOf2(len+addstrlen+1);
+            if(newmax > maxlen)
+                temp = realloc(output, newmax);
+            if(!temp)
+            {
+                ERR("Failed to realloc %lu bytes from %lu!\n", newmax, maxlen);
+                return output;
+            }
+
+            output = temp;
+            maxlen = newmax;
+        }
+
+        for(i = 0;i < addstrlen;i++)
+            output[len++] = addstr[i];
+        output[len] = '\0';
+    }
+
+    return output ? output : calloc(1, 1);
+}
+
+
 static void LoadConfigFromFile(FILE *f)
 {
     char curSection[128] = "";
@@ -216,7 +291,7 @@ static void LoadConfigFromFile(FILE *f)
         }
 
         free(ent->value);
-        ent->value = strdup(value);
+        ent->value = expdup(value);
 
         TRACE("found '%s' = '%s'\n", ent->key, ent->value);
     }

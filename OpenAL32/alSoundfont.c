@@ -469,7 +469,7 @@ ALsoundfont *ALsoundfont_getDefSoundfont(ALCcontext *context)
     {
         FILE *f;
 
-        f = fopen(fname, "rb");
+        f = OpenDataFile(fname, "openal/soundfonts");
         if(f == NULL)
             ERR("Failed to open %s\n", fname);
         else

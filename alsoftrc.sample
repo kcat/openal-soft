@@ -194,7 +194,13 @@
 
 ## soundfont:
 #  A default soundfont (sf2 format). Used when an app requests the system
-#  default.
+#  default. The listed file is relative to system-dependant data directories.
+#  On Windows this is:
+#  %AppData%\openal\soundfonts
+#  And on other systems, it's (in order):
+#  $XDG_DATA_HOME/openal/soundfonts
+#  $XDG_DATA_DIRS/openal/soundfonts
+#  An absolute path may also be specified, if the given file is elsewhere.
 #soundfont =
 
 ## volume:

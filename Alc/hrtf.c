@@ -675,6 +675,9 @@ static FILE *OpenDataFile(const char *fname, const char *subdir)
     FILE *f;
 
 #ifdef _WIN32
+    static const int ids[2] = { CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
+    int i;
+
     /* If the path is absolute, open it directly. */
     if(fname[0] != '\0' && fname[1] == ':' && (fname[2] == '\\' || fname[2] == '/'))
     {
@@ -684,38 +687,34 @@ static FILE *OpenDataFile(const char *fname, const char *subdir)
             return f;
         }
         WARN("Could not open %s\n", fname);
+        return NULL;
     }
-    else
+
+    for(i = 0;i < 2;i++)
     {
-        static const int ids[2] = { CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
-        int i;
+        size_t len;
 
-        for(i = 0;i < 2;i++)
+        if(SHGetSpecialFolderPathA(NULL, buffer, ids[i], FALSE) == FALSE)
+            continue;
+
+        len = strlen(buffer);
+        if(len > 0 && (buffer[len-1] == '\\' || buffer[len-1] == '/'))
+            buffer[--len] = '\0';
+        snprintf(buffer+len, sizeof(buffer)-len, "/%s/%s", subdir, fname);
+        len = strlen(buffer);
+        while(len > 0)
         {
-            size_t len;
-
-            if(SHGetSpecialFolderPathA(NULL, buffer, ids[i], FALSE) == FALSE)
-                continue;
-
-            len = strlen(buffer);
-            if(len > 0 && (buffer[len-1] == '\\' || buffer[len-1] == '/'))
-                buffer[--len] = '\0';
-            snprintf(buffer+len, sizeof(buffer)-len, "/%s/%s", subdir, fname);
-            len = strlen(buffer);
-            while(len > 0)
-            {
-                --len;
-                if(buffer[len] == '/')
-                    buffer[len] = '\\';
-            }
-
-            if((f=fopen(buffer, "rb")) != NULL)
-            {
-                TRACE("Opened %s\n", buffer);
-                return f;
-            }
-            WARN("Could not open %s\n", buffer);
+            --len;
+            if(buffer[len] == '/')
+                buffer[len] = '\\';
         }
+
+        if((f=fopen(buffer, "rb")) != NULL)
+        {
+            TRACE("Opened %s\n", buffer);
+            return f;
+        }
+        WARN("Could not open %s\n", buffer);
     }
 #else
     const char *str, *next;
@@ -728,7 +727,9 @@ static FILE *OpenDataFile(const char *fname, const char *subdir)
             return f;
         }
         WARN("Could not open %s\n", fname);
+        return NULL;
     }
+
     if((str=getenv("XDG_DATA_HOME")) != NULL && str[0] != '\0')
         snprintf(buffer, sizeof(buffer), "%s/%s/%s", str, subdir, fname);
     else if((str=getenv("HOME")) != NULL && str[0] != '\0')

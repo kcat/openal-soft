@@ -1019,8 +1019,8 @@ static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCco
     temp = realloc(*sounds, (zone_end-zone + *sounds_size)*sizeof((*sounds)[0]));
     if(!temp)
     {
-        ERR("Failed reallocating fontsound storage to %ld elements (from %d)\n",
-            (zone_end-zone + *sounds_size), *sounds_size);
+        ERR("Failed reallocating fontsound storage to %d elements (from %d)\n",
+            (ALsizei)(zone_end-zone) + *sounds_size, *sounds_size);
         return;
     }
     *sounds = temp;

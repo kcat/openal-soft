@@ -32,7 +32,6 @@
 #include <time.h>
 #include <errno.h>
 #include <stdarg.h>
-#include <limits.h>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
@@ -105,15 +104,6 @@ extern inline void UnlockUIntMapWrite(UIntMap *map);
 extern inline ALuint NextPowerOf2(ALuint value);
 extern inline ALint fastf2i(ALfloat f);
 extern inline ALuint fastf2u(ALfloat f);
-
-
-#ifndef PATH_MAX
-#ifdef MAX_PATH
-#define PATH_MAX MAX_PATH
-#else
-#define PATH_MAX 4096
-#endif
-#endif
 
 
 ALuint CPUCapFlags = 0;

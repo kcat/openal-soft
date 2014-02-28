@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <math.h>
+#include <limits.h>
 
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
@@ -298,6 +299,14 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #define FORCE_ALIGN __attribute__((force_align_arg_pointer))
 #else
 #define FORCE_ALIGN
+#endif
+
+#ifndef PATH_MAX
+#ifdef MAX_PATH
+#define PATH_MAX MAX_PATH
+#else
+#define PATH_MAX 4096
+#endif
 #endif
 
 

@@ -32,7 +32,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#include <limits.h>
 
 #include "alMain.h"
 
@@ -40,13 +39,6 @@
 #include <shlobj.h>
 #endif
 
-#ifndef PATH_MAX
-#ifdef MAX_PATH
-#define PATH_MAX MAX_PATH
-#else
-#define PATH_MAX 4096
-#endif
-#endif
 
 typedef struct ConfigEntry {
     char *key;

@@ -1564,162 +1564,34 @@ static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALuint numchans,      \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALbyte, ALbyte)
-DECL_TEMPLATE(ALbyte, ALubyte)
-DECL_TEMPLATE(ALbyte, ALshort)
-DECL_TEMPLATE(ALbyte, ALushort)
-DECL_TEMPLATE(ALbyte, ALint)
-DECL_TEMPLATE(ALbyte, ALuint)
-DECL_TEMPLATE(ALbyte, ALfloat)
-DECL_TEMPLATE(ALbyte, ALdouble)
-DECL_TEMPLATE(ALbyte, ALmulaw)
-DECL_TEMPLATE(ALbyte, ALalaw)
-DECL_TEMPLATE(ALbyte, ALbyte3)
-DECL_TEMPLATE(ALbyte, ALubyte3)
+#define DECL_TEMPLATE2(T)  \
+DECL_TEMPLATE(T, ALbyte)   \
+DECL_TEMPLATE(T, ALubyte)  \
+DECL_TEMPLATE(T, ALshort)  \
+DECL_TEMPLATE(T, ALushort) \
+DECL_TEMPLATE(T, ALint)    \
+DECL_TEMPLATE(T, ALuint)   \
+DECL_TEMPLATE(T, ALfloat)  \
+DECL_TEMPLATE(T, ALdouble) \
+DECL_TEMPLATE(T, ALmulaw)  \
+DECL_TEMPLATE(T, ALalaw)   \
+DECL_TEMPLATE(T, ALbyte3)  \
+DECL_TEMPLATE(T, ALubyte3)
 
-DECL_TEMPLATE(ALubyte, ALbyte)
-DECL_TEMPLATE(ALubyte, ALubyte)
-DECL_TEMPLATE(ALubyte, ALshort)
-DECL_TEMPLATE(ALubyte, ALushort)
-DECL_TEMPLATE(ALubyte, ALint)
-DECL_TEMPLATE(ALubyte, ALuint)
-DECL_TEMPLATE(ALubyte, ALfloat)
-DECL_TEMPLATE(ALubyte, ALdouble)
-DECL_TEMPLATE(ALubyte, ALmulaw)
-DECL_TEMPLATE(ALubyte, ALalaw)
-DECL_TEMPLATE(ALubyte, ALbyte3)
-DECL_TEMPLATE(ALubyte, ALubyte3)
+DECL_TEMPLATE2(ALbyte)
+DECL_TEMPLATE2(ALubyte)
+DECL_TEMPLATE2(ALshort)
+DECL_TEMPLATE2(ALushort)
+DECL_TEMPLATE2(ALint)
+DECL_TEMPLATE2(ALuint)
+DECL_TEMPLATE2(ALfloat)
+DECL_TEMPLATE2(ALdouble)
+DECL_TEMPLATE2(ALmulaw)
+DECL_TEMPLATE2(ALalaw)
+DECL_TEMPLATE2(ALbyte3)
+DECL_TEMPLATE2(ALubyte3)
 
-DECL_TEMPLATE(ALshort, ALbyte)
-DECL_TEMPLATE(ALshort, ALubyte)
-DECL_TEMPLATE(ALshort, ALshort)
-DECL_TEMPLATE(ALshort, ALushort)
-DECL_TEMPLATE(ALshort, ALint)
-DECL_TEMPLATE(ALshort, ALuint)
-DECL_TEMPLATE(ALshort, ALfloat)
-DECL_TEMPLATE(ALshort, ALdouble)
-DECL_TEMPLATE(ALshort, ALmulaw)
-DECL_TEMPLATE(ALshort, ALalaw)
-DECL_TEMPLATE(ALshort, ALbyte3)
-DECL_TEMPLATE(ALshort, ALubyte3)
-
-DECL_TEMPLATE(ALushort, ALbyte)
-DECL_TEMPLATE(ALushort, ALubyte)
-DECL_TEMPLATE(ALushort, ALshort)
-DECL_TEMPLATE(ALushort, ALushort)
-DECL_TEMPLATE(ALushort, ALint)
-DECL_TEMPLATE(ALushort, ALuint)
-DECL_TEMPLATE(ALushort, ALfloat)
-DECL_TEMPLATE(ALushort, ALdouble)
-DECL_TEMPLATE(ALushort, ALmulaw)
-DECL_TEMPLATE(ALushort, ALalaw)
-DECL_TEMPLATE(ALushort, ALbyte3)
-DECL_TEMPLATE(ALushort, ALubyte3)
-
-DECL_TEMPLATE(ALint, ALbyte)
-DECL_TEMPLATE(ALint, ALubyte)
-DECL_TEMPLATE(ALint, ALshort)
-DECL_TEMPLATE(ALint, ALushort)
-DECL_TEMPLATE(ALint, ALint)
-DECL_TEMPLATE(ALint, ALuint)
-DECL_TEMPLATE(ALint, ALfloat)
-DECL_TEMPLATE(ALint, ALdouble)
-DECL_TEMPLATE(ALint, ALmulaw)
-DECL_TEMPLATE(ALint, ALalaw)
-DECL_TEMPLATE(ALint, ALbyte3)
-DECL_TEMPLATE(ALint, ALubyte3)
-
-DECL_TEMPLATE(ALuint, ALbyte)
-DECL_TEMPLATE(ALuint, ALubyte)
-DECL_TEMPLATE(ALuint, ALshort)
-DECL_TEMPLATE(ALuint, ALushort)
-DECL_TEMPLATE(ALuint, ALint)
-DECL_TEMPLATE(ALuint, ALuint)
-DECL_TEMPLATE(ALuint, ALfloat)
-DECL_TEMPLATE(ALuint, ALdouble)
-DECL_TEMPLATE(ALuint, ALmulaw)
-DECL_TEMPLATE(ALuint, ALalaw)
-DECL_TEMPLATE(ALuint, ALbyte3)
-DECL_TEMPLATE(ALuint, ALubyte3)
-
-DECL_TEMPLATE(ALfloat, ALbyte)
-DECL_TEMPLATE(ALfloat, ALubyte)
-DECL_TEMPLATE(ALfloat, ALshort)
-DECL_TEMPLATE(ALfloat, ALushort)
-DECL_TEMPLATE(ALfloat, ALint)
-DECL_TEMPLATE(ALfloat, ALuint)
-DECL_TEMPLATE(ALfloat, ALfloat)
-DECL_TEMPLATE(ALfloat, ALdouble)
-DECL_TEMPLATE(ALfloat, ALmulaw)
-DECL_TEMPLATE(ALfloat, ALalaw)
-DECL_TEMPLATE(ALfloat, ALbyte3)
-DECL_TEMPLATE(ALfloat, ALubyte3)
-
-DECL_TEMPLATE(ALdouble, ALbyte)
-DECL_TEMPLATE(ALdouble, ALubyte)
-DECL_TEMPLATE(ALdouble, ALshort)
-DECL_TEMPLATE(ALdouble, ALushort)
-DECL_TEMPLATE(ALdouble, ALint)
-DECL_TEMPLATE(ALdouble, ALuint)
-DECL_TEMPLATE(ALdouble, ALfloat)
-DECL_TEMPLATE(ALdouble, ALdouble)
-DECL_TEMPLATE(ALdouble, ALmulaw)
-DECL_TEMPLATE(ALdouble, ALalaw)
-DECL_TEMPLATE(ALdouble, ALbyte3)
-DECL_TEMPLATE(ALdouble, ALubyte3)
-
-DECL_TEMPLATE(ALmulaw, ALbyte)
-DECL_TEMPLATE(ALmulaw, ALubyte)
-DECL_TEMPLATE(ALmulaw, ALshort)
-DECL_TEMPLATE(ALmulaw, ALushort)
-DECL_TEMPLATE(ALmulaw, ALint)
-DECL_TEMPLATE(ALmulaw, ALuint)
-DECL_TEMPLATE(ALmulaw, ALfloat)
-DECL_TEMPLATE(ALmulaw, ALdouble)
-DECL_TEMPLATE(ALmulaw, ALmulaw)
-DECL_TEMPLATE(ALmulaw, ALalaw)
-DECL_TEMPLATE(ALmulaw, ALbyte3)
-DECL_TEMPLATE(ALmulaw, ALubyte3)
-
-DECL_TEMPLATE(ALalaw, ALbyte)
-DECL_TEMPLATE(ALalaw, ALubyte)
-DECL_TEMPLATE(ALalaw, ALshort)
-DECL_TEMPLATE(ALalaw, ALushort)
-DECL_TEMPLATE(ALalaw, ALint)
-DECL_TEMPLATE(ALalaw, ALuint)
-DECL_TEMPLATE(ALalaw, ALfloat)
-DECL_TEMPLATE(ALalaw, ALdouble)
-DECL_TEMPLATE(ALalaw, ALmulaw)
-DECL_TEMPLATE(ALalaw, ALalaw)
-DECL_TEMPLATE(ALalaw, ALbyte3)
-DECL_TEMPLATE(ALalaw, ALubyte3)
-
-DECL_TEMPLATE(ALbyte3, ALbyte)
-DECL_TEMPLATE(ALbyte3, ALubyte)
-DECL_TEMPLATE(ALbyte3, ALshort)
-DECL_TEMPLATE(ALbyte3, ALushort)
-DECL_TEMPLATE(ALbyte3, ALint)
-DECL_TEMPLATE(ALbyte3, ALuint)
-DECL_TEMPLATE(ALbyte3, ALfloat)
-DECL_TEMPLATE(ALbyte3, ALdouble)
-DECL_TEMPLATE(ALbyte3, ALmulaw)
-DECL_TEMPLATE(ALbyte3, ALalaw)
-DECL_TEMPLATE(ALbyte3, ALbyte3)
-DECL_TEMPLATE(ALbyte3, ALubyte3)
-
-DECL_TEMPLATE(ALubyte3, ALbyte)
-DECL_TEMPLATE(ALubyte3, ALubyte)
-DECL_TEMPLATE(ALubyte3, ALshort)
-DECL_TEMPLATE(ALubyte3, ALushort)
-DECL_TEMPLATE(ALubyte3, ALint)
-DECL_TEMPLATE(ALubyte3, ALuint)
-DECL_TEMPLATE(ALubyte3, ALfloat)
-DECL_TEMPLATE(ALubyte3, ALdouble)
-DECL_TEMPLATE(ALubyte3, ALmulaw)
-DECL_TEMPLATE(ALubyte3, ALalaw)
-DECL_TEMPLATE(ALubyte3, ALbyte3)
-DECL_TEMPLATE(ALubyte3, ALubyte3)
-
+#undef DECL_TEMPLATE2
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
@@ -1786,9 +1658,13 @@ DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
 DECL_TEMPLATE(ALalaw)
-static void Convert_ALima4_ALima4(ALima4 *dst, const ALima4 *src,
-                                  ALuint numchans, ALuint numblocks)
-{ memcpy(dst, src, numblocks*36*numchans); }
+static void Convert_ALima4_ALima4(ALima4* UNUSED(dst), const ALima4* UNUSED(src),
+                                  ALuint UNUSED(numchans), ALuint UNUSED(len))
+{
+    /* We don't store IMA4 samples internally, so IMA4-to-IMA4 conversions
+     * should never happen. */
+    ERR("Unexpected IMA4-to-IMA4 conversion!\n");
+}
 DECL_TEMPLATE(ALbyte3)
 DECL_TEMPLATE(ALubyte3)
 

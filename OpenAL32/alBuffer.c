@@ -24,6 +24,12 @@
 #include <stdio.h>
 #include <assert.h>
 #include <limits.h>
+#ifdef HAVE_ALLOCA_H
+#include <alloca.h>
+#endif
+#ifdef HAVE_MALLOC_H
+#include <malloc.h>
+#endif
 
 #include "alMain.h"
 #include "alu.h"
@@ -1598,11 +1604,11 @@ DECL_TEMPLATE2(ALubyte3)
 static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALuint numchans,  \
                                  ALuint len)                                  \
 {                                                                             \
-    ALshort tmp[65*MAX_INPUT_CHANNELS]; /* Max samples an IMA4 frame can be */\
     ALuint i, j, k;                                                           \
+    ALshort *tmp;                                                             \
                                                                               \
-    i = 0;                                                                    \
-    while(i < len)                                                            \
+    tmp = alloca(65*numchans);                                                \
+    for(i = 0;i < len;)                                                       \
     {                                                                         \
         DecodeIMA4Block(tmp, src, numchans);                                  \
         src += 36*numchans;                                                   \
@@ -1634,11 +1640,12 @@ DECL_TEMPLATE(ALubyte3)
 static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALuint numchans,    \
                                ALuint len)                                    \
 {                                                                             \
-    ALshort tmp[65*MAX_INPUT_CHANNELS]; /* Max samples an IMA4 frame can be */\
     ALint sample[MaxChannels] = {0,0,0,0,0,0,0,0};                            \
     ALint index[MaxChannels] = {0,0,0,0,0,0,0,0};                             \
+    ALshort *tmp;                                                             \
     ALuint i, j;                                                              \
                                                                               \
+    tmp = alloca(65*numchans);                                                \
     for(i = 0;i < len;i += 65)                                                \
     {                                                                         \
         for(j = 0;j < 65*numchans;j++)                                        \

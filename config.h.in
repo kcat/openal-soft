@@ -116,6 +116,9 @@
 /* Define if we have malloc.h */
 #cmakedefine HAVE_MALLOC_H
 
+/* Define if we have alloca.h */
+#cmakedefine HAVE_ALLOCA_H
+
 /* Define if we have strings.h */
 #cmakedefine HAVE_STRINGS_H
 

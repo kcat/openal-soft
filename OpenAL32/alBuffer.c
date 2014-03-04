@@ -429,10 +429,17 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
     WriteLock(&albuf->lock);
-    original_align = ((albuf->OriginalType == UserFmtIMA4) ?
-                      (ChannelsFromUserFmt(albuf->OriginalChannels)*36) :
-                      FrameSizeFromUserFmt(albuf->OriginalChannels,
-                                           albuf->OriginalType));
+    if(albuf->OriginalType == UserFmtIMA4)
+    {
+        ALsizei align = (albuf->OriginalAlign-1)/2 + 4;
+        original_align = ChannelsFromUserFmt(albuf->OriginalChannels) * align;
+    }
+    else
+    {
+        original_align = FrameSizeFromUserFmt(albuf->OriginalChannels,
+                                              albuf->OriginalType) *
+                         albuf->OriginalAlign;
+    }
 
     if(srcchannels != albuf->OriginalChannels || srctype != albuf->OriginalType)
     {
@@ -451,8 +458,8 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
     /* offset -> byte offset, length -> sample count */
     if(srctype == UserFmtIMA4)
     {
-        offset = offset/36*65 * bytes;
-        length = length/original_align * 65;
+        offset = offset/original_align * channels*bytes;
+        length = length/original_align * albuf->OriginalAlign;
     }
     else
     {
@@ -1950,15 +1957,22 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         ALBuf->OriginalChannels = SrcChannels;
         ALBuf->OriginalType     = SrcType;
         if(SrcType == UserFmtIMA4)
-            ALBuf->OriginalSize = frames / 65 * 36 * ChannelsFromUserFmt(SrcChannels);
+        {
+            ALBuf->OriginalSize  = frames / 65 * 36 * ChannelsFromUserFmt(SrcChannels);
+            ALBuf->OriginalAlign = 65;
+        }
         else
-            ALBuf->OriginalSize = frames * FrameSizeFromUserFmt(SrcChannels, SrcType);
+        {
+            ALBuf->OriginalSize  = frames * FrameSizeFromUserFmt(SrcChannels, SrcType);
+            ALBuf->OriginalAlign = 1;
+        }
     }
     else
     {
         ALBuf->OriginalChannels = (enum UserFmtChannels)DstChannels;
         ALBuf->OriginalType     = (enum UserFmtType)DstType;
         ALBuf->OriginalSize     = frames * NewBytes * NewChannels;
+        ALBuf->OriginalAlign    = 1;
     }
 
     ALBuf->Frequency = freq;

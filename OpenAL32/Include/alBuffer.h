@@ -79,6 +79,7 @@ typedef struct ALbuffer {
     enum UserFmtChannels OriginalChannels;
     enum UserFmtType     OriginalType;
     ALsizei              OriginalSize;
+    ALsizei              OriginalAlign;
 
     ALsizei  LoopStart;
     ALsizei  LoopEnd;

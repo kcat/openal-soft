@@ -1896,7 +1896,21 @@ static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALuint numchans,    \
 
 DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
-DECL_TEMPLATE(ALshort)
+static void Convert_ALima4_ALshort(ALima4 *dst, const ALshort *src,
+                                   ALuint numchans, ALuint len, ALuint align)
+{
+    ALint sample[MaxChannels] = {0,0,0,0,0,0,0,0};
+    ALint index[MaxChannels] = {0,0,0,0,0,0,0,0};
+    ALsizei byte_align = ((align-1)/2 + 4) * numchans;
+    ALuint i;
+
+    for(i = 0;i < len;i += align)
+    {
+        EncodeIMA4Block(dst, src, sample, index, numchans, align);
+        src += align*numchans;
+        dst += byte_align;
+    }
+}
 DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALint)
 DECL_TEMPLATE(ALuint)
@@ -1988,7 +2002,23 @@ static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
 
 DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
-DECL_TEMPLATE(ALshort)
+static void Convert_ALmsadpcm_ALshort(ALmsadpcm *dst, const ALshort *src,
+                                  ALuint numchans, ALuint len, ALuint align)
+{
+    ALint sample[MaxChannels] = {0,0,0,0,0,0,0,0};
+    ALint index[MaxChannels] = {0,0,0,0,0,0,0,0};
+    ALsizei byte_align = ((align-2)/2 + 7) * numchans;
+    ALuint i;
+
+    ERR("MSADPCM encoding not currently supported!\n");
+
+    for(i = 0;i < len;i += align)
+    {
+        EncodeMSADPCMBlock(dst, src, sample, index, numchans, align);
+        src += align*numchans;
+        dst += byte_align;
+    }
+}
 DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALint)
 DECL_TEMPLATE(ALuint)

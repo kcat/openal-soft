@@ -1830,7 +1830,7 @@ static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALuint numchans,  \
     ALuint i, j, k;                                                           \
     ALshort *tmp;                                                             \
                                                                               \
-    tmp = alloca(align*numchans);                                             \
+    tmp = alloca(align*numchans*sizeof(*tmp));                                \
     for(i = 0;i < len;i += align)                                             \
     {                                                                         \
         DecodeIMA4Block(tmp, src, numchans, align);                           \
@@ -1881,7 +1881,7 @@ static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALuint numchans,    \
     ALuint i, j, k;                                                           \
     ALshort *tmp;                                                             \
                                                                               \
-    tmp = alloca(align*numchans);                                             \
+    tmp = alloca(align*numchans*sizeof(*tmp));                                \
     for(i = 0;i < len;i += align)                                             \
     {                                                                         \
         for(j = 0;j < align;j++)                                              \
@@ -1933,7 +1933,7 @@ static void Convert_##T##_ALmsadpcm(T *dst, const ALmsadpcm *src,             \
     ALuint i, j, k;                                                           \
     ALshort *tmp;                                                             \
                                                                               \
-    tmp = alloca(align*numchans);                                             \
+    tmp = alloca(align*numchans*sizeof(*tmp));                                \
     for(i = 0;i < len;i += align)                                             \
     {                                                                         \
         DecodeMSADPCMBlock(tmp, src, numchans, align);                        \
@@ -1987,7 +1987,7 @@ static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
                                                                               \
     ERR("MSADPCM encoding not currently supported!\n");                       \
                                                                               \
-    tmp = alloca(align*numchans);                                             \
+    tmp = alloca(align*numchans*sizeof(*tmp));                                \
     for(i = 0;i < len;i += align)                                             \
     {                                                                         \
         for(j = 0;j < align;j++)                                              \

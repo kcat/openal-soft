@@ -1355,7 +1355,7 @@ static void DecodeMSADPCMBlock(ALshort *dst, const ALmsadpcm *src, ALint numchan
             samples[i][0] = pred;
 
             delta[i] = (MSADPCMAdaption[nibble&0x0f] * delta[i]) / 256;
-            delta[i] = maxu(16, delta[i]);
+            delta[i] = maxi(16, delta[i]);
 
             *(dst++) = pred;
         }

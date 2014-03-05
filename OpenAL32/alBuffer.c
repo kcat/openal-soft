@@ -1311,6 +1311,7 @@ static void DecodeMSADPCMBlock(ALshort *dst, const ALmsadpcm *src, ALint numchan
     {
         delta[i]  = *(src++);
         delta[i] |= *(src++) << 8;
+        delta[i]  = (delta[i]^0x8000) - 0x8000;
     }
     for(i = 0;i < numchans;i++)
     {

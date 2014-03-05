@@ -1362,31 +1362,43 @@ static void DecodeMSADPCMBlock(ALshort *dst, const ALmsadpcm *src, ALint numchan
     }
 }
 
-/* FIXME: Stubbed. Just inserts silence. */
-static void EncodeMSADPCMBlock(ALmsadpcm *dst, const ALshort* UNUSED(src), ALint* UNUSED(sample), ALint* UNUSED(index), ALint numchans, ALsizei align)
+/* NOTE: This encoder is pretty dumb/simplistic. Some kind of pre-processing
+ * that tries to find the optimal block predictors would be nice, at least. A
+ * multi-pass method that can generate better deltas would be good, too. */
+static void EncodeMSADPCMBlock(ALmsadpcm *dst, const ALshort *src, ALint *sample, ALint numchans, ALsizei align)
 {
+    ALubyte blockpred[MAX_INPUT_CHANNELS];
+    ALint delta[MAX_INPUT_CHANNELS];
+    ALshort samples[MAX_INPUT_CHANNELS][2];
     ALint i, j;
 
     /* Block predictor */
     for(i = 0;i < numchans;i++)
-        *(dst++) = 2;
+    {
+        /* FIXME: Calculate something better. */
+        blockpred[i] = 0;
+        *(dst++) = blockpred[i];
+    }
     /* Initial delta */
     for(i = 0;i < numchans;i++)
     {
-        *(dst++) = 16;
-        *(dst++) = 0;
+        delta[i] = 16;
+        *(dst++) = (delta[i]   ) & 0xff;
+        *(dst++) = (delta[i]>>8) & 0xff;
     }
     /* Initial sample 1 */
     for(i = 0;i < numchans;i++)
     {
-        *(dst++) = 0;
-        *(dst++) = 0;
+        samples[i][0] = src[1*numchans + i];
+        *(dst++) = (samples[i][0]   ) & 0xff;
+        *(dst++) = (samples[i][0]>>8) & 0xff;
     }
     /* Initial sample 2 */
     for(i = 0;i < numchans;i++)
     {
-        *(dst++) = 0;
-        *(dst++) = 0;
+        samples[i][1] = src[i];
+        *(dst++) = (samples[i][1]   ) & 0xff;
+        *(dst++) = (samples[i][1]>>8) & 0xff;
     }
 
     for(j = 2;j < align;j++)
@@ -1394,7 +1406,29 @@ static void EncodeMSADPCMBlock(ALmsadpcm *dst, const ALshort* UNUSED(src), ALint
         for(i = 0;i < numchans;i++)
         {
             const ALint num = (j*numchans) + i;
-            ALubyte nibble = 0;
+            ALint nibble = 0;
+            ALint bias;
+
+            sample[i] = (samples[i][0]*MSADPCMAdaptionCoeff[blockpred[i]][0] +
+                         samples[i][1]*MSADPCMAdaptionCoeff[blockpred[i]][1]) / 256;
+
+            nibble = src[num] - sample[i];
+            if(nibble >= 0)
+                bias = delta[i] / 2;
+            else
+                bias = -delta[i] / 2;
+
+            nibble = (nibble + bias) / delta[i];
+            nibble = clampi(nibble, -8, 7)&0x0f;
+
+            sample[i] += ((nibble^0x08)-0x08) * delta[i];
+            sample[i]  = clampi(sample[i], -32768, 32767);
+
+            samples[i][1] = samples[i][0];
+            samples[i][0] = sample[i];
+
+            delta[i] = (MSADPCMAdaption[nibble] * delta[i]) / 256;
+            delta[i] = maxi(16, delta[i]);
 
             if(!(num&1))
                 *dst = nibble << 4;
@@ -1980,12 +2014,9 @@ static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
                                   ALuint numchans, ALuint len, ALuint align)  \
 {                                                                             \
     ALint sample[MaxChannels] = {0,0,0,0,0,0,0,0};                            \
-    ALint index[MaxChannels] = {0,0,0,0,0,0,0,0};                             \
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;                        \
     ALuint i, j, k;                                                           \
     ALshort *tmp;                                                             \
-                                                                              \
-    ERR("MSADPCM encoding not currently supported!\n");                       \
                                                                               \
     tmp = alloca(align*numchans*sizeof(*tmp));                                \
     for(i = 0;i < len;i += align)                                             \
@@ -1995,7 +2026,7 @@ static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
             for(k = 0;k < numchans;k++)                                       \
                 tmp[j*numchans + k] = Conv_ALshort_##T(*(src++));             \
         }                                                                     \
-        EncodeMSADPCMBlock(dst, tmp, sample, index, numchans, align);         \
+        EncodeMSADPCMBlock(dst, tmp, sample, numchans, align);                \
         dst += byte_align;                                                    \
     }                                                                         \
 }
@@ -2003,18 +2034,15 @@ static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
 DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 static void Convert_ALmsadpcm_ALshort(ALmsadpcm *dst, const ALshort *src,
-                                  ALuint numchans, ALuint len, ALuint align)
+                                      ALuint numchans, ALuint len, ALuint align)
 {
     ALint sample[MaxChannels] = {0,0,0,0,0,0,0,0};
-    ALint index[MaxChannels] = {0,0,0,0,0,0,0,0};
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;
     ALuint i;
 
-    ERR("MSADPCM encoding not currently supported!\n");
-
     for(i = 0;i < len;i += align)
     {
-        EncodeMSADPCMBlock(dst, src, sample, index, numchans, align);
+        EncodeMSADPCMBlock(dst, src, sample, numchans, align);
         src += align*numchans;
         dst += byte_align;
     }

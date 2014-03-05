@@ -1846,7 +1846,19 @@ static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALuint numchans,  \
 
 DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
-DECL_TEMPLATE(ALshort)
+static void Convert_ALshort_ALima4(ALshort *dst, const ALima4 *src, ALuint numchans,
+                                   ALuint len, ALuint align)
+{
+    ALsizei byte_align = ((align-1)/2 + 4) * numchans;
+    ALuint i;
+
+    for(i = 0;i < len;i += align)
+    {
+        DecodeIMA4Block(dst, src, numchans, align);
+        src += byte_align;
+        dst += align*numchans;
+    }
+}
 DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALint)
 DECL_TEMPLATE(ALuint)
@@ -1866,14 +1878,17 @@ static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALuint numchans,    \
     ALint sample[MaxChannels] = {0,0,0,0,0,0,0,0};                            \
     ALint index[MaxChannels] = {0,0,0,0,0,0,0,0};                             \
     ALsizei byte_align = ((align-1)/2 + 4) * numchans;                        \
+    ALuint i, j, k;                                                           \
     ALshort *tmp;                                                             \
-    ALuint i, j;                                                              \
                                                                               \
     tmp = alloca(align*numchans);                                             \
     for(i = 0;i < len;i += align)                                             \
     {                                                                         \
-        for(j = 0;j < align*numchans;j++)                                     \
-            tmp[j] = Conv_ALshort_##T(*(src++));                              \
+        for(j = 0;j < align;j++)                                              \
+        {                                                                     \
+            for(k = 0;k < numchans;k++)                                       \
+                tmp[j*numchans + k] = Conv_ALshort_##T(*(src++));             \
+        }                                                                     \
         EncodeIMA4Block(dst, tmp, sample, index, numchans, align);            \
         dst += byte_align;                                                    \
     }                                                                         \
@@ -1920,7 +1935,20 @@ static void Convert_##T##_ALmsadpcm(T *dst, const ALmsadpcm *src,             \
 
 DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
-DECL_TEMPLATE(ALshort)
+static void Convert_ALshort_ALmsadpcm(ALshort *dst, const ALmsadpcm *src,
+                                      ALuint numchans, ALuint len,
+                                      ALuint align)
+{
+    ALsizei byte_align = ((align-2)/2 + 7) * numchans;
+    ALuint i;
+
+    for(i = 0;i < len;i += align)
+    {
+        DecodeMSADPCMBlock(dst, src, numchans, align);
+        src += byte_align;
+        dst += align*numchans;
+    }
+}
 DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALint)
 DECL_TEMPLATE(ALuint)
@@ -1940,16 +1968,19 @@ static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
     ALint sample[MaxChannels] = {0,0,0,0,0,0,0,0};                            \
     ALint index[MaxChannels] = {0,0,0,0,0,0,0,0};                             \
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;                        \
+    ALuint i, j, k;                                                           \
     ALshort *tmp;                                                             \
-    ALuint i, j;                                                              \
                                                                               \
     ERR("MSADPCM encoding not currently supported!\n");                       \
                                                                               \
     tmp = alloca(align*numchans);                                             \
     for(i = 0;i < len;i += align)                                             \
     {                                                                         \
-        for(j = 0;j < align*numchans;j++)                                     \
-            tmp[j] = Conv_ALshort_##T(*(src++));                              \
+        for(j = 0;j < align;j++)                                              \
+        {                                                                     \
+            for(k = 0;k < numchans;k++)                                       \
+                tmp[j*numchans + k] = Conv_ALshort_##T(*(src++));             \
+        }                                                                     \
         EncodeMSADPCMBlock(dst, tmp, sample, index, numchans, align);         \
         dst += byte_align;                                                    \
     }                                                                         \

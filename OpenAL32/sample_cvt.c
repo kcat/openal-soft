@@ -396,22 +396,21 @@ static void DecodeMSADPCMBlock(ALshort *dst, const ALmsadpcm *src, ALint numchan
             const ALint num = (j*numchans) + i;
             ALint nibble, pred;
 
-            /* Read the nibble and sign-expand it. */
+            /* Read the nibble (first is in the upper bits). */
             if(!(num&1))
                 nibble = (*src>>4)&0x0f;
             else
                 nibble = (*(src++))&0x0f;
-            nibble = (nibble^0x08) - 0x08;
 
             pred  = (samples[i][0]*MSADPCMAdaptionCoeff[blockpred[i]][0] +
                      samples[i][1]*MSADPCMAdaptionCoeff[blockpred[i]][1]) / 256;
-            pred += nibble * delta[i];
+            pred += ((nibble^0x08) - 0x08) * delta[i];
             pred  = clampi(pred, -32768, 32767);
 
             samples[i][1] = samples[i][0];
             samples[i][0] = pred;
 
-            delta[i] = (MSADPCMAdaption[nibble&0x0f] * delta[i]) / 256;
+            delta[i] = (MSADPCMAdaption[nibble] * delta[i]) / 256;
             delta[i] = maxi(16, delta[i]);
 
             *(dst++) = pred;

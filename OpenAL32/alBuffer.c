@@ -1251,10 +1251,10 @@ static ALboolean SanitizeAlignment(enum UserFmtType type, ALsizei *align)
     }
     if(type == UserFmtMSADPCM)
     {
-        /* MSADPCM block alignment must be a multiple of 8. */
+        /* MSADPCM block alignment must be a multiple of 2. */
         /* FIXME: Too strict? Might only require align*channels to be a
          * multiple of 2. */
-        return ((*align)&7) == 0;
+        return ((*align)&1) == 0;
     }
 
     return AL_TRUE;

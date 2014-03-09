@@ -1069,7 +1069,7 @@ DECL_TEMPLATE(ALubyte3)
 static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
                                   ALuint numchans, ALuint len, ALuint align)  \
 {                                                                             \
-    ALint sample[MaxChannels] = {0,0,0,0,0,0,0,0};                            \
+    ALint sample[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};                     \
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;                        \
     ALuint i, j, k;                                                           \
     ALshort *tmp;                                                             \
@@ -1092,7 +1092,7 @@ DECL_TEMPLATE(ALubyte)
 static void Convert_ALmsadpcm_ALshort(ALmsadpcm *dst, const ALshort *src,
                                       ALuint numchans, ALuint len, ALuint align)
 {
-    ALint sample[MaxChannels] = {0,0,0,0,0,0,0,0};
+    ALint sample[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;
     ALuint i;
 

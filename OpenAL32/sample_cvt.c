@@ -748,9 +748,9 @@ static inline ALfloat Conv_ALfloat_ALshort(ALshort val)
 static inline ALfloat Conv_ALfloat_ALushort(ALushort val)
 { return (val-32768) * (1.0f/32767.0f); }
 static inline ALfloat Conv_ALfloat_ALint(ALint val)
-{ return (ALfloat)(val * (1.0/2147483647.0)); }
+{ return (ALfloat)(val>>7) * (1.0f/16777215.0f); }
 static inline ALfloat Conv_ALfloat_ALuint(ALuint val)
-{ return (ALfloat)((ALint)(val-2147483648u) * (1.0/2147483647.0)); }
+{ return (ALfloat)((ALint)(val>>7)-16777216) * (1.0f/16777215.0f); }
 static inline ALfloat Conv_ALfloat_ALfloat(ALfloat val)
 { return (val==val) ? val : 0.0f; }
 static inline ALfloat Conv_ALfloat_ALdouble(ALdouble val)

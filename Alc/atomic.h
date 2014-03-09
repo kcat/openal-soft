@@ -136,42 +136,6 @@ inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
     return InterlockedCompareExchangePointer(ptr, newval, oldval) == oldval;
 }
 
-#elif defined(__APPLE__)
-
-#include <libkern/OSAtomic.h>
-
-typedef int32_t RefCount;
-inline RefCount IncrementRef(volatile RefCount *ptr)
-{ return OSAtomicIncrement32Barrier(ptr); }
-inline RefCount DecrementRef(volatile RefCount *ptr)
-{ return OSAtomicDecrement32Barrier(ptr); }
-
-inline int ExchangeInt(volatile int *ptr, int newval)
-{
-    /* Really? No regular old atomic swap? */
-    int oldval;
-    do {
-        oldval = *ptr;
-    } while(!OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr));
-    return oldval;
-}
-inline void *ExchangePtr(XchgPtr *ptr, void *newval)
-{
-    void *oldval;
-    do {
-        oldval = *ptr;
-    } while(!OSAtomicCompareAndSwapPtrBarrier(oldval, newval, ptr));
-    return oldval;
-}
-inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
-{
-    return OSAtomicCompareAndSwap32Barrier(oldval, newval, ptr);
-}
-inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
-{
-    return OSAtomicCompareAndSwapPtrBarrier(oldval, newval, ptr);
-}
-
 #else
 #error "No atomic functions available on this platform!"
 typedef ALuint RefCount;

@@ -1,15 +1,26 @@
-# OpenAL config file. Options that are not under a block or are under the
-# [general] block are for general, non-backend-specific options. Blocks may
-# appear multiple times, and duplicated options will take the last value
-# specified.
+# OpenAL config file.
+#
+# Option blocks may appear multiple times, and duplicated options will take the
+# last value specified. Environment variables may be specified within option
+# values, and are automatically substituted when the config file is loaded.
+# Environment variable names may only contain alpha-numeric characters (a-z,
+# A-Z, 0-9) and underscores (_), and are prefixed with $. For example,
+# specifying "$HOME/file.ext" would typically result in something like
+# "/home/user/file.ext". To specify an actual "$" character, use "$$".
+#
 # The system-wide settings can be put in /etc/openal/alsoft.conf and user-
-# specific override settings in ~/.alsoftrc.
-# For Windows, these settings should go into %AppData%\alsoft.ini
-
+# specific override settings in $HOME/.alsoftrc.
+# For Windows, these settings should go into $AppData\alsoft.ini
+#
 # Option and block names are case-insenstive. The supplied values are only
 # hints and may not be honored (though generally it'll try to get as close as
 # possible). Note: options that are left unset may default to app- or system-
 # specified values. These are the current available settings:
+
+##
+## General stuff
+##
+[general]
 
 ## disable-cpu-exts:
 #  Disables use of the listed CPU extensions. Certain methods may utilize CPU
@@ -22,7 +33,7 @@
 #  Sets the output channel configuration. If left unspecified, one will try to
 #  be detected from the system, and defaulting to stereo. The available values
 #  are: mono, stereo, quad, surround51, surround61, surround71
-#channels = stereo
+#channels =
 
 ## sample-type:
 #  Sets the output sample type. Currently, all mixing is done with 32-bit float
@@ -51,7 +62,7 @@
 #  %% - Percent sign (%)
 #  The listed files are relative to system-dependant data directories. On
 #  Windows this is:
-#  %AppData%\openal\hrtf
+#  $AppData\openal\hrtf
 #  And on other systems, it's (in order):
 #  $XDG_DATA_HOME/openal/hrtf  (defaults to $HOME/.local/share/openal/hrtf)
 #  $XDG_DATA_DIRS/openal/hrtf  (defaults to /usr/local/share/openal/hrtf and
@@ -81,8 +92,9 @@
 #wide-stereo = false
 
 ## frequency:
-#  Sets the output frequency.
-#frequency = 44100
+#  Sets the output frequency. If left unspecified it will try to detect a
+#  default from the system, otherwise it will default to 44100.
+#frequency =
 
 ## resampler:
 #  Selects the resampler used when mixing sources. Valid values are:
@@ -121,11 +133,11 @@
 ## drivers:
 #  Sets the backend driver list order, comma-seperated. Unknown backends and
 #  duplicated names are ignored. Unlisted backends won't be considered for use
-#  unless the list is ended with a comma (eg. 'oss,' will list OSS first
-#  followed by all other available backends, while 'oss' will list OSS only).
-#  Backends prepended with - won't be available for use (eg. '-oss,' will allow
-#  all available backends except OSS). An empty list means the default.
-#drivers = pulse,alsa,core,oss,solaris,sndio,qsa,mmdevapi,dsound,winmm,port,opensl,null,wave
+#  unless the list is ended with a comma (e.g. 'oss,' will try OSS first before
+#  other backends, while 'oss' will try OSS only). Backends prepended with -
+#  won't be considered for use (e.g. '-oss,' will try all available backends
+#  except OSS). An empty list means to try all backends.
+#drivers =
 
 ## excludefx:
 #  Sets which effects to exclude, preventing apps from using them. This can
@@ -196,7 +208,7 @@
 #  A default soundfont (sf2 format). Used when an app requests the system
 #  default. The listed file is relative to system-dependant data directories.
 #  On Windows this is:
-#  %AppData%\openal\soundfonts
+#  $AppData\openal\soundfonts
 #  And on other systems, it's (in order):
 #  $XDG_DATA_HOME/openal/soundfonts
 #  $XDG_DATA_DIRS/openal/soundfonts

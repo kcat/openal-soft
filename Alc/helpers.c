@@ -93,8 +93,8 @@ extern inline RefCount IncrementRef(volatile RefCount *ptr);
 extern inline RefCount DecrementRef(volatile RefCount *ptr);
 extern inline int ExchangeInt(volatile int *ptr, int newval);
 extern inline void *ExchangePtr(XchgPtr *ptr, void *newval);
-extern inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval);
-extern inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval);
+extern inline int CompExchangeInt(volatile int *ptr, int oldval, int newval);
+extern inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval);
 
 extern inline void LockUIntMapRead(UIntMap *map);
 extern inline void UnlockUIntMapRead(UIntMap *map);

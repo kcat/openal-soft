@@ -19,13 +19,13 @@ inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 {
     return __sync_lock_test_and_set(ptr, newval);
 }
-inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
+inline int CompExchangeInt(volatile int *ptr, int oldval, int newval)
 {
-    return __sync_bool_compare_and_swap(ptr, oldval, newval);
+    return __sync_val_compare_and_swap(ptr, oldval, newval);
 }
-inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
+inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 {
-    return __sync_bool_compare_and_swap(ptr, oldval, newval);
+    return __sync_val_compare_and_swap(ptr, oldval, newval);
 }
 
 #elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
@@ -55,17 +55,6 @@ inline int ExchangeInt(volatile int *dest, int newval)
                          : "memory");
     return ret;
 }
-
-inline ALboolean CompExchangeInt(volatile int *dest, int oldval, int newval)
-{
-    int ret;
-    __asm__ __volatile__("lock; cmpxchgl %2,(%1)"
-                         : "=a" (ret)
-                         : "r" (dest), "r" (newval), "0" (oldval)
-                         : "memory");
-    return ret == oldval;
-}
-
 inline void *ExchangePtr(XchgPtr *dest, void *newval)
 {
     void *ret;
@@ -81,8 +70,16 @@ inline void *ExchangePtr(XchgPtr *dest, void *newval)
     );
     return ret;
 }
-
-inline ALboolean CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
+inline int CompExchangeInt(volatile int *dest, int oldval, int newval)
+{
+    int ret;
+    __asm__ __volatile__("lock; cmpxchgl %2,(%1)"
+                         : "=a" (ret)
+                         : "r" (dest), "r" (newval), "0" (oldval)
+                         : "memory");
+    return ret;
+}
+inline void *CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
 {
     void *ret;
     __asm__ __volatile__(
@@ -95,7 +92,7 @@ inline ALboolean CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
                          : "r" (dest), "r" (newval), "0" (oldval)
                          : "memory"
     );
-    return ret == oldval;
+    return ret;
 }
 
 #elif defined(_WIN32)
@@ -123,17 +120,17 @@ inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 {
     return InterlockedExchangePointer(ptr, newval);
 }
-inline ALboolean CompExchangeInt(volatile int *ptr, int oldval, int newval)
+inline int CompExchangeInt(volatile int *ptr, int oldval, int newval)
 {
     union {
         volatile int *i;
         volatile LONG *l;
     } u = { ptr };
-    return InterlockedCompareExchange(u.l, newval, oldval) == oldval;
+    return InterlockedCompareExchange(u.l, newval, oldval);
 }
-inline ALboolean CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
+inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 {
-    return InterlockedCompareExchangePointer(ptr, newval, oldval) == oldval;
+    return InterlockedCompareExchangePointer(ptr, newval, oldval);
 }
 
 #else

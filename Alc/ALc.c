@@ -2187,14 +2187,14 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
         ALCcontext_DecRef(context);
     }
 
-    if(CompExchangePtr((XchgPtr*)&GlobalContext, context, NULL))
+    if(CompExchangePtr((XchgPtr*)&GlobalContext, context, NULL) == context)
         ALCcontext_DecRef(context);
 
     ALCdevice_Lock(device);
     tmp_ctx = &device->ContextList;
     while(*tmp_ctx)
     {
-        if(CompExchangePtr((XchgPtr*)tmp_ctx, context, context->next))
+        if(CompExchangePtr((XchgPtr*)tmp_ctx, context, context->next) == context)
             break;
         tmp_ctx = &(*tmp_ctx)->next;
     }
@@ -2903,7 +2903,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     do {
         ALContext->next = device->ContextList;
-    } while(!CompExchangePtr((XchgPtr*)&device->ContextList, ALContext->next, ALContext));
+    } while(CompExchangePtr((XchgPtr*)&device->ContextList, ALContext->next, ALContext) != ALContext->next);
     UnlockLists();
 
     ALCdevice_DecRef(device);
@@ -3284,7 +3284,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     do {
         device->next = DeviceList;
-    } while(!CompExchangePtr((XchgPtr*)&DeviceList, device->next, device));
+    } while(CompExchangePtr((XchgPtr*)&DeviceList, device->next, device) != device->next);
 
     TRACE("Created device %p, \"%s\"\n", device, device->DeviceName);
     return device;
@@ -3415,7 +3415,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     do {
         device->next = DeviceList;
-    } while(!CompExchangePtr((XchgPtr*)&DeviceList, device->next, device));
+    } while(CompExchangePtr((XchgPtr*)&DeviceList, device->next, device) != device->next);
 
     TRACE("Created device %p, \"%s\"\n", device, device->DeviceName);
     return device;
@@ -3598,7 +3598,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     V(device->Backend,open)("Loopback");
     do {
         device->next = DeviceList;
-    } while(!CompExchangePtr((XchgPtr*)&DeviceList, device->next, device));
+    } while(CompExchangePtr((XchgPtr*)&DeviceList, device->next, device) != device->next);
 
     TRACE("Created device %p\n", device);
     return device;

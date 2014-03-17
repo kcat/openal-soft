@@ -816,7 +816,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 
 extern FILE *LogFile;
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(IN_IDE_PARSER)
 #define AL_PRINT(T, MSG, ...) fprintf(LogFile, "AL lib: %s %s: "MSG, T, __FUNCTION__ , ## __VA_ARGS__)
 #else
 void al_print(const char *type, const char *func, const char *fmt, ...) PRINTF_STYLE(3,4);

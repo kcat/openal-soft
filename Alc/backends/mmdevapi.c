@@ -186,7 +186,7 @@ static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALu
     hr = IMMDeviceCollection_GetCount(coll, &count);
     if(SUCCEEDED(hr) && count > 0)
     {
-        devlist = calloc(count, sizeof(*devlist));
+        devlist = calloc(count+1, sizeof(*devlist));
         if(!devlist)
         {
             IMMDeviceCollection_Release(coll);
@@ -199,7 +199,7 @@ static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALu
     if(SUCCEEDED(hr) && defdev != NULL)
         add_device(defdev, &devlist[idx++]);
 
-    for(i = 0;i < count && idx < count;++i)
+    for(i = 0;i < count;++i)
     {
         IMMDevice *device;
 

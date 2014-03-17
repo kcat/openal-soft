@@ -50,7 +50,7 @@ void Sleep(ALuint t);
 
 #define alsched_yield sched_yield
 
-#if defined(HAVE_DLFCN_H)
+#if defined(HAVE_DLFCN_H) && !defined(IN_IDE_PARSER)
 #define HAVE_DYNLOAD 1
 #endif
 

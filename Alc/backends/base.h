@@ -128,6 +128,6 @@ ALCbackendFactory *ALCossBackendFactory_getFactory(void);
 ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
 ALCbackendFactory *ALCloopbackFactory_getFactory(void);
 
-ALCbackend *create_backend_wrapper(ALCdevice *device, ALCbackend_Type type);
+ALCbackend *create_backend_wrapper(ALCdevice *device, const BackendFuncs *funcs, ALCbackend_Type type);
 
 #endif /* AL_BACKENDS_BASE_H */

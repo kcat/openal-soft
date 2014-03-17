@@ -676,7 +676,6 @@ struct ALCdevice_struct
 
     struct ALCbackend *Backend;
 
-    BackendFuncs *Funcs;
     void         *ExtraData; // For the backend's use
 
     ALCdevice *volatile next;

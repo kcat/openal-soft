@@ -281,7 +281,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
     enum FmtChannels Channels;
-    ALfloat (*SrcMatrix)[MaxChannels];
     ALfloat DryGain, DryGainHF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
@@ -309,6 +308,28 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     Resampler       = ALSource->Resampler;
     DirectChannels  = ALSource->DirectChannels;
 
+    src->Direct.OutBuffer = Device->DryBuffer;
+    src->Direct.ClickRemoval = Device->ClickRemoval;
+    src->Direct.PendingClicks = Device->PendingClicks;
+    for(i = 0;i < NumSends;i++)
+    {
+        ALeffectslot *Slot = ALSource->Send[i].Slot;
+        if(!Slot && i == 0)
+            Slot = Device->DefaultSlot;
+        if(!Slot || Slot->EffectType == AL_EFFECT_NULL)
+        {
+            src->Send[i].OutBuffer = NULL;
+            src->Send[i].ClickRemoval = NULL;
+            src->Send[i].PendingClicks = NULL;
+        }
+        else
+        {
+            src->Send[i].OutBuffer = Slot->WetBuffer;
+            src->Send[i].ClickRemoval = Slot->ClickRemoval;
+            src->Send[i].PendingClicks = Slot->PendingClicks;
+        }
+    }
+
     /* Calculate the stepping value */
     Channels = FmtMono;
     BufferListItem = ALSource->queue;
@@ -333,11 +354,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         }
         BufferListItem = BufferListItem->next;
     }
-    if(!DirectChannels && Device->Hrtf)
-        src->DryMix = SelectHrtfMixer();
-    else
-        src->DryMix = SelectDirectMixer();
-    src->WetMix = SelectSendMixer();
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
@@ -350,12 +366,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         WetGainHF[i] = ALSource->Send[i].GainHF;
     }
 
-    SrcMatrix = src->Direct.Gains;
-    for(i = 0;i < MAX_INPUT_CHANNELS;i++)
-    {
-        for(c = 0;c < MaxChannels;c++)
-            SrcMatrix[i][c] = 0.0f;
-    }
     switch(Channels)
     {
     case FmtMono:
@@ -410,6 +420,12 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
     if(DirectChannels != AL_FALSE)
     {
+        ALfloat (*SrcMatrix)[MaxChannels] = src->Direct.Gains;
+        for(i = 0;i < MAX_INPUT_CHANNELS;i++)
+        {
+            for(c = 0;c < MaxChannels;c++)
+                SrcMatrix[i][c] = 0.0f;
+        }
         for(c = 0;c < num_channels;c++)
         {
             for(i = 0;i < (ALint)Device->NumChan;i++)
@@ -422,6 +438,7 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                 }
             }
         }
+        src->DryMix = SelectDirectMixer();
     }
     else if(Device->Hrtf)
     {
@@ -452,9 +469,17 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         src->Direct.Hrtf.Params.IrSize = GetHrtfIrSize(Device->Hrtf);
 
         src->Direct.Hrtf.State = &ALSource->Hrtf;
+        src->DryMix = SelectHrtfMixer();
     }
     else
     {
+        ALfloat (*SrcMatrix)[MaxChannels] = src->Direct.Gains;
+        for(i = 0;i < MAX_INPUT_CHANNELS;i++)
+        {
+            for(c = 0;c < MaxChannels;c++)
+                SrcMatrix[i][c] = 0.0f;
+        }
+
         DryGain *= lerp(1.0f, 1.0f/sqrtf((float)Device->NumChan), hwidth/F_PI);
         for(c = 0;c < num_channels;c++)
         {
@@ -467,30 +492,11 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             ComputeAngleGains(Device, chans[c].angle, hwidth, DryGain,
                               SrcMatrix[c]);
         }
+        src->DryMix = SelectDirectMixer();
     }
-
-    src->Direct.OutBuffer = Device->DryBuffer;
-    src->Direct.ClickRemoval = Device->ClickRemoval;
-    src->Direct.PendingClicks = Device->PendingClicks;
     for(i = 0;i < NumSends;i++)
-    {
-        ALeffectslot *Slot = ALSource->Send[i].Slot;
-        if(!Slot && i == 0)
-            Slot = Device->DefaultSlot;
-        if(!Slot || Slot->EffectType == AL_EFFECT_NULL)
-        {
-            src->Send[i].OutBuffer = NULL;
-            src->Send[i].ClickRemoval = NULL;
-            src->Send[i].PendingClicks = NULL;
-        }
-        else
-        {
-            src->Send[i].OutBuffer = Slot->WetBuffer;
-            src->Send[i].ClickRemoval = Slot->ClickRemoval;
-            src->Send[i].PendingClicks = Slot->PendingClicks;
-        }
         src->Send[i].Gain = WetGain[i];
-    }
+    src->WetMix = SelectSendMixer();
 
     {
         ALfloat gain = maxf(0.01f, DryGainHF);
@@ -845,11 +851,6 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         }
         BufferListItem = BufferListItem->next;
     }
-    if(Device->Hrtf)
-        src->DryMix = SelectHrtfMixer();
-    else
-        src->DryMix = SelectDirectMixer();
-    src->WetMix = SelectSendMixer();
 
     if(Device->Hrtf)
     {
@@ -910,6 +911,7 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         src->Direct.Hrtf.Params.IrSize = GetHrtfIrSize(Device->Hrtf);
 
         src->Direct.Hrtf.State = &ALSource->Hrtf;
+        src->DryMix = SelectHrtfMixer();
     }
     else
     {
@@ -944,10 +946,11 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             enum Channel chan = Device->Speaker2Chan[i];
             Matrix[0][chan] = maxf(Matrix[0][chan], AmbientGain);
         }
+        src->DryMix = SelectDirectMixer();
     }
     for(i = 0;i < NumSends;i++)
         src->Send[i].Gain = WetGain[i];
-
+    src->WetMix = SelectSendMixer();
 
     {
         ALfloat gain = maxf(0.01f, DryGainHF);

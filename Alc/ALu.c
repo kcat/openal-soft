@@ -227,7 +227,7 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     aluMatrixVector(Listener->Params.Velocity, 0.0f, Listener->Params.Matrix);
 }
 
-ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
+ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 {
     static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f } };
     static const struct ChanMap StereoMap[2] = {
@@ -277,6 +277,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     };
 
     ALCdevice *Device = ALContext->Device;
+    ALsource *ALSource = src->Source;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
     enum FmtChannels Channels;
@@ -318,14 +319,14 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         {
             Pitch = Pitch * ALBuffer->Frequency / Frequency;
             if(Pitch > 10.0f)
-                ALSource->Params.Step = 10<<FRACTIONBITS;
+                src->Step = 10<<FRACTIONBITS;
             else
             {
-                ALSource->Params.Step = fastf2i(Pitch*FRACTIONONE);
-                if(ALSource->Params.Step == 0)
-                    ALSource->Params.Step = 1;
+                src->Step = fastf2i(Pitch*FRACTIONONE);
+                if(src->Step == 0)
+                    src->Step = 1;
             }
-            ALSource->Params.Resample = SelectResampler(Resampler, ALSource->Params.Step);
+            src->Resample = SelectResampler(Resampler, src->Step);
 
             Channels = ALBuffer->FmtChannels;
             break;
@@ -333,10 +334,10 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         BufferListItem = BufferListItem->next;
     }
     if(!DirectChannels && Device->Hrtf)
-        ALSource->Params.DryMix = SelectHrtfMixer();
+        src->DryMix = SelectHrtfMixer();
     else
-        ALSource->Params.DryMix = SelectDirectMixer();
-    ALSource->Params.WetMix = SelectSendMixer();
+        src->DryMix = SelectDirectMixer();
+    src->WetMix = SelectSendMixer();
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
@@ -349,7 +350,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         WetGainHF[i] = ALSource->Send[i].GainHF;
     }
 
-    SrcMatrix = ALSource->Params.Direct.Gains;
+    SrcMatrix = src->Direct.Gains;
     for(i = 0;i < MAX_INPUT_CHANNELS;i++)
     {
         for(c = 0;c < MaxChannels;c++)
@@ -429,12 +430,12 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             if(chans[c].channel == LFE)
             {
                 /* Skip LFE */
-                ALSource->Params.Direct.Hrtf.Params.Delay[c][0] = 0;
-                ALSource->Params.Direct.Hrtf.Params.Delay[c][1] = 0;
+                src->Direct.Hrtf.Params.Delay[c][0] = 0;
+                src->Direct.Hrtf.Params.Delay[c][1] = 0;
                 for(i = 0;i < HRIR_LENGTH;i++)
                 {
-                    ALSource->Params.Direct.Hrtf.Params.Coeffs[c][i][0] = 0.0f;
-                    ALSource->Params.Direct.Hrtf.Params.Coeffs[c][i][1] = 0.0f;
+                    src->Direct.Hrtf.Params.Coeffs[c][i][0] = 0.0f;
+                    src->Direct.Hrtf.Params.Coeffs[c][i][1] = 0.0f;
                 }
             }
             else
@@ -443,14 +444,14 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
                                     0.0f, chans[c].angle,  DryGain,
-                                    ALSource->Params.Direct.Hrtf.Params.Coeffs[c],
-                                    ALSource->Params.Direct.Hrtf.Params.Delay[c]);
+                                    src->Direct.Hrtf.Params.Coeffs[c],
+                                    src->Direct.Hrtf.Params.Delay[c]);
             }
         }
         ALSource->Hrtf.Counter = 0;
-        ALSource->Params.Direct.Hrtf.Params.IrSize = GetHrtfIrSize(Device->Hrtf);
+        src->Direct.Hrtf.Params.IrSize = GetHrtfIrSize(Device->Hrtf);
 
-        ALSource->Params.Direct.Hrtf.State = &ALSource->Hrtf;
+        src->Direct.Hrtf.State = &ALSource->Hrtf;
     }
     else
     {
@@ -468,9 +469,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
     }
 
-    ALSource->Params.Direct.OutBuffer = Device->DryBuffer;
-    ALSource->Params.Direct.ClickRemoval = Device->ClickRemoval;
-    ALSource->Params.Direct.PendingClicks = Device->PendingClicks;
+    src->Direct.OutBuffer = Device->DryBuffer;
+    src->Direct.ClickRemoval = Device->ClickRemoval;
+    src->Direct.PendingClicks = Device->PendingClicks;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
@@ -478,23 +479,23 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
             Slot = Device->DefaultSlot;
         if(!Slot || Slot->EffectType == AL_EFFECT_NULL)
         {
-            ALSource->Params.Send[i].OutBuffer = NULL;
-            ALSource->Params.Send[i].ClickRemoval = NULL;
-            ALSource->Params.Send[i].PendingClicks = NULL;
+            src->Send[i].OutBuffer = NULL;
+            src->Send[i].ClickRemoval = NULL;
+            src->Send[i].PendingClicks = NULL;
         }
         else
         {
-            ALSource->Params.Send[i].OutBuffer = Slot->WetBuffer;
-            ALSource->Params.Send[i].ClickRemoval = Slot->ClickRemoval;
-            ALSource->Params.Send[i].PendingClicks = Slot->PendingClicks;
+            src->Send[i].OutBuffer = Slot->WetBuffer;
+            src->Send[i].ClickRemoval = Slot->ClickRemoval;
+            src->Send[i].PendingClicks = Slot->PendingClicks;
         }
-        ALSource->Params.Send[i].Gain = WetGain[i];
+        src->Send[i].Gain = WetGain[i];
     }
 
     {
         ALfloat gain = maxf(0.01f, DryGainHF);
         for(c = 0;c < num_channels;c++)
-            ALfilterState_setParams(&ALSource->Params.Direct.LpFilter[c],
+            ALfilterState_setParams(&src->Direct.LpFilter[c],
                                     ALfilterType_HighShelf, gain,
                                     (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
     }
@@ -502,15 +503,16 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     {
         ALfloat gain = maxf(0.01f, WetGainHF[i]);
         for(c = 0;c < num_channels;c++)
-            ALfilterState_setParams(&ALSource->Params.Send[i].LpFilter[c],
+            ALfilterState_setParams(&src->Send[i].LpFilter[c],
                                     ALfilterType_HighShelf, gain,
                                     (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
     }
 }
 
-ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
+ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 {
     ALCdevice *Device = ALContext->Device;
+    ALsource *ALSource = src->Source;
     ALfloat Velocity[3],Direction[3],Position[3],SourceToListener[3];
     ALfloat InnerAngle,OuterAngle,Angle,Distance,ClampedDist;
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
@@ -578,9 +580,9 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     WetGainHFAuto   = ALSource->WetGainHFAuto;
     RoomRolloffBase = ALSource->RoomRolloffFactor;
 
-    ALSource->Params.Direct.OutBuffer = Device->DryBuffer;
-    ALSource->Params.Direct.ClickRemoval = Device->ClickRemoval;
-    ALSource->Params.Direct.PendingClicks = Device->PendingClicks;
+    src->Direct.OutBuffer = Device->DryBuffer;
+    src->Direct.ClickRemoval = Device->ClickRemoval;
+    src->Direct.PendingClicks = Device->PendingClicks;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
@@ -621,15 +623,15 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
         if(!Slot || Slot->EffectType == AL_EFFECT_NULL)
         {
-            ALSource->Params.Send[i].OutBuffer = NULL;
-            ALSource->Params.Send[i].ClickRemoval = NULL;
-            ALSource->Params.Send[i].PendingClicks = NULL;
+            src->Send[i].OutBuffer = NULL;
+            src->Send[i].ClickRemoval = NULL;
+            src->Send[i].PendingClicks = NULL;
         }
         else
         {
-            ALSource->Params.Send[i].OutBuffer = Slot->WetBuffer;
-            ALSource->Params.Send[i].ClickRemoval = Slot->ClickRemoval;
-            ALSource->Params.Send[i].PendingClicks = Slot->PendingClicks;
+            src->Send[i].OutBuffer = Slot->WetBuffer;
+            src->Send[i].ClickRemoval = Slot->ClickRemoval;
+            src->Send[i].PendingClicks = Slot->PendingClicks;
         }
     }
 
@@ -830,24 +832,24 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
              * frequency, and output frequency. */
             Pitch = Pitch * ALBuffer->Frequency / Frequency;
             if(Pitch > 10.0f)
-                ALSource->Params.Step = 10<<FRACTIONBITS;
+                src->Step = 10<<FRACTIONBITS;
             else
             {
-                ALSource->Params.Step = fastf2i(Pitch*FRACTIONONE);
-                if(ALSource->Params.Step == 0)
-                    ALSource->Params.Step = 1;
+                src->Step = fastf2i(Pitch*FRACTIONONE);
+                if(src->Step == 0)
+                    src->Step = 1;
             }
-            ALSource->Params.Resample = SelectResampler(Resampler, ALSource->Params.Step);
+            src->Resample = SelectResampler(Resampler, src->Step);
 
             break;
         }
         BufferListItem = BufferListItem->next;
     }
     if(Device->Hrtf)
-        ALSource->Params.DryMix = SelectHrtfMixer();
+        src->DryMix = SelectHrtfMixer();
     else
-        ALSource->Params.DryMix = SelectDirectMixer();
-    ALSource->Params.WetMix = SelectSendMixer();
+        src->DryMix = SelectDirectMixer();
+    src->WetMix = SelectSendMixer();
 
     if(Device->Hrtf)
     {
@@ -873,8 +875,8 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         if(ALSource->Hrtf.Moving)
         {
             /* Calculate the normalized HRTF transition factor (delta). */
-            delta = CalcHrtfDelta(ALSource->Params.Direct.Hrtf.Params.Gain, DryGain,
-                                  ALSource->Params.Direct.Hrtf.Params.Dir, Position);
+            delta = CalcHrtfDelta(src->Direct.Hrtf.Params.Gain, DryGain,
+                                  src->Direct.Hrtf.Params.Dir, Position);
             /* If the delta is large enough, get the moving HRIR target
              * coefficients, target delays, steppping values, and counter. */
             if(delta > 0.001f)
@@ -882,36 +884,36 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
                 ALSource->Hrtf.Counter = GetMovingHrtfCoeffs(Device->Hrtf,
                                            ev, az, DryGain, delta,
                                            ALSource->Hrtf.Counter,
-                                           ALSource->Params.Direct.Hrtf.Params.Coeffs[0],
-                                           ALSource->Params.Direct.Hrtf.Params.Delay[0],
-                                           ALSource->Params.Direct.Hrtf.Params.CoeffStep,
-                                           ALSource->Params.Direct.Hrtf.Params.DelayStep);
-                ALSource->Params.Direct.Hrtf.Params.Gain = DryGain;
-                ALSource->Params.Direct.Hrtf.Params.Dir[0] = Position[0];
-                ALSource->Params.Direct.Hrtf.Params.Dir[1] = Position[1];
-                ALSource->Params.Direct.Hrtf.Params.Dir[2] = Position[2];
+                                           src->Direct.Hrtf.Params.Coeffs[0],
+                                           src->Direct.Hrtf.Params.Delay[0],
+                                           src->Direct.Hrtf.Params.CoeffStep,
+                                           src->Direct.Hrtf.Params.DelayStep);
+                src->Direct.Hrtf.Params.Gain = DryGain;
+                src->Direct.Hrtf.Params.Dir[0] = Position[0];
+                src->Direct.Hrtf.Params.Dir[1] = Position[1];
+                src->Direct.Hrtf.Params.Dir[2] = Position[2];
             }
         }
         else
         {
             /* Get the initial (static) HRIR coefficients and delays. */
             GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, DryGain,
-                                ALSource->Params.Direct.Hrtf.Params.Coeffs[0],
-                                ALSource->Params.Direct.Hrtf.Params.Delay[0]);
+                                src->Direct.Hrtf.Params.Coeffs[0],
+                                src->Direct.Hrtf.Params.Delay[0]);
             ALSource->Hrtf.Counter = 0;
             ALSource->Hrtf.Moving  = AL_TRUE;
-            ALSource->Params.Direct.Hrtf.Params.Gain = DryGain;
-            ALSource->Params.Direct.Hrtf.Params.Dir[0] = Position[0];
-            ALSource->Params.Direct.Hrtf.Params.Dir[1] = Position[1];
-            ALSource->Params.Direct.Hrtf.Params.Dir[2] = Position[2];
+            src->Direct.Hrtf.Params.Gain = DryGain;
+            src->Direct.Hrtf.Params.Dir[0] = Position[0];
+            src->Direct.Hrtf.Params.Dir[1] = Position[1];
+            src->Direct.Hrtf.Params.Dir[2] = Position[2];
         }
-        ALSource->Params.Direct.Hrtf.Params.IrSize = GetHrtfIrSize(Device->Hrtf);
+        src->Direct.Hrtf.Params.IrSize = GetHrtfIrSize(Device->Hrtf);
 
-        ALSource->Params.Direct.Hrtf.State = &ALSource->Hrtf;
+        src->Direct.Hrtf.State = &ALSource->Hrtf;
     }
     else
     {
-        ALfloat (*Matrix)[MaxChannels] = ALSource->Params.Direct.Gains;
+        ALfloat (*Matrix)[MaxChannels] = src->Direct.Gains;
         ALfloat DirGain = 0.0f;
         ALfloat AmbientGain;
 
@@ -944,19 +946,19 @@ ALvoid CalcSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
         }
     }
     for(i = 0;i < NumSends;i++)
-        ALSource->Params.Send[i].Gain = WetGain[i];
+        src->Send[i].Gain = WetGain[i];
 
 
     {
         ALfloat gain = maxf(0.01f, DryGainHF);
-        ALfilterState_setParams(&ALSource->Params.Direct.LpFilter[0],
+        ALfilterState_setParams(&src->Direct.LpFilter[0],
                                 ALfilterType_HighShelf, gain,
                                 (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
     }
     for(i = 0;i < NumSends;i++)
     {
         ALfloat gain = maxf(0.01f, WetGainHF[i]);
-        ALfilterState_setParams(&ALSource->Params.Send[i].LpFilter[0],
+        ALfilterState_setParams(&src->Send[i].LpFilter[0],
                                 ALfilterType_HighShelf, gain,
                                 (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
     }
@@ -1060,7 +1062,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             {
                 ALsource *source = (*src)->Source;
 
-                if(source->state != AL_PLAYING)
+                if(source->state != AL_PLAYING && source->state != AL_PAUSED)
                 {
                     ALactivesource *temp = *(--src_end);
                     *src_end = *src;
@@ -1071,9 +1073,10 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
                 if(!DeferUpdates && (ExchangeInt(&source->NeedsUpdate, AL_FALSE) ||
                                      UpdateSources))
-                    ALsource_Update(source, ctx);
+                    (*src)->Update(*src, ctx);
 
-                MixSource(source, device, SamplesToDo);
+                if(source->state != AL_PAUSED)
+                    MixSource(*src, device, SamplesToDo);
                 src++;
             }
 

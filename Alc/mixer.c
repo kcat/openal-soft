@@ -94,8 +94,9 @@ static void DoFilter(ALfilterState *filter, ALfloat *restrict dst, const ALfloat
 }
 
 
-ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
+ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 {
+    ALsource *Source = src->Source;
     ALbufferlistitem *BufferListItem;
     ALuint DataPosInt, DataPosFrac;
     ALuint BuffersPlayed;
@@ -115,7 +116,7 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     DataPosInt    = Source->position;
     DataPosFrac   = Source->position_fraction;
     Looping       = Source->Looping;
-    increment     = Source->Params.Step;
+    increment     = src->Step;
     Resampler     = (increment==FRACTIONONE) ? PointResampler : Source->Resampler;
     NumChannels   = Source->NumChannels;
     SampleSize    = Source->SampleSize;
@@ -322,28 +323,28 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
             }
 
             /* Now resample, then filter and mix to the appropriate outputs. */
-            Source->Params.Resample(&SrcData[BufferPrePadding], DataPosFrac,
-                                    increment, ResampledData, DstBufferSize);
+            src->Resample(&SrcData[BufferPrePadding], DataPosFrac,
+                          increment, ResampledData, DstBufferSize);
 
             {
-                DirectParams *directparms = &Source->Params.Direct;
+                DirectParams *directparms = &src->Direct;
 
                 DoFilter(&directparms->LpFilter[chan], SrcData, ResampledData,
                          DstBufferSize);
-                Source->Params.DryMix(directparms, SrcData, chan, OutPos,
-                                      SamplesToDo, DstBufferSize);
+                src->DryMix(directparms, SrcData, chan, OutPos,
+                            SamplesToDo, DstBufferSize);
             }
 
             for(j = 0;j < Device->NumAuxSends;j++)
             {
-                SendParams *sendparms = &Source->Params.Send[j];
+                SendParams *sendparms = &src->Send[j];
                 if(!sendparms->OutBuffer)
                     continue;
 
                 DoFilter(&sendparms->LpFilter[chan], SrcData, ResampledData,
                          DstBufferSize);
-                Source->Params.WetMix(sendparms, SrcData, OutPos,
-                                      SamplesToDo, DstBufferSize);
+                src->WetMix(sendparms, SrcData, OutPos,
+                            SamplesToDo, DstBufferSize);
             }
         }
         /* Update positions */

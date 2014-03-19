@@ -137,10 +137,10 @@ inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxC
 }
 
 
-ALvoid CalcSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
-ALvoid CalcNonAttnSourceParams(struct ALsource *ALSource, const ALCcontext *ALContext);
+ALvoid CalcSourceParams(struct ALactivesource *src, const ALCcontext *ALContext);
+ALvoid CalcNonAttnSourceParams(struct ALactivesource *src, const ALCcontext *ALContext);
 
-ALvoid MixSource(struct ALsource *Source, ALCdevice *Device, ALuint SamplesToDo);
+ALvoid MixSource(struct ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo);
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);
 /* Caller must lock the device. */

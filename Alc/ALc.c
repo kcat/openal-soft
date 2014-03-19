@@ -1930,10 +1930,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 source->Send[s].GainHF = 1.0f;
                 s++;
             }
-            source->NeedsUpdate = AL_FALSE;
-            ALsource_Update(source, context);
+            source->NeedsUpdate = AL_TRUE;
         }
         UnlockUIntMapRead(&context->SourceMap);
+
+        for(pos = 0;pos < context->ActiveSourceCount;pos++)
+        {
+            ALactivesource *src = context->ActiveSources[pos];
+            ALsource *source = src->Source;
+
+            src->Update(src, context);
+            source->NeedsUpdate = AL_FALSE;
+        }
 
         context = context->next;
     }

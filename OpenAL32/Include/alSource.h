@@ -30,11 +30,6 @@ typedef struct ALbufferlistitem {
 } ALbufferlistitem;
 
 
-typedef struct ALactivesource {
-    struct ALsource *Source;
-} ALactivesource;
-
-
 typedef struct HrtfState {
     ALboolean Moving;
     ALuint Counter;
@@ -82,6 +77,24 @@ typedef struct SendParams {
 
     ALfilterState LpFilter[MAX_INPUT_CHANNELS];
 } SendParams;
+
+
+typedef struct ALactivesource {
+    struct ALsource *Source;
+
+    /** Method to update mixing parameters. */
+    ALvoid (*Update)(struct ALactivesource *self, const ALCcontext *context);
+
+    /** Current target parameters used for mixing. */
+    ResamplerFunc Resample;
+    DryMixerFunc DryMix;
+    WetMixerFunc WetMix;
+
+    ALint Step;
+
+    DirectParams Direct;
+    SendParams Send[MAX_SENDS];
+} ALactivesource;
 
 
 typedef struct ALsource {
@@ -159,28 +172,12 @@ typedef struct ALsource {
     /** HRTF info. */
     HrtfState Hrtf;
 
-    /** Current target parameters used for mixing. */
-    struct {
-        ResamplerFunc Resample;
-        DryMixerFunc DryMix;
-        WetMixerFunc WetMix;
-
-        ALint Step;
-
-        DirectParams Direct;
-
-        SendParams Send[MAX_SENDS];
-    } Params;
     /** Source needs to update its mixing parameters. */
     volatile ALenum NeedsUpdate;
-
-    /** Method to update mixing parameters. */
-    ALvoid (*Update)(struct ALsource *self, const ALCcontext *context);
 
     /** Self ID */
     ALuint id;
 } ALsource;
-#define ALsource_Update(s,a)                 ((s)->Update(s,a))
 
 inline struct ALsource *LookupSource(ALCcontext *context, ALuint id)
 { return (struct ALsource*)LookupUIntMapKey(&context->SourceMap, id); }

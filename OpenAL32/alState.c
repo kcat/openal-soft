@@ -733,7 +733,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         {
             ALsource *source = (*src)->Source;
 
-            if(source->state != AL_PLAYING)
+            if(source->state != AL_PLAYING && source->state != AL_PAUSED)
             {
                 ALactivesource *temp = *(--src_end);
                 *src_end = *src;
@@ -743,7 +743,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
             }
 
             if(ExchangeInt(&source->NeedsUpdate, AL_FALSE) || UpdateSources)
-                ALsource_Update(source, context);
+                (*src)->Update(*src, context);
 
             src++;
         }

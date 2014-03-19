@@ -603,11 +603,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
                 Source->SampleSize  = BytesFromFmt(buffer->FmtType);
                 ReadUnlock(&buffer->lock);
-                if(buffer->FmtChannels == FmtMono)
-                    Source->Update = CalcSourceParams;
-                else
-                    Source->Update = CalcNonAttnSourceParams;
-                Source->NeedsUpdate = AL_TRUE;
             }
             else
             {
@@ -2117,12 +2112,6 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
 
             source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
             source->SampleSize  = BytesFromFmt(buffer->FmtType);
-            if(buffer->FmtChannels == FmtMono)
-                source->Update = CalcSourceParams;
-            else
-                source->Update = CalcNonAttnSourceParams;
-
-            source->NeedsUpdate = AL_TRUE;
         }
         else if(BufferFmt->Frequency != buffer->Frequency ||
                 BufferFmt->OriginalChannels != buffer->OriginalChannels ||
@@ -2291,6 +2280,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
     if(state == AL_PLAYING)
     {
         ALbufferlistitem *BufferList;
+        ALactivesource *src = NULL;
         ALsizei j, k;
 
         /* Check that there is a queue containing at least one valid, non zero
@@ -2342,16 +2332,29 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         for(j = 0;j < Context->ActiveSourceCount;j++)
         {
             if(Context->ActiveSources[j]->Source == Source)
+            {
+                src = Context->ActiveSources[j];
                 break;
+            }
         }
-        if(j == Context->ActiveSourceCount)
+        if(src == NULL)
         {
-            ALsizei idx = Context->ActiveSourceCount;
-            if(!Context->ActiveSources[idx])
-                Context->ActiveSources[idx] = al_malloc(16, sizeof(Context->ActiveSources[0]));
-            Context->ActiveSources[idx]->Source = Source;
+            src = Context->ActiveSources[Context->ActiveSourceCount];
+            if(src == NULL)
+            {
+                src = al_malloc(16, sizeof(src[0]));
+                Context->ActiveSources[Context->ActiveSourceCount] = src;
+            }
+            memset(src, 0, sizeof(*src));
+
+            src->Source = Source;
+            if(BufferList->buffer->FmtChannels == FmtMono)
+                src->Update = CalcSourceParams;
+            else
+                src->Update = CalcNonAttnSourceParams;
             Context->ActiveSourceCount++;
         }
+        Source->NeedsUpdate = AL_TRUE;
     }
     else if(state == AL_PAUSED)
     {

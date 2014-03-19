@@ -29,6 +29,12 @@ typedef struct ALbufferlistitem {
     struct ALbufferlistitem *prev;
 } ALbufferlistitem;
 
+
+typedef struct ALactivesource {
+    struct ALsource *Source;
+} ALactivesource;
+
+
 typedef struct HrtfState {
     ALboolean Moving;
     ALuint Counter;
@@ -78,8 +84,7 @@ typedef struct SendParams {
 } SendParams;
 
 
-typedef struct ALsource
-{
+typedef struct ALsource {
     /** Source properties. */
     volatile ALfloat   Pitch;
     volatile ALfloat   Gain;

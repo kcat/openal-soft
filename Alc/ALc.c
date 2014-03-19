@@ -2137,6 +2137,8 @@ static ALvoid InitContext(ALCcontext *Context)
  */
 static ALCvoid FreeContext(ALCcontext *context)
 {
+    ALsizei i;
+
     TRACE("%p\n", context);
 
     if(context->SourceMap.size > 0)
@@ -2153,9 +2155,14 @@ static ALCvoid FreeContext(ALCcontext *context)
     }
     ResetUIntMap(&context->EffectSlotMap);
 
-    context->ActiveSourceCount = 0;
+    for(i = 0;i < context->MaxActiveSources;i++)
+    {
+        al_free(context->ActiveSources[i]);
+        context->ActiveSources[i] = NULL;
+    }
     free(context->ActiveSources);
     context->ActiveSources = NULL;
+    context->ActiveSourceCount = 0;
     context->MaxActiveSources = 0;
 
     context->ActiveEffectSlotCount = 0;
@@ -2877,8 +2884,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         ALContext->Listener = (ALlistener*)(((ALintptrEXT)(ALContext+1)+15)&~15);
 
         ALContext->MaxActiveSources = 256;
-        ALContext->ActiveSources = malloc(sizeof(ALContext->ActiveSources[0]) *
-                                          ALContext->MaxActiveSources);
+        ALContext->ActiveSources = calloc(ALContext->MaxActiveSources,
+                                          sizeof(ALContext->ActiveSources[0]));
     }
     if(!ALContext || !ALContext->ActiveSources)
     {

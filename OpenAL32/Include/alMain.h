@@ -733,9 +733,9 @@ struct ALCcontext_struct
     volatile ALfloat SpeedOfSound;
     volatile ALenum  DeferUpdates;
 
-    struct ALsource **ActiveSources;
-    ALsizei           ActiveSourceCount;
-    ALsizei           MaxActiveSources;
+    struct ALactivesource **ActiveSources;
+    ALsizei ActiveSourceCount;
+    ALsizei MaxActiveSources;
 
     struct ALeffectslot **ActiveEffectSlots;
     ALsizei               ActiveEffectSlotCount;

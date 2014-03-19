@@ -1025,7 +1025,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALuint SamplesToDo;
     ALeffectslot **slot, **slot_end;
-    ALsource **src, **src_end;
+    ALactivesource **src, **src_end;
     ALCcontext *ctx;
     FPUCtl oldMode;
     ALuint i, c;
@@ -1058,18 +1058,22 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             src_end = src + ctx->ActiveSourceCount;
             while(src != src_end)
             {
-                if((*src)->state != AL_PLAYING)
+                ALsource *source = (*src)->Source;
+
+                if(source->state != AL_PLAYING)
                 {
+                    ALactivesource *temp = *(--src_end);
+                    *src_end = *src;
+                    *src = temp;
                     --(ctx->ActiveSourceCount);
-                    *src = *(--src_end);
                     continue;
                 }
 
-                if(!DeferUpdates && (ExchangeInt(&(*src)->NeedsUpdate, AL_FALSE) ||
+                if(!DeferUpdates && (ExchangeInt(&source->NeedsUpdate, AL_FALSE) ||
                                      UpdateSources))
-                    ALsource_Update(*src, ctx);
+                    ALsource_Update(source, ctx);
 
-                MixSource(*src, device, SamplesToDo);
+                MixSource(source, device, SamplesToDo);
                 src++;
             }
 
@@ -1233,18 +1237,19 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
     Context = device->ContextList;
     while(Context)
     {
-        ALsource **src, **src_end;
+        ALactivesource **src, **src_end;
 
         src = Context->ActiveSources;
         src_end = src + Context->ActiveSourceCount;
         while(src != src_end)
         {
-            if((*src)->state == AL_PLAYING)
+            ALsource *source = (*src)->Source;
+            if(source->state == AL_PLAYING)
             {
-                (*src)->state = AL_STOPPED;
-                (*src)->BuffersPlayed = (*src)->BuffersInQueue;
-                (*src)->position = 0;
-                (*src)->position_fraction = 0;
+                source->state = AL_STOPPED;
+                source->BuffersPlayed = source->BuffersInQueue;
+                source->position = 0;
+                source->position_fraction = 0;
             }
             src++;
         }

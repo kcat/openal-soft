@@ -1272,7 +1272,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     }
     for(i = 0;i < n;i++)
     {
-        ALsource **srclist, **srclistend;
+        ALactivesource **srclist, **srclistend;
 
         if((Source=RemoveSource(context, sources[i])) == NULL)
             continue;
@@ -1283,10 +1283,12 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         srclistend = srclist + context->ActiveSourceCount;
         while(srclist != srclistend)
         {
-            if(*srclist == Source)
+            if((*srclist)->Source == Source)
             {
-                context->ActiveSourceCount--;
-                *srclist = *(--srclistend);
+                ALactivesource *temp = *(--srclistend);
+                *srclistend = *srclist;
+                *srclist = temp;
+                --(context->ActiveSourceCount);
                 break;
             }
             srclist++;
@@ -1903,18 +1905,20 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     LockContext(context);
     while(n > context->MaxActiveSources-context->ActiveSourceCount)
     {
-        void *temp = NULL;
+        ALactivesource **temp = NULL;
         ALsizei newcount;
 
         newcount = context->MaxActiveSources << 1;
         if(newcount > 0)
             temp = realloc(context->ActiveSources,
-                           sizeof(*context->ActiveSources) * newcount);
+                           newcount * sizeof(context->ActiveSources[0]));
         if(!temp)
         {
             UnlockContext(context);
             SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
         }
+        for(i = context->MaxActiveSources;i < newcount;i++)
+            temp[i] = NULL;
 
         context->ActiveSources = temp;
         context->MaxActiveSources = newcount;
@@ -2337,11 +2341,17 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 
         for(j = 0;j < Context->ActiveSourceCount;j++)
         {
-            if(Context->ActiveSources[j] == Source)
+            if(Context->ActiveSources[j]->Source == Source)
                 break;
         }
         if(j == Context->ActiveSourceCount)
-            Context->ActiveSources[Context->ActiveSourceCount++] = Source;
+        {
+            ALsizei idx = Context->ActiveSourceCount;
+            if(!Context->ActiveSources[idx])
+                Context->ActiveSources[idx] = al_malloc(16, sizeof(Context->ActiveSources[0]));
+            Context->ActiveSources[idx]->Source = Source;
+            Context->ActiveSourceCount++;
+        }
     }
     else if(state == AL_PAUSED)
     {

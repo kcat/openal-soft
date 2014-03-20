@@ -90,7 +90,7 @@ void MixDirect_Neon(const DirectParams *params, const ALfloat *restrict data, AL
 
     for(c = 0;c < MaxChannels;c++)
     {
-        DrySend = params->Gains[srcchan][c];
+        DrySend = params->Mix.Gains[srcchan][c];
         if(!(DrySend > GAIN_SILENCE_THRESHOLD))
             continue;
 

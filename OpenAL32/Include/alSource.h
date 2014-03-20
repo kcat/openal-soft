@@ -53,15 +53,17 @@ typedef struct DirectParams {
     ALfloat *ClickRemoval;
     ALfloat *PendingClicks;
 
-    struct {
-        HrtfParams Params;
-        HrtfState *State;
-    } Hrtf;
+    union {
+        struct {
+            HrtfParams Params;
+            HrtfState *State;
+        } Hrtf;
 
-    /* A mixing matrix. First subscript is the channel number of the input data
-     * (regardless of channel configuration) and the second is the channel
-     * target (eg. FrontLeft). Not used with HRTF. */
-    ALfloat Gains[MAX_INPUT_CHANNELS][MaxChannels];
+        /* A mixing matrix. First subscript is the channel number of the input
+         * data (regardless of channel configuration) and the second is the
+         * channel target (eg. FrontLeft). Not used with HRTF. */
+        ALfloat Gains[MAX_INPUT_CHANNELS][MaxChannels];
+    } Mix;
 
     ALfilterState LpFilter[MAX_INPUT_CHANNELS];
 } DirectParams;

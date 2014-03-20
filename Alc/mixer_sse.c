@@ -153,7 +153,7 @@ void MixDirect_SSE(const DirectParams *params, const ALfloat *restrict data, ALu
 
     for(c = 0;c < MaxChannels;c++)
     {
-        DrySend = params->Gains[srcchan][c];
+        DrySend = params->Mix.Gains[srcchan][c];
         if(!(DrySend > GAIN_SILENCE_THRESHOLD))
             continue;
 

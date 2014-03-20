@@ -420,7 +420,7 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
     if(DirectChannels != AL_FALSE)
     {
-        ALfloat (*SrcMatrix)[MaxChannels] = src->Direct.Gains;
+        ALfloat (*SrcMatrix)[MaxChannels] = src->Direct.Mix.Gains;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
             for(c = 0;c < MaxChannels;c++)
@@ -447,12 +447,12 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             if(chans[c].channel == LFE)
             {
                 /* Skip LFE */
-                src->Direct.Hrtf.Params.Delay[c][0] = 0;
-                src->Direct.Hrtf.Params.Delay[c][1] = 0;
+                src->Direct.Mix.Hrtf.Params.Delay[c][0] = 0;
+                src->Direct.Mix.Hrtf.Params.Delay[c][1] = 0;
                 for(i = 0;i < HRIR_LENGTH;i++)
                 {
-                    src->Direct.Hrtf.Params.Coeffs[c][i][0] = 0.0f;
-                    src->Direct.Hrtf.Params.Coeffs[c][i][1] = 0.0f;
+                    src->Direct.Mix.Hrtf.Params.Coeffs[c][i][0] = 0.0f;
+                    src->Direct.Mix.Hrtf.Params.Coeffs[c][i][1] = 0.0f;
                 }
             }
             else
@@ -461,19 +461,19 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
                                     0.0f, chans[c].angle,  DryGain,
-                                    src->Direct.Hrtf.Params.Coeffs[c],
-                                    src->Direct.Hrtf.Params.Delay[c]);
+                                    src->Direct.Mix.Hrtf.Params.Coeffs[c],
+                                    src->Direct.Mix.Hrtf.Params.Delay[c]);
             }
         }
         ALSource->Hrtf.Counter = 0;
-        src->Direct.Hrtf.Params.IrSize = GetHrtfIrSize(Device->Hrtf);
+        src->Direct.Mix.Hrtf.Params.IrSize = GetHrtfIrSize(Device->Hrtf);
 
-        src->Direct.Hrtf.State = &ALSource->Hrtf;
+        src->Direct.Mix.Hrtf.State = &ALSource->Hrtf;
         src->DryMix = SelectHrtfMixer();
     }
     else
     {
-        ALfloat (*SrcMatrix)[MaxChannels] = src->Direct.Gains;
+        ALfloat (*SrcMatrix)[MaxChannels] = src->Direct.Mix.Gains;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
             for(c = 0;c < MaxChannels;c++)
@@ -876,8 +876,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         if(ALSource->Hrtf.Moving)
         {
             /* Calculate the normalized HRTF transition factor (delta). */
-            delta = CalcHrtfDelta(src->Direct.Hrtf.Params.Gain, DryGain,
-                                  src->Direct.Hrtf.Params.Dir, Position);
+            delta = CalcHrtfDelta(src->Direct.Mix.Hrtf.Params.Gain, DryGain,
+                                  src->Direct.Mix.Hrtf.Params.Dir, Position);
             /* If the delta is large enough, get the moving HRIR target
              * coefficients, target delays, steppping values, and counter. */
             if(delta > 0.001f)
@@ -885,37 +885,37 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                 ALSource->Hrtf.Counter = GetMovingHrtfCoeffs(Device->Hrtf,
                                            ev, az, DryGain, delta,
                                            ALSource->Hrtf.Counter,
-                                           src->Direct.Hrtf.Params.Coeffs[0],
-                                           src->Direct.Hrtf.Params.Delay[0],
-                                           src->Direct.Hrtf.Params.CoeffStep,
-                                           src->Direct.Hrtf.Params.DelayStep);
-                src->Direct.Hrtf.Params.Gain = DryGain;
-                src->Direct.Hrtf.Params.Dir[0] = Position[0];
-                src->Direct.Hrtf.Params.Dir[1] = Position[1];
-                src->Direct.Hrtf.Params.Dir[2] = Position[2];
+                                           src->Direct.Mix.Hrtf.Params.Coeffs[0],
+                                           src->Direct.Mix.Hrtf.Params.Delay[0],
+                                           src->Direct.Mix.Hrtf.Params.CoeffStep,
+                                           src->Direct.Mix.Hrtf.Params.DelayStep);
+                src->Direct.Mix.Hrtf.Params.Gain = DryGain;
+                src->Direct.Mix.Hrtf.Params.Dir[0] = Position[0];
+                src->Direct.Mix.Hrtf.Params.Dir[1] = Position[1];
+                src->Direct.Mix.Hrtf.Params.Dir[2] = Position[2];
             }
         }
         else
         {
             /* Get the initial (static) HRIR coefficients and delays. */
             GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, DryGain,
-                                src->Direct.Hrtf.Params.Coeffs[0],
-                                src->Direct.Hrtf.Params.Delay[0]);
+                                src->Direct.Mix.Hrtf.Params.Coeffs[0],
+                                src->Direct.Mix.Hrtf.Params.Delay[0]);
             ALSource->Hrtf.Counter = 0;
             ALSource->Hrtf.Moving  = AL_TRUE;
-            src->Direct.Hrtf.Params.Gain = DryGain;
-            src->Direct.Hrtf.Params.Dir[0] = Position[0];
-            src->Direct.Hrtf.Params.Dir[1] = Position[1];
-            src->Direct.Hrtf.Params.Dir[2] = Position[2];
+            src->Direct.Mix.Hrtf.Params.Gain = DryGain;
+            src->Direct.Mix.Hrtf.Params.Dir[0] = Position[0];
+            src->Direct.Mix.Hrtf.Params.Dir[1] = Position[1];
+            src->Direct.Mix.Hrtf.Params.Dir[2] = Position[2];
         }
-        src->Direct.Hrtf.Params.IrSize = GetHrtfIrSize(Device->Hrtf);
+        src->Direct.Mix.Hrtf.Params.IrSize = GetHrtfIrSize(Device->Hrtf);
 
-        src->Direct.Hrtf.State = &ALSource->Hrtf;
+        src->Direct.Mix.Hrtf.State = &ALSource->Hrtf;
         src->DryMix = SelectHrtfMixer();
     }
     else
     {
-        ALfloat (*Matrix)[MaxChannels] = src->Direct.Gains;
+        ALfloat (*Matrix)[MaxChannels] = src->Direct.Mix.Gains;
         ALfloat DirGain = 0.0f;
         ALfloat AmbientGain;
 

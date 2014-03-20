@@ -686,6 +686,9 @@ struct ALCdevice_struct
     void         *ExtraData; // For the backend's use
 
     ALCdevice *volatile next;
+
+    /* Memory space used by the default slot (Playback devices only) */
+    ALIGN(16) ALCbyte _slot_mem[];
 };
 
 // Frequency was requested by the app or config file
@@ -752,6 +755,9 @@ struct ALCcontext_struct
     const ALCchar *ExtensionList;
 
     ALCcontext *volatile next;
+
+    /* Memory space used by the listener */
+    ALIGN(16) ALCbyte _listener_mem[];
 };
 
 ALCcontext *GetContextRef(void);

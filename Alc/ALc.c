@@ -2885,11 +2885,11 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
-    ALContext = calloc(1, sizeof(ALCcontext)+15+sizeof(ALlistener));
+    ALContext = calloc(1, sizeof(ALCcontext)+sizeof(ALlistener));
     if(ALContext)
     {
         ALContext->ref = 1;
-        ALContext->Listener = (ALlistener*)(((ALintptrEXT)(ALContext+1)+15)&~15);
+        ALContext->Listener = (ALlistener*)ALContext->_listener_mem;
 
         ALContext->MaxActiveSources = 256;
         ALContext->ActiveSources = calloc(ALContext->MaxActiveSources,
@@ -3067,7 +3067,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = NULL;
 
-    device = al_calloc(16, sizeof(ALCdevice)+15+sizeof(ALeffectslot));
+    device = al_calloc(16, sizeof(ALCdevice)+sizeof(ALeffectslot));
     if(!device)
     {
         alcSetError(NULL, ALC_OUT_OF_MEMORY);
@@ -3280,7 +3280,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     if(DefaultEffect.type != AL_EFFECT_NULL)
     {
-        device->DefaultSlot = (ALeffectslot*)(((ALintptrEXT)(device+1)+15)&~15);
+        device->DefaultSlot = (ALeffectslot*)device->_slot_mem;
         if(InitEffectSlot(device->DefaultSlot) != AL_NO_ERROR)
         {
             device->DefaultSlot = NULL;

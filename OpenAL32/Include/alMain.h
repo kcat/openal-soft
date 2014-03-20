@@ -668,6 +668,13 @@ struct ALCdevice_struct
     ALIGN(16) ALfloat ClickRemoval[MaxChannels];
     ALIGN(16) ALfloat PendingClicks[MaxChannels];
 
+    /* Running count of the mixer invocations, in 31.1 fixed point. This
+     * actually increments *twice* when mixing, first at the start and then at
+     * the end, so the bottom bit indicates if the device is currently mixing
+     * and the upper bits indicates how many mixes have been done.
+     */
+    volatile RefCount MixCount;
+
     /* Default effect slot */
     struct ALeffectslot *DefaultSlot;
 

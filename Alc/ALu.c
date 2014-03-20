@@ -1039,6 +1039,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
     while(size > 0)
     {
+        IncrementRef(&device->MixCount);
+
         SamplesToDo = minu(size, BUFFERSIZE);
         for(c = 0;c < MaxChannels;c++)
             memset(device->DryBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
@@ -1228,6 +1230,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         }
 
         size -= SamplesToDo;
+        IncrementRef(&device->MixCount);
     }
 
     RestoreFPUMode(&oldMode);

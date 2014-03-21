@@ -748,8 +748,8 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
             src++;
         }
 
-        slot = context->ActiveEffectSlots;
-        slot_end = slot + context->ActiveEffectSlotCount;
+        slot = VECTOR_ITER_BEGIN(context->ActiveAuxSlots);
+        slot_end = VECTOR_ITER_END(context->ActiveAuxSlots);
         while(slot != slot_end)
         {
             if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))

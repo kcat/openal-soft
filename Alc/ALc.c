@@ -2173,10 +2173,7 @@ static ALCvoid FreeContext(ALCcontext *context)
     context->ActiveSourceCount = 0;
     context->MaxActiveSources = 0;
 
-    context->ActiveEffectSlotCount = 0;
-    free(context->ActiveEffectSlots);
-    context->ActiveEffectSlots = NULL;
-    context->MaxActiveEffectSlots = 0;
+    VECTOR_DEINIT(context->ActiveAuxSlots);
 
     ALCdevice_DecRef(context->Device);
     context->Device = NULL;
@@ -2891,11 +2888,13 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         ALContext->ref = 1;
         ALContext->Listener = (ALlistener*)ALContext->_listener_mem;
 
+        VECTOR_INIT(ALContext->ActiveAuxSlots);
+
         ALContext->MaxActiveSources = 256;
         ALContext->ActiveSources = calloc(ALContext->MaxActiveSources,
                                           sizeof(ALContext->ActiveSources[0]));
     }
-    if(!ALContext || !ALContext->ActiveSources)
+    if(!ALContext || !ALContext->ActiveAuxSlots || !ALContext->ActiveSources)
     {
         if(!device->ContextList)
         {
@@ -2904,8 +2903,16 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         }
         UnlockLists();
 
-        free(ALContext);
-        ALContext = NULL;
+        if(ALContext)
+        {
+            free(ALContext->ActiveSources);
+            ALContext->ActiveSources = NULL;
+
+            VECTOR_DEINIT(ALContext->ActiveAuxSlots);
+
+            free(ALContext);
+            ALContext = NULL;
+        }
 
         alcSetError(device, ALC_OUT_OF_MEMORY);
         ALCdevice_DecRef(device);

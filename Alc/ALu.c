@@ -1086,8 +1086,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
 
             /* effect slot processing */
-            slot = ctx->ActiveEffectSlots;
-            slot_end = slot + ctx->ActiveEffectSlotCount;
+            slot = VECTOR_ITER_BEGIN(ctx->ActiveAuxSlots);
+            slot_end = VECTOR_ITER_END(ctx->ActiveAuxSlots);
             while(slot != slot_end)
             {
                 ALfloat offset = (*slot)->ClickRemoval[0];

@@ -380,14 +380,14 @@ static ALvoid RemoveEffectSlotArray(ALCcontext *context, ALeffectslot *slot)
     ALeffectslot **slotlist, **slotlistend;
 
     LockContext(context);
-    slotlist = context->ActiveEffectSlots;
-    slotlistend = slotlist + context->ActiveEffectSlotCount;
+    slotlist = VECTOR_ITER_BEGIN(context->ActiveAuxSlots);
+    slotlistend = VECTOR_ITER_END(context->ActiveAuxSlots);
     while(slotlist != slotlistend)
     {
         if(*slotlist == slot)
         {
             *slotlist = *(--slotlistend);
-            context->ActiveEffectSlotCount--;
+            VECTOR_POP_BACK(context->ActiveAuxSlots);
             break;
         }
         slotlist++;
@@ -397,33 +397,23 @@ static ALvoid RemoveEffectSlotArray(ALCcontext *context, ALeffectslot *slot)
 
 static ALenum AddEffectSlotArray(ALCcontext *context, ALsizei count, const ALuint *slots)
 {
-    ALsizei i;
+    ALsizei total = count + VECTOR_SIZE(context->ActiveAuxSlots);
 
     LockContext(context);
-    if(count > context->MaxActiveEffectSlots-context->ActiveEffectSlotCount)
+    if(total < VECTOR_SIZE(context->ActiveAuxSlots) || VECTOR_RESERVE(context->ActiveAuxSlots, total) == AL_FALSE)
     {
-        ALsizei newcount;
-        void *temp = NULL;
-
-        newcount = context->MaxActiveEffectSlots ? (context->MaxActiveEffectSlots<<1) : 1;
-        if(newcount > context->MaxActiveEffectSlots)
-            temp = realloc(context->ActiveEffectSlots,
-                           newcount * sizeof(*context->ActiveEffectSlots));
-        if(!temp)
-        {
-            UnlockContext(context);
-            return AL_OUT_OF_MEMORY;
-        }
-        context->ActiveEffectSlots = temp;
-        context->MaxActiveEffectSlots = newcount;
+        UnlockContext(context);
+        return AL_OUT_OF_MEMORY;
     }
-    for(i = 0;i < count;i++)
+
+    while(VECTOR_SIZE(context->ActiveAuxSlots) < total)
     {
-        ALeffectslot *slot = LookupEffectSlot(context, slots[i]);
+        ALeffectslot *slot = LookupEffectSlot(context, *(slots++));
         assert(slot != NULL);
-        context->ActiveEffectSlots[context->ActiveEffectSlotCount++] = slot;
+        VECTOR_PUSH_BACK(context->ActiveAuxSlots, slot);
     }
     UnlockContext(context);
+
     return AL_NO_ERROR;
 }
 

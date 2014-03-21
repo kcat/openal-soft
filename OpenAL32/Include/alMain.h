@@ -22,6 +22,7 @@
 
 #include "atomic.h"
 #include "uintmap.h"
+#include "vector.h"
 
 #ifndef ALC_SOFT_HRTF
 #define ALC_SOFT_HRTF 1
@@ -722,6 +723,10 @@ struct ALCdevice_struct
 #define MIXER_THREAD_NAME "alsoft-mixer"
 
 
+typedef struct ALeffectslot *ALeffectslotPtr;
+DECL_VECTOR(ALeffectslotPtr)
+
+
 struct ALCcontext_struct
 {
     volatile RefCount ref;
@@ -747,9 +752,7 @@ struct ALCcontext_struct
     ALsizei ActiveSourceCount;
     ALsizei MaxActiveSources;
 
-    struct ALeffectslot **ActiveEffectSlots;
-    ALsizei               ActiveEffectSlotCount;
-    ALsizei               MaxActiveEffectSlots;
+    vector_ALeffectslotPtr ActiveAuxSlots;
 
     ALCdevice  *Device;
     const ALCchar *ExtensionList;

@@ -86,6 +86,7 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 #include "alMain.h"
 #include "atomic.h"
 #include "uintmap.h"
+#include "vector.h"
 #include "compat.h"
 
 
@@ -697,6 +698,26 @@ void WriteUnlock(RWLock *lock)
     Unlock(&lock->write_lock);
     if(DecrementRef(&lock->write_count) == 0)
         Unlock(&lock->read_lock);
+}
+
+
+ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t obj_count, size_t obj_size)
+{
+    if(orig_count < obj_count)
+    {
+        vector_ *vecptr = ptr;
+        void *temp;
+
+        /* Need to be explicit with the caller type's base size, because it
+         * could have extra padding between the count and array start (that is,
+         * sizeof(*vector_) may not equal base_size). */
+        temp = realloc(*vecptr, base_size + obj_size*obj_count);
+        if(temp == NULL) return AL_FALSE;
+
+        *vecptr = temp;
+        (*vecptr)->Max = obj_count;
+    }
+    return AL_TRUE;
 }
 
 

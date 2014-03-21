@@ -386,7 +386,7 @@ static ALvoid RemoveEffectSlotArray(ALCcontext *context, ALeffectslot *slot)
     {
         if(*slotlist == slot)
         {
-            *slotlist = *(--slotlistend);
+            *slotlist = VECTOR_BACK(context->ActiveAuxSlots);
             VECTOR_POP_BACK(context->ActiveAuxSlots);
             break;
         }

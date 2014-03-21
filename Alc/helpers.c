@@ -701,12 +701,19 @@ void WriteUnlock(RWLock *lock)
 }
 
 
-ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t obj_count, size_t obj_size)
+ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t obj_count, size_t obj_size, ALboolean exact)
 {
     if(orig_count < obj_count)
     {
         vector_ *vecptr = ptr;
         void *temp;
+
+        /* Use the next power-of-2 size if we don't need to allocate the exact
+         * amount. This is preferred when regularly increasing the vector since
+         * it means fewer reallocations. Though it means it also wastes some
+         * memory. */
+        if(exact == AL_FALSE)
+            obj_count = NextPowerOf2(obj_count);
 
         /* Need to be explicit with the caller type's base size, because it
          * could have extra padding before the start of the array (that is,

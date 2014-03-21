@@ -380,14 +380,11 @@ static void GenModList_insertGen(GenModList *self, const Generator *gen, ALboole
         gen->mGenerator == 58))
         return;
 
-    if(VECTOR_RESERVE(self->gens, NextPowerOf2(VECTOR_SIZE(self->gens)+1)) == AL_FALSE)
+    if(VECTOR_PUSH_BACK(self->gens, *gen) == AL_FALSE)
     {
-        ERR("Failed to increase generator storage to %d elements (from %d)\n",
-            NextPowerOf2(VECTOR_SIZE(self->gens)+1), VECTOR_CAPACITY(self->gens));
+        ERR("Failed to insert generator (from %d elements)\n", VECTOR_SIZE(self->gens));
         return;
     }
-
-    VECTOR_PUSH_BACK(self->gens, *gen);
 }
 static void GenModList_accumGen(GenModList *self, const Generator *gen)
 {
@@ -412,14 +409,11 @@ static void GenModList_accumGen(GenModList *self, const Generator *gen)
         }
     }
 
-    if(VECTOR_RESERVE(self->gens, NextPowerOf2(VECTOR_SIZE(self->gens)+1)) == AL_FALSE)
+    if(VECTOR_PUSH_BACK(self->gens, *gen) == AL_FALSE)
     {
-        ERR("Failed to increase generator storage to %d elements (from %d)\n",
-            NextPowerOf2(VECTOR_SIZE(self->gens)+1), VECTOR_CAPACITY(self->gens));
+        ERR("Failed to insert generator (from %d elements)\n", VECTOR_SIZE(self->gens));
         return;
     }
-
-    VECTOR_PUSH_BACK(self->gens, *gen);
     if(gen->mGenerator < 60)
         VECTOR_BACK(self->gens).mAmount += DefaultGenValue[gen->mGenerator];
 }
@@ -438,14 +432,11 @@ static void GenModList_insertMod(GenModList *self, const Modulator *mod)
         }
     }
 
-    if(VECTOR_RESERVE(self->mods, NextPowerOf2(VECTOR_SIZE(self->mods)+1)) == AL_FALSE)
+    if(VECTOR_PUSH_BACK(self->mods, *mod) == AL_FALSE)
     {
-        ERR("Failed to increase modulator storage to %d elements (from %d)\n",
-            NextPowerOf2(VECTOR_SIZE(self->mods)+1), VECTOR_CAPACITY(self->mods));
+        ERR("Failed to insert modulator (from %d elements)\n", VECTOR_SIZE(self->mods));
         return;
     }
-
-    VECTOR_PUSH_BACK(self->mods, *mod);
 }
 static void GenModList_accumMod(GenModList *self, const Modulator *mod)
 {
@@ -461,14 +452,12 @@ static void GenModList_accumMod(GenModList *self, const Modulator *mod)
         }
     }
 
-    if(VECTOR_RESERVE(self->mods, NextPowerOf2(VECTOR_SIZE(self->mods)+1)) == AL_FALSE)
+    if(VECTOR_PUSH_BACK(self->mods, *mod) == AL_FALSE)
     {
-        ERR("Failed to increase modulator storage to %d elements (from %d)\n",
-            NextPowerOf2(VECTOR_SIZE(self->mods)+1), VECTOR_CAPACITY(self->mods));
+        ERR("Failed to insert modulator (from %d elements)\n", VECTOR_SIZE(self->mods));
         return;
     }
 
-    VECTOR_PUSH_BACK(self->mods, *mod);
     if(mod->mSrcOp == 0x0502 && mod->mDstOp == 48 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)
         VECTOR_BACK(self->mods).mAmount += 960;
     else if(mod->mSrcOp == 0x0102 && mod->mDstOp == 8 && mod->mAmtSrcOp == 0 && mod->mTransOp == 0)

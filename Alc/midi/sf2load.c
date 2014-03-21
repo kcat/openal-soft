@@ -349,12 +349,12 @@ static GenModList GenModList_clone(const GenModList *self)
     GenModList ret;
 
     GenModList_Construct(&ret);
-    VECTOR_RESERVE(ret.gens, VECTOR_MAX(self->gens));
+    VECTOR_RESERVE(ret.gens, VECTOR_CAPACITY(self->gens));
     memcpy(ret.gens, self->gens, sizeof(ret.gens) +
-                                 VECTOR_MAX(ret.gens) * sizeof(ret.gens->Data[0]));
-    VECTOR_RESERVE(ret.mods, VECTOR_MAX(self->mods));
+                                 VECTOR_CAPACITY(ret.gens) * sizeof(ret.gens->Data[0]));
+    VECTOR_RESERVE(ret.mods, VECTOR_CAPACITY(self->mods));
     memcpy(ret.mods, self->mods, sizeof(ret.mods) +
-                                 VECTOR_MAX(ret.mods) * sizeof(ret.mods->Data[0]));
+                                 VECTOR_CAPACITY(ret.mods) * sizeof(ret.mods->Data[0]));
 
     return ret;
 }
@@ -383,7 +383,7 @@ static void GenModList_insertGen(GenModList *self, const Generator *gen, ALboole
     if(VECTOR_RESERVE(self->gens, NextPowerOf2(VECTOR_SIZE(self->gens)+1)) == AL_FALSE)
     {
         ERR("Failed to increase generator storage to %d elements (from %d)\n",
-            NextPowerOf2(VECTOR_SIZE(self->gens)+1), VECTOR_MAX(self->gens));
+            NextPowerOf2(VECTOR_SIZE(self->gens)+1), VECTOR_CAPACITY(self->gens));
         return;
     }
 
@@ -415,7 +415,7 @@ static void GenModList_accumGen(GenModList *self, const Generator *gen)
     if(VECTOR_RESERVE(self->gens, NextPowerOf2(VECTOR_SIZE(self->gens)+1)) == AL_FALSE)
     {
         ERR("Failed to increase generator storage to %d elements (from %d)\n",
-            NextPowerOf2(VECTOR_SIZE(self->gens)+1), VECTOR_MAX(self->gens));
+            NextPowerOf2(VECTOR_SIZE(self->gens)+1), VECTOR_CAPACITY(self->gens));
         return;
     }
 
@@ -441,7 +441,7 @@ static void GenModList_insertMod(GenModList *self, const Modulator *mod)
     if(VECTOR_RESERVE(self->mods, NextPowerOf2(VECTOR_SIZE(self->mods)+1)) == AL_FALSE)
     {
         ERR("Failed to increase modulator storage to %d elements (from %d)\n",
-            NextPowerOf2(VECTOR_SIZE(self->mods)+1), VECTOR_MAX(self->mods));
+            NextPowerOf2(VECTOR_SIZE(self->mods)+1), VECTOR_CAPACITY(self->mods));
         return;
     }
 
@@ -464,7 +464,7 @@ static void GenModList_accumMod(GenModList *self, const Modulator *mod)
     if(VECTOR_RESERVE(self->mods, NextPowerOf2(VECTOR_SIZE(self->mods)+1)) == AL_FALSE)
     {
         ERR("Failed to increase modulator storage to %d elements (from %d)\n",
-            NextPowerOf2(VECTOR_SIZE(self->mods)+1), VECTOR_MAX(self->mods));
+            NextPowerOf2(VECTOR_SIZE(self->mods)+1), VECTOR_CAPACITY(self->mods));
         return;
     }
 

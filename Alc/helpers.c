@@ -709,13 +709,13 @@ ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t 
         void *temp;
 
         /* Need to be explicit with the caller type's base size, because it
-         * could have extra padding between the count and array start (that is,
+         * could have extra padding before the start of the array (that is,
          * sizeof(*vector_) may not equal base_size). */
         temp = realloc(*vecptr, base_size + obj_size*obj_count);
         if(temp == NULL) return AL_FALSE;
 
         *vecptr = temp;
-        (*vecptr)->Max = obj_count;
+        (*vecptr)->Capacity = obj_count;
     }
     return AL_TRUE;
 }

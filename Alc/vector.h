@@ -7,12 +7,12 @@
 
 /* "Base" vector type, designed to alias with the actual vector types. */
 typedef struct vector__s {
-    ALsizei Max;
+    ALsizei Capacity;
     ALsizei Size;
 } *vector_;
 
 #define DECL_VECTOR(T) typedef struct vector_##T##_s {                        \
-    ALsizei Max;                                                              \
+    ALsizei Capacity;                                                         \
     ALsizei Size;                                                             \
     T Data[];                                                                 \
 } *vector_##T;
@@ -22,10 +22,10 @@ typedef struct vector__s {
 
 /* Helper to increase a vector's reserve. Do not call directly. */
 ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t obj_count, size_t obj_size);
-#define VECTOR_RESERVE(_x, _c) (vector_reserve(&(_x), (_x)->Max, sizeof(*(_x)), (_c), sizeof((_x)->Data[0])))
+#define VECTOR_RESERVE(_x, _c) (vector_reserve(&(_x), (_x)->Capacity, sizeof(*(_x)), (_c), sizeof((_x)->Data[0])))
 
-#define VECTOR_SIZE(_x) ((const ALsizei)(_x)->Size)
-#define VECTOR_MAX(_x) ((const ALsizei)(_x)->Max)
+#define VECTOR_CAPACITY(_x) ((const ALsizei)(_x)->Capacity)
+#define VECTOR_SIZE(_x)     ((const ALsizei)(_x)->Size)
 
 #define VECTOR_ITER_BEGIN(_x) ((_x)->Data)
 #define VECTOR_ITER_END(_x)   ((_x)->Data + (_x)->Size)

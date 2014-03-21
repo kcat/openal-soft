@@ -25,6 +25,7 @@ ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t 
 #define VECTOR_RESERVE(_x, _c) (vector_reserve(&(_x), (_x)->Max, sizeof(*(_x)), (_c), sizeof((_x)->Data[0])))
 
 #define VECTOR_SIZE(_x) ((const ALsizei)(_x)->Size)
+#define VECTOR_MAX(_x) ((const ALsizei)(_x)->Max)
 
 #define VECTOR_ITER_BEGIN(_x) ((_x)->Data)
 #define VECTOR_ITER_END(_x)   ((_x)->Data + (_x)->Size)
@@ -33,6 +34,9 @@ ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t 
 #define VECTOR_PUSH_BACK(_x, _obj) ((void)((_x)->Data[(_x)->Size++] = (_obj)))
 #define VECTOR_POP_BACK(_x) ((void)((_x)->Size--))
 
-#define VECTOR_ELEM(_x, _o) ((_x)->Data[_o])
+#define VECTOR_BACK(_x)  ((_x)->Data[(_x)->Size-1])
+#define VECTOR_FRONT(_x) ((_x)->Data[0])
+
+#define VECTOR_ELEM(_x, _o) ((_x)->Data[(_o)])
 
 #endif /* AL_VECTOR_H */

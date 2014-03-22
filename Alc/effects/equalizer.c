@@ -155,10 +155,7 @@ static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesTo
     }
 }
 
-static void ALequalizerState_Delete(ALequalizerState *state)
-{
-    free(state);
-}
+DECLARE_DEFAULT_ALLOCATORS(ALequalizerState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
 
@@ -172,7 +169,7 @@ ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *UNUSED(fa
     ALequalizerState *state;
     int it;
 
-    state = malloc(sizeof(*state));
+    state = ALequalizerState_New(sizeof(*state));
     if(!state) return NULL;
     SET_VTABLE2(ALequalizerState, ALeffectState, state);
 

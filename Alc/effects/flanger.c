@@ -224,10 +224,7 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALuint SamplesToDo, 
     }
 }
 
-static void ALflangerState_Delete(ALflangerState *state)
-{
-    free(state);
-}
+DECLARE_DEFAULT_ALLOCATORS(ALflangerState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALflangerState);
 
@@ -240,7 +237,7 @@ ALeffectState *ALflangerStateFactory_create(ALflangerStateFactory *UNUSED(factor
 {
     ALflangerState *state;
 
-    state = malloc(sizeof(*state));
+    state = ALflangerState_New(sizeof(*state));
     if(!state) return NULL;
     SET_VTABLE2(ALflangerState, ALeffectState, state);
 

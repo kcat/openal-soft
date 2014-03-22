@@ -76,10 +76,7 @@ static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesTo
     }
 }
 
-static void ALdedicatedState_Delete(ALdedicatedState *state)
-{
-    free(state);
-}
+DECLARE_DEFAULT_ALLOCATORS(ALdedicatedState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
 
@@ -93,7 +90,7 @@ ALeffectState *ALdedicatedStateFactory_create(ALdedicatedStateFactory *UNUSED(fa
     ALdedicatedState *state;
     ALsizei s;
 
-    state = malloc(sizeof(*state));
+    state = ALdedicatedState_New(sizeof(*state));
     if(!state) return NULL;
     SET_VTABLE2(ALdedicatedState, ALeffectState, state);
 

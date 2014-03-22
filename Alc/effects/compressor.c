@@ -133,10 +133,7 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint Samples
     }
 }
 
-static void ALcompressorState_Delete(ALcompressorState *state)
-{
-    free(state);
-}
+DECLARE_DEFAULT_ALLOCATORS(ALcompressorState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALcompressorState);
 
@@ -149,7 +146,7 @@ static ALeffectState *ALcompressorStateFactory_create(ALcompressorStateFactory *
 {
     ALcompressorState *state;
 
-    state = malloc(sizeof(*state));
+    state = ALcompressorState_New(sizeof(*state));
     if(!state) return NULL;
     SET_VTABLE2(ALcompressorState, ALeffectState, state);
 

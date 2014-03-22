@@ -171,10 +171,7 @@ static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesTo
     }
 }
 
-static void ALmodulatorState_Delete(ALmodulatorState *state)
-{
-    free(state);
-}
+DECLARE_DEFAULT_ALLOCATORS(ALmodulatorState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
 
@@ -187,7 +184,7 @@ static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *UN
 {
     ALmodulatorState *state;
 
-    state = malloc(sizeof(*state));
+    state = ALmodulatorState_New(sizeof(*state));
     if(!state) return NULL;
     SET_VTABLE2(ALmodulatorState, ALeffectState, state);
 

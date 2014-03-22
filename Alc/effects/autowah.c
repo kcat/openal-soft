@@ -151,10 +151,7 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
     }
 }
 
-static void ALautowahState_Delete(ALautowahState *state)
-{
-    free(state);
-}
+DECLARE_DEFAULT_ALLOCATORS(ALautowahState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALautowahState);
 
@@ -167,7 +164,7 @@ static ALeffectState *ALautowahStateFactory_create(ALautowahStateFactory *UNUSED
 {
     ALautowahState *state;
 
-    state = malloc(sizeof(*state));
+    state = ALautowahState_New(sizeof(*state));
     if(!state) return NULL;
     SET_VTABLE2(ALautowahState, ALeffectState, state);
 

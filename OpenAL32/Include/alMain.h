@@ -376,6 +376,9 @@ static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b)            \
 static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b, argtype3 c) \
 { return T1##_##func(STATIC_UPCAST(T1, T2, obj), a, b, c); }
 
+#define DECLARE_DEFAULT_ALLOCATORS(T)                                         \
+static void* T##_New(size_t size) { return malloc(size); }                    \
+static void T##_Delete(void *ptr) { free(ptr); }
 
 /* Helper to extract an argument list for VCALL. Not used directly. */
 #define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__))

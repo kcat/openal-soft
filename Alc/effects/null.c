@@ -48,10 +48,20 @@ static ALvoid ALnullState_process(ALnullState* UNUSED(state), ALuint UNUSED(samp
     (void)samplesOut;
 }
 
-/* This frees the memory used by the object, after it has been destructed. */
-static void ALnullState_Delete(ALnullState *state)
+/* This allocates memory to store the object, before it gets constructed.
+ * DECLARE_DEFAULT_ALLOCATORS can be used to declate a default method.
+ */
+static void *ALnullState_New(size_t size)
 {
-    free(state);
+    return malloc(size);
+}
+
+/* This frees the memory used by the object, after it has been destructed.
+ * DECLARE_DEFAULT_ALLOCATORS can be used to declate a default method.
+ */
+static void ALnullState_Delete(void *ptr)
+{
+    free(ptr);
 }
 
 /* Define the forwards and the ALeffectState vtable for this type. */
@@ -67,7 +77,7 @@ ALeffectState *ALnullStateFactory_create(ALnullStateFactory *UNUSED(factory))
 {
     ALnullState *state;
 
-    state = calloc(1, sizeof(*state));
+    state = ALnullState_New(sizeof(*state));
     if(!state) return NULL;
     /* Set vtables for inherited types. */
     SET_VTABLE2(ALnullState, ALeffectState, state);

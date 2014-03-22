@@ -224,10 +224,7 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALuint SamplesToDo, co
     }
 }
 
-static void ALchorusState_Delete(ALchorusState *state)
-{
-    free(state);
-}
+DECLARE_DEFAULT_ALLOCATORS(ALchorusState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALchorusState);
 
@@ -240,7 +237,7 @@ static ALeffectState *ALchorusStateFactory_create(ALchorusStateFactory *UNUSED(f
 {
     ALchorusState *state;
 
-    state = malloc(sizeof(*state));
+    state = ALchorusState_New(sizeof(*state));
     if(!state) return NULL;
     SET_VTABLE2(ALchorusState, ALeffectState, state);
 

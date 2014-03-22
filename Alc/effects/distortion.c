@@ -170,10 +170,7 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
     }
 }
 
-static void ALdistortionState_Delete(ALdistortionState *state)
-{
-    free(state);
-}
+DECLARE_DEFAULT_ALLOCATORS(ALdistortionState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
 
@@ -186,7 +183,7 @@ static ALeffectState *ALdistortionStateFactory_create(ALdistortionStateFactory *
 {
     ALdistortionState *state;
 
-    state = malloc(sizeof(*state));
+    state = ALdistortionState_New(sizeof(*state));
     if(!state) return NULL;
     SET_VTABLE2(ALdistortionState, ALeffectState, state);
 

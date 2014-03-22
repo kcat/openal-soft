@@ -22,7 +22,7 @@ struct ALeffectStateVtable {
     void (*const update)(ALeffectState *state, ALCdevice *device, const struct ALeffectslot *slot);
     void (*const process)(ALeffectState *state, ALuint samplesToDo, const ALfloat *restrict samplesIn, ALfloat (*restrict samplesOut)[BUFFERSIZE]);
 
-    void (*const Delete)(struct ALeffectState *state);
+    void (*const Delete)(void *ptr);
 };
 
 #define DEFINE_ALEFFECTSTATE_VTABLE(T)                                        \
@@ -30,7 +30,8 @@ DECLARE_THUNK(T, ALeffectState, void, Destruct)                               \
 DECLARE_THUNK1(T, ALeffectState, ALboolean, deviceUpdate, ALCdevice*)         \
 DECLARE_THUNK2(T, ALeffectState, void, update, ALCdevice*, const ALeffectslot*) \
 DECLARE_THUNK3(T, ALeffectState, void, process, ALuint, const ALfloat*restrict, ALfloatBUFFERSIZE*restrict) \
-DECLARE_THUNK(T, ALeffectState, void, Delete)                                 \
+static void T##_ALeffectState_Delete(void *ptr)                               \
+{ return T##_Delete(STATIC_UPCAST(T, ALeffectState, ptr)); }                  \
                                                                               \
 static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
     T##_ALeffectState_Destruct,                                               \

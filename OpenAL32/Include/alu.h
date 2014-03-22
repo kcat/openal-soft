@@ -1,8 +1,6 @@
 #ifndef _ALU_H_
 #define _ALU_H_
 
-#include "alMain.h"
-
 #include <limits.h>
 #include <math.h>
 #ifdef HAVE_FLOAT_H
@@ -11,6 +9,11 @@
 #ifdef HAVE_IEEEFP_H
 #include <ieeefp.h>
 #endif
+
+#include "alMain.h"
+#include "alBuffer.h"
+#include "alFilter.h"
+#include "hrtf.h"
 
 
 #define F_PI    (3.14159265358979323846f)
@@ -25,14 +28,65 @@
 #define RAD2DEG(x)  ((ALfloat)(x) * (180.0f/F_PI))
 
 
+#define SRC_HISTORY_BITS   (6)
+#define SRC_HISTORY_LENGTH (1<<SRC_HISTORY_BITS)
+#define SRC_HISTORY_MASK   (SRC_HISTORY_LENGTH-1)
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct ALsource;
-struct ALbuffer;
-struct DirectParams;
-struct SendParams;
+typedef struct HrtfState {
+    ALboolean Moving;
+    ALuint Counter;
+    ALIGN(16) ALfloat History[MAX_INPUT_CHANNELS][SRC_HISTORY_LENGTH];
+    ALIGN(16) ALfloat Values[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
+    ALuint Offset;
+} HrtfState;
+
+typedef struct HrtfParams {
+    ALfloat Gain;
+    ALfloat Dir[3];
+    ALIGN(16) ALfloat Coeffs[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
+    ALIGN(16) ALfloat CoeffStep[HRIR_LENGTH][2];
+    ALuint Delay[MAX_INPUT_CHANNELS][2];
+    ALint DelayStep[2];
+    ALuint IrSize;
+} HrtfParams;
+
+typedef struct DirectParams {
+    ALfloat (*OutBuffer)[BUFFERSIZE];
+    ALfloat *ClickRemoval;
+    ALfloat *PendingClicks;
+
+    union {
+        struct {
+            HrtfParams Params;
+            HrtfState *State;
+        } Hrtf;
+
+        /* A mixing matrix. First subscript is the channel number of the input
+         * data (regardless of channel configuration) and the second is the
+         * channel target (eg. FrontLeft). Not used with HRTF. */
+        ALfloat Gains[MAX_INPUT_CHANNELS][MaxChannels];
+    } Mix;
+
+    ALfilterState LpFilter[MAX_INPUT_CHANNELS];
+} DirectParams;
+
+typedef struct SendParams {
+    ALfloat (*OutBuffer)[BUFFERSIZE];
+    ALfloat *ClickRemoval;
+    ALfloat *PendingClicks;
+
+    /* Gain control, which applies to all input channels to a single (mono)
+     * output buffer. */
+    ALfloat Gain;
+
+    ALfilterState LpFilter[MAX_INPUT_CHANNELS];
+} SendParams;
+
 
 typedef void (*ResamplerFunc)(const ALfloat *src, ALuint frac, ALuint increment,
                               ALfloat *restrict dst, ALuint dstlen);

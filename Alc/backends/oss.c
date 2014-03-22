@@ -95,7 +95,7 @@ static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, ALCuint, availableSamples)
 static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, ALint64, getLatency)
 static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, void, unlock)
-static void ALCplaybackOSS_Delete(ALCplaybackOSS *self);
+DECLARE_DEFAULT_ALLOCATORS(ALCplaybackOSS)
 DEFINE_ALCBACKEND_VTABLE(ALCplaybackOSS);
 
 
@@ -302,11 +302,6 @@ static void ALCplaybackOSS_stop(ALCplaybackOSS *self)
     self->mix_data = NULL;
 }
 
-static void ALCplaybackOSS_Delete(ALCplaybackOSS *self)
-{
-    free(self);
-}
-
 
 typedef struct ALCcaptureOSS {
     DERIVE_FROM_TYPE(ALCbackend);
@@ -337,7 +332,7 @@ static ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self);
 static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, ALint64, getLatency)
 static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, void, unlock)
-static void ALCcaptureOSS_Delete(ALCcaptureOSS *self);
+DECLARE_DEFAULT_ALLOCATORS(ALCcaptureOSS)
 DEFINE_ALCBACKEND_VTABLE(ALCcaptureOSS);
 
 
@@ -539,12 +534,6 @@ static ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self)
     return RingBufferSize(self->ring);
 }
 
-void ALCcaptureOSS_Delete(ALCcaptureOSS *self)
-{
-    free(self);
-}
-
-
 
 typedef struct ALCossBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);
@@ -615,8 +604,9 @@ ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory* UNUSED(self
     {
         ALCplaybackOSS *backend;
 
-        backend = calloc(1, sizeof(*backend));
+        backend = ALCplaybackOSS_New(sizeof(*backend));
         if(!backend) return NULL;
+        memset(backend, 0, sizeof(*backend));
 
         ALCplaybackOSS_Construct(backend, device);
 
@@ -626,8 +616,9 @@ ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory* UNUSED(self
     {
         ALCcaptureOSS *backend;
 
-        backend = calloc(1, sizeof(*backend));
+        backend = ALCcaptureOSS_New(sizeof(*backend));
         if(!backend) return NULL;
+        memset(backend, 0, sizeof(*backend));
 
         ALCcaptureOSS_Construct(backend, device);
 

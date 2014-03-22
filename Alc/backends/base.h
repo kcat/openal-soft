@@ -42,7 +42,7 @@ struct ALCbackendVtable {
     void (*const lock)(ALCbackend*);
     void (*const unlock)(ALCbackend*);
 
-    void (*const Delete)(ALCbackend*);
+    void (*const Delete)(void*);
 };
 
 #define DECLARE_ALCBACKEND_VTABLE(T)                                          \
@@ -60,7 +60,8 @@ DECLARE_THUNK(T, ALCbackend, ALCuint, availableSamples)                       \
 DECLARE_THUNK(T, ALCbackend, ALint64, getLatency)                             \
 DECLARE_THUNK(T, ALCbackend, void, lock)                                      \
 DECLARE_THUNK(T, ALCbackend, void, unlock)                                    \
-DECLARE_THUNK(T, ALCbackend, void, Delete)                                    \
+static void T##_ALCbackend_Delete(void *ptr)                                  \
+{ T##_Delete(STATIC_UPCAST(T, ALCbackend, ptr)); }                            \
                                                                               \
 DECLARE_ALCBACKEND_VTABLE(T) = {                                              \
     T##_ALCbackend_Destruct,                                                  \

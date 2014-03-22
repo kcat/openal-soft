@@ -55,6 +55,8 @@ static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALCuint, availableSamples)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALint64, getLatency)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(ALCnullBackend)
+
 
 static const ALCchar nullDevice[] = "No Output";
 
@@ -152,12 +154,6 @@ static void ALCnullBackend_stop(ALCnullBackend *self)
     self->killNow = 0;
 }
 
-
-static void ALCnullBackend_Delete(ALCnullBackend *self)
-{
-    free(self);
-}
-
 DEFINE_ALCBACKEND_VTABLE(ALCnullBackend);
 
 
@@ -213,8 +209,9 @@ static ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UN
 
     assert(type == ALCbackend_Playback);
 
-    backend = calloc(1, sizeof(*backend));
+    backend = ALCnullBackend_New(sizeof(*backend));
     if(!backend) return NULL;
+    memset(backend, 0, sizeof(*backend));
 
     ALCnullBackend_Construct(backend, device);
 

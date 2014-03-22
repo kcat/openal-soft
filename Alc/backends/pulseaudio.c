@@ -509,6 +509,7 @@ static DECLARE_FORWARD2(ALCpulsePlayback, ALCbackend, ALCenum, captureSamples, A
 static DECLARE_FORWARD(ALCpulsePlayback, ALCbackend, ALCuint, availableSamples)
 static void ALCpulsePlayback_lock(ALCpulsePlayback *self);
 static void ALCpulsePlayback_unlock(ALCpulsePlayback *self);
+DECLARE_DEFAULT_ALLOCATORS(ALCpulsePlayback)
 
 
 static void ALCpulsePlayback_Construct(ALCpulsePlayback *self, ALCdevice *device)
@@ -1106,12 +1107,6 @@ static ALint64 ALCpulsePlayback_getLatency(ALCpulsePlayback *self)
     return (ALint64)minu64(latency, U64(0x7fffffffffffffff)/1000) * 1000;
 }
 
-
-static void ALCpulsePlayback_Delete(ALCpulsePlayback *self)
-{
-    free(self);
-}
-
 DEFINE_ALCBACKEND_VTABLE(ALCpulsePlayback);
 
 
@@ -1159,6 +1154,7 @@ static ALCenum ALCpulseCapture_captureSamples(ALCpulseCapture *self, ALCvoid *bu
 static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self);
 static void ALCpulseCapture_lock(ALCpulseCapture *self);
 static void ALCpulseCapture_unlock(ALCpulseCapture *self);
+DECLARE_DEFAULT_ALLOCATORS(ALCpulseCapture)
 
 
 static void ALCpulseCapture_Construct(ALCpulseCapture *self, ALCdevice *device)
@@ -1585,12 +1581,6 @@ static ALint64 ALCpulseCapture_getLatency(ALCpulseCapture *self)
     return (ALint64)minu64(latency, U64(0x7fffffffffffffff)/1000) * 1000;
 }
 
-
-static void ALCpulseCapture_Delete(ALCpulseCapture *self)
-{
-    free(self);
-}
-
 DEFINE_ALCBACKEND_VTABLE(ALCpulseCapture);
 
 
@@ -1725,8 +1715,9 @@ static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* 
     {
         ALCpulsePlayback *backend;
 
-        backend = calloc(1, sizeof(*backend));
+        backend = ALCpulsePlayback_New(sizeof(*backend));
         if(!backend) return NULL;
+        memset(backend, 0, sizeof(*backend));
 
         ALCpulsePlayback_Construct(backend, device);
 
@@ -1736,8 +1727,9 @@ static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* 
     {
         ALCpulseCapture *backend;
 
-        backend = calloc(1, sizeof(*backend));
+        backend = ALCpulseCapture_New(sizeof(*backend));
         if(!backend) return NULL;
+        memset(backend, 0, sizeof(*backend));
 
         ALCpulseCapture_Construct(backend, device);
 

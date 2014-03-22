@@ -76,7 +76,7 @@ static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, ALCuint, availableSamples)
 static ALint64 PlaybackWrapper_getLatency(PlaybackWrapper *self);
 static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, void, lock)
 static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, void, unlock)
-static void PlaybackWrapper_Delete(PlaybackWrapper *self);
+DECLARE_DEFAULT_ALLOCATORS(PlaybackWrapper)
 DEFINE_ALCBACKEND_VTABLE(PlaybackWrapper);
 
 static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device, const BackendFuncs *funcs)
@@ -123,11 +123,6 @@ static ALint64 PlaybackWrapper_getLatency(PlaybackWrapper *self)
     return self->Funcs->GetLatency(device);
 }
 
-static void PlaybackWrapper_Delete(PlaybackWrapper *self)
-{
-    free(self);
-}
-
 
 typedef struct CaptureWrapper {
     DERIVE_FROM_TYPE(ALCbackend);
@@ -147,7 +142,7 @@ static ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self);
 static ALint64 CaptureWrapper_getLatency(CaptureWrapper *self);
 static DECLARE_FORWARD(CaptureWrapper, ALCbackend, void, lock)
 static DECLARE_FORWARD(CaptureWrapper, ALCbackend, void, unlock)
-static void CaptureWrapper_Delete(CaptureWrapper *self);
+DECLARE_DEFAULT_ALLOCATORS(CaptureWrapper)
 DEFINE_ALCBACKEND_VTABLE(CaptureWrapper);
 
 
@@ -202,11 +197,6 @@ static ALint64 CaptureWrapper_getLatency(CaptureWrapper *self)
     return self->Funcs->GetLatency(device);
 }
 
-static void CaptureWrapper_Delete(CaptureWrapper *self)
-{
-    free(self);
-}
-
 
 ALCbackend *create_backend_wrapper(ALCdevice *device, const BackendFuncs *funcs, ALCbackend_Type type)
 {
@@ -214,7 +204,7 @@ ALCbackend *create_backend_wrapper(ALCdevice *device, const BackendFuncs *funcs,
     {
         PlaybackWrapper *backend;
 
-        backend = malloc(sizeof(*backend));
+        backend = PlaybackWrapper_New(sizeof(*backend));
         if(!backend) return NULL;
 
         PlaybackWrapper_Construct(backend, device, funcs);
@@ -226,7 +216,7 @@ ALCbackend *create_backend_wrapper(ALCdevice *device, const BackendFuncs *funcs,
     {
         CaptureWrapper *backend;
 
-        backend = malloc(sizeof(*backend));
+        backend = CaptureWrapper_New(sizeof(*backend));
         if(!backend) return NULL;
 
         CaptureWrapper_Construct(backend, device, funcs);

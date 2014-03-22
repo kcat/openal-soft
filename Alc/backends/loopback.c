@@ -44,7 +44,7 @@ static DECLARE_FORWARD(ALCloopback, ALCbackend, ALCuint, availableSamples)
 static DECLARE_FORWARD(ALCloopback, ALCbackend, ALint64, getLatency)
 static DECLARE_FORWARD(ALCloopback, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCloopback, ALCbackend, void, unlock)
-static void ALCloopback_Delete(ALCloopback *self);
+DECLARE_DEFAULT_ALLOCATORS(ALCloopback)
 DEFINE_ALCBACKEND_VTABLE(ALCloopback);
 
 
@@ -80,12 +80,6 @@ static ALCboolean ALCloopback_start(ALCloopback* UNUSED(self))
 
 static void ALCloopback_stop(ALCloopback* UNUSED(self))
 {
-}
-
-
-static void ALCloopback_Delete(ALCloopback *self)
-{
-    free(self);
 }
 
 
@@ -131,8 +125,9 @@ static ALCbackend* ALCloopbackFactory_createBackend(ALCloopbackFactory* UNUSED(s
 
     assert(type == ALCbackend_Loopback);
 
-    backend = calloc(1, sizeof(*backend));
+    backend = ALCloopback_New(sizeof(*backend));
     if(!backend) return NULL;
+    memset(backend, 0, sizeof(*backend));
 
     ALCloopback_Construct(backend, device);
 

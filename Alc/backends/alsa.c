@@ -408,6 +408,7 @@ static DECLARE_FORWARD2(ALCplaybackAlsa, ALCbackend, ALCenum, captureSamples, vo
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, ALCuint, availableSamples)
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(ALCplaybackAlsa)
 
 
 static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
@@ -888,12 +889,6 @@ static ALint64 ALCplaybackAlsa_getLatency(ALCplaybackAlsa *self)
     return maxi64((ALint64)delay*1000000000/device->Frequency, 0);
 }
 
-
-static void ALCplaybackAlsa_Delete(ALCplaybackAlsa *self)
-{
-    free(self);
-}
-
 DEFINE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
 
 
@@ -923,6 +918,7 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
 static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self);
 static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(ALCcaptureAlsa)
 
 
 static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
@@ -1287,11 +1283,6 @@ static ALint64 ALCcaptureAlsa_getLatency(ALCcaptureAlsa *self)
     return maxi64((ALint64)delay*1000000000/device->Frequency, 0);
 }
 
-static void ALCcaptureAlsa_Delete(ALCcaptureAlsa *self)
-{
-    free(self);
-}
-
 DEFINE_ALCBACKEND_VTABLE(ALCcaptureAlsa);
 
 
@@ -1386,8 +1377,9 @@ static ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UN
     {
         ALCplaybackAlsa *backend;
 
-        backend = calloc(1, sizeof(*backend));
+        backend = ALCplaybackAlsa_New(sizeof(*backend));
         if(!backend) return NULL;
+        memset(backend, 0, sizeof(*backend));
 
         ALCplaybackAlsa_Construct(backend, device);
 
@@ -1397,8 +1389,9 @@ static ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UN
     {
         ALCcaptureAlsa *backend;
 
-        backend = calloc(1, sizeof(*backend));
+        backend = ALCcaptureAlsa_New(sizeof(*backend));
         if(!backend) return NULL;
+        memset(backend, 0, sizeof(*backend));
 
         ALCcaptureAlsa_Construct(backend, device);
 

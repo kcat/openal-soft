@@ -476,7 +476,7 @@ static void FSynth_reset(FSynth *self);
 static void FSynth_update(FSynth *self, ALCdevice *device);
 static void FSynth_processQueue(FSynth *self, ALuint64 time);
 static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
-static void FSynth_Delete(FSynth *self);
+DECLARE_DEFAULT_ALLOCATORS(FSynth)
 DEFINE_MIDISYNTH_VTABLE(FSynth);
 
 static fluid_sfont_t *FSynth_loadSfont(fluid_sfloader_t *loader, const char *filename);
@@ -798,20 +798,15 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
 }
 
 
-static void FSynth_Delete(FSynth *self)
-{
-    free(self);
-}
-
-
 MidiSynth *FSynth_create(ALCdevice *device)
 {
-    FSynth *synth = calloc(1, sizeof(*synth));
+    FSynth *synth = FSynth_New(sizeof(*synth));
     if(!synth)
     {
         ERR("Failed to allocate FSynth\n");
         return NULL;
     }
+    memset(synth, 0, sizeof(*synth));
     FSynth_Construct(synth, device);
 
     if(FSynth_init(synth, device) == AL_FALSE)

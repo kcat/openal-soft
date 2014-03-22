@@ -88,7 +88,7 @@ struct MidiSynthVtable {
     void (*const update)(MidiSynth *self, ALCdevice *device);
     void (*const process)(MidiSynth *self, ALuint samples, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
 
-    void (*const Delete)(MidiSynth *self);
+    void (*const Delete)(void *ptr);
 };
 
 #define DEFINE_MIDISYNTH_VTABLE(T)                                            \
@@ -100,7 +100,8 @@ DECLARE_THUNK(T, MidiSynth, void, stop)                                       \
 DECLARE_THUNK(T, MidiSynth, void, reset)                                      \
 DECLARE_THUNK1(T, MidiSynth, void, update, ALCdevice*)                        \
 DECLARE_THUNK2(T, MidiSynth, void, process, ALuint, ALfloatBUFFERSIZE*restrict) \
-DECLARE_THUNK(T, MidiSynth, void, Delete)                                     \
+static void T##_MidiSynth_Delete(void *ptr)                                   \
+{ T##_Delete(STATIC_UPCAST(T, MidiSynth, ptr)); }                             \
                                                                               \
 static const struct MidiSynthVtable T##_MidiSynth_vtable = {                  \
     T##_MidiSynth_Destruct,                                                   \

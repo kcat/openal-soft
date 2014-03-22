@@ -27,7 +27,7 @@ static DECLARE_FORWARD(DSynth, MidiSynth, void, stop)
 static DECLARE_FORWARD(DSynth, MidiSynth, void, reset)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, update, ALCdevice*)
 static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
-static void DSynth_Delete(DSynth *self);
+DECLARE_DEFAULT_ALLOCATORS(DSynth)
 DEFINE_MIDISYNTH_VTABLE(DSynth);
 
 
@@ -63,20 +63,15 @@ static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloatBUFFERSIZE*r
 }
 
 
-static void DSynth_Delete(DSynth *self)
-{
-    free(self);
-}
-
-
 MidiSynth *DSynth_create(ALCdevice *device)
 {
-    DSynth *synth = calloc(1, sizeof(*synth));
+    DSynth *synth = DSynth_New(sizeof(*synth));
     if(!synth)
     {
         ERR("Failed to allocate DSynth\n");
         return NULL;
     }
+    memset(synth, 0, sizeof(*synth));
     DSynth_Construct(synth, device);
     return STATIC_CAST(MidiSynth, synth);
 }

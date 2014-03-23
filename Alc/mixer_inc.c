@@ -5,13 +5,6 @@
 #include "hrtf.h"
 #include "mixer_defs.h"
 
-#ifdef __GNUC__
-#define LIKELY(x) __builtin_expect(!!(x), 1)
-#define UNLIKELY(x) __builtin_expect(!!(x), 0)
-#else
-#define LIKELY(x) (x)
-#define UNLIKELY(x) (x)
-#endif
 
 #define REAL_MERGE2(a,b) a##b
 #define MERGE2(a,b) REAL_MERGE2(a,b)
@@ -31,11 +24,9 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 
 
 void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+  ALuint OutPos, ALuint UNUSED(SamplesToDo), ALuint BufferSize)
 {
     ALfloat (*restrict DryBuffer)[BUFFERSIZE] = params->OutBuffer;
-    ALfloat *restrict ClickRemoval = params->ClickRemoval;
-    ALfloat *restrict PendingClicks = params->PendingClicks;
     const ALuint IrSize = params->Mix.Hrtf.Params.IrSize;
     const ALint *restrict DelayStep = params->Mix.Hrtf.Params.DelayStep;
     const ALfloat (*restrict CoeffStep)[2] = params->Mix.Hrtf.Params.CoeffStep;
@@ -43,7 +34,7 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
     const ALuint *restrict TargetDelay = params->Mix.Hrtf.Params.Delay[srcchan];
     ALfloat *restrict History = params->Mix.Hrtf.State.History[srcchan];
     ALfloat (*restrict Values)[2] = params->Mix.Hrtf.State.Values[srcchan];
-    ALint Counter = maxu(params->Counter, OutPos) - OutPos;
+    ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
     ALuint Offset = params->Offset + OutPos;
     ALIGN(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALuint Delay[2];
@@ -61,22 +52,7 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
     Delay[0] = TargetDelay[0] - (DelayStep[0]*Counter);
     Delay[1] = TargetDelay[1] - (DelayStep[1]*Counter);
 
-    if(LIKELY(OutPos == 0))
-    {
-        History[Offset&SRC_HISTORY_MASK] = data[pos];
-        left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
-                     History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
-                     (Delay[0]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
-        right = lerp(History[(Offset-(Delay[1]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
-                     History[(Offset-(Delay[1]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
-                     (Delay[1]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
-
-        ClickRemoval[FrontLeft]  -= Values[(Offset+1)&HRIR_MASK][0] +
-                                    Coeffs[0][0] * left;
-        ClickRemoval[FrontRight] -= Values[(Offset+1)&HRIR_MASK][1] +
-                                    Coeffs[0][1] * right;
-    }
-    for(pos = 0;pos < BufferSize && Counter > 0;pos++)
+    for(pos = 0;pos < BufferSize && pos < Counter;pos++)
     {
         History[Offset&SRC_HISTORY_MASK] = data[pos];
         left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
@@ -96,9 +72,7 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
         ApplyCoeffsStep(Offset, Values, IrSize, Coeffs, CoeffStep, left, right);
         DryBuffer[FrontLeft][OutPos]  += Values[Offset&HRIR_MASK][0];
         DryBuffer[FrontRight][OutPos] += Values[Offset&HRIR_MASK][1];
-
         OutPos++;
-        Counter--;
     }
 
     Delay[0] >>= HRTFDELAY_BITS;
@@ -118,17 +92,6 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
         DryBuffer[FrontRight][OutPos] += Values[Offset&HRIR_MASK][1];
 
         OutPos++;
-    }
-    if(LIKELY(OutPos == SamplesToDo))
-    {
-        History[Offset&SRC_HISTORY_MASK] = data[pos];
-        left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];
-        right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];
-
-        PendingClicks[FrontLeft]  += Values[(Offset+1)&HRIR_MASK][0] +
-                                     Coeffs[0][0] * left;
-        PendingClicks[FrontRight] += Values[(Offset+1)&HRIR_MASK][1] +
-                                     Coeffs[0][1] * right;
     }
 }
 

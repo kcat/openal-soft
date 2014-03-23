@@ -38,8 +38,6 @@ extern "C" {
 #endif
 
 typedef struct HrtfState {
-    ALboolean Moving;
-    ALuint Counter;
     ALIGN(16) ALfloat History[MAX_INPUT_CHANNELS][SRC_HISTORY_LENGTH];
     ALIGN(16) ALfloat Values[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
     ALuint Offset;
@@ -71,6 +69,10 @@ typedef struct DirectParams {
          * channel target (eg. FrontLeft). Not used with HRTF. */
         ALfloat Gains[MAX_INPUT_CHANNELS][MaxChannels];
     } Mix;
+    /* If not 'moving', gain/coefficients are set directly without fading. */
+    ALboolean Moving;
+    /* Stepping counter for gain/coefficient fading. */
+    ALuint Counter;
 
     ALfilterState LpFilter[MAX_INPUT_CHANNELS];
 } DirectParams;

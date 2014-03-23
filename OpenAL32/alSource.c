@@ -2339,8 +2339,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         }
         else
         {
-            src->Direct.Mix.Hrtf.State.Moving = AL_FALSE;
-            src->Direct.Mix.Hrtf.State.Counter = 0;
+            src->Direct.Moving = AL_FALSE;
+            src->Direct.Counter = 0;
             for(j = 0;j < MAX_INPUT_CHANNELS;j++)
             {
                 for(k = 0;k < SRC_HISTORY_LENGTH;k++)

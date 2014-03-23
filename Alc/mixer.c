@@ -413,10 +413,10 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
     Source->position_fraction = DataPosFrac;
     src->Direct.Mix.Hrtf.State.Offset += OutPos;
     if(State == AL_PLAYING)
-        src->Direct.Mix.Hrtf.State.Counter = maxu(src->Direct.Mix.Hrtf.State.Counter, OutPos) - OutPos;
+        src->Direct.Counter = maxu(src->Direct.Counter, OutPos) - OutPos;
     else
     {
-        src->Direct.Mix.Hrtf.State.Counter = 0;
-        src->Direct.Mix.Hrtf.State.Moving  = AL_FALSE;
+        src->Direct.Counter = 0;
+        src->Direct.Moving  = AL_FALSE;
     }
 }

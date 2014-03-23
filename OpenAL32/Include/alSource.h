@@ -114,9 +114,6 @@ typedef struct ALsource {
         ALfloat GainHF;
     } Send[MAX_SENDS];
 
-    /** HRTF info. */
-    HrtfState Hrtf;
-
     /** Source needs to update its mixing parameters. */
     volatile ALenum NeedsUpdate;
 

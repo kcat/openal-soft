@@ -30,7 +30,7 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
                                ALfloat left, ALfloat right);
 
 
-void MixDirect_Hrtf(const DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
+void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALfloat (*restrict DryBuffer)[BUFFERSIZE] = params->OutBuffer;
@@ -41,10 +41,10 @@ void MixDirect_Hrtf(const DirectParams *params, const ALfloat *restrict data, AL
     const ALfloat (*restrict CoeffStep)[2] = params->Mix.Hrtf.Params.CoeffStep;
     const ALfloat (*restrict TargetCoeffs)[2] = params->Mix.Hrtf.Params.Coeffs[srcchan];
     const ALuint *restrict TargetDelay = params->Mix.Hrtf.Params.Delay[srcchan];
-    ALfloat *restrict History = params->Mix.Hrtf.State->History[srcchan];
-    ALfloat (*restrict Values)[2] = params->Mix.Hrtf.State->Values[srcchan];
-    ALint Counter = maxu(params->Mix.Hrtf.State->Counter, OutPos) - OutPos;
-    ALuint Offset = params->Mix.Hrtf.State->Offset + OutPos;
+    ALfloat *restrict History = params->Mix.Hrtf.State.History[srcchan];
+    ALfloat (*restrict Values)[2] = params->Mix.Hrtf.State.Values[srcchan];
+    ALint Counter = maxu(params->Mix.Hrtf.State.Counter, OutPos) - OutPos;
+    ALuint Offset = params->Mix.Hrtf.State.Offset + OutPos;
     ALIGN(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALuint Delay[2];
     ALfloat left, right;

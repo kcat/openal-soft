@@ -77,7 +77,7 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_Neon(const DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
+void MixDirect_Neon(DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
@@ -114,7 +114,7 @@ void MixDirect_Neon(const DirectParams *params, const ALfloat *restrict data, AL
 }
 
 
-void MixSend_Neon(const SendParams *params, const ALfloat *restrict data,
+void MixSend_Neon(SendParams *params, const ALfloat *restrict data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;

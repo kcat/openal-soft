@@ -63,7 +63,7 @@ typedef struct DirectParams {
     union {
         struct {
             HrtfParams Params;
-            HrtfState *State;
+            HrtfState State;
         } Hrtf;
 
         /* A mixing matrix. First subscript is the channel number of the input
@@ -91,11 +91,11 @@ typedef struct SendParams {
 typedef void (*ResamplerFunc)(const ALfloat *src, ALuint frac, ALuint increment,
                               ALfloat *restrict dst, ALuint dstlen);
 
-typedef ALvoid (*DryMixerFunc)(const struct DirectParams *params,
+typedef ALvoid (*DryMixerFunc)(struct DirectParams *params,
                                const ALfloat *restrict data, ALuint srcchan,
                                ALuint OutPos, ALuint SamplesToDo,
                                ALuint BufferSize);
-typedef ALvoid (*WetMixerFunc)(const struct SendParams *params,
+typedef ALvoid (*WetMixerFunc)(struct SendParams *params,
                                const ALfloat *restrict data,
                                ALuint OutPos, ALuint SamplesToDo,
                                ALuint BufferSize);

@@ -2265,9 +2265,6 @@ static ALvoid InitSourceParams(ALsource *Source)
     }
 
     Source->NeedsUpdate = AL_TRUE;
-
-    Source->Hrtf.Moving = AL_FALSE;
-    Source->Hrtf.Counter = 0;
 }
 
 
@@ -2291,20 +2288,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             if(BufferList->buffer != NULL && BufferList->buffer->SampleLen)
                 break;
             BufferList = BufferList->next;
-        }
-
-        if(Source->state != AL_PLAYING)
-        {
-            for(j = 0;j < MAX_INPUT_CHANNELS;j++)
-            {
-                for(k = 0;k < SRC_HISTORY_LENGTH;k++)
-                    Source->Hrtf.History[j][k] = 0.0f;
-                for(k = 0;k < HRIR_LENGTH;k++)
-                {
-                    Source->Hrtf.Values[j][k][0] = 0.0f;
-                    Source->Hrtf.Values[j][k][1] = 0.0f;
-                }
-            }
         }
 
         if(Source->state != AL_PAUSED)
@@ -2354,16 +2337,27 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
                 src->Update = CalcNonAttnSourceParams;
             Context->ActiveSourceCount++;
         }
+        else
+        {
+            src->Direct.Mix.Hrtf.State.Moving = AL_FALSE;
+            src->Direct.Mix.Hrtf.State.Counter = 0;
+            for(j = 0;j < MAX_INPUT_CHANNELS;j++)
+            {
+                for(k = 0;k < SRC_HISTORY_LENGTH;k++)
+                    src->Direct.Mix.Hrtf.State.History[j][k] = 0.0f;
+                for(k = 0;k < HRIR_LENGTH;k++)
+                {
+                    src->Direct.Mix.Hrtf.State.Values[j][k][0] = 0.0f;
+                    src->Direct.Mix.Hrtf.State.Values[j][k][1] = 0.0f;
+                }
+            }
+        }
         Source->NeedsUpdate = AL_TRUE;
     }
     else if(state == AL_PAUSED)
     {
         if(Source->state == AL_PLAYING)
-        {
             Source->state = AL_PAUSED;
-            Source->Hrtf.Moving = AL_FALSE;
-            Source->Hrtf.Counter = 0;
-        }
     }
     else if(state == AL_STOPPED)
     {
@@ -2371,8 +2365,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         {
             Source->state = AL_STOPPED;
             Source->BuffersPlayed = Source->BuffersInQueue;
-            Source->Hrtf.Moving = AL_FALSE;
-            Source->Hrtf.Counter = 0;
         }
         Source->Offset = -1.0;
     }
@@ -2384,8 +2376,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->position = 0;
             Source->position_fraction = 0;
             Source->BuffersPlayed = 0;
-            Source->Hrtf.Moving = AL_FALSE;
-            Source->Hrtf.Counter = 0;
         }
         Source->Offset = -1.0;
     }

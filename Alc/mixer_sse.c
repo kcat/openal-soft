@@ -140,7 +140,7 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_SSE(const DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
+void MixDirect_SSE(DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
@@ -177,7 +177,7 @@ void MixDirect_SSE(const DirectParams *params, const ALfloat *restrict data, ALu
 }
 
 
-void MixSend_SSE(const SendParams *params, const ALfloat *restrict data,
+void MixSend_SSE(SendParams *params, const ALfloat *restrict data,
   ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;

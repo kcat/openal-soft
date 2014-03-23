@@ -708,12 +708,17 @@ ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t 
         vector_ *vecptr = ptr;
         void *temp;
 
+        /* Limit vector sizes to the greatest power-of-two value that an
+         * ALsizei can hold. */
+        if(obj_count > (INT_MAX>>1)+1)
+            return AL_FALSE;
+
         /* Use the next power-of-2 size if we don't need to allocate the exact
          * amount. This is preferred when regularly increasing the vector since
          * it means fewer reallocations. Though it means it also wastes some
          * memory. */
         if(exact == AL_FALSE)
-            obj_count = NextPowerOf2(obj_count);
+            obj_count = NextPowerOf2((ALuint)obj_count);
 
         /* Need to be explicit with the caller type's base size, because it
          * could have extra padding before the start of the array (that is,
@@ -722,7 +727,7 @@ ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t 
         if(temp == NULL) return AL_FALSE;
 
         *vecptr = temp;
-        (*vecptr)->Capacity = obj_count;
+        (*vecptr)->Capacity = (ALsizei)obj_count;
     }
     return AL_TRUE;
 }

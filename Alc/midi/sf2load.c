@@ -814,7 +814,7 @@ static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *
                 src1in != AL_INVALID && src1form != AL_INVALID && src0type != AL_INVALID &&
                 trans != AL_INVALID)
         {
-            ALsizei idx = mod - VECTOR_ITER_BEGIN(zone->mods);
+            ALsizei idx = (ALsizei)(mod - VECTOR_ITER_BEGIN(zone->mods));
             ALfontsound_setModStagei(sound, context, idx, AL_SOURCE0_INPUT_SOFT, src0in);
             ALfontsound_setModStagei(sound, context, idx, AL_SOURCE0_TYPE_SOFT, src0type);
             ALfontsound_setModStagei(sound, context, idx, AL_SOURCE0_FORM_SOFT, src0form);

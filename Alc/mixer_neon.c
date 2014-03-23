@@ -93,7 +93,7 @@ void MixDirect_Neon(DirectParams *params, const ALfloat *restrict data, ALuint s
         if(Step != 1.0f && Counter > 0)
         {
             DrySend = params->Mix.Gains.Current[srcchan][c];
-            if(BufferSize-pos > 3 && Counter-pos > 3)
+            for(;BufferSize-pos > 3 && Counter-pos > 3;pos+=4)
             {
                 OutBuffer[c][OutPos+pos  ] += data[pos  ]*DrySend;
                 DrySend *= Step;
@@ -146,7 +146,7 @@ void MixSend_Neon(SendParams *params, const ALfloat *restrict data,
         if(Step != 1.0f && Counter > 0)
         {
             WetGain = params->Gain.Current;
-            if(BufferSize-pos > 3 && Counter-pos > 3)
+            for(;BufferSize-pos > 3 && Counter-pos > 3;pos+=4)
             {
                 OutBuffer[0][OutPos+pos  ] += data[pos  ]*WetGain;
                 WetGain *= Step;

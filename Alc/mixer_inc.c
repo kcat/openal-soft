@@ -43,8 +43,8 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
     const ALuint *restrict TargetDelay = params->Mix.Hrtf.Params.Delay[srcchan];
     ALfloat *restrict History = params->Mix.Hrtf.State.History[srcchan];
     ALfloat (*restrict Values)[2] = params->Mix.Hrtf.State.Values[srcchan];
-    ALuint Offset = params->Mix.Hrtf.State.Offset + OutPos;
     ALint Counter = maxu(params->Counter, OutPos) - OutPos;
+    ALuint Offset = params->Offset + OutPos;
     ALIGN(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALuint Delay[2];
     ALfloat left, right;

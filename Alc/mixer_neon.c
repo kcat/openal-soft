@@ -78,27 +78,48 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 
 
 void MixDirect_Neon(DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+  ALuint OutPos, ALuint UNUSED(SamplesToDo), ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
-    ALfloat *restrict ClickRemoval = params->ClickRemoval;
-    ALfloat *restrict PendingClicks = params->PendingClicks;
-    ALfloat DrySend;
+    ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
+    ALfloat DrySend, Step;
     float32x4_t gain;
-    ALuint pos;
     ALuint c;
 
     for(c = 0;c < MaxChannels;c++)
     {
-        DrySend = params->Mix.Gains[srcchan][c];
+        ALuint pos = 0;
+        Step = params->Mix.Gains.Step[srcchan][c];
+        if(Step != 1.0f && Counter > 0)
+        {
+            DrySend = params->Mix.Gains.Current[srcchan][c];
+            if(BufferSize-pos > 3 && Counter-pos > 3)
+            {
+                OutBuffer[c][OutPos+pos  ] += data[pos  ]*DrySend;
+                DrySend *= Step;
+                OutBuffer[c][OutPos+pos+1] += data[pos+1]*DrySend;
+                DrySend *= Step;
+                OutBuffer[c][OutPos+pos+2] += data[pos+2]*DrySend;
+                DrySend *= Step;
+                OutBuffer[c][OutPos+pos+4] += data[pos+3]*DrySend;
+                DrySend *= Step;
+            }
+            if(!(BufferSize-pos > 3))
+            {
+                for(;pos < BufferSize && pos < Counter;pos++)
+                {
+                    OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
+                    DrySend *= Step;
+                }
+            }
+            params->Mix.Gains.Current[srcchan][c] = DrySend;
+        }
+
+        DrySend = params->Mix.Gains.Target[srcchan][c];
         if(!(DrySend > GAIN_SILENCE_THRESHOLD))
             continue;
-
-        if(OutPos == 0)
-            ClickRemoval[c] -= data[0]*DrySend;
-
         gain = vdupq_n_f32(DrySend);
-        for(pos = 0;BufferSize-pos > 3;pos += 4)
+        for(;BufferSize-pos > 3;pos += 4)
         {
             const float32x4_t val4 = vld1q_f32(&data[pos]);
             float32x4_t dry4 = vld1q_f32(&OutBuffer[c][OutPos+pos]);
@@ -107,9 +128,6 @@ void MixDirect_Neon(DirectParams *params, const ALfloat *restrict data, ALuint s
         }
         for(;pos < BufferSize;pos++)
             OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-
-        if(OutPos+pos == SamplesToDo)
-            PendingClicks[c] += data[pos]*DrySend;
     }
 }
 

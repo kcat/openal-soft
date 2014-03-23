@@ -40,7 +40,6 @@ extern "C" {
 typedef struct HrtfState {
     ALIGN(16) ALfloat History[MAX_INPUT_CHANNELS][SRC_HISTORY_LENGTH];
     ALIGN(16) ALfloat Values[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
-    ALuint Offset;
 } HrtfState;
 
 typedef struct HrtfParams {
@@ -67,12 +66,18 @@ typedef struct DirectParams {
         /* A mixing matrix. First subscript is the channel number of the input
          * data (regardless of channel configuration) and the second is the
          * channel target (eg. FrontLeft). Not used with HRTF. */
-        ALfloat Gains[MAX_INPUT_CHANNELS][MaxChannels];
+        struct {
+            ALfloat Current[MAX_INPUT_CHANNELS][MaxChannels];
+            ALfloat Step[MAX_INPUT_CHANNELS][MaxChannels];
+            ALfloat Target[MAX_INPUT_CHANNELS][MaxChannels];
+        } Gains;
     } Mix;
     /* If not 'moving', gain/coefficients are set directly without fading. */
     ALboolean Moving;
     /* Stepping counter for gain/coefficient fading. */
     ALuint Counter;
+    /* History/coefficient offset. */
+    ALuint Offset;
 
     ALfilterState LpFilter[MAX_INPUT_CHANNELS];
 } DirectParams;

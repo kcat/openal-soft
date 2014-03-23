@@ -83,27 +83,33 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 
 
 void MixDirect_C(DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+  ALuint OutPos, ALuint UNUSED(SamplesToDo), ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
-    ALfloat *restrict ClickRemoval = params->ClickRemoval;
-    ALfloat *restrict PendingClicks = params->PendingClicks;
-    ALfloat DrySend;
-    ALuint pos;
+    ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
+    ALfloat DrySend, Step;
     ALuint c;
 
     for(c = 0;c < MaxChannels;c++)
     {
-        DrySend = params->Mix.Gains[srcchan][c];
+        ALuint pos = 0;
+        Step = params->Mix.Gains.Step[srcchan][c];
+        if(Step != 0.0f && Counter > 0)
+        {
+            DrySend = params->Mix.Gains.Current[srcchan][c];
+            for(;pos < BufferSize && pos < Counter;pos++)
+            {
+                OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
+                DrySend *= Step;
+            }
+            params->Mix.Gains.Current[srcchan][c] = DrySend;
+        }
+
+        DrySend = params->Mix.Gains.Target[srcchan][c];
         if(!(DrySend > GAIN_SILENCE_THRESHOLD))
             continue;
-
-        if(OutPos == 0)
-            ClickRemoval[c] -= data[0]*DrySend;
-        for(pos = 0;pos < BufferSize;pos++)
+        for(;pos < BufferSize;pos++)
             OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-        if(OutPos+pos == SamplesToDo)
-            PendingClicks[c] += data[pos]*DrySend;
     }
 }
 

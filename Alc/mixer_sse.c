@@ -141,27 +141,56 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 
 
 void MixDirect_SSE(DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+  ALuint OutPos, ALuint UNUSED(SamplesToDo), ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
-    ALfloat *restrict ClickRemoval = params->ClickRemoval;
-    ALfloat *restrict PendingClicks = params->PendingClicks;
-    ALfloat DrySend;
-    __m128 gain;
-    ALuint pos;
+    ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
+    ALfloat DrySend, Step;
+    __m128 gain, step;
     ALuint c;
 
     for(c = 0;c < MaxChannels;c++)
     {
-        DrySend = params->Mix.Gains[srcchan][c];
+        ALuint pos = 0;
+        Step = params->Mix.Gains.Step[srcchan][c];
+        if(Step != 1.0f && Counter > 0)
+        {
+            DrySend = params->Mix.Gains.Current[srcchan][c];
+            if(BufferSize-pos > 3 && Counter-pos > 3)
+            {
+                gain = _mm_set_ps(
+                    DrySend,
+                    DrySend * Step,
+                    DrySend * Step * Step,
+                    DrySend * Step * Step * Step
+                );
+                step = _mm_set1_ps(Step * Step * Step * Step);
+                do {
+                    const __m128 val4 = _mm_load_ps(&data[pos]);
+                    __m128 dry4 = _mm_load_ps(&OutBuffer[c][OutPos+pos]);
+                    dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain));
+                    gain = _mm_mul_ps(gain, step);
+                    _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
+                    pos += 4;
+                } while(BufferSize-pos > 3 && Counter-pos > 3);
+                DrySend = _mm_cvtss_f32(_mm_shuffle_ps(gain, gain, _MM_SHUFFLE(3, 3, 3, 3)));
+            }
+            if(!(BufferSize-pos > 3))
+            {
+                for(;pos < BufferSize && pos < Counter;pos++)
+                {
+                    OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
+                    DrySend *= Step;
+                }
+            }
+            params->Mix.Gains.Current[srcchan][c] = DrySend;
+        }
+
+        DrySend = params->Mix.Gains.Target[srcchan][c];
         if(!(DrySend > GAIN_SILENCE_THRESHOLD))
             continue;
-
-        if(OutPos == 0)
-            ClickRemoval[c] -= data[0]*DrySend;
-
         gain = _mm_set1_ps(DrySend);
-        for(pos = 0;BufferSize-pos > 3;pos += 4)
+        for(;BufferSize-pos > 3;pos += 4)
         {
             const __m128 val4 = _mm_load_ps(&data[pos]);
             __m128 dry4 = _mm_load_ps(&OutBuffer[c][OutPos+pos]);
@@ -170,9 +199,6 @@ void MixDirect_SSE(DirectParams *params, const ALfloat *restrict data, ALuint sr
         }
         for(;pos < BufferSize;pos++)
             OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-
-        if(OutPos+pos == SamplesToDo)
-            PendingClicks[c] += data[pos]*DrySend;
     }
 }
 

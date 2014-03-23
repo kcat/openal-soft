@@ -582,6 +582,7 @@ SET(ALC_OBJS  ${ALC_OBJS}
               Alc/midi/sf2load.c
               Alc/midi/dummy.c
               Alc/midi/fluidsynth.c
+              Alc/midi/soft.c
 )
 
 SET(HAVE_FLUIDSYNTH  0)

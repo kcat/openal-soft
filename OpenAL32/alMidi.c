@@ -19,7 +19,9 @@
 
 MidiSynth *SynthCreate(ALCdevice *device)
 {
-    MidiSynth *synth = FSynth_create(device);
+    MidiSynth *synth = NULL;
+    if(!synth) synth = SSynth_create(device);
+    if(!synth) synth = FSynth_create(device);
     if(!synth) synth = DSynth_create(device);
     return synth;
 }

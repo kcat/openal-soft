@@ -118,6 +118,7 @@ static const struct MidiSynthVtable T##_MidiSynth_vtable = {                  \
 }
 
 
+MidiSynth *SSynth_create(ALCdevice *device);
 MidiSynth *FSynth_create(ALCdevice *device);
 MidiSynth *DSynth_create(ALCdevice *device);
 

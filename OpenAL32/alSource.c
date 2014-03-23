@@ -2276,6 +2276,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 {
     if(state == AL_PLAYING)
     {
+        ALCdevice *device = Context->Device;
         ALbufferlistitem *BufferList;
         ALactivesource *src = NULL;
         ALsizei j, k;
@@ -2306,7 +2307,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 
         /* If there's nothing to play, or device is disconnected, go right to
          * stopped */
-        if(!BufferList || !Context->Device->Connected)
+        if(!BufferList || !device->Connected)
         {
             SetSourceState(Source, Context, AL_STOPPED);
             return;
@@ -2339,6 +2340,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         }
         else
         {
+            ALuint i;
+
             src->Direct.Moving = AL_FALSE;
             src->Direct.Counter = 0;
             for(j = 0;j < MAX_INPUT_CHANNELS;j++)
@@ -2350,6 +2353,11 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
                     src->Direct.Mix.Hrtf.State.Values[j][k][0] = 0.0f;
                     src->Direct.Mix.Hrtf.State.Values[j][k][1] = 0.0f;
                 }
+            }
+            for(i = 0;i < device->NumAuxSends;i++)
+            {
+                src->Send[i].Counter = 0;
+                src->Send[i].Moving  = AL_FALSE;
             }
         }
         Source->NeedsUpdate = AL_TRUE;

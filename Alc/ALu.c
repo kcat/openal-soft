@@ -565,7 +565,27 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         src->DryMix = SelectDirectMixer();
     }
     for(i = 0;i < NumSends;i++)
-        src->Send[i].Gain = WetGain[i];
+    {
+        if(src->Send[i].Moving)
+        {
+            ALfloat cur = maxf(src->Send[i].Gain.Current, GAIN_SILENCE_THRESHOLD);
+            ALfloat trg = maxf(src->Send[i].Gain.Target, GAIN_SILENCE_THRESHOLD);
+            if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
+                src->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
+            else
+                src->Send[i].Gain.Step = 1.0f;
+            src->Send[i].Gain.Current = cur;
+            src->Send[i].Counter = 64;
+        }
+        else
+        {
+            src->Send[i].Gain.Current = WetGain[i];
+            src->Send[i].Gain.Target = WetGain[i];
+            src->Send[i].Gain.Step = 1.0f;
+            src->Send[i].Counter = 0;
+            src->Send[i].Moving  = AL_TRUE;
+        }
+    }
     src->WetMix = SelectSendMixer();
 
     {
@@ -1050,7 +1070,27 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         src->DryMix = SelectDirectMixer();
     }
     for(i = 0;i < NumSends;i++)
-        src->Send[i].Gain = WetGain[i];
+    {
+        if(src->Send[i].Moving)
+        {
+            ALfloat cur = maxf(src->Send[i].Gain.Current, GAIN_SILENCE_THRESHOLD);
+            ALfloat trg = maxf(src->Send[i].Gain.Target, GAIN_SILENCE_THRESHOLD);
+            if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
+                src->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
+            else
+                src->Send[i].Gain.Step = 1.0f;
+            src->Send[i].Gain.Current = cur;
+            src->Send[i].Counter = 64;
+        }
+        else
+        {
+            src->Send[i].Gain.Current = WetGain[i];
+            src->Send[i].Gain.Target = WetGain[i];
+            src->Send[i].Gain.Step = 1.0f;
+            src->Send[i].Counter = 0;
+            src->Send[i].Moving  = AL_TRUE;
+        }
+    }
     src->WetMix = SelectSendMixer();
 
     {

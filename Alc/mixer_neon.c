@@ -133,33 +133,53 @@ void MixDirect_Neon(DirectParams *params, const ALfloat *restrict data, ALuint s
 
 
 void MixSend_Neon(SendParams *params, const ALfloat *restrict data,
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+  ALuint OutPos, ALuint UNUSED(SamplesToDo), ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
-    ALfloat *restrict ClickRemoval = params->ClickRemoval;
-    ALfloat *restrict PendingClicks = params->PendingClicks;
-    ALfloat WetGain;
+    ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
+    ALfloat WetGain, Step;
     float32x4_t gain;
-    ALuint pos;
 
-    WetGain = params->Gain;
-    if(!(WetGain > GAIN_SILENCE_THRESHOLD))
-        return;
-
-    if(OutPos == 0)
-        ClickRemoval[0] -= data[0] * WetGain;
-
-    gain = vdupq_n_f32(WetGain);
-    for(pos = 0;BufferSize-pos > 3;pos += 4)
     {
-        const float32x4_t val4 = vld1q_f32(&data[pos]);
-        float32x4_t wet4 = vld1q_f32(&OutBuffer[0][OutPos+pos]);
-        wet4 = vaddq_f32(wet4, vmulq_f32(val4, gain));
-        vst1q_f32(&OutBuffer[0][OutPos+pos], wet4);
-    }
-    for(;pos < BufferSize;pos++)
-        OutBuffer[0][OutPos+pos] += data[pos] * WetGain;
+        ALuint pos = 0;
+        Step = params->Gain.Step;
+        if(Step != 1.0f && Counter > 0)
+        {
+            WetGain = params->Gain.Current;
+            if(BufferSize-pos > 3 && Counter-pos > 3)
+            {
+                OutBuffer[0][OutPos+pos  ] += data[pos  ]*WetGain;
+                WetGain *= Step;
+                OutBuffer[0][OutPos+pos+1] += data[pos+1]*WetGain;
+                WetGain *= Step;
+                OutBuffer[0][OutPos+pos+2] += data[pos+2]*WetGain;
+                WetGain *= Step;
+                OutBuffer[0][OutPos+pos+4] += data[pos+3]*WetGain;
+                WetGain *= Step;
+            }
+            if(!(BufferSize-pos > 3))
+            {
+                for(;pos < BufferSize && pos < Counter;pos++)
+                {
+                    OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
+                    WetGain *= Step;
+                }
+            }
+            params->Gain.Current = WetGain;
+        }
 
-    if(OutPos+pos == SamplesToDo)
-        PendingClicks[0] += data[pos] * WetGain;
+        WetGain = params->Gain.Target;
+        if(!(WetGain > GAIN_SILENCE_THRESHOLD))
+            return;
+        gain = vdupq_n_f32(WetGain);
+        for(;BufferSize-pos > 3;pos += 4)
+        {
+            const float32x4_t val4 = vld1q_f32(&data[pos]);
+            float32x4_t wet4 = vld1q_f32(&OutBuffer[0][OutPos+pos]);
+            wet4 = vaddq_f32(wet4, vmulq_f32(val4, gain));
+            vst1q_f32(&OutBuffer[0][OutPos+pos], wet4);
+        }
+        for(;pos < BufferSize;pos++)
+            OutBuffer[0][OutPos+pos] += data[pos] * WetGain;
+    }
 }

@@ -87,7 +87,14 @@ typedef struct SendParams {
 
     /* Gain control, which applies to all input channels to a single (mono)
      * output buffer. */
-    ALfloat Gain;
+    struct {
+        ALfloat Current;
+        ALfloat Step;
+        ALfloat Target;
+    } Gain;
+
+    ALboolean Moving;
+    ALuint Counter;
 
     ALfilterState LpFilter[MAX_INPUT_CHANNELS];
 } SendParams;

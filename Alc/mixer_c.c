@@ -115,22 +115,30 @@ void MixDirect_C(DirectParams *params, const ALfloat *restrict data, ALuint srcc
 
 
 void MixSend_C(SendParams *params, const ALfloat *restrict data,
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+  ALuint OutPos, ALuint UNUSED(SamplesToDo), ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
-    ALfloat *restrict ClickRemoval = params->ClickRemoval;
-    ALfloat *restrict PendingClicks = params->PendingClicks;
-    ALfloat WetSend;
-    ALuint pos;
+    ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
+    ALfloat WetSend, Step;
 
-    WetSend = params->Gain;
-    if(!(WetSend > GAIN_SILENCE_THRESHOLD))
-        return;
+    {
+        ALuint pos = 0;
+        Step = params->Gain.Step;
+        if(Step != 1.0f && Counter > 0)
+        {
+            WetSend = params->Gain.Current;
+            for(;pos < BufferSize && pos < Counter;pos++)
+            {
+                OutBuffer[0][OutPos+pos] += data[pos]*WetSend;
+                WetSend *= Step;
+            }
+            params->Gain.Current = WetSend;
+        }
 
-    if(OutPos == 0)
-        ClickRemoval[0] -= data[0] * WetSend;
-    for(pos = 0;pos < BufferSize;pos++)
-        OutBuffer[0][OutPos+pos] += data[pos] * WetSend;
-    if(OutPos+pos == SamplesToDo)
-        PendingClicks[0] += data[pos] * WetSend;
+        WetSend = params->Gain.Target;
+        if(!(WetSend > GAIN_SILENCE_THRESHOLD))
+            return;
+        for(;pos < BufferSize;pos++)
+            OutBuffer[0][OutPos+pos] += data[pos] * WetSend;
+    }
 }

@@ -204,33 +204,62 @@ void MixDirect_SSE(DirectParams *params, const ALfloat *restrict data, ALuint sr
 
 
 void MixSend_SSE(SendParams *params, const ALfloat *restrict data,
-  ALuint OutPos, ALuint SamplesToDo, ALuint BufferSize)
+  ALuint OutPos, ALuint UNUSED(SamplesToDo), ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
-    ALfloat *restrict ClickRemoval = params->ClickRemoval;
-    ALfloat *restrict PendingClicks = params->PendingClicks;
-    ALfloat WetGain;
-    __m128 gain;
-    ALuint pos;
+    ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
+    ALfloat WetGain, Step;
+    __m128 gain, step;
 
-    WetGain = params->Gain;
-    if(!(WetGain > GAIN_SILENCE_THRESHOLD))
-        return;
-
-    if(OutPos == 0)
-        ClickRemoval[0] -= data[0] * WetGain;
-
-    gain = _mm_set1_ps(WetGain);
-    for(pos = 0;BufferSize-pos > 3;pos += 4)
     {
-        const __m128 val4 = _mm_load_ps(&data[pos]);
-        __m128 wet4 = _mm_load_ps(&OutBuffer[0][OutPos+pos]);
-        wet4 = _mm_add_ps(wet4, _mm_mul_ps(val4, gain));
-        _mm_store_ps(&OutBuffer[0][OutPos+pos], wet4);
-    }
-    for(;pos < BufferSize;pos++)
-        OutBuffer[0][OutPos+pos] += data[pos] * WetGain;
+        ALuint pos = 0;
 
-    if(OutPos+pos == SamplesToDo)
-        PendingClicks[0] += data[pos] * WetGain;
+        Step = params->Gain.Step;
+        if(Step != 1.0f && Counter > 0)
+        {
+            WetGain = params->Gain.Current;
+            if(BufferSize-pos > 3 && Counter-pos > 3)
+            {
+                gain = _mm_set_ps(
+                    WetGain,
+                    WetGain * Step,
+                    WetGain * Step * Step,
+                    WetGain * Step * Step * Step
+                );
+                step = _mm_set1_ps(Step * Step * Step * Step);
+                do {
+                    const __m128 val4 = _mm_load_ps(&data[pos]);
+                    __m128 dry4 = _mm_load_ps(&OutBuffer[0][OutPos+pos]);
+                    dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain));
+                    gain = _mm_mul_ps(gain, step);
+                    _mm_store_ps(&OutBuffer[0][OutPos+pos], dry4);
+                    pos += 4;
+                } while(BufferSize-pos > 3 && Counter-pos > 3);
+                WetGain = _mm_cvtss_f32(_mm_shuffle_ps(gain, gain, _MM_SHUFFLE(3, 3, 3, 3)));
+            }
+            if(!(BufferSize-pos > 3))
+            {
+                for(;pos < BufferSize && pos < Counter;pos++)
+                {
+                    OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
+                    WetGain *= Step;
+                }
+            }
+            params->Gain.Current = WetGain;
+        }
+
+        WetGain = params->Gain.Target;
+        if(!(WetGain > GAIN_SILENCE_THRESHOLD))
+            return;
+        gain = _mm_set1_ps(WetGain);
+        for(;BufferSize-pos > 3;pos += 4)
+        {
+            const __m128 val4 = _mm_load_ps(&data[pos]);
+            __m128 wet4 = _mm_load_ps(&OutBuffer[0][OutPos+pos]);
+            wet4 = _mm_add_ps(wet4, _mm_mul_ps(val4, gain));
+            _mm_store_ps(&OutBuffer[0][OutPos+pos], wet4);
+        }
+        for(;pos < BufferSize;pos++)
+            OutBuffer[0][OutPos+pos] += data[pos] * WetGain;
+    }
 }

@@ -94,7 +94,7 @@ void MixDirect_C(DirectParams *params, const ALfloat *restrict data, ALuint srcc
     {
         ALuint pos = 0;
         Step = params->Mix.Gains.Step[srcchan][c];
-        if(Step != 0.0f && Counter > 0)
+        if(Step != 1.0f && Counter > 0)
         {
             DrySend = params->Mix.Gains.Current[srcchan][c];
             for(;pos < BufferSize && pos < Counter;pos++)

@@ -82,8 +82,6 @@ typedef struct DirectParams {
 
 typedef struct SendParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
-    ALfloat *ClickRemoval;
-    ALfloat *PendingClicks;
 
     /* Gain control, which applies to all input channels to a single (mono)
      * output buffer. */
@@ -108,8 +106,7 @@ typedef ALvoid (*DryMixerFunc)(struct DirectParams *params,
                                ALuint OutPos, ALuint BufferSize);
 typedef ALvoid (*WetMixerFunc)(struct SendParams *params,
                                const ALfloat *restrict data,
-                               ALuint OutPos, ALuint SamplesToDo,
-                               ALuint BufferSize);
+                               ALuint OutPos, ALuint BufferSize);
 
 
 #define GAIN_SILENCE_THRESHOLD  (0.00001f)

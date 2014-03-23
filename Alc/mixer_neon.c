@@ -133,7 +133,7 @@ void MixDirect_Neon(DirectParams *params, const ALfloat *restrict data, ALuint s
 
 
 void MixSend_Neon(SendParams *params, const ALfloat *restrict data,
-  ALuint OutPos, ALuint UNUSED(SamplesToDo), ALuint BufferSize)
+  ALuint OutPos, ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
     ALuint Counter = maxu(params->Counter, OutPos) - OutPos;

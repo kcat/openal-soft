@@ -531,8 +531,6 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     {
         for(i = 0;i < BUFFERSIZE;i++)
             slot->WetBuffer[c][i] = 0.0f;
-        slot->ClickRemoval[c] = 0.0f;
-        slot->PendingClicks[c] = 0.0f;
     }
     slot->ref = 0;
 

@@ -83,7 +83,7 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 
 
 void MixDirect_C(DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
-  ALuint OutPos, ALuint UNUSED(SamplesToDo), ALuint BufferSize)
+  ALuint OutPos, ALuint BufferSize)
 {
     ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
     ALuint Counter = maxu(params->Counter, OutPos) - OutPos;

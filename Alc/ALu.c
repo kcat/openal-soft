@@ -309,8 +309,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     DirectChannels  = ALSource->DirectChannels;
 
     src->Direct.OutBuffer = Device->DryBuffer;
-    src->Direct.ClickRemoval = Device->ClickRemoval;
-    src->Direct.PendingClicks = Device->PendingClicks;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
@@ -659,8 +657,6 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     RoomRolloffBase = ALSource->RoomRolloffFactor;
 
     src->Direct.OutBuffer = Device->DryBuffer;
-    src->Direct.ClickRemoval = Device->ClickRemoval;
-    src->Direct.PendingClicks = Device->PendingClicks;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
@@ -1254,52 +1250,17 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         device->SamplesDone %= device->Frequency;
         ALCdevice_Unlock(device);
 
-        /* Click-removal. Could do better; this only really handles immediate
-         * changes between updates where a predictive sample could be
-         * generated. Delays caused by effects and HRTF aren't caught. */
-        if(device->FmtChans == DevFmtStereo)
+        if(device->Bs2b)
         {
-            /* Assumes the first two channels are FrontLeft and FrontRight */
-            for(c = 0;c < 2;c++)
-            {
-                ALfloat offset = device->ClickRemoval[c];
-                if(offset < (1.0f/32768.0f))
-                    offset = 0.0f;
-                else for(i = 0;i < SamplesToDo;i++)
-                {
-                    device->DryBuffer[c][i] += offset;
-                    offset -= offset * (1.0f/256.0f);
-                }
-                device->ClickRemoval[c] = offset + device->PendingClicks[c];
-                device->PendingClicks[c] = 0.0f;
-            }
-            if(device->Bs2b)
+            /* Apply binaural/crossfeed filter */
+            for(i = 0;i < SamplesToDo;i++)
             {
                 float samples[2];
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    samples[0] = device->DryBuffer[FrontLeft][i];
-                    samples[1] = device->DryBuffer[FrontRight][i];
-                    bs2b_cross_feed(device->Bs2b, samples);
-                    device->DryBuffer[FrontLeft][i] = samples[0];
-                    device->DryBuffer[FrontRight][i] = samples[1];
-                }
-            }
-        }
-        else
-        {
-            for(c = 0;c < MaxChannels;c++)
-            {
-                ALfloat offset = device->ClickRemoval[c];
-                if(offset < (1.0f/32768.0f))
-                    offset = 0.0f;
-                else for(i = 0;i < SamplesToDo;i++)
-                {
-                    device->DryBuffer[c][i] += offset;
-                    offset -= offset * (1.0f/256.0f);
-                }
-                device->ClickRemoval[c] = offset + device->PendingClicks[c];
-                device->PendingClicks[c] = 0.0f;
+                samples[0] = device->DryBuffer[FrontLeft][i];
+                samples[1] = device->DryBuffer[FrontRight][i];
+                bs2b_cross_feed(device->Bs2b, samples);
+                device->DryBuffer[FrontLeft][i] = samples[0];
+                device->DryBuffer[FrontRight][i] = samples[1];
             }
         }
 

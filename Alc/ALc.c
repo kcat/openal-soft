@@ -1607,7 +1607,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     enum DevFmtType oldType;
     ALCuint oldFreq;
     FPUCtl oldMode;
-    ALuint i;
 
     // Check for attributes
     if(device->Type == Loopback)
@@ -1843,12 +1842,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           device->UpdateSize, device->NumUpdates);
 
     aluInitPanning(device);
-
-    for(i = 0;i < MaxChannels;i++)
-    {
-        device->ClickRemoval[i] = 0.0f;
-        device->PendingClicks[i] = 0.0f;
-    }
 
     V(device->Synth,update)(device);
 

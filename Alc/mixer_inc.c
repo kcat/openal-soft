@@ -24,7 +24,7 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 
 
 void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
-  ALuint OutPos, ALuint UNUSED(SamplesToDo), ALuint BufferSize)
+  ALuint OutPos, ALuint BufferSize)
 {
     ALfloat (*restrict DryBuffer)[BUFFERSIZE] = params->OutBuffer;
     const ALuint IrSize = params->Mix.Hrtf.Params.IrSize;

@@ -331,8 +331,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 
                 DoFilter(&directparms->LpFilter[chan], SrcData, ResampledData,
                          DstBufferSize);
-                src->DryMix(directparms, SrcData, chan, OutPos,
-                            SamplesToDo, DstBufferSize);
+                src->DryMix(directparms, SrcData, chan, OutPos, DstBufferSize);
             }
 
             for(j = 0;j < Device->NumAuxSends;j++)

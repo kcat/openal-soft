@@ -669,9 +669,6 @@ struct ALCdevice_struct
     // Dry path buffer mix
     ALIGN(16) ALfloat DryBuffer[MaxChannels][BUFFERSIZE];
 
-    ALIGN(16) ALfloat ClickRemoval[MaxChannels];
-    ALIGN(16) ALfloat PendingClicks[MaxChannels];
-
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at
      * the end, so the bottom bit indicates if the device is currently mixing

@@ -54,8 +54,6 @@ typedef struct HrtfParams {
 
 typedef struct DirectParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
-    ALfloat *ClickRemoval;
-    ALfloat *PendingClicks;
 
     union {
         struct {
@@ -100,8 +98,7 @@ typedef void (*ResamplerFunc)(const ALfloat *src, ALuint frac, ALuint increment,
 
 typedef ALvoid (*DryMixerFunc)(struct DirectParams *params,
                                const ALfloat *restrict data, ALuint srcchan,
-                               ALuint OutPos, ALuint SamplesToDo,
-                               ALuint BufferSize);
+                               ALuint OutPos, ALuint BufferSize);
 typedef ALvoid (*WetMixerFunc)(struct SendParams *params,
                                const ALfloat *restrict data,
                                ALuint OutPos, ALuint SamplesToDo,

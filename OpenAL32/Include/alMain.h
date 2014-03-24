@@ -662,9 +662,9 @@ struct ALCdevice_struct
     ALuint64 ClockBase;
     ALuint SamplesDone;
 
-    /* Temp storage used for mixing. +1 for the predictive sample. */
-    ALIGN(16) ALfloat SampleData1[BUFFERSIZE+1];
-    ALIGN(16) ALfloat SampleData2[BUFFERSIZE+1];
+    /* Temp storage used for mixing. */
+    ALIGN(16) ALfloat SampleData1[BUFFERSIZE];
+    ALIGN(16) ALfloat SampleData2[BUFFERSIZE];
 
     // Dry path buffer mix
     ALIGN(16) ALfloat DryBuffer[MaxChannels][BUFFERSIZE];

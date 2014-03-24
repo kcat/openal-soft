@@ -19,7 +19,7 @@ void Resample_copy32_C(const ALfloat *data, ALuint UNUSED(frac),
   ALuint increment, ALfloat *restrict OutBuffer, ALuint BufferSize)
 {
     assert(increment==FRACTIONONE);
-    memcpy(OutBuffer, data, (BufferSize+1)*sizeof(ALfloat));
+    memcpy(OutBuffer, data, BufferSize*sizeof(ALfloat));
 }
 
 #define DECL_TEMPLATE(Sampler)                                                \
@@ -29,7 +29,7 @@ void Resample_##Sampler##_C(const ALfloat *data, ALuint frac,                 \
     ALuint pos = 0;                                                           \
     ALuint i;                                                                 \
                                                                               \
-    for(i = 0;i < BufferSize+1;i++)                                           \
+    for(i = 0;i < BufferSize;i++)                                             \
     {                                                                         \
         OutBuffer[i] = Sampler(data + pos, frac);                             \
                                                                               \

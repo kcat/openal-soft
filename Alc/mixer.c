@@ -90,7 +90,6 @@ static void DoFilter(ALfilterState *filter, ALfloat *restrict dst, const ALfloat
     ALuint i;
     for(i = 0;i < numsamples;i++)
         dst[i] = ALfilterState_processSingle(filter, src[i]);
-    dst[i] = ALfilterState_processSingleC(filter, src[i]);
 }
 
 
@@ -133,7 +132,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
         ALuint SrcBufferSize, DstBufferSize;
 
         /* Figure out how many buffer samples will be needed */
-        DataSize64  = SamplesToDo-OutPos+1;
+        DataSize64  = SamplesToDo-OutPos;
         DataSize64 *= increment;
         DataSize64 += DataPosFrac+FRACTIONMASK;
         DataSize64 >>= FRACTIONBITS;
@@ -145,7 +144,6 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
         DataSize64  = SrcBufferSize;
         DataSize64 -= BufferPadding+BufferPrePadding;
         DataSize64 <<= FRACTIONBITS;
-        DataSize64 -= increment;
         DataSize64 -= DataPosFrac;
 
         DstBufferSize = (ALuint)((DataSize64+(increment-1)) / increment);

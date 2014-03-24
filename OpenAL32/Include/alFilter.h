@@ -51,15 +51,6 @@ inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample
     return outsmp;
 }
 
-inline ALfloat ALfilterState_processSingleC(const ALfilterState *filter, ALfloat sample)
-{
-    return filter->b[0] * sample +
-           filter->b[1] * filter->x[0] +
-           filter->b[2] * filter->x[1] -
-           filter->a[1] * filter->y[0] -
-           filter->a[2] * filter->y[1];
-}
-
 
 typedef struct ALfilter {
     // Filter type (AL_FILTER_NULL, ...)

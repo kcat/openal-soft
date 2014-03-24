@@ -24,7 +24,6 @@ static void SSynth_Construct(SSynth *self, ALCdevice *device);
 static void SSynth_Destruct(SSynth *self);
 static DECLARE_FORWARD3(SSynth, MidiSynth, ALenum, selectSoundfonts, ALCcontext*, ALsizei, const ALuint*)
 static DECLARE_FORWARD1(SSynth, MidiSynth, void, setGain, ALfloat)
-static DECLARE_FORWARD1(SSynth, MidiSynth, void, setState, ALenum)
 static DECLARE_FORWARD(SSynth, MidiSynth, void, stop)
 static DECLARE_FORWARD(SSynth, MidiSynth, void, reset)
 static void SSynth_update(SSynth *self, ALCdevice *device);

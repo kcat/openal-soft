@@ -470,7 +470,6 @@ static void FSynth_Destruct(FSynth *self);
 static ALboolean FSynth_init(FSynth *self, ALCdevice *device);
 static ALenum FSynth_selectSoundfonts(FSynth *self, ALCcontext *context, ALsizei count, const ALuint *ids);
 static void FSynth_setGain(FSynth *self, ALfloat gain);
-static void FSynth_setState(FSynth *self, ALenum state);
 static void FSynth_stop(FSynth *self);
 static void FSynth_reset(FSynth *self);
 static void FSynth_update(FSynth *self, ALCdevice *device);
@@ -631,11 +630,6 @@ static void FSynth_setGain(FSynth *self, ALfloat gain)
     MidiSynth_setGain(STATIC_CAST(MidiSynth, self), gain);
 }
 
-
-static void FSynth_setState(FSynth *self, ALenum state)
-{
-    MidiSynth_setState(STATIC_CAST(MidiSynth, self), state);
-}
 
 static void FSynth_stop(FSynth *self)
 {

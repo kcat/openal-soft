@@ -80,7 +80,6 @@ struct MidiSynthVtable {
     ALenum (*const selectSoundfonts)(MidiSynth *self, ALCcontext *context, ALsizei count, const ALuint *ids);
 
     void (*const setGain)(MidiSynth *self, ALfloat gain);
-    void (*const setState)(MidiSynth *self, ALenum state);
 
     void (*const stop)(MidiSynth *self);
     void (*const reset)(MidiSynth *self);
@@ -95,7 +94,6 @@ struct MidiSynthVtable {
 DECLARE_THUNK(T, MidiSynth, void, Destruct)                                   \
 DECLARE_THUNK3(T, MidiSynth, ALenum, selectSoundfonts, ALCcontext*, ALsizei, const ALuint*) \
 DECLARE_THUNK1(T, MidiSynth, void, setGain, ALfloat)                          \
-DECLARE_THUNK1(T, MidiSynth, void, setState, ALenum)                          \
 DECLARE_THUNK(T, MidiSynth, void, stop)                                       \
 DECLARE_THUNK(T, MidiSynth, void, reset)                                      \
 DECLARE_THUNK1(T, MidiSynth, void, update, ALCdevice*)                        \
@@ -108,7 +106,6 @@ static const struct MidiSynthVtable T##_MidiSynth_vtable = {                  \
                                                                               \
     T##_MidiSynth_selectSoundfonts,                                           \
     T##_MidiSynth_setGain,                                                    \
-    T##_MidiSynth_setState,                                                   \
     T##_MidiSynth_stop,                                                       \
     T##_MidiSynth_reset,                                                      \
     T##_MidiSynth_update,                                                     \

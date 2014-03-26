@@ -917,10 +917,9 @@ static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALuint numchans,  \
                                  ALuint len, ALuint align)                    \
 {                                                                             \
     ALsizei byte_align = ((align-1)/2 + 4) * numchans;                        \
+    DECL_VLA(ALshort, tmp, align*numchans);                                   \
     ALuint i, j, k;                                                           \
-    ALshort *tmp;                                                             \
                                                                               \
-    tmp = alloca(align*numchans*sizeof(*tmp));                                \
     for(i = 0;i < len;i += align)                                             \
     {                                                                         \
         DecodeIMA4Block(tmp, src, numchans, align);                           \
@@ -968,10 +967,9 @@ static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALuint numchans,    \
     ALint sample[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};                     \
     ALint index[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};                      \
     ALsizei byte_align = ((align-1)/2 + 4) * numchans;                        \
+    DECL_VLA(ALshort, tmp, align*numchans);                                   \
     ALuint i, j, k;                                                           \
-    ALshort *tmp;                                                             \
                                                                               \
-    tmp = alloca(align*numchans*sizeof(*tmp));                                \
     for(i = 0;i < len;i += align)                                             \
     {                                                                         \
         for(j = 0;j < align;j++)                                              \
@@ -1020,10 +1018,9 @@ static void Convert_##T##_ALmsadpcm(T *dst, const ALmsadpcm *src,             \
                                     ALuint align)                             \
 {                                                                             \
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;                        \
+    DECL_VLA(ALshort, tmp, align*numchans);                                   \
     ALuint i, j, k;                                                           \
-    ALshort *tmp;                                                             \
                                                                               \
-    tmp = alloca(align*numchans*sizeof(*tmp));                                \
     for(i = 0;i < len;i += align)                                             \
     {                                                                         \
         DecodeMSADPCMBlock(tmp, src, numchans, align);                        \
@@ -1071,10 +1068,9 @@ static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
 {                                                                             \
     ALint sample[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};                     \
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;                        \
+    DECL_VLA(ALshort, tmp, align*numchans);                                   \
     ALuint i, j, k;                                                           \
-    ALshort *tmp;                                                             \
                                                                               \
-    tmp = alloca(align*numchans*sizeof(*tmp));                                \
     for(i = 0;i < len;i += align)                                             \
     {                                                                         \
         for(j = 0;j < align;j++)                                              \

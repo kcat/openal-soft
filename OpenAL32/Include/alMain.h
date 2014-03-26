@@ -314,6 +314,12 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #define FORCE_ALIGN
 #endif
 
+#ifdef HAVE_C99_VLA
+#define DECL_VLA(T, _name, _size)  T _name[(_size)]
+#else
+#define DECL_VLA(T, _name, _size)  T *_name = alloca((_size) * sizeof(T))
+#endif
+
 #ifndef PATH_MAX
 #ifdef MAX_PATH
 #define PATH_MAX MAX_PATH

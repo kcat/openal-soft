@@ -89,6 +89,9 @@
 /* Define to the size of a long long int type */
 #cmakedefine SIZEOF_LONG_LONG ${SIZEOF_LONG_LONG}
 
+/* Define if we have C99 variable-length array support */
+#cmakedefine HAVE_C99_VLA
+
 /* Define if we have GCC's destructor attribute */
 #cmakedefine HAVE_GCC_DESTRUCTOR
 

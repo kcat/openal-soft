@@ -159,6 +159,17 @@ IF(CMAKE_COMPILER_IS_GNUCC)
     SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
 ENDIF()
 
+# Check if we have C99 variable length arrays
+CHECK_C_SOURCE_COMPILES(
+"int main(int argc, char *argv[])
+ {
+     volatile int tmp[argc];
+     tmp[0] = argv[0][0];
+     return tmp[0];
+ }"
+HAVE_C99_VLA)
+
+
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES("${OpenAL_SOURCE_DIR}/include" "${OpenAL_BINARY_DIR}")
 IF(CMAKE_VERSION VERSION_LESS "2.8.8")
@@ -302,8 +313,10 @@ ENDIF()
 CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(printf, 1, 2)));
                          int main() {return 0;}" HAVE_GCC_FORMAT)
 
+IF(NOT HAVE_C99_VLA)
+    CHECK_INCLUDE_FILE(alloca.h HAVE_ALLOCA_H)
+ENDIF()
 CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
-CHECK_INCLUDE_FILE(alloca.h HAVE_ALLOCA_H)
 CHECK_INCLUDE_FILE(strings.h HAVE_STRINGS_H)
 CHECK_INCLUDE_FILE(cpuid.h HAVE_CPUID_H)
 CHECK_INCLUDE_FILE(sys/sysconf.h HAVE_SYS_SYSCONF_H)
@@ -327,18 +340,20 @@ CHECK_SYMBOL_EXISTS(aligned_alloc    stdlib.h HAVE_ALIGNED_ALLOC)
 CHECK_SYMBOL_EXISTS(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
 CHECK_SYMBOL_EXISTS(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
 CHECK_SYMBOL_EXISTS(lrintf math.h HAVE_LRINTF)
-IF(HAVE_ALLOCA_H)
-    CHECK_SYMBOL_EXISTS(alloca alloca.h HAVE_ALLOCA)
-ELSEIF(HAVE_MALLOC_H)
-    CHECK_SYMBOL_EXISTS(alloca malloc.h HAVE_ALLOCA)
-ENDIF()
-IF(NOT HAVE_ALLOCA)
-    CHECK_SYMBOL_EXISTS(_alloca malloc.h HAVE__ALLOCA)
-    IF(NOT HAVE__ALLOCA)
-        MESSAGE(FATAL_ERROR "No alloca function found, please report!")
+IF(NOT HAVE_C99_VLA)
+    IF(HAVE_ALLOCA_H)
+        CHECK_SYMBOL_EXISTS(alloca alloca.h HAVE_ALLOCA)
+    ELSEIF(HAVE_MALLOC_H)
+        CHECK_SYMBOL_EXISTS(alloca malloc.h HAVE_ALLOCA)
     ENDIF()
+    IF(NOT HAVE_ALLOCA)
+        CHECK_SYMBOL_EXISTS(_alloca malloc.h HAVE__ALLOCA)
+        IF(NOT HAVE__ALLOCA)
+            MESSAGE(FATAL_ERROR "No alloca function found, please report!")
+        ENDIF()
 
-    ADD_DEFINITIONS(-Dalloca=_alloca)
+        ADD_DEFINITIONS(-Dalloca=_alloca)
+    ENDIF()
 ENDIF()
 
 IF(HAVE_FLOAT_H)

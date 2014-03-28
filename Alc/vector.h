@@ -17,8 +17,8 @@ typedef struct vector__s {
     T Data[];                                                                 \
 } *vector_##T;
 
-#define VECTOR_INIT(_x)   (((_x) = calloc(1, sizeof(*(_x)))) != NULL)
-#define VECTOR_DEINIT(_x) do { free(_x); _x = NULL; } while(0)
+#define VECTOR_INIT(_x)   do { (_x) = calloc(1, sizeof(*(_x))); } while(0)
+#define VECTOR_DEINIT(_x) do { free((_x)); (_x) = NULL; } while(0)
 
 /* Helper to increase a vector's reserve. Do not call directly. */
 ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t obj_count, size_t obj_size, ALboolean exact);

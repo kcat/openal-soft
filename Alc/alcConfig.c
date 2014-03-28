@@ -291,27 +291,45 @@ static void LoadConfigFromFile(FILE *f)
     free(buffer);
 }
 
+#ifdef _WIN32
 void ReadALConfig(void)
 {
-    char buffer[PATH_MAX];
-    const char *str;
+    WCHAR buffer[PATH_MAX];
+    const WCHAR *str;
     FILE *f;
 
-#ifdef _WIN32
-    if(SHGetSpecialFolderPathA(NULL, buffer, CSIDL_APPDATA, FALSE) != FALSE)
+    if(SHGetSpecialFolderPathW(NULL, buffer, CSIDL_APPDATA, FALSE) != FALSE)
     {
-        size_t p = strlen(buffer);
-        snprintf(buffer+p, sizeof(buffer)-p, "\\alsoft.ini");
+        size_t p = lstrlenW(buffer);
+        _snwprintf(buffer+p, PATH_MAX-p, L"\\alsoft.ini");
 
-        TRACE("Loading config %s...\n", buffer);
-        f = al_fopen(buffer, "rt");
+        TRACE("Loading config %ls...\n", buffer);
+        f = _wfopen(buffer, L"rt");
         if(f)
         {
             LoadConfigFromFile(f);
             fclose(f);
         }
     }
+
+    if((str=_wgetenv(L"ALSOFT_CONF")) != NULL && *str)
+    {
+        TRACE("Loading config %ls...\n", str);
+        f = _wfopen(str, L"rt");
+        if(f)
+        {
+            LoadConfigFromFile(f);
+            fclose(f);
+        }
+    }
+}
 #else
+void ReadALConfig(void)
+{
+    char buffer[PATH_MAX];
+    const char *str;
+    FILE *f;
+
     str = "/etc/openal/alsoft.conf";
 
     TRACE("Loading config %s...\n", str);
@@ -388,7 +406,6 @@ void ReadALConfig(void)
             fclose(f);
         }
     }
-#endif
 
     if((str=getenv("ALSOFT_CONF")) != NULL && *str)
     {
@@ -401,6 +418,7 @@ void ReadALConfig(void)
         }
     }
 }
+#endif
 
 void FreeALConfig(void)
 {

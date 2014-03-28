@@ -375,24 +375,26 @@ WCHAR *strdupW(const WCHAR *str)
     return ret;
 }
 
+static WCHAR *FromUTF8(const char *str)
+{
+    WCHAR *out = NULL;
+    int len;
+
+    if((len=MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0)) > 0)
+    {
+        out = calloc(sizeof(WCHAR), len);
+        MultiByteToWideChar(CP_UTF8, 0, str, -1, out, len);
+    }
+    return out;
+}
 
 FILE *al_fopen(const char *fname, const char *mode)
 {
     WCHAR *wname=NULL, *wmode=NULL;
     FILE *file = NULL;
-    int len;
 
-    if((len=MultiByteToWideChar(CP_UTF8, 0, fname, -1, NULL, 0)) > 0)
-    {
-        wname = calloc(sizeof(WCHAR), len);
-        MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, len);
-    }
-    if((len=MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0)) > 0)
-    {
-        wmode = calloc(sizeof(WCHAR), len);
-        MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, len);
-    }
-
+    wname = FromUTF8(fname);
+    wmode = FromUTF8(mode);
     if(!wname)
         ERR("Failed to convert UTF-8 filename: \"%s\"\n", fname);
     else if(!wmode)
@@ -544,19 +546,17 @@ void al_print(const char *type, const char *func, const char *fmt, ...)
     fflush(LogFile);
 }
 
-
+#ifdef _WIN32
 FILE *OpenDataFile(const char *fname, const char *subdir)
 {
-    char buffer[PATH_MAX] = "";
-    FILE *f;
-
-#ifdef _WIN32
     static const int ids[2] = { CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
+    WCHAR *wname=NULL, *wsubdir=NULL;
     int i;
 
     /* If the path is absolute, open it directly. */
     if(fname[0] != '\0' && fname[1] == ':' && (fname[2] == '\\' || fname[2] == '/'))
     {
+        FILE *f;
         if((f=al_fopen(fname, "rb")) != NULL)
         {
             TRACE("Opened %s\n", fname);
@@ -566,18 +566,26 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
         return NULL;
     }
 
-    for(i = 0;i < 2;i++)
+    wname = FromUTF8(fname);
+    wsubdir = FromUTF8(subdir);
+    if(!wname)
+        ERR("Failed to convert UTF-8 filename: \"%s\"\n", fname);
+    else if(!wsubdir)
+        ERR("Failed to convert UTF-8 subdir: \"%s\"\n", subdir);
+    else for(i = 0;i < 2;i++)
     {
+        WCHAR buffer[PATH_MAX];
         size_t len;
+        FILE *f;
 
-        if(SHGetSpecialFolderPathA(NULL, buffer, ids[i], FALSE) == FALSE)
+        if(SHGetSpecialFolderPathW(NULL, buffer, ids[i], FALSE) == FALSE)
             continue;
 
-        len = strlen(buffer);
+        len = lstrlenW(buffer);
         if(len > 0 && (buffer[len-1] == '\\' || buffer[len-1] == '/'))
             buffer[--len] = '\0';
-        snprintf(buffer+len, sizeof(buffer)-len, "/%s/%s", subdir, fname);
-        len = strlen(buffer);
+        _snwprintf(buffer+len, PATH_MAX-len, L"/%ls/%ls", wsubdir, wname);
+        len = lstrlenW(buffer);
         while(len > 0)
         {
             --len;
@@ -585,15 +593,24 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
                 buffer[len] = '\\';
         }
 
-        if((f=al_fopen(buffer, "rb")) != NULL)
+        if((f=_wfopen(buffer, L"rb")) != NULL)
         {
-            TRACE("Opened %s\n", buffer);
+            TRACE("Opened %ls\n", buffer);
             return f;
         }
-        WARN("Could not open %s\n", buffer);
+        WARN("Could not open %ls\n", buffer);
     }
+    free(wname);
+    free(wsubdir);
+
+    return NULL;
+}
 #else
+FILE *OpenDataFile(const char *fname, const char *subdir)
+{
+    char buffer[PATH_MAX] = "";
     const char *str, *next;
+    FILE *f;
 
     if(fname[0] == '/')
     {
@@ -650,10 +667,10 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
         }
         WARN("Could not open %s\n", buffer);
     }
-#endif
 
     return NULL;
 }
+#endif
 
 
 void SetRTPriority(void)

@@ -819,7 +819,7 @@ void al_string_copy(al_string *str, const_al_string from)
 
 void al_string_copy_cstr(al_string *str, const al_string_char_type *from)
 {
-    ALsizei len = strlen(from);
+    size_t len = strlen(from);
     VECTOR_RESERVE(*str, len+1);
     VECTOR_RESIZE(*str, len);
     memcpy(&VECTOR_FRONT(*str), from, len*sizeof(al_string_char_type));

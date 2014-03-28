@@ -339,7 +339,20 @@ static HRESULT DoReset(ALCdevice *device)
     WAVEFORMATEX *wfx = NULL;
     REFERENCE_TIME min_per, buf_time;
     UINT32 buffer_len, min_len;
+    void *ptr = NULL;
     HRESULT hr;
+
+    if(data->client)
+        IAudioClient_Release(data->client);
+    data->client = NULL;
+
+    hr = IMMDevice_Activate(data->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &ptr);
+    if(FAILED(hr))
+    {
+        ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
+        return hr;
+    }
+    data->client = ptr;
 
     hr = IAudioClient_GetMixFormat(data->client, &wfx);
     if(FAILED(hr))
@@ -560,6 +573,13 @@ static HRESULT DoReset(ALCdevice *device)
         device->UpdateSize = buffer_len / device->NumUpdates;
     }
 
+    hr = IAudioClient_SetEventHandle(data->client, data->NotifyEvent);
+    if(FAILED(hr))
+    {
+        ERR("Failed to set event handle: 0x%08lx\n", hr);
+        return hr;
+    }
+
     return hr;
 }
 
@@ -671,15 +691,9 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             data = device->ExtraData;
 
             ResetEvent(data->NotifyEvent);
-            hr = IAudioClient_SetEventHandle(data->client, data->NotifyEvent);
+            hr = IAudioClient_Start(data->client);
             if(FAILED(hr))
-                ERR("Failed to set event handle: 0x%08lx\n", hr);
-            else
-            {
-                hr = IAudioClient_Start(data->client);
-                if(FAILED(hr))
-                    ERR("Failed to start audio client: 0x%08lx\n", hr);
-            }
+                ERR("Failed to start audio client: 0x%08lx\n", hr);
 
             if(SUCCEEDED(hr))
                 hr = IAudioClient_GetService(data->client, &IID_IAudioRenderClient, &ptr);
@@ -728,10 +742,12 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             device = (ALCdevice*)msg.lParam;
             data = device->ExtraData;
 
-            IAudioClient_Release(data->client);
+            if(data->client)
+                IAudioClient_Release(data->client);
             data->client = NULL;
 
-            IMMDevice_Release(data->mmdev);
+            if(data->mmdev)
+                IMMDevice_Release(data->mmdev);
             data->mmdev = NULL;
 
             if(--deviceCount == 0)

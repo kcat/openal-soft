@@ -87,6 +87,7 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 #include "atomic.h"
 #include "uintmap.h"
 #include "vector.h"
+#include "alstring.h"
 #include "compat.h"
 
 
@@ -779,6 +780,69 @@ ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t 
     }
     return AL_TRUE;
 }
+
+ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t obj_size)
+{
+    vector_ *vecptr = ptr;
+    if(!vector_reserve(vecptr, (*vecptr)->Capacity, base_size, obj_count, obj_size, AL_TRUE))
+        return AL_FALSE;
+    (*vecptr)->Size = (ALsizei)obj_count;
+    return AL_TRUE;
+}
+
+
+extern inline ALsizei al_string_length(const_al_string str);
+extern inline ALsizei al_string_empty(const_al_string str);
+extern inline const al_string_char_type *al_string_get_cstr(const_al_string str);
+
+void al_string_clear(al_string *str)
+{
+    /* Reserve one more character than the total size of the string. This is to
+     * ensure we have space to add a null terminator in the string data so it
+     * can be used as a C-style string. */
+    VECTOR_RESERVE(*str, 1);
+    VECTOR_RESIZE(*str, 0);
+    *VECTOR_ITER_END(*str) = 0;
+}
+
+void al_string_copy(al_string *str, const_al_string from)
+{
+    ALsizei len = VECTOR_SIZE(from);
+    VECTOR_RESERVE(*str, len+1);
+    VECTOR_RESIZE(*str, len);
+    memcpy(&VECTOR_FRONT(*str), &VECTOR_FRONT(from),
+           len*sizeof(al_string_char_type));
+    *VECTOR_ITER_END(*str) = 0;
+}
+
+void al_string_copy_cstr(al_string *str, const al_string_char_type *from)
+{
+    ALsizei len = strlen(from);
+    VECTOR_RESERVE(*str, len+1);
+    VECTOR_RESIZE(*str, len);
+    memcpy(&VECTOR_FRONT(*str), from, len*sizeof(al_string_char_type));
+    *VECTOR_ITER_END(*str) = 0;
+}
+
+void al_string_append_char(al_string *str, const al_string_char_type c)
+{
+    VECTOR_RESERVE(*str, al_string_length(*str)+2);
+    VECTOR_PUSH_BACK(*str, c);
+    *VECTOR_ITER_END(*str) = 0;
+}
+
+void al_string_append_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
+{
+    ptrdiff_t len = to - from;
+    if(len != 0)
+    {
+        VECTOR_RESERVE(*str, al_string_length(*str)+len+1);
+        VECTOR_RESIZE(*str, al_string_length(*str)+len);
+        memcpy(VECTOR_ITER_END(*str)-len, from, len);
+        *VECTOR_ITER_END(*str) = 0;
+    }
+}
+
 
 
 void InitUIntMap(UIntMap *map, ALsizei limit)

@@ -15,7 +15,8 @@ typedef struct vector__s {
     ALsizei Capacity;                                                         \
     ALsizei Size;                                                             \
     T Data[];                                                                 \
-} *vector_##T;
+} *vector_##T;                                                                \
+typedef const struct vector_##T##_s *const_vector_##T;
 
 #define VECTOR_INIT(_x)   do { (_x) = calloc(1, sizeof(*(_x))); } while(0)
 #define VECTOR_DEINIT(_x) do { free((_x)); (_x) = NULL; } while(0)
@@ -23,6 +24,10 @@ typedef struct vector__s {
 /* Helper to increase a vector's reserve. Do not call directly. */
 ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t obj_count, size_t obj_size, ALboolean exact);
 #define VECTOR_RESERVE(_x, _c) (vector_reserve(&(_x), (_x)->Capacity, sizeof(*(_x)), (_c), sizeof((_x)->Data[0]), AL_TRUE))
+
+/* Helper to change a vector's size. Do not call directly. */
+ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t obj_size);
+#define VECTOR_RESIZE(_x, _c) (vector_resize(&(_x), sizeof(*(_x)), (_c), sizeof((_x)->Data[0])))
 
 #define VECTOR_CAPACITY(_x) ((const ALsizei)(_x)->Capacity)
 #define VECTOR_SIZE(_x)     ((const ALsizei)(_x)->Size)

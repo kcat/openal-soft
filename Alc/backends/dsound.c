@@ -36,6 +36,7 @@
 #include "alu.h"
 #include "threads.h"
 #include "compat.h"
+#include "alstring.h"
 
 #ifndef DSSPEAKER_5POINT1
 #   define DSSPEAKER_5POINT1          0x00000006
@@ -57,14 +58,14 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 
 static void *ds_handle;
 static HRESULT (WINAPI *pDirectSoundCreate)(LPCGUID pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
-static HRESULT (WINAPI *pDirectSoundEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallback, void *pContext);
+static HRESULT (WINAPI *pDirectSoundEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
 static HRESULT (WINAPI *pDirectSoundCaptureCreate)(LPCGUID pcGuidDevice, IDirectSoundCapture **ppDSC, IUnknown *pUnkOuter);
-static HRESULT (WINAPI *pDirectSoundCaptureEnumerateA)(LPDSENUMCALLBACKA pDSEnumCallback, void *pContext);
+static HRESULT (WINAPI *pDirectSoundCaptureEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
 
 #define DirectSoundCreate            pDirectSoundCreate
-#define DirectSoundEnumerateA        pDirectSoundEnumerateA
+#define DirectSoundEnumerateW        pDirectSoundEnumerateW
 #define DirectSoundCaptureCreate     pDirectSoundCaptureCreate
-#define DirectSoundCaptureEnumerateA pDirectSoundCaptureEnumerateA
+#define DirectSoundCaptureEnumerateW pDirectSoundCaptureEnumerateW
 
 
 typedef struct {
@@ -90,7 +91,7 @@ typedef struct {
 
 
 typedef struct {
-    ALCchar *name;
+    al_string name;
     GUID guid;
 } DevMap;
 
@@ -121,19 +122,19 @@ static ALCboolean DSoundLoad(void)
     }                                                                         \
 } while(0)
         LOAD_FUNC(DirectSoundCreate);
-        LOAD_FUNC(DirectSoundEnumerateA);
+        LOAD_FUNC(DirectSoundEnumerateW);
         LOAD_FUNC(DirectSoundCaptureCreate);
-        LOAD_FUNC(DirectSoundCaptureEnumerateA);
+        LOAD_FUNC(DirectSoundCaptureEnumerateW);
 #undef LOAD_FUNC
     }
     return ALC_TRUE;
 }
 
 
-static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR UNUSED(drvname), LPVOID UNUSED(data))
+static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCWSTR desc, LPCWSTR UNUSED(drvname), LPVOID UNUSED(data))
 {
     LPOLESTR guidstr = NULL;
-    char str[1024];
+    al_string dname;
     HRESULT hr;
     void *temp;
     int count;
@@ -142,17 +143,22 @@ static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR 
     if(!guid)
         return TRUE;
 
+    AL_STRING_INIT(dname);
+
     count = 0;
     do {
-        if(count == 0)
-            snprintf(str, sizeof(str), "%s", desc);
-        else
-            snprintf(str, sizeof(str), "%s #%d", desc, count+1);
+        al_string_copy_wcstr(&dname, desc);
+        if(count != 0)
+        {
+            char str[64];
+            snprintf(str, sizeof(str), " #%d", count+1);
+            al_string_append_cstr(&dname, str);
+        }
         count++;
 
         for(i = 0;i < NumPlaybackDevices;i++)
         {
-            if(strcmp(str, PlaybackDeviceList[i].name) == 0)
+            if(al_string_cmp(dname, PlaybackDeviceList[i].name) == 0)
                 break;
         }
     } while(i != NumPlaybackDevices);
@@ -160,15 +166,17 @@ static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR 
     hr = StringFromCLSID(guid, &guidstr);
     if(SUCCEEDED(hr))
     {
-        TRACE("Got device \"%s\", GUID \"%ls\"\n", str, guidstr);
+        TRACE("Got device \"%s\", GUID \"%ls\"\n", al_string_get_cstr(dname), guidstr);
         CoTaskMemFree(guidstr);
     }
 
     temp = realloc(PlaybackDeviceList, sizeof(DevMap) * (NumPlaybackDevices+1));
-    if(temp)
+    if(!temp)
+        AL_STRING_DEINIT(dname);
+    else
     {
         PlaybackDeviceList = temp;
-        PlaybackDeviceList[NumPlaybackDevices].name = strdup(str);
+        PlaybackDeviceList[NumPlaybackDevices].name = dname;
         PlaybackDeviceList[NumPlaybackDevices].guid = *guid;
         NumPlaybackDevices++;
     }
@@ -177,10 +185,10 @@ static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCSTR desc, LPCSTR 
 }
 
 
-static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR UNUSED(drvname), LPVOID UNUSED(data))
+static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCWSTR desc, LPCWSTR UNUSED(drvname), LPVOID UNUSED(data))
 {
     LPOLESTR guidstr = NULL;
-    char str[1024];
+    al_string dname;
     HRESULT hr;
     void *temp;
     int count;
@@ -189,17 +197,22 @@ static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR U
     if(!guid)
         return TRUE;
 
+    AL_STRING_INIT(dname);
+
     count = 0;
     do {
-        if(count == 0)
-            snprintf(str, sizeof(str), "%s", desc);
-        else
-            snprintf(str, sizeof(str), "%s #%d", desc, count+1);
+        al_string_copy_wcstr(&dname, desc);
+        if(count != 0)
+        {
+            char str[64];
+            snprintf(str, sizeof(str), " #%d", count+1);
+            al_string_append_cstr(&dname, str);
+        }
         count++;
 
         for(i = 0;i < NumCaptureDevices;i++)
         {
-            if(strcmp(str, CaptureDeviceList[i].name) == 0)
+            if(al_string_cmp(dname, CaptureDeviceList[i].name) == 0)
                 break;
         }
     } while(i != NumCaptureDevices);
@@ -207,15 +220,17 @@ static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCSTR desc, LPCSTR U
     hr = StringFromCLSID(guid, &guidstr);
     if(SUCCEEDED(hr))
     {
-        TRACE("Got device \"%s\", GUID \"%ls\"\n", str, guidstr);
+        TRACE("Got device \"%s\", GUID \"%ls\"\n", al_string_get_cstr(dname), guidstr);
         CoTaskMemFree(guidstr);
     }
 
     temp = realloc(CaptureDeviceList, sizeof(DevMap) * (NumCaptureDevices+1));
-    if(temp)
+    if(!temp)
+        AL_STRING_DEINIT(dname);
+    else
     {
         CaptureDeviceList = temp;
-        CaptureDeviceList[NumCaptureDevices].name = strdup(str);
+        CaptureDeviceList[NumCaptureDevices].name = dname;
         CaptureDeviceList[NumCaptureDevices].guid = *guid;
         NumCaptureDevices++;
     }
@@ -336,18 +351,22 @@ static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 {
     DSoundPlaybackData *data = NULL;
     LPGUID guid = NULL;
-    HRESULT hr;
+    HRESULT hr, hrcom;
 
     if(!PlaybackDeviceList)
     {
-        hr = DirectSoundEnumerateA(DSoundEnumPlaybackDevices, NULL);
+        /* Initialize COM to prevent name truncation */
+        hrcom = CoInitialize(NULL);
+        hr = DirectSoundEnumerateW(DSoundEnumPlaybackDevices, NULL);
         if(FAILED(hr))
-            ERR("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+            ERR("Error enumerating DirectSound devices (0x%lx)!\n", hr);
+        if(SUCCEEDED(hrcom))
+            CoUninitialize();
     }
 
     if(!deviceName && NumPlaybackDevices > 0)
     {
-        deviceName = PlaybackDeviceList[0].name;
+        deviceName = al_string_get_cstr(PlaybackDeviceList[0].name);
         guid = &PlaybackDeviceList[0].guid;
     }
     else
@@ -356,7 +375,7 @@ static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
 
         for(i = 0;i < NumPlaybackDevices;i++)
         {
-            if(strcmp(deviceName, PlaybackDeviceList[i].name) == 0)
+            if(al_string_cmp_cstr(PlaybackDeviceList[i].name, deviceName) == 0)
             {
                 guid = &PlaybackDeviceList[i].guid;
                 break;
@@ -669,16 +688,16 @@ static ALCenum DSoundOpenCapture(ALCdevice *device, const ALCchar *deviceName)
     {
         /* Initialize COM to prevent name truncation */
         hrcom = CoInitialize(NULL);
-        hr = DirectSoundCaptureEnumerateA(DSoundEnumCaptureDevices, NULL);
+        hr = DirectSoundCaptureEnumerateW(DSoundEnumCaptureDevices, NULL);
         if(FAILED(hr))
-            ERR("Error enumerating DirectSound devices (%#x)!\n", (unsigned int)hr);
+            ERR("Error enumerating DirectSound devices (0x%lx)!\n", hr);
         if(SUCCEEDED(hrcom))
             CoUninitialize();
     }
 
     if(!deviceName && NumCaptureDevices > 0)
     {
-        deviceName = CaptureDeviceList[0].name;
+        deviceName = al_string_get_cstr(CaptureDeviceList[0].name);
         guid = &CaptureDeviceList[0].guid;
     }
     else
@@ -687,7 +706,7 @@ static ALCenum DSoundOpenCapture(ALCdevice *device, const ALCchar *deviceName)
 
         for(i = 0;i < NumCaptureDevices;i++)
         {
-            if(strcmp(deviceName, CaptureDeviceList[i].name) == 0)
+            if(al_string_cmp_cstr(CaptureDeviceList[i].name, deviceName) == 0)
             {
                 guid = &CaptureDeviceList[i].guid;
                 break;
@@ -972,13 +991,13 @@ void alcDSoundDeinit(void)
     ALuint i;
 
     for(i = 0;i < NumPlaybackDevices;++i)
-        free(PlaybackDeviceList[i].name);
+        AL_STRING_DEINIT(PlaybackDeviceList[i].name);
     free(PlaybackDeviceList);
     PlaybackDeviceList = NULL;
     NumPlaybackDevices = 0;
 
     for(i = 0;i < NumCaptureDevices;++i)
-        free(CaptureDeviceList[i].name);
+        AL_STRING_DEINIT(CaptureDeviceList[i].name);
     free(CaptureDeviceList);
     CaptureDeviceList = NULL;
     NumCaptureDevices = 0;
@@ -993,44 +1012,44 @@ void alcDSoundProbe(enum DevProbe type)
     HRESULT hr, hrcom;
     ALuint i;
 
+    /* Initialize COM to prevent name truncation */
+    hrcom = CoInitialize(NULL);
     switch(type)
     {
         case ALL_DEVICE_PROBE:
             for(i = 0;i < NumPlaybackDevices;++i)
-                free(PlaybackDeviceList[i].name);
+                AL_STRING_DEINIT(PlaybackDeviceList[i].name);
             free(PlaybackDeviceList);
             PlaybackDeviceList = NULL;
             NumPlaybackDevices = 0;
 
-            hr = DirectSoundEnumerateA(DSoundEnumPlaybackDevices, NULL);
+            hr = DirectSoundEnumerateW(DSoundEnumPlaybackDevices, NULL);
             if(FAILED(hr))
-                ERR("Error enumerating DirectSound playback devices (%#x)!\n", (unsigned int)hr);
+                ERR("Error enumerating DirectSound playback devices (0x%lx)!\n", hr);
             else
             {
                 for(i = 0;i < NumPlaybackDevices;i++)
-                    AppendAllDevicesList(PlaybackDeviceList[i].name);
+                    AppendAllDevicesList(al_string_get_cstr(PlaybackDeviceList[i].name));
             }
             break;
 
         case CAPTURE_DEVICE_PROBE:
             for(i = 0;i < NumCaptureDevices;++i)
-                free(CaptureDeviceList[i].name);
+                AL_STRING_DEINIT(CaptureDeviceList[i].name);
             free(CaptureDeviceList);
             CaptureDeviceList = NULL;
             NumCaptureDevices = 0;
 
-            /* Initialize COM to prevent name truncation */
-            hrcom = CoInitialize(NULL);
-            hr = DirectSoundCaptureEnumerateA(DSoundEnumCaptureDevices, NULL);
+            hr = DirectSoundCaptureEnumerateW(DSoundEnumCaptureDevices, NULL);
             if(FAILED(hr))
-                ERR("Error enumerating DirectSound capture devices (%#x)!\n", (unsigned int)hr);
+                ERR("Error enumerating DirectSound capture devices (0x%lx)!\n", hr);
             else
             {
                 for(i = 0;i < NumCaptureDevices;i++)
-                    AppendCaptureDeviceList(CaptureDeviceList[i].name);
+                    AppendCaptureDeviceList(al_string_get_cstr(CaptureDeviceList[i].name));
             }
-            if(SUCCEEDED(hrcom))
-                CoUninitialize();
             break;
     }
+    if(SUCCEEDED(hrcom))
+        CoUninitialize();
 }

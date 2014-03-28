@@ -794,6 +794,8 @@ ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t ob
 extern inline ALsizei al_string_length(const_al_string str);
 extern inline ALsizei al_string_empty(const_al_string str);
 extern inline const al_string_char_type *al_string_get_cstr(const_al_string str);
+extern inline int al_string_cmp(const_al_string str1, const_al_string str2);
+extern inline int al_string_cmp_cstr(const_al_string str1, const al_string_char_type *str2);
 
 void al_string_clear(al_string *str)
 {
@@ -831,6 +833,18 @@ void al_string_append_char(al_string *str, const al_string_char_type c)
     *VECTOR_ITER_END(*str) = 0;
 }
 
+void al_string_append_cstr(al_string *str, const al_string_char_type *from)
+{
+    size_t len = strlen(from);
+    if(len != 0)
+    {
+        VECTOR_RESERVE(*str, al_string_length(*str)+len+1);
+        VECTOR_RESIZE(*str, al_string_length(*str)+len);
+        memcpy(VECTOR_ITER_END(*str)-len, from, len);
+        *VECTOR_ITER_END(*str) = 0;
+    }
+}
+
 void al_string_append_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
 {
     ptrdiff_t len = to - from;
@@ -843,6 +857,19 @@ void al_string_append_range(al_string *str, const al_string_char_type *from, con
     }
 }
 
+#ifdef _WIN32
+void al_string_copy_wcstr(al_string *str, const wchar_t *from)
+{
+    int len;
+    if((len=WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL)) > 0)
+    {
+        VECTOR_RESERVE(*str, len);
+        VECTOR_RESIZE(*str, len-1);
+        WideCharToMultiByte(CP_UTF8, 0, from, -1, &VECTOR_FRONT(*str), len, NULL, NULL);
+        *VECTOR_ITER_END(*str) = 0;
+    }
+}
+#endif
 
 
 void InitUIntMap(UIntMap *map, ALsizei limit)

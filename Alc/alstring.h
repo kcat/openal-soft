@@ -1,7 +1,10 @@
 #ifndef ALSTRING_H
 #define ALSTRING_H
 
+#include <string.h>
+
 #include "vector.h"
+
 
 typedef char al_string_char_type;
 DECL_VECTOR(al_string_char_type)
@@ -23,10 +26,23 @@ inline const al_string_char_type *al_string_get_cstr(const_al_string str)
 
 void al_string_clear(al_string *str);
 
+inline int al_string_cmp(const_al_string str1, const_al_string str2)
+{ return strcmp(al_string_get_cstr(str1), al_string_get_cstr(str2)); }
+
+inline int al_string_cmp_cstr(const_al_string str1, const al_string_char_type *str2)
+{ return strcmp(al_string_get_cstr(str1), str2); }
+
 void al_string_copy(al_string *str, const_al_string from);
 void al_string_copy_cstr(al_string *str, const al_string_char_type *from);
 
 void al_string_append_char(al_string *str, const al_string_char_type c);
+void al_string_append_cstr(al_string *str, const al_string_char_type *from);
 void al_string_append_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to);
+
+#ifdef _WIN32
+#include <wchar.h>
+/* Windows-only methods to deal with WideChar strings. */
+void al_string_copy_wcstr(al_string *str, const wchar_t *from);
+#endif
 
 #endif /* ALSTRING_H */

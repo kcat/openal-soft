@@ -42,6 +42,7 @@
 #include "alu.h"
 #include "threads.h"
 #include "compat.h"
+#include "alstring.h"
 
 
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
@@ -76,7 +77,7 @@ typedef struct {
 
 
 typedef struct {
-    ALCchar *name;
+    al_string name;
     WCHAR *devid;
 } DevMap;
 
@@ -112,42 +113,29 @@ static HRESULT WaitForResponse(ThreadRequest *req)
 }
 
 
-static ALCchar *get_device_name(IMMDevice *device)
+static void get_device_name(IMMDevice *device, al_string *name)
 {
-    ALCchar *name = NULL;
     IPropertyStore *ps;
     PROPVARIANT pvname;
     HRESULT hr;
-    int len;
 
     hr = IMMDevice_OpenPropertyStore(device, STGM_READ, &ps);
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
-        return calloc(1, 1);
+        return;
     }
 
     PropVariantInit(&pvname);
 
     hr = IPropertyStore_GetValue(ps, (const PROPERTYKEY*)&DEVPKEY_Device_FriendlyName, &pvname);
     if(FAILED(hr))
-    {
         WARN("GetValue failed: 0x%08lx\n", hr);
-        name = calloc(1, 1);
-    }
     else
-    {
-        if((len=WideCharToMultiByte(CP_ACP, 0, pvname.pwszVal, -1, NULL, 0, NULL, NULL)) > 0)
-        {
-            name = calloc(1, len);
-            WideCharToMultiByte(CP_ACP, 0, pvname.pwszVal, -1, name, len, NULL, NULL);
-        }
-    }
+        al_string_copy_wcstr(name, pvname.pwszVal);
 
     PropVariantClear(&pvname);
     IPropertyStore_Release(ps);
-
-    return name;
 }
 
 static void add_device(IMMDevice *device, DevMap *devmap)
@@ -155,12 +143,16 @@ static void add_device(IMMDevice *device, DevMap *devmap)
     LPWSTR devid;
     HRESULT hr;
 
+    AL_STRING_INIT(devmap->name);
+
     hr = IMMDevice_GetId(device, &devid);
-    if(SUCCEEDED(hr))
+    if(FAILED(hr))
+        devmap->devid = calloc(sizeof(WCHAR), 1);
+    else
     {
         devmap->devid = strdupW(devid);
-        devmap->name = get_device_name(device);
-        TRACE("Got device \"%s\", \"%ls\"\n", devmap->name, devmap->devid);
+        get_device_name(device, &devmap->name);
+        TRACE("Got device \"%s\", \"%ls\"\n", al_string_get_cstr(devmap->name), devmap->devid);
         CoTaskMemFree(devid);
     }
 }
@@ -660,8 +652,13 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
                 hr = IMMDevice_Activate(data->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &ptr);
             if(SUCCEEDED(hr))
             {
+                al_string str;
+
                 data->client = ptr;
-                device->DeviceName = get_device_name(data->mmdev);
+                AL_STRING_INIT(str);
+                get_device_name(data->mmdev, &str);
+                device->DeviceName = strdup(al_string_get_cstr(str));
+                AL_STRING_DEINIT(str);
             }
 
             if(FAILED(hr))
@@ -788,7 +785,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
 
                 for(i = 0;i < *numdevs;i++)
                 {
-                    free((*devlist)[i].name);
+                    AL_STRING_DEINIT((*devlist)[i].name);
                     free((*devlist)[i].devid);
                 }
                 free(*devlist);
@@ -878,7 +875,7 @@ static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName
             hr = E_FAIL;
             for(i = 0;i < NumPlaybackDevices;i++)
             {
-                if(strcmp(deviceName, PlaybackDeviceList[i].name) == 0)
+                if(strcmp(deviceName, al_string_get_cstr(PlaybackDeviceList[i].name)) == 0)
                 {
                     data->devid = strdupW(PlaybackDeviceList[i].devid);
                     hr = S_OK;
@@ -1016,7 +1013,7 @@ void alcMMDevApiDeinit(void)
 
     for(i = 0;i < NumPlaybackDevices;i++)
     {
-        free(PlaybackDeviceList[i].name);
+        AL_STRING_DEINIT(PlaybackDeviceList[i].name);
         free(PlaybackDeviceList[i].devid);
     }
     free(PlaybackDeviceList);
@@ -1025,7 +1022,7 @@ void alcMMDevApiDeinit(void)
 
     for(i = 0;i < NumCaptureDevices;i++)
     {
-        free(CaptureDeviceList[i].name);
+        AL_STRING_DEINIT(CaptureDeviceList[i].name);
         free(CaptureDeviceList[i].devid);
     }
     free(CaptureDeviceList);
@@ -1058,10 +1055,7 @@ void alcMMDevApiProbe(enum DevProbe type)
             {
                 ALuint i;
                 for(i = 0;i < NumPlaybackDevices;i++)
-                {
-                    if(PlaybackDeviceList[i].name)
-                        AppendAllDevicesList(PlaybackDeviceList[i].name);
-                }
+                    AppendAllDevicesList(al_string_get_cstr(PlaybackDeviceList[i].name));
             }
             break;
 

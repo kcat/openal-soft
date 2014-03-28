@@ -23,6 +23,9 @@ inline int alsched_yield(void)
 
 WCHAR *strdupW(const WCHAR *str);
 
+/* Opens a file with standard I/O. The filename is expected to be UTF-8. */
+FILE *al_fopen(const char *fname, const char *mode);
+
 #define HAVE_DYNLOAD 1
 
 #else
@@ -49,6 +52,8 @@ void Sleep(ALuint t);
 #define althread_once pthread_once
 
 #define alsched_yield sched_yield
+
+#define al_fopen(_n, _m) fopen((_n), (_m))
 
 #if defined(HAVE_DLFCN_H) && !defined(IN_IDE_PARSER)
 #define HAVE_DYNLOAD 1

@@ -375,6 +375,37 @@ WCHAR *strdupW(const WCHAR *str)
     return ret;
 }
 
+
+FILE *al_fopen(const char *fname, const char *mode)
+{
+    WCHAR *wname=NULL, *wmode=NULL;
+    FILE *file = NULL;
+    int len;
+
+    if((len=MultiByteToWideChar(CP_UTF8, 0, fname, -1, NULL, 0)) > 0)
+    {
+        wname = calloc(sizeof(WCHAR), len);
+        MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, len);
+    }
+    if((len=MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0)) > 0)
+    {
+        wmode = calloc(sizeof(WCHAR), len);
+        MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, len);
+    }
+
+    if(!wname)
+        ERR("Failed to convert UTF-8 filename: \"%s\"\n", fname);
+    else if(!wmode)
+        ERR("Failed to convert UTF-8 mode: \"%s\"\n", mode);
+    else
+        file = _wfopen(wname, wmode);
+
+    free(wname);
+    free(wmode);
+
+    return file;
+}
+
 #else
 
 #include <pthread.h>
@@ -526,7 +557,7 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
     /* If the path is absolute, open it directly. */
     if(fname[0] != '\0' && fname[1] == ':' && (fname[2] == '\\' || fname[2] == '/'))
     {
-        if((f=fopen(fname, "rb")) != NULL)
+        if((f=al_fopen(fname, "rb")) != NULL)
         {
             TRACE("Opened %s\n", fname);
             return f;
@@ -554,7 +585,7 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
                 buffer[len] = '\\';
         }
 
-        if((f=fopen(buffer, "rb")) != NULL)
+        if((f=al_fopen(buffer, "rb")) != NULL)
         {
             TRACE("Opened %s\n", buffer);
             return f;
@@ -566,7 +597,7 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
 
     if(fname[0] == '/')
     {
-        if((f=fopen(fname, "rb")) != NULL)
+        if((f=al_fopen(fname, "rb")) != NULL)
         {
             TRACE("Opened %s\n", fname);
             return f;
@@ -581,7 +612,7 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
         snprintf(buffer, sizeof(buffer), "%s/.local/share/%s/%s", str, subdir, fname);
     if(buffer[0])
     {
-        if((f=fopen(buffer, "rb")) != NULL)
+        if((f=al_fopen(buffer, "rb")) != NULL)
         {
             TRACE("Opened %s\n", buffer);
             return f;
@@ -612,7 +643,7 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
         buffer[len] = '\0';
         snprintf(buffer+len, sizeof(buffer)-len, "/%s/%s", subdir, fname);
 
-        if((f=fopen(buffer, "rb")) != NULL)
+        if((f=al_fopen(buffer, "rb")) != NULL)
         {
             TRACE("Opened %s\n", buffer);
             return f;

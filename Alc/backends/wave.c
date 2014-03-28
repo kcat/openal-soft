@@ -183,7 +183,7 @@ static ALCenum wave_open_playback(ALCdevice *device, const ALCchar *deviceName)
 
     data = (wave_data*)calloc(1, sizeof(wave_data));
 
-    data->f = fopen(fname, "wb");
+    data->f = al_fopen(fname, "wb");
     if(!data->f)
     {
         free(data);

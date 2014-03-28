@@ -32,12 +32,12 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-
-#include "alMain.h"
-
 #ifdef _WIN32_IE
 #include <shlobj.h>
 #endif
+
+#include "alMain.h"
+#include "compat.h"
 
 
 typedef struct ConfigEntry {
@@ -304,7 +304,7 @@ void ReadALConfig(void)
         snprintf(buffer+p, sizeof(buffer)-p, "\\alsoft.ini");
 
         TRACE("Loading config %s...\n", buffer);
-        f = fopen(buffer, "rt");
+        f = al_fopen(buffer, "rt");
         if(f)
         {
             LoadConfigFromFile(f);
@@ -315,7 +315,7 @@ void ReadALConfig(void)
     str = "/etc/openal/alsoft.conf";
 
     TRACE("Loading config %s...\n", str);
-    f = fopen(str, "r");
+    f = al_fopen(str, "r");
     if(f)
     {
         LoadConfigFromFile(f);
@@ -346,7 +346,7 @@ void ReadALConfig(void)
             buffer[sizeof(buffer)-1] = 0;
 
             TRACE("Loading config %s...\n", next);
-            f = fopen(next, "r");
+            f = al_fopen(next, "r");
             if(f)
             {
                 LoadConfigFromFile(f);
@@ -362,7 +362,7 @@ void ReadALConfig(void)
         snprintf(buffer, sizeof(buffer), "%s/.alsoftrc", str);
 
         TRACE("Loading config %s...\n", buffer);
-        f = fopen(buffer, "r");
+        f = al_fopen(buffer, "r");
         if(f)
         {
             LoadConfigFromFile(f);
@@ -381,7 +381,7 @@ void ReadALConfig(void)
     if(buffer[0] != 0)
     {
         TRACE("Loading config %s...\n", buffer);
-        f = fopen(buffer, "r");
+        f = al_fopen(buffer, "r");
         if(f)
         {
             LoadConfigFromFile(f);
@@ -393,7 +393,7 @@ void ReadALConfig(void)
     if((str=getenv("ALSOFT_CONF")) != NULL && *str)
     {
         TRACE("Loading config %s...\n", str);
-        f = fopen(str, "r");
+        f = al_fopen(str, "r");
         if(f)
         {
             LoadConfigFromFile(f);

@@ -111,7 +111,7 @@ static ALCenum sndio_open_playback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_INVALID_VALUE;
     }
 
-    device->DeviceName = strdup(deviceName);
+    al_string_copy_cstr(&device->DeviceName, deviceName);
     device->ExtraData = data;
 
     return ALC_NO_ERROR;

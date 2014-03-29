@@ -23,6 +23,7 @@
 #include "atomic.h"
 #include "uintmap.h"
 #include "vector.h"
+#include "alstring.h"
 
 #ifndef ALC_SOFT_HRTF
 #define ALC_SOFT_HRTF 1
@@ -612,7 +613,7 @@ struct ALCdevice_struct
     enum DevFmtChannels FmtChans;
     enum DevFmtType     FmtType;
 
-    ALCchar      *DeviceName;
+    al_string DeviceName;
 
     volatile ALCenum LastError;
 

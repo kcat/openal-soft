@@ -695,8 +695,7 @@ static void ALCpulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const
         return;
     }
 
-    free(device->DeviceName);
-    device->DeviceName = strdup(info->description);
+    al_string_copy_cstr(&device->DeviceName, info->description);
 }
 
 
@@ -1281,8 +1280,7 @@ static void ALCpulseCapture_sourceNameCallback(pa_context *UNUSED(context), cons
         return;
     }
 
-    free(device->DeviceName);
-    device->DeviceName = strdup(info->description);
+    al_string_copy_cstr(&device->DeviceName, info->description);
 }
 
 

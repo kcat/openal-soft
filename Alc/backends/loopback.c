@@ -59,7 +59,7 @@ static ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
-    device->DeviceName = strdup(name);
+    al_string_copy_cstr(&device->DeviceName, name);
     return ALC_NO_ERROR;
 }
 

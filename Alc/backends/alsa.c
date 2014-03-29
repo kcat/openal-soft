@@ -647,7 +647,7 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
 
-    device->DeviceName = strdup(name);
+    al_string_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
 }
@@ -1052,7 +1052,7 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
         }
     }
 
-    device->DeviceName = strdup(name);
+    al_string_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
 

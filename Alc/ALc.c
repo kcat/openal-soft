@@ -2024,8 +2024,7 @@ static ALCvoid FreeDevice(ALCdevice *device)
     free(device->Bs2b);
     device->Bs2b = NULL;
 
-    free(device->DeviceName);
-    device->DeviceName = NULL;
+    AL_STRING_DEINIT(device->DeviceName);
 
     al_free(device);
 }
@@ -2355,7 +2354,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
     case ALC_ALL_DEVICES_SPECIFIER:
         if(VerifyDevice(Device))
         {
-            value = Device->DeviceName;
+            value = al_string_get_cstr(Device->DeviceName);
             ALCdevice_DecRef(Device);
         }
         else
@@ -2368,7 +2367,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
     case ALC_CAPTURE_DEVICE_SPECIFIER:
         if(VerifyDevice(Device))
         {
-            value = Device->DeviceName;
+            value = al_string_get_cstr(Device->DeviceName);
             ALCdevice_DecRef(Device);
         }
         else
@@ -3069,7 +3068,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Flags = 0;
     device->Bs2b = NULL;
     device->Bs2bLevel = 0;
-    device->DeviceName = NULL;
+    AL_STRING_INIT(device->DeviceName);
 
     device->ContextList = NULL;
 
@@ -3285,7 +3284,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->next = DeviceList;
     } while(CompExchangePtr((XchgPtr*)&DeviceList, device->next, device) != device->next);
 
-    TRACE("Created device %p, \"%s\"\n", device, device->DeviceName);
+    TRACE("Created device %p, \"%s\"\n", device, al_string_get_cstr(device->DeviceName));
     return device;
 }
 
@@ -3365,14 +3364,14 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->Connected = ALC_TRUE;
     device->Type = Capture;
 
+    AL_STRING_INIT(device->DeviceName);
+
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
     InitUIntMap(&device->SfontMap, ~0);
     InitUIntMap(&device->PresetMap, ~0);
     InitUIntMap(&device->FontsoundMap, ~0);
-
-    device->DeviceName = NULL;
 
     if(!CaptureBackend.getFactory)
         device->Backend = create_backend_wrapper(device, &CaptureBackend.Funcs,
@@ -3414,7 +3413,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         device->next = DeviceList;
     } while(CompExchangePtr((XchgPtr*)&DeviceList, device->next, device) != device->next);
 
-    TRACE("Created device %p, \"%s\"\n", device, device->DeviceName);
+    TRACE("Created device %p, \"%s\"\n", device, al_string_get_cstr(device->DeviceName));
     return device;
 }
 
@@ -3535,7 +3534,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->Flags = 0;
     device->Bs2b = NULL;
     device->Bs2bLevel = 0;
-    device->DeviceName = NULL;
+    AL_STRING_INIT(device->DeviceName);
 
     device->ContextList = NULL;
 

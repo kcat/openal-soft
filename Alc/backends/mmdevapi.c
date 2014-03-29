@@ -652,13 +652,8 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
                 hr = IMMDevice_Activate(data->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &ptr);
             if(SUCCEEDED(hr))
             {
-                al_string str;
-
                 data->client = ptr;
-                AL_STRING_INIT(str);
-                get_device_name(data->mmdev, &str);
-                device->DeviceName = strdup(al_string_get_cstr(str));
-                AL_STRING_DEINIT(str);
+                get_device_name(data->mmdev, &device->DeviceName);
             }
 
             if(FAILED(hr))
@@ -875,7 +870,7 @@ static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName
             hr = E_FAIL;
             for(i = 0;i < NumPlaybackDevices;i++)
             {
-                if(strcmp(deviceName, al_string_get_cstr(PlaybackDeviceList[i].name)) == 0)
+                if(al_string_cmp_cstr(PlaybackDeviceList[i].name, deviceName) == 0)
                 {
                     data->devid = strdupW(PlaybackDeviceList[i].devid);
                     hr = S_OK;

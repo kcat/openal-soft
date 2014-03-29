@@ -336,7 +336,7 @@ retry_open:
         goto failure;
     }
 
-    Device->DeviceName = strdup(PlaybackDeviceList[DeviceID]);
+    al_string_copy_cstr(&Device->DeviceName, PlaybackDeviceList[DeviceID]);
     return ALC_NO_ERROR;
 
 failure:
@@ -606,7 +606,7 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
     if (data->WaveThread == NULL)
         goto failure;
 
-    Device->DeviceName = strdup(CaptureDeviceList[DeviceID]);
+    al_string_copy_cstr(&Device->DeviceName, CaptureDeviceList[DeviceID]);
     return ALC_NO_ERROR;
 
 failure:

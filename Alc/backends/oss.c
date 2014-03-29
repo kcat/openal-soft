@@ -168,7 +168,7 @@ static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    device->DeviceName = strdup(name);
+    al_string_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
 }
@@ -491,7 +491,7 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
         return ALC_OUT_OF_MEMORY;
     }
 
-    device->DeviceName = strdup(name);
+    al_string_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
 }

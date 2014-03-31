@@ -94,13 +94,14 @@ typedef struct {
     al_string name;
     GUID guid;
 } DevMap;
+DECL_VECTOR(DevMap)
 
-static DevMap *PlaybackDeviceList;
-static ALuint NumPlaybackDevices;
-static DevMap *CaptureDeviceList;
-static ALuint NumCaptureDevices;
+vector_DevMap PlaybackDevices;
+vector_DevMap CaptureDevices;
+
 
 #define MAX_UPDATES 128
+
 
 static ALCboolean DSoundLoad(void)
 {
@@ -131,109 +132,49 @@ static ALCboolean DSoundLoad(void)
 }
 
 
-static BOOL CALLBACK DSoundEnumPlaybackDevices(LPGUID guid, LPCWSTR desc, LPCWSTR UNUSED(drvname), LPVOID UNUSED(data))
+static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCWSTR desc, LPCWSTR UNUSED(drvname), LPVOID data)
 {
+    vector_DevMap *devices = data;
     LPOLESTR guidstr = NULL;
-    al_string dname;
+    DevMap *iter, *end;
+    DevMap entry;
     HRESULT hr;
-    void *temp;
     int count;
-    ALuint i;
 
     if(!guid)
         return TRUE;
 
-    AL_STRING_INIT(dname);
+    AL_STRING_INIT(entry.name);
 
     count = 0;
     do {
-        al_string_copy_wcstr(&dname, desc);
+        al_string_copy_wcstr(&entry.name, desc);
         if(count != 0)
         {
             char str[64];
             snprintf(str, sizeof(str), " #%d", count+1);
-            al_string_append_cstr(&dname, str);
+            al_string_append_cstr(&entry.name, str);
         }
         count++;
 
-        for(i = 0;i < NumPlaybackDevices;i++)
+        iter = VECTOR_ITER_BEGIN(*devices);
+        end = VECTOR_ITER_END(*devices);
+        for(;iter != end;++iter)
         {
-            if(al_string_cmp(dname, PlaybackDeviceList[i].name) == 0)
+            if(al_string_cmp(entry.name, iter->name) == 0)
                 break;
         }
-    } while(i != NumPlaybackDevices);
+    } while(iter != end);
+    entry.guid = *guid;
 
     hr = StringFromCLSID(guid, &guidstr);
     if(SUCCEEDED(hr))
     {
-        TRACE("Got device \"%s\", GUID \"%ls\"\n", al_string_get_cstr(dname), guidstr);
+        TRACE("Got device \"%s\", GUID \"%ls\"\n", al_string_get_cstr(entry.name), guidstr);
         CoTaskMemFree(guidstr);
     }
 
-    temp = realloc(PlaybackDeviceList, sizeof(DevMap) * (NumPlaybackDevices+1));
-    if(!temp)
-        AL_STRING_DEINIT(dname);
-    else
-    {
-        PlaybackDeviceList = temp;
-        PlaybackDeviceList[NumPlaybackDevices].name = dname;
-        PlaybackDeviceList[NumPlaybackDevices].guid = *guid;
-        NumPlaybackDevices++;
-    }
-
-    return TRUE;
-}
-
-
-static BOOL CALLBACK DSoundEnumCaptureDevices(LPGUID guid, LPCWSTR desc, LPCWSTR UNUSED(drvname), LPVOID UNUSED(data))
-{
-    LPOLESTR guidstr = NULL;
-    al_string dname;
-    HRESULT hr;
-    void *temp;
-    int count;
-    ALuint i;
-
-    if(!guid)
-        return TRUE;
-
-    AL_STRING_INIT(dname);
-
-    count = 0;
-    do {
-        al_string_copy_wcstr(&dname, desc);
-        if(count != 0)
-        {
-            char str[64];
-            snprintf(str, sizeof(str), " #%d", count+1);
-            al_string_append_cstr(&dname, str);
-        }
-        count++;
-
-        for(i = 0;i < NumCaptureDevices;i++)
-        {
-            if(al_string_cmp(dname, CaptureDeviceList[i].name) == 0)
-                break;
-        }
-    } while(i != NumCaptureDevices);
-
-    hr = StringFromCLSID(guid, &guidstr);
-    if(SUCCEEDED(hr))
-    {
-        TRACE("Got device \"%s\", GUID \"%ls\"\n", al_string_get_cstr(dname), guidstr);
-        CoTaskMemFree(guidstr);
-    }
-
-    temp = realloc(CaptureDeviceList, sizeof(DevMap) * (NumCaptureDevices+1));
-    if(!temp)
-        AL_STRING_DEINIT(dname);
-    else
-    {
-        CaptureDeviceList = temp;
-        CaptureDeviceList[NumCaptureDevices].name = dname;
-        CaptureDeviceList[NumCaptureDevices].guid = *guid;
-        NumCaptureDevices++;
-    }
+    VECTOR_PUSH_BACK(*devices, entry);
 
     return TRUE;
 }
@@ -353,35 +294,37 @@ static ALCenum DSoundOpenPlayback(ALCdevice *device, const ALCchar *deviceName)
     LPGUID guid = NULL;
     HRESULT hr, hrcom;
 
-    if(!PlaybackDeviceList)
+    if(VECTOR_SIZE(PlaybackDevices) == 0)
     {
         /* Initialize COM to prevent name truncation */
         hrcom = CoInitialize(NULL);
-        hr = DirectSoundEnumerateW(DSoundEnumPlaybackDevices, NULL);
+        hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
         if(FAILED(hr))
             ERR("Error enumerating DirectSound devices (0x%lx)!\n", hr);
         if(SUCCEEDED(hrcom))
             CoUninitialize();
     }
 
-    if(!deviceName && NumPlaybackDevices > 0)
+    if(!deviceName && VECTOR_SIZE(PlaybackDevices) > 0)
     {
-        deviceName = al_string_get_cstr(PlaybackDeviceList[0].name);
-        guid = &PlaybackDeviceList[0].guid;
+        deviceName = al_string_get_cstr(VECTOR_FRONT(PlaybackDevices).name);
+        guid = &VECTOR_FRONT(PlaybackDevices).guid;
     }
     else
     {
-        ALuint i;
+        DevMap *iter, *end;
 
-        for(i = 0;i < NumPlaybackDevices;i++)
+        iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+        end = VECTOR_ITER_END(PlaybackDevices);
+        for(;iter != end;++iter)
         {
-            if(al_string_cmp_cstr(PlaybackDeviceList[i].name, deviceName) == 0)
+            if(al_string_cmp_cstr(iter->name, deviceName) == 0)
             {
-                guid = &PlaybackDeviceList[i].guid;
+                guid = &iter->guid;
                 break;
             }
         }
-        if(i == NumPlaybackDevices)
+        if(iter == end)
             return ALC_INVALID_VALUE;
     }
 
@@ -684,35 +627,37 @@ static ALCenum DSoundOpenCapture(ALCdevice *device, const ALCchar *deviceName)
     HRESULT hr, hrcom;
     ALuint samples;
 
-    if(!CaptureDeviceList)
+    if(VECTOR_SIZE(CaptureDevices) == 0)
     {
         /* Initialize COM to prevent name truncation */
         hrcom = CoInitialize(NULL);
-        hr = DirectSoundCaptureEnumerateW(DSoundEnumCaptureDevices, NULL);
+        hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
         if(FAILED(hr))
             ERR("Error enumerating DirectSound devices (0x%lx)!\n", hr);
         if(SUCCEEDED(hrcom))
             CoUninitialize();
     }
 
-    if(!deviceName && NumCaptureDevices > 0)
+    if(!deviceName && VECTOR_SIZE(CaptureDevices) > 0)
     {
-        deviceName = al_string_get_cstr(CaptureDeviceList[0].name);
-        guid = &CaptureDeviceList[0].guid;
+        deviceName = al_string_get_cstr(VECTOR_FRONT(CaptureDevices).name);
+        guid = &VECTOR_FRONT(CaptureDevices).guid;
     }
     else
     {
-        ALuint i;
+        DevMap *iter, *end;
 
-        for(i = 0;i < NumCaptureDevices;i++)
+        iter = VECTOR_ITER_BEGIN(CaptureDevices);
+        end = VECTOR_ITER_END(CaptureDevices);
+        for(;iter != end;++iter)
         {
-            if(al_string_cmp_cstr(CaptureDeviceList[i].name, deviceName) == 0)
+            if(al_string_cmp_cstr(iter->name, deviceName) == 0)
             {
-                guid = &CaptureDeviceList[i].guid;
+                guid = &iter->guid;
                 break;
             }
         }
-        if(i == NumCaptureDevices)
+        if(iter == end)
             return ALC_INVALID_VALUE;
     }
 
@@ -980,6 +925,9 @@ static const BackendFuncs DSoundFuncs = {
 
 ALCboolean alcDSoundInit(BackendFuncs *FuncList)
 {
+    VECTOR_INIT(PlaybackDevices);
+    VECTOR_INIT(CaptureDevices);
+
     if(!DSoundLoad())
         return ALC_FALSE;
     *FuncList = DSoundFuncs;
@@ -988,19 +936,19 @@ ALCboolean alcDSoundInit(BackendFuncs *FuncList)
 
 void alcDSoundDeinit(void)
 {
-    ALuint i;
+    DevMap *iter, *end;
 
-    for(i = 0;i < NumPlaybackDevices;++i)
-        AL_STRING_DEINIT(PlaybackDeviceList[i].name);
-    free(PlaybackDeviceList);
-    PlaybackDeviceList = NULL;
-    NumPlaybackDevices = 0;
+    iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+    end = VECTOR_ITER_END(PlaybackDevices);
+    for(;iter != end;++iter)
+        AL_STRING_DEINIT(iter->name);
+    VECTOR_DEINIT(PlaybackDevices);
 
-    for(i = 0;i < NumCaptureDevices;++i)
-        AL_STRING_DEINIT(CaptureDeviceList[i].name);
-    free(CaptureDeviceList);
-    CaptureDeviceList = NULL;
-    NumCaptureDevices = 0;
+    iter = VECTOR_ITER_BEGIN(CaptureDevices);
+    end = VECTOR_ITER_END(CaptureDevices);
+    for(;iter != end;++iter)
+        AL_STRING_DEINIT(iter->name);
+    VECTOR_DEINIT(CaptureDevices);
 
     if(ds_handle)
         CloseLib(ds_handle);
@@ -1009,44 +957,48 @@ void alcDSoundDeinit(void)
 
 void alcDSoundProbe(enum DevProbe type)
 {
+    DevMap *iter, *end;
     HRESULT hr, hrcom;
-    ALuint i;
 
     /* Initialize COM to prevent name truncation */
     hrcom = CoInitialize(NULL);
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-            for(i = 0;i < NumPlaybackDevices;++i)
-                AL_STRING_DEINIT(PlaybackDeviceList[i].name);
-            free(PlaybackDeviceList);
-            PlaybackDeviceList = NULL;
-            NumPlaybackDevices = 0;
+            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+            end = VECTOR_ITER_END(PlaybackDevices);
+            for(;iter != end;++iter)
+                AL_STRING_DEINIT(iter->name);
+            VECTOR_RESIZE(PlaybackDevices, 0);
 
-            hr = DirectSoundEnumerateW(DSoundEnumPlaybackDevices, NULL);
+            hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
             if(FAILED(hr))
                 ERR("Error enumerating DirectSound playback devices (0x%lx)!\n", hr);
             else
             {
-                for(i = 0;i < NumPlaybackDevices;i++)
-                    AppendAllDevicesList(al_string_get_cstr(PlaybackDeviceList[i].name));
+                iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+                end = VECTOR_ITER_END(PlaybackDevices);
+                for(;iter != end;++iter)
+                    AppendAllDevicesList(al_string_get_cstr(iter->name));
             }
             break;
 
         case CAPTURE_DEVICE_PROBE:
-            for(i = 0;i < NumCaptureDevices;++i)
-                AL_STRING_DEINIT(CaptureDeviceList[i].name);
-            free(CaptureDeviceList);
-            CaptureDeviceList = NULL;
-            NumCaptureDevices = 0;
+            iter = VECTOR_ITER_BEGIN(CaptureDevices);
+            end = VECTOR_ITER_END(CaptureDevices);
+            for(;iter != end;++iter)
+                AL_STRING_DEINIT(iter->name);
+            VECTOR_RESIZE(CaptureDevices, 0);
 
-            hr = DirectSoundCaptureEnumerateW(DSoundEnumCaptureDevices, NULL);
+            hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
             if(FAILED(hr))
                 ERR("Error enumerating DirectSound capture devices (0x%lx)!\n", hr);
             else
             {
-                for(i = 0;i < NumCaptureDevices;i++)
-                    AppendCaptureDeviceList(al_string_get_cstr(CaptureDeviceList[i].name));
+                iter = VECTOR_ITER_BEGIN(CaptureDevices);
+                end = VECTOR_ITER_END(CaptureDevices);
+                for(;iter != end;++iter)
+                    AppendCaptureDeviceList(al_string_get_cstr(iter->name));
             }
             break;
     }

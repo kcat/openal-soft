@@ -750,11 +750,11 @@ void WriteUnlock(RWLock *lock)
 }
 
 
-ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t obj_count, size_t obj_size, ALboolean exact)
+ALboolean vector_reserve(void *ptr, size_t base_size, size_t obj_count, size_t obj_size, ALboolean exact)
 {
-    if(orig_count < obj_count)
+    vector_ *vecptr = ptr;
+    if((size_t)(*vecptr)->Capacity < obj_count)
     {
-        vector_ *vecptr = ptr;
         void *temp;
 
         /* Limit vector sizes to the greatest power-of-two value that an
@@ -784,7 +784,7 @@ ALboolean vector_reserve(void *ptr, size_t orig_count, size_t base_size, size_t 
 ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t obj_size)
 {
     vector_ *vecptr = ptr;
-    if(!vector_reserve(vecptr, (*vecptr)->Capacity, base_size, obj_count, obj_size, AL_TRUE))
+    if(!vector_reserve(vecptr, base_size, obj_count, obj_size, AL_TRUE))
         return AL_FALSE;
     (*vecptr)->Size = (ALsizei)obj_count;
     return AL_TRUE;

@@ -84,6 +84,7 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 #endif
 
 #include "alMain.h"
+#include "alu.h"
 #include "atomic.h"
 #include "uintmap.h"
 #include "vector.h"
@@ -799,8 +800,6 @@ ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t ob
 extern inline ALsizei al_string_length(const_al_string str);
 extern inline ALsizei al_string_empty(const_al_string str);
 extern inline const al_string_char_type *al_string_get_cstr(const_al_string str);
-extern inline int al_string_cmp(const_al_string str1, const_al_string str2);
-extern inline int al_string_cmp_cstr(const_al_string str1, const al_string_char_type *str2);
 
 void al_string_clear(al_string *str)
 {
@@ -810,6 +809,29 @@ void al_string_clear(al_string *str)
     VECTOR_RESERVE(*str, 1);
     VECTOR_RESIZE(*str, 0);
     *VECTOR_ITER_END(*str) = 0;
+}
+
+static inline int al_string_compare(const al_string_char_type *str1, ALsizei str1len,
+                                    const al_string_char_type *str2, ALsizei str2len)
+{
+    ALsizei complen = mini(str1len, str2len);
+    int ret = memcmp(str1, str2, complen);
+    if(ret == 0)
+    {
+        if(str1len > str2len) return  1;
+        if(str1len < str2len) return -1;
+    }
+    return ret;
+}
+int al_string_cmp(const_al_string str1, const_al_string str2)
+{
+    return al_string_compare(&VECTOR_FRONT(str1), al_string_length(str1),
+                             &VECTOR_FRONT(str2), al_string_length(str2));
+}
+int al_string_cmp_cstr(const_al_string str1, const al_string_char_type *str2)
+{
+    return al_string_compare(&VECTOR_FRONT(str1), al_string_length(str1),
+                             str2, (ALsizei)strlen(str2));
 }
 
 void al_string_copy(al_string *str, const_al_string from)

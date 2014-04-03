@@ -26,11 +26,8 @@ inline const al_string_char_type *al_string_get_cstr(const_al_string str)
 
 void al_string_clear(al_string *str);
 
-inline int al_string_cmp(const_al_string str1, const_al_string str2)
-{ return strcmp(al_string_get_cstr(str1), al_string_get_cstr(str2)); }
-
-inline int al_string_cmp_cstr(const_al_string str1, const al_string_char_type *str2)
-{ return strcmp(al_string_get_cstr(str1), str2); }
+int al_string_cmp(const_al_string str1, const_al_string str2);
+int al_string_cmp_cstr(const_al_string str1, const al_string_char_type *str2);
 
 void al_string_copy(al_string *str, const_al_string from);
 void al_string_copy_cstr(al_string *str, const al_string_char_type *from);

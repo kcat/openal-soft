@@ -2872,7 +2872,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         ALContext->ActiveSources = calloc(ALContext->MaxActiveSources,
                                           sizeof(ALContext->ActiveSources[0]));
     }
-    if(!ALContext || !ALContext->ActiveAuxSlots || !ALContext->ActiveSources)
+    if(!ALContext || !ALContext->ActiveSources)
     {
         if(!device->ContextList)
         {

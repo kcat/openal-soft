@@ -46,9 +46,9 @@ typedef struct HrtfParams {
     ALfloat Gain;
     ALfloat Dir[3];
     ALIGN(16) ALfloat Coeffs[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
-    ALIGN(16) ALfloat CoeffStep[HRIR_LENGTH][2];
+    ALIGN(16) ALfloat CoeffStep[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
     ALuint Delay[MAX_INPUT_CHANNELS][2];
-    ALint DelayStep[2];
+    ALint DelayStep[MAX_INPUT_CHANNELS][2];
     ALuint IrSize;
 } HrtfParams;
 

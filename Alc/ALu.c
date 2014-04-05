@@ -959,8 +959,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                                            src->Direct.Counter,
                                            src->Direct.Mix.Hrtf.Params.Coeffs[0],
                                            src->Direct.Mix.Hrtf.Params.Delay[0],
-                                           src->Direct.Mix.Hrtf.Params.CoeffStep,
-                                           src->Direct.Mix.Hrtf.Params.DelayStep);
+                                           src->Direct.Mix.Hrtf.Params.CoeffStep[0],
+                                           src->Direct.Mix.Hrtf.Params.DelayStep[0]);
                 src->Direct.Counter = counter;
                 src->Direct.Mix.Hrtf.Params.Gain = DryGain;
                 src->Direct.Mix.Hrtf.Params.Dir[0] = Position[0];

@@ -28,8 +28,8 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
 {
     ALfloat (*restrict DryBuffer)[BUFFERSIZE] = params->OutBuffer;
     const ALuint IrSize = params->Mix.Hrtf.Params.IrSize;
-    const ALint *restrict DelayStep = params->Mix.Hrtf.Params.DelayStep;
-    const ALfloat (*restrict CoeffStep)[2] = params->Mix.Hrtf.Params.CoeffStep;
+    const ALint *restrict DelayStep = params->Mix.Hrtf.Params.DelayStep[srcchan];
+    const ALfloat (*restrict CoeffStep)[2] = params->Mix.Hrtf.Params.CoeffStep[srcchan];
     const ALfloat (*restrict TargetCoeffs)[2] = params->Mix.Hrtf.Params.Coeffs[srcchan];
     const ALuint *restrict TargetDelay = params->Mix.Hrtf.Params.Delay[srcchan];
     ALfloat *restrict History = params->Mix.Hrtf.State.History[srcchan];

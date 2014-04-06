@@ -814,12 +814,15 @@ ENDIF()
 
 # Check CoreAudio backend
 IF(ALSOFT_BACKEND_COREAUDIO)
-    CHECK_INCLUDE_FILE(/System/Library/Frameworks/CoreAudio.framework/Headers/CoreAudio.h HAVE_COREAUDIO_FRAMEWORK)
-    IF(HAVE_COREAUDIO_FRAMEWORK)
+    FIND_LIBRARY(COREAUDIO_FRAMEWORK
+                 NAMES CoreAudio
+                 PATHS /System/Library/Frameworks
+                )
+    IF(COREAUDIO_FRAMEWORK)
         SET(HAVE_COREAUDIO 1)
         SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/coreaudio.c)
         SET(BACKENDS  "${BACKENDS} CoreAudio,")
-        SET(EXTRA_LIBS /System/Library/Frameworks/CoreAudio.framework ${EXTRA_LIBS})
+        SET(EXTRA_LIBS ${COREAUDIO_FRAMEWORK} ${EXTRA_LIBS})
         SET(EXTRA_LIBS /System/Library/Frameworks/AudioUnit.framework ${EXTRA_LIBS})
         SET(EXTRA_LIBS /System/Library/Frameworks/ApplicationServices.framework ${EXTRA_LIBS})
 

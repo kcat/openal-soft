@@ -287,7 +287,7 @@ static ALCenum WinMMOpenPlayback(ALCdevice *Device, const ALCchar *deviceName)
 {
     WinMMData *data = NULL;
     const al_string *iter, *end;
-    UINT DeviceID = -1u;
+    UINT DeviceID = 0u-1u;
     MMRESULT res;
 
     if(VECTOR_SIZE(PlaybackDevices) == 0)
@@ -305,7 +305,7 @@ static ALCenum WinMMOpenPlayback(ALCdevice *Device, const ALCchar *deviceName)
             break;
         }
     }
-    if(DeviceID == -1u)
+    if(DeviceID == 0u-1u)
         return ALC_INVALID_VALUE;
 
     data = calloc(1, sizeof(*data));
@@ -507,7 +507,7 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
     ALbyte *BufferData = NULL;
     DWORD CapturedDataSize;
     WinMMData *data = NULL;
-    UINT DeviceID = -1u;
+    UINT DeviceID = 0u-1u;
     ALint BufferSize;
     MMRESULT res;
     ALuint i;
@@ -527,7 +527,7 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
             break;
         }
     }
-    if(DeviceID == -1u)
+    if(DeviceID == 0u-1u)
         return ALC_INVALID_VALUE;
 
     switch(Device->FmtChans)

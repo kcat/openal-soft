@@ -169,6 +169,14 @@ CHECK_C_SOURCE_COMPILES(
  }"
 HAVE_C99_VLA)
 
+# Check if we have C11 static_assert
+CHECK_C_SOURCE_COMPILES(
+"int main()
+ {
+     _Static_assert(sizeof(int) == sizeof(int), \"What\");
+     return 0;
+ }"
+HAVE_C11_STATIC_ASSERT)
 
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES("${OpenAL_SOURCE_DIR}/include" "${OpenAL_BINARY_DIR}")

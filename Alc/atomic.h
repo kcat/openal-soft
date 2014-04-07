@@ -106,7 +106,7 @@ inline RefCount IncrementRef(volatile RefCount *ptr)
 inline RefCount DecrementRef(volatile RefCount *ptr)
 { return InterlockedDecrement(ptr); }
 
-extern ALbyte LONG_size_does_not_match_int[(sizeof(LONG)==sizeof(int))?1:-1];
+static_assert(sizeof(LONG)==sizeof(int), "sizeof LONG does not match sizeof int");
 
 inline int ExchangeInt(volatile int *ptr, int newval)
 {

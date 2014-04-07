@@ -640,7 +640,7 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
     }
 
     if((str=getenv("XDG_DATA_DIRS")) == NULL || str[0] == '\0')
-        str = " /usr/local/share/:/usr/share/";
+        str = "/usr/local/share/:/usr/share/";
 
     next = str;
     while((str=next) != NULL && str[0] != '\0')

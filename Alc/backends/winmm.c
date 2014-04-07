@@ -56,87 +56,103 @@ typedef struct {
 } WinMMData;
 
 
-static ALCchar **PlaybackDeviceList;
-static ALuint  NumPlaybackDevices;
-static ALCchar **CaptureDeviceList;
-static ALuint  NumCaptureDevices;
+static vector_al_string PlaybackDevices;
+static vector_al_string CaptureDevices;
 
 
 static void ProbePlaybackDevices(void)
 {
+    al_string *iter, *end;
+    ALuint numdevs;
     ALuint i;
 
-    for(i = 0;i < NumPlaybackDevices;i++)
-        free(PlaybackDeviceList[i]);
+    iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+    end = VECTOR_ITER_END(PlaybackDevices);
+    for(;iter != end;iter++)
+        AL_STRING_DEINIT(*iter);
+    VECTOR_RESIZE(PlaybackDevices, 0);
 
-    NumPlaybackDevices = waveOutGetNumDevs();
-    PlaybackDeviceList = realloc(PlaybackDeviceList, sizeof(ALCchar*) * NumPlaybackDevices);
-    for(i = 0;i < NumPlaybackDevices;i++)
+    numdevs = waveOutGetNumDevs();
+    VECTOR_RESERVE(PlaybackDevices, numdevs);
+    for(i = 0;i < numdevs;i++)
     {
-        WAVEOUTCAPS WaveCaps;
+        WAVEOUTCAPSW WaveCaps;
+        al_string dname;
 
-        PlaybackDeviceList[i] = NULL;
-        if(waveOutGetDevCaps(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
+        AL_STRING_INIT(dname);
+        if(waveOutGetDevCapsW(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
         {
-            char name[1024];
-            ALuint count, j;
-
-            count = 0;
+            ALuint count = 0;
             do {
-                if(count == 0)
-                    snprintf(name, sizeof(name), "%s", WaveCaps.szPname);
-                else
-                    snprintf(name, sizeof(name), "%s #%d", WaveCaps.szPname, count+1);
+                al_string_copy_wcstr(&dname, WaveCaps.szPname);
+                if(count != 0)
+                {
+                    char str[64];
+                    snprintf(str, sizeof(str), " #%d", count+1);
+                    al_string_append_cstr(&dname, str);
+                }
                 count++;
 
-                for(j = 0;j < i;j++)
+                iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+                end = VECTOR_ITER_END(PlaybackDevices);
+                for(;iter != end;iter++)
                 {
-                    if(strcmp(name, PlaybackDeviceList[j]) == 0)
+                    if(al_string_cmp(*iter, dname) == 0)
                         break;
                 }
-            } while(j != i);
+            } while(iter != end);
 
-            PlaybackDeviceList[i] = strdup(name);
+            TRACE("Got device \"%s\", ID %u\n", al_string_get_cstr(dname), i);
         }
+        VECTOR_PUSH_BACK(PlaybackDevices, dname);
     }
 }
 
 static void ProbeCaptureDevices(void)
 {
+    al_string *iter, *end;
+    ALuint numdevs;
     ALuint i;
 
-    for(i = 0;i < NumCaptureDevices;i++)
-        free(CaptureDeviceList[i]);
+    iter = VECTOR_ITER_BEGIN(CaptureDevices);
+    end = VECTOR_ITER_END(CaptureDevices);
+    for(;iter != end;iter++)
+        AL_STRING_DEINIT(*iter);
+    VECTOR_RESIZE(CaptureDevices, 0);
 
-    NumCaptureDevices = waveInGetNumDevs();
-    CaptureDeviceList = realloc(CaptureDeviceList, sizeof(ALCchar*) * NumCaptureDevices);
-    for(i = 0;i < NumCaptureDevices;i++)
+    numdevs = waveInGetNumDevs();
+    VECTOR_RESERVE(CaptureDevices, numdevs);
+    for(i = 0;i < numdevs;i++)
     {
-        WAVEINCAPS WaveInCaps;
+        WAVEINCAPSW WaveCaps;
+        al_string dname;
 
-        CaptureDeviceList[i] = NULL;
-        if(waveInGetDevCaps(i, &WaveInCaps, sizeof(WAVEINCAPS)) == MMSYSERR_NOERROR)
+        AL_STRING_INIT(dname);
+        if(waveInGetDevCapsW(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
         {
-            char name[1024];
-            ALuint count, j;
-
-            count = 0;
+            ALuint count = 0;
             do {
-                if(count == 0)
-                    snprintf(name, sizeof(name), "%s", WaveInCaps.szPname);
-                else
-                    snprintf(name, sizeof(name), "%s #%d", WaveInCaps.szPname, count+1);
+                al_string_copy_wcstr(&dname, WaveCaps.szPname);
+                if(count != 0)
+                {
+                    char str[64];
+                    snprintf(str, sizeof(str), " #%d", count+1);
+                    al_string_append_cstr(&dname, str);
+                }
                 count++;
 
-                for(j = 0;j < i;j++)
+                iter = VECTOR_ITER_BEGIN(CaptureDevices);
+                end = VECTOR_ITER_END(CaptureDevices);
+                for(;iter != end;iter++)
                 {
-                    if(strcmp(name, CaptureDeviceList[j]) == 0)
+                    if(al_string_cmp(*iter, dname) == 0)
                         break;
                 }
-            } while(j != i);
+            } while(iter != end);
 
-            CaptureDeviceList[i] = strdup(name);
+            TRACE("Got device \"%s\", ID %u\n", al_string_get_cstr(dname), i);
         }
+        VECTOR_PUSH_BACK(CaptureDevices, dname);
     }
 }
 
@@ -270,24 +286,26 @@ static DWORD WINAPI CaptureThreadProc(LPVOID param)
 static ALCenum WinMMOpenPlayback(ALCdevice *Device, const ALCchar *deviceName)
 {
     WinMMData *data = NULL;
-    UINT DeviceID = 0;
+    const al_string *iter, *end;
+    UINT DeviceID = -1u;
     MMRESULT res;
-    ALuint i = 0;
 
-    if(!PlaybackDeviceList)
+    if(VECTOR_SIZE(PlaybackDevices) == 0)
         ProbePlaybackDevices();
 
     // Find the Device ID matching the deviceName if valid
-    for(i = 0;i < NumPlaybackDevices;i++)
+    iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+    end = VECTOR_ITER_END(PlaybackDevices);
+    for(;iter != end;iter++)
     {
-        if(PlaybackDeviceList[i] &&
-           (!deviceName || strcmp(deviceName, PlaybackDeviceList[i]) == 0))
+        if(!al_string_empty(*iter) &&
+           (!deviceName || al_string_cmp_cstr(*iter, deviceName) == 0))
         {
-            DeviceID = i;
+            DeviceID = (UINT)(iter - VECTOR_ITER_BEGIN(PlaybackDevices));
             break;
         }
     }
-    if(i == NumPlaybackDevices)
+    if(DeviceID == -1u)
         return ALC_INVALID_VALUE;
 
     data = calloc(1, sizeof(*data));
@@ -336,7 +354,7 @@ retry_open:
         goto failure;
     }
 
-    al_string_copy_cstr(&Device->DeviceName, PlaybackDeviceList[DeviceID]);
+    al_string_copy(&Device->DeviceName, VECTOR_ELEM(PlaybackDevices, DeviceID));
     return ALC_NO_ERROR;
 
 failure:
@@ -485,28 +503,31 @@ static void WinMMStopPlayback(ALCdevice *device)
 
 static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
 {
+    const al_string *iter, *end;
     ALbyte *BufferData = NULL;
     DWORD CapturedDataSize;
     WinMMData *data = NULL;
-    UINT DeviceID = 0;
+    UINT DeviceID = -1u;
     ALint BufferSize;
     MMRESULT res;
     ALuint i;
 
-    if(!CaptureDeviceList)
+    if(VECTOR_SIZE(CaptureDevices) == 0)
         ProbeCaptureDevices();
 
     // Find the Device ID matching the deviceName if valid
-    for(i = 0;i < NumCaptureDevices;i++)
+    iter = VECTOR_ITER_BEGIN(CaptureDevices);
+    end = VECTOR_ITER_END(CaptureDevices);
+    for(;iter != end;iter++)
     {
-        if(CaptureDeviceList[i] &&
-           (!deviceName || strcmp(deviceName, CaptureDeviceList[i]) == 0))
+        if(!al_string_empty(*iter) &&
+           (!deviceName || al_string_cmp_cstr(*iter, deviceName) == 0))
         {
-            DeviceID = i;
+            DeviceID = (UINT)(iter - VECTOR_ITER_BEGIN(CaptureDevices));
             break;
         }
     }
-    if(i == NumCaptureDevices)
+    if(DeviceID == -1u)
         return ALC_INVALID_VALUE;
 
     switch(Device->FmtChans)
@@ -606,7 +627,7 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
     if (data->WaveThread == NULL)
         goto failure;
 
-    al_string_copy_cstr(&Device->DeviceName, CaptureDeviceList[DeviceID]);
+    al_string_copy(&Device->DeviceName, VECTOR_ELEM(CaptureDevices, DeviceID));
     return ALC_NO_ERROR;
 
 failure:
@@ -718,51 +739,55 @@ static const BackendFuncs WinMMFuncs = {
 
 ALCboolean alcWinMMInit(BackendFuncs *FuncList)
 {
+    VECTOR_INIT(PlaybackDevices);
+    VECTOR_INIT(CaptureDevices);
+
     *FuncList = WinMMFuncs;
     return ALC_TRUE;
 }
 
 void alcWinMMDeinit()
 {
-    ALuint i;
+    al_string *iter, *end;
 
-    for(i = 0;i < NumPlaybackDevices;i++)
-        free(PlaybackDeviceList[i]);
-    free(PlaybackDeviceList);
-    PlaybackDeviceList = NULL;
+    iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+    end = VECTOR_ITER_END(PlaybackDevices);
+    for(;iter != end;iter++)
+        AL_STRING_DEINIT(*iter);
+    VECTOR_DEINIT(PlaybackDevices);
 
-    NumPlaybackDevices = 0;
-
-
-    for(i = 0;i < NumCaptureDevices;i++)
-        free(CaptureDeviceList[i]);
-    free(CaptureDeviceList);
-    CaptureDeviceList = NULL;
-
-    NumCaptureDevices = 0;
+    iter = VECTOR_ITER_BEGIN(CaptureDevices);
+    end = VECTOR_ITER_END(CaptureDevices);
+    for(;iter != end;iter++)
+        AL_STRING_DEINIT(*iter);
+    VECTOR_DEINIT(CaptureDevices);
 }
 
 void alcWinMMProbe(enum DevProbe type)
 {
-    ALuint i;
+    const al_string *iter, *end;
 
     switch(type)
     {
         case ALL_DEVICE_PROBE:
             ProbePlaybackDevices();
-            for(i = 0;i < NumPlaybackDevices;i++)
+            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+            end = VECTOR_ITER_END(PlaybackDevices);
+            for(;iter != end;iter++)
             {
-                if(PlaybackDeviceList[i])
-                    AppendAllDevicesList(PlaybackDeviceList[i]);
+                if(!al_string_empty(*iter))
+                    AppendAllDevicesList(al_string_get_cstr(*iter));
             }
             break;
 
         case CAPTURE_DEVICE_PROBE:
             ProbeCaptureDevices();
-            for(i = 0;i < NumCaptureDevices;i++)
+            iter = VECTOR_ITER_BEGIN(CaptureDevices);
+            end = VECTOR_ITER_END(CaptureDevices);
+            for(;iter != end;iter++)
             {
-                if(CaptureDeviceList[i])
-                    AppendCaptureDeviceList(CaptureDeviceList[i]);
+                if(!al_string_empty(*iter))
+                    AppendCaptureDeviceList(al_string_get_cstr(*iter));
             }
             break;
     }

@@ -42,4 +42,7 @@ void al_string_append_range(al_string *str, const al_string_char_type *from, con
 void al_string_copy_wcstr(al_string *str, const wchar_t *from);
 #endif
 
+
+DECL_VECTOR(al_string)
+
 #endif /* ALSTRING_H */

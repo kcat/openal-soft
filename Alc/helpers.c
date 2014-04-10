@@ -796,6 +796,26 @@ ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t ob
     return AL_TRUE;
 }
 
+ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, ptrdiff_t ins_elem, const void *datstart, ptrdiff_t numins)
+{
+    vector_ *vecptr = ptr;
+    if(*vecptr || numins > 0)
+    {
+        if(!vector_reserve(vecptr, base_size, VECTOR_SIZE(*vecptr)+numins, obj_size, AL_TRUE))
+            return AL_FALSE;
+        if(ins_elem < (*vecptr)->Size)
+        {
+            memmove((char*)(*vecptr) + base_size + ((ins_elem+numins)*obj_size),
+                    (char*)(*vecptr) + base_size + ((ins_elem       )*obj_size),
+                    ((*vecptr)->Size-ins_elem)*obj_size);
+        }
+        memcpy((char*)(*vecptr) + base_size + (ins_elem*obj_size),
+               datstart, numins*obj_size);
+        (*vecptr)->Size += (ALsizei)numins;
+    }
+    return AL_TRUE;
+}
+
 
 extern inline ALsizei al_string_length(const_al_string str);
 extern inline ALsizei al_string_empty(const_al_string str);

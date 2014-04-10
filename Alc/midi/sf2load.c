@@ -346,15 +346,20 @@ static void GenModList_Destruct(GenModList *self)
 
 static GenModList GenModList_clone(const GenModList *self)
 {
+    ALsizei count, i;
     GenModList ret;
 
     GenModList_Construct(&ret);
-    VECTOR_RESERVE(ret.gens, VECTOR_CAPACITY(self->gens));
-    memcpy(ret.gens, self->gens, sizeof(ret.gens) +
-                                 VECTOR_CAPACITY(ret.gens) * sizeof(ret.gens->Data[0]));
-    VECTOR_RESERVE(ret.mods, VECTOR_CAPACITY(self->mods));
-    memcpy(ret.mods, self->mods, sizeof(ret.mods) +
-                                 VECTOR_CAPACITY(ret.mods) * sizeof(ret.mods->Data[0]));
+
+    count = VECTOR_SIZE(self->gens);
+    VECTOR_RESERVE(ret.gens, count);
+    for(i = 0;i < count;i++)
+        VECTOR_PUSH_BACK(ret.gens, VECTOR_ELEM(self->gens, i));
+
+    count = VECTOR_SIZE(self->mods);
+    VECTOR_RESERVE(ret.mods, count);
+    for(i = 0;i < count;i++)
+        VECTOR_PUSH_BACK(ret.mods, VECTOR_ELEM(self->mods, i));
 
     return ret;
 }

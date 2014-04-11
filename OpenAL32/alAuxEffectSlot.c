@@ -35,8 +35,8 @@
 extern inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id);
 extern inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id);
 
-static ALenum AddEffectSlotArray(ALCcontext *Context, ALsizei count, const ALuint *slots);
-static ALvoid RemoveEffectSlotArray(ALCcontext *Context, ALeffectslot *slot);
+static ALenum AddEffectSlotArray(ALCcontext *Context, const_vector_ALeffectslotPtr slots);
+static void RemoveEffectSlotArray(ALCcontext *Context, const ALeffectslot *slot);
 
 
 static UIntMap EffectStateFactoryMap;
@@ -52,14 +52,20 @@ static inline ALeffectStateFactory *getFactoryByType(ALenum type)
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
     ALCcontext *context;
+    vector_ALeffectslotPtr slotvec;
     ALsizei cur;
     ALenum err;
 
     context = GetContextRef();
     if(!context) return;
 
+    VECTOR_INIT(slotvec);
+
     if(!(n >= 0))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(!VECTOR_RESERVE(slotvec, n))
+        SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
+
     for(cur = 0;cur < n;cur++)
     {
         ALeffectslot *slot = al_calloc(16, sizeof(ALeffectslot));
@@ -84,9 +90,11 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             SET_ERROR_AND_GOTO(context, err, done);
         }
 
+        VECTOR_PUSH_BACK(slotvec, slot);
+
         effectslots[cur] = slot->id;
     }
-    err = AddEffectSlotArray(context, n, effectslots);
+    err = AddEffectSlotArray(context, slotvec);
     if(err != AL_NO_ERROR)
     {
         alDeleteAuxiliaryEffectSlots(cur, effectslots);
@@ -94,6 +102,8 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     }
 
 done:
+    VECTOR_DEINIT(slotvec);
+
     ALCcontext_DecRef(context);
 }
 
@@ -375,7 +385,20 @@ done:
 }
 
 
-static ALvoid RemoveEffectSlotArray(ALCcontext *context, ALeffectslot *slot)
+static ALenum AddEffectSlotArray(ALCcontext *context, const_vector_ALeffectslotPtr slots)
+{
+    ALenum err = AL_NO_ERROR;
+
+    LockContext(context);
+    if(!VECTOR_INSERT(context->ActiveAuxSlots, VECTOR_ITER_END(context->ActiveAuxSlots),
+                      VECTOR_ITER_BEGIN(slots), VECTOR_ITER_END(slots)))
+        err = AL_OUT_OF_MEMORY;
+    UnlockContext(context);
+
+    return err;
+}
+
+static void RemoveEffectSlotArray(ALCcontext *context, const ALeffectslot *slot)
 {
     ALeffectslot **slotlist, **slotlistend;
 
@@ -393,28 +416,6 @@ static ALvoid RemoveEffectSlotArray(ALCcontext *context, ALeffectslot *slot)
         slotlist++;
     }
     UnlockContext(context);
-}
-
-static ALenum AddEffectSlotArray(ALCcontext *context, ALsizei count, const ALuint *slots)
-{
-    ALsizei total = count + VECTOR_SIZE(context->ActiveAuxSlots);
-
-    LockContext(context);
-    if(total < VECTOR_SIZE(context->ActiveAuxSlots) || VECTOR_RESERVE(context->ActiveAuxSlots, total) == AL_FALSE)
-    {
-        UnlockContext(context);
-        return AL_OUT_OF_MEMORY;
-    }
-
-    while(VECTOR_SIZE(context->ActiveAuxSlots) < total)
-    {
-        ALeffectslot *slot = LookupEffectSlot(context, *(slots++));
-        assert(slot != NULL);
-        VECTOR_PUSH_BACK(context->ActiveAuxSlots, slot);
-    }
-    UnlockContext(context);
-
-    return AL_NO_ERROR;
 }
 
 

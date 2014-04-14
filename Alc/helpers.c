@@ -796,11 +796,12 @@ ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t ob
     return AL_TRUE;
 }
 
-ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, ptrdiff_t ins_elem, const void *datstart, ptrdiff_t numins)
+ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, ptrdiff_t ins_elem, const void *datstart, const void *datend)
 {
     vector_ *vecptr = ptr;
-    if(*vecptr || numins > 0)
+    if(datstart != datend)
     {
+        ptrdiff_t numins = ((const char*)datend - (const char*)datstart) / obj_size;
         if(!vector_reserve(vecptr, base_size, VECTOR_SIZE(*vecptr)+numins, obj_size, AL_TRUE))
             return AL_FALSE;
         if(ins_elem < (*vecptr)->Size)

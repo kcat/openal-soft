@@ -549,6 +549,9 @@ void al_print(const char *type, const char *func, const char *fmt, ...)
 }
 
 #ifdef _WIN32
+static inline int is_slash(int c)
+{ return (c == '\\' || c == '/'); }
+
 FILE *OpenDataFile(const char *fname, const char *subdir)
 {
     static const int ids[2] = { CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
@@ -556,7 +559,7 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
     int i;
 
     /* If the path is absolute, open it directly. */
-    if(fname[0] != '\0' && fname[1] == ':' && (fname[2] == '\\' || fname[2] == '/'))
+    if(fname[0] != '\0' && fname[1] == ':' && is_slash(fname[2]))
     {
         FILE *f;
         if((f=al_fopen(fname, "rb")) != NULL)
@@ -584,7 +587,7 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
             continue;
 
         len = lstrlenW(buffer);
-        if(len > 0 && (buffer[len-1] == '\\' || buffer[len-1] == '/'))
+        if(len > 0 && is_slash(buffer[len-1]))
             buffer[--len] = '\0';
         _snwprintf(buffer+len, PATH_MAX-len, L"/%ls/%ls", wsubdir, wname);
         len = lstrlenW(buffer);

@@ -36,7 +36,19 @@ ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t ob
 #define VECTOR_ITER_END(_x)   ((_x)->Data + VECTOR_SIZE((_x)))
 
 ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, void *ins_pos, const void *datstart, const void *datend);
+#ifdef __GNUC__
+#define TYPE_CHECK(T1, T2) __builtin_types_compatible_p(T1, T2)
+#define VECTOR_INSERT(_x, _i, _s, _e) __extension__({                         \
+    ALboolean _r;                                                             \
+    static_assert(TYPE_CHECK(__typeof((_x)->Data[0]), __typeof(*(_i))), "Incompatible insertion iterator"); \
+    static_assert(TYPE_CHECK(__typeof((_x)->Data[0]), __typeof(*(_s))), "Incompatible insertion source type"); \
+    static_assert(TYPE_CHECK(__typeof(*(_s)), __typeof(*(_e))), "Incompatible iterator sources"); \
+    _r = vector_insert(&(_x), sizeof(*(_x)), sizeof((_x)->Data[0]), (_i), (_s), (_e)); \
+    _r;                                                                       \
+})
+#else
 #define VECTOR_INSERT(_x, _i, _s, _e) (vector_insert(&(_x), sizeof(*(_x)), sizeof((_x)->Data[0]), (_i), (_s), (_e)))
+#endif
 
 #define VECTOR_PUSH_BACK(_x, _obj) (vector_reserve(&(_x), sizeof(*(_x)), VECTOR_SIZE(_x)+1, sizeof((_x)->Data[0]), AL_FALSE) && \
                                     (((_x)->Data[(_x)->Size++] = (_obj)),AL_TRUE))

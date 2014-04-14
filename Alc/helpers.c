@@ -861,9 +861,8 @@ void al_string_copy(al_string *str, const_al_string from)
 {
     ALsizei len = VECTOR_SIZE(from);
     VECTOR_RESERVE(*str, len+1);
-    VECTOR_RESIZE(*str, len);
-    memcpy(&VECTOR_FRONT(*str), &VECTOR_FRONT(from),
-           len*sizeof(al_string_char_type));
+    VECTOR_RESIZE(*str, 0);
+    VECTOR_INSERT(*str, VECTOR_ITER_END(*str), VECTOR_ITER_BEGIN(from), VECTOR_ITER_BEGIN(from)+len);
     *VECTOR_ITER_END(*str) = 0;
 }
 
@@ -871,8 +870,8 @@ void al_string_copy_cstr(al_string *str, const al_string_char_type *from)
 {
     size_t len = strlen(from);
     VECTOR_RESERVE(*str, len+1);
-    VECTOR_RESIZE(*str, len);
-    memcpy(&VECTOR_FRONT(*str), from, len*sizeof(al_string_char_type));
+    VECTOR_RESIZE(*str, 0);
+    VECTOR_INSERT(*str, VECTOR_ITER_END(*str), from, from+len);
     *VECTOR_ITER_END(*str) = 0;
 }
 
@@ -889,20 +888,17 @@ void al_string_append_cstr(al_string *str, const al_string_char_type *from)
     if(len != 0)
     {
         VECTOR_RESERVE(*str, al_string_length(*str)+len+1);
-        VECTOR_RESIZE(*str, al_string_length(*str)+len);
-        memcpy(VECTOR_ITER_END(*str)-len, from, len);
+        VECTOR_INSERT(*str, VECTOR_ITER_END(*str), from, from+len);
         *VECTOR_ITER_END(*str) = 0;
     }
 }
 
 void al_string_append_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
 {
-    ptrdiff_t len = to - from;
-    if(len != 0)
+    if(to != from)
     {
-        VECTOR_RESERVE(*str, al_string_length(*str)+len+1);
-        VECTOR_RESIZE(*str, al_string_length(*str)+len);
-        memcpy(VECTOR_ITER_END(*str)-len, from, len);
+        VECTOR_RESERVE(*str, al_string_length(*str)+(to-from)+1);
+        VECTOR_INSERT(*str, VECTOR_ITER_END(*str), from, to);
         *VECTOR_ITER_END(*str) = 0;
     }
 }

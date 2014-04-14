@@ -796,14 +796,16 @@ ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t ob
     return AL_TRUE;
 }
 
-ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, ptrdiff_t ins_elem, const void *datstart, const void *datend)
+ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, void *ins_pos, const void *datstart, const void *datend)
 {
     vector_ *vecptr = ptr;
     if(datstart != datend)
     {
+        ptrdiff_t ins_elem = ((char*)ins_pos - ((char*)(*vecptr) + base_size)) / obj_size;
         ptrdiff_t numins = ((const char*)datend - (const char*)datstart) / obj_size;
         if(!vector_reserve(vecptr, base_size, VECTOR_SIZE(*vecptr)+numins, obj_size, AL_TRUE))
             return AL_FALSE;
+        /* NOTE: ins_pos may have been invalidated if *vecptr moved. Use ins_elem instead. */
         if(ins_elem < (*vecptr)->Size)
         {
             memmove((char*)(*vecptr) + base_size + ((ins_elem+numins)*obj_size),

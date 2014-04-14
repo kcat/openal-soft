@@ -350,6 +350,7 @@ AL_API void AL_APIENTRY alSoundfontPresetsSOFT(ALuint id, ALsizei count, const A
         {
             if(!(presets[i]=LookupPreset(device, pids[i])))
             {
+                free(presets);
                 WriteUnlock(&sfont->Lock);
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
             }

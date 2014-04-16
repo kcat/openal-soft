@@ -2,7 +2,6 @@
 #define AL_THREADS_H
 
 #include <time.h>
-#include <errno.h>
 
 
 enum {
@@ -95,6 +94,7 @@ inline int almtx_trylock(almtx_t *mtx)
 #else
 
 #include <stdint.h>
+#include <errno.h>
 #include <pthread.h>
 
 
@@ -124,7 +124,13 @@ inline void althrd_yield(void)
 
 inline int althrd_sleep(const struct timespec *ts, struct timespec *rem)
 {
-    return nanosleep(ts, rem);
+    int ret = nanosleep(ts, rem);
+    if(ret != 0)
+    {
+        ret = ((errno==EINTR) ? -1 : -2);
+        errno = 0;
+    }
+    return ret;
 }
 
 
@@ -171,7 +177,7 @@ inline void al_nssleep(time_t sec, long nsec)
     ts.tv_sec = sec;
     ts.tv_nsec = nsec;
 
-    while(althrd_sleep(&ts, &rem) == -1 && errno == EINTR)
+    while(althrd_sleep(&ts, &rem) == -1)
         ts = rem;
 }
 

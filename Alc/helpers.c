@@ -451,16 +451,6 @@ ALuint timeGetTime(void)
 #endif
 }
 
-void Sleep(ALuint t)
-{
-    struct timespec tv, rem;
-    tv.tv_nsec = (t*1000000)%1000000000;
-    tv.tv_sec = t/1000;
-
-    while(nanosleep(&tv, &rem) == -1 && errno == EINTR)
-        tv = rem;
-}
-
 #ifdef HAVE_DLFCN_H
 
 void *LoadLib(const char *name)

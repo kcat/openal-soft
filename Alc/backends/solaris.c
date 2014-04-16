@@ -86,7 +86,7 @@ static int SolarisProc(void *ptr)
                     break;
                 }
 
-                Sleep(1);
+                al_nssleep(0, 1000000);
                 continue;
             }
 

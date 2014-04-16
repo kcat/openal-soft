@@ -783,7 +783,7 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
                 if(o) pa_operation_unref(o);
             }
             pa_threaded_mainloop_unlock(self->loop);
-            Sleep(1);
+            al_nssleep(0, 1000000);
             pa_threaded_mainloop_lock(self->loop);
             continue;
         }

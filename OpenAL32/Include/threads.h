@@ -2,6 +2,7 @@
 #define AL_THREADS_H
 
 #include <time.h>
+#include <errno.h>
 
 
 enum {
@@ -162,5 +163,16 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts);
 
 
 void SetThreadName(const char *name);
+
+
+inline void al_nssleep(time_t sec, long nsec)
+{
+    struct timespec ts, rem;
+    ts.tv_sec = sec;
+    ts.tv_nsec = nsec;
+
+    while(althrd_sleep(&ts, &rem) == -1 && errno == EINTR)
+        ts = rem;
+}
 
 #endif /* AL_THREADS_H */

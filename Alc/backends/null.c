@@ -94,9 +94,9 @@ static int ALCnullBackend_mixerProc(void *ptr)
         }
         if(avail-done < device->UpdateSize)
         {
-            ALuint restTime = (ALuint)((device->UpdateSize - (avail-done)) * 1000 /
-                                       device->Frequency);
-            Sleep(restTime);
+            long restTime = (long)((device->UpdateSize - (avail-done)) * 1000000000 /
+                                   device->Frequency);
+            al_nssleep(0, restTime);
             continue;
         }
 

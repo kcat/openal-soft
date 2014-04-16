@@ -30,7 +30,6 @@ FILE *al_fopen(const char *fname, const char *mode);
 #include <pthread.h>
 
 ALuint timeGetTime(void);
-void Sleep(ALuint t);
 
 #define althread_key_t pthread_key_t
 #define althread_key_create pthread_key_create

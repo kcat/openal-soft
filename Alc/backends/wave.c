@@ -93,8 +93,8 @@ static int WaveProc(void *ptr)
     ALuint now, start;
     ALuint64 avail, done;
     size_t fs;
-    const ALuint restTime = (ALuint64)Device->UpdateSize * 1000 /
-                            Device->Frequency / 2;
+    const long restTime = (long)((ALuint64)Device->UpdateSize * 1000000000 /
+                                 Device->Frequency / 2);
 
     SetThreadName(MIXER_THREAD_NAME);
 
@@ -116,7 +116,7 @@ static int WaveProc(void *ptr)
         }
         if(avail-done < Device->UpdateSize)
         {
-            Sleep(restTime);
+            al_nssleep(0, restTime);
             continue;
         }
 

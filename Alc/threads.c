@@ -37,6 +37,8 @@ extern inline int almtx_lock(almtx_t *mtx);
 extern inline int almtx_unlock(almtx_t *mtx);
 extern inline int almtx_trylock(almtx_t *mtx);
 
+extern inline void al_nssleep(time_t sec, long nsec);
+
 
 #define THREAD_STACK_SIZE (1*1024*1024) /* 1MB */
 

@@ -85,7 +85,7 @@ OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
 
 IF(WIN32)
     SET(LIBNAME OpenAL32)
-    ADD_DEFINITIONS("-D_WIN32 -D_WIN32_WINNT=0x0501")
+    ADD_DEFINITIONS("-D_WIN32 -D_WIN32_WINNT=0x0502")
 ELSE()
     SET(LIBNAME openal)
 ENDIF()
@@ -446,7 +446,7 @@ IF(ALSOFT_DLOPEN)
 ENDIF()
 
 # Check if we have Windows headers
-CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H -D_WIN32_WINNT=0x0501)
+CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H -D_WIN32_WINNT=0x0502)
 IF(NOT HAVE_WINDOWS_H)
     # These are needed on some systems for extra features
     ADD_DEFINITIONS(-D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700)
@@ -499,7 +499,7 @@ ENDIF()
 CHECK_INCLUDE_FILE(stdint.h HAVE_STDINT_H)
 IF(NOT HAVE_STDINT_H)
     IF(HAVE_WINDOWS_H)
-        CHECK_C_SOURCE_COMPILES("#define _WIN32_WINNT 0x0501
+        CHECK_C_SOURCE_COMPILES("#define _WIN32_WINNT 0x0502
                                  #include <windows.h>
                                  __int64 foo;
                                  int main() {return 0;}" HAVE___INT64)
@@ -766,7 +766,7 @@ ENDIF()
 
 IF(HAVE_WINDOWS_H)
     IF(ALSOFT_BACKEND_WINMM)
-        CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H -D_WIN32_WINNT=0x0501)
+        CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H -D_WIN32_WINNT=0x0502)
         IF(HAVE_MMSYSTEM_H AND HAVE_LIBWINMM)
             SET(HAVE_WINMM 1)
             SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/winmm.c)

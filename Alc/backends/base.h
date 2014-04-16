@@ -2,7 +2,7 @@
 #define AL_BACKENDS_BASE_H
 
 #include "alMain.h"
-#include "compat.h"
+#include "threads.h"
 
 
 struct ALCbackendVtable;
@@ -12,7 +12,7 @@ typedef struct ALCbackend {
 
     ALCdevice *mDevice;
 
-    CRITICAL_SECTION mMutex;
+    almtx_t mMutex;
 } ALCbackend;
 
 void ALCbackend_Construct(ALCbackend *self, ALCdevice *device);

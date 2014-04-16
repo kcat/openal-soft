@@ -90,6 +90,7 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 #include "vector.h"
 #include "alstring.h"
 #include "compat.h"
+#include "threads.h"
 
 
 extern inline RefCount IncrementRef(volatile RefCount *ptr);
@@ -308,7 +309,50 @@ void RestoreFPUMode(const FPUCtl *ctl)
 }
 
 
+extern inline int almtx_lock(almtx_t *mtx);
+extern inline int almtx_unlock(almtx_t *mtx);
+extern inline int almtx_trylock(almtx_t *mtx);
+
 #ifdef _WIN32
+int almtx_init(almtx_t *mtx, int type)
+{
+    if(!mtx) return althrd_error;
+    type &= ~(almtx_recursive|almtx_timed|almtx_normal|almtx_errorcheck);
+    if(type != 0) return althrd_error;
+
+    InitializeCriticalSection(mtx);
+    return althrd_success;
+}
+
+void almtx_destroy(almtx_t *mtx)
+{
+    DeleteCriticalSection(mtx);
+}
+
+int almtx_timedlock(almtx_t *mtx, const alxtime *xt)
+{
+    DWORD expire;
+    int ret;
+
+    if(!mtx || !xt)
+        return althrd_error;
+
+    expire  = xt->sec * 1000;
+    expire += (xt->nsec+999999) / 1000000;
+    expire += timeGetTime();
+
+    while((ret=almtx_trylock(mtx)) == althrd_busy)
+    {
+        DWORD now = timeGetTime();
+        if(expire <= now) break;
+        // busy loop!
+        SwitchToThread();
+    }
+
+    return ret;
+}
+
+
 extern inline int alsched_yield(void);
 
 void althread_once(althread_once_t *once, void (*callback)(void))
@@ -420,43 +464,69 @@ FILE *al_fopen(const char *fname, const char *mode)
 #include <time.h>
 #include <sys/time.h>
 
-void InitializeCriticalSection(CRITICAL_SECTION *cs)
+
+int almtx_init(almtx_t *mtx, int type)
 {
-    pthread_mutexattr_t attrib;
     int ret;
 
-    ret = pthread_mutexattr_init(&attrib);
-    assert(ret == 0);
+    if(!mtx) return althrd_error;
+    if((type&~(almtx_normal|almtx_recursive|almtx_timed|almtx_errorcheck)) != 0)
+        return althrd_error;
 
-    ret = pthread_mutexattr_settype(&attrib, PTHREAD_MUTEX_RECURSIVE);
+    type &= ~almtx_timed;
+    if(type == almtx_plain)
+        ret = pthread_mutex_init(mtx, NULL);
+    else
+    {
+        pthread_mutexattr_t attr;
+
+        ret = pthread_mutexattr_init(&attr);
+        if(ret) return althrd_error;
+
+        switch(type)
+        {
+        case almtx_normal:
+            ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
+            break;
+        case almtx_recursive:
+            ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 #ifdef HAVE_PTHREAD_NP_H
-    if(ret != 0)
-        ret = pthread_mutexattr_setkind_np(&attrib, PTHREAD_MUTEX_RECURSIVE);
+            if(ret != 0)
+                ret = pthread_mutexattr_setkind_np(&attr, PTHREAD_MUTEX_RECURSIVE);
 #endif
-    assert(ret == 0);
-    ret = pthread_mutex_init(cs, &attrib);
-    assert(ret == 0);
+            break;
+        case almtx_errorcheck:
+            ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+            break;
+        default:
+            ret = 1;
+        }
+        if(ret == 0)
+            ret = pthread_mutex_init(mtx, &attr);
+        pthread_mutexattr_destroy(&attr);
+    }
+    return ret ? althrd_error : althrd_success;
+}
 
-    pthread_mutexattr_destroy(&attrib);
-}
-void DeleteCriticalSection(CRITICAL_SECTION *cs)
+void almtx_destroy(almtx_t *mtx)
 {
-    int ret;
-    ret = pthread_mutex_destroy(cs);
-    assert(ret == 0);
+    pthread_mutex_destroy(mtx);
 }
-void EnterCriticalSection(CRITICAL_SECTION *cs)
+
+int almtx_timedlock(almtx_t *mtx, const alxtime *xt)
 {
-    int ret;
-    ret = pthread_mutex_lock(cs);
-    assert(ret == 0);
+    struct timespec ts;
+
+    if(!mtx || !xt)
+        return althrd_error;
+
+    ts.tv_sec = xt->sec;
+    ts.tv_nsec = xt->nsec;
+    if(pthread_mutex_timedlock(mtx, &ts) != 0)
+        return althrd_busy;
+    return althrd_success;
 }
-void LeaveCriticalSection(CRITICAL_SECTION *cs)
-{
-    int ret;
-    ret = pthread_mutex_unlock(cs);
-    assert(ret == 0);
-}
+
 
 /* NOTE: This wrapper isn't quite accurate as it returns an ALuint, as opposed
  * to the expected DWORD. Both are defined as unsigned 32-bit types, however.

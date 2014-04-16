@@ -11,13 +11,15 @@
 /* Base ALCbackend method implementations. */
 void ALCbackend_Construct(ALCbackend *self, ALCdevice *device)
 {
+    int ret;
     self->mDevice = device;
-    InitializeCriticalSection(&self->mMutex);
+    ret = almtx_init(&self->mMutex, almtx_recursive);
+    assert(ret == althrd_success);
 }
 
 void ALCbackend_Destruct(ALCbackend *self)
 {
-    DeleteCriticalSection(&self->mMutex);
+    almtx_destroy(&self->mMutex);
 }
 
 ALCboolean ALCbackend_reset(ALCbackend* UNUSED(self))
@@ -42,12 +44,14 @@ ALint64 ALCbackend_getLatency(ALCbackend* UNUSED(self))
 
 void ALCbackend_lock(ALCbackend *self)
 {
-    EnterCriticalSection(&self->mMutex);
+    int ret = almtx_lock(&self->mMutex);
+    assert(ret == althrd_success);
 }
 
 void ALCbackend_unlock(ALCbackend *self)
 {
-    LeaveCriticalSection(&self->mMutex);
+    int ret = almtx_unlock(&self->mMutex);
+    assert(ret == althrd_success);
 }
 
 

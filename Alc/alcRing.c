@@ -24,6 +24,7 @@
 #include <stdlib.h>
 
 #include "alMain.h"
+#include "threads.h"
 #include "compat.h"
 
 
@@ -35,7 +36,7 @@ struct RingBuffer {
     ALint read_pos;
     ALint write_pos;
 
-    CRITICAL_SECTION cs;
+    almtx_t mtx;
 };
 
 
@@ -51,7 +52,7 @@ RingBuffer *CreateRingBuffer(ALsizei frame_size, ALsizei length)
         ring->read_pos = 0;
         ring->write_pos = 0;
 
-        InitializeCriticalSection(&ring->cs);
+        almtx_init(&ring->mtx, almtx_plain);
     }
     return ring;
 }
@@ -60,7 +61,7 @@ void DestroyRingBuffer(RingBuffer *ring)
 {
     if(ring)
     {
-        DeleteCriticalSection(&ring->cs);
+        almtx_destroy(&ring->mtx);
         free(ring);
     }
 }
@@ -69,9 +70,9 @@ ALsizei RingBufferSize(RingBuffer *ring)
 {
     ALsizei s;
 
-    EnterCriticalSection(&ring->cs);
+    almtx_lock(&ring->mtx);
     s = (ring->write_pos-ring->read_pos+ring->length) % ring->length;
-    LeaveCriticalSection(&ring->cs);
+    almtx_unlock(&ring->mtx);
 
     return s;
 }
@@ -80,7 +81,7 @@ void WriteRingBuffer(RingBuffer *ring, const ALubyte *data, ALsizei len)
 {
     int remain;
 
-    EnterCriticalSection(&ring->cs);
+    almtx_lock(&ring->mtx);
 
     remain = (ring->read_pos-ring->write_pos-1+ring->length) % ring->length;
     if(remain < len) len = remain;
@@ -103,14 +104,14 @@ void WriteRingBuffer(RingBuffer *ring, const ALubyte *data, ALsizei len)
         ring->write_pos %= ring->length;
     }
 
-    LeaveCriticalSection(&ring->cs);
+    almtx_unlock(&ring->mtx);
 }
 
 void ReadRingBuffer(RingBuffer *ring, ALubyte *data, ALsizei len)
 {
     int remain;
 
-    EnterCriticalSection(&ring->cs);
+    almtx_lock(&ring->mtx);
 
     remain = ring->length - ring->read_pos;
     if(remain < len)
@@ -124,5 +125,5 @@ void ReadRingBuffer(RingBuffer *ring, ALubyte *data, ALsizei len)
     ring->read_pos += len;
     ring->read_pos %= ring->length;
 
-    LeaveCriticalSection(&ring->cs);
+    almtx_unlock(&ring->mtx);
 }

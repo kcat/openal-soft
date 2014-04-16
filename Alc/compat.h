@@ -32,12 +32,6 @@ FILE *al_fopen(const char *fname, const char *mode);
 
 #include <pthread.h>
 
-typedef pthread_mutex_t CRITICAL_SECTION;
-void InitializeCriticalSection(CRITICAL_SECTION *cs);
-void DeleteCriticalSection(CRITICAL_SECTION *cs);
-void EnterCriticalSection(CRITICAL_SECTION *cs);
-void LeaveCriticalSection(CRITICAL_SECTION *cs);
-
 ALuint timeGetTime(void);
 void Sleep(ALuint t);
 

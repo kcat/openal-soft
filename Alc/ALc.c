@@ -39,6 +39,8 @@
 #include "bs2b.h"
 #include "alu.h"
 
+#include "compat.h"
+#include "threads.h"
 #include "alstring.h"
 
 #include "backends/base.h"
@@ -764,15 +766,16 @@ static const ALCint alcEFXMinorVersion = 0;
  ************************************************/
 static ALCdevice *volatile DeviceList = NULL;
 
-static CRITICAL_SECTION ListLock;
-
-static void LockLists(void)
+static almtx_t ListLock;
+static inline void LockLists(void)
 {
-    EnterCriticalSection(&ListLock);
+    int lockret = almtx_lock(&ListLock);
+    assert(lockret == althrd_success);
 }
-static void UnlockLists(void)
+static inline void UnlockLists(void)
 {
-    LeaveCriticalSection(&ListLock);
+    int unlockret = almtx_unlock(&ListLock);
+    assert(unlockret == althrd_success);
 }
 
 /************************************************
@@ -859,6 +862,7 @@ static void ReleaseThreadCtx(void *ptr);
 static void alc_init(void)
 {
     const char *str;
+    int ret;
 
     LogFile = stderr;
 
@@ -874,7 +878,8 @@ static void alc_init(void)
         ZScale *= -1.0f;
 
     althread_key_create(&LocalContext, ReleaseThreadCtx);
-    InitializeCriticalSection(&ListLock);
+    ret = almtx_init(&ListLock, almtx_recursive);
+    assert(ret == althrd_success);
     ThunkInit();
 }
 
@@ -1185,7 +1190,7 @@ static void alc_deinit_safe(void)
     FreeALConfig();
 
     ThunkExit();
-    DeleteCriticalSection(&ListLock);
+    almtx_destroy(&ListLock);
     althread_key_delete(LocalContext);
 
     if(LogFile != stderr)

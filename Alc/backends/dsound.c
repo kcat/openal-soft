@@ -77,7 +77,7 @@ typedef struct {
     HANDLE             NotifyEvent;
 
     volatile int killNow;
-    althread_t thread;
+    althrd_t thread;
 } DSoundPlaybackData;
 
 typedef struct {
@@ -180,7 +180,7 @@ static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCWSTR desc, LPCWSTR UNUSED
 }
 
 
-FORCE_ALIGN static ALuint DSoundPlaybackProc(ALvoid *ptr)
+FORCE_ALIGN static int DSoundPlaybackProc(void *ptr)
 {
     ALCdevice *Device = (ALCdevice*)ptr;
     DSoundPlaybackData *data = (DSoundPlaybackData*)Device->ExtraData;
@@ -596,7 +596,8 @@ static ALCboolean DSoundStartPlayback(ALCdevice *device)
 {
     DSoundPlaybackData *data = (DSoundPlaybackData*)device->ExtraData;
 
-    if(!StartThread(&data->thread, DSoundPlaybackProc, device))
+    data->killNow = 0;
+    if(althrd_create(&data->thread, DSoundPlaybackProc, device) != althrd_success)
         return ALC_FALSE;
 
     return ALC_TRUE;
@@ -605,15 +606,14 @@ static ALCboolean DSoundStartPlayback(ALCdevice *device)
 static void DSoundStopPlayback(ALCdevice *device)
 {
     DSoundPlaybackData *data = device->ExtraData;
+    int res;
 
-    if(!data->thread)
+    if(data->killNow)
         return;
 
     data->killNow = 1;
-    StopThread(data->thread);
-    data->thread = NULL;
+    althrd_join(data->thread, &res);
 
-    data->killNow = 0;
     IDirectSoundBuffer_Stop(data->Buffer);
 }
 

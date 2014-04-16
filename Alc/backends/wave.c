@@ -42,7 +42,7 @@ typedef struct {
     ALuint size;
 
     volatile int killNow;
-    althread_t thread;
+    althrd_t thread;
 } wave_data;
 
 
@@ -85,7 +85,7 @@ static void fwrite32le(ALuint val, FILE *f)
 }
 
 
-static ALuint WaveProc(ALvoid *ptr)
+static int WaveProc(void *ptr)
 {
     ALCdevice *Device = (ALCdevice*)ptr;
     wave_data *data = (wave_data*)Device->ExtraData;
@@ -291,7 +291,8 @@ static ALCboolean wave_start_playback(ALCdevice *device)
         return ALC_FALSE;
     }
 
-    if(!StartThread(&data->thread, WaveProc, device))
+    data->killNow = 0;
+    if(althrd_create(&data->thread, WaveProc, device) != althrd_success)
     {
         free(data->buffer);
         data->buffer = NULL;
@@ -306,15 +307,13 @@ static void wave_stop_playback(ALCdevice *device)
     wave_data *data = (wave_data*)device->ExtraData;
     ALuint dataLen;
     long size;
+    int res;
 
-    if(!data->thread)
+    if(data->killNow)
         return;
 
     data->killNow = 1;
-    StopThread(data->thread);
-    data->thread = NULL;
-
-    data->killNow = 0;
+    althrd_join(data->thread, &res);
 
     free(data->buffer);
     data->buffer = NULL;

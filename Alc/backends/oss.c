@@ -78,10 +78,10 @@ typedef struct ALCplaybackOSS {
     int data_size;
 
     volatile int killNow;
-    althread_t thread;
+    althrd_t thread;
 } ALCplaybackOSS;
 
-static ALuint ALCplaybackOSS_mixerProc(ALvoid *ptr);
+static int ALCplaybackOSS_mixerProc(void *ptr);
 
 static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, void, Destruct)
@@ -99,7 +99,7 @@ DECLARE_DEFAULT_ALLOCATORS(ALCplaybackOSS)
 DEFINE_ALCBACKEND_VTABLE(ALCplaybackOSS);
 
 
-static ALuint ALCplaybackOSS_mixerProc(ALvoid *ptr)
+static int ALCplaybackOSS_mixerProc(void *ptr)
 {
     ALCplaybackOSS *self = (ALCplaybackOSS*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
@@ -275,7 +275,8 @@ static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
     self->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     self->mix_data = calloc(1, self->data_size);
 
-    if(!StartThread(&self->thread, ALCplaybackOSS_mixerProc, self))
+    self->killNow = 0;
+    if(althrd_create(&self->thread, ALCplaybackOSS_mixerProc, self) != althrd_success)
     {
         free(self->mix_data);
         self->mix_data = NULL;
@@ -287,14 +288,14 @@ static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
 
 static void ALCplaybackOSS_stop(ALCplaybackOSS *self)
 {
-    if(!self->thread)
+    int res;
+
+    if(self->killNow)
         return;
 
     self->killNow = 1;
-    StopThread(self->thread);
-    self->thread = NULL;
+    althrd_join(self->thread, &res);
 
-    self->killNow = 0;
     if(ioctl(self->fd, SNDCTL_DSP_RESET) != 0)
         ERR("Error resetting device: %s\n", strerror(errno));
 
@@ -315,10 +316,10 @@ typedef struct ALCcaptureOSS {
     int doCapture;
 
     volatile int killNow;
-    althread_t thread;
+    althrd_t thread;
 } ALCcaptureOSS;
 
-static ALuint ALCcaptureOSS_recordProc(ALvoid *ptr);
+static int ALCcaptureOSS_recordProc(void *ptr);
 
 static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, void, Destruct)
@@ -336,7 +337,7 @@ DECLARE_DEFAULT_ALLOCATORS(ALCcaptureOSS)
 DEFINE_ALCBACKEND_VTABLE(ALCcaptureOSS);
 
 
-static ALuint ALCcaptureOSS_recordProc(ALvoid *ptr)
+static int ALCcaptureOSS_recordProc(void *ptr)
 {
     ALCcaptureOSS *self = (ALCcaptureOSS*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
@@ -483,7 +484,8 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     self->data_size = info.fragsize;
     self->read_data = calloc(1, self->data_size);
 
-    if(!StartThread(&self->thread, ALCcaptureOSS_recordProc, self))
+    self->killNow = 0;
+    if(althrd_create(&self->thread, ALCcaptureOSS_recordProc, self) != althrd_success)
     {
         device->ExtraData = NULL;
         close(self->fd);
@@ -498,9 +500,10 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
 
 static void ALCcaptureOSS_close(ALCcaptureOSS *self)
 {
+    int res;
+
     self->killNow = 1;
-    StopThread(self->thread);
-    self->killNow = 0;
+    althrd_join(self->thread, &res);
 
     close(self->fd);
     self->fd = -1;

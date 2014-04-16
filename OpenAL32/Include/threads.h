@@ -3,16 +3,6 @@
 
 #include <time.h>
 
-#include "alMain.h"
-
-struct althread_info;
-typedef struct althread_info* althread_t;
-
-ALboolean StartThread(althread_t *out, ALuint (*func)(ALvoid*), ALvoid *ptr);
-ALuint StopThread(althread_t thread);
-
-void SetThreadName(const char *name);
-
 
 enum {
     althrd_success = 0,
@@ -103,6 +93,7 @@ inline int almtx_trylock(almtx_t *mtx)
 
 #else
 
+#include <stdint.h>
 #include <pthread.h>
 
 
@@ -168,5 +159,8 @@ int althrd_join(althrd_t thr, int *res);
 int almtx_init(almtx_t *mtx, int type);
 void almtx_destroy(almtx_t *mtx);
 int almtx_timedlock(almtx_t *mtx, const struct timespec *ts);
+
+
+void SetThreadName(const char *name);
 
 #endif /* AL_THREADS_H */

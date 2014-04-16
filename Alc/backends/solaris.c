@@ -50,11 +50,11 @@ typedef struct {
     int data_size;
 
     volatile int killNow;
-    althread_t thread;
+    althrd_t thread;
 } solaris_data;
 
 
-static ALuint SolarisProc(ALvoid *ptr)
+static int SolarisProc(void *ptr)
 {
     ALCdevice *Device = (ALCdevice*)ptr;
     solaris_data *data = (solaris_data*)Device->ExtraData;
@@ -211,7 +211,8 @@ static ALCboolean solaris_start_playback(ALCdevice *device)
     data->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     data->mix_data = calloc(1, data->data_size);
 
-    if(!StartThread(&data->thread, SolarisProc, device))
+    data->killNow = 0;
+    if(althrd_create(&data->thread, SolarisProc, device) != althrd_success)
     {
         free(data->mix_data);
         data->mix_data = NULL;
@@ -224,15 +225,14 @@ static ALCboolean solaris_start_playback(ALCdevice *device)
 static void solaris_stop_playback(ALCdevice *device)
 {
     solaris_data *data = (solaris_data*)device->ExtraData;
+    int res;
 
-    if(!data->thread)
+    if(data->killNow)
         return;
 
     data->killNow = 1;
-    StopThread(data->thread);
-    data->thread = NULL;
+    althrd_join(data->thread, &res);
 
-    data->killNow = 0;
     if(ioctl(data->fd, AUDIO_DRAIN) < 0)
         ERR("Error draining device: %s\n", strerror(errno));
 

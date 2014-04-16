@@ -37,11 +37,11 @@ typedef struct ALCnullBackend {
     DERIVE_FROM_TYPE(ALCbackend);
 
     volatile int killNow;
-    althread_t thread;
+    althrd_t thread;
 } ALCnullBackend;
 DECLARE_ALCBACKEND_VTABLE(ALCnullBackend);
 
-static ALuint ALCnullBackend_mixerProc(ALvoid *ptr);
+static int ALCnullBackend_mixerProc(void *ptr);
 
 static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, Destruct)
@@ -68,7 +68,7 @@ static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
 }
 
 
-static ALuint ALCnullBackend_mixerProc(ALvoid *ptr)
+static int ALCnullBackend_mixerProc(void *ptr)
 {
     ALCnullBackend *self = (ALCnullBackend*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
@@ -137,21 +137,21 @@ static ALCboolean ALCnullBackend_reset(ALCnullBackend *self)
 
 static ALCboolean ALCnullBackend_start(ALCnullBackend *self)
 {
-    if(!StartThread(&self->thread, ALCnullBackend_mixerProc, self))
+    self->killNow = 0;
+    if(althrd_create(&self->thread, ALCnullBackend_mixerProc, self) != althrd_success)
         return ALC_FALSE;
     return ALC_TRUE;
 }
 
 static void ALCnullBackend_stop(ALCnullBackend *self)
 {
-    if(!self->thread)
+    int res;
+
+    if(self->killNow)
         return;
 
     self->killNow = 1;
-    StopThread(self->thread);
-    self->thread = NULL;
-
-    self->killNow = 0;
+    althrd_join(self->thread, &res);
 }
 
 DEFINE_ALCBACKEND_VTABLE(ALCnullBackend);

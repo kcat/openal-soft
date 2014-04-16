@@ -390,12 +390,12 @@ typedef struct ALCplaybackAlsa {
     ALsizei size;
 
     volatile int killNow;
-    althread_t thread;
+    althrd_t thread;
 } ALCplaybackAlsa;
 DECLARE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
 
-static ALuint ALCplaybackAlsa_mixerProc(ALvoid *ptr);
-static ALuint ALCplaybackAlsa_mixerNoMMapProc(ALvoid *ptr);
+static int ALCplaybackAlsa_mixerProc(void *ptr);
+static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr);
 
 static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, Destruct)
@@ -418,7 +418,7 @@ static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
 }
 
 
-static ALuint ALCplaybackAlsa_mixerProc(ALvoid *ptr)
+static int ALCplaybackAlsa_mixerProc(void *ptr)
 {
     ALCplaybackAlsa *self = (ALCplaybackAlsa*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
@@ -510,7 +510,7 @@ static ALuint ALCplaybackAlsa_mixerProc(ALvoid *ptr)
     return 0;
 }
 
-static ALuint ALCplaybackAlsa_mixerNoMMapProc(ALvoid *ptr)
+static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr)
 {
     ALCplaybackAlsa *self = (ALCplaybackAlsa*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
@@ -810,7 +810,7 @@ error:
 static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    ALuint (*thread_func)(ALvoid*) = NULL;
+    int (*thread_func)(void*) = NULL;
     snd_pcm_hw_params_t *hp = NULL;
     snd_pcm_access_t access;
     const char *funcerr;
@@ -846,7 +846,8 @@ static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
         }
         thread_func = ALCplaybackAlsa_mixerProc;
     }
-    if(!StartThread(&self->thread, thread_func, self))
+    self->killNow = 0;
+    if(althrd_create(&self->thread, thread_func, self) != althrd_success)
     {
         ERR("Could not create playback thread\n");
         free(self->buffer);
@@ -864,13 +865,14 @@ error:
 
 static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self)
 {
-    if(self->thread)
-    {
-        self->killNow = 1;
-        StopThread(self->thread);
-        self->thread = NULL;
-    }
-    self->killNow = 0;
+    int res;
+
+    if(self->killNow)
+        return;
+
+    self->killNow = 1;
+    althrd_join(self->thread, &res);
+
     free(self->buffer);
     self->buffer = NULL;
 }

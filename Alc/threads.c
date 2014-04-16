@@ -184,7 +184,10 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
     {
         DWORD now = timeGetTime();
         if(now-start >= timelen)
+        {
+            ret = althrd_timedout;
             break;
+        }
         SwitchToThread();
     }
 
@@ -331,12 +334,20 @@ void almtx_destroy(almtx_t *mtx)
 
 int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 {
+    int ret;
+
     if(!mtx || !ts)
         return althrd_error;
 
-    if(pthread_mutex_timedlock(mtx, ts) != 0)
-        return althrd_busy;
-    return althrd_success;
+    ret = pthread_mutex_timedlock(mtx, ts);
+    switch(ret)
+    {
+        case 0: return althrd_success;
+        case ETIMEDOUT: return althrd_timedout;
+        case EAGAIN:
+        case EBUSY: return althrd_busy;
+    }
+    return althrd_error;
 }
 
 #endif

@@ -311,13 +311,11 @@ void RestoreFPUMode(const FPUCtl *ctl)
 
 #ifdef _WIN32
 
-extern inline int alsched_yield(void);
-
 void althread_once(althread_once_t *once, void (*callback)(void))
 {
     LONG ret;
     while((ret=InterlockedExchange(once, 1)) == 1)
-        alsched_yield();
+        althrd_yield();
     if(ret == 0)
         callback();
     InterlockedExchange(once, 2);
@@ -667,7 +665,7 @@ void SetRTPriority(void)
 static void Lock(volatile ALenum *l)
 {
     while(ExchangeInt(l, AL_TRUE) == AL_TRUE)
-        alsched_yield();
+        althrd_yield();
 }
 
 static void Unlock(volatile ALenum *l)

@@ -18,9 +18,6 @@ typedef LONG althread_once_t;
 #define ALTHREAD_ONCE_INIT 0
 void althread_once(althread_once_t *once, void (*callback)(void));
 
-inline int alsched_yield(void)
-{ SwitchToThread(); return 0; }
-
 WCHAR *strdupW(const WCHAR *str);
 
 /* Opens a file with standard I/O. The filename is expected to be UTF-8. */
@@ -44,8 +41,6 @@ void Sleep(ALuint t);
 #define althread_once_t pthread_once_t
 #define ALTHREAD_ONCE_INIT PTHREAD_ONCE_INIT
 #define althread_once pthread_once
-
-#define alsched_yield sched_yield
 
 #define al_fopen(_n, _m) fopen((_n), (_m))
 

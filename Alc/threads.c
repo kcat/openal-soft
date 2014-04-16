@@ -155,8 +155,9 @@ int althrd_sleep(const struct timespec *ts, struct timespec* UNUSED(rem))
 int almtx_init(almtx_t *mtx, int type)
 {
     if(!mtx) return althrd_error;
-    type &= ~(almtx_recursive|almtx_timed|almtx_normal|almtx_errorcheck);
-    if(type != 0) return althrd_error;
+    type &= ~(almtx_recursive|almtx_timed);
+    if(type != almtx_plain)
+        return althrd_error;
 
     InitializeCriticalSection(mtx);
     return althrd_success;
@@ -293,7 +294,7 @@ int almtx_init(almtx_t *mtx, int type)
     int ret;
 
     if(!mtx) return althrd_error;
-    if((type&~(almtx_normal|almtx_recursive|almtx_timed|almtx_errorcheck)) != 0)
+    if((type&~(almtx_recursive|almtx_timed)) != 0)
         return althrd_error;
 
     type &= ~almtx_timed;
@@ -306,24 +307,16 @@ int almtx_init(almtx_t *mtx, int type)
         ret = pthread_mutexattr_init(&attr);
         if(ret) return althrd_error;
 
-        switch(type)
+        if(type == almtx_recursive)
         {
-        case almtx_normal:
-            ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
-            break;
-        case almtx_recursive:
             ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 #ifdef HAVE_PTHREAD_NP_H
             if(ret != 0)
                 ret = pthread_mutexattr_setkind_np(&attr, PTHREAD_MUTEX_RECURSIVE);
 #endif
-            break;
-        case almtx_errorcheck:
-            ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
-            break;
-        default:
-            ret = 1;
         }
+        else
+            ret = 1;
         if(ret == 0)
             ret = pthread_mutex_init(mtx, &attr);
         pthread_mutexattr_destroy(&attr);

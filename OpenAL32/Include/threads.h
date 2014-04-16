@@ -15,9 +15,7 @@ enum {
 enum {
     almtx_plain = 0,
     almtx_recursive = 1,
-    almtx_timed = 2,
-    almtx_normal = 4,
-    almtx_errorcheck = 8
+    almtx_timed = 2
 };
 
 

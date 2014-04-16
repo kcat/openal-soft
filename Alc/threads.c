@@ -139,9 +139,15 @@ int althrd_join(althrd_t thr, int *res)
 int althrd_sleep(const struct timespec *ts, struct timespec* UNUSED(rem))
 {
     DWORD msec;
-    msec  = ts->tv_sec * 1000;
-    msec += (ts->tv_nsec+999999) / 1000000;
+
+    if(ts->tv_sec < 0 || ts->tv_sec >= (0xffffffffu / 1000) ||
+       ts->tv_nsec < 0 || ts->tv_nsec >= 1000000000)
+        return -2;
+
+    msec  = (DWORD)(ts->tv_sec * 1000);
+    msec += (DWORD)((ts->tv_nsec+999999) / 1000000);
     Sleep(msec);
+
     return 0;
 }
 

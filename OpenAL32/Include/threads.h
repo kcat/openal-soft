@@ -1,6 +1,8 @@
 #ifndef AL_THREADS_H
 #define AL_THREADS_H
 
+#include <time.h>
+
 #include "alMain.h"
 
 struct althread_info;
@@ -28,17 +30,54 @@ enum {
     almtx_errorcheck = 8
 };
 
-typedef struct alxtime {
-    time_t sec;
-    long nsec;
-} alxtime;
+
+typedef int (*althrd_start_t)(void*);
 
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+typedef HANDLE althrd_t;
 typedef CRITICAL_SECTION almtx_t;
+
+#ifndef __MINGW32__
+struct timespec {
+    time_t tv_sec;
+    long tv_nsec;
+};
+#endif
+
+
+int althrd_sleep(const struct timespec *ts, struct timespec *rem);
+
+
+#if 0
+inline althrd_t althrd_current(void)
+{
+    /* This is wrong. GetCurrentThread() returns a psuedo-handle of -1 which
+     * various functions will interpret as the calling thread. There is no
+     * apparent way to retrieve the same handle that was returned by
+     * CreateThread. */
+    return GetCurrentThread();
+}
+#endif
+
+inline int althrd_equal(althrd_t thr0, althrd_t thr1)
+{
+    return GetThreadId(thr0) == GetThreadId(thr1);
+}
+
+inline void althrd_exit(int res)
+{
+    ExitThread(res);
+}
+
+inline void althrd_yield(void)
+{
+    SwitchToThread();
+}
+
 
 inline int almtx_lock(almtx_t *mtx)
 {
@@ -67,7 +106,35 @@ inline int almtx_trylock(almtx_t *mtx)
 #include <pthread.h>
 
 
+typedef pthread_t althrd_t;
 typedef pthread_mutex_t almtx_t;
+
+
+inline althrd_t althrd_current(void)
+{
+    return pthread_self();
+}
+
+inline int althrd_equal(althrd_t thr0, althrd_t thr1)
+{
+    return pthread_equal(thr0, thr1);
+}
+
+inline void althrd_exit(int res)
+{
+    pthread_exit((void*)(intptr_t)res);
+}
+
+inline void althrd_yield(void)
+{
+    sched_yield();
+}
+
+inline int althrd_sleep(const struct timespec *ts, struct timespec *rem)
+{
+    return nanosleep(ts, rem);
+}
+
 
 inline int almtx_lock(almtx_t *mtx)
 {
@@ -93,8 +160,13 @@ inline int almtx_trylock(almtx_t *mtx)
 
 #endif
 
+
+int althrd_create(althrd_t *thr, althrd_start_t func, void *arg);
+int althrd_detach(althrd_t thr);
+int althrd_join(althrd_t thr, int *res);
+
 int almtx_init(almtx_t *mtx, int type);
 void almtx_destroy(almtx_t *mtx);
-int almtx_timedlock(almtx_t *mtx, const alxtime *xt);
+int almtx_timedlock(almtx_t *mtx, const struct timespec *ts);
 
 #endif /* AL_THREADS_H */

@@ -309,11 +309,88 @@ void RestoreFPUMode(const FPUCtl *ctl)
 }
 
 
+extern inline int althrd_equal(althrd_t thr0, althrd_t thr1);
+extern inline void althrd_exit(int res);
+extern inline void althrd_yield(void);
+
 extern inline int almtx_lock(almtx_t *mtx);
 extern inline int almtx_unlock(almtx_t *mtx);
 extern inline int almtx_trylock(almtx_t *mtx);
 
 #ifdef _WIN32
+
+#define THREAD_STACK_SIZE (1*1024*1024) /* 1MB */
+
+typedef struct thread_cntr {
+    althrd_start_t func;
+    void *arg;
+} thread_cntr;
+
+static DWORD WINAPI thread_starter(void *arg)
+{
+    thread_cntr cntr;
+    memcpy(&cntr, arg, sizeof(cntr));
+    free(arg);
+
+    return (DWORD)((*cntr.func)(cntr.arg));
+}
+
+
+int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
+{
+    thread_cntr *cntr;
+    DWORD dummy;
+    HANDLE hdl;
+
+    cntr = malloc(sizeof(*cntr));
+    if(!cntr) return althrd_nomem;
+
+    cntr->func = func;
+    cntr->arg = arg;
+
+    hdl = CreateThread(NULL, THREAD_STACK_SIZE, thread_starter, cntr, 0, &dummy);
+    if(!hdl)
+    {
+        free(cntr);
+        return althrd_error;
+    }
+
+    *thr = hdl;
+    return althrd_success;
+}
+
+int althrd_detach(althrd_t thr)
+{
+    if(!thr) return althrd_error;
+    CloseHandle(thr);
+
+    return althrd_success;
+}
+
+int althrd_join(althrd_t thr, int *res)
+{
+    DWORD code;
+
+    if(!thr) return althrd_error;
+
+    WaitForSingleObject(thr, INFINITE);
+    GetExitCodeThread(thr, &code);
+    CloseHandle(thr);
+
+    *res = (int)code;
+    return althrd_success;
+}
+
+int althrd_sleep(const struct timespec *ts, struct timespec* UNUSED(rem))
+{
+    DWORD msec;
+    msec  = ts->tv_sec * 1000;
+    msec += (ts->tv_nsec+999999) / 1000000;
+    Sleep(msec);
+    return 0;
+}
+
+
 int almtx_init(almtx_t *mtx, int type)
 {
     if(!mtx) return althrd_error;
@@ -329,16 +406,16 @@ void almtx_destroy(almtx_t *mtx)
     DeleteCriticalSection(mtx);
 }
 
-int almtx_timedlock(almtx_t *mtx, const alxtime *xt)
+int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 {
     DWORD expire;
     int ret;
 
-    if(!mtx || !xt)
+    if(!mtx || !ts)
         return althrd_error;
 
-    expire  = xt->sec * 1000;
-    expire += (xt->nsec+999999) / 1000000;
+    expire  = ts->tv_sec * 1000;
+    expire += (ts->tv_nsec+999999) / 1000000;
     expire += timeGetTime();
 
     while((ret=almtx_trylock(mtx)) == althrd_busy)
@@ -465,6 +542,80 @@ FILE *al_fopen(const char *fname, const char *mode)
 #include <sys/time.h>
 
 
+extern inline althrd_t althrd_current(void);
+extern inline int althrd_sleep(const struct timespec *ts, struct timespec *rem);
+
+
+#define THREAD_STACK_SIZE (1*1024*1024) /* 1MB */
+
+typedef struct thread_cntr {
+    althrd_start_t func;
+    void *arg;
+} thread_cntr;
+
+static void *thread_starter(void *arg)
+{
+    thread_cntr cntr;
+    memcpy(&cntr, arg, sizeof(cntr));
+    free(arg);
+
+    return (void*)(intptr_t)((*cntr.func)(cntr.arg));
+}
+
+
+int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
+{
+    thread_cntr *cntr;
+    pthread_attr_t attr;
+
+    cntr = malloc(sizeof(*cntr));
+    if(!cntr) return althrd_nomem;
+
+    if(pthread_attr_init(&attr) != 0)
+    {
+        free(cntr);
+        return althrd_error;
+    }
+    if(pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE) != 0)
+    {
+        pthread_attr_destroy(&attr);
+        free(cntr);
+        return althrd_error;
+    }
+
+    cntr->func = func;
+    cntr->arg = arg;
+    if(pthread_create(thr, &attr, thread_starter, cntr) != 0)
+    {
+        pthread_attr_destroy(&attr);
+        free(cntr);
+        return althrd_error;
+    }
+    pthread_attr_destroy(&attr);
+
+    return althrd_success;
+}
+
+int althrd_detach(althrd_t thr)
+{
+    if(pthread_detach(thr) != 0)
+        return althrd_error;
+    return althrd_success;
+}
+
+int althrd_join(althrd_t thr, int *res)
+{
+    void *code;
+
+    if(!res) return althrd_error;
+
+    if(pthread_join(thr, &code) != 0)
+        return althrd_error;
+    *res = (int)(intptr_t)code;
+    return althrd_success;
+}
+
+
 int almtx_init(almtx_t *mtx, int type)
 {
     int ret;
@@ -513,16 +664,12 @@ void almtx_destroy(almtx_t *mtx)
     pthread_mutex_destroy(mtx);
 }
 
-int almtx_timedlock(almtx_t *mtx, const alxtime *xt)
+int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 {
-    struct timespec ts;
-
-    if(!mtx || !xt)
+    if(!mtx || !ts)
         return althrd_error;
 
-    ts.tv_sec = xt->sec;
-    ts.tv_nsec = xt->nsec;
-    if(pthread_mutex_timedlock(mtx, &ts) != 0)
+    if(pthread_mutex_timedlock(mtx, ts) != 0)
         return althrd_busy;
     return althrd_success;
 }

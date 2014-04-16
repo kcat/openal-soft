@@ -72,7 +72,7 @@ typedef struct {
     volatile UINT32 Padding;
 
     volatile int killNow;
-    althread_t thread;
+    althrd_t thread;
 } MMDevApiData;
 
 
@@ -212,7 +212,7 @@ static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALu
 }
 
 
-FORCE_ALIGN static ALuint MMDevApiProc(ALvoid *ptr)
+FORCE_ALIGN static int MMDevApiProc(void *ptr)
 {
     ALCdevice *device = ptr;
     MMDevApiData *data = device->ExtraData;
@@ -692,7 +692,8 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             if(SUCCEEDED(hr))
             {
                 data->render = ptr;
-                if(!StartThread(&data->thread, MMDevApiProc, device))
+                data->killNow = 0;
+                if(althrd_create(&data->thread, MMDevApiProc, device) != althrd_success)
                 {
                     if(data->render)
                         IAudioRenderClient_Release(data->render);
@@ -712,13 +713,12 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             device = (ALCdevice*)msg.lParam;
             data = device->ExtraData;
 
-            if(data->thread)
+            if(data->render)
             {
-                data->killNow = 1;
-                StopThread(data->thread);
-                data->thread = NULL;
+                int res;
 
-                data->killNow = 0;
+                data->killNow = 1;
+                althrd_join(data->thread, &res);
 
                 IAudioRenderClient_Release(data->render);
                 data->render = NULL;

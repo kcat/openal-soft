@@ -479,7 +479,7 @@ typedef struct ALCpulsePlayback {
     pa_context *context;
 
     volatile ALboolean killNow;
-    althread_t thread;
+    althrd_t thread;
 } ALCpulsePlayback;
 DECLARE_ALCBACKEND_VTABLE(ALCpulsePlayback);
 
@@ -496,7 +496,7 @@ static pa_stream *ALCpulsePlayback_connectStream(const char *device_name, pa_thr
                                                  pa_context *context, pa_stream_flags_t flags,
                                                  pa_buffer_attr *attr, pa_sample_spec *spec,
                                                  pa_channel_map *chanmap);
-static ALuint ALCpulsePlayback_mixerProc(ALvoid *ptr);
+static int ALCpulsePlayback_mixerProc(void *ptr);
 
 static void ALCpulsePlayback_Construct(ALCpulsePlayback *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCpulsePlayback, ALCbackend, void, Destruct)
@@ -751,7 +751,7 @@ static pa_stream *ALCpulsePlayback_connectStream(const char *device_name,
 }
 
 
-static ALuint ALCpulsePlayback_mixerProc(ALvoid *ptr)
+static int ALCpulsePlayback_mixerProc(void *ptr)
 {
     ALCpulsePlayback *self = ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
@@ -1051,7 +1051,8 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
 
 static ALCboolean ALCpulsePlayback_start(ALCpulsePlayback *self)
 {
-    if(!StartThread(&self->thread, ALCpulsePlayback_mixerProc, self))
+    self->killNow = AL_FALSE;
+    if(althrd_create(&self->thread, ALCpulsePlayback_mixerProc, self) != althrd_success)
         return ALC_FALSE;
     return ALC_TRUE;
 }
@@ -1059,17 +1060,13 @@ static ALCboolean ALCpulsePlayback_start(ALCpulsePlayback *self)
 static void ALCpulsePlayback_stop(ALCpulsePlayback *self)
 {
     pa_operation *o;
+    int res;
 
     if(!self->stream)
         return;
 
     self->killNow = AL_TRUE;
-    if(self->thread)
-    {
-        StopThread(self->thread);
-        self->thread = NULL;
-    }
-    self->killNow = AL_FALSE;
+    althrd_join(self->thread, &res);
 
     pa_threaded_mainloop_lock(self->loop);
 

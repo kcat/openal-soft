@@ -408,21 +408,21 @@ void almtx_destroy(almtx_t *mtx)
 
 int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 {
-    DWORD expire;
+    DWORD start, timelen;
     int ret;
 
     if(!mtx || !ts)
         return althrd_error;
 
-    expire  = ts->tv_sec * 1000;
-    expire += (ts->tv_nsec+999999) / 1000000;
-    expire += timeGetTime();
+    timelen  = ts->tv_sec * 1000;
+    timelen += (ts->tv_nsec+999999) / 1000000;
 
+    start = timeGetTime();
     while((ret=almtx_trylock(mtx)) == althrd_busy)
     {
         DWORD now = timeGetTime();
-        if(expire <= now) break;
-        // busy loop!
+        if(now-start >= timelen)
+            break;
         SwitchToThread();
     }
 

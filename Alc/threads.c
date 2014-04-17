@@ -143,7 +143,7 @@ int althrd_sleep(const struct timespec *ts, struct timespec* UNUSED(rem))
 {
     DWORD msec;
 
-    if(ts->tv_sec < 0 || ts->tv_sec >= (0xffffffffu / 1000) ||
+    if(ts->tv_sec < 0 || ts->tv_sec >= (0x7fffffff / 1000) ||
        ts->tv_nsec < 0 || ts->tv_nsec >= 1000000000)
         return -2;
 
@@ -200,10 +200,10 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 
 /* An associative map of uint:void* pairs. The key is the TLS index (given by
  * TlsAlloc), and the value is the altss_dtor_t callback. When a thread exits,
- * it iterates over the thread-local value for each TLS key and calls the
- * destructor function if they're both not NULL. Placing a PIMAGE_TLS_CALLBACK
- * function pointer in a ".CRT$XLx" section (where x is a character A to Z)
- * ensures the CRT will call it similar to DllMain.
+ * we iterate over the TLS indices for their thread-local value and call the
+ * destructor function with it if they're both not NULL. To avoid using
+ * DllMain, a PIMAGE_TLS_CALLBACK function pointer is placed in a ".CRT$XLx"
+ * section (where x is a character A to Z) which will be called by the CRT.
  */
 static UIntMap TlsDestructors = UINTMAP_STATIC_INITIALIZE;
 

@@ -212,18 +212,9 @@ void altss_delete(altss_t tss_id);
 
 int altimespec_get(struct timespec *ts, int base);
 
+void al_nssleep(time_t sec, long nsec);
+
 
 void SetThreadName(const char *name);
-
-
-inline void al_nssleep(time_t sec, long nsec)
-{
-    struct timespec ts, rem;
-    ts.tv_sec = sec;
-    ts.tv_nsec = nsec;
-
-    while(althrd_sleep(&ts, &rem) == -1)
-        ts = rem;
-}
 
 #endif /* AL_THREADS_H */

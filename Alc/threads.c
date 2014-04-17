@@ -40,8 +40,6 @@ extern inline int almtx_trylock(almtx_t *mtx);
 extern inline void *altss_get(altss_t tss_id);
 extern inline int altss_set(altss_t tss_id, void *val);
 
-extern inline void al_nssleep(time_t sec, long nsec);
-
 
 #define THREAD_STACK_SIZE (1*1024*1024) /* 1MB */
 
@@ -462,3 +460,14 @@ int altimespec_get(struct timespec *ts, int base)
 }
 
 #endif
+
+
+void al_nssleep(time_t sec, long nsec)
+{
+    struct timespec ts, rem;
+    ts.tv_sec = sec;
+    ts.tv_nsec = nsec;
+
+    while(althrd_sleep(&ts, &rem) == -1)
+        ts = rem;
+}

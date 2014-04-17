@@ -72,38 +72,45 @@ static int ALCnullBackend_mixerProc(void *ptr)
 {
     ALCnullBackend *self = (ALCnullBackend*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    ALuint now, start;
+    struct timespec now, start;
     ALuint64 avail, done;
+    const long restTime = (long)((ALuint64)device->UpdateSize * 1000000000 /
+                                 device->Frequency / 2);
 
     SetRTPriority();
     SetThreadName(MIXER_THREAD_NAME);
 
     done = 0;
-    start = timeGetTime();
+    if(altimespec_get(&start, AL_TIME_UTC) != AL_TIME_UTC)
+    {
+        ERR("Failed to get starting time\n");
+        return 1;
+    }
     while(!self->killNow && device->Connected)
     {
-        now = timeGetTime();
+        if(altimespec_get(&now, AL_TIME_UTC) != AL_TIME_UTC)
+        {
+            ERR("Failed to get current time\n");
+            return 1;
+        }
 
-        avail = (ALuint64)(now-start) * device->Frequency / 1000;
+        avail  = (now.tv_sec - start.tv_sec) * device->Frequency;
+        avail += (ALint64)(now.tv_nsec - start.tv_nsec) * device->Frequency / 1000000000;
         if(avail < done)
         {
-            /* Timer wrapped (50 days???). Add the remainder of the cycle to
-             * the available count and reset the number of samples done */
-            avail += (U64(1)<<32)*device->Frequency/1000 - done;
-            done = 0;
-        }
-        if(avail-done < device->UpdateSize)
-        {
-            long restTime = (long)((device->UpdateSize - (avail-done)) * 1000000000 /
-                                   device->Frequency);
-            al_nssleep(0, restTime);
-            continue;
+            /* Oops, time skipped backwards. Reset the number of samples done
+             * with one update available since we (likely) just came back from
+             * sleeping. */
+            done = avail - device->UpdateSize;
         }
 
-        do {
+        if(avail-done < device->UpdateSize)
+            al_nssleep(0, restTime);
+        else while(avail-done >= device->UpdateSize)
+        {
             aluMixData(device, NULL, device->UpdateSize);
             done += device->UpdateSize;
-        } while(avail-done >= device->UpdateSize);
+        }
     }
 
     return 0;

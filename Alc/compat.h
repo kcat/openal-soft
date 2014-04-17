@@ -23,8 +23,6 @@ FILE *al_fopen(const char *fname, const char *mode);
 
 #include <pthread.h>
 
-ALuint timeGetTime(void);
-
 #define althread_once_t pthread_once_t
 #define ALTHREAD_ONCE_INIT PTHREAD_ONCE_INIT
 #define althread_once pthread_once

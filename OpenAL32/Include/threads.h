@@ -18,9 +18,11 @@ enum {
     almtx_timed = 2
 };
 
-
 typedef int (*althrd_start_t)(void*);
 typedef void (*altss_dtor_t)(void*);
+
+
+#define AL_TIME_UTC 1
 
 
 #ifdef _WIN32
@@ -207,6 +209,8 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts);
 
 int altss_create(altss_t *tss_id, altss_dtor_t callback);
 void altss_delete(altss_t tss_id);
+
+int altimespec_get(struct timespec *ts, int base);
 
 
 void SetThreadName(const char *name);

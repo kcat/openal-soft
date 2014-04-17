@@ -173,25 +173,22 @@ void almtx_destroy(almtx_t *mtx)
 
 int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 {
-    DWORD start, timelen;
     int ret;
 
     if(!mtx || !ts)
         return althrd_error;
 
-    timelen  = ts->tv_sec * 1000;
-    timelen += (ts->tv_nsec+999999) / 1000000;
-
-    start = timeGetTime();
     while((ret=almtx_trylock(mtx)) == althrd_busy)
     {
-        DWORD now = timeGetTime();
-        if(now-start >= timelen)
-        {
-            ret = althrd_timedout;
-            break;
-        }
-        SwitchToThread();
+        struct timespec now;
+
+        if(ts->tv_sec < 0 || ts->tv_nsec < 0 || ts->tv_nsec >= 1000000000 ||
+           altimespec_get(&now, AL_TIME_UTC) != AL_TIME_UTC)
+            return althrd_error;
+        if(now.tv_sec > ts->tv_sec || (now.tv_sec == ts->tv_sec && now.tv_nsec >= ts->tv_nsec))
+            return althrd_timedout;
+
+        althrd_yield();
     }
 
     return ret;
@@ -257,8 +254,28 @@ void altss_delete(altss_t tss_id)
     TlsFree(tss_id);
 }
 
+
+int altimespec_get(struct timespec *ts, int base)
+{
+    if(base == AL_TIME_UTC)
+    {
+        union {
+            FILETIME ftime;
+            ULARGE_INTEGER ulint;
+        } systime;
+        GetSystemTimeAsFileTime(&systime.ftime);
+        /* FILETIME is in 100-nanosecond units, or 1/10th of a microsecond. */
+        ts->tv_sec = systime.ulint.QuadPart/10000000;
+        ts->tv_nsec = (systime.ulint.QuadPart%10000000) * 100;
+        return base;
+    }
+
+    return 0;
+}
+
 #else
 
+#include <unistd.h>
 #include <pthread.h>
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>
@@ -423,6 +440,25 @@ int altss_create(altss_t *tss_id, altss_dtor_t callback)
 void altss_delete(altss_t tss_id)
 {
     pthread_key_delete(tss_id);
+}
+
+
+int altimespec_get(struct timespec *ts, int base)
+{
+    if(base == AL_TIME_UTC)
+    {
+#if _POSIX_TIMERS > 0
+        int ret = clock_gettime(CLOCK_REALTIME, ts);
+        if(ret == 0) return base;
+#else /* _POSIX_TIMERS > 0 */
+#warning "clock_gettime (POSIX.1-2001) is not available, timing resolution will be poor."
+        ts->tv_sec = time(NULL);
+        ts->tv_nsec = 0;
+        return base;
+#endif
+    }
+
+    return 0;
 }
 
 #endif

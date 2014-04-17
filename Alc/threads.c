@@ -198,6 +198,42 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 }
 
 
+/* An associative map of uint:void* pairs. The key is the TLS index (given by
+ * TlsAlloc), and the value is the altss_dtor_t callback. When a thread exits,
+ * it iterates over the thread-local value for each TLS key and calls the
+ * destructor function if they're both not NULL. Placing a PIMAGE_TLS_CALLBACK
+ * function pointer in a ".CRT$XLx" section (where x is a character A to Z)
+ * ensures the CRT will call it similar to DllMain.
+ */
+UIntMap TlsDestructors;
+
+static void NTAPI altss_callback(void* UNUSED(handle), DWORD reason, void* UNUSED(reserved))
+{
+    ALsizei i;
+
+    if(reason != DLL_THREAD_DETACH)
+        return;
+
+    LockUIntMapRead(&TlsDestructors);
+    for(i = 0;i < TlsDestructors.size;i++)
+    {
+        void *ptr = altss_get(TlsDestructors.array[i].key);
+        altss_dtor_t callback = (altss_dtor_t)TlsDestructors.array[i].value;
+        if(ptr && callback)
+            callback(ptr);
+    }
+    UnlockUIntMapRead(&TlsDestructors);
+}
+#ifdef _MSC_VER
+#pragma section(".CRT$XLB",read)
+__declspec(allocate(".CRT$XLB")) PIMAGE_TLS_CALLBACK altss_callback_ = altss_callback;
+#elif defined(__GNUC__)
+PIMAGE_TLS_CALLBACK altss_callback_ __attribute__((section(".CRT$XLB"))) = altss_callback;
+#else
+#warning "No TLS callback support, thread-local contexts may leak references on poorly written applications."
+PIMAGE_TLS_CALLBACK altss_callback_ = altss_callback;
+#endif
+
 int altss_create(altss_t *tss_id, altss_dtor_t callback)
 {
     DWORD key = TlsAlloc();
@@ -206,13 +242,13 @@ int altss_create(altss_t *tss_id, altss_dtor_t callback)
 
     *tss_id = key;
     if(callback != NULL)
-        InsertUIntMapEntry(&TlsDestructor, key, callback);
+        InsertUIntMapEntry(&TlsDestructors, key, callback);
     return althrd_success;
 }
 
 void altss_delete(altss_t tss_id)
 {
-    InsertUIntMapEntry(&TlsDestructor, tss_id, NULL);
+    RemoveUIntMapKey(&TlsDestructors, tss_id);
     TlsFree(tss_id);
 }
 

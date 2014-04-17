@@ -786,34 +786,22 @@ static void alc_init(void);
 static void alc_deinit(void);
 static void alc_deinit_safe(void);
 
-UIntMap TlsDestructor;
+extern UIntMap TlsDestructors;
 
 #ifndef AL_LIBTYPE_STATIC
-BOOL APIENTRY DllMain(HINSTANCE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
+BOOL APIENTRY DllMain(HINSTANCE hModule, DWORD reason, LPVOID lpReserved)
 {
-    ALsizei i;
-
-    // Perform actions based on the reason for calling.
-    switch(ul_reason_for_call)
+    switch(reason)
     {
         case DLL_PROCESS_ATTACH:
             /* Pin the DLL so we won't get unloaded until the process terminates */
             GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
                                (WCHAR*)hModule, &hModule);
-            InitUIntMap(&TlsDestructor, ~0);
+            InitUIntMap(&TlsDestructors, ~0);
             alc_init();
             break;
 
         case DLL_THREAD_DETACH:
-            LockUIntMapRead(&TlsDestructor);
-            for(i = 0;i < TlsDestructor.size;i++)
-            {
-                void *ptr = altss_get(TlsDestructor.array[i].key);
-                altss_dtor_t callback = (altss_dtor_t)TlsDestructor.array[i].value;
-                if(ptr && callback)
-                    callback(ptr);
-            }
-            UnlockUIntMapRead(&TlsDestructor);
             break;
 
         case DLL_PROCESS_DETACH:
@@ -821,7 +809,7 @@ BOOL APIENTRY DllMain(HINSTANCE hModule,DWORD ul_reason_for_call,LPVOID lpReserv
                 alc_deinit();
             else
                 alc_deinit_safe();
-            ResetUIntMap(&TlsDestructor);
+            ResetUIntMap(&TlsDestructors);
             break;
     }
     return TRUE;

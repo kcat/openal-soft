@@ -14,7 +14,6 @@ typedef struct UIntMap {
     ALsizei limit;
     RWLock lock;
 } UIntMap;
-extern UIntMap TlsDestructor;
 
 void InitUIntMap(UIntMap *map, ALsizei limit);
 void ResetUIntMap(UIntMap *map);

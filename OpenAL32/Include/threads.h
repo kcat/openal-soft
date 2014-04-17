@@ -20,6 +20,7 @@ enum {
 
 
 typedef int (*althrd_start_t)(void*);
+typedef void (*altss_dtor_t)(void*);
 
 
 #ifdef _WIN32
@@ -28,6 +29,7 @@ typedef int (*althrd_start_t)(void*);
 
 typedef HANDLE althrd_t;
 typedef CRITICAL_SECTION almtx_t;
+typedef DWORD altss_t;
 
 #ifndef __MINGW32__
 struct timespec {
@@ -89,6 +91,18 @@ inline int almtx_trylock(almtx_t *mtx)
     return althrd_success;
 }
 
+
+inline void *altss_get(altss_t tss_id)
+{
+    return TlsGetValue(tss_id);
+}
+
+inline int altss_set(altss_t tss_id, void *val)
+{
+    TlsSetValue(tss_id, val);
+    return althrd_success;
+}
+
 #else
 
 #include <stdint.h>
@@ -98,6 +112,7 @@ inline int almtx_trylock(almtx_t *mtx)
 
 typedef pthread_t althrd_t;
 typedef pthread_mutex_t almtx_t;
+typedef pthread_key_t altss_t;
 
 
 inline althrd_t althrd_current(void)
@@ -166,6 +181,19 @@ inline int almtx_trylock(almtx_t *mtx)
     return althrd_error;
 }
 
+
+inline void *altss_get(altss_t tss_id)
+{
+    return pthread_getspecific(tss_id);
+}
+
+inline int altss_set(altss_t tss_id, void *val)
+{
+    if(pthread_setspecific(tss_id, val) != 0)
+        return althrd_error;
+    return althrd_success;
+}
+
 #endif
 
 
@@ -176,6 +204,9 @@ int althrd_join(althrd_t thr, int *res);
 int almtx_init(almtx_t *mtx, int type);
 void almtx_destroy(almtx_t *mtx);
 int almtx_timedlock(almtx_t *mtx, const struct timespec *ts);
+
+int altss_create(altss_t *tss_id, altss_dtor_t callback);
+void altss_delete(altss_t tss_id);
 
 
 void SetThreadName(const char *name);

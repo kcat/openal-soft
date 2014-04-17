@@ -322,31 +322,6 @@ void althread_once(althread_once_t *once, void (*callback)(void))
 }
 
 
-int althread_key_create(althread_key_t *key, void (*callback)(void*))
-{
-    *key = TlsAlloc();
-    if(callback)
-        InsertUIntMapEntry(&TlsDestructor, *key, callback);
-    return 0;
-}
-
-int althread_key_delete(althread_key_t key)
-{
-    InsertUIntMapEntry(&TlsDestructor, key, NULL);
-    TlsFree(key);
-    return 0;
-}
-
-void *althread_getspecific(althread_key_t key)
-{ return TlsGetValue(key); }
-
-int althread_setspecific(althread_key_t key, void *val)
-{
-    TlsSetValue(key, val);
-    return 0;
-}
-
-
 void *LoadLib(const char *name)
 { return LoadLibraryA(name); }
 void CloseLib(void *handle)

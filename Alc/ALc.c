@@ -719,7 +719,7 @@ static const ALchar alExtList[] =
 static volatile ALCenum LastNullDeviceError = ALC_NO_ERROR;
 
 /* Thread-local current context */
-static althread_key_t LocalContext;
+static altss_t LocalContext;
 /* Process-wide current context */
 static ALCcontext *volatile GlobalContext = NULL;
 
@@ -808,8 +808,8 @@ BOOL APIENTRY DllMain(HINSTANCE hModule,DWORD ul_reason_for_call,LPVOID lpReserv
             LockUIntMapRead(&TlsDestructor);
             for(i = 0;i < TlsDestructor.size;i++)
             {
-                void *ptr = althread_getspecific(TlsDestructor.array[i].key);
-                void (*callback)(void*) = (void(*)(void*))TlsDestructor.array[i].value;
+                void *ptr = altss_get(TlsDestructor.array[i].key);
+                altss_dtor_t callback = (altss_dtor_t)TlsDestructor.array[i].value;
                 if(ptr && callback)
                     callback(ptr);
             }
@@ -877,9 +877,12 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         ZScale *= -1.0f;
 
-    althread_key_create(&LocalContext, ReleaseThreadCtx);
+    ret = altss_create(&LocalContext, ReleaseThreadCtx);
+    assert(ret == althrd_success);
+
     ret = almtx_init(&ListLock, almtx_recursive);
     assert(ret == althrd_success);
+
     ThunkInit();
 }
 
@@ -1191,7 +1194,7 @@ static void alc_deinit_safe(void)
 
     ThunkExit();
     almtx_destroy(&ListLock);
-    althread_key_delete(LocalContext);
+    altss_delete(LocalContext);
 
     if(LogFile != stderr)
         fclose(LogFile);
@@ -2177,10 +2180,10 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
 {
     ALCcontext *volatile*tmp_ctx;
 
-    if(althread_getspecific(LocalContext) == context)
+    if(altss_get(LocalContext) == context)
     {
         WARN("%p released while current on thread\n", context);
-        althread_setspecific(LocalContext, NULL);
+        altss_set(LocalContext, NULL);
         ALCcontext_DecRef(context);
     }
 
@@ -2261,7 +2264,7 @@ ALCcontext *GetContextRef(void)
 {
     ALCcontext *context;
 
-    context = althread_getspecific(LocalContext);
+    context = altss_get(LocalContext);
     if(context)
         ALCcontext_IncRef(context);
     else
@@ -2949,7 +2952,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 {
     ALCcontext *Context;
 
-    Context = althread_getspecific(LocalContext);
+    Context = altss_get(LocalContext);
     if(!Context) Context = GlobalContext;
 
     return Context;
@@ -2962,7 +2965,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 {
     ALCcontext *Context;
-    Context = althread_getspecific(LocalContext);
+    Context = altss_get(LocalContext);
     return Context;
 }
 
@@ -2984,9 +2987,9 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
     context = ExchangePtr((XchgPtr*)&GlobalContext, context);
     if(context) ALCcontext_DecRef(context);
 
-    if((context=althread_getspecific(LocalContext)) != NULL)
+    if((context=altss_get(LocalContext)) != NULL)
     {
-        althread_setspecific(LocalContext, NULL);
+        altss_set(LocalContext, NULL);
         ALCcontext_DecRef(context);
     }
 
@@ -3008,8 +3011,8 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
         return ALC_FALSE;
     }
     /* context's reference count is already incremented */
-    old = althread_getspecific(LocalContext);
-    althread_setspecific(LocalContext, context);
+    old = altss_get(LocalContext);
+    altss_set(LocalContext, context);
     if(old) ALCcontext_DecRef(old);
 
     return ALC_TRUE;

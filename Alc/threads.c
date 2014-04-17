@@ -37,6 +37,9 @@ extern inline int almtx_lock(almtx_t *mtx);
 extern inline int almtx_unlock(almtx_t *mtx);
 extern inline int almtx_trylock(almtx_t *mtx);
 
+extern inline void *altss_get(altss_t tss_id);
+extern inline int altss_set(altss_t tss_id, void *val);
+
 extern inline void al_nssleep(time_t sec, long nsec);
 
 
@@ -195,6 +198,24 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 }
 
 
+int altss_create(altss_t *tss_id, altss_dtor_t callback)
+{
+    DWORD key = TlsAlloc();
+    if(key == TLS_OUT_OF_INDEXES)
+        return althrd_error;
+
+    *tss_id = key;
+    if(callback != NULL)
+        InsertUIntMapEntry(&TlsDestructor, key, callback);
+    return althrd_success;
+}
+
+void altss_delete(altss_t tss_id)
+{
+    InsertUIntMapEntry(&TlsDestructor, tss_id, NULL);
+    TlsFree(tss_id);
+}
+
 #else
 
 #include <pthread.h>
@@ -348,6 +369,19 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
         case EBUSY: return althrd_busy;
     }
     return althrd_error;
+}
+
+
+int altss_create(altss_t *tss_id, altss_dtor_t callback)
+{
+    if(pthread_key_create(tss_id, callback) != 0)
+        return althrd_error;
+    return althrd_success;
+}
+
+void altss_delete(altss_t tss_id)
+{
+    pthread_key_delete(tss_id);
 }
 
 #endif

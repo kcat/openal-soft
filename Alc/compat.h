@@ -8,12 +8,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-typedef DWORD althread_key_t;
-int althread_key_create(althread_key_t *key, void (*callback)(void*));
-int althread_key_delete(althread_key_t key);
-void *althread_getspecific(althread_key_t key);
-int althread_setspecific(althread_key_t key, void *val);
-
 typedef LONG althread_once_t;
 #define ALTHREAD_ONCE_INIT 0
 void althread_once(althread_once_t *once, void (*callback)(void));
@@ -30,12 +24,6 @@ FILE *al_fopen(const char *fname, const char *mode);
 #include <pthread.h>
 
 ALuint timeGetTime(void);
-
-#define althread_key_t pthread_key_t
-#define althread_key_create pthread_key_create
-#define althread_key_delete pthread_key_delete
-#define althread_getspecific pthread_getspecific
-#define althread_setspecific pthread_setspecific
 
 #define althread_once_t pthread_once_t
 #define ALTHREAD_ONCE_INIT PTHREAD_ONCE_INIT

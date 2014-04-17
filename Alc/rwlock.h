@@ -11,6 +11,7 @@ typedef struct {
     volatile ALenum read_entry_lock;
     volatile ALenum write_lock;
 } RWLock;
+#define RWLOCK_STATIC_INITIALIZE { 0, 0, AL_FALSE, AL_FALSE, AL_FALSE }
 
 void RWLockInit(RWLock *lock);
 void ReadLock(RWLock *lock);

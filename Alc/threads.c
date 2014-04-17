@@ -205,12 +205,17 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
  * function pointer in a ".CRT$XLx" section (where x is a character A to Z)
  * ensures the CRT will call it similar to DllMain.
  */
-UIntMap TlsDestructors;
+static UIntMap TlsDestructors = UINTMAP_STATIC_INITIALIZE;
 
 static void NTAPI altss_callback(void* UNUSED(handle), DWORD reason, void* UNUSED(reserved))
 {
     ALsizei i;
 
+    if(reason == DLL_PROCESS_DETACH)
+    {
+        ResetUIntMap(&TlsDestructors);
+        return;
+    }
     if(reason != DLL_THREAD_DETACH)
         return;
 

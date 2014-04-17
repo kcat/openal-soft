@@ -786,8 +786,6 @@ static void alc_init(void);
 static void alc_deinit(void);
 static void alc_deinit_safe(void);
 
-extern UIntMap TlsDestructors;
-
 #ifndef AL_LIBTYPE_STATIC
 BOOL APIENTRY DllMain(HINSTANCE hModule, DWORD reason, LPVOID lpReserved)
 {
@@ -797,7 +795,6 @@ BOOL APIENTRY DllMain(HINSTANCE hModule, DWORD reason, LPVOID lpReserved)
             /* Pin the DLL so we won't get unloaded until the process terminates */
             GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
                                (WCHAR*)hModule, &hModule);
-            InitUIntMap(&TlsDestructors, ~0);
             alc_init();
             break;
 
@@ -809,7 +806,6 @@ BOOL APIENTRY DllMain(HINSTANCE hModule, DWORD reason, LPVOID lpReserved)
                 alc_deinit();
             else
                 alc_deinit_safe();
-            ResetUIntMap(&TlsDestructors);
             break;
     }
     return TRUE;

@@ -392,7 +392,7 @@ int almtx_init(almtx_t *mtx, int type)
         if(type == almtx_recursive)
         {
             ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-#ifdef HAVE_PTHREAD_NP_H
+#ifdef HAVE_PTHREAD_MUTEXATTR_SETKIND_NP
             if(ret != 0)
                 ret = pthread_mutexattr_setkind_np(&attr, PTHREAD_MUTEX_RECURSIVE);
 #endif

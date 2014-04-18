@@ -175,3 +175,6 @@
 
 /* Define if we have pthread_set_name_np() */
 #cmakedefine HAVE_PTHREAD_SET_NAME_NP
+
+/* Define if we have pthread_mutexattr_setkind_np() */
+#cmakedefine HAVE_PTHREAD_MUTEXATTR_SETKIND_NP

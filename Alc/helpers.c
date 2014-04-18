@@ -322,8 +322,35 @@ void althread_once(althread_once_t *once, void (*callback)(void))
 }
 
 
+static WCHAR *FromUTF8(const char *str)
+{
+    WCHAR *out = NULL;
+    int len;
+
+    if((len=MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0)) > 0)
+    {
+        out = calloc(sizeof(WCHAR), len);
+        MultiByteToWideChar(CP_UTF8, 0, str, -1, out, len);
+    }
+    return out;
+}
+
+
 void *LoadLib(const char *name)
-{ return LoadLibraryA(name); }
+{
+    HANDLE hdl = NULL;
+    WCHAR *wname;
+
+    wname = FromUTF8(name);
+    if(!wname)
+        ERR("Failed to convert UTF-8 filename: \"%s\"\n", name);
+    else
+    {
+        hdl = LoadLibraryW(wname);
+        free(wname);
+    }
+    return hdl;
+}
 void CloseLib(void *handle)
 { FreeLibrary((HANDLE)handle); }
 void *GetSymbol(void *handle, const char *name)
@@ -350,19 +377,6 @@ WCHAR *strdupW(const WCHAR *str)
     if(ret != NULL)
         memcpy(ret, str, sizeof(WCHAR)*len);
     return ret;
-}
-
-static WCHAR *FromUTF8(const char *str)
-{
-    WCHAR *out = NULL;
-    int len;
-
-    if((len=MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0)) > 0)
-    {
-        out = calloc(sizeof(WCHAR), len);
-        MultiByteToWideChar(CP_UTF8, 0, str, -1, out, len);
-    }
-    return out;
 }
 
 FILE *al_fopen(const char *fname, const char *mode)

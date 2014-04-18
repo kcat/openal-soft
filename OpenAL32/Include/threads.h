@@ -6,10 +6,10 @@
 
 enum {
     althrd_success = 0,
+    althrd_error,
     althrd_nomem,
     althrd_timedout,
-    althrd_busy,
-    althrd_error
+    althrd_busy
 };
 
 enum {
@@ -167,7 +167,8 @@ inline int almtx_lock(almtx_t *mtx)
 inline int almtx_unlock(almtx_t *mtx)
 {
     if(!mtx) return althrd_error;
-    pthread_mutex_unlock(mtx);
+    if(pthread_mutex_unlock(mtx) != 0)
+        return althrd_error;
     return althrd_success;
 }
 

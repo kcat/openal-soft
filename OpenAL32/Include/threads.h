@@ -99,7 +99,8 @@ inline void *altss_get(altss_t tss_id)
 
 inline int altss_set(altss_t tss_id, void *val)
 {
-    TlsSetValue(tss_id, val);
+    if(TlsSetValue(tss_id, val) == 0)
+        return althrd_error;
     return althrd_success;
 }
 

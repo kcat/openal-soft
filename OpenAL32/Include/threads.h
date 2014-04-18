@@ -29,7 +29,7 @@ typedef void (*altss_dtor_t)(void*);
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-typedef HANDLE althrd_t;
+typedef DWORD althrd_t;
 typedef CRITICAL_SECTION almtx_t;
 typedef DWORD altss_t;
 
@@ -46,16 +46,12 @@ int althrd_sleep(const struct timespec *ts, struct timespec *rem);
 
 inline althrd_t althrd_current(void)
 {
-    /* This is wrong. GetCurrentThread() returns a psuedo-handle of -1 which
-     * various functions will interpret as the calling thread. There is no
-     * apparent way to retrieve the same handle that was returned by
-     * CreateThread. */
-    return GetCurrentThread();
+    return GetCurrentThreadId();
 }
 
 inline int althrd_equal(althrd_t thr0, althrd_t thr1)
 {
-    return GetThreadId(thr0) == GetThreadId(thr1);
+    return thr0 == thr1;
 }
 
 inline void althrd_exit(int res)

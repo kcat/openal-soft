@@ -65,7 +65,7 @@ void althrd_setname(althrd_t thr, const char *name)
 #pragma pack(pop)
     info.dwType = 0x1000;
     info.szName = name;
-    info.dwThreadID = ((thr == GetCurrentThread()) ? -1 : GetThreadId(thr));
+    info.dwThreadID = thr;
     info.dwFlags = 0;
 
     __try {
@@ -75,9 +75,26 @@ void althrd_setname(althrd_t thr, const char *name)
     }
 #undef MS_VC_EXCEPTION
 #else
-    TRACE("Can't set thread %04lx name to \"%s\"\n", GetThreadId(thr), name);
+    TRACE("Can't set thread %04lx name to \"%s\"\n", thr, name);
 #endif
 }
+
+
+static UIntMap ThrdIdHandle = UINTMAP_STATIC_INITIALIZE;
+
+static void NTAPI althrd_callback(void* UNUSED(handle), DWORD reason, void* UNUSED(reserved))
+{
+    if(reason == DLL_PROCESS_DETACH)
+        ResetUIntMap(&ThrdIdHandle);
+}
+#ifdef _MSC_VER
+#pragma section(".CRT$XLC",read)
+__declspec(allocate(".CRT$XLC")) PIMAGE_TLS_CALLBACK althrd_callback_ = althrd_callback;
+#elif defined(__GNUC__)
+PIMAGE_TLS_CALLBACK althrd_callback_ __attribute__((section(".CRT$XLC"))) = althrd_callback;
+#else
+PIMAGE_TLS_CALLBACK althrd_callback_ = althrd_callback;
+#endif
 
 
 typedef struct thread_cntr {
@@ -98,7 +115,7 @@ static DWORD WINAPI althrd_starter(void *arg)
 int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
 {
     thread_cntr *cntr;
-    DWORD dummy;
+    DWORD thrid;
     HANDLE hdl;
 
     cntr = malloc(sizeof(*cntr));
@@ -107,22 +124,24 @@ int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
     cntr->func = func;
     cntr->arg = arg;
 
-    hdl = CreateThread(NULL, THREAD_STACK_SIZE, althrd_starter, cntr, 0, &dummy);
+    hdl = CreateThread(NULL, THREAD_STACK_SIZE, althrd_starter, cntr, 0, &thrid);
     if(!hdl)
     {
         free(cntr);
         return althrd_error;
     }
+    InsertUIntMapEntry(&ThrdIdHandle, thrid, hdl);
 
-    *thr = hdl;
+    *thr = thrid;
     return althrd_success;
 }
 
 int althrd_detach(althrd_t thr)
 {
-    if(!thr) return althrd_error;
-    CloseHandle(thr);
+    HANDLE hdl = RemoveUIntMapKey(&ThrdIdHandle, thr);
+    if(!hdl) return althrd_error;
 
+    CloseHandle(hdl);
     return althrd_success;
 }
 
@@ -130,11 +149,12 @@ int althrd_join(althrd_t thr, int *res)
 {
     DWORD code;
 
-    if(!thr) return althrd_error;
+    HANDLE hdl = RemoveUIntMapKey(&ThrdIdHandle, thr);
+    if(!hdl) return althrd_error;
 
-    WaitForSingleObject(thr, INFINITE);
-    GetExitCodeThread(thr, &code);
-    CloseHandle(thr);
+    WaitForSingleObject(hdl, INFINITE);
+    GetExitCodeThread(hdl, &code);
+    CloseHandle(hdl);
 
     *res = (int)code;
     return althrd_success;

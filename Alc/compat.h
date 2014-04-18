@@ -19,7 +19,7 @@ FILE *al_fopen(const char *fname, const char *mode);
 
 #include <pthread.h>
 
-#define al_fopen(_n, _m) fopen((_n), (_m))
+#define al_fopen fopen
 
 #if defined(HAVE_DLFCN_H) && !defined(IN_IDE_PARSER)
 #define HAVE_DYNLOAD 1

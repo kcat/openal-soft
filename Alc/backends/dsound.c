@@ -196,7 +196,7 @@ FORCE_ALIGN static int DSoundPlaybackProc(void *ptr)
     HRESULT err;
 
     SetRTPriority();
-    SetThreadName(MIXER_THREAD_NAME);
+    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
     memset(&DSBCaps, 0, sizeof(DSBCaps));
     DSBCaps.dwSize = sizeof(DSBCaps);

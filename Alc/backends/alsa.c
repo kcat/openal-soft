@@ -430,7 +430,7 @@ static int ALCplaybackAlsa_mixerProc(void *ptr)
     int err;
 
     SetRTPriority();
-    SetThreadName(MIXER_THREAD_NAME);
+    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
     update_size = device->UpdateSize;
     num_updates = device->NumUpdates;
@@ -520,7 +520,7 @@ static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr)
     int err;
 
     SetRTPriority();
-    SetThreadName(MIXER_THREAD_NAME);
+    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
     update_size = device->UpdateSize;
     num_updates = device->NumUpdates;

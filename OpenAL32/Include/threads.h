@@ -44,7 +44,6 @@ struct timespec {
 int althrd_sleep(const struct timespec *ts, struct timespec *rem);
 
 
-#if 0
 inline althrd_t althrd_current(void)
 {
     /* This is wrong. GetCurrentThread() returns a psuedo-handle of -1 which
@@ -53,7 +52,6 @@ inline althrd_t althrd_current(void)
      * CreateThread. */
     return GetCurrentThread();
 }
-#endif
 
 inline int althrd_equal(althrd_t thr0, althrd_t thr1)
 {
@@ -202,6 +200,7 @@ inline int altss_set(altss_t tss_id, void *val)
 int althrd_create(althrd_t *thr, althrd_start_t func, void *arg);
 int althrd_detach(althrd_t thr);
 int althrd_join(althrd_t thr, int *res);
+void althrd_setname(althrd_t thr, const char *name);
 
 int almtx_init(almtx_t *mtx, int type);
 void almtx_destroy(almtx_t *mtx);
@@ -213,8 +212,5 @@ void altss_delete(altss_t tss_id);
 int altimespec_get(struct timespec *ts, int base);
 
 void al_nssleep(time_t sec, long nsec);
-
-
-void SetThreadName(const char *name);
 
 #endif /* AL_THREADS_H */

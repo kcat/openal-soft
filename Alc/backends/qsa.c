@@ -183,7 +183,7 @@ FORCE_ALIGN static int qsa_proc_playback(void* ptr)
     struct timeval timeout;
 
     SetRTPriority();
-    SetThreadName(MIXER_THREAD_NAME);
+    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
     /* Increase default 10 priority to 11 to avoid jerky sound */
     SchedGet(0, 0, &param);

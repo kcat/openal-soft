@@ -78,7 +78,7 @@ static int ALCnullBackend_mixerProc(void *ptr)
                                  device->Frequency / 2);
 
     SetRTPriority();
-    SetThreadName(MIXER_THREAD_NAME);
+    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
     done = 0;
     if(altimespec_get(&start, AL_TIME_UTC) != AL_TIME_UTC)

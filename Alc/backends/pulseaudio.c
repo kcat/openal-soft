@@ -761,7 +761,7 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
     ssize_t len;
 
     SetRTPriority();
-    SetThreadName(MIXER_THREAD_NAME);
+    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
     pa_threaded_mainloop_lock(self->loop);
     frame_size = pa_frame_size(&self->spec);

@@ -232,7 +232,7 @@ FORCE_ALIGN static int MMDevApiProc(void *ptr)
     }
 
     SetRTPriority();
-    SetThreadName(MIXER_THREAD_NAME);
+    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
     update_size = device->UpdateSize;
     buffer_len = update_size * device->NumUpdates;

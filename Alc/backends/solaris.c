@@ -62,7 +62,7 @@ static int SolarisProc(void *ptr)
     int wrote;
 
     SetRTPriority();
-    SetThreadName(MIXER_THREAD_NAME);
+    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
     frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 

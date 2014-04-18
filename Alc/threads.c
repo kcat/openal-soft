@@ -29,6 +29,7 @@
 #include "alThunk.h"
 
 
+extern inline althrd_t althrd_current(void);
 extern inline int althrd_equal(althrd_t thr0, althrd_t thr1);
 extern inline void althrd_exit(int res);
 extern inline void althrd_yield(void);
@@ -50,7 +51,7 @@ extern inline int altss_set(altss_t tss_id, void *val);
 #include <mmsystem.h>
 
 
-void SetThreadName(const char *name)
+void althrd_setname(althrd_t thr, const char *name)
 {
 #if defined(_MSC_VER)
 #define MS_VC_EXCEPTION 0x406D1388
@@ -64,7 +65,7 @@ void SetThreadName(const char *name)
 #pragma pack(pop)
     info.dwType = 0x1000;
     info.szName = name;
-    info.dwThreadID = -1;
+    info.dwThreadID = ((thr == GetCurrentThread()) ? -1 : GetThreadId(thr));
     info.dwFlags = 0;
 
     __try {
@@ -74,7 +75,7 @@ void SetThreadName(const char *name)
     }
 #undef MS_VC_EXCEPTION
 #else
-    TRACE("Can't set thread %04lx name to \"%s\"\n", GetCurrentThreadId(), name);
+    TRACE("Can't set thread %04lx name to \"%s\"\n", GetThreadId(thr), name);
 #endif
 }
 
@@ -282,21 +283,22 @@ int altimespec_get(struct timespec *ts, int base)
 #endif
 
 
-extern inline althrd_t althrd_current(void);
 extern inline int althrd_sleep(const struct timespec *ts, struct timespec *rem);
 
 
-void SetThreadName(const char *name)
+void althrd_setname(althrd_t thr, const char *name)
 {
 #if defined(HAVE_PTHREAD_SETNAME_NP)
 #if defined(__GNUC__)
-    if(pthread_setname_np(pthread_self(), name) != 0)
+    if(pthread_setname_np(thr, name) != 0)
 #elif defined(__APPLE__)
-    if(pthread_setname_np(name) != 0)
+    if(!althrd_equal(thr, althrd_current())
+        WARN("Can't set thread name \"%s\" on non-current thread");
+    else if(pthread_setname_np(name) != 0)
 #endif
         WARN("Failed to set thread name to \"%s\": %s\n", name, strerror(errno));
 #elif defined(HAVE_PTHREAD_SET_NAME_NP)
-    pthread_set_name_np(pthread_self(), name);
+    pthread_set_name_np(thr, name);
 #else
     TRACE("Can't set thread name to \"%s\"\n", name);
 #endif

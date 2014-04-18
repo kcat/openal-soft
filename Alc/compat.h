@@ -1,8 +1,6 @@
 #ifndef AL_COMPAT_H
 #define AL_COMPAT_H
 
-#include "AL/al.h"
-
 #ifdef _WIN32
 
 #define WIN32_LEAN_AND_MEAN
@@ -16,8 +14,6 @@ FILE *al_fopen(const char *fname, const char *mode);
 #define HAVE_DYNLOAD 1
 
 #else
-
-#include <pthread.h>
 
 #define al_fopen fopen
 

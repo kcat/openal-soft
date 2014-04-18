@@ -294,6 +294,17 @@ int altimespec_get(struct timespec *ts, int base)
     return 0;
 }
 
+
+void alcall_once(alonce_flag *once, void (*callback)(void))
+{
+    LONG ret;
+    while((ret=InterlockedExchange(once, 1)) == 1)
+        althrd_yield();
+    if(ret == 0)
+        (*callback)();
+    InterlockedExchange(once, 2);
+}
+
 #else
 
 #include <unistd.h>
@@ -304,6 +315,7 @@ int altimespec_get(struct timespec *ts, int base)
 
 
 extern inline int althrd_sleep(const struct timespec *ts, struct timespec *rem);
+extern inline void alcall_once(alonce_flag *once, void (*callback)(void));
 
 
 void althrd_setname(althrd_t thr, const char *name)

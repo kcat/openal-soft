@@ -311,17 +311,6 @@ void RestoreFPUMode(const FPUCtl *ctl)
 
 #ifdef _WIN32
 
-void althread_once(althread_once_t *once, void (*callback)(void))
-{
-    LONG ret;
-    while((ret=InterlockedExchange(once, 1)) == 1)
-        althrd_yield();
-    if(ret == 0)
-        callback();
-    InterlockedExchange(once, 2);
-}
-
-
 static WCHAR *FromUTF8(const char *str)
 {
     WCHAR *out = NULL;

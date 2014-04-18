@@ -29,9 +29,6 @@ typedef void (*altss_dtor_t)(void*);
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-typedef DWORD althrd_t;
-typedef CRITICAL_SECTION almtx_t;
-typedef DWORD altss_t;
 
 #ifndef __MINGW32__
 struct timespec {
@@ -40,8 +37,15 @@ struct timespec {
 };
 #endif
 
+typedef DWORD althrd_t;
+typedef CRITICAL_SECTION almtx_t;
+typedef DWORD altss_t;
+typedef LONG alonce_flag;
+
+#define AL_ONCE_INIT 0
 
 int althrd_sleep(const struct timespec *ts, struct timespec *rem);
+void alcall_once(alonce_flag *once, void (*callback)(void));
 
 
 inline althrd_t althrd_current(void)
@@ -109,6 +113,9 @@ inline int altss_set(altss_t tss_id, void *val)
 typedef pthread_t althrd_t;
 typedef pthread_mutex_t almtx_t;
 typedef pthread_key_t altss_t;
+typedef pthread_once_t alonce_flag;
+
+#define AL_ONCE_INIT PTHREAD_ONCE_INIT
 
 
 inline althrd_t althrd_current(void)
@@ -188,6 +195,12 @@ inline int altss_set(altss_t tss_id, void *val)
     if(pthread_setspecific(tss_id, val) != 0)
         return althrd_error;
     return althrd_success;
+}
+
+
+inline void alcall_once(alonce_flag *once, void (*callback)(void))
+{
+    pthread_once(once, callback);
 }
 
 #endif

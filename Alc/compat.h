@@ -8,10 +8,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-typedef LONG althread_once_t;
-#define ALTHREAD_ONCE_INIT 0
-void althread_once(althread_once_t *once, void (*callback)(void));
-
 WCHAR *strdupW(const WCHAR *str);
 
 /* Opens a file with standard I/O. The filename is expected to be UTF-8. */
@@ -22,10 +18,6 @@ FILE *al_fopen(const char *fname, const char *mode);
 #else
 
 #include <pthread.h>
-
-#define althread_once_t pthread_once_t
-#define ALTHREAD_ONCE_INIT PTHREAD_ONCE_INIT
-#define althread_once pthread_once
 
 #define al_fopen(_n, _m) fopen((_n), (_m))
 

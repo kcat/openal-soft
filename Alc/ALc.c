@@ -737,7 +737,7 @@ enum LogLevel LogLevel = LogError;
 static ALCboolean TrapALCError = ALC_FALSE;
 
 /* One-time configuration init control */
-static althread_once_t alc_config_once = ALTHREAD_ONCE_INIT;
+static alonce_flag alc_config_once = AL_ONCE_INIT;
 
 /* Default effect that applies to sources that don't have an effect on send 0 */
 static ALeffect DefaultEffect;
@@ -1139,7 +1139,7 @@ static void alc_initconfig(void)
     if((str && str[0]) || ConfigValueStr(NULL, "default-reverb", &str))
         LoadReverbPreset(str, &DefaultEffect);
 }
-#define DO_INITCONFIG() althread_once(&alc_config_once, alc_initconfig)
+#define DO_INITCONFIG() alcall_once(&alc_config_once, alc_initconfig)
 
 
 /************************************************

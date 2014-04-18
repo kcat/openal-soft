@@ -153,20 +153,13 @@ inline int althrd_sleep(const struct timespec *ts, struct timespec *rem)
 
 inline int almtx_lock(almtx_t *mtx)
 {
-    int ret = EINVAL;
-    if(mtx != NULL)
-        ret = pthread_mutex_lock(mtx);
-    switch(ret)
-    {
-        case 0: return althrd_success;
-        case EAGAIN: return althrd_busy;
-    }
-    return althrd_error;
+    if(pthread_mutex_lock(mtx) != 0)
+        return althrd_error;
+    return althrd_success;
 }
 
 inline int almtx_unlock(almtx_t *mtx)
 {
-    if(!mtx) return althrd_error;
     if(pthread_mutex_unlock(mtx) != 0)
         return althrd_error;
     return althrd_success;
@@ -174,13 +167,10 @@ inline int almtx_unlock(almtx_t *mtx)
 
 inline int almtx_trylock(almtx_t *mtx)
 {
-    int ret = EINVAL;
-    if(mtx != NULL)
-        ret = pthread_mutex_trylock(mtx);
+    int ret = pthread_mutex_trylock(mtx);
     switch(ret)
     {
         case 0: return althrd_success;
-        case EAGAIN:
         case EBUSY: return althrd_busy;
     }
     return althrd_error;

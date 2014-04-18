@@ -737,7 +737,7 @@ enum LogLevel LogLevel = LogError;
 static ALCboolean TrapALCError = ALC_FALSE;
 
 /* One-time configuration init control */
-static alonce_flag alc_config_once = AL_ONCE_INIT;
+static alonce_flag alc_config_once = AL_ONCE_FLAG_INIT;
 
 /* Default effect that applies to sources that don't have an effect on send 0 */
 static ALeffect DefaultEffect;

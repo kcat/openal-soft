@@ -42,7 +42,7 @@ typedef CRITICAL_SECTION almtx_t;
 typedef DWORD altss_t;
 typedef LONG alonce_flag;
 
-#define AL_ONCE_INIT 0
+#define AL_ONCE_FLAG_INIT 0
 
 int althrd_sleep(const struct timespec *ts, struct timespec *rem);
 void alcall_once(alonce_flag *once, void (*callback)(void));
@@ -116,7 +116,7 @@ typedef pthread_mutex_t almtx_t;
 typedef pthread_key_t altss_t;
 typedef pthread_once_t alonce_flag;
 
-#define AL_ONCE_INIT PTHREAD_ONCE_INIT
+#define AL_ONCE_FLAG_INIT PTHREAD_ONCE_INIT
 
 
 inline althrd_t althrd_current(void)

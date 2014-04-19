@@ -355,12 +355,7 @@ IF(NOT HAVE_C99_VLA)
         CHECK_SYMBOL_EXISTS(alloca malloc.h HAVE_ALLOCA)
     ENDIF()
     IF(NOT HAVE_ALLOCA)
-        CHECK_SYMBOL_EXISTS(_alloca malloc.h HAVE__ALLOCA)
-        IF(NOT HAVE__ALLOCA)
-            MESSAGE(FATAL_ERROR "No alloca function found, please report!")
-        ENDIF()
-
-        ADD_DEFINITIONS(-Dalloca=_alloca)
+        MESSAGE(FATAL_ERROR "No alloca function found, please report!")
     ENDIF()
 ENDIF()
 

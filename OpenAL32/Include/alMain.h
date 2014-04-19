@@ -31,6 +31,15 @@
 #endif
 #endif
 
+#if defined(_WIN64)
+#define SZFMT "%I64u"
+#elif defined(_WIN32)
+#define SZFMT "%d"
+#else
+#define SZFMT "%zu"
+#endif
+
+
 #include "align.h"
 #include "atomic.h"
 #include "uintmap.h"

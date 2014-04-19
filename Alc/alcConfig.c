@@ -89,7 +89,7 @@ static int readline(FILE *f, char **output, size_t *maxlen)
                 temp = realloc(*output, newmax);
             if(!temp)
             {
-                ERR("Failed to realloc %lu bytes from %lu!\n", newmax, *maxlen);
+                ERR("Failed to realloc "SZFMT" bytes from "SZFMT"!\n", newmax, *maxlen);
                 return 0;
             }
 
@@ -162,7 +162,7 @@ static char *expdup(const char *str)
                 temp = realloc(output, newmax);
             if(!temp)
             {
-                ERR("Failed to realloc %lu bytes from %lu!\n", newmax, maxlen);
+                ERR("Failed to realloc "SZFMT" bytes from "SZFMT"!\n", newmax, maxlen);
                 return output;
             }
 

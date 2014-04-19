@@ -30,7 +30,12 @@ IF(WIN32)
     # that already defines the IDs. It is up to that project to ensure all
     # required IDs are defined.
     OPTION(ALSOFT_NO_UID_DEFS "Do not define GUIDs, IIDs, CLSIDs, or PropertyKeys" OFF)
+ELSE()
+    # These are needed on non-Windows systems for extra features
+    ADD_DEFINITIONS(-D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700)
+    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700")
 ENDIF()
+
 
 OPTION(ALSOFT_BACKEND_OSS     "Check for OSS backend"                 ON)
 OPTION(ALSOFT_BACKEND_SOLARIS "Check for Solaris backend"             ON)
@@ -441,10 +446,6 @@ ENDIF()
 # Check if we have Windows headers
 CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H -D_WIN32_WINNT=0x0502)
 IF(NOT HAVE_WINDOWS_H)
-    # These are needed on some systems for extra features
-    ADD_DEFINITIONS(-D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700)
-    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700")
-
     CHECK_FUNCTION_EXISTS(gettimeofday HAVE_GETTIMEOFDAY)
     IF(NOT HAVE_GETTIMEOFDAY)
         MESSAGE(FATAL_ERROR "No timing function found!")

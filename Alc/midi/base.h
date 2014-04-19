@@ -99,7 +99,7 @@ DECLARE_THUNK(T, MidiSynth, void, reset)                                      \
 DECLARE_THUNK1(T, MidiSynth, void, update, ALCdevice*)                        \
 DECLARE_THUNK2(T, MidiSynth, void, process, ALuint, ALfloatBUFFERSIZE*restrict) \
 static void T##_MidiSynth_Delete(void *ptr)                                   \
-{ T##_Delete(STATIC_UPCAST(T, MidiSynth, ptr)); }                             \
+{ T##_Delete(STATIC_UPCAST(T, MidiSynth, (MidiSynth*)ptr)); }                 \
                                                                               \
 static const struct MidiSynthVtable T##_MidiSynth_vtable = {                  \
     T##_MidiSynth_Destruct,                                                   \

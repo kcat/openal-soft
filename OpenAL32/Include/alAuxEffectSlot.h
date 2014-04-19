@@ -33,7 +33,7 @@ DECLARE_THUNK1(T, ALeffectState, ALboolean, deviceUpdate, ALCdevice*)         \
 DECLARE_THUNK2(T, ALeffectState, void, update, ALCdevice*, const ALeffectslot*) \
 DECLARE_THUNK3(T, ALeffectState, void, process, ALuint, const ALfloat*restrict, ALfloatBUFFERSIZE*restrict) \
 static void T##_ALeffectState_Delete(void *ptr)                               \
-{ return T##_Delete(STATIC_UPCAST(T, ALeffectState, ptr)); }                  \
+{ return T##_Delete(STATIC_UPCAST(T, ALeffectState, (ALeffectState*)ptr)); }  \
                                                                               \
 static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
     T##_ALeffectState_Destruct,                                               \

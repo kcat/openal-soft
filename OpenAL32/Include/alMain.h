@@ -348,8 +348,15 @@ static const union {
 
 #define DERIVE_FROM_TYPE(t)          t t##_parent
 #define STATIC_CAST(to, obj)         (&(obj)->to##_parent)
+#ifdef __GNUC__
+#define STATIC_UPCAST(to, from, obj) __extension__({                          \
+    static_assert(__builtin_types_compatible_p(from, __typeof(*(obj))),       \
+                  "Invalid upcast object from type");                         \
+    (to*)((char*)(obj) - offsetof(to, from##_parent));                        \
+})
+#else
 #define STATIC_UPCAST(to, from, obj) ((to*)((char*)(obj) - offsetof(to, from##_parent)))
-
+#endif
 
 #define DECLARE_FORWARD(T1, T2, rettype, func)                                \
 rettype T1##_##func(T1 *obj)                                                  \

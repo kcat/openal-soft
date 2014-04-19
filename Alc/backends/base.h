@@ -61,7 +61,7 @@ DECLARE_THUNK(T, ALCbackend, ALint64, getLatency)                             \
 DECLARE_THUNK(T, ALCbackend, void, lock)                                      \
 DECLARE_THUNK(T, ALCbackend, void, unlock)                                    \
 static void T##_ALCbackend_Delete(void *ptr)                                  \
-{ T##_Delete(STATIC_UPCAST(T, ALCbackend, ptr)); }                            \
+{ T##_Delete(STATIC_UPCAST(T, ALCbackend, (ALCbackend*)ptr)); }               \
                                                                               \
 DECLARE_ALCBACKEND_VTABLE(T) = {                                              \
     T##_ALCbackend_Destruct,                                                  \

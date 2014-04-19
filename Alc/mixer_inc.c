@@ -2,8 +2,10 @@
 
 #include "alMain.h"
 #include "alSource.h"
+
 #include "hrtf.h"
 #include "mixer_defs.h"
+#include "align.h"
 
 
 #define REAL_MERGE2(a,b) a##b
@@ -36,7 +38,7 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
     ALfloat (*restrict Values)[2] = params->Mix.Hrtf.State.Values[srcchan];
     ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
     ALuint Offset = params->Offset + OutPos;
-    ALIGN(16) ALfloat Coeffs[HRIR_LENGTH][2];
+    alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALuint Delay[2];
     ALfloat left, right;
     ALuint pos;

@@ -4,6 +4,8 @@
 #include "alMain.h"
 #include "alEffect.h"
 
+#include "align.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -72,7 +74,7 @@ typedef struct ALeffectslot {
     volatile ALenum NeedsUpdate;
     ALeffectState *EffectState;
 
-    ALIGN(16) ALfloat WetBuffer[1][BUFFERSIZE];
+    alignas(16) ALfloat WetBuffer[1][BUFFERSIZE];
 
     RefCount ref;
 

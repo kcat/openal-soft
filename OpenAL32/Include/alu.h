@@ -13,7 +13,9 @@
 #include "alMain.h"
 #include "alBuffer.h"
 #include "alFilter.h"
+
 #include "hrtf.h"
+#include "align.h"
 
 
 #define F_PI    (3.14159265358979323846f)
@@ -38,15 +40,15 @@ extern "C" {
 #endif
 
 typedef struct HrtfState {
-    ALIGN(16) ALfloat History[MAX_INPUT_CHANNELS][SRC_HISTORY_LENGTH];
-    ALIGN(16) ALfloat Values[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
+    alignas(16) ALfloat History[MAX_INPUT_CHANNELS][SRC_HISTORY_LENGTH];
+    alignas(16) ALfloat Values[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
 } HrtfState;
 
 typedef struct HrtfParams {
     ALfloat Gain;
     ALfloat Dir[3];
-    ALIGN(16) ALfloat Coeffs[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
-    ALIGN(16) ALfloat CoeffStep[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
+    alignas(16) ALfloat Coeffs[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
+    alignas(16) ALfloat CoeffStep[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
     ALuint Delay[MAX_INPUT_CHANNELS][2];
     ALint DelayStep[MAX_INPUT_CHANNELS][2];
     ALuint IrSize;

@@ -176,6 +176,15 @@ CHECK_C_SOURCE_COMPILES(
  }"
 HAVE_C11_STATIC_ASSERT)
 
+# Check if we have C11 alignas
+CHECK_C_SOURCE_COMPILES(
+"_Alignas(4) int foo;
+ int main()
+ {
+     return 0;
+ }"
+HAVE_C11_ALIGNAS)
+
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES("${OpenAL_SOURCE_DIR}/include" "${OpenAL_BINARY_DIR}")
 IF(CMAKE_VERSION VERSION_LESS "2.8.8")
@@ -319,6 +328,7 @@ ENDIF()
 CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(printf, 1, 2)));
                          int main() {return 0;}" HAVE_GCC_FORMAT)
 
+CHECK_INCLUDE_FILE(stdalign.h HAVE_STDALIGN_H)
 IF(NOT HAVE_C99_VLA)
     CHECK_INCLUDE_FILE(alloca.h HAVE_ALLOCA_H)
 ENDIF()

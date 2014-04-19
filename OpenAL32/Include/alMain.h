@@ -31,7 +31,7 @@
 #endif
 #endif
 
-
+#include "align.h"
 #include "atomic.h"
 #include "uintmap.h"
 #include "vector.h"
@@ -271,11 +271,6 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 /* KDevelop's parser doesn't recognize the C99-standard restrict keyword, but
  * recent versions (at least 4.5.1) do recognize GCC's __restrict. */
 #define restrict __restrict
-/* KDevelop won't see the ALIGN macro from config.h when viewing files that
- * don't include it directly (e.g. headers). */
-#ifndef ALIGN
-#define ALIGN(x)
-#endif
 #endif
 
 
@@ -682,11 +677,11 @@ struct ALCdevice_struct
     ALuint SamplesDone;
 
     /* Temp storage used for mixing. */
-    ALIGN(16) ALfloat SampleData1[BUFFERSIZE];
-    ALIGN(16) ALfloat SampleData2[BUFFERSIZE];
+    alignas(16) ALfloat SampleData1[BUFFERSIZE];
+    alignas(16) ALfloat SampleData2[BUFFERSIZE];
 
     // Dry path buffer mix
-    ALIGN(16) ALfloat DryBuffer[MaxChannels][BUFFERSIZE];
+    alignas(16) ALfloat DryBuffer[MaxChannels][BUFFERSIZE];
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at
@@ -708,7 +703,7 @@ struct ALCdevice_struct
     ALCdevice *volatile next;
 
     /* Memory space used by the default slot (Playback devices only) */
-    ALIGN(16) ALCbyte _slot_mem[];
+    alignas(16) ALCbyte _slot_mem[];
 };
 
 // Frequency was requested by the app or config file
@@ -779,7 +774,7 @@ struct ALCcontext_struct
     ALCcontext *volatile next;
 
     /* Memory space used by the listener */
-    ALIGN(16) ALCbyte _listener_mem[];
+    alignas(16) ALCbyte _listener_mem[];
 };
 
 ALCcontext *GetContextRef(void);

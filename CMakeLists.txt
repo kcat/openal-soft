@@ -38,14 +38,12 @@ ENDIF()
 
 
 OPTION(ALSOFT_BACKEND_MMDEVAPI "Check for MMDevApi backend"           ON)
-OPTION(ALSOFT_BACKEND_DSOUND   "Check for DirectSound backend"        ON)
 OPTION(ALSOFT_BACKEND_WINMM    "Check for Windows Multimedia backend" ON)
-OPTION(ALSOFT_BACKEND_OPENSL     "Check for OpenSL backend"           ON)
+OPTION(ALSOFT_BACKEND_OPENSL   "Check for OpenSL backend"             ON)
 
-OPTION(ALSOFT_REQUIRE_MMDEVAPI   "Require MMDevApi"                   OFF)
-OPTION(ALSOFT_REQUIRE_DSOUND     "Require DirectSound backend"        OFF)
-OPTION(ALSOFT_REQUIRE_WINMM      "Require Windows Multimedia backend" OFF)
-OPTION(ALSOFT_REQUIRE_OPENSL     "Require OpenSL backend"             OFF)
+OPTION(ALSOFT_REQUIRE_MMDEVAPI "Require MMDevApi"                   OFF)
+OPTION(ALSOFT_REQUIRE_WINMM    "Require Windows Multimedia backend" OFF)
+OPTION(ALSOFT_REQUIRE_OPENSL   "Require OpenSL backend"             OFF)
 
 OPTION(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
@@ -724,6 +722,28 @@ IF(ALSOFT_REQUIRE_QSA AND NOT HAVE_QSA)
     MESSAGE(FATAL_ERROR "Failed to enabled required QSA backend")
 ENDIF()
 
+# Check DSound backend
+OPTION(ALSOFT_REQUIRE_DSOUND "Require DirectSound backend" OFF)
+FIND_PACKAGE(DSound)
+IF(DSOUND_FOUND)
+    OPTION(ALSOFT_BACKEND_DSOUND "Enable DirectSound backend" ON)
+    IF(ALSOFT_BACKEND_DSOUND)
+        SET(HAVE_DSOUND 1)
+        SET_SOURCE_FILES_PROPERTIES(Alc/backends/dsound.c PROPERTIES
+                                    INCLUDE_DIRECTORIES "${DSOUND_INCLUDE_DIRS}")
+        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/dsound.c)
+        IF(HAVE_DLFCN_H OR WIN32)
+            SET(BACKENDS  "${BACKENDS} DirectSound,")
+        ELSE()
+            SET(BACKENDS  "${BACKENDS} DirectSound \(linked\),")
+            SET(EXTRA_LIBS ${DSOUND_LIBRARIES} ${EXTRA_LIBS})
+        ENDIF()
+    ENDIF()
+ENDIF()
+IF(ALSOFT_REQUIRE_DSOUND AND NOT HAVE_DSOUND)
+    MESSAGE(FATAL_ERROR "Failed to enabled required DSound backend")
+ENDIF()
+
 # Check for MMDevApi backend
 IF(HAVE_WINDOWS_H)
     IF(ALSOFT_BACKEND_MMDEVAPI)
@@ -740,28 +760,7 @@ IF(ALSOFT_REQUIRE_MMDEVAPI AND NOT HAVE_MMDEVAPI)
     MESSAGE(FATAL_ERROR "Failed to enabled required MMDevApi backend")
 ENDIF()
 
-# Check DSound/MMSystem backend
-IF(ALSOFT_BACKEND_DSOUND)
-    CHECK_INCLUDE_FILE(dsound.h HAVE_DSOUND_H)
-    IF(HAVE_DSOUND_H)
-        CHECK_SHARED_FUNCTION_EXISTS(DirectSoundCreate "dsound.h" dsound "" HAVE_LIBDSOUND)
-        IF(HAVE_LIBDSOUND OR HAVE_DLFCN_H OR WIN32)
-            SET(HAVE_DSOUND 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/dsound.c)
-
-            IF(HAVE_DLFCN_H OR WIN32)
-                SET(BACKENDS  "${BACKENDS} DirectSound,")
-            ELSE()
-                SET(BACKENDS  "${BACKENDS} DirectSound \(linked\),")
-                SET(EXTRA_LIBS dsound ${EXTRA_LIBS})
-            ENDIF()
-        ENDIF()
-    ENDIF()
-ENDIF()
-IF(ALSOFT_REQUIRE_DSOUND AND NOT HAVE_DSOUND)
-    MESSAGE(FATAL_ERROR "Failed to enabled required DSound backend")
-ENDIF()
-
+# Check MMSystem backend
 IF(HAVE_WINDOWS_H)
     IF(ALSOFT_BACKEND_WINMM)
         CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H -D_WIN32_WINNT=0x0502)

@@ -25,19 +25,12 @@ INCLUDE(CheckTypeSize)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 
-OPTION(ALSOFT_CPUEXT_SSE  "Check for SSE/SSE2 support" ON)
-OPTION(ALSOFT_CPUEXT_NEON "Check for ARM Neon support" ON)
-
-OPTION(ALSOFT_REQUIRE_SSE  "Require SSE/SSE2 support" OFF)
-OPTION(ALSOFT_REQUIRE_NEON "Require ARM Neon support" OFF)
-
 IF(WIN32)
     # This option is mainly for static linking OpenAL Soft into another project
     # that already defines the IDs. It is up to that project to ensure all
     # required IDs are defined.
     OPTION(ALSOFT_NO_UID_DEFS "Do not define GUIDs, IIDs, CLSIDs, or PropertyKeys" OFF)
 ENDIF()
-
 
 OPTION(ALSOFT_BACKEND_ALSA    "Check for ALSA backend"                ON)
 OPTION(ALSOFT_BACKEND_OSS     "Check for OSS backend"                 ON)
@@ -53,7 +46,9 @@ OPTION(ALSOFT_BACKEND_COREAUDIO  "Check for CoreAudio backend"        ON)
 OPTION(ALSOFT_BACKEND_OPENSL     "Check for OpenSL backend"           ON)
 OPTION(ALSOFT_BACKEND_WAVE "Enable Wave Writer backend"               ON)
 
-OPTION(ALSOFT_MIDI_FLUIDSYNTH "Check for FluidSynth MIDI"             ON)
+
+OPTION(ALSOFT_REQUIRE_SSE  "Require SSE/SSE2 support" OFF)
+OPTION(ALSOFT_REQUIRE_NEON "Require ARM Neon support" OFF)
 
 OPTION(ALSOFT_REQUIRE_ALSA       "Require ALSA backend"               OFF)
 OPTION(ALSOFT_REQUIRE_OSS        "Require OSS backend"                OFF)
@@ -570,9 +565,10 @@ SET(HAVE_SSE  0)
 SET(HAVE_NEON 0)
 
 # Check for SSE support
-IF(ALSOFT_CPUEXT_SSE AND ALIGN_DECL)
-    CHECK_INCLUDE_FILE(xmmintrin.h HAVE_XMMINTRIN_H "${SSE_SWITCH}")
-    IF(HAVE_XMMINTRIN_H)
+CHECK_INCLUDE_FILE(xmmintrin.h HAVE_XMMINTRIN_H "${SSE_SWITCH}")
+IF(HAVE_XMMINTRIN_H)
+    OPTION(ALSOFT_CPUEXT_SSE "Enable SSE/SSE2 support" ON)
+    IF(ALSOFT_CPUEXT_SSE AND ALIGN_DECL)
         SET(HAVE_SSE 1)
         SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer_sse.c)
         IF(SSE_SWITCH)
@@ -587,9 +583,10 @@ IF(ALSOFT_REQUIRE_SSE AND NOT HAVE_SSE)
 ENDIF()
 
 # Check for ARM Neon support
-IF(ALSOFT_CPUEXT_NEON)
-    CHECK_INCLUDE_FILE(arm_neon.h HAVE_ARM_NEON_H)
-    IF(HAVE_ARM_NEON_H)
+CHECK_INCLUDE_FILE(arm_neon.h HAVE_ARM_NEON_H)
+IF(HAVE_ARM_NEON_H)
+    OPTION(ALSOFT_CPUEXT_NEON "Enable ARM Neon support" ON)
+    IF(ALSOFT_CPUEXT_NEON)
         SET(HAVE_NEON 1)
         SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer_neon.c)
         SET(CPU_EXTS "${CPU_EXTS}, Neon")
@@ -611,9 +608,10 @@ SET(ALC_OBJS  ${ALC_OBJS}
 SET(HAVE_FLUIDSYNTH  0)
 
 # Check for FluidSynth support
-IF(ALSOFT_MIDI_FLUIDSYNTH)
-    FIND_PACKAGE(FluidSynth)
-    IF(FLUIDSYNTH_FOUND)
+FIND_PACKAGE(FluidSynth)
+IF(FLUIDSYNTH_FOUND)
+    OPTION(ALSOFT_MIDI_FLUIDSYNTH "Enable FluidSynth MIDI" ON)
+    IF(ALSOFT_MIDI_FLUIDSYNTH)
         SET(HAVE_FLUIDSYNTH 1)
         IF(CMAKE_VERSION VERSION_LESS "2.8.8")
             INCLUDE_DIRECTORIES(${FLUIDSYNTH_INCLUDE_DIR})

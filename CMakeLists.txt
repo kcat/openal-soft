@@ -492,13 +492,6 @@ IF(NOT HAVE_STDINT_H)
     ENDIF()
 ENDIF()
 
-# Windows needs winmm for timeGetTime, even if the backend is disabled
-CHECK_SHARED_FUNCTION_EXISTS(timeGetTime "windows.h;mmsystem.h" winmm "" HAVE_LIBWINMM)
-IF(HAVE_LIBWINMM)
-    SET(EXTRA_LIBS winmm ${EXTRA_LIBS})
-    SET(PKG_CONFIG_LIBS ${PKG_CONFIG_LIBS} -lwinmm)
-ENDIF()
-
 
 SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
                  OpenAL32/alBuffer.c
@@ -764,10 +757,14 @@ ENDIF()
 IF(HAVE_WINDOWS_H)
     IF(ALSOFT_BACKEND_WINMM)
         CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H -D_WIN32_WINNT=0x0502)
-        IF(HAVE_MMSYSTEM_H AND HAVE_LIBWINMM)
-            SET(HAVE_WINMM 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/winmm.c)
-            SET(BACKENDS  "${BACKENDS} WinMM,")
+        IF(HAVE_MMSYSTEM_H)
+            CHECK_SHARED_FUNCTION_EXISTS(waveOutOpen "windows.h;mmsystem.h" winmm "" HAVE_LIBWINMM)
+            IF(HAVE_LIBWINMM)
+                SET(HAVE_WINMM 1)
+                SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/winmm.c)
+                SET(BACKENDS  "${BACKENDS} WinMM,")
+                SET(EXTRA_LIBS winmm ${EXTRA_LIBS})
+            ENDIF()
         ENDIF()
     ENDIF()
 ENDIF()

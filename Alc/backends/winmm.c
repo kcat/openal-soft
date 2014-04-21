@@ -186,10 +186,7 @@ FORCE_ALIGN static DWORD WINAPI PlaybackThreadProc(LPVOID param)
     ALCdevice *Device = (ALCdevice*)param;
     WinMMData *data = Device->ExtraData;
     LPWAVEHDR WaveHdr;
-    ALuint FrameSize;
     MSG msg;
-
-    FrameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 
     SetRTPriority();
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
@@ -207,7 +204,8 @@ FORCE_ALIGN static DWORD WINAPI PlaybackThreadProc(LPVOID param)
         }
 
         WaveHdr = ((LPWAVEHDR)msg.lParam);
-        aluMixData(Device, WaveHdr->lpData, WaveHdr->dwBufferLength/FrameSize);
+        aluMixData(Device, WaveHdr->lpData, WaveHdr->dwBufferLength /
+                                            data->Format.nBlockAlign);
 
         // Send buffer back to play more data
         waveOutWrite(data->WaveHandle.Out, WaveHdr, sizeof(WAVEHDR));
@@ -251,10 +249,8 @@ static DWORD WINAPI CaptureThreadProc(LPVOID param)
     ALCdevice *Device = (ALCdevice*)param;
     WinMMData *data = Device->ExtraData;
     LPWAVEHDR WaveHdr;
-    ALuint FrameSize;
     MSG msg;
 
-    FrameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
     althrd_setname(althrd_current(), "alsoft-record");
 
     while(GetMessage(&msg, NULL, 0, 0))
@@ -267,7 +263,8 @@ static DWORD WINAPI CaptureThreadProc(LPVOID param)
             break;
 
         WaveHdr = ((LPWAVEHDR)msg.lParam);
-        WriteRingBuffer(data->Ring, (ALubyte*)WaveHdr->lpData, WaveHdr->dwBytesRecorded/FrameSize);
+        WriteRingBuffer(data->Ring, (ALubyte*)WaveHdr->lpData,
+                        WaveHdr->dwBytesRecorded/data->Format.nBlockAlign);
 
         // Send buffer back to capture more data
         waveInAddBuffer(data->WaveHandle.In, WaveHdr, sizeof(WAVEHDR));

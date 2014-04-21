@@ -39,9 +39,8 @@
 typedef struct {
     // MMSYSTEM Device
     volatile ALboolean killNow;
-    HANDLE  WaveThreadEvent;
-    HANDLE  WaveThread;
-    DWORD   WaveThreadID;
+    althrd_t thread;
+
     volatile LONG WaveBuffersCommitted;
     WAVEHDR WaveBuffer[4];
 
@@ -172,18 +171,12 @@ static void CALLBACK WaveOutProc(HWAVEOUT UNUSED(device), UINT msg, DWORD_PTR in
         return;
 
     InterlockedDecrement(&data->WaveBuffersCommitted);
-    PostThreadMessage(data->WaveThreadID, msg, 0, param1);
+    PostThreadMessage(data->thread, msg, 0, param1);
 }
 
-/*
-    PlaybackThreadProc
-
-    Used by "MMSYSTEM" Device.  Called when a WaveOut buffer has used up its
-    audio data.
-*/
-FORCE_ALIGN static DWORD WINAPI PlaybackThreadProc(LPVOID param)
+FORCE_ALIGN static int PlaybackThreadProc(void *arg)
 {
-    ALCdevice *Device = (ALCdevice*)param;
+    ALCdevice *Device = (ALCdevice*)arg;
     WinMMData *data = Device->ExtraData;
     LPWAVEHDR WaveHdr;
     MSG msg;
@@ -212,11 +205,6 @@ FORCE_ALIGN static DWORD WINAPI PlaybackThreadProc(LPVOID param)
         InterlockedIncrement(&data->WaveBuffersCommitted);
     }
 
-    // Signal Wave Thread completed event
-    if(data->WaveThreadEvent)
-        SetEvent(data->WaveThreadEvent);
-
-    ExitThread(0);
     return 0;
 }
 
@@ -235,18 +223,12 @@ static void CALLBACK WaveInProc(HWAVEIN UNUSED(device), UINT msg, DWORD_PTR inst
         return;
 
     InterlockedDecrement(&data->WaveBuffersCommitted);
-    PostThreadMessage(data->WaveThreadID, msg, 0, param1);
+    PostThreadMessage(data->thread, msg, 0, param1);
 }
 
-/*
-    CaptureThreadProc
-
-    Used by "MMSYSTEM" Device.  Called when a WaveIn buffer had been filled with new
-    audio data.
-*/
-static DWORD WINAPI CaptureThreadProc(LPVOID param)
+static int CaptureThreadProc(void *arg)
 {
-    ALCdevice *Device = (ALCdevice*)param;
+    ALCdevice *Device = (ALCdevice*)arg;
     WinMMData *data = Device->ExtraData;
     LPWAVEHDR WaveHdr;
     MSG msg;
@@ -271,11 +253,6 @@ static DWORD WINAPI CaptureThreadProc(LPVOID param)
         InterlockedIncrement(&data->WaveBuffersCommitted);
     }
 
-    // Signal Wave Thread completed event
-    if(data->WaveThreadEvent)
-        SetEvent(data->WaveThreadEvent);
-
-    ExitThread(0);
     return 0;
 }
 
@@ -344,20 +321,10 @@ retry_open:
         goto failure;
     }
 
-    data->WaveThreadEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if(data->WaveThreadEvent == NULL)
-    {
-        ERR("CreateEvent failed: %lu\n", GetLastError());
-        goto failure;
-    }
-
     al_string_copy(&Device->DeviceName, VECTOR_ELEM(PlaybackDevices, DeviceID));
     return ALC_NO_ERROR;
 
 failure:
-    if(data->WaveThreadEvent)
-        CloseHandle(data->WaveThreadEvent);
-
     if(data->WaveHandle.Out)
         waveOutClose(data->WaveHandle.Out);
 
@@ -371,9 +338,6 @@ static void WinMMClosePlayback(ALCdevice *device)
     WinMMData *data = (WinMMData*)device->ExtraData;
 
     // Close the Wave device
-    CloseHandle(data->WaveThreadEvent);
-    data->WaveThreadEvent = 0;
-
     waveOutClose(data->WaveHandle.Out);
     data->WaveHandle.Out = 0;
 
@@ -441,8 +405,8 @@ static ALCboolean WinMMStartPlayback(ALCdevice *device)
     ALint BufferSize;
     ALuint i;
 
-    data->WaveThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PlaybackThreadProc, (LPVOID)device, 0, &data->WaveThreadID);
-    if(data->WaveThread == NULL)
+    data->killNow = AL_FALSE;
+    if(althrd_create(&data->thread, PlaybackThreadProc, device) != althrd_success)
         return ALC_FALSE;
 
     data->WaveBuffersCommitted = 0;
@@ -473,19 +437,12 @@ static void WinMMStopPlayback(ALCdevice *device)
     void *buffer = NULL;
     int i;
 
-    if(data->WaveThread == NULL)
+    if(data->killNow)
         return;
 
     // Set flag to stop processing headers
     data->killNow = AL_TRUE;
-
-    // Wait for signal that Wave Thread has been destroyed
-    WaitForSingleObjectEx(data->WaveThreadEvent, 5000, FALSE);
-
-    CloseHandle(data->WaveThread);
-    data->WaveThread = 0;
-
-    data->killNow = AL_FALSE;
+    althrd_join(data->thread, &i);
 
     // Release the wave buffers
     for(i = 0;i < 4;i++)
@@ -578,13 +535,6 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
         goto failure;
     }
 
-    data->WaveThreadEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if(data->WaveThreadEvent == NULL)
-    {
-        ERR("CreateEvent failed: %lu\n", GetLastError());
-        goto failure;
-    }
-
     // Allocate circular memory buffer for the captured audio
     CapturedDataSize = Device->UpdateSize*Device->NumUpdates;
 
@@ -620,17 +570,13 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
         InterlockedIncrement(&data->WaveBuffersCommitted);
     }
 
-    data->WaveThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CaptureThreadProc, (LPVOID)Device, 0, &data->WaveThreadID);
-    if (data->WaveThread == NULL)
+    if(althrd_create(&data->thread, CaptureThreadProc, Device) != althrd_success)
         goto failure;
 
     al_string_copy(&Device->DeviceName, VECTOR_ELEM(CaptureDevices, DeviceID));
     return ALC_NO_ERROR;
 
 failure:
-    if(data->WaveThread)
-        CloseHandle(data->WaveThread);
-
     if(BufferData)
     {
         for(i = 0;i < 4;i++)
@@ -640,9 +586,6 @@ failure:
 
     if(data->Ring)
         DestroyRingBuffer(data->Ring);
-
-    if(data->WaveThreadEvent)
-        CloseHandle(data->WaveThreadEvent);
 
     if(data->WaveHandle.In)
         waveInClose(data->WaveHandle.In);
@@ -660,15 +603,12 @@ static void WinMMCloseCapture(ALCdevice *Device)
 
     /* Tell the processing thread to quit and wait for it to do so. */
     data->killNow = AL_TRUE;
-    PostThreadMessage(data->WaveThreadID, WM_QUIT, 0, 0);
+    PostThreadMessage(data->thread, WM_QUIT, 0, 0);
 
-    WaitForSingleObjectEx(data->WaveThreadEvent, 5000, FALSE);
+    althrd_join(data->thread, &i);
 
     /* Make sure capture is stopped and all pending buffers are flushed. */
     waveInReset(data->WaveHandle.In);
-
-    CloseHandle(data->WaveThread);
-    data->WaveThread = 0;
 
     // Release the wave buffers
     for(i = 0;i < 4;i++)
@@ -683,9 +623,6 @@ static void WinMMCloseCapture(ALCdevice *Device)
     data->Ring = NULL;
 
     // Close the Wave device
-    CloseHandle(data->WaveThreadEvent);
-    data->WaveThreadEvent = 0;
-
     waveInClose(data->WaveHandle.In);
     data->WaveHandle.In = 0;
 

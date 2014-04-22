@@ -58,6 +58,7 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 
 
+#ifdef HAVE_DYNLOAD
 static void *ds_handle;
 static HRESULT (WINAPI *pDirectSoundCreate)(const GUID *pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
 static HRESULT (WINAPI *pDirectSoundEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
@@ -68,10 +69,12 @@ static HRESULT (WINAPI *pDirectSoundCaptureEnumerateW)(LPDSENUMCALLBACKW pDSEnum
 #define DirectSoundEnumerateW        pDirectSoundEnumerateW
 #define DirectSoundCaptureCreate     pDirectSoundCaptureCreate
 #define DirectSoundCaptureEnumerateW pDirectSoundCaptureEnumerateW
+#endif
 
 
 static ALCboolean DSoundLoad(void)
 {
+#ifdef HAVE_DYNLOAD
     if(!ds_handle)
     {
         ds_handle = LoadLib("dsound.dll");
@@ -95,6 +98,7 @@ static ALCboolean DSoundLoad(void)
         LOAD_FUNC(DirectSoundCaptureEnumerateW);
 #undef LOAD_FUNC
     }
+#endif
     return ALC_TRUE;
 }
 
@@ -567,7 +571,7 @@ retry_open:
 
     if(SUCCEEDED(hr))
     {
-        hr = IDirectSoundBuffer_QueryInterface(self->Buffer, &IID_IDirectSoundNotify, (LPVOID *)&self->Notifies);
+        hr = IDirectSoundBuffer_QueryInterface(self->Buffer, &IID_IDirectSoundNotify, (void**)&self->Notifies);
         if(SUCCEEDED(hr))
         {
             DSBPOSITIONNOTIFY notifies[MAX_UPDATES];
@@ -983,9 +987,11 @@ static void ALCdsoundBackendFactory_deinit(ALCdsoundBackendFactory* UNUSED(self)
         AL_STRING_DEINIT(iter->name);
     VECTOR_DEINIT(CaptureDevices);
 
+#ifdef HAVE_DYNLOAD
     if(ds_handle)
         CloseLib(ds_handle);
     ds_handle = NULL;
+#endif
 }
 
 static ALCboolean ALCdsoundBackendFactory_querySupport(ALCdsoundBackendFactory* UNUSED(self), ALCbackend_Type type)

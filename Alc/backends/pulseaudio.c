@@ -864,6 +864,7 @@ static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name
     spec.rate = 44100;
     spec.channels = 2;
 
+    TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
     self->stream = ALCpulsePlayback_connectStream(pulse_name, self->loop, self->context,
                                                   flags, NULL, &spec, NULL);
     if(!self->stream)
@@ -1437,6 +1438,7 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
     if(!GetConfigValueBool("pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
 
+    TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
     self->stream = ALCpulseCapture_connectStream(pulse_name, self->loop, self->context,
                                                  flags, &self->attr, &self->spec,
                                                  &chanmap);

@@ -637,6 +637,7 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
         driver = GetConfigValue("alsa", "device", "default");
     }
 
+    TRACE("Opening device \"%s\"\n", driver);
     err = snd_pcm_open(&self->pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
     if(err < 0)
     {
@@ -966,6 +967,7 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
         driver = GetConfigValue("alsa", "capture", "default");
     }
 
+    TRACE("Opening device \"%s\"\n", driver);
     err = snd_pcm_open(&self->pcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK);
     if(err < 0)
     {

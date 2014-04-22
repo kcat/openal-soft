@@ -227,8 +227,8 @@ static ALCboolean alsa_load(void)
 
 
 typedef struct {
-    ALCchar *name;
-    char *device;
+    al_string name;
+    al_string device_name;
 } DevMap;
 
 static DevMap *allDevNameMap;
@@ -256,9 +256,12 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
     snd_pcm_info_malloc(&pcminfo);
 
     DevList = malloc(sizeof(DevMap) * 1);
-    DevList[0].name = strdup(alsaDevice);
-    DevList[0].device = strdup(GetConfigValue("alsa", (stream==SND_PCM_STREAM_PLAYBACK) ?
-                                                      "device" : "capture", "default"));
+    AL_STRING_INIT(DevList[0].name);
+    AL_STRING_INIT(DevList[0].device_name);
+    al_string_copy_cstr(&DevList[0].name, alsaDevice);
+    al_string_copy_cstr(&DevList[0].device_name,
+                        GetConfigValue("alsa", (stream==SND_PCM_STREAM_PLAYBACK) ?
+                                               "device" : "capture", "default"));
     idx = 1;
 
     card = -1;
@@ -328,8 +331,10 @@ static DevMap *probe_devices(snd_pcm_stream_t stream, ALuint *count)
                          device_prefix, cardid, dev);
 
                 TRACE("Got device \"%s\", \"%s\"\n", name, device);
-                DevList[idx].name = strdup(name);
-                DevList[idx].device = strdup(device);
+                AL_STRING_INIT(DevList[idx].name);
+                AL_STRING_INIT(DevList[idx].device_name);
+                al_string_copy_cstr(&DevList[idx].name, name);
+                al_string_copy_cstr(&DevList[idx].device_name, device);
                 idx++;
             }
         }
@@ -622,9 +627,9 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
 
         for(idx = 0;idx < numDevNames;idx++)
         {
-            if(strcmp(name, allDevNameMap[idx].name) == 0)
+            if(al_string_cmp_cstr(allDevNameMap[idx].name, name) == 0)
             {
-                driver = allDevNameMap[idx].device;
+                driver = al_string_get_cstr(allDevNameMap[idx].device_name);
                 break;
             }
         }
@@ -952,9 +957,9 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 
         for(idx = 0;idx < numCaptureDevNames;idx++)
         {
-            if(strcmp(name, allCaptureDevNameMap[idx].name) == 0)
+            if(al_string_cmp_cstr(allCaptureDevNameMap[idx].name, name) == 0)
             {
-                driver = allCaptureDevNameMap[idx].device;
+                driver = al_string_get_cstr(allCaptureDevNameMap[idx].device_name);
                 break;
             }
         }
@@ -1309,8 +1314,8 @@ static void ALCalsaBackendFactory_deinit(ALCalsaBackendFactory* UNUSED(self))
 
     for(i = 0;i < numDevNames;++i)
     {
-        free(allDevNameMap[i].name);
-        free(allDevNameMap[i].device);
+        AL_STRING_DEINIT(allDevNameMap[i].name);
+        AL_STRING_DEINIT(allDevNameMap[i].device_name);
     }
     free(allDevNameMap);
     allDevNameMap = NULL;
@@ -1318,8 +1323,8 @@ static void ALCalsaBackendFactory_deinit(ALCalsaBackendFactory* UNUSED(self))
 
     for(i = 0;i < numCaptureDevNames;++i)
     {
-        free(allCaptureDevNameMap[i].name);
-        free(allCaptureDevNameMap[i].device);
+        AL_STRING_DEINIT(allCaptureDevNameMap[i].name);
+        AL_STRING_DEINIT(allCaptureDevNameMap[i].device_name);
     }
     free(allCaptureDevNameMap);
     allCaptureDevNameMap = NULL;
@@ -1348,29 +1353,29 @@ static void ALCalsaBackendFactory_probe(ALCalsaBackendFactory* UNUSED(self), enu
         case ALL_DEVICE_PROBE:
             for(i = 0;i < numDevNames;++i)
             {
-                free(allDevNameMap[i].name);
-                free(allDevNameMap[i].device);
+                AL_STRING_DEINIT(allDevNameMap[i].name);
+                AL_STRING_DEINIT(allDevNameMap[i].device_name);
             }
 
             free(allDevNameMap);
             allDevNameMap = probe_devices(SND_PCM_STREAM_PLAYBACK, &numDevNames);
 
             for(i = 0;i < numDevNames;++i)
-                AppendAllDevicesList(allDevNameMap[i].name);
+                AppendAllDevicesList(al_string_get_cstr(allDevNameMap[i].name));
             break;
 
         case CAPTURE_DEVICE_PROBE:
             for(i = 0;i < numCaptureDevNames;++i)
             {
-                free(allCaptureDevNameMap[i].name);
-                free(allCaptureDevNameMap[i].device);
+                AL_STRING_DEINIT(allCaptureDevNameMap[i].name);
+                AL_STRING_DEINIT(allCaptureDevNameMap[i].device_name);
             }
 
             free(allCaptureDevNameMap);
             allCaptureDevNameMap = probe_devices(SND_PCM_STREAM_CAPTURE, &numCaptureDevNames);
 
             for(i = 0;i < numCaptureDevNames;++i)
-                AppendCaptureDeviceList(allCaptureDevNameMap[i].name);
+                AppendCaptureDeviceList(al_string_get_cstr(allCaptureDevNameMap[i].name));
             break;
     }
 }

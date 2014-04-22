@@ -104,6 +104,12 @@ typedef struct {
 #define WM_USER_Enumerate   (WM_USER+5)
 #define WM_USER_Last        (WM_USER+5)
 
+static inline void ReturnMsgResponse(ThreadRequest *req, HRESULT res)
+{
+    req->result = res;
+    SetEvent(req->FinishedEvt);
+}
+
 static HRESULT WaitForResponse(ThreadRequest *req)
 {
     if(WaitForSingleObject(req->FinishedEvt, INFINITE) == WAIT_OBJECT_0)
@@ -592,8 +598,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
     if(FAILED(cohr))
     {
         WARN("Failed to initialize COM: 0x%08lx\n", cohr);
-        req->result = cohr;
-        SetEvent(req->FinishedEvt);
+        ReturnMsgResponse(req, cohr);
         return 0;
     }
 
@@ -602,8 +607,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
     {
         WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
         CoUninitialize();
-        req->result = hr;
-        SetEvent(req->FinishedEvt);
+        ReturnMsgResponse(req, hr);
         return 0;
     }
     Enumerator = ptr;
@@ -665,16 +669,15 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
                     CoUninitialize();
             }
 
-            req->result = hr;
-            SetEvent(req->FinishedEvt);
+            ReturnMsgResponse(req, hr);
             continue;
 
         case WM_USER_ResetDevice:
             req = (ThreadRequest*)msg.wParam;
             device = (ALCdevice*)msg.lParam;
 
-            req->result = DoReset(device);
-            SetEvent(req->FinishedEvt);
+            hr = DoReset(device);
+            ReturnMsgResponse(req, hr);
             continue;
 
         case WM_USER_StartDevice:
@@ -704,8 +707,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
                 }
             }
 
-            req->result = hr;
-            SetEvent(req->FinishedEvt);
+            ReturnMsgResponse(req, hr);
             continue;
 
         case WM_USER_StopDevice:
@@ -725,8 +727,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
                 IAudioClient_Stop(data->client);
             }
 
-            req->result = S_OK;
-            SetEvent(req->FinishedEvt);
+            ReturnMsgResponse(req, S_OK);
             continue;
 
         case WM_USER_CloseDevice:
@@ -745,8 +746,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             if(--deviceCount == 0)
                 CoUninitialize();
 
-            req->result = S_OK;
-            SetEvent(req->FinishedEvt);
+            ReturnMsgResponse(req, S_OK);
             continue;
 
         case WM_USER_Enumerate:
@@ -796,8 +796,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             if(--deviceCount == 0 && SUCCEEDED(cohr))
                 CoUninitialize();
 
-            req->result = S_OK;
-            SetEvent(req->FinishedEvt);
+            ReturnMsgResponse(req, S_OK);
             continue;
 
         default:

@@ -59,9 +59,9 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 
 
 static void *ds_handle;
-static HRESULT (WINAPI *pDirectSoundCreate)(LPCGUID pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
+static HRESULT (WINAPI *pDirectSoundCreate)(const GUID *pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
 static HRESULT (WINAPI *pDirectSoundEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
-static HRESULT (WINAPI *pDirectSoundCaptureCreate)(LPCGUID pcGuidDevice, IDirectSoundCapture **ppDSC, IUnknown *pUnkOuter);
+static HRESULT (WINAPI *pDirectSoundCaptureCreate)(const GUID *pcGuidDevice, IDirectSoundCapture **ppDSC, IUnknown *pUnkOuter);
 static HRESULT (WINAPI *pDirectSoundCaptureEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
 
 #define DirectSoundCreate            pDirectSoundCreate
@@ -110,10 +110,10 @@ DECL_VECTOR(DevMap)
 vector_DevMap PlaybackDevices;
 vector_DevMap CaptureDevices;
 
-static BOOL CALLBACK DSoundEnumDevices(LPGUID guid, LPCWSTR desc, LPCWSTR UNUSED(drvname), LPVOID data)
+static BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR* UNUSED(drvname), void *data)
 {
     vector_DevMap *devices = data;
-    LPOLESTR guidstr = NULL;
+    OLECHAR *guidstr = NULL;
     DevMap *iter, *end;
     DevMap entry;
     HRESULT hr;
@@ -204,7 +204,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
     DSBCAPS DSBCaps;
     DWORD LastCursor = 0;
     DWORD PlayCursor;
-    VOID *WritePtr1, *WritePtr2;
+    void *WritePtr1, *WritePtr2;
     DWORD WriteCnt1,  WriteCnt2;
     BOOL Playing = FALSE;
     DWORD FrameSize;
@@ -308,7 +308,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
 static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *deviceName)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    LPGUID guid = NULL;
+    GUID *guid = NULL;
     HRESULT hr, hrcom;
 
     if(VECTOR_SIZE(PlaybackDevices) == 0)
@@ -666,7 +666,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     WAVEFORMATEXTENSIBLE InputType;
     DSCBUFFERDESC DSCBDescription;
-    LPGUID guid = NULL;
+    GUID *guid = NULL;
     HRESULT hr, hrcom;
     ALuint samples;
 
@@ -891,7 +891,7 @@ static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     DWORD ReadCursor, LastCursor, BufferBytes, NumBytes;
-    VOID *ReadPtr1, *ReadPtr2;
+    void *ReadPtr1, *ReadPtr2;
     DWORD ReadCnt1,  ReadCnt2;
     DWORD FrameSize;
     HRESULT hr;

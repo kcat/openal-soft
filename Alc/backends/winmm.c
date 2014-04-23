@@ -178,7 +178,7 @@ FORCE_ALIGN static int PlaybackThreadProc(void *arg)
 {
     ALCdevice *Device = (ALCdevice*)arg;
     WinMMData *data = Device->ExtraData;
-    LPWAVEHDR WaveHdr;
+    WAVEHDR *WaveHdr;
     MSG msg;
 
     SetRTPriority();
@@ -196,7 +196,7 @@ FORCE_ALIGN static int PlaybackThreadProc(void *arg)
             continue;
         }
 
-        WaveHdr = ((LPWAVEHDR)msg.lParam);
+        WaveHdr = ((WAVEHDR*)msg.lParam);
         aluMixData(Device, WaveHdr->lpData, WaveHdr->dwBufferLength /
                                             data->Format.nBlockAlign);
 
@@ -230,7 +230,7 @@ static int CaptureThreadProc(void *arg)
 {
     ALCdevice *Device = (ALCdevice*)arg;
     WinMMData *data = Device->ExtraData;
-    LPWAVEHDR WaveHdr;
+    WAVEHDR *WaveHdr;
     MSG msg;
 
     althrd_setname(althrd_current(), "alsoft-record");
@@ -244,7 +244,7 @@ static int CaptureThreadProc(void *arg)
         if(data->killNow)
             break;
 
-        WaveHdr = ((LPWAVEHDR)msg.lParam);
+        WaveHdr = ((WAVEHDR*)msg.lParam);
         WriteRingBuffer(data->Ring, (ALubyte*)WaveHdr->lpData,
                         WaveHdr->dwBytesRecorded/data->Format.nBlockAlign);
 
@@ -261,7 +261,7 @@ static ALCenum WinMMOpenPlayback(ALCdevice *Device, const ALCchar *deviceName)
 {
     WinMMData *data = NULL;
     const al_string *iter, *end;
-    UINT DeviceID = 0u-1u;
+    UINT DeviceID;
     MMRESULT res;
 
     if(VECTOR_SIZE(PlaybackDevices) == 0)
@@ -279,7 +279,7 @@ static ALCenum WinMMOpenPlayback(ALCdevice *Device, const ALCchar *deviceName)
             break;
         }
     }
-    if(DeviceID == 0u-1u)
+    if(iter == end)
         return ALC_INVALID_VALUE;
 
     data = calloc(1, sizeof(*data));
@@ -420,7 +420,7 @@ static ALCboolean WinMMStartPlayback(ALCdevice *device)
     {
         memset(&data->WaveBuffer[i], 0, sizeof(WAVEHDR));
         data->WaveBuffer[i].dwBufferLength = BufferSize;
-        data->WaveBuffer[i].lpData = ((i==0) ? (LPSTR)BufferData :
+        data->WaveBuffer[i].lpData = ((i==0) ? (CHAR*)BufferData :
                                       (data->WaveBuffer[i-1].lpData +
                                        data->WaveBuffer[i-1].dwBufferLength));
         waveOutPrepareHeader(data->WaveHandle.Out, &data->WaveBuffer[i], sizeof(WAVEHDR));
@@ -461,8 +461,8 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
     ALbyte *BufferData = NULL;
     DWORD CapturedDataSize;
     WinMMData *data = NULL;
-    UINT DeviceID = 0u-1u;
     ALint BufferSize;
+    UINT DeviceID;
     MMRESULT res;
     ALuint i;
 
@@ -481,7 +481,7 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
             break;
         }
     }
-    if(DeviceID == 0u-1u)
+    if(iter == end)
         return ALC_INVALID_VALUE;
 
     switch(Device->FmtChans)
@@ -560,7 +560,7 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
     {
         memset(&data->WaveBuffer[i], 0, sizeof(WAVEHDR));
         data->WaveBuffer[i].dwBufferLength = BufferSize;
-        data->WaveBuffer[i].lpData = ((i==0) ? (LPSTR)BufferData :
+        data->WaveBuffer[i].lpData = ((i==0) ? (CHAR*)BufferData :
                                       (data->WaveBuffer[i-1].lpData +
                                        data->WaveBuffer[i-1].dwBufferLength));
         data->WaveBuffer[i].dwFlags = 0;

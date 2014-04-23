@@ -41,7 +41,7 @@ typedef struct {
     volatile ALboolean killNow;
     althrd_t thread;
 
-    volatile LONG WaveBuffersCommitted;
+    volatile RefCount WaveBuffersCommitted;
     WAVEHDR WaveBuffer[4];
 
     union {
@@ -170,7 +170,7 @@ static void CALLBACK WaveOutProc(HWAVEOUT UNUSED(device), UINT msg, DWORD_PTR in
     if(msg != WOM_DONE)
         return;
 
-    InterlockedDecrement(&data->WaveBuffersCommitted);
+    DecrementRef(&data->WaveBuffersCommitted);
     PostThreadMessage(data->thread, msg, 0, param1);
 }
 
@@ -202,7 +202,7 @@ FORCE_ALIGN static int PlaybackThreadProc(void *arg)
 
         // Send buffer back to play more data
         waveOutWrite(data->WaveHandle.Out, WaveHdr, sizeof(WAVEHDR));
-        InterlockedIncrement(&data->WaveBuffersCommitted);
+        IncrementRef(&data->WaveBuffersCommitted);
     }
 
     return 0;
@@ -222,7 +222,7 @@ static void CALLBACK WaveInProc(HWAVEIN UNUSED(device), UINT msg, DWORD_PTR inst
     if(msg != WIM_DATA)
         return;
 
-    InterlockedDecrement(&data->WaveBuffersCommitted);
+    DecrementRef(&data->WaveBuffersCommitted);
     PostThreadMessage(data->thread, msg, 0, param1);
 }
 
@@ -250,7 +250,7 @@ static int CaptureThreadProc(void *arg)
 
         // Send buffer back to capture more data
         waveInAddBuffer(data->WaveHandle.In, WaveHdr, sizeof(WAVEHDR));
-        InterlockedIncrement(&data->WaveBuffersCommitted);
+        IncrementRef(&data->WaveBuffersCommitted);
     }
 
     return 0;
@@ -425,7 +425,7 @@ static ALCboolean WinMMStartPlayback(ALCdevice *device)
                                        data->WaveBuffer[i-1].dwBufferLength));
         waveOutPrepareHeader(data->WaveHandle.Out, &data->WaveBuffer[i], sizeof(WAVEHDR));
         waveOutWrite(data->WaveHandle.Out, &data->WaveBuffer[i], sizeof(WAVEHDR));
-        InterlockedIncrement(&data->WaveBuffersCommitted);
+        IncrementRef(&data->WaveBuffersCommitted);
     }
 
     return ALC_TRUE;
@@ -567,7 +567,7 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
         data->WaveBuffer[i].dwLoops = 0;
         waveInPrepareHeader(data->WaveHandle.In, &data->WaveBuffer[i], sizeof(WAVEHDR));
         waveInAddBuffer(data->WaveHandle.In, &data->WaveBuffer[i], sizeof(WAVEHDR));
-        InterlockedIncrement(&data->WaveBuffersCommitted);
+        IncrementRef(&data->WaveBuffersCommitted);
     }
 
     if(althrd_create(&data->thread, CaptureThreadProc, Device) != althrd_success)

@@ -121,15 +121,18 @@ static void ALCloopbackFactory_probe(ALCloopbackFactory* UNUSED(self), enum DevP
 
 static ALCbackend* ALCloopbackFactory_createBackend(ALCloopbackFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
 {
-    ALCloopback *backend;
+    if(type == ALCbackend_Loopback)
+    {
+        ALCloopback *backend;
 
-    assert(type == ALCbackend_Loopback);
+        backend = ALCloopback_New(sizeof(*backend));
+        if(!backend) return NULL;
+        memset(backend, 0, sizeof(*backend));
 
-    backend = ALCloopback_New(sizeof(*backend));
-    if(!backend) return NULL;
-    memset(backend, 0, sizeof(*backend));
+        ALCloopback_Construct(backend, device);
 
-    ALCloopback_Construct(backend, device);
+        return STATIC_CAST(ALCbackend, backend);
+    }
 
-    return STATIC_CAST(ALCbackend, backend);
+    return NULL;
 }

@@ -212,15 +212,18 @@ static void ALCnullBackendFactory_probe(ALCnullBackendFactory* UNUSED(self), enu
 
 static ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
 {
-    ALCnullBackend *backend;
+    if(type == ALCbackend_Playback)
+    {
+        ALCnullBackend *backend;
 
-    assert(type == ALCbackend_Playback);
+        backend = ALCnullBackend_New(sizeof(*backend));
+        if(!backend) return NULL;
+        memset(backend, 0, sizeof(*backend));
 
-    backend = ALCnullBackend_New(sizeof(*backend));
-    if(!backend) return NULL;
-    memset(backend, 0, sizeof(*backend));
+        ALCnullBackend_Construct(backend, device);
 
-    ALCnullBackend_Construct(backend, device);
+        return STATIC_CAST(ALCbackend, backend);
+    }
 
-    return STATIC_CAST(ALCbackend, backend);
+    return NULL;
 }

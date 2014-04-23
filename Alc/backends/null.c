@@ -39,7 +39,6 @@ typedef struct ALCnullBackend {
     volatile int killNow;
     althrd_t thread;
 } ALCnullBackend;
-DECLARE_ALCBACKEND_VTABLE(ALCnullBackend);
 
 static int ALCnullBackend_mixerProc(void *ptr);
 
@@ -56,6 +55,8 @@ static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALint64, getLatency)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCnullBackend)
+
+DEFINE_ALCBACKEND_VTABLE(ALCnullBackend);
 
 
 static const ALCchar nullDevice[] = "No Output";
@@ -160,8 +161,6 @@ static void ALCnullBackend_stop(ALCnullBackend *self)
     self->killNow = 1;
     althrd_join(self->thread, &res);
 }
-
-DEFINE_ALCBACKEND_VTABLE(ALCnullBackend);
 
 
 typedef struct ALCnullBackendFactory {

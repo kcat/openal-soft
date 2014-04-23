@@ -398,7 +398,6 @@ typedef struct ALCplaybackAlsa {
     volatile int killNow;
     althrd_t thread;
 } ALCplaybackAlsa;
-DECLARE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
 
 static int ALCplaybackAlsa_mixerProc(void *ptr);
 static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr);
@@ -412,9 +411,12 @@ static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self);
 static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self);
 static DECLARE_FORWARD2(ALCplaybackAlsa, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, ALCuint, availableSamples)
+static ALint64 ALCplaybackAlsa_getLatency(ALCplaybackAlsa *self);
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCplaybackAlsa)
+
+DEFINE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
 
 
 static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
@@ -900,8 +902,6 @@ static ALint64 ALCplaybackAlsa_getLatency(ALCplaybackAlsa *self)
     return maxi64((ALint64)delay*1000000000/device->Frequency, 0);
 }
 
-DEFINE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
-
 
 typedef struct ALCcaptureAlsa {
     DERIVE_FROM_TYPE(ALCbackend);
@@ -916,7 +916,6 @@ typedef struct ALCcaptureAlsa {
 
     snd_pcm_sframes_t last_avail;
 } ALCcaptureAlsa;
-DECLARE_ALCBACKEND_VTABLE(ALCcaptureAlsa);
 
 static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, Destruct)
@@ -927,9 +926,12 @@ static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self);
 static void ALCcaptureAlsa_stop(ALCcaptureAlsa *self);
 static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples);
 static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self);
+static ALint64 ALCcaptureAlsa_getLatency(ALCcaptureAlsa *self);
 static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCcaptureAlsa)
+
+DEFINE_ALCBACKEND_VTABLE(ALCcaptureAlsa);
 
 
 static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
@@ -1296,9 +1298,6 @@ static ALint64 ALCcaptureAlsa_getLatency(ALCcaptureAlsa *self)
     }
     return maxi64((ALint64)delay*1000000000/device->Frequency, 0);
 }
-
-DEFINE_ALCBACKEND_VTABLE(ALCcaptureAlsa);
-
 
 
 typedef struct ALCalsaBackendFactory {

@@ -480,7 +480,6 @@ typedef struct ALCpulsePlayback {
     volatile ALboolean killNow;
     althrd_t thread;
 } ALCpulsePlayback;
-DECLARE_ALCBACKEND_VTABLE(ALCpulsePlayback);
 
 static void ALCpulsePlayback_deviceCallback(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
 static void ALCpulsePlayback_probeDevices(void);
@@ -506,9 +505,12 @@ static ALCboolean ALCpulsePlayback_start(ALCpulsePlayback *self);
 static void ALCpulsePlayback_stop(ALCpulsePlayback *self);
 static DECLARE_FORWARD2(ALCpulsePlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
 static DECLARE_FORWARD(ALCpulsePlayback, ALCbackend, ALCuint, availableSamples)
+static ALint64 ALCpulsePlayback_getLatency(ALCpulsePlayback *self);
 static void ALCpulsePlayback_lock(ALCpulsePlayback *self);
 static void ALCpulsePlayback_unlock(ALCpulsePlayback *self);
 DECLARE_DEFAULT_ALLOCATORS(ALCpulsePlayback)
+
+DEFINE_ALCBACKEND_VTABLE(ALCpulsePlayback);
 
 
 static void ALCpulsePlayback_Construct(ALCpulsePlayback *self, ALCdevice *device)
@@ -1087,17 +1089,6 @@ static void ALCpulsePlayback_stop(ALCpulsePlayback *self)
 }
 
 
-static void ALCpulsePlayback_lock(ALCpulsePlayback *self)
-{
-    pa_threaded_mainloop_lock(self->loop);
-}
-
-static void ALCpulsePlayback_unlock(ALCpulsePlayback *self)
-{
-    pa_threaded_mainloop_unlock(self->loop);
-}
-
-
 static ALint64 ALCpulsePlayback_getLatency(ALCpulsePlayback *self)
 {
     pa_usec_t latency = 0;
@@ -1113,7 +1104,16 @@ static ALint64 ALCpulsePlayback_getLatency(ALCpulsePlayback *self)
     return (ALint64)minu64(latency, U64(0x7fffffffffffffff)/1000) * 1000;
 }
 
-DEFINE_ALCBACKEND_VTABLE(ALCpulsePlayback);
+
+static void ALCpulsePlayback_lock(ALCpulsePlayback *self)
+{
+    pa_threaded_mainloop_lock(self->loop);
+}
+
+static void ALCpulsePlayback_unlock(ALCpulsePlayback *self)
+{
+    pa_threaded_mainloop_unlock(self->loop);
+}
 
 
 typedef struct ALCpulseCapture {
@@ -1135,7 +1135,6 @@ typedef struct ALCpulseCapture {
     pa_stream *stream;
     pa_context *context;
 } ALCpulseCapture;
-DECLARE_ALCBACKEND_VTABLE(ALCpulseCapture);
 
 static void ALCpulseCapture_deviceCallback(pa_context *context, const pa_source_info *info, int eol, void *pdata);
 static void ALCpulseCapture_probeDevices(void);
@@ -1158,9 +1157,12 @@ static ALCboolean ALCpulseCapture_start(ALCpulseCapture *self);
 static void ALCpulseCapture_stop(ALCpulseCapture *self);
 static ALCenum ALCpulseCapture_captureSamples(ALCpulseCapture *self, ALCvoid *buffer, ALCuint samples);
 static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self);
+static ALint64 ALCpulseCapture_getLatency(ALCpulseCapture *self);
 static void ALCpulseCapture_lock(ALCpulseCapture *self);
 static void ALCpulseCapture_unlock(ALCpulseCapture *self);
 DECLARE_DEFAULT_ALLOCATORS(ALCpulseCapture)
+
+DEFINE_ALCBACKEND_VTABLE(ALCpulseCapture);
 
 
 static void ALCpulseCapture_Construct(ALCpulseCapture *self, ALCdevice *device)
@@ -1570,17 +1572,6 @@ static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self)
 }
 
 
-static void ALCpulseCapture_lock(ALCpulseCapture *self)
-{
-    pa_threaded_mainloop_lock(self->loop);
-}
-
-static void ALCpulseCapture_unlock(ALCpulseCapture *self)
-{
-    pa_threaded_mainloop_unlock(self->loop);
-}
-
-
 static ALint64 ALCpulseCapture_getLatency(ALCpulseCapture *self)
 {
     pa_usec_t latency = 0;
@@ -1596,13 +1587,31 @@ static ALint64 ALCpulseCapture_getLatency(ALCpulseCapture *self)
     return (ALint64)minu64(latency, U64(0x7fffffffffffffff)/1000) * 1000;
 }
 
-DEFINE_ALCBACKEND_VTABLE(ALCpulseCapture);
+
+static void ALCpulseCapture_lock(ALCpulseCapture *self)
+{
+    pa_threaded_mainloop_lock(self->loop);
+}
+
+static void ALCpulseCapture_unlock(ALCpulseCapture *self)
+{
+    pa_threaded_mainloop_unlock(self->loop);
+}
 
 
 typedef struct ALCpulseBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);
 } ALCpulseBackendFactory;
 #define ALCPULSEBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCpulseBackendFactory, ALCbackendFactory) } }
+
+static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory *self);
+static void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory *self);
+static ALCboolean ALCpulseBackendFactory_querySupport(ALCpulseBackendFactory *self, ALCbackend_Type type);
+static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory *self, enum DevProbe type);
+static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
+
+DEFINE_ALCBACKENDFACTORY_VTABLE(ALCpulseBackendFactory);
+
 
 static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(self))
 {
@@ -1760,8 +1769,6 @@ static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* 
 
     return NULL;
 }
-
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCpulseBackendFactory);
 
 
 #else /* PA_API_VERSION == 12 */

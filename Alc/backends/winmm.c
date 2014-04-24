@@ -58,6 +58,17 @@ typedef struct {
 static vector_al_string PlaybackDevices;
 static vector_al_string CaptureDevices;
 
+static void clear_devlist(vector_al_string *list)
+{
+    al_string *iter, *end;
+
+    iter = VECTOR_ITER_BEGIN(*list);
+    end = VECTOR_ITER_END(*list);
+    for(;iter != end;iter++)
+        AL_STRING_DEINIT(*iter);
+    VECTOR_RESIZE(*list, 0);
+}
+
 
 static void ProbePlaybackDevices(void)
 {
@@ -65,11 +76,7 @@ static void ProbePlaybackDevices(void)
     ALuint numdevs;
     ALuint i;
 
-    iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-    end = VECTOR_ITER_END(PlaybackDevices);
-    for(;iter != end;iter++)
-        AL_STRING_DEINIT(*iter);
-    VECTOR_RESIZE(PlaybackDevices, 0);
+    clear_devlist(&PlaybackDevices);
 
     numdevs = waveOutGetNumDevs();
     VECTOR_RESERVE(PlaybackDevices, numdevs);
@@ -113,11 +120,7 @@ static void ProbeCaptureDevices(void)
     ALuint numdevs;
     ALuint i;
 
-    iter = VECTOR_ITER_BEGIN(CaptureDevices);
-    end = VECTOR_ITER_END(CaptureDevices);
-    for(;iter != end;iter++)
-        AL_STRING_DEINIT(*iter);
-    VECTOR_RESIZE(CaptureDevices, 0);
+    clear_devlist(&CaptureDevices);
 
     numdevs = waveInGetNumDevs();
     VECTOR_RESERVE(CaptureDevices, numdevs);
@@ -682,18 +685,10 @@ ALCboolean alcWinMMInit(BackendFuncs *FuncList)
 
 void alcWinMMDeinit()
 {
-    al_string *iter, *end;
-
-    iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-    end = VECTOR_ITER_END(PlaybackDevices);
-    for(;iter != end;iter++)
-        AL_STRING_DEINIT(*iter);
+    clear_devlist(&PlaybackDevices);
     VECTOR_DEINIT(PlaybackDevices);
 
-    iter = VECTOR_ITER_BEGIN(CaptureDevices);
-    end = VECTOR_ITER_END(CaptureDevices);
-    for(;iter != end;iter++)
-        AL_STRING_DEINIT(*iter);
+    clear_devlist(&CaptureDevices);
     VECTOR_DEINIT(CaptureDevices);
 }
 

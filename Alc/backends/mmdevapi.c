@@ -80,11 +80,24 @@ typedef struct {
     al_string name;
     WCHAR *devid;
 } DevMap;
+DECL_VECTOR(DevMap)
 
-static DevMap *PlaybackDeviceList;
-static ALuint NumPlaybackDevices;
-static DevMap *CaptureDeviceList;
-static ALuint NumCaptureDevices;
+static void clear_devlist(vector_DevMap *list)
+{
+    DevMap *iter, *end;
+
+    iter = VECTOR_ITER_BEGIN(*list);
+    end = VECTOR_ITER_END(*list);
+    for(;iter != end;iter++)
+    {
+        AL_STRING_DEINIT(iter->name);
+        free(iter->devid);
+    }
+    VECTOR_RESIZE(*list, 0);
+}
+
+static vector_DevMap PlaybackDevices;
+static vector_DevMap CaptureDevices;
 
 
 static HANDLE ThreadHdl;
@@ -144,58 +157,58 @@ static void get_device_name(IMMDevice *device, al_string *name)
     IPropertyStore_Release(ps);
 }
 
-static void add_device(IMMDevice *device, DevMap *devmap)
+static void add_device(IMMDevice *device, vector_DevMap *list)
 {
     LPWSTR devid;
     HRESULT hr;
 
-    AL_STRING_INIT(devmap->name);
-
     hr = IMMDevice_GetId(device, &devid);
-    if(FAILED(hr))
-        devmap->devid = calloc(sizeof(WCHAR), 1);
-    else
+    if(SUCCEEDED(hr))
     {
-        devmap->devid = strdupW(devid);
-        get_device_name(device, &devmap->name);
-        TRACE("Got device \"%s\", \"%ls\"\n", al_string_get_cstr(devmap->name), devmap->devid);
+        DevMap entry;
+        AL_STRING_INIT(entry.name);
+
+        entry.devid = strdupW(devid);
+        get_device_name(device, &entry.name);
+
         CoTaskMemFree(devid);
+
+        TRACE("Got device \"%s\", \"%ls\"\n", al_string_get_cstr(entry.name), entry.devid);
+        VECTOR_PUSH_BACK(*list, entry);
     }
 }
 
-static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALuint *numdevs)
+static HRESULT ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, vector_DevMap *list)
 {
     IMMDeviceCollection *coll;
     IMMDevice *defdev = NULL;
-    DevMap *devlist = NULL;
     HRESULT hr;
     UINT count;
-    UINT idx;
     UINT i;
 
     hr = IMMDeviceEnumerator_EnumAudioEndpoints(devenum, flowdir, DEVICE_STATE_ACTIVE, &coll);
     if(FAILED(hr))
     {
         ERR("Failed to enumerate audio endpoints: 0x%08lx\n", hr);
-        return NULL;
+        return hr;
     }
 
-    idx = count = 0;
+    count = 0;
     hr = IMMDeviceCollection_GetCount(coll, &count);
     if(SUCCEEDED(hr) && count > 0)
     {
-        devlist = calloc(count+1, sizeof(*devlist));
-        if(!devlist)
+        clear_devlist(list);
+        if(!VECTOR_RESERVE(*list, count+1))
         {
             IMMDeviceCollection_Release(coll);
-            return NULL;
+            return E_OUTOFMEMORY;
         }
 
         hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(devenum, flowdir,
                                                          eMultimedia, &defdev);
     }
     if(SUCCEEDED(hr) && defdev != NULL)
-        add_device(defdev, &devlist[idx++]);
+        add_device(defdev, list);
 
     for(i = 0;i < count;++i)
     {
@@ -205,7 +218,7 @@ static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALu
             continue;
 
         if(device != defdev)
-            add_device(device, &devlist[idx++]);
+            add_device(device, list);
 
         IMMDevice_Release(device);
     }
@@ -213,8 +226,7 @@ static DevMap *ProbeDevices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ALu
     if(defdev) IMMDevice_Release(defdev);
     IMMDeviceCollection_Release(coll);
 
-    *numdevs = idx;
-    return devlist;
+    return S_OK;
 }
 
 
@@ -623,8 +635,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
     PeekMessage(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
 
     TRACE("Message thread initialization complete\n");
-    req->result = S_OK;
-    SetEvent(req->FinishedEvt);
+    ReturnMsgResponse(req, S_OK);
 
     TRACE("Starting message loop\n");
     while(GetMessage(&msg, NULL, WM_USER_First, WM_USER_Last))
@@ -759,35 +770,12 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
                 hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
             if(SUCCEEDED(hr))
             {
-                EDataFlow flowdir;
-                DevMap **devlist;
-                ALuint *numdevs;
-                ALuint i;
-
                 Enumerator = ptr;
-                if(msg.lParam == CAPTURE_DEVICE_PROBE)
-                {
-                    flowdir = eCapture;
-                    devlist = &CaptureDeviceList;
-                    numdevs = &NumCaptureDevices;
-                }
-                else
-                {
-                    flowdir = eRender;
-                    devlist = &PlaybackDeviceList;
-                    numdevs = &NumPlaybackDevices;
-                }
 
-                for(i = 0;i < *numdevs;i++)
-                {
-                    AL_STRING_DEINIT((*devlist)[i].name);
-                    free((*devlist)[i].devid);
-                }
-                free(*devlist);
-                *devlist = NULL;
-                *numdevs = 0;
-
-                *devlist = ProbeDevices(Enumerator, flowdir, numdevs);
+                if(msg.lParam == ALL_DEVICE_PROBE)
+                    hr = ProbeDevices(Enumerator, eRender, &PlaybackDevices);
+                else if(msg.lParam == CAPTURE_DEVICE_PROBE)
+                    hr = ProbeDevices(Enumerator, eCapture, &CaptureDevices);
 
                 IMMDeviceEnumerator_Release(Enumerator);
                 Enumerator = NULL;
@@ -796,7 +784,7 @@ static DWORD CALLBACK MMDevApiMsgProc(void *ptr)
             if(--deviceCount == 0 && SUCCEEDED(cohr))
                 CoUninitialize();
 
-            ReturnMsgResponse(req, S_OK);
+            ReturnMsgResponse(req, hr);
             continue;
 
         default:
@@ -857,9 +845,9 @@ static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName
     {
         if(deviceName)
         {
-            ALuint i;
+            const DevMap *iter, *end;
 
-            if(!PlaybackDeviceList)
+            if(VECTOR_SIZE(PlaybackDevices) == 0)
             {
                 ThreadRequest req = { data->MsgEvent, 0 };
                 if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, ALL_DEVICE_PROBE))
@@ -867,11 +855,13 @@ static ALCenum MMDevApiOpenPlayback(ALCdevice *device, const ALCchar *deviceName
             }
 
             hr = E_FAIL;
-            for(i = 0;i < NumPlaybackDevices;i++)
+            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+            end = VECTOR_ITER_END(PlaybackDevices);
+            for(;iter != end;iter++)
             {
-                if(al_string_cmp_cstr(PlaybackDeviceList[i].name, deviceName) == 0)
+                if(al_string_cmp_cstr(iter->name, deviceName) == 0)
                 {
-                    data->devid = strdupW(PlaybackDeviceList[i].devid);
+                    data->devid = strdupW(iter->devid);
                     hr = S_OK;
                     break;
                 }
@@ -995,6 +985,9 @@ static const BackendFuncs MMDevApiFuncs = {
 
 ALCboolean alcMMDevApiInit(BackendFuncs *FuncList)
 {
+    VECTOR_INIT(PlaybackDevices);
+    VECTOR_INIT(CaptureDevices);
+
     if(!MMDevApiLoad())
         return ALC_FALSE;
     *FuncList = MMDevApiFuncs;
@@ -1003,25 +996,11 @@ ALCboolean alcMMDevApiInit(BackendFuncs *FuncList)
 
 void alcMMDevApiDeinit(void)
 {
-    ALuint i;
+    clear_devlist(&PlaybackDevices);
+    VECTOR_DEINIT(PlaybackDevices);
 
-    for(i = 0;i < NumPlaybackDevices;i++)
-    {
-        AL_STRING_DEINIT(PlaybackDeviceList[i].name);
-        free(PlaybackDeviceList[i].devid);
-    }
-    free(PlaybackDeviceList);
-    PlaybackDeviceList = NULL;
-    NumPlaybackDevices = 0;
-
-    for(i = 0;i < NumCaptureDevices;i++)
-    {
-        AL_STRING_DEINIT(CaptureDeviceList[i].name);
-        free(CaptureDeviceList[i].devid);
-    }
-    free(CaptureDeviceList);
-    CaptureDeviceList = NULL;
-    NumCaptureDevices = 0;
+    clear_devlist(&CaptureDevices);
+    VECTOR_DEINIT(CaptureDevices);
 
     if(ThreadHdl)
     {
@@ -1035,28 +1014,33 @@ void alcMMDevApiDeinit(void)
 void alcMMDevApiProbe(enum DevProbe type)
 {
     ThreadRequest req = { NULL, 0 };
+    const DevMap *iter, *end;
     HRESULT hr = E_FAIL;
 
-    switch(type)
+    req.FinishedEvt = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if(req.FinishedEvt == NULL)
+        ERR("Failed to create event: %lu\n", GetLastError());
+    else
     {
+        if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, type))
+            hr = WaitForResponse(&req);
+        if(SUCCEEDED(hr)) switch(type)
+        {
         case ALL_DEVICE_PROBE:
-            req.FinishedEvt = CreateEvent(NULL, FALSE, FALSE, NULL);
-            if(req.FinishedEvt == NULL)
-                ERR("Failed to create event: %lu\n", GetLastError());
-            else if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, type))
-                hr = WaitForResponse(&req);
-            if(SUCCEEDED(hr))
-            {
-                ALuint i;
-                for(i = 0;i < NumPlaybackDevices;i++)
-                    AppendAllDevicesList(al_string_get_cstr(PlaybackDeviceList[i].name));
-            }
+            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+            end = VECTOR_ITER_END(PlaybackDevices);
+            for(;iter != end;iter++)
+                AppendAllDevicesList(al_string_get_cstr(iter->name));
             break;
 
         case CAPTURE_DEVICE_PROBE:
+            iter = VECTOR_ITER_BEGIN(CaptureDevices);
+            end = VECTOR_ITER_END(CaptureDevices);
+            for(;iter != end;iter++)
+                AppendCaptureDeviceList(al_string_get_cstr(iter->name));
             break;
-    }
-    if(req.FinishedEvt != NULL)
+        }
         CloseHandle(req.FinishedEvt);
-    req.FinishedEvt = NULL;
+        req.FinishedEvt = NULL;
+    }
 }

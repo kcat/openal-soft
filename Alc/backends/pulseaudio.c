@@ -463,6 +463,20 @@ DECL_VECTOR(DevMap)
 static vector_DevMap PlaybackDevices;
 static vector_DevMap CaptureDevices;
 
+static void clear_devlist(vector_DevMap *list)
+{
+    DevMap *iter, *end;
+
+    iter = VECTOR_ITER_BEGIN(*list);
+    end = VECTOR_ITER_END(*list);
+    for(;iter != end;iter++)
+    {
+        AL_STRING_DEINIT(iter->name);
+        AL_STRING_DEINIT(iter->device_name);
+    }
+    VECTOR_RESIZE(*list, 0);
+}
+
 
 typedef struct ALCpulsePlayback {
     DERIVE_FROM_TYPE(ALCbackend);
@@ -562,6 +576,8 @@ static void ALCpulsePlayback_deviceCallback(pa_context *UNUSED(context), const p
 static void ALCpulsePlayback_probeDevices(void)
 {
     pa_threaded_mainloop *loop;
+
+    clear_devlist(&PlaybackDevices);
 
     if((loop=pa_threaded_mainloop_new()) &&
        pa_threaded_mainloop_start(loop) >= 0)
@@ -1215,6 +1231,8 @@ static void ALCpulseCapture_probeDevices(void)
 {
     pa_threaded_mainloop *loop;
 
+    clear_devlist(&CaptureDevices);
+
     if((loop=pa_threaded_mainloop_new()) &&
        pa_threaded_mainloop_start(loop) >= 0)
     {
@@ -1662,24 +1680,10 @@ static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(sel
 
 static void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory* UNUSED(self))
 {
-    DevMap *iter, *end;
-
-    iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-    end = VECTOR_ITER_END(PlaybackDevices);
-    for(;iter != end;iter++)
-    {
-        AL_STRING_DEINIT(iter->name);
-        AL_STRING_DEINIT(iter->device_name);
-    }
+    clear_devlist(&PlaybackDevices);
     VECTOR_DEINIT(PlaybackDevices);
 
-    iter = VECTOR_ITER_BEGIN(CaptureDevices);
-    end = VECTOR_ITER_END(CaptureDevices);
-    for(;iter != end;iter++)
-    {
-        AL_STRING_DEINIT(iter->name);
-        AL_STRING_DEINIT(iter->device_name);
-    }
+    clear_devlist(&CaptureDevices);
     VECTOR_DEINIT(CaptureDevices);
 
     if(prop_filter)
@@ -1703,17 +1707,7 @@ static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), e
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-            end = VECTOR_ITER_END(PlaybackDevices);
-            for(;iter != end;iter++)
-            {
-                AL_STRING_DEINIT(iter->name);
-                AL_STRING_DEINIT(iter->device_name);
-            }
-            VECTOR_RESIZE(PlaybackDevices, 0);
-
             ALCpulsePlayback_probeDevices();
-
             iter = VECTOR_ITER_BEGIN(PlaybackDevices);
             end = VECTOR_ITER_END(PlaybackDevices);
             for(;iter != end;iter++)
@@ -1721,17 +1715,7 @@ static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), e
             break;
 
         case CAPTURE_DEVICE_PROBE:
-            iter = VECTOR_ITER_BEGIN(CaptureDevices);
-            end = VECTOR_ITER_END(CaptureDevices);
-            for(;iter != end;iter++)
-            {
-                AL_STRING_DEINIT(iter->name);
-                AL_STRING_DEINIT(iter->device_name);
-            }
-            VECTOR_RESIZE(CaptureDevices, 0);
-
             ALCpulseCapture_probeDevices();
-
             iter = VECTOR_ITER_BEGIN(CaptureDevices);
             end = VECTOR_ITER_END(CaptureDevices);
             for(;iter != end;iter++)

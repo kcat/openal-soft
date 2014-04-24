@@ -265,6 +265,8 @@ static void probe_devices(snd_pcm_stream_t stream, vector_DevMap *DeviceList)
     int card, err, dev;
     DevMap entry;
 
+    clear_devlist(DeviceList);
+
     snd_ctl_card_info_malloc(&info);
     snd_pcm_info_malloc(&pcminfo);
 
@@ -1344,9 +1346,7 @@ static void ALCalsaBackendFactory_probe(ALCalsaBackendFactory* UNUSED(self), enu
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-            clear_devlist(&PlaybackDevices);
             probe_devices(SND_PCM_STREAM_PLAYBACK, &PlaybackDevices);
-
             iter = VECTOR_ITER_BEGIN(PlaybackDevices);
             end = VECTOR_ITER_END(PlaybackDevices);
             for(;iter != end;iter++)
@@ -1354,9 +1354,7 @@ static void ALCalsaBackendFactory_probe(ALCalsaBackendFactory* UNUSED(self), enu
             break;
 
         case CAPTURE_DEVICE_PROBE:
-            clear_devlist(&CaptureDevices);
             probe_devices(SND_PCM_STREAM_CAPTURE, &CaptureDevices);
-
             iter = VECTOR_ITER_BEGIN(CaptureDevices);
             end = VECTOR_ITER_END(CaptureDevices);
             for(;iter != end;iter++)

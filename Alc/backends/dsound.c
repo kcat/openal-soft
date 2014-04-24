@@ -114,6 +114,17 @@ DECL_VECTOR(DevMap)
 vector_DevMap PlaybackDevices;
 vector_DevMap CaptureDevices;
 
+static void clear_devlist(vector_DevMap *list)
+{
+    DevMap *iter, *end;
+
+    iter = VECTOR_ITER_BEGIN(*list);
+    end = VECTOR_ITER_END(*list);
+    for(;iter != end;++iter)
+        AL_STRING_DEINIT(iter->name);
+    VECTOR_RESIZE(*list, 0);
+}
+
 static BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR* UNUSED(drvname), void *data)
 {
     vector_DevMap *devices = data;
@@ -973,18 +984,10 @@ static ALCboolean ALCdsoundBackendFactory_init(ALCdsoundBackendFactory* UNUSED(s
 
 static void ALCdsoundBackendFactory_deinit(ALCdsoundBackendFactory* UNUSED(self))
 {
-    DevMap *iter, *end;
-
-    iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-    end = VECTOR_ITER_END(PlaybackDevices);
-    for(;iter != end;++iter)
-        AL_STRING_DEINIT(iter->name);
+    clear_devlist(&PlaybackDevices);
     VECTOR_DEINIT(PlaybackDevices);
 
-    iter = VECTOR_ITER_BEGIN(CaptureDevices);
-    end = VECTOR_ITER_END(CaptureDevices);
-    for(;iter != end;++iter)
-        AL_STRING_DEINIT(iter->name);
+    clear_devlist(&CaptureDevices);
     VECTOR_DEINIT(CaptureDevices);
 
 #ifdef HAVE_DYNLOAD
@@ -1011,41 +1014,25 @@ static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory* UNUSED(self),
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-            end = VECTOR_ITER_END(PlaybackDevices);
-            for(;iter != end;++iter)
-                AL_STRING_DEINIT(iter->name);
-            VECTOR_RESIZE(PlaybackDevices, 0);
-
+            clear_devlist(&PlaybackDevices);
             hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
             if(FAILED(hr))
                 ERR("Error enumerating DirectSound playback devices (0x%lx)!\n", hr);
-            else
-            {
-                iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-                end = VECTOR_ITER_END(PlaybackDevices);
-                for(;iter != end;++iter)
-                    AppendAllDevicesList(al_string_get_cstr(iter->name));
-            }
+            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
+            end = VECTOR_ITER_END(PlaybackDevices);
+            for(;iter != end;++iter)
+                AppendAllDevicesList(al_string_get_cstr(iter->name));
             break;
 
         case CAPTURE_DEVICE_PROBE:
-            iter = VECTOR_ITER_BEGIN(CaptureDevices);
-            end = VECTOR_ITER_END(CaptureDevices);
-            for(;iter != end;++iter)
-                AL_STRING_DEINIT(iter->name);
-            VECTOR_RESIZE(CaptureDevices, 0);
-
+            clear_devlist(&CaptureDevices);
             hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
             if(FAILED(hr))
                 ERR("Error enumerating DirectSound capture devices (0x%lx)!\n", hr);
-            else
-            {
-                iter = VECTOR_ITER_BEGIN(CaptureDevices);
-                end = VECTOR_ITER_END(CaptureDevices);
-                for(;iter != end;++iter)
-                    AppendCaptureDeviceList(al_string_get_cstr(iter->name));
-            }
+            iter = VECTOR_ITER_BEGIN(CaptureDevices);
+            end = VECTOR_ITER_END(CaptureDevices);
+            for(;iter != end;++iter)
+                AppendCaptureDeviceList(al_string_get_cstr(iter->name));
             break;
     }
     if(SUCCEEDED(hrcom))

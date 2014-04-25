@@ -83,7 +83,7 @@ static struct BackendInfo BackendList[] = {
     { "qsa", NULL, alc_qsa_init, alc_qsa_deinit, alc_qsa_probe, EmptyFuncs },
 #endif
 #ifdef HAVE_MMDEVAPI
-    { "mmdevapi", NULL, alcMMDevApiInit, alcMMDevApiDeinit, alcMMDevApiProbe, EmptyFuncs },
+    { "mmdevapi", ALCmmdevBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #endif
 #ifdef HAVE_DSOUND
     { "dsound", ALCdsoundBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },

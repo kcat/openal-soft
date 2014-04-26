@@ -27,7 +27,7 @@ static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
                                    const ALfloat (*restrict CoeffStep)[2],
                                    ALfloat left, ALfloat right)
 {
-    const __m128 lrlr = { left, right, left, right };
+    const __m128 lrlr = _mm_set_ps(left, right, left, right);
     __m128 coeffs, deltas, imp0, imp1;
     __m128 vals = _mm_setzero_ps();
     ALuint i;
@@ -88,7 +88,7 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
                                ALfloat (*restrict Coeffs)[2],
                                ALfloat left, ALfloat right)
 {
-    const __m128 lrlr = { left, right, left, right };
+    const __m128 lrlr = _mm_set_ps(left, right, left, right);
     __m128 vals = _mm_setzero_ps();
     __m128 coeffs;
     ALuint i;

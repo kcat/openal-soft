@@ -1032,6 +1032,11 @@ static ALint64 ALCmmdevPlayback_getLatency(ALCmmdevPlayback *self)
 }
 
 
+static inline void AppendAllDevicesList2(const DevMap *entry)
+{ AppendAllDevicesList(al_string_get_cstr(entry->name)); }
+static inline void AppendCaptureDeviceList2(const DevMap *entry)
+{ AppendCaptureDeviceList(al_string_get_cstr(entry->name)); }
+
 typedef struct ALCmmdevBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);
 } ALCmmdevBackendFactory;
@@ -1105,30 +1110,23 @@ static ALCboolean ALCmmdevBackendFactory_querySupport(ALCmmdevBackendFactory* UN
 static void ALCmmdevBackendFactory_probe(ALCmmdevBackendFactory* UNUSED(self), enum DevProbe type)
 {
     ThreadRequest req = { NULL, 0 };
-    const DevMap *iter, *end;
-    HRESULT hr = E_FAIL;
 
     req.FinishedEvt = CreateEvent(NULL, FALSE, FALSE, NULL);
     if(req.FinishedEvt == NULL)
         ERR("Failed to create event: %lu\n", GetLastError());
     else
     {
+        HRESULT hr = E_FAIL;
         if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, type))
             hr = WaitForResponse(&req);
         if(SUCCEEDED(hr)) switch(type)
         {
         case ALL_DEVICE_PROBE:
-            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-            end = VECTOR_ITER_END(PlaybackDevices);
-            for(;iter != end;iter++)
-                AppendAllDevicesList(al_string_get_cstr(iter->name));
+            VECTOR_FOR_EACH(const DevMap, PlaybackDevices, AppendAllDevicesList2);
             break;
 
         case CAPTURE_DEVICE_PROBE:
-            iter = VECTOR_ITER_BEGIN(CaptureDevices);
-            end = VECTOR_ITER_END(CaptureDevices);
-            for(;iter != end;iter++)
-                AppendCaptureDeviceList(al_string_get_cstr(iter->name));
+            VECTOR_FOR_EACH(const DevMap, CaptureDevices, AppendCaptureDeviceList2);
             break;
         }
         CloseHandle(req.FinishedEvt);

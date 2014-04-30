@@ -1617,6 +1617,11 @@ static void ALCpulseCapture_unlock(ALCpulseCapture *self)
 }
 
 
+static inline void AppendAllDevicesList2(const DevMap *entry)
+{ AppendAllDevicesList(al_string_get_cstr(entry->name)); }
+static inline void AppendCaptureDeviceList2(const DevMap *entry)
+{ AppendCaptureDeviceList(al_string_get_cstr(entry->name)); }
+
 typedef struct ALCpulseBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);
 } ALCpulseBackendFactory;
@@ -1702,24 +1707,16 @@ static ALCboolean ALCpulseBackendFactory_querySupport(ALCpulseBackendFactory* UN
 
 static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), enum DevProbe type)
 {
-    DevMap *iter, *end;
-
     switch(type)
     {
         case ALL_DEVICE_PROBE:
             ALCpulsePlayback_probeDevices();
-            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-            end = VECTOR_ITER_END(PlaybackDevices);
-            for(;iter != end;iter++)
-                AppendAllDevicesList(al_string_get_cstr(iter->name));
+            VECTOR_FOR_EACH(const DevMap, PlaybackDevices, AppendAllDevicesList2);
             break;
 
         case CAPTURE_DEVICE_PROBE:
             ALCpulseCapture_probeDevices();
-            iter = VECTOR_ITER_BEGIN(CaptureDevices);
-            end = VECTOR_ITER_END(CaptureDevices);
-            for(;iter != end;iter++)
-                AppendCaptureDeviceList(al_string_get_cstr(iter->name));
+            VECTOR_FOR_EACH(const DevMap, CaptureDevices, AppendCaptureDeviceList2);
             break;
     }
 }

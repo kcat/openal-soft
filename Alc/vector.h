@@ -59,4 +59,11 @@ ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, void *ins_
 
 #define VECTOR_ELEM(_x, _o) ((_x)->Data[(_o)])
 
+#define VECTOR_FOR_EACH(_t, _x, _f)  do {                                     \
+    _t *_iter = VECTOR_ITER_BEGIN((_x));                                      \
+    _t *_end = VECTOR_ITER_END((_x));                                         \
+    for(;_iter != _end;++_iter)                                               \
+        (_f)(_iter);                                                          \
+} while(0)
+
 #endif /* AL_VECTOR_H */

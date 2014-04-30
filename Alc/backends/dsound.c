@@ -950,6 +950,11 @@ done:
 }
 
 
+static inline void AppendAllDevicesList2(const DevMap *entry)
+{ AppendAllDevicesList(al_string_get_cstr(entry->name)); }
+static inline void AppendCaptureDeviceList2(const DevMap *entry)
+{ AppendCaptureDeviceList(al_string_get_cstr(entry->name)); }
+
 typedef struct ALCdsoundBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);
 } ALCdsoundBackendFactory;
@@ -1006,7 +1011,6 @@ static ALCboolean ALCdsoundBackendFactory_querySupport(ALCdsoundBackendFactory* 
 
 static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory* UNUSED(self), enum DevProbe type)
 {
-    DevMap *iter, *end;
     HRESULT hr, hrcom;
 
     /* Initialize COM to prevent name truncation */
@@ -1018,10 +1022,7 @@ static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory* UNUSED(self),
             hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
             if(FAILED(hr))
                 ERR("Error enumerating DirectSound playback devices (0x%lx)!\n", hr);
-            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-            end = VECTOR_ITER_END(PlaybackDevices);
-            for(;iter != end;++iter)
-                AppendAllDevicesList(al_string_get_cstr(iter->name));
+            VECTOR_FOR_EACH(const DevMap, PlaybackDevices, AppendAllDevicesList2);
             break;
 
         case CAPTURE_DEVICE_PROBE:
@@ -1029,10 +1030,7 @@ static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory* UNUSED(self),
             hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
             if(FAILED(hr))
                 ERR("Error enumerating DirectSound capture devices (0x%lx)!\n", hr);
-            iter = VECTOR_ITER_BEGIN(CaptureDevices);
-            end = VECTOR_ITER_END(CaptureDevices);
-            for(;iter != end;++iter)
-                AppendCaptureDeviceList(al_string_get_cstr(iter->name));
+            VECTOR_FOR_EACH(const DevMap, CaptureDevices, AppendCaptureDeviceList2);
             break;
     }
     if(SUCCEEDED(hrcom))

@@ -659,6 +659,17 @@ static ALCuint WinMMAvailableSamples(ALCdevice *Device)
 }
 
 
+static inline void AppendAllDevicesList2(const al_string *name)
+{
+    if(!al_string_empty(*name))
+        AppendAllDevicesList(al_string_get_cstr(*name));
+}
+static inline void AppendCaptureDeviceList2(const al_string *name)
+{
+    if(!al_string_empty(*name))
+        AppendCaptureDeviceList(al_string_get_cstr(*name));
+}
+
 static const BackendFuncs WinMMFuncs = {
     WinMMOpenPlayback,
     WinMMClosePlayback,
@@ -694,30 +705,16 @@ void alcWinMMDeinit()
 
 void alcWinMMProbe(enum DevProbe type)
 {
-    const al_string *iter, *end;
-
     switch(type)
     {
         case ALL_DEVICE_PROBE:
             ProbePlaybackDevices();
-            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-            end = VECTOR_ITER_END(PlaybackDevices);
-            for(;iter != end;iter++)
-            {
-                if(!al_string_empty(*iter))
-                    AppendAllDevicesList(al_string_get_cstr(*iter));
-            }
+            VECTOR_FOR_EACH(const al_string, PlaybackDevices, AppendAllDevicesList2);
             break;
 
         case CAPTURE_DEVICE_PROBE:
             ProbeCaptureDevices();
-            iter = VECTOR_ITER_BEGIN(CaptureDevices);
-            end = VECTOR_ITER_END(CaptureDevices);
-            for(;iter != end;iter++)
-            {
-                if(!al_string_empty(*iter))
-                    AppendCaptureDeviceList(al_string_get_cstr(*iter));
-            }
+            VECTOR_FOR_EACH(const al_string, CaptureDevices, AppendCaptureDeviceList2);
             break;
     }
 }

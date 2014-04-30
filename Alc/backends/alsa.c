@@ -1302,6 +1302,11 @@ static ALint64 ALCcaptureAlsa_getLatency(ALCcaptureAlsa *self)
 }
 
 
+static inline void AppendAllDevicesList2(const DevMap *entry)
+{ AppendAllDevicesList(al_string_get_cstr(entry->name)); }
+static inline void AppendCaptureDeviceList2(const DevMap *entry)
+{ AppendCaptureDeviceList(al_string_get_cstr(entry->name)); }
+
 typedef struct ALCalsaBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);
 } ALCalsaBackendFactory;
@@ -1341,24 +1346,16 @@ static ALCboolean ALCalsaBackendFactory_querySupport(ALCalsaBackendFactory* UNUS
 
 static void ALCalsaBackendFactory_probe(ALCalsaBackendFactory* UNUSED(self), enum DevProbe type)
 {
-    DevMap *iter, *end;
-
     switch(type)
     {
         case ALL_DEVICE_PROBE:
             probe_devices(SND_PCM_STREAM_PLAYBACK, &PlaybackDevices);
-            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-            end = VECTOR_ITER_END(PlaybackDevices);
-            for(;iter != end;iter++)
-                AppendAllDevicesList(al_string_get_cstr(iter->name));
+            VECTOR_FOR_EACH(const DevMap, PlaybackDevices, AppendAllDevicesList2);
             break;
 
         case CAPTURE_DEVICE_PROBE:
             probe_devices(SND_PCM_STREAM_CAPTURE, &CaptureDevices);
-            iter = VECTOR_ITER_BEGIN(CaptureDevices);
-            end = VECTOR_ITER_END(CaptureDevices);
-            for(;iter != end;iter++)
-                AppendCaptureDeviceList(al_string_get_cstr(iter->name));
+            VECTOR_FOR_EACH(const DevMap, CaptureDevices, AppendCaptureDeviceList2);
             break;
     }
 }

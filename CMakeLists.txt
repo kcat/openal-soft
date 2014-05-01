@@ -460,6 +460,8 @@ IF(NOT HAVE_WINDOWS_H)
         CHECK_SYMBOL_EXISTS(pthread_mutexattr_setkind_np "pthread.h;pthread_np.h" HAVE_PTHREAD_MUTEXATTR_SETKIND_NP)
     ENDIF()
 
+    CHECK_SYMBOL_EXISTS(pthread_mutex_timedlock pthread.h HAVE_PTHREAD_MUTEX_TIMEDLOCK)
+
     CHECK_LIBRARY_EXISTS(rt clock_gettime "" HAVE_LIBRT)
     IF(HAVE_LIBRT)
         SET(EXTRA_LIBS rt ${EXTRA_LIBS})

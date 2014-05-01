@@ -447,7 +447,10 @@ void almtx_destroy(almtx_t *mtx)
 
 int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 {
-    int ret = pthread_mutex_timedlock(mtx, ts);
+    int ret;
+
+#ifdef HAVE_PTHREAD_MUTEX_TIMEDLOCK
+    ret = pthread_mutex_timedlock(mtx, ts);
     switch(ret)
     {
         case 0: return althrd_success;
@@ -455,6 +458,25 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
         case EBUSY: return althrd_busy;
     }
     return althrd_error;
+#else
+    if(!mtx || !ts)
+        return althrd_error;
+
+    while((ret=almtx_trylock(mtx)) == althrd_busy)
+    {
+        struct timespec now;
+
+        if(ts->tv_sec < 0 || ts->tv_nsec < 0 || ts->tv_nsec >= 1000000000 ||
+           altimespec_get(&now, AL_TIME_UTC) != AL_TIME_UTC)
+            return althrd_error;
+        if(now.tv_sec > ts->tv_sec || (now.tv_sec == ts->tv_sec && now.tv_nsec >= ts->tv_nsec))
+            return althrd_timedout;
+
+        althrd_yield();
+    }
+
+    return ret;
+#endif
 }
 
 

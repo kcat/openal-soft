@@ -184,3 +184,6 @@
 
 /* Define if we have pthread_mutexattr_setkind_np() */
 #cmakedefine HAVE_PTHREAD_MUTEXATTR_SETKIND_NP
+
+/* Define if we have pthread_mutex_timedlock() */
+#cmakedefine HAVE_PTHREAD_MUTEX_TIMEDLOCK

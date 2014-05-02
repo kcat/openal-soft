@@ -438,10 +438,33 @@ static void ALCmmdevPlayback_Construct(ALCmmdevPlayback *self, ALCdevice *device
     SET_VTABLE2(ALCmmdevPlayback, ALCmmdevProxy, self);
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     ALCmmdevProxy_Construct(STATIC_CAST(ALCmmdevProxy, self));
+
+    self->devid = NULL;
+
+    self->mmdev = NULL;
+    self->client = NULL;
+    self->render = NULL;
+    self->NotifyEvent = NULL;
+
+    self->MsgEvent = NULL;
+
+    self->Padding = 0;
+
+    self->killNow = 0;
 }
 
 static void ALCmmdevPlayback_Destruct(ALCmmdevPlayback *self)
 {
+    if(self->NotifyEvent != NULL)
+        CloseHandle(self->NotifyEvent);
+    self->NotifyEvent = NULL;
+    if(self->MsgEvent != NULL)
+        CloseHandle(self->MsgEvent);
+    self->MsgEvent = NULL;
+
+    free(self->devid);
+    self->devid = NULL;
+
     ALCmmdevProxy_Destruct(STATIC_CAST(ALCmmdevProxy, self));
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }

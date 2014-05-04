@@ -42,7 +42,7 @@ static ALubyte read_8(Reader *stream)
     }
     return buf[0];
 }
-static void skip(Reader *stream, size_t amt)
+static void skip(Reader *stream, ALuint amt)
 {
     while(amt > 0 && !READERR(stream))
     {

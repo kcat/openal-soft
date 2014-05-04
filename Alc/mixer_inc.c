@@ -29,13 +29,9 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
   ALuint OutPos, ALuint BufferSize)
 {
     ALfloat (*restrict DryBuffer)[BUFFERSIZE] = params->OutBuffer;
-    const ALuint IrSize = params->Mix.Hrtf.Params.IrSize;
-    const ALint *restrict DelayStep = params->Mix.Hrtf.Params.DelayStep[srcchan];
-    const ALfloat (*restrict CoeffStep)[2] = params->Mix.Hrtf.Params.CoeffStep[srcchan];
-    const ALfloat (*restrict TargetCoeffs)[2] = params->Mix.Hrtf.Params.Coeffs[srcchan];
-    const ALuint *restrict TargetDelay = params->Mix.Hrtf.Params.Delay[srcchan];
-    ALfloat *restrict History = params->Mix.Hrtf.State.History[srcchan];
-    ALfloat (*restrict Values)[2] = params->Mix.Hrtf.State.Values[srcchan];
+    const ALuint IrSize = params->Mix.Hrtf.IrSize;
+    const HrtfParams *hrtfparams = &params->Mix.Hrtf.Params[srcchan];
+    HrtfState *hrtfstate = &params->Mix.Hrtf.State[srcchan];
     ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
     ALuint Offset = params->Offset + OutPos;
     alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
@@ -47,33 +43,32 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
     pos = 0;
     for(c = 0;c < IrSize;c++)
     {
-        Coeffs[c][0] = TargetCoeffs[c][0] - (CoeffStep[c][0]*Counter);
-        Coeffs[c][1] = TargetCoeffs[c][1] - (CoeffStep[c][1]*Counter);
+        Coeffs[c][0] = hrtfparams->Coeffs[c][0] - (hrtfparams->CoeffStep[c][0]*Counter);
+        Coeffs[c][1] = hrtfparams->Coeffs[c][1] - (hrtfparams->CoeffStep[c][1]*Counter);
     }
-
-    Delay[0] = TargetDelay[0] - (DelayStep[0]*Counter);
-    Delay[1] = TargetDelay[1] - (DelayStep[1]*Counter);
+    Delay[0] = hrtfparams->Delay[0] - (hrtfparams->DelayStep[0]*Counter);
+    Delay[1] = hrtfparams->Delay[1] - (hrtfparams->DelayStep[1]*Counter);
 
     for(pos = 0;pos < BufferSize && pos < Counter;pos++)
     {
-        History[Offset&SRC_HISTORY_MASK] = data[pos];
-        left  = lerp(History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
-                     History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
+        hrtfstate->History[Offset&SRC_HISTORY_MASK] = data[pos];
+        left  = lerp(hrtfstate->History[(Offset-(Delay[0]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
+                     hrtfstate->History[(Offset-(Delay[0]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
                      (Delay[0]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
-        right = lerp(History[(Offset-(Delay[1]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
-                     History[(Offset-(Delay[1]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
+        right = lerp(hrtfstate->History[(Offset-(Delay[1]>>HRTFDELAY_BITS))&SRC_HISTORY_MASK],
+                     hrtfstate->History[(Offset-(Delay[1]>>HRTFDELAY_BITS)-1)&SRC_HISTORY_MASK],
                      (Delay[1]&HRTFDELAY_MASK)*(1.0f/HRTFDELAY_FRACONE));
 
-        Delay[0] += DelayStep[0];
-        Delay[1] += DelayStep[1];
+        Delay[0] += hrtfparams->DelayStep[0];
+        Delay[1] += hrtfparams->DelayStep[1];
 
-        Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
-        Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
+        hrtfstate->Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
+        hrtfstate->Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
         Offset++;
 
-        ApplyCoeffsStep(Offset, Values, IrSize, Coeffs, CoeffStep, left, right);
-        DryBuffer[FrontLeft][OutPos]  += Values[Offset&HRIR_MASK][0];
-        DryBuffer[FrontRight][OutPos] += Values[Offset&HRIR_MASK][1];
+        ApplyCoeffsStep(Offset, hrtfstate->Values, IrSize, Coeffs, hrtfparams->CoeffStep, left, right);
+        DryBuffer[FrontLeft][OutPos]  += hrtfstate->Values[Offset&HRIR_MASK][0];
+        DryBuffer[FrontRight][OutPos] += hrtfstate->Values[Offset&HRIR_MASK][1];
         OutPos++;
     }
 
@@ -81,17 +76,17 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
     Delay[1] >>= HRTFDELAY_BITS;
     for(;pos < BufferSize;pos++)
     {
-        History[Offset&SRC_HISTORY_MASK] = data[pos];
-        left = History[(Offset-Delay[0])&SRC_HISTORY_MASK];
-        right = History[(Offset-Delay[1])&SRC_HISTORY_MASK];
+        hrtfstate->History[Offset&SRC_HISTORY_MASK] = data[pos];
+        left = hrtfstate->History[(Offset-Delay[0])&SRC_HISTORY_MASK];
+        right = hrtfstate->History[(Offset-Delay[1])&SRC_HISTORY_MASK];
 
-        Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
-        Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
+        hrtfstate->Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
+        hrtfstate->Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
         Offset++;
 
-        ApplyCoeffs(Offset, Values, IrSize, Coeffs, left, right);
-        DryBuffer[FrontLeft][OutPos]  += Values[Offset&HRIR_MASK][0];
-        DryBuffer[FrontRight][OutPos] += Values[Offset&HRIR_MASK][1];
+        ApplyCoeffs(Offset, hrtfstate->Values, IrSize, Coeffs, left, right);
+        DryBuffer[FrontLeft][OutPos]  += hrtfstate->Values[Offset&HRIR_MASK][0];
+        DryBuffer[FrontRight][OutPos] += hrtfstate->Values[Offset&HRIR_MASK][1];
 
         OutPos++;
     }

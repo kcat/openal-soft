@@ -40,18 +40,15 @@ extern "C" {
 #endif
 
 typedef struct HrtfState {
-    alignas(16) ALfloat History[MAX_INPUT_CHANNELS][SRC_HISTORY_LENGTH];
-    alignas(16) ALfloat Values[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
+    alignas(16) ALfloat History[SRC_HISTORY_LENGTH];
+    alignas(16) ALfloat Values[HRIR_LENGTH][2];
 } HrtfState;
 
 typedef struct HrtfParams {
-    ALfloat Gain;
-    ALfloat Dir[3];
-    alignas(16) ALfloat Coeffs[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
-    alignas(16) ALfloat CoeffStep[MAX_INPUT_CHANNELS][HRIR_LENGTH][2];
-    ALuint Delay[MAX_INPUT_CHANNELS][2];
-    ALint DelayStep[MAX_INPUT_CHANNELS][2];
-    ALuint IrSize;
+    alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
+    alignas(16) ALfloat CoeffStep[HRIR_LENGTH][2];
+    ALuint Delay[2];
+    ALint DelayStep[2];
 } HrtfParams;
 
 typedef struct DirectParams {
@@ -59,8 +56,11 @@ typedef struct DirectParams {
 
     union {
         struct {
-            HrtfParams Params;
-            HrtfState State;
+            HrtfParams Params[MAX_INPUT_CHANNELS];
+            HrtfState State[MAX_INPUT_CHANNELS];
+            ALuint IrSize;
+            ALfloat Gain;
+            ALfloat Dir[3];
         } Hrtf;
 
         /* A mixing matrix. First subscript is the channel number of the input

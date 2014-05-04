@@ -2347,11 +2347,11 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             for(j = 0;j < MAX_INPUT_CHANNELS;j++)
             {
                 for(k = 0;k < SRC_HISTORY_LENGTH;k++)
-                    src->Direct.Mix.Hrtf.State.History[j][k] = 0.0f;
+                    src->Direct.Mix.Hrtf.State[j].History[k] = 0.0f;
                 for(k = 0;k < HRIR_LENGTH;k++)
                 {
-                    src->Direct.Mix.Hrtf.State.Values[j][k][0] = 0.0f;
-                    src->Direct.Mix.Hrtf.State.Values[j][k][1] = 0.0f;
+                    src->Direct.Mix.Hrtf.State[j].Values[k][0] = 0.0f;
+                    src->Direct.Mix.Hrtf.State[j].Values[k][1] = 0.0f;
                 }
             }
             for(i = 0;i < device->NumAuxSends;i++)

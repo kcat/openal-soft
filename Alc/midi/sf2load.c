@@ -50,9 +50,10 @@ static void skip(Reader *stream, ALuint amt)
         size_t got;
 
         got = READ(stream, buf, minu(sizeof(buf), amt));
-        if(got == 0) READERR(stream) = 1;
+        if(got == 0 || got > amt)
+            READERR(stream) = 1;
 
-        amt -= got;
+        amt -= (ALuint)got;
     }
 }
 

@@ -93,19 +93,20 @@ void MixDirect_C(DirectParams *params, const ALfloat *restrict data, ALuint srcc
     for(c = 0;c < MaxChannels;c++)
     {
         ALuint pos = 0;
+        DrySend = params->Mix.Gains.Current[srcchan][c];
         Step = params->Mix.Gains.Step[srcchan][c];
         if(Step != 1.0f && Counter > 0)
         {
-            DrySend = params->Mix.Gains.Current[srcchan][c];
             for(;pos < BufferSize && pos < Counter;pos++)
             {
                 OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
                 DrySend *= Step;
             }
+            if(pos == Counter)
+                DrySend = params->Mix.Gains.Target[srcchan][c];
             params->Mix.Gains.Current[srcchan][c] = DrySend;
         }
 
-        DrySend = params->Mix.Gains.Target[srcchan][c];
         if(!(DrySend > GAIN_SILENCE_THRESHOLD))
             continue;
         for(;pos < BufferSize;pos++)
@@ -123,19 +124,20 @@ void MixSend_C(SendParams *params, const ALfloat *restrict data,
 
     {
         ALuint pos = 0;
+        WetSend = params->Gain.Current;
         Step = params->Gain.Step;
         if(Step != 1.0f && Counter > 0)
         {
-            WetSend = params->Gain.Current;
             for(;pos < BufferSize && pos < Counter;pos++)
             {
                 OutBuffer[0][OutPos+pos] += data[pos]*WetSend;
                 WetSend *= Step;
             }
+            if(pos == Counter)
+                WetSend = params->Gain.Target;
             params->Gain.Current = WetSend;
         }
 
-        WetSend = params->Gain.Target;
         if(!(WetSend > GAIN_SILENCE_THRESHOLD))
             return;
         for(;pos < BufferSize;pos++)

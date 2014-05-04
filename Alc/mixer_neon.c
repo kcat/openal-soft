@@ -89,22 +89,23 @@ void MixDirect_Neon(DirectParams *params, const ALfloat *restrict data, ALuint s
     for(c = 0;c < MaxChannels;c++)
     {
         ALuint pos = 0;
+        DrySend = params->Mix.Gains.Current[srcchan][c];
         Step = params->Mix.Gains.Step[srcchan][c];
         if(Step != 1.0f && Counter > 0)
         {
-            DrySend = params->Mix.Gains.Current[srcchan][c];
             for(;pos < BufferSize && pos < Counter;pos++)
             {
                 OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
                 DrySend *= Step;
             }
+            if(pos == Counter)
+                DrySend = params->Mix.Gains.Target[srcchan][c];
+            params->Mix.Gains.Current[srcchan][c] = DrySend;
             /* Mix until pos is aligned with 4 or the mix is done. */
             for(;pos < BufferSize && (pos&3) != 0;pos++)
                 OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-            params->Mix.Gains.Current[srcchan][c] = DrySend;
         }
 
-        DrySend = params->Mix.Gains.Target[srcchan][c];
         if(!(DrySend > GAIN_SILENCE_THRESHOLD))
             continue;
         gain = vdupq_n_f32(DrySend);
@@ -131,21 +132,22 @@ void MixSend_Neon(SendParams *params, const ALfloat *restrict data,
 
     {
         ALuint pos = 0;
+        WetGain = params->Gain.Current;
         Step = params->Gain.Step;
         if(Step != 1.0f && Counter > 0)
         {
-            WetGain = params->Gain.Current;
             for(;pos < BufferSize && pos < Counter;pos++)
             {
                 OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
                 WetGain *= Step;
             }
+            if(pos == Counter)
+                WetGain = params->Gain.Target;
+            params->Gain.Current = WetGain;
             for(;pos < BufferSize && (pos&3) != 0;pos++)
                 OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
-            params->Gain.Current = WetGain;
         }
 
-        WetGain = params->Gain.Target;
         if(!(WetGain > GAIN_SILENCE_THRESHOLD))
             return;
         gain = vdupq_n_f32(WetGain);

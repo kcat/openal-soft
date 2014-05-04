@@ -156,6 +156,7 @@ void MixDirect_SSE(DirectParams *params, const ALfloat *restrict data, ALuint sr
         if(Step != 1.0f && Counter > 0)
         {
             DrySend = params->Mix.Gains.Current[srcchan][c];
+            /* Mix with applying gain steps in aligned multiples of 4. */
             if(BufferSize-pos > 3 && Counter-pos > 3)
             {
                 gain = _mm_set_ps(
@@ -175,14 +176,15 @@ void MixDirect_SSE(DirectParams *params, const ALfloat *restrict data, ALuint sr
                 } while(BufferSize-pos > 3 && Counter-pos > 3);
                 DrySend = _mm_cvtss_f32(_mm_shuffle_ps(gain, gain, _MM_SHUFFLE(3, 3, 3, 3)));
             }
-            if(!(BufferSize-pos > 3))
+            /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
+            for(;pos < BufferSize && pos < Counter;pos++)
             {
-                for(;pos < BufferSize && pos < Counter;pos++)
-                {
-                    OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-                    DrySend *= Step;
-                }
+                OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
+                DrySend *= Step;
             }
+            /* Mix until pos is aligned with 4 or the mix is done. */
+            for(;pos < BufferSize && (pos&3) != 0;pos++)
+                OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
             params->Mix.Gains.Current[srcchan][c] = DrySend;
         }
 
@@ -237,14 +239,13 @@ void MixSend_SSE(SendParams *params, const ALfloat *restrict data,
                 } while(BufferSize-pos > 3 && Counter-pos > 3);
                 WetGain = _mm_cvtss_f32(_mm_shuffle_ps(gain, gain, _MM_SHUFFLE(3, 3, 3, 3)));
             }
-            if(!(BufferSize-pos > 3))
+            for(;pos < BufferSize && pos < Counter;pos++)
             {
-                for(;pos < BufferSize && pos < Counter;pos++)
-                {
-                    OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
-                    WetGain *= Step;
-                }
+                OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
+                WetGain *= Step;
             }
+            for(;pos < BufferSize && (pos&3) != 0;pos++)
+                OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
             params->Gain.Current = WetGain;
         }
 

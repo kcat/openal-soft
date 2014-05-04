@@ -93,25 +93,14 @@ void MixDirect_Neon(DirectParams *params, const ALfloat *restrict data, ALuint s
         if(Step != 1.0f && Counter > 0)
         {
             DrySend = params->Mix.Gains.Current[srcchan][c];
-            for(;BufferSize-pos > 3 && Counter-pos > 3;pos+=4)
+            for(;pos < BufferSize && pos < Counter;pos++)
             {
-                OutBuffer[c][OutPos+pos  ] += data[pos  ]*DrySend;
-                DrySend *= Step;
-                OutBuffer[c][OutPos+pos+1] += data[pos+1]*DrySend;
-                DrySend *= Step;
-                OutBuffer[c][OutPos+pos+2] += data[pos+2]*DrySend;
-                DrySend *= Step;
-                OutBuffer[c][OutPos+pos+4] += data[pos+3]*DrySend;
+                OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
                 DrySend *= Step;
             }
-            if(!(BufferSize-pos > 3))
-            {
-                for(;pos < BufferSize && pos < Counter;pos++)
-                {
-                    OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-                    DrySend *= Step;
-                }
-            }
+            /* Mix until pos is aligned with 4 or the mix is done. */
+            for(;pos < BufferSize && (pos&3) != 0;pos++)
+                OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
             params->Mix.Gains.Current[srcchan][c] = DrySend;
         }
 
@@ -146,25 +135,13 @@ void MixSend_Neon(SendParams *params, const ALfloat *restrict data,
         if(Step != 1.0f && Counter > 0)
         {
             WetGain = params->Gain.Current;
-            for(;BufferSize-pos > 3 && Counter-pos > 3;pos+=4)
+            for(;pos < BufferSize && pos < Counter;pos++)
             {
-                OutBuffer[0][OutPos+pos  ] += data[pos  ]*WetGain;
-                WetGain *= Step;
-                OutBuffer[0][OutPos+pos+1] += data[pos+1]*WetGain;
-                WetGain *= Step;
-                OutBuffer[0][OutPos+pos+2] += data[pos+2]*WetGain;
-                WetGain *= Step;
-                OutBuffer[0][OutPos+pos+4] += data[pos+3]*WetGain;
+                OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
                 WetGain *= Step;
             }
-            if(!(BufferSize-pos > 3))
-            {
-                for(;pos < BufferSize && pos < Counter;pos++)
-                {
-                    OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
-                    WetGain *= Step;
-                }
-            }
+            for(;pos < BufferSize && (pos&3) != 0;pos++)
+                OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
             params->Gain.Current = WetGain;
         }
 

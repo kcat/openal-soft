@@ -437,8 +437,8 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             {
                 for(j = 0;j < MaxChannels;j++)
                 {
-                    ALfloat cur = maxf(Current[i][j], GAIN_SILENCE_THRESHOLD);
-                    ALfloat trg = maxf(Matrix[i][j], GAIN_SILENCE_THRESHOLD);
+                    ALfloat cur = maxf(Current[i][j], FLT_EPSILON);
+                    ALfloat trg = maxf(Matrix[i][j], FLT_EPSILON);
                     if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
                         Step[i][j] = powf(trg/cur, 1.0f/64.0f);
                     else
@@ -527,8 +527,8 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             {
                 for(j = 0;j < MaxChannels;j++)
                 {
-                    ALfloat trg = maxf(Matrix[i][j], GAIN_SILENCE_THRESHOLD);
-                    ALfloat cur = maxf(Current[i][j], GAIN_SILENCE_THRESHOLD);
+                    ALfloat trg = maxf(Matrix[i][j], FLT_EPSILON);
+                    ALfloat cur = maxf(Current[i][j], FLT_EPSILON);
                     if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
                         Step[i][j] = powf(trg/cur, 1.0f/64.0f);
                     else
@@ -560,8 +560,8 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     {
         if(src->Send[i].Moving)
         {
-            ALfloat cur = maxf(src->Send[i].Gain.Current, GAIN_SILENCE_THRESHOLD);
-            ALfloat trg = maxf(src->Send[i].Gain.Target, GAIN_SILENCE_THRESHOLD);
+            ALfloat cur = maxf(src->Send[i].Gain.Current, FLT_EPSILON);
+            ALfloat trg = maxf(src->Send[i].Gain.Target, FLT_EPSILON);
             if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
                 src->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
             else
@@ -1025,8 +1025,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             ALfloat (*restrict Step)[MaxChannels] = src->Direct.Mix.Gains.Step;
             for(j = 0;j < MaxChannels;j++)
             {
-                ALfloat cur = maxf(Current[0][j], GAIN_SILENCE_THRESHOLD);
-                ALfloat trg = maxf(Matrix[0][j], GAIN_SILENCE_THRESHOLD);
+                ALfloat cur = maxf(Current[0][j], FLT_EPSILON);
+                ALfloat trg = maxf(Matrix[0][j], FLT_EPSILON);
                 if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
                     Step[0][j] = powf(trg/cur, 1.0f/64.0f);
                 else
@@ -1057,8 +1057,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     {
         if(src->Send[i].Moving)
         {
-            ALfloat cur = maxf(src->Send[i].Gain.Current, GAIN_SILENCE_THRESHOLD);
-            ALfloat trg = maxf(src->Send[i].Gain.Target, GAIN_SILENCE_THRESHOLD);
+            ALfloat cur = maxf(src->Send[i].Gain.Current, FLT_EPSILON);
+            ALfloat trg = maxf(src->Send[i].Gain.Target, FLT_EPSILON);
             if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
                 src->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
             else

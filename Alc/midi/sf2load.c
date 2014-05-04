@@ -1078,6 +1078,8 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                 TRACE("SF2 ROM ID: %s\n", sfont.irom);
             }
         }
+        else
+            TRACE("Skipping INFO sub-chunk '%c%c%c%c' (%u bytes)\n", FOURCCARGS(info.mCode), info.mSize);
         list.mSize -= info.mSize;
         skip(stream, info.mSize);
     }

@@ -1,6 +1,5 @@
 #include "config.h"
 
-#ifdef HAVE_XMMINTRIN_H
 #ifdef IN_IDE_PARSER
 /* KDevelop's parser won't recognize these defines that get added by the -msse
  * switch used to compile this source. Without them, xmmintrin.h fails to
@@ -9,7 +8,6 @@
 #define __SSE__
 #endif
 #include <xmmintrin.h>
-#endif
 
 #include "AL/al.h"
 #include "AL/alc.h"

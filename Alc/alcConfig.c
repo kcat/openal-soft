@@ -157,7 +157,7 @@ static char *expdup(const char *str)
             void *temp = NULL;
             size_t newmax;
 
-            newmax = NextPowerOf2(len+addstrlen+1);
+            newmax = len+addstrlen+1;
             if(newmax > maxlen)
                 temp = realloc(output, newmax);
             if(!temp)

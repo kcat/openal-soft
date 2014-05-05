@@ -147,7 +147,7 @@ HAVE_C11_STATIC_ASSERT)
 
 # Check if we have C11 alignas
 CHECK_C_SOURCE_COMPILES(
-"_Alignas(4) int foo;
+"_Alignas(16) int foo;
  int main()
  {
      return 0;

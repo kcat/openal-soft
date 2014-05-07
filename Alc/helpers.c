@@ -584,24 +584,24 @@ void SetRTPriority(void)
 }
 
 
-static void Lock(volatile ALenum *l)
+static void Lock(volatile int *l)
 {
-    while(ExchangeInt(l, AL_TRUE) == AL_TRUE)
+    while(ExchangeInt(l, true) == true)
         althrd_yield();
 }
 
-static void Unlock(volatile ALenum *l)
+static void Unlock(volatile int *l)
 {
-    ExchangeInt(l, AL_FALSE);
+    ExchangeInt(l, false);
 }
 
 void RWLockInit(RWLock *lock)
 {
     lock->read_count = 0;
     lock->write_count = 0;
-    lock->read_lock = AL_FALSE;
-    lock->read_entry_lock = AL_FALSE;
-    lock->write_lock = AL_FALSE;
+    lock->read_lock = false;
+    lock->read_entry_lock = false;
+    lock->write_lock = false;
 }
 
 void ReadLock(RWLock *lock)

@@ -292,6 +292,8 @@ void altss_delete(altss_t tss_id)
 
 int altimespec_get(struct timespec *ts, int base)
 {
+    static_assert(sizeof(FILETIME) == sizeof(ULARGE_INTEGER),
+                  "Size of FILETIME does not match ULARGE_INTEGER");
     if(base == AL_TIME_UTC)
     {
         union {

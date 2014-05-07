@@ -135,7 +135,7 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 
 #else
 #error "No atomic functions available on this platform!"
-typedef ALuint RefCount;
+typedef unsigned int RefCount;
 #endif
 
 #endif /* AL_ATOMIC_H */

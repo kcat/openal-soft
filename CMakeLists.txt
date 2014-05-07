@@ -136,6 +136,16 @@ CHECK_C_SOURCE_COMPILES(
  }"
 HAVE_C99_VLA)
 
+# Check if we have C99 bool
+CHECK_C_SOURCE_COMPILES(
+"int main(int argc, char *argv[])
+ {
+     volatile _Bool ret;
+     ret = (argc > 1) ? 1 : 0;
+     return ret ? -1 : 0;
+ }"
+HAVE_C99_BOOL)
+
 # Check if we have C11 static_assert
 CHECK_C_SOURCE_COMPILES(
 "int main()
@@ -297,6 +307,7 @@ ENDIF()
 CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(printf, 1, 2)));
                          int main() {return 0;}" HAVE_GCC_FORMAT)
 
+CHECK_INCLUDE_FILE(stdbool.h HAVE_STDBOOL_H)
 CHECK_INCLUDE_FILE(stdalign.h HAVE_STDALIGN_H)
 IF(NOT HAVE_C99_VLA)
     CHECK_INCLUDE_FILE(alloca.h HAVE_ALLOCA_H)

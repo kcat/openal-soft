@@ -307,6 +307,7 @@ void alcall_once(alonce_flag *once, void (*callback)(void))
 
 #else
 
+#include <sys/time.h>
 #include <unistd.h>
 #include <pthread.h>
 #ifdef HAVE_PTHREAD_NP_H
@@ -497,14 +498,19 @@ int altimespec_get(struct timespec *ts, int base)
 {
     if(base == AL_TIME_UTC)
     {
+        int ret;
 #if _POSIX_TIMERS > 0
-        int ret = clock_gettime(CLOCK_REALTIME, ts);
+        ret = clock_gettime(CLOCK_REALTIME, ts);
         if(ret == 0) return base;
 #else /* _POSIX_TIMERS > 0 */
-#warning "clock_gettime (POSIX.1-2001) is not available, timing resolution will be poor."
-        ts->tv_sec = time(NULL);
-        ts->tv_nsec = 0;
-        return base;
+        struct timeval tv;
+        ret = gettimeofday(&tv, NULL);
+        if(ret == 0)
+        {
+            ts->tv_sec = tv.tv_sec;
+            ts->tv_nsec = tv.tv_usec * 1000;
+            return base;
+        }
 #endif
     }
 

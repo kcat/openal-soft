@@ -1,6 +1,8 @@
 #ifndef AL_ATOMIC_H
 #define AL_ATOMIC_H
 
+#include "static_assert.h"
+
 
 typedef void *volatile XchgPtr;
 

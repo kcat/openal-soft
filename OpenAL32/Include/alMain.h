@@ -21,16 +21,6 @@
 #include "AL/alext.h"
 
 
-#ifndef static_assert
-#ifdef HAVE_C11_STATIC_ASSERT
-#define static_assert _Static_assert
-#else
-#define CTASTR2(_pre,_post) _pre##_post
-#define CTASTR(_pre,_post) CTASTR2(_pre,_post)
-#define static_assert(_cond, _msg) typedef struct { int CTASTR(static_assert_failed_at_line_,__LINE__) : !!(_cond); } CTASTR(static_assertion_,__COUNTER__)
-#endif
-#endif
-
 #if defined(_WIN64)
 #define SZFMT "%I64u"
 #elif defined(_WIN32)
@@ -40,6 +30,7 @@
 #endif
 
 
+#include "static_assert.h"
 #include "align.h"
 #include "atomic.h"
 #include "uintmap.h"

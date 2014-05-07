@@ -487,6 +487,8 @@ IF(NOT HAVE_STDINT_H)
 ENDIF()
 
 
+SET(COMMON_OBJS  common/threads.c
+)
 SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
                  OpenAL32/alBuffer.c
                  OpenAL32/alEffect.c
@@ -522,7 +524,6 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/helpers.c
               Alc/hrtf.c
               Alc/panning.c
-              Alc/threads.c
               Alc/mixer.c
               Alc/mixer_c.c
 )
@@ -916,7 +917,7 @@ CONFIGURE_FILE(
     @ONLY)
 
 # Build a library
-ADD_LIBRARY(${LIBNAME} ${LIBTYPE} ${OPENAL_OBJS} ${ALC_OBJS})
+ADD_LIBRARY(${LIBNAME} ${LIBTYPE} ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS})
 SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES)
 IF(WIN32 AND ALSOFT_NO_UID_DEFS)
     SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS AL_NO_UID_DEFS)

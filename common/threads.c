@@ -23,10 +23,10 @@
 #include "threads.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 
-#include "alMain.h"
-#include "alThunk.h"
+#include "uintmap.h"
 
 
 extern inline althrd_t althrd_current(void);
@@ -40,6 +40,19 @@ extern inline int almtx_trylock(almtx_t *mtx);
 
 extern inline void *altss_get(altss_t tss_id);
 extern inline int altss_set(altss_t tss_id, void *val);
+
+
+#ifndef UNUSED
+#if defined(__cplusplus)
+#define UNUSED(x)
+#elif defined(__GNUC__)
+#define UNUSED(x) UNUSED_##x __attribute__((unused))
+#elif defined(__LCLINT__)
+#define UNUSED(x) /*@unused@*/ x
+#else
+#define UNUSED(x) x
+#endif
+#endif
 
 
 #define THREAD_STACK_SIZE (1*1024*1024) /* 1MB */
@@ -75,7 +88,8 @@ void althrd_setname(althrd_t thr, const char *name)
     }
 #undef MS_VC_EXCEPTION
 #else
-    TRACE("Can't set thread %04lx name to \"%s\"\n", thr, name);
+    (void)thr;
+    (void)name;
 #endif
 }
 
@@ -323,17 +337,16 @@ void althrd_setname(althrd_t thr, const char *name)
 {
 #if defined(HAVE_PTHREAD_SETNAME_NP)
 #if defined(__GNUC__)
-    if(pthread_setname_np(thr, name) != 0)
+    pthread_setname_np(thr, name);
 #elif defined(__APPLE__)
-    if(!althrd_equal(thr, althrd_current())
-        WARN("Can't set thread name \"%s\" on non-current thread");
-    else if(pthread_setname_np(name) != 0)
+    if(althrd_equal(thr, althrd_current())
+        pthread_setname_np(name);
 #endif
-        WARN("Failed to set thread name to \"%s\": %s\n", name, strerror(errno));
 #elif defined(HAVE_PTHREAD_SET_NAME_NP)
     pthread_set_name_np(thr, name);
 #else
-    TRACE("Can't set thread name to \"%s\"\n", name);
+    (void)thr;
+    (void)name;
 #endif
 }
 

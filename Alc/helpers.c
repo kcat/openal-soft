@@ -93,13 +93,6 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 #include "threads.h"
 
 
-extern inline RefCount IncrementRef(volatile RefCount *ptr);
-extern inline RefCount DecrementRef(volatile RefCount *ptr);
-extern inline int ExchangeInt(volatile int *ptr, int newval);
-extern inline void *ExchangePtr(XchgPtr *ptr, void *newval);
-extern inline int CompExchangeInt(volatile int *ptr, int oldval, int newval);
-extern inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval);
-
 extern inline void LockUIntMapRead(UIntMap *map);
 extern inline void UnlockUIntMapRead(UIntMap *map);
 extern inline void LockUIntMapWrite(UIntMap *map);

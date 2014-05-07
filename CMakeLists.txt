@@ -487,7 +487,8 @@ IF(NOT HAVE_STDINT_H)
 ENDIF()
 
 
-SET(COMMON_OBJS  common/threads.c
+SET(COMMON_OBJS  common/atomic.c
+                 common/threads.c
 )
 SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
                  OpenAL32/alBuffer.c

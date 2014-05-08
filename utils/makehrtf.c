@@ -70,6 +70,7 @@
 
 // Rely (if naively) on OpenAL's header for the types used for serialization.
 #include "AL/al.h"
+#include "AL/alext.h"
 
 #ifndef M_PI
 #define M_PI                         (3.14159265358979323846)
@@ -231,23 +232,12 @@ enum OutputFormatT {
 // Unsigned integer type.
 typedef unsigned int                 uint;
 
-// Serialization types.  The trailing digit indicates the number of bytes.
-typedef ALubyte                      uint1;
+// Serialization types.  The trailing digit indicates the number of bits.
+typedef ALubyte                      uint8;
 
-typedef ALint                        int4;
-typedef ALuint                       uint4;
-
-#if defined (HAVE_STDINT_H)
-#include <stdint.h>
-
-typedef uint64_t                     uint8;
-#elif defined (HAVE___INT64)
-typedef unsigned __int64             uint8;
-#elif (SIZEOF_LONG == 8)
-typedef unsigned long                uint8;
-#elif (SIZEOF_LONG_LONG == 8)
-typedef unsigned long long           uint8;
-#endif
+typedef ALint                        int32;
+typedef ALuint                       uint32;
+typedef ALuint64SOFT                 uint64;
 
 typedef enum ByteOrderT              ByteOrderT;
 typedef enum SourceFormatT           SourceFormatT;
@@ -1252,9 +1242,9 @@ static void ResamplerRun (ResamplerT * rs, const uint inN, const double * in, co
 
 // Read a binary value of the specified byte order and byte size from a file,
 // storing it as a 32-bit unsigned integer.
-static int ReadBin4 (FILE * fp, const char * filename, const ByteOrderT order, const uint bytes, uint4 * out) {
-  uint1 in [4];
-  uint4 accum;
+static int ReadBin4 (FILE * fp, const char * filename, const ByteOrderT order, const uint bytes, uint32 * out) {
+  uint8 in [4];
+  uint32 accum;
   uint i;
 
   if (fread (in, 1, bytes, fp) != bytes) {
@@ -1280,9 +1270,9 @@ static int ReadBin4 (FILE * fp, const char * filename, const ByteOrderT order, c
 
 // Read a binary value of the specified byte order from a file, storing it as
 // a 64-bit unsigned integer.
-static int ReadBin8 (FILE * fp, const char * filename, const ByteOrderT order, uint8 * out) {
-  uint1 in [8];
-  uint8 accum;
+static int ReadBin8 (FILE * fp, const char * filename, const ByteOrderT order, uint64 * out) {
+  uint8 in [8];
+  uint64 accum;
   uint i;
 
   if (fread (in, 1, 8, fp) != 8) {
@@ -1321,8 +1311,8 @@ static int WriteAscii (const char * out, FILE * fp, const char * filename) {
 
 // Write a binary value of the given byte order and byte size to a file,
 // loading it from a 32-bit unsigned integer.
-static int WriteBin4 (const ByteOrderT order, const uint bytes, const uint4 in, FILE * fp, const char * filename) {
-  uint1 out [4];
+static int WriteBin4 (const ByteOrderT order, const uint bytes, const uint32 in, FILE * fp, const char * filename) {
+  uint8 out [4];
   uint i;
 
   switch (order) {
@@ -1352,12 +1342,12 @@ static int WriteBin4 (const ByteOrderT order, const uint bytes, const uint4 in, 
  */
 static int ReadBinAsDouble (FILE * fp, const char * filename, const ByteOrderT order, const ElementTypeT type, const uint bytes, const int bits, double * out) {
   union {
-    uint4 ui;
-    int4 i;
+    uint32 ui;
+    int32 i;
     float f;
   } v4;
   union {
-    uint8 ui;
+    uint64 ui;
     double f;
   } v8;
 
@@ -1419,8 +1409,8 @@ static int ReadAsciiAsDouble (TokenReaderT * tr, const char * filename, const El
 // Read the RIFF/RIFX WAVE format chunk from a file, validating it against
 // the source parameters and data set metrics.
 static int ReadWaveFormat (FILE * fp, const ByteOrderT order, const uint hrirRate, SourceRefT * src) {
-  uint4 fourCC, chunkSize;
-  uint4 format, channels, rate, dummy, block, size, bits;
+  uint32 fourCC, chunkSize;
+  uint32 format, channels, rate, dummy, block, size, bits;
 
   chunkSize = 0;
   do {
@@ -1522,7 +1512,7 @@ static int ReadWaveData (FILE * fp, const SourceRefT * src, const ByteOrderT ord
 // Read the RIFF/RIFX WAVE list or data chunk, converting all elements to
 // doubles.
 static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT order, const uint n, double * hrir) {
-  uint4 fourCC, chunkSize, listSize, count;
+  uint32 fourCC, chunkSize, listSize, count;
   uint block, skip, offset, i;
   double lastSample;
 
@@ -1608,7 +1598,7 @@ static int ReadWaveList (FILE * fp, const SourceRefT * src, const ByteOrderT ord
 
 // Load a source HRIR from a RIFF/RIFX WAVE file.
 static int LoadWaveSource (FILE * fp, SourceRefT * src, const uint hrirRate, const uint n, double * hrir) {
-  uint4 fourCC, dummy;
+  uint32 fourCC, dummy;
   ByteOrderT order;
 
   if ((! ReadBin4 (fp, src -> mPath, BO_LITTLE, 4, & fourCC)) ||
@@ -2061,14 +2051,14 @@ static int StoreMhr (const HrirDataT * hData, const char * filename) {
   }
   if (! WriteAscii (MHR_FORMAT, fp, filename))
      return (0);
-  if (! WriteBin4 (BO_LITTLE, 4, (uint4) hData -> mIrRate, fp, filename))
+  if (! WriteBin4 (BO_LITTLE, 4, (uint32) hData -> mIrRate, fp, filename))
      return (0);
-  if (! WriteBin4 (BO_LITTLE, 1, (uint4) hData -> mIrPoints, fp, filename))
+  if (! WriteBin4 (BO_LITTLE, 1, (uint32) hData -> mIrPoints, fp, filename))
      return (0);
-  if (! WriteBin4 (BO_LITTLE, 1, (uint4) hData -> mEvCount, fp, filename))
+  if (! WriteBin4 (BO_LITTLE, 1, (uint32) hData -> mEvCount, fp, filename))
      return (0);
   for (e = 0; e < hData -> mEvCount; e ++) {
-      if (! WriteBin4 (BO_LITTLE, 1, (uint4) hData -> mAzCount [e], fp, filename))
+      if (! WriteBin4 (BO_LITTLE, 1, (uint32) hData -> mAzCount [e], fp, filename))
          return (0);
   }
   step = hData -> mIrSize;
@@ -2079,13 +2069,13 @@ static int StoreMhr (const HrirDataT * hData, const char * filename) {
       hpHist = 0;
       for (i = 0; i < n; i ++) {
           v = HpTpdfDither (32767.0 * hData -> mHrirs [j + i], & hpHist);
-          if (! WriteBin4 (BO_LITTLE, 2, (uint4) v, fp, filename))
+          if (! WriteBin4 (BO_LITTLE, 2, (uint32) v, fp, filename))
              return (0);
       }
   }
   for (j = 0; j < hData -> mIrCount; j ++) {
       v = (int) fmin (round (hData -> mIrRate * hData -> mHrtds [j]), MAX_HRTD);
-      if (! WriteBin4 (BO_LITTLE, 1, (uint4) v, fp, filename))
+      if (! WriteBin4 (BO_LITTLE, 1, (uint32) v, fp, filename))
          return (0);
   }
   fclose (fp);

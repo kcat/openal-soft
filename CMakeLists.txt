@@ -499,7 +499,9 @@ ENDIF()
 
 
 SET(COMMON_OBJS  common/atomic.c
+                 common/rwlock.c
                  common/threads.c
+                 common/uintmap.c
 )
 SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
                  OpenAL32/alBuffer.c

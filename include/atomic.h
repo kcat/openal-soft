@@ -5,30 +5,23 @@
 
 
 typedef void *volatile XchgPtr;
+typedef unsigned int RefCount;
 
 #if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) && !defined(__QNXNTO__)
-typedef unsigned int RefCount;
+
 inline RefCount IncrementRef(volatile RefCount *ptr)
 { return __sync_add_and_fetch(ptr, 1); }
 inline RefCount DecrementRef(volatile RefCount *ptr)
 { return __sync_sub_and_fetch(ptr, 1); }
 
 inline int ExchangeInt(volatile int *ptr, int newval)
-{
-    return __sync_lock_test_and_set(ptr, newval);
-}
+{ return __sync_lock_test_and_set(ptr, newval); }
 inline void *ExchangePtr(XchgPtr *ptr, void *newval)
-{
-    return __sync_lock_test_and_set(ptr, newval);
-}
+{ return __sync_lock_test_and_set(ptr, newval); }
 inline int CompExchangeInt(volatile int *ptr, int oldval, int newval)
-{
-    return __sync_val_compare_and_swap(ptr, oldval, newval);
-}
+{ return __sync_val_compare_and_swap(ptr, oldval, newval); }
 inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
-{
-    return __sync_val_compare_and_swap(ptr, oldval, newval);
-}
+{ return __sync_val_compare_and_swap(ptr, oldval, newval); }
 
 #elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
@@ -42,7 +35,6 @@ inline unsigned int xaddl(volatile unsigned int *dest, int incr)
     return ret;
 }
 
-typedef unsigned int RefCount;
 inline RefCount IncrementRef(volatile RefCount *ptr)
 { return xaddl(ptr, 1)+1; }
 inline RefCount DecrementRef(volatile RefCount *ptr)
@@ -102,11 +94,24 @@ inline void *CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-typedef LONG RefCount;
+static_assert(sizeof(LONG)==sizeof(RefCount), "sizeof LONG does not match sizeof RefCount");
+
 inline RefCount IncrementRef(volatile RefCount *ptr)
-{ return InterlockedIncrement(ptr); }
+{
+    union {
+        volatile RefCount *u;
+        volatile LONG *l;
+    } u = { ptr };
+    return InterlockedIncrement(u.l);
+}
 inline RefCount DecrementRef(volatile RefCount *ptr)
-{ return InterlockedDecrement(ptr); }
+{
+    union {
+        volatile RefCount *u;
+        volatile LONG *l;
+    } u = { ptr };
+    return InterlockedDecrement(u.l);
+}
 
 static_assert(sizeof(LONG)==sizeof(int), "sizeof LONG does not match sizeof int");
 
@@ -137,7 +142,6 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 
 #else
 #error "No atomic functions available on this platform!"
-typedef unsigned int RefCount;
 #endif
 
 #endif /* AL_ATOMIC_H */

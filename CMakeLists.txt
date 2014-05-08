@@ -227,6 +227,15 @@ ELSE()
         ADD_DEFINITIONS(-Werror)
     ENDIF()
 
+    # Force enable PIC if available. The static common library will be linked
+    # into the dynamic openal library, which requires all its code to be
+    # position-independent, and CMake doesn't automatically enable PIC for
+    # static library targets (Windows code is always position-independent).
+    CHECK_C_COMPILER_FLAG(-fPIC HAVE_FPIC_SWITCH)
+    IF(HAVE_FPIC_SWITCH AND NOT WIN32)
+        ADD_DEFINITIONS(-fPIC)
+    ENDIF()
+
     SET(CMAKE_C_FLAGS_RELWITHDEBINFO "-g -O2 -D_DEBUG" CACHE STRING
         "Flags used by the compiler during Release with Debug Info builds."
         FORCE)
@@ -930,8 +939,11 @@ CONFIGURE_FILE(
     "${OpenAL_BINARY_DIR}/openal.pc"
     @ONLY)
 
-# Build a library
-ADD_LIBRARY(${LIBNAME} ${LIBTYPE} ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS})
+# Build a common library with reusable helpers
+ADD_LIBRARY(common STATIC ${COMMON_OBJS})
+
+# Build main library
+ADD_LIBRARY(${LIBNAME} ${LIBTYPE} ${OPENAL_OBJS} ${ALC_OBJS})
 SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES)
 IF(WIN32 AND ALSOFT_NO_UID_DEFS)
     SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS AL_NO_UID_DEFS)
@@ -970,7 +982,7 @@ IF(WIN32 AND NOT LIBTYPE STREQUAL "STATIC")
     SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES PREFIX "")
 ENDIF()
 
-TARGET_LINK_LIBRARIES(${LIBNAME} ${EXTRA_LIBS})
+TARGET_LINK_LIBRARIES(${LIBNAME} common ${EXTRA_LIBS})
 
 # Add an install target here
 INSTALL(TARGETS ${LIBNAME}

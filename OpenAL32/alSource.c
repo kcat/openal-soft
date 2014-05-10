@@ -2288,6 +2288,9 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->SourceType = AL_UNDETERMINED;
     Source->Offset = -1.0;
 
+    Source->queue = NULL;
+    Source->current_buffer = NULL;
+
     Source->DirectGain = 1.0f;
     Source->DirectGainHF = 1.0f;
     for(i = 0;i < MAX_SENDS;i++)

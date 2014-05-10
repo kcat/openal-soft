@@ -152,9 +152,9 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
 static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp prop, const ALint *values);
 static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp prop, const ALint64SOFT *values);
 
-static ALboolean GetSourcedv(const ALsource *Source, ALCcontext *Context, SrcFloatProp prop, ALdouble *values);
-static ALboolean GetSourceiv(const ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint *values);
-static ALboolean GetSourcei64v(const ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint64 *values);
+static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp prop, ALdouble *values);
+static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint *values);
+static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint64 *values);
 
 static ALint FloatValsByProp(ALenum prop)
 {
@@ -572,10 +572,10 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
         case AL_BUFFER:
             CHECKVAL(*values == 0 || (buffer=LookupBuffer(device, *values)) != NULL);
 
-            LockContext(Context);
+            WriteLock(&Source->queue_lock);
             if(!(Source->state == AL_STOPPED || Source->state == AL_INITIAL))
             {
-                UnlockContext(Context);
+                WriteUnlock(&Source->queue_lock);
                 SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
             }
 
@@ -606,6 +606,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 oldlist = ExchangePtr((XchgPtr*)&Source->queue, NULL);
             }
             Source->current_buffer = Source->queue;
+            WriteUnlock(&Source->queue_lock);
 
             /* Delete all elements in the previous queue */
             while(oldlist != NULL)
@@ -617,7 +618,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                     DecrementRef(&temp->buffer->ref);
                 free(temp);
             }
-            UnlockContext(Context);
             return AL_TRUE;
 
         case siSourceState:
@@ -853,7 +853,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp
 #undef CHECKVAL
 
 
-static ALboolean GetSourcedv(const ALsource *Source, ALCcontext *Context, SrcFloatProp prop, ALdouble *values)
+static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp prop, ALdouble *values)
 {
     ALdouble offsets[2];
     ALdouble updateLen;
@@ -905,11 +905,11 @@ static ALboolean GetSourcedv(const ALsource *Source, ALCcontext *Context, SrcFlo
         case AL_SEC_OFFSET:
         case AL_SAMPLE_OFFSET:
         case AL_BYTE_OFFSET:
+            ReadLock(&Source->queue_lock);
             LockContext(Context);
-            updateLen = (ALdouble)Context->Device->UpdateSize /
-                        Context->Device->Frequency;
-            GetSourceOffsets(Source, prop, offsets, updateLen);
+            GetSourceOffsets(Source, prop, offsets, 0.0);
             UnlockContext(Context);
+            ReadUnlock(&Source->queue_lock);
             *values = offsets[0];
             return AL_TRUE;
 
@@ -931,19 +931,23 @@ static ALboolean GetSourcedv(const ALsource *Source, ALCcontext *Context, SrcFlo
 
         case AL_SAMPLE_RW_OFFSETS_SOFT:
         case AL_BYTE_RW_OFFSETS_SOFT:
+            ReadLock(&Source->queue_lock);
             LockContext(Context);
             updateLen = (ALdouble)Context->Device->UpdateSize /
                         Context->Device->Frequency;
             GetSourceOffsets(Source, prop, values, updateLen);
             UnlockContext(Context);
+            ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
+            ReadLock(&Source->queue_lock);
             LockContext(Context);
             values[0] = GetSourceSecOffset(Source);
             values[1] = (ALdouble)ALCdevice_GetLatency(Context->Device) /
                         1000000000.0;
             UnlockContext(Context);
+            ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_POSITION:
@@ -991,7 +995,7 @@ static ALboolean GetSourcedv(const ALsource *Source, ALCcontext *Context, SrcFlo
     SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_ENUM, AL_FALSE);
 }
 
-static ALboolean GetSourceiv(const ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint *values)
+static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint *values)
 {
     ALbufferlistitem *BufferList;
     ALdouble dvals[3];
@@ -1008,11 +1012,11 @@ static ALboolean GetSourceiv(const ALsource *Source, ALCcontext *Context, SrcInt
             return AL_TRUE;
 
         case AL_BUFFER:
-            LockContext(Context);
+            ReadLock(&Source->queue_lock);
             BufferList = (Source->SourceType == AL_STATIC) ? Source->queue :
                                                              Source->current_buffer;
             *values = (BufferList && BufferList->buffer) ? BufferList->buffer->id : 0;
-            UnlockContext(Context);
+            ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_SOURCE_STATE:
@@ -1020,7 +1024,7 @@ static ALboolean GetSourceiv(const ALsource *Source, ALCcontext *Context, SrcInt
             return AL_TRUE;
 
         case AL_BUFFERS_QUEUED:
-            LockContext(Context);
+            ReadLock(&Source->queue_lock);
             if(!(BufferList=Source->queue))
                 *values = 0;
             else
@@ -1031,11 +1035,11 @@ static ALboolean GetSourceiv(const ALsource *Source, ALCcontext *Context, SrcInt
                 } while((BufferList=BufferList->next) != NULL);
                 *values = count;
             }
-            UnlockContext(Context);
+            ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_BUFFERS_PROCESSED:
-            LockContext(Context);
+            ReadLock(&Source->queue_lock);
             if(Source->Looping || Source->SourceType != AL_STREAMING)
             {
                 /* Buffers on a looping source are in a perpetual state of
@@ -1053,7 +1057,7 @@ static ALboolean GetSourceiv(const ALsource *Source, ALCcontext *Context, SrcInt
                 }
                 *values = played;
             }
-            UnlockContext(Context);
+            ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_SOURCE_TYPE:
@@ -1127,7 +1131,7 @@ static ALboolean GetSourceiv(const ALsource *Source, ALCcontext *Context, SrcInt
     SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_ENUM, AL_FALSE);
 }
 
-static ALboolean GetSourcei64v(const ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint64 *values)
+static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint64 *values)
 {
     ALdouble dvals[3];
     ALint ivals[3];
@@ -1136,10 +1140,12 @@ static ALboolean GetSourcei64v(const ALsource *Source, ALCcontext *Context, SrcI
     switch(prop)
     {
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+            ReadLock(&Source->queue_lock);
             LockContext(Context);
             values[0] = GetSourceOffset(Source);
             values[1] = ALCdevice_GetLatency(Context->Device);
             UnlockContext(Context);
+            ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_MAX_DISTANCE:
@@ -2064,10 +2070,10 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     if((source=LookupSource(context, src)) == NULL)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
 
-    LockContext(context);
+    WriteLock(&source->queue_lock);
     if(source->SourceType == AL_STATIC)
     {
-        UnlockContext(context);
+        WriteUnlock(&source->queue_lock);
         /* Can't queue on a Static Source */
         SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     }
@@ -2084,12 +2090,14 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         BufferList = BufferList->next;
     }
 
+    LockContext(context);
     for(i = 0;i < nb;i++)
     {
         ALbuffer *buffer = NULL;
         if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
         {
             UnlockContext(context);
+            WriteUnlock(&source->queue_lock);
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
         }
 
@@ -2126,6 +2134,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         {
             ReadUnlock(&buffer->lock);
             UnlockContext(context);
+            WriteUnlock(&source->queue_lock);
             SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
         }
         ReadUnlock(&buffer->lock);
@@ -2151,6 +2160,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     BufferListStart = NULL;
 
     UnlockContext(context);
+    WriteUnlock(&source->queue_lock);
 
 done:
     while(BufferListStart)
@@ -2185,7 +2195,8 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     if((source=LookupSource(context, src)) == NULL)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
 
-    LockContext(context);
+    WriteLock(&source->queue_lock);
+    /* Find the new buffer queue head */
     BufferList = source->queue;
     for(i = 0;i < nb && BufferList;i++)
     {
@@ -2195,29 +2206,37 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     }
     if(source->Looping || source->SourceType != AL_STREAMING || i != nb)
     {
-        UnlockContext(context);
+        WriteUnlock(&source->queue_lock);
         /* Trying to unqueue pending buffers, or a buffer that wasn't queued. */
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     }
 
-    for(i = 0;i < nb;i++)
+    /* Swap it, and cut the new head from the old. */
+    BufferList = ExchangePtr((XchgPtr*)&source->queue, BufferList);
+    if(source->queue)
     {
-        BufferList = source->queue;
-        source->queue = BufferList->next;
+        LockContext(context);
+        source->queue->prev->next = NULL;
+        source->queue->prev = NULL;
+        UnlockContext(context);
+    }
+    WriteUnlock(&source->queue_lock);
 
-        if(BufferList->buffer)
+    for(i = 0;BufferList != NULL;i++)
+    {
+        ALbufferlistitem *next = BufferList->next;
+
+        if(!BufferList->buffer)
+            buffers[i] = 0;
+        else
         {
             buffers[i] = BufferList->buffer->id;
             DecrementRef(&BufferList->buffer->ref);
         }
-        else
-            buffers[i] = 0;
 
         free(BufferList);
+        BufferList = next;
     }
-    if(source->queue)
-        source->queue->prev = NULL;
-    UnlockContext(context);
 
 done:
     ALCcontext_DecRef(context);
@@ -2227,6 +2246,8 @@ done:
 static ALvoid InitSourceParams(ALsource *Source)
 {
     ALuint i;
+
+    RWLockInit(&Source->queue_lock);
 
     Source->InnerAngle = 360.0f;
     Source->OuterAngle = 360.0f;
@@ -2285,6 +2306,7 @@ static ALvoid InitSourceParams(ALsource *Source)
  */
 ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 {
+    ReadLock(&Source->queue_lock);
     if(state == AL_PLAYING)
     {
         ALCdevice *device = Context->Device;
@@ -2320,10 +2342,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         /* If there's nothing to play, or device is disconnected, go right to
          * stopped */
         if(!BufferList || !device->Connected)
-        {
-            SetSourceState(Source, Context, AL_STOPPED);
-            return;
-        }
+            goto do_stop;
 
         for(j = 0;j < Context->ActiveSourceCount;j++)
         {
@@ -2381,6 +2400,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
     }
     else if(state == AL_STOPPED)
     {
+    do_stop:
         if(Source->state != AL_INITIAL)
         {
             Source->state = AL_STOPPED;
@@ -2399,6 +2419,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         }
         Source->Offset = -1.0;
     }
+    ReadUnlock(&Source->queue_lock);
 }
 
 /* GetSourceOffset

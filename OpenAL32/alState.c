@@ -784,7 +784,11 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
 
             if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
                Source->Offset >= 0.0)
+            {
+                ReadLock(&Source->queue_lock);
                 ApplyOffset(Source);
+                ReadUnlock(&Source->queue_lock);
+            }
 
             new_state = ExchangeInt(&Source->new_state, AL_NONE);
             if(new_state)

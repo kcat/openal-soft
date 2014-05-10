@@ -2053,7 +2053,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     ALCcontext *context;
     ALsource *source;
     ALsizei i;
-    ALbufferlistitem *BufferListStart = NULL;
+    ALbufferlistitem *BufferListStart;
     ALbufferlistitem *BufferList;
     ALbuffer *BufferFmt = NULL;
 
@@ -2090,15 +2090,15 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         BufferList = BufferList->next;
     }
 
-    LockContext(context);
+    BufferListStart = NULL;
+    BufferList = NULL;
     for(i = 0;i < nb;i++)
     {
         ALbuffer *buffer = NULL;
         if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
         {
-            UnlockContext(context);
             WriteUnlock(&source->queue_lock);
-            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, buffer_error);
         }
 
         if(!BufferListStart)
@@ -2118,9 +2118,13 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
             BufferList = BufferList->next;
         }
         if(!buffer) continue;
+
+        /* Hold a read lock on each buffer being queued while checking all
+         * provided buffers. This is done so other threads don't see an extra
+         * reference on some buffers if this operation ends up failing. */
+        ReadLock(&buffer->lock);
         IncrementRef(&buffer->ref);
 
-        ReadLock(&buffer->lock);
         if(BufferFmt == NULL)
         {
             BufferFmt = buffer;
@@ -2132,19 +2136,37 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
                 BufferFmt->OriginalChannels != buffer->OriginalChannels ||
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
-            ReadUnlock(&buffer->lock);
-            UnlockContext(context);
             WriteUnlock(&source->queue_lock);
-            SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+            SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, buffer_error);
+
+        buffer_error:
+            /* A buffer failed (invalid ID or format), so unlock and release
+             * each buffer we had. */
+            while(BufferList != NULL)
+            {
+                ALbufferlistitem *prev = BufferList->prev;
+                if((buffer=BufferList->buffer) != NULL)
+                {
+                    DecrementRef(&buffer->ref);
+                    ReadUnlock(&buffer->lock);
+                }
+                free(BufferList);
+                BufferList = prev;
+            }
+            goto done;
         }
-        ReadUnlock(&buffer->lock);
+    }
+    /* All buffers good, unlock them now. */
+    while(BufferList != NULL)
+    {
+        ALbuffer *buffer = BufferList->buffer;
+        if(buffer) ReadUnlock(&buffer->lock);
+        BufferList = BufferList->prev;
     }
 
     /* Source is now streaming */
     source->SourceType = AL_STREAMING;
 
-    if(!source->current_buffer)
-        source->current_buffer = BufferListStart;
     if(!source->queue)
         source->queue = BufferListStart;
     else
@@ -2157,22 +2179,10 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         BufferListStart->prev = BufferList;
         BufferList->next = BufferListStart;
     }
-    BufferListStart = NULL;
-
-    UnlockContext(context);
+    CompExchangePtr((XchgPtr*)&source->current_buffer, NULL, BufferListStart);
     WriteUnlock(&source->queue_lock);
 
 done:
-    while(BufferListStart)
-    {
-        BufferList = BufferListStart;
-        BufferListStart = BufferList->next;
-
-        if(BufferList->buffer)
-            DecrementRef(&BufferList->buffer->ref);
-        free(BufferList);
-    }
-
     ALCcontext_DecRef(context);
 }
 

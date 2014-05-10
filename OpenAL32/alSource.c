@@ -2462,7 +2462,7 @@ static ALint64 GetSourceOffset(const ALsource *Source)
 static ALdouble GetSourceSecOffset(const ALsource *Source)
 {
     const ALbufferlistitem *BufferList;
-    const ALbuffer *Buffer;
+    const ALbuffer *Buffer = NULL;
     ALuint64 readPos;
 
     if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
@@ -2519,8 +2519,8 @@ static ALvoid GetSourceOffsets(const ALsource *Source, ALenum name, ALdouble *of
 
     /* NOTE: This is the offset into the *current* buffer, so add the length of
      * any played buffers */
-    readPos = Source->position;
     totalBufferLen = 0;
+    readPos = Source->position;
     BufferList = Source->queue;
     while(BufferList != NULL)
     {
@@ -2528,9 +2528,9 @@ static ALvoid GetSourceOffsets(const ALsource *Source, ALenum name, ALdouble *of
         readFin = readFin || (BufferList == Source->current_buffer);
         if((buffer=BufferList->buffer) != NULL)
         {
+            if(!Buffer) Buffer = buffer;
             totalBufferLen += buffer->SampleLen;
             if(!readFin) readPos += buffer->SampleLen;
-            if(!Buffer) Buffer = buffer;
         }
         BufferList = BufferList->next;
     }

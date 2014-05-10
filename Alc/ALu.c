@@ -277,7 +277,7 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     };
 
     ALCdevice *Device = ALContext->Device;
-    ALsource *ALSource = src->Source;
+    const ALsource *ALSource = src->Source;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
     enum FmtChannels Channels;
@@ -600,7 +600,7 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 {
     ALCdevice *Device = ALContext->Device;
-    ALsource *ALSource = src->Source;
+    const ALsource *ALSource = src->Source;
     ALfloat Velocity[3],Direction[3],Position[3],SourceToListener[3];
     ALfloat InnerAngle,OuterAngle,Angle,Distance,ClampedDist;
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;

@@ -583,9 +583,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
             {
                 ALbufferlistitem *BufferListItem;
 
-                /* Source is now Static */
-                Source->SourceType = AL_STATIC;
-
                 /* Add the selected buffer to a one-item queue */
                 BufferListItem = malloc(sizeof(ALbufferlistitem));
                 BufferListItem->buffer = buffer;
@@ -593,8 +590,9 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 BufferListItem->prev = NULL;
                 IncrementRef(&buffer->ref);
 
+                /* Source is now Static */
+                Source->SourceType = AL_STATIC;
                 oldlist = ExchangePtr((XchgPtr*)&Source->queue, BufferListItem);
-                Source->BuffersInQueue = 1;
 
                 ReadLock(&buffer->lock);
                 Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
@@ -606,7 +604,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 /* Source is now Undetermined */
                 Source->SourceType = AL_UNDETERMINED;
                 oldlist = ExchangePtr((XchgPtr*)&Source->queue, NULL);
-                Source->BuffersInQueue = 0;
             }
             Source->current_buffer = Source->queue;
 
@@ -1023,7 +1020,18 @@ static ALboolean GetSourceiv(const ALsource *Source, ALCcontext *Context, SrcInt
             return AL_TRUE;
 
         case AL_BUFFERS_QUEUED:
-            *values = Source->BuffersInQueue;
+            LockContext(Context);
+            if(!(BufferList=Source->queue))
+                *values = 0;
+            else
+            {
+                ALsizei count = 0;
+                do {
+                    ++count;
+                } while((BufferList=BufferList->next) != NULL);
+                *values = count;
+            }
+            UnlockContext(Context);
             return AL_TRUE;
 
         case AL_BUFFERS_PROCESSED:
@@ -2142,8 +2150,6 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     }
     BufferListStart = NULL;
 
-    source->BuffersInQueue += nb;
-
     UnlockContext(context);
 
 done:
@@ -2198,7 +2204,6 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     {
         BufferList = source->queue;
         source->queue = BufferList->next;
-        source->BuffersInQueue--;
 
         if(BufferList->buffer)
         {

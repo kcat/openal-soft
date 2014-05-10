@@ -1324,7 +1324,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
             if(source->state == AL_PLAYING)
             {
                 source->state = AL_STOPPED;
-                source->BuffersPlayed = source->BuffersInQueue;
+                source->current_buffer = NULL;
                 source->position = 0;
                 source->position_fraction = 0;
             }

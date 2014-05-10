@@ -98,7 +98,6 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
     ALsource *Source = src->Source;
     ALbufferlistitem *BufferListItem;
     ALuint DataPosInt, DataPosFrac;
-    ALuint BuffersPlayed;
     ALboolean Looping;
     ALuint increment;
     enum Resampler Resampler;
@@ -110,20 +109,17 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
     ALuint chan, j;
 
     /* Get source info */
-    State         = Source->state;
-    BuffersPlayed = Source->BuffersPlayed;
-    DataPosInt    = Source->position;
-    DataPosFrac   = Source->position_fraction;
-    Looping       = Source->Looping;
-    increment     = src->Step;
-    Resampler     = (increment==FRACTIONONE) ? PointResampler : Source->Resampler;
-    NumChannels   = Source->NumChannels;
-    SampleSize    = Source->SampleSize;
+    State          = Source->state;
+    BufferListItem = Source->current_buffer;
+    DataPosInt     = Source->position;
+    DataPosFrac    = Source->position_fraction;
+    Looping        = Source->Looping;
+    increment      = src->Step;
+    Resampler      = (increment==FRACTIONONE) ? PointResampler : Source->Resampler;
+    NumChannels    = Source->NumChannels;
+    SampleSize     = Source->SampleSize;
 
     /* Get current buffer queue item */
-    BufferListItem = Source->queue;
-    for(j = 0;j < BuffersPlayed;j++)
-        BufferListItem = BufferListItem->next;
 
     OutPos = 0;
     do {
@@ -379,20 +375,13 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                 break;
 
             if(BufferListItem->next)
-            {
                 BufferListItem = BufferListItem->next;
-                BuffersPlayed++;
-            }
             else if(Looping)
-            {
                 BufferListItem = Source->queue;
-                BuffersPlayed = 0;
-            }
             else
             {
                 State = AL_STOPPED;
-                BufferListItem = Source->queue;
-                BuffersPlayed = Source->BuffersInQueue;
+                BufferListItem = NULL;
                 DataPosInt = 0;
                 DataPosFrac = 0;
                 break;
@@ -404,7 +393,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 
     /* Update source info */
     Source->state             = State;
-    Source->BuffersPlayed     = BuffersPlayed;
+    Source->current_buffer    = BufferListItem;
     Source->position          = DataPosInt;
     Source->position_fraction = DataPosFrac;
     src->Direct.Offset += OutPos;

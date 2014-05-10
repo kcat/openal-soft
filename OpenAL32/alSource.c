@@ -579,9 +579,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
             }
 
-            Source->BuffersInQueue = 0;
-            Source->BuffersPlayed = 0;
-
             if(buffer != NULL)
             {
                 ALbufferlistitem *BufferListItem;
@@ -609,7 +606,9 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 /* Source is now Undetermined */
                 Source->SourceType = AL_UNDETERMINED;
                 oldlist = ExchangePtr((XchgPtr*)&Source->queue, NULL);
+                Source->BuffersInQueue = 0;
             }
+            Source->current_buffer = Source->queue;
 
             /* Delete all elements in the previous queue */
             while(oldlist != NULL)
@@ -1013,18 +1012,9 @@ static ALboolean GetSourceiv(const ALsource *Source, ALCcontext *Context, SrcInt
 
         case AL_BUFFER:
             LockContext(Context);
-            BufferList = Source->queue;
-            if(Source->SourceType != AL_STATIC)
-            {
-                ALuint i = Source->BuffersPlayed;
-                while(i > 0)
-                {
-                    BufferList = BufferList->next;
-                    i--;
-                }
-            }
-            *values = ((BufferList && BufferList->buffer) ?
-                       BufferList->buffer->id : 0);
+            BufferList = (Source->SourceType == AL_STATIC) ? Source->queue :
+                                                             Source->current_buffer;
+            *values = (BufferList && BufferList->buffer) ? BufferList->buffer->id : 0;
             UnlockContext(Context);
             return AL_TRUE;
 
@@ -1045,7 +1035,16 @@ static ALboolean GetSourceiv(const ALsource *Source, ALCcontext *Context, SrcInt
                 *values = 0;
             }
             else
-                *values = Source->BuffersPlayed;
+            {
+                const ALbufferlistitem *BufferList = Source->queue;
+                ALsizei played = 0;
+                while(BufferList && BufferList != Source->current_buffer)
+                {
+                    played++;
+                    BufferList = BufferList->next;
+                }
+                *values = played;
+            }
             UnlockContext(Context);
             return AL_TRUE;
 
@@ -2127,7 +2126,9 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     /* Source is now streaming */
     source->SourceType = AL_STREAMING;
 
-    if(source->queue == NULL)
+    if(!source->current_buffer)
+        source->current_buffer = BufferListStart;
+    if(!source->queue)
         source->queue = BufferListStart;
     else
     {
@@ -2163,8 +2164,8 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
 {
     ALCcontext *context;
     ALsource *source;
-    ALsizei i;
     ALbufferlistitem *BufferList;
+    ALsizei i;
 
     if(nb == 0)
         return;
@@ -2179,8 +2180,14 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
 
     LockContext(context);
-    if(source->Looping || source->SourceType != AL_STREAMING ||
-       (ALuint)nb > source->BuffersPlayed)
+    BufferList = source->queue;
+    for(i = 0;i < nb && BufferList;i++)
+    {
+        if(BufferList == source->current_buffer)
+            break;
+        BufferList = BufferList->next;
+    }
+    if(source->Looping || source->SourceType != AL_STREAMING || i != nb)
     {
         UnlockContext(context);
         /* Trying to unqueue pending buffers, or a buffer that wasn't queued. */
@@ -2192,7 +2199,6 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
         BufferList = source->queue;
         source->queue = BufferList->next;
         source->BuffersInQueue--;
-        source->BuffersPlayed--;
 
         if(BufferList->buffer)
         {
@@ -2286,7 +2292,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         BufferList = Source->queue;
         while(BufferList)
         {
-            if(BufferList->buffer != NULL && BufferList->buffer->SampleLen)
+            ALbuffer *buffer;
+            if((buffer=BufferList->buffer) != NULL && buffer->SampleLen > 0)
                 break;
             BufferList = BufferList->next;
         }
@@ -2296,7 +2303,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->state = AL_PLAYING;
             Source->position = 0;
             Source->position_fraction = 0;
-            Source->BuffersPlayed = 0;
+            Source->current_buffer = Source->queue;
         }
         else
             Source->state = AL_PLAYING;
@@ -2372,7 +2379,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(Source->state != AL_INITIAL)
         {
             Source->state = AL_STOPPED;
-            Source->BuffersPlayed = Source->BuffersInQueue;
+            Source->current_buffer = NULL;
         }
         Source->Offset = -1.0;
     }
@@ -2383,7 +2390,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->state = AL_INITIAL;
             Source->position = 0;
             Source->position_fraction = 0;
-            Source->BuffersPlayed = 0;
+            Source->current_buffer = Source->queue;
         }
         Source->Offset = -1.0;
     }
@@ -2399,7 +2406,6 @@ static ALint64 GetSourceOffset(const ALsource *Source)
 {
     const ALbufferlistitem *BufferList;
     ALuint64 readPos;
-    ALuint i;
 
     if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
         return 0;
@@ -2409,7 +2415,7 @@ static ALint64 GetSourceOffset(const ALsource *Source)
     readPos  = (ALuint64)Source->position << 32;
     readPos |= (ALuint64)Source->position_fraction << (32-FRACTIONBITS);
     BufferList = Source->queue;
-    for(i = 0;i < Source->BuffersPlayed && BufferList;i++)
+    while(BufferList && BufferList != Source->current_buffer)
     {
         if(BufferList->buffer)
             readPos += (ALuint64)BufferList->buffer->SampleLen << 32;
@@ -2427,22 +2433,10 @@ static ALint64 GetSourceOffset(const ALsource *Source)
 static ALdouble GetSourceSecOffset(const ALsource *Source)
 {
     const ALbufferlistitem *BufferList;
-    const ALbuffer *Buffer = NULL;
+    const ALbuffer *Buffer;
     ALuint64 readPos;
-    ALuint i;
 
-    BufferList = Source->queue;
-    while(BufferList)
-    {
-        if(BufferList->buffer)
-        {
-            Buffer = BufferList->buffer;
-            break;
-        }
-        BufferList = BufferList->next;
-    }
-
-    if((Source->state != AL_PLAYING && Source->state != AL_PAUSED) || !Buffer)
+    if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
         return 0.0;
 
     /* NOTE: This is the offset into the *current* buffer, so add the length of
@@ -2450,10 +2444,20 @@ static ALdouble GetSourceSecOffset(const ALsource *Source)
     readPos  = (ALuint64)Source->position << FRACTIONBITS;
     readPos |= (ALuint64)Source->position_fraction;
     BufferList = Source->queue;
-    for(i = 0;i < Source->BuffersPlayed && BufferList;i++)
+    while(BufferList && BufferList != Source->current_buffer)
     {
-        if(BufferList->buffer)
-            readPos += (ALuint64)BufferList->buffer->SampleLen << FRACTIONBITS;
+        const ALbuffer *buffer = BufferList->buffer;
+        if(buffer != NULL)
+        {
+            if(!Buffer) Buffer = buffer;
+            readPos += (ALuint64)buffer->SampleLen << FRACTIONBITS;
+        }
+        BufferList = BufferList->next;
+    }
+
+    while(BufferList && !Buffer)
+    {
+        Buffer = BufferList->buffer;
         BufferList = BufferList->next;
     }
 
@@ -2469,24 +2473,12 @@ static ALdouble GetSourceSecOffset(const ALsource *Source)
 static ALvoid GetSourceOffsets(const ALsource *Source, ALenum name, ALdouble *offset, ALdouble updateLen)
 {
     const ALbufferlistitem *BufferList;
-    const ALbuffer         *Buffer = NULL;
+    const ALbuffer *Buffer = NULL;
+    ALboolean readFin = AL_FALSE;
     ALuint readPos, writePos;
     ALuint totalBufferLen;
-    ALuint i;
 
-    // Find the first valid Buffer in the Queue
-    BufferList = Source->queue;
-    while(BufferList)
-    {
-        if(BufferList->buffer)
-        {
-            Buffer = BufferList->buffer;
-            break;
-        }
-        BufferList = BufferList->next;
-    }
-
-    if((Source->state != AL_PLAYING && Source->state != AL_PAUSED) || !Buffer)
+    if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
     {
         offset[0] = 0.0;
         offset[1] = 0.0;
@@ -2501,13 +2493,15 @@ static ALvoid GetSourceOffsets(const ALsource *Source, ALenum name, ALdouble *of
     readPos = Source->position;
     totalBufferLen = 0;
     BufferList = Source->queue;
-    for(i = 0;BufferList;i++)
+    while(BufferList != NULL)
     {
-        if(BufferList->buffer)
+        const ALbuffer *buffer;
+        readFin = readFin || (BufferList == Source->current_buffer);
+        if((buffer=BufferList->buffer) != NULL)
         {
-            if(i < Source->BuffersPlayed)
-                readPos += BufferList->buffer->SampleLen;
-            totalBufferLen += BufferList->buffer->SampleLen;
+            totalBufferLen += buffer->SampleLen;
+            if(!readFin) readPos += buffer->SampleLen;
+            if(!Buffer) Buffer = buffer;
         }
         BufferList = BufferList->next;
     }
@@ -2597,10 +2591,9 @@ static ALvoid GetSourceOffsets(const ALsource *Source, ALenum name, ALdouble *of
  */
 ALboolean ApplyOffset(ALsource *Source)
 {
-    const ALbufferlistitem *BufferList;
-    const ALbuffer         *Buffer;
+    ALbufferlistitem *BufferList;
+    const ALbuffer *Buffer;
     ALint bufferLen, totalBufferLen;
-    ALint buffersPlayed;
     ALint offset;
 
     /* Get sample frame offset */
@@ -2608,24 +2601,17 @@ ALboolean ApplyOffset(ALsource *Source)
     if(offset == -1)
         return AL_FALSE;
 
-    buffersPlayed = 0;
     totalBufferLen = 0;
-
     BufferList = Source->queue;
-    while(BufferList)
+    while(BufferList && totalBufferLen <= offset)
     {
         Buffer = BufferList->buffer;
         bufferLen = Buffer ? Buffer->SampleLen : 0;
 
-        if(bufferLen <= offset-totalBufferLen)
-        {
-            /* Offset is past this buffer so increment to the next buffer */
-            buffersPlayed++;
-        }
-        else if(totalBufferLen <= offset)
+        if(bufferLen > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
-            Source->BuffersPlayed = buffersPlayed;
+            Source->current_buffer = BufferList;
 
             Source->position = offset - totalBufferLen;
             Source->position_fraction = 0;

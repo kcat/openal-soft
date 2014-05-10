@@ -255,7 +255,15 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                     pos = BufferPrePadding - DataPosInt;
                     while(pos > 0)
                     {
-                        if(!tmpiter->prev && !Looping)
+                        ALbufferlistitem *prev;
+                        if((prev=tmpiter->prev) != NULL)
+                            tmpiter = prev;
+                        else if(Looping)
+                        {
+                            while(tmpiter->next)
+                                tmpiter = tmpiter->next;
+                        }
+                        else
                         {
                             ALuint DataSize = minu(SrcBufferSize - SrcDataSize, pos);
 
@@ -264,14 +272,6 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 
                             pos = 0;
                             break;
-                        }
-
-                        if(tmpiter->prev)
-                            tmpiter = tmpiter->prev;
-                        else
-                        {
-                            while(tmpiter->next)
-                                tmpiter = tmpiter->next;
                         }
 
                         if(tmpiter->buffer)

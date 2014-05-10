@@ -96,8 +96,8 @@ typedef struct ALsource {
     ALuint position_fraction;
 
     /** Source Buffer Queue info. */
-    ALbufferlistitem *queue;
-    ALbufferlistitem *current_buffer;
+    ALbufferlistitem *volatile queue;
+    ALbufferlistitem *volatile current_buffer;
     RWLock queue_lock;
 
     /** Current buffer sample info. */

@@ -1118,11 +1118,10 @@ static inline ALubyte aluF2UB(ALfloat val)
 { return aluF2B(val)+128; }
 
 #define DECL_TEMPLATE(T, func)                                                \
-static int Write_##T(ALCdevice *device, T *restrict buffer,                   \
-                     ALuint SamplesToDo)                                      \
+static void Write_##T(ALCdevice *device, ALvoid **buffer, ALuint SamplesToDo) \
 {                                                                             \
     ALfloat (*restrict DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
-    ALuint numchans = ChannelsFromDevFmt(device->FmtChans);                   \
+    const ALuint numchans = ChannelsFromDevFmt(device->FmtChans);             \
     const ALuint *offsets = device->ChannelOffsets;                           \
     ALuint i, j;                                                              \
                                                                               \
@@ -1133,11 +1132,11 @@ static int Write_##T(ALCdevice *device, T *restrict buffer,                   \
         if(offsets[j] == INVALID_OFFSET)                                      \
             continue;                                                         \
                                                                               \
-        out = buffer + offsets[j];                                            \
+        out = (T*)(*buffer) + offsets[j];                                     \
         for(i = 0;i < SamplesToDo;i++)                                        \
             out[i*numchans] = func(DryBuffer[j][i]);                          \
     }                                                                         \
-    return SamplesToDo*numchans*sizeof(T);                                    \
+    *buffer = (char*)(*buffer) + SamplesToDo*numchans*sizeof(T);              \
 }
 
 DECL_TEMPLATE(ALfloat, aluF2F)
@@ -1268,33 +1267,30 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
         if(buffer)
         {
-            int bytes = 0;
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    bytes = Write_ALbyte(device, buffer, SamplesToDo);
+                    Write_ALbyte(device, &buffer, SamplesToDo);
                     break;
                 case DevFmtUByte:
-                    bytes = Write_ALubyte(device, buffer, SamplesToDo);
+                    Write_ALubyte(device, &buffer, SamplesToDo);
                     break;
                 case DevFmtShort:
-                    bytes = Write_ALshort(device, buffer, SamplesToDo);
+                    Write_ALshort(device, &buffer, SamplesToDo);
                     break;
                 case DevFmtUShort:
-                    bytes = Write_ALushort(device, buffer, SamplesToDo);
+                    Write_ALushort(device, &buffer, SamplesToDo);
                     break;
                 case DevFmtInt:
-                    bytes = Write_ALint(device, buffer, SamplesToDo);
+                    Write_ALint(device, &buffer, SamplesToDo);
                     break;
                 case DevFmtUInt:
-                    bytes = Write_ALuint(device, buffer, SamplesToDo);
+                    Write_ALuint(device, &buffer, SamplesToDo);
                     break;
                 case DevFmtFloat:
-                    bytes = Write_ALfloat(device, buffer, SamplesToDo);
+                    Write_ALfloat(device, &buffer, SamplesToDo);
                     break;
             }
-
-            buffer = (ALubyte*)buffer + bytes;
         }
 
         size -= SamplesToDo;

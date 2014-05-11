@@ -661,13 +661,13 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
             LockContext(Context);
             if(!filter)
             {
-                Source->DirectGain = 1.0f;
-                Source->DirectGainHF = 1.0f;
+                Source->Direct.Gain = 1.0f;
+                Source->Direct.GainHF = 1.0f;
             }
             else
             {
-                Source->DirectGain = filter->Gain;
-                Source->DirectGainHF = filter->GainHF;
+                Source->Direct.Gain = filter->Gain;
+                Source->Direct.GainHF = filter->GainHF;
             }
             UnlockContext(Context);
             Source->NeedsUpdate = AL_TRUE;
@@ -2301,8 +2301,8 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->queue = NULL;
     Source->current_buffer = NULL;
 
-    Source->DirectGain = 1.0f;
-    Source->DirectGainHF = 1.0f;
+    Source->Direct.Gain = 1.0f;
+    Source->Direct.GainHF = 1.0f;
     for(i = 0;i < MAX_SENDS;i++)
     {
         Source->Send[i].Gain = 1.0f;

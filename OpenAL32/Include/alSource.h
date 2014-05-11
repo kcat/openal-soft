@@ -105,9 +105,10 @@ typedef struct ALsource {
     ALuint SampleSize;
 
     /** Direct filter and auxiliary send info. */
-    ALfloat DirectGain;
-    ALfloat DirectGainHF;
-
+    struct {
+        ALfloat Gain;
+        ALfloat GainHF;
+    } Direct;
     struct {
         struct ALeffectslot *Slot;
         ALfloat Gain;

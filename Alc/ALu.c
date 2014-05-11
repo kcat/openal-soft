@@ -347,12 +347,12 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
-    DryGain *= ALSource->DirectGain * ListenerGain;
-    DryGainHF = ALSource->DirectGainHF;
+    DryGain  *= ALSource->Direct.Gain * ListenerGain;
+    DryGainHF = ALSource->Direct.GainHF;
     for(i = 0;i < NumSends;i++)
     {
-        WetGain[i]  = clampf(SourceVolume, MinVolume, MaxVolume);
-        WetGain[i] *= ALSource->Send[i].Gain * ListenerGain;
+        WetGain[i] = clampf(SourceVolume, MinVolume, MaxVolume);
+        WetGain[i]  *= ALSource->Send[i].Gain * ListenerGain;
         WetGainHF[i] = ALSource->Send[i].GainHF;
     }
 
@@ -873,8 +873,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         WetGain[i] = clampf(WetGain[i], MinVolume, MaxVolume);
 
     /* Apply gain and frequency filters */
-    DryGain   *= ALSource->DirectGain * ListenerGain;
-    DryGainHF *= ALSource->DirectGainHF;
+    DryGain   *= ALSource->Direct.Gain * ListenerGain;
+    DryGainHF *= ALSource->Direct.GainHF;
     for(i = 0;i < NumSends;i++)
     {
         WetGain[i]   *= ALSource->Send[i].Gain * ListenerGain;

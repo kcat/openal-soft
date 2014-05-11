@@ -2314,12 +2314,12 @@ static ALvoid InitSourceParams(ALsource *Source)
 
     Source->Direct.Gain = 1.0f;
     Source->Direct.GainHF = 1.0f;
-    Source->Direct.HFReference = (ALfloat)LOWPASSFREQREF;
+    Source->Direct.HFReference = LOWPASSFREQREF;
     for(i = 0;i < MAX_SENDS;i++)
     {
         Source->Send[i].Gain = 1.0f;
         Source->Send[i].GainHF = 1.0f;
-        Source->Send[i].HFReference = (ALfloat)LOWPASSFREQREF;
+        Source->Send[i].HFReference = LOWPASSFREQREF;
     }
 
     Source->NeedsUpdate = AL_TRUE;

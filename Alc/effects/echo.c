@@ -97,7 +97,7 @@ static ALvoid ALechoState_update(ALechoState *state, ALCdevice *Device, const AL
 
     ALfilterState_setParams(&state->Filter, ALfilterType_HighShelf,
                             1.0f - Slot->EffectProps.Echo.Damping,
-                            (ALfloat)LOWPASSFREQREF/frequency, 0.0f);
+                            LOWPASSFREQREF/frequency, 0.0f);
 
     gain = Slot->Gain;
     dirGain = fabsf(lrpan);

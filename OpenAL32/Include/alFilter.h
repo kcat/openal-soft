@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#define LOWPASSFREQREF  (5000)
+#define LOWPASSFREQREF  (5000.0f)
 
 
 /* Filters implementation is based on the "Cookbook formulae for audio   *

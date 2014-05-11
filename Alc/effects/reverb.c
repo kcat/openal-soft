@@ -1096,7 +1096,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
     }
     else
     {
-        hfscale = (ALfloat)LOWPASSFREQREF / frequency;
+        hfscale = LOWPASSFREQREF / frequency;
         ALfilterState_setParams(&State->LpFilter, ALfilterType_HighShelf,
                                 Slot->EffectProps.Reverb.GainHF,
                                 hfscale, 0.0f);

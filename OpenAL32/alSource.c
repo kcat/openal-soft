@@ -2167,12 +2167,9 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     /* Source is now streaming */
     source->SourceType = AL_STREAMING;
 
-    if(!source->queue)
-        source->queue = BufferListStart;
-    else
+    if((BufferList=CompExchangePtr((XchgPtr*)&source->queue, NULL, BufferListStart)) != NULL)
     {
-        /* Append to the end of the queue */
-        BufferList = source->queue;
+        /* Queue head is not NULL, append to the end of the queue */
         while(BufferList->next != NULL)
             BufferList = BufferList->next;
 
@@ -2191,6 +2188,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     ALCcontext *context;
     ALsource *source;
     ALbufferlistitem *BufferList;
+    ALbufferlistitem *OldHead;
     ALsizei i;
 
     if(nb == 0)
@@ -2222,30 +2220,31 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     }
 
     /* Swap it, and cut the new head from the old. */
-    BufferList = ExchangePtr((XchgPtr*)&source->queue, BufferList);
-    if(source->queue)
+    OldHead = ExchangePtr((XchgPtr*)&source->queue, BufferList);
+    if(BufferList)
     {
         LockContext(context);
-        source->queue->prev->next = NULL;
-        source->queue->prev = NULL;
+        BufferList->prev->next = NULL;
+        BufferList->prev = NULL;
         UnlockContext(context);
     }
     WriteUnlock(&source->queue_lock);
 
-    for(i = 0;BufferList != NULL;i++)
+    while(OldHead != NULL)
     {
-        ALbufferlistitem *next = BufferList->next;
+        ALbufferlistitem *next = OldHead->next;
+        ALbuffer *buffer = OldHead->buffer;
 
-        if(!BufferList->buffer)
-            buffers[i] = 0;
+        if(!buffer)
+            *(buffers++) = 0;
         else
         {
-            buffers[i] = BufferList->buffer->id;
-            DecrementRef(&BufferList->buffer->ref);
+            *(buffers++) = buffer->id;
+            DecrementRef(&buffer->ref);
         }
 
-        free(BufferList);
-        BufferList = next;
+        free(OldHead);
+        OldHead = next;
     }
 
 done:

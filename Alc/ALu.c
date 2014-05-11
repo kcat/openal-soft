@@ -558,6 +558,7 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     }
     for(i = 0;i < NumSends;i++)
     {
+        src->Send[i].Gain.Target = WetGain[i];
         if(src->Send[i].Moving)
         {
             ALfloat cur = maxf(src->Send[i].Gain.Current, FLT_EPSILON);
@@ -571,8 +572,7 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         }
         else
         {
-            src->Send[i].Gain.Current = WetGain[i];
-            src->Send[i].Gain.Target = WetGain[i];
+            src->Send[i].Gain.Current = src->Send[i].Gain.Target;
             src->Send[i].Gain.Step = 1.0f;
             src->Send[i].Counter = 0;
             src->Send[i].Moving  = AL_TRUE;
@@ -1055,6 +1055,7 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     }
     for(i = 0;i < NumSends;i++)
     {
+        src->Send[i].Gain.Target = WetGain[i];
         if(src->Send[i].Moving)
         {
             ALfloat cur = maxf(src->Send[i].Gain.Current, FLT_EPSILON);
@@ -1068,8 +1069,7 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         }
         else
         {
-            src->Send[i].Gain.Current = WetGain[i];
-            src->Send[i].Gain.Target = WetGain[i];
+            src->Send[i].Gain.Current = src->Send[i].Gain.Target;
             src->Send[i].Gain.Step = 1.0f;
             src->Send[i].Counter = 0;
             src->Send[i].Moving  = AL_TRUE;

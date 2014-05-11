@@ -582,18 +582,22 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
     {
         ALfloat gain = maxf(0.01f, DryGainHF);
+        ALfloat hfscale = ALSource->Direct.HFReference / Frequency;
         for(c = 0;c < num_channels;c++)
-            ALfilterState_setParams(&src->Direct.LpFilter[c],
-                                    ALfilterType_HighShelf, gain,
-                                    (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
+            ALfilterState_setParams(
+                &src->Direct.LpFilter[c], ALfilterType_HighShelf, gain,
+                hfscale, 0.0f
+            );
     }
     for(i = 0;i < NumSends;i++)
     {
         ALfloat gain = maxf(0.01f, WetGainHF[i]);
+        ALfloat hfscale = ALSource->Send[i].HFReference / Frequency;
         for(c = 0;c < num_channels;c++)
-            ALfilterState_setParams(&src->Send[i].LpFilter[c],
-                                    ALfilterType_HighShelf, gain,
-                                    (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
+            ALfilterState_setParams(
+                &src->Send[i].LpFilter[c], ALfilterType_HighShelf, gain,
+                hfscale, 0.0f
+            );
     }
 }
 
@@ -1079,16 +1083,20 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
     {
         ALfloat gain = maxf(0.01f, DryGainHF);
-        ALfilterState_setParams(&src->Direct.LpFilter[0],
-                                ALfilterType_HighShelf, gain,
-                                (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
+        ALfloat hfscale = ALSource->Direct.HFReference / Frequency;
+        ALfilterState_setParams(
+            &src->Direct.LpFilter[0], ALfilterType_HighShelf, gain,
+            hfscale, 0.0f
+        );
     }
     for(i = 0;i < NumSends;i++)
     {
         ALfloat gain = maxf(0.01f, WetGainHF[i]);
-        ALfilterState_setParams(&src->Send[i].LpFilter[0],
-                                ALfilterType_HighShelf, gain,
-                                (ALfloat)LOWPASSFREQREF/Frequency, 0.0f);
+        ALfloat hfscale = ALSource->Send[i].HFReference / Frequency;
+        ALfilterState_setParams(
+            &src->Send[i].LpFilter[0], ALfilterType_HighShelf, gain,
+            hfscale, 0.0f
+        );
     }
 }
 

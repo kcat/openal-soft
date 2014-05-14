@@ -2516,6 +2516,7 @@ static ALdouble GetSourceSecOffset(const ALsource *Source)
         Buffer = BufferList->buffer;
         BufferList = BufferList->next;
     }
+    assert(Buffer != NULL);
 
     return (ALdouble)readPos / (ALdouble)FRACTIONONE / (ALdouble)Buffer->Frequency;
 }
@@ -2561,6 +2562,8 @@ static ALvoid GetSourceOffsets(const ALsource *Source, ALenum name, ALdouble *of
         }
         BufferList = BufferList->next;
     }
+    assert(Buffer != NULL);
+
     if(Source->state == AL_PLAYING)
         writePos = readPos + (ALuint)(updateLen*Buffer->Frequency);
     else

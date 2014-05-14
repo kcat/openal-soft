@@ -115,7 +115,7 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
         /* Check for valid Buffer ID */
         if((ALBuf=LookupBuffer(device, buffers[i])) == NULL)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-        if(ALBuf->ref != 0)
+        if(ReadRef(&ALBuf->ref) != 0)
             SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     }
 
@@ -695,7 +695,7 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *val
     {
     case AL_LOOP_POINTS_SOFT:
         WriteLock(&albuf->lock);
-        if(albuf->ref != 0)
+        if(ReadRef(&albuf->ref) != 0)
         {
             WriteUnlock(&albuf->lock);
             SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
@@ -980,7 +980,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         return AL_OUT_OF_MEMORY;
 
     WriteLock(&ALBuf->lock);
-    if(ALBuf->ref != 0)
+    if(ReadRef(&ALBuf->ref) != 0)
     {
         WriteUnlock(&ALBuf->lock);
         return AL_INVALID_OPERATION;

@@ -41,7 +41,7 @@ typedef struct {
     volatile ALboolean killNow;
     althrd_t thread;
 
-    volatile RefCount WaveBuffersCommitted;
+    RefCount WaveBuffersCommitted;
     WAVEHDR WaveBuffer[4];
 
     union {
@@ -194,7 +194,7 @@ FORCE_ALIGN static int PlaybackThreadProc(void *arg)
 
         if(data->killNow)
         {
-            if(data->WaveBuffersCommitted == 0)
+            if(ReadRef(&data->WaveBuffersCommitted) == 0)
                 break;
             continue;
         }
@@ -412,7 +412,7 @@ static ALCboolean WinMMStartPlayback(ALCdevice *device)
     if(althrd_create(&data->thread, PlaybackThreadProc, device) != althrd_success)
         return ALC_FALSE;
 
-    data->WaveBuffersCommitted = 0;
+    InitRef(&data->WaveBuffersCommitted, 0);
 
     // Create 4 Buffers
     BufferSize  = device->UpdateSize*device->NumUpdates / 4;
@@ -549,7 +549,7 @@ static ALCenum WinMMOpenCapture(ALCdevice *Device, const ALCchar *deviceName)
     if(!data->Ring)
         goto failure;
 
-    data->WaveBuffersCommitted = 0;
+    InitRef(&data->WaveBuffersCommitted, 0);
 
     // Create 4 Buffers of 50ms each
     BufferSize = data->Format.nAvgBytesPerSec / 20;

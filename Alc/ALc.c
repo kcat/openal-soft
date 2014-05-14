@@ -2024,14 +2024,14 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
 void ALCdevice_IncRef(ALCdevice *device)
 {
-    RefCount ref;
+    uint ref;
     ref = IncrementRef(&device->ref);
     TRACEREF("%p increasing refcount to %u\n", device, ref);
 }
 
 void ALCdevice_DecRef(ALCdevice *device)
 {
-    RefCount ref;
+    uint ref;
     ref = DecrementRef(&device->ref);
     TRACEREF("%p decreasing refcount to %u\n", device, ref);
     if(ref == 0) FreeDevice(device);
@@ -2189,14 +2189,14 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
 
 void ALCcontext_IncRef(ALCcontext *context)
 {
-    RefCount ref;
+    uint ref;
     ref = IncrementRef(&context->ref);
     TRACEREF("%p increasing refcount to %u\n", context, ref);
 }
 
 void ALCcontext_DecRef(ALCcontext *context)
 {
-    RefCount ref;
+    uint ref;
     ref = DecrementRef(&context->ref);
     TRACEREF("%p decreasing refcount to %u\n", context, ref);
     if(ref == 0) FreeContext(context);
@@ -2855,7 +2855,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALContext = calloc(1, sizeof(ALCcontext)+sizeof(ALlistener));
     if(ALContext)
     {
-        ALContext->ref = 1;
+        InitRef(&ALContext->ref, 1);
         ALContext->Listener = (ALlistener*)ALContext->_listener_mem;
 
         VECTOR_INIT(ALContext->ActiveAuxSlots);
@@ -3052,7 +3052,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
 
     //Validate device
-    device->ref = 1;
+    InitRef(&device->ref, 1);
     device->Connected = ALC_TRUE;
     device->Type = Playback;
     device->LastError = ALC_NO_ERROR;
@@ -3352,7 +3352,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     }
 
     //Validate device
-    device->ref = 1;
+    InitRef(&device->ref, 1);
     device->Connected = ALC_TRUE;
     device->Type = Capture;
 
@@ -3518,7 +3518,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     }
 
     //Validate device
-    device->ref = 1;
+    InitRef(&device->ref, 1);
     device->Connected = ALC_TRUE;
     device->Type = Loopback;
     device->LastError = ALC_NO_ERROR;

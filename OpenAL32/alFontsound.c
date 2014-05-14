@@ -69,7 +69,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFontsoundsSOFT(ALsizei n, const ALuint *ids)
         /* Check for valid ID */
         if((inst=LookupFontsound(device, ids[i])) == NULL)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-        if(inst->ref != 0)
+        if(ReadRef(&inst->ref) != 0)
             SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     }
 
@@ -115,7 +115,7 @@ AL_API void AL_APIENTRY alFontsoundiSOFT(ALuint id, ALenum param, ALint value)
     device = context->Device;
     if(!(sound=LookupFontsound(device, id)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-    if(sound->ref != 0)
+    if(ReadRef(&sound->ref) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
 
     ALfontsound_setPropi(sound, context, param, value);
@@ -136,7 +136,7 @@ AL_API void AL_APIENTRY alFontsound2iSOFT(ALuint id, ALenum param, ALint value1,
     device = context->Device;
     if(!(sound=LookupFontsound(device, id)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-    if(sound->ref != 0)
+    if(ReadRef(&sound->ref) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     switch(param)
     {
@@ -231,7 +231,7 @@ AL_API void AL_APIENTRY alFontsoundivSOFT(ALuint id, ALenum param, const ALint *
     device = context->Device;
     if(!(sound=LookupFontsound(device, id)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-    if(sound->ref != 0)
+    if(ReadRef(&sound->ref) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     switch(param)
     {
@@ -508,7 +508,7 @@ ALfontsound *NewFontsound(ALCcontext *context)
 
 static void ALfontsound_Construct(ALfontsound *self)
 {
-    self->ref = 0;
+    InitRef(&self->ref, 0);
 
     self->MinKey = 0;
     self->MaxKey = 127;
@@ -829,7 +829,7 @@ void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei st
 {
     ALint srcidx = 0;
 
-    if(self->ref != 0)
+    if(ReadRef(&self->ref) != 0)
         SET_ERROR_AND_RETURN(context, AL_INVALID_OPERATION);
     switch(param)
     {

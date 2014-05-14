@@ -610,7 +610,7 @@ enum DeviceType {
 
 struct ALCdevice_struct
 {
-    volatile RefCount ref;
+    RefCount ref;
 
     ALCboolean Connected;
     enum DeviceType Type;
@@ -689,7 +689,7 @@ struct ALCdevice_struct
      * the end, so the bottom bit indicates if the device is currently mixing
      * and the upper bits indicates how many mixes have been done.
      */
-    volatile RefCount MixCount;
+    RefCount MixCount;
 
     /* Default effect slot */
     struct ALeffectslot *DefaultSlot;
@@ -744,7 +744,7 @@ DECL_VECTOR(ALeffectslotPtr)
 
 struct ALCcontext_struct
 {
-    volatile RefCount ref;
+    RefCount ref;
 
     struct ALlistener *Listener;
 

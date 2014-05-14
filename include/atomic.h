@@ -5,14 +5,24 @@
 
 
 typedef void *volatile XchgPtr;
-typedef unsigned int RefCount;
+
+typedef unsigned int uint;
+typedef union {
+    uint value;
+} RefCount;
+
+#define STATIC_REFCOUNT_INIT(V)  {(V)}
 
 #if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) && !defined(__QNXNTO__)
 
-inline RefCount IncrementRef(volatile RefCount *ptr)
-{ return __sync_add_and_fetch(ptr, 1); }
-inline RefCount DecrementRef(volatile RefCount *ptr)
-{ return __sync_sub_and_fetch(ptr, 1); }
+inline void InitRef(volatile RefCount *ptr, uint value)
+{ ptr->value = value; }
+inline uint ReadRef(volatile RefCount *ptr)
+{ __sync_synchronize(); return ptr->value; }
+inline uint IncrementRef(volatile RefCount *ptr)
+{ return __sync_add_and_fetch(&ptr->value, 1); }
+inline uint DecrementRef(volatile RefCount *ptr)
+{ return __sync_sub_and_fetch(&ptr->value, 1); }
 
 inline int ExchangeInt(volatile int *ptr, int newval)
 { return __sync_lock_test_and_set(ptr, newval); }
@@ -25,7 +35,7 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 
 #elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
-inline unsigned int xaddl(volatile unsigned int *dest, int incr)
+inline uint xaddl(volatile uint *dest, int incr)
 {
     unsigned int ret;
     __asm__ __volatile__("lock; xaddl %0,(%1)"
@@ -35,10 +45,14 @@ inline unsigned int xaddl(volatile unsigned int *dest, int incr)
     return ret;
 }
 
-inline RefCount IncrementRef(volatile RefCount *ptr)
-{ return xaddl(ptr, 1)+1; }
-inline RefCount DecrementRef(volatile RefCount *ptr)
-{ return xaddl(ptr, -1)-1; }
+inline void InitRef(volatile RefCount *ptr, uint value)
+{ ptr->value = value; }
+inline uint ReadRef(volatile RefCount *ptr)
+{ __asm__ __volatile__("" ::: "memory"); return ptr->value; }
+inline uint IncrementRef(volatile RefCount *ptr)
+{ return xaddl(&ptr->value, 1)+1; }
+inline uint DecrementRef(volatile RefCount *ptr)
+{ return xaddl(&ptr->value, -1)-1; }
 
 inline int ExchangeInt(volatile int *dest, int newval)
 {
@@ -94,26 +108,28 @@ inline void *CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-static_assert(sizeof(LONG)==sizeof(RefCount), "sizeof LONG does not match sizeof RefCount");
+static_assert(sizeof(LONG)==sizeof(uint), "sizeof LONG does not match sizeof uint");
 
-inline RefCount IncrementRef(volatile RefCount *ptr)
+inline void InitRef(volatile RefCount *ptr, uint value)
+{ ptr->value = value; }
+inline uint ReadRef(volatile RefCount *ptr)
+{ _ReadBarrier(); return ptr->value; }
+inline uint IncrementRef(volatile RefCount *ptr)
 {
     union {
-        volatile RefCount *u;
+        volatile uint *u;
         volatile LONG *l;
-    } u = { ptr };
+    } u = { &ptr->value };
     return InterlockedIncrement(u.l);
 }
-inline RefCount DecrementRef(volatile RefCount *ptr)
+inline uint DecrementRef(volatile RefCount *ptr)
 {
     union {
-        volatile RefCount *u;
+        volatile uint *u;
         volatile LONG *l;
-    } u = { ptr };
+    } u = { &ptr->value };
     return InterlockedDecrement(u.l);
 }
-
-static_assert(sizeof(LONG)==sizeof(int), "sizeof LONG does not match sizeof int");
 
 inline int ExchangeInt(volatile int *ptr, int newval)
 {

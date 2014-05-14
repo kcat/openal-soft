@@ -2230,16 +2230,16 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     if(BufferList)
     {
         ALCdevice *device = context->Device;
-        RefCount count;
+        uint count;
 
         /* Cut the new head's link back to the old body. The mixer is robust
          * enough to handle the link back going away. Once the active mix (if
          * any) is complete, it's safe to finish cutting the old tail from the
          * new head. */
         BufferList = ExchangePtr((XchgPtr*)&BufferList->prev, NULL);
-        if(((count=device->MixCount)&1) != 0)
+        if(((count=ReadRef(&device->MixCount))&1) != 0)
         {
-            while(count == device->MixCount)
+            while(count == ReadRef(&device->MixCount))
                 althrd_yield();
         }
         BufferList->next = NULL;

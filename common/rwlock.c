@@ -24,8 +24,8 @@ static void Unlock(volatile int *l)
 
 void RWLockInit(RWLock *lock)
 {
-    lock->read_count = 0;
-    lock->write_count = 0;
+    InitRef(&lock->read_count, 0);
+    InitRef(&lock->write_count, 0);
     lock->read_lock = false;
     lock->read_entry_lock = false;
     lock->write_lock = false;

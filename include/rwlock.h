@@ -5,13 +5,13 @@
 #include "atomic.h"
 
 typedef struct {
-    volatile RefCount read_count;
-    volatile RefCount write_count;
+    RefCount read_count;
+    RefCount write_count;
     volatile int read_lock;
     volatile int read_entry_lock;
     volatile int write_lock;
 } RWLock;
-#define RWLOCK_STATIC_INITIALIZE { 0, 0, false, false, false }
+#define RWLOCK_STATIC_INITIALIZE { STATIC_REFCOUNT_INIT(0), STATIC_REFCOUNT_INIT(0), false, false, false }
 
 void RWLockInit(RWLock *lock);
 void ReadLock(RWLock *lock);

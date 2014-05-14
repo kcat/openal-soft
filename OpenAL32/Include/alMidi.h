@@ -32,7 +32,7 @@ typedef struct ALenvelope {
 
 
 typedef struct ALfontsound {
-    volatile RefCount ref;
+    RefCount ref;
 
     ALint MinKey, MaxKey;
     ALint MinVelocity, MaxVelocity;
@@ -110,7 +110,7 @@ void ReleaseALFontsounds(ALCdevice *device);
 
 
 typedef struct ALsfpreset {
-    volatile RefCount ref;
+    RefCount ref;
 
     ALint Preset; /* a.k.a. MIDI program number */
     ALint Bank; /* MIDI bank 0...127, or percussion (bank 128) */
@@ -133,7 +133,7 @@ void ReleaseALPresets(ALCdevice *device);
 
 
 typedef struct ALsoundfont {
-    volatile RefCount ref;
+    RefCount ref;
 
     ALsfpreset **Presets;
     ALsizei NumPresets;

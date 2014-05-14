@@ -40,7 +40,6 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
     ALuint pos;
     ALuint c;
 
-    pos = 0;
     for(c = 0;c < IrSize;c++)
     {
         Coeffs[c][0] = hrtfparams->Coeffs[c][0] - (hrtfparams->CoeffStep[c][0]*Counter);

@@ -1167,16 +1167,14 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
             memmove(buffer, self->buffer, amt);
 
             if(self->size > amt)
-            {
                 memmove(self->buffer, self->buffer+amt, self->size - amt);
-                self->size -= amt;
-            }
-            else
+            else if(self->buffer != buffer)
             {
+                /* Do not free the buffer if it's reading into itself. */
                 free(self->buffer);
                 self->buffer = NULL;
-                self->size = 0;
             }
+            self->size -= amt;
             amt = snd_pcm_bytes_to_frames(self->pcmHandle, amt);
         }
         else if(self->doCapture)

@@ -58,6 +58,7 @@ typedef struct ALfilter {
 
     ALfloat Gain;
     ALfloat GainHF;
+    ALfloat HFReference;
 
     void (*SetParami)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint val);
     void (*SetParamiv)(struct ALfilter *filter, ALCcontext *context, ALenum param, const ALint *vals);

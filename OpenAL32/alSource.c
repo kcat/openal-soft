@@ -665,11 +665,13 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
             {
                 Source->Direct.Gain = 1.0f;
                 Source->Direct.GainHF = 1.0f;
+                Source->Direct.HFReference = LOWPASSFREQREF;
             }
             else
             {
                 Source->Direct.Gain = filter->Gain;
                 Source->Direct.GainHF = filter->GainHF;
+                Source->Direct.HFReference = filter->HFReference;
             }
             UnlockContext(Context);
             Source->NeedsUpdate = AL_TRUE;
@@ -738,11 +740,13 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 /* Disable filter */
                 Source->Send[values[1]].Gain = 1.0f;
                 Source->Send[values[1]].GainHF = 1.0f;
+                Source->Send[values[1]].HFReference = LOWPASSFREQREF;
             }
             else
             {
                 Source->Send[values[1]].Gain = filter->Gain;
                 Source->Send[values[1]].GainHF = filter->GainHF;
+                Source->Send[values[1]].HFReference = filter->HFReference;
             }
             Source->NeedsUpdate = AL_TRUE;
             UnlockContext(Context);

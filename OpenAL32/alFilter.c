@@ -532,6 +532,7 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
     {
         filter->Gain = AL_LOWPASS_DEFAULT_GAIN;
         filter->GainHF = AL_LOWPASS_DEFAULT_GAINHF;
+        filter->HFReference = LOWPASSFREQREF;
 
         filter->SetParami  = lp_SetParami;
         filter->SetParamiv = lp_SetParamiv;

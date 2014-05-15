@@ -30,6 +30,11 @@
 #include "alu.h"
 
 
+enum FlangerWaveForm {
+    FWF_Triangle = AL_FLANGER_WAVEFORM_TRIANGLE,
+    FWF_Sinusoid = AL_FLANGER_WAVEFORM_SINUSOID
+};
+
 typedef struct ALflangerState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -44,7 +49,7 @@ typedef struct ALflangerState {
     ALfloat Gain[2][MaxChannels];
 
     /* effect parameters */
-    ALint waveform;
+    enum FlangerWaveForm waveform;
     ALint delay;
     ALfloat depth;
     ALfloat feedback;
@@ -92,7 +97,15 @@ static ALvoid ALflangerState_update(ALflangerState *state, ALCdevice *Device, co
     ALfloat rate;
     ALint phase;
 
-    state->waveform = Slot->EffectProps.Flanger.Waveform;
+    switch(Slot->EffectProps.Flanger.Waveform)
+    {
+        case AL_FLANGER_WAVEFORM_TRIANGLE:
+            state->waveform = FWF_Triangle;
+            break;
+        case AL_FLANGER_WAVEFORM_SINUSOID:
+            state->waveform = FWF_Sinusoid;
+            break;
+    }
     state->depth = Slot->EffectProps.Flanger.Depth;
     state->feedback = Slot->EffectProps.Flanger.Feedback;
     state->delay = fastf2i(Slot->EffectProps.Flanger.Delay * frequency);
@@ -115,10 +128,10 @@ static ALvoid ALflangerState_update(ALflangerState *state, ALCdevice *Device, co
         state->lfo_range = fastf2u(frequency/rate + 0.5f);
         switch(state->waveform)
         {
-            case AL_FLANGER_WAVEFORM_TRIANGLE:
+            case FWF_Triangle:
                 state->lfo_scale = 4.0f / state->lfo_range;
                 break;
-            case AL_FLANGER_WAVEFORM_SINUSOID:
+            case FWF_Sinusoid:
                 state->lfo_scale = F_2PI / state->lfo_range;
                 break;
         }
@@ -198,10 +211,15 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALuint SamplesToDo, 
         ALfloat temps[64][2];
         ALuint td = minu(SamplesToDo-base, 64);
 
-        if(state->waveform == AL_FLANGER_WAVEFORM_TRIANGLE)
-            ProcessTriangle(state, td, SamplesIn+base, temps);
-        else if(state->waveform == AL_FLANGER_WAVEFORM_SINUSOID)
-            ProcessSinusoid(state, td, SamplesIn+base, temps);
+        switch(state->waveform)
+        {
+            case FWF_Triangle:
+                ProcessTriangle(state, td, SamplesIn+base, temps);
+                break;
+            case FWF_Sinusoid:
+                ProcessSinusoid(state, td, SamplesIn+base, temps);
+                break;
+        }
 
         for(kt = 0;kt < MaxChannels;kt++)
         {
@@ -246,6 +264,7 @@ ALeffectState *ALflangerStateFactory_create(ALflangerStateFactory *UNUSED(factor
     state->SampleBuffer[1] = NULL;
     state->offset = 0;
     state->lfo_range = 1;
+    state->waveform = FWF_Triangle;
 
     return STATIC_CAST(ALeffectState, state);
 }

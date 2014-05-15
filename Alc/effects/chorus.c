@@ -30,6 +30,11 @@
 #include "alu.h"
 
 
+enum ChorusWaveForm {
+    CWF_Triangle = AL_CHORUS_WAVEFORM_TRIANGLE,
+    CWF_Sinusoid = AL_CHORUS_WAVEFORM_SINUSOID
+};
+
 typedef struct ALchorusState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -44,7 +49,7 @@ typedef struct ALchorusState {
     ALfloat Gain[2][MaxChannels];
 
     /* effect parameters */
-    ALint waveform;
+    enum ChorusWaveForm waveform;
     ALint delay;
     ALfloat depth;
     ALfloat feedback;
@@ -92,7 +97,15 @@ static ALvoid ALchorusState_update(ALchorusState *state, ALCdevice *Device, cons
     ALfloat rate;
     ALint phase;
 
-    state->waveform = Slot->EffectProps.Chorus.Waveform;
+    switch(Slot->EffectProps.Chorus.Waveform)
+    {
+        case AL_CHORUS_WAVEFORM_TRIANGLE:
+            state->waveform = CWF_Triangle;
+            break;
+        case AL_CHORUS_WAVEFORM_SINUSOID:
+            state->waveform = CWF_Sinusoid;
+            break;
+    }
     state->depth = Slot->EffectProps.Chorus.Depth;
     state->feedback = Slot->EffectProps.Chorus.Feedback;
     state->delay = fastf2i(Slot->EffectProps.Chorus.Delay * frequency);
@@ -115,10 +128,10 @@ static ALvoid ALchorusState_update(ALchorusState *state, ALCdevice *Device, cons
         state->lfo_range = fastf2u(frequency/rate + 0.5f);
         switch(state->waveform)
         {
-            case AL_CHORUS_WAVEFORM_TRIANGLE:
+            case CWF_Triangle:
                 state->lfo_scale = 4.0f / state->lfo_range;
                 break;
-            case AL_CHORUS_WAVEFORM_SINUSOID:
+            case CWF_Sinusoid:
                 state->lfo_scale = F_2PI / state->lfo_range;
                 break;
         }
@@ -198,10 +211,15 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALuint SamplesToDo, co
         ALfloat temps[64][2];
         ALuint td = minu(SamplesToDo-base, 64);
 
-        if(state->waveform == AL_CHORUS_WAVEFORM_TRIANGLE)
-            ProcessTriangle(state, td, SamplesIn+base, temps);
-        else if(state->waveform == AL_CHORUS_WAVEFORM_SINUSOID)
-            ProcessSinusoid(state, td, SamplesIn+base, temps);
+        switch(state->waveform)
+        {
+            case CWF_Triangle:
+                ProcessTriangle(state, td, SamplesIn+base, temps);
+                break;
+            case CWF_Sinusoid:
+                ProcessSinusoid(state, td, SamplesIn+base, temps);
+                break;
+        }
 
         for(kt = 0;kt < MaxChannels;kt++)
         {
@@ -246,6 +264,7 @@ static ALeffectState *ALchorusStateFactory_create(ALchorusStateFactory *UNUSED(f
     state->SampleBuffer[1] = NULL;
     state->offset = 0;
     state->lfo_range = 1;
+    state->waveform = CWF_Triangle;
 
     return STATIC_CAST(ALeffectState, state);
 }

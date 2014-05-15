@@ -677,15 +677,14 @@ static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     unsigned int periodLen, bufferLen;
     snd_pcm_sw_params_t *sp = NULL;
     snd_pcm_hw_params_t *hp = NULL;
+    snd_pcm_format_t format = -1;
     snd_pcm_access_t access;
-    snd_pcm_format_t format;
     unsigned int periods;
     unsigned int rate;
     const char *funcerr;
     int allowmmap;
     int err;
 
-    format = -1;
     switch(device->FmtType)
     {
         case DevFmtByte:
@@ -951,7 +950,7 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
     snd_pcm_uframes_t bufferSizeInFrames;
     snd_pcm_uframes_t periodSizeInFrames;
     ALboolean needring = AL_FALSE;
-    snd_pcm_format_t format;
+    snd_pcm_format_t format = -1;
     const char *funcerr;
     int err;
 
@@ -992,7 +991,6 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
 
-    format = -1;
     switch(device->FmtType)
     {
         case DevFmtByte:

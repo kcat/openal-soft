@@ -158,9 +158,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
     enum UserFmtType srctype;
     ALCdevice *device;
     ALCcontext *context;
-    ALuint framesize;
-    ALenum newformat;
     ALbuffer *albuf;
+    ALenum newformat = AL_NONE;
+    ALuint framesize;
     ALsizei align;
     ALenum err;
 
@@ -204,7 +204,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
             if((size%framesize) != 0)
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-            newformat = AL_FORMAT_MONO_FLOAT32;
             switch(srcchannels)
             {
                 case UserFmtMono: newformat = AL_FORMAT_MONO_FLOAT32; break;
@@ -227,7 +226,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
             if((size%framesize) != 0)
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-            newformat = AL_FORMAT_MONO16;
             switch(srcchannels)
             {
                 case UserFmtMono: newformat = AL_FORMAT_MONO16; break;
@@ -250,7 +248,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
             if((size%framesize) != 0)
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-            newformat = AL_FORMAT_MONO16;
             switch(srcchannels)
             {
                 case UserFmtMono: newformat = AL_FORMAT_MONO16; break;
@@ -273,7 +270,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
             if((size%framesize) != 0)
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-            newformat = AL_FORMAT_MONO16;
             switch(srcchannels)
             {
                 case UserFmtMono: newformat = AL_FORMAT_MONO16; break;

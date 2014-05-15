@@ -920,8 +920,8 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     pa_stream_flags_t flags = 0;
+    const char *mapname = NULL;
     pa_channel_map chanmap;
-    const char *mapname;
     ALuint len;
 
     pa_threaded_mainloop_lock(self->loop);
@@ -989,7 +989,6 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
         return ALC_FALSE;
     }
 
-    mapname = "(invalid)";
     switch(device->FmtChans)
     {
         case DevFmtMono:

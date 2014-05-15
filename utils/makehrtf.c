@@ -1211,6 +1211,9 @@ static void ResamplerRun (ResamplerT * rs, const uint inN, const double * in, co
   double r;
   uint j_f, j_s;
 
+  if (outN == 0)
+     return;
+
   // Handle in-place operation.
   if (in == out)
      work = CreateArray (outN);

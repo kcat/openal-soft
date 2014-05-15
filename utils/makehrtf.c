@@ -769,21 +769,22 @@ static int HpTpdfDither (const double in, int * hpHist) {
 }
 
 // Allocates an array of doubles.
-static double * CreateArray (const size_t n) {
-  double * a = NULL;
+static double *CreateArray(const size_t n)
+{
+    double *a;
 
-  a = (double *) calloc (n, sizeof (double));
-  if (a == NULL) {
-     fprintf (stderr, "Error:  Out of memory.\n");
-     exit (-1);
-  }
-  return (a);
+    a = calloc(n, sizeof(double));
+    if(a == NULL)
+    {
+        fprintf(stderr, "Error:  Out of memory.\n");
+        exit(-1);
+    }
+    return a;
 }
 
 // Frees an array of doubles.
-static void DestroyArray (const double * a) {
-  free ((void *) a);
-}
+static void DestroyArray(double *a)
+{ free(a); }
 
 // Complex number routines.  All outputs must be non-NULL.
 

@@ -193,11 +193,7 @@ static void LoadConfigFromFile(FILE *f)
         char value[256] = "";
 
         comment = strchr(buffer, '#');
-        if(comment)
-        {
-            *(comment++) = 0;
-            comment = rstrip(lstrip(comment));
-        }
+        if(comment) *(comment++) = 0;
 
         line = rstrip(lstrip(buffer));
         if(!line[0])

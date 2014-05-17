@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 #define LOWPASSFREQREF  (5000.0f)
+#define HIGHPASSFREQREF  (250.0f)
 
 
 /* Filters implementation is based on the "Cookbook formulae for audio   *
@@ -65,6 +66,8 @@ typedef struct ALfilter {
     ALfloat Gain;
     ALfloat GainHF;
     ALfloat HFReference;
+    ALfloat GainLF;
+    ALfloat LFReference;
 
     void (*SetParami)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint val);
     void (*SetParamiv)(struct ALfilter *filter, ALCcontext *context, ALenum param, const ALint *vals);

@@ -145,7 +145,8 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
     {
         if(param == AL_FILTER_TYPE)
         {
-            if(value == AL_FILTER_NULL || value == AL_FILTER_LOWPASS || value == AL_FILTER_HIGHPASS)
+            if(value == AL_FILTER_NULL || value == AL_FILTER_LOWPASS ||
+               value == AL_FILTER_HIGHPASS || value == AL_FILTER_BANDPASS)
                 InitFilterParams(ALFilter, value);
             else
                 alSetError(Context, AL_INVALID_VALUE);
@@ -524,6 +525,71 @@ static void hp_GetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, A
 }
 
 
+static void bp_SetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void bp_SetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void bp_SetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
+{
+    switch(param)
+    {
+        case AL_BANDPASS_GAIN:
+            if(!(val >= AL_BANDPASS_MIN_GAIN && val <= AL_BANDPASS_MAX_GAIN))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            filter->Gain = val;
+            break;
+
+        case AL_BANDPASS_GAINHF:
+            if(!(val >= AL_BANDPASS_MIN_GAINHF && val <= AL_BANDPASS_MAX_GAINHF))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            filter->GainHF = val;
+            break;
+
+        case AL_BANDPASS_GAINLF:
+            if(!(val >= AL_BANDPASS_MIN_GAINLF && val <= AL_BANDPASS_MAX_GAINLF))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            filter->GainLF = val;
+            break;
+
+        default:
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+    }
+}
+static void bp_SetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
+{
+    bp_SetParamf(filter, context, param, vals[0]);
+}
+
+static void bp_GetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void bp_GetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
+{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+static void bp_GetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
+{
+    switch(param)
+    {
+        case AL_BANDPASS_GAIN:
+            *val = filter->Gain;
+            break;
+
+        case AL_BANDPASS_GAINHF:
+            *val = filter->GainHF;
+            break;
+
+        case AL_BANDPASS_GAINLF:
+            *val = filter->GainLF;
+            break;
+
+        default:
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+    }
+}
+static void bp_GetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
+{
+    bp_GetParamf(filter, context, param, vals);
+}
+
+
 static void null_SetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 static void null_SetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
@@ -594,6 +660,23 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
         filter->GetParamiv = hp_GetParamiv;
         filter->GetParamf  = hp_GetParamf;
         filter->GetParamfv = hp_GetParamfv;
+    }
+    else if(type == AL_FILTER_BANDPASS)
+    {
+        filter->Gain = AL_BANDPASS_DEFAULT_GAIN;
+        filter->GainHF = AL_BANDPASS_DEFAULT_GAINHF;
+        filter->HFReference = LOWPASSFREQREF;
+        filter->GainLF = AL_BANDPASS_DEFAULT_GAINLF;
+        filter->LFReference = HIGHPASSFREQREF;
+
+        filter->SetParami  = bp_SetParami;
+        filter->SetParamiv = bp_SetParamiv;
+        filter->SetParamf  = bp_SetParamf;
+        filter->SetParamfv = bp_SetParamfv;
+        filter->GetParami  = bp_GetParami;
+        filter->GetParamiv = bp_GetParamiv;
+        filter->GetParamf  = bp_GetParamf;
+        filter->GetParamfv = bp_GetParamfv;
     }
     else
     {

@@ -32,7 +32,7 @@ typedef struct ALfilterState {
 } ALfilterState;
 
 void ALfilterState_clear(ALfilterState *filter);
-void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_scale, ALfloat bandwidth);
+void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_mult, ALfloat bandwidth);
 
 inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample)
 {

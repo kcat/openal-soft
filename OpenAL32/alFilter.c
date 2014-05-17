@@ -335,7 +335,7 @@ void ALfilterState_clear(ALfilterState *filter)
     filter->y[1] = 0.0f;
 }
 
-void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_scale, ALfloat bandwidth)
+void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_mult, ALfloat bandwidth)
 {
     ALfloat alpha;
     ALfloat w0;
@@ -343,7 +343,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
     // Limit gain to -100dB
     gain = maxf(gain, 0.00001f);
 
-    w0 = F_2PI * freq_scale;
+    w0 = F_2PI * freq_mult;
 
     /* Calculate filter coefficients depending on filter type */
     switch(type)

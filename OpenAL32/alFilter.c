@@ -680,6 +680,12 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
     }
     else
     {
+        filter->Gain = 1.0f;
+        filter->GainHF = 1.0f;
+        filter->HFReference = LOWPASSFREQREF;
+        filter->GainLF = 1.0f;
+        filter->LFReference = HIGHPASSFREQREF;
+
         filter->SetParami  = null_SetParami;
         filter->SetParamiv = null_SetParamiv;
         filter->SetParamf  = null_SetParamf;

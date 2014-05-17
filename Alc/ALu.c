@@ -281,9 +281,10 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
     enum FmtChannels Channels;
-    ALfloat DryGain, DryGainHF;
+    ALfloat DryGain, DryGainHF, DryGainLF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
+    ALfloat WetGainLF[MAX_SENDS];
     ALint NumSends, Frequency;
     const struct ChanMap *chans = NULL;
     enum Resampler Resampler;
@@ -349,11 +350,13 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
     DryGain  *= ALSource->Direct.Gain * ListenerGain;
     DryGainHF = ALSource->Direct.GainHF;
+    DryGainLF = ALSource->Direct.GainLF;
     for(i = 0;i < NumSends;i++)
     {
         WetGain[i] = clampf(SourceVolume, MinVolume, MaxVolume);
         WetGain[i]  *= ALSource->Send[i].Gain * ListenerGain;
         WetGainHF[i] = ALSource->Send[i].GainHF;
+        WetGainLF[i] = ALSource->Send[i].GainLF;
     }
 
     switch(Channels)
@@ -582,26 +585,42 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
     {
         ALfloat gainhf = maxf(0.01f, DryGainHF);
+        ALfloat gainlf = maxf(0.01f, DryGainLF);
         ALfloat hfscale = ALSource->Direct.HFReference / Frequency;
+        ALfloat lfscale = ALSource->Direct.LFReference / Frequency;
         for(c = 0;c < num_channels;c++)
         {
-            src->Direct.Filters[c] = (gainhf != 1.0f) ? AF_LowPass : AF_None;
+            src->Direct.Filters[c] = (gainhf != 1.0f && gainlf != 1.0f) ? AF_BandPass :
+                                     (gainhf != 1.0f) ? AF_LowPass :
+                                     (gainlf != 1.0f) ? AF_HighPass : AF_None;
             ALfilterState_setParams(
                 &src->Direct.LpFilter[c], ALfilterType_HighShelf, gainhf,
                 hfscale, 0.0f
+            );
+            ALfilterState_setParams(
+                &src->Direct.HpFilter[c], ALfilterType_LowShelf, gainlf,
+                lfscale, 0.0f
             );
         }
     }
     for(i = 0;i < NumSends;i++)
     {
         ALfloat gainhf = maxf(0.01f, WetGainHF[i]);
+        ALfloat gainlf = maxf(0.01f, WetGainLF[i]);
         ALfloat hfscale = ALSource->Send[i].HFReference / Frequency;
+        ALfloat lfscale = ALSource->Send[i].LFReference / Frequency;
         for(c = 0;c < num_channels;c++)
         {
-            src->Send[i].Filters[c] = (gainhf != 1.0f) ? AF_LowPass : AF_None;
+            src->Send[i].Filters[c] = (gainhf != 1.0f && gainlf != 1.0f) ? AF_BandPass :
+                                      (gainhf != 1.0f) ? AF_LowPass :
+                                      (gainlf != 1.0f) ? AF_HighPass : AF_None;
             ALfilterState_setParams(
                 &src->Send[i].LpFilter[c], ALfilterType_HighShelf, gainhf,
                 hfscale, 0.0f
+            );
+            ALfilterState_setParams(
+                &src->Send[i].HpFilter[c], ALfilterType_LowShelf, gainlf,
+                lfscale, 0.0f
             );
         }
     }
@@ -627,9 +646,11 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     ALfloat DecayDistance[MAX_SENDS];
     ALfloat DryGain;
     ALfloat DryGainHF;
+    ALfloat DryGainLF;
     ALboolean DryGainHFAuto;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
+    ALfloat WetGainLF[MAX_SENDS];
     ALboolean WetGainAuto;
     ALboolean WetGainHFAuto;
     enum Resampler Resampler;
@@ -639,8 +660,12 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     ALint i, j;
 
     DryGainHF = 1.0f;
+    DryGainLF = 1.0f;
     for(i = 0;i < MAX_SENDS;i++)
+    {
         WetGainHF[i] = 1.0f;
+        WetGainLF[i] = 1.0f;
+    }
 
     /* Get context/device properties */
     DopplerFactor = ALContext->DopplerFactor * ALSource->DopplerFactor;
@@ -885,10 +910,12 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     /* Apply gain and frequency filters */
     DryGain   *= ALSource->Direct.Gain * ListenerGain;
     DryGainHF *= ALSource->Direct.GainHF;
+    DryGainLF *= ALSource->Direct.GainLF;
     for(i = 0;i < NumSends;i++)
     {
         WetGain[i]   *= ALSource->Send[i].Gain * ListenerGain;
         WetGainHF[i] *= ALSource->Send[i].GainHF;
+        WetGainLF[i] *= ALSource->Send[i].GainLF;
     }
 
     /* Calculate velocity-based doppler effect */
@@ -1089,21 +1116,37 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
     {
         ALfloat gainhf = maxf(0.01f, DryGainHF);
+        ALfloat gainlf = maxf(0.01f, DryGainLF);
         ALfloat hfscale = ALSource->Direct.HFReference / Frequency;
-        src->Direct.Filters[0] = (gainhf != 1.0f) ? AF_LowPass : AF_None;
+        ALfloat lfscale = ALSource->Direct.LFReference / Frequency;
+        src->Direct.Filters[0] = (gainhf != 1.0f && gainlf != 1.0f) ? AF_BandPass :
+                                 (gainhf != 1.0f) ? AF_LowPass :
+                                 (gainlf != 1.0f) ? AF_HighPass : AF_None;
         ALfilterState_setParams(
             &src->Direct.LpFilter[0], ALfilterType_HighShelf, gainhf,
             hfscale, 0.0f
+        );
+        ALfilterState_setParams(
+            &src->Direct.HpFilter[0], ALfilterType_LowShelf, gainlf,
+            lfscale, 0.0f
         );
     }
     for(i = 0;i < NumSends;i++)
     {
         ALfloat gainhf = maxf(0.01f, WetGainHF[i]);
+        ALfloat gainlf = maxf(0.01f, WetGainLF[i]);
         ALfloat hfscale = ALSource->Send[i].HFReference / Frequency;
-        src->Direct.Filters[0] = (gainhf != 1.0f) ? AF_LowPass : AF_None;
+        ALfloat lfscale = ALSource->Send[i].LFReference / Frequency;
+        src->Direct.Filters[0] = (gainhf != 1.0f && gainlf != 1.0f) ? AF_BandPass :
+                                 (gainhf != 1.0f) ? AF_LowPass :
+                                 (gainlf != 1.0f) ? AF_HighPass : AF_None;
         ALfilterState_setParams(
             &src->Send[i].LpFilter[0], ALfilterType_HighShelf, gainhf,
             hfscale, 0.0f
+        );
+        ALfilterState_setParams(
+            &src->Send[i].HpFilter[0], ALfilterType_LowShelf, gainlf,
+            lfscale, 0.0f
         );
     }
 }

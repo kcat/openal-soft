@@ -666,12 +666,16 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 Source->Direct.Gain = 1.0f;
                 Source->Direct.GainHF = 1.0f;
                 Source->Direct.HFReference = LOWPASSFREQREF;
+                Source->Direct.GainLF = 1.0f;
+                Source->Direct.LFReference = HIGHPASSFREQREF;
             }
             else
             {
                 Source->Direct.Gain = filter->Gain;
                 Source->Direct.GainHF = filter->GainHF;
                 Source->Direct.HFReference = filter->HFReference;
+                Source->Direct.GainLF = filter->GainLF;
+                Source->Direct.LFReference = filter->LFReference;
             }
             UnlockContext(Context);
             Source->NeedsUpdate = AL_TRUE;
@@ -741,12 +745,16 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 Source->Send[values[1]].Gain = 1.0f;
                 Source->Send[values[1]].GainHF = 1.0f;
                 Source->Send[values[1]].HFReference = LOWPASSFREQREF;
+                Source->Send[values[1]].GainLF = 1.0f;
+                Source->Send[values[1]].LFReference = HIGHPASSFREQREF;
             }
             else
             {
                 Source->Send[values[1]].Gain = filter->Gain;
                 Source->Send[values[1]].GainHF = filter->GainHF;
                 Source->Send[values[1]].HFReference = filter->HFReference;
+                Source->Send[values[1]].GainLF = filter->GainLF;
+                Source->Send[values[1]].LFReference = filter->LFReference;
             }
             Source->NeedsUpdate = AL_TRUE;
             UnlockContext(Context);
@@ -2319,11 +2327,15 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->Direct.Gain = 1.0f;
     Source->Direct.GainHF = 1.0f;
     Source->Direct.HFReference = LOWPASSFREQREF;
+    Source->Direct.GainLF = 1.0f;
+    Source->Direct.LFReference = HIGHPASSFREQREF;
     for(i = 0;i < MAX_SENDS;i++)
     {
         Source->Send[i].Gain = 1.0f;
         Source->Send[i].GainHF = 1.0f;
         Source->Send[i].HFReference = LOWPASSFREQREF;
+        Source->Send[i].GainLF = 1.0f;
+        Source->Send[i].LFReference = HIGHPASSFREQREF;
     }
 
     Source->NeedsUpdate = AL_TRUE;

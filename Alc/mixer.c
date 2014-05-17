@@ -84,7 +84,8 @@ static void SilenceData(ALfloat *dst, ALuint samples)
 }
 
 
-static void DoFilters(ALfilterState *lpfilter, ALfloat *restrict dst, const ALfloat *restrict src,
+static void DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter,
+                      ALfloat *restrict dst, const ALfloat *restrict src,
                       ALuint numsamples, enum ActiveFilters type)
 {
     ALuint i;
@@ -97,6 +98,18 @@ static void DoFilters(ALfilterState *lpfilter, ALfloat *restrict dst, const ALfl
         case AF_LowPass:
             for(i = 0;i < numsamples;i++)
                 dst[i] = ALfilterState_processSingle(lpfilter, src[i]);
+            break;
+
+        case AF_HighPass:
+            for(i = 0;i < numsamples;i++)
+                dst[i] = ALfilterState_processSingle(hpfilter, src[i]);
+            break;
+
+        case AF_BandPass:
+            for(i = 0;i < numsamples;i++)
+                dst[i] = ALfilterState_processSingle(hpfilter,
+                    ALfilterState_processSingle(lpfilter, src[i])
+                );
             break;
     }
 }
@@ -332,8 +345,9 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
             {
                 DirectParams *directparms = &src->Direct;
 
-                DoFilters(&directparms->LpFilter[chan], SrcData, ResampledData,
-                          DstBufferSize, directparms->Filters[chan]);
+                DoFilters(&directparms->LpFilter[chan], &directparms->HpFilter[chan],
+                          SrcData, ResampledData, DstBufferSize,
+                          directparms->Filters[chan]);
                 src->DryMix(directparms, SrcData, chan, OutPos, DstBufferSize);
             }
 
@@ -343,8 +357,9 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                 if(!sendparms->OutBuffer)
                     continue;
 
-                DoFilters(&sendparms->LpFilter[chan], SrcData, ResampledData,
-                          DstBufferSize, sendparms->Filters[chan]);
+                DoFilters(&sendparms->LpFilter[chan], &sendparms->HpFilter[chan],
+                          SrcData, ResampledData, DstBufferSize,
+                          sendparms->Filters[chan]);
                 src->WetMix(sendparms, SrcData, OutPos, DstBufferSize);
             }
         }

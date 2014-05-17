@@ -42,6 +42,8 @@ extern "C" {
 enum ActiveFilters {
     AF_None = 0,
     AF_LowPass = 1,
+    AF_HighPass = 2,
+    AF_BandPass = AF_LowPass | AF_HighPass
 };
 
 typedef struct HrtfState {
@@ -61,6 +63,7 @@ typedef struct DirectParams {
 
     enum ActiveFilters Filters[MAX_INPUT_CHANNELS];
     ALfilterState LpFilter[MAX_INPUT_CHANNELS];
+    ALfilterState HpFilter[MAX_INPUT_CHANNELS];
 
     /* If not 'moving', gain/coefficients are set directly without fading. */
     ALboolean Moving;
@@ -94,6 +97,7 @@ typedef struct SendParams {
 
     enum ActiveFilters Filters[MAX_INPUT_CHANNELS];
     ALfilterState LpFilter[MAX_INPUT_CHANNELS];
+    ALfilterState HpFilter[MAX_INPUT_CHANNELS];
 
     ALboolean Moving;
     ALuint Counter;

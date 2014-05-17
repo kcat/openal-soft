@@ -109,12 +109,16 @@ typedef struct ALsource {
         ALfloat Gain;
         ALfloat GainHF;
         ALfloat HFReference;
+        ALfloat GainLF;
+        ALfloat LFReference;
     } Direct;
     struct {
         struct ALeffectslot *Slot;
         ALfloat Gain;
         ALfloat GainHF;
         ALfloat HFReference;
+        ALfloat GainLF;
+        ALfloat LFReference;
     } Send[MAX_SENDS];
 
     /** Source needs to update its mixing parameters. */

@@ -39,6 +39,11 @@
 extern "C" {
 #endif
 
+enum ActiveFilters {
+    AF_None = 0,
+    AF_LowPass = 1,
+};
+
 typedef struct HrtfState {
     alignas(16) ALfloat History[SRC_HISTORY_LENGTH];
     alignas(16) ALfloat Values[HRIR_LENGTH][2];
@@ -53,6 +58,16 @@ typedef struct HrtfParams {
 
 typedef struct DirectParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
+
+    enum ActiveFilters Filters[MAX_INPUT_CHANNELS];
+    ALfilterState LpFilter[MAX_INPUT_CHANNELS];
+
+    /* If not 'moving', gain/coefficients are set directly without fading. */
+    ALboolean Moving;
+    /* Stepping counter for gain/coefficient fading. */
+    ALuint Counter;
+    /* History/coefficient offset. */
+    ALuint Offset;
 
     union {
         struct {
@@ -72,18 +87,16 @@ typedef struct DirectParams {
             ALfloat Target[MAX_INPUT_CHANNELS][MaxChannels];
         } Gains;
     } Mix;
-    /* If not 'moving', gain/coefficients are set directly without fading. */
-    ALboolean Moving;
-    /* Stepping counter for gain/coefficient fading. */
-    ALuint Counter;
-    /* History/coefficient offset. */
-    ALuint Offset;
-
-    ALfilterState LpFilter[MAX_INPUT_CHANNELS];
 } DirectParams;
 
 typedef struct SendParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
+
+    enum ActiveFilters Filters[MAX_INPUT_CHANNELS];
+    ALfilterState LpFilter[MAX_INPUT_CHANNELS];
+
+    ALboolean Moving;
+    ALuint Counter;
 
     /* Gain control, which applies to all input channels to a single (mono)
      * output buffer. */
@@ -92,11 +105,6 @@ typedef struct SendParams {
         ALfloat Step;
         ALfloat Target;
     } Gain;
-
-    ALboolean Moving;
-    ALuint Counter;
-
-    ALfilterState LpFilter[MAX_INPUT_CHANNELS];
 } SendParams;
 
 

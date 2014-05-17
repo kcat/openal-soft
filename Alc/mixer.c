@@ -84,12 +84,21 @@ static void SilenceData(ALfloat *dst, ALuint samples)
 }
 
 
-static void DoFilter(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src,
-                     ALuint numsamples)
+static void DoFilters(ALfilterState *lpfilter, ALfloat *restrict dst, const ALfloat *restrict src,
+                      ALuint numsamples, enum ActiveFilters type)
 {
     ALuint i;
-    for(i = 0;i < numsamples;i++)
-        dst[i] = ALfilterState_processSingle(filter, src[i]);
+    switch(type)
+    {
+        case AF_None:
+            memcpy(dst, src, numsamples * sizeof(ALfloat));
+            break;
+
+        case AF_LowPass:
+            for(i = 0;i < numsamples;i++)
+                dst[i] = ALfilterState_processSingle(lpfilter, src[i]);
+            break;
+    }
 }
 
 
@@ -323,8 +332,8 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
             {
                 DirectParams *directparms = &src->Direct;
 
-                DoFilter(&directparms->LpFilter[chan], SrcData, ResampledData,
-                         DstBufferSize);
+                DoFilters(&directparms->LpFilter[chan], SrcData, ResampledData,
+                          DstBufferSize, directparms->Filters[chan]);
                 src->DryMix(directparms, SrcData, chan, OutPos, DstBufferSize);
             }
 
@@ -334,8 +343,8 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                 if(!sendparms->OutBuffer)
                     continue;
 
-                DoFilter(&sendparms->LpFilter[chan], SrcData, ResampledData,
-                         DstBufferSize);
+                DoFilters(&sendparms->LpFilter[chan], SrcData, ResampledData,
+                          DstBufferSize, sendparms->Filters[chan]);
                 src->WetMix(sendparms, SrcData, OutPos, DstBufferSize);
             }
         }

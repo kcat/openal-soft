@@ -15,12 +15,18 @@ extern "C" {
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt                   */
 
 typedef enum ALfilterType {
+    /** EFX-style low-pass filter, specifying a gain and reference frequency. */
     ALfilterType_HighShelf,
+    /** EFX-style high-pass filter, specifying a gain and reference frequency. */
     ALfilterType_LowShelf,
+    /** Peaking filter, specifying a gain, reference frequency, and bandwidth. */
     ALfilterType_Peaking,
 
+    /** Low-pass cut-off filter, specifying a cut-off frequency and bandwidth. */
     ALfilterType_LowPass,
+    /** High-pass cut-off filter, specifying a cut-off frequency and bandwidth. */
     ALfilterType_HighPass,
+    /** Band-pass filter, specifying a center frequency and bandwidth. */
     ALfilterType_BandPass,
 } ALfilterType;
 

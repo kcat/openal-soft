@@ -96,20 +96,22 @@ static void DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter,
             break;
 
         case AF_LowPass:
-            for(i = 0;i < numsamples;i++)
-                dst[i] = ALfilterState_processSingle(lpfilter, src[i]);
+            ALfilterState_process(lpfilter, dst, src, numsamples);
             break;
-
         case AF_HighPass:
-            for(i = 0;i < numsamples;i++)
-                dst[i] = ALfilterState_processSingle(hpfilter, src[i]);
+            ALfilterState_process(hpfilter, dst, src, numsamples);
             break;
 
         case AF_BandPass:
-            for(i = 0;i < numsamples;i++)
-                dst[i] = ALfilterState_processSingle(hpfilter,
-                    ALfilterState_processSingle(lpfilter, src[i])
-                );
+            for(i = 0;i < numsamples;)
+            {
+                ALfloat temp[64];
+                ALuint todo = minu(64, numsamples-i);
+
+                ALfilterState_process(lpfilter, temp, src, todo);
+                ALfilterState_process(hpfilter, dst, temp, todo);
+                i += todo;
+            }
             break;
     }
 }

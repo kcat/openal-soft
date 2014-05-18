@@ -46,6 +46,14 @@ DECL_TEMPLATE(cubic32)
 #undef DECL_TEMPLATE
 
 
+void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *src, ALuint numsamples)
+{
+    ALuint i;
+    for(i = 0;i < numsamples;i++)
+        *(dst++) = ALfilterState_processSingle(filter, *(src++));
+}
+
+
 static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
                                    const ALuint IrSize,
                                    ALfloat (*restrict Coeffs)[2],

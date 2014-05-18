@@ -138,9 +138,8 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_SSE(DirectParams *params,
-                   ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *restrict data,
-                   ALuint Counter, ALuint srcchan, ALuint OutPos, ALuint BufferSize)
+void MixDirect_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+                   MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize)
 {
     ALfloat DrySend, Step;
     __m128 gain, step;
@@ -149,8 +148,8 @@ void MixDirect_SSE(DirectParams *params,
     for(c = 0;c < MaxChannels;c++)
     {
         ALuint pos = 0;
-        DrySend = params->Mix.Gains.Current[srcchan][c];
-        Step = params->Mix.Gains.Step[srcchan][c];
+        DrySend = Gains->Current[c];
+        Step = Gains->Step[c];
         if(Step != 1.0f && Counter > 0)
         {
             /* Mix with applying gain steps in aligned multiples of 4. */
@@ -180,8 +179,8 @@ void MixDirect_SSE(DirectParams *params,
                 DrySend *= Step;
             }
             if(pos == Counter)
-                DrySend = params->Mix.Gains.Target[srcchan][c];
-            params->Mix.Gains.Current[srcchan][c] = DrySend;
+                DrySend = Gains->Target[c];
+            Gains->Current[c] = DrySend;
             /* Mix until pos is aligned with 4 or the mix is done. */
             for(;pos < BufferSize && (pos&3) != 0;pos++)
                 OutBuffer[c][OutPos+pos] += data[pos]*DrySend;

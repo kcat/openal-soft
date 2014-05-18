@@ -90,9 +90,8 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_C(DirectParams *params,
-                 ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *restrict data,
-                 ALuint Counter, ALuint srcchan, ALuint OutPos, ALuint BufferSize)
+void MixDirect_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+                 MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize)
 {
     ALfloat DrySend, Step;
     ALuint c;
@@ -100,8 +99,8 @@ void MixDirect_C(DirectParams *params,
     for(c = 0;c < MaxChannels;c++)
     {
         ALuint pos = 0;
-        DrySend = params->Mix.Gains.Current[srcchan][c];
-        Step = params->Mix.Gains.Step[srcchan][c];
+        DrySend = Gains->Current[c];
+        Step = Gains->Step[c];
         if(Step != 1.0f && Counter > 0)
         {
             for(;pos < BufferSize && pos < Counter;pos++)
@@ -110,8 +109,8 @@ void MixDirect_C(DirectParams *params,
                 DrySend *= Step;
             }
             if(pos == Counter)
-                DrySend = params->Mix.Gains.Target[srcchan][c];
-            params->Mix.Gains.Current[srcchan][c] = DrySend;
+                DrySend = Gains->Target[c];
+            Gains->Current[c] = DrySend;
         }
 
         if(!(DrySend > GAIN_SILENCE_THRESHOLD))

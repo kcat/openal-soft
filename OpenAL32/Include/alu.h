@@ -46,6 +46,7 @@ enum ActiveFilters {
     AF_BandPass = AF_LowPass | AF_HighPass
 };
 
+
 typedef struct HrtfState {
     alignas(16) ALfloat History[SRC_HISTORY_LENGTH];
     alignas(16) ALfloat Values[HRIR_LENGTH][2];
@@ -57,6 +58,14 @@ typedef struct HrtfParams {
     ALuint Delay[2];
     ALint DelayStep[2];
 } HrtfParams;
+
+
+typedef struct MixGains {
+    ALfloat Current[MaxChannels];
+    ALfloat Step[MaxChannels];
+    ALfloat Target[MaxChannels];
+} MixGains;
+
 
 typedef struct DirectParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
@@ -81,14 +90,7 @@ typedef struct DirectParams {
             ALfloat Dir[3];
         } Hrtf;
 
-        /* A mixing matrix. First subscript is the channel number of the input
-         * data (regardless of channel configuration) and the second is the
-         * channel target (eg. FrontLeft). Not used with HRTF. */
-        struct {
-            ALfloat Current[MAX_INPUT_CHANNELS][MaxChannels];
-            ALfloat Step[MAX_INPUT_CHANNELS][MaxChannels];
-            ALfloat Target[MAX_INPUT_CHANNELS][MaxChannels];
-        } Gains;
+        MixGains Gains[MAX_INPUT_CHANNELS];
     } Mix;
 } DirectParams;
 
@@ -115,10 +117,9 @@ typedef struct SendParams {
 typedef void (*ResamplerFunc)(const ALfloat *src, ALuint frac, ALuint increment,
                               ALfloat *restrict dst, ALuint dstlen);
 
-typedef ALvoid (*DryMixerFunc)(struct DirectParams *params,
-                               ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-                               const ALfloat *restrict data, ALuint Counter,
-                               ALuint srcchan, ALuint OutPos, ALuint BufferSize);
+typedef ALvoid (*DryMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+                               MixGains *Gains, ALuint Counter, ALuint OutPos,
+                               ALuint BufferSize);
 typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                               ALuint Counter, ALuint Offset, const ALuint IrSize,
                               const HrtfParams *hrtfparams, HrtfState *hrtfstate,

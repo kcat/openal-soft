@@ -413,20 +413,28 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
     if(DirectChannels != AL_FALSE)
     {
-        ALfloat (*Matrix)[MaxChannels] = src->Direct.Mix.Gains.Target;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
-            for(c = 0;c < MaxChannels;c++)
-                Matrix[i][c] = 0.0f;
+            ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
+            ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
+            ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
+            for(j = 0;j < MaxChannels;j++)
+            {
+                Current[j] = 0.0f;
+                Step[j] = 1.0f;
+                Target[j] = 0.0f;
+            }
         }
+
         for(c = 0;c < num_channels;c++)
         {
+            ALfloat *restrict Target = src->Direct.Mix.Gains[c].Target;
             for(i = 0;i < (ALint)Device->NumChan;i++)
             {
                 enum Channel chan = Device->Speaker2Chan[i];
                 if(chan == chans[c].channel)
                 {
-                    Matrix[c][chan] = DryGain;
+                    Target[chan] = DryGain;
                     break;
                 }
             }
@@ -434,33 +442,35 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
         if(src->Direct.Moving)
         {
-            ALfloat (*restrict Current)[MaxChannels] = src->Direct.Mix.Gains.Current;
-            ALfloat (*restrict Step)[MaxChannels] = src->Direct.Mix.Gains.Step;
             for(i = 0;i < MAX_INPUT_CHANNELS;i++)
             {
+                ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
+                ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
+                ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
                 for(j = 0;j < MaxChannels;j++)
                 {
-                    ALfloat cur = maxf(Current[i][j], FLT_EPSILON);
-                    ALfloat trg = maxf(Matrix[i][j], FLT_EPSILON);
+                    ALfloat cur = maxf(Current[j], FLT_EPSILON);
+                    ALfloat trg = maxf(Target[j], FLT_EPSILON);
                     if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                        Step[i][j] = powf(trg/cur, 1.0f/64.0f);
+                        Step[j] = powf(trg/cur, 1.0f/64.0f);
                     else
-                        Step[i][j] = 1.0f;
-                    Current[i][j] = cur;
+                        Step[j] = 1.0f;
+                    Current[j] = cur;
                 }
             }
             src->Direct.Counter = 64;
         }
         else
         {
-            ALfloat (*restrict Current)[MaxChannels] = src->Direct.Mix.Gains.Current;
-            ALfloat (*restrict Step)[MaxChannels] = src->Direct.Mix.Gains.Step;
             for(i = 0;i < MAX_INPUT_CHANNELS;i++)
             {
+                ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
+                ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
+                ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
                 for(j = 0;j < MaxChannels;j++)
                 {
-                    Current[i][j] = Matrix[i][j];
-                    Step[i][j] = 1.0f;
+                    Current[j] = Target[j];
+                    Step[j] = 1.0f;
                 }
             }
             src->Direct.Counter = 0;
@@ -504,55 +514,63 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     }
     else
     {
-        ALfloat (*Matrix)[MaxChannels] = src->Direct.Mix.Gains.Target;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
-            for(c = 0;c < MaxChannels;c++)
-                Matrix[i][c] = 0.0f;
+            ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
+            ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
+            ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
+            for(j = 0;j < MaxChannels;j++)
+            {
+                Current[j] = 0.0f;
+                Step[j] = 1.0f;
+                Target[j] = 0.0f;
+            }
         }
 
         DryGain *= lerp(1.0f, 1.0f/sqrtf((float)Device->NumChan), hwidth/F_PI);
         for(c = 0;c < num_channels;c++)
         {
+            ALfloat *restrict Target = src->Direct.Mix.Gains[c].Target;
             /* Special-case LFE */
             if(chans[c].channel == LFE)
             {
-                Matrix[c][chans[c].channel] = DryGain;
+                Target[chans[c].channel] = DryGain;
                 continue;
             }
-            ComputeAngleGains(Device, chans[c].angle, hwidth, DryGain,
-                              Matrix[c]);
+            ComputeAngleGains(Device, chans[c].angle, hwidth, DryGain, Target);
         }
 
         if(src->Direct.Moving)
         {
-            ALfloat (*restrict Current)[MaxChannels] = src->Direct.Mix.Gains.Current;
-            ALfloat (*restrict Step)[MaxChannels] = src->Direct.Mix.Gains.Step;
             for(i = 0;i < MAX_INPUT_CHANNELS;i++)
             {
+                ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
+                ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
+                ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
                 for(j = 0;j < MaxChannels;j++)
                 {
-                    ALfloat trg = maxf(Matrix[i][j], FLT_EPSILON);
-                    ALfloat cur = maxf(Current[i][j], FLT_EPSILON);
+                    ALfloat trg = maxf(Target[j], FLT_EPSILON);
+                    ALfloat cur = maxf(Current[j], FLT_EPSILON);
                     if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                        Step[i][j] = powf(trg/cur, 1.0f/64.0f);
+                        Step[j] = powf(trg/cur, 1.0f/64.0f);
                     else
-                        Step[i][j] = 1.0f;
-                    Current[i][j] = cur;
+                        Step[j] = 1.0f;
+                    Current[j] = cur;
                 }
             }
             src->Direct.Counter = 64;
         }
         else
         {
-            ALfloat (*restrict Current)[MaxChannels] = src->Direct.Mix.Gains.Current;
-            ALfloat (*restrict Step)[MaxChannels] = src->Direct.Mix.Gains.Step;
             for(i = 0;i < MAX_INPUT_CHANNELS;i++)
             {
+                ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
+                ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
+                ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
                 for(j = 0;j < MaxChannels;j++)
                 {
-                    Current[i][j] = Matrix[i][j];
-                    Step[i][j] = 1.0f;
+                    Current[j] = Target[j];
+                    Step[j] = 1.0f;
                 }
             }
             src->Direct.Counter = 0;
@@ -1028,15 +1046,23 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     }
     else
     {
-        ALfloat (*Matrix)[MaxChannels] = src->Direct.Mix.Gains.Target;
+        ALfloat *restrict Target;
         ALfloat DirGain = 0.0f;
         ALfloat AmbientGain;
 
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
+            ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
+            ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
+            Target = src->Direct.Mix.Gains[i].Target;
             for(j = 0;j < MaxChannels;j++)
-                Matrix[i][j] = 0.0f;
+            {
+                Current[j] = 0.0f;
+                Step[j] = 1.0f;
+                Target[j] = 0.0f;
+            }
         }
+        Target = src->Direct.Mix.Gains[0].Target;
 
         /* Normalize the length, and compute panned gains. */
         if(Distance > FLT_EPSILON)
@@ -1048,7 +1074,7 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
             DirGain = sqrtf(Position[0]*Position[0] + Position[2]*Position[2]);
             ComputeAngleGains(Device, atan2f(Position[0], -Position[2]*ZScale), 0.0f,
-                              DryGain*DirGain, Matrix[0]);
+                              DryGain*DirGain, Target);
         }
 
         /* Adjustment for vertical offsets. Not the greatest, but simple
@@ -1057,36 +1083,33 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         for(i = 0;i < (ALint)Device->NumChan;i++)
         {
             enum Channel chan = Device->Speaker2Chan[i];
-            Matrix[0][chan] = maxf(Matrix[0][chan], AmbientGain);
+            Target[chan] = maxf(Target[chan], AmbientGain);
         }
 
         if(src->Direct.Moving)
         {
-            ALfloat (*restrict Current)[MaxChannels] = src->Direct.Mix.Gains.Current;
-            ALfloat (*restrict Step)[MaxChannels] = src->Direct.Mix.Gains.Step;
+            ALfloat *restrict Current = src->Direct.Mix.Gains[0].Current;
+            ALfloat *restrict Step = src->Direct.Mix.Gains[0].Step;
             for(j = 0;j < MaxChannels;j++)
             {
-                ALfloat cur = maxf(Current[0][j], FLT_EPSILON);
-                ALfloat trg = maxf(Matrix[0][j], FLT_EPSILON);
+                ALfloat cur = maxf(Current[j], FLT_EPSILON);
+                ALfloat trg = maxf(Target[j], FLT_EPSILON);
                 if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                    Step[0][j] = powf(trg/cur, 1.0f/64.0f);
+                    Step[j] = powf(trg/cur, 1.0f/64.0f);
                 else
-                    Step[0][j] = 1.0f;
-                Current[0][j] = cur;
+                    Step[j] = 1.0f;
+                Current[j] = cur;
             }
             src->Direct.Counter = 64;
         }
         else
         {
-            ALfloat (*restrict Current)[MaxChannels] = src->Direct.Mix.Gains.Current;
-            ALfloat (*restrict Step)[MaxChannels] = src->Direct.Mix.Gains.Step;
-            for(i = 0;i < MAX_INPUT_CHANNELS;i++)
+            ALfloat *restrict Current = src->Direct.Mix.Gains[0].Current;
+            ALfloat *restrict Step = src->Direct.Mix.Gains[0].Step;
+            for(j = 0;j < MaxChannels;j++)
             {
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    Current[i][j] = Matrix[i][j];
-                    Step[i][j] = 1.0f;
-                }
+                Current[j] = Target[j];
+                Step[j] = 1.0f;
             }
             src->Direct.Counter = 0;
             src->Direct.Moving  = AL_TRUE;

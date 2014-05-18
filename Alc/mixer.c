@@ -345,37 +345,33 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                           increment, ResampledData, DstBufferSize);
 
             {
-                DirectParams *directparms = &src->Direct;
+                DirectParams *parms = &src->Direct;
 
-                DoFilters(&directparms->LpFilter[chan], &directparms->HpFilter[chan],
-                          SrcData, ResampledData, DstBufferSize,
-                          directparms->Filters[chan]);
+                DoFilters(&parms->LpFilter[chan], &parms->HpFilter[chan], SrcData,
+                          ResampledData, DstBufferSize, parms->Filters[chan]);
                 if(!src->IsHrtf)
-                    src->Dry.Mix(directparms->OutBuffer, SrcData,
-                                 &directparms->Mix.Gains[chan],
-                                 maxu(directparms->Counter, OutPos) - OutPos,
-                                 OutPos, DstBufferSize);
+                    src->Dry.Mix(parms->OutBuffer, SrcData, &parms->Mix.Gains[chan],
+                                 maxu(parms->Counter, OutPos) - OutPos, OutPos,
+                                 DstBufferSize);
                 else
-                    src->Dry.HrtfMix(directparms->OutBuffer, SrcData,
-                                     maxu(directparms->Counter, OutPos) - OutPos,
-                                     directparms->Offset + OutPos,
-                                     directparms->Mix.Hrtf.IrSize,
-                                     &directparms->Mix.Hrtf.Params[chan],
-                                     &directparms->Mix.Hrtf.State[chan],
-                                     OutPos, DstBufferSize);
+                    src->Dry.HrtfMix(parms->OutBuffer, SrcData,
+                                     maxu(parms->Counter, OutPos) - OutPos,
+                                     parms->Offset + OutPos, OutPos,
+                                     parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
+                                     &parms->Mix.Hrtf.State[chan], DstBufferSize);
             }
 
             for(j = 0;j < Device->NumAuxSends;j++)
             {
-                SendParams *sendparms = &src->Send[j];
-                if(!sendparms->OutBuffer)
+                SendParams *parms = &src->Send[j];
+                if(!parms->OutBuffer)
                     continue;
 
-                DoFilters(&sendparms->LpFilter[chan], &sendparms->HpFilter[chan],
+                DoFilters(&parms->LpFilter[chan], &parms->HpFilter[chan],
                           SrcData, ResampledData, DstBufferSize,
-                          sendparms->Filters[chan]);
-                src->WetMix(sendparms->OutBuffer, SrcData, &sendparms->Gain,
-                            maxu(sendparms->Counter, OutPos) - OutPos,
+                          parms->Filters[chan]);
+                src->WetMix(parms->OutBuffer, SrcData, &parms->Gain,
+                            maxu(parms->Counter, OutPos) - OutPos,
                             OutPos, DstBufferSize);
             }
         }

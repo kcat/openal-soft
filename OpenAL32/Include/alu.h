@@ -123,9 +123,9 @@ typedef void (*DryMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const AL
                              MixGains *Gains, ALuint Counter, ALuint OutPos,
                              ALuint BufferSize);
 typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                              ALuint Counter, ALuint Offset, const ALuint IrSize,
-                              const HrtfParams *hrtfparams, HrtfState *hrtfstate,
-                              ALuint OutPos, ALuint BufferSize);
+                              ALuint Counter, ALuint Offset, ALuint OutPos,
+                              const ALuint IrSize, const HrtfParams *hrtfparams,
+                              HrtfState *hrtfstate, ALuint BufferSize);
 typedef void (*WetMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                              MixGainMono *Gain, ALuint Counter, ALuint OutPos,
                              ALuint BufferSize);

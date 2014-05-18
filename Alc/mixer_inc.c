@@ -26,9 +26,8 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 
 
 void MixDirect_Hrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                    ALuint Counter, ALuint Offset, const ALuint IrSize,
-                    const HrtfParams *hrtfparams, HrtfState *hrtfstate,
-                    ALuint OutPos, ALuint BufferSize)
+                    ALuint Counter, ALuint Offset, ALuint OutPos, const ALuint IrSize,
+                    const HrtfParams *hrtfparams, HrtfState *hrtfstate, ALuint BufferSize)
 {
     alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALuint Delay[2];

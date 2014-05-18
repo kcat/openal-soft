@@ -25,14 +25,13 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
                                ALfloat left, ALfloat right);
 
 
-void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint srcchan,
-  ALuint OutPos, ALuint BufferSize)
+void MixDirect_Hrtf(DirectParams *params,
+                    ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *restrict data,
+                    ALuint Counter, ALuint srcchan, ALuint OutPos, ALuint BufferSize)
 {
-    ALfloat (*restrict DryBuffer)[BUFFERSIZE] = params->OutBuffer;
     const ALuint IrSize = params->Mix.Hrtf.IrSize;
     const HrtfParams *hrtfparams = &params->Mix.Hrtf.Params[srcchan];
     HrtfState *hrtfstate = &params->Mix.Hrtf.State[srcchan];
-    ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
     ALuint Offset = params->Offset + OutPos;
     alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALuint Delay[2];
@@ -66,8 +65,8 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
         Offset++;
 
         ApplyCoeffsStep(Offset, hrtfstate->Values, IrSize, Coeffs, hrtfparams->CoeffStep, left, right);
-        DryBuffer[FrontLeft][OutPos]  += hrtfstate->Values[Offset&HRIR_MASK][0];
-        DryBuffer[FrontRight][OutPos] += hrtfstate->Values[Offset&HRIR_MASK][1];
+        OutBuffer[FrontLeft][OutPos]  += hrtfstate->Values[Offset&HRIR_MASK][0];
+        OutBuffer[FrontRight][OutPos] += hrtfstate->Values[Offset&HRIR_MASK][1];
         OutPos++;
     }
 
@@ -84,8 +83,8 @@ void MixDirect_Hrtf(DirectParams *params, const ALfloat *restrict data, ALuint s
         Offset++;
 
         ApplyCoeffs(Offset, hrtfstate->Values, IrSize, Coeffs, left, right);
-        DryBuffer[FrontLeft][OutPos]  += hrtfstate->Values[Offset&HRIR_MASK][0];
-        DryBuffer[FrontRight][OutPos] += hrtfstate->Values[Offset&HRIR_MASK][1];
+        OutBuffer[FrontLeft][OutPos]  += hrtfstate->Values[Offset&HRIR_MASK][0];
+        OutBuffer[FrontRight][OutPos] += hrtfstate->Values[Offset&HRIR_MASK][1];
 
         OutPos++;
     }

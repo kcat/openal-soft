@@ -118,18 +118,16 @@ void MixDirect_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *da
 }
 
 
-void MixSend_Neon(SendParams *params, const ALfloat *restrict data,
-  ALuint OutPos, ALuint BufferSize)
+void MixSend_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+                  MixGainMono *Gain, ALuint Counter, ALuint OutPos, ALuint BufferSize)
 {
-    ALfloat (*restrict OutBuffer)[BUFFERSIZE] = params->OutBuffer;
-    ALuint Counter = maxu(params->Counter, OutPos) - OutPos;
     ALfloat WetGain, Step;
     float32x4_t gain;
 
     {
         ALuint pos = 0;
-        WetGain = params->Gain.Current;
-        Step = params->Gain.Step;
+        WetGain = Gain->Current;
+        Step = Gain->Step;
         if(Step != 1.0f && Counter > 0)
         {
             for(;pos < BufferSize && pos < Counter;pos++)
@@ -138,8 +136,8 @@ void MixSend_Neon(SendParams *params, const ALfloat *restrict data,
                 WetGain *= Step;
             }
             if(pos == Counter)
-                WetGain = params->Gain.Target;
-            params->Gain.Current = WetGain;
+                WetGain = Gain->Target;
+            Gain->Current = WetGain;
             for(;pos < BufferSize && (pos&3) != 0;pos++)
                 OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
         }

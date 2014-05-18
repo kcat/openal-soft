@@ -374,7 +374,9 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                 DoFilters(&sendparms->LpFilter[chan], &sendparms->HpFilter[chan],
                           SrcData, ResampledData, DstBufferSize,
                           sendparms->Filters[chan]);
-                src->WetMix(sendparms, SrcData, OutPos, DstBufferSize);
+                src->WetMix(sendparms->OutBuffer, SrcData, &sendparms->Gain,
+                            maxu(sendparms->Counter, OutPos) - OutPos,
+                            OutPos, DstBufferSize);
             }
         }
         /* Update positions */

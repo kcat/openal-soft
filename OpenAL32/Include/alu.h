@@ -66,6 +66,12 @@ typedef struct MixGains {
     ALfloat Target[MaxChannels];
 } MixGains;
 
+typedef struct MixGainMono {
+    ALfloat Current;
+    ALfloat Step;
+    ALfloat Target;
+} MixGainMono;
+
 
 typedef struct DirectParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
@@ -106,27 +112,23 @@ typedef struct SendParams {
 
     /* Gain control, which applies to all input channels to a single (mono)
      * output buffer. */
-    struct {
-        ALfloat Current;
-        ALfloat Step;
-        ALfloat Target;
-    } Gain;
+    MixGainMono Gain;
 } SendParams;
 
 
 typedef void (*ResamplerFunc)(const ALfloat *src, ALuint frac, ALuint increment,
                               ALfloat *restrict dst, ALuint dstlen);
 
-typedef ALvoid (*DryMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                               MixGains *Gains, ALuint Counter, ALuint OutPos,
-                               ALuint BufferSize);
+typedef void (*DryMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+                             MixGains *Gains, ALuint Counter, ALuint OutPos,
+                             ALuint BufferSize);
 typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                               ALuint Counter, ALuint Offset, const ALuint IrSize,
                               const HrtfParams *hrtfparams, HrtfState *hrtfstate,
                               ALuint OutPos, ALuint BufferSize);
-typedef ALvoid (*WetMixerFunc)(struct SendParams *params,
-                               const ALfloat *restrict data,
-                               ALuint OutPos, ALuint BufferSize);
+typedef void (*WetMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+                             MixGainMono *Gain, ALuint Counter, ALuint OutPos,
+                             ALuint BufferSize);
 
 
 #define GAIN_SILENCE_THRESHOLD  (0.00001f) /* -100dB */

@@ -5,9 +5,8 @@
 #include "AL/al.h"
 #include "alMain.h"
 
-struct SendParams;
-
 struct MixGains;
+struct MixGainMono;
 
 struct HrtfParams;
 struct HrtfState;
@@ -27,7 +26,9 @@ void MixDirect_Hrtf_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *
 void MixDirect_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                  struct MixGains *Gains, ALuint Counter, ALuint OutPos,
                  ALuint BufferSize);
-void MixSend_C(struct SendParams*,const ALfloat*restrict,ALuint,ALuint);
+void MixSend_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+               struct MixGainMono *Gain, ALuint Counter, ALuint OutPos,
+               ALuint BufferSize);
 
 /* SSE mixers */
 void MixDirect_Hrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
@@ -37,7 +38,9 @@ void MixDirect_Hrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat
 void MixDirect_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                    struct MixGains *Gains, ALuint Counter, ALuint OutPos,
                    ALuint BufferSize);
-void MixSend_SSE(struct SendParams*,const ALfloat*restrict,ALuint,ALuint);
+void MixSend_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+                 struct MixGainMono *Gain, ALuint Counter, ALuint OutPos,
+                 ALuint BufferSize);
 
 /* Neon mixers */
 void MixDirect_Hrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
@@ -47,6 +50,8 @@ void MixDirect_Hrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloa
 void MixDirect_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                     struct MixGains *Gains, ALuint Counter, ALuint OutPos,
                     ALuint BufferSize);
-void MixSend_Neon(struct SendParams*,const ALfloat*restrict,ALuint,ALuint);
+void MixSend_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+                  struct MixGainMono *Gain, ALuint Counter, ALuint OutPos,
+                  ALuint BufferSize);
 
 #endif /* MIXER_DEFS_H */

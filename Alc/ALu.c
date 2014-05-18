@@ -99,7 +99,7 @@ static ResamplerFunc SelectResampler(enum Resampler Resampler, ALuint increment)
 }
 
 
-static DryMixerFunc SelectHrtfMixer(void)
+static HrtfMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
@@ -467,7 +467,8 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             src->Direct.Moving  = AL_TRUE;
         }
 
-        src->DryMix = SelectDirectMixer();
+        src->IsHrtf = AL_FALSE;
+        src->Dry.Mix = SelectDirectMixer();
     }
     else if(Device->Hrtf)
     {
@@ -498,7 +499,8 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         src->Direct.Moving  = AL_TRUE;
         src->Direct.Mix.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
 
-        src->DryMix = SelectHrtfMixer();
+        src->IsHrtf = AL_TRUE;
+        src->Dry.HrtfMix = SelectHrtfMixer();
     }
     else
     {
@@ -557,7 +559,8 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             src->Direct.Moving  = AL_TRUE;
         }
 
-        src->DryMix = SelectDirectMixer();
+        src->IsHrtf = AL_FALSE;
+        src->Dry.Mix = SelectDirectMixer();
     }
     for(i = 0;i < NumSends;i++)
     {
@@ -1020,7 +1023,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         }
         src->Direct.Mix.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
 
-        src->DryMix = SelectHrtfMixer();
+        src->IsHrtf = AL_TRUE;
+        src->Dry.HrtfMix = SelectHrtfMixer();
     }
     else
     {
@@ -1088,7 +1092,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             src->Direct.Moving  = AL_TRUE;
         }
 
-        src->DryMix = SelectDirectMixer();
+        src->IsHrtf = AL_FALSE;
+        src->Dry.Mix = SelectDirectMixer();
     }
     for(i = 0;i < NumSends;i++)
     {

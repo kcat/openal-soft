@@ -25,14 +25,11 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
                                ALfloat left, ALfloat right);
 
 
-void MixDirect_Hrtf(DirectParams *params,
-                    ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *restrict data,
-                    ALuint Counter, ALuint srcchan, ALuint OutPos, ALuint BufferSize)
+void MixDirect_Hrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+                    ALuint Counter, ALuint Offset, const ALuint IrSize,
+                    const HrtfParams *hrtfparams, HrtfState *hrtfstate,
+                    ALuint OutPos, ALuint BufferSize)
 {
-    const ALuint IrSize = params->Mix.Hrtf.IrSize;
-    const HrtfParams *hrtfparams = &params->Mix.Hrtf.Params[srcchan];
-    HrtfState *hrtfstate = &params->Mix.Hrtf.State[srcchan];
-    ALuint Offset = params->Offset + OutPos;
     alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALuint Delay[2];
     ALfloat left, right;
@@ -95,6 +92,3 @@ void MixDirect_Hrtf(DirectParams *params,
 
 #undef MERGE2
 #undef REAL_MERGE2
-
-#undef UNLIKELY
-#undef LIKELY

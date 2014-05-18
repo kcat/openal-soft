@@ -119,6 +119,10 @@ typedef ALvoid (*DryMixerFunc)(struct DirectParams *params,
                                ALfloat (*restrict OutBuffer)[BUFFERSIZE],
                                const ALfloat *restrict data, ALuint Counter,
                                ALuint srcchan, ALuint OutPos, ALuint BufferSize);
+typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+                              ALuint Counter, ALuint Offset, const ALuint IrSize,
+                              const HrtfParams *hrtfparams, HrtfState *hrtfstate,
+                              ALuint OutPos, ALuint BufferSize);
 typedef ALvoid (*WetMixerFunc)(struct SendParams *params,
                                const ALfloat *restrict data,
                                ALuint OutPos, ALuint BufferSize);

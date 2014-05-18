@@ -350,9 +350,18 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                 DoFilters(&directparms->LpFilter[chan], &directparms->HpFilter[chan],
                           SrcData, ResampledData, DstBufferSize,
                           directparms->Filters[chan]);
-                src->DryMix(directparms, directparms->OutBuffer, SrcData,
-                            maxu(directparms->Counter, OutPos) - OutPos, chan,
-                            OutPos, DstBufferSize);
+                if(!src->IsHrtf)
+                    src->Dry.Mix(directparms, directparms->OutBuffer, SrcData,
+                                 maxu(directparms->Counter, OutPos) - OutPos, chan,
+                                 OutPos, DstBufferSize);
+                else
+                    src->Dry.HrtfMix(directparms->OutBuffer, SrcData,
+                                     maxu(directparms->Counter, OutPos) - OutPos,
+                                     directparms->Offset + OutPos,
+                                     directparms->Mix.Hrtf.IrSize,
+                                     &directparms->Mix.Hrtf.Params[chan],
+                                     &directparms->Mix.Hrtf.State[chan],
+                                     OutPos, DstBufferSize);
             }
 
             for(j = 0;j < Device->NumAuxSends;j++)

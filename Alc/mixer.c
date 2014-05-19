@@ -176,8 +176,8 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 
         for(chan = 0;chan < NumChannels;chan++)
         {
-            ALfloat *SrcData = Device->SampleData1;
-            ALfloat *ResampledData = Device->SampleData2;
+            const ALfloat *ResampledData;
+            ALfloat *SrcData = Device->SourceData;
             ALuint SrcDataSize = 0;
 
             if(Source->SourceType == AL_STATIC)
@@ -341,16 +341,18 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
             }
 
             /* Now resample, then filter and mix to the appropriate outputs. */
-            src->Resample(&SrcData[BufferPrePadding], DataPosFrac,
-                          increment, ResampledData, DstBufferSize);
-
+            ResampledData = src->Resample(
+                &SrcData[BufferPrePadding], DataPosFrac, increment,
+                Device->ResampledData, DstBufferSize
+            );
             {
                 DirectParams *parms = &src->Direct;
                 const ALfloat *samples;
 
                 samples = DoFilters(
                     &parms->Filters[chan].LowPass, &parms->Filters[chan].HighPass,
-                    SrcData, ResampledData, DstBufferSize, parms->Filters[chan].ActiveType
+                    Device->FilteredData, ResampledData, DstBufferSize,
+                    parms->Filters[chan].ActiveType
                 );
                 if(!src->IsHrtf)
                     src->Dry.Mix(parms->OutBuffer, samples, &parms->Mix.Gains[chan],
@@ -375,7 +377,8 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 
                 samples = DoFilters(
                     &parms->Filters[chan].LowPass, &parms->Filters[chan].HighPass,
-                    SrcData, ResampledData, DstBufferSize, parms->Filters[chan].ActiveType
+                    Device->FilteredData, ResampledData, DstBufferSize,
+                    parms->Filters[chan].ActiveType
                 );
                 src->WetMix(parms->OutBuffer, samples, &parms->Gain,
                             maxu(parms->Counter, OutPos) - OutPos,

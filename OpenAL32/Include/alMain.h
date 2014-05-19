@@ -677,9 +677,10 @@ struct ALCdevice_struct
     ALuint64 ClockBase;
     ALuint SamplesDone;
 
-    /* Temp storage used for mixing. */
-    alignas(16) ALfloat SampleData1[BUFFERSIZE];
-    alignas(16) ALfloat SampleData2[BUFFERSIZE];
+    /* Temp storage used for each source when mixing. */
+    alignas(16) ALfloat SourceData[BUFFERSIZE];
+    alignas(16) ALfloat ResampledData[BUFFERSIZE];
+    alignas(16) ALfloat FilteredData[BUFFERSIZE];
 
     // Dry path buffer mix
     alignas(16) ALfloat DryBuffer[MaxChannels][BUFFERSIZE];

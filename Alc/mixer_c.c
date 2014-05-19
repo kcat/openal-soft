@@ -15,28 +15,27 @@ static inline ALfloat lerp32(const ALfloat *vals, ALuint frac)
 static inline ALfloat cubic32(const ALfloat *vals, ALuint frac)
 { return cubic(vals[-1], vals[0], vals[1], vals[2], frac * (1.0f/FRACTIONONE)); }
 
-void Resample_copy32_C(const ALfloat *data, ALuint UNUSED(frac),
-  ALuint increment, ALfloat *restrict OutBuffer, ALuint BufferSize)
+const ALfloat *Resample_copy32_C(const ALfloat *data, ALuint UNUSED(frac),
+  ALuint increment, ALfloat *restrict UNUSED(OutBuffer), ALuint UNUSED(BufferSize))
 {
     assert(increment==FRACTIONONE);
-    memcpy(OutBuffer, data, BufferSize*sizeof(ALfloat));
+    return data;
 }
 
 #define DECL_TEMPLATE(Sampler)                                                \
-void Resample_##Sampler##_C(const ALfloat *data, ALuint frac,                 \
+const ALfloat *Resample_##Sampler##_C(const ALfloat *data, ALuint frac,       \
   ALuint increment, ALfloat *restrict OutBuffer, ALuint BufferSize)           \
 {                                                                             \
-    ALuint pos = 0;                                                           \
     ALuint i;                                                                 \
-                                                                              \
     for(i = 0;i < BufferSize;i++)                                             \
     {                                                                         \
-        OutBuffer[i] = Sampler(data + pos, frac);                             \
+        OutBuffer[i] = Sampler(data, frac);                                   \
                                                                               \
         frac += increment;                                                    \
-        pos  += frac>>FRACTIONBITS;                                           \
+        data += frac>>FRACTIONBITS;                                           \
         frac &= FRACTIONMASK;                                                 \
     }                                                                         \
+    return OutBuffer;                                                         \
 }
 
 DECL_TEMPLATE(point32)

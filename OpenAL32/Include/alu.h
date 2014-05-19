@@ -120,8 +120,8 @@ typedef struct SendParams {
 } SendParams;
 
 
-typedef void (*ResamplerFunc)(const ALfloat *src, ALuint frac, ALuint increment,
-                              ALfloat *restrict dst, ALuint dstlen);
+typedef const ALfloat* (*ResamplerFunc)(const ALfloat *src, ALuint frac, ALuint increment,
+                                        ALfloat *restrict dst, ALuint dstlen);
 
 typedef void (*DryMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                              MixGains *Gains, ALuint Counter, ALuint OutPos,

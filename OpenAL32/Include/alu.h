@@ -76,16 +76,18 @@ typedef struct MixGainMono {
 typedef struct DirectParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
 
-    enum ActiveFilters Filters[MAX_INPUT_CHANNELS];
-    ALfilterState LpFilter[MAX_INPUT_CHANNELS];
-    ALfilterState HpFilter[MAX_INPUT_CHANNELS];
-
     /* If not 'moving', gain/coefficients are set directly without fading. */
     ALboolean Moving;
     /* Stepping counter for gain/coefficient fading. */
     ALuint Counter;
     /* History/coefficient offset. */
     ALuint Offset;
+
+    struct {
+        enum ActiveFilters ActiveType;
+        ALfilterState LowPass;
+        ALfilterState HighPass;
+    } Filters[MAX_INPUT_CHANNELS];
 
     union {
         struct {
@@ -103,12 +105,14 @@ typedef struct DirectParams {
 typedef struct SendParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
 
-    enum ActiveFilters Filters[MAX_INPUT_CHANNELS];
-    ALfilterState LpFilter[MAX_INPUT_CHANNELS];
-    ALfilterState HpFilter[MAX_INPUT_CHANNELS];
-
     ALboolean Moving;
     ALuint Counter;
+
+    struct {
+        enum ActiveFilters ActiveType;
+        ALfilterState LowPass;
+        ALfilterState HighPass;
+    } Filters[MAX_INPUT_CHANNELS];
 
     /* Gain control, which applies to all input channels to a single (mono)
      * output buffer. */

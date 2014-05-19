@@ -348,19 +348,21 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                 DirectParams *parms = &src->Direct;
                 const ALfloat *samples;
 
-                samples = DoFilters(&parms->LpFilter[chan], &parms->HpFilter[chan],
-                                    SrcData, ResampledData, DstBufferSize,
-                                    parms->Filters[chan]);
+                samples = DoFilters(
+                    &parms->Filters[chan].LowPass, &parms->Filters[chan].HighPass,
+                    SrcData, ResampledData, DstBufferSize, parms->Filters[chan].ActiveType
+                );
                 if(!src->IsHrtf)
                     src->Dry.Mix(parms->OutBuffer, samples, &parms->Mix.Gains[chan],
                                  maxu(parms->Counter, OutPos) - OutPos, OutPos,
                                  DstBufferSize);
                 else
-                    src->Dry.HrtfMix(parms->OutBuffer, SrcData,
-                                     maxu(parms->Counter, OutPos) - OutPos,
-                                     parms->Offset + OutPos, OutPos,
-                                     parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
-                                     &parms->Mix.Hrtf.State[chan], DstBufferSize);
+                    src->Dry.HrtfMix(
+                        parms->OutBuffer, SrcData, maxu(parms->Counter, OutPos) - OutPos,
+                        parms->Offset + OutPos, OutPos, parms->Mix.Hrtf.IrSize,
+                        &parms->Mix.Hrtf.Params[chan], &parms->Mix.Hrtf.State[chan],
+                        DstBufferSize
+                    );
             }
 
             for(j = 0;j < Device->NumAuxSends;j++)
@@ -371,9 +373,10 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                 if(!parms->OutBuffer)
                     continue;
 
-                samples = DoFilters(&parms->LpFilter[chan], &parms->HpFilter[chan],
-                                    SrcData, ResampledData, DstBufferSize,
-                                    parms->Filters[chan]);
+                samples = DoFilters(
+                    &parms->Filters[chan].LowPass, &parms->Filters[chan].HighPass,
+                    SrcData, ResampledData, DstBufferSize, parms->Filters[chan].ActiveType
+                );
                 src->WetMix(parms->OutBuffer, samples, &parms->Gain,
                             maxu(parms->Counter, OutPos) - OutPos,
                             OutPos, DstBufferSize);

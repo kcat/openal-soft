@@ -84,23 +84,22 @@ static void SilenceData(ALfloat *dst, ALuint samples)
 }
 
 
-static void DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter,
-                      ALfloat *restrict dst, const ALfloat *restrict src,
-                      ALuint numsamples, enum ActiveFilters type)
+static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter,
+                                ALfloat *restrict dst, const ALfloat *restrict src,
+                                ALuint numsamples, enum ActiveFilters type)
 {
     ALuint i;
     switch(type)
     {
         case AF_None:
-            memcpy(dst, src, numsamples * sizeof(ALfloat));
             break;
 
         case AF_LowPass:
             ALfilterState_process(lpfilter, dst, src, numsamples);
-            break;
+            return dst;
         case AF_HighPass:
             ALfilterState_process(hpfilter, dst, src, numsamples);
-            break;
+            return dst;
 
         case AF_BandPass:
             for(i = 0;i < numsamples;)
@@ -112,8 +111,9 @@ static void DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter,
                 ALfilterState_process(hpfilter, dst, temp, todo);
                 i += todo;
             }
-            break;
+            return dst;
     }
+    return src;
 }
 
 
@@ -346,11 +346,13 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 
             {
                 DirectParams *parms = &src->Direct;
+                const ALfloat *samples;
 
-                DoFilters(&parms->LpFilter[chan], &parms->HpFilter[chan], SrcData,
-                          ResampledData, DstBufferSize, parms->Filters[chan]);
+                samples = DoFilters(&parms->LpFilter[chan], &parms->HpFilter[chan],
+                                    SrcData, ResampledData, DstBufferSize,
+                                    parms->Filters[chan]);
                 if(!src->IsHrtf)
-                    src->Dry.Mix(parms->OutBuffer, SrcData, &parms->Mix.Gains[chan],
+                    src->Dry.Mix(parms->OutBuffer, samples, &parms->Mix.Gains[chan],
                                  maxu(parms->Counter, OutPos) - OutPos, OutPos,
                                  DstBufferSize);
                 else
@@ -364,13 +366,15 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
             for(j = 0;j < Device->NumAuxSends;j++)
             {
                 SendParams *parms = &src->Send[j];
+                const ALfloat *samples;
+
                 if(!parms->OutBuffer)
                     continue;
 
-                DoFilters(&parms->LpFilter[chan], &parms->HpFilter[chan],
-                          SrcData, ResampledData, DstBufferSize,
-                          parms->Filters[chan]);
-                src->WetMix(parms->OutBuffer, SrcData, &parms->Gain,
+                samples = DoFilters(&parms->LpFilter[chan], &parms->HpFilter[chan],
+                                    SrcData, ResampledData, DstBufferSize,
+                                    parms->Filters[chan]);
+                src->WetMix(parms->OutBuffer, samples, &parms->Gain,
                             maxu(parms->Counter, OutPos) - OutPos,
                             OutPos, DstBufferSize);
             }

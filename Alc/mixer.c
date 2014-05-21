@@ -182,7 +182,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 
             if(Source->SourceType == AL_STATIC)
             {
-                const ALbuffer *ALBuffer = Source->queue->buffer;
+                const ALbuffer *ALBuffer = BufferListItem->buffer;
                 const ALubyte *Data = ALBuffer->data;
                 ALuint DataSize;
                 ALuint pos;

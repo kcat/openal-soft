@@ -413,17 +413,11 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
     if(DirectChannels != AL_FALSE)
     {
-        for(i = 0;i < MAX_INPUT_CHANNELS;i++)
+        for(c = 0;c < num_channels;c++)
         {
-            ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
-            ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
-            ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
+            ALfloat *restrict Target = src->Direct.Mix.Gains[c].Target;
             for(j = 0;j < MaxChannels;j++)
-            {
-                Current[j] = 0.0f;
-                Step[j] = 1.0f;
                 Target[j] = 0.0f;
-            }
         }
 
         for(c = 0;c < num_channels;c++)
@@ -440,9 +434,25 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             }
         }
 
-        if(src->Direct.Moving)
+        if(!src->Direct.Moving)
         {
-            for(i = 0;i < MAX_INPUT_CHANNELS;i++)
+            for(i = 0;i < num_channels;i++)
+            {
+                ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
+                ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
+                ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
+                for(j = 0;j < MaxChannels;j++)
+                {
+                    Current[j] = Target[j];
+                    Step[j] = 1.0f;
+                }
+            }
+            src->Direct.Counter = 0;
+            src->Direct.Moving  = AL_TRUE;
+        }
+        else
+        {
+            for(i = 0;i < num_channels;i++)
             {
                 ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
                 ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
@@ -459,22 +469,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                 }
             }
             src->Direct.Counter = 64;
-        }
-        else
-        {
-            for(i = 0;i < MAX_INPUT_CHANNELS;i++)
-            {
-                ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
-                ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
-                ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    Current[j] = Target[j];
-                    Step[j] = 1.0f;
-                }
-            }
-            src->Direct.Counter = 0;
-            src->Direct.Moving  = AL_TRUE;
         }
 
         src->IsHrtf = AL_FALSE;
@@ -500,7 +494,7 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                 /* Get the static HRIR coefficients and delays for this
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
-                                    0.0f, chans[c].angle,  DryGain,
+                                    0.0f, chans[c].angle, DryGain,
                                     src->Direct.Mix.Hrtf.Params[c].Coeffs,
                                     src->Direct.Mix.Hrtf.Params[c].Delay);
             }
@@ -514,17 +508,11 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     }
     else
     {
-        for(i = 0;i < MAX_INPUT_CHANNELS;i++)
+        for(i = 0;i < num_channels;i++)
         {
-            ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
-            ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
             ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
             for(j = 0;j < MaxChannels;j++)
-            {
-                Current[j] = 0.0f;
-                Step[j] = 1.0f;
                 Target[j] = 0.0f;
-            }
         }
 
         DryGain *= lerp(1.0f, 1.0f/sqrtf((float)Device->NumChan), hwidth/F_PI);
@@ -540,9 +528,25 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             ComputeAngleGains(Device, chans[c].angle, hwidth, DryGain, Target);
         }
 
-        if(src->Direct.Moving)
+        if(!src->Direct.Moving)
         {
-            for(i = 0;i < MAX_INPUT_CHANNELS;i++)
+            for(i = 0;i < num_channels;i++)
+            {
+                ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
+                ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
+                ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
+                for(j = 0;j < MaxChannels;j++)
+                {
+                    Current[j] = Target[j];
+                    Step[j] = 1.0f;
+                }
+            }
+            src->Direct.Counter = 0;
+            src->Direct.Moving  = AL_TRUE;
+        }
+        else
+        {
+            for(i = 0;i < num_channels;i++)
             {
                 ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
                 ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
@@ -560,22 +564,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             }
             src->Direct.Counter = 64;
         }
-        else
-        {
-            for(i = 0;i < MAX_INPUT_CHANNELS;i++)
-            {
-                ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
-                ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
-                ALfloat *restrict Target = src->Direct.Mix.Gains[i].Target;
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    Current[j] = Target[j];
-                    Step[j] = 1.0f;
-                }
-            }
-            src->Direct.Counter = 0;
-            src->Direct.Moving  = AL_TRUE;
-        }
 
         src->IsHrtf = AL_FALSE;
         src->Dry.Mix = SelectDirectMixer();
@@ -583,7 +571,14 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     for(i = 0;i < NumSends;i++)
     {
         src->Send[i].Gain.Target = WetGain[i];
-        if(src->Send[i].Moving)
+        if(!src->Send[i].Moving)
+        {
+            src->Send[i].Gain.Current = src->Send[i].Gain.Target;
+            src->Send[i].Gain.Step = 1.0f;
+            src->Send[i].Counter = 0;
+            src->Send[i].Moving  = AL_TRUE;
+        }
+        else
         {
             ALfloat cur = maxf(src->Send[i].Gain.Current, FLT_EPSILON);
             ALfloat trg = maxf(src->Send[i].Gain.Target, FLT_EPSILON);
@@ -593,13 +588,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                 src->Send[i].Gain.Step = 1.0f;
             src->Send[i].Gain.Current = cur;
             src->Send[i].Counter = 64;
-        }
-        else
-        {
-            src->Send[i].Gain.Current = src->Send[i].Gain.Target;
-            src->Send[i].Gain.Step = 1.0f;
-            src->Send[i].Counter = 0;
-            src->Send[i].Moving  = AL_TRUE;
         }
     }
     src->WetMix = SelectSendMixer();
@@ -1046,23 +1034,12 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     }
     else
     {
-        ALfloat *restrict Target;
+        ALfloat *restrict Target = src->Direct.Mix.Gains[0].Target;
         ALfloat DirGain = 0.0f;
         ALfloat AmbientGain;
 
-        for(i = 0;i < MAX_INPUT_CHANNELS;i++)
-        {
-            ALfloat *restrict Current = src->Direct.Mix.Gains[i].Current;
-            ALfloat *restrict Step = src->Direct.Mix.Gains[i].Step;
-            Target = src->Direct.Mix.Gains[i].Target;
-            for(j = 0;j < MaxChannels;j++)
-            {
-                Current[j] = 0.0f;
-                Step[j] = 1.0f;
-                Target[j] = 0.0f;
-            }
-        }
-        Target = src->Direct.Mix.Gains[0].Target;
+        for(j = 0;j < MaxChannels;j++)
+            Target[j] = 0.0f;
 
         /* Normalize the length, and compute panned gains. */
         if(Distance > FLT_EPSILON)
@@ -1086,7 +1063,19 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             Target[chan] = maxf(Target[chan], AmbientGain);
         }
 
-        if(src->Direct.Moving)
+        if(!src->Direct.Moving)
+        {
+            ALfloat *restrict Current = src->Direct.Mix.Gains[0].Current;
+            ALfloat *restrict Step = src->Direct.Mix.Gains[0].Step;
+            for(j = 0;j < MaxChannels;j++)
+            {
+                Current[j] = Target[j];
+                Step[j] = 1.0f;
+            }
+            src->Direct.Counter = 0;
+            src->Direct.Moving  = AL_TRUE;
+        }
+        else
         {
             ALfloat *restrict Current = src->Direct.Mix.Gains[0].Current;
             ALfloat *restrict Step = src->Direct.Mix.Gains[0].Step;
@@ -1102,18 +1091,6 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             }
             src->Direct.Counter = 64;
         }
-        else
-        {
-            ALfloat *restrict Current = src->Direct.Mix.Gains[0].Current;
-            ALfloat *restrict Step = src->Direct.Mix.Gains[0].Step;
-            for(j = 0;j < MaxChannels;j++)
-            {
-                Current[j] = Target[j];
-                Step[j] = 1.0f;
-            }
-            src->Direct.Counter = 0;
-            src->Direct.Moving  = AL_TRUE;
-        }
 
         src->IsHrtf = AL_FALSE;
         src->Dry.Mix = SelectDirectMixer();
@@ -1121,7 +1098,14 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     for(i = 0;i < NumSends;i++)
     {
         src->Send[i].Gain.Target = WetGain[i];
-        if(src->Send[i].Moving)
+        if(!src->Send[i].Moving)
+        {
+            src->Send[i].Gain.Current = src->Send[i].Gain.Target;
+            src->Send[i].Gain.Step = 1.0f;
+            src->Send[i].Counter = 0;
+            src->Send[i].Moving  = AL_TRUE;
+        }
+        else
         {
             ALfloat cur = maxf(src->Send[i].Gain.Current, FLT_EPSILON);
             ALfloat trg = maxf(src->Send[i].Gain.Target, FLT_EPSILON);
@@ -1131,13 +1115,6 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                 src->Send[i].Gain.Step = 1.0f;
             src->Send[i].Gain.Current = cur;
             src->Send[i].Counter = 64;
-        }
-        else
-        {
-            src->Send[i].Gain.Current = src->Send[i].Gain.Target;
-            src->Send[i].Gain.Step = 1.0f;
-            src->Send[i].Counter = 0;
-            src->Send[i].Moving  = AL_TRUE;
         }
     }
     src->WetMix = SelectSendMixer();

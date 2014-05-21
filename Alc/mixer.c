@@ -359,7 +359,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                                  parms->Counter, OutPos, DstBufferSize);
                 else
                     src->Dry.HrtfMix(
-                        parms->OutBuffer, SrcData, parms->Counter, parms->Offset,
+                        parms->OutBuffer, samples, parms->Counter, parms->Offset,
                         OutPos, parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
                         &parms->Mix.Hrtf.State[chan], DstBufferSize
                     );

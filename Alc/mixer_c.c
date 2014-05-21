@@ -15,27 +15,33 @@ static inline ALfloat lerp32(const ALfloat *vals, ALuint frac)
 static inline ALfloat cubic32(const ALfloat *vals, ALuint frac)
 { return cubic(vals[-1], vals[0], vals[1], vals[2], frac * (1.0f/FRACTIONONE)); }
 
-const ALfloat *Resample_copy32_C(const ALfloat *data, ALuint UNUSED(frac),
-  ALuint increment, ALfloat *restrict UNUSED(OutBuffer), ALuint UNUSED(BufferSize))
+const ALfloat *Resample_copy32_C(const ALfloat *src, ALuint UNUSED(frac),
+  ALuint increment, ALfloat *restrict dst, ALuint numsamples)
 {
     assert(increment==FRACTIONONE);
-    return data;
+#if defined(HAVE_SSE) || defined(HAVE_NEON)
+    /* Avoid copying the source data if it's aligned like the destination. */
+    if((((intptr_t)src)&15) == (((intptr_t)dst)&15))
+        return src;
+#endif
+    memcpy(dst, src, numsamples*sizeof(ALfloat));
+    return dst;
 }
 
 #define DECL_TEMPLATE(Sampler)                                                \
-const ALfloat *Resample_##Sampler##_C(const ALfloat *data, ALuint frac,       \
-  ALuint increment, ALfloat *restrict OutBuffer, ALuint BufferSize)           \
+const ALfloat *Resample_##Sampler##_C(const ALfloat *src, ALuint frac,        \
+  ALuint increment, ALfloat *restrict dst, ALuint numsamples)                 \
 {                                                                             \
     ALuint i;                                                                 \
-    for(i = 0;i < BufferSize;i++)                                             \
+    for(i = 0;i < numsamples;i++)                                             \
     {                                                                         \
-        OutBuffer[i] = Sampler(data, frac);                                   \
+        dst[i] = Sampler(src, frac);                                          \
                                                                               \
         frac += increment;                                                    \
-        data += frac>>FRACTIONBITS;                                           \
+        src  += frac>>FRACTIONBITS;                                           \
         frac &= FRACTIONMASK;                                                 \
     }                                                                         \
-    return OutBuffer;                                                         \
+    return dst;                                                               \
 }
 
 DECL_TEMPLATE(point32)

@@ -356,14 +356,12 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                 );
                 if(!src->IsHrtf)
                     src->Dry.Mix(parms->OutBuffer, samples, &parms->Mix.Gains[chan],
-                                 maxu(parms->Counter, OutPos) - OutPos, OutPos,
-                                 DstBufferSize);
+                                 parms->Counter, OutPos, DstBufferSize);
                 else
                     src->Dry.HrtfMix(
-                        parms->OutBuffer, SrcData, maxu(parms->Counter, OutPos) - OutPos,
-                        parms->Offset + OutPos, OutPos, parms->Mix.Hrtf.IrSize,
-                        &parms->Mix.Hrtf.Params[chan], &parms->Mix.Hrtf.State[chan],
-                        DstBufferSize
+                        parms->OutBuffer, SrcData, parms->Counter, parms->Offset,
+                        OutPos, parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
+                        &parms->Mix.Hrtf.State[chan], DstBufferSize
                     );
             }
 
@@ -381,8 +379,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                     parms->Filters[chan].ActiveType
                 );
                 src->WetMix(parms->OutBuffer, samples, &parms->Gain,
-                            maxu(parms->Counter, OutPos) - OutPos,
-                            OutPos, DstBufferSize);
+                            parms->Counter, OutPos, DstBufferSize);
             }
         }
         /* Update positions */
@@ -393,6 +390,10 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
             DataPosFrac &= FRACTIONMASK;
         }
         OutPos += DstBufferSize;
+        src->Direct.Offset += DstBufferSize;
+        src->Direct.Counter = maxu(src->Direct.Counter, DstBufferSize) - DstBufferSize;
+        for(j = 0;j < Device->NumAuxSends;j++)
+            src->Send[j].Counter = maxu(src->Send[j].Counter, DstBufferSize) - DstBufferSize;
 
         /* Handle looping sources */
         while(1)
@@ -443,6 +444,4 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
     Source->current_buffer    = BufferListItem;
     Source->position          = DataPosInt;
     Source->position_fraction = DataPosFrac;
-    src->Direct.Offset += OutPos;
-    src->Direct.Counter = maxu(src->Direct.Counter, OutPos) - OutPos;
 }

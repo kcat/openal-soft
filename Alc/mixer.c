@@ -107,8 +107,8 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
                 ALfloat temp[64];
                 ALuint todo = minu(64, numsamples-i);
 
-                ALfilterState_process(lpfilter, temp, src, todo);
-                ALfilterState_process(hpfilter, dst, temp, todo);
+                ALfilterState_process(lpfilter, temp, src+i, todo);
+                ALfilterState_process(hpfilter, dst+i, temp, todo);
                 i += todo;
             }
             return dst;

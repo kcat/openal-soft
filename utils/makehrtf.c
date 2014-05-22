@@ -58,7 +58,6 @@
  *  1999
  */
 
-// Needed for 64-bit unsigned integer.
 #include "config.h"
 
 #include <stdio.h>
@@ -67,6 +66,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+#ifdef HAVE_STRINGS_H
+#include <strings.h>
+#endif
 
 // Rely (if naively) on OpenAL's header for the types used for serialization.
 #include "AL/al.h"

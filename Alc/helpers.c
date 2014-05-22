@@ -631,8 +631,12 @@ ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, void *ins_
     {
         ptrdiff_t ins_elem = ((char*)ins_pos - ((char*)(*vecptr) + base_size)) / obj_size;
         ptrdiff_t numins = ((const char*)datend - (const char*)datstart) / obj_size;
-        if(!vector_reserve(vecptr, base_size, VECTOR_SIZE(*vecptr)+numins, obj_size, AL_TRUE))
+
+        assert(numins > 0);
+        if(INT_MAX-VECTOR_SIZE(*vecptr) <= numins ||
+           !vector_reserve(vecptr, base_size, VECTOR_SIZE(*vecptr)+numins, obj_size, AL_TRUE))
             return AL_FALSE;
+
         /* NOTE: ins_pos may have been invalidated if *vecptr moved. Use ins_elem instead. */
         if(ins_elem < (*vecptr)->Size)
         {

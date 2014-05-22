@@ -306,9 +306,11 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #endif
 #endif
 
-#ifdef HAVE_GCC_FORMAT
+#ifdef __GNUC__
+#define CONST_FUNC __attribute__((const))
 #define PRINTF_STYLE(x, y) __attribute__((format(printf, (x), (y))))
 #else
+#define CONST_FUNC
 #define PRINTF_STYLE(x, y)
 #endif
 
@@ -577,8 +579,8 @@ enum DevFmtChannels {
     DevFmtChannelsDefault = DevFmtStereo
 };
 
-ALuint BytesFromDevFmt(enum DevFmtType type);
-ALuint ChannelsFromDevFmt(enum DevFmtChannels chans);
+ALuint BytesFromDevFmt(enum DevFmtType type) CONST_FUNC;
+ALuint ChannelsFromDevFmt(enum DevFmtChannels chans) CONST_FUNC;
 inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type)
 {
     return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
@@ -841,8 +843,8 @@ void SetRTPriority(void);
 void SetDefaultChannelOrder(ALCdevice *device);
 void SetDefaultWFXChannelOrder(ALCdevice *device);
 
-const ALCchar *DevFmtTypeString(enum DevFmtType type);
-const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
+const ALCchar *DevFmtTypeString(enum DevFmtType type) CONST_FUNC;
+const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans) CONST_FUNC;
 
 
 extern FILE *LogFile;

@@ -364,6 +364,12 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void);
 #endif
 #endif
 
+#ifndef AL_SOFT_block_alignment
+#define AL_SOFT_block_alignment 1
+#define AL_UNPACK_BLOCK_ALIGNMENT_SOFT           0x200C
+#define AL_PACK_BLOCK_ALIGNMENT_SOFT             0x200D
+#endif
+
 #ifdef __cplusplus
 }
 #endif

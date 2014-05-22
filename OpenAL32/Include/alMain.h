@@ -24,7 +24,7 @@
 #if defined(_WIN64)
 #define SZFMT "%I64u"
 #elif defined(_WIN32)
-#define SZFMT "%d"
+#define SZFMT "%u"
 #else
 #define SZFMT "%zu"
 #endif

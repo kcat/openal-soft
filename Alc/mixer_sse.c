@@ -170,7 +170,7 @@ void MixDirect_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *dat
                     _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
                     pos += 4;
                 } while(BufferSize-pos > 3 && Counter-pos > 3);
-                DrySend = _mm_cvtss_f32(_mm_shuffle_ps(gain, gain, _MM_SHUFFLE(3, 3, 3, 3)));
+                DrySend = _mm_cvtss_f32(gain);
             }
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
             for(;pos < BufferSize && pos < Counter;pos++)
@@ -231,7 +231,7 @@ void MixSend_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                     _mm_store_ps(&OutBuffer[0][OutPos+pos], dry4);
                     pos += 4;
                 } while(BufferSize-pos > 3 && Counter-pos > 3);
-                WetGain = _mm_cvtss_f32(_mm_shuffle_ps(gain, gain, _MM_SHUFFLE(3, 3, 3, 3)));
+                WetGain = _mm_cvtss_f32(gain);
             }
             for(;pos < BufferSize && pos < Counter;pos++)
             {

@@ -2372,7 +2372,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->state = AL_PLAYING;
             Source->position = 0;
             Source->position_fraction = 0;
-            Source->current_buffer = Source->queue;
+            Source->current_buffer = BufferList;
         }
         else
             Source->state = AL_PLAYING;

@@ -301,11 +301,11 @@ typedef ptrdiff_t ALsizeiptrEXT;
 #endif
 
 #ifdef __GNUC__
-#define CONST_FUNC __attribute__((const))
-#define PRINTF_STYLE(x, y) __attribute__((format(printf, (x), (y))))
+#define DECL_CONST __attribute__((const))
+#define DECL_FORMAT(x, y, z) __attribute__((format(x, (y), (z))))
 #else
-#define CONST_FUNC
-#define PRINTF_STYLE(x, y)
+#define DECL_CONST
+#define DECL_FORMAT(x, y, z)
 #endif
 
 #if defined(__GNUC__) && defined(__i386__)
@@ -573,8 +573,8 @@ enum DevFmtChannels {
     DevFmtChannelsDefault = DevFmtStereo
 };
 
-ALuint BytesFromDevFmt(enum DevFmtType type) CONST_FUNC;
-ALuint ChannelsFromDevFmt(enum DevFmtChannels chans) CONST_FUNC;
+ALuint BytesFromDevFmt(enum DevFmtType type) DECL_CONST;
+ALuint ChannelsFromDevFmt(enum DevFmtChannels chans) DECL_CONST;
 inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type)
 {
     return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
@@ -837,8 +837,8 @@ void SetRTPriority(void);
 void SetDefaultChannelOrder(ALCdevice *device);
 void SetDefaultWFXChannelOrder(ALCdevice *device);
 
-const ALCchar *DevFmtTypeString(enum DevFmtType type) CONST_FUNC;
-const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans) CONST_FUNC;
+const ALCchar *DevFmtTypeString(enum DevFmtType type) DECL_CONST;
+const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans) DECL_CONST;
 
 
 extern FILE *LogFile;
@@ -846,8 +846,8 @@ extern FILE *LogFile;
 #if defined(__GNUC__) && !defined(IN_IDE_PARSER)
 #define AL_PRINT(T, MSG, ...) fprintf(LogFile, "AL lib: %s %s: "MSG, T, __FUNCTION__ , ## __VA_ARGS__)
 #else
-void al_print(const char *type, const char *func, const char *fmt, ...) PRINTF_STYLE(3,4);
-#define AL_PRINT(T, MSG, ...) al_print((T), __FUNCTION__, MSG, __VA_ARGS__)
+void al_print(const char *type, const char *func, const char *fmt, ...) DECL_FORMAT(printf, 3,4);
+#define AL_PRINT(T, ...) al_print((T), __FUNCTION__, __VA_ARGS__)
 #endif
 
 enum LogLevel {

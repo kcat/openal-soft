@@ -901,11 +901,11 @@ IF(ALSOFT_UTILS AND NOT ALSOFT_NO_CONFIG_UTIL)
     add_subdirectory(utils/alsoft-config)
 ENDIF()
 IF(ALSOFT_EXAMPLES)
-    FIND_PACKAGE(SDL)
-    IF(SDL_FOUND)
+    FIND_PACKAGE(SDL2)
+    IF(SDL2_FOUND)
         FIND_PACKAGE(SDL_sound)
         IF(SDL_SOUND_FOUND AND CMAKE_VERSION VERSION_LESS "2.8.8")
-            INCLUDE_DIRECTORIES(${SDL_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
+            INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
         ENDIF()
     ENDIF()
 ENDIF()
@@ -1056,26 +1056,30 @@ IF(ALSOFT_UTILS)
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)
-    IF(SDL_FOUND AND SDL_SOUND_FOUND)
+    IF(SDL2_FOUND AND SDL_SOUND_FOUND)
         ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c
                                      examples/common/sdl_sound.c)
-        SET_PROPERTY(TARGET ex-common APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_SOUND_INCLUDE_DIR})
+        SET_PROPERTY(TARGET ex-common APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
+                                                                          ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(alstream examples/alstream.c)
-        TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${LIBNAME})
-        SET_PROPERTY(TARGET alstream APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_SOUND_INCLUDE_DIR})
+        TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        SET_PROPERTY(TARGET alstream APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
+                                                                         ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(alreverb examples/alreverb.c)
-        TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${LIBNAME})
-        SET_PROPERTY(TARGET alreverb APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_SOUND_INCLUDE_DIR})
+        TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        SET_PROPERTY(TARGET alreverb APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
+                                                                         ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(allatency examples/allatency.c)
-        TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${LIBNAME})
-        SET_PROPERTY(TARGET allatency APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_SOUND_INCLUDE_DIR})
+        TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        SET_PROPERTY(TARGET allatency APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
+                                                                          ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(alloopback examples/alloopback.c)
-        TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL_LIBRARY} ${LIBNAME})
-        SET_PROPERTY(TARGET alloopback APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_INCLUDE_DIR}
+        TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        SET_PROPERTY(TARGET alloopback APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                            ${SDL_SOUND_INCLUDE_DIR})
 
         INSTALL(TARGETS alstream alreverb allatency alloopback

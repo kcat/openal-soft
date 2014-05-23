@@ -92,13 +92,15 @@ static ALuint CreateSineWave(void)
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
     PlaybackInfo playback = { NULL, NULL, 0 };
     SDL_AudioSpec desired, obtained;
     ALuint source, buffer;
     ALCint attrs[16];
     ALenum state;
+    (void)argc;
+    (void)argv;
 
     /* Print out error if extension is missing. */
     if(!alcIsExtensionPresent(NULL, "ALC_SOFT_loopback"))
@@ -167,6 +169,8 @@ int main()
 
     attrs[6] = 0; /* end of list */
 
+    playback.FrameSize = FramesToBytes(1, attrs[1], attrs[3]);
+
     /* Initialize OpenAL loopback device, using our format attributes. */
     playback.Device = alcLoopbackOpenDeviceSOFT(NULL);
     if(!playback.Device)
@@ -187,7 +191,6 @@ int main()
         fprintf(stderr, "Failed to set an OpenAL audio context\n");
         goto error;
     }
-    playback.FrameSize = FramesToBytes(1, attrs[1], attrs[3]);
 
     /* Start SDL playing. Our callback (thus alcRenderSamplesSOFT) will now
      * start being called regularly to update the AL playback state. */

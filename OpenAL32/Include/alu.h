@@ -80,8 +80,6 @@ typedef struct DirectParams {
     ALboolean Moving;
     /* Stepping counter for gain/coefficient fading. */
     ALuint Counter;
-    /* History/coefficient offset. */
-    ALuint Offset;
 
     struct {
         enum ActiveFilters ActiveType;

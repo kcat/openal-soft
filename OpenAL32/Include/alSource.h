@@ -41,6 +41,8 @@ typedef struct ALactivesource {
     ALboolean IsHrtf;
     ALint Step;
 
+    ALuint Offset; /* Number of output samples mixed since starting. */
+
     DirectParams Direct;
     SendParams Send[MAX_SENDS];
 } ALactivesource;

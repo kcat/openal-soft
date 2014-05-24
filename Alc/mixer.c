@@ -359,7 +359,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                                  parms->Counter, OutPos, DstBufferSize);
                 else
                     src->Dry.HrtfMix(
-                        parms->OutBuffer, samples, parms->Counter, parms->Offset,
+                        parms->OutBuffer, samples, parms->Counter, src->Offset,
                         OutPos, parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
                         &parms->Mix.Hrtf.State[chan], DstBufferSize
                     );
@@ -390,7 +390,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
             DataPosFrac &= FRACTIONMASK;
         }
         OutPos += DstBufferSize;
-        src->Direct.Offset += DstBufferSize;
+        src->Offset += DstBufferSize;
         src->Direct.Counter = maxu(src->Direct.Counter, DstBufferSize) - DstBufferSize;
         for(j = 0;j < Device->NumAuxSends;j++)
             src->Send[j].Counter = maxu(src->Send[j].Counter, DstBufferSize) - DstBufferSize;

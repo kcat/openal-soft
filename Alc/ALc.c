@@ -3675,17 +3675,18 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
         LockLists();
         if((device->Flags&DEVICE_PAUSED))
         {
-            if(V0(device->Backend,start)() != ALC_FALSE)
+            device->Flags &= ~DEVICE_PAUSED;
+            if(device->ContextList != NULL)
             {
-                device->Flags |= DEVICE_RUNNING;
-                device->Flags &= ~DEVICE_PAUSED;
-            }
-            else
-            {
-                alcSetError(device, ALC_INVALID_DEVICE);
-                ALCdevice_Lock(device);
-                aluHandleDisconnect(device);
-                ALCdevice_Unlock(device);
+                if(V0(device->Backend,start)() != ALC_FALSE)
+                    device->Flags |= DEVICE_RUNNING;
+                else
+                {
+                    alcSetError(device, ALC_INVALID_DEVICE);
+                    ALCdevice_Lock(device);
+                    aluHandleDisconnect(device);
+                    ALCdevice_Unlock(device);
+                }
             }
         }
         UnlockLists();

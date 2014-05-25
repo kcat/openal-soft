@@ -100,6 +100,8 @@ typedef enum SrcFloatProp {
     /* AL_EXT_source_distance_model */
     sfDistanceModel = AL_DISTANCE_MODEL,
 
+    sfSecLength = AL_SEC_LENGTH_SOFT,
+
     /* AL_SOFT_buffer_sub_data / AL_SOFT_buffer_samples */
     sfSampleRWOffsetsSOFT = AL_SAMPLE_RW_OFFSETS_SOFT,
     sfByteRWOffsetsSOFT = AL_BYTE_RW_OFFSETS_SOFT,
@@ -141,6 +143,9 @@ typedef enum SrcIntProp {
 
     /* AL_EXT_source_distance_model */
     siDistanceModel = AL_DISTANCE_MODEL,
+
+    siByteLength = AL_BYTE_LENGTH_SOFT,
+    siSampleLength = AL_SAMPLE_LENGTH_SOFT,
 
     /* AL_SOFT_buffer_sub_data / AL_SOFT_buffer_samples */
     siSampleRWOffsetsSOFT = AL_SAMPLE_RW_OFFSETS_SOFT,
@@ -193,6 +198,7 @@ static ALint FloatValsByProp(ALenum prop)
         case sfBuffersQueued:
         case sfBuffersProcessed:
         case sfSourceType:
+        case sfSecLength:
             return 1;
 
         case sfSampleRWOffsetsSOFT:
@@ -244,6 +250,7 @@ static ALint DoubleValsByProp(ALenum prop)
         case sfBuffersQueued:
         case sfBuffersProcessed:
         case sfSourceType:
+        case sfSecLength:
             return 1;
 
         case sfSampleRWOffsetsSOFT:
@@ -287,6 +294,8 @@ static ALint IntValsByProp(ALenum prop)
         case siDirectFilter:
         case siDirectChannelsSOFT:
         case siDistanceModel:
+        case siByteLength:
+        case siSampleLength:
             return 1;
 
         case siSampleRWOffsetsSOFT:
@@ -332,6 +341,8 @@ static ALint Int64ValsByProp(ALenum prop)
         case siDirectFilter:
         case siDirectChannelsSOFT:
         case siDistanceModel:
+        case siByteLength:
+        case siSampleLength:
             return 1;
 
         case siSampleRWOffsetsSOFT:
@@ -480,6 +491,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             return AL_TRUE;
 
 
+        case sfSecLength:
         case AL_SEC_OFFSET_LATENCY_SOFT:
             /* Query only */
             SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
@@ -651,6 +663,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
             return AL_TRUE;
 
 
+        case siByteLength:
+        case siSampleLength:
         case siSampleRWOffsetsSOFT:
         case siByteRWOffsetsSOFT:
             /* Query only */
@@ -807,6 +821,8 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp
         case AL_SOURCE_STATE:
         case AL_BYTE_OFFSET:
         case AL_SAMPLE_OFFSET:
+        case siByteLength:
+        case siSampleLength:
         case siSourceType:
         case siBuffersQueued:
         case siBuffersProcessed:
@@ -869,6 +885,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp
 
 static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp prop, ALdouble *values)
 {
+    ALbufferlistitem *BufferList;
     ALdouble offsets[2];
     ALdouble updateLen;
     ALint ivals[3];
@@ -941,6 +958,27 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp
 
         case AL_DOPPLER_FACTOR:
             *values = Source->DopplerFactor;
+            return AL_TRUE;
+
+        case sfSecLength:
+            ReadLock(&Source->queue_lock);
+            if(!(BufferList=Source->queue))
+                *values = 0;
+            else
+            {
+                ALint length = 0;
+                ALsizei freq = 1;
+                do {
+                    ALbuffer *buffer = BufferList->buffer;
+                    if(buffer && buffer->SampleLen > 0)
+                    {
+                        freq = buffer->Frequency;
+                        length += buffer->SampleLen;
+                    }
+                } while((BufferList=BufferList->next) != NULL);
+                *values = (ALdouble)length / (ALdouble)freq;
+            }
+            ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_SAMPLE_RW_OFFSETS_SOFT:
@@ -1035,6 +1073,61 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
 
         case AL_SOURCE_STATE:
             *values = Source->state;
+            return AL_TRUE;
+
+        case siByteLength:
+            ReadLock(&Source->queue_lock);
+            if(!(BufferList=Source->queue))
+                *values = 0;
+            else
+            {
+                ALint length = 0;
+                do {
+                    ALbuffer *buffer = BufferList->buffer;
+                    if(buffer && buffer->SampleLen > 0)
+                    {
+                        ALuint byte_align, sample_align;
+                        if(buffer->OriginalType == UserFmtIMA4)
+                        {
+                            ALsizei align = (buffer->OriginalAlign-1)/2 + 4;
+                            byte_align = align * ChannelsFromFmt(buffer->FmtChannels);
+                            sample_align = buffer->OriginalAlign;
+                        }
+                        else if(buffer->OriginalType == UserFmtMSADPCM)
+                        {
+                            ALsizei align = (buffer->OriginalAlign-2)/2 + 7;
+                            byte_align = align * ChannelsFromFmt(buffer->FmtChannels);
+                            sample_align = buffer->OriginalAlign;
+                        }
+                        else
+                        {
+                            ALsizei align = buffer->OriginalAlign;
+                            byte_align = align * ChannelsFromFmt(buffer->FmtChannels);
+                            sample_align = buffer->OriginalAlign;
+                        }
+
+                        length += buffer->SampleLen / sample_align * byte_align;
+                    }
+                } while((BufferList=BufferList->next) != NULL);
+                *values = length;
+            }
+            ReadUnlock(&Source->queue_lock);
+            return AL_TRUE;
+
+        case siSampleLength:
+            ReadLock(&Source->queue_lock);
+            if(!(BufferList=Source->queue))
+                *values = 0;
+            else
+            {
+                ALint length = 0;
+                do {
+                    ALbuffer *buffer = BufferList->buffer;
+                    if(buffer) length += buffer->SampleLen;
+                } while((BufferList=BufferList->next) != NULL);
+                *values = length;
+            }
+            ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_BUFFERS_QUEUED:
@@ -1200,6 +1293,8 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp
         case AL_SOURCE_STATE:
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
+        case siByteLength:
+        case siSampleLength:
         case AL_SOURCE_TYPE:
         case AL_DIRECT_FILTER_GAINHF_AUTO:
         case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:

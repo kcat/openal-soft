@@ -719,7 +719,8 @@ static const ALchar alExtList[] =
     "AL_EXT_MULAW_MCFORMATS AL_EXT_OFFSET AL_EXT_source_distance_model "
     "AL_LOKI_quadriphonic AL_SOFT_block_alignment AL_SOFT_buffer_samples "
     "AL_SOFT_buffer_sub_data AL_SOFT_deferred_updates AL_SOFT_direct_channels "
-    "AL_SOFT_loop_points AL_SOFTX_MSADPCM AL_SOFT_source_latency";
+    "AL_SOFT_loop_points AL_SOFTX_MSADPCM AL_SOFT_source_latency "
+    "AL_SOFTX_source_length";
 
 static volatile ALCenum LastNullDeviceError = ALC_NO_ERROR;
 

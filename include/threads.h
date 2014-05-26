@@ -113,10 +113,21 @@ inline int altss_set(altss_t tss_id, void *val)
 
 typedef pthread_t althrd_t;
 typedef pthread_mutex_t almtx_t;
+typedef pthread_cond_t alcnd_t;
 typedef pthread_key_t altss_t;
 typedef pthread_once_t alonce_flag;
 
 #define AL_ONCE_FLAG_INIT PTHREAD_ONCE_INIT
+
+
+/* NOTE: Condition variables are POSIX-only at the moment, as Windows requires
+ * Vista or newer for them (without slow, hacky work-arounds). */
+int alcnd_init(alcnd_t *cond);
+int alcnd_signal(alcnd_t *cond);
+int alcnd_broadcast(alcnd_t *cond);
+int alcnd_wait(alcnd_t *cond, almtx_t *mtx);
+int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_point);
+void alcnd_destroy(alcnd_t *cond);
 
 
 inline althrd_t althrd_current(void)

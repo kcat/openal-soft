@@ -170,7 +170,8 @@ int althrd_join(althrd_t thr, int *res)
     GetExitCodeThread(hdl, &code);
     CloseHandle(hdl);
 
-    *res = (int)code;
+    if(res != NULL)
+        *res = (int)code;
     return althrd_success;
 }
 
@@ -412,11 +413,10 @@ int althrd_join(althrd_t thr, int *res)
 {
     void *code;
 
-    if(!res) return althrd_error;
-
     if(pthread_join(thr, &code) != 0)
         return althrd_error;
-    *res = (int)(intptr_t)code;
+    if(res != NULL)
+        *res = (int)(intptr_t)code;
     return althrd_success;
 }
 
@@ -493,6 +493,46 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 
     return ret;
 #endif
+}
+
+int alcnd_init(alcnd_t *cond)
+{
+    if(pthread_cond_init(cond, NULL) == 0)
+        return althrd_success;
+    return althrd_error;
+}
+
+int alcnd_signal(alcnd_t *cond)
+{
+    if(pthread_cond_signal(cond) == 0)
+        return althrd_success;
+    return althrd_error;
+}
+
+int alcnd_broadcast(alcnd_t *cond)
+{
+    if(pthread_cond_broadcast(cond) == 0)
+        return althrd_success;
+    return althrd_error;
+}
+
+int alcnd_wait(alcnd_t *cond, almtx_t *mtx)
+{
+    if(pthread_cond_wait(cond, mtx) == 0)
+        return althrd_success;
+    return althrd_error;
+}
+
+int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_point)
+{
+    if(pthread_cond_timedwait(cond, mtx, time_point) == 0)
+        return althrd_success;
+    return althrd_error;
+}
+
+void alcnd_destroy(alcnd_t *cond)
+{
+    pthread_cond_destroy(cond);
 }
 
 

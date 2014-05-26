@@ -1107,11 +1107,16 @@ static void ALCpulsePlayback_stop(ALCpulsePlayback *self)
 static ALint64 ALCpulsePlayback_getLatency(ALCpulsePlayback *self)
 {
     pa_usec_t latency = 0;
-    int neg;
+    int neg, err;
 
-    if(pa_stream_get_latency(self->stream, &latency, &neg) != 0)
+    if((err=pa_stream_get_latency(self->stream, &latency, &neg)) != 0)
     {
-        ERR("Failed to get stream latency!\n");
+        /* FIXME: if err = -PA_ERR_NODATA, it means we were called too soon
+         * after starting the stream and no timing info has been received from
+         * the server yet. Should we wait, possibly stalling the app, or give a
+         * dummy value? Either way, it shouldn't be 0. */
+        if(err != -PA_ERR_NODATA)
+            ERR("Failed to get stream latency: 0x%x\n", err);
         return 0;
     }
 

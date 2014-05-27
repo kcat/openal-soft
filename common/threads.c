@@ -341,15 +341,15 @@ int alcnd_broadcast(alcnd_t *cond)
 int alcnd_wait(alcnd_t *cond, almtx_t *mtx)
 {
     _int_alcnd_t *icond = cond->Ptr;
-    int res, last;
+    int res;
 
     IncrementRef(&icond->wait_count);
     LeaveCriticalSection(mtx);
 
     res = WaitForMultipleObjects(2, icond->events, FALSE, INFINITE);
 
-    last = DecrementRef(&icond->wait_count) == 0 && res == WAIT_OBJECT_0+BROADCAST;
-    if(last) ResetEvent(icond->events[BROADCAST]);
+    if(DecrementRef(&icond->wait_count) == 0 && res == WAIT_OBJECT_0+BROADCAST)
+        ResetEvent(icond->events[BROADCAST]);
     EnterCriticalSection(mtx);
 
     return althrd_success;
@@ -360,7 +360,7 @@ int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_poi
     _int_alcnd_t *icond = cond->Ptr;
     struct timespec curtime;
     DWORD sleeptime;
-    int res, last;
+    int res;
 
     if(altimespec_get(&curtime, AL_TIME_UTC) != AL_TIME_UTC)
         return althrd_error;
@@ -372,8 +372,8 @@ int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_poi
 
     res = WaitForMultipleObjects(2, icond->events, FALSE, sleeptime);
 
-    last = DecrementRef(&icond->wait_count) == 0 && res == WAIT_OBJECT_0+BROADCAST;
-    if(last) ResetEvent(icond->events[BROADCAST]);
+    if(DecrementRef(&icond->wait_count) == 0 && res == WAIT_OBJECT_0+BROADCAST)
+        ResetEvent(icond->events[BROADCAST]);
     EnterCriticalSection(mtx);
 
     return (res == WAIT_TIMEOUT) ? althrd_timedout : althrd_success;

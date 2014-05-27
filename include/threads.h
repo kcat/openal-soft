@@ -39,6 +39,11 @@ struct timespec {
 
 typedef DWORD althrd_t;
 typedef CRITICAL_SECTION almtx_t;
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0600
+typedef CONDITION_VARIABLE alcnd_t;
+#else
+typedef struct { void *Ptr; } alcnd_t;
+#endif
 typedef DWORD altss_t;
 typedef LONG alonce_flag;
 
@@ -118,16 +123,6 @@ typedef pthread_key_t altss_t;
 typedef pthread_once_t alonce_flag;
 
 #define AL_ONCE_FLAG_INIT PTHREAD_ONCE_INIT
-
-
-/* NOTE: Condition variables are POSIX-only at the moment, as Windows requires
- * Vista or newer for them (without slow, hacky work-arounds). */
-int alcnd_init(alcnd_t *cond);
-int alcnd_signal(alcnd_t *cond);
-int alcnd_broadcast(alcnd_t *cond);
-int alcnd_wait(alcnd_t *cond, almtx_t *mtx);
-int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_point);
-void alcnd_destroy(alcnd_t *cond);
 
 
 inline althrd_t althrd_current(void)
@@ -217,6 +212,13 @@ void althrd_setname(althrd_t thr, const char *name);
 int almtx_init(almtx_t *mtx, int type);
 void almtx_destroy(almtx_t *mtx);
 int almtx_timedlock(almtx_t *mtx, const struct timespec *ts);
+
+int alcnd_init(alcnd_t *cond);
+int alcnd_signal(alcnd_t *cond);
+int alcnd_broadcast(alcnd_t *cond);
+int alcnd_wait(alcnd_t *cond, almtx_t *mtx);
+int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_point);
+void alcnd_destroy(alcnd_t *cond);
 
 int altss_create(altss_t *tss_id, altss_dtor_t callback);
 void altss_delete(altss_t tss_id);

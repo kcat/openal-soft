@@ -230,6 +230,164 @@ int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
     return ret;
 }
 
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0600
+int alcnd_init(alcnd_t *cond)
+{
+    InitializeConditionVariable(cond);
+    return althrd_success;
+}
+
+int alcnd_signal(alcnd_t *cond)
+{
+    WakeConditionVariable(cond);
+    return althrd_success;
+}
+
+int alcnd_broadcast(alcnd_t *cond)
+{
+    WakeAllConditionVariable(cond);
+    return althrd_success;
+}
+
+int alcnd_wait(alcnd_t *cond, almtx_t *mtx)
+{
+    if(SleepConditionVariableCS(cond, mtx, INFINITE) != 0)
+        return althrd_success;
+    return althrd_error;
+}
+
+int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_point)
+{
+    struct timespec curtime;
+    DWORD sleeptime;
+
+    if(altimespec_get(&curtime, AL_TIME_UTC) != AL_TIME_UTC)
+        return althrd_error;
+
+    sleeptime  = (time_point->tv_nsec - curtime.tv_nsec + 999999)/1000000;
+    sleeptime += (time_point->tv_sec - curtime.tv_sec)*1000;
+    if(SleepConditionVariableCS(cond, mtx, sleeptime) != 0)
+        return althrd_success;
+    return (GetLastError()==ERROR_TIMEOUT) ? althrd_timedout : althrd_error;
+}
+
+void alcnd_destroy(alcnd_t* UNUSED(cond))
+{
+    /* Nothing to delete? */
+}
+
+#else
+
+/* WARNING: This is a rather poor implementation of condition variables, with
+ * known problems. However, it's simple, efficient, and good enough for now to
+ * not require Vista. Based on "Strategies for Implementing POSIX Condition
+ * Variables" by Douglas C. Schmidt and Irfan Pyarali:
+ * http://www.cs.wustl.edu/~schmidt/win32-cv-1.html
+ */
+/* A better solution may be using Wine's implementation. It requires internals
+ * (NtCreateKeyedEvent, NtReleaseKeyedEvent, and NtWaitForKeyedEvent) from
+ * ntdll, and implemention of exchange and compare-exchange for RefCounts.
+ */
+
+typedef struct {
+    RefCount wait_count;
+
+    HANDLE events[2];
+} _int_alcnd_t;
+enum {
+    SIGNAL = 0,
+    BROADCAST = 1
+};
+
+int alcnd_init(alcnd_t *cond)
+{
+    _int_alcnd_t *icond = calloc(1, sizeof(*icond));
+    if(!icond) return althrd_nomem;
+
+    InitRef(&icond->wait_count, 0);
+
+    icond->events[SIGNAL] = CreateEvent(NULL, FALSE, FALSE, NULL);
+    icond->events[BROADCAST] = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if(!icond->events[SIGNAL] || !icond->events[BROADCAST])
+    {
+        if(icond->events[SIGNAL])
+            CloseHandle(icond->events[SIGNAL]);
+        if(icond->events[BROADCAST])
+            CloseHandle(icond->events[BROADCAST]);
+        free(icond);
+        return althrd_error;
+    }
+
+    cond->Ptr = icond;
+    return althrd_success;
+}
+
+int alcnd_signal(alcnd_t *cond)
+{
+    _int_alcnd_t *icond = cond->Ptr;
+    if(ReadRef(&icond->wait_count) > 0)
+        SetEvent(icond->events[SIGNAL]);
+    return althrd_success;
+}
+
+int alcnd_broadcast(alcnd_t *cond)
+{
+    _int_alcnd_t *icond = cond->Ptr;
+    if(ReadRef(&icond->wait_count) > 0)
+        SetEvent(icond->events[BROADCAST]);
+    return althrd_success;
+}
+
+int alcnd_wait(alcnd_t *cond, almtx_t *mtx)
+{
+    _int_alcnd_t *icond = cond->Ptr;
+    int res, last;
+
+    IncrementRef(&icond->wait_count);
+    LeaveCriticalSection(mtx);
+
+    res = WaitForMultipleObjects(2, icond->events, FALSE, INFINITE);
+
+    last = DecrementRef(&icond->wait_count) == 0 && res == WAIT_OBJECT_0+BROADCAST;
+    if(last) ResetEvent(icond->events[BROADCAST]);
+    EnterCriticalSection(mtx);
+
+    return althrd_success;
+}
+
+int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_point)
+{
+    _int_alcnd_t *icond = cond->Ptr;
+    struct timespec curtime;
+    DWORD sleeptime;
+    int res, last;
+
+    if(altimespec_get(&curtime, AL_TIME_UTC) != AL_TIME_UTC)
+        return althrd_error;
+    sleeptime  = (time_point->tv_nsec - curtime.tv_nsec + 999999)/1000000;
+    sleeptime += (time_point->tv_sec - curtime.tv_sec)*1000;
+
+    IncrementRef(&icond->wait_count);
+    LeaveCriticalSection(mtx);
+
+    res = WaitForMultipleObjects(2, icond->events, FALSE, sleeptime);
+
+    last = DecrementRef(&icond->wait_count) == 0 && res == WAIT_OBJECT_0+BROADCAST;
+    if(last) ResetEvent(icond->events[BROADCAST]);
+    EnterCriticalSection(mtx);
+
+    return (res == WAIT_TIMEOUT) ? althrd_timedout : althrd_success;
+}
+
+void alcnd_destroy(alcnd_t *cond)
+{
+    _int_alcnd_t *icond = cond->Ptr;
+    CloseHandle(icond->events[SIGNAL]);
+    CloseHandle(icond->events[BROADCAST]);
+    free(icond);
+}
+#endif /* defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0600 */
+
 
 /* An associative map of uint:void* pairs. The key is the TLS index (given by
  * TlsAlloc), and the value is the altss_dtor_t callback. When a thread exits,

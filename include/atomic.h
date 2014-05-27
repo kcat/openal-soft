@@ -23,6 +23,10 @@ inline uint IncrementRef(volatile RefCount *ptr)
 { return __sync_add_and_fetch(&ptr->value, 1); }
 inline uint DecrementRef(volatile RefCount *ptr)
 { return __sync_sub_and_fetch(&ptr->value, 1); }
+inline uint ExchangeRef(volatile RefCount *ptr, uint newval)
+{ return __sync_lock_test_and_set(&ptr->value, newval); }
+inline uint CompExchangeRef(volatile RefCount *ptr, uint oldval, uint newval)
+{ return __sync_val_compare_and_swap(&ptr->value, oldval, newval); }
 
 inline int ExchangeInt(volatile int *ptr, int newval)
 { return __sync_lock_test_and_set(ptr, newval); }
@@ -53,6 +57,24 @@ inline uint IncrementRef(volatile RefCount *ptr)
 { return xaddl(&ptr->value, 1)+1; }
 inline uint DecrementRef(volatile RefCount *ptr)
 { return xaddl(&ptr->value, -1)-1; }
+inline uint ExchangeRef(volatile RefCount *ptr, uint newval)
+{
+    int ret;
+    __asm__ __volatile__("lock; xchgl %0,(%1)"
+                         : "=r" (ret)
+                         : "r" (&ptr->value), "0" (newval)
+                         : "memory");
+    return ret;
+}
+inline uint CompExchangeRef(volatile RefCount *ptr, uint oldval, uint newval)
+{
+    int ret;
+    __asm__ __volatile__("lock; cmpxchgl %2,(%1)"
+                         : "=a" (ret)
+                         : "r" (&ptr->value), "r" (newval), "0" (oldval)
+                         : "memory");
+    return ret;
+}
 
 inline int ExchangeInt(volatile int *dest, int newval)
 {
@@ -129,6 +151,22 @@ inline uint DecrementRef(volatile RefCount *ptr)
         volatile LONG *l;
     } u = { &ptr->value };
     return InterlockedDecrement(u.l);
+}
+inline uint ExchangeRef(volatile RefCount *ptr, uint newval)
+{
+    union {
+        volatile uint *i;
+        volatile LONG *l;
+    } u = { &ptr->value };
+    return InterlockedExchange(u.l, newval);
+}
+inline uint CompExchangeRef(volatile RefCount *ptr, uint oldval, uint newval)
+{
+    union {
+        volatile uint *i;
+        volatile LONG *l;
+    } u = { &ptr->value };
+    return InterlockedCompareExchange(u.l, newval, oldval);
 }
 
 inline int ExchangeInt(volatile int *ptr, int newval)

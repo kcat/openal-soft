@@ -4,6 +4,10 @@
 #include "bool.h"
 #include "atomic.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     RefCount read_count;
     RefCount write_count;
@@ -18,5 +22,9 @@ void ReadLock(RWLock *lock);
 void ReadUnlock(RWLock *lock);
 void WriteLock(RWLock *lock);
 void WriteUnlock(RWLock *lock);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AL_RWLOCK_H */

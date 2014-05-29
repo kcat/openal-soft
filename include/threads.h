@@ -3,6 +3,9 @@
 
 #include <time.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 enum {
     althrd_success = 0,
@@ -226,5 +229,9 @@ void altss_delete(altss_t tss_id);
 int altimespec_get(struct timespec *ts, int base);
 
 void al_nssleep(time_t sec, long nsec);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AL_THREADS_H */

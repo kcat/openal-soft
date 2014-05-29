@@ -4,6 +4,10 @@
 #include "AL/al.h"
 #include "rwlock.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct UIntMap {
     struct {
         ALuint key;
@@ -31,5 +35,9 @@ inline void LockUIntMapWrite(UIntMap *map)
 { WriteLock(&map->lock); }
 inline void UnlockUIntMapWrite(UIntMap *map)
 { WriteUnlock(&map->lock); }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AL_UINTMAP_H */

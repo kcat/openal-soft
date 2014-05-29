@@ -3,6 +3,9 @@
 
 #include "static_assert.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef void *volatile XchgPtr;
 
@@ -196,6 +199,10 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 
 #else
 #error "No atomic functions available on this platform!"
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* AL_ATOMIC_H */

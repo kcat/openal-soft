@@ -33,10 +33,16 @@ typedef void (*altss_dtor_t)(void*);
 #include <windows.h>
 
 
-#ifndef __MINGW32__
+#ifndef _TIMESPEC_DEFINED
+#define _TIMESPEC_DEFINED
 struct timespec {
     time_t tv_sec;
     long tv_nsec;
+};
+
+struct itimerspec {
+    struct timespec it_interval;
+    struct timespec it_value;
 };
 #endif
 

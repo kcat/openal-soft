@@ -34,6 +34,8 @@
 #define SRC_HISTORY_LENGTH (1<<SRC_HISTORY_BITS)
 #define SRC_HISTORY_MASK   (SRC_HISTORY_LENGTH-1)
 
+#define MAX_PITCH  (10)
+
 
 #ifdef __cplusplus
 extern "C" {

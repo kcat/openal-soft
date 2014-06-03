@@ -34,11 +34,15 @@
 #include "alu.h"
 #include "bs2b.h"
 #include "hrtf.h"
+#include "static_assert.h"
 
 #include "mixer_defs.h"
 
 #include "midi/base.h"
 
+
+static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
+              "MAX_PITCH and/or BUFFERSIZE are too large for FRACTIONBITS!");
 
 struct ChanMap {
     enum Channel channel;
@@ -330,8 +334,8 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         if((ALBuffer=BufferListItem->buffer) != NULL)
         {
             Pitch = Pitch * ALBuffer->Frequency / Frequency;
-            if(Pitch > 10.0f)
-                src->Step = 10<<FRACTIONBITS;
+            if(Pitch > (ALfloat)MAX_PITCH)
+                src->Step = MAX_PITCH<<FRACTIONBITS;
             else
             {
                 src->Step = fastf2i(Pitch*FRACTIONONE);
@@ -955,8 +959,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             /* Calculate fixed-point stepping value, based on the pitch, buffer
              * frequency, and output frequency. */
             Pitch = Pitch * ALBuffer->Frequency / Frequency;
-            if(Pitch > 10.0f)
-                src->Step = 10<<FRACTIONBITS;
+            if(Pitch > (ALfloat)MAX_PITCH)
+                src->Step = MAX_PITCH<<FRACTIONBITS;
             else
             {
                 src->Step = fastf2i(Pitch*FRACTIONONE);

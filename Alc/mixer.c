@@ -383,12 +383,10 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
             }
         }
         /* Update positions */
-        for(j = 0;j < DstBufferSize;j++)
-        {
-            DataPosFrac += increment;
-            DataPosInt  += DataPosFrac>>FRACTIONBITS;
-            DataPosFrac &= FRACTIONMASK;
-        }
+        DataPosFrac += increment*DstBufferSize;
+        DataPosInt  += DataPosFrac>>FRACTIONBITS;
+        DataPosFrac &= FRACTIONMASK;
+
         OutPos += DstBufferSize;
         src->Offset += DstBufferSize;
         src->Direct.Counter = maxu(src->Direct.Counter, DstBufferSize) - DstBufferSize;

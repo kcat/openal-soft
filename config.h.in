@@ -25,6 +25,8 @@
 
 /* Define if we have SSE CPU extensions */
 #cmakedefine HAVE_SSE
+#cmakedefine HAVE_SSE2
+#cmakedefine HAVE_SSE4_1
 
 /* Define if we have ARM Neon CPU extensions */
 #cmakedefine HAVE_NEON

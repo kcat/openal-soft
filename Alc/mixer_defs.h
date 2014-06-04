@@ -42,6 +42,12 @@ void MixSend_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                  struct MixGainMono *Gain, ALuint Counter, ALuint OutPos,
                  ALuint BufferSize);
 
+/* SSE resamplers */
+const ALfloat *Resample_lerp32_SSE2(const ALfloat *src, ALuint frac, ALuint increment,
+                                    ALfloat *restrict dst, ALuint numsamples);
+const ALfloat *Resample_lerp32_SSE41(const ALfloat *src, ALuint frac, ALuint increment,
+                                     ALfloat *restrict dst, ALuint numsamples);
+
 /* Neon mixers */
 void MixDirect_Hrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                          ALuint Counter, ALuint Offset, ALuint OutPos, const ALuint IrSize,

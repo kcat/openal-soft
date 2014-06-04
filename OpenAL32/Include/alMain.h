@@ -887,7 +887,8 @@ extern ALuint CPUCapFlags;
 enum {
     CPU_CAP_SSE    = 1<<0,
     CPU_CAP_SSE2   = 1<<1,
-    CPU_CAP_NEON   = 1<<2,
+    CPU_CAP_SSE4_1 = 1<<2,
+    CPU_CAP_NEON   = 1<<3,
 };
 
 void FillCPUCaps(ALuint capfilter);

@@ -91,6 +91,14 @@ static ResamplerFunc SelectResampler(enum Resampler Resampler, ALuint increment)
         case PointResampler:
             return Resample_point32_C;
         case LinearResampler:
+#ifdef HAVE_SSE4_1
+            if((CPUCapFlags&CPU_CAP_SSE4_1))
+                return Resample_lerp32_SSE41;
+#endif
+#ifdef HAVE_SSE2
+            if((CPUCapFlags&CPU_CAP_SSE2))
+                return Resample_lerp32_SSE2;
+#endif
             return Resample_lerp32_C;
         case CubicResampler:
             return Resample_cubic32_C;

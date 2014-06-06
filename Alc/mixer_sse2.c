@@ -27,27 +27,6 @@
 #include "mixer_defs.h"
 
 
-static inline void InitiatePositionArrays(ALuint frac, ALuint increment,
-                                          ALuint *frac_arr, ALuint *pos_arr)
-{
-    ALuint frac_tmp;
-
-    pos_arr[0] = 0;
-    frac_arr[0] = frac;
-
-    frac_tmp = frac_arr[0] + increment;
-    pos_arr[1] = pos_arr[0] + (frac_tmp>>FRACTIONBITS);
-    frac_arr[1] = frac_tmp & FRACTIONMASK;
-
-    frac_tmp = frac_arr[1] + increment;
-    pos_arr[2] = pos_arr[1] + (frac_tmp>>FRACTIONBITS);
-    frac_arr[2] = frac_tmp & FRACTIONMASK;
-
-    frac_tmp = frac_arr[2] + increment;
-    pos_arr[3] = pos_arr[2] + (frac_tmp>>FRACTIONBITS);
-    frac_arr[3] = frac_tmp & FRACTIONMASK;
-}
-
 const ALfloat *Resample_lerp32_SSE2(const ALfloat *src, ALuint frac, ALuint increment,
                                     ALfloat *restrict dst, ALuint numsamples)
 {
@@ -60,7 +39,7 @@ const ALfloat *Resample_lerp32_SSE2(const ALfloat *src, ALuint frac, ALuint incr
     ALuint pos;
     ALuint i;
 
-    InitiatePositionArrays(frac, increment, frac_.i, pos_.i);
+    InitiatePositionArrays(frac, increment, frac_.i, pos_.i, 4);
 
     frac4 = _mm_castps_si128(_mm_load_ps(frac_.f));
     pos4 = _mm_castps_si128(_mm_load_ps(pos_.f));

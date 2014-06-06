@@ -37,6 +37,9 @@
 #include "bs2b.h"
 
 
+extern inline void InitiatePositionArrays(ALuint frac, ALuint increment, ALuint *frac_arr, ALuint *pos_arr, ALuint size);
+
+
 static inline ALfloat Sample_ALbyte(ALbyte val)
 { return val * (1.0f/127.0f); }
 

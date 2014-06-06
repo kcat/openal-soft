@@ -1,6 +1,6 @@
 /**
  * OpenAL cross platform audio library
- * Copyright (C) 1999-2014 by authors.
+ * Copyright (C) 2014 by Timothy Arceri <t_arceri@yahoo.com.au>.
  * This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
  *  License as published by the Free Software Foundation; either

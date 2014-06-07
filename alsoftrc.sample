@@ -23,10 +23,11 @@
 [general]
 
 ## disable-cpu-exts:
-#  Disables use of the listed CPU extensions. Certain methods may utilize CPU
-#  extensions when detected, and this option is useful for preventing those
-#  extensions from being used. The available extensions are: sse, sse2, neon.
-#  Specifying 'all' disables use of all extensions.
+#  Disables use of specialized methods that use specific CPU intrinsics.
+#  Certain methods may utilize CPU extensions for improved performance, and
+#  this option is useful for preventing some or all of those methods from being
+#  used. The available extensions are: sse, sse2, sse4.1, and neon. Specifying
+#  'all' disables use of all such specialized methods.
 #disable-cpu-exts =
 
 ## channels:

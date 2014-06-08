@@ -1117,37 +1117,13 @@ static int decode_interrupt_cb(void *ctx)
 int decode_thread(void *arg)
 {
     MovieState *movState = (MovieState *)arg;
-    AVFormatContext *fmtCtx;
+    AVFormatContext *fmtCtx = movState->pFormatCtx;
     AVPacket *packet = (AVPacket[1]){};
     int video_index = -1;
     int audio_index = -1;
 
     movState->videoStream = -1;
     movState->audioStream = -1;
-
-    fmtCtx = avformat_alloc_context();
-    fmtCtx->interrupt_callback = (AVIOInterruptCB){.callback=decode_interrupt_cb, .opaque=movState};
-
-    if(avio_open2(&fmtCtx->pb, movState->filename, AVIO_FLAG_READ, &fmtCtx->interrupt_callback, NULL))
-    {
-        fprintf(stderr, "Failed to open %s\n", movState->filename);
-        goto fail;
-    }
-
-    /* Open movie file */
-    if(avformat_open_input(&fmtCtx, movState->filename, NULL, NULL) != 0)
-    {
-        fprintf(stderr, "Failed to open %s\n", movState->filename);
-        goto fail;
-    }
-    movState->pFormatCtx = fmtCtx;
-
-    /* Retrieve stream information */
-    if(avformat_find_stream_info(fmtCtx, NULL) < 0)
-    {
-        fprintf(stderr, "%s: failed to find stream info\n", movState->filename);
-        goto fail;
-    }
 
     /* Dump information about file onto standard error */
     av_dump_format(fmtCtx, 0, movState->filename, 0);
@@ -1259,7 +1235,6 @@ fail:
     if(movState->audioStream >= 0)
         althrd_join(movState->audio.thread, NULL);
 
-    avformat_close_input(&movState->pFormatCtx);
     SDL_PushEvent(&(SDL_Event){ .user={.type=FF_QUIT_EVENT, .data1=movState} });
 
     return 0;
@@ -1389,7 +1364,32 @@ int main(int argc, char *argv[])
 
     movState->av_sync_type = DEFAULT_AV_SYNC_TYPE;
 
+    movState->pFormatCtx = avformat_alloc_context();
+    movState->pFormatCtx->interrupt_callback = (AVIOInterruptCB){.callback=decode_interrupt_cb, .opaque=movState};
+
+    if(avio_open2(&movState->pFormatCtx->pb, movState->filename, AVIO_FLAG_READ,
+                  &movState->pFormatCtx->interrupt_callback, NULL))
+    {
+        fprintf(stderr, "Failed to open %s\n", movState->filename);
+        return 1;
+    }
+
+    /* Open movie file */
+    if(avformat_open_input(&movState->pFormatCtx, movState->filename, NULL, NULL) != 0)
+    {
+        fprintf(stderr, "Failed to open %s\n", movState->filename);
+        return 1;
+    }
+
+    /* Retrieve stream information */
+    if(avformat_find_stream_info(movState->pFormatCtx, NULL) < 0)
+    {
+        fprintf(stderr, "%s: failed to find stream info\n", movState->filename);
+        return 1;
+    }
+
     schedule_refresh(movState, 40);
+
 
     if(althrd_create(&movState->parse_thread, decode_thread, movState) != althrd_success)
     {
@@ -1452,6 +1452,8 @@ int main(int argc, char *argv[])
 
             case FF_QUIT_EVENT:
                 althrd_join(movState->parse_thread, NULL);
+
+                avformat_close_input(&movState->pFormatCtx);
 
                 almtx_destroy(&movState->audio.src_mutex);
                 almtx_destroy(&movState->video.pictq_mutex);

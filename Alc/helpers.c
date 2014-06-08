@@ -168,12 +168,12 @@ void FillCPUCaps(ALuint capfilter)
     caps |= CPU_CAP_NEON;
 #endif
 
-    TRACE("Got caps:%s%s%s%s%s\n",
-        ((caps&CPU_CAP_SSE)    ? ((capfilter&CPU_CAP_SSE)    ? " SSE"    : " (SSE)")    : ""),
-        ((caps&CPU_CAP_SSE2)   ? ((capfilter&CPU_CAP_SSE2)   ? " SSE2"   : " (SSE2)")   : ""),
-        ((caps&CPU_CAP_SSE4_1) ? ((capfilter&CPU_CAP_SSE4_1) ? " SSE4.1" : " (SSE4.1)") : ""),
-        ((caps&CPU_CAP_NEON)   ? ((capfilter&CPU_CAP_NEON)   ? " Neon"   : " (Neon)")   : ""),
-        ((!caps) ? " -none-" : "")
+    TRACE("Extensions:%s%s%s%s%s\n",
+        ((capfilter&CPU_CAP_SSE)    ? ((caps&CPU_CAP_SSE)    ? " +SSE"    : " -SSE")    : ""),
+        ((capfilter&CPU_CAP_SSE2)   ? ((caps&CPU_CAP_SSE2)   ? " +SSE2"   : " -SSE2")   : ""),
+        ((capfilter&CPU_CAP_SSE4_1) ? ((caps&CPU_CAP_SSE4_1) ? " +SSE4.1" : " -SSE4.1") : ""),
+        ((capfilter&CPU_CAP_NEON)   ? ((caps&CPU_CAP_NEON)   ? " +Neon"   : " -Neon")   : ""),
+        ((!capfilter) ? " -none-" : "")
     );
     CPUCapFlags = caps & capfilter;
 }

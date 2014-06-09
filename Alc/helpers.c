@@ -229,12 +229,6 @@ void al_free(void *ptr)
 }
 
 
-#if (defined(HAVE___CONTROL87_2) || defined(HAVE__CONTROLFP)) && (defined(__x86_64__) || defined(_M_X64))
-/* Win64 doesn't allow us to set the precision control. */
-#undef _MCW_PC
-#define _MCW_PC 0
-#endif
-
 void SetMixerFPUMode(FPUCtl *ctl)
 {
 #ifdef HAVE_FENV_H
@@ -263,7 +257,7 @@ void SetMixerFPUMode(FPUCtl *ctl)
 
     int mode;
     __control87_2(0, 0, &ctl->state, NULL);
-    __control87_2(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC, &mode, NULL);
+    __control87_2(_RC_CHOP, _MCW_RC, &mode, NULL);
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
     {
@@ -275,7 +269,7 @@ void SetMixerFPUMode(FPUCtl *ctl)
 #elif defined(HAVE__CONTROLFP)
 
     ctl->state = _controlfp(0, 0);
-    (void)_controlfp(_RC_CHOP|_PC_24, _MCW_RC|_MCW_PC);
+    (void)_controlfp(_RC_CHOP, _MCW_RC);
 #endif
 }
 
@@ -291,7 +285,7 @@ void RestoreFPUMode(const FPUCtl *ctl)
 #elif defined(HAVE___CONTROL87_2)
 
     int mode;
-    __control87_2(ctl->state, _MCW_RC|_MCW_PC, &mode, NULL);
+    __control87_2(ctl->state, _MCW_RC, &mode, NULL);
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
         __control87_2(ctl->sse_state, _MCW_RC|_MCW_DN, NULL, &mode);
@@ -299,7 +293,7 @@ void RestoreFPUMode(const FPUCtl *ctl)
 
 #elif defined(HAVE__CONTROLFP)
 
-    _controlfp(ctl->state, _MCW_RC|_MCW_PC);
+    _controlfp(ctl->state, _MCW_RC);
 #endif
 }
 

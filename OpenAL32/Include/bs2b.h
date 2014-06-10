@@ -96,8 +96,39 @@ void bs2b_clear(struct bs2b *bs2b);
  * Returns crossfided samle by sample pointer.
  */
 
-/* sample poits to floats */
-void bs2b_cross_feed(struct bs2b *bs2b, float *sample);
+/* sample points to floats */
+inline void bs2b_cross_feed(struct bs2b *bs2b, float *restrict samples)
+{
+/* Single pole IIR filter.
+ * O[n] = a0*I[n] + a1*I[n-1] + b1*O[n-1]
+ */
+
+/* Lowpass filter */
+#define lo_filter(in, out_1) (bs2b->a0_lo*(in) + bs2b->b1_lo*(out_1))
+
+/* Highboost filter */
+#define hi_filter(in, in_1, out_1) (bs2b->a0_hi*(in) + bs2b->a1_hi*(in_1) + bs2b->b1_hi*(out_1))
+
+    /* Lowpass filter */
+    bs2b->last_sample.lo[0] = lo_filter(samples[0], bs2b->last_sample.lo[0]);
+    bs2b->last_sample.lo[1] = lo_filter(samples[1], bs2b->last_sample.lo[1]);
+
+    /* Highboost filter */
+    bs2b->last_sample.hi[0] = hi_filter(samples[0], bs2b->last_sample.asis[0], bs2b->last_sample.hi[0]);
+    bs2b->last_sample.hi[1] = hi_filter(samples[1], bs2b->last_sample.asis[1], bs2b->last_sample.hi[1]);
+    bs2b->last_sample.asis[0] = samples[0];
+    bs2b->last_sample.asis[1] = samples[1];
+
+    /* Crossfeed */
+    samples[0] = (float)(bs2b->last_sample.hi[0] + bs2b->last_sample.lo[1]);
+    samples[1] = (float)(bs2b->last_sample.hi[1] + bs2b->last_sample.lo[0]);
+
+    /* Bass boost cause allpass attenuation */
+    samples[0] *= bs2b->gain;
+    samples[1] *= bs2b->gain;
+#undef hi_filter
+#undef lo_filter
+} /* bs2b_cross_feed */
 
 #ifdef __cplusplus
 }    /* extern "C" */

@@ -32,16 +32,6 @@
 #define M_PI  3.14159265358979323846
 #endif
 
-/* Single pole IIR filter.
- * O[n] = a0*I[n] + a1*I[n-1] + b1*O[n-1]
- */
-
-/* Lowpass filter */
-#define lo_filter(in, out_1) (bs2b->a0_lo*(in) + bs2b->b1_lo*(out_1))
-
-/* Highboost filter */
-#define hi_filter(in, in_1, out_1) (bs2b->a0_hi*(in) + bs2b->a1_hi*(in_1) + bs2b->b1_hi*(out_1))
-
 /* Set up all data. */
 static void init(struct bs2b *bs2b)
 {
@@ -49,7 +39,7 @@ static void init(struct bs2b *bs2b)
     double G_lo,  G_hi;
     double x;
 
-    if ((bs2b->srate > 192000) || (bs2b->srate < 2000))
+    if(bs2b->srate > 192000 || bs2b->srate < 2000)
         bs2b->srate = BS2B_DEFAULT_SRATE;
 
     switch(bs2b->level)
@@ -151,35 +141,4 @@ void bs2b_clear(struct bs2b *bs2b)
     memset(&bs2b->last_sample, 0, sizeof(bs2b->last_sample));
 } /* bs2b_clear */
 
-void bs2b_cross_feed(struct bs2b *bs2b, float *sample)
-{
-    /* Lowpass filter */
-    bs2b->last_sample.lo[0] = lo_filter(sample[0], bs2b->last_sample.lo[0]);
-    bs2b->last_sample.lo[1] = lo_filter(sample[1], bs2b->last_sample.lo[1]);
-
-    /* Highboost filter */
-    bs2b->last_sample.hi[0] = hi_filter(sample[0], bs2b->last_sample.asis[0], bs2b->last_sample.hi[0]);
-    bs2b->last_sample.hi[1] = hi_filter(sample[1], bs2b->last_sample.asis[1], bs2b->last_sample.hi[1]);
-    bs2b->last_sample.asis[0] = sample[0];
-    bs2b->last_sample.asis[1] = sample[1];
-
-    /* Crossfeed */
-    sample[0] = (float)(bs2b->last_sample.hi[0] + bs2b->last_sample.lo[1]);
-    sample[1] = (float)(bs2b->last_sample.hi[1] + bs2b->last_sample.lo[0]);
-
-    /* Bass boost cause allpass attenuation */
-    sample[0] *= bs2b->gain;
-    sample[1] *= bs2b->gain;
-
-    /* Clipping of overloaded samples */
-#if 0
-    if (sample[0] > 1.0)
-        sample[0] = 1.0;
-    if (sample[0] < -1.0)
-        sample[0] = -1.0;
-    if (sample[1] > 1.0)
-        sample[1] = 1.0;
-    if (sample[1] < -1.0)
-        sample[1] = -1.0;
-#endif
-} /* bs2b_cross_feed */
+extern inline void bs2b_cross_feed(struct bs2b *bs2b, float *restrict samples);

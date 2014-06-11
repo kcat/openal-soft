@@ -51,13 +51,13 @@ struct bs2b {
     int srate;   /* Sample rate (Hz) */
 
     /* Lowpass IIR filter coefficients */
-    double a0_lo;
-    double b1_lo;
+    float a0_lo;
+    float b1_lo;
 
     /* Highboost IIR filter coefficients */
-    double a0_hi;
-    double a1_hi;
-    double b1_hi;
+    float a0_hi;
+    float a1_hi;
+    float b1_hi;
 
     /* Global gain against overloading */
     float gain;
@@ -66,9 +66,9 @@ struct bs2b {
      * [0] - first channel, [1] - second channel
      */
     struct t_last_sample {
-        double asis[2];
-        double lo[2];
-        double hi[2];
+        float asis[2];
+        float lo[2];
+        float hi[2];
     } last_sample;
 };
 
@@ -120,8 +120,8 @@ inline void bs2b_cross_feed(struct bs2b *bs2b, float *restrict samples)
     bs2b->last_sample.asis[1] = samples[1];
 
     /* Crossfeed */
-    samples[0] = (float)(bs2b->last_sample.hi[0] + bs2b->last_sample.lo[1]);
-    samples[1] = (float)(bs2b->last_sample.hi[1] + bs2b->last_sample.lo[0]);
+    samples[0] = bs2b->last_sample.hi[0] + bs2b->last_sample.lo[1];
+    samples[1] = bs2b->last_sample.hi[1] + bs2b->last_sample.lo[0];
 
     /* Bass boost cause allpass attenuation */
     samples[0] *= bs2b->gain;

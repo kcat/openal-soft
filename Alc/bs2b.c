@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "bs2b.h"
+#include "alu.h"
 
 #ifndef M_PI
 #define M_PI  3.14159265358979323846
@@ -35,57 +36,56 @@
 /* Set up all data. */
 static void init(struct bs2b *bs2b)
 {
-    double Fc_lo, Fc_hi;
-    double G_lo,  G_hi;
-    double x;
+    float Fc_lo, Fc_hi;
+    float G_lo,  G_hi;
+    float x;
 
-    if(bs2b->srate > 192000 || bs2b->srate < 2000)
-        bs2b->srate = BS2B_DEFAULT_SRATE;
+    bs2b->srate = clampi(bs2b->srate, 2000, 192000);
 
     switch(bs2b->level)
     {
     case BS2B_LOW_CLEVEL: /* Low crossfeed level */
-        Fc_lo = 360.0;
-        Fc_hi = 501.0;
-        G_lo  = 0.398107170553497;
-        G_hi  = 0.205671765275719;
+        Fc_lo = 360.0f;
+        Fc_hi = 501.0f;
+        G_lo  = 0.398107170553497f;
+        G_hi  = 0.205671765275719f;
         break;
 
     case BS2B_MIDDLE_CLEVEL: /* Middle crossfeed level */
-        Fc_lo = 500.0;
-        Fc_hi = 711.0;
-        G_lo  = 0.459726988530872;
-        G_hi  = 0.228208484414988;
+        Fc_lo = 500.0f;
+        Fc_hi = 711.0f;
+        G_lo  = 0.459726988530872f;
+        G_hi  = 0.228208484414988f;
         break;
 
     case BS2B_HIGH_CLEVEL: /* High crossfeed level (virtual speakers are closer to itself) */
-        Fc_lo = 700.0;
-        Fc_hi = 1021.0;
-        G_lo  = 0.530884444230988;
-        G_hi  = 0.250105790667544;
+        Fc_lo = 700.0f;
+        Fc_hi = 1021.0f;
+        G_lo  = 0.530884444230988f;
+        G_hi  = 0.250105790667544f;
         break;
 
     case BS2B_LOW_ECLEVEL: /* Low easy crossfeed level */
-        Fc_lo = 360.0;
-        Fc_hi = 494.0;
-        G_lo  = 0.316227766016838;
-        G_hi  = 0.168236228897329;
+        Fc_lo = 360.0f;
+        Fc_hi = 494.0f;
+        G_lo  = 0.316227766016838f;
+        G_hi  = 0.168236228897329f;
         break;
 
     case BS2B_MIDDLE_ECLEVEL: /* Middle easy crossfeed level */
-        Fc_lo = 500.0;
-        Fc_hi = 689.0;
-        G_lo  = 0.354813389233575;
-        G_hi  = 0.187169483835901;
+        Fc_lo = 500.0f;
+        Fc_hi = 689.0f;
+        G_lo  = 0.354813389233575f;
+        G_hi  = 0.187169483835901f;
         break;
 
     default: /* High easy crossfeed level */
         bs2b->level = BS2B_HIGH_ECLEVEL;
 
-        Fc_lo = 700.0;
-        Fc_hi = 975.0;
-        G_lo  = 0.398107170553497;
-        G_hi  = 0.205671765275719;
+        Fc_lo = 700.0f;
+        Fc_hi = 975.0f;
+        G_lo  = 0.398107170553497f;
+        G_hi  = 0.205671765275719f;
         break;
     } /* switch */
 
@@ -94,16 +94,16 @@ static void init(struct bs2b *bs2b)
      * $x  = exp(-1 / $d);
      */
 
-    x           = exp(-2.0 * M_PI * Fc_lo / bs2b->srate);
+    x           = expf(-2.0f * F_PI * Fc_lo / bs2b->srate);
     bs2b->b1_lo = x;
-    bs2b->a0_lo = G_lo * (1.0 - x);
+    bs2b->a0_lo = G_lo * (1.0f - x);
 
-    x           = exp(-2.0 * M_PI * Fc_hi / bs2b->srate);
+    x           = expf(-2.0f * F_PI * Fc_hi / bs2b->srate);
     bs2b->b1_hi = x;
-    bs2b->a0_hi = 1.0 - G_hi * (1.0 - x);
+    bs2b->a0_hi = 1.0f - G_hi * (1.0f - x);
     bs2b->a1_hi = -x;
 
-    bs2b->gain  = 1.0f / (float)(1.0 - G_hi + G_lo);
+    bs2b->gain  = 1.0f / (1.0f - G_hi + G_lo);
 } /* init */
 
 /* Exported functions.

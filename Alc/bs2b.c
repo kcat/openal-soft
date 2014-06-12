@@ -38,7 +38,7 @@ static void init(struct bs2b *bs2b)
 {
     float Fc_lo, Fc_hi;
     float G_lo,  G_hi;
-    float x;
+    float x, g;
 
     bs2b->srate = clampi(bs2b->srate, 2000, 192000);
 
@@ -89,21 +89,20 @@ static void init(struct bs2b *bs2b)
         break;
     } /* switch */
 
+    g = 1.0f / (1.0f - G_hi + G_lo);
+
     /* $fc = $Fc / $s;
      * $d  = 1 / 2 / pi / $fc;
      * $x  = exp(-1 / $d);
      */
-
     x           = expf(-2.0f * F_PI * Fc_lo / bs2b->srate);
     bs2b->b1_lo = x;
-    bs2b->a0_lo = G_lo * (1.0f - x);
+    bs2b->a0_lo = G_lo * (1.0f - x) * g;
 
     x           = expf(-2.0f * F_PI * Fc_hi / bs2b->srate);
     bs2b->b1_hi = x;
-    bs2b->a0_hi = 1.0f - G_hi * (1.0f - x);
-    bs2b->a1_hi = -x;
-
-    bs2b->gain  = 1.0f / (1.0f - G_hi + G_lo);
+    bs2b->a0_hi = (1.0f - G_hi * (1.0f - x)) * g;
+    bs2b->a1_hi = -x * g;
 } /* init */
 
 /* Exported functions.

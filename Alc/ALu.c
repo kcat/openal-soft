@@ -36,8 +36,6 @@
 #include "hrtf.h"
 #include "static_assert.h"
 
-#include "mixer_defs.h"
-
 #include "midi/base.h"
 
 
@@ -81,63 +79,6 @@ extern inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max);
 
 extern inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu);
 extern inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat mu);
-
-static ResamplerFunc SelectResampler(enum Resampler Resampler, ALuint increment)
-{
-    if(increment == FRACTIONONE)
-        return Resample_copy32_C;
-    switch(Resampler)
-    {
-        case PointResampler:
-            return Resample_point32_C;
-        case LinearResampler:
-#ifdef HAVE_SSE4_1
-            if((CPUCapFlags&CPU_CAP_SSE4_1))
-                return Resample_lerp32_SSE41;
-#endif
-#ifdef HAVE_SSE2
-            if((CPUCapFlags&CPU_CAP_SSE2))
-                return Resample_lerp32_SSE2;
-#endif
-            return Resample_lerp32_C;
-        case CubicResampler:
-            return Resample_cubic32_C;
-        case ResamplerMax:
-            /* Shouldn't happen */
-            break;
-    }
-
-    return Resample_point32_C;
-}
-
-
-static HrtfMixerFunc SelectHrtfMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixHrtf_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixHrtf_Neon;
-#endif
-
-    return MixHrtf_C;
-}
-
-static MixerFunc SelectMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return Mix_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return Mix_Neon;
-#endif
-
-    return Mix_C;
-}
 
 
 static inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
@@ -336,7 +277,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                 if(src->Step == 0)
                     src->Step = 1;
             }
-            src->Resample = SelectResampler(Resampler, src->Step);
 
             Channels = ALBuffer->FmtChannels;
             break;
@@ -581,8 +521,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             src->Send[i].Counter = 64;
         }
     }
-    src->Mix = SelectMixer();
-    src->HrtfMix = SelectHrtfMixer();
 
     {
         ALfloat gainhf = maxf(0.01f, DryGainHF);
@@ -955,7 +893,6 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                 if(src->Step == 0)
                     src->Step = 1;
             }
-            src->Resample = SelectResampler(Resampler, src->Step);
 
             break;
         }
@@ -1106,8 +1043,6 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             src->Send[i].Counter = 64;
         }
     }
-    src->Mix = SelectMixer();
-    src->HrtfMix = SelectHrtfMixer();
 
     {
         ALfloat gainhf = maxf(0.01f, DryGainHF);

@@ -34,10 +34,68 @@
 #include "alListener.h"
 #include "alAuxEffectSlot.h"
 #include "alu.h"
-#include "bs2b.h"
+
+#include "mixer_defs.h"
 
 
 extern inline void InitiatePositionArrays(ALuint frac, ALuint increment, ALuint *frac_arr, ALuint *pos_arr, ALuint size);
+
+
+static inline HrtfMixerFunc SelectHrtfMixer(void)
+{
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return MixHrtf_SSE;
+#endif
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return MixHrtf_Neon;
+#endif
+
+    return MixHrtf_C;
+}
+
+static inline MixerFunc SelectMixer(void)
+{
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return Mix_SSE;
+#endif
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return Mix_Neon;
+#endif
+
+    return Mix_C;
+}
+
+static inline ResamplerFunc SelectResampler(enum Resampler Resampler, ALuint increment)
+{
+    if(increment == FRACTIONONE)
+        return Resample_copy32_C;
+    switch(Resampler)
+    {
+        case PointResampler:
+            return Resample_point32_C;
+        case LinearResampler:
+#ifdef HAVE_SSE4_1
+            if((CPUCapFlags&CPU_CAP_SSE4_1))
+                return Resample_lerp32_SSE41;
+#endif
+#ifdef HAVE_SSE2
+            if((CPUCapFlags&CPU_CAP_SSE2))
+                return Resample_lerp32_SSE2;
+#endif
+            return Resample_lerp32_C;
+        case CubicResampler:
+            return Resample_cubic32_C;
+        case ResamplerMax:
+            /* Shouldn't happen */
+            break;
+    }
+
+    return Resample_point32_C;
+}
 
 
 static inline ALfloat Sample_ALbyte(ALbyte val)
@@ -122,6 +180,9 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 
 ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 {
+    MixerFunc Mix;
+    HrtfMixerFunc HrtfMix;
+    ResamplerFunc Resample;
     ALsource *Source = src->Source;
     ALbufferlistitem *BufferListItem;
     ALuint DataPosInt, DataPosFrac;
@@ -146,7 +207,9 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
     NumChannels    = Source->NumChannels;
     SampleSize     = Source->SampleSize;
 
-    /* Get current buffer queue item */
+    Mix = SelectMixer();
+    HrtfMix = SelectHrtfMixer();
+    Resample = SelectResampler(Resampler, increment);
 
     OutPos = 0;
     do {
@@ -344,7 +407,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
             }
 
             /* Now resample, then filter and mix to the appropriate outputs. */
-            ResampledData = src->Resample(
+            ResampledData = Resample(
                 &SrcData[BufferPrePadding], DataPosFrac, increment,
                 Device->ResampledData, DstBufferSize
             );
@@ -358,14 +421,12 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                     parms->Filters[chan].ActiveType
                 );
                 if(!src->IsHrtf)
-                    src->Mix(samples, MaxChannels, parms->OutBuffer, parms->Mix.Gains[chan],
-                             parms->Counter, OutPos, DstBufferSize);
+                    Mix(samples, MaxChannels, parms->OutBuffer, parms->Mix.Gains[chan],
+                        parms->Counter, OutPos, DstBufferSize);
                 else
-                    src->HrtfMix(
-                        parms->OutBuffer, samples, parms->Counter, src->Offset,
-                        OutPos, parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
-                        &parms->Mix.Hrtf.State[chan], DstBufferSize
-                    );
+                    HrtfMix(parms->OutBuffer, samples, parms->Counter, src->Offset,
+                            OutPos, parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
+                            &parms->Mix.Hrtf.State[chan], DstBufferSize);
             }
 
             for(j = 0;j < Device->NumAuxSends;j++)
@@ -381,8 +442,8 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                     Device->FilteredData, ResampledData, DstBufferSize,
                     parms->Filters[chan].ActiveType
                 );
-                src->Mix(samples, 1, parms->OutBuffer, &parms->Gain,
-                         parms->Counter, OutPos, DstBufferSize);
+                Mix(samples, 1, parms->OutBuffer, &parms->Gain,
+                    parms->Counter, OutPos, DstBufferSize);
             }
         }
         /* Update positions */

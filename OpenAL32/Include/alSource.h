@@ -31,12 +31,9 @@ typedef struct ALactivesource {
     ALvoid (*Update)(struct ALactivesource *self, const ALCcontext *context);
 
     /** Current target parameters used for mixing. */
-    ResamplerFunc Resample;
-    MixerFunc Mix;
-    HrtfMixerFunc HrtfMix;
+    ALint Step;
 
     ALboolean IsHrtf;
-    ALint Step;
 
     ALuint Offset; /* Number of output samples mixed since starting. */
 

@@ -95,61 +95,32 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                 MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize)
+void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
+           MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize)
 {
-    ALfloat DrySend, Step;
+    ALfloat gain, step;
     ALuint c;
 
-    for(c = 0;c < MaxChannels;c++)
+    for(c = 0;c < OutChans;c++)
     {
         ALuint pos = 0;
-        DrySend = Gains[c].Current;
-        Step = Gains[c].Step;
-        if(Step != 1.0f && Counter > 0)
+        gain = Gains[c].Current;
+        step = Gains[c].Step;
+        if(step != 1.0f && Counter > 0)
         {
             for(;pos < BufferSize && pos < Counter;pos++)
             {
-                OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-                DrySend *= Step;
+                OutBuffer[c][OutPos+pos] += data[pos]*gain;
+                gain *= step;
             }
             if(pos == Counter)
-                DrySend = Gains[c].Target;
-            Gains[c].Current = DrySend;
+                gain = Gains[c].Target;
+            Gains[c].Current = gain;
         }
 
-        if(!(DrySend > GAIN_SILENCE_THRESHOLD))
+        if(!(gain > GAIN_SILENCE_THRESHOLD))
             continue;
         for(;pos < BufferSize;pos++)
-            OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-    }
-}
-
-
-void MixSend_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-               MixGains *Gain, ALuint Counter, ALuint OutPos, ALuint BufferSize)
-{
-    ALfloat WetSend, Step;
-
-    {
-        ALuint pos = 0;
-        WetSend = Gain[0].Current;
-        Step = Gain[0].Step;
-        if(Step != 1.0f && Counter > 0)
-        {
-            for(;pos < BufferSize && pos < Counter;pos++)
-            {
-                OutBuffer[0][OutPos+pos] += data[pos]*WetSend;
-                WetSend *= Step;
-            }
-            if(pos == Counter)
-                WetSend = Gain[0].Target;
-            Gain[0].Current = WetSend;
-        }
-
-        if(!(WetSend > GAIN_SILENCE_THRESHOLD))
-            return;
-        for(;pos < BufferSize;pos++)
-            OutBuffer[0][OutPos+pos] += data[pos] * WetSend;
+            OutBuffer[c][OutPos+pos] += data[pos]*gain;
     }
 }

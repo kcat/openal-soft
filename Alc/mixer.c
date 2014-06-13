@@ -358,10 +358,10 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                     parms->Filters[chan].ActiveType
                 );
                 if(!src->IsHrtf)
-                    src->Dry.Mix(parms->OutBuffer, samples, parms->Mix.Gains[chan],
-                                 parms->Counter, OutPos, DstBufferSize);
+                    src->Mix(samples, MaxChannels, parms->OutBuffer, parms->Mix.Gains[chan],
+                             parms->Counter, OutPos, DstBufferSize);
                 else
-                    src->Dry.HrtfMix(
+                    src->HrtfMix(
                         parms->OutBuffer, samples, parms->Counter, src->Offset,
                         OutPos, parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
                         &parms->Mix.Hrtf.State[chan], DstBufferSize
@@ -381,8 +381,8 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                     Device->FilteredData, ResampledData, DstBufferSize,
                     parms->Filters[chan].ActiveType
                 );
-                src->WetMix(parms->OutBuffer, samples, &parms->Gain,
-                            parms->Counter, OutPos, DstBufferSize);
+                src->Mix(samples, 1, parms->OutBuffer, &parms->Gain,
+                         parms->Counter, OutPos, DstBufferSize);
             }
         }
         /* Update positions */

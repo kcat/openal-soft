@@ -138,124 +138,65 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                   MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize)
+void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
+             MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize)
 {
-    ALfloat DrySend, Step;
-    __m128 gain, step;
+    ALfloat gain, step;
+    __m128 gain4, step4;
     ALuint c;
 
-    for(c = 0;c < MaxChannels;c++)
+    for(c = 0;c < OutChans;c++)
     {
         ALuint pos = 0;
-        DrySend = Gains[c].Current;
-        Step = Gains[c].Step;
-        if(Step != 1.0f && Counter > 0)
+        gain = Gains[c].Current;
+        step = Gains[c].Step;
+        if(step != 1.0f && Counter > 0)
         {
             /* Mix with applying gain steps in aligned multiples of 4. */
             if(BufferSize-pos > 3 && Counter-pos > 3)
             {
-                gain = _mm_setr_ps(
-                    DrySend,
-                    DrySend * Step,
-                    DrySend * Step * Step,
-                    DrySend * Step * Step * Step
+                gain4 = _mm_setr_ps(
+                    gain,
+                    gain * step,
+                    gain * step * step,
+                    gain * step * step * step
                 );
-                step = _mm_set1_ps(Step * Step * Step * Step);
+                step4 = _mm_set1_ps(step * step * step * step);
                 do {
                     const __m128 val4 = _mm_load_ps(&data[pos]);
                     __m128 dry4 = _mm_load_ps(&OutBuffer[c][OutPos+pos]);
-                    dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain));
-                    gain = _mm_mul_ps(gain, step);
+                    dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
+                    gain4 = _mm_mul_ps(gain4, step4);
                     _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
                     pos += 4;
                 } while(BufferSize-pos > 3 && Counter-pos > 3);
-                DrySend = _mm_cvtss_f32(gain);
+                gain = _mm_cvtss_f32(gain4);
             }
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
             for(;pos < BufferSize && pos < Counter;pos++)
             {
-                OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-                DrySend *= Step;
+                OutBuffer[c][OutPos+pos] += data[pos]*gain;
+                gain *= step;
             }
             if(pos == Counter)
-                DrySend = Gains[c].Target;
-            Gains[c].Current = DrySend;
+                gain = Gains[c].Target;
+            Gains[c].Current = gain;
             /* Mix until pos is aligned with 4 or the mix is done. */
             for(;pos < BufferSize && (pos&3) != 0;pos++)
-                OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
+                OutBuffer[c][OutPos+pos] += data[pos]*gain;
         }
 
-        if(!(DrySend > GAIN_SILENCE_THRESHOLD))
+        if(!(gain > GAIN_SILENCE_THRESHOLD))
             continue;
-        gain = _mm_set1_ps(DrySend);
+        gain4 = _mm_set1_ps(gain);
         for(;BufferSize-pos > 3;pos += 4)
         {
             const __m128 val4 = _mm_load_ps(&data[pos]);
             __m128 dry4 = _mm_load_ps(&OutBuffer[c][OutPos+pos]);
-            dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain));
+            dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
             _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
         }
         for(;pos < BufferSize;pos++)
-            OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-    }
-}
-
-
-void MixSend_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                 MixGains *Gain, ALuint Counter, ALuint OutPos, ALuint BufferSize)
-{
-    ALfloat WetGain, Step;
-    __m128 gain, step;
-
-    {
-        ALuint pos = 0;
-        WetGain = Gain[0].Current;
-        Step = Gain[0].Step;
-        if(Step != 1.0f && Counter > 0)
-        {
-            if(BufferSize-pos > 3 && Counter-pos > 3)
-            {
-                gain = _mm_setr_ps(
-                    WetGain,
-                    WetGain * Step,
-                    WetGain * Step * Step,
-                    WetGain * Step * Step * Step
-                );
-                step = _mm_set1_ps(Step * Step * Step * Step);
-                do {
-                    const __m128 val4 = _mm_load_ps(&data[pos]);
-                    __m128 dry4 = _mm_load_ps(&OutBuffer[0][OutPos+pos]);
-                    dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain));
-                    gain = _mm_mul_ps(gain, step);
-                    _mm_store_ps(&OutBuffer[0][OutPos+pos], dry4);
-                    pos += 4;
-                } while(BufferSize-pos > 3 && Counter-pos > 3);
-                WetGain = _mm_cvtss_f32(gain);
-            }
-            for(;pos < BufferSize && pos < Counter;pos++)
-            {
-                OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
-                WetGain *= Step;
-            }
-            if(pos == Counter)
-                WetGain = Gain[0].Target;
-            Gain[0].Current = WetGain;
-            for(;pos < BufferSize && (pos&3) != 0;pos++)
-                OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
-        }
-
-        if(!(WetGain > GAIN_SILENCE_THRESHOLD))
-            return;
-        gain = _mm_set1_ps(WetGain);
-        for(;BufferSize-pos > 3;pos += 4)
-        {
-            const __m128 val4 = _mm_load_ps(&data[pos]);
-            __m128 wet4 = _mm_load_ps(&OutBuffer[0][OutPos+pos]);
-            wet4 = _mm_add_ps(wet4, _mm_mul_ps(val4, gain));
-            _mm_store_ps(&OutBuffer[0][OutPos+pos], wet4);
-        }
-        for(;pos < BufferSize;pos++)
-            OutBuffer[0][OutPos+pos] += data[pos] * WetGain;
+            OutBuffer[c][OutPos+pos] += data[pos]*gain;
     }
 }

@@ -75,84 +75,44 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 #undef SUFFIX
 
 
-void MixDirect_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+void MixDirect_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
                     MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize)
 {
-    ALfloat DrySend, Step;
-    float32x4_t gain;
+    ALfloat gain, step;
+    float32x4_t gain4;
     ALuint c;
 
-    for(c = 0;c < MaxChannels;c++)
+    for(c = 0;c < OutChans;c++)
     {
         ALuint pos = 0;
-        DrySend = Gains[c].Current;
-        Step = Gains[c].Step;
-        if(Step != 1.0f && Counter > 0)
+        gain = Gains[c].Current;
+        step = Gains[c].Step;
+        if(step != 1.0f && Counter > 0)
         {
             for(;pos < BufferSize && pos < Counter;pos++)
             {
-                OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-                DrySend *= Step;
+                OutBuffer[c][OutPos+pos] += data[pos]*gain;
+                gain *= step;
             }
             if(pos == Counter)
-                DrySend = Gains[c].Target;
-            Gains[c].Current = DrySend;
+                gain = Gains[c].Target;
+            Gains[c].Current = gain;
             /* Mix until pos is aligned with 4 or the mix is done. */
             for(;pos < BufferSize && (pos&3) != 0;pos++)
-                OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
+                OutBuffer[c][OutPos+pos] += data[pos]*gain;
         }
 
-        if(!(DrySend > GAIN_SILENCE_THRESHOLD))
+        if(!(gain > GAIN_SILENCE_THRESHOLD))
             continue;
-        gain = vdupq_n_f32(DrySend);
+        gain4 = vdupq_n_f32(gain);
         for(;BufferSize-pos > 3;pos += 4)
         {
             const float32x4_t val4 = vld1q_f32(&data[pos]);
             float32x4_t dry4 = vld1q_f32(&OutBuffer[c][OutPos+pos]);
-            dry4 = vaddq_f32(dry4, vmulq_f32(val4, gain));
+            dry4 = vaddq_f32(dry4, vmulq_f32(val4, gain4));
             vst1q_f32(&OutBuffer[c][OutPos+pos], dry4);
         }
         for(;pos < BufferSize;pos++)
-            OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
-    }
-}
-
-
-void MixSend_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                  MixGains *Gain, ALuint Counter, ALuint OutPos, ALuint BufferSize)
-{
-    ALfloat WetGain, Step;
-    float32x4_t gain;
-
-    {
-        ALuint pos = 0;
-        WetGain = Gain[0].Current;
-        Step = Gain[0].Step;
-        if(Step != 1.0f && Counter > 0)
-        {
-            for(;pos < BufferSize && pos < Counter;pos++)
-            {
-                OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
-                WetGain *= Step;
-            }
-            if(pos == Counter)
-                WetGain = Gain[0].Target;
-            Gain[0].Current = WetGain;
-            for(;pos < BufferSize && (pos&3) != 0;pos++)
-                OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
-        }
-
-        if(!(WetGain > GAIN_SILENCE_THRESHOLD))
-            return;
-        gain = vdupq_n_f32(WetGain);
-        for(;BufferSize-pos > 3;pos += 4)
-        {
-            const float32x4_t val4 = vld1q_f32(&data[pos]);
-            float32x4_t wet4 = vld1q_f32(&OutBuffer[0][OutPos+pos]);
-            wet4 = vaddq_f32(wet4, vmulq_f32(val4, gain));
-            vst1q_f32(&OutBuffer[0][OutPos+pos], wet4);
-        }
-        for(;pos < BufferSize;pos++)
-            OutBuffer[0][OutPos+pos] += data[pos] * WetGain;
+            OutBuffer[c][OutPos+pos] += data[pos]*gain;
     }
 }

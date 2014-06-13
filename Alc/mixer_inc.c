@@ -8,10 +8,10 @@
 #include "align.h"
 
 
-#define REAL_MERGE2(a,b) a##b
-#define MERGE2(a,b) REAL_MERGE2(a,b)
+#define REAL_MERGE(a,b) a##b
+#define MERGE(a,b) REAL_MERGE(a,b)
 
-#define MixDirect_Hrtf MERGE2(MixDirect_Hrtf_,SUFFIX)
+#define MixHrtf MERGE(MixHrtf_,SUFFIX)
 
 
 static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
@@ -25,9 +25,9 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
                                ALfloat left, ALfloat right);
 
 
-void MixDirect_Hrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                    ALuint Counter, ALuint Offset, ALuint OutPos, const ALuint IrSize,
-                    const HrtfParams *hrtfparams, HrtfState *hrtfstate, ALuint BufferSize)
+void MixHrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
+             ALuint Counter, ALuint Offset, ALuint OutPos, const ALuint IrSize,
+             const HrtfParams *hrtfparams, HrtfState *hrtfstate, ALuint BufferSize)
 {
     alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALuint Delay[2];
@@ -87,7 +87,7 @@ void MixDirect_Hrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *da
 }
 
 
-#undef MixDirect_Hrtf
+#undef MixHrtf
 
-#undef MERGE2
-#undef REAL_MERGE2
+#undef MERGE
+#undef REAL_MERGE

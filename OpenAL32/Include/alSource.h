@@ -32,11 +32,8 @@ typedef struct ALactivesource {
 
     /** Current target parameters used for mixing. */
     ResamplerFunc Resample;
-    union {
-        MixerFunc Mix;
-        HrtfMixerFunc HrtfMix;
-    } Dry;
-    MixerFunc WetMix;
+    MixerFunc Mix;
+    HrtfMixerFunc HrtfMix;
 
     ALboolean IsHrtf;
     ALint Step;

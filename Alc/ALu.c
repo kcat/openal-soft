@@ -115,42 +115,28 @@ static HrtfMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return MixDirect_Hrtf_SSE;
+        return MixHrtf_SSE;
 #endif
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return MixDirect_Hrtf_Neon;
+        return MixHrtf_Neon;
 #endif
 
-    return MixDirect_Hrtf_C;
+    return MixHrtf_C;
 }
 
-static MixerFunc SelectDirectMixer(void)
+static MixerFunc SelectMixer(void)
 {
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return MixDirect_SSE;
+        return Mix_SSE;
 #endif
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return MixDirect_Neon;
+        return Mix_Neon;
 #endif
 
-    return MixDirect_C;
-}
-
-static MixerFunc SelectSendMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixSend_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixSend_Neon;
-#endif
-
-    return MixSend_C;
+    return Mix_C;
 }
 
 
@@ -480,7 +466,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         }
 
         src->IsHrtf = AL_FALSE;
-        src->Dry.Mix = SelectDirectMixer();
     }
     else if(Device->Hrtf)
     {
@@ -512,7 +497,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         src->Direct.Mix.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
 
         src->IsHrtf = AL_TRUE;
-        src->Dry.HrtfMix = SelectHrtfMixer();
     }
     else
     {
@@ -574,7 +558,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         }
 
         src->IsHrtf = AL_FALSE;
-        src->Dry.Mix = SelectDirectMixer();
     }
     for(i = 0;i < NumSends;i++)
     {
@@ -598,7 +581,8 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             src->Send[i].Counter = 64;
         }
     }
-    src->WetMix = SelectSendMixer();
+    src->Mix = SelectMixer();
+    src->HrtfMix = SelectHrtfMixer();
 
     {
         ALfloat gainhf = maxf(0.01f, DryGainHF);
@@ -1038,7 +1022,6 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         src->Direct.Mix.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
 
         src->IsHrtf = AL_TRUE;
-        src->Dry.HrtfMix = SelectHrtfMixer();
     }
     else
     {
@@ -1100,7 +1083,6 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         }
 
         src->IsHrtf = AL_FALSE;
-        src->Dry.Mix = SelectDirectMixer();
     }
     for(i = 0;i < NumSends;i++)
     {
@@ -1124,7 +1106,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             src->Send[i].Counter = 64;
         }
     }
-    src->WetMix = SelectSendMixer();
+    src->Mix = SelectMixer();
+    src->HrtfMix = SelectHrtfMixer();
 
     {
         ALfloat gainhf = maxf(0.01f, DryGainHF);

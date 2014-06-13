@@ -85,8 +85,8 @@ void MixDirect_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *da
     for(c = 0;c < MaxChannels;c++)
     {
         ALuint pos = 0;
-        DrySend = Gains->Current[c];
-        Step = Gains->Step[c];
+        DrySend = Gains[c].Current;
+        Step = Gains[c].Step;
         if(Step != 1.0f && Counter > 0)
         {
             for(;pos < BufferSize && pos < Counter;pos++)
@@ -95,8 +95,8 @@ void MixDirect_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *da
                 DrySend *= Step;
             }
             if(pos == Counter)
-                DrySend = Gains->Target[c];
-            Gains->Current[c] = DrySend;
+                DrySend = Gains[c].Target;
+            Gains[c].Current = DrySend;
             /* Mix until pos is aligned with 4 or the mix is done. */
             for(;pos < BufferSize && (pos&3) != 0;pos++)
                 OutBuffer[c][OutPos+pos] += data[pos]*DrySend;
@@ -119,15 +119,15 @@ void MixDirect_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *da
 
 
 void MixSend_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                  MixGainMono *Gain, ALuint Counter, ALuint OutPos, ALuint BufferSize)
+                  MixGains *Gain, ALuint Counter, ALuint OutPos, ALuint BufferSize)
 {
     ALfloat WetGain, Step;
     float32x4_t gain;
 
     {
         ALuint pos = 0;
-        WetGain = Gain->Current;
-        Step = Gain->Step;
+        WetGain = Gain[0].Current;
+        Step = Gain[0].Step;
         if(Step != 1.0f && Counter > 0)
         {
             for(;pos < BufferSize && pos < Counter;pos++)
@@ -136,8 +136,8 @@ void MixSend_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data
                 WetGain *= Step;
             }
             if(pos == Counter)
-                WetGain = Gain->Target;
-            Gain->Current = WetGain;
+                WetGain = Gain[0].Target;
+            Gain[0].Current = WetGain;
             for(;pos < BufferSize && (pos&3) != 0;pos++)
                 OutBuffer[0][OutPos+pos] += data[pos]*WetGain;
         }

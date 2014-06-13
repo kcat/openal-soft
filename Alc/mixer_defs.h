@@ -7,7 +7,6 @@
 #include "alu.h"
 
 struct MixGains;
-struct MixGainMono;
 
 struct HrtfParams;
 struct HrtfState;
@@ -28,7 +27,7 @@ void MixDirect_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                  struct MixGains *Gains, ALuint Counter, ALuint OutPos,
                  ALuint BufferSize);
 void MixSend_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-               struct MixGainMono *Gain, ALuint Counter, ALuint OutPos,
+               struct MixGains *Gain, ALuint Counter, ALuint OutPos,
                ALuint BufferSize);
 
 /* SSE mixers */
@@ -40,7 +39,7 @@ void MixDirect_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *dat
                    struct MixGains *Gains, ALuint Counter, ALuint OutPos,
                    ALuint BufferSize);
 void MixSend_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                 struct MixGainMono *Gain, ALuint Counter, ALuint OutPos,
+                 struct MixGains *Gain, ALuint Counter, ALuint OutPos,
                  ALuint BufferSize);
 
 /* SSE resamplers */
@@ -72,7 +71,7 @@ void MixDirect_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *da
                     struct MixGains *Gains, ALuint Counter, ALuint OutPos,
                     ALuint BufferSize);
 void MixSend_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                  struct MixGainMono *Gain, ALuint Counter, ALuint OutPos,
+                  struct MixGains *Gain, ALuint Counter, ALuint OutPos,
                   ALuint BufferSize);
 
 #endif /* MIXER_DEFS_H */

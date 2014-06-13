@@ -358,7 +358,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                     parms->Filters[chan].ActiveType
                 );
                 if(!src->IsHrtf)
-                    src->Dry.Mix(parms->OutBuffer, samples, &parms->Mix.Gains[chan],
+                    src->Dry.Mix(parms->OutBuffer, samples, parms->Mix.Gains[chan],
                                  parms->Counter, OutPos, DstBufferSize);
                 else
                     src->Dry.HrtfMix(

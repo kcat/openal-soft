@@ -104,8 +104,8 @@ void MixDirect_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
     for(c = 0;c < MaxChannels;c++)
     {
         ALuint pos = 0;
-        DrySend = Gains->Current[c];
-        Step = Gains->Step[c];
+        DrySend = Gains[c].Current;
+        Step = Gains[c].Step;
         if(Step != 1.0f && Counter > 0)
         {
             for(;pos < BufferSize && pos < Counter;pos++)
@@ -114,8 +114,8 @@ void MixDirect_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                 DrySend *= Step;
             }
             if(pos == Counter)
-                DrySend = Gains->Target[c];
-            Gains->Current[c] = DrySend;
+                DrySend = Gains[c].Target;
+            Gains[c].Current = DrySend;
         }
 
         if(!(DrySend > GAIN_SILENCE_THRESHOLD))
@@ -127,14 +127,14 @@ void MixDirect_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
 
 
 void MixSend_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-               MixGainMono *Gain, ALuint Counter, ALuint OutPos, ALuint BufferSize)
+               MixGains *Gain, ALuint Counter, ALuint OutPos, ALuint BufferSize)
 {
     ALfloat WetSend, Step;
 
     {
         ALuint pos = 0;
-        WetSend = Gain->Current;
-        Step = Gain->Step;
+        WetSend = Gain[0].Current;
+        Step = Gain[0].Step;
         if(Step != 1.0f && Counter > 0)
         {
             for(;pos < BufferSize && pos < Counter;pos++)
@@ -143,8 +143,8 @@ void MixSend_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                 WetSend *= Step;
             }
             if(pos == Counter)
-                WetSend = Gain->Target;
-            Gain->Current = WetSend;
+                WetSend = Gain[0].Target;
+            Gain[0].Current = WetSend;
         }
 
         if(!(WetSend > GAIN_SILENCE_THRESHOLD))

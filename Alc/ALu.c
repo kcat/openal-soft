@@ -226,7 +226,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     ALfloat WetGainLF[MAX_SENDS];
     ALint NumSends, Frequency;
     const struct ChanMap *chans = NULL;
-    enum Resampler Resampler;
     ALint num_channels = 0;
     ALboolean DirectChannels;
     ALfloat hwidth = 0.0f;
@@ -245,7 +244,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     MinVolume       = ALSource->MinGain;
     MaxVolume       = ALSource->MaxGain;
     Pitch           = ALSource->Pitch;
-    Resampler       = ALSource->Resampler;
     DirectChannels  = ALSource->DirectChannels;
 
     src->Direct.OutBuffer = Device->DryBuffer;
@@ -592,7 +590,6 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     ALfloat WetGainLF[MAX_SENDS];
     ALboolean WetGainAuto;
     ALboolean WetGainHFAuto;
-    enum Resampler Resampler;
     ALfloat Pitch;
     ALuint Frequency;
     ALint NumSends;
@@ -621,7 +618,6 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     MinVolume      = ALSource->MinGain;
     MaxVolume      = ALSource->MaxGain;
     Pitch          = ALSource->Pitch;
-    Resampler      = ALSource->Resampler;
     Position[0]    = ALSource->Position[0];
     Position[1]    = ALSource->Position[1];
     Position[2]    = ALSource->Position[2];

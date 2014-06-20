@@ -1602,7 +1602,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             GotType  = 1<<2,
             GotAll   = GotFreq|GotChans|GotType
         };
-        ALCuint freq, numMono, numStereo, numSends;
+        ALCuint freq, numMono, numStereo, numSends, flags;
         enum DevFmtChannels schans;
         enum DevFmtType stype;
         ALCuint attrIdx = 0;
@@ -1620,6 +1620,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         schans = device->FmtChans;
         stype = device->FmtType;
         freq = device->Frequency;
+        flags = device->Flags;
 
         while(attrList[attrIdx])
         {
@@ -1664,9 +1665,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(attrList[attrIdx] == ALC_HRTF_SOFT)
             {
                 if(attrList[attrIdx + 1] != ALC_FALSE)
-                    device->Flags |= DEVICE_HRTF_REQUEST;
+                    flags |= DEVICE_HRTF_REQUEST;
                 else
-                    device->Flags &= ~DEVICE_HRTF_REQUEST;
+                    flags &= ~DEVICE_HRTF_REQUEST;
             }
 
             attrIdx += 2;
@@ -1683,7 +1684,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if((device->Flags&DEVICE_RUNNING))
             V0(device->Backend,stop)();
-        device->Flags &= ~DEVICE_RUNNING;
+        device->Flags = (flags & ~DEVICE_RUNNING);
 
         if(freq != device->Frequency)
             UpdateClockBase(device);
@@ -1793,10 +1794,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ALCuint freq;
         if(FindHrtfFormat(device, &chans, &freq))
         {
-            device->Frequency = freq;
-            device->FmtChans = chans;
-            device->Flags |= DEVICE_CHANNELS_REQUEST |
-                             DEVICE_FREQUENCY_REQUEST;
+            if(device->Type != Loopback)
+            {
+                device->Frequency = freq;
+                device->FmtChans = chans;
+                device->Flags |= DEVICE_CHANNELS_REQUEST |
+                                 DEVICE_FREQUENCY_REQUEST;
+            }
+            else if(device->Frequency != freq || device->FmtChans != chans)
+            {
+                ERR("Requested format not HRTF compatible: %s, %uhz\n",
+                    DevFmtChannelsString(device->FmtChans), device->Frequency);
+                device->Flags &= ~DEVICE_HRTF_REQUEST;
+            }
         }
     }
 

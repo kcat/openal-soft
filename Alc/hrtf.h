@@ -15,8 +15,8 @@ struct Hrtf;
 #define HRTFDELAY_FRACONE (1<<HRTFDELAY_BITS)
 #define HRTFDELAY_MASK    (HRTFDELAY_FRACONE-1)
 
-const struct Hrtf *GetHrtf(ALCdevice *device);
-ALCboolean FindHrtfFormat(const ALCdevice *device, enum DevFmtChannels *chans, ALCuint *srate);
+const struct Hrtf *GetHrtf(enum DevFmtChannels chans, ALCuint srate);
+ALCboolean FindHrtfFormat(enum DevFmtChannels *chans, ALCuint *srate);
 
 void FreeHrtfs(void);
 

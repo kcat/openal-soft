@@ -1790,9 +1790,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
     if((device->Flags&DEVICE_HRTF_REQUEST))
     {
-        enum DevFmtChannels chans;
-        ALCuint freq;
-        if(FindHrtfFormat(device, &chans, &freq))
+        enum DevFmtChannels chans = device->FmtChans;
+        ALCuint freq = device->Frequency;
+        if(FindHrtfFormat(&chans, &freq))
         {
             if(device->Type != Loopback)
             {
@@ -1843,7 +1843,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->Hrtf = NULL;
     if((device->Flags&DEVICE_HRTF_REQUEST))
     {
-        device->Hrtf = GetHrtf(device);
+        device->Hrtf = GetHrtf(device->FmtChans, device->Frequency);
         if(!device->Hrtf)
             device->Flags &= ~DEVICE_HRTF_REQUEST;
     }

@@ -745,40 +745,39 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
     return NULL;
 }
 
-const struct Hrtf *GetHrtf(ALCdevice *device)
+const struct Hrtf *GetHrtf(enum DevFmtChannels chans, ALCuint srate)
 {
-    if(device->FmtChans == DevFmtStereo)
+    if(chans == DevFmtStereo)
     {
         struct Hrtf *Hrtf = LoadedHrtfs;
         while(Hrtf != NULL)
         {
-            if(device->Frequency == Hrtf->sampleRate)
+            if(srate == Hrtf->sampleRate)
                 return Hrtf;
             Hrtf = Hrtf->next;
         }
 
-        Hrtf = LoadHrtf(device->Frequency);
+        Hrtf = LoadHrtf(srate);
         if(Hrtf != NULL)
             return Hrtf;
     }
-    ERR("Incompatible format: %s %uhz\n",
-        DevFmtChannelsString(device->FmtChans), device->Frequency);
+    ERR("Incompatible format: %s %uhz\n", DevFmtChannelsString(chans), srate);
     return NULL;
 }
 
-ALCboolean FindHrtfFormat(const ALCdevice *device, enum DevFmtChannels *chans, ALCuint *srate)
+ALCboolean FindHrtfFormat(enum DevFmtChannels *chans, ALCuint *srate)
 {
     const struct Hrtf *hrtf = LoadedHrtfs;
     while(hrtf != NULL)
     {
-        if(device->Frequency == hrtf->sampleRate)
+        if(*srate == hrtf->sampleRate)
             break;
         hrtf = hrtf->next;
     }
 
     if(hrtf == NULL)
     {
-        hrtf = LoadHrtf(device->Frequency);
+        hrtf = LoadHrtf(*srate);
         if(hrtf == NULL) return ALC_FALSE;
     }
 

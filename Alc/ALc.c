@@ -1782,8 +1782,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(device->Type != Loopback)
     {
-        int nohrtf = !(device->Flags&DEVICE_HRTF_REQUEST);
-        if(GetConfigValueBool(NULL, "hrtf", !nohrtf))
+        bool usehrtf = !!(device->Flags&DEVICE_HRTF_REQUEST);
+        if(GetConfigValueBool(NULL, "hrtf", usehrtf))
             device->Flags |= DEVICE_HRTF_REQUEST;
         else
             device->Flags &= ~DEVICE_HRTF_REQUEST;

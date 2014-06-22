@@ -295,7 +295,7 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     if(gain > 0.0001f)
     {
         gain *= 1.0f/32767.0f;
-        for(i = 0;i < HRIR_LENGTH;i++)
+        for(i = 0;i < Hrtf->irSize;i++)
         {
             left = coeffs[i][0] - (coeffStep[i][0] * counter);
             right = coeffs[i][1] - (coeffStep[i][1] * counter);
@@ -315,7 +315,7 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     }
     else
     {
-        for(i = 0;i < HRIR_LENGTH;i++)
+        for(i = 0;i < Hrtf->irSize;i++)
         {
             left = coeffs[i][0] - (coeffStep[i][0] * counter);
             right = coeffs[i][1] - (coeffStep[i][1] * counter);

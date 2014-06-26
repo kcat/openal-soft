@@ -101,18 +101,12 @@ AL_API void AL_APIENTRY alMidiSysExSOFT(ALuint64SOFT time, const ALbyte *data, A
     ALCdevice *device;
     ALCcontext *context;
     ALenum err;
-    ALsizei i;
 
     context = GetContextRef();
     if(!context) return;
 
     if(!data || size < 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    for(i = 0;i < size;i++)
-    {
-        if((data[i]&0x80))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    }
 
     device = context->Device;
     ALCdevice_Lock(device);

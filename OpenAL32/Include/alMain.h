@@ -144,7 +144,6 @@
 #define AL_LOOP_UNTIL_RELEASE_SOFT               0x0003
 #define AL_RIGHT_SOFT                            0x0002
 #define AL_LEFT_SOFT                             0x0004
-#define AL_FORMAT_TYPE_SOFT                      0x1991
 #define AL_NOTEOFF_SOFT                          0x0080
 #define AL_NOTEON_SOFT                           0x0090
 #define AL_KEYPRESSURE_SOFT                      0x00A0

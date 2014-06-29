@@ -34,6 +34,8 @@ typedef struct ALenvelope {
 typedef struct ALfontsound {
     RefCount ref;
 
+    struct ALbuffer *Buffer;
+
     ALint MinKey, MaxKey;
     ALint MinVelocity, MaxVelocity;
 

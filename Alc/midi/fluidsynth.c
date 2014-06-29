@@ -144,7 +144,7 @@ typedef struct FSample {
     ALsizei NumMods;
 } FSample;
 
-static void FSample_Construct(FSample *self, ALfontsound *sound, ALsoundfont *sfont)
+static void FSample_Construct(FSample *self, ALfontsound *sound)
 {
     fluid_sample_t *sample = STATIC_CAST(fluid_sample_t, self);
     memset(sample->name, 0, sizeof(sample->name));
@@ -157,7 +157,7 @@ static void FSample_Construct(FSample *self, ALfontsound *sound, ALsoundfont *sf
     sample->pitchadj = sound->PitchCorrection;
     sample->sampletype = getSampleType(sound->SampleType);
     sample->valid = 1;
-    sample->data = sfont->Samples;
+    sample->data = sound->Buffer ? sound->Buffer->data : NULL;
 
     sample->amplitude_that_reaches_noise_floor_is_valid = 0;
     sample->amplitude_that_reaches_noise_floor = 0.0;
@@ -240,7 +240,7 @@ static void FPreset_Construct(FPreset *self, ALsfpreset *preset, fluid_sfont_t *
         ALsizei i;
         self->NumSamples = preset->NumSounds;
         for(i = 0;i < self->NumSamples;i++)
-            FSample_Construct(&self->Samples[i], preset->Sounds[i], sfont);
+            FSample_Construct(&self->Samples[i], preset->Sounds[i]);
     }
 }
 
@@ -294,6 +294,8 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_t *voice;
         ALsizei m;
 
+        if(!STATIC_CAST(fluid_sample_t, sample)->data)
+            continue;
         if(!(key >= sound->MinKey && key <= sound->MaxKey && vel >= sound->MinVelocity && vel <= sound->MaxVelocity))
             continue;
 

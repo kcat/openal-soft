@@ -8,6 +8,7 @@
 #include "alMidi.h"
 #include "alError.h"
 #include "alThunk.h"
+#include "alBuffer.h"
 
 #include "midi/base.h"
 
@@ -257,6 +258,10 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     switch(param)
     {
+        case AL_BUFFER:
+            values[0] = (sound->Buffer ? sound->Buffer->id : 0);
+            break;
+
         case AL_MOD_LFO_TO_PITCH_SOFT:
             values[0] = sound->ModLfoToPitch;
             break;
@@ -510,6 +515,8 @@ static void ALfontsound_Construct(ALfontsound *self)
 {
     InitRef(&self->ref, 0);
 
+    self->Buffer = NULL;
+
     self->MinKey = 0;
     self->MaxKey = 127;
     self->MinVelocity = 0;
@@ -587,6 +594,9 @@ void ALfontsound_Destruct(ALfontsound *self)
     FreeThunkEntry(self->id);
     self->id = 0;
 
+    if(self->Buffer)
+        DecrementRef(&self->Buffer->ref);
+    self->Buffer = NULL;
     if(self->Link)
         DecrementRef(&self->Link->ref);
     self->Link = NULL;
@@ -602,9 +612,26 @@ void ALfontsound_Destruct(ALfontsound *self)
 void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, ALint value)
 {
     ALfontsound *link;
+    ALbuffer *buffer;
 
     switch(param)
     {
+        case AL_BUFFER:
+            buffer = value ? LookupBuffer(context->Device, value) : NULL;
+            if(value && !buffer)
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            else if(buffer)
+            {
+                /* Buffer must have a non-0 length, and must be mono. */
+                if(buffer->SampleLen <= 0 || buffer->FmtChannels != FmtMono)
+                    SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            }
+
+            if(buffer) IncrementRef(&buffer->ref);
+            if((buffer=ExchangePtr((XchgPtr*)&self->Buffer, buffer)) != NULL)
+                DecrementRef(&buffer->ref);
+            break;
+
         case AL_MOD_LFO_TO_PITCH_SOFT:
             self->ModLfoToPitch = value;
             break;

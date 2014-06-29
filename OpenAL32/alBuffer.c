@@ -41,7 +41,6 @@ extern inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id);
 extern inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
 extern inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
 
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels chans, enum UserFmtType type, const ALvoid *data, ALsizei align, ALboolean storesrc);
 static ALboolean IsValidType(ALenum type) DECL_CONST;
 static ALboolean IsValidChannels(ALenum channels) DECL_CONST;
 static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type) DECL_CONST;
@@ -54,7 +53,6 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
     ALCdevice *device;
     ALCcontext *context;
     ALsizei cur = 0;
-    ALenum err;
 
     context = GetContextRef();
     if(!context) return;
@@ -65,25 +63,11 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
     device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
-        ALbuffer *buffer = calloc(1, sizeof(ALbuffer));
+        ALbuffer *buffer = NewBuffer(context);
         if(!buffer)
         {
             alDeleteBuffers(cur, buffers);
-            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
-        }
-        RWLockInit(&buffer->lock);
-
-        err = NewThunkEntry(&buffer->id);
-        if(err == AL_NO_ERROR)
-            err = InsertUIntMapEntry(&device->BufferMap, buffer->id, buffer);
-        if(err != AL_NO_ERROR)
-        {
-            FreeThunkEntry(buffer->id);
-            memset(buffer, 0, sizeof(ALbuffer));
-            free(buffer);
-
-            alDeleteBuffers(cur, buffers);
-            SET_ERROR_AND_GOTO(context, err, done);
+            break;
         }
 
         buffers[cur] = buffer->id;
@@ -120,16 +104,7 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
     }
 
     for(i = 0;i < n;i++)
-    {
-        if((ALBuf=RemoveBuffer(device, buffers[i])) == NULL)
-            continue;
-        FreeThunkEntry(ALBuf->id);
-
-        free(ALBuf->data);
-
-        memset(ALBuf, 0, sizeof(*ALBuf));
-        free(ALBuf);
-    }
+        DeleteBuffer(device, buffers[i]);
 
 done:
     ALCcontext_DecRef(context);
@@ -954,7 +929,7 @@ done:
  * Currently, the new format must have the same channel configuration as the
  * original format.
  */
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALboolean storesrc)
+ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALboolean storesrc)
 {
     ALuint NewChannels, NewBytes;
     enum FmtChannels DstChannels;
@@ -1290,6 +1265,47 @@ static ALboolean IsValidChannels(ALenum channels)
             return AL_TRUE;
     }
     return AL_FALSE;
+}
+
+
+ALbuffer *NewBuffer(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+    ALbuffer *buffer;
+    ALenum err;
+
+    buffer = calloc(1, sizeof(ALbuffer));
+    if(!buffer)
+        SET_ERROR_AND_RETURN_VALUE(context, AL_OUT_OF_MEMORY, NULL);
+    RWLockInit(&buffer->lock);
+
+    err = NewThunkEntry(&buffer->id);
+    if(err == AL_NO_ERROR)
+        err = InsertUIntMapEntry(&device->BufferMap, buffer->id, buffer);
+    if(err != AL_NO_ERROR)
+    {
+        FreeThunkEntry(buffer->id);
+        memset(buffer, 0, sizeof(ALbuffer));
+        free(buffer);
+
+        SET_ERROR_AND_RETURN_VALUE(context, err, NULL);
+    }
+
+    return buffer;
+}
+
+void DeleteBuffer(ALCdevice *device, ALuint bufid)
+{
+    ALbuffer *buffer;
+
+    if((buffer=RemoveBuffer(device, bufid)) == NULL)
+        return;
+    FreeThunkEntry(buffer->id);
+
+    free(buffer->data);
+
+    memset(buffer, 0, sizeof(*buffer));
+    free(buffer);
 }
 
 

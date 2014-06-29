@@ -121,7 +121,7 @@ DECL_TEMPLATE(ALfloat)
 
 #undef DECL_TEMPLATE
 
-static void LoadData(ALfloat *dst, const ALvoid *src, ALuint srcstep, enum FmtType srctype, ALuint samples)
+static void LoadSamples(ALfloat *dst, const ALvoid *src, ALuint srcstep, enum FmtType srctype, ALuint samples)
 {
     switch(srctype)
     {
@@ -137,7 +137,7 @@ static void LoadData(ALfloat *dst, const ALvoid *src, ALuint srcstep, enum FmtTy
     }
 }
 
-static void SilenceData(ALfloat *dst, ALuint samples)
+static void SilenceSamples(ALfloat *dst, ALuint samples)
 {
     ALuint i;
     for(i = 0;i < samples;i++)
@@ -265,7 +265,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                         DataSize = BufferPrePadding - DataPosInt;
                         DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
 
-                        SilenceData(&SrcData[SrcDataSize], DataSize);
+                        SilenceSamples(&SrcData[SrcDataSize], DataSize);
                         SrcDataSize += DataSize;
 
                         pos = 0;
@@ -275,11 +275,11 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                      * rest of the temp buffer */
                     DataSize = minu(SrcBufferSize - SrcDataSize, ALBuffer->SampleLen - pos);
 
-                    LoadData(&SrcData[SrcDataSize], &Data[(pos*NumChannels + chan)*SampleSize],
-                             NumChannels, ALBuffer->FmtType, DataSize);
+                    LoadSamples(&SrcData[SrcDataSize], &Data[(pos*NumChannels + chan)*SampleSize],
+                                NumChannels, ALBuffer->FmtType, DataSize);
                     SrcDataSize += DataSize;
 
-                    SilenceData(&SrcData[SrcDataSize], SrcBufferSize - SrcDataSize);
+                    SilenceSamples(&SrcData[SrcDataSize], SrcBufferSize - SrcDataSize);
                     SrcDataSize += SrcBufferSize - SrcDataSize;
                 }
                 else
@@ -302,7 +302,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                         DataSize = BufferPrePadding - DataPosInt;
                         DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
 
-                        SilenceData(&SrcData[SrcDataSize], DataSize);
+                        SilenceSamples(&SrcData[SrcDataSize], DataSize);
                         SrcDataSize += DataSize;
 
                         pos = 0;
@@ -313,8 +313,8 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                     DataSize = LoopEnd - pos;
                     DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
 
-                    LoadData(&SrcData[SrcDataSize], &Data[(pos*NumChannels + chan)*SampleSize],
-                             NumChannels, ALBuffer->FmtType, DataSize);
+                    LoadSamples(&SrcData[SrcDataSize], &Data[(pos*NumChannels + chan)*SampleSize],
+                                NumChannels, ALBuffer->FmtType, DataSize);
                     SrcDataSize += DataSize;
 
                     DataSize = LoopEnd-LoopStart;
@@ -322,8 +322,8 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                     {
                         DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
 
-                        LoadData(&SrcData[SrcDataSize], &Data[(LoopStart*NumChannels + chan)*SampleSize],
-                                 NumChannels, ALBuffer->FmtType, DataSize);
+                        LoadSamples(&SrcData[SrcDataSize], &Data[(LoopStart*NumChannels + chan)*SampleSize],
+                                    NumChannels, ALBuffer->FmtType, DataSize);
                         SrcDataSize += DataSize;
                     }
                 }
@@ -353,7 +353,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                         {
                             ALuint DataSize = minu(SrcBufferSize - SrcDataSize, pos);
 
-                            SilenceData(&SrcData[SrcDataSize], DataSize);
+                            SilenceSamples(&SrcData[SrcDataSize], DataSize);
                             SrcDataSize += DataSize;
 
                             pos = 0;
@@ -390,8 +390,8 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                             pos -= pos;
 
                             DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
-                            LoadData(&SrcData[SrcDataSize], Data, NumChannels,
-                                     ALBuffer->FmtType, DataSize);
+                            LoadSamples(&SrcData[SrcDataSize], Data, NumChannels,
+                                        ALBuffer->FmtType, DataSize);
                             SrcDataSize += DataSize;
                         }
                     }
@@ -400,7 +400,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                         tmpiter = Source->queue;
                     else if(!tmpiter)
                     {
-                        SilenceData(&SrcData[SrcDataSize], SrcBufferSize - SrcDataSize);
+                        SilenceSamples(&SrcData[SrcDataSize], SrcBufferSize - SrcDataSize);
                         SrcDataSize += SrcBufferSize - SrcDataSize;
                     }
                 }

@@ -97,6 +97,11 @@ typedef struct ALbuffer {
     ALuint id;
 } ALbuffer;
 
+ALbuffer *NewBuffer(ALCcontext *context);
+void DeleteBuffer(ALCdevice *device, ALuint bufid);
+
+ALenum LoadData(ALbuffer *buffer, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALboolean storesrc);
+
 inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 { return (struct ALbuffer*)LookupUIntMapKey(&device->BufferMap, id); }
 inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id)

@@ -155,10 +155,6 @@
 typedef void (AL_APIENTRY*LPALGENSOUNDFONTSSOFT)(ALsizei n, ALuint *ids);
 typedef void (AL_APIENTRY*LPALDELETESOUNDFONTSSOFT)(ALsizei n, const ALuint *ids);
 typedef ALboolean (AL_APIENTRY*LPALISSOUNDFONTSOFT)(ALuint id);
-typedef void (AL_APIENTRY*LPALSOUNDFONTSAMPLESSOFT)(ALuint sfid, ALenum type, ALsizei count, const ALvoid *samples);
-typedef void (AL_APIENTRY*LPALGETSOUNDFONTSAMPLESSOFT)(ALuint id, ALsizei offset, ALsizei count, ALenum type, ALvoid *samples);
-typedef ALvoid* (AL_APIENTRY*LPALSOUNDFONTMAPSAMPLESSOFT)(ALuint sfid, ALsizei offset, ALsizei length);
-typedef void (AL_APIENTRY*LPALSOUNDFONTUNMAPSAMPLESSOFT)(ALuint sfid);
 typedef void (AL_APIENTRY*LPALGETSOUNDFONTIVSOFT)(ALuint id, ALenum param, ALint *values);
 typedef void (AL_APIENTRY*LPALSOUNDFONTPRESETSSOFT)(ALuint id, ALsizei count, const ALuint *pids);
 typedef void (AL_APIENTRY*LPALGENPRESETSSOFT)(ALsizei n, ALuint *ids);
@@ -193,10 +189,6 @@ typedef void (AL_APIENTRY*LPALLOADSOUNDFONTSOFT)(ALuint id, size_t(*cb)(ALvoid*,
 AL_API void AL_APIENTRY alGenSoundfontsSOFT(ALsizei n, ALuint *ids);
 AL_API void AL_APIENTRY alDeleteSoundfontsSOFT(ALsizei n, const ALuint *ids);
 AL_API ALboolean AL_APIENTRY alIsSoundfontSOFT(ALuint id);
-AL_API void AL_APIENTRY alSoundfontSamplesSOFT(ALuint sfid, ALenum type, ALsizei count, const ALvoid *samples);
-AL_API void AL_APIENTRY alGetSoundfontSamplesSOFT(ALuint id, ALsizei offset, ALsizei count, ALenum type, ALvoid *samples);
-AL_API ALvoid* AL_APIENTRY alSoundfontMapSamplesSOFT(ALuint sfid, ALsizei offset, ALsizei length);
-AL_API void AL_APIENTRY alSoundfontUnmapSamplesSOFT(ALuint sfid);
 AL_API void AL_APIENTRY alGetSoundfontivSOFT(ALuint id, ALenum param, ALint *values);
 AL_API void AL_APIENTRY alSoundfontPresetsSOFT(ALuint id, ALsizei count, const ALuint *pids);
 

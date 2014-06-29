@@ -218,7 +218,7 @@ static int FPreset_getPreset(fluid_preset_t *preset);
 static int FPreset_getBank(fluid_preset_t *preset);
 static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int channel, int key, int velocity);
 
-static void FPreset_Construct(FPreset *self, ALsfpreset *preset, fluid_sfont_t *parent, ALsoundfont *sfont)
+static void FPreset_Construct(FPreset *self, ALsfpreset *preset, fluid_sfont_t *parent)
 {
     STATIC_CAST(fluid_preset_t, self)->data = self;
     STATIC_CAST(fluid_preset_t, self)->sfont = parent;
@@ -386,7 +386,7 @@ static void FSfont_Construct(FSfont *self, ALsoundfont *sfont)
         ALsizei i;
         self->NumPresets = sfont->NumPresets;
         for(i = 0;i < self->NumPresets;i++)
-            FPreset_Construct(&self->Presets[i], sfont->Presets[i], STATIC_CAST(fluid_sfont_t, self), sfont);
+            FPreset_Construct(&self->Presets[i], sfont->Presets[i], STATIC_CAST(fluid_sfont_t, self));
     }
 }
 

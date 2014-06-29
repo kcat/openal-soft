@@ -897,7 +897,7 @@ static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *
     }
 }
 
-static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCcontext *context, InstrumentHeader *inst, const PresetHeader *preset, const Soundfont *sfont, const GenModList *pzone)
+static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCcontext *context, ALbuffer *buffer, InstrumentHeader *inst, const PresetHeader *preset, const Soundfont *sfont, const GenModList *pzone)
 {
     const Generator *gen, *gen_end;
     const Modulator *mod, *mod_end;
@@ -990,6 +990,7 @@ static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCco
 
                 sound = NewFontsound(context);
                 (*sounds)[(*sounds_size)++] = sound;
+                ALfontsound_setPropi(sound, context, AL_BUFFER, buffer->id);
                 ALfontsound_setPropi(sound, context, AL_SAMPLE_START_SOFT, samp->mStart);
                 ALfontsound_setPropi(sound, context, AL_SAMPLE_END_SOFT, samp->mEnd);
                 ALfontsound_setPropi(sound, context, AL_SAMPLE_LOOP_START_SOFT, samp->mStartloop);
@@ -1015,6 +1016,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 {
     ALsfpreset **presets = NULL;
     ALsizei presets_size = 0;
+    ALbuffer *buffer = NULL;
     ALuint ltype;
     Soundfont sfont;
     RiffHdr riff;
@@ -1099,6 +1101,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     {
         ALbyte *ptr;
         RiffHdr smpl;
+        ALenum err;
 
         RiffHdr_read(&smpl, stream);
         if(smpl.mCode != FOURCC('s','m','p','l'))
@@ -1108,11 +1111,14 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
         if(smpl.mSize > list.mSize)
             ERROR_GOTO(error, "Invalid Format, sample chunk size mismatch\n");
 
-        if(!(ptr=realloc(soundfont->Samples, smpl.mSize)))
+        buffer = NewBuffer(context);
+        if(!buffer)
             SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, error);
-        soundfont->Samples = (ALshort*)ptr;
-        soundfont->NumSamples = smpl.mSize/2;
+        /* Sample rate it unimportant, the individual fontsounds will specify it. */
+        if((err=LoadData(buffer, 22050, AL_MONO16_SOFT, smpl.mSize/2, UserFmtMono, UserFmtShort, NULL, 1, AL_FALSE)) != AL_NO_ERROR)
+            SET_ERROR_AND_GOTO(context, err, error);
 
+        ptr = buffer->data;
         if(IS_LITTLE_ENDIAN)
             READ(stream, ptr, smpl.mSize);
         else
@@ -1310,8 +1316,10 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                         ERR("Generator %ld has invalid instrument ID (%d of %d)\n",
                             (long)(gen-sfont.pgen), gen->mAmount, sfont.inst_size-1);
                     else
-                        processInstrument(&sounds, &sounds_size, context,
-                                          &sfont.inst[gen->mAmount], &sfont.phdr[i], &sfont, &lzone);
+                        processInstrument(
+                            &sounds, &sounds_size, context, buffer, &sfont.inst[gen->mAmount],
+                            &sfont.phdr[i], &sfont, &lzone
+                        );
                     break;
                 }
                 GenModList_insertGen(&lzone, gen, AL_TRUE);
@@ -1346,6 +1354,9 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     free(presets);
 
     Soundfont_Destruct(&sfont);
+    /* If the buffer ends up unused, delete it. */
+    if(ReadRef(&buffer->ref) == 0)
+        DeleteBuffer(context->Device, buffer->id);
 
     return AL_TRUE;
 
@@ -1359,6 +1370,8 @@ error:
     }
 
     Soundfont_Destruct(&sfont);
+    if(buffer)
+        DeleteBuffer(context->Device, buffer->id);
 
     return AL_FALSE;
 }

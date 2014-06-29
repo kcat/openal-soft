@@ -140,11 +140,7 @@ typedef struct ALsoundfont {
     ALsfpreset **Presets;
     ALsizei NumPresets;
 
-    ALshort *Samples;
-    ALint NumSamples;
-
     RWLock Lock;
-    volatile ALenum Mapped;
 
     ALuint id;
 } ALsoundfont;

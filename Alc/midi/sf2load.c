@@ -848,12 +848,12 @@ static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *
                     value = getLoopMode(value);
                 ALfontsound_setPropi(sound, context, param, value);
             }
-            else if(gen->mGenerator < 256)
+            else
             {
-                static ALboolean warned[256];
-                if(!warned[gen->mGenerator])
+                static ALuint warned[65536/32];
+                if(!(warned[gen->mGenerator/32]&(1<<(gen->mGenerator&31))))
                 {
-                    warned[gen->mGenerator] = AL_TRUE;
+                    warned[gen->mGenerator/32] |= 1<<(gen->mGenerator&31);
                     ERR("Unhandled generator %d\n", gen->mGenerator);
                 }
             }

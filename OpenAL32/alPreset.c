@@ -71,9 +71,8 @@ AL_API ALvoid AL_APIENTRY alDeletePresetsSOFT(ALsizei n, const ALuint *ids)
 
     for(i = 0;i < n;i++)
     {
-        if((preset=LookupPreset(device, ids[i])) == NULL)
-            continue;
-        DeletePreset(preset, device);
+        if((preset=LookupPreset(device, ids[i])) != NULL)
+            DeletePreset(device, preset);
     }
 
 done:
@@ -282,7 +281,7 @@ ALsfpreset *NewPreset(ALCcontext *context)
     return preset;
 }
 
-void DeletePreset(ALsfpreset *preset, ALCdevice *device)
+void DeletePreset(ALCdevice *device, ALsfpreset *preset)
 {
     RemovePreset(device, preset->id);
 

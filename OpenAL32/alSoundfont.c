@@ -357,7 +357,8 @@ void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device)
 
         sounds = ExchangePtr((XchgPtr*)&preset->Sounds, NULL);
         num_sounds = ExchangeInt(&preset->NumSounds, 0);
-        DeletePreset(preset, device);
+
+        DeletePreset(device, preset);
         preset = NULL;
 
         for(j = 0;j < num_sounds;j++)
@@ -377,9 +378,7 @@ void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device)
                         buffer = sounds[j]->Buffer;
                     else if(sounds[j]->Buffer)
                         assert(sounds[j]->Buffer == buffer);
-                    RemoveFontsound(device, sounds[j]->id);
-                    ALfontsound_Destruct(sounds[j]);
-                    free(sounds[j]);
+                    DeleteFontsound(device, sounds[j]);
                     sounds[j] = NULL;
                 }
             }
@@ -393,7 +392,7 @@ void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device)
     if(buffer)
     {
         assert(ReadRef(&buffer->ref) == 0);
-        DeleteBuffer(device, buffer->id);
+        DeleteBuffer(device, buffer);
     }
 }
 

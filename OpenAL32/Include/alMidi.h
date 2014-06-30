@@ -92,11 +92,11 @@ typedef struct ALfontsound {
     ALuint id;
 } ALfontsound;
 
-void ALfontsound_Destruct(ALfontsound *self);
 void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, ALint value);
 void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei stage, ALenum param, ALint value);
 
 ALfontsound *NewFontsound(ALCcontext *context);
+void DeleteFontsound(ALCdevice *device, ALfontsound *sound);
 
 inline struct ALfontsound *LookupFontsound(ALCdevice *device, ALuint id)
 { return (struct ALfontsound*)LookupUIntMapKey(&device->FontsoundMap, id); }
@@ -124,7 +124,7 @@ typedef struct ALsfpreset {
 } ALsfpreset;
 
 ALsfpreset *NewPreset(ALCcontext *context);
-void DeletePreset(ALsfpreset *preset, ALCdevice *device);
+void DeletePreset(ALCdevice *device, ALsfpreset *preset);
 
 inline struct ALsfpreset *LookupPreset(ALCdevice *device, ALuint id)
 { return (struct ALsfpreset*)LookupUIntMapKey(&device->PresetMap, id); }

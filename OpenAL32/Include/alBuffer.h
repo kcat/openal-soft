@@ -98,7 +98,7 @@ typedef struct ALbuffer {
 } ALbuffer;
 
 ALbuffer *NewBuffer(ALCcontext *context);
-void DeleteBuffer(ALCdevice *device, ALuint bufid);
+void DeleteBuffer(ALCdevice *device, ALbuffer *buffer);
 
 ALenum LoadData(ALbuffer *buffer, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALboolean storesrc);
 

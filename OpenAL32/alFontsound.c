@@ -15,9 +15,11 @@
 
 extern inline struct ALfontsound *LookupFontsound(ALCdevice *device, ALuint id);
 extern inline struct ALfontsound *RemoveFontsound(ALCdevice *device, ALuint id);
+extern inline struct ALsfmodulator *LookupModulator(ALfontsound *sound, ALuint id);
+extern inline struct ALsfmodulator *RemoveModulator(ALfontsound *sound, ALuint id);
 
 static void ALfontsound_Construct(ALfontsound *self);
-void ALfontsound_Destruct(ALfontsound *self);
+static void ALfontsound_Destruct(ALfontsound *self);
 void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, ALint value);
 static ALsfmodulator *ALfontsound_getModStage(ALfontsound *self, ALsizei stage);
 void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei stage, ALenum param, ALint value);
@@ -76,13 +78,8 @@ AL_API ALvoid AL_APIENTRY alDeleteFontsoundsSOFT(ALsizei n, const ALuint *ids)
 
     for(i = 0;i < n;i++)
     {
-        if((inst=RemoveFontsound(device, ids[i])) == NULL)
-            continue;
-
-        ALfontsound_Destruct(inst);
-
-        memset(inst, 0, sizeof(*inst));
-        free(inst);
+        if((inst=LookupFontsound(device, ids[i])) == NULL)
+            DeleteFontsound(device, inst);
     }
 
 done:
@@ -510,6 +507,16 @@ ALfontsound *NewFontsound(ALCcontext *context)
     return sound;
 }
 
+void DeleteFontsound(ALCdevice *device, ALfontsound *sound)
+{
+    RemoveFontsound(device, sound->id);
+
+    ALfontsound_Destruct(sound);
+
+    memset(sound, 0, sizeof(*sound));
+    free(sound);
+}
+
 
 static void ALfontsound_Construct(ALfontsound *self)
 {
@@ -587,7 +594,7 @@ static void ALfontsound_Construct(ALfontsound *self)
     self->id = 0;
 }
 
-void ALfontsound_Destruct(ALfontsound *self)
+static void ALfontsound_Destruct(ALfontsound *self)
 {
     ALsizei i;
 

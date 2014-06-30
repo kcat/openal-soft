@@ -104,7 +104,10 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
     }
 
     for(i = 0;i < n;i++)
-        DeleteBuffer(device, buffers[i]);
+    {
+        if((ALBuf=LookupBuffer(device, buffers[i])) != NULL)
+            DeleteBuffer(device, ALBuf);
+    }
 
 done:
     ALCcontext_DecRef(context);
@@ -1294,12 +1297,9 @@ ALbuffer *NewBuffer(ALCcontext *context)
     return buffer;
 }
 
-void DeleteBuffer(ALCdevice *device, ALuint bufid)
+void DeleteBuffer(ALCdevice *device, ALbuffer *buffer)
 {
-    ALbuffer *buffer;
-
-    if((buffer=RemoveBuffer(device, bufid)) == NULL)
-        return;
+    RemoveBuffer(device, buffer->id);
     FreeThunkEntry(buffer->id);
 
     free(buffer->data);

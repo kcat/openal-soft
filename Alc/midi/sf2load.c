@@ -1356,7 +1356,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     Soundfont_Destruct(&sfont);
     /* If the buffer ends up unused, delete it. */
     if(ReadRef(&buffer->ref) == 0)
-        DeleteBuffer(context->Device, buffer->id);
+        DeleteBuffer(context->Device, buffer);
 
     return AL_TRUE;
 
@@ -1365,13 +1365,13 @@ error:
     {
         ALCdevice *device = context->Device;
         for(i = 0;i < presets_size;i++)
-            DeletePreset(presets[i], device);
+            DeletePreset(device, presets[i]);
         free(presets);
     }
 
     Soundfont_Destruct(&sfont);
     if(buffer)
-        DeleteBuffer(context->Device, buffer->id);
+        DeleteBuffer(context->Device, buffer);
 
     return AL_FALSE;
 }

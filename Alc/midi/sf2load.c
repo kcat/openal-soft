@@ -492,7 +492,7 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
 {
     ALsizei i;
 
-    for(i = 0;i < sfont->phdr_size-1;i++)
+    for(i = 0;i < sfont->phdr_size;i++)
     {
         if(sfont->phdr[i].mZoneIdx >= sfont->pbag_size)
         {
@@ -500,21 +500,15 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
                  sfont->phdr[i].mZoneIdx, sfont->pbag_size);
             return AL_FALSE;
         }
-        if(sfont->phdr[i+1].mZoneIdx < sfont->phdr[i].mZoneIdx)
+        if(i+1 < sfont->phdr_size && sfont->phdr[i+1].mZoneIdx < sfont->phdr[i].mZoneIdx)
         {
             WARN("Preset %d has invalid zone index (%d does not follow %d)\n", i+1,
                  sfont->phdr[i+1].mZoneIdx, sfont->phdr[i].mZoneIdx);
             return AL_FALSE;
         }
     }
-    if(sfont->phdr[i].mZoneIdx >= sfont->pbag_size)
-    {
-        WARN("Preset %d has invalid zone index %d (max: %d)\n", i,
-             sfont->phdr[i].mZoneIdx, sfont->pbag_size);
-        return AL_FALSE;
-    }
 
-    for(i = 0;i < sfont->pbag_size-1;i++)
+    for(i = 0;i < sfont->pbag_size;i++)
     {
         if(sfont->pbag[i].mGenIdx >= sfont->pgen_size)
         {
@@ -522,7 +516,7 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
                  sfont->pbag[i].mGenIdx, sfont->pgen_size);
             return AL_FALSE;
         }
-        if(sfont->pbag[i+1].mGenIdx < sfont->pbag[i].mGenIdx)
+        if(i+1 < sfont->pbag_size && sfont->pbag[i].mGenIdx < sfont->pbag[i].mGenIdx)
         {
             WARN("Preset zone %d has invalid generator index (%d does not follow %d)\n", i+1,
                  sfont->pbag[i+1].mGenIdx, sfont->pbag[i].mGenIdx);
@@ -534,28 +528,16 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
                  sfont->pbag[i].mModIdx, sfont->pmod_size);
             return AL_FALSE;
         }
-        if(sfont->pbag[i+1].mModIdx < sfont->pbag[i].mModIdx)
+        if(i+1 < sfont->pbag_size && sfont->pbag[i+1].mModIdx < sfont->pbag[i].mModIdx)
         {
             WARN("Preset zone %d has invalid modulator index (%d does not follow %d)\n", i+1,
                  sfont->pbag[i+1].mModIdx, sfont->pbag[i].mModIdx);
             return AL_FALSE;
         }
     }
-    if(sfont->pbag[i].mGenIdx >= sfont->pgen_size)
-    {
-        WARN("Preset zone %d has invalid generator index %d (max: %d)\n", i,
-             sfont->pbag[i].mGenIdx, sfont->pgen_size);
-        return AL_FALSE;
-    }
-    if(sfont->pbag[i].mModIdx >= sfont->pmod_size)
-    {
-        WARN("Preset zone %d has invalid modulator index %d (max: %d)\n", i,
-             sfont->pbag[i].mModIdx, sfont->pmod_size);
-        return AL_FALSE;
-    }
 
 
-    for(i = 0;i < sfont->inst_size-1;i++)
+    for(i = 0;i < sfont->inst_size;i++)
     {
         if(sfont->inst[i].mZoneIdx >= sfont->ibag_size)
         {
@@ -563,21 +545,15 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
                  sfont->inst[i].mZoneIdx, sfont->ibag_size);
             return AL_FALSE;
         }
-        if(sfont->inst[i+1].mZoneIdx < sfont->inst[i].mZoneIdx)
+        if(i+1 < sfont->inst_size && sfont->inst[i+1].mZoneIdx < sfont->inst[i].mZoneIdx)
         {
             WARN("Instrument %d has invalid zone index (%d does not follow %d)\n", i+1,
                  sfont->inst[i+1].mZoneIdx, sfont->inst[i].mZoneIdx);
             return AL_FALSE;
         }
     }
-    if(sfont->inst[i].mZoneIdx >= sfont->ibag_size)
-    {
-        WARN("Instrument %d has invalid zone index %d (max: %d)\n", i,
-             sfont->inst[i].mZoneIdx, sfont->ibag_size);
-        return AL_FALSE;
-    }
 
-    for(i = 0;i < sfont->ibag_size-1;i++)
+    for(i = 0;i < sfont->ibag_size;i++)
     {
         if(sfont->ibag[i].mGenIdx >= sfont->igen_size)
         {
@@ -585,7 +561,7 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
                  sfont->ibag[i].mGenIdx, sfont->igen_size);
             return AL_FALSE;
         }
-        if(sfont->ibag[i+1].mGenIdx < sfont->ibag[i].mGenIdx)
+        if(i+1 < sfont->ibag_size && sfont->ibag[i+1].mGenIdx < sfont->ibag[i].mGenIdx)
         {
             WARN("Instrument zone %d has invalid generator index (%d does not follow %d)\n", i+1,
                  sfont->ibag[i+1].mGenIdx, sfont->ibag[i].mGenIdx);
@@ -597,24 +573,12 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
                  sfont->ibag[i].mModIdx, sfont->imod_size);
             return AL_FALSE;
         }
-        if(sfont->ibag[i+1].mModIdx < sfont->ibag[i].mModIdx)
+        if(i+1 < sfont->ibag_size && sfont->ibag[i+1].mModIdx < sfont->ibag[i].mModIdx)
         {
             WARN("Instrument zone %d has invalid modulator index (%d does not follow %d)\n", i+1,
                  sfont->ibag[i+1].mModIdx, sfont->ibag[i].mModIdx);
             return AL_FALSE;
         }
-    }
-    if(sfont->ibag[i].mGenIdx >= sfont->igen_size)
-    {
-        WARN("Instrument zone %d has invalid generator index %d (max: %d)\n", i,
-             sfont->ibag[i].mGenIdx, sfont->igen_size);
-        return AL_FALSE;
-    }
-    if(sfont->ibag[i].mModIdx >= sfont->imod_size)
-    {
-        WARN("Instrument zone %d has invalid modulator index %d (max: %d)\n", i,
-             sfont->ibag[i].mModIdx, sfont->imod_size);
-        return AL_FALSE;
     }
 
 

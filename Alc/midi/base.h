@@ -17,8 +17,13 @@ typedef struct Reader {
     void *ptr;
     int error;
 } Reader;
-#define READ(x_, buf_, len_) ((x_)->cb((buf_), (len_), (x_)->ptr))
-#define READERR(x_)          ((x_)->error)
+inline size_t Reader_read(Reader *self, void *buf, size_t len)
+{
+    size_t got = (!self->error) ? self->cb(buf, len, self->ptr) : 0;
+    if(got < len) self->error = 1;
+    return got;
+}
+#define READERR(x_) ((x_)->error)
 
 ALboolean loadSf2(Reader *stream, struct ALsoundfont *sfont, ALCcontext *context);
 

@@ -12,34 +12,27 @@
 #include "midi/base.h"
 
 
+extern inline size_t Reader_read(Reader *self, void *buf, size_t len);
+
 static ALuint read_le32(Reader *stream)
 {
     ALubyte buf[4];
-    if(READ(stream, buf, 4) != 4)
-    {
-        READERR(stream) = 1;
+    if(Reader_read(stream, buf, 4) != 4)
         return 0;
-    }
     return (buf[3]<<24) | (buf[2]<<16) | (buf[1]<<8) | buf[0];
 }
 static ALushort read_le16(Reader *stream)
 {
     ALubyte buf[2];
-    if(READ(stream, buf, 2) != 2)
-    {
-        READERR(stream) = 1;
+    if(Reader_read(stream, buf, 2) != 2)
         return 0;
-    }
     return (buf[1]<<8) | buf[0];
 }
 static ALubyte read_8(Reader *stream)
 {
     ALubyte buf[1];
-    if(READ(stream, buf, 1) != 1)
-    {
-        READERR(stream) = 1;
+    if(Reader_read(stream, buf, 1) != 1)
         return 0;
-    }
     return buf[0];
 }
 static void skip(Reader *stream, ALuint amt)
@@ -47,13 +40,7 @@ static void skip(Reader *stream, ALuint amt)
     while(amt > 0 && !READERR(stream))
     {
         char buf[4096];
-        size_t got;
-
-        got = READ(stream, buf, minu(sizeof(buf), amt));
-        if(got == 0 || got > amt)
-            READERR(stream) = 1;
-
-        amt -= (ALuint)got;
+        amt -= Reader_read(stream, buf, minu(sizeof(buf), amt));
     }
 }
 
@@ -167,8 +154,7 @@ typedef struct PresetHeader {
 } PresetHeader;
 static void PresetHeader_read(PresetHeader *self, Reader *stream)
 {
-    if(READ(stream, self->mName, sizeof(self->mName)) != sizeof(self->mName))
-        READERR(stream) = 1;
+    Reader_read(stream, self->mName, sizeof(self->mName));
     self->mPreset = read_le16(stream);
     self->mBank = read_le16(stream);
     self->mZoneIdx = read_le16(stream);
@@ -183,13 +169,12 @@ typedef struct InstrumentHeader {
 } InstrumentHeader;
 static void InstrumentHeader_read(InstrumentHeader *self, Reader *stream)
 {
-    if(READ(stream, self->mName, sizeof(self->mName)) != sizeof(self->mName))
-        READERR(stream) = 1;
+    Reader_read(stream, self->mName, sizeof(self->mName));
     self->mZoneIdx = read_le16(stream);
 }
 
 typedef struct SampleHeader {
-    ALchar mName[20]; // 20 bytes
+    ALchar mName[20];
     ALuint mStart;
     ALuint mEnd;
     ALuint mStartloop;
@@ -202,8 +187,7 @@ typedef struct SampleHeader {
 } SampleHeader;
 static void SampleHeader_read(SampleHeader *self, Reader *stream)
 {
-    if(READ(stream, self->mName, sizeof(self->mName)) != sizeof(self->mName))
-        READERR(stream) = 1;
+    Reader_read(stream, self->mName, sizeof(self->mName));
     self->mStart = read_le32(stream);
     self->mEnd = read_le32(stream);
     self->mStartloop = read_le32(stream);
@@ -976,6 +960,22 @@ static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCco
     GenModList_Destruct(&gzone);
 }
 
+static size_t printStringChunk(Reader *stream, const RiffHdr *chnk, const char *title)
+{
+    size_t len = 0;
+    if(chnk->mSize == 0 || (chnk->mSize&1))
+        ERR("Invalid %c%c%c%c size: %d\n", FOURCCARGS(chnk->mCode), chnk->mSize);
+    else
+    {
+        char *str = calloc(1, chnk->mSize+1);
+        len = Reader_read(stream, str, chnk->mSize);
+
+        TRACE("%s: %s\n", title, str);
+        free(str);
+    }
+    return len;
+}
+
 ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 {
     ALsfpreset **presets = NULL;
@@ -1006,21 +1006,37 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     list.mSize -= 4;
     while(list.mSize > 0 && !READERR(stream))
     {
-        RiffHdr info;
+        RiffHdr chnk;
 
-        RiffHdr_read(&info, stream);
-        list.mSize -= 8;
-        if(info.mCode == FOURCC('i','f','i','l'))
+        if(list.mSize < 8)
         {
-            if(info.mSize != 4)
-                ERR("Invalid ifil chunk size: %d\n", info.mSize);
+            WARN("Unexpected end of INFO list (%u extra bytes)\n", list.mSize);
+            skip(stream, list.mSize);
+            list.mSize = 0;
+            break;
+        }
+
+        RiffHdr_read(&chnk, stream);
+        list.mSize -= 8;
+        if(list.mSize < chnk.mSize)
+        {
+            WARN("INFO sub-chunk '%c%c%c%c' has %u bytes, but only %u bytes remain\n",
+                 FOURCCARGS(chnk.mCode), chnk.mSize, list.mSize);
+            skip(stream, list.mSize);
+            list.mSize = 0;
+            break;
+        }
+        list.mSize -= chnk.mSize;
+
+        if(chnk.mCode == FOURCC('i','f','i','l'))
+        {
+            if(chnk.mSize != 4)
+                ERR("Invalid ifil chunk size: %d\n", chnk.mSize);
             else
             {
                 ALushort major = read_le16(stream);
                 ALushort minor = read_le16(stream);
-
-                list.mSize -= 4;
-                info.mSize -= 4;
+                chnk.mSize -= 4;
 
                 if(major != 2)
                     ERROR_GOTO(error, "Unsupported SF2 format version: %d.%02d\n", major, minor);
@@ -1029,26 +1045,48 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                 sfont.ifil = (major<<16) | minor;
             }
         }
-        else if(info.mCode == FOURCC('i','r','o','m'))
+        else if(chnk.mCode == FOURCC('i','r','o','m'))
         {
-            if(info.mSize == 0 || (info.mSize&1))
-                ERR("Invalid irom size: %d\n", info.mSize);
+            if(chnk.mSize == 0 || (chnk.mSize&1))
+                ERR("Invalid irom size: %d\n", chnk.mSize);
             else
             {
                 free(sfont.irom);
-                sfont.irom = calloc(1, info.mSize+1);
-                READ(stream, sfont.irom, info.mSize);
-
-                list.mSize -= info.mSize;
-                info.mSize -= info.mSize;
+                sfont.irom = calloc(1, chnk.mSize+1);
+                chnk.mSize -= Reader_read(stream, sfont.irom, chnk.mSize);
 
                 TRACE("SF2 ROM ID: %s\n", sfont.irom);
             }
         }
         else
-            TRACE("Skipping INFO sub-chunk '%c%c%c%c' (%u bytes)\n", FOURCCARGS(info.mCode), info.mSize);
-        list.mSize -= info.mSize;
-        skip(stream, info.mSize);
+        {
+            static const struct {
+                ALuint code;
+                char title[16];
+            } listinfos[] = {
+                { FOURCC('i','s','n','g'), "Engine ID" },
+                { FOURCC('I','N','A','M'), "Name" },
+                { FOURCC('I','C','R','D'), "Creation Date" },
+                { FOURCC('I','E','N','G'), "Creator" },
+                { FOURCC('I','P','R','D'), "Product ID" },
+                { FOURCC('I','C','O','P'), "Copyright" },
+                { FOURCC('I','C','M','T'), "Comment" },
+                { FOURCC('I','S','F','T'), "Created With" },
+                { 0, "" },
+            };
+
+            for(i = 0;listinfos[i].code;i++)
+            {
+                if(listinfos[i].code == chnk.mCode)
+                {
+                    chnk.mSize -= printStringChunk(stream, &chnk, listinfos[i].title);
+                    break;
+                }
+            }
+            if(!listinfos[i].code)
+                TRACE("Skipping INFO sub-chunk '%c%c%c%c' (%u bytes)\n", FOURCCARGS(chnk.mCode), chnk.mSize);
+        }
+        skip(stream, chnk.mSize);
     }
 
     if(READERR(stream) != 0)
@@ -1074,17 +1112,18 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 
         if(smpl.mSize > list.mSize)
             ERROR_GOTO(error, "Invalid Format, sample chunk size mismatch\n");
+        list.mSize -= smpl.mSize;
 
         buffer = NewBuffer(context);
         if(!buffer)
             SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, error);
-        /* Sample rate it unimportant, the individual fontsounds will specify it. */
+        /* Sample rate is unimportant, the individual fontsounds will specify it. */
         if((err=LoadData(buffer, 22050, AL_MONO16_SOFT, smpl.mSize/2, UserFmtMono, UserFmtShort, NULL, 1, AL_FALSE)) != AL_NO_ERROR)
             SET_ERROR_AND_GOTO(context, err, error);
 
         ptr = buffer->data;
         if(IS_LITTLE_ENDIAN)
-            READ(stream, ptr, smpl.mSize);
+            smpl.mSize -= Reader_read(stream, ptr, smpl.mSize);
         else
         {
             ALuint total = 0;
@@ -1094,14 +1133,13 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                 ALuint todo = minu(smpl.mSize-total, sizeof(buf));
                 ALuint i;
 
-                READ(stream, buf, todo);
+                smpl.mSize -= Reader_read(stream, buf, todo);
                 for(i = 0;i < todo;i++)
                     ptr[total+i] = buf[i^1];
 
                 total += todo;
             }
         }
-        list.mSize -= smpl.mSize;
 
         skip(stream, list.mSize);
     }

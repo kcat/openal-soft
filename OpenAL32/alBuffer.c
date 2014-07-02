@@ -50,7 +50,6 @@ static ALboolean SanitizeAlignment(enum UserFmtType type, ALsizei *align);
 
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 {
-    ALCdevice *device;
     ALCcontext *context;
     ALsizei cur = 0;
 
@@ -60,7 +59,6 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
     if(!(n >= 0))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-    device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
         ALbuffer *buffer = NewBuffer(context);

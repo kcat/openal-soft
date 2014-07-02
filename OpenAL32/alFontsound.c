@@ -821,17 +821,13 @@ void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, 
             break;
 
         case AL_FONTSOUND_LINK_SOFT:
-            if(!value)
-                link = NULL;
-            else
-            {
-                link = LookupFontsound(context->Device, value);
-                if(!link)
-                    SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
-            }
+            link = value ? LookupFontsound(context->Device, value) : NULL;
+            if(value && !link)
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+
             if(link) IncrementRef(&link->ref);
-            link = ExchangePtr((XchgPtr*)&self->Link, link);
-            if(link) DecrementRef(&link->ref);
+            if((link=ExchangePtr((XchgPtr*)&self->Link, link)) != NULL)
+                DecrementRef(&link->ref);
             break;
 
         default:

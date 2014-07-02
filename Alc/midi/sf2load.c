@@ -296,7 +296,7 @@ static void Soundfont_Destruct(Soundfont *self)
 }
 
 
-#define FOURCC(a,b,c,d) (((d)<<24) | ((c)<<16) | ((b)<<8) | (a))
+#define FOURCC(a,b,c,d) ((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))
 #define FOURCCARGS(x)  (char)((x)&0xff), (char)(((x)>>8)&0xff), (char)(((x)>>16)&0xff), (char)(((x)>>24)&0xff)
 typedef struct RiffHdr {
     ALuint mCode;
@@ -500,7 +500,7 @@ static ALboolean ensureFontSanity(const Soundfont *sfont)
                  sfont->pbag[i].mGenIdx, sfont->pgen_size);
             return AL_FALSE;
         }
-        if(i+1 < sfont->pbag_size && sfont->pbag[i].mGenIdx < sfont->pbag[i].mGenIdx)
+        if(i+1 < sfont->pbag_size && sfont->pbag[i+1].mGenIdx < sfont->pbag[i].mGenIdx)
         {
             WARN("Preset zone %d has invalid generator index (%d does not follow %d)\n", i+1,
                  sfont->pbag[i+1].mGenIdx, sfont->pbag[i].mGenIdx);

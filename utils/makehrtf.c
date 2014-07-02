@@ -771,10 +771,11 @@ static int HpTpdfDither (const double in, int * hpHist) {
 }
 
 // Allocates an array of doubles.
-static double *CreateArray(const size_t n)
+static double *CreateArray(size_t n)
 {
     double *a;
 
+    if(n == 0) n = 1;
     a = calloc(n, sizeof(double));
     if(a == NULL)
     {

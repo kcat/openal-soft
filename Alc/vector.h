@@ -29,8 +29,8 @@ ALboolean vector_reserve(void *ptr, size_t base_size, size_t obj_count, size_t o
 ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t obj_size);
 #define VECTOR_RESIZE(_x, _c) (vector_resize(&(_x), sizeof(*(_x)), (_c), sizeof((_x)->Data[0])))
 
-#define VECTOR_CAPACITY(_x) ((const ALsizei)((_x) ? (_x)->Capacity : 0))
-#define VECTOR_SIZE(_x)     ((const ALsizei)((_x) ? (_x)->Size : 0))
+#define VECTOR_CAPACITY(_x) ((_x) ? (_x)->Capacity : 0)
+#define VECTOR_SIZE(_x)     ((_x) ? (_x)->Size : 0)
 
 #define VECTOR_ITER_BEGIN(_x) ((_x)->Data + 0)
 #define VECTOR_ITER_END(_x)   ((_x)->Data + VECTOR_SIZE(_x))

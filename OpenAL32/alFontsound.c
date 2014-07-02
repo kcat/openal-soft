@@ -78,7 +78,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFontsoundsSOFT(ALsizei n, const ALuint *ids)
 
     for(i = 0;i < n;i++)
     {
-        if((inst=LookupFontsound(device, ids[i])) == NULL)
+        if((inst=LookupFontsound(device, ids[i])) != NULL)
             DeleteFontsound(device, inst);
     }
 

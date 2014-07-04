@@ -16,6 +16,9 @@
 #include "alu.h"
 
 
+extern inline size_t Reader_read(Reader *self, void *buf, size_t len);
+
+
 /* MIDI events */
 #define SYSEX_EVENT  (0xF0)
 

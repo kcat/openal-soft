@@ -12,8 +12,6 @@
 #include "midi/base.h"
 
 
-extern inline size_t Reader_read(Reader *self, void *buf, size_t len);
-
 static ALuint read_le32(Reader *stream)
 {
     ALubyte buf[4];

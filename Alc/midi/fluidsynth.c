@@ -156,7 +156,7 @@ static void FSample_Construct(FSample *self, ALfontsound *sound)
     sample->origpitch = sound->PitchKey;
     sample->pitchadj = sound->PitchCorrection;
     sample->sampletype = getSampleType(sound->SampleType);
-    sample->valid = 1;
+    sample->valid = !!sound->Buffer;
     sample->data = sound->Buffer ? sound->Buffer->data : NULL;
 
     sample->amplitude_that_reaches_noise_floor_is_valid = 0;
@@ -294,8 +294,6 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
         fluid_voice_t *voice;
         ALsizei m;
 
-        if(!STATIC_CAST(fluid_sample_t, sample)->data)
-            continue;
         if(!(key >= sound->MinKey && key <= sound->MaxKey && vel >= sound->MinVelocity && vel <= sound->MaxVelocity))
             continue;
 

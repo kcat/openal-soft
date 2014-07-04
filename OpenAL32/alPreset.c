@@ -16,7 +16,7 @@ extern inline struct ALsfpreset *LookupPreset(ALCdevice *device, ALuint id);
 extern inline struct ALsfpreset *RemovePreset(ALCdevice *device, ALuint id);
 
 static void ALsfpreset_Construct(ALsfpreset *self);
-void ALsfpreset_Destruct(ALsfpreset *self);
+static void ALsfpreset_Destruct(ALsfpreset *self);
 
 
 AL_API void AL_APIENTRY alGenPresetsSOFT(ALsizei n, ALuint *ids)
@@ -304,7 +304,7 @@ static void ALsfpreset_Construct(ALsfpreset *self)
     self->id = 0;
 }
 
-void ALsfpreset_Destruct(ALsfpreset *self)
+static void ALsfpreset_Destruct(ALsfpreset *self)
 {
     ALsizei i;
 

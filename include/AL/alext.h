@@ -370,6 +370,12 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void);
 #define AL_PACK_BLOCK_ALIGNMENT_SOFT             0x200D
 #endif
 
+#ifndef AL_SOFT_MSADPCM
+#define AL_SOFT_MSADPCM 1
+#define AL_FORMAT_MONO_MSADPCM_SOFT              0x1302
+#define AL_FORMAT_STEREO_MSADPCM_SOFT            0x1303
+#endif
+
 #ifdef __cplusplus
 }
 #endif

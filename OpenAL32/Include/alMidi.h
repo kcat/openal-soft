@@ -157,6 +157,20 @@ inline struct ALsoundfont *RemoveSfont(ALCdevice *device, ALuint id)
 
 void ReleaseALSoundfonts(ALCdevice *device);
 
+
+inline ALboolean IsValidCtrlInput(int cc)
+{
+    /* These correspond to MIDI functions, not real controller values. */
+    if(cc == 0 || cc == 6 || cc == 32 || cc == 38 || (cc >= 98 && cc <= 101) || cc >= 120)
+        return AL_FALSE;
+    /* These are the LSB components of CC0...CC31, which are automatically used when
+     * reading the MSB controller value. */
+    if(cc >= 32 && cc <= 63)
+        return AL_FALSE;
+    /* All the rest are okay! */
+    return AL_TRUE;
+}
+
 #ifdef __cplusplus
 }
 #endif

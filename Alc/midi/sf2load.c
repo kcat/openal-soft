@@ -614,11 +614,8 @@ static ALenum getModSrcInput(int input)
     if(input == 16) return AL_PITCHBEND_SENSITIVITY_SOFT;
     if((input&0x80))
     {
-        input ^= 0x80;
-        if(input > 0 && input < 120 && !(input == 6 || (input >= 32 && input <= 63) ||
-                                         (input >= 98 && input <= 101)))
-            return input;
-        input ^= 0x80;
+        if(IsValidCtrlInput(input^0x80))
+            return input^0x80;
     }
     ERR("Unhandled modulator source input: 0x%02x\n", input);
     return AL_INVALID;

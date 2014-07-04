@@ -16,6 +16,8 @@
 #include "alu.h"
 
 
+extern inline ALboolean IsValidCtrlInput(int cc);
+
 extern inline size_t Reader_read(Reader *self, void *buf, size_t len);
 
 

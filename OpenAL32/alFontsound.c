@@ -871,10 +871,7 @@ void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei st
                  value == AL_NOTEON_KEY_SOFT || value == AL_KEYPRESSURE_SOFT ||
                  value == AL_CHANNELPRESSURE_SOFT || value == AL_PITCHBEND_SOFT ||
                  value == AL_PITCHBEND_SENSITIVITY_SOFT ||
-                 (value > 0 && value < 120 && !(value == 6 || (value >= 32 && value <= 63) ||
-                                                (value >= 98 && value <= 101))
-                 )
-              ))
+                 IsValidCtrlInput(value)))
                 SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
             ALfontsound_getModStage(self, stage)->Source[srcidx].Input = value;
             break;

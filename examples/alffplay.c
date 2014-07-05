@@ -1336,7 +1336,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if(!alIsExtensionPresent("AL_SOFTX_source_length")) /* FIXME */
+    if(!alIsExtensionPresent("AL_SOFT_source_length"))
     {
         fprintf(stderr, "Required AL_SOFT_source_length not supported - exiting\n");
         return 1;

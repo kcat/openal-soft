@@ -376,6 +376,13 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void);
 #define AL_FORMAT_STEREO_MSADPCM_SOFT            0x1303
 #endif
 
+#ifndef AL_SOFT_source_length
+#define AL_SOFT_source_length 1
+/*#define AL_BYTE_LENGTH_SOFT                      0x2009*/
+/*#define AL_SAMPLE_LENGTH_SOFT                    0x200A*/
+/*#define AL_SEC_LENGTH_SOFT                       0x200B*/
+#endif
+
 #ifdef __cplusplus
 }
 #endif

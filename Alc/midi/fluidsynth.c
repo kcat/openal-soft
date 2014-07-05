@@ -174,22 +174,24 @@ static void FSample_Construct(FSample *self, ALfontsound *sound)
     self->Mods = calloc(sound->ModulatorMap.size, sizeof(self->Mods[0]));
     if(self->Mods)
     {
-        ALsizei i;
+        ALsizei i, j;
 
-        self->NumMods = sound->ModulatorMap.size;
-        for(i = 0;i < self->NumMods;i++)
+        for(i = j = 0;i < sound->ModulatorMap.size;i++)
         {
             ALsfmodulator *mod = sound->ModulatorMap.array[i].value;
-            fluid_mod_set_source1(&self->Mods[i], getGenInput(mod->Source[0].Input),
+            if(mod->Dest == AL_NONE)
+                continue;
+            fluid_mod_set_source1(&self->Mods[j], getGenInput(mod->Source[0].Input),
                                   getGenFlags(mod->Source[0].Input, mod->Source[0].Type,
                                               mod->Source[0].Form));
-            fluid_mod_set_source2(&self->Mods[i], getGenInput(mod->Source[1].Input),
+            fluid_mod_set_source2(&self->Mods[j], getGenInput(mod->Source[1].Input),
                                   getGenFlags(mod->Source[1].Input, mod->Source[1].Type,
                                               mod->Source[1].Form));
-            fluid_mod_set_amount(&self->Mods[i], mod->Amount);
-            fluid_mod_set_dest(&self->Mods[i], getSf2Gen(mod->Dest));
-            self->Mods[i].next = NULL;
+            fluid_mod_set_amount(&self->Mods[j], mod->Amount);
+            fluid_mod_set_dest(&self->Mods[j], getSf2Gen(mod->Dest));
+            self->Mods[j++].next = NULL;
         }
+        self->NumMods = j;
     }
 }
 

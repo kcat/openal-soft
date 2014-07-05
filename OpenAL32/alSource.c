@@ -1308,15 +1308,15 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp
         case siBuffer:
         case siDirectFilter:
             if((err=GetSourceiv(Source, Context, (int)prop, ivals)) != AL_FALSE)
-                *values = ((ALuint*)ivals)[0];
+                *values = (ALuint)ivals[0];
             return err;
 
         case siAuxSendFilter:
             if((err=GetSourceiv(Source, Context, (int)prop, ivals)) != AL_FALSE)
             {
-                values[0] = ((ALuint*)ivals)[0];
-                values[1] = ((ALuint*)ivals)[1];
-                values[2] = ((ALuint*)ivals)[2];
+                values[0] = (ALuint)ivals[0];
+                values[1] = (ALuint)ivals[1];
+                values[2] = (ALuint)ivals[2];
             }
             return err;
     }

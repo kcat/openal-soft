@@ -15,8 +15,7 @@
 
 extern inline struct ALfontsound *LookupFontsound(ALCdevice *device, ALuint id);
 extern inline struct ALfontsound *RemoveFontsound(ALCdevice *device, ALuint id);
-extern inline struct ALsfmodulator *LookupModulator(ALfontsound *sound, ALuint id);
-extern inline struct ALsfmodulator *RemoveModulator(ALfontsound *sound, ALuint id);
+
 
 static void ALfontsound_Construct(ALfontsound *self);
 static void ALfontsound_Destruct(ALfontsound *self);
@@ -24,6 +23,11 @@ void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, 
 static ALsfmodulator *ALfontsound_getModStage(ALfontsound *self, ALsizei stage);
 void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei stage, ALenum param, ALint value);
 static void ALfontsound_getModStagei(ALfontsound *self, ALCcontext *context, ALsizei stage, ALenum param, ALint *values);
+
+static inline struct ALsfmodulator *LookupModulator(ALfontsound *sound, ALuint id)
+{ return (struct ALsfmodulator*)LookupUIntMapKey(&sound->ModulatorMap, id); }
+static inline struct ALsfmodulator *RemoveModulator(ALfontsound *sound, ALuint id)
+{ return (struct ALsfmodulator*)RemoveUIntMapKey(&sound->ModulatorMap, id); }
 
 
 AL_API void AL_APIENTRY alGenFontsoundsSOFT(ALsizei n, ALuint *ids)

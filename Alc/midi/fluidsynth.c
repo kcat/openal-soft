@@ -776,13 +776,13 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
 
         if(tonext > 0)
         {
-            ALuint todo = mini(tonext, SamplesToDo-total);
+            ALuint todo = minu(tonext, SamplesToDo-total);
             fluid_synth_write_float(self->Synth, todo, DryBuffer[FrontLeft], total, 1,
                                                        DryBuffer[FrontRight], total, 1);
             total += todo;
             tonext -= todo;
         }
-        if(total < SamplesToDo && tonext == 0)
+        if(total < SamplesToDo && tonext <= 0)
             FSynth_processQueue(self, time);
     }
 

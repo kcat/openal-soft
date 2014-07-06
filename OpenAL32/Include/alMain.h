@@ -720,10 +720,6 @@ struct ALCdevice_struct
 #define MIXER_THREAD_NAME "alsoft-mixer"
 
 
-typedef struct ALeffectslot *ALeffectslotPtr;
-DECL_VECTOR(ALeffectslotPtr)
-
-
 struct ALCcontext_struct
 {
     RefCount ref;
@@ -749,7 +745,7 @@ struct ALCcontext_struct
     ALsizei ActiveSourceCount;
     ALsizei MaxActiveSources;
 
-    vector_ALeffectslotPtr ActiveAuxSlots;
+    VECTOR(struct ALeffectslot*) ActiveAuxSlots;
 
     ALCdevice  *Device;
     const ALCchar *ExtensionList;

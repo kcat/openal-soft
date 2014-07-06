@@ -55,17 +55,13 @@ typedef struct {
 } WinMMData;
 
 
+TYPEDEF_VECTOR(al_string, vector_al_string)
 static vector_al_string PlaybackDevices;
 static vector_al_string CaptureDevices;
 
 static void clear_devlist(vector_al_string *list)
 {
-    al_string *iter, *end;
-
-    iter = VECTOR_ITER_BEGIN(*list);
-    end = VECTOR_ITER_END(*list);
-    for(;iter != end;iter++)
-        AL_STRING_DEINIT(*iter);
+    VECTOR_FOR_EACH(al_string, *list, al_string_deinit);
     VECTOR_RESIZE(*list, 0);
 }
 

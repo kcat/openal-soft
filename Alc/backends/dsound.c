@@ -109,10 +109,10 @@ typedef struct {
     al_string name;
     GUID guid;
 } DevMap;
-DECL_VECTOR(DevMap)
+TYPEDEF_VECTOR(DevMap, vector_DevMap)
 
-vector_DevMap PlaybackDevices;
-vector_DevMap CaptureDevices;
+static vector_DevMap PlaybackDevices;
+static vector_DevMap CaptureDevices;
 
 static void clear_devlist(vector_DevMap *list)
 {

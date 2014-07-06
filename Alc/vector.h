@@ -11,15 +11,23 @@ typedef struct vector__s {
     ALsizei Size;
 } *vector_;
 
-#define DECL_VECTOR(T) typedef struct vector_##T##_s {                        \
+#define TYPEDEF_VECTOR(T, N) typedef struct {                                 \
     ALsizei Capacity;                                                         \
     ALsizei Size;                                                             \
     T Data[];                                                                 \
-} *vector_##T;                                                                \
-typedef const struct vector_##T##_s *const_vector_##T;
+} _##N;                                                                       \
+typedef _##N* N;                                                              \
+typedef const _##N* const_##N;
 
-#define VECTOR_INIT(_x)   do { (_x) = NULL; } while(0)
-#define VECTOR_DEINIT(_x) do { free((_x)); (_x) = NULL; } while(0)
+#define VECTOR(T) struct {                                                    \
+    ALsizei Capacity;                                                         \
+    ALsizei Size;                                                             \
+    T Data[];                                                                 \
+}*
+
+#define VECTOR_INIT(_x)       do { (_x) = NULL; } while(0)
+#define VECTOR_INIT_STATIC()  NULL
+#define VECTOR_DEINIT(_x)     do { free((_x)); (_x) = NULL; } while(0)
 
 /* Helper to increase a vector's reserve. Do not call directly. */
 ALboolean vector_reserve(void *ptr, size_t base_size, size_t obj_count, size_t obj_size, ALboolean exact);
@@ -63,7 +71,7 @@ ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, void *ins_
     _t *_iter = VECTOR_ITER_BEGIN((_x));                                      \
     _t *_end = VECTOR_ITER_END((_x));                                         \
     for(;_iter != _end;++_iter)                                               \
-        (_f)(_iter);                                                          \
+        _f(_iter);                                                            \
 } while(0)
 
 #endif /* AL_VECTOR_H */

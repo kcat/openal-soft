@@ -653,6 +653,7 @@ ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, void *ins_
 }
 
 
+extern inline void al_string_deinit(al_string *str);
 extern inline ALsizei al_string_length(const_al_string str);
 extern inline ALboolean al_string_empty(const_al_string str);
 extern inline const al_string_char_type *al_string_get_cstr(const_al_string str);

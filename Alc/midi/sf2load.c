@@ -307,12 +307,9 @@ static void RiffHdr_read(RiffHdr *self, Reader *stream)
 }
 
 
-DECL_VECTOR(Generator)
-DECL_VECTOR(Modulator)
-
 typedef struct GenModList {
-    vector_Generator gens;
-    vector_Modulator mods;
+    VECTOR(Generator) gens;
+    VECTOR(Modulator) mods;
 } GenModList;
 
 static void GenModList_Construct(GenModList *self)

@@ -65,7 +65,7 @@ typedef struct {
     al_string name;
     WCHAR *devid;
 } DevMap;
-DECL_VECTOR(DevMap)
+TYPEDEF_VECTOR(DevMap, vector_DevMap)
 
 static void clear_devlist(vector_DevMap *list)
 {

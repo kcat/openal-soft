@@ -230,7 +230,7 @@ typedef struct {
     al_string name;
     al_string device_name;
 } DevMap;
-DECL_VECTOR(DevMap)
+TYPEDEF_VECTOR(DevMap, vector_DevMap)
 
 static vector_DevMap PlaybackDevices;
 static vector_DevMap CaptureDevices;

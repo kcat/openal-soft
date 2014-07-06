@@ -399,21 +399,17 @@ static ALenum AddEffectSlotArray(ALCcontext *context, ALeffectslot **start, ALsi
 
 static void RemoveEffectSlotArray(ALCcontext *context, const ALeffectslot *slot)
 {
-    ALeffectslot **slotlist, **slotlistend;
+    ALeffectslot **iter;
 
     LockContext(context);
-    slotlist = VECTOR_ITER_BEGIN(context->ActiveAuxSlots);
-    slotlistend = VECTOR_ITER_END(context->ActiveAuxSlots);
-    while(slotlist != slotlistend)
+#define MATCH_SLOT(_i)  (slot == *(_i))
+    VECTOR_FIND_IF(iter, ALeffectslot*, context->ActiveAuxSlots, MATCH_SLOT);
+    if(iter != VECTOR_ITER_END(context->ActiveAuxSlots))
     {
-        if(*slotlist == slot)
-        {
-            *slotlist = VECTOR_BACK(context->ActiveAuxSlots);
-            VECTOR_POP_BACK(context->ActiveAuxSlots);
-            break;
-        }
-        slotlist++;
+        *iter = VECTOR_BACK(context->ActiveAuxSlots);
+        VECTOR_POP_BACK(context->ActiveAuxSlots);
     }
+#undef MATCH_SLOT
     UnlockContext(context);
 }
 

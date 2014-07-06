@@ -44,54 +44,25 @@
 
 #ifndef ALC_SOFT_midi_interface
 #define ALC_SOFT_midi_interface 1
+/* Global properties */
 #define AL_MIDI_CLOCK_SOFT                       0x9999
 #define AL_MIDI_STATE_SOFT                       0x9986
 #define AL_MIDI_GAIN_SOFT                        0x9998
-#define AL_MIDI_PRESET_SOFT                      0x9997
-#define AL_MIDI_BANK_SOFT                        0x9996
 #define AL_SOUNDFONTS_SIZE_SOFT                  0x9995
 #define AL_SOUNDFONTS_SOFT                       0x9994
+
+/* Soundfont properties */
 #define AL_PRESETS_SIZE_SOFT                     0x9993
 #define AL_PRESETS_SOFT                          0x9992
+
+/* Preset properties */
+#define AL_MIDI_PRESET_SOFT                      0x9997
+#define AL_MIDI_BANK_SOFT                        0x9996
 #define AL_FONTSOUNDS_SIZE_SOFT                  0x9991
 #define AL_FONTSOUNDS_SOFT                       0x9990
 
-#define AL_SOURCE0_INPUT_SOFT                    0x998F
-#define AL_SOURCE0_TYPE_SOFT                     0x998E
-#define AL_SOURCE0_FORM_SOFT                     0x998D
-#define AL_SOURCE1_INPUT_SOFT                    0x998C
-#define AL_SOURCE1_TYPE_SOFT                     0x998B
-#define AL_SOURCE1_FORM_SOFT                     0x998A
-#define AL_AMOUNT_SOFT                           0x9989
-#define AL_TRANSFORM_OP_SOFT                     0x9988
-#define AL_DESTINATION_SOFT                      0x9987
-
-/* Sounce Input */
-#define AL_ONE_SOFT                              0x0080
-#define AL_NOTEON_VELOCITY_SOFT                  0x0082
-#define AL_NOTEON_KEY_SOFT                       0x0083
-/* AL_KEYPRESSURE_SOFT */
-/* AL_CHANNELPRESSURE_SOFT */
-/* AL_PITCHBEND_SOFT */
-#define AL_PITCHBEND_SENSITIVITY_SOFT            0x0090
-/* CC 0...127 */
-
-/* Source Type */
-#define AL_UNORM_SOFT                            0x0000
-#define AL_UNORM_REV_SOFT                        0x0100
-#define AL_SNORM_SOFT                            0x0200
-#define AL_SNORM_REV_SOFT                        0x0300
-
-/* Source Form */
-#define AL_LINEAR_SOFT                           0x0000
-#define AL_CONCAVE_SOFT                          0x0400
-#define AL_CONVEX_SOFT                           0x0800
-#define AL_SWITCH_SOFT                           0x0C00
-
-/* Transform op */
-/* AL_LINEAR_SOFT */
-#define AL_ABSOLUTE_SOFT                         0x0002
-
+/* Fontsound properties */
+/* AL_BUFFER */
 #define AL_SAMPLE_START_SOFT                     0x2000
 #define AL_SAMPLE_END_SOFT                       0x2001
 #define AL_SAMPLE_LOOP_START_SOFT                0x2002
@@ -140,10 +111,55 @@
 #define AL_LOOP_MODE_SOFT                        0x0036
 #define AL_TUNING_SCALE_SOFT                     0x0038
 #define AL_EXCLUSIVE_CLASS_SOFT                  0x0039
-#define AL_LOOP_CONTINUOUS_SOFT                  0x0001
-#define AL_LOOP_UNTIL_RELEASE_SOFT               0x0003
+
+/* Sample Types */
+/* AL_MONO_SOFT */
 #define AL_RIGHT_SOFT                            0x0002
 #define AL_LEFT_SOFT                             0x0004
+
+/* Loop Modes */
+/* AL_NONE */
+#define AL_LOOP_CONTINUOUS_SOFT                  0x0001
+#define AL_LOOP_UNTIL_RELEASE_SOFT               0x0003
+
+/* Fontsound modulator stage properties */
+#define AL_SOURCE0_INPUT_SOFT                    0x998F
+#define AL_SOURCE0_TYPE_SOFT                     0x998E
+#define AL_SOURCE0_FORM_SOFT                     0x998D
+#define AL_SOURCE1_INPUT_SOFT                    0x998C
+#define AL_SOURCE1_TYPE_SOFT                     0x998B
+#define AL_SOURCE1_FORM_SOFT                     0x998A
+#define AL_AMOUNT_SOFT                           0x9989
+#define AL_TRANSFORM_OP_SOFT                     0x9988
+#define AL_DESTINATION_SOFT                      0x9987
+
+/* Sounce Inputs */
+#define AL_ONE_SOFT                              0x0080
+#define AL_NOTEON_VELOCITY_SOFT                  0x0082
+#define AL_NOTEON_KEY_SOFT                       0x0083
+/* AL_KEYPRESSURE_SOFT */
+/* AL_CHANNELPRESSURE_SOFT */
+/* AL_PITCHBEND_SOFT */
+#define AL_PITCHBEND_SENSITIVITY_SOFT            0x0090
+/* CC 0...127 */
+
+/* Source Types */
+#define AL_UNORM_SOFT                            0x0000
+#define AL_UNORM_REV_SOFT                        0x0100
+#define AL_SNORM_SOFT                            0x0200
+#define AL_SNORM_REV_SOFT                        0x0300
+
+/* Source Forms */
+#define AL_LINEAR_SOFT                           0x0000
+#define AL_CONCAVE_SOFT                          0x0400
+#define AL_CONVEX_SOFT                           0x0800
+#define AL_SWITCH_SOFT                           0x0C00
+
+/* Transform Ops */
+/* AL_LINEAR_SOFT */
+#define AL_ABSOLUTE_SOFT                         0x0002
+
+/* Events */
 #define AL_NOTEOFF_SOFT                          0x0080
 #define AL_NOTEON_SOFT                           0x0090
 #define AL_KEYPRESSURE_SOFT                      0x00A0
@@ -151,6 +167,7 @@
 #define AL_PROGRAMCHANGE_SOFT                    0x00C0
 #define AL_CHANNELPRESSURE_SOFT                  0x00D0
 #define AL_PITCHBEND_SOFT                        0x00E0
+
 typedef void (AL_APIENTRY*LPALGENSOUNDFONTSSOFT)(ALsizei n, ALuint *ids);
 typedef void (AL_APIENTRY*LPALDELETESOUNDFONTSSOFT)(ALsizei n, const ALuint *ids);
 typedef ALboolean (AL_APIENTRY*LPALISSOUNDFONTSOFT)(ALuint id);

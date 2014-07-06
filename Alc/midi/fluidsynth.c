@@ -28,7 +28,7 @@
 #define CTRL_ALLNOTESOFF     (123)
 
 
-static int getGenInput(ALenum input)
+static int getModInput(ALenum input)
 {
     switch(input)
     {
@@ -43,7 +43,7 @@ static int getGenInput(ALenum input)
     return input&0x7F;
 }
 
-static int getGenFlags(ALenum input, ALenum type, ALenum form)
+static int getModFlags(ALenum input, ALenum type, ALenum form)
 {
     int ret = 0;
 
@@ -69,7 +69,7 @@ static int getGenFlags(ALenum input, ALenum type, ALenum form)
     return ret;
 }
 
-static enum fluid_gen_type getSf2Gen(ALenum gen)
+static enum fluid_gen_type getModDest(ALenum gen)
 {
     switch(gen)
     {
@@ -183,14 +183,14 @@ static void FSample_Construct(FSample *self, ALfontsound *sound)
             {
                 if(mod->Dest == AL_NONE)
                     continue;
-                fluid_mod_set_source1(&self->Mods[j], getGenInput(mod->Source[0].Input),
-                                      getGenFlags(mod->Source[0].Input, mod->Source[0].Type,
+                fluid_mod_set_source1(&self->Mods[j], getModInput(mod->Source[0].Input),
+                                      getModFlags(mod->Source[0].Input, mod->Source[0].Type,
                                                   mod->Source[0].Form));
-                fluid_mod_set_source2(&self->Mods[j], getGenInput(mod->Source[1].Input),
-                                      getGenFlags(mod->Source[1].Input, mod->Source[1].Type,
+                fluid_mod_set_source2(&self->Mods[j], getModInput(mod->Source[1].Input),
+                                      getModFlags(mod->Source[1].Input, mod->Source[1].Type,
                                                   mod->Source[1].Form));
                 fluid_mod_set_amount(&self->Mods[j], mod->Amount);
-                fluid_mod_set_dest(&self->Mods[j], getSf2Gen(mod->Dest));
+                fluid_mod_set_dest(&self->Mods[j], getModDest(mod->Dest));
                 self->Mods[j++].next = NULL;
             }
         }

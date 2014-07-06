@@ -171,25 +171,28 @@ static void FSample_Construct(FSample *self, ALfontsound *sound)
     self->Sound = sound;
 
     self->NumMods = 0;
-    self->Mods = calloc(sound->ModulatorMap.size, sizeof(self->Mods[0]));
+    self->Mods = calloc(sound->ModulatorMap.size*4, sizeof(fluid_mod_t[4]));
     if(self->Mods)
     {
-        ALsizei i, j;
+        ALsizei i, j, k;
 
         for(i = j = 0;i < sound->ModulatorMap.size;i++)
         {
             ALsfmodulator *mod = sound->ModulatorMap.array[i].value;
-            if(mod->Dest == AL_NONE)
-                continue;
-            fluid_mod_set_source1(&self->Mods[j], getGenInput(mod->Source[0].Input),
-                                  getGenFlags(mod->Source[0].Input, mod->Source[0].Type,
-                                              mod->Source[0].Form));
-            fluid_mod_set_source2(&self->Mods[j], getGenInput(mod->Source[1].Input),
-                                  getGenFlags(mod->Source[1].Input, mod->Source[1].Type,
-                                              mod->Source[1].Form));
-            fluid_mod_set_amount(&self->Mods[j], mod->Amount);
-            fluid_mod_set_dest(&self->Mods[j], getSf2Gen(mod->Dest));
-            self->Mods[j++].next = NULL;
+            for(k = 0;k < 4;k++,mod++)
+            {
+                if(mod->Dest == AL_NONE)
+                    continue;
+                fluid_mod_set_source1(&self->Mods[j], getGenInput(mod->Source[0].Input),
+                                      getGenFlags(mod->Source[0].Input, mod->Source[0].Type,
+                                                  mod->Source[0].Form));
+                fluid_mod_set_source2(&self->Mods[j], getGenInput(mod->Source[1].Input),
+                                      getGenFlags(mod->Source[1].Input, mod->Source[1].Type,
+                                                  mod->Source[1].Form));
+                fluid_mod_set_amount(&self->Mods[j], mod->Amount);
+                fluid_mod_set_dest(&self->Mods[j], getSf2Gen(mod->Dest));
+                self->Mods[j++].next = NULL;
+            }
         }
         self->NumMods = j;
     }
@@ -260,7 +263,6 @@ static void FPreset_Destruct(FPreset *self)
 static ALboolean FPreset_canDelete(FPreset *self)
 {
     ALsizei i;
-
     for(i = 0;i < self->NumSamples;i++)
     {
         if(fluid_sample_refcount(STATIC_CAST(fluid_sample_t, &self->Samples[i])) != 0)
@@ -300,8 +302,7 @@ static int FPreset_noteOn(fluid_preset_t *preset, fluid_synth_t *synth, int chan
             continue;
 
         voice = fluid_synth_alloc_voice(synth, STATIC_CAST(fluid_sample_t, sample), channel, key, vel);
-        if(voice == NULL)
-            return FLUID_FAILED;
+        if(voice == NULL) return FLUID_FAILED;
 
         fluid_voice_gen_set(voice, GEN_MODLFOTOPITCH, sound->ModLfoToPitch);
         fluid_voice_gen_set(voice, GEN_VIBLFOTOPITCH, sound->VibratoLfoToPitch);

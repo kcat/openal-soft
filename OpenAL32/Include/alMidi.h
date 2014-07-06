@@ -87,6 +87,7 @@ typedef struct ALfontsound {
     ALenum SampleType;
     struct ALfontsound *Link;
 
+    /* NOTE: Each map entry contains *four* (4) ALsfmodulator objects. */
     UIntMap ModulatorMap;
 
     ALuint id;

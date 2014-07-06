@@ -25,9 +25,11 @@ void ALfontsound_setModStagei(ALfontsound *self, ALCcontext *context, ALsizei st
 static void ALfontsound_getModStagei(ALfontsound *self, ALCcontext *context, ALsizei stage, ALenum param, ALint *values);
 
 static inline struct ALsfmodulator *LookupModulator(ALfontsound *sound, ALuint id)
-{ return (struct ALsfmodulator*)LookupUIntMapKey(&sound->ModulatorMap, id); }
-static inline struct ALsfmodulator *RemoveModulator(ALfontsound *sound, ALuint id)
-{ return (struct ALsfmodulator*)RemoveUIntMapKey(&sound->ModulatorMap, id); }
+{
+    ALsfmodulator *mod = LookupUIntMapKey(&sound->ModulatorMap, id>>2);
+    if(mod) mod += id&3;
+    return mod;
+}
 
 
 AL_API void AL_APIENTRY alGenFontsoundsSOFT(ALsizei n, ALuint *ids)
@@ -846,15 +848,18 @@ static ALsfmodulator *ALfontsound_getModStage(ALfontsound *self, ALsizei stage)
     {
         static const ALsfmodulator moddef = {
             { { AL_ONE_SOFT, AL_UNORM_SOFT, AL_LINEAR_SOFT },
-              { AL_ONE_SOFT, AL_UNORM_SOFT, AL_LINEAR_SOFT }
-            },
+              { AL_ONE_SOFT, AL_UNORM_SOFT, AL_LINEAR_SOFT } },
             0,
             AL_LINEAR_SOFT,
             AL_NONE
         };
-        ret = malloc(sizeof(*ret));
-        *ret = moddef;
-        InsertUIntMapEntry(&self->ModulatorMap, stage, ret);
+        ret = malloc(sizeof(ALsfmodulator[4]));
+        ret[0] = moddef;
+        ret[1] = moddef;
+        ret[2] = moddef;
+        ret[3] = moddef;
+        InsertUIntMapEntry(&self->ModulatorMap, stage>>2, ret);
+        ret += stage&3;
     }
     return ret;
 }

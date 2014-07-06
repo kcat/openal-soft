@@ -341,9 +341,10 @@ void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device)
 {
     ALsfpreset **presets;
     ALsizei num_presets;
-    ALbuffer *buffer = NULL;
+    VECTOR(ALbuffer*) buffers;
     ALsizei i;
 
+    VECTOR_INIT(buffers);
     presets = ExchangePtr((XchgPtr*)&self->Presets, NULL);
     num_presets = ExchangeInt(&self->NumPresets, 0);
 
@@ -374,10 +375,17 @@ void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device)
                 if(sounds[j] && ReadRef(&sounds[j]->ref) == 0)
                 {
                     deleting = AL_TRUE;
-                    if(!buffer)
-                        buffer = sounds[j]->Buffer;
-                    else if(sounds[j]->Buffer)
-                        assert(sounds[j]->Buffer == buffer);
+                    if(sounds[j]->Buffer)
+                    {
+                        ALbuffer *buffer = sounds[j]->Buffer;
+                        ALbuffer **iter;
+
+#define MATCH_BUFFER(_i) (buffer == *(_i))
+                        VECTOR_FIND_IF(iter, ALbuffer*, buffers, MATCH_BUFFER);
+                        if(iter == VECTOR_ITER_END(buffers))
+                            VECTOR_PUSH_BACK(buffers, buffer);
+#undef MATCH_BUFFER
+                    }
                     DeleteFontsound(device, sounds[j]);
                     sounds[j] = NULL;
                 }
@@ -389,11 +397,13 @@ void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device)
     ALsoundfont_Destruct(self);
     free(self);
 
-    if(buffer)
-    {
-        assert(ReadRef(&buffer->ref) == 0);
-        DeleteBuffer(device, buffer);
-    }
+#define DELETE_BUFFER(iter) do {           \
+    assert(ReadRef(&(*(iter))->ref) == 0); \
+    DeleteBuffer(device, *(iter));         \
+} while(0)
+    VECTOR_FOR_EACH(ALbuffer*, buffers, DELETE_BUFFER);
+    VECTOR_DEINIT(buffers);
+#undef DELETE_BUFFER
 }
 
 

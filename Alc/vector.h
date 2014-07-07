@@ -75,13 +75,14 @@ ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, void *ins_
 } while(0)
 
 #define VECTOR_FIND_IF(_i, _t, _x, _f)  do {                                  \
+    _t *_iter = VECTOR_ITER_BEGIN((_x));                                      \
     _t *_end = VECTOR_ITER_END((_x));                                         \
-    (_i) = VECTOR_ITER_BEGIN((_x));                                           \
-    for(;(_i) != _end;++(_i))                                                 \
+    for(;_iter != _end;++_iter)                                               \
     {                                                                         \
-        if(_f(_i))                                                            \
+        if(_f(_iter))                                                         \
             break;                                                            \
     }                                                                         \
+    (_i) = _iter;                                                             \
 } while(0)
 
 #endif /* AL_VECTOR_H */

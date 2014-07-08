@@ -2407,6 +2407,8 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->DopplerFactor = 1.0f;
     Source->DirectChannels = AL_FALSE;
 
+    Source->Radius = 0.0f;
+
     Source->DistanceModel = DefaultDistanceModel;
 
     Source->Resampler = DefaultResampler;

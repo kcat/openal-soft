@@ -425,7 +425,7 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                 /* Get the static HRIR coefficients and delays for this
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
-                                    0.0f, chans[c].angle, DryGain,
+                                    0.0f, chans[c].angle, 1.0f, DryGain,
                                     src->Direct.Mix.Hrtf.Params[c].Coeffs,
                                     src->Direct.Mix.Hrtf.Params[c].Delay);
             }
@@ -899,6 +899,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     {
         /* Use a binaural HRTF algorithm for stereo headphone playback */
         ALfloat delta, ev = 0.0f, az = 0.0f;
+        ALfloat radius = ALSource->Radius;
+        ALfloat dirfact = 1.0f;
 
         if(Distance > FLT_EPSILON)
         {
@@ -914,6 +916,8 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             ev = asinf(clampf(Position[1], -1.0f, 1.0f));
             az = atan2f(Position[0], -Position[2]*ZScale);
         }
+        if(radius > Distance)
+            dirfact *= Distance / radius;
 
         /* Check to see if the HRIR is already moving. */
         if(src->Direct.Moving)
@@ -926,12 +930,10 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
             if(delta > 0.001f)
             {
                 ALuint counter = GetMovingHrtfCoeffs(Device->Hrtf,
-                                           ev, az, DryGain, delta,
-                                           src->Direct.Counter,
-                                           src->Direct.Mix.Hrtf.Params[0].Coeffs,
-                                           src->Direct.Mix.Hrtf.Params[0].Delay,
-                                           src->Direct.Mix.Hrtf.Params[0].CoeffStep,
-                                           src->Direct.Mix.Hrtf.Params[0].DelayStep);
+                    ev, az, dirfact, DryGain, delta, src->Direct.Counter,
+                    src->Direct.Mix.Hrtf.Params[0].Coeffs, src->Direct.Mix.Hrtf.Params[0].Delay,
+                    src->Direct.Mix.Hrtf.Params[0].CoeffStep, src->Direct.Mix.Hrtf.Params[0].DelayStep
+                );
                 src->Direct.Counter = counter;
                 src->Direct.Mix.Hrtf.Gain = DryGain;
                 src->Direct.Mix.Hrtf.Dir[0] = Position[0];
@@ -942,7 +944,7 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         else
         {
             /* Get the initial (static) HRIR coefficients and delays. */
-            GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, DryGain,
+            GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, dirfact, DryGain,
                                 src->Direct.Mix.Hrtf.Params[0].Coeffs,
                                 src->Direct.Mix.Hrtf.Params[0].Delay);
             src->Direct.Counter = 0;
@@ -968,8 +970,9 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
         /* Normalize the length, and compute panned gains. */
         if(Distance > FLT_EPSILON)
         {
+            ALfloat radius = ALSource->Radius;
             ALfloat Target[MaxChannels];
-            ALfloat invlen = 1.0f/Distance;
+            ALfloat invlen = 1.0f/maxf(Distance, radius);
             Position[0] *= invlen;
             Position[1] *= invlen;
             Position[2] *= invlen;

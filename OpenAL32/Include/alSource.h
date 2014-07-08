@@ -71,6 +71,8 @@ typedef struct ALsource {
     volatile ALfloat RoomRolloffFactor;
     volatile ALfloat DopplerFactor;
 
+    volatile ALfloat Radius;
+
     enum Resampler Resampler;
 
     /**

@@ -313,10 +313,10 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 
         c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
              Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-        coeffs[i][0] = lerp(0.0f, c, dirfact) * gain;
+        coeffs[i][0] = lerp(1.0f, c, dirfact) * gain;
         c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
              Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-        coeffs[i][1] = lerp(0.0f, c, dirfact) * gain;
+        coeffs[i][1] = lerp(1.0f, c, dirfact) * gain;
 
         coeffStep[i][0] = step * (coeffs[i][0] - left);
         coeffStep[i][1] = step * (coeffs[i][1] - right);
@@ -328,10 +328,10 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 
             c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
                  Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-            coeffs[i][0] = lerp(1.0f, c, dirfact) * gain;
+            coeffs[i][0] = lerp(0.0f, c, dirfact) * gain;
             c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
                  Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-            coeffs[i][1] = lerp(1.0f, c, dirfact) * gain;
+            coeffs[i][1] = lerp(0.0f, c, dirfact) * gain;
 
             coeffStep[i][0] = step * (coeffs[i][0] - left);
             coeffStep[i][1] = step * (coeffs[i][1] - right);

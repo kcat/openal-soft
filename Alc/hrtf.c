@@ -61,26 +61,26 @@ static const ALchar magicMarker01[8] = "MinPHR01";
 static struct Hrtf *LoadedHrtfs = NULL;
 
 /* Calculate the elevation indices given the polar elevation in radians.
- * This will return two indices between 0 and (Hrtf->evCount - 1) and an
+ * This will return two indices between 0 and (evcount - 1) and an
  * interpolation factor between 0.0 and 1.0.
  */
-static void CalcEvIndices(const struct Hrtf *Hrtf, ALfloat ev, ALuint *evidx, ALfloat *evmu)
+static void CalcEvIndices(ALuint evcount, ALfloat ev, ALuint *evidx, ALfloat *evmu)
 {
-    ev = (F_PI_2 + ev) * (Hrtf->evCount-1) / F_PI;
+    ev = (F_PI_2 + ev) * (evcount-1) / F_PI;
     evidx[0] = fastf2u(ev);
-    evidx[1] = minu(evidx[0] + 1, Hrtf->evCount-1);
+    evidx[1] = minu(evidx[0] + 1, evcount-1);
     *evmu = ev - evidx[0];
 }
 
 /* Calculate the azimuth indices given the polar azimuth in radians.  This
- * will return two indices between 0 and (Hrtf->azCount[ei] - 1) and an
- * interpolation factor between 0.0 and 1.0.
+ * will return two indices between 0 and (azcount - 1) and an interpolation
+ * factor between 0.0 and 1.0.
  */
-static void CalcAzIndices(const struct Hrtf *Hrtf, ALuint evidx, ALfloat az, ALuint *azidx, ALfloat *azmu)
+static void CalcAzIndices(ALuint azcount, ALfloat az, ALuint *azidx, ALfloat *azmu)
 {
-    az = (F_2PI + az) * Hrtf->azCount[evidx] / (F_2PI);
-    azidx[0] = fastf2u(az) % Hrtf->azCount[evidx];
-    azidx[1] = (azidx[0] + 1) % Hrtf->azCount[evidx];
+    az = (F_2PI + az) * azcount / (F_2PI);
+    azidx[0] = fastf2u(az) % azcount;
+    azidx[1] = (azidx[0] + 1) % azcount;
     *azmu = az - floorf(az);
 }
 
@@ -98,18 +98,17 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
     oldGain = maxf(oldGain, 0.0001f);
     gainChange = fabsf(log10f(newGain / oldGain) / log10f(0.0001f));
 
-    // Calculate the normalized listener to source angle change when there is
-    // enough gain to notice it.
+    // Calculate the angle change only when there is enough gain to notice it.
     angleChange = 0.0f;
     if(gainChange > 0.0001f || newGain > 0.0001f)
     {
         // No angle change when the directions are equal or degenerate (when
         // both have zero length).
-        if(newdir[0]-olddir[0] || newdir[1]-olddir[1] || newdir[2]-olddir[2])
-            angleChange = acosf(olddir[0]*newdir[0] +
-                                olddir[1]*newdir[1] +
-                                olddir[2]*newdir[2]) / F_PI;
-
+        if(newdir[0] != olddir[0] || newdir[1] != olddir[1] || newdir[2] != olddir[2])
+        {
+            ALfloat dotp = olddir[0]*newdir[0] + olddir[1]*newdir[1] + olddir[2]*newdir[2];
+            angleChange = acosf(clampf(dotp, -1.0f, 1.0f)) / F_PI;
+        }
     }
 
     // Use the largest of the two changes for the delta factor, and apply a
@@ -125,35 +124,28 @@ ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3],
  */
 void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat dirfact, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
 {
-    ALuint evidx[2], azidx[2];
-    ALuint lidx[4], ridx[4];
+    ALuint evidx[2], lidx[4], ridx[4];
     ALfloat mu[3], blend[4];
     ALuint i;
 
-    // Claculate elevation indices and interpolation factor.
-    CalcEvIndices(Hrtf, elevation, evidx, &mu[2]);
+    /* Claculate elevation indices and interpolation factor. */
+    CalcEvIndices(Hrtf->evCount, elevation, evidx, &mu[2]);
 
-    // Calculate azimuth indices and interpolation factor for the first
-    // elevation.
-    CalcAzIndices(Hrtf, evidx[0], azimuth, azidx, &mu[0]);
+    for(i = 0;i < 2;i++)
+    {
+        ALuint azcount = Hrtf->azCount[evidx[i]];
+        ALuint evoffset = Hrtf->evOffset[evidx[i]];
+        ALuint azidx[2];
 
-    // Calculate the first set of linear HRIR indices for left and right
-    // channels.
-    lidx[0] = Hrtf->evOffset[evidx[0]] + azidx[0];
-    lidx[1] = Hrtf->evOffset[evidx[0]] + azidx[1];
-    ridx[0] = Hrtf->evOffset[evidx[0]] + ((Hrtf->azCount[evidx[0]]-azidx[0]) % Hrtf->azCount[evidx[0]]);
-    ridx[1] = Hrtf->evOffset[evidx[0]] + ((Hrtf->azCount[evidx[0]]-azidx[1]) % Hrtf->azCount[evidx[0]]);
+        /* Calculate azimuth indices and interpolation factor for this elevation. */
+        CalcAzIndices(azcount, azimuth, azidx, &mu[i]);
 
-    // Calculate azimuth indices and interpolation factor for the second
-    // elevation.
-    CalcAzIndices(Hrtf, evidx[1], azimuth, azidx, &mu[1]);
-
-    // Calculate the second set of linear HRIR indices for left and right
-    // channels.
-    lidx[2] = Hrtf->evOffset[evidx[1]] + azidx[0];
-    lidx[3] = Hrtf->evOffset[evidx[1]] + azidx[1];
-    ridx[2] = Hrtf->evOffset[evidx[1]] + ((Hrtf->azCount[evidx[1]]-azidx[0]) % Hrtf->azCount[evidx[1]]);
-    ridx[3] = Hrtf->evOffset[evidx[1]] + ((Hrtf->azCount[evidx[1]]-azidx[1]) % Hrtf->azCount[evidx[1]]);
+        /* Calculate a set of linear HRIR indices for left and right channels. */
+        lidx[i*2 + 0] = evoffset + azidx[0];
+        lidx[i*2 + 1] = evoffset + azidx[1];
+        ridx[i*2 + 0] = evoffset + ((azcount-azidx[0]) % azcount);
+        ridx[i*2 + 1] = evoffset + ((azcount-azidx[1]) % azcount);
+    }
 
     /* Calculate 4 blending weights for 2D bilinear interpolation. */
     blend[0] = (1.0f-mu[0]) * (1.0f-mu[2]);
@@ -226,37 +218,30 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
  */
 ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat dirfact, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep)
 {
-    ALuint evidx[2], azidx[2];
-    ALuint lidx[4], ridx[4];
+    ALuint evidx[2], lidx[4], ridx[4];
     ALfloat mu[3], blend[4];
     ALfloat left, right;
     ALfloat step;
     ALuint i;
 
-    // Claculate elevation indices and interpolation factor.
-    CalcEvIndices(Hrtf, elevation, evidx, &mu[2]);
+    /* Claculate elevation indices and interpolation factor. */
+    CalcEvIndices(Hrtf->evCount, elevation, evidx, &mu[2]);
 
-    // Calculate azimuth indices and interpolation factor for the first
-    // elevation.
-    CalcAzIndices(Hrtf, evidx[0], azimuth, azidx, &mu[0]);
+    for(i = 0;i < 2;i++)
+    {
+        ALuint azcount = Hrtf->azCount[evidx[i]];
+        ALuint evoffset = Hrtf->evOffset[evidx[i]];
+        ALuint azidx[2];
 
-    // Calculate the first set of linear HRIR indices for left and right
-    // channels.
-    lidx[0] = Hrtf->evOffset[evidx[0]] + azidx[0];
-    lidx[1] = Hrtf->evOffset[evidx[0]] + azidx[1];
-    ridx[0] = Hrtf->evOffset[evidx[0]] + ((Hrtf->azCount[evidx[0]]-azidx[0]) % Hrtf->azCount[evidx[0]]);
-    ridx[1] = Hrtf->evOffset[evidx[0]] + ((Hrtf->azCount[evidx[0]]-azidx[1]) % Hrtf->azCount[evidx[0]]);
+        /* Calculate azimuth indices and interpolation factor for this elevation. */
+        CalcAzIndices(azcount, azimuth, azidx, &mu[i]);
 
-    // Calculate azimuth indices and interpolation factor for the second
-    // elevation.
-    CalcAzIndices(Hrtf, evidx[1], azimuth, azidx, &mu[1]);
-
-    // Calculate the second set of linear HRIR indices for left and right
-    // channels.
-    lidx[2] = Hrtf->evOffset[evidx[1]] + azidx[0];
-    lidx[3] = Hrtf->evOffset[evidx[1]] + azidx[1];
-    ridx[2] = Hrtf->evOffset[evidx[1]] + ((Hrtf->azCount[evidx[1]]-azidx[0]) % Hrtf->azCount[evidx[1]]);
-    ridx[3] = Hrtf->evOffset[evidx[1]] + ((Hrtf->azCount[evidx[1]]-azidx[1]) % Hrtf->azCount[evidx[1]]);
+        /* Calculate a set of linear HRIR indices for left and right channels. */
+        lidx[i*2 + 0] = evoffset + azidx[0];
+        lidx[i*2 + 1] = evoffset + azidx[1];
+        ridx[i*2 + 0] = evoffset + ((azcount-azidx[0]) % azcount);
+        ridx[i*2 + 1] = evoffset + ((azcount-azidx[1]) % azcount);
+    }
 
     // Calculate the stepping parameters.
     delta = maxf(floorf(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);

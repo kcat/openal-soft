@@ -2204,7 +2204,7 @@ static int ProcessMetrics (TokenReaderT * tr, const uint fftSize, const uint tru
           return (0);
        points = (uint) intVal;
        if ((fftSize > 0) && (points > fftSize)) {
-          TrErrorAt (tr, line, col, "Value exceeds the overriden FFT size.\n");
+          TrErrorAt (tr, line, col, "Value exceeds the overridden FFT size.\n");
           return (0);
        }
        if (points < truncSize) {

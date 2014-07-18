@@ -17,6 +17,7 @@
 #include <libavformat/avio.h>
 #include <libavutil/time.h>
 #include <libavutil/avstring.h>
+#include <libavutil/channel_layout.h>
 #include <libswscale/swscale.h>
 #include <libswresample/swresample.h>
 

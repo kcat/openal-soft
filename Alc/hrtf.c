@@ -58,6 +58,10 @@ struct Hrtf {
 static const ALchar magicMarker00[8] = "MinPHR00";
 static const ALchar magicMarker01[8] = "MinPHR01";
 
+/* First value for pass-through coefficients (remaining are 0), used for omni-
+ * directional sounds. */
+static const ALfloat PassthruCoeff = 32767.0f * 0.707106781187f/*sqrt(0.5)*/;
+
 static struct Hrtf *LoadedHrtfs = NULL;
 
 /* Calculate the elevation indices given the polar elevation in radians.
@@ -184,10 +188,10 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
         i = 0;
         c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
              Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-        coeffs[i][0] = lerp(1.0f, c, dirfact) * gain;
+        coeffs[i][0] = lerp(PassthruCoeff, c, dirfact) * gain;
         c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
              Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-        coeffs[i][1] = lerp(1.0f, c, dirfact) * gain;
+        coeffs[i][1] = lerp(PassthruCoeff, c, dirfact) * gain;
 
         for(i = 1;i < Hrtf->irSize;i++)
         {
@@ -298,10 +302,10 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 
         c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
              Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-        coeffs[i][0] = lerp(1.0f, c, dirfact) * gain;
+        coeffs[i][0] = lerp(PassthruCoeff, c, dirfact) * gain;
         c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
              Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-        coeffs[i][1] = lerp(1.0f, c, dirfact) * gain;
+        coeffs[i][1] = lerp(PassthruCoeff, c, dirfact) * gain;
 
         coeffStep[i][0] = step * (coeffs[i][0] - left);
         coeffStep[i][1] = step * (coeffs[i][1] - right);

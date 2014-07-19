@@ -1245,9 +1245,11 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     if(!ensureFontSanity(&sfont))
         goto error;
 
-    presets = calloc(1, (sfont.phdr_size-1)*sizeof(presets[0]));
+    presets = calloc(1, (soundfont->NumPresets+sfont.phdr_size-1)*sizeof(presets[0]));
     if(!presets)
         ERROR_GOTO(error, "Error allocating presets\n");
+    memcpy(presets, soundfont->Presets, soundfont->NumPresets*sizeof(presets[0]));
+    presets_size = soundfont->NumPresets;
 
     for(i = 0;i < sfont.phdr_size-1;i++)
     {
@@ -1341,7 +1343,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
         GenModList_Destruct(&gzone);
     }
 
-    for(i = 0;i < presets_size;i++)
+    for(i = soundfont->NumPresets;i < presets_size;i++)
         IncrementRef(&presets[i]->ref);
     presets = ExchangePtr((XchgPtr*)&soundfont->Presets, presets);
     ExchangeInt(&soundfont->NumPresets, presets_size);
@@ -1359,7 +1361,7 @@ error:
     if(presets)
     {
         ALCdevice *device = context->Device;
-        for(i = 0;i < presets_size;i++)
+        for(i = soundfont->NumPresets;i < presets_size;i++)
             DeletePreset(device, presets[i]);
         free(presets);
     }

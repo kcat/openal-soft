@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "alMain.h"
 #include "alMidi.h"
@@ -306,7 +307,8 @@ void ALsoundfont_Destruct(ALsoundfont *self)
 ALsoundfont *ALsoundfont_getDefSoundfont(ALCcontext *context)
 {
     ALCdevice *device = context->Device;
-    const char *fname;
+    al_string fname = AL_STRING_INIT_STATIC();
+    const char *namelist;
 
     if(device->DefaultSfont)
         return device->DefaultSfont;
@@ -314,25 +316,44 @@ ALsoundfont *ALsoundfont_getDefSoundfont(ALCcontext *context)
     device->DefaultSfont = calloc(1, sizeof(device->DefaultSfont[0]));
     ALsoundfont_Construct(device->DefaultSfont);
 
-    fname = getenv("ALSOFT_SOUNDFONT");
-    if((fname && fname[0]) || ConfigValueStr("midi", "soundfont", &fname))
+    namelist = getenv("ALSOFT_SOUNDFONT");
+    if(!namelist || !namelist[0])
+        ConfigValueStr("midi", "soundfont", &namelist);
+    while(namelist && namelist[0])
     {
+        const char *next, *end;
         FILE *f;
 
-        f = OpenDataFile(fname, "openal/soundfonts");
+        while(*namelist && (isspace(*namelist) || *namelist == ','))
+            namelist++;
+        if(!*namelist)
+            break;
+        next = strchr(namelist, ',');
+        end = next ? next++ : (namelist+strlen(namelist));
+        while(--end != namelist && isspace(*end)) {
+        }
+        if(end == namelist)
+            continue;
+        al_string_append_range(&fname, namelist, end+1);
+        namelist = next;
+
+        f = OpenDataFile(al_string_get_cstr(fname), "openal/soundfonts");
         if(f == NULL)
-            ERR("Failed to open %s\n", fname);
+            ERR("Failed to open %s\n", al_string_get_cstr(fname));
         else
         {
             Reader reader;
             reader.cb = ALsoundfont_read;
             reader.ptr = f;
             reader.error = 0;
-            TRACE("Loading %s\n", fname);
+            TRACE("Loading %s\n", al_string_get_cstr(fname));
             loadSf2(&reader, device->DefaultSfont, context);
             fclose(f);
         }
+
+        al_string_clear(&fname);
     }
+    AL_STRING_DEINIT(fname);
 
     return device->DefaultSfont;
 }

@@ -1353,7 +1353,10 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     Soundfont_Destruct(&sfont);
     /* If the buffer ends up unused, delete it. */
     if(ReadRef(&buffer->ref) == 0)
+    {
+        TRACE("Deleting unused buffer...\n");
         DeleteBuffer(context->Device, buffer);
+    }
 
     return AL_TRUE;
 

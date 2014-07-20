@@ -18,8 +18,8 @@
 extern inline struct ALsoundfont *LookupSfont(ALCdevice *device, ALuint id);
 extern inline struct ALsoundfont *RemoveSfont(ALCdevice *device, ALuint id);
 
-void ALsoundfont_Construct(ALsoundfont *self);
-void ALsoundfont_Destruct(ALsoundfont *self);
+static void ALsoundfont_Construct(ALsoundfont *self);
+static void ALsoundfont_Destruct(ALsoundfont *self);
 void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device);
 ALsoundfont *ALsoundfont_getDefSoundfont(ALCcontext *context);
 static size_t ALsoundfont_read(ALvoid *buf, size_t bytes, ALvoid *ptr);
@@ -275,7 +275,7 @@ done:
 }
 
 
-void ALsoundfont_Construct(ALsoundfont *self)
+static void ALsoundfont_Construct(ALsoundfont *self)
 {
     InitRef(&self->ref, 0);
 
@@ -287,7 +287,7 @@ void ALsoundfont_Construct(ALsoundfont *self)
     self->id = 0;
 }
 
-void ALsoundfont_Destruct(ALsoundfont *self)
+static void ALsoundfont_Destruct(ALsoundfont *self)
 {
     ALsizei i;
 

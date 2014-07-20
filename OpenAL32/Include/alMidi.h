@@ -141,8 +141,6 @@ typedef struct ALsoundfont {
     ALuint id;
 } ALsoundfont;
 
-void ALsoundfont_Construct(ALsoundfont *self);
-void ALsoundfont_Destruct(ALsoundfont *self);
 ALsoundfont *ALsoundfont_getDefSoundfont(ALCcontext *context);
 void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device);
 

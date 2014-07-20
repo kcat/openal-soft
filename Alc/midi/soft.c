@@ -48,9 +48,8 @@ static void SSynth_update(SSynth* UNUSED(self), ALCdevice* UNUSED(device))
 }
 
 
-static void SSynth_mixSamples(SSynth* UNUSED(self), ALuint UNUSED(SamplesToDo), ALfloat (*restrict DryBuffer)[BUFFERSIZE])
+static void SSynth_mixSamples(SSynth* UNUSED(self), ALuint UNUSED(SamplesToDo), ALfloatBUFFERSIZE *restrict UNUSED(DryBuffer))
 {
-    (void)DryBuffer;
 }
 
 

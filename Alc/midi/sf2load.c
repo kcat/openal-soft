@@ -1120,7 +1120,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
         else
         {
             ALuint total = 0;
-            while(total < smpl.mSize)
+            while(total < smpl.mSize && !READERR(stream))
             {
                 ALbyte buf[4096];
                 ALuint todo = minu(smpl.mSize-total, sizeof(buf));

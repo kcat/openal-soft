@@ -433,12 +433,12 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
 {
     static const int ids[2] = { CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
     WCHAR *wname=NULL, *wsubdir=NULL;
+    FILE *f;
     int i;
 
     /* If the path is absolute, open it directly. */
     if(fname[0] != '\0' && fname[1] == ':' && is_slash(fname[2]))
     {
-        FILE *f;
         if((f=al_fopen(fname, "rb")) != NULL)
         {
             TRACE("Opened %s\n", fname);
@@ -447,6 +447,14 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
         WARN("Could not open %s\n", fname);
         return NULL;
     }
+
+    /* If it's relative, try the current directory first before the data directories. */
+    if((f=al_fopen(fname, "rb")) != NULL)
+    {
+        TRACE("Opened %s\n", fname);
+        return f;
+    }
+    WARN("Could not open %s\n", fname);
 
     wname = FromUTF8(fname);
     wsubdir = FromUTF8(subdir);
@@ -458,7 +466,6 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
     {
         WCHAR buffer[PATH_MAX];
         size_t len;
-        FILE *f;
 
         if(SHGetSpecialFolderPathW(NULL, buffer, ids[i], FALSE) == FALSE)
             continue;
@@ -504,6 +511,13 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
         WARN("Could not open %s\n", fname);
         return NULL;
     }
+
+    if((f=al_fopen(fname, "rb")) != NULL)
+    {
+        TRACE("Opened %s\n", fname);
+        return f;
+    }
+    WARN("Could not open %s\n", fname);
 
     if((str=getenv("XDG_DATA_HOME")) != NULL && str[0] != '\0')
         snprintf(buffer, sizeof(buffer), "%s/%s/%s", str, subdir, fname);

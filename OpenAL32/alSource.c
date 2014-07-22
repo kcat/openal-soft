@@ -375,98 +375,98 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             CHECKVAL(*values >= 0.0f);
 
             Source->Pitch = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_CONE_INNER_ANGLE:
             CHECKVAL(*values >= 0.0f && *values <= 360.0f);
 
             Source->InnerAngle = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_CONE_OUTER_ANGLE:
             CHECKVAL(*values >= 0.0f && *values <= 360.0f);
 
             Source->OuterAngle = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_GAIN:
             CHECKVAL(*values >= 0.0f);
 
             Source->Gain = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_MAX_DISTANCE:
             CHECKVAL(*values >= 0.0f);
 
             Source->MaxDistance = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_ROLLOFF_FACTOR:
             CHECKVAL(*values >= 0.0f);
 
             Source->RollOffFactor = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_REFERENCE_DISTANCE:
             CHECKVAL(*values >= 0.0f);
 
             Source->RefDistance = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_MIN_GAIN:
             CHECKVAL(*values >= 0.0f && *values <= 1.0f);
 
             Source->MinGain = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_MAX_GAIN:
             CHECKVAL(*values >= 0.0f && *values <= 1.0f);
 
             Source->MaxGain = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_CONE_OUTER_GAIN:
             CHECKVAL(*values >= 0.0f && *values <= 1.0f);
 
             Source->OuterGain = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_CONE_OUTER_GAINHF:
             CHECKVAL(*values >= 0.0f && *values <= 1.0f);
 
             Source->OuterGainHF = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_AIR_ABSORPTION_FACTOR:
             CHECKVAL(*values >= 0.0f && *values <= 10.0f);
 
             Source->AirAbsorptionFactor = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_ROOM_ROLLOFF_FACTOR:
             CHECKVAL(*values >= 0.0f && *values <= 10.0f);
 
             Source->RoomRolloffFactor = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_DOPPLER_FACTOR:
             CHECKVAL(*values >= 0.0f && *values <= 1.0f);
 
             Source->DopplerFactor = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_SEC_OFFSET:
@@ -505,7 +505,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             Source->Position[1] = values[1];
             Source->Position[2] = values[2];
             UnlockContext(Context);
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_VELOCITY:
@@ -516,7 +516,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             Source->Velocity[1] = values[1];
             Source->Velocity[2] = values[2];
             UnlockContext(Context);
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_DIRECTION:
@@ -527,7 +527,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             Source->Orientation[1] = values[1];
             Source->Orientation[2] = values[2];
             UnlockContext(Context);
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
 
@@ -574,7 +574,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
 
             Source->HeadRelative = (ALboolean)*values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_LOOPING:
@@ -692,35 +692,35 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 Source->Direct.LFReference = filter->LFReference;
             }
             UnlockContext(Context);
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_DIRECT_FILTER_GAINHF_AUTO:
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
 
             Source->DryGainHFAuto = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
 
             Source->WetGainAuto = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
 
             Source->WetGainHFAuto = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_DIRECT_CHANNELS_SOFT:
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
 
             Source->DirectChannels = *values;
-            Source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
         case AL_DISTANCE_MODEL:
@@ -734,7 +734,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
 
             Source->DistanceModel = *values;
             if(Context->SourceDistanceModel)
-                Source->NeedsUpdate = AL_TRUE;
+                ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
 
@@ -770,8 +770,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
                 Source->Send[values[1]].GainLF = filter->GainLF;
                 Source->Send[values[1]].LFReference = filter->LFReference;
             }
-            Source->NeedsUpdate = AL_TRUE;
             UnlockContext(Context);
+            ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
 
@@ -2435,7 +2435,7 @@ static ALvoid InitSourceParams(ALsource *Source)
         Source->Send[i].LFReference = HIGHPASSFREQREF;
     }
 
-    Source->NeedsUpdate = AL_TRUE;
+    ATOMIC_STORE_UNSAFE(Source->NeedsUpdate, AL_TRUE);
 }
 
 
@@ -2530,7 +2530,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
                 src->Send[i].Moving  = AL_FALSE;
             }
         }
-        Source->NeedsUpdate = AL_TRUE;
+        ATOMIC_STORE(Source->NeedsUpdate, AL_TRUE);
     }
     else if(state == AL_PAUSED)
     {

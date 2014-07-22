@@ -1882,7 +1882,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         ALsizei pos;
 
-        context->UpdateSources = AL_FALSE;
+        ATOMIC_STORE_UNSAFE(context->UpdateSources, AL_FALSE);
         LockUIntMapRead(&context->EffectSlotMap);
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
@@ -1914,7 +1914,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 source->Send[s].GainHF = 1.0f;
                 s++;
             }
-            source->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE_UNSAFE(source->NeedsUpdate, AL_TRUE);
         }
         UnlockUIntMapRead(&context->SourceMap);
 
@@ -1931,7 +1931,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
 
             src->Update(src, context);
-            source->NeedsUpdate = AL_FALSE;
+            ATOMIC_STORE_UNSAFE(source->NeedsUpdate, AL_FALSE);
         }
 
         context = context->next;
@@ -2111,7 +2111,7 @@ static ALvoid InitContext(ALCcontext *Context)
 
     //Validate Context
     Context->LastError = AL_NO_ERROR;
-    Context->UpdateSources = AL_FALSE;
+    ATOMIC_STORE_UNSAFE(Context->UpdateSources, AL_FALSE);
     Context->ActiveSourceCount = 0;
     InitUIntMap(&Context->SourceMap, Context->Device->MaxNoOfSources);
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);

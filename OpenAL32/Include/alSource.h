@@ -124,7 +124,7 @@ typedef struct ALsource {
     } Send[MAX_SENDS];
 
     /** Source needs to update its mixing parameters. */
-    volatile ALenum NeedsUpdate;
+    ATOMIC(ALenum) NeedsUpdate;
 
     /** Self ID */
     ALuint id;

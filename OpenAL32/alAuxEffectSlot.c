@@ -183,7 +183,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         err = InitializeEffect(device, slot, effect);
         if(err != AL_NO_ERROR)
             SET_ERROR_AND_GOTO(context, err, done);
-        context->UpdateSources = AL_TRUE;
+        ATOMIC_STORE(context->UpdateSources, AL_TRUE);
         break;
 
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
@@ -191,7 +191,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
         slot->AuxSendAuto = value;
-        context->UpdateSources = AL_TRUE;
+        ATOMIC_STORE(context->UpdateSources, AL_TRUE);
         break;
 
     default:

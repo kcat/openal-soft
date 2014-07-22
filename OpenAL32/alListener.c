@@ -40,7 +40,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
         context->Listener->Gain = value;
-        context->UpdateSources = AL_TRUE;
+        ATOMIC_STORE(context->UpdateSources, AL_TRUE);
         break;
 
     case AL_METERS_PER_UNIT:
@@ -48,7 +48,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
         context->Listener->MetersPerUnit = value;
-        context->UpdateSources = AL_TRUE;
+        ATOMIC_STORE(context->UpdateSources, AL_TRUE);
         break;
 
     default:
@@ -77,7 +77,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
         context->Listener->Position[0] = value1;
         context->Listener->Position[1] = value2;
         context->Listener->Position[2] = value3;
-        context->UpdateSources = AL_TRUE;
+        ATOMIC_STORE(context->UpdateSources, AL_TRUE);
         UnlockContext(context);
         break;
 
@@ -89,7 +89,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
         context->Listener->Velocity[0] = value1;
         context->Listener->Velocity[1] = value2;
         context->Listener->Velocity[2] = value3;
-        context->UpdateSources = AL_TRUE;
+        ATOMIC_STORE(context->UpdateSources, AL_TRUE);
         UnlockContext(context);
         break;
 
@@ -142,7 +142,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
         context->Listener->Up[0] = values[3];
         context->Listener->Up[1] = values[4];
         context->Listener->Up[2] = values[5];
-        context->UpdateSources = AL_TRUE;
+        ATOMIC_STORE(context->UpdateSources, AL_TRUE);
         UnlockContext(context);
         break;
 

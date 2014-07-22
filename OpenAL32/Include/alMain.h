@@ -748,7 +748,7 @@ struct ALCcontext_struct
 
     volatile ALenum LastError;
 
-    volatile ALenum UpdateSources;
+    ATOMIC(ALenum) UpdateSources;
 
     volatile enum DistanceModel DistanceModel;
     volatile ALboolean SourceDistanceModel;

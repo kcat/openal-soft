@@ -15,7 +15,7 @@ typedef struct {
     volatile int read_entry_lock;
     volatile int write_lock;
 } RWLock;
-#define RWLOCK_STATIC_INITIALIZE { STATIC_REFCOUNT_INIT(0), STATIC_REFCOUNT_INIT(0), false, false, false }
+#define RWLOCK_STATIC_INITIALIZE { ATOMIC_INIT_STATIC(0), ATOMIC_INIT_STATIC(0), false, false, false }
 
 void RWLockInit(RWLock *lock);
 void ReadLock(RWLock *lock);

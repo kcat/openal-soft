@@ -103,6 +103,9 @@
 /* Define if we have C11 _Alignas support */
 #cmakedefine HAVE_C11_ALIGNAS
 
+/* Define if we have C11 _Atomic support */
+#cmakedefine HAVE_C11_ATOMIC
+
 /* Define if we have GCC's destructor attribute */
 #cmakedefine HAVE_GCC_DESTRUCTOR
 

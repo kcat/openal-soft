@@ -35,6 +35,7 @@ ALboolean TrapALError = AL_FALSE;
 
 ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
 {
+    ALenum curerr = AL_NO_ERROR;
     if(TrapALError)
     {
 #ifdef _WIN32
@@ -45,7 +46,7 @@ ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
         raise(SIGTRAP);
 #endif
     }
-    ATOMIC_COMPARE_EXCHANGE(ALenum, Context->LastError, AL_NO_ERROR, errorCode);
+    (void)ATOMIC_COMPARE_EXCHANGE(ALenum, Context->LastError, curerr, errorCode);
 }
 
 AL_API ALenum AL_APIENTRY alGetError(void)

@@ -2181,6 +2181,7 @@ static ALCvoid FreeContext(ALCcontext *context)
 static void ReleaseContext(ALCcontext *context, ALCdevice *device)
 {
     ALCcontext *volatile*tmp_ctx;
+    ALCcontext *origctx;
 
     if(altss_get(LocalContext) == context)
     {
@@ -2189,7 +2190,8 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
         ALCcontext_DecRef(context);
     }
 
-    if(ATOMIC_COMPARE_EXCHANGE(ALCcontext*, GlobalContext, context, NULL) == context)
+    origctx = context;
+    if(ATOMIC_COMPARE_EXCHANGE(ALCcontext*, GlobalContext, origctx, NULL))
         ALCcontext_DecRef(context);
 
     ALCdevice_Lock(device);

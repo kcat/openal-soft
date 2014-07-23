@@ -164,6 +164,16 @@ CHECK_C_SOURCE_COMPILES(
  }"
 HAVE_C11_ALIGNAS)
 
+# Check if we have C11 _Atomic
+CHECK_C_SOURCE_COMPILES(
+"#include <stdatomic.h>
+ int _Atomic foo;
+ int main()
+ {
+     return atomic_load(&foo);
+ }"
+HAVE_C11_ATOMIC)
+
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES("${OpenAL_SOURCE_DIR}/include" "${OpenAL_BINARY_DIR}")
 IF(CMAKE_VERSION VERSION_LESS "2.8.8")

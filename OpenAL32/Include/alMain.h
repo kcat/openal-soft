@@ -621,7 +621,7 @@ struct ALCdevice_struct
 
     al_string DeviceName;
 
-    volatile ALCenum LastError;
+    ATOMIC(ALCenum) LastError;
 
     // Maximum number of sources that can be created
     ALuint       MaxNoOfSources;
@@ -746,7 +746,7 @@ struct ALCcontext_struct
     UIntMap SourceMap;
     UIntMap EffectSlotMap;
 
-    volatile ALenum LastError;
+    ATOMIC(ALenum) LastError;
 
     ATOMIC(ALenum) UpdateSources;
 

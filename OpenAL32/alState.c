@@ -752,7 +752,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         slot_end = VECTOR_ITER_END(context->ActiveAuxSlots);
         while(slot != slot_end)
         {
-            if(ExchangeInt(&(*slot)->NeedsUpdate, AL_FALSE))
+            if(ATOMIC_EXCHANGE(ALenum, (*slot)->NeedsUpdate, AL_FALSE))
                 V((*slot)->EffectState,update)(context->Device, *slot);
             slot++;
         }

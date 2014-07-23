@@ -71,7 +71,7 @@ typedef struct ALeffectslot {
     volatile ALfloat   Gain;
     volatile ALboolean AuxSendAuto;
 
-    volatile ALenum NeedsUpdate;
+    ATOMIC(ALenum) NeedsUpdate;
     ALeffectState *EffectState;
 
     alignas(16) ALfloat WetBuffer[1][BUFFERSIZE];

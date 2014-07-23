@@ -246,7 +246,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
         slot->Gain = value;
-        slot->NeedsUpdate = AL_TRUE;
+        ATOMIC_STORE(slot->NeedsUpdate, AL_TRUE);
         break;
 
     default:
@@ -485,7 +485,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         /* FIXME: This should be done asynchronously, but since the EffectState
          * object was changed, it needs an update before its Process method can
          * be called. */
-        EffectSlot->NeedsUpdate = AL_FALSE;
+        ATOMIC_STORE(EffectSlot->NeedsUpdate, AL_FALSE);
         V(EffectSlot->EffectState,update)(Device, EffectSlot);
         ALCdevice_Unlock(Device);
 
@@ -501,7 +501,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
             ALCdevice_Lock(Device);
             memcpy(&EffectSlot->EffectProps, &effect->Props, sizeof(effect->Props));
             ALCdevice_Unlock(Device);
-            EffectSlot->NeedsUpdate = AL_TRUE;
+            ATOMIC_STORE(EffectSlot->NeedsUpdate, AL_TRUE);
         }
     }
 
@@ -522,7 +522,7 @@ ALenum InitEffectSlot(ALeffectslot *slot)
 
     slot->Gain = 1.0;
     slot->AuxSendAuto = AL_TRUE;
-    slot->NeedsUpdate = AL_FALSE;
+    ATOMIC_STORE_UNSAFE(slot->NeedsUpdate, AL_FALSE);
     for(c = 0;c < 1;c++)
     {
         for(i = 0;i < BUFFERSIZE;i++)

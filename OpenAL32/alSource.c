@@ -2500,13 +2500,9 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
                 Context->ActiveSources[Context->ActiveSourceCount] = src;
             }
             memset(src, 0, sizeof(*src));
+            Context->ActiveSourceCount++;
 
             src->Source = Source;
-            if(BufferList->buffer->FmtChannels == FmtMono)
-                src->Update = CalcSourceParams;
-            else
-                src->Update = CalcNonAttnSourceParams;
-            Context->ActiveSourceCount++;
         }
         else
         {
@@ -2530,6 +2526,12 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
                 src->Send[i].Moving  = AL_FALSE;
             }
         }
+
+        if(BufferList->buffer->FmtChannels == FmtMono)
+            src->Update = CalcSourceParams;
+        else
+            src->Update = CalcNonAttnSourceParams;
+
         ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
     }
     else if(state == AL_PAUSED)

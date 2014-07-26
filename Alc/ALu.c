@@ -1167,7 +1167,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             ALenum UpdateSources = AL_FALSE;
 
             if(!DeferUpdates)
-                UpdateSources = ATOMIC_EXCHANGE(ALenum, ctx->UpdateSources, AL_FALSE);
+                UpdateSources = ATOMIC_EXCHANGE(ALenum, &ctx->UpdateSources, AL_FALSE);
 
             if(UpdateSources)
                 CalcListenerParams(ctx->Listener);
@@ -1188,7 +1188,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     continue;
                 }
 
-                if(!DeferUpdates && (ATOMIC_EXCHANGE(ALenum, source->NeedsUpdate, AL_FALSE) ||
+                if(!DeferUpdates && (ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) ||
                                      UpdateSources))
                     (*src)->Update(*src, ctx);
 
@@ -1202,7 +1202,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             slot_end = VECTOR_ITER_END(ctx->ActiveAuxSlots);
             while(slot != slot_end)
             {
-                if(!DeferUpdates && ATOMIC_EXCHANGE(ALenum, (*slot)->NeedsUpdate, AL_FALSE))
+                if(!DeferUpdates && ATOMIC_EXCHANGE(ALenum, &(*slot)->NeedsUpdate, AL_FALSE))
                     V((*slot)->EffectState,update)(device, *slot);
 
                 V((*slot)->EffectState,process)(SamplesToDo, (*slot)->WetBuffer[0],
@@ -1220,7 +1220,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         slot = &device->DefaultSlot;
         if(*slot != NULL)
         {
-            if(ATOMIC_EXCHANGE(ALenum, (*slot)->NeedsUpdate, AL_FALSE))
+            if(ATOMIC_EXCHANGE(ALenum, &(*slot)->NeedsUpdate, AL_FALSE))
                 V((*slot)->EffectState,update)(device, *slot);
 
             V((*slot)->EffectState,process)(SamplesToDo, (*slot)->WetBuffer[0],

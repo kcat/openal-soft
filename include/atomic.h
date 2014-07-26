@@ -29,18 +29,18 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 
 #define ATOMIC_INIT_STATIC(_newval) {ATOMIC_VAR_INIT(_newval)}
 
-#define ATOMIC_LOAD_UNSAFE(_val)           atomic_load_explicit(&(_val).value, memory_order_relaxed)
-#define ATOMIC_STORE_UNSAFE(_val, _newval) atomic_store_explicit(&(_val).value, (_newval), memory_order_relaxed)
+#define ATOMIC_LOAD_UNSAFE(_val)           atomic_load_explicit(&(_val)->value, memory_order_relaxed)
+#define ATOMIC_STORE_UNSAFE(_val, _newval) atomic_store_explicit(&(_val)->value, (_newval), memory_order_relaxed)
 
-#define ATOMIC_LOAD(_val)            atomic_load(&(_val).value)
-#define ATOMIC_STORE(_val, _newval)  atomic_store(&(_val).value, (_newval))
+#define ATOMIC_LOAD(_val)            atomic_load(&(_val)->value)
+#define ATOMIC_STORE(_val, _newval)  atomic_store(&(_val)->value, (_newval))
 
-#define ATOMIC_ADD(T, _val, _incr) atomic_fetch_add(&(_val).value, (_incr))
-#define ATOMIC_SUB(T, _val, _decr) atomic_fetch_sub(&(_val).value, (_decr))
+#define ATOMIC_ADD(T, _val, _incr) atomic_fetch_add(&(_val)->value, (_incr))
+#define ATOMIC_SUB(T, _val, _decr) atomic_fetch_sub(&(_val)->value, (_decr))
 
-#define ATOMIC_EXCHANGE(T, _val, _newval) atomic_exchange(&(_val).value, (_newval))
+#define ATOMIC_EXCHANGE(T, _val, _newval) atomic_exchange(&(_val)->value, (_newval))
 #define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval)                    \
-    atomic_compare_exchange_strong(&(_val).value, &(_oldval), (_newval))
+    atomic_compare_exchange_strong(&(_val)->value, (_oldval), (_newval))
 
 /* Atomics using GCC intrinsics */
 #elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) && !defined(__QNXNTO__)
@@ -59,35 +59,35 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
 
-#define ATOMIC_LOAD_UNSAFE(_val)  ((_val).value)
+#define ATOMIC_LOAD_UNSAFE(_val)  ((_val)->value)
 #define ATOMIC_STORE_UNSAFE(_val, _newval)  do {  \
-    (_val).value = (_newval);                     \
+    (_val)->value = (_newval);                    \
 } while(0)
 
-#define ATOMIC_LOAD(_val)  (__sync_synchronize(),(_val).value)
+#define ATOMIC_LOAD(_val)  (__sync_synchronize(),(_val)->value)
 #define ATOMIC_STORE(_val, _newval)  do {  \
-    (_val).value = (_newval);              \
+    (_val)->value = (_newval);             \
     __sync_synchronize();                  \
 } while(0)
 
 #define ATOMIC_ADD(T, _val, _incr)  __extension__({                           \
-    static_assert(sizeof(T)==sizeof((_val).value), "Type "#T" has incorrect size!"); \
-    __sync_fetch_and_add(&(_val).value, (_incr));                             \
+    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
+    __sync_fetch_and_add(&(_val)->value, (_incr));                            \
 })
 #define ATOMIC_SUB(T, _val, _decr)  __extension__({                           \
-    static_assert(sizeof(T)==sizeof((_val).value), "Type "#T" has incorrect size!"); \
-    __sync_fetch_and_sub(&(_val).value, (_decr));                             \
+    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
+    __sync_fetch_and_sub(&(_val)->value, (_decr));                            \
 })
 
 #define ATOMIC_EXCHANGE(T, _val, _newval)  __extension__({                    \
-    static_assert(sizeof(T)==sizeof((_val).value), "Type "#T" has incorrect size!"); \
-    __sync_lock_test_and_set(&(_val).value, (_newval));                       \
+    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
+    __sync_lock_test_and_set(&(_val)->value, (_newval));                      \
 })
 #define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval) __extension__({    \
-    static_assert(sizeof(T)==sizeof((_val).value), "Type "#T" has incorrect size!"); \
-    __typeof(_oldval) _old = (_oldval);                                       \
-    (_oldval) = __sync_val_compare_and_swap(&(_val).value, (_oldval), (_newval)); \
-    (_oldval) == _old;                                                        \
+    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
+    __typeof(*_oldval) _old = *(_oldval);                                     \
+    *(_oldval) = __sync_val_compare_and_swap(&(_val)->value, _old, (_newval)); \
+    *(_oldval) == _old;                                                       \
 })
 
 /* Atomics using x86/x86-64 GCC inline assembly */
@@ -142,50 +142,50 @@ inline void *CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
 
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
 
-#define ATOMIC_LOAD_UNSAFE(_val)  ((_val).value)
+#define ATOMIC_LOAD_UNSAFE(_val)  ((_val)->value)
 #define ATOMIC_STORE_UNSAFE(_val, _newval)  do {  \
-    (_val).value = (_newval);                     \
+    (_val)->value = (_newval);                    \
 } while(0)
 
 inline void _al_mem_barrier(void)
 { __asm__ __volatile__("" ::: "memory"); }
 
-#define ATOMIC_LOAD(_val)  (_al_mem_barrier(),(_val).value)
+#define ATOMIC_LOAD(_val)  (_al_mem_barrier(),(_val)->value)
 #define ATOMIC_STORE(_val, _newval)  do {  \
-    (_val).value = (_newval);              \
+    (_val)->value = (_newval);             \
     _al_mem_barrier();                     \
 } while(0)
 
 #define ATOMIC_ADD(T, _val, _incr)  __extension__({                           \
     static_assert(sizeof(T)==4, "Type "#T" has incorrect size!");             \
-    static_assert(sizeof(T)==sizeof((_val).value), "Type "#T" has incorrect size!"); \
+    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     T _r;                                                                     \
-    WRAP_ADD(_r, &(_val).value, (_incr));                                     \
+    WRAP_ADD(_r, &(_val)->value, (_incr));                                    \
     _r;                                                                       \
 })
 #define ATOMIC_SUB(T, _val, _decr)  __extension__({                           \
     static_assert(sizeof(T)==4, "Type "#T" has incorrect size!");             \
-    static_assert(sizeof(T)==sizeof((_val).value), "Type "#T" has incorrect size!"); \
+    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     T _r;                                                                     \
-    WRAP_SUB(_r, &(_val).value, (_decr));                                     \
+    WRAP_SUB(_r, &(_val)->value, (_decr));                                    \
     _r;                                                                       \
 })
 
 #define ATOMIC_EXCHANGE(T, _val, _newval)  __extension__({                    \
     static_assert(sizeof(T)==4 || sizeof(T)==8, "Type "#T" has incorrect size!"); \
-    static_assert(sizeof(T)==sizeof((_val).value), "Type "#T" has incorrect size!"); \
+    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     T _r;                                                                     \
-    if(sizeof(T) == 4) WRAP_XCHG("l", _r, &(_val).value, (_newval));          \
-    else if(sizeof(T) == 8) WRAP_XCHG("q", _r, &(_val).value, (_newval));     \
+    if(sizeof(T) == 4) WRAP_XCHG("l", _r, &(_val)->value, (_newval));         \
+    else if(sizeof(T) == 8) WRAP_XCHG("q", _r, &(_val)->value, (_newval));    \
     _r;                                                                       \
 })
 #define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval) __extension__({    \
     static_assert(sizeof(T)==4 || sizeof(T)==8, "Type "#T" has incorrect size!"); \
-    static_assert(sizeof(T)==sizeof((_val).value), "Type "#T" has incorrect size!"); \
-    __typeof(_oldval) _old = (_oldval);                                       \
-    if(sizeof(T) == 4) WRAP_CMPXCHG("l", (_oldval), &(_val).value, (_oldval), (_newval)); \
-    else if(sizeof(T) == 8) WRAP_CMPXCHG("q", (_oldval), &(_val).value, (_oldval), (_newval)); \
-    (_oldval) == _old;                                                        \
+    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
+    __typeof(*_oldval) _old = *(_oldval);                                     \
+    if(sizeof(T) == 4) WRAP_CMPXCHG("l", *(_oldval), &(_val)->value, _old, (_newval)); \
+    else if(sizeof(T) == 8) WRAP_CMPXCHG("q", *(_oldval), &(_val)->value, _old, (_newval)); \
+    *(_oldval) == _old;                                                       \
 })
 
 /* Atomics using Windows methods */
@@ -235,35 +235,35 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
 
-#define ATOMIC_LOAD_UNSAFE(_val)  ((_val).value)
+#define ATOMIC_LOAD_UNSAFE(_val)  ((_val)->value)
 #define ATOMIC_STORE_UNSAFE(_val, _newval)  do {  \
-    (_val).value = (_newval);                     \
+    (_val)->value = (_newval);                    \
 } while(0)
 
 inline void _al_mem_barrier(void) { _ReadBarrier(); }
 
-#define ATOMIC_LOAD(_val)  (_al_mem_barrier(),(_val).value)
+#define ATOMIC_LOAD(_val)  (_al_mem_barrier(),(_val)->value)
 #define ATOMIC_STORE(_val, _newval)  do {  \
-    (_val).value = (_newval);              \
+    (_val)->value = (_newval);             \
     _WriteBarrier();                       \
 } while(0)
 
 int _al_invalid_atomic_size(); /* not defined */
 
 #define ATOMIC_ADD(T, _val, _incr)                                            \
-    ((sizeof(T)==4) ? WRAP_ADD(LONG, T, InterlockedExchangeAdd, &(_val).value, (_incr)) : \
+    ((sizeof(T)==4) ? WRAP_ADD(LONG, T, InterlockedExchangeAdd, &(_val)->value, (_incr)) : \
      (T)_al_invalid_atomic_size())
 #define ATOMIC_SUB(T, _val, _decr)                                            \
-    ((sizeof(T)==4) ? WRAP_SUB(LONG, T, InterlockedExchangeAdd, &(_val).value, (_decr)) : \
+    ((sizeof(T)==4) ? WRAP_SUB(LONG, T, InterlockedExchangeAdd, &(_val)->value, (_decr)) : \
      (T)_al_invalid_atomic_size())
 
 #define ATOMIC_EXCHANGE(T, _val, _newval)                                     \
-    ((sizeof(T)==4) ? WRAP_XCHG(LONG, T, InterlockedExchange, &(_val).value, (_newval)) : \
-     (sizeof(T)==8) ? WRAP_XCHG(LONGLONG, T, InterlockedExchange64, &(_val).value, (_newval)) : \
+    ((sizeof(T)==4) ? WRAP_XCHG(LONG, T, InterlockedExchange, &(_val)->value, (_newval)) : \
+     (sizeof(T)==8) ? WRAP_XCHG(LONGLONG, T, InterlockedExchange64, &(_val)->value, (_newval)) : \
      (T)_al_invalid_atomic_size())
 #define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval)                    \
-    ((sizeof(T)==4) ? WRAP_CMPXCHG(LONG, T, CompareAndSwap32, &(_val).value, (_newval), &(_oldval)) : \
-     (sizeof(T)==8) ? WRAP_CMPXCHG(LONGLONG, T, CompareAndSwap64, &(_val).value, (_newval), &(_oldval)) : \
+    ((sizeof(T)==4) ? WRAP_CMPXCHG(LONG, T, CompareAndSwap32, &(_val)->value, (_newval), (_oldval)) : \
+     (sizeof(T)==8) ? WRAP_CMPXCHG(LONGLONG, T, CompareAndSwap64, &(_val)->value, (_newval), (_oldval)) : \
      (bool)_al_invalid_atomic_size())
 
 #else
@@ -275,17 +275,17 @@ typedef unsigned int uint;
 typedef ATOMIC(uint) RefCount;
 
 inline void InitRef(RefCount *ptr, uint value)
-{ ATOMIC_STORE_UNSAFE(*ptr, value); }
+{ ATOMIC_STORE_UNSAFE(ptr, value); }
 inline uint ReadRef(RefCount *ptr)
-{ return ATOMIC_LOAD(*ptr); }
+{ return ATOMIC_LOAD(ptr); }
 inline uint IncrementRef(RefCount *ptr)
-{ return ATOMIC_ADD(uint, *ptr, 1)+1; }
+{ return ATOMIC_ADD(uint, ptr, 1)+1; }
 inline uint DecrementRef(RefCount *ptr)
-{ return ATOMIC_SUB(uint, *ptr, 1)-1; }
+{ return ATOMIC_SUB(uint, ptr, 1)-1; }
 inline uint ExchangeRef(RefCount *ptr, uint newval)
-{ return ATOMIC_EXCHANGE(uint, *ptr, newval); }
+{ return ATOMIC_EXCHANGE(uint, ptr, newval); }
 inline uint CompExchangeRef(RefCount *ptr, uint oldval, uint newval)
-{ (void)ATOMIC_COMPARE_EXCHANGE(uint, *ptr, oldval, newval); return oldval; }
+{ (void)ATOMIC_COMPARE_EXCHANGE(uint, ptr, &oldval, newval); return oldval; }
 
 #ifdef __cplusplus
 }

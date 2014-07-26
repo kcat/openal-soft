@@ -56,7 +56,7 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
         context->SourceDistanceModel = AL_TRUE;
-        ATOMIC_STORE(context->UpdateSources, AL_TRUE);
+        ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
         break;
 
     default:
@@ -78,7 +78,7 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
         context->SourceDistanceModel = AL_FALSE;
-        ATOMIC_STORE(context->UpdateSources, AL_TRUE);
+        ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
         break;
 
     default:
@@ -643,7 +643,7 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
     context->DopplerFactor = value;
-    ATOMIC_STORE(context->UpdateSources, AL_TRUE);
+    ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
 
 done:
     ALCcontext_DecRef(context);
@@ -660,7 +660,7 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
     context->DopplerVelocity = value;
-    ATOMIC_STORE(context->UpdateSources, AL_TRUE);
+    ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
 
 done:
     ALCcontext_DecRef(context);
@@ -677,7 +677,7 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
     context->SpeedOfSound = value;
-    ATOMIC_STORE(context->UpdateSources, AL_TRUE);
+    ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
 
 done:
     ALCcontext_DecRef(context);
@@ -698,7 +698,7 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
 
     context->DistanceModel = value;
     if(!context->SourceDistanceModel)
-        ATOMIC_STORE(context->UpdateSources, AL_TRUE);
+        ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
 
 done:
     ALCcontext_DecRef(context);
@@ -725,7 +725,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         context->DeferUpdates = AL_TRUE;
 
         /* Make sure all pending updates are performed */
-        UpdateSources = ATOMIC_EXCHANGE(ALenum, context->UpdateSources, AL_FALSE);
+        UpdateSources = ATOMIC_EXCHANGE(ALenum, &context->UpdateSources, AL_FALSE);
 
         src = context->ActiveSources;
         src_end = src + context->ActiveSourceCount;
@@ -742,7 +742,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
                 continue;
             }
 
-            if(ATOMIC_EXCHANGE(ALenum, source->NeedsUpdate, AL_FALSE) || UpdateSources)
+            if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) || UpdateSources)
                 (*src)->Update(*src, context);
 
             src++;
@@ -752,7 +752,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         slot_end = VECTOR_ITER_END(context->ActiveAuxSlots);
         while(slot != slot_end)
         {
-            if(ATOMIC_EXCHANGE(ALenum, (*slot)->NeedsUpdate, AL_FALSE))
+            if(ATOMIC_EXCHANGE(ALenum, &(*slot)->NeedsUpdate, AL_FALSE))
                 V((*slot)->EffectState,update)(context->Device, *slot);
             slot++;
         }

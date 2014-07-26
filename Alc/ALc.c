@@ -1558,9 +1558,9 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
     }
 
     if(device)
-        ATOMIC_STORE(device->LastError, errorCode);
+        ATOMIC_STORE(&device->LastError, errorCode);
     else
-        ATOMIC_STORE(LastNullDeviceError, errorCode);
+        ATOMIC_STORE(&LastNullDeviceError, errorCode);
 }
 
 
@@ -1882,7 +1882,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         ALsizei pos;
 
-        ATOMIC_STORE_UNSAFE(context->UpdateSources, AL_FALSE);
+        ATOMIC_STORE_UNSAFE(&context->UpdateSources, AL_FALSE);
         LockUIntMapRead(&context->EffectSlotMap);
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
@@ -1895,7 +1895,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 RestoreFPUMode(&oldMode);
                 return ALC_INVALID_DEVICE;
             }
-            ATOMIC_STORE(slot->NeedsUpdate, AL_FALSE);
+            ATOMIC_STORE(&slot->NeedsUpdate, AL_FALSE);
             V(slot->EffectState,update)(device, slot);
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
@@ -1914,7 +1914,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 source->Send[s].GainHF = 1.0f;
                 s++;
             }
-            ATOMIC_STORE_UNSAFE(source->NeedsUpdate, AL_TRUE);
+            ATOMIC_STORE_UNSAFE(&source->NeedsUpdate, AL_TRUE);
         }
         UnlockUIntMapRead(&context->SourceMap);
 
@@ -1931,7 +1931,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
 
             src->Update(src, context);
-            ATOMIC_STORE_UNSAFE(source->NeedsUpdate, AL_FALSE);
+            ATOMIC_STORE_UNSAFE(&source->NeedsUpdate, AL_FALSE);
         }
 
         context = context->next;
@@ -1946,7 +1946,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             RestoreFPUMode(&oldMode);
             return ALC_INVALID_DEVICE;
         }
-        ATOMIC_STORE(slot->NeedsUpdate, AL_FALSE);
+        ATOMIC_STORE(&slot->NeedsUpdate, AL_FALSE);
         V(slot->EffectState,update)(device, slot);
     }
     ALCdevice_Unlock(device);
@@ -2110,8 +2110,8 @@ static ALvoid InitContext(ALCcontext *Context)
         Context->Listener->Params.Velocity[i] = 0.0f;
 
     //Validate Context
-    ATOMIC_STORE_UNSAFE(Context->LastError, AL_NO_ERROR);
-    ATOMIC_STORE_UNSAFE(Context->UpdateSources, AL_FALSE);
+    ATOMIC_STORE_UNSAFE(&Context->LastError, AL_NO_ERROR);
+    ATOMIC_STORE_UNSAFE(&Context->UpdateSources, AL_FALSE);
     Context->ActiveSourceCount = 0;
     InitUIntMap(&Context->SourceMap, Context->Device->MaxNoOfSources);
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
@@ -2191,7 +2191,7 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
     }
 
     origctx = context;
-    if(ATOMIC_COMPARE_EXCHANGE(ALCcontext*, GlobalContext, origctx, NULL))
+    if(ATOMIC_COMPARE_EXCHANGE(ALCcontext*, &GlobalContext, &origctx, NULL))
         ALCcontext_DecRef(context);
 
     ALCdevice_Lock(device);
@@ -2274,7 +2274,7 @@ ALCcontext *GetContextRef(void)
     else
     {
         LockLists();
-        context = ATOMIC_LOAD(GlobalContext);
+        context = ATOMIC_LOAD(&GlobalContext);
         if(context)
             ALCcontext_IncRef(context);
         UnlockLists();
@@ -2298,11 +2298,11 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 
     if(VerifyDevice(device))
     {
-        errorCode = ATOMIC_EXCHANGE(ALCenum, device->LastError, ALC_NO_ERROR);
+        errorCode = ATOMIC_EXCHANGE(ALCenum, &device->LastError, ALC_NO_ERROR);
         ALCdevice_DecRef(device);
     }
     else
-        errorCode = ATOMIC_EXCHANGE(ALCenum, LastNullDeviceError, ALC_NO_ERROR);
+        errorCode = ATOMIC_EXCHANGE(ALCenum, &LastNullDeviceError, ALC_NO_ERROR);
 
     return errorCode;
 }
@@ -2856,7 +2856,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
-    ATOMIC_STORE(device->LastError, ALC_NO_ERROR);
+    ATOMIC_STORE(&device->LastError, ALC_NO_ERROR);
 
     if((err=UpdateDeviceParams(device, attrList)) != ALC_NO_ERROR)
     {
@@ -2955,7 +2955,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 {
     ALCcontext *Context = altss_get(LocalContext);
-    if(!Context) Context = ATOMIC_LOAD(GlobalContext);
+    if(!Context) Context = ATOMIC_LOAD(&GlobalContext);
     return Context;
 }
 
@@ -2983,7 +2983,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
         return ALC_FALSE;
     }
     /* context's reference count is already incremented */
-    context = ATOMIC_EXCHANGE(ALCcontext*, GlobalContext, context);
+    context = ATOMIC_EXCHANGE(ALCcontext*, &GlobalContext, context);
     if(context) ALCcontext_DecRef(context);
 
     if((context=altss_get(LocalContext)) != NULL)
@@ -3070,7 +3070,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitRef(&device->ref, 1);
     device->Connected = ALC_TRUE;
     device->Type = Playback;
-    ATOMIC_STORE_UNSAFE(device->LastError, ALC_NO_ERROR);
+    ATOMIC_STORE_UNSAFE(&device->LastError, ALC_NO_ERROR);
 
     device->Flags = 0;
     device->Bs2b = NULL;
@@ -3536,7 +3536,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitRef(&device->ref, 1);
     device->Connected = ALC_TRUE;
     device->Type = Loopback;
-    ATOMIC_STORE_UNSAFE(device->LastError, ALC_NO_ERROR);
+    ATOMIC_STORE_UNSAFE(&device->LastError, ALC_NO_ERROR);
 
     device->Flags = 0;
     device->Bs2b = NULL;

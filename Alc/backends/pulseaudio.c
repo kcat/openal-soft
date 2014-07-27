@@ -435,7 +435,9 @@ static void pulse_close(pa_threaded_mainloop *loop, pa_context *context,
 
     if(stream)
     {
+        pa_stream_set_state_callback(stream, NULL, NULL);
         pa_stream_set_moved_callback(stream, NULL, NULL);
+        pa_stream_set_write_callback(stream, NULL, NULL);
 #if PA_CHECK_VERSION(0,9,15)
         if(pa_stream_set_buffer_attr_callback)
             pa_stream_set_buffer_attr_callback(stream, NULL, NULL);
@@ -501,6 +503,7 @@ static void ALCpulsePlayback_probeDevices(void);
 static void ALCpulsePlayback_bufferAttrCallback(pa_stream *stream, void *pdata);
 static void ALCpulsePlayback_contextStateCallback(pa_context *context, void *pdata);
 static void ALCpulsePlayback_streamStateCallback(pa_stream *stream, void *pdata);
+static void ALCpulsePlayback_streamWriteCallback(pa_stream *p, size_t nbytes, void *userdata);
 static void ALCpulsePlayback_sinkInfoCallback(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
 static void ALCpulsePlayback_sinkNameCallback(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
 static void ALCpulsePlayback_streamMovedCallback(pa_stream *stream, void *pdata);
@@ -657,6 +660,12 @@ static void ALCpulsePlayback_streamStateCallback(pa_stream *stream, void *pdata)
     pa_threaded_mainloop_signal(self->loop, 0);
 }
 
+static void ALCpulsePlayback_streamWriteCallback(pa_stream* UNUSED(p), size_t UNUSED(nbytes), void *pdata)
+{
+    ALCpulsePlayback *self = pdata;
+    pa_threaded_mainloop_signal(self->loop, 0);
+}
+
 static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
 {
     ALCpulsePlayback *self = pdata;
@@ -806,9 +815,7 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
                 o = pa_stream_cork(self->stream, 0, NULL, NULL);
                 if(o) pa_operation_unref(o);
             }
-            pa_threaded_mainloop_unlock(self->loop);
-            al_nssleep(0, 1000000);
-            pa_threaded_mainloop_lock(self->loop);
+            pa_threaded_mainloop_wait(self->loop);
             continue;
         }
         len -= len%update_size;
@@ -1037,6 +1044,7 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     }
     pa_stream_set_state_callback(self->stream, ALCpulsePlayback_streamStateCallback, self);
     pa_stream_set_moved_callback(self->stream, ALCpulsePlayback_streamMovedCallback, self);
+    pa_stream_set_write_callback(self->stream, ALCpulsePlayback_streamWriteCallback, self);
 
     self->spec = *(pa_stream_get_sample_spec(self->stream));
     if(device->Frequency != self->spec.rate)

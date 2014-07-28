@@ -194,6 +194,34 @@ inline void _al_mem_barrier(void)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+/* NOTE: This mess is *extremely* noisy, at least on GCC. It works by wrapping
+ * Windows' 32-bit and 64-bit atomic methods, which are then casted to use the
+ * given type based on its size (e.g. int and float use 32-bit atomics). This
+ * is fine for the swap and compare-and-swap methods, although the add and
+ * subtract methods only work properly for integer types.
+ *
+ * Despite how noisy it is, it's unfortunately the only way that doesn't rely
+ * on C99 (damn MSVC).
+ */
+
+inline LONG AtomicAdd32(volatile LONG *dest, LONG incr)
+{
+    return InterlockedExchangeAdd(dest, incr);
+}
+inline LONG AtomicSub32(volatile LONG *dest, LONG decr)
+{
+    return InterlockedExchangeAdd(dest, -decr);
+}
+
+inline LONG AtomicSwap32(volatile LONG *dest, LONG newval)
+{
+    return InterlockedExchange(dest, newval);
+}
+inline LONGLONG AtomicSwap64(volatile LONGLONG *dest, LONGLONG newval)
+{
+    return InterlockedExchange64(dest, newval);
+}
+
 inline bool CompareAndSwap32(volatile LONG *dest, LONG newval, LONG *oldval)
 {
     LONG old = *oldval;
@@ -207,27 +235,25 @@ inline bool CompareAndSwap64(volatile LONGLONG *dest, LONGLONG newval, LONGLONG 
     return old == *oldval;
 }
 
-#define RAW_CAST(T1, T2, _val)  (((union{T2 from; T1 to;}){.from=(_val)}).to)
-#define WRAP_ADD(T1, T2, _func, _ptr, _incr)  RAW_CAST(T2,T1,_func(RAW_CAST(T1 volatile*,T2 volatile*,(_ptr)), RAW_CAST(T1,T2,(_incr))))
-#define WRAP_SUB(T1, T2, _func, _ptr, _decr)  RAW_CAST(T2,T1,_func(RAW_CAST(T1 volatile*,T2 volatile*,(_ptr)), -RAW_CAST(T1,T2,(_decr))))
-#define WRAP_XCHG(T1, T2, _func, _ptr, _newval)  RAW_CAST(T2,T1,_func(RAW_CAST(T1 volatile*,T2 volatile*,(_ptr)), RAW_CAST(T1,T2,(_newval))))
-#define WRAP_CMPXCHG(T1, T2, _func, _ptr, _newval, _oldval)  _func(RAW_CAST(T1 volatile*,T2 volatile*,(_ptr)), RAW_CAST(T1,T2,(_newval)), RAW_CAST(T1*,T2*,(_oldval)))
+#define WRAP_ADDSUB(T, _func, _ptr, _amnt)  ((T(*)(T volatile*,T))_func)((_ptr), (_amnt))
+#define WRAP_XCHG(T, _func, _ptr, _newval)  ((T(*)(T volatile*,T))_func)((_ptr), (_newval))
+#define WRAP_CMPXCHG(T, _func, _ptr, _newval, _oldval) ((bool(*)(T volatile*,T,T*))_func)((_ptr), (_newval), (_oldval))
 
 inline int ExchangeInt(volatile int *ptr, int newval)
-{ return WRAP_XCHG(LONG,int,InterlockedExchange,ptr,newval); }
+{ return WRAP_XCHG(int,AtomicSwap32,ptr,newval); }
 inline int CompExchangeInt(volatile int *ptr, int oldval, int newval)
-{ WRAP_CMPXCHG(LONG,int,CompareAndSwap32,ptr,newval,&oldval); return oldval; }
+{ WRAP_CMPXCHG(int,CompareAndSwap32,ptr,newval,&oldval); return oldval; }
 
 #ifdef _WIN64
 inline void *ExchangePtr(XchgPtr *ptr, void *newval)
-{ return WRAP_XCHG(LONGLONG,void*,InterlockedExchange64,ptr,newval); }
+{ return WRAP_XCHG(void*,AtomicSwap64,ptr,newval); }
 inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
-{ WRAP_CMPXCHG(LONGLONG,void*,CompareAndSwap64,ptr,newval,&oldval); return oldval; }
+{ WRAP_CMPXCHG(void*,CompareAndSwap64,ptr,newval,&oldval); return oldval; }
 #else
 inline void *ExchangePtr(XchgPtr *ptr, void *newval)
-{ return WRAP_XCHG(LONG,void*,InterlockedExchange,ptr,newval); }
+{ return WRAP_XCHG(void*,AtomicSwap32,ptr,newval); }
 inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
-{ WRAP_CMPXCHG(LONG,void*,CompareAndSwap32,ptr,newval,&oldval); return oldval; }
+{ WRAP_CMPXCHG(void*,CompareAndSwap32,ptr,newval,&oldval); return oldval; }
 #endif
 
 
@@ -251,19 +277,19 @@ inline void _al_mem_barrier(void) { MemoryBarrier(); }
 int _al_invalid_atomic_size(); /* not defined */
 
 #define ATOMIC_ADD(T, _val, _incr)                                            \
-    ((sizeof(T)==4) ? WRAP_ADD(LONG, T, InterlockedExchangeAdd, &(_val)->value, (_incr)) : \
+    ((sizeof(T)==4) ? WRAP_ADDSUB(T, AtomicAdd32, &(_val)->value, (_incr)) :  \
      (T)_al_invalid_atomic_size())
 #define ATOMIC_SUB(T, _val, _decr)                                            \
-    ((sizeof(T)==4) ? WRAP_SUB(LONG, T, InterlockedExchangeAdd, &(_val)->value, (_decr)) : \
+    ((sizeof(T)==4) ? WRAP_ADDSUB(T, AtomicSub32, &(_val)->value, (_decr)) :  \
      (T)_al_invalid_atomic_size())
 
 #define ATOMIC_EXCHANGE(T, _val, _newval)                                     \
-    ((sizeof(T)==4) ? WRAP_XCHG(LONG, T, InterlockedExchange, &(_val)->value, (_newval)) : \
-     (sizeof(T)==8) ? WRAP_XCHG(LONGLONG, T, InterlockedExchange64, &(_val)->value, (_newval)) : \
+    ((sizeof(T)==4) ? WRAP_XCHG(T, AtomicSwap32, &(_val)->value, (_newval)) : \
+     (sizeof(T)==8) ? WRAP_XCHG(T, AtomicSwap64, &(_val)->value, (_newval)) : \
      (T)_al_invalid_atomic_size())
 #define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval)                    \
-    ((sizeof(T)==4) ? WRAP_CMPXCHG(LONG, T, CompareAndSwap32, &(_val)->value, (_newval), (_oldval)) : \
-     (sizeof(T)==8) ? WRAP_CMPXCHG(LONGLONG, T, CompareAndSwap64, &(_val)->value, (_newval), (_oldval)) : \
+    ((sizeof(T)==4) ? WRAP_CMPXCHG(T, CompareAndSwap32, &(_val)->value, (_newval), (_oldval)) : \
+     (sizeof(T)==8) ? WRAP_CMPXCHG(T, CompareAndSwap64, &(_val)->value, (_newval), (_oldval)) : \
      (bool)_al_invalid_atomic_size())
 
 #else

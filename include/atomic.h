@@ -240,12 +240,12 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
     (_val)->value = (_newval);                    \
 } while(0)
 
-inline void _al_mem_barrier(void) { _ReadBarrier(); }
+inline void _al_mem_barrier(void) { MemoryBarrier(); }
 
 #define ATOMIC_LOAD(_val)  (_al_mem_barrier(),(_val)->value)
 #define ATOMIC_STORE(_val, _newval)  do {  \
     (_val)->value = (_newval);             \
-    _WriteBarrier();                       \
+    MemoryBarrier();                       \
 } while(0)
 
 int _al_invalid_atomic_size(); /* not defined */

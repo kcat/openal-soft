@@ -19,8 +19,6 @@ inline int ExchangeInt(volatile int *ptr, int newval)
 { return atomic_exchange(ptr, newval); }
 inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 { return atomic_exchange(ptr, newval); }
-inline int CompExchangeInt(volatile int *ptr, int oldval, int newval)
-{ atomic_compare_exchange_strong(ptr, &oldval, newval); return oldval; }
 inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 { atomic_compare_exchange_strong(ptr, &oldval, newval); return oldval; }
 
@@ -49,8 +47,6 @@ inline int ExchangeInt(volatile int *ptr, int newval)
 { return __sync_lock_test_and_set(ptr, newval); }
 inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 { return __sync_lock_test_and_set(ptr, newval); }
-inline int CompExchangeInt(volatile int *ptr, int oldval, int newval)
-{ return __sync_val_compare_and_swap(ptr, oldval, newval); }
 inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 { return __sync_val_compare_and_swap(ptr, oldval, newval); }
 
@@ -126,8 +122,6 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 
 inline int ExchangeInt(volatile int *dest, int newval)
 { int ret; WRAP_XCHG("l", ret, dest, newval); return ret; }
-inline int CompExchangeInt(volatile int *dest, int oldval, int newval)
-{ int ret; WRAP_CMPXCHG("l", ret, dest, oldval, newval); return ret; }
 
 #ifdef __i386__
 inline void *ExchangePtr(XchgPtr *dest, void *newval)
@@ -246,8 +240,6 @@ inline bool CompareAndSwap64(volatile LONGLONG *dest, LONGLONG newval, LONGLONG 
 
 inline int ExchangeInt(volatile int *ptr, int newval)
 { return WRAP_XCHG(int,AtomicSwap32,ptr,newval); }
-inline int CompExchangeInt(volatile int *ptr, int oldval, int newval)
-{ WRAP_CMPXCHG(int,CompareAndSwap32,ptr,newval,&oldval); return oldval; }
 
 #ifdef _WIN64
 inline void *ExchangePtr(XchgPtr *ptr, void *newval)

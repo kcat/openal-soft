@@ -260,7 +260,7 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
 
     /* Calculate the stepping value */
     Channels = FmtMono;
-    BufferListItem = ALSource->queue;
+    BufferListItem = ATOMIC_LOAD(&ALSource->queue);
     while(BufferListItem != NULL)
     {
         ALbuffer *ALBuffer;
@@ -872,7 +872,7 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
                  clampf(SpeedOfSound-VSS, 1.0f, SpeedOfSound*2.0f - 1.0f);
     }
 
-    BufferListItem = ALSource->queue;
+    BufferListItem = ATOMIC_LOAD(&ALSource->queue);
     while(BufferListItem != NULL)
     {
         ALbuffer *ALBuffer;
@@ -1308,7 +1308,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
             if(source->state == AL_PLAYING)
             {
                 source->state = AL_STOPPED;
-                source->current_buffer = NULL;
+                ATOMIC_STORE(&source->current_buffer, NULL);
                 source->position = 0;
                 source->position_fraction = 0;
             }

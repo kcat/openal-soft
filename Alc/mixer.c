@@ -198,7 +198,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 
     /* Get source info */
     State          = Source->state;
-    BufferListItem = Source->current_buffer;
+    BufferListItem = ATOMIC_LOAD(&Source->current_buffer);
     DataPosInt     = Source->position;
     DataPosFrac    = Source->position_fraction;
     Looping        = Source->Looping;
@@ -397,7 +397,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
                     }
                     tmpiter = tmpiter->next;
                     if(!tmpiter && Looping)
-                        tmpiter = Source->queue;
+                        tmpiter = ATOMIC_LOAD(&Source->queue);
                     else if(!tmpiter)
                     {
                         SilenceSamples(&SrcData[SrcDataSize], SrcBufferSize - SrcDataSize);
@@ -484,17 +484,18 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
             if(DataSize > DataPosInt)
                 break;
 
-            if(BufferListItem->next)
-                BufferListItem = BufferListItem->next;
-            else if(Looping)
-                BufferListItem = Source->queue;
-            else
+            if(!(BufferListItem=BufferListItem->next))
             {
-                State = AL_STOPPED;
-                BufferListItem = NULL;
-                DataPosInt = 0;
-                DataPosFrac = 0;
-                break;
+                if(Looping)
+                    BufferListItem = ATOMIC_LOAD(&Source->queue);
+                else
+                {
+                    State = AL_STOPPED;
+                    BufferListItem = NULL;
+                    DataPosInt = 0;
+                    DataPosFrac = 0;
+                    break;
+                }
             }
 
             DataPosInt -= DataSize;
@@ -503,7 +504,7 @@ ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
 
     /* Update source info */
     Source->state             = State;
-    Source->current_buffer    = BufferListItem;
+    ATOMIC_STORE(&Source->current_buffer, BufferListItem);
     Source->position          = DataPosInt;
     Source->position_fraction = DataPosFrac;
 }

@@ -18,9 +18,9 @@ extern const ALsizei ResamplerPrePadding[ResamplerMax];
 
 
 typedef struct ALbufferlistitem {
-    struct ALbuffer         *buffer;
-    struct ALbufferlistitem *next;
-    struct ALbufferlistitem *prev;
+    struct ALbuffer *buffer;
+    struct ALbufferlistitem *volatile next;
+    struct ALbufferlistitem *volatile prev;
 } ALbufferlistitem;
 
 
@@ -98,8 +98,8 @@ typedef struct ALsource {
     ALuint position_fraction;
 
     /** Source Buffer Queue info. */
-    ALbufferlistitem *volatile queue;
-    ALbufferlistitem *volatile current_buffer;
+    ATOMIC(ALbufferlistitem*) queue;
+    ATOMIC(ALbufferlistitem*) current_buffer;
     RWLock queue_lock;
 
     /** Current buffer sample info. */

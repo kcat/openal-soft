@@ -59,15 +59,19 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
 
-#define ATOMIC_LOAD_UNSAFE(_val)  ((_val)->value)
+#define ATOMIC_LOAD_UNSAFE(_val)  __extension__({(_val)->value;})
 #define ATOMIC_STORE_UNSAFE(_val, _newval)  do {  \
     (_val)->value = (_newval);                    \
 } while(0)
 
-#define ATOMIC_LOAD(_val)  (__sync_synchronize(),(_val)->value)
+#define ATOMIC_LOAD(_val)  __extension__({      \
+    __typeof((_val)->value) _r = (_val)->value; \
+    __asm__ __volatile__("" ::: "memory");      \
+    _r;                                         \
+})
 #define ATOMIC_STORE(_val, _newval)  do {  \
+    __asm__ __volatile__("" ::: "memory"); \
     (_val)->value = (_newval);             \
-    __sync_synchronize();                  \
 } while(0)
 
 #define ATOMIC_ADD(T, _val, _incr)  __extension__({                           \
@@ -142,18 +146,19 @@ inline void *CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
 
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
 
-#define ATOMIC_LOAD_UNSAFE(_val)  ((_val)->value)
+#define ATOMIC_LOAD_UNSAFE(_val)  __extension__({(_val)->value;})
 #define ATOMIC_STORE_UNSAFE(_val, _newval)  do {  \
     (_val)->value = (_newval);                    \
 } while(0)
 
-inline void _al_mem_barrier(void)
-{ __asm__ __volatile__("" ::: "memory"); }
-
-#define ATOMIC_LOAD(_val)  (_al_mem_barrier(),(_val)->value)
+#define ATOMIC_LOAD(_val)  __extension__({      \
+    __typeof((_val)->value) _r = (_val)->value; \
+    __asm__ __volatile__("" ::: "memory");      \
+    _r;                                         \
+})
 #define ATOMIC_STORE(_val, _newval)  do {  \
+    __asm__ __volatile__("" ::: "memory"); \
     (_val)->value = (_newval);             \
-    _al_mem_barrier();                     \
 } while(0)
 
 #define ATOMIC_ADD(T, _val, _incr)  __extension__({                           \
@@ -266,12 +271,9 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
     (_val)->value = (_newval);                    \
 } while(0)
 
-inline void _al_mem_barrier(void) { MemoryBarrier(); }
-
-#define ATOMIC_LOAD(_val)  (_al_mem_barrier(),(_val)->value)
+#define ATOMIC_LOAD(_val)  ((_val)->value)
 #define ATOMIC_STORE(_val, _newval)  do {  \
     (_val)->value = (_newval);             \
-    MemoryBarrier();                       \
 } while(0)
 
 int _al_invalid_atomic_size(); /* not defined */
@@ -293,7 +295,24 @@ int _al_invalid_atomic_size(); /* not defined */
      (bool)_al_invalid_atomic_size())
 
 #else
+
 #error "No atomic functions available on this platform!"
+
+#define ATOMIC(T)  T
+
+#define ATOMIC_INIT_STATIC(_newval) (0)
+
+#define ATOMIC_LOAD_UNSAFE(_val)  (0)
+#define ATOMIC_STORE_UNSAFE(_val, _newval)  ((void)0)
+
+#define ATOMIC_LOAD(_val)  (0)
+#define ATOMIC_STORE(_val, _newval)  ((void)0)
+
+#define ATOMIC_ADD(T, _val, _incr)  (0)
+#define ATOMIC_SUB(T, _val, _decr)  (0)
+
+#define ATOMIC_EXCHANGE(T, _val, _newval)  (0)
+#define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval) (0)
 #endif
 
 

@@ -39,7 +39,7 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
 #define ATOMIC_SUB(T, _val, _decr) atomic_fetch_sub(&(_val)->value, (_decr))
 
 #define ATOMIC_EXCHANGE(T, _val, _newval) atomic_exchange(&(_val)->value, (_newval))
-#define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval)                    \
+#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval)             \
     atomic_compare_exchange_strong(&(_val)->value, (_oldval), (_newval))
 
 /* Atomics using GCC intrinsics */
@@ -87,7 +87,7 @@ inline void *CompExchangePtr(XchgPtr *ptr, void *oldval, void *newval)
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     __sync_lock_test_and_set(&(_val)->value, (_newval));                      \
 })
-#define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval) __extension__({    \
+#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval) __extension__({ \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     __typeof(*_oldval) _old = *(_oldval);                                     \
     *(_oldval) = __sync_val_compare_and_swap(&(_val)->value, _old, (_newval)); \
@@ -184,7 +184,7 @@ inline void *CompExchangePtr(XchgPtr *dest, void *oldval, void *newval)
     else if(sizeof(T) == 8) WRAP_XCHG("q", _r, &(_val)->value, (_newval));    \
     _r;                                                                       \
 })
-#define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval) __extension__({    \
+#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval) __extension__({ \
     static_assert(sizeof(T)==4 || sizeof(T)==8, "Type "#T" has incorrect size!"); \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     __typeof(*_oldval) _old = *(_oldval);                                     \
@@ -289,7 +289,7 @@ int _al_invalid_atomic_size(); /* not defined */
     ((sizeof(T)==4) ? WRAP_XCHG(T, AtomicSwap32, &(_val)->value, (_newval)) : \
      (sizeof(T)==8) ? WRAP_XCHG(T, AtomicSwap64, &(_val)->value, (_newval)) : \
      (T)_al_invalid_atomic_size())
-#define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval)                    \
+#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval)             \
     ((sizeof(T)==4) ? WRAP_CMPXCHG(T, CompareAndSwap32, &(_val)->value, (_newval), (_oldval)) : \
      (sizeof(T)==8) ? WRAP_CMPXCHG(T, CompareAndSwap64, &(_val)->value, (_newval), (_oldval)) : \
      (bool)_al_invalid_atomic_size())
@@ -312,7 +312,7 @@ int _al_invalid_atomic_size(); /* not defined */
 #define ATOMIC_SUB(T, _val, _decr)  (0)
 
 #define ATOMIC_EXCHANGE(T, _val, _newval)  (0)
-#define ATOMIC_COMPARE_EXCHANGE(T, _val, _oldval, _newval) (0)
+#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval) (0)
 #endif
 
 
@@ -327,10 +327,6 @@ inline uint IncrementRef(RefCount *ptr)
 { return ATOMIC_ADD(uint, ptr, 1)+1; }
 inline uint DecrementRef(RefCount *ptr)
 { return ATOMIC_SUB(uint, ptr, 1)-1; }
-inline uint ExchangeRef(RefCount *ptr, uint newval)
-{ return ATOMIC_EXCHANGE(uint, ptr, newval); }
-inline uint CompExchangeRef(RefCount *ptr, uint oldval, uint newval)
-{ (void)ATOMIC_COMPARE_EXCHANGE(uint, ptr, &oldval, newval); return oldval; }
 
 #ifdef __cplusplus
 }

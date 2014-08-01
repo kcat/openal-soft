@@ -83,9 +83,9 @@ inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 })
 #define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval) __extension__({ \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
-    __typeof(*_oldval) _old = *(_oldval);                                     \
-    *(_oldval) = __sync_val_compare_and_swap(&(_val)->value, _old, (_newval)); \
-    *(_oldval) == _old;                                                       \
+    T _o = *(_oldval);                                                        \
+    *(_oldval) = __sync_val_compare_and_swap(&(_val)->value, _o, (_newval));  \
+    *(_oldval) == _o;                                                         \
 })
 
 /* Atomics using x86/x86-64 GCC inline assembly */
@@ -175,7 +175,7 @@ inline void *ExchangePtr(XchgPtr *dest, void *newval)
 #define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval) __extension__({ \
     static_assert(sizeof(T)==4 || sizeof(T)==8, "Type "#T" has incorrect size!"); \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
-    __typeof(*_oldval) _old = *(_oldval);                                     \
+    T _old = *(_oldval);                                                      \
     if(sizeof(T) == 4) WRAP_CMPXCHG("l", *(_oldval), &(_val)->value, _old, (T)(_newval)); \
     else if(sizeof(T) == 8) WRAP_CMPXCHG("q", *(_oldval), &(_val)->value, _old, (T)(_newval)); \
     *(_oldval) == _old;                                                       \

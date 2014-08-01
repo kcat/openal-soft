@@ -694,11 +694,11 @@ struct ALCdevice_struct
     struct ALeffectslot *DefaultSlot;
 
     // Contexts created on this device
-    ALCcontext *volatile ContextList;
+    ATOMIC(ALCcontext*) ContextList;
 
     struct ALCbackend *Backend;
 
-    void         *ExtraData; // For the backend's use
+    void *ExtraData; // For the backend's use
 
     ALCdevice *volatile next;
 

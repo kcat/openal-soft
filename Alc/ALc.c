@@ -766,7 +766,7 @@ static const ALCint alcEFXMinorVersion = 0;
 /************************************************
  * Device lists
  ************************************************/
-static ALCdevice *volatile DeviceList = NULL;
+static ATOMIC(ALCdevice*) DeviceList = ATOMIC_INIT_STATIC(NULL);
 
 static almtx_t ListLock;
 static inline void LockLists(void)
@@ -1165,7 +1165,7 @@ static void alc_cleanup(void)
     free(alcCaptureDefaultDeviceSpecifier);
     alcCaptureDefaultDeviceSpecifier = NULL;
 
-    if((dev=ExchangePtr((XchgPtr*)&DeviceList, NULL)) != NULL)
+    if((dev=ATOMIC_EXCHANGE(ALCdevice*, &DeviceList, NULL)) != NULL)
     {
         ALCuint num = 0;
         do {
@@ -1877,7 +1877,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     SetMixerFPUMode(&oldMode);
     ALCdevice_Lock(device);
-    context = device->ContextList;
+    context = ATOMIC_LOAD(&device->ContextList);
     while(context)
     {
         ALsizei pos;
@@ -2067,7 +2067,7 @@ static ALCdevice *VerifyDevice(ALCdevice *device)
         return NULL;
 
     LockLists();
-    tmpDevice = DeviceList;
+    tmpDevice = ATOMIC_LOAD(&DeviceList);
     while(tmpDevice && tmpDevice != device)
         tmpDevice = tmpDevice->next;
 
@@ -2180,7 +2180,7 @@ static ALCvoid FreeContext(ALCcontext *context)
  */
 static void ReleaseContext(ALCcontext *context, ALCdevice *device)
 {
-    ALCcontext *volatile*tmp_ctx;
+    ALCcontext *nextctx;
     ALCcontext *origctx;
 
     if(altss_get(LocalContext) == context)
@@ -2195,12 +2195,15 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
         ALCcontext_DecRef(context);
 
     ALCdevice_Lock(device);
-    tmp_ctx = &device->ContextList;
-    while(*tmp_ctx)
+    origctx = context;
+    nextctx = context->next;
+    if(!ATOMIC_COMPARE_EXCHANGE_STRONG(ALCcontext*, &device->ContextList, &origctx, nextctx))
     {
-        if(CompExchangePtr((XchgPtr*)tmp_ctx, context, context->next) == context)
-            break;
-        tmp_ctx = &(*tmp_ctx)->next;
+        ALCcontext *list;
+        do {
+            list = origctx;
+            origctx = context;
+        } while(!COMPARE_EXCHANGE(&list->next, &origctx, nextctx));
     }
     ALCdevice_Unlock(device);
 
@@ -2237,19 +2240,19 @@ static ALCcontext *VerifyContext(ALCcontext *context)
     ALCdevice *dev;
 
     LockLists();
-    dev = DeviceList;
+    dev = ATOMIC_LOAD(&DeviceList);
     while(dev)
     {
-        ALCcontext *tmp_ctx = dev->ContextList;
-        while(tmp_ctx)
+        ALCcontext *ctx = ATOMIC_LOAD(&dev->ContextList);
+        while(ctx)
         {
-            if(tmp_ctx == context)
+            if(ctx == context)
             {
-                ALCcontext_IncRef(tmp_ctx);
+                ALCcontext_IncRef(ctx);
                 UnlockLists();
-                return tmp_ctx;
+                return ctx;
             }
-            tmp_ctx = tmp_ctx->next;
+            ctx = ctx->next;
         }
         dev = dev->next;
     }
@@ -2886,7 +2889,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     }
     if(!ALContext || !ALContext->ActiveSources)
     {
-        if(!device->ContextList)
+        if(!ATOMIC_LOAD(&device->ContextList))
         {
             V0(device->Backend,stop)();
             device->Flags &= ~DEVICE_RUNNING;
@@ -2913,9 +2916,12 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALCdevice_IncRef(device);
     InitContext(ALContext);
 
-    do {
-        ALContext->next = device->ContextList;
-    } while(CompExchangePtr((XchgPtr*)&device->ContextList, ALContext->next, ALContext) != ALContext->next);
+    {
+        ALCcontext *head = ATOMIC_LOAD(&device->ContextList);
+        do {
+            ALContext->next = head;
+        } while(!ATOMIC_COMPARE_EXCHANGE_WEAK(ALCcontext*, &device->ContextList, &head, ALContext));
+    }
     UnlockLists();
 
     ALCdevice_DecRef(device);
@@ -2938,7 +2944,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     if(Device)
     {
         ReleaseContext(context, Device);
-        if(!Device->ContextList)
+        if(!ATOMIC_LOAD(&Device->ContextList))
         {
             V0(Device->Backend,stop)();
             Device->Flags &= ~DEVICE_RUNNING;
@@ -3077,7 +3083,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Bs2bLevel = 0;
     AL_STRING_INIT(device->DeviceName);
 
-    device->ContextList = NULL;
+    ATOMIC_STORE_UNSAFE(&device->ContextList, NULL);
 
     device->ClockBase = 0;
     device->SamplesDone = 0;
@@ -3287,9 +3293,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         }
     }
 
-    do {
-        device->next = DeviceList;
-    } while(CompExchangePtr((XchgPtr*)&DeviceList, device->next, device) != device->next);
+    {
+        ALCdevice *head = ATOMIC_LOAD(&DeviceList);
+        do {
+            device->next = head;
+        } while(!ATOMIC_COMPARE_EXCHANGE_WEAK(ALCdevice*, &DeviceList, &head, device));
+    }
 
     TRACE("Created device %p, \"%s\"\n", device, al_string_get_cstr(device->DeviceName));
     return device;
@@ -3299,36 +3308,48 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
  *
  * Closes the given device.
  */
-ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *Device)
+ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
 {
-    ALCdevice *volatile*list;
+    ALCdevice *list, *origdev, *nextdev;
     ALCcontext *ctx;
 
     LockLists();
-    list = &DeviceList;
-    while(*list && *list != Device)
-        list = &(*list)->next;
-
-    if(!*list || (*list)->Type == Capture)
+    list = ATOMIC_LOAD(&DeviceList);
+    do {
+        if(list == device)
+            break;
+    } while((list=list->next) != NULL);
+    if(!list || list->Type == Capture)
     {
-        alcSetError(*list, ALC_INVALID_DEVICE);
+        alcSetError(list, ALC_INVALID_DEVICE);
         UnlockLists();
         return ALC_FALSE;
     }
 
-    *list = (*list)->next;
+    origdev = device;
+    nextdev = device->next;
+    if(!ATOMIC_COMPARE_EXCHANGE_STRONG(ALCdevice*, &DeviceList, &origdev, nextdev))
+    {
+        do {
+            list = origdev;
+            origdev = device;
+        } while(!COMPARE_EXCHANGE(&list->next, &origdev, nextdev));
+    }
     UnlockLists();
 
-    while((ctx=Device->ContextList) != NULL)
+    ctx = ATOMIC_LOAD(&device->ContextList);
+    while(ctx != NULL)
     {
+        ALCcontext *next = ctx->next;
         WARN("Releasing context %p\n", ctx);
-        ReleaseContext(ctx, Device);
+        ReleaseContext(ctx, device);
+        ctx = next;
     }
-    if((Device->Flags&DEVICE_RUNNING))
-        V0(Device->Backend,stop)();
-    Device->Flags &= ~DEVICE_RUNNING;
+    if((device->Flags&DEVICE_RUNNING))
+        V0(device->Backend,stop)();
+    device->Flags &= ~DEVICE_RUNNING;
 
-    ALCdevice_DecRef(Device);
+    ALCdevice_DecRef(device);
 
     return ALC_TRUE;
 }
@@ -3416,34 +3437,46 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return NULL;
     }
 
-    do {
-        device->next = DeviceList;
-    } while(CompExchangePtr((XchgPtr*)&DeviceList, device->next, device) != device->next);
+    {
+        ALCdevice *head = ATOMIC_LOAD(&DeviceList);
+        do {
+            device->next = head;
+        } while(!ATOMIC_COMPARE_EXCHANGE_WEAK(ALCdevice*, &DeviceList, &head, device));
+    }
 
     TRACE("Created device %p, \"%s\"\n", device, al_string_get_cstr(device->DeviceName));
     return device;
 }
 
-ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *Device)
+ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
 {
-    ALCdevice *volatile*list;
+    ALCdevice *list, *next, *nextdev;
 
     LockLists();
-    list = &DeviceList;
-    while(*list && *list != Device)
-        list = &(*list)->next;
-
-    if(!*list || (*list)->Type != Capture)
+    list = ATOMIC_LOAD(&DeviceList);
+    do {
+        if(list == device)
+            break;
+    } while((list=list->next) != NULL);
+    if(!list || list->Type != Capture)
     {
-        alcSetError(*list, ALC_INVALID_DEVICE);
+        alcSetError(list, ALC_INVALID_DEVICE);
         UnlockLists();
         return ALC_FALSE;
     }
 
-    *list = (*list)->next;
+    next = device;
+    nextdev = device->next;
+    if(!ATOMIC_COMPARE_EXCHANGE_STRONG(ALCdevice*, &DeviceList, &next, nextdev))
+    {
+        do {
+            list = next;
+            next = device;
+        } while(!COMPARE_EXCHANGE(&list->next, &next, nextdev));
+    }
     UnlockLists();
 
-    ALCdevice_DecRef(Device);
+    ALCdevice_DecRef(device);
 
     return ALC_TRUE;
 }
@@ -3543,7 +3576,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->Bs2bLevel = 0;
     AL_STRING_INIT(device->DeviceName);
 
-    device->ContextList = NULL;
+    ATOMIC_STORE_UNSAFE(&device->ContextList, NULL);
 
     device->ClockBase = 0;
     device->SamplesDone = 0;
@@ -3599,9 +3632,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     // Open the "backend"
     V(device->Backend,open)("Loopback");
-    do {
-        device->next = DeviceList;
-    } while(CompExchangePtr((XchgPtr*)&DeviceList, device->next, device) != device->next);
+
+    {
+        ALCdevice *head = ATOMIC_LOAD(&DeviceList);
+        do {
+            device->next = head;
+        } while(!ATOMIC_COMPARE_EXCHANGE_WEAK(ALCdevice*, &DeviceList, &head, device));
+    }
 
     TRACE("Created device %p\n", device);
     return device;
@@ -3686,7 +3723,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
         if((device->Flags&DEVICE_PAUSED))
         {
             device->Flags &= ~DEVICE_PAUSED;
-            if(device->ContextList != NULL)
+            if(ATOMIC_LOAD(&device->ContextList) != NULL)
             {
                 if(V0(device->Backend,start)() != ALC_FALSE)
                     device->Flags |= DEVICE_RUNNING;

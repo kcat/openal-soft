@@ -1160,7 +1160,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         ALCdevice_Lock(device);
         V(device->Synth,process)(SamplesToDo, device->DryBuffer);
 
-        ctx = device->ContextList;
+        ctx = ATOMIC_LOAD(&device->ContextList);
         while(ctx)
         {
             ALenum DeferUpdates = ctx->DeferUpdates;
@@ -1295,7 +1295,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
 
     device->Connected = ALC_FALSE;
 
-    Context = device->ContextList;
+    Context = ATOMIC_LOAD(&device->ContextList);
     while(Context)
     {
         ALactivesource **src, **src_end;

@@ -153,14 +153,14 @@ inline void *ExchangePtr(XchgPtr *dest, void *newval)
     static_assert(sizeof(T)==4, "Type "#T" has incorrect size!");             \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     T _r;                                                                     \
-    WRAP_ADD(_r, &(_val)->value, (_incr));                                    \
+    WRAP_ADD(_r, &(_val)->value, (T)(_incr));                                 \
     _r;                                                                       \
 })
 #define ATOMIC_SUB(T, _val, _decr)  __extension__({                           \
     static_assert(sizeof(T)==4, "Type "#T" has incorrect size!");             \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     T _r;                                                                     \
-    WRAP_SUB(_r, &(_val)->value, (_decr));                                    \
+    WRAP_SUB(_r, &(_val)->value, (T)(_decr));                                 \
     _r;                                                                       \
 })
 
@@ -168,16 +168,16 @@ inline void *ExchangePtr(XchgPtr *dest, void *newval)
     static_assert(sizeof(T)==4 || sizeof(T)==8, "Type "#T" has incorrect size!"); \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     T _r;                                                                     \
-    if(sizeof(T) == 4) WRAP_XCHG("l", _r, &(_val)->value, (_newval));         \
-    else if(sizeof(T) == 8) WRAP_XCHG("q", _r, &(_val)->value, (_newval));    \
+    if(sizeof(T) == 4) WRAP_XCHG("l", _r, &(_val)->value, (T)(_newval));      \
+    else if(sizeof(T) == 8) WRAP_XCHG("q", _r, &(_val)->value, (T)(_newval)); \
     _r;                                                                       \
 })
 #define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval) __extension__({ \
     static_assert(sizeof(T)==4 || sizeof(T)==8, "Type "#T" has incorrect size!"); \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     __typeof(*_oldval) _old = *(_oldval);                                     \
-    if(sizeof(T) == 4) WRAP_CMPXCHG("l", *(_oldval), &(_val)->value, _old, (_newval)); \
-    else if(sizeof(T) == 8) WRAP_CMPXCHG("q", *(_oldval), &(_val)->value, _old, (_newval)); \
+    if(sizeof(T) == 4) WRAP_CMPXCHG("l", *(_oldval), &(_val)->value, _old, (T)(_newval)); \
+    else if(sizeof(T) == 8) WRAP_CMPXCHG("q", *(_oldval), &(_val)->value, _old, (T)(_newval)); \
     *(_oldval) == _old;                                                       \
 })
 

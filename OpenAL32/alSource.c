@@ -935,11 +935,11 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp
         case AL_SEC_OFFSET:
         case AL_SAMPLE_OFFSET:
         case AL_BYTE_OFFSET:
-            ReadLock(&Source->queue_lock);
             LockContext(Context);
+            ReadLock(&Source->queue_lock);
             GetSourceOffsets(Source, prop, offsets, 0.0);
-            UnlockContext(Context);
             ReadUnlock(&Source->queue_lock);
+            UnlockContext(Context);
             *values = offsets[0];
             return AL_TRUE;
 
@@ -982,23 +982,23 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp
 
         case AL_SAMPLE_RW_OFFSETS_SOFT:
         case AL_BYTE_RW_OFFSETS_SOFT:
-            ReadLock(&Source->queue_lock);
             LockContext(Context);
+            ReadLock(&Source->queue_lock);
             updateLen = (ALdouble)Context->Device->UpdateSize /
                         Context->Device->Frequency;
             GetSourceOffsets(Source, prop, values, updateLen);
-            UnlockContext(Context);
             ReadUnlock(&Source->queue_lock);
+            UnlockContext(Context);
             return AL_TRUE;
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
-            ReadLock(&Source->queue_lock);
             LockContext(Context);
+            ReadLock(&Source->queue_lock);
             values[0] = GetSourceSecOffset(Source);
+            ReadUnlock(&Source->queue_lock);
             values[1] = (ALdouble)ALCdevice_GetLatency(Context->Device) /
                         1000000000.0;
             UnlockContext(Context);
-            ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_POSITION:
@@ -1247,12 +1247,12 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp
     switch(prop)
     {
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
-            ReadLock(&Source->queue_lock);
             LockContext(Context);
+            ReadLock(&Source->queue_lock);
             values[0] = GetSourceOffset(Source);
+            ReadUnlock(&Source->queue_lock);
             values[1] = ALCdevice_GetLatency(Context->Device);
             UnlockContext(Context);
-            ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_MAX_DISTANCE:

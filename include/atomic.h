@@ -23,10 +23,8 @@ inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 
 #define ATOMIC(T)  struct { T _Atomic value; }
 
+#define ATOMIC_INIT(_val, _newval) atomic_init(&(_val)->value, (_newval))
 #define ATOMIC_INIT_STATIC(_newval) {ATOMIC_VAR_INIT(_newval)}
-
-#define ATOMIC_LOAD_UNSAFE(_val)           atomic_load_explicit(&(_val)->value, memory_order_relaxed)
-#define ATOMIC_STORE_UNSAFE(_val, _newval) atomic_store_explicit(&(_val)->value, (_newval), memory_order_relaxed)
 
 #define ATOMIC_LOAD(_val)            atomic_load(&(_val)->value)
 #define ATOMIC_STORE(_val, _newval)  atomic_store(&(_val)->value, (_newval))
@@ -51,12 +49,8 @@ inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 
 #define ATOMIC(T)  struct { T volatile value; }
 
+#define ATOMIC_INIT(_val, _newval)  do { (_val)->value = (_newval); } while(0)
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
-
-#define ATOMIC_LOAD_UNSAFE(_val)  __extension__({(_val)->value;})
-#define ATOMIC_STORE_UNSAFE(_val, _newval)  do {  \
-    (_val)->value = (_newval);                    \
-} while(0)
 
 #define ATOMIC_LOAD(_val)  __extension__({      \
     __typeof((_val)->value) _r = (_val)->value; \
@@ -132,12 +126,8 @@ inline void *ExchangePtr(XchgPtr *dest, void *newval)
 
 #define ATOMIC(T)  struct { T volatile value; }
 
+#define ATOMIC_INIT(_val, _newval)  do { (_val)->value = (_newval); } while(0)
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
-
-#define ATOMIC_LOAD_UNSAFE(_val)  __extension__({(_val)->value;})
-#define ATOMIC_STORE_UNSAFE(_val, _newval)  do {  \
-    (_val)->value = (_newval);                    \
-} while(0)
 
 #define ATOMIC_LOAD(_val)  __extension__({      \
     __typeof((_val)->value) _r = (_val)->value; \
@@ -246,12 +236,8 @@ inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 
 #define ATOMIC(T)  struct { T volatile value; }
 
+#define ATOMIC_INIT(_val, _newval)  do { (_val)->value = (_newval); } while(0)
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
-
-#define ATOMIC_LOAD_UNSAFE(_val)  ((_val)->value)
-#define ATOMIC_STORE_UNSAFE(_val, _newval)  do {  \
-    (_val)->value = (_newval);                    \
-} while(0)
 
 #define ATOMIC_LOAD(_val)  ((_val)->value)
 #define ATOMIC_STORE(_val, _newval)  do {  \
@@ -312,7 +298,7 @@ typedef unsigned int uint;
 typedef ATOMIC(uint) RefCount;
 
 inline void InitRef(RefCount *ptr, uint value)
-{ ATOMIC_STORE_UNSAFE(ptr, value); }
+{ ATOMIC_INIT(ptr, value); }
 inline uint ReadRef(RefCount *ptr)
 { return ATOMIC_LOAD(ptr); }
 inline uint IncrementRef(RefCount *ptr)

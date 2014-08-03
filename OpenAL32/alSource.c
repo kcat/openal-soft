@@ -2423,8 +2423,8 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->SourceType = AL_UNDETERMINED;
     Source->Offset = -1.0;
 
-    ATOMIC_STORE_UNSAFE(&Source->queue, NULL);
-    ATOMIC_STORE_UNSAFE(&Source->current_buffer, NULL);
+    ATOMIC_INIT(&Source->queue, NULL);
+    ATOMIC_INIT(&Source->current_buffer, NULL);
 
     Source->Direct.Gain = 1.0f;
     Source->Direct.GainHF = 1.0f;
@@ -2440,7 +2440,7 @@ static ALvoid InitSourceParams(ALsource *Source)
         Source->Send[i].LFReference = HIGHPASSFREQREF;
     }
 
-    ATOMIC_STORE_UNSAFE(&Source->NeedsUpdate, AL_TRUE);
+    ATOMIC_INIT(&Source->NeedsUpdate, AL_TRUE);
 }
 
 

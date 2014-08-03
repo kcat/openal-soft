@@ -1882,7 +1882,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         ALsizei pos;
 
-        ATOMIC_STORE_UNSAFE(&context->UpdateSources, AL_FALSE);
+        ATOMIC_STORE(&context->UpdateSources, AL_FALSE);
         LockUIntMapRead(&context->EffectSlotMap);
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
@@ -1914,7 +1914,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 source->Send[s].GainHF = 1.0f;
                 s++;
             }
-            ATOMIC_STORE_UNSAFE(&source->NeedsUpdate, AL_TRUE);
+            ATOMIC_STORE(&source->NeedsUpdate, AL_TRUE);
         }
         UnlockUIntMapRead(&context->SourceMap);
 
@@ -1931,7 +1931,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
 
             src->Update(src, context);
-            ATOMIC_STORE_UNSAFE(&source->NeedsUpdate, AL_FALSE);
+            ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
         }
 
         context = context->next;
@@ -2110,8 +2110,8 @@ static ALvoid InitContext(ALCcontext *Context)
         Context->Listener->Params.Velocity[i] = 0.0f;
 
     //Validate Context
-    ATOMIC_STORE_UNSAFE(&Context->LastError, AL_NO_ERROR);
-    ATOMIC_STORE_UNSAFE(&Context->UpdateSources, AL_FALSE);
+    ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
+    ATOMIC_INIT(&Context->UpdateSources, AL_FALSE);
     Context->ActiveSourceCount = 0;
     InitUIntMap(&Context->SourceMap, Context->Device->MaxNoOfSources);
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
@@ -3076,14 +3076,14 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitRef(&device->ref, 1);
     device->Connected = ALC_TRUE;
     device->Type = Playback;
-    ATOMIC_STORE_UNSAFE(&device->LastError, ALC_NO_ERROR);
+    ATOMIC_INIT(&device->LastError, ALC_NO_ERROR);
 
     device->Flags = 0;
     device->Bs2b = NULL;
     device->Bs2bLevel = 0;
     AL_STRING_INIT(device->DeviceName);
 
-    ATOMIC_STORE_UNSAFE(&device->ContextList, NULL);
+    ATOMIC_INIT(&device->ContextList, NULL);
 
     device->ClockBase = 0;
     device->SamplesDone = 0;
@@ -3569,14 +3569,14 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitRef(&device->ref, 1);
     device->Connected = ALC_TRUE;
     device->Type = Loopback;
-    ATOMIC_STORE_UNSAFE(&device->LastError, ALC_NO_ERROR);
+    ATOMIC_INIT(&device->LastError, ALC_NO_ERROR);
 
     device->Flags = 0;
     device->Bs2b = NULL;
     device->Bs2bLevel = 0;
     AL_STRING_INIT(device->DeviceName);
 
-    ATOMIC_STORE_UNSAFE(&device->ContextList, NULL);
+    ATOMIC_INIT(&device->ContextList, NULL);
 
     device->ClockBase = 0;
     device->SamplesDone = 0;

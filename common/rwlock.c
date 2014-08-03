@@ -21,9 +21,9 @@ void RWLockInit(RWLock *lock)
 {
     InitRef(&lock->read_count, 0);
     InitRef(&lock->write_count, 0);
-    ATOMIC_STORE_UNSAFE(&lock->read_lock, false);
-    ATOMIC_STORE_UNSAFE(&lock->read_entry_lock, false);
-    ATOMIC_STORE_UNSAFE(&lock->write_lock, false);
+    ATOMIC_INIT(&lock->read_lock, false);
+    ATOMIC_INIT(&lock->read_entry_lock, false);
+    ATOMIC_INIT(&lock->write_lock, false);
 }
 
 void ReadLock(RWLock *lock)

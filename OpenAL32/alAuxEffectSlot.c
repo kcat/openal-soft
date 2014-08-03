@@ -522,7 +522,7 @@ ALenum InitEffectSlot(ALeffectslot *slot)
 
     slot->Gain = 1.0;
     slot->AuxSendAuto = AL_TRUE;
-    ATOMIC_STORE_UNSAFE(&slot->NeedsUpdate, AL_FALSE);
+    ATOMIC_INIT(&slot->NeedsUpdate, AL_FALSE);
     for(c = 0;c < 1;c++)
     {
         for(i = 0;i < BUFFERSIZE;i++)

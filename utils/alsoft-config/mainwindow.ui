@@ -58,8 +58,8 @@
        <rect>
         <x>120</x>
         <y>20</y>
-        <width>206</width>
-        <height>23</height>
+        <width>188</width>
+        <height>22</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -147,8 +147,8 @@ float and converted to the output sample type as needed.</string>
        <rect>
         <x>120</x>
         <y>50</y>
-        <width>247</width>
-        <height>23</height>
+        <width>227</width>
+        <height>22</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -200,7 +200,7 @@ to stereo output.</string>
        <rect>
         <x>120</x>
         <y>80</y>
-        <width>123</width>
+        <width>111</width>
         <height>22</height>
        </rect>
       </property>
@@ -354,7 +354,7 @@ sample rate.</string>
        </property>
        <property name="toolTip">
         <string>A list of files containing HRTF data sets. The listed data sets
-are used in place of or in addiiton to the the built-in set. The
+are used in place of or in addition to the the default sets. The
 filenames may contain these markers, which will be replaced
 as needed:
 %r - Device sampling rate
@@ -738,8 +738,8 @@ value currently possible is 4.</string>
        <rect>
         <x>110</x>
         <y>120</y>
-        <width>203</width>
-        <height>23</height>
+        <width>185</width>
+        <height>22</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -775,7 +775,7 @@ value currently possible is 4.</string>
         <x>10</x>
         <y>150</y>
         <width>511</width>
-        <height>61</height>
+        <height>91</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -815,14 +815,27 @@ preventing those extensions from being used.</string>
       <widget class="QCheckBox" name="disableNeonCheckBox">
        <property name="geometry">
         <rect>
-         <x>380</x>
-         <y>20</y>
+         <x>200</x>
+         <y>50</y>
          <width>111</width>
          <height>31</height>
         </rect>
        </property>
        <property name="text">
         <string>Disable Neon</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="disableSSE41CheckBox">
+       <property name="geometry">
+        <rect>
+         <x>370</x>
+         <y>20</y>
+         <width>121</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Disable SSE4.1</string>
        </property>
       </widget>
      </widget>
@@ -1011,10 +1024,10 @@ value of 0 means no change.</string>
      <widget class="QGroupBox" name="groupBox_5">
       <property name="geometry">
        <rect>
-        <x>9</x>
+        <x>10</x>
         <y>170</y>
         <width>511</width>
-        <height>181</height>
+        <height>191</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -1068,7 +1081,7 @@ intensive for the system to handle.</string>
        <property name="geometry">
         <rect>
          <x>70</x>
-         <y>120</y>
+         <y>150</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -1080,8 +1093,8 @@ intensive for the system to handle.</string>
       <widget class="QCheckBox" name="disableEchoCheck">
        <property name="geometry">
         <rect>
-         <x>70</x>
-         <y>150</y>
+         <x>320</x>
+         <y>30</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -1094,7 +1107,7 @@ intensive for the system to handle.</string>
        <property name="geometry">
         <rect>
          <x>320</x>
-         <y>30</y>
+         <y>60</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -1107,7 +1120,7 @@ intensive for the system to handle.</string>
        <property name="geometry">
         <rect>
          <x>320</x>
-         <y>60</y>
+         <y>90</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -1120,7 +1133,7 @@ intensive for the system to handle.</string>
        <property name="geometry">
         <rect>
          <x>320</x>
-         <y>90</y>
+         <y>120</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -1133,7 +1146,7 @@ intensive for the system to handle.</string>
        <property name="geometry">
         <rect>
          <x>320</x>
-         <y>120</y>
+         <y>150</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -1144,6 +1157,19 @@ added by the ALC_EXT_DEDICATED extension.</string>
        </property>
        <property name="text">
         <string>Dedicated ...</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="disableCompressorCheck">
+       <property name="geometry">
+        <rect>
+         <x>70</x>
+         <y>120</y>
+         <width>111</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Compressor</string>
        </property>
       </widget>
      </widget>
@@ -1168,8 +1194,8 @@ added by the ALC_EXT_DEDICATED extension.</string>
        <rect>
         <x>160</x>
         <y>20</y>
-        <width>142</width>
-        <height>23</height>
+        <width>131</width>
+        <height>22</height>
        </rect>
       </property>
       <property name="sizeAdjustPolicy">
@@ -1320,7 +1346,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
      <x>0</x>
      <y>0</y>
      <width>564</width>
-     <height>20</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

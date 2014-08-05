@@ -220,6 +220,7 @@ void MainWindow::loadConfig(const QString &fname)
                    disabledCpuExts.begin(), std::mem_fun_ref(&QString::trimmed));
     ui->disableSSECheckBox->setChecked(disabledCpuExts.contains("sse", Qt::CaseInsensitive));
     ui->disableSSE2CheckBox->setChecked(disabledCpuExts.contains("sse2", Qt::CaseInsensitive));
+    ui->disableSSE41CheckBox->setChecked(disabledCpuExts.contains("sse4.1", Qt::CaseInsensitive));
     ui->disableNeonCheckBox->setChecked(disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
     if(settings.value("hrtf").toString() == QString())
@@ -291,6 +292,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->disableEaxReverbCheck->setChecked(excludefx.contains("eaxreverb", Qt::CaseInsensitive));
     ui->disableStdReverbCheck->setChecked(excludefx.contains("reverb", Qt::CaseInsensitive));
     ui->disableChorusCheck->setChecked(excludefx.contains("chorus", Qt::CaseInsensitive));
+    ui->disableCompressorCheck->setChecked(excludefx.contains("compressor", Qt::CaseInsensitive));
     ui->disableDistortionCheck->setChecked(excludefx.contains("distortion", Qt::CaseInsensitive));
     ui->disableEchoCheck->setChecked(excludefx.contains("echo", Qt::CaseInsensitive));
     ui->disableEqualizerCheck->setChecked(excludefx.contains("equalizer", Qt::CaseInsensitive));
@@ -359,6 +361,8 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("sse");
     if(ui->disableSSE2CheckBox->isChecked())
         strlist.append("sse2");
+    if(ui->disableSSE41CheckBox->isChecked())
+        strlist.append("sse4.1");
     if(ui->disableNeonCheckBox->isChecked())
         strlist.append("neon");
     settings.setValue("disable-cpu-exts", strlist.join(QChar(',')));
@@ -418,6 +422,8 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("chorus");
     if(ui->disableDistortionCheck->isChecked())
         strlist.append("distortion");
+    if(ui->disableCompressorCheck->isChecked())
+        strlist.append("compressor");
     if(ui->disableEchoCheck->isChecked())
         strlist.append("echo");
     if(ui->disableEqualizerCheck->isChecked())

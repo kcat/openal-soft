@@ -10,13 +10,113 @@
 #include "alMain.h"
 #include "alError.h"
 #include "alMidi.h"
+#include "alu.h"
+#include "compat.h"
 #include "evtqueue.h"
 #include "rwlock.h"
-#include "alu.h"
 
 #ifdef HAVE_FLUIDSYNTH
 
 #include <fluidsynth.h>
+
+
+#ifdef HAVE_DYNLOAD
+#define FLUID_FUNCS(MAGIC)                                                    \
+    MAGIC(new_fluid_synth);                                                   \
+    MAGIC(delete_fluid_synth);                                                \
+    MAGIC(new_fluid_settings);                                                \
+    MAGIC(delete_fluid_settings);                                             \
+    MAGIC(fluid_settings_setint);                                             \
+    MAGIC(fluid_settings_setnum);                                             \
+    MAGIC(fluid_synth_noteon);                                                \
+    MAGIC(fluid_synth_noteoff);                                               \
+    MAGIC(fluid_synth_program_change);                                        \
+    MAGIC(fluid_synth_pitch_bend);                                            \
+    MAGIC(fluid_synth_channel_pressure);                                      \
+    MAGIC(fluid_synth_cc);                                                    \
+    MAGIC(fluid_synth_sysex);                                                 \
+    MAGIC(fluid_synth_bank_select);                                           \
+    MAGIC(fluid_synth_set_channel_type);                                      \
+    MAGIC(fluid_synth_all_sounds_off);                                        \
+    MAGIC(fluid_synth_system_reset);                                          \
+    MAGIC(fluid_synth_set_gain);                                              \
+    MAGIC(fluid_synth_set_sample_rate);                                       \
+    MAGIC(fluid_synth_write_float);                                           \
+    MAGIC(fluid_synth_add_sfloader);                                          \
+    MAGIC(fluid_synth_sfload);                                                \
+    MAGIC(fluid_synth_sfunload);                                              \
+    MAGIC(fluid_synth_alloc_voice);                                           \
+    MAGIC(fluid_synth_start_voice);                                           \
+    MAGIC(fluid_voice_gen_set);                                               \
+    MAGIC(fluid_voice_add_mod);                                               \
+    MAGIC(fluid_mod_set_source1);                                             \
+    MAGIC(fluid_mod_set_source2);                                             \
+    MAGIC(fluid_mod_set_amount);                                              \
+    MAGIC(fluid_mod_set_dest);
+
+void *fsynth_handle = NULL;
+#define DECL_FUNC(x) __typeof(x) *p##x
+FLUID_FUNCS(DECL_FUNC)
+#undef DECL_FUNC
+
+#define new_fluid_synth pnew_fluid_synth
+#define delete_fluid_synth pdelete_fluid_synth
+#define new_fluid_settings pnew_fluid_settings
+#define delete_fluid_settings pdelete_fluid_settings
+#define fluid_settings_setint pfluid_settings_setint
+#define fluid_settings_setnum pfluid_settings_setnum
+#define fluid_synth_noteon pfluid_synth_noteon
+#define fluid_synth_noteoff pfluid_synth_noteoff
+#define fluid_synth_program_change pfluid_synth_program_change
+#define fluid_synth_pitch_bend pfluid_synth_pitch_bend
+#define fluid_synth_channel_pressure pfluid_synth_channel_pressure
+#define fluid_synth_cc pfluid_synth_cc
+#define fluid_synth_sysex pfluid_synth_sysex
+#define fluid_synth_bank_select pfluid_synth_bank_select
+#define fluid_synth_set_channel_type pfluid_synth_set_channel_type
+#define fluid_synth_all_sounds_off pfluid_synth_all_sounds_off
+#define fluid_synth_system_reset pfluid_synth_system_reset
+#define fluid_synth_set_gain pfluid_synth_set_gain
+#define fluid_synth_set_sample_rate pfluid_synth_set_sample_rate
+#define fluid_synth_write_float pfluid_synth_write_float
+#define fluid_synth_add_sfloader pfluid_synth_add_sfloader
+#define fluid_synth_sfload pfluid_synth_sfload
+#define fluid_synth_sfunload pfluid_synth_sfunload
+#define fluid_synth_alloc_voice pfluid_synth_alloc_voice
+#define fluid_synth_start_voice pfluid_synth_start_voice
+#define fluid_voice_gen_set pfluid_voice_gen_set
+#define fluid_voice_add_mod pfluid_voice_add_mod
+#define fluid_mod_set_source1 pfluid_mod_set_source1
+#define fluid_mod_set_source2 pfluid_mod_set_source2
+#define fluid_mod_set_amount pfluid_mod_set_amount
+#define fluid_mod_set_dest pfluid_mod_set_dest
+
+static inline ALboolean LoadFSynth(void)
+{
+    ALboolean ret = AL_TRUE;
+    if(!fsynth_handle)
+    {
+        fsynth_handle = LoadLib("libfluidsynth.so.1");
+        if(!fsynth_handle) return AL_FALSE;
+
+#define LOAD_FUNC(x) do {                                                     \
+     p##x = GetSymbol(fsynth_handle, #x);                                     \
+     if(!p##x) ret = AL_FALSE;                                                \
+} while(0)
+        FLUID_FUNCS(LOAD_FUNC)
+#undef LOAD_FUNC
+
+        if(ret == AL_FALSE)
+        {
+            CloseLib(fsynth_handle);
+            fsynth_handle = NULL;
+        }
+    }
+    return ret;
+}
+#else
+static inline ALboolean LoadFSynth(void) { return AL_TRUE; }
+#endif
 
 
 /* MIDI events */
@@ -797,7 +897,12 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
 
 MidiSynth *FSynth_create(ALCdevice *device)
 {
-    FSynth *synth = FSynth_New(sizeof(*synth));
+    FSynth *synth;
+
+    if(!LoadFSynth())
+        return NULL;
+
+    synth = FSynth_New(sizeof(*synth));
     if(!synth)
     {
         ERR("Failed to allocate FSynth\n");

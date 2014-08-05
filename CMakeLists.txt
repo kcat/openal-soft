@@ -555,10 +555,26 @@ SET(ALC_OBJS  Alc/ALc.c
 
 
 SET(CPU_EXTS "Default")
-SET(HAVE_SSE 0)
-SET(HAVE_SSE2 0)
-SET(HAVE_SSE4_1 0)
-SET(HAVE_NEON 0)
+SET(HAVE_SSE        0)
+SET(HAVE_SSE2       0)
+SET(HAVE_SSE4_1     0)
+SET(HAVE_NEON       0)
+
+SET(HAVE_FLUIDSYNTH 0)
+
+SET(HAVE_ALSA       0)
+SET(HAVE_OSS        0)
+SET(HAVE_SOLARIS    0)
+SET(HAVE_SNDIO      0)
+SET(HAVE_QSA        0)
+SET(HAVE_DSOUND     0)
+SET(HAVE_MMDEVAPI   0)
+SET(HAVE_WINMM      0)
+SET(HAVE_PORTAUDIO  0)
+SET(HAVE_PULSEAUDIO 0)
+SET(HAVE_COREAUDIO  0)
+SET(HAVE_OPENSL     0)
+SET(HAVE_WAVE       0)
 
 # Check for SSE support
 OPTION(ALSOFT_REQUIRE_SSE "Require SSE support" OFF)
@@ -637,55 +653,6 @@ IF(ALSOFT_REQUIRE_NEON AND NOT HAVE_NEON)
 ENDIF()
 
 
-SET(ALC_OBJS  ${ALC_OBJS}
-              Alc/midi/base.c
-              Alc/midi/sf2load.c
-              Alc/midi/dummy.c
-              Alc/midi/fluidsynth.c
-              Alc/midi/soft.c
-)
-
-SET(HAVE_FLUIDSYNTH  0)
-
-# Check for FluidSynth support
-OPTION(ALSOFT_REQUIRE_FLUIDSYNTH "Require FluidSynth MIDI" OFF)
-FIND_PACKAGE(FluidSynth)
-IF(FLUIDSYNTH_FOUND)
-    OPTION(ALSOFT_MIDI_FLUIDSYNTH "Enable FluidSynth MIDI" ON)
-    IF(ALSOFT_MIDI_FLUIDSYNTH)
-        SET(HAVE_FLUIDSYNTH 1)
-        IF(CMAKE_VERSION VERSION_LESS "2.8.8")
-            INCLUDE_DIRECTORIES(${FLUIDSYNTH_INCLUDE_DIR})
-        ENDIF()
-        SET(EXTRA_LIBS ${FLUIDSYNTH_LIBRARIES} ${EXTRA_LIBS})
-    ENDIF()
-ENDIF()
-IF(ALSOFT_REQUIRE_FLUIDSYNTH AND NOT HAVE_FLUIDSYNTH)
-    MESSAGE(FATAL_ERROR "Failed to enabled required FluidSynth support")
-ENDIF()
-
-
-SET(ALC_OBJS  ${ALC_OBJS}
-              Alc/backends/base.c
-              # Default backends, always available
-              Alc/backends/loopback.c
-              Alc/backends/null.c
-)
-
-SET(BACKENDS "")
-SET(HAVE_ALSA       0)
-SET(HAVE_OSS        0)
-SET(HAVE_SOLARIS    0)
-SET(HAVE_SNDIO      0)
-SET(HAVE_QSA        0)
-SET(HAVE_DSOUND     0)
-SET(HAVE_MMDEVAPI   0)
-SET(HAVE_WINMM      0)
-SET(HAVE_PORTAUDIO  0)
-SET(HAVE_PULSEAUDIO 0)
-SET(HAVE_COREAUDIO  0)
-SET(HAVE_OPENSL     0)
-SET(HAVE_WAVE       0)
 IF(WIN32 OR HAVE_DLFCN_H)
     SET(IS_LINKED "")
     MACRO(ADD_BACKEND_LIBS _LIBS)
@@ -696,6 +663,40 @@ ELSE()
         SET(EXTRA_LIBS ${_LIBS} ${EXTRA_LIBS})
     ENDMACRO()
 ENDIF()
+
+SET(ALC_OBJS  ${ALC_OBJS}
+              Alc/midi/base.c
+              Alc/midi/sf2load.c
+              Alc/midi/dummy.c
+              Alc/midi/fluidsynth.c
+              Alc/midi/soft.c
+)
+
+# Check for FluidSynth support
+OPTION(ALSOFT_REQUIRE_FLUIDSYNTH "Require FluidSynth MIDI" OFF)
+FIND_PACKAGE(FluidSynth)
+IF(FLUIDSYNTH_FOUND)
+    OPTION(ALSOFT_MIDI_FLUIDSYNTH "Enable FluidSynth MIDI" ON)
+    IF(ALSOFT_MIDI_FLUIDSYNTH)
+        SET(HAVE_FLUIDSYNTH 1)
+        ADD_BACKEND_LIBS(${FLUIDSYNTH_LIBRARIES})
+        IF(CMAKE_VERSION VERSION_LESS "2.8.8")
+            INCLUDE_DIRECTORIES(${ALSA_INCLUDE_DIRS})
+        ENDIF()
+    ENDIF()
+ENDIF()
+IF(ALSOFT_REQUIRE_FLUIDSYNTH AND NOT HAVE_FLUIDSYNTH)
+    MESSAGE(FATAL_ERROR "Failed to enabled required FluidSynth support")
+ENDIF()
+
+
+SET(BACKENDS "")
+SET(ALC_OBJS  ${ALC_OBJS}
+              Alc/backends/base.c
+              # Default backends, always available
+              Alc/backends/loopback.c
+              Alc/backends/null.c
+)
 
 # Check ALSA backend
 OPTION(ALSOFT_REQUIRE_ALSA "Require ALSA backend" OFF)

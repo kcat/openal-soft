@@ -348,15 +348,14 @@ sample rate.</string>
         <rect>
          <x>110</x>
          <y>30</y>
-         <width>361</width>
+         <width>301</width>
          <height>121</height>
         </rect>
        </property>
        <property name="toolTip">
         <string>A list of files containing HRTF data sets. The listed data sets
-are used in place of or in addition to the the default sets. The
-filenames may contain these markers, which will be replaced
-as needed:
+are used in place of the default sets. The filenames may
+contain these markers, which will be replaced as needed:
 %r - Device sampling rate
 %% - Percent sign (%)</string>
        </property>
@@ -379,14 +378,14 @@ as needed:
       <widget class="QPushButton" name="hrtfAddButton">
        <property name="geometry">
         <rect>
-         <x>475</x>
+         <x>419</x>
          <y>30</y>
-         <width>25</width>
+         <width>81</width>
          <height>25</height>
         </rect>
        </property>
        <property name="text">
-        <string/>
+        <string>Add...</string>
        </property>
        <property name="icon">
         <iconset theme="list-add">
@@ -400,14 +399,14 @@ as needed:
       <widget class="QPushButton" name="hrtfRemoveButton">
        <property name="geometry">
         <rect>
-         <x>475</x>
+         <x>419</x>
          <y>60</y>
-         <width>25</width>
+         <width>81</width>
          <height>25</height>
         </rect>
        </property>
        <property name="text">
-        <string/>
+        <string>Remove</string>
        </property>
        <property name="icon">
         <iconset theme="list-remove">

@@ -52,6 +52,48 @@ static QString getDefaultConfigName()
         return base +'/'+ fname;
     return fname;
 }
+
+static QString getBaseDataPath()
+{
+#ifdef Q_OS_WIN32
+    QByteArray base = qgetenv("AppData");
+#else
+    QByteArray base = qgetenv("XDG_DATA_HOME");
+    if(base.isEmpty())
+    {
+        base = qgetenv("HOME");
+        if(!base.isEmpty())
+            base += "/.local/share";
+    }
+#endif
+    return base;
+}
+
+static QStringList getAllDataPaths(QString append=QString())
+{
+    QStringList list;
+    list.append(getBaseDataPath());
+#ifdef Q_OS_WIN32
+    // TODO: Common AppData path
+#else
+    QString paths = qgetenv("XDG_DATA_DIRS");
+    if(paths.isEmpty())
+        paths = "/usr/local/share/:/usr/share/";
+    list += paths.split(QChar(':'), QString::SkipEmptyParts);
+#endif
+    QStringList::iterator iter = list.begin();
+    while(iter != list.end())
+    {
+        if(iter->isEmpty())
+            iter = list.erase(iter);
+        else
+        {
+            iter->append(append);
+            iter++;
+        }
+    }
+    return list;
+}
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -490,10 +532,36 @@ void MainWindow::updatePeriodCountSlider()
 
 void MainWindow::addHrtfFile()
 {
-    QStringList fnames = QFileDialog::getOpenFileNames(this, tr("Select Files"), QString(),
+    const QStringList datapaths = getAllDataPaths("/openal/hrtf");
+    QStringList fnames = QFileDialog::getOpenFileNames(this, tr("Select Files"),
+                                                       datapaths.empty() ? QString() : datapaths[0],
                                                        "HRTF Datasets(*.mhr);;All Files(*.*)");
     if(fnames.isEmpty() == false)
-        ui->hrtfFileList->addItems(fnames);
+    {
+        for(QStringList::iterator iter = fnames.begin();iter != fnames.end();iter++)
+        {
+            QStringList::const_iterator path = datapaths.constBegin();
+            for(;path != datapaths.constEnd();path++)
+            {
+                QDir hrtfdir(*path);
+                if(!hrtfdir.isAbsolute())
+                    continue;
+
+                const QString relname = hrtfdir.relativeFilePath(*iter);
+                if(!relname.startsWith(".."))
+                {
+                    // If filename is within this path, use the relative pathname
+                    ui->hrtfFileList->addItem(relname);
+                    break;
+                }
+            }
+            if(path == datapaths.constEnd())
+            {
+                // Filename is not within any data path, use the absolute pathname
+                ui->hrtfFileList->addItem(*iter);
+            }
+        }
+    }
 }
 
 void MainWindow::removeHrtfFile()

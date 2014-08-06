@@ -91,7 +91,7 @@ FLUID_FUNCS(DECL_FUNC)
 #define fluid_mod_set_amount pfluid_mod_set_amount
 #define fluid_mod_set_dest pfluid_mod_set_dest
 
-static inline ALboolean LoadFSynth(void)
+static ALboolean LoadFSynth(void)
 {
     ALboolean ret = AL_TRUE;
     if(!fsynth_handle)

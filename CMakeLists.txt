@@ -1093,6 +1093,7 @@ ENDIF()
 # Install HRTF definitions
 IF(ALSOFT_HRTF_DEFS)
     INSTALL(FILES hrtf/default-44100.mhr
+                  hrtf/default-48000.mhr
             DESTINATION share/openal/hrtf
     )
     MESSAGE(STATUS "Installing HRTF definitions")

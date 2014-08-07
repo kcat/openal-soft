@@ -778,63 +778,75 @@ value currently possible is 4.</string>
        </rect>
       </property>
       <property name="toolTip">
-       <string>Disables use of specific CPU extensions. Certain methods may
-utilize CPU extensions when detected, and this is useful for
-preventing those extensions from being used.</string>
+       <string>Enables use of specific CPU extensions. Certain methods may
+utilize CPU extensions when detected, and disabling these can
+be useful for preventing those extensions from being used.</string>
       </property>
       <property name="title">
        <string>CPU Extensions</string>
       </property>
-      <widget class="QCheckBox" name="disableSSECheckBox">
+      <widget class="QCheckBox" name="enableSSECheckBox">
        <property name="geometry">
         <rect>
-         <x>10</x>
+         <x>180</x>
          <y>20</y>
-         <width>101</width>
+         <width>71</width>
          <height>31</height>
         </rect>
        </property>
        <property name="text">
-        <string>Disable SSE</string>
+        <string>SSE</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
-      <widget class="QCheckBox" name="disableSSE2CheckBox">
+      <widget class="QCheckBox" name="enableSSE2CheckBox">
        <property name="geometry">
         <rect>
-         <x>200</x>
-         <y>20</y>
-         <width>111</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Disable SSE2</string>
-       </property>
-      </widget>
-      <widget class="QCheckBox" name="disableNeonCheckBox">
-       <property name="geometry">
-        <rect>
-         <x>200</x>
+         <x>180</x>
          <y>50</y>
-         <width>111</width>
+         <width>71</width>
          <height>31</height>
         </rect>
        </property>
        <property name="text">
-        <string>Disable Neon</string>
+        <string>SSE2</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
-      <widget class="QCheckBox" name="disableSSE41CheckBox">
+      <widget class="QCheckBox" name="enableNeonCheckBox">
        <property name="geometry">
         <rect>
-         <x>370</x>
-         <y>20</y>
-         <width>121</width>
+         <x>260</x>
+         <y>50</y>
+         <width>71</width>
          <height>31</height>
         </rect>
        </property>
        <property name="text">
-        <string>Disable SSE4.1</string>
+        <string>Neon</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="enableSSE41CheckBox">
+       <property name="geometry">
+        <rect>
+         <x>260</x>
+         <y>20</y>
+         <width>71</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>SSE4.1</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </widget>
@@ -1030,14 +1042,14 @@ value of 0 means no change.</string>
        </rect>
       </property>
       <property name="toolTip">
-       <string>Disables effects, preventing apps from recognizing them. This
-can help for apps that try to use effects which are too CPU
-intensive for the system to handle.</string>
+       <string>Specifies which effects apps can recognize. Disabling effects
+can help for apps that try to use ones that are too intensive
+for the system to handle.</string>
       </property>
       <property name="title">
-       <string>Disabled Effects</string>
+       <string>Enabled Effects</string>
       </property>
-      <widget class="QCheckBox" name="disableEaxReverbCheck">
+      <widget class="QCheckBox" name="enableEaxReverbCheck">
        <property name="geometry">
         <rect>
          <x>70</x>
@@ -1049,8 +1061,11 @@ intensive for the system to handle.</string>
        <property name="text">
         <string>EAX Reverb</string>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
-      <widget class="QCheckBox" name="disableStdReverbCheck">
+      <widget class="QCheckBox" name="enableStdReverbCheck">
        <property name="geometry">
         <rect>
          <x>70</x>
@@ -1062,8 +1077,11 @@ intensive for the system to handle.</string>
        <property name="text">
         <string>Standard Reverb</string>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
-      <widget class="QCheckBox" name="disableChorusCheck">
+      <widget class="QCheckBox" name="enableChorusCheck">
        <property name="geometry">
         <rect>
          <x>70</x>
@@ -1075,8 +1093,11 @@ intensive for the system to handle.</string>
        <property name="text">
         <string>Chorus</string>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
-      <widget class="QCheckBox" name="disableDistortionCheck">
+      <widget class="QCheckBox" name="enableDistortionCheck">
        <property name="geometry">
         <rect>
          <x>70</x>
@@ -1088,8 +1109,11 @@ intensive for the system to handle.</string>
        <property name="text">
         <string>Distortion</string>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
-      <widget class="QCheckBox" name="disableEchoCheck">
+      <widget class="QCheckBox" name="enableEchoCheck">
        <property name="geometry">
         <rect>
          <x>320</x>
@@ -1101,8 +1125,11 @@ intensive for the system to handle.</string>
        <property name="text">
         <string>Echo</string>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
-      <widget class="QCheckBox" name="disableEqualizerCheck">
+      <widget class="QCheckBox" name="enableEqualizerCheck">
        <property name="geometry">
         <rect>
          <x>320</x>
@@ -1114,8 +1141,11 @@ intensive for the system to handle.</string>
        <property name="text">
         <string>Equalizer</string>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
-      <widget class="QCheckBox" name="disableFlangerCheck">
+      <widget class="QCheckBox" name="enableFlangerCheck">
        <property name="geometry">
         <rect>
          <x>320</x>
@@ -1127,8 +1157,11 @@ intensive for the system to handle.</string>
        <property name="text">
         <string>Flanger</string>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
-      <widget class="QCheckBox" name="disableModulatorCheck">
+      <widget class="QCheckBox" name="enableModulatorCheck">
        <property name="geometry">
         <rect>
          <x>320</x>
@@ -1140,8 +1173,11 @@ intensive for the system to handle.</string>
        <property name="text">
         <string>Ring Modulator</string>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
-      <widget class="QCheckBox" name="disableDedicatedCheck">
+      <widget class="QCheckBox" name="enableDedicatedCheck">
        <property name="geometry">
         <rect>
          <x>320</x>
@@ -1151,14 +1187,17 @@ intensive for the system to handle.</string>
         </rect>
        </property>
        <property name="toolTip">
-        <string>Disables both the Dedicated Dialog and Dedicated LFE effects
+        <string>Enables both the Dedicated Dialog and Dedicated LFE effects
 added by the ALC_EXT_DEDICATED extension.</string>
        </property>
        <property name="text">
         <string>Dedicated ...</string>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
-      <widget class="QCheckBox" name="disableCompressorCheck">
+      <widget class="QCheckBox" name="enableCompressorCheck">
        <property name="geometry">
         <rect>
          <x>70</x>
@@ -1169,6 +1208,9 @@ added by the ALC_EXT_DEDICATED extension.</string>
        </property>
        <property name="text">
         <string>Compressor</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </widget>

@@ -260,10 +260,10 @@ void MainWindow::loadConfig(const QString &fname)
         disabledCpuExts = disabledCpuExts[0].split(QChar(','));
     std::transform(disabledCpuExts.begin(), disabledCpuExts.end(),
                    disabledCpuExts.begin(), std::mem_fun_ref(&QString::trimmed));
-    ui->disableSSECheckBox->setChecked(disabledCpuExts.contains("sse", Qt::CaseInsensitive));
-    ui->disableSSE2CheckBox->setChecked(disabledCpuExts.contains("sse2", Qt::CaseInsensitive));
-    ui->disableSSE41CheckBox->setChecked(disabledCpuExts.contains("sse4.1", Qt::CaseInsensitive));
-    ui->disableNeonCheckBox->setChecked(disabledCpuExts.contains("neon", Qt::CaseInsensitive));
+    ui->enableSSECheckBox->setChecked(!disabledCpuExts.contains("sse", Qt::CaseInsensitive));
+    ui->enableSSE2CheckBox->setChecked(!disabledCpuExts.contains("sse2", Qt::CaseInsensitive));
+    ui->enableSSE41CheckBox->setChecked(!disabledCpuExts.contains("sse4.1", Qt::CaseInsensitive));
+    ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
     if(settings.value("hrtf").toString() == QString())
         ui->hrtfEnableButton->setChecked(true);
@@ -331,16 +331,16 @@ void MainWindow::loadConfig(const QString &fname)
         excludefx = excludefx[0].split(QChar(','));
     std::transform(excludefx.begin(), excludefx.end(),
                    excludefx.begin(), std::mem_fun_ref(&QString::trimmed));
-    ui->disableEaxReverbCheck->setChecked(excludefx.contains("eaxreverb", Qt::CaseInsensitive));
-    ui->disableStdReverbCheck->setChecked(excludefx.contains("reverb", Qt::CaseInsensitive));
-    ui->disableChorusCheck->setChecked(excludefx.contains("chorus", Qt::CaseInsensitive));
-    ui->disableCompressorCheck->setChecked(excludefx.contains("compressor", Qt::CaseInsensitive));
-    ui->disableDistortionCheck->setChecked(excludefx.contains("distortion", Qt::CaseInsensitive));
-    ui->disableEchoCheck->setChecked(excludefx.contains("echo", Qt::CaseInsensitive));
-    ui->disableEqualizerCheck->setChecked(excludefx.contains("equalizer", Qt::CaseInsensitive));
-    ui->disableFlangerCheck->setChecked(excludefx.contains("flanger", Qt::CaseInsensitive));
-    ui->disableModulatorCheck->setChecked(excludefx.contains("modulator", Qt::CaseInsensitive));
-    ui->disableDedicatedCheck->setChecked(excludefx.contains("dedicated", Qt::CaseInsensitive));
+    ui->enableEaxReverbCheck->setChecked(!excludefx.contains("eaxreverb", Qt::CaseInsensitive));
+    ui->enableStdReverbCheck->setChecked(!excludefx.contains("reverb", Qt::CaseInsensitive));
+    ui->enableChorusCheck->setChecked(!excludefx.contains("chorus", Qt::CaseInsensitive));
+    ui->enableCompressorCheck->setChecked(!excludefx.contains("compressor", Qt::CaseInsensitive));
+    ui->enableDistortionCheck->setChecked(!excludefx.contains("distortion", Qt::CaseInsensitive));
+    ui->enableEchoCheck->setChecked(!excludefx.contains("echo", Qt::CaseInsensitive));
+    ui->enableEqualizerCheck->setChecked(!excludefx.contains("equalizer", Qt::CaseInsensitive));
+    ui->enableFlangerCheck->setChecked(!excludefx.contains("flanger", Qt::CaseInsensitive));
+    ui->enableModulatorCheck->setChecked(!excludefx.contains("modulator", Qt::CaseInsensitive));
+    ui->enableDedicatedCheck->setChecked(!excludefx.contains("dedicated", Qt::CaseInsensitive));
 }
 
 void MainWindow::saveCurrentConfig()
@@ -399,13 +399,13 @@ void MainWindow::saveConfig(const QString &fname) const
     }
 
     QStringList strlist;
-    if(ui->disableSSECheckBox->isChecked())
+    if(!ui->enableSSECheckBox->isChecked())
         strlist.append("sse");
-    if(ui->disableSSE2CheckBox->isChecked())
+    if(!ui->enableSSE2CheckBox->isChecked())
         strlist.append("sse2");
-    if(ui->disableSSE41CheckBox->isChecked())
+    if(!ui->enableSSE41CheckBox->isChecked())
         strlist.append("sse4.1");
-    if(ui->disableNeonCheckBox->isChecked())
+    if(!ui->enableNeonCheckBox->isChecked())
         strlist.append("neon");
     settings.setValue("disable-cpu-exts", strlist.join(QChar(',')));
 
@@ -456,25 +456,25 @@ void MainWindow::saveConfig(const QString &fname) const
         settings.setValue("reverb/boost", ui->reverbBoostEdit->text());
 
     strlist.clear();
-    if(ui->disableEaxReverbCheck->isChecked())
+    if(!ui->enableEaxReverbCheck->isChecked())
         strlist.append("eaxreverb");
-    if(ui->disableStdReverbCheck->isChecked())
+    if(!ui->enableStdReverbCheck->isChecked())
         strlist.append("reverb");
-    if(ui->disableChorusCheck->isChecked())
+    if(!ui->enableChorusCheck->isChecked())
         strlist.append("chorus");
-    if(ui->disableDistortionCheck->isChecked())
+    if(!ui->enableDistortionCheck->isChecked())
         strlist.append("distortion");
-    if(ui->disableCompressorCheck->isChecked())
+    if(!ui->enableCompressorCheck->isChecked())
         strlist.append("compressor");
-    if(ui->disableEchoCheck->isChecked())
+    if(!ui->enableEchoCheck->isChecked())
         strlist.append("echo");
-    if(ui->disableEqualizerCheck->isChecked())
+    if(!ui->enableEqualizerCheck->isChecked())
         strlist.append("equalizer");
-    if(ui->disableFlangerCheck->isChecked())
+    if(!ui->enableFlangerCheck->isChecked())
         strlist.append("flanger");
-    if(ui->disableModulatorCheck->isChecked())
+    if(!ui->enableModulatorCheck->isChecked())
         strlist.append("modulator");
-    if(ui->disableDedicatedCheck->isChecked())
+    if(!ui->enableDedicatedCheck->isChecked())
         strlist.append("dedicated");
     settings.setValue("excludefx", strlist.join(QChar(',')));
 

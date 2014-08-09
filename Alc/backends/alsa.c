@@ -625,23 +625,17 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
 
     if(name)
     {
-        const DevMap *iter, *end;
+        const DevMap *iter;
 
         if(VECTOR_SIZE(PlaybackDevices) == 0)
             probe_devices(SND_PCM_STREAM_PLAYBACK, &PlaybackDevices);
 
-        iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-        end = VECTOR_ITER_END(PlaybackDevices);
-        for(;iter != end;iter++)
-        {
-            if(al_string_cmp_cstr(iter->name, name) == 0)
-            {
-                driver = al_string_get_cstr(iter->device_name);
-                break;
-            }
-        }
-        if(iter == end)
+#define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, name) == 0)
+        VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
+#undef MATCH_NAME
+        if(iter == VECTOR_ITER_END(PlaybackDevices))
             return ALC_INVALID_VALUE;
+        driver = al_string_get_cstr(iter->device_name);
     }
     else
     {
@@ -956,23 +950,17 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 
     if(name)
     {
-        const DevMap *iter, *end;
+        const DevMap *iter;
 
         if(VECTOR_SIZE(CaptureDevices) == 0)
             probe_devices(SND_PCM_STREAM_CAPTURE, &CaptureDevices);
 
-        iter = VECTOR_ITER_BEGIN(CaptureDevices);
-        end = VECTOR_ITER_END(CaptureDevices);
-        for(;iter != end;iter++)
-        {
-            if(al_string_cmp_cstr(iter->name, name) == 0)
-            {
-                driver = al_string_get_cstr(iter->device_name);
-                break;
-            }
-        }
-        if(iter == end)
+#define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, name) == 0)
+        VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
+#undef MATCH_NAME
+        if(iter == VECTOR_ITER_END(CaptureDevices))
             return ALC_INVALID_VALUE;
+        driver = al_string_get_cstr(iter->device_name);
     }
     else
     {

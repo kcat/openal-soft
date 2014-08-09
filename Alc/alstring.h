@@ -13,7 +13,7 @@ inline void al_string_deinit(al_string *str)
 { VECTOR_DEINIT(*str); }
 #define AL_STRING_INIT(_x)       do { (_x) = (al_string)NULL; } while(0)
 #define AL_STRING_INIT_STATIC()  ((al_string)NULL)
-#define AL_STRING_DEINIT(_x)     al_string_deinit(&(_x));
+#define AL_STRING_DEINIT(_x)     al_string_deinit(&(_x))
 
 inline ALsizei al_string_length(const_al_string str)
 { return VECTOR_SIZE(str); }

@@ -116,12 +116,9 @@ static vector_DevMap CaptureDevices;
 
 static void clear_devlist(vector_DevMap *list)
 {
-    DevMap *iter, *end;
-
-    iter = VECTOR_ITER_BEGIN(*list);
-    end = VECTOR_ITER_END(*list);
-    for(;iter != end;++iter)
-        AL_STRING_DEINIT(iter->name);
+#define DEINIT_STR(i) AL_STRING_DEINIT((i)->name)
+    VECTOR_FOR_EACH(DevMap, *list, DEINIT_STR);
+#undef DEINIT_STR
     VECTOR_RESIZE(*list, 0);
 }
 
@@ -323,7 +320,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
 static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *deviceName)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    GUID *guid = NULL;
+    const GUID *guid = NULL;
     HRESULT hr, hrcom;
 
     if(VECTOR_SIZE(PlaybackDevices) == 0)
@@ -344,20 +341,14 @@ static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *de
     }
     else
     {
-        DevMap *iter, *end;
+        const DevMap *iter;
 
-        iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-        end = VECTOR_ITER_END(PlaybackDevices);
-        for(;iter != end;++iter)
-        {
-            if(al_string_cmp_cstr(iter->name, deviceName) == 0)
-            {
-                guid = &iter->guid;
-                break;
-            }
-        }
-        if(iter == end)
+#define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, deviceName) == 0)
+        VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
+#undef MATCH_NAME
+        if(iter == VECTOR_ITER_END(PlaybackDevices))
             return ALC_INVALID_VALUE;
+        guid = &iter->guid;
     }
 
     hr = DS_OK;
@@ -681,7 +672,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     WAVEFORMATEXTENSIBLE InputType;
     DSCBUFFERDESC DSCBDescription;
-    GUID *guid = NULL;
+    const GUID *guid = NULL;
     HRESULT hr, hrcom;
     ALuint samples;
 
@@ -703,20 +694,14 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
     }
     else
     {
-        DevMap *iter, *end;
+        const DevMap *iter;
 
-        iter = VECTOR_ITER_BEGIN(CaptureDevices);
-        end = VECTOR_ITER_END(CaptureDevices);
-        for(;iter != end;++iter)
-        {
-            if(al_string_cmp_cstr(iter->name, deviceName) == 0)
-            {
-                guid = &iter->guid;
-                break;
-            }
-        }
-        if(iter == end)
+#define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, deviceName) == 0)
+        VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
+#undef MATCH_NAME
+        if(iter == VECTOR_ITER_END(CaptureDevices))
             return ALC_INVALID_VALUE;
+        guid = &iter->guid;
     }
 
     switch(device->FmtType)

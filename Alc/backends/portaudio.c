@@ -45,6 +45,7 @@ MAKE_FUNC(Pa_StopStream);
 MAKE_FUNC(Pa_OpenStream);
 MAKE_FUNC(Pa_CloseStream);
 MAKE_FUNC(Pa_GetDefaultOutputDevice);
+MAKE_FUNC(Pa_GetDefaultInputDevice);
 MAKE_FUNC(Pa_GetStreamInfo);
 #undef MAKE_FUNC
 
@@ -56,6 +57,7 @@ MAKE_FUNC(Pa_GetStreamInfo);
 #define Pa_OpenStream                  pPa_OpenStream
 #define Pa_CloseStream                 pPa_CloseStream
 #define Pa_GetDefaultOutputDevice      pPa_GetDefaultOutputDevice
+#define Pa_GetDefaultInputDevice       pPa_GetDefaultInputDevice
 #define Pa_GetStreamInfo               pPa_GetStreamInfo
 #endif
 
@@ -97,6 +99,7 @@ static ALCboolean pa_load(void)
         LOAD_FUNC(Pa_OpenStream);
         LOAD_FUNC(Pa_CloseStream);
         LOAD_FUNC(Pa_GetDefaultOutputDevice);
+        LOAD_FUNC(Pa_GetDefaultInputDevice);
         LOAD_FUNC(Pa_GetStreamInfo);
 #undef LOAD_FUNC
 
@@ -318,7 +321,7 @@ static ALCenum pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
     data->params.device = -1;
     if(!ConfigValueInt("port", "capture", &data->params.device) ||
        data->params.device < 0)
-        data->params.device = Pa_GetDefaultOutputDevice();
+        data->params.device = Pa_GetDefaultInputDevice();
     data->params.suggestedLatency = 0.0f;
     data->params.hostApiSpecificStreamInfo = NULL;
 

@@ -30,11 +30,11 @@ typedef const _##N* const_##N;
 #define VECTOR_DEINIT(_x)     do { free((_x)); (_x) = NULL; } while(0)
 
 /* Helper to increase a vector's reserve. Do not call directly. */
-ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_count, size_t obj_size, ALboolean exact);
-#define VECTOR_RESERVE(_x, _c) (vector_reserve((char*)&(_x), sizeof(*(_x)), (_c), sizeof((_x)->Data[0]), AL_TRUE))
+ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, ALsizei obj_count, ALboolean exact);
+#define VECTOR_RESERVE(_x, _c) (vector_reserve((char*)&(_x), sizeof(*(_x)), sizeof((_x)->Data[0]), (_c), AL_TRUE))
 
-ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_count, size_t obj_size);
-#define VECTOR_RESIZE(_x, _c) (vector_resize((char*)&(_x), sizeof(*(_x)), (_c), sizeof((_x)->Data[0])))
+ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_size, ALsizei obj_count);
+#define VECTOR_RESIZE(_x, _c) (vector_resize((char*)&(_x), sizeof(*(_x)), sizeof((_x)->Data[0]), (_c)))
 
 #define VECTOR_CAPACITY(_x) ((_x) ? (_x)->Capacity : 0)
 #define VECTOR_SIZE(_x)     ((_x) ? (_x)->Size : 0)
@@ -57,7 +57,7 @@ ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_
 #define VECTOR_INSERT(_x, _i, _s, _e) (vector_insert((char*)&(_x), sizeof(*(_x)), sizeof((_x)->Data[0]), (_i), (_s), (_e)))
 #endif
 
-#define VECTOR_PUSH_BACK(_x, _obj) (vector_reserve((char*)&(_x), sizeof(*(_x)), VECTOR_SIZE(_x)+1, sizeof((_x)->Data[0]), AL_FALSE) && \
+#define VECTOR_PUSH_BACK(_x, _obj) (vector_reserve((char*)&(_x), sizeof(*(_x)), sizeof((_x)->Data[0]), VECTOR_SIZE(_x)+1, AL_FALSE) && \
                                     (((_x)->Data[(_x)->Size++] = (_obj)),AL_TRUE))
 #define VECTOR_POP_BACK(_x) ((void)((_x)->Size--))
 

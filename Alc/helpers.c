@@ -594,25 +594,25 @@ void SetRTPriority(void)
 }
 
 
-ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_count, size_t obj_size, ALboolean exact)
+ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, ALsizei obj_count, ALboolean exact)
 {
     vector_ *vecptr = (vector_*)ptr;
-    if((size_t)(*vecptr ? (*vecptr)->Capacity : 0) < obj_count)
+    if(obj_count < 0)
+        return AL_FALSE;
+    if((*vecptr ? (*vecptr)->Capacity : 0) < obj_count)
     {
         ALsizei old_size = (*vecptr ? (*vecptr)->Size : 0);
         void *temp;
-
-        /* Limit vector sizes to the greatest power-of-two value that an
-         * ALsizei can hold. */
-        if(obj_count > (INT_MAX>>1)+1)
-            return AL_FALSE;
 
         /* Use the next power-of-2 size if we don't need to allocate the exact
          * amount. This is preferred when regularly increasing the vector since
          * it means fewer reallocations. Though it means it also wastes some
          * memory. */
         if(exact == AL_FALSE)
+        {
             obj_count = NextPowerOf2((ALuint)obj_count);
+            if(obj_count < 0) return AL_FALSE;
+        }
 
         /* Need to be explicit with the caller type's base size, because it
          * could have extra padding before the start of the array (that is,
@@ -621,20 +621,22 @@ ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_count, size_t o
         if(temp == NULL) return AL_FALSE;
 
         *vecptr = temp;
-        (*vecptr)->Capacity = (ALsizei)obj_count;
+        (*vecptr)->Capacity = obj_count;
         (*vecptr)->Size = old_size;
     }
     return AL_TRUE;
 }
 
-ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_count, size_t obj_size)
+ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_size, ALsizei obj_count)
 {
     vector_ *vecptr = (vector_*)ptr;
+    if(obj_count < 0)
+        return AL_FALSE;
     if(*vecptr || obj_count > 0)
     {
-        if(!vector_reserve((char*)vecptr, base_size, obj_count, obj_size, AL_TRUE))
+        if(!vector_reserve((char*)vecptr, base_size, obj_size, obj_count, AL_TRUE))
             return AL_FALSE;
-        (*vecptr)->Size = (ALsizei)obj_count;
+        (*vecptr)->Size = obj_count;
     }
     return AL_TRUE;
 }
@@ -651,7 +653,7 @@ ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_
 
         assert(numins > 0);
         if(INT_MAX-VECTOR_SIZE(*vecptr) <= numins ||
-           !vector_reserve((char*)vecptr, base_size, VECTOR_SIZE(*vecptr)+numins, obj_size, AL_TRUE))
+           !vector_reserve((char*)vecptr, base_size, obj_size, VECTOR_SIZE(*vecptr)+numins, AL_TRUE))
             return AL_FALSE;
 
         /* NOTE: ins_pos may have been invalidated if *vecptr moved. Use ins_elem instead. */

@@ -644,7 +644,9 @@ ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_
     vector_ *vecptr = (vector_*)ptr;
     if(datstart != datend)
     {
-        ptrdiff_t ins_elem = ((char*)ins_pos - ((char*)(*vecptr) + base_size)) / obj_size;
+        ptrdiff_t ins_elem = (*vecptr ? ((char*)ins_pos - ((char*)(*vecptr) + base_size)) :
+                                        ((char*)ins_pos - (char*)NULL)) /
+                             obj_size;
         ptrdiff_t numins = ((const char*)datend - (const char*)datstart) / obj_size;
 
         assert(numins > 0);

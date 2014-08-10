@@ -39,8 +39,8 @@ ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_count, size_t ob
 #define VECTOR_CAPACITY(_x) ((_x) ? (_x)->Capacity : 0)
 #define VECTOR_SIZE(_x)     ((_x) ? (_x)->Size : 0)
 
-#define VECTOR_ITER_BEGIN(_x) ((_x)->Data + 0)
-#define VECTOR_ITER_END(_x)   ((_x)->Data + VECTOR_SIZE(_x))
+#define VECTOR_ITER_BEGIN(_x) ((_x) ? (_x)->Data + 0 : NULL)
+#define VECTOR_ITER_END(_x)   ((_x) ? (_x)->Data + (_x)->Size : NULL)
 
 ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_pos, const void *datstart, const void *datend);
 #ifdef __GNUC__

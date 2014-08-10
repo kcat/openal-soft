@@ -594,9 +594,9 @@ void SetRTPriority(void)
 }
 
 
-ALboolean vector_reserve(void *ptr, size_t base_size, size_t obj_count, size_t obj_size, ALboolean exact)
+ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_count, size_t obj_size, ALboolean exact)
 {
-    vector_ *vecptr = ptr;
+    vector_ *vecptr = (vector_*)ptr;
     if((size_t)(*vecptr ? (*vecptr)->Capacity : 0) < obj_count)
     {
         ALsizei old_size = (*vecptr ? (*vecptr)->Size : 0);
@@ -627,21 +627,21 @@ ALboolean vector_reserve(void *ptr, size_t base_size, size_t obj_count, size_t o
     return AL_TRUE;
 }
 
-ALboolean vector_resize(void *ptr, size_t base_size, size_t obj_count, size_t obj_size)
+ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_count, size_t obj_size)
 {
-    vector_ *vecptr = ptr;
+    vector_ *vecptr = (vector_*)ptr;
     if(*vecptr || obj_count > 0)
     {
-        if(!vector_reserve(vecptr, base_size, obj_count, obj_size, AL_TRUE))
+        if(!vector_reserve((char*)vecptr, base_size, obj_count, obj_size, AL_TRUE))
             return AL_FALSE;
         (*vecptr)->Size = (ALsizei)obj_count;
     }
     return AL_TRUE;
 }
 
-ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, void *ins_pos, const void *datstart, const void *datend)
+ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_pos, const void *datstart, const void *datend)
 {
-    vector_ *vecptr = ptr;
+    vector_ *vecptr = (vector_*)ptr;
     if(datstart != datend)
     {
         ptrdiff_t ins_elem = ((char*)ins_pos - ((char*)(*vecptr) + base_size)) / obj_size;
@@ -649,7 +649,7 @@ ALboolean vector_insert(void *ptr, size_t base_size, size_t obj_size, void *ins_
 
         assert(numins > 0);
         if(INT_MAX-VECTOR_SIZE(*vecptr) <= numins ||
-           !vector_reserve(vecptr, base_size, VECTOR_SIZE(*vecptr)+numins, obj_size, AL_TRUE))
+           !vector_reserve((char*)vecptr, base_size, VECTOR_SIZE(*vecptr)+numins, obj_size, AL_TRUE))
             return AL_FALSE;
 
         /* NOTE: ins_pos may have been invalidated if *vecptr moved. Use ins_elem instead. */

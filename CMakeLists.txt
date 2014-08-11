@@ -351,6 +351,7 @@ CHECK_INCLUDE_FILE(ftw.h HAVE_FTW_H)
 CHECK_INCLUDE_FILE(io.h HAVE_IO_H)
 CHECK_INCLUDE_FILE(strings.h HAVE_STRINGS_H)
 CHECK_INCLUDE_FILE(cpuid.h HAVE_CPUID_H)
+CHECK_INCLUDE_FILE(intrin.h HAVE_INTRIN_H)
 CHECK_INCLUDE_FILE(sys/sysconf.h HAVE_SYS_SYSCONF_H)
 CHECK_INCLUDE_FILE(fenv.h HAVE_FENV_H)
 CHECK_INCLUDE_FILE(float.h HAVE_FLOAT_H)
@@ -367,6 +368,16 @@ IF(HAVE_CPUID_H)
             unsigned int eax, ebx, ecx, edx;
             return __get_cpuid(0, eax, ebx, ecx, edx);
         }" HAVE_GCC_GET_CPUID)
+ENDIF()
+
+IF(HAVE_INTRIN_H)
+    CHECK_C_SOURCE_COMPILES("#include <intrin.h>
+        int main()
+        {
+            int regs[4];
+            __cpuid(regs, 0);
+            return regs[0];
+        }" HAVE_CPUID_INTRINSIC)
 ENDIF()
 
 # Some systems need libm for some of the following math functions to work

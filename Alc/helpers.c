@@ -66,6 +66,9 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif
+#ifdef HAVE_INTRIN_H
+#include <intrin.h>
+#endif
 #ifdef HAVE_CPUID_H
 #include <cpuid.h>
 #endif
@@ -147,19 +150,48 @@ void FillCPUCaps(ALuint capfilter)
             }
         }
     }
-#elif defined(HAVE_WINDOWS_H)
-    HMODULE k32 = GetModuleHandleA("kernel32.dll");
-    BOOL (WINAPI*IsProcessorFeaturePresent)(DWORD ProcessorFeature);
-    IsProcessorFeaturePresent = (BOOL(WINAPI*)(DWORD))GetProcAddress(k32, "IsProcessorFeaturePresent");
-    if(!IsProcessorFeaturePresent)
-        ERR("IsProcessorFeaturePresent not available; CPU caps not detected\n");
+#elif defined(HAVE_CPUID_INTRINSIC) && (defined(__i386__) || defined(__x86_64__) || \
+                                        defined(_M_IX86) || defined(_M_X64))
+    union {
+        int regs[4];
+        char str[sizeof(int[4])];
+    } cpuinf[3];
+
+    (__cpuid)(cpuinf[0].regs, 0);
+    if(cpuinf[0].regs[0] == 0)
+        ERR("Failed to get CPUID\n");
     else
     {
-        if(IsProcessorFeaturePresent(PF_XMMI_INSTRUCTIONS_AVAILABLE))
+        unsigned int maxfunc = cpuinf[0].regs[0];
+        unsigned int maxextfunc;
+
+        (__cpuid)(cpuinf[0].regs, 0x80000000);
+        maxextfunc = cpuinf[0].regs[0];
+
+        TRACE("Detected max CPUID function: 0x%x (ext. 0x%x)\n", maxfunc, maxextfunc);
+
+        TRACE("Vendor ID: \"%.4s%.4s%.4s\"\n", cpuinf[0].str+4, cpuinf[0].str+12, cpuinf[0].str+8);
+        if(maxextfunc >= 0x80000004)
         {
-            caps |= CPU_CAP_SSE;
-            if(IsProcessorFeaturePresent(PF_XMMI64_INSTRUCTIONS_AVAILABLE))
-                caps |= CPU_CAP_SSE2;
+            (__cpuid)(cpuinf[0].regs, 0x80000002);
+            (__cpuid)(cpuinf[1].regs, 0x80000003);
+            (__cpuid)(cpuinf[2].regs, 0x80000004);
+            TRACE("Name: \"%.16s%.16s%.16s\"\n", cpuinf[0].str, cpuinf[1].str, cpuinf[2].str);
+        }
+
+        if(maxfunc >= 1)
+        {
+            (__cpuid)(cpuinf[0].regs, 1);
+            if((cpuinf[0].regs[3]&(1<<25)))
+            {
+                caps |= CPU_CAP_SSE;
+                if((cpuinf[0].regs[3]&(1<<26)))
+                {
+                    caps |= CPU_CAP_SSE2;
+                    if((cpuinf[0].regs[2]&(1<<19)))
+                        caps |= CPU_CAP_SSE4_1;
+                }
+            }
         }
     }
 #endif

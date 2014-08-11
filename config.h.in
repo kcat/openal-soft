@@ -148,6 +148,9 @@
 /* Define if we have cpuid.h */
 #cmakedefine HAVE_CPUID_H
 
+/* Define if we have intrin.h */
+#cmakedefine HAVE_INTRIN_H
+
 /* Define if we have sys/sysconf.h */
 #cmakedefine HAVE_SYS_SYSCONF_H
 
@@ -168,6 +171,9 @@
 
 /* Define if we have GCC's __get_cpuid() */
 #cmakedefine HAVE_GCC_GET_CPUID
+
+/* Define if we have the __cpuid() intrinsic */
+#cmakedefine HAVE_CPUID_INTRINSIC
 
 /* Define if we have _controlfp() */
 #cmakedefine HAVE__CONTROLFP

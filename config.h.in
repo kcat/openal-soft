@@ -130,12 +130,6 @@
 /* Define if we have pthread_np.h */
 #cmakedefine HAVE_PTHREAD_NP_H
 
-/* Define if we have xmmintrin.h */
-#cmakedefine HAVE_XMMINTRIN_H
-
-/* Define if we have arm_neon.h */
-#cmakedefine HAVE_ARM_NEON_H
-
 /* Define if we have alloca.h */
 #cmakedefine HAVE_ALLOCA_H
 

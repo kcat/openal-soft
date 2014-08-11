@@ -26,27 +26,6 @@ include(CheckFileOffsetBits)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 
-IF(WIN32)
-    # This option is mainly for static linking OpenAL Soft into another project
-    # that already defines the IDs. It is up to that project to ensure all
-    # required IDs are defined.
-    OPTION(ALSOFT_NO_UID_DEFS "Do not define GUIDs, IIDs, CLSIDs, or PropertyKeys" OFF)
-ELSE()
-    # These are needed on non-Windows systems for extra features
-    ADD_DEFINITIONS(-D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700)
-    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700")
-ENDIF()
-
-# Set defines for large file support
-CHECK_FILE_OFFSET_BITS()
-IF(_FILE_OFFSET_BITS)
-    ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=${_FILE_OFFSET_BITS})
-    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_FILE_OFFSET_BITS=${_FILE_OFFSET_BITS}")
-ENDIF()
-ADD_DEFINITIONS(-D_LARGEFILE_SOURCE -D_LARGE_FILES)
-SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_LARGEFILE_SOURCE -D_LARGE_FILES")
-
-
 OPTION(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
 OPTION(ALSOFT_WERROR  "Treat compile warnings as errors"      OFF)
@@ -63,9 +42,39 @@ OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
 IF(WIN32)
     SET(LIBNAME OpenAL32)
     ADD_DEFINITIONS("-D_WIN32 -D_WIN32_WINNT=0x0502")
+
+    # This option is mainly for static linking OpenAL Soft into another project
+    # that already defines the IDs. It is up to that project to ensure all
+    # required IDs are defined.
+    OPTION(ALSOFT_NO_UID_DEFS "Do not define GUIDs, IIDs, CLSIDs, or PropertyKeys" OFF)
+
+    IF(MINGW)
+        OPTION(ALSOFT_BUILD_IMPORT_LIB "Build an import .lib using dlltool (requires sed)" ON)
+        IF(NOT DLLTOOL)
+            IF(HOST)
+                SET(DLLTOOL "${HOST}-dlltool")
+            ELSE()
+                SET(DLLTOOL "dlltool")
+            ENDIF()
+        ENDIF()
+    ENDIF()
 ELSE()
     SET(LIBNAME openal)
+
+    # These are needed on non-Windows systems for extra features
+    ADD_DEFINITIONS(-D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700)
+    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700")
 ENDIF()
+
+# Set defines for large file support
+CHECK_FILE_OFFSET_BITS()
+IF(_FILE_OFFSET_BITS)
+    ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=${_FILE_OFFSET_BITS})
+    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_FILE_OFFSET_BITS=${_FILE_OFFSET_BITS}")
+ENDIF()
+ADD_DEFINITIONS(-D_LARGEFILE_SOURCE -D_LARGE_FILES)
+SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_LARGEFILE_SOURCE -D_LARGE_FILES")
+
 
 # QNX's gcc do not uses /usr/include and /usr/lib pathes by default
 IF ("${CMAKE_C_PLATFORM_ID}" STREQUAL "QNX")
@@ -1040,8 +1049,25 @@ SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES VERSION ${LIB_VERSION}
 IF(WIN32 AND NOT LIBTYPE STREQUAL "STATIC")
     SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES PREFIX "")
 ENDIF()
-IF(MINGW)
-    SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES LINK_FLAGS "-Wl,--output-def,${LIBNAME}.def")
+IF(MINGW AND ALSOFT_BUILD_IMPORT_LIB)
+    FIND_PROGRAM(SED_EXECUTABLE NAMES sed DOC "sed executable")
+    FIND_PROGRAM(DLLTOOL_EXECUTABLE NAMES "${DLLTOOL}" DOC "dlltool executable")
+    IF(NOT SED_EXECUTABLE OR NOT DLLTOOL_EXECUTABLE)
+        MESSAGE(STATUS "")
+        IF(NOT SED_EXECUTABLE)
+            MESSAGE(STATUS "WARNING: Cannot find sed, disabling .def/.lib generation")
+        ENDIF()
+        IF(NOT DLLTOOL_EXECUTABLE)
+            MESSAGE(STATUS "WARNING: Cannot find dlltool, disabling .def/.lib generation")
+        ENDIF()
+    ELSE()
+        SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES LINK_FLAGS "-Wl,--output-def,${LIBNAME}.def")
+        ADD_CUSTOM_COMMAND(TARGET ${LIBNAME} POST_BUILD
+                           COMMAND "${SED_EXECUTABLE}" -i -e "s/ @[^ ]*//" ${LIBNAME}.def
+                           COMMAND "${DLLTOOL_EXECUTABLE}" -d ${LIBNAME}.def -l ${LIBNAME}.lib -D ${LIBNAME}.dll
+                           COMMENT "Stripping ordinals from ${LIBNAME}.def and generating ${LIBNAME}.lib..."
+                           VERBATIM)
+    ENDIF()
 ENDIF()
 
 TARGET_LINK_LIBRARIES(${LIBNAME} common ${EXTRA_LIBS})

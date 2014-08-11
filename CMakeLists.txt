@@ -360,6 +360,15 @@ IF(NOT HAVE_GUIDDEF_H)
     CHECK_INCLUDE_FILE(initguid.h HAVE_INITGUID_H)
 ENDIF()
 
+IF(HAVE_CPUID_H)
+    CHECK_C_SOURCE_COMPILES("#include <cpuid.h>
+        int main()
+        {
+            unsigned int eax, ebx, ecx, edx;
+            return __get_cpuid(0, eax, ebx, ecx, edx);
+        }" HAVE_GCC_GET_CPUID)
+ENDIF()
+
 # Some systems need libm for some of the following math functions to work
 CHECK_LIBRARY_EXISTS(m pow "" HAVE_LIBM)
 IF(HAVE_LIBM)

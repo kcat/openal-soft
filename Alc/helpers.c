@@ -107,8 +107,8 @@ void FillCPUCaps(ALuint capfilter)
 
 /* FIXME: We really should get this for all available CPUs in case different
  * CPUs have different caps (is that possible on one machine?). */
-#if defined(HAVE_CPUID_H) && (defined(__i386__) || defined(__x86_64__) || \
-                              defined(_M_IX86) || defined(_M_X64))
+#if defined(HAVE_GCC_GET_CPUID) && (defined(__i386__) || defined(__x86_64__) || \
+                                    defined(_M_IX86) || defined(_M_X64))
     union {
         unsigned int regs[4];
         char str[sizeof(unsigned int[4])];

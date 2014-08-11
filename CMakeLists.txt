@@ -1048,25 +1048,27 @@ SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES VERSION ${LIB_VERSION}
                                             SOVERSION ${LIB_MAJOR_VERSION})
 IF(WIN32 AND NOT LIBTYPE STREQUAL "STATIC")
     SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES PREFIX "")
-ENDIF()
-IF(MINGW AND ALSOFT_BUILD_IMPORT_LIB)
-    FIND_PROGRAM(SED_EXECUTABLE NAMES sed DOC "sed executable")
-    FIND_PROGRAM(DLLTOOL_EXECUTABLE NAMES "${DLLTOOL}" DOC "dlltool executable")
-    IF(NOT SED_EXECUTABLE OR NOT DLLTOOL_EXECUTABLE)
-        MESSAGE(STATUS "")
-        IF(NOT SED_EXECUTABLE)
-            MESSAGE(STATUS "WARNING: Cannot find sed, disabling .def/.lib generation")
+
+    IF(MINGW AND ALSOFT_BUILD_IMPORT_LIB)
+        FIND_PROGRAM(SED_EXECUTABLE NAMES sed DOC "sed executable")
+        FIND_PROGRAM(DLLTOOL_EXECUTABLE NAMES "${DLLTOOL}" DOC "dlltool executable")
+        IF(NOT SED_EXECUTABLE OR NOT DLLTOOL_EXECUTABLE)
+            MESSAGE(STATUS "")
+            IF(NOT SED_EXECUTABLE)
+                MESSAGE(STATUS "WARNING: Cannot find sed, disabling .def/.lib generation")
+            ENDIF()
+            IF(NOT DLLTOOL_EXECUTABLE)
+                MESSAGE(STATUS "WARNING: Cannot find dlltool, disabling .def/.lib generation")
+            ENDIF()
+        ELSE()
+            SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES LINK_FLAGS "-Wl,--output-def,${LIBNAME}.def")
+            ADD_CUSTOM_COMMAND(TARGET ${LIBNAME} POST_BUILD
+                COMMAND "${SED_EXECUTABLE}" -i -e "s/ @[^ ]*//" ${LIBNAME}.def
+                COMMAND "${DLLTOOL_EXECUTABLE}" -d ${LIBNAME}.def -l ${LIBNAME}.lib -D ${LIBNAME}.dll
+                COMMENT "Stripping ordinals from ${LIBNAME}.def and generating ${LIBNAME}.lib..."
+                VERBATIM
+            )
         ENDIF()
-        IF(NOT DLLTOOL_EXECUTABLE)
-            MESSAGE(STATUS "WARNING: Cannot find dlltool, disabling .def/.lib generation")
-        ENDIF()
-    ELSE()
-        SET_TARGET_PROPERTIES(${LIBNAME} PROPERTIES LINK_FLAGS "-Wl,--output-def,${LIBNAME}.def")
-        ADD_CUSTOM_COMMAND(TARGET ${LIBNAME} POST_BUILD
-                           COMMAND "${SED_EXECUTABLE}" -i -e "s/ @[^ ]*//" ${LIBNAME}.def
-                           COMMAND "${DLLTOOL_EXECUTABLE}" -d ${LIBNAME}.def -l ${LIBNAME}.lib -D ${LIBNAME}.dll
-                           COMMENT "Stripping ordinals from ${LIBNAME}.def and generating ${LIBNAME}.lib..."
-                           VERBATIM)
     ENDIF()
 ENDIF()
 

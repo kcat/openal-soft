@@ -383,6 +383,16 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void);
 /*#define AL_SEC_LENGTH_SOFT                       0x200B*/
 #endif
 
+#ifndef ALC_SOFT_pause_device
+#define ALC_SOFT_pause_device 1
+typedef void (ALC_APIENTRY*LPALCDEVICEPAUSESOFT)(ALCdevice *device);
+typedef void (ALC_APIENTRY*LPALCDEVICERESUMESOFT)(ALCdevice *device);
+#ifdef AL_ALEXT_PROTOTYPES
+ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device);
+ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device);
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

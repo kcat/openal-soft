@@ -1,7 +1,7 @@
 #ifndef AL_ALIGN_H
 #define AL_ALIGN_H
 
-#ifdef HAVE_STDALIGN_H
+#if defined(HAVE_STDALIGN_H) && defined(HAVE_C11_ALIGNAS)
 #include <stdalign.h>
 #endif
 

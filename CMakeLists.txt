@@ -248,13 +248,15 @@ ELSE()
         ADD_DEFINITIONS(-Werror)
     ENDIF()
 
-    # Force enable PIC if available. The static common library will be linked
-    # into the dynamic openal library, which requires all its code to be
-    # position-independent, and CMake doesn't automatically enable PIC for
-    # static library targets (Windows code is always position-independent).
-    CHECK_C_COMPILER_FLAG(-fPIC HAVE_FPIC_SWITCH)
-    IF(HAVE_FPIC_SWITCH AND NOT WIN32)
-        ADD_DEFINITIONS(-fPIC)
+    # Force enable -fPIC for CMake versions before 2.8.9 (later versions have
+    # the POSITION_INDEPENDENT_CODE target property). The static common library
+    # will be linked into the dynamic openal library, which requires all its
+    # code to be position-independent.
+    IF(CMAKE_VERSION VERSION_LESS "2.8.9" AND NOT WIN32)
+        CHECK_C_COMPILER_FLAG(-fPIC HAVE_FPIC_SWITCH)
+        IF(HAVE_FPIC_SWITCH)
+            ADD_DEFINITIONS(-fPIC)
+        ENDIF()
     ENDIF()
 
     # We want RelWithDebInfo to actually include debug stuff (define _DEBUG
@@ -1015,6 +1017,9 @@ CONFIGURE_FILE(
 
 # Build a common library with reusable helpers
 ADD_LIBRARY(common STATIC ${COMMON_OBJS})
+IF(NOT LIBTYPE STREQUAL "STATIC")
+    SET_PROPERTY(TARGET common PROPERTY POSITION_INDEPENDENT_CODE TRUE)
+ENDIF()
 
 # Build main library
 ADD_LIBRARY(${LIBNAME} ${LIBTYPE} ${OPENAL_OBJS} ${ALC_OBJS})

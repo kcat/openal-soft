@@ -214,11 +214,6 @@ IF(NOT CMAKE_DEBUG_POSTFIX)
 ENDIF()
 
 IF(MSVC)
-    # ???
-    SET(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -D_DEBUG")
-    SET(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -DNDEBUG")
-    SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DNDEBUG")
-    SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG")
     ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
     ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
     ADD_DEFINITIONS("/wd4098")
@@ -262,18 +257,13 @@ ELSE()
         ADD_DEFINITIONS(-fPIC)
     ENDIF()
 
-    SET(CMAKE_C_FLAGS_RELWITHDEBINFO "-g -O2 -D_DEBUG" CACHE STRING
-        "Flags used by the compiler during Release with Debug Info builds."
-        FORCE)
-    SET(CMAKE_C_FLAGS_MINSIZEREL "-Os -DNDEBUG" CACHE STRING
-        "Flags used by the compiler during release minsize builds."
-        FORCE)
-    SET(CMAKE_C_FLAGS_RELEASE "-O2 -fomit-frame-pointer -DNDEBUG" CACHE STRING
-        "Flags used by the compiler during release builds"
-        FORCE)
-    SET(CMAKE_C_FLAGS_DEBUG "-g3 -D_DEBUG" CACHE STRING
-        "Flags used by the compiler during debug builds."
-        FORCE)
+    # We want RelWithDebInfo to actually include debug stuff (define _DEBUG
+    # instead of NDEBUG)
+    FOREACH(flag_var  CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+        IF(${flag_var} MATCHES "-DNDEBUG")
+            STRING(REGEX REPLACE "-DNDEBUG" "-D_DEBUG" ${flag_var} "${${flag_var}}")
+        ENDIF()
+    ENDFOREACH()
 
     CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));
                              int main() {return 0;}" HAVE_GCC_DESTRUCTOR)

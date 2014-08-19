@@ -38,6 +38,7 @@
 
 #include "alMain.h"
 #include "compat.h"
+#include "bool.h"
 
 
 typedef struct ConfigEntry {
@@ -137,13 +138,21 @@ static char *expdup(const char *str)
             }
             else
             {
+                bool hasbraces;
                 char envname[1024];
                 size_t k = 0;
+
+                hasbraces = (*str == '{');
+                if(hasbraces) str++;
 
                 while((isalnum(*str) || *str == '_') && k < sizeof(envname)-1)
                     envname[k++] = *(str++);
                 envname[k++] = '\0';
 
+                if(hasbraces && *str != '}')
+                    continue;
+
+                if(hasbraces) str++;
                 if((addstr=getenv(envname)) == NULL)
                     continue;
                 addstrlen = strlen(addstr);

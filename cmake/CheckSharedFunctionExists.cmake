@@ -58,12 +58,12 @@ MACRO(CHECK_SHARED_FUNCTION_EXISTS SYMBOL FILES LIBRARY LOCATION VARIABLE)
       "${CMAKE_CONFIGURABLE_FILE_CONTENT}\nvoid cmakeRequireSymbol(int dummy,...){(void)dummy;}\nint main()\n{\n  cmakeRequireSymbol(0,&${SYMBOL});\n  return 0;\n}\n")
 
     CONFIGURE_FILE("${CMAKE_ROOT}/Modules/CMakeConfigurableFile.in"
-      "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/CheckSymbolExists.c" @ONLY)
+      "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/CheckSymbolExists.c" @ONLY)
 
     MESSAGE(STATUS "Looking for ${SYMBOL} in ${LIBRARY}")
     TRY_COMPILE(${VARIABLE}
-      ${CMAKE_BINARY_DIR}
-      ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/CheckSymbolExists.c
+      ${CMAKE_CURRENT_BINARY_DIR}
+      ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/CheckSymbolExists.c
       COMPILE_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
       CMAKE_FLAGS 
       -DCOMPILE_DEFINITIONS:STRING=${MACRO_CHECK_SYMBOL_EXISTS_FLAGS}
@@ -74,18 +74,18 @@ MACRO(CHECK_SHARED_FUNCTION_EXISTS SYMBOL FILES LIBRARY LOCATION VARIABLE)
     IF(${VARIABLE})
       MESSAGE(STATUS "Looking for ${SYMBOL} in ${LIBRARY} - found")
       SET(${VARIABLE} 1 CACHE INTERNAL "Have symbol ${SYMBOL} in ${LIBRARY}")
-      FILE(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log 
+      FILE(APPEND ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
         "Determining if the ${SYMBOL} "
         "exist in ${LIBRARY} passed with the following output:\n"
-        "${OUTPUT}\nFile ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/CheckSymbolExists.c:\n"
+        "${OUTPUT}\nFile ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/CheckSymbolExists.c:\n"
         "${CMAKE_CONFIGURABLE_FILE_CONTENT}\n")
     ELSE(${VARIABLE})
       MESSAGE(STATUS "Looking for ${SYMBOL} in ${LIBRARY} - not found.")
       SET(${VARIABLE} "" CACHE INTERNAL "Have symbol ${SYMBOL} in ${LIBRARY}")
-      FILE(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log 
+      FILE(APPEND ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
         "Determining if the ${SYMBOL} "
         "exist in ${LIBRARY} failed with the following output:\n"
-        "${OUTPUT}\nFile ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/CheckSymbolExists.c:\n"
+        "${OUTPUT}\nFile ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/CheckSymbolExists.c:\n"
         "${CMAKE_CONFIGURABLE_FILE_CONTENT}\n")
     ENDIF(${VARIABLE})
   ENDIF("${VARIABLE}" MATCHES "^${VARIABLE}$")

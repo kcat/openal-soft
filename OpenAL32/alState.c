@@ -715,7 +715,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
     if(!context->DeferUpdates)
     {
         ALboolean UpdateSources;
-        ALactivesource *src, *src_end;
+        ALvoice *voice, *voice_end;
         ALeffectslot **slot, **slot_end;
         FPUCtl oldMode;
 
@@ -727,23 +727,23 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         /* Make sure all pending updates are performed */
         UpdateSources = ATOMIC_EXCHANGE(ALenum, &context->UpdateSources, AL_FALSE);
 
-        src = context->ActiveSources;
-        src_end = src + context->ActiveSourceCount;
-        while(src != src_end)
+        voice = context->Voices;
+        voice_end = voice + context->VoiceCount;
+        while(voice != voice_end)
         {
-            ALsource *source = src->Source;
+            ALsource *source = voice->Source;
             if(!source) goto next;
 
             if(source->state != AL_PLAYING && source->state != AL_PAUSED)
             {
-                src->Source = NULL;
+                voice->Source = NULL;
                 continue;
             }
 
             if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) || UpdateSources)
-                src->Update(src, source, context);
+                voice->Update(voice, source, context);
         next:
-            src++;
+            voice++;
         }
 
         slot = VECTOR_ITER_BEGIN(context->ActiveAuxSlots);

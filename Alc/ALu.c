@@ -166,7 +166,7 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     aluMatrixVector(Listener->Params.Velocity, 0.0f, Listener->Params.Matrix);
 }
 
-ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, const ALCcontext *ALContext)
+ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
 {
     static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f } };
     static const struct ChanMap StereoMap[2] = {
@@ -245,16 +245,16 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
     Pitch           = ALSource->Pitch;
     DirectChannels  = ALSource->DirectChannels;
 
-    src->Direct.OutBuffer = Device->DryBuffer;
+    voice->Direct.OutBuffer = Device->DryBuffer;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
         if(!Slot && i == 0)
             Slot = Device->DefaultSlot;
         if(!Slot || Slot->EffectType == AL_EFFECT_NULL)
-            src->Send[i].OutBuffer = NULL;
+            voice->Send[i].OutBuffer = NULL;
         else
-            src->Send[i].OutBuffer = Slot->WetBuffer;
+            voice->Send[i].OutBuffer = Slot->WetBuffer;
     }
 
     /* Calculate the stepping value */
@@ -267,12 +267,12 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
         {
             Pitch = Pitch * ALBuffer->Frequency / Frequency;
             if(Pitch > (ALfloat)MAX_PITCH)
-                src->Step = MAX_PITCH<<FRACTIONBITS;
+                voice->Step = MAX_PITCH<<FRACTIONBITS;
             else
             {
-                src->Step = fastf2i(Pitch*FRACTIONONE);
-                if(src->Step == 0)
-                    src->Step = 1;
+                voice->Step = fastf2i(Pitch*FRACTIONONE);
+                if(voice->Step == 0)
+                    voice->Step = 1;
             }
 
             Channels = ALBuffer->FmtChannels;
@@ -350,14 +350,14 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
     {
         for(c = 0;c < num_channels;c++)
         {
-            MixGains *gains = src->Direct.Mix.Gains[c];
+            MixGains *gains = voice->Direct.Mix.Gains[c];
             for(j = 0;j < MaxChannels;j++)
                 gains[j].Target = 0.0f;
         }
 
         for(c = 0;c < num_channels;c++)
         {
-            MixGains *gains = src->Direct.Mix.Gains[c];
+            MixGains *gains = voice->Direct.Mix.Gains[c];
             for(i = 0;i < (ALint)Device->NumChan;i++)
             {
                 enum Channel chan = Device->Speaker2Chan[i];
@@ -369,25 +369,25 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
             }
         }
 
-        if(!src->Direct.Moving)
+        if(!voice->Direct.Moving)
         {
             for(i = 0;i < num_channels;i++)
             {
-                MixGains *gains = src->Direct.Mix.Gains[i];
+                MixGains *gains = voice->Direct.Mix.Gains[i];
                 for(j = 0;j < MaxChannels;j++)
                 {
                     gains[j].Current = gains[j].Target;
                     gains[j].Step = 1.0f;
                 }
             }
-            src->Direct.Counter = 0;
-            src->Direct.Moving  = AL_TRUE;
+            voice->Direct.Counter = 0;
+            voice->Direct.Moving  = AL_TRUE;
         }
         else
         {
             for(i = 0;i < num_channels;i++)
             {
-                MixGains *gains = src->Direct.Mix.Gains[i];
+                MixGains *gains = voice->Direct.Mix.Gains[i];
                 for(j = 0;j < MaxChannels;j++)
                 {
                     ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
@@ -399,10 +399,10 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
                     gains[j].Current = cur;
                 }
             }
-            src->Direct.Counter = 64;
+            voice->Direct.Counter = 64;
         }
 
-        src->IsHrtf = AL_FALSE;
+        voice->IsHrtf = AL_FALSE;
     }
     else if(Device->Hrtf)
     {
@@ -411,12 +411,12 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
             if(chans[c].channel == LFE)
             {
                 /* Skip LFE */
-                src->Direct.Mix.Hrtf.Params[c].Delay[0] = 0;
-                src->Direct.Mix.Hrtf.Params[c].Delay[1] = 0;
+                voice->Direct.Mix.Hrtf.Params[c].Delay[0] = 0;
+                voice->Direct.Mix.Hrtf.Params[c].Delay[1] = 0;
                 for(i = 0;i < HRIR_LENGTH;i++)
                 {
-                    src->Direct.Mix.Hrtf.Params[c].Coeffs[i][0] = 0.0f;
-                    src->Direct.Mix.Hrtf.Params[c].Coeffs[i][1] = 0.0f;
+                    voice->Direct.Mix.Hrtf.Params[c].Coeffs[i][0] = 0.0f;
+                    voice->Direct.Mix.Hrtf.Params[c].Coeffs[i][1] = 0.0f;
                 }
             }
             else
@@ -425,21 +425,21 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
                                     0.0f, chans[c].angle, 1.0f, DryGain,
-                                    src->Direct.Mix.Hrtf.Params[c].Coeffs,
-                                    src->Direct.Mix.Hrtf.Params[c].Delay);
+                                    voice->Direct.Mix.Hrtf.Params[c].Coeffs,
+                                    voice->Direct.Mix.Hrtf.Params[c].Delay);
             }
         }
-        src->Direct.Counter = 0;
-        src->Direct.Moving  = AL_TRUE;
-        src->Direct.Mix.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
+        voice->Direct.Counter = 0;
+        voice->Direct.Moving  = AL_TRUE;
+        voice->Direct.Mix.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
 
-        src->IsHrtf = AL_TRUE;
+        voice->IsHrtf = AL_TRUE;
     }
     else
     {
         for(i = 0;i < num_channels;i++)
         {
-            MixGains *gains = src->Direct.Mix.Gains[i];
+            MixGains *gains = voice->Direct.Mix.Gains[i];
             for(j = 0;j < MaxChannels;j++)
                 gains[j].Target = 0.0f;
         }
@@ -447,7 +447,7 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
         DryGain *= lerp(1.0f, 1.0f/sqrtf((float)Device->NumChan), hwidth/F_PI);
         for(c = 0;c < num_channels;c++)
         {
-            MixGains *gains = src->Direct.Mix.Gains[c];
+            MixGains *gains = voice->Direct.Mix.Gains[c];
             ALfloat Target[MaxChannels];
 
             /* Special-case LFE */
@@ -461,25 +461,25 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
                 gains[i].Target = Target[i];
         }
 
-        if(!src->Direct.Moving)
+        if(!voice->Direct.Moving)
         {
             for(i = 0;i < num_channels;i++)
             {
-                MixGains *gains = src->Direct.Mix.Gains[i];
+                MixGains *gains = voice->Direct.Mix.Gains[i];
                 for(j = 0;j < MaxChannels;j++)
                 {
                     gains[j].Current = gains[j].Target;
                     gains[j].Step = 1.0f;
                 }
             }
-            src->Direct.Counter = 0;
-            src->Direct.Moving  = AL_TRUE;
+            voice->Direct.Counter = 0;
+            voice->Direct.Moving  = AL_TRUE;
         }
         else
         {
             for(i = 0;i < num_channels;i++)
             {
-                MixGains *gains = src->Direct.Mix.Gains[i];
+                MixGains *gains = voice->Direct.Mix.Gains[i];
                 for(j = 0;j < MaxChannels;j++)
                 {
                     ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
@@ -491,31 +491,31 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
                     gains[j].Current = cur;
                 }
             }
-            src->Direct.Counter = 64;
+            voice->Direct.Counter = 64;
         }
 
-        src->IsHrtf = AL_FALSE;
+        voice->IsHrtf = AL_FALSE;
     }
     for(i = 0;i < NumSends;i++)
     {
-        src->Send[i].Gain.Target = WetGain[i];
-        if(!src->Send[i].Moving)
+        voice->Send[i].Gain.Target = WetGain[i];
+        if(!voice->Send[i].Moving)
         {
-            src->Send[i].Gain.Current = src->Send[i].Gain.Target;
-            src->Send[i].Gain.Step = 1.0f;
-            src->Send[i].Counter = 0;
-            src->Send[i].Moving  = AL_TRUE;
+            voice->Send[i].Gain.Current = voice->Send[i].Gain.Target;
+            voice->Send[i].Gain.Step = 1.0f;
+            voice->Send[i].Counter = 0;
+            voice->Send[i].Moving  = AL_TRUE;
         }
         else
         {
-            ALfloat cur = maxf(src->Send[i].Gain.Current, FLT_EPSILON);
-            ALfloat trg = maxf(src->Send[i].Gain.Target, FLT_EPSILON);
+            ALfloat cur = maxf(voice->Send[i].Gain.Current, FLT_EPSILON);
+            ALfloat trg = maxf(voice->Send[i].Gain.Target, FLT_EPSILON);
             if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                src->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
+                voice->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
             else
-                src->Send[i].Gain.Step = 1.0f;
-            src->Send[i].Gain.Current = cur;
-            src->Send[i].Counter = 64;
+                voice->Send[i].Gain.Step = 1.0f;
+            voice->Send[i].Gain.Current = cur;
+            voice->Send[i].Counter = 64;
         }
     }
 
@@ -526,15 +526,15 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
         ALfloat lfscale = ALSource->Direct.LFReference / Frequency;
         for(c = 0;c < num_channels;c++)
         {
-            src->Direct.Filters[c].ActiveType = AF_None;
-            if(gainhf != 1.0f) src->Direct.Filters[c].ActiveType |= AF_LowPass;
-            if(gainlf != 1.0f) src->Direct.Filters[c].ActiveType |= AF_HighPass;
+            voice->Direct.Filters[c].ActiveType = AF_None;
+            if(gainhf != 1.0f) voice->Direct.Filters[c].ActiveType |= AF_LowPass;
+            if(gainlf != 1.0f) voice->Direct.Filters[c].ActiveType |= AF_HighPass;
             ALfilterState_setParams(
-                &src->Direct.Filters[c].LowPass, ALfilterType_HighShelf, gainhf,
+                &voice->Direct.Filters[c].LowPass, ALfilterType_HighShelf, gainhf,
                 hfscale, 0.0f
             );
             ALfilterState_setParams(
-                &src->Direct.Filters[c].HighPass, ALfilterType_LowShelf, gainlf,
+                &voice->Direct.Filters[c].HighPass, ALfilterType_LowShelf, gainlf,
                 lfscale, 0.0f
             );
         }
@@ -547,22 +547,22 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, co
         ALfloat lfscale = ALSource->Send[i].LFReference / Frequency;
         for(c = 0;c < num_channels;c++)
         {
-            src->Send[i].Filters[c].ActiveType = AF_None;
-            if(gainhf != 1.0f) src->Send[i].Filters[c].ActiveType |= AF_LowPass;
-            if(gainlf != 1.0f) src->Send[i].Filters[c].ActiveType |= AF_HighPass;
+            voice->Send[i].Filters[c].ActiveType = AF_None;
+            if(gainhf != 1.0f) voice->Send[i].Filters[c].ActiveType |= AF_LowPass;
+            if(gainlf != 1.0f) voice->Send[i].Filters[c].ActiveType |= AF_HighPass;
             ALfilterState_setParams(
-                &src->Send[i].Filters[c].LowPass, ALfilterType_HighShelf, gainhf,
+                &voice->Send[i].Filters[c].LowPass, ALfilterType_HighShelf, gainhf,
                 hfscale, 0.0f
             );
             ALfilterState_setParams(
-                &src->Send[i].Filters[c].HighPass, ALfilterType_LowShelf, gainlf,
+                &voice->Send[i].Filters[c].HighPass, ALfilterType_LowShelf, gainlf,
                 lfscale, 0.0f
             );
         }
     }
 }
 
-ALvoid CalcSourceParams(ALactivesource *src, const ALsource *ALSource, const ALCcontext *ALContext)
+ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
 {
     ALCdevice *Device = ALContext->Device;
     ALfloat Velocity[3],Direction[3],Position[3],SourceToListener[3];
@@ -636,7 +636,7 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALsource *ALSource, const ALC
     WetGainHFAuto   = ALSource->WetGainHFAuto;
     RoomRolloffBase = ALSource->RoomRolloffFactor;
 
-    src->Direct.OutBuffer = Device->DryBuffer;
+    voice->Direct.OutBuffer = Device->DryBuffer;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
@@ -676,9 +676,9 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALsource *ALSource, const ALC
         }
 
         if(!Slot || Slot->EffectType == AL_EFFECT_NULL)
-            src->Send[i].OutBuffer = NULL;
+            voice->Send[i].OutBuffer = NULL;
         else
-            src->Send[i].OutBuffer = Slot->WetBuffer;
+            voice->Send[i].OutBuffer = Slot->WetBuffer;
     }
 
     /* Transform source to listener space (convert to head relative) */
@@ -880,12 +880,12 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALsource *ALSource, const ALC
              * frequency, and output frequency. */
             Pitch = Pitch * ALBuffer->Frequency / Frequency;
             if(Pitch > (ALfloat)MAX_PITCH)
-                src->Step = MAX_PITCH<<FRACTIONBITS;
+                voice->Step = MAX_PITCH<<FRACTIONBITS;
             else
             {
-                src->Step = fastf2i(Pitch*FRACTIONONE);
-                if(src->Step == 0)
-                    src->Step = 1;
+                voice->Step = fastf2i(Pitch*FRACTIONONE);
+                if(voice->Step == 0)
+                    voice->Step = 1;
             }
 
             break;
@@ -918,47 +918,47 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALsource *ALSource, const ALC
             dirfact *= Distance / radius;
 
         /* Check to see if the HRIR is already moving. */
-        if(src->Direct.Moving)
+        if(voice->Direct.Moving)
         {
             /* Calculate the normalized HRTF transition factor (delta). */
-            delta = CalcHrtfDelta(src->Direct.Mix.Hrtf.Gain, DryGain,
-                                  src->Direct.Mix.Hrtf.Dir, Position);
+            delta = CalcHrtfDelta(voice->Direct.Mix.Hrtf.Gain, DryGain,
+                                  voice->Direct.Mix.Hrtf.Dir, Position);
             /* If the delta is large enough, get the moving HRIR target
              * coefficients, target delays, steppping values, and counter. */
             if(delta > 0.001f)
             {
                 ALuint counter = GetMovingHrtfCoeffs(Device->Hrtf,
-                    ev, az, dirfact, DryGain, delta, src->Direct.Counter,
-                    src->Direct.Mix.Hrtf.Params[0].Coeffs, src->Direct.Mix.Hrtf.Params[0].Delay,
-                    src->Direct.Mix.Hrtf.Params[0].CoeffStep, src->Direct.Mix.Hrtf.Params[0].DelayStep
+                    ev, az, dirfact, DryGain, delta, voice->Direct.Counter,
+                    voice->Direct.Mix.Hrtf.Params[0].Coeffs, voice->Direct.Mix.Hrtf.Params[0].Delay,
+                    voice->Direct.Mix.Hrtf.Params[0].CoeffStep, voice->Direct.Mix.Hrtf.Params[0].DelayStep
                 );
-                src->Direct.Counter = counter;
-                src->Direct.Mix.Hrtf.Gain = DryGain;
-                src->Direct.Mix.Hrtf.Dir[0] = Position[0];
-                src->Direct.Mix.Hrtf.Dir[1] = Position[1];
-                src->Direct.Mix.Hrtf.Dir[2] = Position[2];
+                voice->Direct.Counter = counter;
+                voice->Direct.Mix.Hrtf.Gain = DryGain;
+                voice->Direct.Mix.Hrtf.Dir[0] = Position[0];
+                voice->Direct.Mix.Hrtf.Dir[1] = Position[1];
+                voice->Direct.Mix.Hrtf.Dir[2] = Position[2];
             }
         }
         else
         {
             /* Get the initial (static) HRIR coefficients and delays. */
             GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, dirfact, DryGain,
-                                src->Direct.Mix.Hrtf.Params[0].Coeffs,
-                                src->Direct.Mix.Hrtf.Params[0].Delay);
-            src->Direct.Counter = 0;
-            src->Direct.Moving  = AL_TRUE;
-            src->Direct.Mix.Hrtf.Gain = DryGain;
-            src->Direct.Mix.Hrtf.Dir[0] = Position[0];
-            src->Direct.Mix.Hrtf.Dir[1] = Position[1];
-            src->Direct.Mix.Hrtf.Dir[2] = Position[2];
+                                voice->Direct.Mix.Hrtf.Params[0].Coeffs,
+                                voice->Direct.Mix.Hrtf.Params[0].Delay);
+            voice->Direct.Counter = 0;
+            voice->Direct.Moving  = AL_TRUE;
+            voice->Direct.Mix.Hrtf.Gain = DryGain;
+            voice->Direct.Mix.Hrtf.Dir[0] = Position[0];
+            voice->Direct.Mix.Hrtf.Dir[1] = Position[1];
+            voice->Direct.Mix.Hrtf.Dir[2] = Position[2];
         }
-        src->Direct.Mix.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
+        voice->Direct.Mix.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
 
-        src->IsHrtf = AL_TRUE;
+        voice->IsHrtf = AL_TRUE;
     }
     else
     {
-        MixGains *gains = src->Direct.Mix.Gains[0];
+        MixGains *gains = voice->Direct.Mix.Gains[0];
         ALfloat DirGain = 0.0f;
         ALfloat AmbientGain;
 
@@ -991,15 +991,15 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALsource *ALSource, const ALC
             gains[chan].Target = maxf(gains[chan].Target, AmbientGain);
         }
 
-        if(!src->Direct.Moving)
+        if(!voice->Direct.Moving)
         {
             for(j = 0;j < MaxChannels;j++)
             {
                 gains[j].Current = gains[j].Target;
                 gains[j].Step = 1.0f;
             }
-            src->Direct.Counter = 0;
-            src->Direct.Moving  = AL_TRUE;
+            voice->Direct.Counter = 0;
+            voice->Direct.Moving  = AL_TRUE;
         }
         else
         {
@@ -1013,31 +1013,31 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALsource *ALSource, const ALC
                     gains[j].Step = 1.0f;
                 gains[j].Current = cur;
             }
-            src->Direct.Counter = 64;
+            voice->Direct.Counter = 64;
         }
 
-        src->IsHrtf = AL_FALSE;
+        voice->IsHrtf = AL_FALSE;
     }
     for(i = 0;i < NumSends;i++)
     {
-        src->Send[i].Gain.Target = WetGain[i];
-        if(!src->Send[i].Moving)
+        voice->Send[i].Gain.Target = WetGain[i];
+        if(!voice->Send[i].Moving)
         {
-            src->Send[i].Gain.Current = src->Send[i].Gain.Target;
-            src->Send[i].Gain.Step = 1.0f;
-            src->Send[i].Counter = 0;
-            src->Send[i].Moving  = AL_TRUE;
+            voice->Send[i].Gain.Current = voice->Send[i].Gain.Target;
+            voice->Send[i].Gain.Step = 1.0f;
+            voice->Send[i].Counter = 0;
+            voice->Send[i].Moving  = AL_TRUE;
         }
         else
         {
-            ALfloat cur = maxf(src->Send[i].Gain.Current, FLT_EPSILON);
-            ALfloat trg = maxf(src->Send[i].Gain.Target, FLT_EPSILON);
+            ALfloat cur = maxf(voice->Send[i].Gain.Current, FLT_EPSILON);
+            ALfloat trg = maxf(voice->Send[i].Gain.Target, FLT_EPSILON);
             if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                src->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
+                voice->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
             else
-                src->Send[i].Gain.Step = 1.0f;
-            src->Send[i].Gain.Current = cur;
-            src->Send[i].Counter = 64;
+                voice->Send[i].Gain.Step = 1.0f;
+            voice->Send[i].Gain.Current = cur;
+            voice->Send[i].Counter = 64;
         }
     }
 
@@ -1046,15 +1046,15 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALsource *ALSource, const ALC
         ALfloat gainlf = maxf(0.01f, DryGainLF);
         ALfloat hfscale = ALSource->Direct.HFReference / Frequency;
         ALfloat lfscale = ALSource->Direct.LFReference / Frequency;
-        src->Direct.Filters[0].ActiveType = AF_None;
-        if(gainhf != 1.0f) src->Direct.Filters[0].ActiveType |= AF_LowPass;
-        if(gainlf != 1.0f) src->Direct.Filters[0].ActiveType |= AF_HighPass;
+        voice->Direct.Filters[0].ActiveType = AF_None;
+        if(gainhf != 1.0f) voice->Direct.Filters[0].ActiveType |= AF_LowPass;
+        if(gainlf != 1.0f) voice->Direct.Filters[0].ActiveType |= AF_HighPass;
         ALfilterState_setParams(
-            &src->Direct.Filters[0].LowPass, ALfilterType_HighShelf, gainhf,
+            &voice->Direct.Filters[0].LowPass, ALfilterType_HighShelf, gainhf,
             hfscale, 0.0f
         );
         ALfilterState_setParams(
-            &src->Direct.Filters[0].HighPass, ALfilterType_LowShelf, gainlf,
+            &voice->Direct.Filters[0].HighPass, ALfilterType_LowShelf, gainlf,
             lfscale, 0.0f
         );
     }
@@ -1064,15 +1064,15 @@ ALvoid CalcSourceParams(ALactivesource *src, const ALsource *ALSource, const ALC
         ALfloat gainlf = maxf(0.01f, WetGainLF[i]);
         ALfloat hfscale = ALSource->Send[i].HFReference / Frequency;
         ALfloat lfscale = ALSource->Send[i].LFReference / Frequency;
-        src->Send[i].Filters[0].ActiveType = AF_None;
-        if(gainhf != 1.0f) src->Send[i].Filters[0].ActiveType |= AF_LowPass;
-        if(gainlf != 1.0f) src->Send[i].Filters[0].ActiveType |= AF_HighPass;
+        voice->Send[i].Filters[0].ActiveType = AF_None;
+        if(gainhf != 1.0f) voice->Send[i].Filters[0].ActiveType |= AF_LowPass;
+        if(gainlf != 1.0f) voice->Send[i].Filters[0].ActiveType |= AF_HighPass;
         ALfilterState_setParams(
-            &src->Send[i].Filters[0].LowPass, ALfilterType_HighShelf, gainhf,
+            &voice->Send[i].Filters[0].LowPass, ALfilterType_HighShelf, gainhf,
             hfscale, 0.0f
         );
         ALfilterState_setParams(
-            &src->Send[i].Filters[0].HighPass, ALfilterType_LowShelf, gainlf,
+            &voice->Send[i].Filters[0].HighPass, ALfilterType_LowShelf, gainlf,
             lfscale, 0.0f
         );
     }
@@ -1140,7 +1140,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALuint SamplesToDo;
     ALeffectslot **slot, **slot_end;
-    ALactivesource *src, *src_end;
+    ALvoice *voice, *voice_end;
     ALCcontext *ctx;
     FPUCtl oldMode;
     ALuint i, c;
@@ -1171,27 +1171,27 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 CalcListenerParams(ctx->Listener);
 
             /* source processing */
-            src = ctx->ActiveSources;
-            src_end = src + ctx->ActiveSourceCount;
-            while(src != src_end)
+            voice = ctx->Voices;
+            voice_end = voice + ctx->VoiceCount;
+            while(voice != voice_end)
             {
-                ALsource *source = src->Source;
+                ALsource *source = voice->Source;
                 if(!source) goto next;
 
                 if(source->state != AL_PLAYING && source->state != AL_PAUSED)
                 {
-                    src->Source = NULL;
+                    voice->Source = NULL;
                     goto next;
                 }
 
                 if(!DeferUpdates && (ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) ||
                                      UpdateSources))
-                    src->Update(src, source, ctx);
+                    voice->Update(voice, source, ctx);
 
                 if(source->state != AL_PAUSED)
-                    MixSource(src, source, device, SamplesToDo);
+                    MixSource(voice, source, device, SamplesToDo);
             next:
-                src++;
+                voice++;
             }
 
             /* effect slot processing */
@@ -1295,14 +1295,14 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
     Context = ATOMIC_LOAD(&device->ContextList);
     while(Context)
     {
-        ALactivesource *src, *src_end;
+        ALvoice *voice, *voice_end;
 
-        src = Context->ActiveSources;
-        src_end = src + Context->ActiveSourceCount;
-        while(src != src_end)
+        voice = Context->Voices;
+        voice_end = voice + Context->VoiceCount;
+        while(voice != voice_end)
         {
-            ALsource *source = src->Source;
-            src->Source = NULL;
+            ALsource *source = voice->Source;
+            voice->Source = NULL;
 
             if(source && source->state == AL_PLAYING)
             {
@@ -1312,9 +1312,9 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
                 source->position_fraction = 0;
             }
 
-            src++;
+            voice++;
         }
-        Context->ActiveSourceCount = 0;
+        Context->VoiceCount = 0;
 
         Context = Context->next;
     }

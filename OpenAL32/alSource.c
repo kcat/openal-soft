@@ -1389,21 +1389,21 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     }
     for(i = 0;i < n;i++)
     {
-        ALactivesource *srclist, *srclistend;
+        ALvoice *voice, *voice_end;
 
         if((Source=RemoveSource(context, sources[i])) == NULL)
             continue;
         FreeThunkEntry(Source->id);
 
         LockContext(context);
-        srclist = context->ActiveSources;
-        srclistend = srclist + context->ActiveSourceCount;
-        while(srclist != srclistend)
+        voice = context->Voices;
+        voice_end = voice + context->VoiceCount;
+        while(voice != voice_end)
         {
             ALsource *old = Source;
-            if(COMPARE_EXCHANGE(&srclist->Source, &old, NULL))
+            if(COMPARE_EXCHANGE(&voice->Source, &old, NULL))
                 break;
-            srclist++;
+            voice++;
         }
         UnlockContext(context);
 
@@ -2015,24 +2015,23 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     }
 
     LockContext(context);
-    while(n > context->MaxActiveSources-context->ActiveSourceCount)
+    while(n > context->MaxVoices-context->VoiceCount)
     {
-        ALactivesource *temp = NULL;
+        ALvoice *temp = NULL;
         ALsizei newcount;
 
-        newcount = context->MaxActiveSources << 1;
+        newcount = context->MaxVoices << 1;
         if(newcount > 0)
-            temp = realloc(context->ActiveSources,
-                           newcount * sizeof(context->ActiveSources[0]));
+            temp = realloc(context->Voices, newcount * sizeof(context->Voices[0]));
         if(!temp)
         {
             UnlockContext(context);
             SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
         }
-        memset(&temp[context->MaxActiveSources], 0, (newcount-context->MaxActiveSources) * sizeof(temp[0]));
+        memset(&temp[context->MaxVoices], 0, (newcount-context->MaxVoices) * sizeof(temp[0]));
 
-        context->ActiveSources = temp;
-        context->MaxActiveSources = newcount;
+        context->Voices = temp;
+        context->MaxVoices = newcount;
     }
 
     for(i = 0;i < n;i++)
@@ -2449,7 +2448,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
     {
         ALCdevice *device = Context->Device;
         ALbufferlistitem *BufferList;
-        ALactivesource *src = NULL;
+        ALvoice *voice = NULL;
         ALsizei i;
 
         /* Check that there is a queue containing at least one valid, non zero
@@ -2484,51 +2483,51 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 
         /* Make sure this source isn't already active, while looking for an
          * unused active source slot to put it in. */
-        for(i = 0;i < Context->ActiveSourceCount;i++)
+        for(i = 0;i < Context->VoiceCount;i++)
         {
             ALsource *old = Source;
-            if(COMPARE_EXCHANGE(&Context->ActiveSources[i].Source, &old, NULL))
+            if(COMPARE_EXCHANGE(&Context->Voices[i].Source, &old, NULL))
             {
-                if(src == NULL)
+                if(voice == NULL)
                 {
-                    src = &Context->ActiveSources[i];
-                    src->Source = Source;
+                    voice = &Context->Voices[i];
+                    voice->Source = Source;
                 }
                 break;
             }
             old = NULL;
-            if(src == NULL && COMPARE_EXCHANGE(&Context->ActiveSources[i].Source, &old, Source))
-                src = &Context->ActiveSources[i];
+            if(voice == NULL && COMPARE_EXCHANGE(&Context->Voices[i].Source, &old, Source))
+                voice = &Context->Voices[i];
         }
-        if(src == NULL)
+        if(voice == NULL)
         {
-            src = &Context->ActiveSources[Context->ActiveSourceCount++];
-            src->Source = Source;
+            voice = &Context->Voices[Context->VoiceCount++];
+            voice->Source = Source;
         }
 
-        src->Direct.Moving = AL_FALSE;
-        src->Direct.Counter = 0;
+        voice->Direct.Moving = AL_FALSE;
+        voice->Direct.Counter = 0;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
             ALsizei j;
             for(j = 0;j < SRC_HISTORY_LENGTH;j++)
-                src->Direct.Mix.Hrtf.State[i].History[j] = 0.0f;
+                voice->Direct.Mix.Hrtf.State[i].History[j] = 0.0f;
             for(j = 0;j < HRIR_LENGTH;j++)
             {
-                src->Direct.Mix.Hrtf.State[i].Values[j][0] = 0.0f;
-                src->Direct.Mix.Hrtf.State[i].Values[j][1] = 0.0f;
+                voice->Direct.Mix.Hrtf.State[i].Values[j][0] = 0.0f;
+                voice->Direct.Mix.Hrtf.State[i].Values[j][1] = 0.0f;
             }
         }
         for(i = 0;i < (ALsizei)device->NumAuxSends;i++)
         {
-            src->Send[i].Counter = 0;
-            src->Send[i].Moving  = AL_FALSE;
+            voice->Send[i].Counter = 0;
+            voice->Send[i].Moving  = AL_FALSE;
         }
 
         if(BufferList->buffer->FmtChannels == FmtMono)
-            src->Update = CalcSourceParams;
+            voice->Update = CalcSourceParams;
         else
-            src->Update = CalcNonAttnSourceParams;
+            voice->Update = CalcNonAttnSourceParams;
 
         ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
     }

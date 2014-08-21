@@ -1922,23 +1922,23 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         UnlockUIntMapRead(&context->SourceMap);
 
-        for(pos = 0;pos < context->ActiveSourceCount;pos++)
+        for(pos = 0;pos < context->VoiceCount;pos++)
         {
-            ALactivesource *src = &context->ActiveSources[pos];
-            ALsource *source = src->Source;
+            ALvoice *voice = &context->Voices[pos];
+            ALsource *source = voice->Source;
             ALuint s = device->NumAuxSends;
 
             while(s < MAX_SENDS)
             {
-                src->Send[s].Moving = AL_FALSE;
-                src->Send[s].Counter = 0;
+                voice->Send[s].Moving = AL_FALSE;
+                voice->Send[s].Counter = 0;
                 s++;
             }
 
             if(source)
             {
                 ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
-                src->Update(src, source, context);
+                voice->Update(voice, source, context);
             }
         }
 
@@ -2120,7 +2120,6 @@ static ALvoid InitContext(ALCcontext *Context)
     //Validate Context
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
     ATOMIC_INIT(&Context->UpdateSources, AL_FALSE);
-    Context->ActiveSourceCount = 0;
     InitUIntMap(&Context->SourceMap, Context->Device->MaxNoOfSources);
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
 
@@ -2159,10 +2158,10 @@ static void FreeContext(ALCcontext *context)
     }
     ResetUIntMap(&context->EffectSlotMap);
 
-    free(context->ActiveSources);
-    context->ActiveSources = NULL;
-    context->ActiveSourceCount = 0;
-    context->MaxActiveSources = 0;
+    free(context->Voices);
+    context->Voices = NULL;
+    context->VoiceCount = 0;
+    context->MaxVoices = 0;
 
     VECTOR_DEINIT(context->ActiveAuxSlots);
 
@@ -2884,11 +2883,11 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
         VECTOR_INIT(ALContext->ActiveAuxSlots);
 
-        ALContext->MaxActiveSources = 256;
-        ALContext->ActiveSources = calloc(ALContext->MaxActiveSources,
-                                          sizeof(ALContext->ActiveSources[0]));
+        ALContext->VoiceCount = 0;
+        ALContext->MaxVoices = 256;
+        ALContext->Voices = calloc(ALContext->MaxVoices, sizeof(ALContext->Voices[0]));
     }
-    if(!ALContext || !ALContext->ActiveSources)
+    if(!ALContext || !ALContext->Voices)
     {
         if(!ATOMIC_LOAD(&device->ContextList))
         {
@@ -2899,8 +2898,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
         if(ALContext)
         {
-            free(ALContext->ActiveSources);
-            ALContext->ActiveSources = NULL;
+            free(ALContext->Voices);
+            ALContext->Voices = NULL;
 
             VECTOR_DEINIT(ALContext->ActiveAuxSlots);
 

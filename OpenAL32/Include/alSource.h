@@ -27,11 +27,11 @@ typedef struct ALbufferlistitem {
 } ALbufferlistitem;
 
 
-typedef struct ALactivesource {
+typedef struct ALvoice {
     struct ALsource *volatile Source;
 
     /** Method to update mixing parameters. */
-    ALvoid (*Update)(struct ALactivesource *self, const struct ALsource *source, const ALCcontext *context);
+    ALvoid (*Update)(struct ALvoice *self, const struct ALsource *source, const ALCcontext *context);
 
     /** Current target parameters used for mixing. */
     ALint Step;
@@ -42,7 +42,7 @@ typedef struct ALactivesource {
 
     DirectParams Direct;
     SendParams Send[MAX_SENDS];
-} ALactivesource;
+} ALvoice;
 
 
 typedef struct ALsource {

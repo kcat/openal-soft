@@ -178,7 +178,7 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 }
 
 
-ALvoid MixSource(ALactivesource *src, ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
+ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     MixerFunc Mix;
     HrtfMixerFunc HrtfMix;
@@ -201,7 +201,7 @@ ALvoid MixSource(ALactivesource *src, ALsource *Source, ALCdevice *Device, ALuin
     DataPosInt     = Source->position;
     DataPosFrac    = Source->position_fraction;
     Looping        = Source->Looping;
-    increment      = src->Step;
+    increment      = voice->Step;
     Resampler      = (increment==FRACTIONONE) ? PointResampler : Source->Resampler;
     NumChannels    = Source->NumChannels;
     SampleSize     = Source->SampleSize;
@@ -411,7 +411,7 @@ ALvoid MixSource(ALactivesource *src, ALsource *Source, ALCdevice *Device, ALuin
                 Device->ResampledData, DstBufferSize
             );
             {
-                DirectParams *parms = &src->Direct;
+                DirectParams *parms = &voice->Direct;
                 const ALfloat *samples;
 
                 samples = DoFilters(
@@ -419,18 +419,18 @@ ALvoid MixSource(ALactivesource *src, ALsource *Source, ALCdevice *Device, ALuin
                     Device->FilteredData, ResampledData, DstBufferSize,
                     parms->Filters[chan].ActiveType
                 );
-                if(!src->IsHrtf)
+                if(!voice->IsHrtf)
                     Mix(samples, MaxChannels, parms->OutBuffer, parms->Mix.Gains[chan],
                         parms->Counter, OutPos, DstBufferSize);
                 else
-                    HrtfMix(parms->OutBuffer, samples, parms->Counter, src->Offset,
+                    HrtfMix(parms->OutBuffer, samples, parms->Counter, voice->Offset,
                             OutPos, parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
                             &parms->Mix.Hrtf.State[chan], DstBufferSize);
             }
 
             for(j = 0;j < Device->NumAuxSends;j++)
             {
-                SendParams *parms = &src->Send[j];
+                SendParams *parms = &voice->Send[j];
                 const ALfloat *samples;
 
                 if(!parms->OutBuffer)
@@ -451,10 +451,10 @@ ALvoid MixSource(ALactivesource *src, ALsource *Source, ALCdevice *Device, ALuin
         DataPosFrac &= FRACTIONMASK;
 
         OutPos += DstBufferSize;
-        src->Offset += DstBufferSize;
-        src->Direct.Counter = maxu(src->Direct.Counter, DstBufferSize) - DstBufferSize;
+        voice->Offset += DstBufferSize;
+        voice->Direct.Counter = maxu(voice->Direct.Counter, DstBufferSize) - DstBufferSize;
         for(j = 0;j < Device->NumAuxSends;j++)
-            src->Send[j].Counter = maxu(src->Send[j].Counter, DstBufferSize) - DstBufferSize;
+            voice->Send[j].Counter = maxu(voice->Send[j].Counter, DstBufferSize) - DstBufferSize;
 
         /* Handle looping sources */
         while(1)

@@ -1389,7 +1389,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     }
     for(i = 0;i < n;i++)
     {
-        ALactivesource **srclist, **srclistend;
+        ALactivesource *srclist, *srclistend;
 
         if((Source=RemoveSource(context, sources[i])) == NULL)
             continue;
@@ -1401,7 +1401,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         while(srclist != srclistend)
         {
             ALsource *old = Source;
-            if(COMPARE_EXCHANGE(&(*srclist)->Source, &old, NULL))
+            if(COMPARE_EXCHANGE(&srclist->Source, &old, NULL))
                 break;
             srclist++;
         }
@@ -2017,7 +2017,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     LockContext(context);
     while(n > context->MaxActiveSources-context->ActiveSourceCount)
     {
-        ALactivesource **temp = NULL;
+        ALactivesource *temp = NULL;
         ALsizei newcount;
 
         newcount = context->MaxActiveSources << 1;
@@ -2029,8 +2029,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             UnlockContext(context);
             SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
         }
-        for(i = context->MaxActiveSources;i < newcount;i++)
-            temp[i] = NULL;
+        memset(&temp[context->MaxActiveSources], 0, (newcount-context->MaxActiveSources) * sizeof(temp[0]));
 
         context->ActiveSources = temp;
         context->MaxActiveSources = newcount;
@@ -2483,57 +2482,47 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(!BufferList || !device->Connected)
             goto do_stop;
 
+        /* Make sure this source isn't already active, while looking for an
+         * unused active source slot to put it in. */
         for(i = 0;i < Context->ActiveSourceCount;i++)
         {
-            if(Context->ActiveSources[i]->Source == Source)
+            ALsource *old = Source;
+            if(COMPARE_EXCHANGE(&Context->ActiveSources[i].Source, &old, NULL))
             {
-                src = Context->ActiveSources[i];
+                if(src == NULL)
+                {
+                    src = &Context->ActiveSources[i];
+                    src->Source = Source;
+                }
                 break;
             }
+            old = NULL;
+            if(src == NULL && COMPARE_EXCHANGE(&Context->ActiveSources[i].Source, &old, Source))
+                src = &Context->ActiveSources[i];
         }
         if(src == NULL)
         {
-            for(i = 0;i < Context->ActiveSourceCount;i++)
-            {
-                ALsource *old = NULL;
-                src = Context->ActiveSources[i];
-                if(COMPARE_EXCHANGE(&src->Source, &old, Source))
-                    break;
-            }
-            if(i == Context->ActiveSourceCount)
-            {
-                src = Context->ActiveSources[Context->ActiveSourceCount];
-                if(src == NULL)
-                {
-                    src = al_malloc(16, sizeof(src[0]));
-                    Context->ActiveSources[Context->ActiveSourceCount] = src;
-                }
-                Context->ActiveSourceCount++;
-            }
-            memset(src, 0, sizeof(*src));
-
+            src = &Context->ActiveSources[Context->ActiveSourceCount++];
             src->Source = Source;
         }
-        else
+
+        src->Direct.Moving = AL_FALSE;
+        src->Direct.Counter = 0;
+        for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
-            src->Direct.Moving = AL_FALSE;
-            src->Direct.Counter = 0;
-            for(i = 0;i < MAX_INPUT_CHANNELS;i++)
+            ALsizei j;
+            for(j = 0;j < SRC_HISTORY_LENGTH;j++)
+                src->Direct.Mix.Hrtf.State[i].History[j] = 0.0f;
+            for(j = 0;j < HRIR_LENGTH;j++)
             {
-                ALsizei j;
-                for(j = 0;j < SRC_HISTORY_LENGTH;j++)
-                    src->Direct.Mix.Hrtf.State[i].History[j] = 0.0f;
-                for(j = 0;j < HRIR_LENGTH;j++)
-                {
-                    src->Direct.Mix.Hrtf.State[i].Values[j][0] = 0.0f;
-                    src->Direct.Mix.Hrtf.State[i].Values[j][1] = 0.0f;
-                }
+                src->Direct.Mix.Hrtf.State[i].Values[j][0] = 0.0f;
+                src->Direct.Mix.Hrtf.State[i].Values[j][1] = 0.0f;
             }
-            for(i = 0;i < (ALsizei)device->NumAuxSends;i++)
-            {
-                src->Send[i].Counter = 0;
-                src->Send[i].Moving  = AL_FALSE;
-            }
+        }
+        for(i = 0;i < (ALsizei)device->NumAuxSends;i++)
+        {
+            src->Send[i].Counter = 0;
+            src->Send[i].Moving  = AL_FALSE;
         }
 
         if(BufferList->buffer->FmtChannels == FmtMono)

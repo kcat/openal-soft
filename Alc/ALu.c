@@ -1140,7 +1140,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALuint SamplesToDo;
     ALeffectslot **slot, **slot_end;
-    ALactivesource **src, **src_end;
+    ALactivesource *src, *src_end;
     ALCcontext *ctx;
     FPUCtl oldMode;
     ALuint i, c;
@@ -1175,21 +1175,21 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             src_end = src + ctx->ActiveSourceCount;
             while(src != src_end)
             {
-                ALsource *source = (*src)->Source;
+                ALsource *source = src->Source;
                 if(!source) goto next;
 
                 if(source->state != AL_PLAYING && source->state != AL_PAUSED)
                 {
-                    (*src)->Source = NULL;
+                    src->Source = NULL;
                     goto next;
                 }
 
                 if(!DeferUpdates && (ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) ||
                                      UpdateSources))
-                    (*src)->Update(*src, source, ctx);
+                    src->Update(src, source, ctx);
 
                 if(source->state != AL_PAUSED)
-                    MixSource(*src, source, device, SamplesToDo);
+                    MixSource(src, source, device, SamplesToDo);
             next:
                 src++;
             }
@@ -1295,14 +1295,14 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
     Context = ATOMIC_LOAD(&device->ContextList);
     while(Context)
     {
-        ALactivesource **src, **src_end;
+        ALactivesource *src, *src_end;
 
         src = Context->ActiveSources;
         src_end = src + Context->ActiveSourceCount;
         while(src != src_end)
         {
-            ALsource *source = (*src)->Source;
-            (*src)->Source = NULL;
+            ALsource *source = src->Source;
+            src->Source = NULL;
 
             if(source && source->state == AL_PLAYING)
             {

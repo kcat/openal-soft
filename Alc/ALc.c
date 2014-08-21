@@ -1924,7 +1924,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         for(pos = 0;pos < context->ActiveSourceCount;pos++)
         {
-            ALactivesource *src = context->ActiveSources[pos];
+            ALactivesource *src = &context->ActiveSources[pos];
             ALsource *source = src->Source;
             ALuint s = device->NumAuxSends;
 
@@ -1937,8 +1937,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
             if(source)
             {
-                src->Update(src, source, context);
                 ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
+                src->Update(src, source, context);
             }
         }
 
@@ -2141,10 +2141,8 @@ static ALvoid InitContext(ALCcontext *Context)
  * Cleans up the context, and destroys any remaining objects the app failed to
  * delete. Called once there's no more references on the context.
  */
-static ALCvoid FreeContext(ALCcontext *context)
+static void FreeContext(ALCcontext *context)
 {
-    ALsizei i;
-
     TRACE("%p\n", context);
 
     if(context->SourceMap.size > 0)
@@ -2161,11 +2159,6 @@ static ALCvoid FreeContext(ALCcontext *context)
     }
     ResetUIntMap(&context->EffectSlotMap);
 
-    for(i = 0;i < context->MaxActiveSources;i++)
-    {
-        al_free(context->ActiveSources[i]);
-        context->ActiveSources[i] = NULL;
-    }
     free(context->ActiveSources);
     context->ActiveSources = NULL;
     context->ActiveSourceCount = 0;

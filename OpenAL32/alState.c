@@ -715,7 +715,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
     if(!context->DeferUpdates)
     {
         ALboolean UpdateSources;
-        ALactivesource **src, **src_end;
+        ALactivesource *src, *src_end;
         ALeffectslot **slot, **slot_end;
         FPUCtl oldMode;
 
@@ -731,17 +731,17 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         src_end = src + context->ActiveSourceCount;
         while(src != src_end)
         {
-            ALsource *source = (*src)->Source;
+            ALsource *source = src->Source;
             if(!source) goto next;
 
             if(source->state != AL_PLAYING && source->state != AL_PAUSED)
             {
-                (*src)->Source = NULL;
+                src->Source = NULL;
                 continue;
             }
 
             if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) || UpdateSources)
-                (*src)->Update(*src, source, context);
+                src->Update(src, source, context);
         next:
             src++;
         }

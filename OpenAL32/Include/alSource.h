@@ -11,6 +11,9 @@
 extern "C" {
 #endif
 
+struct ALbuffer;
+struct ALsource;
+
 extern enum Resampler DefaultResampler;
 
 extern const ALsizei ResamplerPadding[ResamplerMax];
@@ -25,10 +28,10 @@ typedef struct ALbufferlistitem {
 
 
 typedef struct ALactivesource {
-    struct ALsource *Source;
+    struct ALsource *volatile Source;
 
     /** Method to update mixing parameters. */
-    ALvoid (*Update)(struct ALactivesource *self, const ALCcontext *context);
+    ALvoid (*Update)(struct ALactivesource *self, const struct ALsource *source, const ALCcontext *context);
 
     /** Current target parameters used for mixing. */
     ALint Step;

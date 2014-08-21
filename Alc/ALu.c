@@ -166,7 +166,7 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     aluMatrixVector(Listener->Params.Velocity, 0.0f, Listener->Params.Matrix);
 }
 
-ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
+ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALsource *ALSource, const ALCcontext *ALContext)
 {
     static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f } };
     static const struct ChanMap StereoMap[2] = {
@@ -216,7 +216,6 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     };
 
     ALCdevice *Device = ALContext->Device;
-    const ALsource *ALSource = src->Source;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
     enum FmtChannels Channels;
@@ -563,10 +562,9 @@ ALvoid CalcNonAttnSourceParams(ALactivesource *src, const ALCcontext *ALContext)
     }
 }
 
-ALvoid CalcSourceParams(ALactivesource *src, const ALCcontext *ALContext)
+ALvoid CalcSourceParams(ALactivesource *src, const ALsource *ALSource, const ALCcontext *ALContext)
 {
     ALCdevice *Device = ALContext->Device;
-    const ALsource *ALSource = src->Source;
     ALfloat Velocity[3],Direction[3],Position[3],SourceToListener[3];
     ALfloat InnerAngle,OuterAngle,Angle,Distance,ClampedDist;
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
@@ -1178,22 +1176,21 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             while(src != src_end)
             {
                 ALsource *source = (*src)->Source;
+                if(!source) goto next;
 
                 if(source->state != AL_PLAYING && source->state != AL_PAUSED)
                 {
-                    ALactivesource *temp = *(--src_end);
-                    *src_end = *src;
-                    *src = temp;
-                    --(ctx->ActiveSourceCount);
-                    continue;
+                    (*src)->Source = NULL;
+                    goto next;
                 }
 
                 if(!DeferUpdates && (ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) ||
                                      UpdateSources))
-                    (*src)->Update(*src, ctx);
+                    (*src)->Update(*src, source, ctx);
 
                 if(source->state != AL_PAUSED)
-                    MixSource(*src, device, SamplesToDo);
+                    MixSource(*src, source, device, SamplesToDo);
+            next:
                 src++;
             }
 
@@ -1305,13 +1302,16 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
         while(src != src_end)
         {
             ALsource *source = (*src)->Source;
-            if(source->state == AL_PLAYING)
+            (*src)->Source = NULL;
+
+            if(source && source->state == AL_PLAYING)
             {
                 source->state = AL_STOPPED;
                 ATOMIC_STORE(&source->current_buffer, NULL);
                 source->position = 0;
                 source->position_fraction = 0;
             }
+
             src++;
         }
         Context->ActiveSourceCount = 0;

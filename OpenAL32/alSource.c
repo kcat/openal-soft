@@ -1400,14 +1400,9 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         srclistend = srclist + context->ActiveSourceCount;
         while(srclist != srclistend)
         {
-            if((*srclist)->Source == Source)
-            {
-                ALactivesource *temp = *(--srclistend);
-                *srclistend = *srclist;
-                *srclist = temp;
-                --(context->ActiveSourceCount);
+            ALsource *old = Source;
+            if(COMPARE_EXCHANGE(&(*srclist)->Source, &old, NULL))
                 break;
-            }
             srclist++;
         }
         UnlockContext(context);
@@ -2456,7 +2451,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         ALCdevice *device = Context->Device;
         ALbufferlistitem *BufferList;
         ALactivesource *src = NULL;
-        ALsizei j, k;
+        ALsizei i;
 
         /* Check that there is a queue containing at least one valid, non zero
          * length Buffer. */
@@ -2488,44 +2483,53 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(!BufferList || !device->Connected)
             goto do_stop;
 
-        for(j = 0;j < Context->ActiveSourceCount;j++)
+        for(i = 0;i < Context->ActiveSourceCount;i++)
         {
-            if(Context->ActiveSources[j]->Source == Source)
+            if(Context->ActiveSources[i]->Source == Source)
             {
-                src = Context->ActiveSources[j];
+                src = Context->ActiveSources[i];
                 break;
             }
         }
         if(src == NULL)
         {
-            src = Context->ActiveSources[Context->ActiveSourceCount];
-            if(src == NULL)
+            for(i = 0;i < Context->ActiveSourceCount;i++)
             {
-                src = al_malloc(16, sizeof(src[0]));
-                Context->ActiveSources[Context->ActiveSourceCount] = src;
+                ALsource *old = NULL;
+                src = Context->ActiveSources[i];
+                if(COMPARE_EXCHANGE(&src->Source, &old, Source))
+                    break;
+            }
+            if(i == Context->ActiveSourceCount)
+            {
+                src = Context->ActiveSources[Context->ActiveSourceCount];
+                if(src == NULL)
+                {
+                    src = al_malloc(16, sizeof(src[0]));
+                    Context->ActiveSources[Context->ActiveSourceCount] = src;
+                }
+                Context->ActiveSourceCount++;
             }
             memset(src, 0, sizeof(*src));
-            Context->ActiveSourceCount++;
 
             src->Source = Source;
         }
         else
         {
-            ALuint i;
-
             src->Direct.Moving = AL_FALSE;
             src->Direct.Counter = 0;
-            for(j = 0;j < MAX_INPUT_CHANNELS;j++)
+            for(i = 0;i < MAX_INPUT_CHANNELS;i++)
             {
-                for(k = 0;k < SRC_HISTORY_LENGTH;k++)
-                    src->Direct.Mix.Hrtf.State[j].History[k] = 0.0f;
-                for(k = 0;k < HRIR_LENGTH;k++)
+                ALsizei j;
+                for(j = 0;j < SRC_HISTORY_LENGTH;j++)
+                    src->Direct.Mix.Hrtf.State[i].History[j] = 0.0f;
+                for(j = 0;j < HRIR_LENGTH;j++)
                 {
-                    src->Direct.Mix.Hrtf.State[j].Values[k][0] = 0.0f;
-                    src->Direct.Mix.Hrtf.State[j].Values[k][1] = 0.0f;
+                    src->Direct.Mix.Hrtf.State[i].Values[j][0] = 0.0f;
+                    src->Direct.Mix.Hrtf.State[i].Values[j][1] = 0.0f;
                 }
             }
-            for(i = 0;i < device->NumAuxSends;i++)
+            for(i = 0;i < (ALsizei)device->NumAuxSends;i++)
             {
                 src->Send[i].Counter = 0;
                 src->Send[i].Moving  = AL_FALSE;

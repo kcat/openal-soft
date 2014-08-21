@@ -732,19 +732,17 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
         while(src != src_end)
         {
             ALsource *source = (*src)->Source;
+            if(!source) goto next;
 
             if(source->state != AL_PLAYING && source->state != AL_PAUSED)
             {
-                ALactivesource *temp = *(--src_end);
-                *src_end = *src;
-                *src = temp;
-                --(context->ActiveSourceCount);
+                (*src)->Source = NULL;
                 continue;
             }
 
             if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) || UpdateSources)
-                (*src)->Update(*src, context);
-
+                (*src)->Update(*src, source, context);
+        next:
             src++;
         }
 

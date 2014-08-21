@@ -41,6 +41,10 @@
 extern "C" {
 #endif
 
+struct ALsource;
+struct ALactivesource;
+
+
 enum ActiveFilters {
     AF_None = 0,
     AF_LowPass = 1,
@@ -216,10 +220,10 @@ inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxC
 }
 
 
-ALvoid CalcSourceParams(struct ALactivesource *src, const ALCcontext *ALContext);
-ALvoid CalcNonAttnSourceParams(struct ALactivesource *src, const ALCcontext *ALContext);
+ALvoid CalcSourceParams(struct ALactivesource *src, const struct ALsource *source, const ALCcontext *ALContext);
+ALvoid CalcNonAttnSourceParams(struct ALactivesource *src, const struct ALsource *source, const ALCcontext *ALContext);
 
-ALvoid MixSource(struct ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo);
+ALvoid MixSource(struct ALactivesource *src, struct ALsource *source, ALCdevice *Device, ALuint SamplesToDo);
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);
 /* Caller must lock the device. */

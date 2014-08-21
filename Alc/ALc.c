@@ -1927,6 +1927,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             ALactivesource *src = context->ActiveSources[pos];
             ALsource *source = src->Source;
             ALuint s = device->NumAuxSends;
+
             while(s < MAX_SENDS)
             {
                 src->Send[s].Moving = AL_FALSE;
@@ -1934,8 +1935,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 s++;
             }
 
-            src->Update(src, context);
-            ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
+            if(source)
+            {
+                src->Update(src, source, context);
+                ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
+            }
         }
 
         context = context->next;

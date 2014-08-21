@@ -178,12 +178,11 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 }
 
 
-ALvoid MixSource(ALactivesource *src, ALCdevice *Device, ALuint SamplesToDo)
+ALvoid MixSource(ALactivesource *src, ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     MixerFunc Mix;
     HrtfMixerFunc HrtfMix;
     ResamplerFunc Resample;
-    ALsource *Source = src->Source;
     ALbufferlistitem *BufferListItem;
     ALuint DataPosInt, DataPosFrac;
     ALboolean Looping;

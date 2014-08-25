@@ -617,11 +617,11 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, co
 // offset.
 static inline ALvoid RealizeLineOffset(ALfloat *sampleBuffer, DelayLine *Delay)
 {
-    Delay->Line = &sampleBuffer[(ALintptrEXT)Delay->Line];
+    Delay->Line = &sampleBuffer[(ptrdiff_t)Delay->Line];
 }
 
 // Calculate the length of a delay line and store its mask and offset.
-static ALuint CalcLineLength(ALfloat length, ALintptrEXT offset, ALuint frequency, DelayLine *Delay)
+static ALuint CalcLineLength(ALfloat length, ptrdiff_t offset, ALuint frequency, DelayLine *Delay)
 {
     ALuint samples;
 

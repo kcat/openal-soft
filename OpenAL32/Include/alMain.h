@@ -263,9 +263,6 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 typedef ALint64SOFT ALint64;
 typedef ALuint64SOFT ALuint64;
 
-typedef ptrdiff_t ALintptrEXT;
-typedef ptrdiff_t ALsizeiptrEXT;
-
 #ifndef U64
 #if defined(_MSC_VER)
 #define U64(x) ((ALuint64)(x##ui64))

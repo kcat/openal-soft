@@ -100,7 +100,7 @@ static struct BackendInfo BackendList[] = {
 
     { "null", ALCnullBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #ifdef HAVE_WAVE
-    { "wave", NULL, alc_wave_init, alc_wave_deinit, alc_wave_probe, EmptyFuncs },
+    { "wave", ALCwaveBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #endif
 
     { NULL, NULL, NULL, NULL, NULL, EmptyFuncs }

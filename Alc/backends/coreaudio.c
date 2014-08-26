@@ -383,6 +383,11 @@ static ALCenum ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     ca_data *data;
     OSStatus err;
 
+    if(!deviceName)
+        deviceName = ca_device;
+    else if(strcmp(deviceName, ca_device) != 0)
+        return ALC_INVALID_VALUE;
+
     desc.componentType = kAudioUnitType_Output;
     desc.componentSubType = kAudioUnitSubType_HALOutput;
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;

@@ -142,31 +142,38 @@ static void get_device_name(IMMDevice *device, al_string *name)
     IPropertyStore_Release(ps);
 }
 
-static void add_device(IMMDevice *device, vector_DevMap *list)
+static void add_device(IMMDevice *device, LPCWSTR devid, vector_DevMap *list)
+{
+    DevMap entry;
+
+    AL_STRING_INIT(entry.name);
+    entry.devid = strdupW(devid);
+    get_device_name(device, &entry.name);
+
+    TRACE("Got device \"%s\", \"%ls\"\n", al_string_get_cstr(entry.name), entry.devid);
+    VECTOR_PUSH_BACK(*list, entry);
+}
+
+static LPWSTR get_device_id(IMMDevice *device)
 {
     LPWSTR devid;
     HRESULT hr;
 
     hr = IMMDevice_GetId(device, &devid);
-    if(SUCCEEDED(hr))
+    if(FAILED(hr))
     {
-        DevMap entry;
-        AL_STRING_INIT(entry.name);
-
-        entry.devid = strdupW(devid);
-        get_device_name(device, &entry.name);
-
-        CoTaskMemFree(devid);
-
-        TRACE("Got device \"%s\", \"%ls\"\n", al_string_get_cstr(entry.name), entry.devid);
-        VECTOR_PUSH_BACK(*list, entry);
+        ERR("Failed to get device id: %lx\n", hr);
+        return NULL;
     }
+
+    return devid;
 }
 
 static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, vector_DevMap *list)
 {
     IMMDeviceCollection *coll;
     IMMDevice *defdev = NULL;
+    LPWSTR defdevid = NULL;
     HRESULT hr;
     UINT count;
     UINT i;
@@ -183,7 +190,7 @@ static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ve
     if(SUCCEEDED(hr) && count > 0)
     {
         clear_devlist(list);
-        if(!VECTOR_RESERVE(*list, count+1))
+        if(!VECTOR_RESERVE(*list, count))
         {
             IMMDeviceCollection_Release(coll);
             return E_OUTOFMEMORY;
@@ -193,22 +200,32 @@ static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ve
                                                          eMultimedia, &defdev);
     }
     if(SUCCEEDED(hr) && defdev != NULL)
-        add_device(defdev, list);
+    {
+        defdevid = get_device_id(defdev);
+        if(defdevid)
+            add_device(defdev, defdevid, list);
+    }
 
     for(i = 0;i < count;++i)
     {
         IMMDevice *device;
+        LPWSTR devid;
 
-        if(FAILED(IMMDeviceCollection_Item(coll, i, &device)))
-            continue;
+        hr = IMMDeviceCollection_Item(coll, i, &device);
+        if(FAILED(hr)) continue;
 
-        if(device != defdev)
-            add_device(device, list);
-
+        devid = get_device_id(device);
+        if(devid)
+        {
+            if(wcscmp(devid, defdevid) != 0)
+                add_device(device, devid, list);
+            CoTaskMemFree(devid);
+        }
         IMMDevice_Release(device);
     }
 
     if(defdev) IMMDevice_Release(defdev);
+    if(defdevid) CoTaskMemFree(defdevid);
     IMMDeviceCollection_Release(coll);
 
     return S_OK;

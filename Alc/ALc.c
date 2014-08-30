@@ -1686,8 +1686,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             V0(device->Backend,stop)();
         device->Flags = (flags & ~DEVICE_RUNNING);
 
-        if(freq != device->Frequency)
-            UpdateClockBase(device);
+        UpdateClockBase(device);
+
         device->Frequency = freq;
         device->FmtChans = schans;
         device->FmtType = stype;
@@ -1748,14 +1748,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ConfigValueUInt(NULL, "sends", &numSends);
         numSends = minu(MAX_SENDS, numSends);
 
+        UpdateClockBase(device);
+
         device->UpdateSize = (ALuint64)device->UpdateSize * freq /
                              device->Frequency;
         /* SSE and Neon do best with the update size being a multiple of 4 */
         if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
             device->UpdateSize = (device->UpdateSize+3)&~3;
 
-        if(freq != device->Frequency)
-            UpdateClockBase(device);
         device->Frequency = freq;
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
@@ -1766,19 +1766,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         return ALC_NO_ERROR;
 
     UpdateClockBase(device);
-
-    oldFreq  = device->Frequency;
-    oldChans = device->FmtChans;
-    oldType  = device->FmtType;
-
-    TRACE("Pre-reset: %s%s, %s%s, %s%uhz, %u update size x%d\n",
-          (device->Flags&DEVICE_CHANNELS_REQUEST)?"*":"",
-          DevFmtChannelsString(device->FmtChans),
-          (device->Flags&DEVICE_SAMPLE_TYPE_REQUEST)?"*":"",
-          DevFmtTypeString(device->FmtType),
-          (device->Flags&DEVICE_FREQUENCY_REQUEST)?"*":"",
-          device->Frequency,
-          device->UpdateSize, device->NumUpdates);
 
     if(device->Type != Loopback)
     {
@@ -1809,6 +1796,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
         }
     }
+
+    oldFreq  = device->Frequency;
+    oldChans = device->FmtChans;
+    oldType  = device->FmtType;
+
+    TRACE("Pre-reset: %s%s, %s%s, %s%uhz, %u update size x%d\n",
+          (device->Flags&DEVICE_CHANNELS_REQUEST)?"*":"",
+          DevFmtChannelsString(device->FmtChans),
+          (device->Flags&DEVICE_SAMPLE_TYPE_REQUEST)?"*":"",
+          DevFmtTypeString(device->FmtType),
+          (device->Flags&DEVICE_FREQUENCY_REQUEST)?"*":"",
+          device->Frequency,
+          device->UpdateSize, device->NumUpdates);
 
     if(V0(device->Backend,reset)() == ALC_FALSE)
         return ALC_INVALID_DEVICE;

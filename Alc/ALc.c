@@ -2158,7 +2158,7 @@ static void FreeContext(ALCcontext *context)
     }
     ResetUIntMap(&context->EffectSlotMap);
 
-    free(context->Voices);
+    al_free(context->Voices);
     context->Voices = NULL;
     context->VoiceCount = 0;
     context->MaxVoices = 0;
@@ -2170,7 +2170,7 @@ static void FreeContext(ALCcontext *context)
 
     //Invalidate context
     memset(context, 0, sizeof(ALCcontext));
-    free(context);
+    al_free(context);
 }
 
 /* ReleaseContext
@@ -2875,7 +2875,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
-    ALContext = calloc(1, sizeof(ALCcontext)+sizeof(ALlistener));
+    ALContext = al_calloc(16, sizeof(ALCcontext)+sizeof(ALlistener));
     if(ALContext)
     {
         InitRef(&ALContext->ref, 1);
@@ -2885,7 +2885,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
         ALContext->VoiceCount = 0;
         ALContext->MaxVoices = 256;
-        ALContext->Voices = calloc(ALContext->MaxVoices, sizeof(ALContext->Voices[0]));
+        ALContext->Voices = al_calloc(16, ALContext->MaxVoices * sizeof(ALContext->Voices[0]));
     }
     if(!ALContext || !ALContext->Voices)
     {
@@ -2898,12 +2898,12 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
         if(ALContext)
         {
-            free(ALContext->Voices);
+            al_free(ALContext->Voices);
             ALContext->Voices = NULL;
 
             VECTOR_DEINIT(ALContext->ActiveAuxSlots);
 
-            free(ALContext);
+            al_free(ALContext);
             ALContext = NULL;
         }
 

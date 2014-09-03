@@ -85,8 +85,8 @@ typedef struct ALbuffer {
     ALsizei  LoopStart;
     ALsizei  LoopEnd;
 
-    ALsizei UnpackAlign;
-    ALsizei PackAlign;
+    ATOMIC(ALsizei) UnpackAlign;
+    ATOMIC(ALsizei) PackAlign;
 
     /* Number of times buffer was attached to a source (deletion can only occur when 0) */
     RefCount ref;

@@ -26,33 +26,33 @@
 #include "alThunk.h"
 
 
-static ALenum *ThunkArray;
-static ALuint  ThunkArraySize;
-static RWLock  ThunkLock;
+static ATOMIC(ALenum) *ThunkArray;
+static ALuint          ThunkArraySize;
+static RWLock ThunkLock;
 
 void ThunkInit(void)
 {
     RWLockInit(&ThunkLock);
     ThunkArraySize = 1;
-    ThunkArray = calloc(1, ThunkArraySize * sizeof(*ThunkArray));
+    ThunkArray = al_calloc(16, ThunkArraySize * sizeof(*ThunkArray));
 }
 
 void ThunkExit(void)
 {
-    free(ThunkArray);
+    al_free(ThunkArray);
     ThunkArray = NULL;
     ThunkArraySize = 0;
 }
 
 ALenum NewThunkEntry(ALuint *index)
 {
-    ALenum *NewList;
+    void *NewList;
     ALuint i;
 
     ReadLock(&ThunkLock);
     for(i = 0;i < ThunkArraySize;i++)
     {
-        if(ExchangeInt(&ThunkArray[i], AL_TRUE) == AL_FALSE)
+        if(ATOMIC_EXCHANGE(ALenum, &ThunkArray[i], AL_TRUE) == AL_FALSE)
         {
             ReadUnlock(&ThunkLock);
             *index = i+1;
@@ -62,18 +62,19 @@ ALenum NewThunkEntry(ALuint *index)
     ReadUnlock(&ThunkLock);
 
     WriteLock(&ThunkLock);
-    NewList = realloc(ThunkArray, ThunkArraySize*2 * sizeof(*ThunkArray));
+    NewList = al_calloc(16, ThunkArraySize*2 * sizeof(*ThunkArray));
     if(!NewList)
     {
         WriteUnlock(&ThunkLock);
         ERR("Realloc failed to increase to %u entries!\n", ThunkArraySize*2);
         return AL_OUT_OF_MEMORY;
     }
-    memset(&NewList[ThunkArraySize], 0, ThunkArraySize*sizeof(*ThunkArray));
-    ThunkArraySize *= 2;
+    memcpy(NewList, ThunkArray, ThunkArraySize*sizeof(*ThunkArray));
+    al_free(ThunkArray);
     ThunkArray = NewList;
+    ThunkArraySize *= 2;
 
-    ThunkArray[i] = AL_TRUE;
+    ATOMIC_STORE(&ThunkArray[i], AL_TRUE);
     WriteUnlock(&ThunkLock);
 
     *index = i+1;
@@ -84,6 +85,6 @@ void FreeThunkEntry(ALuint index)
 {
     ReadLock(&ThunkLock);
     if(index > 0 && index <= ThunkArraySize)
-        ExchangeInt(&ThunkArray[index-1], AL_FALSE);
+        ATOMIC_STORE(&ThunkArray[index-1], AL_FALSE);
     ReadUnlock(&ThunkLock);
 }
